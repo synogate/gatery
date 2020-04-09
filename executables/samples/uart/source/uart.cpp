@@ -18,15 +18,30 @@
 
 #include "uart.h"
 
+#include <metaHDL_core/frontend/Registers.h>
+#include <metaHDL_core/frontend/Integers.h>
+#include <metaHDL_core/frontend/Scope.h>
+#include <metaHDL_core/frontend/SignalArithmeticOp.h>
+#include <metaHDL_core/frontend/SignalLogicOp.h>
+#include <metaHDL_core/frontend/SignalMiscOp.h>
+
+#include <metaHDL_core/utils/Exceptions.h>
+
 using namespace mhdl::core::frontend;
 
-UartTransmitter::UartTransmitter() :
-    inputData(8), send(1),
-    outputLine(1), idle(1)
+
+UartTransmitter::UartTransmitter(unsigned dataBits, unsigned stopBits, unsigned clockCyclesPerBit) :
+            m_dataBits(dataBits), m_stopBits(stopBits), m_clockCyclesPerBit(clockCyclesPerBit) 
 {
+}
+        
+void UartTransmitter::operator()(const BitVector &inputData, const Bit &send, Bit &outputLine, Bit &idle)
+{
+    Scope scope;
+    scope.setName(GET_FUNCTION_NAME);
+
     // todo: constants!
-    BitVector enable(1);
-    BitVector reset(1);
+    Bit enable;
 
     RegisterFactory reg({}, {});
     
@@ -40,15 +55,15 @@ UartTransmitter::UartTransmitter() :
     
     UnsignedInteger bitCounterOne(5);
     UnsignedInteger bitCounterZero(5);
-    bitCounter.assign(reg.reg(bitCounter+bitCounterOne, enable, bitCounterZero, idle));
+    //bitCounter.driveWith(reg(bitCounter+bitCounterOne, enable, bitCounterZero, idle));
     
     auto done = bitCounter[4];
     
-    auto nextData = select(loadingData, inputData, shiftedData);
+    auto nextData = mux(loadingData, shiftedData, inputData);
 
     // todo: constants!
-    BitVector high(1);
-    BitVector low(1);
+    Bit high;
+    Bit low;
 
 
     
@@ -56,21 +71,22 @@ UartTransmitter::UartTransmitter() :
     // Default to high (idle state).
     outputLine = high;    
     // Send start bit while loading data
-    outputLine = select(loadingData, low, outputLine);
+    outputLine = mux(loadingData, outputLine, low);
     // Send data bits if not idle
-    outputLine = select(idle, outputLine, currentData[0]);
+    outputLine = mux(idle, currentData[0], outputLine);
     // Send stop bit if done
-    outputLine = select(done, high, outputLine);
+    outputLine = mux(done, outputLine, high);
     
 
-    currentData.assign(reg.reg(nextData, enable, reset, dataZero));
+    //currentData.driveWith(reg.reg(nextData, enable, reset, dataZero));
+    driveWith(currentData, reg(nextData, enable, dataZero));
     
     auto nextIdle = idle;
     // if loading new data not idle in next step
-    nextIdle = select(loadingData, low, nextIdle);
+    nextIdle = mux(loadingData, low, nextIdle);
     // if done, idle in next step
-    nextIdle = select(done, high, nextIdle);
+    nextIdle = mux(done, high, nextIdle);
         
-    idle.assign(reg.reg(nextIdle, enable, reset, high));
+    //idle.driveWith(reg.reg(nextIdle, enable, reset));
 }
 

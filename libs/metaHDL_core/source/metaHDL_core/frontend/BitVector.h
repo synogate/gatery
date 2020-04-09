@@ -1,6 +1,12 @@
 #pragma once
 
+#include "Bit.h"
 #include "Signal.h"
+#include "Scope.h"
+
+#include "../hlim/coreNodes/Node_Signal.h"
+
+#include "../utils/Exceptions.h"
 
 #include <vector>
 
@@ -8,64 +14,76 @@ namespace mhdl {
 namespace core {    
 namespace frontend {
 
+// concat x = a && b && c;
+    
+    
+struct Selection {
+    // some selection descriptor
+    
+    static Selection From(int start);
+    static Selection Range(int start, int end);
+    static Selection RangeIncl(int start, int endIncl);
+    static Selection StridedRange(int start, int end, int stride);
+
+    static Selection Slice(int offset, unsigned size);
+    static Selection StridedSlice(int offset, unsigned size, int stride);
+};
+
 /**
  * @todo write docs
  */
 template<typename FinalType>
-class BaseBitVector : public Signal<FinalType>
+class BaseBitVector : public ElementarySignal
 {
     public:
-        BaseBitVector(unsigned width) : m_width(width) { }
+        using isBitVector = void;
         
-        FinalType operator<<(unsigned amount);
-        FinalType operator>>(unsigned amount);
-        FinalType operator|(const FinalType &rhs);
-        FinalType operator&(const FinalType &rhs);
-        FinalType operator^(const FinalType &rhs);
-        FinalType operator~();
-        FinalType operator[](unsigned idx);
+        virtual void resize(unsigned width);
         
-        unsigned getWidth() const { return m_width; }
         
-        virtual void assign(const FinalType &rhs) override { }
+        FinalType operator<<(unsigned amount) { }
+        FinalType operator>>(unsigned amount) { }
+        Bit operator[](int idx) { }
+
+        FinalType operator()(int offset, unsigned size) { return operator()(Selection::Range(offset, size)); }
+        FinalType operator()(const Selection &selection) { }
+
+        FinalType &operator=(const FinalType &rhs) { assign(rhs); return *this; }
     protected:
-        unsigned m_width;
+        BaseBitVector() = default;
+        BaseBitVector(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType) : ElementarySignal(port, connectionType) { }
+        
 };
 
-template<class FinalType, class RhsType>
-FinalType concat(FinalType &lhs, RhsType &rhs) {
-    static_assert(std::is_base_of<BaseBitVector<FinalType>, FinalType>::value, "Left hand side must be derived from BaseBitVector");
-    static_assert(std::is_base_of<BaseBitVector<RhsType>, RhsType>::value, "Right hand side must be derived from BaseBitVector");
+
+template<typename FinalType>
+void BaseBitVector<FinalType>::resize(unsigned width)
+{
+    hlim::Node_Signal *signalNode = dynamic_cast<hlim::Node_Signal*>(m_port->node);
+    MHDL_ASSERT(signalNode != nullptr);
+    MHDL_DESIGNCHECK_HINT(signalNode->isOrphaned(), "Can not resize signal once it is connected (driving or driven).");
     
-    
-    FinalType concatSignal(lhs.getWidth() + rhs.getWidth());
-   
-    // todo: do something
-        
-    return concatSignal;
+    m_width = width;
+    signalNode->setConnectionType(getSignalType());    
 }
 
-template<class SelectorType, class FinalType>
-FinalType select(SelectorType &selector, FinalType lhs, FinalType rhs) {
-    static_assert(std::is_base_of<BaseBitVector<FinalType>, FinalType>::value, "Left and right hand side must be derived from BaseBitVector");
-    static_assert(std::is_base_of<BaseBitVector<SelectorType>, SelectorType>::value, "Selector type must be derived from BaseBitVector");
-    
-    if (lhs.getWidth() != rhs.getWidth())
-        throw "baaaah";
-    
-    FinalType result(lhs.getWidth());
-   
-    // todo: do something
-        
-    return result;
-}
 
 
 class BitVector : public BaseBitVector<BitVector>
 {
     public:
-        BitVector(unsigned width) : BaseBitVector<BitVector>(width) { }
+        MHDL_SIGNAL
+        
+        using isUntypedBitvectorSignal = void;        
+        
+        BitVector() = default;
+        BitVector(unsigned width);
+        BitVector(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType);
+    protected:
+        virtual hlim::ConnectionType getSignalType() const override;
+
 };
+
 
 }
 }

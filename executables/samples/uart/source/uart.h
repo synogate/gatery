@@ -18,9 +18,9 @@
 
 #pragma once
 
-#include <metaHDL_core/frontend/Registers.h>
 #include <metaHDL_core/frontend/BitVector.h>
-#include <metaHDL_core/frontend/Integers.h>
+#include <metaHDL_core/frontend/Bit.h>
+
 
 /**
  * @todo write docs
@@ -29,15 +29,14 @@ class UartTransmitter
 {
     public:
         using BitVector = mhdl::core::frontend::BitVector;
+        using Bit = mhdl::core::frontend::Bit;
+
+        UartTransmitter(unsigned dataBits, unsigned stopBits, unsigned clockCyclesPerBit);
         
-        // inputs
-        BitVector inputData;
-        BitVector send;
-        // outputs
-        BitVector outputLine;
-        BitVector idle;
-        
-        UartTransmitter();
+        void operator()(const BitVector &inputData, const Bit &send, Bit &outputLine, Bit &idle);
     protected:
+        unsigned m_dataBits;
+        unsigned m_stopBits; 
+        unsigned m_clockCyclesPerBit;
 };
 

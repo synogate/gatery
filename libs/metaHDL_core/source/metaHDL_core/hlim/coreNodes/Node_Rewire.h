@@ -1,0 +1,41 @@
+#pragma once
+#include "../Node.h"
+
+#include <boost/format.hpp>
+
+#include <vector>
+
+namespace mhdl {
+namespace core {    
+namespace hlim {
+    
+class Node_Rewire : public Node
+{
+    public:
+        struct OutputRange {
+            unsigned subwidth;
+            enum Source {
+                INPUT,
+                CONST_ZERO,
+                CONST_ONE,
+            };
+            Source source;
+            unsigned inputIdx;
+            unsigned inputOffset;
+        };
+        
+        virtual std::string getTypeName() override { return "Rewire"; }
+        virtual void assertValidity() override { }
+        virtual std::string getInputName(unsigned idx) override { return (boost::format("in_%d")%idx).str(); }
+        virtual std::string getOutputName(unsigned idx) override { return "output"; }
+        
+        void setConcat();
+        void setInterleave();
+        void setExtract(unsigned offset, unsigned count, unsigned stride = 1);        
+    protected:
+        std::vector<OutputRange> m_ranges;
+};
+
+}
+}
+}
