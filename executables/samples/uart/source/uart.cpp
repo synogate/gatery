@@ -39,7 +39,8 @@ UartTransmitter::UartTransmitter(unsigned dataBits, unsigned stopBits, unsigned 
 void UartTransmitter::operator()(const BitVector &inputData, const Bit &send, Bit &outputLine, Bit &idle)
 {
     Scope scope;
-    scope.setName(GET_FUNCTION_NAME);
+    //scope.setName(GET_FUNCTION_NAME);
+    scope.setName("UartTransmitter");
 
     // todo: constants!
     Bit enable;
@@ -53,6 +54,7 @@ void UartTransmitter::operator()(const BitVector &inputData, const Bit &send, Bi
     
     auto shiftedData = currentData >> 1;
     auto loadingData = idle & send;
+    loadingData.setName("loadingData");
     
     UnsignedInteger bitCounterOne(5);
     UnsignedInteger bitCounterZero(5);
@@ -61,6 +63,7 @@ void UartTransmitter::operator()(const BitVector &inputData, const Bit &send, Bi
     auto done = bitCounter[4];
     
     auto nextData = mux(loadingData, shiftedData, inputData);
+    nextData.setName("nextData");
 
     // todo: constants!
     Bit high;

@@ -24,6 +24,11 @@ class NodeGroup
         
         template<typename NodeType, typename... Args>
         NodeType *addNode(Args&&... args);
+
+        inline const NodeGroup *getParent() const { return m_parent; }
+        inline const std::string &getName() const { return m_name; }
+        inline const std::vector<std::unique_ptr<Node>> &getNodes() const { return m_nodes; }
+        inline const std::vector<std::unique_ptr<NodeGroup>> &getChildren() const { return m_children; }
     protected:
         std::string m_name;
         

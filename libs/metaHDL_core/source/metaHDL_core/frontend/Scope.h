@@ -32,6 +32,8 @@ class RootScope : public Scope
 {
     public:
         RootScope();
+        
+        inline hlim::Circuit &getCircuit() { return m_circuit; }
     protected:
         hlim::Circuit m_circuit;
 };

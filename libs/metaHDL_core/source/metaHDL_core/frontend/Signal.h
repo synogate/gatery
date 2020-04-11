@@ -36,6 +36,7 @@ class ElementarySignal : public BaseSignal {
         unsigned getWidth() const { return m_node->getConnectionType().width; }
         
         inline hlim::Node_Signal *getNode() const { return m_node; }
+        virtual void setName(const std::string &name) override { m_node->setName(name); }
     protected:
         ElementarySignal();
         ElementarySignal(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType);

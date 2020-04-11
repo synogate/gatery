@@ -4,6 +4,7 @@
 
 #include "../utils/StackTrace.h"
 #include "../utils/LinkedList.h"
+#include "../utils/Exceptions.h"
 
 #include <vector>
 #include <set>
@@ -49,11 +50,15 @@ class Node
         inline const utils::StackTrace &getStackTrace() const { return m_stackTrace; }
 
         inline void setName(std::string name) { m_name = std::move(name); }
+        inline const std::string &getName() const { return m_name; }
         
+        unsigned getNumInputs() const { return m_inputs.size(); }
         InputPort &getInput(unsigned index) { return m_inputs[index]; }
+        unsigned getNumOutputs() const { return m_outputs.size(); }
         OutputPort &getOutput(unsigned index) { return m_outputs[index]; }
 
         bool isOrphaned() const;
+        const NodeGroup *getGroup() const { return m_nodeGroup; }
     protected:
         std::string m_name;
         std::vector<InputPort> m_inputs;

@@ -3,6 +3,11 @@ cmake_minimum_required (VERSION 3.0)
 find_package(Boost COMPONENTS system thread REQUIRED) 
 
 add_library(metaHDL_core STATIC
+    source/metaHDL_core/export/vhdl/CodeFormatting.cpp
+    source/metaHDL_core/export/vhdl/CodeFormatting.h
+    source/metaHDL_core/export/vhdl/VHDLExport.cpp
+    source/metaHDL_core/export/vhdl/VHDLExport.h
+
     source/metaHDL_core/frontend/Bit.cpp
     source/metaHDL_core/frontend/Bit.h
     source/metaHDL_core/frontend/BitVector.cpp

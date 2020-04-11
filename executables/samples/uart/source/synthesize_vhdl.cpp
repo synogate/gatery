@@ -7,6 +7,8 @@
 #include <metaHDL_core/utils/StackTrace.h>
 #include <metaHDL_core/utils/Exceptions.h>
 
+#include <metaHDL_core/export/vhdl/VHDLExport.h>
+
 #include "uart.h"
 
 
@@ -15,6 +17,7 @@
 
 using namespace mhdl::core::frontend;
 using namespace mhdl::utils;
+using namespace mhdl::core::vhdl;
 
 int main() { 
    
@@ -27,9 +30,17 @@ int main() {
             UartTransmitter uart(8, 1, 1000);
             
             BitVector data(8);
+            data.setName("data");
+            
             Bit send, idle, outputLine;
+            send.setName("send");
+            idle.setName("idle");
+            outputLine.setName("outputLine");
             
             uart(data, send, outputLine, idle);
+            
+            VHDLExport vhdl("VHDL_out/");
+            vhdl(root.getCircuit());
             
         } catch (const mhdl::utils::InternalError &exception) {
             std::cerr << "Internal error occured!" << std::endl << exception << std::endl;

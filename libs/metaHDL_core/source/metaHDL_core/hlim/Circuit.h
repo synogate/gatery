@@ -18,6 +18,7 @@ class Circuit
         Circuit();
         
         inline NodeGroup *getRootNodeGroup() { return m_root.get(); }
+        inline const NodeGroup *getRootNodeGroup() const { return m_root.get(); }
     protected:
         std::vector<Node*> m_inputs;
         std::vector<Node*> m_outputs;
