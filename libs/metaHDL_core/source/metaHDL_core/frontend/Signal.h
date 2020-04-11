@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../hlim/coreNodes/Node_Signal.h"
 #include "../hlim/Node.h"
 #include "../hlim/Circuit.h"
 
@@ -32,22 +33,18 @@ class ElementarySignal : public BaseSignal {
     public:
         using isElementarySignal = void;
         
-        unsigned getWidth() const { return m_width; }
+        unsigned getWidth() const { return m_node->getConnectionType().width; }
         
-        inline hlim::Node::OutputPort *getOutputPort() const { return m_port; }
+        inline hlim::Node_Signal *getNode() const { return m_node; }
     protected:
         ElementarySignal();
         ElementarySignal(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType);
         ElementarySignal &operator=(const ElementarySignal&) = default;
         void assign(const ElementarySignal &rhs);
 
-        unsigned m_width = 0;
-        
-        mutable hlim::Node::OutputPort *m_port = nullptr;
-        //hlim::NodeGroup *m_nextAssignmentNodeGroup = nullptr;
+        mutable hlim::Node_Signal *m_node = nullptr; 
 
-        //virtual void putNextSignalNodeInGroup(hlim::NodeGroup *group) override;
-        virtual hlim::ConnectionType getSignalType() const = 0;
+        virtual hlim::ConnectionType getSignalType(unsigned width) const = 0;
         
         template<typename SignalType, typename>
         friend SignalType &assign(SignalType &lhs, const SignalType &rhs);

@@ -36,16 +36,16 @@ class SignalArithmeticOp
 
 template<typename SignalType, typename = std::enable_if_t<utils::isNumberSignal<SignalType>::value>>
 SignalType SignalArithmeticOp::operator()(const SignalType &lhs, const SignalType &rhs) {
-    const hlim::Node_Signal *lhsSignal = dynamic_cast<const hlim::Node_Signal*>(lhs.getOutputPort()->node);
-    const hlim::Node_Signal *rhsSignal = dynamic_cast<const hlim::Node_Signal*>(rhs.getOutputPort()->node);
+    hlim::Node_Signal *lhsSignal = lhs.getNode();
+    hlim::Node_Signal *rhsSignal = rhs.getNode();
     MHDL_ASSERT(lhsSignal != nullptr);
     MHDL_ASSERT(rhsSignal != nullptr);
     MHDL_DESIGNCHECK_HINT(lhsSignal->getConnectionType() == rhsSignal->getConnectionType(), "Can only perform arithmetic operations on operands of same type (e.g. width).");
     
     hlim::Node_Arithmetic *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Arithmetic>(m_op);
     node->recordStackTrace();
-    lhs.getOutputPort()->connect(node->getInput(0));
-    rhs.getOutputPort()->connect(node->getInput(1));
+    lhsSignal->getOutput(0).connect(node->getInput(0));
+    rhsSignal->getOutput(0).connect(node->getInput(1));
 
     return SignalType(&node->getOutput(0), getResultingType(lhsSignal->getConnectionType(), rhsSignal->getConnectionType()));
 }

@@ -5,6 +5,7 @@
 #include "Scope.h"
 
 #include "../hlim/coreNodes/Node_Signal.h"
+#include "../hlim/coreNodes/Node_Rewire.h"
 
 #include "../utils/Exceptions.h"
 
@@ -36,14 +37,11 @@ template<typename FinalType>
 class BaseBitVector : public ElementarySignal
 {
     public:
-        using isBitVector = void;
+        using isBitVectorSignal = void;
         
         virtual void resize(unsigned width);
         
-        
-        FinalType operator<<(unsigned amount) { }
-        FinalType operator>>(unsigned amount) { }
-        Bit operator[](int idx) { }
+        Bit operator[](int idx);
 
         FinalType operator()(int offset, unsigned size) { return operator()(Selection::Range(offset, size)); }
         FinalType operator()(const Selection &selection) { }
@@ -59,13 +57,36 @@ class BaseBitVector : public ElementarySignal
 template<typename FinalType>
 void BaseBitVector<FinalType>::resize(unsigned width)
 {
-    hlim::Node_Signal *signalNode = dynamic_cast<hlim::Node_Signal*>(m_port->node);
-    MHDL_ASSERT(signalNode != nullptr);
-    MHDL_DESIGNCHECK_HINT(signalNode->isOrphaned(), "Can not resize signal once it is connected (driving or driven).");
+    MHDL_DESIGNCHECK_HINT(m_node->isOrphaned(), "Can not resize signal once it is connected (driving or driven).");
     
-    m_width = width;
-    signalNode->setConnectionType(getSignalType());    
+    m_node->setConnectionType(getSignalType(width));    
 }
+
+
+template<typename FinalType>
+Bit BaseBitVector<FinalType>::operator[](int idx)
+{
+    hlim::Node_Rewire *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Rewire>(1);
+    node->recordStackTrace();
+    
+    idx = (m_node->getConnectionType().width + (idx % m_node->getConnectionType().width)) % m_node->getConnectionType().width;
+    
+    hlim::Node_Rewire::RewireOperation rewireOp;
+    rewireOp.ranges.push_back({
+        .subwidth = 1,
+        .source = hlim::Node_Rewire::OutputRange::INPUT,
+        .inputIdx = 0,
+        .inputOffset = (unsigned) idx,
+    });
+    node->setOp(std::move(rewireOp));
+    
+    m_node->getOutput(0).connect(node->getInput(0));
+    hlim::ConnectionType connectionType;
+    connectionType.interpretation = hlim::ConnectionType::BOOL;
+    connectionType.width = 1;
+    return Bit(&node->getOutput(0), connectionType);
+}
+
 
 
 
@@ -80,7 +101,7 @@ class BitVector : public BaseBitVector<BitVector>
         BitVector(unsigned width);
         BitVector(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType);
     protected:
-        virtual hlim::ConnectionType getSignalType() const override;
+        virtual hlim::ConnectionType getSignalType(unsigned width) const override;
 
 };
 

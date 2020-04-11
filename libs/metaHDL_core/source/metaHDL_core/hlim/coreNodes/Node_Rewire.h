@@ -24,6 +24,12 @@ class Node_Rewire : public Node
             unsigned inputOffset;
         };
         
+        struct RewireOperation {
+            std::vector<OutputRange> ranges;
+        };
+        
+        Node_Rewire(NodeGroup *group, unsigned numInputs);
+        
         virtual std::string getTypeName() override { return "Rewire"; }
         virtual void assertValidity() override { }
         virtual std::string getInputName(unsigned idx) override { return (boost::format("in_%d")%idx).str(); }
@@ -32,8 +38,10 @@ class Node_Rewire : public Node
         void setConcat();
         void setInterleave();
         void setExtract(unsigned offset, unsigned count, unsigned stride = 1);        
+        
+        inline void setOp(RewireOperation rewireOperation) { m_rewireOperation = std::move(rewireOperation); }
     protected:
-        std::vector<OutputRange> m_ranges;
+        RewireOperation m_rewireOperation;
 };
 
 }

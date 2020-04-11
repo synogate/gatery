@@ -15,12 +15,12 @@ BitVector::BitVector(hlim::Node::OutputPort *port, const hlim::ConnectionType &c
     
 }
 
-hlim::ConnectionType BitVector::getSignalType() const
+hlim::ConnectionType BitVector::getSignalType(unsigned width) const
 {
     hlim::ConnectionType connectionType;
     
     connectionType.interpretation = hlim::ConnectionType::RAW;
-    connectionType.width = m_width;
+    connectionType.width = width;
     
     return connectionType;
 }

@@ -17,6 +17,8 @@ add_library(metaHDL_core STATIC
     source/metaHDL_core/frontend/Signal.h
     source/metaHDL_core/frontend/SignalArithmeticOp.cpp
     source/metaHDL_core/frontend/SignalArithmeticOp.h
+    source/metaHDL_core/frontend/SignalBitshiftOp.cpp
+    source/metaHDL_core/frontend/SignalBitshiftOp.h
     source/metaHDL_core/frontend/SignalDelay.cpp
     source/metaHDL_core/frontend/SignalDelay.h
     source/metaHDL_core/frontend/SignalLogicOp.cpp

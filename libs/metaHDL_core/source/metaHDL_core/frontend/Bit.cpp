@@ -7,11 +7,8 @@ namespace frontend {
 
 Bit::Bit()
 {
-    hlim::Node_Signal *signalNode = dynamic_cast<hlim::Node_Signal*>(m_port->node);
-    MHDL_ASSERT(signalNode != nullptr);
-    MHDL_ASSERT(signalNode->isOrphaned());
-    
-    signalNode->setConnectionType(getSignalType());    
+    MHDL_ASSERT(m_node->isOrphaned());
+    m_node->setConnectionType(getSignalType(1));
 }
 
 Bit::Bit(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType) : ElementarySignal(port, connectionType) 
@@ -19,8 +16,10 @@ Bit::Bit(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionTyp
     
 }
 
-hlim::ConnectionType Bit::getSignalType() const 
+hlim::ConnectionType Bit::getSignalType(unsigned width) const 
 {
+    MHDL_ASSERT(width == 1);
+    
     hlim::ConnectionType connectionType;
     
     connectionType.interpretation = hlim::ConnectionType::BOOL;

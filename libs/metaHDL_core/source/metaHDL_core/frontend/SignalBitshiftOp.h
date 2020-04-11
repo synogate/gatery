@@ -14,83 +14,141 @@
 
 #include <boost/format.hpp>
 
+#include <optional>
+
 
 namespace mhdl {
 namespace core {    
 namespace frontend {
     
-class SignalBitShift
+class SignalBitShiftOp
 {
     public:
-        SignalBitShift(int shift) : m_shift(shift) { }
+        SignalBitShiftOp(int shift) : m_shift(shift) { }
         
-        SignalBitShift &setFillLeft(bool bit);
-        SignalBitShift &setFillRight(bool bit);
-        SignalBitShift &duplicateLeft();
-        SignalBitShift &duplicateRight();
+        inline SignalBitShiftOp &setFillLeft(bool bit) { m_fillLeft = bit; return *this; }
+        inline SignalBitShiftOp &setFillRight(bool bit) { m_fillRight = bit; return *this; }
+        inline SignalBitShiftOp &duplicateLeft() { m_duplicateLeft = true; m_rotate = false; return *this; }
+        inline SignalBitShiftOp &duplicateRight() { m_duplicateRight = true; m_rotate = false; return *this; }
+        inline SignalBitShiftOp &rotate() { m_rotate = true; m_duplicateLeft = m_duplicateRight = false; return *this; }
         
         hlim::ConnectionType getResultingType(const hlim::ConnectionType &operand);
         
-        template<typename SignalType, typename = std::enable_if_t<utils::isNumberSignal<SignalType>::value>>
-        SignalType operator()(const SignalType &lhs, const SignalType &rhs);
+        template<typename SignalType, typename = std::enable_if_t<utils::isBitVectorSignal<SignalType>::value>>
+        SignalType operator()(const SignalType &operand);
     protected:
         int m_shift;
-        /// extend etc.
+        bool m_duplicateLeft = false;
+        bool m_duplicateRight = false;
+        bool m_rotate = false;
+        bool m_fillLeft = false;
+        bool m_fillRight = false;
 };
 
 
-template<typename SignalType, typename = std::enable_if_t<utils::isNumberSignal<SignalType>::value>>
-SignalType SignalArithmeticOp::operator()(const SignalType &lhs, const SignalType &rhs) {
-    const hlim::Node_Signal *lhsSignal = dynamic_cast<const hlim::Node_Signal*>(lhs.getOutputPort()->node);
-    const hlim::Node_Signal *rhsSignal = dynamic_cast<const hlim::Node_Signal*>(rhs.getOutputPort()->node);
-    MHDL_ASSERT(lhsSignal != nullptr);
-    MHDL_ASSERT(rhsSignal != nullptr);
-    MHDL_DESIGNCHECK_HINT(lhsSignal->getConnectionType() == rhsSignal->getConnectionType(), "Can only perform arithmetic operations on operands of same type (e.g. width).");
+template<typename SignalType, typename = std::enable_if_t<utils::isBitVectorSignal<SignalType>::value>>
+SignalType SignalBitShiftOp::operator()(const SignalType &operand) {
+    hlim::Node_Signal *signal = operand.getNode();
+    MHDL_ASSERT(signal != nullptr);
     
-    hlim::Node_Arithmetic *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Arithmetic>(m_op);
+    hlim::Node_Rewire *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Rewire>(1);
     node->recordStackTrace();
-    lhs.getOutputPort()->connect(node->getInput(0));
-    rhs.getOutputPort()->connect(node->getInput(1));
-
-    return SignalType(&node->getOutput(0), getResultingType(lhsSignal->getConnectionType(), rhsSignal->getConnectionType()));
+    
+    unsigned absShift = std::abs(m_shift);
+    
+    hlim::Node_Rewire::RewireOperation rewireOp;
+    if (m_rotate) {
+        MHDL_ASSERT_HINT(false, "Not implemented yet!");
+    } else {
+        if (m_shift < 0) {            
+            if (absShift < signal->getConnectionType().width) {
+                rewireOp.ranges.push_back({
+                    .subwidth = signal->getConnectionType().width - absShift,
+                    .source = hlim::Node_Rewire::OutputRange::INPUT,
+                    .inputIdx = 0,
+                    .inputOffset = (unsigned) absShift,
+                });
+            }
+            
+            if (m_duplicateLeft) {
+                for (unsigned i = 0; i < (unsigned) absShift; i++) {
+                    rewireOp.ranges.push_back({
+                        .subwidth = 1,
+                        .source = hlim::Node_Rewire::OutputRange::INPUT,
+                        .inputIdx = 0,
+                        .inputOffset = signal->getConnectionType().width-1,
+                    });
+                }
+            } else {
+                rewireOp.ranges.push_back({
+                    .subwidth = absShift,
+                    .source = (m_fillLeft? hlim::Node_Rewire::OutputRange::CONST_ONE : hlim::Node_Rewire::OutputRange::CONST_ZERO),
+                });
+            }
+        } else {
+            if (m_duplicateRight) {
+                for (unsigned i = 0; i < (unsigned) absShift; i++) {
+                    rewireOp.ranges.push_back({
+                        .subwidth = 1,
+                        .source = hlim::Node_Rewire::OutputRange::INPUT,
+                        .inputIdx = 0,
+                        .inputOffset = 0,
+                    });
+                }
+            } else {
+                rewireOp.ranges.push_back({
+                    .subwidth = absShift,
+                    .source = (m_fillLeft? hlim::Node_Rewire::OutputRange::CONST_ONE : hlim::Node_Rewire::OutputRange::CONST_ZERO),
+                });
+            }
+            if (absShift < signal->getConnectionType().width) {
+                rewireOp.ranges.push_back({
+                    .subwidth = signal->getConnectionType().width - absShift,
+                    .source = hlim::Node_Rewire::OutputRange::INPUT,
+                    .inputIdx = 0,
+                    .inputOffset = 0,
+                });
+            }
+        }
+    }
+    node->setOp(std::move(rewireOp));
+    
+    signal->getOutput(0).connect(node->getInput(0));
+    return SignalType(&node->getOutput(0), getResultingType(signal->getConnectionType()));
 }
 
 
-#define MHDL_BUILD_ARITHMETIC_OPERATOR(typeTrait, cppOp, Op)                                    \
-    template<typename SignalType, typename = std::enable_if_t<typeTrait<SignalType>::value>>    \
-    SignalType cppOp(const SignalType &lhs, const SignalType &rhs)  {                           \
-        SignalArithmeticOp op(Op);                                                              \
-        return op(lhs, rhs);                                                                    \
-    }
-    
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, add, hlim::Node_Arithmetic::ADD)
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator+, hlim::Node_Arithmetic::ADD)
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, sub, hlim::Node_Arithmetic::SUB)
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator-, hlim::Node_Arithmetic::SUB)
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, mul, hlim::Node_Arithmetic::MUL)
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator*, hlim::Node_Arithmetic::MUL)
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, div, hlim::Node_Arithmetic::DIV)
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator/, hlim::Node_Arithmetic::DIV)
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, rem, hlim::Node_Arithmetic::REM)
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator%, hlim::Node_Arithmetic::REM)
-
-#undef MHDL_BUILD_ARITHMETIC_OPERATOR
 
 
-#define MHDL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(typeTrait, cppOp, Op)                         \
-    template<typename SignalType, typename = std::enable_if_t<typeTrait<SignalType>::value>>    \
-    SignalType &cppOp(SignalType lhs, const SignalType &rhs)  {                                 \
-        SignalArithmeticOp op(Op);                                                              \
-        return lhs = op(lhs, rhs);                                                              \
-    }
 
-MHDL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator+=, hlim::Node_Arithmetic::ADD)
-MHDL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator-=, hlim::Node_Arithmetic::SUB)
-MHDL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator*=, hlim::Node_Arithmetic::MUL)
-MHDL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator/=, hlim::Node_Arithmetic::DIV)
-MHDL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator%=, hlim::Node_Arithmetic::REM)
-    
-#undef MHDL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR
+template<typename SignalType, typename = std::enable_if_t<utils::isBitVectorSignal<SignalType>::value>>
+SignalType operator<<(const SignalType &signal, int amount)  {                                 
+    MHDL_DESIGNCHECK_HINT(amount >= 0, "Shifting by negative amount not allowed!");
+    SignalBitShiftOp op((int) amount);                                                              
+    return op(signal);                                                                              
+}
+
+template<typename SignalType, typename = std::enable_if_t<utils::isBitVectorSignal<SignalType>::value>>
+SignalType operator>>(const SignalType &signal, int amount)  {                                 
+    MHDL_DESIGNCHECK_HINT(amount >= 0, "Shifting by negative amount not allowed!");
+    SignalBitShiftOp op(- (int)amount);                                                              
+    if (utils::isSignedIntegerSignal<SignalType>::value)
+        op.duplicateLeft();
+    return op(signal);                                                                              
+}
+
+template<typename SignalType, typename = std::enable_if_t<utils::isBitVectorSignal<SignalType>::value>>
+SignalType &operator<<=(SignalType &signal, int amount)  {
+    signal = signal << amount;
+    return signal; 
+}
+
+template<typename SignalType, typename = std::enable_if_t<utils::isBitVectorSignal<SignalType>::value>>
+SignalType &operator>>=(SignalType &signal, int amount)  {
+    signal = signal >> amount;
+    return signal;
+}
+
 
 }
 }

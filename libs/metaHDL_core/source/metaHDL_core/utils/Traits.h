@@ -45,6 +45,14 @@ struct isBitSignal<Type, typename Type::isBitSignal> : std::true_type { };
 
 
 template<typename Type, typename = void>
+struct isBitVectorSignal : std::false_type { };
+
+template<typename Type>
+struct isBitVectorSignal<Type, typename Type::isBitVectorSignal> : std::true_type { };
+
+
+
+template<typename Type, typename = void>
 struct isUnsignedIntegerSignal : std::false_type { };
 
 template<typename Type>

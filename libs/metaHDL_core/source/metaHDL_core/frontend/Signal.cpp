@@ -13,27 +13,25 @@ namespace frontend {
 
 ElementarySignal::ElementarySignal()
 {
-    hlim::Node_Signal *signalNode = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Signal>();
-    signalNode->recordStackTrace();
-    m_port = &signalNode->getOutput(0);    
+    m_node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Signal>();
+    m_node->recordStackTrace();
 }
 
 ElementarySignal::ElementarySignal(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType)
 {
-    hlim::Node_Signal *signalNode = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Signal>();
-    signalNode->recordStackTrace();
-    signalNode->setConnectionType(connectionType);
-    port->connect(signalNode->getInput(0));
-    m_port = &signalNode->getOutput(0);
+    m_node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Signal>();
+    m_node->recordStackTrace();
+    m_node->setConnectionType(connectionType);
+    port->connect(m_node->getInput(0));
 }
 
 void ElementarySignal::assign(const ElementarySignal &rhs) {
-    hlim::Node_Signal *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Signal>();    
-    node->recordStackTrace();
+    m_node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Signal>();    
+    m_node->recordStackTrace();
+    m_node->setConnectionType(rhs.m_node->getConnectionType());
     
-    MHDL_ASSERT(rhs.m_port != nullptr);
-    rhs.m_port->connect(node->getInput(0));    
-    m_port = &node->getOutput(0);
+    MHDL_ASSERT(rhs.m_node != nullptr);
+    rhs.m_node->getOutput(0).connect(m_node->getInput(0));    
 }
 
 

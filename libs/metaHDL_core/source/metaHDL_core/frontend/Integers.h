@@ -19,7 +19,7 @@ class UnsignedInteger : public BaseBitVector<UnsignedInteger>
         UnsignedInteger(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType) : BaseBitVector<UnsignedInteger>(port, connectionType) { }
         
     protected:
-        virtual hlim::ConnectionType getSignalType() const override;
+        virtual hlim::ConnectionType getSignalType(unsigned width) const override;
         
 };
 
@@ -35,7 +35,7 @@ class SignedInteger : public BaseBitVector<SignedInteger>
         SignedInteger(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType) : BaseBitVector<SignedInteger>(port, connectionType) { }
         
     protected:
-        virtual hlim::ConnectionType getSignalType() const override;
+        virtual hlim::ConnectionType getSignalType(unsigned width) const override;
         
 };
 

@@ -24,7 +24,7 @@ class Bit : public ElementarySignal
         
         Bit &operator=(const Bit &rhs) { assign(rhs); return *this; }
     protected:
-        virtual hlim::ConnectionType getSignalType() const override;
+        virtual hlim::ConnectionType getSignalType(unsigned width) const override;
 };
 
 }

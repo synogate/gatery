@@ -23,6 +23,7 @@
 #include <metaHDL_core/frontend/Scope.h>
 #include <metaHDL_core/frontend/SignalArithmeticOp.h>
 #include <metaHDL_core/frontend/SignalLogicOp.h>
+#include <metaHDL_core/frontend/SignalBitshiftOp.h>
 #include <metaHDL_core/frontend/SignalMiscOp.h>
 
 #include <metaHDL_core/utils/Exceptions.h>
