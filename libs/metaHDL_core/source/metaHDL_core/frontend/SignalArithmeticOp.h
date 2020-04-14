@@ -28,6 +28,8 @@ class SignalArithmeticOp
         
         template<typename SignalType, typename = std::enable_if_t<utils::isNumberSignal<SignalType>::value>>
         SignalType operator()(const SignalType &lhs, const SignalType &rhs);
+
+        inline hlim::Node_Arithmetic::Op getOp() const { return m_op; }
     protected:
         hlim::Node_Arithmetic::Op m_op;
         /// extend etc.

@@ -39,6 +39,8 @@ class BaseBitVector : public ElementarySignal
     public:
         using isBitVectorSignal = void;
         
+        BaseBitVector(const FinalType &rhs) { assign(rhs); }
+        
         virtual void resize(unsigned width);
         
         Bit operator[](int idx);

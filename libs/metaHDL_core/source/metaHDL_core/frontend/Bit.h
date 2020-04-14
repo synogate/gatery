@@ -20,6 +20,7 @@ class Bit : public ElementarySignal
         using isBitSignal = void;
         
         Bit();
+        Bit(const Bit &rhs);
         Bit(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType);
         
         Bit &operator=(const Bit &rhs) { assign(rhs); return *this; }

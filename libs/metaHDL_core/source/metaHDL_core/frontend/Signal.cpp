@@ -26,12 +26,20 @@ ElementarySignal::ElementarySignal(hlim::Node::OutputPort *port, const hlim::Con
 }
 
 void ElementarySignal::assign(const ElementarySignal &rhs) {
+    std::string oldName = m_node->getName();
+    
     m_node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Signal>();    
     m_node->recordStackTrace();
     m_node->setConnectionType(rhs.m_node->getConnectionType());
     
     MHDL_ASSERT(rhs.m_node != nullptr);
-    rhs.m_node->getOutput(0).connect(m_node->getInput(0));    
+    rhs.m_node->getOutput(0).connect(m_node->getInput(0));
+    
+    if (oldName.empty())
+        setName(rhs.m_node->getName());
+    else 
+        setName(oldName);
+    
 }
 
 

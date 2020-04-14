@@ -1,7 +1,9 @@
 #pragma once
 
 #include "SignalDelay.h"
+#include "Scope.h"
 #include "../utils/Traits.h"
+#include "../hlim/coreNodes/Node_Register.h"
 
 namespace mhdl {
 namespace core {    
@@ -32,7 +34,7 @@ class PipelineRegisterFactory : public RegisterFactory
         PipelineRegisterFactory(const ClockConfig &clockConfig, const ResetConfig &resetConfig);
         
         ///@todo overload for compound signals
-        template<typename DataSignal, typename = std::enable_if_t<utils::isSignal<DataSignal>::value>>
+        template<typename DataSignal, typename = std::enable_if_t<utils::isElementarySignal<DataSignal>::value>>
         DataSignal delayBy(DataSignal inputSignal, Bit enableSignal, DataSignal resetValue, unsigned ticks);
 
         ///@todo overload for compound signals
@@ -44,10 +46,16 @@ class PipelineRegisterFactory : public RegisterFactory
 
 
 
-template<typename DataSignal, typename = std::enable_if_t<utils::isSignal<DataSignal>::value>>
+template<typename DataSignal, typename = std::enable_if_t<utils::isElementarySignal<DataSignal>::value>>
 DataSignal RegisterFactory::operator()(const DataSignal &inputSignal, const Bit &enableSignal, const DataSignal &resetValue)
 {
-    return inputSignal; /// @todo
+    hlim::Node_Register *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Register>();
+    node->recordStackTrace();
+    inputSignal.getNode()->getOutput(0).connect(node->getInput(0));
+    enableSignal.getNode()->getOutput(0).connect(node->getInput(1));
+    resetValue.getNode()->getOutput(0).connect(node->getInput(2));
+
+    return DataSignal(&node->getOutput(0), inputSignal.getNode()->getConnectionType());
 }
 
 

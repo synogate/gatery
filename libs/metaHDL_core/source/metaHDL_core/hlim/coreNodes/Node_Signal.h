@@ -12,10 +12,10 @@ class Node_Signal : public Node
     public:
         Node_Signal(NodeGroup *group) : Node(group, 1, 1) {  }
         
-        virtual std::string getTypeName() override { return "Signal"; }
-        virtual void assertValidity() override { }
-        virtual std::string getInputName(unsigned idx) override { return "in"; }
-        virtual std::string getOutputName(unsigned idx) override { return "out"; }
+        virtual std::string getTypeName() const override { return "Signal"; }
+        virtual void assertValidity() const override { }
+        virtual std::string getInputName(unsigned idx) const override { return "in"; }
+        virtual std::string getOutputName(unsigned idx) const override { return "out"; }
         
         void setConnectionType(const ConnectionType &connectionType);
         inline const ConnectionType &getConnectionType() const { return m_connectionType; }

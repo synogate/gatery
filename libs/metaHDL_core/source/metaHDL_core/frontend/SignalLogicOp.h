@@ -29,6 +29,8 @@ class SignalLogicOp
 
         template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>
         SignalType operator()(const SignalType &operand);
+
+        inline hlim::Node_Logic::Op getOp() const { return m_op; }
     protected:
         hlim::Node_Logic::Op m_op;
 };

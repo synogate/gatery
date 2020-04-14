@@ -20,10 +20,12 @@ class Node_Logic : public Node
         
         Node_Logic(NodeGroup *group, Op op) : Node(group, op==NOT?1:2, 1), m_op(op) { }
         
-        virtual std::string getTypeName() override { return ""; }
-        virtual void assertValidity() override { }
-        virtual std::string getInputName(unsigned idx) override { return ""; }
-        virtual std::string getOutputName(unsigned idx) override { return "output"; }
+        virtual std::string getTypeName() const override { return ""; }
+        virtual void assertValidity() const override { }
+        virtual std::string getInputName(unsigned idx) const override { return ""; }
+        virtual std::string getOutputName(unsigned idx) const override { return "output"; }
+
+        inline Op getOp() const { return m_op; }
     protected:
         Op m_op;
 };

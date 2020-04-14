@@ -44,30 +44,43 @@ void UartTransmitter::operator()(const BitVector &inputData, const Bit &send, Bi
 
     // todo: constants!
     Bit enable;
+    MHDL_NAMED(enable);
 
     RegisterFactory reg({}, {});
     
     UnsignedInteger bitCounter(5);
     
     BitVector currentData(8);
+    MHDL_NAMED(currentData);
     BitVector dataZero(8);
+    MHDL_NAMED(dataZero);
     
     auto shiftedData = currentData >> 1;
+    MHDL_NAMED(shiftedData);
+    
     auto loadingData = idle & send;
-    loadingData.setName("loadingData");
+    MHDL_NAMED(loadingData);
     
     UnsignedInteger bitCounterOne(5);
+    MHDL_NAMED(bitCounterOne);
     UnsignedInteger bitCounterZero(5);
-    //bitCounter.driveWith(reg(bitCounter+bitCounterOne, enable, bitCounterZero, idle));
+    MHDL_NAMED(bitCounterZero);
+    
+    auto newBitCounter = mux(idle, bitCounter+bitCounterOne, bitCounterZero);
+    MHDL_NAMED(newBitCounter);
+    driveWith(bitCounter, reg(newBitCounter, enable, bitCounterZero));
     
     auto done = bitCounter[4];
+    MHDL_NAMED(done);
     
     auto nextData = mux(loadingData, shiftedData, inputData);
-    nextData.setName("nextData");
+    MHDL_NAMED(nextData);
 
     // todo: constants!
     Bit high;
+    MHDL_NAMED(high);
     Bit low;
+    MHDL_NAMED(low);
 
 
     
@@ -82,15 +95,15 @@ void UartTransmitter::operator()(const BitVector &inputData, const Bit &send, Bi
     outputLine = mux(done, outputLine, high);
     
 
-    //currentData.driveWith(reg.reg(nextData, enable, reset, dataZero));
     driveWith(currentData, reg(nextData, enable, dataZero));
     
     auto nextIdle = idle;
+    MHDL_NAMED(nextIdle);
     // if loading new data not idle in next step
     nextIdle = mux(loadingData, low, nextIdle);
     // if done, idle in next step
     nextIdle = mux(done, high, nextIdle);
         
-    //idle.driveWith(reg.reg(nextIdle, enable, reset));
+    driveWith(idle, reg(nextIdle, enable, high));
 }
 

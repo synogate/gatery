@@ -41,10 +41,10 @@ class Node
             void disconnect(InputPort &port);
         };
         
-        virtual std::string getTypeName() = 0;
-        virtual void assertValidity() = 0;
-        virtual std::string getInputName(unsigned idx) = 0;
-        virtual std::string getOutputName(unsigned idx) = 0;
+        virtual std::string getTypeName() const = 0;
+        virtual void assertValidity() const = 0;
+        virtual std::string getInputName(unsigned idx) const = 0;
+        virtual std::string getOutputName(unsigned idx) const = 0;
         
         inline void recordStackTrace() { m_stackTrace.record(10, 1); }
         inline const utils::StackTrace &getStackTrace() const { return m_stackTrace; }
@@ -54,8 +54,10 @@ class Node
         
         unsigned getNumInputs() const { return m_inputs.size(); }
         InputPort &getInput(unsigned index) { return m_inputs[index]; }
+        const InputPort &getInput(unsigned index) const { return m_inputs[index]; }
         unsigned getNumOutputs() const { return m_outputs.size(); }
         OutputPort &getOutput(unsigned index) { return m_outputs[index]; }
+        const OutputPort &getOutput(unsigned index) const { return m_outputs[index]; }
 
         bool isOrphaned() const;
         const NodeGroup *getGroup() const { return m_nodeGroup; }

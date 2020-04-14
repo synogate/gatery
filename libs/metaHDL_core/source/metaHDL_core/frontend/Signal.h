@@ -23,10 +23,17 @@ class BaseSignal {
         
         virtual const char *getSignalTypeName() = 0;
         
-        virtual void setName(const std::string &name) { }
+        virtual void setName(std::string name) { }
     protected:
         //virtual void putNextSignalNodeInGroup(hlim::NodeGroup *group) = 0;
 };
+
+template<typename T, typename = std::enable_if<utils::isSignal<T>::value>::type>
+void setName(T &signal, std::string name) {
+    signal.setName(std::move(name));
+}
+
+#define MHDL_NAMED(x) mhdl::core::frontend::setName(x, #x)
 
 
 class ElementarySignal : public BaseSignal {
@@ -36,7 +43,7 @@ class ElementarySignal : public BaseSignal {
         unsigned getWidth() const { return m_node->getConnectionType().width; }
         
         inline hlim::Node_Signal *getNode() const { return m_node; }
-        virtual void setName(const std::string &name) override { m_node->setName(name); }
+        virtual void setName(std::string name) override { m_node->setName(std::move(name)); }
     protected:
         ElementarySignal();
         ElementarySignal(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType);

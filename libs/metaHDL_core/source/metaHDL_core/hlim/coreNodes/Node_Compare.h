@@ -17,10 +17,10 @@ class Node_Compare : public Node
             GEQ
         };
         
-        virtual std::string getTypeName() override { return "Compare"; }
-        virtual void assertValidity() override { }
-        virtual std::string getInputName(unsigned idx) override { return idx==0?"a":"b"; }
-        virtual std::string getOutputName(unsigned idx) override { return "out"; }
+        virtual std::string getTypeName() const override { return "Compare"; }
+        virtual void assertValidity() const override { }
+        virtual std::string getInputName(unsigned idx) const override { return idx==0?"a":"b"; }
+        virtual std::string getOutputName(unsigned idx) const override { return "out"; }
     protected:
 };
 

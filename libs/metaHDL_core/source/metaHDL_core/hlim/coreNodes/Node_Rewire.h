@@ -30,10 +30,10 @@ class Node_Rewire : public Node
         
         Node_Rewire(NodeGroup *group, unsigned numInputs);
         
-        virtual std::string getTypeName() override { return "Rewire"; }
-        virtual void assertValidity() override { }
-        virtual std::string getInputName(unsigned idx) override { return (boost::format("in_%d")%idx).str(); }
-        virtual std::string getOutputName(unsigned idx) override { return "output"; }
+        virtual std::string getTypeName() const override { return "Rewire"; }
+        virtual void assertValidity() const override { }
+        virtual std::string getInputName(unsigned idx) const override { return (boost::format("in_%d")%idx).str(); }
+        virtual std::string getOutputName(unsigned idx) const override { return "output"; }
         
         void setConcat();
         void setInterleave();
