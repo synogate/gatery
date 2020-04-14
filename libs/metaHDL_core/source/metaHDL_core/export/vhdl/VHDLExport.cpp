@@ -198,6 +198,7 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
                 for (auto i : utils::Range(driver->getNumInputs())) {
                     auto driverSignal = dynamic_cast<const hlim::Node_Signal*>(driver->getInput(i).connection->node);
                     MHDL_ASSERT(driverSignal);
+                    if (closedList.find(driverSignal) != closedList.end()) continue;
                     openList.insert(driverSignal);
 //std::cout << "      adding signal " << getSignalName(driverSignal) << std::endl;
                 }
@@ -318,17 +319,45 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
         const hlim::Node_Rewire *rewireNode = dynamic_cast<const hlim::Node_Rewire*>(node);
         if (rewireNode != nullptr) { 
             
-            if (rewireNode->getNumInputs() == 1) {
+            unsigned bitExtractIdx;
+            if (rewireNode->getOp().isBitExtract(bitExtractIdx)) {
                 formatNode(stream, rewireNode->getInput(0).connection->node);
                 
                 ///@todo be mindfull of bits vs single element vectors!
-                unsigned bitExtractIdx;
-                if (rewireNode->getOp().isBitExtract(bitExtractIdx)) {
-                    stream << "[" << bitExtractIdx << "]";
-                } else 
-                    stream << "(UNHANDLED_REWIRE_OP)";
-            } else 
-                stream << "UNHANDLED_REWIRE_OP";
+                stream << "[" << bitExtractIdx << "]";
+            } else {
+                
+                const auto &op = rewireNode->getOp().ranges;
+                if (op.size() > 1)
+                    stream << "(";
+
+                for (auto i : utils::Range(op.size())) {
+                    if (i > 0)
+                        stream << " & ";
+                    const auto &range = op[op.size()-1-i];
+                    switch (range.source) {
+                        case hlim::Node_Rewire::OutputRange::INPUT:
+                            formatNode(stream, rewireNode->getInput(range.inputIdx).connection->node);
+                            stream << "(" << range.inputOffset + range.subwidth - 1 << " downto " << range.inputOffset << ")";
+                        break;
+                        case hlim::Node_Rewire::OutputRange::CONST_ZERO:
+                            stream << "2#";
+                            for (auto j : utils::Range(range.subwidth))
+                                stream << "0";
+                        break;
+                        case hlim::Node_Rewire::OutputRange::CONST_ONE:
+                            stream << "2#";
+                            for (auto j : utils::Range(range.subwidth))
+                                stream << "1";
+                        break;
+                        default:
+                            stream << "UNHANDLED_REWIRE_OP";
+                    }
+                }
+                
+                if (op.size() > 1)
+                    stream << ")";
+            }
             
             return; 
         }
