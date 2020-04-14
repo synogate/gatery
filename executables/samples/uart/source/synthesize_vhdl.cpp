@@ -39,6 +39,9 @@ int main() {
             
             uart(data, send, outputLine, idle);
             
+            Bit useIdle = idle;
+            Bit useOutputLine = outputLine;
+            
             VHDLExport vhdl("VHDL_out/");
             vhdl(root.getCircuit());
             
