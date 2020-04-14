@@ -3,6 +3,7 @@
 #include "NodeGroup.h"
 
 #include "../utils/Exceptions.h"
+#include "../utils/Range.h"
 
 namespace mhdl {
 namespace core {    
@@ -54,6 +55,26 @@ void Node::OutputPort::disconnect(InputPort &port)
     auto it = connections.find(&port);
     MHDL_ASSERT_HINT(it != connections.end(), "InputPort not in list of connections!");
     connections.erase(it);
+}
+
+void Node::moveToGroup(NodeGroup *group)
+{
+    if (group == m_nodeGroup) return;
+    
+    unsigned index = ~0u;
+    for (auto i : utils::Range(m_nodeGroup->m_nodes.size()))
+        if (m_nodeGroup->m_nodes[i].get() == this) {
+            index = i;
+            break;
+        }
+    MHDL_ASSERT(index != ~0u);
+
+    group->m_nodes.push_back(std::move(m_nodeGroup->m_nodes[index]));
+
+    m_nodeGroup->m_nodes[index] = std::move(m_nodeGroup->m_nodes.back());
+    m_nodeGroup->m_nodes.pop_back();
+    
+    m_nodeGroup = group;
 }
 
 

@@ -37,6 +37,8 @@ class NodeGroup
         NodeGroup *m_parent = nullptr;
         
         utils::StackTrace m_stackTrace;
+        
+        friend class Node;
 };
 
 

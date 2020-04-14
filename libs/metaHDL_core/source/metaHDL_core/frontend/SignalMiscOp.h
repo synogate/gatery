@@ -75,6 +75,8 @@ void driveWith(SignalType &dst, const SignalType &src)  {
     
     MHDL_ASSERT(src.getNode() != nullptr);
     src.getNode()->getOutput(0).connect(signalNode->getInput(0));
+    
+    signalNode->moveToGroup(Scope::getCurrentNodeGroup());
 }
 
 

@@ -61,6 +61,8 @@ class Node
 
         bool isOrphaned() const;
         const NodeGroup *getGroup() const { return m_nodeGroup; }
+        
+        void moveToGroup(NodeGroup *group);
     protected:
         std::string m_name;
         std::vector<InputPort> m_inputs;
