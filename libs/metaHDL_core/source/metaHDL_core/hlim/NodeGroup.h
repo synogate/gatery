@@ -29,6 +29,9 @@ class NodeGroup
         inline const std::string &getName() const { return m_name; }
         inline const std::vector<std::unique_ptr<Node>> &getNodes() const { return m_nodes; }
         inline const std::vector<std::unique_ptr<NodeGroup>> &getChildren() const { return m_children; }
+        
+        
+        void cullUnnamedSignalNodes();
     protected:
         std::string m_name;
         

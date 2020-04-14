@@ -27,20 +27,24 @@ int main() {
             RootScope root;
             root.setName("root");
 
-            UartTransmitter uart(8, 1, 1000);
+            {
+                UartTransmitter uart(8, 1, 1000);
+                
+                BitVector data(8);
+                data.setName("data");
+                
+                Bit send, idle, outputLine;
+                send.setName("send");
+                idle.setName("idle");
+                outputLine.setName("outputLine");
+                
+                uart(data, send, outputLine, idle);
+                
+                Bit useIdle = idle;
+                Bit useOutputLine = outputLine;
+            }
             
-            BitVector data(8);
-            data.setName("data");
-            
-            Bit send, idle, outputLine;
-            send.setName("send");
-            idle.setName("idle");
-            outputLine.setName("outputLine");
-            
-            uart(data, send, outputLine, idle);
-            
-            Bit useIdle = idle;
-            Bit useOutputLine = outputLine;
+            root.getCircuit().getRootNodeGroup()->cullUnnamedSignalNodes();
             
             VHDLExport vhdl("VHDL_out/");
             vhdl(root.getCircuit());
