@@ -26,6 +26,9 @@ class Node_Rewire : public Node
         
         struct RewireOperation {
             std::vector<OutputRange> ranges;
+            
+            bool isBitExtract(unsigned &bitIndex) const;
+            bool isRegularBitShift(int &shift, bool &keepSign) const;
         };
         
         Node_Rewire(NodeGroup *group, unsigned numInputs);
@@ -40,6 +43,7 @@ class Node_Rewire : public Node
         void setExtract(unsigned offset, unsigned count, unsigned stride = 1);        
         
         inline void setOp(RewireOperation rewireOperation) { m_rewireOperation = std::move(rewireOperation); }
+        inline const RewireOperation &getOp() const { return m_rewireOperation; }
     protected:
         RewireOperation m_rewireOperation;
 };

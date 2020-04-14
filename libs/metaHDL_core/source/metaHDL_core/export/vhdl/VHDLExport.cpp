@@ -10,6 +10,7 @@
 #include "../../hlim//coreNodes/Node_Multiplexer.h"
 #include "../../hlim//coreNodes/Node_Signal.h"
 #include "../../hlim//coreNodes/Node_Register.h"
+#include "../../hlim//coreNodes/Node_Rewire.h"
 
 #include <set>
 #include <map>
@@ -18,6 +19,8 @@
 #include <iostream>
 #include <iomanip>
 #include <functional>
+
+#include "../../utils/Range.h"
 
 namespace mhdl {
 namespace core {
@@ -61,6 +64,8 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
         
     std::string entityName = group->getName(); ///@todo: codeFormatting
     
+    // Helper function to produce unique signal names. 
+    ///@todo must be case insensitive!
     std::map<const hlim::Node*, std::string> signalNames;
     std::set<std::string> usedSignalNames;
     auto getSignalName = [&](const hlim::Node_Signal *node)->std::string {
@@ -80,6 +85,28 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
     };
     
     
+    auto formatConnectionType = [](std::fstream &stream, const hlim::ConnectionType &connectionType) {
+        switch (connectionType.interpretation) {
+            case hlim::ConnectionType::BOOL:
+                stream << "STD_LOGIC";
+            break;
+            case hlim::ConnectionType::RAW:
+                stream << "STD_LOGIC_VECTOR("<<connectionType.width-1 << " downto 0)";
+            break;
+            case hlim::ConnectionType::UNSIGNED:
+                stream << "STD_LOGIC_UNSIGNED("<<connectionType.width-1 << " downto 0)";
+            break;
+            case hlim::ConnectionType::SIGNED_2COMPLEMENT:
+                stream << "STD_LOGIC_SIGNED("<<connectionType.width-1 << " downto 0)";
+            break;
+            
+            default:
+                stream << "UNHANDLED_DATA_TYPE";
+        };        
+    };
+    
+    
+    // Find all input and output signals based on node group assignment
     std::set<const hlim::Node_Signal*> inputSignals;
     std::set<const hlim::Node_Signal*> outputSignals;
     for (const auto &node : group->getNodes()) {
@@ -120,34 +147,103 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
         }
     }
     
+    // Find all signals that need to be made explicit due to explicit naming, vhdl language restrictions, etc.
+    std::set<const hlim::Node_Signal*> requiredCombinatorySignals = outputSignals;
+    std::set<const hlim::Node_Signal*> requiredRegisterSignals;
+    std::set<const hlim::Node_Register*> requiredRegisters;
+    {
+        std::set<const hlim::Node_Signal*> closedList;
+        std::set<const hlim::Node_Signal*> openList;
+        openList = outputSignals;
+        closedList = inputSignals;
+        
+        while (!openList.empty()) {
+            const hlim::Node_Signal* signal = *openList.begin();
+            openList.erase(openList.begin());
+            closedList.insert(signal);
+            
+//std::cout << "signal " << getSignalName(signal) << std::endl;
+            
+            //MHDL_DESIGNCHECK_HINT(signal->getInput(0).connection != nullptr, "Undriven signal used to compose outputs!");
+            if (signal->getInput(0).connection == nullptr) continue; ///@todo Enforce
+            
+            const hlim::Node *driver = signal->getInput(0).connection->node;        
+//std::cout << "  driver " << driver->getName() << " of type " << driver->getTypeName() << std::endl;
+            
+            if (dynamic_cast<const hlim::Node_Signal*>(driver) != nullptr) {
+                auto driverSignal = (const hlim::Node_Signal*)driver;
+                
+                if (closedList.find(driverSignal) != closedList.end()) continue;
+                
+                openList.insert(driverSignal);
+                
+                if (!driverSignal->getName().empty())
+                    requiredCombinatorySignals.insert(driverSignal);
+            } else {
+                if (dynamic_cast<const hlim::Node_Register*>(driver) != nullptr) {
+                    requiredRegisters.insert((const hlim::Node_Register*)driver);
+                    
+                    requiredRegisterSignals.insert(signal);
+                    
+                    MHDL_ASSERT(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(0).connection->node) != nullptr);
+                    requiredCombinatorySignals.insert(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(0).connection->node));
+
+                    MHDL_ASSERT(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(1).connection->node) != nullptr);
+                    requiredCombinatorySignals.insert(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(1).connection->node));
+
+                    MHDL_ASSERT(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(2).connection->node) != nullptr);
+                    requiredCombinatorySignals.insert(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(2).connection->node));
+                }
+                
+                for (auto i : utils::Range(driver->getNumInputs())) {
+                    auto driverSignal = dynamic_cast<const hlim::Node_Signal*>(driver->getInput(i).connection->node);
+                    MHDL_ASSERT(driverSignal);
+                    openList.insert(driverSignal);
+//std::cout << "      adding signal " << getSignalName(driverSignal) << std::endl;
+                }
+            }
+        }
+    }
     
-    
+    for (auto sig : requiredRegisterSignals) {
+        auto it = requiredCombinatorySignals.find(sig);
+        if (it != requiredCombinatorySignals.end())
+            requiredCombinatorySignals.erase(it);
+    }
     
     file << "ENTITY " << entityName << " IS " << std::endl;
     file << m_codeFormatting->getIndentation() << "PORT(" << std::endl;
     for (const auto &signal : inputSignals) {
         std::string signalName = getSignalName(signal); ///@todo: codeFormatting
-        std::string signalType = "something"; ///@todo: codeFormatting
-        file << m_codeFormatting->getIndentation() << m_codeFormatting->getIndentation() << signalName << " : IN " << signalType << "; "<< std::endl;
+        file << m_codeFormatting->getIndentation() << m_codeFormatting->getIndentation() << signalName << " : IN ";
+        formatConnectionType(file, signal->getConnectionType());
+        file << "; "<< std::endl;
     }
     for (const auto &signal : outputSignals) {
         std::string signalName = getSignalName(signal); ///@todo: codeFormatting
-        std::string signalType = "something"; ///@todo: codeFormatting
-        file << m_codeFormatting->getIndentation() << m_codeFormatting->getIndentation() << signalName << " : OUT " << signalType << "; "<< std::endl;
+        file << m_codeFormatting->getIndentation() << m_codeFormatting->getIndentation() << signalName << " : OUT ";
+        formatConnectionType(file, signal->getConnectionType());
+        file << "; "<< std::endl;
     }
     
     file << m_codeFormatting->getIndentation() << ");" << std::endl;
     file << "END " << entityName << ";" << std::endl << std::endl;    
 
     file << "ARCHITECTURE impl OF " << entityName << " IS " << std::endl;
-    for (const auto &node : group->getNodes()) {
-        hlim::Node_Signal *signal = dynamic_cast<hlim::Node_Signal *>(node.get());
-        if (signal != nullptr) {
-            if (!signal->isOrphaned())
-                if (inputSignals.find(signal) == inputSignals.end() && outputSignals.find(signal) == outputSignals.end()) {
-                    std::string signalType = "something"; ///@todo: codeFormatting
-                    file << m_codeFormatting->getIndentation() << "SIGNAL " << getSignalName(signal) << " : " << signalType << "; "<< std::endl;
-                }
+    file << m_codeFormatting->getIndentation() << "-- Combinatory signals" << std::endl;
+    for (const auto &signal : requiredCombinatorySignals) {
+        if (inputSignals.find(signal) == inputSignals.end() && outputSignals.find(signal) == outputSignals.end()) {
+            file << m_codeFormatting->getIndentation() << "SIGNAL " << getSignalName(signal) << " : ";
+            formatConnectionType(file, signal->getConnectionType());
+            file << "; "<< std::endl;
+        }
+    }
+    file << m_codeFormatting->getIndentation() << "-- Register signals" << std::endl;
+    for (const auto &signal : requiredRegisterSignals) {
+        if (inputSignals.find(signal) == inputSignals.end() && outputSignals.find(signal) == outputSignals.end()) {
+            file << m_codeFormatting->getIndentation() << "SIGNAL " << getSignalName(signal) << " : ";
+            formatConnectionType(file, signal->getConnectionType());
+            file << "; "<< std::endl;
         }
     }
         
@@ -155,10 +251,19 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
     formatNode = [&](std::fstream &stream, const hlim::Node *node) {
         const hlim::Node_Signal *signalNode = dynamic_cast<const hlim::Node_Signal *>(node);
         if (signalNode != nullptr) { 
-            if (!signalNode->getName().empty() || signalNode->getInput(0).connection == nullptr) 
+//            std::cout << getSignalName(signalNode) << std::endl;; 
+            if (requiredCombinatorySignals.find(signalNode) != requiredCombinatorySignals.end() ||
+                requiredRegisterSignals.find(signalNode) != requiredRegisterSignals.end() ||
+                inputSignals.find(signalNode) != inputSignals.end() ||
+                outputSignals.find(signalNode) != outputSignals.end())
+                
                 stream << getSignalName(signalNode); 
-            else
-                formatNode(stream, signalNode->getInput(0).connection->node);
+            else {
+                if (signalNode->getInput(0).connection == nullptr)
+                    stream << "UNCONNECTED";
+                else
+                    formatNode(stream, signalNode->getInput(0).connection->node);
+            }
             return;            
         }
         
@@ -171,7 +276,7 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
                 case hlim::Node_Arithmetic::SUB: stream << " - "; break;
                 case hlim::Node_Arithmetic::MUL: stream << " * "; break;
                 case hlim::Node_Arithmetic::DIV: stream << " / "; break;
-                case hlim::Node_Arithmetic::REM: stream << " % "; break;
+                case hlim::Node_Arithmetic::REM: stream << " MOD "; break;
                 default:
                     MHDL_ASSERT_HINT(false, "Unhandled operation!");
             };
@@ -210,44 +315,55 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
             stream << ")";
             return; 
         }
+        const hlim::Node_Rewire *rewireNode = dynamic_cast<const hlim::Node_Rewire*>(node);
+        if (rewireNode != nullptr) { 
+            
+            if (rewireNode->getNumInputs() == 1) {
+                formatNode(stream, rewireNode->getInput(0).connection->node);
+                
+                ///@todo be mindfull of bits vs single element vectors!
+                unsigned bitExtractIdx;
+                if (rewireNode->getOp().isBitExtract(bitExtractIdx)) {
+                    stream << "[" << bitExtractIdx << "]";
+                } else 
+                    stream << "(UNHANDLED_REWIRE_OP)";
+            } else 
+                stream << "UNHANDLED_REWIRE_OP";
+            
+            return; 
+        }
         stream << "unhandled_operation" << node->getTypeName();
     };
         
     file << "BEGIN" << std::endl;
-    file << m_codeFormatting->getIndentation() << "combinatory : process()" << std::endl;
+    file << m_codeFormatting->getIndentation() << "combinatory : PROCESS()" << std::endl;
     file << m_codeFormatting->getIndentation() << "BEGIN" << std::endl;
-    for (const auto &node : group->getNodes()) {
-        hlim::Node_Signal *signal = dynamic_cast<hlim::Node_Signal *>(node.get());
-        if (signal != nullptr) {
-            if (!signal->getName().empty() && node->getInput(0).connection != nullptr) {
-                hlim::Node *sourceNode = node->getInput(0).connection->node;
-
-                file << m_codeFormatting->getIndentation() << m_codeFormatting->getIndentation() << getSignalName(signal) << " := ";
-                formatNode(file, sourceNode);
-                file << ";" << std::endl;
-                
-            }
+    for (const hlim::Node_Signal *signal : requiredCombinatorySignals) {
+        if (inputSignals.find(signal) != inputSignals.end()) continue;
+        
+        file << m_codeFormatting->getIndentation() << m_codeFormatting->getIndentation() << getSignalName(signal) << " := ";
+        if (signal->getInput(0).connection != nullptr) {
+            hlim::Node *sourceNode = signal->getInput(0).connection->node;
+            formatNode(file, sourceNode);
+        } else {
+            file << "UNCONNECTED";
         }
+        file << ";" << std::endl;
     }
     
     file << m_codeFormatting->getIndentation() << "END PROCESS;" << std::endl << std::endl;
 
-    file << m_codeFormatting->getIndentation() << "registers : process(clk)" << std::endl;
+    file << m_codeFormatting->getIndentation() << "registers : PROCESS(clk)" << std::endl;
     file << m_codeFormatting->getIndentation() << "BEGIN" << std::endl;
     file << m_codeFormatting->getIndentation() << m_codeFormatting->getIndentation() << "IF (rising_edge(clk)) THEN" << std::endl;
-    for (const auto &node : group->getNodes()) {
-        const hlim::Node_Register *reg = dynamic_cast<const hlim::Node_Register *>(node.get());
-        if (reg != nullptr) {
-            if (reg->getInput(0).connection != nullptr) {
-                const hlim::Node_Signal *sourceNode = dynamic_cast<const hlim::Node_Signal *>(reg->getInput(0).connection->node);
-                for (const auto &outputConnection : reg->getOutput(0).connections) {
-                    const hlim::Node_Signal *destinationNode = dynamic_cast<const hlim::Node_Signal *>(outputConnection->node);
+    for (const hlim::Node_Register *reg : requiredRegisters) {
+        const hlim::Node_Signal *sourceNode = dynamic_cast<const hlim::Node_Signal *>(reg->getInput(0).connection->node);
+        for (const auto &outputConnection : reg->getOutput(0).connections) {
+            const hlim::Node_Signal *destinationNode = dynamic_cast<const hlim::Node_Signal *>(outputConnection->node);
 
-                    file << m_codeFormatting->getIndentation() << m_codeFormatting->getIndentation() << m_codeFormatting->getIndentation() << getSignalName(destinationNode) << " := ";
-                    formatNode(file, sourceNode);
-                    file << ";" << std::endl;
-                }
-            }
+            file << m_codeFormatting->getIndentation() << m_codeFormatting->getIndentation() << m_codeFormatting->getIndentation() << getSignalName(destinationNode) << " := ";
+            formatNode(file, sourceNode);
+            file << ";" << std::endl;
         }
     }
     file << m_codeFormatting->getIndentation() << m_codeFormatting->getIndentation() << "END IF;" << std::endl;
