@@ -81,4 +81,4 @@ target_link_libraries(metaHDL_core PUBLIC
     ${Boost_LIBRARIES}
 )
 
-
+target_compile_features(metaHDL_core PUBLIC cxx_std_20)

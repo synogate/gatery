@@ -25,7 +25,7 @@ namespace utils {
 
 #if defined(_MSC_VER)
 
-#warning "StackTrace not yet implemented"
+#pragma message ( "StackTrace not yet implemented" )
 
 /// @todo: look into stack tracing on windows
     
