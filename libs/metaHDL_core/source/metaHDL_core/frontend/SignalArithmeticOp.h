@@ -42,7 +42,6 @@ SignalType SignalArithmeticOp::operator()(const SignalType &lhs, const SignalTyp
     hlim::Node_Signal *rhsSignal = rhs.getNode();
     MHDL_ASSERT(lhsSignal != nullptr);
     MHDL_ASSERT(rhsSignal != nullptr);
-    MHDL_DESIGNCHECK_HINT(lhsSignal->getConnectionType() == rhsSignal->getConnectionType(), "Can only perform arithmetic operations on operands of same type (e.g. width).");
     
     hlim::Node_Arithmetic *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Arithmetic>(m_op);
     node->recordStackTrace();

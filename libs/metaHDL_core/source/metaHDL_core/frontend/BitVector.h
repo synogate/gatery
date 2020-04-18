@@ -26,8 +26,8 @@ struct Selection {
     static Selection RangeIncl(int start, int endIncl);
     static Selection StridedRange(int start, int end, int stride);
 
-    static Selection Slice(int offset, unsigned size);
-    static Selection StridedSlice(int offset, unsigned size, int stride);
+    static Selection Slice(int offset, size_t size);
+    static Selection StridedSlice(int offset, size_t size, int stride);
 };
 
 /**
@@ -41,11 +41,11 @@ class BaseBitVector : public ElementarySignal
         
         BaseBitVector(const FinalType &rhs) { assign(rhs); }
         
-        virtual void resize(unsigned width);
+        virtual void resize(size_t width);
         
-        Bit operator[](int idx);
+        Bit operator[](size_t idx);
 
-        FinalType operator()(int offset, unsigned size) { return operator()(Selection::Range(offset, size)); }
+        FinalType operator()(int offset, size_t size) { return operator()(Selection::Range(offset, size)); }
         FinalType operator()(const Selection &selection) { }
 
         FinalType &operator=(const FinalType &rhs) { assign(rhs); return *this; }
@@ -57,7 +57,7 @@ class BaseBitVector : public ElementarySignal
 
 
 template<typename FinalType>
-void BaseBitVector<FinalType>::resize(unsigned width)
+void BaseBitVector<FinalType>::resize(size_t width)
 {
     MHDL_DESIGNCHECK_HINT(m_node->isOrphaned(), "Can not resize signal once it is connected (driving or driven).");
     
@@ -66,7 +66,7 @@ void BaseBitVector<FinalType>::resize(unsigned width)
 
 
 template<typename FinalType>
-Bit BaseBitVector<FinalType>::operator[](int idx)
+Bit BaseBitVector<FinalType>::operator[](size_t idx)
 {
     hlim::Node_Rewire *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Rewire>(1);
     node->recordStackTrace();
@@ -78,7 +78,7 @@ Bit BaseBitVector<FinalType>::operator[](int idx)
         .subwidth = 1,
         .source = hlim::Node_Rewire::OutputRange::INPUT,
         .inputIdx = 0,
-        .inputOffset = (unsigned) idx,
+        .inputOffset = (size_t) idx,
     });
     node->setOp(std::move(rewireOp));
     
@@ -100,10 +100,10 @@ class BitVector : public BaseBitVector<BitVector>
         using isUntypedBitvectorSignal = void;        
         
         BitVector() = default;
-        BitVector(unsigned width);
+        BitVector(size_t width);
         BitVector(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType);
     protected:
-        virtual hlim::ConnectionType getSignalType(unsigned width) const override;
+        virtual hlim::ConnectionType getSignalType(size_t width) const override;
 
 };
 

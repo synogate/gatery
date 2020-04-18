@@ -5,7 +5,7 @@ namespace core {
 namespace frontend {
     
 
-BitVector::BitVector(unsigned width)
+BitVector::BitVector(size_t width)
 { 
     resize(width); 
 }
@@ -15,7 +15,7 @@ BitVector::BitVector(hlim::Node::OutputPort *port, const hlim::ConnectionType &c
     
 }
 
-hlim::ConnectionType BitVector::getSignalType(unsigned width) const
+hlim::ConnectionType BitVector::getSignalType(size_t width) const
 {
     hlim::ConnectionType connectionType;
     

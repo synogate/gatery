@@ -23,10 +23,10 @@ struct ConnectionType
     
     Interpretation interpretation = RAW;
     
-    unsigned width = 0;
-    unsigned fixedPoint_denominator = 1;
+    size_t width = 0;
+    size_t fixedPoint_denominator = 1;
     bool float_signBit = false;
-    unsigned float_mantissaBits = 0;
+    size_t float_mantissaBits = 0;
     int float_exponentBias = 0;
     
     bool operator==(const ConnectionType &rhs) const;
@@ -39,7 +39,7 @@ class ConnectionType
     public:
         virtual ~ConnectionType() = default;
 
-        virtual unsigned getTotalWidth() const = 0;
+        virtual size_t getTotalWidth() const = 0;
     protected:
 };
 
@@ -54,14 +54,14 @@ class BusConnectionType : public ConnectionType
             FLOAT
         };
         
-        virtual unsigned getTotalWidth() const override { return m_width; }
+        virtual size_t getTotalWidth() const override { return m_width; }
     protected:
         Interpretation m_interpretation = RAW;
         
-        unsigned m_width = 1;
-        unsigned m_fixedPoint_denominator = 1;
+        size_t m_width = 1;
+        size_t m_fixedPoint_denominator = 1;
         bool m_float_signBit = false;
-        unsigned m_float_mantissaBits = 0;
+        size_t m_float_mantissaBits = 0;
         int m_float_exponentBias = 0;
 };
 
@@ -73,7 +73,7 @@ class CompoundConnectionType : public ConnectionType
             ConnectionType *type;
         };
 
-        virtual unsigned getTotalWidth() const override;
+        virtual size_t getTotalWidth() const override;
     protected:
         std::vector<SubConnection> m_subConnections;
 };

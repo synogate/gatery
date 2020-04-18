@@ -20,8 +20,8 @@ class Node_Arithmetic : public Node
         
         virtual std::string getTypeName() const override { return "Arithmetic"; }
         virtual void assertValidity() const override { }
-        virtual std::string getInputName(unsigned idx) const override { return idx==0?"a":"b"; }
-        virtual std::string getOutputName(unsigned idx) const override { return "out"; }
+        virtual std::string getInputName(size_t idx) const override { return idx==0?"a":"b"; }
+        virtual std::string getOutputName(size_t idx) const override { return "out"; }
 
         inline Op getOp() const { return m_op; }
     protected:

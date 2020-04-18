@@ -13,7 +13,7 @@ namespace utils {
 class StackTrace
 {
     public:
-        void record(unsigned size, unsigned skipTop);
+        void record(size_t size, size_t skipTop);
         const std::vector<void*> &getTrace() const { return m_trace; }
         std::vector<std::string> formatEntries() const;
     protected:

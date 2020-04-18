@@ -19,7 +19,7 @@ class NodeGroup;
 class Node
 {
     public:
-        Node(NodeGroup *group, unsigned numInputs, unsigned numOutputs);
+        Node(NodeGroup *group, size_t numInputs, size_t numOutputs);
         virtual ~Node() { }
         
         struct Port {
@@ -43,8 +43,8 @@ class Node
         
         virtual std::string getTypeName() const = 0;
         virtual void assertValidity() const = 0;
-        virtual std::string getInputName(unsigned idx) const = 0;
-        virtual std::string getOutputName(unsigned idx) const = 0;
+        virtual std::string getInputName(size_t idx) const = 0;
+        virtual std::string getOutputName(size_t idx) const = 0;
         
         inline void recordStackTrace() { m_stackTrace.record(10, 1); }
         inline const utils::StackTrace &getStackTrace() const { return m_stackTrace; }

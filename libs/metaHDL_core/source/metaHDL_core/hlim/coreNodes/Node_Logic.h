@@ -22,8 +22,8 @@ class Node_Logic : public Node
         
         virtual std::string getTypeName() const override { return ""; }
         virtual void assertValidity() const override { }
-        virtual std::string getInputName(unsigned idx) const override { return ""; }
-        virtual std::string getOutputName(unsigned idx) const override { return "output"; }
+        virtual std::string getInputName(size_t idx) const override { return ""; }
+        virtual std::string getOutputName(size_t idx) const override { return "output"; }
 
         inline Op getOp() const { return m_op; }
     protected:

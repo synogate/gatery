@@ -19,7 +19,7 @@ void NodeGroup::cullUnnamedSignalNodes()
     for (auto &c : m_children)
         c->cullUnnamedSignalNodes();
     
-    for (unsigned i = 0; i < m_nodes.size(); i++) {
+    for (size_t i = 0; i < m_nodes.size(); i++) {
         Node_Signal *signal = dynamic_cast<Node_Signal*>(m_nodes[i].get());
         if (signal == nullptr)
             continue;

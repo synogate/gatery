@@ -76,7 +76,7 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
         if (initialName.empty())
             initialName = "unnamed";
         std::string name = initialName;
-        unsigned index = 2;
+        size_t index = 2;
         while (usedSignalNames.find(name) != usedSignalNames.end())
             name = (boost::format("%s_%d") % initialName % index++).str();
         signalNames[node] = name;
@@ -306,7 +306,7 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
         const hlim::Node_Multiplexer *muxNode = dynamic_cast<const hlim::Node_Multiplexer*>(node);
         if (muxNode != nullptr) { 
             stream << "(";
-            for (unsigned i = 1; i+1 < muxNode->getNumInputs(); i++) {
+            for (size_t i = 1; i+1 < muxNode->getNumInputs(); i++) {
                 formatNode(stream, muxNode->getInput(i).connection->node);
                 stream << " when ( ";
                 formatNode(stream, muxNode->getInput(0).connection->node);
@@ -319,7 +319,7 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
         const hlim::Node_Rewire *rewireNode = dynamic_cast<const hlim::Node_Rewire*>(node);
         if (rewireNode != nullptr) { 
             
-            unsigned bitExtractIdx;
+            size_t bitExtractIdx;
             if (rewireNode->getOp().isBitExtract(bitExtractIdx)) {
                 formatNode(stream, rewireNode->getInput(0).connection->node);
                 

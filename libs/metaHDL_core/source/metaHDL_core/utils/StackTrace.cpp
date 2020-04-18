@@ -29,20 +29,20 @@ namespace utils {
 
 /// @todo: look into stack tracing on windows
     
-void StackTrace::record(unsigned size, unsigned skipTop) { }
+void StackTrace::record(size_t size, size_t skipTop) { }
 std::vector<std::string> StackTrace::formatEntries() const { return {"Not implemented"}; }
 
     
 #elif defined(__GNUC__) && defined(__linux__)
 
 
-void StackTrace::record(unsigned size, unsigned skipTop) 
+void StackTrace::record(size_t size, size_t skipTop) 
 { 
     std::vector<void*> fullBuffer(size+skipTop);
-    unsigned traceSize = backtrace(fullBuffer.data(), fullBuffer.size());
+    size_t traceSize = backtrace(fullBuffer.data(), fullBuffer.size());
     if (traceSize > skipTop) {
         m_trace.resize(traceSize - skipTop);
-        for (unsigned i = skipTop; i < traceSize; i++)
+        for (size_t i = skipTop; i < traceSize; i++)
             m_trace[i-skipTop] = fullBuffer[i];
     } else
         m_trace.clear();

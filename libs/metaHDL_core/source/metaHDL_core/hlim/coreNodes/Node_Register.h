@@ -15,8 +15,8 @@ class Node_Register : public Node
         
         virtual std::string getTypeName() const override { return "Register"; }
         virtual void assertValidity() const override { }
-        virtual std::string getInputName(unsigned idx) const override { switch (idx) { case 0: return "in"; case 1: return "enable"; default: return "resetValue"; } }
-        virtual std::string getOutputName(unsigned idx) const override { return "out"; }
+        virtual std::string getInputName(size_t idx) const override { switch (idx) { case 0: return "in"; case 1: return "enable"; default: return "resetValue"; } }
+        virtual std::string getOutputName(size_t idx) const override { return "out"; }
 };
 
 }

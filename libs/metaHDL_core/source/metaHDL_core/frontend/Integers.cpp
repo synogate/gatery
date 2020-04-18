@@ -4,7 +4,7 @@ namespace mhdl {
 namespace core {    
 namespace frontend {
     
-hlim::ConnectionType UnsignedInteger::getSignalType(unsigned width) const
+hlim::ConnectionType UnsignedInteger::getSignalType(size_t width) const
 {
     hlim::ConnectionType connectionType;
     
@@ -16,7 +16,7 @@ hlim::ConnectionType UnsignedInteger::getSignalType(unsigned width) const
 }
 
 
-hlim::ConnectionType SignedInteger::getSignalType(unsigned width) const
+hlim::ConnectionType SignedInteger::getSignalType(size_t width) const
 {
     hlim::ConnectionType connectionType;
     

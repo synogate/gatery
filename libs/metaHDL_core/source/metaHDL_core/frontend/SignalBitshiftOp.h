@@ -54,7 +54,7 @@ SignalType SignalBitShiftOp::operator()(const SignalType &operand) {
     hlim::Node_Rewire *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Rewire>(1);
     node->recordStackTrace();
     
-    unsigned absShift = std::abs(m_shift);
+    size_t absShift = std::abs(m_shift);
     
     hlim::Node_Rewire::RewireOperation rewireOp;
     if (m_rotate) {
@@ -66,12 +66,12 @@ SignalType SignalBitShiftOp::operator()(const SignalType &operand) {
                     .subwidth = signal->getConnectionType().width - absShift,
                     .source = hlim::Node_Rewire::OutputRange::INPUT,
                     .inputIdx = 0,
-                    .inputOffset = (unsigned) absShift,
+                    .inputOffset = (size_t) absShift,
                 });
             }
             
             if (m_duplicateLeft) {
-                for (unsigned i = 0; i < (unsigned) absShift; i++) {
+                for (size_t i = 0; i < (size_t) absShift; i++) {
                     rewireOp.ranges.push_back({
                         .subwidth = 1,
                         .source = hlim::Node_Rewire::OutputRange::INPUT,
@@ -87,7 +87,7 @@ SignalType SignalBitShiftOp::operator()(const SignalType &operand) {
             }
         } else {
             if (m_duplicateRight) {
-                for (unsigned i = 0; i < (unsigned) absShift; i++) {
+                for (size_t i = 0; i < (size_t) absShift; i++) {
                     rewireOp.ranges.push_back({
                         .subwidth = 1,
                         .source = hlim::Node_Rewire::OutputRange::INPUT,

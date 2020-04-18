@@ -36,7 +36,7 @@ class PipelineRegisterFactory : public RegisterFactory
         
         ///@todo overload for compound signals
         template<typename DataSignal, typename = std::enable_if_t<utils::isElementarySignal<DataSignal>::value>>
-        DataSignal delayBy(DataSignal inputSignal, Bit enableSignal, DataSignal resetValue, unsigned ticks);
+        DataSignal delayBy(DataSignal inputSignal, Bit enableSignal, DataSignal resetValue, size_t ticks);
 
         ///@todo overload for compound signals
         template<typename DataSignal, typename = std::enable_if_t<utils::isSignal<DataSignal>::value>>

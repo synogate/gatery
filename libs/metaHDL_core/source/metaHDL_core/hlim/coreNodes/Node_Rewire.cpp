@@ -5,7 +5,7 @@ namespace core {
 namespace hlim {
     
     
-bool Node_Rewire::RewireOperation::isBitExtract(unsigned &bitIndex) const
+bool Node_Rewire::RewireOperation::isBitExtract(size_t& bitIndex) const
 {
     if (ranges.size() == 1) {
         if (ranges[0].subwidth == 1 &&
@@ -19,7 +19,7 @@ bool Node_Rewire::RewireOperation::isBitExtract(unsigned &bitIndex) const
     return false;
 }
 
-Node_Rewire::Node_Rewire(NodeGroup *group, unsigned numInputs) : Node(group, numInputs, 1)
+Node_Rewire::Node_Rewire(NodeGroup *group, size_t numInputs) : Node(group, numInputs, 1)
 {
     
 }

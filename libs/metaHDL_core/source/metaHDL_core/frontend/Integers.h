@@ -15,11 +15,11 @@ class UnsignedInteger : public BaseBitVector<UnsignedInteger>
         using isUnsignedIntegerSignal = void;
         
         UnsignedInteger() = default;
-        UnsignedInteger(unsigned width) { resize(width); }
+        UnsignedInteger(size_t width) { resize(width); }
         UnsignedInteger(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType) : BaseBitVector<UnsignedInteger>(port, connectionType) { }
         
     protected:
-        virtual hlim::ConnectionType getSignalType(unsigned width) const override;
+        virtual hlim::ConnectionType getSignalType(size_t width) const override;
         
 };
 
@@ -31,11 +31,11 @@ class SignedInteger : public BaseBitVector<SignedInteger>
         using isSignedIntegerSignal = void;
         
         SignedInteger() = default;
-        SignedInteger(unsigned width) { resize(width); }
+        SignedInteger(size_t width) { resize(width); }
         SignedInteger(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType) : BaseBitVector<SignedInteger>(port, connectionType) { }
         
     protected:
-        virtual hlim::ConnectionType getSignalType(unsigned width) const override;
+        virtual hlim::ConnectionType getSignalType(size_t width) const override;
         
 };
 

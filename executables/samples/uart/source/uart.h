@@ -31,12 +31,12 @@ class UartTransmitter
         using BitVector = mhdl::core::frontend::BitVector;
         using Bit = mhdl::core::frontend::Bit;
 
-        UartTransmitter(unsigned dataBits, unsigned stopBits, unsigned clockCyclesPerBit);
+        UartTransmitter(size_t dataBits, size_t stopBits, size_t clockCyclesPerBit);
         
         void operator()(const BitVector &inputData, const Bit &send, Bit &outputLine, Bit &idle);
     protected:
-        unsigned m_dataBits;
-        unsigned m_stopBits; 
-        unsigned m_clockCyclesPerBit;
+        size_t m_dataBits;
+        size_t m_stopBits; 
+        size_t m_clockCyclesPerBit;
 };
 

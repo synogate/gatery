@@ -10,7 +10,7 @@ namespace core {
 namespace hlim {
 
 
-Node::Node(NodeGroup *group, unsigned numInputs, unsigned numOutputs) : m_nodeGroup(group)//, m_nodeGroupListEntry(*this)
+Node::Node(NodeGroup *group, size_t numInputs, size_t numOutputs) : m_nodeGroup(group)//, m_nodeGroupListEntry(*this)
 {
     //m_nodeGroup->getNodes().insertBack(m_nodeGroupListEntry);
     m_inputs.resize(numInputs, InputPort(this));

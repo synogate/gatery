@@ -20,7 +20,7 @@ Bit::Bit(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionTyp
     
 }
 
-hlim::ConnectionType Bit::getSignalType(unsigned width) const 
+hlim::ConnectionType Bit::getSignalType(size_t width) const 
 {
     MHDL_ASSERT(width == 1);
     
