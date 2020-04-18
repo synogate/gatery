@@ -14,6 +14,21 @@ NodeGroup *NodeGroup::addChildNodeGroup()
 }
 
 
+
+bool NodeGroup::isChildOf(const NodeGroup *other) const
+{
+    const NodeGroup *parent = getParent();
+    while (parent != nullptr) {
+        if (parent == other)
+            return true;
+        parent = parent->getParent();
+    }
+    return false;
+}
+
+
+
+
 void NodeGroup::cullUnnamedSignalNodes()
 {
     for (auto &c : m_children)

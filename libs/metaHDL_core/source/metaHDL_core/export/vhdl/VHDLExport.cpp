@@ -1,16 +1,20 @@
 #include "VHDLExport.h"
 
+#include "VHDL_AST.h"
+
 #include "../../utils/Range.h"
 #include "../../utils/Enumerate.h"
 #include "../../utils/Exceptions.h"
 
-#include "../../hlim//coreNodes/Node_Arithmetic.h"
-#include "../../hlim//coreNodes/Node_Compare.h"
-#include "../../hlim//coreNodes/Node_Logic.h"
-#include "../../hlim//coreNodes/Node_Multiplexer.h"
-#include "../../hlim//coreNodes/Node_Signal.h"
-#include "../../hlim//coreNodes/Node_Register.h"
-#include "../../hlim//coreNodes/Node_Rewire.h"
+#include "../../hlim/coreNodes/Node_Arithmetic.h"
+#include "../../hlim/coreNodes/Node_Compare.h"
+#include "../../hlim/coreNodes/Node_Logic.h"
+#include "../../hlim/coreNodes/Node_Multiplexer.h"
+#include "../../hlim/coreNodes/Node_Signal.h"
+#include "../../hlim/coreNodes/Node_Register.h"
+#include "../../hlim/coreNodes/Node_Rewire.h"
+
+#include "VHDL_AST.h"
 
 #include <set>
 #include <map>
@@ -19,12 +23,13 @@
 #include <iostream>
 #include <iomanip>
 #include <functional>
-
-#include "../../utils/Range.h"
+#include <list>
+#include <map>
 
 namespace mhdl {
 namespace core {
 namespace vhdl {
+    
 
 VHDLExport::VHDLExport(std::filesystem::path destination)
 {
@@ -41,7 +46,13 @@ VHDLExport &VHDLExport::setFormatting(CodeFormatting *codeFormatting)
 
 void VHDLExport::operator()(const hlim::Circuit &circuit)
 {
+#if 0
     exportGroup(circuit.getRootNodeGroup());
+#else
+    ast::Root root(m_codeFormatting.get());
+    root.createEntity().buildFrom((hlim::NodeGroup*)circuit.getRootNodeGroup());
+    root.print();
+#endif
 }
 
 void VHDLExport::exportGroup(const hlim::NodeGroup *group)
@@ -59,7 +70,7 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
     std::fstream file(filePath.string().c_str(), std::fstream::out);
     file << m_codeFormatting->getFileHeader();
     
-    file << "LIBRARY ieee;" << std::endl << "USE ieee.std_logic_1164.ALL;" << std::endl << std::endl;
+    file << "LIBRARY ieee;" << std::endl << "USE ieee.std_logic_1164.ALL;" << std::endl << "USE ieee.numeric_std.all;" << std::endl << std::endl;
     
         
     std::string entityName = group->getName(); ///@todo: codeFormatting
@@ -148,7 +159,7 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
     }
     
     // Find all signals that need to be made explicit due to explicit naming, vhdl language restrictions, etc.
-    std::set<const hlim::Node_Signal*> requiredCombinatorySignals = outputSignals;
+    std::set<const hlim::Node_Signal*> requiredCombinatorialSignals = outputSignals;
     std::set<const hlim::Node_Signal*> requiredRegisterSignals;
     std::set<const hlim::Node_Register*> requiredRegisters;
     {
@@ -162,7 +173,8 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
             openList.erase(openList.begin());
             closedList.insert(signal);
             
-//std::cout << "signal " << getSignalName(signal) << std::endl;
+            if (!signal->getName().empty())
+                requiredCombinatorialSignals.insert(signal);
             
             //MHDL_DESIGNCHECK_HINT(signal->getInput(0).connection != nullptr, "Undriven signal used to compose outputs!");
             if (signal->getInput(0).connection == nullptr) continue; ///@todo Enforce
@@ -173,12 +185,8 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
             if (dynamic_cast<const hlim::Node_Signal*>(driver) != nullptr) {
                 auto driverSignal = (const hlim::Node_Signal*)driver;
                 
-                if (closedList.find(driverSignal) != closedList.end()) continue;
-                
+                if (closedList.find(driverSignal) != closedList.end()) continue;                
                 openList.insert(driverSignal);
-                
-                if (!driverSignal->getName().empty())
-                    requiredCombinatorySignals.insert(driverSignal);
             } else {
                 if (dynamic_cast<const hlim::Node_Register*>(driver) != nullptr) {
                     requiredRegisters.insert((const hlim::Node_Register*)driver);
@@ -186,13 +194,16 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
                     requiredRegisterSignals.insert(signal);
                     
                     MHDL_ASSERT(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(0).connection->node) != nullptr);
-                    requiredCombinatorySignals.insert(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(0).connection->node));
+                    requiredCombinatorialSignals.insert(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(0).connection->node));
 
                     MHDL_ASSERT(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(1).connection->node) != nullptr);
-                    requiredCombinatorySignals.insert(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(1).connection->node));
+                    requiredCombinatorialSignals.insert(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(1).connection->node));
 
                     MHDL_ASSERT(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(2).connection->node) != nullptr);
-                    requiredCombinatorySignals.insert(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(2).connection->node));
+                    requiredCombinatorialSignals.insert(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(2).connection->node));
+                } else
+                if (dynamic_cast<const hlim::Node_Multiplexer*>(driver) != nullptr) {
+                    requiredCombinatorialSignals.insert(signal);
                 }
                 
                 for (auto i : utils::Range(driver->getNumInputs())) {
@@ -207,9 +218,9 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
     }
     
     for (auto sig : requiredRegisterSignals) {
-        auto it = requiredCombinatorySignals.find(sig);
-        if (it != requiredCombinatorySignals.end())
-            requiredCombinatorySignals.erase(it);
+        auto it = requiredCombinatorialSignals.find(sig);
+        if (it != requiredCombinatorialSignals.end())
+            requiredCombinatorialSignals.erase(it);
     }
     
     file << "ENTITY " << entityName << " IS " << std::endl;
@@ -231,8 +242,8 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
     file << "END " << entityName << ";" << std::endl << std::endl;    
 
     file << "ARCHITECTURE impl OF " << entityName << " IS " << std::endl;
-    file << m_codeFormatting->getIndentation() << "-- Combinatory signals" << std::endl;
-    for (const auto &signal : requiredCombinatorySignals) {
+    file << m_codeFormatting->getIndentation() << "-- Combinatorial signals" << std::endl;
+    for (const auto &signal : requiredCombinatorialSignals) {
         if (inputSignals.find(signal) == inputSignals.end() && outputSignals.find(signal) == outputSignals.end()) {
             file << m_codeFormatting->getIndentation() << "SIGNAL " << getSignalName(signal) << " : ";
             formatConnectionType(file, signal->getConnectionType());
@@ -253,7 +264,7 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
         const hlim::Node_Signal *signalNode = dynamic_cast<const hlim::Node_Signal *>(node);
         if (signalNode != nullptr) { 
 //            std::cout << getSignalName(signalNode) << std::endl;; 
-            if (requiredCombinatorySignals.find(signalNode) != requiredCombinatorySignals.end() ||
+            if (requiredCombinatorialSignals.find(signalNode) != requiredCombinatorialSignals.end() ||
                 requiredRegisterSignals.find(signalNode) != requiredRegisterSignals.end() ||
                 inputSignals.find(signalNode) != inputSignals.end() ||
                 outputSignals.find(signalNode) != outputSignals.end())
@@ -341,14 +352,16 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
                             stream << "(" << range.inputOffset + range.subwidth - 1 << " downto " << range.inputOffset << ")";
                         break;
                         case hlim::Node_Rewire::OutputRange::CONST_ZERO:
-                            stream << "2#";
+                            stream << '"';
                             for (auto j : utils::Range(range.subwidth))
                                 stream << "0";
+                            stream << '"';
                         break;
                         case hlim::Node_Rewire::OutputRange::CONST_ONE:
-                            stream << "2#";
+                            stream << '"';
                             for (auto j : utils::Range(range.subwidth))
                                 stream << "1";
+                            stream << '"';
                         break;
                         default:
                             stream << "UNHANDLED_REWIRE_OP";
@@ -363,14 +376,35 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
         }
         stream << "unhandled_operation" << node->getTypeName();
     };
-        
+    
     file << "BEGIN" << std::endl;
-    file << m_codeFormatting->getIndentation() << "combinatory : PROCESS()" << std::endl;
+    
+    
+    
+    
+    
+    file << m_codeFormatting->getIndentation() << "combinatorial : PROCESS(";
+    {
+        bool first = true;
+        for (const auto &signal : requiredCombinatorialSignals) {
+            if (!first) 
+                file << ", "; 
+            first = false;
+            file << getSignalName(signal);
+        }
+        for (const auto &signal : requiredRegisterSignals) {
+            if (!first)
+                file << ", ";
+            first = false;
+            file << getSignalName(signal);
+        }
+    }
+    file << ")" << std::endl;
     file << m_codeFormatting->getIndentation() << "BEGIN" << std::endl;
-    for (const hlim::Node_Signal *signal : requiredCombinatorySignals) {
+    for (const hlim::Node_Signal *signal : requiredCombinatorialSignals) {
         if (inputSignals.find(signal) != inputSignals.end()) continue;
         
-        file << m_codeFormatting->getIndentation() << m_codeFormatting->getIndentation() << getSignalName(signal) << " := ";
+        file << m_codeFormatting->getIndentation() << m_codeFormatting->getIndentation() << getSignalName(signal) << " <= ";
         if (signal->getInput(0).connection != nullptr) {
             hlim::Node *sourceNode = signal->getInput(0).connection->node;
             formatNode(file, sourceNode);
@@ -390,7 +424,7 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
         for (const auto &outputConnection : reg->getOutput(0).connections) {
             const hlim::Node_Signal *destinationNode = dynamic_cast<const hlim::Node_Signal *>(outputConnection->node);
 
-            file << m_codeFormatting->getIndentation() << m_codeFormatting->getIndentation() << m_codeFormatting->getIndentation() << getSignalName(destinationNode) << " := ";
+            file << m_codeFormatting->getIndentation() << m_codeFormatting->getIndentation() << m_codeFormatting->getIndentation() << getSignalName(destinationNode) << " <= ";
             formatNode(file, sourceNode);
             file << ";" << std::endl;
         }
@@ -401,7 +435,7 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
     file << "END impl;" << std::endl;
 }
 
-        
+
 }
 }
 }
