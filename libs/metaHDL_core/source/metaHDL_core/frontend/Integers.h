@@ -3,9 +3,7 @@
 #include "BitVector.h"
 #include "SignalArithmeticOp.h"
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
 
 class UnsignedInteger : public BaseBitVector<UnsignedInteger>
 {
@@ -39,6 +37,4 @@ class SignedInteger : public BaseBitVector<SignedInteger>
         
 };
 
-}
-}
 }

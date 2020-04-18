@@ -11,9 +11,7 @@
 
 #include <vector>
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
 
 // concat x = a && b && c;
     
@@ -108,6 +106,4 @@ class BitVector : public BaseBitVector<BitVector>
 };
 
 
-}
-}
 }

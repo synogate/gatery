@@ -5,9 +5,7 @@
 
 #include <vector>
 
-namespace mhdl {
-namespace core {    
-namespace hlim {
+namespace mhdl::core::hlim {
     
 class Node_Rewire : public Node
 {
@@ -48,6 +46,4 @@ class Node_Rewire : public Node
         RewireOperation m_rewireOperation;
 };
 
-}
-}
 }

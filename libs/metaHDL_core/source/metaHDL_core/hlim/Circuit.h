@@ -7,9 +7,7 @@
 #include <vector>
 #include <memory>
 
-namespace mhdl {
-namespace core {    
-namespace hlim {
+namespace mhdl::core::hlim {
 
 
 class Circuit
@@ -26,6 +24,4 @@ class Circuit
 };
 
 
-}
-}
 }

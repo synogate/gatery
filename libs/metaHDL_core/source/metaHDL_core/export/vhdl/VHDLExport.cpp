@@ -26,9 +26,7 @@
 #include <list>
 #include <map>
 
-namespace mhdl {
-namespace core {
-namespace vhdl {
+namespace mhdl::core::vhdl {
     
 
 VHDLExport::VHDLExport(std::filesystem::path destination)
@@ -436,6 +434,4 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
 }
 
 
-}
-}
 }

@@ -1,8 +1,6 @@
 #pragma once
 
-namespace mhdl {
-namespace core {    
-namespace hlim {
+namespace mhdl::core::hlim {
 
 /**
  * @todo write docs
@@ -12,6 +10,4 @@ class Constraint
 };
 
 
-}
-}
 }

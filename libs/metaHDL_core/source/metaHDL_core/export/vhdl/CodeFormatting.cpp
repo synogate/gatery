@@ -2,9 +2,7 @@
 
 #include <boost/format.hpp>
 
-namespace mhdl {
-namespace core {
-namespace vhdl {
+namespace mhdl::core::vhdl {
 
 
 DefaultCodeFormatting::DefaultCodeFormatting()
@@ -54,6 +52,4 @@ std::string DefaultCodeFormatting::getGlobalName(const std::string &id, unsigned
 }
 
 
-}
-}
 }

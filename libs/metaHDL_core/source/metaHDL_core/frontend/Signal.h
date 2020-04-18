@@ -11,9 +11,7 @@
 #include <boost/format.hpp>
 
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
     
 class BaseSignal {
     public:
@@ -100,6 +98,4 @@ class CompoundSignal : public BaseSignal
 */
 
     
-}
-}
 }

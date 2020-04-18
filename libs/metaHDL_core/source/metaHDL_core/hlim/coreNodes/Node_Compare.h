@@ -1,9 +1,7 @@
 #pragma once
 #include "../Node.h"
 
-namespace mhdl {
-namespace core {    
-namespace hlim {
+namespace mhdl::core::hlim {
     
 class Node_Compare : public Node
 {
@@ -24,6 +22,4 @@ class Node_Compare : public Node
     protected:
 };
 
-}
-}
 }

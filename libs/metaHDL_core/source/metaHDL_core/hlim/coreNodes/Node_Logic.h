@@ -1,9 +1,7 @@
 #pragma once
 #include "../Node.h"
 
-namespace mhdl {
-namespace core {    
-namespace hlim {
+namespace mhdl::core::hlim {
     
 class Node_Logic : public Node
 {
@@ -30,6 +28,4 @@ class Node_Logic : public Node
         Op m_op;
 };
 
-}
-}
 }

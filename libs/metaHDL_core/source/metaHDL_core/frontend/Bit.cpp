@@ -1,8 +1,6 @@
 #include "Bit.h"
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
 
 
 Bit::Bit()
@@ -34,6 +32,4 @@ hlim::ConnectionType Bit::getSignalType(size_t width) const
 
 
 
-}
-}
 }

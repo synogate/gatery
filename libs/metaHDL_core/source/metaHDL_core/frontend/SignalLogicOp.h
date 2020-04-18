@@ -13,9 +13,7 @@
 #include <boost/format.hpp>
 
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
     
 class SignalLogicOp
 {
@@ -107,7 +105,5 @@ MHDL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(utils::isElementarySignal, operator^=, hlim
 
 
 
-}
-}
 }
 

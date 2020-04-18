@@ -2,9 +2,7 @@
 
 #include "../../utils/Exceptions.h"
 
-namespace mhdl {
-namespace core {    
-namespace hlim {
+namespace mhdl::core::hlim {
     
 void Node_Signal::setConnectionType(const ConnectionType &connectionType)
 {
@@ -13,6 +11,4 @@ void Node_Signal::setConnectionType(const ConnectionType &connectionType)
     m_connectionType = connectionType;
 }
 
-}
-}
 }

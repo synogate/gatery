@@ -6,9 +6,7 @@
 #include "../hlim/coreNodes/Node_Register.h"
 #include "../frontend/Bit.h"
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
 
 class Bit;    
     
@@ -60,6 +58,4 @@ DataSignal RegisterFactory::operator()(const DataSignal &inputSignal, const Bit 
 }
 
 
-}
-}
 }

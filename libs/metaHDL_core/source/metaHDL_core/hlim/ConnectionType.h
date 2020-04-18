@@ -5,9 +5,7 @@
 #include <string>
 #include <memory>
 
-namespace mhdl {
-namespace core {    
-namespace hlim {
+namespace mhdl::core::hlim {
 
 #if 1
 struct ConnectionType
@@ -79,8 +77,6 @@ class CompoundConnectionType : public ConnectionType
 };
 #endif
 
-}
-}
 }
 
 #endif // CONNECTIONTYPE_H

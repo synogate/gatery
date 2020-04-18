@@ -5,9 +5,7 @@
 #include "../utils/Exceptions.h"
 #include "../utils/Range.h"
 
-namespace mhdl {
-namespace core {    
-namespace hlim {
+namespace mhdl::core::hlim {
 
 
 Node::Node(NodeGroup *group, size_t numInputs, size_t numOutputs) : m_nodeGroup(group)//, m_nodeGroupListEntry(*this)
@@ -78,6 +76,4 @@ void Node::moveToGroup(NodeGroup *group)
 }
 
 
-}
-}
 }

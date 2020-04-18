@@ -6,9 +6,7 @@
 
 #include <iostream>
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
 
 
 ElementarySignal::ElementarySignal()
@@ -58,6 +56,4 @@ void CompoundSignal::registerSignal(const std::string &name, BaseSignal &signal)
 }
 */
 
-}
-}
 }

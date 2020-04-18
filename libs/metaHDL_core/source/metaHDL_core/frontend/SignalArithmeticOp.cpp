@@ -1,8 +1,6 @@
 #include "SignalArithmeticOp.h"
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
 
 hlim::ConnectionType SignalArithmeticOp::getResultingType(const hlim::ConnectionType &lhs, const hlim::ConnectionType &rhs)
 {
@@ -11,6 +9,4 @@ hlim::ConnectionType SignalArithmeticOp::getResultingType(const hlim::Connection
     return lhs; /// @todo
 }
 
-}
-}
 }

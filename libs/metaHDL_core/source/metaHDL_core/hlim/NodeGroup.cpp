@@ -2,9 +2,7 @@
 
 #include "coreNodes/Node_Signal.h"
 
-namespace mhdl {
-namespace core {
-namespace hlim {
+namespace mhdl::core::hlim {
 
 NodeGroup *NodeGroup::addChildNodeGroup()
 {
@@ -81,6 +79,4 @@ void NodeGroup::cullUnnamedSignalNodes()
 }
 
 
-}
-}
 }

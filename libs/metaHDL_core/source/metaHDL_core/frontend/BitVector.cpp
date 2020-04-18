@@ -1,8 +1,6 @@
 #include "BitVector.h"
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
     
 
 BitVector::BitVector(size_t width)
@@ -26,6 +24,4 @@ hlim::ConnectionType BitVector::getSignalType(size_t width) const
 }
 
 
-}
-}
 }

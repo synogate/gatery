@@ -10,9 +10,7 @@
 #include <set>
 #include <string>
 
-namespace mhdl {
-namespace core {    
-namespace hlim {
+namespace mhdl::core::hlim {
 
 class NodeGroup;
     
@@ -73,6 +71,4 @@ class Node
         
 };
 
-}
-}
 }

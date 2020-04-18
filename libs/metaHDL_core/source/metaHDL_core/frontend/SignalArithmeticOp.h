@@ -15,9 +15,7 @@
 #include <boost/format.hpp>
 
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
     
 class SignalArithmeticOp
 {
@@ -88,6 +86,4 @@ MHDL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator%=, hli
     
 #undef MHDL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR
 
-}
-}
 }

@@ -4,9 +4,7 @@
 
 #include <boost/format.hpp>
 
-namespace mhdl {
-namespace core {    
-namespace hlim {
+namespace mhdl::core::hlim {
     
 class Node_Multiplexer : public Node
 {
@@ -19,6 +17,4 @@ class Node_Multiplexer : public Node
         virtual std::string getOutputName(size_t idx) const override { return "out"; }
 };
 
-}
-}
 }

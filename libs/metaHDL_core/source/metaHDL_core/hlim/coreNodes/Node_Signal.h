@@ -3,9 +3,7 @@
 #include "../Node.h"
 #include "../ConnectionType.h"
 
-namespace mhdl {
-namespace core {    
-namespace hlim {
+namespace mhdl::core::hlim {
     
 class Node_Signal : public Node
 {
@@ -23,6 +21,4 @@ class Node_Signal : public Node
         ConnectionType m_connectionType;
 };
 
-}
-}
 }

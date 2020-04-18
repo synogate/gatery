@@ -1,8 +1,6 @@
 #include "Node_Rewire.h"
 
-namespace mhdl {
-namespace core {    
-namespace hlim {
+namespace mhdl::core::hlim {
     
     
 bool Node_Rewire::RewireOperation::isBitExtract(size_t& bitIndex) const
@@ -24,6 +22,4 @@ Node_Rewire::Node_Rewire(NodeGroup *group, size_t numInputs) : Node(group, numIn
     
 }
 
-}
-}
 }

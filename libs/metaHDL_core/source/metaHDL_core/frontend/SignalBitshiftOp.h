@@ -17,9 +17,7 @@
 #include <optional>
 
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
     
 class SignalBitShiftOp
 {
@@ -150,6 +148,4 @@ SignalType &operator>>=(SignalType &signal, int amount)  {
 }
 
 
-}
-}
 }

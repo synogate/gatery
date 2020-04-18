@@ -1,8 +1,6 @@
 #include "Integers.h"
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
     
 hlim::ConnectionType UnsignedInteger::getSignalType(size_t width) const
 {
@@ -29,6 +27,4 @@ hlim::ConnectionType SignedInteger::getSignalType(size_t width) const
 
 
 
-}
-}
 }
