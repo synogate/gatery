@@ -61,6 +61,7 @@ class Node
 
         bool isOrphaned() const;
         const NodeGroup *getGroup() const { return m_nodeGroup; }
+        NodeGroup *getGroup() { return m_nodeGroup; }
         
         void moveToGroup(NodeGroup *group);
     protected:

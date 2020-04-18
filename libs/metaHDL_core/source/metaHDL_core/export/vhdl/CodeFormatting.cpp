@@ -1,5 +1,7 @@
 #include "CodeFormatting.h"
 
+#include <boost/format.hpp>
+
 namespace mhdl {
 namespace core {
 namespace vhdl {
@@ -30,6 +32,25 @@ std::filesystem::path DefaultCodeFormatting::getFilename(const hlim::NodeGroup *
     }
     
     return path;
+}
+
+std::string DefaultCodeFormatting::getNodeName(const hlim::Node *node, unsigned attempt) const
+{
+    std::string initialName = node->getName();
+    if (initialName.empty())
+        initialName = "unnamed";
+    if (attempt == 0)
+        return initialName;
+    
+    return (boost::format("%s_%d") % initialName % (attempt+1)).str();
+}
+
+std::string DefaultCodeFormatting::getGlobalName(const std::string &id, unsigned attempt) const
+{
+    if (attempt == 0)
+        return id;
+    
+    return (boost::format("%s_%d") % id % (attempt+1)).str();
 }
 
 
