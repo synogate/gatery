@@ -8,13 +8,12 @@
 
 #include "../../hlim/coreNodes/Node_Arithmetic.h"
 #include "../../hlim/coreNodes/Node_Compare.h"
+#include "../../hlim/coreNodes/Node_Constant.h"
 #include "../../hlim/coreNodes/Node_Logic.h"
 #include "../../hlim/coreNodes/Node_Multiplexer.h"
 #include "../../hlim/coreNodes/Node_Signal.h"
 #include "../../hlim/coreNodes/Node_Register.h"
 #include "../../hlim/coreNodes/Node_Rewire.h"
-
-#include "VHDL_AST.h"
 
 #include <set>
 #include <map>
@@ -369,9 +368,26 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
                 if (op.size() > 1)
                     stream << ")";
             }
-            
+
             return; 
         }
+
+        if (const hlim::Node_Constant* constNode = dynamic_cast<const hlim::Node_Constant*>(node))
+        {
+            // todo: what is the right way to get node width?
+            const auto& conType = ((const hlim::Node_Signal*)(*constNode->getOutput(0).connections.begin())->node)->getConnectionType();
+
+            char sep = '"';
+            if (conType.interpretation == hlim::ConnectionType::BOOL)
+                sep = '\'';
+
+            stream << sep;
+            for (bool b : constNode->getValue().bitVec)
+                stream << (b ? '1' : '0');
+            stream << sep;
+            return;
+        }
+
         stream << "unhandled_operation" << node->getTypeName();
     };
     
