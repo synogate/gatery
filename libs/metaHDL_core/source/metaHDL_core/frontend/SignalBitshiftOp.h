@@ -46,7 +46,7 @@ class SignalBitShiftOp
 };
 
 
-template<typename SignalType, typename = std::enable_if_t<utils::isBitVectorSignal<SignalType>::value>>
+template<typename SignalType, typename>
 SignalType SignalBitShiftOp::operator()(const SignalType &operand) {
     hlim::Node_Signal *signal = operand.getNode();
     MHDL_ASSERT(signal != nullptr);

@@ -36,7 +36,7 @@ class SignalArithmeticOp
 };
 
 
-template<typename SignalType, typename = std::enable_if_t<utils::isNumberSignal<SignalType>::value>>
+template<typename SignalType, typename>
 SignalType SignalArithmeticOp::operator()(const SignalType &lhs, const SignalType &rhs) {
     hlim::Node_Signal *lhsSignal = lhs.getNode();
     hlim::Node_Signal *rhsSignal = rhs.getNode();

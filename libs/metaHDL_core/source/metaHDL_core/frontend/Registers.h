@@ -4,6 +4,7 @@
 #include "Scope.h"
 #include "../utils/Traits.h"
 #include "../hlim/coreNodes/Node_Register.h"
+#include "../frontend/Bit.h"
 
 namespace mhdl {
 namespace core {    
@@ -46,7 +47,7 @@ class PipelineRegisterFactory : public RegisterFactory
 
 
 
-template<typename DataSignal, typename = std::enable_if_t<utils::isElementarySignal<DataSignal>::value>>
+template<typename DataSignal, typename>
 DataSignal RegisterFactory::operator()(const DataSignal &inputSignal, const Bit &enableSignal, const DataSignal &resetValue)
 {
     hlim::Node_Register *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Register>();

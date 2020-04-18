@@ -52,12 +52,12 @@ class Node
         inline void setName(std::string name) { m_name = std::move(name); }
         inline const std::string &getName() const { return m_name; }
         
-        unsigned getNumInputs() const { return m_inputs.size(); }
-        InputPort &getInput(unsigned index) { return m_inputs[index]; }
-        const InputPort &getInput(unsigned index) const { return m_inputs[index]; }
-        unsigned getNumOutputs() const { return m_outputs.size(); }
-        OutputPort &getOutput(unsigned index) { return m_outputs[index]; }
-        const OutputPort &getOutput(unsigned index) const { return m_outputs[index]; }
+        size_t getNumInputs() const { return m_inputs.size(); }
+        InputPort &getInput(size_t index) { return m_inputs[index]; }
+        const InputPort &getInput(size_t index) const { return m_inputs[index]; }
+        size_t getNumOutputs() const { return m_outputs.size(); }
+        OutputPort &getOutput(size_t index) { return m_outputs[index]; }
+        const OutputPort &getOutput(size_t index) const { return m_outputs[index]; }
 
         bool isOrphaned() const;
         const NodeGroup *getGroup() const { return m_nodeGroup; }

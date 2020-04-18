@@ -61,7 +61,7 @@ void Node::moveToGroup(NodeGroup *group)
 {
     if (group == m_nodeGroup) return;
     
-    unsigned index = ~0u;
+    size_t index = ~0u;
     for (auto i : utils::Range(m_nodeGroup->m_nodes.size()))
         if (m_nodeGroup->m_nodes[i].get() == this) {
             index = i;
