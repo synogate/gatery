@@ -5,6 +5,8 @@ find_package(Boost COMPONENTS system thread REQUIRED)
 add_library(metaHDL_core STATIC
     source/metaHDL_core/export/vhdl/CodeFormatting.cpp
     source/metaHDL_core/export/vhdl/CodeFormatting.h
+    source/metaHDL_core/export/vhdl/VHDL_AST.cpp
+    source/metaHDL_core/export/vhdl/VHDL_AST.h
     source/metaHDL_core/export/vhdl/VHDLExport.cpp
     source/metaHDL_core/export/vhdl/VHDLExport.h
 
@@ -46,6 +48,8 @@ add_library(metaHDL_core STATIC
     source/metaHDL_core/hlim/ConnectionType.h
     source/metaHDL_core/hlim/Node.cpp
     source/metaHDL_core/hlim/Node.h
+    source/metaHDL_core/hlim/NodeCategorization.cpp
+    source/metaHDL_core/hlim/NodeCategorization.h
     source/metaHDL_core/hlim/NodeGroup.cpp
     source/metaHDL_core/hlim/NodeGroup.h
 
