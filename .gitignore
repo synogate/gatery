@@ -2,4 +2,9 @@
 build**/
 doc/gen/*
 .vs
+x64
+Debug
+Release
+*.user
+*.filters
 
