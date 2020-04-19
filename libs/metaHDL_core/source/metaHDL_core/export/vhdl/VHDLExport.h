@@ -7,9 +7,7 @@
 #include <filesystem>
 #include <memory>
 
-namespace mhdl {
-namespace core {
-namespace vhdl {
+namespace mhdl::core::vhdl {
 
 /**
  * @todo write docs
@@ -29,6 +27,4 @@ class VHDLExport
         void exportGroup(const hlim::NodeGroup *group);
 };
 
-}
-}
 }

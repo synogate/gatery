@@ -1,15 +1,11 @@
 #include "Registers.h"
 
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
 
 RegisterFactory::RegisterFactory(const ClockConfig &clockConfig, const ResetConfig &resetConfig)
 {
 }
 
-}
-}
 }
 

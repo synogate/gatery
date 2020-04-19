@@ -8,9 +8,7 @@
 #include <string>
 #include <memory>
 
-namespace mhdl {
-namespace core {
-namespace hlim {
+namespace mhdl::core::hlim {
 
 class Node_Signal;
 class Node_Register;
@@ -66,6 +64,4 @@ NodeType *NodeGroup::addNode(Args&&... args) {
     return (NodeType *) m_nodes.back().get();
 }
 
-}
-}
 }

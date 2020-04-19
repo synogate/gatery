@@ -1,16 +1,12 @@
 #pragma once
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
     
     
 class SignalDelay
 {
 };
 
-}
-}
 }
 
 

@@ -13,9 +13,7 @@
 #include <boost/format.hpp>
 
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
     
 ///@todo overload for compound signals
 template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>    
@@ -85,6 +83,4 @@ void driveWith(SignalType &dst, const SignalType &src)  {
 
 
 
-}
-}
 }

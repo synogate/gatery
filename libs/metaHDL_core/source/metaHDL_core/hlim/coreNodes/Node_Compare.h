@@ -1,9 +1,7 @@
 #pragma once
 #include "../Node.h"
 
-namespace mhdl {
-namespace core {    
-namespace hlim {
+namespace mhdl::core::hlim {
     
 class Node_Compare : public Node
 {
@@ -19,11 +17,9 @@ class Node_Compare : public Node
         
         virtual std::string getTypeName() const override { return "Compare"; }
         virtual void assertValidity() const override { }
-        virtual std::string getInputName(unsigned idx) const override { return idx==0?"a":"b"; }
-        virtual std::string getOutputName(unsigned idx) const override { return "out"; }
+        virtual std::string getInputName(size_t idx) const override { return idx==0?"a":"b"; }
+        virtual std::string getOutputName(size_t idx) const override { return "out"; }
     protected:
 };
 
-}
-}
 }

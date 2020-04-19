@@ -2,9 +2,7 @@
 
 #include <stdexcept>
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
 
 thread_local Scope *Scope::m_currentScope = nullptr;
 
@@ -44,6 +42,4 @@ RootScope::RootScope() : Scope(this)
 }
 
 
-}
-}
 }

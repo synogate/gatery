@@ -3,9 +3,7 @@
 #include "../hlim/NodeGroup.h"
 #include "../hlim/Circuit.h"
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
 
 class RootScope;
     
@@ -38,6 +36,4 @@ class RootScope : public Scope
         hlim::Circuit m_circuit;
 };
 
-}
-}
 }

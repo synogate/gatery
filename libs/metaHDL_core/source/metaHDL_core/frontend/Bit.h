@@ -9,9 +9,7 @@
 
 #include <vector>
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
     
 class Bit : public ElementarySignal
 {
@@ -25,9 +23,7 @@ class Bit : public ElementarySignal
         
         Bit &operator=(const Bit &rhs) { assign(rhs); return *this; }
     protected:
-        virtual hlim::ConnectionType getSignalType(unsigned width) const override;
+        virtual hlim::ConnectionType getSignalType(size_t width) const override;
 };
 
-}
-}
 }

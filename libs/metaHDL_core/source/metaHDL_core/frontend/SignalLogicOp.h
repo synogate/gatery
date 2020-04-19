@@ -13,9 +13,7 @@
 #include <boost/format.hpp>
 
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
     
 class SignalLogicOp
 {
@@ -35,7 +33,7 @@ class SignalLogicOp
         hlim::Node_Logic::Op m_op;
 };
 
-template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>
+template<typename SignalType, typename>
 SignalType SignalLogicOp::operator()(const SignalType &lhs, const SignalType &rhs) {
     MHDL_DESIGNCHECK_HINT(m_op != hlim::Node_Logic::NOT, "Trying to perform a not operation with two operands.");
     
@@ -53,7 +51,7 @@ SignalType SignalLogicOp::operator()(const SignalType &lhs, const SignalType &rh
     return SignalType(&node->getOutput(0), getResultingType(lhsSignal->getConnectionType(), rhsSignal->getConnectionType()));
 }
 
-template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>
+template<typename SignalType, typename>
 SignalType SignalLogicOp::operator()(const SignalType &lhs) {
     MHDL_DESIGNCHECK_HINT(m_op == hlim::Node_Logic::NOT, "Trying to perform a non-not operation with one operand.");
     
@@ -107,7 +105,5 @@ MHDL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(utils::isElementarySignal, operator^=, hlim
 
 
 
-}
-}
 }
 

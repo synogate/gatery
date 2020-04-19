@@ -1,8 +1,6 @@
 #include "ConnectionType.h"
 
-namespace mhdl {
-namespace core {    
-namespace hlim {
+namespace mhdl::core::hlim {
 
 
 bool ConnectionType::operator==(const ConnectionType &rhs) const
@@ -19,9 +17,9 @@ bool ConnectionType::operator==(const ConnectionType &rhs) const
     
 #if 0
 
-unsigned CompoundConnectionType::getTotalWidth() const 
+size_t CompoundConnectionType::getTotalWidth() const 
 {
-    unsigned sum = 0;
+    size_t sum = 0;
     for (const auto &sub : m_subConnections)
         sum += sub.type->getTotalWidth();
     return sum;
@@ -29,7 +27,5 @@ unsigned CompoundConnectionType::getTotalWidth() const
 
 #endif
 
-}
-}
 }
 

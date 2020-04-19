@@ -5,12 +5,10 @@
 #include "../utils/Exceptions.h"
 #include "../utils/Range.h"
 
-namespace mhdl {
-namespace core {    
-namespace hlim {
+namespace mhdl::core::hlim {
 
 
-Node::Node(NodeGroup *group, unsigned numInputs, unsigned numOutputs) : m_nodeGroup(group)//, m_nodeGroupListEntry(*this)
+Node::Node(NodeGroup *group, size_t numInputs, size_t numOutputs) : m_nodeGroup(group)//, m_nodeGroupListEntry(*this)
 {
     //m_nodeGroup->getNodes().insertBack(m_nodeGroupListEntry);
     m_inputs.resize(numInputs, InputPort(this));
@@ -61,7 +59,7 @@ void Node::moveToGroup(NodeGroup *group)
 {
     if (group == m_nodeGroup) return;
     
-    unsigned index = ~0u;
+    size_t index = ~0u;
     for (auto i : utils::Range(m_nodeGroup->m_nodes.size()))
         if (m_nodeGroup->m_nodes[i].get() == this) {
             index = i;
@@ -78,6 +76,4 @@ void Node::moveToGroup(NodeGroup *group)
 }
 
 
-}
-}
 }

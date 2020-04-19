@@ -18,6 +18,7 @@
 
 #include "uart.h"
 
+#include <metaHDL_core/frontend/Constant.h>
 #include <metaHDL_core/frontend/Registers.h>
 #include <metaHDL_core/frontend/Integers.h>
 #include <metaHDL_core/frontend/Scope.h>
@@ -31,7 +32,7 @@
 using namespace mhdl::core::frontend;
 
 
-UartTransmitter::UartTransmitter(unsigned dataBits, unsigned stopBits, unsigned clockCyclesPerBit) :
+UartTransmitter::UartTransmitter(size_t dataBits, size_t stopBits, size_t clockCyclesPerBit) :
             m_dataBits(dataBits), m_stopBits(stopBits), m_clockCyclesPerBit(clockCyclesPerBit) 
 {
 }
@@ -61,38 +62,25 @@ void UartTransmitter::operator()(const BitVector &inputData, const Bit &send, Bi
     auto loadingData = idle & send;
     MHDL_NAMED(loadingData);
     
-    UnsignedInteger bitCounterOne(5);
-    MHDL_NAMED(bitCounterOne);
-    UnsignedInteger bitCounterZero(5);
-    MHDL_NAMED(bitCounterZero);
-    
-    auto newBitCounter = mux(idle, bitCounter+bitCounterOne, bitCounterZero);
+    auto newBitCounter = mux(idle, bitCounter + 1_uvec, 0b00000_uvec);
     MHDL_NAMED(newBitCounter);
-    driveWith(bitCounter, reg(newBitCounter, enable, bitCounterZero));
+    driveWith(bitCounter, reg(newBitCounter, enable, 0x00_uvec));
     
     auto done = bitCounter[4];
     MHDL_NAMED(done);
     
     auto nextData = mux(loadingData, shiftedData, inputData);
     MHDL_NAMED(nextData);
-
-    // todo: constants!
-    Bit high;
-    MHDL_NAMED(high);
-    Bit low;
-    MHDL_NAMED(low);
-
-
     
     
     // Default to high (idle state).
-    outputLine = high;    
+    outputLine = 1_bit;    
     // Send start bit while loading data
-    outputLine = mux(loadingData, outputLine, low);
+    outputLine = mux(loadingData, outputLine, 0_bit);
     // Send data bits if not idle
     outputLine = mux(idle, currentData[0], outputLine);
     // Send stop bit if done
-    outputLine = mux(done, outputLine, high);
+    outputLine = mux(done, outputLine, 1_bit);
     
 
     driveWith(currentData, reg(nextData, enable, dataZero));
@@ -100,10 +88,10 @@ void UartTransmitter::operator()(const BitVector &inputData, const Bit &send, Bi
     auto nextIdle = idle;
     MHDL_NAMED(nextIdle);
     // if loading new data not idle in next step
-    nextIdle = mux(loadingData, low, nextIdle);
+    nextIdle = mux(loadingData, 0_bit, nextIdle);
     // if done, idle in next step
-    nextIdle = mux(done, high, nextIdle);
+    nextIdle = mux(done, 1_bit, nextIdle);
         
-    driveWith(idle, reg(nextIdle, enable, high));
+    driveWith(idle, reg(nextIdle, enable, 1_bit));
 }
 

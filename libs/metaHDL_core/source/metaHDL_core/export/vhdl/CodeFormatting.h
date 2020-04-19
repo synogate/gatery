@@ -6,9 +6,7 @@
 
 #include <string>
 
-namespace mhdl {
-namespace core {
-namespace vhdl {
+namespace mhdl::core::vhdl {
 
 
 /**
@@ -45,6 +43,4 @@ class DefaultCodeFormatting : public CodeFormatting
 };
 
 
-}
-}
 }

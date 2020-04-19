@@ -5,7 +5,7 @@
 namespace mhdl {
 namespace utils {
     
-template<typename Integral = unsigned>
+template<typename Integral = size_t>
 class Range
 {
     public:

@@ -8,13 +8,12 @@
 
 #include "../../hlim/coreNodes/Node_Arithmetic.h"
 #include "../../hlim/coreNodes/Node_Compare.h"
+#include "../../hlim/coreNodes/Node_Constant.h"
 #include "../../hlim/coreNodes/Node_Logic.h"
 #include "../../hlim/coreNodes/Node_Multiplexer.h"
 #include "../../hlim/coreNodes/Node_Signal.h"
 #include "../../hlim/coreNodes/Node_Register.h"
 #include "../../hlim/coreNodes/Node_Rewire.h"
-
-#include "VHDL_AST.h"
 
 #include <set>
 #include <map>
@@ -26,9 +25,7 @@
 #include <list>
 #include <map>
 
-namespace mhdl {
-namespace core {
-namespace vhdl {
+namespace mhdl::core::vhdl {
     
 
 VHDLExport::VHDLExport(std::filesystem::path destination)
@@ -87,7 +84,7 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
         if (initialName.empty())
             initialName = "unnamed";
         std::string name = initialName;
-        unsigned index = 2;
+        size_t index = 2;
         while (usedSignalNames.find(name) != usedSignalNames.end())
             name = (boost::format("%s_%d") % initialName % index++).str();
         signalNames[node] = name;
@@ -317,7 +314,7 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
         const hlim::Node_Multiplexer *muxNode = dynamic_cast<const hlim::Node_Multiplexer*>(node);
         if (muxNode != nullptr) { 
             stream << "(";
-            for (unsigned i = 1; i+1 < muxNode->getNumInputs(); i++) {
+            for (size_t i = 1; i+1 < muxNode->getNumInputs(); i++) {
                 formatNode(stream, muxNode->getInput(i).connection->node);
                 stream << " when ( ";
                 formatNode(stream, muxNode->getInput(0).connection->node);
@@ -330,7 +327,7 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
         const hlim::Node_Rewire *rewireNode = dynamic_cast<const hlim::Node_Rewire*>(node);
         if (rewireNode != nullptr) { 
             
-            unsigned bitExtractIdx;
+            size_t bitExtractIdx;
             if (rewireNode->getOp().isBitExtract(bitExtractIdx)) {
                 formatNode(stream, rewireNode->getInput(0).connection->node);
                 
@@ -371,9 +368,26 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
                 if (op.size() > 1)
                     stream << ")";
             }
-            
+
             return; 
         }
+
+        if (const hlim::Node_Constant* constNode = dynamic_cast<const hlim::Node_Constant*>(node))
+        {
+            // todo: what is the right way to get node width?
+            const auto& conType = ((const hlim::Node_Signal*)(*constNode->getOutput(0).connections.begin())->node)->getConnectionType();
+
+            char sep = '"';
+            if (conType.interpretation == hlim::ConnectionType::BOOL)
+                sep = '\'';
+
+            stream << sep;
+            for (bool b : constNode->getValue().bitVec)
+                stream << (b ? '1' : '0');
+            stream << sep;
+            return;
+        }
+
         stream << "unhandled_operation" << node->getTypeName();
     };
     
@@ -436,6 +450,4 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
 }
 
 
-}
-}
 }

@@ -4,10 +4,9 @@
 #include "Scope.h"
 #include "../utils/Traits.h"
 #include "../hlim/coreNodes/Node_Register.h"
+#include "../frontend/Bit.h"
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
 
 class Bit;    
     
@@ -35,7 +34,7 @@ class PipelineRegisterFactory : public RegisterFactory
         
         ///@todo overload for compound signals
         template<typename DataSignal, typename = std::enable_if_t<utils::isElementarySignal<DataSignal>::value>>
-        DataSignal delayBy(DataSignal inputSignal, Bit enableSignal, DataSignal resetValue, unsigned ticks);
+        DataSignal delayBy(DataSignal inputSignal, Bit enableSignal, DataSignal resetValue, size_t ticks);
 
         ///@todo overload for compound signals
         template<typename DataSignal, typename = std::enable_if_t<utils::isSignal<DataSignal>::value>>
@@ -46,7 +45,7 @@ class PipelineRegisterFactory : public RegisterFactory
 
 
 
-template<typename DataSignal, typename = std::enable_if_t<utils::isElementarySignal<DataSignal>::value>>
+template<typename DataSignal, typename>
 DataSignal RegisterFactory::operator()(const DataSignal &inputSignal, const Bit &enableSignal, const DataSignal &resetValue)
 {
     hlim::Node_Register *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Register>();
@@ -59,6 +58,4 @@ DataSignal RegisterFactory::operator()(const DataSignal &inputSignal, const Bit 
 }
 
 
-}
-}
 }

@@ -15,9 +15,7 @@
 #include <boost/format.hpp>
 
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
     
 class SignalArithmeticOp
 {
@@ -36,13 +34,12 @@ class SignalArithmeticOp
 };
 
 
-template<typename SignalType, typename = std::enable_if_t<utils::isNumberSignal<SignalType>::value>>
+template<typename SignalType, typename>
 SignalType SignalArithmeticOp::operator()(const SignalType &lhs, const SignalType &rhs) {
     hlim::Node_Signal *lhsSignal = lhs.getNode();
     hlim::Node_Signal *rhsSignal = rhs.getNode();
     MHDL_ASSERT(lhsSignal != nullptr);
     MHDL_ASSERT(rhsSignal != nullptr);
-    MHDL_DESIGNCHECK_HINT(lhsSignal->getConnectionType() == rhsSignal->getConnectionType(), "Can only perform arithmetic operations on operands of same type (e.g. width).");
     
     hlim::Node_Arithmetic *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Arithmetic>(m_op);
     node->recordStackTrace();
@@ -89,6 +86,4 @@ MHDL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator%=, hli
     
 #undef MHDL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR
 
-}
-}
 }

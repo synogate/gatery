@@ -26,10 +26,10 @@ class Enumerate
                 iterator operator++(int) { iterator oldIter = *this; this->operator++(); return oldIter; }
                 bool operator==(const iterator &rhs) const { return m_iter == rhs.m_iter; }
                 bool operator!=(const iterator &rhs) const { return m_iter != rhs.m_iter; }
-                std::pair<unsigned, typename DeferredIterator::value_type&> operator*() { return std::make_pair(m_index, std::ref(*m_iter)); }
+                std::pair<size_t, typename DeferredIterator::value_type&> operator*() { return std::make_pair(m_index, std::ref(*m_iter)); }
             protected:
                 DeferredIterator m_iter;
-                unsigned m_index = 0;
+                size_t m_index = 0;
         };
 
         iterator begin() { return iterator(m_container.begin()); }
@@ -57,10 +57,10 @@ class ConstEnumerate
                 iterator operator++(int) { iterator oldIter = *this; this->operator++(); return oldIter; }
                 bool operator==(const iterator &rhs) const { return m_iter == rhs.m_iter; }
                 bool operator!=(const iterator &rhs) const { return m_iter != rhs.m_iter; }
-                std::pair<unsigned, const typename DeferredIterator::value_type&> operator*() { return std::make_pair(m_index, std::ref(*m_iter)); }
+                std::pair<size_t, const typename DeferredIterator::value_type&> operator*() { return std::make_pair(m_index, std::ref(*m_iter)); }
             protected:
                 DeferredIterator m_iter;
-                unsigned m_index = 0;
+                size_t m_index = 0;
         };
 
         iterator begin() { return iterator(m_container.cbegin()); }

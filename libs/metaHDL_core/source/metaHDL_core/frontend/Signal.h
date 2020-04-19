@@ -11,9 +11,7 @@
 #include <boost/format.hpp>
 
 
-namespace mhdl {
-namespace core {    
-namespace frontend {
+namespace mhdl::core::frontend {
     
 class BaseSignal {
     public:
@@ -40,7 +38,7 @@ class ElementarySignal : public BaseSignal {
     public:
         using isElementarySignal = void;
         
-        unsigned getWidth() const { return m_node->getConnectionType().width; }
+        size_t getWidth() const { return m_node->getConnectionType().width; }
         
         inline hlim::Node_Signal *getNode() const { return m_node; }
         virtual void setName(std::string name) override { m_node->setName(std::move(name)); }
@@ -52,7 +50,7 @@ class ElementarySignal : public BaseSignal {
 
         mutable hlim::Node_Signal *m_node = nullptr; 
 
-        virtual hlim::ConnectionType getSignalType(unsigned width) const = 0;
+        virtual hlim::ConnectionType getSignalType(size_t width) const = 0;
         
         template<typename SignalType, typename>
         friend SignalType &assign(SignalType &lhs, const SignalType &rhs);
@@ -100,6 +98,4 @@ class CompoundSignal : public BaseSignal
 */
 
     
-}
-}
 }

@@ -57,7 +57,7 @@ class LinkedList
         iterator begin() { return iterator(m_first); }
         iterator end() { return iterator(); }
         
-        unsigned size() const { return m_count; }
+        size_t size() const { return m_count; }
         bool empty() const { return m_count == 0; }
         
         void deleteAll();
@@ -74,7 +74,7 @@ class LinkedList
     protected:
         ListEntry *m_first = nullptr;
         ListEntry *m_last = nullptr;
-        unsigned m_count = 0;
+        size_t m_count = 0;
 };
 
 }
