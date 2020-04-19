@@ -6,7 +6,7 @@ hlim::ConnectionType SignalArithmeticOp::getResultingType(const hlim::Connection
 {
     hlim::ConnectionType type = lhs;
     type.width = std::max(lhs.width, rhs.width);
-    return lhs; /// @todo
+    return type; /// @todo
 }
 
 }
