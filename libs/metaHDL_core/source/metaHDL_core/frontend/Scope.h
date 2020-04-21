@@ -4,36 +4,57 @@
 #include "../hlim/Circuit.h"
 
 namespace mhdl::core::frontend {
-
-class RootScope;
     
-class Scope
+    
+template<class FinalType>
+class BaseScope
 {
     public:
-        Scope();
-        ~Scope();
+        BaseScope() { m_parentScope = m_currentScope; m_currentScope = this; }
+        ~BaseScope() { m_currentScope = m_parentScope; }
+    protected:
+        FinalType *m_parentScope;
+        static thread_local FinalType *m_currentScope;
+};
+
+template<class FinalType>
+thread_local FinalType *BaseScope<FinalType>::m_currentScope = nullptr;
+    
+
+
+class GroupScope : public BaseScope<GroupScope>
+{
+    public:
+        GroupScope();
+        GroupScope(hlim::NodeGroup *nodeGroup);
         
-        Scope &setName(std::string name);
+        GroupScope &setName(std::string name);
         
-        static Scope *getCurrentScope() { return m_currentScope; }
+        static GroupScope *get() { return m_currentScope; }
         static hlim::NodeGroup *getCurrentNodeGroup() { return m_currentScope==nullptr?nullptr:m_currentScope->m_nodeGroup; }
     protected:
-        Scope(RootScope*);
-        
-        Scope *m_parentScope;
-        static thread_local Scope *m_currentScope;
-        
         hlim::NodeGroup *m_nodeGroup;
 };
 
-class RootScope : public Scope
+class FactoryOverride : public BaseScope<FactoryOverride>
 {
     public:
-        RootScope();
+        static FactoryOverride *get() { return m_currentScope; }
+    protected:
+};
+
+
+class DesignScope : public BaseScope<DesignScope>
+{
+    public:
+        DesignScope();
         
-        inline hlim::Circuit &getCircuit() { return m_circuit; }
+        hlim::Circuit &getCircuit() { return m_circuit; }
     protected:
         hlim::Circuit m_circuit;
+        GroupScope m_rootScope;
+        
+        // design affecting settings and their overrides go here, as well as tweaking settings (e.g. speed vs area parameters)
 };
 
 }

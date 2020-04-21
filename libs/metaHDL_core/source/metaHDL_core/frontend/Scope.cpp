@@ -1,45 +1,32 @@
 #include "Scope.h"
 
-#include <stdexcept>
 
 namespace mhdl::core::frontend {
-
-thread_local Scope *Scope::m_currentScope = nullptr;
-
-Scope::Scope()
-{
-    m_parentScope = m_currentScope;
-    m_currentScope = this;
     
+GroupScope::GroupScope() : BaseScope<GroupScope>()
+{
     m_nodeGroup = m_parentScope->m_nodeGroup->addChildNodeGroup();
     m_nodeGroup->recordStackTrace();
 }
 
-Scope::Scope(RootScope*)
+GroupScope::GroupScope(hlim::NodeGroup *nodeGroup)
 {
-    if (m_currentScope != nullptr)
-        throw std::runtime_error("Only one root scope can exist!");
-    m_parentScope = nullptr;
-    m_currentScope = this;
+    m_nodeGroup = nodeGroup;
 }
 
-Scope::~Scope()
-{
-    m_currentScope = m_parentScope;
-}
 
-Scope &Scope::setName(std::string name)
+GroupScope &GroupScope::setName(std::string name)
 {
     m_nodeGroup->setName(std::move(name));
     return *this;
 }
 
 
-RootScope::RootScope() : Scope(this) 
-{
-    m_nodeGroup = m_circuit.getRootNodeGroup();
-    m_nodeGroup->recordStackTrace();
+DesignScope::DesignScope() : BaseScope<DesignScope>(), m_rootScope(m_circuit.getRootNodeGroup())
+{ 
+    m_rootScope.setName("root");
+    
+    MHDL_DESIGNCHECK_HINT(m_parentScope == nullptr, "Only one design scope can be active at a time!");
 }
-
 
 }

@@ -52,6 +52,8 @@ add_library(metaHDL_core STATIC
     source/metaHDL_core/hlim/NodeCategorization.h
     source/metaHDL_core/hlim/NodeGroup.cpp
     source/metaHDL_core/hlim/NodeGroup.h
+    source/metaHDL_core/hlim/NodeIO.cpp
+    source/metaHDL_core/hlim/NodeIO.h
 
     source/metaHDL_core/utils/Enumerate.h
     source/metaHDL_core/utils/Exceptions.cpp
