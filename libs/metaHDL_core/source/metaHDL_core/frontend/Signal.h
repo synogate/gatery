@@ -31,9 +31,6 @@ void setName(T &signal, std::string name) {
     signal.setName(std::move(name));
 }
 
-#define MHDL_NAMED(x) mhdl::core::frontend::setName(x, #x)
-
-
 class ElementarySignal : public BaseSignal {
     public:
         using isElementarySignal = void;
@@ -65,10 +62,6 @@ hlim::Node_Signal *constructBinaryOperation(hlim::Node::OutputPort *lhs, hlim::N
 
 
 
-#define MHDL_SIGNAL \
-        virtual const char *getSignalTypeName() override { return GET_FUNCTION_NAME; }
-
-
 /*
 
 
@@ -76,6 +69,13 @@ hlim::Node_Signal *constructBinaryOperation(hlim::Node::OutputPort *lhs, hlim::N
         registerSignal(#x, x)
 
         
+ 
+ 
+ Bundles are templated wrappers around structs/containers
+ 
+ 
+ 
+
         // Bundles
 class CompoundSignal : public BaseSignal
 {

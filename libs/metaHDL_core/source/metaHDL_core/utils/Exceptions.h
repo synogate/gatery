@@ -1,7 +1,7 @@
 #pragma once
 
 #include "StackTrace.h"
-
+#include "Preprocessor.h"
 
 #include <boost/lexical_cast.hpp>
 
@@ -34,8 +34,6 @@ class InternalError : public MHDLError<std::logic_error>
         InternalError(const char *file, size_t line, const std::string &what) : MHDLError<std::logic_error>(file, line, what) { }
 };
 
-#define MHDL_ASSERT(x) { if (!(x)) { throw mhdl::utils::InternalError(__FILE__, __LINE__, std::string("Assertion failed: ") + #x); }}
-#define MHDL_ASSERT_HINT(x, message) { if (!(x)) { throw mhdl::utils::InternalError(__FILE__, __LINE__, std::string("Assertion failed: ") + #x + " Hint: " + message); }}
 
 
 class DesignError : public MHDLError<std::runtime_error>
@@ -43,9 +41,6 @@ class DesignError : public MHDLError<std::runtime_error>
     public:
         DesignError(const char *file, size_t line, const std::string &what)  : MHDLError<std::runtime_error>(file, line, what) { }
 };
-
-#define MHDL_DESIGNCHECK(x) { if (!(x)) { throw mhdl::utils::DesignError(__FILE__, __LINE__, std::string("Design failed: ") + #x); }}
-#define MHDL_DESIGNCHECK_HINT(x, message) { if (!(x)) { throw mhdl::utils::DesignError(__FILE__, __LINE__, std::string("Design failed: ") + #x + " Hint: " + message); }}
 
 
 template<class BaseError>
