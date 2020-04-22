@@ -22,7 +22,7 @@ class CodeFormatting
         
         virtual std::filesystem::path getFilename(const hlim::NodeGroup *nodeGroup) const = 0;
         
-        virtual std::string getNodeName(const hlim::Node *node, unsigned attempt) const = 0;
+        virtual std::string getNodeName(const hlim::BaseNode *node, unsigned attempt) const = 0;
         virtual std::string getGlobalName(const std::string &id, unsigned attempt) const = 0;
     protected:
         std::string m_indentation;
@@ -38,7 +38,7 @@ class DefaultCodeFormatting : public CodeFormatting
         
         virtual std::filesystem::path getFilename(const hlim::NodeGroup *nodeGroup) const override;
 
-        virtual std::string getNodeName(const hlim::Node *node, unsigned attempt) const override;
+        virtual std::string getNodeName(const hlim::BaseNode *node, unsigned attempt) const override;
         virtual std::string getGlobalName(const std::string &id, unsigned attempt) const override;
 };
 

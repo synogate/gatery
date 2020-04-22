@@ -32,7 +32,7 @@ std::filesystem::path DefaultCodeFormatting::getFilename(const hlim::NodeGroup *
     return path;
 }
 
-std::string DefaultCodeFormatting::getNodeName(const hlim::Node *node, unsigned attempt) const
+std::string DefaultCodeFormatting::getNodeName(const hlim::BaseNode *node, unsigned attempt) const
 {
     std::string initialName = node->getName();
     if (initialName.empty())

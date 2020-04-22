@@ -6,7 +6,7 @@
 
 namespace mhdl::core::hlim {
     
-class Node_Register : public Node
+class Node_Register : public Node<Node_Register>
 {
     public:
         enum Input {

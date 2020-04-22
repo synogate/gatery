@@ -7,18 +7,18 @@
 
 namespace mhdl::core::hlim {
 
-Node::Node() 
+BaseNode::BaseNode() 
 {
 }
 
-Node::Node(size_t numInputs, size_t numOutputs)
+BaseNode::BaseNode(size_t numInputs, size_t numOutputs)
 {
     resizeInputs(numInputs);
     resizeOutputs(numOutputs);
 }
 
 
-bool Node::isOrphaned() const
+bool BaseNode::isOrphaned() const
 {
     for (auto i : utils::Range(getNumInputPorts()))
         if (getDriver(i).node != nullptr) return false;
@@ -29,7 +29,7 @@ bool Node::isOrphaned() const
     return true;
 }
 
-void Node::moveToGroup(NodeGroup *group)
+void BaseNode::moveToGroup(NodeGroup *group)
 {
     if (group == m_nodeGroup) return;
     

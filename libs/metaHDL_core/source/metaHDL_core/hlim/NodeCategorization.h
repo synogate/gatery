@@ -12,7 +12,7 @@ namespace mhdl {
 namespace core {
 namespace hlim {
 
-class Node;
+class BaseNode;
 class Node_Signal;
 class Node_Register;
 
@@ -25,9 +25,9 @@ struct NodeCategorization
     std::map<Node_Signal*, NodeGroup*> childOutputSignals;
     std::set<Node_Signal*> internalSignals;
     std::set<Node_Register*> registers;
-    std::set<Node*> combinatorial;
-    std::set<Node*> unconnected;
-    std::set<Node*> unused;
+    std::set<BaseNode*> combinatorial;
+    std::set<BaseNode*> unconnected;
+    std::set<BaseNode*> unused;
     std::set<NodeGroup*> childGroups;
     
     void parse(NodeGroup *group, const std::function<bool(NodeGroup *child)> &includeChild);

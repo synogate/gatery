@@ -22,7 +22,7 @@ class Circuit
         
         void cullUnnamedSignalNodes();        
     protected:
-        std::vector<std::unique_ptr<Node>> m_nodes;
+        std::vector<std::unique_ptr<BaseNode>> m_nodes;
         std::unique_ptr<NodeGroup> m_root;
 };
 

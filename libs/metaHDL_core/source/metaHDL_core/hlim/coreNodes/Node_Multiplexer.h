@@ -6,7 +6,7 @@
 
 namespace mhdl::core::hlim {
     
-class Node_Multiplexer : public Node
+class Node_Multiplexer : public Node<Node_Multiplexer>
 {
     public:
         Node_Multiplexer(size_t numMultiplexedInputs) : Node(1+numMultiplexedInputs, 1) { }

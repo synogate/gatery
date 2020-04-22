@@ -5,7 +5,7 @@
 
 namespace mhdl::core::hlim {
     
-class Node_Signal : public Node
+class Node_Signal : public Node<Node_Signal>
 {
     public:
         Node_Signal() : Node(1, 1) {  }

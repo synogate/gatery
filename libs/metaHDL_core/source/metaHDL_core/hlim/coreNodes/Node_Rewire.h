@@ -7,7 +7,7 @@
 
 namespace mhdl::core::hlim {
     
-class Node_Rewire : public Node
+class Node_Rewire : public Node<Node_Rewire>
 {
     public:
         struct OutputRange {

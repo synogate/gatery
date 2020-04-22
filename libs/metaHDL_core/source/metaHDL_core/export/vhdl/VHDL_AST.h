@@ -23,7 +23,7 @@ namespace ast {
 class Namespace {
     public:
         /// Creates/retrieves name of a node (usually a signal).
-        std::string getName(const hlim::Node* node);
+        std::string getName(const hlim::BaseNode* node);
         /// Creates/retrieves name of a global entity (usually clock and reset signals).
         std::string getGlobalsName(const std::string &id);
 
@@ -34,7 +34,7 @@ class Namespace {
         Namespace *m_parent = nullptr;
         CodeFormatting *m_codeFormatting = nullptr;
         std::set<std::string> m_namesInUse;
-        std::map<const hlim::Node*, std::string> m_nodeNames;
+        std::map<const hlim::BaseNode*, std::string> m_nodeNames;
         std::map<std::string, std::string> m_globalsNames;
 };
 
@@ -66,7 +66,7 @@ struct CombinatorialBlock
 {
     Namespace nspace;
     Locals locals;
-    std::vector<hlim::Node*> nodes;
+    std::vector<hlim::BaseNode*> nodes;
     std::vector<Assignment> unconditionalAssignments;
     std::map<hlim::Node_Signal*, ConditionalAssignments> conditionalAssignments;
 };

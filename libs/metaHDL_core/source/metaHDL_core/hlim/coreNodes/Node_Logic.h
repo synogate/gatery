@@ -3,7 +3,7 @@
 
 namespace mhdl::core::hlim {
     
-class Node_Logic : public Node
+class Node_Logic : public Node<Node_Logic>
 {
     public:
         enum Op {

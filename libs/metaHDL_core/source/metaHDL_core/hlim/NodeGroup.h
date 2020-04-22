@@ -32,7 +32,7 @@ class NodeGroup
         
         inline const NodeGroup *getParent() const { return m_parent; }
         inline const std::string &getName() const { return m_name; }
-        inline const std::vector<Node*> &getNodes() const { return m_nodes; }
+        inline const std::vector<BaseNode*> &getNodes() const { return m_nodes; }
         inline const std::vector<std::unique_ptr<NodeGroup>> &getChildren() const { return m_children; }
 
 
@@ -40,13 +40,13 @@ class NodeGroup
     protected:
         std::string m_name;
         
-        std::vector<Node*> m_nodes;
+        std::vector<BaseNode*> m_nodes;
         std::vector<std::unique_ptr<NodeGroup>> m_children;
         NodeGroup *m_parent = nullptr;
         
         utils::StackTrace m_stackTrace;
         
-        friend class Node;
+        friend class BaseNode;
 };
 
 }

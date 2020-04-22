@@ -86,7 +86,7 @@ namespace mhdl::core::hlim {
         size_t base = 10;
     };
     
-    class Node_Constant : public Node
+    class Node_Constant : public Node<Node_Constant>
     {
     public:
         Node_Constant(ConstantData value, const hlim::ConnectionType& connectionType) : Node(0, 1), m_Value(value) { setOutputConnectionType(0, connectionType); }

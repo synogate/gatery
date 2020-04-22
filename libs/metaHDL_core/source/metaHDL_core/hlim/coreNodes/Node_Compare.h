@@ -3,7 +3,7 @@
 
 namespace mhdl::core::hlim {
     
-class Node_Compare : public Node
+class Node_Compare : public Node<Node_Compare>
 {
     public:
         enum Op {

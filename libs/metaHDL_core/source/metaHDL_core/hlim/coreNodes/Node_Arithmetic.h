@@ -3,7 +3,7 @@
 
 namespace mhdl::core::hlim {
     
-class Node_Arithmetic : public Node
+class Node_Arithmetic : public Node<Node_Arithmetic>
 {
     public:
         enum Op {

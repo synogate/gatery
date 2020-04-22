@@ -63,7 +63,7 @@ void NodeIO::connectInput(size_t inputPort, const NodePort &output)
     inPort = output;
     if (inPort.node != nullptr) {
         auto &outPort = inPort.node->m_outputPorts[inPort.port];
-        outPort.connections.push_back({.node = static_cast<Node*>(this), .port = inputPort});
+        outPort.connections.push_back({.node = static_cast<BaseNode*>(this), .port = inputPort});
     }
 }
 
@@ -76,7 +76,7 @@ void NodeIO::disconnectInput(size_t inputPort)
         auto it = std::find(
                         outPort.connections.begin(),
                         outPort.connections.end(),
-                        NodePort{.node = static_cast<Node*>(this), .port = inputPort});
+                        NodePort{.node = static_cast<BaseNode*>(this), .port = inputPort});
         
         MHDL_ASSERT(it != outPort.connections.end());
         

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "NodeIO.h"
+#include "NodeVisitor.h"
 
 #include "../utils/StackTrace.h"
 #include "../utils/LinkedList.h"
@@ -17,12 +18,12 @@ namespace mhdl::core::hlim {
 
 class NodeGroup;
     
-class Node : public NodeIO
+class BaseNode : public NodeIO
 {
     public:
-        Node();
-        Node(size_t numInputs, size_t numOutputs);
-        virtual ~Node() { }
+        BaseNode();
+        BaseNode(size_t numInputs, size_t numOutputs);
+        virtual ~BaseNode() { }
 
         virtual std::string getTypeName() const = 0;
         virtual void assertValidity() const = 0;
@@ -41,11 +42,25 @@ class Node : public NodeIO
         NodeGroup *getGroup() { return m_nodeGroup; }
         
         void moveToGroup(NodeGroup *group);
+
+        virtual void visit(NodeVisitor &visitor) = 0;
+        virtual void visit(ConstNodeVisitor &visitor) const = 0;
     protected:
         std::string m_name;
         utils::StackTrace m_stackTrace;
         NodeGroup *m_nodeGroup = nullptr;
-        
 };
+
+template<class FinalType>
+class Node : public BaseNode
+{
+    public:
+        Node() : BaseNode() { }
+        Node(size_t numInputs, size_t numOutputs) : BaseNode(numInputs, numOutputs) { }
+        
+        virtual void visit(NodeVisitor &visitor) override { visitor(*static_cast<FinalType*>(this)); }
+        virtual void visit(ConstNodeVisitor &visitor) const override { visitor(*static_cast<const FinalType*>(this)); }
+};
+
 
 }

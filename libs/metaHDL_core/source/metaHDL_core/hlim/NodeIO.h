@@ -12,11 +12,11 @@
 
 namespace mhdl::core::hlim {
 
-class Node;
+class BaseNode;
 class NodeIO;
 
 struct NodePort {
-    Node *node = nullptr;
+    BaseNode *node = nullptr;
     size_t port = ~0ull;
     
     bool operator==(const NodePort &rhs) const { return node == rhs.node && port == rhs.port; }
@@ -44,7 +44,7 @@ class ExplorationList {
                 iterator();
                 //iterator(Node *node, 
                 
-                std::set<Node*> m_closedList;
+                std::set<BaseNode*> m_closedList;
                 std::set<NodePort> m_openList;
                 
                 friend class ExplorationList;
