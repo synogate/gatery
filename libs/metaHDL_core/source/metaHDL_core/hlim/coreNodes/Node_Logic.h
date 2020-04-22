@@ -16,7 +16,10 @@ class Node_Logic : public Node
             NOT
         };
         
-        Node_Logic(NodeGroup *group, Op op) : Node(group, op==NOT?1:2, 1), m_op(op) { }
+        Node_Logic(Op op) : Node(op==NOT?1:2, 1), m_op(op) { }
+        
+        inline void connectInput(size_t operand, const NodePort &port) { NodeIO::connectInput(operand, port); }
+        inline void disconnectInput(size_t operand) { NodeIO::disconnectInput(operand); }
         
         virtual std::string getTypeName() const override { return ""; }
         virtual void assertValidity() const override { }

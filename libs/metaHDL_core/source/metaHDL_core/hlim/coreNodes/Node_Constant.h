@@ -89,8 +89,8 @@ namespace mhdl::core::hlim {
     class Node_Constant : public Node
     {
     public:
-        Node_Constant(NodeGroup* group, ConstantData value) : Node(group, 0, 1), m_Value(value) { }
-
+        Node_Constant(ConstantData value, const hlim::ConnectionType& connectionType) : Node(0, 1), m_Value(value) { setOutputConnectionType(0, connectionType); }
+        
         virtual std::string getTypeName() const override { return "Constant"; }
         virtual void assertValidity() const override { }
         virtual std::string getInputName(size_t idx) const override { return ""; }

@@ -17,7 +17,9 @@ class NodeIO;
 
 struct NodePort {
     Node *node = nullptr;
-    size_t port = ~0ull;            
+    size_t port = ~0ull;
+    
+    bool operator==(const NodePort &rhs) const { return node == rhs.node && port == rhs.port; }
 };
 
 
@@ -55,6 +57,7 @@ class ExplorationList {
         bool m_ignoreSignals;
 };
 
+class Circuit;
 
 class NodeIO
 {
@@ -88,6 +91,8 @@ class NodeIO
 
         std::vector<NodePort> m_inputPorts;
         std::vector<OutputPort> m_outputPorts;
+        
+        friend class Circuit;
 };
 
 

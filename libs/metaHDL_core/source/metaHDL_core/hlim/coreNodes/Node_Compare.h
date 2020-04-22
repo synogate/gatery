@@ -15,6 +15,9 @@ class Node_Compare : public Node
             GEQ
         };
         
+        inline void connectInput(size_t operand, const NodePort &port) { NodeIO::connectInput(operand, port); }
+        inline void disconnectInput(size_t operand) { NodeIO::disconnectInput(operand); }        
+        
         virtual std::string getTypeName() const override { return "Compare"; }
         virtual void assertValidity() const override { }
         virtual std::string getInputName(size_t idx) const override { return idx==0?"a":"b"; }

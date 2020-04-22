@@ -11,11 +11,10 @@ Node::Node()
 {
 }
 
-Node::Node(NodeGroup *group, size_t numInputs, size_t numOutputs)
+Node::Node(size_t numInputs, size_t numOutputs)
 {
     resizeInputs(numInputs);
     resizeOutputs(numOutputs);
-    moveToGroup(group);
 }
 
 

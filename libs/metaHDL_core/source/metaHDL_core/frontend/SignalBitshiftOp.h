@@ -49,7 +49,7 @@ SignalType SignalBitShiftOp::operator()(const SignalType &operand) {
     hlim::Node_Signal *signal = operand.getNode();
     MHDL_ASSERT(signal != nullptr);
     
-    hlim::Node_Rewire *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Rewire>(1);
+    hlim::Node_Rewire *node = DesignScope::createNode<hlim::Node_Rewire>(1);
     node->recordStackTrace();
     
     size_t absShift = std::abs(m_shift);
@@ -59,9 +59,9 @@ SignalType SignalBitShiftOp::operator()(const SignalType &operand) {
         MHDL_ASSERT_HINT(false, "Not implemented yet!");
     } else {
         if (m_shift < 0) {            
-            if (absShift < signal->getConnectionType().width) {
+            if (absShift < signal->getOutputConnectionType(0).width) {
                 rewireOp.ranges.push_back({
-                    .subwidth = signal->getConnectionType().width - absShift,
+                    .subwidth = signal->getOutputConnectionType(0).width - absShift,
                     .source = hlim::Node_Rewire::OutputRange::INPUT,
                     .inputIdx = 0,
                     .inputOffset = (size_t) absShift,
@@ -74,7 +74,7 @@ SignalType SignalBitShiftOp::operator()(const SignalType &operand) {
                         .subwidth = 1,
                         .source = hlim::Node_Rewire::OutputRange::INPUT,
                         .inputIdx = 0,
-                        .inputOffset = signal->getConnectionType().width-1,
+                        .inputOffset = signal->getOutputConnectionType(0).width-1,
                     });
                 }
             } else {
@@ -99,9 +99,9 @@ SignalType SignalBitShiftOp::operator()(const SignalType &operand) {
                     .source = (m_fillLeft? hlim::Node_Rewire::OutputRange::CONST_ONE : hlim::Node_Rewire::OutputRange::CONST_ZERO),
                 });
             }
-            if (absShift < signal->getConnectionType().width) {
+            if (absShift < signal->getOutputConnectionType(0).width) {
                 rewireOp.ranges.push_back({
-                    .subwidth = signal->getConnectionType().width - absShift,
+                    .subwidth = signal->getOutputConnectionType(0).width - absShift,
                     .source = hlim::Node_Rewire::OutputRange::INPUT,
                     .inputIdx = 0,
                     .inputOffset = 0,
@@ -110,9 +110,8 @@ SignalType SignalBitShiftOp::operator()(const SignalType &operand) {
         }
     }
     node->setOp(std::move(rewireOp));
-    
-    signal->getOutput(0).connect(node->getInput(0));
-    return SignalType(&node->getOutput(0), getResultingType(signal->getConnectionType()));
+    node->connectInput(0, {.node = signal, .port = 0});
+    return SignalType({.node = node, .port = 0});
 }
 
 

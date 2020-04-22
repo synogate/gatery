@@ -1,8 +1,7 @@
 #include "Node_Rewire.h"
 
 namespace mhdl::core::hlim {
-    
-    
+
 bool Node_Rewire::RewireOperation::isBitExtract(size_t& bitIndex) const
 {
     if (ranges.size() == 1) {
@@ -17,7 +16,7 @@ bool Node_Rewire::RewireOperation::isBitExtract(size_t& bitIndex) const
     return false;
 }
 
-Node_Rewire::Node_Rewire(NodeGroup *group, size_t numInputs) : Node(group, numInputs, 1)
+Node_Rewire::Node_Rewire(size_t numInputs) : Node(numInputs, 1)
 {
     
 }

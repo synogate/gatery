@@ -48,13 +48,13 @@ class PipelineRegisterFactory : public RegisterFactory
 template<typename DataSignal, typename>
 DataSignal RegisterFactory::operator()(const DataSignal &inputSignal, const Bit &enableSignal, const DataSignal &resetValue)
 {
-    hlim::Node_Register *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Register>();
+    hlim::Node_Register *node = DesignScope::createNode<hlim::Node_Register>();
     node->recordStackTrace();
-    inputSignal.getNode()->getOutput(0).connect(node->getInput(0));
-    enableSignal.getNode()->getOutput(0).connect(node->getInput(1));
-    resetValue.getNode()->getOutput(0).connect(node->getInput(2));
-
-    return DataSignal(&node->getOutput(0), inputSignal.getNode()->getConnectionType());
+    node->connectInput(hlim::Node_Register::DATA, {.node = inputSignal.getNode(), .port = 0ull});
+    node->connectInput(hlim::Node_Register::RESET_VALUE, {.node = resetValue.getNode(), .port = 0ull});
+    node->connectInput(hlim::Node_Register::ENABLE, {.node = enableSignal.getNode(), .port = 0ull});
+    
+    return DataSignal({.node = node, .port = 0ull});
 }
 
 

@@ -15,6 +15,8 @@
 #include "../../hlim/coreNodes/Node_Register.h"
 #include "../../hlim/coreNodes/Node_Rewire.h"
 
+#include "VHDL_AST.h"
+
 #include <set>
 #include <map>
 #include <string>
@@ -43,7 +45,7 @@ VHDLExport &VHDLExport::setFormatting(CodeFormatting *codeFormatting)
 
 void VHDLExport::operator()(const hlim::Circuit &circuit)
 {
-#if 0
+#if 1
     exportGroup(circuit.getRootNodeGroup());
 #else
     ast::Root root(m_codeFormatting.get());
@@ -55,6 +57,7 @@ void VHDLExport::operator()(const hlim::Circuit &circuit)
 void VHDLExport::exportGroup(const hlim::NodeGroup *group)
 {
     
+#if 0    
     for (const auto &child : group->getChildren())
         exportGroup(child.get());
     
@@ -447,6 +450,9 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
     file << m_codeFormatting->getIndentation() << "END PROCESS;" << std::endl;
 
     file << "END impl;" << std::endl;
+    
+#endif
+    
 }
 
 

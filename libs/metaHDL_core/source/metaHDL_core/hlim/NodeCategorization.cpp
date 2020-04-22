@@ -13,7 +13,7 @@ namespace core {
 namespace hlim {
 
 namespace {
-
+/*
 std::set<hlim::Node*> collectRelevantNodes(NodeGroup *group, std::set<NodeGroup*> &childGroups, const std::function<bool(NodeGroup *child)> &includeChild)
 {
     std::set<hlim::Node*> result;
@@ -35,13 +35,13 @@ std::set<hlim::Node*> collectRelevantNodes(NodeGroup *group, std::set<NodeGroup*
     
     return result;
 }
-
+*/
 }
     
 
 void NodeCategorization::parse(NodeGroup *group, const std::function<bool(NodeGroup *child)> &includeChild)
 {
-    
+    /*
     std::set<hlim::Node*> allConsideredNodes = collectRelevantNodes(group, childGroups, includeChild);
     
     auto isNodeInConsideredSet = [&allConsideredNodes](Node *node) {
@@ -163,6 +163,7 @@ void NodeCategorization::parse(NodeGroup *group, const std::function<bool(NodeGr
 
         unused.insert(node);
     }
+    */
 }
 
 

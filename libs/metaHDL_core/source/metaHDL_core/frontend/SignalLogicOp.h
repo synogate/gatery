@@ -41,14 +41,14 @@ SignalType SignalLogicOp::operator()(const SignalType &lhs, const SignalType &rh
     hlim::Node_Signal *rhsSignal = rhs.getNode();
     MHDL_ASSERT(lhsSignal != nullptr);
     MHDL_ASSERT(rhsSignal != nullptr);
-    MHDL_DESIGNCHECK_HINT(lhsSignal->getConnectionType() == rhsSignal->getConnectionType(), "Can only perform logic operations on operands of same type (e.g. width).");
+    MHDL_DESIGNCHECK_HINT(lhsSignal->getOutputConnectionType(0) == rhsSignal->getOutputConnectionType(0), "Can only perform logic operations on operands of same type (e.g. width).");
     
-    hlim::Node_Logic *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Logic>(m_op);
+    hlim::Node_Logic *node = DesignScope::createNode<hlim::Node_Logic>(m_op);
     node->recordStackTrace();
-    lhsSignal->getOutput(0).connect(node->getInput(0));
-    rhsSignal->getOutput(0).connect(node->getInput(1));
+    node->connectInput(0, {.node = lhsSignal, .port = 0ull});
+    node->connectInput(1, {.node = rhsSignal, .port = 0ull});
 
-    return SignalType(&node->getOutput(0), getResultingType(lhsSignal->getConnectionType(), rhsSignal->getConnectionType()));
+    return SignalType({.node = node, .port = 0ull});
 }
 
 template<typename SignalType, typename>
@@ -58,11 +58,11 @@ SignalType SignalLogicOp::operator()(const SignalType &lhs) {
     hlim::Node_Signal *lhsSignal = lhs.getNode();
     MHDL_ASSERT(lhsSignal != nullptr);
     
-    hlim::Node_Logic *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Logic>(m_op);
+    hlim::Node_Logic *node = DesignScope::createNode<hlim::Node_Logic>(m_op);
     node->recordStackTrace();
-    lhsSignal->getOutput(0).connect(node->getInput(0));
+    node->connectInput(0, {.node = lhsSignal, .port = 0ull});
 
-    return SignalType(&node->getOutput(0), lhsSignal->getConnectionType());
+    return SignalType({.node = node, .port = 0ull});
 }
 
 

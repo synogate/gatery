@@ -18,8 +18,8 @@ namespace mhdl::core::frontend
     template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>
     SignalType Constant(hlim::ConstantData&& value, const hlim::ConnectionType& connectionType)
     {
-        auto* node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Constant>(value);
-        return SignalType(&node->getOutput(0), connectionType);
+        auto* node = DesignScope::createNode<hlim::Node_Constant>(value, connectionType);
+        return SignalType({.node = node, .port = 0ull});
     }
 
     inline namespace literal 

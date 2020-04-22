@@ -8,7 +8,7 @@ namespace mhdl::core::hlim {
 class Node_Signal : public Node
 {
     public:
-        Node_Signal(NodeGroup *group) : Node(group, 1, 1) {  }
+        Node_Signal() : Node(1, 1) {  }
         
         virtual std::string getTypeName() const override { return "Signal"; }
         virtual void assertValidity() const override { }
@@ -16,9 +16,9 @@ class Node_Signal : public Node
         virtual std::string getOutputName(size_t idx) const override { return "out"; }
         
         void setConnectionType(const ConnectionType &connectionType);
-        inline const ConnectionType &getConnectionType() const { return m_connectionType; }
-    protected:
-        ConnectionType m_connectionType;
+        
+        void connectInput(const NodePort &nodePort);
+        void disconnectInput();
 };
 
 }

@@ -11,33 +11,30 @@ namespace mhdl::core::frontend {
 
 ElementarySignal::ElementarySignal()
 {
-    m_node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Signal>();
+    m_node = DesignScope::createNode<hlim::Node_Signal>();    
     m_node->recordStackTrace();
 }
 
-ElementarySignal::ElementarySignal(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType)
+ElementarySignal::ElementarySignal(const hlim::NodePort &port)
 {
-    m_node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Signal>();
+    m_node = DesignScope::createNode<hlim::Node_Signal>();    
     m_node->recordStackTrace();
-    m_node->setConnectionType(connectionType);
-    port->connect(m_node->getInput(0));
+    m_node->setConnectionType(port.node->getOutputConnectionType(port.port));
+    m_node->connectInput(port);
 }
 
 void ElementarySignal::assign(const ElementarySignal &rhs) {
     std::string oldName = m_node->getName();
     
-    m_node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Signal>();    
+    m_node = DesignScope::createNode<hlim::Node_Signal>();    
     m_node->recordStackTrace();
-    m_node->setConnectionType(rhs.m_node->getConnectionType());
-    
-    MHDL_ASSERT(rhs.m_node != nullptr);
-    rhs.m_node->getOutput(0).connect(m_node->getInput(0));
+    m_node->setConnectionType(rhs.m_node->getOutputConnectionType(0));
+    m_node->connectInput({.node = rhs.m_node, .port = 0});
     
     if (oldName.empty())
         setName(rhs.m_node->getName());
     else 
-        setName(oldName);
-    
+        setName(oldName);    
 }
 
 

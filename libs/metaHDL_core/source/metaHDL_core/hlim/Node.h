@@ -21,11 +21,9 @@ class Node : public NodeIO
 {
     public:
         Node();
-        Node(NodeGroup *group, size_t numInputs, size_t numOutputs);
+        Node(size_t numInputs, size_t numOutputs);
         virtual ~Node() { }
 
-        virtual void inputDataTypeChanged(size_t inputIdx) = 0;
-        
         virtual std::string getTypeName() const = 0;
         virtual void assertValidity() const = 0;
         virtual std::string getInputName(size_t idx) const = 0;

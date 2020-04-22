@@ -32,13 +32,11 @@ class NodeGroup
         
         inline const NodeGroup *getParent() const { return m_parent; }
         inline const std::string &getName() const { return m_name; }
-        inline const std::vector<std::unique_ptr<Node>> &getNodes() const { return m_nodes; }
+        inline const std::vector<Node*> &getNodes() const { return m_nodes; }
         inline const std::vector<std::unique_ptr<NodeGroup>> &getChildren() const { return m_children; }
 
 
         bool isChildOf(const NodeGroup *other) const;
-        
-        void cullUnnamedSignalNodes();
     protected:
         std::string m_name;
         

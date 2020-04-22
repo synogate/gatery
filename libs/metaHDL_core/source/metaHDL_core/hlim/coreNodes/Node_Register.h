@@ -9,12 +9,22 @@ namespace mhdl::core::hlim {
 class Node_Register : public Node
 {
     public:
-        Node_Register(NodeGroup *group) : Node(group, 3, 1) { }
+        enum Input {
+            DATA,
+            RESET_VALUE,
+            ENABLE,
+            NUM_INPUTS
+        };
         
-        virtual std::string getTypeName() const override { return "Register"; }
-        virtual void assertValidity() const override { }
-        virtual std::string getInputName(size_t idx) const override { switch (idx) { case 0: return "in"; case 1: return "enable"; default: return "resetValue"; } }
-        virtual std::string getOutputName(size_t idx) const override { return "out"; }
+        Node_Register();
+        
+        inline void connectInput(Input input, const NodePort &port) { NodeIO::connectInput(input, port); }
+        inline void disconnectInput(Input input) { NodeIO::disconnectInput(input); }
+        
+        virtual std::string getTypeName() const override;
+        virtual void assertValidity() const override;
+        virtual std::string getInputName(size_t idx) const override;
+        virtual std::string getOutputName(size_t idx) const override;
 };
 
 }

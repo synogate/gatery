@@ -39,10 +39,11 @@ UartTransmitter::UartTransmitter(size_t dataBits, size_t stopBits, size_t clockC
         
 void UartTransmitter::operator()(const BitVector &inputData, const Bit &send, Bit &outputLine, Bit &idle)
 {
-    Scope scope;
+    GroupScope scope;
     //scope.setName(GET_FUNCTION_NAME);
     scope.setName("UartTransmitter");
-
+    
+    
     // todo: constants!
     Bit enable;
     MHDL_NAMED(enable);
@@ -86,7 +87,7 @@ void UartTransmitter::operator()(const BitVector &inputData, const Bit &send, Bi
     driveWith(currentData, reg(nextData, enable, dataZero));
     
     auto nextIdle = idle;
-    MHDL_NAMED(nextIdle);
+    //MHDL_NAMED(nextIdle);
     // if loading new data not idle in next step
     nextIdle = mux(loadingData, 0_bit, nextIdle);
     // if done, idle in next step

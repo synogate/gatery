@@ -26,10 +26,12 @@ class Node_Rewire : public Node
             std::vector<OutputRange> ranges;
             
             bool isBitExtract(size_t& bitIndex) const;
-            bool isRegularBitShift(int &shift, bool &keepSign) const;
         };
         
-        Node_Rewire(NodeGroup *group, size_t numInputs);
+        Node_Rewire(size_t numInputs);
+        
+        inline void connectInput(size_t operand, const NodePort &port) { NodeIO::connectInput(operand, port); }
+        inline void disconnectInput(size_t operand) { NodeIO::disconnectInput(operand); }        
         
         virtual std::string getTypeName() const override { return "Rewire"; }
         virtual void assertValidity() const override { }

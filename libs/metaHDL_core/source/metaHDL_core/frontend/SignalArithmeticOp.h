@@ -16,7 +16,7 @@
 
 
 namespace mhdl::core::frontend {
-    
+
 class SignalArithmeticOp
 {
     public:
@@ -41,12 +41,12 @@ SignalType SignalArithmeticOp::operator()(const SignalType &lhs, const SignalTyp
     MHDL_ASSERT(lhsSignal != nullptr);
     MHDL_ASSERT(rhsSignal != nullptr);
     
-    hlim::Node_Arithmetic *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Arithmetic>(m_op);
+    hlim::Node_Arithmetic *node = DesignScope::createNode<hlim::Node_Arithmetic>(m_op);
     node->recordStackTrace();
-    lhsSignal->getOutput(0).connect(node->getInput(0));
-    rhsSignal->getOutput(0).connect(node->getInput(1));
+    node->connectInput(0, {.node = lhsSignal, .port = 0});
+    node->connectInput(1, {.node = rhsSignal, .port = 0});
 
-    return SignalType(&node->getOutput(0), getResultingType(lhsSignal->getConnectionType(), rhsSignal->getConnectionType()));
+    return SignalType({.node = node, .port = 0});
 }
 
 

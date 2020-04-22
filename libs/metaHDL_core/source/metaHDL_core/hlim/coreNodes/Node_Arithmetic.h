@@ -14,7 +14,10 @@ class Node_Arithmetic : public Node
             REM
         };
         
-        Node_Arithmetic(NodeGroup *group, Op op) : Node(group, 2, 1), m_op(op) { }
+        Node_Arithmetic(Op op) : Node(2, 1), m_op(op) { }
+        
+        inline void connectInput(size_t operand, const NodePort &port) { NodeIO::connectInput(operand, port); }
+        inline void disconnectInput(size_t operand) { NodeIO::disconnectInput(operand); }
         
         virtual std::string getTypeName() const override { return "Arithmetic"; }
         virtual void assertValidity() const override { }

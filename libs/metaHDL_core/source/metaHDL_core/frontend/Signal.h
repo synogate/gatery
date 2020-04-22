@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../hlim/coreNodes/Node_Signal.h"
+#include "../hlim/NodeIO.h"
 #include "../hlim/Node.h"
 #include "../hlim/Circuit.h"
 
@@ -35,13 +36,13 @@ class ElementarySignal : public BaseSignal {
     public:
         using isElementarySignal = void;
         
-        size_t getWidth() const { return m_node->getConnectionType().width; }
+        size_t getWidth() const { return m_node->getOutputConnectionType(0).width; }
         
         inline hlim::Node_Signal *getNode() const { return m_node; }
         virtual void setName(std::string name) override { m_node->setName(std::move(name)); }
     protected:
         ElementarySignal();
-        ElementarySignal(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType);
+        ElementarySignal(const hlim::NodePort &port);
         ElementarySignal &operator=(const ElementarySignal&) = default;
         void assign(const ElementarySignal &rhs);
 

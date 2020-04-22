@@ -19,6 +19,8 @@ class Circuit
         
         inline NodeGroup *getRootNodeGroup() { return m_root.get(); }
         inline const NodeGroup *getRootNodeGroup() const { return m_root.get(); }
+        
+        void cullUnnamedSignalNodes();        
     protected:
         std::vector<std::unique_ptr<Node>> m_nodes;
         std::unique_ptr<NodeGroup> m_root;
@@ -27,7 +29,7 @@ class Circuit
 
 template<typename NodeType, typename... Args>
 NodeType *Circuit::createNode(Args&&... args) {
-    m_nodes.push_back(std::make_unique<NodeType>(this, std::forward<Args>(args)...));
+    m_nodes.push_back(std::make_unique<NodeType>(std::forward<Args>(args)...));
     return (NodeType *) m_nodes.back().get();
 }
 

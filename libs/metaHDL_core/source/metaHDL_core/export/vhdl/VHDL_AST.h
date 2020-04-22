@@ -123,6 +123,8 @@ class Root
         inline CodeFormatting *getCodeFormatting() { return m_codeFormatting; }
         
         void print();
+        
+        void write(std::filesystem::path destination);
     protected:
         CodeFormatting *m_codeFormatting;
         Namespace m_namespace;

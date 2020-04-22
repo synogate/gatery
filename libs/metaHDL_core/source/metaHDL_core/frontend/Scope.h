@@ -10,7 +10,7 @@ template<class FinalType>
 class BaseScope
 {
     public:
-        BaseScope() { m_parentScope = m_currentScope; m_currentScope = this; }
+        BaseScope() { m_parentScope = m_currentScope; m_currentScope = static_cast<FinalType*>(this); }
         ~BaseScope() { m_currentScope = m_parentScope; }
     protected:
         FinalType *m_parentScope;
@@ -48,13 +48,26 @@ class DesignScope : public BaseScope<DesignScope>
 {
     public:
         DesignScope();
-        
+
+        static DesignScope *get() { return m_currentScope; }
         hlim::Circuit &getCircuit() { return m_circuit; }
+        
+        template<typename NodeType, typename... Args>
+        static NodeType *createNode(Args&&... args);        
+        
     protected:
         hlim::Circuit m_circuit;
         GroupScope m_rootScope;
         
         // design affecting settings and their overrides go here, as well as tweaking settings (e.g. speed vs area parameters)
 };
+
+template<typename NodeType, typename... Args>
+NodeType *DesignScope::createNode(Args&&... args) {
+    NodeType *node = m_currentScope->m_circuit.createNode<NodeType>(std::forward<Args>(args)...);
+    node->moveToGroup(GroupScope::getCurrentNodeGroup());
+    return node;
+}
+
 
 }

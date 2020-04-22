@@ -8,12 +8,9 @@
 
 #include <iostream>
 
-namespace mhdl {
-namespace core {
-namespace vhdl {
+namespace mhdl::core::vhdl::ast {
     
-
-namespace ast {
+#if 0
 
 std::string Namespace::getName(const hlim::Node* node)
 {
@@ -186,13 +183,11 @@ Entity &Root::createEntity()
 
 void Root::print()
 {
-    for (auto &c : m_components) {
+    for (auto &c : m_components)
         c.print();
-    }
 }
 
-}
-}
-}
+#endif
+    
 }
 

@@ -22,19 +22,20 @@ SignalType mux(const Bit &selector, const SignalType &lhs, const SignalType &rhs
     hlim::Node_Signal *rhsSignal = rhs.getNode();
     MHDL_ASSERT(lhsSignal != nullptr);
     MHDL_ASSERT(rhsSignal != nullptr);
-    MHDL_DESIGNCHECK_HINT(lhsSignal->getConnectionType() == rhsSignal->getConnectionType(), "Can only multiplex operands of same type (e.g. width).");
+    MHDL_DESIGNCHECK_HINT(lhsSignal->getOutputConnectionType(0) == rhsSignal->getOutputConnectionType(0), "Can only multiplex operands of same type (e.g. width).");
     
-    hlim::Node_Multiplexer *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Multiplexer>(2);
+    hlim::Node_Multiplexer *node = DesignScope::createNode<hlim::Node_Multiplexer>(2);
     node->recordStackTrace();
-    selector.getNode()->getOutput(0).connect(node->getInput(0));
-    lhsSignal->getOutput(0).connect(node->getInput(1));
-    rhsSignal->getOutput(0).connect(node->getInput(2));
+    node->connectSelector({.node = selector.getNode(), .port = 0ull});
+    node->connectInput(0, {.node = lhsSignal, .port = 0ull});
+    node->connectInput(1, {.node = rhsSignal, .port = 0ull});
 
-    return SignalType(&node->getOutput(0), lhsSignal->getConnectionType());
+    return SignalType({.node = node, .port = 0ull});
 }
 
 ///@todo overload for compound signals
 ///@todo doesn't work yet
+#if 0
 template<typename SelectorType, typename ContainerType, typename SignalType = typename ContainerType::value_type, typename = std::enable_if_t<
                                                                                                 utils::isElementarySignal<SignalType>::value &&
                                                                                                 utils::isUnsignedIntegerSignal<SelectorType>::value &&
@@ -46,7 +47,7 @@ SignalType mux(const SelectorType &selector, const ContainerType &inputs)  {
     const hlim::Node_Signal *firstSignal = inputs.begin()->getNode();
     MHDL_ASSERT(firstSignal != nullptr);
     
-    hlim::Node_Multiplexer *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Multiplexer>(inputs.size());
+    hlim::Node_Multiplexer *node = DesignScope::createNode<hlim::Node_Multiplexer>(inputs.size());
     node->recordStackTrace();
     selector.getNode()->getOutput(0).connect(node->getInput(0));
     for (const auto &pair : ConstEnumerate(inputs)) {
@@ -59,7 +60,7 @@ SignalType mux(const SelectorType &selector, const ContainerType &inputs)  {
     
     return SignalType(&node->getOutput(0), firstSignal->getConnectionType());
 }
-
+#endif
 
 
 
@@ -69,12 +70,11 @@ void driveWith(SignalType &dst, const SignalType &src)  {
     hlim::Node_Signal *signalNode = dst.getNode();
     MHDL_ASSERT(signalNode != nullptr);
     
-    MHDL_DESIGNCHECK_HINT(signalNode->getInput(0).connection == nullptr, "Signal is already being driven.");
-    
+    MHDL_DESIGNCHECK_HINT(signalNode->getDriver(0).node == nullptr, "Signal is already being driven.");
     MHDL_ASSERT(src.getNode() != nullptr);
-    src.getNode()->getOutput(0).connect(signalNode->getInput(0));
     
-    signalNode->moveToGroup(Scope::getCurrentNodeGroup());
+    signalNode->connectInput({.node = src.getNode(), .port = 0ull});
+    signalNode->moveToGroup(GroupScope::getCurrentNodeGroup());
 }
 
 

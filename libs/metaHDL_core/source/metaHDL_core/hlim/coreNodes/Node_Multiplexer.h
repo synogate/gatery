@@ -9,7 +9,13 @@ namespace mhdl::core::hlim {
 class Node_Multiplexer : public Node
 {
     public:
-        Node_Multiplexer(NodeGroup *group, size_t numMultiplexedInputs) : Node(group, 1+numMultiplexedInputs, 1) { }
+        Node_Multiplexer(size_t numMultiplexedInputs) : Node(1+numMultiplexedInputs, 1) { }
+        
+        inline void connectSelector(const NodePort &port) { NodeIO::connectInput(0, port); }
+        inline void disconnectSelector() { NodeIO::disconnectInput(0); }
+
+        inline void connectInput(size_t operand, const NodePort &port) { NodeIO::connectInput(1+operand, port); }
+        inline void disconnectInput(size_t operand) { NodeIO::disconnectInput(1+operand); }        
         
         virtual std::string getTypeName() const override { return "Multiplexer"; }
         virtual void assertValidity() const override { }

@@ -49,8 +49,7 @@ class BaseBitVector : public ElementarySignal
         FinalType &operator=(const FinalType &rhs) { assign(rhs); return *this; }
     protected:
         BaseBitVector() = default;
-        BaseBitVector(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType) : ElementarySignal(port, connectionType) { }
-        
+        BaseBitVector(const hlim::NodePort &port) : ElementarySignal(port) { }        
 };
 
 
@@ -66,10 +65,11 @@ void BaseBitVector<FinalType>::resize(size_t width)
 template<typename FinalType>
 Bit BaseBitVector<FinalType>::operator[](size_t idx)
 {
-    hlim::Node_Rewire *node = Scope::getCurrentNodeGroup()->addNode<hlim::Node_Rewire>(1);
+    hlim::Node_Rewire *node = DesignScope::get()->getCircuit().createNode<hlim::Node_Rewire>(1);
     node->recordStackTrace();
     
-    idx = (m_node->getConnectionType().width + (idx % m_node->getConnectionType().width)) % m_node->getConnectionType().width;
+    size_t w = m_node->getOutputConnectionType(0).width;
+    idx = (w + (idx % w)) % w;
     
     hlim::Node_Rewire::RewireOperation rewireOp;
     rewireOp.ranges.push_back({
@@ -80,11 +80,9 @@ Bit BaseBitVector<FinalType>::operator[](size_t idx)
     });
     node->setOp(std::move(rewireOp));
     
-    m_node->getOutput(0).connect(node->getInput(0));
-    hlim::ConnectionType connectionType;
-    connectionType.interpretation = hlim::ConnectionType::BOOL;
-    connectionType.width = 1;
-    return Bit(&node->getOutput(0), connectionType);
+    node->connectInput(0, {.node = m_node, .port = 0ull});
+
+    return Bit({.node = node, .port = 0ull});
 }
 
 
@@ -99,7 +97,7 @@ class BitVector : public BaseBitVector<BitVector>
         
         BitVector() = default;
         BitVector(size_t width);
-        BitVector(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType);
+        BitVector(const hlim::NodePort &port);
     protected:
         virtual hlim::ConnectionType getSignalType(size_t width) const override;
 

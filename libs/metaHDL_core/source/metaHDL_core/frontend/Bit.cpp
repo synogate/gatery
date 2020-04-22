@@ -11,11 +11,12 @@ Bit::Bit()
 
 Bit::Bit(const Bit &rhs) {
     assign(rhs);
+    m_node->setConnectionType(getSignalType(1));
 }
 
-Bit::Bit(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType) : ElementarySignal(port, connectionType) 
+Bit::Bit(const hlim::NodePort &port) : ElementarySignal(port) 
 { 
-    
+    m_node->setConnectionType(getSignalType(1));    
 }
 
 hlim::ConnectionType Bit::getSignalType(size_t width) const 

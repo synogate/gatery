@@ -8,7 +8,7 @@ BitVector::BitVector(size_t width)
     resize(width); 
 }
 
-BitVector::BitVector(hlim::Node::OutputPort *port, const hlim::ConnectionType &connectionType) : BaseBitVector<BitVector>(port, connectionType)
+BitVector::BitVector(const hlim::NodePort &port) : BaseBitVector<BitVector>(port)
 { 
     
 }
