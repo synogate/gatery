@@ -14,20 +14,22 @@ class Node_Arithmetic : public Node
             REM
         };
         
-        Node_Arithmetic(Op op) : Node(2, 1), m_op(op) { }
+        Node_Arithmetic(Op op);
         
-        inline void connectInput(size_t operand, const NodePort &port) { NodeIO::connectInput(operand, port); }
-        inline void disconnectInput(size_t operand) { NodeIO::disconnectInput(operand); }
+        void connectInput(size_t operand, const NodePort &port);
+        void disconnectInput(size_t operand);
         
-        virtual std::string getTypeName() const override { return "Arithmetic"; }
-        virtual void assertValidity() const override { }
-        virtual std::string getInputName(size_t idx) const override { return idx==0?"a":"b"; }
-        virtual std::string getOutputName(size_t idx) const override { return "out"; }
+        virtual std::string getTypeName() const override;
+        virtual void assertValidity() const override;
+        virtual std::string getInputName(size_t idx) const override;
+        virtual std::string getOutputName(size_t idx) const override;
 
         inline Op getOp() const { return m_op; }
     protected:
         Op m_op;
         // extend or not, etc...
+        
+        void updateConnectionType();
 };
 
 }

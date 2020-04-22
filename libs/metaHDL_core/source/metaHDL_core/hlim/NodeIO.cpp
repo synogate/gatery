@@ -42,6 +42,15 @@ ExplorationList NodeIO::getNonSignalDriven(size_t outputPort) const
 {
 }
 
+void NodeIO::setOutputConnectionType(size_t outputPort, const ConnectionType &connectionType) 
+{ 
+    if (m_outputPorts[outputPort].connectionType != connectionType) {
+        MHDL_ASSERT_HINT(m_outputPorts[outputPort].connections.empty(), "The connection type of the output can not change once a node has connected to it!");        
+        m_outputPorts[outputPort].connectionType = connectionType; 
+    }
+}
+
+
 void NodeIO::connectInput(size_t inputPort, const NodePort &output)
 {
     auto &inPort = m_inputPorts[inputPort];

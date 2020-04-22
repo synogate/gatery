@@ -16,19 +16,21 @@ class Node_Logic : public Node
             NOT
         };
         
-        Node_Logic(Op op) : Node(op==NOT?1:2, 1), m_op(op) { }
+        Node_Logic(Op op);
         
-        inline void connectInput(size_t operand, const NodePort &port) { NodeIO::connectInput(operand, port); }
-        inline void disconnectInput(size_t operand) { NodeIO::disconnectInput(operand); }
+        void connectInput(size_t operand, const NodePort &port);
+        void disconnectInput(size_t operand);
         
-        virtual std::string getTypeName() const override { return ""; }
-        virtual void assertValidity() const override { }
-        virtual std::string getInputName(size_t idx) const override { return ""; }
-        virtual std::string getOutputName(size_t idx) const override { return "output"; }
+        virtual std::string getTypeName() const override;
+        virtual void assertValidity() const override;
+        virtual std::string getInputName(size_t idx) const override;
+        virtual std::string getOutputName(size_t idx) const override;
 
         inline Op getOp() const { return m_op; }
     protected:
         Op m_op;
+        
+        void updateConnectionType();        
 };
 
 }

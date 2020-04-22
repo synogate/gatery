@@ -6,12 +6,12 @@ namespace mhdl::core::hlim {
     
 void Node_Signal::setConnectionType(const ConnectionType &connectionType)
 {
-    MHDL_ASSERT_HINT(getDirectlyDriven(0).empty(), "Can only change or set the connection type on unconnected signal nodes!");
     setOutputConnectionType(0, connectionType);
 }
 
 void Node_Signal::connectInput(const NodePort &nodePort)
 {
+    MHDL_ASSERT_HINT(nodePort.node->getOutputConnectionType(nodePort.port) == getOutputConnectionType(0), "The connection type of the node that is being connected does not match the connection type of the signal");
     NodeIO::connectInput(0, nodePort);
 }
 

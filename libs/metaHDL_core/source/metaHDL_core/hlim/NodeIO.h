@@ -74,9 +74,9 @@ class NodeIO
         ExplorationList getSignalsDriven(size_t outputPort) const;
         ExplorationList getNonSignalDriven(size_t outputPort) const;
 
-        inline ConnectionType getOutputConnectionType(size_t outputPort) const { return m_outputPorts[outputPort].connectionType; }
+        inline const ConnectionType &getOutputConnectionType(size_t outputPort) const { return m_outputPorts[outputPort].connectionType; }
     protected:
-        inline void setOutputConnectionType(size_t outputPort, ConnectionType connectionType) { m_outputPorts[outputPort].connectionType = connectionType; }
+        void setOutputConnectionType(size_t outputPort, const ConnectionType &connectionType);
         
         void connectInput(size_t inputPort, const NodePort &output);
         void disconnectInput(size_t inputPort);
@@ -85,7 +85,7 @@ class NodeIO
         void resizeOutputs(size_t num);
     private:
         struct OutputPort {
-            ConnectionType connectionType;            
+            ConnectionType connectionType; ///@todo: turn into pointer and cache somewhere
             std::vector<NodePort> connections;
         };
 

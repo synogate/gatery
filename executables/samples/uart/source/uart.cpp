@@ -65,7 +65,7 @@ void UartTransmitter::operator()(const BitVector &inputData, const Bit &send, Bi
     
     auto newBitCounter = mux(idle, bitCounter + 1_uvec, 0b00000_uvec);
     MHDL_NAMED(newBitCounter);
-    driveWith(bitCounter, reg(newBitCounter, enable, 0x00_uvec));
+    driveWith(bitCounter, reg(newBitCounter, enable, 0b00000_uvec));
     
     auto done = bitCounter[4];
     MHDL_NAMED(done);

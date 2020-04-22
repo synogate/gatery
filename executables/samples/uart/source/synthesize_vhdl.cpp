@@ -24,8 +24,7 @@ int main() {
     try {
         try {
 
-            RootScope root;
-            root.setName("root");
+            DesignScope design;
 
             {
                 UartTransmitter uart(8, 1, 1000);
@@ -44,10 +43,10 @@ int main() {
                 Bit useOutputLine = outputLine;
             }
             
-            root.getCircuit().getRootNodeGroup()->cullUnnamedSignalNodes();
+            design.getCircuit().cullUnnamedSignalNodes();
             
             VHDLExport vhdl("VHDL_out/");
-            vhdl(root.getCircuit());
+            vhdl(design.getCircuit());
             
         } catch (const mhdl::utils::InternalError &exception) {
             std::cerr << "Internal error occured!" << std::endl << exception << std::endl;

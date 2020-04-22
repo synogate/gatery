@@ -33,8 +33,14 @@ add_library(metaHDL_core STATIC
 
     source/metaHDL_core/hlim/coreNodes/Node_Arithmetic.cpp
     source/metaHDL_core/hlim/coreNodes/Node_Arithmetic.h
+    source/metaHDL_core/hlim/coreNodes/Node_Compare.cpp
+    source/metaHDL_core/hlim/coreNodes/Node_Compare.h
+    source/metaHDL_core/hlim/coreNodes/Node_Constant.cpp
+    source/metaHDL_core/hlim/coreNodes/Node_Constant.h
     source/metaHDL_core/hlim/coreNodes/Node_Logic.cpp
     source/metaHDL_core/hlim/coreNodes/Node_Logic.h
+    source/metaHDL_core/hlim/coreNodes/Node_Multiplexer.cpp
+    source/metaHDL_core/hlim/coreNodes/Node_Multiplexer.h
     source/metaHDL_core/hlim/coreNodes/Node_Register.cpp
     source/metaHDL_core/hlim/coreNodes/Node_Register.h
     source/metaHDL_core/hlim/coreNodes/Node_Rewire.cpp

@@ -14,8 +14,8 @@ class Node_Multiplexer : public Node
         inline void connectSelector(const NodePort &port) { NodeIO::connectInput(0, port); }
         inline void disconnectSelector() { NodeIO::disconnectInput(0); }
 
-        inline void connectInput(size_t operand, const NodePort &port) { NodeIO::connectInput(1+operand, port); }
-        inline void disconnectInput(size_t operand) { NodeIO::disconnectInput(1+operand); }        
+        void connectInput(size_t operand, const NodePort &port);
+        inline void disconnectInput(size_t operand) { NodeIO::disconnectInput(1+operand); }
         
         virtual std::string getTypeName() const override { return "Multiplexer"; }
         virtual void assertValidity() const override { }

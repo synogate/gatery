@@ -28,6 +28,7 @@ struct ConnectionType
     int float_exponentBias = 0;
     
     bool operator==(const ConnectionType &rhs) const;
+    bool operator!=(const ConnectionType &rhs) const { return !(*this == rhs); }
 };
 
 #else

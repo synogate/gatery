@@ -7,6 +7,14 @@ Node_Register::Node_Register() : Node(NUM_INPUTS, 1)
 
 }
 
+void Node_Register::connectInput(Input input, const NodePort &port) 
+{ 
+    NodeIO::connectInput(input, port); 
+    if (input == DATA || input == RESET_VALUE) 
+        setOutputConnectionType(0, port.node->getOutputConnectionType(port.port));
+}
+
+
 std::string Node_Register::getTypeName() const
 { 
     return "Register"; 

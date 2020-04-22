@@ -21,4 +21,28 @@ Node_Rewire::Node_Rewire(size_t numInputs) : Node(numInputs, 1)
     
 }
 
+void Node_Rewire::connectInput(size_t operand, const NodePort &port) 
+{ 
+    NodeIO::connectInput(operand, port); 
+    updateConnectionType();
+}
+
+
+void Node_Rewire::updateConnectionType()
+{
+    auto lhs = getDriver(0);
+    
+    ConnectionType desiredConnectionType = getOutputConnectionType(0);
+    
+    if (lhs.node != nullptr)
+        desiredConnectionType = lhs.node->getOutputConnectionType(lhs.port);
+    
+    desiredConnectionType.width = 0;
+    for (auto r : m_rewireOperation.ranges)
+        desiredConnectionType.width += r.subwidth;
+
+    setOutputConnectionType(0, desiredConnectionType);
+}
+
+
 }

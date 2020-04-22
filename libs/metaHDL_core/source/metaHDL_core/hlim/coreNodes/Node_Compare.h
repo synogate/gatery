@@ -15,6 +15,8 @@ class Node_Compare : public Node
             GEQ
         };
         
+        Node_Compare();
+        
         inline void connectInput(size_t operand, const NodePort &port) { NodeIO::connectInput(operand, port); }
         inline void disconnectInput(size_t operand) { NodeIO::disconnectInput(operand); }        
         

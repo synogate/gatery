@@ -22,8 +22,6 @@ class SignalArithmeticOp
     public:
         SignalArithmeticOp(hlim::Node_Arithmetic::Op op) : m_op(op) { }
         
-        hlim::ConnectionType getResultingType(const hlim::ConnectionType &lhs, const hlim::ConnectionType &rhs);
-        
         template<typename SignalType, typename = std::enable_if_t<utils::isNumberSignal<SignalType>::value>>
         SignalType operator()(const SignalType &lhs, const SignalType &rhs);
 

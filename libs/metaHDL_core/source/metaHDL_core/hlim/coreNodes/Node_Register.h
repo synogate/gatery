@@ -18,7 +18,7 @@ class Node_Register : public Node
         
         Node_Register();
         
-        inline void connectInput(Input input, const NodePort &port) { NodeIO::connectInput(input, port); }
+        void connectInput(Input input, const NodePort &port);
         inline void disconnectInput(Input input) { NodeIO::disconnectInput(input); }
         
         virtual std::string getTypeName() const override;
