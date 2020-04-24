@@ -51,6 +51,29 @@ std::string DefaultCodeFormatting::getNodeName(const hlim::BaseNode *node, unsig
     return (boost::format("%s_%d") % initialName % (attempt+1)).str();
 }
 
+std::string DefaultCodeFormatting::getSignalName(const std::string &desiredName, SignalType type, unsigned attempt) const 
+{
+    std::string initialName = desiredName;
+    if (initialName.empty())
+        initialName = "unnamed";
+    
+    switch (type) {
+        case SIG_ENTITY_INPUT: initialName = std::string("in_") + initialName; break;
+        case SIG_ENTITY_OUTPUT: initialName = std::string("out_") + initialName; break;
+        case SIG_CHILD_ENTITY_INPUT: initialName = std::string("c_in_") + initialName; break;
+        case SIG_CHILD_ENTITY_OUTPUT: initialName = std::string("c_out_") + initialName; break;
+        case SIG_REGISTER_INPUT: initialName = std::string("r_in_") + initialName; break;
+        case SIG_REGISTER_OUTPUT: initialName = std::string("r_out_") + initialName; break;
+        case SIG_LOCAL_SIGNAL: initialName = std::string("s_") + initialName; break;
+        case SIG_LOCAL_VARIABLE: initialName = std::string("v_") + initialName; break;
+    }
+    
+    if (attempt == 0)
+        return initialName;
+    
+    return (boost::format("%s_%d") % initialName % (attempt+1)).str();
+}
+
 std::string DefaultCodeFormatting::getGlobalName(const std::string &id, unsigned attempt) const
 {
     std::string initialName = id;

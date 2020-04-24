@@ -26,7 +26,7 @@ class Namespace {
         /// Creates/retrieves name of a node (usually a signal).
         //std::string getName(hlim::NodePort nodePort, const std::string &desiredName);
         
-        std::string allocateName(const std::string &desiredName);
+        std::string allocateName(const std::string &desiredName, CodeFormatting::SignalType type);
         
         /// Creates/retrieves name of a global entity (usually clock and reset signals).
         std::string getGlobalsName(const std::string &id);
@@ -127,6 +127,8 @@ class Process : public BaseBlock
         
         bool isInterEntityInputSignal(hlim::NodePort nodePort);
         bool isInterEntityOutputSignal(hlim::NodePort nodePort);
+        
+        void formatExpression(std::ostream &stream, const hlim::NodePort &nodePort, std::set<hlim::NodePort> &dependentInputs, bool forceUnfold = false);
 };
 
 

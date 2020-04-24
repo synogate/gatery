@@ -2,9 +2,16 @@
 
 #include "../../hlim/NodeCategorization.h"
 #include "../../hlim/Node.h"
+
+#include "../../hlim/coreNodes/Node_Arithmetic.h"
+#include "../../hlim/coreNodes/Node_Compare.h"
+#include "../../hlim/coreNodes/Node_Constant.h"
+#include "../../hlim/coreNodes/Node_Logic.h"
+#include "../../hlim/coreNodes/Node_Multiplexer.h"
 #include "../../hlim/coreNodes/Node_Signal.h"
 #include "../../hlim/coreNodes/Node_Register.h"
-#include "../../hlim/coreNodes/Node_Multiplexer.h"
+#include "../../hlim/coreNodes/Node_Rewire.h"
+
 
 #include "../../utils/Range.h"
 
@@ -59,12 +66,12 @@ std::string Namespace::getName(hlim::NodePort nodePort, const std::string &desir
 }
 */
 
-std::string Namespace::allocateName(const std::string &desiredName)
+std::string Namespace::allocateName(const std::string &desiredName, CodeFormatting::SignalType type)
 {
     unsigned attempt = 0;
     std::string name;
     do {
-        name = m_codeFormatting->getGlobalName(desiredName, attempt++);
+        name = m_codeFormatting->getSignalName(desiredName, type, attempt++);
     } while (isNameInUse(name));
 
     m_namesInUse.insert(name);
@@ -114,6 +121,7 @@ void BaseBlock::extractExplicitSignals()
     // Find all explicit signals/variables (signals that will need to be declared and assigned)
     for (auto node : m_nodeGroup->getNodes()) {
         
+#if 0
         // Named signals are explicit
         if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr && !node->getName().empty()) {
             hlim::NodePort driver = {.node = node, .port = 0};
@@ -125,6 +133,7 @@ void BaseBlock::extractExplicitSignals()
             
             explicitSignal.hintedExplicit = true;
         }
+#endif
         
         // Check for inputs
         for (auto i : utils::Range(node->getNumInputPorts())) {
@@ -315,7 +324,7 @@ void BaseBlock::allocateLocalSignals()
         if (m_signalDeclaration.signalNames.find(p.first) != m_signalDeclaration.signalNames.end()) continue;
         
         m_signalDeclaration.localSignals.push_back(p.first);
-        m_signalDeclaration.signalNames[p.first] = m_namespace.allocateName(std::string("l_")+p.second.desiredName);
+        m_signalDeclaration.signalNames[p.first] = m_namespace.allocateName(p.second.desiredName, CodeFormatting::SIG_LOCAL_VARIABLE);
     }
 }
 
@@ -336,26 +345,28 @@ void Process::allocateExternalIOSignals()
             if (isInterEntityInputSignal(p.first)) {
                 auto it = m_parent.getSignalDeclaration().signalNames.find(p.first);
                 if (it == m_parent.getSignalDeclaration().signalNames.end()) {
-                    auto actualName = m_parent.getNamespace().allocateName(std::string("in_")+p.second.desiredName);
+                    auto actualName = m_parent.getNamespace().allocateName(p.second.desiredName, CodeFormatting::SIG_ENTITY_INPUT);
                     m_parent.getSignalDeclaration().inputSignals.push_back(p.first);
                     m_parent.getSignalDeclaration().signalNames[p.first] = actualName;
                     m_signalDeclaration.signalNames[p.first] = actualName;
                 } else {
                     m_signalDeclaration.signalNames[p.first] = it->second;
                 }
+                m_signalDeclaration.inputSignals.push_back(p.first);
             }
         } 
         if (p.second.drivingExternal) {
             if (isInterEntityOutputSignal(p.first)) {
                 auto it = m_parent.getSignalDeclaration().signalNames.find(p.first);
                 if (it == m_parent.getSignalDeclaration().signalNames.end()) {
-                    auto actualName = m_parent.getNamespace().allocateName(std::string("out_")+p.second.desiredName);
+                    auto actualName = m_parent.getNamespace().allocateName(p.second.desiredName, CodeFormatting::SIG_ENTITY_OUTPUT);
                     m_parent.getSignalDeclaration().outputSignals.push_back(p.first);
                     m_parent.getSignalDeclaration().signalNames[p.first] = actualName;
                     m_signalDeclaration.signalNames[p.first] = actualName;
                 } else {
                     m_signalDeclaration.signalNames[p.first] = it->second;
                 }
+                m_signalDeclaration.outputSignals.push_back(p.first);
             }
         }
     }
@@ -374,13 +385,17 @@ void Process::allocateIntraEntitySignals()
                 
                 auto it = m_parent.getSignalDeclaration().signalNames.find(p.first);
                 if (it == m_parent.getSignalDeclaration().signalNames.end()) {
-                    auto actualName = m_parent.getNamespace().allocateName(std::string("ip_")+p.second.desiredName);
+                    auto actualName = m_parent.getNamespace().allocateName(p.second.desiredName, CodeFormatting::SIG_LOCAL_SIGNAL);
                     m_parent.getSignalDeclaration().localSignals.push_back(p.first);
                     m_parent.getSignalDeclaration().signalNames[p.first] = actualName;
                     m_signalDeclaration.signalNames[p.first] = actualName;
                 } else {
                     m_signalDeclaration.signalNames[p.first] = it->second;
                 }
+                if (p.second.drivenByExternal)
+                    m_signalDeclaration.inputSignals.push_back(p.first);
+                else
+                    m_signalDeclaration.outputSignals.push_back(p.first);
             }
         }
     }
@@ -395,13 +410,17 @@ void Process::allocateChildEntitySignals()
 
             auto it = m_parent.getSignalDeclaration().signalNames.find(p.first);
             if (it == m_parent.getSignalDeclaration().signalNames.end()) {
-                auto actualName = m_parent.getNamespace().allocateName(std::string(p.second.drivingChild?"ci_":"co_")+p.second.desiredName);
+                auto actualName = m_parent.getNamespace().allocateName(p.second.desiredName, p.second.drivingChild?CodeFormatting::SIG_CHILD_ENTITY_INPUT:CodeFormatting::SIG_CHILD_ENTITY_OUTPUT);
                 m_parent.getSignalDeclaration().localSignals.push_back(p.first);
                 m_parent.getSignalDeclaration().signalNames[p.first] = actualName;
                 m_signalDeclaration.signalNames[p.first] = actualName;
             } else {
                 m_signalDeclaration.signalNames[p.first] = it->second;
             }
+            if (p.second.drivenByChild)
+                m_signalDeclaration.inputSignals.push_back(p.first);
+            else
+                m_signalDeclaration.outputSignals.push_back(p.first);
         }
     }
 }
@@ -415,15 +434,18 @@ void Process::allocateRegisterSignals()
         if (p.second.registerInput || p.second.registerOutput) {
             auto it = m_parent.getSignalDeclaration().signalNames.find(p.first);
             if (it == m_parent.getSignalDeclaration().signalNames.end()) {
-                auto actualName = m_parent.getNamespace().allocateName(std::string(p.second.registerInput?"ri_":"ro_")+p.second.desiredName);
+                auto actualName = m_parent.getNamespace().allocateName(p.second.desiredName, p.second.registerInput?CodeFormatting::SIG_REGISTER_INPUT:CodeFormatting::SIG_REGISTER_OUTPUT);
                 m_parent.getSignalDeclaration().localSignals.push_back(p.first);
                 m_parent.getSignalDeclaration().signalNames[p.first] = actualName;
                 m_signalDeclaration.signalNames[p.first] = actualName;
             } else {
                 m_signalDeclaration.signalNames[p.first] = it->second;
             }
-            
-            continue;
+
+            if (p.second.registerOutput)
+                m_signalDeclaration.inputSignals.push_back(p.first);
+            else
+                m_signalDeclaration.outputSignals.push_back(p.first);
         }
     }
 }
@@ -442,6 +464,135 @@ bool Process::isInterEntityOutputSignal(hlim::NodePort nodePort)
     return false;
 }
 
+
+void Process::formatExpression(std::ostream &stream, const hlim::NodePort &nodePort, std::set<hlim::NodePort> &dependentInputs, bool forceUnfold) 
+{
+    if (nodePort.node == nullptr) {
+        stream << "UNCONNECTED";
+        return;
+    }
+    
+    if (!forceUnfold && m_explicitSignals.find(nodePort) != m_explicitSignals.end()) {
+        stream << m_signalDeclaration.signalNames[nodePort];
+        dependentInputs.insert(nodePort);
+        return;
+    }
+    
+    const hlim::Node_Signal *signalNode = dynamic_cast<const hlim::Node_Signal *>(nodePort.node);
+    if (signalNode != nullptr) { 
+        formatExpression(stream, signalNode->getDriver(0), dependentInputs);
+        return;            
+    }
+    
+    const hlim::Node_Arithmetic *arithmeticNode = dynamic_cast<const hlim::Node_Arithmetic*>(nodePort.node);
+    if (arithmeticNode != nullptr) { 
+        stream << "(";
+        formatExpression(stream, arithmeticNode->getDriver(0), dependentInputs);
+        switch (arithmeticNode->getOp()) {
+            case hlim::Node_Arithmetic::ADD: stream << " + "; break;
+            case hlim::Node_Arithmetic::SUB: stream << " - "; break;
+            case hlim::Node_Arithmetic::MUL: stream << " * "; break;
+            case hlim::Node_Arithmetic::DIV: stream << " / "; break;
+            case hlim::Node_Arithmetic::REM: stream << " MOD "; break;
+            default:
+                MHDL_ASSERT_HINT(false, "Unhandled operation!");
+        };
+        formatExpression(stream, arithmeticNode->getDriver(1), dependentInputs);
+        stream << ")";
+        return; 
+    }
+    
+    const hlim::Node_Logic *logicNode = dynamic_cast<const hlim::Node_Logic*>(nodePort.node);
+    if (logicNode != nullptr) { 
+        stream << "(";
+        if (logicNode->getOp() == hlim::Node_Logic::NOT) {
+            stream << " not "; formatExpression(stream, logicNode->getDriver(0), dependentInputs);
+        } else {
+            formatExpression(stream, logicNode->getDriver(0), dependentInputs); 
+            switch (logicNode->getOp()) {
+                case hlim::Node_Logic::AND: stream << " and "; break;
+                case hlim::Node_Logic::NAND: stream << " nand "; break;
+                case hlim::Node_Logic::OR: stream << " or ";  break;
+                case hlim::Node_Logic::NOR: stream << " nor "; break;
+                case hlim::Node_Logic::XOR: stream << " xor "; break;
+                case hlim::Node_Logic::EQ: stream << " xnor "; break;
+                default:
+                    MHDL_ASSERT_HINT(false, "Unhandled operation!");
+            };
+            formatExpression(stream, logicNode->getDriver(1), dependentInputs);
+        }
+        stream << ")";
+        return; 
+    }
+
+    const hlim::Node_Rewire *rewireNode = dynamic_cast<const hlim::Node_Rewire*>(nodePort.node);
+    if (rewireNode != nullptr) { 
+        
+        size_t bitExtractIdx;
+        if (rewireNode->getOp().isBitExtract(bitExtractIdx)) {
+            formatExpression(stream, rewireNode->getDriver(0), dependentInputs);
+            
+            ///@todo be mindfull of bits vs single element vectors!
+            stream << "(" << bitExtractIdx << ")";
+        } else {
+            
+            const auto &op = rewireNode->getOp().ranges;
+            if (op.size() > 1)
+                stream << "(";
+
+            for (auto i : utils::Range(op.size())) {
+                if (i > 0)
+                    stream << " & ";
+                const auto &range = op[op.size()-1-i];
+                switch (range.source) {
+                    case hlim::Node_Rewire::OutputRange::INPUT:
+                        formatExpression(stream, rewireNode->getDriver(range.inputIdx), dependentInputs);
+                        stream << "(" << range.inputOffset + range.subwidth - 1 << " downto " << range.inputOffset << ")";
+                    break;
+                    case hlim::Node_Rewire::OutputRange::CONST_ZERO:
+                        stream << '"';
+                        for (auto j : utils::Range(range.subwidth))
+                            stream << "0";
+                        stream << '"';
+                    break;
+                    case hlim::Node_Rewire::OutputRange::CONST_ONE:
+                        stream << '"';
+                        for (auto j : utils::Range(range.subwidth))
+                            stream << "1";
+                        stream << '"';
+                    break;
+                    default:
+                        stream << "UNHANDLED_REWIRE_OP";
+                }
+            }
+            
+            if (op.size() > 1)
+                stream << ")";
+        }
+
+        return; 
+    }
+
+    if (const hlim::Node_Constant* constNode = dynamic_cast<const hlim::Node_Constant*>(nodePort.node))
+    {
+        // todo: what is the right way to get node width?
+        const auto& conType = constNode->getOutputConnectionType(0);
+
+        char sep = '"';
+        if (conType.interpretation == hlim::ConnectionType::BOOL)
+            sep = '\'';
+
+        stream << sep;
+        for (bool b : constNode->getValue().bitVec)
+            stream << (b ? '1' : '0');
+        stream << sep;
+        return;
+    }
+
+    stream << "unhandled_operation" << nodePort.node->getTypeName();
+};
+
+
 void Process::write(std::fstream &file)
 {
     auto &codeFormatting = *m_parent.getRoot().getCodeFormatting();
@@ -456,16 +607,20 @@ void Process::write(std::fstream &file)
             first = false;
             file << m_signalDeclaration.signalNames[signal];
         }
+        /*
         for (const auto &signal : m_signalDeclaration.outputSignals) {
             if (!first)
                 file << ", ";
             first = false;
             file << m_signalDeclaration.signalNames[signal];
         }
+        */
     }
     file << ")" << std::endl;
     
+    std::set<hlim::NodePort> variableList;
     for (const auto &signal : m_signalDeclaration.localSignals) {
+        variableList.insert(signal);
         codeFormatting.indent(file, 2);
         file << "variable " << m_signalDeclaration.signalNames[signal] << " : ";
         formatConnectionType(file, signal.node->getOutputConnectionType(signal.port));
@@ -475,9 +630,108 @@ void Process::write(std::fstream &file)
     codeFormatting.indent(file, 1);
     file << "BEGIN" << std::endl;
 
-    
-    std::vector<std::string> reverseInstructions;
     {
+        struct Statement {
+            std::set<hlim::NodePort> inputs;
+            std::set<hlim::NodePort> outputs;
+            std::string code;
+        };
+        
+        std::vector<Statement> statements;
+        
+        auto constructStatementsFor = [&](hlim::NodePort nodePort) {
+            std::stringstream code;
+            codeFormatting.indent(code, 3);
+            
+            Statement statement;
+            statement.outputs.insert(nodePort);
+            
+            hlim::Node_Multiplexer *muxNode = dynamic_cast<hlim::Node_Multiplexer *>(nodePort.node);
+            if (muxNode != nullptr) {
+                code << "IF (";
+                formatExpression(code, muxNode->getDriver(0), statement.inputs, false);
+                code << " = '1') THEN"<< std::endl;
+                
+                    codeFormatting.indent(code, 4);
+                    code << m_signalDeclaration.signalNames[nodePort];
+                    if (variableList.find(nodePort) != variableList.end())
+                        code << " := ";
+                    else
+                        code << " <= ";
+                    
+                    formatExpression(code, muxNode->getDriver(2), statement.inputs, false);
+                    code << ";" << std::endl;
+                    
+                codeFormatting.indent(code, 3);
+                code << "ELSE" << std::endl;
+
+                    codeFormatting.indent(code, 4);
+                    code << m_signalDeclaration.signalNames[nodePort];
+                    if (variableList.find(nodePort) != variableList.end())
+                        code << " := ";
+                    else
+                        code << " <= ";
+                    
+                    formatExpression(code, muxNode->getDriver(1), statement.inputs, false);
+                    code << ";" << std::endl;
+                
+                codeFormatting.indent(code, 3);
+                code << "END IF;" << std::endl;
+            } else {
+                code << m_signalDeclaration.signalNames[nodePort];
+                if (variableList.find(nodePort) != variableList.end())
+                    code << " := ";
+                else
+                    code << " <= ";
+                
+                formatExpression(code, nodePort, statement.inputs, true);
+                code << ";" << std::endl;
+            }
+            statement.code = code.str();
+            statements.push_back(std::move(statement));
+        };
+        
+        for (auto s : m_signalDeclaration.outputSignals) 
+            constructStatementsFor(s);
+        
+        for (auto s : m_signalDeclaration.localSignals) 
+            constructStatementsFor(s);
+        
+        
+        
+        
+        
+        
+        std::set<hlim::NodePort> signalsReady;
+        for (auto s : m_signalDeclaration.inputSignals) 
+            signalsReady.insert(s);
+
+        /// @todo: Will deadlock for circular dependency
+        while (!statements.empty()) {
+            for (auto i : utils::Range(statements.size())) {
+                
+                auto &statement = statements[i];
+                
+                bool ready = true;
+                for (auto s : statement.inputs)
+                    if (signalsReady.find(s) == signalsReady.end()) {
+                        ready = false;
+                        break;
+                    }
+                
+                if (ready) {
+                    file << statement.code;
+
+                    for (auto s : statement.outputs)
+                        signalsReady.insert(s);
+
+                    statements[i] = std::move(statements.back());
+                    statements.pop_back();
+                    
+                    break;
+                }
+            }
+        }
     }
     
     
