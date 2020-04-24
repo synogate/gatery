@@ -34,10 +34,10 @@ void formatConnectionType(std::ostream &stream, const hlim::ConnectionType &conn
             stream << "STD_LOGIC_VECTOR("<<connectionType.width-1 << " downto 0)";
         break;
         case hlim::ConnectionType::UNSIGNED:
-            stream << "STD_LOGIC_UNSIGNED("<<connectionType.width-1 << " downto 0)";
+            stream << "UNSIGNED("<<connectionType.width-1 << " downto 0)";
         break;
         case hlim::ConnectionType::SIGNED_2COMPLEMENT:
-            stream << "STD_LOGIC_SIGNED("<<connectionType.width-1 << " downto 0)";
+            stream << "INTEGER("<<connectionType.width-1 << " downto 0)";
         break;
         
         default:
