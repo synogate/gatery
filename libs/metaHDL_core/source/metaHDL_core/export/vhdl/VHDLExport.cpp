@@ -45,12 +45,13 @@ VHDLExport &VHDLExport::setFormatting(CodeFormatting *codeFormatting)
 
 void VHDLExport::operator()(const hlim::Circuit &circuit)
 {
-#if 1
+#if 0
     exportGroup(circuit.getRootNodeGroup());
 #else
     ast::Root root(m_codeFormatting.get());
     root.createEntity().buildFrom((hlim::NodeGroup*)circuit.getRootNodeGroup());
     root.print();
+    root.write(m_destination);
 #endif
 }
 

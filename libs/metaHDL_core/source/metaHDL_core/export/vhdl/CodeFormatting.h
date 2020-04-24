@@ -5,6 +5,7 @@
 #include <filesystem>
 
 #include <string>
+#include <ostream>
 
 namespace mhdl::core::vhdl {
 
@@ -19,6 +20,7 @@ class CodeFormatting
         
         inline const std::string &getIndentation() const { return m_indentation; }
         inline const std::string &getFileHeader() const { return m_fileHeader; }
+        void indent(std::ostream &stream, unsigned depth);
         
         virtual std::filesystem::path getFilename(const hlim::NodeGroup *nodeGroup) const = 0;
         

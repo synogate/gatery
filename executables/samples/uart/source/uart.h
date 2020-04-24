@@ -33,7 +33,7 @@ class UartTransmitter
 
         UartTransmitter(size_t dataBits, size_t stopBits, size_t clockCyclesPerBit);
         
-        void operator()(const BitVector &inputData, const Bit &send, Bit &outputLine, Bit &idle);
+        void operator()(const BitVector &inputData, Bit send, Bit &outputLine, Bit &idle);
     protected:
         size_t m_dataBits;
         size_t m_stopBits; 

@@ -16,19 +16,21 @@ class Node_Register;
 class NodeGroup
 {
     public:
-        enum GroupFlags {
+        enum GroupType {
             GRP_PROCEDURE   = 0x01,
             GRP_AREA        = 0x02,
-            GRP_ENTITY      = 0x04,
+            GRP_ENTITY      = 0x03,
         };
         
+        NodeGroup(GroupType groupType);
+        ~NodeGroup();
         
         inline void recordStackTrace() { m_stackTrace.record(10, 1); }
         inline const utils::StackTrace &getStackTrace() const { return m_stackTrace; }
         
         inline void setName(std::string name) { m_name = std::move(name); }
         
-        NodeGroup *addChildNodeGroup();
+        NodeGroup *addChildNodeGroup(GroupType groupType);
         
         inline const NodeGroup *getParent() const { return m_parent; }
         inline const std::string &getName() const { return m_name; }
@@ -37,8 +39,11 @@ class NodeGroup
 
 
         bool isChildOf(const NodeGroup *other) const;
+        
+        inline GroupType getGroupType() const { return m_groupType; }
     protected:
         std::string m_name;
+        GroupType m_groupType;
         
         std::vector<BaseNode*> m_nodes;
         std::vector<std::unique_ptr<NodeGroup>> m_children;

@@ -19,7 +19,8 @@ struct NodePort {
     BaseNode *node = nullptr;
     size_t port = ~0ull;
     
-    bool operator==(const NodePort &rhs) const { return node == rhs.node && port == rhs.port; }
+    inline bool operator==(const NodePort &rhs) const { return node == rhs.node && port == rhs.port; }
+    inline bool operator<(const NodePort &rhs) const { if (node < rhs.node) return true; if (node > rhs.node) return false; return port < rhs.port; }
 };
 
 

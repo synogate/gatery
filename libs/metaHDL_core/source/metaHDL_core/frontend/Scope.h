@@ -2,6 +2,7 @@
 
 #include "../hlim/NodeGroup.h"
 #include "../hlim/Circuit.h"
+#include "../utils/Preprocessor.h"
 
 namespace mhdl::core::frontend {
     
@@ -25,7 +26,7 @@ thread_local FinalType *BaseScope<FinalType>::m_currentScope = nullptr;
 class GroupScope : public BaseScope<GroupScope>
 {
     public:
-        GroupScope();
+        GroupScope(hlim::NodeGroup::GroupType groupType);
         GroupScope(hlim::NodeGroup *nodeGroup);
         
         GroupScope &setName(std::string name);
@@ -64,6 +65,11 @@ class DesignScope : public BaseScope<DesignScope>
 
 template<typename NodeType, typename... Args>
 NodeType *DesignScope::createNode(Args&&... args) {
+    MHDL_ASSERT(GroupScope::getCurrentNodeGroup() != nullptr);
+    
+    MHDL_DESIGNCHECK_HINT(GroupScope::getCurrentNodeGroup()->getGroupType() == hlim::NodeGroup::GRP_AREA ||
+                          GroupScope::getCurrentNodeGroup()->getGroupType() == hlim::NodeGroup::GRP_PROCEDURE, "Nodes creation can only happen inside GROUP_AREA or GROUP_PROCEDURE scopes!");
+    
     NodeType *node = m_currentScope->m_circuit.createNode<NodeType>(std::forward<Args>(args)...);
     node->moveToGroup(GroupScope::getCurrentNodeGroup());
     return node;

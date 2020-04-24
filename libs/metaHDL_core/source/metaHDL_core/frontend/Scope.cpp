@@ -3,13 +3,13 @@
 
 namespace mhdl::core::frontend {
     
-GroupScope::GroupScope() : BaseScope<GroupScope>()
+GroupScope::GroupScope(hlim::NodeGroup::GroupType groupType) : BaseScope<GroupScope>()
 {
-    m_nodeGroup = m_parentScope->m_nodeGroup->addChildNodeGroup();
+    m_nodeGroup = m_parentScope->m_nodeGroup->addChildNodeGroup(groupType);
     m_nodeGroup->recordStackTrace();
 }
 
-GroupScope::GroupScope(hlim::NodeGroup *nodeGroup)
+GroupScope::GroupScope(hlim::NodeGroup *nodeGroup) : BaseScope<GroupScope>()
 {
     m_nodeGroup = nodeGroup;
 }

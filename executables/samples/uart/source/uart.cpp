@@ -30,6 +30,7 @@
 #include <metaHDL_core/utils/Exceptions.h>
 
 using namespace mhdl::core::frontend;
+using namespace mhdl::core::hlim;
 
 
 UartTransmitter::UartTransmitter(size_t dataBits, size_t stopBits, size_t clockCyclesPerBit) :
@@ -37,25 +38,34 @@ UartTransmitter::UartTransmitter(size_t dataBits, size_t stopBits, size_t clockC
 {
 }
         
-void UartTransmitter::operator()(const BitVector &inputData, const Bit &send, Bit &outputLine, Bit &idle)
+void UartTransmitter::operator()(const BitVector &inputData, Bit send, Bit &outputLine, Bit &idle)
 {
-    GroupScope scope;
-    //scope.setName(GET_FUNCTION_NAME);
-    scope.setName("UartTransmitter");
+    MHDL_NAMED(send);
+    MHDL_NAMED(outputLine);
+    MHDL_NAMED(idle);
+
+
+    GroupScope entity(NodeGroup::GRP_ENTITY);
+    entity.setName("UartTransmitter");
     
+    GroupScope area(NodeGroup::GRP_AREA);
+    area.setName("all");
     
     // todo: constants!
-    Bit enable;
+    Bit enable = 1_bit;
     MHDL_NAMED(enable);
 
     RegisterFactory reg({}, {});
     
     UnsignedInteger bitCounter(5);
+    MHDL_NAMED(bitCounter);
     
     BitVector currentData(8);
     MHDL_NAMED(currentData);
+    /*
     BitVector dataZero(8);
     MHDL_NAMED(dataZero);
+    */
     
     auto shiftedData = currentData >> 1;
     MHDL_NAMED(shiftedData);
@@ -84,7 +94,7 @@ void UartTransmitter::operator()(const BitVector &inputData, const Bit &send, Bi
     outputLine = mux(done, outputLine, 1_bit);
     
 
-    driveWith(currentData, reg(nextData, enable, dataZero));
+    driveWith(currentData, reg(nextData, enable, 0x00_vec));
     
     auto nextIdle = idle;
     //MHDL_NAMED(nextIdle);

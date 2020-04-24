@@ -17,6 +17,11 @@ BaseNode::BaseNode(size_t numInputs, size_t numOutputs)
     resizeOutputs(numOutputs);
 }
 
+BaseNode::~BaseNode() 
+{ 
+    moveToGroup(nullptr); 
+}
+
 
 bool BaseNode::isOrphaned() const
 {

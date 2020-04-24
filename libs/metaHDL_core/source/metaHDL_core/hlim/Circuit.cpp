@@ -9,7 +9,7 @@ namespace mhdl::core::hlim {
 
 Circuit::Circuit()
 {
-    m_root.reset(new NodeGroup());
+    m_root.reset(new NodeGroup(NodeGroup::GRP_ENTITY));
 }
 
 void Circuit::cullUnnamedSignalNodes()
@@ -40,6 +40,21 @@ void Circuit::cullUnnamedSignalNodes()
             
             signal->disconnectInput();
         
+            m_nodes[i] = std::move(m_nodes.back());
+            m_nodes.pop_back();
+            i--;
+        }
+    }
+}
+
+void Circuit::cullOrphanedSignalNodes()
+{
+    for (size_t i = 0; i < m_nodes.size(); i++) {
+        Node_Signal *signal = dynamic_cast<Node_Signal*>(m_nodes[i].get());
+        if (signal == nullptr)
+            continue;
+        
+        if (signal->isOrphaned()) {
             m_nodes[i] = std::move(m_nodes.back());
             m_nodes.pop_back();
             i--;

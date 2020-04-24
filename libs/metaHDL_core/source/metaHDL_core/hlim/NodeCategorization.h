@@ -16,13 +16,13 @@ class BaseNode;
 class Node_Signal;
 class Node_Register;
 
-
+/*
 struct NodeCategorization
 {
-    std::map<Node_Signal*, NodeGroup*> inputSignals;
-    std::map<Node_Signal*, NodeGroup*> outputSignals;
-    std::map<Node_Signal*, NodeGroup*> childInputSignals;
-    std::map<Node_Signal*, NodeGroup*> childOutputSignals;
+    std::set<NodePort> drivenByExternal;
+    std::set<NodePort> drivingExternal;
+    std::set<NodePort> drivenByChild;
+    std::set<NodePort> drivingChild;
     std::set<Node_Signal*> internalSignals;
     std::set<Node_Register*> registers;
     std::set<BaseNode*> combinatorial;
@@ -30,9 +30,9 @@ struct NodeCategorization
     std::set<BaseNode*> unused;
     std::set<NodeGroup*> childGroups;
     
-    void parse(NodeGroup *group, const std::function<bool(NodeGroup *child)> &includeChild);
+    void parse(NodeGroup *group);
 };
-
+*/
 }
 }
 }

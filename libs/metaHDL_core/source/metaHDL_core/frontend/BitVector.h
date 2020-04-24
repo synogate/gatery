@@ -65,7 +65,7 @@ void BaseBitVector<FinalType>::resize(size_t width)
 template<typename FinalType>
 Bit BaseBitVector<FinalType>::operator[](size_t idx)
 {
-    hlim::Node_Rewire *node = DesignScope::get()->getCircuit().createNode<hlim::Node_Rewire>(1);
+    hlim::Node_Rewire *node = DesignScope::createNode<hlim::Node_Rewire>(1);
     node->recordStackTrace();
     
     size_t w = m_node->getOutputConnectionType(0).width;

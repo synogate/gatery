@@ -12,59 +12,23 @@ namespace mhdl {
 namespace core {
 namespace hlim {
 
-namespace {
-/*
-std::set<hlim::Node*> collectRelevantNodes(NodeGroup *group, std::set<NodeGroup*> &childGroups, const std::function<bool(NodeGroup *child)> &includeChild)
+#if 0
+void NodeCategorization::parse(NodeGroup *group)
 {
-    std::set<hlim::Node*> result;
-    
-    std::stack<NodeGroup*> groups;
-    groups.push(group);
-    while (!groups.empty()) {
-        NodeGroup *g = groups.top(); groups.pop();
-        
-        for (auto &node : g->getNodes())
-            result.insert(node.get());
-        
-        for (auto &child : g->getChildren())
-            if (includeChild(child.get()))
-                groups.push(child.get());
-            else
-                childGroups.insert(child.get());
-    }
-    
-    return result;
-}
-*/
-}
-    
-
-void NodeCategorization::parse(NodeGroup *group, const std::function<bool(NodeGroup *child)> &includeChild)
-{
-    /*
-    std::set<hlim::Node*> allConsideredNodes = collectRelevantNodes(group, childGroups, includeChild);
-    
-    auto isNodeInConsideredSet = [&allConsideredNodes](Node *node) {
-        return allConsideredNodes.find(node) != allConsideredNodes.end();
-    };
-
     // Find all connecting signals (inputs, outputs, child inputs, child outputs)
-    for (auto node : allConsideredNodes) {
-        for (auto i : utils::Range(node->getNumInputs())) {
-            if (node->getInput(i).connection != nullptr) {
-                
-                Node *drivingNode = node->getInput(i).connection->node;
-                
-                if (!isNodeInConsideredSet(drivingNode)) { // This node is being driven by a node outside of the considered set.
-                    if (drivingNode->getGroup()->isChildOf(group)) { // Either it is being driven by a child module...
-                        Node_Signal *signal = dynamic_cast<Node_Signal*>(drivingNode);
-                        MHDL_ASSERT(signal != nullptr);
-                        childOutputSignals[signal] = drivingNode->getGroup();
-                    } else {                                         // .. or by an outside node.
-                        Node_Signal *signal = dynamic_cast<Node_Signal*>(drivingNode);
-                        MHDL_ASSERT(signal != nullptr);
-                        inputSignals[signal] = drivingNode->getGroup();
-                    }
+    for (auto node : group->getNodes()) {
+        for (auto i : utils::Range(node->getNumInputPorts())) {
+            auto driver = node->getDriver(i);
+
+            if (driver.node == nullptr)
+                unconnected.insert(node);
+            else {
+                if (driver.node->getGroup()->isChildOf(group)) { // Either it is being driven by a child module...
+                    childOutputSignals.insert(
+                } else {                                         // .. or by an outside node.
+                    Node_Signal *signal = dynamic_cast<Node_Signal*>(drivingNode);
+                    MHDL_ASSERT(signal != nullptr);
+                    inputSignals[signal] = drivingNode->getGroup();
                 }
             }
         }
@@ -165,7 +129,7 @@ void NodeCategorization::parse(NodeGroup *group, const std::function<bool(NodeGr
     }
     */
 }
-
+#endif
 
 }
 }

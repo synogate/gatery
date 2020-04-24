@@ -1,10 +1,18 @@
 #include "CodeFormatting.h"
 
+#include "../../utils/Range.h"
+
 #include <boost/format.hpp>
 
 namespace mhdl::core::vhdl {
 
 
+void CodeFormatting::indent(std::ostream &stream, unsigned depth)
+{
+    for (auto i : utils::Range(depth))
+        stream << m_indentation;
+}
+    
 DefaultCodeFormatting::DefaultCodeFormatting()
 { 
     m_indentation = "    ";
@@ -45,10 +53,13 @@ std::string DefaultCodeFormatting::getNodeName(const hlim::BaseNode *node, unsig
 
 std::string DefaultCodeFormatting::getGlobalName(const std::string &id, unsigned attempt) const
 {
+    std::string initialName = id;
+    if (initialName.empty())
+        initialName = "unnamed";
     if (attempt == 0)
-        return id;
+        return initialName;
     
-    return (boost::format("%s_%d") % id % (attempt+1)).str();
+    return (boost::format("%s_%d") % initialName % (attempt+1)).str();
 }
 
 

@@ -23,7 +23,7 @@ class BaseNode : public NodeIO
     public:
         BaseNode();
         BaseNode(size_t numInputs, size_t numOutputs);
-        virtual ~BaseNode() { }
+        virtual ~BaseNode();
 
         virtual std::string getTypeName() const = 0;
         virtual void assertValidity() const = 0;

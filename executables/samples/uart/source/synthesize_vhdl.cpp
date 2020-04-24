@@ -16,6 +16,7 @@
 
 
 using namespace mhdl::core::frontend;
+using namespace mhdl::core::hlim;
 using namespace mhdl::utils;
 using namespace mhdl::core::vhdl;
 
@@ -27,23 +28,29 @@ int main() {
             DesignScope design;
 
             {
+                GroupScope area(NodeGroup::GRP_AREA);
+                area.setName("all");
+                
                 UartTransmitter uart(8, 1, 1000);
                 
                 BitVector data(8);
-                data.setName("data");
+                data.setName("data_of_uart0");
                 
                 Bit send, idle, outputLine;
-                send.setName("send");
-                idle.setName("idle");
-                outputLine.setName("outputLine");
+                send.setName("send_of_uart0");
+                idle.setName("idle_of_uart0");
+                outputLine.setName("outputLine_of_uart0");
                 
                 uart(data, send, outputLine, idle);
                 
                 Bit useIdle = idle;
+                MHDL_NAMED(useIdle);
                 Bit useOutputLine = outputLine;
+                MHDL_NAMED(useOutputLine);
             }
             
             design.getCircuit().cullUnnamedSignalNodes();
+            design.getCircuit().cullOrphanedSignalNodes();
             
             VHDLExport vhdl("VHDL_out/");
             vhdl(design.getCircuit());

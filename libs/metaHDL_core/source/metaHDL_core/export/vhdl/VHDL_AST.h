@@ -7,11 +7,12 @@
 #include "../../hlim/Circuit.h"
 
 
+#include <filesystem>
 #include <set>
 #include <map>
 #include <string>
 #include <list>
-#include <map>
+#include <vector>
 
 namespace mhdl {
 namespace core {
@@ -23,7 +24,10 @@ namespace ast {
 class Namespace {
     public:
         /// Creates/retrieves name of a node (usually a signal).
-        std::string getName(const hlim::BaseNode* node);
+        //std::string getName(hlim::NodePort nodePort, const std::string &desiredName);
+        
+        std::string allocateName(const std::string &desiredName);
+        
         /// Creates/retrieves name of a global entity (usually clock and reset signals).
         std::string getGlobalsName(const std::string &id);
 
@@ -34,51 +38,61 @@ class Namespace {
         Namespace *m_parent = nullptr;
         CodeFormatting *m_codeFormatting = nullptr;
         std::set<std::string> m_namesInUse;
-        std::map<const hlim::BaseNode*, std::string> m_nodeNames;
+        std::map<hlim::NodePort, std::string> m_nodeNames;
         std::map<std::string, std::string> m_globalsNames;
 };
 
-struct Locals
-{
-    std::set<hlim::Node_Signal*> signals;
-    std::set<hlim::Node_Signal*> variables;
+
+struct ExplicitSignal {
+    hlim::NodePort producerOutput;
+    std::string desiredName;
+
+    bool drivenByExternal = false;
+    bool drivingExternal = false;
+    bool drivenByChild = false;
+    bool drivingChild = false;
+    
+    bool hintedExplicit = false;
+    bool syntaxNecessity = false;
+    bool registerInput = false;
+    bool registerOutput = false;
+    bool multipleConsumers = false;
 };
 
-struct IO {
-    std::map<hlim::Node_Signal*, hlim::NodeGroup*> inputs;
-    std::map<hlim::Node_Signal*, hlim::NodeGroup*> outputs;
+
+struct SignalDeclaration {
+    std::vector<hlim::NodePort> inputSignals;
+    std::vector<hlim::NodePort> outputSignals;
+    std::vector<hlim::NodePort> localSignals;
     // clock, reset, pins, ...
     std::vector<std::string> globalInputs;
     // clock, reset, pins, ...
     std::vector<std::string> globalOutputs;
+    
+    std::map<hlim::NodePort, std::string> signalNames;
 };
 
-struct Assignment {
-    hlim::Node_Signal *recievingSignal;
+class BaseBlock {
+    public:
+        BaseBlock(Namespace *parent, CodeFormatting *codeFormatting, hlim::NodeGroup *nodeGroup);
+        
+        void extractExplicitSignals();
+        
+        void allocateLocalSignals();
+    protected:
+        Namespace m_namespace;
+        SignalDeclaration m_signalDeclaration;        
+        hlim::NodeGroup *m_nodeGroup;
+        std::map<hlim::NodePort, ExplicitSignal> m_explicitSignals;
+        
 };
 
-struct ConditionalAssignments {
-    std::vector<Assignment> truePart;
-    std::vector<Assignment> falsePart;
-};
-
-struct CombinatorialBlock
+class Procedure : public BaseBlock
 {
-    Namespace nspace;
-    Locals locals;
-    std::vector<hlim::BaseNode*> nodes;
-    std::vector<Assignment> unconditionalAssignments;
-    std::map<hlim::Node_Signal*, ConditionalAssignments> conditionalAssignments;
+    public:
+    protected:
+        Procedure *m_identicalProcedure = nullptr;
 };
-
-/*
-class Procedure
-{
-    Namespace nspace;
-    IO io;
-    CombinatorialBlock code;
-};
-*/
 
 struct RegisterConfig
 {
@@ -90,6 +104,32 @@ struct RegisterConfig
     std::vector<hlim::Node_Register*> registerNodes;
 };
 
+class Entity;
+
+class Process : public BaseBlock
+{
+    public:
+        Process(Entity &parent, hlim::NodeGroup *nodeGroup);
+        
+        void allocateExternalIOSignals();
+        void allocateIntraEntitySignals();
+        void allocateChildEntitySignals();
+        void allocateRegisterSignals();
+
+        inline const std::string &getName() const { return m_name; }
+        
+        void write(std::fstream &file);
+        
+    protected:
+        Entity &m_parent;
+        std::string m_name;
+        std::list<RegisterConfig> m_registerConfigs;
+        
+        bool isInterEntityInputSignal(hlim::NodePort nodePort);
+        bool isInterEntityOutputSignal(hlim::NodePort nodePort);
+};
+
+
 class Root;
 
 class Entity
@@ -99,15 +139,21 @@ class Entity
         void buildFrom(hlim::NodeGroup *nodeGroup);
 
         void print();
+        void write(std::filesystem::path destination);
+        
+        
+        inline SignalDeclaration &getSignalDeclaration() { return m_signalDeclaration; }
+        inline Root &getRoot() { return m_root; }
+        inline Namespace &getNamespace() { return m_namespace; }
+        hlim::NodeGroup *getNodeGroup() { return m_nodeGroup; }
     protected:
         Root &m_root;        
+        hlim::NodeGroup *m_nodeGroup;
         std::string m_name;
         Namespace m_namespace;
-        IO m_io;
-        Locals m_locals;
-        std::vector<Entity*> m_subComponents;
-        std::list<CombinatorialBlock> m_combinatorialProcesses;
-        std::list<RegisterConfig> m_registerConfigs;
+        SignalDeclaration m_signalDeclaration;
+        std::vector<Entity*> m_subEntities;
+        std::list<Process> m_processes;
 
         Entity *m_identicalEntity = nullptr;
 };
@@ -128,7 +174,7 @@ class Root
     protected:
         CodeFormatting *m_codeFormatting;
         Namespace m_namespace;
-        std::list<Entity> m_components;
+        std::list<Entity> m_entities;
 };
 
 
