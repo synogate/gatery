@@ -11,9 +11,13 @@ namespace mhdl::core::frontend {
 class Bit;    
     
 class ClockConfig {
+    public:
+        std::string clockName = "clk";
 };
 
 class ResetConfig {
+    public:
+        std::string resetName = "reset";
 };
 
 class RegisterFactory
@@ -25,6 +29,8 @@ class RegisterFactory
         template<typename DataSignal, typename = std::enable_if_t<utils::isSignal<DataSignal>::value>>
         DataSignal operator()(const DataSignal &inputSignal, const Bit &enableSignal, const DataSignal &resetValue);
     protected:
+        ClockConfig m_clockConfig; 
+        ResetConfig m_resetConfig;
 };
 
 class PipelineRegisterFactory : public RegisterFactory
@@ -55,6 +61,9 @@ DataSignal RegisterFactory::operator()(const DataSignal &inputSignal, const Bit 
     node->connectInput(hlim::Node_Register::DATA, {.node = inputSignal.getNode(), .port = 0ull});
     node->connectInput(hlim::Node_Register::RESET_VALUE, {.node = resetValue.getNode(), .port = 0ull});
     node->connectInput(hlim::Node_Register::ENABLE, {.node = enableSignal.getNode(), .port = 0ull});
+    
+    node->m_clockName = m_clockConfig.clockName;
+    node->m_resetName = m_resetConfig.resetName;
     
     return DataSignal({.node = node, .port = 0ull});
 }

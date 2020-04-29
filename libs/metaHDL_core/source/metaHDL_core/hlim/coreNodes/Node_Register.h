@@ -16,6 +16,9 @@ class Node_Register : public Node<Node_Register>
             NUM_INPUTS
         };
         
+        std::string m_resetName;
+        std::string m_clockName;
+        
         Node_Register();
         
         void connectInput(Input input, const NodePort &port);

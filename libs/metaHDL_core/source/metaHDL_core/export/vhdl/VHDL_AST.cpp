@@ -599,6 +599,7 @@ void Process::write(std::fstream &file)
     
     codeFormatting.indent(file, 1);
     file << "combinatorial_" << m_name << " : PROCESS(";
+#if 0    
     {
         bool first = true;
         for (const auto &signal : m_signalDeclaration.inputSignals) {
@@ -616,6 +617,9 @@ void Process::write(std::fstream &file)
         }
         */
     }
+#else
+    file << "all";
+#endif
     file << ")" << std::endl;
     
     std::set<hlim::NodePort> variableList;
@@ -739,13 +743,28 @@ void Process::write(std::fstream &file)
     file << "END PROCESS;" << std::endl << std::endl;
     
     codeFormatting.indent(file, 1);
-    file << "register_" << m_name << " : PROCESS(clk)" << std::endl;
+    file << "register_" << m_name << " : PROCESS(clk, reset)" << std::endl;
         
     codeFormatting.indent(file, 1);
     file << "BEGIN" << std::endl;
     
     codeFormatting.indent(file, 2);
-    file << "IF (rising_edge(clk)) THEN" << std::endl;
+    file << "IF (reset = '1') THEN" << std::endl;
+
+    for (auto node : m_nodeGroup->getNodes()) {
+        hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
+        if (regNode != nullptr) {
+            
+            hlim::NodePort output = {.node = regNode, .port = 0};
+            hlim::NodePort resetValue = regNode->getDriver(hlim::Node_Register::RESET_VALUE);
+            
+            codeFormatting.indent(file, 3);
+            file << m_signalDeclaration.signalNames[output] << " <= " << m_signalDeclaration.signalNames[resetValue] << ";" << std::endl;
+        }
+    }
+
+    codeFormatting.indent(file, 2);
+    file << "ELSIF (rising_edge(clk)) THEN" << std::endl;
     
     for (auto node : m_nodeGroup->getNodes()) {
         hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
@@ -867,6 +886,9 @@ void Entity::write(std::filesystem::path destination)
     
     {
         std::vector<std::string> portList;
+        
+        portList.push_back("clk : IN STD_LOGIC");
+        portList.push_back("reset : IN STD_LOGIC");
     
         for (const auto &signal : m_signalDeclaration.inputSignals) {
             std::stringstream line;
@@ -909,6 +931,10 @@ void Entity::write(std::filesystem::path destination)
         file << "inst_" << subEntity->m_name << " : entity work." << subEntity->m_name << "(impl) port map (" << std::endl;
         
         std::vector<std::string> portmapList;
+
+        portmapList.push_back("clk => clk");
+        portmapList.push_back("reset => reset");
+        
         for (auto &s : subEntity->m_signalDeclaration.inputSignals) {
             std::stringstream line;
             line << subEntity->m_signalDeclaration.signalNames[s] << " => ";

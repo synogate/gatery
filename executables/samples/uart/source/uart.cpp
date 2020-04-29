@@ -57,7 +57,7 @@ void UartTransmitter::operator()(const BitVector &inputData, Bit send, Bit &outp
 
     RegisterFactory reg({}, {});
     
-    UnsignedInteger bitCounter(5);
+    UnsignedInteger bitCounter(4);
     MHDL_NAMED(bitCounter);
     
     BitVector currentData(8);
@@ -73,11 +73,11 @@ void UartTransmitter::operator()(const BitVector &inputData, Bit send, Bit &outp
     auto loadingData = idle & send;
     MHDL_NAMED(loadingData);
     
-    auto newBitCounter = mux(idle, bitCounter + 1_uvec, 0b00000_uvec);
+    auto newBitCounter = mux(idle, bitCounter + 1_uvec, 0b0000_uvec);
     MHDL_NAMED(newBitCounter);
-    driveWith(bitCounter, reg(newBitCounter, enable, 0b00000_uvec));
+    driveWith(bitCounter, reg(newBitCounter, enable, 0b0000_uvec));
     
-    auto done = bitCounter[4];
+    auto done = bitCounter[3];
     MHDL_NAMED(done);
     
     auto nextData = mux(loadingData, shiftedData, inputData);
@@ -99,9 +99,9 @@ void UartTransmitter::operator()(const BitVector &inputData, Bit send, Bit &outp
     auto nextIdle = idle;
     //MHDL_NAMED(nextIdle);
     // if loading new data not idle in next step
-    nextIdle = mux(loadingData, 0_bit, nextIdle);
+    nextIdle = mux(loadingData, nextIdle, 0_bit);
     // if done, idle in next step
-    nextIdle = mux(done, 1_bit, nextIdle);
+    nextIdle = mux(done, nextIdle, 1_bit);
         
     driveWith(idle, reg(nextIdle, enable, 1_bit));
 }
