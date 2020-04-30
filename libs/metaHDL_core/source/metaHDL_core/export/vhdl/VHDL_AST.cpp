@@ -8,6 +8,7 @@
 #include "../../hlim/coreNodes/Node_Constant.h"
 #include "../../hlim/coreNodes/Node_Logic.h"
 #include "../../hlim/coreNodes/Node_Multiplexer.h"
+#include "../../hlim/coreNodes/Node_PriorityConditional.h"
 #include "../../hlim/coreNodes/Node_Signal.h"
 #include "../../hlim/coreNodes/Node_Register.h"
 #include "../../hlim/coreNodes/Node_Rewire.h"
@@ -230,6 +231,27 @@ void BaseBlock::extractExplicitSignals()
             }
         }
         
+        // check for prio conditional
+        hlim::Node_PriorityConditional *prioCon = dynamic_cast<hlim::Node_PriorityConditional *>(node);
+        if (prioCon != nullptr) {
+            
+            // Handle output
+            {
+                hlim::NodePort driver;
+                driver.node = prioCon;
+                driver.port = 0;
+
+                ExplicitSignal &explicitSignal = m_explicitSignals[driver];
+                explicitSignal.producerOutput = driver;
+                
+                if (explicitSignal.desiredName.empty() && !prioCon->getDirectlyDriven(0).empty() && dynamic_cast<hlim::Node_Signal*>(prioCon->getDirectlyDriven(0)[0].node) != nullptr)
+                    explicitSignal.desiredName = prioCon->getDirectlyDriven(0)[0].node->getName();
+                if (explicitSignal.desiredName.empty())
+                    explicitSignal.desiredName = node->getName();                
+                
+                explicitSignal.syntaxNecessity = true;
+            }
+        }
         
         // check for registers
         hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
@@ -651,10 +673,13 @@ void Process::write(std::fstream &file)
             statement.outputs.insert(nodePort);
             
             hlim::Node_Multiplexer *muxNode = dynamic_cast<hlim::Node_Multiplexer *>(nodePort.node);
+            hlim::Node_PriorityConditional *prioCon = dynamic_cast<hlim::Node_PriorityConditional *>(nodePort.node);
+            
+            
             if (muxNode != nullptr) {
-                code << "IF (";
+                code << "IF ";
                 formatExpression(code, muxNode->getDriver(0), statement.inputs, false);
-                code << " = '1') THEN"<< std::endl;
+                code << " = '1' THEN"<< std::endl;
                 
                     codeFormatting.indent(code, 4);
                     code << m_signalDeclaration.signalNames[nodePort];
@@ -681,6 +706,55 @@ void Process::write(std::fstream &file)
                 
                 codeFormatting.indent(code, 3);
                 code << "END IF;" << std::endl;
+            } else 
+            if (prioCon != nullptr) {
+                if (prioCon->getNumChoices() == 0) {
+                    code << m_signalDeclaration.signalNames[nodePort];
+                    if (variableList.find(nodePort) != variableList.end())
+                        code << " := ";
+                    else
+                        code << " <= ";
+                    
+                    formatExpression(code, prioCon->getDriver(hlim::Node_PriorityConditional::inputPortDefault()), statement.inputs, false);
+                    code << ";" << std::endl;
+                } else {
+                    for (auto choice : utils::Range(prioCon->getNumChoices())) {
+                        if (choice == 0)
+                            code << "IF ";
+                        else {
+                            codeFormatting.indent(code, 3);
+                            code << "ELSIF ";
+                        }
+                        formatExpression(code, prioCon->getDriver(hlim::Node_PriorityConditional::inputPortChoiceCondition(choice)), statement.inputs, false);
+                        code << " = '1' THEN"<< std::endl;
+                        
+                            codeFormatting.indent(code, 4);
+                            code << m_signalDeclaration.signalNames[nodePort];
+                            if (variableList.find(nodePort) != variableList.end())
+                                code << " := ";
+                            else
+                                code << " <= ";
+                            
+                            formatExpression(code, prioCon->getDriver(hlim::Node_PriorityConditional::inputPortChoiceValue(choice)), statement.inputs, false);
+                            code << ";" << std::endl;
+                    }
+                            
+                    codeFormatting.indent(code, 3);
+                    code << "ELSE" << std::endl;
+
+                        codeFormatting.indent(code, 4);
+                        code << m_signalDeclaration.signalNames[nodePort];
+                        if (variableList.find(nodePort) != variableList.end())
+                            code << " := ";
+                        else
+                            code << " <= ";
+                        
+                        formatExpression(code, prioCon->getDriver(hlim::Node_PriorityConditional::inputPortDefault()), statement.inputs, false);
+                        code << ";" << std::endl;
+                    
+                    codeFormatting.indent(code, 3);
+                    code << "END IF;" << std::endl;
+                }
             } else {
                 code << m_signalDeclaration.signalNames[nodePort];
                 if (variableList.find(nodePort) != variableList.end())
