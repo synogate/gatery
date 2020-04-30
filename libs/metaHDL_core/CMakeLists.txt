@@ -16,6 +16,8 @@ add_library(metaHDL_core STATIC
     source/metaHDL_core/frontend/BitVector.h
     source/metaHDL_core/frontend/Integers.cpp
     source/metaHDL_core/frontend/Integers.h
+    source/metaHDL_core/frontend/PriorityConditional.cpp
+    source/metaHDL_core/frontend/PriorityConditional.h
     source/metaHDL_core/frontend/Registers.cpp
     source/metaHDL_core/frontend/Registers.h
     source/metaHDL_core/frontend/Scope.cpp
@@ -41,6 +43,8 @@ add_library(metaHDL_core STATIC
     source/metaHDL_core/hlim/coreNodes/Node_Logic.h
     source/metaHDL_core/hlim/coreNodes/Node_Multiplexer.cpp
     source/metaHDL_core/hlim/coreNodes/Node_Multiplexer.h
+    source/metaHDL_core/hlim/coreNodes/Node_PriorityConditional.cpp
+    source/metaHDL_core/hlim/coreNodes/Node_PriorityConditional.h
     source/metaHDL_core/hlim/coreNodes/Node_Register.cpp
     source/metaHDL_core/hlim/coreNodes/Node_Register.h
     source/metaHDL_core/hlim/coreNodes/Node_Rewire.cpp

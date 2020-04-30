@@ -73,11 +73,19 @@ SignalType SignalLogicOp::operator()(const SignalType &lhs) {
         SignalLogicOp op(Op);                                                                   \
         return op(lhs, rhs);                                                                    \
     }
+
+#define MHDL_BUILD_LOGIC_OPERATOR_UNARY(typeTrait, cppOp, Op)                                   \
+    template<typename SignalType, typename = std::enable_if_t<typeTrait<SignalType>::value>>    \
+    SignalType cppOp(const SignalType &lhs)  {                                                  \
+        SignalLogicOp op(Op);                                                                   \
+        return op(lhs);                                                                         \
+    }
+    
     
 MHDL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, operator&, hlim::Node_Logic::AND)
 MHDL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, operator|, hlim::Node_Logic::OR)
 MHDL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, operator^, hlim::Node_Logic::XOR)
-//MHDL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, operator~, hlim::Node_Logic::NOT)
+MHDL_BUILD_LOGIC_OPERATOR_UNARY(utils::isElementarySignal, operator~, hlim::Node_Logic::NOT)
 
 MHDL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, nand, hlim::Node_Logic::NAND)
 MHDL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, nor, hlim::Node_Logic::NOR)
@@ -86,8 +94,10 @@ MHDL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, bitwiseEqual, hlim::Node_Lo
 MHDL_BUILD_LOGIC_OPERATOR(utils::isBitSignal, operator&&, hlim::Node_Logic::AND)
 MHDL_BUILD_LOGIC_OPERATOR(utils::isBitSignal, operator||, hlim::Node_Logic::OR)
 MHDL_BUILD_LOGIC_OPERATOR(utils::isBitSignal, operator==, hlim::Node_Logic::EQ)
+MHDL_BUILD_LOGIC_OPERATOR_UNARY(utils::isBitSignal, operator!, hlim::Node_Logic::NOT)
 
 #undef MHDL_BUILD_LOGIC_OPERATOR
+#undef MHDL_BUILD_LOGIC_OPERATOR_UNARY
 
 
 #define MHDL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(typeTrait, cppOp, Op)                         \

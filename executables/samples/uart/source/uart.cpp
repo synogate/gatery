@@ -26,6 +26,7 @@
 #include <metaHDL_core/frontend/SignalLogicOp.h>
 #include <metaHDL_core/frontend/SignalBitshiftOp.h>
 #include <metaHDL_core/frontend/SignalMiscOp.h>
+#include <metaHDL_core/frontend/PriorityConditional.h>
 
 #include <metaHDL_core/utils/Exceptions.h>
 
@@ -84,14 +85,17 @@ void UartTransmitter::operator()(const BitVector &inputData, Bit send, Bit &outp
     MHDL_NAMED(nextData);
     
     
-    // Default to high (idle state).
-    outputLine = 1_bit;    
-    // Send start bit while loading data
-    outputLine = mux(loadingData, outputLine, 0_bit);
-    // Send data bits if not idle
-    outputLine = mux(idle, currentData[0], outputLine);
-    // Send stop bit if done
-    outputLine = mux(done, outputLine, 1_bit);
+    {
+        PriorityConditional<Bit> con;
+        
+        con
+            .addCondition(done, 1_bit)           // Send stop bit if done
+            .addCondition(!idle, currentData[0]) // Send data bits if not idle
+            .addCondition(loadingData, 0_bit);   // Send start bit while loading data
+            
+        // Default to high (idle state).
+        outputLine = con(1_bit);
+    }
     
 
     driveWith(currentData, reg(nextData, enable, 0x00_vec));
