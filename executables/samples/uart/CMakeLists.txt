@@ -18,6 +18,7 @@ target_link_libraries(uart_synthesize_vhdl
     uart
 )
 
+if(${WITH_QT})
 
 add_executable(uart_simulate
     source/simulate.cpp
@@ -25,5 +26,7 @@ add_executable(uart_simulate
 
 target_link_libraries(uart_simulate
     uart
+    metaHDL_vis_qt
 )
 
+endif()
