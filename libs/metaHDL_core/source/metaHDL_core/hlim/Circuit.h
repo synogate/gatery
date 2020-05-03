@@ -19,7 +19,9 @@ class Circuit
         
         inline NodeGroup *getRootNodeGroup() { return m_root.get(); }
         inline const NodeGroup *getRootNodeGroup() const { return m_root.get(); }
-        
+
+        inline const std::vector<std::unique_ptr<BaseNode>> &getNodes() const { return m_nodes; }
+
         void cullUnnamedSignalNodes();
         void cullOrphanedSignalNodes();
     protected:

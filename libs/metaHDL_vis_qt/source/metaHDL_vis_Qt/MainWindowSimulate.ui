@@ -23,7 +23,7 @@
      </widget>
     </item>
     <item>
-     <widget class="CircuitView" name="graphicsView"/>
+     <widget class="mhdl::vis::CircuitView" name="circuitView"/>
     </item>
    </layout>
   </widget>
@@ -52,7 +52,28 @@
       </widget>
      </item>
      <item>
-      <widget class="QTableWidget" name="tableWidget"/>
+      <widget class="QTableWidget" name="tableWidget_signals">
+       <column>
+        <property name="text">
+         <string>Signal</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Value</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Defined in</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Driver defined in</string>
+        </property>
+       </column>
+      </widget>
      </item>
     </layout>
    </widget>
@@ -71,13 +92,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QTreeWidget" name="treeWidget">
-       <column>
-        <property name="text">
-         <string notr="true">1</string>
-        </property>
-       </column>
-      </widget>
+      <widget class="QTreeWidget" name="treeView_graphHierarchy"/>
      </item>
     </layout>
    </widget>
@@ -109,7 +124,7 @@
           <x>0</x>
           <y>0</y>
           <width>256</width>
-          <height>89</height>
+          <height>150</height>
          </rect>
         </property>
         <attribute name="label">
@@ -138,7 +153,8 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset theme="SP_MediaPlay"/>
+              <iconset theme="SP_MediaPlay">
+               <normaloff>.</normaloff>.</iconset>
              </property>
             </widget>
            </item>
@@ -148,7 +164,8 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset theme="SP_MediaStop"/>
+              <iconset theme="SP_MediaStop">
+               <normaloff>.</normaloff>.</iconset>
              </property>
             </widget>
            </item>
@@ -191,7 +208,7 @@
           <x>0</x>
           <y>0</y>
           <width>256</width>
-          <height>89</height>
+          <height>150</height>
          </rect>
         </property>
         <attribute name="label">
@@ -203,10 +220,26 @@
     </layout>
    </widget>
   </widget>
+  <widget class="QDockWidget" name="dockWidget_5">
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_5">
+    <layout class="QVBoxLayout" name="verticalLayout_6">
+     <item>
+      <widget class="QLabel" name="label_6">
+       <property name="text">
+        <string>Design Control:</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>CircuitView</class>
+   <class>mhdl::vis::CircuitView</class>
    <extends>QGraphicsView</extends>
    <header location="global">metaHDL_vis_Qt/CircuitView.h</header>
   </customwidget>
