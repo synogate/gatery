@@ -13,7 +13,6 @@ class Node_Signal : public Node
 
         enum { Type = UserType + 2 };
         int type() const override { return Type; }
-
     protected:
         core::hlim::Node_Signal *m_hlimNode;
 };

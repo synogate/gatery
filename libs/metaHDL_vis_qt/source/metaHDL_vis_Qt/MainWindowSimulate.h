@@ -18,9 +18,12 @@ class MainWindowSimulate : public QMainWindow
         ~MainWindowSimulate();
     
     private slots:
+        void treeWidget_graphHierarchy_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
 
     private:
         Ui::MainWindowSimulate m_ui;
+        core::hlim::Circuit &m_circuit;
+        std::map<QTreeWidgetItem *, core::hlim::NodeGroup *> m_item2NodeGroup;
         
         void reccurFillTreeWidget(QTreeWidgetItem *item, core::hlim::NodeGroup *nodeGroup);
 };

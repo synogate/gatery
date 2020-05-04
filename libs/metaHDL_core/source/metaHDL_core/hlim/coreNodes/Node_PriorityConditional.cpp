@@ -39,7 +39,7 @@ void Node_PriorityConditional::disconnectInput(size_t choice)
 
 std::string Node_PriorityConditional::getTypeName() const 
 { 
-    return "PriorityConditional"; 
+    return "PrioConditional"; 
 }
 
 void Node_PriorityConditional::assertValidity() const 

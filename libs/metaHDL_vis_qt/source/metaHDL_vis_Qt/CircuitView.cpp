@@ -16,6 +16,7 @@
 
 #include <QWheelEvent>
 
+#include <iostream>
 
 namespace mhdl::vis {
 
@@ -38,6 +39,36 @@ CircuitView::CircuitView(QWidget *parent)
     m_portFont.setPointSizeF(2.0f);
 }
 
+void CircuitView::mouseMoveEvent(QMouseEvent *event) 
+{
+    auto list = items(event->x(), event->y());
+    
+    std::set<BaseGraphicsComposite*> newHoverList;
+    for (auto p : list) {
+        while (p != nullptr) {
+            BaseGraphicsComposite *cast_p = dynamic_cast<BaseGraphicsComposite*>(p);
+            if (cast_p != nullptr) {
+                newHoverList.insert(cast_p);
+                break;
+            }
+            p = p->parentItem();
+        }
+    }
+    
+    for (auto p : m_hoverItems) {
+        if (newHoverList.find(p) == newHoverList.end())
+            p->hoverEnd();
+    }
+    for (auto p : newHoverList) {
+        if (m_hoverItems.find(p) == m_hoverItems.end())
+            p->hoverStart();
+    }
+    
+    std::swap(m_hoverItems, newHoverList);
+    
+    
+    QGraphicsView::mouseMoveEvent(event);
+}
 
 
 void CircuitView::render(core::hlim::Circuit &circuit, core::hlim::NodeGroup *group)

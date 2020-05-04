@@ -64,8 +64,9 @@ Node_Entity::Node_Entity(CircuitView *circuitView, core::hlim::NodeGroup *nodeGr
     
     m_name = m_hlimNodeGroup->getName();
     
-    createDefaultGraphics();
+    createDefaultGraphics(200);
 
+    dynamic_cast<QGraphicsRectItem*>(m_background)->setBrush(QBrush(QColor(128, 128, 128)));
 }
 
 }

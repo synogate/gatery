@@ -2,6 +2,7 @@
 
 #include "Node.h"
 
+#include "BaseGraphicsComposite.h"
 
 #include <metaHDL_core/hlim/Circuit.h>
 #include <metaHDL_core/hlim/Node.h>
@@ -28,12 +29,16 @@ class CircuitView : public QGraphicsView
 
         inline const QFont &getInteriorFont() const { return m_interiorFont; }
         inline const QFont &getPortFont() const { return m_portFont; }
+        
+        virtual void mouseMoveEvent(QMouseEvent *event) override;
 
     public slots:
         void zoomIn();
         void zoomOut();
 
     protected:
+        std::set<BaseGraphicsComposite*> m_hoverItems;
+        
         std::vector<std::unique_ptr<Node>> m_nodes;
         QGraphicsScene *m_scene;
         QFont m_interiorFont;

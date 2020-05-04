@@ -1,5 +1,7 @@
 #pragma once
 
+#include "BaseGraphicsComposite.h"
+
 #include <metaHDL_core/hlim/NodeIO.h>
 
 
@@ -9,7 +11,7 @@ namespace mhdl::vis {
 
 class CircuitView;    
     
-class Node : public QGraphicsItemGroup
+class Node : public BaseGraphicsComposite
 {
     public:
         struct Port {
@@ -35,12 +37,9 @@ class Node : public QGraphicsItemGroup
         std::vector<Port> m_inputPorts;
         std::vector<Port> m_outputPorts;
         
-        void createDefaultGraphics();
+        void createDefaultGraphics(float width);
         
         QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
-
-        void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
-        void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
 };
 
 }

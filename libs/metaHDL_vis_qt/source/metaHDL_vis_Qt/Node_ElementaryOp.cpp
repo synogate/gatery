@@ -24,7 +24,7 @@ Node_ElementaryOp::Node_ElementaryOp(CircuitView *circuitView, core::hlim::BaseN
         m_outputPorts[i].producer = {.node = m_hlimNode, .port = i};
     }
     
-    createDefaultGraphics();
+    createDefaultGraphics(100);
 }
 
 }
