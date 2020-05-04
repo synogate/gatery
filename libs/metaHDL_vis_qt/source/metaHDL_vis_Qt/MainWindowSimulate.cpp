@@ -14,7 +14,7 @@ MainWindowSimulate::MainWindowSimulate(QWidget *parent, core::hlim::Circuit &cir
     m_ui.toolButton_Reset->setIcon(m_ui.toolButton_StepForward->style()->standardIcon(QStyle::SP_BrowserReload));
     
     
-    m_ui.circuitView->render(circuit, circuit.getRootNodeGroup());
+    m_ui.circuitView->render(circuit, circuit.getRootNodeGroup()->getChildren().front()->getChildren().front().get());
     
     QTreeWidgetItem *rootItem;
     m_ui.treeView_graphHierarchy->addTopLevelItem(rootItem = new QTreeWidgetItem(m_ui.treeView_graphHierarchy));

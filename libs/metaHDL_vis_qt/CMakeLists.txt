@@ -18,8 +18,16 @@ add_library(metaHDL_vis_qt STATIC
     source/metaHDL_vis_Qt/MainWindowSimulate.h
     source/metaHDL_vis_Qt/CircuitView.cpp
     source/metaHDL_vis_Qt/CircuitView.h
+    source/metaHDL_vis_Qt/EdgeTree.cpp
+    source/metaHDL_vis_Qt/EdgeTree.h
+    source/metaHDL_vis_Qt/GraphLayouting.cpp
+    source/metaHDL_vis_Qt/GraphLayouting.h
     source/metaHDL_vis_Qt/Node.cpp
     source/metaHDL_vis_Qt/Node.h
+    source/metaHDL_vis_Qt/Node_ElementaryOp.cpp
+    source/metaHDL_vis_Qt/Node_ElementaryOp.h
+    source/metaHDL_vis_Qt/Node_Entity.cpp
+    source/metaHDL_vis_Qt/Node_Entity.h
     source/metaHDL_vis_Qt/Node_Signal.cpp
     source/metaHDL_vis_Qt/Node_Signal.h
 #    resources.qrc

@@ -1,19 +1,20 @@
 #include "Node_Signal.h"
 
+#include "CircuitView.h"
+
 
 namespace mhdl::vis {
 
 Node_Signal::Node_Signal(CircuitView *circuitView, core::hlim::Node_Signal *hlimNode) : Node(circuitView), m_hlimNode(hlimNode)
 {
-    createDefault(1, 1);
-    if (!m_hlimNode->getName().empty()) {
-        QGraphicsTextItem *text;
-        m_interior = text = new QGraphicsTextItem(QString::fromUtf8(m_hlimNode->getName().c_str()), this);
-        
-        text->setTextWidth(100);
-        text->adjustSize();
-        text->setPos(-50.0f, -text->boundingRect().height()/2);
-    }
+    m_name = m_hlimNode->getName();
+    
+    m_inputPorts.resize(1);
+    m_inputPorts[0].producer = m_hlimNode->getDriver(0);
+    m_outputPorts.resize(1);
+    m_outputPorts[0].producer = {.node = m_hlimNode, .port = 0ull};
+    
+    createDefaultGraphics();
 }
 
 }
