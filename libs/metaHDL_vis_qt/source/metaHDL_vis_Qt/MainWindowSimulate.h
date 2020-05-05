@@ -1,13 +1,19 @@
 #ifndef MAINWINDOWSIMULATE_H
 #define MAINWINDOWSIMULATE_H
 
+#include "CHCLSyntaxHighlighter.h"
+
 #include <ui_MainWindowSimulate.h>
 
 #include <metaHDL_core/hlim/Circuit.h>
 
+#include <boost/stacktrace.hpp>
+
+#include <memory>
 
 namespace mhdl::vis {
 
+class Node_Signal;
 
 class MainWindowSimulate : public QMainWindow
 {
@@ -19,13 +25,22 @@ class MainWindowSimulate : public QMainWindow
     
     private slots:
         void treeWidget_graphHierarchy_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
+        void onCircuitViewElementsClicked(const std::set<BaseGraphicsComposite*> &elements);
+        void onlistWidget_stackTraceView_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous);
 
     private:
         Ui::MainWindowSimulate m_ui;
         core::hlim::Circuit &m_circuit;
         std::map<QTreeWidgetItem *, core::hlim::NodeGroup *> m_item2NodeGroup;
+        std::map<Node_Signal*, unsigned> m_signalNode2TableRow;
+        
+        std::map<QListWidgetItem *, boost::stacktrace::frame> m_listWidget_stackTraceView_stackTrace;
+        
+        std::unique_ptr<CHCLSyntaxHighlighter> m_syntaxHighlighter;
         
         void reccurFillTreeWidget(QTreeWidgetItem *item, core::hlim::NodeGroup *nodeGroup);
+        
+        void switchToGroup(core::hlim::NodeGroup *nodeGroup);
 };
 
 }

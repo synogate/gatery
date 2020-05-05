@@ -39,21 +39,21 @@ CircuitView::CircuitView(QWidget *parent)
     m_portFont.setPointSizeF(2.0f);
 }
 
+
+void CircuitView::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::RightButton) {
+        std::set<BaseGraphicsComposite*> clickedList = fetchElements(event->x(), event->y());
+        
+        onElementsClicked(clickedList);
+    }
+    
+    QGraphicsView::mousePressEvent(event);
+}
+
 void CircuitView::mouseMoveEvent(QMouseEvent *event) 
 {
-    auto list = items(event->x(), event->y());
-    
-    std::set<BaseGraphicsComposite*> newHoverList;
-    for (auto p : list) {
-        while (p != nullptr) {
-            BaseGraphicsComposite *cast_p = dynamic_cast<BaseGraphicsComposite*>(p);
-            if (cast_p != nullptr) {
-                newHoverList.insert(cast_p);
-                break;
-            }
-            p = p->parentItem();
-        }
-    }
+    std::set<BaseGraphicsComposite*> newHoverList = fetchElements(event->x(), event->y());
     
     for (auto p : m_hoverItems) {
         if (newHoverList.find(p) == newHoverList.end())
@@ -66,16 +66,33 @@ void CircuitView::mouseMoveEvent(QMouseEvent *event)
     
     std::swap(m_hoverItems, newHoverList);
     
-    
     QGraphicsView::mouseMoveEvent(event);
 }
 
+std::set<BaseGraphicsComposite*> CircuitView::fetchElements(int x, int y)
+{
+    auto list = items(x, y);
+    
+    std::set<BaseGraphicsComposite*> elements;
+    for (auto p : list) {
+        while (p != nullptr) {
+            BaseGraphicsComposite *cast_p = dynamic_cast<BaseGraphicsComposite*>(p);
+            if (cast_p != nullptr) {
+                elements.insert(cast_p);
+                break;
+            }
+            p = p->parentItem();
+        }
+    }
+    return elements;
+}
 
 void CircuitView::render(core::hlim::Circuit &circuit, core::hlim::NodeGroup *group)
 {
     m_scene->clear();
+
+    m_nodes.clear();
     
-    std::vector<Node*> nodePtrs;
     layout::GraphLayouting layout;
     
     std::set<layout::NodePort> registerOutputs;
@@ -85,27 +102,29 @@ void CircuitView::render(core::hlim::Circuit &circuit, core::hlim::NodeGroup *gr
             if (dynamic_cast<core::hlim::Node_Signal*>(node) != nullptr) {
                 Node_Signal *n;
                 m_scene->addItem(n = new Node_Signal(this, dynamic_cast<core::hlim::Node_Signal*>(node)));
-                nodePtrs.push_back(n);
+                m_nodes.push_back(n);
+                
+                
             } else {
                 Node_ElementaryOp *n;
                 m_scene->addItem(n = new Node_ElementaryOp(this, node));
-                nodePtrs.push_back(n);
+                m_nodes.push_back(n);
                 
                 if (dynamic_cast<core::hlim::Node_Register*>(node) != nullptr) {
-                    registerOutputs.insert({.node=nodePtrs.size()-1, .port=0ull});
+                    registerOutputs.insert({.node=m_nodes.size()-1, .port=0ull});
                 }
             }
         }
         for (auto &subEntity : area->getChildren()) {
             Node_Entity *n;
             m_scene->addItem(n = new Node_Entity(this, subEntity.get()));
-            nodePtrs.push_back(n);
+            m_nodes.push_back(n);
         }
     }
     
     std::map<core::hlim::NodePort, layout::NodePort> hlim2layout;
-    for (auto n_i : utils::Range(nodePtrs.size())) {
-        auto n = nodePtrs[n_i];
+    for (auto n_i : utils::Range(m_nodes.size())) {
+        auto n = m_nodes[n_i];
         
         for (auto p_i : utils::Range(n->getOutputPorts().size())) {
             auto p = n->getOutputPorts()[p_i];
@@ -118,9 +137,9 @@ void CircuitView::render(core::hlim::Circuit &circuit, core::hlim::NodeGroup *gr
     
     std::map<layout::NodePort, std::vector<layout::NodePort>> edges;
     
-    layout.nodes.reserve(nodePtrs.size());
-    for (auto n_i : utils::Range(nodePtrs.size())) {
-        auto n = nodePtrs[n_i];
+    layout.nodes.reserve(m_nodes.size());
+    for (auto n_i : utils::Range(m_nodes.size())) {
+        auto n = m_nodes[n_i];
         layout::Node layoutNode;
         layoutNode.width = n->childrenBoundingRect().width();
         layoutNode.height = n->childrenBoundingRect().height();
@@ -158,9 +177,9 @@ void CircuitView::render(core::hlim::Circuit &circuit, core::hlim::NodeGroup *gr
     layout.run();
     
 
-    for (auto i : utils::Range(nodePtrs.size())) {
+    for (auto i : utils::Range(m_nodes.size())) {
         const auto &nodeLayout = layout.getNodeLayouts()[i];
-        nodePtrs[i]->setPos(nodeLayout.location.x, nodeLayout.location.y);
+        m_nodes[i]->setPos(nodeLayout.location.x, nodeLayout.location.y);
     }
     
     for (auto i : utils::Range(layout.edges.size())) {

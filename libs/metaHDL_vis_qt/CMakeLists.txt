@@ -10,9 +10,13 @@ endif()
 
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
 
-
+find_package(Boost COMPONENTS system filesystem REQUIRED) 
 
 add_library(metaHDL_vis_qt STATIC
+    source/metaHDL_vis_Qt/BaseGraphicsComposite.cpp
+    source/metaHDL_vis_Qt/BaseGraphicsComposite.h
+    source/metaHDL_vis_Qt/CHCLSyntaxHighlighter.cpp
+    source/metaHDL_vis_Qt/CHCLSyntaxHighlighter.h
     source/metaHDL_vis_Qt/MainWindowSimulate.ui
     source/metaHDL_vis_Qt/MainWindowSimulate.cpp
     source/metaHDL_vis_Qt/MainWindowSimulate.h
@@ -36,6 +40,7 @@ add_library(metaHDL_vis_qt STATIC
 target_include_directories(metaHDL_vis_qt PUBLIC
     ${CMAKE_CURRENT_BINARY_DIR}/metaHDL_vis_qt_autogen/include
     ${CMAKE_CURRENT_SOURCE_DIR}/source
+    ${Boost_INCLUDE_DIRS}
 )
 
 target_include_directories(metaHDL_vis_qt INTERFACE
@@ -45,6 +50,7 @@ target_include_directories(metaHDL_vis_qt INTERFACE
 target_link_libraries(metaHDL_vis_qt PUBLIC
     Qt5::Widgets
     metaHDL_core
+    ${Boost_LIBRARIES}
 )
 
 target_compile_features(metaHDL_vis_qt PUBLIC cxx_std_20)

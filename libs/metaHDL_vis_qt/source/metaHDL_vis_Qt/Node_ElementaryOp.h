@@ -14,6 +14,7 @@ class Node_ElementaryOp : public Node
         enum { Type = UserType + 2 };
         int type() const override { return Type; }
 
+        inline core::hlim::BaseNode *getHlimNode() { return m_hlimNode; }
     protected:
         core::hlim::BaseNode *m_hlimNode;
 };
