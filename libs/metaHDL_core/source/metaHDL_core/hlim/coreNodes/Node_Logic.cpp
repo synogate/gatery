@@ -42,7 +42,9 @@ std::string Node_Logic::getOutputName(size_t idx) const
 void Node_Logic::updateConnectionType()
 {
     auto lhs = getDriver(0);
-    auto rhs = getDriver(1);
+    NodePort rhs;
+    if (m_op != NOT)
+        rhs = getDriver(1);
     
     ConnectionType desiredConnectionType = getOutputConnectionType(0);
     
