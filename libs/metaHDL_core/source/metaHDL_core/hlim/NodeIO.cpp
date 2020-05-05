@@ -33,7 +33,7 @@ const std::vector<NodePort> &NodeIO::getDirectlyDriven(size_t outputPort) const
 {
     return m_outputPorts[outputPort].connections;
 }
-
+/*
 ExplorationList NodeIO::getSignalsDriven(size_t outputPort) const
 {
 }
@@ -41,7 +41,7 @@ ExplorationList NodeIO::getSignalsDriven(size_t outputPort) const
 ExplorationList NodeIO::getNonSignalDriven(size_t outputPort) const
 {
 }
-
+*/
 void NodeIO::setOutputConnectionType(size_t outputPort, const ConnectionType &connectionType) 
 { 
     if (m_outputPorts[outputPort].connectionType != connectionType) {

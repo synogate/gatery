@@ -14,7 +14,11 @@ class PriorityConditional
 {
     public:
         PriorityConditional<DataSignal> &addCondition(const Bit &enableSignal, const DataSignal &value) {
-            m_choices.push_back({enableSignal, value});
+            m_choices.push_back({});
+            m_choices.back().first = enableSignal;
+            m_choices.back().first.setName("");
+            m_choices.back().second = value;
+            m_choices.back().second.setName("");
             return *this;
         }
 
@@ -25,7 +29,7 @@ class PriorityConditional
             
             for (auto &c : m_choices)
                 node->addInput({.node = c.first.getNode(), .port = 0ull},
-                            {.node = c.second.getNode(), .port = 0ull});
+                               {.node = c.second.getNode(), .port = 0ull});
 
             return DataSignal({.node = node, .port = 0ull});
         }

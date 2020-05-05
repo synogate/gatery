@@ -23,7 +23,7 @@ struct NodePort {
     inline bool operator<(const NodePort &rhs) const { if (node < rhs.node) return true; if (node > rhs.node) return false; return port < rhs.port; }
 };
 
-
+/*
 class ExplorationList {
     public:
         class iterator {
@@ -57,7 +57,7 @@ class ExplorationList {
         NodeIO &m_nodeIO;
         bool m_ignoreSignals;
 };
-
+*/
 class Circuit;
 
 class NodeIO
@@ -72,8 +72,10 @@ class NodeIO
         NodePort getNonSignalDriver(size_t inputPort) const;
         
         const std::vector<NodePort> &getDirectlyDriven(size_t outputPort) const;
+        /*
         ExplorationList getSignalsDriven(size_t outputPort) const;
         ExplorationList getNonSignalDriven(size_t outputPort) const;
+        */
 
         inline const ConnectionType &getOutputConnectionType(size_t outputPort) const { return m_outputPorts[outputPort].connectionType; }
     protected:
