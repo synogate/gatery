@@ -98,3 +98,16 @@ target_link_libraries(metaHDL_core PUBLIC
 )
 
 target_compile_features(metaHDL_core PUBLIC cxx_std_20)
+
+if(MSVC)
+    target_compile_definitions(metaHDL_core PUBLIC -DBOOST_STACKTRACE_USE_WINDBG)
+    # Boost docu: Uses COM to show debug info. May require linking with ole32 and dbgeng. 
+else()
+    #target_compile_definitions(metaHDL_core PUBLIC -DBOOST_STACKTRACE_USE_BACKTRACE)
+    #target_link_libraries(metaHDL_core PUBLIC -ldl -lbacktrace)
+    target_compile_definitions(metaHDL_core PUBLIC -DBOOST_STACKTRACE_USE_ADDR2LINE)
+    target_link_libraries(metaHDL_core PUBLIC -ldl)
+endif()
+
+
+
