@@ -24,7 +24,7 @@ namespace mhdl::core::frontend
 
     inline namespace literal 
     {
-        Bit operator ""_bit(const char* _val)
+        inline Bit operator ""_bit(const char* _val)
         {
             MHDL_DESIGNCHECK(_val[0] == '0' || _val[0] == '1');
             MHDL_DESIGNCHECK(_val[1] == 0);
@@ -36,7 +36,7 @@ namespace mhdl::core::frontend
             return Constant<Bit>(hlim::ConstantData{_val}, type);
         }
 
-        BitVector operator ""_vec(const char* _val)
+        inline BitVector operator ""_vec(const char* _val)
         {
             hlim::ConstantData lit{ _val };
             hlim::ConnectionType type{
@@ -46,7 +46,7 @@ namespace mhdl::core::frontend
             return Constant<BitVector>(std::move(lit), type);
         }
 
-        UnsignedInteger operator ""_uvec(const char* _val)
+        inline UnsignedInteger operator ""_uvec(const char* _val)
         {
             hlim::ConstantData lit{ _val };
             hlim::ConnectionType type{
@@ -56,7 +56,7 @@ namespace mhdl::core::frontend
             return Constant<UnsignedInteger>(std::move(lit), type);
         }
 
-        SignedInteger operator ""_svec(const char* _val)
+        inline SignedInteger operator ""_svec(const char* _val)
         {
             hlim::ConstantData lit{ _val };
             hlim::ConnectionType type{
