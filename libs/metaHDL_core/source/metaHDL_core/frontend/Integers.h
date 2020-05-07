@@ -11,6 +11,8 @@ class UnsignedInteger : public BaseBitVector<UnsignedInteger>
         MHDL_SIGNAL
         
         using isUnsignedIntegerSignal = void;
+
+        UnsignedInteger ext(size_t width) const { return zext(width); }
         
         UnsignedInteger() = default;
         UnsignedInteger(size_t width) { resize(width); }
@@ -28,6 +30,8 @@ class SignedInteger : public BaseBitVector<SignedInteger>
         
         using isSignedIntegerSignal = void;
         
+        SignedInteger ext(size_t width) const { return sext(width); }
+
         SignedInteger() = default;
         SignedInteger(size_t width) { resize(width); }
         SignedInteger(const hlim::NodePort &port) : BaseBitVector<SignedInteger>(port) { }
