@@ -93,7 +93,6 @@ MHDL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, bitwiseEqual, hlim::Node_Lo
     
 MHDL_BUILD_LOGIC_OPERATOR(utils::isBitSignal, operator&&, hlim::Node_Logic::AND)
 MHDL_BUILD_LOGIC_OPERATOR(utils::isBitSignal, operator||, hlim::Node_Logic::OR)
-MHDL_BUILD_LOGIC_OPERATOR(utils::isBitSignal, operator==, hlim::Node_Logic::EQ)
 MHDL_BUILD_LOGIC_OPERATOR_UNARY(utils::isBitSignal, operator!, hlim::Node_Logic::NOT)
 
 #undef MHDL_BUILD_LOGIC_OPERATOR

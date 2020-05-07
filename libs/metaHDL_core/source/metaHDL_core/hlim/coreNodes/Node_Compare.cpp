@@ -11,4 +11,8 @@ Node_Compare::Node_Compare() : Node(2, 1)
     setOutputConnectionType(0, conType);
 }
 
+Node_Compare::Node_Compare(Op) : Node_Compare()
+{
+}
+
 }
