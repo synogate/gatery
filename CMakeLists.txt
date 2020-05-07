@@ -21,4 +21,4 @@ add_subdirectory(libs/metaHDL_vis_qt/)
 endif()
 
 add_subdirectory(executables/samples/uart)
-
+add_subdirectory(executables/samples/gameoflife)
