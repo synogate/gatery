@@ -9,7 +9,7 @@ void ElementaryVector::resize(size_t width)
     m_node->setConnectionType(getSignalType(width));
 }
 
-Bit ElementaryVector::operator[](size_t idx)
+Bit ElementaryVector::operator[](size_t idx) const
 {
     hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(1);
     node->recordStackTrace();
@@ -62,6 +62,8 @@ void ElementaryVector::setBit(size_t idx, const Bit& in)
             .inputOffset = idx + 1,
         });
     }
+
+    node->setOp(std::move(rewireOp));
 
     m_node = DesignScope::createNode<hlim::Node_Signal>();
     m_node->recordStackTrace();

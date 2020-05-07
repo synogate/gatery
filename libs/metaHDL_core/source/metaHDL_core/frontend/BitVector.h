@@ -36,14 +36,12 @@ public:
 
     virtual void resize(size_t width);
 
-    Bit operator[](size_t idx);
+    Bit operator[](size_t idx) const;
 
     void setBit(size_t idx, const Bit& in);
 
-    Bit front() { return (*this)[0]; }
-    Bit back() { return (*this)[getWidth()-1]; }
-    Bit lsb() { return front(); }
-    Bit msb() { return back(); }
+    Bit lsb() const { return (*this)[0]; }
+    Bit msb() const { return (*this)[getWidth()-1]; }
 };
 
 /**
@@ -57,7 +55,7 @@ class BaseBitVector : public ElementaryVector
         
         BaseBitVector(const FinalType &rhs) { assign(rhs); }
         
-        FinalType zext(size_t width) const { return bext(width, 0_bit); }
+        FinalType zext(size_t width) const;
         FinalType sext(size_t width) const { return bext(width, msb()); }
         FinalType bext(size_t width, const Bit& bit) const;
 
@@ -88,6 +86,35 @@ class BitVector : public BaseBitVector<BitVector>
 
 
 template<typename FinalType>
+inline FinalType BaseBitVector<FinalType>::zext(size_t width) const
+{
+    hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(1);
+    node->recordStackTrace();
+
+    node->connectInput(0, { .node = m_node, .port = 0 });
+
+    hlim::Node_Rewire::RewireOperation rewireOp;
+    if (width > 0 && getWidth() > 0)
+    {
+        rewireOp.ranges.push_back({
+                .subwidth = std::min(width, getWidth()),
+                .source = hlim::Node_Rewire::OutputRange::INPUT,
+            });
+    }
+
+    if (width > getWidth())
+    {
+        rewireOp.ranges.push_back({
+                .subwidth = width - getWidth(),
+                .source = hlim::Node_Rewire::OutputRange::CONST_ZERO,
+            });
+    }
+
+    node->setOp(std::move(rewireOp));
+    return FinalType(hlim::NodePort{ .node = node });
+}
+
+template<typename FinalType>
 inline FinalType BaseBitVector<FinalType>::bext(size_t width, const Bit& bit) const
 {
     hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(2);
@@ -110,10 +137,11 @@ inline FinalType BaseBitVector<FinalType>::bext(size_t width, const Bit& bit) co
         rewireOp.ranges.resize(width - getWidth() + rewireOp.ranges.size(), {
                 .subwidth = 1,
                 .source = hlim::Node_Rewire::OutputRange::INPUT,
-                .sourceIdx = 1,
+                .inputIdx = 1,
             });
     }
 
+    node->setOp(std::move(rewireOp));
     return FinalType(hlim::NodePort{.node = node});
 }
 
