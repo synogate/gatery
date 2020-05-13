@@ -157,7 +157,7 @@ void GraphLayouting::run()
             destination.tile.y = (int) std::floor((m_nodeLayouts[dstNode].location.y + nodes[dstNode].relativeInputPortLocations[dstPort].y)/tileScale);
             destination.dir = 0;
 
-            std::cout << "destination " << destination.tile.x << " " << destination.tile.y << "  " << destination.dir << std::endl;
+            //std::cout << "destination " << destination.tile.x << " " << destination.tile.y << "  " << destination.dir << std::endl;
             
             
             std::map<Loc, float> bestScores;

@@ -6,6 +6,8 @@
 #include <ui_MainWindowSimulate.h>
 
 #include <metaHDL_core/hlim/Circuit.h>
+#include <metaHDL_core/simulation/ReferenceSimulator.h>
+#include <metaHDL_core/simulation/SimulatorControl.h>
 
 #include <boost/stacktrace.hpp>
 
@@ -31,6 +33,9 @@ class MainWindowSimulate : public QMainWindow
     private:
         Ui::MainWindowSimulate m_ui;
         core::hlim::Circuit &m_circuit;
+        core::sim::ReferenceSimulator m_simulator;
+        core::sim::SimulatorControl m_simControl;
+        
         std::map<QTreeWidgetItem *, core::hlim::NodeGroup *> m_item2NodeGroup;
         std::map<Node_Signal*, unsigned> m_signalNode2TableRow;
         
@@ -41,6 +46,8 @@ class MainWindowSimulate : public QMainWindow
         void reccurFillTreeWidget(QTreeWidgetItem *item, core::hlim::NodeGroup *nodeGroup);
         
         void switchToGroup(core::hlim::NodeGroup *nodeGroup);
+        
+        void updateSignalValues();
 };
 
 }

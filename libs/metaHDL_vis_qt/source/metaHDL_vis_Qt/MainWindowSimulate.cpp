@@ -5,6 +5,7 @@
 
 
 #include <metaHDL_core/hlim/coreNodes/Node_Signal.h>
+#include <metaHDL_core/utils/Range.h>
 
 
 #include <boost/filesystem.hpp>
@@ -14,6 +15,8 @@
 #include <QFile>
 #include <QTextStream>
 #include <QTextBlock>
+
+#include <sstream>
 
 boost::filesystem::path shortenPath(const boost::filesystem::path &path)
 {
@@ -38,6 +41,11 @@ MainWindowSimulate::MainWindowSimulate(QWidget *parent, core::hlim::Circuit &cir
     m_ui.toolButton_FastForward->setIcon(m_ui.toolButton_StepForward->style()->standardIcon(QStyle::SP_MediaSeekForward));
     m_ui.toolButton_Pause->setIcon(m_ui.toolButton_StepForward->style()->standardIcon(QStyle::SP_MediaPause));
     m_ui.toolButton_Reset->setIcon(m_ui.toolButton_StepForward->style()->standardIcon(QStyle::SP_BrowserReload));
+    
+    
+    m_simulator.compileProgram(m_circuit);
+    m_simulator.reevaluate();
+    m_simControl.bindSimulator(&m_simulator);
     
     
     switchToGroup(m_circuit.getRootNodeGroup());
@@ -122,13 +130,16 @@ void MainWindowSimulate::switchToGroup(core::hlim::NodeGroup *nodeGroup)
         }
     }
         
+    updateSignalValues();
+        
 }
 
 void MainWindowSimulate::onCircuitViewElementsClicked(const std::set<BaseGraphicsComposite*> &elements)
 {
     core::hlim::BaseNode *firstNode = nullptr;
+    Node_Signal *signalNode = nullptr;
     for (auto p : elements) {
-        Node_Signal *signalNode = dynamic_cast<Node_Signal*>(p);
+        signalNode = dynamic_cast<Node_Signal*>(p);
         if (signalNode != nullptr) {
             firstNode = signalNode->getHlimNode();
             break;
@@ -155,6 +166,10 @@ void MainWindowSimulate::onCircuitViewElementsClicked(const std::set<BaseGraphic
             m_ui.listWidget_stackTraceView->addItem(item);
             m_listWidget_stackTraceView_stackTrace[item] = s;
         }
+        
+        if (signalNode != nullptr) {
+            m_ui.tableWidget_signals->selectRow(m_signalNode2TableRow[signalNode]);
+        }
     }
 }
 
@@ -180,5 +195,28 @@ void MainWindowSimulate::onlistWidget_stackTraceView_currentItemChanged(QListWid
         }
     }
 }
+
+void MainWindowSimulate::updateSignalValues()
+{
+    for (auto pair : m_signalNode2TableRow) {
+        core::sim::DataState state;
+//        m_simulator.getValueOfOutput({.node = pair.first->getHlimNode(), .port = 0ull}, state);
+        if (state.size() == 0)
+            m_ui.tableWidget_signals->setItem(pair.second, 1, new QTableWidgetItem(QString::fromUtf8("undefined")));
+        else {
+            std::stringstream bitString;
+            for (auto i : utils::Range(state.size()))
+                if (!state.defined(i))
+                    bitString << "?";
+                else
+                    if (state.bit(i))
+                        bitString << "1";
+                    else
+                        bitString << "0";
+            m_ui.tableWidget_signals->setItem(pair.second, 1, new QTableWidgetItem(QString::fromUtf8(bitString.str().c_str())));
+        }
+    }
+}
+
 
 }

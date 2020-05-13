@@ -516,8 +516,17 @@
           </property>
           <widget class="QListWidget" name="listWidget_stackTraceView"/>
           <widget class="QTextEdit" name="textEdit_sourceView">
+           <property name="font">
+            <font>
+             <family>DejaVu Sans Mono</family>
+             <kerning>false</kerning>
+            </font>
+           </property>
            <property name="lineWrapMode">
             <enum>QTextEdit::NoWrap</enum>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
            </property>
           </widget>
          </widget>

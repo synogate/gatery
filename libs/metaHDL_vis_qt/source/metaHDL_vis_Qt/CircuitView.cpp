@@ -103,8 +103,6 @@ void CircuitView::render(core::hlim::Circuit &circuit, core::hlim::NodeGroup *gr
                 Node_Signal *n;
                 m_scene->addItem(n = new Node_Signal(this, dynamic_cast<core::hlim::Node_Signal*>(node)));
                 m_nodes.push_back(n);
-                
-                
             } else {
                 Node_ElementaryOp *n;
                 m_scene->addItem(n = new Node_ElementaryOp(this, node));
