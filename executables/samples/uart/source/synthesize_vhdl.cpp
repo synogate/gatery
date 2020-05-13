@@ -32,6 +32,10 @@ int main() {
                 GroupScope area(NodeGroup::GRP_AREA);
                 area.setName("all");
                 
+                auto clk = design.createClock<mhdl::core::hlim::RootClock>("clk", mhdl::core::hlim::ClockRational(10'000));
+                
+                RegisterConfig regConf = {.clk = clk, .resetName = "rst"};
+                
                 UartTransmitter uart(8, 1, 1000);
                 
                 BitVector data(8);
@@ -42,7 +46,7 @@ int main() {
                 idle.setName("idle_of_uart0");
                 outputLine.setName("outputLine_of_uart0");
                 
-                uart(data, send, outputLine, idle);
+                uart(data, send, outputLine, idle, regConf);
                 
                 Bit useIdle = idle;
                 MHDL_NAMED(useIdle);

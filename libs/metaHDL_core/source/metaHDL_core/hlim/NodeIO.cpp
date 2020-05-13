@@ -18,6 +18,7 @@ NodeIO::~NodeIO()
 
 NodePort NodeIO::getDriver(size_t inputPort) const
 {
+    MHDL_ASSERT(inputPort < m_inputPorts.size());
     return m_inputPorts[inputPort];
 }
 

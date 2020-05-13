@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ConnectionType.h"
+#include "../simulation/BitVectorState.h"
 
 #include "../utils/StackTrace.h"
 #include "../utils/LinkedList.h"
@@ -89,12 +90,14 @@ class NodeIO
     private:
         struct OutputPort {
             ConnectionType connectionType; ///@todo: turn into pointer and cache somewhere
+            bool outputConstant;
+            sim::DefaultBitVectorState outputValue;
             std::vector<NodePort> connections;
         };
 
         std::vector<NodePort> m_inputPorts;
         std::vector<OutputPort> m_outputPorts;
-        
+
         friend class Circuit;
 };
 

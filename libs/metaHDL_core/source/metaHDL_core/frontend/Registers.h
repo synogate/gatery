@@ -10,33 +10,29 @@ namespace mhdl::core::frontend {
 
 class Bit;    
     
-class ClockConfig {
-    public:
-        std::string clockName = "clk";
-};
-
-class ResetConfig {
-    public:
-        std::string resetName = "reset";
+struct RegisterConfig {
+    hlim::BaseClock *clk = nullptr;
+    // bool triggerRisingEdge = true;
+    // bool asyncReset = true;
+    std::string resetName = "reset";
 };
 
 class RegisterFactory
 {
     public:
-        RegisterFactory(const ClockConfig &clockConfig, const ResetConfig &resetConfig);
+        RegisterFactory(const RegisterConfig &registerConfig);
         
         ///@todo overload for compound signals
         template<typename DataSignal, typename = std::enable_if_t<utils::isSignal<DataSignal>::value>>
         DataSignal operator()(const DataSignal &inputSignal, const Bit &enableSignal, const DataSignal &resetValue);
     protected:
-        ClockConfig m_clockConfig; 
-        ResetConfig m_resetConfig;
+        RegisterConfig m_registerConfig; 
 };
 
 class PipelineRegisterFactory : public RegisterFactory
 {
     public:
-        PipelineRegisterFactory(const ClockConfig &clockConfig, const ResetConfig &resetConfig);
+        PipelineRegisterFactory(const RegisterConfig &registerConfig);
         
         ///@todo overload for compound signals
         template<typename DataSignal, typename = std::enable_if_t<utils::isElementarySignal<DataSignal>::value>>
@@ -46,6 +42,7 @@ class PipelineRegisterFactory : public RegisterFactory
         template<typename DataSignal, typename = std::enable_if_t<utils::isSignal<DataSignal>::value>>
         DataSignal delayBy(DataSignal inputSignal, Bit enableSignal, DataSignal resetValue, SignalDelay delay);
     protected:
+        RegisterConfig m_registerConfig; 
 };
 
 
@@ -62,8 +59,8 @@ DataSignal RegisterFactory::operator()(const DataSignal &inputSignal, const Bit 
     node->connectInput(hlim::Node_Register::RESET_VALUE, {.node = resetValue.getNode(), .port = 0ull});
     node->connectInput(hlim::Node_Register::ENABLE, {.node = enableSignal.getNode(), .port = 0ull});
     
-    node->m_clockName = m_clockConfig.clockName;
-    node->m_resetName = m_resetConfig.resetName;
+    node->setClock(m_registerConfig.clk);
+    node->setReset(m_registerConfig.resetName);
     
     return DataSignal({.node = node, .port = 0ull});
 }

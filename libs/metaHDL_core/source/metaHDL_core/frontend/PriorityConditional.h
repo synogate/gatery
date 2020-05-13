@@ -71,7 +71,7 @@ class ConditionalScopeHelper
 
 
 #define ELSE \
-    else { MHDL_ASSERT(false); } if ()
+    else { MHDL_ASSERT(false); } if (true)
 
 
 

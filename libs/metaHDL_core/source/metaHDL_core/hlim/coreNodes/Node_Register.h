@@ -16,18 +16,24 @@ class Node_Register : public Node<Node_Register>
             NUM_INPUTS
         };
         
-        std::string m_resetName;
-        std::string m_clockName;
-        
         Node_Register();
         
         void connectInput(Input input, const NodePort &port);
         inline void disconnectInput(Input input) { NodeIO::disconnectInput(input); }
         
+        void setClock(BaseClock *clk);
+        void setReset(std::string resetName);
+        
+        inline const std::string &getResetName() { return m_resetName; }
+        
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;
         virtual std::string getInputName(size_t idx) const override;
         virtual std::string getOutputName(size_t idx) const override;
+
+        virtual size_t getInternalStateSize() const override;
+    protected:
+        std::string m_resetName;
 };
 
 }

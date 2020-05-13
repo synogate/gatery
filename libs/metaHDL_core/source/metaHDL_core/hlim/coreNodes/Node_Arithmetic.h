@@ -19,6 +19,8 @@ class Node_Arithmetic : public Node<Node_Arithmetic>
         void connectInput(size_t operand, const NodePort &port);
         void disconnectInput(size_t operand);
         
+        virtual void simulateEvaluate(sim::DefaultBitVectorState &state, size_t *inputOffsets, size_t *outputOffsets) override;
+        
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;
         virtual std::string getInputName(size_t idx) const override;

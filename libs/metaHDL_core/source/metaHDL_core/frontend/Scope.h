@@ -56,6 +56,8 @@ class DesignScope : public BaseScope<DesignScope>
         template<typename NodeType, typename... Args>
         static NodeType *createNode(Args&&... args);        
         
+        template<typename ClockType, typename... Args>
+        static ClockType *createClock(Args&&... args);        
     protected:
         hlim::Circuit m_circuit;
         GroupScope m_rootScope;
@@ -75,5 +77,10 @@ NodeType *DesignScope::createNode(Args&&... args) {
     return node;
 }
 
+template<typename ClockType, typename... Args>
+ClockType *DesignScope::createClock(Args&&... args) {
+    ClockType *node = m_currentScope->m_circuit.createClock<ClockType>(std::forward<Args>(args)...);
+    return node;
+}
 
 }

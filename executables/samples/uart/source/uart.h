@@ -20,6 +20,7 @@
 
 #include <metaHDL_core/frontend/BitVector.h>
 #include <metaHDL_core/frontend/Bit.h>
+#include <metaHDL_core/frontend/Registers.h>
 
 
 /**
@@ -30,10 +31,11 @@ class UartTransmitter
     public:
         using BitVector = mhdl::core::frontend::BitVector;
         using Bit = mhdl::core::frontend::Bit;
+        using RegConf = mhdl::core::frontend::RegisterConfig;
 
         UartTransmitter(size_t dataBits, size_t stopBits, size_t clockCyclesPerBit);
         
-        void operator()(const BitVector &inputData, Bit send, Bit &outputLine, Bit &idle);
+        void operator()(const BitVector &inputData, Bit send, Bit &outputLine, Bit &idle, RegConf &regConf);
     protected:
         size_t m_dataBits;
         size_t m_stopBits; 

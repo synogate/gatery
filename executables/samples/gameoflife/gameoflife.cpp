@@ -80,7 +80,9 @@ int main()
         GroupScope area(NodeGroup::GRP_AREA);
         area.setName("all");
 
-        RegisterFactory clk({}, {});
+        auto clk = design.createClock<mhdl::core::hlim::RootClock>("clk", mhdl::core::hlim::ClockRational(10'000));
+        RegisterConfig regConf = {.clk = clk, .resetName = "rst"};
+        RegisterFactory registerFactory(regConf);
 
         GameOfLife game(32);
 
@@ -88,7 +90,7 @@ int main()
         MHDL_NAMED(in.data);
         MHDL_NAMED(in.valid);
 
-        BitStream out = game(clk, in);
+        BitStream out = game(registerFactory, in);
     }
 
     design.getCircuit().cullUnnamedSignalNodes();

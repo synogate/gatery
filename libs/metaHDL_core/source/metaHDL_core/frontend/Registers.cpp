@@ -3,7 +3,7 @@
 
 namespace mhdl::core::frontend {
 
-RegisterFactory::RegisterFactory(const ClockConfig &clockConfig, const ResetConfig &resetConfig) : m_clockConfig(clockConfig), m_resetConfig(resetConfig)
+RegisterFactory::RegisterFactory(const RegisterConfig &registerConfig) : m_registerConfig(registerConfig)
 {
 }
 

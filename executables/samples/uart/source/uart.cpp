@@ -1,3 +1,4 @@
+#pragma once
 /*
  * <one line to give the program's name and a brief idea of what it does.>
  * Copyright (C) 2020  <copyright holder> <email>
@@ -39,7 +40,7 @@ UartTransmitter::UartTransmitter(size_t dataBits, size_t stopBits, size_t clockC
 {
 }
         
-void UartTransmitter::operator()(const BitVector &inputData, Bit send, Bit &outputLine, Bit &idle)
+void UartTransmitter::operator()(const BitVector &inputData, Bit send, Bit &outputLine, Bit &idle, RegConf &regConf)
 {
     MHDL_NAMED(send);
     MHDL_NAMED(outputLine);
@@ -56,7 +57,7 @@ void UartTransmitter::operator()(const BitVector &inputData, Bit send, Bit &outp
     Bit enable = 1_bit;
     MHDL_NAMED(enable);
 
-    RegisterFactory reg({}, {});
+    RegisterFactory reg(regConf);
     
     UnsignedInteger bitCounter(4);
     MHDL_NAMED(bitCounter);
@@ -101,7 +102,7 @@ void UartTransmitter::operator()(const BitVector &inputData, Bit send, Bit &outp
     driveWith(currentData, reg(nextData, enable, 0x00_vec));
     
     auto nextIdle = idle;
-    //MHDL_NAMED(nextIdle);
+    MHDL_NAMED(nextIdle);
     // if loading new data not idle in next step
     nextIdle = mux(loadingData, nextIdle, 0_bit);
     // if done, idle in next step

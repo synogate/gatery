@@ -1,9 +1,12 @@
 #include "Node.h"
 
 #include "NodeGroup.h"
+#include "Clock.h"
 
 #include "../utils/Exceptions.h"
 #include "../utils/Range.h"
+
+#include <algorithm>
 
 namespace mhdl::core::hlim {
 
@@ -20,6 +23,8 @@ BaseNode::BaseNode(size_t numInputs, size_t numOutputs)
 BaseNode::~BaseNode() 
 { 
     moveToGroup(nullptr); 
+    for (auto i : utils::Range(m_clocks.size()))
+        detachClock(i);
 }
 
 
@@ -51,5 +56,29 @@ void BaseNode::moveToGroup(NodeGroup *group)
         m_nodeGroup->m_nodes.push_back(this);
 }
 
+void BaseNode::attachClock(BaseClock *clk, size_t clockPort)
+{
+    if (m_clocks[clockPort] == clk) return;
+    
+    detachClock(clockPort);
+    
+    m_clocks[clockPort] = clk;
+    clk->m_clockedNodes.push_back({.node = this, .port = clockPort});
+}
+
+void BaseNode::detachClock(size_t clockPort)
+{
+    if (m_clocks[clockPort] == nullptr) return;
+    
+    auto clock = m_clocks[clockPort];
+    
+    auto it = std::find(clock->m_clockedNodes.begin(), clock->m_clockedNodes.end(), NodePort{.node = this, .port = clockPort});
+    MHDL_ASSERT(it != clock->m_clockedNodes.end());
+
+    *it = clock->m_clockedNodes.back();
+    clock->m_clockedNodes.pop_back();
+    
+    m_clocks[clockPort] = nullptr;
+}
 
 }

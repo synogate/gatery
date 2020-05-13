@@ -55,6 +55,8 @@ SignalType SignalArithmeticOp::operator()(const SignalType &lhs, const SignalTyp
         return op(lhs, rhs);                                                                    \
     }
     
+// add_ext for add extend    
+    
 MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, add, hlim::Node_Arithmetic::ADD)
 MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator+, hlim::Node_Arithmetic::ADD)
 MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, sub, hlim::Node_Arithmetic::SUB)

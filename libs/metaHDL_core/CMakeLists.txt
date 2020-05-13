@@ -54,6 +54,8 @@ add_library(metaHDL_core STATIC
     
     source/metaHDL_core/hlim/Circuit.cpp
     source/metaHDL_core/hlim/Circuit.h
+    source/metaHDL_core/hlim/Clock.cpp
+    source/metaHDL_core/hlim/Clock.h
     source/metaHDL_core/hlim/ConnectionType.cpp
     source/metaHDL_core/hlim/ConnectionType.h
     source/metaHDL_core/hlim/Node.cpp
@@ -65,9 +67,17 @@ add_library(metaHDL_core STATIC
     source/metaHDL_core/hlim/NodeIO.cpp
     source/metaHDL_core/hlim/NodeIO.h
 
+    source/metaHDL_core/simulation/BitVectorState.cpp
+    source/metaHDL_core/simulation/BitVectorState.h
+    source/metaHDL_core/simulation/ReferenceSimulator.cpp
+    source/metaHDL_core/simulation/ReferenceSimulator.h
     source/metaHDL_core/simulation/Simulator.cpp
     source/metaHDL_core/simulation/Simulator.h
+    source/metaHDL_core/simulation/SimulatorControl.cpp
+    source/metaHDL_core/simulation/SimulatorControl.h
     
+    source/metaHDL_core/utils/BitManipulation.h
+    source/metaHDL_core/utils/BitManipulation.cpp
     source/metaHDL_core/utils/Enumerate.h
     source/metaHDL_core/utils/Exceptions.cpp
     source/metaHDL_core/utils/Exceptions.h
