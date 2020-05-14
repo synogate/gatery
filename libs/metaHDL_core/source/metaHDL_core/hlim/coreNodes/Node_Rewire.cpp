@@ -53,13 +53,15 @@ void Node_Rewire::simulateEvaluate(sim::DefaultBitVectorState &state, const size
     for (const auto &range : m_rewireOperation.ranges) {
         if (range.source == OutputRange::INPUT) {
             auto driver = getNonSignalDriver(range.inputIdx);
-            if (driver.node == nullptr) continue;
-    
-            state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth,
-                    state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[range.inputIdx]+range.inputOffset, range.subwidth));
-            
-            state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0] + outputOffset, range.subwidth,
-                    state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[range.inputIdx]+range.inputOffset, range.subwidth));
+            if (driver.node == nullptr) {
+                state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth, 0ull);
+            } else {
+                state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth,
+                        state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[range.inputIdx]+range.inputOffset, range.subwidth));
+                
+                state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0] + outputOffset, range.subwidth,
+                        state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[range.inputIdx]+range.inputOffset, range.subwidth));
+            }
         } else {
             std::uint64_t output = range.source == OutputRange::CONST_ZERO?0ull:~0ull;
             state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth, ~0ull);
