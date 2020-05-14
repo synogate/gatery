@@ -21,7 +21,7 @@ class Node_Logic : public Node<Node_Logic>
         void connectInput(size_t operand, const NodePort &port);
         void disconnectInput(size_t operand);
         
-        virtual void simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *inputOffsets, const size_t *outputOffsets) const override;        
+        virtual void simulateEvaluate(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets) const override;        
         
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;

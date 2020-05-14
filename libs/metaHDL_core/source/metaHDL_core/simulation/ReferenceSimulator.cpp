@@ -24,7 +24,7 @@ namespace mhdl::core::sim {
 void ExecutionBlock::evaluate(DataState &state) const
 {
     for (const auto &step : m_steps) 
-        step.node->simulateEvaluate(state.signalState, step.inputs.data(), step.outputs.data());
+        step.node->simulateEvaluate(state.signalState, step.internal, step.inputs.data(), step.outputs.data());
 }
     
 void ExecutionBlock::addStep(MappedNode mappedNode)
@@ -38,7 +38,7 @@ LatchedNode::LatchedNode(MappedNode mappedNode, size_t clockPort) : m_mappedNode
 
 void LatchedNode::advance(DataState &state) const
 {
-    m_mappedNode.node->simulateAdvance(state.signalState, m_mappedNode.inputs.data(), m_mappedNode.outputs.data(), m_clockPort);
+    m_mappedNode.node->simulateAdvance(state.signalState, m_mappedNode.internal, m_mappedNode.inputs.data(), m_mappedNode.outputs.data(), m_clockPort);
 }
 
     
@@ -64,10 +64,13 @@ void Program::compileProgram(const hlim::Circuit &circuit)
         
         MappedNode mappedNode;
         mappedNode.node = node.get();
+        mappedNode.internal = m_stateMapping.nodeToInternalOffset[node.get()];
         for (auto i : utils::Range(node->getNumInputPorts()))
             mappedNode.inputs.push_back(m_stateMapping.outputToOffset[node->getNonSignalDriver(i)]);
         for (auto i : utils::Range(node->getNumOutputPorts())) 
             mappedNode.outputs.push_back(m_stateMapping.outputToOffset[{.node = node.get(), .port = i}]);
+        
+        std::map<size_t, std::set<size_t>> clockDomainClockPortList;
         
         for (auto i : utils::Range(node->getNumOutputPorts())) {
             
@@ -91,12 +94,19 @@ void Program::compileProgram(const hlim::Circuit &circuit)
 
                     m_resetNodes.push_back(mappedNode);
                     
-                    for (auto clockPort : utils::Range(node->getClocks().size()))
-                        m_clockDomains[m_stateMapping.clockToClkDomain[node->getClocks()[clockPort]]].latches.push_back(LatchedNode(mappedNode, clockPort));
+                    for (auto clockPort : utils::Range(node->getClocks().size())) {
+                        size_t clockDomainIdx = m_stateMapping.clockToClkDomain[node->getClocks()[clockPort]];
+                        clockDomainClockPortList[clockDomainIdx].insert(clockPort);
+                    }
                 } break;
-            }
-            
+            }            
         }
+        
+        for (const auto &pair : clockDomainClockPortList) {
+            auto &clockDomain = m_clockDomains[pair.first];
+            for (size_t clockPort : pair.second)
+                clockDomain.latches.push_back(LatchedNode(mappedNode, clockPort));
+        }        
     }
 
     
@@ -142,6 +152,7 @@ void Program::compileProgram(const hlim::Circuit &circuit)
         
         MappedNode mappedNode;
         mappedNode.node = readyNode;
+        mappedNode.internal = m_stateMapping.nodeToInternalOffset[readyNode];
         for (auto i : utils::Range(readyNode->getNumInputPorts()))
             mappedNode.inputs.push_back(m_stateMapping.outputToOffset[readyNode->getNonSignalDriver(i)]);
         for (auto i : utils::Range(readyNode->getNumOutputPorts())) 
@@ -185,11 +196,15 @@ void Program::allocateSignals(const hlim::Circuit &circuit)
                 }
             }
         } else {
+            
+            if (node->getInternalStateSize() > 0)
+                m_stateMapping.nodeToInternalOffset[node.get()] = allocator.allocate(node->getInternalStateSize());
+            
             for (auto i : utils::Range(node->getNumOutputPorts())) {
                 hlim::NodePort driver = {.node = node.get(), .port = i};
                 auto it = m_stateMapping.outputToOffset.find(driver);
                 if (it == m_stateMapping.outputToOffset.end()) {
-                    unsigned width = node->getOutputConnectionType(0).width;
+                    unsigned width = node->getOutputConnectionType(i).width;
                     m_stateMapping.outputToOffset[driver] = allocator.allocate(width);
                 }
             }
@@ -208,9 +223,10 @@ void Program::reset(DataState &dataState) const
     memset(dataState.signalState.data(DefaultConfig::DEFINED), 
            0x00, dataState.signalState.getNumBlocks() * sizeof(DefaultConfig::BaseType));
 
-   
+    
     for (const auto &mappedNode : m_resetNodes)
-        mappedNode.node->simulateReset(dataState.signalState, mappedNode.outputs.data());
+        mappedNode.node->simulateReset(dataState.signalState, mappedNode.internal, mappedNode.outputs.data());
+    
 }
 
 void Program::reevaluate(DataState &dataState) const

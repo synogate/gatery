@@ -20,6 +20,7 @@ struct DataState
 struct StateMapping
 {
     std::map<hlim::NodePort, size_t> outputToOffset;
+    std::map<hlim::BaseNode*, size_t> nodeToInternalOffset;
     std::map<hlim::BaseClock*, size_t> clockToClkDomain;
     /*
     std::map<hlim::BaseClock*, size_t> clockToSignalIdx;
@@ -38,6 +39,7 @@ struct StateMapping
 
 struct MappedNode {
     hlim::BaseNode *node = nullptr;
+    size_t internal;
     std::vector<size_t> inputs;
     std::vector<size_t> outputs;
 };

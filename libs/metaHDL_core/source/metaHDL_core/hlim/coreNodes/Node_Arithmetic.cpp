@@ -42,7 +42,7 @@ void Node_Arithmetic::disconnectInput(size_t operand)
 }
 
 
-void Node_Arithmetic::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *inputOffsets, const size_t *outputOffsets) const 
+void Node_Arithmetic::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets) const 
 {
     MHDL_ASSERT_HINT(getOutputConnectionType(0).width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
     auto leftDriver = getNonSignalDriver(0);

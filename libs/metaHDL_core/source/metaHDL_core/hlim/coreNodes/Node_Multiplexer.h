@@ -17,7 +17,7 @@ class Node_Multiplexer : public Node<Node_Multiplexer>
         void connectInput(size_t operand, const NodePort &port);
         inline void disconnectInput(size_t operand) { NodeIO::disconnectInput(1+operand); }
 
-        virtual void simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *inputOffsets, const size_t *outputOffsets) const override;
+        virtual void simulateEvaluate(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets) const override;
         
         virtual std::string getTypeName() const override { return "mux"; }
         virtual void assertValidity() const override { }

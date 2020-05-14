@@ -26,7 +26,7 @@ void Node_Register::setReset(std::string resetName)
     m_resetName = std::move(resetName);
 }
 
-void Node_Register::simulateReset(sim::DefaultBitVectorState &state, const size_t *outputOffsets) const
+void Node_Register::simulateReset(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *outputOffsets) const
 {
     auto resetDriver = getNonSignalDriver(RESET_VALUE);
     if (resetDriver.node == nullptr) return;
@@ -53,7 +53,7 @@ void Node_Register::simulateReset(sim::DefaultBitVectorState &state, const size_
     
 }
 
-void Node_Register::simulateAdvance(sim::DefaultBitVectorState &state, const size_t *inputOffsets, const size_t *outputOffsets, size_t clockPort) const
+void Node_Register::simulateAdvance(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets, size_t clockPort) const
 {
     MHDL_ASSERT(clockPort == 0);
     
