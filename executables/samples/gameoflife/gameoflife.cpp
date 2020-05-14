@@ -1,4 +1,7 @@
 #include "pch.h"
+
+#include "gameoflife.h"
+
 #include <numeric>
 
 using namespace mhdl::core::frontend;
@@ -6,97 +9,95 @@ using namespace mhdl::core::hlim;
 using namespace mhdl::utils;
 using namespace mhdl::core::vhdl;
 
-struct BitStream
-{
-    Bit valid;
-    Bit data;
-};
-
 template<typename T>
 T delay(RegisterFactory& clock, const T& in, const Bit& enable, const T& resetValue, size_t count)
 {
+    GroupScope entity(NodeGroup::GRP_ENTITY);
+    entity.setName(std::string("delay_by_") + std::to_string(count));
+
+    GroupScope area(NodeGroup::GRP_AREA);
+    area.setName("all"); // ???
+
     T out = in;
     for (size_t i = 0; i < count; ++i)
         out = clock(out, enable, resetValue);
     return out;
 }
 
-class GameOfLife
-{
-public:
-    GameOfLife(size_t width) :
-        m_Width(width)
-    {}
+GameOfLife::GameOfLife(size_t width) :
+    m_Width(width)
+{}
 
-    BitStream operator() (RegisterFactory& clock, const BitStream& in) const
+BitStream GameOfLife::operator() (RegisterFactory& clock, const BitStream& in) const
+{
+    GroupScope entity(NodeGroup::GRP_ENTITY);
+    entity.setName("GameOfLife");
+
+    GroupScope area(NodeGroup::GRP_AREA);
+    area.setName("all"); // ???
+
+
+    
+    std::array<Bit, 9> neighborBits;
     {
         GroupScope entity(NodeGroup::GRP_ENTITY);
-        entity.setName("GameOfLife");
+        entity.setName("cacheNeighbors");
 
         GroupScope area(NodeGroup::GRP_AREA);
         area.setName("all"); // ???
 
+        neighborBits[0] = in.data;
 
-        std::array<UnsignedInteger, 9> neighbors;
-        neighbors[0] = UnsignedInteger(1);
-        neighbors[0].setBit(0, in.data);
-
-        for (size_t i = 1; i < neighbors.size(); ++i)
+        for (size_t i = 1; i < neighborBits.size(); ++i)
         {
             if (i % 3 == 0)
-                neighbors[i] = delay(clock, neighbors[i - 1], in.valid, 0b0_uvec, m_Width - 3);
+                neighborBits[i] = delay(clock, neighborBits[i - 1], in.valid, 0_bit, m_Width - 3);
             else
-                neighbors[i] = clock(neighbors[i-1], in.valid, 0b0_uvec);
+                neighborBits[i] = clock(neighborBits[i-1], in.valid, 0_bit);
         }
 
-        for (size_t i = 0; i < neighbors.size(); ++i)
-            neighbors[i].setName("neighbor" + std::to_string(i));
-
-        UnsignedInteger sum = std::accumulate(neighbors.begin(), neighbors.end(), 0x0_uvec);
-        sum.setName("sum");
-
-        PriorityConditional<Bit> sel;
-        sel.addCondition(sum == 4_uvec, 1_bit);
-        sel.addCondition(sum == 3_uvec, neighbors[1 * 3 + 1][0]);
-
-        BitStream out;
-        out.data = sel(0_bit);
-        MHDL_NAMED(out.data);
-        out.valid = in.valid;
-        MHDL_NAMED(out.valid);
-        return out;
+        for (size_t i = 0; i < neighborBits.size(); ++i)
+            neighborBits[i].setName("neighbor_bit" + std::to_string(i));
     }
 
-
-private:
-    size_t m_Width;
-};
-
-int main()
-{
-    DesignScope design;
-
+    std::array<UnsignedInteger, 9> neighbors;
     {
+        GroupScope entity(NodeGroup::GRP_ENTITY);
+        entity.setName("bitextendNeighbors");
+
         GroupScope area(NodeGroup::GRP_AREA);
-        area.setName("all");
+        area.setName("all"); // ???
 
-        auto clk = design.createClock<mhdl::core::hlim::RootClock>("clk", mhdl::core::hlim::ClockRational(10'000));
-        RegisterConfig regConf = {.clk = clk, .resetName = "rst"};
-        RegisterFactory registerFactory(regConf);
+        for (size_t i = 0; i < neighbors.size(); ++i) {
+            neighbors[i] = 0b0000_uvec;
+            neighbors[i].setBit(0, neighborBits[i]);
+            neighbors[i].setName("neighbor" + std::to_string(i));
+        }
+    }
+    
+    UnsignedInteger sum;
+    {
+        GroupScope entity(NodeGroup::GRP_ENTITY);
+        entity.setName("sumNeighbors");
 
-        GameOfLife game(32);
+        GroupScope area(NodeGroup::GRP_AREA);
+        area.setName("all"); // ???
 
-        BitStream in;
-        MHDL_NAMED(in.data);
-        MHDL_NAMED(in.valid);
-
-        BitStream out = game(registerFactory, in);
+        sum = neighbors[0] + neighbors[1] + neighbors[2] +  
+              neighbors[3]                + neighbors[5] +  
+              neighbors[6] + neighbors[7] + neighbors[8];
+        sum.setName("sum");
     }
 
-    design.getCircuit().cullUnnamedSignalNodes();
-    design.getCircuit().cullOrphanedSignalNodes();
+    PriorityConditional<Bit> sel;
+    sel.addCondition(sum == 0b0011_uvec, 1_bit);
+    sel.addCondition(sum == 0b0010_uvec, neighbors[1 * 3 + 1][0]);
 
-    VHDLExport vhdl("VHDL_out/");
-    vhdl(design.getCircuit());
-
+    BitStream out;
+    out.data = sel(0_bit);
+    MHDL_NAMED(out.data);
+    out.valid = in.valid;
+    MHDL_NAMED(out.valid);
+    return out;
 }
+
