@@ -22,6 +22,7 @@ class Node_Register : public Node<Node_Register>
         inline void disconnectInput(Input input) { NodeIO::disconnectInput(input); }
         
         virtual void simulateReset(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *outputOffsets) const override;
+        virtual void simulateEvaluate(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets) const override;
         virtual void simulateAdvance(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets, size_t clockPort) const override;
         
         void setClock(BaseClock *clk);

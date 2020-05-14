@@ -48,9 +48,30 @@ void Node_Register::simulateReset(sim::DefaultBitVectorState &state, const size_
         state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0] + offset, chunkSize, block);
         state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0] + offset, chunkSize, ~0ull);    
         
+        state.insertNonStraddling(sim::DefaultConfig::VALUE, internalOffset + offset, chunkSize, block);
+        state.insertNonStraddling(sim::DefaultConfig::DEFINED, internalOffset + offset, chunkSize, ~0ull);    
+        
         offset += chunkSize;
     }
     
+}
+
+void Node_Register::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets) const
+{
+    size_t width = getOutputConnectionType(0).width;
+    size_t offset = 0;
+    while (offset < width) {
+        size_t chunkSize = std::min<size_t>(64, width-offset);
+        
+        state.insertNonStraddling(sim::DefaultConfig::DEFINED, internalOffset + offset, chunkSize,
+                state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[DATA]+offset, chunkSize));
+        
+        state.insertNonStraddling(sim::DefaultConfig::VALUE, internalOffset + offset, chunkSize,
+                state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[DATA]+offset, chunkSize));
+
+        offset += chunkSize;
+    }
+
 }
 
 void Node_Register::simulateAdvance(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets, size_t clockPort) const
@@ -73,10 +94,10 @@ void Node_Register::simulateAdvance(sim::DefaultBitVectorState &state, const siz
         size_t chunkSize = std::min<size_t>(64, width-offset);
         
         state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0] + offset, chunkSize,
-                state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[DATA]+offset, chunkSize));
+                state.extractNonStraddling(sim::DefaultConfig::DEFINED, internalOffset+offset, chunkSize));
         
         state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0] + offset, chunkSize,
-                state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[DATA]+offset, chunkSize));
+                state.extractNonStraddling(sim::DefaultConfig::VALUE, internalOffset+offset, chunkSize));
 
         offset += chunkSize;
     }
