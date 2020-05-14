@@ -45,4 +45,39 @@ void Node_Rewire::updateConnectionType()
 }
 
 
+void Node_Rewire::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *inputOffsets, const size_t *outputOffsets) const 
+{
+    MHDL_ASSERT_HINT(getOutputConnectionType(0).width <= 64, "Rewiring with more than 64 bits not yet implemented!");
+
+    size_t outputOffset = 0;
+    for (const auto &range : m_rewireOperation.ranges) {
+        if (range.source == OutputRange::INPUT) {
+            auto driver = getNonSignalDriver(range.inputIdx);
+            if (driver.node == nullptr) continue;
+    
+            state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth,
+                    state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[range.inputIdx]+range.inputOffset, range.subwidth));
+            
+            state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0] + outputOffset, range.subwidth,
+                    state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[range.inputIdx]+range.inputOffset, range.subwidth));
+        } else {
+            std::uint64_t output = range.source == OutputRange::CONST_ZERO?0ull:~0ull;
+            state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth, ~0ull);
+            state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0] + outputOffset, range.subwidth, output);
+        }
+        outputOffset += range.subwidth;
+    }
+}
+
+std::string Node_Rewire::getTypeName() const 
+{ 
+    size_t bitIndex;
+    if (m_rewireOperation.isBitExtract(bitIndex))
+        return std::string("bit ") + std::to_string(bitIndex);
+    else
+        return "Rewire"; 
+}
+
+
+
 }

@@ -8,7 +8,18 @@
 
 namespace mhdl::utils {
     
-    
+
+inline unsigned nextPow2(unsigned v) 
+{
+    v--;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    v++;
+    return v;
+}
     
 #ifdef __BMI__
 inline std::uint64_t andNot(std::uint64_t a, std::uint64_t b) {

@@ -2,6 +2,7 @@
 
 #include "Simulator.h"
 
+#include "BitVectorState.h"
 #include "../hlim/NodeIO.h"
 #include "../utils/BitManipulation.h"
 
@@ -11,56 +12,46 @@
 
 namespace mhdl::core::sim {
 
-class DataState 
+struct DataState 
 {
-    public:
-        void resize(size_t size);
-        inline size_t size() const { return m_size; }
-        inline size_t getNumBlocks() const { return m_values.size(); }
-        void clear();
-        
-        bool bit(size_t idx) { return m_values[idx/64] & (1ull << (idx % 64)); }
-        bool defined(size_t idx) { return m_defined[idx/64] & (1ull << (idx % 64)); }
-
-        void setBit(size_t idx, bool value) { if (value) m_values[idx/64] |= (1ull << (idx % 64)); else m_values[idx/64] &= ~(1ull << (idx % 64)); }
-        void setDefined(size_t idx, bool value) { if (value) m_defined[idx/64] |= (1ull << (idx % 64)); else m_defined[idx/64] &= ~(1ull << (idx % 64)); }
-        
-        DataState getRange(size_t offset, size_t size);
-        
-        std::uint64_t *getValueData() { return m_values.data(); }
-        const std::uint64_t *getValueData() const { return m_values.data(); }
-        std::uint64_t *getDefinedData() { return m_defined.data(); }
-        const std::uint64_t *getDefinedData() const { return m_defined.data(); }
-        
-        bool anyUndefined(size_t offset, size_t size);
-    protected:
-        size_t m_size;
-        std::vector<std::uint64_t> m_values;
-        std::vector<std::uint64_t> m_defined;
+    DefaultBitVectorState signalState;
 };
 
 struct StateMapping
 {
     std::map<hlim::NodePort, size_t> outputToOffset;
-    std::map<std::string, size_t> clockToSignalIdx;
-    std::map<std::string, size_t> clockToClkIdx;
-    std::map<std::string, size_t> resetToSignalIdx;
+    std::map<hlim::BaseClock*, size_t> clockToClkDomain;
+    /*
+    std::map<hlim::BaseClock*, size_t> clockToSignalIdx;
+    std::map<hlim::BaseClock*, size_t> clockToClkIdx;
+    */
+//    std::map<std::string, size_t> resetToSignalIdx;
     
     StateMapping() { clear(); }
     
-    void clear() { outputToOffset.clear(); outputToOffset[{}] = ~0ull; clockToSignalIdx.clear(); clockToClkIdx.clear(); resetToSignalIdx.clear(); }    
+    void clear() { 
+        outputToOffset.clear(); outputToOffset[{}] = ~0ull; //clockToSignalIdx.clear(); clockToClkIdx.clear(); 
+        clockToClkDomain.clear();
+        //resetToSignalIdx.clear(); 
+    }    
+};
+
+struct MappedNode {
+    hlim::BaseNode *node = nullptr;
+    std::vector<size_t> inputs;
+    std::vector<size_t> outputs;
 };
 
 class ExecutionBlock
 {
     public:
-        void execute(DataState &state) const;
+        void evaluate(DataState &state) const;
 
-        void addInstruction(const std::function<void(DataState &state)> &inst);
+        void addStep(MappedNode mappedNode);
     protected:
-        std::vector<size_t> m_dependsOnExecutionBlocks;
-        std::vector<size_t> m_dependentExecutionBlocks;
-        std::vector<std::function<void(DataState &state)>> m_instructions;
+        //std::vector<size_t> m_dependsOnExecutionBlocks;
+        //std::vector<size_t> m_dependentExecutionBlocks;
+        std::vector<MappedNode> m_steps;
 };
 
 class HardwareAssert
@@ -69,26 +60,22 @@ class HardwareAssert
     protected:
 };
 
-class Register
+class LatchedNode
 {
     public:
-        Register(unsigned size, unsigned srcData, unsigned srcReset, unsigned dst);
-        void advance(DataState &state);
-    protected:
-        size_t m_dataWordSize;
-        size_t m_srcDataWordOffset;
-        size_t m_dstDataWordOffset;
-        size_t m_resetDataWordOffset;
+        LatchedNode(MappedNode mappedNode, size_t clockPort);
         
-        size_t m_dependsOnExecutionBlock;
-        std::vector<size_t> m_dependentExecutionBlocks;
+        void advance(DataState &state) const;
+    protected:
+        MappedNode m_mappedNode;
+        size_t m_clockPort;
+        
+        //std::vector<size_t> m_dependentExecutionBlocks;
 };
 
 struct ClockDomain
 {
-    size_t clkIdx;
-    size_t resetIdx;
-    std::vector<Register> registers;
+    std::vector<LatchedNode> latches;
 };
 
 struct ExecutionState
@@ -97,34 +84,33 @@ struct ExecutionState
     std::vector<size_t> clocksTriggered;
 };
 
-
+/*
 struct ClockDriver
 {
     size_t srcSignalIdx;
     size_t dstClockIdx;
 };
-
+*/
 class Program
 {
     public:
         void compileProgram(const hlim::Circuit &circuit);
 
-        void executeCombinatory(ExecutionState &executionState, DataState &dataState, bool forceFullReevaluation = false) const;
-        void advanceRegisters(ExecutionState &executionState, DataState &dataState) const;
+        void reset(DataState &dataState) const;
+        void reevaluate(DataState &dataState) const;
+        void advanceClock(DataState &dataState, hlim::BaseClock *clock) const;
         
         
-        inline const DataState &getInitialState() const { return m_initialState; }
         inline size_t getFullStateWidth() const { return m_fullStateWidth; }
         inline const StateMapping &getStateMapping() const { return m_stateMapping; }
         inline const std::vector<ExecutionBlock> &getExecutionBlocks() const { return m_executionBlocks; }
     protected:
-        DataState m_initialState;
         size_t m_fullStateWidth;
         
         StateMapping m_stateMapping;
 
-        std::map<size_t, std::vector<size_t>> m_clockIdx2clockDomain;
-        std::vector<ClockDriver> m_clockDrivers;
+        std::vector<MappedNode> m_resetNodes;
+        //std::vector<ClockDriver> m_clockDrivers;
         std::vector<ClockDomain> m_clockDomains;
         std::vector<ExecutionBlock> m_executionBlocks;
         
@@ -137,7 +123,6 @@ class ReferenceSimulator : public Simulator
         virtual void compileProgram(const hlim::Circuit &circuit) override;
         
         virtual void reset() override;
-        
         virtual void reevaluate() override;
         virtual void advanceAnyTick() override;
         
@@ -148,6 +133,8 @@ class ReferenceSimulator : public Simulator
         Program m_program;
         ExecutionState m_executionState;
         DataState m_dataState;
+        
+        hlim::BaseClock *clk;
 };
 
 }

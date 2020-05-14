@@ -42,7 +42,7 @@ void Node_Arithmetic::disconnectInput(size_t operand)
 }
 
 
-void Node_Arithmetic::simulateEvaluate(sim::DefaultBitVectorState &state, size_t *inputOffsets, size_t *outputOffsets)
+void Node_Arithmetic::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *inputOffsets, const size_t *outputOffsets) const 
 {
     MHDL_ASSERT_HINT(getOutputConnectionType(0).width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
     auto leftDriver = getNonSignalDriver(0);
@@ -54,8 +54,8 @@ void Node_Arithmetic::simulateEvaluate(sim::DefaultBitVectorState &state, size_t
     MHDL_ASSERT_HINT(leftType.width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
     MHDL_ASSERT_HINT(rightType.width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
     
-    if (!state.allDefinedNonStraddling(inputOffsets[0], leftType.width)) return;
-    if (!state.allDefinedNonStraddling(inputOffsets[1], rightType.width)) return;
+    if (!allDefinedNonStraddling(state, inputOffsets[0], leftType.width)) return;
+    if (!allDefinedNonStraddling(state, inputOffsets[1], rightType.width)) return;
    
     std::uint64_t left = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0], leftType.width);
     std::uint64_t right = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[1], rightType.width);

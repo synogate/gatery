@@ -51,6 +51,12 @@ void NodeIO::setOutputConnectionType(size_t outputPort, const ConnectionType &co
     }
 }
 
+void NodeIO::setOutputType(size_t outputPort, OutputType outputType)
+{
+    m_outputPorts[outputPort].outputType = outputType;
+}
+
+
 
 void NodeIO::connectInput(size_t inputPort, const NodePort &output)
 {

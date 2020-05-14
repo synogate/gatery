@@ -33,7 +33,9 @@ class Node_Rewire : public Node<Node_Rewire>
         void connectInput(size_t operand, const NodePort &port);
         inline void disconnectInput(size_t operand) { NodeIO::disconnectInput(operand); }        
         
-        virtual std::string getTypeName() const override { return "Rewire"; }
+        virtual void simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *inputOffsets, const size_t *outputOffsets) const override;        
+        
+        virtual std::string getTypeName() const override;
         virtual void assertValidity() const override { }
         virtual std::string getInputName(size_t idx) const override { return (boost::format("in_%d")%idx).str(); }
         virtual std::string getOutputName(size_t idx) const override { return "output"; }

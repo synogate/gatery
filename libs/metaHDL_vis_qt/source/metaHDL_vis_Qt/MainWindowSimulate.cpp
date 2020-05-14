@@ -44,7 +44,6 @@ MainWindowSimulate::MainWindowSimulate(QWidget *parent, core::hlim::Circuit &cir
     
     
     m_simulator.compileProgram(m_circuit);
-    m_simulator.reevaluate();
     m_simControl.bindSimulator(&m_simulator);
     
     
@@ -64,6 +63,12 @@ MainWindowSimulate::MainWindowSimulate(QWidget *parent, core::hlim::Circuit &cir
     QObject::connect(m_ui.listWidget_stackTraceView, &QListWidget::currentItemChanged,
                      this, &MainWindowSimulate::onlistWidget_stackTraceView_currentItemChanged);
 
+    QObject::connect(m_ui.toolButton_StepForward, &QToolButton::pressed,
+                     this, &MainWindowSimulate::ontoolButton_StepForward_pressed);
+    QObject::connect(m_ui.toolButton_Reset, &QToolButton::pressed,
+                     this, &MainWindowSimulate::ontoolButton_Reset_pressed);
+    
+    
     m_syntaxHighlighter.reset(new CHCLSyntaxHighlighter(m_ui.textEdit_sourceView->document()));
 }
 
@@ -199,17 +204,16 @@ void MainWindowSimulate::onlistWidget_stackTraceView_currentItemChanged(QListWid
 void MainWindowSimulate::updateSignalValues()
 {
     for (auto pair : m_signalNode2TableRow) {
-        core::sim::DataState state;
-//        m_simulator.getValueOfOutput({.node = pair.first->getHlimNode(), .port = 0ull}, state);
+        core::sim::DefaultBitVectorState state = m_simulator.getValueOfOutput({.node = pair.first->getHlimNode(), .port = 0ull});
         if (state.size() == 0)
             m_ui.tableWidget_signals->setItem(pair.second, 1, new QTableWidgetItem(QString::fromUtf8("undefined")));
         else {
             std::stringstream bitString;
             for (auto i : utils::Range(state.size()))
-                if (!state.defined(i))
+                if (!state.get(core::sim::DefaultConfig::DEFINED, state.size()-1-i))
                     bitString << "?";
                 else
-                    if (state.bit(i))
+                    if (state.get(core::sim::DefaultConfig::VALUE, state.size()-1-i))
                         bitString << "1";
                     else
                         bitString << "0";
@@ -218,5 +222,17 @@ void MainWindowSimulate::updateSignalValues()
     }
 }
 
+void MainWindowSimulate::ontoolButton_StepForward_pressed()
+{
+    //m_simControl.advanceAnyTick();
+    m_simulator.advanceAnyTick();
+    updateSignalValues();
+}
+
+void MainWindowSimulate::ontoolButton_Reset_pressed()
+{
+    m_simulator.reset();
+    updateSignalValues();
+}
 
 }

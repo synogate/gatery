@@ -82,6 +82,7 @@ namespace mhdl::core::hlim {
             std::reverse(bitVec.begin(), bitVec.end());
         }
 
+        ///@todo: Do we want DefaultBitVectorState here to also represent undefined values?
         std::vector<bool> bitVec;
         size_t base = 10;
     };
@@ -89,12 +90,14 @@ namespace mhdl::core::hlim {
     class Node_Constant : public Node<Node_Constant>
     {
     public:
-        Node_Constant(ConstantData value, const hlim::ConnectionType& connectionType) : Node(0, 1), m_Value(value) { setOutputConnectionType(0, connectionType); }
+        Node_Constant(ConstantData value, const hlim::ConnectionType& connectionType);
+
+        virtual void simulateReset(sim::DefaultBitVectorState &state, const size_t *outputOffsets) const override;
         
-        virtual std::string getTypeName() const override { return "Constant"; }
-        virtual void assertValidity() const override { }
-        virtual std::string getInputName(size_t idx) const override { return ""; }
-        virtual std::string getOutputName(size_t idx) const override { return "output"; }
+        virtual std::string getTypeName() const override;
+        virtual void assertValidity() const override;
+        virtual std::string getInputName(size_t idx) const override;
+        virtual std::string getOutputName(size_t idx) const override;
 
         const ConstantData& getValue() const { return m_Value; }
     protected:

@@ -67,6 +67,8 @@ add_library(metaHDL_core STATIC
     source/metaHDL_core/hlim/NodeIO.cpp
     source/metaHDL_core/hlim/NodeIO.h
 
+    source/metaHDL_core/simulation/BitAllocator.cpp
+    source/metaHDL_core/simulation/BitAllocator.h
     source/metaHDL_core/simulation/BitVectorState.cpp
     source/metaHDL_core/simulation/BitVectorState.h
     source/metaHDL_core/simulation/ReferenceSimulator.cpp

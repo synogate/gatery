@@ -25,6 +25,7 @@ class Circuit
         inline const NodeGroup *getRootNodeGroup() const { return m_root.get(); }
 
         inline const std::vector<std::unique_ptr<BaseNode>> &getNodes() const { return m_nodes; }
+        inline const std::vector<std::unique_ptr<BaseClock>> &getClocks() const { return m_clocks; }
 
         void cullUnnamedSignalNodes();
         void cullOrphanedSignalNodes();

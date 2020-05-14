@@ -32,7 +32,7 @@ class BitVectorState
         inline size_t getNumBlocks() const { return m_values[0].size(); }
         void clear();
         
-        bool get(typename Config::Plane plane, size_t idx);
+        bool get(typename Config::Plane plane, size_t idx) const;
         void set(typename Config::Plane plane, size_t idx);
         void set(typename Config::Plane plane, size_t idx, bool bit);
         void clear(typename Config::Plane plane, size_t idx);
@@ -41,23 +41,22 @@ class BitVectorState
         typename Config::BaseType *data(typename Config::Plane plane);
         const typename Config::BaseType *data(typename Config::Plane plane) const;
         
-        BitVectorState<Config> extract(size_t start, size_t size);
+        BitVectorState<Config> extract(size_t start, size_t size) const;
         
-        typename Config::BaseType extractNonStraddling(typename Config::Plane plane, size_t start, size_t size);
+        typename Config::BaseType extractNonStraddling(typename Config::Plane plane, size_t start, size_t size) const;
         void insertNonStraddling(typename Config::Plane plane, size_t start, size_t size, typename Config::BaseType value);
     protected:
         size_t m_size;
         std::array<std::vector<std::uint64_t>, Config::NUM_PLANES> m_values;
 };
 
-class DefaultBitVectorState : public BitVectorState<DefaultConfig>
-{
-    public:
-        bool allDefinedNonStraddling(size_t start, size_t size) {
-            return utils::andNot(extractNonStraddling(DefaultConfig::DEFINED, start, size), utils::bitMaskRange(0, size));
-        }
-};
 
+template<typename Config>
+bool allDefinedNonStraddling(const BitVectorState<Config> &vec, size_t start, size_t size) {
+    return !utils::andNot(vec.extractNonStraddling(Config::DEFINED, start, size), utils::bitMaskRange(0, size));
+}
+
+using DefaultBitVectorState = BitVectorState<DefaultConfig>;
 
 
 
@@ -69,6 +68,7 @@ class DefaultBitVectorState : public BitVectorState<DefaultConfig>
 template<class Config>
 void BitVectorState<Config>::resize(size_t size)
 {
+    m_size = size;
     for (auto i : utils::Range<size_t>(Config::NUM_PLANES))
         m_values[i].resize((size+Config::NUM_BITS_PER_BLOCK-1) / Config::NUM_BITS_PER_BLOCK);
 }
@@ -81,7 +81,7 @@ void BitVectorState<Config>::clear()
 }
 
 template<class Config>
-bool BitVectorState<Config>::get(typename Config::Plane plane, size_t idx)
+bool BitVectorState<Config>::get(typename Config::Plane plane, size_t idx) const
 {
     return utils::bitExtract(m_values[plane].data(), idx);
 }
@@ -126,24 +126,24 @@ const typename Config::BaseType *BitVectorState<Config>::data(typename Config::P
 }
 
 template<class Config>
-BitVectorState<Config> BitVectorState<Config>::extract(size_t start, size_t size)
+BitVectorState<Config> BitVectorState<Config>::extract(size_t start, size_t size) const
 {
     BitVectorState<Config> result;
     result.resize(size);
     if (start % 8 == 0) {
         for (auto i : utils::Range<size_t>(Config::NUM_PLANES))
-            memcpy((char*) result.data(i), (char*) data(i) + start/8, (size+7)/8);
+            memcpy((char*) result.data((typename Config::Plane) i), (char*) data((typename Config::Plane) i) + start/8, (size+7)/8);
     } else {
         ///@todo optimize
         for (auto i : utils::Range<size_t>(Config::NUM_PLANES))
             for (auto j : utils::Range(size))
-                result.set(i, j, get(i, j+start));
+                result.set((typename Config::Plane) i, j, get((typename Config::Plane) i, j+start));
     }
     return result;
 }
 
 template<class Config>
-typename Config::BaseType BitVectorState<Config>::extractNonStraddling(typename Config::Plane plane, size_t start, size_t size)
+typename Config::BaseType BitVectorState<Config>::extractNonStraddling(typename Config::Plane plane, size_t start, size_t size) const
 {
     return utils::bitfieldExtract(m_values[plane][start / Config::NUM_BITS_PER_BLOCK], start % Config::NUM_BITS_PER_BLOCK, size);
 }

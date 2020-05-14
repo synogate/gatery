@@ -108,6 +108,23 @@ void CircuitView::render(core::hlim::Circuit &circuit, core::hlim::NodeGroup *gr
                 m_scene->addItem(n = new Node_ElementaryOp(this, node));
                 m_nodes.push_back(n);
                 
+                for (auto i : utils::Range(node->getNumInputPorts())) {
+                    auto driver = node->getDriver(i);
+                    if (driver.node != nullptr)
+                        if (driver.node->getGroup() == nullptr || !driver.node->getGroup()->isChildOf(group)) {
+                            ///@todo: Mark as input
+                            if (dynamic_cast<core::hlim::Node_Signal*>(driver.node) != nullptr) {
+                                Node_Signal *n;
+                                m_scene->addItem(n = new Node_Signal(this, dynamic_cast<core::hlim::Node_Signal*>(driver.node)));
+                                m_nodes.push_back(n);
+                            } else {
+                                Node_ElementaryOp *n;
+                                m_scene->addItem(n = new Node_ElementaryOp(this, driver.node));
+                                m_nodes.push_back(n);
+                            }
+                        }
+                }
+                
                 if (dynamic_cast<core::hlim::Node_Register*>(node) != nullptr) {
                     registerOutputs.insert({.node=m_nodes.size()-1, .port=0ull});
                 }

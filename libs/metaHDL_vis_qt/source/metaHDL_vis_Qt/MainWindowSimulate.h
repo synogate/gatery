@@ -29,6 +29,8 @@ class MainWindowSimulate : public QMainWindow
         void treeWidget_graphHierarchy_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
         void onCircuitViewElementsClicked(const std::set<BaseGraphicsComposite*> &elements);
         void onlistWidget_stackTraceView_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous);
+        void ontoolButton_StepForward_pressed();
+        void ontoolButton_Reset_pressed();
 
     private:
         Ui::MainWindowSimulate m_ui;

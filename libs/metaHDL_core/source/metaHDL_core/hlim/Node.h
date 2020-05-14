@@ -36,9 +36,9 @@ class BaseNode : public NodeIO
         
         virtual size_t getInternalStateSize() const { return 0; }
         
-        virtual void simulateReset(sim::DefaultBitVectorState &state, size_t *outputOffsets) { }
-        virtual void simulateEvaluate(sim::DefaultBitVectorState &state, size_t *inputOffsets, size_t *outputOffsets) { }
-        virtual void simulateAdvance(sim::DefaultBitVectorState &state, size_t *inputOffsets, size_t *outputOffsets, size_t clockPort) { }
+        virtual void simulateReset(sim::DefaultBitVectorState &state, const size_t *outputOffsets) const { }
+        virtual void simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *inputOffsets, const size_t *outputOffsets) const { }
+        virtual void simulateAdvance(sim::DefaultBitVectorState &state, const size_t *inputOffsets, const size_t *outputOffsets, size_t clockPort) const { }
         
         inline void recordStackTrace() { m_stackTrace.record(10, 1); }
         inline const utils::StackTrace &getStackTrace() const { return m_stackTrace; }
@@ -50,6 +50,8 @@ class BaseNode : public NodeIO
         
         const NodeGroup *getGroup() const { return m_nodeGroup; }
         NodeGroup *getGroup() { return m_nodeGroup; }
+        
+        inline const std::vector<BaseClock*> &getClocks() const { return m_clocks; }
         
         void moveToGroup(NodeGroup *group);
 
