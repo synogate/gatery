@@ -13,7 +13,7 @@ using ClockRational = boost::rational<std::uint64_t>;
 class BaseClock
 {
     public:
-        virtual ~BaseClock() = default;
+        virtual ~BaseClock();
         
         virtual ClockRational getAbsoluteFrequency() = 0;
         virtual ClockRational getAbsolutePhaseShift() = 0;

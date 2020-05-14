@@ -3,7 +3,16 @@
 #include "../utils/Exceptions.h"
 #include "../utils/Preprocessor.h"
 
+#include "../hlim/Node.h"
+
 namespace mhdl::core::hlim {
+    
+BaseClock::~BaseClock()
+{
+    while (!m_clockedNodes.empty())
+        m_clockedNodes.front().node->detachClock(m_clockedNodes.front().port);
+}
+
     
 ClockRational SignalDrivenClock::getAbsoluteFrequency() 
 {
