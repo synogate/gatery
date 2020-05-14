@@ -87,7 +87,7 @@ std::set<BaseGraphicsComposite*> CircuitView::fetchElements(int x, int y)
     return elements;
 }
 
-void CircuitView::render(core::hlim::Circuit &circuit, core::hlim::NodeGroup *group)
+void CircuitView::render(core::hlim::Circuit &circuit, core::hlim::NodeGroup *group, std::function<void(float)> progressCallback)
 {
     m_scene->clear();
 
@@ -189,7 +189,7 @@ void CircuitView::render(core::hlim::Circuit &circuit, core::hlim::NodeGroup *gr
     }
     
     
-    layout.run();
+    layout.run(progressCallback);
     
 
     for (auto i : utils::Range(m_nodes.size())) {

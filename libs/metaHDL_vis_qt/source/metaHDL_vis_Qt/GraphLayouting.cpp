@@ -12,7 +12,7 @@
 
 namespace mhdl::vis::layout {
 
-void GraphLayouting::run()
+void GraphLayouting::run(std::function<void(float)> progressCallback)
 {
     const float tileScale = 5.0f;
 
@@ -135,6 +135,8 @@ void GraphLayouting::run()
     };
     
     for (auto i : utils::Range(edges.size())) {
+        progressCallback((float) i / edges.size());
+        
         m_edgeLayouts[i].lines.resize(edges[i].dst.size());
         
         auto srcNode = edges[i].src.node;

@@ -16,6 +16,7 @@
 
 #include <vector>
 #include <memory>
+#include <functional>
 
 
 namespace mhdl::vis {
@@ -27,7 +28,7 @@ class CircuitView : public QGraphicsView
     Q_OBJECT
     public:
         CircuitView(QWidget *parent = nullptr);
-        void render(core::hlim::Circuit &circuit, core::hlim::NodeGroup *group);
+        void render(core::hlim::Circuit &circuit, core::hlim::NodeGroup *group, std::function<void(float)> progressCallback = std::function<void(float)>());
 
         inline const QFont &getInteriorFont() const { return m_interiorFont; }
         inline const QFont &getPortFont() const { return m_portFont; }

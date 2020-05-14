@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <functional>
 
 namespace mhdl::vis::layout {
 
@@ -48,7 +49,7 @@ class GraphLayouting {
         std::vector<Node> nodes;
         std::vector<Edge> edges;
         
-        void run();
+        void run(std::function<void(float)> progressCallback = std::function<void(float)>());
         
         inline const std::vector<NodeLayout> &getNodeLayouts() { return m_nodeLayouts; }
         inline const std::vector<EdgeLayout> &getEdgeLayouts() { return m_edgeLayouts; }

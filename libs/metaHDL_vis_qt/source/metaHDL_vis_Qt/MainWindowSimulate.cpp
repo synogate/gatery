@@ -15,6 +15,7 @@
 #include <QFile>
 #include <QTextStream>
 #include <QTextBlock>
+#include <QProgressDialog>
 
 #include <sstream>
 
@@ -98,9 +99,19 @@ void MainWindowSimulate::treeWidget_graphHierarchy_currentItemChanged(QTreeWidge
 
 void MainWindowSimulate::switchToGroup(core::hlim::NodeGroup *nodeGroup)
 {
+    QProgressDialog progress("Layouting...", "Cancel", 0, 1000, this);
+    progress.setMinimumDuration(0);
+    progress.setWindowModality(Qt::WindowModal);
+    progress.setValue(0);
+
     m_ui.textEdit_log->append(QString::fromUtf8((std::string("Showing node group '") + nodeGroup->getName() + "'").c_str()));
     
-    m_ui.circuitView->render(m_circuit, nodeGroup);
+    m_ui.circuitView->render(m_circuit, nodeGroup, [&progress](float p){
+        progress.setValue(p * 1000);
+        if (progress.wasCanceled())
+            ; // haha, nice try
+        QCoreApplication::processEvents();
+    });
     
     size_t row = 0;
     m_signalNode2TableRow.clear();
