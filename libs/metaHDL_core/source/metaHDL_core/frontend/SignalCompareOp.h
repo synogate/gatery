@@ -34,7 +34,7 @@ namespace mhdl::core::frontend {
         MHDL_ASSERT(lhsSignal != nullptr);
         MHDL_ASSERT(rhsSignal != nullptr);
 
-        if constexpr (!utils::isIntegerSignal<SignalType>::value)
+        //if constexpr (!utils::isIntegerSignal<SignalType>::value)
             MHDL_DESIGNCHECK_HINT(lhs.getWidth() == rhs.getWidth(), "Signal comparison is needs equal width for non auto extendable types.");
 
         auto* node = DesignScope::createNode<hlim::Node_Compare>(m_op);
