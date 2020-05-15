@@ -15,6 +15,11 @@ class Node_Register : public Node<Node_Register>
             ENABLE,
             NUM_INPUTS
         };
+        enum Internal {
+            INT_DATA,
+            INT_ENABLE,
+            NUM_INTERNALS
+        };
         
         Node_Register();
         
@@ -23,7 +28,7 @@ class Node_Register : public Node<Node_Register>
         
         virtual void simulateReset(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
         virtual void simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;
-        virtual void simulateAdvance(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets, size_t clockPort) const override;
+        virtual void simulateAdvance(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const override;
         
         void setClock(BaseClock *clk);
         void setReset(std::string resetName);

@@ -38,7 +38,7 @@ class BaseNode : public NodeIO
         
         virtual void simulateReset(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const { }
         virtual void simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const { }
-        virtual void simulateAdvance(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets, size_t clockPort) const { }
+        virtual void simulateAdvance(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const { }
         
         inline void recordStackTrace() { m_stackTrace.record(10, 1); }
         inline const utils::StackTrace &getStackTrace() const { return m_stackTrace; }

@@ -32,6 +32,12 @@ class SimpleDualPortRam : public Node_External
             READ_DATA,
             NUM_OUTPUTS
         };
+        enum Internal {
+            INT_MEMORY,
+            INT_READ_DATA,
+            INT_READ_ENABLE,
+            NUM_INTERNALS
+        };
         enum Clock {
             WRITE_CLK,
             READ_CLK,
@@ -47,7 +53,7 @@ class SimpleDualPortRam : public Node_External
         
         virtual void simulateReset(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
         virtual void simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;        
-        virtual void simulateAdvance(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets, size_t clockPort) const override;
+        virtual void simulateAdvance(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const override;
         
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;

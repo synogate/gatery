@@ -56,7 +56,7 @@ class SignalGenerator : public Node_SignalGenerator
             state.insertNonStraddling(sim::DefaultConfig::DEFINED, internalOffsets[0], 64, ~0ull);    
         }
 
-        void simulateAdvance(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets, size_t clockPort) const
+        void simulateAdvance(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const
         {
             std::uint64_t &tick = state.data(sim::DefaultConfig::VALUE)[internalOffsets[0]/64];
             switch (tick) {

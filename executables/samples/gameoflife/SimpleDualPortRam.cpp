@@ -110,6 +110,18 @@ void SimpleDualPortRam::simulateReset(sim::DefaultBitVectorState &state, const s
 
 }
 
+
+bool rangesOverlap(size_t range1_start, size_t range1_size, size_t range2_start, size_t range2_size)
+{
+    if (range1_start >= range2_start+range2_size)
+        return false;
+    if (range1_start+range1_size <= range2_start)
+        return false;
+    
+    return true;
+}
+
+
 void SimpleDualPortRam::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
     NodePort drivers[NUM_INPUTS];
@@ -153,72 +165,47 @@ void SimpleDualPortRam::simulateEvaluate(sim::DefaultBitVectorState &state, cons
         }
     }
 
-}
-
-bool rangesOverlap(size_t range1_start, size_t range1_size, size_t range2_start, size_t range2_size)
-{
-    if (range1_start >= range2_start+range2_size)
-        return false;
-    if (range1_start+range1_size <= range2_start)
-        return false;
     
-    return true;
+    MHDL_ASSERT(drivers[READ_ENABLE].node != nullptr);
+    state.copyRange(internalOffsets[INT_READ_ENABLE], state, inputOffsets[READ_ENABLE], 1);
+    
+    bool readEnableDefined = state.get(sim::DefaultConfig::DEFINED, inputOffsets[READ_ENABLE]);
+    bool readEnable = state.get(sim::DefaultConfig::VALUE, inputOffsets[READ_ENABLE]);
+    
+    if (readEnableDefined && readEnable)  {
+        size_t readAddrWidth = 0; 
+        bool readAddressDefined = false;
+        size_t readAddress = ~0u;
+        if (drivers[READ_ADDR].node != nullptr) {
+            readAddrWidth = drivers[READ_ADDR].node->getOutputConnectionType(drivers[READ_ADDR].port).width;        
+            readAddressDefined = allDefinedNonStraddling(state, inputOffsets[READ_ADDR], readAddrWidth);
+            readAddress = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[READ_ADDR], readAddrWidth) * m_readDataWidth;
+        }
+
+        MHDL_ASSERT(drivers[READ_ADDR].node != nullptr);
+        
+        if ((readAddress+m_readDataWidth > m_initialData.size()) ||
+            ((!writeEnableDefined || writeEnable) && (!writeAddressDefined || rangesOverlap(readAddress, m_readDataWidth, writeAddress, m_writeDataWidth)))) {
+            
+            state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[INT_READ_DATA], m_readDataWidth);
+        } else {
+            state.copyRange(internalOffsets[INT_READ_DATA], state, internalOffsets[0] + readAddress, m_readDataWidth);
+        }
+    }
+
 }
 
-void SimpleDualPortRam::simulateAdvance(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets, size_t clockPort) const
+void SimpleDualPortRam::simulateAdvance(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const
 {
     if (clockPort == READ_CLK) {
-        NodePort drivers[NUM_INPUTS];
-        for (auto i : utils::Range<size_t>(NUM_INPUTS)) 
-            drivers[i] = getNonSignalDriver(i);
-
-        MHDL_ASSERT(drivers[WRITE_ENABLE].node != nullptr);
-            
-        bool writeEnableDefined = state.get(sim::DefaultConfig::DEFINED, inputOffsets[WRITE_ENABLE]);
-        bool writeEnable = state.get(sim::DefaultConfig::VALUE, inputOffsets[WRITE_ENABLE]);
+        bool readEnableDefined = state.get(sim::DefaultConfig::DEFINED, internalOffsets[INT_READ_ENABLE]);
+        bool readEnable = state.get(sim::DefaultConfig::VALUE, internalOffsets[INT_READ_ENABLE]);
         
-        size_t writeAddrWidth = 0; 
-        bool writeAddressDefined = false;
-        size_t writeAddress = ~0u;
-        if (drivers[WRITE_ADDR].node != nullptr) {
-            writeAddrWidth = drivers[WRITE_ADDR].node->getOutputConnectionType(drivers[WRITE_ADDR].port).width;        
-            writeAddressDefined = allDefinedNonStraddling(state, inputOffsets[WRITE_ADDR], writeAddrWidth);
-            writeAddress = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[WRITE_ADDR], writeAddrWidth) * m_writeDataWidth;
-        }
-        
-        
-        
-        MHDL_ASSERT(drivers[READ_ENABLE].node != nullptr);
-            
-        bool readEnableDefined = state.get(sim::DefaultConfig::DEFINED, inputOffsets[READ_ENABLE]);
-        
-        if (!readEnableDefined) {
+        if (!readEnableDefined)
             state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[READ_DATA], m_readDataWidth);
-        } else {
-            bool readEnable = state.get(sim::DefaultConfig::VALUE, inputOffsets[READ_ENABLE]);
-            if (readEnable) {
-                size_t readAddrWidth = 0; 
-                bool readAddressDefined = false;
-                size_t readAddress = ~0u;
-                if (drivers[READ_ADDR].node != nullptr) {
-                    readAddrWidth = drivers[READ_ADDR].node->getOutputConnectionType(drivers[READ_ADDR].port).width;        
-                    readAddressDefined = allDefinedNonStraddling(state, inputOffsets[READ_ADDR], readAddrWidth);
-                    readAddress = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[READ_ADDR], readAddrWidth) * m_readDataWidth;
-                }
-
-                if (!readEnableDefined || readEnable) {
-                    MHDL_ASSERT(drivers[READ_ADDR].node != nullptr);
-                }
-                
-                if ((readAddress+m_readDataWidth > m_initialData.size()) ||
-                    (writeEnable && (!writeAddressDefined || rangesOverlap(readAddress, m_readDataWidth, writeAddress, m_writeDataWidth)))) {
-                    
-                    state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[READ_DATA], m_readDataWidth);
-                } else {
-                    state.copyRange(outputOffsets[READ_DATA], state, internalOffsets[0] + readAddress, m_readDataWidth);
-                }
-            }
-        }
+        else
+            if (readEnable)
+                state.copyRange(outputOffsets[READ_DATA], state, internalOffsets[INT_READ_DATA], m_readDataWidth);
     }
 }
     
@@ -252,7 +239,12 @@ std::string SimpleDualPortRam::getOutputName(size_t idx) const
 }
 
 std::vector<size_t> SimpleDualPortRam::getInternalStateSizes() const {
-    return {m_initialData.size()};
+    
+    std::vector<size_t> res(NUM_INTERNALS);
+    res[INT_MEMORY] = m_initialData.size();
+    res[INT_READ_DATA] = m_readDataWidth;
+    res[INT_READ_ENABLE] = 1;
+    return res;
 }
 
         

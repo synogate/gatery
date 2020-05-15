@@ -62,31 +62,29 @@ void Node_Register::simulateReset(sim::DefaultBitVectorState &state, const size_
 
 void Node_Register::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
-    state.copyRange(internalOffsets[0], state, inputOffsets[DATA], getOutputConnectionType(0).width);
+    if (inputOffsets[DATA] == ~0ull)
+        state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[INT_DATA], getOutputConnectionType(0).width);
+    else
+        state.copyRange(internalOffsets[INT_DATA], state, inputOffsets[DATA], getOutputConnectionType(0).width);
+    
+    if (inputOffsets[ENABLE] == ~0ull)
+        state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[INT_ENABLE], 1);
+    else
+        state.copyRange(internalOffsets[INT_ENABLE], state, inputOffsets[ENABLE], 1);
 }
 
-void Node_Register::simulateAdvance(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets, size_t clockPort) const
+void Node_Register::simulateAdvance(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const
 {
     MHDL_ASSERT(clockPort == 0);
     
-    auto enableDriver = getNonSignalDriver(ENABLE);
-    if (enableDriver.node == nullptr) {
-        state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
-        return;
-    } 
+    bool enableDefined = state.get(sim::DefaultConfig::DEFINED, internalOffsets[INT_ENABLE]);
+    bool enable = state.get(sim::DefaultConfig::VALUE, internalOffsets[INT_ENABLE]);
     
-    if (!allDefinedNonStraddling(state, inputOffsets[ENABLE], 1)) {
-        state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
-        return;
-    }
-   
-    std::uint64_t enable = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[ENABLE], 1);
-    
-    if (!enable) 
-        return;
-    
-
-    state.copyRange(outputOffsets[0], state, internalOffsets[0], getOutputConnectionType(0).width);
+    if (!enableDefined) {
+        state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width);
+    } else
+        if (enable) 
+            state.copyRange(outputOffsets[0], state, internalOffsets[INT_DATA], getOutputConnectionType(0).width);
 }
 
 
@@ -118,7 +116,10 @@ std::string Node_Register::getOutputName(size_t idx) const
 
 std::vector<size_t> Node_Register::getInternalStateSizes() const 
 {
-    return {getOutputConnectionType(0).width};
+    std::vector<size_t> res(NUM_INTERNALS);
+    res[INT_DATA] = getOutputConnectionType(0).width;
+    res[INT_ENABLE] = 1;
+    return res;
 }
 
 

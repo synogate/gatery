@@ -38,7 +38,7 @@ LatchedNode::LatchedNode(MappedNode mappedNode, size_t clockPort) : m_mappedNode
 
 void LatchedNode::advance(DataState &state) const
 {
-    m_mappedNode.node->simulateAdvance(state.signalState, m_mappedNode.internal.data(), m_mappedNode.inputs.data(), m_mappedNode.outputs.data(), m_clockPort);
+    m_mappedNode.node->simulateAdvance(state.signalState, m_mappedNode.internal.data(), m_mappedNode.outputs.data(), m_clockPort);
 }
 
     
