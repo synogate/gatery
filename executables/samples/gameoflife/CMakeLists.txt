@@ -5,6 +5,8 @@ add_library(gameoflife
     pch.h
     gameoflife.cpp
     gameoflife.h
+    SimpleDualPortRam.cpp
+    SimpleDualPortRam.h
 )
 
 target_link_libraries(gameoflife PUBLIC

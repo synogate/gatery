@@ -11,25 +11,35 @@ Node_Compare::Node_Compare(Op op) : Node(2, 1), m_op(op)
     setOutputConnectionType(0, conType);
 }
 
-void Node_Compare::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets) const 
+void Node_Compare::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
     auto leftDriver = getNonSignalDriver(0);
     auto rightDriver = getNonSignalDriver(1);
-    if (leftDriver.node == nullptr || rightDriver.node == nullptr) return;
+    if (leftDriver.node == nullptr || rightDriver.node == nullptr) {
+        state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+        return;
+    }
     
     const auto &leftType = leftDriver.node->getOutputConnectionType(leftDriver.port);
     const auto &rightType = rightDriver.node->getOutputConnectionType(rightDriver.port);
     MHDL_ASSERT_HINT(leftType.width <= 64, "Compare with more than 64 bits not yet implemented!");
     MHDL_ASSERT_HINT(rightType.width <= 64, "Compare with more than 64 bits not yet implemented!");
+    MHDL_ASSERT_HINT(leftType.interpretation == rightType.interpretation, "Comparing signals with different interpretations not yet implemented!");
     
-    if (!allDefinedNonStraddling(state, inputOffsets[0], leftType.width)) return;
-    if (!allDefinedNonStraddling(state, inputOffsets[1], rightType.width)) return;
+    if (!allDefinedNonStraddling(state, inputOffsets[0], leftType.width)) {
+        state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+        return;
+    }
+    if (!allDefinedNonStraddling(state, inputOffsets[1], rightType.width)) {
+        state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+        return;
+    }
    
     std::uint64_t left = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0], leftType.width);
     std::uint64_t right = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[1], rightType.width);
     bool result;
     
-    switch (getOutputConnectionType(0).interpretation) {
+    switch (leftType.interpretation) {
         case ConnectionType::BOOL:
         case ConnectionType::RAW:
             switch (m_op) {
@@ -82,7 +92,7 @@ void Node_Compare::simulateEvaluate(sim::DefaultBitVectorState &state, const siz
                     result = left != right;
                 break;
                 default:
-                    MHDL_ASSERT_HINT(false, "Case not yet implemented!");
+                    MHDL_ASSERT_HINT(false, "Case not yet implemented (sign extension missing)!");
             }
         break;
         default:

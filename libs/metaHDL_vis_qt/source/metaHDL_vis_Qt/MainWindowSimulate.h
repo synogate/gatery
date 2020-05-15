@@ -29,8 +29,11 @@ class MainWindowSimulate : public QMainWindow
         void treeWidget_graphHierarchy_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
         void onCircuitViewElementsClicked(const std::set<BaseGraphicsComposite*> &elements);
         void onlistWidget_stackTraceView_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous);
+        void ontoolButton_FastForward_pressed();
+        void ontoolButton_Pause_pressed();
         void ontoolButton_StepForward_pressed();
         void ontoolButton_Reset_pressed();
+        void onRunSimulation();
 
     private:
         Ui::MainWindowSimulate m_ui;
@@ -45,10 +48,16 @@ class MainWindowSimulate : public QMainWindow
         
         std::unique_ptr<CHCLSyntaxHighlighter> m_syntaxHighlighter;
         
+        core::hlim::BaseNode *m_bitmapNode = nullptr;
+        QGraphicsPixmapItem *m_bitmapGraphicsItem;
+        QImage m_bitmapImage;
+        
+        bool m_simulationRunning = false;
+        
+        
+        void updateBitmap();
         void reccurFillTreeWidget(QTreeWidgetItem *item, core::hlim::NodeGroup *nodeGroup);
-        
         void switchToGroup(core::hlim::NodeGroup *nodeGroup);
-        
         void updateSignalValues();
 };
 

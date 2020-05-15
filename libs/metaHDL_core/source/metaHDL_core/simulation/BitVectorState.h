@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../utils/Exceptions.h"
+#include "../utils/Preprocessor.h"
 #include "../utils/BitManipulation.h"
 #include "../utils/Range.h"
 
@@ -37,6 +39,11 @@ class BitVectorState
         void set(typename Config::Plane plane, size_t idx, bool bit);
         void clear(typename Config::Plane plane, size_t idx);
         void toggle(typename Config::Plane plane, size_t idx);
+
+        void setRange(typename Config::Plane plane, size_t offset, size_t size, bool bit);
+        void setRange(typename Config::Plane plane, size_t offset, size_t size);
+        void clearRange(typename Config::Plane plane, size_t offset, size_t size);
+        void copyRange(size_t dstOffset, const BitVectorState<Config> &src, size_t srcOffset, size_t size);
         
         typename Config::BaseType *data(typename Config::Plane plane);
         const typename Config::BaseType *data(typename Config::Plane plane) const;
@@ -113,6 +120,73 @@ void BitVectorState<Config>::toggle(typename Config::Plane plane, size_t idx)
     utils::bitToggle(m_values[plane].data(), idx);
 }
 
+
+template<class Config>
+void BitVectorState<Config>::setRange(typename Config::Plane plane, size_t offset, size_t size, bool bit)
+{
+    typename Config::BaseType content = 0;
+    if (bit)
+        content = ~content;
+    
+    size_t firstWordSize;
+    size_t wordOffset = offset / Config::NUM_BITS_PER_BLOCK;
+    if (offset % Config::NUM_BITS_PER_BLOCK == 0) {
+        firstWordSize = 0;
+    } else {
+        firstWordSize = std::min(size, Config::NUM_BITS_PER_BLOCK - offset % Config::NUM_BITS_PER_BLOCK);
+        insertNonStraddling(plane, offset, firstWordSize, content);
+        wordOffset++;
+    }
+    
+    size_t numFullWords = (size - firstWordSize) / Config::NUM_BITS_PER_BLOCK;
+    for (auto i : utils::Range(numFullWords))
+        m_values[plane][wordOffset + i] = content;
+
+
+    size_t trailingWordSize = (size - firstWordSize) % Config::NUM_BITS_PER_BLOCK;
+    if (trailingWordSize > 0)
+        insertNonStraddling(plane, offset + firstWordSize + numFullWords*Config::NUM_BITS_PER_BLOCK, trailingWordSize, content);
+}
+
+template<class Config>
+void BitVectorState<Config>::setRange(typename Config::Plane plane, size_t offset, size_t size)
+{
+    setRange(plane, offset, size, true);
+}
+
+template<class Config>
+void BitVectorState<Config>::clearRange(typename Config::Plane plane, size_t offset, size_t size)
+{
+    setRange(plane, offset, size, false);
+}
+
+template<class Config>
+void BitVectorState<Config>::copyRange(size_t dstOffset, const BitVectorState<Config> &src, size_t srcOffset, size_t size)
+{
+    // This code assumes that either offsets are aligned to block boundaries, or the access doesn't cross block boundaries    
+    MHDL_ASSERT(dstOffset % Config::NUM_BITS_PER_BLOCK == 0 || 
+                dstOffset % Config::NUM_BITS_PER_BLOCK + size <= Config::NUM_BITS_PER_BLOCK);
+
+    MHDL_ASSERT(srcOffset % Config::NUM_BITS_PER_BLOCK == 0 || 
+                (srcOffset % Config::NUM_BITS_PER_BLOCK) + size <= Config::NUM_BITS_PER_BLOCK);
+    
+    
+    ///@todo: Optimize aligned cases (which happen quite frequently!)
+    size_t width = size;
+    size_t offset = 0;
+    while (offset < width) {
+        size_t chunkSize = std::min<size_t>(Config::NUM_BITS_PER_BLOCK, width-offset);
+        
+        for (auto i : utils::Range<size_t>(Config::NUM_PLANES))
+            insertNonStraddling((typename Config::Plane) i, dstOffset + offset, chunkSize,
+                    src.extractNonStraddling((typename Config::Plane) i, srcOffset+offset, chunkSize));
+
+        offset += chunkSize;
+    }
+
+}
+
+
 template<class Config>
 typename Config::BaseType *BitVectorState<Config>::data(typename Config::Plane plane)
 {
@@ -133,12 +207,9 @@ BitVectorState<Config> BitVectorState<Config>::extract(size_t start, size_t size
     if (start % 8 == 0) {
         for (auto i : utils::Range<size_t>(Config::NUM_PLANES))
             memcpy((char*) result.data((typename Config::Plane) i), (char*) data((typename Config::Plane) i) + start/8, (size+7)/8);
-    } else {
-        ///@todo optimize
-        for (auto i : utils::Range<size_t>(Config::NUM_PLANES))
-            for (auto j : utils::Range(size))
-                result.set((typename Config::Plane) i, j, get((typename Config::Plane) i, j+start));
-    }
+    } else
+        result.copyRange(0, *this, start, size);
+
     return result;
 }
 

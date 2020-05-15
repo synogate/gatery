@@ -36,47 +36,29 @@ void Node_PriorityConditional::disconnectInput(size_t choice)
 }
 
 
-void Node_PriorityConditional::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets) const 
+void Node_PriorityConditional::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
     for (auto choice : utils::Range(getNumChoices())) {
         auto conditionDriver = getNonSignalDriver(inputPortChoiceCondition(choice));
-        if (conditionDriver.node == nullptr) return;
+        if (conditionDriver.node == nullptr) {
+            state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+            return;
+        }
         
         std::uint64_t conditionDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[inputPortChoiceCondition(choice)], 1);
         std::uint64_t condition = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[inputPortChoiceCondition(choice)], 1);
         
-        if (!conditionDefined) return;
+        if (!conditionDefined) {
+            state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+            return;
+        }
         
         if (condition) {
-            size_t width = getOutputConnectionType(0).width;
-            size_t offset = 0;
-            while (offset < width) {
-                size_t chunkSize = std::min<size_t>(64, width-offset);
-                
-                state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0] + offset, chunkSize,
-                        state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[inputPortChoiceValue(choice)]+offset, chunkSize));
-                
-                state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0] + offset, chunkSize,
-                        state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[inputPortChoiceValue(choice)]+offset, chunkSize));
-
-                offset += chunkSize;
-            }
+            state.copyRange(outputOffsets[0], state, inputOffsets[inputPortChoiceValue(choice)], getOutputConnectionType(0).width);
             return;
         }
     }
-    size_t width = getOutputConnectionType(0).width;
-    size_t offset = 0;
-    while (offset < width) {
-        size_t chunkSize = std::min<size_t>(64, width-offset);
-        
-        state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0] + offset, chunkSize,
-                state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[inputPortDefault()]+offset, chunkSize));
-        
-        state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0] + offset, chunkSize,
-                state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[inputPortDefault()]+offset, chunkSize));
-
-        offset += chunkSize;
-    }
+    state.copyRange(outputOffsets[0], state, inputOffsets[inputPortDefault()], getOutputConnectionType(0).width);
 }
 
 

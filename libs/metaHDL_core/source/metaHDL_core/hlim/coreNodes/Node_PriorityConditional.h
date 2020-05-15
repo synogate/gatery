@@ -22,7 +22,7 @@ class Node_PriorityConditional : public Node<Node_PriorityConditional>
         void addInput(const NodePort &condition, const NodePort &value);
         void disconnectInput(size_t choice);
         
-        virtual void simulateEvaluate(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets) const override;        
+        virtual void simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;        
         
         inline size_t getNumChoices() const { return (getNumInputPorts()-1)/2; }
         

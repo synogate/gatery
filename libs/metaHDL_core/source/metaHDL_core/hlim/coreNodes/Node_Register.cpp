@@ -26,10 +26,14 @@ void Node_Register::setReset(std::string resetName)
     m_resetName = std::move(resetName);
 }
 
-void Node_Register::simulateReset(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *outputOffsets) const
+void Node_Register::simulateReset(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
 {
     auto resetDriver = getNonSignalDriver(RESET_VALUE);
-    if (resetDriver.node == nullptr) return;
+    if (resetDriver.node == nullptr) {
+        state.setRange(sim::DefaultConfig::DEFINED, internalOffsets[0], getOutputConnectionType(0).width, false);
+        state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+        return;
+    }
 
     Node_Constant *constNode = dynamic_cast<Node_Constant *>(resetDriver.node);
     MHDL_ASSERT_HINT(constNode != nullptr, "Constant value propagation is not yet implemented, so for simulation the register reset value must be connected to a constant node via signals only!");
@@ -48,59 +52,41 @@ void Node_Register::simulateReset(sim::DefaultBitVectorState &state, const size_
         state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0] + offset, chunkSize, block);
         state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0] + offset, chunkSize, ~0ull);    
         
-        state.insertNonStraddling(sim::DefaultConfig::VALUE, internalOffset + offset, chunkSize, block);
-        state.insertNonStraddling(sim::DefaultConfig::DEFINED, internalOffset + offset, chunkSize, ~0ull);    
+        state.insertNonStraddling(sim::DefaultConfig::VALUE, internalOffsets[0] + offset, chunkSize, block);
+        state.insertNonStraddling(sim::DefaultConfig::DEFINED, internalOffsets[0] + offset, chunkSize, ~0ull);    
         
         offset += chunkSize;
     }
     
 }
 
-void Node_Register::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets) const
+void Node_Register::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
-    size_t width = getOutputConnectionType(0).width;
-    size_t offset = 0;
-    while (offset < width) {
-        size_t chunkSize = std::min<size_t>(64, width-offset);
-        
-        state.insertNonStraddling(sim::DefaultConfig::DEFINED, internalOffset + offset, chunkSize,
-                state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[DATA]+offset, chunkSize));
-        
-        state.insertNonStraddling(sim::DefaultConfig::VALUE, internalOffset + offset, chunkSize,
-                state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[DATA]+offset, chunkSize));
-
-        offset += chunkSize;
-    }
-
+    state.copyRange(internalOffsets[0], state, inputOffsets[DATA], getOutputConnectionType(0).width);
 }
 
-void Node_Register::simulateAdvance(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets, size_t clockPort) const
+void Node_Register::simulateAdvance(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets, size_t clockPort) const
 {
     MHDL_ASSERT(clockPort == 0);
     
     auto enableDriver = getNonSignalDriver(ENABLE);
-    if (enableDriver.node == nullptr) return;
+    if (enableDriver.node == nullptr) {
+        state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+        return;
+    } 
     
-    if (!allDefinedNonStraddling(state, inputOffsets[ENABLE], 1)) return;
+    if (!allDefinedNonStraddling(state, inputOffsets[ENABLE], 1)) {
+        state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+        return;
+    }
    
     std::uint64_t enable = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[ENABLE], 1);
     
     if (!enable) 
         return;
     
-    size_t width = getOutputConnectionType(0).width;
-    size_t offset = 0;
-    while (offset < width) {
-        size_t chunkSize = std::min<size_t>(64, width-offset);
-        
-        state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0] + offset, chunkSize,
-                state.extractNonStraddling(sim::DefaultConfig::DEFINED, internalOffset+offset, chunkSize));
-        
-        state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0] + offset, chunkSize,
-                state.extractNonStraddling(sim::DefaultConfig::VALUE, internalOffset+offset, chunkSize));
 
-        offset += chunkSize;
-    }
+    state.copyRange(outputOffsets[0], state, internalOffsets[0], getOutputConnectionType(0).width);
 }
 
 
@@ -130,9 +116,9 @@ std::string Node_Register::getOutputName(size_t idx) const
     return "data_out";
 }
 
-size_t Node_Register::getInternalStateSize() const 
+std::vector<size_t> Node_Register::getInternalStateSizes() const 
 {
-    return getOutputConnectionType(0).width;
+    return {getOutputConnectionType(0).width};
 }
 
 

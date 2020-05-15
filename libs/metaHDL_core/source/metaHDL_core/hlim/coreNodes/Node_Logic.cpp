@@ -18,17 +18,23 @@ void Node_Logic::disconnectInput(size_t operand)
     NodeIO::disconnectInput(operand); 
 }
 
-void Node_Logic::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets) const 
+void Node_Logic::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
     size_t width = getOutputConnectionType(0).width;
 
     NodePort leftDriver = getNonSignalDriver(0);
-    if (leftDriver.node == nullptr) return;
+    if (leftDriver.node == nullptr) {
+        state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+        return;
+    }
 
     NodePort rightDriver; 
     if (m_op != NOT) {
         rightDriver = getNonSignalDriver(0);
-        if (rightDriver.node == nullptr) return;        
+        if (rightDriver.node == nullptr) {
+            state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+            return;
+        }
     }
 
     size_t offset = 0;

@@ -5,6 +5,7 @@ namespace mhdl::core::hlim {
 class Node_Arithmetic;
 class Node_Compare;
 class Node_Constant;
+class Node_External;
 class Node_Logic;
 class Node_Multiplexer;
 class Node_PriorityConditional;
@@ -19,6 +20,7 @@ class NodeVisitor
         virtual void operator()(Node_Arithmetic &node) = 0;
         virtual void operator()(Node_Compare &node) = 0;
         virtual void operator()(Node_Constant &node) = 0;
+        virtual void operator()(Node_External &node) = 0;
         virtual void operator()(Node_Logic &node) = 0;
         virtual void operator()(Node_Multiplexer &node) = 0;
         virtual void operator()(Node_PriorityConditional &node) = 0;
@@ -34,6 +36,7 @@ class ConstNodeVisitor
         virtual void operator()(const Node_Arithmetic &node) = 0;
         virtual void operator()(const Node_Compare &node) = 0;
         virtual void operator()(const Node_Constant &node) = 0;
+        virtual void operator()(const Node_External &node) = 0;
         virtual void operator()(const Node_Logic &node) = 0;
         virtual void operator()(const Node_Multiplexer &node) = 0;
         virtual void operator()(const Node_PriorityConditional &node) = 0;

@@ -20,7 +20,7 @@ struct DataState
 struct StateMapping
 {
     std::map<hlim::NodePort, size_t> outputToOffset;
-    std::map<hlim::BaseNode*, size_t> nodeToInternalOffset;
+    std::map<hlim::BaseNode*, std::vector<size_t>> nodeToInternalOffset;
     std::map<hlim::BaseClock*, size_t> clockToClkDomain;
     /*
     std::map<hlim::BaseClock*, size_t> clockToSignalIdx;
@@ -39,7 +39,7 @@ struct StateMapping
 
 struct MappedNode {
     hlim::BaseNode *node = nullptr;
-    size_t internal;
+    std::vector<size_t> internal;
     std::vector<size_t> inputs;
     std::vector<size_t> outputs;
 };
@@ -128,6 +128,7 @@ class ReferenceSimulator : public Simulator
         virtual void reevaluate() override;
         virtual void advanceAnyTick() override;
         
+        virtual DefaultBitVectorState getValueOfInternalState(const hlim::BaseNode *node, size_t idx) override;
         virtual DefaultBitVectorState getValueOfOutput(const hlim::NodePort &nodePort) override;
         virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfClock(const hlim::BaseClock *clk) override;
         virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfReset(const std::string &reset) override;

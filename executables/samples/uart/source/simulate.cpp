@@ -44,7 +44,7 @@ class SignalGenerator : public Node_SignalGenerator
             setOutputType(1, OUTPUT_LATCHED);
         }
         
-        void simulateReset(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *outputOffsets) const
+        void simulateReset(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
         {
             state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0], 1, 0);
             state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0], 1, ~0ull);    
@@ -52,13 +52,13 @@ class SignalGenerator : public Node_SignalGenerator
             state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[1], 8, 0);
             state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[1], 8, ~0ull);    
             
-            state.insertNonStraddling(sim::DefaultConfig::VALUE, internalOffset, 64, 0);
-            state.insertNonStraddling(sim::DefaultConfig::DEFINED, internalOffset, 64, ~0ull);    
+            state.insertNonStraddling(sim::DefaultConfig::VALUE, internalOffsets[0], 64, 0);
+            state.insertNonStraddling(sim::DefaultConfig::DEFINED, internalOffsets[0], 64, ~0ull);    
         }
 
-        void simulateAdvance(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets, size_t clockPort) const
+        void simulateAdvance(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets, size_t clockPort) const
         {
-            std::uint64_t &tick = state.data(sim::DefaultConfig::VALUE)[internalOffset/64];
+            std::uint64_t &tick = state.data(sim::DefaultConfig::VALUE)[internalOffsets[0]/64];
             switch (tick) {
                 case 5:
                     state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0], 1, 1);
@@ -92,8 +92,8 @@ class SignalGenerator : public Node_SignalGenerator
             }
         }
 
-        virtual size_t getInternalStateSize() const override {
-            return 64;
+        virtual std::vector<size_t> getInternalStateSizes() const override {
+            return {64};
         }
 };
 

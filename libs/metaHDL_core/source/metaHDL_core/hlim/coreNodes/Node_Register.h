@@ -21,9 +21,9 @@ class Node_Register : public Node<Node_Register>
         void connectInput(Input input, const NodePort &port);
         inline void disconnectInput(Input input) { NodeIO::disconnectInput(input); }
         
-        virtual void simulateReset(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *outputOffsets) const override;
-        virtual void simulateEvaluate(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets) const override;
-        virtual void simulateAdvance(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets, size_t clockPort) const override;
+        virtual void simulateReset(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
+        virtual void simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;
+        virtual void simulateAdvance(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets, size_t clockPort) const override;
         
         void setClock(BaseClock *clk);
         void setReset(std::string resetName);
@@ -35,7 +35,7 @@ class Node_Register : public Node<Node_Register>
         virtual std::string getInputName(size_t idx) const override;
         virtual std::string getOutputName(size_t idx) const override;
 
-        virtual size_t getInternalStateSize() const override;
+        virtual std::vector<size_t> getInternalStateSizes() const override;
     protected:
         std::string m_resetName;
 };

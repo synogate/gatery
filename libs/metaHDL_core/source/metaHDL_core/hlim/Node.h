@@ -34,11 +34,11 @@ class BaseNode : public NodeIO
         virtual std::string getInputName(size_t idx) const = 0;
         virtual std::string getOutputName(size_t idx) const = 0;
         
-        virtual size_t getInternalStateSize() const { return 0; }
+        virtual std::vector<size_t> getInternalStateSizes() const { return {}; }
         
-        virtual void simulateReset(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *outputOffsets) const { }
-        virtual void simulateEvaluate(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets) const { }
-        virtual void simulateAdvance(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets, size_t clockPort) const { }
+        virtual void simulateReset(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const { }
+        virtual void simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const { }
+        virtual void simulateAdvance(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets, size_t clockPort) const { }
         
         inline void recordStackTrace() { m_stackTrace.record(10, 1); }
         inline const utils::StackTrace &getStackTrace() const { return m_stackTrace; }

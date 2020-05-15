@@ -7,7 +7,16 @@
 #include <immintrin.h>
 
 namespace mhdl::utils {
-    
+
+#ifdef _MSC_VER
+inline unsigned truncLog2(unsigned v) {    
+    return 31-__lzcnt(v);
+}
+#else
+inline unsigned truncLog2(unsigned v) {    
+    return 31-__builtin_clz(v);
+}
+#endif
 
 inline unsigned nextPow2(unsigned v) 
 {
@@ -107,6 +116,8 @@ inline void bitToggle(const void *a, size_t idx) {
 
 
 inline std::uint64_t bitMaskRange(unsigned start, unsigned count) {
+    if (count == 0)
+        return 0ull;
     return (~0ull >> (64-count)) << start;
 }
 
@@ -117,7 +128,10 @@ inline std::uint64_t bitfieldExtract(std::uint64_t a, unsigned start, unsigned c
 }
 #else
 inline std::uint64_t bitfieldExtract(std::uint64_t a, unsigned start, unsigned count) {
-    return (a >> start) & ((1ull << count) - 1);
+    if (count < 64)
+        return (a >> start) & ((1ull << count) - 1);
+    else
+        return (a >> start);
 }
 #endif
 

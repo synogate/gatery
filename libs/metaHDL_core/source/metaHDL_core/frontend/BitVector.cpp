@@ -46,12 +46,15 @@ void ElementaryVector::setBit(size_t idx, const Bit& in)
         rewireOp.ranges.push_back({
             .subwidth = idx,
             .source = hlim::Node_Rewire::OutputRange::INPUT,
+            .inputIdx = 0,
+            .inputOffset = 0,
         });
 
     rewireOp.ranges.push_back({
         .subwidth = 1,
         .source = hlim::Node_Rewire::OutputRange::INPUT,
         .inputIdx = 1,
+        .inputOffset = 0,
     });
 
     if (idx + 1 != getWidth())
@@ -59,6 +62,7 @@ void ElementaryVector::setBit(size_t idx, const Bit& in)
         rewireOp.ranges.push_back({
             .subwidth = getWidth() - idx - 1,
             .source = hlim::Node_Rewire::OutputRange::INPUT,
+            .inputIdx = 0,
             .inputOffset = idx + 1,
         });
     }

@@ -42,20 +42,30 @@ void Node_Arithmetic::disconnectInput(size_t operand)
 }
 
 
-void Node_Arithmetic::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t internalOffset, const size_t *inputOffsets, const size_t *outputOffsets) const 
+void Node_Arithmetic::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
     MHDL_ASSERT_HINT(getOutputConnectionType(0).width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
     auto leftDriver = getNonSignalDriver(0);
     auto rightDriver = getNonSignalDriver(1);
-    if (leftDriver.node == nullptr || rightDriver.node == nullptr) return;
+    if (leftDriver.node == nullptr || rightDriver.node == nullptr) {
+        state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+        return;
+    }
     
     const auto &leftType = leftDriver.node->getOutputConnectionType(leftDriver.port);
     const auto &rightType = rightDriver.node->getOutputConnectionType(rightDriver.port);
     MHDL_ASSERT_HINT(leftType.width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
     MHDL_ASSERT_HINT(rightType.width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
     
-    if (!allDefinedNonStraddling(state, inputOffsets[0], leftType.width)) return;
-    if (!allDefinedNonStraddling(state, inputOffsets[1], rightType.width)) return;
+    if (!allDefinedNonStraddling(state, inputOffsets[0], leftType.width)) {
+        state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+        return;
+    }
+    
+    if (!allDefinedNonStraddling(state, inputOffsets[1], rightType.width)) {
+        state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+        return;
+    }
    
     std::uint64_t left = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0], leftType.width);
     std::uint64_t right = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[1], rightType.width);

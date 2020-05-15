@@ -16,6 +16,7 @@
 #include <QTextStream>
 #include <QTextBlock>
 #include <QProgressDialog>
+#include <QTimer>
 
 #include <sstream>
 
@@ -39,9 +40,10 @@ MainWindowSimulate::MainWindowSimulate(QWidget *parent, core::hlim::Circuit &cir
     m_ui.setupUi(this);
     
     m_ui.toolButton_StepForward->setIcon(m_ui.toolButton_StepForward->style()->standardIcon(QStyle::SP_MediaPlay));
-    m_ui.toolButton_FastForward->setIcon(m_ui.toolButton_StepForward->style()->standardIcon(QStyle::SP_MediaSeekForward));
-    m_ui.toolButton_Pause->setIcon(m_ui.toolButton_StepForward->style()->standardIcon(QStyle::SP_MediaPause));
-    m_ui.toolButton_Reset->setIcon(m_ui.toolButton_StepForward->style()->standardIcon(QStyle::SP_BrowserReload));
+    m_ui.toolButton_FastForward->setIcon(m_ui.toolButton_FastForward->style()->standardIcon(QStyle::SP_MediaSeekForward));
+    m_ui.toolButton_Pause->setIcon(m_ui.toolButton_Pause->style()->standardIcon(QStyle::SP_MediaPause));
+    m_ui.toolButton_Pause->setEnabled(false);
+    m_ui.toolButton_Reset->setIcon(m_ui.toolButton_Reset->style()->standardIcon(QStyle::SP_BrowserReload));
     
     
     m_simulator.compileProgram(m_circuit);
@@ -64,6 +66,10 @@ MainWindowSimulate::MainWindowSimulate(QWidget *parent, core::hlim::Circuit &cir
     QObject::connect(m_ui.listWidget_stackTraceView, &QListWidget::currentItemChanged,
                      this, &MainWindowSimulate::onlistWidget_stackTraceView_currentItemChanged);
 
+    QObject::connect(m_ui.toolButton_FastForward, &QToolButton::pressed,
+                     this, &MainWindowSimulate::ontoolButton_FastForward_pressed);
+    QObject::connect(m_ui.toolButton_Pause, &QToolButton::pressed,
+                     this, &MainWindowSimulate::ontoolButton_Pause_pressed);
     QObject::connect(m_ui.toolButton_StepForward, &QToolButton::pressed,
                      this, &MainWindowSimulate::ontoolButton_StepForward_pressed);
     QObject::connect(m_ui.toolButton_Reset, &QToolButton::pressed,
@@ -71,11 +77,59 @@ MainWindowSimulate::MainWindowSimulate(QWidget *parent, core::hlim::Circuit &cir
     
     
     m_syntaxHighlighter.reset(new CHCLSyntaxHighlighter(m_ui.textEdit_sourceView->document()));
+
+
+    m_bitmapImage = QImage(1, 1, QImage::Format_Indexed8);
+    m_bitmapGraphicsItem = new QGraphicsPixmapItem(QPixmap::fromImage(m_bitmapImage));
+    m_ui.graphicsView_bitmapView_graphics->setScene(new QGraphicsScene());
+    m_ui.graphicsView_bitmapView_graphics->scene()->addItem(m_bitmapGraphicsItem);
+
+    m_ui.graphicsView_bitmapView_graphics->setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
+    m_ui.graphicsView_bitmapView_graphics->setDragMode(QGraphicsView::ScrollHandDrag);
+    m_ui.graphicsView_bitmapView_graphics->scale(10.0f, 10.0f);
 }
 
 MainWindowSimulate::~MainWindowSimulate()
 {
 }
+
+void MainWindowSimulate::updateBitmap()
+{
+    if (m_bitmapNode != nullptr) {
+        unsigned width = 32;
+        
+        auto state = m_simulator.getValueOfInternalState(m_bitmapNode, 0);
+        
+        unsigned rows = (state.size() + width-1)/width;
+        
+        if (m_bitmapImage.width() != width || m_bitmapImage.height() != rows) {
+            m_bitmapImage = QImage(width, rows, QImage::Format_Indexed8);
+            m_bitmapImage.setColor(0, qRgb(255, 255, 255));
+            m_bitmapImage.setColor(1, qRgb(0, 0, 0));
+            m_bitmapImage.setColor(2, qRgb(255, 0, 0));
+            m_bitmapImage.setColor(3, qRgb(128, 128, 128));
+        }
+        
+        for (auto y : utils::Range(rows))
+            for (auto x : utils::Range(width)) {
+                size_t idx = x+y*width;
+                if (idx >= state.size())
+                    m_bitmapImage.setPixel(x, y, 3);
+                else {
+                    if (!state.get(core::sim::DefaultConfig::DEFINED, idx))
+                        m_bitmapImage.setPixel(x, y, 2);
+                    else
+                        if (state.get(core::sim::DefaultConfig::VALUE, idx))
+                            m_bitmapImage.setPixel(x, y, 0);
+                        else
+                            m_bitmapImage.setPixel(x, y, 1);
+                }
+            }
+        
+        m_bitmapGraphicsItem->setPixmap(QPixmap::fromImage(m_bitmapImage));
+    }
+}
+
 
 void MainWindowSimulate::reccurFillTreeWidget(QTreeWidgetItem *item, core::hlim::NodeGroup *nodeGroup)
 {
@@ -152,6 +206,15 @@ void MainWindowSimulate::switchToGroup(core::hlim::NodeGroup *nodeGroup)
 
 void MainWindowSimulate::onCircuitViewElementsClicked(const std::set<BaseGraphicsComposite*> &elements)
 {
+    for (auto p : elements) {
+        Node_ElementaryOp *elemOpNode = dynamic_cast<Node_ElementaryOp*>(p);
+        if (elemOpNode != nullptr) {
+            m_bitmapNode = elemOpNode->getHlimNode();
+            updateBitmap();
+            break;
+        }            
+    }    
+    
     core::hlim::BaseNode *firstNode = nullptr;
     Node_Signal *signalNode = nullptr;
     for (auto p : elements) {
@@ -233,17 +296,58 @@ void MainWindowSimulate::updateSignalValues()
     }
 }
 
+
+void MainWindowSimulate::onRunSimulation()
+{
+    float frequency = m_ui.doubleSpinBox_simulationFrequency->value();
+    
+    unsigned iters = 1;
+    float delay = 1000.0f / frequency;
+    while (delay < 200) {
+        iters *= 2;
+        delay *= 2;
+    }
+
+    for (auto iter : utils::Range(iters))
+        m_simulator.advanceAnyTick();
+    updateSignalValues();
+    updateBitmap();
+    
+    if (m_simulationRunning)
+        QTimer::singleShot((unsigned)delay, this, SLOT(onRunSimulation()));
+}
+
+
+void MainWindowSimulate::ontoolButton_FastForward_pressed()
+{
+    m_simulationRunning = true;
+    m_ui.toolButton_FastForward->setEnabled(false);
+    m_ui.toolButton_StepForward->setEnabled(false);
+    m_ui.toolButton_Pause->setEnabled(true);
+    onRunSimulation();
+}
+
+void MainWindowSimulate::ontoolButton_Pause_pressed()
+{
+    m_simulationRunning = false;
+    m_ui.toolButton_FastForward->setEnabled(true);
+    m_ui.toolButton_StepForward->setEnabled(true);
+    m_ui.toolButton_Pause->setEnabled(false);
+}
+
 void MainWindowSimulate::ontoolButton_StepForward_pressed()
 {
     //m_simControl.advanceAnyTick();
     m_simulator.advanceAnyTick();
     updateSignalValues();
+    updateBitmap();
 }
 
 void MainWindowSimulate::ontoolButton_Reset_pressed()
 {
     m_simulator.reset();
     updateSignalValues();
+    updateBitmap();
 }
 
 }

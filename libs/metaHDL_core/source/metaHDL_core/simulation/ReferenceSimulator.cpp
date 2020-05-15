@@ -24,7 +24,7 @@ namespace mhdl::core::sim {
 void ExecutionBlock::evaluate(DataState &state) const
 {
     for (const auto &step : m_steps) 
-        step.node->simulateEvaluate(state.signalState, step.internal, step.inputs.data(), step.outputs.data());
+        step.node->simulateEvaluate(state.signalState, step.internal.data(), step.inputs.data(), step.outputs.data());
 }
     
 void ExecutionBlock::addStep(MappedNode mappedNode)
@@ -38,7 +38,7 @@ LatchedNode::LatchedNode(MappedNode mappedNode, size_t clockPort) : m_mappedNode
 
 void LatchedNode::advance(DataState &state) const
 {
-    m_mappedNode.node->simulateAdvance(state.signalState, m_mappedNode.internal, m_mappedNode.inputs.data(), m_mappedNode.outputs.data(), m_clockPort);
+    m_mappedNode.node->simulateAdvance(state.signalState, m_mappedNode.internal.data(), m_mappedNode.inputs.data(), m_mappedNode.outputs.data(), m_clockPort);
 }
 
     
@@ -196,9 +196,11 @@ void Program::allocateSignals(const hlim::Circuit &circuit)
                 }
             }
         } else {
-            
-            if (node->getInternalStateSize() > 0)
-                m_stateMapping.nodeToInternalOffset[node.get()] = allocator.allocate(node->getInternalStateSize());
+            std::vector<size_t> internalSizes = node->getInternalStateSizes();
+            std::vector<size_t> internalOffsets(internalSizes.size());
+            for (auto i : utils::Range(internalSizes.size()))
+                internalOffsets[i] = allocator.allocate(internalSizes[i]);
+            m_stateMapping.nodeToInternalOffset[node.get()] = internalOffsets;
             
             for (auto i : utils::Range(node->getNumOutputPorts())) {
                 hlim::NodePort driver = {.node = node.get(), .port = i};
@@ -225,7 +227,7 @@ void Program::reset(DataState &dataState) const
 
     
     for (const auto &mappedNode : m_resetNodes)
-        mappedNode.node->simulateReset(dataState.signalState, mappedNode.internal, mappedNode.outputs.data());
+        mappedNode.node->simulateReset(dataState.signalState, mappedNode.internal.data(), mappedNode.outputs.data());
     
 }
 
@@ -267,6 +269,19 @@ void ReferenceSimulator::advanceAnyTick()
     reevaluate();
 }
 
+
+DefaultBitVectorState ReferenceSimulator::getValueOfInternalState(const hlim::BaseNode *node, size_t idx) 
+{
+    DefaultBitVectorState value;
+    auto it = m_program.getStateMapping().nodeToInternalOffset.find((hlim::BaseNode *) node);
+    if (it == m_program.getStateMapping().nodeToInternalOffset.end()) {
+        value.resize(0);
+    } else {
+        unsigned width = node->getInternalStateSizes()[idx];
+        value = m_dataState.signalState.extract(it->second[idx], width);
+    }
+    return value;
+}
 
 DefaultBitVectorState ReferenceSimulator::getValueOfOutput(const hlim::NodePort &nodePort)
 {
