@@ -381,6 +381,12 @@
               </item>
               <item>
                <widget class="QDoubleSpinBox" name="doubleSpinBox_simulationFrequency">
+                <property name="maximum">
+                 <double>10000.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>20.000000000000000</double>
+                </property>
                 <property name="value">
                  <double>0.500000000000000</double>
                 </property>

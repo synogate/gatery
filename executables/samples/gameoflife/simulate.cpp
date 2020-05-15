@@ -41,11 +41,11 @@ int main(int argc, char *argv[]) {
         RegisterFactory registerFactory(regConf);
         
 
-        frontend::Bit ramWriteEnable = 0_bit;
+        frontend::Bit ramWriteEnable;
         frontend::UnsignedInteger ramWriteAddress(10);
         frontend::BitVector ramWriteData(1);
 
-        frontend::Bit ramReadEnable = 0_bit;
+        frontend::Bit ramReadEnable;
         frontend::UnsignedInteger ramReadAddress(10);
         frontend::BitVector ramReadData(1);
 
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
             initialFrameBuffer.set(sim::DefaultConfig::VALUE, 5);
             
             for (auto y : utils::Range(6, 9))
-                initialFrameBuffer.setRange(sim::DefaultConfig::VALUE, y*32+10, 20);
+                initialFrameBuffer.setRange(sim::DefaultConfig::VALUE, y*32+10, 15);
             
             unsigned romReadDelay = 1;
             
@@ -114,16 +114,32 @@ int main(int argc, char *argv[]) {
         MHDL_NAMED(ramReadAddress);
         MHDL_NAMED(ramReadData);
 
+        
+        const unsigned totalDelay = 1 + 32 + 1;
+
+        frontend::UnsignedInteger nextReadAddress = ramReadAddress + 1_uvec;
+        nextReadAddress = mux(nextReadAddress < 512_uvec, 0b0000000000_uvec, nextReadAddress);
+        
+        driveWith(ramReadAddress, registerFactory(nextReadAddress, initialized, 0b0000000000_uvec));
+        driveWith(ramWriteAddress, delay(registerFactory, ramReadAddress, 1_bit, 0b0000000000_uvec, totalDelay));
+        driveWith(ramReadEnable, initialized);
+        driveWith(ramWriteEnable, delay(registerFactory, 1_bit, initialized, 0_bit, totalDelay));
+        
+        
         GameOfLife game(32);
 
         BitStream in;
         MHDL_NAMED(in.data);
         MHDL_NAMED(in.valid);
         
-        in.data = 1_bit;
-        in.valid = 1_bit;
+        in.data = ramReadData[0];
+        in.valid = delay(registerFactory, ramReadEnable, initialized, 0_bit, 1);
 
         BitStream out = game(registerFactory, in);
+        
+        frontend::BitVector castData(1);
+        castData.setBit(0, out.data);
+        driveWith(ramWriteData, castData);
     }
 
     design.getCircuit().cullUnnamedSignalNodes();

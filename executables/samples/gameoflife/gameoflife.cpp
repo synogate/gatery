@@ -37,7 +37,7 @@ BitStream GameOfLife::operator() (RegisterFactory& clock, const BitStream& in) c
         for (size_t i = 1; i < neighborBits.size(); ++i)
         {
             if (i % 3 == 0)
-                neighborBits[i] = delay(clock, neighborBits[i - 1], in.valid, 0_bit, m_Width - 3);
+                neighborBits[i] = delay(clock, neighborBits[i - 1], in.valid, 0_bit, m_Width - 2);
             else
                 neighborBits[i] = clock(neighborBits[i-1], in.valid, 0_bit);
         }
@@ -77,7 +77,7 @@ BitStream GameOfLife::operator() (RegisterFactory& clock, const BitStream& in) c
 
     PriorityConditional<Bit> sel;
     sel.addCondition(sum == 0b0011_uvec, 1_bit);
-    sel.addCondition(sum == 0b0010_uvec, neighbors[1 * 3 + 1][0]);
+    sel.addCondition(sum == 0b0010_uvec, neighborBits[1 * 3 + 1]);
 
     BitStream out;
     out.data = sel(0_bit);
