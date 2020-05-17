@@ -69,9 +69,9 @@ BitStream GameOfLife::operator() (RegisterFactory& clock, const BitStream& in) c
         GroupScope area(NodeGroup::GRP_AREA);
         area.setName("all"); // ???
 
-        sum = neighbors[0] + neighbors[1] + neighbors[2] +  
-              neighbors[3]                + neighbors[5] +  
-              neighbors[6] + neighbors[7] + neighbors[8];
+        sum = ((neighbors[0] + neighbors[1])  + ( neighbors[2] +  
+                neighbors[3]))                + ((neighbors[5] +  
+                neighbors[6]) + (neighbors[7] +   neighbors[8]));
         sum.setName("sum");
     }
 
