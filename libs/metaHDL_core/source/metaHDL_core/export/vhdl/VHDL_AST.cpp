@@ -12,6 +12,7 @@
 #include "../../hlim/coreNodes/Node_Signal.h"
 #include "../../hlim/coreNodes/Node_Register.h"
 #include "../../hlim/coreNodes/Node_Rewire.h"
+#include "../../hlim/supportNodes/Node_External.h"
 
 
 #include "../../utils/Range.h"
@@ -21,6 +22,12 @@
 #include <iomanip>
 
 namespace mhdl::core::vhdl::ast {
+    
+std::ostream &operator<<(std::ostream &stream, hlim::NodePort nodePort)
+{
+    stream << std::hex << "0x" << (size_t)nodePort.node << std::dec << "[" << nodePort.port << "]";
+    return stream;
+}
     
     
 namespace {
@@ -191,6 +198,44 @@ void BaseBlock::extractExplicitSignals()
             }
         }
         
+        // check for external
+        hlim::Node_External *extNode = dynamic_cast<hlim::Node_External *>(node);
+        if (extNode != nullptr) {
+            for (auto i : utils::Range(extNode->getNumInputPorts())) {
+                hlim::NodePort driver = extNode->getDriver(i);
+
+                if (driver.node == nullptr) {
+                    std::cout << "Warning: Unused node: Port " << i << " of node '"<<extNode->getName()<<"' not connected!" << std::endl;
+                    std::cout << node->getStackTrace() << std::endl;
+                } else {
+                    ExplicitSignal &explicitSignal = m_explicitSignals[driver];
+                    explicitSignal.producerOutput = driver;
+                    
+                    if (explicitSignal.desiredName.empty())
+                        explicitSignal.desiredName = driver.node->getName();
+                    
+                    explicitSignal.drivingChild = true;
+                }                
+            }
+            
+            // Handle output
+            for (auto i : utils::Range(extNode->getNumOutputPorts())) {
+                hlim::NodePort driver;
+                driver.node = extNode;
+                driver.port = i;
+
+                ExplicitSignal &explicitSignal = m_explicitSignals[driver];
+                explicitSignal.producerOutput = driver;
+                
+                if (explicitSignal.desiredName.empty() && !extNode->getDirectlyDriven(i).empty() && dynamic_cast<hlim::Node_Signal*>(extNode->getDirectlyDriven(i)[0].node) != nullptr)
+                    explicitSignal.desiredName = extNode->getDirectlyDriven(i)[0].node->getName();
+                if (explicitSignal.desiredName.empty())
+                    explicitSignal.desiredName = node->getName();                
+                
+                explicitSignal.drivenByChild = true;
+            }
+        }
+        
         // Check for multiple use
         for (auto i : utils::Range(node->getNumOutputPorts())) {
             if (node->getDirectlyDriven(i).size() > 1) {
@@ -322,7 +367,7 @@ void BaseBlock::extractExplicitSignals()
     }
     
     
-
+/*
     
     std::cout << "Found " << m_explicitSignals.size() << " explicit signals" << std::endl;
     for (auto p : m_explicitSignals) {
@@ -337,6 +382,7 @@ void BaseBlock::extractExplicitSignals()
         std::cout << "    registerOutput " << (p.second.registerOutput?"true":"false") << std::endl;
         std::cout << "    multipleConsumers " << (p.second.multipleConsumers?"true":"false") << std::endl;
     }
+    */
 }
 
 
@@ -429,7 +475,7 @@ void Process::allocateChildEntitySignals()
         if (m_signalDeclaration.signalNames.find(p.first) != m_signalDeclaration.signalNames.end()) continue;
         
         if (p.second.drivenByChild || p.second.drivingChild) {
-
+            
             auto it = m_parent.getSignalDeclaration().signalNames.find(p.first);
             if (it == m_parent.getSignalDeclaration().signalNames.end()) {
                 auto actualName = m_parent.getNamespace().allocateName(p.second.desiredName, p.second.drivingChild?CodeFormatting::SIG_CHILD_ENTITY_INPUT:CodeFormatting::SIG_CHILD_ENTITY_OUTPUT);
@@ -1086,6 +1132,22 @@ void Entity::write(std::filesystem::path destination)
         codeFormatting.indent(file, 1);
         file << ");" << std::endl;
     }
+
+    for (const auto &area : m_nodeGroup->getChildren()) {
+        for (auto node : area->getNodes()) {
+            hlim::Node_External *extNode = dynamic_cast<hlim::Node_External *>(node);
+            if (extNode != nullptr) {
+                std::vector<std::string> inputNames(extNode->getNumInputPorts());
+                for (auto i : utils::Range(extNode->getNumInputPorts())) 
+                    inputNames[i] = m_signalDeclaration.signalNames[extNode->getDriver(i)];
+                std::vector<std::string> outputNames(extNode->getNumOutputPorts());
+                for (auto i : utils::Range(extNode->getNumOutputPorts()))
+                    outputNames[i] = m_signalDeclaration.signalNames[{.node = extNode, .port = i}];
+                m_root.getCodeFormatting()->instantiateExternal(file, extNode, inputNames, outputNames);
+            }
+        }
+    }
+
     
     for (auto &process : m_processes)
         process.write(file);

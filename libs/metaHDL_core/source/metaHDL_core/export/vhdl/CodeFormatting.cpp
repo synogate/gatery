@@ -86,4 +86,17 @@ std::string DefaultCodeFormatting::getGlobalName(const std::string &id, unsigned
 }
 
 
+void DefaultCodeFormatting::addExternalNodeHandler(ExternalNodeHandler nodeHandler)
+{
+    m_externalNodeHandlers.push_back(std::move(nodeHandler));
+}
+
+void DefaultCodeFormatting::instantiateExternal(std::ostream &stream, const hlim::Node_External *node, const std::vector<std::string> &inputSignalNames, const std::vector<std::string> &outputSignalNames) const
+{
+    for (const auto &handler : m_externalNodeHandlers)
+        if (handler(stream, node, inputSignalNames, outputSignalNames))
+            return;
+}
+
+
 }

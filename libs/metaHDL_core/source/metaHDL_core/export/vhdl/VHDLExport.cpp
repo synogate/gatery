@@ -43,6 +43,12 @@ VHDLExport &VHDLExport::setFormatting(CodeFormatting *codeFormatting)
     return *this;
 }
 
+CodeFormatting *VHDLExport::getFormatting()
+{
+    return m_codeFormatting.get();
+}
+
+
 void VHDLExport::operator()(const hlim::Circuit &circuit)
 {
 #if 0

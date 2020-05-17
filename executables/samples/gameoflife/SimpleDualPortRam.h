@@ -60,6 +60,11 @@ class SimpleDualPortRam : public Node_External
         virtual std::string getInputName(size_t idx) const override;
         virtual std::string getOutputName(size_t idx) const override;
         virtual std::vector<size_t> getInternalStateSizes() const override;
+
+
+        inline const sim::DefaultBitVectorState &getInitialData() const { return m_initialData; }
+        inline size_t getWriteDataWidth() const { return m_writeDataWidth; }
+        inline size_t getReadDataWidth() const { return m_readDataWidth; }
     protected:
         sim::DefaultBitVectorState m_initialData;
         size_t m_writeDataWidth;

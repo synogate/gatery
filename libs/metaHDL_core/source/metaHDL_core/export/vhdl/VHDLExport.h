@@ -18,6 +18,7 @@ class VHDLExport
         VHDLExport(std::filesystem::path destination);
         
         VHDLExport &setFormatting(CodeFormatting *codeFormatting);
+        CodeFormatting *getFormatting();
         
         void operator()(const hlim::Circuit &circuit);        
     protected:
