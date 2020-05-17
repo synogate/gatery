@@ -135,7 +135,7 @@ void BaseBlock::extractExplicitSignals()
             explicitSignal.hintedExplicit = true;
         }
 #endif
-        
+      
         // Check for inputs
         for (auto i : utils::Range(node->getNumInputPorts())) {
             auto driver = node->getDriver(i);
@@ -547,6 +547,25 @@ void Process::formatExpression(std::ostream &stream, const hlim::NodePort &nodeP
         return; 
     }
 
+    const hlim::Node_Compare *compareNode = dynamic_cast<const hlim::Node_Compare*>(nodePort.node);
+    if (compareNode != nullptr) { 
+        stream << "(";
+        formatExpression(stream, compareNode->getDriver(0), dependentInputs); 
+        switch (compareNode->getOp()) {
+            case hlim::Node_Compare::EQ: stream << " = "; break;
+            case hlim::Node_Compare::NEQ: stream << " != "; break;
+            case hlim::Node_Compare::LT: stream << " < ";  break;
+            case hlim::Node_Compare::GT: stream << " > "; break;
+            case hlim::Node_Compare::LEQ: stream << " <= "; break;
+            case hlim::Node_Compare::GEQ: stream << " >= "; break;
+            default:
+                MHDL_ASSERT_HINT(false, "Unhandled operation!");
+        };
+        formatExpression(stream, compareNode->getDriver(1), dependentInputs);
+        stream << ")";
+        return; 
+    }
+
     const hlim::Node_Rewire *rewireNode = dynamic_cast<const hlim::Node_Rewire*>(nodePort.node);
     if (rewireNode != nullptr) { 
         
@@ -913,6 +932,39 @@ void Entity::buildFrom(hlim::NodeGroup *nodeGroup)
 
     for (auto &process : m_processes)
         process.allocateChildEntitySignals();
+    
+    for (auto subEntity : m_subEntities) {
+        for (auto subSig : subEntity->m_signalDeclaration.inputSignals) {
+            auto it = m_signalDeclaration.signalNames.find(subSig);
+            if (it == m_signalDeclaration.signalNames.end()) {
+                const std::string &subSigName = subEntity->m_signalDeclaration.signalNames[subSig];
+                if (subSig.node->getGroup() == nullptr || !subSig.node->getGroup()->isChildOf(m_nodeGroup)) {
+                    auto actualName = m_namespace.allocateName(subSigName, CodeFormatting::SIG_ENTITY_INPUT);
+                    m_signalDeclaration.inputSignals.push_back(subSig);
+                    m_signalDeclaration.signalNames[subSig] = actualName;
+                } else {
+                    auto actualName = m_namespace.allocateName(subSigName, CodeFormatting::SIG_LOCAL_SIGNAL);
+                    m_signalDeclaration.localSignals.push_back(subSig);
+                    m_signalDeclaration.signalNames[subSig] = actualName;
+                }
+            }
+        }
+        for (auto subSig : subEntity->m_signalDeclaration.outputSignals) {
+            auto it = m_signalDeclaration.signalNames.find(subSig);
+            if (it == m_signalDeclaration.signalNames.end()) {
+                const std::string &subSigName = subEntity->m_signalDeclaration.signalNames[subSig];
+                if (subSig.node->getGroup() == nullptr || !subSig.node->getGroup()->isChildOf(m_nodeGroup)) {
+                    auto actualName = m_namespace.allocateName(subSigName, CodeFormatting::SIG_ENTITY_OUTPUT);
+                    m_signalDeclaration.outputSignals.push_back(subSig);
+                    m_signalDeclaration.signalNames[subSig] = actualName;
+                } else {
+                    auto actualName = m_namespace.allocateName(subSigName, CodeFormatting::SIG_LOCAL_SIGNAL);
+                    m_signalDeclaration.localSignals.push_back(subSig);
+                    m_signalDeclaration.signalNames[subSig] = actualName;
+                }
+            }
+        }
+    }    
 
     for (auto &process : m_processes)
         process.allocateLocalSignals();

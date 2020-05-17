@@ -16,6 +16,7 @@ class Node_Compare : public Node<Node_Compare>
         };
         
         Node_Compare(Op op);
+        inline Op getOp() const { return m_op; }
         
         inline void connectInput(size_t operand, const NodePort &port) { NodeIO::connectInput(operand, port); }
         inline void disconnectInput(size_t operand) { NodeIO::disconnectInput(operand); }        

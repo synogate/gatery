@@ -14,12 +14,7 @@
 #include <list>
 #include <vector>
 
-namespace mhdl {
-namespace core {
-namespace vhdl {
-    
-
-namespace ast {
+namespace mhdl::core::vhdl::ast {
 
 class Namespace {
     public:
@@ -180,7 +175,4 @@ class Root
 };
 
 
-}
-}
-}
 }
