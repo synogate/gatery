@@ -13,6 +13,10 @@ if(NOT MSVC)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -O0 -g")
 endif()
 
+if(WIN32)
+    add_compile_definitions(NOMINMAX)
+endif()
+
 #add_subdirectory(libs/cppDWARF/)
 add_subdirectory(libs/metaHDL_core/)
 

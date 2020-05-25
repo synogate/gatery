@@ -6,6 +6,10 @@
 
 #include <immintrin.h>
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
+
 namespace mhdl::utils {
 
 #ifdef _MSC_VER
