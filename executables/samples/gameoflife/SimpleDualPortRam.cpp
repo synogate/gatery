@@ -100,7 +100,7 @@ void SimpleDualPortRam::simulateReset(sim::DefaultBitVectorState &state, const s
         std::uint64_t block = 0;
         for (auto i : utils::Range(chunkSize))
             if (constNode->getValue().bitVec[offset + i])
-                block |= 1 << i;
+                block |= 1ull << i;
                     
         state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[READ_DATA] + offset, chunkSize, block);
         state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[READ_DATA] + offset, chunkSize, ~0ull);    
@@ -229,6 +229,7 @@ std::string SimpleDualPortRam::getInputName(size_t idx) const
         case READ_ENABLE: return "READ_ENABLE";
         case RESET_READ_DATA: return "RESET_READ_DATA";
     }
+    return {};
 }
 
 std::string SimpleDualPortRam::getOutputName(size_t idx) const 
@@ -236,6 +237,7 @@ std::string SimpleDualPortRam::getOutputName(size_t idx) const
     switch (idx) {
         case READ_DATA: return "readData";
     }
+    return {};
 }
 
 std::vector<size_t> SimpleDualPortRam::getInternalStateSizes() const {

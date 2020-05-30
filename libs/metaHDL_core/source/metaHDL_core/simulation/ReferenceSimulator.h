@@ -31,7 +31,7 @@ struct StateMapping
     StateMapping() { clear(); }
     
     void clear() { 
-        outputToOffset.clear(); outputToOffset[{}] = ~0ull; //clockToSignalIdx.clear(); clockToClkIdx.clear(); 
+        outputToOffset.clear(); outputToOffset[{}] = SIZE_MAX; //clockToSignalIdx.clear(); clockToClkIdx.clear(); 
         clockToClkDomain.clear();
         //resetToSignalIdx.clear(); 
     }    

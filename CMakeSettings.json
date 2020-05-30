@@ -22,7 +22,13 @@
       "buildCommandArgs": "-v",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "msvc_x86" ],
-      "variables": []
+      "variables": [
+        {
+          "name": "WITH_GHDL",
+          "value": "True",
+          "type": "BOOL"
+        }
+      ]
     }
   ]
 }

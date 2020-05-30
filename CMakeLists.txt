@@ -14,6 +14,10 @@ if(NOT MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -g")
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS} -O3 -g")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -O0 -g")
+else()
+    add_compile_options(/wd4146) # - still unsigned. for boost rational
+    add_compile_options(/wd26812) # use enum class. for andy
+    add_compile_definitions(__BMI__=1)
 endif()
 
 if(WIN32)

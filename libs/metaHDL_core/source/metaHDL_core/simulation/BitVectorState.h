@@ -14,7 +14,7 @@ namespace mhdl::core::sim {
 
 struct DefaultConfig
 {
-    using BaseType = std::uint64_t;
+    using BaseType = std::size_t;
     enum {
         NUM_BITS_PER_BLOCK = sizeof(BaseType)*8
     };
@@ -54,7 +54,7 @@ class BitVectorState
         void insertNonStraddling(typename Config::Plane plane, size_t start, size_t size, typename Config::BaseType value);
     protected:
         size_t m_size;
-        std::array<std::vector<std::uint64_t>, Config::NUM_PLANES> m_values;
+        std::array<std::vector<typename Config::BaseType>, Config::NUM_PLANES> m_values;
 };
 
 

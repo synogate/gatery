@@ -6,6 +6,10 @@
 
 #include <immintrin.h>
 
+#if defined(_M_AMD64) || defined(__amd64__)
+#define AMD64 1
+#endif
+
 #ifdef _MSC_VER
 #include <intrin.h>
 #endif
@@ -34,13 +38,21 @@ inline unsigned nextPow2(unsigned v)
     return v;
 }
     
-#ifdef __BMI__
-inline std::uint64_t andNot(std::uint64_t a, std::uint64_t b) {
-    return _bandn_u64(a, b);
-}
-#else
-inline std::uint64_t andNot(std::uint64_t a, std::uint64_t b) {
+template<typename T>
+inline T andNot(T a, T b) {
     return ~a & b;
+}
+
+#ifdef __BMI__
+#ifdef AMD64
+template<>
+inline std::uint64_t andNot(std::uint64_t a, std::uint64_t b) {
+    return _andn_u64(a, b);
+}
+#endif
+template<>
+inline std::uint32_t andNot(std::uint32_t a, std::uint32_t b) {
+    return _andn_u32(a, b);
 }
 #endif
 
@@ -118,29 +130,35 @@ inline void bitToggle(const void *a, size_t idx) {
 #endif
 }
 
-
-inline std::uint64_t bitMaskRange(unsigned start, unsigned count) {
-    if (count == 0)
-        return 0ull;
-    return (~0ull >> (64-count)) << start;
+template<typename T = std::size_t>
+inline T bitMaskRange(unsigned start, unsigned count) {
+    return ((T{ 1 } << count) - 1) << start;
 }
 
+template<typename T>
+inline T bitfieldExtract(T a, unsigned start, unsigned count) {
+    start &= 0xFF;
+    count &= 0xFF;
+    return (a >> start) & ((T{ 1 } << count) - 1);
+}
 
 #ifdef __BMI__
+#ifdef AMD64
+template<>
 inline std::uint64_t bitfieldExtract(std::uint64_t a, unsigned start, unsigned count) {
     return _bextr_u64(a, start, count);
 }
-#else
-inline std::uint64_t bitfieldExtract(std::uint64_t a, unsigned start, unsigned count) {
-    if (count < 64)
-        return (a >> start) & ((1ull << count) - 1);
-    else
-        return (a >> start);
+#endif
+
+template<>
+inline std::uint32_t bitfieldExtract(std::uint32_t a, unsigned start, unsigned count) {
+    return _bextr_u32(a, start, count);
 }
 #endif
 
-inline std::uint64_t bitfieldInsert(std::uint64_t a, unsigned start, unsigned count, std::uint64_t v) {
-    std::uint64_t mask = bitMaskRange(start, count);
+template<typename T>
+inline T bitfieldInsert(T a, unsigned start, unsigned count, T v) {
+    auto mask = bitMaskRange<T>(start, count);
     return andNot(mask, a) | (mask & (v << start));
 }
 

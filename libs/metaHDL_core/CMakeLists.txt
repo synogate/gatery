@@ -100,7 +100,7 @@ foreach(file ${data_files})
 endforeach(file)
 
 
-target_include_directories(metaHDL_core PUBLIC
+target_include_directories(metaHDL_core SYSTEM PUBLIC
     ${Boost_INCLUDE_DIRS}
 )
 

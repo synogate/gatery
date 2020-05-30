@@ -91,7 +91,7 @@ void NodeIO::disconnectInput(size_t inputPort)
         outPort.connections.pop_back();
         
         inPort.node = nullptr;
-        inPort.port = ~0ull;
+        inPort.port = INV_PORT;
     }
 }
 
