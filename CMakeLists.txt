@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 3.0)
 project (mhdl_core)
 
 option(WITH_QT "Include QT stuff in the build" off)
+option(WITH_GHDL "Include GHDL stuff in the build" off)
 
 enable_testing()
 
@@ -22,7 +23,9 @@ endif()
 #add_subdirectory(libs/cppDWARF/)
 add_subdirectory(libs/metaHDL_core/)
 
+if(${WITH_GHDL})
 add_subdirectory(libs/vpi_simulation_host)
+endif()
 
 if(${WITH_QT})
 add_subdirectory(libs/metaHDL_vis_qt/)
