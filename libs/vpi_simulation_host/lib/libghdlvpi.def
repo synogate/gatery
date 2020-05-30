@@ -1,0 +1,30 @@
+LIBRARY libghdlvpi
+EXPORTS
+	VPI_THUNK	@1
+	vpi_chk_error	@2
+	vpi_control	@3
+	vpi_free_object	@4
+	vpi_get	@5
+	vpi_get_str	@6
+	vpi_get_time	@7
+	vpi_get_value	@8
+	vpi_get_vlog_info	@9
+	vpi_handle	@10
+	vpi_handle_by_index	@11
+	vpi_handle_by_name	@12
+	vpi_iterate	@13
+	vpi_mcd_close	@14
+	vpi_mcd_fgetc	@15
+	vpi_mcd_fputc	@16
+	vpi_mcd_name	@17
+	vpi_mcd_open	@18
+	vpi_mcd_open_x	@19
+	vpi_mcd_vprintf	@20
+	vpi_printf	@21
+	vpi_put_value	@22
+	vpi_register_cb	@23
+	vpi_register_systf	@24
+	vpi_remove_cb	@25
+	vpi_scan	@26
+	vpi_sim_vcontrol	@27
+	vpi_vprintf	@28

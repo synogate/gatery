@@ -3,6 +3,8 @@ project (mhdl_core)
 
 option(WITH_QT "Include QT stuff in the build" off)
 
+enable_testing()
+
 LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 if(NOT MSVC)
@@ -15,6 +17,8 @@ endif()
 
 #add_subdirectory(libs/cppDWARF/)
 add_subdirectory(libs/metaHDL_core/)
+
+add_subdirectory(libs/vpi_simulation_host)
 
 if(${WITH_QT})
 add_subdirectory(libs/metaHDL_vis_qt/)
