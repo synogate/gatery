@@ -26,12 +26,12 @@ ClockRational SignalDrivenClock::getAbsolutePhaseShift()
 
 ClockRational SignalDrivenClock::getFrequencyRelativeTo(BaseClock &other)
 {
-    
+    return {};
 }
 
 ClockRational SignalDrivenClock::getPhaseShiftRelativeTo(BaseClock &other)
 {
-    
+    return {};
 }
 
     
@@ -44,12 +44,12 @@ RootClock::RootClock(std::string name, ClockRational frequency) : m_frequency(fr
 
 ClockRational RootClock::getFrequencyRelativeTo(BaseClock &other)
 {
-    
+    return {};
 }
 
 ClockRational RootClock::getPhaseShiftRelativeTo(BaseClock &other)
 {
-    
+    return {};
 }
     
     
@@ -68,12 +68,12 @@ ClockRational Clock::getAbsolutePhaseShift()
 
 ClockRational Clock::getFrequencyRelativeTo(BaseClock &other)
 {
-    
+    return {};
 }
 
 ClockRational Clock::getPhaseShiftRelativeTo(BaseClock &other)
 {
-    
+    return {};
 }
 
         

@@ -298,10 +298,12 @@ DefaultBitVectorState ReferenceSimulator::getValueOfOutput(const hlim::NodePort 
 
 std::array<bool, DefaultConfig::NUM_PLANES> ReferenceSimulator::getValueOfClock(const hlim::BaseClock *clk)
 {
+    return {};
 }
 
 std::array<bool, DefaultConfig::NUM_PLANES> ReferenceSimulator::getValueOfReset(const std::string &reset)
 {
+    return {};
 }
 
 

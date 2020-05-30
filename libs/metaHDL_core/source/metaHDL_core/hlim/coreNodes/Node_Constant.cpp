@@ -21,7 +21,7 @@ void Node_Constant::simulateReset(sim::DefaultBitVectorState &state, const size_
         std::uint64_t block = 0;
         for (auto i : utils::Range(chunkSize))
             if (m_Value.bitVec[offset + i])
-                block |= 1 << i;
+                block |= 1ull << i;
                     
         state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0] + offset, chunkSize, block);
         state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0] + offset, chunkSize, ~0ull);    
