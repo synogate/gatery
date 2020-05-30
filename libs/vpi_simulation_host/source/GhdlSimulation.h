@@ -26,10 +26,17 @@ namespace vpi_client
 
 		const vpi_host::SimInfo& info() const { return m_SimInfo; }
 
+	protected:
+		void loadSimulationInfo();
+
+		template<typename T>
+		T loadResponse();
+
 	private:
 		const std::string m_InstanceName;
 		bp::child m_GhdlProcess;
-		std::optional<ipc::message_queue> m_CmdQueue;
+		std::optional<ipc::message_queue> m_CmdQueueP2C;
+		std::optional<ipc::message_queue> m_CmdQueueC2P;
 
 		vpi_host::SimInfo m_SimInfo;
 		

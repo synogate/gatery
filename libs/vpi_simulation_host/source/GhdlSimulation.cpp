@@ -2,6 +2,11 @@
 
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/dll/shared_library.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/iostreams/device/array.hpp>
+#include <boost/iostreams/stream.hpp>
+#include <boost/serialization/vector.hpp>
 
 #include <algorithm>
 #include <sstream>
@@ -31,10 +36,16 @@ vpi_client::GhdlSimulation::~GhdlSimulation()
 	if (m_GhdlProcess.running())
 		m_GhdlProcess.terminate();
 
-	if (m_CmdQueue)
+	if (m_CmdQueueP2C)
 	{
-		m_CmdQueue.reset();
-		ipc::message_queue::remove(m_InstanceName.c_str());
+		m_CmdQueueP2C.reset();
+		ipc::message_queue::remove((m_InstanceName + "_P2C").c_str());
+	}
+
+	if (m_CmdQueueC2P)
+	{
+		m_CmdQueueC2P.reset();
+		ipc::message_queue::remove((m_InstanceName + "_C2P").c_str());
 	}
 }
 
@@ -68,9 +79,15 @@ void vpi_client::GhdlSimulation::launch(std::string_view topEntity, const vpi_cl
 	bp::environment env = boost::this_process::environment();
 
 	// create communication channel
-	ipc::message_queue::remove(m_InstanceName.c_str());
-	m_CmdQueue.emplace(ipc::create_only, m_InstanceName.c_str(), 10, 1024);
-	env["MHDL_VPI_CMDQUEUE"] = m_InstanceName;
+	auto parent2child = m_InstanceName + "_p2c";
+	env["MHDL_VPI_CMDQUEUE_P2C"] = parent2child;
+	ipc::message_queue::remove(parent2child.c_str());
+	m_CmdQueueP2C.emplace(ipc::create_only, parent2child.c_str(), 10, 1024);
+
+	auto child2parent = m_InstanceName + "_c2p";
+	env["MHDL_VPI_CMDQUEUE_C2P"] = child2parent;
+	ipc::message_queue::remove(child2parent.c_str());
+	m_CmdQueueC2P.emplace(ipc::create_only, child2parent.c_str(), 10, 1024);
 
 #ifdef _WIN32
 	// for some reason libghdlvpi is located in a seperate path. so we need to make sure LoadLibrary can find it.
@@ -86,14 +103,16 @@ void vpi_client::GhdlSimulation::launch(std::string_view topEntity, const vpi_cl
 		generic_params,
 		"--vpi=" + vpi_host_path.string()
 	);
+
+	loadSimulationInfo();
 }
 
 int vpi_client::GhdlSimulation::exit()
 {
-	if (!m_CmdQueue || !m_GhdlProcess.running())
+	if (!m_GhdlProcess.running())
 		throw std::runtime_error{ "ghdl instance not running" };
 
-	m_CmdQueue->send("e", 1, 0);
+	m_CmdQueueP2C->send("e", 1, 0);
 
 	if (!m_GhdlProcess.wait_for(std::chrono::seconds(2)))
 	{
@@ -101,5 +120,28 @@ int vpi_client::GhdlSimulation::exit()
 		m_GhdlProcess.terminate();
 	}
 	return m_GhdlProcess.exit_code();
+}
+
+template<typename T>
+inline T vpi_client::GhdlSimulation::loadResponse()
+{
+	std::vector<uint8_t> buffer(m_CmdQueueC2P->get_max_msg_size());
+	unsigned len, prio;
+	m_CmdQueueC2P->receive(buffer.data(), buffer.size(), len, prio);
+	buffer.resize(len);
+
+	boost::iostreams::array_source source{ (char*)buffer.data(), buffer.size() };
+	boost::iostreams::stream is{ source }; 
+	boost::archive::binary_iarchive a{ is };
+
+	T ret;
+	a >> ret;
+	return ret;
+}
+
+void vpi_client::GhdlSimulation::loadSimulationInfo()
+{
+	m_CmdQueueP2C->send("I", 1, 0);
+	m_SimInfo = loadResponse<vpi_host::SimInfo>();
 }
 
