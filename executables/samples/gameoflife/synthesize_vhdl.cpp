@@ -147,15 +147,17 @@ int main()
     VHDLExport vhdl("VHDL_out/");
     
     auto codeFormatting = (DefaultCodeFormatting*) vhdl.getFormatting();
-    codeFormatting->addExternalNodeHandler([codeFormatting](std::ostream &file, const hlim::Node_External *node, const std::vector<std::string> &inputSignalNames, const std::vector<std::string> &outputSignalNames)->bool{
+    codeFormatting->addExternalNodeHandler([codeFormatting](std::ostream &file, const hlim::Node_External *node, unsigned indent, 
+                                                            const std::vector<std::string> &inputSignalNames, const std::vector<std::string> &outputSignalNames, const std::vector<std::string> &clockNames)->bool{
         
         const SimpleDualPortRam *ram = dynamic_cast<const SimpleDualPortRam *>(node);
         if (ram != nullptr) {        
-            codeFormatting->indent(file, 1);
+            codeFormatting->indent(file, indent);
             file << "inst_" << node->getName() << " : BRAM_SDP_MACRO generic map (" << std::endl;
 
             std::vector<std::string> genericmapList;
-            genericmapList.push_back("INIT => todo: evaluate const expression of input port");
+            genericmapList.push_back("-- INIT => todo: evaluate const expression of input port");
+            genericmapList.push_back("INIT => 0");
             genericmapList.push_back(std::string("WRITE_WIDTH => ") + std::to_string(ram->getWriteDataWidth()));
             genericmapList.push_back(std::string("READ_WIDTH => ") + std::to_string(ram->getReadDataWidth()));
             genericmapList.push_back(std::string("BRAM_SIZE => ") + std::to_string(ram->getInitialData().size()));
@@ -179,7 +181,7 @@ int main()
                 }
 
             for (auto i : utils::Range(genericmapList.size())) {
-                codeFormatting->indent(file, 2);
+                codeFormatting->indent(file, indent+1);
                 file << genericmapList[i];
                 if (i+1 < genericmapList.size())
                     file << ",";
@@ -188,25 +190,33 @@ int main()
 
             
             
-            codeFormatting->indent(file, 1);
+            codeFormatting->indent(file, indent);
             file << ") port map (" << std::endl;
             
             std::vector<std::string> portmapList;
 
-            portmapList.push_back("RDCLK => clk");
-            portmapList.push_back("WRCLK => clk");
+            if (!clockNames[SimpleDualPortRam::READ_CLK].empty())
+                portmapList.push_back(std::string("RDCLK => ") + clockNames[SimpleDualPortRam::READ_CLK]);
+            if (!clockNames[SimpleDualPortRam::WRITE_CLK].empty())
+                portmapList.push_back(std::string("WRCLK => ") + clockNames[SimpleDualPortRam::WRITE_CLK]);
             portmapList.push_back("RST => reset");
             
-            portmapList.push_back(std::string("RDEN => ") + inputSignalNames[SimpleDualPortRam::READ_ENABLE]);
-            portmapList.push_back(std::string("WREN => ") + inputSignalNames[SimpleDualPortRam::WRITE_ENABLE]);
-            portmapList.push_back(std::string("DI => ") + inputSignalNames[SimpleDualPortRam::WRITE_DATA]);
-            portmapList.push_back(std::string("RDADDR => ") + inputSignalNames[SimpleDualPortRam::READ_ADDR]);
-            portmapList.push_back(std::string("WRADDR => ") + inputSignalNames[SimpleDualPortRam::WRITE_ADDR]);
-            
-            portmapList.push_back(std::string("DO => ") + outputSignalNames[SimpleDualPortRam::READ_DATA]);
+            if (!inputSignalNames[SimpleDualPortRam::READ_ENABLE].empty())
+                portmapList.push_back(std::string("RDEN => ") + inputSignalNames[SimpleDualPortRam::READ_ENABLE]);
+            if (!inputSignalNames[SimpleDualPortRam::WRITE_ENABLE].empty())
+                portmapList.push_back(std::string("WREN => ") + inputSignalNames[SimpleDualPortRam::WRITE_ENABLE]);
+            if (!inputSignalNames[SimpleDualPortRam::WRITE_DATA].empty())
+                portmapList.push_back(std::string("DI => ") + inputSignalNames[SimpleDualPortRam::WRITE_DATA]);
+            if (!inputSignalNames[SimpleDualPortRam::READ_ADDR].empty())
+                portmapList.push_back(std::string("RDADDR => ") + inputSignalNames[SimpleDualPortRam::READ_ADDR]);
+            if (!inputSignalNames[SimpleDualPortRam::WRITE_ADDR].empty())
+                portmapList.push_back(std::string("WRADDR => ") + inputSignalNames[SimpleDualPortRam::WRITE_ADDR]);
+                
+            if (!inputSignalNames[SimpleDualPortRam::READ_DATA].empty())
+                portmapList.push_back(std::string("DO => ") + outputSignalNames[SimpleDualPortRam::READ_DATA]);
 
             for (auto i : utils::Range(portmapList.size())) {
-                codeFormatting->indent(file, 2);
+                codeFormatting->indent(file, indent+1);
                 file << portmapList[i];
                 if (i+1 < portmapList.size())
                     file << ",";
@@ -214,7 +224,7 @@ int main()
             }
             
             
-            codeFormatting->indent(file, 1);
+            codeFormatting->indent(file, indent);
             file << ");" << std::endl;
             
             return true;

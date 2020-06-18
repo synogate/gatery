@@ -55,6 +55,61 @@ void formatConnectionType(std::ostream &stream, const hlim::ConnectionType &conn
 
     
 }
+
+
+
+
+
+void NodeGroupInfo::buildFrom(hlim::NodeGroup *nodeGroup, bool mergeAreasReccursive)
+{
+    std::vector<hlim::NodeGroup*> nodeGroupStack = { nodeGroup };
+
+    while (!nodeGroupStack.empty()) {
+        hlim::NodeGroup *group = nodeGroupStack.back();
+        nodeGroupStack.pop_back();
+    
+        for (auto node : group->getNodes()) {
+            hlim::Node_External *extNode = dynamic_cast<hlim::Node_External *>(node);
+            if (extNode != nullptr) {
+                externalNodes.push_back(extNode);
+            } else
+                nodes.push_back(node);
+        }
+        
+        for (const auto &childGroup : group->getChildren()) {
+            switch (childGroup->getGroupType()) {
+                case hlim::NodeGroup::GRP_ENTITY:
+                    subEntities.push_back(childGroup.get());
+                break;
+                case hlim::NodeGroup::GRP_AREA:
+                    if (mergeAreasReccursive)
+                        nodeGroupStack.push_back(childGroup.get());
+                    else
+                        subAreas.push_back(childGroup.get());
+                break;
+            }
+        }
+    }
+}
+
+
+
+void Hlim2AstMapping::assignNodeToBlock(hlim::BaseNode *node, BaseBlock *block)
+{
+    m_node2Block[node] = block;
+}
+
+BaseBlock *Hlim2AstMapping::getBlock(hlim::BaseNode *node) const
+{
+    auto it = m_node2Block.find(node);
+    if (it == m_node2Block.end())
+        return nullptr;
+    return it->second;
+}
+
+
+
+
     
 /*
 std::string Namespace::getName(hlim::NodePort nodePort, const std::string &desiredName)
@@ -118,16 +173,162 @@ bool Namespace::isNameInUse(const std::string &name) const
 
 
 
-BaseBlock::BaseBlock(Namespace *parent, CodeFormatting *codeFormatting, hlim::NodeGroup *nodeGroup)
+BaseBlock::BaseBlock(BaseBlock *parent, Hlim2AstMapping &hlim2astMapping, CodeFormatting *codeFormatting, hlim::NodeGroup *nodeGroup)
+            : m_hlim2astMapping(hlim2astMapping)
 {
-    m_namespace.setup(parent, codeFormatting);
+    m_namespace.setup(parent==nullptr?nullptr:(&parent->getNamespace()), codeFormatting);
     m_nodeGroup = nodeGroup;
+    m_name = nodeGroup->getName(); // @todo namespace?!
+    m_comment = nodeGroup->getComment();
 }
 
-void BaseBlock::extractExplicitSignals()
+bool BaseBlock::isChildOf(const BaseBlock *other) const
+{
+    const BaseBlock *parent = getParent();
+    while (parent != nullptr) {
+        if (parent == other)
+            return true;
+        parent = parent->getParent();
+    }
+    return false;    
+}
+
+void BaseBlock::extractExplicitSignals_checkInputOutput(hlim::BaseNode *node)
+{
+    // Check for inputs
+    for (auto i : utils::Range(node->getNumInputPorts())) {
+        auto driver = node->getDriver(i);
+
+        if (driver.node == nullptr) {
+            std::cout << "Warning: Unconnected node: Port " << i << " of node '"<<node->getName()<<"' not connected!" << std::endl;
+            std::cout << node->getStackTrace() << std::endl;
+        } else {
+            BaseBlock *driverBlock = m_hlim2astMapping.getBlock(driver.node);
+            if (driverBlock != this) {
+                ExplicitSignal &explicitSignal = m_explicitSignals[driver];
+                explicitSignal.producerOutput = driver;
+                
+                if (explicitSignal.desiredName.empty())
+                    explicitSignal.desiredName = driver.node->getName(); // prefer driver's name for inputs
+                if (explicitSignal.desiredName.empty())
+                    explicitSignal.desiredName = node->getName();
+                
+                if (driverBlock != nullptr && driverBlock->isChildOf(this)) { // Either it is being driven by a child module...
+                    explicitSignal.drivenByChild = true;
+                } else {                                             // .. or by an outside node.
+                    explicitSignal.drivenByExternal = true;
+                }
+            }
+        }
+    }
+    
+    // Check for outputs
+    for (auto i : utils::Range(node->getNumOutputPorts())) {
+        if (node->getDirectlyDriven(i).empty()) {
+            std::cout << "Warning: Unused node: Port " << i << " of node '"<<node->getName()<<"' not connected!" << std::endl;
+            std::cout << node->getStackTrace() << std::endl;
+        }
+        hlim::NodePort driver;
+        driver.node = node;
+        driver.port = i;
+        
+        for (auto driven : node->getDirectlyDriven(i)) {
+            BaseBlock *drivenBlock = m_hlim2astMapping.getBlock(driven.node);
+            if (drivenBlock != this) {
+            
+                ExplicitSignal &explicitSignal = m_explicitSignals[driver];
+                explicitSignal.producerOutput = driver;
+                
+                if (explicitSignal.desiredName.empty())
+                    explicitSignal.desiredName = node->getName(); // prefer own name for outputs
+                if (explicitSignal.desiredName.empty())
+                    explicitSignal.desiredName = driven.node->getName(); 
+                
+                if (drivenBlock != nullptr && drivenBlock->isChildOf(this)) { // Either it is driving a child module...
+                    explicitSignal.drivingChild = true;
+                } else {                                             // .. or an outside node.
+                    explicitSignal.drivingExternal = true;
+                }
+            }
+        }
+    }
+}
+
+
+Process::Process(BaseBlock *parent, Hlim2AstMapping &hlim2astMapping, CodeFormatting *codeFormatting, hlim::NodeGroup *nodeGroup, const std::vector<hlim::BaseNode*> &nodes) : 
+                    BaseBlock(parent, hlim2astMapping, codeFormatting, nodeGroup)
+{
+    for (auto node : nodeSet.get()) {
+        m_hlim2astMapping.assignNodeToBlock(node, this);
+        hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
+        if (regNode != nullptr) {
+            m_registerNodes[RegisterConfig{
+                .clockSignal = regNode->getClocks()[0],
+                .resetSignal = regNode->getResetName(),
+                .raisingEdge = true,
+                .synchronousReset = true
+            }].push_back(node);
+        } else 
+            m_combinatoryNodes.push_back(node);
+    }
+}
+
+void Process::extractExplicitSignals()
 {
     // Find all explicit signals/variables (signals that will need to be declared and assigned)
-    for (auto node : m_nodeGroup->getNodes()) {
+    
+    for (auto &regConfig : m_registerNodes) {
+        for (auto node : regConfig.second) {
+            // check for registers
+            hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
+            if (regNode != nullptr) {
+                
+                m_resets.insert(regNode->getResetName());
+                MHDL_ASSERT(regNode->getClocks()[0] != nullptr);
+                m_clocks.insert(regNode->getClocks()[0]);
+                
+                // Handle output
+                {
+                    hlim::NodePort driver;
+                    driver.node = regNode;
+                    driver.port = 0;
+
+                    ExplicitSignal &explicitSignal = m_explicitSignals[driver];
+                    explicitSignal.producerOutput = driver;
+                    
+                    if (explicitSignal.desiredName.empty() && 
+                        !regNode->getDirectlyDriven(0).empty() && 
+                        dynamic_cast<hlim::Node_Signal*>(regNode->getDirectlyDriven(0)[0].node) != nullptr)
+                        explicitSignal.desiredName = regNode->getDirectlyDriven(0)[0].node->getName();
+                    if (explicitSignal.desiredName.empty())
+                        explicitSignal.desiredName = node->getName();                
+                    
+                    explicitSignal.registerOutput = true;
+                }
+                
+                // Handle inputs (data, enable, reset value)
+                for (auto input : std::array<hlim::Node_Register::Input, 3>{hlim::Node_Register::DATA, hlim::Node_Register::ENABLE, hlim::Node_Register::RESET_VALUE}) {
+                    hlim::NodePort driver = regNode->getDriver(input);
+
+                    if (driver.node == nullptr) {
+                        std::cout << "Warning: Unused node: Port " << input << " of node '"<<node->getName()<<"' not connected!" << std::endl;
+                        std::cout << node->getStackTrace() << std::endl;
+                    } else {
+                        ExplicitSignal &explicitSignal = m_explicitSignals[driver];
+                        explicitSignal.producerOutput = driver;
+                        
+                        if (explicitSignal.desiredName.empty())
+                            explicitSignal.desiredName = driver.node->getName();
+                        
+                        explicitSignal.registerInput = true;
+                    }
+                }
+            }            
+        }
+    }
+    
+    
+    for (auto node : m_combinatoryNodes) {
         
 #if 0
         // Named signals are explicit
@@ -142,99 +343,9 @@ void BaseBlock::extractExplicitSignals()
             explicitSignal.hintedExplicit = true;
         }
 #endif
+
+        extractExplicitSignals_checkInputOutput(node);
       
-        // Check for inputs
-        for (auto i : utils::Range(node->getNumInputPorts())) {
-            auto driver = node->getDriver(i);
-
-            if (driver.node == nullptr) {
-                std::cout << "Warning: Unconnected node: Port " << i << " of node '"<<node->getName()<<"' not connected!" << std::endl;
-                std::cout << node->getStackTrace() << std::endl;
-            } else if (driver.node->getGroup() != m_nodeGroup) {
-                
-                ExplicitSignal &explicitSignal = m_explicitSignals[driver];
-                explicitSignal.producerOutput = driver;
-                
-                if (explicitSignal.desiredName.empty())
-                    explicitSignal.desiredName = driver.node->getName(); // prefer driver's name for inputs
-                if (explicitSignal.desiredName.empty())
-                    explicitSignal.desiredName = node->getName();
-                
-                if (driver.node->getGroup() != nullptr && driver.node->getGroup()->isChildOf(m_nodeGroup)) { // Either it is being driven by a child module...
-                    explicitSignal.drivenByChild = true;
-                } else {                                             // .. or by an outside node.
-                    explicitSignal.drivenByExternal = true;
-                }
-            }
-        }
-        
-        // Check for outputs
-        for (auto i : utils::Range(node->getNumOutputPorts())) {
-            if (node->getDirectlyDriven(i).empty()) {
-                std::cout << "Warning: Unused node: Port " << i << " of node '"<<node->getName()<<"' not connected!" << std::endl;
-                std::cout << node->getStackTrace() << std::endl;
-            }
-            hlim::NodePort driver;
-            driver.node = node;
-            driver.port = i;
-            
-            for (auto driven : node->getDirectlyDriven(i)) {
-                if (driven.node->getGroup() != m_nodeGroup) {
-                
-                    ExplicitSignal &explicitSignal = m_explicitSignals[driver];
-                    explicitSignal.producerOutput = driver;
-                    
-                    if (explicitSignal.desiredName.empty())
-                        explicitSignal.desiredName = node->getName(); // prefer own name for outputs
-                    if (explicitSignal.desiredName.empty())
-                        explicitSignal.desiredName = driven.node->getName(); 
-                    
-                    if (driven.node->getGroup() != nullptr && driven.node->getGroup()->isChildOf(m_nodeGroup)) { // Either it is driving a child module...
-                        explicitSignal.drivingChild = true;
-                    } else {                                             // .. or an outside node.
-                        explicitSignal.drivingExternal = true;
-                    }
-                }
-            }
-        }
-        
-        // check for external
-        hlim::Node_External *extNode = dynamic_cast<hlim::Node_External *>(node);
-        if (extNode != nullptr) {
-            for (auto i : utils::Range(extNode->getNumInputPorts())) {
-                hlim::NodePort driver = extNode->getDriver(i);
-
-                if (driver.node == nullptr) {
-                    std::cout << "Warning: Unused node: Port " << i << " of node '"<<extNode->getName()<<"' not connected!" << std::endl;
-                    std::cout << node->getStackTrace() << std::endl;
-                } else {
-                    ExplicitSignal &explicitSignal = m_explicitSignals[driver];
-                    explicitSignal.producerOutput = driver;
-                    
-                    if (explicitSignal.desiredName.empty())
-                        explicitSignal.desiredName = driver.node->getName();
-                    
-                    explicitSignal.drivingChild = true;
-                }                
-            }
-            
-            // Handle output
-            for (auto i : utils::Range(extNode->getNumOutputPorts())) {
-                hlim::NodePort driver;
-                driver.node = extNode;
-                driver.port = i;
-
-                ExplicitSignal &explicitSignal = m_explicitSignals[driver];
-                explicitSignal.producerOutput = driver;
-                
-                if (explicitSignal.desiredName.empty() && !extNode->getDirectlyDriven(i).empty() && dynamic_cast<hlim::Node_Signal*>(extNode->getDirectlyDriven(i)[0].node) != nullptr)
-                    explicitSignal.desiredName = extNode->getDirectlyDriven(i)[0].node->getName();
-                if (explicitSignal.desiredName.empty())
-                    explicitSignal.desiredName = node->getName();                
-                
-                explicitSignal.drivenByChild = true;
-            }
-        }
         
         // Check for multiple use
         for (auto i : utils::Range(node->getNumOutputPorts())) {
@@ -298,72 +409,6 @@ void BaseBlock::extractExplicitSignals()
             }
         }
         
-        // check for registers
-        hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
-        if (regNode != nullptr) {
-            
-            // Handle output
-            {
-                hlim::NodePort driver;
-                driver.node = regNode;
-                driver.port = 0;
-                
-#if 0                
-                // find first explicit or branching signal within same group
-                while (true) {
-                    if (m_explicitSignals.find(driver) == m_explicitSignals.end())
-                        break;
-                    
-                    if (driver.node->getDirectlyDriven(driver.port).size() != 1)
-                        break;
-                    
-                    auto nextInput = driver.node->getDirectlyDriven(driver.port).front();
-                    if (dynamic_cast<hlim::Node_Signal*>(nextInput.node) == nullptr)
-                        break;
-                    
-                    if (nextInput.node->getGroup() != nodeGroup)
-                        break;                    
-                    
-                    driver.node = nextInput.node;
-                    driver.port = 0;
-                }
-
-                ExplicitSignal &explicitSignal = m_explicitSignals[driver];
-                explicitSignal.producerOutput = driver;
-                
-                if (explicitSignal.desiredName.empty())
-                    explicitSignal.desiredName = node->getName();
-#else
-                ExplicitSignal &explicitSignal = m_explicitSignals[driver];
-                explicitSignal.producerOutput = driver;
-                
-                if (explicitSignal.desiredName.empty() && !regNode->getDirectlyDriven(0).empty() && dynamic_cast<hlim::Node_Signal*>(regNode->getDirectlyDriven(0)[0].node) != nullptr)
-                    explicitSignal.desiredName = regNode->getDirectlyDriven(0)[0].node->getName();
-                if (explicitSignal.desiredName.empty())
-                    explicitSignal.desiredName = node->getName();                
-#endif
-                
-                explicitSignal.registerOutput = true;
-            }
-            
-            // Handle inputs (data, enable, reset value)
-            for (auto input : std::array<hlim::Node_Register::Input, 3>{hlim::Node_Register::DATA, hlim::Node_Register::ENABLE, hlim::Node_Register::RESET_VALUE}) {
-                hlim::NodePort driver = regNode->getDriver(input);
-
-                if (driver.node == nullptr) {
-                    std::cout << "Warning: Unused node: Port " << input << " of node '"<<node->getName()<<"' not connected!" << std::endl;
-                    std::cout << node->getStackTrace() << std::endl;
-                } else {
-                    ExplicitSignal &explicitSignal = m_explicitSignals[driver];
-                    explicitSignal.producerOutput = driver;
-                    
-                    if (explicitSignal.desiredName.empty())
-                        explicitSignal.desiredName = driver.node->getName();
-                    
-                    explicitSignal.registerInput = true;
-                }
-            }
-        }
     }
     
     
@@ -386,7 +431,7 @@ void BaseBlock::extractExplicitSignals()
 }
 
 
-void BaseBlock::allocateLocalSignals()
+void Process::allocateLocalSignals()
 {
     for (auto &p : m_explicitSignals) {
         if (m_signalDeclaration.signalNames.find(p.first) != m_signalDeclaration.signalNames.end()) continue;
@@ -396,11 +441,6 @@ void BaseBlock::allocateLocalSignals()
     }
 }
 
-
-Process::Process(Entity &parent, hlim::NodeGroup *nodeGroup) : BaseBlock(&parent.getNamespace(), parent.getRoot().getCodeFormatting(), nodeGroup), m_parent(parent)
-{ 
-    m_name = parent.getNamespace().getGlobalsName(nodeGroup->getName());    
-}
 
 void Process::allocateExternalIOSignals()
 {
@@ -454,7 +494,10 @@ void Process::allocateIntraEntitySignals()
                 auto it = m_parent.getSignalDeclaration().signalNames.find(p.first);
                 if (it == m_parent.getSignalDeclaration().signalNames.end()) {
                     auto actualName = m_parent.getNamespace().allocateName(p.second.desiredName, CodeFormatting::SIG_LOCAL_SIGNAL);
-                    m_parent.getSignalDeclaration().localSignals.push_back(p.first);
+                    if (p.second.drivenByChild)
+                        m_parent.getSignalDeclaration().childInputSignals.push_back(p.first);
+                    else
+                        m_parent.getSignalDeclaration().childOutputSignals.push_back(p.first);
                     m_parent.getSignalDeclaration().signalNames[p.first] = actualName;
                     m_signalDeclaration.signalNames[p.first] = actualName;
                 } else {
@@ -479,12 +522,17 @@ void Process::allocateChildEntitySignals()
             auto it = m_parent.getSignalDeclaration().signalNames.find(p.first);
             if (it == m_parent.getSignalDeclaration().signalNames.end()) {
                 auto actualName = m_parent.getNamespace().allocateName(p.second.desiredName, p.second.drivingChild?CodeFormatting::SIG_CHILD_ENTITY_INPUT:CodeFormatting::SIG_CHILD_ENTITY_OUTPUT);
-                m_parent.getSignalDeclaration().localSignals.push_back(p.first);
+                
+                if (p.second.drivenByChild)
+                    m_parent.getSignalDeclaration().childInputSignals.push_back(p.first);
+                else
+                    m_parent.getSignalDeclaration().childOutputSignals.push_back(p.first);
                 m_parent.getSignalDeclaration().signalNames[p.first] = actualName;
                 m_signalDeclaration.signalNames[p.first] = actualName;
             } else {
                 m_signalDeclaration.signalNames[p.first] = it->second;
             }
+
             if (p.second.drivenByChild)
                 m_signalDeclaration.inputSignals.push_back(p.first);
             else
@@ -518,21 +566,6 @@ void Process::allocateRegisterSignals()
     }
 }
 
-
-bool Process::isInterEntityInputSignal(hlim::NodePort nodePort)
-{
-    return nodePort.node->getGroup() == nullptr || !nodePort.node->getGroup()->isChildOf(m_parent.getNodeGroup());
-}
-
-bool Process::isInterEntityOutputSignal(hlim::NodePort nodePort)
-{
-    for (auto p : nodePort.node->getDirectlyDriven(nodePort.port))
-        if (p.node->getGroup() == nullptr || !p.node->getGroup()->isChildOf(m_parent.getNodeGroup()))
-            return true;
-    return false;
-}
-
-
 void Process::formatExpression(std::ostream &stream, const hlim::NodePort &nodePort, std::set<hlim::NodePort> &dependentInputs, bool forceUnfold) 
 {
     if (nodePort.node == nullptr) {
@@ -544,6 +577,10 @@ void Process::formatExpression(std::ostream &stream, const hlim::NodePort &nodeP
         stream << m_signalDeclaration.signalNames[nodePort];
         dependentInputs.insert(nodePort);
         return;
+    }
+    
+    if (dynamic_cast<const hlim::Node_Register*>(nodePort.node)) {
+        std::cout << "Encountered register in format expression!" << std::endl;
     }
     
     const hlim::Node_Signal *signalNode = dynamic_cast<const hlim::Node_Signal *>(nodePort.node);
@@ -670,8 +707,10 @@ void Process::formatExpression(std::ostream &stream, const hlim::NodePort &nodeP
             sep = '\'';
 
         stream << sep;
-        for (bool b : constNode->getValue().bitVec)
+        for (auto idx : utils::Range(constNode->getValue().bitVec.size())) {
+            bool b = constNode->getValue().bitVec[constNode->getValue().bitVec.size()-1-idx];
             stream << (b ? '1' : '0');
+        }
         stream << sep;
         return;
     }
@@ -731,6 +770,8 @@ void Process::write(std::fstream &file)
         std::vector<Statement> statements;
         
         auto constructStatementsFor = [&](hlim::NodePort nodePort) {
+            if (nodePort.node->getGroup() != m_nodeGroup) return;
+            
             std::stringstream code;
             codeFormatting.indent(code, 3);
             
@@ -841,14 +882,16 @@ void Process::write(std::fstream &file)
             constructStatementsFor(s);
         
         
-        
-        
-        
-        
         std::set<hlim::NodePort> signalsReady;
         for (auto s : m_signalDeclaration.inputSignals) 
             signalsReady.insert(s);
 
+        for (auto s : m_parent.getSignalDeclaration().childInputSignals) 
+            signalsReady.insert(s);
+
+        for (auto s : m_parent.getSignalDeclaration().inputSignals) 
+            signalsReady.insert(s);
+        
         /// @todo: Will deadlock for circular dependency
         while (!statements.empty()) {
             for (auto i : utils::Range(statements.size())) {
@@ -863,7 +906,7 @@ void Process::write(std::fstream &file)
                     }
                 
                 if (ready) {
-                    file << statement.code;
+                    file << statement.code << std::flush;
 
                     for (auto s : statement.outputs)
                         signalsReady.insert(s);
@@ -925,6 +968,115 @@ void Process::write(std::fstream &file)
 
 
 
+void Block::buildFrom(hlim::NodeGroup *nodeGroup)
+{
+}
+
+void Block::propagateIOSignalsFromChildren()
+{
+    for (auto &process : m_processes) 
+        propagateIOSignalsFromChild(&process);
+    for (auto entity : m_subEntities) 
+        propagateIOSignalsFromChild(entity);
+}
+
+void Block::propagateIOSignalsFromChild(BaseBlock *child)
+{
+    bool childIsProcess = dynamic_cast<Process*>(child) != nullptr;
+    
+    for (auto &explicitSignal : child->getExplicitSignals()) {
+        if (explicitSignal.second.drivenByExternal || explicitSignal.second.drivingExternal) {
+            ExplicitSignal &es = m_explicitSignals[explicitSignal.second.producerOutput];
+            es.producerOutput = explicitSignal.second.producerOutput;
+            es.drivingChild = !explicitSignal.second.drivingExternal;
+            es.drivenByChild = !explicitSignal.second.drivenByExternal;
+            
+            BaseBlock *block = m_hlim2astMapping.getBlock(es.producerOutput.node);
+            if (block == nullptr || (block != this && block->isChildOf(this))) {
+                es.drivenByExternal = !explicitSignal.second.drivenByExternal;
+            }
+            
+            for (
+            es.drivingExternal = explicitSignal.second.drivingExternal;
+        }
+        
+        if (childIsProcess) {
+            if (explicitSignal.second.registerInput || explicitSignal.second.registerOutput) {
+                
+            }
+        }
+    }
+}
+
+
+void Block::extractExplicitSignals()
+{
+    for (auto node : m_externalNodes) {
+        // Check for inputs
+        for (auto i : utils::Range(node->getNumInputPorts())) {
+            auto driver = node->getDriver(i);
+
+            if (driver.node == nullptr) {
+                std::cout << "Warning: Unconnected node: Port " << i << " of node '"<<node->getName()<<"' not connected!" << std::endl;
+                std::cout << node->getStackTrace() << std::endl;
+            } else {
+                ExplicitSignal &explicitSignal = m_explicitSignals[driver];
+                explicitSignal.producerOutput = driver;
+                
+                if (explicitSignal.desiredName.empty())
+                    explicitSignal.desiredName = driver.node->getName(); // prefer driver's name for inputs
+                if (explicitSignal.desiredName.empty())
+                    explicitSignal.desiredName = node->getName();
+                
+                explicitSignal.drivingChild = true;
+                
+                BaseBlock *driverBlock = m_hlim2astMapping.getBlock(driver.node);
+                if (driverBlock != this) {
+                    if (driverBlock != nullptr && driverBlock->isChildOf(this)) { // Either it is being driven by a child module...
+                        explicitSignal.drivenByChild = true;
+                    } else {                                             // .. or by an outside node.
+                        explicitSignal.drivenByExternal = true;
+                    }
+                }
+            }
+        }
+        
+        // Check for outputs
+        for (auto i : utils::Range(node->getNumOutputPorts())) {
+            if (node->getDirectlyDriven(i).empty()) {
+                std::cout << "Warning: Unused node: Port " << i << " of node '"<<node->getName()<<"' not connected!" << std::endl;
+                std::cout << node->getStackTrace() << std::endl;
+            }
+            hlim::NodePort driver;
+            driver.node = node;
+            driver.port = i;
+            
+            for (auto driven : node->getDirectlyDriven(i)) {
+                ExplicitSignal &explicitSignal = m_explicitSignals[driver];
+                explicitSignal.producerOutput = driver;
+                
+                if (explicitSignal.desiredName.empty())
+                    explicitSignal.desiredName = node->getName(); // prefer own name for outputs
+                if (explicitSignal.desiredName.empty())
+                    explicitSignal.desiredName = driven.node->getName(); 
+
+                explicitSignal.drivenByChild = true;
+
+                BaseBlock *drivenBlock = m_hlim2astMapping.getBlock(driven.node);
+                if (drivenBlock != this) {
+                    if (drivenBlock != nullptr && drivenBlock->isChildOf(this)) { // Either it is driving a child module...
+                        explicitSignal.drivingChild = true;
+                    } else {                                             // .. or an outside node.
+                        explicitSignal.drivingExternal = true;
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
 Entity::Entity(Root &root) : m_root(root)
 {
     m_namespace.setup(&m_root.getNamespace(), m_root.getCodeFormatting());
@@ -938,19 +1090,96 @@ void Entity::buildFrom(hlim::NodeGroup *nodeGroup)
     
     m_name = m_root.getNamespace().getGlobalsName(nodeGroup->getName());
     
+
+    NodeGroupInfo grpInfo;
+    grpInfo.buildFrom(nodeGroup, false);
+    
+    // create sub entities
+    for (auto &subEntity : grpInfo.subEntities) {
+        m_subEntities.push_back(&m_root.createEntity());
+        m_subEntities.back()->buildFrom(subEntity);
+    }
+    
+    // create external nodes
+    m_externalNodes = std::move(grpInfo.externalNodes);
+    
+    // create default process for nodes
+    // m_defaultProcesses = ...
+    
+    
+    for (auto &subArea : grpInfo.subAreas) {
+        NodeGroupInfo areaInfo;
+        areaInfo.buildFrom(subArea, false);
+        
+        // If there is nothing but logic inside it's a process, otherwise a block
+        if (areaInfo.externalNodes.empty() && 
+            areaInfo.subEntities.empty() &&
+            areaInfo.subAreas.empty()) {
+            
+            m_processes.push_back(Process(*this, subArea));
+            auto &process = m_processes.back();
+            process.extractExplicitSignals();
+            
+            // create process (pair)
+            
+        } else {
+            
+            // create block
+            m_blocks.push_back(Block(*this, subArea));
+            auto &block = m_blocks.back();
+            //process.extractExplicitSignals();
+            
+            for (auto &subSubArea : areaInfo.subAreas) {
+
+                // Merge reccursively into process (pair)
+                NodeGroupInfo subAreaInfo;
+                subAreaInfo.buildFrom(subSubArea, true);
+
+                // create process
+                m_processes.push_back(Process(&block, subSubArea));
+                auto &process = m_processes.back();
+                process.extractExplicitSignals();
+                
+            }
+        }
+    }
+    
+    
+    
+    std::vector<NodeGroup*> subEntities;
+    std::vector<NodeGroup*> subBlocks;
+
+
+
+    for (auto &childGroup : nodeGroup->getChildren()) {
+        switch (childGroup->getGroupType()) {
+            case hlim::NodeGroup::GRP_ENTITY:
+            break;
+            case hlim::NodeGroup::GRP_AREA: {
+                
+                
+            } break;
+        }
+    }
+
+    
+    
     for (auto &childGroup : nodeGroup->getChildren()) {
         
         switch (childGroup->getGroupType()) {
             case hlim::NodeGroup::GRP_ENTITY:
                 m_subEntities.push_back(&m_root.createEntity());
                 m_subEntities.back()->buildFrom(childGroup.get());
+                MHDL_ASSERT(false);
             break;
-            case hlim::NodeGroup::GRP_AREA:
+            case hlim::NodeGroup::GRP_AREA: {
+                std::vector<Entity*> thisProcessSubEntities;
                 for (auto &subChildGroup : childGroup->getChildren()) {
                     switch (subChildGroup->getGroupType()) {
                         case hlim::NodeGroup::GRP_ENTITY:
                             m_subEntities.push_back(&m_root.createEntity());
                             m_subEntities.back()->buildFrom(subChildGroup.get());
+                            thisProcessSubEntities.push_back(m_subEntities.back());
                         break;
                         default:
                             MHDL_ASSERT_HINT(false, "Unhandled case!");
@@ -958,12 +1187,90 @@ void Entity::buildFrom(hlim::NodeGroup *nodeGroup)
                 }
                 
                 m_processes.push_back(Process(*this, childGroup.get()));
-                m_processes.back().extractExplicitSignals();
-            break;
+                auto &process = m_processes.back();
+                process.extractExplicitSignals();
+
+                for (auto subEntity : thisProcessSubEntities) {
+                    for (auto subSig : subEntity->m_signalDeclaration.inputSignals) {
+                        ExplicitSignal &explicitSignal = process.getExplicitSignals()[subSig];
+                        explicitSignal.producerOutput = subSig;
+                        
+                        if (explicitSignal.desiredName.empty())
+                            explicitSignal.desiredName = subEntity->m_signalDeclaration.signalNames[subSig];
+
+                        explicitSignal.drivingChild = true;
+                        
+                        if (subSig.node->getGroup() == nullptr) {
+                            explicitSignal.drivenByExternal = true;
+                        } else {
+                            if (subSig.node->getGroup()->isChildOf(m_nodeGroup)) {
+                                if (subSig.node->getGroup() != childGroup.get())
+                                    explicitSignal.drivenByChild = true;
+                            } else 
+                                explicitSignal.drivenByExternal = true;
+                        }
+                    }
+                    for (auto subSig : subEntity->m_signalDeclaration.outputSignals) {
+                        ExplicitSignal &explicitSignal = process.getExplicitSignals()[subSig];
+                        explicitSignal.producerOutput = subSig;
+                        
+                        if (explicitSignal.desiredName.empty())
+                            explicitSignal.desiredName = subEntity->m_signalDeclaration.signalNames[subSig];
+
+                        explicitSignal.drivenByChild = true;
+                        
+                        for (auto driven : subSig.node->getDirectlyDriven(subSig.port)) {
+                            if (driven.node->getGroup() != m_nodeGroup) {
+                            
+                            if (driven.node->getGroup() != nullptr && driven.node->getGroup()->isChildOf(m_nodeGroup)) { // Either it is driving a child module...
+                                explicitSignal.drivingChild = true;
+                            } else {                                             // .. or an outside node.
+                                explicitSignal.drivingExternal = true;
+                            }
+                        }
+                    }
+                }
+                    
+#if 0                    
+                    for (auto subSig : subEntity->m_signalDeclaration.inputSignals) {
+                        auto it = m_signalDeclaration.signalNames.find(subSig);
+                        if (it == m_signalDeclaration.signalNames.end()) {
+                            const std::string &subSigName = subEntity->m_signalDeclaration.signalNames[subSig];
+                            if (subSig.node->getGroup() == nullptr || !subSig.node->getGroup()->isChildOf(m_nodeGroup)) {
+                                auto actualName = m_namespace.allocateName(subSigName, CodeFormatting::SIG_ENTITY_INPUT);
+                                m_signalDeclaration.inputSignals.push_back(subSig);
+                                m_signalDeclaration.signalNames[subSig] = actualName;
+                            } else {
+                                auto actualName = m_namespace.allocateName(subSigName, CodeFormatting::SIG_LOCAL_SIGNAL);
+                                m_signalDeclaration.childOutputSignals.push_back(subSig);
+                                m_signalDeclaration.signalNames[subSig] = actualName;
+                            }
+                        }
+                    }
+                    for (auto subSig : subEntity->m_signalDeclaration.outputSignals) {
+                        auto it = m_signalDeclaration.signalNames.find(subSig);
+                        if (it == m_signalDeclaration.signalNames.end()) {
+                            const std::string &subSigName = subEntity->m_signalDeclaration.signalNames[subSig];
+                            if (subSig.node->getGroup() == nullptr || !subSig.node->getGroup()->isChildOf(m_nodeGroup)) {
+                                auto actualName = m_namespace.allocateName(subSigName, CodeFormatting::SIG_ENTITY_OUTPUT);
+                                m_signalDeclaration.outputSignals.push_back(subSig);
+                                m_signalDeclaration.signalNames[subSig] = actualName;
+                            } else {
+                                auto actualName = m_namespace.allocateName(subSigName, CodeFormatting::SIG_LOCAL_SIGNAL);
+                                m_signalDeclaration.childInputSignals.push_back(subSig);
+                                m_signalDeclaration.signalNames[subSig] = actualName;
+                            }
+                        }
+                    }
+#endif
+                }    
+                
+            } break;
             default:
                 MHDL_ASSERT_HINT(false, "Unhandled case!");
         }
     }
+   
     
     // Prioritize signal name allocation
 
@@ -972,45 +1279,12 @@ void Entity::buildFrom(hlim::NodeGroup *nodeGroup)
     
     for (auto &process : m_processes)
         process.allocateIntraEntitySignals();
-    
+
     for (auto &process : m_processes)
         process.allocateRegisterSignals();
 
     for (auto &process : m_processes)
         process.allocateChildEntitySignals();
-    
-    for (auto subEntity : m_subEntities) {
-        for (auto subSig : subEntity->m_signalDeclaration.inputSignals) {
-            auto it = m_signalDeclaration.signalNames.find(subSig);
-            if (it == m_signalDeclaration.signalNames.end()) {
-                const std::string &subSigName = subEntity->m_signalDeclaration.signalNames[subSig];
-                if (subSig.node->getGroup() == nullptr || !subSig.node->getGroup()->isChildOf(m_nodeGroup)) {
-                    auto actualName = m_namespace.allocateName(subSigName, CodeFormatting::SIG_ENTITY_INPUT);
-                    m_signalDeclaration.inputSignals.push_back(subSig);
-                    m_signalDeclaration.signalNames[subSig] = actualName;
-                } else {
-                    auto actualName = m_namespace.allocateName(subSigName, CodeFormatting::SIG_LOCAL_SIGNAL);
-                    m_signalDeclaration.localSignals.push_back(subSig);
-                    m_signalDeclaration.signalNames[subSig] = actualName;
-                }
-            }
-        }
-        for (auto subSig : subEntity->m_signalDeclaration.outputSignals) {
-            auto it = m_signalDeclaration.signalNames.find(subSig);
-            if (it == m_signalDeclaration.signalNames.end()) {
-                const std::string &subSigName = subEntity->m_signalDeclaration.signalNames[subSig];
-                if (subSig.node->getGroup() == nullptr || !subSig.node->getGroup()->isChildOf(m_nodeGroup)) {
-                    auto actualName = m_namespace.allocateName(subSigName, CodeFormatting::SIG_ENTITY_OUTPUT);
-                    m_signalDeclaration.outputSignals.push_back(subSig);
-                    m_signalDeclaration.signalNames[subSig] = actualName;
-                } else {
-                    auto actualName = m_namespace.allocateName(subSigName, CodeFormatting::SIG_LOCAL_SIGNAL);
-                    m_signalDeclaration.localSignals.push_back(subSig);
-                    m_signalDeclaration.signalNames[subSig] = actualName;
-                }
-            }
-        }
-    }    
 
     for (auto &process : m_processes)
         process.allocateLocalSignals();
@@ -1095,7 +1369,18 @@ void Entity::write(std::filesystem::path destination)
         formatConnectionType(file, signal.node->getOutputConnectionType(signal.port));
         file << "; "<< std::endl;
     }        
-    
+    for (const auto &signal : m_signalDeclaration.childInputSignals) {
+        codeFormatting.indent(file, 1);
+        file << "SIGNAL " << m_signalDeclaration.signalNames[signal] << " : ";
+        formatConnectionType(file, signal.node->getOutputConnectionType(signal.port));
+        file << "; "<< std::endl;
+    }        
+    for (const auto &signal : m_signalDeclaration.childOutputSignals) {
+        codeFormatting.indent(file, 1);
+        file << "SIGNAL " << m_signalDeclaration.signalNames[signal] << " : ";
+        formatConnectionType(file, signal.node->getOutputConnectionType(signal.port));
+        file << "; "<< std::endl;
+    }        
     file << "BEGIN" << std::endl;
     
     for (auto subEntity : m_subEntities) {

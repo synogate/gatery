@@ -44,7 +44,9 @@ class BaseNode : public NodeIO
         inline const utils::StackTrace &getStackTrace() const { return m_stackTrace; }
 
         inline void setName(std::string name) { m_name = std::move(name); }
+        inline void setComment(std::string comment) { m_comment = std::move(comment); }
         inline const std::string &getName() const { return m_name; }
+        inline const std::string &getComment() const { return m_comment; }
         
         bool isOrphaned() const;
         
@@ -63,6 +65,7 @@ class BaseNode : public NodeIO
     protected:
 
         std::string m_name;
+        std::string m_comment;
         utils::StackTrace m_stackTrace;
         NodeGroup *m_nodeGroup = nullptr;
         std::vector<BaseClock*> m_clocks;

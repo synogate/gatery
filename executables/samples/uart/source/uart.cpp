@@ -19,6 +19,7 @@
 
 #include "uart.h"
 
+#include <metaHDL_core/frontend/Comments.h>
 #include <metaHDL_core/frontend/Constant.h>
 #include <metaHDL_core/frontend/Registers.h>
 #include <metaHDL_core/frontend/Integers.h>
@@ -48,10 +49,9 @@ void UartTransmitter::operator()(const BitVector &inputData, Bit send, Bit &outp
 
 
     GroupScope entity(NodeGroup::GRP_ENTITY);
-    entity.setName("UartTransmitter");
-    
-    GroupScope area(NodeGroup::GRP_AREA);
-    area.setName("all");
+    entity
+        .setName("UartTransmitter")
+        .setComment("Sends data with the full baudrate of the clock speed for maximum awesomeness.");
     
     // todo: constants!
     Bit enable = 1_bit;
@@ -85,29 +85,46 @@ void UartTransmitter::operator()(const BitVector &inputData, Bit send, Bit &outp
     auto nextData = mux(loadingData, shiftedData, inputData);
     MHDL_NAMED(nextData);
     
-    
     {
-        PriorityConditional<Bit> con;
-        
-        con
-            .addCondition(done, 1_bit)           // Send stop bit if done
-            .addCondition(!idle, currentData[0]) // Send data bits if not idle
-            .addCondition(loadingData, 0_bit);   // Send start bit while loading data
+        GroupScope area(NodeGroup::GRP_AREA);
+        area
+            .setName("areaToForceBlocks")
+            .setComment("This area scope is just here to force a BLOCK in vhdl.");
+    
+        {
+            GroupScope area(NodeGroup::GRP_AREA);
+            area.setName("outputHandling");
             
-        // Default to high (idle state).
-        outputLine = con(1_bit);
-    }
-    
-
-    driveWith(currentData, reg(nextData, enable, 0x00_vec));
-    
-    auto nextIdle = idle;
-    MHDL_NAMED(nextIdle);
-    // if loading new data not idle in next step
-    nextIdle = mux(loadingData, nextIdle, 0_bit);
-    // if done, idle in next step
-    nextIdle = mux(done, nextIdle, 1_bit);
+            PriorityConditional<Bit> con;
+            
+            con
+                .addCondition(done, 1_bit)           // Send stop bit if done
+                .addCondition(!idle, currentData[0]) // Send data bits if not idle
+                .addCondition(loadingData, 0_bit);   // Send start bit while loading data
+                
+            // Default to high (idle state).
+            outputLine = con(1_bit);
+        }
         
-    driveWith(idle, reg(nextIdle, enable, 1_bit));
+
+        driveWith(currentData, reg(nextData, enable, 0x00_vec));
+        
+        {
+            GroupScope area(NodeGroup::GRP_AREA);
+            area.setName("stateMachine");
+            
+            MHDL_COMMENT << "By default the next state is 'idle'.";
+            auto nextIdle = idle;
+            MHDL_NAMED(nextIdle);
+            
+            MHDL_COMMENT << "if loading new data not idle in next step";
+            nextIdle = mux(loadingData, nextIdle, 0_bit);
+            
+            MHDL_COMMENT << "if done, idle in next step";
+            nextIdle = mux(done, nextIdle, 1_bit);
+                
+            driveWith(idle, reg(nextIdle, enable, 1_bit));
+        }
+    }
 }
 

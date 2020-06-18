@@ -3,10 +3,24 @@ cmake_minimum_required (VERSION 3.0)
 find_package(Boost COMPONENTS system thread REQUIRED) 
 
 add_library(metaHDL_core STATIC
+    source/metaHDL_core/export/vhdl/AST.cpp
+    source/metaHDL_core/export/vhdl/AST.h
+    source/metaHDL_core/export/vhdl/BaseGrouping.cpp
+    source/metaHDL_core/export/vhdl/BaseGrouping.h
+    source/metaHDL_core/export/vhdl/BasicBlock.cpp
+    source/metaHDL_core/export/vhdl/BasicBlock.h
+    source/metaHDL_core/export/vhdl/Block.cpp
+    source/metaHDL_core/export/vhdl/Block.h
     source/metaHDL_core/export/vhdl/CodeFormatting.cpp
     source/metaHDL_core/export/vhdl/CodeFormatting.h
-    source/metaHDL_core/export/vhdl/VHDL_AST.cpp
-    source/metaHDL_core/export/vhdl/VHDL_AST.h
+    source/metaHDL_core/export/vhdl/Entity.cpp
+    source/metaHDL_core/export/vhdl/Entity.h
+    source/metaHDL_core/export/vhdl/NamespaceScope.cpp
+    source/metaHDL_core/export/vhdl/NamespaceScope.h
+    source/metaHDL_core/export/vhdl/Process.cpp
+    source/metaHDL_core/export/vhdl/Process.h
+    #source/metaHDL_core/export/vhdl/VHDL_AST.cpp
+    #source/metaHDL_core/export/vhdl/VHDL_AST.h
     source/metaHDL_core/export/vhdl/VHDLExport.cpp
     source/metaHDL_core/export/vhdl/VHDLExport.h
 
@@ -14,6 +28,8 @@ add_library(metaHDL_core STATIC
     source/metaHDL_core/frontend/Bit.h
     source/metaHDL_core/frontend/BitVector.cpp
     source/metaHDL_core/frontend/BitVector.h
+    source/metaHDL_core/frontend/Comments.cpp
+    source/metaHDL_core/frontend/Comments.h
     source/metaHDL_core/frontend/Integers.cpp
     source/metaHDL_core/frontend/Integers.h
     source/metaHDL_core/frontend/PriorityConditional.cpp

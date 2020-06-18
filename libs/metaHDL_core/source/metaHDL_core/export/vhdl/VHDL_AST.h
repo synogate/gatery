@@ -2,9 +2,11 @@
 
 #include "CodeFormatting.h"
 
+#include "../../hlim/Clock.h"
 #include "../../hlim/Node.h"
 #include "../../hlim/NodeGroup.h"
 #include "../../hlim/Circuit.h"
+#include "../../hlim/NodeSet.h"
 
 
 #include <filesystem>
@@ -14,8 +16,36 @@
 #include <list>
 #include <vector>
 
+namespace mhdl::core::hlim {
+    class Node_External;
+}
+
 namespace mhdl::core::vhdl::ast {
 
+    
+struct NodeGroupInfo
+{
+    std::vector<hlim::BaseNode*> nodes;
+    std::vector<hlim::Node_External*> externalNodes;
+    std::vector<hlim::NodeGroup*> subEntities;
+    std::vector<hlim::NodeGroup*> subAreas;
+    
+    void buildFrom(hlim::NodeGroup *nodeGroup, bool mergeAreasReccursive);
+};
+
+
+class BaseBlock;
+
+class Hlim2AstMapping
+{
+    public:
+        void assignNodeToBlock(hlim::BaseNode *node, BaseBlock *block);
+        BaseBlock *getBlock(hlim::BaseNode *node) const;
+    protected:
+        std::map<hlim::BaseNode*, BaseBlock*> m_node2Block;
+};
+    
+    
 class Namespace {
     public:
         /// Creates/retrieves name of a node (usually a signal).
@@ -59,44 +89,49 @@ struct SignalDeclaration {
     std::vector<hlim::NodePort> inputSignals;
     std::vector<hlim::NodePort> outputSignals;
     std::vector<hlim::NodePort> localSignals;
-    // clock, reset, pins, ...
-    std::vector<std::string> globalInputs;
-    // clock, reset, pins, ...
-    std::vector<std::string> globalOutputs;
+    std::vector<hlim::NodePort> childInputSignals;
+    std::vector<hlim::NodePort> childOutputSignals;
     
+    std::map<std::string, std::string> resetNames;
     std::map<hlim::NodePort, std::string> signalNames;
+    std::map<hlim::BaseClock*, std::string> clockNames;
 };
 
 class BaseBlock {
     public:
-        BaseBlock(Namespace *parent, CodeFormatting *codeFormatting, hlim::NodeGroup *nodeGroup);
+        BaseBlock(BaseBlock *parent, Hlim2AstMapping &hlim2astMapping, CodeFormatting *codeFormatting, hlim::NodeGroup *nodeGroup);
+        virtual ~BaseBlock() { }
+                
+        inline std::map<hlim::NodePort, ExplicitSignal> &getExplicitSignals() { return m_explicitSignals; }
+        inline SignalDeclaration &getSignalDeclaration() { return m_signalDeclaration; }
+        inline Namespace &getNamespace() { return m_namespace; }
+        inline hlim::NodeGroup *getNodeGroup() { return m_nodeGroup; }
         
-        void extractExplicitSignals();
+        inline BaseBlock *getParent() const { return m_parent; }
+        bool isChildOf(const BaseBlock *other) const;
         
-        void allocateLocalSignals();
+        void inheritSignalsFromParent();        
     protected:
+        BaseBlock *m_parent;
+        Hlim2AstMapping &m_hlim2astMapping;
         Namespace m_namespace;
         SignalDeclaration m_signalDeclaration;        
-        hlim::NodeGroup *m_nodeGroup;
         std::map<hlim::NodePort, ExplicitSignal> m_explicitSignals;
-        
-};
+        std::set<std::string> m_resets;
+        std::set<hlim::BaseClock*> m_clocks;
+        hlim::NodeGroup *m_nodeGroup;
+        std::string m_name;
+        std::string m_comment;
 
-class Procedure : public BaseBlock
-{
-    public:
-    protected:
-        Procedure *m_identicalProcedure = nullptr;
+        void extractExplicitSignals_checkInputOutput(hlim::BaseNode *node);
 };
 
 struct RegisterConfig
 {
-    std::string clockSignal;
+    hlim::BaseClock *clockSignal;
     std::string resetSignal;
     bool raisingEdge;
     bool synchronousReset;
-    
-    std::vector<hlim::Node_Register*> registerNodes;
 };
 
 class Entity;
@@ -104,8 +139,12 @@ class Entity;
 class Process : public BaseBlock
 {
     public:
-        Process(Entity &parent, hlim::NodeGroup *nodeGroup);
+        Process(BaseBlock *parent, Hlim2AstMapping &hlim2astMapping, CodeFormatting *codeFormatting, hlim::NodeGroup *nodeGroup, const std::vector<hlim::BaseNode*> &nodes);
+        virtual ~Process() { }
         
+        void extractExplicitSignals();
+        
+        void allocateLocalSignals();
         void allocateExternalIOSignals();
         void allocateIntraEntitySignals();
         void allocateChildEntitySignals();
@@ -114,45 +153,46 @@ class Process : public BaseBlock
         inline const std::string &getName() const { return m_name; }
         
         void write(std::fstream &file);
-        
     protected:
-        Entity &m_parent;
-        std::string m_name;
-        std::list<RegisterConfig> m_registerConfigs;
-        
-        bool isInterEntityInputSignal(hlim::NodePort nodePort);
-        bool isInterEntityOutputSignal(hlim::NodePort nodePort);
+        std::vector<hlim::BaseNode*> m_combinatoryNodes;
+        std::map<RegisterConfig, std::vector<hlim::BaseNode*>> m_registerNodes;
         
         void formatExpression(std::ostream &stream, const hlim::NodePort &nodePort, std::set<hlim::NodePort> &dependentInputs, bool forceUnfold = false);
 };
 
+class Block : public BaseBlock
+{
+    public:
+        void buildFrom(hlim::NodeGroup *nodeGroup);
+
+        void propagateIOSignalsFromChildren();
+        void extractExplicitSignals();
+    protected:
+        void propagateIOSignalsFromChild(BaseBlock *child);
+        std::vector<Entity*> m_subEntities;
+        std::vector<hlim::Node_External*> m_externalNodes;
+        std::list<Process> m_processes;
+};
 
 class Root;
 
-class Entity
+class Entity : public Block
 {
     public:
         Entity(Root &root);
         void buildFrom(hlim::NodeGroup *nodeGroup);
+        
 
         void print();
         void write(std::filesystem::path destination);
         
         
-        inline SignalDeclaration &getSignalDeclaration() { return m_signalDeclaration; }
         inline Root &getRoot() { return m_root; }
-        inline Namespace &getNamespace() { return m_namespace; }
-        hlim::NodeGroup *getNodeGroup() { return m_nodeGroup; }
     protected:
         Root &m_root;        
-        hlim::NodeGroup *m_nodeGroup;
-        std::string m_name;
-        Namespace m_namespace;
-        SignalDeclaration m_signalDeclaration;
-        std::vector<Entity*> m_subEntities;
-        std::list<Process> m_processes;
 
         Entity *m_identicalEntity = nullptr;
+        std::list<Block> m_blocks;
 };
 
 class Root

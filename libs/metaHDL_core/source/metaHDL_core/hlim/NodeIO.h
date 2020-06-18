@@ -69,6 +69,7 @@ class NodeIO
         enum OutputType {
             OUTPUT_IMMEDIATE,
             OUTPUT_LATCHED,
+            // latched and immediate
             OUTPUT_CONSTANT
         };
 

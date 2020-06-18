@@ -21,6 +21,12 @@ GroupScope &GroupScope::setName(std::string name)
     return *this;
 }
 
+GroupScope &GroupScope::setComment(std::string comment)
+{
+    m_nodeGroup->setComment(std::move(comment));
+    return *this;
+}
+
 
 DesignScope::DesignScope() : BaseScope<DesignScope>(), m_rootScope(m_circuit.getRootNodeGroup())
 { 

@@ -25,19 +25,8 @@ R"Delim(
 -- will be lost uppon regeneration.
 --------------------------------------------------------------------
 )Delim";
-}
 
-std::filesystem::path DefaultCodeFormatting::getFilename(const hlim::NodeGroup *nodeGroup) const {
-    
-    std::filesystem::path path = nodeGroup->getName() + ".vhdl";
-    
-    const hlim::NodeGroup *parent = nodeGroup->getParent();
-    while (parent != nullptr) {
-        path = parent->getName() / path;
-        parent = parent->getParent();
-    }
-    
-    return path;
+    m_filenameExtension = ".vhdl";
 }
 
 std::string DefaultCodeFormatting::getNodeName(const hlim::BaseNode *node, unsigned attempt) const
@@ -74,11 +63,44 @@ std::string DefaultCodeFormatting::getSignalName(const std::string &desiredName,
     return (boost::format("%s_%d") % initialName % (attempt+1)).str();
 }
 
-std::string DefaultCodeFormatting::getGlobalName(const std::string &id, unsigned attempt) const
+std::string DefaultCodeFormatting::getEntityName(const std::string &desiredName, unsigned attempt) const
 {
-    std::string initialName = id;
+    std::string initialName = desiredName;
     if (initialName.empty())
-        initialName = "unnamed";
+        initialName = "UnnamedEntity";
+    if (attempt == 0)
+        return initialName;
+    
+    return (boost::format("%s_%d") % initialName % (attempt+1)).str();
+}
+
+std::string DefaultCodeFormatting::getBlockName(const std::string &desiredName, unsigned attempt) const
+{
+    std::string initialName = desiredName;
+    if (initialName.empty())
+        initialName = "unnamedBlock";
+    if (attempt == 0)
+        return initialName;
+    
+    return (boost::format("%s_%d") % initialName % (attempt+1)).str();
+}
+
+std::string DefaultCodeFormatting::getProcessName(const std::string &desiredName, bool clocked, unsigned attempt) const
+{
+    std::string initialName = desiredName;
+    if (initialName.empty())
+        initialName = "unnamedProcess";
+    if (attempt == 0)
+        return initialName + (clocked?"_reg":"_comb");
+    
+    return (boost::format("%s_%d_%s") % initialName % (attempt+1) % (clocked?"_reg":"_comb")).str();
+}
+
+std::string DefaultCodeFormatting::getClockName(const std::string &desiredName, unsigned attempt) const
+{
+    std::string initialName = desiredName;
+    if (initialName.empty())
+        initialName = "unnamedClock";
     if (attempt == 0)
         return initialName;
     
@@ -86,15 +108,141 @@ std::string DefaultCodeFormatting::getGlobalName(const std::string &id, unsigned
 }
 
 
+
+void DefaultCodeFormatting::formatEntityComment(std::ostream &stream, const std::string &entityName, const std::string &comment)
+{
+    stream 
+        << "------------------------------------------------" << std::endl
+        << "--  Entity: " << entityName << std::endl
+        << "-- ";
+    for (char c : comment) {
+        switch (c) {
+            case '\n':
+                stream << std::endl << "-- ";
+            break;
+            case '\r':
+            break;
+            default:
+                stream << c;
+            break;
+        }
+    }
+    stream << std::endl
+           << "------------------------------------------------" << std::endl << std::endl;
+}
+
+void DefaultCodeFormatting::formatBlockComment(std::ostream &stream, const std::string &blockName, const std::string &comment)
+{
+    if (comment.empty()) return;
+    indent(stream, 1);
+    stream 
+        << "------------------------------------------------" << std::endl;
+    indent(stream, 1);
+    stream 
+        << "-- ";
+    for (char c : comment) {
+        switch (c) {
+            case '\n':
+                stream << std::endl;
+                indent(stream, 1);
+                stream 
+                    << "-- ";
+            break;
+            case '\r':
+            break;
+            default:
+                stream << c;
+            break;
+        }
+    }
+    stream << std::endl;
+    indent(stream, 1);
+    stream
+        << "------------------------------------------------" << std::endl;
+}
+
+void DefaultCodeFormatting::formatProcessComment(std::ostream &stream, unsigned indentation, const std::string &processName, const std::string &comment)
+{
+    if (comment.empty()) return;
+    indent(stream, indentation);
+    stream 
+        << "-- ";
+    for (char c : comment) {
+        switch (c) {
+            case '\n':
+                stream << std::endl;
+                indent(stream, indentation);
+                stream 
+                    << "-- ";
+            break;
+            case '\r':
+            break;
+            default:
+                stream << c;
+            break;
+        }
+    }
+    stream << std::endl;
+}
+
+void DefaultCodeFormatting::formatCodeComment(std::ostream &stream, unsigned indentation, const std::string &comment)
+{
+    if (comment.empty()) return;
+    stream << std::endl;
+    indent(stream, indentation);
+    stream
+        << "-- ";
+    for (char c : comment) {
+        switch (c) {
+            case '\n':
+                stream << std::endl;
+                indent(stream, indentation);
+                stream 
+                    << "-- ";
+            break;
+            case '\r':
+            break;
+            default:
+                stream << c;
+            break;
+        }
+    }
+    stream << std::endl;
+}
+
+
+void DefaultCodeFormatting::formatConnectionType(std::ostream &stream, const hlim::ConnectionType &connectionType) 
+{
+    switch (connectionType.interpretation) {
+        case hlim::ConnectionType::BOOL:
+            stream << "STD_LOGIC";
+        break;
+        case hlim::ConnectionType::RAW:
+            stream << "STD_LOGIC_VECTOR("<<connectionType.width-1 << " downto 0)";
+        break;
+        case hlim::ConnectionType::UNSIGNED:
+            stream << "UNSIGNED("<<connectionType.width-1 << " downto 0)";
+        break;
+        case hlim::ConnectionType::SIGNED_2COMPLEMENT:
+            stream << "INTEGER("<<connectionType.width-1 << " downto 0)";
+        break;
+        
+        default:
+            stream << "UNHANDLED_DATA_TYPE";
+    };
+}
+
+
+
 void DefaultCodeFormatting::addExternalNodeHandler(ExternalNodeHandler nodeHandler)
 {
     m_externalNodeHandlers.push_back(std::move(nodeHandler));
 }
 
-void DefaultCodeFormatting::instantiateExternal(std::ostream &stream, const hlim::Node_External *node, const std::vector<std::string> &inputSignalNames, const std::vector<std::string> &outputSignalNames) const
+void DefaultCodeFormatting::instantiateExternal(std::ostream &stream, const hlim::Node_External *node, unsigned indent, const std::vector<std::string> &inputSignalNames, const std::vector<std::string> &outputSignalNames, const std::vector<std::string> &clockNames) const
 {
     for (const auto &handler : m_externalNodeHandlers)
-        if (handler(stream, node, inputSignalNames, outputSignalNames))
+        if (handler(stream, node, indent, inputSignalNames, outputSignalNames, clockNames))
             return;
 }
 

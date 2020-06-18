@@ -17,9 +17,8 @@ class NodeGroup
 {
     public:
         enum GroupType {
-            GRP_PROCEDURE   = 0x01,
+            GRP_ENTITY      = 0x01,
             GRP_AREA        = 0x02,
-            GRP_ENTITY      = 0x03,
         };
         
         NodeGroup(GroupType groupType);
@@ -29,20 +28,22 @@ class NodeGroup
         inline const utils::StackTrace &getStackTrace() const { return m_stackTrace; }
         
         inline void setName(std::string name) { m_name = std::move(name); }
+        inline void setComment(std::string comment) { m_comment = std::move(comment); }
         
         NodeGroup *addChildNodeGroup(GroupType groupType);
         
         inline const NodeGroup *getParent() const { return m_parent; }
         inline const std::string &getName() const { return m_name; }
+        inline const std::string &getComment() const { return m_comment; }
         inline const std::vector<BaseNode*> &getNodes() const { return m_nodes; }
         inline const std::vector<std::unique_ptr<NodeGroup>> &getChildren() const { return m_children; }
-
 
         bool isChildOf(const NodeGroup *other) const;
         
         inline GroupType getGroupType() const { return m_groupType; }
     protected:
         std::string m_name;
+        std::string m_comment;
         GroupType m_groupType;
         
         std::vector<BaseNode*> m_nodes;

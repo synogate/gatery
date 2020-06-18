@@ -29,9 +29,6 @@ int main() {
             DesignScope design;
 
             {
-                GroupScope area(NodeGroup::GRP_AREA);
-                area.setName("all");
-                
                 auto clk = design.createClock<mhdl::core::hlim::RootClock>("clk", mhdl::core::hlim::ClockRational(10'000));
                 
                 RegisterConfig regConf = {.clk = clk, .resetName = "rst"};

@@ -15,7 +15,7 @@
 #include "../../hlim/coreNodes/Node_Register.h"
 #include "../../hlim/coreNodes/Node_Rewire.h"
 
-#include "VHDL_AST.h"
+#include "AST.h"
 
 #include <set>
 #include <map>
@@ -53,11 +53,15 @@ void VHDLExport::operator()(const hlim::Circuit &circuit)
 {
 #if 0
     exportGroup(circuit.getRootNodeGroup());
-#else
+#elif 0
     ast::Root root(m_codeFormatting.get());
     root.createEntity().buildFrom((hlim::NodeGroup*)circuit.getRootNodeGroup());
     root.print();
     root.write(m_destination);
+#else
+    AST ast(m_codeFormatting.get());
+    ast.convert((hlim::Circuit &)circuit);
+    ast.writeVHDL(m_destination);
 #endif
 }
 
