@@ -96,7 +96,7 @@ inline void bitSet(const void *a, size_t idx) {
 
 inline void bitClear(std::uint64_t &a, unsigned idx) {
 #if 1
-    a = andNot(1ull << idx, a);
+    a = andNot<std::uint64_t>(1ull << idx, a);
 #else
     _bittestandreset64(&a, idx);
 #endif
@@ -105,7 +105,7 @@ inline void bitClear(std::uint64_t &a, unsigned idx) {
 inline void bitClear(const void *a, size_t idx) {
 #if 1
     std::uint64_t &v = ((std::uint64_t*)a)[idx/64];
-    v = andNot(1ull << (idx % 64), v);
+    v = andNot<std::uint64_t>(1ull << (idx % 64), v);
 #else
     _bittestandreset64((std::uint64_t)&a, idx);
 #endif    
