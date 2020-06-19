@@ -1,0 +1,36 @@
+cmake_minimum_required (VERSION 3.0)
+
+find_package(Boost COMPONENTS system thread REQUIRED) 
+
+LIST(APPEND HCL_ALL_LIBS hcl_stl)
+SET(HCL_ALL_LIBS ${HCL_ALL_LIBS} PARENT_SCOPE)
+
+add_library(hcl_stl STATIC
+    source/hcl/stl/BlockRam.h
+    source/hcl/stl/BlockRam.cpp
+)
+
+set(data_files 
+)
+
+foreach(file ${data_files})
+    configure_file(${file} ${PROJECT_BINARY_DIR}/${file} COPYONLY)
+endforeach(file)
+
+
+target_include_directories(hcl_stl SYSTEM PUBLIC
+    ${Boost_INCLUDE_DIRS}
+)
+
+target_include_directories(hcl_stl INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/source
+)
+
+target_link_libraries(hcl_stl PUBLIC
+    hcl_net
+    hcl_frontend
+    ${Boost_LIBRARIES}
+)
+
+hcl_setup_target(hcl_stl)
+

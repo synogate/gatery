@@ -1,39 +1,41 @@
 cmake_minimum_required (VERSION 3.0)
-project (mhdl_core)
 
-option(WITH_QT "Include QT stuff in the build" off)
-option(WITH_GHDL "Include GHDL stuff in the build" off)
+option(HCL_WITH_QT "Include QT stuff in the build" off)
+option(HCL_WITH_GHDL "Include GHDL stuff in the build" off)
 
 enable_testing()
 
-LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+LIST(APPEND CMAKE_MODULE_PATH cmake/)
 
-if(NOT MSVC)
-    LIST(APPEND CMAKE_CXX_FLAGS "-march=native -ffast-math -Wall -pedantic -Wextra -std=c++2a -Wno-int-in-bool-context -Wno-class-memaccess -Wno-unused-parameter -Wno-deprecated-copy")
 
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -g")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS} -O3 -g")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -O0 -g")
-else()
-    add_compile_options(/wd4146) # - still unsigned. for boost rational
-    add_compile_options(/wd26812) # use enum class. for andy
-    add_compile_definitions(__BMI__=1)
+function(hcl_setup_target target)
+    target_compile_features(${target} PUBLIC cxx_std_20)
+
+    if(MSVC)
+        target_compile_definitions(${target} PUBLIC -DBOOST_STACKTRACE_USE_WINDBG)
+        # Boost docu: Uses COM to show debug info. May require linking with ole32 and dbgeng. 
+    else()
+        #target_compile_definitions(hcl PUBLIC -DBOOST_STACKTRACE_USE_BACKTRACE)
+        #target_link_libraries(hcl PUBLIC -ldl -lbacktrace)
+        target_compile_definitions(${target} PUBLIC -DBOOST_STACKTRACE_USE_ADDR2LINE)
+        target_link_libraries(${target} PUBLIC -ldl)
+    endif()
+endfunction()
+
+
+add_subdirectory(net/)
+add_subdirectory(frontend/)
+add_subdirectory(stl/)
+
+if(${HCL_WITH_GHDL})
+add_subdirectory(libs/vpi_sim)
 endif()
 
-if(WIN32)
-    add_compile_definitions(NOMINMAX)
+if(${HCL_WITH_QT})
+add_subdirectory(libs/vis/)
 endif()
 
-#add_subdirectory(libs/cppDWARF/)
-add_subdirectory(libs/metaHDL_core/)
 
-if(${WITH_GHDL})
-add_subdirectory(libs/vpi_simulation_host)
-endif()
-
-if(${WITH_QT})
-add_subdirectory(libs/metaHDL_vis_qt/)
-endif()
-
-add_subdirectory(executables/samples/uart)
-add_subdirectory(executables/samples/gameoflife)
+set(HCL_ALL_LIBS ${HCL_ALL_LIBS} PARENT_SCOPE)
+set(HCL_WITH_QT ${HCL_WITH_QT} PARENT_SCOPE)
+set(HCL_WITH_GHDL ${HCL_WITH_GHDL} PARENT_SCOPE)
