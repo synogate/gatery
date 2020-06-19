@@ -46,11 +46,11 @@ class NamespaceScope
         std::string allocateBlockName(const std::string &desiredName);
         std::string allocateProcessName(const std::string &desiredName, bool clocked);
     protected:
-        bool isNameInUse(const std::string &name) const;
+        bool isNameInUse(const std::string &upperCaseName) const;
         AST &m_ast;
         NamespaceScope *m_parent;
         
-        std::set<std::string, boost::algorithm::is_iless> m_namesInUse;
+        std::set<std::string> m_namesInUse;
         std::map<hlim::NodePort, std::string> m_nodeNames;
         std::map<NodeInternalStorageSignal, std::string> m_nodeStorageNames;
         std::map<hlim::BaseClock*, std::string> m_clockNames;

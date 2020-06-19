@@ -26,11 +26,13 @@ std::string NamespaceScope::allocateName(hlim::NodePort nodePort, const std::str
     
     unsigned attempt = 0;
     std::string name;
+    std::string upperCaseName;
     do {
         name = cf.getSignalName(desiredName, type, attempt++);
-    } while (isNameInUse(name));
+        upperCaseName = boost::to_upper_copy(name);
+    } while (isNameInUse(upperCaseName));
 
-    m_namesInUse.insert(name);
+    m_namesInUse.insert(upperCaseName);
     m_nodeNames[nodePort] = name;
     return name;    
 }
@@ -51,12 +53,13 @@ std::string NamespaceScope::allocateName(hlim::BaseClock *clock, const std::stri
     HCL_ASSERT(m_clockNames.find(clock) == m_clockNames.end());
     
     unsigned attempt = 0;
-    std::string name;
+    std::string name, upperCaseName;
     do {
         name = cf.getClockName(desiredName, attempt++);
-    } while (isNameInUse(name));
+        upperCaseName = boost::to_upper_copy(name);
+    } while (isNameInUse(upperCaseName));
 
-    m_namesInUse.insert(name);
+    m_namesInUse.insert(upperCaseName);
     m_clockNames[clock] = name;
     return name;    
 }
@@ -76,12 +79,13 @@ std::string NamespaceScope::allocateEntityName(const std::string &desiredName)
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     unsigned attempt = 0;
-    std::string name;
+    std::string name, upperCaseName;
     do {
         name = cf.getEntityName(desiredName, attempt++);
-    } while (isNameInUse(name));
+        upperCaseName = boost::to_upper_copy(name);
+    } while (isNameInUse(upperCaseName));
 
-    m_namesInUse.insert(name);
+    m_namesInUse.insert(upperCaseName);
     return name;
 }
 
@@ -90,12 +94,13 @@ std::string NamespaceScope::allocateBlockName(const std::string &desiredName)
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     unsigned attempt = 0;
-    std::string name;
+    std::string name, upperCaseName;
     do {
         name = cf.getBlockName(desiredName, attempt++);
-    } while (isNameInUse(name));
+        upperCaseName = boost::to_upper_copy(name);
+    } while (isNameInUse(upperCaseName));
 
-    m_namesInUse.insert(name);
+    m_namesInUse.insert(upperCaseName);
     return name;    
 }
 
@@ -104,21 +109,22 @@ std::string NamespaceScope::allocateProcessName(const std::string &desiredName, 
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     unsigned attempt = 0;
-    std::string name;
+    std::string name, upperCaseName;
     do {
         name = cf.getProcessName(desiredName, clocked, attempt++);
-    } while (isNameInUse(name));
+        upperCaseName = boost::to_upper_copy(name);
+    } while (isNameInUse(upperCaseName));
 
-    m_namesInUse.insert(name);
+    m_namesInUse.insert(upperCaseName);
     return name;    
 }
 
 
-bool NamespaceScope::isNameInUse(const std::string &name) const
+bool NamespaceScope::isNameInUse(const std::string &upperCaseName) const
 {
-    if (m_namesInUse.find(name) != m_namesInUse.end()) return true;
+    if (m_namesInUse.find(upperCaseName) != m_namesInUse.end()) return true;
     if (m_parent != nullptr)
-        return m_parent->isNameInUse(name);
+        return m_parent->isNameInUse(upperCaseName);
     return false;
 
 }
