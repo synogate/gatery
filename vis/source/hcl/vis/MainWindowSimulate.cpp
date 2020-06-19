@@ -4,8 +4,8 @@
 #include "Node_ElementaryOp.h"
 
 
-#include <metaHDL_core/hlim/coreNodes/Node_Signal.h>
-#include <metaHDL_core/utils/Range.h>
+#include <hcl/hlim/coreNodes/Node_Signal.h>
+#include <hcl/utils/Range.h>
 
 
 #include <boost/filesystem.hpp>
@@ -135,14 +135,22 @@ void MainWindowSimulate::reccurFillTreeWidget(QTreeWidgetItem *item, core::hlim:
 {
     m_item2NodeGroup[item] = nodeGroup;
     item->setText(0, QString::fromUtf8(nodeGroup->getName().c_str()));
-    for (auto &area : nodeGroup->getChildren())
-        for (auto &entity : area->getChildren()) {
-            QTreeWidgetItem *newItem;
-            item->addChild(newItem = new QTreeWidgetItem());
-            reccurFillTreeWidget(newItem, entity.get());
-        }
-            
     
+    std::vector<core::hlim::NodeGroup*> groupStack = { nodeGroup };
+    
+    while (!groupStack.empty()) {
+        core::hlim::NodeGroup *group = groupStack.back();
+        groupStack.pop_back();
+        
+        for (auto &subGroup : group->getChildren()) {
+            if (subGroup->getGroupType() == core::hlim::NodeGroup::GRP_ENTITY) {
+                QTreeWidgetItem *newItem;
+                item->addChild(newItem = new QTreeWidgetItem());
+                reccurFillTreeWidget(newItem, subGroup.get());
+            } else
+                groupStack.push_back(subGroup.get());
+        }
+    }
 }
 
 void MainWindowSimulate::treeWidget_graphHierarchy_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous)

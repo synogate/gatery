@@ -42,7 +42,7 @@
       <property name="handleWidth">
        <number>4</number>
       </property>
-      <widget class="mhdl::vis::CircuitView" name="circuitView">
+      <widget class="hcl::vis::CircuitView" name="circuitView">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>0</horstretch>
@@ -621,7 +621,7 @@
   <customwidget>
    <class>mhdl::vis::CircuitView</class>
    <extends>QGraphicsView</extends>
-   <header location="global">metaHDL_vis_Qt/CircuitView.h</header>
+   <header location="global">hcl/vis/CircuitView.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

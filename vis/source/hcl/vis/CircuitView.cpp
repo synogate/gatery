@@ -9,9 +9,9 @@
 #include "Node_ElementaryOp.h"
 #include "Node_Entity.h"
 
-#include <metaHDL_core/utils/Range.h>
-#include <metaHDL_core/hlim/coreNodes/Node_Signal.h>
-#include <metaHDL_core/hlim/coreNodes/Node_Register.h>
+#include <hcl/utils/Range.h>
+#include <hcl/hlim/coreNodes/Node_Signal.h>
+#include <hcl/hlim/coreNodes/Node_Register.h>
 
 
 #include <QWheelEvent>
@@ -97,8 +97,21 @@ void CircuitView::render(core::hlim::Circuit &circuit, core::hlim::NodeGroup *gr
     
     std::set<layout::NodePort> registerOutputs;
     
-    for (auto &area : group->getChildren()) {
-        for (auto &node : area->getNodes()) {
+    std::vector<core::hlim::NodeGroup*> groupStack = { group };
+    
+    while (!groupStack.empty()) {
+        core::hlim::NodeGroup *nodeGroup = groupStack.back();
+        groupStack.pop_back();
+        
+        for (auto &subGroup : nodeGroup->getChildren()) {
+            if (subGroup->getGroupType() == core::hlim::NodeGroup::GRP_ENTITY) {
+                Node_Entity *n;
+                m_scene->addItem(n = new Node_Entity(this, subGroup.get()));
+                m_nodes.push_back(n);
+            } else
+                groupStack.push_back(subGroup.get());
+        }
+        for (auto &node : nodeGroup->getNodes()) {
             if (dynamic_cast<core::hlim::Node_Signal*>(node) != nullptr) {
                 Node_Signal *n;
                 m_scene->addItem(n = new Node_Signal(this, dynamic_cast<core::hlim::Node_Signal*>(node)));
@@ -111,7 +124,7 @@ void CircuitView::render(core::hlim::Circuit &circuit, core::hlim::NodeGroup *gr
                 for (auto i : utils::Range(node->getNumInputPorts())) {
                     auto driver = node->getDriver(i);
                     if (driver.node != nullptr)
-                        if (driver.node->getGroup() == nullptr || !driver.node->getGroup()->isChildOf(group)) {
+                        if (driver.node->getGroup() == nullptr || (driver.node->getGroup() != group && !driver.node->getGroup()->isChildOf(group))) {
                             ///@todo: Mark as input
                             if (dynamic_cast<core::hlim::Node_Signal*>(driver.node) != nullptr) {
                                 Node_Signal *n;
@@ -129,11 +142,6 @@ void CircuitView::render(core::hlim::Circuit &circuit, core::hlim::NodeGroup *gr
                     registerOutputs.insert({.node=m_nodes.size()-1, .port=0ull});
                 }
             }
-        }
-        for (auto &subEntity : area->getChildren()) {
-            Node_Entity *n;
-            m_scene->addItem(n = new Node_Entity(this, subEntity.get()));
-            m_nodes.push_back(n);
         }
     }
     

@@ -1,8 +1,6 @@
 #include "GraphLayouting.h"
 
-#include <metaHDL_core/utils/Range.h>
-#include <metaHDL_core/utils/Exceptions.h>
-#include <metaHDL_core/utils/Preprocessor.h>
+#include <hcl/utils.h>
 
 #include <set>
 #include <map>

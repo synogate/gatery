@@ -5,9 +5,9 @@
 
 #include <ui_MainWindowSimulate.h>
 
-#include <metaHDL_core/hlim/Circuit.h>
-#include <metaHDL_core/simulation/ReferenceSimulator.h>
-#include <metaHDL_core/simulation/SimulatorControl.h>
+#include <hcl/hlim/Circuit.h>
+#include <hcl/simulation/ReferenceSimulator.h>
+#include <hcl/simulation/SimulatorControl.h>
 
 #include <boost/stacktrace.hpp>
 

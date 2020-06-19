@@ -6,9 +6,9 @@
 
 #include "Node_Signal.h"
 
-#include <metaHDL_core/hlim/Circuit.h>
-#include <metaHDL_core/hlim/Node.h>
-#include <metaHDL_core/hlim/NodeGroup.h>
+#include <hcl/hlim/Circuit.h>
+#include <hcl/hlim/Node.h>
+#include <hcl/hlim/NodeGroup.h>
 
 
 #include <QGraphicsItem>

@@ -2,8 +2,8 @@
     
 #include "Node.h"
 
-#include <metaHDL_core/hlim/NodeGroup.h>
-#include <metaHDL_core/hlim/NodeIO.h>
+#include <hcl/hlim/NodeGroup.h>
+#include <hcl/hlim/NodeIO.h>
 
 namespace hcl::vis {
     

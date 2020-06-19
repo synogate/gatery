@@ -2,7 +2,7 @@
     
 #include "Node.h"
 
-#include <metaHDL_core/hlim/coreNodes/Node_Signal.h>
+#include <hcl/hlim/coreNodes/Node_Signal.h>
 
 namespace hcl::vis {
     

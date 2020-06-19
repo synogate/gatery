@@ -3,7 +3,7 @@
 #include "CircuitView.h"
 
 
-#include <metaHDL_core/utils/Range.h>
+#include <hcl/utils/Range.h>
 
 namespace hcl::vis {
 

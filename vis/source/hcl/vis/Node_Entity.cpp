@@ -2,7 +2,7 @@
 
 #include "CircuitView.h"
 
-#include <metaHDL_core/utils/Range.h>
+#include <hcl/utils/Range.h>
 
 #include <set>
 
@@ -14,9 +14,17 @@ Node_Entity::Node_Entity(CircuitView *circuitView, core::hlim::NodeGroup *nodeGr
     std::set<core::hlim::NodePort> inputsFound;
     std::set<core::hlim::NodePort> outputsFound;
     
-    for (auto &area : m_hlimNodeGroup->getChildren()) {
+    std::vector<core::hlim::NodeGroup*> groupStack = { m_hlimNodeGroup };
+    
+    while (!groupStack.empty()) {
+        core::hlim::NodeGroup *nodeGroup = groupStack.back();
+        groupStack.pop_back();
+        
+        for (auto &subGroup : nodeGroup->getChildren()) 
+            groupStack.push_back(subGroup.get());
+    
         // Find all explicit signals/variables (signals that will need to be declared and assigned)
-        for (auto node : area->getNodes()) {
+        for (auto node : nodeGroup->getNodes()) {
             // Check for inputs
             for (auto i : utils::Range(node->getNumInputPorts())) {
                 auto driver = node->getDriver(i);
@@ -24,7 +32,7 @@ Node_Entity::Node_Entity(CircuitView *circuitView, core::hlim::NodeGroup *nodeGr
                 if (driver.node == nullptr) {
 //                    std::cout << "Warning: Unconnected node: Port " << i << " of node '"<<node->getName()<<"' not connected!" << std::endl;
 //                    std::c#include "CircuitView.h"out << node->getStackTrace() << std::endl;
-                } else if (driver.node->getGroup() == nullptr || !driver.node->getGroup()->isChildOf(m_hlimNodeGroup)) {
+                } else if (driver.node->getGroup() == nullptr || (driver.node->getGroup() != m_hlimNodeGroup && !driver.node->getGroup()->isChildOf(m_hlimNodeGroup))) {
                     inputsFound.insert(driver);
                 }
             }
@@ -40,13 +48,14 @@ Node_Entity::Node_Entity(CircuitView *circuitView, core::hlim::NodeGroup *nodeGr
                 driver.port = i;
                 
                 for (auto driven : node->getDirectlyDriven(i)) {
-                    if (driven.node->getGroup() == nullptr || !driven.node->getGroup()->isChildOf(m_hlimNodeGroup)) {
+                    if (driven.node->getGroup() == nullptr || (driven.node->getGroup() != m_hlimNodeGroup && !driven.node->getGroup()->isChildOf(m_hlimNodeGroup))) {
                         outputsFound.insert(driver);
                     }
                 }
             }
         }
     }
+    
     for (auto p : inputsFound) {
         m_inputPorts.push_back({
             .name = p.node->getName(),
