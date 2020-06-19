@@ -23,7 +23,7 @@ class CodeFormatting
         inline const std::string &getIndentation() const { return m_indentation; }
         inline const std::string &getFileHeader() const { return m_fileHeader; }
         inline const std::string &getFilenameExtension() const { return m_filenameExtension; }
-        void indent(std::ostream &stream, unsigned depth);
+        void indent(std::ostream &stream, unsigned depth) const;
         virtual void formatEntityComment(std::ostream &stream, const std::string &entityName, const std::string &comment) = 0;
         virtual void formatBlockComment(std::ostream &stream, const std::string &blockName, const std::string &comment) = 0;
         virtual void formatProcessComment(std::ostream &stream, unsigned indentation, const std::string &processName, const std::string &comment) = 0;
@@ -62,7 +62,7 @@ class CodeFormatting
 class DefaultCodeFormatting : public CodeFormatting
 {
     public:
-        using ExternalNodeHandler = std::function<bool(std::ostream &, const hlim::Node_External *, unsigned, const std::vector<std::string> &, const std::vector<std::string> &, const std::vector<std::string> &)>;
+        using ExternalNodeHandler = std::function<bool(const CodeFormatting*, std::ostream &, const hlim::Node_External *, unsigned, const std::vector<std::string> &, const std::vector<std::string> &, const std::vector<std::string> &)>;
         
         DefaultCodeFormatting();
         

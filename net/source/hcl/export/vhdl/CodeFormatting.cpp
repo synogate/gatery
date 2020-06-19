@@ -7,7 +7,7 @@
 namespace hcl::core::vhdl {
 
 
-void CodeFormatting::indent(std::ostream &stream, unsigned depth)
+void CodeFormatting::indent(std::ostream &stream, unsigned depth) const
 {
     for (auto i : utils::Range(depth))
         stream << m_indentation;
@@ -242,7 +242,7 @@ void DefaultCodeFormatting::addExternalNodeHandler(ExternalNodeHandler nodeHandl
 void DefaultCodeFormatting::instantiateExternal(std::ostream &stream, const hlim::Node_External *node, unsigned indent, const std::vector<std::string> &inputSignalNames, const std::vector<std::string> &outputSignalNames, const std::vector<std::string> &clockNames) const
 {
     for (const auto &handler : m_externalNodeHandlers)
-        if (handler(stream, node, indent, inputSignalNames, outputSignalNames, clockNames))
+        if (handler(this, stream, node, indent, inputSignalNames, outputSignalNames, clockNames))
             return;
 }
 

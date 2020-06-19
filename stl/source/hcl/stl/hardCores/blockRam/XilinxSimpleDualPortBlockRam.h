@@ -2,6 +2,7 @@
 
 #include <hcl/hlim/Clock.h>
 #include <hcl/hlim/supportNodes/Node_External.h>
+#include <hcl/export/vhdl/CodeFormatting.h>
 #include <hcl/simulation/BitVectorState.h>
 
 #include <vector>
@@ -61,6 +62,10 @@ class XilinxSimpleDualPortBlockRam : public core::hlim::Node_External
         inline const DefaultBitVectorState &getInitialData() const { return m_initialData; }
         inline size_t getWriteDataWidth() const { return m_writeDataWidth; }
         inline size_t getReadDataWidth() const { return m_readDataWidth; }
+        
+        
+        static bool writeVHDL(const core::vhdl::CodeFormatting *codeFormatting, std::ostream &file, const core::hlim::Node_External *node, unsigned indent,
+                        const std::vector<std::string> &inputSignalNames, const std::vector<std::string> &outputSignalNames, const std::vector<std::string> &clockNames);
     protected:
         DefaultBitVectorState m_initialData;
         size_t m_writeDataWidth;

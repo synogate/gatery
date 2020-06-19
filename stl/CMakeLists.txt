@@ -6,10 +6,13 @@ LIST(APPEND HCL_ALL_LIBS hcl_stl)
 SET(HCL_ALL_LIBS ${HCL_ALL_LIBS} PARENT_SCOPE)
 
 add_library(hcl_stl STATIC
+    source/hcl/stl/buildCtrl/TargetVendor.h
+    source/hcl/stl/buildCtrl/TargetVendor.cpp
     source/hcl/stl/hardCores/BlockRam.h
     source/hcl/stl/hardCores/BlockRam.cpp
     source/hcl/stl/hardCores/blockRam/XilinxSimpleDualPortBlockRam.cpp
     source/hcl/stl/hardCores/blockRam/XilinxSimpleDualPortBlockRam.h
+    source/hcl/stl/ExternalNodeHandlers.h
 )
 
 set(data_files 

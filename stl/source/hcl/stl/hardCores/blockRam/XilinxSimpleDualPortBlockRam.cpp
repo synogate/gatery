@@ -3,6 +3,8 @@
 #include <hcl/hlim/coreNodes/Node_Constant.h>
 #include <hcl/utils.h>
 
+#include <boost/format.hpp>
+
 namespace hcl::stl::blockram {
 
 using namespace core;
@@ -247,5 +249,90 @@ std::vector<size_t> XilinxSimpleDualPortBlockRam::getInternalStateSizes() const 
     res[INT_READ_ENABLE] = 1;
     return res;
 }
-    
+
+bool XilinxSimpleDualPortBlockRam::writeVHDL(const core::vhdl::CodeFormatting *codeFormatting, std::ostream &file, const hlim::Node_External *node, unsigned indent,
+                const std::vector<std::string> &inputSignalNames, const std::vector<std::string> &outputSignalNames, const std::vector<std::string> &clockNames)
+{
+    const XilinxSimpleDualPortBlockRam *ram = dynamic_cast<const XilinxSimpleDualPortBlockRam*>(node);
+    if (ram != nullptr) {        
+        codeFormatting->indent(file, indent);
+        file << "inst_" << node->getName() << " : BRAM_SDP_MACRO generic map (" << std::endl;
+
+        std::vector<std::string> genericmapList;
+        genericmapList.push_back("-- INIT => todo: evaluate const expression of input port");
+        genericmapList.push_back("INIT => 0");
+        genericmapList.push_back(std::string("WRITE_WIDTH => ") + std::to_string(ram->getWriteDataWidth()));
+        genericmapList.push_back(std::string("READ_WIDTH => ") + std::to_string(ram->getReadDataWidth()));
+        genericmapList.push_back(std::string("BRAM_SIZE => ") + std::to_string(ram->getInitialData().size()));
+        if (ram->isRom())
+            for (auto block : utils::Range((ram->getInitialData().size()+255)/256)) {
+                std::stringstream hexStream;
+                for (auto byteIdx : utils::Range(256/8)) {
+                    size_t bitsRemaining = ram->getInitialData().size() - block*256 - byteIdx*8;
+                    std::uint8_t byte = 0;
+                    for (auto bitIdx : utils::Range(std::min<size_t>(8, bitsRemaining))) {
+                        bool def = ram->getInitialData().get(sim::DefaultConfig::DEFINED, block*256 + byteIdx*8+bitIdx);
+                        bool value = ram->getInitialData().get(sim::DefaultConfig::VALUE, block*256 + byteIdx*8+bitIdx);
+                        ///@todo use def
+                        if (value)
+                            byte |= (1 << bitIdx);
+                    }
+                    hexStream << std::hex << std::setw(2) << std::setfill('0') << (unsigned) byte;
+                }
+                
+                genericmapList.push_back((boost::format("INIT_%02d => X\"%s\"") % block % hexStream.str()).str());
+            }
+
+        for (auto i : utils::Range(genericmapList.size())) {
+            codeFormatting->indent(file, indent+1);
+            file << genericmapList[i];
+            if (i+1 < genericmapList.size())
+                file << ",";
+            file << std::endl;
+        }
+
+        
+        
+        codeFormatting->indent(file, indent);
+        file << ") port map (" << std::endl;
+        
+        std::vector<std::string> portmapList;
+
+        if (!clockNames[XilinxSimpleDualPortBlockRam::READ_CLK].empty())
+            portmapList.push_back(std::string("RDCLK => ") + clockNames[XilinxSimpleDualPortBlockRam::READ_CLK]);
+        if (!clockNames[XilinxSimpleDualPortBlockRam::WRITE_CLK].empty())
+            portmapList.push_back(std::string("WRCLK => ") + clockNames[XilinxSimpleDualPortBlockRam::WRITE_CLK]);
+        portmapList.push_back("RST => reset");
+        
+        if (!inputSignalNames[XilinxSimpleDualPortBlockRam::READ_ENABLE].empty())
+            portmapList.push_back(std::string("RDEN => ") + inputSignalNames[XilinxSimpleDualPortBlockRam::READ_ENABLE]);
+        if (!inputSignalNames[XilinxSimpleDualPortBlockRam::WRITE_ENABLE].empty())
+            portmapList.push_back(std::string("WREN => ") + inputSignalNames[XilinxSimpleDualPortBlockRam::WRITE_ENABLE]);
+        if (!inputSignalNames[XilinxSimpleDualPortBlockRam::WRITE_DATA].empty())
+            portmapList.push_back(std::string("DI => ") + inputSignalNames[XilinxSimpleDualPortBlockRam::WRITE_DATA]);
+        if (!inputSignalNames[XilinxSimpleDualPortBlockRam::READ_ADDR].empty())
+            portmapList.push_back(std::string("RDADDR => ") + inputSignalNames[XilinxSimpleDualPortBlockRam::READ_ADDR]);
+        if (!inputSignalNames[XilinxSimpleDualPortBlockRam::WRITE_ADDR].empty())
+            portmapList.push_back(std::string("WRADDR => ") + inputSignalNames[XilinxSimpleDualPortBlockRam::WRITE_ADDR]);
+            
+        if (!inputSignalNames[XilinxSimpleDualPortBlockRam::READ_DATA].empty())
+            portmapList.push_back(std::string("DO => ") + outputSignalNames[XilinxSimpleDualPortBlockRam::READ_DATA]);
+
+        for (auto i : utils::Range(portmapList.size())) {
+            codeFormatting->indent(file, indent+1);
+            file << portmapList[i];
+            if (i+1 < portmapList.size())
+                file << ",";
+            file << std::endl;
+        }
+        
+        codeFormatting->indent(file, indent);
+        file << ");" << std::endl;
+        
+        return true;
+    }
+    return false;
+}
+
+
 }
