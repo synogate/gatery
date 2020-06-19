@@ -1,6 +1,6 @@
 #include "CHCLSyntaxHighlighter.h"
 
-namespace mhdl::vis {
+namespace hcl::vis {
     
     
 CHCLSyntaxHighlighter::CHCLSyntaxHighlighter(QTextDocument *parent)
@@ -57,7 +57,7 @@ CHCLSyntaxHighlighter::CHCLSyntaxHighlighter(QTextDocument *parent)
     m_highlightingRules.append(rule);
     
     const QString CHCLFunctionPatterns[] = {
-        QStringLiteral("\\bMHDL_NAMED(?=\\()"),
+        QStringLiteral("\\bHCL_NAMED(?=\\()"),
         QStringLiteral("\\bmux(?=\\()"),
         QStringLiteral("\\bdriveWith(?=\\()"),
     };

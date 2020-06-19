@@ -1,7 +1,7 @@
 #include "Node_Multiplexer.h"
 
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
 void Node_Multiplexer::connectInput(size_t operand, const NodePort &port) 
 { 
@@ -18,7 +18,7 @@ void Node_Multiplexer::simulateEvaluate(sim::DefaultBitVectorState &state, const
     }
     
     const auto &selectorType = selectorDriver.node->getOutputConnectionType(selectorDriver.port);
-    MHDL_ASSERT_HINT(selectorType.width <= 64, "Multiplexer with more than 64 bit selector not possible!");
+    HCL_ASSERT_HINT(selectorType.width <= 64, "Multiplexer with more than 64 bit selector not possible!");
     
     if (!allDefinedNonStraddling(state, inputOffsets[0], selectorType.width)) {
         state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);

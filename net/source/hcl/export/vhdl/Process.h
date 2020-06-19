@@ -5,7 +5,7 @@
 #include <ostream>
 
 
-namespace mhdl::core::vhdl {
+namespace hcl::core::vhdl {
     
 class BasicBlock;
 

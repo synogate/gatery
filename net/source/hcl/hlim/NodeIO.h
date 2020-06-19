@@ -11,7 +11,7 @@
 #include <set>
 #include <string>
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
 class BaseNode;
 class NodeIO;
@@ -34,7 +34,7 @@ class ExplorationList {
                 using iterator_category = std::forward_iterator_tag;                
 
                 iterator &operator++();
-                bool operator!=(const iterator &rhs) const { MHDL_ASSERT(rhs.m_isEndIterator); return m_isEndIterator || m_openList.empty(); }
+                bool operator!=(const iterator &rhs) const { HCL_ASSERT(rhs.m_isEndIterator); return m_isEndIterator || m_openList.empty(); }
                 NodePort operator*() { return *m_openList.begin(); }
             protected:
                 bool m_isEndIterator;

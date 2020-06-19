@@ -3,7 +3,7 @@
 
 #include <string_view>
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
     // todo: this is a parser and representation of bit values. replace by simulation data structure.
     struct ConstantData
@@ -24,7 +24,7 @@ namespace mhdl::core::hlim {
                     base = 2;
                     break;
                 default:
-                    MHDL_ASSERT(!"invalid literal. only hex and binary may start with 0.")
+                    HCL_ASSERT(!"invalid literal. only hex and binary may start with 0.")
                 }
                 _str.remove_prefix(2);
             }
@@ -44,11 +44,11 @@ namespace mhdl::core::hlim {
             {
                 if (c == '\'')
                     continue;
-                MHDL_DESIGNCHECK(std::isdigit(c));
-                MHDL_DESIGNCHECK_HINT(acc != 0 || c != '0' || _str.size() == 1, "leading zeros are not allowed for decimal literals.");
+                HCL_DESIGNCHECK(std::isdigit(c));
+                HCL_DESIGNCHECK_HINT(acc != 0 || c != '0' || _str.size() == 1, "leading zeros are not allowed for decimal literals.");
 
                 uint64_t new_acc = acc * 10 + (c - '0');
-                MHDL_DESIGNCHECK_HINT(new_acc >= acc, "decimal literal overflow. use hex literal instead.");
+                HCL_DESIGNCHECK_HINT(new_acc >= acc, "decimal literal overflow. use hex literal instead.");
                 acc = new_acc;
             }
 
@@ -74,7 +74,7 @@ namespace mhdl::core::hlim {
                 else if (c >= 'A' && c <= 'W')
                     val = c - 'A';
 
-                MHDL_DESIGNCHECK_HINT(val < base, "invalid character " + c + " in " + std::string{ _str });
+                HCL_DESIGNCHECK_HINT(val < base, "invalid character " + c + " in " + std::string{ _str });
 
                 for (size_t mask = base / 2; mask; mask /= 2)
                     bitVec.push_back((val & mask) != 0);

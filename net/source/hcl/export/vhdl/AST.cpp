@@ -7,7 +7,7 @@
 
 #include <fstream>
 
-namespace mhdl::core::vhdl {
+namespace hcl::core::vhdl {
     
 
 void Hlim2AstMapping::assignNodeToScope(hlim::BaseNode *node, BaseGrouping *block)

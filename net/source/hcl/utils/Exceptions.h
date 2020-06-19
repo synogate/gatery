@@ -9,8 +9,7 @@
 #include <csignal>
 
 
-namespace mhdl {
-namespace utils {
+namespace hcl::utils {
 
 template<class BaseError>
 class MHDLError : public BaseError
@@ -53,5 +52,4 @@ std::ostream &operator<<(std::ostream &stream, const MHDLError<BaseError> &excep
     return stream;
 }
 
-}
 }

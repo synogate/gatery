@@ -27,7 +27,7 @@ void NodeCategorization::parse(NodeGroup *group)
                     childOutputSignals.insert(
                 } else {                                         // .. or by an outside node.
                     Node_Signal *signal = dynamic_cast<Node_Signal*>(drivingNode);
-                    MHDL_ASSERT(signal != nullptr);
+                    HCL_ASSERT(signal != nullptr);
                     inputSignals[signal] = drivingNode->getGroup();
                 }
             }
@@ -44,7 +44,7 @@ void NodeCategorization::parse(NodeGroup *group)
                             childInputSignals.insert({signal, drivenNode->getGroup()});
                         } else {
                             Node_Signal *signal = dynamic_cast<Node_Signal *>(drivenNode);
-                            MHDL_ASSERT(signal != nullptr);
+                            HCL_ASSERT(signal != nullptr);
                             childInputSignals.insert({signal, drivenNode->getGroup()});
                         }
                     } else {
@@ -53,7 +53,7 @@ void NodeCategorization::parse(NodeGroup *group)
                             outputSignals.insert({signal, drivenNode->getGroup()});
                         } else {
                             Node_Signal *signal = dynamic_cast<Node_Signal *>(drivenNode);
-                            MHDL_ASSERT(signal != nullptr);
+                            HCL_ASSERT(signal != nullptr);
                             outputSignals.insert({signal, drivenNode->getGroup()});
                         }
                     }
@@ -82,7 +82,7 @@ void NodeCategorization::parse(NodeGroup *group)
             openList.erase(openList.begin());
             closedList.insert(signal);
 
-            //MHDL_DESIGNCHECK_HINT(signal->getInput(0).connection != nullptr, "Undriven signal used to compose outputs!");
+            //HCL_DESIGNCHECK_HINT(signal->getInput(0).connection != nullptr, "Undriven signal used to compose outputs!");
             if (signal->getInput(0).connection == nullptr) {
                 unconnected.insert(signal);
                 continue;
@@ -105,7 +105,7 @@ void NodeCategorization::parse(NodeGroup *group)
                 
                 for (auto i : utils::Range(driver->getNumInputs())) {
                     auto driverSignal = dynamic_cast<hlim::Node_Signal*>(driver->getInput(i).connection->node);
-                    MHDL_ASSERT(driverSignal);
+                    HCL_ASSERT(driverSignal);
                     if (closedList.find(driverSignal) != closedList.end()) continue;
                     
                     internalSignals.insert(driverSignal);

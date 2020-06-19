@@ -13,7 +13,7 @@
 
 #include <string_view>
 
-namespace mhdl::core::frontend 
+namespace hcl::core::frontend 
 {
     template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>
     SignalType Constant(hlim::ConstantData&& value, const hlim::ConnectionType& connectionType)
@@ -26,8 +26,8 @@ namespace mhdl::core::frontend
     {
         inline Bit operator ""_bit(const char* _val)
         {
-            MHDL_DESIGNCHECK(_val[0] == '0' || _val[0] == '1');
-            MHDL_DESIGNCHECK(_val[1] == 0);
+            HCL_DESIGNCHECK(_val[0] == '0' || _val[0] == '1');
+            HCL_DESIGNCHECK(_val[1] == 0);
 
             hlim::ConnectionType type{ 
                 .interpretation = hlim::ConnectionType::BOOL,

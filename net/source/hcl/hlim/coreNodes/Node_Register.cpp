@@ -1,7 +1,7 @@
 #include "Node_Register.h"
 #include "Node_Constant.h"
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
 Node_Register::Node_Register() : Node(NUM_INPUTS, 1) 
 { 
@@ -36,7 +36,7 @@ void Node_Register::simulateReset(sim::DefaultBitVectorState &state, const size_
     }
 
     Node_Constant *constNode = dynamic_cast<Node_Constant *>(resetDriver.node);
-    MHDL_ASSERT_HINT(constNode != nullptr, "Constant value propagation is not yet implemented, so for simulation the register reset value must be connected to a constant node via signals only!");
+    HCL_ASSERT_HINT(constNode != nullptr, "Constant value propagation is not yet implemented, so for simulation the register reset value must be connected to a constant node via signals only!");
     
     size_t width = getOutputConnectionType(0).width;
     size_t offset = 0;
@@ -75,7 +75,7 @@ void Node_Register::simulateEvaluate(sim::DefaultBitVectorState &state, const si
 
 void Node_Register::simulateAdvance(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const
 {
-    MHDL_ASSERT(clockPort == 0);
+    HCL_ASSERT(clockPort == 0);
     
     bool enableDefined = state.get(sim::DefaultConfig::DEFINED, internalOffsets[INT_ENABLE]);
     bool enable = state.get(sim::DefaultConfig::VALUE, internalOffsets[INT_ENABLE]);

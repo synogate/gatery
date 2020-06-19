@@ -7,7 +7,7 @@
 #include <filesystem>
 #include <memory>
 
-namespace mhdl::core::vhdl {
+namespace hcl::core::vhdl {
 
 /**
  * @todo write docs

@@ -2,7 +2,7 @@
 
 #include "../utils/BitManipulation.h"
 
-namespace mhdl::core::sim {
+namespace hcl::core::sim {
 
 size_t BitAllocator::allocate(unsigned size) {
     if (size <= 32) {

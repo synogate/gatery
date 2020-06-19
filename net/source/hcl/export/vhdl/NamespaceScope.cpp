@@ -5,7 +5,7 @@
 #include "../../utils/Exceptions.h"
 #include "../../utils/Preprocessor.h"
 
-namespace mhdl::core::vhdl {
+namespace hcl::core::vhdl {
 
 NamespaceScope::NamespaceScope(AST &ast, NamespaceScope *parent) : m_ast(ast), m_parent(parent)
 {
@@ -22,7 +22,7 @@ std::string NamespaceScope::allocateName(hlim::NodePort nodePort, const std::str
 {
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
-    MHDL_ASSERT(m_nodeNames.find(nodePort) == m_nodeNames.end());
+    HCL_ASSERT(m_nodeNames.find(nodePort) == m_nodeNames.end());
     
     unsigned attempt = 0;
     std::string name;
@@ -40,7 +40,7 @@ const std::string &NamespaceScope::getName(hlim::NodePort nodePort) const
     if (it != m_nodeNames.end())
         return it->second;
     
-    MHDL_ASSERT_HINT(m_parent != nullptr, "End of namespace scope chain reached, it seems no name was allocated for the given NodePort!");
+    HCL_ASSERT_HINT(m_parent != nullptr, "End of namespace scope chain reached, it seems no name was allocated for the given NodePort!");
     return m_parent->getName(nodePort);
 }
 
@@ -48,7 +48,7 @@ std::string NamespaceScope::allocateName(hlim::BaseClock *clock, const std::stri
 {
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
-    MHDL_ASSERT(m_clockNames.find(clock) == m_clockNames.end());
+    HCL_ASSERT(m_clockNames.find(clock) == m_clockNames.end());
     
     unsigned attempt = 0;
     std::string name;
@@ -67,7 +67,7 @@ const std::string &NamespaceScope::getName(hlim::BaseClock *clock) const
     if (it != m_clockNames.end())
         return it->second;
     
-    MHDL_ASSERT_HINT(m_parent != nullptr, "End of namespace scope chain reached, it seems no name was allocated for the given clock!");
+    HCL_ASSERT_HINT(m_parent != nullptr, "End of namespace scope chain reached, it seems no name was allocated for the given clock!");
     return m_parent->getName(clock);
 }
 

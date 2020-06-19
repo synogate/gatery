@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
 Node_Constant::Node_Constant(ConstantData value, const hlim::ConnectionType& connectionType) : Node(0, 1), m_Value(value) 
 {

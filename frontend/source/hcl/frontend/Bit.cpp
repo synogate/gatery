@@ -1,11 +1,11 @@
 #include "Bit.h"
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
 
 
 Bit::Bit()
 {
-    MHDL_ASSERT(m_node->isOrphaned());
+    HCL_ASSERT(m_node->isOrphaned());
     m_node->setConnectionType(getSignalType(1));
 }
 
@@ -21,7 +21,7 @@ Bit::Bit(const hlim::NodePort &port) : ElementarySignal(port)
 
 hlim::ConnectionType Bit::getSignalType(size_t width) const 
 {
-    MHDL_ASSERT(width == 1);
+    HCL_ASSERT(width == 1);
     
     hlim::ConnectionType connectionType;
     

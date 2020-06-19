@@ -9,7 +9,7 @@
 #include <ostream>
 #include <functional>
 
-namespace mhdl::core::vhdl {
+namespace hcl::core::vhdl {
 
 
 /**

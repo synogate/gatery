@@ -6,7 +6,7 @@
 
 #include <string>
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
     
 using ClockRational = boost::rational<std::uint64_t>;    
     

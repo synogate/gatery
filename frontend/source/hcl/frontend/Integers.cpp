@@ -1,6 +1,6 @@
 #include "Integers.h"
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
     
 hlim::ConnectionType UnsignedInteger::getSignalType(size_t width) const
 {

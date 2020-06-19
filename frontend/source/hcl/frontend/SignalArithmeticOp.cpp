@@ -1,6 +1,6 @@
 #include "SignalArithmeticOp.h"
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
 
 
 

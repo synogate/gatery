@@ -7,7 +7,7 @@
 #include <hcl/utils/Traits.h>
 #include <hcl/hlim/coreNodes/Node_Register.h>
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
 
 class Bit;    
     
@@ -52,7 +52,7 @@ class PipelineRegisterFactory : public RegisterFactory
 template<typename DataSignal, typename>
 DataSignal RegisterFactory::operator()(const DataSignal &inputSignal, const Bit &enableSignal, const DataSignal &resetValue)
 {
-    MHDL_DESIGNCHECK_HINT(inputSignal.getNode()->getOutputConnectionType(0) == resetValue.getNode()->getOutputConnectionType(0), "The connection types of the input and reset signals must be the same!");
+    HCL_DESIGNCHECK_HINT(inputSignal.getNode()->getOutputConnectionType(0) == resetValue.getNode()->getOutputConnectionType(0), "The connection types of the input and reset signals must be the same!");
     
     hlim::Node_Register *node = DesignScope::createNode<hlim::Node_Register>();
     node->recordStackTrace();

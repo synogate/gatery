@@ -4,7 +4,7 @@
 
 #include <metaHDL_core/hlim/coreNodes/Node_Signal.h>
 
-namespace mhdl::vis {
+namespace hcl::vis {
     
 class Node_Signal : public Node
 {

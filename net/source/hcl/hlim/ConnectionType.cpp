@@ -1,6 +1,6 @@
 #include "ConnectionType.h"
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
 
 bool ConnectionType::operator==(const ConnectionType &rhs) const

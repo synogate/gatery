@@ -2,8 +2,7 @@
 
 #include <iterator>
 
-namespace mhdl {
-namespace utils {
+namespace hcl::utils {
 
 template<class Elements>
 class LinkedList;
@@ -77,5 +76,4 @@ class LinkedList
         size_t m_count = 0;
 };
 
-}
 }

@@ -19,4 +19,4 @@
  * @brief
  * @details
  */
-namespace mhdl::core::frontend { }
+namespace hcl::core::frontend { }

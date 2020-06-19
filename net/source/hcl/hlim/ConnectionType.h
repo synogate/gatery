@@ -5,7 +5,7 @@
 #include <string>
 #include <memory>
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
 #if 1
 struct ConnectionType

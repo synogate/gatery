@@ -8,7 +8,7 @@
 #include <string>
 #include <memory>
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
 class Node_Signal;
 class Node_Register;

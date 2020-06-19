@@ -3,7 +3,7 @@
 #include <sstream>
 #include <string>
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
     
 class Comments
 {
@@ -16,5 +16,5 @@ class Comments
 
 }
 
-#define MHDL_COMMENT mhdl::core::frontend::Comments::get()
+#define HCL_COMMENT hcl::core::frontend::Comments::get()
 

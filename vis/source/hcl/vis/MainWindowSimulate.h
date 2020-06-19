@@ -13,7 +13,7 @@
 
 #include <memory>
 
-namespace mhdl::vis {
+namespace hcl::vis {
 
 class Node_Signal;
 

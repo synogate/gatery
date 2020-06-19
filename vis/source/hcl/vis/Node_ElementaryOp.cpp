@@ -6,7 +6,7 @@
 #include "CircuitView.h"
 
 
-namespace mhdl::vis {
+namespace hcl::vis {
 
 Node_ElementaryOp::Node_ElementaryOp(CircuitView *circuitView, core::hlim::BaseNode *hlimNode) : Node(circuitView), m_hlimNode(hlimNode)
 {

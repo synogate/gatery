@@ -2,7 +2,7 @@
 
 #include "coreNodes/Node_Signal.h"
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
     
 NodeGroup::NodeGroup(GroupType groupType) : m_groupType(groupType)

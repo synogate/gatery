@@ -80,12 +80,12 @@ void vpi_client::GhdlSimulation::launch(std::string_view topEntity, const vpi_cl
 
 	// create communication channel
 	auto parent2child = m_InstanceName + "_p2c";
-	env["MHDL_VPI_CMDQUEUE_P2C"] = parent2child;
+	env["HCL_VPI_CMDQUEUE_P2C"] = parent2child;
 	ipc::message_queue::remove(parent2child.c_str());
 	m_CmdQueueP2C.emplace(ipc::create_only, parent2child.c_str(), 10, 1024);
 
 	auto child2parent = m_InstanceName + "_c2p";
-	env["MHDL_VPI_CMDQUEUE_C2P"] = child2parent;
+	env["HCL_VPI_CMDQUEUE_C2P"] = child2parent;
 	ipc::message_queue::remove(child2parent.c_str());
 	m_CmdQueueC2P.emplace(ipc::create_only, child2parent.c_str(), 10, 1024);
 

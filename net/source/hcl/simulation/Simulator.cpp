@@ -1,6 +1,6 @@
 #include "Simulator.h"
 
-namespace mhdl::core::sim {
+namespace hcl::core::sim {
     
     
 

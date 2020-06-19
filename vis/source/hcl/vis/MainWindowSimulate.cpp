@@ -31,7 +31,7 @@ std::string formatStackFrame(const boost::stacktrace::frame &frame)
 }
 
 
-namespace mhdl::vis {
+namespace hcl::vis {
 
 
 MainWindowSimulate::MainWindowSimulate(QWidget *parent, core::hlim::Circuit &circuit)

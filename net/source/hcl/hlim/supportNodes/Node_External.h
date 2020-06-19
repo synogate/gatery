@@ -4,7 +4,7 @@
 
 #include <functional>
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
 
 class Node_External : public Node<Node_External>

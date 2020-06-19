@@ -25,7 +25,7 @@
 #include <list>
 #include <map>
 
-namespace mhdl::core::vhdl {
+namespace hcl::core::vhdl {
     
 
 VHDLExport::VHDLExport(std::filesystem::path destination)
@@ -139,12 +139,12 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
                         inputSignals.insert(signal);
                     } else {
                         hlim::Node_Signal *signal = dynamic_cast<hlim::Node_Signal *>(node->getInput(i).connection->node);
-                        MHDL_ASSERT(signal != nullptr);
+                        HCL_ASSERT(signal != nullptr);
                         inputSignals.insert(signal);
                     }
 #else
                     hlim::Node_Signal *signal = dynamic_cast<hlim::Node_Signal *>(node->getInput(i).connection->node);
-                    MHDL_ASSERT(signal != nullptr);
+                    HCL_ASSERT(signal != nullptr);
                     inputSignals.insert(signal);
 #endif
                 }
@@ -159,7 +159,7 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
                         outputSignals.insert(signal);
                     } else {
                         hlim::Node_Signal *signal = dynamic_cast<hlim::Node_Signal *>(connection->node);
-                        MHDL_ASSERT(signal != nullptr);
+                        HCL_ASSERT(signal != nullptr);
                         outputSignals.insert(signal);
                     }
                 }
@@ -185,7 +185,7 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
             if (!signal->getName().empty())
                 requiredCombinatorialSignals.insert(signal);
             
-            //MHDL_DESIGNCHECK_HINT(signal->getInput(0).connection != nullptr, "Undriven signal used to compose outputs!");
+            //HCL_DESIGNCHECK_HINT(signal->getInput(0).connection != nullptr, "Undriven signal used to compose outputs!");
             if (signal->getInput(0).connection == nullptr) continue; ///@todo Enforce
             
             const hlim::Node *driver = signal->getInput(0).connection->node;        
@@ -202,13 +202,13 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
                     
                     requiredRegisterSignals.insert(signal);
                     
-                    MHDL_ASSERT(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(0).connection->node) != nullptr);
+                    HCL_ASSERT(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(0).connection->node) != nullptr);
                     requiredCombinatorialSignals.insert(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(0).connection->node));
 
-                    MHDL_ASSERT(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(1).connection->node) != nullptr);
+                    HCL_ASSERT(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(1).connection->node) != nullptr);
                     requiredCombinatorialSignals.insert(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(1).connection->node));
 
-                    MHDL_ASSERT(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(2).connection->node) != nullptr);
+                    HCL_ASSERT(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(2).connection->node) != nullptr);
                     requiredCombinatorialSignals.insert(dynamic_cast<const hlim::Node_Signal*>(driver->getInput(2).connection->node));
                 } else
                 if (dynamic_cast<const hlim::Node_Multiplexer*>(driver) != nullptr) {
@@ -217,7 +217,7 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
                 
                 for (auto i : utils::Range(driver->getNumInputs())) {
                     auto driverSignal = dynamic_cast<const hlim::Node_Signal*>(driver->getInput(i).connection->node);
-                    MHDL_ASSERT(driverSignal);
+                    HCL_ASSERT(driverSignal);
                     if (closedList.find(driverSignal) != closedList.end()) continue;
                     openList.insert(driverSignal);
 //std::cout << "      adding signal " << getSignalName(driverSignal) << std::endl;
@@ -299,7 +299,7 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
                 case hlim::Node_Arithmetic::DIV: stream << " / "; break;
                 case hlim::Node_Arithmetic::REM: stream << " MOD "; break;
                 default:
-                    MHDL_ASSERT_HINT(false, "Unhandled operation!");
+                    HCL_ASSERT_HINT(false, "Unhandled operation!");
             };
             formatNode(stream, arithmeticNode->getInput(1).connection->node);
             stream << ")";
@@ -318,7 +318,7 @@ void VHDLExport::exportGroup(const hlim::NodeGroup *group)
                 case hlim::Node_Logic::EQ: formatNode(stream, logicNode->getInput(0).connection->node); stream << " xnor ";  formatNode(stream, logicNode->getInput(1).connection->node); break;
                 case hlim::Node_Logic::NOT: stream << " not "; formatNode(stream, logicNode->getInput(0).connection->node); break;
                 default:
-                    MHDL_ASSERT_HINT(false, "Unhandled operation!");
+                    HCL_ASSERT_HINT(false, "Unhandled operation!");
             };
             stream << ")";
             return; 

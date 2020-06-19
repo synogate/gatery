@@ -3,7 +3,7 @@
 #include <QSyntaxHighlighter>
 #include <QRegularExpression>
 
-namespace mhdl::vis {
+namespace hcl::vis {
 
 
 class CHCLSyntaxHighlighter : public QSyntaxHighlighter

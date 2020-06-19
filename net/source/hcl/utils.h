@@ -13,4 +13,4 @@
  * @brief
  * @details
  */
-namespace mhdl::utils { }
+namespace hcl::utils { }

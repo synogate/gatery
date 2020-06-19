@@ -17,7 +17,7 @@
 #include <optional>
 
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
     
 class SignalBitShiftOp
 {
@@ -47,7 +47,7 @@ class SignalBitShiftOp
 template<typename SignalType, typename>
 SignalType SignalBitShiftOp::operator()(const SignalType &operand) {
     hlim::Node_Signal *signal = operand.getNode();
-    MHDL_ASSERT(signal != nullptr);
+    HCL_ASSERT(signal != nullptr);
     
     hlim::Node_Rewire *node = DesignScope::createNode<hlim::Node_Rewire>(1);
     node->recordStackTrace();
@@ -56,7 +56,7 @@ SignalType SignalBitShiftOp::operator()(const SignalType &operand) {
     
     hlim::Node_Rewire::RewireOperation rewireOp;
     if (m_rotate) {
-        MHDL_ASSERT_HINT(false, "Not implemented yet!");
+        HCL_ASSERT_HINT(false, "Not implemented yet!");
     } else {
         if (m_shift < 0) {            
             if (absShift < signal->getOutputConnectionType(0).width) {
@@ -120,14 +120,14 @@ SignalType SignalBitShiftOp::operator()(const SignalType &operand) {
 
 template<typename SignalType, typename = std::enable_if_t<utils::isBitVectorSignal<SignalType>::value>>
 SignalType operator<<(const SignalType &signal, int amount)  {                                 
-    MHDL_DESIGNCHECK_HINT(amount >= 0, "Shifting by negative amount not allowed!");
+    HCL_DESIGNCHECK_HINT(amount >= 0, "Shifting by negative amount not allowed!");
     SignalBitShiftOp op((int) amount);                                                              
     return op(signal);                                                                              
 }
 
 template<typename SignalType, typename = std::enable_if_t<utils::isBitVectorSignal<SignalType>::value>>
 SignalType operator>>(const SignalType &signal, int amount)  {                                 
-    MHDL_DESIGNCHECK_HINT(amount >= 0, "Shifting by negative amount not allowed!");
+    HCL_DESIGNCHECK_HINT(amount >= 0, "Shifting by negative amount not allowed!");
     SignalBitShiftOp op(- (int)amount);                                                              
     if (utils::isSignedIntegerSignal<SignalType>::value)
         op.duplicateLeft();

@@ -5,7 +5,7 @@
 
 #include <vector>
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
     
 class Node_Rewire : public Node<Node_Rewire>
 {

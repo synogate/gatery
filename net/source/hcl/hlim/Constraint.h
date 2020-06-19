@@ -1,6 +1,6 @@
 #pragma once
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
 /**
  * @todo write docs

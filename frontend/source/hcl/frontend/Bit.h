@@ -8,12 +8,12 @@
 
 #include <vector>
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
     
 class Bit : public ElementarySignal
 {
     public:
-        MHDL_SIGNAL
+        HCL_SIGNAL
         using isBitSignal = void;
         
         Bit();

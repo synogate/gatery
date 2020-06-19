@@ -9,7 +9,7 @@
 #include <vector>
 #include <memory>
 
-namespace mhdl::vis {
+namespace hcl::vis {
 
 class EdgeTree : public BaseGraphicsComposite
 {

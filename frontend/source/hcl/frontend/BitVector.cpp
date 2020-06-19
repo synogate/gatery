@@ -1,10 +1,10 @@
 #include "BitVector.h"
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
     
 void ElementaryVector::resize(size_t width)
 {
-    MHDL_DESIGNCHECK_HINT(m_node->isOrphaned(), "Can not resize signal once it is connected (driving or driven).");
+    HCL_DESIGNCHECK_HINT(m_node->isOrphaned(), "Can not resize signal once it is connected (driving or driven).");
 
     m_node->setConnectionType(getSignalType(width));
 }
@@ -33,7 +33,7 @@ Bit ElementaryVector::operator[](size_t idx) const
 
 void ElementaryVector::setBit(size_t idx, const Bit& in)
 {
-    MHDL_DESIGNCHECK_HINT(getWidth() > idx, "Out of bounds vector element assignment.");
+    HCL_DESIGNCHECK_HINT(getWidth() > idx, "Out of bounds vector element assignment.");
 
     hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(2);
     node->recordStackTrace();

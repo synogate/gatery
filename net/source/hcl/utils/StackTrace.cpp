@@ -9,8 +9,7 @@
 #include <stdexcept>
 
 
-namespace mhdl {
-namespace utils {
+namespace hcl::utils {
 
 
 void StackTrace::record(size_t size, size_t skipTop) 
@@ -46,5 +45,4 @@ std::ostream &operator<<(std::ostream &stream, const StackTrace &trace)
 }
 
     
-}
 }

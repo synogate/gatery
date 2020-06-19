@@ -8,12 +8,12 @@
 #include <memory>
 #include <string>
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
     class Circuit;
     class BaseNode;
 }
 
-namespace mhdl::core::vhdl {
+namespace hcl::core::vhdl {
 
 class Entity;
 class BaseGrouping;

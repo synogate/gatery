@@ -2,8 +2,7 @@
 
 #include <type_traits>
 
-namespace mhdl {
-namespace utils {
+namespace hcl::utils {
     
 ///@todo: Use Concepts!!!    
 
@@ -87,5 +86,4 @@ struct isNumberSignal<Type, std::enable_if_t<
                             // floats, fixed points, ...
                     >> : std::true_type { };
 
-}
 }

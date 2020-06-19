@@ -5,7 +5,7 @@
 
 #include <metaHDL_core/utils/Range.h>
 
-namespace mhdl::vis {
+namespace hcl::vis {
 
 Node::Node(CircuitView *circuitView) : m_circuitView(circuitView)
 {

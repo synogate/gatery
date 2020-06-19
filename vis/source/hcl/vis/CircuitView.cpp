@@ -18,7 +18,7 @@
 
 #include <iostream>
 
-namespace mhdl::vis {
+namespace hcl::vis {
 
 
 CircuitView::CircuitView(QWidget *parent)
@@ -144,7 +144,7 @@ void CircuitView::render(core::hlim::Circuit &circuit, core::hlim::NodeGroup *gr
         for (auto p_i : utils::Range(n->getOutputPorts().size())) {
             auto p = n->getOutputPorts()[p_i];
             
-            MHDL_ASSERT(p.producer.node != nullptr);
+            HCL_ASSERT(p.producer.node != nullptr);
 
             hlim2layout[p.producer] = {.node = n_i, .port = p_i};
         }

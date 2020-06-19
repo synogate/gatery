@@ -3,7 +3,7 @@
 #include "CircuitView.h"
 
 
-namespace mhdl::vis {
+namespace hcl::vis {
 
 Node_Signal::Node_Signal(CircuitView *circuitView, core::hlim::Node_Signal *hlimNode) : Node(circuitView), m_hlimNode(hlimNode)
 {

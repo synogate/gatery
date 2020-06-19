@@ -10,7 +10,7 @@
 #include <functional>
 #include <map>
 
-namespace mhdl::core::sim {
+namespace hcl::core::sim {
 
 struct DataState 
 {

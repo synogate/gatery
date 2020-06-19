@@ -8,7 +8,7 @@
 
 #include <algorithm>
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
 BaseNode::BaseNode() 
 {
@@ -45,7 +45,7 @@ void BaseNode::moveToGroup(NodeGroup *group)
     
     if (m_nodeGroup != nullptr) {
         auto it = std::find(m_nodeGroup->m_nodes.begin(), m_nodeGroup->m_nodes.end(), this);
-        MHDL_ASSERT(it != m_nodeGroup->m_nodes.end());
+        HCL_ASSERT(it != m_nodeGroup->m_nodes.end());
 
         *it = m_nodeGroup->m_nodes.back();
         m_nodeGroup->m_nodes.pop_back();
@@ -73,7 +73,7 @@ void BaseNode::detachClock(size_t clockPort)
     auto clock = m_clocks[clockPort];
     
     auto it = std::find(clock->m_clockedNodes.begin(), clock->m_clockedNodes.end(), NodePort{.node = this, .port = clockPort});
-    MHDL_ASSERT(it != clock->m_clockedNodes.end());
+    HCL_ASSERT(it != clock->m_clockedNodes.end());
 
     *it = clock->m_clockedNodes.back();
     clock->m_clockedNodes.pop_back();

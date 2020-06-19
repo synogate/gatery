@@ -4,13 +4,14 @@
 
 #include "CodeFormatting.h"
 
+#include <boost/algorithm/string.hpp>
+
 #include <map>
 #include <set>
 #include <string>
 
-#include <strings.h>
 
-namespace mhdl::core::vhdl {
+namespace hcl::core::vhdl {
 
 class AST;
 
@@ -49,13 +50,7 @@ class NamespaceScope
         AST &m_ast;
         NamespaceScope *m_parent;
         
-        struct CaseInsensitiveCompare { 
-            bool operator() (const std::string& a, const std::string& b) const {
-                return strcasecmp(a.c_str(), b.c_str()) < 0;
-            }
-        };
-
-        std::set<std::string, CaseInsensitiveCompare> m_namesInUse;
+        std::set<std::string, boost::algorithm::is_iless> m_namesInUse;
         std::map<hlim::NodePort, std::string> m_nodeNames;
         std::map<NodeInternalStorageSignal, std::string> m_nodeStorageNames;
         std::map<hlim::BaseClock*, std::string> m_clockNames;

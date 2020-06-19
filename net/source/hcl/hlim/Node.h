@@ -17,7 +17,7 @@
 #include <set>
 #include <string>
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
 class NodeGroup;
 class BaseClock;

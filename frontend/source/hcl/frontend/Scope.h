@@ -5,7 +5,7 @@
 #include <hcl/hlim/Circuit.h>
 #include <hcl/utils/Preprocessor.h>
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
     
     
 template<class FinalType>
@@ -69,7 +69,7 @@ class DesignScope : public BaseScope<DesignScope>
 
 template<typename NodeType, typename... Args>
 NodeType *DesignScope::createNode(Args&&... args) {
-    MHDL_ASSERT(GroupScope::getCurrentNodeGroup() != nullptr);
+    HCL_ASSERT(GroupScope::getCurrentNodeGroup() != nullptr);
     
     NodeType *node = m_currentScope->m_circuit.createNode<NodeType>(std::forward<Args>(args)...);
     node->moveToGroup(GroupScope::getCurrentNodeGroup());

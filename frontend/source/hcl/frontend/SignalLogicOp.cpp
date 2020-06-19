@@ -1,6 +1,6 @@
 #include "SignalLogicOp.h"
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
 
 hlim::ConnectionType SignalLogicOp::getResultingType(const hlim::ConnectionType &lhs, const hlim::ConnectionType &rhs)
 {

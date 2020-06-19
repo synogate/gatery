@@ -3,12 +3,12 @@
 #include "BitVector.h"
 #include "SignalArithmeticOp.h"
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
 
 class UnsignedInteger : public BaseBitVector<UnsignedInteger>
 {
     public:
-        MHDL_SIGNAL
+        HCL_SIGNAL
         
         using isUnsignedIntegerSignal = void;
 
@@ -26,7 +26,7 @@ class UnsignedInteger : public BaseBitVector<UnsignedInteger>
 class SignedInteger : public BaseBitVector<SignedInteger>
 {
     public:
-        MHDL_SIGNAL
+        HCL_SIGNAL
         
         using isSignedIntegerSignal = void;
         

@@ -19,7 +19,7 @@
 #include <functional>
 
 
-namespace mhdl::vis {
+namespace hcl::vis {
     
 
 

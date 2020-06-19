@@ -7,7 +7,7 @@
 
 #include <QGraphicsItem>
 
-namespace mhdl::vis {
+namespace hcl::vis {
 
 class CircuitView;    
     

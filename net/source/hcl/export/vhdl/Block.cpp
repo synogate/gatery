@@ -4,7 +4,7 @@
 #include "AST.h"
 
 
-namespace mhdl::core::vhdl {
+namespace hcl::core::vhdl {
 
 Block::Block(Entity *parent, const std::string &desiredName) : BasicBlock(parent->getAST(), parent, &parent->getNamespaceScope()) 
 { 
@@ -19,7 +19,7 @@ Block::~Block()
 
 void Block::buildFrom(hlim::NodeGroup *nodeGroup)
 {
-    MHDL_ASSERT(nodeGroup->getGroupType() == hlim::NodeGroup::GRP_AREA);
+    HCL_ASSERT(nodeGroup->getGroupType() == hlim::NodeGroup::GRP_AREA);
     
     m_comment = nodeGroup->getComment();
 

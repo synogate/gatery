@@ -12,7 +12,7 @@
 #include <vector>
 #include <algorithm>
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
 
 // concat x = a && b && c;
     
@@ -72,7 +72,7 @@ class BaseBitVector : public ElementaryVector
 class BitVector : public BaseBitVector<BitVector>
 {
     public:
-        MHDL_SIGNAL
+        HCL_SIGNAL
         
         using isUntypedBitvectorSignal = void;        
 

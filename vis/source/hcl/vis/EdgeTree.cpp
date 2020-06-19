@@ -3,7 +3,7 @@
 #include <QBrush>
 #include <QPen>
 
-namespace mhdl::vis {
+namespace hcl::vis {
 
 EdgeTree::EdgeTree(const layout::EdgeLayout &edgeLayout)
 {

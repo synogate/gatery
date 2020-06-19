@@ -18,7 +18,7 @@
 
 #include <immintrin.h>
 
-namespace mhdl::core::sim {
+namespace hcl::core::sim {
     
     
 void ExecutionBlock::evaluate(DataState &state) const
@@ -146,7 +146,7 @@ void Program::compileProgram(const hlim::Circuit &circuit)
             }
         }
         
-        MHDL_DESIGNCHECK_HINT(readyNode != nullptr, "Cyclic dependency!");
+        HCL_DESIGNCHECK_HINT(readyNode != nullptr, "Cyclic dependency!");
         
         nodesRemaining.erase(readyNode);     
         

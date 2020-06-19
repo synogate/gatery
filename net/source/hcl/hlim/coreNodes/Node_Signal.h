@@ -3,7 +3,7 @@
 #include "../Node.h"
 #include "../ConnectionType.h"
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
     
 class Node_Signal : public Node<Node_Signal>
 {

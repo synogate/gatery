@@ -3,7 +3,7 @@
 #include <vector>
 #include <functional>
 
-namespace mhdl::vis::layout {
+namespace hcl::vis::layout {
 
 struct Location {
     float x, y;

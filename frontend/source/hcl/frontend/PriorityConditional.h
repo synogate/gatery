@@ -8,7 +8,7 @@
 
 #include <vector>
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
     
 template<typename DataSignal, typename = std::enable_if_t<utils::isSignal<DataSignal>::value>>
 class PriorityConditional
@@ -72,7 +72,7 @@ class ConditionalScopeHelper
 
 
 #define ELSE \
-    else { MHDL_ASSERT(false); } if (true)
+    else { HCL_ASSERT(false); } if (true)
 
 
 

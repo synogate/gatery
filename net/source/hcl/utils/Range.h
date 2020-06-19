@@ -2,8 +2,7 @@
 
 #include <iterator>
 
-namespace mhdl {
-namespace utils {
+namespace hcl::utils {
     
 template<typename Integral = size_t>
 class Range
@@ -34,6 +33,5 @@ class Range
         Integral m_end = 0;
 };
     
-}
 }
 

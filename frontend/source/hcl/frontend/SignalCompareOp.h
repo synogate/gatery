@@ -10,7 +10,7 @@
 #include <hcl/utils/Preprocessor.h>
 #include <hcl/utils/Traits.h>
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
 
     class SignalCompareOp
     {
@@ -31,11 +31,11 @@ namespace mhdl::core::frontend {
     Bit SignalCompareOp::operator()(const SignalType& lhs, const SignalType& rhs) {
         hlim::Node_Signal* lhsSignal = lhs.getNode();
         hlim::Node_Signal* rhsSignal = rhs.getNode();
-        MHDL_ASSERT(lhsSignal != nullptr);
-        MHDL_ASSERT(rhsSignal != nullptr);
+        HCL_ASSERT(lhsSignal != nullptr);
+        HCL_ASSERT(rhsSignal != nullptr);
 
         //if constexpr (!utils::isIntegerSignal<SignalType>::value)
-            MHDL_DESIGNCHECK_HINT(lhs.getWidth() == rhs.getWidth(), "Signal comparison is needs equal width for non auto extendable types.");
+            HCL_DESIGNCHECK_HINT(lhs.getWidth() == rhs.getWidth(), "Signal comparison is needs equal width for non auto extendable types.");
 
         auto* node = DesignScope::createNode<hlim::Node_Compare>(m_op);
         node->recordStackTrace();

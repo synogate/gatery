@@ -8,7 +8,7 @@
 #include <vector>
 #include <memory>
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
 class Circuit
 {

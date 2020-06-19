@@ -13,7 +13,7 @@
 #include <boost/format.hpp>
 
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
     
 class SignalLogicOp
 {
@@ -35,13 +35,13 @@ class SignalLogicOp
 
 template<typename SignalType, typename>
 SignalType SignalLogicOp::operator()(const SignalType &lhs, const SignalType &rhs) {
-    MHDL_DESIGNCHECK_HINT(m_op != hlim::Node_Logic::NOT, "Trying to perform a not operation with two operands.");
+    HCL_DESIGNCHECK_HINT(m_op != hlim::Node_Logic::NOT, "Trying to perform a not operation with two operands.");
     
     hlim::Node_Signal *lhsSignal = lhs.getNode();
     hlim::Node_Signal *rhsSignal = rhs.getNode();
-    MHDL_ASSERT(lhsSignal != nullptr);
-    MHDL_ASSERT(rhsSignal != nullptr);
-    MHDL_DESIGNCHECK_HINT(lhsSignal->getOutputConnectionType(0) == rhsSignal->getOutputConnectionType(0), "Can only perform logic operations on operands of same type (e.g. width).");
+    HCL_ASSERT(lhsSignal != nullptr);
+    HCL_ASSERT(rhsSignal != nullptr);
+    HCL_DESIGNCHECK_HINT(lhsSignal->getOutputConnectionType(0) == rhsSignal->getOutputConnectionType(0), "Can only perform logic operations on operands of same type (e.g. width).");
     
     hlim::Node_Logic *node = DesignScope::createNode<hlim::Node_Logic>(m_op);
     node->recordStackTrace();
@@ -53,10 +53,10 @@ SignalType SignalLogicOp::operator()(const SignalType &lhs, const SignalType &rh
 
 template<typename SignalType, typename>
 SignalType SignalLogicOp::operator()(const SignalType &lhs) {
-    MHDL_DESIGNCHECK_HINT(m_op == hlim::Node_Logic::NOT, "Trying to perform a non-not operation with one operand.");
+    HCL_DESIGNCHECK_HINT(m_op == hlim::Node_Logic::NOT, "Trying to perform a non-not operation with one operand.");
     
     hlim::Node_Signal *lhsSignal = lhs.getNode();
-    MHDL_ASSERT(lhsSignal != nullptr);
+    HCL_ASSERT(lhsSignal != nullptr);
     
     hlim::Node_Logic *node = DesignScope::createNode<hlim::Node_Logic>(m_op);
     node->recordStackTrace();
@@ -67,14 +67,14 @@ SignalType SignalLogicOp::operator()(const SignalType &lhs) {
 
 
 
-#define MHDL_BUILD_LOGIC_OPERATOR(typeTrait, cppOp, Op)                                         \
+#define HCL_BUILD_LOGIC_OPERATOR(typeTrait, cppOp, Op)                                         \
     template<typename SignalType, typename = std::enable_if_t<typeTrait<SignalType>::value>>    \
     SignalType cppOp(const SignalType &lhs, const SignalType &rhs)  {                           \
         SignalLogicOp op(Op);                                                                   \
         return op(lhs, rhs);                                                                    \
     }
 
-#define MHDL_BUILD_LOGIC_OPERATOR_UNARY(typeTrait, cppOp, Op)                                   \
+#define HCL_BUILD_LOGIC_OPERATOR_UNARY(typeTrait, cppOp, Op)                                   \
     template<typename SignalType, typename = std::enable_if_t<typeTrait<SignalType>::value>>    \
     SignalType cppOp(const SignalType &lhs)  {                                                  \
         SignalLogicOp op(Op);                                                                   \
@@ -82,35 +82,35 @@ SignalType SignalLogicOp::operator()(const SignalType &lhs) {
     }
     
     
-MHDL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, operator&, hlim::Node_Logic::AND)
-MHDL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, operator|, hlim::Node_Logic::OR)
-MHDL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, operator^, hlim::Node_Logic::XOR)
-MHDL_BUILD_LOGIC_OPERATOR_UNARY(utils::isElementarySignal, operator~, hlim::Node_Logic::NOT)
+HCL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, operator&, hlim::Node_Logic::AND)
+HCL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, operator|, hlim::Node_Logic::OR)
+HCL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, operator^, hlim::Node_Logic::XOR)
+HCL_BUILD_LOGIC_OPERATOR_UNARY(utils::isElementarySignal, operator~, hlim::Node_Logic::NOT)
 
-MHDL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, nand, hlim::Node_Logic::NAND)
-MHDL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, nor, hlim::Node_Logic::NOR)
-MHDL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, bitwiseEqual, hlim::Node_Logic::EQ)
+HCL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, nand, hlim::Node_Logic::NAND)
+HCL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, nor, hlim::Node_Logic::NOR)
+HCL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, bitwiseEqual, hlim::Node_Logic::EQ)
     
-MHDL_BUILD_LOGIC_OPERATOR(utils::isBitSignal, operator&&, hlim::Node_Logic::AND)
-MHDL_BUILD_LOGIC_OPERATOR(utils::isBitSignal, operator||, hlim::Node_Logic::OR)
-MHDL_BUILD_LOGIC_OPERATOR_UNARY(utils::isBitSignal, operator!, hlim::Node_Logic::NOT)
+HCL_BUILD_LOGIC_OPERATOR(utils::isBitSignal, operator&&, hlim::Node_Logic::AND)
+HCL_BUILD_LOGIC_OPERATOR(utils::isBitSignal, operator||, hlim::Node_Logic::OR)
+HCL_BUILD_LOGIC_OPERATOR_UNARY(utils::isBitSignal, operator!, hlim::Node_Logic::NOT)
 
-#undef MHDL_BUILD_LOGIC_OPERATOR
-#undef MHDL_BUILD_LOGIC_OPERATOR_UNARY
+#undef HCL_BUILD_LOGIC_OPERATOR
+#undef HCL_BUILD_LOGIC_OPERATOR_UNARY
 
 
-#define MHDL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(typeTrait, cppOp, Op)                         \
+#define HCL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(typeTrait, cppOp, Op)                         \
     template<typename SignalType, typename = std::enable_if_t<typeTrait<SignalType>::value>>    \
     SignalType &cppOp(SignalType lhs, const SignalType &rhs)  {                                 \
         SignalLogicOp op(Op);                                                              \
         return lhs = op(lhs, rhs);                                                              \
     }
 
-MHDL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(utils::isElementarySignal, operator&=, hlim::Node_Logic::AND)
-MHDL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(utils::isElementarySignal, operator|=, hlim::Node_Logic::OR)
-MHDL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(utils::isElementarySignal, operator^=, hlim::Node_Logic::XOR)
+HCL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(utils::isElementarySignal, operator&=, hlim::Node_Logic::AND)
+HCL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(utils::isElementarySignal, operator|=, hlim::Node_Logic::OR)
+HCL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(utils::isElementarySignal, operator^=, hlim::Node_Logic::XOR)
 
-#undef MHDL_BUILD_LOGIC_ASSIGNMENT_OPERATOR
+#undef HCL_BUILD_LOGIC_ASSIGNMENT_OPERATOR
 
 
 

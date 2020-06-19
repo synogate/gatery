@@ -2,7 +2,7 @@
 
 #include "../../utils/BitManipulation.h"
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
 Node_Arithmetic::Node_Arithmetic(Op op) : Node(2, 1), m_op(op) 
 { 
@@ -26,7 +26,7 @@ void Node_Arithmetic::updateConnectionType()
         if (rhs.node != nullptr) {
             desiredConnectionType = lhs.node->getOutputConnectionType(lhs.port);
             desiredConnectionType.width = std::max(desiredConnectionType.width, rhs.node->getOutputConnectionType(rhs.port).width);
-            MHDL_ASSERT_HINT(lhs.node->getOutputConnectionType(lhs.port).interpretation == rhs.node->getOutputConnectionType(rhs.port).interpretation, "Mixing different interpretations not yet implemented!");
+            HCL_ASSERT_HINT(lhs.node->getOutputConnectionType(lhs.port).interpretation == rhs.node->getOutputConnectionType(rhs.port).interpretation, "Mixing different interpretations not yet implemented!");
         } else
             desiredConnectionType = lhs.node->getOutputConnectionType(lhs.port);
     } else if (rhs.node != nullptr)
@@ -44,7 +44,7 @@ void Node_Arithmetic::disconnectInput(size_t operand)
 
 void Node_Arithmetic::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
-    MHDL_ASSERT_HINT(getOutputConnectionType(0).width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
+    HCL_ASSERT_HINT(getOutputConnectionType(0).width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
     auto leftDriver = getNonSignalDriver(0);
     auto rightDriver = getNonSignalDriver(1);
     if (leftDriver.node == nullptr || rightDriver.node == nullptr) {
@@ -54,8 +54,8 @@ void Node_Arithmetic::simulateEvaluate(sim::DefaultBitVectorState &state, const 
     
     const auto &leftType = leftDriver.node->getOutputConnectionType(leftDriver.port);
     const auto &rightType = rightDriver.node->getOutputConnectionType(rightDriver.port);
-    MHDL_ASSERT_HINT(leftType.width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
-    MHDL_ASSERT_HINT(rightType.width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
+    HCL_ASSERT_HINT(leftType.width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
+    HCL_ASSERT_HINT(rightType.width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
     
     if (!allDefinedNonStraddling(state, inputOffsets[0], leftType.width)) {
         state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
@@ -73,16 +73,16 @@ void Node_Arithmetic::simulateEvaluate(sim::DefaultBitVectorState &state, const 
     
     switch (getOutputConnectionType(0).interpretation) {
         case ConnectionType::BOOL:
-            MHDL_ASSERT_HINT(false, "Can't do arithmetic on booleans!");
+            HCL_ASSERT_HINT(false, "Can't do arithmetic on booleans!");
         break;
         case ConnectionType::RAW:
-            MHDL_ASSERT_HINT(false, "Can't do arithmetic on raw data!");
+            HCL_ASSERT_HINT(false, "Can't do arithmetic on raw data!");
         break;
         case ConnectionType::ONE_HOT:
-            MHDL_ASSERT_HINT(false, "Can't do arithmetic on one hot data!");
+            HCL_ASSERT_HINT(false, "Can't do arithmetic on one hot data!");
         break;
         case ConnectionType::FLOAT:
-            MHDL_ASSERT_HINT(false, "Can't do arithmetic on float data yet!");
+            HCL_ASSERT_HINT(false, "Can't do arithmetic on float data yet!");
         break;
         case ConnectionType::UNSIGNED:
             switch (m_op) {
@@ -102,7 +102,7 @@ void Node_Arithmetic::simulateEvaluate(sim::DefaultBitVectorState &state, const 
                     result = left % right;
                 break;
                 default:
-                    MHDL_ASSERT_HINT(false, "Unhandled case!");
+                    HCL_ASSERT_HINT(false, "Unhandled case!");
             }
         break;
         case ConnectionType::SIGNED_2COMPLEMENT:
@@ -114,20 +114,20 @@ void Node_Arithmetic::simulateEvaluate(sim::DefaultBitVectorState &state, const 
                     result = left - right;
                 break;
                 case MUL:
-                    MHDL_ASSERT_HINT(false, "Multiplication of signed data types not yet implemented!");
+                    HCL_ASSERT_HINT(false, "Multiplication of signed data types not yet implemented!");
                 break;
                 case DIV:
-                    MHDL_ASSERT_HINT(false, "Division of signed data types not yet implemented!");
+                    HCL_ASSERT_HINT(false, "Division of signed data types not yet implemented!");
                 break;
                 case REM:
-                    MHDL_ASSERT_HINT(false, "Remainder of signed data types not yet implemented!");
+                    HCL_ASSERT_HINT(false, "Remainder of signed data types not yet implemented!");
                 break;
                 default:
-                    MHDL_ASSERT_HINT(false, "Unhandled case!");
+                    HCL_ASSERT_HINT(false, "Unhandled case!");
             }
         break;
         default:
-            MHDL_ASSERT_HINT(false, "Unhandled case!");
+            HCL_ASSERT_HINT(false, "Unhandled case!");
     }
     
     state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0], getOutputConnectionType(0).width, result);

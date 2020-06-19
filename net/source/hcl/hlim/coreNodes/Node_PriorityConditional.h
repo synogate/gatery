@@ -4,7 +4,7 @@
 
 #include <boost/format.hpp>
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
     
 class Node_PriorityConditional : public Node<Node_PriorityConditional>
 {

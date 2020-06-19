@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <string.h>
 
-namespace mhdl::core::sim {
+namespace hcl::core::sim {
 
 struct DefaultConfig
 {
@@ -164,10 +164,10 @@ template<class Config>
 void BitVectorState<Config>::copyRange(size_t dstOffset, const BitVectorState<Config> &src, size_t srcOffset, size_t size)
 {
     // This code assumes that either offsets are aligned to block boundaries, or the access doesn't cross block boundaries    
-    MHDL_ASSERT(dstOffset % Config::NUM_BITS_PER_BLOCK == 0 || 
+    HCL_ASSERT(dstOffset % Config::NUM_BITS_PER_BLOCK == 0 || 
                 dstOffset % Config::NUM_BITS_PER_BLOCK + size <= Config::NUM_BITS_PER_BLOCK);
 
-    MHDL_ASSERT(srcOffset % Config::NUM_BITS_PER_BLOCK == 0 || 
+    HCL_ASSERT(srcOffset % Config::NUM_BITS_PER_BLOCK == 0 || 
                 (srcOffset % Config::NUM_BITS_PER_BLOCK) + size <= Config::NUM_BITS_PER_BLOCK);
     
     

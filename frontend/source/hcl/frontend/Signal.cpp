@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
 
 
 ElementarySignal::ElementarySignal()

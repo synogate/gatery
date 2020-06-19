@@ -1,6 +1,6 @@
 #pragma once
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
     
     
 class SignalDelay

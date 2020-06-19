@@ -14,7 +14,7 @@
 #include <intrin.h>
 #endif
 
-namespace mhdl::utils {
+namespace hcl::utils {
 
 #ifdef _MSC_VER
 inline unsigned truncLog2(unsigned v) {    

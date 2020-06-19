@@ -6,7 +6,7 @@
 
 #include <set>
 
-namespace mhdl::vis {
+namespace hcl::vis {
 
 Node_Entity::Node_Entity(CircuitView *circuitView, core::hlim::NodeGroup *nodeGroup) : Node(circuitView), m_hlimNodeGroup(nodeGroup)
 {

@@ -12,7 +12,7 @@
 #include <boost/format.hpp>
 
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
     
 class BaseSignal {
     public:
@@ -56,8 +56,8 @@ class ElementarySignal : public BaseSignal {
 
 /*
 hlim::Node_Signal *constructBinaryOperation(hlim::Node::OutputPort *lhs, hlim::Node::OutputPort *rhs, hlim::Node *opNode) {
-    MHDL_ASSERT(dynamic_cast<hlim::Node_Signal*>(lhs->node) != nullptr);
-    MHDL_ASSERT(dynamic_cast<hlim::Node_Signal*>(rhs->node) != nullptr);
+    HCL_ASSERT(dynamic_cast<hlim::Node_Signal*>(lhs->node) != nullptr);
+    HCL_ASSERT(dynamic_cast<hlim::Node_Signal*>(rhs->node) != nullptr);
 }
 */
 
@@ -66,7 +66,7 @@ hlim::Node_Signal *constructBinaryOperation(hlim::Node::OutputPort *lhs, hlim::N
 /*
 
 
-#define MHDL_SUBSIGNAL(x) \
+#define HCL_SUBSIGNAL(x) \
         registerSignal(#x, x)
 
         

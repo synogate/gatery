@@ -1,6 +1,6 @@
 #pragma once
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
 class Node_Arithmetic;
 class Node_Compare;

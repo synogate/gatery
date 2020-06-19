@@ -9,7 +9,7 @@
 #include <functional>
 #include <map>
 
-namespace mhdl::core::sim {
+namespace hcl::core::sim {
 
 class Simulator
 {

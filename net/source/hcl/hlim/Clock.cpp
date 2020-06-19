@@ -5,7 +5,7 @@
 
 #include "../hlim/Node.h"
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
     
 BaseClock::~BaseClock()
 {
@@ -16,12 +16,12 @@ BaseClock::~BaseClock()
     
 ClockRational SignalDrivenClock::getAbsoluteFrequency() 
 {
-    MHDL_DESIGNCHECK_HINT(false, "Can not compute the absolute frequency of a signal driven clock!");
+    HCL_DESIGNCHECK_HINT(false, "Can not compute the absolute frequency of a signal driven clock!");
 }
 
 ClockRational SignalDrivenClock::getAbsolutePhaseShift() 
 {
-    MHDL_DESIGNCHECK_HINT(false, "Can not compute the absolute phase shift of a signal driven clock!");
+    HCL_DESIGNCHECK_HINT(false, "Can not compute the absolute phase shift of a signal driven clock!");
 }
 
 ClockRational SignalDrivenClock::getFrequencyRelativeTo(BaseClock &other)

@@ -1,7 +1,7 @@
 #include "Scope.h"
 
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
     
 GroupScope::GroupScope(hlim::NodeGroup::GroupType groupType) : BaseScope<GroupScope>()
 {
@@ -32,7 +32,7 @@ DesignScope::DesignScope() : BaseScope<DesignScope>(), m_rootScope(m_circuit.get
 { 
     m_rootScope.setName("root");
     
-    MHDL_DESIGNCHECK_HINT(m_parentScope == nullptr, "Only one design scope can be active at a time!");
+    HCL_DESIGNCHECK_HINT(m_parentScope == nullptr, "Only one design scope can be active at a time!");
 }
 
 }

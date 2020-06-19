@@ -13,16 +13,16 @@
 #endif
 
 
-#define MHDL_NAMED(x) mhdl::core::frontend::setName(x, #x)
+#define HCL_NAMED(x) hcl::core::frontend::setName(x, #x)
 
-#define MHDL_SIGNAL \
+#define HCL_SIGNAL \
         virtual const char *getSignalTypeName() override { return GET_FUNCTION_NAME; }
 
 
         
-#define MHDL_ASSERT(x) { if (!(x)) { throw mhdl::utils::InternalError(__FILE__, __LINE__, std::string("Assertion failed: ") + #x); }}
-#define MHDL_ASSERT_HINT(x, message) { if (!(x)) { throw mhdl::utils::InternalError(__FILE__, __LINE__, std::string("Assertion failed: ") + #x + " Hint: " + message); }}
+#define HCL_ASSERT(x) { if (!(x)) { throw hcl::utils::InternalError(__FILE__, __LINE__, std::string("Assertion failed: ") + #x); }}
+#define HCL_ASSERT_HINT(x, message) { if (!(x)) { throw hcl::utils::InternalError(__FILE__, __LINE__, std::string("Assertion failed: ") + #x + " Hint: " + message); }}
 
 
-#define MHDL_DESIGNCHECK(x) { if (!(x)) { throw mhdl::utils::DesignError(__FILE__, __LINE__, std::string("Design failed: ") + #x); }}
-#define MHDL_DESIGNCHECK_HINT(x, message) { if (!(x)) { throw mhdl::utils::DesignError(__FILE__, __LINE__, std::string("Design failed: ") + #x + " Hint: " + message); }}
+#define HCL_DESIGNCHECK(x) { if (!(x)) { throw hcl::utils::DesignError(__FILE__, __LINE__, std::string("Design failed: ") + #x); }}
+#define HCL_DESIGNCHECK_HINT(x, message) { if (!(x)) { throw hcl::utils::DesignError(__FILE__, __LINE__, std::string("Design failed: ") + #x + " Hint: " + message); }}

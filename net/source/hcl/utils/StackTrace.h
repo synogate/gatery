@@ -9,8 +9,7 @@
 #include <ostream>
 
 
-namespace mhdl {
-namespace utils {
+namespace hcl::utils {
     
     
 
@@ -27,5 +26,4 @@ class StackTrace
 std::ostream &operator<<(std::ostream &stream, const StackTrace &trace);
 
 
-}
 }

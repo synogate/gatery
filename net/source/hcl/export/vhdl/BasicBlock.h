@@ -5,7 +5,7 @@
 #include <vector>
 #include <memory>
 
-namespace mhdl::core::vhdl {
+namespace hcl::core::vhdl {
     
 class Entity;
 class Process;

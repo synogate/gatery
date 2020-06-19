@@ -16,7 +16,7 @@
 #include "../../hlim/coreNodes/Node_Register.h"
 #include "../../hlim/coreNodes/Node_Rewire.h"
 
-namespace mhdl::core::vhdl {
+namespace hcl::core::vhdl {
 
 Process::Process(BasicBlock *parent) : BaseGrouping(parent->getAST(), parent, &parent->getNamespaceScope())
 {
@@ -127,7 +127,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
         }
     }
     
-    MHDL_ASSERT(dynamic_cast<const hlim::Node_Register*>(nodePort.node) == nullptr);
+    HCL_ASSERT(dynamic_cast<const hlim::Node_Register*>(nodePort.node) == nullptr);
     
     const hlim::Node_Signal *signalNode = dynamic_cast<const hlim::Node_Signal *>(nodePort.node);
     if (signalNode != nullptr) { 
@@ -146,7 +146,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
             case hlim::Node_Arithmetic::DIV: stream << " / "; break;
             case hlim::Node_Arithmetic::REM: stream << " MOD "; break;
             default:
-                MHDL_ASSERT_HINT(false, "Unhandled operation!");
+                HCL_ASSERT_HINT(false, "Unhandled operation!");
         };
         formatExpression(stream, comments, arithmeticNode->getDriver(1), dependentInputs);
         stream << ")";
@@ -168,7 +168,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
                 case hlim::Node_Logic::XOR: stream << " xor "; break;
                 case hlim::Node_Logic::EQ: stream << " xnor "; break;
                 default:
-                    MHDL_ASSERT_HINT(false, "Unhandled operation!");
+                    HCL_ASSERT_HINT(false, "Unhandled operation!");
             };
             formatExpression(stream, comments, logicNode->getDriver(1), dependentInputs);
         }
@@ -188,7 +188,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
             case hlim::Node_Compare::LEQ: stream << " <= "; break;
             case hlim::Node_Compare::GEQ: stream << " >= "; break;
             default:
-                MHDL_ASSERT_HINT(false, "Unhandled operation!");
+                HCL_ASSERT_HINT(false, "Unhandled operation!");
         };
         formatExpression(stream, comments, compareNode->getDriver(1), dependentInputs);
         stream << ")";
@@ -261,7 +261,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
         return;
     }
 
-    MHDL_ASSERT_HINT(false, "Unhandled node type!");
+    HCL_ASSERT_HINT(false, "Unhandled node type!");
 }
 
 void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
@@ -422,7 +422,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
                 }
             }
             
-            MHDL_ASSERT_HINT(bestStatement != ~0ull, "Cyclic dependency of signals detected!");
+            HCL_ASSERT_HINT(bestStatement != ~0ull, "Cyclic dependency of signals detected!");
             
             cf.formatCodeComment(stream, indentation+1, statements[bestStatement].comment);
             stream << statements[bestStatement].code << std::flush;
@@ -477,7 +477,7 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 
     for (auto node : m_nodes) {
         hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
-        MHDL_ASSERT(regNode != nullptr);
+        HCL_ASSERT(regNode != nullptr);
             
         hlim::NodePort output = {.node = regNode, .port = 0};
         hlim::NodePort resetValue = regNode->getDriver(hlim::Node_Register::RESET_VALUE);
@@ -493,7 +493,7 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
     
     for (auto node : m_nodes) {
         hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
-        MHDL_ASSERT(regNode != nullptr);
+        HCL_ASSERT(regNode != nullptr);
             
         hlim::NodePort output = {.node = regNode, .port = 0};
         hlim::NodePort dataInput = regNode->getDriver(hlim::Node_Register::DATA);

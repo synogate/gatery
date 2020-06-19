@@ -1,7 +1,7 @@
 #include "Node_Compare.h"
 
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
 Node_Compare::Node_Compare(Op op) : Node(2, 1), m_op(op)
 {
@@ -22,9 +22,9 @@ void Node_Compare::simulateEvaluate(sim::DefaultBitVectorState &state, const siz
     
     const auto &leftType = leftDriver.node->getOutputConnectionType(leftDriver.port);
     const auto &rightType = rightDriver.node->getOutputConnectionType(rightDriver.port);
-    MHDL_ASSERT_HINT(leftType.width <= 64, "Compare with more than 64 bits not yet implemented!");
-    MHDL_ASSERT_HINT(rightType.width <= 64, "Compare with more than 64 bits not yet implemented!");
-    MHDL_ASSERT_HINT(leftType.interpretation == rightType.interpretation, "Comparing signals with different interpretations not yet implemented!");
+    HCL_ASSERT_HINT(leftType.width <= 64, "Compare with more than 64 bits not yet implemented!");
+    HCL_ASSERT_HINT(rightType.width <= 64, "Compare with more than 64 bits not yet implemented!");
+    HCL_ASSERT_HINT(leftType.interpretation == rightType.interpretation, "Comparing signals with different interpretations not yet implemented!");
     
     if (!allDefinedNonStraddling(state, inputOffsets[0], leftType.width)) {
         state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
@@ -50,14 +50,14 @@ void Node_Compare::simulateEvaluate(sim::DefaultBitVectorState &state, const siz
                     result = left != right;
                 break;
                 default:
-                    MHDL_ASSERT_HINT(false, "Unhandled case!");
+                    HCL_ASSERT_HINT(false, "Unhandled case!");
             }
         break;
         case ConnectionType::ONE_HOT:
-            MHDL_ASSERT_HINT(false, "Can't do compare on one hot data yet!");
+            HCL_ASSERT_HINT(false, "Can't do compare on one hot data yet!");
         break;
         case ConnectionType::FLOAT:
-            MHDL_ASSERT_HINT(false, "Can't do compare on float data yet!");
+            HCL_ASSERT_HINT(false, "Can't do compare on float data yet!");
         break;
         case ConnectionType::UNSIGNED:
             switch (m_op) {
@@ -80,7 +80,7 @@ void Node_Compare::simulateEvaluate(sim::DefaultBitVectorState &state, const siz
                     result = left >= right;
                 break;
                 default:
-                    MHDL_ASSERT_HINT(false, "Unhandled case!");
+                    HCL_ASSERT_HINT(false, "Unhandled case!");
             }
         break;
         case ConnectionType::SIGNED_2COMPLEMENT:
@@ -92,11 +92,11 @@ void Node_Compare::simulateEvaluate(sim::DefaultBitVectorState &state, const siz
                     result = left != right;
                 break;
                 default:
-                    MHDL_ASSERT_HINT(false, "Case not yet implemented (sign extension missing)!");
+                    HCL_ASSERT_HINT(false, "Case not yet implemented (sign extension missing)!");
             }
         break;
         default:
-            MHDL_ASSERT_HINT(false, "Unhandled case!");
+            HCL_ASSERT_HINT(false, "Unhandled case!");
     }
     
     state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0], 1, result?1:0);

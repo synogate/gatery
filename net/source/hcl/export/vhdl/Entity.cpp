@@ -9,7 +9,7 @@
 
 #include <memory>
 
-namespace mhdl::core::vhdl {
+namespace hcl::core::vhdl {
 
 Entity::Entity(AST &ast, const std::string &desiredName, BasicBlock *parent) : BasicBlock(ast, parent, &ast.getNamespaceScope())
 {
@@ -23,7 +23,7 @@ Entity::~Entity()
 
 void Entity::buildFrom(hlim::NodeGroup *nodeGroup)
 {
-    MHDL_ASSERT(nodeGroup->getGroupType() == hlim::NodeGroup::GRP_ENTITY);
+    HCL_ASSERT(nodeGroup->getGroupType() == hlim::NodeGroup::GRP_ENTITY);
     
     m_comment = nodeGroup->getComment();
 

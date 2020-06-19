@@ -1,7 +1,7 @@
 #pragma once
 #include "../Node.h"
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
     
 class Node_Logic : public Node<Node_Logic>
 {

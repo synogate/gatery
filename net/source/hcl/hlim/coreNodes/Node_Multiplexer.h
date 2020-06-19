@@ -4,7 +4,7 @@
 
 #include <boost/format.hpp>
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
     
 class Node_Multiplexer : public Node<Node_Multiplexer>
 {

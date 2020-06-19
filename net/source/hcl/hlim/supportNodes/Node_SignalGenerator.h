@@ -2,7 +2,7 @@
 
 #include "../Node.h"
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
 class Node_SignalGenerator : public Node<Node_SignalGenerator>
 {

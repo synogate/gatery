@@ -33,8 +33,8 @@ namespace vpi_host
     };
 
     VpiSimulationHost::VpiSimulationHost() :
-        m_CmdQueueP2C(ipc::open_only, boost::this_process::environment().get("MHDL_VPI_CMDQUEUE_P2C").c_str()),
-        m_CmdQueueC2P(ipc::open_only, boost::this_process::environment().get("MHDL_VPI_CMDQUEUE_C2P").c_str())
+        m_CmdQueueP2C(ipc::open_only, boost::this_process::environment().get("HCL_VPI_CMDQUEUE_P2C").c_str()),
+        m_CmdQueueC2P(ipc::open_only, boost::this_process::environment().get("HCL_VPI_CMDQUEUE_C2P").c_str())
     {
     }
 

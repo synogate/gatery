@@ -15,7 +15,7 @@
 #include <boost/format.hpp>
 
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
 
 class SignalArithmeticOp
 {
@@ -36,8 +36,8 @@ template<typename SignalType, typename>
 SignalType SignalArithmeticOp::operator()(const SignalType &lhs, const SignalType &rhs) {
     hlim::Node_Signal *lhsSignal = lhs.getNode();
     hlim::Node_Signal *rhsSignal = rhs.getNode();
-    MHDL_ASSERT(lhsSignal != nullptr);
-    MHDL_ASSERT(rhsSignal != nullptr);
+    HCL_ASSERT(lhsSignal != nullptr);
+    HCL_ASSERT(rhsSignal != nullptr);
     
     hlim::Node_Arithmetic *node = DesignScope::createNode<hlim::Node_Arithmetic>(m_op);
     node->recordStackTrace();
@@ -48,7 +48,7 @@ SignalType SignalArithmeticOp::operator()(const SignalType &lhs, const SignalTyp
 }
 
 
-#define MHDL_BUILD_ARITHMETIC_OPERATOR(typeTrait, cppOp, Op)                                    \
+#define HCL_BUILD_ARITHMETIC_OPERATOR(typeTrait, cppOp, Op)                                    \
     template<typename SignalType, typename = std::enable_if_t<typeTrait<SignalType>::value>>    \
     SignalType cppOp(const SignalType &lhs, const SignalType &rhs)  {                           \
         SignalArithmeticOp op(Op);                                                              \
@@ -57,33 +57,33 @@ SignalType SignalArithmeticOp::operator()(const SignalType &lhs, const SignalTyp
     
 // add_ext for add extend    
     
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, add, hlim::Node_Arithmetic::ADD)
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator+, hlim::Node_Arithmetic::ADD)
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, sub, hlim::Node_Arithmetic::SUB)
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator-, hlim::Node_Arithmetic::SUB)
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, mul, hlim::Node_Arithmetic::MUL)
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator*, hlim::Node_Arithmetic::MUL)
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, div, hlim::Node_Arithmetic::DIV)
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator/, hlim::Node_Arithmetic::DIV)
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, rem, hlim::Node_Arithmetic::REM)
-MHDL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator%, hlim::Node_Arithmetic::REM)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, add, hlim::Node_Arithmetic::ADD)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator+, hlim::Node_Arithmetic::ADD)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, sub, hlim::Node_Arithmetic::SUB)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator-, hlim::Node_Arithmetic::SUB)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, mul, hlim::Node_Arithmetic::MUL)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator*, hlim::Node_Arithmetic::MUL)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, div, hlim::Node_Arithmetic::DIV)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator/, hlim::Node_Arithmetic::DIV)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, rem, hlim::Node_Arithmetic::REM)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator%, hlim::Node_Arithmetic::REM)
 
-#undef MHDL_BUILD_ARITHMETIC_OPERATOR
+#undef HCL_BUILD_ARITHMETIC_OPERATOR
 
 
-#define MHDL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(typeTrait, cppOp, Op)                         \
+#define HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(typeTrait, cppOp, Op)                         \
     template<typename SignalType, typename = std::enable_if_t<typeTrait<SignalType>::value>>    \
     SignalType &cppOp(SignalType lhs, const SignalType &rhs)  {                                 \
         SignalArithmeticOp op(Op);                                                              \
         return lhs = op(lhs, rhs);                                                              \
     }
 
-MHDL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator+=, hlim::Node_Arithmetic::ADD)
-MHDL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator-=, hlim::Node_Arithmetic::SUB)
-MHDL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator*=, hlim::Node_Arithmetic::MUL)
-MHDL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator/=, hlim::Node_Arithmetic::DIV)
-MHDL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator%=, hlim::Node_Arithmetic::REM)
+HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator+=, hlim::Node_Arithmetic::ADD)
+HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator-=, hlim::Node_Arithmetic::SUB)
+HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator*=, hlim::Node_Arithmetic::MUL)
+HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator/=, hlim::Node_Arithmetic::DIV)
+HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator%=, hlim::Node_Arithmetic::REM)
     
-#undef MHDL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR
+#undef HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR
 
 }

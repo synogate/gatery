@@ -1,6 +1,6 @@
 #include "Node_Rewire.h"
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
 bool Node_Rewire::RewireOperation::isBitExtract(size_t& bitIndex) const
 {
@@ -47,7 +47,7 @@ void Node_Rewire::updateConnectionType()
 
 void Node_Rewire::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
-    MHDL_ASSERT_HINT(getOutputConnectionType(0).width <= 64, "Rewiring with more than 64 bits not yet implemented!");
+    HCL_ASSERT_HINT(getOutputConnectionType(0).width <= 64, "Rewiring with more than 64 bits not yet implemented!");
 
     size_t outputOffset = 0;
     for (const auto &range : m_rewireOperation.ranges) {

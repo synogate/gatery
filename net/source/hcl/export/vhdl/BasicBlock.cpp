@@ -10,7 +10,7 @@
 #include "../../hlim/coreNodes/Node_Register.h"
 
 
-namespace mhdl::core::vhdl {
+namespace hcl::core::vhdl {
 
 
 void NodeGroupInfo::buildFrom(hlim::NodeGroup *nodeGroup, bool mergeAreasReccursive)
@@ -312,7 +312,7 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
                 cf.instantiateExternal(stream, statement.ref.externalNode, indent, inputSignalNames, outputSignalNames, clockNames);
             } break;
             case ConcurrentStatement::TYPE_BLOCK:
-                MHDL_ASSERT(indent == 1);
+                HCL_ASSERT(indent == 1);
                 statement.ref.block->writeVHDL(stream);
             break;
             case ConcurrentStatement::TYPE_PROCESS:

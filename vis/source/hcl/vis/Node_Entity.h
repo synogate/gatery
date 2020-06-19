@@ -5,7 +5,7 @@
 #include <metaHDL_core/hlim/NodeGroup.h>
 #include <metaHDL_core/hlim/NodeIO.h>
 
-namespace mhdl::vis {
+namespace hcl::vis {
     
 class Node_Entity : public Node
 {

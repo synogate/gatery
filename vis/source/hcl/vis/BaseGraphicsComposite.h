@@ -2,7 +2,7 @@
 
 #include <QGraphicsItemGroup>
 
-namespace mhdl::vis {
+namespace hcl::vis {
     
 
 class BaseGraphicsComposite : public QGraphicsItemGroup

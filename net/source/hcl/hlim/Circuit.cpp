@@ -5,7 +5,7 @@
 #include "coreNodes/Node_Signal.h"
 
 
-namespace mhdl::core::hlim {
+namespace hcl::core::hlim {
 
 Circuit::Circuit()
 {

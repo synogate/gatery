@@ -10,7 +10,7 @@
 
 #include <iostream>
 
-namespace mhdl::vis::layout {
+namespace hcl::vis::layout {
 
 void GraphLayouting::run(std::function<void(float)> progressCallback)
 {
@@ -54,7 +54,7 @@ void GraphLayouting::run(std::function<void(float)> progressCallback)
             readyNodes[cost].push_back(n);
         }
         
-        MHDL_ASSERT(!readyNodes.empty());
+        HCL_ASSERT(!readyNodes.empty());
         
         const auto &nodeColumn = readyNodes.begin()->second;
         
@@ -178,7 +178,7 @@ void GraphLayouting::run(std::function<void(float)> progressCallback)
             }
             
             while (true) {
-                MHDL_ASSERT(!openList.empty());
+                HCL_ASSERT(!openList.empty());
                 
                 ScoredLoc loc = openList.top();
                 openList.pop();

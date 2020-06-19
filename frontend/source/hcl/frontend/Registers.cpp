@@ -1,7 +1,7 @@
 #include "Registers.h"
 
 
-namespace mhdl::core::frontend {
+namespace hcl::core::frontend {
 
 RegisterFactory::RegisterFactory(const RegisterConfig &registerConfig) : m_registerConfig(registerConfig)
 {

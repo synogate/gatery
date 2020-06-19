@@ -4,8 +4,7 @@
 #include <utility>
 #include <functional>
 
-namespace mhdl {
-namespace utils {
+namespace hcl::utils {
     
 template<class Container>
 class Enumerate
@@ -69,5 +68,4 @@ class ConstEnumerate
         const Container &m_container;
 };
 
-}
 }
