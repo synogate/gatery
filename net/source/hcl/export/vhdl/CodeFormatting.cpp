@@ -93,7 +93,7 @@ std::string DefaultCodeFormatting::getProcessName(const std::string &desiredName
     if (attempt == 0)
         return initialName + (clocked?"_reg":"_comb");
     
-    return (boost::format("%s_%d_%s") % initialName % (attempt+1) % (clocked?"_reg":"_comb")).str();
+    return (boost::format("%s_%d%s") % initialName % (attempt+1) % (clocked?"_reg":"_comb")).str();
 }
 
 std::string DefaultCodeFormatting::getClockName(const std::string &desiredName, unsigned attempt) const
