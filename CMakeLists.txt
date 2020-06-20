@@ -28,11 +28,11 @@ add_subdirectory(frontend/)
 add_subdirectory(stl/)
 
 if(${HCL_WITH_GHDL})
-add_subdirectory(libs/vpi_sim)
+add_subdirectory(vpi_sim)
 endif()
 
 if(${HCL_WITH_QT})
-add_subdirectory(libs/vis/)
+add_subdirectory(vis/)
 endif()
 
 
