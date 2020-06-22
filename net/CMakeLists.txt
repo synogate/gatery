@@ -43,6 +43,11 @@ add_library(hcl_net STATIC
     source/hcl/hlim/coreNodes/Node_Rewire.h
     source/hcl/hlim/coreNodes/Node_Signal.cpp
     source/hcl/hlim/coreNodes/Node_Signal.h
+
+    source/hcl/hlim/supportNodes/Node_External.cpp
+    source/hcl/hlim/supportNodes/Node_External.h
+    source/hcl/hlim/supportNodes/Node_SignalGenerator.cpp
+    source/hcl/hlim/supportNodes/Node_SignalGenerator.h
     
     source/hcl/hlim/Circuit.cpp
     source/hcl/hlim/Circuit.h
