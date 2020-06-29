@@ -27,6 +27,7 @@ add_library(hcl_frontend STATIC
     source/hcl/frontend/SignalArithmeticOp.h
     source/hcl/frontend/SignalBitshiftOp.cpp
     source/hcl/frontend/SignalBitshiftOp.h
+    source/hcl/frontend/SignalCompareOp.h
     source/hcl/frontend/SignalDelay.cpp
     source/hcl/frontend/SignalDelay.h
     source/hcl/frontend/SignalLogicOp.cpp
@@ -60,3 +61,5 @@ target_link_libraries(hcl_frontend PUBLIC
 )
 
 hcl_setup_target(hcl_frontend)
+
+add_subdirectory(unitTests)

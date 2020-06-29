@@ -13,6 +13,7 @@ class Node_Register;
 class Node_Rewire;
 class Node_Signal;
 class Node_SignalGenerator;
+class Node_SignalTap;
     
 class NodeVisitor
 {
@@ -28,6 +29,7 @@ class NodeVisitor
         virtual void operator()(Node_Rewire &node) = 0;
         virtual void operator()(Node_Signal &node) = 0;
         virtual void operator()(Node_SignalGenerator &node) = 0;
+        virtual void operator()(Node_SignalTap &node) = 0;
 };
 
 class ConstNodeVisitor
@@ -44,6 +46,7 @@ class ConstNodeVisitor
         virtual void operator()(const Node_Rewire &node) = 0;
         virtual void operator()(const Node_Signal &node) = 0;
         virtual void operator()(const Node_SignalGenerator &node) = 0;
+        virtual void operator()(const Node_SignalTap &node) = 0;
 };
 
 

@@ -36,7 +36,7 @@ void Node_PriorityConditional::disconnectInput(size_t choice)
 }
 
 
-void Node_PriorityConditional::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
+void Node_PriorityConditional::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
     for (auto choice : utils::Range(getNumChoices())) {
         auto conditionDriver = getNonSignalDriver(inputPortChoiceCondition(choice));

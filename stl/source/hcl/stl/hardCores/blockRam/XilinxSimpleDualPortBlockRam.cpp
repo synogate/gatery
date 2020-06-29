@@ -75,7 +75,7 @@ bool XilinxSimpleDualPortBlockRam::isRom() const
 
 
         
-void XilinxSimpleDualPortBlockRam::simulateReset(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
+void XilinxSimpleDualPortBlockRam::simulateReset(SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
 {
     if (isRom()) {
         state.copyRange(internalOffsets[0], m_initialData, 0, m_initialData.size());
@@ -123,7 +123,7 @@ bool rangesOverlap(size_t range1_start, size_t range1_size, size_t range2_start,
 }
 
 
-void XilinxSimpleDualPortBlockRam::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
+void XilinxSimpleDualPortBlockRam::simulateEvaluate(SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
     NodePort drivers[NUM_INPUTS];
     for (auto i : utils::Range<size_t>(NUM_INPUTS)) 
@@ -196,7 +196,7 @@ void XilinxSimpleDualPortBlockRam::simulateEvaluate(sim::DefaultBitVectorState &
 
 }
 
-void XilinxSimpleDualPortBlockRam::simulateAdvance(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const
+void XilinxSimpleDualPortBlockRam::simulateAdvance(SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const
 {
     if (clockPort == READ_CLK) {
         bool readEnableDefined = state.get(sim::DefaultConfig::DEFINED, internalOffsets[INT_READ_ENABLE]);

@@ -8,6 +8,7 @@
 #include <hcl/hlim/Circuit.h>
 #include <hcl/simulation/ReferenceSimulator.h>
 #include <hcl/simulation/SimulatorControl.h>
+#include <hcl/simulation/SimulatorCallbacks.h>
 
 #include <boost/stacktrace.hpp>
 
@@ -17,7 +18,7 @@ namespace hcl::vis {
 
 class Node_Signal;
 
-class MainWindowSimulate : public QMainWindow
+class MainWindowSimulate : public QMainWindow, hcl::core::sim::SimulatorCallbacks
 {
     Q_OBJECT
 
@@ -25,6 +26,10 @@ class MainWindowSimulate : public QMainWindow
         explicit MainWindowSimulate(QWidget *parent, core::hlim::Circuit &circuit);
         ~MainWindowSimulate();
     
+        virtual void onNewTick(const core::hlim::BaseClock *clock) override;
+        virtual void onDebugMessage(const core::hlim::BaseNode *src, std::string msg) override;
+        virtual void onWarning(const core::hlim::BaseNode *src, std::string msg) override;
+        virtual void onAssert(const core::hlim::BaseNode *src, std::string msg) override;
     private slots:
         void treeWidget_graphHierarchy_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
         void onCircuitViewElementsClicked(const std::set<BaseGraphicsComposite*> &elements);
@@ -35,6 +40,7 @@ class MainWindowSimulate : public QMainWindow
         void ontoolButton_Reset_pressed();
         void onRunSimulation();
 
+        
     private:
         Ui::MainWindowSimulate m_ui;
         core::hlim::Circuit &m_circuit;

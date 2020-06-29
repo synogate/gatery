@@ -9,7 +9,7 @@ void Node_Multiplexer::connectInput(size_t operand, const NodePort &port)
     setOutputConnectionType(0, port.node->getOutputConnectionType(port.port)); 
 }
 
-void Node_Multiplexer::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
+void Node_Multiplexer::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
     auto selectorDriver = getNonSignalDriver(0);
     if (selectorDriver.node == nullptr) {

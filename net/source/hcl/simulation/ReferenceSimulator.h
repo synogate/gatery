@@ -1,5 +1,6 @@
 #pragma once
 
+#include "SimulatorCallbacks.h"
 #include "Simulator.h"
 
 #include "BitVectorState.h"
@@ -47,7 +48,7 @@ struct MappedNode {
 class ExecutionBlock
 {
     public:
-        void evaluate(DataState &state) const;
+        void evaluate(SimulatorCallbacks &simCallbacks, DataState &state) const;
 
         void addStep(MappedNode mappedNode);
     protected:
@@ -67,7 +68,7 @@ class LatchedNode
     public:
         LatchedNode(MappedNode mappedNode, size_t clockPort);
         
-        void advance(DataState &state) const;
+        void advance(SimulatorCallbacks &simCallbacks, DataState &state) const;
     protected:
         MappedNode m_mappedNode;
         size_t m_clockPort;
@@ -96,11 +97,11 @@ struct ClockDriver
 class Program
 {
     public:
-        void compileProgram(const hlim::Circuit &circuit);
+        void compileProgram(const hlim::Circuit &circuit, const std::vector<hlim::BaseNode*> &nodes);
 
-        void reset(DataState &dataState) const;
-        void reevaluate(DataState &dataState) const;
-        void advanceClock(DataState &dataState, hlim::BaseClock *clock) const;
+        void reset(SimulatorCallbacks &simCallbacks, DataState &dataState) const;
+        void reevaluate(SimulatorCallbacks &simCallbacks, DataState &dataState) const;
+        void advanceClock(SimulatorCallbacks &simCallbacks, DataState &dataState, hlim::BaseClock *clock) const;
         
         
         inline size_t getFullStateWidth() const { return m_fullStateWidth; }
@@ -116,13 +117,14 @@ class Program
         std::vector<ClockDomain> m_clockDomains;
         std::vector<ExecutionBlock> m_executionBlocks;
         
-        void allocateSignals(const hlim::Circuit &circuit);
+        void allocateSignals(const hlim::Circuit &circuit, const std::vector<hlim::BaseNode*> &nodes);
 };
     
 class ReferenceSimulator : public Simulator
 {
     public:
-        virtual void compileProgram(const hlim::Circuit &circuit) override;
+        ReferenceSimulator(SimulatorCallbacks &simCallbacks);
+        virtual void compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs = {}) override;
         
         virtual void reset() override;
         virtual void reevaluate() override;
@@ -133,6 +135,7 @@ class ReferenceSimulator : public Simulator
         virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfClock(const hlim::BaseClock *clk) override;
         virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfReset(const std::string &reset) override;
     protected:
+        SimulatorCallbacks &m_simCallbacks;
         Program m_program;
         ExecutionState m_executionState;
         DataState m_dataState;

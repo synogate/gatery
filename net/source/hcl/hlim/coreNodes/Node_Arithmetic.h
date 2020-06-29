@@ -19,7 +19,7 @@ class Node_Arithmetic : public Node<Node_Arithmetic>
         void connectInput(size_t operand, const NodePort &port);
         void disconnectInput(size_t operand);
         
-        virtual void simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;
+        virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;
         
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;

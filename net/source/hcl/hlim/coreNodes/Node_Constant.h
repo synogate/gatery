@@ -92,7 +92,7 @@ namespace hcl::core::hlim {
     public:
         Node_Constant(ConstantData value, const hlim::ConnectionType& connectionType);
 
-        virtual void simulateReset(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
+        virtual void simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
         
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;

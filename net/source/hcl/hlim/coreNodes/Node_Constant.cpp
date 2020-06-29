@@ -10,7 +10,7 @@ Node_Constant::Node_Constant(ConstantData value, const hlim::ConnectionType& con
     setOutputType(0, OUTPUT_CONSTANT);
 }
 
-void Node_Constant::simulateReset(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const 
+void Node_Constant::simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const 
 {
     size_t width = getOutputConnectionType(0).width;
     size_t offset = 0;

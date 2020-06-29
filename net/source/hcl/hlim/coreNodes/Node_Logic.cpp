@@ -18,7 +18,7 @@ void Node_Logic::disconnectInput(size_t operand)
     NodeIO::disconnectInput(operand); 
 }
 
-void Node_Logic::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
+void Node_Logic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
     size_t width = getOutputConnectionType(0).width;
 

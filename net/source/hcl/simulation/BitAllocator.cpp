@@ -5,6 +5,9 @@
 namespace hcl::core::sim {
 
 size_t BitAllocator::allocate(unsigned size) {
+    if (size == 0)
+        return 0ull;
+    
     if (size <= 32) {
         size = utils::nextPow2(size);
         

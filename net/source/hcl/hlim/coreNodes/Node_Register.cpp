@@ -26,7 +26,7 @@ void Node_Register::setReset(std::string resetName)
     m_resetName = std::move(resetName);
 }
 
-void Node_Register::simulateReset(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
+void Node_Register::simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
 {
     auto resetDriver = getNonSignalDriver(RESET_VALUE);
     if (resetDriver.node == nullptr) {
@@ -60,7 +60,7 @@ void Node_Register::simulateReset(sim::DefaultBitVectorState &state, const size_
     
 }
 
-void Node_Register::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
+void Node_Register::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
     if (inputOffsets[DATA] == ~0ull)
         state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[INT_DATA], getOutputConnectionType(0).width);
@@ -73,7 +73,7 @@ void Node_Register::simulateEvaluate(sim::DefaultBitVectorState &state, const si
         state.copyRange(internalOffsets[INT_ENABLE], state, inputOffsets[ENABLE], 1);
 }
 
-void Node_Register::simulateAdvance(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const
+void Node_Register::simulateAdvance(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const
 {
     HCL_ASSERT(clockPort == 0);
     

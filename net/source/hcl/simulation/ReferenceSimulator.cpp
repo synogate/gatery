@@ -21,10 +21,10 @@
 namespace hcl::core::sim {
     
     
-void ExecutionBlock::evaluate(DataState &state) const
+void ExecutionBlock::evaluate(SimulatorCallbacks &simCallbacks, DataState &state) const
 {
     for (const auto &step : m_steps) 
-        step.node->simulateEvaluate(state.signalState, step.internal.data(), step.inputs.data(), step.outputs.data());
+        step.node->simulateEvaluate(simCallbacks, state.signalState, step.internal.data(), step.inputs.data(), step.outputs.data());
 }
     
 void ExecutionBlock::addStep(MappedNode mappedNode)
@@ -36,15 +36,15 @@ LatchedNode::LatchedNode(MappedNode mappedNode, size_t clockPort) : m_mappedNode
 {
 }
 
-void LatchedNode::advance(DataState &state) const
+void LatchedNode::advance(SimulatorCallbacks &simCallbacks, DataState &state) const
 {
-    m_mappedNode.node->simulateAdvance(state.signalState, m_mappedNode.internal.data(), m_mappedNode.outputs.data(), m_clockPort);
+    m_mappedNode.node->simulateAdvance(simCallbacks, state.signalState, m_mappedNode.internal.data(), m_mappedNode.outputs.data(), m_clockPort);
 }
 
     
-void Program::compileProgram(const hlim::Circuit &circuit)
+void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hlim::BaseNode*> &nodes)
 {
-    allocateSignals(circuit);
+    allocateSignals(circuit, nodes);
     
     
     for (const auto &clock : circuit.getClocks()) {
@@ -58,17 +58,17 @@ void Program::compileProgram(const hlim::Circuit &circuit)
     std::set<hlim::NodePort> outputsReady;
     
     std::set<hlim::BaseNode*> nodesRemaining;
-    for (const auto &node : circuit.getNodes()) {
-        if (dynamic_cast<hlim::Node_Signal*>(node.get()) != nullptr) continue;
-        nodesRemaining.insert(node.get());
+    for (auto node : nodes) {
+        if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr) continue;
+        nodesRemaining.insert(node);
         
         MappedNode mappedNode;
-        mappedNode.node = node.get();
-        mappedNode.internal = m_stateMapping.nodeToInternalOffset[node.get()];
+        mappedNode.node = node;
+        mappedNode.internal = m_stateMapping.nodeToInternalOffset[node];
         for (auto i : utils::Range(node->getNumInputPorts()))
             mappedNode.inputs.push_back(m_stateMapping.outputToOffset[node->getNonSignalDriver(i)]);
         for (auto i : utils::Range(node->getNumOutputPorts())) 
-            mappedNode.outputs.push_back(m_stateMapping.outputToOffset[{.node = node.get(), .port = i}]);
+            mappedNode.outputs.push_back(m_stateMapping.outputToOffset[{.node = node, .port = i}]);
         
         std::map<size_t, std::set<size_t>> clockDomainClockPortList;
         
@@ -80,7 +80,7 @@ void Program::compileProgram(const hlim::Circuit &circuit)
                 break;
                 case hlim::NodeIO::OUTPUT_CONSTANT: {
                     hlim::NodePort driver;
-                    driver.node = node.get();
+                    driver.node = node;
                     driver.port = i;
                     outputsReady.insert(driver);
                     
@@ -88,7 +88,7 @@ void Program::compileProgram(const hlim::Circuit &circuit)
                 } break;
                 case hlim::NodeIO::OUTPUT_LATCHED: {
                     hlim::NodePort driver;
-                    driver.node = node.get();
+                    driver.node = node;
                     driver.port = i;
                     outputsReady.insert(driver);
 
@@ -170,15 +170,15 @@ void Program::compileProgram(const hlim::Circuit &circuit)
     
 }
 
-void Program::allocateSignals(const hlim::Circuit &circuit)
+void Program::allocateSignals(const hlim::Circuit &circuit, const std::vector<hlim::BaseNode*> &nodes)
 {
     m_stateMapping.clear();
     
     BitAllocator allocator;
 
     // variables
-    for (const auto &node : circuit.getNodes()) {
-        hlim::Node_Signal *signalNode = dynamic_cast<hlim::Node_Signal*>(node.get());
+    for (auto node : nodes) {
+        hlim::Node_Signal *signalNode = dynamic_cast<hlim::Node_Signal*>(node);
         if (signalNode != nullptr) {
             auto driver = signalNode->getNonSignalDriver(0);
             
@@ -200,10 +200,10 @@ void Program::allocateSignals(const hlim::Circuit &circuit)
             std::vector<size_t> internalOffsets(internalSizes.size());
             for (auto i : utils::Range(internalSizes.size()))
                 internalOffsets[i] = allocator.allocate(internalSizes[i]);
-            m_stateMapping.nodeToInternalOffset[node.get()] = internalOffsets;
+            m_stateMapping.nodeToInternalOffset[node] = internalOffsets;
             
             for (auto i : utils::Range(node->getNumOutputPorts())) {
-                hlim::NodePort driver = {.node = node.get(), .port = i};
+                hlim::NodePort driver = {.node = node, .port = i};
                 auto it = m_stateMapping.outputToOffset.find(driver);
                 if (it == m_stateMapping.outputToOffset.end()) {
                     unsigned width = node->getOutputConnectionType(i).width;
@@ -215,8 +215,10 @@ void Program::allocateSignals(const hlim::Circuit &circuit)
     
     m_fullStateWidth = allocator.getTotalSize();
 }
-    
-void Program::reset(DataState &dataState) const
+
+
+ 
+void Program::reset(SimulatorCallbacks &simCallbacks, DataState &dataState) const
 {
     dataState.signalState.resize(m_fullStateWidth);
     
@@ -227,46 +229,83 @@ void Program::reset(DataState &dataState) const
 
     
     for (const auto &mappedNode : m_resetNodes)
-        mappedNode.node->simulateReset(dataState.signalState, mappedNode.internal.data(), mappedNode.outputs.data());
+        mappedNode.node->simulateReset(simCallbacks, dataState.signalState, mappedNode.internal.data(), mappedNode.outputs.data());
     
 }
 
-void Program::reevaluate(DataState &dataState) const
+void Program::reevaluate(SimulatorCallbacks &simCallbacks, DataState &dataState) const
 {
-    m_executionBlocks.front().evaluate(dataState);
+    m_executionBlocks.front().evaluate(simCallbacks, dataState);
 }
 
-void Program::advanceClock(DataState &dataState, hlim::BaseClock *clock) const
+void Program::advanceClock(SimulatorCallbacks &simCallbacks, DataState &dataState, hlim::BaseClock *clock) const
 {
+    simCallbacks.onNewTick(clock);
     const auto &domain = m_clockDomains[m_stateMapping.clockToClkDomain.find(clock)->second];
     for (const auto &latch : domain.latches)
-        latch.advance(dataState);
+        latch.advance(simCallbacks, dataState);
 }
     
-    
-void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit)
+ 
+ReferenceSimulator::ReferenceSimulator(SimulatorCallbacks &simCallbacks) : m_simCallbacks(simCallbacks)
 {
-    m_program.compileProgram(circuit);
-    reset();
-    clk = circuit.getClocks().front().get();
+}
+
+void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs)
+{
+    std::vector<hlim::BaseNode*> nodes;
+    if (outputs.empty()) {
+        nodes.reserve(circuit.getNodes().size());
+        for (const auto &node : circuit.getNodes())
+            nodes.push_back(node.get());
+    } else {
+        std::set<hlim::BaseNode*> nodeSet;
+        {
+            std::vector<hlim::BaseNode*> stack;
+            for (auto nodePort : outputs)
+                stack.push_back(nodePort.node);
+            
+            while (!stack.empty()) {
+                hlim::BaseNode *node = stack.back();
+                stack.pop_back();
+                if (nodeSet.find(node) == nodeSet.end()) {
+                    nodeSet.insert(node);
+                    for (auto i : utils::Range(node->getNumInputPorts())) 
+                        if (node->getDriver(i).node != nullptr)
+                            stack.push_back(node->getDriver(i).node);
+                }
+            }
+        }
+        nodes.reserve(nodeSet.size());
+        for (const auto &node : nodeSet)
+            nodes.push_back(node);
+    }
+    
+    m_program.compileProgram(circuit, nodes);
+    if (circuit.getClocks().empty())
+        clk = nullptr;
+    else
+        clk = circuit.getClocks().front().get();
 }
 
 void ReferenceSimulator::reset()
 {
-    m_program.reset(m_dataState);
+    m_simulationTime = 0;
+    m_program.reset(m_simCallbacks, m_dataState);
     reevaluate();
 }
 
 
 void ReferenceSimulator::reevaluate()
 {
-    m_program.reevaluate(m_dataState);
+    m_program.reevaluate(m_simCallbacks, m_dataState);
 }
 
 void ReferenceSimulator::advanceAnyTick()
 {  
-    m_program.advanceClock(m_dataState, clk);
+    m_program.advanceClock(m_simCallbacks, m_dataState, clk);
     reevaluate();
+    m_simulationTime += 1ull / clk->getAbsoluteFrequency();
 }
 
 

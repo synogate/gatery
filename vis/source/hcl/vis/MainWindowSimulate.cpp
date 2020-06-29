@@ -17,6 +17,7 @@
 #include <QTextBlock>
 #include <QProgressDialog>
 #include <QTimer>
+#include <QMessageBox>
 
 #include <sstream>
 
@@ -35,7 +36,7 @@ namespace hcl::vis {
 
 
 MainWindowSimulate::MainWindowSimulate(QWidget *parent, core::hlim::Circuit &circuit)
-    : QMainWindow(parent), m_circuit(circuit)
+    : QMainWindow(parent), m_circuit(circuit), m_simulator(*this)
 {
     m_ui.setupUi(this);
     
@@ -357,5 +358,27 @@ void MainWindowSimulate::ontoolButton_Reset_pressed()
     updateSignalValues();
     updateBitmap();
 }
+
+void MainWindowSimulate::onNewTick(const core::hlim::BaseClock *clock)
+{
+}
+
+void MainWindowSimulate::onDebugMessage(const core::hlim::BaseNode *src, std::string msg)
+{
+}
+
+void MainWindowSimulate::onWarning(const core::hlim::BaseNode *src, std::string msg)
+{
+}
+
+void MainWindowSimulate::onAssert(const core::hlim::BaseNode *src, std::string msg)
+{
+    ontoolButton_Pause_pressed();
+    
+    QMessageBox msgBox;
+    msgBox.setText(msg.c_str());
+    msgBox.exec();
+}
+
 
 }

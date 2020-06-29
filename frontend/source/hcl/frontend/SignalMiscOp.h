@@ -6,6 +6,7 @@
 #include "Scope.h"
 
 #include <hcl/hlim/coreNodes/Node_Multiplexer.h>
+#include <hcl/hlim/supportNodes/Node_SignalTap.h>
 #include <hcl/utils/Preprocessor.h>
 #include <hcl/utils/Traits.h>
 
@@ -80,6 +81,49 @@ void driveWith(SignalType &dst, const SignalType &src)  {
 
 
 //cat(....)
+
+/*
+template<typename SignalType, typename = std::enable_if_t<utils::isBitVectorSignal<SignalType>::value>>    
+class hex
+{
+};
+
+todo: pretty printing functions
+*/
+
+
+class SignalTapHelper
+{
+    public:
+        SignalTapHelper(hlim::Node_SignalTap::Level level);
+        
+        void triggerIf(const Bit &condition);
+        void triggerIfNot(const Bit &condition);
+        
+        SignalTapHelper &operator<<(const std::string &msg);
+        
+        template<typename type, typename = std::enable_if_t<std::is_arithmetic<type>::value>>
+        SignalTapHelper &operator<<(type number) { return (*this) << boost::lexical_cast<std::string>(number); }
+
+        template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>    
+        SignalTapHelper &operator<<(const SignalType &signal) {
+            unsigned port = addInput({.node = signal.getNode(), .port = 0ull});
+            m_node->addMessagePart(hlim::Node_SignalTap::FormattedSignal{.inputIdx = port, .format = 0});
+            return *this;
+        }
+    protected:
+        unsigned addInput(hlim::NodePort nodePort);
+        hlim::Node_SignalTap *m_node = nullptr;
+};
+
+
+
+
+SignalTapHelper sim_assert(const Bit &condition);
+SignalTapHelper sim_warnIf(const Bit &condition);
+    
+SignalTapHelper sim_debug();
+SignalTapHelper sim_debugIf(const Bit &condition);
 
 
 

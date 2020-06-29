@@ -48,6 +48,8 @@ add_library(hcl_net STATIC
     source/hcl/hlim/supportNodes/Node_External.h
     source/hcl/hlim/supportNodes/Node_SignalGenerator.cpp
     source/hcl/hlim/supportNodes/Node_SignalGenerator.h
+    source/hcl/hlim/supportNodes/Node_SignalTap.cpp
+    source/hcl/hlim/supportNodes/Node_SignalTap.h
     
     source/hcl/hlim/Circuit.cpp
     source/hcl/hlim/Circuit.h
@@ -74,6 +76,8 @@ add_library(hcl_net STATIC
     source/hcl/simulation/Simulator.h
     source/hcl/simulation/SimulatorControl.cpp
     source/hcl/simulation/SimulatorControl.h
+    source/hcl/simulation/UnitTestSimulationFixture.cpp
+    source/hcl/simulation/UnitTestSimulationFixture.h
     
     source/hcl/utils/BitManipulation.h
     source/hcl/utils/BitManipulation.cpp

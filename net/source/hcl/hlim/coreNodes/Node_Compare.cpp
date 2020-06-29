@@ -11,7 +11,7 @@ Node_Compare::Node_Compare(Op op) : Node(2, 1), m_op(op)
     setOutputConnectionType(0, conType);
 }
 
-void Node_Compare::simulateEvaluate(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
+void Node_Compare::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
     auto leftDriver = getNonSignalDriver(0);
     auto rightDriver = getNonSignalDriver(1);
