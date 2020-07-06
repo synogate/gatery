@@ -111,7 +111,7 @@ inline FinalType BaseBitVector<FinalType>::zext(size_t width) const
     }
 
     node->setOp(std::move(rewireOp));
-    return FinalType(hlim::NodePort{ .node = node });
+    return FinalType(hlim::NodePort{ .node = node, .port = 0ull });
 }
 
 template<typename FinalType>
@@ -142,7 +142,7 @@ inline FinalType BaseBitVector<FinalType>::bext(size_t width, const Bit& bit) co
     }
 
     node->setOp(std::move(rewireOp));
-    return FinalType(hlim::NodePort{.node = node});
+    return FinalType(hlim::NodePort{.node = node, .port = 0ull});
 }
 
 }

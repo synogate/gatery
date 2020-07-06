@@ -27,6 +27,7 @@ Bit ElementaryVector::operator[](size_t idx) const
     node->setOp(std::move(rewireOp));
 
     node->connectInput(0, { .node = m_node, .port = 0ull });
+    node->changeOutputType({.interpretation = hlim::ConnectionType::BOOL});
 
     return Bit({ .node = node, .port = 0ull });
 }
