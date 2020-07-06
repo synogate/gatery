@@ -26,12 +26,12 @@ ElementarySignal::ElementarySignal(const hlim::NodePort &port)
 
 ElementarySignal::~ElementarySignal()
 {
-//    if (m_conditionalScope != nullptr)
-//        m_conditionalScope->
+    if (m_conditionalScope != nullptr)
+        m_conditionalScope->unregisterSignal(this);
 }
 
 
-void ElementarySignal::assignConditionalScopeMuxOutput(const hlim::NodePort &port, hlim::ConditionalScope *parentScope)
+void ElementarySignal::assignConditionalScopeMuxOutput(const hlim::NodePort &port, ConditionalScope *parentScope)
 {
     std::string oldName = m_node->getName();
     
@@ -63,7 +63,7 @@ void ElementarySignal::assign(const ElementarySignal &rhs) {
     
     if (ConditionalScope::get() != nullptr) {
         ConditionalScope::get()->registerConditionalAssignment(this, previousOutput);
-        //m_conditionalScope = ConditionalScope::get();
+        m_conditionalScope = ConditionalScope::get();
     }
 }
 

@@ -86,5 +86,46 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAss
     eval(design.getCircuit());
 }
 
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelConditionalAssignment, data::xrange(8) * data::xrange(8), x, y)
+{
+    using namespace hcl::core::frontend;
+    
+    DesignScope design;
+
+    UnsignedInteger a = ConstUnsignedInteger(x, 8);
+    UnsignedInteger b = ConstUnsignedInteger(y, 8);
+
+    UnsignedInteger c;
+    IF (a[2] == 1_bit) {
+        IF (a[1] == 1_bit)
+            c = a + b;
+        ELSE {
+            c = a - b;
+        }
+    } ELSE {
+        IF (a[1] == 1_bit)
+            c = a;
+        ELSE {
+            c = b;
+        }
+    }
+    
+    unsigned groundTruth;
+    if (unsigned(x) & 4) {
+        if (unsigned(x) & 2) 
+            groundTruth = x+y;
+        else
+            groundTruth = x-y;
+    } else {
+        if (unsigned(x) & 2) 
+            groundTruth = x;
+        else
+            groundTruth = y;
+    }
+
+    sim_assert(c == ConstUnsignedInteger(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+    
+    eval(design.getCircuit());
+}
 
 

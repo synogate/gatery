@@ -12,6 +12,7 @@
 #include <vector>
 #include <algorithm>
 
+
 namespace hcl::core::frontend {
 
 // concat x = a && b && c;
@@ -53,7 +54,7 @@ class BaseBitVector : public ElementaryVector
     public:
         using isBitVectorSignal = void;
         
-        BaseBitVector(const FinalType &rhs) { assign(rhs); }
+        BaseBitVector(const BaseBitVector<FinalType> &rhs) { assign(rhs); }
         
         FinalType zext(size_t width) const;
         FinalType sext(size_t width) const { return bext(width, msb()); }
@@ -62,7 +63,7 @@ class BaseBitVector : public ElementaryVector
         FinalType operator()(int offset, size_t size) { return operator()(Selection::Range(offset, size)); }
         FinalType operator()(const Selection &selection) { }
 
-        FinalType &operator=(const FinalType &rhs) { assign(rhs); return *this; }
+        BaseBitVector<FinalType> &operator=(const BaseBitVector<FinalType> &rhs) { assign(rhs); return *this; }
     protected:
         BaseBitVector() = default;
         BaseBitVector(const hlim::NodePort &port) : ElementaryVector(port) { }

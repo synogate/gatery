@@ -64,15 +64,17 @@ void ConditionalScope::buildConditionalMuxes()
         hlim::Node_Multiplexer *node = DesignScope::createNode<hlim::Node_Multiplexer>(2);
         node->recordStackTrace();
         node->connectSelector(m_condition);
+    
+        // always assign conditionalOutput last to derive output connection type from that one.
         if (m_negateCondition) {
-            node->connectInput(0, conditionalOutput);
             node->connectInput(1, previousOutput);
+            node->connectInput(0, conditionalOutput);
         } else {
-            node->connectInput(1, conditionalOutput);
             node->connectInput(0, previousOutput);
+            node->connectInput(1, conditionalOutput);
         }
         
-        signal->assignConditionalScopeMuxOutput({.node = node, .port = 0ull}, nullptr);
+        signal->assignConditionalScopeMuxOutput({.node = node, .port = 0ull}, m_parentScope);
         if (m_parentScope != nullptr) {
             m_parentScope->registerConditionalAssignment(signal, previousOutput);
         }
