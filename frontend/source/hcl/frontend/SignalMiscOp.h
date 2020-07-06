@@ -80,7 +80,65 @@ void driveWith(SignalType &dst, const SignalType &src)  {
 
 
 
-//cat(....)
+template<typename SignalType, typename = std::enable_if_t<utils::isBitVectorSignal<SignalType>::value>>    
+SignalType cat(const std::vector<const ElementarySignal*> signals)  {
+    hlim::Node_Rewire *node = DesignScope::createNode<hlim::Node_Rewire>(signals.size());
+    node->recordStackTrace();
+    
+    hlim::Node_Rewire::RewireOperation op;
+    op.ranges.resize(signals.size());
+    
+    for (auto i : utils::Range(signals.size())) {
+        node->connectInput(i, {.node = signals[signals.size()-1-i]->getNode(), .port = 0ull});
+        op.ranges[i].subwidth = signals[signals.size()-1-i]->getWidth();
+        op.ranges[i].source = hlim::Node_Rewire::OutputRange::INPUT;
+        op.ranges[i].inputIdx = i;
+        op.ranges[i].inputOffset = 0;
+    }
+    node->setOp(op);
+    {
+        SignalType dummy(1);
+        node->changeOutputType(dummy.getNode()->getOutputConnectionType(0));
+    }
+    
+    return SignalType({.node = node, .port = 0ull});
+}
+
+
+template<class VectorType, class ... Types>
+struct GetFirstVectorType {
+    using type = std::enable_if_t<utils::isBitVectorSignal<VectorType>::value, VectorType>;
+};
+
+template<class ... Types>
+struct GetFirstVectorType<Bit, Types...> {
+    using type = typename GetFirstVectorType<Types...>::type;
+};
+
+
+template<class Signal>
+void collectSignals(std::vector<const ElementarySignal*> &signals, const Signal &signal) {
+    signals.push_back(&signal);
+}
+
+template<class Signal, class ... Types>
+void collectSignals(std::vector<const ElementarySignal*> &signals, const Signal &signal, const Types&... remaining) {
+    signals.push_back(&signal);
+    collectSignals(signals, remaining...);
+}
+
+
+
+template<typename... Types>
+typename GetFirstVectorType<Types...>::type cat(const Types&... allSignals)
+{
+    static_assert(sizeof...(Types) > 0, "Can not concatenate empty list of signals!");
+
+    std::vector<const ElementarySignal*> signals;
+    collectSignals(signals, allSignals...);
+    return cat<typename GetFirstVectorType<Types...>::type>(signals);
+}
+
 
 /*
 template<typename SignalType, typename = std::enable_if_t<utils::isBitVectorSignal<SignalType>::value>>    

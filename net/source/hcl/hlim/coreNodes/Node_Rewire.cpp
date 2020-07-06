@@ -18,7 +18,6 @@ bool Node_Rewire::RewireOperation::isBitExtract(size_t& bitIndex) const
 
 Node_Rewire::Node_Rewire(size_t numInputs) : Node(numInputs, 1)
 {
-    
 }
 
 void Node_Rewire::connectInput(size_t operand, const NodePort &port) 
@@ -27,15 +26,15 @@ void Node_Rewire::connectInput(size_t operand, const NodePort &port)
     updateConnectionType();
 }
 
+void Node_Rewire::changeOutputType(ConnectionType outputType)
+{
+    m_desiredConnectionType = outputType;
+    updateConnectionType();
+}
 
 void Node_Rewire::updateConnectionType()
 {
-    auto lhs = getDriver(0);
-    
-    ConnectionType desiredConnectionType = getOutputConnectionType(0);
-    
-    if (lhs.node != nullptr)
-        desiredConnectionType = lhs.node->getOutputConnectionType(lhs.port);
+    ConnectionType desiredConnectionType = m_desiredConnectionType;
     
     desiredConnectionType.width = 0;
     for (auto r : m_rewireOperation.ranges)
