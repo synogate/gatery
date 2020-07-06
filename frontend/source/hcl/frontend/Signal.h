@@ -11,6 +11,9 @@
 
 #include <boost/format.hpp>
 
+namespace hcl::core::hlim {
+    class ConditionalScope;
+}
 
 namespace hcl::core::frontend {
     
@@ -36,10 +39,14 @@ class ElementarySignal : public BaseSignal {
     public:
         using isElementarySignal = void;
         
+        virtual ~ElementarySignal();
+        
         size_t getWidth() const { return m_node->getOutputConnectionType(0).width; }
         
         inline hlim::Node_Signal *getNode() const { return m_node; }
         virtual void setName(std::string name) override { m_node->setName(std::move(name)); }
+        
+        void assignConditionalScopeMuxOutput(const hlim::NodePort &port, hlim::ConditionalScope *parentScope);
     protected:
         ElementarySignal();
         ElementarySignal(const hlim::NodePort &port);
@@ -47,6 +54,8 @@ class ElementarySignal : public BaseSignal {
         void assign(const ElementarySignal &rhs);
 
         mutable hlim::Node_Signal *m_node = nullptr; 
+        
+        hlim::ConditionalScope *m_conditionalScope = nullptr;
 
         virtual hlim::ConnectionType getSignalType(size_t width) const = 0;
         

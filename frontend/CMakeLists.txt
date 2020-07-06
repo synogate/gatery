@@ -12,6 +12,8 @@ add_library(hcl_frontend STATIC
     source/hcl/frontend/BitVector.h
     source/hcl/frontend/Comments.cpp
     source/hcl/frontend/Comments.h
+    source/hcl/frontend/ConditionalScope.cpp
+    source/hcl/frontend/ConditionalScope.h
     source/hcl/frontend/Constant.h
     source/hcl/frontend/Integers.cpp
     source/hcl/frontend/Integers.h

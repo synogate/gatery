@@ -3,6 +3,7 @@
 #include "frontend/Bit.h"
 #include "frontend/BitVector.h"
 #include "frontend/Comments.h"
+#include "frontend/ConditionalScope.h"
 #include "frontend/Constant.h"
 #include "frontend/Integers.h"
 #include "frontend/PriorityConditional.h"

@@ -56,3 +56,35 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounter, hcl::core::sim::UnitTestSimulationFixture
     
     runTicks(design.getCircuit(), clk, 10);
 }
+
+
+
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAssignment, data::xrange(8) * data::xrange(8), x, y)
+{
+    using namespace hcl::core::frontend;
+    
+    DesignScope design;
+
+    UnsignedInteger a = ConstUnsignedInteger(x, 8);
+    UnsignedInteger b = ConstUnsignedInteger(y, 8);
+
+    UnsignedInteger c;
+    IF (a[1] == 1_bit)
+        c = a + b;
+    ELSE {
+        c = a - b;
+    }
+    
+    unsigned groundTruth;
+    if (unsigned(x) & 2) 
+        groundTruth = unsigned(x)+unsigned(y);
+    else
+        groundTruth = unsigned(x)-unsigned(y);        
+
+    sim_assert(c == ConstUnsignedInteger(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+    
+    eval(design.getCircuit());
+}
+
+
+
