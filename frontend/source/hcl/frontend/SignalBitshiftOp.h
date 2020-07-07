@@ -52,6 +52,8 @@ SignalType SignalBitShiftOp::operator()(const SignalType &operand) {
     hlim::Node_Rewire *node = DesignScope::createNode<hlim::Node_Rewire>(1);
     node->recordStackTrace();
     
+    node->changeOutputType(signal->getOutputConnectionType(0));
+    
     size_t absShift = std::abs(m_shift);
     
     hlim::Node_Rewire::RewireOperation rewireOp;

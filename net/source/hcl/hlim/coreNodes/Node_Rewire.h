@@ -46,7 +46,11 @@ class Node_Rewire : public Node<Node_Rewire>
         
         inline void setOp(RewireOperation rewireOperation) { m_rewireOperation = std::move(rewireOperation); updateConnectionType(); }
         inline const RewireOperation &getOp() const { return m_rewireOperation; }
+        
+        void changeOutputType(ConnectionType outputType);
     protected:
+        ConnectionType m_desiredConnectionType;
+
         RewireOperation m_rewireOperation;
         void updateConnectionType();
         

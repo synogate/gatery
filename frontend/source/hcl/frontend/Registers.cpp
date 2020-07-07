@@ -7,5 +7,14 @@ RegisterFactory::RegisterFactory(const RegisterConfig &registerConfig) : m_regis
 {
 }
 
+template<>
+Register<Bit>::Register(const RegisterConfig &registerConfig, Bit resetSignal)
+{
+    m_registerConfig = registerConfig;
+    m_enableSignal = 1_bit;
+    m_resetSignal = resetSignal;
+}
+
+
 }
 

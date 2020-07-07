@@ -13,6 +13,8 @@
 
 
 namespace hcl::core::frontend {
+
+class ConditionalScope;
     
 class BaseSignal {
     public:
@@ -36,17 +38,24 @@ class ElementarySignal : public BaseSignal {
     public:
         using isElementarySignal = void;
         
+        virtual ~ElementarySignal();
+        
         size_t getWidth() const { return m_node->getOutputConnectionType(0).width; }
         
         inline hlim::Node_Signal *getNode() const { return m_node; }
         virtual void setName(std::string name) override { m_node->setName(std::move(name)); }
+        
+        void assignConditionalScopeMuxOutput(const hlim::NodePort &port, ConditionalScope *parentScope);
     protected:
         ElementarySignal();
         ElementarySignal(const hlim::NodePort &port);
-        ElementarySignal &operator=(const ElementarySignal&) = default;
+        ElementarySignal &operator=(const ElementarySignal&) = delete;
+        ElementarySignal &operator=(const ElementarySignal&&) = delete;
         void assign(const ElementarySignal &rhs);
 
         mutable hlim::Node_Signal *m_node = nullptr; 
+        
+        ConditionalScope *m_conditionalScope = nullptr;
 
         virtual hlim::ConnectionType getSignalType(size_t width) const = 0;
         

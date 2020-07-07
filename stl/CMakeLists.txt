@@ -39,3 +39,4 @@ target_link_libraries(hcl_stl PUBLIC
 
 hcl_setup_target(hcl_stl)
 
+add_subdirectory(unitTests)

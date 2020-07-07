@@ -48,6 +48,7 @@ MainWindowSimulate::MainWindowSimulate(QWidget *parent, core::hlim::Circuit &cir
     
     
     m_simulator.compileProgram(m_circuit);
+    m_simulator.reset();
     m_simControl.bindSimulator(&m_simulator);
     
     

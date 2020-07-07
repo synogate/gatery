@@ -8,6 +8,8 @@ namespace hcl::core::hlim {
     // todo: this is a parser and representation of bit values. replace by simulation data structure.
     struct ConstantData
     {
+        ConstantData() { }
+        
         ConstantData(std::string_view _str)
         {
             // check base prefix

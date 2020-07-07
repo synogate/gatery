@@ -22,6 +22,36 @@ namespace hcl::core::frontend
         return SignalType({.node = node, .port = 0ull});
     }
 
+    inline UnsignedInteger ConstUnsignedInteger(std::uint64_t value, size_t width)
+    {
+        hlim::ConstantData cv;
+        cv.bitVec.resize(width, false);
+        for (auto i : utils::Range(width))
+            if (value & (1 << i))
+                cv.bitVec[i] = true;
+
+        auto* node = DesignScope::createNode<hlim::Node_Constant>(cv, hlim::ConnectionType{ 
+                .interpretation = hlim::ConnectionType::UNSIGNED,
+                .width = width
+            });
+        return UnsignedInteger({.node = node, .port = 0ull});
+    }
+
+    inline SignedInteger ConstSignedInteger(std::int64_t value, size_t width)
+    {
+        hlim::ConstantData cv;
+        cv.bitVec.resize(width, false);
+        for (auto i : utils::Range(width))
+            if (value & (1 << i))
+                cv.bitVec[i] = true;
+
+        auto* node = DesignScope::createNode<hlim::Node_Constant>(cv, hlim::ConnectionType{ 
+                .interpretation = hlim::ConnectionType::SIGNED_2COMPLEMENT,
+                .width = width
+            });
+        return SignedInteger({.node = node, .port = 0ull});
+    }
+
     inline namespace literal 
     {
         inline Bit operator ""_bit(const char* _val)
