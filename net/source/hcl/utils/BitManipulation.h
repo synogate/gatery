@@ -3,6 +3,7 @@
 #include "Range.h"
 
 #include <cstdint>
+#include <bit>
 
 #include <immintrin.h>
 
@@ -14,7 +15,18 @@
 #include <intrin.h>
 #endif
 
+
 namespace hcl::utils {
+
+#ifdef _MSC_VER
+    template<typename T>
+    int popcount(T val) noexcept
+    {
+        return (int)__popcnt64((int64_t)val);
+    }
+#else
+    using ::std::popcount;
+#endif
 
 #ifdef _MSC_VER
 inline unsigned truncLog2(unsigned v) {    

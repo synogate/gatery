@@ -14,7 +14,6 @@
 
 #include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
 
-#include <bit>
 
 using namespace boost::unit_test;
 
@@ -27,7 +26,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, BitCountTest, 
     UnsignedInteger a = ConstUnsignedInteger(val, bitsize);
     UnsignedInteger count = hcl::stl::bitcount(a);
     
-    unsigned actualBitCount = std::popcount(unsigned(val) & (0xFF >> (8-bitsize)));
+    unsigned actualBitCount = hcl::utils::popcount(unsigned(val) & (0xFF >> (8-bitsize)));
     
     BOOST_REQUIRE(count.getWidth() >= hcl::utils::truncLog2(bitsize)+1);
     //sim_debug() << "The bitcount of " << a << " should be " << actualBitCount << " and is " << count;
