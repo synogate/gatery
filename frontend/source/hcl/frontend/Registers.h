@@ -26,7 +26,14 @@ class RegisterFactory
         ///@todo overload for compound signals
         template<typename DataSignal, typename = std::enable_if_t<utils::isSignal<DataSignal>::value>>
         DataSignal operator()(const DataSignal &inputSignal, const Bit &enableSignal, const DataSignal &resetValue);
-    protected:
+
+        template<typename DataSignal, typename = std::enable_if_t<utils::isSignal<DataSignal>::value>>
+        DataSignal operator()(const DataSignal& inputSignal, const Bit& enableSignal);
+
+        template<typename DataSignal, typename = std::enable_if_t<utils::isSignal<DataSignal>::value>>
+        DataSignal operator()(const DataSignal& inputSignal);
+
+protected:
         RegisterConfig m_registerConfig; 
 };
 
@@ -66,5 +73,31 @@ DataSignal RegisterFactory::operator()(const DataSignal &inputSignal, const Bit 
     return DataSignal({.node = node, .port = 0ull});
 }
 
+template<typename DataSignal, typename>
+DataSignal RegisterFactory::operator()(const DataSignal& inputSignal, const Bit& enableSignal)
+{
+    hlim::Node_Register* node = DesignScope::createNode<hlim::Node_Register>();
+    node->recordStackTrace();
+    node->connectInput(hlim::Node_Register::DATA, { .node = inputSignal.getNode(), .port = 0ull });
+    node->connectInput(hlim::Node_Register::ENABLE, { .node = enableSignal.getNode(), .port = 0ull });
+
+    node->setClock(m_registerConfig.clk);
+    node->setReset(m_registerConfig.resetName);
+
+    return DataSignal({ .node = node, .port = 0ull });
+}
+
+template<typename DataSignal, typename>
+DataSignal RegisterFactory::operator()(const DataSignal& inputSignal)
+{
+    hlim::Node_Register* node = DesignScope::createNode<hlim::Node_Register>();
+    node->recordStackTrace();
+    node->connectInput(hlim::Node_Register::DATA, { .node = inputSignal.getNode(), .port = 0ull });
+
+    node->setClock(m_registerConfig.clk);
+    node->setReset(m_registerConfig.resetName);
+
+    return DataSignal({ .node = node, .port = 0ull });
+}
 
 }
