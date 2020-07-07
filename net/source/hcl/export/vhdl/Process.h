@@ -55,12 +55,13 @@ class CombinatoryProcess : public Process
 struct RegisterConfig
 {
     hlim::BaseClock *clock;
+    std::string resetSignal;    
     /*
     std::string resetSignal;
     bool raisingEdge;
     bool synchronousReset;
     */
-    inline bool operator<(const RegisterConfig &rhs) const { return clock < rhs.clock; }
+    inline bool operator<(const RegisterConfig &rhs) const { if (clock < rhs.clock) return true; if (clock > rhs.clock) return false; return resetSignal < rhs.resetSignal; }
 };
 
 class RegisterProcess : public Process

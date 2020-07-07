@@ -475,24 +475,28 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
     cf.indent(stream, indentation);
     stream << "BEGIN" << std::endl;
 
-    cf.indent(stream, indentation+1);
-    stream << "IF (reset = '1') THEN" << std::endl;
+    if (m_config.resetSignal != "") {
+        cf.indent(stream, indentation+1);
+        stream << "IF (" << m_config.resetSignal << " = '1') THEN" << std::endl;
 
-    for (auto node : m_nodes) {
-        hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
-        HCL_ASSERT(regNode != nullptr);
+        for (auto node : m_nodes) {
+            hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
+            HCL_ASSERT(regNode != nullptr);
+                
+            hlim::NodePort output = {.node = regNode, .port = 0};
+            hlim::NodePort resetValue = regNode->getDriver(hlim::Node_Register::RESET_VALUE);
             
-        hlim::NodePort output = {.node = regNode, .port = 0};
-        hlim::NodePort resetValue = regNode->getDriver(hlim::Node_Register::RESET_VALUE);
-        
-        if (resetValue.node != nullptr) {
+            HCL_ASSERT(resetValue.node != nullptr);
             cf.indent(stream, indentation+2);
             stream << m_namespaceScope.getName(output) << " <= " << m_namespaceScope.getName(resetValue) << ";" << std::endl;
         }
-    }
 
-    cf.indent(stream, indentation+1);
-    stream << "ELSIF (rising_edge(" << clockName << ")) THEN" << std::endl;
+        cf.indent(stream, indentation+1);
+        stream << "ELSIF (rising_edge(" << clockName << ")) THEN" << std::endl;
+    } else {
+        cf.indent(stream, indentation+1);
+        stream << "IF (rising_edge(" << clockName << ")) THEN" << std::endl;
+    }
     
     for (auto node : m_nodes) {
         hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
