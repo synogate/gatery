@@ -27,7 +27,7 @@ namespace hcl::core::frontend
         hlim::ConstantData cv;
         cv.bitVec.resize(width, false);
         for (auto i : utils::Range(width))
-            if (value & (1 << i))
+            if (value & (1ull << i))
                 cv.bitVec[i] = true;
 
         auto* node = DesignScope::createNode<hlim::Node_Constant>(cv, hlim::ConnectionType{ 
@@ -42,7 +42,7 @@ namespace hcl::core::frontend
         hlim::ConstantData cv;
         cv.bitVec.resize(width, false);
         for (auto i : utils::Range(width))
-            if (value & (1 << i))
+            if (value & (1ull << i))
                 cv.bitVec[i] = true;
 
         auto* node = DesignScope::createNode<hlim::Node_Constant>(cv, hlim::ConnectionType{ 
