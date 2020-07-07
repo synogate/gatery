@@ -18,17 +18,24 @@ namespace hcl::core::frontend {
         SignalCompareOp(hlim::Node_Compare::Op op) : m_op(op) { }
 
         template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>
-        Bit operator()(const SignalType& lhs, const SignalType& rhs);
+        Bit operator()(const SignalType& lhs, const SignalType& rhs) { return create(lhs, rhs); }
+        
+        template<typename SignalType, typename DerivedSignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value && std::is_base_of<SignalType, DerivedSignalType>::value>>
+        Bit operator()(const SignalType& lhs, const DerivedSignalType& rhs) { return create(lhs, rhs); }
+        template<typename SignalType, typename DerivedSignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value && std::is_base_of<SignalType, DerivedSignalType>::value>>
+        Bit operator()(const DerivedSignalType& lhs, const SignalType& rhs) { return create(lhs, rhs); }
 
         inline hlim::Node_Compare::Op getOp() const { return m_op; }
     protected:
         hlim::Node_Compare::Op m_op;
         /// extend etc.
+        template<typename LhsSignalType, typename RhsSignalType>
+        Bit create(const LhsSignalType& lhs, const RhsSignalType& rhs);
     };
 
 
-    template<typename SignalType, typename>
-    Bit SignalCompareOp::operator()(const SignalType& lhs, const SignalType& rhs) {
+    template<typename LhsSignalType, typename RhsSignalType>
+    Bit SignalCompareOp::create(const LhsSignalType& lhs, const RhsSignalType& rhs) {
         hlim::Node_Signal* lhsSignal = lhs.getNode();
         hlim::Node_Signal* rhsSignal = rhs.getNode();
         HCL_ASSERT(lhsSignal != nullptr);
@@ -46,22 +53,23 @@ namespace hcl::core::frontend {
     }
 
 
-    template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>
-    inline Bit operator == (const SignalType& l, const SignalType& r) { SignalCompareOp op(hlim::Node_Compare::EQ); return op(l, r); }
+#define BUILD_OP(cpp_op, nodeOP) \
+    template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>                                                                                                   \
+    inline Bit operator cpp_op (const SignalType& l, const SignalType& r) { SignalCompareOp op(nodeOP); return op(l, r); }                                                                                         \
+                                                                                                                                                                                                               \
+    template<typename SignalType, typename DerivedSignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value && std::is_base_of<SignalType, DerivedSignalType>::value>>              \
+    inline Bit operator cpp_op (const SignalType& l, const DerivedSignalType& r) { SignalCompareOp op(nodeOP); return op(l, r); }                                                                                  \
+                                                                                                                                                                                                               \
+    template<typename SignalType, typename DerivedSignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value && std::is_base_of<SignalType, DerivedSignalType>::value>>              \
+    inline Bit operator cpp_op (const DerivedSignalType& l, const SignalType& r) { SignalCompareOp op(nodeOP); return op(l, r); }
 
-    template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>
-    inline Bit operator != (const SignalType& l, const SignalType& r) { SignalCompareOp op(hlim::Node_Compare::NEQ); return op(l, r); }
+    BUILD_OP(==, hlim::Node_Compare::EQ)
+    BUILD_OP(!=, hlim::Node_Compare::NEQ)
+    BUILD_OP(>, hlim::Node_Compare::LT)
+    BUILD_OP(<, hlim::Node_Compare::GT)
+    BUILD_OP(>=, hlim::Node_Compare::LEQ)
+    BUILD_OP(<=, hlim::Node_Compare::GEQ)
+#undef BUILD_OP
 
-    template<typename SignalType, typename = std::enable_if_t<utils::isNumberSignal<SignalType>::value>>
-    inline Bit operator < (const SignalType& l, const SignalType& r)  { SignalCompareOp op(hlim::Node_Compare::LT); return op(l, r); }
-
-    template<typename SignalType, typename = std::enable_if_t<utils::isNumberSignal<SignalType>::value>>
-    inline Bit operator > (const SignalType& l, const SignalType& r)  { SignalCompareOp op(hlim::Node_Compare::GT); return op(l, r); }
-
-    template<typename SignalType, typename = std::enable_if_t<utils::isNumberSignal<SignalType>::value>>
-    inline Bit operator <= (const SignalType& l, const SignalType& r) { SignalCompareOp op(hlim::Node_Compare::LEQ); return op(l, r); }
-
-    template<typename SignalType, typename = std::enable_if_t<utils::isNumberSignal<SignalType>::value>>
-    inline Bit operator >= (const SignalType& l, const SignalType& r) { SignalCompareOp op(hlim::Node_Compare::GEQ); return op(l, r); }
 }
 
