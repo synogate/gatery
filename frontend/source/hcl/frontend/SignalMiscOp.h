@@ -4,6 +4,7 @@
 #include "Bit.h"
 #include "BitVector.h"
 #include "Scope.h"
+#include "ConditionalScope.h"
 
 #include <hcl/hlim/coreNodes/Node_Multiplexer.h>
 #include <hcl/hlim/supportNodes/Node_SignalTap.h>
@@ -67,7 +68,10 @@ SignalType mux(const SelectorType &selector, const ContainerType &inputs)  {
 
 ///@todo overload for compound signals
 template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>    
-void driveWith(SignalType &dst, const SignalType &src)  {                                 
+void driveWith(SignalType &dst, const SignalType &src)  {
+    
+    HCL_ASSERT_HINT(ConditionalScope::get() == nullptr, "Using driveWith in conditional scopes (IF ELSE) not yet implemented!");
+    
     hlim::Node_Signal *signalNode = dst.getNode();
     HCL_ASSERT(signalNode != nullptr);
     
