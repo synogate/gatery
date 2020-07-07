@@ -58,6 +58,32 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounter, hcl::core::sim::UnitTestSimulationFixture
 }
 
 
+BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+    
+    DesignScope design;
+    
+    auto clk = design.createClock<hcl::core::hlim::RootClock>("clk", hcl::core::hlim::ClockRational(10'000));
+    RegisterConfig regConf{.clk = clk, .resetName = "rst"};
+    
+    {
+        Register<UnsignedInteger> counter(regConf, 0x00_uvec);
+        counter = counter.delay(1) + 1_uvec;
+        sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
+
+        UnsignedInteger refCount(8);
+        simpleSignalGenerator(clk, [](SimpleSignalGeneratorContext &context){
+            context.set(0, context.getTick());
+        }, refCount);
+        
+        sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);    
+    }
+    
+    runTicks(design.getCircuit(), clk, 10);
+}
+
+
 
 BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAssignment, data::xrange(8) * data::xrange(8), x, y)
 {
