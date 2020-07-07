@@ -69,6 +69,7 @@ void ElementaryVector::setBit(size_t idx, const Bit& in)
     }
 
     node->setOp(std::move(rewireOp));
+    node->changeOutputType(m_node->getOutputConnectionType(0));    
 
     m_node = DesignScope::createNode<hlim::Node_Signal>();
     m_node->recordStackTrace();

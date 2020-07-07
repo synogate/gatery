@@ -112,6 +112,7 @@ inline FinalType BaseBitVector<FinalType>::zext(size_t width) const
     }
 
     node->setOp(std::move(rewireOp));
+    node->changeOutputType(m_node->getOutputConnectionType(0));    
     return FinalType(hlim::NodePort{ .node = node, .port = 0ull });
 }
 
@@ -143,6 +144,7 @@ inline FinalType BaseBitVector<FinalType>::bext(size_t width, const Bit& bit) co
     }
 
     node->setOp(std::move(rewireOp));
+    node->changeOutputType(m_node->getOutputConnectionType(0));    
     return FinalType(hlim::NodePort{.node = node, .port = 0ull});
 }
 
