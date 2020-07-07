@@ -182,7 +182,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
         formatExpression(stream, comments, compareNode->getDriver(0), dependentInputs); 
         switch (compareNode->getOp()) {
             case hlim::Node_Compare::EQ: stream << " = "; break;
-            case hlim::Node_Compare::NEQ: stream << " != "; break;
+            case hlim::Node_Compare::NEQ: stream << " /= "; break;
             case hlim::Node_Compare::LT: stream << " < ";  break;
             case hlim::Node_Compare::GT: stream << " > "; break;
             case hlim::Node_Compare::LEQ: stream << " <= "; break;
@@ -215,10 +215,13 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
                     stream << " & ";
                 const auto &range = op[op.size()-1-i];
                 switch (range.source) {
-                    case hlim::Node_Rewire::OutputRange::INPUT:
-                        formatExpression(stream, comments, rewireNode->getDriver(range.inputIdx), dependentInputs);
-                        stream << "(" << range.inputOffset + range.subwidth - 1 << " downto " << range.inputOffset << ")";
-                    break;
+                    case hlim::Node_Rewire::OutputRange::INPUT: {
+                        auto driver = rewireNode->getDriver(range.inputIdx);
+                        formatExpression(stream, comments, driver, dependentInputs);
+                        if (driver.node != nullptr)
+                            if (range.inputOffset != 0 || range.subwidth != driver.node->getOutputConnectionType(driver.port).width)
+                                stream << "(" << range.inputOffset + range.subwidth - 1 << " downto " << range.inputOffset << ")";
+                    } break;
                     case hlim::Node_Rewire::OutputRange::CONST_ZERO:
                         stream << '"';
                         for (auto j : utils::Range(range.subwidth))
