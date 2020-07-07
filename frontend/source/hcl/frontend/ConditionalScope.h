@@ -33,9 +33,11 @@ class ConditionalScope : public BaseScope<ConditionalScope>
         std::map<hlim::NodePort, hlim::NodePort> m_conditional2previousOutput;
         std::set<ElementarySignal*> m_conditionalyAssignedSignals;
 
-        bool m_negateCondition;
+        bool m_isElsePart;
         hlim::NodePort m_condition;
         static thread_local hlim::NodePort m_lastCondition;
+        std::set<hlim::Node_Multiplexer*> m_lastConditionMultiplexers;
+        static thread_local std::set<hlim::Node_Multiplexer*> m_handoverLastConditionMultiplexers;
         
         void buildConditionalMuxes();
 };
@@ -48,36 +50,6 @@ class ConditionalScope : public BaseScope<ConditionalScope>
 #define ELSE \
     else { HCL_ASSERT(false); } if (hcl::core::frontend::ConditionalScope ___condScope{}; true)
 
-
-/*
-
-UnsignedIntegerSignal sum = 0;
-
-WHEN(condition) {
-    for (auto &entity : entities) {
-        sum1 += vodoo(entity);
-        sum2 += vodoo(entity);
-    }
-}
-
-WHEN (condition) {
-    UnsignedIntegerSignal sum2 = 0;
-
-    WHEN (condition) {
-        sum1 = sum1 + entity[0];
-        sum2 = sum2 + entity[0];
-        sum1 = sum1 + entity[1];
-        sum2 = sum2 + entity[1];
-        sum1 = sum1 + entity[2];
-        sum2 = sum2 + entity[2];
-    }
-    sum1 += sum2;
-} ELSE {
-}
-
-else { assert(true); } if (ElseHelper b) 
-
-*/
 
 }
     

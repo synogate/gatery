@@ -10,23 +10,27 @@
 namespace hcl::core::frontend {
 
 thread_local hlim::NodePort ConditionalScope::m_lastCondition;
+thread_local std::set<hlim::Node_Multiplexer*> ConditionalScope::m_handoverLastConditionMultiplexers;
 
 ConditionalScope::ConditionalScope(const Bit &condition)
 {
     m_condition = {.node = condition.getNode(), .port = 0ull};
-    m_negateCondition = false;
+    m_isElsePart = false;
 }
 
 ConditionalScope::ConditionalScope()
 {
+    m_lastConditionMultiplexers = m_handoverLastConditionMultiplexers;
     m_condition = m_lastCondition;
-    m_negateCondition = true;
+    m_isElsePart = true;
 }
 
 ConditionalScope::~ConditionalScope()
 {
     buildConditionalMuxes();
     m_lastCondition = m_condition;
+    if (!m_isElsePart)
+        m_handoverLastConditionMultiplexers = m_lastConditionMultiplexers;
 }
 
 void ConditionalScope::registerConditionalAssignment(ElementarySignal *signal, hlim::NodePort previousOutput)
@@ -60,23 +64,46 @@ void ConditionalScope::buildConditionalMuxes()
         HCL_ASSERT(it != m_conditional2previousOutput.end());
         hlim::NodePort previousOutput = it->second;
 
-
-        hlim::Node_Multiplexer *node = DesignScope::createNode<hlim::Node_Multiplexer>(2);
-        node->recordStackTrace();
-        node->connectSelector(m_condition);
-    
-        // always assign conditionalOutput last to derive output connection type from that one.
-        if (m_negateCondition) {
-            node->connectInput(1, previousOutput);
-            node->connectInput(0, conditionalOutput);
-        } else {
-            node->connectInput(0, previousOutput);
-            node->connectInput(1, conditionalOutput);
+        hlim::Node_Multiplexer *previousMultiplexerNode = dynamic_cast<hlim::Node_Multiplexer *>(previousOutput.node);
+        if (previousMultiplexerNode == nullptr) {
+            hlim::Node_Signal *previousSignalNode = dynamic_cast<hlim::Node_Signal *>(previousOutput.node);
+            if (previousSignalNode != nullptr)
+                previousMultiplexerNode = dynamic_cast<hlim::Node_Multiplexer*>(previousSignalNode->getNonSignalDriver(0).node);
         }
+        if (m_isElsePart && previousMultiplexerNode != nullptr && m_lastConditionMultiplexers.contains(previousMultiplexerNode)) {
+            // We are in the ELSE part, and this signal was also assigned in the IF part.
+            // It already has a multiplexer from the IF part, so we replace the corresponding input of that multiplexer instead of chaining another one.
+            previousMultiplexerNode->connectInput(0, conditionalOutput);
+
+            hlim::NodePort output{.node = previousMultiplexerNode, .port = 0ull};
+            signal->assignConditionalScopeMuxOutput(output, m_parentScope);
+            if (m_parentScope != nullptr) {
+                m_parentScope->registerConditionalAssignment(signal, previousOutput);
+            }
+        } else {
+
+            hlim::Node_Multiplexer *node = DesignScope::createNode<hlim::Node_Multiplexer>(2);
+            node->recordStackTrace();
+            node->connectSelector(m_condition);
         
-        signal->assignConditionalScopeMuxOutput({.node = node, .port = 0ull}, m_parentScope);
-        if (m_parentScope != nullptr) {
-            m_parentScope->registerConditionalAssignment(signal, previousOutput);
+            // always assign conditionalOutput last to derive output connection type from that one.
+            if (m_isElsePart) {
+                node->connectInput(1, previousOutput);
+                node->connectInput(0, conditionalOutput);
+            } else {
+                node->connectInput(0, previousOutput);
+                node->connectInput(1, conditionalOutput);
+            }
+            
+            hlim::NodePort output{.node = node, .port = 0ull};
+            
+            if (!m_isElsePart)
+                m_lastConditionMultiplexers.insert(node);
+            
+            signal->assignConditionalScopeMuxOutput(output, m_parentScope);
+            if (m_parentScope != nullptr) {
+                m_parentScope->registerConditionalAssignment(signal, previousOutput);
+            }
         }
     }
 }
