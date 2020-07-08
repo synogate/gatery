@@ -15,6 +15,8 @@ namespace hcl::core::sim {
 class Simulator
 {
     public:
+        virtual ~Simulator() = default;
+        
         virtual void compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs = {}) = 0;
         
         virtual void reset() = 0;
