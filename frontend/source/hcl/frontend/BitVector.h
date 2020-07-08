@@ -167,7 +167,7 @@ BitVectorSlice<SignalType> &BitVectorSlice<SignalType>::operator=(const Elementa
     
     if (m_selection.start != 0)
         rewireOp.ranges.push_back({
-            .subwidth = m_selection.start,
+            .subwidth = size_t(m_selection.start),
             .source = hlim::Node_Rewire::OutputRange::INPUT,
             .inputIdx = 0,
             .inputOffset = 0,
@@ -229,7 +229,7 @@ BitVectorSlice<SignalType>::operator SignalType() const
         .subwidth = selectionEnd - m_selection.start,
         .source = hlim::Node_Rewire::OutputRange::INPUT,
         .inputIdx = 0,
-        .inputOffset = m_selection.start,
+        .inputOffset = size_t(m_selection.start),
     });
 
     node->setOp(std::move(rewireOp));

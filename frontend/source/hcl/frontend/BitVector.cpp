@@ -47,7 +47,7 @@ Selection Selection::Slice(int offset, size_t size)
 {
     return {
         .start = offset,
-        .end = offset+size,
+        .end = offset + int(size),
         .stride = 1,
         .untilEndOfSource = false,
     };
@@ -57,7 +57,7 @@ Selection Selection::StridedSlice(int offset, size_t size, int stride)
 {
     return {
         .start = offset,
-        .end = offset+size,
+        .end = offset + int(size),
         .stride = stride,
         .untilEndOfSource = false,
     };
