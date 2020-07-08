@@ -2,6 +2,68 @@
 
 namespace hcl::core::frontend {
     
+    
+Selection Selection::From(int start)
+{
+    return {
+        .start = start,
+        .end = 0,
+        .stride = 1,
+        .untilEndOfSource = true,
+    };
+}
+
+Selection Selection::Range(int start, int end)
+{
+    return {
+        .start = start,
+        .end = end,
+        .stride = 1,
+        .untilEndOfSource = false,
+    };
+}
+
+Selection Selection::RangeIncl(int start, int endIncl)
+{
+    return {
+        .start = start,
+        .end = endIncl+1,
+        .stride = 1,
+        .untilEndOfSource = false,
+    };
+}
+
+Selection Selection::StridedRange(int start, int end, int stride)
+{
+    return {
+        .start = start,
+        .end = end,
+        .stride = stride,
+        .untilEndOfSource = false,
+    };
+}
+
+Selection Selection::Slice(int offset, size_t size)
+{
+    return {
+        .start = offset,
+        .end = offset+size,
+        .stride = 1,
+        .untilEndOfSource = false,
+    };
+}
+
+Selection Selection::StridedSlice(int offset, size_t size, int stride)
+{
+    return {
+        .start = offset,
+        .end = offset+size,
+        .stride = stride,
+        .untilEndOfSource = false,
+    };
+}
+    
+    
 void ElementaryVector::resize(size_t width)
 {
     HCL_DESIGNCHECK_HINT(m_node->isOrphaned(), "Can not resize signal once it is connected (driving or driven).");

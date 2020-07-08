@@ -72,6 +72,79 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestOperators,
 
 
 
+
+
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicing, data::xrange(8) * data::xrange(3, 8), x, bitsize)
+{
+    using namespace hcl::core::frontend;
+    
+    DesignScope design;
+    
+    UnsignedInteger a = ConstUnsignedInteger(x, bitsize);
+    
+    {
+        UnsignedInteger res = a(0, 1);
+        sim_assert(res == ConstUnsignedInteger(x & 1, 1)) << "Slicing first bit of " << a << " failed: " << res;
+    }
+
+    {
+        UnsignedInteger res = a(1, 2);
+        sim_assert(res == ConstUnsignedInteger((x >> 1) & 3, 2)) << "Slicing second and third bit of " << a << " failed: " << res;
+    }
+
+    {
+        UnsignedInteger res = a(1, 2);
+        res = 0b00_uvec;
+        sim_assert(a == ConstUnsignedInteger(x, bitsize)) << "Modifying copy of slice of a changes a to " << a << ", should be: " << x;
+    }
+    
+    eval(design.getCircuit());
+}
+
+
+
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicingModifications, data::xrange(8) * data::xrange(3, 8), x, bitsize)
+{
+    using namespace hcl::core::frontend;
+    
+    DesignScope design;
+    
+    UnsignedInteger a = ConstUnsignedInteger(x, bitsize);
+    
+    {
+        UnsignedInteger b = a;
+        b(1, 2) = 0b00_uvec;
+        
+        auto groundTruth = ConstUnsignedInteger(unsigned(x) & ~0b110, bitsize);
+        sim_assert(b == groundTruth) << "Clearing two bits out of " << a << " should be " << groundTruth << " but is " << b;
+    }
+    
+    eval(design.getCircuit());
+}
+
+
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicingAddition, data::xrange(8) * data::xrange(3, 8), x, bitsize)
+{
+    using namespace hcl::core::frontend;
+    
+    DesignScope design;
+    
+    UnsignedInteger a = ConstUnsignedInteger(x, bitsize);
+    
+    {
+        UnsignedInteger b = a;
+        b(1, 2) = (UnsignedInteger) b(1, 2) + 1_uvec;
+        
+        auto groundTruth = ConstUnsignedInteger((unsigned(x) & ~0b110) | (unsigned(x+2) & 0b110), bitsize);
+        sim_assert(b == groundTruth) << "Incrementing two bits out of " << a << " should be " << groundTruth << " but is " << b;
+    }
+    
+    eval(design.getCircuit());
+}
+
+
+
+
 BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, SimpleAdditionNetwork, data::xrange(8) * data::xrange(8) * data::xrange(1, 8), x, y, bitsize)
 {
     using namespace hcl::core::frontend;

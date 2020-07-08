@@ -19,7 +19,10 @@ namespace hcl::core::frontend {
     
     
 struct Selection {
-    // some selection descriptor
+    int start = 0;
+    int end = 0;
+    int stride = 1;
+    bool untilEndOfSource = false;    
     
     static Selection From(int start);
     static Selection Range(int start, int end);
@@ -45,6 +48,34 @@ public:
     Bit msb() const { return (*this)[getWidth()-1]; }
 };
 
+
+template<typename FinalType>
+class BaseBitVector;
+
+template<typename SignalType>
+class BitVectorSlice
+{
+    public:
+        ~BitVectorSlice();
+        
+        BitVectorSlice<SignalType> &operator=(const ElementarySignal &signal);
+        operator SignalType() const;
+    protected:
+        BitVectorSlice(const BitVectorSlice<SignalType> &) = delete;
+        BitVectorSlice<SignalType> &operator=(const BitVectorSlice<SignalType> &) = delete;
+        BitVectorSlice(BaseBitVector<SignalType> *signal, const Selection &selection);
+        
+        
+        BaseBitVector<SignalType> *m_signal;
+        Selection m_selection;
+        
+        hlim::NodePort m_lastSignalNodePort;
+        
+        friend class BaseBitVector<SignalType>;
+        
+        void unregisterSignal();
+};
+
 /**
  * @todo write docs
  */
@@ -55,18 +86,23 @@ class BaseBitVector : public ElementaryVector
         using isBitVectorSignal = void;
         
         BaseBitVector(const BaseBitVector<FinalType> &rhs) { assign(rhs); }
+        ~BaseBitVector() { for (auto slice : m_slices) slice->unregisterSignal(); }
         
         FinalType zext(size_t width) const;
         FinalType sext(size_t width) const { return bext(width, msb()); }
         FinalType bext(size_t width, const Bit& bit) const;
 
-        FinalType operator()(int offset, size_t size) { return operator()(Selection::Range(offset, size)); }
-        FinalType operator()(const Selection &selection) { }
+        BitVectorSlice<FinalType> operator()(int offset, size_t size) { return BitVectorSlice<FinalType>(this, Selection::Slice(offset, size)); }
+        BitVectorSlice<FinalType> operator()(const Selection &selection) { return BitVectorSlice<FinalType>(this, selection); }
 
         BaseBitVector<FinalType> &operator=(const BaseBitVector<FinalType> &rhs) { assign(rhs); return *this; }
     protected:
         BaseBitVector() = default;
         BaseBitVector(const hlim::NodePort &port) : ElementaryVector(port) { }
+        
+        std::set<BitVectorSlice<FinalType>*> m_slices;
+        friend class BitVectorSlice<FinalType>;
+        void unregisterSlice(BitVectorSlice<FinalType> *slice) { m_slices.erase(slice); }
 };
 
 
@@ -84,6 +120,130 @@ class BitVector : public BaseBitVector<BitVector>
         virtual hlim::ConnectionType getSignalType(size_t width) const override;
 
 };
+
+
+
+template<typename SignalType>
+BitVectorSlice<SignalType>::BitVectorSlice(BaseBitVector<SignalType> *signal, const Selection &selection) : m_signal(signal), m_selection(selection)
+{
+}
+
+template<typename SignalType>
+BitVectorSlice<SignalType>::~BitVectorSlice() 
+{ 
+    if (m_signal != nullptr) 
+        m_signal->unregisterSlice(this); 
+}
+
+template<typename SignalType>
+BitVectorSlice<SignalType> &BitVectorSlice<SignalType>::operator=(const ElementarySignal &signal)
+{
+    HCL_ASSERT(m_signal != nullptr);
+    
+    
+    size_t inputWidth = m_signal->getWidth();
+    
+    hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(2);
+    node->recordStackTrace();
+
+    node->connectInput(0, {.node = m_signal->getNode(), .port = 0ull});
+    node->connectInput(1, {.node = signal.getNode(), .port = 0ull});
+
+    hlim::Node_Rewire::RewireOperation rewireOp;
+    HCL_ASSERT_HINT(m_selection.stride == 1, "Strided slices not yet implemented!");
+    
+    size_t selectionEnd = m_selection.end;
+    if (m_selection.untilEndOfSource)
+        selectionEnd = inputWidth;
+
+    HCL_DESIGNCHECK(m_selection.start >= 0);
+    HCL_DESIGNCHECK(m_selection.start < inputWidth);
+    
+    HCL_DESIGNCHECK(selectionEnd >= 0);
+    HCL_DESIGNCHECK(selectionEnd <= inputWidth);
+
+    HCL_DESIGNCHECK_HINT(selectionEnd - m_selection.start == signal.getWidth(), "When assigning a signal to a sliced signal, the widths of the assigned signal and the slicing range must match");
+
+    
+    if (m_selection.start != 0)
+        rewireOp.ranges.push_back({
+            .subwidth = m_selection.start,
+            .source = hlim::Node_Rewire::OutputRange::INPUT,
+            .inputIdx = 0,
+            .inputOffset = 0,
+        });
+
+    rewireOp.ranges.push_back({
+        .subwidth = selectionEnd - m_selection.start,
+        .source = hlim::Node_Rewire::OutputRange::INPUT,
+        .inputIdx = 1,
+        .inputOffset = 0,
+    });
+
+    if (selectionEnd != inputWidth)
+        rewireOp.ranges.push_back({
+            .subwidth = inputWidth - selectionEnd,
+            .source = hlim::Node_Rewire::OutputRange::INPUT,
+            .inputIdx = 0,
+            .inputOffset = selectionEnd,
+        });
+    
+    node->setOp(std::move(rewireOp));
+    node->changeOutputType(m_signal->getNode()->getOutputConnectionType(0));    
+    
+    m_signal->operator=(SignalType(hlim::NodePort{ .node = node, .port = 0ull }));
+    
+    return *this;
+}
+
+template<typename SignalType>
+BitVectorSlice<SignalType>::operator SignalType() const
+{
+    hlim::NodePort currentInput;
+    if (m_signal != nullptr) {
+        currentInput = {.node = m_signal->getNode(), .port = 0ull};
+    } else
+        currentInput = m_lastSignalNodePort;
+    
+    size_t inputWidth = currentInput.node->getOutputConnectionType(currentInput.port).width;
+    
+    hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(1);
+    node->recordStackTrace();
+
+    node->connectInput(0, currentInput);
+
+    hlim::Node_Rewire::RewireOperation rewireOp;
+    HCL_ASSERT_HINT(m_selection.stride == 1, "Strided slices not yet implemented!");
+    
+    size_t selectionEnd = m_selection.end;
+    if (m_selection.untilEndOfSource)
+        selectionEnd = inputWidth;
+
+    HCL_DESIGNCHECK(m_selection.start >= 0);
+    HCL_DESIGNCHECK(m_selection.start < inputWidth);
+    
+    HCL_DESIGNCHECK(selectionEnd >= 0);
+    HCL_DESIGNCHECK(selectionEnd <= inputWidth);
+    
+    rewireOp.ranges.push_back({
+        .subwidth = selectionEnd - m_selection.start,
+        .source = hlim::Node_Rewire::OutputRange::INPUT,
+        .inputIdx = 0,
+        .inputOffset = m_selection.start,
+    });
+
+    node->setOp(std::move(rewireOp));
+    node->changeOutputType(currentInput.node->getOutputConnectionType(0));    
+    return SignalType(hlim::NodePort{ .node = node, .port = 0ull });    
+}
+
+template<typename SignalType>
+void BitVectorSlice<SignalType>::unregisterSignal() { 
+    m_lastSignalNodePort = {.node = m_signal->getNode(), .port = 0ull};
+    m_signal = nullptr;
+}
+
+
 
 
 template<typename FinalType>
