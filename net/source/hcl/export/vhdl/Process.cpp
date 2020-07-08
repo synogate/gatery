@@ -110,7 +110,7 @@ void CombinatoryProcess::allocateNames()
 void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &comments, const hlim::NodePort &nodePort, std::set<hlim::NodePort> &dependentInputs, bool forceUnfold) 
 {
     if (nodePort.node == nullptr) {
-        stream << "UNCONNECTED";
+        stream << "(others => 'X')";
         return;
     }
     
@@ -130,7 +130,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
     HCL_ASSERT(dynamic_cast<const hlim::Node_Register*>(nodePort.node) == nullptr);
     
     const hlim::Node_Signal *signalNode = dynamic_cast<const hlim::Node_Signal *>(nodePort.node);
-    if (signalNode != nullptr) { 
+    if (signalNode != nullptr) {
         formatExpression(stream, comments, signalNode->getDriver(0), dependentInputs);
         return;            
     }
