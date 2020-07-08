@@ -92,7 +92,7 @@ HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator%, hlim::Node_Arith
 
 #define HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(typeTrait, cppOp, Op)                         \
     template<typename SignalType, typename = std::enable_if_t<typeTrait<SignalType>::value>>    \
-    SignalType &cppOp(SignalType lhs, const SignalType &rhs)  {                                 \
+    SignalType &cppOp(SignalType &lhs, const SignalType &rhs)  {                                 \
         SignalArithmeticOp op(Op);                                                              \
         return lhs = op(lhs, rhs);                                                              \
     }

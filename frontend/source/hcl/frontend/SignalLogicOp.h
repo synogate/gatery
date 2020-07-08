@@ -101,7 +101,7 @@ HCL_BUILD_LOGIC_OPERATOR_UNARY(utils::isBitSignal, operator!, hlim::Node_Logic::
 
 #define HCL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(typeTrait, cppOp, Op)                         \
     template<typename SignalType, typename = std::enable_if_t<typeTrait<SignalType>::value>>    \
-    SignalType &cppOp(SignalType lhs, const SignalType &rhs)  {                                 \
+    SignalType &cppOp(SignalType &lhs, const SignalType &rhs)  {                                 \
         SignalLogicOp op(Op);                                                              \
         return lhs = op(lhs, rhs);                                                              \
     }
