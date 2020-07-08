@@ -90,6 +90,21 @@ void Process::extractSignals()
             if (m_outputs.find(driver) == m_outputs.end())
                 m_localSignals.insert(driver);
         }
+        
+        // check for rewire nodes with slices, which require explicit input signals
+        hlim::Node_Rewire *rewireNode = dynamic_cast<hlim::Node_Rewire*>(node);
+        if (rewireNode != nullptr) {
+            for (const auto &op : rewireNode->getOp().ranges) {
+                if (op.source == hlim::Node_Rewire::OutputRange::INPUT) {
+                    auto driver = rewireNode->getDriver(op.inputIdx);
+                    if (driver.node != nullptr)
+                        if (op.inputOffset != 0 || op.subwidth != driver.node->getOutputConnectionType(driver.port).width)
+                            if (m_outputs.find(driver) == m_outputs.end())
+                                m_localSignals.insert(driver);
+                }
+            }
+        }
+        
     }
 }
 

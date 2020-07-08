@@ -58,11 +58,12 @@ class BitVectorSlice
     public:
         ~BitVectorSlice();
         
+        BitVectorSlice<SignalType> &operator=(const BitVectorSlice<SignalType> &slice) { return this->operator=((SignalType) slice); }
         BitVectorSlice<SignalType> &operator=(const ElementarySignal &signal);
         operator SignalType() const;
     protected:
         BitVectorSlice(const BitVectorSlice<SignalType> &) = delete;
-        BitVectorSlice<SignalType> &operator=(const BitVectorSlice<SignalType> &) = delete;
+//        BitVectorSlice<SignalType> &operator=(const BitVectorSlice<SignalType> &) = delete;
         BitVectorSlice(BaseBitVector<SignalType> *signal, const Selection &selection);
         
         
