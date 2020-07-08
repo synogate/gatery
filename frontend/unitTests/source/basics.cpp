@@ -10,6 +10,68 @@
 
 using namespace boost::unit_test;
 
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestOperators, data::xrange(8) * data::xrange(8) * data::xrange(1, 8), x, y, bitsize)
+{
+    using namespace hcl::core::frontend;
+    
+    DesignScope design;
+
+    
+    UnsignedInteger a = ConstUnsignedInteger(x, bitsize);
+    UnsignedInteger b = ConstUnsignedInteger(y, bitsize);
+
+#define op2str(op) #op
+#define buildOperatorTest(op)                                                                               \
+    {                                                                                                       \
+        UnsignedInteger c = a op b;                                                                         \
+        UnsignedInteger groundTruth = ConstUnsignedInteger(std::uint64_t(x) op std::uint64_t(y), bitsize);  \
+        sim_assert(c == groundTruth) << "The result of " << a << " " << op2str(op) << " " << b              \
+            << " should be " << groundTruth << " (with overflow in " << bitsize << "bits) but is " << c;    \
+    }
+    
+    buildOperatorTest(+)
+    buildOperatorTest(-)
+    buildOperatorTest(*)
+    //buildOperatorTest(/)
+    
+    buildOperatorTest(&)
+    buildOperatorTest(|)
+    buildOperatorTest(^)
+    
+#undef op2str
+#undef buildOperatorTest
+
+    
+#define op2str(op) #op
+#define buildOperatorTest(op)                                                                               \
+    {                                                                                                       \
+        UnsignedInteger c = a;                                                                              \
+        c op b;                                                                                             \
+        std::uint64_t gt = x;                                                                               \
+        gt op std::uint64_t(y);                                                                             \
+        UnsignedInteger groundTruth = ConstUnsignedInteger(gt, bitsize);                                    \
+        sim_assert(c == groundTruth) << "The result of (" << c << "="<<a << ") " << op2str(op) << " " << b  \
+            << " should be " << groundTruth << " (with overflow in " << bitsize << "bits) but is " << c;    \
+    }
+    
+    buildOperatorTest(+=)
+    buildOperatorTest(-=)
+    buildOperatorTest(*=)
+    //buildOperatorTest(/=)
+    
+    buildOperatorTest(&=)
+    buildOperatorTest(|=)
+    buildOperatorTest(^=)
+    
+#undef op2str
+#undef buildOperatorTest
+    
+    
+    eval(design.getCircuit());
+}
+
+
+
 BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, SimpleAdditionNetwork, data::xrange(8) * data::xrange(8) * data::xrange(1, 8), x, y, bitsize)
 {
     using namespace hcl::core::frontend;
@@ -112,6 +174,72 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAss
     eval(design.getCircuit());
 }
 
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAssignmentMultipleStatements, data::xrange(8) * data::xrange(8), x, y)
+{
+    using namespace hcl::core::frontend;
+    
+    DesignScope design;
+
+    UnsignedInteger a = ConstUnsignedInteger(x, 8);
+    UnsignedInteger b = ConstUnsignedInteger(y, 8);
+
+    UnsignedInteger c;
+    IF (a[1] == 1_bit) {
+        c = a + b;
+        c += a;
+        c += b;
+    } ELSE {
+        c = a - b;
+    }
+    
+    unsigned groundTruth;
+    if (unsigned(x) & 2) {
+        groundTruth = unsigned(x)+unsigned(y);
+        groundTruth += x;
+        groundTruth += y;
+    } else {
+        groundTruth = unsigned(x)-unsigned(y);        
+    }
+
+    sim_assert(c == ConstUnsignedInteger(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+    
+    eval(design.getCircuit());
+}
+
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAssignmentMultipleElseStatements, data::xrange(8) * data::xrange(8), x, y)
+{
+    using namespace hcl::core::frontend;
+    
+    DesignScope design;
+
+    UnsignedInteger a = ConstUnsignedInteger(x, 8);
+    UnsignedInteger b = ConstUnsignedInteger(y, 8);
+
+    UnsignedInteger c;
+    IF (a[1] == 1_bit)
+        c = a + b;
+    ELSE {
+        c = a - b;
+        c = c - b;
+        c = c - b;
+    }
+    
+    unsigned groundTruth;
+    if (unsigned(x) & 2) 
+        groundTruth = unsigned(x)+unsigned(y);
+    else {
+        groundTruth = unsigned(x)-unsigned(y);        
+        groundTruth = groundTruth-unsigned(y);        
+        groundTruth = groundTruth-unsigned(y);        
+    }
+
+    sim_assert(c == ConstUnsignedInteger(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+    
+    eval(design.getCircuit());
+}
+
+
+
 BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelConditionalAssignment, data::xrange(8) * data::xrange(8), x, y)
 {
     using namespace hcl::core::frontend;
@@ -155,3 +283,87 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
 }
 
 
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelConditionalAssignmentMultipleStatements, data::xrange(8) * data::xrange(8), x, y)
+{
+    using namespace hcl::core::frontend;
+    
+    DesignScope design;
+
+    UnsignedInteger a = ConstUnsignedInteger(x, 8);
+    UnsignedInteger b = ConstUnsignedInteger(y, 8);
+
+    UnsignedInteger c;
+    IF (a[2] == 1_bit) {
+        IF (a[1] == 1_bit) {
+            c = a + b;
+            c += b;
+            c += a;
+        } ELSE {
+            c = a - b;
+        }
+    } ELSE {
+        IF (a[1] == 1_bit)
+            c = a;
+        ELSE {
+            c = b;
+        }
+    }
+    
+    unsigned groundTruth;
+    if (unsigned(x) & 4) {
+        if (unsigned(x) & 2) {
+            groundTruth = x+y;
+            groundTruth += y;
+            groundTruth += x;
+        } else
+            groundTruth = x-y;
+    } else {
+        if (unsigned(x) & 2) 
+            groundTruth = x;
+        else
+            groundTruth = y;
+    }
+
+    sim_assert(c == ConstUnsignedInteger(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+    
+    eval(design.getCircuit());
+}
+
+/*
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignment, data::xrange(8) * data::xrange(8), x, y)
+{
+    using namespace hcl::core::frontend;
+    
+    DesignScope design;
+
+    UnsignedInteger a = ConstUnsignedInteger(x, 8);
+    UnsignedInteger b = ConstUnsignedInteger(y, 8);
+
+    UnsignedInteger c = a;
+    IF (a[2] == 1_bit) {
+        IF (a[1] == 1_bit)
+            c = a + b;
+        ELSE {
+            c = a - b;
+        }
+    } ELSE {
+        IF (a[1] == 1_bit)
+            c = b;
+    }
+    
+    unsigned groundTruth = x;
+    if (unsigned(x) & 4) {
+        if (unsigned(x) & 2) 
+            groundTruth = x+y;
+        else
+            groundTruth = x-y;
+    } else {
+        if (unsigned(x) & 2) 
+            groundTruth = y;
+    }
+
+    sim_assert(c == ConstUnsignedInteger(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+    
+    eval(design.getCircuit());
+}
+*/
