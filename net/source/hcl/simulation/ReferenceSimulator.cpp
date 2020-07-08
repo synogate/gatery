@@ -135,12 +135,12 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
             std::cout << "nodesRemaining : " << nodesRemaining.size() << std::endl;
             
             for (auto node : nodesRemaining) {
-                std::cout << node->getName() << "  " << node->getTypeName() << std::endl;
+                std::cout << node->getName() << "  " << node->getTypeName() << "  " << std::hex << (size_t)node << std::endl;
                 for (auto i : utils::Range(node->getNumInputPorts())) {
                     auto driver = node->getNonSignalDriver(i);
                     if (driver.node != nullptr && (outputsReady.find(node->getNonSignalDriver(i)) == outputsReady.end())) {
                         std::cout << "    Input " << i << " not ready." << std::endl;
-                        std::cout << "        " << driver.node->getName() << "  " << driver.node->getTypeName() << std::endl;
+                        std::cout << "        " << driver.node->getName() << "  " << driver.node->getTypeName() << "  " << std::hex << (size_t)driver.node << std::endl;
                     }
                 }
             }

@@ -70,7 +70,21 @@ void ConditionalScope::buildConditionalMuxes()
             if (previousSignalNode != nullptr)
                 previousMultiplexerNode = dynamic_cast<hlim::Node_Multiplexer*>(previousSignalNode->getNonSignalDriver(0).node);
         }
-        if (m_isElsePart && previousMultiplexerNode != nullptr && m_lastConditionMultiplexers.contains(previousMultiplexerNode)) {
+        //
+        
+        /*
+         * This is broken, so it's disabled for now...
+         * It breaks in a construction such as this:
+         * IF (condition1) {
+         *      c = ...;
+         * } ELSE {
+         *      IF (condition2)
+         *          c = ...;
+         * }
+         * The cascaded multiplexer is in the ELSE part and thus gets attached to the input of the outer multiplexer. However, he cascaded 
+         * multiplexer uses the modified c value (modified from the outer IF branch) as input, thus building a cyclic dependency.
+         */
+        if (false && m_isElsePart && previousMultiplexerNode != nullptr && m_lastConditionMultiplexers.contains(previousMultiplexerNode)) {
             // We are in the ELSE part, and this signal was also assigned in the IF part.
             // It already has a multiplexer from the IF part, so we replace the corresponding input of that multiplexer instead of chaining another one.
             previousMultiplexerNode->connectInput(0, conditionalOutput);
