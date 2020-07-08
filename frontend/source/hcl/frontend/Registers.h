@@ -73,7 +73,7 @@ template<typename SignalType>
 Register<SignalType>::Register(const RegisterConfig &registerConfig, SignalType resetSignal)
 {
     m_registerConfig = registerConfig;
-    m_enableSignal = 1_bit;
+    m_enableSignal = true;
     m_resetSignal = resetSignal;
     m_delayedSignal.resize(m_resetSignal.getWidth());
 }

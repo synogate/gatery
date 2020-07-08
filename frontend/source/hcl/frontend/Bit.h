@@ -19,8 +19,10 @@ class Bit : public ElementarySignal
         Bit();
         Bit(const Bit &rhs);
         Bit(const hlim::NodePort &port);
+        Bit(bool value);
         
-        Bit &operator=(const Bit &rhs) { assign(rhs); return *this; }
+        Bit& operator=(const Bit &rhs) { assign(rhs); return *this; }
+        Bit& operator=(bool value);
     protected:
         virtual hlim::ConnectionType getSignalType(size_t width) const override;
 };

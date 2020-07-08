@@ -41,7 +41,7 @@ core::frontend::UnsignedInteger bitcount(SignalType vec)
                 subSums[j] = subSums[j*2+0];
                 continue;
             }
-            subSums[j] = cat(0_bit, subSums[j*2+0]) + cat(0_bit, subSums[j*2+1]);
+            subSums[j] = cat(0b0_uvec, subSums[j * 2 + 0]) + cat(0b0_uvec, subSums[j * 2 + 1]);
         }
     }
     return subSums[0];

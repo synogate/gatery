@@ -11,7 +11,7 @@ template<>
 Register<Bit>::Register(const RegisterConfig &registerConfig, Bit resetSignal)
 {
     m_registerConfig = registerConfig;
-    m_enableSignal = 1_bit;
+    m_enableSignal = true;
     m_resetSignal = resetSignal;
 }
 

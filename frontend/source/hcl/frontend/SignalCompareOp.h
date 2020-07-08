@@ -4,6 +4,8 @@
 #include "Scope.h"
 #include "Bit.h"
 
+#include "SignalLogicOp.h"
+
 #include <hcl/hlim/coreNodes/Node_Signal.h>
 #include <hcl/hlim/coreNodes/Node_Compare.h>
 
@@ -63,13 +65,19 @@ namespace hcl::core::frontend {
     template<typename SignalType, typename DerivedSignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value && std::is_base_of<SignalType, DerivedSignalType>::value>>              \
     inline Bit operator cpp_op (const DerivedSignalType& l, const SignalType& r) { SignalCompareOp op(nodeOP); return op(l, r); }
 
-    BUILD_OP(==, hlim::Node_Compare::EQ)
-    BUILD_OP(!=, hlim::Node_Compare::NEQ)
-    BUILD_OP(>, hlim::Node_Compare::LT)
-    BUILD_OP(<, hlim::Node_Compare::GT)
-    BUILD_OP(>=, hlim::Node_Compare::LEQ)
-    BUILD_OP(<=, hlim::Node_Compare::GEQ)
+    BUILD_OP(== , hlim::Node_Compare::EQ);
+    BUILD_OP(!= , hlim::Node_Compare::NEQ);
+    BUILD_OP(> , hlim::Node_Compare::LT);
+    BUILD_OP(< , hlim::Node_Compare::GT);
+    BUILD_OP(>= , hlim::Node_Compare::LEQ);
+    BUILD_OP(<= , hlim::Node_Compare::GEQ);
 #undef BUILD_OP
+
+    inline Bit operator == (const Bit& l, bool r) { return r ? l : ~l; }
+    inline Bit operator == (bool l, const Bit& r) { return r == l; }
+
+    inline Bit operator != (const Bit& l, bool r) { return r ? ~l : l; }
+    inline Bit operator != (bool l, const Bit& r) { return r != l; }
 
 }
 

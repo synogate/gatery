@@ -15,7 +15,9 @@ struct SerialTMDS {
 };
 
 core::frontend::BitVector tmdsEncode(core::hlim::BaseClock *pixelClock, core::frontend::Bit sendData, core::frontend::UnsignedInteger data, core::frontend::BitVector ctrl);
-    
+
+core::frontend::BitVector tmdsReduceTransitions(core::frontend::UnsignedInteger data);
+
 class Transmitter
 {
     public:

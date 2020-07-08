@@ -13,6 +13,8 @@ add_library(hcl_stl STATIC
     source/hcl/stl/hardCores/blockRam/XilinxSimpleDualPortBlockRam.cpp
     source/hcl/stl/hardCores/blockRam/XilinxSimpleDualPortBlockRam.h
     source/hcl/stl/ExternalNodeHandlers.h
+    source/hcl/stl/io/HDMITransmitter.h
+    source/hcl/stl/io/HDMITransmitter.cpp
 )
 
 set(data_files 

@@ -26,14 +26,14 @@ core::frontend::BitVector tmdsEncode(core::hlim::BaseClock *pixelClock, core::fr
     HCL_DESIGNCHECK_HINT(ctrl.getWidth() == 2, "data must be 8 bit wide");
     
     HCL_COMMENT << "Count the number of high bits in the input word";
-    UnsignedInteger sumOfOnes = utils::bitcount(data);
+    UnsignedInteger sumOfOnes = bitcount(data);
     HCL_NAMED(sumOfOnes);   
 
     HCL_COMMENT << "Prepare XORed and XNORed data words to select from based on number of high bits";
 
     UnsignedInteger dataXNOR = data;
     UnsignedInteger dataXOR = data;
-    for (auto i : utils::Range(1, data.getWidth())) {
+    for (auto i : utils::Range<size_t>(1, data.getWidth())) {
         dataXOR.setBit(i, data[i] ^ dataXOR[i-1]);
         dataXNOR.setBit(i, data[i] == dataXNOR[i-1]);
     }
@@ -66,9 +66,14 @@ core::frontend::BitVector tmdsEncode(core::hlim::BaseClock *pixelClock, core::fr
     }
 
     HCL_COMMENT << "Keep a running (signed) counter of the imbalance on the line, to modify future data encodings accordingly";
-    driveWith(disparity, reg(newDisparity, 1_bit, 0b0000_svec));
+    driveWith(disparity, reg(newDisparity, true, 0b0000_svec));
     
     return result;
+}
+
+core::frontend::BitVector tmdsReduceTransitions(core::frontend::UnsignedInteger data)
+{
+    return core::frontend::BitVector();
 }
 
 }

@@ -52,20 +52,8 @@ namespace hcl::core::frontend
         return SignedInteger({.node = node, .port = 0ull});
     }
 
-    inline namespace literal 
+    inline namespace literal
     {
-        inline Bit operator ""_bit(const char* _val)
-        {
-            HCL_DESIGNCHECK(_val[0] == '0' || _val[0] == '1');
-            HCL_DESIGNCHECK(_val[1] == 0);
-
-            hlim::ConnectionType type{ 
-                .interpretation = hlim::ConnectionType::BOOL,
-                .width = 1
-            };
-            return Constant<Bit>(hlim::ConstantData{_val}, type);
-        }
-
         inline BitVector operator ""_vec(const char* _val)
         {
             hlim::ConstantData lit{ _val };
@@ -85,7 +73,6 @@ namespace hcl::core::frontend
             };
             return Constant<UnsignedInteger>(std::move(lit), type);
         }
-
         inline SignedInteger operator ""_svec(const char* _val)
         {
             hlim::ConstantData lit{ _val };

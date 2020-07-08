@@ -165,6 +165,24 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, SimpleAddition
     eval(design.getCircuit());
 }
 
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, BitFromBool, data::xrange(2) * data::xrange(2), l, r)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+    Bit a = l != 0;
+    Bit b;
+    b = r != 0;
+
+    sim_assert((a == b) == Bit{ l == r });
+    sim_assert((a != b) == Bit{ l != r });
+    sim_assert((a == true) == Bit(l != 0));
+    sim_assert((true == a) == Bit(l != 0));
+    sim_assert((a != true) == Bit(l == 0));
+    sim_assert((true != a) == Bit(l == 0));
+
+    eval(design.getCircuit());
+}
 
 BOOST_FIXTURE_TEST_CASE(SimpleCounter, hcl::core::sim::UnitTestSimulationFixture)
 {
@@ -179,7 +197,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounter, hcl::core::sim::UnitTestSimulationFixture
     UnsignedInteger nextCounter = counter + 0b1_uvec;
     sim_debug() << "Counter value is " << counter << " and next counter value is " << nextCounter;
 
-    driveWith(counter, reg(nextCounter, 1_bit, 0b00000000_uvec));
+    driveWith(counter, reg(nextCounter, true, 0b00000000_uvec));
 
 
     UnsignedInteger refCount(8);
@@ -230,7 +248,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAss
     UnsignedInteger b = ConstUnsignedInteger(y, 8);
 
     UnsignedInteger c;
-    IF (a[1] == 1_bit)
+    IF (a[1])
         c = a + b;
     ELSE {
         c = a - b;
@@ -257,7 +275,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAss
     UnsignedInteger b = ConstUnsignedInteger(y, 8);
 
     UnsignedInteger c;
-    IF (a[1] == 1_bit) {
+    IF (a[1]) {
         c = a + b;
         c += a;
         c += b;
@@ -289,7 +307,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAss
     UnsignedInteger b = ConstUnsignedInteger(y, 8);
 
     UnsignedInteger c;
-    IF (a[1] == 1_bit)
+    IF (a[1])
         c = a + b;
     ELSE {
         c = a - b;
@@ -323,14 +341,14 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
     UnsignedInteger b = ConstUnsignedInteger(y, 8);
 
     UnsignedInteger c;
-    IF (a[2] == 1_bit) {
-        IF (a[1] == 1_bit)
+    IF (a[2]) {
+        IF (a[1])
             c = a + b;
         ELSE {
             c = a - b;
         }
     } ELSE {
-        IF (a[1] == 1_bit)
+        IF (a[1])
             c = a;
         ELSE {
             c = b;
@@ -366,8 +384,8 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
     UnsignedInteger b = ConstUnsignedInteger(y, 8);
 
     UnsignedInteger c;
-    IF (a[2] == 1_bit) {
-        IF (a[1] == 1_bit) {
+    IF (a[2]) {
+        IF (a[1]) {
             c = a + b;
             c += b;
             c += a;
@@ -375,7 +393,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
             c = a - b;
         }
     } ELSE {
-        IF (a[1] == 1_bit)
+        IF (a[1])
             c = a;
         ELSE {
             c = b;
@@ -412,8 +430,8 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
     UnsignedInteger b = ConstUnsignedInteger(y, 8);
 
     UnsignedInteger c = a;
-    IF (a[2] == 1_bit) {
-        IF (a[1] == 1_bit)
+    IF (a[2]) {
+        IF (a[1])
             c = a + b;
         ELSE {
             c = a - b;
@@ -445,9 +463,9 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
     UnsignedInteger b = ConstUnsignedInteger(y, 8);
 
     UnsignedInteger c = a;
-    IF (a[2] == 1_bit) {
+    IF (a[2]) {
     } ELSE {
-        IF (a[1] == 1_bit)
+        IF (a[1])
             c = b;
     }
     
@@ -474,13 +492,13 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
     UnsignedInteger b = ConstUnsignedInteger(y, 8);
 
     UnsignedInteger c = a;
-    IF (a[2] == 1_bit) {
-        IF (a[1] == 1_bit)
+    IF (a[2]) {
+        IF (a[1])
             c = a + b;
         ELSE
             c = a - b;
     } ELSE {
-        IF (a[1] == 1_bit)
+        IF (a[1])
             c = b;
     }
     
@@ -510,10 +528,10 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
     UnsignedInteger b = ConstUnsignedInteger(y, 8);
 
     UnsignedInteger c = a;
-    IF (a[2] == 1_bit) {
+    IF (a[2]) {
         c = a + b;
     } ELSE {
-        IF (a[1] == 1_bit)
+        IF (a[1])
             c = b;
     }
     
