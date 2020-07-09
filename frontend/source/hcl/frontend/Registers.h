@@ -37,6 +37,8 @@ class RegisterFactory
         template<typename DataSignal, typename = std::enable_if_t<utils::isSignal<DataSignal>::value>>
         DataSignal operator()(const DataSignal& inputSignal);
 
+        const RegisterConfig& config() const { return m_registerConfig; }
+
 protected:
         RegisterConfig m_registerConfig; 
 };
