@@ -547,3 +547,48 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
     
     eval(design.getCircuit());
 }
+
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, UnsignedCompare, data::xrange(8) * data::xrange(8), x, y)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    UnsignedInteger a = ConstUnsignedInteger(x, 8);
+    UnsignedInteger b = ConstUnsignedInteger(y, 8);
+
+    if (x > y)
+    {
+        sim_assert(a > b);
+        sim_assert(!(a <= b));
+    }
+    else
+    {
+        sim_assert(!(a > b));
+        sim_assert(a <= b);
+    }
+
+    if (x < y)
+    {
+        sim_assert(a < b);
+        sim_assert(!(a >= b));
+    }
+    else
+    {
+        sim_assert(!(a < b));
+        sim_assert(a >= b);
+    }
+
+    if (x == y)
+    {
+        sim_assert(a == b);
+        sim_assert(!(a != b));
+    }
+    else
+    {
+        sim_assert(a != b);
+        sim_assert(!(a == b));
+    }
+
+    eval(design.getCircuit());
+}

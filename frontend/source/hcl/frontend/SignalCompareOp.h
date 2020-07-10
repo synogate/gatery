@@ -67,10 +67,10 @@ namespace hcl::core::frontend {
 
     BUILD_OP(== , hlim::Node_Compare::EQ);
     BUILD_OP(!= , hlim::Node_Compare::NEQ);
-    BUILD_OP(> , hlim::Node_Compare::LT);
-    BUILD_OP(< , hlim::Node_Compare::GT);
-    BUILD_OP(>= , hlim::Node_Compare::LEQ);
-    BUILD_OP(<= , hlim::Node_Compare::GEQ);
+    BUILD_OP(> , hlim::Node_Compare::GT);
+    BUILD_OP(< , hlim::Node_Compare::LT);
+    BUILD_OP(>= , hlim::Node_Compare::GEQ);
+    BUILD_OP(<= , hlim::Node_Compare::LEQ);
 #undef BUILD_OP
 
     inline Bit operator == (const Bit& l, bool r) { return r ? l : ~l; }
