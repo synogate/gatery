@@ -110,4 +110,48 @@ core::frontend::BitVector tmdsDecodeReduceTransitions(const core::frontend::BitV
     return decoded;
 }
 
+core::frontend::BitVector tmdsEncodeBitflip(const core::frontend::RegisterFactory& clk, const core::frontend::BitVector& data)
+{
+    HCL_COMMENT << "count the number of uncompensated ones";
+    Register<UnsignedInteger> global_counter{ clk.config(), 0b000_uvec };
+    HCL_NAMED(global_counter);
+
+    UnsignedInteger word_counter = 0b100_uvec;
+    for (size_t i = 0; i < data.getWidth(); ++i)
+    {
+        UnsignedInteger tmp{ 1 };
+        tmp.setBit(0, data[i]);
+        word_counter += tmp;
+    }
+
+    Bit invert = word_counter[word_counter.getWidth() - 1] == global_counter.delay(1)[global_counter.getWidth() - 1];
+    HCL_NAMED(invert);
+
+    BitVector result = cat(invert, data); // TODO: data ^ invert
+    HCL_NAMED(result);
+
+    IF(invert)
+    {
+        // TODO: add sub/add alu
+        global_counter = global_counter.delay(1) - word_counter; // TODO: initialize registers with its own delay value
+        result = cat(1_vec, ~data);
+    }
+    ELSE
+    {
+        global_counter = global_counter.delay(1) + word_counter;
+    }
+
+    return result;
+}
+
+core::frontend::BitVector hdmi::tmdsDecodeBitflip(const core::frontend::BitVector& data)
+{
+    // TODO: should be return data(0, -1) ^ data[back];
+    BitVector tmp = data.zext(data.getWidth()-1);
+    HCL_NAMED(tmp);
+    for (size_t i = 0; i < tmp.getWidth(); ++i)
+        tmp.setBit(i, tmp[i] ^ data[data.getWidth() - 1]);
+    return tmp;
+}
+
 }

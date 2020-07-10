@@ -30,4 +30,31 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, tmdsReduction,
     eval(design.getCircuit());
 }
 
+BOOST_FIXTURE_TEST_CASE(tmdsBitflip, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+    // TODO: move RegisterConfig and RegisterFactory to single Clock class
+    auto clk = design.createClock<hcl::core::hlim::RootClock>("clk", hcl::core::hlim::ClockRational(10'000));
+    RegisterConfig regConf{ .clk = clk, .resetName = "rst" };
+    RegisterFactory regFac{ regConf };
+    { // TODO: register should not wait for destructor to work
+
+        Register<UnsignedInteger> test_counter{ regConf, 0x00_uvec };
+        test_counter = test_counter.delay(1) + 1_uvec;
+
+        BitVector test_counter_bv{ test_counter.getWidth() }; // TODO: cast
+        for (size_t i = 0; i < test_counter_bv.getWidth(); ++i)
+            test_counter_bv.setBit(i, test_counter.delay(1)[i]);
+
+        BitVector encoded = hcl::stl::hdmi::tmdsEncodeBitflip(regFac, test_counter_bv);
+        BOOST_TEST(test_counter.getWidth() == encoded.getWidth() - 1);
+
+        BitVector decoded = hcl::stl::hdmi::tmdsDecodeBitflip(encoded);
+        sim_assert(decoded == test_counter_bv);
+    }
+
+    runTicks(design.getCircuit(), clk, 260);
+}
 

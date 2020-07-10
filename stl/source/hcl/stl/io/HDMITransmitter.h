@@ -19,6 +19,9 @@ core::frontend::BitVector tmdsEncode(core::hlim::BaseClock *pixelClock, core::fr
 core::frontend::BitVector tmdsEncodeReduceTransitions(const core::frontend::BitVector& data);
 core::frontend::BitVector tmdsDecodeReduceTransitions(const core::frontend::BitVector& data);
 
+core::frontend::BitVector tmdsEncodeBitflip(const core::frontend::RegisterFactory& clk, const core::frontend::BitVector& data);
+core::frontend::BitVector tmdsDecodeBitflip(const core::frontend::BitVector& data);
+
 class Transmitter
 {
     public:
