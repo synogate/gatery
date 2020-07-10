@@ -71,9 +71,43 @@ core::frontend::BitVector tmdsEncode(core::hlim::BaseClock *pixelClock, core::fr
     return result;
 }
 
-core::frontend::BitVector tmdsReduceTransitions(core::frontend::UnsignedInteger data)
+core::frontend::BitVector tmdsEncodeReduceTransitions(const core::frontend::BitVector& data)
 {
-    return core::frontend::BitVector();
+    HCL_COMMENT << "Count the number of high bits in the input word";
+    UnsignedInteger sumOfOnes = bitcount(data);
+    HCL_NAMED(sumOfOnes);
+
+    HCL_COMMENT << "Prepare XORed and XNORed data words to select from based on number of high bits";
+
+    // TODO: rename getWidth to size to be more container like
+    // TODO: allow compare of different bit width
+    UnsignedInteger literalConstant = (4_uvec).ext(sumOfOnes.getWidth());
+    Bit invert = sumOfOnes > literalConstant || (sumOfOnes == literalConstant && data[0] == false);
+
+    BitVector tmdsReduced{ data.getWidth() + 1 };
+    HCL_NAMED(tmdsReduced);
+
+    tmdsReduced.setBit(0, data[0]);
+    for (auto i : utils::Range<size_t>(1, data.getWidth())) {
+        tmdsReduced.setBit(i, data[i] ^ tmdsReduced[i - 1] ^ invert);
+    }
+
+    HCL_COMMENT << "Decode using 1=xor, 0=xnor";
+    tmdsReduced.setBit(data.getWidth(), ~invert);
+
+    return tmdsReduced;
+}
+
+core::frontend::BitVector tmdsDecodeReduceTransitions(const core::frontend::BitVector& data)
+{
+    BitVector decoded = data.zext(data.getWidth() - 1);
+    decoded = decoded ^ (decoded << 1); // TODO: ^ invert operator missing
+    HCL_NAMED(decoded);
+
+    IF(!data[data.getWidth() - 1])
+        decoded(1, decoded.getWidth()-1) = ~(BitVector)decoded(1, decoded.getWidth() - 1);
+
+    return decoded;
 }
 
 }
