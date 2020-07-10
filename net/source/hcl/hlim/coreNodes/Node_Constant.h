@@ -39,6 +39,14 @@ namespace hcl::core::hlim {
 
         }
 
+        ConstantData(uint64_t value, size_t width)
+        {
+            bitVec.resize(width, false);
+            for (auto i : utils::Range(width))
+                if (value & (1ull << i))
+                    bitVec[i] = true;
+        }
+
         void parseDecimal(std::string_view _str)
         {
             uint64_t acc = 0;

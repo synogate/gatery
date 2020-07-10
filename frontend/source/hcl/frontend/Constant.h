@@ -22,34 +22,34 @@ namespace hcl::core::frontend
         return SignalType({.node = node, .port = 0ull});
     }
 
+    inline BitVector ConstBitVector(uint64_t value, size_t width)
+    {
+        return Constant<BitVector>(
+            hlim::ConstantData{ value, width },
+            hlim::ConnectionType{
+                .interpretation = hlim::ConnectionType::RAW,
+                .width = width
+            });
+    }
+
     inline UnsignedInteger ConstUnsignedInteger(std::uint64_t value, size_t width)
     {
-        hlim::ConstantData cv;
-        cv.bitVec.resize(width, false);
-        for (auto i : utils::Range(width))
-            if (value & (1ull << i))
-                cv.bitVec[i] = true;
-
-        auto* node = DesignScope::createNode<hlim::Node_Constant>(cv, hlim::ConnectionType{ 
+        return Constant<UnsignedInteger>(
+            hlim::ConstantData{ value, width },
+            hlim::ConnectionType{
                 .interpretation = hlim::ConnectionType::UNSIGNED,
                 .width = width
             });
-        return UnsignedInteger({.node = node, .port = 0ull});
     }
 
     inline SignedInteger ConstSignedInteger(std::int64_t value, size_t width)
     {
-        hlim::ConstantData cv;
-        cv.bitVec.resize(width, false);
-        for (auto i : utils::Range(width))
-            if (value & (1ull << i))
-                cv.bitVec[i] = true;
-
-        auto* node = DesignScope::createNode<hlim::Node_Constant>(cv, hlim::ConnectionType{ 
+        return Constant<SignedInteger>(
+            hlim::ConstantData{ uint64_t(value), width },
+            hlim::ConnectionType{
                 .interpretation = hlim::ConnectionType::SIGNED_2COMPLEMENT,
                 .width = width
             });
-        return SignedInteger({.node = node, .port = 0ull});
     }
 
     inline namespace literal
