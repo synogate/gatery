@@ -2,7 +2,6 @@
 
 #include "Bit.h"
 #include "BitVector.h"
-#include "Integers.h"
 
 namespace hcl::core::frontend {
 

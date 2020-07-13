@@ -25,7 +25,7 @@ namespace hcl::core::frontend {
         m_node->setConnectionType(getSignalType(1));
     }
 
-    Bit::Bit(const Bit &rhs) {
+    Bit::Bit(const Bit &rhs) : ElementarySignal(rhs) {
         assign(rhs);
         m_node->setConnectionType(getSignalType(1));
     }

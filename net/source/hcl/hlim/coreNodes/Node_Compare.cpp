@@ -41,7 +41,6 @@ void Node_Compare::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
     
     switch (leftType.interpretation) {
         case ConnectionType::BOOL:
-        case ConnectionType::RAW:
             switch (m_op) {
                 case EQ:
                     result = left == right;
@@ -53,13 +52,7 @@ void Node_Compare::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
                     HCL_ASSERT_HINT(false, "Unhandled case!");
             }
         break;
-        case ConnectionType::ONE_HOT:
-            HCL_ASSERT_HINT(false, "Can't do compare on one hot data yet!");
-        break;
-        case ConnectionType::FLOAT:
-            HCL_ASSERT_HINT(false, "Can't do compare on float data yet!");
-        break;
-        case ConnectionType::UNSIGNED:
+        case ConnectionType::BITVEC:
             switch (m_op) {
                 case EQ:
                     result = left == right;
@@ -81,18 +74,6 @@ void Node_Compare::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
                 break;
                 default:
                     HCL_ASSERT_HINT(false, "Unhandled case!");
-            }
-        break;
-        case ConnectionType::SIGNED_2COMPLEMENT:
-            switch (m_op) {
-                case EQ:
-                    result = left == right;
-                break;
-                case NEQ:
-                    result = left != right;
-                break;
-                default:
-                    HCL_ASSERT_HINT(false, "Case not yet implemented (sign extension missing)!");
             }
         break;
         default:

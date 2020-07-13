@@ -48,6 +48,7 @@ class ElementarySignal : public BaseSignal {
         void assignConditionalScopeMuxOutput(const hlim::NodePort &port, ConditionalScope *parentScope);
     protected:
         ElementarySignal();
+        ElementarySignal(const ElementarySignal&) = default;
         ElementarySignal(const hlim::NodePort &port);
         ElementarySignal &operator=(const ElementarySignal&) = delete;
         ElementarySignal &operator=(const ElementarySignal&&) = delete;

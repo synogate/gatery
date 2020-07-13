@@ -22,13 +22,13 @@ class SignalArithmeticOp
     public:
         SignalArithmeticOp(hlim::Node_Arithmetic::Op op) : m_op(op) { }
         
-        template<typename SignalType, typename = std::enable_if_t<utils::isNumberSignal<SignalType>::value>>
+        template<typename SignalType, typename = std::enable_if_t<utils::isBitVectorSignal<SignalType>::value>>
         SignalType operator()(const SignalType &lhs, const SignalType &rhs) { return create<SignalType, SignalType, SignalType>(lhs, rhs); }
         
-        template<typename SignalType, typename DerivedSignalType, typename = std::enable_if_t<utils::isNumberSignal<SignalType>::value && std::is_base_of<SignalType, DerivedSignalType>::value>>
+        template<typename SignalType, typename DerivedSignalType, typename = std::enable_if_t<utils::isBitVectorSignal<SignalType>::value && std::is_base_of<SignalType, DerivedSignalType>::value>>
         SignalType operator()(const SignalType &lhs, const DerivedSignalType &rhs) { return create<SignalType, SignalType, DerivedSignalType>(lhs, rhs); }
 
-        template<typename SignalType, typename DerivedSignalType, typename = std::enable_if_t<utils::isNumberSignal<SignalType>::value && std::is_base_of<SignalType, DerivedSignalType>::value>>
+        template<typename SignalType, typename DerivedSignalType, typename = std::enable_if_t<utils::isBitVectorSignal<SignalType>::value && std::is_base_of<SignalType, DerivedSignalType>::value>>
         SignalType operator()(const DerivedSignalType &lhs, const SignalType &rhs) { return create<SignalType, DerivedSignalType, SignalType>(lhs, rhs); }
 
         inline hlim::Node_Arithmetic::Op getOp() const { return m_op; }
@@ -76,16 +76,16 @@ ReturnType SignalArithmeticOp::create(const LhsSignalType &lhs, const RhsSignalT
     
 // add_ext for add extend    
     
-HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, add, hlim::Node_Arithmetic::ADD)
-HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator+, hlim::Node_Arithmetic::ADD)
-HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, sub, hlim::Node_Arithmetic::SUB)
-HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator-, hlim::Node_Arithmetic::SUB)
-HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, mul, hlim::Node_Arithmetic::MUL)
-HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator*, hlim::Node_Arithmetic::MUL)
-HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, div, hlim::Node_Arithmetic::DIV)
-HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator/, hlim::Node_Arithmetic::DIV)
-HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, rem, hlim::Node_Arithmetic::REM)
-HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator%, hlim::Node_Arithmetic::REM)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isBitVectorSignal, add, hlim::Node_Arithmetic::ADD)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isBitVectorSignal, operator+, hlim::Node_Arithmetic::ADD)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isBitVectorSignal, sub, hlim::Node_Arithmetic::SUB)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isBitVectorSignal, operator-, hlim::Node_Arithmetic::SUB)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isBitVectorSignal, mul, hlim::Node_Arithmetic::MUL)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isBitVectorSignal, operator*, hlim::Node_Arithmetic::MUL)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isBitVectorSignal, div, hlim::Node_Arithmetic::DIV)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isBitVectorSignal, operator/, hlim::Node_Arithmetic::DIV)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isBitVectorSignal, rem, hlim::Node_Arithmetic::REM)
+HCL_BUILD_ARITHMETIC_OPERATOR(utils::isBitVectorSignal, operator%, hlim::Node_Arithmetic::REM)
 
 #undef HCL_BUILD_ARITHMETIC_OPERATOR
 
@@ -97,11 +97,11 @@ HCL_BUILD_ARITHMETIC_OPERATOR(utils::isNumberSignal, operator%, hlim::Node_Arith
         return lhs = op(lhs, rhs);                                                              \
     }
 
-HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator+=, hlim::Node_Arithmetic::ADD)
-HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator-=, hlim::Node_Arithmetic::SUB)
-HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator*=, hlim::Node_Arithmetic::MUL)
-HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator/=, hlim::Node_Arithmetic::DIV)
-HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isNumberSignal, operator%=, hlim::Node_Arithmetic::REM)
+HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isBitVectorSignal, operator+=, hlim::Node_Arithmetic::ADD)
+HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isBitVectorSignal, operator-=, hlim::Node_Arithmetic::SUB)
+HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isBitVectorSignal, operator*=, hlim::Node_Arithmetic::MUL)
+HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isBitVectorSignal, operator/=, hlim::Node_Arithmetic::DIV)
+HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isBitVectorSignal, operator%=, hlim::Node_Arithmetic::REM)
     
 #undef HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR
 

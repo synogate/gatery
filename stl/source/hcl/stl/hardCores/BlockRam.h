@@ -8,7 +8,7 @@ template<typename DataSignal>
 struct BlockRamPort
 {
     DataSignal data;
-    core::frontend::UnsignedInteger addr;
+    core::frontend::BVec addr;
     core::hlim::Clock *clock;
     core::frontend::Bit enable;
 };

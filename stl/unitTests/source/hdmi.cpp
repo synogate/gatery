@@ -19,12 +19,12 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, tmdsReduction,
 
     DesignScope design;
 
-    auto a = ConstBitVector(val, 8);
+    auto a = ConstBVec(val, 8);
 
-    BitVector encoded = hcl::stl::hdmi::tmdsEncodeReduceTransitions(a);
+    BVec encoded = hcl::stl::hdmi::tmdsEncodeReduceTransitions(a);
     BOOST_TEST(encoded.getWidth() == a.getWidth() + 1);
 
-    BitVector decoded = hcl::stl::hdmi::tmdsDecodeReduceTransitions(encoded);
+    BVec decoded = hcl::stl::hdmi::tmdsDecodeReduceTransitions(encoded);
     sim_assert(a == decoded);
 
     eval(design.getCircuit());
@@ -41,17 +41,17 @@ BOOST_FIXTURE_TEST_CASE(tmdsBitflip, hcl::core::sim::UnitTestSimulationFixture)
     RegisterFactory regFac{ regConf };
     { // TODO: register should not wait for destructor to work
 
-        Register<UnsignedInteger> test_counter{ regConf, 0x00_uvec };
-        test_counter = test_counter.delay(1) + 1_uvec;
+        Register<BVec> test_counter{ regConf, 0x00_bvec };
+        test_counter = test_counter.delay(1) + 1_bvec;
 
-        BitVector test_counter_bv{ test_counter.getWidth() }; // TODO: cast
+        BVec test_counter_bv{ test_counter.getWidth() }; // TODO: cast
         for (size_t i = 0; i < test_counter_bv.getWidth(); ++i)
             test_counter_bv.setBit(i, test_counter.delay(1)[i]);
 
-        BitVector encoded = hcl::stl::hdmi::tmdsEncodeBitflip(regFac, test_counter_bv);
+        BVec encoded = hcl::stl::hdmi::tmdsEncodeBitflip(regFac, test_counter_bv);
         BOOST_TEST(test_counter.getWidth() == encoded.getWidth() - 1);
 
-        BitVector decoded = hcl::stl::hdmi::tmdsDecodeBitflip(encoded);
+        BVec decoded = hcl::stl::hdmi::tmdsDecodeBitflip(encoded);
         sim_assert(decoded == test_counter_bv);
     }
 

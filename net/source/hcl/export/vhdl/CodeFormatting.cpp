@@ -217,16 +217,9 @@ void DefaultCodeFormatting::formatConnectionType(std::ostream &stream, const hli
         case hlim::ConnectionType::BOOL:
             stream << "STD_LOGIC";
         break;
-        case hlim::ConnectionType::RAW:
-            stream << "STD_LOGIC_VECTOR("<<connectionType.width-1 << " downto 0)";
-        break;
-        case hlim::ConnectionType::UNSIGNED:
+        case hlim::ConnectionType::BITVEC:
             stream << "UNSIGNED("<<connectionType.width-1 << " downto 0)";
         break;
-        case hlim::ConnectionType::SIGNED_2COMPLEMENT:
-            stream << "INTEGER("<<connectionType.width-1 << " downto 0)";
-        break;
-        
         default:
             stream << "UNHANDLED_DATA_TYPE";
     };

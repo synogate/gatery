@@ -104,7 +104,7 @@ void MainWindowSimulate::updateBitmap()
         
         unsigned rows = (state.size() + width-1)/width;
         
-        if (m_bitmapImage.width() != width || m_bitmapImage.height() != rows) {
+        if (m_bitmapImage.width() != (int) width || m_bitmapImage.height() != (int) rows) {
             m_bitmapImage = QImage(width, rows, QImage::Format_Indexed8);
             m_bitmapImage.setColor(0, qRgb(255, 255, 255));
             m_bitmapImage.setColor(1, qRgb(0, 0, 0));

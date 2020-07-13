@@ -14,13 +14,13 @@ struct SerialTMDS {
     SerialTMDSPair clock;
 };
 
-core::frontend::BitVector tmdsEncode(core::hlim::BaseClock *pixelClock, core::frontend::Bit sendData, core::frontend::UnsignedInteger data, core::frontend::BitVector ctrl);
+core::frontend::BVec tmdsEncode(core::hlim::BaseClock *pixelClock, core::frontend::Bit sendData, core::frontend::BVec data, core::frontend::BVec ctrl);
 
-core::frontend::BitVector tmdsEncodeReduceTransitions(const core::frontend::BitVector& data);
-core::frontend::BitVector tmdsDecodeReduceTransitions(const core::frontend::BitVector& data);
+core::frontend::BVec tmdsEncodeReduceTransitions(const core::frontend::BVec& data);
+core::frontend::BVec tmdsDecodeReduceTransitions(const core::frontend::BVec& data);
 
-core::frontend::BitVector tmdsEncodeBitflip(const core::frontend::RegisterFactory& clk, const core::frontend::BitVector& data);
-core::frontend::BitVector tmdsDecodeBitflip(const core::frontend::BitVector& data);
+core::frontend::BVec tmdsEncodeBitflip(const core::frontend::RegisterFactory& clk, const core::frontend::BVec& data);
+core::frontend::BVec tmdsDecodeBitflip(const core::frontend::BVec& data);
 
 class Transmitter
 {

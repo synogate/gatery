@@ -17,14 +17,14 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestOperators,
     DesignScope design;
 
     
-    UnsignedInteger a = ConstUnsignedInteger(x, bitsize);
-    UnsignedInteger b = ConstUnsignedInteger(y, bitsize);
+    BVec a = ConstBVec(x, bitsize);
+    BVec b = ConstBVec(y, bitsize);
 
 #define op2str(op) #op
 #define buildOperatorTest(op)                                                                               \
     {                                                                                                       \
-        UnsignedInteger c = a op b;                                                                         \
-        UnsignedInteger groundTruth = ConstUnsignedInteger(std::uint64_t(x) op std::uint64_t(y), bitsize);  \
+        BVec c = a op b;                                                                         \
+        BVec groundTruth = ConstBVec(std::uint64_t(x) op std::uint64_t(y), bitsize);  \
         sim_assert(c == groundTruth) << "The result of " << a << " " << op2str(op) << " " << b              \
             << " should be " << groundTruth << " (with overflow in " << bitsize << "bits) but is " << c;    \
     }
@@ -45,11 +45,11 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestOperators,
 #define op2str(op) #op
 #define buildOperatorTest(op)                                                                               \
     {                                                                                                       \
-        UnsignedInteger c = a;                                                                              \
+        BVec c = a;                                                                              \
         c op b;                                                                                             \
         std::uint64_t gt = x;                                                                               \
         gt op std::uint64_t(y);                                                                             \
-        UnsignedInteger groundTruth = ConstUnsignedInteger(gt, bitsize);                                    \
+        BVec groundTruth = ConstBVec(gt, bitsize);                                    \
         sim_assert(c == groundTruth) << "The result of (" << c << "="<<a << ") " << op2str(op) << " " << b  \
             << " should be " << groundTruth << " (with overflow in " << bitsize << "bits) but is " << c;    \
     }
@@ -80,22 +80,22 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicing, d
     
     DesignScope design;
     
-    UnsignedInteger a = ConstUnsignedInteger(x, bitsize);
+    BVec a = ConstBVec(x, bitsize);
     
     {
-        UnsignedInteger res = a(0, 1);
-        sim_assert(res == ConstUnsignedInteger(x & 1, 1)) << "Slicing first bit of " << a << " failed: " << res;
+        BVec res = a(0, 1);
+        sim_assert(res == ConstBVec(x & 1, 1)) << "Slicing first bit of " << a << " failed: " << res;
     }
 
     {
-        UnsignedInteger res = a(1, 2);
-        sim_assert(res == ConstUnsignedInteger((x >> 1) & 3, 2)) << "Slicing second and third bit of " << a << " failed: " << res;
+        BVec res = a(1, 2);
+        sim_assert(res == ConstBVec((x >> 1) & 3, 2)) << "Slicing second and third bit of " << a << " failed: " << res;
     }
 
     {
-        UnsignedInteger res = a(1, 2);
-        res = 0b00_uvec;
-        sim_assert(a == ConstUnsignedInteger(x, bitsize)) << "Modifying copy of slice of a changes a to " << a << ", should be: " << x;
+        BVec res = a(1, 2);
+        res = 0b00_bvec;
+        sim_assert(a == ConstBVec(x, bitsize)) << "Modifying copy of slice of a changes a to " << a << ", should be: " << x;
     }
     
     eval(design.getCircuit());
@@ -109,13 +109,13 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicingMod
     
     DesignScope design;
     
-    UnsignedInteger a = ConstUnsignedInteger(x, bitsize);
+    BVec a = ConstBVec(x, bitsize);
     
     {
-        UnsignedInteger b = a;
-        b(1, 2) = 0b00_uvec;
+        BVec b = a;
+        b(1, 2) = 0b00_bvec;
         
-        auto groundTruth = ConstUnsignedInteger(unsigned(x) & ~0b110, bitsize);
+        auto groundTruth = ConstBVec(unsigned(x) & ~0b110, bitsize);
         sim_assert(b == groundTruth) << "Clearing two bits out of " << a << " should be " << groundTruth << " but is " << b;
     }
     
@@ -129,13 +129,13 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicingAdd
     
     DesignScope design;
     
-    UnsignedInteger a = ConstUnsignedInteger(x, bitsize);
+    BVec a = ConstBVec(x, bitsize);
     
     {
-        UnsignedInteger b = a;
-        b(1, 2) = (UnsignedInteger) b(1, 2) + 1_uvec;
+        BVec b = a;
+        b(1, 2) = (BVec) b(1, 2) + 1_bvec;
         
-        auto groundTruth = ConstUnsignedInteger((unsigned(x) & ~0b110) | (unsigned(x+2) & 0b110), bitsize);
+        auto groundTruth = ConstBVec((unsigned(x) & ~0b110) | (unsigned(x+2) & 0b110), bitsize);
         sim_assert(b == groundTruth) << "Incrementing two bits out of " << a << " should be " << groundTruth << " but is " << b;
     }
     
@@ -151,16 +151,16 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, SimpleAddition
     
     DesignScope design;
 
-    UnsignedInteger a = ConstUnsignedInteger(x, bitsize);
+    BVec a = ConstBVec(x, bitsize);
     sim_debug() << "Signal a is " << a;
     
-    UnsignedInteger b = ConstUnsignedInteger(y, bitsize);
+    BVec b = ConstBVec(y, bitsize);
     sim_debug() << "Signal b is " << b;
     
-    UnsignedInteger c = a + b;
+    BVec c = a + b;
     sim_debug() << "Signal c (= a + b) is " << c;
     
-    sim_assert(c == ConstUnsignedInteger(x+y, bitsize)) << "The signal c should be " << x+y << " (with overflow in " << bitsize << "bits) but is " << c;
+    sim_assert(c == ConstBVec(x+y, bitsize)) << "The signal c should be " << x+y << " (with overflow in " << bitsize << "bits) but is " << c;
     
     eval(design.getCircuit());
 }
@@ -193,14 +193,14 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounter, hcl::core::sim::UnitTestSimulationFixture
     auto clk = design.createClock<hcl::core::hlim::RootClock>("clk", hcl::core::hlim::ClockRational(10'000));
     RegisterFactory reg({.clk = clk, .resetName = "rst"});
     
-    UnsignedInteger counter(8);
-    UnsignedInteger nextCounter = counter + 0b1_uvec;
+    BVec counter(8);
+    BVec nextCounter = counter + 0b1_bvec;
     sim_debug() << "Counter value is " << counter << " and next counter value is " << nextCounter;
 
-    driveWith(counter, reg(nextCounter, true, 0b00000000_uvec));
+    driveWith(counter, reg(nextCounter, true, 0b00000000_bvec));
 
 
-    UnsignedInteger refCount(8);
+    BVec refCount(8);
     simpleSignalGenerator(clk, [](SimpleSignalGeneratorContext &context){
         context.set(0, context.getTick());
     }, refCount);
@@ -221,11 +221,11 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, hcl::core::sim::UnitTestSimulati
     RegisterConfig regConf{.clk = clk, .resetName = "rst"};
     
     {
-        Register<UnsignedInteger> counter(regConf, 0x00_uvec);
-        counter = counter.delay(1) + 1_uvec;
+        Register<BVec> counter(regConf, 0x00_bvec);
+        counter = counter.delay(1) + 1_bvec;
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
-        UnsignedInteger refCount(8);
+        BVec refCount(8);
         simpleSignalGenerator(clk, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick());
         }, refCount);
@@ -244,10 +244,10 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAss
     
     DesignScope design;
 
-    UnsignedInteger a = ConstUnsignedInteger(x, 8);
-    UnsignedInteger b = ConstUnsignedInteger(y, 8);
+    BVec a = ConstBVec(x, 8);
+    BVec b = ConstBVec(y, 8);
 
-    UnsignedInteger c;
+    BVec c;
     IF (a[1])
         c = a + b;
     ELSE {
@@ -260,7 +260,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAss
     else
         groundTruth = unsigned(x)-unsigned(y);        
 
-    sim_assert(c == ConstUnsignedInteger(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
     
     eval(design.getCircuit());
 }
@@ -271,10 +271,10 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAss
     
     DesignScope design;
 
-    UnsignedInteger a = ConstUnsignedInteger(x, 8);
-    UnsignedInteger b = ConstUnsignedInteger(y, 8);
+    BVec a = ConstBVec(x, 8);
+    BVec b = ConstBVec(y, 8);
 
-    UnsignedInteger c;
+    BVec c;
     IF (a[1]) {
         c = a + b;
         c += a;
@@ -292,7 +292,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAss
         groundTruth = unsigned(x)-unsigned(y);        
     }
 
-    sim_assert(c == ConstUnsignedInteger(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
     
     eval(design.getCircuit());
 }
@@ -303,10 +303,10 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAss
     
     DesignScope design;
 
-    UnsignedInteger a = ConstUnsignedInteger(x, 8);
-    UnsignedInteger b = ConstUnsignedInteger(y, 8);
+    BVec a = ConstBVec(x, 8);
+    BVec b = ConstBVec(y, 8);
 
-    UnsignedInteger c;
+    BVec c;
     IF (a[1])
         c = a + b;
     ELSE {
@@ -324,7 +324,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAss
         groundTruth = groundTruth-unsigned(y);        
     }
 
-    sim_assert(c == ConstUnsignedInteger(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
     
     eval(design.getCircuit());
 }
@@ -337,10 +337,10 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
     
     DesignScope design;
 
-    UnsignedInteger a = ConstUnsignedInteger(x, 8);
-    UnsignedInteger b = ConstUnsignedInteger(y, 8);
+    BVec a = ConstBVec(x, 8);
+    BVec b = ConstBVec(y, 8);
 
-    UnsignedInteger c;
+    BVec c;
     IF (a[2]) {
         IF (a[1])
             c = a + b;
@@ -368,7 +368,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
             groundTruth = y;
     }
 
-    sim_assert(c == ConstUnsignedInteger(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
     
     eval(design.getCircuit());
 }
@@ -380,10 +380,10 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
     
     DesignScope design;
 
-    UnsignedInteger a = ConstUnsignedInteger(x, 8);
-    UnsignedInteger b = ConstUnsignedInteger(y, 8);
+    BVec a = ConstBVec(x, 8);
+    BVec b = ConstBVec(y, 8);
 
-    UnsignedInteger c;
+    BVec c;
     IF (a[2]) {
         IF (a[1]) {
             c = a + b;
@@ -415,7 +415,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
             groundTruth = y;
     }
 
-    sim_assert(c == ConstUnsignedInteger(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
     
     eval(design.getCircuit());
 }
@@ -426,10 +426,10 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
     
     DesignScope design;
 
-    UnsignedInteger a = ConstUnsignedInteger(x, 8);
-    UnsignedInteger b = ConstUnsignedInteger(y, 8);
+    BVec a = ConstBVec(x, 8);
+    BVec b = ConstBVec(y, 8);
 
-    UnsignedInteger c = a;
+    BVec c = a;
     IF (a[2]) {
         IF (a[1])
             c = a + b;
@@ -446,7 +446,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
             groundTruth = x-y;
     } 
     
-    sim_assert(c == ConstUnsignedInteger(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
     
     eval(design.getCircuit());
 }
@@ -459,10 +459,10 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
     
     DesignScope design;
 
-    UnsignedInteger a = ConstUnsignedInteger(x, 8);
-    UnsignedInteger b = ConstUnsignedInteger(y, 8);
+    BVec a = ConstBVec(x, 8);
+    BVec b = ConstBVec(y, 8);
 
-    UnsignedInteger c = a;
+    BVec c = a;
     IF (a[2]) {
     } ELSE {
         IF (a[1])
@@ -476,7 +476,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
             groundTruth = y;
     }
 
-    sim_assert(c == ConstUnsignedInteger(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
     
     eval(design.getCircuit());
 }
@@ -488,10 +488,10 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
     
     DesignScope design;
 
-    UnsignedInteger a = ConstUnsignedInteger(x, 8);
-    UnsignedInteger b = ConstUnsignedInteger(y, 8);
+    BVec a = ConstBVec(x, 8);
+    BVec b = ConstBVec(y, 8);
 
-    UnsignedInteger c = a;
+    BVec c = a;
     IF (a[2]) {
         IF (a[1])
             c = a + b;
@@ -513,7 +513,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
             groundTruth = y;
     }
 
-    sim_assert(c == ConstUnsignedInteger(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
     
     eval(design.getCircuit());
 }
@@ -524,10 +524,10 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
     
     DesignScope design;
 
-    UnsignedInteger a = ConstUnsignedInteger(x, 8);
-    UnsignedInteger b = ConstUnsignedInteger(y, 8);
+    BVec a = ConstBVec(x, 8);
+    BVec b = ConstBVec(y, 8);
 
-    UnsignedInteger c = a;
+    BVec c = a;
     IF (a[2]) {
         c = a + b;
     } ELSE {
@@ -543,7 +543,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
             groundTruth = y;
     }
 
-    sim_assert(c == ConstUnsignedInteger(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
     
     eval(design.getCircuit());
 }
@@ -554,8 +554,8 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, UnsignedCompar
 
     DesignScope design;
 
-    UnsignedInteger a = ConstUnsignedInteger(x, 8);
-    UnsignedInteger b = ConstUnsignedInteger(y, 8);
+    BVec a = ConstBVec(x, 8);
+    BVec b = ConstBVec(y, 8);
 
     if (x > y)
     {

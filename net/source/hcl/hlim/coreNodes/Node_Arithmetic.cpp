@@ -75,16 +75,7 @@ void Node_Arithmetic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, si
         case ConnectionType::BOOL:
             HCL_ASSERT_HINT(false, "Can't do arithmetic on booleans!");
         break;
-        case ConnectionType::RAW:
-            HCL_ASSERT_HINT(false, "Can't do arithmetic on raw data!");
-        break;
-        case ConnectionType::ONE_HOT:
-            HCL_ASSERT_HINT(false, "Can't do arithmetic on one hot data!");
-        break;
-        case ConnectionType::FLOAT:
-            HCL_ASSERT_HINT(false, "Can't do arithmetic on float data yet!");
-        break;
-        case ConnectionType::UNSIGNED:
+        case ConnectionType::BITVEC:
             switch (m_op) {
                 case ADD:
                     result = left + right;
@@ -100,27 +91,6 @@ void Node_Arithmetic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, si
                 break;
                 case REM:
                     result = left % right;
-                break;
-                default:
-                    HCL_ASSERT_HINT(false, "Unhandled case!");
-            }
-        break;
-        case ConnectionType::SIGNED_2COMPLEMENT:
-            switch (m_op) {
-                case ADD:
-                    result = left + right;
-                break;
-                case SUB:
-                    result = left - right;
-                break;
-                case MUL:
-                    HCL_ASSERT_HINT(false, "Multiplication of signed data types not yet implemented!");
-                break;
-                case DIV:
-                    HCL_ASSERT_HINT(false, "Division of signed data types not yet implemented!");
-                break;
-                case REM:
-                    HCL_ASSERT_HINT(false, "Remainder of signed data types not yet implemented!");
                 break;
                 default:
                     HCL_ASSERT_HINT(false, "Unhandled case!");

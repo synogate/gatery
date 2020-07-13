@@ -28,7 +28,7 @@ XilinxSimpleDualPortBlockRam::XilinxSimpleDualPortBlockRam(BaseClock *writeClk, 
 
     resizeOutputs(NUM_OUTPUTS);
     setOutputConnectionType(READ_DATA, {
-        .interpretation = ConnectionType::RAW,
+        .interpretation = ConnectionType::BITVEC,
         .width = m_readDataWidth,
     });
     setOutputType(READ_DATA, OUTPUT_LATCHED);
@@ -38,11 +38,11 @@ void XilinxSimpleDualPortBlockRam::connectInput(Input input, const NodePort &por
 {
     switch (input) {
         case WRITE_ADDR:
-            HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).interpretation == ConnectionType::UNSIGNED);
+            HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).interpretation == ConnectionType::BITVEC);
             HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).width == utils::truncLog2(utils::nextPow2(m_initialData.size() / m_writeDataWidth)));
         break;
         case WRITE_DATA:
-            HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).interpretation == ConnectionType::RAW);
+            HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).interpretation == ConnectionType::BITVEC);
             HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).width == m_writeDataWidth);
         break;
         case WRITE_ENABLE:
@@ -50,7 +50,7 @@ void XilinxSimpleDualPortBlockRam::connectInput(Input input, const NodePort &por
             HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).width == 1);
         break;
         case READ_ADDR:
-            HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).interpretation == ConnectionType::UNSIGNED);
+            HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).interpretation == ConnectionType::BITVEC);
             HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).width == utils::truncLog2(utils::nextPow2(m_initialData.size() / m_readDataWidth)));
         break;
         case READ_ENABLE:
@@ -58,7 +58,7 @@ void XilinxSimpleDualPortBlockRam::connectInput(Input input, const NodePort &por
             HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).width == 1);
         break;
         case RESET_READ_DATA:
-            HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).interpretation == ConnectionType::RAW);
+            HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).interpretation == ConnectionType::BITVEC);
             HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).width == m_readDataWidth);
         break;
         default:
