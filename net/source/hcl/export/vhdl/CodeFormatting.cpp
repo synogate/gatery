@@ -218,6 +218,7 @@ void DefaultCodeFormatting::formatConnectionType(std::ostream &stream, const hli
             stream << "STD_LOGIC";
         break;
         case hlim::ConnectionType::BITVEC:
+            //stream << "STD_LOGIC_VECTOR("<<connectionType.width-1 << " downto 0)";
             stream << "UNSIGNED("<<connectionType.width-1 << " downto 0)";
         break;
         default:

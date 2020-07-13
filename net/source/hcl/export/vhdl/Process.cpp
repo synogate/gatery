@@ -152,6 +152,21 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
     
     const hlim::Node_Arithmetic *arithmeticNode = dynamic_cast<const hlim::Node_Arithmetic*>(nodePort.node);
     if (arithmeticNode != nullptr) { 
+#if 0
+        stream << "STD_LOGIC_VECTOR(UNSIGNED(";
+        formatExpression(stream, comments, arithmeticNode->getDriver(0), dependentInputs);
+        switch (arithmeticNode->getOp()) {
+            case hlim::Node_Arithmetic::ADD: stream << ") + UNSIGNED("; break;
+            case hlim::Node_Arithmetic::SUB: stream << ") - UNSIGNED("; break;
+            case hlim::Node_Arithmetic::MUL: stream << ") * UNSIGNED("; break;
+            case hlim::Node_Arithmetic::DIV: stream << ") / UNSIGNED("; break;
+            case hlim::Node_Arithmetic::REM: stream << ") MOD UNSIGNED("; break;
+            default:
+                HCL_ASSERT_HINT(false, "Unhandled operation!");
+        };
+        formatExpression(stream, comments, arithmeticNode->getDriver(1), dependentInputs);
+        stream << "))";
+#else
         stream << "(";
         formatExpression(stream, comments, arithmeticNode->getDriver(0), dependentInputs);
         switch (arithmeticNode->getOp()) {
@@ -165,6 +180,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
         };
         formatExpression(stream, comments, arithmeticNode->getDriver(1), dependentInputs);
         stream << ")";
+#endif
         return; 
     }
     
