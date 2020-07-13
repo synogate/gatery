@@ -87,7 +87,7 @@ void Process::extractSignals()
         hlim::Node_PriorityConditional *prioCon = dynamic_cast<hlim::Node_PriorityConditional *>(node);
         if (prioCon != nullptr) {
             hlim::NodePort driver{.node = prioCon, .port = 0};
-            if (m_outputs.find(driver) == m_outputs.end())
+            if (!m_outputs.contains(driver))
                 m_localSignals.insert(driver);
         }
         
@@ -99,13 +99,13 @@ void Process::extractSignals()
                     auto driver = rewireNode->getDriver(op.inputIdx);
                     if (driver.node != nullptr)
                         if (op.inputOffset != 0 || op.subwidth != driver.node->getOutputConnectionType(driver.port).width)
-                            if (m_outputs.find(driver) == m_outputs.end())
+                            if (!m_outputs.contains(driver) && !m_inputs.contains(driver))
                                 m_localSignals.insert(driver);
                 }
             }
         }
-        
     }
+    verifySignalsDisjoint();    
 }
 
 
@@ -472,6 +472,8 @@ void RegisterProcess::allocateNames()
 
 void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 {
+    verifySignalsDisjoint();
+    
     CodeFormatting &cf = m_ast.getCodeFormatting();
     
     std::string clockName = m_namespaceScope.getName(m_config.clock);

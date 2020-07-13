@@ -51,6 +51,8 @@ class BaseGrouping
         bool isConsumedExternally(hlim::NodePort nodePort);
         
         std::string findNearestDesiredName(hlim::NodePort nodePort);
+
+        void verifySignalsDisjoint();
 };
 
 
