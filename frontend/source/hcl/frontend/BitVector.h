@@ -46,6 +46,8 @@ class BVecSlice
         BVecSlice &operator=(const BVecSlice &slice);
         BVecSlice &operator=(const ElementarySignal &signal);
         operator BVec() const;
+        
+        size_t size() const;
     protected:
         BVecSlice() = delete;
         BVecSlice(const BVecSlice &) = delete;

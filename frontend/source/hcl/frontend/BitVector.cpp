@@ -83,6 +83,27 @@ BVecSlice &BVecSlice::operator=(const BVecSlice &slice)
     return this->operator=((BVec) slice); 
 }
 
+size_t BVecSlice::size() const
+{
+    HCL_ASSERT(m_signal != nullptr);
+    size_t inputWidth = m_signal->getWidth();
+    
+    HCL_ASSERT_HINT(m_selection.stride == 1, "Strided slices not yet implemented!");
+    
+    size_t selectionEnd = m_selection.end;
+    if (m_selection.untilEndOfSource)
+        selectionEnd = inputWidth;
+
+    HCL_DESIGNCHECK(m_selection.start >= 0);
+    HCL_DESIGNCHECK((size_t) m_selection.start < inputWidth);
+    
+    //HCL_DESIGNCHECK(selectionEnd >= 0);
+    HCL_DESIGNCHECK(selectionEnd <= inputWidth);
+
+    return selectionEnd - m_selection.start;
+}
+
+
 BVecSlice &BVecSlice::operator=(const ElementarySignal &signal)
 {
     HCL_ASSERT(m_signal != nullptr);

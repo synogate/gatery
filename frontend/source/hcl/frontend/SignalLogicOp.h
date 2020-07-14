@@ -3,6 +3,7 @@
 #include "Signal.h"
 #include "Bit.h"
 #include "BitVector.h"
+#include "Registers.h"
 
 #include <hcl/hlim/coreNodes/Node_Logic.h>
 
@@ -22,20 +23,26 @@ class SignalLogicOp
         
         hlim::ConnectionType getResultingType(const hlim::ConnectionType &lhs, const hlim::ConnectionType &rhs);
         
-        BVec operator()(const BVec &lhs, const BVec &rhs);
-        BVec operator()(const BVec &lhs, const Bit &rhs);
-        Bit operator()(const Bit &lhs, const Bit &rhs);
+        BVec operator()(const BVec &lhs, const BVec &rhs) { return create(lhs, rhs); }
+        Bit operator()(const Bit &lhs, const Bit &rhs) { return create(lhs, rhs); }
 
-        BVec operator()(const BVec &operand);
-        Bit operator()(const Bit &operand);
+        BVec operator()(const BVec &operand) { return create(operand); }
+        Bit operator()(const Bit &operand) { return create(operand); }
 
         inline hlim::Node_Logic::Op getOp() const { return m_op; }
     protected:
         hlim::Node_Logic::Op m_op;
+        
+        template<typename SignalType>
+        SignalType create(const SignalType &lhs, const SignalType &rhs);
+        
+        template<typename SignalType>
+        SignalType create(const SignalType &lhs);
 };
 
-template<typename SignalType, typename>
-SignalType SignalLogicOp::operator()(const SignalType &lhs, const SignalType &rhs) {
+template<typename SignalType>
+SignalType SignalLogicOp::create(const SignalType &lhs, const SignalType &rhs)
+{
     HCL_DESIGNCHECK_HINT(m_op != hlim::Node_Logic::NOT, "Trying to perform a not operation with two operands.");
     
     hlim::Node_Signal *lhsSignal = lhs.getNode();
@@ -52,8 +59,9 @@ SignalType SignalLogicOp::operator()(const SignalType &lhs, const SignalType &rh
     return SignalType({.node = node, .port = 0ull});
 }
 
-template<typename SignalType, typename>
-SignalType SignalLogicOp::operator()(const SignalType &lhs) {
+template<typename SignalType>
+SignalType SignalLogicOp::create(const SignalType &lhs)
+{
     HCL_DESIGNCHECK_HINT(m_op == hlim::Node_Logic::NOT, "Trying to perform a non-not operation with one operand.");
     
     hlim::Node_Signal *lhsSignal = lhs.getNode();
@@ -68,40 +76,76 @@ SignalType SignalLogicOp::operator()(const SignalType &lhs) {
 
 
 
-#define HCL_BUILD_LOGIC_OPERATOR(typeTrait, cppOp, Op)                                         \
-    template<typename SignalType, typename = std::enable_if_t<typeTrait<SignalType>::value>>    \
-    SignalType cppOp(const SignalType &lhs, const SignalType &rhs)  {                           \
-        SignalLogicOp op(Op);                                                                   \
-        return op(lhs, rhs);                                                                    \
+#define HCL_BUILD_LOGIC_OPERATOR(cppOp, Op)                           \
+    inline BVec cppOp(const BVec &lhs, const BVec &rhs) {                    \
+        SignalLogicOp op(Op);                                         \
+        return op(lhs, rhs);                                          \
+    }                                                                 \
+    inline BVec cppOp(const Bit &lhs, const BVec &rhs) {                     \
+        SignalLogicOp op(Op);                                         \
+        return op(lhs.sext(rhs.getWidth()), rhs);                     \
+    }                                                                 \
+    inline BVec cppOp(const BVec &lhs, const Bit &rhs) {                     \
+        SignalLogicOp op(Op);                                         \
+        return op(lhs, rhs.sext(lhs.getWidth()));                     \
+    }                                                                 \
+    inline Bit cppOp(const Bit &lhs, const Bit &rhs) {                       \
+        SignalLogicOp op(Op);                                         \
+        return op(lhs, rhs);                                          \
+    }                                                                 \
+
+#define HCL_BUILD_LOGIC_OPERATOR_UNARY(cppOp, Op)                      \
+    inline BVec cppOp(const BVec &lhs)  {                                     \
+        SignalLogicOp op(Op);                                          \
+        return op(lhs);                                                \
+    }                                                                  \
+    inline Bit cppOp(const Bit &lhs)  {                                       \
+        SignalLogicOp op(Op);                                          \
+        return op(lhs);                                                \
     }
 
-#define HCL_BUILD_LOGIC_OPERATOR_UNARY(typeTrait, cppOp, Op)                                   \
-    template<typename SignalType, typename = std::enable_if_t<typeTrait<SignalType>::value>>    \
-    SignalType cppOp(const SignalType &lhs)  {                                                  \
-        SignalLogicOp op(Op);                                                                   \
-        return op(lhs);                                                                         \
-    }
-    
-    
-HCL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, operator&, hlim::Node_Logic::AND)
-HCL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, operator|, hlim::Node_Logic::OR)
-HCL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, operator^, hlim::Node_Logic::XOR)
-HCL_BUILD_LOGIC_OPERATOR_UNARY(utils::isElementarySignal, operator~, hlim::Node_Logic::NOT)
+#define HCL_BUILD_LOGIC_OPERATOR_BIT_ONLY(cppOp, Op)                  \
+    inline Bit cppOp(const Bit &lhs, const Bit &rhs) {                       \
+        SignalLogicOp op(Op);                                         \
+        return op(lhs, rhs);                                          \
+    }                                                                 \
 
-HCL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, nand, hlim::Node_Logic::NAND)
-HCL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, nor, hlim::Node_Logic::NOR)
-HCL_BUILD_LOGIC_OPERATOR(utils::isElementarySignal, bitwiseEqual, hlim::Node_Logic::EQ)
+#define HCL_BUILD_LOGIC_OPERATOR_UNARY_BIT_ONLY(cppOp, Op)             \
+    inline Bit cppOp(const Bit &lhs)  {                                       \
+        SignalLogicOp op(Op);                                          \
+        return op(lhs);                                                \
+    }
+
     
-HCL_BUILD_LOGIC_OPERATOR(utils::isBitSignal, operator&&, hlim::Node_Logic::AND)
-HCL_BUILD_LOGIC_OPERATOR(utils::isBitSignal, operator||, hlim::Node_Logic::OR)
-HCL_BUILD_LOGIC_OPERATOR_UNARY(utils::isBitSignal, operator!, hlim::Node_Logic::NOT)
+HCL_BUILD_LOGIC_OPERATOR(operator&, hlim::Node_Logic::AND)
+HCL_BUILD_LOGIC_OPERATOR(operator|, hlim::Node_Logic::OR)
+HCL_BUILD_LOGIC_OPERATOR(operator^, hlim::Node_Logic::XOR)
+HCL_BUILD_LOGIC_OPERATOR_UNARY(operator~, hlim::Node_Logic::NOT)
+
+HCL_BUILD_LOGIC_OPERATOR(nand, hlim::Node_Logic::NAND)
+HCL_BUILD_LOGIC_OPERATOR(nor, hlim::Node_Logic::NOR)
+HCL_BUILD_LOGIC_OPERATOR(bitwiseEqual, hlim::Node_Logic::EQ)
+    
+HCL_BUILD_LOGIC_OPERATOR_BIT_ONLY(operator&&, hlim::Node_Logic::AND)
+HCL_BUILD_LOGIC_OPERATOR_BIT_ONLY(operator||, hlim::Node_Logic::OR)
+HCL_BUILD_LOGIC_OPERATOR_UNARY_BIT_ONLY(operator!, hlim::Node_Logic::NOT)
 
 #undef HCL_BUILD_LOGIC_OPERATOR
+#undef HCL_BUILD_LOGIC_OPERATOR_BIT_ONLY
 #undef HCL_BUILD_LOGIC_OPERATOR_UNARY
+#undef HCL_BUILD_LOGIC_OPERATOR_UNARY_BIT_ONLY
 
 
 #define HCL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(typeTrait, cppOp, Op)                               \
     inline BVec &cppOp(BVec &lhs, const BVec &rhs)  {                                           \
+        SignalLogicOp op(Op);                                                                   \
+        return lhs = op(lhs, rhs);                                                              \
+    }                                                                                           \
+    inline BVec &cppOp(BVec &lhs, const Bit &rhs)  {                                            \
+        SignalLogicOp op(Op);                                                                   \
+        return lhs = op(lhs, rhs.sext(lhs.getWidth()));                                         \
+    }                                                                                           \
+    inline Bit &cppOp(Bit &lhs, const Bit &rhs)  {                                              \
         SignalLogicOp op(Op);                                                                   \
         return lhs = op(lhs, rhs);                                                              \
     }                                                                                           \
@@ -112,7 +156,11 @@ HCL_BUILD_LOGIC_OPERATOR_UNARY(utils::isBitSignal, operator!, hlim::Node_Logic::
     }                                                                                           \
     inline void cppOp(BVecSlice lhs, const BVec &rhs)  {                                        \
         SignalLogicOp op(Op);                                                                   \
-        op(lhs, rhs);                                                                           \
+        lhs = op(lhs, rhs);                                                                           \
+    }                                                                                           \
+    inline void cppOp(BVecSlice lhs, const Bit &rhs)  {                                         \
+        SignalLogicOp op(Op);                                                                   \
+        lhs = op(lhs, rhs.sext(lhs.size()));                                                          \
     } 
 
 HCL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(utils::isElementarySignal, operator&=, hlim::Node_Logic::AND)

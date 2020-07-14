@@ -64,8 +64,8 @@ namespace hcl::core::frontend {
             rewireOp.ranges.push_back({
                     .subwidth = 1,
                     .source = hlim::Node_Rewire::OutputRange::INPUT,
-                    .sourceIdx = 0,
-                    .sourceOffset = 0,
+                    .inputIdx = 0,
+                    .inputOffset = 0,
                 });
         }
 

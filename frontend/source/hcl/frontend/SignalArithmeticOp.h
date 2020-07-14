@@ -66,7 +66,7 @@ HCL_BUILD_ARITHMETIC_OPERATOR(operator%, hlim::Node_Arithmetic::REM)
     }                                                                                           \
     inline void cppOp(BVecSlice lhs, const BVec &rhs)  {                                        \
         SignalArithmeticOp op(Op);                                                              \
-        op(lhs, rhs);                                                                           \
+        lhs = op(lhs, rhs);                                                                           \
     } 
     
 

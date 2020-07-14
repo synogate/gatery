@@ -27,7 +27,6 @@ class Bit : public ElementarySignal
         BVec sext(size_t width) const;
         BVec bext(size_t width, const Bit& bit) const;
         
-        
         Bit& operator=(const Bit &rhs) { assign(rhs); return *this; }
         Bit& operator=(bool value);
     protected:
