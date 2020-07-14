@@ -347,27 +347,61 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
             };
             
             if (muxNode != nullptr) {
-                code << "IF ";
-                formatExpression(code, comment, muxNode->getDriver(0), statement.inputs, false);
-                code << " = '1' THEN"<< std::endl;
-                
-                    cf.indent(code, indentation+2);
-                    emitAssignment();
+                if (muxNode->getNumInputPorts() == 3) {
+                    code << "IF ";
+                    formatExpression(code, comment, muxNode->getDriver(0), statement.inputs, false);
+                    code << " = '1' THEN"<< std::endl;
                     
-                    formatExpression(code, comment, muxNode->getDriver(2), statement.inputs, false);
-                    code << ";" << std::endl;
-                    
-                cf.indent(code, indentation+1);
-                code << "ELSE" << std::endl;
+                        cf.indent(code, indentation+2);
+                        emitAssignment();
+                        
+                        formatExpression(code, comment, muxNode->getDriver(2), statement.inputs, false);
+                        code << ";" << std::endl;
+                        
+                    cf.indent(code, indentation+1);
+                    code << "ELSE" << std::endl;
 
+                        cf.indent(code, indentation+2);
+                        emitAssignment();
+                        
+                        formatExpression(code, comment, muxNode->getDriver(1), statement.inputs, false);
+                        code << ";" << std::endl;
+                    
+                    cf.indent(code, indentation+1);
+                    code << "END IF;" << std::endl;
+                } else {
+                    code << "CASE ";
+                    formatExpression(code, comment, muxNode->getDriver(0), statement.inputs, false);
+                    code << " IS"<< std::endl;
+                    
+                    for (auto i : utils::Range<size_t>(1, muxNode->getNumInputPorts())) {
+                        cf.indent(code, indentation+2);
+                        code << "WHEN \""; 
+                        size_t inputIdx = i-1;
+                        for (auto bitIdx : utils::Range(muxNode->getDriver(0).node->getOutputConnectionType(0).width)) {
+                            bool b = inputIdx & (1 << (muxNode->getDriver(0).node->getOutputConnectionType(0).width - 1 - bitIdx));
+                            code << (b ? '1' : '0');
+                        }
+                        code << "\" => ";
+                        emitAssignment();
+                        
+                        formatExpression(code, comment, muxNode->getDriver(i), statement.inputs, false);
+                        code << ";" << std::endl;
+                    }
                     cf.indent(code, indentation+2);
+                    code << "WHEN OTHERS => ";
                     emitAssignment();
                     
-                    formatExpression(code, comment, muxNode->getDriver(1), statement.inputs, false);
-                    code << ";" << std::endl;
-                
-                cf.indent(code, indentation+1);
-                code << "END IF;" << std::endl;
+                    code << "\"";
+                    for (auto bitIdx : utils::Range(muxNode->getDriver(1).node->getOutputConnectionType(0).width)) {
+                        code << "X";
+                    }
+                    code << "\";" << std::endl;
+                    
+                        
+                    cf.indent(code, indentation+1);
+                    code << "END CASE;" << std::endl;
+                }
                 
                 if (!nodePort.node->getComment().empty())
                     comment << nodePort.node->getComment() << std::endl;

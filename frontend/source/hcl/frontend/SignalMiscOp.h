@@ -35,6 +35,32 @@ SignalType mux(const Bit &selector, const SignalType &lhs, const SignalType &rhs
     return SignalType({.node = node, .port = 0ull});
 }
 
+
+///@todo overload for compound signals
+template<typename ContainerType, typename = std::enable_if_t<utils::isContainer<ContainerType>::value>>    
+typename ContainerType::value_type mux(const BVec &selector, const ContainerType &table)  {                                 
+    hlim::Node_Multiplexer *node = DesignScope::createNode<hlim::Node_Multiplexer>(table.size());
+    node->recordStackTrace();
+    node->connectSelector({.node = selector.getNode(), .port = 0ull});
+
+    
+    HCL_DESIGNCHECK_HINT(table.size() <= (1ull << selector.getNode()->getOutputConnectionType(0).width), "The number of mux inputs is larger than can be addressed with it's selector input's width!");
+    
+    const auto &firstSignal = *table.begin();
+    
+    size_t idx = 0;
+    for (const auto &signal : table) {
+        HCL_DESIGNCHECK_HINT(signal.getNode()->getOutputConnectionType(0) == firstSignal.getNode()->getOutputConnectionType(0), "Can only multiplex operands of same type (e.g. width).");
+        node->connectInput(idx, {.node = signal.getNode(), .port = 0ull});
+        idx++;
+    }
+    
+    using SignalType = typename ContainerType::value_type;
+
+    return SignalType({.node = node, .port = 0ull});
+}
+
+
 ///@todo overload for compound signals
 ///@todo doesn't work yet
 #if 0
