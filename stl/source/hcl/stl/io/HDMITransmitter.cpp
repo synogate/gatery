@@ -8,7 +8,7 @@ using namespace hcl::core::frontend;
 using namespace hcl::core::hlim;
 
 
-core::frontend::BVec tmdsEncode(core::hlim::BaseClock *pixelClock, core::frontend::Bit dataEnable, core::frontend::BVec data, core::frontend::BVec ctrl)
+core::frontend::BVec tmdsEncode(core::hlim::Clock *pixelClock, core::frontend::Bit dataEnable, core::frontend::BVec data, core::frontend::BVec ctrl)
 {
     HCL_NAMED(dataEnable);
     HCL_NAMED(data);

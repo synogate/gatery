@@ -39,12 +39,15 @@ class BVec;
 class BVecSlice
 {
     public:
+        using isBitVectorSignalLike = void;
+        
         ~BVecSlice();
         
         BVecSlice &operator=(const BVecSlice &slice);
         BVecSlice &operator=(const ElementarySignal &signal);
         operator BVec() const;
     protected:
+        BVecSlice() = delete;
         BVecSlice(const BVecSlice &) = delete;
         BVecSlice(BVec *signal, const Selection &selection);
         

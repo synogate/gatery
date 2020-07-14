@@ -23,7 +23,7 @@ void UnitTestSimulationFixture::eval(const hlim::Circuit &circuit)
     //m_simulator->reevaluate();
 }
 
-void UnitTestSimulationFixture::runTicks(const hlim::Circuit &circuit, const hlim::BaseClock *clock, unsigned numTicks)
+void UnitTestSimulationFixture::runTicks(const hlim::Circuit &circuit, const hlim::Clock *clock, unsigned numTicks)
 {
     m_runLimClock = 0;
     m_runLimClock = clock;
@@ -36,7 +36,7 @@ void UnitTestSimulationFixture::runTicks(const hlim::Circuit &circuit, const hli
 }
 
 
-void UnitTestSimulationFixture::onNewTick(const hlim::BaseClock *clock)
+void UnitTestSimulationFixture::onNewTick(const hlim::Clock *clock)
 {
     if (clock == m_runLimClock)
         m_runLimTicks++;

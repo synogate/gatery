@@ -22,10 +22,10 @@ struct StateMapping
 {
     std::map<hlim::NodePort, size_t> outputToOffset;
     std::map<hlim::BaseNode*, std::vector<size_t>> nodeToInternalOffset;
-    std::map<hlim::BaseClock*, size_t> clockToClkDomain;
+    std::map<hlim::Clock*, size_t> clockToClkDomain;
     /*
-    std::map<hlim::BaseClock*, size_t> clockToSignalIdx;
-    std::map<hlim::BaseClock*, size_t> clockToClkIdx;
+    std::map<hlim::Clock*, size_t> clockToSignalIdx;
+    std::map<hlim::Clock*, size_t> clockToClkIdx;
     */
 //    std::map<std::string, size_t> resetToSignalIdx;
     
@@ -101,7 +101,7 @@ class Program
 
         void reset(SimulatorCallbacks &simCallbacks, DataState &dataState) const;
         void reevaluate(SimulatorCallbacks &simCallbacks, DataState &dataState) const;
-        void advanceClock(SimulatorCallbacks &simCallbacks, DataState &dataState, hlim::BaseClock *clock) const;
+        void advanceClock(SimulatorCallbacks &simCallbacks, DataState &dataState, hlim::Clock *clock) const;
         
         
         inline size_t getFullStateWidth() const { return m_fullStateWidth; }
@@ -132,7 +132,7 @@ class ReferenceSimulator : public Simulator
         
         virtual DefaultBitVectorState getValueOfInternalState(const hlim::BaseNode *node, size_t idx) override;
         virtual DefaultBitVectorState getValueOfOutput(const hlim::NodePort &nodePort) override;
-        virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfClock(const hlim::BaseClock *clk) override;
+        virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfClock(const hlim::Clock *clk) override;
         virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfReset(const std::string &reset) override;
     protected:
         SimulatorCallbacks &m_simCallbacks;
@@ -140,7 +140,7 @@ class ReferenceSimulator : public Simulator
         ExecutionState m_executionState;
         DataState m_dataState;
         
-        hlim::BaseClock *clk;
+        hlim::Clock *clk;
 };
 
 }

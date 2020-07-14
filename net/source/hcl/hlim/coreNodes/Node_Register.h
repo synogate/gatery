@@ -30,7 +30,7 @@ class Node_Register : public Node<Node_Register>
         virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;
         virtual void simulateAdvance(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const override;
         
-        void setClock(BaseClock *clk);
+        void setClock(Clock *clk);
         void setReset(std::string resetName);
         
         inline const std::string &getResetName() { return m_resetName; }

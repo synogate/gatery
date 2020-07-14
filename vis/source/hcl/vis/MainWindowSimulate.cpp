@@ -360,7 +360,7 @@ void MainWindowSimulate::ontoolButton_Reset_pressed()
     updateBitmap();
 }
 
-void MainWindowSimulate::onNewTick(const core::hlim::BaseClock *clock)
+void MainWindowSimulate::onNewTick(const core::hlim::Clock *clock)
 {
 }
 

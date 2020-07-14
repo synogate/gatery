@@ -7,7 +7,7 @@ namespace hcl::core::hlim {
 class Node_SignalGenerator : public Node<Node_SignalGenerator>
 {
     public:
-        Node_SignalGenerator(BaseClock *clk);
+        Node_SignalGenerator(Clock *clk);
         
         virtual void simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
         virtual void simulateAdvance(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const override;

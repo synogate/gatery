@@ -14,7 +14,7 @@ struct SerialTMDS {
     SerialTMDSPair clock;
 };
 
-core::frontend::BVec tmdsEncode(core::hlim::BaseClock *pixelClock, core::frontend::Bit sendData, core::frontend::BVec data, core::frontend::BVec ctrl);
+core::frontend::BVec tmdsEncode(core::hlim::Clock *pixelClock, core::frontend::Bit sendData, core::frontend::BVec data, core::frontend::BVec ctrl);
 
 core::frontend::BVec tmdsEncodeReduceTransitions(const core::frontend::BVec& data);
 core::frontend::BVec tmdsDecodeReduceTransitions(const core::frontend::BVec& data);

@@ -133,7 +133,9 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicingAdd
     
     {
         BVec b = a;
-        b(1, 2) = (BVec) b(1, 2) + 1_bvec;
+        //b(1, 2) = b(1, 2) + 1_bvec;
+        auto slice = b(1, 2);
+        b(1, 2) += 1_bvec;
         
         auto groundTruth = ConstBVec((unsigned(x) & ~0b110) | (unsigned(x+2) & 0b110), bitsize);
         sim_assert(b == groundTruth) << "Incrementing two bits out of " << a << " should be " << groundTruth << " but is " << b;

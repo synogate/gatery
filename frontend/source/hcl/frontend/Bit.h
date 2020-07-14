@@ -10,6 +10,8 @@
 
 namespace hcl::core::frontend {
     
+class BVec;
+    
 class Bit : public ElementarySignal
 {
     public:
@@ -20,6 +22,11 @@ class Bit : public ElementarySignal
         Bit(const Bit &rhs);
         Bit(const hlim::NodePort &port);
         Bit(bool value);
+        
+        BVec zext(size_t width) const;
+        BVec sext(size_t width) const;
+        BVec bext(size_t width, const Bit& bit) const;
+        
         
         Bit& operator=(const Bit &rhs) { assign(rhs); return *this; }
         Bit& operator=(bool value);

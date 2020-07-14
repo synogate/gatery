@@ -49,4 +49,16 @@ namespace hcl::utils {
     template<typename Type>
     struct isBitVectorSignal<Type, typename Type::isBitVectorSignal> : std::true_type { };
 
+    
+    template<typename Type, typename = void>
+    struct isBitVectorSignalLikeOnly : std::false_type { };
+
+    template<typename Type>
+    struct isBitVectorSignalLikeOnly<Type, typename Type::isBitVectorSignalLike> : std::true_type { };
+    
+    template<typename Type, typename = void>
+    struct isBitVectorSignalLike : std::false_type { };
+
+    template<typename Type>
+    struct isBitVectorSignalLike<Type, typename std::enable_if_t<isBitVectorSignal<Type>::value || isBitVectorSignalLikeOnly<Type>::value>> : std::true_type { };
 }

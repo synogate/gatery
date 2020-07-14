@@ -77,6 +77,7 @@ BVecSlice::~BVecSlice()
         m_signal->unregisterSlice(this); 
 }
 
+
 BVecSlice &BVecSlice::operator=(const BVecSlice &slice)
 { 
     return this->operator=((BVec) slice); 

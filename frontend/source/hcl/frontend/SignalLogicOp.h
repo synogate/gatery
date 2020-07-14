@@ -22,11 +22,12 @@ class SignalLogicOp
         
         hlim::ConnectionType getResultingType(const hlim::ConnectionType &lhs, const hlim::ConnectionType &rhs);
         
-        template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>
-        SignalType operator()(const SignalType &lhs, const SignalType &rhs);
+        BVec operator()(const BVec &lhs, const BVec &rhs);
+        BVec operator()(const BVec &lhs, const Bit &rhs);
+        Bit operator()(const Bit &lhs, const Bit &rhs);
 
-        template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>
-        SignalType operator()(const SignalType &operand);
+        BVec operator()(const BVec &operand);
+        Bit operator()(const Bit &operand);
 
         inline hlim::Node_Logic::Op getOp() const { return m_op; }
     protected:
@@ -99,12 +100,20 @@ HCL_BUILD_LOGIC_OPERATOR_UNARY(utils::isBitSignal, operator!, hlim::Node_Logic::
 #undef HCL_BUILD_LOGIC_OPERATOR_UNARY
 
 
-#define HCL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(typeTrait, cppOp, Op)                         \
-    template<typename SignalType, typename = std::enable_if_t<typeTrait<SignalType>::value>>    \
-    SignalType &cppOp(SignalType &lhs, const SignalType &rhs)  {                                 \
-        SignalLogicOp op(Op);                                                              \
+#define HCL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(typeTrait, cppOp, Op)                               \
+    inline BVec &cppOp(BVec &lhs, const BVec &rhs)  {                                           \
+        SignalLogicOp op(Op);                                                                   \
         return lhs = op(lhs, rhs);                                                              \
-    }
+    }                                                                                           \
+    template<typename SignalType>                                                               \
+    inline Register<SignalType> &cppOp(Register<SignalType> &lhs, const BVec &rhs)  {           \
+        SignalLogicOp op(Op);                                                                   \
+        return lhs = op(lhs, rhs);                                                              \
+    }                                                                                           \
+    inline void cppOp(BVecSlice lhs, const BVec &rhs)  {                                        \
+        SignalLogicOp op(Op);                                                                   \
+        op(lhs, rhs);                                                                           \
+    } 
 
 HCL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(utils::isElementarySignal, operator&=, hlim::Node_Logic::AND)
 HCL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(utils::isElementarySignal, operator|=, hlim::Node_Logic::OR)

@@ -39,8 +39,8 @@ class NamespaceScope
         std::string allocateName(NodeInternalStorageSignal nodePort, const std::string &desiredName);
         const std::string &getName(NodeInternalStorageSignal nodePort) const;
 
-        std::string allocateName(hlim::BaseClock *clock, const std::string &desiredName);
-        const std::string &getName(hlim::BaseClock *clock) const;
+        std::string allocateName(hlim::Clock *clock, const std::string &desiredName);
+        const std::string &getName(hlim::Clock *clock) const;
 
         std::string allocateEntityName(const std::string &desiredName);
         std::string allocateBlockName(const std::string &desiredName);
@@ -53,7 +53,7 @@ class NamespaceScope
         std::set<std::string> m_namesInUse;
         std::map<hlim::NodePort, std::string> m_nodeNames;
         std::map<NodeInternalStorageSignal, std::string> m_nodeStorageNames;
-        std::map<hlim::BaseClock*, std::string> m_clockNames;
+        std::map<hlim::Clock*, std::string> m_clockNames;
 };
 
 

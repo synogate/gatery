@@ -238,7 +238,7 @@ void Program::reevaluate(SimulatorCallbacks &simCallbacks, DataState &dataState)
     m_executionBlocks.front().evaluate(simCallbacks, dataState);
 }
 
-void Program::advanceClock(SimulatorCallbacks &simCallbacks, DataState &dataState, hlim::BaseClock *clock) const
+void Program::advanceClock(SimulatorCallbacks &simCallbacks, DataState &dataState, hlim::Clock *clock) const
 {
     simCallbacks.onNewTick(clock);
     const auto &domain = m_clockDomains[m_stateMapping.clockToClkDomain.find(clock)->second];
@@ -335,7 +335,7 @@ DefaultBitVectorState ReferenceSimulator::getValueOfOutput(const hlim::NodePort 
     return value;
 }
 
-std::array<bool, DefaultConfig::NUM_PLANES> ReferenceSimulator::getValueOfClock(const hlim::BaseClock *clk)
+std::array<bool, DefaultConfig::NUM_PLANES> ReferenceSimulator::getValueOfClock(const hlim::Clock *clk)
 {
     return {};
 }

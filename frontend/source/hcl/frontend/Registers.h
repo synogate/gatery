@@ -16,7 +16,7 @@ namespace hcl::core::frontend {
 class Bit;    
     
 struct RegisterConfig {
-    hlim::BaseClock *clk = nullptr;
+    hlim::Clock *clk = nullptr;
     // bool triggerRisingEdge = true;
     // bool asyncReset = true;
     std::string resetName = "reset";

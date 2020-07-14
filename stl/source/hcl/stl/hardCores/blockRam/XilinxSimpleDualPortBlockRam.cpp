@@ -11,7 +11,7 @@ using namespace core;
 using namespace core::hlim;
     
     
-XilinxSimpleDualPortBlockRam::XilinxSimpleDualPortBlockRam(BaseClock *writeClk, BaseClock *readClk, sim::DefaultBitVectorState initialData, size_t writeDataWidth, size_t readDataWidth, bool outputRegister) : 
+XilinxSimpleDualPortBlockRam::XilinxSimpleDualPortBlockRam(Clock *writeClk, Clock *readClk, sim::DefaultBitVectorState initialData, size_t writeDataWidth, size_t readDataWidth, bool outputRegister) : 
             m_initialData(std::move(initialData))
 {    
     HCL_ASSERT_HINT(!outputRegister, "Read output register not yet implemented!");
