@@ -19,13 +19,13 @@ namespace hcl::stl {
 #if 0
         BVec sumOfOnes = 0b0000_bvec;
         for (auto i : utils::Range(data.getWidth()))
-            sumOfOnes += mux(data[i], 0_bvec, 1_bvec); /// @todo this must work better
+            sumOfOnes += data[i].zext(1);
         return sumOfOnes;
 #else
         std::vector<BVec> subSums;
         subSums.resize(vec.getWidth());
         for (auto i : utils::Range(vec.getWidth()))
-            subSums[i] = mux(vec[i], 0_bvec, 1_bvec); /// @todo this must work better
+            subSums[i] = vec[i].zext(1);
 
         for (unsigned i = utils::nextPow2(vec.getWidth())/2; i > 0; i /= 2) {
             for (unsigned j = 0; j < i; j++) {

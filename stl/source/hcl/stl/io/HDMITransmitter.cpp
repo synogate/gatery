@@ -68,7 +68,7 @@ core::frontend::BVec tmdsEncode(core::hlim::Clock *pixelClock, core::frontend::B
         HCL_NAMED(noImbalanceInQ_m);
         
         IF (noPreviousImbalance | noImbalanceInQ_m) {
-            result(0, 8) = mux(useXnor, q_m, ~q_m);
+            result(0, 8) = mux(useXnor, {q_m, ~q_m});
             result.setBit(8, useXnor);
             result.setBit(9, ~useXnor);
             
