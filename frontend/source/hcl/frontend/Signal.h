@@ -59,9 +59,6 @@ class ElementarySignal : public BaseSignal {
         ConditionalScope *m_conditionalScope = nullptr;
 
         virtual hlim::ConnectionType getSignalType(size_t width) const = 0;
-        
-        template<typename SignalType, typename>
-        friend SignalType &assign(SignalType &lhs, const SignalType &rhs);
 };
 
 /*
