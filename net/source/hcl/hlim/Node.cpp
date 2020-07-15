@@ -56,7 +56,7 @@ void BaseNode::moveToGroup(NodeGroup *group)
         m_nodeGroup->m_nodes.push_back(this);
 }
 
-void BaseNode::attachClock(BaseClock *clk, size_t clockPort)
+void BaseNode::attachClock(Clock *clk, size_t clockPort)
 {
     if (m_clocks[clockPort] == clk) return;
     

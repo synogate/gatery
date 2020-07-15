@@ -16,7 +16,7 @@ namespace hcl::core::frontend {
 class Bit;    
     
 struct RegisterConfig {
-    hlim::BaseClock *clk = nullptr;
+    hlim::Clock *clk = nullptr;
     // bool triggerRisingEdge = true;
     // bool asyncReset = true;
     std::string resetName = "reset";
@@ -55,6 +55,7 @@ class Register : public SignalType
         ~Register();
         inline Register<SignalType> &setEnable(Bit enableSignal) { m_enableSignal = enableSignal; return *this; }
         
+        Register<SignalType> &operator=(const Register<SignalType> &rhs) { return this->operator=((SignalType)rhs); }
         Register<SignalType> &operator=(const SignalType &signal);
         //operator SignalType() const { return m_newSignal; }
         
@@ -62,6 +63,8 @@ class Register : public SignalType
         
         virtual void setName(std::string name) override;        
     protected:
+        Register(const Register<SignalType> &rhs) = delete;
+        
         RegisterConfig m_registerConfig;
         Bit m_enableSignal;
         SignalType m_resetSignal;
@@ -189,3 +192,7 @@ DataSignal RegisterFactory::operator()(const DataSignal& inputSignal)
 }
 
 }
+
+
+
+

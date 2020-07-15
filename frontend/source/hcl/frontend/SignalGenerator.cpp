@@ -2,7 +2,6 @@
 
 #include "Bit.h"
 #include "BitVector.h"
-#include "Integers.h"
 
 namespace hcl::core::frontend {
 
@@ -31,12 +30,12 @@ void SimpleSignalGeneratorContext::set(size_t output, std::uint64_t value, std::
 }
     
     
-hlim::Node_SignalGenerator* createSigGenNode(hlim::BaseClock *refClk, std::vector<const ElementarySignal*> &signals, const std::function<void(SimpleSignalGeneratorContext &context)> &genCallback)
+hlim::Node_SignalGenerator* createSigGenNode(hlim::Clock *refClk, std::vector<const ElementarySignal*> &signals, const std::function<void(SimpleSignalGeneratorContext &context)> &genCallback)
 {
     class SigGenNode : public hlim::Node_SignalGenerator
     {
         public:
-            SigGenNode(hlim::BaseClock *clk, std::vector<const ElementarySignal*> &signals, const std::function<void(SimpleSignalGeneratorContext &context)> &genCallback) : 
+            SigGenNode(hlim::Clock *clk, std::vector<const ElementarySignal*> &signals, const std::function<void(SimpleSignalGeneratorContext &context)> &genCallback) : 
                                         hlim::Node_SignalGenerator(clk), m_genCallback(genCallback) {
                 
                 m_outputNames.resize(signals.size());

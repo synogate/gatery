@@ -15,6 +15,8 @@ add_library(hcl_stl STATIC
     source/hcl/stl/ExternalNodeHandlers.h
     source/hcl/stl/io/HDMITransmitter.h
     source/hcl/stl/io/HDMITransmitter.cpp
+    source/hcl/stl/utils/BitCount.h
+    source/hcl/stl/utils/BitCount.cpp
 )
 
 set(data_files 

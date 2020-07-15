@@ -26,7 +26,7 @@ class Simulator
         
         virtual DefaultBitVectorState getValueOfInternalState(const hlim::BaseNode *node, size_t idx) = 0;
         virtual DefaultBitVectorState getValueOfOutput(const hlim::NodePort &nodePort) = 0;
-        virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfClock(const hlim::BaseClock *clk) = 0;
+        virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfClock(const hlim::Clock *clk) = 0;
         virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfReset(const std::string &reset) = 0;
     
         inline const hlim::ClockRational &getCurrentimulationTime() { return m_simulationTime; }

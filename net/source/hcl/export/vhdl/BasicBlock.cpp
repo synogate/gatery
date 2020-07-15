@@ -92,6 +92,7 @@ void BasicBlock::extractSignals()
                 m_inputClocks.insert(node->getClocks()[i]);
         }
     }
+    verifySignalsDisjoint();    
 }
 
 void BasicBlock::allocateNames()
@@ -108,6 +109,8 @@ void BasicBlock::allocateNames()
 
 void BasicBlock::routeChildIOUpwards(BaseGrouping *child)
 {
+    verifySignalsDisjoint();
+
     for (auto &input : child->getInputs()) {
         if (isProducedExternally(input))
             m_inputs.insert(input);
@@ -121,6 +124,8 @@ void BasicBlock::routeChildIOUpwards(BaseGrouping *child)
     for (auto &clock : child->getClocks()) {
         m_inputClocks.insert(clock);
     }
+
+    verifySignalsDisjoint();
 }
 
 
@@ -323,6 +328,5 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
         }
     }
 }
-
     
 }

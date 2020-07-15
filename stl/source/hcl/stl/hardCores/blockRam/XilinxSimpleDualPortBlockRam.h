@@ -31,18 +31,18 @@ class XilinxSimpleDualPortBlockRam : public core::hlim::Node_External
             INT_READ_ENABLE,
             NUM_INTERNALS
         };
-        enum Clock {
+        enum Clocks {
             WRITE_CLK,
             READ_CLK,
             NUM_CLOCKS
         };
         
-        using BaseClock = hcl::core::hlim::BaseClock;
+        using Clock = hcl::core::hlim::Clock;
         using NodePort = hcl::core::hlim::NodePort;
         using DefaultBitVectorState = hcl::core::sim::DefaultBitVectorState;
         using SimulatorCallbacks = hcl::core::sim::SimulatorCallbacks;
                 
-        XilinxSimpleDualPortBlockRam(BaseClock *writeClk, BaseClock *readClk, DefaultBitVectorState initialData, 
+        XilinxSimpleDualPortBlockRam(Clock *writeClk, Clock *readClk, DefaultBitVectorState initialData, 
                                 size_t writeDataWidth=1, size_t readDataWidth=1, bool outputRegister=false);
 
         void connectInput(Input input, const NodePort &port);

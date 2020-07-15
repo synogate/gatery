@@ -48,6 +48,7 @@ class ElementarySignal : public BaseSignal {
         void assignConditionalScopeMuxOutput(const hlim::NodePort &port, ConditionalScope *parentScope);
     protected:
         ElementarySignal();
+        ElementarySignal(const ElementarySignal&) = default;
         ElementarySignal(const hlim::NodePort &port);
         ElementarySignal &operator=(const ElementarySignal&) = delete;
         ElementarySignal &operator=(const ElementarySignal&&) = delete;
@@ -58,9 +59,6 @@ class ElementarySignal : public BaseSignal {
         ConditionalScope *m_conditionalScope = nullptr;
 
         virtual hlim::ConnectionType getSignalType(size_t width) const = 0;
-        
-        template<typename SignalType, typename>
-        friend SignalType &assign(SignalType &lhs, const SignalType &rhs);
 };
 
 /*

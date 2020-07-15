@@ -15,8 +15,8 @@ add_library(hcl_frontend STATIC
     source/hcl/frontend/ConditionalScope.cpp
     source/hcl/frontend/ConditionalScope.h
     source/hcl/frontend/Constant.h
-    source/hcl/frontend/Integers.cpp
-    source/hcl/frontend/Integers.h
+    source/hcl/frontend/FSM.cpp
+    source/hcl/frontend/FSM.h
     source/hcl/frontend/PriorityConditional.cpp
     source/hcl/frontend/PriorityConditional.h
     source/hcl/frontend/Registers.cpp

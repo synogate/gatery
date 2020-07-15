@@ -21,7 +21,7 @@
 namespace hcl::core::hlim {
 
 class NodeGroup;
-class BaseClock;
+class Clock;
     
 class BaseNode : public NodeIO
 {
@@ -54,14 +54,14 @@ class BaseNode : public NodeIO
         const NodeGroup *getGroup() const { return m_nodeGroup; }
         NodeGroup *getGroup() { return m_nodeGroup; }
         
-        inline const std::vector<BaseClock*> &getClocks() const { return m_clocks; }
+        inline const std::vector<Clock*> &getClocks() const { return m_clocks; }
         
         void moveToGroup(NodeGroup *group);
 
         virtual void visit(NodeVisitor &visitor) = 0;
         virtual void visit(ConstNodeVisitor &visitor) const = 0;
 
-        void attachClock(BaseClock *clk, size_t clockPort);
+        void attachClock(Clock *clk, size_t clockPort);
         void detachClock(size_t clockPort);
     protected:
 
@@ -69,7 +69,7 @@ class BaseNode : public NodeIO
         std::string m_comment;
         utils::StackTrace m_stackTrace;
         NodeGroup *m_nodeGroup = nullptr;
-        std::vector<BaseClock*> m_clocks;
+        std::vector<Clock*> m_clocks;
 };
 
 template<class FinalType>

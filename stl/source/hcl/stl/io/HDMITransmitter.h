@@ -14,13 +14,13 @@ struct SerialTMDS {
     SerialTMDSPair clock;
 };
 
-core::frontend::BitVector tmdsEncode(core::hlim::BaseClock *pixelClock, core::frontend::Bit sendData, core::frontend::UnsignedInteger data, core::frontend::BitVector ctrl);
+core::frontend::BVec tmdsEncode(core::hlim::Clock *pixelClock, core::frontend::Bit sendData, core::frontend::BVec data, core::frontend::BVec ctrl);
 
-core::frontend::BitVector tmdsEncodeReduceTransitions(const core::frontend::BitVector& data);
-core::frontend::BitVector tmdsDecodeReduceTransitions(const core::frontend::BitVector& data);
+core::frontend::BVec tmdsEncodeReduceTransitions(const core::frontend::BVec& data);
+core::frontend::BVec tmdsDecodeReduceTransitions(const core::frontend::BVec& data);
 
-core::frontend::BitVector tmdsEncodeBitflip(const core::frontend::RegisterFactory& clk, const core::frontend::BitVector& data);
-core::frontend::BitVector tmdsDecodeBitflip(const core::frontend::BitVector& data);
+core::frontend::BVec tmdsEncodeBitflip(const core::frontend::RegisterFactory& clk, const core::frontend::BVec& data);
+core::frontend::BVec tmdsDecodeBitflip(const core::frontend::BVec& data);
 
 template<typename T>
 class UnpackScope : public core::frontend::ConditionalScope
@@ -44,7 +44,7 @@ struct Valid : T
 
 struct ColorRGB
 {
-    core::frontend::BitVector r, g, b;
+    core::frontend::BVec r, g, b;
 };
 
 class TmdsEncoder
@@ -54,19 +54,19 @@ public:
 
     void addColorStream(const Valid<ColorRGB>& color) { setColor(color.unpack()); }
     void addSync(const core::frontend::Bit& hsync, const core::frontend::Bit& vsync);
-    void addTERC4(const Valid<core::frontend::BitVector>& ctrl) { setTERC4(ctrl.unpack()); }
+    void addTERC4(const Valid<core::frontend::BVec>& ctrl) { setTERC4(ctrl.unpack()); }
 
     // alternative interface using conditionals
     void setColor(const ColorRGB& color);
     void setSync(bool hsync, bool vsync);
-    void setTERC4(const core::frontend::BitVector& ctrl);
+    void setTERC4(const core::frontend::BVec& ctrl);
 
     SerialTMDS serialOutput() const;
     const auto& channels() const { return m_Channel; }
 
 protected:
     core::frontend::RegisterFactory& m_Clk;
-    std::array<core::frontend::BitVector, 3> m_Channel;
+    std::array<core::frontend::BVec, 3> m_Channel;
 };
 
 class Transmitter

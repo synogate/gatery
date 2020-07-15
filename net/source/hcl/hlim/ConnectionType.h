@@ -12,20 +12,12 @@ struct ConnectionType
 {
     enum Interpretation {
         BOOL,
-        RAW,
-        UNSIGNED,
-        SIGNED_2COMPLEMENT,
-        ONE_HOT,
-        FLOAT
+        BITVEC,
     };
     
-    Interpretation interpretation = RAW;
+    Interpretation interpretation = BITVEC;
     
     size_t width = 0;
-    size_t fixedPoint_denominator = 1;
-    bool float_signBit = false;
-    size_t float_mantissaBits = 0;
-    int float_exponentBias = 0;
     
     bool operator==(const ConnectionType &rhs) const;
     bool operator!=(const ConnectionType &rhs) const { return !(*this == rhs); }

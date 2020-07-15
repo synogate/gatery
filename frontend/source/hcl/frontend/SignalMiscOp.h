@@ -16,24 +16,36 @@
 
 
 namespace hcl::core::frontend {
-    
+
 ///@todo overload for compound signals
-template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>    
-SignalType mux(const Bit &selector, const SignalType &lhs, const SignalType &rhs)  {                                 
-    hlim::Node_Signal *lhsSignal = lhs.getNode();
-    hlim::Node_Signal *rhsSignal = rhs.getNode();
-    HCL_ASSERT(lhsSignal != nullptr);
-    HCL_ASSERT(rhsSignal != nullptr);
-    HCL_DESIGNCHECK_HINT(lhsSignal->getOutputConnectionType(0) == rhsSignal->getOutputConnectionType(0), "Can only multiplex operands of same type (e.g. width).");
-    
-    hlim::Node_Multiplexer *node = DesignScope::createNode<hlim::Node_Multiplexer>(2);
+template<typename ContainerType>//, typename = std::enable_if_t<utils::isContainer<ContainerType>::value>>    
+typename ContainerType::value_type mux(const ElementarySignal &selector, const ContainerType &table)  {      
+    hlim::Node_Multiplexer *node = DesignScope::createNode<hlim::Node_Multiplexer>(table.size());
     node->recordStackTrace();
     node->connectSelector({.node = selector.getNode(), .port = 0ull});
-    node->connectInput(0, {.node = lhsSignal, .port = 0ull});
-    node->connectInput(1, {.node = rhsSignal, .port = 0ull});
+
+    HCL_DESIGNCHECK_HINT(table.size() <= (1ull << selector.getNode()->getOutputConnectionType(0).width), "The number of mux inputs is larger than can be addressed with it's selector input's width!");
+    
+    const auto &firstSignal = *begin(table);
+    
+    size_t idx = 0;
+    for (const auto &signal : table) {
+        HCL_DESIGNCHECK_HINT(signal.getNode()->getOutputConnectionType(0) == firstSignal.getNode()->getOutputConnectionType(0), "Can only multiplex operands of same type (e.g. width).");
+        node->connectInput(idx, {.node = signal.getNode(), .port = 0ull});
+        idx++;
+    }
+    
+    using SignalType = typename ContainerType::value_type;
 
     return SignalType({.node = node, .port = 0ull});
 }
+
+template<typename ElemType>
+ElemType mux(const ElementarySignal &selector, const std::initializer_list<ElemType> &table) {
+    return mux<std::initializer_list<ElemType>>(selector, table);
+}
+
+
 
 ///@todo overload for compound signals
 ///@todo doesn't work yet
@@ -83,50 +95,24 @@ void driveWith(SignalType &dst, const SignalType &src)  {
 }
 
 
+  
+BVec cat(const std::vector<const ElementarySignal*> signals);
 
-template<typename SignalType, typename = std::enable_if_t<utils::isBitVectorSignal<SignalType>::value>>    
-SignalType cat(const std::vector<const ElementarySignal*> signals)  {
-    hlim::Node_Rewire *node = DesignScope::createNode<hlim::Node_Rewire>(signals.size());
-    node->recordStackTrace();
-    
-    hlim::Node_Rewire::RewireOperation op;
-    op.ranges.resize(signals.size());
-    
-    for (auto i : utils::Range(signals.size())) {
-        node->connectInput(i, {.node = signals[signals.size()-1-i]->getNode(), .port = 0ull});
-        op.ranges[i].subwidth = signals[signals.size()-1-i]->getWidth();
-        op.ranges[i].source = hlim::Node_Rewire::OutputRange::INPUT;
-        op.ranges[i].inputIdx = i;
-        op.ranges[i].inputOffset = 0;
-    }
-    node->setOp(op);
-    {
-        SignalType dummy(1);
-        node->changeOutputType(dummy.getNode()->getOutputConnectionType(0));
-    }
-    
-    return SignalType({.node = node, .port = 0ull});
+inline void collectSignals(std::vector<const ElementarySignal*> &signals, const Bit &signal) {
+    signals.push_back(&signal);
 }
-
-
-template<class VectorType, class ... Types>
-struct GetFirstVectorType {
-    using type = std::enable_if_t<utils::isBitVectorSignal<VectorType>::value, VectorType>;
-};
-
-template<class ... Types>
-struct GetFirstVectorType<Bit, Types...> {
-    using type = typename GetFirstVectorType<Types...>::type;
-};
-
-
-template<class Signal>
-void collectSignals(std::vector<const ElementarySignal*> &signals, const Signal &signal) {
+inline void collectSignals(std::vector<const ElementarySignal*> &signals, const BVec &signal) {
     signals.push_back(&signal);
 }
 
-template<class Signal, class ... Types>
-void collectSignals(std::vector<const ElementarySignal*> &signals, const Signal &signal, const Types&... remaining) {
+template<typename... Types>
+void collectSignals(std::vector<const ElementarySignal*> &signals, const Bit &signal, const Types&... remaining) {
+    signals.push_back(&signal);
+    collectSignals(signals, remaining...);
+}
+
+template<typename... Types>
+void collectSignals(std::vector<const ElementarySignal*> &signals, const BVec &signal, const Types&... remaining) {
     signals.push_back(&signal);
     collectSignals(signals, remaining...);
 }
@@ -134,13 +120,13 @@ void collectSignals(std::vector<const ElementarySignal*> &signals, const Signal 
 
 
 template<typename... Types>
-typename GetFirstVectorType<Types...>::type cat(const Types&... allSignals)
+BVec cat(const Types&... allSignals)
 {
     static_assert(sizeof...(Types) > 0, "Can not concatenate empty list of signals!");
 
     std::vector<const ElementarySignal*> signals;
     collectSignals(signals, allSignals...);
-    return cat<typename GetFirstVectorType<Types...>::type>(signals);
+    return cat(signals);
 }
 
 

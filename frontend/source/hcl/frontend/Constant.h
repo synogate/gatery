@@ -4,7 +4,6 @@
 #include "Signal.h"
 #include "Bit.h"
 #include "BitVector.h"
-#include "Integers.h"
 
 #include <hcl/hlim/coreNodes/Node_Constant.h>
 
@@ -22,65 +21,26 @@ namespace hcl::core::frontend
         return SignalType({.node = node, .port = 0ull});
     }
 
-    inline BitVector ConstBitVector(uint64_t value, size_t width)
+    inline BVec ConstBVec(uint64_t value, size_t width)
     {
-        return Constant<BitVector>(
+        return Constant<BVec>(
             hlim::ConstantData{ value, width },
             hlim::ConnectionType{
-                .interpretation = hlim::ConnectionType::RAW,
-                .width = width
-            });
-    }
-
-    inline UnsignedInteger ConstUnsignedInteger(std::uint64_t value, size_t width)
-    {
-        return Constant<UnsignedInteger>(
-            hlim::ConstantData{ value, width },
-            hlim::ConnectionType{
-                .interpretation = hlim::ConnectionType::UNSIGNED,
-                .width = width
-            });
-    }
-
-    inline SignedInteger ConstSignedInteger(std::int64_t value, size_t width)
-    {
-        return Constant<SignedInteger>(
-            hlim::ConstantData{ uint64_t(value), width },
-            hlim::ConnectionType{
-                .interpretation = hlim::ConnectionType::SIGNED_2COMPLEMENT,
+                .interpretation = hlim::ConnectionType::BITVEC,
                 .width = width
             });
     }
 
     inline namespace literal
     {
-        inline BitVector operator ""_vec(const char* _val)
+        inline BVec operator ""_bvec(const char* _val)
         {
             hlim::ConstantData lit{ _val };
             hlim::ConnectionType type{
-                .interpretation = hlim::ConnectionType::RAW,
+                .interpretation = hlim::ConnectionType::BITVEC,
                 .width = lit.bitVec.size()
             };
-            return Constant<BitVector>(std::move(lit), type);
-        }
-
-        inline UnsignedInteger operator ""_uvec(const char* _val)
-        {
-            hlim::ConstantData lit{ _val };
-            hlim::ConnectionType type{
-                .interpretation = hlim::ConnectionType::UNSIGNED,
-                .width = lit.bitVec.size()
-            };
-            return Constant<UnsignedInteger>(std::move(lit), type);
-        }
-        inline SignedInteger operator ""_svec(const char* _val)
-        {
-            hlim::ConstantData lit{ _val };
-            hlim::ConnectionType type{
-                .interpretation = hlim::ConnectionType::SIGNED_2COMPLEMENT,
-                .width = lit.bitVec.size()
-            };
-            return Constant<SignedInteger>(std::move(lit), type);
+            return Constant<BVec>(std::move(lit), type);
         }
     }
 }

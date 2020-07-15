@@ -7,11 +7,18 @@
 
 namespace hcl::core::hlim {
     
-BaseClock::~BaseClock()
+Clock::~Clock()
 {
     while (!m_clockedNodes.empty())
         m_clockedNodes.front().node->detachClock(m_clockedNodes.front().port);
 }
+/*
+Clock &Clock::createClockDivider(ClockRational frequencyDivider, ClockRational phaseShift = 0)
+{
+    assert(false);
+    return 
+}
+*/
 
     
 ClockRational SignalDrivenClock::getAbsoluteFrequency() 
@@ -24,12 +31,12 @@ ClockRational SignalDrivenClock::getAbsolutePhaseShift()
     HCL_DESIGNCHECK_HINT(false, "Can not compute the absolute phase shift of a signal driven clock!");
 }
 
-ClockRational SignalDrivenClock::getFrequencyRelativeTo(BaseClock &other)
+ClockRational SignalDrivenClock::getFrequencyRelativeTo(Clock &other)
 {
     return {};
 }
 
-ClockRational SignalDrivenClock::getPhaseShiftRelativeTo(BaseClock &other)
+ClockRational SignalDrivenClock::getPhaseShiftRelativeTo(Clock &other)
 {
     return {};
 }
@@ -42,12 +49,12 @@ RootClock::RootClock(std::string name, ClockRational frequency) : m_frequency(fr
 }
     
 
-ClockRational RootClock::getFrequencyRelativeTo(BaseClock &other)
+ClockRational RootClock::getFrequencyRelativeTo(Clock &other)
 {
     return {};
 }
 
-ClockRational RootClock::getPhaseShiftRelativeTo(BaseClock &other)
+ClockRational RootClock::getPhaseShiftRelativeTo(Clock &other)
 {
     return {};
 }
@@ -55,23 +62,23 @@ ClockRational RootClock::getPhaseShiftRelativeTo(BaseClock &other)
     
     
     
-ClockRational Clock::getAbsoluteFrequency()
+ClockRational ChildClock::getAbsoluteFrequency()
 {
     return m_parentClock->getAbsoluteFrequency() * m_parentRelativeMultiplicator;
 }
 
-ClockRational Clock::getAbsolutePhaseShift()
+ClockRational ChildClock::getAbsolutePhaseShift()
 {
     return m_parentClock->getAbsolutePhaseShift() + m_parentRelativePhaseShift * m_parentClock->getAbsoluteFrequency();
 }
 
 
-ClockRational Clock::getFrequencyRelativeTo(BaseClock &other)
+ClockRational ChildClock::getFrequencyRelativeTo(Clock &other)
 {
     return {};
 }
 
-ClockRational Clock::getPhaseShiftRelativeTo(BaseClock &other)
+ClockRational ChildClock::getPhaseShiftRelativeTo(Clock &other)
 {
     return {};
 }

@@ -60,5 +60,21 @@ std::string BaseGrouping::findNearestDesiredName(hlim::NodePort nodePort)
     return "";
 }
 
+void BaseGrouping::verifySignalsDisjoint()
+{
+    for (auto & s : m_inputs) {
+        HCL_ASSERT(!m_outputs.contains(s));
+        HCL_ASSERT(!m_localSignals.contains(s));
+    } 
+    for (auto & s : m_outputs) {
+        HCL_ASSERT(!m_inputs.contains(s));
+        HCL_ASSERT(!m_localSignals.contains(s));
+    } 
+    for (auto & s : m_localSignals) {
+        HCL_ASSERT(!m_outputs.contains(s));
+        HCL_ASSERT(!m_inputs.contains(s));
+    } 
+}
+
 
 }

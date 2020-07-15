@@ -3,6 +3,7 @@
 #include "Signal.h"
 #include "Scope.h"
 #include "Bit.h"
+#include "BitVector.h"
 
 #include "SignalLogicOp.h"
 
@@ -19,13 +20,8 @@ namespace hcl::core::frontend {
     public:
         SignalCompareOp(hlim::Node_Compare::Op op) : m_op(op) { }
 
-        template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>
-        Bit operator()(const SignalType& lhs, const SignalType& rhs) { return create(lhs, rhs); }
-        
-        template<typename SignalType, typename DerivedSignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value && std::is_base_of<SignalType, DerivedSignalType>::value>>
-        Bit operator()(const SignalType& lhs, const DerivedSignalType& rhs) { return create(lhs, rhs); }
-        template<typename SignalType, typename DerivedSignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value && std::is_base_of<SignalType, DerivedSignalType>::value>>
-        Bit operator()(const DerivedSignalType& lhs, const SignalType& rhs) { return create(lhs, rhs); }
+        Bit operator()(const BVec& lhs, const BVec& rhs) { return create(lhs, rhs); }
+        Bit operator()(const Bit& lhs, const Bit& rhs) { return create(lhs, rhs); }
 
         inline hlim::Node_Compare::Op getOp() const { return m_op; }
     protected:
@@ -55,23 +51,23 @@ namespace hcl::core::frontend {
     }
 
 
-#define BUILD_OP(cpp_op, nodeOP) \
-    template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>                                                                                                   \
-    inline Bit operator cpp_op (const SignalType& l, const SignalType& r) { SignalCompareOp op(nodeOP); return op(l, r); }                                                                                         \
-                                                                                                                                                                                                               \
-    template<typename SignalType, typename DerivedSignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value && std::is_base_of<SignalType, DerivedSignalType>::value>>              \
-    inline Bit operator cpp_op (const SignalType& l, const DerivedSignalType& r) { SignalCompareOp op(nodeOP); return op(l, r); }                                                                                  \
-                                                                                                                                                                                                               \
-    template<typename SignalType, typename DerivedSignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value && std::is_base_of<SignalType, DerivedSignalType>::value>>              \
-    inline Bit operator cpp_op (const DerivedSignalType& l, const SignalType& r) { SignalCompareOp op(nodeOP); return op(l, r); }
+#define BUILD_OP_BVEC(cpp_op, nodeOP) \
+    inline Bit operator cpp_op (const BVec& l, const BVec& r) { SignalCompareOp op(nodeOP); return op(l, r); }
+    
+#define BUILD_OP_BIT(cpp_op, nodeOP) \
+    inline Bit operator cpp_op (const Bit& l, const Bit& r) { SignalCompareOp op(nodeOP); return op(l, r); }
 
-    BUILD_OP(== , hlim::Node_Compare::EQ);
-    BUILD_OP(!= , hlim::Node_Compare::NEQ);
-    BUILD_OP(> , hlim::Node_Compare::GT);
-    BUILD_OP(< , hlim::Node_Compare::LT);
-    BUILD_OP(>= , hlim::Node_Compare::GEQ);
-    BUILD_OP(<= , hlim::Node_Compare::LEQ);
-#undef BUILD_OP
+    BUILD_OP_BVEC(== , hlim::Node_Compare::EQ)
+    BUILD_OP_BVEC(!= , hlim::Node_Compare::NEQ)
+    BUILD_OP_BVEC(> , hlim::Node_Compare::GT)
+    BUILD_OP_BVEC(< , hlim::Node_Compare::LT)
+    BUILD_OP_BVEC(>= , hlim::Node_Compare::GEQ)
+    BUILD_OP_BVEC(<= , hlim::Node_Compare::LEQ)
+
+    BUILD_OP_BIT(== , hlim::Node_Compare::EQ)
+    BUILD_OP_BIT(!= , hlim::Node_Compare::NEQ)
+#undef BUILD_OP_BVEC
+#undef BUILD_OP_BIT
 
     inline Bit operator == (const Bit& l, bool r) { return r ? l : ~l; }
     inline Bit operator == (bool l, const Bit& r) { return r == l; }

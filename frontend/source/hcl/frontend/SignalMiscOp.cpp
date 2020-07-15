@@ -6,6 +6,27 @@
 
 namespace hcl::core::frontend {
 
+    
+BVec cat(const std::vector<const ElementarySignal*> signals)  {
+    hlim::Node_Rewire *node = DesignScope::createNode<hlim::Node_Rewire>(signals.size());
+    node->recordStackTrace();
+    
+    hlim::Node_Rewire::RewireOperation op;
+    op.ranges.resize(signals.size());
+    
+    for (auto i : utils::Range(signals.size())) {
+        node->connectInput(i, {.node = signals[signals.size()-1-i]->getNode(), .port = 0ull});
+        op.ranges[i].subwidth = signals[signals.size()-1-i]->getWidth();
+        op.ranges[i].source = hlim::Node_Rewire::OutputRange::INPUT;
+        op.ranges[i].inputIdx = i;
+        op.ranges[i].inputOffset = 0;
+    }
+    node->setOp(op);
+    node->changeOutputType({.interpretation = hlim::ConnectionType::BITVEC});
+ 
+    return BVec({.node = node, .port = 0ull});
+}
+    
 
 SignalTapHelper::SignalTapHelper(hlim::Node_SignalTap::Level level)
 {

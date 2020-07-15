@@ -46,7 +46,7 @@ const std::string &NamespaceScope::getName(hlim::NodePort nodePort) const
     return m_parent->getName(nodePort);
 }
 
-std::string NamespaceScope::allocateName(hlim::BaseClock *clock, const std::string &desiredName)
+std::string NamespaceScope::allocateName(hlim::Clock *clock, const std::string &desiredName)
 {
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
@@ -64,7 +64,7 @@ std::string NamespaceScope::allocateName(hlim::BaseClock *clock, const std::stri
     return name;    
 }
 
-const std::string &NamespaceScope::getName(hlim::BaseClock *clock) const
+const std::string &NamespaceScope::getName(hlim::Clock *clock) const
 {
     auto it = m_clockNames.find(clock);
     if (it != m_clockNames.end())

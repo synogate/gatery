@@ -16,7 +16,7 @@ void Node_Register::connectInput(Input input, const NodePort &port)
         setOutputConnectionType(0, port.node->getOutputConnectionType(port.port));
 }
 
-void Node_Register::setClock(BaseClock *clk)
+void Node_Register::setClock(Clock *clk)
 {
     attachClock(clk, 0);
 }

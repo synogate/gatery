@@ -87,7 +87,7 @@ void Process::extractSignals()
         hlim::Node_PriorityConditional *prioCon = dynamic_cast<hlim::Node_PriorityConditional *>(node);
         if (prioCon != nullptr) {
             hlim::NodePort driver{.node = prioCon, .port = 0};
-            if (m_outputs.find(driver) == m_outputs.end())
+            if (!m_outputs.contains(driver))
                 m_localSignals.insert(driver);
         }
         
@@ -99,13 +99,13 @@ void Process::extractSignals()
                     auto driver = rewireNode->getDriver(op.inputIdx);
                     if (driver.node != nullptr)
                         if (op.inputOffset != 0 || op.subwidth != driver.node->getOutputConnectionType(driver.port).width)
-                            if (m_outputs.find(driver) == m_outputs.end())
+                            if (!m_outputs.contains(driver) && !m_inputs.contains(driver))
                                 m_localSignals.insert(driver);
                 }
             }
         }
-        
     }
+    verifySignalsDisjoint();    
 }
 
 
@@ -152,6 +152,21 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
     
     const hlim::Node_Arithmetic *arithmeticNode = dynamic_cast<const hlim::Node_Arithmetic*>(nodePort.node);
     if (arithmeticNode != nullptr) { 
+#if 0
+        stream << "STD_LOGIC_VECTOR(UNSIGNED(";
+        formatExpression(stream, comments, arithmeticNode->getDriver(0), dependentInputs);
+        switch (arithmeticNode->getOp()) {
+            case hlim::Node_Arithmetic::ADD: stream << ") + UNSIGNED("; break;
+            case hlim::Node_Arithmetic::SUB: stream << ") - UNSIGNED("; break;
+            case hlim::Node_Arithmetic::MUL: stream << ") * UNSIGNED("; break;
+            case hlim::Node_Arithmetic::DIV: stream << ") / UNSIGNED("; break;
+            case hlim::Node_Arithmetic::REM: stream << ") MOD UNSIGNED("; break;
+            default:
+                HCL_ASSERT_HINT(false, "Unhandled operation!");
+        };
+        formatExpression(stream, comments, arithmeticNode->getDriver(1), dependentInputs);
+        stream << "))";
+#else
         stream << "(";
         formatExpression(stream, comments, arithmeticNode->getDriver(0), dependentInputs);
         switch (arithmeticNode->getOp()) {
@@ -165,6 +180,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
         };
         formatExpression(stream, comments, arithmeticNode->getDriver(1), dependentInputs);
         stream << ")";
+#endif
         return; 
     }
     
@@ -331,27 +347,61 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
             };
             
             if (muxNode != nullptr) {
-                code << "IF ";
-                formatExpression(code, comment, muxNode->getDriver(0), statement.inputs, false);
-                code << " = '1' THEN"<< std::endl;
-                
-                    cf.indent(code, indentation+2);
-                    emitAssignment();
+                if (muxNode->getNumInputPorts() == 3) {
+                    code << "IF ";
+                    formatExpression(code, comment, muxNode->getDriver(0), statement.inputs, false);
+                    code << " = '1' THEN"<< std::endl;
                     
-                    formatExpression(code, comment, muxNode->getDriver(2), statement.inputs, false);
-                    code << ";" << std::endl;
-                    
-                cf.indent(code, indentation+1);
-                code << "ELSE" << std::endl;
+                        cf.indent(code, indentation+2);
+                        emitAssignment();
+                        
+                        formatExpression(code, comment, muxNode->getDriver(2), statement.inputs, false);
+                        code << ";" << std::endl;
+                        
+                    cf.indent(code, indentation+1);
+                    code << "ELSE" << std::endl;
 
+                        cf.indent(code, indentation+2);
+                        emitAssignment();
+                        
+                        formatExpression(code, comment, muxNode->getDriver(1), statement.inputs, false);
+                        code << ";" << std::endl;
+                    
+                    cf.indent(code, indentation+1);
+                    code << "END IF;" << std::endl;
+                } else {
+                    code << "CASE ";
+                    formatExpression(code, comment, muxNode->getDriver(0), statement.inputs, false);
+                    code << " IS"<< std::endl;
+                    
+                    for (auto i : utils::Range<size_t>(1, muxNode->getNumInputPorts())) {
+                        cf.indent(code, indentation+2);
+                        code << "WHEN \""; 
+                        size_t inputIdx = i-1;
+                        for (auto bitIdx : utils::Range(muxNode->getDriver(0).node->getOutputConnectionType(0).width)) {
+                            bool b = inputIdx & (1 << (muxNode->getDriver(0).node->getOutputConnectionType(0).width - 1 - bitIdx));
+                            code << (b ? '1' : '0');
+                        }
+                        code << "\" => ";
+                        emitAssignment();
+                        
+                        formatExpression(code, comment, muxNode->getDriver(i), statement.inputs, false);
+                        code << ";" << std::endl;
+                    }
                     cf.indent(code, indentation+2);
+                    code << "WHEN OTHERS => ";
                     emitAssignment();
                     
-                    formatExpression(code, comment, muxNode->getDriver(1), statement.inputs, false);
-                    code << ";" << std::endl;
-                
-                cf.indent(code, indentation+1);
-                code << "END IF;" << std::endl;
+                    code << "\"";
+                    for (auto bitIdx : utils::Range(muxNode->getDriver(1).node->getOutputConnectionType(0).width)) {
+                        code << "X";
+                    }
+                    code << "\";" << std::endl;
+                    
+                        
+                    cf.indent(code, indentation+1);
+                    code << "END CASE;" << std::endl;
+                }
                 
                 if (!nodePort.node->getComment().empty())
                     comment << nodePort.node->getComment() << std::endl;
@@ -472,6 +522,8 @@ void RegisterProcess::allocateNames()
 
 void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 {
+    verifySignalsDisjoint();
+    
     CodeFormatting &cf = m_ast.getCodeFormatting();
     
     std::string clockName = m_namespaceScope.getName(m_config.clock);

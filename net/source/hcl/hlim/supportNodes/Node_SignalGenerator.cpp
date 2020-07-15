@@ -4,7 +4,7 @@
 
 namespace hcl::core::hlim {
 
-Node_SignalGenerator::Node_SignalGenerator(BaseClock *clk) {
+Node_SignalGenerator::Node_SignalGenerator(Clock *clk) {
     m_clocks.resize(1);
     attachClock(clk, 0);
 }

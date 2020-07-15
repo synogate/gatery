@@ -54,7 +54,7 @@ class CombinatoryProcess : public Process
 
 struct RegisterConfig
 {
-    hlim::BaseClock *clock;
+    hlim::Clock *clock;
     std::string resetSignal;    
     /*
     std::string resetSignal;
