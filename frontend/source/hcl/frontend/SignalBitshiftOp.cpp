@@ -105,6 +105,17 @@ BVec &operator>>=(BVec &signal, int amount)  {
     return signal;
 }
 
+BVecSlice &operator<<=(BVecSlice &signal, int amount)
+{
+    signal = (BVec) signal << amount;
+    return signal;
+}
+
+BVecSlice &operator>>=(BVecSlice &signal, int amount)
+{
+    signal = (BVec) signal >> amount;
+    return signal;
+}
 
 
 

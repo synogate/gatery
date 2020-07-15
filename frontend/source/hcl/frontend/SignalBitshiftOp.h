@@ -48,5 +48,7 @@ BVec operator>>(const BVec &signal, int amount);
 BVec &operator<<=(BVec &signal, int amount);
 BVec &operator>>=(BVec &signal, int amount);
 
+BVecSlice &operator<<=(BVecSlice &signal, int amount);
+BVecSlice &operator>>=(BVecSlice &signal, int amount);
 
 }

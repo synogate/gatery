@@ -154,11 +154,11 @@ HCL_BUILD_LOGIC_OPERATOR_UNARY_BIT_ONLY(operator!, hlim::Node_Logic::NOT)
         SignalLogicOp op(Op);                                                                   \
         return lhs = op(lhs, rhs);                                                              \
     }                                                                                           \
-    inline void cppOp(BVecSlice lhs, const BVec &rhs)  {                                        \
+    inline void cppOp(BVecSlice &&lhs, const BVec &rhs)  {                                        \
         SignalLogicOp op(Op);                                                                   \
         lhs = op(lhs, rhs);                                                                           \
     }                                                                                           \
-    inline void cppOp(BVecSlice lhs, const Bit &rhs)  {                                         \
+    inline void cppOp(BVecSlice &&lhs, const Bit &rhs)  {                                         \
         SignalLogicOp op(Op);                                                                   \
         lhs = op(lhs, rhs.sext(lhs.size()));                                                          \
     } 
