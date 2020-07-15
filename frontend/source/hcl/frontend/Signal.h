@@ -45,7 +45,7 @@ class ElementarySignal : public BaseSignal {
         inline hlim::Node_Signal *getNode() const { return m_node; }
         virtual void setName(std::string name) override { m_node->setName(std::move(name)); }
         
-        void assignConditionalScopeMuxOutput(const hlim::NodePort &port, ConditionalScope *parentScope);
+        virtual void assignConditionalScopeMuxOutput(const hlim::NodePort &port, ConditionalScope *parentScope);
     protected:
         ElementarySignal();
         ElementarySignal(const ElementarySignal&) = default;

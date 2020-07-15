@@ -238,6 +238,90 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, hcl::core::sim::UnitTestSimulati
     runTicks(design.getCircuit(), clk, 10);
 }
 
+BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+    
+    DesignScope design;
+    
+    auto clk = design.createClock<hcl::core::hlim::RootClock>("clk", hcl::core::hlim::ClockRational(10'000));
+    RegisterConfig regConf{.clk = clk, .resetName = "rst"};
+    
+    {
+        Register<BVec> counter(0x00_bvec, regConf);
+        counter += 1_bvec;
+        counter += 1_bvec;
+        sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
+
+        BVec refCount(8);
+        simpleSignalGenerator(clk, [](SimpleSignalGeneratorContext &context){
+            context.set(0, context.getTick()*2);
+        }, refCount);
+        
+        sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);    
+    }
+    
+    runTicks(design.getCircuit(), clk, 10);
+}
+
+BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+    
+    DesignScope design;
+    
+    auto clk = design.createClock<hcl::core::hlim::RootClock>("clk", hcl::core::hlim::ClockRational(10'000));
+    RegisterConfig regConf{.clk = clk, .resetName = "rst"};
+    
+    {
+        Register<BVec> counter(0x01_bvec, regConf);
+        counter <<= 1;
+        sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
+
+        BVec refCount(8);
+        simpleSignalGenerator(clk, [](SimpleSignalGeneratorContext &context){
+            context.set(0, 1 << context.getTick());
+        }, refCount);
+        
+        sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);    
+    }
+    
+    runTicks(design.getCircuit(), clk, 6);
+}
+
+BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+    
+    DesignScope design;
+    
+    auto clk = design.createClock<hcl::core::hlim::RootClock>("clk", hcl::core::hlim::ClockRational(10'000));
+    RegisterConfig regConf{.clk = clk, .resetName = "rst"};
+    
+    {
+        Bit condition;
+        simpleSignalGenerator(clk, [](SimpleSignalGeneratorContext &context){
+            context.set(0, context.getTick() % 2);
+        }, condition);
+
+
+        Register<BVec> counter(0x00_bvec, regConf);
+        IF (condition)
+            counter += 1_bvec;
+
+        sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
+
+        BVec refCount(8);
+        simpleSignalGenerator(clk, [](SimpleSignalGeneratorContext &context){
+            context.set(0, context.getTick()/2);
+        }, refCount);
+        
+        sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);    
+    }
+    
+    runTicks(design.getCircuit(), clk, 10);
+}
+
 
 
 BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAssignment, data::xrange(8) * data::xrange(8), x, y)

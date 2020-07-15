@@ -17,7 +17,7 @@ namespace hcl::core::frontend::fsm {
 thread_local FSM *FSM::m_fsmContext = nullptr;
     
     
-FSM::FSM(const RegisterConfig &regConf, const BaseState &startState) : m_stateReg(regConf, 0x00_bvec)
+FSM::FSM(const RegisterConfig &regConf, const BaseState &startState) : m_stateReg(0x00_bvec, regConf)
 {
     m_fsmContext = this;
     
