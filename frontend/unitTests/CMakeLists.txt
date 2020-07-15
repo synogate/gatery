@@ -3,6 +3,7 @@ cmake_minimum_required (VERSION 2.6)
 find_package (Boost COMPONENTS system filesystem unit_test_framework REQUIRED)
 
 add_executable(unitTestCore
+    source/fsm.cpp
     source/basics.cpp
     source/main.cpp
 )

@@ -45,7 +45,7 @@ FSM::FSM(const RegisterConfig &regConf, const BaseState &startState) : m_stateRe
 }
 
 
-void FSM::delayedSwitch(const DelayedState &nextState)
+void FSM::delayedSwitch(const BaseState &nextState)
 {
     if (!m_fsmContext->m_state2encoding.contains(&nextState)) {
         m_fsmContext->m_unhandledStates.push_back(&nextState);
@@ -57,6 +57,11 @@ void FSM::delayedSwitch(const DelayedState &nextState)
     m_fsmContext->m_stateReg = *m_fsmContext->m_state2encoding[&nextState];
     if (m_fsmContext->m_currentState->m_onExit)
         m_fsmContext->m_currentState->m_onExit();
+}
+
+void FSM::delayedSwitch(const DelayedState &nextState)
+{
+    delayedSwitch((const BaseState&) nextState);
     if (nextState.m_onEnter)
         nextState.m_onEnter();
 }
@@ -73,6 +78,7 @@ void FSM::immediateSwitch(const ImmediateState &nextState)
     m_fsmContext->m_stateReg = *m_fsmContext->m_state2encoding[&nextState];
     if (m_fsmContext->m_currentState->m_onExit)
         m_fsmContext->m_currentState->m_onExit();
+    m_fsmContext->m_currentState = &nextState;
     if (nextState.m_onActive)
         nextState.m_onActive();
 }
@@ -84,6 +90,10 @@ Bit FSM::isInState(const BaseState &state)
 }
 
 void delayedSwitch(const DelayedState &nextState)
+{
+    FSM::delayedSwitch(nextState);
+}
+void delayedSwitch(const ImmediateState &nextState)
 {
     FSM::delayedSwitch(nextState);
 }

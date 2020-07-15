@@ -57,6 +57,7 @@ class FSM
         FSM(const RegisterConfig &regConf, const BaseState &startState);
         Bit isInState(const BaseState &state);
         
+        static void delayedSwitch(const BaseState &nextState);
         static void delayedSwitch(const DelayedState &nextState);
         static void immediateSwitch(const ImmediateState &nextState);
     protected:
@@ -71,6 +72,7 @@ class FSM
 };
 
 void delayedSwitch(const DelayedState &nextState);
+void delayedSwitch(const ImmediateState &nextState);
 void immediateSwitch(const ImmediateState &nextState);
 
 }
