@@ -44,6 +44,7 @@ class DesignError : public MHDLError<std::runtime_error>
 
 template<class BaseError>
 std::ostream &operator<<(std::ostream &stream, const MHDLError<BaseError> &exception) {
+    /// @todo change format so that tools can more easily grab filename and line number
     stream 
         << exception.what() << std::endl
         << "Stack trace: " << std::endl
