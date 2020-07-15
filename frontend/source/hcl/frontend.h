@@ -5,6 +5,7 @@
 #include "frontend/Comments.h"
 #include "frontend/ConditionalScope.h"
 #include "frontend/Constant.h"
+#include "frontend/FSM.h"
 #include "frontend/PriorityConditional.h"
 #include "frontend/Registers.h"
 #include "frontend/Scope.h"
