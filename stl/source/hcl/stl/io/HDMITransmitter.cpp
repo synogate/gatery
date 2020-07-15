@@ -49,7 +49,7 @@ core::frontend::BVec tmdsEncode(core::hlim::Clock *pixelClock, core::frontend::B
         q_m = dataXNOR;
     
     HCL_COMMENT << "Keep a running (signed) counter of the imbalance on the line, to modify future data encodings accordingly";
-    Register<BVec> imbalance({.clk = pixelClock}, 0b0000_bvec);
+    Register<BVec> imbalance(0b0000_bvec, {.clk = pixelClock});
     HCL_NAMED(imbalance);
     
     core::frontend::BVec result(10);
@@ -161,7 +161,7 @@ core::frontend::BVec tmdsDecodeReduceTransitions(const core::frontend::BVec& dat
 core::frontend::BVec tmdsEncodeBitflip(const core::frontend::RegisterFactory& clk, const core::frontend::BVec& data)
 {
     HCL_COMMENT << "count the number of uncompensated ones";
-    Register<BVec> global_counter{ clk.config(), 0b000_bvec };
+    Register<BVec> global_counter{ 0b000_bvec, clk.config() };
     HCL_NAMED(global_counter);
 
     // TODO: depend with and start value on data width
@@ -276,15 +276,15 @@ SerialTMDS hcl::stl::hdmi::TmdsEncoder::serialOutput() const
     RegisterFactory& fastClk = m_Clk;
 
     Register<BVec> chan[] = {
-        {fastClk.config(), 0b0000000000_bvec}, // TODO: Register<> without reset
-        {fastClk.config(), 0b0000000000_bvec},
-        {fastClk.config(), 0b0000000000_bvec}
+        {fastClk.config()},
+        {fastClk.config()},
+        {fastClk.config()}
     };
 
     for (auto& c : chan)
         c = c.delay(1) >> 1;
 
-    Register<BVec> shiftCounter{ fastClk.config(), 0x0_bvec };
+    Register<BVec> shiftCounter{ 0x0_bvec, fastClk.config() };
     HCL_NAMED(shiftCounter);
     shiftCounter = shiftCounter.delay(1) + 1_bvec;
 

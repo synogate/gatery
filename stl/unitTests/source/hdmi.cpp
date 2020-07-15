@@ -41,8 +41,8 @@ BOOST_FIXTURE_TEST_CASE(tmdsBitflip, hcl::core::sim::UnitTestSimulationFixture)
     RegisterFactory regFac{ regConf };
     { // TODO: register should not wait for destructor to work
 
-        Register<BVec> test_counter{ regConf, 0x00_bvec };
-        test_counter = test_counter.delay(1) + 1_bvec;
+        Register<BVec> test_counter{ 0x00_bvec, regConf };
+        test_counter += 1_bvec;
 
         BVec test_counter_bv{ test_counter.getWidth() }; // TODO: cast
         for (size_t i = 0; i < test_counter_bv.getWidth(); ++i)

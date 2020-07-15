@@ -52,7 +52,7 @@ class ElementarySignal : public BaseSignal {
         ElementarySignal(const hlim::NodePort &port);
         ElementarySignal &operator=(const ElementarySignal&) = delete;
         ElementarySignal &operator=(const ElementarySignal&&) = delete;
-        void assign(const ElementarySignal &rhs);
+        virtual void assign(const ElementarySignal &rhs);
 
         mutable hlim::Node_Signal *m_node = nullptr; 
         

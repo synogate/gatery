@@ -223,8 +223,8 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, hcl::core::sim::UnitTestSimulati
     RegisterConfig regConf{.clk = clk, .resetName = "rst"};
     
     {
-        Register<BVec> counter(regConf, 0x00_bvec);
-        counter = counter.delay(1) + 1_bvec;
+        Register<BVec> counter(0x00_bvec, regConf);
+        counter += 1_bvec;
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
         BVec refCount(8);

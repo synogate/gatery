@@ -60,10 +60,8 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             fsm::DelayedState running;
             HCL_NAMED(running);
 
-            Register<BVec> a(regConf, 0b00000000_bvec);
-            a = a.delay(1);
-            Register<BVec> b(regConf, 0b00000000_bvec);
-            b = b.delay(1);
+            Register<BVec> a(0b00000000_bvec, regConf);
+            Register<BVec> b(0b00000000_bvec, regConf);
 
 #if 0
             // Euclid's gcd
@@ -90,8 +88,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             fsm::ImmediateState shifting;
             HCL_NAMED(shifting);
 
-            Register<BVec> d(regConf, 0b0000_bvec);
-            d = d.delay(1);
+            Register<BVec> d(0b0000_bvec, regConf);
             
             idle.onActive([&]{
                 IF (start) {
@@ -206,10 +203,8 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD
                 .setComment("Statemachine to compute the GCD of two 8-bit integers.");
 
 
-            Register<BVec> a(regConf, 0b00000000_bvec);
-            a = a.delay(1);
-            Register<BVec> b(regConf, 0b00000000_bvec);
-            b = b.delay(1);
+            Register<BVec> a(0b00000000_bvec, regConf);
+            Register<BVec> b(0b00000000_bvec, regConf);
 
             IF(start) {
                 a = x_vec;
@@ -218,7 +213,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD
 
             IF(a == b) {
                 done = true;
-            } ELSE{
+            } ELSE {
                 IF(a > b) {
                     a = a - b;
                 } ELSE {
@@ -230,7 +225,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD
             HCL_NAMED(result);
             HCL_NAMED(done);
 
-            //sim_debug() << "a is " << a.delay(1) << " and b is " << b.delay(1);
+            sim_debug() << "a is " << a.delay(1) << " and b is " << b.delay(1);
         }
 
         BVec ticks(8);
