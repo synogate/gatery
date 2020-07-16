@@ -69,7 +69,6 @@ inline frontend::Register<SignalType>::Register(const Clock& clock, Args ...sign
     m_node.connectInput(hlim::Node_Register::DATA, signalPort);
     // TODO: connect Enable to global ConditionalScope
 
-    setEnable(true);
     setClock(clock);
 
     m_delayedSignal = SignalType({ .node = &m_node, .port = 0ull });

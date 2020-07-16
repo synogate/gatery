@@ -62,9 +62,10 @@ void Node_Register::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim:
     else
         state.copyRange(internalOffsets[INT_DATA], state, inputOffsets[DATA], getOutputConnectionType(0).width);
     
-    if (inputOffsets[ENABLE] == ~0ull)
-        state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[INT_ENABLE], 1);
-    else
+    if (inputOffsets[ENABLE] == ~0ull) {
+        state.setRange(sim::DefaultConfig::DEFINED, internalOffsets[INT_ENABLE], 1);
+        state.setRange(sim::DefaultConfig::VALUE, internalOffsets[INT_ENABLE], 1);
+    } else
         state.copyRange(internalOffsets[INT_ENABLE], state, inputOffsets[ENABLE], 1);
 }
 

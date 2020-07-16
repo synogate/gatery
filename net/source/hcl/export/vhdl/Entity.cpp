@@ -107,12 +107,15 @@ void Entity::writeVHDL(std::ostream &stream)
     {
         std::vector<std::string> portList;
 
-        portList.push_back("reset : IN STD_LOGIC");
-    
         for (const auto &clk : m_inputClocks) {
             std::stringstream line;
             line << m_namespaceScope.getName(clk) << " : IN STD_LOGIC";
             portList.push_back(line.str());
+            if (clk->getResetType() != hlim::Clock::ResetType::NONE) {
+                std::stringstream line;
+                line << m_namespaceScope.getName(clk)<<clk->getResetName() << " : IN STD_LOGIC";
+                portList.push_back(line.str());
+            }
         }
         for (const auto &signal : m_inputs) {
             std::stringstream line;

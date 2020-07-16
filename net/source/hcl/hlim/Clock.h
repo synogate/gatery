@@ -23,7 +23,7 @@ class Clock
         enum class ResetType {
             SYNCHRONOUS,
             ASYNCHRONOUS,
-            INITIALIZATION_ONLY
+            NONE
         };
         
         Clock();
@@ -40,6 +40,7 @@ class Clock
         inline const std::string &getResetName() const { return m_resetName; }
         inline const TriggerEvent &getTriggerEvent() const { return m_triggerEvent; }
         inline const ResetType &getResetType() const { return m_resetType; }
+        inline const bool &getInitializeRegs() const { return m_initializeRegs; }
         inline const bool &getResetHighActive() const { return m_resetHighActive; }
         inline const bool &getPhaseSynchronousWithParent() const { return m_phaseSynchronousWithParent; }
         
@@ -47,6 +48,7 @@ class Clock
         inline void setResetName(std::string name) { m_resetName = std::move(name); }
         inline void setTriggerEvent(TriggerEvent trigEvt) { m_triggerEvent = trigEvt; }
         inline void setResetType(ResetType rstType) { m_resetType = rstType; }
+        inline void setInitializeRegs(bool initializeRegs) { m_initializeRegs = initializeRegs; }
         inline void setResetHighActive(bool rstHigh) { m_resetHighActive = rstHigh; }
         inline void setPhaseSynchronousWithParent(bool phaseSync) { m_phaseSynchronousWithParent = phaseSync; }
         
@@ -58,6 +60,7 @@ class Clock
         std::string m_resetName;
         TriggerEvent m_triggerEvent;
         ResetType m_resetType;
+        bool m_initializeRegs;
         bool m_resetHighActive;
         bool m_phaseSynchronousWithParent;
         // todo:

@@ -25,6 +25,7 @@ class ClockConfig
         boost::optional<std::string> m_resetName;
         boost::optional<TriggerEvent> m_triggerEvent;
         boost::optional<ResetType> m_resetType;
+        boost::optional<bool> m_initializeRegs;
         boost::optional<bool> m_resetHighActive;
         boost::optional<bool> m_phaseSynchronousWithParent;
     
@@ -38,6 +39,7 @@ class ClockConfig
         BUILD_SET(m_name, setName)
         BUILD_SET(m_resetName, setResetName)
         BUILD_SET(m_triggerEvent, setTriggerEvent)
+        BUILD_SET(m_initializeRegs, setInitializeRegs)
         BUILD_SET(m_resetType, setResetType)
         BUILD_SET(m_resetHighActive, setResetHighActive)
         BUILD_SET(m_phaseSynchronousWithParent, setPhaseSynchronousWithParent)        
@@ -67,6 +69,8 @@ class Clock
     protected:
         hlim::Clock *m_clock;
         Clock(hlim::Clock *clock, const ClockConfig &config);
+        
+        void applyConfig(const ClockConfig &config);
 };
 
 

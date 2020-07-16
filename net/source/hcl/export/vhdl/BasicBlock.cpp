@@ -8,6 +8,7 @@
 
 
 #include "../../hlim/coreNodes/Node_Register.h"
+#include "../../hlim/Clock.h"
 
 
 namespace hcl::core::vhdl {
@@ -208,7 +209,7 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
                 
                 RegisterConfig config = {
                     .clock = regNode->getClocks()[0],
-                    .resetSignal = (resetValue.node != nullptr?"reset":""),
+                    .hasResetSignal = regNode->getNonSignalDriver(hlim::Node_Register::RESET_VALUE).node != nullptr
                 };
                 registerNodes[config].push_back(regNode);
                 continue;
@@ -267,13 +268,18 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
                 
                 std::vector<std::string> portmapList;
 
-                portmapList.push_back("reset => reset");
                 
                 for (auto &s : subEntity->m_inputClocks) {
                     std::stringstream line;
                     line << subEntity->m_namespaceScope.getName(s) << " => ";
                     line << m_namespaceScope.getName(s);
                     portmapList.push_back(line.str());
+                    if (s->getResetType() != hlim::Clock::ResetType::NONE) {
+                        std::stringstream line;
+                        line << subEntity->m_namespaceScope.getName(s)<<s->getResetName() << " => ";
+                        line << m_namespaceScope.getName(s)<<s->getResetName();
+                        portmapList.push_back(line.str());
+                    }
                 }
                 for (auto &s : subEntity->m_inputs) {
                     std::stringstream line;

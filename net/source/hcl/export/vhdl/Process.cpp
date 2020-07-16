@@ -527,10 +527,15 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
     CodeFormatting &cf = m_ast.getCodeFormatting();
     
     std::string clockName = m_namespaceScope.getName(m_config.clock);
+    std::string resetName = clockName + m_config.clock->getResetName();
 
     cf.formatProcessComment(stream, indentation, m_name, m_comment);
     cf.indent(stream, indentation);
-    stream << m_name << " : PROCESS(" << clockName << ", reset)" << std::endl;
+
+    if (m_config.hasResetSignal && m_config.clock->getResetType() == hlim::Clock::ResetType::ASYNCHRONOUS)
+        stream << m_name << " : PROCESS(" << clockName << ", " << resetName << ")" << std::endl;
+    else
+        stream << m_name << " : PROCESS(" << clockName << ")" << std::endl;
     
     for (const auto &signal : m_localSignals) {
         cf.indent(stream, indentation+1);
@@ -542,9 +547,9 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
     cf.indent(stream, indentation);
     stream << "BEGIN" << std::endl;
 
-    if (m_config.resetSignal != "") {
+    if (m_config.hasResetSignal && m_config.clock->getResetType() == hlim::Clock::ResetType::ASYNCHRONOUS) {
         cf.indent(stream, indentation+1);
-        stream << "IF (" << m_config.resetSignal << " = '1') THEN" << std::endl;
+        stream << "IF (" << m_config.clock->getResetName() << " = '" << (m_config.clock->getResetHighActive()?'1':'0') << "') THEN" << std::endl;
 
         for (auto node : m_nodes) {
             hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
@@ -559,11 +564,45 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
         }
 
         cf.indent(stream, indentation+1);
-        stream << "ELSIF (rising_edge(" << clockName << ")) THEN" << std::endl;
+        stream << "ELSIF";
     } else {
         cf.indent(stream, indentation+1);
-        stream << "IF (rising_edge(" << clockName << ")) THEN" << std::endl;
+        stream << "IF";
     }
+    
+    switch (m_config.clock->getTriggerEvent()) {
+        case hlim::Clock::TriggerEvent::RISING:
+            stream << " (rising_edge(" << clockName << ")) THEN" << std::endl;
+        break;
+        case hlim::Clock::TriggerEvent::FALLING:
+            stream << " (falling_edge(" << clockName << ")) THEN" << std::endl;
+        break;
+        case hlim::Clock::TriggerEvent::RISING_AND_FALLING:
+            stream << " (" << clockName << "'event) THEN" << std::endl;
+        break;
+    }
+
+    unsigned indentationOffset = 0;
+    if (m_config.hasResetSignal && m_config.clock->getResetType() == hlim::Clock::ResetType::SYNCHRONOUS) {
+        cf.indent(stream, indentation+2);
+        stream << "IF (" << resetName << " = '" << (m_config.clock->getResetHighActive()?'1':'0') << "') THEN" << std::endl;
+        
+        for (auto node : m_nodes) {
+            hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
+            HCL_ASSERT(regNode != nullptr);
+                
+            hlim::NodePort output = {.node = regNode, .port = 0};
+            hlim::NodePort resetValue = regNode->getDriver(hlim::Node_Register::RESET_VALUE);
+            
+            cf.indent(stream, indentation+3);
+            stream << m_namespaceScope.getName(output) << " <= " << m_namespaceScope.getName(resetValue) << ";" << std::endl;            
+        }
+        
+        cf.indent(stream, indentation+2);
+        stream << "ELSE" << std::endl;
+        indentationOffset++;
+    }
+    
     
     for (auto node : m_nodes) {
         hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
@@ -574,19 +613,25 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
         hlim::NodePort enableInput = regNode->getDriver(hlim::Node_Register::ENABLE);
         
         if (enableInput.node != nullptr) {
-            cf.indent(stream, indentation+2);
+            cf.indent(stream, indentation+2+indentationOffset);
             stream << "IF (" << m_namespaceScope.getName(enableInput) << " = '1') THEN" << std::endl;
             
-            cf.indent(stream, indentation+3);
+            cf.indent(stream, indentation+3+indentationOffset);
             stream << m_namespaceScope.getName(output) << " <= " << m_namespaceScope.getName(dataInput) << ";" << std::endl;
             
-            cf.indent(stream, indentation+2);
+            cf.indent(stream, indentation+2+indentationOffset);
             stream << "END IF;" << std::endl;
         } else {
-            cf.indent(stream, indentation+2);
+            cf.indent(stream, indentation+2+indentationOffset);
             stream << m_namespaceScope.getName(output) << " <= " << m_namespaceScope.getName(dataInput) << ";" << std::endl;
         }
     }
+    
+    if (indentationOffset) {
+        cf.indent(stream, indentation+2);
+        stream << "END IF;" << std::endl;
+    }
+    
     cf.indent(stream, indentation+1);
     stream << "END IF;" << std::endl;
 

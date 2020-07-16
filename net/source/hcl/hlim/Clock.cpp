@@ -13,6 +13,7 @@ Clock::Clock()
     m_resetName = "reset";
     m_triggerEvent = TriggerEvent::RISING;
     m_resetType = ResetType::SYNCHRONOUS;
+    m_initializeRegs = true;
     m_resetHighActive = true;
     m_phaseSynchronousWithParent = false;
     m_parentClock = nullptr;
