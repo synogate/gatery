@@ -1,15 +1,12 @@
 #pragma once
 
 #include "SignalMiscOp.h"
+#include "Clock.h"
 
 #include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
 
 #include <functional>
 #include <vector>
-
-namespace hcl::core::hlim {
-    class Clock;
-}
 
 namespace hcl::core::frontend {
     
@@ -31,7 +28,7 @@ class SimpleSignalGeneratorContext
         std::uint64_t m_tick;
 };
     
-hlim::Node_SignalGenerator* createSigGenNode(hlim::Clock *refClk, std::vector<const ElementarySignal*> &signals, const std::function<void(SimpleSignalGeneratorContext &context)> &genCallback);
+hlim::Node_SignalGenerator* createSigGenNode(const Clock &refClk, std::vector<const ElementarySignal*> &signals, const std::function<void(SimpleSignalGeneratorContext &context)> &genCallback);
 
 
 template<class Signal>
@@ -48,7 +45,7 @@ void assignGeneratorOutputs(hlim::Node_SignalGenerator* sigGenNode, size_t offse
 }
 
 template<class ...Signals>
-void simpleSignalGenerator(hlim::Clock *refClk, const std::function<void(SimpleSignalGeneratorContext &context)> &genCallback, Signals &...allSignals)
+void simpleSignalGenerator(const Clock &refClk, const std::function<void(SimpleSignalGeneratorContext &context)> &genCallback, Signals &...allSignals)
 {
     std::vector<const ElementarySignal*> signals;
     collectSignals(signals, allSignals...);

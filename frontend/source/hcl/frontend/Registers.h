@@ -2,6 +2,7 @@
 
 #include "SignalDelay.h"
 #include "Scope.h"
+#include "Clock.h"
 #include "Bit.h"
 #include "SignalMiscOp.h"
 #include "Constant.h"
@@ -14,36 +15,7 @@
 
 namespace hcl::core::frontend {
 
-class Bit;    
-    
-struct RegisterConfig {
-    hlim::Clock *clk = nullptr;
-    // bool triggerRisingEdge = true;
-    // bool asyncReset = true;
-    std::string resetName = "reset";
-};
-
-class RegisterFactory
-{
-    public:
-        RegisterFactory(const RegisterConfig &registerConfig);
-        
-        ///@todo overload for compound signals
-        template<typename DataSignal, typename = std::enable_if_t<utils::isSignal<DataSignal>::value>>
-        DataSignal operator()(const DataSignal &inputSignal, const Bit &enableSignal, const DataSignal &resetValue);
-
-        template<typename DataSignal, typename = std::enable_if_t<utils::isSignal<DataSignal>::value>>
-        DataSignal operator()(const DataSignal& inputSignal, const Bit& enableSignal);
-
-        template<typename DataSignal, typename = std::enable_if_t<utils::isSignal<DataSignal>::value>>
-        DataSignal operator()(const DataSignal& inputSignal);
-
-        const RegisterConfig& config() const { return m_registerConfig; }
-
-protected:
-        RegisterConfig m_registerConfig; 
-};
-
+class Bit;
 
 ///@todo overload for compound signals
 template<typename SignalType>
@@ -56,17 +28,17 @@ class Register : public SignalType
         ~Register();
 
         template<typename... Args>
-        Register(const RegisterConfig& registerConfig, Args... signalParams);
+        Register(const Clock& clock, Args... signalParams);
 
         template<typename ...Args>
-        Register(const SignalType& resetSignal, const RegisterConfig& registerConfig, Args... signalParams);
-        Register(const SignalType& resetSignal, const RegisterConfig& registerConfig);
+        Register(const SignalType& resetSignal, const Clock& clock, Args... signalParams);
+        Register(const SignalType& resetSignal, const Clock& clock);
 
         Register(const Register<SignalType>& rhs) = delete;
 
         Register<SignalType>& setEnable(const Bit& enableSignal);
         Register<SignalType>& setReset(const SignalType& resetValue);
-        Register<SignalType>& setClock(const RegisterConfig& registerConfig);
+        Register<SignalType>& setClock(const Clock& clock);
         
         Register<SignalType>& operator=(const Register<SignalType>& rhs) { assign(rhs); return *this; }
         Register<SignalType> &operator=(const SignalType &signal) { assign(signal); return *this; }
@@ -87,7 +59,7 @@ class Register : public SignalType
 
 template<typename SignalType>
 template<typename ...Args>
-inline frontend::Register<SignalType>::Register(const RegisterConfig& registerConfig, Args ...signalParams) :
+inline frontend::Register<SignalType>::Register(const Clock& clock, Args ...signalParams) :
     SignalType{signalParams...},
     m_node{*DesignScope::createNode<hlim::Node_Register>()}
 {
@@ -98,7 +70,7 @@ inline frontend::Register<SignalType>::Register(const RegisterConfig& registerCo
     // TODO: connect Enable to global ConditionalScope
 
     setEnable(true);
-    setClock(registerConfig);
+    setClock(clock);
 
     m_delayedSignal = SignalType({ .node = &m_node, .port = 0ull });
 
@@ -110,8 +82,8 @@ inline frontend::Register<SignalType>::Register(const RegisterConfig& registerCo
 
 template<typename SignalType>
 template<typename ...Args>
-Register<SignalType>::Register(const SignalType& resetSignal, const RegisterConfig &registerConfig, Args... signalParams) :
-    Register<SignalType>{registerConfig, signalParams...}
+Register<SignalType>::Register(const SignalType& resetSignal, const Clock& clock, Args... signalParams) :
+    Register<SignalType>{clock, signalParams...}
 {
     setReset(resetSignal);
 }
@@ -119,18 +91,18 @@ Register<SignalType>::Register(const SignalType& resetSignal, const RegisterConf
 template<typename SignalType>
 inline Register<SignalType>::~Register()
 {
-    HCL_ASSERT(m_node.getDriver(hlim::Node_Register::DATA).node == SignalType::getNode());
+   // HCL_ASSERT(m_node.getDriver(hlim::Node_Register::DATA).node == SignalType::getNode());
 }
 
 template<typename SignalType>
-inline Register<SignalType>::Register(const SignalType& resetSignal, const RegisterConfig& registerConfig) :
-    Register{ resetSignal, registerConfig, resetSignal.getWidth() }
+inline Register<SignalType>::Register(const SignalType& resetSignal, const Clock& clock) :
+    Register{ resetSignal, clock, resetSignal.getWidth() }
 {
 }
 
 template<>
-inline Register<Bit>::Register(const Bit& resetSignal, const RegisterConfig& registerConfig) :
-    Register{ resetSignal, registerConfig, Bit{} }
+inline Register<Bit>::Register(const Bit& resetSignal, const Clock& clock) :
+    Register{ resetSignal, clock, Bit{} }
 {
 }
 
@@ -150,10 +122,9 @@ inline Register<SignalType>& Register<SignalType>::setReset(const SignalType& re
 }
 
 template<typename SignalType>
-inline Register<SignalType>& Register<SignalType>::setClock(const RegisterConfig& registerConfig)
+inline Register<SignalType>& Register<SignalType>::setClock(const Clock& clock)
 {
-    m_node.setClock(registerConfig.clk);
-    m_node.setReset(registerConfig.resetName);
+    m_node.setClock(clock.getClk());
     return *this;
 }
 
@@ -196,6 +167,8 @@ void Register<SignalType>::setName(std::string name)
     SignalType::setName(std::move(name));
 }
 
+
+/*
 class PipelineRegisterFactory : public RegisterFactory
 {
     public:
@@ -211,53 +184,7 @@ class PipelineRegisterFactory : public RegisterFactory
     protected:
         RegisterConfig m_registerConfig; 
 };
-
-
-
-
-template<typename DataSignal, typename>
-DataSignal RegisterFactory::operator()(const DataSignal &inputSignal, const Bit &enableSignal, const DataSignal &resetValue)
-{
-    HCL_DESIGNCHECK_HINT(inputSignal.getNode()->getOutputConnectionType(0) == resetValue.getNode()->getOutputConnectionType(0), "The connection types of the input and reset signals must be the same!");
-    
-    hlim::Node_Register *node = DesignScope::createNode<hlim::Node_Register>();
-    node->recordStackTrace();
-    node->connectInput(hlim::Node_Register::DATA, {.node = inputSignal.getNode(), .port = 0ull});
-    node->connectInput(hlim::Node_Register::RESET_VALUE, {.node = resetValue.getNode(), .port = 0ull});
-    node->connectInput(hlim::Node_Register::ENABLE, {.node = enableSignal.getNode(), .port = 0ull});
-    
-    node->setClock(m_registerConfig.clk);
-    node->setReset(m_registerConfig.resetName);
-    
-    return DataSignal({.node = node, .port = 0ull});
-}
-
-template<typename DataSignal, typename>
-DataSignal RegisterFactory::operator()(const DataSignal& inputSignal, const Bit& enableSignal)
-{
-    hlim::Node_Register* node = DesignScope::createNode<hlim::Node_Register>();
-    node->recordStackTrace();
-    node->connectInput(hlim::Node_Register::DATA, { .node = inputSignal.getNode(), .port = 0ull });
-    node->connectInput(hlim::Node_Register::ENABLE, { .node = enableSignal.getNode(), .port = 0ull });
-
-    node->setClock(m_registerConfig.clk);
-    node->setReset(m_registerConfig.resetName);
-
-    return DataSignal({ .node = node, .port = 0ull });
-}
-
-template<typename DataSignal, typename>
-DataSignal RegisterFactory::operator()(const DataSignal& inputSignal)
-{
-    hlim::Node_Register* node = DesignScope::createNode<hlim::Node_Register>();
-    node->recordStackTrace();
-    node->connectInput(hlim::Node_Register::DATA, { .node = inputSignal.getNode(), .port = 0ull });
-
-    node->setClock(m_registerConfig.clk);
-    node->setReset(m_registerConfig.resetName);
-
-    return DataSignal({ .node = node, .port = 0ull });
-}
+*/
 
 }
 

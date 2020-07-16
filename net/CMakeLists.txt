@@ -27,6 +27,8 @@ add_library(hcl_net STATIC
 
     source/hcl/hlim/coreNodes/Node_Arithmetic.cpp
     source/hcl/hlim/coreNodes/Node_Arithmetic.h
+    source/hcl/hlim/coreNodes/Node_Clk2Signal.cpp
+    source/hcl/hlim/coreNodes/Node_Clk2Signal.h
     source/hcl/hlim/coreNodes/Node_Compare.cpp
     source/hcl/hlim/coreNodes/Node_Compare.h
     source/hcl/hlim/coreNodes/Node_Constant.cpp

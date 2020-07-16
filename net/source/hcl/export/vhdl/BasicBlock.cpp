@@ -31,10 +31,10 @@ void NodeGroupInfo::buildFrom(hlim::NodeGroup *nodeGroup, bool mergeAreasReccurs
 
         for (const auto &childGroup : group->getChildren()) {
             switch (childGroup->getGroupType()) {
-                case hlim::NodeGroup::GRP_ENTITY:
+                case hlim::NodeGroup::GroupType::ENTITY:
                     subEntities.push_back(childGroup.get());
                 break;
-                case hlim::NodeGroup::GRP_AREA:
+                case hlim::NodeGroup::GroupType::AREA:
                     if (mergeAreasReccursive)
                         nodeGroupStack.push_back(childGroup.get());
                     else
@@ -145,10 +145,10 @@ void BasicBlock::collectInstantiations(hlim::NodeGroup *nodeGroup, bool reccursi
         
         for (const auto &childGroup : group->getChildren()) {
             switch (childGroup->getGroupType()) {
-                case hlim::NodeGroup::GRP_ENTITY:
+                case hlim::NodeGroup::GroupType::ENTITY:
                     handleEntityInstantiation(childGroup.get());
                 break;
-                case hlim::NodeGroup::GRP_AREA:
+                case hlim::NodeGroup::GroupType::AREA:
                     if (reccursive)
                         nodeGroupStack.push_back(childGroup.get());
                 break;
@@ -220,7 +220,7 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
 
         if (reccursive)
             for (const auto &childGroup : group->getChildren())
-                if (childGroup->getGroupType() == hlim::NodeGroup::GRP_AREA)
+                if (childGroup->getGroupType() == hlim::NodeGroup::GroupType::AREA)
                     nodeGroupStack.push_back(childGroup.get());
     }
     

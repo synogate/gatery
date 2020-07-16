@@ -186,32 +186,6 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, BitFromBool, d
     eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(SimpleCounter, hcl::core::sim::UnitTestSimulationFixture)
-{
-    using namespace hcl::core::frontend;
-    
-    DesignScope design;
-    
-    auto clk = design.createClock<hcl::core::hlim::RootClock>("clk", hcl::core::hlim::ClockRational(10'000));
-    RegisterFactory reg({.clk = clk, .resetName = "rst"});
-    
-    BVec counter(8);
-    BVec nextCounter = counter + 0b1_bvec;
-    sim_debug() << "Counter value is " << counter << " and next counter value is " << nextCounter;
-
-    driveWith(counter, reg(nextCounter, true, 0b00000000_bvec));
-
-
-    BVec refCount(8);
-    simpleSignalGenerator(clk, [](SimpleSignalGeneratorContext &context){
-        context.set(0, context.getTick());
-    }, refCount);
-    
-    sim_assert(counter == refCount) << "The counter should be " << refCount << " but is " << counter;
-    
-    runTicks(design.getCircuit(), clk, 10);
-}
-
 
 BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, hcl::core::sim::UnitTestSimulationFixture)
 {
@@ -219,23 +193,22 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, hcl::core::sim::UnitTestSimulati
     
     DesignScope design;
     
-    auto clk = design.createClock<hcl::core::hlim::RootClock>("clk", hcl::core::hlim::ClockRational(10'000));
-    RegisterConfig regConf{.clk = clk, .resetName = "rst"};
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     
     {
-        Register<BVec> counter(0x00_bvec, regConf);
+        Register<BVec> counter(0x00_bvec, clock);
         counter += 1_bvec;
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
         BVec refCount(8);
-        simpleSignalGenerator(clk, [](SimpleSignalGeneratorContext &context){
+        simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick());
         }, refCount);
         
         sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);    
     }
     
-    runTicks(design.getCircuit(), clk, 10);
+    runTicks(design.getCircuit(), clock.getClk(), 10);
 }
 
 BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, hcl::core::sim::UnitTestSimulationFixture)
@@ -244,24 +217,23 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, hcl::core::sim::UnitTestSimulati
     
     DesignScope design;
     
-    auto clk = design.createClock<hcl::core::hlim::RootClock>("clk", hcl::core::hlim::ClockRational(10'000));
-    RegisterConfig regConf{.clk = clk, .resetName = "rst"};
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     
     {
-        Register<BVec> counter(0x00_bvec, regConf);
+        Register<BVec> counter(0x00_bvec, clock);
         counter += 1_bvec;
         counter += 1_bvec;
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
         BVec refCount(8);
-        simpleSignalGenerator(clk, [](SimpleSignalGeneratorContext &context){
+        simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick()*2);
         }, refCount);
         
         sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);    
     }
     
-    runTicks(design.getCircuit(), clk, 10);
+    runTicks(design.getCircuit(), clock.getClk(), 10);
 }
 
 BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, hcl::core::sim::UnitTestSimulationFixture)
@@ -270,23 +242,22 @@ BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, hcl::core::sim::UnitTestSimulationFixt
     
     DesignScope design;
     
-    auto clk = design.createClock<hcl::core::hlim::RootClock>("clk", hcl::core::hlim::ClockRational(10'000));
-    RegisterConfig regConf{.clk = clk, .resetName = "rst"};
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     
     {
-        Register<BVec> counter(0x01_bvec, regConf);
+        Register<BVec> counter(0x01_bvec, clock);
         counter <<= 1;
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
         BVec refCount(8);
-        simpleSignalGenerator(clk, [](SimpleSignalGeneratorContext &context){
+        simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, 1 << context.getTick());
         }, refCount);
         
         sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);    
     }
     
-    runTicks(design.getCircuit(), clk, 6);
+    runTicks(design.getCircuit(), clock.getClk(), 6);
 }
 
 BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, hcl::core::sim::UnitTestSimulationFixture)
@@ -295,31 +266,30 @@ BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, hcl::core::sim::UnitTestS
     
     DesignScope design;
     
-    auto clk = design.createClock<hcl::core::hlim::RootClock>("clk", hcl::core::hlim::ClockRational(10'000));
-    RegisterConfig regConf{.clk = clk, .resetName = "rst"};
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     
     {
         Bit condition;
-        simpleSignalGenerator(clk, [](SimpleSignalGeneratorContext &context){
+        simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick() % 2);
         }, condition);
 
 
-        Register<BVec> counter(0x00_bvec, regConf);
+        Register<BVec> counter(0x00_bvec, clock);
         IF (condition)
             counter += 1_bvec;
 
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
         BVec refCount(8);
-        simpleSignalGenerator(clk, [](SimpleSignalGeneratorContext &context){
+        simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick()/2);
         }, refCount);
         
         sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);    
     }
     
-    runTicks(design.getCircuit(), clk, 10);
+    runTicks(design.getCircuit(), clock.getClk(), 10);
 }
 
 

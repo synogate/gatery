@@ -5,22 +5,19 @@
 namespace hcl::stl::hdmi {
 
 using namespace hcl::core::frontend;
-using namespace hcl::core::hlim;
 
 
-core::frontend::BVec tmdsEncode(core::hlim::Clock *pixelClock, core::frontend::Bit dataEnable, core::frontend::BVec data, core::frontend::BVec ctrl)
+core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::frontend::Bit dataEnable, core::frontend::BVec data, core::frontend::BVec ctrl)
 {
     HCL_NAMED(dataEnable);
     HCL_NAMED(data);
     HCL_NAMED(ctrl);
     
-    GroupScope entity(NodeGroup::GRP_ENTITY);
+    GroupScope entity(GroupScope::GroupType::ENTITY);
     entity
         .setName("tmdsEncode")
         .setComment("Encodes 8-bit data words to 10-bit TMDS words with control bits");
         
-    
-    RegisterFactory reg({.clk = pixelClock});
 
     HCL_DESIGNCHECK_HINT(data.getWidth() == 8, "data must be 8 bit wide");
     HCL_DESIGNCHECK_HINT(ctrl.getWidth() == 2, "data must be 8 bit wide");
@@ -49,7 +46,7 @@ core::frontend::BVec tmdsEncode(core::hlim::Clock *pixelClock, core::frontend::B
         q_m = dataXNOR;
     
     HCL_COMMENT << "Keep a running (signed) counter of the imbalance on the line, to modify future data encodings accordingly";
-    Register<BVec> imbalance(0b0000_bvec, {.clk = pixelClock});
+    Register<BVec> imbalance(0b0000_bvec, pixelClock);
     HCL_NAMED(imbalance);
     
     core::frontend::BVec result(10);
@@ -158,10 +155,10 @@ core::frontend::BVec tmdsDecodeReduceTransitions(const core::frontend::BVec& dat
     return decoded;
 }
 
-core::frontend::BVec tmdsEncodeBitflip(const core::frontend::RegisterFactory& clk, const core::frontend::BVec& data)
+core::frontend::BVec tmdsEncodeBitflip(const core::frontend::Clock& clk, const core::frontend::BVec& data)
 {
     HCL_COMMENT << "count the number of uncompensated ones";
-    Register<BVec> global_counter{ 0b000_bvec, clk.config() };
+    Register<BVec> global_counter{ 0b000_bvec, clk };
     HCL_NAMED(global_counter);
 
     // TODO: depend with and start value on data width
@@ -203,13 +200,13 @@ core::frontend::BVec tmdsDecodeBitflip(const core::frontend::BVec& data)
     return tmp;
 }
 
-TmdsEncoder::TmdsEncoder(core::frontend::RegisterFactory& clk) :
+TmdsEncoder::TmdsEncoder(core::frontend::Clock& clk) :
     m_Clk{clk}
 {
     m_Channel.fill(0b0010101011_bvec); // no data symbol
     m_Channel[0].setName("redChannel"); // TODO: convinient method to name arrays
-    m_Channel[0].setName("greenChannel");
-    m_Channel[0].setName("blueChannel");
+    m_Channel[1].setName("greenChannel");
+    m_Channel[2].setName("blueChannel");
 }
 
 void TmdsEncoder::addSync(const core::frontend::Bit& hsync, const core::frontend::Bit& vsync)
@@ -241,9 +238,9 @@ void hcl::stl::hdmi::TmdsEncoder::setSync(bool hsync, bool vsync)
         m_Channel[2] = 0b0010101011_bvec;
 }
 
-void hcl::stl::hdmi::TmdsEncoder::setTERC4(const core::frontend::BVec& ctrl)
+void hcl::stl::hdmi::TmdsEncoder::setTERC4(core::frontend::BVec ctrl)
 {
-    const BVec trec4lookup[] = {
+    std::array<BVec, 16> trec4lookup = {
         0b1010011100_bvec,
         0b1001100011_bvec,
         0b1011100100_bvec,
@@ -263,9 +260,9 @@ void hcl::stl::hdmi::TmdsEncoder::setTERC4(const core::frontend::BVec& ctrl)
     };
 
     HCL_ASSERT(ctrl.getWidth() == 6);
-    //m_Channel[0] = mux(ctrl(0, 2), trec4lookup); // TODO: improve mux to accept any container as second input
-    //m_Channel[1] = mux(ctrl(2, 2), trec4lookup); // TODO: subrange as argument for mux
-    //m_Channel[2] = mux(ctrl(4, 2), trec4lookup);
+    m_Channel[0] = mux(ctrl(0, 2), trec4lookup); // TODO: improve mux to accept any container as second input
+    m_Channel[1] = mux(ctrl(2, 2), trec4lookup); // TODO: subrange as argument for mux
+    m_Channel[2] = mux(ctrl(4, 2), trec4lookup);
 }
 
 SerialTMDS hcl::stl::hdmi::TmdsEncoder::serialOutput() const
@@ -273,18 +270,18 @@ SerialTMDS hcl::stl::hdmi::TmdsEncoder::serialOutput() const
     // TODO: use shift register/serdes lib for automatic vendor specific serdes usage
 
     // TODO: create multiplied clock from m_Clk
-    RegisterFactory& fastClk = m_Clk;
+    Clock fastClk = m_Clk.deriveClock(ClockConfig{}.setFrequencyMultiplier(10).setName("TmdsEncoderFastClock"));
 
     Register<BVec> chan[] = {
-        {fastClk.config()},
-        {fastClk.config()},
-        {fastClk.config()}
+        {fastClk},
+        {fastClk},
+        {fastClk}
     };
 
     for (auto& c : chan)
         c = c.delay(1) >> 1;
 
-    Register<BVec> shiftCounter{ 0x0_bvec, fastClk.config() };
+    Register<BVec> shiftCounter{ 0x0_bvec, fastClk };
     HCL_NAMED(shiftCounter);
     shiftCounter = shiftCounter.delay(1) + 1_bvec;
 

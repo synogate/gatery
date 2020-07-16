@@ -14,12 +14,12 @@ struct SerialTMDS {
     SerialTMDSPair clock;
 };
 
-core::frontend::BVec tmdsEncode(core::hlim::Clock *pixelClock, core::frontend::Bit sendData, core::frontend::BVec data, core::frontend::BVec ctrl);
+core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::frontend::Bit sendData, core::frontend::BVec data, core::frontend::BVec ctrl);
 
 core::frontend::BVec tmdsEncodeReduceTransitions(const core::frontend::BVec& data);
 core::frontend::BVec tmdsDecodeReduceTransitions(const core::frontend::BVec& data);
 
-core::frontend::BVec tmdsEncodeBitflip(const core::frontend::RegisterFactory& clk, const core::frontend::BVec& data);
+core::frontend::BVec tmdsEncodeBitflip(const core::frontend::Clock& clk, const core::frontend::BVec& data);
 core::frontend::BVec tmdsDecodeBitflip(const core::frontend::BVec& data);
 
 template<typename T>
@@ -50,7 +50,7 @@ struct ColorRGB
 class TmdsEncoder
 {
 public:
-    TmdsEncoder(core::frontend::RegisterFactory& clk);
+    TmdsEncoder(core::frontend::Clock& clk);
 
     void addColorStream(const Valid<ColorRGB>& color) { setColor(color.unpack()); }
     void addSync(const core::frontend::Bit& hsync, const core::frontend::Bit& vsync);
@@ -59,13 +59,13 @@ public:
     // alternative interface using conditionals
     void setColor(const ColorRGB& color);
     void setSync(bool hsync, bool vsync);
-    void setTERC4(const core::frontend::BVec& ctrl);
+    void setTERC4(core::frontend::BVec ctrl);
 
     SerialTMDS serialOutput() const;
     const auto& channels() const { return m_Channel; }
 
 protected:
-    core::frontend::RegisterFactory& m_Clk;
+    core::frontend::Clock& m_Clk;
     std::array<core::frontend::BVec, 3> m_Channel;
 };
 

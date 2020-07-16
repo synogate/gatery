@@ -4,46 +4,71 @@
 
 #include <boost/rational.hpp>
 
+
 #include <string>
 
 namespace hcl::core::hlim {
     
 using ClockRational = boost::rational<std::uint64_t>;    
-    
+
 class Clock
 {
     public:
+        enum class TriggerEvent {
+            RISING,
+            FALLING,
+            RISING_AND_FALLING
+        };
+        
+        enum class ResetType {
+            SYNCHRONOUS,
+            ASYNCHRONOUS,
+            INITIALIZATION_ONLY
+        };
+        
+        Clock();
         virtual ~Clock();
         
         virtual ClockRational getAbsoluteFrequency() = 0;
-        virtual ClockRational getAbsolutePhaseShift() = 0;
-
         virtual ClockRational getFrequencyRelativeTo(Clock &other) = 0;
-        virtual ClockRational getPhaseShiftRelativeTo(Clock &other) = 0;
         
-        inline const std::string &getName() const { return m_name; }
+        inline Clock *getParentClock() const { return m_parentClock; }
         
 //        Clock &createClockDivider(ClockRational frequencyDivider, ClockRational phaseShift = 0);
         
+        inline const std::string &getName() const { return m_name; }        
+        inline const std::string &getResetName() const { return m_resetName; }
+        inline const TriggerEvent &getTriggerEvent() const { return m_triggerEvent; }
+        inline const ResetType &getResetType() const { return m_resetType; }
+        inline const bool &getResetHighActive() const { return m_resetHighActive; }
+        inline const bool &getPhaseSynchronousWithParent() const { return m_phaseSynchronousWithParent; }
+        
+        inline void setName(std::string name) { m_name = std::move(name); }
+        inline void setResetName(std::string name) { m_resetName = std::move(name); }
+        inline void setTriggerEvent(TriggerEvent trigEvt) { m_triggerEvent = trigEvt; }
+        inline void setResetType(ResetType rstType) { m_resetType = rstType; }
+        inline void setResetHighActive(bool rstHigh) { m_resetHighActive = rstHigh; }
+        inline void setPhaseSynchronousWithParent(bool phaseSync) { m_phaseSynchronousWithParent = phaseSync; }
+        
     protected:
-        // reset config
+        Clock *m_parentClock = nullptr;
         
         std::string m_name;
         
+        std::string m_resetName;
+        TriggerEvent m_triggerEvent;
+        ResetType m_resetType;
+        bool m_resetHighActive;
+        bool m_phaseSynchronousWithParent;
+        // todo:
+        /*
+            * clock enable
+            * clock disable high/low
+            * clock2signal
+            */
+        
         std::vector<NodePort> m_clockedNodes;
         friend class BaseNode;        
-};
-
-class SignalDrivenClock : public Clock
-{
-    public:
-        virtual ClockRational getAbsoluteFrequency() override;
-        virtual ClockRational getAbsolutePhaseShift() override;
-
-        virtual ClockRational getFrequencyRelativeTo(Clock &other) override;
-        virtual ClockRational getPhaseShiftRelativeTo(Clock &other) override;
-    protected:
-        NodePort m_src;
 };
 
 class RootClock : public Clock
@@ -52,26 +77,24 @@ class RootClock : public Clock
         RootClock(std::string name, ClockRational frequency);
         
         virtual ClockRational getAbsoluteFrequency() override { return m_frequency; }
-        virtual ClockRational getAbsolutePhaseShift() override { return ClockRational(0); }
-
         virtual ClockRational getFrequencyRelativeTo(Clock &other) override;
-        virtual ClockRational getPhaseShiftRelativeTo(Clock &other) override;
+        
+        void setFrequency(ClockRational frequency) { m_frequency = m_frequency; }
     protected:
         ClockRational m_frequency;
 };
 
-class ChildClock : public Clock
+class DerivedClock : public Clock
 {
     public:
+        DerivedClock(Clock *parentClock);
+        
         virtual ClockRational getAbsoluteFrequency() override;
-        virtual ClockRational getAbsolutePhaseShift() override;
-
         virtual ClockRational getFrequencyRelativeTo(Clock &other) override;
-        virtual ClockRational getPhaseShiftRelativeTo(Clock &other) override;
+        
+        inline void setFrequencyMuliplier(ClockRational m) { m_parentRelativeMultiplicator = m; }
     protected:
-        Clock *m_parentClock;
         ClockRational m_parentRelativeMultiplicator;
-        ClockRational m_parentRelativePhaseShift;
 };
 
 

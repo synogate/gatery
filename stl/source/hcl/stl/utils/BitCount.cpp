@@ -11,7 +11,7 @@ namespace hcl::stl {
         
         HCL_NAMED(vec);
         
-        GroupScope entity(NodeGroup::GRP_ENTITY);
+        GroupScope entity(GroupScope::GroupType::ENTITY);
         entity
             .setName("bitcount")
             .setComment("Counts the number of high bits");

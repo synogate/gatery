@@ -10,6 +10,8 @@ add_library(hcl_frontend STATIC
     source/hcl/frontend/Bit.h
     source/hcl/frontend/BitVector.cpp
     source/hcl/frontend/BitVector.h
+    source/hcl/frontend/Clock.cpp
+    source/hcl/frontend/Clock.h
     source/hcl/frontend/Comments.cpp
     source/hcl/frontend/Comments.h
     source/hcl/frontend/ConditionalScope.cpp

@@ -23,7 +23,7 @@ Entity::~Entity()
 
 void Entity::buildFrom(hlim::NodeGroup *nodeGroup)
 {
-    HCL_ASSERT(nodeGroup->getGroupType() == hlim::NodeGroup::GRP_ENTITY);
+    HCL_ASSERT(nodeGroup->getGroupType() == hlim::NodeGroup::GroupType::ENTITY);
     
     m_comment = nodeGroup->getComment();
 

@@ -54,7 +54,7 @@ class ImmediateState : public BaseState
 class FSM
 {
     public:
-        FSM(const RegisterConfig &regConf, const BaseState &startState);
+        FSM(const Clock &clock, const BaseState &startState);
         Bit isInState(const BaseState &state);
         
         static void delayedSwitch(const BaseState &nextState);

@@ -16,9 +16,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
     
     DesignScope design;
     
-    auto clk = design.createClock<hcl::core::hlim::RootClock>("clk", hcl::core::hlim::ClockRational(10'000));
-    RegisterConfig regConf = {.clk = clk, .resetName = "rst"};
-    RegisterFactory reg(regConf);
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     
     auto gcd_ref = [](unsigned a, unsigned b) -> unsigned {
         while (a != b) {
@@ -38,7 +36,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
         BVec y_vec = ConstBVec(y, 8);
 
         Bit start;
-        simpleSignalGenerator(clk, [](SimpleSignalGeneratorContext &context){
+        simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick() == 0);
         }, start);
         
@@ -49,7 +47,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             HCL_NAMED(x_vec);
             HCL_NAMED(y_vec);
             
-            GroupScope entity(hcl::core::hlim::NodeGroup::GRP_ENTITY);
+            GroupScope entity(GroupScope::GroupType::ENTITY);
             entity
                 .setName("gcd")
                 .setComment("Statemachine to compute the GCD of two 8-bit integers.");
@@ -60,8 +58,8 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             fsm::DelayedState running;
             HCL_NAMED(running);
 
-            Register<BVec> a(0b00000000_bvec, regConf);
-            Register<BVec> b(0b00000000_bvec, regConf);
+            Register<BVec> a(0b00000000_bvec, clock);
+            Register<BVec> b(0b00000000_bvec, clock);
 
 #if 0
             // Euclid's gcd
@@ -88,7 +86,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             fsm::ImmediateState shifting;
             HCL_NAMED(shifting);
 
-            Register<BVec> d(0b0000_bvec, regConf);
+            Register<BVec> d(0b0000_bvec, clock);
             
             idle.onActive([&]{
                 IF (start) {
@@ -136,7 +134,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
                 }
             });            
 #endif
-            fsm::FSM stateMachine(regConf, idle);
+            fsm::FSM stateMachine(clock, idle);
             result = a.delay(1);
             HCL_NAMED(result);
             done = stateMachine.isInState(idle);
@@ -146,7 +144,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
         }
         
         BVec ticks(8);
-        simpleSignalGenerator(clk, [](SimpleSignalGeneratorContext &context){
+        simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick());
         }, ticks);
         
@@ -155,7 +153,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
         sim_assert((ticks < ConstBVec(maxTicks-1, 8)) || (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
     }
 
-    runTicks(design.getCircuit(), clk, maxTicks);
+    runTicks(design.getCircuit(), clock.getClk(), maxTicks);
 }
 
 BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD, data::make({ 1, 2, 3, 4, 5, 10, 42 })* data::make({ 1, 2, 3, 4, 5, 23, 56, 126 }), x, y)
@@ -164,9 +162,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD
 
     DesignScope design;
 
-    auto clk = design.createClock<hcl::core::hlim::RootClock>("clk", hcl::core::hlim::ClockRational(10'000));
-    RegisterConfig regConf = { .clk = clk, .resetName = "rst" };
-    RegisterFactory reg(regConf);
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
 
     auto gcd_ref = [](unsigned a, unsigned b) -> unsigned {
         while (a != b) {
@@ -186,7 +182,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD
         BVec y_vec = ConstBVec(y, 8);
 
         Bit start;
-        simpleSignalGenerator(clk, [](SimpleSignalGeneratorContext& context) {
+        simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
             context.set(0, context.getTick() == 0);
             }, start);
 
@@ -197,14 +193,14 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD
             HCL_NAMED(x_vec);
             HCL_NAMED(y_vec);
 
-            GroupScope entity(hcl::core::hlim::NodeGroup::GRP_ENTITY);
+            GroupScope entity(GroupScope::GroupType::ENTITY);
             entity
                 .setName("gcd")
                 .setComment("Statemachine to compute the GCD of two 8-bit integers.");
 
 
-            Register<BVec> a(0b00000000_bvec, regConf);
-            Register<BVec> b(0b00000000_bvec, regConf);
+            Register<BVec> a(0b00000000_bvec, clock);
+            Register<BVec> b(0b00000000_bvec, clock);
 
             IF(start) {
                 a = x_vec;
@@ -229,7 +225,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD
         }
 
         BVec ticks(8);
-        simpleSignalGenerator(clk, [](SimpleSignalGeneratorContext& context) {
+        simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
             context.set(0, context.getTick());
             }, ticks);
 
@@ -238,5 +234,5 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD
         sim_assert((ticks < ConstBVec(maxTicks - 1, 8)) || (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
     }
 
-    runTicks(design.getCircuit(), clk, maxTicks);
+    runTicks(design.getCircuit(), clock.getClk(), maxTicks);
 }

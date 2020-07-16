@@ -7,6 +7,18 @@
 
 namespace hcl::core::hlim {
     
+Clock::Clock()
+{
+    m_name = "clk";
+    m_resetName = "reset";
+    m_triggerEvent = TriggerEvent::RISING;
+    m_resetType = ResetType::SYNCHRONOUS;
+    m_resetHighActive = true;
+    m_phaseSynchronousWithParent = false;
+    m_parentClock = nullptr;
+}
+
+    
 Clock::~Clock()
 {
     while (!m_clockedNodes.empty())
@@ -20,28 +32,6 @@ Clock &Clock::createClockDivider(ClockRational frequencyDivider, ClockRational p
 }
 */
 
-    
-ClockRational SignalDrivenClock::getAbsoluteFrequency() 
-{
-    HCL_DESIGNCHECK_HINT(false, "Can not compute the absolute frequency of a signal driven clock!");
-}
-
-ClockRational SignalDrivenClock::getAbsolutePhaseShift() 
-{
-    HCL_DESIGNCHECK_HINT(false, "Can not compute the absolute phase shift of a signal driven clock!");
-}
-
-ClockRational SignalDrivenClock::getFrequencyRelativeTo(Clock &other)
-{
-    return {};
-}
-
-ClockRational SignalDrivenClock::getPhaseShiftRelativeTo(Clock &other)
-{
-    return {};
-}
-
-    
 
 RootClock::RootClock(std::string name, ClockRational frequency) : m_frequency(frequency)
 {
@@ -54,34 +44,30 @@ ClockRational RootClock::getFrequencyRelativeTo(Clock &other)
     return {};
 }
 
-ClockRational RootClock::getPhaseShiftRelativeTo(Clock &other)
+    
+DerivedClock::DerivedClock(Clock *parentClock)
 {
-    return {};
+    m_parentClock = parentClock;
+    m_parentRelativeMultiplicator = 1;
+    
+    m_name = m_parentClock->getName();
+    
+    m_resetName = m_parentClock->getResetName();
+    m_triggerEvent = m_parentClock->getTriggerEvent();
+    m_resetType = m_parentClock->getResetType();
+    m_resetHighActive = m_parentClock->getResetHighActive();
+    m_phaseSynchronousWithParent = m_parentClock->getPhaseSynchronousWithParent();
 }
+
     
-    
-    
-    
-ClockRational ChildClock::getAbsoluteFrequency()
+ClockRational DerivedClock::getAbsoluteFrequency()
 {
     return m_parentClock->getAbsoluteFrequency() * m_parentRelativeMultiplicator;
 }
 
-ClockRational ChildClock::getAbsolutePhaseShift()
-{
-    return m_parentClock->getAbsolutePhaseShift() + m_parentRelativePhaseShift * m_parentClock->getAbsoluteFrequency();
-}
-
-
-ClockRational ChildClock::getFrequencyRelativeTo(Clock &other)
+ClockRational DerivedClock::getFrequencyRelativeTo(Clock &other)
 {
     return {};
 }
-
-ClockRational ChildClock::getPhaseShiftRelativeTo(Clock &other)
-{
-    return {};
-}
-
         
 }

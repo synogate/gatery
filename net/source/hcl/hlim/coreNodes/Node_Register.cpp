@@ -21,11 +21,6 @@ void Node_Register::setClock(Clock *clk)
     attachClock(clk, 0);
 }
 
-void Node_Register::setReset(std::string resetName)
-{
-    m_resetName = std::move(resetName);
-}
-
 void Node_Register::simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
 {
     auto resetDriver = getNonSignalDriver(RESET_VALUE);

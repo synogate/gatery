@@ -30,7 +30,7 @@ void SimpleSignalGeneratorContext::set(size_t output, std::uint64_t value, std::
 }
     
     
-hlim::Node_SignalGenerator* createSigGenNode(hlim::Clock *refClk, std::vector<const ElementarySignal*> &signals, const std::function<void(SimpleSignalGeneratorContext &context)> &genCallback)
+hlim::Node_SignalGenerator* createSigGenNode(const Clock &refClk, std::vector<const ElementarySignal*> &signals, const std::function<void(SimpleSignalGeneratorContext &context)> &genCallback)
 {
     class SigGenNode : public hlim::Node_SignalGenerator
     {
@@ -60,7 +60,7 @@ hlim::Node_SignalGenerator* createSigGenNode(hlim::Clock *refClk, std::vector<co
             }
     };    
     
-    return DesignScope::createNode<SigGenNode>(refClk, signals, genCallback);
+    return DesignScope::createNode<SigGenNode>(refClk.getClk(), signals, genCallback);
 }
 
 }

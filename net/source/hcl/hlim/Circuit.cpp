@@ -9,7 +9,7 @@ namespace hcl::core::hlim {
 
 Circuit::Circuit()
 {
-    m_root.reset(new NodeGroup(NodeGroup::GRP_ENTITY));
+    m_root.reset(new NodeGroup(NodeGroup::GroupType::ENTITY));
 }
 
 void Circuit::cullUnnamedSignalNodes()

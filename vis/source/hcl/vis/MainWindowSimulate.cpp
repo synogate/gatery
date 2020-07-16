@@ -145,7 +145,7 @@ void MainWindowSimulate::reccurFillTreeWidget(QTreeWidgetItem *item, core::hlim:
         groupStack.pop_back();
         
         for (auto &subGroup : group->getChildren()) {
-            if (subGroup->getGroupType() == core::hlim::NodeGroup::GRP_ENTITY) {
+            if (subGroup->getGroupType() == core::hlim::NodeGroup::GroupType::ENTITY) {
                 QTreeWidgetItem *newItem;
                 item->addChild(newItem = new QTreeWidgetItem());
                 reccurFillTreeWidget(newItem, subGroup.get());

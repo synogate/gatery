@@ -27,7 +27,9 @@ thread_local FinalType *BaseScope<FinalType>::m_currentScope = nullptr;
 class GroupScope : public BaseScope<GroupScope>
 {
     public:
-        GroupScope(hlim::NodeGroup::GroupType groupType);
+        using GroupType = hlim::NodeGroup::GroupType;
+        
+        GroupScope(GroupType groupType);
         GroupScope(hlim::NodeGroup *nodeGroup);
         
         GroupScope &setName(std::string name);

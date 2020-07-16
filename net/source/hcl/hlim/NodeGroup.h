@@ -16,9 +16,9 @@ class Node_Register;
 class NodeGroup
 {
     public:
-        enum GroupType {
-            GRP_ENTITY      = 0x01,
-            GRP_AREA        = 0x02,
+        enum class GroupType {
+            ENTITY      = 0x01,
+            AREA        = 0x02,
         };
         
         NodeGroup(GroupType groupType);
