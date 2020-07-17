@@ -194,9 +194,11 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, hcl::core::sim::UnitTestSimulati
     DesignScope design;
     
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
-    
+    ClockScope clockScope(clock);
+
     {
-        Register<BVec> counter(0x00_bvec, clock);
+        Register<BVec> counter(8);
+        counter.setReset(0x00_bvec);
         counter += 1_bvec;
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
@@ -218,9 +220,12 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, hcl::core::sim::UnitTestSimulati
     DesignScope design;
     
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
-    
+    ClockScope clockScope(clock);
+
     {
-        Register<BVec> counter(0x00_bvec, clock);
+        Register<BVec> counter(8);
+        counter.setReset(0x00_bvec);
+
         counter += 1_bvec;
         counter += 1_bvec;
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
@@ -243,9 +248,12 @@ BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, hcl::core::sim::UnitTestSimulationFixt
     DesignScope design;
     
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
-    
+    ClockScope clockScope(clock);
+
     {
-        Register<BVec> counter(0x01_bvec, clock);
+        Register<BVec> counter(8);
+        counter.setReset(0x01_bvec);
+
         counter <<= 1;
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
@@ -267,7 +275,7 @@ BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, hcl::core::sim::UnitTestS
     DesignScope design;
     
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
-    
+    ClockScope clockScope(clock);
     {
         Bit condition;
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
@@ -275,7 +283,9 @@ BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, hcl::core::sim::UnitTestS
         }, condition);
 
 
-        Register<BVec> counter(0x00_bvec, clock);
+        Register<BVec> counter(8);
+        counter.setReset(0x00_bvec);
+
         IF (condition)
             counter += 1_bvec;
 

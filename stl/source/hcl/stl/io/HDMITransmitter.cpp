@@ -46,7 +46,9 @@ core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::fronten
         q_m = dataXNOR;
     
     HCL_COMMENT << "Keep a running (signed) counter of the imbalance on the line, to modify future data encodings accordingly";
-    Register<BVec> imbalance(0b0000_bvec, pixelClock);
+    Register<BVec> imbalance;
+    imbalance.setReset(0b0000_bvec);
+    imbalance.setClock(pixelClock);
     HCL_NAMED(imbalance);
     
     core::frontend::BVec result(10);
@@ -158,7 +160,9 @@ core::frontend::BVec tmdsDecodeReduceTransitions(const core::frontend::BVec& dat
 core::frontend::BVec tmdsEncodeBitflip(const core::frontend::Clock& clk, const core::frontend::BVec& data)
 {
     HCL_COMMENT << "count the number of uncompensated ones";
-    Register<BVec> global_counter{ 0b000_bvec, clk };
+    Register<BVec> global_counter{3};
+    global_counter.setClock(clk);
+    global_counter.setReset(0b000_bvec);
     HCL_NAMED(global_counter);
 
     // TODO: depend with and start value on data width
@@ -269,19 +273,19 @@ SerialTMDS hcl::stl::hdmi::TmdsEncoder::serialOutput() const
 {
     // TODO: use shift register/serdes lib for automatic vendor specific serdes usage
 
-    // TODO: create multiplied clock from m_Clk
     Clock fastClk = m_Clk.deriveClock(ClockConfig{}.setFrequencyMultiplier(10).setName("TmdsEncoderFastClock"));
 
-    Register<BVec> chan[] = {
-        {fastClk},
-        {fastClk},
-        {fastClk}
-    };
-
+    Register<BVec> chan[3];
+    chan[0].setClock(fastClk);
+    chan[1].setClock(fastClk);
+    chan[2].setClock(fastClk);
+    
     for (auto& c : chan)
         c = c.delay(1) >> 1;
 
-    Register<BVec> shiftCounter{ 0x0_bvec, fastClk };
+    Register<BVec> shiftCounter(4);
+    shiftCounter.setReset(0x0_bvec);
+    shiftCounter.setClock(fastClk);
     HCL_NAMED(shiftCounter);
     shiftCounter = shiftCounter.delay(1) + 1_bvec;
 

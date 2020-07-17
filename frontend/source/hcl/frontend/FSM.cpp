@@ -17,9 +17,12 @@ namespace hcl::core::frontend::fsm {
 thread_local FSM *FSM::m_fsmContext = nullptr;
     
     
-FSM::FSM(const Clock &clock, const BaseState &startState) : m_stateReg(0x00_bvec, clock)
+FSM::FSM(const Clock &clock, const BaseState &startState) : m_stateReg(8)
 {
     m_fsmContext = this;
+    
+    m_stateReg.setClock(clock);
+    m_stateReg.setReset(0x00_bvec);
     
     m_stateReg = m_stateReg.delay(1);
     m_stateReg.setName("fsm_state");

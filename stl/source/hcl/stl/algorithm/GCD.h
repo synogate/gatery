@@ -8,10 +8,10 @@ namespace hcl::stl
 {
 	using BVecPair = std::pair<core::frontend::BVec, core::frontend::BVec>;
 
-	StreamSource<BVecPair> binaryGCDStep1(core::frontend::RegisterFactory& clk, StreamSink<BVecPair>& in, size_t iterationsPerClock = 1);
-	StreamSource<core::frontend::BVec> shiftLeft(core::frontend::RegisterFactory& clk, StreamSink<BVecPair>& in, size_t iterationsPerClock = 1);
+	StreamSource<BVecPair> binaryGCDStep1(StreamSink<BVecPair>& in, size_t iterationsPerClock = 1);
+	StreamSource<core::frontend::BVec> shiftLeft(StreamSink<BVecPair>& in, size_t iterationsPerClock = 1);
 
-	StreamSource<core::frontend::BVec> binaryGCD(core::frontend::RegisterFactory& clk, StreamSink<BVecPair>& in, size_t iterationsPerClock = 1);
+	StreamSource<core::frontend::BVec> binaryGCD(StreamSink<BVecPair>& in, size_t iterationsPerClock = 1);
 
 
 }

@@ -28,11 +28,7 @@ class Register : public SignalType
         ~Register();
 
         template<typename... Args>
-        Register(const Clock& clock, Args... signalParams);
-
-        template<typename ...Args>
-        Register(const SignalType& resetSignal, const Clock& clock, Args... signalParams);
-        Register(const SignalType& resetSignal, const Clock& clock);
+        explicit Register(Args... signalParams);
 
         Register(const Register<SignalType>& rhs) = delete;
 
@@ -59,7 +55,7 @@ class Register : public SignalType
 
 template<typename SignalType>
 template<typename ...Args>
-inline frontend::Register<SignalType>::Register(const Clock& clock, Args ...signalParams) :
+inline frontend::Register<SignalType>::Register(Args ...signalParams) :
     SignalType{signalParams...},
     m_node{*DesignScope::createNode<hlim::Node_Register>()}
 {
@@ -69,7 +65,7 @@ inline frontend::Register<SignalType>::Register(const Clock& clock, Args ...sign
     m_node.connectInput(hlim::Node_Register::DATA, signalPort);
     // TODO: connect Enable to global ConditionalScope
 
-    setClock(clock);
+    setClock(ClockScope::getClk());
 
     m_delayedSignal = SignalType({ .node = &m_node, .port = 0ull });
 
@@ -80,29 +76,9 @@ inline frontend::Register<SignalType>::Register(const Clock& clock, Args ...sign
 }
 
 template<typename SignalType>
-template<typename ...Args>
-Register<SignalType>::Register(const SignalType& resetSignal, const Clock& clock, Args... signalParams) :
-    Register<SignalType>{clock, signalParams...}
-{
-    setReset(resetSignal);
-}
-
-template<typename SignalType>
 inline Register<SignalType>::~Register()
 {
    // HCL_ASSERT(m_node.getDriver(hlim::Node_Register::DATA).node == SignalType::getNode());
-}
-
-template<typename SignalType>
-inline Register<SignalType>::Register(const SignalType& resetSignal, const Clock& clock) :
-    Register{ resetSignal, clock, resetSignal.getWidth() }
-{
-}
-
-template<>
-inline Register<Bit>::Register(const Bit& resetSignal, const Clock& clock) :
-    Register{ resetSignal, clock, Bit{} }
-{
 }
 
 template<typename SignalType>

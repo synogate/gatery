@@ -17,6 +17,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
     DesignScope design;
     
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    ClockScope clkScp(clock);
     
     auto gcd_ref = [](unsigned a, unsigned b) -> unsigned {
         while (a != b) {
@@ -58,8 +59,10 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             fsm::DelayedState running;
             HCL_NAMED(running);
 
-            Register<BVec> a(0b00000000_bvec, clock);
-            Register<BVec> b(0b00000000_bvec, clock);
+            Register<BVec> a(8);
+            a.setReset(0b00000000_bvec);
+            Register<BVec> b(8);
+            b.setReset(0b00000000_bvec);
 
 #if 0
             // Euclid's gcd
@@ -86,7 +89,8 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             fsm::ImmediateState shifting;
             HCL_NAMED(shifting);
 
-            Register<BVec> d(0b0000_bvec, clock);
+            Register<BVec> d(4);
+            d.setReset(0b0000_bvec);
             
             idle.onActive([&]{
                 IF (start) {
@@ -163,6 +167,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD
     DesignScope design;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    ClockScope clkScp(clock);
 
     auto gcd_ref = [](unsigned a, unsigned b) -> unsigned {
         while (a != b) {
@@ -199,8 +204,10 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD
                 .setComment("Statemachine to compute the GCD of two 8-bit integers.");
 
 
-            Register<BVec> a(0b00000000_bvec, clock);
-            Register<BVec> b(0b00000000_bvec, clock);
+            Register<BVec> a(8);
+            a.setReset(0b00000000_bvec);
+            Register<BVec> b(8);
+            b.setReset(0b00000000_bvec);
 
             IF(start) {
                 a = x_vec;

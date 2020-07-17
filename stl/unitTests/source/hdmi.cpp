@@ -36,8 +36,10 @@ BOOST_FIXTURE_TEST_CASE(tmdsBitflip, hcl::core::sim::UnitTestSimulationFixture)
     DesignScope design;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
-  
-    Register<BVec> test_counter{ 0x00_bvec, clock };
+    ClockScope scope(clock);
+    
+    Register<BVec> test_counter(8);
+    test_counter.setReset(0x00_bvec);
     test_counter += 1_bvec;
 
     BVec encoded = hcl::stl::hdmi::tmdsEncodeBitflip(clock, test_counter.delay(1));

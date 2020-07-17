@@ -3,15 +3,15 @@
 using namespace hcl::core::frontend;
 
 
-hcl::stl::StreamSource<hcl::stl::BVecPair> hcl::stl::binaryGCDStep1(core::frontend::RegisterFactory& clk, StreamSink<BVecPair>& in, size_t iterationsPerClock)
+hcl::stl::StreamSource<hcl::stl::BVecPair> hcl::stl::binaryGCDStep1(StreamSink<BVecPair>& in, size_t iterationsPerClock)
 {
 	const size_t width = in.first.getWidth();
 	StreamSource<BVecPair> out(BVec{ width }, BVec{ width });
 
-	Register<BVec> a{ clk.config(), width };
-	Register<BVec> b{ clk.config(), width };
-	Register<BVec> d{ clk.config(), utils::Log2C(width) };
-	Register<Bit> active{ clk.config() };
+	Register<BVec> a{ width };
+	Register<BVec> b{ width };
+	Register<BVec> d{ utils::Log2C(width) };
+	Register<Bit> active{ };
 	HCL_NAMED(a);
 	HCL_NAMED(b);
 	HCL_NAMED(d);
@@ -65,11 +65,11 @@ hcl::stl::StreamSource<hcl::stl::BVecPair> hcl::stl::binaryGCDStep1(core::fronte
 	return out;
 }
 
-hcl::stl::StreamSource<hcl::core::frontend::BVec> hcl::stl::shiftLeft(core::frontend::RegisterFactory& clk, StreamSink<BVecPair>& in, size_t iterationsPerClock)
+hcl::stl::StreamSource<hcl::core::frontend::BVec> hcl::stl::shiftLeft(StreamSink<BVecPair>& in, size_t iterationsPerClock)
 {
-	Register<BVec> a{ clk.config(), in.first.getWidth() };
-	Register<BVec> b{ clk.config(), in.second.getWidth() };
-	Register<Bit> active{ clk.config() };
+	Register<BVec> a{ in.first.getWidth() };
+	Register<BVec> b{ in.second.getWidth() };
+	Register<Bit> active{ };
 	HCL_NAMED(a);
 	HCL_NAMED(b);
 	HCL_NAMED(active);
@@ -102,14 +102,15 @@ hcl::stl::StreamSource<hcl::core::frontend::BVec> hcl::stl::shiftLeft(core::fron
 	return out;
 }
 
-hcl::stl::StreamSource<hcl::core::frontend::BVec> hcl::stl::binaryGCD(core::frontend::RegisterFactory& clk, StreamSink<BVecPair>& in, size_t iterationsPerClock)
+hcl::stl::StreamSource<hcl::core::frontend::BVec> hcl::stl::binaryGCD(StreamSink<BVecPair>& in, size_t iterationsPerClock)
 {
-	GroupScope entity(hcl::core::hlim::NodeGroup::GRP_ENTITY);
+	GroupScope entity(GroupScope::GroupType::ENTITY);
 	entity
 		.setName("gcd")
 		.setComment("Compute the greatest common divisor of two integers using binary GCD.");
 
-	StreamSink step1 = binaryGCDStep1(clk, in, iterationsPerClock);
-	auto step2 = shiftLeft(clk, step1, iterationsPerClock);
+    StreamSource source = binaryGCDStep1(in, iterationsPerClock);
+	StreamSink<BVecPair> step1 = source;
+	auto step2 = shiftLeft(step1, iterationsPerClock);
 	return step2;
 }
