@@ -96,6 +96,8 @@ class BVec : public ElementarySignal
 
         Bit lsb() const { return (*this)[0]; }
         Bit msb() const { return (*this)[getWidth()-1]; }
+
+        SignalConnector<BVec> getPrimordial() { return ElementarySignal::getPrimordial<BVec>(); }
     protected:
         std::set<BVecSlice*> m_slices;
         friend class BVecSlice;
@@ -104,6 +106,9 @@ class BVec : public ElementarySignal
         virtual hlim::ConnectionType getSignalType(size_t width) const override;
 };
 
+        
+
+inline SignalConnector<BVec> primordial(BVec &bvec) { return bvec.getPrimordial(); }
 
 
 }

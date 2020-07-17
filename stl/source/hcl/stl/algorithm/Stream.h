@@ -14,8 +14,8 @@ namespace hcl::stl
 		StreamSink(const StreamSink&) = delete;
 		StreamSink(StreamSink&&) = default;
 
-		core::frontend::Bit valid = true;
-		core::frontend::Bit ready = true;
+		core::frontend::Bit valid;// = true;
+		core::frontend::Bit ready;// = true;
 	};
 
 	template<typename Payload>
@@ -25,8 +25,8 @@ namespace hcl::stl
 		StreamSource(const StreamSource&) = delete;
 		StreamSource(StreamSource&&) = default;
 
-		core::frontend::Bit valid = true;
-		core::frontend::Bit ready = true;
+		core::frontend::Bit valid;// = true;
+		core::frontend::Bit ready;// = true;
 
 		void operator >> (StreamSink<Payload>& sink);
 	};
@@ -34,8 +34,10 @@ namespace hcl::stl
 	template<typename Payload>
 	void connect(StreamSource<Payload>& source, StreamSink<Payload>& sink)
 	{
-		driveWith(source.ready, sink.ready);
-		driveWith(sink.valid, source.valid);
+        //primordial((Payload&)source) <= (Payload&)sink;
+        (Payload&)sink = (Payload&)source; ///@todo wire in order independent fashion
+        primordial(source.ready) <= sink.ready;
+        primordial(sink.valid) <= source.valid;
 	}
 
 	template<typename Payload>

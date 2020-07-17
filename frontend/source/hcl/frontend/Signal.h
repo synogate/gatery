@@ -1,5 +1,7 @@
 #pragma once
 
+#include "SignalConnector.h"
+
 #include <hcl/hlim/coreNodes/Node_Signal.h>
 #include <hcl/hlim/NodeIO.h>
 #include <hcl/hlim/Node.h>
@@ -55,10 +57,17 @@ class ElementarySignal : public BaseSignal {
         virtual void assign(const ElementarySignal &rhs);
 
         mutable hlim::Node_Signal *m_node = nullptr; 
+        hlim::Node_Signal *m_startNode = nullptr; 
         
         ConditionalScope *m_conditionalScope = nullptr;
 
         virtual hlim::ConnectionType getSignalType(size_t width) const = 0;
+        
+        template<typename FinalType>
+        SignalConnector<FinalType> getPrimordial() {
+            return SignalConnector<FinalType>(m_startNode);
+        }
+
 };
 
 /*

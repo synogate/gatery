@@ -28,6 +28,7 @@ namespace hcl::core::frontend {
 
     Bit::Bit(const Bit &rhs) : ElementarySignal(rhs) {
         assign(rhs);
+m_startNode = rhs.m_startNode;
         m_node->setConnectionType(getSignalType(1));
     }
 
@@ -126,5 +127,4 @@ namespace hcl::core::frontend {
         assign(bool2bit(value));
         return *this;
     }
-
 }

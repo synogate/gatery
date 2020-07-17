@@ -14,6 +14,7 @@ ElementarySignal::ElementarySignal()
 {
     m_node = DesignScope::createNode<hlim::Node_Signal>();    
     m_node->recordStackTrace();
+    m_startNode = m_node;
 }
 
 ElementarySignal::ElementarySignal(const hlim::NodePort &port)
@@ -22,6 +23,7 @@ ElementarySignal::ElementarySignal(const hlim::NodePort &port)
     m_node->recordStackTrace();
     m_node->setConnectionType(port.node->getOutputConnectionType(port.port));
     m_node->connectInput(port);
+    m_startNode = m_node;
 }
 
 ElementarySignal::~ElementarySignal()

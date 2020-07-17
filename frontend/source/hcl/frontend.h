@@ -14,6 +14,7 @@
 #include "frontend/SignalArithmeticOp.h"
 #include "frontend/SignalBitshiftOp.h"
 #include "frontend/SignalCompareOp.h"
+#include "frontend/SignalConnector.h"
 #include "frontend/SignalDelay.h"
 #include "frontend/SignalGenerator.h"
 #include "frontend/SignalLogicOp.h"

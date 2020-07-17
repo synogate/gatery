@@ -160,7 +160,7 @@ core::frontend::BVec tmdsDecodeReduceTransitions(const core::frontend::BVec& dat
 core::frontend::BVec tmdsEncodeBitflip(const core::frontend::Clock& clk, const core::frontend::BVec& data)
 {
     HCL_COMMENT << "count the number of uncompensated ones";
-    Register<BVec> global_counter{3};
+    Register<BVec> global_counter{3ull};
     global_counter.setClock(clk);
     global_counter.setReset(0b000_bvec);
     HCL_NAMED(global_counter);

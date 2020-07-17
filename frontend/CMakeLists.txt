@@ -32,6 +32,8 @@ add_library(hcl_frontend STATIC
     source/hcl/frontend/SignalBitshiftOp.cpp
     source/hcl/frontend/SignalBitshiftOp.h
     source/hcl/frontend/SignalCompareOp.h
+    source/hcl/frontend/SignalConnector.cpp
+    source/hcl/frontend/SignalConnector.h
     source/hcl/frontend/SignalDelay.cpp
     source/hcl/frontend/SignalDelay.h
     source/hcl/frontend/SignalGenerator.cpp
