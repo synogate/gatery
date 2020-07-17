@@ -39,7 +39,7 @@ void XilinxSimpleDualPortBlockRam::connectInput(Input input, const NodePort &por
     switch (input) {
         case WRITE_ADDR:
             HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).interpretation == ConnectionType::BITVEC);
-            HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).width == utils::truncLog2(utils::nextPow2(m_initialData.size() / m_writeDataWidth)));
+            HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).width == utils::Log2C(m_initialData.size() / m_writeDataWidth));
         break;
         case WRITE_DATA:
             HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).interpretation == ConnectionType::BITVEC);
@@ -51,7 +51,7 @@ void XilinxSimpleDualPortBlockRam::connectInput(Input input, const NodePort &por
         break;
         case READ_ADDR:
             HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).interpretation == ConnectionType::BITVEC);
-            HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).width == utils::truncLog2(utils::nextPow2(m_initialData.size() / m_readDataWidth)));
+            HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).width == utils::Log2C(m_initialData.size() / m_readDataWidth));
         break;
         case READ_ENABLE:
             HCL_DESIGNCHECK(port.node->getOutputConnectionType(port.port).interpretation == ConnectionType::BOOL);

@@ -28,7 +28,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, BitCountTest, 
     
     unsigned actualBitCount = hcl::utils::popcount(unsigned(val) & (0xFF >> (8-bitsize)));
     
-    BOOST_REQUIRE(count.getWidth() >= hcl::utils::truncLog2(bitsize)+1);
+    BOOST_REQUIRE(count.getWidth() >= hcl::utils::Log2(bitsize)+1);
     //sim_debug() << "The bitcount of " << a << " should be " << actualBitCount << " and is " << count;
     sim_assert(count == ConstBVec(actualBitCount, count.getWidth())) << "The bitcount of " << a << " should be " << actualBitCount << " but is " << count;
     

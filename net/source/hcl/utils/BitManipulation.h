@@ -28,14 +28,34 @@ namespace hcl::utils {
     using ::std::popcount;
 #endif
 
+template<typename T>
+T Log2(T v)
+{
+    T ret = 0;
+    while (v >>= 1)
+        ++ret;
+    return ret;
+}
+
+template<typename T>
+T Log2C(T v)
+{
+    return Log2(v - 1) + 1;
+}
+
 #ifdef _MSC_VER
-inline unsigned truncLog2(unsigned v) {    
-    return 31-__lzcnt(v);
-}
+template<> inline uint16_t Log2(uint16_t v) { return 15 - __lzcnt16(v); }
+template<> inline uint32_t Log2(uint32_t v) { return 31 - __lzcnt(v); }
+
+# ifdef AMD64
+template<> inline uint64_t Log2(uint64_t v) { return 63 - __lzcnt64(v); }
+# endif
 #else
-inline unsigned truncLog2(unsigned v) {    
-    return 31-__builtin_clz(v);
-}
+template<> inline uint32_t Log2(uint32_t v) { return 31 - __builtin_clz(v); }
+
+# ifdef AMD64
+template<> inline uint64_t Log2(uint64_t v) { return 63 - __builtin_clzll(v); }
+# endif
 #endif
 
 inline unsigned nextPow2(unsigned v) 
