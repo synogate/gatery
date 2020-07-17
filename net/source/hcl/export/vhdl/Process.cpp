@@ -7,6 +7,7 @@
 #include "../../hlim/Clock.h"
 
 #include "../../hlim/coreNodes/Node_Arithmetic.h"
+#include "../../hlim/coreNodes/Node_Clk2Signal.h"
 #include "../../hlim/coreNodes/Node_Compare.h"
 #include "../../hlim/coreNodes/Node_Constant.h"
 #include "../../hlim/coreNodes/Node_Logic.h"
@@ -292,6 +293,11 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
             stream << (b ? '1' : '0');
         }
         stream << sep;
+        return;
+    }
+
+    if (const hlim::Node_Clk2Signal* clk2signal = dynamic_cast<const hlim::Node_Clk2Signal*>(nodePort.node)) {
+        stream << m_namespaceScope.getName(clk2signal->getClocks()[0]);
         return;
     }
 
