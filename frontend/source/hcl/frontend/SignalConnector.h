@@ -41,7 +41,7 @@ void SignalConnector<SignalType>::operator<=(const SignalType &driver)
     HCL_ASSERT_HINT(ConditionalScope::get() == nullptr, "Using driveWith in conditional scopes (IF ELSE) not yet implemented!");
 
     ///@todo global enable mux / conditional scopes
-    m_signalNode->connectInput({.node = driver.getNode(), .port = 0ull}); 
+    m_signalNode->connectInput(driver.getReadPort());
     m_signalNode->moveToGroup(GroupScope::getCurrentNodeGroup());
 }
 

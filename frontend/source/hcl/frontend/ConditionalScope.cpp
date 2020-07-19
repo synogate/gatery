@@ -14,7 +14,7 @@ thread_local std::set<hlim::Node_Multiplexer*> ConditionalScope::m_handoverLastC
 
 ConditionalScope::ConditionalScope(const Bit &condition)
 {
-    m_condition = {.node = condition.getNode(), .port = 0ull};
+    m_condition = condition.getReadPort();
     m_isElsePart = false;
 }
 
@@ -35,7 +35,7 @@ ConditionalScope::~ConditionalScope()
 
 void ConditionalScope::registerConditionalAssignment(ElementarySignal *signal, hlim::NodePort previousOutput)
 {
-    hlim::NodePort conditionalOutput = {.node = signal->getNode(), .port = 0ull};
+    hlim::NodePort conditionalOutput = signal->getReadPort();
     
     // There is a problem here with assigning unconnected signals condtionally. All unconnected signals land in the same "bucket". I need to think about this more.
     HCL_ASSERT(!m_conditional2previousOutput.contains(conditionalOutput));
@@ -59,7 +59,7 @@ void ConditionalScope::unregisterSignal(ElementarySignal *signal)
 void ConditionalScope::buildConditionalMuxes()
 {
     for (auto signal : m_conditionalyAssignedSignals) {
-        hlim::NodePort conditionalOutput = {.node = signal->getNode(), .port = 0ull};
+        hlim::NodePort conditionalOutput = signal->getReadPort();
         auto it = m_conditional2previousOutput.find(conditionalOutput);
         HCL_ASSERT(it != m_conditional2previousOutput.end());
         hlim::NodePort previousOutput = it->second;

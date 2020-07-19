@@ -114,8 +114,8 @@ BVecSlice &BVecSlice::operator=(const ElementarySignal &signal)
     hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(2);
     node->recordStackTrace();
 
-    node->connectInput(0, {.node = m_signal->getNode(), .port = 0ull});
-    node->connectInput(1, {.node = signal.getNode(), .port = 0ull});
+    node->connectInput(0, m_signal->getReadPort());
+    node->connectInput(1, signal.getReadPort());
 
     hlim::Node_Rewire::RewireOperation rewireOp;
     HCL_ASSERT_HINT(m_selection.stride == 1, "Strided slices not yet implemented!");
@@ -157,7 +157,7 @@ BVecSlice &BVecSlice::operator=(const ElementarySignal &signal)
         });
     
     node->setOp(std::move(rewireOp));
-    node->changeOutputType(m_signal->getNode()->getOutputConnectionType(0));    
+    node->changeOutputType(m_signal->getConnType());    
     
     m_signal->operator=(BVec(hlim::NodePort{ .node = node, .port = 0ull }));
     
@@ -168,7 +168,7 @@ BVecSlice::operator BVec() const
 {
     hlim::NodePort currentInput;
     if (m_signal != nullptr) {
-        currentInput = {.node = m_signal->getNode(), .port = 0ull};
+        currentInput = m_signal->getReadPort();
     } else
         currentInput = m_lastSignalNodePort;
     
@@ -205,7 +205,7 @@ BVecSlice::operator BVec() const
 }
 
 void BVecSlice::unregisterSignal() { 
-    m_lastSignalNodePort = {.node = m_signal->getNode(), .port = 0ull};
+    m_lastSignalNodePort = m_signal->getReadPort();
     m_signal = nullptr;
 }
 
@@ -268,7 +268,7 @@ void BVec::setBit(size_t idx, const Bit& in)
     node->recordStackTrace();
 
     node->connectInput(0, { .node = m_node, .port = 0 });
-    node->connectInput(1, { .node = in.getNode(), .port = 0 });
+    node->connectInput(1, in.getReadPort());
 
     hlim::Node_Rewire::RewireOperation rewireOp;
     if (idx != 0)
@@ -355,7 +355,7 @@ BVec BVec::bext(size_t width, const Bit& bit) const
     node->recordStackTrace();
 
     node->connectInput(0, { .node = m_node, .port = 0 });
-    node->connectInput(1, { .node = bit.getNode(), .port = 0 });
+    node->connectInput(1, bit.getReadPort());
 
     hlim::Node_Rewire::RewireOperation rewireOp;
     if (width > 0 && getWidth() > 0)

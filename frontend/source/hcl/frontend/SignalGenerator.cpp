@@ -42,8 +42,8 @@ hlim::Node_SignalGenerator* createSigGenNode(const Clock &refClk, std::vector<co
                 std::vector<hlim::ConnectionType> connectionTypes;
                 connectionTypes.resize(signals.size());
                 for (auto i : utils::Range(signals.size())) {
-                    m_outputNames[i] = signals[i]->getNode()->getName();
-                    connectionTypes[i] = signals[i]->getNode()->getOutputConnectionType(0);
+                    m_outputNames[i] = signals[i]->getName();
+                    connectionTypes[i] = signals[i]->getConnType();
                 }
                 
                 setOutputs(connectionTypes);

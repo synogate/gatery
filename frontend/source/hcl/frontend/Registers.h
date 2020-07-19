@@ -59,7 +59,7 @@ inline frontend::Register<SignalType>::Register(Args ...signalParams) :
     SignalType{signalParams...},
     m_node{*DesignScope::createNode<hlim::Node_Register>()}
 {
-    const core::hlim::NodePort signalPort{ .node = SignalType::getNode(), .port = 0ull };
+    const core::hlim::NodePort signalPort = SignalType::getReadPort();
 
     m_node.recordStackTrace();
     m_node.connectInput(hlim::Node_Register::DATA, signalPort);
@@ -84,14 +84,14 @@ inline Register<SignalType>::~Register()
 template<typename SignalType>
 inline Register<SignalType>& Register<SignalType>::setEnable(const Bit& enableSignal)
 {
-    m_node.connectInput(hlim::Node_Register::ENABLE, { .node = enableSignal.getNode(), .port = 0ull });
+    m_node.connectInput(hlim::Node_Register::ENABLE, enableSignal.getReadPort());
     return *this;
 }
 
 template<typename SignalType>
 inline Register<SignalType>& Register<SignalType>::setReset(const SignalType& resetValue)
 {
-    m_node.connectInput(hlim::Node_Register::RESET_VALUE, { .node = resetValue.getNode(), .port = 0ull });
+    m_node.connectInput(hlim::Node_Register::RESET_VALUE, resetValue.getReadPort());
     m_resetSignal = resetValue;
     return *this;
 }
@@ -122,14 +122,14 @@ inline void Register<SignalType>::assign(const ElementarySignal& value)
 {
     HCL_DESIGNCHECK_HINT(value.getWidth() == SignalType::getWidth(), "Input signals to a register must match it's signal in width");
     SignalType::assign(value);
-    m_node.connectInput(hlim::Node_Register::DATA, { .node = SignalType::getNode(), .port = 0ull });
+    m_node.connectInput(hlim::Node_Register::DATA, SignalType::getReadPort());
 }
 
 template<typename SignalType>
 void Register<SignalType>::assignConditionalScopeMuxOutput(const hlim::NodePort &port, ConditionalScope *parentScope)
 {
     SignalType::assignConditionalScopeMuxOutput(port, parentScope);
-    m_node.connectInput(hlim::Node_Register::DATA, { .node = SignalType::getNode(), .port = 0ull });
+    m_node.connectInput(hlim::Node_Register::DATA, SignalType::getReadPort());
 }
 
 

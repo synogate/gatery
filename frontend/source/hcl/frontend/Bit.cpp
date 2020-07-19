@@ -94,7 +94,7 @@ m_startNode = rhs.m_startNode;
         node->recordStackTrace();
 
         node->connectInput(0, { .node = m_node, .port = 0 });
-        node->connectInput(1, { .node = bit.getNode(), .port = 0 });
+        node->connectInput(1, bit.getReadPort());
 
         hlim::Node_Rewire::RewireOperation rewireOp;
         if (width > 0)

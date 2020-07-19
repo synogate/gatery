@@ -34,18 +34,12 @@ namespace hcl::core::frontend {
 
     template<typename LhsSignalType, typename RhsSignalType>
     Bit SignalCompareOp::create(const LhsSignalType& lhs, const RhsSignalType& rhs) {
-        hlim::Node_Signal* lhsSignal = lhs.getNode();
-        hlim::Node_Signal* rhsSignal = rhs.getNode();
-        HCL_ASSERT(lhsSignal != nullptr);
-        HCL_ASSERT(rhsSignal != nullptr);
-
-        //if constexpr (!utils::isIntegerSignal<SignalType>::value)
-            HCL_DESIGNCHECK_HINT(lhs.getWidth() == rhs.getWidth(), "Signal comparison is needs equal width for non auto extendable types.");
+        HCL_DESIGNCHECK_HINT(lhs.getWidth() == rhs.getWidth(), "Signal comparison is needs equal width for non auto extendable types.");
 
         auto* node = DesignScope::createNode<hlim::Node_Compare>(m_op);
         node->recordStackTrace();
-        node->connectInput(0, { .node = lhsSignal, .port = 0 });
-        node->connectInput(1, { .node = rhsSignal, .port = 0 });
+        node->connectInput(0, lhs.getReadPort());
+        node->connectInput(1, rhs.getReadPort());
 
         return Bit({ .node = node, .port = 0 });
     }

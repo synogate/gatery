@@ -15,7 +15,7 @@ BVec cat(const std::vector<const ElementarySignal*> signals)  {
     op.ranges.resize(signals.size());
     
     for (auto i : utils::Range(signals.size())) {
-        node->connectInput(i, {.node = signals[signals.size()-1-i]->getNode(), .port = 0ull});
+        node->connectInput(i, signals[signals.size() - 1 - i]->getReadPort());
         op.ranges[i].subwidth = signals[signals.size()-1-i]->getWidth();
         op.ranges[i].source = hlim::Node_Rewire::OutputRange::INPUT;
         op.ranges[i].inputIdx = i;
@@ -47,14 +47,14 @@ unsigned SignalTapHelper::addInput(hlim::NodePort nodePort)
 void SignalTapHelper::triggerIf(const Bit &condition)
 {
     HCL_ASSERT_HINT(m_node->getNumInputPorts() == 0, "Condition must be the first input to signal tap!");
-    addInput({.node = condition.getNode(), .port = 0ull});
+    addInput(condition.getReadPort());
     m_node->setTrigger(hlim::Node_SignalTap::TRIG_FIRST_INPUT_HIGH);
 }
 
 void SignalTapHelper::triggerIfNot(const Bit &condition)
 {
     HCL_ASSERT_HINT(m_node->getNumInputPorts() == 0, "Condition must be the first input to signal tap!");
-    addInput({.node = condition.getNode(), .port = 0ull});
+    addInput(condition.getReadPort());
     m_node->setTrigger(hlim::Node_SignalTap::TRIG_FIRST_INPUT_LOW);
 }
 

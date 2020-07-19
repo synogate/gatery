@@ -42,9 +42,12 @@ class ElementarySignal : public BaseSignal {
         
         virtual ~ElementarySignal();
         
-        size_t getWidth() const { return m_node->getOutputConnectionType(0).width; }
+        size_t getWidth() const { return getConnType().width; }
         
-        inline hlim::Node_Signal *getNode() const { return m_node; }
+        inline const hlim::ConnectionType& getConnType() const { hlim::NodePort port = getReadPort(); return port.node->getOutputConnectionType(port.port); }
+        inline hlim::NodePort getReadPort() const { return { .node = m_node, .port = 0ull }; }
+        inline const std::string& getName() const { return m_node->getName(); }
+        inline hlim::Node_Signal *getSignalNode() const { return m_node; }
         virtual void setName(std::string name) override { m_node->setName(std::move(name)); }
         
         virtual void assignConditionalScopeMuxOutput(const hlim::NodePort &port, ConditionalScope *parentScope);

@@ -8,13 +8,12 @@ hlim::ConnectionType SignalBitShiftOp::getResultingType(const hlim::ConnectionTy
 
 
 BVec SignalBitShiftOp::operator()(const BVec &operand) {
-    hlim::Node_Signal *signal = operand.getNode();
-    HCL_ASSERT(signal != nullptr);
+    const size_t width = operand.getWidth();
     
     hlim::Node_Rewire *node = DesignScope::createNode<hlim::Node_Rewire>(1);
     node->recordStackTrace();
     
-    node->changeOutputType(signal->getOutputConnectionType(0));
+    node->changeOutputType(operand.getConnType());
     
     size_t absShift = std::abs(m_shift);
     
@@ -23,9 +22,9 @@ BVec SignalBitShiftOp::operator()(const BVec &operand) {
         HCL_ASSERT_HINT(false, "Not implemented yet!");
     } else {
         if (m_shift < 0) {            
-            if (absShift < signal->getOutputConnectionType(0).width) {
+            if (absShift < width) {
                 rewireOp.ranges.push_back({
-                    .subwidth = signal->getOutputConnectionType(0).width - absShift,
+                    .subwidth = width - absShift,
                     .source = hlim::Node_Rewire::OutputRange::INPUT,
                     .inputIdx = 0,
                     .inputOffset = (size_t) absShift,
@@ -38,7 +37,7 @@ BVec SignalBitShiftOp::operator()(const BVec &operand) {
                         .subwidth = 1,
                         .source = hlim::Node_Rewire::OutputRange::INPUT,
                         .inputIdx = 0,
-                        .inputOffset = signal->getOutputConnectionType(0).width-1,
+                        .inputOffset = width -1,
                     });
                 }
             } else {
@@ -63,9 +62,9 @@ BVec SignalBitShiftOp::operator()(const BVec &operand) {
                     .source = (m_fillLeft? hlim::Node_Rewire::OutputRange::CONST_ONE : hlim::Node_Rewire::OutputRange::CONST_ZERO),
                 });
             }
-            if (absShift < signal->getOutputConnectionType(0).width) {
+            if (absShift < width) {
                 rewireOp.ranges.push_back({
-                    .subwidth = signal->getOutputConnectionType(0).width - absShift,
+                    .subwidth = width - absShift,
                     .source = hlim::Node_Rewire::OutputRange::INPUT,
                     .inputIdx = 0,
                     .inputOffset = 0,
@@ -74,7 +73,7 @@ BVec SignalBitShiftOp::operator()(const BVec &operand) {
         }
     }
     node->setOp(std::move(rewireOp));
-    node->connectInput(0, {.node = signal, .port = 0});
+    node->connectInput(0, operand.getReadPort());
     return BVec({.node = node, .port = 0});
 }
 

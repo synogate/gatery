@@ -22,16 +22,16 @@ template<typename ContainerType>//, typename = std::enable_if_t<utils::isContain
 typename ContainerType::value_type mux(const ElementarySignal &selector, const ContainerType &table)  {      
     hlim::Node_Multiplexer *node = DesignScope::createNode<hlim::Node_Multiplexer>(table.size());
     node->recordStackTrace();
-    node->connectSelector({.node = selector.getNode(), .port = 0ull});
+    node->connectSelector(selector.getReadPort());
 
-    HCL_DESIGNCHECK_HINT(table.size() <= (1ull << selector.getNode()->getOutputConnectionType(0).width), "The number of mux inputs is larger than can be addressed with it's selector input's width!");
+    HCL_DESIGNCHECK_HINT(table.size() <= (1ull << selector.getWidth()), "The number of mux inputs is larger than can be addressed with it's selector input's width!");
     
     const auto &firstSignal = *begin(table);
     
     size_t idx = 0;
     for (const auto &signal : table) {
-        HCL_DESIGNCHECK_HINT(signal.getNode()->getOutputConnectionType(0) == firstSignal.getNode()->getOutputConnectionType(0), "Can only multiplex operands of same type (e.g. width).");
-        node->connectInput(idx, {.node = signal.getNode(), .port = 0ull});
+        HCL_DESIGNCHECK_HINT(signal.getConnType() == firstSignal.getConnType(), "Can only multiplex operands of same type (e.g. width).");
+        node->connectInput(idx, signal.getReadPort());
         idx++;
     }
     
@@ -84,13 +84,12 @@ void driveWith(SignalType &dst, const SignalType &src)  {
     
     HCL_ASSERT_HINT(ConditionalScope::get() == nullptr, "Using driveWith in conditional scopes (IF ELSE) not yet implemented!");
     
-    hlim::Node_Signal *signalNode = dst.getNode();
+    hlim::Node_Signal* signalNode = dst.getSignalNode();
     HCL_ASSERT(signalNode != nullptr);
     
     HCL_DESIGNCHECK_HINT(signalNode->getDriver(0).node == nullptr, "Signal is already being driven.");
-    HCL_ASSERT(src.getNode() != nullptr);
     
-    signalNode->connectInput({.node = src.getNode(), .port = 0ull});
+    signalNode->connectInput(src.getReadPort());
     signalNode->moveToGroup(GroupScope::getCurrentNodeGroup());
 }
 
@@ -155,7 +154,7 @@ class SignalTapHelper
 
         template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>    
         SignalTapHelper &operator<<(const SignalType &signal) {
-            unsigned port = addInput({.node = signal.getNode(), .port = 0ull});
+            unsigned port = addInput(signal.getReadPort());
             m_node->addMessagePart(hlim::Node_SignalTap::FormattedSignal{.inputIdx = port, .format = 0});
             return *this;
         }

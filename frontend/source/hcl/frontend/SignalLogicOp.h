@@ -44,17 +44,12 @@ template<typename SignalType>
 SignalType SignalLogicOp::create(const SignalType &lhs, const SignalType &rhs)
 {
     HCL_DESIGNCHECK_HINT(m_op != hlim::Node_Logic::NOT, "Trying to perform a not operation with two operands.");
-    
-    hlim::Node_Signal *lhsSignal = lhs.getNode();
-    hlim::Node_Signal *rhsSignal = rhs.getNode();
-    HCL_ASSERT(lhsSignal != nullptr);
-    HCL_ASSERT(rhsSignal != nullptr);
-    HCL_DESIGNCHECK_HINT(lhsSignal->getOutputConnectionType(0) == rhsSignal->getOutputConnectionType(0), "Can only perform logic operations on operands of same type (e.g. width).");
+    HCL_DESIGNCHECK_HINT(lhs.getConnType() == lhs.getConnType(), "Can only perform logic operations on operands of same type (e.g. width).");
     
     hlim::Node_Logic *node = DesignScope::createNode<hlim::Node_Logic>(m_op);
     node->recordStackTrace();
-    node->connectInput(0, {.node = lhsSignal, .port = 0ull});
-    node->connectInput(1, {.node = rhsSignal, .port = 0ull});
+    node->connectInput(0, lhs.getReadPort());
+    node->connectInput(1, rhs.getReadPort());
 
     return SignalType({.node = node, .port = 0ull});
 }
@@ -64,12 +59,9 @@ SignalType SignalLogicOp::create(const SignalType &lhs)
 {
     HCL_DESIGNCHECK_HINT(m_op == hlim::Node_Logic::NOT, "Trying to perform a non-not operation with one operand.");
     
-    hlim::Node_Signal *lhsSignal = lhs.getNode();
-    HCL_ASSERT(lhsSignal != nullptr);
-    
     hlim::Node_Logic *node = DesignScope::createNode<hlim::Node_Logic>(m_op);
     node->recordStackTrace();
-    node->connectInput(0, {.node = lhsSignal, .port = 0ull});
+    node->connectInput(0, lhs.getReadPort());
 
     return SignalType({.node = node, .port = 0ull});
 }
