@@ -22,19 +22,17 @@ namespace hcl::core::frontend {
 
     Bit::Bit()
     {
-        HCL_ASSERT(m_node->isOrphaned());
-        m_node->setConnectionType(getSignalType(1));
+        setConnectionType(getSignalType(1));
     }
 
     Bit::Bit(const Bit &rhs) : ElementarySignal(rhs) {
         assign(rhs);
-m_startNode = rhs.m_startNode;
-        m_node->setConnectionType(getSignalType(1));
+        setConnectionType(getSignalType(1));
     }
 
     Bit::Bit(const hlim::NodePort &port) : ElementarySignal(port) 
     { 
-        m_node->setConnectionType(getSignalType(1));    
+        setConnectionType(getSignalType(1));    
     }
 
     Bit::Bit(bool value) : Bit(bool2bit(value)) {
@@ -57,7 +55,7 @@ m_startNode = rhs.m_startNode;
         hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(1);
         node->recordStackTrace();
 
-        node->connectInput(0, { .node = m_node, .port = 0 });
+        node->connectInput(0, getReadPort());
 
         hlim::Node_Rewire::RewireOperation rewireOp;
         if (width > 0)
@@ -93,7 +91,7 @@ m_startNode = rhs.m_startNode;
         hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(2);
         node->recordStackTrace();
 
-        node->connectInput(0, { .node = m_node, .port = 0 });
+        node->connectInput(0, getReadPort());
         node->connectInput(1, bit.getReadPort());
 
         hlim::Node_Rewire::RewireOperation rewireOp;

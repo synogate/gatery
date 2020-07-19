@@ -36,7 +36,7 @@ void setName(T &signal, std::string name) {
     signal.setName(std::move(name));
 }
 
-class ElementarySignal : public BaseSignal {
+    class ElementarySignal : public BaseSignal {
     public:
         using isElementarySignal = void;
         
@@ -58,20 +58,25 @@ class ElementarySignal : public BaseSignal {
         ElementarySignal &operator=(const ElementarySignal&) = delete;
         ElementarySignal &operator=(const ElementarySignal&&) = delete;
         virtual void assign(const ElementarySignal &rhs);
+        virtual hlim::ConnectionType getSignalType(size_t width) const = 0;
+
+        template<typename FinalType>
+        SignalConnector<FinalType> getPrimordial() {
+            return SignalConnector<FinalType>(m_startNode);
+        }
+
+        void setConnectionType(const hlim::ConnectionType& connectionType);
+
+    private:
 
         mutable hlim::Node_Signal *m_node = nullptr; 
         hlim::Node_Signal *m_startNode = nullptr; 
         
         ConditionalScope *m_conditionalScope = nullptr;
 
-        virtual hlim::ConnectionType getSignalType(size_t width) const = 0;
         
-        template<typename FinalType>
-        SignalConnector<FinalType> getPrimordial() {
-            return SignalConnector<FinalType>(m_startNode);
-        }
 
-};
+    };
 
 /*
 hlim::Node_Signal *constructBinaryOperation(hlim::Node::OutputPort *lhs, hlim::Node::OutputPort *rhs, hlim::Node *opNode) {

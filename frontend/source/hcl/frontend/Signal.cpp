@@ -69,6 +69,12 @@ void ElementarySignal::assign(const ElementarySignal &rhs) {
     }
 }
 
+void ElementarySignal::setConnectionType(const hlim::ConnectionType& connectionType)
+{
+    HCL_DESIGNCHECK_HINT(m_node->isOrphaned() || connectionType.width == getWidth(), "Can not resize signal once it is connected (driving or driven).");
+    m_node->setConnectionType(connectionType);
+}
+
 
 /*
     

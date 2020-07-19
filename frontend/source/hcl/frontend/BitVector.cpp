@@ -232,9 +232,7 @@ BVec::BVec(const hlim::NodePort &port) : ElementarySignal(port)
 
 void BVec::resize(size_t width)
 {
-    HCL_DESIGNCHECK_HINT(m_node->isOrphaned(), "Can not resize signal once it is connected (driving or driven).");
-
-    m_node->setConnectionType(getSignalType(width));
+    setConnectionType(getSignalType(width));
 }
 
 Bit BVec::operator[](size_t idx) const
@@ -242,7 +240,7 @@ Bit BVec::operator[](size_t idx) const
     hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(1);
     node->recordStackTrace();
 
-    size_t w = m_node->getOutputConnectionType(0).width;
+    size_t w = getWidth();
     idx = (w + (idx % w)) % w;
 
     hlim::Node_Rewire::RewireOperation rewireOp;
@@ -254,7 +252,7 @@ Bit BVec::operator[](size_t idx) const
         });
     node->setOp(std::move(rewireOp));
 
-    node->connectInput(0, { .node = m_node, .port = 0ull });
+    node->connectInput(0, getReadPort());
     node->changeOutputType({.interpretation = hlim::ConnectionType::BOOL});
 
     return Bit({ .node = node, .port = 0ull });
@@ -267,7 +265,7 @@ void BVec::setBit(size_t idx, const Bit& in)
     hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(2);
     node->recordStackTrace();
 
-    node->connectInput(0, { .node = m_node, .port = 0 });
+    node->connectInput(0, getReadPort());
     node->connectInput(1, in.getReadPort());
 
     hlim::Node_Rewire::RewireOperation rewireOp;
@@ -297,12 +295,8 @@ void BVec::setBit(size_t idx, const Bit& in)
     }
 
     node->setOp(std::move(rewireOp));
-    node->changeOutputType(m_node->getOutputConnectionType(0));    
-
-    m_node = DesignScope::createNode<hlim::Node_Signal>();
-    m_node->recordStackTrace();
-    m_node->setConnectionType(node->getOutputConnectionType(0));
-    m_node->connectInput({ .node = node, .port = 0 });
+    node->changeOutputType(getConnType());
+    assign(BVec{ {.node = node, .port = 0ull } });
 }
 
 
@@ -325,7 +319,7 @@ BVec BVec::zext(size_t width) const
     hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(1);
     node->recordStackTrace();
 
-    node->connectInput(0, { .node = m_node, .port = 0 });
+    node->connectInput(0, getReadPort());
 
     hlim::Node_Rewire::RewireOperation rewireOp;
     if (width > 0 && getWidth() > 0)
@@ -345,7 +339,7 @@ BVec BVec::zext(size_t width) const
     }
 
     node->setOp(std::move(rewireOp));
-    node->changeOutputType(m_node->getOutputConnectionType(0));    
+    node->changeOutputType(getConnType());    
     return BVec(hlim::NodePort{ .node = node, .port = 0ull });
 }
 
@@ -354,7 +348,7 @@ BVec BVec::bext(size_t width, const Bit& bit) const
     hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(2);
     node->recordStackTrace();
 
-    node->connectInput(0, { .node = m_node, .port = 0 });
+    node->connectInput(0, getReadPort());
     node->connectInput(1, bit.getReadPort());
 
     hlim::Node_Rewire::RewireOperation rewireOp;
@@ -376,7 +370,7 @@ BVec BVec::bext(size_t width, const Bit& bit) const
     }
 
     node->setOp(std::move(rewireOp));
-    node->changeOutputType(m_node->getOutputConnectionType(0));    
+    node->changeOutputType(getConnType());    
     return BVec(hlim::NodePort{.node = node, .port = 0ull});
 }
 
