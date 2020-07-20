@@ -1,61 +1,59 @@
 #include "ConditionalScope.h"
 
-#include "Bit.h"
 #include "Signal.h"
+#include "Bit.h"
 
+#include "SignalLogicOp.h"
 
 #include <hcl/hlim/coreNodes/Node_Multiplexer.h>
 
 
 namespace hcl::core::frontend {
 
-thread_local hlim::NodePort ConditionalScope::m_lastCondition;
-thread_local std::set<hlim::Node_Multiplexer*> ConditionalScope::m_handoverLastConditionMultiplexers;
+    thread_local hlim::NodePort ConditionalScope::m_lastCondition;
+
+    thread_local static std::optional<Bit> g_lastConditionBit;
 
 ConditionalScope::ConditionalScope(const Bit &condition)
 {
-    m_condition = condition.getReadPort();
-    m_isElsePart = false;
+    setCondition(condition.getReadPort());
 }
 
 ConditionalScope::ConditionalScope()
 {
-    m_lastConditionMultiplexers = m_handoverLastConditionMultiplexers;
-    m_condition = m_lastCondition;
-    m_isElsePart = true;
+    hlim::Node_Logic* invNode = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::NOT);
+    invNode->connectInput(0, m_lastCondition);
+    setCondition({ .node = invNode, .port = 0ull });
 }
 
 ConditionalScope::~ConditionalScope()
 {
-    buildConditionalMuxes();
     m_lastCondition = m_condition;
-    if (!m_isElsePart)
-        m_handoverLastConditionMultiplexers = m_lastConditionMultiplexers;
+    g_lastConditionBit.reset();
 }
 
-void ConditionalScope::registerConditionalAssignment(ElementarySignal *signal, hlim::NodePort previousOutput)
+const Bit& ConditionalScope::getCurrentCondition()
 {
-    hlim::NodePort conditionalOutput = signal->getReadPort();
-    
-    // There is a problem here with assigning unconnected signals condtionally. All unconnected signals land in the same "bucket". I need to think about this more.
-    HCL_ASSERT(!m_conditional2previousOutput.contains(conditionalOutput));
-    
-    
-    // Check if the previous assignment to this signal was also conditioned on the same (this) condition. If so, directly "forward" to an earlier assignment that was not conditional.
-    auto it = m_conditional2previousOutput.find(previousOutput);
-    if (it != m_conditional2previousOutput.end())
-        previousOutput = it->second;
-    
-    m_conditional2previousOutput[conditionalOutput] = previousOutput;
-    m_conditionalyAssignedSignals.insert(signal);
+    if (!g_lastConditionBit)
+        g_lastConditionBit.emplace(m_lastCondition);
+    return *g_lastConditionBit;
 }
 
-void ConditionalScope::unregisterSignal(ElementarySignal *signal)
+void ConditionalScope::setCondition(hlim::NodePort port)
 {
-    m_conditionalyAssignedSignals.erase(signal);
+    m_condition = port;
+    m_fullCondition = port;
+
+    if (m_parentScope)
+    {
+        hlim::Node_Logic* andNode = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::AND);
+        andNode->connectInput(0, m_condition);
+        andNode->connectInput(1, m_parentScope->m_fullCondition);
+        m_fullCondition = { .node = andNode, .port = 0ull };
+    }
 }
 
-
+#if 0
 void ConditionalScope::buildConditionalMuxes()
 {
     for (auto signal : m_conditionalyAssignedSignals) {
@@ -121,7 +119,7 @@ void ConditionalScope::buildConditionalMuxes()
         }
     }
 }
-
+#endif
 
 
 }

@@ -72,11 +72,11 @@ class BVec : public ElementarySignal
         using ElementarySignal::ElementarySignal;
         using isBitVectorSignal = void;
 
-        BVec();
+        BVec() = default;
         BVec(size_t width);
         BVec(const hlim::NodePort &port);
 
-        BVec(const BVec &rhs) : ElementarySignal(rhs) { assign(rhs); }
+        BVec(const BVec &rhs) : ElementarySignal(rhs.getReadPort()) {}
         ~BVec() { for (auto slice : m_slices) slice->unregisterSignal(); }
 
         BVec zext(size_t width) const;

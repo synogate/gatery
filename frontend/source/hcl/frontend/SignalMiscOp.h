@@ -87,7 +87,7 @@ void driveWith(SignalType &dst, const SignalType &src)  {
     hlim::Node_Signal* signalNode = dst.getSignalNode();
     HCL_ASSERT(signalNode != nullptr);
     
-    HCL_DESIGNCHECK_HINT(signalNode->getDriver(0).node == nullptr, "Signal is already being driven.");
+    //HCL_DESIGNCHECK_HINT(signalNode->getDriver(0).node == nullptr, "Signal is already being driven.");
     
     signalNode->connectInput(src.getReadPort());
     signalNode->moveToGroup(GroupScope::getCurrentNodeGroup());

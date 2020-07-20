@@ -42,40 +42,37 @@ void setName(T &signal, std::string name) {
         
         virtual ~ElementarySignal();
         
-        size_t getWidth() const { return getConnType().width; }
+        size_t getWidth() const { return m_exitNode ? getConnType().width : 0; }
         
         inline const hlim::ConnectionType& getConnType() const { hlim::NodePort port = getReadPort(); return port.node->getOutputConnectionType(port.port); }
-        inline hlim::NodePort getReadPort() const { return { .node = m_node, .port = 0ull }; }
-        inline const std::string& getName() const { return m_node->getName(); }
-        inline hlim::Node_Signal *getSignalNode() const { return m_node; }
-        virtual void setName(std::string name) override { m_node->setName(std::move(name)); }
+        inline hlim::NodePort getReadPort() const { return { .node = m_valueNode, .port = 0ull }; }
+        inline const std::string& getName() const { return m_exitNode->getName(); }
+        inline hlim::Node_Signal *getSignalNode() const { return m_exitNode; }
+        virtual void setName(std::string name) override;
         
-        virtual void assignConditionalScopeMuxOutput(const hlim::NodePort &port, ConditionalScope *parentScope);
     protected:
-        ElementarySignal();
-        ElementarySignal(const ElementarySignal&) = default;
+        ElementarySignal() = default;
+        ElementarySignal(const hlim::ConnectionType& connType);
         ElementarySignal(const hlim::NodePort &port);
         ElementarySignal &operator=(const ElementarySignal&) = delete;
         ElementarySignal &operator=(const ElementarySignal&&) = delete;
+
         virtual void assign(const ElementarySignal &rhs);
         virtual hlim::ConnectionType getSignalType(size_t width) const = 0;
 
         template<typename FinalType>
         SignalConnector<FinalType> getPrimordial() {
-            return SignalConnector<FinalType>(m_startNode);
+            return SignalConnector<FinalType>(m_entryNode);
         }
 
         void setConnectionType(const hlim::ConnectionType& connectionType);
 
     private:
+        void init(const hlim::ConnectionType& connType);
 
-        mutable hlim::Node_Signal *m_node = nullptr; 
-        hlim::Node_Signal *m_startNode = nullptr; 
-        
-        ConditionalScope *m_conditionalScope = nullptr;
-
-        
-
+        hlim::Node_Signal* m_exitNode = nullptr;
+        hlim::Node_Signal* m_entryNode = nullptr;
+        hlim::Node_Signal* m_valueNode = nullptr;
     };
 
 /*

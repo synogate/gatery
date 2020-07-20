@@ -44,7 +44,6 @@ class Register : public SignalType
         
         virtual void setName(std::string name) override;        
 
-        virtual void assignConditionalScopeMuxOutput(const hlim::NodePort &port, ConditionalScope *parentScope) override;
     protected:
         void assign(const ElementarySignal& value) override;
 
@@ -124,14 +123,6 @@ inline void Register<SignalType>::assign(const ElementarySignal& value)
     SignalType::assign(value);
     m_node.connectInput(hlim::Node_Register::DATA, SignalType::getReadPort());
 }
-
-template<typename SignalType>
-void Register<SignalType>::assignConditionalScopeMuxOutput(const hlim::NodePort &port, ConditionalScope *parentScope)
-{
-    SignalType::assignConditionalScopeMuxOutput(port, parentScope);
-    m_node.connectInput(hlim::Node_Register::DATA, SignalType::getReadPort());
-}
-
 
 template<typename SignalType>
 void Register<SignalType>::setName(std::string name)

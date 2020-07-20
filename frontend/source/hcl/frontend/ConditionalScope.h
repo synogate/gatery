@@ -2,45 +2,38 @@
 
 #include "Scope.h"
 
-
 #include <hcl/utils/Traits.h>
 #include <hcl/hlim/coreNodes/Node_PriorityConditional.h>
 
 #include <vector>
 #include <map>
 #include <set>
+#include <optional>
 
 namespace hcl::core::frontend {
     
-class Bit;    
-class ElementarySignal;
+    class Bit;
 
-class ConditionalScope : public BaseScope<ConditionalScope>
-{
-    public:
-        static ConditionalScope *get() { return m_currentScope; }
+    class ConditionalScope : public BaseScope<ConditionalScope>
+    {
+        public:
+            static ConditionalScope *get() { return m_currentScope; }
 
-        ConditionalScope(const Bit &condition);
-        ConditionalScope();
-        ~ConditionalScope();
+            ConditionalScope(const Bit &condition);
+            ConditionalScope();
+            ~ConditionalScope();
 
-        inline const hlim::NodePort &getCondition() { return m_condition; }
-        
-        void registerConditionalAssignment(ElementarySignal *signal, hlim::NodePort previousOutput);
-        void unregisterSignal(ElementarySignal *signal);
-        inline bool isOutputConditional(hlim::NodePort output) { return m_conditional2previousOutput.contains(output); }
-    protected:
-        std::map<hlim::NodePort, hlim::NodePort> m_conditional2previousOutput;
-        std::set<ElementarySignal*> m_conditionalyAssignedSignals;
+            static const Bit& getCurrentCondition();
+            static hlim::NodePort getCurrentConditionPort() { return ConditionalScope::get()->m_fullCondition; }
 
-        bool m_isElsePart;
-        hlim::NodePort m_condition;
-        static thread_local hlim::NodePort m_lastCondition;
-        std::set<hlim::Node_Multiplexer*> m_lastConditionMultiplexers;
-        static thread_local std::set<hlim::Node_Multiplexer*> m_handoverLastConditionMultiplexers;
-        
-        void buildConditionalMuxes();
-};
+        private:
+            void setCondition(hlim::NodePort port);
+
+            hlim::NodePort m_condition;
+            hlim::NodePort m_fullCondition;
+
+            thread_local static hlim::NodePort m_lastCondition;
+    };
 
 
 #define IF(x) \

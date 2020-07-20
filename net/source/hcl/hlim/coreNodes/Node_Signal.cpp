@@ -11,7 +11,9 @@ void Node_Signal::setConnectionType(const ConnectionType &connectionType)
 
 void Node_Signal::connectInput(const NodePort &nodePort)
 {
-    HCL_ASSERT_HINT(nodePort.node->getOutputConnectionType(nodePort.port) == getOutputConnectionType(0), "The connection type of the node that is being connected does not match the connection type of the signal");
+    auto paramType = nodePort.node->getOutputConnectionType(nodePort.port);
+    auto myType = getOutputConnectionType(0);
+    HCL_ASSERT_HINT(paramType == myType, "The connection type of the node that is being connected does not match the connection type of the signal");
     NodeIO::connectInput(0, nodePort);
 }
 

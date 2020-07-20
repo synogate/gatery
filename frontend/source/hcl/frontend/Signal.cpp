@@ -4,91 +4,90 @@
 
 #include <hcl/utils/Exceptions.h>
 #include <hcl/hlim/coreNodes/Node_Signal.h>
+#include <hcl/hlim/coreNodes/Node_Multiplexer.h>
 
 #include <iostream>
 
 namespace hcl::core::frontend {
-
-
-ElementarySignal::ElementarySignal()
-{
-    m_node = DesignScope::createNode<hlim::Node_Signal>();    
-    m_node->recordStackTrace();
-    m_startNode = m_node;
-}
-
-ElementarySignal::ElementarySignal(const hlim::NodePort &port)
-{
-    m_node = DesignScope::createNode<hlim::Node_Signal>();    
-    m_node->recordStackTrace();
-    m_node->setConnectionType(port.node->getOutputConnectionType(port.port));
-    m_node->connectInput(port);
-    m_startNode = m_node;
-}
-
-ElementarySignal::~ElementarySignal()
-{
-    if (m_conditionalScope != nullptr)
-        m_conditionalScope->unregisterSignal(this);
-}
-
-
-void ElementarySignal::assignConditionalScopeMuxOutput(const hlim::NodePort &port, ConditionalScope *parentScope)
-{
-    std::string oldName = m_node->getName();
-    
-    m_node = DesignScope::createNode<hlim::Node_Signal>();    
-    m_node->recordStackTrace();
-    if (port.node != nullptr)
-        m_node->setConnectionType(port.node->getOutputConnectionType(port.port));
-    m_node->connectInput(port);
-    
-    setName(oldName);    
-    m_conditionalScope = parentScope;
-}
-
-void ElementarySignal::assign(const ElementarySignal &rhs) {
-    
-    hlim::NodePort previousOutput = {.node = m_node, .port = 0ull};
-    
-    std::string oldName = m_node->getName();
-    
-    m_node = DesignScope::createNode<hlim::Node_Signal>();    
-    m_node->recordStackTrace();
-    m_node->setConnectionType(rhs.m_node->getOutputConnectionType(0));
-    m_node->connectInput({.node = rhs.m_node, .port = 0});
-    
-    if (oldName.empty())
-        setName(rhs.m_node->getName());
-    else 
-        setName(oldName);
-    
-    if (ConditionalScope::get() != nullptr) {
-        ConditionalScope::get()->registerConditionalAssignment(this, previousOutput);
-        m_conditionalScope = ConditionalScope::get();
+    ElementarySignal::ElementarySignal(const hlim::ConnectionType& connType)
+    {
+        init(connType);
     }
-}
 
-void ElementarySignal::setConnectionType(const hlim::ConnectionType& connectionType)
-{
-    HCL_DESIGNCHECK_HINT(m_node->isOrphaned() || connectionType.width == getWidth(), "Can not resize signal once it is connected (driving or driven).");
-    m_node->setConnectionType(connectionType);
-}
+    ElementarySignal::ElementarySignal(const hlim::NodePort& port)
+    {
+        init(port.node->getOutputConnectionType(port.port));
+        m_entryNode->connectInput(port);
+    }
+
+    ElementarySignal::~ElementarySignal()
+    {
+    }
 
 
-/*
-    
-CompoundSignal &CompoundSignal::operator=(const CompoundSignal &rhs)
-{
-    std::cout << "assignment CompoundSignal:" << getSignalTypeName() << std::endl;
-    return *this;
-}
+    void ElementarySignal::setName(std::string name)
+    {
+        m_entryNode->setName(name);
+        m_valueNode->setName(name);
+        m_exitNode->setName(name);
+    }
 
-void CompoundSignal::registerSignal(const std::string &name, BaseSignal &signal)
-{
-    signal.setName(name);
-    m_subSignals.push_back(&signal);
-}
-*/
+    void ElementarySignal::init(const hlim::ConnectionType& connType)
+    {
+        m_entryNode = DesignScope::createNode<hlim::Node_Signal>();
+        m_entryNode->setConnectionType(connType);
+        m_entryNode->recordStackTrace();
+        m_valueNode = m_entryNode;
+
+        m_exitNode = DesignScope::createNode<hlim::Node_Signal>();
+        m_exitNode->setConnectionType(connType);
+        m_exitNode->recordStackTrace();
+        m_exitNode->connectInput(getReadPort());
+    }
+
+    void ElementarySignal::assign(const ElementarySignal& rhs) {
+
+        if (!m_exitNode)
+            init(rhs.getConnType());
+
+        if (getName().empty())
+            setName(rhs.getName());
+
+        const hlim::NodePort previousOutput = getReadPort();
+
+        m_valueNode = DesignScope::createNode<hlim::Node_Signal>();
+        m_valueNode->recordStackTrace();
+        m_valueNode->setConnectionType(rhs.getConnType());
+        m_valueNode->setName(getName());
+
+        if (ConditionalScope::get() == nullptr)
+        {
+            m_valueNode->connectInput(rhs.getReadPort());
+        }
+        else
+        {
+            hlim::Node_Multiplexer* mux = DesignScope::createNode<hlim::Node_Multiplexer>(2);
+            mux->connectInput(0, previousOutput);
+            mux->connectInput(1, rhs.getReadPort());
+            mux->connectSelector(ConditionalScope::getCurrentConditionPort());
+
+            m_valueNode->connectInput({ .node = mux, .port = 0ull });
+        }
+
+        m_exitNode->connectInput(getReadPort());
+    }
+
+    void ElementarySignal::setConnectionType(const hlim::ConnectionType& connectionType)
+    {
+        if (connectionType.width != getWidth())
+        {
+            HCL_DESIGNCHECK_HINT(m_exitNode->isOrphaned(), "Can not resize signal once it is connected (driving or driven).");
+
+            m_entryNode->setConnectionType(connectionType);
+            m_exitNode->setConnectionType(connectionType);
+        }
+
+        m_valueNode->setConnectionType(connectionType);
+    }
 
 }

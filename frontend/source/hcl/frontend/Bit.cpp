@@ -20,14 +20,11 @@ namespace hcl::core::frontend {
         return Bit({ .node = node, .port = 0ull });
     }
 
-    Bit::Bit()
-    {
-        setConnectionType(getSignalType(1));
-    }
+    Bit::Bit() :
+        ElementarySignal{getSignalType(1)}
+    {}
 
-    Bit::Bit(const Bit &rhs) : ElementarySignal(rhs) {
-        assign(rhs);
-        setConnectionType(getSignalType(1));
+    Bit::Bit(const Bit &rhs) : ElementarySignal(rhs.getReadPort()) {
     }
 
     Bit::Bit(const hlim::NodePort &port) : ElementarySignal(port) 

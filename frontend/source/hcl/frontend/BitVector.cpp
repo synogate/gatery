@@ -213,17 +213,9 @@ void BVecSlice::unregisterSignal() {
 
 
 
-
-
-BVec::BVec()
-{ 
-    resize(0); 
-}
-
-BVec::BVec(size_t width)
-{ 
-    resize(width); 
-}
+BVec::BVec(size_t width) :
+    ElementarySignal(getSignalType(width))
+{}
 
 BVec::BVec(const hlim::NodePort &port) : ElementarySignal(port)
 { 
