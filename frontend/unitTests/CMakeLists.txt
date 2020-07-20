@@ -6,7 +6,7 @@ add_executable(unitTestCore
     source/fsm.cpp
     source/basics.cpp
     source/main.cpp
-)
+ "source/BVecTest.cpp")
 
 target_include_directories (unitTestCore PUBLIC
     ${Boost_INCLUDE_DIRS}

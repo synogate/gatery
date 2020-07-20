@@ -11,6 +11,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <compare>
 
 
 namespace hcl::core::frontend {
@@ -64,6 +65,47 @@ class BVecSlice
         void unregisterSignal();
 };
 
+template<typename TVec>
+class BVecBitProxy
+{
+public:
+    BVecBitProxy(TVec* vec, size_t index) : m_vec{ vec }, m_index{ index } {}
+
+    BVecBitProxy& operator = (const Bit& value) { m_vec->setBit(m_index, value); return *this; }
+    operator Bit () const { return (*(const TVec*)m_vec)[m_index]; };
+
+private:
+    TVec* const m_vec;
+    const size_t m_index;
+};
+
+template<typename TVec>
+class BVecIterator
+{
+public:
+
+public:
+    BVecIterator(TVec* vec, size_t index) : m_vec{vec}, m_index{index} {}
+    BVecIterator(const BVecIterator&) = default;
+
+    BVecIterator& operator ++ () { ++m_index; return *this; }
+    BVecIterator operator ++ (int) { BVecIterator tmp = *this; m_index++; return tmp; }
+    BVecIterator& operator -- () { --m_index; return *this; }
+    BVecIterator operator -- (int) { BVecIterator tmp = *this; m_index--; return tmp; }
+    BVecIterator operator + (size_t offset) const { return { m_vec, m_index + offset }; }
+    BVecIterator operator - (size_t offset) const { return { m_vec, m_index - offset }; }
+    BVecIterator& operator += (size_t offset) { m_index += offset; return *this; }
+    BVecIterator& operator -= (size_t offset) { m_index -= offset; return *this; }
+    ptrdiff_t operator - (const BVecIterator& rhs) const { return ptrdiff_t(m_index) - rhs.m_index; }
+
+    //bool operator != (const BVecIterator&) const = default;
+    auto operator <=> (const BVecIterator& rhs) const = default; // { assert(m_vec == rhs.m_vec); return m_index <=> rhs.m_index; }
+    BVecBitProxy<TVec> operator* () const { return { m_vec, m_index }; }
+
+private:
+    TVec* m_vec;
+    size_t m_index;
+};
 
 class BVec : public ElementarySignal
 {
@@ -92,11 +134,26 @@ class BVec : public ElementarySignal
         virtual void resize(size_t width);
 
         Bit operator[](size_t idx) const;
+        BVecBitProxy<BVec> operator[](size_t idx) { assert(idx < size()); return { this, idx }; }
 
         void setBit(size_t idx, const Bit& in);
 
         Bit lsb() const { return (*this)[0]; }
-        Bit msb() const { return (*this)[getWidth()-1]; }
+        Bit msb() const { return (*this)[size()-1]; }
+
+        bool empty() const { return size() == 0; }
+        size_t size() const { return getWidth(); }
+
+        Bit front() const { return lsb(); }
+        Bit back() const { return msb(); }
+        BVecBitProxy<BVec> front() { return { this, 0 }; }
+        BVecBitProxy<BVec> back() { return { this, size() - 1 }; }
+
+        BVecIterator<BVec> begin() { return { this, 0 }; }
+        BVecIterator<BVec> end() { return { this, size() }; }
+        BVecIterator<const BVec> cbegin() const { return { this, 0 }; }
+        BVecIterator<const BVec> cend() const { return { this, size() }; }
+
     protected:
         BVec(const BVec &rhs, ElementarySignal::InitPrimordial);
         
