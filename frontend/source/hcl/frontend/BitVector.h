@@ -74,6 +74,10 @@ public:
     BVecBitProxy& operator = (const Bit& value) { m_vec->setBit(m_index, value); return *this; }
     operator Bit () const { return (*(const TVec*)m_vec)[m_index]; };
 
+    BVec zext(size_t width) const;
+    BVec sext(size_t width) const;
+    BVec bext(size_t width, const Bit& bit) const;
+
 private:
     TVec* const m_vec;
     const size_t m_index;
@@ -163,5 +167,23 @@ class BVec : public ElementarySignal
 
         virtual hlim::ConnectionType getSignalType(size_t width) const override;
 };
+
+template<typename TVec>
+inline BVec BVecBitProxy<TVec>::zext(size_t width) const
+{
+    return ((Bit)*this).zext(width);
+}
+
+template<typename TVec>
+inline BVec BVecBitProxy<TVec>::sext(size_t width) const
+{
+    return ((Bit)*this).sext(width);
+}
+
+template<typename TVec>
+inline BVec BVecBitProxy<TVec>::bext(size_t width, const Bit& bit) const
+{
+    return ((Bit)*this).bext(width, bit);
+}
 
 }
