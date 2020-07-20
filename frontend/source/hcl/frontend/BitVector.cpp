@@ -211,20 +211,48 @@ void BVecSlice::unregisterSignal() {
 
 
 
-
+BVec::BVec() :
+    ElementarySignal(ElementarySignal::InitInvalid::x)
+{
+}
 
 BVec::BVec(size_t width) :
-    ElementarySignal(getSignalType(width))
-{}
+    ElementarySignal(getSignalType(width), ElementarySignal::InitUnconnected::x)
+{
+    
+}
 
-BVec::BVec(const hlim::NodePort &port) : ElementarySignal(port)
+BVec::BVec(const hlim::NodePort &port) : ElementarySignal(port, ElementarySignal::InitOperation::x)
 { 
     
 }
 
+BVec::BVec(const BVec &rhs) : ElementarySignal(rhs, ElementarySignal::InitCopyCtor::x) 
+{
+    
+}
+
+BVec::BVec(const BVec &rhs, ElementarySignal::InitPrimordial) : ElementarySignal(rhs, ElementarySignal::InitPrimordial::x) 
+{
+    
+}
+
+
+BVec::~BVec() 
+{ 
+    for (auto slice : m_slices) 
+        slice->unregisterSignal(); 
+}
+
+
 void BVec::resize(size_t width)
 {
     setConnectionType(getSignalType(width));
+}
+
+BVec BVec::operator*() const
+{
+    return BVec(*this, ElementarySignal::InitPrimordial::x);
 }
 
 Bit BVec::operator[](size_t idx) const

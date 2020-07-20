@@ -34,10 +34,9 @@ namespace hcl::stl
 	template<typename Payload>
 	void connect(StreamSource<Payload>& source, StreamSink<Payload>& sink)
 	{
-        //primordial((Payload&)source) <= (Payload&)sink;
         (Payload&)sink = (Payload&)source; ///@todo wire in order independent fashion
-        primordial(source.ready) <= sink.ready;
-        primordial(sink.valid) <= source.valid;
+        *source.ready = sink.ready;
+        *sink.valid = source.valid;
 	}
 
 	template<typename Payload>

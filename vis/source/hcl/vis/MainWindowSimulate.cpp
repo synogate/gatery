@@ -366,10 +366,12 @@ void MainWindowSimulate::onNewTick(const core::hlim::Clock *clock)
 
 void MainWindowSimulate::onDebugMessage(const core::hlim::BaseNode *src, std::string msg)
 {
+    m_ui.textEdit_log->append(QString::fromUtf8((std::string("Info '") + src->getName() + "': " + msg).c_str()));
 }
 
 void MainWindowSimulate::onWarning(const core::hlim::BaseNode *src, std::string msg)
 {
+    m_ui.textEdit_log->append(QString::fromUtf8((std::string("Warning '") + src->getName() + "': " + msg).c_str()));
 }
 
 void MainWindowSimulate::onAssert(const core::hlim::BaseNode *src, std::string msg)

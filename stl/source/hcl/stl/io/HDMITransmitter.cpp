@@ -283,7 +283,7 @@ SerialTMDS hcl::stl::hdmi::TmdsEncoder::serialOutput() const
     for (auto& c : chan)
         c = c.delay(1) >> 1;
 
-    Register<BVec> shiftCounter(4);
+    Register<BVec> shiftCounter(4u);
     shiftCounter.setReset(0x0_bvec);
     shiftCounter.setClock(fastClk);
     HCL_NAMED(shiftCounter);

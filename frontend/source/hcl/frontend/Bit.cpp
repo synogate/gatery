@@ -21,19 +21,25 @@ namespace hcl::core::frontend {
     }
 
     Bit::Bit() :
-        ElementarySignal{getSignalType(1)}
+        ElementarySignal{getSignalType(1), ElementarySignal::InitUnconnected::x}
     {}
 
-    Bit::Bit(const Bit &rhs) : ElementarySignal(rhs.getReadPort()) {
+    Bit::Bit(const Bit &rhs) : ElementarySignal(rhs, ElementarySignal::InitCopyCtor::x) 
+    {
     }
 
-    Bit::Bit(const hlim::NodePort &port) : ElementarySignal(port) 
+    Bit::Bit(const hlim::NodePort &port) : ElementarySignal(port, ElementarySignal::InitOperation::x)
     { 
         setConnectionType(getSignalType(1));    
     }
 
     Bit::Bit(bool value) : Bit(bool2bit(value)) {
     }
+    
+    Bit::Bit(const Bit &rhs, ElementarySignal::InitPrimordial) : ElementarySignal(rhs, ElementarySignal::InitPrimordial::x) 
+    {
+    }
+    
 
     hlim::ConnectionType Bit::getSignalType(size_t width) const 
     {
@@ -122,4 +128,10 @@ namespace hcl::core::frontend {
         assign(bool2bit(value));
         return *this;
     }
+    
+    Bit Bit::operator*() const
+    {
+        return Bit(*this, ElementarySignal::InitPrimordial::x);
+    }
+    
 }

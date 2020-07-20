@@ -38,7 +38,7 @@ BOOST_FIXTURE_TEST_CASE(tmdsBitflip, hcl::core::sim::UnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope scope(clock);
     
-    Register<BVec> test_counter(8);
+    Register<BVec> test_counter(8u);
     test_counter.setReset(0x00_bvec);
     test_counter += 1_bvec;
 

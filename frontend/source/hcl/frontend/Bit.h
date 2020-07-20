@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Signal.h"
-#include "SignalConnector.h"
 #include "Scope.h"
 
 #include <hcl/hlim/coreNodes/Node_Signal.h>
@@ -30,12 +29,12 @@ class Bit : public ElementarySignal
         
         Bit& operator=(const Bit &rhs) { assign(rhs); return *this; }
         Bit& operator=(bool value);
-        
-        SignalConnector<Bit> getPrimordial() { return ElementarySignal::getPrimordial<Bit>(); }
+
+        Bit operator*() const;
     protected:
+        Bit(const Bit &rhs, ElementarySignal::InitPrimordial);
+        
         virtual hlim::ConnectionType getSignalType(size_t width) const override;
 };
-
-inline SignalConnector<Bit> primordial(Bit &bit) { return bit.getPrimordial(); }
 
 }

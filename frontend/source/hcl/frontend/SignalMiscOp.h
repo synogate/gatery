@@ -76,24 +76,6 @@ SignalType mux(const SelectorType &selector, const ContainerType &inputs)  {
 }
 #endif
 
-
-
-///@todo overload for compound signals
-template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>    
-void driveWith(SignalType &dst, const SignalType &src)  {
-    
-    HCL_ASSERT_HINT(ConditionalScope::get() == nullptr, "Using driveWith in conditional scopes (IF ELSE) not yet implemented!");
-    
-    hlim::Node_Signal* signalNode = dst.getSignalNode();
-    HCL_ASSERT(signalNode != nullptr);
-    
-    //HCL_DESIGNCHECK_HINT(signalNode->getDriver(0).node == nullptr, "Signal is already being driven.");
-    
-    signalNode->connectInput(src.getReadPort());
-    signalNode->moveToGroup(GroupScope::getCurrentNodeGroup());
-}
-
-
   
 BVec cat(const std::vector<const ElementarySignal*> signals);
 

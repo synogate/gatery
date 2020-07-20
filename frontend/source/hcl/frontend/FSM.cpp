@@ -17,7 +17,7 @@ namespace hcl::core::frontend::fsm {
 thread_local FSM *FSM::m_fsmContext = nullptr;
     
     
-FSM::FSM(const Clock &clock, const BaseState &startState) : m_stateReg(8)
+FSM::FSM(const Clock &clock, const BaseState &startState) : m_stateReg(8u)
 {
     m_fsmContext = this;
     
@@ -42,9 +42,8 @@ FSM::FSM(const Clock &clock, const BaseState &startState) : m_stateReg(8)
         }
     }
     
-    for (auto &pair : m_state2encoding) {
-        driveWith(*pair.second, ConstBVec(m_state2id[pair.first], 8));
-    }
+    for (auto &pair : m_state2encoding)
+        **pair.second = ConstBVec(m_state2id[pair.first], 8);
 }
 
 

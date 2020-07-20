@@ -72,12 +72,11 @@ class BVec : public ElementarySignal
         using ElementarySignal::ElementarySignal;
         using isBitVectorSignal = void;
 
-        BVec() = default;
+        BVec();
         BVec(size_t width);
         BVec(const hlim::NodePort &port);
-
-        BVec(const BVec &rhs) : ElementarySignal(rhs.getReadPort()) {}
-        ~BVec() { for (auto slice : m_slices) slice->unregisterSignal(); }
+        BVec(const BVec &rhs);
+        ~BVec();
 
         BVec zext(size_t width) const;
         BVec sext(size_t width) const { return bext(width, msb()); }
@@ -87,6 +86,8 @@ class BVec : public ElementarySignal
         BVecSlice operator()(const Selection &selection) { return BVecSlice(this, selection); }
 
         BVec &operator=(const BVec &rhs) { assign(rhs); return *this; }
+        
+        BVec operator*() const;
 
         virtual void resize(size_t width);
 
@@ -96,19 +97,14 @@ class BVec : public ElementarySignal
 
         Bit lsb() const { return (*this)[0]; }
         Bit msb() const { return (*this)[getWidth()-1]; }
-
-        SignalConnector<BVec> getPrimordial() { return ElementarySignal::getPrimordial<BVec>(); }
     protected:
+        BVec(const BVec &rhs, ElementarySignal::InitPrimordial);
+        
         std::set<BVecSlice*> m_slices;
         friend class BVecSlice;
         void unregisterSlice(BVecSlice *slice) { m_slices.erase(slice); }
 
         virtual hlim::ConnectionType getSignalType(size_t width) const override;
 };
-
-        
-
-inline SignalConnector<BVec> primordial(BVec &bvec) { return bvec.getPrimordial(); }
-
 
 }
