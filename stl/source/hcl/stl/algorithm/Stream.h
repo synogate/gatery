@@ -35,8 +35,8 @@ namespace hcl::stl
 	void connect(StreamSource<Payload>& source, StreamSink<Payload>& sink)
 	{
         (Payload&)sink = (Payload&)source; ///@todo wire in order independent fashion
-        *source.ready = sink.ready;
-        *sink.valid = source.valid;
+        source.ready = *sink.ready;
+        sink.valid = *source.valid;
 	}
 
 	template<typename Payload>

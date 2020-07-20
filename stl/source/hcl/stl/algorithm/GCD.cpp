@@ -18,7 +18,7 @@ hcl::stl::StreamSource<hcl::stl::BVecPair> hcl::stl::binaryGCDStep1(StreamSink<B
 	HCL_NAMED(active);
 	active.setReset(false);
 
-	*in.ready = !active;
+	in.ready = !active;
 
 	IF(in.valid && in.ready)
 	{
@@ -74,7 +74,7 @@ hcl::stl::StreamSource<hcl::core::frontend::BVec> hcl::stl::shiftLeft(StreamSink
 	HCL_NAMED(b);
 	HCL_NAMED(active);
 	active.setReset(false);
-	*in.ready = !active;
+	in.ready = !active;
 
 	IF(in.valid && in.ready)
 	{

@@ -30,9 +30,9 @@ class Bit : public ElementarySignal
         Bit& operator=(const Bit &rhs) { assign(rhs); return *this; }
         Bit& operator=(bool value);
 
-        Bit operator*() const;
+        const Bit operator*() const;
     protected:
-        Bit(const Bit &rhs, ElementarySignal::InitPrimordial);
+        Bit(const Bit &rhs, ElementarySignal::InitSuccessor);
         
         virtual hlim::ConnectionType getSignalType(size_t width) const override;
 };

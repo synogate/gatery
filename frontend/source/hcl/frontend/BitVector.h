@@ -129,7 +129,7 @@ class BVec : public ElementarySignal
 
         BVec &operator=(const BVec &rhs) { assign(rhs); return *this; }
         
-        BVec operator*() const;
+        const BVec operator*() const;
 
         virtual void resize(size_t width);
 
@@ -155,7 +155,7 @@ class BVec : public ElementarySignal
         BVecIterator<const BVec> cend() const { return { this, size() }; }
 
     protected:
-        BVec(const BVec &rhs, ElementarySignal::InitPrimordial);
+        BVec(const BVec &rhs, ElementarySignal::InitSuccessor);
         
         std::set<BVecSlice*> m_slices;
         friend class BVecSlice;

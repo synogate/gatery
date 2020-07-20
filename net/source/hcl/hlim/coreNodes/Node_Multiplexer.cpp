@@ -6,7 +6,8 @@ namespace hcl::core::hlim {
 void Node_Multiplexer::connectInput(size_t operand, const NodePort &port) 
 { 
     NodeIO::connectInput(1+operand, port); 
-    setOutputConnectionType(0, port.node->getOutputConnectionType(port.port)); 
+    if (port.node != nullptr)
+        setOutputConnectionType(0, port.node->getOutputConnectionType(port.port)); 
 }
 
 void Node_Multiplexer::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const

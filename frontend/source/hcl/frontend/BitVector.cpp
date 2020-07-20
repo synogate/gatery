@@ -232,7 +232,7 @@ BVec::BVec(const BVec &rhs) : ElementarySignal(rhs, ElementarySignal::InitCopyCt
     
 }
 
-BVec::BVec(const BVec &rhs, ElementarySignal::InitPrimordial) : ElementarySignal(rhs, ElementarySignal::InitPrimordial::x) 
+BVec::BVec(const BVec &rhs, ElementarySignal::InitSuccessor) : ElementarySignal(rhs, ElementarySignal::InitSuccessor::x) 
 {
     
 }
@@ -250,9 +250,9 @@ void BVec::resize(size_t width)
     setConnectionType(getSignalType(width));
 }
 
-BVec BVec::operator*() const
+const BVec BVec::operator*() const
 {
-    return BVec(*this, ElementarySignal::InitPrimordial::x);
+    return BVec(*this, ElementarySignal::InitSuccessor::x);
 }
 
 Bit BVec::operator[](size_t idx) const

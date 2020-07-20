@@ -22,18 +22,18 @@ namespace hcl::core::frontend {
     ElementarySignal::ElementarySignal(const hlim::NodePort& port, InitOperation)
     {
         init(port.node->getOutputConnectionType(port.port));
-        m_entryNode->connectInput(port);
+        m_node->connectInput(port);
     }
 
     ElementarySignal::ElementarySignal(const ElementarySignal& rhs, InitCopyCtor)
     {
         init(rhs.getConnType());
-        m_entryNode->connectInput(rhs.getReadPort());
+        m_node->connectInput(rhs.getReadPort());
     }
     
-    ElementarySignal::ElementarySignal(const ElementarySignal& successor, InitPrimordial)
+    ElementarySignal::ElementarySignal(const ElementarySignal& ancestor, InitSuccessor)
     {
-        initPrimordial(successor);
+        initSuccessor(ancestor);
     }
 
     ElementarySignal::~ElementarySignal()
@@ -42,97 +42,52 @@ namespace hcl::core::frontend {
 
     void ElementarySignal::setName(std::string name)
     {
-#if 1
-        m_entryNode->setName(name+"_entry");
-        m_valueNode->setName(name+"_value");
-        m_exitNode->setName(name+"_exit");
-#else
-        m_entryNode->setName(name);
-        m_valueNode->setName(name);
-        m_exitNode->setName(name);
-#endif
+        m_node->setName(name);
     }
 
     void ElementarySignal::init(const hlim::ConnectionType& connType)
     {
-        m_entryNode = DesignScope::createNode<hlim::Node_Signal>();
-        m_entryNode->setConnectionType(connType);
-        m_entryNode->recordStackTrace();
-        m_valueNode = m_entryNode;
-
-        m_exitNode = DesignScope::createNode<hlim::Node_Signal>();
-        m_exitNode->setConnectionType(connType);
-        m_exitNode->recordStackTrace();
-        m_exitNode->connectInput(getReadPort());
+        m_node = DesignScope::createNode<hlim::Node_Signal>();
+        m_node->setConnectionType(connType);
+        m_node->recordStackTrace();
     }
 
-    void ElementarySignal::initPrimordial(const ElementarySignal& successor)
+    void ElementarySignal::initSuccessor(const ElementarySignal& ancestor)
     {
-        HCL_DESIGNCHECK_HINT(successor.m_entryNode != nullptr, "Can not dereference (create primordial signals of) bit vectors which aren't inialized (e.g. have no size)!");
-        
-        init(successor.getConnType());
+        init(ancestor.getConnType());
 
-        auto oldDriver = successor.m_entryNode->getDriver(0);
-        
-        if (ConditionalScope::get() == nullptr || oldDriver.node == nullptr)
-        {
-            successor.m_entryNode->connectInput({.node = m_exitNode, .port = 0});
-        }
-        else
-        {
-            hlim::Node_Multiplexer* mux = DesignScope::createNode<hlim::Node_Multiplexer>(2);
-            mux->connectInput(0, oldDriver);
-            mux->connectInput(1, {.node = m_exitNode, .port = 0});
-            mux->connectSelector(ConditionalScope::getCurrentConditionPort());
-
-            successor.m_entryNode->connectInput({ .node = mux, .port = 0ull });
-        }
-        
+        m_node->connectInput({.node = ancestor.m_node, .port = 0});
     }
 
     void ElementarySignal::assign(const ElementarySignal& rhs) {
 
-        if (!m_exitNode)
+        if (!m_node)
             init(rhs.getConnType());
 
         if (getName().empty())
             setName(rhs.getName());
 
-        const hlim::NodePort previousOutput = getReadPort();
-
-        m_valueNode = DesignScope::createNode<hlim::Node_Signal>();
-        m_valueNode->recordStackTrace();
-        m_valueNode->setConnectionType(rhs.getConnType());
-        m_valueNode->setName(getName());
-
         if (ConditionalScope::get() == nullptr)
         {
-            m_valueNode->connectInput(rhs.getReadPort());
+            m_node->connectInput(rhs.getReadPort());
         }
         else
         {
             hlim::Node_Multiplexer* mux = DesignScope::createNode<hlim::Node_Multiplexer>(2);
-            mux->connectInput(0, previousOutput);
-            mux->connectInput(1, rhs.getReadPort());
+            mux->connectInput(0, getReadPort());
+            mux->connectInput(1, rhs.getReadPort()); // assign rhs last in case previous port was undefined
             mux->connectSelector(ConditionalScope::getCurrentConditionPort());
 
-            m_valueNode->connectInput({ .node = mux, .port = 0ull });
+            m_node->connectInput({ .node = mux, .port = 0ull });
         }
-
-        m_exitNode->connectInput(getReadPort());
     }
 
     void ElementarySignal::setConnectionType(const hlim::ConnectionType& connectionType)
     {
         if (connectionType.width != getWidth())
-        {
-            HCL_DESIGNCHECK_HINT(m_exitNode->isOrphaned(), "Can not resize signal once it is connected (driving or driven).");
+            HCL_DESIGNCHECK_HINT(m_node->isOrphaned(), "Can not resize signal once it is connected (driving or driven).");
 
-            m_entryNode->setConnectionType(connectionType);
-            m_exitNode->setConnectionType(connectionType);
-        }
-
-        m_valueNode->setConnectionType(connectionType);
+        m_node->setConnectionType(connectionType);
     }
 
 }

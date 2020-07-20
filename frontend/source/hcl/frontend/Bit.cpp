@@ -36,7 +36,7 @@ namespace hcl::core::frontend {
     Bit::Bit(bool value) : Bit(bool2bit(value)) {
     }
     
-    Bit::Bit(const Bit &rhs, ElementarySignal::InitPrimordial) : ElementarySignal(rhs, ElementarySignal::InitPrimordial::x) 
+    Bit::Bit(const Bit &rhs, ElementarySignal::InitSuccessor) : ElementarySignal(rhs, ElementarySignal::InitSuccessor::x) 
     {
     }
     
@@ -129,9 +129,9 @@ namespace hcl::core::frontend {
         return *this;
     }
     
-    Bit Bit::operator*() const
+    const Bit Bit::operator*() const
     {
-        return Bit(*this, ElementarySignal::InitPrimordial::x);
+        return Bit(*this, ElementarySignal::InitSuccessor::x);
     }
     
 }

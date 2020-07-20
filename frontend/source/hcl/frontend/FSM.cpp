@@ -36,14 +36,14 @@ FSM::FSM(const Clock &clock, const BaseState &startState) : m_stateReg(8u)
         m_currentState = m_unhandledStates.back();
         m_unhandledStates.pop_back();
 
-        IF (m_stateReg.delay(1) == *m_state2encoding[m_currentState]) {
+        IF (m_stateReg.delay(1) == **m_state2encoding[m_currentState]) {
             if (m_currentState->m_onActive)
                 m_currentState->m_onActive();
         }
     }
     
     for (auto &pair : m_state2encoding)
-        **pair.second = ConstBVec(m_state2id[pair.first], 8);
+        *pair.second = ConstBVec(m_state2id[pair.first], 8);
 }
 
 
@@ -56,7 +56,7 @@ void FSM::delayedSwitch(const BaseState &nextState)
         m_fsmContext->m_state2id[&nextState] = m_fsmContext->m_nextStateId++;
     }    
     
-    m_fsmContext->m_stateReg = *m_fsmContext->m_state2encoding[&nextState];
+    m_fsmContext->m_stateReg = **m_fsmContext->m_state2encoding[&nextState];
     if (m_fsmContext->m_currentState->m_onExit)
         m_fsmContext->m_currentState->m_onExit();
 }
@@ -77,7 +77,7 @@ void FSM::immediateSwitch(const ImmediateState &nextState)
         m_fsmContext->m_state2id[&nextState] = m_fsmContext->m_nextStateId++;
     }
     
-    m_fsmContext->m_stateReg = *m_fsmContext->m_state2encoding[&nextState];
+    m_fsmContext->m_stateReg = **m_fsmContext->m_state2encoding[&nextState];
     if (m_fsmContext->m_currentState->m_onExit)
         m_fsmContext->m_currentState->m_onExit();
     m_fsmContext->m_currentState = &nextState;
@@ -88,7 +88,7 @@ void FSM::immediateSwitch(const ImmediateState &nextState)
 Bit FSM::isInState(const BaseState &state) 
 {
     HCL_DESIGNCHECK_HINT(m_state2encoding.contains(&state), "State is unreachable in this FSM!");
-    return m_stateReg.delay(1) == *m_state2encoding[&state];
+    return m_stateReg.delay(1) == **m_state2encoding[&state];
 }
 
 void delayedSwitch(const DelayedState &nextState)

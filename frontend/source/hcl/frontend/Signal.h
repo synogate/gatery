@@ -40,17 +40,17 @@ namespace hcl::core::frontend {
         
         virtual ~ElementarySignal();
         
-        size_t getWidth() const { return m_exitNode ? getConnType().width : 0; }
+        size_t getWidth() const { return m_node ? getConnType().width : 0; }
         
-        inline const hlim::ConnectionType& getConnType() const { hlim::NodePort port = getReadPort(); return port.node->getOutputConnectionType(port.port); }
-        inline hlim::NodePort getReadPort() const { return { .node = m_valueNode, .port = 0ull }; }
-        inline const std::string& getName() const { return m_exitNode->getName(); }
-        inline hlim::Node_Signal *getSignalNode() const { return m_exitNode; }
+        inline const hlim::ConnectionType& getConnType() const { return m_node->getOutputConnectionType(0); }
+        inline hlim::NodePort getReadPort() const { return m_node==nullptr?hlim::NodePort{}:m_node->getDriver(0); }
+        inline const std::string& getName() const { return m_node->getName(); }
+        //inline hlim::Node_Signal *getSignalNode() const { return m_node; }
         virtual void setName(std::string name) override;
         
     protected:
         enum class InitInvalid { x };
-        enum class InitPrimordial { x };
+        enum class InitSuccessor { x };
         enum class InitCopyCtor { x };
         enum class InitOperation { x };
         enum class InitUnconnected { x };
@@ -59,7 +59,7 @@ namespace hcl::core::frontend {
         ElementarySignal(const hlim::ConnectionType& connType, InitUnconnected);
         ElementarySignal(const hlim::NodePort &port, InitOperation);
         ElementarySignal(const ElementarySignal& rhs, InitCopyCtor);
-        ElementarySignal(const ElementarySignal& successor, InitPrimordial);
+        ElementarySignal(const ElementarySignal& ancestor, InitSuccessor);
         
         ElementarySignal &operator=(const ElementarySignal&) = delete;
         ElementarySignal &operator=(const ElementarySignal&&) = delete;
@@ -69,13 +69,12 @@ namespace hcl::core::frontend {
 
         void setConnectionType(const hlim::ConnectionType& connectionType);
         
-        void initPrimordial(const ElementarySignal& successor);
+        void initSuccessor(const ElementarySignal& ancestor);
+
+        hlim::Node_Signal* m_node = nullptr;
     private:
         void init(const hlim::ConnectionType& connType);
 
-        hlim::Node_Signal* m_exitNode = nullptr;
-        hlim::Node_Signal* m_entryNode = nullptr;
-        hlim::Node_Signal* m_valueNode = nullptr;
     };
 
 }
