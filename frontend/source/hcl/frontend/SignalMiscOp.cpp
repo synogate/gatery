@@ -7,7 +7,7 @@
 namespace hcl::core::frontend {
 
     
-BVec cat(const std::vector<const ElementarySignal*> signals)  {
+BVec cat(const std::vector<SignalPort>& signals)  {
     hlim::Node_Rewire *node = DesignScope::createNode<hlim::Node_Rewire>(signals.size());
     node->recordStackTrace();
     
@@ -15,8 +15,8 @@ BVec cat(const std::vector<const ElementarySignal*> signals)  {
     op.ranges.resize(signals.size());
     
     for (auto i : utils::Range(signals.size())) {
-        node->connectInput(i, signals[signals.size() - 1 - i]->getReadPort());
-        op.ranges[i].subwidth = signals[signals.size()-1-i]->getWidth();
+        node->connectInput(i, signals[signals.size() - 1 - i].getReadPort());
+        op.ranges[i].subwidth = signals[signals.size()-1-i].getWidth();
         op.ranges[i].source = hlim::Node_Rewire::OutputRange::INPUT;
         op.ranges[i].inputIdx = i;
         op.ranges[i].inputOffset = 0;

@@ -15,17 +15,19 @@ namespace hcl::core::frontend
 	class SignalPort
 	{
 	public:
-		void setPort(hlim::NodePort port) { m_port = port; HCL_ASSERT(m_port.node); }
+		void setPort(hlim::NodePort port) { m_port = port; }
+		void setConnType(const hlim::ConnectionType& type) { m_connType = type; }
 		void setName(std::string_view name) { m_name = name; }
 
 		std::string_view getName() const { return m_name; }
 
 		size_t getWidth() const { return getConnType().width; }
-		const hlim::ConnectionType& getConnType() const { return m_port.node->getOutputConnectionType(m_port.port); }
+		const hlim::ConnectionType& getConnType() const { return m_connType; }
 		const hlim::NodePort& getReadPort() const { return m_port; }
 
 	private:
 		hlim::NodePort m_port;
+		hlim::ConnectionType m_connType;
 		std::string_view m_name;
 	};
 

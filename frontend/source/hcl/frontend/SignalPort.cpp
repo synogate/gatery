@@ -16,6 +16,7 @@ hcl::core::frontend::BitSignalPort::BitSignalPort(bool bit) :
 hcl::core::frontend::BitSignalPort::BitSignalPort(const Bit& bit)
 {
 	setPort(bit.getReadPort());
+	setConnType(bit.getConnType());
 	setName(bit.getName());
 }
 
@@ -37,6 +38,7 @@ hcl::core::frontend::BVecSignalPort::BVecSignalPort(std::string_view vec) :
 hcl::core::frontend::BVecSignalPort::BVecSignalPort(const BVec& vec)
 {
 	setPort(vec.getReadPort());
+	setConnType(vec.getConnType());
 	setName(vec.getName());
 }
 

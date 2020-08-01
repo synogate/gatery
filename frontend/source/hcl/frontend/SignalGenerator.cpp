@@ -30,20 +30,20 @@ void SimpleSignalGeneratorContext::set(size_t output, std::uint64_t value, std::
 }
     
     
-hlim::Node_SignalGenerator* createSigGenNode(const Clock &refClk, std::vector<const ElementarySignal*> &signals, const std::function<void(SimpleSignalGeneratorContext &context)> &genCallback)
+hlim::Node_SignalGenerator* createSigGenNode(const Clock &refClk, std::vector<SignalPort> &signals, const std::function<void(SimpleSignalGeneratorContext &context)> &genCallback)
 {
     class SigGenNode : public hlim::Node_SignalGenerator
     {
         public:
-            SigGenNode(hlim::Clock *clk, std::vector<const ElementarySignal*> &signals, const std::function<void(SimpleSignalGeneratorContext &context)> &genCallback) : 
+            SigGenNode(hlim::Clock *clk, std::vector<SignalPort> &signals, const std::function<void(SimpleSignalGeneratorContext &context)> &genCallback) :
                                         hlim::Node_SignalGenerator(clk), m_genCallback(genCallback) {
                 
                 m_outputNames.resize(signals.size());
                 std::vector<hlim::ConnectionType> connectionTypes;
                 connectionTypes.resize(signals.size());
                 for (auto i : utils::Range(signals.size())) {
-                    m_outputNames[i] = signals[i]->getName();
-                    connectionTypes[i] = signals[i]->getConnType();
+                    m_outputNames[i] = std::string{ signals[i].getName() };
+                    connectionTypes[i] = signals[i].getConnType();
                 }
                 
                 setOutputs(connectionTypes);
