@@ -16,150 +16,69 @@
 
 namespace hcl::core::frontend {
     
-class SignalLogicOp
-{
-    public:
-        SignalLogicOp(hlim::Node_Logic::Op op) : m_op(op) { }
-        
-        hlim::ConnectionType getResultingType(const hlim::ConnectionType &lhs, const hlim::ConnectionType &rhs);
-        
-        BVec operator()(const BVec &lhs, const BVec &rhs) { return create(lhs, rhs); }
-        Bit operator()(const Bit &lhs, const Bit &rhs) { return create(lhs, rhs); }
 
-        BVec operator()(const BVec &operand) { return create(operand); }
-        Bit operator()(const Bit &operand) { return create(operand); }
+    hlim::NodePort makeNode(hlim::Node_Logic::Op op, const SignalPort& in);
+    hlim::NodePort makeNode(hlim::Node_Logic::Op op, const SignalPort& lhs, const SignalPort& rhs);
+    hlim::NodePort makeNodeEqWidth(hlim::Node_Logic::Op op, const SignalPort& lhs, const BitSignalPort& rhs);
 
-        inline hlim::Node_Logic::Op getOp() const { return m_op; }
-    protected:
-        hlim::Node_Logic::Op m_op;
-        
-        template<typename SignalType>
-        SignalType create(const SignalType &lhs, const SignalType &rhs);
-        
-        template<typename SignalType>
-        SignalType create(const SignalType &lhs);
-};
+    // and, or, xor, not are c++ keywords so use l prefix for Logic, b for bitwise
+    inline BVec land(BVecSignalPort lhs, BVecSignalPort rhs) { return makeNode(hlim::Node_Logic::AND, lhs, rhs); }
+    inline BVec lnand(BVecSignalPort lhs, BVecSignalPort rhs) { return makeNode(hlim::Node_Logic::NAND, lhs, rhs); }
+    inline BVec lor(BVecSignalPort lhs, BVecSignalPort rhs) { return makeNode(hlim::Node_Logic::OR, lhs, rhs); }
+    inline BVec lnor(BVecSignalPort lhs, BVecSignalPort rhs) { return makeNode(hlim::Node_Logic::NOR, lhs, rhs); }
+    inline BVec lxor(BVecSignalPort lhs, BVecSignalPort rhs) { return makeNode(hlim::Node_Logic::XOR, lhs, rhs); }
+    inline BVec lxnor(BVecSignalPort lhs, BVecSignalPort rhs) { return makeNode(hlim::Node_Logic::EQ, lhs, rhs); }
+    inline BVec lnot(BVecSignalPort lhs) { return makeNode(hlim::Node_Logic::NOT, lhs); }
 
-template<typename SignalType>
-SignalType SignalLogicOp::create(const SignalType &lhs, const SignalType &rhs)
-{
-    HCL_DESIGNCHECK_HINT(m_op != hlim::Node_Logic::NOT, "Trying to perform a not operation with two operands.");
-    HCL_DESIGNCHECK_HINT(lhs.getConnType() == lhs.getConnType(), "Can only perform logic operations on operands of same type (e.g. width).");
-    
-    hlim::Node_Logic *node = DesignScope::createNode<hlim::Node_Logic>(m_op);
-    node->recordStackTrace();
-    node->connectInput(0, lhs.getReadPort());
-    node->connectInput(1, rhs.getReadPort());
+    inline BVec operator & (BVecSignalPort lhs, BVecSignalPort rhs) { return land(lhs, rhs); }
+    inline BVec operator | (BVecSignalPort lhs, BVecSignalPort rhs) { return lor(lhs, rhs); }
+    inline BVec operator ^ (BVecSignalPort lhs, BVecSignalPort rhs) { return lxor(lhs, rhs); }
+    inline BVec operator ~ (BVecSignalPort lhs) { return lnot(lhs); }
 
-    return SignalType({.node = node, .port = 0ull});
-}
-
-template<typename SignalType>
-SignalType SignalLogicOp::create(const SignalType &lhs)
-{
-    HCL_DESIGNCHECK_HINT(m_op == hlim::Node_Logic::NOT, "Trying to perform a non-not operation with one operand.");
-    
-    hlim::Node_Logic *node = DesignScope::createNode<hlim::Node_Logic>(m_op);
-    node->recordStackTrace();
-    node->connectInput(0, lhs.getReadPort());
-
-    return SignalType({.node = node, .port = 0ull});
-}
+    template<typename SignalType> SignalType& operator &= (SignalType& lhs, BVecSignalPort rhs) { return lhs = land(lhs, rhs); }
+    template<typename SignalType> SignalType& operator |= (SignalType& lhs, BVecSignalPort rhs) { return lhs = lor(lhs, rhs); }
+    template<typename SignalType> SignalType& operator ^= (SignalType& lhs, BVecSignalPort rhs) { return lhs = lxor(lhs, rhs); }
 
 
 
-#define HCL_BUILD_LOGIC_OPERATOR(cppOp, Op)                           \
-    inline BVec cppOp(const BVec &lhs, const BVec &rhs) {                    \
-        SignalLogicOp op(Op);                                         \
-        return op(lhs, rhs);                                          \
-    }                                                                 \
-    inline BVec cppOp(const Bit &lhs, const BVec &rhs) {                     \
-        SignalLogicOp op(Op);                                         \
-        return op(lhs.sext(rhs.getWidth()), rhs);                     \
-    }                                                                 \
-    inline BVec cppOp(const BVec &lhs, const Bit &rhs) {                     \
-        SignalLogicOp op(Op);                                         \
-        return op(lhs, rhs.sext(lhs.getWidth()));                     \
-    }                                                                 \
-    inline Bit cppOp(const Bit &lhs, const Bit &rhs) {                       \
-        SignalLogicOp op(Op);                                         \
-        return op(lhs, rhs);                                          \
-    }                                                                 \
+    inline Bit land(BitSignalPort lhs, BitSignalPort rhs) { return makeNode(hlim::Node_Logic::AND, lhs, rhs); }
+    inline Bit lnand(BitSignalPort lhs, BitSignalPort rhs) { return makeNode(hlim::Node_Logic::NAND, lhs, rhs); }
+    inline Bit lor(BitSignalPort lhs, BitSignalPort rhs) { return makeNode(hlim::Node_Logic::OR, lhs, rhs); }
+    inline Bit lnor(BitSignalPort lhs, BitSignalPort rhs) { return makeNode(hlim::Node_Logic::NOR, lhs, rhs); }
+    inline Bit lxor(BitSignalPort lhs, BitSignalPort rhs) { return makeNode(hlim::Node_Logic::XOR, lhs, rhs); }
+    inline Bit lxnor(BitSignalPort lhs, BitSignalPort rhs) { return makeNode(hlim::Node_Logic::EQ, lhs, rhs); }
+    inline Bit lnot(BitSignalPort lhs) { return makeNode(hlim::Node_Logic::NOT, lhs); }
 
-#define HCL_BUILD_LOGIC_OPERATOR_UNARY(cppOp, Op)                      \
-    inline BVec cppOp(const BVec &lhs)  {                                     \
-        SignalLogicOp op(Op);                                          \
-        return op(lhs);                                                \
-    }                                                                  \
-    inline Bit cppOp(const Bit &lhs)  {                                       \
-        SignalLogicOp op(Op);                                          \
-        return op(lhs);                                                \
-    }
+    inline Bit operator & (BitSignalPort lhs, BitSignalPort rhs) { return land(lhs, rhs); }
+    inline Bit operator | (BitSignalPort lhs, BitSignalPort rhs) { return lor(lhs, rhs); }
+    inline Bit operator ^ (BitSignalPort lhs, BitSignalPort rhs) { return lxor(lhs, rhs); }
+    inline Bit operator ~ (BitSignalPort lhs) { return lnot(lhs); }
+    inline Bit operator ! (BitSignalPort lhs) { return lnot(lhs); }
 
-#define HCL_BUILD_LOGIC_OPERATOR_BIT_ONLY(cppOp, Op)                  \
-    inline Bit cppOp(const Bit &lhs, const Bit &rhs) {                       \
-        SignalLogicOp op(Op);                                         \
-        return op(lhs, rhs);                                          \
-    }                                                                 \
-
-#define HCL_BUILD_LOGIC_OPERATOR_UNARY_BIT_ONLY(cppOp, Op)             \
-    inline Bit cppOp(const Bit &lhs)  {                                       \
-        SignalLogicOp op(Op);                                          \
-        return op(lhs);                                                \
-    }
-
-    
-HCL_BUILD_LOGIC_OPERATOR(operator&, hlim::Node_Logic::AND)
-HCL_BUILD_LOGIC_OPERATOR(operator|, hlim::Node_Logic::OR)
-HCL_BUILD_LOGIC_OPERATOR(operator^, hlim::Node_Logic::XOR)
-HCL_BUILD_LOGIC_OPERATOR_UNARY(operator~, hlim::Node_Logic::NOT)
-
-HCL_BUILD_LOGIC_OPERATOR(nand, hlim::Node_Logic::NAND)
-HCL_BUILD_LOGIC_OPERATOR(nor, hlim::Node_Logic::NOR)
-HCL_BUILD_LOGIC_OPERATOR(bitwiseEqual, hlim::Node_Logic::EQ)
-    
-HCL_BUILD_LOGIC_OPERATOR_BIT_ONLY(operator&&, hlim::Node_Logic::AND)
-HCL_BUILD_LOGIC_OPERATOR_BIT_ONLY(operator||, hlim::Node_Logic::OR)
-HCL_BUILD_LOGIC_OPERATOR_UNARY_BIT_ONLY(operator!, hlim::Node_Logic::NOT)
-
-#undef HCL_BUILD_LOGIC_OPERATOR
-#undef HCL_BUILD_LOGIC_OPERATOR_BIT_ONLY
-#undef HCL_BUILD_LOGIC_OPERATOR_UNARY
-#undef HCL_BUILD_LOGIC_OPERATOR_UNARY_BIT_ONLY
+    inline Bit& operator &= (Bit& lhs, BitSignalPort rhs) { return lhs = land(lhs, rhs); }
+    inline Bit& operator |= (Bit& lhs, BitSignalPort rhs) { return lhs = lor(lhs, rhs); }
+    inline Bit& operator ^= (Bit& lhs, BitSignalPort rhs) { return lhs = lxor(lhs, rhs); }
 
 
-#define HCL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(typeTrait, cppOp, Op)                               \
-    inline BVec &cppOp(BVec &lhs, const BVec &rhs)  {                                           \
-        SignalLogicOp op(Op);                                                                   \
-        return lhs = op(lhs, rhs);                                                              \
-    }                                                                                           \
-    inline BVec &cppOp(BVec &lhs, const Bit &rhs)  {                                            \
-        SignalLogicOp op(Op);                                                                   \
-        return lhs = op(lhs, rhs.sext(lhs.getWidth()));                                         \
-    }                                                                                           \
-    inline Bit &cppOp(Bit &lhs, const Bit &rhs)  {                                              \
-        SignalLogicOp op(Op);                                                                   \
-        return lhs = op(lhs, rhs);                                                              \
-    }                                                                                           \
-    template<typename SignalType>                                                               \
-    inline Register<SignalType> &cppOp(Register<SignalType> &lhs, const BVec &rhs)  {           \
-        SignalLogicOp op(Op);                                                                   \
-        return lhs = op(lhs, rhs);                                                              \
-    }                                                                                           \
-    inline void cppOp(BVecSlice &&lhs, const BVec &rhs)  {                                        \
-        SignalLogicOp op(Op);                                                                   \
-        lhs = op(lhs, rhs);                                                                           \
-    }                                                                                           \
-    inline void cppOp(BVecSlice &&lhs, const Bit &rhs)  {                                         \
-        SignalLogicOp op(Op);                                                                   \
-        lhs = op(lhs, rhs.sext(lhs.size()));                                                          \
-    } 
 
-HCL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(utils::isElementarySignal, operator&=, hlim::Node_Logic::AND)
-HCL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(utils::isElementarySignal, operator|=, hlim::Node_Logic::OR)
-HCL_BUILD_LOGIC_ASSIGNMENT_OPERATOR(utils::isElementarySignal, operator^=, hlim::Node_Logic::XOR)
+    inline BVec band(BVecSignalPort lhs, BitSignalPort rhs) { return makeNodeEqWidth(hlim::Node_Logic::AND, lhs, rhs); }
+    inline BVec bnand(BVecSignalPort lhs, BitSignalPort rhs) { return makeNodeEqWidth(hlim::Node_Logic::NAND, lhs, rhs); }
+    inline BVec bor(BVecSignalPort lhs, BitSignalPort rhs) { return makeNodeEqWidth(hlim::Node_Logic::OR, lhs, rhs); }
+    inline BVec bnor(BVecSignalPort lhs, BitSignalPort rhs) { return makeNodeEqWidth(hlim::Node_Logic::NOR, lhs, rhs); }
+    inline BVec bxor(BVecSignalPort lhs, BitSignalPort rhs) { return makeNodeEqWidth(hlim::Node_Logic::XOR, lhs, rhs); }
+    inline BVec bxnor(BVecSignalPort lhs, BitSignalPort rhs) { return makeNodeEqWidth(hlim::Node_Logic::EQ, lhs, rhs); }
 
-#undef HCL_BUILD_LOGIC_ASSIGNMENT_OPERATOR
+
+    inline BVec operator & (BVecSignalPort lhs, BitSignalPort rhs) { return band(lhs, rhs); }
+    inline BVec operator | (BVecSignalPort lhs, BitSignalPort rhs) { return bor(lhs, rhs); }
+    inline BVec operator ^ (BVecSignalPort lhs, BitSignalPort rhs) { return bxor(lhs, rhs); }
+    inline BVec operator & (BitSignalPort rhs, BVecSignalPort lhs) { return band(lhs, rhs); }
+    inline BVec operator | (BitSignalPort rhs, BVecSignalPort lhs) { return bor(lhs, rhs); }
+    inline BVec operator ^ (BitSignalPort rhs, BVecSignalPort lhs) { return bxor(lhs, rhs); }
+
+    inline BVec& operator &= (BVec& lhs, BitSignalPort rhs) { return lhs = band(lhs, rhs); }
+    inline BVec& operator |= (BVec& lhs, BitSignalPort rhs) { return lhs = bor(lhs, rhs); }
+    inline BVec& operator ^= (BVec& lhs, BitSignalPort rhs) { return lhs = bxor(lhs, rhs); }
 
 
 

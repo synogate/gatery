@@ -36,6 +36,7 @@ namespace hcl::core::frontend
 		BitSignalPort(bool);
 		BitSignalPort(const Bit&);
 		BitSignalPort(const BVecBitProxy<BVec>&);
+		BitSignalPort(const BVecBitProxy<const BVec>&);
 	};
 
 	class BVecSignalPort : public SignalPort

@@ -106,18 +106,18 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
                 } ELSE {
                     Bit a_odd = a[0];
                     Bit b_odd = b[0];
-                    IF (!a_odd && !b_odd) {
+                    IF (!a_odd & !b_odd) {
                         a >>= 1;
                         b >>= 1;
                         d += 1_bvec;
                     } 
-                    IF (!a_odd && b_odd) {
+                    IF (!a_odd & b_odd) {
                         a >>= 1;
                     }
-                    IF (a_odd && !b_odd) {
+                    IF (a_odd & !b_odd) {
                         b >>= 1;
                     }
-                    IF (a_odd && b_odd) {
+                    IF (a_odd & b_odd) {
                         IF (a < b) {
                             BVec help = a;
                             a = b;
@@ -152,9 +152,9 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             context.set(0, context.getTick());
         }, ticks);
         
-        sim_assert((ticks < ConstBVec(maxTicks-1, 8)) || done) << "The state machine should be idle after " << maxTicks << " cycles";
+        sim_assert((ticks < ConstBVec(maxTicks-1, 8)) | done) << "The state machine should be idle after " << maxTicks << " cycles";
         BVec gtruth = ConstBVec(gcd_ref(x, y), 8);
-        sim_assert((ticks < ConstBVec(maxTicks-1, 8)) || (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
+        sim_assert((ticks < ConstBVec(maxTicks-1, 8)) | (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
     }
 
     runTicks(design.getCircuit(), clock.getClk(), maxTicks);
@@ -236,9 +236,9 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD
             context.set(0, context.getTick());
             }, ticks);
 
-        sim_assert((ticks < ConstBVec(maxTicks - 1, 8)) || done) << "The state machine should be idle after " << maxTicks << " cycles";
+        sim_assert((ticks < ConstBVec(maxTicks - 1, 8)) | done) << "The state machine should be idle after " << maxTicks << " cycles";
         BVec gtruth = ConstBVec(gcd_ref(x, y), 8);
-        sim_assert((ticks < ConstBVec(maxTicks - 1, 8)) || (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
+        sim_assert((ticks < ConstBVec(maxTicks - 1, 8)) | (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
     }
 
     runTicks(design.getCircuit(), clock.getClk(), maxTicks);

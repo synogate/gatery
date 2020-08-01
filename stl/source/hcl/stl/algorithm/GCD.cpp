@@ -20,7 +20,7 @@ hcl::stl::StreamSource<hcl::stl::BVecPair> hcl::stl::binaryGCDStep1(StreamSink<B
 
 	in.ready = !active;
 
-	IF(in.valid && in.ready)
+	IF(in.valid & in.ready)
 	{
 		a = in.first;
 		b = in.second;
@@ -40,10 +40,10 @@ hcl::stl::StreamSource<hcl::stl::BVecPair> hcl::stl::binaryGCDStep1(StreamSink<B
 			IF(!b_odd)
 				b >>= 1;
 
-			IF(!a_odd && !b_odd)
+			IF(!a_odd & !b_odd)
 				d += 1_bvec;
 
-			IF(a_odd && b_odd)
+			IF(a_odd & b_odd)
 			{
 				BVec abs = cat(0b0_bvec, a) - cat(0b0_bvec, b);
 				a = mux(abs.msb(), { (BVec&)a, (BVec&)b }); // TODO: (BVec&) cast?
@@ -55,11 +55,11 @@ hcl::stl::StreamSource<hcl::stl::BVecPair> hcl::stl::binaryGCDStep1(StreamSink<B
 		
 	}
 
-	out.valid = active && a == b;
+	out.valid = active & a == b;
 	out.first = a;
 	out.second = b;
 
-	IF(out.valid && out.ready)
+	IF(out.valid & out.ready)
 		active = false;
 
 	return out;
@@ -76,7 +76,7 @@ hcl::stl::StreamSource<hcl::core::frontend::BVec> hcl::stl::shiftLeft(StreamSink
 	active.setReset(false);
 	in.ready = !active;
 
-	IF(in.valid && in.ready)
+	IF(in.valid & in.ready)
 	{
 		a = in.first;
 		b = in.second;
@@ -93,10 +93,10 @@ hcl::stl::StreamSource<hcl::core::frontend::BVec> hcl::stl::shiftLeft(StreamSink
 	}
 
 	StreamSource<BVec> out{ in.first.getWidth() };
-	out.valid = active && b != 0_bvec;
+	out.valid = active & b != 0_bvec;
 	(BVec&)out = a;
 
-	IF(out.valid && out.ready)
+	IF(out.valid & out.ready)
 		active = false;
 
 	return out;

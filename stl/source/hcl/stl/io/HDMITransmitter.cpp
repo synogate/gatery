@@ -129,7 +129,7 @@ core::frontend::BVec tmdsEncodeReduceTransitions(const core::frontend::BVec& dat
     // TODO: rename getWidth to size to be more container like
     // TODO: allow compare of different bit width
     BVec literalConstant = (4_bvec).zext(sumOfOnes.getWidth());
-    Bit invert = sumOfOnes > literalConstant || (sumOfOnes == literalConstant && data[0] == false);
+    Bit invert = sumOfOnes > literalConstant | (sumOfOnes == literalConstant & data[0] == false);
 
     BVec tmdsReduced{ data.getWidth() + 1 };
     HCL_NAMED(tmdsReduced);
@@ -219,7 +219,7 @@ void TmdsEncoder::addSync(const core::frontend::Bit& hsync, const core::frontend
         setSync(true, false);
     IF(vsync)
         setSync(false, true);
-    IF(hsync && vsync)
+    IF(hsync & vsync)
         setSync(true, true);
 }
 

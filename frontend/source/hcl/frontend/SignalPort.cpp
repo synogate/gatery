@@ -24,6 +24,11 @@ hcl::core::frontend::BitSignalPort::BitSignalPort(const BVecBitProxy<BVec>& bit)
 {
 }
 
+hcl::core::frontend::BitSignalPort::BitSignalPort(const BVecBitProxy<const BVec>& bit) :
+	BitSignalPort(Bit{ bit })
+{
+}
+
 hcl::core::frontend::BVecSignalPort::BVecSignalPort(std::string_view vec) :
 	BVecSignalPort(ConstBVec(vec))
 {
