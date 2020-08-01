@@ -658,3 +658,43 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, UnsignedCompar
 
     eval(design.getCircuit());
 }
+
+BOOST_FIXTURE_TEST_CASE(BitSignalPortSyntax, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    auto func = [](BitSignalPort port) { return Bit{ port.getReadPort() }; };
+
+    Bit in = ConstBit('1');
+
+    sim_assert(func('1') == in);
+    sim_assert(func(true) == in);
+    sim_assert(func(in) == in);
+
+    BVec test = ConstBVec(1, 4);
+    sim_assert(func(test[0]) == in);
+    sim_assert(func(test[1]) != in);
+
+    eval(design.getCircuit());
+}
+
+BOOST_FIXTURE_TEST_CASE(BVecSignalPortSyntax, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    auto func = [](BVecSignalPort port) { return BVec{ port.getReadPort() }; };
+
+    BVec in = ConstBVec(5, 3);
+
+    sim_assert(func(5) == in);
+    sim_assert(func(in) == in);
+
+    BVec test = ConstBVec(13, 5);
+    sim_assert(func(test(0,3)) == in);
+
+    eval(design.getCircuit());
+}
