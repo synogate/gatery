@@ -29,11 +29,6 @@ hcl::core::frontend::BVecSignalPort::BVecSignalPort(std::string_view vec) :
 {
 }
 
-hcl::core::frontend::BVecSignalPort::BVecSignalPort(uint64_t vec) :
-	BVecSignalPort(ConstBVec(vec))
-{
-}
-
 hcl::core::frontend::BVecSignalPort::BVecSignalPort(const BVec& vec)
 {
 	setPort(vec.getReadPort());

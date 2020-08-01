@@ -698,3 +698,29 @@ BOOST_FIXTURE_TEST_CASE(BVecSignalPortSyntax, hcl::core::sim::UnitTestSimulation
 
     eval(design.getCircuit());
 }
+
+BOOST_FIXTURE_TEST_CASE(BVecArithmeticOpSyntax, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    BVec in = ConstBVec(5, 3);
+    BVec res = in + 5;
+    in - 5;
+    in * 5;
+    in / 5;
+    in % 5;
+    
+    in += 2;
+    in -= 1;
+    in *= 2;
+    in /= 2;
+    in %= 3;
+
+    in + '1';
+    in - true;
+    in += '0';
+    in -= false;
+
+}

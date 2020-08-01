@@ -18,65 +18,38 @@
 
 namespace hcl::core::frontend {
 
-class SignalArithmeticOp
-{
-    public:
-        SignalArithmeticOp(hlim::Node_Arithmetic::Op op) : m_op(op) { }
-        
-        BVec operator()(const BVec &lhs, const BVec &rhs);
 
-        inline hlim::Node_Arithmetic::Op getOp() const { return m_op; }
-    protected:
-        hlim::Node_Arithmetic::Op m_op;
-        
-};
+    hlim::NodePort makeNode(hlim::Node_Arithmetic op, BVecSignalPort lhs, BVecSignalPort rhs);
 
+    inline BVec add(BVecSignalPort lhs, BVecSignalPort rhs) { return makeNode(hlim::Node_Arithmetic::ADD, lhs, rhs); }
+    inline BVec sub(BVecSignalPort lhs, BVecSignalPort rhs) { return makeNode(hlim::Node_Arithmetic::SUB, lhs, rhs); }
+    inline BVec mul(BVecSignalPort lhs, BVecSignalPort rhs) { return makeNode(hlim::Node_Arithmetic::MUL, lhs, rhs); }
+    inline BVec div(BVecSignalPort lhs, BVecSignalPort rhs) { return makeNode(hlim::Node_Arithmetic::DIV, lhs, rhs); }
+    inline BVec rem(BVecSignalPort lhs, BVecSignalPort rhs) { return makeNode(hlim::Node_Arithmetic::REM, lhs, rhs); }
 
-#define HCL_BUILD_ARITHMETIC_OPERATOR(cppOp, Op)                                    \
-    inline BVec cppOp(const BVec &lhs, const BVec &rhs)  {                          \
-        SignalArithmeticOp op(Op);                                                  \
-        return op(lhs, rhs);                                                        \
-    }                                                                               \
+    inline BVec add(BVecSignalPort lhs, BitSignalPort rhs) { BVec r{ 1 }; r.setBit(0, rhs); return makeNode(hlim::Node_Arithmetic::ADD, lhs, r); }
+    inline BVec sub(BVecSignalPort lhs, BitSignalPort rhs) { BVec r{ 1 }; r.setBit(0, rhs); return makeNode(hlim::Node_Arithmetic::SUB, lhs, r); }
+    inline BVec add(BitSignalPort lhs, BVecSignalPort rhs) { BVec l{ 1 }; l.setBit(0, lhs); return makeNode(hlim::Node_Arithmetic::ADD, l, rhs); }
+    inline BVec sub(BitSignalPort lhs, BVecSignalPort rhs) { BVec l{ 1 }; l.setBit(0, lhs); return makeNode(hlim::Node_Arithmetic::SUB, l, rhs); }
+
+    inline BVec operator + (BVecSignalPort lhs, BVecSignalPort rhs) { return add(lhs, rhs); }
+    inline BVec operator - (BVecSignalPort lhs, BVecSignalPort rhs) { return sub(lhs, rhs); }
+    inline BVec operator * (BVecSignalPort lhs, BVecSignalPort rhs) { return mul(lhs, rhs); }
+    inline BVec operator / (BVecSignalPort lhs, BVecSignalPort rhs) { return div(lhs, rhs); }
+    inline BVec operator % (BVecSignalPort lhs, BVecSignalPort rhs) { return rem(lhs, rhs); }
     
-// add_ext for add extend    
-    
-HCL_BUILD_ARITHMETIC_OPERATOR(add, hlim::Node_Arithmetic::ADD)
-HCL_BUILD_ARITHMETIC_OPERATOR(operator+, hlim::Node_Arithmetic::ADD)
-HCL_BUILD_ARITHMETIC_OPERATOR(sub, hlim::Node_Arithmetic::SUB)
-HCL_BUILD_ARITHMETIC_OPERATOR(operator-, hlim::Node_Arithmetic::SUB)
-HCL_BUILD_ARITHMETIC_OPERATOR(mul, hlim::Node_Arithmetic::MUL)
-HCL_BUILD_ARITHMETIC_OPERATOR(operator*, hlim::Node_Arithmetic::MUL)
-HCL_BUILD_ARITHMETIC_OPERATOR(div, hlim::Node_Arithmetic::DIV)
-HCL_BUILD_ARITHMETIC_OPERATOR(operator/, hlim::Node_Arithmetic::DIV)
-HCL_BUILD_ARITHMETIC_OPERATOR(rem, hlim::Node_Arithmetic::REM)
-HCL_BUILD_ARITHMETIC_OPERATOR(operator%, hlim::Node_Arithmetic::REM)
+    inline BVec operator + (BVecSignalPort lhs, BitSignalPort rhs) { return add(lhs, rhs); }
+    inline BVec operator - (BVecSignalPort lhs, BitSignalPort rhs) { return sub(lhs, rhs); }
+    inline BVec operator + (BitSignalPort lhs, BVecSignalPort rhs) { return add(lhs, rhs); }
+    inline BVec operator - (BitSignalPort lhs, BVecSignalPort rhs) { return sub(lhs, rhs); }
 
-#undef HCL_BUILD_ARITHMETIC_OPERATOR
+    template<typename SignalType> SignalType& operator += (SignalType& lhs, BVecSignalPort rhs) { return lhs = add(lhs, rhs); }
+    template<typename SignalType> SignalType& operator -= (SignalType& lhs, BVecSignalPort rhs) { return lhs = sub(lhs, rhs); }
+    template<typename SignalType> SignalType& operator *= (SignalType& lhs, BVecSignalPort rhs) { return lhs = mul(lhs, rhs); }
+    template<typename SignalType> SignalType& operator /= (SignalType& lhs, BVecSignalPort rhs) { return lhs = div(lhs, rhs); }
+    template<typename SignalType> SignalType& operator %= (SignalType& lhs, BVecSignalPort rhs) { return lhs = rem(lhs, rhs); }
 
-
-#define HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(typeTrait, cppOp, Op)                          \
-    inline BVec &cppOp(BVec &lhs, const BVec &rhs)  {                                           \
-        SignalArithmeticOp op(Op);                                                              \
-        return lhs = op(lhs, rhs);                                                              \
-    }                                                                                           \
-    template<typename SignalType>                                                               \
-    inline Register<SignalType> &cppOp(Register<SignalType> &lhs, const BVec &rhs)  {           \
-        SignalArithmeticOp op(Op);                                                              \
-        return lhs = op(lhs, rhs);                                                              \
-    }                                                                                           \
-    inline void cppOp(BVecSlice &&lhs, const BVec &rhs)  {                                        \
-        SignalArithmeticOp op(Op);                                                              \
-        lhs = op(lhs, rhs);                                                                           \
-    } 
-    
-
-    
-HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isBitVectorSignalLike, operator+=, hlim::Node_Arithmetic::ADD)
-HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isBitVectorSignalLike, operator-=, hlim::Node_Arithmetic::SUB)
-HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isBitVectorSignalLike, operator*=, hlim::Node_Arithmetic::MUL)
-HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isBitVectorSignalLike, operator/=, hlim::Node_Arithmetic::DIV)
-HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR(utils::isBitVectorSignalLike, operator%=, hlim::Node_Arithmetic::REM)
-    
-#undef HCL_BUILD_ARITHMETIC_ASSIGNMENT_OPERATOR
+    template<typename SignalType> SignalType& operator += (SignalType& lhs, BitSignalPort rhs) { return lhs = add(lhs, rhs); }
+    template<typename SignalType> SignalType& operator -= (SignalType& lhs, BitSignalPort rhs) { return lhs = sub(lhs, rhs); }
 
 }

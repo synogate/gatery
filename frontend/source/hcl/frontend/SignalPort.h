@@ -3,6 +3,7 @@
 #include <hcl/hlim/NodeIO.h>
 
 #include <string_view>
+#include <type_traits>
 
 namespace hcl::core::frontend
 {
@@ -41,9 +42,11 @@ namespace hcl::core::frontend
 	{
 	public:
 		BVecSignalPort(std::string_view);
-		BVecSignalPort(uint64_t);
 		BVecSignalPort(const BVec&);
 		BVecSignalPort(const BVecSlice&);
+
+		template <typename U = uint64_t, typename = std::enable_if_t<std::is_integral_v<U> & !std::is_same_v<U, char> & !std::is_same_v<U, bool>> >
+		BVecSignalPort(U vec) : BVecSignalPort(ConstBVec(vec)) {}
 	};
 
 }

@@ -122,10 +122,12 @@ class BVec : public ElementarySignal
         using isBitVectorSignal = void;
 
         BVec();
-        BVec(size_t width);
         BVec(const hlim::NodePort &port);
         BVec(BVecSignalPort rhs);
         BVec(const BVec& rhs) : BVec{ BVecSignalPort{rhs} } {}
+
+        explicit BVec(size_t width);
+
         ~BVec();
 
         BVec zext(size_t width) const;
