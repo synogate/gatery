@@ -1,6 +1,7 @@
 #include "Signal.h"
 #include "Scope.h"
 #include "ConditionalScope.h"
+#include "SignalPort.h"
 
 #include <hcl/utils/Exceptions.h>
 #include <hcl/hlim/coreNodes/Node_Signal.h>
@@ -25,7 +26,7 @@ namespace hcl::core::frontend {
         m_node->connectInput(port);
     }
 
-    ElementarySignal::ElementarySignal(const ElementarySignal& rhs, InitCopyCtor)
+    ElementarySignal::ElementarySignal(const SignalPort& rhs, InitCopyCtor)
     {
         init(rhs.getConnType());
         m_node->connectInput(rhs.getReadPort());
@@ -59,13 +60,13 @@ namespace hcl::core::frontend {
         m_node->connectInput({.node = ancestor.m_node, .port = 0});
     }
 
-    void ElementarySignal::assign(const ElementarySignal& rhs) {
+    void ElementarySignal::assign(const SignalPort& rhs) {
 
         if (!m_node)
             init(rhs.getConnType());
 
         if (getName().empty())
-            setName(rhs.getName());
+            setName(std::string{ rhs.getName() });
 
         if (ConditionalScope::get() == nullptr)
         {

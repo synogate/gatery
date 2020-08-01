@@ -16,6 +16,7 @@ hcl::core::frontend::BitSignalPort::BitSignalPort(bool bit) :
 hcl::core::frontend::BitSignalPort::BitSignalPort(const Bit& bit)
 {
 	setPort(bit.getReadPort());
+	setName(bit.getName());
 }
 
 hcl::core::frontend::BitSignalPort::BitSignalPort(const BVecBitProxy<BVec>& bit) :
@@ -36,6 +37,7 @@ hcl::core::frontend::BVecSignalPort::BVecSignalPort(uint64_t vec) :
 hcl::core::frontend::BVecSignalPort::BVecSignalPort(const BVec& vec)
 {
 	setPort(vec.getReadPort());
+	setName(vec.getName());
 }
 
 hcl::core::frontend::BVecSignalPort::BVecSignalPort(const BVecSlice& vec) :

@@ -5,35 +5,17 @@
 
 namespace hcl::core::frontend {
 
-    static Bit bool2bit(bool value)
-    {
-        hlim::ConnectionType type{
-            .interpretation = hlim::ConnectionType::BOOL,
-            .width = 1
-        };
-
-        hlim::ConstantData cv;
-        cv.base = 2;
-        cv.bitVec.push_back(value);
-
-        auto* node = DesignScope::createNode<hlim::Node_Constant>(cv, type);
-        return Bit({ .node = node, .port = 0ull });
-    }
-
     Bit::Bit() :
         ElementarySignal{getSignalType(1), ElementarySignal::InitUnconnected::x}
     {}
 
-    Bit::Bit(const Bit &rhs) : ElementarySignal(rhs, ElementarySignal::InitCopyCtor::x) 
+    Bit::Bit(BitSignalPort rhs) : ElementarySignal(rhs, ElementarySignal::InitCopyCtor::x)
     {
     }
 
     Bit::Bit(const hlim::NodePort &port) : ElementarySignal(port, ElementarySignal::InitOperation::x)
     { 
         setConnectionType(getSignalType(1));    
-    }
-
-    Bit::Bit(bool value) : Bit(bool2bit(value)) {
     }
     
     Bit::Bit(const Bit &rhs, ElementarySignal::InitSuccessor) : ElementarySignal(rhs, ElementarySignal::InitSuccessor::x) 
@@ -121,12 +103,6 @@ namespace hcl::core::frontend {
         node->setOp(std::move(rewireOp));
         node->changeOutputType({.interpretation = hlim::ConnectionType::BITVEC});    
         return BVec(hlim::NodePort{.node = node, .port = 0ull});
-    }
-
-    Bit& Bit::operator=(bool value)
-    {
-        assign(bool2bit(value));
-        return *this;
     }
     
     const Bit Bit::operator*() const

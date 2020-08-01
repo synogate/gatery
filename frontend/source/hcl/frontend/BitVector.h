@@ -2,6 +2,7 @@
 
 #include "Bit.h"
 #include "Signal.h"
+#include "SignalPort.h"
 #include "Scope.h"
 
 #include <hcl/hlim/coreNodes/Node_Signal.h>
@@ -71,7 +72,7 @@ class BVecBitProxy
 public:
     BVecBitProxy(TVec* vec, size_t index) : m_vec{ vec }, m_index{ index } {}
 
-    BVecBitProxy& operator = (const Bit& value) { m_vec->setBit(m_index, value); return *this; }
+    BVecBitProxy& operator = (BitSignalPort value) { m_vec->setBit(m_index, Bit{ value }); return *this; }
     operator Bit () const { return (*(const TVec*)m_vec)[m_index]; };
 
     BVec zext(size_t width) const;
@@ -114,6 +115,8 @@ private:
 class BVec : public ElementarySignal
 {
     public:
+        using PortType = BVecSignalPort;
+
         HCL_SIGNAL
         using ElementarySignal::ElementarySignal;
         using isBitVectorSignal = void;
@@ -121,7 +124,8 @@ class BVec : public ElementarySignal
         BVec();
         BVec(size_t width);
         BVec(const hlim::NodePort &port);
-        BVec(const BVec &rhs);
+        BVec(BVecSignalPort rhs);
+        BVec(const BVec& rhs) : BVec{ BVecSignalPort{rhs} } {}
         ~BVec();
 
         BVec zext(size_t width) const;
@@ -131,7 +135,8 @@ class BVec : public ElementarySignal
         BVecSlice operator()(int offset, size_t size) { return BVecSlice(this, Selection::Slice(offset, size)); }
         BVecSlice operator()(const Selection &selection) { return BVecSlice(this, selection); }
 
-        BVec &operator=(const BVec &rhs) { assign(rhs); return *this; }
+        BVec& operator=(BVecSignalPort rhs) { assign(rhs); return *this; }
+        BVec& operator=(const BVec& rhs) { assign(BVecSignalPort{ rhs }); return *this; }
         
         const BVec operator*() const;
 
@@ -140,7 +145,7 @@ class BVec : public ElementarySignal
         Bit operator[](size_t idx) const;
         BVecBitProxy<BVec> operator[](size_t idx) { assert(idx < size()); return { this, idx }; }
 
-        void setBit(size_t idx, const Bit& in);
+        void setBit(size_t idx, BitSignalPort in);
 
         Bit lsb() const { return (*this)[0]; }
         Bit msb() const { return (*this)[size()-1]; }

@@ -23,6 +23,7 @@ class Register : public SignalType
 {
     public:
         using SigType = std::enable_if_t<utils::isElementarySignal<SignalType>::value, SignalType>;
+        using PortType = typename SignalType::PortType;
         
         // TODO: add default and copy constructor
         ~Register();
@@ -32,12 +33,12 @@ class Register : public SignalType
 
         Register(const Register<SignalType>& rhs) = delete;
 
-        Register<SignalType>& setEnable(const Bit& enableSignal);
-        Register<SignalType>& setReset(const SignalType& resetValue);
+        Register<SignalType>& setEnable(BitSignalPort enableSignal);
+        Register<SignalType>& setReset(PortType resetValue);
         Register<SignalType>& setClock(const Clock& clock);
         
-        Register<SignalType>& operator=(const Register<SignalType>& rhs) { assign(rhs); return *this; }
-        Register<SignalType> &operator=(const SignalType &signal) { assign(signal); return *this; }
+        Register<SignalType>& operator=(const Register<SignalType>& rhs) { assign(PortType{ rhs }); return *this; }
+        Register<SignalType>& operator=(PortType signal) { assign(signal); return *this; }
         
         const SignalType &delay(size_t ticks = 1);
         void reset();
@@ -45,11 +46,11 @@ class Register : public SignalType
         virtual void setName(std::string name) override;        
 
     protected:
-        void assign(const ElementarySignal& value) override;
+        void assign(const SignalPort& value) override;
 
         hlim::Node_Register& m_regNode;
         SignalType m_delayedSignal;
-        std::optional<SignalType> m_resetSignal;
+        std::optional<PortType> m_resetSignal;
 };
 
 template<typename SignalType>
@@ -68,7 +69,7 @@ inline frontend::Register<SignalType>::Register(Args ...signalParams) :
 
     // default assign register output to self
     if (!SignalType::m_node->getDriver(0).node)
-        assign(m_delayedSignal);
+        assign(typename SignalType::PortType{ m_delayedSignal });
 }
 
 template<typename SignalType>
@@ -78,14 +79,14 @@ inline Register<SignalType>::~Register()
 }
 
 template<typename SignalType>
-inline Register<SignalType>& Register<SignalType>::setEnable(const Bit& enableSignal)
+inline Register<SignalType>& Register<SignalType>::setEnable(BitSignalPort enableSignal)
 {
     m_regNode.connectInput(hlim::Node_Register::ENABLE, enableSignal.getReadPort());
     return *this;
 }
 
 template<typename SignalType>
-inline Register<SignalType>& Register<SignalType>::setReset(const SignalType& resetValue)
+inline Register<SignalType>& Register<SignalType>::setReset(PortType resetValue)
 {
     m_regNode.connectInput(hlim::Node_Register::RESET_VALUE, resetValue.getReadPort());
     m_resetSignal = resetValue;
@@ -114,7 +115,7 @@ inline void Register<SignalType>::reset()
 }
 
 template<typename SignalType>
-inline void Register<SignalType>::assign(const ElementarySignal& value)
+inline void Register<SignalType>::assign(const SignalPort& value)
 {
     HCL_DESIGNCHECK_HINT(value.getWidth() == SignalType::getWidth(), "Input signals to a register must match it's signal in width");
     SignalType::assign(value);

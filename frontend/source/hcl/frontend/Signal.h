@@ -15,6 +15,7 @@
 namespace hcl::core::frontend {
 
     class ConditionalScope;
+    class SignalPort;
         
     class BaseSignal {
         public:
@@ -58,13 +59,13 @@ namespace hcl::core::frontend {
         ElementarySignal(InitInvalid);
         ElementarySignal(const hlim::ConnectionType& connType, InitUnconnected);
         ElementarySignal(const hlim::NodePort &port, InitOperation);
-        ElementarySignal(const ElementarySignal& rhs, InitCopyCtor);
+        ElementarySignal(const SignalPort& rhs, InitCopyCtor);
         ElementarySignal(const ElementarySignal& ancestor, InitSuccessor);
         
         ElementarySignal &operator=(const ElementarySignal&) = delete;
         ElementarySignal &operator=(const ElementarySignal&&) = delete;
 
-        virtual void assign(const ElementarySignal &rhs);
+        virtual void assign(const SignalPort& rhs);
         virtual hlim::ConnectionType getSignalType(size_t width) const = 0;
 
         void setConnectionType(const hlim::ConnectionType& connectionType);

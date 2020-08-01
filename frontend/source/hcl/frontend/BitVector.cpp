@@ -159,7 +159,7 @@ BVecSlice &BVecSlice::operator=(const ElementarySignal &signal)
     node->setOp(std::move(rewireOp));
     node->changeOutputType(m_signal->getConnType());    
     
-    m_signal->operator=(BVec(hlim::NodePort{ .node = node, .port = 0ull }));
+    *m_signal = BVec(hlim::NodePort{ .node = node, .port = 0ull });
     
     return *this;
 }
@@ -227,7 +227,7 @@ BVec::BVec(const hlim::NodePort &port) : ElementarySignal(port, ElementarySignal
     
 }
 
-BVec::BVec(const BVec &rhs) : ElementarySignal(rhs, ElementarySignal::InitCopyCtor::x) 
+BVec::BVec(BVecSignalPort rhs) : ElementarySignal(rhs, ElementarySignal::InitCopyCtor::x)
 {
     
 }
@@ -278,7 +278,7 @@ Bit BVec::operator[](size_t idx) const
     return Bit({ .node = node, .port = 0ull });
 }
 
-void BVec::setBit(size_t idx, const Bit& in)
+void BVec::setBit(size_t idx, BitSignalPort in)
 {
     HCL_DESIGNCHECK_HINT(getWidth() > idx, "Out of bounds vector element assignment.");
 
@@ -316,7 +316,7 @@ void BVec::setBit(size_t idx, const Bit& in)
 
     node->setOp(std::move(rewireOp));
     node->changeOutputType(getConnType());
-    assign(BVec{ {.node = node, .port = 0ull } });
+    assign(BVecSignalPort{ BVec{ {.node = node, .port = 0ull } } });
 }
 
 
