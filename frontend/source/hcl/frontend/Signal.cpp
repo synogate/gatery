@@ -43,7 +43,9 @@ namespace hcl::core::frontend {
 
     void ElementarySignal::setName(std::string name)
     {
-        m_node->setName(name);
+        m_name = std::move(name);
+        if(m_node)
+            m_node->setName(m_name);
     }
 
     void ElementarySignal::init(const hlim::ConnectionType& connType)
@@ -51,6 +53,7 @@ namespace hcl::core::frontend {
         m_node = DesignScope::createNode<hlim::Node_Signal>();
         m_node->setConnectionType(connType);
         m_node->recordStackTrace();
+        m_node->setName(m_name);
     }
 
     void ElementarySignal::initSuccessor(const ElementarySignal& ancestor)

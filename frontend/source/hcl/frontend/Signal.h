@@ -45,7 +45,7 @@ namespace hcl::core::frontend {
         
         inline const hlim::ConnectionType& getConnType() const { return m_node->getOutputConnectionType(0); }
         inline hlim::NodePort getReadPort() const { return m_node==nullptr?hlim::NodePort{}:m_node->getDriver(0); }
-        inline const std::string& getName() const { return m_node->getName(); }
+        inline std::string_view getName() const { return m_name; }
         //inline hlim::Node_Signal *getSignalNode() const { return m_node; }
         virtual void setName(std::string name) override;
         
@@ -75,6 +75,8 @@ namespace hcl::core::frontend {
         hlim::Node_Signal* m_node = nullptr;
     private:
         void init(const hlim::ConnectionType& connType);
+
+        std::string m_name;
 
     };
 
