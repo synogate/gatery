@@ -43,7 +43,7 @@ add_library(hcl_frontend STATIC
     source/hcl/frontend/SignalPort.cpp
     source/hcl/frontend/SignalPort.h
     source/hcl/frontend.h
-)
+ "source/hcl/frontend/Pack.h" )
 
 
 

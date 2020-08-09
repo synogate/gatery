@@ -1,0 +1,105 @@
+#include <boost/test/unit_test.hpp>
+#include <boost/test/data/dataset.hpp>
+#include <boost/test/data/test_case.hpp>
+#include <boost/test/data/monomorphic.hpp>
+
+#include <hcl/frontend.h>
+#include <hcl/simulation/UnitTestSimulationFixture.h>
+
+#include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
+
+using namespace boost::unit_test;
+
+struct SimpleStruct
+{
+    hcl::core::frontend::BVec vec = hcl::core::frontend::BVec{ 3 };
+    hcl::core::frontend::Bit bit;
+};
+
+BOOST_HANA_ADAPT_STRUCT(SimpleStruct, vec, bit);
+
+struct RichStruct : SimpleStruct
+{
+    std::vector<SimpleStruct> list;
+};
+
+BOOST_HANA_ADAPT_STRUCT(RichStruct, vec, bit, list);
+
+BOOST_FIXTURE_TEST_CASE(CompoundName, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    Bit bit;
+    name(bit, "bit");
+    BOOST_CHECK(bit.getName() == "bit");
+
+    BVec vec{4};
+    name(vec, "vec");
+    BOOST_CHECK(vec.getName() == "vec");
+
+    std::vector<BVec> vecvec{ 3, vec };
+    name(vecvec, "vecvec");
+    BOOST_CHECK(vecvec[0].getName() == "vecvec0");
+    BOOST_CHECK(vecvec[1].getName() == "vecvec1");
+    BOOST_CHECK(vecvec[2].getName() == "vecvec2");
+
+    RichStruct obj;
+    obj.list.emplace_back();
+    name(obj, "obj");
+    BOOST_CHECK(obj.list[0].vec.getName() == "obj_list0_vec");
+}
+
+BOOST_FIXTURE_TEST_CASE(CompoundWidth, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    Bit bit;
+    BOOST_TEST(width(bit) == 1);
+
+    BVec vec{ 4 };
+    BOOST_TEST(width(vec) == 4);
+
+    std::vector<BVec> vecvec{ 3, vec };
+    BOOST_TEST(width(vecvec) == 3*4);
+
+}
+
+BOOST_FIXTURE_TEST_CASE(CompoundPack, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    {
+        Bit bit = '1';
+        BVec bitPack = pack(bit);
+        sim_assert(bitPack[0] == '1');
+    }
+
+    {
+        BVec vec = 5;
+        BVec vecPack = pack(vec);
+        sim_assert(vecPack == 5);
+    }
+
+    {
+        BVec vec = 5;
+        std::vector<BVec> vecvec{ 3, vec };
+        BVec vecPack = pack(vecvec);
+        sim_assert(vecPack(0,3) == 5);
+        sim_assert(vecPack(3,3) == 5);
+        sim_assert(vecPack(6,3) == 5);
+
+        std::vector<BVec> vecvec2{ 3, BVec{3} };
+        unpack(vecvec2, vecPack);
+        sim_assert(vecvec2[0] == 5);
+        sim_assert(vecvec2[1] == 5);
+        sim_assert(vecvec2[2] == 5);
+    }
+
+    eval(design.getCircuit());
+}

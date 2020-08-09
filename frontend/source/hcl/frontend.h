@@ -7,6 +7,7 @@
 #include "frontend/ConditionalScope.h"
 #include "frontend/Constant.h"
 #include "frontend/FSM.h"
+#include "frontend/Pack.h"
 #include "frontend/PriorityConditional.h"
 #include "frontend/Registers.h"
 #include "frontend/Scope.h"

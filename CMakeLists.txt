@@ -24,6 +24,7 @@ endfunction()
 
 add_compile_definitions(NOMINMAX)
 add_compile_definitions(WIN32_LEAN_AND_MEAN)
+add_compile_definitions(_HAS_DEPRECATED_IS_LITERAL_TYPE=1)
 
 add_subdirectory(net/)
 add_subdirectory(frontend/)
