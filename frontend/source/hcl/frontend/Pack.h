@@ -40,7 +40,7 @@ namespace hcl::core::frontend
 			}
 			else if constexpr (boost::hana::Struct<Compound>::value)
 			{
-				boost::hana::for_each(boost::hana::accessors<Compound>(), [&](auto member) {
+				boost::hana::for_each(boost::hana::accessors<std::remove_cv_t<Compound>>(), [&](auto member) {
 					v.enter(boost::hana::first(member).c_str());
 					visitCompound(v, boost::hana::second(member)(signal));
 					v.leave();
@@ -57,8 +57,12 @@ namespace hcl::core::frontend
 		{
 			struct WidthVisitor : internal::SignalVisitor
 			{
-				void operator () (const BVec& vec) { m_totalCount++; m_totalWidth += vec.size(); }
-				void operator () (const Bit& vec) { m_totalCount++; m_totalWidth++; }
+				void operator () (const BVec& vec) { 
+					m_totalCount++; m_totalWidth += vec.size(); 
+				}
+				void operator () (const Bit& vec) { 
+					m_totalCount++; m_totalWidth++; 
+				}
 
 				size_t m_totalWidth = 0;
 				size_t m_totalCount = 0;

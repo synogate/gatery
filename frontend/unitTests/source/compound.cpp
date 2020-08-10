@@ -110,22 +110,23 @@ BOOST_FIXTURE_TEST_CASE(CompoundUnpack, hcl::core::sim::UnitTestSimulationFixtur
     for (size_t i = 0; i < 7; ++i)
     {
         in.list.emplace_back();
-        in.list.back().vec = i;
+        in.list.back().vec = ConstBVec(i, 3);
         in.list.back().bit = i < 4;
     }
 
-    //BVec inPacked = pack(in);
+    BVec inPacked = pack(in);
 
-    //RichStruct out;
-    //unpack(out, inPacked);
+    RichStruct out;
+    out.list.resize(in.list.size());
+    unpack(out, inPacked);
 
-    //sim_assert(out.vec == 5);
-    //sim_assert(out.bit == '0');
-    //for (size_t i = 0; i < 7; ++i)
-    //{
-    //    sim_assert(out.list[i].vec == ConstBVec(i, 3));
-    //    sim_assert(out.list[i].bit == i < 4);
-    //}
+    sim_assert(out.vec == 5);
+    sim_assert(out.bit == '0');
+    for (size_t i = 0; i < 7; ++i)
+    {
+        sim_assert(out.list[i].vec == ConstBVec(i, 3));
+        sim_assert(out.list[i].bit == i < 4);
+    }
     
     eval(design.getCircuit());
 }
