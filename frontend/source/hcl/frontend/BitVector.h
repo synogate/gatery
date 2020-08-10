@@ -11,7 +11,7 @@
 
 #include <vector>
 #include <algorithm>
-#include <compare>
+//#include <compare>
 
 
 namespace hcl::core::frontend {
@@ -99,7 +99,13 @@ public:
     ptrdiff_t operator - (const BVecIterator& rhs) const { return ptrdiff_t(m_index) - rhs.m_index; }
 
     //bool operator != (const BVecIterator&) const = default;
-    auto operator <=> (const BVecIterator& rhs) const = default; // { assert(m_vec == rhs.m_vec); return m_index <=> rhs.m_index; }
+    //auto operator <=> (const BVecIterator& rhs) const = default; // { assert(m_vec == rhs.m_vec); return m_index <=> rhs.m_index; }
+    bool operator<(const BVecIterator& rhs) const { return m_index < rhs.m_index; }
+    bool operator<=(const BVecIterator& rhs) const { return m_index <= rhs.m_index; }
+    bool operator>(const BVecIterator& rhs) const { return m_index > rhs.m_index; }
+    bool operator>=(const BVecIterator& rhs) const { return m_index >= rhs.m_index; }
+    bool operator==(const BVecIterator& rhs) const { return m_index == rhs.m_index; }
+    bool operator!=(const BVecIterator& rhs) const { return m_index != rhs.m_index; }
     BVecBitProxy<TVec> operator* () const { return { m_vec, m_index }; }
 
 private:

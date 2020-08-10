@@ -25,7 +25,7 @@ namespace hcl::stl {
         std::vector<BVec> subSums;
         subSums.resize(vec.getWidth());
         for (auto i : utils::Range(vec.getWidth()))
-            subSums[i] = vec[i].zext(1);
+            subSums[i] = Bit(vec[i]).zext(1);
 
         for (unsigned i = utils::nextPow2(vec.getWidth())/2; i > 0; i /= 2) {
             for (unsigned j = 0; j < i; j++) {

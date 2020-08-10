@@ -34,7 +34,7 @@ BOOST_FIXTURE_TEST_CASE(BVecIterator, hcl::core::sim::UnitTestSimulationFixture)
     BOOST_TEST(a.size() == counter);
 
     counter = 0;
-    for (auto& b : a)
+    for (auto b : a)
         counter++;
     BOOST_TEST(a.size() == counter);
 
@@ -46,7 +46,7 @@ BOOST_FIXTURE_TEST_CASE(BVecIterator, hcl::core::sim::UnitTestSimulationFixture)
     a[0] = true;
     sim_assert(a[0] == true);
 
-    for (auto& b : a)
+    for (auto b : a)
         b = true;
     sim_assert(a[1] == true);
 
