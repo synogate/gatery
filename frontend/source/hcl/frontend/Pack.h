@@ -117,33 +117,22 @@ namespace hcl::core::frontend
 			PackVisitor(size_t numInputs) {
 				m_node = DesignScope::createNode<hlim::Node_Rewire>(numInputs);
 				m_node->recordStackTrace();
-				m_op.ranges.reserve(numInputs);
 			}
 
 			void operator () (const ElementarySignal& vec) 
 			{ 
-				m_node->connectInput(m_op.ranges.size(), vec.getReadPort());
-				
-				m_op.ranges.emplace_back(hlim::Node_Rewire::OutputRange{
-					.subwidth = vec.getWidth(),
-					.source = hlim::Node_Rewire::OutputRange::INPUT,
-					.inputIdx = m_op.ranges.size(),
-					.inputOffset = 0
-				});
-				
-				m_totalWidth += vec.getWidth();
+				m_node->connectInput(m_idx++, vec.getReadPort());
 			}
 
 			hlim::Node_Rewire* m_node;
-			hlim::Node_Rewire::RewireOperation m_op;
-			size_t m_totalWidth = 0;
+			size_t m_idx = 0;
 		};
 
 		auto [count, width] = internal::countAndWidth(compound);
 
 		PackVisitor v{ count };
 		internal::visitCompound(v, compound);
-		v.m_node->setOp(v.m_op);
+		v.m_node->setConcat();
 		return hlim::NodePort{ v.m_node, 0 };
 	}
 	
@@ -156,14 +145,25 @@ namespace hcl::core::frontend
 
 			void operator () (BVec& vec)
 			{
-//				vec = m_packed(m_totalWidth, vec.size());
+				auto* node = DesignScope::createNode<hlim::Node_Rewire>(1);
+				node->recordStackTrace();
+				node->connectInput(0, m_packed.getReadPort());
+				node->setExtract(m_totalWidth, vec.getWidth());
 				m_totalWidth += vec.size();
+			
+				vec = BVec{ hlim::NodePort{node, 0} };
 			}
 
 			void operator () (Bit& vec)
 			{
-				vec = m_packed[m_totalWidth];
+				auto* node = DesignScope::createNode<hlim::Node_Rewire>(1);
+				node->recordStackTrace();
+				node->connectInput(0, m_packed.getReadPort());
+				node->changeOutputType({ hlim::ConnectionType::BOOL });
+				node->setExtract(m_totalWidth, 1);
 				m_totalWidth++;
+
+				vec = Bit{ hlim::NodePort{node, 0} };
 			}
 
 			const BVec& m_packed;

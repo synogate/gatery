@@ -42,7 +42,7 @@ class Node_Rewire : public Node<Node_Rewire>
         
         void setConcat();
         void setInterleave();
-        void setExtract(size_t offset, size_t count, size_t stride = 1);        
+        void setExtract(size_t offset, size_t count);        
         
         inline void setOp(RewireOperation rewireOperation) { m_rewireOperation = std::move(rewireOperation); updateConnectionType(); }
         inline const RewireOperation &getOp() const { return m_rewireOperation; }

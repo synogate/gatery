@@ -26,6 +26,41 @@ void Node_Rewire::connectInput(size_t operand, const NodePort &port)
     updateConnectionType();
 }
 
+void Node_Rewire::setConcat()
+{
+    RewireOperation op;
+    op.ranges.reserve(getNumInputPorts());
+
+    for (size_t i = 0; i < getNumInputPorts(); ++i)
+    {
+        NodePort driver = getDriver(i);
+        HCL_ASSERT(driver.node);
+        size_t width = driver.node->getOutputConnectionType(driver.port).width;
+
+        op.ranges.emplace_back(OutputRange{
+            .subwidth = width,
+            .source = OutputRange::INPUT,
+            .inputIdx = i,
+            .inputOffset = 0
+        });
+    }
+    setOp(std::move(op));
+}
+
+void Node_Rewire::setExtract(size_t offset, size_t count)
+{
+    HCL_DESIGNCHECK(getNumInputPorts() == 1);
+
+    RewireOperation op;
+    op.ranges.emplace_back(OutputRange{
+        .subwidth = count,
+        .source = OutputRange::INPUT,
+        .inputIdx = 0,
+        .inputOffset = offset
+    });
+    setOp(std::move(op));
+}
+
 void Node_Rewire::changeOutputType(ConnectionType outputType)
 {
     m_desiredConnectionType = outputType;
