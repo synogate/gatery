@@ -67,9 +67,20 @@ namespace hcl::core::frontend {
         if (getName().empty())
             setName(rhs.getName());
 
+#define INSERT_BRIDGE_NODES
+        
+#ifdef INSERT_BRIDGE_NODES
+        hlim::Node_Signal *bridgeNode = DesignScope::createNode<hlim::Node_Signal>();
+        bridgeNode->setConnectionType(rhs.getConnType());
+        bridgeNode->recordStackTrace();
+        bridgeNode->setName(m_node->getName());
+#else
+        bridgeNode = m_node;
+#endif
+
         if (ConditionalScope::get() == nullptr)
         {
-            m_node->connectInput(rhs.getReadPort());
+            bridgeNode->connectInput(rhs.getReadPort());
         }
         else
         {
@@ -78,8 +89,11 @@ namespace hcl::core::frontend {
             mux->connectInput(1, rhs.getReadPort()); // assign rhs last in case previous port was undefined
             mux->connectSelector(ConditionalScope::getCurrentConditionPort());
 
-            m_node->connectInput({ .node = mux, .port = 0ull });
+            bridgeNode->connectInput({ .node = mux, .port = 0ull });
         }
+#ifdef INSERT_BRIDGE_NODES
+        m_node->connectInput({ .node = bridgeNode, .port = 0ull });
+#endif
     }
 
     void ElementarySignal::setConnectionType(const hlim::ConnectionType& connectionType)

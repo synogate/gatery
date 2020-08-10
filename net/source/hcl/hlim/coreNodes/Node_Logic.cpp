@@ -48,14 +48,25 @@ void Node_Logic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::De
         */
         
         
-        std::uint64_t resultDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[0]+offset, chunkSize);
-        if (m_op != NOT)
-            resultDefined &= state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[1]+offset, chunkSize);
+        std::uint64_t resultDefined;
         
-        std::uint64_t left = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0]+offset, chunkSize);
-        std::uint64_t right;
-        if (m_op != NOT)
-            right = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[1]+offset, chunkSize);
+        if (inputOffsets[0] == ~0ull || (inputOffsets[1] == ~0ull && m_op != NOT))
+            resultDefined = 0;
+        else {
+            resultDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[0]+offset, chunkSize);
+            if (m_op != NOT)
+                resultDefined &= state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[1]+offset, chunkSize);
+        }
+        
+        std::uint64_t left = 0;
+        std::uint64_t right = 0;
+        
+        if (inputOffsets[0] != ~0ull)
+            left = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0]+offset, chunkSize);
+
+        if (inputOffsets[1] != ~0ull)
+            if (m_op != NOT)
+                right = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[1]+offset, chunkSize);
         
         std::uint64_t result;
         switch (m_op) {

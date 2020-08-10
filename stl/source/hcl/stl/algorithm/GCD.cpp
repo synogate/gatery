@@ -5,7 +5,7 @@ using namespace hcl::core::frontend;
 
 hcl::stl::StreamSource<hcl::stl::BVecPair> hcl::stl::binaryGCDStep1(StreamSink<BVecPair>& in, size_t iterationsPerClock)
 {
-	const size_t width = in.first.getWidth();
+	const size_t width = in.first.size();
 	StreamSource<BVecPair> out(BVec{ width }, BVec{ width });
 
 	Register<BVec> a{ width };
@@ -24,7 +24,7 @@ hcl::stl::StreamSource<hcl::stl::BVecPair> hcl::stl::binaryGCDStep1(StreamSink<B
 	{
 		a = in.first;
 		b = in.second;
-		d = ConstBVec(0, d.getWidth());
+		d = ConstBVec(0, d.size());
 		active = true;
 	}
 
@@ -67,8 +67,8 @@ hcl::stl::StreamSource<hcl::stl::BVecPair> hcl::stl::binaryGCDStep1(StreamSink<B
 
 hcl::stl::StreamSource<hcl::core::frontend::BVec> hcl::stl::shiftLeft(StreamSink<BVecPair>& in, size_t iterationsPerClock)
 {
-	Register<BVec> a{ in.first.getWidth() };
-	Register<BVec> b{ in.second.getWidth() };
+	Register<BVec> a{ in.first.size() };
+	Register<BVec> b{ in.second.size() };
 	Register<Bit> active{ };
 	HCL_NAMED(a);
 	HCL_NAMED(b);
@@ -85,15 +85,15 @@ hcl::stl::StreamSource<hcl::core::frontend::BVec> hcl::stl::shiftLeft(StreamSink
 
 	for (size_t i = 0; i < iterationsPerClock; ++i)
 	{
-		IF(b != 0_bvec)
+		IF(b != (0b0_bvec).zext(b.size()))
 		{
 			a <<= 1;
-			b -= 1_bvec;
+			b -= (0b1_bvec).zext(b.size());
 		}
 	}
 
-	StreamSource<BVec> out{ in.first.getWidth() };
-	out.valid = active && b != 0_bvec;
+	StreamSource<BVec> out{ in.first.size() };
+	out.valid = active && b != (0b0_bvec).zext(b.size());
 	(BVec&)out = a;
 
 	IF(out.valid && out.ready)

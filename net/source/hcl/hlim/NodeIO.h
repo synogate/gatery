@@ -89,6 +89,8 @@ class NodeIO
 
         inline const ConnectionType &getOutputConnectionType(size_t outputPort) const { return m_outputPorts[outputPort].connectionType; }
         inline OutputType getOutputType(size_t outputPort) const { return m_outputPorts[outputPort].outputType; }
+        
+        virtual bool hasSideEffects() const;
     protected:
         void setOutputConnectionType(size_t outputPort, const ConnectionType &connectionType);
         void setOutputType(size_t outputPort, OutputType outputType);

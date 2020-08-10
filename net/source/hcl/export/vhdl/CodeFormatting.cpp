@@ -188,21 +188,22 @@ void DefaultCodeFormatting::formatProcessComment(std::ostream &stream, unsigned 
 void DefaultCodeFormatting::formatCodeComment(std::ostream &stream, unsigned indentation, const std::string &comment)
 {
     if (comment.empty()) return;
-    stream << std::endl;
-    indent(stream, indentation);
-    stream
-        << "-- ";
+    
+    bool insertHeader = true;
     for (char c : comment) {
         switch (c) {
             case '\n':
-                stream << std::endl;
-                indent(stream, indentation);
-                stream 
-                    << "-- ";
+                insertHeader = true;
             break;
             case '\r':
             break;
             default:
+                if (insertHeader) {
+                    stream << std::endl;
+                    indent(stream, indentation);
+                    stream << "-- ";
+                    insertHeader = false;
+                }
                 stream << c;
             break;
         }
