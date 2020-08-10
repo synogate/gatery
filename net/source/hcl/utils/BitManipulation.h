@@ -40,6 +40,9 @@ T Log2(T v)
 template<typename T>
 T Log2C(T v)
 {
+    if (v == 0)
+        return 0;
+
     return Log2(v - 1) + 1;
 }
 
