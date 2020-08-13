@@ -78,6 +78,7 @@ class NodeIO
         inline size_t getNumInputPorts() const { return m_inputPorts.size(); }
         inline size_t getNumOutputPorts() const { return m_outputPorts.size(); }
         
+        ConnectionType getDriverConnType(size_t inputPort) const;
         NodePort getDriver(size_t inputPort) const;
         NodePort getNonSignalDriver(size_t inputPort) const;
         

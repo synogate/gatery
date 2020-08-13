@@ -25,19 +25,19 @@ namespace hcl::stl {
         std::vector<BVec> subSums;
         subSums.resize(vec.getWidth());
         for (auto i : utils::Range(vec.getWidth()))
-            subSums[i] = vec[i].zext(1);
+            subSums[i] = zext(vec[i], utils::Log2C(vec.size()));
 
         for (unsigned i = utils::nextPow2(vec.getWidth())/2; i > 0; i /= 2) {
             for (unsigned j = 0; j < i; j++) {
                 if (j*2+0 >= subSums.size()) {
-                    subSums[j] = 0_bvec;
+                    subSums[j] = 0;
                     continue;
                 }
                 if (j*2+1 >= subSums.size()) {
                     subSums[j] = subSums[j*2+0];
                     continue;
                 }
-                subSums[j] = cat(0b0_bvec, subSums[j * 2 + 0]) + cat(0b0_bvec, subSums[j * 2 + 1]);
+                subSums[j] = subSums[j * 2 + 0] + subSums[j * 2 + 1];
             }
         }
         return subSums[0];

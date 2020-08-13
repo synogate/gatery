@@ -31,7 +31,7 @@ class PriorityConditional
             for (auto &c : m_choices)
                 node->addInput(c.first.getReadPort(), c.second.getReadPort());
 
-            return DataSignal({.node = node, .port = 0ull});
+            return SignalReadPort(node);
         }
     protected:
         std::vector<std::pair<Bit, DataSignal>> m_choices;

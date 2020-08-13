@@ -40,8 +40,8 @@ add_library(hcl_frontend STATIC
     source/hcl/frontend/SignalLogicOp.h
     source/hcl/frontend/SignalMiscOp.cpp
     source/hcl/frontend/SignalMiscOp.h
-    source/hcl/frontend/SignalPort.cpp
-    source/hcl/frontend/SignalPort.h
+    
+    
     source/hcl/frontend.h
  "source/hcl/frontend/Pack.h" )
 

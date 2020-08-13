@@ -28,13 +28,13 @@ class SimpleSignalGeneratorContext
         std::uint64_t m_tick;
 };
     
-hlim::Node_SignalGenerator* createSigGenNode(const Clock &refClk, std::vector<SignalPort> &signals, const std::function<void(SimpleSignalGeneratorContext &context)> &genCallback);
+hlim::Node_SignalGenerator* createSigGenNode(const Clock &refClk, std::vector<const ElementarySignal*> &signals, const std::function<void(SimpleSignalGeneratorContext &context)> &genCallback);
 
 
 template<class Signal>
 void assignGeneratorOutputs(hlim::Node_SignalGenerator* sigGenNode, size_t offset, Signal &signal) 
 {
-    signal = Signal({.node = sigGenNode, .port = offset});
+    signal = Signal(SignalReadPort({.node = sigGenNode, .port = offset}));
 }
 
 template<class Signal, class ...Signals>
@@ -47,7 +47,7 @@ void assignGeneratorOutputs(hlim::Node_SignalGenerator* sigGenNode, size_t offse
 template<class ...Signals>
 void simpleSignalGenerator(const Clock &refClk, const std::function<void(SimpleSignalGeneratorContext &context)> &genCallback, Signals &...allSignals)
 {
-    std::vector<SignalPort> signals;
+    std::vector<const ElementarySignal*> signals;
     collectSignals(signals, allSignals...);
     hlim::Node_SignalGenerator* sigGenNode = createSigGenNode(refClk, signals, genCallback);
     assignGeneratorOutputs(sigGenNode, 0, allSignals...);

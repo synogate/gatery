@@ -16,6 +16,12 @@ NodeIO::~NodeIO()
     resizeOutputs(0);
 }
 
+hlim::ConnectionType NodeIO::getDriverConnType(size_t inputPort) const
+{
+    NodePort driver = getDriver(inputPort);
+    return driver.node->getOutputConnectionType(driver.port);
+}
+
 NodePort NodeIO::getDriver(size_t inputPort) const
 {
     HCL_ASSERT(inputPort < m_inputPorts.size());

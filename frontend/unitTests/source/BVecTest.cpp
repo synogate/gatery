@@ -110,21 +110,3 @@ BOOST_FIXTURE_TEST_CASE(BVecFrontBack, hcl::core::sim::UnitTestSimulationFixture
 
     eval(design.getCircuit());
 }
-
-BOOST_FIXTURE_TEST_CASE(BVecConstFrontBack, hcl::core::sim::UnitTestSimulationFixture)
-{
-    using namespace hcl::core::frontend;
-
-    DesignScope design;
-
-    const BVec a = 0b1100_bvec;
-    a.front() = true;
-    a.back() = false;
-
-    sim_assert(!a.front());
-    sim_assert(a.back());
-    sim_assert(!a.lsb());
-    sim_assert(a.msb());
-
-    eval(design.getCircuit());
-}

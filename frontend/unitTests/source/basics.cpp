@@ -133,9 +133,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicingAdd
     
     {
         BVec b = a;
-        //b(1, 2) = b(1, 2) + 1_bvec;
-        auto slice = b(1, 2);
-        b(1, 2) += 1_bvec;
+        b(1, 2) = b(1, 2) + 1;
         
         auto groundTruth = ConstBVec((unsigned(x) & ~0b110) | (unsigned(x+2) & 0b110), bitsize);
         sim_assert(b == groundTruth) << "Incrementing two bits out of " << a << " should be " << groundTruth << " but is " << b;
@@ -197,12 +195,12 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, hcl::core::sim::UnitTestSimulati
     ClockScope clockScope(clock);
 
     {
-        Register<BVec> counter(8);
+        Register<BVec> counter(8, Expansion::none);
         counter.setReset(0x00_bvec);
-        counter += 1_bvec;
+        counter += 1;
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
-        BVec refCount(8);
+        BVec refCount(8, Expansion::none);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick());
         }, refCount);
@@ -223,14 +221,14 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, hcl::core::sim::UnitTestSimulati
     ClockScope clockScope(clock);
 
     {
-        Register<BVec> counter(8);
+        Register<BVec> counter(8, Expansion::none);
         counter.setReset(0x00_bvec);
 
-        counter += 1_bvec;
-        counter += 1_bvec;
+        counter += 1;
+        counter += 1;
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
-        BVec refCount(8);
+        BVec refCount(8, Expansion::none);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick()*2);
         }, refCount);
@@ -251,13 +249,13 @@ BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, hcl::core::sim::UnitTestSimulationFixt
     ClockScope clockScope(clock);
 
     {
-        Register<BVec> counter(8);
+        Register<BVec> counter(8, Expansion::none);
         counter.setReset(0x01_bvec);
 
         counter <<= 1;
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
-        BVec refCount(8);
+        BVec refCount(8, Expansion::none);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, 1 << context.getTick());
         }, refCount);
@@ -283,15 +281,15 @@ BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, hcl::core::sim::UnitTestS
         }, condition);
 
 
-        Register<BVec> counter(8);
+        Register<BVec> counter(8, Expansion::none);
         counter.setReset(0x00_bvec);
 
         IF (condition)
-            counter += 1_bvec;
+            counter += 1;
 
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
-        BVec refCount(8);
+        BVec refCount(8, Expansion::none);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick()/2);
         }, refCount);
@@ -659,46 +657,6 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, UnsignedCompar
     eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(BitSignalPortSyntax, hcl::core::sim::UnitTestSimulationFixture)
-{
-    using namespace hcl::core::frontend;
-
-    DesignScope design;
-
-    auto func = [](BitSignalPort port) { return Bit{ port.getReadPort() }; };
-
-    Bit in = ConstBit('1');
-
-    sim_assert(func('1') == in);
-    sim_assert(func(true) == in);
-    sim_assert(func(in) == in);
-
-    BVec test = ConstBVec(1, 4);
-    sim_assert(func(test[0]) == in);
-    sim_assert(func(test[1]) != in);
-
-    eval(design.getCircuit());
-}
-
-BOOST_FIXTURE_TEST_CASE(BVecSignalPortSyntax, hcl::core::sim::UnitTestSimulationFixture)
-{
-    using namespace hcl::core::frontend;
-
-    DesignScope design;
-
-    auto func = [](BVecSignalPort port) { return BVec{ port.getReadPort() }; };
-
-    BVec in = ConstBVec(5, 3);
-
-    sim_assert(func(5) == in);
-    sim_assert(func(in) == in);
-
-    BVec test = ConstBVec(13, 5);
-    sim_assert(func(test(0,3)) == in);
-
-    eval(design.getCircuit());
-}
-
 BOOST_FIXTURE_TEST_CASE(BVecArithmeticOpSyntax, hcl::core::sim::UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
@@ -706,17 +664,17 @@ BOOST_FIXTURE_TEST_CASE(BVecArithmeticOpSyntax, hcl::core::sim::UnitTestSimulati
     DesignScope design;
 
     BVec in = ConstBVec(5, 3);
-    BVec res = in + 5;
-    in - 5;
-    in * 5;
-    in / 5;
-    in % 5;
+    BVec res = in + 5u;
+    in - 5u;
+    in * 5u;
+    in / 5u;
+    in % 5u;
     
-    in += 2;
-    in -= 1;
-    in *= 2;
-    in /= 2;
-    in %= 3;
+    in += 2u;
+    in -= 1u;
+    in *= 2u;
+    in /= 2u;
+    in %= 3u;
 
     in + '1';
     in - true;

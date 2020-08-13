@@ -15,10 +15,6 @@
 
 #define HCL_NAMED(x) hcl::core::frontend::setName(x, #x)
 
-#define HCL_SIGNAL \
-        virtual const char *getSignalTypeName() override { return GET_FUNCTION_NAME; }
-
-
         
 #define HCL_ASSERT(x) { if (!(x)) { throw hcl::utils::InternalError(__FILE__, __LINE__, std::string("Assertion failed: ") + #x); }}
 #define HCL_ASSERT_HINT(x, message) { if (!(x)) { throw hcl::utils::InternalError(__FILE__, __LINE__, std::string("Assertion failed: ") + #x + " Hint: " + message); }}

@@ -9,6 +9,19 @@ namespace hcl::core::hlim {
     struct ConstantData
     {
         ConstantData() { }
+
+        ConstantData(char bitValue)
+        {
+            // TODO: fix undefined 'x'
+            bitVec.resize(1, bitValue != '0');
+            base = 2;
+        }
+
+        ConstantData(bool bitValue)
+        {
+            bitVec.resize(1, bitValue);
+            base = 2;
+        }
         
         ConstantData(std::string_view _str)
         {

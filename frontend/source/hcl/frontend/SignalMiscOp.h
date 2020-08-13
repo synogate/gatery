@@ -37,7 +37,7 @@ typename ContainerType::value_type mux(const ElementarySignal &selector, const C
     
     using SignalType = typename ContainerType::value_type;
 
-    return SignalType({.node = node, .port = 0ull});
+    return SignalReadPort(node);
 }
 
 template<typename ElemType>
@@ -77,19 +77,19 @@ SignalType mux(const SelectorType &selector, const ContainerType &inputs)  {
 #endif
 
   
-BVec cat(const std::vector<SignalPort>& signals);
+BVec cat(const std::vector<const ElementarySignal*>& signals);
 
-inline void collectSignals(const std::vector<SignalPort>& signals) {};
+inline void collectSignals(const std::vector<const ElementarySignal*>& signals) {};
 
 template<typename... Types>
-void collectSignals(std::vector<SignalPort>& signals, BitSignalPort signal, const Types&... remaining) {
-    signals.push_back(signal);
+void collectSignals(std::vector<const ElementarySignal*>& signals, const Bit& signal, const Types&... remaining) {
+    signals.push_back(&signal);
     return collectSignals(signals, remaining...);
 }
 
 template<typename... Types>
-void collectSignals(std::vector<SignalPort>& signals, BVecSignalPort signal, const Types&... remaining) {
-    signals.push_back(signal);
+void collectSignals(std::vector<const ElementarySignal*>& signals, const BVec& signal, const Types&... remaining) {
+    signals.push_back(&signal);
     return collectSignals(signals, remaining...);
 }
 
@@ -97,7 +97,7 @@ template<typename... Types>
 BVec cat(const Types&... allSignals)
 {
     static_assert(sizeof...(Types) > 0, "Can not concatenate empty list of signals!");
-    std::vector<SignalPort> tmp{};
+    std::vector<const ElementarySignal*> tmp{};
     tmp.reserve(sizeof...(Types));
     collectSignals(tmp, allSignals...);
     return cat(tmp);
@@ -134,7 +134,7 @@ class SignalTapHelper
             return *this;
         }
     protected:
-        unsigned addInput(hlim::NodePort nodePort);
+        size_t addInput(hlim::NodePort nodePort);
         hlim::Node_SignalTap *m_node = nullptr;
 };
 

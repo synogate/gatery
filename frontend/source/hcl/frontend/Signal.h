@@ -16,68 +16,45 @@ namespace hcl::core::frontend {
 
     class ConditionalScope;
     class SignalPort;
-        
-    class BaseSignal {
-        public:
-            using isSignal = void;
 
-            virtual ~BaseSignal() = default;
-            
-            virtual const char *getSignalTypeName() = 0;
-            
-            virtual void setName(std::string name) { }
-        protected:
-            //virtual void putNextSignalNodeInGroup(hlim::NodeGroup *group) = 0;
+    enum class Expansion
+    {
+        none,
+        zero,
+        one,
+        sign
     };
 
-    template<typename T, typename = std::enable_if<utils::isSignal<T>::value>::type>
-    void setName(T &signal, std::string name) {
-        signal.setName(std::move(name));
-    }
+    struct SignalReadPort : hlim::NodePort
+    {
+        SignalReadPort() = default;
+        SignalReadPort(const SignalReadPort&) = default;
+        explicit SignalReadPort(hlim::BaseNode* node, Expansion policy = Expansion::none) : hlim::NodePort{.node = node, .port = 0}, expansionPolicy(policy) {}
+        explicit SignalReadPort(hlim::NodePort np, Expansion policy = Expansion::none) : hlim::NodePort(np), expansionPolicy(policy) {}
 
-    class ElementarySignal : public BaseSignal {
+        Expansion expansionPolicy = Expansion::none;
+
+        SignalReadPort expand(size_t width) const;
+    };
+
+    inline const hlim::ConnectionType& connType(const SignalReadPort& port) { return port.node->getOutputConnectionType(port.port); }
+    inline size_t width(const SignalReadPort& port) { return connType(port).width; }
+
+    class ElementarySignal {
     public:
+        using isSignal = void;
         using isElementarySignal = void;
         
-        virtual ~ElementarySignal();
-        
-        size_t getWidth() const { return m_node ? getConnType().width : 0; }
-        
-        inline const hlim::ConnectionType& getConnType() const { return m_node->getOutputConnectionType(0); }
-        inline hlim::NodePort getReadPort() const { return m_node==nullptr?hlim::NodePort{}:m_node->getDriver(0); }
-        inline std::string_view getName() const { return m_name; }
-        //inline hlim::Node_Signal *getSignalNode() const { return m_node; }
-        virtual void setName(std::string name) override;
-        
-    protected:
-        enum class InitInvalid { x };
-        enum class InitSuccessor { x };
-        enum class InitCopyCtor { x };
-        enum class InitOperation { x };
-        enum class InitUnconnected { x };
-        
-        ElementarySignal(InitInvalid);
-        ElementarySignal(const hlim::ConnectionType& connType, InitUnconnected);
-        ElementarySignal(const hlim::NodePort &port, InitOperation);
-        ElementarySignal(const SignalPort& rhs, InitCopyCtor);
-        ElementarySignal(const ElementarySignal& ancestor, InitSuccessor);
-        
-        ElementarySignal &operator=(const ElementarySignal&) = delete;
-        ElementarySignal &operator=(const ElementarySignal&&) = delete;
+        virtual ~ElementarySignal() = default;
 
-        virtual void assign(const SignalPort& rhs);
-        virtual hlim::ConnectionType getSignalType(size_t width) const = 0;
+        virtual bool valid() const = 0;
 
-        void setConnectionType(const hlim::ConnectionType& connectionType);
-        
-        void initSuccessor(const ElementarySignal& ancestor);
-
-        hlim::Node_Signal* m_node = nullptr;
-    private:
-        void init(const hlim::ConnectionType& connType);
-
-        std::string m_name;
-
+        // these methods are undefined for invalid signals (uninitialized)
+        virtual size_t getWidth() const = 0;
+        virtual hlim::ConnectionType getConnType() const = 0;
+        virtual SignalReadPort getReadPort() const = 0;
+        virtual std::string_view getName() const = 0;
+        virtual void setName(std::string name) = 0;
     };
 
 }

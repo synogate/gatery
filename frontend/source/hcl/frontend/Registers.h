@@ -23,7 +23,6 @@ class Register : public SignalType
 {
     public:
         using SigType = std::enable_if_t<utils::isElementarySignal<SignalType>::value, SignalType>;
-        using PortType = typename SignalType::PortType;
         
         // TODO: add default and copy constructor
         ~Register();
@@ -33,12 +32,12 @@ class Register : public SignalType
 
         Register(const Register<SignalType>& rhs) = delete;
 
-        Register<SignalType>& setEnable(BitSignalPort enableSignal);
-        Register<SignalType>& setReset(PortType resetValue);
+        Register<SignalType>& setEnable(const Bit& enableSignal);
+        Register<SignalType>& setReset(const SignalType& resetValue);
         Register<SignalType>& setClock(const Clock& clock);
         
-        Register<SignalType>& operator=(const Register<SignalType>& rhs) { assign(PortType{ rhs }); return *this; }
-        Register<SignalType>& operator=(PortType signal) { assign(signal); return *this; }
+        Register<SignalType>& operator=(const Register<SignalType>& rhs) { assign(rhs.getReadPort()); return *this; }
+        Register<SignalType>& operator=(const SignalType& rhs) { assign(rhs.getReadPort()); return *this; }
         
         const SignalType &delay(size_t ticks = 1);
         void reset();
@@ -46,11 +45,10 @@ class Register : public SignalType
         virtual void setName(std::string name) override;        
 
     protected:
-        void assign(const SignalPort& value) override;
 
         hlim::Node_Register& m_regNode;
         SignalType m_delayedSignal;
-        std::optional<PortType> m_resetSignal;
+        std::optional<SignalType> m_resetSignal;
 };
 
 template<typename SignalType>
@@ -59,17 +57,33 @@ inline frontend::Register<SignalType>::Register(Args ...signalParams) :
     SignalType{signalParams...},
     m_regNode{*DesignScope::createNode<hlim::Node_Register>()}
 {
+    HCL_ASSERT(valid());
+
     m_regNode.recordStackTrace();
-    m_regNode.connectInput(hlim::Node_Register::DATA, {.node = SignalType::m_node, .port = 0ull});
+
     // TODO: connect Enable to global ConditionalScope
 
     setClock(ClockScope::getClk());
+    m_regNode.connectInput(hlim::Node_Register::DATA, (**this).getReadPort());
 
-    m_delayedSignal = SignalType({ .node = &m_regNode, .port = 0ull });
+    m_delayedSignal = SignalType(SignalReadPort(&m_regNode));
 
-    // default assign register output to self
-    if (!SignalType::m_node->getDriver(0).node)
-        assign(typename SignalType::PortType{ m_delayedSignal });
+    // specialize on undefined value ctors
+    if constexpr (sizeof...(Args) == 2 && std::is_same_v<SignalType, BVec>)
+    {
+        if constexpr (
+            std::is_integral_v<std::tuple_element_t<0, std::tuple<Args...>>> &&
+            std::is_same_v<Expansion, std::tuple_element_t<1, std::tuple<Args...>>>
+            )
+        {
+            assign(m_delayedSignal.getReadPort());
+        }
+    }
+
+    if constexpr (sizeof...(Args) == 0 && std::is_same_v<SignalType, Bit>)
+    {
+        assign(m_delayedSignal.getReadPort());
+    }
 }
 
 template<typename SignalType>
@@ -79,17 +93,17 @@ inline Register<SignalType>::~Register()
 }
 
 template<typename SignalType>
-inline Register<SignalType>& Register<SignalType>::setEnable(BitSignalPort enableSignal)
+inline Register<SignalType>& Register<SignalType>::setEnable(const Bit& enableSignal)
 {
     m_regNode.connectInput(hlim::Node_Register::ENABLE, enableSignal.getReadPort());
     return *this;
 }
 
 template<typename SignalType>
-inline Register<SignalType>& Register<SignalType>::setReset(PortType resetValue)
+inline Register<SignalType>& Register<SignalType>::setReset(const SignalType& resetValue)
 {
-    m_regNode.connectInput(hlim::Node_Register::RESET_VALUE, resetValue.getReadPort());
     m_resetSignal = resetValue;
+    m_regNode.connectInput(hlim::Node_Register::RESET_VALUE, m_resetSignal->getReadPort());
     return *this;
 }
 
@@ -110,16 +124,8 @@ const SignalType &Register<SignalType>::delay(size_t ticks)
 template<typename SignalType>
 inline void Register<SignalType>::reset()
 {
-    HCL_ASSERT(m_resetSignal);
-    assign(*m_resetSignal);
-}
-
-template<typename SignalType>
-inline void Register<SignalType>::assign(const SignalPort& value)
-{
-    HCL_DESIGNCHECK_HINT(value.getWidth() == SignalType::getWidth(), "Input signals to a register must match it's signal in width");
-    SignalType::assign(value);
-    m_regNode.connectInput(hlim::Node_Register::DATA, SignalType::getReadPort());
+    HCL_DESIGNCHECK(m_resetSignal);
+    assign(m_resetSignal->getReadPort());
 }
 
 template<typename SignalType>

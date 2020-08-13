@@ -1,399 +1,332 @@
 #include "BitVector.h"
+#include "ConditionalScope.h"
+
+#include <hcl/hlim/coreNodes/Node_Constant.h>
+#include <hcl/hlim/coreNodes/Node_Rewire.h>
+#include <hcl/hlim/coreNodes/Node_Multiplexer.h>
 
 namespace hcl::core::frontend {
-    
-    
-Selection Selection::From(int start)
-{
-    return {
-        .start = start,
-        .end = 0,
-        .stride = 1,
-        .untilEndOfSource = true,
-    };
-}
 
-Selection Selection::Range(int start, int end)
-{
-    return {
-        .start = start,
-        .end = end,
-        .stride = 1,
-        .untilEndOfSource = false,
-    };
-}
-
-Selection Selection::RangeIncl(int start, int endIncl)
-{
-    return {
-        .start = start,
-        .end = endIncl+1,
-        .stride = 1,
-        .untilEndOfSource = false,
-    };
-}
-
-Selection Selection::StridedRange(int start, int end, int stride)
-{
-    return {
-        .start = start,
-        .end = end,
-        .stride = stride,
-        .untilEndOfSource = false,
-    };
-}
-
-Selection Selection::Slice(int offset, size_t size)
-{
-    return {
-        .start = offset,
-        .end = offset + int(size),
-        .stride = 1,
-        .untilEndOfSource = false,
-    };
-}
-
-Selection Selection::StridedSlice(int offset, size_t size, int stride)
-{
-    return {
-        .start = offset,
-        .end = offset + int(size),
-        .stride = stride,
-        .untilEndOfSource = false,
-    };
-}
-
-
-
-
-
-BVecSlice::BVecSlice(BVec *signal, const Selection &selection) : m_signal(signal), m_selection(selection)
-{
-}
-
-BVecSlice::~BVecSlice() 
-{ 
-    if (m_signal != nullptr) 
-        m_signal->unregisterSlice(this); 
-}
-
-
-BVecSlice &BVecSlice::operator=(const BVecSlice &slice)
-{ 
-    return this->operator=((BVec) slice); 
-}
-
-size_t BVecSlice::size() const
-{
-    HCL_ASSERT(m_signal != nullptr);
-    size_t inputWidth = m_signal->getWidth();
-    
-    HCL_ASSERT_HINT(m_selection.stride == 1, "Strided slices not yet implemented!");
-    
-    size_t selectionEnd = m_selection.end;
-    if (m_selection.untilEndOfSource)
-        selectionEnd = inputWidth;
-
-    HCL_DESIGNCHECK(m_selection.start >= 0);
-    HCL_DESIGNCHECK((size_t) m_selection.start < inputWidth);
-    
-    //HCL_DESIGNCHECK(selectionEnd >= 0);
-    HCL_DESIGNCHECK(selectionEnd <= inputWidth);
-
-    return selectionEnd - m_selection.start;
-}
-
-
-BVecSlice &BVecSlice::operator=(const ElementarySignal &signal)
-{
-    HCL_ASSERT(m_signal != nullptr);
-    
-    
-    size_t inputWidth = m_signal->getWidth();
-    
-    hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(2);
-    node->recordStackTrace();
-
-    node->connectInput(0, m_signal->getReadPort());
-    node->connectInput(1, signal.getReadPort());
-
-    hlim::Node_Rewire::RewireOperation rewireOp;
-    HCL_ASSERT_HINT(m_selection.stride == 1, "Strided slices not yet implemented!");
-    
-    size_t selectionEnd = m_selection.end;
-    if (m_selection.untilEndOfSource)
-        selectionEnd = inputWidth;
-
-    HCL_DESIGNCHECK(m_selection.start >= 0);
-    HCL_DESIGNCHECK((size_t) m_selection.start < inputWidth);
-    
-    //HCL_DESIGNCHECK(selectionEnd >= 0);
-    HCL_DESIGNCHECK(selectionEnd <= inputWidth);
-
-    HCL_DESIGNCHECK_HINT(selectionEnd - m_selection.start == signal.getWidth(), "When assigning a signal to a sliced signal, the widths of the assigned signal and the slicing range must match");
-
-    
-    if (m_selection.start != 0)
-        rewireOp.ranges.push_back({
-            .subwidth = size_t(m_selection.start),
-            .source = hlim::Node_Rewire::OutputRange::INPUT,
-            .inputIdx = 0,
-            .inputOffset = 0,
-        });
-
-    rewireOp.ranges.push_back({
-        .subwidth = selectionEnd - m_selection.start,
-        .source = hlim::Node_Rewire::OutputRange::INPUT,
-        .inputIdx = 1,
-        .inputOffset = 0,
-    });
-
-    if (selectionEnd != inputWidth)
-        rewireOp.ranges.push_back({
-            .subwidth = inputWidth - selectionEnd,
-            .source = hlim::Node_Rewire::OutputRange::INPUT,
-            .inputIdx = 0,
-            .inputOffset = selectionEnd,
-        });
-    
-    node->setOp(std::move(rewireOp));
-    node->changeOutputType(m_signal->getConnType());    
-    
-    *m_signal = BVec(hlim::NodePort{ .node = node, .port = 0ull });
-    
-    return *this;
-}
-
-BVecSlice::operator BVec() const
-{
-    hlim::NodePort currentInput;
-    if (m_signal != nullptr) {
-        currentInput = m_signal->getReadPort();
-    } else
-        currentInput = m_lastSignalNodePort;
-    
-    size_t inputWidth = currentInput.node->getOutputConnectionType(currentInput.port).width;
-    
-    hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(1);
-    node->recordStackTrace();
-
-    node->connectInput(0, currentInput);
-
-    hlim::Node_Rewire::RewireOperation rewireOp;
-    HCL_ASSERT_HINT(m_selection.stride == 1, "Strided slices not yet implemented!");
-    
-    size_t selectionEnd = m_selection.end;
-    if (m_selection.untilEndOfSource)
-        selectionEnd = inputWidth;
-
-    HCL_DESIGNCHECK(m_selection.start >= 0);
-    HCL_DESIGNCHECK((size_t) m_selection.start < inputWidth);
-    
-    //HCL_DESIGNCHECK(selectionEnd >= 0);
-    HCL_DESIGNCHECK(selectionEnd <= inputWidth);
-    
-    rewireOp.ranges.push_back({
-        .subwidth = selectionEnd - m_selection.start,
-        .source = hlim::Node_Rewire::OutputRange::INPUT,
-        .inputIdx = 0,
-        .inputOffset = size_t(m_selection.start),
-    });
-
-    node->setOp(std::move(rewireOp));
-    node->changeOutputType(currentInput.node->getOutputConnectionType(0));    
-    return BVec(hlim::NodePort{ .node = node, .port = 0ull });    
-}
-
-void BVecSlice::unregisterSignal() { 
-    m_lastSignalNodePort = m_signal->getReadPort();
-    m_signal = nullptr;
-}
-
-
-
-BVec::BVec() :
-    ElementarySignal(ElementarySignal::InitInvalid::x)
-{
-}
-
-BVec::BVec(size_t width) :
-    ElementarySignal(getSignalType(width), ElementarySignal::InitUnconnected::x)
-{
-    
-}
-
-BVec::BVec(const hlim::NodePort &port) : ElementarySignal(port, ElementarySignal::InitOperation::x)
-{ 
-    
-}
-
-BVec::BVec(BVecSignalPort rhs) : ElementarySignal(rhs, ElementarySignal::InitCopyCtor::x)
-{
-    
-}
-
-BVec::BVec(const BVec &rhs, ElementarySignal::InitSuccessor) : ElementarySignal(rhs, ElementarySignal::InitSuccessor::x) 
-{
-    
-}
-
-
-BVec::~BVec() 
-{ 
-    for (auto slice : m_slices) 
-        slice->unregisterSignal(); 
-}
-
-
-void BVec::resize(size_t width)
-{
-    setConnectionType(getSignalType(width));
-}
-
-const BVec BVec::operator*() const
-{
-    return BVec(*this, ElementarySignal::InitSuccessor::x);
-}
-
-Bit BVec::operator[](size_t idx) const
-{
-    hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(1);
-    node->recordStackTrace();
-
-    size_t w = getWidth();
-    idx = (w + (idx % w)) % w;
-
-    hlim::Node_Rewire::RewireOperation rewireOp;
-    rewireOp.ranges.push_back({
-        .subwidth = 1,
-        .source = hlim::Node_Rewire::OutputRange::INPUT,
-        .inputIdx = 0,
-        .inputOffset = (size_t)idx,
-        });
-    node->setOp(std::move(rewireOp));
-
-    node->connectInput(0, getReadPort());
-    node->changeOutputType({.interpretation = hlim::ConnectionType::BOOL});
-
-    return Bit({ .node = node, .port = 0ull });
-}
-
-void BVec::setBit(size_t idx, BitSignalPort in)
-{
-    HCL_DESIGNCHECK_HINT(getWidth() > idx, "Out of bounds vector element assignment.");
-
-    hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(2);
-    node->recordStackTrace();
-
-    node->connectInput(0, getReadPort());
-    node->connectInput(1, in.getReadPort());
-
-    hlim::Node_Rewire::RewireOperation rewireOp;
-    if (idx != 0)
-        rewireOp.ranges.push_back({
-            .subwidth = idx,
-            .source = hlim::Node_Rewire::OutputRange::INPUT,
-            .inputIdx = 0,
-            .inputOffset = 0,
-        });
-
-    rewireOp.ranges.push_back({
-        .subwidth = 1,
-        .source = hlim::Node_Rewire::OutputRange::INPUT,
-        .inputIdx = 1,
-        .inputOffset = 0,
-    });
-
-    if (idx + 1 != getWidth())
+    Selection Selection::All()
     {
-        rewireOp.ranges.push_back({
-            .subwidth = getWidth() - idx - 1,
-            .source = hlim::Node_Rewire::OutputRange::INPUT,
-            .inputIdx = 0,
-            .inputOffset = idx + 1,
-        });
+        return { .untilEndOfSource = true };
     }
 
-    node->setOp(std::move(rewireOp));
-    node->changeOutputType(getConnType());
-    assign(BVecSignalPort{ BVec{ {.node = node, .port = 0ull } } });
-}
-
-
-hlim::ConnectionType BVec::getSignalType(size_t width) const
-{
-    hlim::ConnectionType connectionType;
-    
-    connectionType.interpretation = hlim::ConnectionType::BITVEC;
-    connectionType.width = width;
-    
-    return connectionType;
-}
-
-
-
-
-
-BVec BVec::zext(size_t width) const
-{
-    hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(1);
-    node->recordStackTrace();
-
-    node->connectInput(0, getReadPort());
-
-    hlim::Node_Rewire::RewireOperation rewireOp;
-    if (width > 0 && getWidth() > 0)
+    Selection Selection::From(int start)
     {
-        rewireOp.ranges.push_back({
-                .subwidth = std::min(width, getWidth()),
-                .source = hlim::Node_Rewire::OutputRange::INPUT,
-            });
+        return {
+            .start = start,
+            .end = 0,
+            .stride = 1,
+            .untilEndOfSource = true,
+        };
     }
 
-    if (width > getWidth())
+    Selection Selection::Range(int start, int end)
     {
-        rewireOp.ranges.push_back({
-                .subwidth = width - getWidth(),
-                .source = hlim::Node_Rewire::OutputRange::CONST_ZERO,
-            });
+        return {
+            .start = start,
+            .end = end,
+            .stride = 1,
+            .untilEndOfSource = false,
+        };
     }
 
-    node->setOp(std::move(rewireOp));
-    node->changeOutputType(getConnType());    
-    return BVec(hlim::NodePort{ .node = node, .port = 0ull });
-}
-
-BVec BVec::bext(size_t width, const Bit& bit) const
-{
-    hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(2);
-    node->recordStackTrace();
-
-    node->connectInput(0, getReadPort());
-    node->connectInput(1, bit.getReadPort());
-
-    hlim::Node_Rewire::RewireOperation rewireOp;
-    if (width > 0 && getWidth() > 0)
+    Selection Selection::RangeIncl(int start, int endIncl)
     {
-        rewireOp.ranges.push_back({
-                .subwidth = std::min(width, getWidth()),
-                .source = hlim::Node_Rewire::OutputRange::INPUT,
-            });
+        return {
+            .start = start,
+            .end = endIncl + 1,
+            .stride = 1,
+            .untilEndOfSource = false,
+        };
     }
 
-    if (width > getWidth())
+    Selection Selection::StridedRange(int start, int end, int stride)
     {
-        rewireOp.ranges.resize(width - getWidth() + rewireOp.ranges.size(), {
-                .subwidth = 1,
-                .source = hlim::Node_Rewire::OutputRange::INPUT,
-                .inputIdx = 1,
-            });
+        return {
+            .start = start,
+            .end = end,
+            .stride = stride,
+            .untilEndOfSource = false,
+        };
     }
 
-    node->setOp(std::move(rewireOp));
-    node->changeOutputType(getConnType());    
-    return BVec(hlim::NodePort{.node = node, .port = 0ull});
-}
+    Selection Selection::Slice(int offset, size_t size)
+    {
+        return {
+            .start = offset,
+            .end = offset + int(size),
+            .stride = 1,
+            .untilEndOfSource = false,
+        };
+    }
+
+    Selection Selection::StridedSlice(int offset, size_t size, int stride)
+    {
+        return {
+            .start = offset,
+            .end = offset + int(size),
+            .stride = stride,
+            .untilEndOfSource = false,
+        };
+    }
+
+    static hlim::Node_Rewire::RewireOperation pickSelection(const Selection& range)
+    {
+        HCL_DESIGNCHECK(!range.untilEndOfSource);
+        HCL_ASSERT(range.start >= 0);
+
+        hlim::Node_Rewire::RewireOperation op;
+        if (range.stride == 1)
+        {
+            op.addInput(0, range.start, range.end - range.start);
+        }
+        else
+        {
+            HCL_ASSERT(range.stride > 1);
+
+            for (size_t i = (size_t)range.start; i < range.end; i += range.stride)
+                op.addInput(0, i, 1);
+        }
+
+        return op;
+    }
+
+    static hlim::Node_Rewire::RewireOperation replaceSelection(const Selection& range, size_t width)
+    {
+        HCL_DESIGNCHECK(!range.untilEndOfSource);
+        HCL_DESIGNCHECK(range.end <= width);
+        HCL_ASSERT(range.start >= 0);
+
+        hlim::Node_Rewire::RewireOperation op;
+        if (range.stride == 1)
+        {
+            op.addInput(0, 0, range.start);
+            op.addInput(1, 0, range.end - range.start);
+            op.addInput(0, range.end, width - range.end);
+        }
+        else
+        {
+            size_t offset0 = 0;
+            size_t offset1 = 0;
+
+            for (size_t i = (size_t)range.start; i < range.end; i += range.stride)
+            {
+                op.addInput(0, offset0, i);
+                op.addInput(1, offset1++, 1);
+                offset0 = i + 1;
+            }
+            op.addInput(0, offset0, width - offset0);
+        }
+
+        return op;
+    }
 
 
+    BVec::BVec(hlim::Node_Signal* node, Selection range, Expansion expansionPolicy) :
+        m_node(node),
+        m_selection(range),
+        m_expansionPolicy(expansionPolicy)
+    {
+        auto connType = node->getOutputConnectionType(0);
+        HCL_DESIGNCHECK(!range.untilEndOfSource); // no impl
+        HCL_DESIGNCHECK(range.end <= connType.width);
+        HCL_DESIGNCHECK(connType.interpretation == hlim::ConnectionType::BITVEC);
+
+        m_width = (m_selection.end - m_selection.start) / m_selection.stride;
+    }
+
+    BVec::BVec(size_t width, Expansion expansionPolicy)
+    {
+        // TODO: set constant to undefined
+        auto* constant = DesignScope::createNode<hlim::Node_Constant>(
+            hlim::ConstantData(0, width), 
+            hlim::ConnectionType{.interpretation = hlim::ConnectionType::BITVEC, .width = width}
+            );
+        assign(SignalReadPort(constant, expansionPolicy));
+    }
+
+    BVec::BVec(std::string_view rhs)
+    {
+        assign(rhs);
+    }
+
+    const BVec BVec::operator*() const
+    {
+        if (m_selection == Selection::All())
+            return SignalReadPort(m_node, m_expansionPolicy);
+
+        auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
+        rewire->connectInput(0, { .node = m_node, .port = 0 });
+        rewire->setOp(pickSelection(m_selection));
+        return SignalReadPort(rewire, m_expansionPolicy);
+    }
+
+    void BVec::resize(size_t width)
+    {
+        HCL_DESIGNCHECK_HINT(m_selection == Selection::All(), "BVec::resize is not allowed for alias BVec's. use zext instead.");
+        HCL_DESIGNCHECK_HINT(m_node->getDirectlyDriven(0).empty(), "BVec::resize is allowed for unused signals (final)");
+        HCL_DESIGNCHECK_HINT(width > getWidth(), "BVec::resize width decrease not allowed");
+        HCL_DESIGNCHECK_HINT(width <= getWidth() || m_expansionPolicy != Expansion::none, "BVec::resize width increase only allowed when expansion policy is set");
+
+        if (width == getWidth())
+            return;
+
+        auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
+        rewire->connectInput(0, getReadPort());
+
+        switch (m_expansionPolicy)
+        {
+        case Expansion::sign: rewire->setPadTo(width); break;
+        case Expansion::zero: rewire->setPadTo(width, hlim::Node_Rewire::OutputRange::CONST_ZERO); break;
+        case Expansion::one: rewire->setPadTo(width, hlim::Node_Rewire::OutputRange::CONST_ONE); break;
+        default: break;
+        }
+
+        m_node->connectInput({ .node = rewire, .port = 0 }); // unconditional (largest of all paths wins)
+        m_width = width;
+        m_bitAlias.clear();
+    }
+
+    hlim::ConnectionType BVec::getConnType() const
+    {
+        return hlim::ConnectionType{ .interpretation = hlim::ConnectionType::BITVEC, .width = m_width };
+    }
+
+    SignalReadPort BVec::getReadPort() const
+    {
+        SignalReadPort driver(m_node->getDriver(0), m_expansionPolicy);
+        if (m_readPortDriver != driver.node)
+        {
+            m_readPort = driver;
+            m_readPortDriver = driver.node;
+
+            if (m_selection != Selection::All())
+            {
+                auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
+                rewire->connectInput(0, m_readPort);
+                rewire->setOp(pickSelection(m_selection));
+                m_readPort = SignalReadPort(rewire, m_expansionPolicy);
+            }
+        }
+        return m_readPort;
+    }
+
+    void BVec::setName(std::string name)
+    {
+        m_node->setName(move(name));
+    }
+
+    void BVec::assign(std::string_view value)
+    {
+        auto data = hlim::ConstantData(value);
+        auto* constant = DesignScope::createNode<hlim::Node_Constant>(
+            data,
+            hlim::ConnectionType{ .interpretation = hlim::ConnectionType::BITVEC, .width = data.bitVec.size() }
+        );
+
+        // TODO: set policy from string content
+        assign(SignalReadPort(constant, Expansion::none));
+    }
+
+    void BVec::assign(SignalReadPort in)
+    {
+        HCL_ASSERT(connType(in).interpretation == hlim::ConnectionType::BITVEC);
+
+        if (!m_node)
+        {
+            m_width = width(in);
+            m_expansionPolicy = in.expansionPolicy;
+
+            m_node = DesignScope::createNode<hlim::Node_Signal>();
+            m_node->setConnectionType(getConnType());
+            m_node->recordStackTrace();
+        }
+
+        // TODO: handle implicit width expansion
+        HCL_ASSERT(width(in) <= m_width);
+
+        in = in.expand(m_width);
+
+        if (m_selection != Selection::All())
+        {
+            auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(2);
+            rewire->connectInput(0, m_node->getDriver(0));
+            rewire->connectInput(1, in);
+            rewire->setOp(replaceSelection(m_selection, m_node->getOutputConnectionType(0).width));
+            in.node = rewire;
+            in.port = 0;
+        }
+
+        if (ConditionalScope::get())
+        {
+            auto* mux = DesignScope::createNode<hlim::Node_Multiplexer>(2);
+            mux->connectInput(0, m_node->getDriver(0));
+            mux->connectInput(1, in); // assign rhs last in case previous port was undefined
+            mux->connectSelector(ConditionalScope::getCurrentConditionPort());
+            in.node = mux;
+            in.port = 0;
+        }
+
+        m_node->connectInput(in);
+    }
+
+    std::vector<Bit>& BVec::aliasVec() const
+    {
+        if (m_bitAlias.size() != getWidth())
+        {
+            m_bitAlias.reserve(getWidth());
+            for (size_t i = 0; i < getWidth(); ++i)
+                m_bitAlias.emplace_back(m_node, i);
+        }
+        return m_bitAlias;
+    }
+
+    Bit& BVec::aliasMsb() const
+    {
+        if (!m_msbAlias)
+            m_msbAlias.emplace(m_node, ~0u);
+        return *m_msbAlias;
+    }
+
+    Bit& BVec::aliasLsb() const
+    {
+        if (!m_lsbAlias)
+            m_lsbAlias.emplace(m_node, 0);
+        return *m_lsbAlias;
+    }
+
+    BVec& BVec::aliasRange(const Selection& range) const
+    {
+        auto [it, exists] = m_rangeAlias.try_emplace(range, m_node, range, m_expansionPolicy);
+        return it->second;
+    }
+
+    BVec ext(const Bit& bit, size_t increment)
+    {
+        SignalReadPort port = bit.getReadPort();
+        return BVec(port.expand(bit.getWidth() + increment));
+    }
+
+    BVec ext(const Bit& bit, size_t increment, Expansion policy)
+    {
+        SignalReadPort port = bit.getReadPort();
+        port.expansionPolicy = policy;
+        return BVec(port.expand(bit.getWidth() + increment));
+    }
+
+    BVec ext(const BVec& bvec, size_t increment)
+    {
+        SignalReadPort port = bvec.getReadPort();
+        return BVec(port.expand(bvec.getWidth() + increment));
+    }
+
+    BVec ext(const BVec& bvec, size_t increment, Expansion policy)
+    {
+        SignalReadPort port = bvec.getReadPort();
+        port.expansionPolicy = policy;
+        return BVec(port.expand(bvec.getWidth() + increment));
+    }
 
 }

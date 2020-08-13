@@ -74,7 +74,7 @@ BVec SignalBitShiftOp::operator()(const BVec &operand) {
     }
     node->setOp(std::move(rewireOp));
     node->connectInput(0, operand.getReadPort());
-    return BVec({.node = node, .port = 0});
+    return SignalReadPort(node);
 }
 
 
@@ -103,19 +103,5 @@ BVec &operator>>=(BVec &signal, int amount)  {
     signal = signal >> amount;
     return signal;
 }
-
-BVecSlice &operator<<=(BVecSlice &signal, int amount)
-{
-    signal = (BVec) signal << amount;
-    return signal;
-}
-
-BVecSlice &operator>>=(BVecSlice &signal, int amount)
-{
-    signal = (BVec) signal >> amount;
-    return signal;
-}
-
-
 
 }

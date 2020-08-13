@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Signal.h"
-#include "SignalPort.h"
 #include "Scope.h"
 
 #include <hcl/hlim/coreNodes/Node_Signal.h>
@@ -11,33 +10,47 @@
 
 namespace hcl::core::frontend {
     
-class BVec;
+    class BVec;
     
-class Bit : public ElementarySignal
-{
-    public:
-        using PortType = BitSignalPort;
+    class Bit : public ElementarySignal
+    {
+        public:
+            using isBitSignal = void;
+        
+            Bit();
+            Bit(const Bit& rhs);
 
-        HCL_SIGNAL
-        using isBitSignal = void;
-        
-        Bit();
-        Bit(BitSignalPort rhs);
-        Bit(const hlim::NodePort &port);
-        Bit(const Bit& rhs) : Bit{BitSignalPort{rhs}} {}
-        
-        BVec zext(size_t width) const;
-        BVec sext(size_t width) const;
-        BVec bext(size_t width, const Bit& bit) const;
-        
-        Bit& operator=(BitSignalPort rhs) { assign(rhs); return *this; }
-        Bit& operator=(const Bit& rhs) { assign(BitSignalPort{ rhs }); return *this; }
+            Bit(const SignalReadPort& port);
+            Bit(hlim::Node_Signal* node, size_t offset); // alias Bit
 
-        const Bit operator*() const;
-    protected:
-        Bit(const Bit &rhs, ElementarySignal::InitSuccessor);
+            Bit(char);
+            Bit(bool);
         
-        virtual hlim::ConnectionType getSignalType(size_t width) const override;
-};
+            Bit& operator=(const Bit& rhs) { assign(rhs.getReadPort()); return *this; }
+            Bit& operator=(char rhs) { assign(rhs); return *this; }
+            Bit& operator=(bool rhs) { assign(rhs); return *this; }
+
+            const Bit operator*() const;
+
+            size_t getWidth() const final;
+            hlim::ConnectionType getConnType() const final;
+            SignalReadPort getReadPort() const final;
+            std::string_view getName() const final;
+            void setName(std::string name) override;
+
+        protected:
+            void createNode();
+            void assign(bool);
+            void assign(char);
+            virtual void assign(SignalReadPort in);
+
+            bool valid() const final; // hide method since Bit is always valid
+
+        private:
+            hlim::Node_Signal* m_node = nullptr;
+            size_t m_offset = 0;
+
+    };
+
 
 }

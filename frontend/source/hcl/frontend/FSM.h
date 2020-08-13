@@ -79,5 +79,6 @@ void immediateSwitch(const ImmediateState &nextState);
 
 
 namespace hcl::core::frontend {
-inline void setName(fsm::BaseState &state, std::string name) { state.setName(std::move(name)); }
+inline void setName(fsm::DelayedState&state, std::string name) { state.setName(std::move(name)); }
+inline void setName(fsm::ImmediateState& state, std::string name) { state.setName(std::move(name)); }
 }

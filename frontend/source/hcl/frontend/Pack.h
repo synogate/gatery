@@ -76,7 +76,7 @@ namespace hcl::core::frontend
 	}
 
 	template<typename Comp>
-	void name(Comp& compound, std::string_view prefix)
+	void setName(Comp& compound, std::string_view prefix)
 	{
 		struct NameVisitor
 		{
@@ -137,7 +137,7 @@ namespace hcl::core::frontend
 		PackVisitor v{ count };
 		internal::visitCompound(v, compound);
 		v.m_node->setConcat();
-		return hlim::NodePort{ v.m_node, 0 };
+		return SignalReadPort(v.m_node);
 	}
 	
 	template<typename Comp>
@@ -155,7 +155,7 @@ namespace hcl::core::frontend
 				node->setExtract(m_totalWidth, vec.getWidth());
 				m_totalWidth += vec.size();
 			
-				vec = BVec{ hlim::NodePort{node, 0} };
+				vec = BVec{ SignalReadPort(node) };
 			}
 
 			void operator () (Bit& vec)
@@ -167,7 +167,7 @@ namespace hcl::core::frontend
 				node->setExtract(m_totalWidth, 1);
 				m_totalWidth++;
 
-				vec = Bit{ hlim::NodePort{node, 0} };
+				vec = Bit{ SignalReadPort(node) };
 			}
 
 			const BVec& m_packed;

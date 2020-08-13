@@ -18,7 +18,7 @@ namespace hcl::core::frontend
     SignalType Constant(hlim::ConstantData&& value, const hlim::ConnectionType& connectionType)
     {
         auto* node = DesignScope::createNode<hlim::Node_Constant>(value, connectionType);
-        return SignalType({.node = node, .port = 0ull});
+        return SignalReadPort(node);
     }
 
     inline BVec ConstBVec(uint64_t value, size_t width)
@@ -69,7 +69,7 @@ namespace hcl::core::frontend
         HCL_ASSERT(value == '0' || value == '1');
 
         auto* node = DesignScope::createNode<hlim::Node_Constant>(cv, type);
-        return Bit({ .node = node, .port = 0ull });
+        return SignalReadPort(node);
     }
 
     inline Bit ConstBit(bool value)
@@ -83,7 +83,7 @@ namespace hcl::core::frontend
     {
         inline BVec operator ""_bvec(const char* _val)
         {
-            hlim::ConstantData lit{ _val };
+            hlim::ConstantData lit{ std::string_view{ _val} };
             hlim::ConnectionType type{
                 .interpretation = hlim::ConnectionType::BITVEC,
                 .width = lit.bitVec.size()

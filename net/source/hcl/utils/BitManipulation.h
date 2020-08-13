@@ -166,12 +166,12 @@ inline void bitToggle(const void *a, size_t idx) {
 }
 
 template<typename T = std::size_t>
-inline T bitMaskRange(unsigned start, unsigned count) {
+inline T bitMaskRange(size_t start, size_t count) {
     return ((T{ 1 } << count) - 1) << start;
 }
 
 template<typename T>
-inline T bitfieldExtract(T a, unsigned start, unsigned count) {
+inline T bitfieldExtract(T a, size_t start, size_t count) {
     start &= 0xFF;
     count &= 0xFF;
     return (a >> start) & ((T{ 1 } << count) - 1);
@@ -180,19 +180,19 @@ inline T bitfieldExtract(T a, unsigned start, unsigned count) {
 #ifdef __BMI__
 #ifdef AMD64
 template<>
-inline std::uint64_t bitfieldExtract(std::uint64_t a, unsigned start, unsigned count) {
+inline std::uint64_t bitfieldExtract(std::uint64_t a, size_t start, size_t count) {
     return _bextr_u64(a, start, count);
 }
 #endif
 
 template<>
-inline std::uint32_t bitfieldExtract(std::uint32_t a, unsigned start, unsigned count) {
+inline std::uint32_t bitfieldExtract(std::uint32_t a, size_t start, size_t count) {
     return _bextr_u32(a, start, count);
 }
 #endif
 
 template<typename T>
-inline T bitfieldInsert(T a, unsigned start, unsigned count, T v) {
+inline T bitfieldInsert(T a, size_t start, size_t count, T v) {
     auto mask = bitMaskRange<T>(start, count);
     return andNot(mask, a) | (mask & (v << start));
 }

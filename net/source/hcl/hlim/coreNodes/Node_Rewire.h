@@ -26,6 +26,9 @@ class Node_Rewire : public Node<Node_Rewire>
             std::vector<OutputRange> ranges;
             
             bool isBitExtract(size_t& bitIndex) const;
+
+            RewireOperation& addInput(size_t inputIndex, size_t inputOffset, size_t width);
+            RewireOperation& addConstant(OutputRange::Source type, size_t width);
         };
         
         Node_Rewire(size_t numInputs);
@@ -42,8 +45,11 @@ class Node_Rewire : public Node<Node_Rewire>
         
         void setConcat();
         void setInterleave();
-        void setExtract(size_t offset, size_t count);        
-        
+        void setExtract(size_t offset, size_t count);   
+        void setReplaceRange(size_t offset);
+        void setPadTo(size_t width, OutputRange::Source padding); // pad input 0
+        void setPadTo(size_t width); // pad input 0 with msb
+
         inline void setOp(RewireOperation rewireOperation) { m_rewireOperation = std::move(rewireOperation); updateConnectionType(); }
         inline const RewireOperation &getOp() const { return m_rewireOperation; }
         

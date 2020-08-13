@@ -28,12 +28,11 @@ core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::fronten
 
     HCL_COMMENT << "Prepare XORed and XNORed data words to select from based on number of high bits";
 
+    const size_t subWidth = data.getWidth() - 1;
     BVec dataXNOR = data;
+    dataXNOR(1, subWidth) = lxnor(dataXNOR(1, subWidth), dataXNOR(0, subWidth));
     BVec dataXOR = data;
-    for (auto i : utils::Range<size_t>(1, data.getWidth())) {
-        dataXOR.setBit(i, data[i] ^ dataXOR[i-1]);
-        dataXNOR.setBit(i, data[i] == dataXNOR[i-1]);
-    }
+    dataXOR(1, subWidth) ^= dataXOR(0, subWidth);
 
     HCL_NAMED(dataXNOR);
     HCL_NAMED(dataXOR);
@@ -46,7 +45,7 @@ core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::fronten
         q_m = dataXNOR;
     
     HCL_COMMENT << "Keep a running (signed) counter of the imbalance on the line, to modify future data encodings accordingly";
-    Register<BVec> imbalance;
+    Register<BVec> imbalance{ 4, Expansion::none };
     imbalance.setReset(0b0000_bvec);
     imbalance.setClock(pixelClock);
     HCL_NAMED(imbalance);
@@ -68,8 +67,7 @@ core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::fronten
         
         IF (noPreviousImbalance | noImbalanceInQ_m) {
             result(0, 8) = mux(useXnor, {q_m, ~q_m});
-            result.setBit(8, useXnor);
-            result.setBit(9, ~useXnor);
+            result(8, 2) = cat(useXnor, ~useXnor);
             
             IF (useXnor) 
                 imbalance = imbalance.delay(1) - 8_bvec + sumOfOnes_q_m + sumOfOnes_q_m;
@@ -85,16 +83,14 @@ core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::fronten
                 ((!positivePreviousImbalance) & (!positiveImbalanceInQ_m))) {
                 
                 result(0, 8) = ~q_m;
-                result.setBit(8, useXnor);
-                result.setBit(9, true);
+                result(8, 2) = cat(useXnor, '1');
                 
                 imbalance = imbalance.delay(1) + 8_bvec - sumOfOnes_q_m - sumOfOnes_q_m;
                 IF (useXnor)
                     imbalance = (BVec) imbalance + 2_bvec;
             } ELSE {
                 result(0, 8) = q_m;
-                result.setBit(8, useXnor);
-                result.setBit(9, true);
+                result(8, 2) = cat(useXnor, '1');
                 
                 imbalance = imbalance.delay(1) + 8_bvec - sumOfOnes_q_m - sumOfOnes_q_m;
                 IF (useXnor)
@@ -126,53 +122,39 @@ core::frontend::BVec tmdsEncodeReduceTransitions(const core::frontend::BVec& dat
 
     HCL_COMMENT << "Prepare XORed and XNORed data words to select from based on number of high bits";
 
-    // TODO: rename getWidth to size to be more container like
-    // TODO: allow compare of different bit width
-    BVec literalConstant = (4_bvec).zext(sumOfOnes.getWidth());
-    Bit invert = sumOfOnes > literalConstant | (sumOfOnes == literalConstant & data[0] == false);
-
-    BVec tmdsReduced{ data.getWidth() + 1 };
-    HCL_NAMED(tmdsReduced);
-
-    tmdsReduced.setBit(0, data[0]);
-    for (auto i : utils::Range<size_t>(1, data.getWidth())) {
-        tmdsReduced.setBit(i, data[i] ^ tmdsReduced[i - 1] ^ invert);
-    }
+    Bit invert = sumOfOnes > 4u | (sumOfOnes == 4u & !data.lsb());
 
     HCL_COMMENT << "Decode using 1=xor, 0=xnor";
-    tmdsReduced.setBit(data.getWidth(), ~invert);
+    BVec tmdsReduced = cat(~invert, data);
+    for (auto i : utils::Range<size_t>(1, data.getWidth()))
+        tmdsReduced[i] ^= tmdsReduced[i - 1] ^ invert;
 
+    HCL_NAMED(tmdsReduced);
     return tmdsReduced;
 }
 
 core::frontend::BVec tmdsDecodeReduceTransitions(const core::frontend::BVec& data)
 {
-    BVec decoded = data.zext(data.getWidth() - 1);
-    decoded = decoded ^ (decoded << 1); // TODO: ^ invert operator missing
+    BVec decoded = data(0, data.getWidth() - 1);
+    decoded ^= decoded << 1;
+    decoded(1, decoded.getWidth() - 1) ^= data.msb();
+
     HCL_NAMED(decoded);
-
-    IF(!data[data.getWidth() - 1])
-        decoded(1, decoded.getWidth()-1) = ~(BVec)decoded(1, decoded.getWidth() - 1);
-
     return decoded;
 }
 
 core::frontend::BVec tmdsEncodeBitflip(const core::frontend::Clock& clk, const core::frontend::BVec& data)
 {
     HCL_COMMENT << "count the number of uncompensated ones";
-    Register<BVec> global_counter{3ull};
+    Register<BVec> global_counter{3ull, Expansion::none };
     global_counter.setClock(clk);
     global_counter.setReset(0b000_bvec);
     HCL_NAMED(global_counter);
 
     // TODO: depend with and start value on data width
     BVec word_counter = 0b100_bvec;
-    for (size_t i = 0; i < data.getWidth(); ++i)
-    {
-        BVec tmp{ 1 };
-        tmp.setBit(0, data[i]);
-        word_counter += tmp;
-    }
+    for (const Bit& b : data)
+        word_counter += b;
 
     Bit invert = word_counter[word_counter.getWidth() - 1] == global_counter.delay(1)[global_counter.getWidth() - 1];
     HCL_NAMED(invert);
@@ -184,7 +166,7 @@ core::frontend::BVec tmdsEncodeBitflip(const core::frontend::Clock& clk, const c
     {
         // TODO: add sub/add alu
         global_counter = global_counter.delay(1) - word_counter; // TODO: initialize registers with its own delay value
-        result = cat(1_bvec, ~data);
+        result = cat('1', ~data);
     }
     ELSE
     {
@@ -197,11 +179,7 @@ core::frontend::BVec tmdsEncodeBitflip(const core::frontend::Clock& clk, const c
 core::frontend::BVec tmdsDecodeBitflip(const core::frontend::BVec& data)
 {
     // TODO: should be return data(0, -1) ^ data[back];
-    BVec tmp = data.zext(data.getWidth()-1);
-    HCL_NAMED(tmp);
-    for (size_t i = 0; i < tmp.getWidth(); ++i)
-        tmp.setBit(i, tmp[i] ^ data[data.getWidth() - 1]);
-    return tmp;
+    return data(0, data.getWidth() - 1) ^ data.msb();
 }
 
 TmdsEncoder::TmdsEncoder(core::frontend::Clock& clk) :
@@ -283,11 +261,11 @@ SerialTMDS hcl::stl::hdmi::TmdsEncoder::serialOutput() const
     for (auto& c : chan)
         c = c.delay(1) >> 1;
 
-    Register<BVec> shiftCounter(4u);
+    Register<BVec> shiftCounter(4u, Expansion::none);
     shiftCounter.setReset(0x0_bvec);
     shiftCounter.setClock(fastClk);
     HCL_NAMED(shiftCounter);
-    shiftCounter = shiftCounter.delay(1) + 1_bvec;
+    shiftCounter = shiftCounter.delay(1) + 1;
 
     IF(shiftCounter == 9_bvec)
     {

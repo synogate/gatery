@@ -35,7 +35,7 @@ ConditionalScope::~ConditionalScope()
 const Bit& ConditionalScope::getCurrentCondition()
 {
     if (!g_lastConditionBit)
-        g_lastConditionBit.emplace(m_lastCondition);
+        g_lastConditionBit.emplace(SignalReadPort(m_lastCondition));
     return *g_lastConditionBit;
 }
 

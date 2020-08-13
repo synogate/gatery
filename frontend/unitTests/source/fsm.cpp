@@ -59,9 +59,9 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             fsm::DelayedState running;
             HCL_NAMED(running);
 
-            Register<BVec> a(8);
+            Register<BVec> a(8, Expansion::none);
             a.setReset(0b00000000_bvec);
-            Register<BVec> b(8);
+            Register<BVec> b(8, Expansion::none);
             b.setReset(0b00000000_bvec);
 
 #if 0
@@ -89,14 +89,14 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             fsm::ImmediateState shifting;
             HCL_NAMED(shifting);
 
-            Register<BVec> d(4);
+            Register<BVec> d(4, Expansion::none);
             d.setReset(0b0000_bvec);
             
             idle.onActive([&]{
                 IF (start) {
                     a = x_vec;
                     b = y_vec;
-                    d = (0_bvec).zext(4);
+                    d = ConstBVec(0, 4);
                     fsm::delayedSwitch(running);
                 }
             });
@@ -109,7 +109,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
                     IF (!a_odd & !b_odd) {
                         a >>= 1;
                         b >>= 1;
-                        d += 1_bvec;
+                        d += 1;
                     } 
                     IF (!a_odd & b_odd) {
                         a >>= 1;
@@ -130,16 +130,17 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
                 }
             });
             shifting.onActive([&]{
-                IF (d == (0_bvec).zext(4)) {
+                IF(d == ConstBVec(0, 4)) {
                     fsm::immediateSwitch(idle);
                 } ELSE {
                     a <<= 1;
-                    d -= 1_bvec;
+                    d -= 1;
                 }
             });            
 #endif
             fsm::FSM stateMachine(clock, idle);
             result = a.delay(1);
+            sim_debug() << result << "," << a << "," << a.delay(1);
             HCL_NAMED(result);
             done = stateMachine.isInState(idle);
             HCL_NAMED(done);
@@ -147,7 +148,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             //sim_debug() << "a is " << a.delay(1) << " and b is " << b.delay(1);
         }
         
-        BVec ticks(8);
+        BVec ticks(8, Expansion::none);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick());
         }, ticks);
@@ -204,9 +205,9 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD
                 .setComment("Statemachine to compute the GCD of two 8-bit integers.");
 
 
-            Register<BVec> a(8);
+            Register<BVec> a(8, Expansion::none);
             a.setReset(0b00000000_bvec);
-            Register<BVec> b(8);
+            Register<BVec> b(8, Expansion::none);
             b.setReset(0b00000000_bvec);
 
             IF(start) {
@@ -231,7 +232,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD
             sim_debug() << "a is " << a.delay(1) << " and b is " << b.delay(1);
         }
 
-        BVec ticks(8);
+        BVec ticks(8, Expansion::none);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
             context.set(0, context.getTick());
             }, ticks);

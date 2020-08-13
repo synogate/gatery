@@ -17,14 +17,13 @@ namespace hcl::core::frontend::fsm {
 thread_local FSM *FSM::m_fsmContext = nullptr;
     
     
-FSM::FSM(const Clock &clock, const BaseState &startState) : m_stateReg(8u)
+FSM::FSM(const Clock &clock, const BaseState &startState) : 
+    m_stateReg(8u, Expansion::none)
 {
     m_fsmContext = this;
     
     m_stateReg.setClock(clock);
     m_stateReg.setReset(0x00_bvec);
-    
-    m_stateReg = m_stateReg.delay(1);
     m_stateReg.setName("fsm_state");
 
     m_state2encoding[&startState] = std::make_unique<BVec>(8);
@@ -43,7 +42,7 @@ FSM::FSM(const Clock &clock, const BaseState &startState) : m_stateReg(8u)
     }
     
     for (auto &pair : m_state2encoding)
-        *pair.second = ConstBVec(m_state2id[pair.first], 8);
+        *pair.second = m_state2id[pair.first];
 }
 
 

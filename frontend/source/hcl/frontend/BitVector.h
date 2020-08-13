@@ -2,7 +2,6 @@
 
 #include "Bit.h"
 #include "Signal.h"
-#include "SignalPort.h"
 #include "Scope.h"
 
 #include <hcl/hlim/coreNodes/Node_Signal.h>
@@ -13,184 +12,196 @@
 #include <vector>
 #include <algorithm>
 #include <compare>
-
+#include <optional>
+#include <map>
 
 namespace hcl::core::frontend {
 
-// concat x = a && b && c;
-    
-    
-struct Selection {
-    int start = 0;
-    int end = 0;
-    int stride = 1;
-    bool untilEndOfSource = false;    
-    
-    static Selection From(int start);
-    static Selection Range(int start, int end);
-    static Selection RangeIncl(int start, int endIncl);
-    static Selection StridedRange(int start, int end, int stride);
+	struct Selection {
+		int start = 0;
+		int end = 0;
+		int stride = 1;
+		bool untilEndOfSource = false;
 
-    static Selection Slice(int offset, size_t size);
-    static Selection StridedSlice(int offset, size_t size, int stride);
-};
+		static Selection All();
+		static Selection From(int start);
+		static Selection Range(int start, int end);
+		static Selection RangeIncl(int start, int endIncl);
+		static Selection StridedRange(int start, int end, int stride);
+
+		static Selection Slice(int offset, size_t size);
+		static Selection StridedSlice(int offset, size_t size, int stride);
+
+		auto operator <=> (const Selection& rhs) const = default;
+	};
+
+	class BVec : public ElementarySignal
+	{
+	public:
+		using isBitVectorSignal = void;
+
+		using iterator = std::vector<Bit>::iterator;
+		using const_iterator = std::vector<Bit>::const_iterator;
+		using reverse_iterator = std::vector<Bit>::reverse_iterator;
+		using const_reverse_iterator = std::vector<Bit>::const_reverse_iterator;
+
+		BVec() = default;
+		BVec(const BVec& rhs) { assign(rhs.getReadPort()); }
+
+		BVec(const SignalReadPort& port) { assign(port); }
+		BVec(hlim::Node_Signal* node, Selection range, Expansion expansionPolicy); // alias
+		BVec(size_t width, Expansion expansionPolicy);
+
+		BVec(std::string_view rhs);
+
+		template <typename Int, typename = std::enable_if_t<std::is_integral_v<Int> & !std::is_same_v<Int, char> & !std::is_same_v<Int, bool>> >
+		BVec(Int vec) { assign(vec); }
+
+		template <typename Int, typename = std::enable_if_t<std::is_integral_v<Int> & !std::is_same_v<Int, char> & !std::is_same_v<Int, bool>> >
+		BVec& operator = (Int rhs) { assign(rhs); return *this; }
+		BVec& operator = (std::string_view rhs) { assign(rhs); return *this; }
+		BVec& operator = (const BVec& rhs) { assign(rhs.getReadPort()); return *this; }
+
+		BVec& operator()(int offset, size_t size) { return aliasRange(Selection::Slice(offset, size)); }
+		const BVec& operator() (int offset, size_t size) const { return aliasRange(Selection::Slice(offset, size)); }
+
+		BVec& operator()(const Selection& selection) { return aliasRange(selection); }
+		const BVec& operator() (const Selection& selection) const { return aliasRange(selection); }
+
+		//BVec zext(size_t width) const;
+		//BVec sext(size_t width) const { return bext(width, msb()); }
+		//BVec bext(size_t width, const Bit& bit) const;
+
+		const BVec operator*() const;
+
+		virtual void resize(size_t width);
+
+		Bit& lsb() { return aliasLsb(); }
+		const Bit& lsb() const { return aliasLsb(); }
+		Bit& msb() { return aliasMsb(); }
+		const Bit& msb() const { return aliasMsb(); }
+
+		Bit& operator[](size_t idx) { return aliasVec()[idx]; }
+		const Bit& operator[](size_t idx) const { return aliasVec()[idx]; }
+
+		Bit& at(size_t idx) { return aliasVec().at(idx); }
+		const Bit& at(size_t idx) const { return aliasVec().at(idx); }
+
+		bool empty() const { return getWidth() == 0; }
+		size_t size() const { return getWidth(); }
+
+		Bit& front() { return aliasVec().front(); }
+		const Bit& front() const { return aliasVec().front(); }
+		Bit& back() { return aliasVec().back(); }
+		const Bit& back() const { return aliasVec().back(); }
+
+		iterator begin() { return aliasVec().begin(); }
+		iterator end() { return aliasVec().end(); }
+		const_iterator begin() const { return aliasVec().begin(); }
+		const_iterator end() const { return aliasVec().end(); }
+		const_iterator cbegin() const { return aliasVec().cbegin(); }
+		const_iterator cend() const { return aliasVec().cend(); }
+
+		reverse_iterator rbegin() { return aliasVec().rbegin(); }
+		reverse_iterator rend() { return aliasVec().rend(); }
+		const_reverse_iterator rbegin() const { return aliasVec().rbegin(); }
+		const_reverse_iterator rend() const { return aliasVec().rend(); }
+		const_reverse_iterator crbegin() const { return aliasVec().crbegin(); }
+		const_reverse_iterator crend() const { return aliasVec().crend(); }
 
 
-class BVec;
+		bool valid() const final { return m_node != nullptr; }
 
-class BVecSlice
-{
-    public:
-        using isBitVectorSignalLike = void;
-        
-        ~BVecSlice();
-        
-        BVecSlice &operator=(const BVecSlice &slice);
-        BVecSlice &operator=(const ElementarySignal &signal);
-        operator BVec() const;
-        
-        size_t size() const;
-    protected:
-        BVecSlice() = delete;
-        BVecSlice(const BVecSlice &) = delete;
-        BVecSlice(BVec *signal, const Selection &selection);
-        
-        
-        BVec *m_signal;
-        Selection m_selection;
-        
-        hlim::NodePort m_lastSignalNodePort;
-        
-        friend class BVec;
-        
-        void unregisterSignal();
-};
+		// these methods are undefined for invalid signals (uninitialized)
+		size_t getWidth() const final { return m_width; }
+		hlim::ConnectionType getConnType() const final;
+		SignalReadPort getReadPort() const final;
+		std::string_view getName() const final { return m_node->getName(); }
+		void setName(std::string name) override;
 
-template<typename TVec>
-class BVecBitProxy
-{
-public:
-    BVecBitProxy(TVec* vec, size_t index) : m_vec{ vec }, m_index{ index } {}
+	protected:
+		template <typename Int, typename = std::enable_if_t<std::is_integral_v<Int> & !std::is_same_v<Int, char> & !std::is_same_v<Int, bool>> >
+		void assign(Int);
+		void assign(std::string_view);
+		virtual void assign(SignalReadPort);
 
-    BVecBitProxy& operator = (BitSignalPort value) { m_vec->setBit(m_index, Bit{ value }); return *this; }
-    operator Bit () const { return (*(const TVec*)m_vec)[m_index]; };
+	private:
+		hlim::Node_Signal* m_node = nullptr;
+		Selection m_selection = Selection::All();
+		Expansion m_expansionPolicy = Expansion::none;
+		size_t m_width = 0;
 
-    BVec zext(size_t width) const;
-    BVec sext(size_t width) const;
-    BVec bext(size_t width, const Bit& bit) const;
+		std::vector<Bit>& aliasVec() const;
+		Bit& aliasMsb() const;
+		Bit& aliasLsb() const;
+		BVec& aliasRange(const Selection& range) const;
 
-private:
-    TVec* const m_vec;
-    const size_t m_index;
-};
+		mutable std::vector<Bit> m_bitAlias;
+		mutable std::optional<Bit> m_lsbAlias;
+		mutable std::optional<Bit> m_msbAlias;
+		mutable std::map<Selection, BVec> m_rangeAlias;
 
-template<typename TVec>
-class BVecIterator
-{
-public:
+		mutable SignalReadPort m_readPort;
+		mutable void* m_readPortDriver = nullptr;
+	};
 
-public:
-    BVecIterator(TVec* vec, size_t index) : m_vec{vec}, m_index{index} {}
-    BVecIterator(const BVecIterator&) = default;
+	BVec ext(const Bit& bvec, size_t increment);
+	BVec ext(const Bit& bit, size_t increment, Expansion policy);
+	inline BVec zext(const Bit& bit, size_t increment = 0) { return ext(bit, increment, Expansion::zero); }
+	inline BVec oext(const Bit& bit, size_t increment = 0) { return ext(bit, increment, Expansion::one); }
+	inline BVec sext(const Bit& bit, size_t increment = 0) { return ext(bit, increment, Expansion::sign); }
 
-    BVecIterator& operator ++ () { ++m_index; return *this; }
-    BVecIterator operator ++ (int) { BVecIterator tmp = *this; m_index++; return tmp; }
-    BVecIterator& operator -- () { --m_index; return *this; }
-    BVecIterator operator -- (int) { BVecIterator tmp = *this; m_index--; return tmp; }
-    BVecIterator operator + (size_t offset) const { return { m_vec, m_index + offset }; }
-    BVecIterator operator - (size_t offset) const { return { m_vec, m_index - offset }; }
-    BVecIterator& operator += (size_t offset) { m_index += offset; return *this; }
-    BVecIterator& operator -= (size_t offset) { m_index -= offset; return *this; }
-    ptrdiff_t operator - (const BVecIterator& rhs) const { return ptrdiff_t(m_index) - rhs.m_index; }
+	BVec ext(const BVec& bvec, size_t increment);
+	BVec ext(const BVec& bvec, size_t increment, Expansion policy);
+	inline BVec zext(const BVec& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::zero); }
+	inline BVec oext(const BVec& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::one); }
+	inline BVec sext(const BVec& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::sign); }
 
-    //bool operator != (const BVecIterator&) const = default;
-    auto operator <=> (const BVecIterator& rhs) const = default; // { assert(m_vec == rhs.m_vec); return m_index <=> rhs.m_index; }
-    BVecBitProxy<TVec> operator* () const { return { m_vec, m_index }; }
+	struct NormalizedWidthOperands
+	{
+		template<typename SigA, typename SigB>
+		NormalizedWidthOperands(const SigA&, const SigB&);
 
-private:
-    TVec* m_vec;
-    size_t m_index;
-};
+		SignalReadPort lhs, rhs;
+	};
 
-class BVec : public ElementarySignal
-{
-    public:
-        using PortType = BVecSignalPort;
+	template<typename Int, typename>
+	inline void BVec::assign(Int value)
+	{
+		size_t width;
+		Expansion policy;
 
-        HCL_SIGNAL
-        using ElementarySignal::ElementarySignal;
-        using isBitVectorSignal = void;
+		if constexpr (std::is_unsigned_v<Int>)
+		{
+			policy = Expansion::zero;
+			width = utils::Log2C(value);
+		}
+		else
+		{
+			policy = Expansion::sign;
 
-        BVec();
-        BVec(const hlim::NodePort &port);
-        BVec(BVecSignalPort rhs);
-        BVec(const BVec& rhs) : BVec{ BVecSignalPort{rhs} } {}
+			if (value >= 0)
+				width = utils::Log2C(value) + 1;
+			else
+				width = utils::Log2C(~value) + 1;
+		}
 
-        explicit BVec(size_t width);
+		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
+			hlim::ConstantData(uint64_t(value), width),
+			hlim::ConnectionType{ .interpretation = hlim::ConnectionType::BITVEC, .width = width }
+		);
+		assign(SignalReadPort(constant, policy));
+	}
 
-        ~BVec();
+	template<typename SigA, typename SigB>
+	inline NormalizedWidthOperands::NormalizedWidthOperands(const SigA& l, const SigB& r)
+	{
+		lhs = l.getReadPort();
+		rhs = r.getReadPort();
 
-        BVec zext(size_t width) const;
-        BVec sext(size_t width) const { return bext(width, msb()); }
-        BVec bext(size_t width, const Bit& bit) const;
-
-        BVecSlice operator()(int offset, size_t size) { return BVecSlice(this, Selection::Slice(offset, size)); }
-        BVecSlice operator()(const Selection &selection) { return BVecSlice(this, selection); }
-
-        BVec& operator=(BVecSignalPort rhs) { assign(rhs); return *this; }
-        BVec& operator=(const BVec& rhs) { assign(BVecSignalPort{ rhs }); return *this; }
-        
-        const BVec operator*() const;
-
-        virtual void resize(size_t width);
-
-        Bit operator[](size_t idx) const;
-        BVecBitProxy<BVec> operator[](size_t idx) { assert(idx < size()); return { this, idx }; }
-
-        void setBit(size_t idx, BitSignalPort in);
-
-        Bit lsb() const { return (*this)[0]; }
-        Bit msb() const { return (*this)[size()-1]; }
-
-        bool empty() const { return size() == 0; }
-        size_t size() const { return getWidth(); }
-
-        Bit front() const { return lsb(); }
-        Bit back() const { return msb(); }
-        BVecBitProxy<BVec> front() { return { this, 0 }; }
-        BVecBitProxy<BVec> back() { return { this, size() - 1 }; }
-
-        BVecIterator<BVec> begin() { return { this, 0 }; }
-        BVecIterator<BVec> end() { return { this, size() }; }
-        BVecIterator<const BVec> cbegin() const { return { this, 0 }; }
-        BVecIterator<const BVec> cend() const { return { this, size() }; }
-
-    protected:
-        BVec(const BVec &rhs, ElementarySignal::InitSuccessor);
-        
-        std::set<BVecSlice*> m_slices;
-        friend class BVecSlice;
-        void unregisterSlice(BVecSlice *slice) { m_slices.erase(slice); }
-
-        virtual hlim::ConnectionType getSignalType(size_t width) const override;
-};
-
-template<typename TVec>
-inline BVec BVecBitProxy<TVec>::zext(size_t width) const
-{
-    return ((Bit)*this).zext(width);
-}
-
-template<typename TVec>
-inline BVec BVecBitProxy<TVec>::sext(size_t width) const
-{
-    return ((Bit)*this).sext(width);
-}
-
-template<typename TVec>
-inline BVec BVecBitProxy<TVec>::bext(size_t width, const Bit& bit) const
-{
-    return ((Bit)*this).bext(width, bit);
-}
+		const size_t maxWidth = std::max(width(lhs), width(rhs));
+		lhs = lhs.expand(maxWidth);
+		rhs = rhs.expand(maxWidth);
+	}
 
 }

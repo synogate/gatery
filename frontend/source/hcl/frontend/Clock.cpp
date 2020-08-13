@@ -69,7 +69,7 @@ Bit Clock::driveSignal()
 
     node->setClock(m_clock);
  
-    return Bit({.node = node, .port = 0ull});
+    return node;
 }
 
 

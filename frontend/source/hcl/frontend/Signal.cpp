@@ -1,97 +1,31 @@
 #include "Signal.h"
 #include "Scope.h"
-#include "ConditionalScope.h"
-#include "SignalPort.h"
 
-#include <hcl/utils/Exceptions.h>
-#include <hcl/hlim/coreNodes/Node_Signal.h>
-#include <hcl/hlim/coreNodes/Node_Multiplexer.h>
+#include <hcl/hlim/coreNodes/Node_Rewire.h>
 
-#include <iostream>
+hcl::core::frontend::SignalReadPort hcl::core::frontend::SignalReadPort::expand(size_t width) const
+{
+	hlim::ConnectionType type = connType(*this);
+	HCL_DESIGNCHECK_HINT(type.width <= width, "signal width cannot be implicitly decreased");
+	HCL_DESIGNCHECK_HINT(type.width == width || expansionPolicy != Expansion::none, "missmatching operands size and no expansion policy specified");
 
-namespace hcl::core::frontend {
+	hlim::NodePort ret{ .node = this->node, .port = this->port };
 
-    ElementarySignal::ElementarySignal(InitInvalid)
-    {
-    }
-    
-    ElementarySignal::ElementarySignal(const hlim::ConnectionType& connType, InitUnconnected)
-    {
-        init(connType);
-    }
+	if (type.width < width && expansionPolicy != Expansion::none ||
+		type.width == width && type.interpretation == hlim::ConnectionType::BOOL)
+	{
+		auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
+		rewire->connectInput(0, ret);
 
-    ElementarySignal::ElementarySignal(const hlim::NodePort& port, InitOperation)
-    {
-        init(port.node->getOutputConnectionType(port.port));
-        m_node->connectInput(port);
-    }
+		switch (expansionPolicy)
+		{
+		case Expansion::one:	rewire->setPadTo(width, hlim::Node_Rewire::OutputRange::CONST_ONE);		break;
+		case Expansion::zero:	rewire->setPadTo(width, hlim::Node_Rewire::OutputRange::CONST_ZERO);	break;
+		case Expansion::sign:	rewire->setPadTo(width);	break;
+		default: break;
+		}
 
-    ElementarySignal::ElementarySignal(const SignalPort& rhs, InitCopyCtor)
-    {
-        init(rhs.getConnType());
-        m_node->connectInput(rhs.getReadPort());
-    }
-    
-    ElementarySignal::ElementarySignal(const ElementarySignal& ancestor, InitSuccessor)
-    {
-        initSuccessor(ancestor);
-    }
-
-    ElementarySignal::~ElementarySignal()
-    {
-    }
-
-    void ElementarySignal::setName(std::string name)
-    {
-        m_name = std::move(name);
-        if(m_node)
-            m_node->setName(m_name);
-    }
-
-    void ElementarySignal::init(const hlim::ConnectionType& connType)
-    {
-        m_node = DesignScope::createNode<hlim::Node_Signal>();
-        m_node->setConnectionType(connType);
-        m_node->recordStackTrace();
-        m_node->setName(m_name);
-    }
-
-    void ElementarySignal::initSuccessor(const ElementarySignal& ancestor)
-    {
-        init(ancestor.getConnType());
-
-        m_node->connectInput({.node = ancestor.m_node, .port = 0});
-    }
-
-    void ElementarySignal::assign(const SignalPort& rhs) {
-
-        if (!m_node)
-            init(rhs.getConnType());
-
-        if (getName().empty())
-            setName(std::string{ rhs.getName() });
-
-        if (ConditionalScope::get() == nullptr)
-        {
-            m_node->connectInput(rhs.getReadPort());
-        }
-        else
-        {
-            hlim::Node_Multiplexer* mux = DesignScope::createNode<hlim::Node_Multiplexer>(2);
-            mux->connectInput(0, getReadPort());
-            mux->connectInput(1, rhs.getReadPort()); // assign rhs last in case previous port was undefined
-            mux->connectSelector(ConditionalScope::getCurrentConditionPort());
-
-            m_node->connectInput({ .node = mux, .port = 0ull });
-        }
-    }
-
-    void ElementarySignal::setConnectionType(const hlim::ConnectionType& connectionType)
-    {
-        if (connectionType.width != getWidth())
-            HCL_DESIGNCHECK_HINT(m_node->isOrphaned(), "Can not resize signal once it is connected (driving or driven).");
-
-        m_node->setConnectionType(connectionType);
-    }
-
+		ret = hlim::NodePort{ .node = rewire, .port = 0 };
+	}
+	return SignalReadPort{ ret, expansionPolicy };
 }

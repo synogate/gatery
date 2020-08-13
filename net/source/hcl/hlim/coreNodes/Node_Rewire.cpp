@@ -16,6 +16,35 @@ bool Node_Rewire::RewireOperation::isBitExtract(size_t& bitIndex) const
     return false;
 }
 
+Node_Rewire::RewireOperation& Node_Rewire::RewireOperation::addInput(size_t inputIndex, size_t inputOffset, size_t width)
+{
+    if (width > 0)
+    {
+        ranges.emplace_back(OutputRange{
+            .subwidth = width,
+            .source = OutputRange::INPUT,
+            .inputIdx = inputIndex,
+            .inputOffset = inputOffset
+            });
+    }
+    return *this;
+}
+
+Node_Rewire::RewireOperation& Node_Rewire::RewireOperation::addConstant(OutputRange::Source type, size_t width)
+{
+    HCL_ASSERT(type != OutputRange::INPUT);
+
+    if (width > 0)
+    {
+        ranges.emplace_back(OutputRange{
+            .subwidth = width,
+            .source = type,
+            .inputIdx = 0,
+            .inputOffset = 0
+            });
+    }
+}
+
 Node_Rewire::Node_Rewire(size_t numInputs) : Node(numInputs, 1)
 {
 }
@@ -52,12 +81,52 @@ void Node_Rewire::setExtract(size_t offset, size_t count)
     HCL_DESIGNCHECK(getNumInputPorts() == 1);
 
     RewireOperation op;
-    op.ranges.emplace_back(OutputRange{
-        .subwidth = count,
-        .source = OutputRange::INPUT,
-        .inputIdx = 0,
-        .inputOffset = offset
-    });
+    op.addInput(0, offset, count);
+    setOp(std::move(op));
+}
+
+void Node_Rewire::setReplaceRange(size_t offset)
+{
+    HCL_ASSERT(getNumInputPorts() == 2);
+
+    const ConnectionType type0 = getDriverConnType(0);
+    const ConnectionType type1 = getDriverConnType(1);
+    HCL_ASSERT(type0.width >= type1.width + offset);
+
+    hlim::Node_Rewire::RewireOperation op;
+    op.addInput(0, 0, offset);
+    op.addInput(1, 0, type1.width);
+    op.addInput(0, offset + type1.width, type0.width - (offset + type1.width));
+
+    setOp(std::move(op));
+}
+
+void Node_Rewire::setPadTo(size_t width, OutputRange::Source padding)
+{
+    HCL_ASSERT(getNumInputPorts() == 1);
+
+    const ConnectionType type0 = getDriverConnType(0);
+
+    hlim::Node_Rewire::RewireOperation op;
+    op.addInput(0, 0, std::min(width, type0.width));
+    if(width > type0.width)
+        op.addConstant(padding, width - type0.width);
+
+    setOp(std::move(op));
+}
+
+void Node_Rewire::setPadTo(size_t width)
+{
+    HCL_ASSERT(getNumInputPorts() == 1);
+
+    const ConnectionType type0 = getDriverConnType(0);
+    HCL_DESIGNCHECK(type0.width > 0);
+
+    hlim::Node_Rewire::RewireOperation op;
+    op.addInput(0, 0, std::min(width, type0.width));
+    for(size_t i = type0.width; i < width; ++i)
+        op.addInput(0, type0.width-1, 1);
+
     setOp(std::move(op));
 }
 
@@ -74,6 +143,7 @@ void Node_Rewire::updateConnectionType()
     desiredConnectionType.width = 0;
     for (auto r : m_rewireOperation.ranges)
         desiredConnectionType.width += r.subwidth;
+    HCL_ASSERT(desiredConnectionType.width <= 64);
 
     setOutputConnectionType(0, desiredConnectionType);
 }

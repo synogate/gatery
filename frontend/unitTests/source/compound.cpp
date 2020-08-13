@@ -12,7 +12,7 @@ using namespace boost::unit_test;
 
 struct SimpleStruct
 {
-    hcl::core::frontend::BVec vec = hcl::core::frontend::BVec{ 3 };
+    hcl::core::frontend::BVec vec = hcl::core::frontend::BVec{ 3, hcl::core::frontend::Expansion::none };
     hcl::core::frontend::Bit bit;
 };
 
@@ -32,22 +32,22 @@ BOOST_FIXTURE_TEST_CASE(CompoundName, hcl::core::sim::UnitTestSimulationFixture)
     DesignScope design;
 
     Bit bit;
-    name(bit, "bit");
+    setName(bit, "bit");
     BOOST_CHECK(bit.getName() == "bit");
 
-    BVec vec{4};
-    name(vec, "vec");
+    BVec vec{4, Expansion::none };
+    setName(vec, "vec");
     BOOST_CHECK(vec.getName() == "vec");
 
-    std::vector<BVec> vecvec{ 3, vec };
-    name(vecvec, "vecvec");
+    std::vector<BVec> vecvec( 3, vec );
+    setName(vecvec, "vecvec");
     BOOST_CHECK(vecvec[0].getName() == "vecvec0");
     BOOST_CHECK(vecvec[1].getName() == "vecvec1");
     BOOST_CHECK(vecvec[2].getName() == "vecvec2");
 
     RichStruct obj;
     obj.list.emplace_back();
-    name(obj, "obj");
+    setName(obj, "obj");
     BOOST_CHECK(obj.list[0].vec.getName() == "obj_list0_vec");
 }
 
@@ -60,10 +60,10 @@ BOOST_FIXTURE_TEST_CASE(CompoundWidth, hcl::core::sim::UnitTestSimulationFixture
     Bit bit;
     BOOST_TEST(width(bit) == 1);
 
-    BVec vec{ 4 };
+    BVec vec{ 4, Expansion::none };
     BOOST_TEST(width(vec) == 4);
 
-    std::vector<BVec> vecvec{ 3, vec };
+    std::vector<BVec> vecvec( 3, vec );
     BOOST_TEST(width(vecvec) == 3*4);
 
 }
@@ -87,12 +87,12 @@ BOOST_FIXTURE_TEST_CASE(CompoundPack, hcl::core::sim::UnitTestSimulationFixture)
     }
 
     {
-        BVec vec = 5;
-        std::vector<BVec> vecvec{ 3, vec };
+        BVec vec = 5u;
+        std::vector<BVec> vecvec( 3, vec );
         BVec vecPack = pack(vecvec);
-        sim_assert(vecPack(0,3) == 5);
-        sim_assert(vecPack(3,3) == 5);
-        sim_assert(vecPack(6,3) == 5);
+        sim_assert(vecPack(0,3) == 5u);
+        sim_assert(vecPack(3,3) == 5u);
+        sim_assert(vecPack(6,3) == 5u);
     }
 
     eval(design.getCircuit());
@@ -105,7 +105,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundUnpack, hcl::core::sim::UnitTestSimulationFixtur
     DesignScope design;
 
     RichStruct in;
-    in.vec = 5;
+    in.vec = 5u;
     in.bit = '0';
     for (size_t i = 0; i < 7; ++i)
     {
@@ -120,7 +120,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundUnpack, hcl::core::sim::UnitTestSimulationFixtur
     out.list.resize(in.list.size());
     unpack(out, inPacked);
 
-    sim_assert(out.vec == 5);
+    sim_assert(out.vec == 5u);
     sim_assert(out.bit == '0');
     for (size_t i = 0; i < 7; ++i)
     {
