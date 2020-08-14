@@ -70,7 +70,7 @@ hcl::core::frontend::SignalReadPort hcl::core::frontend::SignalReadPort::expand(
 
 		auto* signal = DesignScope::createNode<hlim::Node_Signal>();
 		signal->connectInput({ .node = rewire, .port = 0 });
-		signal->setName("after_rewire");
+		signal->setName(node->getName());
 
 		//ret = hlim::NodePort{ .node = rewire, .port = 0 };
 		ret = hlim::NodePort{ .node = signal, .port = 0 };

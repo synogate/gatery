@@ -30,7 +30,8 @@ ConditionalScope::ConditionalScope()
 #ifdef SPAM_SIGNAL_NODES
     hlim::Node_Signal* sigNode = DesignScope::createNode<hlim::Node_Signal>();
     sigNode->connectInput({ .node = invNode, .port = 0ull });
-    sigNode->setName("else_branch_negation");
+    if (!m_lastCondition.node->getName().empty())
+        sigNode->setName(std::string("not_")+m_lastCondition.node->getName());
     setCondition({ .node = sigNode, .port = 0ull });
 #else
     setCondition({ .node = invNode, .port = 0ull });
@@ -69,7 +70,8 @@ void ConditionalScope::setCondition(hlim::NodePort port)
 #ifdef SPAM_SIGNAL_NODES
         hlim::Node_Signal* sigNode = DesignScope::createNode<hlim::Node_Signal>();
         sigNode->connectInput({ .node = andNode, .port = 0ull });
-        sigNode->setName("nested_condition_mux");
+        if (!port.node->getName().empty())
+            sigNode->setName(std::string("nested_condition_")+port.node->getName());
         m_fullCondition = { .node = sigNode, .port = 0ull };
 #else
         m_fullCondition = { .node = andNode, .port = 0ull };

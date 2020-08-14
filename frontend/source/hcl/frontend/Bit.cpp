@@ -88,6 +88,8 @@ namespace hcl::core::frontend {
 
     void Bit::setName(std::string name)
     {
+        if (m_node->getDriver(0).node != nullptr)
+            m_node->getDriver(0).node->setName(name);
         m_node->setName(move(name));
     }
 
@@ -116,6 +118,8 @@ namespace hcl::core::frontend {
 
         if (type.interpretation != hlim::ConnectionType::BOOL)
         {
+            std::string in_name = in.node->getName();
+            
             auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(2);
             rewire->connectInput(0, m_node->getDriver(0));
             rewire->connectInput(1, in);
@@ -125,16 +129,34 @@ namespace hcl::core::frontend {
             rewire->setReplaceRange(offset);
 
             in = SignalReadPort(rewire);
+            {
+                auto* signal = DesignScope::createNode<hlim::Node_Signal>();
+                signal->connectInput(in);
+                signal->setName(in_name);
+                signal->recordStackTrace();
+                in = SignalReadPort(signal);
+            }
         }
         
         if (ConditionalScope::get())
         {
+            auto* signal_in = DesignScope::createNode<hlim::Node_Signal>();
+            signal_in->connectInput(m_node->getDriver(0));
+            signal_in->setName(m_node->getName());
+
             auto* mux = DesignScope::createNode<hlim::Node_Multiplexer>(2);
-            mux->connectInput(0, m_node->getDriver(0));
+            mux->connectInput(0, {.node = signal_in, .port = 0});
             mux->connectInput(1, in); // assign rhs last in case previous port was undefined
             mux->connectSelector(ConditionalScope::getCurrentConditionPort());
 
             in = SignalReadPort(mux);
+        }
+        {
+            auto* signal = DesignScope::createNode<hlim::Node_Signal>();
+            signal->connectInput(in);
+            signal->setName(m_node->getName());
+            signal->recordStackTrace();
+            in = SignalReadPort(signal);
         }
 
         m_node->connectInput(in);
