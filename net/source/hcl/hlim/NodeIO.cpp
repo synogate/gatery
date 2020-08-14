@@ -63,6 +63,15 @@ void NodeIO::setOutputType(size_t outputPort, OutputType outputType)
 }
 
 
+bool NodeIO::hasSideEffects() const
+{
+    for (const auto &o : m_outputPorts)
+        if (o.outputType == OUTPUT_LATCHED)
+            return true;
+    return false;
+}
+
+
 
 void NodeIO::connectInput(size_t inputPort, const NodePort &output)
 {
