@@ -32,6 +32,7 @@ class Circuit
         void cullUnusedNodes();
         void mergeMuxes();
         void cullMuxConditionNegations();
+        void removeIrrelevantMuxes();
         
         void optimize(size_t level);
     protected:
