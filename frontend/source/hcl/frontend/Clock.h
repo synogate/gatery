@@ -66,6 +66,7 @@ class Clock
         Bit driveSignal();
         
         hlim::Clock *getClk() const { return m_clock; }
+        hlim::ClockRational getAbsoluteFrequency() { return m_clock->getAbsoluteFrequency(); }
     protected:
         hlim::Clock *m_clock;
         Clock(hlim::Clock *clock, const ClockConfig &config);
