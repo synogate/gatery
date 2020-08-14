@@ -97,6 +97,7 @@ MainWindowSimulate::~MainWindowSimulate()
 
 void MainWindowSimulate::updateBitmap()
 {
+    return;
     if (m_bitmapNode != nullptr) {
         unsigned width = 32;
         
