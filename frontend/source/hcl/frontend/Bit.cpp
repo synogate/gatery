@@ -45,7 +45,7 @@ namespace hcl::core::frontend {
 
             ret = hlim::NodePort{ .node = rewire, .port = 0 };
         }
-        return SignalReadPort(ret, Expansion::zero);
+        return SignalReadPort(ret);
     }
 
     size_t Bit::getWidth() const
@@ -78,7 +78,7 @@ namespace hcl::core::frontend {
 
             ret = hlim::NodePort{ .node = rewire, .port = 0 };
         }
-        return SignalReadPort{ ret, Expansion::zero };
+        return SignalReadPort{ ret };
     }
 
     std::string_view Bit::getName() const

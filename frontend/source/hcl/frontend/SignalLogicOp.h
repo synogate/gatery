@@ -60,24 +60,24 @@ namespace hcl::core::frontend {
 
 
 
-    inline BVec band(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::AND, {lhs, rhs}); }
-    inline BVec bnand(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::NAND, {lhs, rhs}); }
-    inline BVec bor(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::OR, {lhs, rhs}); }
-    inline BVec bnor(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::NOR, {lhs, rhs}); }
-    inline BVec bxor(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::XOR, {lhs, rhs}); }
-    inline BVec bxnor(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::EQ, {lhs, rhs}); }
+    inline BVec land(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::AND, {lhs, sext(rhs)}); }
+    inline BVec lnand(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::NAND, {lhs, sext(rhs)}); }
+    inline BVec lor(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::OR, {lhs, sext(rhs)}); }
+    inline BVec lnor(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::NOR, {lhs, sext(rhs)}); }
+    inline BVec lxor(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::XOR, {lhs, sext(rhs)}); }
+    inline BVec lxnor(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::EQ, {lhs, sext(rhs)}); }
 
 
-    inline BVec operator & (const BVec& lhs, const Bit& rhs) { return band(lhs, rhs); }
-    inline BVec operator | (const BVec& lhs, const Bit& rhs) { return bor(lhs, rhs); }
-    inline BVec operator ^ (const BVec& lhs, const Bit& rhs) { return bxor(lhs, rhs); }
-    inline BVec operator & (const Bit& rhs, const BVec& lhs) { return band(lhs, rhs); }
-    inline BVec operator | (const Bit& rhs, const BVec& lhs) { return bor(lhs, rhs); }
-    inline BVec operator ^ (const Bit& rhs, const BVec& lhs) { return bxor(lhs, rhs); }
+    inline BVec operator & (const BVec& lhs, const Bit& rhs) { return land(lhs, rhs); }
+    inline BVec operator | (const BVec& lhs, const Bit& rhs) { return lor(lhs, rhs); }
+    inline BVec operator ^ (const BVec& lhs, const Bit& rhs) { return lxor(lhs, rhs); }
+    inline BVec operator & (const Bit& lhs, const BVec& rhs) { return land(rhs, lhs); }
+    inline BVec operator | (const Bit& lhs, const BVec& rhs) { return lor(rhs, lhs); }
+    inline BVec operator ^ (const Bit& lhs, const BVec& rhs) { return lxor(rhs, lhs); }
 
-    inline BVec& operator &= (BVec& lhs, const Bit& rhs) { return lhs = band(lhs, rhs); }
-    inline BVec& operator |= (BVec& lhs, const Bit& rhs) { return lhs = bor(lhs, rhs); }
-    inline BVec& operator ^= (BVec& lhs, const Bit& rhs) { return lhs = bxor(lhs, rhs); }
+    inline BVec& operator &= (BVec& lhs, const Bit& rhs) { return lhs = land(lhs, rhs); }
+    inline BVec& operator |= (BVec& lhs, const Bit& rhs) { return lhs = lor(lhs, rhs); }
+    inline BVec& operator ^= (BVec& lhs, const Bit& rhs) { return lhs = lxor(lhs, rhs); }
 
 
 

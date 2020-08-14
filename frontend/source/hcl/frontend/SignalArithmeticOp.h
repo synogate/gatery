@@ -26,10 +26,10 @@ namespace hcl::core::frontend {
     inline BVec div(const BVec& lhs, const BVec& rhs) { return makeNode(hlim::Node_Arithmetic::DIV, { lhs, rhs }); }
     inline BVec rem(const BVec& lhs, const BVec& rhs) { return makeNode(hlim::Node_Arithmetic::REM, { lhs, rhs }); }
 
-    inline BVec add(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Arithmetic::ADD, { lhs, rhs }); }
-    inline BVec sub(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Arithmetic::SUB, { lhs, rhs }); }
-    inline BVec add(const Bit& lhs, const BVec& rhs) { return makeNode(hlim::Node_Arithmetic::ADD, { lhs, rhs }); }
-    inline BVec sub(const Bit& lhs, const BVec& rhs) { return makeNode(hlim::Node_Arithmetic::SUB, { lhs, rhs }); }
+    inline BVec add(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Arithmetic::ADD, { lhs, zext(rhs) }); }
+    inline BVec sub(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Arithmetic::SUB, { lhs, zext(rhs) }); }
+    inline BVec add(const Bit& lhs, const BVec& rhs) { return makeNode(hlim::Node_Arithmetic::ADD, { zext(lhs), rhs }); }
+    inline BVec sub(const Bit& lhs, const BVec& rhs) { return makeNode(hlim::Node_Arithmetic::SUB, { zext(lhs), rhs }); }
 
     inline BVec operator + (const BVec& lhs, const BVec& rhs) { return add(lhs, rhs); }
     inline BVec operator - (const BVec& lhs, const BVec& rhs) { return sub(lhs, rhs); }

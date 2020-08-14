@@ -683,6 +683,19 @@ BOOST_FIXTURE_TEST_CASE(BVecArithmeticOpSyntax, hcl::core::sim::UnitTestSimulati
 
 }
 
+BOOST_FIXTURE_TEST_CASE(LogicOpSyntax, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    BVec in = ConstBVec(5, 3);
+
+    '1' & in;
+    in & '1';
+
+}
+
 BOOST_FIXTURE_TEST_CASE(SimpleCat, hcl::core::sim::UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
