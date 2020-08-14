@@ -33,7 +33,7 @@ namespace hcl::core::frontend
 
     inline BVec ConstBVec(uint64_t value)
     {
-        const size_t width = utils::Log2C(value);
+        const size_t width = utils::Log2C(value + 1);
 
         return Constant<BVec>(
             hlim::ConstantData{ value, width },

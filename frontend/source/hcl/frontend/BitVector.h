@@ -172,16 +172,16 @@ namespace hcl::core::frontend {
 		if constexpr (std::is_unsigned_v<Int>)
 		{
 			policy = Expansion::zero;
-			width = utils::Log2C(value);
+			width = utils::Log2C(value+1);
 		}
 		else
 		{
 			policy = Expansion::sign;
 
 			if (value >= 0)
-				width = utils::Log2C(value) + 1;
+				width = utils::Log2C(value + 1) + 1;
 			else
-				width = utils::Log2C(~value) + 1;
+				width = utils::Log2C(~value + 1) + 1;
 		}
 
 		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
