@@ -125,7 +125,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundUnpack, hcl::core::sim::UnitTestSimulationFixtur
     for (size_t i = 0; i < 7; ++i)
     {
         sim_assert(out.list[i].vec == ConstBVec(i, 3));
-        sim_assert(out.list[i].bit == i < 4);
+        sim_assert(out.list[i].bit == (i < 4));
     }
     
     eval(design.getCircuit());

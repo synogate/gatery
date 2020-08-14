@@ -41,7 +41,7 @@ hcl::stl::StreamSource<hcl::stl::BVecPair> hcl::stl::binaryGCDStep1(StreamSink<B
                 b >>= 1;
 
             IF(!a_odd & !b_odd)
-                d += 1;
+                d += 1u;
 
             IF(a_odd & b_odd)
             {
@@ -88,7 +88,7 @@ hcl::stl::StreamSource<hcl::core::frontend::BVec> hcl::stl::shiftLeft(StreamSink
         IF(b != 0_bvec)
         {
             a <<= 1;
-            b -= 1;
+            b -= 1u;
         }
     }
 

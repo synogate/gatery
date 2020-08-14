@@ -29,18 +29,6 @@ namespace hcl::core::frontend {
         m_offset(offset)
     {}
 
-    Bit::Bit(char val)
-    {
-        createNode();
-        assign(val);
-    }
-
-    Bit::Bit(bool val)
-    {
-        createNode();
-        assign(val);
-    }
-
     const Bit Bit::operator*() const
     {
         hlim::NodePort ret{ .node = m_node, .port = 0 };

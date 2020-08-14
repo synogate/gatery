@@ -1,5 +1,7 @@
 #include "SignalMiscOp.h"
 
+#include "SignalLogicOp.h"
+
 #include <hcl/utils/Range.h>
 #include <hcl/utils/Preprocessor.h>
 
@@ -61,19 +63,26 @@ SignalTapHelper &SignalTapHelper::operator<<(const std::string &msg)
 SignalTapHelper sim_assert(const Bit &condition)
 {
     SignalTapHelper helper(hlim::Node_SignalTap::LVL_ASSERT);
-    helper.triggerIfNot(condition);    
+    helper.triggerIfNot(/*(!ConditionalScope::getCurrentCondition()) | */condition);    
     return helper;
 }
 
 SignalTapHelper sim_warnIf(const Bit &condition)
 {
     SignalTapHelper helper(hlim::Node_SignalTap::LVL_WARN);
-    helper.triggerIf(condition);    
+    helper.triggerIf(/*ConditionalScope::getCurrentCondition() & */condition);    
     return helper;
 }
 
     
 SignalTapHelper sim_debug()
+{
+    SignalTapHelper helper(hlim::Node_SignalTap::LVL_DEBUG);
+   // helper.triggerIf(ConditionalScope::getCurrentCondition());
+    return helper;
+}
+
+SignalTapHelper sim_debugAlways()
 {
     SignalTapHelper helper(hlim::Node_SignalTap::LVL_DEBUG);
     return helper;
@@ -82,7 +91,7 @@ SignalTapHelper sim_debug()
 SignalTapHelper sim_debugIf(const Bit &condition)
 {
     SignalTapHelper helper(hlim::Node_SignalTap::LVL_DEBUG);
-    helper.triggerIf(condition);    
+    helper.triggerIf(/*ConditionalScope::getCurrentCondition() & */condition);
     return helper;
 }
 

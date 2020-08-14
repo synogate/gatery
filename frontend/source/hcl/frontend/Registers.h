@@ -36,8 +36,8 @@ class Register : public SignalType
         Register<SignalType>& setReset(const SignalType& resetValue);
         Register<SignalType>& setClock(const Clock& clock);
         
-        Register<SignalType>& operator=(const Register<SignalType>& rhs) { assign(rhs.getReadPort()); return *this; }
-        Register<SignalType>& operator=(const SignalType& rhs) { assign(rhs.getReadPort()); return *this; }
+        Register<SignalType>& operator=(const Register<SignalType>& rhs) { SignalType::assign(rhs.getReadPort()); return *this; }
+        Register<SignalType>& operator=(const SignalType& rhs) { SignalType::assign(rhs.getReadPort()); return *this; }
         
         const SignalType &delay(size_t ticks = 1);
         void reset();
@@ -57,7 +57,7 @@ inline frontend::Register<SignalType>::Register(Args ...signalParams) :
     SignalType{signalParams...},
     m_regNode{*DesignScope::createNode<hlim::Node_Register>()}
 {
-    HCL_ASSERT(valid());
+    HCL_ASSERT(SignalType::valid());
 
     m_regNode.recordStackTrace();
 
@@ -76,13 +76,13 @@ inline frontend::Register<SignalType>::Register(Args ...signalParams) :
             std::is_same_v<Expansion, std::tuple_element_t<1, std::tuple<Args...>>>
             )
         {
-            assign(m_delayedSignal.getReadPort());
+            SignalType::assign(m_delayedSignal.getReadPort());
         }
     }
 
     if constexpr (sizeof...(Args) == 0 && std::is_same_v<SignalType, Bit>)
     {
-        assign(m_delayedSignal.getReadPort());
+        SignalType::assign(m_delayedSignal.getReadPort());
     }
 }
 

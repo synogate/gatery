@@ -86,7 +86,7 @@ namespace hcl::core::frontend {
         {
             HCL_ASSERT(range.stride > 1);
 
-            for (size_t i = (size_t)range.start; i < range.end; i += range.stride)
+            for (size_t i = (size_t)range.start; i < (size_t)range.end; i += range.stride)
                 op.addInput(0, i, 1);
         }
 
@@ -96,7 +96,7 @@ namespace hcl::core::frontend {
     static hlim::Node_Rewire::RewireOperation replaceSelection(const Selection& range, size_t width)
     {
         HCL_DESIGNCHECK(!range.untilEndOfSource);
-        HCL_DESIGNCHECK(range.end <= width);
+        HCL_DESIGNCHECK((size_t) range.end <= width);
         HCL_ASSERT(range.start >= 0);
 
         hlim::Node_Rewire::RewireOperation op;
@@ -111,7 +111,7 @@ namespace hcl::core::frontend {
             size_t offset0 = 0;
             size_t offset1 = 0;
 
-            for (size_t i = (size_t)range.start; i < range.end; i += range.stride)
+            for (size_t i = (size_t)range.start; i < (size_t)range.end; i += range.stride)
             {
                 op.addInput(0, offset0, i);
                 op.addInput(1, offset1++, 1);
@@ -131,7 +131,7 @@ namespace hcl::core::frontend {
     {
         auto connType = node->getOutputConnectionType(0);
         HCL_DESIGNCHECK(!range.untilEndOfSource); // no impl
-        HCL_DESIGNCHECK(range.end <= connType.width);
+        HCL_DESIGNCHECK((size_t)range.end <= connType.width);
         HCL_DESIGNCHECK(connType.interpretation == hlim::ConnectionType::BITVEC);
 
         m_width = (m_selection.end - m_selection.start) / m_selection.stride;

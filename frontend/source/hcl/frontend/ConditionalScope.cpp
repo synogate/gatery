@@ -6,6 +6,7 @@
 #include "SignalLogicOp.h"
 
 #include <hcl/hlim/coreNodes/Node_Multiplexer.h>
+#include <hcl/hlim/coreNodes/Node_Signal.h>
 
 
 namespace hcl::core::frontend {
@@ -14,6 +15,8 @@ namespace hcl::core::frontend {
 
     thread_local static std::optional<Bit> g_lastConditionBit;
 
+#define SPAM_SIGNAL_NODES
+    
 ConditionalScope::ConditionalScope(const Bit &condition)
 {
     setCondition(condition.getReadPort());
@@ -23,7 +26,16 @@ ConditionalScope::ConditionalScope()
 {
     hlim::Node_Logic* invNode = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::NOT);
     invNode->connectInput(0, m_lastCondition);
+
+#ifdef SPAM_SIGNAL_NODES
+    hlim::Node_Signal* sigNode = DesignScope::createNode<hlim::Node_Signal>();
+    sigNode->connectInput({ .node = invNode, .port = 0ull });
+    sigNode->setName("else_branch_negation");
+    setCondition({ .node = sigNode, .port = 0ull });
+#else
     setCondition({ .node = invNode, .port = 0ull });
+#endif
+    
 }
 
 ConditionalScope::~ConditionalScope()
@@ -31,14 +43,18 @@ ConditionalScope::~ConditionalScope()
     m_lastCondition = m_condition;
     g_lastConditionBit.reset();
 }
-
+/*
 const Bit& ConditionalScope::getCurrentCondition()
 {
-    if (!g_lastConditionBit)
-        g_lastConditionBit.emplace(SignalReadPort(m_lastCondition));
+    if (!g_lastConditionBit) {
+        if (m_lastCondition.node == nullptr)
+            g_lastConditionBit.emplace('1');
+        else
+            g_lastConditionBit.emplace(SignalReadPort(m_lastCondition));
+    }
     return *g_lastConditionBit;
 }
-
+*/
 void ConditionalScope::setCondition(hlim::NodePort port)
 {
     m_condition = port;
@@ -49,7 +65,15 @@ void ConditionalScope::setCondition(hlim::NodePort port)
         hlim::Node_Logic* andNode = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::AND);
         andNode->connectInput(0, m_condition);
         andNode->connectInput(1, m_parentScope->m_fullCondition);
+        
+#ifdef SPAM_SIGNAL_NODES
+        hlim::Node_Signal* sigNode = DesignScope::createNode<hlim::Node_Signal>();
+        sigNode->connectInput({ .node = andNode, .port = 0ull });
+        sigNode->setName("nested_condition_mux");
+        m_fullCondition = { .node = sigNode, .port = 0ull };
+#else
         m_fullCondition = { .node = andNode, .port = 0ull };
+#endif
     }
 }
 

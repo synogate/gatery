@@ -23,12 +23,16 @@ namespace hcl::core::frontend {
             Bit(const SignalReadPort& port);
             Bit(hlim::Node_Signal* node, size_t offset); // alias Bit
 
-            Bit(char);
-            Bit(bool);
+            template<typename T, typename = std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, bool>>>
+            Bit(T v) {
+                createNode();
+                assign(v);
+            }
         
             Bit& operator=(const Bit& rhs) { assign(rhs.getReadPort()); return *this; }
-            Bit& operator=(char rhs) { assign(rhs); return *this; }
-            Bit& operator=(bool rhs) { assign(rhs); return *this; }
+
+            template<typename T, typename = std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, bool>>>
+            Bit& operator=(T rhs) { assign(rhs); return *this; }
 
             const Bit operator*() const;
 
@@ -51,6 +55,5 @@ namespace hcl::core::frontend {
             size_t m_offset = 0;
 
     };
-
 
 }

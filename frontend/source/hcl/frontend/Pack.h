@@ -110,7 +110,7 @@ namespace hcl::core::frontend
 	template<typename Comp>
 	size_t width(const Comp& compound)
 	{
-		return get<1>(internal::countAndWidth(compound));
+		return std::get<1>(internal::countAndWidth(compound));
 	}
 	
 	template<typename Comp>

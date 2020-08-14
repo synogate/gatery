@@ -23,7 +23,7 @@ namespace hcl::core::frontend {
             ConditionalScope();
             ~ConditionalScope();
 
-            static const Bit& getCurrentCondition();
+//            static const Bit& getCurrentCondition();
             static hlim::NodePort getCurrentConditionPort() { return ConditionalScope::get()->m_fullCondition; }
 
         private:

@@ -4,6 +4,7 @@
 #include "Signal.h"
 #include "Scope.h"
 
+#include <hcl/hlim/coreNodes/Node_Constant.h>
 #include <hcl/hlim/coreNodes/Node_Signal.h>
 #include <hcl/hlim/coreNodes/Node_Rewire.h>
 
@@ -68,9 +69,6 @@ namespace hcl::core::frontend {
 		BVec& operator()(const Selection& selection) { return aliasRange(selection); }
 		const BVec& operator() (const Selection& selection) const { return aliasRange(selection); }
 
-		//BVec zext(size_t width) const;
-		//BVec sext(size_t width) const { return bext(width, msb()); }
-		//BVec bext(size_t width, const Bit& bit) const;
 
 		const BVec operator*() const;
 

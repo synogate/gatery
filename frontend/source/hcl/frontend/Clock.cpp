@@ -69,7 +69,7 @@ Bit Clock::driveSignal()
 
     node->setClock(m_clock);
  
-    return node;
+    return SignalReadPort(node);
 }
 
 

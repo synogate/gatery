@@ -205,9 +205,9 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD
                 .setComment("Statemachine to compute the GCD of two 8-bit integers.");
 
 
-            Register<BVec> a(8, Expansion::none);
+            Register<BVec> a(8u, Expansion::none);
             a.setReset(0b00000000_bvec);
-            Register<BVec> b(8, Expansion::none);
+            Register<BVec> b(8u, Expansion::none);
             b.setReset(0b00000000_bvec);
 
             IF(start) {

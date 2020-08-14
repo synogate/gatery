@@ -35,7 +35,7 @@ typename ContainerType::value_type mux(const ElementarySignal &selector, const C
         idx++;
     }
     
-    using SignalType = typename ContainerType::value_type;
+    //using SignalType = typename ContainerType::value_type;
 
     return SignalReadPort(node);
 }
@@ -79,7 +79,7 @@ SignalType mux(const SelectorType &selector, const ContainerType &inputs)  {
   
 BVec cat(const std::vector<const ElementarySignal*>& signals);
 
-inline void collectSignals(const std::vector<const ElementarySignal*>& signals) {};
+inline void collectSignals(const std::vector<const ElementarySignal*>& signals) {}
 
 template<typename... Types>
 void collectSignals(std::vector<const ElementarySignal*>& signals, const Bit& signal, const Types&... remaining) {
@@ -145,6 +145,7 @@ SignalTapHelper sim_assert(const Bit &condition);
 SignalTapHelper sim_warnIf(const Bit &condition);
     
 SignalTapHelper sim_debug();
+SignalTapHelper sim_debugAlways();
 SignalTapHelper sim_debugIf(const Bit &condition);
 
 

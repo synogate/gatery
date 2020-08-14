@@ -74,6 +74,7 @@ NodeType *DesignScope::createNode(Args&&... args) {
     HCL_ASSERT(GroupScope::getCurrentNodeGroup() != nullptr);
     
     NodeType *node = m_currentScope->m_circuit.createNode<NodeType>(std::forward<Args>(args)...);
+    node->recordStackTrace();
     node->moveToGroup(GroupScope::getCurrentNodeGroup());
     node->setComment(Comments::retrieve());
     return node;
