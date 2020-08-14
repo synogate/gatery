@@ -62,10 +62,18 @@ hcl::core::frontend::SignalReadPort hcl::core::frontend::SignalReadPort::expand(
 		case Expansion::one:	rewire->setPadTo(width, hlim::Node_Rewire::OutputRange::CONST_ONE);		break;
 		case Expansion::zero:	rewire->setPadTo(width, hlim::Node_Rewire::OutputRange::CONST_ZERO);	break;
 		case Expansion::sign:	rewire->setPadTo(width);	break;
-		default: break;
+		default: 
+				HCL_ASSERT(type.width == width);
+				rewire->setConcat();
+				break;
 		}
 
-		ret = hlim::NodePort{ .node = rewire, .port = 0 };
+		auto* signal = DesignScope::createNode<hlim::Node_Signal>();
+		signal->connectInput({ .node = rewire, .port = 0 });
+		signal->setName("after_rewire");
+
+		//ret = hlim::NodePort{ .node = rewire, .port = 0 };
+		ret = hlim::NodePort{ .node = signal, .port = 0 };
 	}
 	return SignalReadPort{ ret, expansionPolicy };
 }

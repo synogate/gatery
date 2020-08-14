@@ -709,3 +709,19 @@ BOOST_FIXTURE_TEST_CASE(SimpleCat, hcl::core::sim::UnitTestSimulationFixture)
 
     eval(design.getCircuit());
 }
+
+
+BOOST_FIXTURE_TEST_CASE(msbBroadcast, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    BVec vec = 0b0000_bvec;
+    BVec vec_2 = 0b1000_bvec;
+    vec ^= vec_2.msb();
+
+    sim_assert(vec == 0b1111_bvec) << "result is " << vec << " but should be 0b1111_bvec";
+
+    eval(design.getCircuit());
+}
