@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Range.h"
+#include "Exceptions.h"
 
 #include <boost/rational.hpp>
 
