@@ -137,7 +137,7 @@ core::frontend::BVec tmdsDecodeReduceTransitions(const core::frontend::BVec& dat
 {
     BVec decoded = data(0, data.getWidth() - 1);
     decoded ^= decoded << 1;
-    decoded(1, decoded.getWidth() - 1) ^= data.msb();
+    decoded(1, decoded.getWidth() - 1) ^= ~data.msb();
 
     HCL_NAMED(decoded);
     return decoded;
