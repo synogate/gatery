@@ -34,21 +34,21 @@ BOOST_FIXTURE_TEST_CASE(BVecIterator, hcl::core::sim::UnitTestSimulationFixture)
     BOOST_TEST(a.size() == counter);
 
     counter = 0;
-    for (auto b : a)
+    for (auto &b : a)
         counter++;
     BOOST_TEST(a.size() == counter);
 
-    sim_assert(a[0] == false);
-    sim_assert(a[1] == false);
-    sim_assert(a[2] == true);
-    sim_assert(a[3] == true);
+    sim_assert(a[0] == false) << "a[0] is " << a[0] << " but should be false";
+    sim_assert(a[1] == false) << "a[1] is " << a[1] << " but should be false";
+    sim_assert(a[2] == true) << "a[2] is " << a[2] << " but should be true";
+    sim_assert(a[3] == true) << "a[3] is " << a[3] << " but should be true";
 
     a[0] = true;
-    sim_assert(a[0] == true);
+    sim_assert(a[0] == true) << "a[0] is " << a[0] << " after setting it explicitely to true";
 
-    for (auto b : a)
+    for (auto &b : a)
         b = true;
-    sim_assert(a[1] == true);
+    sim_assert(a[1] == true) << "a[1] is " << a[1] << " after setting all bits to true";
 
 
     eval(design.getCircuit());
