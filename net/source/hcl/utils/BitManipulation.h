@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Range.h"
+#include "Exceptions.h"
 
 #include <boost/rational.hpp>
 
@@ -35,6 +36,7 @@ namespace hcl::utils {
 template<typename T>
 T Log2(T v)
 {
+    HCL_ASSERT(v > 0);
     T ret = 0;
     while (v >>= 1)
         ++ret;
@@ -44,24 +46,25 @@ T Log2(T v)
 template<typename T>
 T Log2C(T v)
 {
-    if (v == 0)
+    HCL_ASSERT(v > 0);
+    if (v == 1)
         return 0;
 
     return Log2(v - 1) + 1;
 }
 
 #ifdef _MSC_VER
-template<> inline uint16_t Log2(uint16_t v) { return 15 - __lzcnt16(v); }
-template<> inline uint32_t Log2(uint32_t v) { return 31 - __lzcnt(v); }
+template<> inline uint16_t Log2(uint16_t v) { HCL_ASSERT(v > 0); return 15 - __lzcnt16(v); }
+template<> inline uint32_t Log2(uint32_t v) { HCL_ASSERT(v > 0); return 31 - __lzcnt(v); }
 
 # ifdef AMD64
-template<> inline uint64_t Log2(uint64_t v) { return 63 - __lzcnt64(v); }
+template<> inline uint64_t Log2(uint64_t v) { HCL_ASSERT(v > 0); return 63 - __lzcnt64(v); }
 # endif
 #else
-template<> inline uint32_t Log2(uint32_t v) { return 31 - __builtin_clz(v); }
+template<> inline uint32_t Log2(uint32_t v) { HCL_ASSERT(v > 0); return 31 - __builtin_clz(v); }
 
 # ifdef AMD64
-template<> inline uint64_t Log2(uint64_t v) { return 63 - __builtin_clzll(v); }
+template<> inline uint64_t Log2(uint64_t v) { HCL_ASSERT(v > 0); return 63 - __builtin_clzll(v); }
 # endif
 #endif
 
