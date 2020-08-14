@@ -46,6 +46,8 @@ class Node_SignalTap : public Node<Node_SignalTap>
 
         virtual std::vector<size_t> getInternalStateSizes() const override;
         
+        virtual bool hasSideEffects() const override { return true; }
+
     protected:
         Level m_level = LVL_DEBUG;
         Trigger m_trigger = TRIG_ALWAYS;

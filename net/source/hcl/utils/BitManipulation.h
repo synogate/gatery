@@ -2,8 +2,12 @@
 
 #include "Range.h"
 
+#include <boost/rational.hpp>
+
+
 #include <cstdint>
 #include <bit>
+
 
 #include <immintrin.h>
 
@@ -60,6 +64,12 @@ template<> inline uint32_t Log2(uint32_t v) { return 31 - __builtin_clz(v); }
 template<> inline uint64_t Log2(uint64_t v) { return 63 - __builtin_clzll(v); }
 # endif
 #endif
+
+
+inline size_t Log2(boost::rational<std::uint64_t> v)
+{
+    return Log2(v.numerator() / v.denominator());
+}
 
 inline unsigned nextPow2(unsigned v) 
 {
