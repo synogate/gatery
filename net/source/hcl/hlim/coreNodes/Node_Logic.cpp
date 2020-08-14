@@ -23,62 +23,71 @@ void Node_Logic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::De
     size_t width = getOutputConnectionType(0).width;
 
     NodePort leftDriver = getNonSignalDriver(0);
+    bool leftAllUndefined = leftDriver.node == nullptr;
+    /*
     if (leftDriver.node == nullptr) {
         state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
         return;
     }
+    */
 
     NodePort rightDriver; 
+    bool rightAllUndefined = true;
     if (m_op != NOT) {
         rightDriver = getNonSignalDriver(0);
-        if (rightDriver.node == nullptr) {
-            state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
-            return;
-        }
+        rightAllUndefined = rightDriver.node == nullptr;
     }
 
     size_t offset = 0;
     
     while (offset < width) {
         size_t chunkSize = std::min<size_t>(64, width-offset);
-        /*
-        if (!allDefinedNonStraddling(state, inputOffsets[0]+offset, chunkSize)) return;
-        if (m_op != NOT)
-            if (!allDefinedNonStraddling(state, inputOffsets[1]+offset, chunkSize)) return;
-        */
         
+        std::uint64_t left, leftDefined, right, rightDefined;
         
-        std::uint64_t resultDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[0]+offset, chunkSize);
-        if (m_op != NOT)
-            resultDefined &= state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[1]+offset, chunkSize);
+        if (leftAllUndefined)
+            leftDefined = 0;
+        else {
+            leftDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[0]+offset, chunkSize);
+            left = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0]+offset, chunkSize);
+        }
         
-        std::uint64_t left = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0]+offset, chunkSize);
-        std::uint64_t right;
-        if (m_op != NOT)
+        if (rightAllUndefined || m_op == NOT)
+            rightDefined = 0;
+        else {
+            rightDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[1]+offset, chunkSize);
             right = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[1]+offset, chunkSize);
+        }
         
-        std::uint64_t result;
+        std::uint64_t result, resultDefined;
         switch (m_op) {
             case AND:
                 result = left & right;
+                resultDefined = (leftDefined & !left) | (rightDefined & !right) | (leftDefined & rightDefined);
             break;
             case NAND:
                 result = ~(left & right);
+                resultDefined = (leftDefined & !left) | (rightDefined & !right) | (leftDefined & rightDefined);
             break;
             case OR:
                 result = left | right;
+                resultDefined = (leftDefined & left) | (rightDefined & right) | (leftDefined  & rightDefined);
             break;
             case NOR:
                 result = ~(left | right);
+                resultDefined = (leftDefined & left) | (rightDefined & right) | (leftDefined  & rightDefined);
             break;
             case XOR:
                 result = left ^ right;
+                resultDefined = leftDefined & rightDefined;
             break;
             case EQ:
                 result = ~(left ^ right);
+                resultDefined = leftDefined & rightDefined;
             break;
             case NOT:
                 result = ~left;
+                resultDefined = leftDefined;
             break;
         };
                     
