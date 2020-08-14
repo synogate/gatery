@@ -66,7 +66,7 @@ template<> inline uint64_t Log2(uint64_t v) { return 63 - __builtin_clzll(v); }
 #endif
 
 
-size_t Log2(boost::rational<std::uint64_t> v)
+inline size_t Log2(boost::rational<std::uint64_t> v)
 {
     return Log2(v.numerator() / v.denominator());
 }
