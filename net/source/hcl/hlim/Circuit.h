@@ -33,6 +33,7 @@ class Circuit
         void mergeMuxes();
         void cullMuxConditionNegations();
         void removeIrrelevantMuxes();
+        void propagateConstants();
         
         void optimize(size_t level);
     protected:

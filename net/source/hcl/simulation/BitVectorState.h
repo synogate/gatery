@@ -53,7 +53,7 @@ class BitVectorState
         typename Config::BaseType extractNonStraddling(typename Config::Plane plane, size_t start, size_t size) const;
         void insertNonStraddling(typename Config::Plane plane, size_t start, size_t size, typename Config::BaseType value);
     protected:
-        size_t m_size;
+        size_t m_size = 0;
         std::array<std::vector<typename Config::BaseType>, Config::NUM_PLANES> m_values;
 };
 

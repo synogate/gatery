@@ -5,6 +5,10 @@
 #include "coreNodes/Node_Signal.h"
 #include "coreNodes/Node_Multiplexer.h"
 #include "coreNodes/Node_Logic.h"
+#include "coreNodes/Node_Constant.h"
+
+
+#include "../simulation/BitVectorState.h"
 
 
 #include <set>
@@ -72,29 +76,37 @@ void Circuit::cullOrphanedSignalNodes()
 
 void Circuit::cullUnusedNodes()
 {
-    for (size_t i = 0; i < m_nodes.size(); i++) {
-        if (m_nodes[i]->hasSideEffects()) 
-            continue;
-
-        if (Node_Signal *signalNode = dynamic_cast<Node_Signal*>(m_nodes[i].get()))
-            if (!signalNode->getName().empty())
-                continue;
-
-        bool isInUse = false;
-        for (auto j : utils::Range(m_nodes[i]->getNumOutputPorts())) 
-            if (!m_nodes[i]->getDirectlyDriven(j).empty()) {
-                isInUse = true;
-                break;
-            }
+    //std::cout << "cullUnusedNodes()" << std::endl;
+    bool done;
+    do {
+        done = true;
+    
+        for (size_t i = 0; i < m_nodes.size(); i++) {
             
-        if (!isInUse) {
-            std::cout << "Culling node " << m_nodes[i]->getTypeName() << " "  << m_nodes[i]->getName() << std::endl;
+            if (m_nodes[i]->hasSideEffects())
+                continue;
                 
-            m_nodes[i] = std::move(m_nodes.back());
-            m_nodes.pop_back();
-            i--;
+            if (Node_Signal *signalNode = dynamic_cast<Node_Signal*>(m_nodes[i].get()))
+                if (!signalNode->getName().empty())
+                    continue;
+
+            bool isInUse = false;
+            for (auto j : utils::Range(m_nodes[i]->getNumOutputPorts())) 
+                if (!m_nodes[i]->getDirectlyDriven(j).empty()) {
+                    isInUse = true;
+                    break;
+                }
+                
+            if (!isInUse) {
+                //std::cout << "    Culling node " << m_nodes[i]->getTypeName() << " "  << m_nodes[i]->getName() << std::endl;
+                    
+                m_nodes[i] = std::move(m_nodes.back());
+                m_nodes.pop_back();
+                i--;
+                done = false;
+            }
         }
-    }    
+    } while (!done);
 }
 
 
@@ -119,7 +131,7 @@ struct HierarchyCondition {
                 if (Node_Logic *logicNode = dynamic_cast<Node_Logic*>(top.first.node)) {
                     if (logicNode->getOp() == Node_Logic::NOT) {
                         auto driver = logicNode->getNonSignalDriver(0);
-                        stack.push_back({logicNode->getNonSignalDriver(0), !top.second});
+                        stack.push_back({driver, !top.second});
                     } else 
                     if (logicNode->getOp() == Node_Logic::AND) {
                         for (auto j : utils::Range(logicNode->getNumInputPorts()))
@@ -191,7 +203,7 @@ void Circuit::mergeMuxes()
             if (Node_Multiplexer *muxNode = dynamic_cast<Node_Multiplexer*>(m_nodes[i].get())) {
                 if (muxNode->getNumInputPorts() != 3) continue;
 
-                std::cout << "Found 2-input mux" << std::endl;
+                //std::cout << "Found 2-input mux" << std::endl;
 
                 HierarchyCondition condition;
                 condition.parse({.node = muxNode, .port = 0});
@@ -205,7 +217,7 @@ void Circuit::mergeMuxes()
                         continue;
                     
                     if (Node_Multiplexer *prevMuxNode = dynamic_cast<Node_Multiplexer*>(input0.node)) {
-                        std::cout << "Found 2 chained muxes" << std::endl;
+                        //std::cout << "Found 2 chained muxes" << std::endl;
                         
                         HierarchyCondition prevCondition;
                         prevCondition.parse({.node = prevMuxNode, .port = 0});                
@@ -220,6 +232,7 @@ void Circuit::mergeMuxes()
                             conditionsMatch = true;
                             prevConditionNegated = muxInput==0;
                         } else {
+                            /*
                             std::cout << "Condition 1 is :" << std::endl;
                             if (condition.m_undefined) std::cout << "   undefined" << std::endl;
                             if (condition.m_contradicting) std::cout << "   contradicting" << std::endl;
@@ -242,67 +255,17 @@ void Circuit::mergeMuxes()
                                 std::cout << std::hex << p.first.node << ':' << p.first.port;
                             }
                             std::cout << std::endl;
+                            */
                         }
                         
                         if (conditionsMatch) {
-                            std::cout << "Conditions match!" << std::endl;
+                            //std::cout << "Conditions match!" << std::endl;
                             
                             auto bypass = prevMuxNode->getDriver(prevConditionNegated?2:1);
-                            auto prevOp = prevMuxNode->getDriver(prevConditionNegated?1:2);
-                            
-                            done = false;
-                            
                             // Connect second mux directly to bypass
                             muxNode->connectInput(muxInput, bypass);
-#if 0                            
-                            // Connect second logic op block directly to output of first logic op block
-                            for (auto prevMuxOutput : prevMuxNode->getDirectlyDriven(0)) {
-                                std::vector<BaseNode*> openList = { prevMuxOutput.node };
-                                std::set<BaseNode*> closedList;
 
-                                bool allSubnetOutputsMuxed = true;
-                                
-                                while (!openList.empty()) {
-                                    BaseNode *node = openList.back();
-                                    openList.pop_back();
-                                    if (closedList.contains(node)) continue;
-                                    closedList.insert(node);
-                                    
-                                    if (node->hasSideEffects()) {
-                                        allSubnetOutputsMuxed = false;
-                                        std::cout << "Internal node with sideeffects, skipping" << std::endl;
-                                        break;
-                                    }
-                                    
-                                    if (node->getGroup() != muxNode->getGroup()) {
-                                        allSubnetOutputsMuxed = false;
-                                        std::cout << "Internal node driving external, skipping" << std::endl;
-                                        break;
-                                    }
-                                    
-                                    if (Node_Multiplexer *subnetOutputMuxNode = dynamic_cast<Node_Multiplexer*>(node)) {
-                                        HierarchyCondition subnetOutputMuxNodeCondition;
-                                        subnetOutputMuxNodeCondition.parse({.node = subnetOutputMuxNode, .port = 0});                
-                                        
-                                        if (prevCondition.isEqualOf(subnetOutputMuxNodeCondition)) {
-                                            continue;
-                                        }
-                                    }
-                                    
-                                    for (auto j : utils::Range(node->getNumOutputPorts()))
-                                        for (auto driven : node->getDirectlyDriven(j)) 
-                                            openList.push_back(driven.node);
-                                        
-                                }
-                                
-                                if (allSubnetOutputsMuxed) {
-                                    std::cout << "Rewiring past mux" << std::endl;
-                                    prevMuxOutput.node->connectInput(prevMuxOutput.port, prevOp);
-                                } else {
-                                    std::cout << "Not rewiring past mux" << std::endl;
-                                }
-                            }
-#endif
+                            done = false;
                         }
                     }
                 }
@@ -322,7 +285,7 @@ void Circuit::removeIrrelevantMuxes()
             if (Node_Multiplexer *muxNode = dynamic_cast<Node_Multiplexer*>(m_nodes[i].get())) {
                 if (muxNode->getNumInputPorts() != 3) continue;
 
-                std::cout << "Found 2-input mux" << std::endl;
+                //std::cout << "Found 2-input mux" << std::endl;
 
                 HierarchyCondition condition;
                 condition.parse({.node = muxNode, .port = 0});
@@ -343,13 +306,13 @@ void Circuit::removeIrrelevantMuxes()
                             
                             if (input.node->hasSideEffects()) {
                                 allSubnetOutputsMuxed = false;
-                                std::cout << "Internal node with sideeffects, skipping" << std::endl;
+                                //std::cout << "Internal node with sideeffects, skipping" << std::endl;
                                 break;
                             }
                             
                             if (input.node->getGroup() != muxNode->getGroup()) {
                                 allSubnetOutputsMuxed = false;
-                                std::cout << "Internal node driving external, skipping" << std::endl;
+                                //std::cout << "Internal node driving external, skipping" << std::endl;
                                 break;
                             }
                             
@@ -372,11 +335,11 @@ void Circuit::removeIrrelevantMuxes()
                         }
                         
                         if (allSubnetOutputsMuxed) {
-                            std::cout << "Rewiring past mux" << std::endl;
+                            //std::cout << "Rewiring past mux" << std::endl;
                             muxOutput.node->connectInput(muxOutput.port, muxNode->getDriver(muxInputPort));
                             done = false;
                         } else {
-                            std::cout << "Not rewiring past mux" << std::endl;
+                            //std::cout << "Not rewiring past mux" << std::endl;
                         }
                     }
                 }
@@ -412,6 +375,114 @@ void Circuit::cullMuxConditionNegations()
 }
 
 
+void Circuit::propagateConstants()
+{
+    //std::cout << "propagateConstants()" << std::endl;
+    sim::DummySimulatorCallbacks ignoreCallbacks;
+    
+    std::vector<NodePort> openList;
+    // std::set<NodePort> closedList;
+    
+    // Start walking the graph from the const nodes
+    for (size_t i = 0; i < m_nodes.size(); i++) {
+        if (Node_Constant *constNode = dynamic_cast<Node_Constant*>(m_nodes[i].get())) {
+            openList.push_back({.node = constNode, .port = 0});
+        }
+    }
+    
+    while (!openList.empty()) {
+        NodePort constPort = openList.back();
+        openList.pop_back();
+        /*
+        if (closedList.contains(constPort)) continue;
+        closedList.insert(constPort);
+        */
+        
+        // The output constPort is constant, loop over all nodes driven by this and look for nodes that can be computed 
+        for (auto successor : constPort.node->getDirectlyDriven(constPort.port)) {
+            
+            // Signal nodes don't do anything, so add the output of the signal node to the openList
+            if (Node_Signal *signalNode = dynamic_cast<Node_Signal*>(successor.node)) {
+                openList.push_back({.node = signalNode, .port = 0});
+                continue;
+            } 
+            
+            // Nodes with side-effects can't be computed
+            if (successor.node->hasSideEffects()) continue;
+            
+            if (!successor.node->getInternalStateSizes().empty()) continue; // can't be good for const propagation
+            
+            // Attempt to compute the output of this node.
+            // Build a state vector with all inputs. Set all non-const inputs to undefined.
+            sim::DefaultBitVectorState state;
+            std::vector<size_t> inputOffsets(successor.node->getNumInputPorts());
+            for (size_t port : utils::Range(successor.node->getNumInputPorts())) {
+                auto driver = successor.node->getNonSignalDriver(port);
+                if (driver.node != nullptr) {
+                    auto conType = driver.node->getOutputConnectionType(driver.port);
+                    size_t offset = state.size();
+                    state.resize(offset + (conType.width + 63)/64 * 64);
+                    inputOffsets[port] = offset;
+                    if (Node_Constant *constNode = dynamic_cast<Node_Constant*>(driver.node)) {
+                        size_t arr[] = {offset};
+                        constNode->simulateReset(ignoreCallbacks, state, nullptr, arr); // import const data
+                    } else {
+                        state.clearRange(sim::DefaultConfig::DEFINED, offset, conType.width);   // set non-const data to undefined
+                    }
+                }
+            }
+            
+            // Allocate Outputs
+            std::vector<size_t> outputOffsets(successor.node->getNumOutputPorts());
+            for (size_t port : utils::Range(successor.node->getNumOutputPorts())) {
+                auto conType = successor.node->getOutputConnectionType(port);
+                size_t offset = state.size();
+                state.resize(offset + (conType.width + 63)/64 * 64);
+                outputOffsets[port] = offset;
+            }
+            
+            // Simulate node
+            successor.node->simulateEvaluate(ignoreCallbacks, state, nullptr, inputOffsets.data(), outputOffsets.data()); // compute outputs
+            
+            // Check all outputs. If any are fully defined, all nodes connected to that output can instead be connected to a const-node with the result.
+            // If this nodes ends up without any other nodes connected to it, it will be culled by other optimization steps.
+            for (size_t port : utils::Range(successor.node->getNumOutputPorts())) {
+                auto conType = successor.node->getOutputConnectionType(port);
+                
+                bool allDefined = true;
+                for (auto i : utils::Range(conType.width))
+                    if (!state.get(sim::DefaultConfig::DEFINED, outputOffsets[port]+i)) {
+                        allDefined = false;
+                        break;
+                    }
+                    
+                if (allDefined) {
+                    //std::cout << "    Found all const output" << std::endl;
+                    
+                    ConstantData value;
+                    value.bitVec.resize(conType.width);
+                    for (auto i : utils::Range(conType.width))
+                        value.bitVec[i] = state.get(sim::DefaultConfig::VALUE, outputOffsets[port]+i);
+                    
+                    
+                    auto* constant = createNode<Node_Constant>(value, conType);
+                    constant->moveToGroup(successor.node->getGroup());
+                    NodePort newConstOutputPort{.node = constant, .port = 0};
+                    
+                    while (!successor.node->getDirectlyDriven(port).empty()) {
+                        NodePort input = successor.node->getDirectlyDriven(port).back();
+                        input.node->connectInput(input.port, newConstOutputPort);
+                    }
+                        
+                    // Add the new const-node output to the openList to continue const-propagation from here.
+                    openList.push_back(newConstOutputPort);
+                }
+            }
+        }
+    }
+}
+
+
 void Circuit::optimize(size_t level)
 {
     switch (level) {
@@ -426,11 +497,13 @@ void Circuit::optimize(size_t level)
             cullUnusedNodes();
         break;
         case 3:
+            propagateConstants();
             cullOrphanedSignalNodes();
             cullUnnamedSignalNodes();
             mergeMuxes();
             removeIrrelevantMuxes();
             cullMuxConditionNegations();
+            propagateConstants(); // do again after muxes are removed
             cullUnusedNodes();
         break;
     };

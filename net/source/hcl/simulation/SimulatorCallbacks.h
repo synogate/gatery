@@ -22,5 +22,13 @@ class SimulatorCallbacks
     protected:
 };
 
+class DummySimulatorCallbacks : public SimulatorCallbacks
+{
+    public:
+        virtual void onNewTick(const hlim::Clock *clock) override { }
+        virtual void onDebugMessage(const hlim::BaseNode *src, std::string msg) override { }
+        virtual void onWarning(const hlim::BaseNode *src, std::string msg) override { }
+        virtual void onAssert(const hlim::BaseNode *src, std::string msg) override { }
+};
 
 }
