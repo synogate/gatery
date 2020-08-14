@@ -76,31 +76,29 @@ SignalType mux(const SelectorType &selector, const ContainerType &inputs)  {
 }
 #endif
 
-  
-BVec cat(const std::vector<const ElementarySignal*>& signals);
-
-inline void collectSignals(const std::vector<const ElementarySignal*>& signals) {}
-
-template<typename... Types>
-void collectSignals(std::vector<const ElementarySignal*>& signals, const Bit& signal, const Types&... remaining) {
-    signals.push_back(&signal);
-    return collectSignals(signals, remaining...);
-}
-
-template<typename... Types>
-void collectSignals(std::vector<const ElementarySignal*>& signals, const BVec& signal, const Types&... remaining) {
-    signals.push_back(&signal);
-    return collectSignals(signals, remaining...);
-}
-
 template<typename... Types>
 BVec cat(const Types&... allSignals)
 {
-    static_assert(sizeof...(Types) > 0, "Can not concatenate empty list of signals!");
-    std::vector<const ElementarySignal*> tmp{};
-    tmp.reserve(sizeof...(Types));
-    collectSignals(tmp, allSignals...);
-    return cat(tmp);
+    auto check_parameter = [](auto signal) {
+        static_assert(std::is_convertible_v<decltype(signal), BVec> | std::is_convertible_v<decltype(signal), Bit>,
+            "argument passed to cat is not a signal or constant");
+    };
+    (check_parameter(allSignals), ...);
+
+    struct
+    {
+        hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(sizeof...(allSignals));
+        size_t offset = sizeof...(allSignals) - 1;
+
+        void operator () (const Bit& signal) { node->connectInput(offset--, signal.getReadPort()); }
+        void operator () (const BVec& signal) { node->connectInput(offset--, signal.getReadPort()); }
+    } assigner;
+
+    (assigner(allSignals), ...);
+    assigner.node->setConcat();
+    assigner.node->changeOutputType({ .interpretation = hlim::ConnectionType::BITVEC });
+
+    return SignalReadPort(assigner.node);
 }
 
 

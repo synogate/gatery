@@ -27,31 +27,38 @@ class SimpleSignalGeneratorContext
         const size_t *m_outputOffsets;
         std::uint64_t m_tick;
 };
+
+namespace internal
+{
+    struct SignalDesc
+    {
+        SignalDesc(const ElementarySignal& sig) :
+            connType(sig.getConnType()),
+            name(sig.getName())
+        {}
+
+        hlim::ConnectionType connType;
+        std::string_view name;
+    };
+
+    hlim::Node_SignalGenerator* createSigGenNode(const Clock& refClk, std::vector<SignalDesc>& signals, const std::function<void(SimpleSignalGeneratorContext& context)>& genCallback);
+}
     
-hlim::Node_SignalGenerator* createSigGenNode(const Clock &refClk, std::vector<const ElementarySignal*> &signals, const std::function<void(SimpleSignalGeneratorContext &context)> &genCallback);
 
-
-template<class Signal>
-void assignGeneratorOutputs(hlim::Node_SignalGenerator* sigGenNode, size_t offset, Signal &signal) 
-{
-    signal = Signal(SignalReadPort({.node = sigGenNode, .port = offset}));
-}
-
-template<class Signal, class ...Signals>
-void assignGeneratorOutputs(hlim::Node_SignalGenerator* sigGenNode, size_t offset, Signal &signal, Signals &...remainingSignals) 
-{
-    assignGeneratorOutputs(sigGenNode, offset, signal);
-    assignGeneratorOutputs(sigGenNode, offset+1, remainingSignals...);
-}
 
 template<class ...Signals>
 void simpleSignalGenerator(const Clock &refClk, const std::function<void(SimpleSignalGeneratorContext &context)> &genCallback, Signals &...allSignals)
 {
-    std::vector<const ElementarySignal*> signals;
-    collectSignals(signals, allSignals...);
-    hlim::Node_SignalGenerator* sigGenNode = createSigGenNode(refClk, signals, genCallback);
-    assignGeneratorOutputs(sigGenNode, 0, allSignals...);
-    
+    std::vector<internal::SignalDesc> signals = {allSignals...};
+    hlim::Node_SignalGenerator* sigGenNode = internal::createSigGenNode(refClk, signals, genCallback);
+
+    SignalReadPort port(sigGenNode);
+    auto assign = [&](auto& signal) {
+        signal = port;
+        port.port++;
+    };
+
+    (assign(allSignals), ...);
 }
 
 

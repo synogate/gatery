@@ -8,20 +8,6 @@
 
 namespace hcl::core::frontend {
 
-    
-BVec cat(const std::vector<const ElementarySignal*>& signals)  {
-    hlim::Node_Rewire *node = DesignScope::createNode<hlim::Node_Rewire>(signals.size());
-    node->recordStackTrace();
-        
-    for (auto i : utils::Range(signals.size()))
-        node->connectInput(i, signals[signals.size() - 1 - i]->getReadPort());
-   
-    node->setConcat();
-    node->changeOutputType({.interpretation = hlim::ConnectionType::BITVEC});
- 
-    return SignalReadPort(node);
-}
-    
 
 SignalTapHelper::SignalTapHelper(hlim::Node_SignalTap::Level level)
 {

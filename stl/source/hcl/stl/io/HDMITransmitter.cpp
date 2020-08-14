@@ -45,7 +45,7 @@ core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::fronten
         q_m = dataXNOR;
     
     HCL_COMMENT << "Keep a running (signed) counter of the imbalance on the line, to modify future data encodings accordingly";
-    Register<BVec> imbalance{ 4, Expansion::none };
+    Register<BVec> imbalance{ 4u, Expansion::none };
     imbalance.setReset(0b0000_bvec);
     imbalance.setClock(pixelClock);
     HCL_NAMED(imbalance);
@@ -122,7 +122,7 @@ core::frontend::BVec tmdsEncodeReduceTransitions(const core::frontend::BVec& dat
 
     HCL_COMMENT << "Prepare XORed and XNORed data words to select from based on number of high bits";
 
-    Bit invert = sumOfOnes > 4u | (sumOfOnes == 4u & !data.lsb());
+    Bit invert = (sumOfOnes > 4u) | (sumOfOnes == 4u & !data.lsb());
 
     HCL_COMMENT << "Decode using 1=xor, 0=xnor";
     BVec tmdsReduced = cat(~invert, data);

@@ -195,7 +195,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, hcl::core::sim::UnitTestSimulati
     ClockScope clockScope(clock);
 
     {
-        Register<BVec> counter(8, Expansion::none);
+        Register<BVec> counter(8u, Expansion::none);
         counter.setReset(0x00_bvec);
         counter += 1;
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
@@ -221,7 +221,7 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, hcl::core::sim::UnitTestSimulati
     ClockScope clockScope(clock);
 
     {
-        Register<BVec> counter(8, Expansion::none);
+        Register<BVec> counter(8u, Expansion::none);
         counter.setReset(0x00_bvec);
 
         counter += 1;
@@ -249,7 +249,7 @@ BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, hcl::core::sim::UnitTestSimulationFixt
     ClockScope clockScope(clock);
 
     {
-        Register<BVec> counter(8, Expansion::none);
+        Register<BVec> counter(8u, Expansion::none);
         counter.setReset(0x01_bvec);
 
         counter <<= 1;
@@ -281,7 +281,7 @@ BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, hcl::core::sim::UnitTestS
         }, condition);
 
 
-        Register<BVec> counter(8, Expansion::none);
+        Register<BVec> counter(8u, Expansion::none);
         counter.setReset(0x00_bvec);
 
         IF (condition)
@@ -681,4 +681,18 @@ BOOST_FIXTURE_TEST_CASE(BVecArithmeticOpSyntax, hcl::core::sim::UnitTestSimulati
     in += '0';
     in -= false;
 
+}
+
+BOOST_FIXTURE_TEST_CASE(SimpleCat, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    BVec vec = 42u;
+    BVec vec_2 = cat('1', vec, '0');
+    BOOST_TEST(vec_2.size() == 8);
+    sim_assert(vec_2 == 42u * 2 + 128) << "result is " << vec_2;
+
+    eval(design.getCircuit());
 }

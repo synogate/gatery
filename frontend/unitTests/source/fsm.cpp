@@ -59,9 +59,9 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             fsm::DelayedState running;
             HCL_NAMED(running);
 
-            Register<BVec> a(8, Expansion::none);
+            Register<BVec> a(8u, Expansion::none);
             a.setReset(0b00000000_bvec);
-            Register<BVec> b(8, Expansion::none);
+            Register<BVec> b(8u, Expansion::none);
             b.setReset(0b00000000_bvec);
 
 #if 0
@@ -89,7 +89,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             fsm::ImmediateState shifting;
             HCL_NAMED(shifting);
 
-            Register<BVec> d(4, Expansion::none);
+            Register<BVec> d(4u, Expansion::none);
             d.setReset(0b0000_bvec);
             
             idle.onActive([&]{
