@@ -10,7 +10,9 @@
 
 using namespace boost::unit_test;
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestOperators, data::xrange(8) * data::xrange(8) * data::xrange(1, 8), x, y, bitsize)
+const auto optimizationLevels = data::make({0, 1, 2, 3});
+
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestOperators, optimizationLevels * data::xrange(8) * data::xrange(8) * data::xrange(1, 8), optimization, x, y, bitsize)
 {
     using namespace hcl::core::frontend;
     
@@ -66,6 +68,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestOperators,
 #undef op2str
 #undef buildOperatorTest
     
+    design.getCircuit().optimize(optimization);
     
     eval(design.getCircuit());
 }
@@ -74,7 +77,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestOperators,
 
 
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicing, data::xrange(8) * data::xrange(3, 8), x, bitsize)
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicing, optimizationLevels * data::xrange(8) * data::xrange(3, 8), optimization, x, bitsize)
 {
     using namespace hcl::core::frontend;
     
@@ -97,6 +100,8 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicing, d
         res = 0;
         sim_assert(a == ConstBVec(x, bitsize)) << "Modifying copy of slice of a changes a to " << a << ", should be: " << x;
     }
+
+    design.getCircuit().optimize(optimization);
     
     eval(design.getCircuit());
 }
@@ -123,7 +128,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicingMod
 }
 
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicingAddition, data::xrange(8) * data::xrange(3, 8), x, bitsize)
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicingAddition, optimizationLevels * data::xrange(8) * data::xrange(3, 8), optimization, x, bitsize)
 {
     using namespace hcl::core::frontend;
     
@@ -139,13 +144,15 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicingAdd
         sim_assert(b == groundTruth) << "Incrementing two bits out of " << a << " should be " << groundTruth << " but is " << b;
     }
     
+    design.getCircuit().optimize(optimization);
+    
     eval(design.getCircuit());
 }
 
 
 
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, SimpleAdditionNetwork, data::xrange(8) * data::xrange(8) * data::xrange(1, 8), x, y, bitsize)
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, SimpleAdditionNetwork, optimizationLevels * data::xrange(8) * data::xrange(8) * data::xrange(1, 8), optimization, x, y, bitsize)
 {
     using namespace hcl::core::frontend;
     
@@ -162,6 +169,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, SimpleAddition
     
     sim_assert(c == ConstBVec(x+y, bitsize)) << "The signal c should be " << x+y << " (with overflow in " << bitsize << "bits) but is " << c;
     
+    design.getCircuit().optimize(optimization);
     eval(design.getCircuit());
 }
 
@@ -517,7 +525,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
 
 
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignmentNoIf, data::xrange(8) * data::xrange(8), x, y)
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignmentNoIf, optimizationLevels * data::xrange(8) * data::xrange(8), optimization, x, y)
 {
     using namespace hcl::core::frontend;
     
@@ -542,11 +550,12 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
 
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
     
+    design.getCircuit().optimize(optimization);    
     eval(design.getCircuit());
 }
 
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignment, data::xrange(8) * data::xrange(8), x, y)
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignment, optimizationLevels * data::xrange(8) * data::xrange(8), optimization, x, y)
 {
     using namespace hcl::core::frontend;
     
@@ -579,6 +588,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
 
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
     
+    design.getCircuit().optimize(optimization);    
     eval(design.getCircuit());
 }
 

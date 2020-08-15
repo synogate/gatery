@@ -211,6 +211,8 @@ namespace hcl::core::frontend {
 
     void BVec::setName(std::string name)
     {
+        if (m_node->getDriver(0).node != nullptr)
+            m_node->getDriver(0).node->setName(name);
         m_node->setName(move(name));
     }
 
@@ -246,24 +248,48 @@ namespace hcl::core::frontend {
 
         if (m_selection != Selection::All())
         {
+            std::string in_name = in.node->getName();
+            
             auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(2);
             rewire->connectInput(0, m_node->getDriver(0));
             rewire->connectInput(1, in);
             rewire->setOp(replaceSelection(m_selection, m_node->getOutputConnectionType(0).width));
             in.node = rewire;
             in.port = 0;
+            
+            {
+                auto* signal = DesignScope::createNode<hlim::Node_Signal>();
+                signal->connectInput(in);
+                signal->setName(in_name);
+                signal->recordStackTrace();
+                in = SignalReadPort(signal);
+            }
+            
         }
 
         if (ConditionalScope::get())
         {
+            auto* signal = DesignScope::createNode<hlim::Node_Signal>();
+            signal->connectInput(m_node->getDriver(0));
+            signal->setName(m_node->getName());
+            signal->recordStackTrace();
+
             auto* mux = DesignScope::createNode<hlim::Node_Multiplexer>(2);
-            mux->connectInput(0, m_node->getDriver(0));
+            mux->connectInput(0, {.node = signal, .port = 0});
             mux->connectInput(1, in); // assign rhs last in case previous port was undefined
             mux->connectSelector(ConditionalScope::getCurrentConditionPort());
             in.node = mux;
             in.port = 0;
         }
 
+        {
+            auto* signal = DesignScope::createNode<hlim::Node_Signal>();
+            signal->connectInput(in);
+            signal->setName(m_node->getName());
+            signal->recordStackTrace();
+            in = SignalReadPort(signal);
+        }
+        
         m_node->connectInput(in);
     }
 

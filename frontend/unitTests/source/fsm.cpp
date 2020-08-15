@@ -10,7 +10,7 @@
 
 using namespace boost::unit_test;
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data::make({1, 2, 3, 4, 5, 10, 42}) * data::make({1, 2, 3, 4, 5, 23, 56, 126}), x, y)
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data::make({0, 1, 2, 3}) * data::make({1, 2, 3, 4, 5, 10, 42}) * data::make({1, 2, 3, 4, 5, 23, 56, 126}), optimize, x, y)
 {
     using namespace hcl::core::frontend;
     
@@ -29,7 +29,6 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
         return a;
     };
     
-    
     unsigned maxTicks = 200;
     
     {
@@ -40,7 +39,8 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick() == 0);
         }, start);
-        
+
+       
         BVec result;
         Bit done;
         
@@ -74,13 +74,13 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
                 }
             });
             running.onActive([&]{
-                IF (a.delay(1) == b.delay(1)) {
+                IF (a == b) {
                     fsm::immediateSwitch(idle);
                 } ELSE {
-                    IF (a.delay(1) > b.delay(1)) {
-                        a = a.delay(1) - b.delay(1);
+                    IF (a > b) {
+                        a = a - b;
                     } ELSE {
-                        b = b.delay(1) - a.delay(1);
+                        b = b - a;
                     }
                 }
             });
@@ -144,8 +144,6 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             HCL_NAMED(result);
             done = stateMachine.isInState(idle);
             HCL_NAMED(done);
-
-            //sim_debug() << "a is " << a.delay(1) << " and b is " << b.delay(1);
         }
         
         BVec ticks(8, Expansion::none);
@@ -157,11 +155,12 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
         BVec gtruth = ConstBVec(gcd_ref(x, y), 8);
         sim_assert((ticks < ConstBVec(maxTicks-1, 8)) | (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
     }
-
+    
+    design.getCircuit().optimize(optimize);
     runTicks(design.getCircuit(), clock.getClk(), maxTicks);
 }
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD, data::make({ 1, 2, 3, 4, 5, 10, 42 })* data::make({ 1, 2, 3, 4, 5, 23, 56, 126 }), x, y)
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD, data::make({0, 1, 2, 3}) * data::make({ 1, 2, 3, 4, 5, 10, 42 })* data::make({ 1, 2, 3, 4, 5, 23, 56, 126 }), optimize, x, y)
 {
     using namespace hcl::core::frontend;
 
@@ -242,5 +241,6 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD
         sim_assert((ticks < ConstBVec(maxTicks - 1, 8)) | (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
     }
 
+    design.getCircuit().optimize(optimize);
     runTicks(design.getCircuit(), clock.getClk(), maxTicks);
 }
