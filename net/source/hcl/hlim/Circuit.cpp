@@ -459,13 +459,7 @@ void Circuit::propagateConstants()
                 if (allDefined) {
                     //std::cout << "    Found all const output" << std::endl;
                     
-                    ConstantData value;
-                    value.bitVec.resize(conType.width);
-                    for (auto i : utils::Range(conType.width))
-                        value.bitVec[i] = state.get(sim::DefaultConfig::VALUE, outputOffsets[port]+i);
-                    
-                    
-                    auto* constant = createNode<Node_Constant>(value, conType);
+                    auto* constant = createNode<Node_Constant>(state.extract(outputOffsets[port], conType.width), conType.interpretation);
                     constant->moveToGroup(successor.node->getGroup());
                     NodePort newConstOutputPort{.node = constant, .port = 0};
                     
