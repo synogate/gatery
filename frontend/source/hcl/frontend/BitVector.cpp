@@ -1,5 +1,6 @@
 #include "BitVector.h"
 #include "ConditionalScope.h"
+#include "Constant.h"
 
 #include <hcl/hlim/coreNodes/Node_Constant.h>
 #include <hcl/hlim/coreNodes/Node_Rewire.h>
@@ -141,15 +142,10 @@ namespace hcl::core::frontend {
     {
         // TODO: set constant to undefined
         auto* constant = DesignScope::createNode<hlim::Node_Constant>(
-            hlim::ConstantData(0, width), 
-            hlim::ConnectionType{.interpretation = hlim::ConnectionType::BITVEC, .width = width}
+            undefinedBVec(width), 
+            hlim::ConnectionType::BITVEC
             );
         assign(SignalReadPort(constant, expansionPolicy));
-    }
-
-    BVec::BVec(std::string_view rhs)
-    {
-        assign(rhs);
     }
 
     const BVec BVec::operator*() const
@@ -220,10 +216,9 @@ namespace hcl::core::frontend {
 
     void BVec::assign(std::string_view value)
     {
-        auto data = hlim::ConstantData(value);
         auto* constant = DesignScope::createNode<hlim::Node_Constant>(
-            data,
-            hlim::ConnectionType{ .interpretation = hlim::ConnectionType::BITVEC, .width = data.bitVec.size() }
+            parseBVec(value),
+            hlim::ConnectionType::BITVEC
         );
 
         // TODO: set policy from string content

@@ -60,9 +60,9 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             HCL_NAMED(running);
 
             Register<BVec> a(8u, Expansion::none);
-            a.setReset(0b00000000_bvec);
+            a.setReset("b00000000");
             Register<BVec> b(8u, Expansion::none);
-            b.setReset(0b00000000_bvec);
+            b.setReset("b00000000");
 
 #if 0
             // Euclid's gcd
@@ -90,7 +90,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             HCL_NAMED(shifting);
 
             Register<BVec> d(4u, Expansion::none);
-            d.setReset(0b0000_bvec);
+            d.setReset("b0000");
             
             idle.onActive([&]{
                 IF (start) {
@@ -206,9 +206,9 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD
 
 
             Register<BVec> a(8u, Expansion::none);
-            a.setReset(0b00000000_bvec);
+            a.setReset("b00000000");
             Register<BVec> b(8u, Expansion::none);
-            b.setReset(0b00000000_bvec);
+            b.setReset("b00000000");
 
             IF(start) {
                 a = x_vec;

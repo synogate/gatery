@@ -17,7 +17,7 @@ namespace hcl::stl {
             .setComment("Counts the number of high bits");
         
 #if 0
-        BVec sumOfOnes = 0b0000_bvec;
+        BVec sumOfOnes = "b0000";
         for (auto i : utils::Range(data.getWidth()))
             sumOfOnes += data[i].zext(1);
         return sumOfOnes;

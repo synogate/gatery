@@ -1,6 +1,7 @@
 #include "Bit.h"
 #include "BitVector.h"
 #include "ConditionalScope.h"
+#include "Constant.h"
 
 #include <hcl/hlim/coreNodes/Node_Constant.h>
 #include <hcl/hlim/coreNodes/Node_Rewire.h>
@@ -100,13 +101,17 @@ namespace hcl::core::frontend {
 
     void Bit::assign(bool value)
     {
-        auto* constant = DesignScope::createNode<hlim::Node_Constant>(value, getConnType());
+        auto* constant = DesignScope::createNode<hlim::Node_Constant>(
+            parseBit(value), hlim::ConnectionType::BOOL
+            );
         assign(SignalReadPort(constant));
     }
 
     void Bit::assign(char value)
     {
-        auto* constant = DesignScope::createNode<hlim::Node_Constant>(value, getConnType());
+        auto* constant = DesignScope::createNode<hlim::Node_Constant>(
+            parseBit(value), hlim::ConnectionType::BOOL
+            );
         assign(SignalReadPort(constant));
     }
 

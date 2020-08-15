@@ -127,7 +127,7 @@ class SignalTapHelper
 
         template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>    
         SignalTapHelper &operator<<(const SignalType &signal) {
-            unsigned port = addInput(signal.getReadPort());
+            unsigned port = (unsigned)addInput(signal.getReadPort());
             m_node->addMessagePart(hlim::Node_SignalTap::FormattedSignal{.inputIdx = port, .format = 0});
             return *this;
         }

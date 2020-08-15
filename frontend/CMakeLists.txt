@@ -43,7 +43,7 @@ add_library(hcl_frontend STATIC
     
     
     source/hcl/frontend.h
- "source/hcl/frontend/Pack.h" )
+ "source/hcl/frontend/Pack.h"  "source/hcl/frontend/Constant.cpp")
 
 
 

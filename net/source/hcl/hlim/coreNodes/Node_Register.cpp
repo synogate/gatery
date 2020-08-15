@@ -34,26 +34,7 @@ void Node_Register::simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::De
     Node_Constant *constNode = dynamic_cast<Node_Constant *>(resetDriver.node);
     HCL_ASSERT_HINT(constNode != nullptr, "Constant value propagation is not yet implemented, so for simulation the register reset value must be connected to a constant node via signals only!");
     
-    size_t width = getOutputConnectionType(0).width;
-    size_t offset = 0;
-    
-    while (offset < width) {
-        size_t chunkSize = std::min<size_t>(64, width-offset);
-        
-        std::uint64_t block = 0;
-        for (auto i : utils::Range(chunkSize))
-            if (constNode->getValue().bitVec[offset + i])
-                block |= 1ull << i;
-                    
-        state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0] + offset, chunkSize, block);
-        state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0] + offset, chunkSize, ~0ull);    
-        
-        state.insertNonStraddling(sim::DefaultConfig::VALUE, internalOffsets[0] + offset, chunkSize, block);
-        state.insertNonStraddling(sim::DefaultConfig::DEFINED, internalOffsets[0] + offset, chunkSize, ~0ull);    
-        
-        offset += chunkSize;
-    }
-    
+    state.insert(constNode->getValue(), outputOffsets[0]);
 }
 
 void Node_Register::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const

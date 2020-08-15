@@ -49,11 +49,12 @@ class BitVectorState
         const typename Config::BaseType *data(typename Config::Plane plane) const;
         
         BitVectorState<Config> extract(size_t start, size_t size) const;
+        void insert(const BitVectorState& state, size_t offset);
         
         typename Config::BaseType extractNonStraddling(typename Config::Plane plane, size_t start, size_t size) const;
         void insertNonStraddling(typename Config::Plane plane, size_t start, size_t size, typename Config::BaseType value);
     protected:
-        size_t m_size;
+        size_t m_size = 0;
         std::array<std::vector<typename Config::BaseType>, Config::NUM_PLANES> m_values;
 };
 
@@ -65,7 +66,20 @@ bool allDefinedNonStraddling(const BitVectorState<Config> &vec, size_t start, si
 
 using DefaultBitVectorState = BitVectorState<DefaultConfig>;
 
-
+template<typename Config>
+std::ostream& operator << (std::ostream& s, const BitVectorState<Config>& state)
+{
+    for (size_t i = 0; i < state.size(); ++i)
+    {
+        if (!state.get(Config::DEFINED, i))
+            s << 'x';
+        else if (state.get(Config::VALUE, i))
+            s << '1';
+        else
+            s << '0';
+    }
+    return s;
+}
 
 
 
@@ -214,6 +228,26 @@ BitVectorState<Config> BitVectorState<Config>::extract(size_t start, size_t size
 }
 
 template<class Config>
+inline void BitVectorState<Config>::insert(const BitVectorState& state, size_t offset)
+{
+    const size_t width = state.size();
+    size_t srcOffset = 0;
+
+    while (srcOffset < width) {
+        size_t chunkSize = std::min<size_t>(64, width - srcOffset);
+
+        auto val = state.extractNonStraddling(sim::DefaultConfig::VALUE, srcOffset, chunkSize);
+        insertNonStraddling(sim::DefaultConfig::VALUE, offset, chunkSize, val);
+
+        auto def = state.extractNonStraddling(sim::DefaultConfig::DEFINED, srcOffset, chunkSize);
+        insertNonStraddling(sim::DefaultConfig::DEFINED, offset, chunkSize, def);
+
+        offset += chunkSize;
+        srcOffset += chunkSize;
+    }
+}
+
+template<class Config>
 typename Config::BaseType BitVectorState<Config>::extractNonStraddling(typename Config::Plane plane, size_t start, size_t size) const
 {
     return utils::bitfieldExtract(m_values[plane][start / Config::NUM_BITS_PER_BLOCK], start % Config::NUM_BITS_PER_BLOCK, size);
@@ -222,8 +256,11 @@ typename Config::BaseType BitVectorState<Config>::extractNonStraddling(typename 
 template<class Config>
 void BitVectorState<Config>::insertNonStraddling(typename Config::Plane plane, size_t start, size_t size, typename Config::BaseType value)
 {
-    auto &op = m_values[plane][start / Config::NUM_BITS_PER_BLOCK];
-    op = utils::bitfieldInsert(op, start % Config::NUM_BITS_PER_BLOCK, size, value);
+    if (size)
+    {
+        auto& op = m_values[plane][start / Config::NUM_BITS_PER_BLOCK];
+        op = utils::bitfieldInsert(op, start % Config::NUM_BITS_PER_BLOCK, size, value);
+    }
 }
 
 

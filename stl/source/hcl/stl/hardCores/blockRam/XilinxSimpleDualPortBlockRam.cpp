@@ -70,7 +70,7 @@ void XilinxSimpleDualPortBlockRam::connectInput(Input input, const NodePort &por
 bool XilinxSimpleDualPortBlockRam::isRom() const
 {
     Node_Constant *cNode = dynamic_cast<Node_Constant*>(getNonSignalDriver(WRITE_ENABLE).node);    
-    return cNode != nullptr && !cNode->getValue().bitVec[0];
+    return cNode != nullptr;
 }
 
 
@@ -92,23 +92,7 @@ void XilinxSimpleDualPortBlockRam::simulateReset(SimulatorCallbacks &simCallback
     Node_Constant *constNode = dynamic_cast<Node_Constant *>(resetDriver.node);
     HCL_ASSERT_HINT(constNode != nullptr, "Constant value propagation is not yet implemented, so for simulation the register reset value must be connected to a constant node via signals only!");
     
-    size_t width = getOutputConnectionType(0).width;
-    size_t offset = 0;
-    
-    while (offset < width) {
-        size_t chunkSize = std::min<size_t>(64, width-offset);
-        
-        std::uint64_t block = 0;
-        for (auto i : utils::Range(chunkSize))
-            if (constNode->getValue().bitVec[offset + i])
-                block |= 1ull << i;
-                    
-        state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[READ_DATA] + offset, chunkSize, block);
-        state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[READ_DATA] + offset, chunkSize, ~0ull);    
-        
-        offset += chunkSize;
-    }
-
+    state.insert(constNode->getValue(), outputOffsets[0]);
 }
 
 

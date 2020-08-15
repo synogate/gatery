@@ -16,7 +16,7 @@ BOOST_FIXTURE_TEST_CASE(BVecIterator, hcl::core::sim::UnitTestSimulationFixture)
 
     DesignScope design;
 
-    BVec a = 0b1100_bvec;
+    BVec a = "b1100";
     BOOST_TEST(a.size() == 4);
     BOOST_TEST(!a.empty());
 
@@ -60,7 +60,7 @@ BOOST_FIXTURE_TEST_CASE(BVecIteratorArithmetic, hcl::core::sim::UnitTestSimulati
 
     DesignScope design;
 
-    BVec a = 0b1100_bvec;
+    BVec a = "b1100";
 
     auto it1 = a.begin();
     auto it2 = it1 + 1;
@@ -96,7 +96,7 @@ BOOST_FIXTURE_TEST_CASE(BVecFrontBack, hcl::core::sim::UnitTestSimulationFixture
 
     DesignScope design;
 
-    BVec a = 0b1100_bvec;
+    BVec a = "b1100";
     sim_assert(!a.front());
     sim_assert(a.back());
     sim_assert(!a.lsb());
@@ -109,4 +109,14 @@ BOOST_FIXTURE_TEST_CASE(BVecFrontBack, hcl::core::sim::UnitTestSimulationFixture
     sim_assert(!a.back());
 
     eval(design.getCircuit());
+}
+
+BOOST_FIXTURE_TEST_CASE(ConstantDataStringParser, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+    
+    BOOST_CHECK(parseBVec("32x1bBXx").size() == 32);
+    BOOST_CHECK(parseBVec("x1bBX").size() == 16);
+    BOOST_CHECK(parseBVec("o170X").size() == 12);
+    BOOST_CHECK(parseBVec("b10xX").size() == 4);
 }

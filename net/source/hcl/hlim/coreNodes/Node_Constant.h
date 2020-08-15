@@ -5,115 +5,10 @@
 
 namespace hcl::core::hlim {
 
-    // todo: this is a parser and representation of bit values. replace by simulation data structure.
-    struct ConstantData
-    {
-        ConstantData() { }
-
-        ConstantData(char bitValue)
-        {
-            // TODO: fix undefined 'x'
-            bitVec.resize(1, bitValue != '0');
-            base = 2;
-        }
-
-        ConstantData(bool bitValue)
-        {
-            bitVec.resize(1, bitValue);
-            base = 2;
-        }
-        
-        ConstantData(std::string_view _str)
-        {
-            // check base prefix
-            if (_str.length() >= 3 && _str.front() == '0')
-            {
-                switch (_str[1])
-                {
-                case 'x':
-                case 'X':
-                    base = 16;
-                    break;
-                case 'b':
-                case 'B':
-                    base = 2;
-                    break;
-                default:
-                    HCL_ASSERT(!"invalid literal. only hex and binary may start with 0.")
-                }
-                _str.remove_prefix(2);
-            }
-
-            if (base == 10)
-                parseDecimal(_str);
-            else
-                parsePow2Base(_str);
-
-
-        }
-
-        ConstantData(uint64_t value, size_t width)
-        {
-            bitVec.resize(width, false);
-            for (auto i : utils::Range(width))
-                if (value & (1ull << i))
-                    bitVec[i] = true;
-        }
-
-        void parseDecimal(std::string_view _str)
-        {
-            uint64_t acc = 0;
-            for (char c : _str)
-            {
-                if (c == '\'')
-                    continue;
-                HCL_DESIGNCHECK(std::isdigit(c));
-                HCL_DESIGNCHECK_HINT(acc != 0 || c != '0' || _str.size() == 1, "leading zeros are not allowed for decimal literals.");
-
-                uint64_t new_acc = acc * 10 + (c - '0');
-                HCL_DESIGNCHECK_HINT(new_acc >= acc, "decimal literal overflow. use hex literal instead.");
-                acc = new_acc;
-            }
-
-            do
-            {
-                bitVec.push_back((acc & 1) == 1);
-                acc >>= 1;
-            } while (acc);
-        }
-
-        void parsePow2Base(std::string_view _str)
-        {
-            for (char c : _str)
-            {
-                if (c == '\'')
-                    continue;
-
-                size_t val = ~0u;
-                if (c >= '0' && c <= '9')
-                    val = c - '0';
-                else if (c >= 'a' && c <= 'w') // reserve 'x' for undefined
-                    val = c - 'a';
-                else if (c >= 'A' && c <= 'W')
-                    val = c - 'A';
-
-                HCL_DESIGNCHECK_HINT(val < base, "invalid character " + c + " in " + std::string{ _str });
-
-                for (size_t mask = base / 2; mask; mask /= 2)
-                    bitVec.push_back((val & mask) != 0);
-            }
-            std::reverse(bitVec.begin(), bitVec.end());
-        }
-
-        ///@todo: Do we want DefaultBitVectorState here to also represent undefined values?
-        std::vector<bool> bitVec;
-        size_t base = 10;
-    };
-    
     class Node_Constant : public Node<Node_Constant>
     {
     public:
-        Node_Constant(ConstantData value, const hlim::ConnectionType& connectionType);
+        Node_Constant(sim::DefaultBitVectorState value, hlim::ConnectionType::Interpretation connectionType);
 
         virtual void simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
         
@@ -122,8 +17,8 @@ namespace hcl::core::hlim {
         virtual std::string getInputName(size_t idx) const override;
         virtual std::string getOutputName(size_t idx) const override;
 
-        const ConstantData& getValue() const { return m_Value; }
+        const sim::DefaultBitVectorState& getValue() const { return m_Value; }
     protected:
-        ConstantData m_Value;
+        sim::DefaultBitVectorState m_Value;
     };
 }

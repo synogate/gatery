@@ -94,7 +94,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicing, d
 
     {
         BVec res = a(1, 2);
-        res = 0b00_bvec;
+        res = 0;
         sim_assert(a == ConstBVec(x, bitsize)) << "Modifying copy of slice of a changes a to " << a << ", should be: " << x;
     }
     
@@ -113,7 +113,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicingMod
     
     {
         BVec b = a;
-        b(1, 2) = 0b00_bvec;
+        b(1, 2) = 0;
         
         auto groundTruth = ConstBVec(unsigned(x) & ~0b110, bitsize);
         sim_assert(b == groundTruth) << "Clearing two bits out of " << a << " should be " << groundTruth << " but is " << b;
@@ -174,12 +174,12 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, BitFromBool, d
     Bit b;
     b = r != 0;
 
-    sim_assert((a == b) == Bit{ l == r });
-    sim_assert((a != b) == Bit{ l != r });
-    sim_assert((a == true) == Bit(l != 0));
-    sim_assert((true == a) == Bit(l != 0));
-    sim_assert((a != true) == Bit(l == 0));
-    sim_assert((true != a) == Bit(l == 0));
+    sim_assert((a == b) == Bit{ l == r })  << "test 0: " << a << "," << b;
+    sim_assert((a != b) == Bit{ l != r })  << "test 1: " << a << "," << b;
+    sim_assert((a == true) == Bit(l != 0)) << "test 2: " << a << "," << b;
+    sim_assert((true == a) == Bit(l != 0)) << "test 3: " << a << "," << b;
+    sim_assert((a != true) == Bit(l == 0)) << "test 4: " << a << "," << b;
+    sim_assert((true != a) == Bit(l == 0)) << "test 5: " << a << "," << b;
 
     eval(design.getCircuit());
 }
@@ -196,7 +196,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, hcl::core::sim::UnitTestSimulati
 
     {
         Register<BVec> counter(8u, Expansion::none);
-        counter.setReset(0x00_bvec);
+        counter.setReset("8b0");
         counter += 1;
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
@@ -222,7 +222,7 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, hcl::core::sim::UnitTestSimulati
 
     {
         Register<BVec> counter(8u, Expansion::none);
-        counter.setReset(0x00_bvec);
+        counter.setReset("8b0");
 
         counter += 1;
         counter += 1;
@@ -250,14 +250,14 @@ BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, hcl::core::sim::UnitTestSimulationFixt
 
     {
         Register<BVec> counter(8u, Expansion::none);
-        counter.setReset(0x01_bvec);
+        counter.setReset("8b1");
 
         counter <<= 1;
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
         BVec refCount(8, Expansion::none);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
-            context.set(0, 1 << context.getTick());
+            context.set(0, 1ull << context.getTick());
         }, refCount);
         
         sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);    
@@ -282,7 +282,7 @@ BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, hcl::core::sim::UnitTestS
 
 
         Register<BVec> counter(8u, Expansion::none);
-        counter.setReset(0x00_bvec);
+        counter.setReset("8b0");
 
         IF (condition)
             counter += 1;
@@ -663,7 +663,7 @@ BOOST_FIXTURE_TEST_CASE(BVecArithmeticOpSyntax, hcl::core::sim::UnitTestSimulati
 
     DesignScope design;
 
-    BVec in = ConstBVec(5, 3);
+    BVec in = 5;
     BVec res = in + 5u;
     in - 5u;
     in * 5u;
@@ -689,7 +689,7 @@ BOOST_FIXTURE_TEST_CASE(LogicOpSyntax, hcl::core::sim::UnitTestSimulationFixture
 
     DesignScope design;
 
-    BVec in = ConstBVec(5, 3);
+    BVec in = 5;
 
     '1' & in;
     in & '1';
@@ -717,11 +717,13 @@ BOOST_FIXTURE_TEST_CASE(msbBroadcast, hcl::core::sim::UnitTestSimulationFixture)
 
     DesignScope design;
 
-    BVec vec = 0b0000_bvec;
-    BVec vec_2 = 0b1000_bvec;
+    const char* t = false;
+
+    BVec vec = "4b0000";
+    BVec vec_2 = "4b1000";
     vec ^= vec_2.msb();
 
-    sim_assert(vec == 0b1111_bvec) << "result is " << vec << " but should be 0b1111_bvec";
+    sim_assert(vec == "4b1111") << "result is " << vec << " but should be 1111";
 
     eval(design.getCircuit());
 }

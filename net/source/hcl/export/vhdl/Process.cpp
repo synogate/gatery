@@ -288,10 +288,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
             sep = '\'';
 
         stream << sep;
-        for (auto idx : utils::Range(constNode->getValue().bitVec.size())) {
-            bool b = constNode->getValue().bitVec[constNode->getValue().bitVec.size()-1-idx];
-            stream << (b ? '1' : '0');
-        }
+        stream << constNode->getValue();
         stream << sep;
         return;
     }

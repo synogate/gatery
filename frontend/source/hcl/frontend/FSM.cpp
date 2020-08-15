@@ -23,7 +23,7 @@ FSM::FSM(const Clock &clock, const BaseState &startState) :
     m_fsmContext = this;
     
     m_stateReg.setClock(clock);
-    m_stateReg.setReset(0x00_bvec);
+    m_stateReg.setReset("8b0");
     m_stateReg.setName("fsm_state");
 
     m_state2encoding[&startState] = std::make_unique<BVec>(8, Expansion::none);

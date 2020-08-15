@@ -53,14 +53,16 @@ namespace hcl::core::frontend {
 		BVec(hlim::Node_Signal* node, Selection range, Expansion expansionPolicy); // alias
 		BVec(size_t width, Expansion expansionPolicy);
 
-		BVec(std::string_view rhs);
+		template<unsigned S>
+		BVec(const char(&rhs)[S]) { assign(std::string_view(rhs)); }
 
 		template <typename Int, typename = std::enable_if_t<std::is_integral_v<Int> & !std::is_same_v<Int, char> & !std::is_same_v<Int, bool>> >
 		BVec(Int vec) { assign(vec); }
 
 		template <typename Int, typename = std::enable_if_t<std::is_integral_v<Int> & !std::is_same_v<Int, char> & !std::is_same_v<Int, bool>> >
 		BVec& operator = (Int rhs) { assign(rhs); return *this; }
-		BVec& operator = (std::string_view rhs) { assign(rhs); return *this; }
+		template<unsigned S>
+		BVec& operator = (const char (&rhs)[S]) { assign(std::string_view(rhs)); return *this; }
 		BVec& operator = (const BVec& rhs) { assign(rhs.getReadPort()); return *this; }
 
 		BVec& operator()(int offset, size_t size) { return aliasRange(Selection::Slice(offset, size)); }
@@ -169,24 +171,20 @@ namespace hcl::core::frontend {
 		size_t width;
 		Expansion policy;
 
-		if constexpr (std::is_unsigned_v<Int>)
+		if (value >= 0)
 		{
 			policy = Expansion::zero;
-			width = utils::Log2C(value+1);
+			width = utils::Log2C(value + 1);
 		}
 		else
 		{
 			policy = Expansion::sign;
-
-			if (value >= 0)
-				width = utils::Log2C(value + 1) + 1;
-			else
-				width = utils::Log2C(~value + 1) + 1;
+			width = utils::Log2C(~value + 1) + 1;
 		}
 
 		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
-			hlim::ConstantData(uint64_t(value), width),
-			hlim::ConnectionType{ .interpretation = hlim::ConnectionType::BITVEC, .width = width }
+			parseBVec(uint64_t(value), width),
+			hlim::ConnectionType::BITVEC
 		);
 		assign(SignalReadPort(constant, policy));
 	}

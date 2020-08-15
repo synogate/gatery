@@ -37,7 +37,7 @@ core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::fronten
     HCL_NAMED(dataXNOR);
     HCL_NAMED(dataXOR);
     
-    Bit useXnor = !((sumOfOnes_data > 4_bvec) | ((sumOfOnes_data == 4_bvec) & (!data[0])));
+    Bit useXnor = !((sumOfOnes_data > 4) | ((sumOfOnes_data == 4) & (!data[0])));
     HCL_NAMED(useXnor);
     BVec q_m = dataXOR;
     HCL_NAMED(q_m);
@@ -46,7 +46,7 @@ core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::fronten
     
     HCL_COMMENT << "Keep a running (signed) counter of the imbalance on the line, to modify future data encodings accordingly";
     Register<BVec> imbalance{ 4u, Expansion::none };
-    imbalance.setReset(0b0000_bvec);
+    imbalance.setReset("b0000");
     imbalance.setClock(pixelClock);
     HCL_NAMED(imbalance);
     
@@ -60,9 +60,9 @@ core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::fronten
         BVec sumOfOnes_q_m = bitcount(q_m);
         HCL_NAMED(sumOfOnes_q_m);   
         
-        Bit noPreviousImbalance = imbalance.delay(1) == 0_bvec;
+        Bit noPreviousImbalance = imbalance.delay(1) == 0;
         HCL_NAMED(noPreviousImbalance);
-        Bit noImbalanceInQ_m = sumOfOnes_q_m == 4_bvec;
+        Bit noImbalanceInQ_m = sumOfOnes_q_m == 4;
         HCL_NAMED(noImbalanceInQ_m);
         
         IF (noPreviousImbalance | noImbalanceInQ_m) {
@@ -70,14 +70,14 @@ core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::fronten
             result(8, 2) = cat(useXnor, ~useXnor);
             
             IF (useXnor) 
-                imbalance = imbalance.delay(1) - 8_bvec + sumOfOnes_q_m + sumOfOnes_q_m;
+                imbalance = imbalance.delay(1) - 8 + sumOfOnes_q_m + sumOfOnes_q_m;
             ELSE
-                imbalance = imbalance.delay(1) + 8_bvec - sumOfOnes_q_m - sumOfOnes_q_m;
+                imbalance = imbalance.delay(1) + 8 - sumOfOnes_q_m - sumOfOnes_q_m;
             
         } ELSE {
             Bit positivePreviousImbalance = !imbalance.delay(1).msb(); // Sign bit
             HCL_NAMED(positivePreviousImbalance);
-            Bit positiveImbalanceInQ_m = sumOfOnes_q_m > 4_bvec;
+            Bit positiveImbalanceInQ_m = sumOfOnes_q_m > 4;
             HCL_NAMED(positiveImbalanceInQ_m);
             IF ((positivePreviousImbalance & positiveImbalanceInQ_m) |
                 ((!positivePreviousImbalance) & (!positiveImbalanceInQ_m))) {
@@ -85,30 +85,30 @@ core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::fronten
                 result(0, 8) = ~q_m;
                 result(8, 2) = cat(useXnor, '1');
                 
-                imbalance = imbalance.delay(1) + 8_bvec - sumOfOnes_q_m - sumOfOnes_q_m;
+                imbalance = imbalance.delay(1) + 8 - sumOfOnes_q_m - sumOfOnes_q_m;
                 IF (useXnor)
-                    imbalance = (BVec) imbalance + 2_bvec;
+                    imbalance = (BVec) imbalance + 2;
             } ELSE {
                 result(0, 8) = q_m;
                 result(8, 2) = cat(useXnor, '1');
                 
-                imbalance = imbalance.delay(1) + 8_bvec - sumOfOnes_q_m - sumOfOnes_q_m;
+                imbalance = imbalance.delay(1) + 8 - sumOfOnes_q_m - sumOfOnes_q_m;
                 IF (useXnor)
-                    imbalance = (BVec) imbalance + 2_bvec;
+                    imbalance = (BVec) imbalance + 2;
             }
         }
     } ELSE {
         PriorityConditional<core::frontend::BVec> con;
         
         con
-            .addCondition(ctrl == 0b00_bvec, 0b1101010100_bvec)
-            .addCondition(ctrl == 0b01_bvec, 0b0010101011_bvec)
-            .addCondition(ctrl == 0b10_bvec, 0b0101010100_bvec)
-            .addCondition(ctrl == 0b11_bvec, 0b1010101011_bvec);
+            .addCondition(ctrl == "b00", "b1101010100")
+            .addCondition(ctrl == "b01", "b0010101011")
+            .addCondition(ctrl == "b10", "b0101010100")
+            .addCondition(ctrl == "b11", "b1010101011");
             
-        result = con(0b0000000000_bvec);
+        result = con("b0000000000");
         
-        imbalance = 0b0000_bvec;
+        imbalance = "b0000";
     }
 
     return result;
@@ -148,11 +148,11 @@ core::frontend::BVec tmdsEncodeBitflip(const core::frontend::Clock& clk, const c
     HCL_COMMENT << "count the number of uncompensated ones";
     Register<BVec> global_counter{3ull, Expansion::none };
     global_counter.setClock(clk);
-    global_counter.setReset(0b000_bvec);
+    global_counter.setReset("b000");
     HCL_NAMED(global_counter);
 
     // TODO: depend with and start value on data width
-    BVec word_counter = 0b100_bvec;
+    BVec word_counter = "b100";
     for (const Bit& b : data)
         word_counter += b;
 
@@ -185,7 +185,7 @@ core::frontend::BVec tmdsDecodeBitflip(const core::frontend::BVec& data)
 TmdsEncoder::TmdsEncoder(core::frontend::Clock& clk) :
     m_Clk{clk}
 {
-    m_Channel.fill(0b0010101011_bvec); // no data symbol
+    m_Channel.fill("b0010101011"); // no data symbol
     m_Channel[0].setName("redChannel"); // TODO: convinient method to name arrays
     m_Channel[1].setName("greenChannel");
     m_Channel[2].setName("blueChannel");
@@ -211,34 +211,34 @@ void hcl::stl::hdmi::TmdsEncoder::setColor(const ColorRGB& color)
 void hcl::stl::hdmi::TmdsEncoder::setSync(bool hsync, bool vsync)
 {
     if (hsync && vsync)
-        m_Channel[2] = 0b1010101011_bvec;
+        m_Channel[2] = "b1010101011";
     else if (hsync)
-        m_Channel[2] = 0b0010101011_bvec;
+        m_Channel[2] = "b0010101011";
     else if (vsync)
-        m_Channel[2] = 0b0101010100_bvec;
+        m_Channel[2] = "b0101010100";
     else
-        m_Channel[2] = 0b0010101011_bvec;
+        m_Channel[2] = "b0010101011";
 }
 
 void hcl::stl::hdmi::TmdsEncoder::setTERC4(core::frontend::BVec ctrl)
 {
     std::array<BVec, 16> trec4lookup = {
-        0b1010011100_bvec,
-        0b1001100011_bvec,
-        0b1011100100_bvec,
-        0b1011100010_bvec,
-        0b0101110001_bvec,
-        0b0100011110_bvec,
-        0b0110001110_bvec,
-        0b0100111100_bvec,
-        0b1011001100_bvec,
-        0b0100111001_bvec,
-        0b0110011100_bvec,
-        0b1011000110_bvec,
-        0b1010001110_bvec,
-        0b1001110001_bvec,
-        0b0101100011_bvec,
-        0b1011000011_bvec
+        "b1010011100",
+        "b1001100011",
+        "b1011100100",
+        "b1011100010",
+        "b0101110001",
+        "b0100011110",
+        "b0110001110",
+        "b0100111100",
+        "b1011001100",
+        "b0100111001",
+        "b0110011100",
+        "b1011000110",
+        "b1010001110",
+        "b1001110001",
+        "b0101100011",
+        "b1011000011"
     };
 
     HCL_ASSERT(ctrl.getWidth() == 6);
@@ -262,14 +262,14 @@ SerialTMDS hcl::stl::hdmi::TmdsEncoder::serialOutput() const
         c = c.delay(1) >> 1;
 
     Register<BVec> shiftCounter(4u, Expansion::none);
-    shiftCounter.setReset(0x0_bvec);
+    shiftCounter.setReset("4b0");
     shiftCounter.setClock(fastClk);
     HCL_NAMED(shiftCounter);
     shiftCounter = shiftCounter.delay(1) + 1u;
 
-    IF(shiftCounter == 9_bvec)
+    IF(shiftCounter == 9)
     {
-        shiftCounter = 0x0_bvec;
+        shiftCounter = 0;
 
         for (size_t i = 0; i < m_Channel.size(); ++i)
             chan[i] = m_Channel[i]; // TODO: clock domain crossing lib and warning
