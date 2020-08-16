@@ -66,15 +66,19 @@ sim::DefaultBitVectorState hcl::core::frontend::parseBVec(std::string_view value
         }
     };
 
-
-    bool r = parse(value.begin(), value.end(),
-        (-uint_)[parseWidth] > (
-            (char_('x') > (*char_("0-9a-fA-FxX"))[std::bind(parseHex, 4, std::placeholders::_1)]) |
-            (char_('o') > (*char_("0-7xX"))[std::bind(parseHex, 3, std::placeholders::_1)]) |
-            (char_('b') > (*char_("0-1xX"))[std::bind(parseHex, 1, std::placeholders::_1)])
-            )
-    );
-    HCL_DESIGNCHECK_HINT(r, "parsing of BVec literal failed (32xF, b0, ...)");
+    try {
+        parse(value.begin(), value.end(),
+            (-uint_)[parseWidth] > (
+                (char_('x') > (*char_("0-9a-fA-FxX"))[std::bind(parseHex, 4, std::placeholders::_1)]) |
+                (char_('o') > (*char_("0-7xX"))[std::bind(parseHex, 3, std::placeholders::_1)]) |
+                (char_('b') > (*char_("0-1xX"))[std::bind(parseHex, 1, std::placeholders::_1)])
+                ) > eoi
+        );
+    }
+    catch (const expectation_failure<std::string_view::iterator>& err)
+    {
+        HCL_DESIGNCHECK_HINT(false, "parsing of BVec literal failed (32xF, b0, ...)");
+    }
 
     return ret;
 }
