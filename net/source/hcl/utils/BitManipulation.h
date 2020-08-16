@@ -180,6 +180,9 @@ inline void bitToggle(const void *a, size_t idx) {
 
 template<typename T = std::size_t>
 inline T bitMaskRange(size_t start, size_t count) {
+    HCL_ASSERT(count <= sizeof(T) * 8);
+    if (count == sizeof(T) * 8)
+        return ~T(0);
     return ((T{ 1 } << count) - 1) << start;
 }
 
@@ -187,7 +190,7 @@ template<typename T>
 inline T bitfieldExtract(T a, size_t start, size_t count) {
     start &= 0xFF;
     count &= 0xFF;
-    return (a >> start) & ((T{ 1 } << count) - 1);
+    return (a >> start) & bitMaskRange(0, count);
 }
 
 #ifdef __BMI__
