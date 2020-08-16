@@ -299,7 +299,7 @@ namespace hcl::core::frontend {
         {
             m_bitAlias.reserve(getWidth());
             for (size_t i = 0; i < getWidth(); ++i)
-                m_bitAlias.emplace_back(m_node, i);
+                m_bitAlias.emplace_back(m_node, m_selection.start + i * m_selection.stride);
         }
         return m_bitAlias;
     }
@@ -307,20 +307,32 @@ namespace hcl::core::frontend {
     Bit& BVec::aliasMsb() const
     {
         if (!m_msbAlias)
-            m_msbAlias.emplace(m_node, ~0u);
+        {
+            if (m_selection == Selection::All())
+                m_msbAlias.emplace(m_node, ~0u);
+            else
+                m_msbAlias.emplace(m_node, m_selection.end - 1);
+        }
         return *m_msbAlias;
     }
 
     Bit& BVec::aliasLsb() const
     {
         if (!m_lsbAlias)
-            m_lsbAlias.emplace(m_node, 0);
+            m_lsbAlias.emplace(m_node, m_selection.start);
         return *m_lsbAlias;
     }
 
     BVec& BVec::aliasRange(const Selection& range) const
     {
-        auto [it, exists] = m_rangeAlias.try_emplace(range, m_node, range, m_expansionPolicy);
+        Selection newRange = range;
+        if (m_selection != Selection::All())
+        {
+            newRange.start += m_selection.start;
+            newRange.end += m_selection.start;
+            newRange.stride *= m_selection.stride;
+        }
+        auto [it, exists] = m_rangeAlias.try_emplace(range, m_node, newRange, m_expansionPolicy);
         return it->second;
     }
 
