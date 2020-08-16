@@ -219,6 +219,61 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, hcl::core::sim::UnitTestSimulati
     runTicks(design.getCircuit(), clock.getClk(), 10);
 }
 
+BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    ClockScope clockScope(clock);
+
+    {
+        BVec counter(8u, Expansion::none);
+        counter = reg(*counter, "8b0");
+
+        BVec refCount(8, Expansion::none);
+        simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
+            context.set(0, context.getTick());
+            }, refCount);
+
+        sim_assert(counter == refCount) << "The counter should be " << refCount << " but is " << counter;
+
+        counter += 1;
+    }
+
+    runTicks(design.getCircuit(), clock.getClk(), 18);
+}
+
+BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    ClockScope clockScope(clock);
+
+    {
+        BVec vec1 = reg("b01");
+        BVec vec2 = reg("b01", "2b");
+        Bit bit1 = reg('1');
+        Bit bit2 = reg('1', '0');
+
+        BVec ref(2, Expansion::none);
+        simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
+            context.set(0, context.getTick() ? 1 : 0);
+            }, ref);
+
+        sim_assert((ref == 0) | (vec1 == ref)) << "should be " << ref << " but is " << vec1;
+        sim_assert((ref == 0) | (bit1 == ref[0])) << "should be " << ref[0] << " but is " << bit1;
+        sim_assert(vec2 == ref) << "should be " << ref << " but is " << vec2;
+        sim_assert(bit2 == ref[0]) << "should be " << ref[0] << " but is " << bit2;
+    }
+
+    runTicks(design.getCircuit(), clock.getClk(), 3);
+}
+
 BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, hcl::core::sim::UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;

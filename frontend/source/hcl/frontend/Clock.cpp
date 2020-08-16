@@ -1,7 +1,9 @@
 #include "Clock.h"
 #include "Bit.h"
+#include "ConditionalScope.h"
 
 #include <hcl/hlim/coreNodes/Node_Clk2Signal.h>
+#include <hcl/hlim/coreNodes/Node_Register.h>
 
 namespace hcl::core::frontend {
     
@@ -70,6 +72,60 @@ Bit Clock::driveSignal()
     node->setClock(m_clock);
  
     return SignalReadPort(node);
+}
+
+BVec Clock::operator()(const BVec& signal) const
+{
+    SignalReadPort data = signal.getReadPort();
+
+    auto* reg = DesignScope::createNode<hlim::Node_Register>();
+    reg->setClock(m_clock);
+    reg->connectInput(hlim::Node_Register::DATA, data);
+
+    if (ConditionalScope::get())
+        reg->connectInput(hlim::Node_Register::ENABLE, ConditionalScope::getCurrentConditionPort());
+
+    return SignalReadPort(reg, data.expansionPolicy);
+}
+
+BVec Clock::operator()(const BVec& signal, const BVec& reset) const
+{
+    NormalizedWidthOperands ops(signal, reset);
+
+    auto* reg = DesignScope::createNode<hlim::Node_Register>();
+    reg->setClock(m_clock);
+    reg->connectInput(hlim::Node_Register::DATA, ops.lhs);
+    reg->connectInput(hlim::Node_Register::RESET_VALUE, ops.rhs);
+
+    if (ConditionalScope::get())
+        reg->connectInput(hlim::Node_Register::ENABLE, ConditionalScope::getCurrentConditionPort());
+
+    return SignalReadPort(reg, ops.lhs.expansionPolicy);
+}
+
+Bit Clock::operator()(const Bit& signal) const
+{
+    auto* reg = DesignScope::createNode<hlim::Node_Register>();
+    reg->setClock(m_clock);
+    reg->connectInput(hlim::Node_Register::DATA, signal.getReadPort());
+
+    if (ConditionalScope::get())
+        reg->connectInput(hlim::Node_Register::ENABLE, ConditionalScope::getCurrentConditionPort());
+
+    return SignalReadPort(reg);
+}
+
+Bit Clock::operator()(const Bit& signal, const Bit& reset) const
+{
+    auto* reg = DesignScope::createNode<hlim::Node_Register>();
+    reg->setClock(m_clock);
+    reg->connectInput(hlim::Node_Register::DATA, signal.getReadPort());
+    reg->connectInput(hlim::Node_Register::RESET_VALUE, reset.getReadPort());
+
+    if (ConditionalScope::get())
+        reg->connectInput(hlim::Node_Register::ENABLE, ConditionalScope::getCurrentConditionPort());
+
+    return SignalReadPort(reg);
 }
 
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Bit.h"
+#include "BitVector.h"
 #include "Scope.h"
 
 #include <hcl/hlim/Clock.h>
@@ -64,7 +65,12 @@ class Clock
         Clock &operator=(const Clock &other);
         
         Bit driveSignal();
-        
+
+        BVec operator() (const BVec& signal) const;
+        BVec operator() (const BVec& signal, const BVec& reset) const;
+        Bit operator() (const Bit& signal) const;
+        Bit operator() (const Bit& signal, const Bit& reset) const;
+
         hlim::Clock *getClk() const { return m_clock; }
         hlim::ClockRational getAbsoluteFrequency() { return m_clock->getAbsoluteFrequency(); }
     protected:
@@ -83,6 +89,12 @@ class ClockScope : public BaseScope<ClockScope>
     protected:
         Clock &m_clock;
 };
+
+inline BVec reg(const BVec& signal, const BVec& reset) { return ClockScope::getClk()(signal, reset); }
+inline BVec reg(const BVec& signal) { return ClockScope::getClk()(signal); }
+
+inline Bit reg(const Bit& signal, const Bit& reset) { return ClockScope::getClk()(signal, reset); }
+inline Bit reg(const Bit& signal) { return ClockScope::getClk()(signal); }
 
 
 /*
