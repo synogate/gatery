@@ -5,6 +5,7 @@
 
 
 #include <hcl/stl/utils/BitCount.h>
+#include <hcl/stl/utils/OneHot.h>
 #include <hcl/utils/BitManipulation.h>
 
 
@@ -32,6 +33,29 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, BitCountTest, 
     //sim_debug() << "The bitcount of " << a << " should be " << actualBitCount << " and is " << count;
     sim_assert(count == ConstBVec(actualBitCount, count.getWidth())) << "The bitcount of " << a << " should be " << actualBitCount << " but is " << count;
     
+    eval(design.getCircuit());
+}
+
+
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, Decoder, data::xrange(3), val)
+{
+    using namespace hcl::core::frontend;
+    using namespace hcl::stl;
+
+    DesignScope design;
+
+    OneHot result = decoder(ConstBVec(val, 2));
+    BOOST_CHECK(result.size() == 4);
+    sim_assert(result == (1u << val)) << "decoded to " << result;
+
+    BVec back = encoder(result);
+    BOOST_CHECK(back.size() == 2);
+    sim_assert(back == val) << "encoded to " << back;
+
+    BVec prio = priorityEncoder(result);
+    BOOST_CHECK(prio.size() == 2);
+    sim_assert(prio == val) << "encoded to " << prio;
+
     eval(design.getCircuit());
 }
 
