@@ -17,6 +17,8 @@ add_library(hcl_stl STATIC
     source/hcl/stl/io/HDMITransmitter.cpp
     source/hcl/stl/utils/BitCount.h
     source/hcl/stl/utils/BitCount.cpp
+    source/hcl/stl/algorithm/TreeReduce.h
+    source/hcl/stl/algorithm/TreeReduce.cpp
     "source/hcl/stl/algorithm/GCD.h" 
     "source/hcl/stl/algorithm/GCD.cpp" "source/hcl/stl/algorithm/Stream.h" "source/hcl/stl/utils/OneHot.h" "source/hcl/stl/utils/OneHot.cpp")
 
