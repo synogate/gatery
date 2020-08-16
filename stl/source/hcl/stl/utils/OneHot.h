@@ -15,8 +15,17 @@ namespace hcl::stl
 	};
 
 	OneHot decoder(const core::frontend::BVec& in);
-
 	core::frontend::BVec encoder(const OneHot& in);
-	core::frontend::BVec priorityEncoder(const core::frontend::BVec& in);
+
+	struct EncoderResult
+	{
+		core::frontend::BVec index;
+		core::frontend::Bit valid;
+	};
+
+	EncoderResult priorityEncoder(const core::frontend::BVec& in);
+	EncoderResult priorityEncoderTree(const core::frontend::BVec& in, bool registerStep, size_t resultBitsPerStep = 2);
 
 }
+
+BOOST_HANA_ADAPT_STRUCT(hcl::stl::EncoderResult, index, valid);

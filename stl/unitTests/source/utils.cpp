@@ -11,6 +11,7 @@
 
 
 #include <hcl/frontend.h>
+#include <hcl/utils.h>
 #include <hcl/simulation/UnitTestSimulationFixture.h>
 
 #include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
@@ -52,11 +53,36 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, Decoder, data:
     BOOST_CHECK(back.size() == 2);
     sim_assert(back == val) << "encoded to " << back;
 
-    BVec prio = priorityEncoder(result);
-    BOOST_CHECK(prio.size() == 2);
-    sim_assert(prio == val) << "encoded to " << prio;
+    EncoderResult prio = priorityEncoder(result);
+    BOOST_CHECK(prio.index.size() == 2);
+    sim_assert(prio.valid);
+    sim_assert(prio.index == val) << "encoded to " << prio.index;
 
     eval(design.getCircuit());
 }
 
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, PriorityEncoderTreeTest, data::xrange(65), val)
+{
+    using namespace hcl::core::frontend;
+    using namespace hcl::stl;
 
+    DesignScope design;
+
+    uint64_t testVector = 1ull << val;
+    if (val == 54) testVector |= 7;
+    if (val == 64) testVector = 0;
+
+    auto res = priorityEncoderTree(ConstBVec(testVector, 64), false);
+    
+    if (testVector)
+    {
+        BVec ref = hcl::utils::Log2(testVector & -testVector);
+        sim_assert(res.valid & res.index == ref) << "wrong index: " << res.index << " should be " << ref;
+    }
+    else
+    {
+        sim_assert(!res.valid) << "wrong valid: " << res.valid;
+    }
+
+    eval(design.getCircuit());
+}
