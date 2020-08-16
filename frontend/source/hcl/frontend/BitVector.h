@@ -4,6 +4,8 @@
 #include "Signal.h"
 #include "Scope.h"
 
+#include "Constant.h"
+
 #include <hcl/hlim/coreNodes/Node_Constant.h>
 #include <hcl/hlim/coreNodes/Node_Signal.h>
 #include <hcl/hlim/coreNodes/Node_Rewire.h>
