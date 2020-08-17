@@ -34,7 +34,7 @@ namespace hcl::core::frontend {
 
         Expansion expansionPolicy = Expansion::none;
 
-        SignalReadPort expand(size_t width) const;
+        SignalReadPort expand(size_t width, hlim::ConnectionType::Interpretation resultType) const;
     };
 
     inline const hlim::ConnectionType& connType(const SignalReadPort& port) { return port.node->getOutputConnectionType(port.port); }

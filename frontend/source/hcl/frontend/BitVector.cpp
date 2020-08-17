@@ -229,8 +229,6 @@ namespace hcl::core::frontend {
 
     void BVec::assign(SignalReadPort in)
     {
-        HCL_ASSERT(connType(in).interpretation == hlim::ConnectionType::BITVEC);
-
         if (!m_node)
         {
             m_width = width(in);
@@ -244,7 +242,7 @@ namespace hcl::core::frontend {
         // TODO: handle implicit width expansion
         HCL_ASSERT(width(in) <= m_width);
 
-        in = in.expand(m_width);
+        in = in.expand(m_width, hlim::ConnectionType::BITVEC);
 
         if (m_selection != Selection::All())
         {
@@ -339,27 +337,35 @@ namespace hcl::core::frontend {
     BVec ext(const Bit& bit, size_t increment)
     {
         SignalReadPort port = bit.getReadPort();
-        return BVec(port.expand(bit.getWidth() + increment));
+        if (increment)
+            port = port.expand(bit.getWidth() + increment, hlim::ConnectionType::BITVEC);
+        return BVec(port);
     }
 
     BVec ext(const Bit& bit, size_t increment, Expansion policy)
     {
         SignalReadPort port = bit.getReadPort();
         port.expansionPolicy = policy;
-        return BVec(port.expand(bit.getWidth() + increment));
+        if (increment)
+            port = port.expand(bit.getWidth() + increment, hlim::ConnectionType::BITVEC);
+        return BVec(port);
     }
 
     BVec ext(const BVec& bvec, size_t increment)
     {
         SignalReadPort port = bvec.getReadPort();
-        return BVec(port.expand(bvec.getWidth() + increment));
+        if (increment)
+            port = port.expand(bvec.getWidth() + increment, hlim::ConnectionType::BITVEC);
+        return BVec(port);
     }
 
     BVec ext(const BVec& bvec, size_t increment, Expansion policy)
     {
         SignalReadPort port = bvec.getReadPort();
         port.expansionPolicy = policy;
-        return BVec(port.expand(bvec.getWidth() + increment));
+        if (increment)
+            port = port.expand(bvec.getWidth() + increment, hlim::ConnectionType::BITVEC);
+        return BVec(port);
     }
 
 }

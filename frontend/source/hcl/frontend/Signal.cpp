@@ -43,7 +43,7 @@
 */
    
 
-hcl::core::frontend::SignalReadPort hcl::core::frontend::SignalReadPort::expand(size_t width) const
+hcl::core::frontend::SignalReadPort hcl::core::frontend::SignalReadPort::expand(size_t width, hlim::ConnectionType::Interpretation resultType) const
 {
 	hlim::ConnectionType type = connType(*this);
 	HCL_DESIGNCHECK_HINT(type.width <= width, "signal width cannot be implicitly decreased");
@@ -51,10 +51,10 @@ hcl::core::frontend::SignalReadPort hcl::core::frontend::SignalReadPort::expand(
 
 	hlim::NodePort ret{ .node = this->node, .port = this->port };
 
-	if (type.width < width && expansionPolicy != Expansion::none ||
-		type.width == width && type.interpretation == hlim::ConnectionType::BOOL)
+	if (type.width < width || type.interpretation != resultType)
 	{
 		auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
+		rewire->changeOutputType(hlim::ConnectionType{ .interpretation = resultType, .width = width });
 		rewire->connectInput(0, ret);
 
 		switch (expansionPolicy)
@@ -71,8 +71,6 @@ hcl::core::frontend::SignalReadPort hcl::core::frontend::SignalReadPort::expand(
 		auto* signal = DesignScope::createNode<hlim::Node_Signal>();
 		signal->connectInput({ .node = rewire, .port = 0 });
 		signal->setName(node->getName());
-
-		//ret = hlim::NodePort{ .node = rewire, .port = 0 };
 		ret = hlim::NodePort{ .node = signal, .port = 0 };
 	}
 	return SignalReadPort{ ret, expansionPolicy };

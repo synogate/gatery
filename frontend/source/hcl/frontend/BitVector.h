@@ -196,8 +196,15 @@ namespace hcl::core::frontend {
 		rhs = r.getReadPort();
 
 		const size_t maxWidth = std::max(width(lhs), width(rhs));
-		lhs = lhs.expand(maxWidth);
-		rhs = rhs.expand(maxWidth);
+
+		hlim::ConnectionType::Interpretation type = hlim::ConnectionType::BITVEC;
+		if (maxWidth == 1 && 
+			(l.getConnType().interpretation != r.getConnType().interpretation || 
+			 l.getConnType().interpretation == hlim::ConnectionType::BOOL))
+			type = hlim::ConnectionType::BITVEC;
+
+		lhs = lhs.expand(maxWidth, type);
+		rhs = rhs.expand(maxWidth, type);
 	}
 
 }
