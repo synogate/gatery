@@ -4,7 +4,7 @@ using namespace hcl::core::frontend;
 
 hcl::stl::OneHot hcl::stl::decoder(const BVec& in)
 {
-	OneHot ret(1ull << in.size());
+	OneHot ret = BitWidth{ 1ull << in.size() };
 
 	for (size_t i = 0; i < ret.size(); ++i)
 		ret[i] = in == i;
@@ -14,7 +14,7 @@ hcl::stl::OneHot hcl::stl::decoder(const BVec& in)
 
 BVec hcl::stl::encoder(const OneHot& in)
 {
-	BVec ret(utils::Log2C(in.size()), Expansion::none);
+	BVec ret = BitWidth{ utils::Log2C(in.size()) };
 
 	ret = 0;
 	for (size_t i = 0; i < in.size(); ++i)
@@ -26,9 +26,9 @@ BVec hcl::stl::encoder(const OneHot& in)
 hcl::stl::EncoderResult hcl::stl::priorityEncoder(const BVec& in)
 {
 	if (in.empty())
-		return { BVec(0, Expansion::none), '0' };
+		return { BVec(0_b), '0' };
 
-	BVec ret(utils::Log2C(in.size()), Expansion::none);
+	BVec ret = BitWidth{ utils::Log2C(in.size()) };
 
 	for (size_t i = in.size() - 1; i < in.size(); --i)
 		IF(in[i])
@@ -54,12 +54,12 @@ hcl::stl::EncoderResult hcl::stl::priorityEncoderTree(const BVec& in, bool regis
 	setName(lowerStep, "lowerStep");
 
 	EncoderResult lowSelect{
-		BVec(utils::Log2(inBitsPerStep), Expansion::none),
+		BitWidth{utils::Log2(inBitsPerStep)},
 		'0'
 	};
 	setName(lowSelect, "lowSelect");
 
-	BVec highSelect(bps, Expansion::none);
+	BVec highSelect = BitWidth{ bps };
 	HCL_NAMED(highSelect);
 
 	for (size_t i = lowerStep.size() - 1; i < lowerStep.size(); --i)

@@ -127,11 +127,11 @@ namespace hcl::core::frontend {
         HCL_DESIGNCHECK(connType.width > m_range.bitOffset(m_range.width-1));
     }
 
-    BVec::BVec(size_t width, Expansion expansionPolicy)
+    BVec::BVec(BitWidth width, Expansion expansionPolicy)
     {
         // TODO: set constant to undefined
         auto* constant = DesignScope::createNode<hlim::Node_Constant>(
-            undefinedBVec(width), 
+            undefinedBVec(width.value), 
             hlim::ConnectionType::BITVEC
             );
         assign(SignalReadPort(constant, expansionPolicy));

@@ -18,7 +18,7 @@ thread_local FSM *FSM::m_fsmContext = nullptr;
     
     
 FSM::FSM(const Clock &clock, const BaseState &startState) : 
-    m_stateReg(8u, Expansion::none)
+    m_stateReg(8_b)
 {
     m_fsmContext = this;
     
@@ -26,7 +26,7 @@ FSM::FSM(const Clock &clock, const BaseState &startState) :
     m_stateReg.setReset("8b0");
     m_stateReg.setName("fsm_state");
 
-    m_state2encoding[&startState] = std::make_unique<BVec>(8, Expansion::none);
+    m_state2encoding[&startState] = std::make_unique<BVec>(8_b);
     m_state2encoding[&startState]->setName(startState.m_name);
     m_state2id[&startState] = m_nextStateId++;
     m_unhandledStates.push_back(&startState);
@@ -50,7 +50,7 @@ void FSM::delayedSwitch(const BaseState &nextState)
 {
     if (!m_fsmContext->m_state2encoding.contains(&nextState)) {
         m_fsmContext->m_unhandledStates.push_back(&nextState);
-        m_fsmContext->m_state2encoding[&nextState] = std::make_unique<BVec>(8, Expansion::none);
+        m_fsmContext->m_state2encoding[&nextState] = std::make_unique<BVec>(8_b);
         m_fsmContext->m_state2encoding[&nextState]->setName(nextState.m_name);
         m_fsmContext->m_state2id[&nextState] = m_fsmContext->m_nextStateId++;
     }    
@@ -71,7 +71,7 @@ void FSM::immediateSwitch(const ImmediateState &nextState)
 {
     if (!m_fsmContext->m_state2encoding.contains(&nextState)) {
         m_fsmContext->m_unhandledStates.push_back(&nextState);
-        m_fsmContext->m_state2encoding[&nextState] = std::make_unique<BVec>(8, Expansion::none);
+        m_fsmContext->m_state2encoding[&nextState] = std::make_unique<BVec>(8_b);
         m_fsmContext->m_state2encoding[&nextState]->setName(nextState.m_name);
         m_fsmContext->m_state2id[&nextState] = m_fsmContext->m_nextStateId++;
     }

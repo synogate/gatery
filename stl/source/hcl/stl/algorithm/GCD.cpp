@@ -8,9 +8,9 @@ hcl::stl::StreamSource<hcl::stl::BVecPair> hcl::stl::binaryGCDStep1(StreamSink<B
     const size_t width = in.first.getWidth();
     StreamSource<BVecPair> out(BVec{ width }, BVec{ width });
 
-    Register<BVec> a{ width, Expansion::none };
-    Register<BVec> b{ width, Expansion::none };
-    Register<BVec> d{ utils::Log2C(width), Expansion::none };
+    Register<BVec> a(BitWidth{ width });
+    Register<BVec> b(BitWidth{ width });
+    Register<BVec> d(BitWidth{ utils::Log2C(width) });
     Register<Bit> active;
     HCL_NAMED(a);
     HCL_NAMED(b);
@@ -67,8 +67,8 @@ hcl::stl::StreamSource<hcl::stl::BVecPair> hcl::stl::binaryGCDStep1(StreamSink<B
 
 hcl::stl::StreamSource<hcl::core::frontend::BVec> hcl::stl::shiftLeft(StreamSink<BVecPair>& in, size_t iterationsPerClock)
 {
-    Register<BVec> a{ in.first.getWidth(), Expansion::none };
-    Register<BVec> b{ in.second.getWidth(), Expansion::none };
+    Register<BVec> a{ BitWidth{in.first.getWidth()} };
+    Register<BVec> b{ BitWidth{in.second.getWidth()} };
     Register<Bit> active;
     HCL_NAMED(a);
     HCL_NAMED(b);

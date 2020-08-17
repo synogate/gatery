@@ -203,12 +203,12 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, hcl::core::sim::UnitTestSimulati
     ClockScope clockScope(clock);
 
     {
-        Register<BVec> counter(8u, Expansion::none);
+        Register<BVec> counter(8_b);
         counter.setReset("8b0");
         counter += 1;
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
-        BVec refCount(8, Expansion::none);
+        BVec refCount(8_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick());
         }, refCount);
@@ -229,10 +229,10 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, hcl::core::sim::UnitTestSimula
     ClockScope clockScope(clock);
 
     {
-        BVec counter(8u, Expansion::none);
+        BVec counter(8_b);
         counter = reg(*counter, "8b0");
 
-        BVec refCount(8, Expansion::none);
+        BVec refCount(8_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
             context.set(0, context.getTick());
             }, refCount);
@@ -260,7 +260,7 @@ BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, hcl::core::sim::UnitTestSimulationFi
         Bit bit1 = reg('1');
         Bit bit2 = reg('1', '0');
 
-        BVec ref(2, Expansion::none);
+        BVec ref(2_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
             context.set(0, context.getTick() ? 1 : 0);
             }, ref);
@@ -284,14 +284,14 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, hcl::core::sim::UnitTestSimulati
     ClockScope clockScope(clock);
 
     {
-        Register<BVec> counter(8u, Expansion::none);
+        Register<BVec> counter(8_b);
         counter.setReset("8b0");
 
         counter += 1;
         counter += 1;
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
-        BVec refCount(8, Expansion::none);
+        BVec refCount(8_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick()*2);
         }, refCount);
@@ -312,13 +312,13 @@ BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, hcl::core::sim::UnitTestSimulationFixt
     ClockScope clockScope(clock);
 
     {
-        Register<BVec> counter(8u, Expansion::none);
+        Register<BVec> counter(8_b);
         counter.setReset("8b1");
 
         counter <<= 1;
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
-        BVec refCount(8, Expansion::none);
+        BVec refCount(8_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, 1ull << context.getTick());
         }, refCount);
@@ -344,7 +344,7 @@ BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, hcl::core::sim::UnitTestS
         }, condition);
 
 
-        Register<BVec> counter(8u, Expansion::none);
+        Register<BVec> counter(8_b);
         counter.setReset("8b0");
 
         IF (condition)
@@ -352,7 +352,7 @@ BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, hcl::core::sim::UnitTestS
 
         sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
-        BVec refCount(8, Expansion::none);
+        BVec refCount(8_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick()/2);
         }, refCount);

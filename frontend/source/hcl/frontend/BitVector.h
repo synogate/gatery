@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Bit.h"
+#include "BitWidth.h"
 #include "Signal.h"
 #include "Scope.h"
 
@@ -68,7 +69,7 @@ namespace hcl::core::frontend {
 
 		BVec(const SignalReadPort& port) { assign(port); }
 		BVec(hlim::Node_Signal* node, Range range, Expansion expansionPolicy); // alias
-		BVec(size_t width, Expansion expansionPolicy);
+		BVec(BitWidth width, Expansion expansionPolicy = Expansion::none);
 
 		template<unsigned S>
 		BVec(const char(&rhs)[S]) { assign(std::string_view(rhs)); }
@@ -82,8 +83,10 @@ namespace hcl::core::frontend {
 		BVec& operator = (const char (&rhs)[S]) { assign(std::string_view(rhs)); return *this; }
 		BVec& operator = (const BVec& rhs) { assign(rhs.getReadPort()); return *this; }
 
-		BVec& operator()(int offset, int size, size_t stride = 1) { return (*this)(Selection::StridedSlice(offset, size, stride)); }
-		const BVec& operator() (int offset, int size, size_t stride = 1) const { return (*this)(Selection::StridedSlice(offset, size, stride)); }
+		template<typename Int1, typename Int2, typename = std::enable_if_t<std::is_integral_v<Int1> && std::is_integral_v<Int2>>>
+		BVec& operator()(Int1 offset, Int2 size, size_t stride = 1) { return (*this)(Selection::StridedSlice(int(offset), int(size), stride)); }
+		template<typename Int1, typename Int2, typename = std::enable_if_t<std::is_integral_v<Int1>&& std::is_integral_v<Int2>>>
+		const BVec& operator() (Int1 offset, Int2 size, size_t stride = 1) const { return (*this)(Selection::StridedSlice(int(offset), int(size), stride)); }
 
 		BVec& operator()(const Selection& selection) { return aliasRange(Range(selection, m_range)); }
 		const BVec& operator() (const Selection& selection) const { return aliasRange(Range(selection, m_range)); }

@@ -72,12 +72,16 @@ inline frontend::Register<SignalType>::Register(Args ...signalParams) :
     if constexpr (sizeof...(Args) == 2 && std::is_same_v<SignalType, BVec>)
     {
         if constexpr (
-            std::is_integral_v<std::tuple_element_t<0, std::tuple<Args...>>> &&
+            std::is_same_v<BitWidth, std::tuple_element_t<0, std::tuple<Args...>>> &&
             std::is_same_v<Expansion, std::tuple_element_t<1, std::tuple<Args...>>>
             )
-        {
             SignalType::assign(m_delayedSignal.getReadPort());
-        }
+    }
+
+    if constexpr (sizeof...(Args) == 1 && std::is_same_v<SignalType, BVec>)
+    {
+        if constexpr (std::is_same_v<BitWidth, std::tuple_element_t<0, std::tuple<Args...>>>)
+            SignalType::assign(m_delayedSignal.getReadPort());
     }
 
     if constexpr (sizeof...(Args) == 0 && std::is_same_v<SignalType, Bit>)

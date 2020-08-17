@@ -59,9 +59,9 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             fsm::DelayedState running;
             HCL_NAMED(running);
 
-            Register<BVec> a(8u, Expansion::none);
+            Register<BVec> a(8_b);
             a.setReset("b00000000");
-            Register<BVec> b(8u, Expansion::none);
+            Register<BVec> b(8_b);
             b.setReset("b00000000");
 
 #if 0
@@ -89,7 +89,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             fsm::ImmediateState shifting;
             HCL_NAMED(shifting);
 
-            Register<BVec> d(4u, Expansion::none);
+            Register<BVec> d(4_b);
             d.setReset("b0000");
             
             idle.onActive([&]{
@@ -146,7 +146,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             HCL_NAMED(done);
         }
         
-        BVec ticks(8, Expansion::none);
+        BVec ticks(8_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick());
         }, ticks);
@@ -204,9 +204,9 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD
                 .setComment("Statemachine to compute the GCD of two 8-bit integers.");
 
 
-            Register<BVec> a(8u, Expansion::none);
+            Register<BVec> a(8_b);
             a.setReset("b00000000");
-            Register<BVec> b(8u, Expansion::none);
+            Register<BVec> b(8_b);
             b.setReset("b00000000");
 
             IF(start) {
@@ -231,7 +231,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD
             sim_debug() << "a is " << a.delay(1) << " and b is " << b.delay(1);
         }
 
-        BVec ticks(8, Expansion::none);
+        BVec ticks(8_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
             context.set(0, context.getTick());
             }, ticks);

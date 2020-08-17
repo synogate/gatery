@@ -9,10 +9,11 @@
 #include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
 
 using namespace boost::unit_test;
+using namespace hcl::core::frontend;
 
 struct SimpleStruct
 {
-    hcl::core::frontend::BVec vec = hcl::core::frontend::BVec{ 3, hcl::core::frontend::Expansion::none };
+    hcl::core::frontend::BVec vec = hcl::core::frontend::BVec(3_b);
     hcl::core::frontend::Bit bit;
 };
 
@@ -35,7 +36,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundName, hcl::core::sim::UnitTestSimulationFixture)
     setName(bit, "bit");
     BOOST_CHECK(bit.getName() == "bit");
 
-    BVec vec{4, Expansion::none };
+    BVec vec{4_b };
     setName(vec, "vec");
     BOOST_CHECK(vec.getName() == "vec");
 
@@ -60,7 +61,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundWidth, hcl::core::sim::UnitTestSimulationFixture
     Bit bit;
     BOOST_TEST(width(bit) == 1);
 
-    BVec vec{ 4, Expansion::none };
+    BVec vec{ 4_b };
     BOOST_TEST(width(vec) == 4);
 
     std::vector<BVec> vecvec( 3, vec );
