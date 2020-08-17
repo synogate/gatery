@@ -1,5 +1,9 @@
 #include "Constant.h"
 
+#include "BitVector.h"
+
+#include <hcl/hlim/coreNodes/Node_Constant.h>
+
 #include <optional>
 #include <boost/spirit/home/x3.hpp>
 
@@ -100,4 +104,11 @@ sim::DefaultBitVectorState hcl::core::frontend::undefinedBVec(size_t width)
     ret.resize(width);
     ret.setRange(sim::DefaultConfig::DEFINED, 0, width, false);
     return ret;
+}
+
+
+hcl::core::frontend::BVec hcl::core::frontend::ConstBVec(uint64_t value, size_t width)
+{
+    auto* node = DesignScope::createNode<hlim::Node_Constant>(parseBVec(value, width), hlim::ConnectionType::BITVEC);
+    return SignalReadPort(node);
 }
