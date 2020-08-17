@@ -22,18 +22,18 @@ namespace hcl::core::frontend {
 
 	struct Selection {
 		int start = 0;
-		int end = 0;
-		int stride = 1;
+		int width = 0;
+		size_t stride = 1;
 		bool untilEndOfSource = false;
 
 		static Selection All();
 		static Selection From(int start);
 		static Selection Range(int start, int end);
 		static Selection RangeIncl(int start, int endIncl);
-		static Selection StridedRange(int start, int end, int stride);
+		static Selection StridedRange(int start, int end, size_t stride);
 
-		static Selection Slice(int offset, size_t size);
-		static Selection StridedSlice(int offset, size_t size, int stride);
+		static Selection Slice(int offset, int size);
+		static Selection StridedSlice(int offset, int size, size_t stride);
 
 		auto operator <=> (const Selection& rhs) const = default;
 	};
@@ -41,6 +41,21 @@ namespace hcl::core::frontend {
 	class BVec : public ElementarySignal
 	{
 	public:
+		struct Range {
+			Range() = default;
+			Range(const Range&) = default;
+			Range(const Selection& s, const Range& r);
+
+			auto operator <=> (const Range&) const = default;
+
+			size_t bitOffset(size_t idx) const { HCL_ASSERT(idx < width); return offset + idx * stride; }
+
+			size_t width = 0;
+			size_t offset = 0;
+			size_t stride = 1;
+			bool subset = false;
+		};
+
 		using isBitVectorSignal = void;
 
 		using iterator = std::vector<Bit>::iterator;
@@ -52,7 +67,7 @@ namespace hcl::core::frontend {
 		BVec(const BVec& rhs) { assign(rhs.getReadPort()); }
 
 		BVec(const SignalReadPort& port) { assign(port); }
-		BVec(hlim::Node_Signal* node, Selection range, Expansion expansionPolicy); // alias
+		BVec(hlim::Node_Signal* node, Range range, Expansion expansionPolicy); // alias
 		BVec(size_t width, Expansion expansionPolicy);
 
 		template<unsigned S>
@@ -67,11 +82,11 @@ namespace hcl::core::frontend {
 		BVec& operator = (const char (&rhs)[S]) { assign(std::string_view(rhs)); return *this; }
 		BVec& operator = (const BVec& rhs) { assign(rhs.getReadPort()); return *this; }
 
-		BVec& operator()(int offset, size_t size) { return aliasRange(Selection::Slice(offset, size)); }
-		const BVec& operator() (int offset, size_t size) const { return aliasRange(Selection::Slice(offset, size)); }
+		BVec& operator()(int offset, int size, size_t stride = 1) { return (*this)(Selection::StridedSlice(offset, size, stride)); }
+		const BVec& operator() (int offset, int size, size_t stride = 1) const { return (*this)(Selection::StridedSlice(offset, size, stride)); }
 
-		BVec& operator()(const Selection& selection) { return aliasRange(selection); }
-		const BVec& operator() (const Selection& selection) const { return aliasRange(selection); }
+		BVec& operator()(const Selection& selection) { return aliasRange(Range(selection, m_range)); }
+		const BVec& operator() (const Selection& selection) const { return aliasRange(Range(selection, m_range)); }
 
 
 		const BVec operator*() const;
@@ -115,7 +130,7 @@ namespace hcl::core::frontend {
 		bool valid() const final { return m_node != nullptr; }
 
 		// these methods are undefined for invalid signals (uninitialized)
-		size_t getWidth() const final { return m_width; }
+		size_t getWidth() const final { return m_range.width; }
 		hlim::ConnectionType getConnType() const final;
 		SignalReadPort getReadPort() const final;
 		std::string_view getName() const final { return m_node->getName(); }
@@ -129,19 +144,18 @@ namespace hcl::core::frontend {
 
 	private:
 		hlim::Node_Signal* m_node = nullptr;
-		Selection m_selection = Selection::All();
+		Range m_range;
 		Expansion m_expansionPolicy = Expansion::none;
-		size_t m_width = 0;
 
 		std::vector<Bit>& aliasVec() const;
 		Bit& aliasMsb() const;
 		Bit& aliasLsb() const;
-		BVec& aliasRange(const Selection& range) const;
+		BVec& aliasRange(const Range& range) const;
 
 		mutable std::vector<Bit> m_bitAlias;
 		mutable std::optional<Bit> m_lsbAlias;
 		mutable std::optional<Bit> m_msbAlias;
-		mutable std::map<Selection, BVec> m_rangeAlias;
+		mutable std::map<Range, BVec> m_rangeAlias;
 
 		mutable SignalReadPort m_readPort;
 		mutable void* m_readPortDriver = nullptr;

@@ -120,3 +120,25 @@ BOOST_FIXTURE_TEST_CASE(ConstantDataStringParser, hcl::core::sim::UnitTestSimula
     BOOST_CHECK(parseBVec("o170X").size() == 12);
     BOOST_CHECK(parseBVec("b10xX").size() == 4);
 }
+
+BOOST_FIXTURE_TEST_CASE(BVecSelectorAccess, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    BVec a = "b11001110";
+
+    sim_assert(a(2, 4) == "b0011");
+
+    sim_assert(a(1, -1) == "b1100111");
+    sim_assert(a(-2, 2) == "b11");
+
+    sim_assert(a(0, 4, 2) == "b1010");
+    sim_assert(a(1, 4, 2) == "b1011");
+
+    sim_assert(a(0, 4, 2)(0, 2, 2) == "b00");
+    sim_assert(a(0, 4, 2)(1, 2, 2) == "b11");
+
+    eval(design.getCircuit());
+}

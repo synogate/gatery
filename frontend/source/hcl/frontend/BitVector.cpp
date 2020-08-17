@@ -17,7 +17,7 @@ namespace hcl::core::frontend {
     {
         return {
             .start = start,
-            .end = 0,
+            .width = 0,
             .stride = 1,
             .untilEndOfSource = true,
         };
@@ -27,7 +27,7 @@ namespace hcl::core::frontend {
     {
         return {
             .start = start,
-            .end = end,
+            .width = end - start,
             .stride = 1,
             .untilEndOfSource = false,
         };
@@ -37,86 +37,78 @@ namespace hcl::core::frontend {
     {
         return {
             .start = start,
-            .end = endIncl + 1,
+            .width = endIncl - start + 1,
             .stride = 1,
             .untilEndOfSource = false,
         };
     }
 
-    Selection Selection::StridedRange(int start, int end, int stride)
+    Selection Selection::StridedRange(int start, int end, size_t stride)
     {
         return {
             .start = start,
-            .end = end,
+            .width = (end - start) / int(stride),
             .stride = stride,
             .untilEndOfSource = false,
         };
     }
 
-    Selection Selection::Slice(int offset, size_t size)
+    Selection Selection::Slice(int offset, int size)
     {
         return {
             .start = offset,
-            .end = offset + int(size),
+            .width = size,
             .stride = 1,
             .untilEndOfSource = false,
         };
     }
 
-    Selection Selection::StridedSlice(int offset, size_t size, int stride)
+    Selection Selection::StridedSlice(int offset, int size, size_t stride)
     {
         return {
             .start = offset,
-            .end = offset + int(size),
+            .width = size,
             .stride = stride,
             .untilEndOfSource = false,
         };
     }
 
-    static hlim::Node_Rewire::RewireOperation pickSelection(const Selection& range)
+    static hlim::Node_Rewire::RewireOperation pickSelection(const BVec::Range& range)
     {
-        HCL_DESIGNCHECK(!range.untilEndOfSource);
-        HCL_ASSERT(range.start >= 0);
-
         hlim::Node_Rewire::RewireOperation op;
         if (range.stride == 1)
         {
-            op.addInput(0, range.start, range.end - range.start);
+            op.addInput(0, range.offset, range.width);
         }
         else
         {
-            HCL_ASSERT(range.stride > 1);
-
-            for (size_t i = (size_t)range.start; i < (size_t)range.end; i += range.stride)
-                op.addInput(0, i, 1);
+            for (size_t i = 0; i < range.width; ++i)
+                op.addInput(0, range.bitOffset(i), 1);
         }
-
         return op;
     }
 
-    static hlim::Node_Rewire::RewireOperation replaceSelection(const Selection& range, size_t width)
+    static hlim::Node_Rewire::RewireOperation replaceSelection(const BVec::Range& range, size_t width)
     {
-        HCL_DESIGNCHECK(!range.untilEndOfSource);
-        HCL_DESIGNCHECK((size_t) range.end <= width);
-        HCL_ASSERT(range.start >= 0);
+        HCL_ASSERT(range.bitOffset(range.width - 1) < width);
 
         hlim::Node_Rewire::RewireOperation op;
         if (range.stride == 1)
         {
-            op.addInput(0, 0, range.start);
-            op.addInput(1, 0, range.end - range.start);
-            op.addInput(0, range.end, width - range.end);
+            op.addInput(0, 0, range.offset);
+            op.addInput(1, 0, range.width);
+            op.addInput(0, range.offset + range.width, width - (range.offset + range.width));
         }
         else
         {
             size_t offset0 = 0;
             size_t offset1 = 0;
 
-            for (size_t i = (size_t)range.start; i < (size_t)range.end; i += range.stride)
+            for (size_t i = 0; i < range.width; ++i)
             {
-                op.addInput(0, offset0, i);
+                op.addInput(0, offset0, range.bitOffset(i));
                 op.addInput(1, offset1++, 1);
-                offset0 = i + 1;
+                offset0 = range.bitOffset(i) + 1;
             }
             op.addInput(0, offset0, width - offset0);
         }
@@ -125,17 +117,14 @@ namespace hcl::core::frontend {
     }
 
 
-    BVec::BVec(hlim::Node_Signal* node, Selection range, Expansion expansionPolicy) :
+    BVec::BVec(hlim::Node_Signal* node, Range range, Expansion expansionPolicy) :
         m_node(node),
-        m_selection(range),
+        m_range(range),
         m_expansionPolicy(expansionPolicy)
     {
         auto connType = node->getOutputConnectionType(0);
-        HCL_DESIGNCHECK(!range.untilEndOfSource); // no impl
-        HCL_DESIGNCHECK((size_t)range.end <= connType.width);
         HCL_DESIGNCHECK(connType.interpretation == hlim::ConnectionType::BITVEC);
-
-        m_width = (m_selection.end - m_selection.start) / m_selection.stride;
+        HCL_DESIGNCHECK(connType.width > m_range.bitOffset(m_range.width-1));
     }
 
     BVec::BVec(size_t width, Expansion expansionPolicy)
@@ -150,18 +139,18 @@ namespace hcl::core::frontend {
 
     const BVec BVec::operator*() const
     {
-        if (m_selection == Selection::All())
+        if (!m_range.subset)
             return SignalReadPort(m_node, m_expansionPolicy);
 
         auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
         rewire->connectInput(0, { .node = m_node, .port = 0 });
-        rewire->setOp(pickSelection(m_selection));
+        rewire->setOp(pickSelection(m_range));
         return SignalReadPort(rewire, m_expansionPolicy);
     }
 
     void BVec::resize(size_t width)
     {
-        HCL_DESIGNCHECK_HINT(m_selection == Selection::All(), "BVec::resize is not allowed for alias BVec's. use zext instead.");
+        HCL_DESIGNCHECK_HINT(!m_range.subset, "BVec::resize is not allowed for alias BVec's. use zext instead.");
         HCL_DESIGNCHECK_HINT(m_node->getDirectlyDriven(0).empty(), "BVec::resize is allowed for unused signals (final)");
         HCL_DESIGNCHECK_HINT(width > getWidth(), "BVec::resize width decrease not allowed");
         HCL_DESIGNCHECK_HINT(width <= getWidth() || m_expansionPolicy != Expansion::none, "BVec::resize width increase only allowed when expansion policy is set");
@@ -181,13 +170,13 @@ namespace hcl::core::frontend {
         }
 
         m_node->connectInput({ .node = rewire, .port = 0 }); // unconditional (largest of all paths wins)
-        m_width = width;
+        m_range.width = width;
         m_bitAlias.clear();
     }
 
     hlim::ConnectionType BVec::getConnType() const
     {
-        return hlim::ConnectionType{ .interpretation = hlim::ConnectionType::BITVEC, .width = m_width };
+        return hlim::ConnectionType{ .interpretation = hlim::ConnectionType::BITVEC, .width = m_range.width };
     }
 
     SignalReadPort BVec::getReadPort() const
@@ -198,11 +187,11 @@ namespace hcl::core::frontend {
             m_readPort = driver;
             m_readPortDriver = driver.node;
 
-            if (m_selection != Selection::All())
+            if (m_range.subset)
             {
                 auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
                 rewire->connectInput(0, m_readPort);
-                rewire->setOp(pickSelection(m_selection));
+                rewire->setOp(pickSelection(m_range));
                 m_readPort = SignalReadPort(rewire, m_expansionPolicy);
             }
         }
@@ -231,7 +220,7 @@ namespace hcl::core::frontend {
     {
         if (!m_node)
         {
-            m_width = width(in);
+            m_range.width = width(in);
             m_expansionPolicy = in.expansionPolicy;
 
             m_node = DesignScope::createNode<hlim::Node_Signal>();
@@ -240,18 +229,18 @@ namespace hcl::core::frontend {
         }
 
         // TODO: handle implicit width expansion
-        HCL_ASSERT(width(in) <= m_width);
+        HCL_ASSERT(width(in) <= m_range.width);
 
-        in = in.expand(m_width, hlim::ConnectionType::BITVEC);
+        in = in.expand(m_range.width, hlim::ConnectionType::BITVEC);
 
-        if (m_selection != Selection::All())
+        if (m_range.subset)
         {
             std::string in_name = in.node->getName();
             
             auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(2);
             rewire->connectInput(0, m_node->getDriver(0));
             rewire->connectInput(1, in);
-            rewire->setOp(replaceSelection(m_selection, m_node->getOutputConnectionType(0).width));
+            rewire->setOp(replaceSelection(m_range, m_node->getOutputConnectionType(0).width));
             in.node = rewire;
             in.port = 0;
             
@@ -293,11 +282,11 @@ namespace hcl::core::frontend {
 
     std::vector<Bit>& BVec::aliasVec() const
     {
-        if (m_bitAlias.size() != getWidth())
+        if (m_bitAlias.size() != m_range.width)
         {
-            m_bitAlias.reserve(getWidth());
-            for (size_t i = 0; i < getWidth(); ++i)
-                m_bitAlias.emplace_back(m_node, m_selection.start + i * m_selection.stride);
+            m_bitAlias.reserve(m_range.width);
+            for (size_t i = 0; i < m_range.width; ++i)
+                m_bitAlias.emplace_back(m_node, m_range.bitOffset(i));
         }
         return m_bitAlias;
     }
@@ -306,10 +295,10 @@ namespace hcl::core::frontend {
     {
         if (!m_msbAlias)
         {
-            if (m_selection == Selection::All())
+            if (!m_range.subset)
                 m_msbAlias.emplace(m_node, ~0u);
             else
-                m_msbAlias.emplace(m_node, m_selection.end - 1);
+                m_msbAlias.emplace(m_node, m_range.bitOffset(m_range.width - 1));
         }
         return *m_msbAlias;
     }
@@ -317,20 +306,13 @@ namespace hcl::core::frontend {
     Bit& BVec::aliasLsb() const
     {
         if (!m_lsbAlias)
-            m_lsbAlias.emplace(m_node, m_selection.start);
+            m_lsbAlias.emplace(m_node, m_range.bitOffset(0));
         return *m_lsbAlias;
     }
 
-    BVec& BVec::aliasRange(const Selection& range) const
+    BVec& BVec::aliasRange(const Range& range) const
     {
-        Selection newRange = range;
-        if (m_selection != Selection::All())
-        {
-            newRange.start += m_selection.start;
-            newRange.end += m_selection.start;
-            newRange.stride *= m_selection.stride;
-        }
-        auto [it, exists] = m_rangeAlias.try_emplace(range, m_node, newRange, m_expansionPolicy);
+        auto [it, exists] = m_rangeAlias.try_emplace(range, m_node, range, m_expansionPolicy);
         return it->second;
     }
 
@@ -366,6 +348,33 @@ namespace hcl::core::frontend {
         if (increment)
             port = port.expand(bvec.getWidth() + increment, hlim::ConnectionType::BITVEC);
         return BVec(port);
+    }
+
+    BVec::Range::Range(const Selection& s, const Range& r)
+    {
+        if (s.start >= 0)
+            offset = (size_t)s.start;
+        else
+        {
+            offset = size_t(s.start + r.width);
+        }
+
+        if (s.width >= 0)
+            width = size_t(s.width);
+        else
+        {
+            HCL_DESIGNCHECK(s.stride <= 1); // not yet defined
+            width = size_t(s.width + r.width);
+        }
+
+        stride = s.stride * r.stride;
+        
+        if(r.stride > 0)
+            offset *= r.stride;
+        offset += r.offset;
+
+        subset = true;
+        HCL_DESIGNCHECK(bitOffset(width - 1) <= r.bitOffset(r.width - 1));
     }
 
 }
