@@ -2,6 +2,7 @@
 
 #include "frontend/Bit.h"
 #include "frontend/BitVector.h"
+#include "frontend/BitWidth.h"
 #include "frontend/Clock.h"
 #include "frontend/Comments.h"
 #include "frontend/ConditionalScope.h"
