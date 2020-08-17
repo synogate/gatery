@@ -1,5 +1,9 @@
 #pragma once
+#include <span>
+
 #include <hcl/frontend.h>
+
+#include "../algorithm/Stream.h"
 
 namespace hcl::stl
 {
@@ -17,6 +21,11 @@ namespace hcl::stl
 	OneHot decoder(const core::frontend::BVec& in);
 	core::frontend::BVec encoder(const OneHot& in);
 
+	std::vector<Stream<core::frontend::BVec>> makeIndexList(const core::frontend::BVec& valids);
+
+	template<typename T, typename Iter>
+	Stream<T> priorityEncoder(Iter begin, Iter end);
+
 	struct EncoderResult
 	{
 		core::frontend::BVec index;
@@ -25,6 +34,35 @@ namespace hcl::stl
 
 	EncoderResult priorityEncoder(const core::frontend::BVec& in);
 	EncoderResult priorityEncoderTree(const core::frontend::BVec& in, bool registerStep, size_t resultBitsPerStep = 2);
+
+
+	// implementation 
+
+	template<typename T, typename Iter>
+	Stream<T> priorityEncoder(Iter begin, Iter end)
+	{
+		Stream<T> ret;
+		ret.valid = '0';
+
+		size_t maxWidth = 0;
+		for (Iter it = begin; it != end; ++it)
+			if (maxWidth < it->value.size())
+				maxWidth = it->value.size();
+		ret.value = core::frontend::BitWidth{ maxWidth };
+
+		core::frontend::Bit anyValid = '0';
+		for(Iter it = begin; it != end; ++it)
+		{
+			IF(it->valid & !anyValid)
+			{
+				anyValid = '1';
+				ret.value = it->value;
+				ret.valid = it->valid;
+				it->ready = *ret.ready;
+			}
+		}
+		return ret;
+	}
 
 }
 

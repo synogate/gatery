@@ -61,6 +61,34 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, Decoder, data:
     eval(design.getCircuit());
 }
 
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ListEncoder, data::xrange(3), val)
+{
+    using namespace hcl::core::frontend;
+    using namespace hcl::stl;
+
+    DesignScope design;
+
+    OneHot result = decoder(ConstBVec(val, 2));
+    BOOST_CHECK(result.size() == 4);
+    sim_assert(result == (1u << val)) << "decoded to " << result;
+
+    auto indexList = makeIndexList(result);
+    BOOST_CHECK(indexList.size() == result.size());
+
+    for (size_t i = 0; i < indexList.size(); ++i)
+    {
+        sim_assert(indexList[i].value == i) << indexList[i].value << " != " << i;
+        sim_assert(indexList[i].valid == (val == i)) << indexList[i].valid << " != " << (val == i);
+    }
+
+    auto encoded = priorityEncoder<BVec>(indexList.begin(), indexList.end());
+    sim_assert(encoded.valid);
+    sim_assert(encoded.value == val);
+
+    eval(design.getCircuit());
+}
+
+
 BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, PriorityEncoderTreeTest, data::xrange(65), val)
 {
     using namespace hcl::core::frontend;

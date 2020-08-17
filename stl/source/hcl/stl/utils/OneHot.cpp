@@ -23,6 +23,17 @@ BVec hcl::stl::encoder(const OneHot& in)
 	return ret;
 }
 
+std::vector<hcl::stl::Stream<hcl::core::frontend::BVec>> hcl::stl::makeIndexList(const core::frontend::BVec& valids)
+{
+	std::vector<Stream<BVec>> ret(valids.size());
+	for (size_t i = 0; i < valids.size(); ++i)
+	{
+		ret[i].value = i;
+		ret[i].valid = valids[i];
+	}
+	return ret;
+}
+
 hcl::stl::EncoderResult hcl::stl::priorityEncoder(const BVec& in)
 {
 	if (in.empty())
