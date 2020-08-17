@@ -192,6 +192,13 @@ namespace hcl::stl
 
 
 #endif
+	template<typename Payload>
+	struct Stream
+	{
+		core::frontend::Bit valid = '1';
+		core::frontend::Bit ready = '1';
+		Payload value;
+	};
 
 	template<typename Payload>
 	struct StreamSource;
