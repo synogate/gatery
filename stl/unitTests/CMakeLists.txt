@@ -6,7 +6,7 @@ add_executable(unitTestSTL
     source/main.cpp
     source/utils.cpp
     "source/hdmi.cpp"
-)
+ "source/tcamTest.cpp")
 
 target_include_directories (unitTestSTL PUBLIC
     ${Boost_INCLUDE_DIRS}
