@@ -45,6 +45,7 @@ namespace hcl::core::frontend {
     {
         size_t symbolWidth;
         Selection operator [] (int idx) const { return Selection::Symbol(idx, symbolWidth); }
+        Selection operator [] (size_t idx) const { return Selection::Symbol(int(idx), symbolWidth); }
     };
 
     class BVec : public ElementarySignal
