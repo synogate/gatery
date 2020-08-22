@@ -73,6 +73,16 @@ namespace hcl::core::frontend {
         };
     }
 
+    Selection Selection::Symbol(int idx, size_t symbolWidth)
+    {
+        return {
+            .start = idx * int(symbolWidth),
+            .width = int(symbolWidth),
+            .stride = 1,
+            .untilEndOfSource = false
+        };
+    }
+
     static hlim::Node_Rewire::RewireOperation pickSelection(const BVec::Range& range)
     {
         hlim::Node_Rewire::RewireOperation op;
