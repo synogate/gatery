@@ -4,6 +4,8 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include "../hlim/Circuit.h"
+
 namespace hcl::core::sim {
 
 UnitTestSimulationFixture::UnitTestSimulationFixture()
@@ -16,15 +18,19 @@ UnitTestSimulationFixture::~UnitTestSimulationFixture()
 }
 
 
-void UnitTestSimulationFixture::eval(const hlim::Circuit &circuit)
+void UnitTestSimulationFixture::eval(hlim::Circuit &circuit)
 {
+    circuit.removeFalseLoops();
+
     m_simulator->compileProgram(circuit);
     m_simulator->reset();
     //m_simulator->reevaluate();
 }
 
-void UnitTestSimulationFixture::runTicks(const hlim::Circuit &circuit, const hlim::Clock *clock, unsigned numTicks)
+void UnitTestSimulationFixture::runTicks(hlim::Circuit &circuit, const hlim::Clock *clock, unsigned numTicks)
 {
+    circuit.removeFalseLoops();
+    
     m_runLimClock = 0;
     m_runLimClock = clock;
     

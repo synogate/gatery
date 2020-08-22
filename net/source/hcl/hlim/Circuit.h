@@ -34,6 +34,8 @@ class Circuit
         void cullMuxConditionNegations();
         void removeIrrelevantMuxes();
         void propagateConstants();
+
+        void removeFalseLoops();
         
         void optimize(size_t level);
     protected:

@@ -21,8 +21,8 @@ class UnitTestSimulationFixture : public SimulatorCallbacks
         UnitTestSimulationFixture();
         ~UnitTestSimulationFixture();
         
-        void eval(const hlim::Circuit &circuit);
-        void runTicks(const hlim::Circuit &circuit, const hlim::Clock *clock, unsigned numTicks);
+        void eval(hlim::Circuit &circuit);
+        void runTicks(hlim::Circuit &circuit, const hlim::Clock *clock, unsigned numTicks);
 
         virtual void onNewTick(const hlim::Clock *clock) override;
         virtual void onDebugMessage(const hlim::BaseNode *src, std::string msg) override;

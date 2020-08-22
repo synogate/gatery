@@ -12,7 +12,7 @@ namespace hcl::core::frontend {
     Bit::Bit()
     {
         createNode();
-        assign('x');
+        m_node->connectInput(SignalReadPort(m_node));
     }
 
     Bit::Bit(const Bit& rhs) : Bit(rhs.getReadPort())

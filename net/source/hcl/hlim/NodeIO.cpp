@@ -31,8 +31,13 @@ NodePort NodeIO::getDriver(size_t inputPort) const
 NodePort NodeIO::getNonSignalDriver(size_t inputPort) const
 {
     NodePort np = m_inputPorts[inputPort];
-    while (np.node != nullptr && dynamic_cast<Node_Signal*>(np.node) != nullptr) 
+    while (np.node != nullptr && dynamic_cast<Node_Signal*>(np.node) != nullptr)
+    {
+        if (np.node == this)
+            return NodePort{};
+
         np = np.node->m_inputPorts[0];
+    }
     return np;
 }
 

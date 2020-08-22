@@ -111,6 +111,48 @@ BOOST_FIXTURE_TEST_CASE(BVecFrontBack, hcl::core::sim::UnitTestSimulationFixture
     eval(design.getCircuit());
 }
 
+BOOST_FIXTURE_TEST_CASE(BitSignalLoopSemanticTest, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    Bit unused; // should not produce combinatorial loop errors
+
+    Bit a;
+    sim_assert(a) << a << " should be 1";
+    a = '1';
+
+    Bit b;
+    b = '1';
+    sim_assert(b) << b << " should be 1";
+
+    eval(design.getCircuit());
+}
+
+BOOST_FIXTURE_TEST_CASE(BVecSignalLoopSemanticTest, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    BVec unused = 2_b; // should not produce combinatorial loop errors
+
+    BVec a = 2_b;
+    sim_assert(a == "b10") << a << " should be 10";
+    a = "b10";
+
+    BVec b = 2_b;
+    b = "b11";
+    sim_assert(b == "b11") << b << " should be 11";
+
+    //BVec shadowed = 2_b;
+    //shadowed[0] = '1';
+    //shadowed[1] = '0';
+
+    eval(design.getCircuit());
+}
+
 BOOST_FIXTURE_TEST_CASE(ConstantDataStringParser, hcl::core::sim::UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;

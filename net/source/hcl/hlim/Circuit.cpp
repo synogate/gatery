@@ -74,6 +74,21 @@ void Circuit::cullOrphanedSignalNodes()
     }
 }
 
+static bool isUnusedNode(const BaseNode& node)
+{
+    if (node.hasSideEffects())
+        return false;
+
+    auto* signalNode = dynamic_cast<const Node_Signal*>(&node);
+
+    if (signalNode && !signalNode->getName().empty())
+        return false;
+
+    for (auto j : utils::Range(node.getNumOutputPorts()))
+        if (!node.getDirectlyDriven(j).empty())
+            return false;
+}
+
 void Circuit::cullUnusedNodes()
 {
     //std::cout << "cullUnusedNodes()" << std::endl;
@@ -82,24 +97,11 @@ void Circuit::cullUnusedNodes()
         done = true;
     
         for (size_t i = 0; i < m_nodes.size(); i++) {
-            
-            if (m_nodes[i]->hasSideEffects())
-                continue;
-                
-            if (Node_Signal *signalNode = dynamic_cast<Node_Signal*>(m_nodes[i].get()))
-                if (!signalNode->getName().empty())
-                    continue;
 
-            bool isInUse = false;
-            for (auto j : utils::Range(m_nodes[i]->getNumOutputPorts())) 
-                if (!m_nodes[i]->getDirectlyDriven(j).empty()) {
-                    isInUse = true;
-                    break;
-                }
-                
-            if (!isInUse) {
+            if (isUnusedNode(*m_nodes[i]))
+            {
                 //std::cout << "    Culling node " << m_nodes[i]->getTypeName() << " "  << m_nodes[i]->getName() << std::endl;
-                    
+
                 m_nodes[i] = std::move(m_nodes.back());
                 m_nodes.pop_back();
                 i--;
@@ -472,6 +474,21 @@ void Circuit::propagateConstants()
                     openList.push_back(newConstOutputPort);
                 }
             }
+        }
+    }
+}
+
+void Circuit::removeFalseLoops()
+{
+    for (size_t i = 0; i < m_nodes.size(); i++) 
+    {
+        auto* signalNode = dynamic_cast<const Node_Signal*>(m_nodes[i].get());
+
+        if (signalNode && !signalNode->getNonSignalDriver(0).node)
+        {
+            m_nodes[i] = std::move(m_nodes.back());
+            m_nodes.pop_back();
+            i--;
         }
     }
 }

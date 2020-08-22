@@ -154,6 +154,8 @@ namespace hcl::core::frontend {
         void assign(std::string_view);
         virtual void assign(SignalReadPort);
 
+        void createNode(size_t width, Expansion policy);
+
     private:
         hlim::Node_Signal* m_node = nullptr;
         Range m_range;

@@ -139,12 +139,8 @@ namespace hcl::core::frontend {
 
     BVec::BVec(BitWidth width, Expansion expansionPolicy)
     {
-        // TODO: set constant to undefined
-        auto* constant = DesignScope::createNode<hlim::Node_Constant>(
-            undefinedBVec(width.value), 
-            hlim::ConnectionType::BITVEC
-            );
-        assign(SignalReadPort(constant, expansionPolicy));
+        createNode(width.value, expansionPolicy);
+        assign(SignalReadPort(m_node));
     }
 
     const BVec BVec::operator*() const
@@ -229,14 +225,7 @@ namespace hcl::core::frontend {
     void BVec::assign(SignalReadPort in)
     {
         if (!m_node)
-        {
-            m_range.width = width(in);
-            m_expansionPolicy = in.expansionPolicy;
-
-            m_node = DesignScope::createNode<hlim::Node_Signal>();
-            m_node->setConnectionType(getConnType());
-            m_node->recordStackTrace();
-        }
+            createNode(width(in), in.expansionPolicy);
 
         // TODO: handle implicit width expansion
         HCL_ASSERT(width(in) <= m_range.width);
@@ -289,6 +278,18 @@ namespace hcl::core::frontend {
         }
         
         m_node->connectInput(in);
+    }
+
+    void BVec::createNode(size_t width, Expansion policy)
+    {
+        HCL_ASSERT(!m_node);
+
+        m_range.width = width;
+        m_expansionPolicy = policy;
+
+        m_node = DesignScope::createNode<hlim::Node_Signal>();
+        m_node->setConnectionType(getConnType());
+        m_node->recordStackTrace();
     }
 
     std::vector<Bit>& BVec::aliasVec() const
