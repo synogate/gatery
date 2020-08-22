@@ -264,7 +264,8 @@ namespace hcl::core::frontend {
             
         }
 
-        if (ConditionalScope::get())
+        ConditionalScope* scope = ConditionalScope::get();
+        if (scope)
         {
             auto* signal = DesignScope::createNode<hlim::Node_Signal>();
             signal->connectInput(m_node->getDriver(0));
@@ -274,7 +275,8 @@ namespace hcl::core::frontend {
             auto* mux = DesignScope::createNode<hlim::Node_Multiplexer>(2);
             mux->connectInput(0, {.node = signal, .port = 0});
             mux->connectInput(1, in); // assign rhs last in case previous port was undefined
-            mux->connectSelector(ConditionalScope::getCurrentConditionPort());
+            mux->connectSelector(scope->getFullCondition());
+            mux->setConditionId(scope->getId());
             in.node = mux;
             in.port = 0;
         }

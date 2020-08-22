@@ -12,17 +12,20 @@
 namespace hcl::core::frontend {
 
     thread_local hlim::NodePort ConditionalScope::m_lastCondition;
+    thread_local size_t ConditionalScope::s_nextId = 1;
 
     thread_local static std::optional<Bit> g_lastConditionBit;
 
 #define SPAM_SIGNAL_NODES
     
-ConditionalScope::ConditionalScope(const Bit &condition)
+ConditionalScope::ConditionalScope(const Bit &condition) :
+    m_id(s_nextId++)
 {
     setCondition(condition.getReadPort());
 }
 
-ConditionalScope::ConditionalScope()
+ConditionalScope::ConditionalScope() :
+    m_id(s_nextId++)
 {
     hlim::Node_Logic* invNode = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::NOT);
     invNode->connectInput(0, m_lastCondition);

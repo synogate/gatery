@@ -6,8 +6,8 @@
 
 namespace hcl::core::hlim {
     
-class Node_Register : public Node<Node_Register>
-{
+    class Node_Register : public Node<Node_Register>
+    {
     public:
         enum Input {
             DATA,
@@ -20,24 +20,30 @@ class Node_Register : public Node<Node_Register>
             INT_ENABLE,
             NUM_INTERNALS
         };
-        
+
         Node_Register();
-        
-        void connectInput(Input input, const NodePort &port);
+
+        void connectInput(Input input, const NodePort& port);
         inline void disconnectInput(Input input) { NodeIO::disconnectInput(input); }
-        
-        virtual void simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
-        virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;
-        virtual void simulateAdvance(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const override;
-        
-        void setClock(Clock *clk);
-        
+
+        virtual void simulateReset(sim::SimulatorCallbacks& simCallbacks, sim::DefaultBitVectorState& state, const size_t* internalOffsets, const size_t* outputOffsets) const override;
+        virtual void simulateEvaluate(sim::SimulatorCallbacks& simCallbacks, sim::DefaultBitVectorState& state, const size_t* internalOffsets, const size_t* inputOffsets, const size_t* outputOffsets) const override;
+        virtual void simulateAdvance(sim::SimulatorCallbacks& simCallbacks, sim::DefaultBitVectorState& state, const size_t* internalOffsets, const size_t* outputOffsets, size_t clockPort) const override;
+
+        void setClock(Clock* clk);
+
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;
         virtual std::string getInputName(size_t idx) const override;
         virtual std::string getOutputName(size_t idx) const override;
 
         virtual std::vector<size_t> getInternalStateSizes() const override;
-};
+
+        void setConditionId(size_t id) { m_conditionId = id; }
+        size_t getConditionId() const { return m_conditionId; }
+
+    protected:
+        size_t m_conditionId = 0;
+    };
 
 }

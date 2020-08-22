@@ -82,8 +82,12 @@ BVec Clock::operator()(const BVec& signal) const
     reg->setClock(m_clock);
     reg->connectInput(hlim::Node_Register::DATA, data);
 
-    if (ConditionalScope::get())
-        reg->connectInput(hlim::Node_Register::ENABLE, ConditionalScope::getCurrentConditionPort());
+    ConditionalScope* scope = ConditionalScope::get();
+    if (scope)
+    {
+        reg->connectInput(hlim::Node_Register::ENABLE, scope->getFullCondition());
+        reg->setConditionId(scope->getId());
+    }
 
     return SignalReadPort(reg, data.expansionPolicy);
 }
@@ -97,8 +101,12 @@ BVec Clock::operator()(const BVec& signal, const BVec& reset) const
     reg->connectInput(hlim::Node_Register::DATA, ops.lhs);
     reg->connectInput(hlim::Node_Register::RESET_VALUE, ops.rhs);
 
-    if (ConditionalScope::get())
-        reg->connectInput(hlim::Node_Register::ENABLE, ConditionalScope::getCurrentConditionPort());
+    ConditionalScope* scope = ConditionalScope::get();
+    if (scope)
+    {
+        reg->connectInput(hlim::Node_Register::ENABLE, scope->getFullCondition());
+        reg->setConditionId(scope->getId());
+    }
 
     return SignalReadPort(reg, ops.lhs.expansionPolicy);
 }
@@ -109,8 +117,12 @@ Bit Clock::operator()(const Bit& signal) const
     reg->setClock(m_clock);
     reg->connectInput(hlim::Node_Register::DATA, signal.getReadPort());
 
-    if (ConditionalScope::get())
-        reg->connectInput(hlim::Node_Register::ENABLE, ConditionalScope::getCurrentConditionPort());
+    ConditionalScope* scope = ConditionalScope::get();
+    if (scope)
+    {
+        reg->connectInput(hlim::Node_Register::ENABLE, scope->getFullCondition());
+        reg->setConditionId(scope->getId());
+    }
 
     return SignalReadPort(reg);
 }
@@ -122,8 +134,12 @@ Bit Clock::operator()(const Bit& signal, const Bit& reset) const
     reg->connectInput(hlim::Node_Register::DATA, signal.getReadPort());
     reg->connectInput(hlim::Node_Register::RESET_VALUE, reset.getReadPort());
 
-    if (ConditionalScope::get())
-        reg->connectInput(hlim::Node_Register::ENABLE, ConditionalScope::getCurrentConditionPort());
+    ConditionalScope* scope = ConditionalScope::get();
+    if (scope)
+    {
+        reg->connectInput(hlim::Node_Register::ENABLE, scope->getFullCondition());
+        reg->setConditionId(scope->getId());
+    }
 
     return SignalReadPort(reg);
 }

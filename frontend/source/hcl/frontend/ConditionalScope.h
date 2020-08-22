@@ -5,10 +5,6 @@
 #include <hcl/utils/Traits.h>
 #include <hcl/hlim/coreNodes/Node_PriorityConditional.h>
 
-#include <vector>
-#include <map>
-#include <set>
-#include <optional>
 
 namespace hcl::core::frontend {
     
@@ -23,16 +19,18 @@ namespace hcl::core::frontend {
             ConditionalScope();
             ~ConditionalScope();
 
-//            static const Bit& getCurrentCondition();
-            static hlim::NodePort getCurrentConditionPort() { return ConditionalScope::get()->m_fullCondition; }
+            hlim::NodePort getFullCondition() const { return m_fullCondition; }
+            size_t getId() const { return m_id; }
 
         private:
             void setCondition(hlim::NodePort port);
 
+            const size_t m_id;
             hlim::NodePort m_condition;
             hlim::NodePort m_fullCondition;
 
             thread_local static hlim::NodePort m_lastCondition;
+            thread_local static size_t s_nextId;
     };
 
 
