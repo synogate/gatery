@@ -1,5 +1,6 @@
 #include "TCAM.h"
 
+#include "../utils/OneHot.h"
 #include "../hardCores/AsyncRam.h"
 
 using namespace hcl::stl;
@@ -41,4 +42,70 @@ BVec hcl::stl::constructTCAMCell(
     HCL_NAMED(rams);
 
     return match;
+}
+
+void hcl::stl::LutTCAM::setLutSize(size_t addrWidth, size_t dataWidth)
+{
+    m_lutAddrWidth = addrWidth;
+    m_lutDataWidth = dataWidth;
+}
+
+void hcl::stl::LutTCAM::setSize(size_t numElements, size_t bitsPerElement)
+{
+    m_numElements = numElements;
+    m_bitsPerElement = bitsPerElement;
+}
+
+void hcl::stl::LutTCAM::setInput(const Valid<LutCAMSimpleStreamRequest>& in)
+{
+    HCL_DESIGNCHECK(m_bitsPerElement % m_lutAddrWidth == 0);
+    HCL_DESIGNCHECK(m_numElements % m_lutDataWidth == 0);
+    HCL_DESIGNCHECK(in.updateLutData.size() == m_lutDataWidth);
+
+    SymbolSelect keyWord{ m_lutAddrWidth };
+    m_valid = in.valid & !in.update;
+
+    m_luts.reserve(getNumLuts());
+    for (size_t i = 0; i < getNumLuts(); ++i)
+    {
+        AvalonMM& lut = m_luts.emplace_back(m_lutAddrWidth, m_lutDataWidth);
+        lut.address = in.searchKey(keyWord[i % getNumLutsPerElement()]);
+        lut.read = '1';
+        lut.write = in.update & in.updateLutAddr == i;
+        lut.writeData = in.updateLutData;
+    }
+}
+
+void hcl::stl::LutTCAM::setMemoryType(std::function<void(AvalonMM&)> ramFactory)
+{
+    for (AvalonMM& lut : m_luts)
+        ramFactory(lut);
+    setName(m_luts, "luts");
+}
+
+void hcl::stl::LutTCAM::setPerElementReduce()
+{
+    std::vector<BVec> groupMatch;
+
+    for (auto it = m_luts.begin(); it != m_luts.end();)
+    {
+        auto lut_end = it + getNumLutsPerElement();
+
+        BVec match = it->readData;
+        for (auto it2 = it + 1; it2 != lut_end; ++it2)
+            match &= it2->readData;
+        groupMatch.push_back(match);
+    }
+    setName(groupMatch, "perGroupMatch");
+
+    m_match = pack(groupMatch);
+    setName(m_match, "match");
+}
+
+Valid<BVec> hcl::stl::LutTCAM::getResultIndex()
+{
+    return {
+        m_valid,
+        priorityEncoder(m_match).index
+    };
 }
