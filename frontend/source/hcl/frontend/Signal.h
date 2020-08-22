@@ -45,6 +45,7 @@ namespace hcl::core::frontend {
         using isSignal = void;
         using isElementarySignal = void;
         
+        ElementarySignal();
         virtual ~ElementarySignal() = default;
 
         virtual bool valid() const = 0;
@@ -55,6 +56,10 @@ namespace hcl::core::frontend {
         virtual SignalReadPort getReadPort() const = 0;
         virtual std::string_view getName() const = 0;
         virtual void setName(std::string name) = 0;
+
+    protected:
+        size_t m_initialScopeId = 0;
+
     };
 
 }

@@ -143,8 +143,7 @@ namespace hcl::core::frontend {
             }
         }
         
-        ConditionalScope* scope = ConditionalScope::get();
-        if (scope)
+        if (auto* scope = ConditionalScope::get(); scope && scope->getId() > m_initialScopeId)
         {
             auto* signal_in = DesignScope::createNode<hlim::Node_Signal>();
             signal_in->connectInput(m_node->getDriver(0));
