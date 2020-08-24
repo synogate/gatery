@@ -64,7 +64,7 @@ inline frontend::Register<SignalType>::Register(Args ...signalParams) :
     // TODO: connect Enable to global ConditionalScope
 
     setClock(ClockScope::getClk());
-    m_regNode.connectInput(hlim::Node_Register::DATA, (**this).getReadPort());
+    m_regNode.connectInput(hlim::Node_Register::DATA, this->getReadPort());
 
     m_delayedSignal = SignalType(SignalReadPort(&m_regNode));
 

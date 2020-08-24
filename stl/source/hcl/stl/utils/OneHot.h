@@ -60,7 +60,7 @@ namespace hcl::stl
 				anyValid = '1';
 				ret.value = it->value;
 				ret.valid = it->valid;
-				it->ready = *ret.ready;
+				it->ready = ret.ready;
 			}
 		}
 		return ret;

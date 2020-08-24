@@ -29,25 +29,6 @@ namespace hcl::core::frontend {
         m_offset(offset)
     {}
 
-    const Bit Bit::operator*() const
-    {
-        hlim::NodePort ret{ .node = m_node, .port = 0 };
-        hlim::ConnectionType type = ret.node->getOutputConnectionType(ret.port);
-
-        if (type.interpretation != hlim::ConnectionType::BOOL)
-        {
-            auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-            rewire->connectInput(0, ret);
-            rewire->changeOutputType(getConnType());
-
-            size_t offset = std::min(m_offset, type.width - 1); // used for msb alias, but can alias any future offset
-            rewire->setExtract(offset, 1);
-
-            ret = hlim::NodePort{ .node = rewire, .port = 0 };
-        }
-        return SignalReadPort(ret);
-    }
-
     size_t Bit::getWidth() const
     {
         return 1;

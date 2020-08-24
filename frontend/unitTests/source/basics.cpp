@@ -230,7 +230,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, hcl::core::sim::UnitTestSimula
 
     {
         BVec counter(8_b);
-        counter = reg(*counter, "8b0");
+        counter = reg(counter, "8b0");
 
         BVec refCount(8_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {

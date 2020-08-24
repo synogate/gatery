@@ -102,8 +102,6 @@ namespace hcl::core::frontend {
         const BVec& operator() (const Selection& selection) const { return aliasRange(Range(selection, m_range)); }
 
 
-        const BVec operator*() const;
-
         virtual void resize(size_t width);
 
         Bit& lsb() { return aliasLsb(); }

@@ -149,17 +149,6 @@ namespace hcl::core::frontend {
         return *this;
     }
 
-    const BVec BVec::operator*() const
-    {
-        if (!m_range.subset)
-            return SignalReadPort(m_node, m_expansionPolicy);
-
-        auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-        rewire->connectInput(0, { .node = m_node, .port = 0 });
-        rewire->setOp(pickSelection(m_range));
-        return SignalReadPort(rewire, m_expansionPolicy);
-    }
-
     void BVec::resize(size_t width)
     {
         HCL_DESIGNCHECK_HINT(!m_range.subset, "BVec::resize is not allowed for alias BVec's. use zext instead.");
