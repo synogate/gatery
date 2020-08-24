@@ -25,7 +25,7 @@ std::vector<hcl::stl::Stream<hcl::core::frontend::BVec>> hcl::stl::makeIndexList
     std::vector<Stream<BVec>> ret(valids.size());
     for (size_t i = 0; i < valids.size(); ++i)
     {
-        ret[i].value = i;
+        ret[i].value() = i;
         ret[i].valid = valids[i];
     }
     return ret;

@@ -193,11 +193,18 @@ namespace hcl::stl
 
 #endif
     template<typename Payload>
-    struct Stream
+    struct Stream : Payload
     {
-        core::frontend::Bit valid = '1';
-        core::frontend::Bit ready = '1';
-        Payload value;
+        template<typename... PayloadArgs>
+        Stream(PayloadArgs... ctorArgs) :
+            Payload(ctorArgs...)
+        {}
+
+        core::frontend::Bit valid;
+        core::frontend::Bit ready;
+
+        Payload& value() { return *this; }
+        const Payload& value() const { return *this; }
     };
 
     template<typename Payload>

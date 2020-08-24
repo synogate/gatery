@@ -48,17 +48,19 @@ namespace hcl::stl
 
 		size_t maxWidth = 0;
 		for (Iter it = begin; it != end; ++it)
-			if (maxWidth < it->value.size())
-				maxWidth = it->value.size();
-		ret.value = hcl::core::frontend::ConstBVec(maxWidth);
+			if (maxWidth < it->size())
+				maxWidth = it->size();
+		ret.value() = hcl::core::frontend::ConstBVec(maxWidth);
 
 		core::frontend::Bit anyValid = '0';
 		for(Iter it = begin; it != end; ++it)
 		{
+			it->ready = '0';
+
 			IF(it->valid & !anyValid)
 			{
 				anyValid = '1';
-				ret.value = it->value;
+				ret.value() = it->value();
 				ret.valid = it->valid;
 				it->ready = ret.ready;
 			}

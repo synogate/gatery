@@ -77,13 +77,13 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ListEncoder, d
 
     for (size_t i = 0; i < indexList.size(); ++i)
     {
-        sim_assert(indexList[i].value == i) << indexList[i].value << " != " << i;
+        sim_assert(indexList[i].value() == i) << indexList[i].value() << " != " << i;
         sim_assert(indexList[i].valid == (val == i)) << indexList[i].valid << " != " << (val == i);
     }
 
     auto encoded = priorityEncoder<BVec>(indexList.begin(), indexList.end());
     sim_assert(encoded.valid);
-    sim_assert(encoded.value == val);
+    sim_assert(encoded.value() == val);
 
     eval(design.getCircuit());
 }
