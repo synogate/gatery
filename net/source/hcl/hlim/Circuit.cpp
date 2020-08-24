@@ -480,17 +480,17 @@ void Circuit::propagateConstants()
 
 void Circuit::removeFalseLoops()
 {
-    for (size_t i = 0; i < m_nodes.size(); i++) 
-    {
-        auto* signalNode = dynamic_cast<const Node_Signal*>(m_nodes[i].get());
-
-        if (signalNode && !signalNode->getNonSignalDriver(0).node)
-        {
-            m_nodes[i] = std::move(m_nodes.back());
-            m_nodes.pop_back();
-            i--;
-        }
-    }
+//    for (size_t i = 0; i < m_nodes.size(); i++) 
+//    {
+//        auto* signalNode = dynamic_cast<const Node_Signal*>(m_nodes[i].get());
+//
+//        if (signalNode && !signalNode->getNonSignalDriver(0).node)
+//        {
+//            m_nodes[i] = std::move(m_nodes.back());
+//            m_nodes.pop_back();
+//            i--;
+//        }
+//    }
 }
 
 

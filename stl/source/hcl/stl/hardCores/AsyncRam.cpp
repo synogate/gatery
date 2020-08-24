@@ -11,12 +11,13 @@ void hcl::stl::asyncRam(AvalonMM& avmm)
     for (size_t i = 0; i < ram.size(); ++i)
     {
         ram[i] = BitWidth{ avmm.readData.size() };
-        ram[i] = reg(*ram[i]);
+        ram[i] = reg(ram[i]);
         IF(avmm.write & avmm.address == i)
             ram[i] = avmm.writeData;
     }
     HCL_NAMED(ram);
 
+    avmm.readData = ConstBVec(avmm.readData.size());
     IF(avmm.read & ~avmm.write)
         avmm.readData = mux(avmm.address, ram);
     avmm.readDataValid = avmm.read;

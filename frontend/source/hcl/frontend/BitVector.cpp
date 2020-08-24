@@ -140,7 +140,13 @@ namespace hcl::core::frontend {
     BVec::BVec(BitWidth width, Expansion expansionPolicy)
     {
         createNode(width.value, expansionPolicy);
-        assign(SignalReadPort(m_node));
+    }
+
+    BVec& BVec::operator=(BitWidth width)
+    {
+        HCL_DESIGNCHECK(!m_node);
+        createNode(width.value, m_expansionPolicy);
+        return *this;
     }
 
     const BVec BVec::operator*() const
@@ -187,7 +193,7 @@ namespace hcl::core::frontend {
 
     SignalReadPort BVec::getReadPort() const
     {
-        SignalReadPort driver(m_node->getDriver(0), m_expansionPolicy);
+        SignalReadPort driver = getRawDriver();
         if (m_readPortDriver != driver.node)
         {
             m_readPort = driver;
@@ -237,7 +243,7 @@ namespace hcl::core::frontend {
             std::string in_name = in.node->getName();
             
             auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(2);
-            rewire->connectInput(0, m_node->getDriver(0));
+            rewire->connectInput(0, getRawDriver());
             rewire->connectInput(1, in);
             rewire->setOp(replaceSelection(m_range, m_node->getOutputConnectionType(0).width));
             in.node = rewire;
@@ -255,8 +261,9 @@ namespace hcl::core::frontend {
 
         if (auto* scope = ConditionalScope::get(); scope && scope->getId() > m_initialScopeId)
         {
+            HCL_ASSERT_HINT(m_node->getDriver(0).node, "latch or complete shadowing for loop not yet implemented");
             auto* signal = DesignScope::createNode<hlim::Node_Signal>();
-            signal->connectInput(m_node->getDriver(0));
+            signal->connectInput(getRawDriver());
             signal->setName(m_node->getName());
             signal->recordStackTrace();
 
@@ -290,6 +297,14 @@ namespace hcl::core::frontend {
         m_node = DesignScope::createNode<hlim::Node_Signal>();
         m_node->setConnectionType(getConnType());
         m_node->recordStackTrace();
+    }
+
+    SignalReadPort BVec::getRawDriver() const
+    {
+        hlim::NodePort driver = m_node->getDriver(0);
+        if (!driver.node)
+            driver = hlim::NodePort{ .node = m_node, .port = 0ull };
+        return SignalReadPort(driver, m_expansionPolicy);
     }
 
     std::vector<Bit>& BVec::aliasVec() const

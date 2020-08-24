@@ -374,7 +374,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAss
     BVec a = ConstBVec(x, 8);
     BVec b = ConstBVec(y, 8);
 
-    BVec c;
+    BVec c = ConstBVec(8);
     IF (a[1])
         c = a + b;
     ELSE {
@@ -401,7 +401,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAss
     BVec a = ConstBVec(x, 8);
     BVec b = ConstBVec(y, 8);
 
-    BVec c;
+    BVec c = ConstBVec(8);
     IF (a[1]) {
         c = a + b;
         c += a;
@@ -433,7 +433,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAss
     BVec a = ConstBVec(x, 8);
     BVec b = ConstBVec(y, 8);
 
-    BVec c;
+    BVec c = ConstBVec(8);
     IF (a[1])
         c = a + b;
     ELSE {
@@ -467,7 +467,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
     BVec a = ConstBVec(x, 8);
     BVec b = ConstBVec(y, 8);
 
-    BVec c;
+    BVec c = ConstBVec(8);
     IF (a[2]) {
         IF (a[1])
             c = a + b;
@@ -510,7 +510,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
     BVec a = ConstBVec(x, 8);
     BVec b = ConstBVec(y, 8);
 
-    BVec c;
+    BVec c = ConstBVec(8);
     IF (a[2]) {
         IF (a[1]) {
             c = a + b;

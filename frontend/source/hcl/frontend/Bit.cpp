@@ -12,7 +12,6 @@ namespace hcl::core::frontend {
     Bit::Bit()
     {
         createNode();
-        m_node->connectInput(SignalReadPort(m_node));
     }
 
     Bit::Bit(const Bit& rhs) : Bit(rhs.getReadPort())
@@ -64,7 +63,8 @@ namespace hcl::core::frontend {
 
     SignalReadPort Bit::getReadPort() const
     {
-        hlim::NodePort ret = m_node->getDriver(0);
+        SignalReadPort ret = getRawDriver();
+
         hlim::ConnectionType type = ret.node->getOutputConnectionType(ret.port);
 
         if (type.interpretation != hlim::ConnectionType::BOOL)
@@ -77,9 +77,9 @@ namespace hcl::core::frontend {
             size_t offset = std::min(m_offset, type.width-1); // used for msb alias, but can alias any future offset
             rewire->setExtract(offset, 1);
 
-            ret = hlim::NodePort{ .node = rewire, .port = 0 };
+            ret = SignalReadPort(rewire);
         }
-        return SignalReadPort{ ret };
+        return ret;
     }
 
     std::string_view Bit::getName() const
@@ -126,7 +126,7 @@ namespace hcl::core::frontend {
             std::string in_name = in.node->getName();
             
             auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(2);
-            rewire->connectInput(0, m_node->getDriver(0));
+            rewire->connectInput(0, getRawDriver());
             rewire->connectInput(1, in);
             rewire->changeOutputType(type);
 
@@ -145,8 +145,9 @@ namespace hcl::core::frontend {
         
         if (auto* scope = ConditionalScope::get(); scope && scope->getId() > m_initialScopeId)
         {
+            HCL_ASSERT_HINT(m_node->getDriver(0).node, "latch or complete shadowing for loop not yet implemented");
             auto* signal_in = DesignScope::createNode<hlim::Node_Signal>();
-            signal_in->connectInput(m_node->getDriver(0));
+            signal_in->connectInput(getRawDriver());
             signal_in->setName(m_node->getName());
 
             auto* mux = DesignScope::createNode<hlim::Node_Multiplexer>(2);
@@ -166,6 +167,14 @@ namespace hcl::core::frontend {
         }
 
         m_node->connectInput(in);
+    }
+
+    SignalReadPort Bit::getRawDriver() const
+    {
+        hlim::NodePort driver = m_node->getDriver(0);
+        if (!driver.node)
+            driver = hlim::NodePort{ .node = m_node, .port = 0ull };
+        return SignalReadPort(driver);
     }
 
     bool Bit::valid() const

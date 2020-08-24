@@ -49,6 +49,7 @@ namespace hcl::core::frontend {
             virtual void assign(SignalReadPort in);
 
             bool valid() const final; // hide method since Bit is always valid
+            SignalReadPort getRawDriver() const;
 
         private:
             hlim::Node_Signal* m_node = nullptr;

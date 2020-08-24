@@ -20,7 +20,7 @@ BOOST_FIXTURE_TEST_CASE(asyncMemoryTest, hcl::core::sim::UnitTestSimulationFixtu
     ClockScope scope(clock);
 
     BVec counter = 6_b;
-    counter = reg(*counter, "6b0");
+    counter = reg(counter, "6b0");
     
     AvalonMM ram(5, 20);
 
@@ -47,7 +47,7 @@ BOOST_FIXTURE_TEST_CASE(TCAMCellTest, hcl::core::sim::UnitTestSimulationFixture)
     ClockScope scope(clock);
 
     BVec counter = 6_b;
-    counter = reg(*counter, "6b0");
+    counter = reg(counter, "6b0");
 
     BVec searchKey = 10_b;
     searchKey = zext(counter(0, 5));
@@ -63,7 +63,7 @@ BOOST_FIXTURE_TEST_CASE(TCAMCellTest, hcl::core::sim::UnitTestSimulationFixture)
 
     BVec match = constructTCAMCell(searchKey, !counter[5], updateData);
 
-    BVec matchRef = 20_b;
+    BVec matchRef = ConstBVec(20);
     for (size_t i = 0; i < matchRef.size(); ++i)
         matchRef[i] = counter(0, 5) == i;
     BOOST_CHECK(match.size() == matchRef.size());

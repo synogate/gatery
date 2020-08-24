@@ -91,6 +91,7 @@ namespace hcl::core::frontend {
         template<unsigned S>
         BVec& operator = (const char (&rhs)[S]) { assign(std::string_view(rhs)); return *this; }
         BVec& operator = (const BVec& rhs) { assign(rhs.getReadPort()); return *this; }
+        BVec& operator = (BitWidth width);
 
         template<typename Int1, typename Int2, typename = std::enable_if_t<std::is_integral_v<Int1> && std::is_integral_v<Int2>>>
         BVec& operator()(Int1 offset, Int2 size, size_t stride = 1) { return (*this)(Selection::StridedSlice(int(offset), int(size), stride)); }
@@ -155,6 +156,7 @@ namespace hcl::core::frontend {
         virtual void assign(SignalReadPort);
 
         void createNode(size_t width, Expansion policy);
+        SignalReadPort getRawDriver() const;
 
     private:
         hlim::Node_Signal* m_node = nullptr;

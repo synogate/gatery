@@ -16,6 +16,8 @@ namespace hcl::stl
 		explicit OneHot(const core::frontend::BVec& initValue) : BVec(initValue) {}
 
 		OneHot& operator = (const OneHot&) = default;
+
+		void setBit(const BVec& idx);
 	};
 
 	OneHot decoder(const core::frontend::BVec& in);
@@ -48,7 +50,7 @@ namespace hcl::stl
 		for (Iter it = begin; it != end; ++it)
 			if (maxWidth < it->value.size())
 				maxWidth = it->value.size();
-		ret.value = core::frontend::BitWidth{ maxWidth };
+		ret.value = hcl::core::frontend::ConstBVec(maxWidth);
 
 		core::frontend::Bit anyValid = '0';
 		for(Iter it = begin; it != end; ++it)
