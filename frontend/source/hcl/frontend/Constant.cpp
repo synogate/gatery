@@ -98,17 +98,18 @@ sim::DefaultBitVectorState hcl::core::frontend::parseBVec(uint64_t value, size_t
     return ret;
 }
 
-sim::DefaultBitVectorState hcl::core::frontend::undefinedBVec(size_t width)
-{
-    sim::DefaultBitVectorState ret;
-    ret.resize(width);
-    ret.setRange(sim::DefaultConfig::DEFINED, 0, width, false);
-    return ret;
-}
-
-
 hcl::core::frontend::BVec hcl::core::frontend::ConstBVec(uint64_t value, size_t width)
 {
     auto* node = DesignScope::createNode<hlim::Node_Constant>(parseBVec(value, width), hlim::ConnectionType::BITVEC);
+    return SignalReadPort(node);
+}
+
+hcl::core::frontend::BVec hcl::core::frontend::ConstBVec(size_t width)
+{
+    sim::DefaultBitVectorState value;
+    value.resize(width);
+    value.setRange(sim::DefaultConfig::DEFINED, 0, width, false);
+
+    auto* node = DesignScope::createNode<hlim::Node_Constant>(value, hlim::ConnectionType::BITVEC);
     return SignalReadPort(node);
 }
