@@ -4,11 +4,40 @@
 #include <boost/test/data/monomorphic.hpp>
 
 #include <hcl/stl/hardCores/AsyncRam.h>
+#include <hcl/stl/hardCores/BlockRam.h>
 #include <hcl/stl/kvs/TCAM.h>
 #include <hcl/simulation/UnitTestSimulationFixture.h>
 #include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
 
 using namespace boost::unit_test;
+
+BOOST_FIXTURE_TEST_CASE(ramSimpleDualPortAsyncTest, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::stl;
+    using namespace hcl::core::frontend;
+    DesignScope design;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    ClockScope scope(clock);
+
+    BVec counter = 6_b;
+    counter += 1;
+    counter = reg(counter, "6b0");
+
+    BVec address = counter(0, -1);
+    BVec data = ~address;
+    Bit update = !counter.msb();
+
+    Ram<BVec> ram(32, 5_b);
+
+    IF(update)
+        ram[address] = data;
+
+    sim_assert(update | ram[address] == data) << ram[address].read() << " should be " << data << " phase " << update;
+
+    runTicks(design.getCircuit(), clock.getClk(), 64);
+}
+
 
 BOOST_FIXTURE_TEST_CASE(asyncMemoryTest, hcl::core::sim::UnitTestSimulationFixture)
 {
