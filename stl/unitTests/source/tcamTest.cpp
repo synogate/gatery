@@ -5,6 +5,7 @@
 
 #include <hcl/stl/hardCores/AsyncRam.h>
 #include <hcl/stl/hardCores/BlockRam.h>
+#include <hcl/stl/hardCores/blockRam/XilinxSimpleDualPortBlockRam.h>
 #include <hcl/stl/kvs/TCAM.h>
 #include <hcl/simulation/UnitTestSimulationFixture.h>
 #include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
@@ -131,3 +132,45 @@ BOOST_FIXTURE_TEST_CASE(TCAMCellTest, hcl::core::sim::UnitTestSimulationFixture)
     runTicks(design.getCircuit(), clock.getClk(), 64);
 }
 
+BOOST_FIXTURE_TEST_CASE(xilinxBramTest, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::stl;
+    using namespace hcl::core::frontend;
+    DesignScope design;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    ClockScope scope(clock);
+
+    BVec counter = 6_b;
+    counter = reg(counter, "6b0");
+
+    hcl::stl::blockram::XilinxSimpleDualPortBlockRam::DefaultBitVectorState initVec;
+    initVec.resize(20 * (1ull << 5));
+    initVec.clearRange(hcl::core::sim::DefaultConfig::DEFINED, 0, initVec.size());
+
+    using XilinxRam = hcl::stl::blockram::XilinxSimpleDualPortBlockRam;
+
+    auto* xram = DesignScope::createNode<XilinxRam>(
+        clock.getClk(), clock.getClk(), initVec, 20, 20, false
+    );
+
+    AvalonMM ram(5, 20);
+    ram.address = counter(0, 5);
+    ram.read = '1';
+    ram.readData = BVec{ SignalReadPort(xram) };
+    ram.write = !counter[5];
+    ram.writeData = zext(counter);
+
+    const Bit one = '1';
+    xram->connectInput(XilinxRam::WRITE_ADDR, ram.address.getReadPort());
+    xram->connectInput(XilinxRam::WRITE_DATA, ram.writeData.getReadPort());
+    xram->connectInput(XilinxRam::WRITE_ENABLE, ram.write.getReadPort());
+    xram->connectInput(XilinxRam::READ_ADDR, ram.address.getReadPort());
+    xram->connectInput(XilinxRam::READ_ENABLE, one.getReadPort());
+
+    BVec lastCounter = reg(counter, "6b0");
+    sim_assert(!lastCounter[5] | ram.readData == zext(lastCounter(0, 5))) << ram.readData << " should be " << lastCounter(0, 5) << " phase " << lastCounter[5];
+
+    counter += 1;
+    runTicks(design.getCircuit(), clock.getClk(), 64);
+}

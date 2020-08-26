@@ -51,7 +51,10 @@ class BitVectorState
         BitVectorState<Config> extract(size_t start, size_t size) const;
         void insert(const BitVectorState& state, size_t offset);
         
+        typename Config::BaseType extract(typename Config::Plane plane, size_t offset, size_t size) const;
         typename Config::BaseType extractNonStraddling(typename Config::Plane plane, size_t start, size_t size) const;
+
+        void insert(typename Config::Plane plane, size_t start, size_t size, typename Config::BaseType value);
         void insertNonStraddling(typename Config::Plane plane, size_t start, size_t size, typename Config::BaseType value);
     protected:
         size_t m_size = 0;
@@ -176,15 +179,7 @@ void BitVectorState<Config>::clearRange(typename Config::Plane plane, size_t off
 
 template<class Config>
 void BitVectorState<Config>::copyRange(size_t dstOffset, const BitVectorState<Config> &src, size_t srcOffset, size_t size)
-{
-    // This code assumes that either offsets are aligned to block boundaries, or the access doesn't cross block boundaries    
-    HCL_ASSERT(dstOffset % Config::NUM_BITS_PER_BLOCK == 0 || 
-                dstOffset % Config::NUM_BITS_PER_BLOCK + size <= Config::NUM_BITS_PER_BLOCK);
-
-    HCL_ASSERT(srcOffset % Config::NUM_BITS_PER_BLOCK == 0 || 
-                (srcOffset % Config::NUM_BITS_PER_BLOCK) + size <= Config::NUM_BITS_PER_BLOCK);
-    
-    
+{    
     ///@todo: Optimize aligned cases (which happen quite frequently!)
     size_t width = size;
     size_t offset = 0;
@@ -192,12 +187,11 @@ void BitVectorState<Config>::copyRange(size_t dstOffset, const BitVectorState<Co
         size_t chunkSize = std::min<size_t>(Config::NUM_BITS_PER_BLOCK, width-offset);
         
         for (auto i : utils::Range<size_t>(Config::NUM_PLANES))
-            insertNonStraddling((typename Config::Plane) i, dstOffset + offset, chunkSize,
-                    src.extractNonStraddling((typename Config::Plane) i, srcOffset+offset, chunkSize));
+            insert((typename Config::Plane) i, dstOffset + offset, chunkSize,
+                    src.extract((typename Config::Plane) i, srcOffset + offset, chunkSize));
 
         offset += chunkSize;
     }
-
 }
 
 
@@ -248,14 +242,49 @@ inline void BitVectorState<Config>::insert(const BitVectorState& state, size_t o
 }
 
 template<class Config>
+inline typename Config::BaseType BitVectorState<Config>::extract(typename Config::Plane plane, size_t offset, size_t size) const
+{
+    HCL_ASSERT(size <= Config::NUM_BITS_PER_BLOCK);
+    const auto* values = &m_values[plane][offset / Config::NUM_BITS_PER_BLOCK];
+    const size_t wordOffset = offset % Config::NUM_BITS_PER_BLOCK;
+
+    auto val = values[0];
+    val >>= wordOffset;
+    if(wordOffset + size > Config::NUM_BITS_PER_BLOCK)
+        val |= values[1] << (Config::NUM_BITS_PER_BLOCK - wordOffset);
+    val &= utils::bitMaskRange(0, size);
+
+    return val;
+}
+
+template<class Config>
 typename Config::BaseType BitVectorState<Config>::extractNonStraddling(typename Config::Plane plane, size_t start, size_t size) const
 {
+    HCL_ASSERT(start % Config::NUM_BITS_PER_BLOCK + size <= Config::NUM_BITS_PER_BLOCK);
     return utils::bitfieldExtract(m_values[plane][start / Config::NUM_BITS_PER_BLOCK], start % Config::NUM_BITS_PER_BLOCK, size);
+}
+
+template<class Config>
+inline void BitVectorState<Config>::insert(typename Config::Plane plane, size_t offset, size_t size, typename Config::BaseType value)
+{
+    HCL_ASSERT(size <= Config::NUM_BITS_PER_BLOCK);
+    const size_t wordOffset = offset % Config::NUM_BITS_PER_BLOCK;
+    if (wordOffset + size <= Config::NUM_BITS_PER_BLOCK)
+    {
+        insertNonStraddling(plane, offset, size, value);
+        return;
+    }
+
+    auto* dst = &m_values[plane][offset / Config::NUM_BITS_PER_BLOCK];
+    dst[0] = utils::bitfieldInsert(dst[0], wordOffset, Config::NUM_BITS_PER_BLOCK - wordOffset, value);
+    value >>= Config::NUM_BITS_PER_BLOCK - wordOffset;
+    dst[1] = utils::bitfieldInsert(dst[1], 0, (wordOffset + size) % Config::NUM_BITS_PER_BLOCK, value);
 }
 
 template<class Config>
 void BitVectorState<Config>::insertNonStraddling(typename Config::Plane plane, size_t start, size_t size, typename Config::BaseType value)
 {
+    HCL_ASSERT(start % Config::NUM_BITS_PER_BLOCK + size <= Config::NUM_BITS_PER_BLOCK);
     if (size)
     {
         auto& op = m_values[plane][start / Config::NUM_BITS_PER_BLOCK];
