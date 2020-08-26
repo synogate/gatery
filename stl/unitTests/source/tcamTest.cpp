@@ -9,6 +9,7 @@
 #include <hcl/stl/kvs/TCAM.h>
 #include <hcl/simulation/UnitTestSimulationFixture.h>
 #include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
+#include <hcl/export/vhdl/VHDLExport.h>
 
 using namespace boost::unit_test;
 
@@ -143,6 +144,7 @@ BOOST_FIXTURE_TEST_CASE(xilinxBramTest, hcl::core::sim::UnitTestSimulationFixtur
 
     BVec counter = 6_b;
     counter = reg(counter, "6b0");
+    HCL_NAMED(counter);
 
     hcl::stl::blockram::XilinxSimpleDualPortBlockRam::DefaultBitVectorState initVec;
     initVec.resize(20 * (1ull << 5));
@@ -160,6 +162,7 @@ BOOST_FIXTURE_TEST_CASE(xilinxBramTest, hcl::core::sim::UnitTestSimulationFixtur
     ram.readData = BVec{ SignalReadPort(xram) };
     ram.write = !counter[5];
     ram.writeData = zext(counter);
+    HCL_NAMED(ram);
 
     const Bit one = '1';
     xram->connectInput(XilinxRam::WRITE_ADDR, ram.address.getReadPort());
@@ -173,4 +176,11 @@ BOOST_FIXTURE_TEST_CASE(xilinxBramTest, hcl::core::sim::UnitTestSimulationFixtur
 
     counter += 1;
     runTicks(design.getCircuit(), clock.getClk(), 64);
+
+    hcl::core::vhdl::VHDLExport vhdl("bram_test");
+
+    auto* formatter = dynamic_cast<hcl::core::vhdl::DefaultCodeFormatting*>(vhdl.getFormatting());
+    formatter->addExternalNodeHandler(XilinxRam::writeVHDL);
+
+    vhdl(design.getCircuit());
 }
