@@ -63,6 +63,7 @@ namespace hcl::core::frontend {
 		using const_iterator = std::vector<Bit>::const_iterator;
 		using reverse_iterator = std::vector<Bit>::reverse_iterator;
 		using const_reverse_iterator = std::vector<Bit>::const_reverse_iterator;
+        using value_type = Bit;
 
 		BVec() = default;
 		BVec(const BVec& rhs) { assign(rhs.getReadPort()); }
@@ -138,6 +139,7 @@ namespace hcl::core::frontend {
 		SignalReadPort getReadPort() const final;
 		std::string_view getName() const final { return m_node->getName(); }
 		void setName(std::string name) override;
+        void addToSignalGroup(hlim::SignalGroup *signalGroup, unsigned index);
 
 	protected:
 		template <typename Int, typename = std::enable_if_t<std::is_integral_v<Int> & !std::is_same_v<Int, char> & !std::is_same_v<Int, bool>> >

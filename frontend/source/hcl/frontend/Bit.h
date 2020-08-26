@@ -41,6 +41,7 @@ namespace hcl::core::frontend {
             SignalReadPort getReadPort() const final;
             std::string_view getName() const final;
             void setName(std::string name) override;
+            void addToSignalGroup(hlim::SignalGroup *signalGroup, unsigned index);
 
         protected:
             void createNode();

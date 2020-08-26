@@ -1,6 +1,7 @@
 #pragma once
 
 #include "NodeGroup.h"
+#include "SignalGroup.h"
 #include "Node.h"
 #include "ConnectionType.h"
 #include "Clock.h"
@@ -17,6 +18,9 @@ class Circuit
         
         template<typename NodeType, typename... Args>
         NodeType *createNode(Args&&... args);        
+
+        template<typename... Args>
+        SignalGroup *createSignalGroup(Args&&... args);        
         
         template<typename ClockType, typename... Args>
         ClockType *createClock(Args&&... args);        
@@ -39,6 +43,7 @@ class Circuit
     protected:
         std::vector<std::unique_ptr<BaseNode>> m_nodes;
         std::unique_ptr<NodeGroup> m_root;
+        std::vector<std::unique_ptr<SignalGroup>> m_signalGroups;
         std::vector<std::unique_ptr<Clock>> m_clocks;
 };
 
@@ -54,5 +59,12 @@ ClockType *Circuit::createClock(Args&&... args) {
     m_clocks.push_back(std::make_unique<ClockType>(std::forward<Args>(args)...));
     return (ClockType *) m_clocks.back().get();
 }
+
+template<typename... Args>
+SignalGroup *Circuit::createSignalGroup(Args&&... args) {
+    m_signalGroups.push_back(std::make_unique<SignalGroup>(std::forward<Args>(args)...));
+    return m_signalGroups.back().get();
+}
+
 
 }
