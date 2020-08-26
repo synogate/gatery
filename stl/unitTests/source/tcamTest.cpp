@@ -38,6 +38,36 @@ BOOST_FIXTURE_TEST_CASE(ramSimpleDualPortAsyncTest, hcl::core::sim::UnitTestSimu
     runTicks(design.getCircuit(), clock.getClk(), 64);
 }
 
+BOOST_FIXTURE_TEST_CASE(ramDualPortAccessOrderTest, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::stl;
+    using namespace hcl::core::frontend;
+    DesignScope design;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    ClockScope scope(clock);
+
+    BVec counter = 8_b;
+    counter += 1;
+    counter = reg(counter, "8b0");
+
+    BVec addr0 = counter(0, -1);
+    BVec addr1 = addr0;
+
+    Ram<BVec> ram(2, 8_b);
+
+    BVec read00 = ram[addr0]; // async read of old ram content
+    BVec read10 = ram[addr1];
+
+    ram[addr0] = counter;
+    BVec read01 = ram[addr0]; // should read counter
+    BVec read11 = ram[addr1];
+
+    sim_debug() << read00 << ", " << read10 << ", " << read01 << ", " << read11;
+    
+    runTicks(design.getCircuit(), clock.getClk(), 8);
+}
+
 
 BOOST_FIXTURE_TEST_CASE(asyncMemoryTest, hcl::core::sim::UnitTestSimulationFixture)
 {
