@@ -79,6 +79,7 @@ BVec Clock::operator()(const BVec& signal) const
     SignalReadPort data = signal.getReadPort();
 
     auto* reg = DesignScope::createNode<hlim::Node_Register>();
+    reg->setName(std::string{ signal.getName() });
     reg->setClock(m_clock);
     reg->connectInput(hlim::Node_Register::DATA, data);
 
@@ -97,6 +98,7 @@ BVec Clock::operator()(const BVec& signal, const BVec& reset) const
     NormalizedWidthOperands ops(signal, reset);
 
     auto* reg = DesignScope::createNode<hlim::Node_Register>();
+    reg->setName(std::string{ signal.getName() });
     reg->setClock(m_clock);
     reg->connectInput(hlim::Node_Register::DATA, ops.lhs);
     reg->connectInput(hlim::Node_Register::RESET_VALUE, ops.rhs);
@@ -114,6 +116,7 @@ BVec Clock::operator()(const BVec& signal, const BVec& reset) const
 Bit Clock::operator()(const Bit& signal) const
 {
     auto* reg = DesignScope::createNode<hlim::Node_Register>();
+    reg->setName(std::string{ signal.getName() });
     reg->setClock(m_clock);
     reg->connectInput(hlim::Node_Register::DATA, signal.getReadPort());
 
@@ -130,6 +133,7 @@ Bit Clock::operator()(const Bit& signal) const
 Bit Clock::operator()(const Bit& signal, const Bit& reset) const
 {
     auto* reg = DesignScope::createNode<hlim::Node_Register>();
+    reg->setName(std::string{ signal.getName() });
     reg->setClock(m_clock);
     reg->connectInput(hlim::Node_Register::DATA, signal.getReadPort());
     reg->connectInput(hlim::Node_Register::RESET_VALUE, reset.getReadPort());

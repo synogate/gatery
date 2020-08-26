@@ -191,6 +191,7 @@ namespace hcl::core::frontend {
             if (m_range.subset)
             {
                 auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
+                rewire->setName(std::string(getName()));
                 rewire->connectInput(0, m_readPort);
                 rewire->setOp(pickSelection(m_range));
                 m_readPort = SignalReadPort(rewire, m_expansionPolicy);
@@ -221,6 +222,9 @@ namespace hcl::core::frontend {
     {
         if (!m_node)
             createNode(width(in), in.expansionPolicy);
+
+        if (getName().empty())
+            setName(in.node->getName());
 
         // TODO: handle implicit width expansion
         HCL_ASSERT(width(in) <= m_range.width);

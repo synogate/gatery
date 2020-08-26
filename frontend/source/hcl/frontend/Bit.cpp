@@ -52,6 +52,7 @@ namespace hcl::core::frontend {
         {
             // TODO: cache rewire node if m_node's input is unchanged
             auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
+            rewire->setName(std::string(getName()));
             rewire->connectInput(0, ret);
             rewire->changeOutputType(getConnType());
 
@@ -101,6 +102,9 @@ namespace hcl::core::frontend {
     void Bit::assign(SignalReadPort in)
     {
         hlim::ConnectionType type = m_node->getOutputConnectionType(0);
+
+        if (getName().empty())
+            setName(in.node->getName());
 
         if (type.interpretation != hlim::ConnectionType::BOOL)
         {
