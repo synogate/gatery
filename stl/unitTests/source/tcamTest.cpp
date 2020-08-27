@@ -61,7 +61,7 @@ BOOST_FIXTURE_TEST_CASE(ramDualPortAccessOrderTest, hcl::core::sim::UnitTestSimu
     BVec read00 = ram[addr0]; // async read of old ram content
     BVec read10 = ram[addr1];
 
-    ram[addr0] = counter;
+    ram[reg(addr0)] = counter;
     BVec read01 = ram[addr0]; // should read counter
     BVec read11 = ram[addr1];
 
@@ -146,41 +146,26 @@ BOOST_FIXTURE_TEST_CASE(xilinxBramTest, hcl::core::sim::UnitTestSimulationFixtur
     counter = reg(counter, "6b0");
     HCL_NAMED(counter);
 
-    hcl::stl::blockram::XilinxSimpleDualPortBlockRam::DefaultBitVectorState initVec;
-    initVec.resize(20 * (1ull << 5));
-    initVec.clearRange(hcl::core::sim::DefaultConfig::DEFINED, 0, initVec.size());
+    Stream<WritePort> wr(5, 20);
+    Stream<BVec> rd = 5_b;
+    Stream<BVec> rdData = simpleDualPortRam(wr, rd, "test");
 
-    using XilinxRam = hcl::stl::blockram::XilinxSimpleDualPortBlockRam;
-
-    auto* xram = DesignScope::createNode<XilinxRam>(
-        clock.getClk(), clock.getClk(), initVec, 20, 20, false
-    );
-
-    AvalonMM ram(5, 20);
-    ram.address = counter(0, 5);
-    ram.read = '1';
-    ram.readData = BVec{ SignalReadPort(xram) };
-    ram.write = !counter[5];
-    ram.writeData = zext(counter);
-    HCL_NAMED(ram);
-
-    const Bit one = '1';
-    xram->connectInput(XilinxRam::WRITE_ADDR, ram.address.getReadPort());
-    xram->connectInput(XilinxRam::WRITE_DATA, ram.writeData.getReadPort());
-    xram->connectInput(XilinxRam::WRITE_ENABLE, ram.write.getReadPort());
-    xram->connectInput(XilinxRam::READ_ADDR, ram.address.getReadPort());
-    xram->connectInput(XilinxRam::READ_ENABLE, one.getReadPort());
+    rd.value() = counter(0, 5);
+    rd.valid = '1';
+    wr.address = counter(0, 5);
+    wr.writeData = zext(counter);
+    wr.valid = !counter[5];
 
     BVec lastCounter = reg(counter, "6b0");
-    sim_assert(!lastCounter[5] | ram.readData == zext(lastCounter(0, 5))) << ram.readData << " should be " << lastCounter(0, 5) << " phase " << lastCounter[5];
+    sim_assert(!lastCounter[5] | rdData == zext(lastCounter(0, 5))) << rdData << " should be " << lastCounter(0, 5) << " phase " << lastCounter[5];
 
     counter += 1;
     runTicks(design.getCircuit(), clock.getClk(), 64);
 
-    hcl::core::vhdl::VHDLExport vhdl("bram_test");
+    //hcl::core::vhdl::VHDLExport vhdl("bram_test");
 
-    auto* formatter = dynamic_cast<hcl::core::vhdl::DefaultCodeFormatting*>(vhdl.getFormatting());
-    formatter->addExternalNodeHandler(XilinxRam::writeVHDL);
+    //auto* formatter = dynamic_cast<hcl::core::vhdl::DefaultCodeFormatting*>(vhdl.getFormatting());
+    //formatter->addExternalNodeHandler(blockram::XilinxSimpleDualPortBlockRam::writeIntelVHDL);
 
-    vhdl(design.getCircuit());
+    //vhdl(design.getCircuit());
 }

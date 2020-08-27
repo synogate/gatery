@@ -175,4 +175,22 @@ namespace hcl::stl {
     };
 
 
+
+    // temp interface
+    struct WritePort
+    {
+        WritePort(size_t addrWidth, size_t dataWidth) :
+            address(hcl::core::frontend::BitWidth{ addrWidth }),
+            writeData(hcl::core::frontend::BitWidth{ dataWidth })
+        {}
+
+        hcl::core::frontend::BVec address;
+        hcl::core::frontend::BVec writeData;
+    };
+
+    // TODO remove simpleDualPortRam API
+    Stream<core::frontend::BVec> simpleDualPortRam(Stream<WritePort>& write, Stream<core::frontend::BVec> readAddress, std::string_view name);
+
 }
+
+BOOST_HANA_ADAPT_STRUCT(hcl::stl::WritePort, address, writeData);

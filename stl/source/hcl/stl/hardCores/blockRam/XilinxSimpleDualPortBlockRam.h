@@ -67,7 +67,9 @@ class XilinxSimpleDualPortBlockRam : public core::hlim::Node_External
         
         static bool writeVHDL(const core::vhdl::CodeFormatting *codeFormatting, std::ostream &file, const core::hlim::Node_External *node, unsigned indent,
                         const std::vector<std::string> &inputSignalNames, const std::vector<std::string> &outputSignalNames, const std::vector<std::string> &clockNames);
-    protected:
+        static bool writeIntelVHDL(const core::vhdl::CodeFormatting* codeFormatting, std::ostream& file, const core::hlim::Node_External* node, unsigned indent,
+            const std::vector<std::string>& inputSignalNames, const std::vector<std::string>& outputSignalNames, const std::vector<std::string>& clockNames);
+protected:
         DefaultBitVectorState m_initialData;
         size_t m_writeDataWidth;
         size_t m_readDataWidth;

@@ -5,6 +5,8 @@
 
 #include <boost/format.hpp>
 
+#include <string_view>
+
 namespace hcl::stl::blockram {
 
 using namespace core;
@@ -299,7 +301,7 @@ bool XilinxSimpleDualPortBlockRam::writeVHDL(const core::vhdl::CodeFormatting *c
         if (!inputSignalNames[XilinxSimpleDualPortBlockRam::WRITE_ADDR].empty())
             portmapList.push_back(std::string("WRADDR => ") + inputSignalNames[XilinxSimpleDualPortBlockRam::WRITE_ADDR]);
             
-        if (!inputSignalNames[XilinxSimpleDualPortBlockRam::READ_DATA].empty())
+        if (!outputSignalNames[XilinxSimpleDualPortBlockRam::READ_DATA].empty())
             portmapList.push_back(std::string("DO => ") + outputSignalNames[XilinxSimpleDualPortBlockRam::READ_DATA]);
 
         for (auto i : utils::Range(portmapList.size())) {
@@ -316,6 +318,80 @@ bool XilinxSimpleDualPortBlockRam::writeVHDL(const core::vhdl::CodeFormatting *c
         return true;
     }
     return false;
+}
+
+bool XilinxSimpleDualPortBlockRam::writeIntelVHDL(const core::vhdl::CodeFormatting* codeFormatting, std::ostream& file, const core::hlim::Node_External* node, unsigned indent, const std::vector<std::string>& inputSignalNames, const std::vector<std::string>& outputSignalNames, const std::vector<std::string>& clockNames)
+{
+    const XilinxSimpleDualPortBlockRam* ram = dynamic_cast<const XilinxSimpleDualPortBlockRam*>(node);
+    if (!ram)
+        return false;
+    HCL_ASSERT(ram->getWriteDataWidth() == ram->getReadDataWidth());
+
+    codeFormatting->indent(file, indent);
+    file << "inst_" << node->getName() << " : altdpram generic map (" << std::endl;
+
+    bool firstPort = true;
+    auto addPort = [&](std::string_view portName, std::string_view signalName) {
+        if (!signalName.empty())
+        {
+            if (!firstPort) file << ",\n"; firstPort = false;
+            codeFormatting->indent(file, indent + 1);
+            file << portName << " => " << signalName;
+        }
+    };
+
+
+    addPort("lpm_type", "\"altdpram\"");
+    addPort("read_during_write_mode_mixed_ports", "\"DONT_CARE\"");
+    //addPort("width_byteena", "1");
+
+    const size_t addrWidth = utils::Log2C(ram->getInitialData().size() / ram->getReadDataWidth());
+    addPort("ram_block_type", addrWidth <= 6 ? "\"MLAB\"" : "\"AUTO\"");
+
+    addPort("width", std::to_string(ram->getReadDataWidth()));
+    addPort("widthad", std::to_string(addrWidth));
+
+    // write data
+    addPort("indata_aclr", "\"OFF\"");
+    addPort("indata_reg", "\"INCLOCK\"");
+    // write address
+    addPort("wraddress_aclr", "\"OFF\"");
+    addPort("wraddress_reg", "\"INCLOCK\"");
+    // write ctrl
+    addPort("wrcontrol_aclr", "\"OFF\"");
+    addPort("wrcontrol_reg", "\"INCLOCK\"");
+    // read data
+    addPort("outdata_aclr", "\"OFF\"");
+    addPort("outdata_reg", "\"UNREGISTERED\"");
+    // read address
+    addPort("rdaddress_aclr", "\"OFF\"");
+    addPort("rdaddress_reg", "\"OUTCLOCK\"");
+    // read ctrl
+    addPort("rdcontrol_aclr", "\"OFF\"");
+    addPort("rdcontrol_reg", "\"OUTCLOCK\"");
+
+    file << '\n';
+    codeFormatting->indent(file, indent);
+    file << ") port map (" << std::endl;
+
+    firstPort = true;
+
+    addPort("outclock", clockNames[XilinxSimpleDualPortBlockRam::READ_CLK]);
+    addPort("inclock", clockNames[XilinxSimpleDualPortBlockRam::WRITE_CLK]);
+
+    addPort("rden", inputSignalNames[XilinxSimpleDualPortBlockRam::READ_ENABLE]);
+    addPort("rdaddress", inputSignalNames[XilinxSimpleDualPortBlockRam::READ_ADDR]);
+    addPort("q", outputSignalNames[XilinxSimpleDualPortBlockRam::READ_DATA]);
+
+    addPort("wren", inputSignalNames[XilinxSimpleDualPortBlockRam::WRITE_ENABLE]);
+    addPort("wraddress", inputSignalNames[XilinxSimpleDualPortBlockRam::WRITE_ADDR]);
+    addPort("data", inputSignalNames[XilinxSimpleDualPortBlockRam::WRITE_DATA]);
+
+    file << '\n';
+    codeFormatting->indent(file, indent);
+    file << ");" << std::endl;
+
+    return true;
 }
 
 
