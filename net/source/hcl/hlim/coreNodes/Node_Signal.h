@@ -4,7 +4,9 @@
 #include "../ConnectionType.h"
 
 namespace hcl::core::hlim {
-    
+
+class SignalGroup;
+
 class Node_Signal : public Node<Node_Signal>
 {
     public:
@@ -19,6 +21,13 @@ class Node_Signal : public Node<Node_Signal>
         
         void connectInput(const NodePort &nodePort);
         void disconnectInput();
+
+        const SignalGroup *getSignalGroup() const { return m_signalGroup; }
+        SignalGroup *getSignalGroup() { return m_signalGroup; }
+        
+        void moveToSignalGroup(SignalGroup *group, unsigned index = ~0u);        
+    protected:
+        SignalGroup *m_signalGroup = nullptr;
 };
 
 }

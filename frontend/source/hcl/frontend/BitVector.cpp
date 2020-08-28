@@ -206,6 +206,11 @@ namespace hcl::core::frontend {
             m_node->getDriver(0).node->setName(name);
         m_node->setName(move(name));
     }
+    
+    void BVec::addToSignalGroup(hlim::SignalGroup *signalGroup, unsigned index)
+    {
+        m_node->moveToSignalGroup(signalGroup, index);
+    }
 
     void BVec::assign(std::string_view value)
     {

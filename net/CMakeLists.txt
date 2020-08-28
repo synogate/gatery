@@ -67,6 +67,8 @@ add_library(hcl_net STATIC
     source/hcl/hlim/NodeGroup.h
     source/hcl/hlim/NodeIO.cpp
     source/hcl/hlim/NodeIO.h
+    source/hcl/hlim/SignalGroup.cpp
+    source/hcl/hlim/SignalGroup.h
 
     source/hcl/simulation/BitAllocator.cpp
     source/hcl/simulation/BitAllocator.h

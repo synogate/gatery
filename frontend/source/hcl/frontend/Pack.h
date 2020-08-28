@@ -2,6 +2,9 @@
 #include "BitVector.h"
 #include "Bit.h"
 
+#include <hcl/hlim/SignalGroup.h>
+
+
 #include <stack>
 
 #include <boost/spirit/home/support/container.hpp>
@@ -15,6 +18,10 @@ namespace hcl::core::frontend
 	{
 		struct SignalVisitor
 		{
+			void enterPackStruct() {}
+			void enterPackContainer() {}
+			void leavePack() {}
+
 			void enter(std::string_view name) {}
 			void leave() {}
 
@@ -27,6 +34,7 @@ namespace hcl::core::frontend
 		{
 			if constexpr (boost::spirit::traits::is_container<Compound>::value)
 			{
+                v.enterPackContainer();
 				size_t idx = 0;
 				std::string idx_string;
 
@@ -37,14 +45,17 @@ namespace hcl::core::frontend
 					visitCompound(v, item);
 					v.leave();
 				}
+				v.leavePack();
 			}
 			else if constexpr (boost::hana::Struct<Compound>::value)
 			{
+                v.enterPackStruct();
 				boost::hana::for_each(boost::hana::accessors<std::remove_cv_t<Compound>>(), [&](auto member) {
 					v.enter(boost::hana::first(member).c_str());
 					visitCompound(v, boost::hana::second(member)(signal));
 					v.leave();
 					});
+                v.leavePack();
 			}
 			else
 			{
@@ -78,7 +89,7 @@ namespace hcl::core::frontend
 	template<typename Comp>
 	void setName(Comp& compound, std::string_view prefix)
 	{
-		struct NameVisitor
+		struct NameVisitor : public internal::SignalVisitor
 		{
 			void enter(std::string_view name) { m_names.push_back(name); }
 			void leave() { m_names.pop_back(); }
@@ -180,5 +191,51 @@ namespace hcl::core::frontend
 		internal::visitCompound(v, compound);
 	}
 
+	
+    template<typename Comp>
+	void makeSignalGroup(Comp& compound)
+	{
+		struct Visitor : public internal::SignalVisitor
+		{
+			void enterPackStruct() {
+				hlim::SignalGroup *sigGroup;
+				if (m_sigGroups.empty())
+					sigGroup = DesignScope::get()->getCircuit().createSignalGroup(hlim::SignalGroup::GroupType::STRUCT);
+				else
+					sigGroup = m_sigGroups.back()->addChildSignalGroup(hlim::SignalGroup::GroupType::STRUCT);
+				sigGroup->recordStackTrace();
+				m_sigGroups.push_back(sigGroup);
+            }
+			void enterPackContainer() {
+				hlim::SignalGroup *sigGroup;
+				if (m_sigGroups.empty())
+					sigGroup = DesignScope::get()->getCircuit().createSignalGroup(hlim::SignalGroup::GroupType::ARRAY);
+				else
+					sigGroup = m_sigGroups.back()->addChildSignalGroup(hlim::SignalGroup::GroupType::ARRAY);
+				sigGroup->recordStackTrace();
+				m_sigGroups.push_back(sigGroup);
+            }
+			void leavePack() {
+				m_sigGroups.pop_back();                
+            }
+			
+			void operator () (BVec& vec)
+			{
+                if (!m_sigGroups.empty())
+                    vec.addToSignalGroup(m_sigGroups.back(), ~0u);
+			}
+
+			void operator () (Bit& bit) 
+            {
+                if (!m_sigGroups.empty())
+                    bit.addToSignalGroup(m_sigGroups.back(), ~0u);
+            }
+
+			std::vector<hlim::SignalGroup*> m_sigGroups;
+		};
+
+		Visitor v;
+		internal::visitCompound(v, compound);
+	}
 
 }
