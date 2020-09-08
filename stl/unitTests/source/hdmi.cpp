@@ -26,7 +26,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, tmdsReduction,
     BOOST_TEST(encoded.getWidth() == a.getWidth() + 1);
 
     BVec decoded = hcl::stl::hdmi::tmdsDecodeReduceTransitions(encoded);
-    sim_assert(a == decoded);
+    sim_assert(a == decoded) << "decode(encoder()) mismatch: input:" << a << " decoded " << decoded;
     sim_debug() << a << " => " << encoded << " => " << decoded << " | " << hcl::stl::bitcount(a);
     ;
 

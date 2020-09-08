@@ -71,7 +71,7 @@ void Node_Logic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::De
             break;
             case OR:
                 result = left | right;
-                resultDefined = (leftDefined & left) | (rightDefined & right) | (leftDefined  & rightDefined);
+                resultDefined = (leftDefined & left) | (rightDefined & right) | (leftDefined & rightDefined);
             break;
             case NOR:
                 result = ~(left | right);

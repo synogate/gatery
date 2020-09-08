@@ -782,8 +782,6 @@ BOOST_FIXTURE_TEST_CASE(msbBroadcast, hcl::core::sim::UnitTestSimulationFixture)
 
     DesignScope design;
 
-    const char* t = false;
-
     BVec vec = "4b0000";
     BVec vec_2 = "4b1000";
     vec ^= vec_2.msb();
