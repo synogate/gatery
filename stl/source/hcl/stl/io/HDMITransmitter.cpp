@@ -50,7 +50,7 @@ core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::fronten
     imbalance.setClock(pixelClock);
     HCL_NAMED(imbalance);
     
-    core::frontend::BVec result(10);
+    core::frontend::BVec result(10_b, Expansion::none);
     HCL_NAMED(result);
     
     HCL_COMMENT << "If sending data, 8/10 encode the data, otherwise encode the control bits";
@@ -126,7 +126,7 @@ core::frontend::BVec tmdsEncodeReduceTransitions(const core::frontend::BVec& dat
 
     HCL_COMMENT << "Decode using 1=xor, 0=xnor";
     BVec tmdsReduced = cat(~invert, data);
-    for (auto i : utils::Range<size_t>(1, data.getWidth()))
+    for (auto i : utils::Range<size_t>(1, data.size()))
         tmdsReduced[i] ^= tmdsReduced[i - 1] ^ invert;
 
     HCL_NAMED(tmdsReduced);
@@ -135,7 +135,7 @@ core::frontend::BVec tmdsEncodeReduceTransitions(const core::frontend::BVec& dat
 
 core::frontend::BVec tmdsDecodeReduceTransitions(const core::frontend::BVec& data)
 {
-    BVec decoded = data(0, data.getWidth() - 1);
+    BVec decoded = data(0, data.size() - 1);
     decoded ^= decoded << 1;
     decoded(1, decoded.getWidth() - 1) ^= ~data.msb();
 

@@ -9,6 +9,7 @@
 
 
 #include "../simulation/BitVectorState.h"
+#include "../utils/Range.h"
 
 
 #include <set>

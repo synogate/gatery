@@ -102,17 +102,17 @@ namespace hcl::stl {
         {
             auto* scope = hcl::core::frontend::ConditionalScope::get();
             if (!scope)
-                m_port.write = '1';
+                this->m_port.write = '1';
             else
-                m_port.write = hcl::core::frontend::SignalReadPort{ scope->getFullCondition() };
+                this->m_port.write = hcl::core::frontend::SignalReadPort{ scope->getFullCondition() };
 
-            m_port.writeData = pack(value);
-            core::frontend::sim_debug() << "write " << *m_port.write << ", data " << *m_port.writeData << ", address " << m_port.address;
+            this->m_port.writeData = pack(value);
+            core::frontend::sim_debug() << "write " << *this->m_port.write << ", data " << *this->m_port.writeData << ", address " << this->m_port.address;
 
-            for (size_t i = 0; i < m_memory->data.size(); ++i)
+            for (size_t i = 0; i < this->m_memory->data.size(); ++i)
             {
-                IF(m_port.address == i)
-                    m_memory->data[i] = *m_port.writeData;
+                IF(this->m_port.address == i)
+                    this->m_memory->data[i] = *this->m_port.writeData;
             }
             return *this;
         }
@@ -162,15 +162,16 @@ namespace hcl::stl {
     class Ram : public Rom<Data>
     {
     public:
-        using Rom::Rom;
+        using Rom<Data>::Rom;
+        using BVec = core::frontend::BVec;
         
         // - merge same bitvector node ports
         // - allow different address width for Data = BVec
         MemoryPort<Data> operator [] (const BVec& address)
         {
             auto readPort = address.getReadPort();
-            auto [it, found] = m_memory->ports.try_emplace(readPort, address);
-            return { m_memory, it->second, m_defaultValue };
+            auto [it, found] = this->m_memory->ports.try_emplace(readPort, address);
+            return { this->m_memory, it->second, this->m_defaultValue };
         }
     };
 
