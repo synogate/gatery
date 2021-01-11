@@ -5,6 +5,7 @@
 #include "AST.h"
 
 #include "../../hlim/Clock.h"
+#include "../../hlim/coreNodes/Node_Pin.h"
 
 
 #include <memory>
@@ -82,6 +83,9 @@ void Entity::allocateNames()
     for (auto &clock : m_inputClocks)
         m_namespaceScope.allocateName(clock, clock->getName());
 
+    for (auto &ioPin : m_ioPins)
+        m_namespaceScope.allocateName(ioPin, ioPin->getName());
+
     BasicBlock::allocateNames();
     for (auto &block : m_blocks)
         block->allocateNames();
@@ -116,6 +120,26 @@ void Entity::writeVHDL(std::ostream &stream)
                 line << m_namespaceScope.getName(clk)<<clk->getResetName() << " : IN STD_LOGIC";
                 portList.push_back(line.str());
             }
+        }
+        for (auto &ioPin : m_ioPins) {
+            bool isInput = !ioPin->getDirectlyDriven(0).empty();
+            bool isOutput = ioPin->getNonSignalDriver(0).node != nullptr;
+
+            std::stringstream line;
+            line << m_namespaceScope.getName(ioPin) << " : ";
+            if (isInput && isOutput) {
+                line << "INOUT "; // this will need more thought at other places to work
+                cf.formatConnectionType(line, ioPin->getOutputConnectionType(0));
+            } else if (isInput) {
+                line << "IN ";
+                cf.formatConnectionType(line, ioPin->getOutputConnectionType(0));
+            } else if (isOutput) {
+                line << "OUT ";
+                auto driver = ioPin->getNonSignalDriver(0);
+                cf.formatConnectionType(line, driver.node->getOutputConnectionType(driver.port));
+            } else
+                continue;
+            portList.push_back(line.str());
         }
         for (const auto &signal : m_inputs) {
             std::stringstream line;

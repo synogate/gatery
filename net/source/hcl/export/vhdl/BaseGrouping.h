@@ -34,6 +34,7 @@ class BaseGrouping
         inline const std::set<hlim::NodePort> &getInputs() { return m_inputs; }
         inline const std::set<hlim::NodePort> &getOutputs() { return m_outputs; }
         inline const std::set<hlim::Clock *> &getClocks() { return m_inputClocks; }
+        inline const std::set<hlim::Node_Pin *> &getIoPins() { return m_ioPins; }
     protected:
         AST &m_ast;
         NamespaceScope m_namespaceScope;
@@ -45,6 +46,7 @@ class BaseGrouping
         std::set<hlim::NodePort> m_inputs;
         std::set<hlim::NodePort> m_outputs;
         std::set<hlim::Clock *> m_inputClocks;
+        std::set<hlim::Node_Pin*> m_ioPins;
         
         
         bool isProducedExternally(hlim::NodePort nodePort);

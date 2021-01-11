@@ -207,9 +207,9 @@ namespace hcl::core::frontend {
         m_node->setName(move(name));
     }
     
-    void BVec::addToSignalGroup(hlim::SignalGroup *signalGroup, unsigned index)
+    void BVec::addToSignalGroup(hlim::SignalGroup *signalGroup)
     {
-        m_node->moveToSignalGroup(signalGroup, index);
+        m_node->moveToSignalGroup(signalGroup);
     }
 
     void BVec::assign(std::string_view value)

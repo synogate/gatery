@@ -6,6 +6,7 @@
 #include "coreNodes/Node_Multiplexer.h"
 #include "coreNodes/Node_Logic.h"
 #include "coreNodes/Node_Constant.h"
+#include "coreNodes/Node_Pin.h"
 
 
 #include "../simulation/BitVectorState.h"
@@ -84,6 +85,9 @@ static bool isUnusedNode(const BaseNode& node)
 
     if (signalNode && !signalNode->getName().empty())
         return false;
+
+    auto* pinNode = dynamic_cast<const Node_Pin*>(&node);
+    if (pinNode) return false;
 
     for (auto j : utils::Range(node.getNumOutputPorts()))
         if (!node.getDirectlyDriven(j).empty())

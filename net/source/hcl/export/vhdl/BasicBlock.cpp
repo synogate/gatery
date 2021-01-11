@@ -125,6 +125,9 @@ void BasicBlock::routeChildIOUpwards(BaseGrouping *child)
     for (auto &clock : child->getClocks()) {
         m_inputClocks.insert(clock);
     }
+    for (auto &ioPin : child->getIoPins()) {
+        m_ioPins.insert(ioPin);
+    }
 
     verifySignalsDisjoint();
 }
@@ -280,6 +283,12 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
                         line << m_namespaceScope.getName(s)<<s->getResetName();
                         portmapList.push_back(line.str());
                     }
+                }
+                for (auto &s : subEntity->m_ioPins) {
+                    std::stringstream line;
+                    line << subEntity->m_namespaceScope.getName(s) << " => ";
+                    line << m_namespaceScope.getName(s);
+                    portmapList.push_back(line.str());
                 }
                 for (auto &s : subEntity->m_inputs) {
                     std::stringstream line;

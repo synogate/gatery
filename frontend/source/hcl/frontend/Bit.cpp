@@ -76,9 +76,9 @@ namespace hcl::core::frontend {
         m_node->setName(move(name));
     }
 
-    void Bit::addToSignalGroup(hlim::SignalGroup *signalGroup, unsigned index)
+    void Bit::addToSignalGroup(hlim::SignalGroup *signalGroup)
     {
-        m_node->moveToSignalGroup(signalGroup, index);
+        m_node->moveToSignalGroup(signalGroup);
     }
 
     void Bit::createNode()
