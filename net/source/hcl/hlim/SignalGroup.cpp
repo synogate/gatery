@@ -12,7 +12,7 @@ SignalGroup::SignalGroup(GroupType groupType) : m_groupType(groupType)
 SignalGroup::~SignalGroup()
 {
     while (!m_nodes.empty())
-        m_nodes.front()->moveToSignalGroup(nullptr);
+        m_nodes.back()->moveToSignalGroup(nullptr);
 }
 
 

@@ -29,28 +29,19 @@ void Node_Signal::disconnectInput()
     NodeIO::disconnectInput(0);
 }
 
-void Node_Signal::moveToSignalGroup(SignalGroup *group, unsigned index)
+void Node_Signal::moveToSignalGroup(SignalGroup *group)
 {
     if (m_signalGroup != nullptr) {
         auto it = std::find(m_signalGroup->m_nodes.begin(), m_signalGroup->m_nodes.end(), this);
         HCL_ASSERT(it != m_signalGroup->m_nodes.end());
 
-        *it = nullptr;
+        *it = std::move(m_signalGroup->m_nodes.back());
+        m_signalGroup->m_nodes.pop_back();
     }
     
     m_signalGroup = group;
-    if (m_signalGroup != nullptr) {
-        if (index == ~0u)
-            m_signalGroup->m_nodes.push_back(this);
-        else {
-            if (index >= m_signalGroup->m_nodes.size())
-                m_signalGroup->m_nodes.resize(index+1, nullptr);
-            
-            if (m_signalGroup->m_nodes[index] != nullptr)
-                m_signalGroup->m_nodes[index]->moveToSignalGroup(nullptr);
-            m_signalGroup->m_nodes[index] = this;
-        }
-    }
+    if (m_signalGroup != nullptr)
+        m_signalGroup->m_nodes.push_back(this);
 }
 
 

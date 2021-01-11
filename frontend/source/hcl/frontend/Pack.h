@@ -197,23 +197,20 @@ namespace hcl::core::frontend
 	{
 		struct Visitor : public internal::SignalVisitor
 		{
-			void enterPackStruct() {
+			void enterPack(hlim::SignalGroup::GroupType groupType) {
 				hlim::SignalGroup *sigGroup;
 				if (m_sigGroups.empty())
-					sigGroup = DesignScope::get()->getCircuit().createSignalGroup(hlim::SignalGroup::GroupType::STRUCT);
+					sigGroup = DesignScope::get()->getCircuit().createSignalGroup(groupType);
 				else
-					sigGroup = m_sigGroups.back()->addChildSignalGroup(hlim::SignalGroup::GroupType::STRUCT);
+					sigGroup = m_sigGroups.back()->addChildSignalGroup(groupType);
 				sigGroup->recordStackTrace();
 				m_sigGroups.push_back(sigGroup);
+			}
+			void enterPackStruct() {
+				enterPack(hlim::SignalGroup::GroupType::STRUCT);
             }
 			void enterPackContainer() {
-				hlim::SignalGroup *sigGroup;
-				if (m_sigGroups.empty())
-					sigGroup = DesignScope::get()->getCircuit().createSignalGroup(hlim::SignalGroup::GroupType::ARRAY);
-				else
-					sigGroup = m_sigGroups.back()->addChildSignalGroup(hlim::SignalGroup::GroupType::ARRAY);
-				sigGroup->recordStackTrace();
-				m_sigGroups.push_back(sigGroup);
+				enterPack(hlim::SignalGroup::GroupType::ARRAY);
             }
 			void leavePack() {
 				m_sigGroups.pop_back();                
@@ -222,13 +219,13 @@ namespace hcl::core::frontend
 			void operator () (BVec& vec)
 			{
                 if (!m_sigGroups.empty())
-                    vec.addToSignalGroup(m_sigGroups.back(), ~0u);
+                    vec.addToSignalGroup(m_sigGroups.back());
 			}
 
 			void operator () (Bit& bit) 
             {
                 if (!m_sigGroups.empty())
-                    bit.addToSignalGroup(m_sigGroups.back(), ~0u);
+                    bit.addToSignalGroup(m_sigGroups.back());
             }
 
 			std::vector<hlim::SignalGroup*> m_sigGroups;
