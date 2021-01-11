@@ -19,6 +19,8 @@ add_library(hcl_frontend STATIC
     source/hcl/frontend/Constant.h
     source/hcl/frontend/FSM.cpp
     source/hcl/frontend/FSM.h
+    source/hcl/frontend/Pin.cpp
+    source/hcl/frontend/Pin.h
     source/hcl/frontend/PriorityConditional.cpp
     source/hcl/frontend/PriorityConditional.h
     source/hcl/frontend/Registers.cpp

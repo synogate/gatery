@@ -37,6 +37,8 @@ add_library(hcl_net STATIC
     source/hcl/hlim/coreNodes/Node_Logic.h
     source/hcl/hlim/coreNodes/Node_Multiplexer.cpp
     source/hcl/hlim/coreNodes/Node_Multiplexer.h
+    source/hcl/hlim/coreNodes/Node_Pin.cpp
+    source/hcl/hlim/coreNodes/Node_Pin.h
     source/hcl/hlim/coreNodes/Node_PriorityConditional.cpp
     source/hcl/hlim/coreNodes/Node_PriorityConditional.h
     source/hcl/hlim/coreNodes/Node_Register.cpp

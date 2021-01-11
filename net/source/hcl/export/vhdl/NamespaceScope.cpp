@@ -74,6 +74,35 @@ const std::string &NamespaceScope::getName(hlim::Clock *clock) const
     return m_parent->getName(clock);
 }
 
+
+std::string NamespaceScope::allocateName(hlim::Node_Pin *ioPin, const std::string &desiredName)
+{
+    CodeFormatting &cf = m_ast.getCodeFormatting();
+
+    HCL_ASSERT(m_ioPinNames.find(ioPin) == m_ioPinNames.end());
+    
+    unsigned attempt = 0;
+    std::string name, upperCaseName;
+    do {
+        name = cf.getIoPinName(desiredName, attempt++);
+        upperCaseName = boost::to_upper_copy(name);
+    } while (isNameInUse(upperCaseName));
+
+    m_namesInUse.insert(upperCaseName);
+    m_ioPinNames[ioPin] = name;
+    return name;    
+}
+
+const std::string &NamespaceScope::getName(hlim::Node_Pin *ioPin) const
+{
+    auto it = m_ioPinNames.find(ioPin);
+    if (it != m_ioPinNames.end())
+        return it->second;
+    
+    HCL_ASSERT_HINT(m_parent != nullptr, "End of namespace scope chain reached, it seems no name was allocated for the given ioPin!");
+    return m_parent->getName(ioPin);
+}
+
 std::string NamespaceScope::allocateEntityName(const std::string &desiredName)
 {
     CodeFormatting &cf = m_ast.getCodeFormatting();
