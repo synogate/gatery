@@ -49,7 +49,7 @@ hcl::stl::StreamSource<hcl::stl::BVecPair> hcl::stl::binaryGCDStep1(StreamSink<B
                 a = mux(abs.msb(), { (BVec&)a, (BVec&)b }); // TODO: (BVec&) cast?
 
                 HCL_COMMENT << "a - b is always even, it is sufficient to build the 1s complement";
-                b = (abs(0, b.getWidth()) ^ abs.msb()) >> 1;
+                b = (abs(0, b.size()) ^ abs.msb()) >> 1;
             }
         }
         

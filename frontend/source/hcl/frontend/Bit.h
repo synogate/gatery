@@ -34,7 +34,7 @@ namespace hcl::core::frontend {
             template<typename T, typename = std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, bool>>>
             Bit& operator=(T rhs) { assign(rhs); return *this; }
 
-            size_t getWidth() const final;
+            BitWidth getWidth() const final;
             hlim::ConnectionType getConnType() const final;
             SignalReadPort getReadPort() const final;
             std::string_view getName() const final;

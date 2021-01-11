@@ -7,6 +7,8 @@ namespace hcl::core::frontend
 	{
 		auto operator <=> (const BitWidth&) const = default;
 		unsigned long long value;
+
+		operator unsigned long long() const { return value; }
 	};
 
 	inline namespace literals

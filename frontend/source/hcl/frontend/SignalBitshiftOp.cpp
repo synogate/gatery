@@ -8,7 +8,7 @@ hlim::ConnectionType SignalBitShiftOp::getResultingType(const hlim::ConnectionTy
 
 
 BVec SignalBitShiftOp::operator()(const BVec &operand) {
-    const size_t width = operand.getWidth();
+    const size_t width = operand.size();
     
     hlim::Node_Rewire *node = DesignScope::createNode<hlim::Node_Rewire>(1);
     node->recordStackTrace();
@@ -102,6 +102,13 @@ BVec &operator<<=(BVec &signal, int amount)  {
 BVec &operator>>=(BVec &signal, int amount)  {
     signal = signal >> amount;
     return signal;
+}
+
+BVec rot(const BVec& signal, int amount)
+{
+    SignalBitShiftOp op((int)amount);
+    op.rotate();
+    return op(signal);
 }
 
 }

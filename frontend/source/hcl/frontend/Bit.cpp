@@ -29,9 +29,9 @@ namespace hcl::core::frontend {
         m_offset(offset)
     {}
 
-    size_t Bit::getWidth() const
+    BitWidth Bit::getWidth() const
     {
-        return 1;
+        return 1_b;
     }
 
     hlim::ConnectionType Bit::getConnType() const

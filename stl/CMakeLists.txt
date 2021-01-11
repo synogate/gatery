@@ -20,7 +20,7 @@ add_library(hcl_stl STATIC
     source/hcl/stl/algorithm/TreeReduce.h
     source/hcl/stl/algorithm/TreeReduce.cpp
     "source/hcl/stl/algorithm/GCD.h" 
-    "source/hcl/stl/algorithm/GCD.cpp" "source/hcl/stl/algorithm/Stream.h" "source/hcl/stl/utils/OneHot.h" "source/hcl/stl/utils/OneHot.cpp" "source/hcl/stl/hardCores/AsyncRam.h" "source/hcl/stl/hardCores/AsyncRam.cpp" "source/hcl/stl/kvs/TCAM.h" "source/hcl/stl/kvs/TCAM.cpp")
+    "source/hcl/stl/algorithm/GCD.cpp" "source/hcl/stl/algorithm/Stream.h" "source/hcl/stl/utils/OneHot.h" "source/hcl/stl/utils/OneHot.cpp" "source/hcl/stl/hardCores/AsyncRam.h" "source/hcl/stl/hardCores/AsyncRam.cpp" "source/hcl/stl/kvs/TCAM.h" "source/hcl/stl/kvs/TCAM.cpp" "source/hcl/stl/crypto/sha1.h" "source/hcl/stl/crypto/sha1.cpp")
 
 set(data_files 
 )

@@ -37,6 +37,7 @@ namespace hcl::core::frontend {
         static Selection StridedSlice(int offset, int size, size_t stride);
 
         static Selection Symbol(int idx, size_t symbolWidth);
+        static Selection Symbol(size_t idx, size_t symbolWidth) { return Symbol(int(idx), symbolWidth); }
 
         auto operator <=> (const Selection& rhs) const = default;
     };
@@ -116,8 +117,8 @@ namespace hcl::core::frontend {
         Bit& at(size_t idx) { return aliasVec().at(idx); }
         const Bit& at(size_t idx) const { return aliasVec().at(idx); }
 
-        bool empty() const { return getWidth() == 0; }
-        size_t size() const { return getWidth(); }
+        bool empty() const { return size() == 0; }
+        size_t size() const { return getWidth().value; }
 
         Bit& front() { return aliasVec().front(); }
         const Bit& front() const { return aliasVec().front(); }
@@ -142,7 +143,7 @@ namespace hcl::core::frontend {
         bool valid() const final { return m_node != nullptr; }
 
 		// these methods are undefined for invalid signals (uninitialized)
-		size_t getWidth() const final { return m_range.width; }
+        BitWidth getWidth() const final { return BitWidth{ m_range.width }; }
 		hlim::ConnectionType getConnType() const final;
 		SignalReadPort getReadPort() const final;
 		std::string_view getName() const final { return m_node->getName(); }

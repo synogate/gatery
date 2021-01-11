@@ -153,10 +153,10 @@ namespace hcl::core::frontend {
     {
         HCL_DESIGNCHECK_HINT(!m_range.subset, "BVec::resize is not allowed for alias BVec's. use zext instead.");
         HCL_DESIGNCHECK_HINT(m_node->getDirectlyDriven(0).empty(), "BVec::resize is allowed for unused signals (final)");
-        HCL_DESIGNCHECK_HINT(width > getWidth(), "BVec::resize width decrease not allowed");
-        HCL_DESIGNCHECK_HINT(width <= getWidth() || m_expansionPolicy != Expansion::none, "BVec::resize width increase only allowed when expansion policy is set");
+        HCL_DESIGNCHECK_HINT(width > size(), "BVec::resize width decrease not allowed");
+        HCL_DESIGNCHECK_HINT(width <= size() || m_expansionPolicy != Expansion::none, "BVec::resize width increase only allowed when expansion policy is set");
 
-        if (width == getWidth())
+        if (width == size())
             return;
 
         auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
@@ -345,7 +345,7 @@ namespace hcl::core::frontend {
     {
         SignalReadPort port = bit.getReadPort();
         if (increment)
-            port = port.expand(bit.getWidth() + increment, hlim::ConnectionType::BITVEC);
+            port = port.expand(1 + increment, hlim::ConnectionType::BITVEC);
         return BVec(port);
     }
 
@@ -354,7 +354,7 @@ namespace hcl::core::frontend {
         SignalReadPort port = bit.getReadPort();
         port.expansionPolicy = policy;
         if (increment)
-            port = port.expand(bit.getWidth() + increment, hlim::ConnectionType::BITVEC);
+            port = port.expand(1 + increment, hlim::ConnectionType::BITVEC);
         return BVec(port);
     }
 
@@ -362,7 +362,7 @@ namespace hcl::core::frontend {
     {
         SignalReadPort port = bvec.getReadPort();
         if (increment)
-            port = port.expand(bvec.getWidth() + increment, hlim::ConnectionType::BITVEC);
+            port = port.expand(bvec.size() + increment, hlim::ConnectionType::BITVEC);
         return BVec(port);
     }
 
@@ -371,7 +371,7 @@ namespace hcl::core::frontend {
         SignalReadPort port = bvec.getReadPort();
         port.expansionPolicy = policy;
         if (increment)
-            port = port.expand(bvec.getWidth() + increment, hlim::ConnectionType::BITVEC);
+            port = port.expand(bvec.size() + increment, hlim::ConnectionType::BITVEC);
         return BVec(port);
     }
 

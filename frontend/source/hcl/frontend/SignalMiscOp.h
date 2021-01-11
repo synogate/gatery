@@ -24,7 +24,7 @@ typename ContainerType::value_type mux(const ElementarySignal &selector, const C
     node->recordStackTrace();
     node->connectSelector(selector.getReadPort());
 
-    HCL_DESIGNCHECK_HINT(table.size() <= (1ull << selector.getWidth()), "The number of mux inputs is larger than can be addressed with it's selector input's width!");
+    HCL_DESIGNCHECK_HINT(table.size() <= (1ull << selector.getWidth().value), "The number of mux inputs is larger than can be addressed with it's selector input's width!");
     
     const auto &firstSignal = *begin(table);
     
