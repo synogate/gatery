@@ -20,9 +20,9 @@ namespace hcl::core::frontend {
         m_pinNode->setBool();
     }
 
-    InputPins::InputPins(unsigned width) {
+    InputPins::InputPins(BitWidth width) {
         m_pinNode = DesignScope::createNode<hlim::Node_Pin>();
-        m_pinNode->setWidth(width);
+        m_pinNode->setWidth(width.value);
     }
 
 }
