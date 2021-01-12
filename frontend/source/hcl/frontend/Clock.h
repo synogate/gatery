@@ -8,6 +8,11 @@
 
 #include <boost/optional.hpp>
 
+#include <boost/spirit/home/support/container.hpp>
+#include <boost/hana/adapt_struct.hpp>
+#include <boost/hana/for_each.hpp>
+#include <boost/hana/fwd/accessors.hpp>
+
 namespace hcl::core::frontend {
     
 class Clock;
@@ -95,6 +100,31 @@ inline BVec reg(const BVec& signal) { return ClockScope::getClk()(signal); }
 
 inline Bit reg(const Bit& signal, const Bit& reset) { return ClockScope::getClk()(signal, reset); }
 inline Bit reg(const Bit& signal) { return ClockScope::getClk()(signal); }
+
+template<typename Compound>
+Compound reg(const Compound& compound)
+{
+    Compound ret = compound;
+
+    if constexpr (boost::spirit::traits::is_container<Compound>::value)
+    {
+        for (auto& item : ret)
+            item = reg(item);
+    }
+    else if constexpr (boost::hana::Struct<Compound>::value)
+    {
+        boost::hana::for_each(boost::hana::accessors<std::remove_cv_t<Compound>>(), [&](auto member) {
+            auto& item = boost::hana::second(member)(ret);
+            item = reg(item);
+        });
+    }
+    else if constexpr (std::is_base_of_v<ElementarySignal, Compound>)
+    {
+        ret = reg(compound);
+    }
+
+    return ret;
+}
 
 
 /*
