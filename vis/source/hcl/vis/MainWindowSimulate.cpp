@@ -174,7 +174,7 @@ void MainWindowSimulate::switchToGroup(core::hlim::NodeGroup *nodeGroup)
     m_ui.circuitView->render(m_circuit, nodeGroup, [&progress](float p){
         progress.setValue(p * 1000);
         if (progress.wasCanceled())
-            ; // haha, nice try
+            {}; // haha, nice try
         QCoreApplication::processEvents();
     });
     
@@ -319,7 +319,7 @@ void MainWindowSimulate::onRunSimulation()
         delay *= 2;
     }
 
-    for (auto iter : utils::Range(iters))
+    for ([[maybe_unused]] auto iter : utils::Range(iters))
         m_simulator.advanceAnyTick();
     updateSignalValues();
     updateBitmap();

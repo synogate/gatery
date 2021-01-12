@@ -34,7 +34,7 @@ BOOST_FIXTURE_TEST_CASE(BVecIterator, hcl::core::sim::UnitTestSimulationFixture)
     BOOST_TEST(a.size() == counter);
 
     counter = 0;
-    for (auto &b : a)
+    for ([[maybe_unused]] auto &b : a)
         counter++;
     BOOST_TEST(a.size() == counter);
 

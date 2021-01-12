@@ -208,7 +208,7 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
 
             hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
             if (regNode != nullptr) {
-                hlim::NodePort resetValue = regNode->getDriver(hlim::Node_Register::RESET_VALUE);
+                //hlim::NodePort resetValue = regNode->getDriver(hlim::Node_Register::RESET_VALUE);
                 
                 RegisterConfig config = {
                     .clock = regNode->getClocks()[0],

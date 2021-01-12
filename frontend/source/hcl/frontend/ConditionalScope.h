@@ -39,7 +39,8 @@ namespace hcl::core::frontend {
 
 
 #define ELSE \
-    else { HCL_ASSERT(false); } if (hcl::core::frontend::ConditionalScope ___condScope{}; true)
+    else { HCL_ASSERT(false); } \
+    if (hcl::core::frontend::ConditionalScope ___condScope{}; true)
 
 
 }

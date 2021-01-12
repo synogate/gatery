@@ -269,13 +269,13 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
                     } break;
                     case hlim::Node_Rewire::OutputRange::CONST_ZERO:
                         stream << '"';
-                        for (auto j : utils::Range(range.subwidth))
+                        for ([[maybe_unused]] auto j : utils::Range(range.subwidth))
                             stream << "0";
                         stream << '"';
                     break;
                     case hlim::Node_Rewire::OutputRange::CONST_ONE:
                         stream << '"';
-                        for (auto j : utils::Range(range.subwidth))
+                        for ([[maybe_unused]] auto j : utils::Range(range.subwidth))
                             stream << "1";
                         stream << '"';
                     break;
@@ -418,7 +418,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
                     code << assignmentPrefix;
                     
                     code << "\"";
-                    for (auto bitIdx : utils::Range(muxNode->getDriver(1).node->getOutputConnectionType(0).width)) {
+                    for ([[maybe_unused]] auto bitIdx : utils::Range(muxNode->getDriver(1).node->getOutputConnectionType(0).width)) {
                         code << "X";
                     }
                     code << "\";" << std::endl;
