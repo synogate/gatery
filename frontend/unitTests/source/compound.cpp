@@ -119,7 +119,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundUnpack, hcl::core::sim::UnitTestSimulationFixtur
 
     RichStruct out;
     out.list.resize(in.list.size());
-    unpack(out, inPacked);
+    unpack(inPacked, out);
 
     sim_assert(out.vec == 5u);
     sim_assert(out.bit == '0');
