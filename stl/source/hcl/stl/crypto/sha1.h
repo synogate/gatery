@@ -6,6 +6,12 @@ namespace hcl::stl
 	template<typename TVec = BVec, typename TAdder = CarrySafeAdder>
 	struct Sha1Generator
 	{
+		enum {
+			NUM_ROUNDS = 80,
+			HASH_WIDTH = 160,
+			BLOCK_WIDTH = 512
+		};
+
 		BOOST_HANA_DEFINE_STRUCT(Sha1Generator,
 			(TVec, hash),
 			(TVec, a),
@@ -83,5 +89,55 @@ namespace hcl::stl
 		const TVec& finalize() { return hash; }
 	};
 
+	template<typename TVec = BVec, typename TAdder = CarrySafeAdder>
+	struct Sha0Generator : Sha1Generator<TVec, TAdder>
+	{
+		using base = Sha1Generator<TVec, TAdder>;
+		using base::a;
+		using base::b;
+		using base::c;
+		using base::d;
+		using base::e;
+		using base::w;
+
+		// same as sha1 but without rotation during message extension
+		void round(const BVec& round)
+		{
+			// select round constant
+			TVec k;
+			IF(round < 20)
+				k = 0x5A827999;
+			ELSE IF(round < 40)
+				k = 0x6ED9EBA1;
+			ELSE IF(round < 60)
+				k = 0x8F1BBCDC;
+			ELSE
+				k = 0xCA62C1D6;
+
+			// select round function
+			TVec f = b ^ c ^ d;
+			IF(round < 20)
+				f = (b & c) | (~b & d);
+			ELSE IF(round >= 40 & round < 60)
+				f = (b & c) | (b & d) | (c & d);
+
+			// update state
+			TVec tmp = TAdder{} + rotl(a, 5) + e + w[0] + k + f;
+			e = d;
+			d = c;
+			c = rotl(b, 30);
+			b = a;
+			a = tmp;
+
+			// extend message
+			const BVec next_w = w[13] ^ w[8] ^ w[2] ^ w[0];
+
+			for (size_t i = 0; i < 15; ++i)
+				w[i] = w[i + 1];
+			w[15] = next_w;
+		}
+	};
+
 	extern template struct Sha1Generator<>;
+	extern template struct Sha0Generator<>;
 }
