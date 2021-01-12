@@ -70,7 +70,7 @@ void Process::extractSignals()
         for (auto i : utils::Range(node->getNumOutputPorts())) {
             if (node->getDirectlyDriven(i).size() > 1) {
                 hlim::NodePort driver{.node = node, .port = i};
-                if (m_outputs.find(driver) == m_outputs.end())
+                if (!m_outputs.contains(driver) && !m_inputs.contains(driver) && !dynamic_cast<hlim::Node_Pin*>(driver.node))
                     m_localSignals.insert(driver);
             }
         }
@@ -80,7 +80,7 @@ void Process::extractSignals()
         hlim::Node_Multiplexer *muxNode = dynamic_cast<hlim::Node_Multiplexer *>(node);
         if (muxNode != nullptr) {
             hlim::NodePort driver{.node = muxNode, .port = 0};
-            if (m_outputs.find(driver) == m_outputs.end())
+            if (!m_outputs.contains(driver) && !m_inputs.contains(driver) && !dynamic_cast<hlim::Node_Pin*>(driver.node))
                 m_localSignals.insert(driver);
         }
         
@@ -88,7 +88,7 @@ void Process::extractSignals()
         hlim::Node_PriorityConditional *prioCon = dynamic_cast<hlim::Node_PriorityConditional *>(node);
         if (prioCon != nullptr) {
             hlim::NodePort driver{.node = prioCon, .port = 0};
-            if (!m_outputs.contains(driver))
+            if (!m_outputs.contains(driver) && !m_inputs.contains(driver) && !dynamic_cast<hlim::Node_Pin*>(driver.node))
                 m_localSignals.insert(driver);
         }
         
@@ -100,7 +100,7 @@ void Process::extractSignals()
                     auto driver = rewireNode->getDriver(op.inputIdx);
                     if (driver.node != nullptr)
                         if (op.inputOffset != 0 || op.subwidth != driver.node->getOutputConnectionType(driver.port).width)
-                            if (!m_outputs.contains(driver) && !m_inputs.contains(driver))
+                            if (!m_outputs.contains(driver) && !m_inputs.contains(driver) && !dynamic_cast<hlim::Node_Pin*>(driver.node))
                                 m_localSignals.insert(driver);
                 }
             }
@@ -141,9 +141,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
         comments << nodePort.node->getComment() << std::endl;
     
     if (!forceUnfold) {
-        if (m_inputs.find(nodePort) != m_inputs.end() || 
-            m_outputs.find(nodePort) != m_outputs.end() || 
-            m_localSignals.find(nodePort) != m_localSignals.end()) {
+        if (m_inputs.contains(nodePort) || m_outputs.contains(nodePort) || m_localSignals.contains(nodePort)) {
             stream << m_namespaceScope.getName(nodePort);
             dependentInputs.insert(nodePort);
             return;
@@ -151,6 +149,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
     }
     
     HCL_ASSERT(dynamic_cast<const hlim::Node_Register*>(nodePort.node) == nullptr);
+    HCL_ASSERT(dynamic_cast<const hlim::Node_Multiplexer*>(nodePort.node) == nullptr);
     
     const hlim::Node_Signal *signalNode = dynamic_cast<const hlim::Node_Signal *>(nodePort.node);
     if (signalNode != nullptr) {
@@ -357,11 +356,15 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
             
             bool isLocalSignal = m_localSignals.contains(nodePort);
             std::string assignmentPrefix;
+            bool forceUnfold;
             if (auto *ioPin = dynamic_cast<hlim::Node_Pin*>(nodePort.node)) {
                 assignmentPrefix = m_namespaceScope.getName(ioPin);
                 nodePort = ioPin->getDriver(0);
-            } else
+                forceUnfold = false; // assigning to pin, can directly do with a signal/variable;
+            } else {
                 assignmentPrefix = m_namespaceScope.getName(nodePort);
+                forceUnfold = true; // referring to target, must force unfolding
+            }
 
             if (isLocalSignal)
                 assignmentPrefix += " := ";
@@ -419,8 +422,8 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
                         code << "X";
                     }
                     code << "\";" << std::endl;
-                    
-                        
+
+
                     cf.indent(code, indentation+1);
                     code << "END CASE;" << std::endl;
                 }
@@ -469,7 +472,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
             } else {
                 code << assignmentPrefix;
                 
-                formatExpression(code, comment, nodePort, statement.inputs, true);
+                formatExpression(code, comment, nodePort, statement.inputs, forceUnfold);
                 code << ";" << std::endl;
             }
             statement.code = code.str();
