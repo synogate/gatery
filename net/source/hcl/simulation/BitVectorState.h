@@ -72,7 +72,7 @@ using DefaultBitVectorState = BitVectorState<DefaultConfig>;
 template<typename Config>
 std::ostream& operator << (std::ostream& s, const BitVectorState<Config>& state)
 {
-    for (size_t i = 0; i < state.size(); ++i)
+    for (int i = state.size()-1; i >= 0; --i)
     {
         if (!state.get(Config::DEFINED, i))
             s << 'x';
