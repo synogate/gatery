@@ -11,6 +11,7 @@
 
 #include <boost/format.hpp>
 
+#include "BitWidth.h"
 
 namespace hcl::core::frontend {
 
@@ -51,7 +52,7 @@ namespace hcl::core::frontend {
         virtual bool valid() const = 0;
 
         // these methods are undefined for invalid signals (uninitialized)
-        virtual size_t getWidth() const = 0;
+        virtual BitWidth getWidth() const = 0;
         virtual hlim::ConnectionType getConnType() const = 0;
         virtual SignalReadPort getReadPort() const = 0;
         virtual std::string_view getName() const = 0;

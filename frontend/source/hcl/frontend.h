@@ -27,3 +27,8 @@
  * @details
  */
 namespace hcl::core::frontend { }
+
+namespace hcl
+{
+	using namespace core::frontend;
+}

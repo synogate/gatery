@@ -48,4 +48,9 @@ BVec operator>>(const BVec &signal, int amount);
 BVec &operator<<=(BVec &signal, int amount);
 BVec &operator>>=(BVec &signal, int amount);
 
+BVec rot(const BVec& signal, int amount);
+inline BVec rotl(const BVec& signal, int amount) { return rot(signal, amount); }
+inline BVec rotr(const BVec& signal, int amount) { return rot(signal, -amount); }
+
+
 }

@@ -29,6 +29,13 @@ namespace hcl::core::frontend
 			void operator () (const Bit& vec) {}
 		};
 
+		template<typename Visitor, typename Compound, typename ...Compounds>
+		void visitCompound(Visitor& v, Compound& signal, Compounds& ... signals)
+		{
+			visitCompound(v, signal);
+			visitCompound(v, signals...);
+		}
+
 		template<typename Visitor, typename Compound>
 		void visitCompound(Visitor& v, Compound& signal)
 		{
@@ -63,8 +70,8 @@ namespace hcl::core::frontend
 			}
 		}
 
-		template<typename Comp>
-		std::tuple<size_t, size_t> countAndWidth(const Comp& compound)
+		template<typename... Comp>
+		std::tuple<size_t, size_t> countAndWidth(const Comp& ...compound)
 		{
 			struct WidthVisitor : internal::SignalVisitor
 			{
@@ -80,7 +87,7 @@ namespace hcl::core::frontend
 			};
 
 			WidthVisitor v;
-			internal::visitCompound(v, compound);
+			internal::visitCompound(v, compound...);
 			return { v.m_totalCount, v.m_totalWidth };
 		}
 
@@ -118,14 +125,14 @@ namespace hcl::core::frontend
 		internal::visitCompound(v, compound);
 	}
 
-	template<typename Comp>
-	size_t width(const Comp& compound)
+	template<typename... Comp>
+	size_t width(const Comp& ...compound)
 	{
-		return std::get<1>(internal::countAndWidth(compound));
+		return std::get<1>(internal::countAndWidth(compound...));
 	}
 	
-	template<typename Comp>
-	BVec pack(const Comp& compound)
+	template<typename... Comp>
+	BVec pack(const Comp& ...compound)
 	{
 		struct PackVisitor : internal::SignalVisitor
 		{
@@ -143,16 +150,16 @@ namespace hcl::core::frontend
 			size_t m_idx = 0;
 		};
 
-		auto [count, width] = internal::countAndWidth(compound);
+		auto [count, width] = internal::countAndWidth(compound...);
 
 		PackVisitor v{ count };
-		internal::visitCompound(v, compound);
+		internal::visitCompound(v, compound...);
 		v.m_node->setConcat();
 		return SignalReadPort(v.m_node);
 	}
 	
-	template<typename Comp>
-	void unpack(Comp& compound, const BVec& vec)
+	template<typename... Comp>
+	void unpack(const BVec& vec, Comp& ... compound)
 	{
 		struct UnpackVisitor : internal::SignalVisitor
 		{
@@ -185,10 +192,10 @@ namespace hcl::core::frontend
 			size_t m_totalWidth = 0;
 		};
 
-		HCL_DESIGNCHECK(vec.size() == width(compound));
+		HCL_DESIGNCHECK(vec.size() == width(compound...));
 
 		UnpackVisitor v{ vec };
-		internal::visitCompound(v, compound);
+		internal::visitCompound(v, compound...);
 	}
 
 	

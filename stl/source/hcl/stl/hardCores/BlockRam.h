@@ -75,7 +75,7 @@ namespace hcl::stl {
             }
 
             Data ret = m_defaultValue;
-            hcl::core::frontend::unpack(ret, readData);
+            hcl::core::frontend::unpack(readData, ret);
             return ret;
         }
 
