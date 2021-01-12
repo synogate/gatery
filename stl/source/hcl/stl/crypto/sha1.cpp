@@ -1,4 +1,9 @@
 #include "sha1.h"
 
-template hcl::stl::Sha1Config<hcl::BVec>;
-template hcl::stl::ShaState<hcl::BVec>;
+namespace hcl::stl
+{
+
+    template class Sha1Config<hcl::BVec>;
+    template class ShaState<hcl::BVec>;
+
+}

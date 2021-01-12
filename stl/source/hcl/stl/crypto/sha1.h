@@ -152,5 +152,6 @@ namespace hcl::stl
 
 	};
 
-
+	extern template class Sha1Config<hcl::BVec>;
+	extern template class ShaState<hcl::BVec>;
 }
