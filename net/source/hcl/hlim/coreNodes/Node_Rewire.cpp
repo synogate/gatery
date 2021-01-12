@@ -43,6 +43,7 @@ Node_Rewire::RewireOperation& Node_Rewire::RewireOperation::addConstant(OutputRa
             .inputOffset = 0
             });
     }
+    return *this;
 }
 
 Node_Rewire::Node_Rewire(size_t numInputs) : Node(numInputs, 1)

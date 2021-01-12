@@ -81,17 +81,17 @@ static bool isUnusedNode(const BaseNode& node)
     if (node.hasSideEffects())
         return false;
 
+/*
     auto* signalNode = dynamic_cast<const Node_Signal*>(&node);
-
     if (signalNode && !signalNode->getName().empty())
         return false;
-
-    auto* pinNode = dynamic_cast<const Node_Pin*>(&node);
-    if (pinNode) return false;
+*/
 
     for (auto j : utils::Range(node.getNumOutputPorts()))
         if (!node.getDirectlyDriven(j).empty())
             return false;
+
+    return true;
 }
 
 void Circuit::cullUnusedNodes()
