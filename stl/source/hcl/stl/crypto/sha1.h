@@ -1,95 +1,20 @@
 #include <hcl/frontend.h>
-#include <span>
+#include "../Adder.h"
 
 namespace hcl::stl
 {
-	template<typename TVec>
-	struct Sha1Config
+	template<typename TVec = BVec, typename TAdder = CarrySafeAdder>
+	struct Sha1Generator
 	{
-		size_t numRounds = 80;
-
-		virtual TVec F(const BVec& round, const std::span<TVec,5> s)
-		{
-			TVec ret = s[1] ^ s[2] ^ s[3];
-
-			IF(round < 20)
-				ret = (s[1] & s[2]) | (~s[1] & s[3]);
-			ELSE IF(round >= 40 & round < 60)
-				ret = (s[1] & s[2]) | (s[1] & s[3]) | (s[2] & s[3]);
-
-			return ret;
-		}
-
-		virtual TVec K(const BVec& round)
-		{
-			TVec K;
-			IF(round < 20)
-				K = 0x5A827999;
-			ELSE IF(round < 40)
-				K = 0x6ED9EBA1;
-			ELSE IF(round < 60)
-				K = 0x8F1BBCDC;
-			ELSE
-				K = 0xCA62C1D6;
-			return K;
-		}
-
-		virtual void stateRound(const BVec& round, std::span<TVec, 5> s, const TVec& w)
-		{
-			TVec f = F(round, s);
-			TVec k = K(round);
-
-			TVec tmp = rotl(s[0], 5) + f + k + w + s[4];
-			s[4] = s[3];
-			s[3] = s[2];
-			s[2] = rotl(s[1], 30);
-			s[1] = s[0];
-			s[0] = tmp;
-		}
-
-		virtual TVec messageRound(std::span<TVec, 16> msg)
-		{
-			TVec w = msg[0];
-			for (size_t i = 0; i < 15; ++i)
-				msg[i] = msg[i + 1];
-
-			const size_t l = 15;
-			msg[l] = rotl(msg[l-3] ^ msg[l-8] ^ msg[l-14] ^ w, 1);
-			return w;
-		}
-
-		virtual TVec hashBlock(const TVec& state, const TVec& message)
-		{
-			std::array<TVec, 5> s;
-			const size_t wordSize = state.size() / s.size();
-			for (size_t i = 0; i < s.size(); ++i)
-				s[i] = state(Selection::Symbol(i, wordSize));
-
-			std::array<TVec, 16> m;
-			for (size_t i = 0; i < m.size(); ++i)
-				m[i] = message(Selection::Symbol(i, message.size() / m.size()));
-
-			for (size_t r = 0; r < numRounds; ++r)
-			{
-				TVec w = messageRound(m);
-				stateRound(r, s, w);
-			}
-
-			TVec ret_state = state;
-			for (size_t i = 0; i < s.size(); ++i)
-				ret_state(Selection::Symbol(i, wordSize)) += s[i];
-
-			return ret_state;
-		}
-		
-	};
-
-	template<typename TVec>
-	struct ShaState
-	{
-		TVec hash;
-		TVec a, b, c, d, e;
-		TVec w[16];
+		BOOST_HANA_DEFINE_STRUCT(Sha1Generator,
+			(TVec, hash),
+			(TVec, a),
+			(TVec, b),
+			(TVec, c),
+			(TVec, d),
+			(TVec, e),
+			(std::array<TVec,16>, w)
+		);
 
 		void init()
 		{
@@ -100,6 +25,12 @@ namespace hcl::stl
 			e = "0xC3D2E1F0";
 
 			hash = pack(a, b, c, d, e);
+		}
+
+		void beginBlock(const TVec& _block)
+		{
+			for (size_t i = 0; i < w.size(); ++i)
+				w[i] = _block(Selection::Symbol(i, 32));
 		}
 
 		void round(const BVec& round)
@@ -123,7 +54,7 @@ namespace hcl::stl
 				f = (b & c) | (b & d) | (c & d);
 
 			// update state
-			TVec tmp = rotl(a, 5) + f + k + w[0] + e;
+			TVec tmp = TAdder{} + rotl(a, 5) + e + w[0] + k + f;
 			e = d;
 			d = c;
 			c = rotl(b, 30);
@@ -138,7 +69,7 @@ namespace hcl::stl
 			w[15] = next_w;
 		}
 
-		TVec finalize()
+		void endBlock()
 		{
 			a += hash(Selection::Symbol(0, 32));
 			b += hash(Selection::Symbol(1, 32));
@@ -147,9 +78,9 @@ namespace hcl::stl
 			e += hash(Selection::Symbol(4, 32));
 
 			hash = pack(a, b, c, d, e);
-			return hash;
 		}
 
+		const TVec& finalize() { return hash; }
 	};
 
 

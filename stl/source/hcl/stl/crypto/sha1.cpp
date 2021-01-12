@@ -1,4 +1,4 @@
 #include "sha1.h"
+#include "../Adder.h"
 
-template hcl::stl::Sha1Config<hcl::BVec>;
-template hcl::stl::ShaState<hcl::BVec>;
+template hcl::stl::Sha1Generator<>;
