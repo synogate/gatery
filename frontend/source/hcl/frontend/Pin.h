@@ -37,7 +37,7 @@ namespace hcl::core::frontend {
 
     class InputPins {
         public:
-            InputPins(unsigned width);
+            InputPins(BitWidth width);
             inline operator BVec () { return BVec(SignalReadPort({.node=m_pinNode, .port=0ull})); }
 
             inline InputPins &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
@@ -49,5 +49,5 @@ namespace hcl::core::frontend {
     inline OutputPins pinOut(const BVec &bitVector) { return OutputPins(bitVector); }
 
     inline InputPin pinIn() { return InputPin(); }
-    inline InputPins pinIn(unsigned width) { return InputPins(width); }
+    inline InputPins pinIn(BitWidth width) { return InputPins(width); }
 }

@@ -82,8 +82,8 @@ namespace hcl::stl {
         operator Data() const { return read(); }
 
     protected:
-        internal::MemoryPort& m_port;
         std::shared_ptr<internal::Memory> m_memory;
+        internal::MemoryPort& m_port;
         Data m_defaultValue;
 
     };

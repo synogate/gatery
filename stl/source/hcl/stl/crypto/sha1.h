@@ -83,5 +83,5 @@ namespace hcl::stl
 		const TVec& finalize() { return hash; }
 	};
 
-
+	extern template struct Sha1Generator<>;
 }
