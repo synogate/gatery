@@ -1,4 +1,5 @@
 #include <hcl/frontend.h>
+#include "HashEngine.h"
 #include "../Adder.h"
 
 namespace hcl::stl
@@ -22,7 +23,7 @@ namespace hcl::stl
 			(std::array<TVec,16>, w)
 		);
 
-		void init()
+		Sha1Generator()
 		{
 			a = "0x67452301";
 			b = "0xEFCDAB89";
