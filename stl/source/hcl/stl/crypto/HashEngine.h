@@ -1,5 +1,7 @@
 #include <hcl/frontend.h>
 
+#include "../Counter.h"
+
 namespace hcl::stl
 {
 	template<typename THash>
@@ -13,6 +15,15 @@ namespace hcl::stl
 		void throughput(size_t cyclesPerHash);
 
 		void buildPipeline(THash& hash) const;
+		void buildRoundProcessor(size_t startRound, size_t numRounds, THash& hash) const
+		{
+			Counter roundCounter{ numRounds };
+
+			BVec round = roundCounter.value() + startRound;
+
+
+
+		}
 
 	private:
 		size_t m_latency = 0;
