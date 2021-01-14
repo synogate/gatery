@@ -15,13 +15,28 @@ namespace hcl::stl
 		void throughput(size_t cyclesPerHash);
 
 		void buildPipeline(THash& hash) const;
-		void buildRoundProcessor(size_t startRound, size_t numRounds, THash& hash) const
+		void buildRoundProcessor(size_t startRound, THash& hash) const
 		{
-			Counter roundCounter{ numRounds };
+			const size_t numSections = std::max<size_t>(1, m_latency);
+			for (size_t s = 0; s < numSections; ++s)
+			{
+				Counter roundCounter{ m_throughput };
 
-			BVec round = roundCounter.value() + startRound;
+				THash state;
+				// TDOO: copy bit width from hash to state
 
+				IF(roundCounter.isFirst())
+					state = hash;
 
+				const size_t roundsPerSection = THash::NUM_ROUNDS / numSections / m_throughput;
+				for (size_t i = 0; i < roundsPerSection; ++i)
+					state.round(roundCounter.value() * roundsPerSection + (s * roundsPerSection + i));
+
+				if(m_latency > 0)
+					state = reg(state);
+
+				hash = state;
+			}
 
 		}
 
