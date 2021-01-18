@@ -45,7 +45,7 @@ add_library(hcl_frontend STATIC
     
     
     source/hcl/frontend.h
- "source/hcl/frontend/Pack.h"  "source/hcl/frontend/Constant.cpp" "source/hcl/frontend/BitWidth.h")
+ "source/hcl/frontend/Pack.h"  "source/hcl/frontend/Constant.cpp" "source/hcl/frontend/BitWidth.h" "source/hcl/frontend/ConstructFrom.h")
 
 
 

@@ -131,3 +131,40 @@ BOOST_FIXTURE_TEST_CASE(CompoundUnpack, hcl::core::sim::UnitTestSimulationFixtur
     
     eval(design.getCircuit());
 }
+
+BOOST_FIXTURE_TEST_CASE(ConstructFromSignal, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    Bit sbit = '1';
+    Bit dbit = constructFrom(sbit);
+    sim_assert(sbit == '1');
+
+    BVec svec = "0x101A";
+    BVec dvec = constructFrom(svec);
+    sim_assert(svec == "0x101A");
+
+    int sval = 5;
+    int dval = constructFrom(sval);
+    BOOST_TEST(sval == 5);
+    BOOST_TEST(dval == 5);
+
+    eval(design.getCircuit());
+}
+
+BOOST_FIXTURE_TEST_CASE(ConstructFromCompound, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    std::array<Bit, 4> fixedContainerSrc = { {'1', '0', '1', '1'} };
+    std::array<Bit, 4> fixedContainerDst = constructFrom(fixedContainerSrc);
+    sim_assert(fixedContainerSrc[0] == '1');
+
+
+
+    eval(design.getCircuit());
+}

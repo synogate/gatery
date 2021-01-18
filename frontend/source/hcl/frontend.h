@@ -7,6 +7,7 @@
 #include "frontend/Comments.h"
 #include "frontend/ConditionalScope.h"
 #include "frontend/Constant.h"
+#include "frontend/ConstructFrom.h"
 #include "frontend/FSM.h"
 #include "frontend/Pack.h"
 #include "frontend/Pin.h"
