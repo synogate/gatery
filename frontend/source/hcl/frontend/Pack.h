@@ -64,7 +64,7 @@ namespace hcl::core::frontend
 					});
                 v.leavePack();
 			}
-			else
+			else if constexpr (std::is_base_of_v<ElementarySignal, Compound>)
 			{
 				v(signal);
 			}

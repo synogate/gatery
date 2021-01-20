@@ -38,7 +38,11 @@ namespace hcl::core::frontend
 		}
 		else if constexpr (std::is_base_of_v<BVec, T>)
 		{
-			dst = src.getWidth();
+			BitWidth dstWidth = dst.getWidth();
+			if (dstWidth.value == 0)
+				dst = src.getWidth();
+			else
+				HCL_DESIGNCHECK_HINT(dstWidth == src.getWidth(), "cannot change width of signal");
 		}
 		else if constexpr (std::is_base_of_v<Bit, T>)
 		{

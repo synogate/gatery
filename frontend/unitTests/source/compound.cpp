@@ -22,9 +22,10 @@ BOOST_HANA_ADAPT_STRUCT(SimpleStruct, vec, bit);
 struct RichStruct : SimpleStruct
 {
     std::vector<SimpleStruct> list;
+    int parameter = 5;
 };
 
-BOOST_HANA_ADAPT_STRUCT(RichStruct, vec, bit, list);
+BOOST_HANA_ADAPT_STRUCT(RichStruct, vec, bit, list, parameter);
 
 BOOST_FIXTURE_TEST_CASE(CompoundName, hcl::core::sim::UnitTestSimulationFixture)
 {
@@ -164,7 +165,24 @@ BOOST_FIXTURE_TEST_CASE(ConstructFromCompound, hcl::core::sim::UnitTestSimulatio
     std::array<Bit, 4> fixedContainerDst = constructFrom(fixedContainerSrc);
     sim_assert(fixedContainerSrc[0] == '1');
 
+    std::vector<Bit> dynamicContainerSrc = { '1', '0', '1', '1' };
+    std::vector<Bit> dynamicContainerDst = constructFrom(dynamicContainerSrc);
+    sim_assert(dynamicContainerSrc[0] == '1');
 
+    RichStruct in;
+    in.vec = 5u;
+    in.bit = '0';
+    in.parameter = 13;
+    for (size_t i = 0; i < 7; ++i)
+    {
+        in.list.emplace_back();
+        in.list.back().vec = ConstBVec(i, 3);
+        in.list.back().bit = i < 4;
+    }
+
+    RichStruct out = constructFrom(in);
+    BOOST_TEST(in.parameter == out.parameter);
 
     eval(design.getCircuit());
 }
+
