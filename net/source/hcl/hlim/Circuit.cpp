@@ -7,6 +7,9 @@
 #include "coreNodes/Node_Logic.h"
 #include "coreNodes/Node_Constant.h"
 #include "coreNodes/Node_Pin.h"
+#include "coreNodes/Node_Rewire.h"
+
+#include "BlockRamDetector.h"
 
 
 #include "../simulation/BitVectorState.h"
@@ -381,6 +384,29 @@ void Circuit::cullMuxConditionNegations()
     }
 }
 
+/**
+ * @details So far only removes no-op rewire nodes since they prevent block-ram detection
+ * 
+ */
+void Circuit::removeNoOps()
+{
+    for (size_t i = 0; i < m_nodes.size(); i++) {
+        bool removeNode = false;
+
+        if (auto *rewire = dynamic_cast<Node_Rewire*>(m_nodes[i].get())) {
+            if (rewire->isNoOp()) {
+                rewire->bypassOutputToInput(0, 0);
+                removeNode = true;
+            }
+        }
+        
+        if (removeNode) {
+            m_nodes[i] = std::move(m_nodes.back());
+            m_nodes.pop_back();
+            i--;
+        }
+    }
+}
 
 void Circuit::propagateConstants()
 {
@@ -499,6 +525,8 @@ void Circuit::removeFalseLoops()
 }
 
 
+
+
 void Circuit::optimize(size_t level)
 {
     switch (level) {
@@ -519,8 +547,11 @@ void Circuit::optimize(size_t level)
             mergeMuxes();
             removeIrrelevantMuxes();
             cullMuxConditionNegations();
+            removeNoOps();
             propagateConstants(); // do again after muxes are removed
             cullUnusedNodes();
+
+            findBlockRams(*this);
         break;
     };
 }

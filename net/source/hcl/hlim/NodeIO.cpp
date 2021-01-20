@@ -135,5 +135,14 @@ void NodeIO::resizeOutputs(size_t num)
     m_outputPorts.resize(num);
 }
 
+void NodeIO::bypassOutputToInput(size_t outputPort, size_t inputPort)
+{
+    NodePort newSource = getDriver(inputPort);
+    
+    while (!getDirectlyDriven(outputPort).empty()) {
+        auto p = getDirectlyDriven(outputPort).front();
+        p.node->connectInput(p.port, newSource);
+    }
+}
         
 }

@@ -85,7 +85,30 @@ std::ostream& operator << (std::ostream& s, const BitVectorState<Config>& state)
 }
 
 
+template<typename Config, typename Functor>
+BitVectorState<Config> createBitVectorState(std::size_t numWords, std::size_t wordSize, Functor functor) {
+    BitVectorState<Config> state;
+    state.resize(numWords * wordSize);
 
+    for (auto i : utils::Range(numWords)) {
+        typename Config::BaseType planes[Config::NUM_PLANES];
+
+        functor(i, planes);
+
+        for (auto p : utils::Range(Config::NUM_PLANES))
+            if (sizeof(typename Config::BaseType) % wordSize == 0)
+                state.insertNonStraddling(p, i * wordSize, wordSize, planes[p]);
+            else
+                state.insert(p, i * wordSize, wordSize, planes[p]);
+    }
+
+    return state;
+}
+
+template<typename Functor>
+DefaultBitVectorState createDefaultBitVectorState(std::size_t numWords, std::size_t wordSize, Functor functor) {
+    return createBitVectorState<DefaultConfig, Functor>(numWords, wordSize, functor);
+}
 
 
 

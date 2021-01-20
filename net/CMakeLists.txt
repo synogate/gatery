@@ -50,11 +50,19 @@ add_library(hcl_net STATIC
 
     source/hcl/hlim/supportNodes/Node_External.cpp
     source/hcl/hlim/supportNodes/Node_External.h
+    source/hcl/hlim/supportNodes/Node_Memory.cpp
+    source/hcl/hlim/supportNodes/Node_Memory.h
+    source/hcl/hlim/supportNodes/Node_MemReadPort.cpp
+    source/hcl/hlim/supportNodes/Node_MemReadPort.h
+    source/hcl/hlim/supportNodes/Node_MemWritePort.cpp
+    source/hcl/hlim/supportNodes/Node_MemWritePort.h
     source/hcl/hlim/supportNodes/Node_SignalGenerator.cpp
     source/hcl/hlim/supportNodes/Node_SignalGenerator.h
     source/hcl/hlim/supportNodes/Node_SignalTap.cpp
     source/hcl/hlim/supportNodes/Node_SignalTap.h
     
+    source/hcl/hlim/BlockRamDetector.cpp
+    source/hcl/hlim/BlockRamDetector.h
     source/hcl/hlim/Circuit.cpp
     source/hcl/hlim/Circuit.h
     source/hcl/hlim/Clock.cpp
