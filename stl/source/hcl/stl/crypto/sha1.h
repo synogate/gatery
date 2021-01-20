@@ -37,21 +37,20 @@ namespace hcl::stl
 		void beginBlock(const TVec& _block)
 		{
 			for (size_t i = 0; i < w.size(); ++i)
-				w[i] = _block(Selection::Symbol(i, 32));
+				w[i] = _block(Selection::Symbol(w.size() - 1 - i, 32));
 		}
 
 		void round(const BVec& round)
 		{
 			// select round constant
-			TVec k;
+			TVec k = 0xCA62C1D6;
+
 			IF(round < 20)
 				k = 0x5A827999;
 			ELSE IF(round < 40)
 				k = 0x6ED9EBA1;
 			ELSE IF(round < 60)
 				k = 0x8F1BBCDC;
-			ELSE
-				k = 0xCA62C1D6;
 
 			// select round function
 			TVec f = b ^ c ^ d;
@@ -61,7 +60,7 @@ namespace hcl::stl
 				f = (b & c) | (b & d) | (c & d);
 
 			// update state
-			TVec tmp = TAdder{} + rotl(a, 5) + e + w[0] + k + f;
+			TVec tmp = rotl(a, 5) + e + w[0] + k; // + f;
 			e = d;
 			d = c;
 			c = rotl(b, 30);

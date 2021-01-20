@@ -22,8 +22,7 @@ namespace hcl::stl
 			{
 				Counter roundCounter{ m_throughput };
 
-				THash state;
-				// TDOO: copy bit width from hash to state
+				THash state = constructFrom(hash);
 
 				IF(roundCounter.isFirst())
 					state = hash;
@@ -68,7 +67,7 @@ namespace hcl::stl
 	template<typename THash>
 	inline void HashEngine<THash>::buildPipeline(THash& hash) const
 	{
-		const size_t regInterval = THash::NUM_ROUNDS / m_latency;
+		const size_t regInterval = m_latency ? THash::NUM_ROUNDS / m_latency : THash::NUM_ROUNDS + 1;
 
 		for (size_t i = 0; i < THash::NUM_ROUNDS; ++i)
 		{

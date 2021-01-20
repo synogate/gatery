@@ -18,60 +18,71 @@ BVec SignalBitShiftOp::operator()(const BVec &operand) {
     size_t absShift = std::abs(m_shift);
     
     hlim::Node_Rewire::RewireOperation rewireOp;
-    if (m_rotate) {
-        HCL_ASSERT_HINT(false, "Not implemented yet!");
-    } else {
-        if (m_shift < 0) {            
-            if (absShift < width) {
+    if (m_shift < 0) {            
+        if (absShift < width) {
+            rewireOp.ranges.push_back({
+                .subwidth = width - absShift,
+                .source = hlim::Node_Rewire::OutputRange::INPUT,
+                .inputIdx = 0,
+                .inputOffset = (size_t) absShift,
+            });
+        }
+            
+        if (m_rotate) {
+            rewireOp.ranges.push_back({
+                .subwidth = absShift,
+                .source = hlim::Node_Rewire::OutputRange::INPUT,
+                .inputIdx = 0,
+                .inputOffset = 0
+            });
+        } else if (m_duplicateLeft) {
+            for (size_t i = 0; i < (size_t) absShift; i++) {
                 rewireOp.ranges.push_back({
-                    .subwidth = width - absShift,
+                    .subwidth = 1,
                     .source = hlim::Node_Rewire::OutputRange::INPUT,
                     .inputIdx = 0,
-                    .inputOffset = (size_t) absShift,
-                });
-            }
-            
-            if (m_duplicateLeft) {
-                for (size_t i = 0; i < (size_t) absShift; i++) {
-                    rewireOp.ranges.push_back({
-                        .subwidth = 1,
-                        .source = hlim::Node_Rewire::OutputRange::INPUT,
-                        .inputIdx = 0,
-                        .inputOffset = width -1,
-                    });
-                }
-            } else {
-                rewireOp.ranges.push_back({
-                    .subwidth = absShift,
-                    .source = (m_fillLeft? hlim::Node_Rewire::OutputRange::CONST_ONE : hlim::Node_Rewire::OutputRange::CONST_ZERO),
+                    .inputOffset = width -1,
                 });
             }
         } else {
-            if (m_duplicateRight) {
-                for (size_t i = 0; i < (size_t) absShift; i++) {
-                    rewireOp.ranges.push_back({
-                        .subwidth = 1,
-                        .source = hlim::Node_Rewire::OutputRange::INPUT,
-                        .inputIdx = 0,
-                        .inputOffset = 0,
-                    });
-                }
-            } else {
+            rewireOp.ranges.push_back({
+                .subwidth = absShift,
+                .source = (m_fillLeft? hlim::Node_Rewire::OutputRange::CONST_ONE : hlim::Node_Rewire::OutputRange::CONST_ZERO),
+            });
+        }
+    } else {
+        if (m_rotate) {
+            rewireOp.ranges.push_back({
+                .subwidth = absShift,
+                .source = hlim::Node_Rewire::OutputRange::INPUT,
+                .inputIdx = 0,
+                .inputOffset = width - absShift
+            });
+        } else if (m_duplicateRight) {
+            for (size_t i = 0; i < (size_t) absShift; i++) {
                 rewireOp.ranges.push_back({
-                    .subwidth = absShift,
-                    .source = (m_fillLeft? hlim::Node_Rewire::OutputRange::CONST_ONE : hlim::Node_Rewire::OutputRange::CONST_ZERO),
-                });
-            }
-            if (absShift < width) {
-                rewireOp.ranges.push_back({
-                    .subwidth = width - absShift,
+                    .subwidth = 1,
                     .source = hlim::Node_Rewire::OutputRange::INPUT,
                     .inputIdx = 0,
                     .inputOffset = 0,
                 });
             }
+        } else {
+            rewireOp.ranges.push_back({
+                .subwidth = absShift,
+                .source = (m_fillLeft? hlim::Node_Rewire::OutputRange::CONST_ONE : hlim::Node_Rewire::OutputRange::CONST_ZERO),
+            });
+        }
+        if (absShift < width) {
+            rewireOp.ranges.push_back({
+                .subwidth = width - absShift,
+                .source = hlim::Node_Rewire::OutputRange::INPUT,
+                .inputIdx = 0,
+                .inputOffset = 0,
+            });
         }
     }
+
     node->setOp(std::move(rewireOp));
     node->connectInput(0, operand.getReadPort());
     return SignalReadPort(node);

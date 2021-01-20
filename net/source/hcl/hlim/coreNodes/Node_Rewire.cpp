@@ -144,7 +144,7 @@ void Node_Rewire::updateConnectionType()
     desiredConnectionType.width = 0;
     for (auto r : m_rewireOperation.ranges)
         desiredConnectionType.width += r.subwidth;
-    HCL_ASSERT(desiredConnectionType.width <= 64);
+    //HCL_ASSERT(desiredConnectionType.width <= 64);
 
     setOutputConnectionType(0, desiredConnectionType);
 }
@@ -152,7 +152,7 @@ void Node_Rewire::updateConnectionType()
 
 void Node_Rewire::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
-    HCL_ASSERT_HINT(getOutputConnectionType(0).width <= 64, "Rewiring with more than 64 bits not yet implemented!");
+    //HCL_ASSERT_HINT(getOutputConnectionType(0).width <= 64, "Rewiring with more than 64 bits not yet implemented!");
 
     size_t outputOffset = 0;
     for (const auto &range : m_rewireOperation.ranges) {
