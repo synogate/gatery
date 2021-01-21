@@ -1,3 +1,4 @@
+#pragma once
 #include <hcl/frontend.h>
 
 #include "../Counter.h"

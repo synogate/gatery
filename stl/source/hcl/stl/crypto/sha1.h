@@ -1,3 +1,4 @@
+#pragma once
 #include <hcl/frontend.h>
 #include "HashEngine.h"
 #include "../Adder.h"
@@ -104,15 +105,14 @@ namespace hcl::stl
 		void round(const BVec& round)
 		{
 			// select round constant
-			TVec k;
+			TVec k = 0xCA62C1D6;
+
 			IF(round < 20)
 				k = 0x5A827999;
 			ELSE IF(round < 40)
 				k = 0x6ED9EBA1;
 			ELSE IF(round < 60)
 				k = 0x8F1BBCDC;
-			ELSE
-				k = 0xCA62C1D6;
 
 			// select round function
 			TVec f = b ^ c ^ d;
