@@ -22,11 +22,13 @@ ConditionalScope::ConditionalScope(const Bit &condition) :
     m_id(s_nextId++)
 {
     setCondition(condition.getReadPort());
+    m_isElseScope = false;
 }
 
 ConditionalScope::ConditionalScope() :
     m_id(s_nextId++)
 {
+    m_isElseScope = true;
     hlim::Node_Logic* invNode = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::NOT);
     invNode->connectInput(0, m_lastCondition);
 
@@ -44,7 +46,17 @@ ConditionalScope::ConditionalScope() :
 
 ConditionalScope::~ConditionalScope()
 {
-    m_lastCondition = m_condition;
+    if (!m_isElseScope) {
+        m_lastCondition = m_condition;
+    } else {
+        hlim::Node_Logic* invNode = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::NOT);
+        invNode->connectInput(0, m_condition);
+        hlim::Node_Logic* andNode = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::OR);
+        andNode->connectInput(0, m_lastCondition);
+        andNode->connectInput(1, {.node=invNode, .port=0u});
+
+        m_lastCondition = {.node=andNode, .port=0u};
+    }
     g_lastConditionBit.reset();
 }
 /*

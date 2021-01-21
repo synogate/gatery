@@ -547,6 +547,51 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
     eval(design.getCircuit());
 }
 
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiElseConditionalAssignment, data::xrange(8)* data::xrange(8), x, y)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    BVec a = ConstBVec(x, 8);
+    BVec b = ConstBVec(y, 8);
+
+    BVec c = ConstBVec(8);
+    IF(a[2]) {
+        IF(a[1]) {
+            c = a + b;
+            c += b;
+            c += a;
+        } ELSE{
+            c = a - b;
+        }
+    } ELSE IF(a[1])
+        c = a;
+    ELSE
+        c = b;
+
+    unsigned groundTruth;
+    if (unsigned(x) & 4) {
+        if (unsigned(x) & 2) {
+            groundTruth = x + y;
+            groundTruth += y;
+            groundTruth += x;
+        }
+        else
+            groundTruth = x - y;
+    }
+    else 
+        if (unsigned(x) & 2)
+            groundTruth = x;
+        else
+            groundTruth = y;
+    
+
+    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+
+    eval(design.getCircuit());
+}
+
 BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignmentNoElse, data::xrange(8) * data::xrange(8), x, y)
 {
     using namespace hcl::core::frontend;
