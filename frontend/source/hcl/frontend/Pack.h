@@ -137,13 +137,14 @@ namespace hcl::core::frontend
 		struct PackVisitor : internal::SignalVisitor
 		{
 			PackVisitor(size_t numInputs) {
+				m_idx = numInputs - 1;
 				m_node = DesignScope::createNode<hlim::Node_Rewire>(numInputs);
 				m_node->recordStackTrace();
 			}
 
 			void operator () (const ElementarySignal& vec) 
 			{ 
-				m_node->connectInput(m_idx++, vec.getReadPort());
+				m_node->connectInput(m_idx--, vec.getReadPort());
 			}
 
 			hlim::Node_Rewire* m_node;
@@ -163,15 +164,18 @@ namespace hcl::core::frontend
 	{
 		struct UnpackVisitor : internal::SignalVisitor
 		{
-			UnpackVisitor(const BVec& out) : m_packed(out) {}
+			UnpackVisitor(const BVec& out) : 
+				m_packed(out),
+				m_totalWidth(out.size())
+			{}
 
 			void operator () (BVec& vec)
 			{
 				auto* node = DesignScope::createNode<hlim::Node_Rewire>(1);
 				node->recordStackTrace();
 				node->connectInput(0, m_packed.getReadPort());
+				m_totalWidth -= vec.size();
 				node->setExtract(m_totalWidth, vec.getWidth());
-				m_totalWidth += vec.size();
 			
 				vec = BVec{ SignalReadPort(node) };
 			}
@@ -182,8 +186,8 @@ namespace hcl::core::frontend
 				node->recordStackTrace();
 				node->connectInput(0, m_packed.getReadPort());
 				node->changeOutputType({ hlim::ConnectionType::BOOL });
+				m_totalWidth--;
 				node->setExtract(m_totalWidth, 1);
-				m_totalWidth++;
 
 				vec = Bit{ SignalReadPort(node) };
 			}
