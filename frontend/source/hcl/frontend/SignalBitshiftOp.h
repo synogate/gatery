@@ -43,14 +43,21 @@ class SignalBitShiftOp
 };
 
 
-BVec operator<<(const BVec &signal, int amount);
-BVec operator>>(const BVec &signal, int amount);
-BVec &operator<<=(BVec &signal, int amount);
-BVec &operator>>=(BVec &signal, int amount);
+BVec operator<<(const BVec &signal, int amount); // TODO (remove)
+BVec operator>>(const BVec &signal, int amount); // TODO (remove)
+BVec &operator<<=(BVec &signal, int amount); // TODO (remove)
+BVec &operator>>=(BVec &signal, int amount); // TODO (remove)
 
-BVec rot(const BVec& signal, int amount);
-inline BVec rotl(const BVec& signal, int amount) { return rot(signal, amount); }
-inline BVec rotr(const BVec& signal, int amount) { return rot(signal, -amount); }
+BVec rot(const BVec& signal, int amount); // TODO (remove)
+inline BVec rotl(const BVec& signal, int amount) { return rot(signal, amount); }  // TODO (remove)
+inline BVec rotr(const BVec& signal, int amount) { return rot(signal, -amount); }  // TODO (remove)
 
+BVec operator<<(const BVec& signal, const BVec& amount); // TODO
+BVec operator>>(const BVec& signal, const BVec& amount); // TODO
+BVec& operator<<=(BVec& signal, const BVec& amount); // TODO
+BVec& operator>>=(BVec& signal, const BVec& amount); // TODO
+
+BVec rotl(const BVec& signal, const BVec& amount); // TODO
+BVec rotr(const BVec& signal, const BVec& amount); // TODO
 
 }
