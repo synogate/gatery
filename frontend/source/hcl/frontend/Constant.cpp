@@ -70,13 +70,28 @@ sim::DefaultBitVectorState hcl::core::frontend::parseBVec(std::string_view value
         }
     };
 
+    auto parseDec = [&](auto& ctx) {
+        std::string_view numStr = _attr(ctx);
+        uint64_t num = std::strtoull(numStr.data(), nullptr, 10);
+        uint64_t width = utils::Log2C(num + 1);
+
+        if (ret.size() == 0)
+            ret.resize(width);
+        HCL_DESIGNCHECK_HINT(ret.size() >= width, "string BVec constant width is to small for its value");
+
+        ret.setRange(sim::DefaultConfig::DEFINED, 0, width, true);
+        for (size_t i = 0; i < width; ++i)
+            ret.set(sim::DefaultConfig::VALUE, i, (num & (1ull << i)) != false);
+    };
+
     try {
         parse(value.begin(), value.end(),
             (-uint_)[parseWidth] > (
                 (char_('x') > (*char_("0-9a-fA-FxX"))[std::bind(parseHex, 4, std::placeholders::_1)]) |
                 (char_('o') > (*char_("0-7xX"))[std::bind(parseHex, 3, std::placeholders::_1)]) |
-                (char_('b') > (*char_("0-1xX"))[std::bind(parseHex, 1, std::placeholders::_1)])
-                ) > eoi
+                (char_('b') > (*char_("0-1xX"))[std::bind(parseHex, 1, std::placeholders::_1)]) |
+                (char_('d') > (*char_("0-9"))[parseDec])
+            ) > eoi
         );
     }
     catch (const expectation_failure<std::string_view::iterator>& err)

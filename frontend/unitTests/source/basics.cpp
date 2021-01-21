@@ -363,6 +363,24 @@ BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, hcl::core::sim::UnitTestS
     runTicks(design.getCircuit(), clock.getClk(), 10);
 }
 
+BOOST_FIXTURE_TEST_CASE(StringLiteralParsing, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    BVec a = "d7";
+    BOOST_TEST(a.size() == 3);
+
+    BVec b = "4d7";
+    BOOST_TEST(b.size() == 4);
+    sim_assert(b == "x7");
+    sim_assert(b == 7);
+    sim_assert(b == "b0111");
+    sim_assert(b == "4o7");
+
+    eval(design.getCircuit());
+}
 
 
 BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAssignment, data::xrange(8) * data::xrange(8), x, y)
