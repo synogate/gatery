@@ -25,11 +25,11 @@ namespace hcl::stl
 
 		Sha1Generator()
 		{
-			a = "0x67452301";
-			b = "0xEFCDAB89";
-			c = "0x98BADCFE";
-			d = "0x10325476";
-			e = "0xC3D2E1F0";
+			a = "x67452301";
+			b = "xEFCDAB89";
+			c = "x98BADCFE";
+			d = "x10325476";
+			e = "xC3D2E1F0";
 
 			hash = pack(a, b, c, d, e);
 		}
@@ -60,7 +60,7 @@ namespace hcl::stl
 				f = (b & c) | (b & d) | (c & d);
 
 			// update state
-			TVec tmp = rotl(a, 5) + e + w[0] + k; // + f;
+			TVec tmp = TAdder{} + rotl(a, 5) + e + w[0] + k + f;
 			e = d;
 			d = c;
 			c = rotl(b, 30);
@@ -77,11 +77,11 @@ namespace hcl::stl
 
 		void endBlock()
 		{
-			a += hash(Selection::Symbol(0, 32));
-			b += hash(Selection::Symbol(1, 32));
+			a += hash(Selection::Symbol(4, 32));
+			b += hash(Selection::Symbol(3, 32));
 			c += hash(Selection::Symbol(2, 32));
-			d += hash(Selection::Symbol(3, 32));
-			e += hash(Selection::Symbol(4, 32));
+			d += hash(Selection::Symbol(1, 32));
+			e += hash(Selection::Symbol(0, 32));
 
 			hash = pack(a, b, c, d, e);
 		}
