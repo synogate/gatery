@@ -53,14 +53,14 @@ sim::DefaultBitVectorState hcl::core::frontend::parseBVec(std::string_view value
 
         for (size_t i = 0; i < num.size(); ++i)
         {
-            size_t value = 0;
-            size_t defined = 0xFF;
+            uint8_t value = 0;
+            uint8_t defined = 0xFF;
             if (num[i] >= '0' && num[i] <= '9')
                 value = num[i] - '0';
             else if (num[i] >= 'a' && num[i] <= 'f')
-                value = num[i] - 'a';
+                value = num[i] - 'a' + 10;
             else if (num[i] >= 'A' && num[i] <= 'F')
-                value = num[i] - 'A';
+                value = num[i] - 'A' + 10;
             else
                 defined = 0;
 
