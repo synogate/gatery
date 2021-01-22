@@ -28,6 +28,7 @@ namespace hcl::core::frontend {
             const size_t m_id;
             hlim::NodePort m_condition;
             hlim::NodePort m_fullCondition;
+            bool m_isElseScope;
 
             thread_local static hlim::NodePort m_lastCondition;
             thread_local static size_t s_nextId;
