@@ -29,6 +29,46 @@ template<class Config>
 class BitVectorState
 {
     public:
+        class iterator
+        {
+        public:
+            class proxy
+            {
+            public:
+                proxy(BitVectorState& state, typename Config::Plane plane, size_t offset, size_t size) :
+                    m_state(state), m_plane(plane), m_offset(offset), m_size(size) {}
+
+                operator typename Config::BaseType() const { return m_state.extract(m_plane, m_offset, m_size); }
+                proxy& operator = (typename Config::BaseType value) { m_state.insert(m_plane, m_offset, m_size, value); return *this; }
+
+            private:
+                BitVectorState& m_state;
+                const typename Config::Plane m_plane;
+                const size_t m_offset;
+                const size_t m_size;
+            };
+
+            iterator(BitVectorState& state, typename Config::Plane plane, size_t offset, size_t end) : 
+                m_state(state), m_plane(plane), m_offset(offset), m_end(end) {}
+
+            bool operator != (const iterator& r) const { return m_offset != r.m_offset; }
+            bool operator == (const iterator& r) const { return m_offset == r.m_offset; }
+
+            iterator& operator ++() { m_offset += stepWidth(); return *this; }
+            iterator operator ++(int) { return iterator{m_state, m_plane, m_offset + stepWidth(), m_end}; }
+
+            proxy operator *() { return proxy{ m_state, m_plane, m_offset, stepWidth() }; }
+
+            size_t stepWidth() const { return std::min(sizeof(typename Config::BaseType) * 8, m_end - m_offset); }
+            size_t mask() const { return (1ull << stepWidth()) - 1; }
+
+        private:
+            BitVectorState& m_state;
+            const typename Config::Plane m_plane;
+            size_t m_offset;
+            const size_t m_end;
+        };
+
         void resize(size_t size);
         inline size_t size() const { return m_size; }
         inline size_t getNumBlocks() const { return m_values[0].size(); }
@@ -56,7 +96,10 @@ class BitVectorState
 
         void insert(typename Config::Plane plane, size_t start, size_t size, typename Config::BaseType value);
         void insertNonStraddling(typename Config::Plane plane, size_t start, size_t size, typename Config::BaseType value);
-    protected:
+
+        std::pair<iterator, iterator> range(typename Config::Plane plane, size_t offset, size_t size);
+
+protected:
         size_t m_size = 0;
         std::array<std::vector<typename Config::BaseType>, Config::NUM_PLANES> m_values;
 };
@@ -66,6 +109,9 @@ template<typename Config>
 bool allDefinedNonStraddling(const BitVectorState<Config> &vec, size_t start, size_t size) {
     return !utils::andNot(vec.extractNonStraddling(Config::DEFINED, start, size), utils::bitMaskRange(0, size));
 }
+
+
+
 
 using DefaultBitVectorState = BitVectorState<DefaultConfig>;
 
@@ -290,6 +336,17 @@ void BitVectorState<Config>::insertNonStraddling(typename Config::Plane plane, s
         auto& op = m_values[plane][start / Config::NUM_BITS_PER_BLOCK];
         op = utils::bitfieldInsert(op, start % Config::NUM_BITS_PER_BLOCK, size, value);
     }
+}
+
+template<class Config>
+inline std::pair<typename BitVectorState<Config>::iterator, typename BitVectorState<Config>::iterator> 
+BitVectorState<Config>::range(typename Config::Plane plane, size_t offset, size_t size)
+{
+    const size_t endOffset = offset + size;
+    return {
+        iterator{*this, plane, offset, endOffset},
+        iterator{*this, plane, endOffset, endOffset}
+    };
 }
 
 

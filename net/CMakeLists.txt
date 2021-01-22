@@ -97,7 +97,7 @@ add_library(hcl_net STATIC
     source/hcl/utils/StackTrace.cpp
     source/hcl/utils/StackTrace.h
     source/hcl/utils/Traits.h
-)
+ "source/hcl/hlim/coreNodes/Node_Shift.h" "source/hcl/hlim/coreNodes/Node_Shift.cpp")
 
 set(data_files 
 )

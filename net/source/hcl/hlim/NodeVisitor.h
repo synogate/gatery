@@ -13,6 +13,7 @@ class Node_Pin;
 class Node_PriorityConditional;
 class Node_Register;
 class Node_Rewire;
+class Node_Shift;
 class Node_Signal;
 class Node_SignalGenerator;
 class Node_SignalTap;
@@ -32,6 +33,7 @@ class NodeVisitor
         virtual void operator()(Node_Register &node) = 0;
         virtual void operator()(Node_Rewire &node) = 0;
         virtual void operator()(Node_Signal &node) = 0;
+        virtual void operator()(Node_Shift &node) = 0;
         virtual void operator()(Node_SignalGenerator &node) = 0;
         virtual void operator()(Node_SignalTap &node) = 0;
 };
@@ -50,6 +52,7 @@ class ConstNodeVisitor
         virtual void operator()(const Node_PriorityConditional &node) = 0;
         virtual void operator()(const Node_Register &node) = 0;
         virtual void operator()(const Node_Rewire &node) = 0;
+        virtual void operator()(const Node_Shift &node) = 0;
         virtual void operator()(const Node_Signal &node) = 0;
         virtual void operator()(const Node_SignalGenerator &node) = 0;
         virtual void operator()(const Node_SignalTap &node) = 0;
