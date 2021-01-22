@@ -57,13 +57,13 @@ Exploration<forward, Policy>::Exploration(NodePort nodePort) : m_nodePort(nodePo
 }
 
 template<bool forward, typename Policy>
-Exploration<forward, Policy>::iterator Exploration<forward, Policy>::begin()
+typename Exploration<forward, Policy>::iterator Exploration<forward, Policy>::begin()
 {
     return iterator(m_nodePort);
 }
 
 template<bool forward, typename Policy>
-Exploration<forward, Policy>::iterator Exploration<forward, Policy>::end()
+typename Exploration<forward, Policy>::iterator Exploration<forward, Policy>::end()
 {
     return iterator();
 }
