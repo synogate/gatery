@@ -13,6 +13,7 @@ struct ConnectionType
     enum Interpretation {
         BOOL,
         BITVEC,
+        DEPENDENCY,
     };
     
     Interpretation interpretation = BITVEC;

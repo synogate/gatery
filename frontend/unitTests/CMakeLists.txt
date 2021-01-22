@@ -6,6 +6,7 @@ add_executable(unitTestCore
     source/fsm.cpp
     source/basics.cpp
     source/main.cpp
+    source/memory.cpp
  "source/BVecTest.cpp" "source/compound.cpp")
 
 target_include_directories (unitTestCore PUBLIC

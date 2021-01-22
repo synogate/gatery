@@ -16,6 +16,10 @@ class Node_Rewire;
 class Node_Signal;
 class Node_SignalGenerator;
 class Node_SignalTap;
+
+class Node_Memory;
+class Node_MemReadPort;
+class Node_MemWritePort;
     
 class NodeVisitor
 {
@@ -34,6 +38,9 @@ class NodeVisitor
         virtual void operator()(Node_Signal &node) = 0;
         virtual void operator()(Node_SignalGenerator &node) = 0;
         virtual void operator()(Node_SignalTap &node) = 0;
+        virtual void operator()(Node_Memory &node) = 0;
+        virtual void operator()(Node_MemReadPort &node) = 0;
+        virtual void operator()(Node_MemWritePort &node) = 0;
 };
 
 class ConstNodeVisitor
@@ -53,6 +60,9 @@ class ConstNodeVisitor
         virtual void operator()(const Node_Signal &node) = 0;
         virtual void operator()(const Node_SignalGenerator &node) = 0;
         virtual void operator()(const Node_SignalTap &node) = 0;
+        virtual void operator()(const Node_Memory &node) = 0;
+        virtual void operator()(const Node_MemReadPort &node) = 0;
+        virtual void operator()(const Node_MemWritePort &node) = 0;
 };
 
 

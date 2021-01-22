@@ -52,6 +52,7 @@ class Node_Rewire : public Node<Node_Rewire>
 
         inline void setOp(RewireOperation rewireOperation) { m_rewireOperation = std::move(rewireOperation); updateConnectionType(); }
         inline const RewireOperation &getOp() const { return m_rewireOperation; }
+        bool isNoOp() const;
         
         void changeOutputType(ConnectionType outputType);
     protected:

@@ -19,10 +19,11 @@ class NodeGroup
         enum class GroupType {
             ENTITY      = 0x01,
             AREA        = 0x02,
+            SFU         = 0x03,
         };
         
         NodeGroup(GroupType groupType);
-        ~NodeGroup();
+        virtual ~NodeGroup();
         
         inline void recordStackTrace() { m_stackTrace.record(10, 1); }
         inline const utils::StackTrace &getStackTrace() const { return m_stackTrace; }
@@ -31,6 +32,13 @@ class NodeGroup
         inline void setComment(std::string comment) { m_comment = std::move(comment); }
         
         NodeGroup *addChildNodeGroup(GroupType groupType);
+        
+        template<typename Type, typename... Args>
+        Type *addSpecialChildNodeGroup(Args&&... args) {
+            m_children.push_back(std::make_unique<Type>(std::forward<Args>(args)...));
+            m_children.back()->m_parent = this;
+            return (Type*)m_children.back().get();
+        }
         
         inline const NodeGroup *getParent() const { return m_parent; }
         inline const std::string &getName() const { return m_name; }

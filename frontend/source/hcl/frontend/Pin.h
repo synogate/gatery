@@ -4,6 +4,7 @@
 #include "BitVector.h"
 
 #include <hcl/hlim/coreNodes/Node_Pin.h>
+#include <hcl/hlim/coreNodes/Node_Signal.h>
 
 namespace hcl::core::frontend {
 
@@ -28,7 +29,17 @@ namespace hcl::core::frontend {
         public:
             InputPin();
 
-            inline operator Bit () { return Bit(SignalReadPort({.node=m_pinNode, .port=0ull})); }
+            inline operator Bit () { 
+#if 0
+                return Bit(SignalReadPort({.node=m_pinNode, .port=0ull})); 
+#else
+                auto* signal = DesignScope::createNode<hlim::Node_Signal>();
+                signal->connectInput({.node=m_pinNode, .port=0ull});
+                signal->setName(m_pinNode->getName());
+                signal->recordStackTrace();
+                return Bit(SignalReadPort(signal)); 
+#endif
+            }
 
             inline InputPin &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
         protected:

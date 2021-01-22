@@ -1,6 +1,8 @@
 #pragma once
 
+#include "NodePort.h"
 #include "ConnectionType.h"
+#include "GraphExploration.h"
 #include "../simulation/BitVectorState.h"
 
 #include "../utils/StackTrace.h"
@@ -15,52 +17,6 @@ namespace hcl::core::hlim {
 
 class BaseNode;
 class NodeIO;
-
-constexpr size_t INV_PORT = std::numeric_limits<std::size_t>::max();
-
-struct NodePort {
-    BaseNode *node = nullptr;
-    size_t port = INV_PORT;
-    
-    inline bool operator==(const NodePort &rhs) const { return node == rhs.node && port == rhs.port; }
-    inline bool operator<(const NodePort &rhs) const { if (node < rhs.node) return true; if (node > rhs.node) return false; return port < rhs.port; }
-};
-
-/*
-class ExplorationList {
-    public:
-        class iterator {
-            public:
-                using iterator_category = std::forward_iterator_tag;                
-
-                iterator &operator++();
-                bool operator!=(const iterator &rhs) const { HCL_ASSERT(rhs.m_isEndIterator); return m_isEndIterator || m_openList.empty(); }
-                NodePort operator*() { return *m_openList.begin(); }
-            protected:
-                bool m_isEndIterator;
-                enum Mode {
-                    ONLY_DIRECT,
-                    ONLY_SIGNALS,
-                    IGNORE_SIGNALS
-                };
-                Mode m_mode;
-
-                iterator();
-                //iterator(Node *node, 
-                
-                std::set<BaseNode*> m_closedList;
-                std::set<NodePort> m_openList;
-                
-                friend class ExplorationList;
-        };
-        
-        iterator begin();
-        iterator end();
-    protected:
-        NodeIO &m_nodeIO;
-        bool m_ignoreSignals;
-};
-*/
 class Circuit;
 
 class NodeIO
@@ -81,17 +37,18 @@ class NodeIO
         ConnectionType getDriverConnType(size_t inputPort) const;
         NodePort getDriver(size_t inputPort) const;
         NodePort getNonSignalDriver(size_t inputPort) const;
-        
+
         const std::vector<NodePort> &getDirectlyDriven(size_t outputPort) const;
-        /*
-        ExplorationList getSignalsDriven(size_t outputPort) const;
-        ExplorationList getNonSignalDriven(size_t outputPort) const;
-        */
+
+        ExplorationFwdDepthFirst exploreOutput(size_t port) { return ExplorationFwdDepthFirst({.node=(BaseNode*)this, .port = port}); }
+        ExplorationBwdDepthFirst exploreInput(size_t port) { return ExplorationBwdDepthFirst({.node=(BaseNode*)this, .port = port}); }
 
         inline const ConnectionType &getOutputConnectionType(size_t outputPort) const { return m_outputPorts[outputPort].connectionType; }
         inline OutputType getOutputType(size_t outputPort) const { return m_outputPorts[outputPort].outputType; }
         
         virtual bool hasSideEffects() const;
+
+        void bypassOutputToInput(size_t outputPort, size_t inputPort);
     protected:
         void setOutputConnectionType(size_t outputPort, const ConnectionType &connectionType);
         void setOutputType(size_t outputPort, OutputType outputType);

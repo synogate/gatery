@@ -18,6 +18,8 @@ add_library(hcl_net STATIC
     source/hcl/export/vhdl/CodeFormatting.h
     source/hcl/export/vhdl/Entity.cpp
     source/hcl/export/vhdl/Entity.h
+    source/hcl/export/vhdl/GenericMemoryEntity.cpp
+    source/hcl/export/vhdl/GenericMemoryEntity.h
     source/hcl/export/vhdl/NamespaceScope.cpp
     source/hcl/export/vhdl/NamespaceScope.h
     source/hcl/export/vhdl/Process.cpp
@@ -50,6 +52,12 @@ add_library(hcl_net STATIC
 
     source/hcl/hlim/supportNodes/Node_External.cpp
     source/hcl/hlim/supportNodes/Node_External.h
+    source/hcl/hlim/supportNodes/Node_Memory.cpp
+    source/hcl/hlim/supportNodes/Node_Memory.h
+    source/hcl/hlim/supportNodes/Node_MemReadPort.cpp
+    source/hcl/hlim/supportNodes/Node_MemReadPort.h
+    source/hcl/hlim/supportNodes/Node_MemWritePort.cpp
+    source/hcl/hlim/supportNodes/Node_MemWritePort.h
     source/hcl/hlim/supportNodes/Node_SignalGenerator.cpp
     source/hcl/hlim/supportNodes/Node_SignalGenerator.h
     source/hcl/hlim/supportNodes/Node_SignalTap.cpp
@@ -59,6 +67,8 @@ add_library(hcl_net STATIC
     source/hcl/hlim/Circuit.h
     source/hcl/hlim/Clock.cpp
     source/hcl/hlim/Clock.h
+    source/hcl/hlim/GraphExploration.cpp
+    source/hcl/hlim/GraphExploration.h
     source/hcl/hlim/ConnectionType.cpp
     source/hcl/hlim/ConnectionType.h
     source/hcl/hlim/Node.cpp
@@ -69,6 +79,8 @@ add_library(hcl_net STATIC
     source/hcl/hlim/NodeGroup.h
     source/hcl/hlim/NodeIO.cpp
     source/hcl/hlim/NodeIO.h
+    source/hcl/hlim/MemoryDetector.cpp
+    source/hcl/hlim/MemoryDetector.h
     source/hcl/hlim/SignalGroup.cpp
     source/hcl/hlim/SignalGroup.h
 

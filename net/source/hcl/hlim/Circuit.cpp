@@ -7,6 +7,10 @@
 #include "coreNodes/Node_Logic.h"
 #include "coreNodes/Node_Constant.h"
 #include "coreNodes/Node_Pin.h"
+#include "coreNodes/Node_Rewire.h"
+#include "coreNodes/Node_Register.h"
+
+#include "MemoryDetector.h"
 
 
 #include "../simulation/BitVectorState.h"
@@ -381,6 +385,82 @@ void Circuit::cullMuxConditionNegations()
     }
 }
 
+/**
+ * @details So far only removes no-op rewire nodes since they prevent block-ram detection
+ * 
+ */
+void Circuit::removeNoOps()
+{
+    for (size_t i = 0; i < m_nodes.size(); i++) {
+        bool removeNode = false;
+
+        if (auto *rewire = dynamic_cast<Node_Rewire*>(m_nodes[i].get())) {
+            if (rewire->isNoOp()) {
+                rewire->bypassOutputToInput(0, 0);
+                removeNode = true;
+            }
+        }
+        
+        if (removeNode) {
+            m_nodes[i] = std::move(m_nodes.back());
+            m_nodes.pop_back();
+            i--;
+        }
+    }
+}
+
+void Circuit::foldRegisterMuxEnableLoops()
+{
+    for (size_t i = 0; i < m_nodes.size(); i++) {
+        if (auto *regNode = dynamic_cast<Node_Register*>(m_nodes[i].get())) {
+            auto enableCondition = regNode->getNonSignalDriver((unsigned)Node_Register::Input::ENABLE);
+            
+            auto data = regNode->getNonSignalDriver((unsigned)Node_Register::Input::DATA);
+            if (auto *muxNode = dynamic_cast<Node_Multiplexer*>(data.node)) {
+                if (muxNode->getNumInputPorts() == 3) {
+
+                    auto muxInput1 = muxNode->getNonSignalDriver(1);
+                    auto muxInput2 = muxNode->getNonSignalDriver(2);
+
+                    auto muxCondition = muxNode->getDriver(0);
+
+                    if (muxInput1.node == regNode) {
+                        if (enableCondition.node != nullptr) {
+                            auto *andNode = createNode<Node_Logic>(Node_Logic::AND);
+                            andNode->recordStackTrace();
+                            andNode->moveToGroup(regNode->getGroup());
+                            andNode->connectInput(0, enableCondition);
+                            andNode->connectInput(1, muxCondition);
+
+                            regNode->connectInput(Node_Register::Input::ENABLE, {.node=andNode, .port=0ull});
+                        } else {
+                            regNode->connectInput(Node_Register::Input::ENABLE, muxCondition);
+                        }
+                        regNode->connectInput(Node_Register::Input::DATA, muxNode->getDriver(2));
+                    } else if (muxInput2.node == regNode) {
+                        auto *notNode = createNode<Node_Logic>(Node_Logic::NOT);
+                        notNode->recordStackTrace();
+                        notNode->moveToGroup(regNode->getGroup());
+                        notNode->connectInput(0, muxCondition);
+
+                        if (enableCondition.node != nullptr) {
+                            auto *andNode = createNode<Node_Logic>(Node_Logic::AND);
+                            andNode->recordStackTrace();
+                            andNode->moveToGroup(regNode->getGroup());
+                            andNode->connectInput(0, enableCondition);
+                            andNode->connectInput(1, {.node=notNode,.port=0ull});
+
+                            regNode->connectInput(Node_Register::Input::ENABLE, {.node=andNode, .port=0ull});
+                        } else {
+                            regNode->connectInput(Node_Register::Input::ENABLE, {.node=notNode, .port=0ull});
+                        }
+                        regNode->connectInput(Node_Register::Input::DATA, muxNode->getDriver(1));
+                    }
+                }
+            }
+        }
+    }
+}
 
 void Circuit::propagateConstants()
 {
@@ -499,6 +579,8 @@ void Circuit::removeFalseLoops()
 }
 
 
+
+
 void Circuit::optimize(size_t level)
 {
     switch (level) {
@@ -519,8 +601,12 @@ void Circuit::optimize(size_t level)
             mergeMuxes();
             removeIrrelevantMuxes();
             cullMuxConditionNegations();
+            removeNoOps();
+            foldRegisterMuxEnableLoops();
             propagateConstants(); // do again after muxes are removed
             cullUnusedNodes();
+
+            findMemoryGroups(*this);
         break;
     };
 }
