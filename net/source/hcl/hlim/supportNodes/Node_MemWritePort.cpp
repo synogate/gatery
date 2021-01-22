@@ -8,6 +8,7 @@ Node_MemWritePort::Node_MemWritePort(std::size_t bitWidth) : m_bitWidth(bitWidth
 {
     resizeInputs((unsigned)Inputs::count);
     resizeOutputs(0);
+    m_clocks.resize(1);
 }
 
 void Node_MemWritePort::connectMemory(Node_Memory *memory)
@@ -44,6 +45,11 @@ void Node_MemWritePort::connectData(const NodePort &output)
 bool Node_MemWritePort::hasSideEffects() const
 {
     return getDriver((unsigned)Inputs::memory).node != nullptr;
+}
+
+void Node_MemWritePort::setClock(Clock* clk)
+{
+    attachClock(clk, 0);
 }
 
 void Node_MemWritePort::simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const

@@ -28,7 +28,10 @@ namespace hcl::core::frontend {
             {
                 auto *readPort = DesignScope::createNode<hlim::Node_MemReadPort>(m_wordSize);
                 readPort->connectMemory(m_memoryNode);
-                readPort->connectEnable(constructEnableBit().getReadPort());
+                //readPort->connectEnable(constructEnableBit().getReadPort());
+                if (auto* scope = hcl::core::frontend::ConditionalScope::get())
+                    readPort->connectEnable(scope->getFullCondition());
+
                 readPort->connectAddress(m_address.getReadPort());
 
                 BVec rawData(SignalReadPort({.node=readPort, .port=(unsigned)hlim::Node_MemReadPort::Outputs::data}));
@@ -42,11 +45,16 @@ namespace hcl::core::frontend {
             void write(const Data& value) {
                 BVec packedValue = pack(value);
 
+                HCL_DESIGNCHECK_HINT(packedValue.size() == m_wordSize, "The width of data assigned to a memory write port must match the previously specified word width of the memory or memory view.");
+
                 auto *writePort = DesignScope::createNode<hlim::Node_MemWritePort>(m_wordSize);
                 writePort->connectMemory(m_memoryNode);
-                writePort->connectEnable(constructEnableBit().getReadPort());
+                //writePort->connectEnable(constructEnableBit().getReadPort());
+                if (auto* scope = hcl::core::frontend::ConditionalScope::get())
+                    writePort->connectEnable(scope->getFullCondition());
                 writePort->connectAddress(m_address.getReadPort());
                 writePort->connectData(packedValue.getReadPort());
+                writePort->setClock(ClockScope::getClk().getClk());
             }
 
             MemoryPortFactory<Data>& operator = (const Data& value) { write(value); return *this; }

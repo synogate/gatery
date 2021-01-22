@@ -38,6 +38,8 @@ class Node_MemReadPort : public Node<Node_MemReadPort>
         virtual std::string getOutputName(size_t idx) const override;
 
         virtual std::vector<size_t> getInternalStateSizes() const override;        
+
+        inline size_t getBitWidth() const { return m_bitWidth; }
     protected:
         friend class Node_Memory;
         std::size_t m_bitWidth;

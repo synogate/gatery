@@ -28,6 +28,9 @@ class Node_MemWritePort : public Node<Node_MemWritePort>
         void connectAddress(const NodePort &output);
         void connectData(const NodePort &output);
 
+        void setClock(Clock* clk);
+
+
         virtual bool hasSideEffects() const override;
 
         virtual void simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
@@ -39,6 +42,8 @@ class Node_MemWritePort : public Node<Node_MemWritePort>
         virtual std::string getOutputName(size_t idx) const override;
 
         virtual std::vector<size_t> getInternalStateSizes() const override;        
+
+        inline size_t getBitWidth() const { return m_bitWidth; }
     protected:
         friend class Node_Memory;
         std::size_t m_bitWidth;
