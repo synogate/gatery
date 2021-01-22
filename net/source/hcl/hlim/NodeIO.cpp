@@ -45,6 +45,7 @@ const std::vector<NodePort> &NodeIO::getDirectlyDriven(size_t outputPort) const
 {
     return m_outputPorts[outputPort].connections;
 }
+
 /*
 ExplorationList NodeIO::getSignalsDriven(size_t outputPort) const
 {

@@ -67,6 +67,8 @@ add_library(hcl_net STATIC
     source/hcl/hlim/Circuit.h
     source/hcl/hlim/Clock.cpp
     source/hcl/hlim/Clock.h
+    source/hcl/hlim/GraphExploration.cpp
+    source/hcl/hlim/GraphExploration.h
     source/hcl/hlim/ConnectionType.cpp
     source/hcl/hlim/ConnectionType.h
     source/hcl/hlim/Node.cpp
