@@ -92,16 +92,85 @@ void Entity::allocateNames()
 }
 
 
+void Entity::writeLibrariesVHDL(std::ostream &stream)
+{
+    stream << "LIBRARY ieee;" << std::endl 
+           << "USE ieee.std_logic_1164.ALL;" << std::endl 
+           << "USE ieee.numeric_std.all;" << std::endl << std::endl;
+    
+}
+
+std::vector<std::string> Entity::getPortsVHDL()
+{
+    CodeFormatting &cf = m_ast.getCodeFormatting();
+
+    std::vector<std::string> portList;
+    for (const auto &clk : m_inputClocks) {
+        std::stringstream line;
+        line << m_namespaceScope.getName(clk) << " : IN STD_LOGIC";
+        portList.push_back(line.str());
+        if (clk->getResetType() != hlim::Clock::ResetType::NONE) {
+            std::stringstream line;
+            line << m_namespaceScope.getName(clk)<<clk->getResetName() << " : IN STD_LOGIC";
+            portList.push_back(line.str());
+        }
+    }
+    for (auto &ioPin : m_ioPins) {
+        bool isInput = !ioPin->getDirectlyDriven(0).empty();
+        bool isOutput = ioPin->getNonSignalDriver(0).node != nullptr;
+
+        std::stringstream line;
+        line << m_namespaceScope.getName(ioPin) << " : ";
+        if (isInput && isOutput) {
+            line << "INOUT "; // this will need more thought at other places to work
+            cf.formatConnectionType(line, ioPin->getOutputConnectionType(0));
+        } else if (isInput) {
+            line << "IN ";
+            cf.formatConnectionType(line, ioPin->getOutputConnectionType(0));
+        } else if (isOutput) {
+            line << "OUT ";
+            auto driver = ioPin->getNonSignalDriver(0);
+            cf.formatConnectionType(line, driver.node->getOutputConnectionType(driver.port));
+        } else
+            continue;
+        portList.push_back(line.str());
+    }
+    for (const auto &signal : m_inputs) {
+        std::stringstream line;
+        line << m_namespaceScope.getName(signal) << " : IN ";
+        cf.formatConnectionType(line, signal.node->getOutputConnectionType(signal.port));
+        portList.push_back(line.str());
+    }
+    for (const auto &signal : m_outputs) {
+        std::stringstream line;
+        line << m_namespaceScope.getName(signal) << " : OUT ";
+        cf.formatConnectionType(line, signal.node->getOutputConnectionType(signal.port));
+        portList.push_back(line.str());
+    }
+    return portList;
+}
+
+void Entity::writeLocalSignalsVHDL(std::ostream &stream)
+{
+    CodeFormatting &cf = m_ast.getCodeFormatting();
+
+    for (const auto &signal : m_localSignals) {
+        cf.indent(stream, 1);
+        stream << "SIGNAL " << m_namespaceScope.getName(signal) << " : ";
+        cf.formatConnectionType(stream, signal.node->getOutputConnectionType(signal.port));
+        stream << "; "<< std::endl;
+    }        
+}
+
+
+
 void Entity::writeVHDL(std::ostream &stream)
 {
     CodeFormatting &cf = m_ast.getCodeFormatting();
     
     stream << cf.getFileHeader();
     
-    stream << "LIBRARY ieee;" << std::endl 
-           << "USE ieee.std_logic_1164.ALL;" << std::endl 
-           << "USE ieee.numeric_std.all;" << std::endl << std::endl;
-    
+    writeLibrariesVHDL(stream);
     
     cf.formatEntityComment(stream, m_name, m_comment);
 
@@ -109,51 +178,8 @@ void Entity::writeVHDL(std::ostream &stream)
     cf.indent(stream, 1); stream << "PORT(" << std::endl;
     
     {
-        std::vector<std::string> portList;
+        std::vector<std::string> portList = getPortsVHDL();
 
-        for (const auto &clk : m_inputClocks) {
-            std::stringstream line;
-            line << m_namespaceScope.getName(clk) << " : IN STD_LOGIC";
-            portList.push_back(line.str());
-            if (clk->getResetType() != hlim::Clock::ResetType::NONE) {
-                std::stringstream line;
-                line << m_namespaceScope.getName(clk)<<clk->getResetName() << " : IN STD_LOGIC";
-                portList.push_back(line.str());
-            }
-        }
-        for (auto &ioPin : m_ioPins) {
-            bool isInput = !ioPin->getDirectlyDriven(0).empty();
-            bool isOutput = ioPin->getNonSignalDriver(0).node != nullptr;
-
-            std::stringstream line;
-            line << m_namespaceScope.getName(ioPin) << " : ";
-            if (isInput && isOutput) {
-                line << "INOUT "; // this will need more thought at other places to work
-                cf.formatConnectionType(line, ioPin->getOutputConnectionType(0));
-            } else if (isInput) {
-                line << "IN ";
-                cf.formatConnectionType(line, ioPin->getOutputConnectionType(0));
-            } else if (isOutput) {
-                line << "OUT ";
-                auto driver = ioPin->getNonSignalDriver(0);
-                cf.formatConnectionType(line, driver.node->getOutputConnectionType(driver.port));
-            } else
-                continue;
-            portList.push_back(line.str());
-        }
-        for (const auto &signal : m_inputs) {
-            std::stringstream line;
-            line << m_namespaceScope.getName(signal) << " : IN ";
-            cf.formatConnectionType(line, signal.node->getOutputConnectionType(signal.port));
-            portList.push_back(line.str());
-        }
-        for (const auto &signal : m_outputs) {
-            std::stringstream line;
-            line << m_namespaceScope.getName(signal) << " : OUT ";
-            cf.formatConnectionType(line, signal.node->getOutputConnectionType(signal.port));
-            portList.push_back(line.str());
-        }
-        
         for (auto i : utils::Range(portList.size())) {
             cf.indent(stream, 2);        
             stream << portList[i];
@@ -168,20 +194,69 @@ void Entity::writeVHDL(std::ostream &stream)
 
     stream << "ARCHITECTURE impl OF " << m_name << " IS " << std::endl;
     
-    for (const auto &signal : m_localSignals) {
-        cf.indent(stream, 1);
-        stream << "SIGNAL " << m_namespaceScope.getName(signal) << " : ";
-        cf.formatConnectionType(stream, signal.node->getOutputConnectionType(signal.port));
-        stream << "; "<< std::endl;
-    }        
+    writeLocalSignalsVHDL(stream);
     
     stream << "BEGIN" << std::endl;
     
     writeStatementsVHDL(stream, 1);
 
     stream << "END impl;" << std::endl;
-
 }
+
+void Entity::writeInstantiationVHDL(std::ostream &stream, unsigned indent)
+{
+    CodeFormatting &cf = m_ast.getCodeFormatting();
+
+    cf.indent(stream, indent);
+    stream << "inst_" << getName() << " : entity work." << getName() << "(impl) port map (" << std::endl;
+    
+    std::vector<std::string> portmapList;
+
+    
+    for (auto &s : m_inputClocks) {
+        std::stringstream line;
+        line << m_namespaceScope.getName(s) << " => ";
+        line << m_parent->getNamespaceScope().getName(s);
+        portmapList.push_back(line.str());
+        if (s->getResetType() != hlim::Clock::ResetType::NONE) {
+            std::stringstream line;
+            line << m_namespaceScope.getName(s)<<s->getResetName() << " => ";
+            line << m_parent->getNamespaceScope().getName(s)<<s->getResetName();
+            portmapList.push_back(line.str());
+        }
+    }
+    for (auto &s : m_ioPins) {
+        std::stringstream line;
+        line << m_namespaceScope.getName(s) << " => ";
+        line << m_parent->getNamespaceScope().getName(s);
+        portmapList.push_back(line.str());
+    }
+    for (auto &s : m_inputs) {
+        std::stringstream line;
+        line << m_namespaceScope.getName(s) << " => ";
+        line << m_parent->getNamespaceScope().getName(s);
+        portmapList.push_back(line.str());
+    }
+    for (auto &s : m_outputs) {
+        std::stringstream line;
+        line << m_namespaceScope.getName(s) << " => ";
+        line << m_parent->getNamespaceScope().getName(s);
+        portmapList.push_back(line.str());
+    }
+    
+    for (auto i : utils::Range(portmapList.size())) {
+        cf.indent(stream, indent+1);
+        stream << portmapList[i];
+        if (i+1 < portmapList.size())
+            stream << ",";
+        stream << std::endl;
+    }
+    
+    
+    cf.indent(stream, indent);
+    stream << ");" << std::endl;
+}
+
 
    
 }

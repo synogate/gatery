@@ -37,11 +37,14 @@ class Circuit
         void mergeMuxes();
         void cullMuxConditionNegations();
         void removeIrrelevantMuxes();
+        void removeNoOps();
+        void foldRegisterMuxEnableLoops();
         void propagateConstants();
 
         void removeFalseLoops();
         
         void optimize(size_t level);
+
     protected:
         std::vector<std::unique_ptr<BaseNode>> m_nodes;
         std::unique_ptr<NodeGroup> m_root;

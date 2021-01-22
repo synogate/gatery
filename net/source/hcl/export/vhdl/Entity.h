@@ -28,8 +28,14 @@ class Entity : public BasicBlock
         virtual void allocateNames() override;
         
         void writeVHDL(std::ostream &stream);
+
+        virtual void writeInstantiationVHDL(std::ostream &stream, unsigned indent);
     protected:        
         std::vector<std::unique_ptr<Block>> m_blocks;
+
+        virtual void writeLibrariesVHDL(std::ostream &stream);
+        virtual std::vector<std::string> getPortsVHDL();
+        virtual void writeLocalSignalsVHDL(std::ostream &stream);
 };
 
 }

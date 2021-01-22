@@ -180,6 +180,21 @@ std::string Node_Rewire::getTypeName() const
         return "Rewire"; 
 }
 
+bool Node_Rewire::isNoOp() const
+{
+    auto outWidth = getOutputConnectionType(0).width;
+    
+    size_t offset = 0;
+    for (const auto &range : m_rewireOperation.ranges) {
+        if (range.source != OutputRange::INPUT) return false;
+        if (range.inputIdx != 0) return false;
+        if (range.inputOffset != offset) return false;
+        offset += range.subwidth;
+    }
+    HCL_ASSERT(offset == outWidth);
+
+    return true;
+}
 
 
 }
