@@ -17,6 +17,7 @@ struct NodeGroupInfo
     std::vector<hlim::Node_External*> externalNodes;
     std::vector<hlim::NodeGroup*> subEntities;
     std::vector<hlim::NodeGroup*> subAreas;
+    std::vector<hlim::NodeGroup*> SFUs;
     
     void buildFrom(hlim::NodeGroup *nodeGroup, bool mergeAreasReccursive);
 };
@@ -66,7 +67,7 @@ class BasicBlock : public BaseGrouping
         void collectInstantiations(hlim::NodeGroup *nodeGroup, bool reccursive);        
         void processifyNodes(const std::string &desiredProcessName, hlim::NodeGroup *nodeGroup, bool reccursive);
         void routeChildIOUpwards(BaseGrouping *child);
-        void writeStatementsVHDL(std::ostream &stream, unsigned indent);
+        virtual void writeStatementsVHDL(std::ostream &stream, unsigned indent);
         
         
         std::vector<ShiftRegStorage> m_shiftRegStorage;
@@ -78,6 +79,7 @@ class BasicBlock : public BaseGrouping
         
         void handleEntityInstantiation(hlim::NodeGroup *nodeGroup);
         void handleExternalNodeInstantiaton(hlim::Node_External *externalNode);
+        void handleSFUInstantiaton(hlim::NodeGroup *sfu);
 };
 
 

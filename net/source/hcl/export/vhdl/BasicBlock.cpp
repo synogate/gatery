@@ -6,6 +6,8 @@
 #include "CodeFormatting.h"
 #include "AST.h"
 
+#include "GenericMemoryEntity.h"
+
 
 #include "../../hlim/coreNodes/Node_Register.h"
 #include "../../hlim/Clock.h"
@@ -40,6 +42,9 @@ void NodeGroupInfo::buildFrom(hlim::NodeGroup *nodeGroup, bool mergeAreasReccurs
                         nodeGroupStack.push_back(childGroup.get());
                     else
                         subAreas.push_back(childGroup.get());
+                break;
+                case hlim::NodeGroup::GroupType::SFU:
+                    SFUs.push_back(childGroup.get());
                 break;
             }
         }
@@ -156,6 +161,9 @@ void BasicBlock::collectInstantiations(hlim::NodeGroup *nodeGroup, bool reccursi
                     if (reccursive)
                         nodeGroupStack.push_back(childGroup.get());
                 break;
+                case hlim::NodeGroup::GroupType::SFU:
+                    handleSFUInstantiaton(childGroup.get());
+                break;
             }
         }
     }
@@ -187,6 +195,27 @@ void BasicBlock::handleExternalNodeInstantiaton(hlim::Node_External *externalNod
     
     m_statements.push_back(statement);
 }
+
+void BasicBlock::handleSFUInstantiaton(hlim::NodeGroup *sfu)
+{
+    Entity *entity;
+    if (auto *memGrp = dynamic_cast<hlim::MemoryGroup*>(sfu)) {
+        auto &memEntity = m_ast.createSpecialEntity<GenericMemoryEntity>(sfu->getName(), this);
+        m_entities.push_back(&memEntity);
+        memEntity.buildFrom(memGrp);
+    
+        entity = &memEntity;
+    } else
+        throw hcl::utils::InternalError(__FILE__, __LINE__, "Unhandled SFU node group");
+
+    ConcurrentStatement statement;
+    statement.type = ConcurrentStatement::TYPE_ENTITY_INSTANTIATION;
+    statement.ref.entity = entity;
+    statement.sortIdx = 0; /// @todo
+    
+    m_statements.push_back(statement);
+}
+
 
 void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::NodeGroup *nodeGroup, bool reccursive)
 {
@@ -264,57 +293,8 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
     for (auto &statement : m_statements) {
         switch (statement.type) {
             case ConcurrentStatement::TYPE_ENTITY_INSTANTIATION: {
-                
                 auto subEntity = statement.ref.entity;
-                cf.indent(stream, indent);
-                stream << "inst_" << subEntity->getName() << " : entity work." << subEntity->getName() << "(impl) port map (" << std::endl;
-                
-                std::vector<std::string> portmapList;
-
-                
-                for (auto &s : subEntity->m_inputClocks) {
-                    std::stringstream line;
-                    line << subEntity->m_namespaceScope.getName(s) << " => ";
-                    line << m_namespaceScope.getName(s);
-                    portmapList.push_back(line.str());
-                    if (s->getResetType() != hlim::Clock::ResetType::NONE) {
-                        std::stringstream line;
-                        line << subEntity->m_namespaceScope.getName(s)<<s->getResetName() << " => ";
-                        line << m_namespaceScope.getName(s)<<s->getResetName();
-                        portmapList.push_back(line.str());
-                    }
-                }
-                for (auto &s : subEntity->m_ioPins) {
-                    std::stringstream line;
-                    line << subEntity->m_namespaceScope.getName(s) << " => ";
-                    line << m_namespaceScope.getName(s);
-                    portmapList.push_back(line.str());
-                }
-                for (auto &s : subEntity->m_inputs) {
-                    std::stringstream line;
-                    line << subEntity->m_namespaceScope.getName(s) << " => ";
-                    line << m_namespaceScope.getName(s);
-                    portmapList.push_back(line.str());
-                }
-                for (auto &s : subEntity->m_outputs) {
-                    std::stringstream line;
-                    line << subEntity->m_namespaceScope.getName(s) << " => ";
-                    line << m_namespaceScope.getName(s);
-                    portmapList.push_back(line.str());
-                }
-                
-                for (auto i : utils::Range(portmapList.size())) {
-                    cf.indent(stream, indent+1);
-                    stream << portmapList[i];
-                    if (i+1 < portmapList.size())
-                        stream << ",";
-                    stream << std::endl;
-                }
-                
-                
-                cf.indent(stream, indent);
-                stream << ");" << std::endl;
-
+                subEntity->writeInstantiationVHDL(stream, indent);
             } break;
             case ConcurrentStatement::TYPE_EXT_NODE_INSTANTIATION: {
                 std::vector<std::string> inputSignalNames(statement.ref.externalNode->getNumInputPorts());

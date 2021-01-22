@@ -18,6 +18,8 @@ add_library(hcl_net STATIC
     source/hcl/export/vhdl/CodeFormatting.h
     source/hcl/export/vhdl/Entity.cpp
     source/hcl/export/vhdl/Entity.h
+    source/hcl/export/vhdl/GenericMemoryEntity.cpp
+    source/hcl/export/vhdl/GenericMemoryEntity.h
     source/hcl/export/vhdl/NamespaceScope.cpp
     source/hcl/export/vhdl/NamespaceScope.h
     source/hcl/export/vhdl/Process.cpp
