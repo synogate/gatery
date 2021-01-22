@@ -8,8 +8,9 @@
 #include "coreNodes/Node_Constant.h"
 #include "coreNodes/Node_Pin.h"
 #include "coreNodes/Node_Rewire.h"
+#include "coreNodes/Node_Register.h"
 
-#include "BlockRamDetector.h"
+#include "MemoryDetector.h"
 
 
 #include "../simulation/BitVectorState.h"
@@ -408,6 +409,59 @@ void Circuit::removeNoOps()
     }
 }
 
+void Circuit::foldRegisterMuxEnableLoops()
+{
+    for (size_t i = 0; i < m_nodes.size(); i++) {
+        if (auto *regNode = dynamic_cast<Node_Register*>(m_nodes[i].get())) {
+            auto enableCondition = regNode->getNonSignalDriver((unsigned)Node_Register::Input::ENABLE);
+            
+            auto data = regNode->getNonSignalDriver((unsigned)Node_Register::Input::DATA);
+            if (auto *muxNode = dynamic_cast<Node_Multiplexer*>(data.node)) {
+                if (muxNode->getNumInputPorts() == 3) {
+
+                    auto muxInput1 = muxNode->getNonSignalDriver(1);
+                    auto muxInput2 = muxNode->getNonSignalDriver(2);
+
+                    auto muxCondition = muxNode->getDriver(0);
+
+                    if (muxInput1.node == regNode) {
+                        if (enableCondition.node != nullptr) {
+                            auto *andNode = createNode<Node_Logic>(Node_Logic::AND);
+                            andNode->recordStackTrace();
+                            andNode->moveToGroup(regNode->getGroup());
+                            andNode->connectInput(0, enableCondition);
+                            andNode->connectInput(1, muxCondition);
+
+                            regNode->connectInput(Node_Register::Input::ENABLE, {.node=andNode, .port=0ull});
+                        } else {
+                            regNode->connectInput(Node_Register::Input::ENABLE, muxCondition);
+                        }
+                        regNode->connectInput(Node_Register::Input::DATA, muxNode->getDriver(2));
+                    } else if (muxInput2.node == regNode) {
+                        auto *notNode = createNode<Node_Logic>(Node_Logic::NOT);
+                        notNode->recordStackTrace();
+                        notNode->moveToGroup(regNode->getGroup());
+                        notNode->connectInput(0, muxCondition);
+
+                        if (enableCondition.node != nullptr) {
+                            auto *andNode = createNode<Node_Logic>(Node_Logic::AND);
+                            andNode->recordStackTrace();
+                            andNode->moveToGroup(regNode->getGroup());
+                            andNode->connectInput(0, enableCondition);
+                            andNode->connectInput(1, {.node=notNode,.port=0ull});
+
+                            regNode->connectInput(Node_Register::Input::ENABLE, {.node=andNode, .port=0ull});
+                        } else {
+                            regNode->connectInput(Node_Register::Input::ENABLE, {.node=notNode, .port=0ull});
+                        }
+                        regNode->connectInput(Node_Register::Input::DATA, muxNode->getDriver(1));
+                    }
+                }
+            }
+        }
+    }
+}
+
 void Circuit::propagateConstants()
 {
     //std::cout << "propagateConstants()" << std::endl;
@@ -548,10 +602,11 @@ void Circuit::optimize(size_t level)
             removeIrrelevantMuxes();
             cullMuxConditionNegations();
             removeNoOps();
+            foldRegisterMuxEnableLoops();
             propagateConstants(); // do again after muxes are removed
             cullUnusedNodes();
 
-            findBlockRams(*this);
+            findMemoryGroups(*this);
         break;
     };
 }

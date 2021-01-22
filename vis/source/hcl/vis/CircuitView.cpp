@@ -104,7 +104,7 @@ void CircuitView::render(core::hlim::Circuit &circuit, core::hlim::NodeGroup *gr
         groupStack.pop_back();
         
         for (auto &subGroup : nodeGroup->getChildren()) {
-            if (subGroup->getGroupType() == core::hlim::NodeGroup::GroupType::ENTITY) {
+            if (subGroup->getGroupType() == core::hlim::NodeGroup::GroupType::ENTITY || subGroup->getGroupType() == core::hlim::NodeGroup::GroupType::SFU) {
                 Node_Entity *n;
                 m_scene->addItem(n = new Node_Entity(this, subGroup.get()));
                 m_nodes.push_back(n);

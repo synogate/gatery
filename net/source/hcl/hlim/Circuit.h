@@ -38,6 +38,7 @@ class Circuit
         void cullMuxConditionNegations();
         void removeIrrelevantMuxes();
         void removeNoOps();
+        void foldRegisterMuxEnableLoops();
         void propagateConstants();
 
         void removeFalseLoops();
