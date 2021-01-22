@@ -9,7 +9,7 @@ namespace hcl::core::vhdl {
 
 void CodeFormatting::indent(std::ostream &stream, unsigned depth) const
 {
-    for (auto i : utils::Range(depth))
+    for ([[maybe_unused]] auto i : utils::Range(depth))
         stream << m_indentation;
 }
     

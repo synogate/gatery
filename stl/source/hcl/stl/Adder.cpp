@@ -1,6 +1,6 @@
 #include "Adder.h"
 
-template hcl::stl::Adder<hcl::BVec>;
+template class hcl::stl::Adder<hcl::BVec>;
 
 hcl::stl::CarrySafeAdder& hcl::stl::CarrySafeAdder::add(const BVec& b)
 {

@@ -35,6 +35,8 @@ namespace hcl::stl
 
 	};
 
+	extern template class hcl::stl::Adder<hcl::BVec>;
+
 	class CarrySafeAdder
 	{
 	public:
