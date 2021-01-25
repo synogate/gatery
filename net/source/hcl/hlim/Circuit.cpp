@@ -471,7 +471,7 @@ void Circuit::removeConstSelectMuxes()
                 HCL_ASSERT(constNode->getValue().size() < 64);
                 std::uint64_t selDefined = constNode->getValue().extractNonStraddling(sim::DefaultConfig::DEFINED, 0, constNode->getValue().size());
                 std::uint64_t selValue = constNode->getValue().extractNonStraddling(sim::DefaultConfig::VALUE, 0, constNode->getValue().size());
-                if (selDefined ^ (~0ull >> (64 - constNode->getValue().size())) == 0) {
+                if ((selDefined ^ (~0ull >> (64 - constNode->getValue().size()))) == 0) {
                     muxNode->bypassOutputToInput(0, 1+selValue);
                 }
             }
