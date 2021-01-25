@@ -40,6 +40,7 @@ class Circuit
         void removeNoOps();
         void foldRegisterMuxEnableLoops();
         void propagateConstants();
+        void removeConstSelectMuxes();
 
         void removeFalseLoops();
         

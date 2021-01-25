@@ -462,6 +462,23 @@ void Circuit::foldRegisterMuxEnableLoops()
     }
 }
 
+void Circuit::removeConstSelectMuxes()
+{
+    for (size_t i = 0; i < m_nodes.size(); i++) {
+        if (auto *muxNode = dynamic_cast<Node_Multiplexer*>(m_nodes[i].get())) {
+            auto sel = muxNode->getNonSignalDriver(0);
+            if (auto *constNode = dynamic_cast<Node_Constant*>(sel.node)) {
+                HCL_ASSERT(constNode->getValue().size() < 64);
+                std::uint64_t selDefined = constNode->getValue().extractNonStraddling(sim::DefaultConfig::DEFINED, 0, constNode->getValue().size());
+                std::uint64_t selValue = constNode->getValue().extractNonStraddling(sim::DefaultConfig::VALUE, 0, constNode->getValue().size());
+                if (selDefined ^ (~0ull >> (64 - constNode->getValue().size())) == 0) {
+                    muxNode->bypassOutputToInput(0, 1+selValue);
+                }
+            }
+        }
+    }
+}
+
 void Circuit::propagateConstants()
 {
     //std::cout << "propagateConstants()" << std::endl;
@@ -603,6 +620,7 @@ void Circuit::optimize(size_t level)
             cullMuxConditionNegations();
             removeNoOps();
             foldRegisterMuxEnableLoops();
+            removeConstSelectMuxes();
             propagateConstants(); // do again after muxes are removed
             cullUnusedNodes();
 
