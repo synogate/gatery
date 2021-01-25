@@ -193,6 +193,8 @@ bool Node_Rewire::isNoOp() const
     }
     HCL_ASSERT(offset == outWidth);
 
+    if (offset != getDriverConnType(0).width) return false;
+
     return true;
 }
 
