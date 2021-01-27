@@ -234,7 +234,7 @@ namespace hcl::core::frontend {
         if (maxWidth == 1 && 
             (l.getConnType().interpretation != r.getConnType().interpretation || 
              l.getConnType().interpretation == hlim::ConnectionType::BOOL))
-            type = hlim::ConnectionType::BITVEC;
+            type = hlim::ConnectionType::BOOL;
 
         lhs = lhs.expand(maxWidth, type);
         rhs = rhs.expand(maxWidth, type);
