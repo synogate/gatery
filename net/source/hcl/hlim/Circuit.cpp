@@ -595,7 +595,25 @@ void Circuit::removeFalseLoops()
 //    }
 }
 
+/// @details It seems many parts of the vhdl export still require signal nodes so this step adds back in missing ones
+void Circuit::ensureSignalNodePlacement()
+{
+    for (auto &node : m_nodes) {
+        if (dynamic_cast<Node_Signal*>(node.get()) != nullptr) continue;
+        for (auto i : utils::Range(node->getNumInputPorts())) {
+            auto driver = node->getDriver(i);
+            if (driver.node == nullptr) continue;
+            if (node->getDriverConnType(i).interpretation == ConnectionType::DEPENDENCY) continue;
+            if (dynamic_cast<Node_Signal*>(driver.node) != nullptr) continue;
 
+            auto *sigNode = createNode<Node_Signal>();
+            sigNode->moveToGroup(driver.node->getGroup());
+
+            sigNode->connectInput(driver);
+            node->connectInput(i, {.node=sigNode, .port=0ull});
+        }
+    }
+}
 
 
 void Circuit::optimize(size_t level)
@@ -623,6 +641,8 @@ void Circuit::optimize(size_t level)
             removeConstSelectMuxes();
             propagateConstants(); // do again after muxes are removed
             cullUnusedNodes();
+
+            ensureSignalNodePlacement();
 
             findMemoryGroups(*this);
         break;

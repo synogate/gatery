@@ -43,6 +43,8 @@ class Circuit
         void removeConstSelectMuxes();
 
         void removeFalseLoops();
+
+        void ensureSignalNodePlacement();
         
         void optimize(size_t level);
 
