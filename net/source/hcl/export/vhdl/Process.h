@@ -49,7 +49,13 @@ class CombinatoryProcess : public Process
         
         virtual void writeVHDL(std::ostream &stream, unsigned indentation) override;
     protected:
-        void formatExpression(std::ostream &stream, std::ostream &comments, const hlim::NodePort &nodePort, std::set<hlim::NodePort> &dependentInputs, bool forceUnfold = false);
+        enum class Context {
+            BOOL,
+            STD_LOGIC,
+        };
+
+        void formatExpression(std::ostream &stream, std::ostream &comments, const hlim::NodePort &nodePort, 
+                                std::set<hlim::NodePort> &dependentInputs, Context context = Context::STD_LOGIC, bool forceUnfold = false);
 };
 
 struct RegisterConfig
