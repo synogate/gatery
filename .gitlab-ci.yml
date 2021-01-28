@@ -28,13 +28,16 @@ build-job:
     paths:
       - build/
 
-build-job-documentation:
+pages:
   stage: configure
   script:
     - doxygen doc/Doxyfile
+    - mv doc/gen/html/ public/
   artifacts:
     paths:
-      - doc/gen/
+      - public
+  only:
+    - master
 
 test-job-frontend:
   stage: test
