@@ -27,6 +27,7 @@ build-job:
     - configure-job
   artifacts:
     paths:
+      - build/
       - result.txt  
 
 build-job-documentation:
