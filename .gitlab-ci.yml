@@ -1,19 +1,29 @@
 
+stages:
+  - configure
+  - build
+  - test
+  - deploy
 
-build-job:
-  stage: build
+
+configure-job:
+  stage: configure
   script:
     - rm -Rf build
     - mkdir build
     - cd build
     - cmake ..
+
+build-job:
+  stage: build
+  script:
+    - cd build
     - make -j 8
 
 build-job-documentation:
   stage: build
   script:
     - echo TODO Build documentation
-
 
 test-job-frontend:
   stage: test
