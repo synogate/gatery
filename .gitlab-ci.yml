@@ -19,6 +19,8 @@ build-job:
   script:
     - cd build
     - make -j 8
+  dependencies:
+    - configure-job
 
 build-job-documentation:
   stage: build
@@ -30,11 +32,14 @@ test-job-frontend:
   script:
     - cd build
     - frontend/unitTests/unitTestCore
+  dependencies:
+    - build-job
 
 test-job-stl:
   stage: test
   script:
     - cd build
     - stl/unitTests/unitTestSTL
-
+  dependencies:
+    - build-job
 
