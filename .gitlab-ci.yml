@@ -12,7 +12,7 @@ build-job:
 build-job-documentation:
   stage: build
   script:
-    - echo "TODO: Build documentation"
+    - echo TODO Build documentation
 
 
 test-job-frontend:
