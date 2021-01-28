@@ -28,7 +28,10 @@ build-job:
 build-job-documentation:
   stage: build
   script:
-    - echo TODO Build documentation
+    - doxygen doc/Doxyfile
+  artifacts:
+    paths:
+      - doc/gen/
 
 test-job-frontend:
   stage: test
