@@ -12,23 +12,21 @@ configure-job:
     - rm -Rf build
     - mkdir build
     - cd build
-    - cmake .. > ./result.txt
+    - cmake ..
   artifacts:
     paths:
       - build/
-      - result.txt  
 
 build-job:
   stage: build
   script:
     - cd build
-    - make -j 8 >> ./result.txt
+    - make -j 8
   dependencies:
     - configure-job
   artifacts:
     paths:
       - build/
-      - result.txt  
 
 build-job-documentation:
   stage: configure
@@ -42,21 +40,15 @@ test-job-frontend:
   stage: test
   script:
     - cd build
-    - frontend/unitTests/unitTestCore > test_frontend.txt
+    - frontend/unitTests/unitTestCore
   dependencies:
     - build-job
-  artifacts:
-    paths:
-      - test_frontend.txt  
 
 test-job-stl:
   stage: test
   script:
     - cd build
-    - stl/unitTests/unitTestSTL > test_STL.txt
+    - stl/unitTests/unitTestSTL
   dependencies:
     - build-job
-  artifacts:
-    paths:
-      - test_STL.txt  
 
