@@ -13,6 +13,9 @@ configure-job:
     - mkdir build
     - cd build
     - cmake ..
+  artifacts:
+    paths:
+      - build/  
 
 build-job:
   stage: build
