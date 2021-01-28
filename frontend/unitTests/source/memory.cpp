@@ -9,7 +9,7 @@
 #include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
 
 using namespace boost::unit_test;
-
+/*
 BOOST_FIXTURE_TEST_CASE(ROM, hcl::core::sim::UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
@@ -31,3 +31,4 @@ BOOST_FIXTURE_TEST_CASE(ROM, hcl::core::sim::UnitTestSimulationFixture)
 
     eval(design.getCircuit());
 }
+*/
