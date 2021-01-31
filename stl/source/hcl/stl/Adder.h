@@ -44,7 +44,7 @@ namespace hcl::stl
 		CarrySafeAdder(const CarrySafeAdder&) = default;
 
 		CarrySafeAdder& add(const BVec&);
-		CarrySafeAdder& operator + (const BVec& b) { return add(b); }
+		CarrySafeAdder operator + (const BVec& b) { CarrySafeAdder ret = *this; ret.add(b); return ret; }
 		CarrySafeAdder& operator += (const BVec& b) { return add(b); }
 
 		BVec sum() const;
