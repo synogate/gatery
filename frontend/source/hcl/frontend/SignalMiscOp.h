@@ -19,23 +19,35 @@ namespace hcl::core::frontend {
 
 ///@todo overload for compound signals
 template<typename ContainerType>//, typename = std::enable_if_t<utils::isContainer<ContainerType>::value>>    
-typename ContainerType::value_type mux(const ElementarySignal &selector, const ContainerType &table)  {      
-    hlim::Node_Multiplexer *node = DesignScope::createNode<hlim::Node_Multiplexer>(table.size());
-    node->recordStackTrace();
-    node->connectSelector(selector.getReadPort());
+typename ContainerType::value_type mux(const ElementarySignal &selector, const ContainerType &table) {
 
-    HCL_DESIGNCHECK_HINT(table.size() <= (1ull << selector.getWidth().value), "The number of mux inputs is larger than can be addressed with it's selector input's width!");
-    
-    const auto &firstSignal = *begin(table);
-    
-    size_t idx = 0;
-    for (const auto &signal : table) {
-        HCL_DESIGNCHECK_HINT(signal.getConnType() == firstSignal.getConnType(), "Can only multiplex operands of same type (e.g. width).");
-        node->connectInput(idx, signal.getReadPort());
-        idx++;
+    const SignalReadPort selPort = selector.getReadPort();
+    const size_t selPortWidth = selector.getWidth().value;
+    size_t tableSize = table.size();
+
+    if (tableSize > (1ull << selPortWidth))
+    {
+        HCL_DESIGNCHECK_HINT(selPort.expansionPolicy == Expansion::zero, "The number of mux inputs is larger than can be addressed with it's selector input's width!");
+        tableSize = 1ull << selPortWidth;
     }
+
+    hlim::Node_Multiplexer *node = DesignScope::createNode<hlim::Node_Multiplexer>(tableSize);
+    node->recordStackTrace();
+    node->connectSelector(selPort);
     
-    //using SignalType = typename ContainerType::value_type;
+    const auto it_end = begin(table) + tableSize;
+
+    hlim::ConnectionType elementType;
+    for (auto it = begin(table); it != it_end; ++it)
+    {
+        hlim::ConnectionType t = it->getConnType();
+        if (t.width > elementType.width)
+            elementType = t;
+    }
+
+    size_t idx = 0;
+    for (auto it = begin(table); it != it_end; ++it, ++idx)
+        node->connectInput(idx, it->getReadPort().expand(elementType.width, elementType.interpretation));
 
     return SignalReadPort(node);
 }
@@ -102,6 +114,7 @@ BVec cat(const Types&... allSignals)
     return SignalReadPort(assigner.node);
 }
 
+BVec swapEndian(const BVec& word, size_t byteSize = 8);
 
 /*
 template<typename SignalType, typename = std::enable_if_t<utils::isBitVectorSignal<SignalType>::value>>    

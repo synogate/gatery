@@ -46,6 +46,26 @@ SignalTapHelper &SignalTapHelper::operator<<(const std::string &msg)
     return *this;
 }
     
+BVec swapEndian(const BVec& word, size_t byteSize)
+{
+    const size_t numSymbols = (word.size() + byteSize - 1) / byteSize;
+    const size_t srcWidth = numSymbols * byteSize;
+
+    hlim::Node_Rewire* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
+    rewire->connectInput(0, word.getReadPort().expand(srcWidth, hlim::ConnectionType::BITVEC));
+
+    hlim::Node_Rewire::RewireOperation op;
+    op.ranges.reserve(numSymbols);
+    for (size_t i = 0; i < numSymbols; ++i)
+        op.addInput(0, srcWidth - byteSize * (i + 1), byteSize);
+    rewire->setOp(std::move(op));
+
+    BVec ret{ SignalReadPort(rewire) };
+    if (!word.getName().empty())
+        ret.setName(std::string(word.getName()) + "_swapped");
+    return ret;
+}
+
 SignalTapHelper sim_assert(const Bit &condition)
 {
     SignalTapHelper helper(hlim::Node_SignalTap::LVL_ASSERT);
