@@ -52,12 +52,18 @@ BVec rot(const BVec& signal, int amount); // TODO (remove)
 inline BVec rotl(const BVec& signal, int amount) { return rot(signal, amount); }  // TODO (remove)
 inline BVec rotr(const BVec& signal, int amount) { return rot(signal, -amount); }  // TODO (remove)
 
-BVec operator<<(const BVec& signal, const BVec& amount); // TODO
-BVec operator>>(const BVec& signal, const BVec& amount); // TODO
-BVec& operator<<=(BVec& signal, const BVec& amount); // TODO
-BVec& operator>>=(BVec& signal, const BVec& amount); // TODO
+BVec zshl(const BVec& signal, const BVec& amount);
+BVec oshl(const BVec& signal, const BVec& amount);
+BVec sshl(const BVec& signal, const BVec& amount);
+BVec zshr(const BVec& signal, const BVec& amount);
+BVec oshr(const BVec& signal, const BVec& amount);
+BVec sshr(const BVec& signal, const BVec& amount);
+BVec rotl(const BVec& signal, const BVec& amount);
+BVec rotr(const BVec& signal, const BVec& amount);
 
-BVec rotl(const BVec& signal, const BVec& amount); // TODO
-BVec rotr(const BVec& signal, const BVec& amount); // TODO
+inline BVec operator<<(const BVec& signal, const BVec& amount) { return zshl(signal, amount); }
+inline BVec operator>>(const BVec& signal, const BVec& amount) { return zshr(signal, amount); }
+inline BVec& operator<<=(BVec& signal, const BVec& amount) { return signal = zshl(signal, amount); }
+inline BVec& operator>>=(BVec& signal, const BVec& amount) { return signal = zshr(signal, amount); }
 
 }

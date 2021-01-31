@@ -382,6 +382,26 @@ BOOST_FIXTURE_TEST_CASE(StringLiteralParsing, hcl::core::sim::UnitTestSimulation
     eval(design.getCircuit());
 }
 
+BOOST_FIXTURE_TEST_CASE(ShiftOp, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    sim_assert(zshr("xA0", "x4") == "x0A") << "zshr failed";
+    sim_assert(oshr("xA0", "x4") == "xFA") << "oshr failed";
+    sim_assert(sshr("xA0", "x4") == "xFA") << "sshr failed";
+    sim_assert(sshr("x70", "x4") == "x07") << "sshr failed";
+    sim_assert(rotr("xA4", "x4") == "x4A") << "rotr failed";
+
+    sim_assert(zshl("x0A", "x4") == "xA0") << "zshl failed";
+    sim_assert(oshl("x0B", "x4") == "xBF") << "oshl failed";
+    sim_assert(sshl("x0B", "x4") == "xBF") << "sshl failed";
+    sim_assert(sshl("x0A", "x4") == "xA0") << "sshl failed";
+    sim_assert(rotl("x4A", "x4") == "xA4") << "rotl failed";
+
+    eval(design.getCircuit());
+}
 
 BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAssignment, data::xrange(8) * data::xrange(8), x, y)
 {

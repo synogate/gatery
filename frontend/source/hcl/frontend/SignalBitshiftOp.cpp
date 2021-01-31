@@ -1,5 +1,7 @@
 #include "SignalBitshiftOp.h"
 
+#include <hcl/hlim/coreNodes/Node_Shift.h>
+
 namespace hcl::core::frontend {
 
 hlim::ConnectionType SignalBitShiftOp::getResultingType(const hlim::ConnectionType &operand) {
@@ -120,6 +122,56 @@ BVec rot(const BVec& signal, int amount)
     SignalBitShiftOp op((int)amount);
     op.rotate();
     return op(signal);
+}
+
+static BVec internal_shift(const BVec& signal, const BVec& amount, hlim::Node_Shift::dir direction, hlim::Node_Shift::fill fill)
+{
+    hlim::Node_Shift* node = DesignScope::createNode<hlim::Node_Shift>(direction, fill);
+    node->recordStackTrace();
+
+    node->connectOperand(signal.getReadPort());
+    node->connectAmount(amount.getReadPort());
+    return SignalReadPort(node);
+}
+
+BVec zshl(const BVec& signal, const BVec& amount)
+{
+    return internal_shift(signal, amount, hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::zero);
+}
+
+BVec oshl(const BVec& signal, const BVec& amount)
+{
+    return internal_shift(signal, amount, hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::one);
+}
+
+BVec sshl(const BVec& signal, const BVec& amount)
+{
+    return internal_shift(signal, amount, hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::last);
+}
+
+BVec zshr(const BVec& signal, const BVec& amount)
+{
+    return internal_shift(signal, amount, hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::zero);
+}
+
+BVec oshr(const BVec& signal, const BVec& amount)
+{
+    return internal_shift(signal, amount, hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::one);
+}
+
+BVec sshr(const BVec& signal, const BVec& amount)
+{
+    return internal_shift(signal, amount, hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::last);
+}
+
+BVec rotl(const BVec& signal, const BVec& amount)
+{
+    return internal_shift(signal, amount, hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::rotate);
+}
+
+BVec rotr(const BVec& signal, const BVec& amount)
+{
+    return internal_shift(signal, amount, hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::rotate);
 }
 
 }
