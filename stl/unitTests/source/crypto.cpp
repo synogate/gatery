@@ -9,6 +9,7 @@
 #include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
 
 #include <hcl/stl/crypto/sha1.h>
+#include <hcl/stl/crypto/sha2.h>
 #include <hcl/stl/crypto/md5.h>
 
 using namespace boost::unit_test;
@@ -155,6 +156,32 @@ BOOST_FIXTURE_TEST_CASE(Sha1, hcl::core::sim::UnitTestSimulationFixture)
     sim_assert(hash(0, 64) == ref(0, 64)); // TODO: implement large compare simulation
     sim_assert(hash(64, 64) == ref(64, 64));
     sim_assert(hash(128, 32) == ref(128, 32));
+
+    eval(design.getCircuit());
+}
+
+BOOST_FIXTURE_TEST_CASE(Sha2_256, hcl::core::sim::UnitTestSimulationFixture)
+{
+    DesignScope design;
+
+    // create padded empty input
+    BVec msgBlock = "512x0";
+    msgBlock.msb() = '1';
+
+    stl::Sha2_256<> sha2;
+
+    sha2.beginBlock(msgBlock);
+    stl::HashEngine<stl::Sha2_256<>> sha2Engine(0, 0);
+    sha2Engine.buildPipeline(sha2);
+    sha2.endBlock();
+
+    BVec hash = sha2.finalize();
+    BVec ref = "xE3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855";
+
+    sim_assert(hash(0, 64) == ref(0, 64)); // TODO: implement large compare simulation
+    sim_assert(hash(64, 64) == ref(64, 64));
+    sim_assert(hash(128, 32) == ref(128, 32));
+    sim_assert(hash(160, 32) == ref(160, 32));
 
     eval(design.getCircuit());
 }
