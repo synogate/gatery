@@ -9,6 +9,7 @@
 #include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
 
 #include <hcl/stl/crypto/sha1.h>
+#include <hcl/stl/crypto/md5.h>
 
 using namespace boost::unit_test;
 using namespace hcl;
@@ -154,6 +155,81 @@ BOOST_FIXTURE_TEST_CASE(Sha1, hcl::core::sim::UnitTestSimulationFixture)
     sim_assert(hash(0, 64) == ref(0, 64)); // TODO: implement large compare simulation
     sim_assert(hash(64, 64) == ref(64, 64));
     sim_assert(hash(128, 32) == ref(128, 32));
+
+    eval(design.getCircuit());
+}
+
+BOOST_FIXTURE_TEST_CASE(Md5, hcl::core::sim::UnitTestSimulationFixture)
+{
+    struct md5ref
+    {
+        uint32_t a = 0x67452301;
+        uint32_t b = 0xefcdab89;
+        uint32_t c = 0x98badcfe;
+        uint32_t d = 0x10325476;
+
+        uint32_t w[16] = { 0x80 };
+
+        md5ref round(uint32_t idx) const
+        {
+            md5ref ret;
+
+            const uint32_t K = uint32_t(pow(2., 32.) * abs(sin(idx + 1)));
+
+            const uint32_t S_table[4][4] = { {7, 12, 17, 22}, {5, 9, 14, 20}, {4, 11, 16, 23}, {6, 10, 15, 21} };
+            const uint32_t S = S_table[idx / 16][idx % 4];
+
+            const uint32_t Wmul[4] = { 1, 5, 3, 7 };
+            const uint32_t Wadd[4] = { 0, 1, 5, 0 };
+            const uint32_t W = Wmul[idx / 16] * idx + Wadd[idx / 16];
+
+            uint32_t F;
+            switch (idx / 16) {
+            case 0: F = (b & c) | (~b & d); break;
+            case 1: F = (d & b) | (~d & c); break;
+            case 2: F = b ^ c ^ d;          break;
+            default:F = c ^ (b | ~d);
+            }
+
+            uint32_t tmp = F + a + K + w[W % 16];
+            tmp = (tmp << S) | (tmp >> (32 - S));
+
+            ret.a = d;
+            ret.b = tmp + b;
+            ret.c = b;
+            ret.d = c;
+            return ret;
+        }
+    };
+
+    DesignScope design;
+
+    // create padded empty input
+    BVec msgBlock = "512x0";
+    msgBlock.msb() = '1';
+    stl::Md5Generator<> md5;
+    md5.beginBlock(msgBlock);
+
+    md5ref refImpl;
+    for (size_t i = 0; i < 64; ++i)
+    {
+        md5.round(i);
+        refImpl = refImpl.round(uint32_t(i));
+
+        sim_assert(md5.a == refImpl.a) << "a in round " << i;
+        sim_assert(md5.b == refImpl.b) << "b in round " << i;
+        sim_assert(md5.c == refImpl.c) << "c in round " << i;
+        sim_assert(md5.d == refImpl.d) << "d in round " << i;
+    }
+
+    BOOST_TEST(refImpl.a + 0x67452301 == 0xd98c1dd4);
+    md5.endBlock();
+
+    BVec hash = md5.finalize();
+    BVec ref = "xD41D8CD98F00B204E9800998ECF8427E";
+
+    sim_assert(hash(0, 64) == ref(0, 64)) << hash << " != " << ref; // TODO: implement large compare simulation
+    sim_assert(hash(64, 64) == ref(64, 64)) << hash << " != " << ref;
 
     eval(design.getCircuit());
 }

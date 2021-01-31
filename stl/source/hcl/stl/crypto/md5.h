@@ -56,13 +56,14 @@ namespace hcl::stl
 			c = "x98BADCFE";
 			d = "x10325476";
 
-			hash = pack(a, b, c, d);
+			hash = pack(d, c, b, a);
 		}
 
 		void beginBlock(const TVec& _block)
 		{
+			TVec swappedBlock = swapEndian(_block);
 			for (size_t i = 0; i < w.size(); ++i)
-				w[i] = _block(Selection::Symbol(w.size() - 1 - i, 32));
+				w[i] = swappedBlock(i * 32, 32);
 		}
 
 		void round(const BVec& round)
@@ -71,7 +72,7 @@ namespace hcl::stl
 			
 			// select round function
 			TVec f = c ^ (b | ~d);
-			BVec g = zext(round, 4 - round.size());
+			BVec g = zext(round, 4)(0, 4); // TODO: allow without first extend if not needed
 
 			IF(round < 16)
 			{
@@ -95,22 +96,22 @@ namespace hcl::stl
 			TVec m = mux(g, w);
 			// update state
 			TVec tmp = b + rotl(TAdder{} + a + k + f + m, mux(round, s));
+			a = d;
 			d = c;
 			c = b;
 			b = tmp;
-			a = d;
 		}
 
 		void endBlock()
 		{
-			a += hash(Selection::Symbol(4, 32));
-			b += hash(Selection::Symbol(3, 32));
+			a += hash(Selection::Symbol(0, 32));
+			b += hash(Selection::Symbol(1, 32));
 			c += hash(Selection::Symbol(2, 32));
-			d += hash(Selection::Symbol(1, 32));
+			d += hash(Selection::Symbol(3, 32));
 
-			hash = pack(a, b, c, d);
+			hash = pack(d, c, b, a);
 		}
 
-		const TVec& finalize() { return hash; }
+		TVec finalize() { return swapEndian(hash); }
 	};
 }
