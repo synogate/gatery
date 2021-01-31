@@ -76,7 +76,7 @@ namespace hcl::core::frontend {
         using value_type = Bit;
 
         BVec() = default;
-        BVec(const BVec& rhs) { assign(rhs.getReadPort()); }
+        BVec(const BVec& rhs) { if(rhs.m_node) assign(rhs.getReadPort()); }
 
         BVec(const SignalReadPort& port) { assign(port); }
         BVec(hlim::Node_Signal* node, Range range, Expansion expansionPolicy); // alias
