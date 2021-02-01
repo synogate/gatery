@@ -5,8 +5,7 @@
 
 namespace hcl::core::hlim {
 
-class Node_MemReadPort;
-class Node_MemWritePort;
+class Node_MemPort;
 
 
 /**
@@ -26,7 +25,16 @@ class Node_MemWritePort;
 class Node_Memory : public Node<Node_Memory>
 {
     public:
+        enum class MemType {
+            DONT_CARE,
+            LUTRAM,
+            BRAM,
+        };
+
         Node_Memory();
+
+        void setType(MemType type) { m_type = type; }
+        void setNoConflicts();
 
         std::size_t getSize() { return m_powerOnState.size(); }
         void setPowerOnState(sim::DefaultBitVectorState powerOnState);
@@ -37,14 +45,24 @@ class Node_Memory : public Node<Node_Memory>
 
         virtual bool hasSideEffects() const override { return false; } // for now
 
+        bool isROM() const;
+
+        Node_MemPort *getLastPort();
+
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;
         virtual std::string getInputName(size_t idx) const override;
         virtual std::string getOutputName(size_t idx) const override;
 
         virtual std::vector<size_t> getInternalStateSizes() const override;
+
+        MemType type() const { return m_type; }
+        bool noConflicts() const { return m_noConflicts; }
     protected:
         sim::DefaultBitVectorState m_powerOnState;
+
+        MemType m_type = MemType::DONT_CARE;
+        bool m_noConflicts = false;
 };
 
 }

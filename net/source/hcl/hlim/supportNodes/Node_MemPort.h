@@ -2,34 +2,47 @@
 
 #include "../Node.h"
 
-
 namespace hcl::core::hlim {
 
 class Node_Memory;
 
-class Node_MemWritePort : public Node<Node_MemWritePort>
+class Node_MemPort : public Node<Node_MemPort>
 {
     public:
         enum class Inputs {
             memory,
             enable,
+            wrEnable,
             address,
-            data,
+            wrData,
+            orderAfter,
             count
         };
 
-        Node_MemWritePort(std::size_t bitWidth);
+        enum class Outputs {
+            rdData,
+            orderBefore,
+            count
+        };
+
+        Node_MemPort(std::size_t bitWidth);
 
         void connectMemory(Node_Memory *memory);
         void disconnectMemory();
 
         Node_Memory *getMemory();
         void connectEnable(const NodePort &output);
+        void connectWrEnable(const NodePort &output);
         void connectAddress(const NodePort &output);
-        void connectData(const NodePort &output);
+        void connectWrData(const NodePort &output);
+        void orderAfter(Node_MemPort *port);
+        bool isOrderedAfter(Node_MemPort *port) const;
+        bool isOrderedBefore(Node_MemPort *port) const;
 
         void setClock(Clock* clk);
 
+        bool isReadPort();
+        bool isWritePort();
 
         virtual bool hasSideEffects() const override;
 

@@ -605,6 +605,7 @@ void Circuit::ensureSignalNodePlacement()
             if (driver.node == nullptr) continue;
             if (node->getDriverConnType(i).interpretation == ConnectionType::DEPENDENCY) continue;
             if (dynamic_cast<Node_Signal*>(driver.node) != nullptr) continue;
+            if (driver.node->getGroup() != nullptr && driver.node->getGroup()->getGroupType() == NodeGroup::GroupType::SFU) continue;
 
             auto *sigNode = createNode<Node_Signal>();
             sigNode->moveToGroup(driver.node->getGroup());
@@ -645,8 +646,24 @@ void Circuit::optimize(size_t level)
             ensureSignalNodePlacement();
 
             findMemoryGroups(*this);
+            buildExplicitMemoryCircuitry(*this);
+            cullUnusedNodes(); // do again after memory group extraction with potential register retiming
         break;
     };
 }
+
+
+Node_Signal *Circuit::appendSignal(NodePort &nodePort)
+{
+    Node_Signal *sig = createNode<Node_Signal>();
+    sig->recordStackTrace();
+    if (nodePort.node != nullptr) {
+        sig->connectInput(nodePort);
+        sig->moveToGroup(nodePort.node->getGroup());
+    }
+    nodePort = {.node=sig, .port=0ull};
+    return sig;
+}
+
 
 }

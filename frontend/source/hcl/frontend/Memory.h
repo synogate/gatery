@@ -8,8 +8,7 @@
 
 
 #include <hcl/hlim/supportNodes/Node_Memory.h>
-#include <hcl/hlim/supportNodes/Node_MemReadPort.h>
-#include <hcl/hlim/supportNodes/Node_MemWritePort.h>
+#include <hcl/hlim/supportNodes/Node_MemPort.h>
 
 
 #include <functional>
@@ -26,15 +25,14 @@ namespace hcl::core::frontend {
 
             Data read() const
             {
-                auto *readPort = DesignScope::createNode<hlim::Node_MemReadPort>(m_wordSize);
+                auto *readPort = DesignScope::createNode<hlim::Node_MemPort>(m_wordSize);
                 readPort->connectMemory(m_memoryNode);
-                //readPort->connectEnable(constructEnableBit().getReadPort());
                 if (auto* scope = hcl::core::frontend::ConditionalScope::get())
                     readPort->connectEnable(scope->getFullCondition());
 
                 readPort->connectAddress(m_address.getReadPort());
 
-                BVec rawData(SignalReadPort({.node=readPort, .port=(unsigned)hlim::Node_MemReadPort::Outputs::data}));
+                BVec rawData(SignalReadPort({.node=readPort, .port=(unsigned)hlim::Node_MemPort::Outputs::rdData}));
                 Data ret = m_defaultValue;
                 hcl::core::frontend::unpack(rawData, ret);
                 return ret;
@@ -47,13 +45,15 @@ namespace hcl::core::frontend {
 
                 HCL_DESIGNCHECK_HINT(packedValue.size() == m_wordSize, "The width of data assigned to a memory write port must match the previously specified word width of the memory or memory view.");
 
-                auto *writePort = DesignScope::createNode<hlim::Node_MemWritePort>(m_wordSize);
+                auto *writePort = DesignScope::createNode<hlim::Node_MemPort>(m_wordSize);
                 writePort->connectMemory(m_memoryNode);
                 //writePort->connectEnable(constructEnableBit().getReadPort());
-                if (auto* scope = hcl::core::frontend::ConditionalScope::get())
+                if (auto* scope = hcl::core::frontend::ConditionalScope::get()) {
                     writePort->connectEnable(scope->getFullCondition());
+                    writePort->connectWrEnable(scope->getFullCondition());
+                }
                 writePort->connectAddress(m_address.getReadPort());
-                writePort->connectData(packedValue.getReadPort());
+                writePort->connectWrData(packedValue.getReadPort());
                 writePort->setClock(ClockScope::getClk().getClk());
             }
 
@@ -74,6 +74,8 @@ namespace hcl::core::frontend {
             }
     };
 
+    using MemType = hlim::Node_Memory::MemType;
+
     template<typename Data>
     class Memory {
         public:
@@ -85,6 +87,9 @@ namespace hcl::core::frontend {
                 state.clearRange(sim::DefaultConfig::DEFINED, 0, count * m_wordWidth);
                 m_memoryNode->setPowerOnState(std::move(state));
             }
+
+            void setType(MemType type) { m_memoryNode->setType(type); }
+            void noConflicts() { m_memoryNode->setNoConflicts(); }
 
             void setPowerOnState(sim::DefaultBitVectorState powerOnState) { m_memoryNode->setPowerOnState(std::move(powerOnState)); }
             //void setReset(std::size_t address, Data constWord);

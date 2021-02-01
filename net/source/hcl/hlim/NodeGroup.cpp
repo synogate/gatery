@@ -2,6 +2,8 @@
 
 #include "coreNodes/Node_Signal.h"
 
+#include "../utils/Range.h"
+
 namespace hcl::core::hlim {
 
     
@@ -23,7 +25,19 @@ NodeGroup *NodeGroup::addChildNodeGroup(GroupType groupType)
     return m_children.back().get();
 }
 
+void NodeGroup::moveInto(NodeGroup *newParent)
+{
+    size_t parentIdx = ~0ull;
+    for (auto i : utils::Range(m_parent->m_children.size()))
+        if (m_parent->m_children[i].get() == this) {
+            parentIdx = i;
+            break;
+        }
 
+    newParent->m_children.push_back(std::move(m_parent->m_children[parentIdx]));
+    m_parent->m_children[parentIdx] = std::move(m_parent->m_children.back());
+    m_parent->m_children.pop_back();
+}
 
 bool NodeGroup::isChildOf(const NodeGroup *other) const
 {

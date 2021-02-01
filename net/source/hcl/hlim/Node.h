@@ -50,6 +50,8 @@ class BaseNode : public NodeIO
         inline const std::string &getComment() const { return m_comment; }
         
         bool isOrphaned() const;
+        virtual bool hasSideEffects() const;
+        virtual bool isCombinatorial() const;
         
         const NodeGroup *getGroup() const { return m_nodeGroup; }
         NodeGroup *getGroup() { return m_nodeGroup; }

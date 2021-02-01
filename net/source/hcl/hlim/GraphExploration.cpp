@@ -59,7 +59,7 @@ Exploration<forward, Policy>::Exploration(NodePort nodePort) : m_nodePort(nodePo
 template<bool forward, typename Policy>
 typename Exploration<forward, Policy>::iterator Exploration<forward, Policy>::begin()
 {
-    return iterator(m_nodePort);
+    return iterator(m_skipDependencies, m_nodePort);
 }
 
 template<bool forward, typename Policy>
@@ -83,18 +83,23 @@ void DepthFirstPolicy<forward>::init(NodePort nodePort)
 }
 
 template<bool forward>
-void DepthFirstPolicy<forward>::advance()
+void DepthFirstPolicy<forward>::advance(bool skipDependencies)
 {
+    if (m_stack.empty()) return;
     BaseNode *currentNode = m_stack.top().node;
     m_stack.pop();
     if (forward) {
         for (auto i : utils::Range(currentNode->getNumOutputPorts()))
-            for (auto np : currentNode->getDirectlyDriven(i))
-                m_stack.push(np);
+            if (!skipDependencies || currentNode->getOutputConnectionType(i).interpretation != ConnectionType::DEPENDENCY)
+                for (auto np : currentNode->getDirectlyDriven(i))
+                    m_stack.push(np);
     } else {
-        for (auto i : utils::Range(currentNode->getNumInputPorts()))
-            if (currentNode->getDriver(i).node != nullptr)
-                m_stack.push(currentNode->getDriver(i));
+        for (auto i : utils::Range(currentNode->getNumInputPorts())) {
+            auto driver = currentNode->getDriver(i);
+            if (driver.node != nullptr)
+                if (!skipDependencies || driver.node->getOutputConnectionType(driver.port).interpretation != ConnectionType::DEPENDENCY)
+                    m_stack.push(driver);
+        }
     }
 }
 

@@ -32,6 +32,8 @@ class NodeGroup
         inline void setComment(std::string comment) { m_comment = std::move(comment); }
         
         NodeGroup *addChildNodeGroup(GroupType groupType);
+
+        void moveInto(NodeGroup *newParent);
         
         template<typename Type, typename... Args>
         Type *addSpecialChildNodeGroup(Args&&... args) {

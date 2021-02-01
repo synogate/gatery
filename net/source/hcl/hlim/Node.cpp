@@ -39,6 +39,24 @@ bool BaseNode::isOrphaned() const
     return true;
 }
 
+
+bool BaseNode::hasSideEffects() const
+{
+    for (auto i : utils::Range(getNumOutputPorts()))
+        if (getOutputType(i) == OUTPUT_LATCHED)
+            return true;
+    return false;
+}
+
+bool BaseNode::isCombinatorial() const
+{
+    for (auto clk : m_clocks)
+        if (clk != nullptr)
+            return false;
+    return true;
+}
+
+
 void BaseNode::moveToGroup(NodeGroup *group)
 {
     if (group == m_nodeGroup) return;

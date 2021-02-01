@@ -49,22 +49,30 @@ class Exploration {
                 using iterator_category = std::forward_iterator_tag;                
 
                 iterator() : m_isEndIterator(true) { }
-                iterator(NodePort nodePort) : m_isEndIterator(false) { m_policy.init(nodePort); }
+                iterator(bool skipDependencies, NodePort nodePort) : m_skipDependencies(skipDependencies), m_isEndIterator(false) { m_policy.init(nodePort); }
 
-                iterator &operator++() { m_policy.advance(); return *this; }
+                iterator &operator++() { m_policy.advance(m_skipDependencies); return *this; }
                 bool operator!=(const iterator &rhs) const { HCL_ASSERT(rhs.m_isEndIterator); return !m_policy.done(); }
                 NodePortHandle operator*() { return NodePortHandle(*this, m_policy.getCurrent()); }
                 void backtrack() { m_policy.backtrack(); }
             protected:
+                bool m_skipDependencies;
                 bool m_isEndIterator;
                 Policy m_policy;
         };
         
         Exploration(NodePort nodePort);
 
+        Exploration<forward, Policy> skipDependencies() {
+            Exploration<forward, Policy> res(m_nodePort);
+            res.m_skipDependencies = true;
+            return res;
+        }
+
         iterator begin();
         iterator end();
     protected:
+        bool m_skipDependencies = false;
         NodePort m_nodePort;
 };
 
@@ -72,7 +80,7 @@ template<bool forward>
 class DepthFirstPolicy {
     public:
         void init(NodePort nodePort);
-        void advance();
+        void advance(bool skipDependencies);
         void backtrack();
         bool done() const;
         NodePort getCurrent();

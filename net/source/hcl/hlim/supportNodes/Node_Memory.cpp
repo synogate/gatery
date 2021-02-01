@@ -1,7 +1,6 @@
 #include "Node_Memory.h"
 
-#include "Node_MemReadPort.h"
-#include "Node_MemWritePort.h"
+#include "Node_MemPort.h"
 
 namespace hcl::core::hlim {
 
@@ -10,6 +9,15 @@ namespace hcl::core::hlim {
         resizeOutputs(1);
         setOutputConnectionType(0, {.interpretation = ConnectionType::DEPENDENCY, .width=1});
     }
+
+    void Node_Memory::setNoConflicts() 
+    {
+        m_noConflicts = true;
+        for (auto np : getDirectlyDriven(0))
+            if (auto *port = dynamic_cast<Node_MemPort*>(np.node))
+                port->orderAfter(nullptr);
+    }
+
 
     void Node_Memory::setPowerOnState(sim::DefaultBitVectorState powerOnState)
     {
@@ -26,6 +34,24 @@ namespace hcl::core::hlim {
         state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], 1);
     }
 
+    bool Node_Memory::isROM() const {
+        for (auto np : getDirectlyDriven(0))
+            if (auto *port = dynamic_cast<Node_MemPort*>(np.node))
+                if (port->isWritePort()) return false;
+
+        return true;
+    }
+
+    Node_MemPort *Node_Memory::getLastPort()
+    {
+        for (auto np : getDirectlyDriven(0)) {
+            if (auto *port = dynamic_cast<Node_MemPort*>(np.node)) {
+                if (port->getDirectlyDriven((unsigned)Node_MemPort::Outputs::orderBefore).empty())
+                    return port;
+            }
+        }
+        return nullptr;
+    }
 
     std::string Node_Memory::getTypeName() const
     {

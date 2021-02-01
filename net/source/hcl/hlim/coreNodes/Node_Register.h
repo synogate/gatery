@@ -32,6 +32,8 @@ namespace hcl::core::hlim {
 
         void setClock(Clock* clk);
 
+        bool hasSideEffects() const override { return false; }
+
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;
         virtual std::string getInputName(size_t idx) const override;

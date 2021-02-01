@@ -5,8 +5,7 @@
 #include "../../hlim/Clock.h"
 #include "../../hlim/coreNodes/Node_Register.h"
 #include "../../hlim/supportNodes/Node_Memory.h"
-#include "../../hlim/supportNodes/Node_MemReadPort.h"
-#include "../../hlim/supportNodes/Node_MemWritePort.h"
+#include "../../hlim/supportNodes/Node_MemPort.h"
 #include "../../hlim/MemoryDetector.h"
 
 
@@ -29,9 +28,12 @@ void GenericMemoryEntity::buildFrom(hlim::MemoryGroup *memGrp)
         m_ast.getMapping().assignNodeToScope(node, this);
 
     for (auto &wp : memGrp->getWritePorts()) {
-        auto addrInput = wp.node->getDriver((unsigned)hlim::Node_MemWritePort::Inputs::address);
-        auto enInput = wp.node->getDriver((unsigned)hlim::Node_MemWritePort::Inputs::enable);
-        auto dataInput = wp.node->getDriver((unsigned)hlim::Node_MemWritePort::Inputs::data);
+        auto addrInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
+        auto enInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
+        auto wrEnInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrEnable);
+        auto dataInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrData);
+
+        HCL_ASSERT_HINT(enInput == wrEnInput, "For now I don't want to mix read and write ports, so wrEn == en always.");
 
         if (addrInput.node != nullptr)
             m_inputs.insert(addrInput);
@@ -43,8 +45,8 @@ void GenericMemoryEntity::buildFrom(hlim::MemoryGroup *memGrp)
         m_inputClocks.insert(wp.node->getClocks()[0]);
     }
     for (auto &rp : memGrp->getReadPorts()) {
-        auto addrInput = rp.node->getDriver((unsigned)hlim::Node_MemReadPort::Inputs::address);
-        auto enInput = rp.node->getDriver((unsigned)hlim::Node_MemWritePort::Inputs::enable);
+        auto addrInput = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
+        auto enInput = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
         auto dataOutput = rp.dataOutput;
 
         if (addrInput.node != nullptr)
@@ -206,7 +208,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                 indent++;
 
                 for (auto &wp : clock.second.writePorts) {
-                    auto enablePort = wp.node->getDriver((unsigned)hlim::Node_MemWritePort::Inputs::enable);
+                    auto enablePort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
                     if (enablePort.node != nullptr) {
                         cf.indent(stream, indent);
                         stream << "IF ("<< m_namespaceScope.getName(enablePort) << " = '1') THEN\n"; 
@@ -214,8 +216,8 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                     }
 
 
-                    auto addrPort = wp.node->getDriver((unsigned)hlim::Node_MemWritePort::Inputs::address);
-                    auto dataPort = wp.node->getDriver((unsigned)hlim::Node_MemWritePort::Inputs::data);
+                    auto addrPort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
+                    auto dataPort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrData);
 
                     cf.indent(stream, indent);
                     stream << "memory(to_integer(" << m_namespaceScope.getName(addrPort) << ")) <= " << m_namespaceScope.getName(dataPort) << ";\n";
@@ -227,7 +229,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                     }
                 }
                 for (auto &rp : clock.second.readPorts) {
-                    auto enablePort = rp.node->getDriver((unsigned)hlim::Node_MemReadPort::Inputs::enable);
+                    auto enablePort = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
                     if (enablePort.node != nullptr) {
                         cf.indent(stream, indent);
                         stream << "IF ("<< m_namespaceScope.getName(enablePort) << " = '1') THEN\n"; 
@@ -235,7 +237,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                     }
 
 
-                    auto addrPort = rp.node->getDriver((unsigned)hlim::Node_MemWritePort::Inputs::address);
+                    auto addrPort = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
                     auto dataPort = rp.dataOutput;
 
                     cf.indent(stream, indent);
@@ -324,7 +326,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
             indent++;
             
                 for (auto &rp : clock.second.readPorts) {
-                    auto enablePort = rp.node->getDriver((unsigned)hlim::Node_MemReadPort::Inputs::enable);
+                    auto enablePort = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
                     if (enablePort.node != nullptr) {
                         cf.indent(stream, indent);
                         stream << "IF ("<< m_namespaceScope.getName(enablePort) << " = '1') THEN\n"; 
@@ -332,7 +334,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                     }
 
 
-                    auto addrPort = rp.node->getDriver((unsigned)hlim::Node_MemWritePort::Inputs::address);
+                    auto addrPort = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
                     auto dataPort = rp.dataOutput;
 
                     cf.indent(stream, indent);

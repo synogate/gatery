@@ -48,6 +48,7 @@ class Circuit
         
         void optimize(size_t level);
 
+        Node_Signal *appendSignal(NodePort &nodePort);
     protected:
         std::vector<std::unique_ptr<BaseNode>> m_nodes;
         std::unique_ptr<NodeGroup> m_root;
