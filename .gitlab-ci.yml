@@ -32,6 +32,7 @@ documentation-job:
   stage: configure
   script:
     - doxygen doc/Doxyfile
+    - rm -rf /mnt/doxygenDocu/tech/doxygenDocu/gatery/*
     - mv doc/gen/html/ /mnt/doxygenDocu/tech/doxygenDocu/gatery
   only:
     - master
