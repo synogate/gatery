@@ -647,6 +647,7 @@ void Circuit::optimize(size_t level)
 
             findMemoryGroups(*this);
             buildExplicitMemoryCircuitry(*this);
+            cullUnnamedSignalNodes();
             cullUnusedNodes(); // do again after memory group extraction with potential register retiming
         break;
     };

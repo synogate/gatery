@@ -446,7 +446,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
         if (!enable)
             enable = NodePort{};
 
-        auto insertDelayOutput = [&](NodePort &np, NodeGroup *ng, const char *comment)->Node_Register* {
+        auto insertDelayOutput = [&](NodePort &np, NodeGroup *ng, const char *name, const char *comment)->Node_Register* {
             std::vector<NodePort> consumers = np.node->getDirectlyDriven(np.port);
 
             auto *reg = circuit.createNode<Node_Register>();
@@ -458,11 +458,12 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
             reg->connectInput(Node_Register::Input::ENABLE, *enable);
             reg->connectInput(Node_Register::Input::DATA, np);
             np = {.node = reg, .port = 0ull};
+            circuit.appendSignal(np)->setName(name);
             for (auto c : consumers)
                 c.node->rewireInput(c.port, np);
             return reg;
         };
-        auto insertDelayInput = [&](NodePort np, NodeGroup *ng, const char *comment)->Node_Register* {
+        auto insertDelayInput = [&](NodePort np, NodeGroup *ng, const char *name, const char *comment)->Node_Register* {
             auto driver = np.node->getDriver(np.port);
             auto *reg = circuit.createNode<Node_Register>();
             reg->recordStackTrace();
@@ -472,12 +473,16 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
             
             reg->connectInput(Node_Register::Input::ENABLE, *enable);
             reg->connectInput(Node_Register::Input::DATA, driver);
-            np.node->rewireInput(np.port, {.node=reg, .port=0ull});
+
+            NodePort newNp = {.node = reg, .port = 0ull};
+            circuit.appendSignal(newNp)->setName(name);
+
+            np.node->rewireInput(np.port, newNp);
             return reg;
         };
 
         // insert delay into read bus:
-        rp.syncReadDataReg = insertDelayOutput(rp.dataOutput, this, "");
+        rp.syncReadDataReg = insertDelayOutput(rp.dataOutput, this, "sync_read", "Retimed register to make read synchronous");
 
         // bypass output registers
         for (auto reg : registers) 
@@ -486,11 +491,11 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
         // insert delays on other inputs
         for (auto n : delayedNodes) {
             for (auto i : utils::Range(n->getNumInputPorts())) {
-                auto driver = n->getDriver(i);
+                auto driver = n->getNonSignalDriver(i);
                 if (driver.node == nullptr) continue;
                 if (driver.node->getOutputConnectionType(driver.port).interpretation == ConnectionType::DEPENDENCY) continue; // TODO: think about this
                 if (!delayedNodes.contains(driver.node) && driver.node != rp.syncReadDataReg) {
-                    insertDelayInput({.node=n, .port=i}, n->getGroup(), "Auto generated register");
+                    insertDelayInput({.node=n, .port=i}, n->getGroup(), (n->getName()+"delayed").c_str(), "Auto generated register on signal going into a subnet that was delayed due to register retiming for BRAM sync read formation.");
                 }                
             }
         }
@@ -507,10 +512,13 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
             delayedWrData->connectInput(Node_Register::Input::ENABLE, *enable);
             delayedWrData->connectInput(Node_Register::Input::DATA, writePort->getDriver((unsigned)Node_MemPort::Inputs::wrData));
 
-            insertDelayInput({.node=writePort, .port=(unsigned)Node_MemPort::Inputs::address}, m_fixupNodeGroup, "");
+            NodePort delayedWrDataNP = {.node = delayedWrData, .port = 0ull};
+            circuit.appendSignal(delayedWrDataNP)->setName("delayed_wr_data");
+
+            insertDelayInput({.node=writePort, .port=(unsigned)Node_MemPort::Inputs::address}, m_fixupNodeGroup, "delayed_wr_addr", "");
 
             HCL_ASSERT(writePort->getNonSignalDriver((unsigned)Node_MemPort::Inputs::enable) == writePort->getNonSignalDriver((unsigned)Node_MemPort::Inputs::wrEnable));
-            insertDelayInput({.node=writePort, .port=(unsigned)Node_MemPort::Inputs::enable}, m_fixupNodeGroup, "");
+            insertDelayInput({.node=writePort, .port=(unsigned)Node_MemPort::Inputs::enable}, m_fixupNodeGroup, "delayed_wr_enable", "");
             writePort->rewireInput((unsigned)Node_MemPort::Inputs::wrEnable, writePort->getDriver((unsigned)Node_MemPort::Inputs::enable));
 
             auto *addrCompNode = circuit.createNode<Node_Compare>(Node_Compare::EQ);
@@ -521,6 +529,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
             addrCompNode->connectInput(1, writePort->getDriver((unsigned)Node_MemPort::Inputs::address));
 
             NodePort conflict = {.node = addrCompNode, .port = 0ull};
+            circuit.appendSignal(conflict)->setName("conflict");
 
             if (rp.node->getDriver((unsigned)Node_MemPort::Inputs::enable).node != nullptr) {
                 auto *logicAnd = circuit.createNode<Node_Logic>(Node_Logic::AND);
@@ -529,6 +538,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
                 logicAnd->connectInput(0, conflict);
                 logicAnd->connectInput(1, rp.node->getDriver((unsigned)Node_MemPort::Inputs::enable));
                 conflict = {.node = logicAnd, .port = 0ull};
+                circuit.appendSignal(conflict)->setName("conflict");
             }
 
             if (writePort->getDriver((unsigned)Node_MemPort::Inputs::enable).node != nullptr) {
@@ -538,6 +548,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
                 logicAnd->connectInput(0, conflict);
                 logicAnd->connectInput(1, writePort->getDriver((unsigned)Node_MemPort::Inputs::enable));
                 conflict = {.node = logicAnd, .port = 0ull};
+                circuit.appendSignal(conflict)->setName("conflict");
             }
 
             std::vector<NodePort> consumers = rp.dataOutput.node->getDirectlyDriven(rp.dataOutput.port);
@@ -551,11 +562,15 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
             muxNode->setComment("If read and write addr match and read and write are enabled, forward write data to read output.");
             muxNode->connectSelector(conflict);
             muxNode->connectInput(0, rp.dataOutput);
-            muxNode->connectInput(1, {.node=delayedWrData, .port=0ull});
+            muxNode->connectInput(1, delayedWrDataNP);
+
+            NodePort muxOut = {.node = muxNode, .port=0ull};
+
+            circuit.appendSignal(muxOut)->setName("conflict_bypass_mux");
 
             // Rewire all original consumers to the mux output
             for (auto np : consumers)
-                np.node->rewireInput(np.port, {.node=muxNode, .port=0ull});
+                np.node->rewireInput(np.port, muxOut);
         }       
     }
 }

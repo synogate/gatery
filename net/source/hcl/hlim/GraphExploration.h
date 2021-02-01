@@ -51,14 +51,15 @@ class Exploration {
                 iterator() : m_isEndIterator(true) { }
                 iterator(bool skipDependencies, NodePort nodePort) : m_skipDependencies(skipDependencies), m_isEndIterator(false) { m_policy.init(nodePort); }
 
-                iterator &operator++() { m_policy.advance(m_skipDependencies); return *this; }
+                iterator &operator++() { if (m_ignoreAdvance) m_ignoreAdvance = false; else m_policy.advance(m_skipDependencies); return *this; }
                 bool operator!=(const iterator &rhs) const { HCL_ASSERT(rhs.m_isEndIterator); return !m_policy.done(); }
                 NodePortHandle operator*() { return NodePortHandle(*this, m_policy.getCurrent()); }
-                void backtrack() { m_policy.backtrack(); }
+                void backtrack() { m_policy.backtrack(); m_ignoreAdvance = true; }
             protected:
                 bool m_skipDependencies;
                 bool m_isEndIterator;
                 Policy m_policy;
+                bool m_ignoreAdvance = false;
         };
         
         Exploration(NodePort nodePort);
