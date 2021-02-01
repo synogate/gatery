@@ -135,8 +135,8 @@ template<typename SignalType>
 void Register<SignalType>::setName(std::string name)
 {
     if(m_resetSignal)
-        m_resetSignal->setName(name+"_reset");
-    m_delayedSignal.setName(name+"_delayed_1");
+        m_resetSignal->setName(name+"reset");
+    m_delayedSignal.setName(name+"delayed_1");
     SignalType::setName(std::move(name));
 }
 
