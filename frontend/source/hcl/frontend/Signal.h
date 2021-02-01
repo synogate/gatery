@@ -3,7 +3,6 @@
 #include <hcl/hlim/coreNodes/Node_Signal.h>
 #include <hcl/hlim/NodeIO.h>
 #include <hcl/hlim/Node.h>
-#include <hcl/hlim/Circuit.h>
 
 #include <hcl/utils/Enumerate.h>
 #include <hcl/utils/Preprocessor.h>
