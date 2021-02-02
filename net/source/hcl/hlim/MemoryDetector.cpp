@@ -124,6 +124,14 @@ void MemoryGroup::formAround(Node_Memory *memory, Circuit &circuit)
             }
         }
     }
+
+    if (m_memory->type() == Node_Memory::MemType::DONT_CARE) {
+        size_t numWords = m_memory->getSize() / m_memory->getMaxPortWidth();
+        if (numWords > 64)
+            m_memory->setType(Node_Memory::MemType::BRAM);
+        // todo: Also depend on other things
+    }
+
 }
 
 void MemoryGroup::lazyCreateFixupNodeGroup()
