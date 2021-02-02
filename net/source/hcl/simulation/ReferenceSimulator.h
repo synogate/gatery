@@ -1,6 +1,5 @@
 #pragma once
 
-#include "SimulatorCallbacks.h"
 #include "Simulator.h"
 
 #include "BitVectorState.h"
@@ -123,19 +122,19 @@ class Program
 class ReferenceSimulator : public Simulator
 {
     public:
-        ReferenceSimulator(SimulatorCallbacks &simCallbacks);
+        ReferenceSimulator();
         virtual void compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs = {}) override;
         
         virtual void reset() override;
         virtual void reevaluate() override;
         virtual void advanceAnyTick() override;
         
+        virtual bool outputOptimizedAway(const hlim::NodePort &nodePort) override;
         virtual DefaultBitVectorState getValueOfInternalState(const hlim::BaseNode *node, size_t idx) override;
         virtual DefaultBitVectorState getValueOfOutput(const hlim::NodePort &nodePort) override;
         virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfClock(const hlim::Clock *clk) override;
         virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfReset(const std::string &reset) override;
     protected:
-        SimulatorCallbacks &m_simCallbacks;
         Program m_program;
         ExecutionState m_executionState;
         DataState m_dataState;

@@ -10,7 +10,8 @@ namespace hcl::core::sim {
 
 UnitTestSimulationFixture::UnitTestSimulationFixture()
 {
-    m_simulator.reset(new ReferenceSimulator(*this));
+    m_simulator.reset(new ReferenceSimulator());
+    m_simulator->addCallbacks(this);
 }
 
 UnitTestSimulationFixture::~UnitTestSimulationFixture()
@@ -42,9 +43,13 @@ void UnitTestSimulationFixture::runTicks(hlim::Circuit &circuit, const hlim::Clo
 }
 
 
-void UnitTestSimulationFixture::onNewTick(const hlim::Clock *clock)
+void UnitTestSimulationFixture::onNewTick(const hlim::ClockRational &simulationTime)
 {
-    if (clock == m_runLimClock)
+}
+
+void UnitTestSimulationFixture::onClock(const hlim::Clock *clock, bool risingEdge)
+{
+    if (clock == m_runLimClock && risingEdge)
         m_runLimTicks++;
 }
 

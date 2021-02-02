@@ -240,14 +240,14 @@ void Program::reevaluate(SimulatorCallbacks &simCallbacks, DataState &dataState)
 
 void Program::advanceClock(SimulatorCallbacks &simCallbacks, DataState &dataState, hlim::Clock *clock) const
 {
-    simCallbacks.onNewTick(clock);
+    simCallbacks.onClock(clock, true);
     const auto &domain = m_clockDomains[m_stateMapping.clockToClkDomain.find(clock)->second];
     for (const auto &latch : domain.latches)
         latch.advance(simCallbacks, dataState);
 }
-    
+
  
-ReferenceSimulator::ReferenceSimulator(SimulatorCallbacks &simCallbacks) : m_simCallbacks(simCallbacks)
+ReferenceSimulator::ReferenceSimulator()
 {
 }
 
@@ -291,21 +291,28 @@ void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const std:
 void ReferenceSimulator::reset()
 {
     m_simulationTime = 0;
-    m_program.reset(m_simCallbacks, m_dataState);
+    m_program.reset(m_callbackDispatcher, m_dataState);
     reevaluate();
 }
 
 
 void ReferenceSimulator::reevaluate()
 {
-    m_program.reevaluate(m_simCallbacks, m_dataState);
+    m_program.reevaluate(m_callbackDispatcher, m_dataState);
 }
 
 void ReferenceSimulator::advanceAnyTick()
 {  
-    m_program.advanceClock(m_simCallbacks, m_dataState, clk);
-    reevaluate();
     m_simulationTime += 1ull / clk->getAbsoluteFrequency();
+    m_callbackDispatcher.onNewTick(m_simulationTime);
+    m_program.advanceClock(m_callbackDispatcher, m_dataState, clk);
+    reevaluate();
+}
+
+
+bool ReferenceSimulator::outputOptimizedAway(const hlim::NodePort &nodePort)
+{
+    return !m_program.getStateMapping().nodeToInternalOffset.contains(nodePort.node);
 }
 
 
