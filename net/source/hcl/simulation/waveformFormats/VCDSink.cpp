@@ -1,6 +1,7 @@
 #include "VCDSink.h"
 
 #include "../../hlim/NodeGroup.h"
+#include "../../hlim/Circuit.h"
 
 #include <chrono>
 #include <ctime>
@@ -20,10 +21,9 @@ VCDSink::VCDSink(hlim::Circuit &circuit, Simulator &simulator, const char *filen
         if (!m_logFile) throw std::runtime_error(std::string("Could not open log file for writing: ") + logFilename);
     } else
         m_doWriteLogFile = false;
-}
 
-void VCDSink::onClock(const hlim::Clock *clock, bool risingEdge)
-{
+    for (auto &clk : circuit.getClocks()) 
+        m_allClocks.push_back(clk.get());
 }
 
 void VCDSink::onDebugMessage(const hlim::BaseNode *src, std::string msg)
@@ -133,6 +133,20 @@ void VCDSink::initialize()
     reccurWriteModules(&root);
 
 
+    m_vcdFile
+        << "$scope module clocks $end\n";
+
+    for (auto &clk : m_allClocks) {
+        std::string id = identifierGenerator.getIdentifer();
+        m_clock2code[clk] = id;
+        m_vcdFile
+            << "$var wire 1 " << id << " " << clk->getName() << " $end\n";
+    }
+
+    m_vcdFile
+        << "$upscope $end\n";
+
+
     m_vcdFile 
         << "$enddefinitions $end\n"
         << "$dumpvars\n";
@@ -175,5 +189,16 @@ void VCDSink::stateToFile(size_t offset, size_t size)
                 m_vcdFile << '0';
     }
 }
+
+void VCDSink::onClock(const hlim::Clock *clock, bool risingEdge)
+{
+    if (risingEdge)
+        m_vcdFile << '1';
+    else
+        m_vcdFile << '0';
+
+    m_vcdFile << m_clock2code[(hlim::Clock *)clock] << "\n";
+}
+
 
 }

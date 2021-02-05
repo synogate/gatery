@@ -24,7 +24,7 @@ void UnitTestSimulationFixture::eval(hlim::Circuit &circuit)
     circuit.removeFalseLoops();
 
     m_simulator->compileProgram(circuit);
-    m_simulator->reset();
+    m_simulator->powerOn();
     //m_simulator->reevaluate();
 }
 
@@ -36,10 +36,10 @@ void UnitTestSimulationFixture::runTicks(hlim::Circuit &circuit, const hlim::Clo
     m_runLimClock = clock;
     
     m_simulator->compileProgram(circuit);
-    m_simulator->reset();
+    m_simulator->powerOn();
     m_simulator->reevaluate();
     while (m_runLimTicks < numTicks)
-        m_simulator->advanceAnyTick();
+        m_simulator->advanceEvent();
 }
 
 

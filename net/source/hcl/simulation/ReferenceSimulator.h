@@ -9,12 +9,18 @@
 #include <vector>
 #include <functional>
 #include <map>
+#include <queue>
 
 namespace hcl::core::sim {
+
+struct ClockState {
+    bool high;
+};
 
 struct DataState 
 {
     DefaultBitVectorState signalState;
+    std::vector<ClockState> clockState;
 };
 
 struct StateMapping
@@ -62,29 +68,23 @@ class HardwareAssert
     protected:
 };
 
-class LatchedNode
+class ClockedNode
 {
     public:
-        LatchedNode(MappedNode mappedNode, size_t clockPort);
+        ClockedNode(MappedNode mappedNode, size_t clockPort);
         
         void advance(SimulatorCallbacks &simCallbacks, DataState &state) const;
     protected:
         MappedNode m_mappedNode;
         size_t m_clockPort;
-        
-        //std::vector<size_t> m_dependentExecutionBlocks;
 };
 
 struct ClockDomain
 {
-    std::vector<LatchedNode> latches;
+    std::vector<ClockedNode> clockedNodes;
+    std::vector<size_t> dependentExecutionBlocks;
 };
 
-struct ExecutionState
-{
-    size_t simulationTick = 0;
-    std::vector<size_t> clocksTriggered;
-};
 
 /*
 struct ClockDriver
@@ -93,53 +93,53 @@ struct ClockDriver
     size_t dstClockIdx;
 };
 */
-class Program
+struct Program
 {
-    public:
-        void compileProgram(const hlim::Circuit &circuit, const std::vector<hlim::BaseNode*> &nodes);
+    void compileProgram(const hlim::Circuit &circuit, const std::vector<hlim::BaseNode*> &nodes);
 
-        void reset(SimulatorCallbacks &simCallbacks, DataState &dataState) const;
-        void reevaluate(SimulatorCallbacks &simCallbacks, DataState &dataState) const;
-        void advanceClock(SimulatorCallbacks &simCallbacks, DataState &dataState, hlim::Clock *clock) const;
-        
-        
-        inline size_t getFullStateWidth() const { return m_fullStateWidth; }
-        inline const StateMapping &getStateMapping() const { return m_stateMapping; }
-        inline const std::vector<ExecutionBlock> &getExecutionBlocks() const { return m_executionBlocks; }
-    protected:
-        size_t m_fullStateWidth;
-        
-        StateMapping m_stateMapping;
+    size_t m_fullStateWidth;
+    
+    StateMapping m_stateMapping;
 
-        std::vector<MappedNode> m_resetNodes;
-        //std::vector<ClockDriver> m_clockDrivers;
-        std::vector<ClockDomain> m_clockDomains;
-        std::vector<ExecutionBlock> m_executionBlocks;
-        
+    std::vector<MappedNode> m_powerOnNodes;
+    //std::vector<ClockDriver> m_clockDrivers;
+    std::vector<ClockDomain> m_clockDomains;
+    std::vector<ExecutionBlock> m_executionBlocks;
+
+    protected:        
         void allocateSignals(const hlim::Circuit &circuit, const std::vector<hlim::BaseNode*> &nodes);
 };
+
+struct Event {
+    hlim::ClockRational timeOfEvent;
+    hlim::Clock *clock;
+    size_t clockDomainIdx;
+    bool risingEdge;
     
+    bool operator<(const Event &rhs) const { return timeOfEvent > rhs.timeOfEvent; }
+};
+
 class ReferenceSimulator : public Simulator
 {
     public:
         ReferenceSimulator();
         virtual void compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs = {}) override;
         
-        virtual void reset() override;
+        virtual void powerOn() override;
         virtual void reevaluate() override;
-        virtual void advanceAnyTick() override;
+        virtual void advanceEvent() override;
+        virtual void advance(hlim::ClockRational seconds) override;
         
         virtual bool outputOptimizedAway(const hlim::NodePort &nodePort) override;
         virtual DefaultBitVectorState getValueOfInternalState(const hlim::BaseNode *node, size_t idx) override;
         virtual DefaultBitVectorState getValueOfOutput(const hlim::NodePort &nodePort) override;
         virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfClock(const hlim::Clock *clk) override;
-        virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfReset(const std::string &reset) override;
+        //virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfReset(const std::string &reset) override;
     protected:
         Program m_program;
-        ExecutionState m_executionState;
         DataState m_dataState;
         
-        hlim::Clock *clk;
+        std::priority_queue<Event> m_nextEvents;
 };
 
 }
