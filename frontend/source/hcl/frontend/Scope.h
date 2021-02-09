@@ -11,10 +11,25 @@ namespace hcl::core::frontend {
 template<class FinalType>
 class BaseScope
 {
+    class Lock {
+    public:
+        Lock(FinalType* ptr) : m_ptr(ptr) {}
+        ~Lock();
+
+        FinalType* operator -> () { return m_ptr; }
+        operator bool() const { return m_ptr != nullptr; }
+    private:
+        FinalType* const m_ptr;
+    };
+
     public:
         BaseScope() { m_parentScope = m_currentScope; m_currentScope = static_cast<FinalType*>(this); }
         ~BaseScope() { m_currentScope = m_parentScope; }
+
+        static Lock lock() { Lock ret = m_currentScope; m_currentScope = nullptr; return ret; }
     protected:
+        static void unlock(FinalType* scope) { assert(!m_currentScope); m_currentScope = scope; }
+
         FinalType *m_parentScope;
         static thread_local FinalType *m_currentScope;
 };
@@ -84,6 +99,12 @@ template<typename ClockType, typename... Args>
 ClockType *DesignScope::createClock(Args&&... args) {
     ClockType *node = m_currentScope->m_circuit.createClock<ClockType>(std::forward<Args>(args)...);
     return node;
+}
+
+template<class FinalType>
+inline BaseScope<FinalType>::Lock::~Lock()
+{
+    BaseScope<FinalType>::unlock(m_ptr);
 }
 
 }
