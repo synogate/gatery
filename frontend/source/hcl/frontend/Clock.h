@@ -78,6 +78,8 @@ class Clock
 
         hlim::Clock *getClk() const { return m_clock; }
         hlim::ClockRational getAbsoluteFrequency() { return m_clock->getAbsoluteFrequency(); }
+
+        void setName(std::string name) { m_clock->setName(std::move(name)); }
     protected:
         hlim::Clock *m_clock;
         Clock(hlim::Clock *clock, const ClockConfig &config);
@@ -90,7 +92,10 @@ class ClockScope : public BaseScope<ClockScope>
 {
     public:
         ClockScope(Clock &clock) : m_clock(clock) { }
-        static Clock &getClk() { return m_currentScope->m_clock; }
+        static Clock &getClk() { 
+            HCL_DESIGNCHECK_HINT(m_currentScope != nullptr, "No clock scope active!");
+            return m_currentScope->m_clock; 
+        }
     protected:
         Clock &m_clock;
 };
