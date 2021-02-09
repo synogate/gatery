@@ -18,6 +18,16 @@ namespace hcl::core::hlim {
                 port->orderAfter(nullptr);
     }
 
+    std::size_t Node_Memory::getMaxPortWidth() const {
+        std::size_t size = 0;
+
+        for (auto np : getDirectlyDriven(0)) {
+            auto *port = dynamic_cast<Node_MemPort*>(np.node);
+            size = std::max(size, port->getBitWidth());
+        }
+
+        return size;
+    }
 
     void Node_Memory::setPowerOnState(sim::DefaultBitVectorState powerOnState)
     {

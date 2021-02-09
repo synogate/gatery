@@ -12,7 +12,8 @@ class Node_SignalTap : public Node<Node_SignalTap>
         enum Level {
             LVL_ASSERT,
             LVL_WARN,
-            LVL_DEBUG
+            LVL_DEBUG,
+            LVL_WATCH
         };
         enum Trigger {
             TRIG_ALWAYS,

@@ -98,6 +98,10 @@ add_library(hcl_net STATIC
     source/hcl/simulation/SimulatorControl.h
     source/hcl/simulation/UnitTestSimulationFixture.cpp
     source/hcl/simulation/UnitTestSimulationFixture.h
+    source/hcl/simulation/WaveformRecorder.cpp
+    source/hcl/simulation/WaveformRecorder.h
+    source/hcl/simulation/waveformFormats/VCDSink.cpp
+    source/hcl/simulation/waveformFormats/VCDSink.h
     
     source/hcl/utils/BitManipulation.h
     source/hcl/utils/BitManipulation.cpp

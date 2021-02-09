@@ -36,7 +36,8 @@ class Node_Memory : public Node<Node_Memory>
         void setType(MemType type) { m_type = type; }
         void setNoConflicts();
 
-        std::size_t getSize() { return m_powerOnState.size(); }
+        std::size_t getSize() const { return m_powerOnState.size(); }
+        std::size_t getMaxPortWidth() const;
         void setPowerOnState(sim::DefaultBitVectorState powerOnState);
         const sim::DefaultBitVectorState &getPowerOnState() const { return m_powerOnState; }
 

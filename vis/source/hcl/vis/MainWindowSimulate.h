@@ -26,7 +26,8 @@ class MainWindowSimulate : public QMainWindow, hcl::core::sim::SimulatorCallback
         explicit MainWindowSimulate(QWidget *parent, core::hlim::Circuit &circuit);
         ~MainWindowSimulate();
     
-        virtual void onNewTick(const core::hlim::Clock *clock) override;
+        virtual void onNewTick(const core::hlim::ClockRational &simulationTime) override;
+        virtual void onClock(const core::hlim::Clock *clock, bool risingEdge) override;
         virtual void onDebugMessage(const core::hlim::BaseNode *src, std::string msg) override;
         virtual void onWarning(const core::hlim::BaseNode *src, std::string msg) override;
         virtual void onAssert(const core::hlim::BaseNode *src, std::string msg) override;

@@ -1,15 +1,12 @@
 #pragma once
 
 #include "NodeIO.h"
-
-#include <boost/rational.hpp>
+#include "ClockRational.h"
 
 
 #include <string>
 
 namespace hcl::core::hlim {
-    
-using ClockRational = boost::rational<std::uint64_t>;    
 
 class Clock
 {

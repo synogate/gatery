@@ -482,7 +482,7 @@ void Circuit::removeConstSelectMuxes()
 void Circuit::propagateConstants()
 {
     //std::cout << "propagateConstants()" << std::endl;
-    sim::DummySimulatorCallbacks ignoreCallbacks;
+    sim::SimulatorCallbacks ignoreCallbacks;
     
     std::vector<NodePort> openList;
     // std::set<NodePort> closedList;
@@ -511,9 +511,11 @@ void Circuit::propagateConstants()
                 continue;
             } 
             
-            // Nodes with side-effects can't be computed
+            // Only work on combinatory nodes
+            if (!successor.node->isCombinatorial()) continue;
+            // Nodes with side-effects can't be removed/bypassed
             if (successor.node->hasSideEffects()) continue;
-            
+           
             if (!successor.node->getInternalStateSizes().empty()) continue; // can't be good for const propagation
             
             // Attempt to compute the output of this node.
@@ -642,7 +644,6 @@ void Circuit::optimize(size_t level)
             removeConstSelectMuxes();
             propagateConstants(); // do again after muxes are removed
             cullUnusedNodes();
-
             ensureSignalNodePlacement();
 
             findMemoryGroups(*this);

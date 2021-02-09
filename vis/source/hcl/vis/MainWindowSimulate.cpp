@@ -36,9 +36,11 @@ namespace hcl::vis {
 
 
 MainWindowSimulate::MainWindowSimulate(QWidget *parent, core::hlim::Circuit &circuit)
-    : QMainWindow(parent), m_circuit(circuit), m_simulator(*this)
+    : QMainWindow(parent), m_circuit(circuit)
 {
     m_ui.setupUi(this);
+
+    m_simulator.addCallbacks(this);
     
     m_ui.toolButton_StepForward->setIcon(m_ui.toolButton_StepForward->style()->standardIcon(QStyle::SP_MediaPlay));
     m_ui.toolButton_FastForward->setIcon(m_ui.toolButton_FastForward->style()->standardIcon(QStyle::SP_MediaSeekForward));
@@ -48,7 +50,7 @@ MainWindowSimulate::MainWindowSimulate(QWidget *parent, core::hlim::Circuit &cir
     
     
     m_simulator.compileProgram(m_circuit);
-    m_simulator.reset();
+    m_simulator.powerOn();
     m_simControl.bindSimulator(&m_simulator);
     
     
@@ -320,7 +322,7 @@ void MainWindowSimulate::onRunSimulation()
     }
 
     for ([[maybe_unused]] auto iter : utils::Range(iters))
-        m_simulator.advanceAnyTick();
+        m_simulator.advanceEvent();
     updateSignalValues();
     updateBitmap();
     
@@ -349,19 +351,24 @@ void MainWindowSimulate::ontoolButton_Pause_pressed()
 void MainWindowSimulate::ontoolButton_StepForward_pressed()
 {
     //m_simControl.advanceAnyTick();
-    m_simulator.advanceAnyTick();
+    m_simulator.advanceEvent();
     updateSignalValues();
     updateBitmap();
 }
 
 void MainWindowSimulate::ontoolButton_Reset_pressed()
 {
-    m_simulator.reset();
+    m_simulator.powerOn();
     updateSignalValues();
     updateBitmap();
 }
 
-void MainWindowSimulate::onNewTick(const core::hlim::Clock *clock)
+
+void MainWindowSimulate::onNewTick(const core::hlim::ClockRational &simulationTime)
+{
+}
+
+void MainWindowSimulate::onClock(const core::hlim::Clock *clock, bool risingEdge)
 {
 }
 
