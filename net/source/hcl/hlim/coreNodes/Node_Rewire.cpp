@@ -204,6 +204,7 @@ bool Node_Rewire::isNoOp() const
 std::unique_ptr<BaseNode> Node_Rewire::cloneUnconnected() const 
 {
     std::unique_ptr<BaseNode> res(new Node_Rewire(getNumInputPorts()));
+    copyBaseToClone(res.get());
     ((Node_Rewire*)res.get())->m_desiredConnectionType = m_desiredConnectionType;
     ((Node_Rewire*)res.get())->m_rewireOperation = m_rewireOperation;
     return res;

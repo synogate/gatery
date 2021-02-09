@@ -9,6 +9,7 @@
 #include "../hlim/coreNodes/Node_Constant.h"
 #include "../hlim/coreNodes/Node_Pin.h"
 
+#include "../export/DotExport.h"
 
 namespace hcl::core::sim {
 
@@ -23,8 +24,10 @@ void ConstructionTimeSimulationContext::getSignal(hlim::NodePort output, Default
     hlim::Circuit simCircuit;
 
     std::vector<hlim::NodePort> inputPorts;
+    std::vector<hlim::NodePort> outputPorts = {output};
 
     std::map<hlim::NodePort, hlim::NodePort> outputsTranslated;
+    std::map<hlim::NodePort, hlim::NodePort> outputsShorted;
     std::set<hlim::NodePort> outputsHandled;
     std::vector<hlim::NodePort> openList;
     openList.push_back(output);
@@ -58,11 +61,20 @@ void ConstructionTimeSimulationContext::getSignal(hlim::NodePort output, Default
             auto type = nodePort.node->getOutputConnectionType(nodePort.port);
 
             auto reset = reg->getNonSignalDriver(hlim::Node_Register::Input::RESET_VALUE);
-            if (auto *const_v = dynamic_cast<hlim::Node_Constant*>(reset.node)) {
-                auto *c_node = simCircuit.createUnconnectedClone(const_v);
+            if (reset.node != nullptr) {
+                outputPorts.push_back(reset);
+                openList.push_back(reset);
+
+                for (auto c : nodePort.node->getDirectlyDriven(nodePort.port))
+                    outputsShorted[c] = reset;
+            } else {
+                DefaultBitVectorState undefinedState;
+                undefinedState.resize(type.width);
+                undefinedState.clearRange(DefaultConfig::DEFINED, 0, type.width);
+
+                auto *c_node = simCircuit.createNode<hlim::Node_Constant>(std::move(undefinedState), type.interpretation);
                 outputsTranslated[nodePort] = {.node = c_node, .port = 0ull};
-            } else
-                outputsTranslated[nodePort] = {}; // translate to unconnected
+            }
 
             for (auto c : nodePort.node->getDirectlyDriven(nodePort.port))
                 inputPorts.push_back(c);
@@ -95,11 +107,15 @@ void ConstructionTimeSimulationContext::getSignal(hlim::NodePort output, Default
         }
     }
 
+    //visualize(simCircuit, "/tmp/circuit_01");
+
     // Copy subnet
     std::map<hlim::BaseNode*, hlim::BaseNode*> mapSrc2Dst;
-    simCircuit.copySubnet(inputPorts, {output}, mapSrc2Dst);
+    simCircuit.copySubnet(inputPorts, outputPorts, mapSrc2Dst);
 
-    // Link to const nodes
+    //visualize(simCircuit, "/tmp/circuit_02");
+
+    // Link to const nodes or short
     for (auto np : inputPorts) {
         // only care about input ports to nodes that are part of the new subnet
         auto it = mapSrc2Dst.find(np.node);
@@ -109,23 +125,48 @@ void ConstructionTimeSimulationContext::getSignal(hlim::NodePort output, Default
 
             // Translate the driver of that input
             auto oldDriver = oldConsumer->getDriver(np.port);
-            auto newDriver = outputsTranslated.find(oldDriver)->second;
-
-            // Rewire the corresponding consumer in the new subnet
-            newConsumer->rewireInput(np.port, newDriver);
+            auto it2 = outputsTranslated.find(oldDriver);
+            if (it2 != outputsTranslated.end()) { // its a link to a const node
+                auto newDriver = it2->second;
+                // Rewire the corresponding consumer in the new subnet
+                newConsumer->rewireInput(np.port, newDriver);
+            } else { // its shorted, e.g. to bypass a register
+                // Find where it was supposed to be bypassed to in the old circuit
+                auto it2 = outputsShorted.find(np); HCL_ASSERT(it2 != outputsShorted.end());
+                // Find the corresponding producer in the new circuit
+                auto it3 = mapSrc2Dst.find(it2->second.node); HCL_ASSERT(it3 != mapSrc2Dst.end());
+                auto newProducer = it3->second;
+                // Rewire
+                newConsumer->rewireInput(np.port, {.node=newProducer, .port=it2->second.port});
+            }
         }
     }
 
+    //visualize(simCircuit, "/tmp/circuit_03");
+
     // Translate the output of interest
     hlim::NodePort newOutput = output;
-    newOutput.node = mapSrc2Dst.find(output.node)->second;
+    {
+        auto it = outputsTranslated.find(output);
+        if (it != outputsTranslated.end())
+            newOutput = it->second;
+        else    
+            newOutput.node = mapSrc2Dst.find(output.node)->second;
+    }
 
-    // Force output's existance
+    // Force output's existance throughout optimization
     auto *pin = simCircuit.createNode<hlim::Node_Pin>();
     pin->connect(newOutput);
 
+    //visualize(simCircuit, "/tmp/circuit_04");
+
     // optimize
     simCircuit.optimize(3);
+
+    // Reestablish output from pin
+    newOutput = pin->getDriver(0);
+
+    //visualize(simCircuit, "/tmp/circuit_05");
 
     // Run simulation
     sim::SimulatorCallbacks ignoreCallbacks;
