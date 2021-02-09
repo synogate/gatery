@@ -99,4 +99,18 @@ void BaseNode::detachClock(size_t clockPort)
     m_clocks[clockPort] = nullptr;
 }
 
+void BaseNode::copyBaseToClone(BaseNode *copy) const 
+{ 
+    copy->m_name = m_name;
+    copy->m_comment = m_comment;
+    copy->m_stackTrace = m_stackTrace;
+    copy->m_clocks.resize(m_clocks.size());
+    copy->resizeInputs(getNumInputPorts());
+    copy->resizeOutputs(getNumOutputPorts());
+    for (auto i : utils::Range(getNumOutputPorts())) {
+        copy->setOutputConnectionType(i, getOutputConnectionType(i));
+        copy->setOutputType(i, getOutputType(i));
+    }
+}
+
 }

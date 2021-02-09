@@ -88,5 +88,12 @@ std::string Node_PriorityConditional::getOutputName(size_t idx) const
     
 }
 
+std::unique_ptr<BaseNode> Node_PriorityConditional::cloneUnconnected() const { 
+    std::unique_ptr<BaseNode> copy(new Node_PriorityConditional());
+    copyBaseToClone(copy.get());
+
+    return copy;
+}
+
 
 }

@@ -133,6 +133,8 @@ BOOST_FIXTURE_TEST_CASE(TCAMCellTest, hcl::core::sim::UnitTestSimulationFixture)
     runTicks(design.getCircuit(), clock.getClk(), 64);
 }
 
+/*
+
 BOOST_FIXTURE_TEST_CASE(xilinxBramTest, hcl::core::sim::UnitTestSimulationFixture)
 {
     using namespace hcl::stl;
@@ -169,3 +171,5 @@ BOOST_FIXTURE_TEST_CASE(xilinxBramTest, hcl::core::sim::UnitTestSimulationFixtur
 
     //vhdl(design.getCircuit());
 }
+
+*/

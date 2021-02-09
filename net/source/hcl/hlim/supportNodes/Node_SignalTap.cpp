@@ -115,4 +115,19 @@ std::vector<size_t> Node_SignalTap::getInternalStateSizes() const
 }
 
 
+
+
+std::unique_ptr<BaseNode> Node_SignalTap::cloneUnconnected() const 
+{
+    std::unique_ptr<BaseNode> res(new Node_SignalTap());
+    copyBaseToClone(res.get());
+    ((Node_SignalTap*)res.get())->m_level = m_level;
+    ((Node_SignalTap*)res.get())->m_trigger = m_trigger;
+    ((Node_SignalTap*)res.get())->m_logMessage = m_logMessage;
+    return res;
+}
+
+
+
+
 }

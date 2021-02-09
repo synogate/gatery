@@ -57,6 +57,8 @@ class Node_MemPort : public Node<Node_MemPort>
         virtual std::vector<size_t> getInternalStateSizes() const override;        
 
         inline size_t getBitWidth() const { return m_bitWidth; }
+
+        virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
     protected:
         friend class Node_Memory;
         std::size_t m_bitWidth;

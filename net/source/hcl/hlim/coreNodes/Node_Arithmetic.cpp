@@ -132,5 +132,13 @@ std::string Node_Arithmetic::getOutputName(size_t idx) const
     return "out";
 }
 
+std::unique_ptr<BaseNode> Node_Arithmetic::cloneUnconnected() const 
+{
+    std::unique_ptr<BaseNode> res(new Node_Arithmetic(m_op));
+    copyBaseToClone(res.get());
+    return res;
+}
+
+
         
 }

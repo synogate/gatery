@@ -49,6 +49,7 @@ class Node_SignalTap : public Node<Node_SignalTap>
         
         virtual bool hasSideEffects() const override { return true; }
 
+        virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
     protected:
         Level m_level = LVL_DEBUG;
         Trigger m_trigger = TRIG_ALWAYS;

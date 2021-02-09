@@ -23,6 +23,7 @@
 #include "frontend/SignalGenerator.h"
 #include "frontend/SignalLogicOp.h"
 #include "frontend/SignalMiscOp.h"
+#include "frontend/SimSigHandle.h"
 
 /**
  * @brief

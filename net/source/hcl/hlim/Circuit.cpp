@@ -30,6 +30,91 @@ Circuit::Circuit()
     m_root.reset(new NodeGroup(NodeGroup::GroupType::ENTITY));
 }
 
+/**
+ * @brief Copies a subnet of all nodes that are needed to drive the specified outputs up to the specified inputs
+ * @note Do note that subnetInputs specified input ports, not output ports!
+ * @param source The circuit to copy from
+ * @param subnetInputs Input ports where to stop copying
+ * @param subnetOutputs Output ports from where to start copying.
+ * @param mapSrc2Dst Map from all copied nodes in the source circuit to the corresponding node in the destination circuit.
+ */
+void Circuit::copySubnet(const std::vector<NodePort> &subnetInputs, 
+                         const std::vector<NodePort> &subnetOutputs, 
+                         std::map<BaseNode*, BaseNode*> &mapSrc2Dst)
+{
+    mapSrc2Dst.clear();
+    
+    std::set<NodePort> subnetInputSet(subnetInputs.begin(), subnetInputs.end());
+
+    std::set<BaseNode*> closedList;
+    std::vector<NodePort> openList = subnetOutputs;
+
+    // Scan and copy unconnected nodes
+    while (!openList.empty()) {
+        NodePort nodePort = openList.back();
+        openList.pop_back();
+        if (closedList.contains(nodePort.node)) continue;
+        closedList.insert(nodePort.node);
+        
+        mapSrc2Dst[nodePort.node] = createUnconnectedClone(nodePort.node);
+        for (auto i : utils::Range(nodePort.node->getNumInputPorts())) {
+            auto driver = nodePort.node->getDriver(i);
+            if (driver.node == nullptr) continue;
+            if (subnetInputSet.contains({.node=nodePort.node, .port=i})) continue;
+            openList.push_back(driver);
+        }
+    }
+
+    // Reestablish connections, create clock network on demand
+    std::map<Clock*, Clock*> mapSrc2Dst_clocks;
+    std::function<Clock*(Clock*)> lazyCreateClockNetwork;
+    
+    lazyCreateClockNetwork = [&](Clock *oldClock)->Clock*{
+        auto it = mapSrc2Dst_clocks.find(oldClock);
+        if (it != mapSrc2Dst_clocks.end()) return it->second;
+
+        Clock *oldParent = oldClock->getParentClock();
+        Clock *newParent = nullptr;
+        if (oldParent != nullptr) 
+            newParent = lazyCreateClockNetwork(oldParent);
+        return createUnconnectedClock(oldClock, newParent);
+    };
+
+
+    for (auto oldNew : mapSrc2Dst) {
+        auto oldNode = oldNew.first;
+        auto newNode = oldNew.second;
+        for (auto i : utils::Range(oldNode->getNumInputPorts())) {
+            auto driver = oldNode->getDriver(i);
+            if (driver.node == nullptr) continue;
+            auto it = mapSrc2Dst.find(driver.node);
+            if (it != mapSrc2Dst.end())
+                newNode->rewireInput(i, {.node = it->second, .port=driver.port});
+        }
+
+        for (auto i : utils::Range(oldNode->getClocks().size())) {
+            auto *oldClock = oldNode->getClocks()[i];
+            if (oldClock != nullptr)
+                newNode->attachClock(lazyCreateClockNetwork(oldClock), i);
+        }
+    }
+}
+
+
+BaseNode *Circuit::createUnconnectedClone(BaseNode *srcNode)
+{
+    m_nodes.push_back(srcNode->cloneUnconnected());
+    return m_nodes.back().get();
+}
+
+
+Clock *Circuit::createUnconnectedClock(Clock *clock, Clock *newParent)
+{
+    m_clocks.push_back(clock->cloneUnconnected(newParent));
+    return m_clocks.back().get();
+}
+
+
 void Circuit::cullUnnamedSignalNodes()
 {
     for (size_t i = 0; i < m_nodes.size(); i++) {

@@ -39,4 +39,12 @@ std::string Node_Constant::getOutputName(size_t idx) const
     return "output"; 
 }
 
+
+std::unique_ptr<BaseNode> Node_Constant::cloneUnconnected() const 
+{
+    std::unique_ptr<BaseNode> res(new Node_Constant(m_Value, getOutputConnectionType(0).interpretation));
+    copyBaseToClone(res.get());
+    return res;
+}
+
 }

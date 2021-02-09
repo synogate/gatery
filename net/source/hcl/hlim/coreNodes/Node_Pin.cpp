@@ -43,4 +43,11 @@ std::string Node_Pin::getOutputName(size_t idx) const
     return "out"; 
 }
 
+std::unique_ptr<BaseNode> Node_Pin::cloneUnconnected() const { 
+    std::unique_ptr<BaseNode> copy(new Node_Pin());
+    copyBaseToClone(copy.get());
+
+    return copy;
+}
+
 }

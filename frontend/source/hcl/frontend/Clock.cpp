@@ -64,6 +64,7 @@ Clock Clock::deriveClock(const ClockConfig &config)
     return Clock(DesignScope::createClock<hlim::DerivedClock>(m_clock), config);
 }
 
+/*
 Bit Clock::driveSignal()
 {
     hlim::Node_Clk2Signal *node = DesignScope::createNode<hlim::Node_Clk2Signal>();
@@ -73,6 +74,7 @@ Bit Clock::driveSignal()
  
     return SignalReadPort(node);
 }
+*/
 
 BVec Clock::operator()(const BVec& signal) const
 {

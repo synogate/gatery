@@ -162,4 +162,18 @@ std::vector<size_t> Node_MemPort::getInternalStateSizes() const
     return {};
 }
 
+
+
+
+
+
+std::unique_ptr<BaseNode> Node_MemPort::cloneUnconnected() const 
+{
+    std::unique_ptr<BaseNode> res(new Node_MemPort(m_bitWidth));
+    copyBaseToClone(res.get());
+    return res;
+}
+
+
+
 }

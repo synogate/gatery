@@ -5,6 +5,7 @@
 using namespace hcl::stl;
 using namespace hcl::core::frontend;
 
+/*
 Stream<BVec> hcl::stl::simpleDualPortRam(Stream<WritePort>& write, Stream<BVec> readAddress, std::string_view name)
 {
     HCL_ASSERT_HINT(write.address.size() == readAddress.size(), "not yet implemented");
@@ -54,3 +55,4 @@ Stream<BVec> hcl::stl::simpleDualPortRam(Stream<WritePort>& write, Stream<BVec> 
     xram->setName(std::string(name));
     return ret;
 }
+*/

@@ -4,6 +4,7 @@
 #include <hcl/hlim/NodeGroup.h>
 #include <hcl/hlim/Circuit.h>
 #include <hcl/utils/Preprocessor.h>
+#include <hcl/simulation/ConstructionTimeSimulationContext.h>
 
 namespace hcl::core::frontend {
     
@@ -80,6 +81,8 @@ class DesignScope : public BaseScope<DesignScope>
     protected:
         hlim::Circuit m_circuit;
         GroupScope m_rootScope;
+
+        sim::ConstructionTimeSimulationContext m_simContext;
         
         // design affecting settings and their overrides go here, as well as tweaking settings (e.g. speed vs area parameters)
 };

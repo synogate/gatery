@@ -46,7 +46,6 @@ class MainWindowSimulate : public QMainWindow, hcl::core::sim::SimulatorCallback
         Ui::MainWindowSimulate m_ui;
         core::hlim::Circuit &m_circuit;
         core::sim::ReferenceSimulator m_simulator;
-        core::sim::SimulatorControl m_simControl;
         
         std::map<QTreeWidgetItem *, core::hlim::NodeGroup *> m_item2NodeGroup;
         std::map<Node_Signal*, unsigned> m_signalNode2TableRow;

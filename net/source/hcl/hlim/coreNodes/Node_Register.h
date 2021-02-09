@@ -44,6 +44,7 @@ namespace hcl::core::hlim {
         void setConditionId(size_t id) { m_conditionId = id; }
         size_t getConditionId() const { return m_conditionId; }
 
+        virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
     protected:
         size_t m_conditionId = 0;
     };

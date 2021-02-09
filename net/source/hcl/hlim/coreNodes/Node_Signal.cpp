@@ -44,6 +44,12 @@ void Node_Signal::moveToSignalGroup(SignalGroup *group)
         m_signalGroup->m_nodes.push_back(this);
 }
 
+std::unique_ptr<BaseNode> Node_Signal::cloneUnconnected() const { 
+    std::unique_ptr<BaseNode> copy(new Node_Signal());
+    copyBaseToClone(copy.get());
+
+    return copy;
+}
 
 
 }

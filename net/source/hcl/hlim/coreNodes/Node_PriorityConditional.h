@@ -30,6 +30,8 @@ class Node_PriorityConditional : public Node<Node_PriorityConditional>
         virtual void assertValidity() const;
         virtual std::string getInputName(size_t idx) const;
         virtual std::string getOutputName(size_t idx) const;
+
+        virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 };
 
 }

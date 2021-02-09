@@ -34,6 +34,8 @@ class BaseNode : public NodeIO
         virtual void assertValidity() const = 0;
         virtual std::string getInputName(size_t idx) const = 0;
         virtual std::string getOutputName(size_t idx) const = 0;
+
+        virtual std::unique_ptr<BaseNode> cloneUnconnected() const = 0;
         
         virtual std::vector<size_t> getInternalStateSizes() const { return {}; }
         
@@ -72,6 +74,8 @@ class BaseNode : public NodeIO
         utils::StackTrace m_stackTrace;
         NodeGroup *m_nodeGroup = nullptr;
         std::vector<Clock*> m_clocks;
+
+        void copyBaseToClone(BaseNode *copy) const;
 };
 
 template<class FinalType>
@@ -83,6 +87,10 @@ class Node : public BaseNode
 
         virtual void visit(NodeVisitor &visitor) override { visitor(*static_cast<FinalType*>(this)); }
         virtual void visit(ConstNodeVisitor &visitor) const override { visitor(*static_cast<const FinalType*>(this)); }
+
+
+    protected:
+
 };
 
 

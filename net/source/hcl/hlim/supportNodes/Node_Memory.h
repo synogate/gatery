@@ -59,6 +59,8 @@ class Node_Memory : public Node<Node_Memory>
 
         MemType type() const { return m_type; }
         bool noConflicts() const { return m_noConflicts; }
+
+        virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
     protected:
         sim::DefaultBitVectorState m_powerOnState;
 

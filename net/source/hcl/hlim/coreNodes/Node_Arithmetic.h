@@ -27,6 +27,8 @@ class Node_Arithmetic : public Node<Node_Arithmetic>
         virtual std::string getOutputName(size_t idx) const override;
 
         inline Op getOp() const { return m_op; }
+
+        virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
     protected:
         Op m_op;
         // extend or not, etc...

@@ -29,6 +29,8 @@ class Node_Logic : public Node<Node_Logic>
         virtual std::string getOutputName(size_t idx) const override;
 
         inline Op getOp() const { return m_op; }
+
+        virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
     protected:
         Op m_op;
         

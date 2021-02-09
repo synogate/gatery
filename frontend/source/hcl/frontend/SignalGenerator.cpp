@@ -48,8 +48,17 @@ hlim::Node_SignalGenerator* internal::createSigGenNode(const Clock &refClk, std:
                 
                 setOutputs(connectionTypes);
             }
-            
+            SigGenNode(const SigGenNode *cloneFrom) : hlim::Node_SignalGenerator(cloneFrom->m_clocks[0]), m_genCallback(cloneFrom->m_genCallback) {
+                cloneFrom->copyBaseToClone(this);
+                m_outputNames = cloneFrom->m_outputNames;
+            }            
             virtual std::string getOutputName(size_t idx) const override { return m_outputNames[idx]; }
+    
+            virtual std::unique_ptr<BaseNode> cloneUnconnected() const override {
+                std::unique_ptr<BaseNode> res(new SigGenNode(this));
+                return res;
+            }
+
         protected:
             std::vector<std::string> m_outputNames;
             std::function<void(SimpleSignalGeneratorContext &context)> m_genCallback;

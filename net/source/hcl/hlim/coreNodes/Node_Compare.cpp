@@ -113,5 +113,12 @@ std::string Node_Compare::getOutputName(size_t idx) const
     return "out"; 
 }
 
+std::unique_ptr<BaseNode> Node_Compare::cloneUnconnected() const 
+{
+    std::unique_ptr<BaseNode> res(new Node_Compare(m_op));
+    copyBaseToClone(res.get());
+    return res;
+}
+
 
 }

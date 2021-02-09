@@ -18,6 +18,8 @@ namespace hcl::core::hlim {
         virtual std::string getOutputName(size_t idx) const override;
 
         const sim::DefaultBitVectorState& getValue() const { return m_Value; }
+
+        virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
     protected:
         sim::DefaultBitVectorState m_Value;
     };

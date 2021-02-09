@@ -38,4 +38,14 @@ void Node_Multiplexer::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, s
         state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width);
 }
 
+
+
+std::unique_ptr<BaseNode> Node_Multiplexer::cloneUnconnected() const 
+{
+    std::unique_ptr<BaseNode> res(new Node_Multiplexer(getNumInputPorts()-1));
+    copyBaseToClone(res.get());
+    return res;
+}
+
+
 }

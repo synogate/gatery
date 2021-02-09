@@ -55,6 +55,8 @@ class Node_Rewire : public Node<Node_Rewire>
         bool isNoOp() const;
         
         void changeOutputType(ConnectionType outputType);
+
+        virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
     protected:
         ConnectionType m_desiredConnectionType;
 

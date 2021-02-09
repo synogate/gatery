@@ -144,4 +144,15 @@ namespace hcl::core::hlim
 	{
 		return "out";
 	}
+
+
+
+
+	std::unique_ptr<BaseNode> Node_Shift::cloneUnconnected() const 
+	{
+		std::unique_ptr<BaseNode> res(new Node_Shift(m_direction, m_fill));
+		copyBaseToClone(res.get());
+		return res;
+	}
+
 }

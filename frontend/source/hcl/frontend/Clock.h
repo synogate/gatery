@@ -69,7 +69,7 @@ class Clock
         Clock(const Clock &other);
         Clock &operator=(const Clock &other);
         
-        Bit driveSignal();
+        //Bit driveSignal();
 
         BVec operator() (const BVec& signal) const;
         BVec operator() (const BVec& signal, const BVec& reset) const;

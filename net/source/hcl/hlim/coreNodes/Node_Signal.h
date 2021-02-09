@@ -25,7 +25,9 @@ class Node_Signal : public Node<Node_Signal>
         const SignalGroup *getSignalGroup() const { return m_signalGroup; }
         SignalGroup *getSignalGroup() { return m_signalGroup; }
         
-        void moveToSignalGroup(SignalGroup *group);        
+        void moveToSignalGroup(SignalGroup *group);
+
+        virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
     protected:
         SignalGroup *m_signalGroup = nullptr;
 };

@@ -8,6 +8,7 @@
 
 #include <vector>
 #include <memory>
+#include <map>
 
 namespace hcl::core::hlim {
 
@@ -15,16 +16,24 @@ class Circuit
 {
     public:
         Circuit();
+
+        void copySubnet(const std::vector<NodePort> &subnetInputs, 
+                        const std::vector<NodePort> &subnetOutputs, 
+                        std::map<BaseNode*, BaseNode*> &mapSrc2Dst);
         
         template<typename NodeType, typename... Args>
         NodeType *createNode(Args&&... args);        
+
+        BaseNode *createUnconnectedClone(BaseNode *srcNode);
 
         template<typename... Args>
         SignalGroup *createSignalGroup(Args&&... args);        
         
         template<typename ClockType, typename... Args>
         ClockType *createClock(Args&&... args);        
-        
+
+        Clock *createUnconnectedClock(Clock *clock, Clock *newParent);
+
         inline NodeGroup *getRootNodeGroup() { return m_root.get(); }
         inline const NodeGroup *getRootNodeGroup() const { return m_root.get(); }
 

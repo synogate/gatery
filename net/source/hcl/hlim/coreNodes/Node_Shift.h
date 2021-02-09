@@ -32,6 +32,7 @@ namespace hcl::core::hlim
         dir getDirection() const { return m_direction; }
         fill getFillMode() const { return m_fill; }
 
+        virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
     protected:
         const dir m_direction;
         const fill m_fill;

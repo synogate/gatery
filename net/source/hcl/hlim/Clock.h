@@ -5,6 +5,7 @@
 
 
 #include <string>
+#include <memory>
 
 namespace hcl::core::hlim {
 
@@ -49,8 +50,11 @@ class Clock
         inline void setResetHighActive(bool rstHigh) { m_resetHighActive = rstHigh; }
         inline void setPhaseSynchronousWithParent(bool phaseSync) { m_phaseSynchronousWithParent = phaseSync; }
         
+        virtual std::unique_ptr<Clock> cloneUnconnected(Clock *newParent);
     protected:
         Clock *m_parentClock = nullptr;
+
+        virtual std::unique_ptr<Clock> allocateClone(Clock *newParent) = 0;
         
         std::string m_name;
         
@@ -80,7 +84,11 @@ class RootClock : public Clock
         virtual ClockRational getFrequencyRelativeTo(Clock &other) override;
         
         void setFrequency(ClockRational frequency) { m_frequency = m_frequency; }
+
+        virtual std::unique_ptr<Clock> cloneUnconnected(Clock *newParent) override;
     protected:
+        virtual std::unique_ptr<Clock> allocateClone(Clock *newParent) override;
+
         ClockRational m_frequency;
 };
 
@@ -93,7 +101,11 @@ class DerivedClock : public Clock
         virtual ClockRational getFrequencyRelativeTo(Clock &other) override;
         
         inline void setFrequencyMuliplier(ClockRational m) { m_parentRelativeMultiplicator = m; }
+
+        virtual std::unique_ptr<Clock> cloneUnconnected(Clock *newParent) override;
     protected:
+        virtual std::unique_ptr<Clock> allocateClone(Clock *newParent) override;
+
         ClockRational m_parentRelativeMultiplicator;
 };
 

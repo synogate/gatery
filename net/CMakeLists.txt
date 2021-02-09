@@ -90,8 +90,16 @@ add_library(hcl_net STATIC
     source/hcl/simulation/BitAllocator.h
     source/hcl/simulation/BitVectorState.cpp
     source/hcl/simulation/BitVectorState.h
+    source/hcl/simulation/ConstructionTimeSimulationContext.cpp
+    source/hcl/simulation/ConstructionTimeSimulationContext.h
     source/hcl/simulation/ReferenceSimulator.cpp
     source/hcl/simulation/ReferenceSimulator.h
+    source/hcl/simulation/RunTimeSimulationContext.cpp
+    source/hcl/simulation/RunTimeSimulationContext.h
+    source/hcl/simulation/SigHandle.cpp
+    source/hcl/simulation/SigHandle.h
+    source/hcl/simulation/SimulationContext.cpp
+    source/hcl/simulation/SimulationContext.h
     source/hcl/simulation/Simulator.cpp
     source/hcl/simulation/Simulator.h
     source/hcl/simulation/SimulatorControl.cpp

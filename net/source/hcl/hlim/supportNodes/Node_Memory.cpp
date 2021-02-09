@@ -87,4 +87,19 @@ namespace hcl::core::hlim {
         return { m_powerOnState.size() };
     }
 
+
+
+
+
+    std::unique_ptr<BaseNode> Node_Memory::cloneUnconnected() const 
+    {
+        std::unique_ptr<BaseNode> res(new Node_Memory());
+        copyBaseToClone(res.get());
+        ((Node_Memory*)res.get())->m_powerOnState = m_powerOnState;
+        ((Node_Memory*)res.get())->m_type = m_type;
+        ((Node_Memory*)res.get())->m_noConflicts = m_noConflicts;
+        return res;
+    }
+
+
 }

@@ -150,4 +150,13 @@ void Node_Logic::updateConnectionType()
     setOutputConnectionType(0, desiredConnectionType);
 }
 
+
+std::unique_ptr<BaseNode> Node_Logic::cloneUnconnected() const 
+{
+    std::unique_ptr<BaseNode> res(new Node_Logic(m_op));
+    copyBaseToClone(res.get());
+    return res;
+}
+
+
 }
