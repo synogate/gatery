@@ -70,6 +70,8 @@ class DesignScope : public BaseScope<DesignScope>
     public:
         DesignScope();
 
+        static void visualize(const std::string &filename);
+
         static DesignScope *get() { return m_currentScope; }
         hlim::Circuit &getCircuit() { return m_circuit; }
         

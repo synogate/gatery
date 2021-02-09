@@ -26,6 +26,8 @@ add_library(hcl_net STATIC
     source/hcl/export/vhdl/Process.h
     source/hcl/export/vhdl/VHDLExport.cpp
     source/hcl/export/vhdl/VHDLExport.h
+    source/hcl/export/DotExport.cpp
+    source/hcl/export/DotExport.h
 
     source/hcl/hlim/coreNodes/Node_Arithmetic.cpp
     source/hcl/hlim/coreNodes/Node_Arithmetic.h
