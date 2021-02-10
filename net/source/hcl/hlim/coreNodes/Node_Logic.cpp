@@ -2,20 +2,20 @@
 
 namespace hcl::core::hlim {
 
-Node_Logic::Node_Logic(Op op) : Node(op==NOT?1:2, 1), m_op(op) 
-{ 
-    
+Node_Logic::Node_Logic(Op op) : Node(op==NOT?1:2, 1), m_op(op)
+{
+
 }
 
-void Node_Logic::connectInput(size_t operand, const NodePort &port) 
-{ 
-    NodeIO::connectInput(operand, port); 
+void Node_Logic::connectInput(size_t operand, const NodePort &port)
+{
+    NodeIO::connectInput(operand, port);
     updateConnectionType();
 }
 
-void Node_Logic::disconnectInput(size_t operand) 
-{ 
-    NodeIO::disconnectInput(operand); 
+void Node_Logic::disconnectInput(size_t operand)
+{
+    NodeIO::disconnectInput(operand);
 }
 
 void Node_Logic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
@@ -31,7 +31,7 @@ void Node_Logic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::De
     }
     */
 
-    NodePort rightDriver; 
+    NodePort rightDriver;
     bool rightAllUndefined = true;
     if (m_op != NOT) {
         rightDriver = getNonSignalDriver(0);
@@ -39,26 +39,26 @@ void Node_Logic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::De
     }
 
     size_t offset = 0;
-    
+
     while (offset < width) {
         size_t chunkSize = std::min<size_t>(64, width-offset);
-        
+
         std::uint64_t left, leftDefined, right, rightDefined;
-        
-        if (leftAllUndefined)
+
+        if (leftAllUndefined || inputOffsets[0] == ~0ull)
             leftDefined = 0;
         else {
             leftDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[0]+offset, chunkSize);
             left = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0]+offset, chunkSize);
         }
-        
-        if (rightAllUndefined || m_op == NOT)
+
+        if (rightAllUndefined || m_op == NOT || inputOffsets[1] == ~0ull)
             rightDefined = 0;
         else {
             rightDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[1]+offset, chunkSize);
             right = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[1]+offset, chunkSize);
         }
-        
+
         std::uint64_t result, resultDefined;
         switch (m_op) {
             case AND:
@@ -90,15 +90,15 @@ void Node_Logic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::De
                 resultDefined = leftDefined;
             break;
         };
-                    
-        state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0] + offset, chunkSize, result);        
-        state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0] + offset, chunkSize, resultDefined);        
+
+        state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0] + offset, chunkSize, result);
+        state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0] + offset, chunkSize, resultDefined);
         offset += chunkSize;
     }
 }
 
-std::string Node_Logic::getTypeName() const 
-{ 
+std::string Node_Logic::getTypeName() const
+{
     switch (m_op) {
         case AND: return "and";
         case NAND: return "nand";
@@ -107,36 +107,36 @@ std::string Node_Logic::getTypeName() const
         case XOR: return "xor";
         case EQ: return "bitwise-equal";
         case NOT: return "not";
-        default: 
-            return "Logic"; 
+        default:
+            return "Logic";
     }
 }
 
-void Node_Logic::assertValidity() const 
-{ 
-    
+void Node_Logic::assertValidity() const
+{
+
 }
 
-std::string Node_Logic::getInputName(size_t idx) const 
-{ 
-    return idx==0?"a":"b"; 
+std::string Node_Logic::getInputName(size_t idx) const
+{
+    return idx==0?"a":"b";
 }
 
-std::string Node_Logic::getOutputName(size_t idx) const 
-{ 
-    return "output"; 
+std::string Node_Logic::getOutputName(size_t idx) const
+{
+    return "output";
 }
 
-    
+
 void Node_Logic::updateConnectionType()
 {
     auto lhs = getDriver(0);
     NodePort rhs;
     if (m_op != NOT)
         rhs = getDriver(1);
-    
+
     ConnectionType desiredConnectionType = getOutputConnectionType(0);
-    
+
     if (lhs.node != nullptr) {
         if (rhs.node != nullptr) {
             desiredConnectionType = lhs.node->getOutputConnectionType(lhs.port);
@@ -146,12 +146,12 @@ void Node_Logic::updateConnectionType()
             desiredConnectionType = lhs.node->getOutputConnectionType(lhs.port);
     } else if (rhs.node != nullptr)
         desiredConnectionType = rhs.node->getOutputConnectionType(rhs.port);
-    
+
     setOutputConnectionType(0, desiredConnectionType);
 }
 
 
-std::unique_ptr<BaseNode> Node_Logic::cloneUnconnected() const 
+std::unique_ptr<BaseNode> Node_Logic::cloneUnconnected() const
 {
     std::unique_ptr<BaseNode> res(new Node_Logic(m_op));
     copyBaseToClone(res.get());
