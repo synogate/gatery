@@ -1,5 +1,14 @@
 #include "DotExport.h"
 
+#include "../hlim/coreNodes/Node_Register.h"
+#include "../hlim/coreNodes/Node_Multiplexer.h"
+#include "../hlim/coreNodes/Node_Constant.h"
+#include "../hlim/coreNodes/Node_Logic.h"
+#include "../hlim/coreNodes/Node_Arithmetic.h"
+#include "../hlim/coreNodes/Node_Compare.h"
+#include "../hlim/coreNodes/Node_Pin.h"
+#include "../hlim/supportNodes/Node_SignalTap.h"
+
 #include <fstream>
 #include <stdexcept>
 #include <cstdlib>
@@ -15,12 +24,35 @@ DotExport::DotExport(std::filesystem::path destination) : m_destination(std::mov
 void DotExport::operator()(const hlim::Circuit &circuit)
 {
     std::fstream file(m_destination.string().c_str(), std::fstream::out);
-    if (!file.is_open()) 
+    if (!file.is_open())
         throw std::runtime_error("Could not open file!");
     file << "digraph G {" << std::endl;
 
     std::map<hlim::BaseNode*, unsigned> node2idx;
   //  std::map<hlim::NodeGroup*, unsigned> nodeGroup2idx;
+
+
+    auto styleNode = [](std::fstream &file, hlim::BaseNode *node) {
+        if (dynamic_cast<hlim::Node_Register*>(node))
+            file << " shape=\"box\" style=\"filled\" fillcolor=\"#a0a0ff\"";
+        else if (dynamic_cast<hlim::Node_Constant*>(node))
+            file << " shape=\"ellipse\" style=\"filled\" fillcolor=\"#ffa0a0\"";
+        else if (dynamic_cast<hlim::Node_Multiplexer*>(node))
+            file << " shape=\"diamond\" style=\"filled\" fillcolor=\"#b0b0b0\"";
+        else if (dynamic_cast<hlim::Node_Arithmetic*>(node))
+            file << " shape=\"box\" style=\"filled\" fillcolor=\"#a0ffa0\"";
+        else if (dynamic_cast<hlim::Node_Logic*>(node))
+            file << " shape=\"box\" style=\"filled\" fillcolor=\"#ffffa0\"";
+        else if (dynamic_cast<hlim::Node_Compare*>(node))
+            file << " shape=\"box\" style=\"filled\" fillcolor=\"#ffd0a0\"";
+        else if (dynamic_cast<hlim::Node_Pin*>(node))
+            file << " shape=\"house\"";
+        else if (dynamic_cast<hlim::Node_SignalTap*>(node))
+            file << " shape=\"cds\"";
+        else
+            file << " shape=\"box\"";
+
+    };
 
     {
         unsigned idx = 0;
@@ -32,7 +64,7 @@ void DotExport::operator()(const hlim::Circuit &circuit)
             file << "subgraph cluster_" << graphIdx << "{" << std::endl;
           //  nodeGroup2idx[nodeGroup] = graphIdx++;
             graphIdx++;
-            
+
             file << " label=\"" << nodeGroup->getName() << "\";" << std::endl;
             switch (nodeGroup->getGroupType()) {
                 case hlim::NodeGroup::GroupType::ENTITY:
@@ -50,7 +82,9 @@ void DotExport::operator()(const hlim::Circuit &circuit)
                 reccurWalkNodeGroup(subGroup.get());
 
             for (auto *node : nodeGroup->getNodes()) {
-                file << "node_" << idx << "[label=\"" << node->getName() << " - " << node->getTypeName() << "\" shape=\"polygon\"];" << std::endl;
+                file << "node_" << idx << "[label=\"" << node->getName() << " - " << node->getTypeName() << "\"";
+                styleNode(file, node);
+                file << "];" << std::endl;
                 node2idx[node] = idx;
                 idx++;
             }
@@ -61,17 +95,19 @@ void DotExport::operator()(const hlim::Circuit &circuit)
 
         for (auto &node : circuit.getNodes()) {
             if (node->getGroup() == nullptr) {
-                file << "node_" << idx << "[label=\"" << node->getName() << " - " << node->getTypeName() << "\" shape=\"polygon\"];" << std::endl;
+                file << "node_" << idx << "[label=\"" << node->getName() << " - " << node->getTypeName() << "\"";
+                styleNode(file, node.get());
+                file << "];" << std::endl;
                 node2idx[node.get()] = idx;
                 idx++;
             }
         }
     }
-        
+
     for (auto &node : circuit.getNodes()) {
         unsigned nodeId = node2idx.find(node.get())->second;
 
-        for (auto port : utils::Range(node->getNumInputPorts())) {            
+        for (auto port : utils::Range(node->getNumInputPorts())) {
             auto producer = node->getDriver(port);
             if (producer.node == nullptr) continue;
 
