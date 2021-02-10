@@ -80,6 +80,7 @@ void WaveformRecorder::onNewTick(const hlim::ClockRational &simulationTime)
         auto size = m_id2StateOffsetSize[id].size;
 
         auto newState = m_simulator.getValueOfOutput(sigId.first);
+        if (newState.size() == 0) continue;
 
         bool stateChanged = false;
         for (auto p : utils::Range(DefaultConfig::NUM_PLANES)) {
