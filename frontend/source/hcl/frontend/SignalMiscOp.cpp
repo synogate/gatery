@@ -39,13 +39,13 @@ void SignalTapHelper::triggerIfNot(const Bit &condition)
     m_node->setTrigger(hlim::Node_SignalTap::TRIG_FIRST_INPUT_LOW);
 }
 
-    
+
 SignalTapHelper &SignalTapHelper::operator<<(const std::string &msg)
 {
     m_node->addMessagePart(msg);
     return *this;
 }
-    
+
 BVec swapEndian(const BVec& word, size_t byteSize)
 {
     const size_t numSymbols = (word.size() + byteSize - 1) / byteSize;
@@ -69,22 +69,23 @@ BVec swapEndian(const BVec& word, size_t byteSize)
 SignalTapHelper sim_assert(const Bit &condition)
 {
     SignalTapHelper helper(hlim::Node_SignalTap::LVL_ASSERT);
-    helper.triggerIfNot(/*(!ConditionalScope::getCurrentCondition()) | */condition);    
+    helper.triggerIfNot(/*(!ConditionalScope::getCurrentCondition()) | */condition);
     return helper;
 }
 
 SignalTapHelper sim_warnIf(const Bit &condition)
 {
     SignalTapHelper helper(hlim::Node_SignalTap::LVL_WARN);
-    helper.triggerIf(/*ConditionalScope::getCurrentCondition() & */condition);    
+    helper.triggerIf(/*ConditionalScope::getCurrentCondition() & */condition);
     return helper;
 }
 
-    
+
 SignalTapHelper sim_debug()
 {
     SignalTapHelper helper(hlim::Node_SignalTap::LVL_DEBUG);
-   // helper.triggerIf(ConditionalScope::getCurrentCondition());
+    if (ConditionalScope::get() != nullptr)
+        helper.triggerIf(Bit(SignalReadPort{ConditionalScope::get()->getFullCondition()}));
     return helper;
 }
 

@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.0)
 
-find_package(Boost COMPONENTS system thread REQUIRED) 
+find_package(Boost COMPONENTS system thread REQUIRED)
 
 LIST(APPEND HCL_ALL_LIBS hcl_net)
 SET(HCL_ALL_LIBS ${HCL_ALL_LIBS} PARENT_SCOPE)
@@ -66,7 +66,7 @@ add_library(hcl_net STATIC
     source/hcl/hlim/supportNodes/Node_SignalGenerator.h
     source/hcl/hlim/supportNodes/Node_SignalTap.cpp
     source/hcl/hlim/supportNodes/Node_SignalTap.h
-    
+
     source/hcl/hlim/Circuit.cpp
     source/hcl/hlim/Circuit.h
     source/hcl/hlim/Clock.cpp
@@ -104,6 +104,8 @@ add_library(hcl_net STATIC
     source/hcl/simulation/SimulationContext.h
     source/hcl/simulation/Simulator.cpp
     source/hcl/simulation/Simulator.h
+    source/hcl/simulation/SimulatorCallbacks.cpp
+    source/hcl/simulation/SimulatorCallbacks.h
     source/hcl/simulation/SimulatorControl.cpp
     source/hcl/simulation/SimulatorControl.h
     source/hcl/simulation/UnitTestSimulationFixture.cpp
@@ -112,7 +114,7 @@ add_library(hcl_net STATIC
     source/hcl/simulation/WaveformRecorder.h
     source/hcl/simulation/waveformFormats/VCDSink.cpp
     source/hcl/simulation/waveformFormats/VCDSink.h
-    
+
     source/hcl/utils/BitManipulation.h
     source/hcl/utils/BitManipulation.cpp
     source/hcl/utils/Enumerate.h
@@ -127,7 +129,7 @@ add_library(hcl_net STATIC
     source/hcl/utils/Traits.h
  "source/hcl/hlim/coreNodes/Node_Shift.h" "source/hcl/hlim/coreNodes/Node_Shift.cpp")
 
-set(data_files 
+set(data_files
 )
 
 foreach(file ${data_files})
