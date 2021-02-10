@@ -17,20 +17,20 @@ class Circuit
     public:
         Circuit();
 
-        void copySubnet(const std::vector<NodePort> &subnetInputs, 
-                        const std::vector<NodePort> &subnetOutputs, 
+        void copySubnet(const std::vector<NodePort> &subnetInputs,
+                        const std::vector<NodePort> &subnetOutputs,
                         std::map<BaseNode*, BaseNode*> &mapSrc2Dst);
-        
+
         template<typename NodeType, typename... Args>
-        NodeType *createNode(Args&&... args);        
+        NodeType *createNode(Args&&... args);
 
         BaseNode *createUnconnectedClone(BaseNode *srcNode);
 
         template<typename... Args>
-        SignalGroup *createSignalGroup(Args&&... args);        
-        
+        SignalGroup *createSignalGroup(Args&&... args);
+
         template<typename ClockType, typename... Args>
-        ClockType *createClock(Args&&... args);        
+        ClockType *createClock(Args&&... args);
 
         Clock *createUnconnectedClock(Clock *clock, Clock *newParent);
 
@@ -40,6 +40,7 @@ class Circuit
         inline const std::vector<std::unique_ptr<BaseNode>> &getNodes() const { return m_nodes; }
         inline const std::vector<std::unique_ptr<Clock>> &getClocks() const { return m_clocks; }
 
+        void cullSequentiallyDuplicatedSignalNodes();
         void cullUnnamedSignalNodes();
         void cullOrphanedSignalNodes();
         void cullUnusedNodes();
@@ -54,7 +55,7 @@ class Circuit
         void removeFalseLoops();
 
         void ensureSignalNodePlacement();
-        
+
         void optimize(size_t level);
 
         Node_Signal *appendSignal(NodePort &nodePort);

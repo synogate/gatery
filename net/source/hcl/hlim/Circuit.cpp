@@ -38,12 +38,12 @@ Circuit::Circuit()
  * @param subnetOutputs Output ports from where to start copying.
  * @param mapSrc2Dst Map from all copied nodes in the source circuit to the corresponding node in the destination circuit.
  */
-void Circuit::copySubnet(const std::vector<NodePort> &subnetInputs, 
-                         const std::vector<NodePort> &subnetOutputs, 
+void Circuit::copySubnet(const std::vector<NodePort> &subnetInputs,
+                         const std::vector<NodePort> &subnetOutputs,
                          std::map<BaseNode*, BaseNode*> &mapSrc2Dst)
 {
     mapSrc2Dst.clear();
-    
+
     std::set<NodePort> subnetInputSet(subnetInputs.begin(), subnetInputs.end());
 
     std::set<BaseNode*> closedList;
@@ -55,7 +55,7 @@ void Circuit::copySubnet(const std::vector<NodePort> &subnetInputs,
         openList.pop_back();
         if (closedList.contains(nodePort.node)) continue;
         closedList.insert(nodePort.node);
-        
+
         mapSrc2Dst[nodePort.node] = createUnconnectedClone(nodePort.node);
         for (auto i : utils::Range(nodePort.node->getNumInputPorts())) {
             auto driver = nodePort.node->getDriver(i);
@@ -68,14 +68,14 @@ void Circuit::copySubnet(const std::vector<NodePort> &subnetInputs,
     // Reestablish connections, create clock network on demand
     std::map<Clock*, Clock*> mapSrc2Dst_clocks;
     std::function<Clock*(Clock*)> lazyCreateClockNetwork;
-    
+
     lazyCreateClockNetwork = [&](Clock *oldClock)->Clock*{
         auto it = mapSrc2Dst_clocks.find(oldClock);
         if (it != mapSrc2Dst_clocks.end()) return it->second;
 
         Clock *oldParent = oldClock->getParentClock();
         Clock *newParent = nullptr;
-        if (oldParent != nullptr) 
+        if (oldParent != nullptr)
             newParent = lazyCreateClockNetwork(oldParent);
         return createUnconnectedClock(oldClock, newParent);
     };
@@ -121,31 +121,63 @@ void Circuit::cullUnnamedSignalNodes()
         Node_Signal *signal = dynamic_cast<Node_Signal*>(m_nodes[i].get());
         if (signal == nullptr)
             continue;
-            
+
         if (!signal->getName().empty())
             continue;
-        
+
         bool inputIsSignalOrUnconnected = (signal->getDriver(0).node == nullptr) || (dynamic_cast<Node_Signal*>(signal->getDriver(0).node) != nullptr);
 
         bool allOutputsAreSignals = true;
         for (const auto &c : signal->getDirectlyDriven(0)) {
             allOutputsAreSignals &= (dynamic_cast<Node_Signal*>(c.node) != nullptr);
         }
-        
+
         if (inputIsSignalOrUnconnected || allOutputsAreSignals) {
-            
+
             NodePort newSource = signal->getDriver(0);
-            
+
             while (!signal->getDirectlyDriven(0).empty()) {
                 auto p = signal->getDirectlyDriven(0).front();
                 p.node->connectInput(p.port, newSource);
             }
-            
+
             signal->disconnectInput();
-        
+
             m_nodes[i] = std::move(m_nodes.back());
             m_nodes.pop_back();
             i--;
+        }
+    }
+}
+
+void Circuit::cullSequentiallyDuplicatedSignalNodes()
+{
+    for (size_t i = 0; i < m_nodes.size(); i++) {
+        Node_Signal *signal = dynamic_cast<Node_Signal*>(m_nodes[i].get());
+        if (signal == nullptr)
+            continue;
+
+        auto driver = signal->getDriver(0);
+
+        if (auto *driverSignal = dynamic_cast<Node_Signal*>(driver.node)) {
+
+            if (driverSignal->getName() == signal->getName() &&
+                driverSignal->getComment() == signal->getComment() &&
+                driverSignal->getGroup() == signal->getGroup() &&
+                driverSignal->getSignalGroup() == signal->getSignalGroup()) {
+
+
+                while (!signal->getDirectlyDriven(0).empty()) {
+                    auto p = signal->getDirectlyDriven(0).front();
+                    p.node->connectInput(p.port, driver);
+                }
+
+                signal->disconnectInput();
+
+                m_nodes[i] = std::move(m_nodes.back());
+                m_nodes.pop_back();
+                i--;
+            }
         }
     }
 }
@@ -156,7 +188,7 @@ void Circuit::cullOrphanedSignalNodes()
         Node_Signal *signal = dynamic_cast<Node_Signal*>(m_nodes[i].get());
         if (signal == nullptr)
             continue;
-        
+
         if (signal->isOrphaned()) {
             m_nodes[i] = std::move(m_nodes.back());
             m_nodes.pop_back();
@@ -189,7 +221,7 @@ void Circuit::cullUnusedNodes()
     bool done;
     do {
         done = true;
-    
+
         for (size_t i = 0; i < m_nodes.size(); i++) {
 
             if (isUnusedNode(*m_nodes[i]))
@@ -217,7 +249,7 @@ struct HierarchyCondition {
             stack.push_back({nodeInput.node->getNonSignalDriver(nodeInput.port), false});
         else
             m_undefined = true;
-        
+
         while (!stack.empty()) {
             auto top = stack.back();
             stack.pop_back();
@@ -228,7 +260,7 @@ struct HierarchyCondition {
                     if (logicNode->getOp() == Node_Logic::NOT) {
                         auto driver = logicNode->getNonSignalDriver(0);
                         stack.push_back({driver, !top.second});
-                    } else 
+                    } else
                     if (logicNode->getOp() == Node_Logic::AND) {
                         for (auto j : utils::Range(logicNode->getNumInputPorts()))
                             stack.push_back({logicNode->getNonSignalDriver(j), top.second});
@@ -249,11 +281,11 @@ struct HierarchyCondition {
             }
         }
     }
-    
+
     bool isEqualOf(const HierarchyCondition &other) const {
         if (m_undefined || other.m_undefined) return false;
         if (m_contradicting && other.m_contradicting) return true;
-        
+
         if (m_conditionsAndNegations.size() != other.m_conditionsAndNegations.size()) return false;
         for (const auto &pair : m_conditionsAndNegations) {
             auto it = other.m_conditionsAndNegations.find(pair.first);
@@ -262,11 +294,11 @@ struct HierarchyCondition {
         }
         return true;
     }
-    
+
     bool isNegationOf(const HierarchyCondition &other) const {
         if (m_undefined || other.m_undefined) return false;
         if (m_contradicting && other.m_contradicting) return false;
-        
+
         if (m_conditionsAndNegations.size() != other.m_conditionsAndNegations.size()) return false;
         for (const auto &pair : m_conditionsAndNegations) {
             auto it = other.m_conditionsAndNegations.find(pair.first);
@@ -279,7 +311,7 @@ struct HierarchyCondition {
     bool isSubsetOf(const HierarchyCondition &other) const {
         if (m_undefined || other.m_undefined) return false;
         if (m_contradicting && other.m_contradicting) return false;
-        
+
         for (const auto &pair : m_conditionsAndNegations) {
             auto it = other.m_conditionsAndNegations.find(pair.first);
             if (it == other.m_conditionsAndNegations.end()) return false;
@@ -294,7 +326,7 @@ void Circuit::mergeMuxes()
     bool done;
     do {
         done = true;
-        
+
         for (size_t i = 0; i < m_nodes.size(); i++) {
             if (Node_Multiplexer *muxNode = dynamic_cast<Node_Multiplexer*>(m_nodes[i].get())) {
                 if (muxNode->getNumInputPorts() != 3) continue;
@@ -303,24 +335,24 @@ void Circuit::mergeMuxes()
 
                 HierarchyCondition condition;
                 condition.parse({.node = muxNode, .port = 0});
-                
+
                 for (size_t muxInput : utils::Range(2)) {
-                
+
                     auto input0 = muxNode->getNonSignalDriver(muxInput?2:1);
                     auto input1 = muxNode->getNonSignalDriver(muxInput?1:2);
-                    
+
                     if (input1.node == nullptr)
                         continue;
-                    
+
                     if (Node_Multiplexer *prevMuxNode = dynamic_cast<Node_Multiplexer*>(input0.node)) {
                         //std::cout << "Found 2 chained muxes" << std::endl;
-                        
+
                         HierarchyCondition prevCondition;
-                        prevCondition.parse({.node = prevMuxNode, .port = 0});                
-                        
+                        prevCondition.parse({.node = prevMuxNode, .port = 0});
+
                         bool conditionsMatch = false;
                         bool prevConditionNegated;
-                        
+
                         if (prevCondition.isEqualOf(condition)) {
                             conditionsMatch = true;
                             prevConditionNegated = muxInput==1;
@@ -353,10 +385,10 @@ void Circuit::mergeMuxes()
                             std::cout << std::endl;
                             */
                         }
-                        
+
                         if (conditionsMatch) {
                             //std::cout << "Conditions match!" << std::endl;
-                            
+
                             auto bypass = prevMuxNode->getDriver(prevConditionNegated?2:1);
                             // Connect second mux directly to bypass
                             muxNode->connectInput(muxInput, bypass);
@@ -376,7 +408,7 @@ void Circuit::removeIrrelevantMuxes()
     bool done;
     do {
         done = true;
-        
+
         for (size_t i = 0; i < m_nodes.size(); i++) {
             if (Node_Multiplexer *muxNode = dynamic_cast<Node_Multiplexer*>(m_nodes[i].get())) {
                 if (muxNode->getNumInputPorts() != 3) continue;
@@ -385,51 +417,51 @@ void Circuit::removeIrrelevantMuxes()
 
                 HierarchyCondition condition;
                 condition.parse({.node = muxNode, .port = 0});
-                
+
                 for (size_t muxInputPort : utils::Range(1,3)) {
-                
+
                     for (auto muxOutput : muxNode->getDirectlyDriven(0)) {
                         std::vector<NodePort> openList = { muxOutput };
                         std::set<NodePort> closedList;
 
                         bool allSubnetOutputsMuxed = true;
-                        
+
                         while (!openList.empty()) {
                             NodePort input = openList.back();
                             openList.pop_back();
                             if (closedList.contains(input)) continue;
                             closedList.insert(input);
-                            
+
                             if (input.node->hasSideEffects()) {
                                 allSubnetOutputsMuxed = false;
                                 //std::cout << "Internal node with sideeffects, skipping" << std::endl;
                                 break;
                             }
-                            
+
                             if (input.node->getGroup() != muxNode->getGroup()) {
                                 allSubnetOutputsMuxed = false;
                                 //std::cout << "Internal node driving external, skipping" << std::endl;
                                 break;
                             }
-                            
+
                             if (Node_Multiplexer *subnetOutputMuxNode = dynamic_cast<Node_Multiplexer*>(input.node)) {
                                 if (muxNode->getNumInputPorts() == 3) {
                                     HierarchyCondition subnetOutputMuxNodeCondition;
-                                    subnetOutputMuxNodeCondition.parse({.node = subnetOutputMuxNode, .port = 0});                
-                                    
+                                    subnetOutputMuxNodeCondition.parse({.node = subnetOutputMuxNode, .port = 0});
+
                                     if (input.port == muxInputPort && condition.isEqualOf(subnetOutputMuxNodeCondition))
                                         continue;
                                     if (input.port != muxInputPort && condition.isNegationOf(subnetOutputMuxNodeCondition))
                                         continue;
                                 }
                             }
-                            
+
                             for (auto j : utils::Range(input.node->getNumOutputPorts()))
-                                for (auto driven : input.node->getDirectlyDriven(j)) 
+                                for (auto driven : input.node->getDirectlyDriven(j))
                                     openList.push_back(driven);
-                                
+
                         }
-                        
+
                         if (allSubnetOutputsMuxed) {
                             //std::cout << "Rewiring past mux" << std::endl;
                             muxOutput.node->connectInput(muxOutput.port, muxNode->getDriver(muxInputPort));
@@ -452,17 +484,17 @@ void Circuit::cullMuxConditionNegations()
             if (muxNode->getNumInputPorts() != 3) continue;
 
             auto condition = muxNode->getNonSignalDriver(0);
-            
+
             if (Node_Logic *logicNode = dynamic_cast<Node_Logic*>(condition.node)) {
                 if (logicNode->getOp() == Node_Logic::NOT) {
                     muxNode->connectSelector(logicNode->getDriver(0));
-                    
+
                     auto input0 = muxNode->getDriver(1);
                     auto input1 = muxNode->getDriver(2);
-                    
+
                     muxNode->connectInput(0, input1);
                     muxNode->connectInput(1, input0);
-                    
+
                     i--; // check same mux again to unravel chain of nots
                 }
             }
@@ -472,7 +504,7 @@ void Circuit::cullMuxConditionNegations()
 
 /**
  * @details So far only removes no-op rewire nodes since they prevent block-ram detection
- * 
+ *
  */
 void Circuit::removeNoOps()
 {
@@ -485,7 +517,7 @@ void Circuit::removeNoOps()
                 removeNode = true;
             }
         }
-        
+
         if (removeNode) {
             m_nodes[i] = std::move(m_nodes.back());
             m_nodes.pop_back();
@@ -499,7 +531,7 @@ void Circuit::foldRegisterMuxEnableLoops()
     for (size_t i = 0; i < m_nodes.size(); i++) {
         if (auto *regNode = dynamic_cast<Node_Register*>(m_nodes[i].get())) {
             auto enableCondition = regNode->getNonSignalDriver((unsigned)Node_Register::Input::ENABLE);
-            
+
             auto data = regNode->getNonSignalDriver((unsigned)Node_Register::Input::DATA);
             if (auto *muxNode = dynamic_cast<Node_Multiplexer*>(data.node)) {
                 if (muxNode->getNumInputPorts() == 3) {
@@ -568,17 +600,17 @@ void Circuit::propagateConstants()
 {
     //std::cout << "propagateConstants()" << std::endl;
     sim::SimulatorCallbacks ignoreCallbacks;
-    
+
     std::vector<NodePort> openList;
     // std::set<NodePort> closedList;
-    
+
     // Start walking the graph from the const nodes
     for (size_t i = 0; i < m_nodes.size(); i++) {
         if (Node_Constant *constNode = dynamic_cast<Node_Constant*>(m_nodes[i].get())) {
             openList.push_back({.node = constNode, .port = 0});
         }
     }
-    
+
     while (!openList.empty()) {
         NodePort constPort = openList.back();
         openList.pop_back();
@@ -586,23 +618,23 @@ void Circuit::propagateConstants()
         if (closedList.contains(constPort)) continue;
         closedList.insert(constPort);
         */
-        
-        // The output constPort is constant, loop over all nodes driven by this and look for nodes that can be computed 
+
+        // The output constPort is constant, loop over all nodes driven by this and look for nodes that can be computed
         for (auto successor : constPort.node->getDirectlyDriven(constPort.port)) {
-            
+
             // Signal nodes don't do anything, so add the output of the signal node to the openList
             if (Node_Signal *signalNode = dynamic_cast<Node_Signal*>(successor.node)) {
                 openList.push_back({.node = signalNode, .port = 0});
                 continue;
-            } 
-            
+            }
+
             // Only work on combinatory nodes
             if (!successor.node->isCombinatorial()) continue;
             // Nodes with side-effects can't be removed/bypassed
             if (successor.node->hasSideEffects()) continue;
-           
+
             if (!successor.node->getInternalStateSizes().empty()) continue; // can't be good for const propagation
-            
+
             // Attempt to compute the output of this node.
             // Build a state vector with all inputs. Set all non-const inputs to undefined.
             sim::DefaultBitVectorState state;
@@ -622,7 +654,7 @@ void Circuit::propagateConstants()
                     }
                 }
             }
-            
+
             // Allocate Outputs
             std::vector<size_t> outputOffsets(successor.node->getNumOutputPorts());
             for (size_t port : utils::Range(successor.node->getNumOutputPorts())) {
@@ -631,34 +663,34 @@ void Circuit::propagateConstants()
                 state.resize(offset + (conType.width + 63)/64 * 64);
                 outputOffsets[port] = offset;
             }
-            
+
             // Simulate node
             successor.node->simulateEvaluate(ignoreCallbacks, state, nullptr, inputOffsets.data(), outputOffsets.data()); // compute outputs
-            
+
             // Check all outputs. If any are fully defined, all nodes connected to that output can instead be connected to a const-node with the result.
             // If this nodes ends up without any other nodes connected to it, it will be culled by other optimization steps.
             for (size_t port : utils::Range(successor.node->getNumOutputPorts())) {
                 auto conType = successor.node->getOutputConnectionType(port);
-                
+
                 bool allDefined = true;
                 for (auto i : utils::Range(conType.width))
                     if (!state.get(sim::DefaultConfig::DEFINED, outputOffsets[port]+i)) {
                         allDefined = false;
                         break;
                     }
-                    
+
                 if (allDefined) {
                     //std::cout << "    Found all const output" << std::endl;
-                    
+
                     auto* constant = createNode<Node_Constant>(state.extract(outputOffsets[port], conType.width), conType.interpretation);
                     constant->moveToGroup(successor.node->getGroup());
                     NodePort newConstOutputPort{.node = constant, .port = 0};
-                    
+
                     while (!successor.node->getDirectlyDriven(port).empty()) {
                         NodePort input = successor.node->getDirectlyDriven(port).back();
                         input.node->connectInput(input.port, newConstOutputPort);
                     }
-                        
+
                     // Add the new const-node output to the openList to continue const-propagation from here.
                     openList.push_back(newConstOutputPort);
                 }
@@ -669,7 +701,7 @@ void Circuit::propagateConstants()
 
 void Circuit::removeFalseLoops()
 {
-//    for (size_t i = 0; i < m_nodes.size(); i++) 
+//    for (size_t i = 0; i < m_nodes.size(); i++)
 //    {
 //        auto* signalNode = dynamic_cast<const Node_Signal*>(m_nodes[i].get());
 //
@@ -721,8 +753,9 @@ void Circuit::optimize(size_t level)
             propagateConstants();
             cullOrphanedSignalNodes();
             cullUnnamedSignalNodes();
+            cullSequentiallyDuplicatedSignalNodes();
             mergeMuxes();
-            removeIrrelevantMuxes();
+            //removeIrrelevantMuxes();
             cullMuxConditionNegations();
             removeNoOps();
             foldRegisterMuxEnableLoops();
