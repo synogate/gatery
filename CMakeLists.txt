@@ -7,13 +7,16 @@ enable_testing()
 
 LIST(APPEND CMAKE_MODULE_PATH cmake/)
 
+if(NOT MSVC)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++2a -fcoroutines")
+endif()
 
 function(hcl_setup_target target)
     target_compile_features(${target} PUBLIC cxx_std_20)
 
     if(WIN32)
         target_compile_definitions(${target} PUBLIC -DBOOST_STACKTRACE_USE_WINDBG)
-        # Boost docu: Uses COM to show debug info. May require linking with ole32 and dbgeng. 
+        # Boost docu: Uses COM to show debug info. May require linking with ole32 and dbgeng.
     else()
         #target_compile_definitions(hcl PUBLIC -DBOOST_STACKTRACE_USE_BACKTRACE)
         #target_link_libraries(hcl PUBLIC -ldl -lbacktrace)
