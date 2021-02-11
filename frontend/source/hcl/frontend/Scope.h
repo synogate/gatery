@@ -14,13 +14,15 @@ class BaseScope
 {
     class Lock {
     public:
+        Lock(Lock&& o) : m_ptr(o.m_ptr) { o.m_ptr = nullptr; }
+        Lock(const Lock&) = delete;
         Lock(FinalType* ptr) : m_ptr(ptr) {}
         ~Lock();
 
         FinalType* operator -> () { return m_ptr; }
         operator bool() const { return m_ptr != nullptr; }
     private:
-        FinalType* const m_ptr;
+        FinalType* m_ptr;
     };
 
     public:
@@ -109,7 +111,8 @@ ClockType *DesignScope::createClock(Args&&... args) {
 template<class FinalType>
 inline BaseScope<FinalType>::Lock::~Lock()
 {
-    BaseScope<FinalType>::unlock(m_ptr);
+    if(m_ptr)
+        BaseScope<FinalType>::unlock(m_ptr);
 }
 
 }
