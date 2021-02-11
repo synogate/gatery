@@ -1,6 +1,7 @@
 #pragma once
 
 #include "utils/BitManipulation.h"
+#include "utils/CppTools.h"
 #include "utils/Enumerate.h"
 #include "utils/Exceptions.h"
 #include "utils/LinkedList.h"

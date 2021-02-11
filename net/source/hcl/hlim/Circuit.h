@@ -24,7 +24,7 @@ class Circuit
         template<typename NodeType, typename... Args>
         NodeType *createNode(Args&&... args);
 
-        BaseNode *createUnconnectedClone(BaseNode *srcNode);
+        BaseNode *createUnconnectedClone(BaseNode *srcNode, bool noId = false);
 
         template<typename... Args>
         SignalGroup *createSignalGroup(Args&&... args);
@@ -64,12 +64,15 @@ class Circuit
         std::unique_ptr<NodeGroup> m_root;
         std::vector<std::unique_ptr<SignalGroup>> m_signalGroups;
         std::vector<std::unique_ptr<Clock>> m_clocks;
+
+        std::uint64_t m_nextNodeId = 0;
 };
 
 
 template<typename NodeType, typename... Args>
 NodeType *Circuit::createNode(Args&&... args) {
     m_nodes.push_back(std::make_unique<NodeType>(std::forward<Args>(args)...));
+    m_nodes.back()->setId(m_nextNodeId++, {});
     return (NodeType *) m_nodes.back().get();
 }
 

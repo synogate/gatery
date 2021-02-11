@@ -49,6 +49,8 @@ void Circuit::copySubnet(const std::vector<NodePort> &subnetInputs,
     std::set<BaseNode*> closedList;
     std::vector<NodePort> openList = subnetOutputs;
 
+    std::vector<std::pair<std::uint64_t, BaseNode*>> sortedNodes;
+
     // Scan and copy unconnected nodes
     while (!openList.empty()) {
         NodePort nodePort = openList.back();
@@ -56,7 +58,9 @@ void Circuit::copySubnet(const std::vector<NodePort> &subnetInputs,
         if (closedList.contains(nodePort.node)) continue;
         closedList.insert(nodePort.node);
 
-        mapSrc2Dst[nodePort.node] = createUnconnectedClone(nodePort.node);
+        BaseNode *newNode = createUnconnectedClone(nodePort.node);
+        mapSrc2Dst[nodePort.node] = newNode;
+        sortedNodes.push_back({nodePort.node->getId(), newNode});
         for (auto i : utils::Range(nodePort.node->getNumInputPorts())) {
             auto driver = nodePort.node->getDriver(i);
             if (driver.node == nullptr) continue;
@@ -64,6 +68,11 @@ void Circuit::copySubnet(const std::vector<NodePort> &subnetInputs,
             openList.push_back(driver);
         }
     }
+
+    // Sort new nodes based on old ids to give them new ids (unique to this circuit) while preserving the order
+    std::sort(sortedNodes.begin(), sortedNodes.end());
+    for (auto [oldId, node] : sortedNodes)
+        node->setId(m_nextNodeId++, {});
 
     // Reestablish connections, create clock network on demand
     std::map<Clock*, Clock*> mapSrc2Dst_clocks;
@@ -101,9 +110,11 @@ void Circuit::copySubnet(const std::vector<NodePort> &subnetInputs,
 }
 
 
-BaseNode *Circuit::createUnconnectedClone(BaseNode *srcNode)
+BaseNode *Circuit::createUnconnectedClone(BaseNode *srcNode, bool noId)
 {
     m_nodes.push_back(srcNode->cloneUnconnected());
+    if (!noId)
+        m_nodes.back()->setId(m_nextNodeId++, {});
     return m_nodes.back().get();
 }
 
