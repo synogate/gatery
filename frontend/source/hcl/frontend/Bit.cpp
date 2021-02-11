@@ -18,6 +18,16 @@ namespace hcl::core::frontend {
     {
     }
 
+    Bit::Bit(Bit&& rhs) noexcept :
+        ElementarySignal(rhs),
+        m_node(rhs.m_node),
+        m_offset(rhs.m_offset)
+    {
+        rhs.m_node = nullptr;
+        rhs.m_offset = 0;
+        rhs.createNode();
+    }
+
     Bit::Bit(const SignalReadPort& port)
     {
         createNode();

@@ -19,6 +19,7 @@ namespace hcl::core::frontend {
         
             Bit();
             Bit(const Bit& rhs);
+            Bit(Bit&& rhs) noexcept;
 
             Bit(const SignalReadPort& port);
             Bit(hlim::Node_Signal* node, size_t offset); // alias Bit

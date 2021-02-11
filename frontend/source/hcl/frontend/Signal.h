@@ -46,6 +46,7 @@ namespace hcl::core::frontend {
         using isElementarySignal = void;
         
         ElementarySignal();
+        ElementarySignal(const ElementarySignal&) noexcept = default;
         virtual ~ElementarySignal() = default;
 
         virtual bool valid() const = 0;

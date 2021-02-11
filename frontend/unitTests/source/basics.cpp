@@ -219,6 +219,30 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, hcl::core::sim::UnitTestSimulati
     runTicks(design.getCircuit(), clock.getClk(), 10);
 }
 
+BOOST_FIXTURE_TEST_CASE(SignalMoveAssignment, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+
+    {
+        Bit a;
+        Bit b = a;
+        Bit c = std::move(a);
+        c = '1';
+        sim_assert(b == '1');
+    }
+    {
+        BVec a = 4_b;
+        BVec b = a;
+        BVec c = std::move(a);
+        c = 1;
+        sim_assert(b == 1);
+    }
+
+    eval(design.getCircuit());
+}
+
 BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, hcl::core::sim::UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;

@@ -127,6 +127,7 @@ namespace hcl::core::frontend {
     }
 
 
+
     BVec::BVec(hlim::Node_Signal* node, Range range, Expansion expansionPolicy) :
         m_node(node),
         m_range(range),
