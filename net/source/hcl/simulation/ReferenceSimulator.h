@@ -10,6 +10,7 @@
 #include <functional>
 #include <map>
 #include <queue>
+#include <list>
 
 namespace hcl::core::sim {
 
@@ -17,7 +18,7 @@ struct ClockState {
     bool high;
 };
 
-struct DataState 
+struct DataState
 {
     DefaultBitVectorState signalState;
     std::vector<ClockState> clockState;
@@ -33,14 +34,14 @@ struct StateMapping
     std::map<hlim::Clock*, size_t> clockToClkIdx;
     */
 //    std::map<std::string, size_t> resetToSignalIdx;
-    
+
     StateMapping() { clear(); }
-    
-    void clear() { 
-        outputToOffset.clear(); outputToOffset[{}] = SIZE_MAX; //clockToSignalIdx.clear(); clockToClkIdx.clear(); 
+
+    void clear() {
+        outputToOffset.clear(); outputToOffset[{}] = SIZE_MAX; //clockToSignalIdx.clear(); clockToClkIdx.clear();
         clockToClkDomain.clear();
-        //resetToSignalIdx.clear(); 
-    }    
+        //resetToSignalIdx.clear();
+    }
 };
 
 struct MappedNode {
@@ -72,7 +73,7 @@ class ClockedNode
 {
     public:
         ClockedNode(MappedNode mappedNode, size_t clockPort);
-        
+
         void advance(SimulatorCallbacks &simCallbacks, DataState &state) const;
     protected:
         MappedNode m_mappedNode;
@@ -98,7 +99,7 @@ struct Program
     void compileProgram(const hlim::Circuit &circuit, const std::vector<hlim::BaseNode*> &nodes);
 
     size_t m_fullStateWidth;
-    
+
     StateMapping m_stateMapping;
 
     std::vector<MappedNode> m_powerOnNodes;
@@ -106,17 +107,32 @@ struct Program
     std::vector<ClockDomain> m_clockDomains;
     std::vector<ExecutionBlock> m_executionBlocks;
 
-    protected:        
+    protected:
         void allocateSignals(const hlim::Circuit &circuit, const std::vector<hlim::BaseNode*> &nodes);
 };
 
 struct Event {
+    enum class Type {
+        clock,
+        fiberResume
+    };
+    Type type;
     hlim::ClockRational timeOfEvent;
-    hlim::Clock *clock;
-    size_t clockDomainIdx;
-    bool risingEdge;
-    
-    bool operator<(const Event &rhs) const { return timeOfEvent > rhs.timeOfEvent; }
+
+    struct {
+        hlim::Clock *clock;
+        size_t clockDomainIdx;
+        bool risingEdge;
+    } clockEvt;
+    struct {
+        std::coroutine_handle<> handle;
+    } fiberResumeEvt;
+
+    bool operator<(const Event &rhs) const {
+        if (timeOfEvent > rhs.timeOfEvent) return true;
+        if (timeOfEvent < rhs.timeOfEvent) return false;
+        return (unsigned)type > (unsigned) rhs.type; // clocks before fibers
+    }
 };
 
 class ReferenceSimulator : public Simulator
@@ -124,22 +140,32 @@ class ReferenceSimulator : public Simulator
     public:
         ReferenceSimulator();
         virtual void compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs = {}) override;
-        
+
         virtual void powerOn() override;
         virtual void reevaluate() override;
         virtual void advanceEvent() override;
         virtual void advance(hlim::ClockRational seconds) override;
-        
+
+        virtual void setInputPin(hlim::Node_Pin *pin, const DefaultBitVectorState &state) override;
         virtual bool outputOptimizedAway(const hlim::NodePort &nodePort) override;
         virtual DefaultBitVectorState getValueOfInternalState(const hlim::BaseNode *node, size_t idx) override;
         virtual DefaultBitVectorState getValueOfOutput(const hlim::NodePort &nodePort) override;
         virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfClock(const hlim::Clock *clk) override;
         //virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfReset(const std::string &reset) override;
+
+        virtual void addSimulationFiber(std::function<SimulationFiber()> fiber) override;
+
+        virtual void simulationFiberSuspending(std::coroutine_handle<> handle, WaitFor &waitFor, utils::RestrictTo<RunTimeSimulationContext>) override;
+        virtual void simulationFiberSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil, utils::RestrictTo<RunTimeSimulationContext>) override;
     protected:
         Program m_program;
         DataState m_dataState;
-        
+
         std::priority_queue<Event> m_nextEvents;
+
+        std::vector<std::function<SimulationFiber()>> m_fibers;
+        std::list<SimulationFiber> m_runningFibers;
+        bool m_stateNeedsReevaluating = false;
 };
 
 }

@@ -10,14 +10,13 @@ thread_local SimulationContext *SimulationContext::m_current = nullptr;
 
 SimulationContext::SimulationContext()
 {
-    HCL_ASSERT(m_current == nullptr);
+    m_overshadowed = m_current;
     m_current = this;
 }
 
 SimulationContext::~SimulationContext()
 {
-    HCL_ASSERT(m_current == this);
-    m_current = nullptr;
+    m_current = m_overshadowed;
 }
 
 

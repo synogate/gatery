@@ -18,7 +18,7 @@ namespace hcl::core::frontend {
     };
     class OutputPins {
         public:
-            OutputPins(const BVec &bitVector);           
+            OutputPins(const BVec &bitVector);
 
             inline OutputPins &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
         protected:
@@ -29,19 +29,21 @@ namespace hcl::core::frontend {
         public:
             InputPin();
 
-            inline operator Bit () { 
+            inline operator Bit () {
 #if 0
-                return Bit(SignalReadPort({.node=m_pinNode, .port=0ull})); 
+                return Bit(SignalReadPort({.node=m_pinNode, .port=0ull}));
 #else
                 auto* signal = DesignScope::createNode<hlim::Node_Signal>();
                 signal->connectInput({.node=m_pinNode, .port=0ull});
                 signal->setName(m_pinNode->getName());
                 signal->recordStackTrace();
-                return Bit(SignalReadPort(signal)); 
+                return Bit(SignalReadPort(signal));
 #endif
             }
 
             inline InputPin &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
+            inline hlim::Node_Pin *getNode() { return m_pinNode; }
+            inline hlim::Node_Pin *getNode() const { return m_pinNode; }
         protected:
             hlim::Node_Pin *m_pinNode;
     };
@@ -52,6 +54,8 @@ namespace hcl::core::frontend {
             inline operator BVec () { return BVec(SignalReadPort({.node=m_pinNode, .port=0ull})); }
 
             inline InputPins &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
+            inline hlim::Node_Pin *getNode() { return m_pinNode; }
+            inline hlim::Node_Pin *getNode() const { return m_pinNode; }
         protected:
             hlim::Node_Pin *m_pinNode;
     };

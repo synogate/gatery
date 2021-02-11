@@ -150,7 +150,7 @@ void ConstructionTimeSimulationContext::getSignal(hlim::NodePort output, Default
         auto it = outputsTranslated.find(output);
         if (it != outputsTranslated.end())
             newOutput = it->second;
-        else    
+        else
             newOutput.node = mapSrc2Dst.find(output.node)->second;
     }
 
@@ -178,5 +178,16 @@ void ConstructionTimeSimulationContext::getSignal(hlim::NodePort output, Default
     // Fetch result
     state = simulator.getValueOfOutput(newOutput);
 }
+
+void ConstructionTimeSimulationContext::simulationFiberSuspending(std::coroutine_handle<> handle, WaitFor &waitFor)
+{
+    HCL_ASSERT_HINT(false, "Simulation coroutine attemped to run (and suspend) outside of simulation!");
+}
+
+void ConstructionTimeSimulationContext::simulationFiberSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil)
+{
+    HCL_ASSERT_HINT(false, "Simulation coroutine attemped to run (and suspend) outside of simulation!");
+}
+
 
 }
