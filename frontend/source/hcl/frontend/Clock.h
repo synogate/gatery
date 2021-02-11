@@ -113,14 +113,16 @@ Compound reg(const Compound& compound)
 
     if constexpr (boost::spirit::traits::is_container<Compound>::value)
     {
-        for (auto& item : ret)
-            item = reg(item);
+        auto it_src = begin(compound);
+        for (auto it = begin(ret); it != end(ret); ++it)
+            *it = reg(*it_src++);
     }
     else if constexpr (boost::hana::Struct<Compound>::value)
     {
         boost::hana::for_each(boost::hana::accessors<std::remove_cv_t<Compound>>(), [&](auto member) {
-            auto& item = boost::hana::second(member)(ret);
-            item = reg(item);
+            auto& src_item = boost::hana::second(member)(compound);
+            auto& dst_item = boost::hana::second(member)(ret);
+            dst_item = reg(src_item);
         });
     }
     else if constexpr (std::is_base_of_v<ElementarySignal, Compound>)
