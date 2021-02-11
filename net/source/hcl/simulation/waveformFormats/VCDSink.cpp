@@ -3,6 +3,8 @@
 #include "../../hlim/NodeGroup.h"
 #include "../../hlim/Circuit.h"
 
+#include <boost/format.hpp>
+
 #include <chrono>
 #include <ctime>
 #include <iomanip>
@@ -22,7 +24,7 @@ VCDSink::VCDSink(hlim::Circuit &circuit, Simulator &simulator, const char *filen
     } else
         m_doWriteLogFile = false;
 
-    for (auto &clk : circuit.getClocks()) 
+    for (auto &clk : circuit.getClocks())
         m_allClocks.push_back(clk.get());
 }
 
@@ -76,7 +78,7 @@ void VCDSink::initialize()
 {
     auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
-    m_vcdFile 
+    m_vcdFile
         << "$date\n" << std::put_time(std::localtime(&now), "%Y-%m-%d %X") << "\n$end\n"
         << "$version\nGatery simulation output\n$end\n"
         << "$timescale\n1ps\n$end\n";
@@ -124,9 +126,10 @@ void VCDSink::initialize()
             std::string name = sigId.first.node->getName();
             if (name.empty())
                 name = "unnamed";
+            name = (boost::format("%s_id%d") % name % sigId.first.node->getId()).str();
 
             m_vcdFile
-                << "$var wire " << width << " " << m_id2sigCode[sigId.second] << " " << name << " $end\n";            
+                << "$var wire " << width << " " << m_id2sigCode[sigId.second] << " " << name << " $end\n";
         }
     };
 
@@ -147,7 +150,7 @@ void VCDSink::initialize()
         << "$upscope $end\n";
 
 
-    m_vcdFile 
+    m_vcdFile
         << "$enddefinitions $end\n"
         << "$dumpvars\n";
 
@@ -159,7 +162,7 @@ void VCDSink::signalChanged(size_t id)
     if (offsetSize.size == 1) {
         stateToFile(offsetSize.offset, 1);
         m_vcdFile << m_id2sigCode[id] << "\n";
-    } else { 
+    } else {
         m_vcdFile << "b";
         stateToFile(offsetSize.offset, offsetSize.size);
         m_vcdFile << " " << m_id2sigCode[id] << "\n";

@@ -10,6 +10,7 @@
 #include "../utils/StackTrace.h"
 #include "../utils/LinkedList.h"
 #include "../utils/Exceptions.h"
+#include "../utils/CppTools.h"
 
 #include <boost/smart_ptr.hpp>
 #include <boost/smart_ptr/intrusive_ref_counter.hpp>
@@ -22,7 +23,7 @@ namespace hcl::core::hlim {
 
 class NodeGroup;
 class Clock;
-    
+
 class BaseNode : public NodeIO
 {
     public:
@@ -36,13 +37,13 @@ class BaseNode : public NodeIO
         virtual std::string getOutputName(size_t idx) const = 0;
 
         virtual std::unique_ptr<BaseNode> cloneUnconnected() const = 0;
-        
+
         virtual std::vector<size_t> getInternalStateSizes() const { return {}; }
-        
+
         virtual void simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const { }
         virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const { }
         virtual void simulateAdvance(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const { }
-        
+
         inline void recordStackTrace() { m_stackTrace.record(10, 1); }
         inline const utils::StackTrace &getStackTrace() const { return m_stackTrace; }
 
@@ -50,16 +51,16 @@ class BaseNode : public NodeIO
         inline void setComment(std::string comment) { m_comment = std::move(comment); }
         inline const std::string &getName() const { return m_name; }
         inline const std::string &getComment() const { return m_comment; }
-        
+
         bool isOrphaned() const;
         virtual bool hasSideEffects() const;
         virtual bool isCombinatorial() const;
-        
+
         const NodeGroup *getGroup() const { return m_nodeGroup; }
         NodeGroup *getGroup() { return m_nodeGroup; }
-        
+
         inline const std::vector<Clock*> &getClocks() const { return m_clocks; }
-        
+
         void moveToGroup(NodeGroup *group);
 
         virtual void visit(NodeVisitor &visitor) = 0;
@@ -67,7 +68,14 @@ class BaseNode : public NodeIO
 
         void attachClock(Clock *clk, size_t clockPort);
         void detachClock(size_t clockPort);
+
+        /// Returns an id that is unique to this node within the circuit.
+        /// @details The id order is preserved when subnets are copied and always reflects creation order.
+        inline std::uint64_t getId() const { return m_nodeId; }
+
+        void setId(std::uint64_t id, utils::RestrictTo<Circuit>) { m_nodeId = id; }
     protected:
+        std::uint64_t m_nodeId = ~0ull;
 
         std::string m_name;
         std::string m_comment;

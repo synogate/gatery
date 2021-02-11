@@ -82,7 +82,7 @@ void DotExport::operator()(const hlim::Circuit &circuit)
                 reccurWalkNodeGroup(subGroup.get());
 
             for (auto *node : nodeGroup->getNodes()) {
-                file << "node_" << idx << "[label=\"" << node->getName() << " - " << node->getTypeName() << "\"";
+                file << "node_" << idx << "[label=\"" << node->getName() << " - " << node->getId() << " - " << node->getTypeName() << "\"";
                 styleNode(file, node);
                 file << "];" << std::endl;
                 node2idx[node] = idx;
@@ -95,7 +95,7 @@ void DotExport::operator()(const hlim::Circuit &circuit)
 
         for (auto &node : circuit.getNodes()) {
             if (node->getGroup() == nullptr) {
-                file << "node_" << idx << "[label=\"" << node->getName() << " - " << node->getTypeName() << "\"";
+                file << "node_" << idx << "[label=\"" << node->getName() << " - " << node->getId() << " - " << node->getTypeName() << "\"";
                 styleNode(file, node.get());
                 file << "];" << std::endl;
                 node2idx[node.get()] = idx;
@@ -140,8 +140,19 @@ void DotExport::operator()(const hlim::Circuit &circuit)
             }
 
 
-            ///@todo weight based on how closely together they were created
-            //file << " weight="<<node->getInput(port).displayWeight;
+            std::int64_t creationDistance = (std::int64_t)node->getId() - (std::int64_t)producer.node->getId();
+            float weight;
+            if (creationDistance > 0)
+                weight = 100.0f / std::log(1+std::abs(creationDistance));
+            else {
+                //file << " constraint=false";
+                weight = 1.0f / std::log(1+std::abs(creationDistance));
+            }
+
+            if (producer.node->getGroup() != node->getGroup())
+                weight *= 0.01f;
+
+            file << " weight="<<std::round(1+weight * 100.0f); // dot wants integers, so scale everything up
 
             file << "];" << std::endl;
         }
