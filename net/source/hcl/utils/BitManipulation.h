@@ -197,13 +197,13 @@ inline T bitfieldExtract(T a, size_t start, size_t count) {
 #ifdef AMD64
 template<>
 inline std::uint64_t bitfieldExtract(std::uint64_t a, size_t start, size_t count) {
-    return _bextr_u64(a, start, count);
+    return _bextr_u64(a, (unsigned int)start, (unsigned int)count);
 }
 #endif
 
 template<>
 inline std::uint32_t bitfieldExtract(std::uint32_t a, size_t start, size_t count) {
-    return _bextr_u32(a, start, count);
+    return _bextr_u32(a, (unsigned int)start, (unsigned int)count);
 }
 #endif
 

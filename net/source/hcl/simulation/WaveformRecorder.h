@@ -8,7 +8,7 @@
 
 namespace hcl::core::hlim {
     class Circuit;
-    class NodePort;
+    struct NodePort;
 }
 
 namespace hcl::core::sim {

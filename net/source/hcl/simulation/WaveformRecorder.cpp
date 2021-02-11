@@ -57,7 +57,7 @@ void WaveformRecorder::initializeStates()
     for (auto &sigId : m_signal2id) {
         auto id = sigId.second;
         auto size = sigId.first.node->getOutputConnectionType(sigId.first.port).width;
-        auto offset = allocator.allocate(size);
+        auto offset = allocator.allocate((unsigned int)size);
         m_id2StateOffsetSize[id].offset = offset;
         m_id2StateOffsetSize[id].size = size;
     }
