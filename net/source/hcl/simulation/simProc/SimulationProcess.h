@@ -11,7 +11,7 @@ class SimulationProcess {
             auto initial_suspend() { return std::suspend_always(); }
             auto final_suspend() noexcept { return std::suspend_always(); }
             void return_void() { }
-            void unhandled_exception() { throw; } // todo
+            void unhandled_exception() { throw; }
         };
         using Handle = std::coroutine_handle<promise_type>;
 
