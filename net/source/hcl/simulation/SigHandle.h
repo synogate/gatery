@@ -13,6 +13,7 @@ namespace hcl::core::sim {
 class SigHandle {
     public:
         SigHandle(hlim::NodePort output) : m_output(output) { }
+        void operator=(const SigHandle &rhs) { this->operator=(rhs.eval()); }
 
         void operator=(std::uint64_t v);
         void operator=(const DefaultBitVectorState &state);
