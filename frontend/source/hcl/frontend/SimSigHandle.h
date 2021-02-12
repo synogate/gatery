@@ -9,6 +9,7 @@
 #include <hcl/simulation/simProc/SimulationProcess.h>
 #include <hcl/simulation/simProc/WaitFor.h>
 #include <hcl/simulation/simProc/WaitUntil.h>
+#include <hcl/simulation/simProc/WaitClock.h>
 
 
 namespace hcl::core::frontend {
@@ -29,6 +30,6 @@ using WaitFor = sim::WaitFor;
 using WaitUntil = sim::WaitUntil;
 using Seconds = hlim::ClockRational;
 
-sim::WaitClk waitClk(const Clock &clk);
+sim::WaitClock WaitClk(const Clock &clk);
 
 }

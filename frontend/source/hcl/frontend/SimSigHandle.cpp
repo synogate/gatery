@@ -1,5 +1,7 @@
 #include "SimSigHandle.h"
 
+#include "Clock.h"
+
 namespace hcl::core::frontend {
 
 sim::SigHandle sim(hlim::NodePort output)
@@ -39,6 +41,11 @@ sim::SigHandle sim(const OutputPins &pins)
     auto driver = pins.getNode()->getDriver(0);
     HCL_DESIGNCHECK_HINT(driver.node != nullptr, "Can't read unbound output pin!");
     return sim(driver);
+}
+
+sim::WaitClock WaitClk(const Clock &clk)
+{
+    return sim::WaitClock(clk.getClk());
 }
 
 

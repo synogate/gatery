@@ -90,6 +90,8 @@ add_library(hcl_net STATIC
 
     source/hcl/simulation/simProc/SimulationProcess.cpp
     source/hcl/simulation/simProc/SimulationProcess.h
+    source/hcl/simulation/simProc/WaitClock.cpp
+    source/hcl/simulation/simProc/WaitClock.h
     source/hcl/simulation/simProc/WaitFor.cpp
     source/hcl/simulation/simProc/WaitFor.h
     source/hcl/simulation/simProc/WaitUntil.cpp

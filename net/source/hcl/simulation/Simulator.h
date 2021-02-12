@@ -27,6 +27,7 @@ namespace hcl::core::sim {
 class RunTimeSimulationContext;
 class WaitFor;
 class WaitUntil;
+class WaitClock;
 
 class Simulator
 {
@@ -56,6 +57,7 @@ class Simulator
 
         virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor, utils::RestrictTo<RunTimeSimulationContext>) = 0;
         virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil, utils::RestrictTo<RunTimeSimulationContext>) = 0;
+        virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock, utils::RestrictTo<RunTimeSimulationContext>) = 0;
     protected:
         class CallbackDispatcher : public SimulatorCallbacks {
             public:

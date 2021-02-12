@@ -17,6 +17,7 @@
 
 #include "simProc/WaitFor.h"
 #include "simProc/WaitUntil.h"
+#include "simProc/WaitClock.h"
 #include "RunTimeSimulationContext.h"
 
 #include <iostream>
@@ -286,6 +287,16 @@ void ReferenceSimulator::powerOn()
         e.clockEvt.clockDomainIdx = p.second;
         e.clockEvt.risingEdge = !m_dataState.clockState[e.clockEvt.clockDomainIdx].high;
         e.timeOfEvent = m_simulationTime + hlim::ClockRational(1,2) / e.clockEvt.clock->getAbsoluteFrequency();
+
+        auto trigType = p.first->getTriggerEvent();
+        if (trigType == hlim::Clock::TriggerEvent::RISING_AND_FALLING ||
+            (trigType == hlim::Clock::TriggerEvent::RISING && e.clockEvt.risingEdge) ||
+            (trigType == hlim::Clock::TriggerEvent::FALLING && !e.clockEvt.risingEdge)) {
+
+            m_dataState.clockState[e.clockEvt.clockDomainIdx].nextTrigger = e.timeOfEvent;
+        } else
+            m_dataState.clockState[e.clockEvt.clockDomainIdx].nextTrigger = e.timeOfEvent + hlim::ClockRational(1,2) / e.clockEvt.clock->getAbsoluteFrequency();
+
         m_nextEvents.push(e);
     }
 
@@ -346,6 +357,8 @@ void ReferenceSimulator::advanceEvent()
 
                         for (auto &cn : clkDom.clockedNodes)
                             cn.advance(m_callbackDispatcher, m_dataState);
+
+                        m_dataState.clockState[clkEvent.clockDomainIdx].nextTrigger = event.timeOfEvent + hlim::ClockRational(1) / clkEvent.clock->getAbsoluteFrequency();
                     }
                     m_callbackDispatcher.onClock(clkEvent.clock, clkEvent.risingEdge);
 
@@ -486,6 +499,20 @@ void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> han
 {
     HCL_ASSERT_HINT(false, "Not implemented yet!");
 }
+
+
+void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock, utils::RestrictTo<RunTimeSimulationContext>)
+{
+    auto it = m_program.m_stateMapping.clockToClkDomain.find(const_cast<hlim::Clock*>(waitClock.getClock()));
+    HCL_ASSERT_HINT(it != m_program.m_stateMapping.clockToClkDomain.end(), "Simulation process is trying to wait on a clock that is not part of the simulation!");
+
+    Event e;
+    e.type = Event::Type::simProcResume;
+    e.timeOfEvent = m_dataState.clockState[it->second].nextTrigger;
+    e.simProcResumeEvt.handle = handle;
+    m_nextEvents.push(e);
+}
+
 
 
 }

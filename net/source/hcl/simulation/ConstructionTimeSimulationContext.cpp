@@ -189,5 +189,9 @@ void ConstructionTimeSimulationContext::simulationProcessSuspending(std::corouti
     HCL_ASSERT_HINT(false, "Simulation coroutine attemped to run (and suspend) outside of simulation!");
 }
 
+void ConstructionTimeSimulationContext::simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock)
+{
+    HCL_ASSERT_HINT(false, "Simulation coroutine attemped to run (and suspend) outside of simulation!");
+}
 
 }
