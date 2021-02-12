@@ -20,21 +20,23 @@ void RunTimeSimulationContext::overrideSignal(hlim::NodePort output, const Defau
 
 void RunTimeSimulationContext::getSignal(hlim::NodePort output, DefaultBitVectorState &state)
 {
-    auto *pin = dynamic_cast<hlim::Node_Pin*>(output.node);
+    /*
+    // Check doesn't work because one connects to the output driving the outputPin
     auto *sigTap = dynamic_cast<hlim::Node_SignalTap*>(output.node);
+    auto *pin = dynamic_cast<hlim::Node_Pin*>(output.node);
     HCL_DESIGNCHECK_HINT(pin || sigTap, "Only io pins and signal taps allow run time reading!");
-
+    */
     state = m_simulator->getValueOfOutput(output);
 }
 
-void RunTimeSimulationContext::simulationFiberSuspending(std::coroutine_handle<> handle, WaitFor &waitFor)
+void RunTimeSimulationContext::simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor)
 {
-    m_simulator->simulationFiberSuspending(handle, waitFor, {});
+    m_simulator->simulationProcessSuspending(handle, waitFor, {});
 }
 
-void RunTimeSimulationContext::simulationFiberSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil)
+void RunTimeSimulationContext::simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil)
 {
-    m_simulator->simulationFiberSuspending(handle, waitUntil, {});
+    m_simulator->simulationProcessSuspending(handle, waitUntil, {});
 }
 
 

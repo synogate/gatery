@@ -179,12 +179,12 @@ void ConstructionTimeSimulationContext::getSignal(hlim::NodePort output, Default
     state = simulator.getValueOfOutput(newOutput);
 }
 
-void ConstructionTimeSimulationContext::simulationFiberSuspending(std::coroutine_handle<> handle, WaitFor &waitFor)
+void ConstructionTimeSimulationContext::simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor)
 {
     HCL_ASSERT_HINT(false, "Simulation coroutine attemped to run (and suspend) outside of simulation!");
 }
 
-void ConstructionTimeSimulationContext::simulationFiberSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil)
+void ConstructionTimeSimulationContext::simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil)
 {
     HCL_ASSERT_HINT(false, "Simulation coroutine attemped to run (and suspend) outside of simulation!");
 }

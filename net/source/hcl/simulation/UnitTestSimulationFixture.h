@@ -9,8 +9,9 @@ namespace hcl::core::hlim {
 }
 
 namespace hcl::core::sim {
-    
+
     class Simulator;
+    class SimulationProcess;
 
 /**
  * @todo write docs
@@ -20,7 +21,9 @@ class UnitTestSimulationFixture : public SimulatorCallbacks
     public:
         UnitTestSimulationFixture();
         ~UnitTestSimulationFixture();
-        
+
+        void addSimulationProcess(std::function<SimulationProcess()> simProc);
+
         void eval(hlim::Circuit &circuit);
         void runTicks(hlim::Circuit &circuit, const hlim::Clock *clock, unsigned numTicks);
 
@@ -31,7 +34,7 @@ class UnitTestSimulationFixture : public SimulatorCallbacks
         virtual void onAssert(const hlim::BaseNode *src, std::string msg) override;
     protected:
         std::unique_ptr<Simulator> m_simulator;
-        
+
         const hlim::Clock *m_runLimClock = nullptr;
         unsigned m_runLimTicks = 0;
 };

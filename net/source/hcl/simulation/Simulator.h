@@ -3,7 +3,7 @@
 #include "BitVectorState.h"
 #include "SimulatorCallbacks.h"
 
-#include "simFiber/SimulationFiber.h"
+#include "simProc/SimulationProcess.h"
 
 #include "../hlim/NodeIO.h"
 #include "../hlim/Clock.h"
@@ -52,10 +52,10 @@ class Simulator
 
         inline const hlim::ClockRational &getCurrentSimulationTime() { return m_simulationTime; }
 
-        virtual void addSimulationFiber(std::function<SimulationFiber()> fiber) = 0;
+        virtual void addSimulationProcess(std::function<SimulationProcess()> simProc) = 0;
 
-        virtual void simulationFiberSuspending(std::coroutine_handle<> handle, WaitFor &waitFor, utils::RestrictTo<RunTimeSimulationContext>) = 0;
-        virtual void simulationFiberSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil, utils::RestrictTo<RunTimeSimulationContext>) = 0;
+        virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor, utils::RestrictTo<RunTimeSimulationContext>) = 0;
+        virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil, utils::RestrictTo<RunTimeSimulationContext>) = 0;
     protected:
         class CallbackDispatcher : public SimulatorCallbacks {
             public:

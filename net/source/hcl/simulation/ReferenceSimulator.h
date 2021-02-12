@@ -114,7 +114,7 @@ struct Program
 struct Event {
     enum class Type {
         clock,
-        fiberResume
+        simProcResume
     };
     Type type;
     hlim::ClockRational timeOfEvent;
@@ -126,7 +126,7 @@ struct Event {
     } clockEvt;
     struct {
         std::coroutine_handle<> handle;
-    } fiberResumeEvt;
+    } simProcResumeEvt;
 
     bool operator<(const Event &rhs) const {
         if (timeOfEvent > rhs.timeOfEvent) return true;
@@ -153,18 +153,18 @@ class ReferenceSimulator : public Simulator
         virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfClock(const hlim::Clock *clk) override;
         //virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfReset(const std::string &reset) override;
 
-        virtual void addSimulationFiber(std::function<SimulationFiber()> fiber) override;
+        virtual void addSimulationProcess(std::function<SimulationProcess()> simProc) override;
 
-        virtual void simulationFiberSuspending(std::coroutine_handle<> handle, WaitFor &waitFor, utils::RestrictTo<RunTimeSimulationContext>) override;
-        virtual void simulationFiberSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil, utils::RestrictTo<RunTimeSimulationContext>) override;
+        virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor, utils::RestrictTo<RunTimeSimulationContext>) override;
+        virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil, utils::RestrictTo<RunTimeSimulationContext>) override;
     protected:
         Program m_program;
         DataState m_dataState;
 
         std::priority_queue<Event> m_nextEvents;
 
-        std::vector<std::function<SimulationFiber()>> m_fibers;
-        std::list<SimulationFiber> m_runningFibers;
+        std::vector<std::function<SimulationProcess()>> m_simProcs;
+        std::list<SimulationProcess> m_runningSimProcs;
         bool m_stateNeedsReevaluating = false;
 };
 

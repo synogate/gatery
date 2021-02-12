@@ -15,8 +15,8 @@
 #include "../hlim/coreNodes/Node_Pin.h"
 #include "../hlim/NodeVisitor.h"
 
-#include "simFiber/WaitFor.h"
-#include "simFiber/WaitUntil.h"
+#include "simProc/WaitFor.h"
+#include "simProc/WaitUntil.h"
 #include "RunTimeSimulationContext.h"
 
 #include <iostream>
@@ -295,10 +295,10 @@ void ReferenceSimulator::powerOn()
     {
         RunTimeSimulationContext context(this);
         // start all fibers
-        m_runningFibers.clear();
-        for (auto &f : m_fibers) {
-            m_runningFibers.push_back(f());
-            m_runningFibers.back().resume();
+        m_runningSimProcs.clear();
+        for (auto &f : m_simProcs) {
+            m_runningSimProcs.push_back(f());
+            m_runningSimProcs.back().resume();
         }
     }
 
@@ -324,7 +324,7 @@ void ReferenceSimulator::advanceEvent()
 
     while (m_nextEvents.top().timeOfEvent == m_simulationTime) { // outer loop because fibers can do a waitFor(0) in which we need to run again.
         std::set<size_t> triggeredExecutionBlocks;
-        std::vector<Event> fibersResuming;
+        std::vector<Event> simProcsResuming;
         while (m_nextEvents.top().timeOfEvent == m_simulationTime) {
             auto event = m_nextEvents.top();
             m_nextEvents.pop();
@@ -353,8 +353,8 @@ void ReferenceSimulator::advanceEvent()
                     event.timeOfEvent += hlim::ClockRational(1,2) / clkEvent.clock->getAbsoluteFrequency();
                     m_nextEvents.push(event);
                 } break;
-                case Event::Type::fiberResume: {
-                    fibersResuming.push_back(event);
+                case Event::Type::simProcResume: {
+                    simProcsResuming.push_back(event);
                 } break;
                 default:
                     HCL_ASSERT_HINT(false, "Not implemented!");
@@ -367,9 +367,9 @@ void ReferenceSimulator::advanceEvent()
 
         {
             RunTimeSimulationContext context(this);
-            for (auto &event : fibersResuming) {
-                HCL_ASSERT(event.fiberResumeEvt.handle);
-                event.fiberResumeEvt.handle.resume();
+            for (auto &event : simProcsResuming) {
+                HCL_ASSERT(event.simProcResumeEvt.handle);
+                event.simProcResumeEvt.handle.resume();
             }
         }
 
@@ -414,6 +414,10 @@ bool ReferenceSimulator::outputOptimizedAway(const hlim::NodePort &nodePort)
 
 DefaultBitVectorState ReferenceSimulator::getValueOfInternalState(const hlim::BaseNode *node, size_t idx)
 {
+    if (m_stateNeedsReevaluating)
+        reevaluate();
+
+
     DefaultBitVectorState value;
     auto it = m_program.m_stateMapping.nodeToInternalOffset.find((hlim::BaseNode *) node);
     if (it == m_program.m_stateMapping.nodeToInternalOffset.end()) {
@@ -427,6 +431,9 @@ DefaultBitVectorState ReferenceSimulator::getValueOfInternalState(const hlim::Ba
 
 DefaultBitVectorState ReferenceSimulator::getValueOfOutput(const hlim::NodePort &nodePort)
 {
+    if (m_stateNeedsReevaluating)
+        reevaluate();
+
     DefaultBitVectorState value;
     auto it = m_program.m_stateMapping.outputToOffset.find(nodePort);
     if (it == m_program.m_stateMapping.outputToOffset.end()) {
@@ -460,22 +467,22 @@ std::array<bool, DefaultConfig::NUM_PLANES> ReferenceSimulator::getValueOfReset(
 }
 */
 
-void ReferenceSimulator::addSimulationFiber(std::function<SimulationFiber()> fiber)
+void ReferenceSimulator::addSimulationProcess(std::function<SimulationProcess()> simProc)
 {
-    m_fibers.push_back(std::move(fiber));
+    m_simProcs.push_back(std::move(simProc));
 }
 
-void ReferenceSimulator::simulationFiberSuspending(std::coroutine_handle<> handle, WaitFor &waitFor, utils::RestrictTo<RunTimeSimulationContext>)
+void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor, utils::RestrictTo<RunTimeSimulationContext>)
 {
     HCL_ASSERT(handle);
     Event e;
-    e.type = Event::Type::fiberResume;
+    e.type = Event::Type::simProcResume;
     e.timeOfEvent = m_simulationTime + waitFor.getDuration();
-    e.fiberResumeEvt.handle = handle;
+    e.simProcResumeEvt.handle = handle;
     m_nextEvents.push(e);
 }
 
-void ReferenceSimulator::simulationFiberSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil, utils::RestrictTo<RunTimeSimulationContext>)
+void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil, utils::RestrictTo<RunTimeSimulationContext>)
 {
     HCL_ASSERT_HINT(false, "Not implemented yet!");
 }

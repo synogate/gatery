@@ -88,12 +88,12 @@ add_library(hcl_net STATIC
     source/hcl/hlim/SignalGroup.cpp
     source/hcl/hlim/SignalGroup.h
 
-    source/hcl/simulation/simFiber/SimulationFiber.cpp
-    source/hcl/simulation/simFiber/SimulationFiber.h
-    source/hcl/simulation/simFiber/WaitFor.cpp
-    source/hcl/simulation/simFiber/WaitFor.h
-    source/hcl/simulation/simFiber/WaitUntil.cpp
-    source/hcl/simulation/simFiber/WaitUntil.h
+    source/hcl/simulation/simProc/SimulationProcess.cpp
+    source/hcl/simulation/simProc/SimulationProcess.h
+    source/hcl/simulation/simProc/WaitFor.cpp
+    source/hcl/simulation/simProc/WaitFor.h
+    source/hcl/simulation/simProc/WaitUntil.cpp
+    source/hcl/simulation/simProc/WaitUntil.h
 
     source/hcl/simulation/BitAllocator.cpp
     source/hcl/simulation/BitAllocator.h

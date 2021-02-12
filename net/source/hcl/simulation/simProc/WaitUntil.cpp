@@ -13,7 +13,7 @@ WaitUntil::WaitUntil(hlim::NodePort np, Trigger trigger) : m_np(np), m_trigger(t
 
 void WaitUntil::await_suspend(std::coroutine_handle<> handle)
 {
-    SimulationContext::current()->simulationFiberSuspending(handle, *this);
+    SimulationContext::current()->simulationProcessSuspending(handle, *this);
 }
 
 }

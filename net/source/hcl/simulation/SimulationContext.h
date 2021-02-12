@@ -19,8 +19,8 @@ class SimulationContext {
         virtual void overrideSignal(hlim::NodePort output, const DefaultBitVectorState &state) = 0;
         virtual void getSignal(hlim::NodePort output, DefaultBitVectorState &state) = 0;
 
-        virtual void simulationFiberSuspending(std::coroutine_handle<> handle, WaitFor &waitFor) = 0;
-        virtual void simulationFiberSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil) = 0;
+        virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor) = 0;
+        virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil) = 0;
 
         static SimulationContext *current() { return m_current; }
     protected:

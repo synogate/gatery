@@ -27,5 +27,19 @@ sim::SigHandle sim(const InputPins &pins)
     return sim({.node=pins.getNode(), .port=0ull});
 }
 
+sim::SigHandle sim(const OutputPin &pin)
+{
+    auto driver = pin.getNode()->getDriver(0);
+    HCL_DESIGNCHECK_HINT(driver.node != nullptr, "Can't read unbound output pin!");
+    return sim(driver);
+}
+
+sim::SigHandle sim(const OutputPins &pins)
+{
+    auto driver = pins.getNode()->getDriver(0);
+    HCL_DESIGNCHECK_HINT(driver.node != nullptr, "Can't read unbound output pin!");
+    return sim(driver);
+}
+
 
 }

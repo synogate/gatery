@@ -8,6 +8,7 @@ add_executable(unitTestCore
     source/main.cpp
     source/memory.cpp
     source/constructionTimeSimulation.cpp
+    source/simulationProcess.cpp
  "source/BVecTest.cpp" "source/compound.cpp")
 
 target_include_directories (unitTestCore PUBLIC

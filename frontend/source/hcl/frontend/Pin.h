@@ -13,6 +13,8 @@ namespace hcl::core::frontend {
             OutputPin(const Bit &bit);
 
             inline OutputPin &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
+            inline hlim::Node_Pin *getNode() { return m_pinNode; }
+            inline hlim::Node_Pin *getNode() const { return m_pinNode; }
         protected:
             hlim::Node_Pin *m_pinNode;
     };
@@ -21,6 +23,8 @@ namespace hcl::core::frontend {
             OutputPins(const BVec &bitVector);
 
             inline OutputPins &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
+            inline hlim::Node_Pin *getNode() { return m_pinNode; }
+            inline hlim::Node_Pin *getNode() const { return m_pinNode; }
         protected:
             hlim::Node_Pin *m_pinNode;
     };

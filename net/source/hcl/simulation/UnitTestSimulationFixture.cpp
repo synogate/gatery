@@ -18,6 +18,11 @@ UnitTestSimulationFixture::~UnitTestSimulationFixture()
 {
 }
 
+void UnitTestSimulationFixture::addSimulationProcess(std::function<SimulationProcess()> simProc)
+{
+    m_simulator->addSimulationProcess(std::move(simProc));
+}
+
 
 void UnitTestSimulationFixture::eval(hlim::Circuit &circuit)
 {
@@ -31,13 +36,12 @@ void UnitTestSimulationFixture::eval(hlim::Circuit &circuit)
 void UnitTestSimulationFixture::runTicks(hlim::Circuit &circuit, const hlim::Clock *clock, unsigned numTicks)
 {
     circuit.removeFalseLoops();
-    
+
     m_runLimClock = 0;
     m_runLimClock = clock;
-    
+
     m_simulator->compileProgram(circuit);
     m_simulator->powerOn();
-    m_simulator->reevaluate();
     while (m_runLimTicks < numTicks)
         m_simulator->advanceEvent();
 }
@@ -67,5 +71,5 @@ void UnitTestSimulationFixture::onAssert(const hlim::BaseNode *src, std::string 
 {
     BOOST_FAIL(msg);
 }
-    
+
 }
