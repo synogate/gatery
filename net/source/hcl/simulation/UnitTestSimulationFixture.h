@@ -3,6 +3,7 @@
 #include "SimulatorCallbacks.h"
 
 #include <memory>
+#include <functional>
 
 namespace hcl::core::hlim {
     class Circuit;
