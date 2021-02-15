@@ -77,7 +77,7 @@ namespace hcl::core::frontend {
 
         BVec() = default;
         BVec(const BVec& rhs) { if(rhs.m_node) assign(rhs.getReadPort()); }
-        BVec(BVec&& rhs) noexcept = default;
+        BVec(BVec&& rhs);
 
         BVec(const SignalReadPort& port) { assign(port); }
         BVec(hlim::Node_Signal* node, Range range, Expansion expansionPolicy); // alias
@@ -94,6 +94,7 @@ namespace hcl::core::frontend {
         template<unsigned S>
         BVec& operator = (const char (&rhs)[S]) { assign(std::string_view(rhs)); return *this; }
         BVec& operator = (const BVec& rhs) { assign(rhs.getReadPort()); return *this; }
+        BVec& operator = (BVec&& rhs);
         BVec& operator = (BitWidth width);
 
         template<typename Int1, typename Int2, typename = std::enable_if_t<std::is_integral_v<Int1> && std::is_integral_v<Int2>>>
@@ -164,6 +165,7 @@ namespace hcl::core::frontend {
         hlim::Node_Signal* m_node = nullptr;
         Range m_range;
         Expansion m_expansionPolicy = Expansion::none;
+        std::string m_name;
 
         std::vector<Bit>& aliasVec() const;
         Bit& aliasMsb() const;

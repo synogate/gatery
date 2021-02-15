@@ -128,6 +128,13 @@ namespace hcl::core::frontend {
 
 
 
+    BVec::BVec(BVec&& rhs) :
+        ElementarySignal(rhs)
+    {
+        assign(rhs.getReadPort());
+        rhs.assign(SignalReadPort(m_node, rhs.m_expansionPolicy));
+    }
+
     BVec::BVec(hlim::Node_Signal* node, Range range, Expansion expansionPolicy) :
         m_node(node),
         m_range(range),
@@ -141,6 +148,13 @@ namespace hcl::core::frontend {
     BVec::BVec(BitWidth width, Expansion expansionPolicy)
     {
         createNode(width.value, expansionPolicy);
+    }
+
+    BVec& BVec::operator=(BVec&& rhs)
+    {
+        assign(rhs.getReadPort());
+        rhs.assign(SignalReadPort(m_node, m_expansionPolicy));
+        return *this;
     }
 
     BVec& BVec::operator=(BitWidth width)
@@ -203,9 +217,14 @@ namespace hcl::core::frontend {
 
     void BVec::setName(std::string name)
     {
-        if (m_node->getDriver(0).node != nullptr)
-            m_node->getDriver(0).node->setName(name);
-        m_node->setName(move(name));
+        m_name = std::move(name);
+
+        if (m_node)
+        {
+            if (m_node->getDriver(0).node != nullptr)
+                m_node->getDriver(0).node->setName(m_name);
+            m_node->setName(m_name);
+        }
     }
     
     void BVec::addToSignalGroup(hlim::SignalGroup *signalGroup)
@@ -296,6 +315,9 @@ namespace hcl::core::frontend {
         m_node = DesignScope::createNode<hlim::Node_Signal>();
         m_node->setConnectionType(getConnType());
         m_node->recordStackTrace();
+
+        if (!m_name.empty())
+            m_node->setName(m_name);
     }
 
     SignalReadPort BVec::getRawDriver() const
