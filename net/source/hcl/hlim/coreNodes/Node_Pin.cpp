@@ -5,7 +5,7 @@ namespace hcl::core::hlim {
 
 Node_Pin::Node_Pin() : Node(1, 1)
 {
-    setOutputType(0, OUTPUT_LATCHED);
+    setOutputType(0, OUTPUT_IMMEDIATE);
 }
 
 void Node_Pin::setBool()
