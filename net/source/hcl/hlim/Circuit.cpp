@@ -443,7 +443,7 @@ void Circuit::removeIrrelevantMuxes()
                             if (closedList.contains(input)) continue;
                             closedList.insert(input);
 
-                            if (input.node->hasSideEffects()) {
+                            if (input.node->hasSideEffects() || !input.node->isCombinatorial()) {
                                 allSubnetOutputsMuxed = false;
                                 //std::cout << "Internal node with sideeffects, skipping" << std::endl;
                                 break;
