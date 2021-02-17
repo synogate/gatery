@@ -5,6 +5,7 @@
 
 #include <hcl/frontend.h>
 #include <hcl/simulation/UnitTestSimulationFixture.h>
+#include <hcl/simulation/waveformFormats/VCDSink.h>
 
 #include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
 
@@ -241,6 +242,126 @@ BOOST_FIXTURE_TEST_CASE(SignalMoveAssignment, hcl::core::sim::UnitTestSimulation
     }
 
     eval(design.getCircuit());
+}
+
+BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    ClockScope clockScope(clock);
+
+    {
+        hcl::BVec a = "xa";
+        hcl::BVec b = "xb";
+        HCL_NAMED(a);
+        HCL_NAMED(b);
+        std::swap(a, b);
+    
+        sim_assert(a == "xb");
+        sim_assert(b == "xa");
+    }
+
+    {
+        hcl::BVec c = 0xC;
+        hcl::BVec d = 0xD;
+        HCL_NAMED(c);
+        HCL_NAMED(d);
+
+        InputPin pinConditionIn = pinIn(); // TODO default value for input pins (simulation and vhdl export)
+        hcl::Bit condition = pinConditionIn;
+        HCL_NAMED(condition);
+
+        IF(condition)
+            std::swap(c, d);
+
+        auto pinC = pinOut(c);
+        auto pinD = pinOut(d);
+
+        addSimulationProcess([&]()->SimProcess {
+
+            sim(pinConditionIn) = 0;
+            BOOST_TEST(sim(pinC) == 0xC);
+            BOOST_TEST(sim(pinD) == 0xD);
+            co_await WaitClk(clock);
+
+            sim(pinConditionIn) = 1;
+            BOOST_TEST(sim(pinC) == 0xD);
+            BOOST_TEST(sim(pinD) == 0xC);
+            co_await WaitClk(clock);
+
+        });
+
+    }
+
+    design.getCircuit().optimize(3);
+    runTicks(design.getCircuit(), clock.getClk(), 100);
+}
+
+BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    ClockScope clockScope(clock);
+
+    {
+        hcl::Vector<BVec> listA(4);
+        HCL_NAMED(listA);
+        for (size_t i = 0; i < listA.size(); ++i)
+            listA[i] = ConstBVec(i, 2);
+        std::rotate(listA.begin(), listA.begin() + 1, listA.end());
+
+        sim_assert(listA[0] == 1);
+        sim_assert(listA[1] == 2);
+        sim_assert(listA[2] == 3);
+        sim_assert(listA[3] == 0);
+    }
+
+    {
+        std::vector<InputPins> in;
+        hcl::Vector<BVec> listB;
+        for (size_t i = 0; i < 4; ++i)
+        {
+            in.emplace_back(2_b);
+            listB.emplace_back(in.back());
+        }
+        HCL_NAMED(listB);
+
+        InputPin pinConditionIn = pinIn();
+        hcl::Bit condition = pinConditionIn;
+        HCL_NAMED(condition);
+
+        IF(condition)
+            std::rotate(listB.begin(), listB.begin() + 1, listB.end());
+
+        std::vector<OutputPins> out;
+        for (BVec& i : listB)
+            out.emplace_back(i);
+
+        addSimulationProcess([&]()->SimProcess {
+
+            for (size_t i = 0; i < in.size(); ++i)
+                sim(in[i]) = i;
+            sim(pinConditionIn) = 0;
+
+            for (size_t i = 0; i < in.size(); ++i)
+                BOOST_TEST(sim(out[i]) == i);
+            co_await WaitClk(clock);
+
+            sim(pinConditionIn) = 1;
+            for (size_t i = 0; i < in.size(); ++i)
+                BOOST_TEST(sim(out[i]) == (i + 1) % 4);
+            co_await WaitClk(clock);
+
+        });
+
+    }
+
+    design.getCircuit().optimize(3);
+    runTicks(design.getCircuit(), clock.getClk(), 100);
 }
 
 BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, hcl::core::sim::UnitTestSimulationFixture)
