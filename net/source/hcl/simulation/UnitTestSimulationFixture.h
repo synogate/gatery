@@ -17,22 +17,24 @@ namespace hcl::core::sim {
 /**
  * @todo write docs
  */
-class UnitTestSimulationFixture : public SimulatorCallbacks
-{
+    class UnitTestSimulationFixture : public SimulatorCallbacks
+    {
     public:
         UnitTestSimulationFixture();
         ~UnitTestSimulationFixture();
 
         void addSimulationProcess(std::function<SimulationProcess()> simProc);
 
-        void eval(hlim::Circuit &circuit);
-        void runTicks(hlim::Circuit &circuit, const hlim::Clock *clock, unsigned numTicks);
+        void eval(hlim::Circuit& circuit);
+        void runTicks(hlim::Circuit& circuit, const hlim::Clock* clock, unsigned numTicks);
 
-        virtual void onNewTick(const hlim::ClockRational &simulationTime) override;
-        virtual void onClock(const hlim::Clock *clock, bool risingEdge) override;
-        virtual void onDebugMessage(const hlim::BaseNode *src, std::string msg) override;
-        virtual void onWarning(const hlim::BaseNode *src, std::string msg) override;
-        virtual void onAssert(const hlim::BaseNode *src, std::string msg) override;
+        virtual void onNewTick(const hlim::ClockRational& simulationTime) override;
+        virtual void onClock(const hlim::Clock* clock, bool risingEdge) override;
+        virtual void onDebugMessage(const hlim::BaseNode* src, std::string msg) override;
+        virtual void onWarning(const hlim::BaseNode* src, std::string msg) override;
+        virtual void onAssert(const hlim::BaseNode* src, std::string msg) override;
+
+        Simulator& getSimulator() { return *m_simulator; }
     protected:
         std::unique_ptr<Simulator> m_simulator;
 
