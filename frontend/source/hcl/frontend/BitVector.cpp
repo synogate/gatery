@@ -153,7 +153,18 @@ namespace hcl::core::frontend {
     BVec& BVec::operator=(BVec&& rhs)
     {
         assign(rhs.getReadPort());
-        rhs.assign(SignalReadPort(m_node, m_expansionPolicy));
+
+        SignalReadPort outRange{ m_node, m_expansionPolicy };
+        if (m_range.subset)
+        {
+            auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
+            rewire->setName(std::string(getName()));
+            rewire->connectInput(0, outRange);
+            rewire->setOp(pickSelection(m_range));
+            outRange = SignalReadPort(rewire, m_expansionPolicy);
+        }
+
+        rhs.assign(outRange);
         return *this;
     }
 
@@ -251,13 +262,13 @@ namespace hcl::core::frontend {
         if (getName().empty())
             setName(in.node->getName());
 
-        // TODO: handle implicit width expansion
-        HCL_ASSERT(width(in) <= m_range.width);
-
-        in = in.expand(m_range.width, hlim::ConnectionType::BITVEC);
+        const bool incrementWidth = width(in) > m_range.width;
+        if(!incrementWidth)
+            in = in.expand(m_range.width, hlim::ConnectionType::BITVEC);
 
         if (m_range.subset)
         {
+            HCL_ASSERT(!incrementWidth);
             std::string in_name = in.node->getName();
             
             auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(2);
@@ -280,18 +291,42 @@ namespace hcl::core::frontend {
         if (auto* scope = ConditionalScope::get(); scope && scope->getId() > m_initialScopeId)
         {
             HCL_ASSERT_HINT(m_node->getDriver(0).node, "latch or complete shadowing for loop not yet implemented");
-            auto* signal = DesignScope::createNode<hlim::Node_Signal>();
-            signal->connectInput(getRawDriver());
-            signal->setName(m_node->getName());
-            signal->recordStackTrace();
+
+            SignalReadPort oldSignal = getRawDriver();
+
+            { // place optional signal node for graph debugging
+                auto* signal = DesignScope::createNode<hlim::Node_Signal>();
+                signal->connectInput(oldSignal);
+                signal->setName(m_node->getName());
+                signal->recordStackTrace();
+                oldSignal = SignalReadPort{ signal };
+            }
+
+            if (incrementWidth)
+            {
+                HCL_ASSERT(m_expansionPolicy != Expansion::none);
+                HCL_ASSERT(!m_range.subset);
+
+                auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
+                rewire->connectInput(0, oldSignal);
+
+                switch (m_expansionPolicy)
+                {
+                case Expansion::zero:   rewire->setPadTo(width(in), hlim::Node_Rewire::OutputRange::CONST_ZERO);    break;
+                case Expansion::one:    rewire->setPadTo(width(in), hlim::Node_Rewire::OutputRange::CONST_ONE);    break;
+                case Expansion::sign:   rewire->setPadTo(width(in)); break;
+                default: break;
+                }
+                                
+                oldSignal = SignalReadPort{ rewire };
+            }
 
             auto* mux = DesignScope::createNode<hlim::Node_Multiplexer>(2);
-            mux->connectInput(0, {.node = signal, .port = 0});
+            mux->connectInput(0, oldSignal);
             mux->connectInput(1, in); // assign rhs last in case previous port was undefined
             mux->connectSelector(scope->getFullCondition());
             mux->setConditionId(scope->getId());
-            in.node = mux;
-            in.port = 0;
+            in = SignalReadPort{ mux };
         }
 
         {
@@ -300,6 +335,21 @@ namespace hcl::core::frontend {
             signal->setName(m_node->getName());
             signal->recordStackTrace();
             in = SignalReadPort(signal);
+        }
+
+        if (!m_node->getDirectlyDriven(0).empty() && incrementWidth)
+        {
+            const auto nodeInputs = m_node->getDirectlyDriven(0);
+
+            auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
+            rewire->connectInput(0, SignalReadPort{ m_node });
+            rewire->setExtract(0, m_range.width);
+
+            for (const hlim::NodePort& port : nodeInputs)
+                port.node->rewireInput(port.port, SignalReadPort{ rewire });
+
+            HCL_ASSERT(!m_range.subset);
+            m_range.width = width(in);
         }
         
         m_node->connectInput(in);
