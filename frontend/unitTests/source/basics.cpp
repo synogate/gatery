@@ -364,6 +364,26 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, hcl::core::sim::UnitTestSimulation
     runTicks(design.getCircuit(), clock.getClk(), 100);
 }
 
+BOOST_FIXTURE_TEST_CASE(ConditionalLoopAssignment, hcl::core::sim::UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    DesignScope design;
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    ClockScope clockScope(clock);
+
+    hcl::Bit condition = '1';
+    hcl::BVec counter = 4_b;
+    HCL_NAMED(condition);
+    HCL_NAMED(counter);
+    
+    IF(condition)
+        counter += 1;
+    counter = reg(counter);
+
+    runTicks(design.getCircuit(), clock.getClk(), 100);
+}
+
 BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, hcl::core::sim::UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
