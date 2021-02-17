@@ -19,7 +19,7 @@ namespace hcl::core::frontend {
     }
 
     Bit::Bit(Bit&& rhs) noexcept :
-        ElementarySignal(rhs),
+        ElementarySignal(),
         m_node(rhs.m_node),
         m_offset(rhs.m_offset)
     {

@@ -129,7 +129,7 @@ namespace hcl::core::frontend {
 
 
     BVec::BVec(BVec&& rhs) :
-        ElementarySignal(rhs)
+        ElementarySignal()
     {
         assign(rhs.getReadPort());
         rhs.assign(SignalReadPort(m_node, rhs.m_expansionPolicy));
