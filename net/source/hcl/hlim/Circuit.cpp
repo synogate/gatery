@@ -766,7 +766,7 @@ void Circuit::optimize(size_t level)
             cullUnnamedSignalNodes();
             cullSequentiallyDuplicatedSignalNodes();
             mergeMuxes();
-            //removeIrrelevantMuxes();
+            removeIrrelevantMuxes();
             cullMuxConditionNegations();
             removeNoOps();
             foldRegisterMuxEnableLoops();
