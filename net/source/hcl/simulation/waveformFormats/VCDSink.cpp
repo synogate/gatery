@@ -123,13 +123,8 @@ void VCDSink::initialize()
         }
         for (const auto &sigId : module->signals) {
             auto width = sigId.first.node->getOutputConnectionType(sigId.first.port).width;
-            std::string name = sigId.first.node->getName();
-            if (name.empty())
-                name = "unnamed";
-            name = (boost::format("%s_id%d") % name % sigId.first.node->getId()).str();
-
             m_vcdFile
-                << "$var wire " << width << " " << m_id2sigCode[sigId.second] << " " << name << " $end\n";
+                << "$var wire " << width << " " << m_id2sigCode[sigId.second] << " " << m_signalNames[sigId.second] << " $end\n";
         }
     };
 

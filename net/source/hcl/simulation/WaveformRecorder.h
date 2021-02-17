@@ -22,8 +22,8 @@ class WaveformRecorder : public SimulatorCallbacks
 {
     public:
         WaveformRecorder(hlim::Circuit &circuit, Simulator &simulator);
-        
-        void addSignal(hlim::NodePort np);
+
+        void addSignal(hlim::NodePort np, const std::string &nameOverride = {});
         void addAllWatchSignalTaps();
         void addAllOutPins();
         void addAllNamedSignals();
@@ -39,6 +39,7 @@ class WaveformRecorder : public SimulatorCallbacks
             size_t offset, size;
         };
         std::vector<StateOffsetSize> m_id2StateOffsetSize;
+        std::vector<std::string> m_signalNames;
         sim::DefaultBitVectorState m_trackedState;
 
         void initializeStates();

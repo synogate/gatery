@@ -14,6 +14,9 @@ void Node_SignalTap::addInput(hlim::NodePort input)
 
 void Node_SignalTap::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
+    if (m_trigger == LVL_WATCH) 
+        return;
+
     bool triggered;
     if (m_trigger == TRIG_ALWAYS) {
         triggered = true;
@@ -25,14 +28,14 @@ void Node_SignalTap::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim
         } else {
             const auto &conditionType = conditionDriver.node->getOutputConnectionType(conditionDriver.port);
             HCL_ASSERT_HINT(conditionType.width == 1, "Condition must be 1 bit!");
-            
+
             bool defined = state.get(sim::DefaultConfig::DEFINED, inputOffsets[0]);
             bool value = state.get(sim::DefaultConfig::VALUE, inputOffsets[0]);
-            
+
             triggered = !defined || (m_trigger == TRIG_FIRST_INPUT_HIGH && value) || (m_trigger == TRIG_FIRST_INPUT_LOW && !value);
         }
     }
-    
+
     if (triggered) {
         struct Concatenator : public boost::static_visitor<> {
             void operator()(const std::string &str) {

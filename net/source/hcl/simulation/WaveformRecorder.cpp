@@ -8,6 +8,8 @@
 #include "../hlim/coreNodes/Node_Pin.h"
 #include "../hlim/coreNodes/Node_Signal.h"
 
+#include <boost/format.hpp>
+
 namespace hcl::core::sim {
 
 WaveformRecorder::WaveformRecorder(hlim::Circuit &circuit, Simulator &simulator) : m_circuit(circuit), m_simulator(simulator)
@@ -15,11 +17,20 @@ WaveformRecorder::WaveformRecorder(hlim::Circuit &circuit, Simulator &simulator)
     m_simulator.addCallbacks(this);
 }
 
-void WaveformRecorder::addSignal(hlim::NodePort np)
+void WaveformRecorder::addSignal(hlim::NodePort np, const std::string &nameOverride)
 {
     HCL_ASSERT(np.node->getOutputConnectionType(np.port).interpretation != hlim::ConnectionType::DEPENDENCY);
-    if (!m_signal2id.contains(np))
+    if (!m_signal2id.contains(np)) {
         m_signal2id.insert({np, m_signal2id.size()});
+        if (!nameOverride.empty())
+            m_signalNames.push_back(nameOverride);
+        else {
+            std::string baseName = np.node->getName();
+            if (baseName.empty())
+                baseName = "unnamed";
+            m_signalNames.push_back((boost::format("%s_id_%d") % baseName % np.node->getId()).str());
+        }
+    }
 }
 
 void WaveformRecorder::addAllWatchSignalTaps()
@@ -27,7 +38,7 @@ void WaveformRecorder::addAllWatchSignalTaps()
     for (auto &node : m_circuit.getNodes())
         if (auto *tap = dynamic_cast<hlim::Node_SignalTap*>(node.get()))
             if (tap->getLevel() == hlim::Node_SignalTap::LVL_WATCH)
-                addSignal(tap->getDriver(0));
+                addSignal(tap->getDriver(0), tap->getName());
 }
 
 void WaveformRecorder::addAllOutPins()
@@ -36,7 +47,7 @@ void WaveformRecorder::addAllOutPins()
         if (auto *pin = dynamic_cast<hlim::Node_Pin*>(node.get())) {
             auto driver = pin->getDriver(0);
             if (driver.node != nullptr)
-                addSignal(driver);
+                addSignal(driver, pin->getName());
         }
 }
 
