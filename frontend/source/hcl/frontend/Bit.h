@@ -19,7 +19,7 @@ namespace hcl::core::frontend {
         
             Bit();
             Bit(const Bit& rhs);
-            Bit(Bit&& rhs) noexcept;
+            Bit(Bit&& rhs);
             ~Bit();
 
             Bit(const SignalReadPort& port);
@@ -32,6 +32,7 @@ namespace hcl::core::frontend {
             }
         
             Bit& operator=(const Bit& rhs) { assign(rhs.getReadPort()); return *this; }
+            Bit& operator=(Bit&& rhs);
 
             template<typename T, typename = std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, bool>>>
             Bit& operator=(T rhs) { assign(rhs); return *this; }
