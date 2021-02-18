@@ -127,12 +127,17 @@ struct Event {
     } clockEvt;
     struct {
         std::coroutine_handle<> handle;
+        std::uint64_t insertionId;
     } simProcResumeEvt;
 
     bool operator<(const Event &rhs) const {
         if (timeOfEvent > rhs.timeOfEvent) return true;
         if (timeOfEvent < rhs.timeOfEvent) return false;
-        return (unsigned)type > (unsigned) rhs.type; // clocks before fibers
+        if ((unsigned)type > (unsigned) rhs.type) return true; // clocks before fibers
+        if ((unsigned)type < (unsigned)rhs.type) return false; // clocks before fibers
+        if (type == Type::simProcResume)
+            return simProcResumeEvt.insertionId > rhs.simProcResumeEvt.insertionId;
+        return false;
     }
 };
 
@@ -168,6 +173,7 @@ class ReferenceSimulator : public Simulator
         std::vector<std::function<SimulationProcess()>> m_simProcs;
         std::list<SimulationProcess> m_runningSimProcs;
         bool m_stateNeedsReevaluating = false;
+        std::uint64_t m_nextSimProcInsertionId = 0;
 };
 
 }

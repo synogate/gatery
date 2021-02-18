@@ -492,6 +492,7 @@ void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> han
     e.type = Event::Type::simProcResume;
     e.timeOfEvent = m_simulationTime + waitFor.getDuration();
     e.simProcResumeEvt.handle = handle;
+    e.simProcResumeEvt.insertionId = m_nextSimProcInsertionId++;
     m_nextEvents.push(e);
 }
 
@@ -510,6 +511,7 @@ void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> han
     e.type = Event::Type::simProcResume;
     e.timeOfEvent = m_dataState.clockState[it->second].nextTrigger;
     e.simProcResumeEvt.handle = handle;
+    e.simProcResumeEvt.insertionId = m_nextSimProcInsertionId++;
     m_nextEvents.push(e);
 }
 
