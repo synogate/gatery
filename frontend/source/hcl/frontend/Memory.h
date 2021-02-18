@@ -5,6 +5,8 @@
 #include "BitWidth.h"
 #include "ConditionalScope.h"
 #include "Pack.h"
+#include "Clock.h"
+#include "SignalMiscOp.h"
 
 
 #include <hcl/hlim/supportNodes/Node_Memory.h>
@@ -38,7 +40,7 @@ namespace hcl::core::frontend {
                 return ret;
             }
 
-            operator Data() const { return read(); }        
+            operator Data() const { return read(); }
 
             void write(const Data& value) {
                 BVec packedValue = pack(value);
@@ -73,6 +75,13 @@ namespace hcl::core::frontend {
                 return enable;
             }
     };
+
+    template<typename Data>
+    Data reg(MemoryPortFactory<Data> readPort) { return reg((Data)readPort); }
+
+    template<typename Data>
+    void sim_tap(MemoryPortFactory<Data> readPort) { sim_tap((Data)readPort); }
+
 
     using MemType = hlim::Node_Memory::MemType;
 

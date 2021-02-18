@@ -68,6 +68,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
         if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr) continue;
         nodesRemaining.insert(node);
 
+
         MappedNode mappedNode;
         mappedNode.node = node;
         mappedNode.internal = m_stateMapping.nodeToInternalOffset[node];
@@ -75,8 +76,6 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
             mappedNode.inputs.push_back(m_stateMapping.outputToOffset[node->getNonSignalDriver(i)]);
         for (auto i : utils::Range(node->getNumOutputPorts()))
             mappedNode.outputs.push_back(m_stateMapping.outputToOffset[{.node = node, .port = i}]);
-
-        std::map<size_t, std::set<size_t>> clockDomainClockPortList;
 
         for (auto i : utils::Range(node->getNumOutputPorts())) {
 
@@ -90,7 +89,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
                     driver.port = i;
                     outputsReady.insert(driver);
 
-                    m_powerOnNodes.push_back(mappedNode);
+//                    m_powerOnNodes.push_back(mappedNode);
                 } break;
                 case hlim::NodeIO::OUTPUT_LATCHED: {
                     hlim::NodePort driver;
@@ -98,21 +97,20 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
                     driver.port = i;
                     outputsReady.insert(driver);
 
-                    m_powerOnNodes.push_back(mappedNode);
-
-                    for (auto clockPort : utils::Range(node->getClocks().size())) {
-                        size_t clockDomainIdx = m_stateMapping.clockToClkDomain[node->getClocks()[clockPort]];
-                        clockDomainClockPortList[clockDomainIdx].insert(clockPort);
-                    }
+//                    m_powerOnNodes.push_back(mappedNode);
                 } break;
             }
         }
+        m_powerOnNodes.push_back(mappedNode); /// @todo now we do this to all nodes, needs to be found out by some other means
 
-        for (const auto &pair : clockDomainClockPortList) {
-            auto &clockDomain = m_clockDomains[pair.first];
-            for (size_t clockPort : pair.second)
+        for (auto clockPort : utils::Range(node->getClocks().size())) {
+            if (node->getClocks()[clockPort] != nullptr) {
+                size_t clockDomainIdx = m_stateMapping.clockToClkDomain[node->getClocks()[clockPort]];
+                auto &clockDomain = m_clockDomains[clockDomainIdx];
                 clockDomain.clockedNodes.push_back(ClockedNode(mappedNode, clockPort));
-            clockDomain.dependentExecutionBlocks.push_back(0ull); /// @todo only attach those that actually need to be recomputed
+                if (clockDomain.dependentExecutionBlocks.empty()) /// @todo only attach those that actually need to be recomputed
+                    clockDomain.dependentExecutionBlocks.push_back(0ull);
+            }
         }
     }
 
@@ -183,10 +181,20 @@ void Program::allocateSignals(const hlim::Circuit &circuit, const std::vector<hl
 
     BitAllocator allocator;
 
-    // variables
+    struct ReferringNode {
+        hlim::BaseNode* node;
+        std::vector<std::pair<hlim::BaseNode*, size_t>> refs;
+        size_t internalSizeOffset;
+    };
+
+    std::vector<ReferringNode> referringNodes;
+
+
+    // First, loop through all nodes and allocate state and output state space.
+    // Keep a list of nodes that refer to other node's internal state to fill in once all internal state has been allocated.
     for (auto node : nodes) {
-        hlim::Node_Signal *signalNode = dynamic_cast<hlim::Node_Signal*>(node);
-        if (signalNode != nullptr) {
+        // Signals simply point to the actual producer's output
+        if (auto *signalNode = dynamic_cast<hlim::Node_Signal*>(node)) {
             auto driver = signalNode->getNonSignalDriver(0);
 
             unsigned width = signalNode->getOutputConnectionType(0).width;
@@ -204,10 +212,15 @@ void Program::allocateSignals(const hlim::Circuit &circuit, const std::vector<hl
             }
         } else {
             std::vector<size_t> internalSizes = node->getInternalStateSizes();
-            std::vector<size_t> internalOffsets(internalSizes.size());
+            ReferringNode refNode;
+            refNode.node = node;
+            refNode.refs = node->getReferencedInternalStateSizes();
+            refNode.internalSizeOffset = internalSizes.size();
+
+            std::vector<size_t> internalOffsets(internalSizes.size() + refNode.refs.size());
             for (auto i : utils::Range(internalSizes.size()))
                 internalOffsets[i] = allocator.allocate(internalSizes[i]);
-            m_stateMapping.nodeToInternalOffset[node] = internalOffsets;
+            m_stateMapping.nodeToInternalOffset[node] = std::move(internalOffsets);
 
             for (auto i : utils::Range(node->getNumOutputPorts())) {
                 hlim::NodePort driver = {.node = node, .port = i};
@@ -217,8 +230,22 @@ void Program::allocateSignals(const hlim::Circuit &circuit, const std::vector<hl
                     m_stateMapping.outputToOffset[driver] = allocator.allocate(width);
                 }
             }
+
+            if (!refNode.refs.empty())
+                referringNodes.push_back(refNode);
         }
     }
+
+    // Now that all internal states have been allocated, update referring nodes
+    for (auto &refNode : referringNodes) {
+        auto &mappedInternal = m_stateMapping.nodeToInternalOffset[refNode.node];
+        for (auto i : utils::Range(refNode.refs.size())) {
+            auto &ref = refNode.refs[i];
+            auto refedIdx = m_stateMapping.nodeToInternalOffset[ref.first][ref.second];
+            mappedInternal[refNode.internalSizeOffset+i] = refedIdx;
+        }
+    }
+
 
     m_fullStateWidth = allocator.getTotalSize();
 }

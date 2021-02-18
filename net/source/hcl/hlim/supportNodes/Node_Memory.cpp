@@ -10,7 +10,7 @@ namespace hcl::core::hlim {
         setOutputConnectionType(0, {.interpretation = ConnectionType::DEPENDENCY, .width=1});
     }
 
-    void Node_Memory::setNoConflicts() 
+    void Node_Memory::setNoConflicts()
     {
         m_noConflicts = true;
         for (auto np : getDirectlyDriven(0))
@@ -36,6 +36,7 @@ namespace hcl::core::hlim {
 
     void Node_Memory::simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
     {
+        state.copyRange(internalOffsets[0], m_powerOnState, 0, m_powerOnState.size());
         state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], 1);
     }
 
@@ -91,7 +92,7 @@ namespace hcl::core::hlim {
 
 
 
-    std::unique_ptr<BaseNode> Node_Memory::cloneUnconnected() const 
+    std::unique_ptr<BaseNode> Node_Memory::cloneUnconnected() const
     {
         std::unique_ptr<BaseNode> res(new Node_Memory());
         copyBaseToClone(res.get());
