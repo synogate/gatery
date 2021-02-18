@@ -25,12 +25,23 @@ class Node_MemPort : public Node<Node_MemPort>
             count
         };
 
+        enum class Internal {
+            wrData,
+            address,
+            wrEnable,
+            count
+        };
+        enum class RefInternal {
+            memory = (unsigned)Internal::count
+        };
+
+
         Node_MemPort(std::size_t bitWidth);
 
         void connectMemory(Node_Memory *memory);
         void disconnectMemory();
 
-        Node_Memory *getMemory();
+        Node_Memory *getMemory() const;
         void connectEnable(const NodePort &output);
         void connectWrEnable(const NodePort &output);
         void connectAddress(const NodePort &output);
@@ -41,24 +52,26 @@ class Node_MemPort : public Node<Node_MemPort>
 
         void setClock(Clock* clk);
 
-        bool isReadPort();
-        bool isWritePort();
+        bool isReadPort() const;
+        bool isWritePort() const;
 
         virtual bool hasSideEffects() const override;
 
         virtual void simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
         virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;
+        virtual void simulateAdvance(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const override;
 
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;
         virtual std::string getInputName(size_t idx) const override;
         virtual std::string getOutputName(size_t idx) const override;
 
-        virtual std::vector<size_t> getInternalStateSizes() const override;        
-
         inline size_t getBitWidth() const { return m_bitWidth; }
 
         virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
+
+        virtual std::vector<size_t> getInternalStateSizes() const override;
+        virtual std::vector<std::pair<BaseNode*, size_t>> getReferencedInternalStateSizes() const override;
     protected:
         friend class Node_Memory;
         std::size_t m_bitWidth;

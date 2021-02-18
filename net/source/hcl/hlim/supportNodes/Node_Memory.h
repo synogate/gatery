@@ -10,8 +10,8 @@ class Node_MemPort;
 
 /**
  * @brief Abstract memory node to represent e.g. BlockRams or LutRams
- * 
- * 
+ *
+ *
  * The Node_Memory can be accessed by connecting Node_MemReadPort and Node_MemWritePort as read and write ports.
  * Arbitrarily many read and write ports can be connected.
  * The Node_Memory serves as the entity that represents the stored information and groups the read and write ports together.
@@ -19,7 +19,7 @@ class Node_MemPort;
  * by adding registers to the data output.
  *
  * The connections are made through 1-bit wide connections between the nodes of type "ConnectionType::DEPENDENCY".
- * 
+ *
  */
 
 class Node_Memory : public Node<Node_Memory>
@@ -29,6 +29,11 @@ class Node_Memory : public Node<Node_Memory>
             DONT_CARE,
             LUTRAM,
             BRAM,
+        };
+
+        enum class Internal {
+            data,
+            count
         };
 
         Node_Memory();

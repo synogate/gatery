@@ -38,7 +38,10 @@ class BaseNode : public NodeIO
 
         virtual std::unique_ptr<BaseNode> cloneUnconnected() const = 0;
 
+        /// Returns a list of word sizes of all the words of internal state that the node needs for simulation.
         virtual std::vector<size_t> getInternalStateSizes() const { return {}; }
+        /// Returns a list of nodes and word indices to refer to the internal state words of other nodes that this node needs to access during simulation.
+        virtual std::vector<std::pair<BaseNode*, size_t>> getReferencedInternalStateSizes() const { return {}; }
 
         virtual void simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const { }
         virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const { }
