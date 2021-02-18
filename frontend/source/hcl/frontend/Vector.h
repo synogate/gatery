@@ -9,6 +9,9 @@ namespace hcl
 	public:
 		using std::vector<T>::vector;
 
+		Vector(Vector&&) = default;
+		Vector(const Vector&) = default;
+
 		Vector& operator = (const Vector& rhs)
 		{
 			std::vector<T>::resize(rhs.size());
