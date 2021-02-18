@@ -264,31 +264,55 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, hcl::core::sim::UnitTestSimulationFi
     }
 
     {
+        hcl::Bit x = '0';
+        hcl::Bit y = '1';
+        HCL_NAMED(x);
+        HCL_NAMED(y);
+        std::swap(x, y);
+
+        sim_assert(x == '1');
+        sim_assert(y == '0');
+    }
+
+    {
         hcl::BVec c = 0xC;
         hcl::BVec d = 0xD;
         HCL_NAMED(c);
         HCL_NAMED(d);
+        hcl::Bit x = '0';
+        hcl::Bit y = '1';
+        HCL_NAMED(x);
+        HCL_NAMED(y);
 
         InputPin pinConditionIn = pinIn(); // TODO default value for input pins (simulation and vhdl export)
         hcl::Bit condition = pinConditionIn;
         HCL_NAMED(condition);
 
         IF(condition)
+        {
             std::swap(c, d);
+            std::swap(x, y);
+        }
 
         auto pinC = pinOut(c);
         auto pinD = pinOut(d);
+        auto pinX = pinOut(x);
+        auto pinY = pinOut(y);
 
         addSimulationProcess([&]()->SimProcess {
 
             sim(pinConditionIn) = 0;
             BOOST_TEST(sim(pinC) == 0xC);
             BOOST_TEST(sim(pinD) == 0xD);
+            BOOST_TEST(sim(pinX) == 0);
+            BOOST_TEST(sim(pinY) == 1);
             co_await WaitClk(clock);
 
             sim(pinConditionIn) = 1;
             BOOST_TEST(sim(pinC) == 0xD);
             BOOST_TEST(sim(pinD) == 0xC);
+            BOOST_TEST(sim(pinX) == 1);
+            BOOST_TEST(sim(pinY) == 0);
             co_await WaitClk(clock);
 
         });
