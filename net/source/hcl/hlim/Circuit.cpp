@@ -356,6 +356,8 @@ void Circuit::mergeMuxes()
                         continue;
 
                     if (Node_Multiplexer *prevMuxNode = dynamic_cast<Node_Multiplexer*>(input0.node)) {
+                        if (prevMuxNode == muxNode) continue; // sad thing
+
                         //std::cout << "Found 2 chained muxes" << std::endl;
 
                         HierarchyCondition prevCondition;
