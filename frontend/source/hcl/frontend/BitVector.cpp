@@ -290,8 +290,6 @@ namespace hcl::core::frontend {
 
         if (auto* scope = ConditionalScope::get(); scope && scope->getId() > m_initialScopeId)
         {
-            HCL_ASSERT_HINT(m_node->getDriver(0).node, "latch or complete shadowing for loop not yet implemented");
-
             SignalReadPort oldSignal = getRawDriver();
 
             { // place optional signal node for graph debugging

@@ -145,7 +145,6 @@ namespace hcl::core::frontend {
         
         if (auto* scope = ConditionalScope::get(); scope && scope->getId() > m_initialScopeId)
         {
-            HCL_ASSERT_HINT(m_node->getDriver(0).node, "latch or complete shadowing for loop not yet implemented");
             auto* signal_in = DesignScope::createNode<hlim::Node_Signal>();
             signal_in->connectInput(getRawDriver());
             signal_in->setName(m_node->getName());
