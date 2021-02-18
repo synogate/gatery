@@ -196,7 +196,6 @@ void sim_tap(const Compound& compound)
             sim_tap(src_item);
         });
     }
-    else HCL_ASSERT(false);
 }
 
 
