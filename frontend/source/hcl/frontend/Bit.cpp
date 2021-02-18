@@ -28,6 +28,11 @@ namespace hcl::core::frontend {
         rhs.createNode();
     }
 
+    Bit::~Bit()
+    {
+        m_node->removeRef();
+    }
+
     Bit::Bit(const SignalReadPort& port)
     {
         createNode();
@@ -37,7 +42,9 @@ namespace hcl::core::frontend {
     Bit::Bit(hlim::Node_Signal* node, size_t offset) :
         m_node(node),
         m_offset(offset)
-    {}
+    {
+        m_node->addRef();
+    }
 
     BitWidth Bit::getWidth() const
     {
@@ -93,7 +100,9 @@ namespace hcl::core::frontend {
 
     void Bit::createNode()
     {
+        HCL_ASSERT(!m_node);
         m_node = DesignScope::createNode<hlim::Node_Signal>();
+        m_node->addRef();
         m_node->setConnectionType(getConnType());
         m_node->recordStackTrace();
     }

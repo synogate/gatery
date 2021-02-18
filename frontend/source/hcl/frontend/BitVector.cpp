@@ -126,13 +126,16 @@ namespace hcl::core::frontend {
         return op;
     }
 
-
-
     BVec::BVec(BVec&& rhs) :
         ElementarySignal()
     {
         assign(rhs.getReadPort());
         rhs.assign(SignalReadPort(m_node, rhs.m_expansionPolicy));
+    }
+
+    BVec::~BVec()
+    {
+        m_node->removeRef();
     }
 
     BVec::BVec(hlim::Node_Signal* node, Range range, Expansion expansionPolicy) :
@@ -143,6 +146,7 @@ namespace hcl::core::frontend {
         auto connType = node->getOutputConnectionType(0);
         HCL_DESIGNCHECK(connType.interpretation == hlim::ConnectionType::BITVEC);
         HCL_DESIGNCHECK(connType.width > m_range.bitOffset(m_range.width-1));
+        m_node->addRef();
     }
 
     BVec::BVec(BitWidth width, Expansion expansionPolicy)
@@ -285,7 +289,6 @@ namespace hcl::core::frontend {
                 signal->recordStackTrace();
                 in = SignalReadPort(signal);
             }
-            
         }
 
         if (auto* scope = ConditionalScope::get(); scope && scope->getId() > m_initialScopeId)
@@ -363,6 +366,7 @@ namespace hcl::core::frontend {
         m_node = DesignScope::createNode<hlim::Node_Signal>();
         m_node->setConnectionType(getConnType());
         m_node->recordStackTrace();
+        m_node->addRef();
 
         if (!m_name.empty())
             m_node->setName(m_name);
