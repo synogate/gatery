@@ -543,7 +543,7 @@ void Circuit::removeNoOps()
             }
         }
 
-        if (removeNode) {
+        if (removeNode && !m_nodes[i]->hasRef()) {
             m_nodes[i] = std::move(m_nodes.back());
             m_nodes.pop_back();
             i--;
