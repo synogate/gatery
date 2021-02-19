@@ -14,7 +14,7 @@ class NodePtr
             m_ptr = rhs.m_ptr;
             if (m_ptr) m_ptr->addRef();
         }
-        NodePtr(NodeType *ptr) {
+        explicit NodePtr(NodeType *ptr) {
             m_ptr = ptr;
             if (m_ptr) m_ptr->addRef();
         }
@@ -40,7 +40,7 @@ class NodePtr
         bool operator!=(const NodePtr<NodeType> &rhs) const {
             return m_ptr != rhs.m_ptr;
         }
-
+/*
         template<typename PointerType>
         bool operator==(std::enable_if_t<std::is_pointer_v<PointerType>, PointerType> rhs) const {
             return m_ptr == rhs;
@@ -49,7 +49,7 @@ class NodePtr
         bool operator!=(std::enable_if_t<std::is_pointer_v<PointerType>, PointerType> rhs) const {
             return m_ptr != rhs;
         }
-
+*/
         operator NodeType*() const { return m_ptr; }
 
 
