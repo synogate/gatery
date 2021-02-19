@@ -9,12 +9,13 @@
 using namespace boost::unit_test;
 using namespace hcl::core::frontend;
 
+using UnitTestSimulationFixture = hcl::core::frontend::UnitTestSimulationFixture;
 
-BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_arith, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_arith, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clkScp(clock);
 
@@ -45,11 +46,11 @@ BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_arith, hcl::core::sim::UnitTestSimulation
 }
 
 
-BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_logic, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_logic, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clkScp(clock);
 
@@ -80,11 +81,11 @@ BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_logic, hcl::core::sim::UnitTestSimulation
 }
 
 
-BOOST_FIXTURE_TEST_CASE(CTS_TestRegisterReset, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(CTS_TestRegisterReset, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clkScp(clock);
 

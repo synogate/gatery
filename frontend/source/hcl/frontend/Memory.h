@@ -11,6 +11,7 @@
 
 #include <hcl/hlim/supportNodes/Node_Memory.h>
 #include <hcl/hlim/supportNodes/Node_MemPort.h>
+#include <hcl/hlim/NodePtr.h>
 
 
 #include <functional>
@@ -61,7 +62,7 @@ namespace hcl::core::frontend {
 
             MemoryPortFactory<Data>& operator = (const Data& value) { write(value); return *this; }
         protected:
-            hlim::Node_Memory *m_memoryNode;
+            hlim::NodePtr<hlim::Node_Memory> m_memoryNode;
             Data m_defaultValue;
             BVec m_address;
             std::size_t m_wordSize;
@@ -116,7 +117,7 @@ namespace hcl::core::frontend {
             Memory<DataNew> view(DataNew def = DataNew{}) { return Memory<DataNew>(m_memoryNode, def); }
 
         protected:
-            hlim::Node_Memory *m_memoryNode;
+            hlim::NodePtr<hlim::Node_Memory> m_memoryNode;
             Data m_defaultValue;
             std::size_t m_wordWidth;
 

@@ -11,12 +11,13 @@
 using namespace boost::unit_test;
 using namespace hcl::core::frontend;
 using namespace hcl::utils;
+using UnitTestSimulationFixture = hcl::core::frontend::UnitTestSimulationFixture;
 
-BOOST_FIXTURE_TEST_CASE(SimProc_Basics, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     {
@@ -54,15 +55,15 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, hcl::core::sim::UnitTestSimulationFixtur
 
 
     design.getCircuit().optimize(3);
-    runTicks(design.getCircuit(), clock.getClk(), 5*10 + 3); // do some extra rounds without generator changing the input
+    runTicks(clock.getClk(), 5*10 + 3); // do some extra rounds without generator changing the input
 }
 
 
-BOOST_FIXTURE_TEST_CASE(SimProc_ExceptionForwarding, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SimProc_ExceptionForwarding, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
     Clock clock(ClockConfig{}.setAbsoluteFrequency(1));
 
 
@@ -72,15 +73,15 @@ BOOST_FIXTURE_TEST_CASE(SimProc_ExceptionForwarding, hcl::core::sim::UnitTestSim
     });
 
 
-    BOOST_CHECK_THROW(runTicks(design.getCircuit(), clock.getClk(), 10), std::runtime_error);
+    BOOST_CHECK_THROW(runTicks(clock.getClk(), 10), std::runtime_error);
 }
 
 
-BOOST_FIXTURE_TEST_CASE(SimProc_PingPong, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SimProc_PingPong, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     {
@@ -113,5 +114,5 @@ BOOST_FIXTURE_TEST_CASE(SimProc_PingPong, hcl::core::sim::UnitTestSimulationFixt
 
 
     design.getCircuit().optimize(3);
-    runTicks(design.getCircuit(), clock.getClk(), 10);
+    runTicks(clock.getClk(), 10);
 }

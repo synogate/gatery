@@ -12,28 +12,23 @@ namespace hcl::core::hlim {
     public:
         Node_Signal() : Node(1, 1) {  }
 
-        void addRef() { m_refCounter++; }
-        void removeRef() { HCL_ASSERT(m_refCounter > 0); m_refCounter--; }
-        bool hasRef() const { return m_refCounter > 0; }
-
         virtual std::string getTypeName() const override { return "Signal"; }
         virtual void assertValidity() const override { }
         virtual std::string getInputName(size_t idx) const override { return "in"; }
         virtual std::string getOutputName(size_t idx) const override { return "out"; }
-        
+
         void setConnectionType(const ConnectionType &connectionType);
-        
+
         void connectInput(const NodePort &nodePort);
         void disconnectInput();
 
         const SignalGroup *getSignalGroup() const { return m_signalGroup; }
         SignalGroup *getSignalGroup() { return m_signalGroup; }
-        
+
         void moveToSignalGroup(SignalGroup *group);
 
         virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
     protected:
         SignalGroup *m_signalGroup = nullptr;
-        size_t m_refCounter = 0;
     };
 }

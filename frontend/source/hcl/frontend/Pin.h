@@ -5,6 +5,7 @@
 
 #include <hcl/hlim/coreNodes/Node_Pin.h>
 #include <hcl/hlim/coreNodes/Node_Signal.h>
+#include <hcl/hlim/NodePtr.h>
 
 namespace hcl::core::frontend {
 
@@ -13,20 +14,20 @@ namespace hcl::core::frontend {
             OutputPin(const Bit &bit);
 
             inline OutputPin &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
-            inline hlim::Node_Pin *getNode() { return m_pinNode; }
-            inline hlim::Node_Pin *getNode() const { return m_pinNode; }
+            inline hlim::Node_Pin *getNode() { return m_pinNode.get(); }
+            inline hlim::Node_Pin *getNode() const { return m_pinNode.get(); }
         protected:
-            hlim::Node_Pin *m_pinNode;
+            hlim::NodePtr<hlim::Node_Pin> m_pinNode;
     };
     class OutputPins {
         public:
             OutputPins(const BVec &bitVector);
 
             inline OutputPins &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
-            inline hlim::Node_Pin *getNode() { return m_pinNode; }
-            inline hlim::Node_Pin *getNode() const { return m_pinNode; }
+            inline hlim::Node_Pin *getNode() { return m_pinNode.get(); }
+            inline hlim::Node_Pin *getNode() const { return m_pinNode.get(); }
         protected:
-            hlim::Node_Pin *m_pinNode;
+            hlim::NodePtr<hlim::Node_Pin> m_pinNode;
     };
 
     class InputPin {
@@ -46,10 +47,10 @@ namespace hcl::core::frontend {
             }
 
             inline InputPin &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
-            inline hlim::Node_Pin *getNode() { return m_pinNode; }
-            inline hlim::Node_Pin *getNode() const { return m_pinNode; }
+            inline hlim::Node_Pin *getNode() { return m_pinNode.get(); }
+            inline hlim::Node_Pin *getNode() const { return m_pinNode.get(); }
         protected:
-            hlim::Node_Pin *m_pinNode;
+            hlim::NodePtr<hlim::Node_Pin> m_pinNode;
     };
 
     class InputPins {
@@ -58,10 +59,10 @@ namespace hcl::core::frontend {
             inline operator BVec () { return BVec(SignalReadPort({.node=m_pinNode, .port=0ull})); }
 
             inline InputPins &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
-            inline hlim::Node_Pin *getNode() { return m_pinNode; }
-            inline hlim::Node_Pin *getNode() const { return m_pinNode; }
+            inline hlim::Node_Pin *getNode() { return m_pinNode.get(); }
+            inline hlim::Node_Pin *getNode() const { return m_pinNode.get(); }
         protected:
-            hlim::Node_Pin *m_pinNode;
+            hlim::NodePtr<hlim::Node_Pin> m_pinNode;
     };
 
     inline OutputPin pinOut(const Bit &bit) { return OutputPin(bit); }

@@ -10,11 +10,14 @@
 
 using namespace boost::unit_test;
 
-BOOST_FIXTURE_TEST_CASE(BVecIterator, hcl::core::sim::UnitTestSimulationFixture)
+using UnitTestSimulationFixture = hcl::core::frontend::UnitTestSimulationFixture;
+
+
+BOOST_FIXTURE_TEST_CASE(BVecIterator, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
 
     BVec a = "b1100";
     BOOST_TEST(a.size() == 4);
@@ -51,14 +54,14 @@ BOOST_FIXTURE_TEST_CASE(BVecIterator, hcl::core::sim::UnitTestSimulationFixture)
     sim_assert(a[1] == true) << "a[1] is " << a[1] << " after setting all bits to true";
 
 
-    eval(design.getCircuit());
+    eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(BVecIteratorArithmetic, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(BVecIteratorArithmetic, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
 
     BVec a = "b1100";
 
@@ -90,11 +93,11 @@ BOOST_FIXTURE_TEST_CASE(BVecIteratorArithmetic, hcl::core::sim::UnitTestSimulati
     BOOST_CHECK(it5 == a.begin());
 }
 
-BOOST_FIXTURE_TEST_CASE(BVecFrontBack, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(BVecFrontBack, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
 
     BVec a = "b1100";
     sim_assert(!a.front());
@@ -108,14 +111,14 @@ BOOST_FIXTURE_TEST_CASE(BVecFrontBack, hcl::core::sim::UnitTestSimulationFixture
     a.back() = false;
     sim_assert(!a.back());
 
-    eval(design.getCircuit());
+    eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(BitSignalLoopSemanticTest, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(BitSignalLoopSemanticTest, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
 
     Bit unused; // should not produce combinatorial loop errors
 
@@ -127,14 +130,14 @@ BOOST_FIXTURE_TEST_CASE(BitSignalLoopSemanticTest, hcl::core::sim::UnitTestSimul
     b = '1';
     sim_assert(b) << b << " should be 1";
 
-    eval(design.getCircuit());
+    eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(BVecSignalLoopSemanticTest, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(BVecSignalLoopSemanticTest, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
 
     BVec unused = 2_b; // should not produce combinatorial loop errors
 
@@ -156,24 +159,24 @@ BOOST_FIXTURE_TEST_CASE(BVecSignalLoopSemanticTest, hcl::core::sim::UnitTestSimu
     //shadowed[0] = '1';
     //shadowed[1] = '0';
 
-    eval(design.getCircuit());
+    eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(ConstantDataStringParser, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(ConstantDataStringParser, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
-    
+
     BOOST_CHECK(parseBVec("32x1bBXx").size() == 32);
     BOOST_CHECK(parseBVec("x1bBX").size() == 16);
     BOOST_CHECK(parseBVec("o170X").size() == 12);
     BOOST_CHECK(parseBVec("b10xX").size() == 4);
 }
 
-BOOST_FIXTURE_TEST_CASE(BVecSelectorAccess, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(BVecSelectorAccess, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
 
     BVec a = "b11001110";
 
@@ -188,5 +191,5 @@ BOOST_FIXTURE_TEST_CASE(BVecSelectorAccess, hcl::core::sim::UnitTestSimulationFi
     sim_assert(a(0, 4, 2)(0, 2, 2) == "b00");
     sim_assert(a(0, 4, 2)(1, 2, 2) == "b11");
 
-    eval(design.getCircuit());
+    eval();
 }

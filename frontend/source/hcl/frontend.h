@@ -8,6 +8,7 @@
 #include "frontend/ConditionalScope.h"
 #include "frontend/Constant.h"
 #include "frontend/ConstructFrom.h"
+#include "frontend/FrontendUnitTestSimulationFixture.h"
 #include "frontend/FSM.h"
 #include "frontend/Memory.h"
 #include "frontend/Pack.h"
