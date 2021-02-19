@@ -89,7 +89,15 @@ namespace hcl::core::frontend {
     template<typename Data>
     class Memory {
         public:
-            Memory(std::size_t count, Data def = Data{}) : m_defaultValue(def) {
+            Memory(std::size_t count, Data def = Data{}) {
+                setup(count, std::move(def));
+            }
+
+            Memory() { }
+
+            void setup(std::size_t count, Data def = Data{}) {
+                HCL_DESIGNCHECK(m_memoryNode == nullptr);
+                m_defaultValue = std::move(def);
                 m_wordWidth = width(m_defaultValue);
                 m_memoryNode = DesignScope::createNode<hlim::Node_Memory>();
                 sim::DefaultBitVectorState state;
@@ -98,8 +106,10 @@ namespace hcl::core::frontend {
                 m_memoryNode->setPowerOnState(std::move(state));
             }
 
+
             void setType(MemType type) { m_memoryNode->setType(type); }
             void noConflicts() { m_memoryNode->setNoConflicts(); }
+            bool valid() { return m_memoryNode != nullptr; }
 
             void setPowerOnState(sim::DefaultBitVectorState powerOnState) { m_memoryNode->setPowerOnState(std::move(powerOnState)); }
             //void setReset(std::size_t address, Data constWord);
@@ -110,8 +120,8 @@ namespace hcl::core::frontend {
             BitWidth wordSize() const { return BitWidth{m_wordWidth}; }
             std::size_t numWords() const { return size() / m_wordWidth; }
 
-            MemoryPortFactory<Data> operator [] (const BVec& address)             { return MemoryPortFactory<Data>(m_memoryNode, address, m_defaultValue); }
-            const MemoryPortFactory<Data> operator [] (const BVec& address) const { return MemoryPortFactory<Data>(m_memoryNode, address, m_defaultValue); }
+            MemoryPortFactory<Data> operator [] (const BVec& address)             { HCL_DESIGNCHECK(m_memoryNode != nullptr); return MemoryPortFactory<Data>(m_memoryNode, address, m_defaultValue); }
+            const MemoryPortFactory<Data> operator [] (const BVec& address) const { HCL_DESIGNCHECK(m_memoryNode != nullptr); return MemoryPortFactory<Data>(m_memoryNode, address, m_defaultValue); }
 
             template<typename DataNew>
             Memory<DataNew> view(DataNew def = DataNew{}) { return Memory<DataNew>(m_memoryNode, def); }
@@ -119,7 +129,7 @@ namespace hcl::core::frontend {
         protected:
             hlim::NodePtr<hlim::Node_Memory> m_memoryNode;
             Data m_defaultValue;
-            std::size_t m_wordWidth;
+            std::size_t m_wordWidth = 0;
 
             Memory(hlim::Node_Memory *memoryNode, Data def = Data{}) : m_memoryNode(memoryNode) {
             }
