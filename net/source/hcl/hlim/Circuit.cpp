@@ -153,7 +153,8 @@ void Circuit::cullUnnamedSignalNodes()
 
         if (inputIsSignalOrUnconnected || allOutputsAreSignals) {
 
-            signal->bypassOutputToInput(0, 0);
+            if (signal->getDriver(0).node != signal)
+                signal->bypassOutputToInput(0, 0);
             signal->disconnectInput();
 
             m_nodes[i] = std::move(m_nodes.back());
