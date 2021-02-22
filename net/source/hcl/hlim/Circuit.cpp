@@ -743,6 +743,8 @@ void Circuit::removeFalseLoops()
 /// @details It seems many parts of the vhdl export still require signal nodes so this step adds back in missing ones
 void Circuit::ensureSignalNodePlacement()
 {
+    std::map<NodePort, Node_Signal*> addedSignalsNodes;
+
     for (auto &node : m_nodes) {
         if (dynamic_cast<Node_Signal*>(node.get()) != nullptr) continue;
         for (auto i : utils::Range(node->getNumInputPorts())) {
@@ -752,11 +754,17 @@ void Circuit::ensureSignalNodePlacement()
             if (dynamic_cast<Node_Signal*>(driver.node) != nullptr) continue;
             if (driver.node->getGroup() != nullptr && driver.node->getGroup()->getGroupType() == NodeGroup::GroupType::SFU) continue;
 
-            auto *sigNode = createNode<Node_Signal>();
-            sigNode->moveToGroup(driver.node->getGroup());
+            auto it = addedSignalsNodes.find(driver);
+            if (it != addedSignalsNodes.end()) {
+                node->connectInput(i, {.node=it->second, .port=0ull});
+            } else {
+                auto *sigNode = createNode<Node_Signal>();
+                sigNode->moveToGroup(driver.node->getGroup());
 
-            sigNode->connectInput(driver);
-            node->connectInput(i, {.node=sigNode, .port=0ull});
+                sigNode->connectInput(driver);
+                node->connectInput(i, {.node=sigNode, .port=0ull});
+                addedSignalsNodes[driver] = sigNode;
+            }
         }
     }
 }
