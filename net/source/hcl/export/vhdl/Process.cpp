@@ -321,6 +321,8 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
         stream << sep;
         stream << constNode->getValue();
         stream << sep;
+        if (context == Context::BOOL)
+            stream << " = '1'";
         return;
     }
 
