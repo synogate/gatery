@@ -152,7 +152,10 @@ class ReferenceSimulator : public Simulator
         virtual void advanceEvent() override;
         virtual void advance(hlim::ClockRational seconds) override;
 
-        virtual void setInputPin(hlim::Node_Pin *pin, const DefaultBitVectorState &state) override;
+        virtual void simProcSetInputPin(hlim::Node_Pin *pin, const DefaultBitVectorState &state) override;
+        virtual DefaultBitVectorState simProcGetValueOfOutput(const hlim::NodePort &nodePort) override;
+
+
         virtual bool outputOptimizedAway(const hlim::NodePort &nodePort) override;
         virtual DefaultBitVectorState getValueOfInternalState(const hlim::BaseNode *node, size_t idx) override;
         virtual DefaultBitVectorState getValueOfOutput(const hlim::NodePort &nodePort) override;

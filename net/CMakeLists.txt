@@ -24,6 +24,8 @@ add_library(hcl_net STATIC
     source/hcl/export/vhdl/NamespaceScope.h
     source/hcl/export/vhdl/Process.cpp
     source/hcl/export/vhdl/Process.h
+    source/hcl/export/vhdl/TestbenchRecorder.cpp
+    source/hcl/export/vhdl/TestbenchRecorder.h
     source/hcl/export/vhdl/VHDLExport.cpp
     source/hcl/export/vhdl/VHDLExport.h
     source/hcl/export/DotExport.cpp

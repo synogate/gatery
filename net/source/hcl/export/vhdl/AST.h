@@ -35,9 +35,9 @@ class AST
     public:
         AST(CodeFormatting *codeFormatting);
         ~AST();
-        
+
         void convert(hlim::Circuit &circuit);
-        
+
         Entity &createEntity(const std::string &desiredName, BasicBlock *parent);
 
         template<typename Type, typename... Args>
@@ -49,8 +49,10 @@ class AST
         inline CodeFormatting &getCodeFormatting() { return *m_codeFormatting; }
         inline NamespaceScope &getNamespaceScope() { return m_namespaceScope; }
         inline Hlim2AstMapping &getMapping() { return m_mapping; }
-        
+
         void writeVHDL(std::filesystem::path destination);
+
+        inline Entity *getRootEntity() { return m_entities.front().get(); }
     protected:
         CodeFormatting *m_codeFormatting;
         NamespaceScope m_namespaceScope;
