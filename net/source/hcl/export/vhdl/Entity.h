@@ -30,6 +30,10 @@ class Entity : public BasicBlock
         void writeVHDL(std::ostream &stream);
 
         virtual void writeInstantiationVHDL(std::ostream &stream, unsigned indent);
+
+        Entity *getParentEntity();
+
+        inline const std::vector<std::unique_ptr<Block>> &getBlocks() const { return m_blocks; }
     protected:
         std::vector<std::unique_ptr<Block>> m_blocks;
 

@@ -3,10 +3,12 @@
 #include "Entity.h"
 #include "CodeFormatting.h"
 #include "HelperPackage.h"
+#include "Block.h"
 
 #include "../../hlim/Circuit.h"
 
 #include <fstream>
+#include <functional>
 
 namespace hcl::core::vhdl {
 
@@ -77,6 +79,26 @@ void AST::writeVHDL(std::filesystem::path destination)
         entity->writeVHDL(file);
     }
 
+}
+
+std::vector<Entity*> AST::getDependencySortedEntities()
+{
+    std::vector<Entity*> reverseList;
+
+    std::function<void(Entity*)> reccurEntity;
+    reccurEntity = [&](Entity *entity) {
+        reverseList.push_back(entity);
+        for (auto *subEnt : entity->getSubEntities())
+            reccurEntity(subEnt);
+        for (auto &block : entity->getBlocks())
+            for (auto *subEnt : block->getSubEntities())
+                reccurEntity(subEnt);
+    };
+
+    reccurEntity(getRootEntity());
+
+
+    return {reverseList.rbegin(), reverseList.rend()};
 }
 
 }

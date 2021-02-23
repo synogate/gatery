@@ -262,5 +262,16 @@ void Entity::writeInstantiationVHDL(std::ostream &stream, unsigned indent)
 }
 
 
+Entity *Entity::getParentEntity()
+{
+    auto *parent = getParent();
+    while (parent != nullptr) {
+        if (auto *entity = dynamic_cast<Entity*>(parent))
+            return entity;
+        else
+            parent = parent->getParent();
+    }
+    return nullptr;
+}
 
 }

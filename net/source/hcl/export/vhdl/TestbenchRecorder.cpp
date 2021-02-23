@@ -8,16 +8,15 @@
 #include "../../hlim/coreNodes/Node_Pin.h"
 
 
-
 #include <sstream>
 #include <iostream>
 
 namespace hcl::core::vhdl {
 
 
-TestbenchRecorder::TestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, const std::string &filename) : m_exporter(exporter), m_ast(ast), m_simulator(simulator)
+TestbenchRecorder::TestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, const std::string &name) : m_exporter(exporter), m_ast(ast), m_simulator(simulator), m_name(name)
 {
-    m_testbenchFile.open(filename.c_str(), std::fstream::out);
+    m_testbenchFile.open(m_ast->getFilename(basePath, name).c_str(), std::fstream::out);
     writeHeader();
 }
 
@@ -157,6 +156,7 @@ void TestbenchRecorder::writeFooter()
 {
 //    CodeFormatting &cf = m_ast->getCodeFormatting();
 //    cf.indent(m_testbenchFile, 1);
+    m_testbenchFile << "WAIT;" << std::endl;
     m_testbenchFile << "END PROCESS;" << std::endl;
     m_testbenchFile << "END;" << std::endl;
 }

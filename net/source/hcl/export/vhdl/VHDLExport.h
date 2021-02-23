@@ -31,13 +31,13 @@ class VHDLExport
         void operator()(const hlim::Circuit &circuit);
 
         void recordTestbench(sim::Simulator &simulator, const std::string &name);
+
+        void writeGHDLScript(const std::string &name);
     protected:
         std::filesystem::path m_destination;
         std::unique_ptr<CodeFormatting> m_codeFormatting;
         std::optional<TestbenchRecorder> m_testbenchRecorder;
         std::unique_ptr<AST> m_ast;
-
-        void exportGroup(const hlim::NodeGroup *group);
 };
 
 }

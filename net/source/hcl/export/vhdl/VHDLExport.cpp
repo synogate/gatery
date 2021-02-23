@@ -1,5 +1,8 @@
 #include "VHDLExport.h"
 
+#include "Package.h"
+#include "Entity.h"
+
 #include "../../utils/Range.h"
 #include "../../utils/Enumerate.h"
 #include "../../utils/Exceptions.h"
@@ -15,7 +18,6 @@
 
 
 #include "../../simulation/Simulator.h"
-
 
 #include <set>
 #include <map>
@@ -58,8 +60,30 @@ void VHDLExport::operator()(const hlim::Circuit &circuit)
 
 void VHDLExport::recordTestbench(sim::Simulator &simulator, const std::string &name)
 {
-    m_testbenchRecorder.emplace(*this, m_ast.get(), simulator, (m_destination / (name + m_codeFormatting->getFilenameExtension())).string());
+    m_testbenchRecorder.emplace(*this, m_ast.get(), simulator, m_destination, name);
     simulator.addCallbacks(&*m_testbenchRecorder);
+}
+
+void VHDLExport::writeGHDLScript(const std::string &name)
+{
+    std::fstream file((m_destination / name).string().c_str(), std::fstream::out);
+    file.exceptions(std::fstream::failbit | std::fstream::badbit);
+
+    auto sortedEntites = m_ast->getDependencySortedEntities();
+
+    file << "#!/bin/sh" << std::endl;
+    for (auto &package : m_ast->getPackages())
+        file << "ghdl -a --std=08 --ieee=synopsys " << m_ast->getFilename("", package->getName()) << std::endl;;
+
+    for (auto entity : sortedEntites)
+        file << "ghdl -a --std=08 --ieee=synopsys " << m_ast->getFilename("", entity->getName()) << std::endl;;
+
+    if (m_testbenchRecorder) {
+        file << "ghdl -a --std=08 --ieee=synopsys " << m_ast->getFilename("", m_testbenchRecorder->getName()) << std::endl;;
+
+        file << "ghdl -e --std=08 --ieee=synopsys " << m_testbenchRecorder->getName() << std::endl;
+        file << "ghdl -r " << m_testbenchRecorder->getName() << " --vcd=signals.vcd --wave=signals.ghw" << std::endl;
+    }
 }
 
 
