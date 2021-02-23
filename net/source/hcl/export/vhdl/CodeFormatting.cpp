@@ -12,11 +12,11 @@ void CodeFormatting::indent(std::ostream &stream, unsigned depth) const
     for ([[maybe_unused]] auto i : utils::Range(depth))
         stream << m_indentation;
 }
-    
+
 DefaultCodeFormatting::DefaultCodeFormatting()
-{ 
+{
     m_indentation = "    ";
-    m_fileHeader = 
+    m_fileHeader =
 R"Delim(
 --------------------------------------------------------------------
 -- This file is under some license that we haven't figured out yet.
@@ -36,16 +36,16 @@ std::string DefaultCodeFormatting::getNodeName(const hlim::BaseNode *node, unsig
         initialName = "unnamed";
     if (attempt == 0)
         return initialName;
-    
+
     return (boost::format("%s_%d") % initialName % (attempt+1)).str();
 }
 
-std::string DefaultCodeFormatting::getSignalName(const std::string &desiredName, SignalType type, unsigned attempt) const 
+std::string DefaultCodeFormatting::getSignalName(const std::string &desiredName, SignalType type, unsigned attempt) const
 {
     std::string initialName = desiredName;
     if (initialName.empty())
         initialName = "unnamed";
-    
+
     switch (type) {
         case SIG_ENTITY_INPUT: initialName = std::string("in_") + initialName; break;
         case SIG_ENTITY_OUTPUT: initialName = std::string("out_") + initialName; break;
@@ -56,10 +56,21 @@ std::string DefaultCodeFormatting::getSignalName(const std::string &desiredName,
         case SIG_LOCAL_SIGNAL: initialName = std::string("s_") + initialName; break;
         case SIG_LOCAL_VARIABLE: initialName = std::string("v_") + initialName; break;
     }
-    
+
     if (attempt == 0)
         return initialName;
-    
+
+    return (boost::format("%s_%d") % initialName % (attempt+1)).str();
+}
+
+std::string DefaultCodeFormatting::getPackageName(const std::string &desiredName, unsigned attempt) const
+{
+    std::string initialName = desiredName;
+    if (initialName.empty())
+        initialName = "UnnamedPackage";
+    if (attempt == 0)
+        return initialName;
+
     return (boost::format("%s_%d") % initialName % (attempt+1)).str();
 }
 
@@ -70,7 +81,7 @@ std::string DefaultCodeFormatting::getEntityName(const std::string &desiredName,
         initialName = "UnnamedEntity";
     if (attempt == 0)
         return initialName;
-    
+
     return (boost::format("%s_%d") % initialName % (attempt+1)).str();
 }
 
@@ -81,7 +92,7 @@ std::string DefaultCodeFormatting::getBlockName(const std::string &desiredName, 
         initialName = "unnamedBlock";
     if (attempt == 0)
         return initialName;
-    
+
     return (boost::format("%s_%d") % initialName % (attempt+1)).str();
 }
 
@@ -92,7 +103,7 @@ std::string DefaultCodeFormatting::getProcessName(const std::string &desiredName
         initialName = "unnamedProcess";
     if (attempt == 0)
         return initialName + (clocked?"_reg":"_comb");
-    
+
     return (boost::format("%s_%d%s") % initialName % (attempt+1) % (clocked?"_reg":"_comb")).str();
 }
 
@@ -103,7 +114,7 @@ std::string DefaultCodeFormatting::getClockName(const std::string &desiredName, 
         initialName = "unnamedClock";
     if (attempt == 0)
         return initialName;
-    
+
     return (boost::format("%s_%d") % initialName % (attempt+1)).str();
 }
 
@@ -114,13 +125,13 @@ std::string DefaultCodeFormatting::getIoPinName(const std::string &desiredName, 
         initialName = "unnamedIoPin";
     if (attempt == 0)
         return initialName;
-    
+
     return (boost::format("%s_%d") % initialName % (attempt+1)).str();
 }
 
 void DefaultCodeFormatting::formatEntityComment(std::ostream &stream, const std::string &entityName, const std::string &comment)
 {
-    stream 
+    stream
         << "------------------------------------------------" << std::endl
         << "--  Entity: " << entityName << std::endl
         << "-- ";
@@ -144,17 +155,17 @@ void DefaultCodeFormatting::formatBlockComment(std::ostream &stream, const std::
 {
     if (comment.empty()) return;
     indent(stream, 1);
-    stream 
+    stream
         << "------------------------------------------------" << std::endl;
     indent(stream, 1);
-    stream 
+    stream
         << "-- ";
     for (char c : comment) {
         switch (c) {
             case '\n':
                 stream << std::endl;
                 indent(stream, 1);
-                stream 
+                stream
                     << "-- ";
             break;
             case '\r':
@@ -174,14 +185,14 @@ void DefaultCodeFormatting::formatProcessComment(std::ostream &stream, unsigned 
 {
     if (comment.empty()) return;
     indent(stream, indentation);
-    stream 
+    stream
         << "-- ";
     for (char c : comment) {
         switch (c) {
             case '\n':
                 stream << std::endl;
                 indent(stream, indentation);
-                stream 
+                stream
                     << "-- ";
             break;
             case '\r':
@@ -197,7 +208,7 @@ void DefaultCodeFormatting::formatProcessComment(std::ostream &stream, unsigned 
 void DefaultCodeFormatting::formatCodeComment(std::ostream &stream, unsigned indentation, const std::string &comment)
 {
     if (comment.empty()) return;
-    
+
     bool insertHeader = true;
     for (char c : comment) {
         switch (c) {
@@ -221,7 +232,7 @@ void DefaultCodeFormatting::formatCodeComment(std::ostream &stream, unsigned ind
 }
 
 
-void DefaultCodeFormatting::formatConnectionType(std::ostream &stream, const hlim::ConnectionType &connectionType) 
+void DefaultCodeFormatting::formatConnectionType(std::ostream &stream, const hlim::ConnectionType &connectionType)
 {
     switch (connectionType.interpretation) {
         case hlim::ConnectionType::BOOL:

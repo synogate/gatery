@@ -19,6 +19,7 @@ class Entity;
 class BaseGrouping;
 class BasicBlock;
 class CodeFormatting;
+class Package;
 
 class Hlim2AstMapping
 {
@@ -52,12 +53,19 @@ class AST
 
         void writeVHDL(std::filesystem::path destination);
 
+        std::filesystem::path getFilename(std::filesystem::path basePath, const std::string &name);
+
+        inline const std::vector<std::unique_ptr<Entity>> &getEntities() { return m_entities; }
+        inline const std::vector<std::unique_ptr<Package>> &getPackages() { return m_packages; }
+
         inline Entity *getRootEntity() { return m_entities.front().get(); }
     protected:
         CodeFormatting *m_codeFormatting;
         NamespaceScope m_namespaceScope;
         std::vector<std::unique_ptr<Entity>> m_entities;
+        std::vector<std::unique_ptr<Package>> m_packages;
         Hlim2AstMapping m_mapping;
+
 };
 
 }

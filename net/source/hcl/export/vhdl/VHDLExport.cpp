@@ -56,9 +56,9 @@ void VHDLExport::operator()(const hlim::Circuit &circuit)
     m_ast->writeVHDL(m_destination);
 }
 
-void VHDLExport::recordTestbench(sim::Simulator &simulator)
+void VHDLExport::recordTestbench(sim::Simulator &simulator, const std::string &name)
 {
-    m_testbenchRecorder.emplace(*this, m_ast.get(), simulator);
+    m_testbenchRecorder.emplace(*this, m_ast.get(), simulator, (m_destination / (name + m_codeFormatting->getFilenameExtension())).string());
     simulator.addCallbacks(&*m_testbenchRecorder);
 }
 

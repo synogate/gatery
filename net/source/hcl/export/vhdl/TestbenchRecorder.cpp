@@ -15,9 +15,9 @@
 namespace hcl::core::vhdl {
 
 
-TestbenchRecorder::TestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator) : m_exporter(exporter), m_ast(ast), m_simulator(simulator)
+TestbenchRecorder::TestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, const std::string &filename) : m_exporter(exporter), m_ast(ast), m_simulator(simulator)
 {
-    m_testbenchFile.open("testbench.vhdl", std::fstream::out);
+    m_testbenchFile.open(filename.c_str(), std::fstream::out);
     writeHeader();
 }
 
@@ -68,7 +68,7 @@ ARCHITECTURE tb OF testbench IS
 
         m_testbenchFile << "    SIGNAL " << name << " : ";
         cf.formatConnectionType(m_testbenchFile, conType);
-        m_testbenchFile << std::endl;
+        m_testbenchFile << ';' << std::endl;
 
         if (isOutput)
             m_outputToIoPinName[ioPin->getDriver(0)] = name;
@@ -123,7 +123,7 @@ ARCHITECTURE tb OF testbench IS
 
     for (auto &s : allClocks) {
         cf.indent(m_testbenchFile, 2);
-        m_testbenchFile << rootEntity->getNamespaceScope().getName(s) << " <= '0'" << std::endl;
+        m_testbenchFile << rootEntity->getNamespaceScope().getName(s) << " <= '0';" << std::endl;
         if (s->getResetType() != hlim::Clock::ResetType::NONE) {
             cf.indent(m_testbenchFile, 2);
             m_testbenchFile << rootEntity->getNamespaceScope().getName(s)<<s->getResetName() << " <= '1';" << std::endl;
@@ -131,37 +131,52 @@ ARCHITECTURE tb OF testbench IS
     }
 
     cf.indent(m_testbenchFile, 2);
-    m_testbenchFile << "WAIT FOR 1us;" << std::endl;
+    m_testbenchFile << "WAIT FOR 1 us;" << std::endl;
     for (auto &s : allClocks) {
         cf.indent(m_testbenchFile, 2);
-        m_testbenchFile << rootEntity->getNamespaceScope().getName(s) << " <= '1'" << std::endl;
+        m_testbenchFile << rootEntity->getNamespaceScope().getName(s) << " <= '1';" << std::endl;
     }
     cf.indent(m_testbenchFile, 2);
-    m_testbenchFile << "WAIT FOR 1us;" << std::endl;
+    m_testbenchFile << "WAIT FOR 1 us;" << std::endl;
 
     for (auto &s : allClocks) {
         cf.indent(m_testbenchFile, 2);
-        m_testbenchFile << rootEntity->getNamespaceScope().getName(s) << " <= '0'" << std::endl;
+        m_testbenchFile << rootEntity->getNamespaceScope().getName(s) << " <= '0';" << std::endl;
         if (s->getResetType() != hlim::Clock::ResetType::NONE) {
             cf.indent(m_testbenchFile, 2);
             m_testbenchFile << rootEntity->getNamespaceScope().getName(s)<<s->getResetName() << " <= '0';" << std::endl;
         }
     }
     cf.indent(m_testbenchFile, 2);
-    m_testbenchFile << "WAIT FOR 1us;" << std::endl;
+    m_testbenchFile << "WAIT FOR 1 us;" << std::endl;
 
     m_lastSimulationTime = 0;
 }
 
 void TestbenchRecorder::writeFooter()
 {
-    CodeFormatting &cf = m_ast->getCodeFormatting();
-    cf.indent(m_testbenchFile, 1);
+//    CodeFormatting &cf = m_ast->getCodeFormatting();
+//    cf.indent(m_testbenchFile, 1);
     m_testbenchFile << "END PROCESS;" << std::endl;
     m_testbenchFile << "END;" << std::endl;
 }
 
 
+
+namespace {
+    void formatTime(std::ostream &stream, hlim::ClockRational time) {
+        std::string unit = "sec";
+        if (time.denominator() > 1) { unit = "ms"; time *= 1000; }
+        if (time.denominator() > 1) { unit = "us"; time *= 1000; }
+        if (time.denominator() > 1) { unit = "ns"; time *= 1000; }
+        if (time.denominator() > 1) { unit = "ps"; time *= 1000; }
+        if (time.denominator() > 1) { unit = "fs"; time *= 1000; }
+
+        if (time.denominator() > 1) std::cout << "Warning, rounding fractional to nearest integer femtosecond" << std::endl;
+
+        stream << time.numerator() / time.denominator() << ' ' << unit;
+    }
+}
 
 void TestbenchRecorder::onNewTick(const hlim::ClockRational &simulationTime)
 {
@@ -170,17 +185,26 @@ void TestbenchRecorder::onNewTick(const hlim::ClockRational &simulationTime)
     auto timeDiff = simulationTime - m_lastSimulationTime;
     m_lastSimulationTime = simulationTime;
 
-    std::string unit = "sec";
-    if (timeDiff.denominator() > 1) { unit = "ms"; timeDiff *= 1000; }
-    if (timeDiff.denominator() > 1) { unit = "us"; timeDiff *= 1000; }
-    if (timeDiff.denominator() > 1) { unit = "ns"; timeDiff *= 1000; }
-    if (timeDiff.denominator() > 1) { unit = "ps"; timeDiff *= 1000; }
-    if (timeDiff.denominator() > 1) { unit = "fs"; timeDiff *= 1000; }
+    // All asserts are collected to be triggered halfway between the last tick (when signals were set) and the next tick (when new stuff happens).
+    if (m_assertStatements.str().empty()) {
+        cf.indent(m_testbenchFile, 2);
+        m_testbenchFile << "WAIT FOR ";
+        formatTime(m_testbenchFile, timeDiff);
+        m_testbenchFile << ';' << std::endl;
+    } else {
+        cf.indent(m_testbenchFile, 2);
+        m_testbenchFile << "WAIT FOR ";
+        formatTime(m_testbenchFile, timeDiff * hlim::ClockRational(1,2));
+        m_testbenchFile << ';' << std::endl;
 
-    if (timeDiff.denominator() > 1) std::cout << "Warning, rounding fractional to nearest integer femtosecond" << std::endl;
+        m_testbenchFile << m_assertStatements.str();
+        m_assertStatements.str(std::string());
 
-    cf.indent(m_testbenchFile, 2);
-    m_testbenchFile << "WAIT FOR " << timeDiff.numerator() / timeDiff.denominator() << unit << ';' << std::endl;
+        cf.indent(m_testbenchFile, 2);
+        m_testbenchFile << "WAIT FOR ";
+        formatTime(m_testbenchFile, timeDiff * hlim::ClockRational(1,2));
+        m_testbenchFile << ';' << std::endl;
+    }
 }
 
 void TestbenchRecorder::onClock(const hlim::Clock *clock, bool risingEdge)
@@ -190,9 +214,9 @@ void TestbenchRecorder::onClock(const hlim::Clock *clock, bool risingEdge)
 
     cf.indent(m_testbenchFile, 2);
     if (risingEdge)
-        m_testbenchFile << rootEntity->getNamespaceScope().getName((hlim::Clock *) clock) << " <= '0'" << std::endl;
+        m_testbenchFile << rootEntity->getNamespaceScope().getName((hlim::Clock *) clock) << " <= '1';" << std::endl;
     else
-        m_testbenchFile << rootEntity->getNamespaceScope().getName((hlim::Clock *) clock) << " <= '1'" << std::endl;
+        m_testbenchFile << rootEntity->getNamespaceScope().getName((hlim::Clock *) clock) << " <= '0';" << std::endl;
 }
 
 void TestbenchRecorder::onSimProcOutputOverridden(hlim::NodePort output, const sim::DefaultBitVectorState &state)
@@ -223,20 +247,30 @@ void TestbenchRecorder::onSimProcOutputRead(hlim::NodePort output, const sim::De
     HCL_ASSERT(name_it != m_outputToIoPinName.end());
 
     CodeFormatting &cf = m_ast->getCodeFormatting();
-    auto *rootEntity = m_ast->getRootEntity();
-
-    cf.indent(m_testbenchFile, 2);
-    m_testbenchFile << "ASSERT " << name_it->second << " = ";
 
     const auto& conType = output.node->getOutputConnectionType(output.port);
+    if (conType.interpretation == hlim::ConnectionType::BOOL) {
+        if (state.get(sim::DefaultConfig::DEFINED, 0)) {
+            cf.indent(m_assertStatements, 2);
+            m_assertStatements << "ASSERT " << name_it->second << " = '" << state << "';" << std::endl;
+        }
+    } else {
+        // If all bits are defined, assert on the entire vector, otherwise build individual asserts for each valid bit.
+        bool allDefined = true;
+        for (auto i : utils::Range(conType.width))
+            allDefined &= state.get(sim::DefaultConfig::DEFINED, i);
 
-    char sep = '"';
-    if (conType.interpretation == hlim::ConnectionType::BOOL)
-        sep = '\'';
-
-    m_testbenchFile << sep;
-    m_testbenchFile << state;
-    m_testbenchFile << sep << ';' << std::endl;
+        if (allDefined) {
+            cf.indent(m_assertStatements, 2);
+            m_assertStatements << "ASSERT " << name_it->second << " = \"" << state << "\";" << std::endl;
+        } else {
+            for (auto i : utils::Range(conType.width))
+                if (state.get(sim::DefaultConfig::DEFINED, i)) {
+                    char v = state.get(sim::DefaultConfig::VALUE, i)?'1':'0';
+                    m_assertStatements << "ASSERT " << name_it->second << '('<<i<<") = '" << v << "';" << std::endl;
+                }
+        }
+    }
 }
 
 

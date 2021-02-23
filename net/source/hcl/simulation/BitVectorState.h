@@ -48,7 +48,7 @@ class BitVectorState
                 const size_t m_size;
             };
 
-            iterator(BitVectorState& state, typename Config::Plane plane, size_t offset, size_t end) : 
+            iterator(BitVectorState& state, typename Config::Plane plane, size_t offset, size_t end) :
                 m_state(state), m_plane(plane), m_offset(offset), m_end(end) {}
 
             bool operator != (const iterator& r) const { return m_offset != r.m_offset; }
@@ -73,7 +73,7 @@ class BitVectorState
         inline size_t size() const { return m_size; }
         inline size_t getNumBlocks() const { return m_values[0].size(); }
         void clear();
-        
+
         bool get(typename Config::Plane plane, size_t idx) const;
         void set(typename Config::Plane plane, size_t idx);
         void set(typename Config::Plane plane, size_t idx, bool bit);
@@ -84,13 +84,13 @@ class BitVectorState
         void setRange(typename Config::Plane plane, size_t offset, size_t size);
         void clearRange(typename Config::Plane plane, size_t offset, size_t size);
         void copyRange(size_t dstOffset, const BitVectorState<Config> &src, size_t srcOffset, size_t size);
-        
+
         typename Config::BaseType *data(typename Config::Plane plane);
         const typename Config::BaseType *data(typename Config::Plane plane) const;
-        
+
         BitVectorState<Config> extract(size_t start, size_t size) const;
         void insert(const BitVectorState& state, size_t offset);
-        
+
         typename Config::BaseType extract(typename Config::Plane plane, size_t offset, size_t size) const;
         typename Config::BaseType extractNonStraddling(typename Config::Plane plane, size_t start, size_t size) const;
 
@@ -121,7 +121,7 @@ std::ostream& operator << (std::ostream& s, const BitVectorState<Config>& state)
     for (int i = state.size()-1; i >= 0; --i)
     {
         if (!state.get(Config::DEFINED, i))
-            s << 'x';
+            s << 'X';
         else if (state.get(Config::VALUE, i))
             s << '1';
         else
@@ -213,7 +213,7 @@ void BitVectorState<Config>::setRange(typename Config::Plane plane, size_t offse
     typename Config::BaseType content = 0;
     if (bit)
         content = ~content;
-    
+
     size_t firstWordSize;
     size_t wordOffset = offset / Config::NUM_BITS_PER_BLOCK;
     if (offset % Config::NUM_BITS_PER_BLOCK == 0) {
@@ -223,7 +223,7 @@ void BitVectorState<Config>::setRange(typename Config::Plane plane, size_t offse
         insertNonStraddling(plane, offset, firstWordSize, content);
         wordOffset++;
     }
-    
+
     size_t numFullWords = (size - firstWordSize) / Config::NUM_BITS_PER_BLOCK;
     for (auto i : utils::Range(numFullWords))
         m_values[plane][wordOffset + i] = content;
@@ -248,13 +248,13 @@ void BitVectorState<Config>::clearRange(typename Config::Plane plane, size_t off
 
 template<class Config>
 void BitVectorState<Config>::copyRange(size_t dstOffset, const BitVectorState<Config> &src, size_t srcOffset, size_t size)
-{    
+{
     ///@todo: Optimize aligned cases (which happen quite frequently!)
     size_t width = size;
     size_t offset = 0;
     while (offset < width) {
         size_t chunkSize = std::min<size_t>(Config::NUM_BITS_PER_BLOCK, width-offset);
-        
+
         for (auto i : utils::Range<size_t>(Config::NUM_PLANES))
             insert((typename Config::Plane) i, dstOffset + offset, chunkSize,
                     src.extract((typename Config::Plane) i, srcOffset + offset, chunkSize));
@@ -362,7 +362,7 @@ void BitVectorState<Config>::insertNonStraddling(typename Config::Plane plane, s
 }
 
 template<class Config>
-inline std::pair<typename BitVectorState<Config>::iterator, typename BitVectorState<Config>::iterator> 
+inline std::pair<typename BitVectorState<Config>::iterator, typename BitVectorState<Config>::iterator>
 BitVectorState<Config>::range(typename Config::Plane plane, size_t offset, size_t size)
 {
     const size_t endOffset = offset + size;

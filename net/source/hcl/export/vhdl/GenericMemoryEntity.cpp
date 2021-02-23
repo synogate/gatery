@@ -23,7 +23,7 @@ void GenericMemoryEntity::buildFrom(hlim::MemoryGroup *memGrp)
     m_memGrp = memGrp;
     // probably not the best place to do it....
     m_namespaceScope.allocateName({.node=memGrp->getMemory(), .port=0}, "memory", CodeFormatting::SIG_LOCAL_SIGNAL);
-    
+
     for (auto node : memGrp->getNodes())
         m_ast.getMapping().assignNodeToScope(node, this);
 
@@ -74,7 +74,7 @@ void GenericMemoryEntity::buildFrom(hlim::MemoryGroup *memGrp)
     }
 }
 
-void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream) 
+void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 {
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
@@ -96,7 +96,7 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 
     HCL_ASSERT_HINT(memorySize % wordSize == 0, "Memory size is not a multiple of the word size!");
 
-    
+
     cf.indent(stream, 1);
     stream << "CONSTANT WORD_WIDTH : integer := " << wordSize << ";\n";
     cf.indent(stream, 1);
@@ -139,7 +139,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
             clocks[rp.syncReadDataReg->getClocks()[0]].readPorts.push_back(rp);
         else
             clocks[nullptr].readPorts.push_back(rp);
-    
+
     // If ROM, initialize in combinatorial process
     if (m_memGrp->getWritePorts().empty()) {
 
@@ -170,7 +170,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                 bool value = powerOnState.get(hcl::core::sim::DefaultConfig::VALUE, i*wordSize + wordSize-1-j);
                 if (!defined)
                     stream << 'x';
-                else 
+                else
                     if (value)
                         stream << '1';
                     else
@@ -193,17 +193,17 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
 
                 cf.indent(stream, indent);
                 switch (clock.first->getTriggerEvent()) {
-                    case hlim::Clock::TriggerEvent::RISING: 
-                        stream << "IF (rising_edge(" << m_namespaceScope.getName(clock.first) << ")) THEN\n"; 
+                    case hlim::Clock::TriggerEvent::RISING:
+                        stream << "IF (rising_edge(" << m_namespaceScope.getName(clock.first) << ")) THEN\n";
                     break;
-                    case hlim::Clock::TriggerEvent::FALLING: 
-                        stream << "IF (falling_edge(" << m_namespaceScope.getName(clock.first) << ")) THEN\n"; 
+                    case hlim::Clock::TriggerEvent::FALLING:
+                        stream << "IF (falling_edge(" << m_namespaceScope.getName(clock.first) << ")) THEN\n";
                     break;
-                    case hlim::Clock::TriggerEvent::RISING_AND_FALLING: 
-                        stream << "IF (" << m_namespaceScope.getName(clock.first) << "'event) THEN\n"; 
+                    case hlim::Clock::TriggerEvent::RISING_AND_FALLING:
+                        stream << "IF (" << m_namespaceScope.getName(clock.first) << "'event) THEN\n";
                     break;
                     default:
-                        HCL_ASSERT_HINT(false, "Unhandled case"); 
+                        HCL_ASSERT_HINT(false, "Unhandled case");
                 }
                 indent++;
 
@@ -211,7 +211,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                     auto enablePort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
                     if (enablePort.node != nullptr) {
                         cf.indent(stream, indent);
-                        stream << "IF ("<< m_namespaceScope.getName(enablePort) << " = '1') THEN\n"; 
+                        stream << "IF ("<< m_namespaceScope.getName(enablePort) << " = '1') THEN\n";
                         indent++;
                     }
 
@@ -220,19 +220,19 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                     auto dataPort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrData);
 
                     cf.indent(stream, indent);
-                    stream << "memory(to_integer(" << m_namespaceScope.getName(addrPort) << ")) <= " << m_namespaceScope.getName(dataPort) << ";\n";
+                    stream << "memory(to_integer(" << m_namespaceScope.getName(addrPort) << ") mod NUM_WORDS) <= " << m_namespaceScope.getName(dataPort) << ";\n";
 
                     if (enablePort.node != nullptr) {
                         indent--;
                         cf.indent(stream, indent);
-                        stream << "END IF;\n"; 
+                        stream << "END IF;\n";
                     }
                 }
                 for (auto &rp : clock.second.readPorts) {
                     auto enablePort = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
                     if (enablePort.node != nullptr) {
                         cf.indent(stream, indent);
-                        stream << "IF ("<< m_namespaceScope.getName(enablePort) << " = '1') THEN\n"; 
+                        stream << "IF ("<< m_namespaceScope.getName(enablePort) << " = '1') THEN\n";
                         indent++;
                     }
 
@@ -246,19 +246,19 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                     } else {
                         stream << m_namespaceScope.getName(dataPort) << "_outputReg";
                     }
-                    stream << " <= memory(to_integer(" << m_namespaceScope.getName(addrPort) << "));\n";
+                    stream << " <= memory(to_integer(" << m_namespaceScope.getName(addrPort) << ") mod NUM_WORDS);\n";
 
                     if (enablePort.node != nullptr) {
                         indent--;
                         cf.indent(stream, indent);
-                        stream << "END IF;\n"; 
+                        stream << "END IF;\n";
                     }
 
                     if (rp.outputReg != nullptr) {
                         auto enablePort = rp.outputReg->getDriver((unsigned)hlim::Node_Register::Input::ENABLE);
                         if (enablePort.node != nullptr) {
                             cf.indent(stream, indent);
-                            stream << "IF ("<< m_namespaceScope.getName(enablePort) << " = '1') THEN\n"; 
+                            stream << "IF ("<< m_namespaceScope.getName(enablePort) << " = '1') THEN\n";
                             indent++;
                         }
                         cf.indent(stream, indent);
@@ -267,14 +267,14 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                         if (enablePort.node != nullptr) {
                             indent--;
                             cf.indent(stream, indent);
-                            stream << "END IF;\n"; 
+                            stream << "END IF;\n";
                         }
 
                         if (clock.first->getResetType() == hlim::Clock::ResetType::SYNCHRONOUS) {
                             auto reset = rp.outputReg->getDriver((unsigned)hlim::Node_Register::Input::RESET_VALUE);
                             if (reset.node != nullptr) {
                                 cf.indent(stream, indent);
-                                stream << "IF ("<< m_namespaceScope.getName(clock.first)<<clock.first->getResetName() << " = '1') THEN\n"; 
+                                stream << "IF ("<< m_namespaceScope.getName(clock.first)<<clock.first->getResetName() << " = '1') THEN\n";
                                 indent++;
 
                                     cf.indent(stream, indent);
@@ -282,7 +282,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
 
                                 indent--;
                                 cf.indent(stream, indent);
-                                stream << "END IF;\n"; 
+                                stream << "END IF;\n";
                             }
                         }
                     }
@@ -299,7 +299,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                             auto reset = rp.outputReg->getDriver((unsigned)hlim::Node_Register::Input::RESET_VALUE);
                             if (reset.node != nullptr) {
                                 cf.indent(stream, indent);
-                                stream << "IF ("<< m_namespaceScope.getName(clock.first)<<clock.first->getResetName() << " = '1') THEN\n"; 
+                                stream << "IF ("<< m_namespaceScope.getName(clock.first)<<clock.first->getResetName() << " = '1') THEN\n";
                                 indent++;
 
                                     cf.indent(stream, indent);
@@ -307,7 +307,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
 
                                 indent--;
                                 cf.indent(stream, indent);
-                                stream << "END IF;\n"; 
+                                stream << "END IF;\n";
                             }
                         }
                     }
@@ -324,12 +324,12 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
             stream << "BEGIN\n";
 
             indent++;
-            
+
                 for (auto &rp : clock.second.readPorts) {
                     auto enablePort = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
                     if (enablePort.node != nullptr) {
                         cf.indent(stream, indent);
-                        stream << "IF ("<< m_namespaceScope.getName(enablePort) << " = '1') THEN\n"; 
+                        stream << "IF ("<< m_namespaceScope.getName(enablePort) << " = '1') THEN\n";
                         indent++;
                     }
 
@@ -338,12 +338,12 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                     auto dataPort = rp.dataOutput;
 
                     cf.indent(stream, indent);
-                    stream << m_namespaceScope.getName(dataPort) << " <= memory(to_integer(" << m_namespaceScope.getName(addrPort) << "));\n";
+                    stream << m_namespaceScope.getName(dataPort) << " <= memory(to_integer(" << m_namespaceScope.getName(addrPort) << ") mod NUM_WORDS);\n";
 
                     if (enablePort.node != nullptr) {
                         indent--;
                         cf.indent(stream, indent);
-                        stream << "END IF;\n"; 
+                        stream << "END IF;\n";
                     }
                 }
 

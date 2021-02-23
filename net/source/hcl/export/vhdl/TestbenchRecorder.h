@@ -4,6 +4,7 @@
 
 #include <fstream>
 #include <map>
+#include <sstream>
 
 namespace hcl::core::sim {
     class Simulator;
@@ -17,7 +18,7 @@ class AST;
 class TestbenchRecorder : public sim::SimulatorCallbacks
 {
     public:
-        TestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator);
+        TestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, const std::string &filename);
         ~TestbenchRecorder();
 
         virtual void onNewTick(const hlim::ClockRational &simulationTime) override;
@@ -38,6 +39,8 @@ class TestbenchRecorder : public sim::SimulatorCallbacks
         hlim::ClockRational m_lastSimulationTime;
 
         std::map<hlim::NodePort, std::string> m_outputToIoPinName;
+
+        std::stringstream m_assertStatements;
 
         void writeHeader();
         void writeFooter();

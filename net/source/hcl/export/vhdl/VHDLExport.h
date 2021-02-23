@@ -30,7 +30,7 @@ class VHDLExport
 
         void operator()(const hlim::Circuit &circuit);
 
-        void recordTestbench(sim::Simulator &simulator);
+        void recordTestbench(sim::Simulator &simulator, const std::string &name);
     protected:
         std::filesystem::path m_destination;
         std::unique_ptr<CodeFormatting> m_codeFormatting;

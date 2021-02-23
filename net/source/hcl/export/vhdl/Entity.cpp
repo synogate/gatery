@@ -3,6 +3,7 @@
 #include "Block.h"
 
 #include "AST.h"
+#include "Package.h"
 
 #include "../../hlim/Clock.h"
 #include "../../hlim/coreNodes/Node_Pin.h"
@@ -25,22 +26,22 @@ Entity::~Entity()
 void Entity::buildFrom(hlim::NodeGroup *nodeGroup)
 {
     HCL_ASSERT(nodeGroup->getGroupType() == hlim::NodeGroup::GroupType::ENTITY);
-    
+
     m_comment = nodeGroup->getComment();
 
     NodeGroupInfo grpInfo;
     grpInfo.buildFrom(nodeGroup, false);
-    
+
     collectInstantiations(nodeGroup, false);
-    
+
     processifyNodes("default", nodeGroup, false);
-    
+
     for (auto &subArea : grpInfo.subAreas) {
         NodeGroupInfo areaInfo;
         areaInfo.buildFrom(subArea, false);
-        
+
         // If there is nothing but logic inside it's a process, otherwise a block
-        if (areaInfo.externalNodes.empty() && 
+        if (areaInfo.externalNodes.empty() &&
             areaInfo.subEntities.empty() &&
             areaInfo.subAreas.empty()) {
 
@@ -50,16 +51,16 @@ void Entity::buildFrom(hlim::NodeGroup *nodeGroup)
             m_blocks.push_back(std::make_unique<Block>(this, subArea->getName()));
             auto &block = m_blocks.back();
             block->buildFrom(subArea);
-            
+
             ConcurrentStatement statement;
             statement.type = ConcurrentStatement::TYPE_BLOCK;
             statement.ref.block = block.get();
             statement.sortIdx = 0; /// @todo
-            
+
             m_statements.push_back(statement);
         }
     }
-    
+
     std::sort(m_statements.begin(), m_statements.end());
 }
 
@@ -74,12 +75,12 @@ void Entity::extractSignals()
 
 void Entity::allocateNames()
 {
-    for (auto &input : m_inputs) 
+    for (auto &input : m_inputs)
         m_namespaceScope.allocateName(input, findNearestDesiredName(input), CodeFormatting::SIG_ENTITY_INPUT);
 
     for (auto &output : m_outputs)
         m_namespaceScope.allocateName(output, findNearestDesiredName(output), CodeFormatting::SIG_ENTITY_OUTPUT);
-    
+
     for (auto &clock : m_inputClocks)
         m_namespaceScope.allocateName(clock, clock->getName());
 
@@ -94,10 +95,13 @@ void Entity::allocateNames()
 
 void Entity::writeLibrariesVHDL(std::ostream &stream)
 {
-    stream << "LIBRARY ieee;" << std::endl 
-           << "USE ieee.std_logic_1164.ALL;" << std::endl 
+    stream << "LIBRARY ieee;" << std::endl
+           << "USE ieee.std_logic_1164.ALL;" << std::endl
            << "USE ieee.numeric_std.all;" << std::endl << std::endl;
-    
+
+    // Import everything for now
+    for (const auto &package : m_ast.getPackages())
+        package->writeImportStatement(stream);
 }
 
 std::vector<std::string> Entity::getPortsVHDL()
@@ -159,7 +163,7 @@ void Entity::writeLocalSignalsVHDL(std::ostream &stream)
         stream << "SIGNAL " << m_namespaceScope.getName(signal) << " : ";
         cf.formatConnectionType(stream, signal.node->getOutputConnectionType(signal.port));
         stream << "; "<< std::endl;
-    }        
+    }
 }
 
 
@@ -167,37 +171,37 @@ void Entity::writeLocalSignalsVHDL(std::ostream &stream)
 void Entity::writeVHDL(std::ostream &stream)
 {
     CodeFormatting &cf = m_ast.getCodeFormatting();
-    
+
     stream << cf.getFileHeader();
-    
+
     writeLibrariesVHDL(stream);
-    
+
     cf.formatEntityComment(stream, m_name, m_comment);
 
     stream << "ENTITY " << m_name << " IS " << std::endl;
     cf.indent(stream, 1); stream << "PORT(" << std::endl;
-    
+
     {
         std::vector<std::string> portList = getPortsVHDL();
 
         for (auto i : utils::Range(portList.size())) {
-            cf.indent(stream, 2);        
+            cf.indent(stream, 2);
             stream << portList[i];
             if (i+1 < portList.size())
                 stream << ";";
             stream << std::endl;
         }
     }
-    
+
     cf.indent(stream, 1); stream << ");" << std::endl;
-    stream << "END " << m_name << ";" << std::endl << std::endl;    
+    stream << "END " << m_name << ";" << std::endl << std::endl;
 
     stream << "ARCHITECTURE impl OF " << m_name << " IS " << std::endl;
-    
+
     writeLocalSignalsVHDL(stream);
-    
+
     stream << "BEGIN" << std::endl;
-    
+
     writeStatementsVHDL(stream, 1);
 
     stream << "END impl;" << std::endl;
@@ -209,10 +213,10 @@ void Entity::writeInstantiationVHDL(std::ostream &stream, unsigned indent)
 
     cf.indent(stream, indent);
     stream << "inst_" << getName() << " : entity work." << getName() << "(impl) port map (" << std::endl;
-    
+
     std::vector<std::string> portmapList;
 
-    
+
     for (auto &s : m_inputClocks) {
         std::stringstream line;
         line << m_namespaceScope.getName(s) << " => ";
@@ -243,7 +247,7 @@ void Entity::writeInstantiationVHDL(std::ostream &stream, unsigned indent)
         line << m_parent->getNamespaceScope().getName(s);
         portmapList.push_back(line.str());
     }
-    
+
     for (auto i : utils::Range(portmapList.size())) {
         cf.indent(stream, indent+1);
         stream << portmapList[i];
@@ -251,12 +255,12 @@ void Entity::writeInstantiationVHDL(std::ostream &stream, unsigned indent)
             stream << ",";
         stream << std::endl;
     }
-    
-    
+
+
     cf.indent(stream, indent);
     stream << ");" << std::endl;
 }
 
 
-   
+
 }
