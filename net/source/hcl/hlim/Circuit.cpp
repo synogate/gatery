@@ -125,7 +125,10 @@ Clock *Circuit::createUnconnectedClock(Clock *clock, Clock *newParent)
     return m_clocks.back().get();
 }
 
-
+/**
+ * @brief Removes unnecessary and unnamed signal nodes
+ *
+ */
 void Circuit::cullUnnamedSignalNodes()
 {
     for (size_t i = 0; i < m_nodes.size(); i++) {
@@ -133,9 +136,14 @@ void Circuit::cullUnnamedSignalNodes()
         if (signal == nullptr)
             continue;
 
+        // Don't cull named signals
         if (!signal->getName().empty())
             continue;
 
+        // Don't cull signals that are still referenced by frontend objects
+        if (signal->hasRef()) continue;
+
+        // We want to keep one signal node between non-signal nodes, so only cull if the input or all outputs are signals.
         bool inputIsSignalOrUnconnected = (signal->getDriver(0).node == nullptr) || (dynamic_cast<Node_Signal*>(signal->getDriver(0).node) != nullptr);
 
         bool allOutputsAreSignals = true;
@@ -145,13 +153,8 @@ void Circuit::cullUnnamedSignalNodes()
 
         if (inputIsSignalOrUnconnected || allOutputsAreSignals) {
 
-            NodePort newSource = signal->getDriver(0);
-
-            while (!signal->getDirectlyDriven(0).empty()) {
-                auto p = signal->getDirectlyDriven(0).front();
-                p.node->connectInput(p.port, newSource);
-            }
-
+            if (signal->getDriver(0).node != signal)
+                signal->bypassOutputToInput(0, 0);
             signal->disconnectInput();
 
             m_nodes[i] = std::move(m_nodes.back());
@@ -161,12 +164,19 @@ void Circuit::cullUnnamedSignalNodes()
     }
 }
 
+/**
+ * @brief Removes signal nodes that are unnecessary because there is a sequence of identical ones
+ *
+ */
 void Circuit::cullSequentiallyDuplicatedSignalNodes()
 {
     for (size_t i = 0; i < m_nodes.size(); i++) {
         Node_Signal *signal = dynamic_cast<Node_Signal*>(m_nodes[i].get());
         if (signal == nullptr)
             continue;
+
+        // Don't cull signals that are still referenced by frontend objects
+        if (signal->hasRef()) continue;
 
         auto driver = signal->getDriver(0);
 
@@ -177,12 +187,7 @@ void Circuit::cullSequentiallyDuplicatedSignalNodes()
                 driverSignal->getGroup() == signal->getGroup() &&
                 driverSignal->getSignalGroup() == signal->getSignalGroup()) {
 
-
-                while (!signal->getDirectlyDriven(0).empty()) {
-                    auto p = signal->getDirectlyDriven(0).front();
-                    p.node->connectInput(p.port, driver);
-                }
-
+                signal->bypassOutputToInput(0, 0);
                 signal->disconnectInput();
 
                 m_nodes[i] = std::move(m_nodes.back());
@@ -193,12 +198,19 @@ void Circuit::cullSequentiallyDuplicatedSignalNodes()
     }
 }
 
+/**
+ * @brief Cull signal nodes without inputs or outputs
+ *
+ */
 void Circuit::cullOrphanedSignalNodes()
 {
     for (size_t i = 0; i < m_nodes.size(); i++) {
         Node_Signal *signal = dynamic_cast<Node_Signal*>(m_nodes[i].get());
         if (signal == nullptr)
             continue;
+
+        // Don't cull signals that are still referenced by frontend objects
+        if (signal->hasRef()) continue;
 
         if (signal->isOrphaned()) {
             m_nodes[i] = std::move(m_nodes.back());
@@ -213,6 +225,7 @@ static bool isUnusedNode(const BaseNode& node)
     if (node.hasSideEffects())
         return false;
 
+    if (node.hasRef()) return false;
 /*
     auto* signalNode = dynamic_cast<const Node_Signal*>(&node);
     if (signalNode && !signalNode->getName().empty())
@@ -531,7 +544,7 @@ void Circuit::removeNoOps()
             }
         }
 
-        if (removeNode) {
+        if (removeNode && !m_nodes[i]->hasRef()) {
             m_nodes[i] = std::move(m_nodes.back());
             m_nodes.pop_back();
             i--;
@@ -730,6 +743,8 @@ void Circuit::removeFalseLoops()
 /// @details It seems many parts of the vhdl export still require signal nodes so this step adds back in missing ones
 void Circuit::ensureSignalNodePlacement()
 {
+    std::map<NodePort, Node_Signal*> addedSignalsNodes;
+
     for (auto &node : m_nodes) {
         if (dynamic_cast<Node_Signal*>(node.get()) != nullptr) continue;
         for (auto i : utils::Range(node->getNumInputPorts())) {
@@ -739,11 +754,17 @@ void Circuit::ensureSignalNodePlacement()
             if (dynamic_cast<Node_Signal*>(driver.node) != nullptr) continue;
             if (driver.node->getGroup() != nullptr && driver.node->getGroup()->getGroupType() == NodeGroup::GroupType::SFU) continue;
 
-            auto *sigNode = createNode<Node_Signal>();
-            sigNode->moveToGroup(driver.node->getGroup());
+            auto it = addedSignalsNodes.find(driver);
+            if (it != addedSignalsNodes.end()) {
+                node->connectInput(i, {.node=it->second, .port=0ull});
+            } else {
+                auto *sigNode = createNode<Node_Signal>();
+                sigNode->moveToGroup(driver.node->getGroup());
 
-            sigNode->connectInput(driver);
-            node->connectInput(i, {.node=sigNode, .port=0ull});
+                sigNode->connectInput(driver);
+                node->connectInput(i, {.node=sigNode, .port=0ull});
+                addedSignalsNodes[driver] = sigNode;
+            }
         }
     }
 }

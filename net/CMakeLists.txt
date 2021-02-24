@@ -20,10 +20,16 @@ add_library(hcl_net STATIC
     source/hcl/export/vhdl/Entity.h
     source/hcl/export/vhdl/GenericMemoryEntity.cpp
     source/hcl/export/vhdl/GenericMemoryEntity.h
+    source/hcl/export/vhdl/HelperPackage.cpp
+    source/hcl/export/vhdl/HelperPackage.h
     source/hcl/export/vhdl/NamespaceScope.cpp
     source/hcl/export/vhdl/NamespaceScope.h
+    source/hcl/export/vhdl/Package.cpp
+    source/hcl/export/vhdl/Package.h
     source/hcl/export/vhdl/Process.cpp
     source/hcl/export/vhdl/Process.h
+    source/hcl/export/vhdl/TestbenchRecorder.cpp
+    source/hcl/export/vhdl/TestbenchRecorder.h
     source/hcl/export/vhdl/VHDLExport.cpp
     source/hcl/export/vhdl/VHDLExport.h
     source/hcl/export/DotExport.cpp

@@ -31,6 +31,10 @@ class BaseNode : public NodeIO
         BaseNode(size_t numInputs, size_t numOutputs);
         virtual ~BaseNode();
 
+        void addRef() { m_refCounter++; }
+        void removeRef() { HCL_ASSERT(m_refCounter > 0); m_refCounter--; }
+        bool hasRef() const { return m_refCounter > 0; }
+
         virtual std::string getTypeName() const = 0;
         virtual void assertValidity() const = 0;
         virtual std::string getInputName(size_t idx) const = 0;
@@ -86,8 +90,12 @@ class BaseNode : public NodeIO
         NodeGroup *m_nodeGroup = nullptr;
         std::vector<Clock*> m_clocks;
 
+        size_t m_refCounter = 0;
+
+
         void copyBaseToClone(BaseNode *copy) const;
 };
+
 
 template<class FinalType>
 class Node : public BaseNode

@@ -13,13 +13,12 @@ using namespace boost::unit_test;
 
 const auto optimizationLevels = data::make({0, 1, 2, 3});
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestOperators, optimizationLevels * data::xrange(8) * data::xrange(8) * data::xrange(1, 8), optimization, x, y, bitsize)
+using UnitTestSimulationFixture = hcl::core::frontend::UnitTestSimulationFixture;
+
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLevels * data::xrange(8) * data::xrange(8) * data::xrange(1, 8), optimization, x, y, bitsize)
 {
     using namespace hcl::core::frontend;
-    
-    DesignScope design;
 
-    
     BVec a = ConstBVec(x, bitsize);
     BVec b = ConstBVec(y, bitsize);
 
@@ -31,20 +30,20 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestOperators,
         sim_assert(c == groundTruth) << "The result of " << a << " " << op2str(op) << " " << b              \
             << " should be " << groundTruth << " (with overflow in " << bitsize << "bits) but is " << c;    \
     }
-    
+
     buildOperatorTest(+)
     buildOperatorTest(-)
     buildOperatorTest(*)
     //buildOperatorTest(/)
-    
+
     buildOperatorTest(&)
     buildOperatorTest(|)
     buildOperatorTest(^)
-    
+
 #undef op2str
 #undef buildOperatorTest
 
-    
+
 #define op2str(op) #op
 #define buildOperatorTest(op)                                                                               \
     {                                                                                                       \
@@ -56,36 +55,34 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestOperators,
         sim_assert(c == groundTruth) << "The result of (" << c << "="<<a << ") " << op2str(op) << " " << b  \
             << " should be " << groundTruth << " (with overflow in " << bitsize << "bits) but is " << c;    \
     }
-    
+
     buildOperatorTest(+=)
     buildOperatorTest(-=)
     buildOperatorTest(*=)
     //buildOperatorTest(/=)
-    
+
     buildOperatorTest(&=)
     buildOperatorTest(|=)
     buildOperatorTest(^=)
-    
+
 #undef op2str
 #undef buildOperatorTest
-    
+
     design.getCircuit().optimize(optimization);
-    
-    eval(design.getCircuit());
+
+    eval();
 }
 
 
 
 
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicing, optimizationLevels * data::xrange(8) * data::xrange(3, 8), optimization, x, bitsize)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicing, optimizationLevels * data::xrange(8) * data::xrange(3, 8), optimization, x, bitsize)
 {
     using namespace hcl::core::frontend;
-    
-    DesignScope design;
-    
+
     BVec a = ConstBVec(x, bitsize);
-    
+
     {
         BVec res = a(0, 1);
         sim_assert(res == ConstBVec(x & 1, 1)) << "Slicing first bit of " << a << " failed: " << res;
@@ -103,82 +100,75 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicing, o
     }
 
     design.getCircuit().optimize(optimization);
-    
-    eval(design.getCircuit());
+
+    eval();
 }
 
 
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicingModifications, data::xrange(8) * data::xrange(3, 8), x, bitsize)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicingModifications, data::xrange(8) * data::xrange(3, 8), x, bitsize)
 {
     using namespace hcl::core::frontend;
-    
-    DesignScope design;
-    
+
     BVec a = ConstBVec(x, bitsize);
-    
+
     {
         BVec b = a;
         b(1, 2) = 0;
-        
+
         auto groundTruth = ConstBVec(unsigned(x) & ~0b110, bitsize);
         sim_assert(b == groundTruth) << "Clearing two bits out of " << a << " should be " << groundTruth << " but is " << b;
     }
-    
-    eval(design.getCircuit());
+
+    eval();
 }
 
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestSlicingAddition, optimizationLevels * data::xrange(8) * data::xrange(3, 8), optimization, x, bitsize)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicingAddition, optimizationLevels * data::xrange(8) * data::xrange(3, 8), optimization, x, bitsize)
 {
     using namespace hcl::core::frontend;
-    
-    DesignScope design;
-    
+
     BVec a = ConstBVec(x, bitsize);
-    
+
     {
         BVec b = a;
         b(1, 2) = b(1, 2) + 1;
-        
+
         auto groundTruth = ConstBVec((unsigned(x) & ~0b110) | (unsigned(x+2) & 0b110), bitsize);
         sim_assert(b == groundTruth) << "Incrementing two bits out of " << a << " should be " << groundTruth << " but is " << b;
     }
-    
+
     design.getCircuit().optimize(optimization);
-    
-    eval(design.getCircuit());
+
+    eval();
 }
 
 
 
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, SimpleAdditionNetwork, optimizationLevels * data::xrange(8) * data::xrange(8) * data::xrange(1, 8), optimization, x, y, bitsize)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, SimpleAdditionNetwork, optimizationLevels * data::xrange(8) * data::xrange(8) * data::xrange(1, 8), optimization, x, y, bitsize)
 {
     using namespace hcl::core::frontend;
-    
-    DesignScope design;
 
     BVec a = ConstBVec(x, bitsize);
     sim_debug() << "Signal a is " << a;
-    
+
     BVec b = ConstBVec(y, bitsize);
     sim_debug() << "Signal b is " << b;
-    
+
     BVec c = a + b;
     sim_debug() << "Signal c (= a + b) is " << c;
-    
+
     sim_assert(c == ConstBVec(x+y, bitsize)) << "The signal c should be " << x+y << " (with overflow in " << bitsize << "bits) but is " << c;
-    
+
     design.getCircuit().optimize(optimization);
-    eval(design.getCircuit());
+    eval();
 }
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, BitFromBool, data::xrange(2) * data::xrange(2), l, r)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, BitFromBool, data::xrange(2) * data::xrange(2), l, r)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
     Bit a = l != 0;
     Bit b;
     b = r != 0;
@@ -190,16 +180,14 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, BitFromBool, d
     sim_assert((a != true) == Bit(l == 0)) << "test 4: " << a << "," << b;
     sim_assert((true != a) == Bit(l == 0)) << "test 5: " << a << "," << b;
 
-    eval(design.getCircuit());
+    eval();
 }
 
 
-BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
-    
-    DesignScope design;
-    
+
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
 
@@ -213,18 +201,16 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, hcl::core::sim::UnitTestSimulati
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick());
         }, refCount);
-        
-        sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);    
+
+        sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);
     }
-    
-    runTicks(design.getCircuit(), clock.getClk(), 10);
+
+    runTicks(clock.getClk(), 10);
 }
 
-BOOST_FIXTURE_TEST_CASE(SignalMoveAssignment, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SignalMoveAssignment, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
-
-    DesignScope design;
 
     {
         Bit a;
@@ -241,14 +227,13 @@ BOOST_FIXTURE_TEST_CASE(SignalMoveAssignment, hcl::core::sim::UnitTestSimulation
         sim_assert(b == 1);
     }
 
-    eval(design.getCircuit());
+    eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
 
@@ -258,7 +243,7 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, hcl::core::sim::UnitTestSimulationFi
         HCL_NAMED(a);
         HCL_NAMED(b);
         std::swap(a, b);
-    
+
         sim_assert(a == "xb");
         sim_assert(b == "xa");
     }
@@ -299,7 +284,7 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, hcl::core::sim::UnitTestSimulationFi
         auto pinX = pinOut(x);
         auto pinY = pinOut(y);
 
-        addSimulationProcess([&]()->SimProcess {
+        addSimulationProcess([=, &clock]()->SimProcess {
 
             sim(pinConditionIn) = 0;
             BOOST_TEST(sim(pinC) == 0xC);
@@ -320,14 +305,13 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, hcl::core::sim::UnitTestSimulationFi
     }
 
     design.getCircuit().optimize(3);
-    runTicks(design.getCircuit(), clock.getClk(), 100);
+    runTicks(clock.getClk(), 100);
 }
 
-BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
 
@@ -365,7 +349,7 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, hcl::core::sim::UnitTestSimulation
         for (BVec& i : listB)
             out.emplace_back(i);
 
-        addSimulationProcess([&]()->SimProcess {
+        addSimulationProcess([=, &clock]()->SimProcess {
 
             for (size_t i = 0; i < in.size(); ++i)
                 sim(in[i]) = i;
@@ -385,14 +369,13 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, hcl::core::sim::UnitTestSimulation
     }
 
     design.getCircuit().optimize(3);
-    runTicks(design.getCircuit(), clock.getClk(), 100);
+    runTicks(clock.getClk(), 100);
 }
 
-BOOST_FIXTURE_TEST_CASE(ConditionalLoopAssignment, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(ConditionalLoopAssignment, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
 
@@ -400,19 +383,17 @@ BOOST_FIXTURE_TEST_CASE(ConditionalLoopAssignment, hcl::core::sim::UnitTestSimul
     hcl::BVec counter = 4_b;
     HCL_NAMED(condition);
     HCL_NAMED(counter);
-    
+
     IF(condition)
         counter += 1;
     counter = reg(counter);
 
-    runTicks(design.getCircuit(), clock.getClk(), 100);
+    runTicks(clock.getClk(), 100);
 }
 
-BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
-
-    DesignScope design;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
@@ -431,14 +412,12 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, hcl::core::sim::UnitTestSimula
         counter += 1;
     }
 
-    runTicks(design.getCircuit(), clock.getClk(), 18);
+    runTicks(clock.getClk(), 18);
 }
 
-BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
-
-    DesignScope design;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
@@ -460,15 +439,13 @@ BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, hcl::core::sim::UnitTestSimulationFi
         sim_assert(bit2 == ref[0]) << "should be " << ref[0] << " but is " << bit2;
     }
 
-    runTicks(design.getCircuit(), clock.getClk(), 3);
+    runTicks(clock.getClk(), 3);
 }
 
-BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
-    
-    DesignScope design;
-    
+
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
 
@@ -484,19 +461,19 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, hcl::core::sim::UnitTestSimulati
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick()*2);
         }, refCount);
-        
-        sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);    
+
+        sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);
     }
-    
-    runTicks(design.getCircuit(), clock.getClk(), 10);
+
+    runTicks(clock.getClk(), 10);
 }
 
-BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
-    
-    DesignScope design;
-    
+
+
+
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
 
@@ -511,19 +488,19 @@ BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, hcl::core::sim::UnitTestSimulationFixt
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, 1ull << context.getTick());
         }, refCount);
-        
-        sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);    
+
+        sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);
     }
-    
-    runTicks(design.getCircuit(), clock.getClk(), 6);
+
+    runTicks(clock.getClk(), 6);
 }
 
-BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
-    
-    DesignScope design;
-    
+
+
+
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
     {
@@ -545,18 +522,18 @@ BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, hcl::core::sim::UnitTestS
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick()/2);
         }, refCount);
-        
-        sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);    
+
+        sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);
     }
-    
-    runTicks(design.getCircuit(), clock.getClk(), 10);
+
+    runTicks(clock.getClk(), 10);
 }
 
-BOOST_FIXTURE_TEST_CASE(StringLiteralParsing, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(StringLiteralParsing, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
 
     BVec a = "d7";
     BOOST_TEST(a.size() == 3);
@@ -568,14 +545,14 @@ BOOST_FIXTURE_TEST_CASE(StringLiteralParsing, hcl::core::sim::UnitTestSimulation
     sim_assert(b == "b0111");
     sim_assert(b == "4o7");
 
-    eval(design.getCircuit());
+    eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(ShiftOp, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(ShiftOp, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
 
     sim_assert(zshr("xA0", "x4") == "x0A") << "zshr failed";
     sim_assert(oshr("xA0", "x4") == "xFA") << "oshr failed";
@@ -589,14 +566,14 @@ BOOST_FIXTURE_TEST_CASE(ShiftOp, hcl::core::sim::UnitTestSimulationFixture)
     sim_assert(sshl("x0A", "x4") == "xA0") << "sshl failed";
     sim_assert(rotl("x4A", "x4") == "xA4") << "rotl failed";
 
-    eval(design.getCircuit());
+    eval();
 }
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAssignment, data::xrange(8) * data::xrange(8), x, y)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, ConditionalAssignment, data::xrange(8) * data::xrange(8), x, y)
 {
     using namespace hcl::core::frontend;
-    
-    DesignScope design;
+
+
 
     BVec a = ConstBVec(x, 8);
     BVec b = ConstBVec(y, 8);
@@ -607,23 +584,23 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAss
     ELSE {
         c = a - b;
     }
-    
+
     unsigned groundTruth;
-    if (unsigned(x) & 2) 
+    if (unsigned(x) & 2)
         groundTruth = unsigned(x)+unsigned(y);
     else
-        groundTruth = unsigned(x)-unsigned(y);        
+        groundTruth = unsigned(x)-unsigned(y);
 
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
-    
-    eval(design.getCircuit());
+
+    eval();
 }
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAssignmentMultipleStatements, data::xrange(8) * data::xrange(8), x, y)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, ConditionalAssignmentMultipleStatements, data::xrange(8) * data::xrange(8), x, y)
 {
     using namespace hcl::core::frontend;
-    
-    DesignScope design;
+
+
 
     BVec a = ConstBVec(x, 8);
     BVec b = ConstBVec(y, 8);
@@ -636,26 +613,26 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAss
     } ELSE {
         c = a - b;
     }
-    
+
     unsigned groundTruth;
     if (unsigned(x) & 2) {
         groundTruth = unsigned(x)+unsigned(y);
         groundTruth += x;
         groundTruth += y;
     } else {
-        groundTruth = unsigned(x)-unsigned(y);        
+        groundTruth = unsigned(x)-unsigned(y);
     }
 
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
-    
-    eval(design.getCircuit());
+
+    eval();
 }
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAssignmentMultipleElseStatements, data::xrange(8) * data::xrange(8), x, y)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, ConditionalAssignmentMultipleElseStatements, data::xrange(8) * data::xrange(8), x, y)
 {
     using namespace hcl::core::frontend;
-    
-    DesignScope design;
+
+
 
     BVec a = ConstBVec(x, 8);
     BVec b = ConstBVec(y, 8);
@@ -668,28 +645,28 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ConditionalAss
         c = c - b;
         c = c - b;
     }
-    
+
     unsigned groundTruth;
-    if (unsigned(x) & 2) 
+    if (unsigned(x) & 2)
         groundTruth = unsigned(x)+unsigned(y);
     else {
-        groundTruth = unsigned(x)-unsigned(y);        
-        groundTruth = groundTruth-unsigned(y);        
-        groundTruth = groundTruth-unsigned(y);        
+        groundTruth = unsigned(x)-unsigned(y);
+        groundTruth = groundTruth-unsigned(y);
+        groundTruth = groundTruth-unsigned(y);
     }
 
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
-    
-    eval(design.getCircuit());
+
+    eval();
 }
 
 
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelConditionalAssignment, data::xrange(8) * data::xrange(8), x, y)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignment, data::xrange(8) * data::xrange(8), x, y)
 {
     using namespace hcl::core::frontend;
-    
-    DesignScope design;
+
+
 
     BVec a = ConstBVec(x, 8);
     BVec b = ConstBVec(y, 8);
@@ -708,31 +685,31 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
             c = b;
         }
     }
-    
+
     unsigned groundTruth;
     if (unsigned(x) & 4) {
-        if (unsigned(x) & 2) 
+        if (unsigned(x) & 2)
             groundTruth = x+y;
         else
             groundTruth = x-y;
     } else {
-        if (unsigned(x) & 2) 
+        if (unsigned(x) & 2)
             groundTruth = x;
         else
             groundTruth = y;
     }
 
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
-    
-    eval(design.getCircuit());
+
+    eval();
 }
 
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelConditionalAssignmentMultipleStatements, data::xrange(8) * data::xrange(8), x, y)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentMultipleStatements, data::xrange(8) * data::xrange(8), x, y)
 {
     using namespace hcl::core::frontend;
-    
-    DesignScope design;
+
+
 
     BVec a = ConstBVec(x, 8);
     BVec b = ConstBVec(y, 8);
@@ -753,7 +730,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
             c = b;
         }
     }
-    
+
     unsigned groundTruth;
     if (unsigned(x) & 4) {
         if (unsigned(x) & 2) {
@@ -763,22 +740,22 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
         } else
             groundTruth = x-y;
     } else {
-        if (unsigned(x) & 2) 
+        if (unsigned(x) & 2)
             groundTruth = x;
         else
             groundTruth = y;
     }
 
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
-    
-    eval(design.getCircuit());
+
+    eval();
 }
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiElseConditionalAssignment, data::xrange(8)* data::xrange(8), x, y)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiElseConditionalAssignment, data::xrange(8)* data::xrange(8), x, y)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
 
     BVec a = ConstBVec(x, 8);
     BVec b = ConstBVec(y, 8);
@@ -807,23 +784,23 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiElseCondi
         else
             groundTruth = x - y;
     }
-    else 
+    else
         if (unsigned(x) & 2)
             groundTruth = x;
         else
             groundTruth = y;
-    
+
 
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
 
-    eval(design.getCircuit());
+    eval();
 }
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignmentNoElse, data::xrange(8) * data::xrange(8), x, y)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignmentNoElse, data::xrange(8) * data::xrange(8), x, y)
 {
     using namespace hcl::core::frontend;
-    
-    DesignScope design;
+
+
 
     BVec a = ConstBVec(x, 8);
     BVec b = ConstBVec(y, 8);
@@ -835,28 +812,28 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
         ELSE {
             c = a - b;
         }
-    } 
-    
+    }
+
     unsigned groundTruth = x;
     if (unsigned(x) & 4) {
-        if (unsigned(x) & 2) 
+        if (unsigned(x) & 2)
             groundTruth = x+y;
         else
             groundTruth = x-y;
-    } 
-    
+    }
+
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
-    
-    eval(design.getCircuit());
+
+    eval();
 }
 
 
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignmentNoIf, optimizationLevels * data::xrange(8) * data::xrange(8), optimization, x, y)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignmentNoIf, optimizationLevels * data::xrange(8) * data::xrange(8), optimization, x, y)
 {
     using namespace hcl::core::frontend;
-    
-    DesignScope design;
+
+
 
     BVec a = ConstBVec(x, 8);
     BVec b = ConstBVec(y, 8);
@@ -867,26 +844,26 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
         IF (a[1])
             c = b;
     }
-    
+
     unsigned groundTruth = x;
     if (unsigned(x) & 4) {
     } else {
-        if (unsigned(x) & 2) 
+        if (unsigned(x) & 2)
             groundTruth = y;
     }
 
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
-    
-    design.getCircuit().optimize(optimization);    
-    eval(design.getCircuit());
+
+    design.getCircuit().optimize(optimization);
+    eval();
 }
 
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignment, optimizationLevels * data::xrange(8) * data::xrange(8), optimization, x, y)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignment, optimizationLevels * data::xrange(8) * data::xrange(8), optimization, x, y)
 {
     using namespace hcl::core::frontend;
-    
-    DesignScope design;
+
+
 
     BVec a = ConstBVec(x, 8);
     BVec b = ConstBVec(y, 8);
@@ -901,29 +878,29 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
         IF (a[1])
             c = b;
     }
-    
+
     unsigned groundTruth = x;
     if (unsigned(x) & 4) {
-        if (unsigned(x) & 2) 
+        if (unsigned(x) & 2)
             groundTruth = x+y;
         else
             groundTruth = x-y;
     } else {
-        if (unsigned(x) & 2) 
+        if (unsigned(x) & 2)
             groundTruth = y;
     }
 
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
-    
-    design.getCircuit().optimize(optimization);    
-    eval(design.getCircuit());
+
+    design.getCircuit().optimize(optimization);
+    eval();
 }
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelConditionalAssignmentIfElseIf, data::xrange(8) * data::xrange(8), x, y)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentIfElseIf, data::xrange(8) * data::xrange(8), x, y)
 {
     using namespace hcl::core::frontend;
-    
-    DesignScope design;
+
+
 
     BVec a = ConstBVec(x, 8);
     BVec b = ConstBVec(y, 8);
@@ -935,25 +912,25 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, MultiLevelCond
         IF (a[1])
             c = b;
     }
-    
+
     unsigned groundTruth = x;
     if (unsigned(x) & 4) {
         groundTruth = x+y;
     } else {
-        if (unsigned(x) & 2) 
+        if (unsigned(x) & 2)
             groundTruth = y;
     }
 
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
-    
-    eval(design.getCircuit());
+
+    eval();
 }
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, UnsignedCompare, data::xrange(8) * data::xrange(8), x, y)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, UnsignedCompare, data::xrange(8) * data::xrange(8), x, y)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
 
     BVec a = ConstBVec(x, 8);
     BVec b = ConstBVec(y, 8);
@@ -991,14 +968,14 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, UnsignedCompar
         sim_assert(!(a == b));
     }
 
-    eval(design.getCircuit());
+    eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(BVecArithmeticOpSyntax, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(BVecArithmeticOpSyntax, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
 
     BVec in = 5;
     BVec res = in + 5u;
@@ -1006,7 +983,7 @@ BOOST_FIXTURE_TEST_CASE(BVecArithmeticOpSyntax, hcl::core::sim::UnitTestSimulati
     in * 5u;
     in / 5u;
     in % 5u;
-    
+
     in += 2u;
     in -= 1u;
     in *= 2u;
@@ -1020,11 +997,11 @@ BOOST_FIXTURE_TEST_CASE(BVecArithmeticOpSyntax, hcl::core::sim::UnitTestSimulati
 
 }
 
-BOOST_FIXTURE_TEST_CASE(LogicOpSyntax, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(LogicOpSyntax, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
 
     BVec in = 5;
 
@@ -1033,26 +1010,26 @@ BOOST_FIXTURE_TEST_CASE(LogicOpSyntax, hcl::core::sim::UnitTestSimulationFixture
 
 }
 
-BOOST_FIXTURE_TEST_CASE(SimpleCat, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SimpleCat, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
 
     BVec vec = 42u;
     BVec vec_2 = cat('1', vec, '0');
     BOOST_TEST(vec_2.size() == 8);
     sim_assert(vec_2 == 42u * 2 + 128) << "result is " << vec_2;
 
-    eval(design.getCircuit());
+    eval();
 }
 
 
-BOOST_FIXTURE_TEST_CASE(msbBroadcast, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(msbBroadcast, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
 
     BVec vec = "4b0000";
     BVec vec_2 = "4b1000";
@@ -1060,5 +1037,5 @@ BOOST_FIXTURE_TEST_CASE(msbBroadcast, hcl::core::sim::UnitTestSimulationFixture)
 
     sim_assert(vec == "4b1111") << "result is " << vec << " but should be 1111";
 
-    eval(design.getCircuit());
+    eval();
 }

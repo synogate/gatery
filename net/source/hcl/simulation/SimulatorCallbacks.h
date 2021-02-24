@@ -1,6 +1,8 @@
 #pragma once
 
 #include "../hlim/ClockRational.h"
+#include "../hlim/NodePort.h"
+#include "BitVectorState.h"
 
 #include <string>
 
@@ -22,6 +24,9 @@ class SimulatorCallbacks
         virtual void onDebugMessage(const hlim::BaseNode *src, std::string msg) { }
         virtual void onWarning(const hlim::BaseNode *src, std::string msg) { }
         virtual void onAssert(const hlim::BaseNode *src, std::string msg) { }
+
+        virtual void onSimProcOutputOverridden(hlim::NodePort output, const DefaultBitVectorState &state) { }
+        virtual void onSimProcOutputRead(hlim::NodePort output, const DefaultBitVectorState &state) { }
     protected:
 };
 

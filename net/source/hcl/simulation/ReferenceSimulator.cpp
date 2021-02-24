@@ -438,13 +438,23 @@ void ReferenceSimulator::advance(hlim::ClockRational seconds)
 }
 
 
-void ReferenceSimulator::setInputPin(hlim::Node_Pin *pin, const DefaultBitVectorState &state)
+void ReferenceSimulator::simProcSetInputPin(hlim::Node_Pin *pin, const DefaultBitVectorState &state)
 {
     auto it = m_program.m_stateMapping.nodeToInternalOffset.find(pin);
     HCL_ASSERT(it != m_program.m_stateMapping.nodeToInternalOffset.end());
     pin->setState(m_dataState.signalState, it->second.data(), state);
     m_stateNeedsReevaluating = true;
+    m_callbackDispatcher.onSimProcOutputOverridden({.node=pin, .port=0}, state);
 }
+
+
+DefaultBitVectorState ReferenceSimulator::simProcGetValueOfOutput(const hlim::NodePort &nodePort)
+{
+    auto value = getValueOfOutput(nodePort);
+    m_callbackDispatcher.onSimProcOutputRead(nodePort, value);
+    return value;
+}
+
 
 bool ReferenceSimulator::outputOptimizedAway(const hlim::NodePort &nodePort)
 {

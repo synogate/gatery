@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.0)
 
-find_package(Boost COMPONENTS system thread REQUIRED) 
+find_package(Boost COMPONENTS system thread REQUIRED)
 
 LIST(APPEND HCL_ALL_LIBS hcl_frontend)
 SET(HCL_ALL_LIBS ${HCL_ALL_LIBS} PARENT_SCOPE)
@@ -16,6 +16,8 @@ add_library(hcl_frontend STATIC
     source/hcl/frontend/Comments.h
     source/hcl/frontend/ConditionalScope.cpp
     source/hcl/frontend/ConditionalScope.h
+    source/hcl/frontend/FrontendUnitTestSimulationFixture.cpp
+    source/hcl/frontend/FrontendUnitTestSimulationFixture.h
     source/hcl/frontend/Constant.h
     source/hcl/frontend/FSM.cpp
     source/hcl/frontend/FSM.h
@@ -46,14 +48,14 @@ add_library(hcl_frontend STATIC
     source/hcl/frontend/SignalMiscOp.h
     source/hcl/frontend/SimSigHandle.cpp
     source/hcl/frontend/SimSigHandle.h
-    
-    
+
+
     source/hcl/frontend.h
  "source/hcl/frontend/Pack.h"  "source/hcl/frontend/Constant.cpp" "source/hcl/frontend/BitWidth.h" "source/hcl/frontend/ConstructFrom.h" "source/hcl/frontend/Vector.h")
 
 
 
-set(data_files 
+set(data_files
 )
 
 foreach(file ${data_files})

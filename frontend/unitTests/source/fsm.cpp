@@ -9,16 +9,17 @@
 #include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
 
 using namespace boost::unit_test;
+using UnitTestSimulationFixture = hcl::core::frontend::UnitTestSimulationFixture;
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data::make({0, 1, 2, 3}) * data::make({1, 2, 3, 4, 5, 10, 42}) * data::make({1, 2, 3, 4, 5, 23, 56, 126}), optimize, x, y)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestGCD, data::make({0, 1, 2, 3}) * data::make({1, 2, 3, 4, 5, 10, 42}) * data::make({1, 2, 3, 4, 5, 23, 56, 126}), optimize, x, y)
 {
     using namespace hcl::core::frontend;
-    
-    DesignScope design;
-    
+
+
+
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clkScp(clock);
-    
+
     auto gcd_ref = [](unsigned a, unsigned b) -> unsigned {
         while (a != b) {
             if (a > b)
@@ -28,9 +29,9 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
         }
         return a;
     };
-    
+
     unsigned maxTicks = 200;
-    
+
     {
         BVec x_vec = ConstBVec(x, 8);
         BVec y_vec = ConstBVec(y, 8);
@@ -40,20 +41,20 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             context.set(0, context.getTick() == 0);
         }, start);
 
-       
+
         BVec result;
         Bit done;
-        
+
         {
             HCL_NAMED(x_vec);
             HCL_NAMED(y_vec);
-            
+
             GroupScope entity(GroupScope::GroupType::ENTITY);
             entity
                 .setName("gcd")
                 .setComment("Statemachine to compute the GCD of two 8-bit integers.");
-            
-            
+
+
             fsm::ImmediateState idle;
             HCL_NAMED(idle);
             fsm::DelayedState running;
@@ -63,7 +64,6 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             a.setReset("b00000000");
             Register<BVec> b(8_b);
             b.setReset("b00000000");
-
 #if 0
             // Euclid's gcd
             idle.onActive([&]{
@@ -91,7 +91,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
 
             Register<BVec> d(4_b);
             d.setReset("b0000");
-            
+
             idle.onActive([&]{
                 IF (start) {
                     a = x_vec;
@@ -110,7 +110,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
                         a >>= 1;
                         b >>= 1;
                         d += 1;
-                    } 
+                    }
                     IF (!a_odd & b_odd) {
                         a >>= 1;
                     }
@@ -136,7 +136,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
                     a <<= 1;
                     d -= 1;
                 }
-            });            
+            });
 #endif
             fsm::FSM stateMachine(clock, idle);
             result = a.delay(1);
@@ -145,26 +145,26 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TestGCD, data:
             done = stateMachine.isInState(idle);
             HCL_NAMED(done);
         }
-        
+
         BVec ticks(8_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick());
         }, ticks);
-        
+
         sim_assert((ticks < ConstBVec(maxTicks-1, 8)) | done) << "The state machine should be idle after " << maxTicks << " cycles";
         BVec gtruth = ConstBVec(gcd_ref(x, y), 8);
         sim_assert((ticks < ConstBVec(maxTicks-1, 8)) | (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
     }
-    
+
     design.getCircuit().optimize(optimize);
-    runTicks(design.getCircuit(), clock.getClk(), maxTicks);
+    runTicks(clock.getClk(), maxTicks);
 }
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD, data::make({0, 1, 2, 3}) * data::make({ 1, 2, 3, 4, 5, 10, 42 })* data::make({ 1, 2, 3, 4, 5, 23, 56, 126 }), optimize, x, y)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, FSMlessTestGCD, data::make({0, 1, 2, 3}) * data::make({ 1, 2, 3, 4, 5, 10, 42 })* data::make({ 1, 2, 3, 4, 5, 23, 56, 126 }), optimize, x, y)
 {
     using namespace hcl::core::frontend;
 
-    DesignScope design;
+
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clkScp(clock);
@@ -242,5 +242,5 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, FSMlessTestGCD
     }
 
     design.getCircuit().optimize(optimize);
-    runTicks(design.getCircuit(), clock.getClk(), maxTicks);
+    runTicks(clock.getClk(), maxTicks);
 }

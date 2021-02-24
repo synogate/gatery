@@ -58,6 +58,7 @@ class NamespaceScope
         std::string allocateName(hlim::Node_Pin *ioPin, const std::string &desiredName);
         const std::string &getName(hlim::Node_Pin *ioPin) const;
 
+        std::string allocatePackageName(const std::string &desiredName);
         std::string allocateEntityName(const std::string &desiredName);
         std::string allocateBlockName(const std::string &desiredName);
         std::string allocateProcessName(const std::string &desiredName, bool clocked);
@@ -65,7 +66,7 @@ class NamespaceScope
         bool isNameInUse(const std::string &upperCaseName) const;
         AST &m_ast;
         NamespaceScope *m_parent;
-        
+
         std::set<std::string> m_namesInUse;
         std::map<hlim::NodePort, std::string> m_nodeNames;
         std::map<NodeInternalStorageSignal, std::string> m_nodeStorageNames;

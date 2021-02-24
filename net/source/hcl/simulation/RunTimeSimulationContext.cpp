@@ -15,7 +15,7 @@ void RunTimeSimulationContext::overrideSignal(hlim::NodePort output, const Defau
 {
     auto *pin = dynamic_cast<hlim::Node_Pin*>(output.node);
     HCL_DESIGNCHECK_HINT(pin != nullptr, "Only io pin outputs allow run time overrides!");
-    m_simulator->setInputPin(pin, state);
+    m_simulator->simProcSetInputPin(pin, state);
 }
 
 void RunTimeSimulationContext::getSignal(hlim::NodePort output, DefaultBitVectorState &state)
@@ -26,7 +26,7 @@ void RunTimeSimulationContext::getSignal(hlim::NodePort output, DefaultBitVector
     auto *pin = dynamic_cast<hlim::Node_Pin*>(output.node);
     HCL_DESIGNCHECK_HINT(pin || sigTap, "Only io pins and signal taps allow run time reading!");
     */
-    state = m_simulator->getValueOfOutput(output);
+    state = m_simulator->simProcGetValueOfOutput(output);
 }
 
 void RunTimeSimulationContext::simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor)

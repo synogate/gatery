@@ -135,7 +135,7 @@ namespace hcl::core::frontend {
 
     BVec::~BVec()
     {
-        m_node->removeRef();
+        if (m_node) m_node->removeRef();
     }
 
     BVec::BVec(hlim::Node_Signal* node, Range range, Expansion expansionPolicy) :
@@ -241,7 +241,7 @@ namespace hcl::core::frontend {
             m_node->setName(m_name);
         }
     }
-    
+
     void BVec::addToSignalGroup(hlim::SignalGroup *signalGroup)
     {
         m_node->moveToSignalGroup(signalGroup);
@@ -274,14 +274,14 @@ namespace hcl::core::frontend {
         {
             HCL_ASSERT(!incrementWidth);
             std::string in_name = in.node->getName();
-            
+
             auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(2);
             rewire->connectInput(0, getRawDriver());
             rewire->connectInput(1, in);
             rewire->setOp(replaceSelection(m_range, m_node->getOutputConnectionType(0).width));
             in.node = rewire;
             in.port = 0;
-            
+
             {
                 auto* signal = DesignScope::createNode<hlim::Node_Signal>();
                 signal->connectInput(in);
@@ -318,7 +318,7 @@ namespace hcl::core::frontend {
                 case Expansion::sign:   rewire->setPadTo(width(in)); break;
                 default: break;
                 }
-                                
+
                 oldSignal = SignalReadPort{ rewire };
             }
 
@@ -352,7 +352,7 @@ namespace hcl::core::frontend {
             HCL_ASSERT(!m_range.subset);
             m_range.width = width(in);
         }
-        
+
         m_node->connectInput(in);
     }
 
@@ -468,7 +468,7 @@ namespace hcl::core::frontend {
         }
 
         stride = s.stride * r.stride;
-        
+
         if(r.stride > 0)
             offset *= r.stride;
         offset += r.offset;

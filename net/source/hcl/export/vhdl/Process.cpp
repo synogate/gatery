@@ -202,16 +202,14 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
         return;
     }
 
+
     const hlim::Node_Logic *logicNode = dynamic_cast<const hlim::Node_Logic*>(nodePort.node);
     if (logicNode != nullptr) {
-        if (context == Context::STD_LOGIC)
-            stream << "'1' when (";
-        else
-            stream << "(";
+        stream << "(";
         if (logicNode->getOp() == hlim::Node_Logic::NOT) {
-            stream << " not "; formatExpression(stream, comments, logicNode->getDriver(0), dependentInputs, Context::BOOL);
+            stream << " not "; formatExpression(stream, comments, logicNode->getDriver(0), dependentInputs, context);
         } else {
-            formatExpression(stream, comments, logicNode->getDriver(0), dependentInputs, Context::BOOL);
+            formatExpression(stream, comments, logicNode->getDriver(0), dependentInputs, context);
             switch (logicNode->getOp()) {
                 case hlim::Node_Logic::AND: stream << " and "; break;
                 case hlim::Node_Logic::NAND: stream << " nand "; break;
@@ -222,19 +220,17 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
                 default:
                     HCL_ASSERT_HINT(false, "Unhandled operation!");
             };
-            formatExpression(stream, comments, logicNode->getDriver(1), dependentInputs, Context::BOOL);
+            formatExpression(stream, comments, logicNode->getDriver(1), dependentInputs, context);
         }
-        if (context == Context::STD_LOGIC)
-            stream << ") else '0'";
-        else
-            stream << ")";
+        stream << ")";
         return;
     }
+
 
     const hlim::Node_Compare *compareNode = dynamic_cast<const hlim::Node_Compare*>(nodePort.node);
     if (compareNode != nullptr) {
         if (context == Context::STD_LOGIC)
-            stream << "'1' when (";
+            stream << "bool2stdlogic(";
         else
             stream << "(";
         formatExpression(stream, comments, compareNode->getDriver(0), dependentInputs);
@@ -249,10 +245,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
                 HCL_ASSERT_HINT(false, "Unhandled operation!");
         };
         formatExpression(stream, comments, compareNode->getDriver(1), dependentInputs);
-        if (context == Context::STD_LOGIC)
-            stream << ") else '0'";
-        else
-            stream << ")";
+        stream << ")";
         return;
     }
 
@@ -314,13 +307,23 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
         // todo: what is the right way to get node width?
         const auto& conType = constNode->getOutputConnectionType(0);
 
-        char sep = '"';
-        if (conType.interpretation == hlim::ConnectionType::BOOL)
-            sep = '\'';
+        if (context == Context::BOOL) {
+            HCL_ASSERT(conType.interpretation == hlim::ConnectionType::BOOL);
+            const auto &v = constNode->getValue();
+            HCL_ASSERT(v.get(sim::DefaultConfig::DEFINED, 0));
+            if (v.get(sim::DefaultConfig::VALUE, 0))
+                stream << "true";
+            else
+                stream << "false";
+        } else {
+            char sep = '"';
+            if (conType.interpretation == hlim::ConnectionType::BOOL)
+                sep = '\'';
 
-        stream << sep;
-        stream << constNode->getValue();
-        stream << sep;
+            stream << sep;
+            stream << constNode->getValue();
+            stream << sep;
+        }
         return;
     }
 

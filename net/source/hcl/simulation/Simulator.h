@@ -44,7 +44,9 @@ class Simulator
         virtual void advanceEvent() = 0;
         virtual void advance(hlim::ClockRational seconds) = 0;
 
-        virtual void setInputPin(hlim::Node_Pin *pin, const DefaultBitVectorState &state) = 0;
+        virtual void simProcSetInputPin(hlim::Node_Pin *pin, const DefaultBitVectorState &state) = 0;
+        virtual DefaultBitVectorState simProcGetValueOfOutput(const hlim::NodePort &nodePort) = 0;
+
         virtual bool outputOptimizedAway(const hlim::NodePort &nodePort) = 0;
         virtual DefaultBitVectorState getValueOfInternalState(const hlim::BaseNode *node, size_t idx) = 0;
         virtual DefaultBitVectorState getValueOfOutput(const hlim::NodePort &nodePort) = 0;
@@ -68,6 +70,9 @@ class Simulator
                 virtual void onDebugMessage(const hlim::BaseNode *src, std::string msg) override;
                 virtual void onWarning(const hlim::BaseNode *src, std::string msg) override;
                 virtual void onAssert(const hlim::BaseNode *src, std::string msg) override;
+
+                virtual void onSimProcOutputOverridden(hlim::NodePort output, const DefaultBitVectorState &state) override;
+                virtual void onSimProcOutputRead(hlim::NodePort output, const DefaultBitVectorState &state) override;
         };
 
         hlim::ClockRational m_simulationTime;

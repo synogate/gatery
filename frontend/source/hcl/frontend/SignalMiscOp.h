@@ -8,6 +8,7 @@
 
 #include <hcl/hlim/coreNodes/Node_Multiplexer.h>
 #include <hcl/hlim/supportNodes/Node_SignalTap.h>
+#include <hcl/hlim/NodePtr.h>
 #include <hcl/utils/Preprocessor.h>
 #include <hcl/utils/Traits.h>
 
@@ -154,7 +155,7 @@ class SignalTapHelper
         }
     protected:
         size_t addInput(hlim::NodePort nodePort);
-        hlim::Node_SignalTap *m_node = nullptr;
+        hlim::NodePtr<hlim::Node_SignalTap> m_node;
 };
 
 
