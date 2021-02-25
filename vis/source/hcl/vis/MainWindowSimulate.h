@@ -25,12 +25,16 @@ class MainWindowSimulate : public QMainWindow, hcl::core::sim::SimulatorCallback
     public:
         explicit MainWindowSimulate(QWidget *parent, core::hlim::Circuit &circuit);
         ~MainWindowSimulate();
+
+        inline core::sim::ReferenceSimulator& getSimulator() { return m_simulator; }
     
         virtual void onNewTick(const core::hlim::ClockRational &simulationTime) override;
         virtual void onClock(const core::hlim::Clock *clock, bool risingEdge) override;
         virtual void onDebugMessage(const core::hlim::BaseNode *src, std::string msg) override;
         virtual void onWarning(const core::hlim::BaseNode *src, std::string msg) override;
         virtual void onAssert(const core::hlim::BaseNode *src, std::string msg) override;
+
+        void powerOn() { ontoolButton_Reset_pressed(); }
     private slots:
         void treeWidget_graphHierarchy_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
         void onCircuitViewElementsClicked(const std::set<BaseGraphicsComposite*> &elements);

@@ -295,14 +295,38 @@ void MainWindowSimulate::updateSignalValues()
             m_ui.tableWidget_signals->setItem(pair.second, 1, new QTableWidgetItem(QString::fromUtf8("undefined")));
         else {
             std::stringstream bitString;
-            for (auto i : utils::Range(state.size()))
-                if (!state.get(core::sim::DefaultConfig::DEFINED, state.size()-1-i))
-                    bitString << "?";
-                else
-                    if (state.get(core::sim::DefaultConfig::VALUE, state.size()-1-i))
-                        bitString << "1";
+            if (state.size() % 4 != 0) {
+                bitString << "0b";
+                for (auto i : utils::Range(state.size()))
+                    if (!state.get(core::sim::DefaultConfig::DEFINED, state.size() - 1 - i))
+                        bitString << "?";
                     else
-                        bitString << "0";
+                        if (state.get(core::sim::DefaultConfig::VALUE, state.size() - 1 - i))
+                            bitString << "1";
+                        else
+                            bitString << "0";
+            } else {
+                bitString << "0x";
+                for (auto i : utils::Range(state.size() / 4)) {
+                    bool defined = true;
+                    unsigned v = 0;
+                    for (auto j : utils::Range(4)) {
+                        if (!state.get(core::sim::DefaultConfig::DEFINED, state.size() - 1 - i * 4 - j))
+                            defined = false;
+                        if (state.get(core::sim::DefaultConfig::VALUE, state.size() - 1 - i * 4 - j))
+                            v = (v << 1) | 1;
+                        else
+                            v = (v << 1);
+                    }
+                    if (!defined)
+                        bitString << "X";
+                    else
+                        if (v < 10)
+                            bitString << v;
+                        else
+                            bitString << (char)('A' + v - 10);
+                }
+            }
             m_ui.tableWidget_signals->setItem(pair.second, 1, new QTableWidgetItem(QString::fromUtf8(bitString.str().c_str())));
         }
     }
