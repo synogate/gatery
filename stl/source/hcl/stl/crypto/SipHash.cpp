@@ -48,18 +48,18 @@ namespace hcl::stl
 
 		for (size_t i = 0; i < blockReg.size() / 64; ++i)
 		{
-			BVec msgWord = blockReg(i * 64, 64);
-			HCL_NAMED(msgWord);
-
-			state[3] ^= msgWord;
+			state[3] ^= blockReg(i * 64, 64);
 			for (size_t j = 0; j < m_messageWordRounds; ++j)
 			{
 				round(state);
 
 				if (m_placeRegister)
+				{
 					blockReg = reg(blockReg);
+					blockReg = reg(blockReg);
+				}
 			}
-			state[0] ^= msgWord;
+			state[0] ^= blockReg(i * 64, 64);
 		}
 	}
 
@@ -107,6 +107,9 @@ namespace hcl::stl
 		sipOp(state[2], state[3], 0, 16);
 		sipOp(state[2], state[1], 32, 17);
 		sipOp(state[0], state[3], 0, 21);
+
+		static size_t roundIdx = 0;
+		setName(state, "round" + std::to_string(roundIdx++) + "_state");
 	}
 
 	BVec SipHash::pad(const BVec& block, size_t msgByteSize)

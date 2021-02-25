@@ -11,7 +11,7 @@ namespace hcl::stl
 		SipHash(size_t messageWordRounds = 2, size_t finalizeRounds = 4, size_t hashWidth = 64);
 
 		virtual void enableRegister(bool state) { m_placeRegister = state; }
-		virtual size_t latency(size_t numBlocks, size_t blockSize) const { return m_placeRegister ? (m_messageWordRounds * (blockSize / 64) + m_finalizeRounds) : 0; }
+		virtual size_t latency(size_t numBlocks, size_t blockSize) const { return m_placeRegister ? 2 * (m_messageWordRounds * (blockSize / 64) + m_finalizeRounds) : 0; }
 
 		virtual void initialize(SipHashState& state, const BVec& key);
 		virtual void block(SipHashState& state, const BVec& block);
