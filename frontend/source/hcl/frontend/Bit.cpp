@@ -81,7 +81,7 @@ namespace hcl::core::frontend {
     {
         SignalReadPort ret = getRawDriver();
 
-        hlim::ConnectionType type = ret.node->getOutputConnectionType(ret.port);
+        hlim::ConnectionType type = hlim::getOutputConnectionType(ret);
         if (type.interpretation != hlim::ConnectionType::BOOL)
         {
             // TODO: cache rewire node if m_node's input is unchanged
@@ -150,7 +150,7 @@ namespace hcl::core::frontend {
         if (type.interpretation != hlim::ConnectionType::BOOL)
         {
             std::string in_name = in.node->getName();
-            
+
             auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(2);
             rewire->connectInput(0, getRawDriver());
             rewire->connectInput(1, in);
@@ -168,7 +168,7 @@ namespace hcl::core::frontend {
                 in = SignalReadPort(signal);
             }
         }
-        
+
         if (auto* scope = ConditionalScope::get(); scope && scope->getId() > m_initialScopeId)
         {
             auto* signal_in = DesignScope::createNode<hlim::Node_Signal>();
@@ -206,6 +206,6 @@ namespace hcl::core::frontend {
     {
         return true;
     }
-    
+
 
 }

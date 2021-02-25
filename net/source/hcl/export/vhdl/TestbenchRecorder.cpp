@@ -61,7 +61,7 @@ ARCHITECTURE tb OF testbench IS
         hlim::ConnectionType conType;
         if (isOutput) {
             auto driver = ioPin->getNonSignalDriver(0);
-            conType = driver.node->getOutputConnectionType(driver.port);
+            conType = hlim::getOutputConnectionType(driver);
         } else
             conType = ioPin->getOutputConnectionType(0);
 
@@ -230,7 +230,7 @@ void TestbenchRecorder::onSimProcOutputOverridden(hlim::NodePort output, const s
     cf.indent(m_testbenchFile, 2);
     m_testbenchFile << name_it->second << " <= ";
 
-    const auto& conType = output.node->getOutputConnectionType(output.port);
+    const auto& conType = hlim::getOutputConnectionType(output);
 
     char sep = '"';
     if (conType.interpretation == hlim::ConnectionType::BOOL)
@@ -248,7 +248,7 @@ void TestbenchRecorder::onSimProcOutputRead(hlim::NodePort output, const sim::De
 
     CodeFormatting &cf = m_ast->getCodeFormatting();
 
-    const auto& conType = output.node->getOutputConnectionType(output.port);
+    const auto& conType = hlim::getOutputConnectionType(output);
     if (conType.interpretation == hlim::ConnectionType::BOOL) {
         if (state.get(sim::DefaultConfig::DEFINED, 0)) {
             cf.indent(m_assertStatements, 2);

@@ -6,10 +6,10 @@
 
 
 namespace hcl::core::vhdl {
-    
+
 class BasicBlock;
 
-    
+
 struct SequentialStatement
 {
     enum Type {
@@ -20,7 +20,7 @@ struct SequentialStatement
         hlim::NodePort expressionProducer;
     } ref;
     size_t sortIdx = 0;
-    
+
     inline bool operator<(const SequentialStatement &rhs) { return sortIdx < rhs.sortIdx; }
 };
 
@@ -32,7 +32,7 @@ class Process : public BaseGrouping
 {
     public:
         Process(BasicBlock *parent);
-        
+
         void buildFromNodes(const std::vector<hlim::BaseNode*> &nodes);
         virtual void extractSignals() override;
         virtual void writeVHDL(std::ostream &stream, unsigned indentation) = 0;
@@ -46,15 +46,16 @@ class CombinatoryProcess : public Process
         CombinatoryProcess(BasicBlock *parent, const std::string &desiredName);
 
         virtual void allocateNames() override;
-        
+
         virtual void writeVHDL(std::ostream &stream, unsigned indentation) override;
     protected:
         enum class Context {
             BOOL,
             STD_LOGIC,
+            STD_LOGIC_VECTOR
         };
 
-        void formatExpression(std::ostream &stream, std::ostream &comments, const hlim::NodePort &nodePort, 
+        void formatExpression(std::ostream &stream, std::ostream &comments, const hlim::NodePort &nodePort,
                                 std::set<hlim::NodePort> &dependentInputs, Context context = Context::STD_LOGIC, bool forceUnfold = false);
 };
 

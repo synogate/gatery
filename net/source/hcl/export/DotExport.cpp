@@ -113,7 +113,7 @@ void DotExport::operator()(const hlim::Circuit &circuit)
 
             unsigned producerId = node2idx.find(producer.node)->second;
 
-            auto type = producer.node->getOutputConnectionType(producer.port);
+            auto type = hlim::getOutputConnectionType(producer);
 
             file << "node_" << producerId << " -> node_" << nodeId << " [";
 

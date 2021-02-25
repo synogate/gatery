@@ -6,7 +6,7 @@
 #include <hcl/hlim/coreNodes/Node_Register.h>
 
 namespace hcl::core::frontend {
-    
+
 
 Clock::Clock(const ClockConfig &config)
 {
@@ -23,13 +23,7 @@ Clock::Clock(const Clock &other)
 
 Clock &Clock::operator=(const Clock &other)
 {
-    if (other.m_clock->getParentClock() == nullptr) {
-        m_clock = DesignScope::createClock<hlim::RootClock>(m_clock->getName(), m_clock->getAbsoluteFrequency());
-        ///@todo copy attributes
-    } else {
-        m_clock = DesignScope::createClock<hlim::DerivedClock>(other.m_clock->getParentClock());
-        ///@todo copy attributes
-    }
+    m_clock = DesignScope::get()->getCircuit().createUnconnectedClock(other.m_clock, other.m_clock->getParentClock());
     return *this;
 }
 
@@ -41,7 +35,7 @@ Clock::Clock(hlim::Clock *clock, const ClockConfig &config) : m_clock(clock)
     }
     if (config.m_frequencyMultiplier) dynamic_cast<hlim::DerivedClock*>(m_clock)->setFrequencyMuliplier(*config.m_frequencyMultiplier);
     applyConfig(config);
-    
+
 }
 
 void Clock::applyConfig(const ClockConfig &config)
@@ -53,7 +47,7 @@ void Clock::applyConfig(const ClockConfig &config)
     if (config.m_initializeRegs) m_clock->setInitializeRegs(*config.m_initializeRegs);
     if (config.m_resetHighActive) m_clock->setResetHighActive(*config.m_resetHighActive);
     if (config.m_phaseSynchronousWithParent) m_clock->setPhaseSynchronousWithParent(*config.m_phaseSynchronousWithParent);
-    
+
     HCL_DESIGNCHECK_HINT(m_clock->getResetType() != ResetType::NONE || m_clock->getInitializeRegs(), "Either a type of reset, or the initialization for registers should be enabled!");
 }
 
@@ -71,7 +65,7 @@ Bit Clock::driveSignal()
     node->recordStackTrace();
 
     node->setClock(m_clock);
- 
+
     return SignalReadPort(node);
 }
 */

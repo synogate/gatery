@@ -154,8 +154,8 @@ void MemoryGroup::convertPortDependencyToLogic(Circuit &circuit)
     for (auto &rp : m_readPorts) {
         // Collect a list of all potentially conflicting write ports and sort them in write order, so that conflict resolution can also happen in write order
         std::vector<WritePort*> sortedWritePorts;
-        for (auto &wp : m_writePorts) 
-            if (wp.node->isOrderedBefore(rp.node)) 
+        for (auto &wp : m_writePorts)
+            if (wp.node->isOrderedBefore(rp.node))
                 sortedWritePorts.push_back(&wp);
 
         // sort last to first because multiplexers are prepended.
@@ -270,7 +270,7 @@ void MemoryGroup::convertPortDependencyToLogic(Circuit &circuit)
                 addrCompNode->connectInput(1, wp2.node->getDriver((unsigned)Node_MemPort::Inputs::address));
 
                 // Enable write if addresses differ
-                NodePort newWrEn1 = {.node = addrCompNode, .port = 0ull}; 
+                NodePort newWrEn1 = {.node = addrCompNode, .port = 0ull};
                 circuit.appendSignal(newWrEn1)->setName("newWrEn");
 
                 // Alternatively, enable write if wp2 does not write (no connection on enable means yes)
@@ -353,11 +353,11 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
                     // We encountered a read port.
                     // If this is a ROM, we are fine. Otherwise we have a problem because we can not delay the read by one tick.
                     if (!port->getMemory()->isROM()) {
-                        issues 
+                        issues
                             << "Async read port feeds into a non-read-only memory, can't insert register to make synchronous without breaking read-write-timings on second memory.\n"
                             << "Read port from:\n";
                         issues << rp.node->getStackTrace();
-                        issues 
+                        issues
                             << "Second non-read-only memory access:\n";
                         issues << port->getStackTrace();
                         HCL_DESIGNCHECK_HINT(false, issues.str());
@@ -367,11 +367,11 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
                     // RMW hazard fixing if writing to the same memory
                     if (port->getMemory() != m_memory) {
                         // This is also a problem
-                        issues 
+                        issues
                             << "Async read port feeds into a write port of memory, can't insert register to make synchronous without breaking read-write-timings on second memory.\n"
                             << "Read port from:\n";
                         issues << rp.node->getStackTrace();
-                        issues 
+                        issues
                             << "Second write memory access:\n";
                         issues << port->getStackTrace();
                         HCL_DESIGNCHECK_HINT(false, issues.str());
@@ -388,11 +388,11 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
             } else
             if (auto *reg = dynamic_cast<Node_Register*>(nh.node())) {
                 if (reg->getNonSignalDriver((unsigned)Node_Register::Input::RESET_VALUE).node != nullptr) {
-                    issues 
+                    issues
                         << "Async read port feeds through combinatory nodes into a register with a reset value. The reset can value would change upon moving the register backwards.\n"
                         << "Read port from:\n";
                     issues << rp.node->getStackTrace();
-                    issues 
+                    issues
                         << "Register:\n";
                     issues << reg->getStackTrace();
                     HCL_DESIGNCHECK_HINT(false, issues.str());
@@ -403,12 +403,12 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
                 continue;
             } else
             if (!nh.node()->isCombinatorial() || nh.node()->hasSideEffects()) {
-                issues 
+                issues
                     << "Async read port feeds into a non-combinatorial node or a node with side effects. Can't insert register.\n";
-                issues 
+                issues
                     << "Read port from:\n";
                 issues << rp.node->getStackTrace();
-                issues 
+                issues
                     << "Offending node from:\n";
                 issues << nh.node()->getStackTrace();
                 HCL_DESIGNCHECK_HINT(false, issues.str());
@@ -427,7 +427,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
                 issue << "From:\n" << writePort->getStackTrace();
             }
 
-            for (auto reg : registers) 
+            for (auto reg : registers)
                 if (clock == nullptr) {
                     clock = reg->getClocks()[0];
                     issue << "From:\n" << reg->getStackTrace();
@@ -440,7 +440,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
         {
             std::stringstream issue;
             issue << "Can't turn memory into blockram because an asynchronous read can not be turned into a synchronous one: Following registers are using differing enables.\n";
-            for (auto reg : registers) 
+            for (auto reg : registers)
                 if (!enable) {
                     enable = reg->getNonSignalDriver((unsigned)Node_Register::Input::ENABLE);
                     issue << "From:\n" << reg->getStackTrace();
@@ -462,7 +462,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
             reg->moveToGroup(ng);
             reg->setComment(comment);
             reg->setClock(clock);
-            
+
             reg->connectInput(Node_Register::Input::ENABLE, *enable);
             reg->connectInput(Node_Register::Input::DATA, np);
             np = {.node = reg, .port = 0ull};
@@ -478,7 +478,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
             reg->moveToGroup(ng);
             reg->setComment(comment);
             reg->setClock(clock);
-            
+
             reg->connectInput(Node_Register::Input::ENABLE, *enable);
             reg->connectInput(Node_Register::Input::DATA, driver);
 
@@ -493,7 +493,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
         rp.syncReadDataReg = insertDelayOutput(rp.dataOutput, this, "sync_read", "Retimed register to make read synchronous");
 
         // bypass output registers
-        for (auto reg : registers) 
+        for (auto reg : registers)
             reg->bypassOutputToInput(0, (unsigned)Node_Register::Input::DATA);
 
         // insert delays on other inputs
@@ -501,10 +501,10 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
             for (auto i : utils::Range(n->getNumInputPorts())) {
                 auto driver = n->getNonSignalDriver(i);
                 if (driver.node == nullptr) continue;
-                if (driver.node->getOutputConnectionType(driver.port).interpretation == ConnectionType::DEPENDENCY) continue; // TODO: think about this
+                if (hlim::outputIsDependency(driver)) continue; // TODO: think about this
                 if (!delayedNodes.contains(driver.node) && driver.node != rp.syncReadDataReg) {
                     insertDelayInput({.node=n, .port=i}, n->getGroup(), (n->getName()+"delayed").c_str(), "Auto generated register on signal going into a subnet that was delayed due to register retiming for BRAM sync read formation.");
-                }                
+                }
             }
         }
 
@@ -516,7 +516,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
             delayedWrData->recordStackTrace();
             delayedWrData->moveToGroup(m_fixupNodeGroup);
             delayedWrData->setClock(clock);
-            
+
             delayedWrData->connectInput(Node_Register::Input::ENABLE, *enable);
             delayedWrData->connectInput(Node_Register::Input::DATA, writePort->getDriver((unsigned)Node_MemPort::Inputs::wrData));
 
@@ -579,23 +579,23 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
             // Rewire all original consumers to the mux output
             for (auto np : consumers)
                 np.node->rewireInput(np.port, muxOut);
-        }       
+        }
     }
 }
 
 void MemoryGroup::verify()
 {
     switch (m_memory->type()) {
-        case Node_Memory::MemType::BRAM: 
+        case Node_Memory::MemType::BRAM:
             for (auto &rp : m_readPorts) {
                 std::stringstream issue;
-                issue << "Memory can not become BRAM because a read port is missing it's data register.\nMemory from:\n" 
+                issue << "Memory can not become BRAM because a read port is missing it's data register.\nMemory from:\n"
                       << m_memory->getStackTrace() << "\nRead port from:\n" << rp.node->getStackTrace();
                 HCL_DESIGNCHECK_HINT(rp.syncReadDataReg != nullptr, issue.str());
             }
             if (m_readPorts.size() + m_writePorts.size() > 2) {
                 std::stringstream issue;
-                issue << "Memory can not become BRAM because it has too many memory ports.\nMemory from:\n" 
+                issue << "Memory can not become BRAM because it has too many memory ports.\nMemory from:\n"
                       << m_memory->getStackTrace();
                 HCL_DESIGNCHECK_HINT(false, issue.str());
             }
@@ -603,13 +603,13 @@ void MemoryGroup::verify()
         case Node_Memory::MemType::LUTRAM:
             if (m_readPorts.size() > 1) {
                 std::stringstream issue;
-                issue << "Memory can not become LUTRAM because it has too many read ports.\nMemory from:\n" 
+                issue << "Memory can not become LUTRAM because it has too many read ports.\nMemory from:\n"
                       << m_memory->getStackTrace();
                 HCL_DESIGNCHECK_HINT(false, issue.str());
             }
             if (m_writePorts.size() > 1) {
                 std::stringstream issue;
-                issue << "Memory can not become LUTRAM because it has too many write ports.\nMemory from:\n" 
+                issue << "Memory can not become LUTRAM because it has too many write ports.\nMemory from:\n"
                       << m_memory->getStackTrace();
                 HCL_DESIGNCHECK_HINT(false, issue.str());
             }
