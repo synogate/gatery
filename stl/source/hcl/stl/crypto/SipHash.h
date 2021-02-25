@@ -28,4 +28,6 @@ namespace hcl::stl
 		bool m_placeRegister = false;
 	};
 
+	std::tuple<BVec, size_t> sipHash(const BVec& block, const BVec& key, bool placeregister = true);
+
 }

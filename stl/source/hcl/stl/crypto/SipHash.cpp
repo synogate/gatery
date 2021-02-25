@@ -22,8 +22,8 @@ namespace hcl::stl
 		state[3] = "x7465646279746573";
 		
 		HCL_DESIGNCHECK_HINT(key.size() == 128, "SipHash key must be 128bit wide");
-		BVec k0 = swapEndian(key(64, 64));
-		BVec k1 = swapEndian(key(0, 64));
+		BVec k0 = key( 0, 64);
+		BVec k1 = key(64, 64);
 		HCL_NAMED(k0);
 		HCL_NAMED(k1);
 
@@ -43,19 +43,21 @@ namespace hcl::stl
 
 		HCL_DESIGNCHECK_HINT(block.size() % 64 == 0, "SipHash blocks need to be a multiple of 64 bit");
 
-		for (size_t i = 0; i < block.size() / 64; ++i)
+		BVec blockReg = block;
+		HCL_NAMED(blockReg);
+
+		for (size_t i = 0; i < blockReg.size() / 64; ++i)
 		{
-			BVec msgWord = swapEndian(block(i * 64, 64));
+			BVec msgWord = blockReg(i * 64, 64);
 			HCL_NAMED(msgWord);
 
 			state[3] ^= msgWord;
 			for (size_t j = 0; j < m_messageWordRounds; ++j)
 			{
-				sim_debug() << "state0: " << state[0];
-				sim_debug() << "state1: " << state[1];
-				sim_debug() << "state2: " << state[2];
-				sim_debug() << "state3: " << state[3];
 				round(state);
+
+				if (m_placeRegister)
+					blockReg = reg(blockReg);
 			}
 			state[0] ^= msgWord;
 		}
@@ -115,9 +117,28 @@ namespace hcl::stl
 		BVec paddedLength = ConstBVec(msgByteSize, 8);
 		HCL_NAMED(paddedLength);
 
-		size_t zeroPad = 64 - ((msgByteSize * 8 + 8) % 64);
+		size_t zeroPad = (64 - (msgByteSize * 8 + 8)) % 64;
 		BVec paddedBlock = cat(paddedLength, zext(block(0, msgByteSize*8), zeroPad));
 		HCL_NAMED(paddedBlock);
 		return paddedBlock;
+	}
+	
+	std::tuple<BVec, size_t> sipHash(const BVec& block, const BVec& key, bool placeregister)
+	{
+		GroupScope entity(GroupScope::GroupType::ENTITY);
+		entity.setName("SipHash");
+
+		HCL_DESIGNCHECK_HINT(block.size() <= 56 && block.size() % 8 == 0, "no impl");
+
+		SipHash hash;
+		hash.enableRegister(placeregister);
+
+		BVec paddedBlock = hash.pad(block, block.size() / 8);
+		HCL_NAMED(paddedBlock);
+
+		SipHashState state;
+		hash.initialize(state, key);
+		hash.block(state, paddedBlock);
+		return { hash.finalize(state), hash.latency(1, 64) };
 	}
 }

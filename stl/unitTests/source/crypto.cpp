@@ -276,7 +276,7 @@ BOOST_FIXTURE_TEST_CASE(SipHash64Test, hcl::core::sim::UnitTestSimulationFixture
 
     stl::SipHashState state;
     
-    BVec key = "x000102030405060708090A0B0C0D0E0F";
+    BVec key = "x0F0E0D0C0B0A09080706050403020100";
     sip.initialize(state, key);
     
     InputPins msg = pinIn(64_b).setName("msg");
@@ -307,21 +307,56 @@ BOOST_FIXTURE_TEST_CASE(SipHash64Test, hcl::core::sim::UnitTestSimulationFixture
         uint64_t blockVal = 0;
         for (size_t i = 0; i < 7; ++i)
         {
-            blockVal |= i << (64 - (i + 1) * 8);
-            blockVal++; // siphash padding
-            sim(msg) = blockVal;
-            co_await WaitClk(clock);   
+            blockVal |= i << (i * 8);
+            sim(msg) = blockVal + (i + 1) * (1ull << 56); // add padding
+            co_await WaitClk(clock);
             BOOST_TEST(sim(hash) == test_vector_sip64[i + 1]);
         }
 
     });
 
+    //design.getCircuit().optimize(3);
+    //design.visualize("siphash");
+    //core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "siphash.vcd");
+    //vcd.addAllNamedSignals();
 
     design.getCircuit().optimize(3);
+    runTicks(design.getCircuit(), clock.getClk(), 10);
+}
 
-    design.visualize("siphash");
-    core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "siphash.vcd");
-    vcd.addAllNamedSignals();
+BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, hcl::core::sim::UnitTestSimulationFixture)
+{
+    DesignScope design;
 
-    runTicks(design.getCircuit(), clock.getClk(), 100);
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    ClockScope clockScope(clock);
+
+    stl::SipHash sip;
+
+    uint64_t blockVal = 0;
+    for (size_t i = 0; i < 7; ++i)
+    {
+        blockVal |= i << (i * 8);
+        uint64_t ref = blockVal + (i + 1) * (1ull << 56); // add padding
+
+        BVec paddedBlock = sip.pad(ConstBVec(blockVal, (i + 1) * 8), i + 1);
+        HCL_NAMED(paddedBlock);
+        sim_assert(paddedBlock == ref);
+    }
+
+    eval(design.getCircuit());
+}
+
+BOOST_FIXTURE_TEST_CASE(SipHash64HelperTest, hcl::core::sim::UnitTestSimulationFixture)
+{
+    DesignScope design;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    ClockScope clockScope(clock);
+
+    auto [hash, latency] = stl::sipHash("x0100", "x0F0E0D0C0B0A09080706050403020100", false);
+    BOOST_TEST(latency == 0);
+    sim_assert(hash == 0x0d6c8009d9a94f5a) << hash;
+    
+    eval(design.getCircuit());
 }
