@@ -51,12 +51,15 @@ void WaveformRecorder::addAllOutPins()
         }
 }
 
-void WaveformRecorder::addAllNamedSignals()
+void WaveformRecorder::addAllNamedSignals(bool appendNodeId)
 {
     for (auto &node : m_circuit.getNodes())
         if (auto *sig = dynamic_cast<hlim::Node_Signal*>(node.get())) {
             if (!sig->getName().empty())
-                addSignal({.node=sig, .port=0ull});
+                if (!appendNodeId)
+                    addSignal({.node=sig, .port=0ull}, sig->getName());
+                else
+                    addSignal({.node=sig, .port=0ull});
         }
 }
 
