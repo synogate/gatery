@@ -162,7 +162,6 @@ namespace hcl::core::frontend {
         if (m_range.subset)
         {
             auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-            rewire->setName(std::string(getName()));
             rewire->connectInput(0, outRange);
             rewire->setOp(pickSelection(m_range));
             outRange = SignalReadPort(rewire, m_expansionPolicy);
@@ -221,7 +220,6 @@ namespace hcl::core::frontend {
             if (m_range.subset)
             {
                 auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-                rewire->setName(std::string(getName()));
                 rewire->connectInput(0, m_readPort);
                 rewire->setOp(pickSelection(m_range));
                 m_readPort = SignalReadPort(rewire, m_expansionPolicy);
@@ -230,16 +228,23 @@ namespace hcl::core::frontend {
         return m_readPort;
     }
 
+    std::string_view BVec::getName() const
+    {
+        if (auto *sigNode = dynamic_cast<hlim::Node_Signal*>(m_node->getDriver(0).node))
+            return sigNode->getName();
+        return {};
+    }
+
     void BVec::setName(std::string name)
     {
-        m_name = std::move(name);
+        HCL_DESIGNCHECK_HINT(m_node != nullptr, "Can only set names to initialized BVecs!");
 
-        if (m_node)
-        {
-            if (m_node->getDriver(0).node != nullptr)
-                m_node->getDriver(0).node->setName(m_name);
-            m_node->setName(m_name);
-        }
+        auto* signal = DesignScope::createNode<hlim::Node_Signal>();
+        signal->connectInput(getReadPort());
+        signal->setName(name);
+        signal->recordStackTrace();
+
+        assign(SignalReadPort(signal));
     }
 
     void BVec::addToSignalGroup(hlim::SignalGroup *signalGroup)
@@ -263,9 +268,6 @@ namespace hcl::core::frontend {
         if (!m_node)
             createNode(width(in), in.expansionPolicy);
 
-        if (getName().empty())
-            setName(in.node->getName());
-
         const bool incrementWidth = width(in) > m_range.width;
         if(!incrementWidth)
             in = in.expand(m_range.width, hlim::ConnectionType::BITVEC);
@@ -285,7 +287,6 @@ namespace hcl::core::frontend {
             {
                 auto* signal = DesignScope::createNode<hlim::Node_Signal>();
                 signal->connectInput(in);
-                signal->setName(in_name);
                 signal->recordStackTrace();
                 in = SignalReadPort(signal);
             }
@@ -295,10 +296,9 @@ namespace hcl::core::frontend {
         {
             SignalReadPort oldSignal = getRawDriver();
 
-            { // place optional signal node for graph debugging
+            if (dynamic_cast<hlim::Node_Signal*>(oldSignal.node) == nullptr) {
                 auto* signal = DesignScope::createNode<hlim::Node_Signal>();
                 signal->connectInput(oldSignal);
-                signal->setName(m_node->getName());
                 signal->recordStackTrace();
                 oldSignal = SignalReadPort{ signal };
             }
@@ -330,10 +330,9 @@ namespace hcl::core::frontend {
             in = SignalReadPort{ mux };
         }
 
-        {
+        if (dynamic_cast<hlim::Node_Signal*>(in.node) == nullptr) {
             auto* signal = DesignScope::createNode<hlim::Node_Signal>();
             signal->connectInput(in);
-            signal->setName(m_node->getName());
             signal->recordStackTrace();
             in = SignalReadPort(signal);
         }
@@ -367,9 +366,6 @@ namespace hcl::core::frontend {
         m_node->setConnectionType(getConnType());
         m_node->recordStackTrace();
         m_node->addRef();
-
-        if (!m_name.empty())
-            m_node->setName(m_name);
     }
 
     SignalReadPort BVec::getRawDriver() const

@@ -15,12 +15,12 @@ namespace hcl::stl
 		GroupScope entity(GroupScope::GroupType::ENTITY);
 		entity.setName("SipHashInit");
 
-		HCL_NAMED(state);
 		state[0] = "x736f6d6570736575";
 		state[1] = "x646f72616e646f6d";
 		state[2] = "x6c7967656e657261";
 		state[3] = "x7465646279746573";
-		
+		HCL_NAMED(state);
+
 		HCL_DESIGNCHECK_HINT(key.size() == 128, "SipHash key must be 128bit wide");
 		BVec k0 = key( 0, 64);
 		BVec k1 = key(64, 64);
@@ -125,7 +125,7 @@ namespace hcl::stl
 		HCL_NAMED(paddedBlock);
 		return paddedBlock;
 	}
-	
+
 	std::tuple<BVec, size_t> sipHash(const BVec& block, const BVec& key, bool placeregister)
 	{
 		GroupScope entity(GroupScope::GroupType::ENTITY);
