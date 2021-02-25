@@ -14,9 +14,7 @@ target_include_directories (unitTestSTL PUBLIC
 
 add_definitions (-DBOOST_TEST_DYN_LINK)
 target_link_libraries (unitTestSTL
-    hcl_net
-    hcl_frontend
-    hcl_stl
+    ${HCL_ALL_LIBS}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
 )
