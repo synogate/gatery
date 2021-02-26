@@ -179,7 +179,7 @@ void VCDSink::advanceTick(const hlim::ClockRational &simulationTime)
 {
     auto ratTickIdx = simulationTime / hlim::ClockRational(1, 1'000'000'000'000ull);
     size_t tickIdx = ratTickIdx.numerator() / ratTickIdx.denominator();
-    m_vcdFile << "#"<<tickIdx<<"\n";
+    m_vcdFile << "#"<<tickIdx<<std::endl;
 }
 
 
