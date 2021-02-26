@@ -29,7 +29,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundA, hcl::core::sim::UnitTestSimulationFixture)
     stl::Sha1Generator<> sha1, sha1ref;
     sha1.beginBlock(msgBlock);
     sim_assert(sha1.w[0] == "x80000000") << "w0";
-    
+
     sha1.round(0);
 
     uint32_t h1 = 0xEFCDAB89;
@@ -364,10 +364,10 @@ BOOST_FIXTURE_TEST_CASE(SipHash64Test, hcl::core::sim::UnitTestSimulationFixture
     sip.enableRegister(true);
 
     stl::SipHashState state;
-    
+
     BVec key = "x0F0E0D0C0B0A09080706050403020100";
     sip.initialize(state, key);
-    
+
     InputPins msg = pinIn(64_b).setName("msg");
     sip.block(state, msg);
     OutputPins hash = pinOut(sip.finalize(state)).setName("hash");
@@ -419,7 +419,7 @@ BOOST_FIXTURE_TEST_CASE(SipHash64Test, hcl::core::sim::UnitTestSimulationFixture
     design.getCircuit().optimize(3);
     design.visualize("siphash");
     core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "siphash.vcd");
-    vcd.addAllNamedSignals();
+    vcd.addAllSignals();
 
     design.getCircuit().optimize(3);
     runTicks(design.getCircuit(), clock.getClk(), 24);
@@ -458,6 +458,6 @@ BOOST_FIXTURE_TEST_CASE(SipHash64HelperTest, hcl::core::sim::UnitTestSimulationF
     auto [hash, latency] = stl::sipHash("x0100", "x0F0E0D0C0B0A09080706050403020100", false);
     BOOST_TEST(latency == 0);
     sim_assert(hash == 0x0d6c8009d9a94f5a) << hash;
-    
+
     eval(design.getCircuit());
 }
