@@ -62,6 +62,7 @@ class NamespaceScope
         std::string allocateEntityName(const std::string &desiredName);
         std::string allocateBlockName(const std::string &desiredName);
         std::string allocateProcessName(const std::string &desiredName, bool clocked);
+        std::string allocateInstanceName(const std::string &desiredName);
     protected:
         bool isNameInUse(const std::string &upperCaseName) const;
         AST &m_ast;

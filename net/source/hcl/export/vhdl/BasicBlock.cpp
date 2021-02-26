@@ -53,13 +53,13 @@ void NodeGroupInfo::buildFrom(hlim::NodeGroup *nodeGroup, bool mergeAreasReccurs
 
 
 BasicBlock::BasicBlock(AST &ast, BasicBlock *parent, NamespaceScope *parentNamespace) : BaseGrouping(ast, parent, parentNamespace)
-{ 
-    
+{
+
 }
 
-BasicBlock::~BasicBlock() 
-{ 
-    
+BasicBlock::~BasicBlock()
+{
+
 }
 
 
@@ -73,7 +73,7 @@ void BasicBlock::extractSignals()
         ent->extractSignals();
         routeChildIOUpwards(ent);
     }
-    
+
     for (auto node : m_externalNodes) {
         for (auto i : utils::Range(node->getNumInputPorts())) {
             auto driver = node->getDriver(i);
@@ -87,7 +87,7 @@ void BasicBlock::extractSignals()
                 .node = node,
                 .port = i
             };
-            
+
             if (isConsumedExternally(driver))
                 m_outputs.insert(driver);
             else
@@ -98,14 +98,14 @@ void BasicBlock::extractSignals()
                 m_inputClocks.insert(node->getClocks()[i]);
         }
     }
-    verifySignalsDisjoint();    
+    verifySignalsDisjoint();
 }
 
 void BasicBlock::allocateNames()
 {
     for (auto &local : m_localSignals)
         m_namespaceScope.allocateName(local, findNearestDesiredName(local), CodeFormatting::SIG_LOCAL_SIGNAL);
-    
+
     for (auto &proc : m_processes)
         proc->allocateNames();
     for (auto &ent : m_entities)
@@ -145,13 +145,13 @@ void BasicBlock::collectInstantiations(hlim::NodeGroup *nodeGroup, bool reccursi
     while (!nodeGroupStack.empty()) {
         hlim::NodeGroup *group = nodeGroupStack.back();
         nodeGroupStack.pop_back();
-    
+
         for (auto node : group->getNodes()) {
             hlim::Node_External *extNode = dynamic_cast<hlim::Node_External *>(node);
             if (extNode != nullptr)
                 handleExternalNodeInstantiaton(extNode);
         }
-        
+
         for (const auto &childGroup : group->getChildren()) {
             switch (childGroup->getGroupType()) {
                 case hlim::NodeGroup::GroupType::ENTITY:
@@ -173,13 +173,14 @@ void BasicBlock::handleEntityInstantiation(hlim::NodeGroup *nodeGroup)
 {
     auto &entity = m_ast.createEntity(nodeGroup->getName(), this);
     m_entities.push_back(&entity);
+    m_entityInstanceNames.push_back(m_namespaceScope.allocateInstanceName(nodeGroup->getInstanceName()));
     entity.buildFrom(nodeGroup);
-    
+
     ConcurrentStatement statement;
     statement.type = ConcurrentStatement::TYPE_ENTITY_INSTANTIATION;
-    statement.ref.entity = &entity;
-    statement.sortIdx = 0; /// @todo
-    
+    statement.ref.entityIdx = m_entities.size()-1;
+    statement.sortIdx = m_entities.size()-1;
+
     m_statements.push_back(statement);
 }
 
@@ -187,12 +188,12 @@ void BasicBlock::handleExternalNodeInstantiaton(hlim::Node_External *externalNod
 {
     m_externalNodes.push_back(externalNode);
     m_ast.getMapping().assignNodeToScope(externalNode, this);
-    
+
     ConcurrentStatement statement;
     statement.type = ConcurrentStatement::TYPE_EXT_NODE_INSTANTIATION;
     statement.ref.externalNode = externalNode;
     statement.sortIdx = 0; /// @todo
-    
+
     m_statements.push_back(statement);
 }
 
@@ -202,17 +203,18 @@ void BasicBlock::handleSFUInstantiaton(hlim::NodeGroup *sfu)
     if (auto *memGrp = dynamic_cast<hlim::MemoryGroup*>(sfu)) {
         auto &memEntity = m_ast.createSpecialEntity<GenericMemoryEntity>(sfu->getName(), this);
         m_entities.push_back(&memEntity);
+        m_entityInstanceNames.push_back(m_namespaceScope.allocateInstanceName(sfu->getInstanceName()));
         memEntity.buildFrom(memGrp);
-    
+
         entity = &memEntity;
     } else
         throw hcl::utils::InternalError(__FILE__, __LINE__, "Unhandled SFU node group");
 
     ConcurrentStatement statement;
     statement.type = ConcurrentStatement::TYPE_ENTITY_INSTANTIATION;
-    statement.ref.entity = entity;
-    statement.sortIdx = 0; /// @todo
-    
+    statement.ref.entityIdx = m_entities.size()-1;
+    statement.sortIdx = m_entities.size()-1;
+
     m_statements.push_back(statement);
 }
 
@@ -221,8 +223,8 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
 {
     std::vector<hlim::BaseNode*> normalNodes;
     std::map<RegisterConfig, std::vector<hlim::BaseNode*>> registerNodes;
-    
-    
+
+
     std::vector<hlim::NodeGroup*> nodeGroupStack = { nodeGroup };
 
     while (!nodeGroupStack.empty()) {
@@ -238,7 +240,7 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
             hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
             if (regNode != nullptr) {
                 //hlim::NodePort resetValue = regNode->getDriver(hlim::Node_Register::RESET_VALUE);
-                
+
                 RegisterConfig config = {
                     .clock = regNode->getClocks()[0],
                     .hasResetSignal = regNode->getNonSignalDriver(hlim::Node_Register::RESET_VALUE).node != nullptr
@@ -256,30 +258,30 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
                 if (childGroup->getGroupType() == hlim::NodeGroup::GroupType::AREA)
                     nodeGroupStack.push_back(childGroup.get());
     }
-    
+
     if (!normalNodes.empty()) {
         m_processes.push_back(std::make_unique<CombinatoryProcess>(this, desiredProcessName));
         Process &process = *m_processes.back();
         process.buildFromNodes(normalNodes);
-        
+
         ConcurrentStatement statement;
         statement.type = ConcurrentStatement::TYPE_PROCESS;
         statement.ref.process = &process;
         statement.sortIdx = 0; /// @todo
-        
+
         m_statements.push_back(statement);
     }
-    
+
     for (auto &regProc : registerNodes) {
         m_processes.push_back(std::make_unique<RegisterProcess>(this, desiredProcessName, regProc.first));
         Process &process = *m_processes.back();
         process.buildFromNodes(regProc.second);
-        
+
         ConcurrentStatement statement;
         statement.type = ConcurrentStatement::TYPE_PROCESS;
         statement.ref.process = &process;
         statement.sortIdx = 0; /// @todo
-        
+
         m_statements.push_back(statement);
     }
 }
@@ -289,19 +291,19 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
 void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
 {
     CodeFormatting &cf = m_ast.getCodeFormatting();
-    
+
     for (auto &statement : m_statements) {
         switch (statement.type) {
             case ConcurrentStatement::TYPE_ENTITY_INSTANTIATION: {
-                auto subEntity = statement.ref.entity;
-                subEntity->writeInstantiationVHDL(stream, indent);
+                auto subEntity = m_entities[statement.ref.entityIdx];
+                subEntity->writeInstantiationVHDL(stream, indent, m_entityInstanceNames[statement.ref.entityIdx]);
             } break;
             case ConcurrentStatement::TYPE_EXT_NODE_INSTANTIATION: {
                 std::vector<std::string> inputSignalNames(statement.ref.externalNode->getNumInputPorts());
                 for (auto i : utils::Range(inputSignalNames.size()))
                     if (statement.ref.externalNode->getDriver(i).node != nullptr)
                         inputSignalNames[i] = m_namespaceScope.getName(statement.ref.externalNode->getDriver(i));
-                
+
                 std::vector<std::string> outputSignalNames(statement.ref.externalNode->getNumOutputPorts());
                 for (auto i : utils::Range(outputSignalNames.size()))
                     outputSignalNames[i] = m_namespaceScope.getName(hlim::NodePort{.node = statement.ref.externalNode, .port = i});
@@ -323,5 +325,5 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
         }
     }
 }
-    
+
 }

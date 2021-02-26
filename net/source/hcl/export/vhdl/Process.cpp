@@ -22,7 +22,6 @@ namespace hcl::core::vhdl {
 
 Process::Process(BasicBlock *parent) : BaseGrouping(parent->getAST(), parent, &parent->getNamespaceScope())
 {
-
 }
 
 void Process::buildFromNodes(const std::vector<hlim::BaseNode*> &nodes)
@@ -58,9 +57,9 @@ void Process::extractSignals()
                 m_inputClocks.insert(node->getClocks()[i]);
         }
 
-#if 0
+#if 1
         // Named signals are explicit
-        if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr && !node->getName().empty()) {
+        if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr && node->hasGivenName()) {
             hlim::NodePort driver = {.node = node, .port = 0};
             if (m_outputs.find(driver) == m_outputs.end())
                 m_localSignals.insert(driver);
@@ -68,7 +67,7 @@ void Process::extractSignals()
 #endif
         // Check for multiple use
         for (auto i : utils::Range(node->getNumOutputPorts())) {
-            if (node->getDirectlyDriven(i).size() > 1) {
+            if (node->getDirectlyDriven(i).size() > 1 && node->getOutputConnectionType(i).interpretation != hlim::ConnectionType::BOOL) {
                 hlim::NodePort driver{.node = node, .port = i};
                 if (!m_outputs.contains(driver) && !m_inputs.contains(driver) && !dynamic_cast<hlim::Node_Pin*>(driver.node))
                     m_localSignals.insert(driver);

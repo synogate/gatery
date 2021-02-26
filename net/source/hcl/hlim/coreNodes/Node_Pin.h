@@ -27,6 +27,8 @@ namespace hcl::core::hlim {
             virtual std::string getOutputName(size_t idx) const override;
 
             virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
+
+            virtual std::string attemptInferOutputName(size_t outputPort) const;
     };
 
 }

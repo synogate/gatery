@@ -114,4 +114,25 @@ void BaseNode::copyBaseToClone(BaseNode *copy) const
     }
 }
 
+std::string BaseNode::attemptInferOutputName(size_t outputPort) const
+{
+    std::stringstream name;
+    bool first = true;
+    for (auto i : utils::Range(getNumInputPorts())) {
+        auto driver = getDriver(i);
+        if (driver.node == nullptr)
+            return "";
+        if (driver.node->getOutputConnectionType(driver.port).interpretation == ConnectionType::DEPENDENCY) continue;
+        if (driver.node->getName().empty()) {
+            return "";
+        } else {
+            if (!first) name << '_';
+            first = false;
+            name << driver.node->getName();
+        }
+    }
+    return name.str();
+}
+
+
 }

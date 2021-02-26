@@ -164,6 +164,21 @@ std::string NamespaceScope::allocateProcessName(const std::string &desiredName, 
     return name;
 }
 
+std::string NamespaceScope::allocateInstanceName(const std::string &desiredName)
+{
+    CodeFormatting &cf = m_ast.getCodeFormatting();
+
+    unsigned attempt = 0;
+    std::string name, upperCaseName;
+    do {
+        name = cf.getInstanceName(desiredName, attempt++);
+        upperCaseName = boost::to_upper_copy(name);
+    } while (isNameInUse(upperCaseName));
+
+    m_namesInUse.insert(upperCaseName);
+    return name;
+}
+
 
 bool NamespaceScope::isNameInUse(const std::string &upperCaseName) const
 {

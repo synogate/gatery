@@ -29,7 +29,7 @@ class Entity : public BasicBlock
 
         void writeVHDL(std::ostream &stream);
 
-        virtual void writeInstantiationVHDL(std::ostream &stream, unsigned indent);
+        virtual void writeInstantiationVHDL(std::ostream &stream, unsigned indent, const std::string &instanceName);
 
         Entity *getParentEntity();
 

@@ -40,6 +40,8 @@ class Circuit
         inline const std::vector<std::unique_ptr<BaseNode>> &getNodes() const { return m_nodes; }
         inline const std::vector<std::unique_ptr<Clock>> &getClocks() const { return m_clocks; }
 
+        void inferSignalNames();
+
         void cullSequentiallyDuplicatedSignalNodes();
         void cullUnnamedSignalNodes();
         void cullOrphanedSignalNodes();

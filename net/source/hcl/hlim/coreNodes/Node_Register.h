@@ -5,7 +5,7 @@
 #include <boost/format.hpp>
 
 namespace hcl::core::hlim {
-    
+
     class Node_Register : public Node<Node_Register>
     {
     public:
@@ -45,6 +45,8 @@ namespace hcl::core::hlim {
         size_t getConditionId() const { return m_conditionId; }
 
         virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
+
+        virtual std::string attemptInferOutputName(size_t outputPort) const override;
     protected:
         size_t m_conditionId = 0;
     };

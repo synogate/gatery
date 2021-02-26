@@ -65,7 +65,7 @@ void DotExport::operator()(const hlim::Circuit &circuit)
           //  nodeGroup2idx[nodeGroup] = graphIdx++;
             graphIdx++;
 
-            file << " label=\"" << nodeGroup->getName() << "\";" << std::endl;
+            file << " label=\"" << nodeGroup->getInstanceName() << "\";" << std::endl;
             switch (nodeGroup->getGroupType()) {
                 case hlim::NodeGroup::GroupType::ENTITY:
                     file << " color=blue;" << std::endl;
@@ -82,7 +82,12 @@ void DotExport::operator()(const hlim::Circuit &circuit)
                 reccurWalkNodeGroup(subGroup.get());
 
             for (auto *node : nodeGroup->getNodes()) {
-                file << "node_" << idx << "[label=\"" << node->getName() << " - " << node->getId() << " - " << node->getTypeName() << "\"";
+                file << "node_" << idx << "[label=\"";
+                if (node->getName().length() < 30)
+                    file << node->getName();
+                else
+                    file << "[zip]";
+                file << " - " << node->getId() << " - " << node->getTypeName() << "\"";
                 styleNode(file, node);
                 file << "];" << std::endl;
                 node2idx[node] = idx;

@@ -11,7 +11,7 @@ namespace hcl::core::hlim {
         Node_Constant(sim::DefaultBitVectorState value, hlim::ConnectionType::Interpretation connectionType);
 
         virtual void simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
-        
+
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;
         virtual std::string getInputName(size_t idx) const override;
@@ -20,6 +20,8 @@ namespace hcl::core::hlim {
         const sim::DefaultBitVectorState& getValue() const { return m_Value; }
 
         virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
+
+        virtual std::string attemptInferOutputName(size_t outputPort) const;
     protected:
         sim::DefaultBitVectorState m_Value;
     };
