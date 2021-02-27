@@ -18,19 +18,22 @@ using namespace boost::unit_test;
 using namespace hcl;
 
 
-BOOST_FIXTURE_TEST_CASE(TinyCookuTableLookup, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCookuTableLookup, data::xrange(2, 4), numTables)
 {
     DesignScope design;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000));
     ClockScope clockScope(clock);
 
-    InputPins lookupKey = pinIn(8_b).setName("key");
+    const BitWidth keySize{ size_t(numTables * 4) };
+    const BitWidth tableIdxWidth{ hcl::utils::Log2C(size_t(numTables)) };
+
+    InputPins lookupKey = pinIn(keySize).setName("key");
     InputPin update = pinIn().setName("update");
-    InputPins updateTableIdx = pinIn(1_b).setName("updateTableIdx");
+    InputPins updateTableIdx = pinIn(tableIdxWidth).setName("updateTableIdx");
     InputPins updateItemIdx = pinIn(4_b).setName("updateItemIdx");
     InputPin updateItemValid = pinIn().setName("updateItemValid");
-    InputPins updateItemKey = pinIn(8_b).setName("updateItemKey");
+    InputPins updateItemKey = pinIn(keySize).setName("updateItemKey");
     InputPins updateItemValue = pinIn(8_b).setName("updateItemValue");
     
     stl::RegisterMap mmap;
@@ -47,7 +50,8 @@ BOOST_FIXTURE_TEST_CASE(TinyCookuTableLookup, hcl::core::sim::UnitTestSimulation
                 .key = updateItemKey,
                 .value = updateItemValue
             }
-        }
+        },
+        .numTables = size_t(numTables),
     };
     HCL_NAMED(params);
     stl::TinyCuckooOut result = stl::tinyCuckoo(params, mmap);
@@ -71,7 +75,7 @@ BOOST_FIXTURE_TEST_CASE(TinyCookuTableLookup, hcl::core::sim::UnitTestSimulation
         while(true)
         {
             size_t value = rng() & 0xFF;
-            size_t key = (value * 23) & 0xFF;
+            size_t key = hcl::utils::bitfieldExtract(value * 23, 0, keySize.value);
 
             if (rng() % 3 == 0)
             {
@@ -105,7 +109,7 @@ BOOST_FIXTURE_TEST_CASE(TinyCookuTableLookup, hcl::core::sim::UnitTestSimulation
         std::mt19937 rng{ 1338 };
         while (true)
         {
-            sim(lookupKey) = rng() & 0xFF;
+            sim(lookupKey) = hcl::utils::bitfieldExtract(rng(), 0, keySize.value);
             co_await WaitClk(clock);
         }
     });
@@ -150,9 +154,9 @@ BOOST_FIXTURE_TEST_CASE(TinyCookuTableLookup, hcl::core::sim::UnitTestSimulation
 
 
     design.getCircuit().optimize(3);
-    design.visualize("TinyCookuTableLookup");
-    core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TinyCookuTableLookup.vcd");
-    vcd.addAllNamedSignals();
+    //design.visualize("TinyCookuTableLookup");
+    //core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TinyCookuTableLookup.vcd");
+    //vcd.addAllNamedSignals();
 
     runTicks(design.getCircuit(), clock.getClk(), 4096);
 }
