@@ -149,7 +149,7 @@ namespace hcl::core::frontend {
         BitWidth getWidth() const final { return BitWidth{ m_range.width }; }
 		hlim::ConnectionType getConnType() const final;
 		SignalReadPort getReadPort() const final;
-		std::string_view getName() const final { return m_node->getName(); }
+		std::string_view getName() const final;
 		void setName(std::string name) override;
         void addToSignalGroup(hlim::SignalGroup *signalGroup);
 
@@ -166,7 +166,6 @@ namespace hcl::core::frontend {
         hlim::Node_Signal* m_node = nullptr;
         Range m_range;
         Expansion m_expansionPolicy = Expansion::none;
-        std::string m_name;
 
         std::vector<Bit>& aliasVec() const;
         Bit& aliasMsb() const;
@@ -235,8 +234,8 @@ namespace hcl::core::frontend {
         const size_t maxWidth = std::max(width(lhs), width(rhs));
 
         hlim::ConnectionType::Interpretation type = hlim::ConnectionType::BITVEC;
-        if (maxWidth == 1 && 
-            (l.getConnType().interpretation != r.getConnType().interpretation || 
+        if (maxWidth == 1 &&
+            (l.getConnType().interpretation != r.getConnType().interpretation ||
              l.getConnType().interpretation == hlim::ConnectionType::BOOL))
             type = hlim::ConnectionType::BOOL;
 

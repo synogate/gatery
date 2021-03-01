@@ -129,6 +129,18 @@ std::string DefaultCodeFormatting::getIoPinName(const std::string &desiredName, 
     return (boost::format("%s_%d") % initialName % (attempt+1)).str();
 }
 
+std::string DefaultCodeFormatting::getInstanceName(const std::string &desiredName, unsigned attempt) const
+{
+    std::string initialName = desiredName;
+    if (initialName.empty())
+        initialName = "unnamedInstance";
+    if (attempt == 0)
+        return initialName;
+
+    return (boost::format("%s_%d") % initialName % (attempt+1)).str();
+}
+
+
 void DefaultCodeFormatting::formatEntityComment(std::ostream &stream, const std::string &entityName, const std::string &comment)
 {
     stream

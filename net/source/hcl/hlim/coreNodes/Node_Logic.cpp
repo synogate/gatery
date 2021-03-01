@@ -158,5 +158,35 @@ std::unique_ptr<BaseNode> Node_Logic::cloneUnconnected() const
     return res;
 }
 
+std::string Node_Logic::attemptInferOutputName(size_t outputPort) const
+{
+    std::stringstream name;
+
+    auto driver0 = getDriver(0);
+    if (driver0.node == nullptr) return "";
+    if (driver0.node->getName().empty()) return "";
+
+    name << driver0.node->getName();
+
+    switch (m_op) {
+        case AND: name << "_and_"; break;
+        case NAND: name << "_nand_"; break;
+        case OR: name << "_or_"; break;
+        case NOR: name << "_nor_"; break;
+        case XOR: name << "_xor_"; break;
+        case EQ: name << "_bweq_"; break;
+        case NOT: name << "_not"; break;
+        default: name << "_logic_"; break;
+    }
+
+    if (getNumInputPorts() > 1) {
+        auto driver1 = getDriver(1);
+        if (driver1.node == nullptr) return "";
+        if (driver1.node->getName().empty()) return "";
+
+        name << driver1.node->getName();
+    }
+    return name.str();
+}
 
 }

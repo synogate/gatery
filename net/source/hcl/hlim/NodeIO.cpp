@@ -31,10 +31,15 @@ NodePort NodeIO::getDriver(size_t inputPort) const
 NodePort NodeIO::getNonSignalDriver(size_t inputPort) const
 {
     NodePort np = m_inputPorts[inputPort];
+    size_t loopCounter = 0;
+    const NodeIO* loopCheckSignal = this;
+
     while (np.node != nullptr && dynamic_cast<Node_Signal*>(np.node) != nullptr)
     {
-        if (np.node == this)
+        if (np.node == loopCheckSignal)
             return NodePort{};
+        if (++loopCounter % 200 == 0) // TODO: use node color for loop detection
+            loopCheckSignal = np.node;
 
         np = np.node->m_inputPorts[0];
     }

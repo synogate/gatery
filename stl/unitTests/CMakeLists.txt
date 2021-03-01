@@ -6,7 +6,7 @@ add_executable(unitTestSTL
     source/main.cpp
     source/utils.cpp
     "source/hdmi.cpp"
- "source/tcamTest.cpp" "source/crypto.cpp")
+ "source/tcamTest.cpp" "source/crypto.cpp" "source/kvs.cpp")
 
 target_include_directories (unitTestSTL PUBLIC
     ${Boost_INCLUDE_DIRS}
@@ -14,9 +14,7 @@ target_include_directories (unitTestSTL PUBLIC
 
 add_definitions (-DBOOST_TEST_DYN_LINK)
 target_link_libraries (unitTestSTL
-    hcl_net
-    hcl_frontend
-    hcl_stl
+    ${HCL_ALL_LIBS}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
 )

@@ -12,7 +12,7 @@ namespace hcl::core::hlim {
 
 class Node_Signal;
 class Node_Register;
-    
+
 class NodeGroup
 {
     public:
@@ -21,47 +21,52 @@ class NodeGroup
             AREA        = 0x02,
             SFU         = 0x03,
         };
-        
+
         NodeGroup(GroupType groupType);
         virtual ~NodeGroup();
-        
+
         inline void recordStackTrace() { m_stackTrace.record(10, 1); }
         inline const utils::StackTrace &getStackTrace() const { return m_stackTrace; }
-        
+
+        void reccurInferInstanceNames();
+
         inline void setName(std::string name) { m_name = std::move(name); }
+        inline void setInstanceName(std::string name) { m_instanceName = std::move(name); }
         inline void setComment(std::string comment) { m_comment = std::move(comment); }
-        
+
         NodeGroup *addChildNodeGroup(GroupType groupType);
 
         void moveInto(NodeGroup *newParent);
-        
+
         template<typename Type, typename... Args>
         Type *addSpecialChildNodeGroup(Args&&... args) {
             m_children.push_back(std::make_unique<Type>(std::forward<Args>(args)...));
             m_children.back()->m_parent = this;
             return (Type*)m_children.back().get();
         }
-        
+
         inline const NodeGroup *getParent() const { return m_parent; }
         inline const std::string &getName() const { return m_name; }
+        inline const std::string &getInstanceName() const { return m_instanceName; }
         inline const std::string &getComment() const { return m_comment; }
         inline const std::vector<BaseNode*> &getNodes() const { return m_nodes; }
         inline const std::vector<std::unique_ptr<NodeGroup>> &getChildren() const { return m_children; }
 
         bool isChildOf(const NodeGroup *other) const;
-        
+
         inline GroupType getGroupType() const { return m_groupType; }
     protected:
         std::string m_name;
+        std::string m_instanceName;
         std::string m_comment;
         GroupType m_groupType;
-        
+
         std::vector<BaseNode*> m_nodes;
         std::vector<std::unique_ptr<NodeGroup>> m_children;
         NodeGroup *m_parent = nullptr;
-        
+
         utils::StackTrace m_stackTrace;
-        
+
         friend class BaseNode;
 };
 

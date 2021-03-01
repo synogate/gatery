@@ -33,7 +33,7 @@ struct ConcurrentStatement
     };
     Type type;
     union {
-        Entity *entity;
+        size_t entityIdx;
         hlim::Node_External *externalNode;
         Block *block;
         Process *process;
@@ -75,6 +75,7 @@ class BasicBlock : public BaseGrouping
         std::vector<ShiftRegStorage> m_shiftRegStorage;
         std::vector<std::unique_ptr<Process>> m_processes;
         std::vector<Entity*> m_entities;
+        std::vector<std::string> m_entityInstanceNames;
         std::vector<hlim::Node_External*> m_externalNodes;
 
         std::vector<ConcurrentStatement> m_statements;

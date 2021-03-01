@@ -50,6 +50,7 @@ class CodeFormatting
         virtual std::string getProcessName(const std::string &desiredName, bool clocked, unsigned attempt) const = 0;
         virtual std::string getClockName(const std::string &desiredName, unsigned attempt) const = 0;
         virtual std::string getIoPinName(const std::string &desiredName, unsigned attempt) const = 0;
+        virtual std::string getInstanceName(const std::string &desiredName, unsigned attempt) const = 0;
 
         virtual void instantiateExternal(std::ostream &stream, const hlim::Node_External *node, unsigned indent,
                                          const std::vector<std::string> &inputSignalNames, const std::vector<std::string> &outputSignalNames, const std::vector<std::string> &clockNames) const = 0;
@@ -76,6 +77,7 @@ class DefaultCodeFormatting : public CodeFormatting
         virtual std::string getProcessName(const std::string &desiredName, bool clocked, unsigned attempt) const override;
         virtual std::string getClockName(const std::string &desiredName, unsigned attempt) const override;
         virtual std::string getIoPinName(const std::string &desiredName, unsigned attempt) const override;
+        virtual std::string getInstanceName(const std::string &desiredName, unsigned attempt) const override;
 
         virtual void formatEntityComment(std::ostream &stream, const std::string &entityName, const std::string &comment) override;
         virtual void formatBlockComment(std::ostream &stream, const std::string &blockName, const std::string &comment) override;

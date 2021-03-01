@@ -116,16 +116,27 @@ void VCDSink::initialize()
     reccurWriteModules = [&](const Module *module){
         for (const auto &p : module->subModules) {
             m_vcdFile
-                << "$scope module " << p.first->getName() << " $end\n";
+                << "$scope module " << p.first->getInstanceName() << " $end\n";
             reccurWriteModules(&p.second);
             m_vcdFile
                 << "$upscope $end\n";
         }
         for (const auto &sigId : module->signals) {
+            if (m_hiddenSignal[sigId.second]) continue;
             auto width = sigId.first.node->getOutputConnectionType(sigId.first.port).width;
             m_vcdFile
                 << "$var wire " << width << " " << m_id2sigCode[sigId.second] << " " << m_signalNames[sigId.second] << " $end\n";
         }
+        m_vcdFile
+            << "$scope module __hidden $end\n";
+        for (const auto &sigId : module->signals) {
+            if (!m_hiddenSignal[sigId.second]) continue;
+            auto width = sigId.first.node->getOutputConnectionType(sigId.first.port).width;
+            m_vcdFile
+                << "$var wire " << width << " " << m_id2sigCode[sigId.second] << " " << m_signalNames[sigId.second] << " $end\n";
+        }
+        m_vcdFile
+            << "$upscope $end\n";
     };
 
     reccurWriteModules(&root);
@@ -168,7 +179,7 @@ void VCDSink::advanceTick(const hlim::ClockRational &simulationTime)
 {
     auto ratTickIdx = simulationTime / hlim::ClockRational(1, 1'000'000'000'000ull);
     size_t tickIdx = ratTickIdx.numerator() / ratTickIdx.denominator();
-    m_vcdFile << "#"<<tickIdx<<"\n";
+    m_vcdFile << "#"<<tickIdx<<std::endl;
 }
 
 

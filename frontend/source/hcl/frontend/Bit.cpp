@@ -51,7 +51,6 @@ namespace hcl::core::frontend {
         if (type.interpretation != hlim::ConnectionType::BOOL)
         {
             auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-            rewire->setName(std::string(getName()));
             rewire->connectInput(0, outRange);
             rewire->changeOutputType(getConnType());
 
@@ -86,7 +85,6 @@ namespace hcl::core::frontend {
         {
             // TODO: cache rewire node if m_node's input is unchanged
             auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-            rewire->setName(std::string(getName()));
             rewire->connectInput(0, ret);
             rewire->changeOutputType(getConnType());
 
@@ -100,14 +98,19 @@ namespace hcl::core::frontend {
 
     std::string_view Bit::getName() const
     {
-        return m_node->getName();
+        if (auto *sigNode = dynamic_cast<hlim::Node_Signal*>(m_node->getDriver(0).node))
+            return sigNode->getName();
+        return {};
     }
 
     void Bit::setName(std::string name)
     {
-        if (m_node->getDriver(0).node != nullptr)
-            m_node->getDriver(0).node->setName(name);
-        m_node->setName(move(name));
+        auto* signal = DesignScope::createNode<hlim::Node_Signal>();
+        signal->connectInput(getReadPort());
+        signal->setName(name);
+        signal->recordStackTrace();
+
+        assign(SignalReadPort(signal));
     }
 
     void Bit::addToSignalGroup(hlim::SignalGroup *signalGroup)
@@ -144,9 +147,6 @@ namespace hcl::core::frontend {
     {
         hlim::ConnectionType type = m_node->getOutputConnectionType(0);
 
-        if (getName().empty())
-            setName(in.node->getName());
-
         if (type.interpretation != hlim::ConnectionType::BOOL)
         {
             std::string in_name = in.node->getName();
@@ -163,7 +163,6 @@ namespace hcl::core::frontend {
             {
                 auto* signal = DesignScope::createNode<hlim::Node_Signal>();
                 signal->connectInput(in);
-                signal->setName(in_name);
                 signal->recordStackTrace();
                 in = SignalReadPort(signal);
             }
@@ -173,7 +172,6 @@ namespace hcl::core::frontend {
         {
             auto* signal_in = DesignScope::createNode<hlim::Node_Signal>();
             signal_in->connectInput(getRawDriver());
-            signal_in->setName(m_node->getName());
 
             auto* mux = DesignScope::createNode<hlim::Node_Multiplexer>(2);
             mux->connectInput(0, {.node = signal_in, .port = 0});
@@ -183,10 +181,10 @@ namespace hcl::core::frontend {
 
             in = SignalReadPort(mux);
         }
-        {
+
+        if (dynamic_cast<hlim::Node_Signal*>(in.node) == nullptr) {
             auto* signal = DesignScope::createNode<hlim::Node_Signal>();
             signal->connectInput(in);
-            signal->setName(m_node->getName());
             signal->recordStackTrace();
             in = SignalReadPort(signal);
         }

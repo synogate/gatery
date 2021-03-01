@@ -317,9 +317,9 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, UnitTestSimulationFixture)
 
     {
         hcl::Vector<BVec> listA(4);
-        HCL_NAMED(listA);
         for (size_t i = 0; i < listA.size(); ++i)
             listA[i] = ConstBVec(i, 2);
+        HCL_NAMED(listA);
         std::rotate(listA.begin(), listA.begin() + 1, listA.end());
 
         sim_assert(listA[0] == 1);

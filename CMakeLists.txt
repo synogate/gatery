@@ -31,15 +31,17 @@ add_compile_definitions(_HAS_DEPRECATED_IS_LITERAL_TYPE=1)
 
 add_subdirectory(net/)
 add_subdirectory(frontend/)
+
+if(${HCL_WITH_QT})
+add_subdirectory(vis/)
+endif()
+
 add_subdirectory(stl/)
 
 if(${HCL_WITH_GHDL})
 add_subdirectory(vpi_sim)
 endif()
 
-if(${HCL_WITH_QT})
-add_subdirectory(vis/)
-endif()
 
 
 set(HCL_ALL_LIBS ${HCL_ALL_LIBS} PARENT_SCOPE)

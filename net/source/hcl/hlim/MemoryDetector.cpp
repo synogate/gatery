@@ -22,6 +22,7 @@ namespace hcl::core::hlim {
 
 MemoryGroup::MemoryGroup() : NodeGroup(GroupType::SFU)
 {
+    m_name = "memory";
 }
 
 void MemoryGroup::formAround(Node_Memory *memory, Circuit &circuit)

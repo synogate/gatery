@@ -207,12 +207,12 @@ void Entity::writeVHDL(std::ostream &stream)
     stream << "END impl;" << std::endl;
 }
 
-void Entity::writeInstantiationVHDL(std::ostream &stream, unsigned indent)
+void Entity::writeInstantiationVHDL(std::ostream &stream, unsigned indent, const std::string &instanceName)
 {
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     cf.indent(stream, indent);
-    stream << "inst_" << getName() << " : entity work." << getName() << "(impl) port map (" << std::endl;
+    stream << instanceName << " : entity work." << getName() << "(impl) port map (" << std::endl;
 
     std::vector<std::string> portmapList;
 

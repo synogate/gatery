@@ -65,4 +65,10 @@ std::unique_ptr<BaseNode> Node_Pin::cloneUnconnected() const {
     return copy;
 }
 
+std::string Node_Pin::attemptInferOutputName(size_t outputPort) const
+{
+    return m_name;
+}
+
+
 }

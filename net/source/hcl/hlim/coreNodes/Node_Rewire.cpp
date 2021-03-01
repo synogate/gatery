@@ -8,7 +8,7 @@ bool Node_Rewire::RewireOperation::isBitExtract(size_t& bitIndex) const
         if (ranges[0].subwidth == 1 &&
             ranges[0].source == OutputRange::INPUT &&
             ranges[0].inputIdx == 0) {
-            
+
             bitIndex = ranges[0].inputOffset;
             return true;
         }
@@ -50,9 +50,9 @@ Node_Rewire::Node_Rewire(size_t numInputs) : Node(numInputs, 1)
 {
 }
 
-void Node_Rewire::connectInput(size_t operand, const NodePort &port) 
-{ 
-    NodeIO::connectInput(operand, port); 
+void Node_Rewire::connectInput(size_t operand, const NodePort &port)
+{
+    NodeIO::connectInput(operand, port);
     updateConnectionType();
 }
 
@@ -140,7 +140,7 @@ void Node_Rewire::changeOutputType(ConnectionType outputType)
 void Node_Rewire::updateConnectionType()
 {
     ConnectionType desiredConnectionType = m_desiredConnectionType;
-    
+
     desiredConnectionType.width = 0;
     for (auto r : m_rewireOperation.ranges)
         desiredConnectionType.width += r.subwidth;
@@ -171,19 +171,19 @@ void Node_Rewire::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::D
     }
 }
 
-std::string Node_Rewire::getTypeName() const 
-{ 
+std::string Node_Rewire::getTypeName() const
+{
     size_t bitIndex;
     if (m_rewireOperation.isBitExtract(bitIndex))
         return std::string("bit ") + std::to_string(bitIndex);
     else
-        return "Rewire"; 
+        return "Rewire";
 }
 
 bool Node_Rewire::isNoOp() const
 {
     auto outWidth = getOutputConnectionType(0).width;
-    
+
     size_t offset = 0;
     for (const auto &range : m_rewireOperation.ranges) {
         if (range.source != OutputRange::INPUT) return false;
@@ -201,7 +201,7 @@ bool Node_Rewire::isNoOp() const
 
 
 
-std::unique_ptr<BaseNode> Node_Rewire::cloneUnconnected() const 
+std::unique_ptr<BaseNode> Node_Rewire::cloneUnconnected() const
 {
     std::unique_ptr<BaseNode> res(new Node_Rewire(getNumInputPorts()));
     copyBaseToClone(res.get());
@@ -209,6 +209,41 @@ std::unique_ptr<BaseNode> Node_Rewire::cloneUnconnected() const
     ((Node_Rewire*)res.get())->m_rewireOperation = m_rewireOperation;
     return res;
 }
+
+
+std::string Node_Rewire::attemptInferOutputName(size_t outputPort) const
+{
+    size_t bitIndex;
+    if (m_rewireOperation.isBitExtract(bitIndex)) {
+        auto driver0 = getDriver(0);
+        if (driver0.node == nullptr) return "";
+        if (driver0.node->getName().empty()) return "";
+
+        std::stringstream name;
+        name << driver0.node->getName() << "_bit_" << bitIndex;
+        return name.str();
+    } else {
+        std::stringstream name;
+        bool first = true;
+        for (auto i : utils::Range(getNumInputPorts())) {
+            auto driver = getDriver(i);
+            if (driver.node == nullptr)
+                return "";
+            if (driver.node->getOutputConnectionType(driver.port).interpretation == ConnectionType::DEPENDENCY) continue;
+            if (driver.node->getName().empty()) {
+                return "";
+            } else {
+                if (!first) name << '_';
+                first = false;
+                name << driver.node->getName();
+            }
+        }
+        name << "_rewired";
+        return name.str();
+    }
+}
+
+
 
 
 }

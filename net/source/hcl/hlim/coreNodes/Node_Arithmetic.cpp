@@ -138,6 +138,34 @@ std::unique_ptr<BaseNode> Node_Arithmetic::cloneUnconnected() const
     return res;
 }
 
+std::string Node_Arithmetic::attemptInferOutputName(size_t outputPort) const
+{
+    std::stringstream name;
+
+    auto driver0 = getDriver(0);
+    if (driver0.node == nullptr) return "";
+    if (driver0.node->getName().empty()) return "";
+
+    name << driver0.node->getName();
+
+    switch (m_op) {
+        case ADD: name << "_plus_"; break;
+        case SUB: name << "_minus_"; break;
+        case MUL: name << "_times_"; break;
+        case DIV: name << "_over_"; break;
+        case REM: name << "_rem_"; break;
+        default: name << "_arith_op_"; break;
+    }
+
+    auto driver1 = getDriver(1);
+    if (driver1.node == nullptr) return "";
+    if (driver1.node->getName().empty()) return "";
+
+    name << driver1.node->getName();
+
+    return name.str();
+}
+
 
 
 }

@@ -54,10 +54,13 @@ class BaseNode : public NodeIO
         inline void recordStackTrace() { m_stackTrace.record(10, 1); }
         inline const utils::StackTrace &getStackTrace() const { return m_stackTrace; }
 
-        inline void setName(std::string name) { m_name = std::move(name); }
+        inline void setName(std::string name) { m_name = std::move(name); m_nameInferred = false; }
+        inline void setInferredName(std::string name) { m_name = std::move(name); m_nameInferred = true; }
         inline void setComment(std::string comment) { m_comment = std::move(comment); }
         inline const std::string &getName() const { return m_name; }
         inline const std::string &getComment() const { return m_comment; }
+        inline bool nameWasInferred() const { return m_nameInferred; }
+        inline bool hasGivenName() const { return !m_name.empty() && !m_nameInferred; }
 
         bool isOrphaned() const;
         virtual bool hasSideEffects() const;
@@ -81,9 +84,14 @@ class BaseNode : public NodeIO
         inline std::uint64_t getId() const { return m_nodeId; }
 
         void setId(std::uint64_t id, utils::RestrictTo<Circuit>) { m_nodeId = id; }
+
+        /// Attempts to create a reasonable name based on its input names and operations.
+        virtual std::string attemptInferOutputName(size_t outputPort) const;
+
     protected:
         std::uint64_t m_nodeId = ~0ull;
 
+        bool m_nameInferred = true;
         std::string m_name;
         std::string m_comment;
         utils::StackTrace m_stackTrace;

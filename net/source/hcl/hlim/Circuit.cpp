@@ -126,6 +126,56 @@ Clock *Circuit::createUnconnectedClock(Clock *clock, Clock *newParent)
 }
 
 /**
+ * @brief Infers signal names for all unnamed signals
+ *
+ */
+void Circuit::inferSignalNames()
+{
+    std::set<Node_Signal*> unnamedSignals;
+    for (size_t i = 0; i < m_nodes.size(); i++)
+        if (auto *signal = dynamic_cast<Node_Signal*>(m_nodes[i].get()))
+            if (signal->getName().empty())
+                unnamedSignals.insert(signal);
+
+
+    while (!unnamedSignals.empty()) {
+
+        Node_Signal *s = *unnamedSignals.begin();
+        std::vector<Node_Signal*> signalsToName;
+        std::set<Node_Signal*> loopDetection;
+
+        signalsToName.push_back(s);
+        loopDetection.insert(s);
+
+        for (auto nh : s->exploreInput(0).skipDependencies()) {
+            if (nh.isSignal()) {
+                if (loopDetection.contains((Node_Signal*)nh.node())) {
+                    nh.node()->setInferredName("loop");
+                    nh.backtrack();
+                } else
+                    if (!nh.node()->getName().empty()) {
+                        nh.backtrack();
+                    } else {
+                        signalsToName.push_back((Node_Signal*)nh.node());
+                        loopDetection.insert((Node_Signal*)nh.node());
+                    }
+            }
+        }
+
+        for (auto it = signalsToName.rbegin(); it != signalsToName.rend(); ++it) {
+            if ((*it)->getName().empty()) {
+                auto driver = (*it)->getDriver(0);
+                auto name = driver.node->attemptInferOutputName(driver.port);
+                if (!name.empty())
+                    (*it)->setInferredName(std::move(name));
+            }
+            unnamedSignals.erase(*it);
+        }
+    }
+}
+
+
+/**
  * @brief Removes unnecessary and unnamed signal nodes
  *
  */
@@ -654,6 +704,16 @@ void Circuit::propagateConstants()
                 continue;
             }
 
+            // Remove registers without reset on the path
+            if (auto *regNode = dynamic_cast<Node_Register*>(successor.node))
+                if (regNode->getNonSignalDriver((unsigned)Node_Register::Input::RESET_VALUE).node == nullptr) {
+
+                    regNode->bypassOutputToInput(0, (unsigned)Node_Register::Input::DATA);
+                    regNode->disconnectInput(Node_Register::Input::DATA);
+                    openList.push_back(constPort);
+                    continue;
+                }
+
             // Only work on combinatory nodes
             if (!successor.node->isCombinatorial()) continue;
             // Nodes with side-effects can't be removed/bypassed
@@ -802,8 +862,11 @@ void Circuit::optimize(size_t level)
             buildExplicitMemoryCircuitry(*this);
             cullUnnamedSignalNodes();
             cullUnusedNodes(); // do again after memory group extraction with potential register retiming
+
+            inferSignalNames();
         break;
     };
+    m_root->reccurInferInstanceNames();
 }
 
 

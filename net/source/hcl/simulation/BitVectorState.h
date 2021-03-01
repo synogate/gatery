@@ -118,16 +118,32 @@ using DefaultBitVectorState = BitVectorState<DefaultConfig>;
 template<typename Config>
 std::ostream& operator << (std::ostream& s, const BitVectorState<Config>& state)
 {
-    for (int i = state.size()-1; i >= 0; --i)
-    {
-        if (!state.get(Config::DEFINED, i))
-            s << 'X';
-        else if (state.get(Config::VALUE, i))
-            s << '1';
-        else
-            s << '0';
+    if ((s.flags() & std::ios_base::hex) && (state.size() % 4 == 0)) {
+        for (auto i : utils::Range(state.size()/4)) {
+            bool allDefined = true;
+            unsigned v = 0;
+            for (auto j : utils::Range(4)) {
+                v <<= 1;
+                allDefined  &= state.get(Config::DEFINED, state.size() - 1 - i*4-j);
+
+                if (state.get(Config::VALUE, state.size() - 1 - i*4-j))
+                    v |= 1;
+            }
+            s << v;
+        }
+        return s;
+    } else {
+        for (int i = state.size()-1; i >= 0; --i)
+        {
+            if (!state.get(Config::DEFINED, i))
+                s << 'X';
+            else if (state.get(Config::VALUE, i))
+                s << '1';
+            else
+                s << '0';
+        }
+        return s;
     }
-    return s;
 }
 
 
