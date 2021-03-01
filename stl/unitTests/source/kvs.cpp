@@ -35,7 +35,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCookuTable
     InputPin updateItemValid = pinIn().setName("updateItemValid");
     InputPins updateItemKey = pinIn(keySize).setName("updateItemKey");
     InputPins updateItemValue = pinIn(8_b).setName("updateItemValue");
-    
+
     stl::RegisterMap mmap;
     stl::TinyCuckooIn params = {
         .key = lookupKey,
@@ -126,7 +126,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCookuTable
                 {
                     BOOST_TEST(lookupQueue.back() == sim(outValue));
                     if (lookupQueue.back() != sim(outValue))
-                        __debugbreak();
+                        DEBUG_BREAK();
                 }
                 else
                     BOOST_TEST(lookupQueue.back() == invalid);
