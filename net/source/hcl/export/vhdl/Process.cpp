@@ -337,7 +337,6 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
 
     if (const hlim::Node_Constant* constNode = dynamic_cast<const hlim::Node_Constant*>(nodePort.node))
     {
-        // todo: what is the right way to get node width?
         const auto& conType = constNode->getOutputConnectionType(0);
 
         if (context == Context::BOOL) {
