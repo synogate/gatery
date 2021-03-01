@@ -33,6 +33,8 @@ void Process::buildFromNodes(const std::vector<hlim::BaseNode*> &nodes)
 
 void Process::extractSignals()
 {
+    std::set<hlim::NodePort> potentialLocalSignals;
+    // In the first pass, insert everything as local signals, then remove from that list everything that also ended up as input, output, or is a pin
     for (auto node : m_nodes) {
         // Check IO
         for (auto i : utils::Range(node->getNumInputPorts())) {
@@ -56,39 +58,33 @@ void Process::extractSignals()
             if (node->getClocks()[i] != nullptr)
                 m_inputClocks.insert(node->getClocks()[i]);
         }
-
 #if 1
         // Named signals are explicit
         if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr && node->hasGivenName()) {
             hlim::NodePort driver = {.node = node, .port = 0};
-            if (m_outputs.find(driver) == m_outputs.end())
-                m_localSignals.insert(driver);
+            potentialLocalSignals.insert(driver);
         }
 #endif
         // Check for multiple use
         for (auto i : utils::Range(node->getNumOutputPorts())) {
             if (node->getDirectlyDriven(i).size() > 1 && node->getOutputConnectionType(i).interpretation != hlim::ConnectionType::BOOL) {
                 hlim::NodePort driver{.node = node, .port = i};
-                if (!m_outputs.contains(driver) && !m_inputs.contains(driver) && !dynamic_cast<hlim::Node_Pin*>(driver.node))
-                    m_localSignals.insert(driver);
+                potentialLocalSignals.insert(driver);
             }
         }
-
 
         // check for multiplexer
         hlim::Node_Multiplexer *muxNode = dynamic_cast<hlim::Node_Multiplexer *>(node);
         if (muxNode != nullptr) {
             hlim::NodePort driver{.node = muxNode, .port = 0};
-            if (!m_outputs.contains(driver) && !m_inputs.contains(driver) && !dynamic_cast<hlim::Node_Pin*>(driver.node))
-                m_localSignals.insert(driver);
+            potentialLocalSignals.insert(driver);
         }
 
         // check for prio conditional
         hlim::Node_PriorityConditional *prioCon = dynamic_cast<hlim::Node_PriorityConditional *>(node);
         if (prioCon != nullptr) {
             hlim::NodePort driver{.node = prioCon, .port = 0};
-            if (!m_outputs.contains(driver) && !m_inputs.contains(driver) && !dynamic_cast<hlim::Node_Pin*>(driver.node))
-                m_localSignals.insert(driver);
+            potentialLocalSignals.insert(driver);
         }
 
         // check for rewire nodes with slices, which require explicit input signals
@@ -99,8 +95,7 @@ void Process::extractSignals()
                     auto driver = rewireNode->getDriver(op.inputIdx);
                     if (driver.node != nullptr)
                         if (op.inputOffset != 0 || op.subwidth != getOutputWidth(driver))
-                            if (!m_outputs.contains(driver) && !m_inputs.contains(driver) && !dynamic_cast<hlim::Node_Pin*>(driver.node))
-                                m_localSignals.insert(driver);
+                            potentialLocalSignals.insert(driver);
                 }
             }
         }
@@ -112,6 +107,11 @@ void Process::extractSignals()
         }
 
     }
+
+    for (auto driver : potentialLocalSignals)
+        if (!m_outputs.contains(driver) && !m_inputs.contains(driver) && !dynamic_cast<hlim::Node_Pin*>(driver.node))
+            m_localSignals.insert(driver);
+
     verifySignalsDisjoint();
 }
 
