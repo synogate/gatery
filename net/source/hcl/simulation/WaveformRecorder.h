@@ -36,12 +36,17 @@ class WaveformRecorder : public SimulatorCallbacks
         bool m_initialized = false;
 
         std::map<hlim::NodePort, size_t> m_signal2id;
+
         struct StateOffsetSize {
             size_t offset, size;
         };
+        struct Signal {
+            std::string name;
+            bool isBVec;
+            bool isHidden;
+        };
         std::vector<StateOffsetSize> m_id2StateOffsetSize;
-        std::vector<std::string> m_signalNames;
-        std::vector<bool> m_hiddenSignal;
+        std::vector<Signal> m_id2Signal;
         sim::DefaultBitVectorState m_trackedState;
 
         void initializeStates();

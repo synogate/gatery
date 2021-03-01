@@ -122,18 +122,18 @@ void VCDSink::initialize()
                 << "$upscope $end\n";
         }
         for (const auto &sigId : module->signals) {
-            if (m_hiddenSignal[sigId.second]) continue;
+            if (m_id2Signal[sigId.second].isHidden) continue;
             auto width = sigId.first.node->getOutputConnectionType(sigId.first.port).width;
             m_vcdFile
-                << "$var wire " << width << " " << m_id2sigCode[sigId.second] << " " << m_signalNames[sigId.second] << " $end\n";
+                << "$var wire " << width << " " << m_id2sigCode[sigId.second] << " " << m_id2Signal[sigId.second].name << " $end\n";
         }
         m_vcdFile
             << "$scope module __hidden $end\n";
         for (const auto &sigId : module->signals) {
-            if (!m_hiddenSignal[sigId.second]) continue;
+            if (!m_id2Signal[sigId.second].isHidden) continue;
             auto width = sigId.first.node->getOutputConnectionType(sigId.first.port).width;
             m_vcdFile
-                << "$var wire " << width << " " << m_id2sigCode[sigId.second] << " " << m_signalNames[sigId.second] << " $end\n";
+                << "$var wire " << width << " " << m_id2sigCode[sigId.second] << " " << m_id2Signal[sigId.second].name << " $end\n";
         }
         m_vcdFile
             << "$upscope $end\n";
@@ -165,7 +165,7 @@ void VCDSink::initialize()
 void VCDSink::signalChanged(size_t id)
 {
     const auto &offsetSize = m_id2StateOffsetSize[id];
-    if (offsetSize.size == 1) {
+    if (offsetSize.size == 1 && !m_id2Signal[id].isBVec) {
         stateToFile(offsetSize.offset, 1);
         m_vcdFile << m_id2sigCode[id] << "\n";
     } else {
