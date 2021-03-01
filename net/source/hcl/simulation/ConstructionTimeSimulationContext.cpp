@@ -44,7 +44,7 @@ void ConstructionTimeSimulationContext::getSignal(hlim::NodePort output, Default
         {
             auto it = m_overrides.find(nodePort);
             if (it != m_overrides.end()) {
-                auto type = nodePort.node->getOutputConnectionType(nodePort.port);
+                auto type = hlim::getOutputConnectionType(nodePort);
                 HCL_ASSERT(type.width == it->second.size());
                 auto *c_node = simCircuit.createNode<hlim::Node_Constant>(it->second, type.interpretation);
                 outputsTranslated[nodePort] = {.node = c_node, .port = 0ull};
@@ -58,7 +58,7 @@ void ConstructionTimeSimulationContext::getSignal(hlim::NodePort output, Default
 
         // try use reset value
         if (auto *reg = dynamic_cast<hlim::Node_Register*>(nodePort.node)) {
-            auto type = nodePort.node->getOutputConnectionType(nodePort.port);
+            auto type = hlim::getOutputConnectionType(nodePort);
 
             auto reset = reg->getNonSignalDriver(hlim::Node_Register::Input::RESET_VALUE);
             if (reset.node != nullptr) {
@@ -84,7 +84,7 @@ void ConstructionTimeSimulationContext::getSignal(hlim::NodePort output, Default
 
         // use undefined for everything non-combinatorial
         if (!nodePort.node->isCombinatorial()) {
-            auto type = nodePort.node->getOutputConnectionType(nodePort.port);
+            auto type = hlim::getOutputConnectionType(nodePort);
 
             DefaultBitVectorState undefinedState;
             undefinedState.resize(type.width);

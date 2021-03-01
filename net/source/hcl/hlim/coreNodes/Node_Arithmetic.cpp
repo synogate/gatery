@@ -51,8 +51,8 @@ void Node_Arithmetic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, si
         return;
     }
 
-    const auto &leftType = leftDriver.node->getOutputConnectionType(leftDriver.port);
-    const auto &rightType = rightDriver.node->getOutputConnectionType(rightDriver.port);
+    const auto &leftType = hlim::getOutputConnectionType(leftDriver);
+    const auto &rightType = hlim::getOutputConnectionType(rightDriver);
     HCL_ASSERT_HINT(leftType.width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
     HCL_ASSERT_HINT(rightType.width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
 

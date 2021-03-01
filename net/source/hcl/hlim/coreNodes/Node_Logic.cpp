@@ -139,13 +139,13 @@ void Node_Logic::updateConnectionType()
 
     if (lhs.node != nullptr) {
         if (rhs.node != nullptr) {
-            desiredConnectionType = lhs.node->getOutputConnectionType(lhs.port);
-            HCL_ASSERT_HINT(desiredConnectionType == rhs.node->getOutputConnectionType(rhs.port), "Support for differing types of input to logic node not yet implemented");
+            desiredConnectionType = hlim::getOutputConnectionType(lhs);
+            HCL_ASSERT_HINT(desiredConnectionType == hlim::getOutputConnectionType(rhs), "Support for differing types of input to logic node not yet implemented");
             //desiredConnectionType.width = std::max(desiredConnectionType.width, rhs.node->getOutputConnectionType(rhs.port).width);
         } else
-            desiredConnectionType = lhs.node->getOutputConnectionType(lhs.port);
+            desiredConnectionType = hlim::getOutputConnectionType(lhs);
     } else if (rhs.node != nullptr)
-        desiredConnectionType = rhs.node->getOutputConnectionType(rhs.port);
+        desiredConnectionType = hlim::getOutputConnectionType(rhs);
 
     setOutputConnectionType(0, desiredConnectionType);
 }

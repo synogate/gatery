@@ -14,7 +14,7 @@ void Node_SignalTap::addInput(hlim::NodePort input)
 
 void Node_SignalTap::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
-    if (m_trigger == LVL_WATCH) 
+    if (m_trigger == LVL_WATCH)
         return;
 
     bool triggered;
@@ -26,7 +26,7 @@ void Node_SignalTap::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim
         if (conditionDriver.node == nullptr) {
             triggered = true; // unconnected is undefined and undefined always triggers.
         } else {
-            const auto &conditionType = conditionDriver.node->getOutputConnectionType(conditionDriver.port);
+            const auto &conditionType = hlim::getOutputConnectionType(conditionDriver);
             HCL_ASSERT_HINT(conditionType.width == 1, "Condition must be 1 bit!");
 
             bool defined = state.get(sim::DefaultConfig::DEFINED, inputOffsets[0]);
@@ -47,7 +47,7 @@ void Node_SignalTap::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim
                     message << "UNCONNECTED";
                     return;
                 }
-                const auto &type = driver.node->getOutputConnectionType(driver.port);
+                const auto &type = hlim::getOutputConnectionType(driver);
                 for (auto i : utils::Range(type.width)) {
                     if (state.get(sim::DefaultConfig::DEFINED, inputOffsets[signal.inputIdx]+type.width-1-i)) {
                         if (state.get(sim::DefaultConfig::VALUE, inputOffsets[signal.inputIdx]+type.width-1-i))
@@ -58,27 +58,27 @@ void Node_SignalTap::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim
                         message << 'X';
                 }
             }
-            
+
             const Node_SignalTap *node;
             sim::DefaultBitVectorState &state;
             const size_t *inputOffsets;
             std::stringstream message;
-            
+
             Concatenator(const Node_SignalTap *node, sim::DefaultBitVectorState &state, const size_t *inputOffsets) : node(node), state(state), inputOffsets(inputOffsets) { }
         };
-        
+
         Concatenator concatenator(this, state, inputOffsets);
         for (const auto &part : m_logMessage)
             boost::apply_visitor(concatenator, part);
-        
+
         switch (m_level) {
-            case LVL_ASSERT: 
+            case LVL_ASSERT:
                 simCallbacks.onAssert(this, concatenator.message.str());
             break;
-            case LVL_WARN: 
+            case LVL_WARN:
                 simCallbacks.onWarning(this, concatenator.message.str());
             break;
-            case LVL_DEBUG: 
+            case LVL_DEBUG:
                 simCallbacks.onDebugMessage(this, concatenator.message.str());
             break;
         }
@@ -120,7 +120,7 @@ std::vector<size_t> Node_SignalTap::getInternalStateSizes() const
 
 
 
-std::unique_ptr<BaseNode> Node_SignalTap::cloneUnconnected() const 
+std::unique_ptr<BaseNode> Node_SignalTap::cloneUnconnected() const
 {
     std::unique_ptr<BaseNode> res(new Node_SignalTap());
     copyBaseToClone(res.get());

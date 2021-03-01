@@ -420,7 +420,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
                 forceUnfold = true; // referring to target, must force unfolding
             }
 
-            auto targetContext = hlim::outputIsBvec(nodePort)?Context::STD_LOGIC_VECTOR:Context::STD_LOGIC;
+            auto targetContext = hlim::outputIsBVec(nodePort)?Context::STD_LOGIC_VECTOR:Context::STD_LOGIC;
 
             if (isLocalSignal)
                 assignmentPrefix += " := ";
