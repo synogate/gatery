@@ -13,7 +13,6 @@
 #include <random>
 
 #include <hcl/stl/kvs/TinyCuckoo.h>
-#include <hcl/stl/kvs/TinyCuckooCore.h>
 
 using namespace boost::unit_test;
 using namespace hcl;
@@ -160,6 +159,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCookuTable
 }
 #if 0
 #include <hcl/export/vhdl/VHDLExport.h>
+#include <hcl/stl/kvs/TinyCuckooCore.h>
 
 BOOST_FIXTURE_TEST_CASE(TinyCuckooCoreTest, hcl::core::sim::UnitTestSimulationFixture)
 {
