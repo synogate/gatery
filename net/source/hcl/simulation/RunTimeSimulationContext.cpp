@@ -1,6 +1,7 @@
 #include "RunTimeSimulationContext.h"
 
 #include "../hlim/coreNodes/Node_Pin.h"
+#include "../hlim/coreNodes/Node_Signal.h"
 #include "../hlim/supportNodes/Node_SignalTap.h"
 
 #include "Simulator.h"
@@ -13,6 +14,8 @@ RunTimeSimulationContext::RunTimeSimulationContext(Simulator *simulator) : m_sim
 
 void RunTimeSimulationContext::overrideSignal(hlim::NodePort output, const DefaultBitVectorState &state)
 {
+    if (dynamic_cast<hlim::Node_Signal*>(output.node))
+        output = output.node->getNonSignalDriver(0);
     auto *pin = dynamic_cast<hlim::Node_Pin*>(output.node);
     HCL_DESIGNCHECK_HINT(pin != nullptr, "Only io pin outputs allow run time overrides!");
     m_simulator->simProcSetInputPin(pin, state);
