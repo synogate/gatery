@@ -45,16 +45,18 @@ void Node_Logic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::De
 
         std::uint64_t left, leftDefined, right, rightDefined;
 
-        if (leftAllUndefined || inputOffsets[0] == ~0ull)
+        if (leftAllUndefined || inputOffsets[0] == ~0ull) {
             leftDefined = 0;
-        else {
+            left = 0;
+        } else {
             leftDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[0]+offset, chunkSize);
             left = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0]+offset, chunkSize);
         }
 
-        if (rightAllUndefined || m_op == NOT || inputOffsets[1] == ~0ull)
+        if (rightAllUndefined || m_op == NOT || inputOffsets[1] == ~0ull) {
             rightDefined = 0;
-        else {
+            right = 0;
+        } else {
             rightDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[1]+offset, chunkSize);
             right = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[1]+offset, chunkSize);
         }
