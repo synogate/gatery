@@ -805,8 +805,9 @@ void Circuit::ensureSignalNodePlacement()
 {
     std::map<NodePort, Node_Signal*> addedSignalsNodes;
 
-    for (auto &node : m_nodes) {
-        if (dynamic_cast<Node_Signal*>(node.get()) != nullptr) continue;
+    for (auto idx : utils::Range(m_nodes.size())) {
+        auto node = m_nodes[idx].get();
+        if (dynamic_cast<Node_Signal*>(node) != nullptr) continue;
         for (auto i : utils::Range(node->getNumInputPorts())) {
             auto driver = node->getDriver(i);
             if (driver.node == nullptr) continue;
