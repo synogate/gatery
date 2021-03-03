@@ -5,7 +5,7 @@
 
 namespace hcl::stl
 {
-	TinyCuckooOut tinyCuckoo(const TinyCuckooIn& in, RegisterMap& mmap)
+	TinyCuckooOut tinyCuckoo(const TinyCuckooIn& in)
 	{
 		GroupScope entity(GroupScope::GroupType::ENTITY);
 		entity.setName("TinyCuckoo");
@@ -29,8 +29,8 @@ namespace hcl::stl
 			//mem.setType(MemType::BRAM);
 			mem.setPowerOnState(
 				hcl::core::sim::createDefaultBitVectorState(1ull << in.tableWidth().value, width(in.update.item), [](size_t idx, core::sim::DefaultConfig::BaseType* planes) {
-					planes[core::sim::DefaultConfig::DEFINED] = ~0u;
-					planes[core::sim::DefaultConfig::VALUE] = 0;
+					planes[core::sim::DefaultConfig::DEFINED] = ~0ull;
+					planes[core::sim::DefaultConfig::VALUE] = 0ull;
 				}));
 
 			IF(in.update.valid & in.update.tableIdx == i)
