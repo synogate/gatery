@@ -118,6 +118,16 @@ namespace hcl::core::frontend {
         m_node->moveToSignalGroup(signalGroup);
     }
 
+    void Bit::setResetValue(bool v)
+    {
+        m_resetValue = v;
+    }
+
+    void Bit::setResetValue(char v)
+    {
+        HCL_ASSERT(v == '1' || v == '0'); setResetValue(v == '1');
+    }
+
     void Bit::createNode()
     {
         HCL_ASSERT(!m_node);

@@ -7,6 +7,7 @@
 #include <hcl/utils/Exceptions.h>
 
 #include <vector>
+#include <optional>
 
 namespace hcl::core::frontend {
     
@@ -44,6 +45,10 @@ namespace hcl::core::frontend {
             void setName(std::string name) override;
             void addToSignalGroup(hlim::SignalGroup *signalGroup);
 
+            void setResetValue(bool v);
+            void setResetValue(char v);
+            std::optional<bool> getResetValue() const { return m_resetValue; }
+
         protected:
             void createNode();
             void assign(bool);
@@ -56,7 +61,7 @@ namespace hcl::core::frontend {
         private:
             hlim::Node_Signal* m_node = nullptr;
             size_t m_offset = 0;
-
+            std::optional<bool> m_resetValue;
     };
 
 }

@@ -117,6 +117,9 @@ BVec Clock::operator()(const BVec& signal, const BVec& reset) const
 
 Bit Clock::operator()(const Bit& signal) const
 {
+    if (signal.getResetValue())
+        return (*this)(signal, *signal.getResetValue());
+
     auto* reg = DesignScope::createNode<hlim::Node_Register>();
     reg->setName(std::string{ signal.getName() });
     reg->setClock(m_clock);
