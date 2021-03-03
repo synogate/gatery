@@ -20,8 +20,8 @@ void Node_Compare::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
         return;
     }
 
-    const auto &leftType = leftDriver.node->getOutputConnectionType(leftDriver.port);
-    const auto &rightType = rightDriver.node->getOutputConnectionType(rightDriver.port);
+    const auto &leftType = hlim::getOutputConnectionType(leftDriver);
+    const auto &rightType = hlim::getOutputConnectionType(rightDriver);
     HCL_ASSERT_HINT(leftType.width <= 64, "Compare with more than 64 bits not yet implemented!");
     HCL_ASSERT_HINT(rightType.width <= 64, "Compare with more than 64 bits not yet implemented!");
     HCL_ASSERT_HINT(leftType.interpretation == rightType.interpretation, "Comparing signals with different interpretations not yet implemented!");

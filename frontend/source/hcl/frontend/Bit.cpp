@@ -80,7 +80,7 @@ namespace hcl::core::frontend {
     {
         SignalReadPort ret = getRawDriver();
 
-        hlim::ConnectionType type = ret.node->getOutputConnectionType(ret.port);
+        hlim::ConnectionType type = hlim::getOutputConnectionType(ret);
         if (type.interpretation != hlim::ConnectionType::BOOL)
         {
             // TODO: cache rewire node if m_node's input is unchanged

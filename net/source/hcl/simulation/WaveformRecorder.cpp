@@ -19,19 +19,21 @@ WaveformRecorder::WaveformRecorder(hlim::Circuit &circuit, Simulator &simulator)
 
 void WaveformRecorder::addSignal(hlim::NodePort np, bool hidden, const std::string &nameOverride)
 {
-    HCL_ASSERT(np.node->getOutputConnectionType(np.port).interpretation != hlim::ConnectionType::DEPENDENCY);
+    HCL_ASSERT(!hlim::outputIsDependency(np));
     if (!m_signal2id.contains(np)) {
-        m_signal2id.insert({np, m_signal2id.size()});
+        m_signal2id.insert({np, m_id2Signal.size()});
+        Signal signal;
         if (!nameOverride.empty()) {
-            m_signalNames.push_back(nameOverride);
-            m_hiddenSignal.push_back(hidden);
+            signal.name = nameOverride;
         } else {
             std::string baseName = np.node->getName();
             if (baseName.empty())
                 baseName = "unnamed";
-            m_signalNames.push_back((boost::format("%s_id_%d") % baseName % np.node->getId()).str());
-            m_hiddenSignal.push_back(hidden);
+            signal.name = (boost::format("%s_id_%d") % baseName % np.node->getId()).str();
         }
+        signal.isHidden = hidden;
+        signal.isBVec = hlim::outputIsBVec(np);
+        m_id2Signal.push_back(signal);
     }
 }
 

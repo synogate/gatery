@@ -153,12 +153,11 @@ BOOST_FIXTURE_TEST_CASE(BVecSignalLoopSemanticTest, UnitTestSimulationFixture)
     c = 2_b;
     sim_assert(c == "b01") << c << " should be 01";
     c = "b01";
-
-    // TODO: make it work
-    //BVec shadowed = 2_b;
-    //shadowed[0] = '1';
-    //shadowed[1] = '0';
-
+/*
+    BVec shadowed = 2_b;
+    shadowed[0] = '1';
+    shadowed[1] = '0';
+*/
     eval();
 }
 

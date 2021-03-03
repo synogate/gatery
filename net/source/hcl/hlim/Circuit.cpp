@@ -728,7 +728,7 @@ void Circuit::propagateConstants()
             for (size_t port : utils::Range(successor.node->getNumInputPorts())) {
                 auto driver = successor.node->getNonSignalDriver(port);
                 if (driver.node != nullptr) {
-                    auto conType = driver.node->getOutputConnectionType(driver.port);
+                    auto conType = hlim::getOutputConnectionType(driver);
                     size_t offset = state.size();
                     state.resize(offset + (conType.width + 63)/64 * 64);
                     inputOffsets[port] = offset;

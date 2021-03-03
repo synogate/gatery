@@ -125,8 +125,6 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCookuTable
                 if (sim(outFound))
                 {
                     BOOST_TEST(lookupQueue.back() == sim(outValue));
-                    if (lookupQueue.back() != sim(outValue))
-                        __debugbreak();
                 }
                 else
                     BOOST_TEST(lookupQueue.back() == invalid);

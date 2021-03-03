@@ -11,6 +11,8 @@ namespace hcl::core::frontend {
         m_pinNode->setName(std::string(bit.getName()));
     }
 
+
+
     OutputPins::OutputPins(const BVec &bitVector) {
         m_pinNode = DesignScope::createNode<hlim::Node_Pin>();
         m_pinNode->connect(bitVector.getReadPort());

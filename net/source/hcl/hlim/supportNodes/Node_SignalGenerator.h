@@ -4,6 +4,7 @@
 
 namespace hcl::core::hlim {
 
+
 class Node_SignalGenerator : public Node<Node_SignalGenerator>
 {
     public:
@@ -17,6 +18,7 @@ class Node_SignalGenerator : public Node<Node_SignalGenerator>
         virtual std::string getInputName(size_t idx) const override;
 
         virtual std::vector<size_t> getInternalStateSizes() const override;
+
     protected:
         void setOutputs(const std::vector<ConnectionType> &connections);
         void resetDataDefinedZero(sim::DefaultBitVectorState &state, const size_t *outputOffsets) const;

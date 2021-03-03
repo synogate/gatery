@@ -23,14 +23,13 @@ void Node_Arithmetic::updateConnectionType()
     ConnectionType desiredConnectionType = getOutputConnectionType(0);
 
     if (lhs.node != nullptr) {
+        desiredConnectionType = hlim::getOutputConnectionType(lhs);
         if (rhs.node != nullptr) {
-            desiredConnectionType = lhs.node->getOutputConnectionType(lhs.port);
-            desiredConnectionType.width = std::max(desiredConnectionType.width, rhs.node->getOutputConnectionType(rhs.port).width);
+            desiredConnectionType.width = std::max(desiredConnectionType.width, getOutputWidth(rhs));
             HCL_ASSERT_HINT(lhs.node->getOutputConnectionType(lhs.port).interpretation == rhs.node->getOutputConnectionType(rhs.port).interpretation, "Mixing different interpretations not yet implemented!");
-        } else
-            desiredConnectionType = lhs.node->getOutputConnectionType(lhs.port);
+        }
     } else if (rhs.node != nullptr)
-        desiredConnectionType = rhs.node->getOutputConnectionType(rhs.port);
+        desiredConnectionType = hlim::getOutputConnectionType(rhs);
 
     setOutputConnectionType(0, desiredConnectionType);
 }
@@ -52,8 +51,8 @@ void Node_Arithmetic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, si
         return;
     }
 
-    const auto &leftType = leftDriver.node->getOutputConnectionType(leftDriver.port);
-    const auto &rightType = rightDriver.node->getOutputConnectionType(rightDriver.port);
+    const auto &leftType = hlim::getOutputConnectionType(leftDriver);
+    const auto &rightType = hlim::getOutputConnectionType(rightDriver);
     HCL_ASSERT_HINT(leftType.width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
     HCL_ASSERT_HINT(rightType.width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
 

@@ -105,6 +105,28 @@ class BaseNode : public NodeIO
 };
 
 
+inline bool outputIsBVec(const NodePort &output) {
+    return output.node->getOutputConnectionType(output.port).interpretation == ConnectionType::BITVEC;
+}
+
+inline bool outputIsBool(const NodePort &output) {
+    return output.node->getOutputConnectionType(output.port).interpretation == ConnectionType::BOOL;
+}
+
+inline bool outputIsDependency(const NodePort &output) {
+    return output.node->getOutputConnectionType(output.port).interpretation == ConnectionType::DEPENDENCY;
+}
+
+
+inline size_t getOutputWidth(const NodePort &output) {
+    return output.node->getOutputConnectionType(output.port).width;
+}
+
+inline auto getOutputConnectionType(const NodePort &output) {
+    return output.node->getOutputConnectionType(output.port);
+}
+
+
 template<class FinalType>
 class Node : public BaseNode
 {

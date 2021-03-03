@@ -122,7 +122,7 @@ std::string BaseNode::attemptInferOutputName(size_t outputPort) const
         auto driver = getDriver(i);
         if (driver.node == nullptr)
             return "";
-        if (driver.node->getOutputConnectionType(driver.port).interpretation == ConnectionType::DEPENDENCY) continue;
+        if (hlim::outputIsDependency(driver)) continue;
         if (driver.node->getName().empty()) {
             return "";
         } else {

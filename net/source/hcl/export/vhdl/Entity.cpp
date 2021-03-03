@@ -134,7 +134,7 @@ std::vector<std::string> Entity::getPortsVHDL()
         } else if (isOutput) {
             line << "OUT ";
             auto driver = ioPin->getNonSignalDriver(0);
-            cf.formatConnectionType(line, driver.node->getOutputConnectionType(driver.port));
+            cf.formatConnectionType(line, hlim::getOutputConnectionType(driver));
         } else
             continue;
         portList.push_back(line.str());
@@ -142,13 +142,13 @@ std::vector<std::string> Entity::getPortsVHDL()
     for (const auto &signal : m_inputs) {
         std::stringstream line;
         line << m_namespaceScope.getName(signal) << " : IN ";
-        cf.formatConnectionType(line, signal.node->getOutputConnectionType(signal.port));
+        cf.formatConnectionType(line, hlim::getOutputConnectionType(signal));
         portList.push_back(line.str());
     }
     for (const auto &signal : m_outputs) {
         std::stringstream line;
         line << m_namespaceScope.getName(signal) << " : OUT ";
-        cf.formatConnectionType(line, signal.node->getOutputConnectionType(signal.port));
+        cf.formatConnectionType(line, hlim::getOutputConnectionType(signal));
         portList.push_back(line.str());
     }
     return portList;
@@ -161,7 +161,7 @@ void Entity::writeLocalSignalsVHDL(std::ostream &stream)
     for (const auto &signal : m_localSignals) {
         cf.indent(stream, 1);
         stream << "SIGNAL " << m_namespaceScope.getName(signal) << " : ";
-        cf.formatConnectionType(stream, signal.node->getOutputConnectionType(signal.port));
+        cf.formatConnectionType(stream, hlim::getOutputConnectionType(signal));
         stream << "; "<< std::endl;
     }
 }

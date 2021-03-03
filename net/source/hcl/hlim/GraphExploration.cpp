@@ -90,14 +90,14 @@ void DepthFirstPolicy<forward>::advance(bool skipDependencies)
     m_stack.pop();
     if (forward) {
         for (auto i : utils::Range(currentNode->getNumOutputPorts()))
-            if (!skipDependencies || currentNode->getOutputConnectionType(i).interpretation != ConnectionType::DEPENDENCY)
+            if (!skipDependencies ||  currentNode->getOutputConnectionType(i).interpretation != ConnectionType::DEPENDENCY)
                 for (auto np : currentNode->getDirectlyDriven(i))
                     m_stack.push(np);
     } else {
         for (auto i : utils::Range(currentNode->getNumInputPorts())) {
             auto driver = currentNode->getDriver(i);
             if (driver.node != nullptr)
-                if (!skipDependencies || driver.node->getOutputConnectionType(driver.port).interpretation != ConnectionType::DEPENDENCY)
+                if (!skipDependencies || !hlim::outputIsDependency(driver))
                     m_stack.push(driver);
         }
     }

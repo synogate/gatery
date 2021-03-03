@@ -507,7 +507,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
             for (auto i : utils::Range(n->getNumInputPorts())) {
                 auto driver = n->getNonSignalDriver(i);
                 if (driver.node == nullptr) continue;
-                if (driver.node->getOutputConnectionType(driver.port).interpretation == ConnectionType::DEPENDENCY) continue; // TODO: think about this
+                if (hlim::outputIsDependency(driver)) continue; // TODO: think about this
                 if (!delayedNodes.contains(driver.node) && driver.node != rp.syncReadDataReg) {
                     insertDelayInput({.node=n, .port=i}, n->getGroup(), (n->getName()+"delayed").c_str(), "Auto generated register on signal going into a subnet that was delayed due to register retiming for BRAM sync read formation.");
                 }

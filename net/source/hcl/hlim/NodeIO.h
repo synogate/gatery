@@ -30,10 +30,10 @@ class NodeIO
         };
 
         virtual ~NodeIO();
-        
+
         inline size_t getNumInputPorts() const { return m_inputPorts.size(); }
         inline size_t getNumOutputPorts() const { return m_outputPorts.size(); }
-        
+
         ConnectionType getDriverConnType(size_t inputPort) const;
         NodePort getDriver(size_t inputPort) const;
         NodePort getNonSignalDriver(size_t inputPort) const;
@@ -45,14 +45,14 @@ class NodeIO
 
         inline const ConnectionType &getOutputConnectionType(size_t outputPort) const { return m_outputPorts[outputPort].connectionType; }
         inline OutputType getOutputType(size_t outputPort) const { return m_outputPorts[outputPort].outputType; }
-        
+
         void bypassOutputToInput(size_t outputPort, size_t inputPort);
 
         inline void rewireInput(size_t inputPort, const NodePort &output) { connectInput(inputPort, output); }
     protected:
         void setOutputConnectionType(size_t outputPort, const ConnectionType &connectionType);
         void setOutputType(size_t outputPort, OutputType outputType);
-        
+
         void connectInput(size_t inputPort, const NodePort &output);
         void disconnectInput(size_t inputPort);
 
@@ -60,7 +60,7 @@ class NodeIO
         void resizeOutputs(size_t num);
     private:
         struct OutputPort {
-            ConnectionType connectionType; ///@todo: turn into pointer and cache somewhere
+            ConnectionType connectionType;
             OutputType outputType = OUTPUT_IMMEDIATE;
             sim::DefaultBitVectorState outputValue;
             std::vector<NodePort> connections;

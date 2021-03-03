@@ -100,9 +100,11 @@ template<typename... Types>
 BVec cat(const Types&... allSignals)
 {
     auto check_parameter = [](auto signal) {
-        // TODO: check does not work for string literals
-        //static_assert(std::is_convertible_v<decltype(signal), BVec> | std::is_convertible_v<decltype(signal), Bit>,
-        //    "argument passed to cat is not a signal or constant");
+        static_assert(std::is_convertible_v<decltype(signal), BVec> ||
+                      std::is_convertible_v<decltype(signal), Bit> ||
+                      std::is_same_v<decltype(signal), char> ||
+                      std::is_same_v<decltype(signal), const char*>,
+            "argument passed to cat is not a signal or constant");
     };
     (check_parameter(allSignals), ...);
 

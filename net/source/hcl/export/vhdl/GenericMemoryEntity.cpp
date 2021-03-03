@@ -115,7 +115,7 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
         if (rp.outputReg != nullptr) {
             cf.indent(stream, 1);
             stream << "SIGNAL " << m_namespaceScope.getName(rp.dataOutput) << "_outputReg : ";
-            cf.formatConnectionType(stream, rp.dataOutput.node->getOutputConnectionType(rp.dataOutput.port));
+            cf.formatConnectionType(stream, hlim::getOutputConnectionType(rp.dataOutput));
             stream << "; "<< std::endl;
         }
 
