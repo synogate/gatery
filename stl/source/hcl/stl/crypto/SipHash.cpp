@@ -105,11 +105,10 @@ namespace hcl::stl
 
 		sipOp(state[0], state[1], 32, 13);
 		sipOp(state[2], state[3], 0, 16);
+		setName(state, "midstate");
 		sipOp(state[2], state[1], 32, 17);
 		sipOp(state[0], state[3], 0, 21);
-
-		static size_t roundIdx = 0;
-		setName(state, "round" + std::to_string(roundIdx++) + "_state");
+		setName(state, "state");
 	}
 
 	BVec SipHash::pad(const BVec& block, size_t msgByteSize)
