@@ -421,31 +421,36 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
         boost::optional<NodePort> enable;
         // Ensure everything is on the same clock:
         {
-            std::stringstream issue;
-            issue << "Can't turn memory into blockram because an asynchronous read can not be turned into a synchronous one: Following registers are using differing clocks.\n";
-            if (writePort != nullptr) {
+            hlim::Node_Register* potentiallyOffendingReg = nullptr;
+            if (writePort != nullptr)
                 clock = writePort->getClocks()[0];
-                issue << "From:\n" << writePort->getStackTrace();
-            }
 
             for (auto reg : registers)
                 if (clock == nullptr) {
                     clock = reg->getClocks()[0];
-                    issue << "From:\n" << reg->getStackTrace();
+                    potentiallyOffendingReg = reg;
                 } else if (clock != reg->getClocks()[0]) {
+                    std::stringstream issue;
+                    issue << "Can't turn memory into blockram because an asynchronous read can not be turned into a synchronous one: Following registers are using differing clocks.\n";
+                    if (writePort != nullptr)
+                        issue << "From:\n" << writePort->getStackTrace();
+                    if (potentiallyOffendingReg)
+                        issue << "From:\n" << potentiallyOffendingReg->getStackTrace();
                     issue << "and from:\n" << reg->getStackTrace();
                     HCL_DESIGNCHECK_HINT(false, issue.str());
                 }
         }
         // Ensure everything is on the same enable:
         {
-            std::stringstream issue;
-            issue << "Can't turn memory into blockram because an asynchronous read can not be turned into a synchronous one: Following registers are using differing enables.\n";
+            hlim::Node_Register* potentiallyOffendingReg = nullptr;
             for (auto reg : registers)
                 if (!enable) {
                     enable = reg->getNonSignalDriver((unsigned)Node_Register::Input::ENABLE);
-                    issue << "From:\n" << reg->getStackTrace();
+                    potentiallyOffendingReg = reg;
                 } else if (*enable != reg->getNonSignalDriver((unsigned)Node_Register::Input::ENABLE)) {
+                    std::stringstream issue;
+                    issue << "Can't turn memory into blockram because an asynchronous read can not be turned into a synchronous one: Following registers are using differing enables.\n";
+                    issue << "From:\n" << potentiallyOffendingReg->getStackTrace();
                     issue << "and from:\n" << reg->getStackTrace();
                     HCL_DESIGNCHECK_HINT(false, issue.str());
                 }
@@ -589,10 +594,12 @@ void MemoryGroup::verify()
     switch (m_memory->type()) {
         case Node_Memory::MemType::BRAM:
             for (auto &rp : m_readPorts) {
-                std::stringstream issue;
-                issue << "Memory can not become BRAM because a read port is missing it's data register.\nMemory from:\n"
-                      << m_memory->getStackTrace() << "\nRead port from:\n" << rp.node->getStackTrace();
-                HCL_DESIGNCHECK_HINT(rp.syncReadDataReg != nullptr, issue.str());
+                if (rp.syncReadDataReg == nullptr) {
+                    std::stringstream issue;
+                    issue << "Memory can not become BRAM because a read port is missing it's data register.\nMemory from:\n"
+                        << m_memory->getStackTrace() << "\nRead port from:\n" << rp.node->getStackTrace();
+                    HCL_DESIGNCHECK_HINT(false, issue.str());
+                }
             }
             if (m_readPorts.size() + m_writePorts.size() > 2) {
                 std::stringstream issue;
