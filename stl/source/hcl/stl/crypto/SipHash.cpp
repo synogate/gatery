@@ -7,7 +7,7 @@ namespace hcl::stl
 		m_finalizeRounds(finalizeRounds),
 		m_hashWidth(hashWidth)
 	{
-		HCL_DESIGNCHECK_HINT(m_hashWidth == 64 | m_hashWidth == 128, "SipHash is implemented for 64 and 128 bit output only");
+		HCL_DESIGNCHECK_HINT((m_hashWidth == 64) | (m_hashWidth == 128), "SipHash is implemented for 64 and 128 bit output only");
 	}
 
 	void SipHash::initialize(SipHashState& state, const BVec& key)
