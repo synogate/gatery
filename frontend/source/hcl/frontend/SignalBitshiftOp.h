@@ -51,6 +51,8 @@ BVec &operator>>=(BVec &signal, int amount); // TODO (remove)
 BVec rot(const BVec& signal, int amount); // TODO (remove)
 inline BVec rotl(const BVec& signal, int amount) { return rot(signal, amount); }  // TODO (remove)
 inline BVec rotr(const BVec& signal, int amount) { return rot(signal, -amount); }  // TODO (remove)
+inline BVec rotl(const BVec& signal, size_t amount) { return rot(signal, int(amount)); }  // TODO (remove)
+inline BVec rotr(const BVec& signal, size_t amount) { return rot(signal, -int(amount)); }  // TODO (remove)
 
 
 BVec zshl(const BVec& signal, const BVec& amount);
