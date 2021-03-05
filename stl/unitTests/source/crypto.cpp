@@ -14,6 +14,7 @@
 #include <hcl/stl/crypto/sha2.h>
 #include <hcl/stl/crypto/md5.h>
 #include <hcl/stl/crypto/SipHash.h>
+#include <hcl/stl/crypto/TabulationHashing.h>
 
 using namespace boost::unit_test;
 using namespace hcl;
@@ -416,10 +417,10 @@ BOOST_FIXTURE_TEST_CASE(SipHash64Test, hcl::core::sim::UnitTestSimulationFixture
 
     });
 
-    design.getCircuit().optimize(3);
-    design.visualize("siphash");
-    core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "siphash.vcd");
-    vcd.addAllSignals();
+    //design.getCircuit().optimize(3);
+    //design.visualize("siphash");
+    //core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "siphash.vcd");
+    //vcd.addAllSignals();
 
     design.getCircuit().optimize(3);
     runTicks(design.getCircuit(), clock.getClk(), 24);
@@ -460,4 +461,74 @@ BOOST_FIXTURE_TEST_CASE(SipHash64HelperTest, hcl::core::sim::UnitTestSimulationF
     sim_assert(hash == 0x0d6c8009d9a94f5a) << hash;
 
     eval(design.getCircuit());
+}
+
+BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, hcl::core::sim::UnitTestSimulationFixture)
+{
+    DesignScope design;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000));
+    ClockScope clockScope(clock);
+
+    stl::TabulationHashing gen{16_b};
+    BVec data = pinIn(16_b).setName("data");
+    BVec hash = reg(gen(data));
+    stl::AvalonMM ctrl = gen.singleUpdatePort();
+
+    auto addrTab = pinIn(1_b).setName("addrTab");
+    auto addrSym = pinIn(8_b).setName("addrSym");
+    ctrl.address = 0;
+    ctrl.address(ctrl.addressSel["table"]) = addrTab;
+    ctrl.address(ctrl.addressSel["symbol"]) = addrSym;
+
+    std::array<std::array<uint16_t, 256>, 2> reference;
+
+    pinOut(hash).setName("hash");
+
+    *ctrl.write = pinIn().setName("update");
+    {
+        std::cout << "start\n";
+        ctrl.writeData = pinIn(16_b).setName("update_write_data");
+    }
+    std::cout << "end\n";
+
+    HCL_NAMED(ctrl);
+
+    addSimulationProcess([&]()->SimProcess {
+        
+        std::random_device rng;
+
+        sim(*ctrl.write) = '1';
+        for (size_t t = 0; t < reference.size(); ++t)
+        {
+            sim(addrTab) = t;
+
+            for (size_t i = 0; i < reference[t].size(); ++i)
+            {
+                reference[t][i] = rng() & 0xFFFF;
+                sim(addrSym) = i;
+                sim(*ctrl.writeData) = reference[t][i];
+
+                co_await WaitClk(clock);
+            }
+        }
+        sim(*ctrl.write) = '0';
+
+        for(size_t i = 0; i < 16; ++i)
+            co_await WaitClk(clock);
+
+        for (size_t i = 0; i < (1 << 16); ++i)
+        {
+            sim(data) = i;
+            co_await WaitClk(clock);
+        }
+    });
+
+    design.getCircuit().optimize(3);
+    design.visualize("TabulationHashingTest");
+    core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TabulationHashingTest.vcd");
+    vcd.addAllSignals();
+
+    design.getCircuit().optimize(3);
+    runTicks(design.getCircuit(), clock.getClk(), 129);
 }

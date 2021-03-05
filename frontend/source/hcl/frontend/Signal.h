@@ -47,7 +47,7 @@ namespace hcl::core::frontend {
         
         ElementarySignal();
         ElementarySignal(const ElementarySignal&) noexcept = delete;
-        virtual ~ElementarySignal() = default;
+        virtual ~ElementarySignal();
 
         virtual bool valid() const = 0;
 

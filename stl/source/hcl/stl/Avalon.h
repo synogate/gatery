@@ -1,28 +1,26 @@
 #pragma once
 #include <hcl/frontend.h>
+#include <map>
+#include <string_view>
 
 namespace hcl::stl
 {
     struct AvalonMM
     {
-        AvalonMM() = default;
-        AvalonMM(const AvalonMM&) = default;
-        AvalonMM(size_t addressWidth, size_t dataWidth) :
-            address(core::frontend::BitWidth{ addressWidth }),
-            read('0'),
-            write('0'),
-            writeData(core::frontend::BitWidth{ dataWidth }),
-            readData(core::frontend::BitWidth{ dataWidth }),
-            readDataValid('0')
-        {}
+        BVec address;
+        std::optional<Bit> ready;
+        std::optional<Bit> read;
+        std::optional<Bit> write;
+        std::optional<BVec> writeData;
+        std::optional<BVec> readData;
+        std::optional<Bit> readDataValid;
 
-        core::frontend::BVec address;
-        core::frontend::Bit read;
-        core::frontend::Bit write;
-        core::frontend::BVec writeData;
-        core::frontend::BVec readData;
-        core::frontend::Bit readDataValid;
+        size_t readLatency = 0;
+        size_t readyLatency = 0;
+
+        std::map<std::string_view, Selection> addressSel;
+        std::map<std::string_view, Selection> dataSel;
     };
 }
 
-BOOST_HANA_ADAPT_STRUCT(hcl::stl::AvalonMM, address, read, write, writeData, readData, readDataValid);
+BOOST_HANA_ADAPT_STRUCT(hcl::stl::AvalonMM, address, ready, read, write, writeData, readData, readDataValid, readLatency, readyLatency, addressSel, dataSel);
