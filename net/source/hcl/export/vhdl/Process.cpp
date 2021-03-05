@@ -210,7 +210,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
         stream << "))";
 #else
         stream << "(";
-        formatExpression(stream, comments, arithmeticNode->getDriver(0), dependentInputs);
+        formatExpression(stream, comments, arithmeticNode->getDriver(0), dependentInputs, Context::STD_LOGIC_VECTOR);
         switch (arithmeticNode->getOp()) {
             case hlim::Node_Arithmetic::ADD: stream << " + "; break;
             case hlim::Node_Arithmetic::SUB: stream << " - "; break;
@@ -220,7 +220,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
             default:
                 HCL_ASSERT_HINT(false, "Unhandled operation!");
         };
-        formatExpression(stream, comments, arithmeticNode->getDriver(1), dependentInputs);
+        formatExpression(stream, comments, arithmeticNode->getDriver(1), dependentInputs, Context::STD_LOGIC_VECTOR);
         stream << ")";
 #endif
         return;
@@ -257,7 +257,8 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
             stream << "bool2stdlogic(";
         else
             stream << "(";
-        formatExpression(stream, comments, compareNode->getDriver(0), dependentInputs);
+        auto subContext = compareNode->getDriverConnType(0).interpretation == hlim::ConnectionType::BITVEC?Context::STD_LOGIC_VECTOR:Context::STD_LOGIC;
+        formatExpression(stream, comments, compareNode->getDriver(0), dependentInputs, subContext);
         switch (compareNode->getOp()) {
             case hlim::Node_Compare::EQ: stream << " = "; break;
             case hlim::Node_Compare::NEQ: stream << " /= "; break;
@@ -268,7 +269,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
             default:
                 HCL_ASSERT_HINT(false, "Unhandled operation!");
         };
-        formatExpression(stream, comments, compareNode->getDriver(1), dependentInputs);
+        formatExpression(stream, comments, compareNode->getDriver(1), dependentInputs, subContext);
         stream << ")";
         return;
     }
@@ -278,20 +279,27 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
 
         size_t bitExtractIdx;
         if (rewireNode->getOp().isBitExtract(bitExtractIdx)) {
-            formatExpression(stream, comments, rewireNode->getDriver(0), dependentInputs);
+            if (hlim::outputIsBVec(rewireNode->getDriver(0))) {
+                formatExpression(stream, comments, rewireNode->getDriver(0), dependentInputs, Context::STD_LOGIC_VECTOR);
 
-            switch (context) {
-                case Context::BOOL:
-                    stream << "(" << bitExtractIdx << ") = '1'";
-                break;
-                case Context::STD_LOGIC:
-                    stream << "(" << bitExtractIdx << ")";
-                break;
-                case Context::STD_LOGIC_VECTOR:
-                    stream << "(" << bitExtractIdx << " downto " << bitExtractIdx << ")";
-                break;
-                default:
-                    HCL_ASSERT_HINT(false, "Unhandled case!");
+                switch (context) {
+                    case Context::BOOL:
+                        stream << "(" << bitExtractIdx << ") = '1'";
+                    break;
+                    case Context::STD_LOGIC:
+                        stream << "(" << bitExtractIdx << ")";
+                    break;
+                    case Context::STD_LOGIC_VECTOR:
+                        stream << "(" << bitExtractIdx << " downto " << bitExtractIdx << ")";
+                    break;
+                    default:
+                        HCL_ASSERT_HINT(false, "Unhandled case!");
+                }
+            } else { // is bool->bvec type cast
+                HCL_ASSERT(bitExtractIdx == 0);
+                stream << "(0 => ";
+                formatExpression(stream, comments, rewireNode->getDriver(0), dependentInputs, Context::STD_LOGIC);
+                stream << ")";
             }
         } else {
 
@@ -306,7 +314,8 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
                 switch (range.source) {
                     case hlim::Node_Rewire::OutputRange::INPUT: {
                         auto driver = rewireNode->getDriver(range.inputIdx);
-                        formatExpression(stream, comments, driver, dependentInputs);
+                        auto subContext = hlim::outputIsBVec(driver)?Context::STD_LOGIC_VECTOR:Context::STD_LOGIC;
+                        formatExpression(stream, comments, driver, dependentInputs, subContext);
                         if (driver.node != nullptr)
                             if (range.inputOffset != 0 || range.subwidth != hlim::getOutputWidth(driver))
                                 stream << "(" << range.inputOffset + range.subwidth - 1 << " downto " << range.inputOffset << ")";

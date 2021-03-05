@@ -56,7 +56,7 @@ class CombinatoryProcess : public Process
         };
 
         void formatExpression(std::ostream &stream, std::ostream &comments, const hlim::NodePort &nodePort,
-                                std::set<hlim::NodePort> &dependentInputs, Context context = Context::STD_LOGIC, bool forceUnfold = false);
+                                std::set<hlim::NodePort> &dependentInputs, Context context, bool forceUnfold = false);
 };
 
 struct RegisterConfig

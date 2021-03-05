@@ -45,7 +45,7 @@ void HelperPackage::writeVHDL(std::ostream &stream)
         cf.indent(stream, 2);
         stream << "END IF;" << std::endl;
     cf.indent(stream, 1);
-    stream << "END bool2stdlogic;" << std::endl;
+    stream << "END bool2stdlogic;" << std::endl << std::endl;
 
     cf.indent(stream, 1);
     stream << "FUNCTION stdlogic2bool(v : STD_LOGIC) RETURN BOOLEAN IS" << std::endl;
@@ -54,7 +54,7 @@ void HelperPackage::writeVHDL(std::ostream &stream)
         cf.indent(stream, 2);
         stream << "RETURN v = '1';" << std::endl;
     cf.indent(stream, 1);
-    stream << "END stdlogic2bool;" << std::endl;
+    stream << "END stdlogic2bool;" << std::endl << std::endl;
 
     stream << "END PACKAGE BODY " << m_name << ';' << std::endl;
 }
