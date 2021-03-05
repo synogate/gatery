@@ -112,6 +112,11 @@ namespace hcl::core::frontend {
             bool valid() { return m_memoryNode != nullptr; }
 
             void setPowerOnState(sim::DefaultBitVectorState powerOnState) { m_memoryNode->setPowerOnState(std::move(powerOnState)); }
+            void setPowerOnStateZero() {
+                auto &state = m_memoryNode->getPowerOnState();
+                state.clearRange(sim::DefaultConfig::VALUE, 0, state.size());
+                state.setRange(sim::DefaultConfig::DEFINED, 0, state.size());
+            }
             //void setReset(std::size_t address, Data constWord);
 
             void addResetLogic(std::function<BVec(BVec)> address2data);

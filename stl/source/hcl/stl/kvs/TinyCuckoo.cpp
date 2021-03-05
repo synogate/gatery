@@ -27,11 +27,7 @@ namespace hcl::stl
 
 			Memory<TinyCuckooItem> mem(1ull << in.tableWidth().value, in.update.item);
 			//mem.setType(MemType::BRAM);
-			mem.setPowerOnState(
-				hcl::core::sim::createDefaultBitVectorState(1ull << in.tableWidth().value, width(in.update.item), [](size_t idx, core::sim::DefaultConfig::BaseType* planes) {
-					planes[core::sim::DefaultConfig::DEFINED] = ~0ull;
-					planes[core::sim::DefaultConfig::VALUE] = 0ull;
-				}));
+			mem.setPowerOnStateZero();
 
 			IF(in.update.valid & in.update.tableIdx == i)
 				mem[in.update.itemIdx] = in.update.item;
@@ -44,7 +40,7 @@ namespace hcl::stl
 			for (size_t l = 0; l < in.latency; l++)
 				lookupData = reg(lookupData);
 			HCL_NAMED(lookupData);
-			
+
 			IF(lookupData.valid & lookupData.key == out.key)
 			{
 				out.found = '1';

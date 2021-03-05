@@ -45,6 +45,7 @@ class Node_Memory : public Node<Node_Memory>
         std::size_t getMaxPortWidth() const;
         void setPowerOnState(sim::DefaultBitVectorState powerOnState);
         const sim::DefaultBitVectorState &getPowerOnState() const { return m_powerOnState; }
+        sim::DefaultBitVectorState &getPowerOnState() { return m_powerOnState; }
 
         virtual void simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
         virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;
