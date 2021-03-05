@@ -15,6 +15,8 @@ namespace hcl::core::hlim {
             void setBool();
             void setWidth(unsigned width);
 
+            bool isOutputPin() const;
+
             virtual bool hasSideEffects() const override { return true; }
             virtual std::vector<size_t> getInternalStateSizes() const override;
 

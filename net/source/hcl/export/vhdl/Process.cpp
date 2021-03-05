@@ -410,7 +410,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
             bool isLocalSignal = m_localSignals.contains(nodePort);
             std::string assignmentPrefix;
             bool forceUnfold;
-            if (auto *ioPin = dynamic_cast<hlim::Node_Pin*>(nodePort.node)) { // todo: all in all this is bad
+            if (auto *ioPin = dynamic_cast<hlim::Node_Pin*>(nodePort.node); ioPin && ioPin->isOutputPin()) { // todo: all in all this is bad
                 assignmentPrefix = m_namespaceScope.getName(ioPin);
                 forceUnfold = false; // assigning to pin, can directly do with a signal/variable;
                 nodePort = ioPin->getDriver(0);

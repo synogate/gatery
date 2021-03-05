@@ -18,6 +18,11 @@ void Node_Pin::setWidth(unsigned width)
     setOutputConnectionType(0, {.interpretation = ConnectionType::BITVEC, .width = width});
 }
 
+bool Node_Pin::isOutputPin() const
+{
+    return getDriver(0).node != nullptr;
+}
+
 std::vector<size_t> Node_Pin::getInternalStateSizes() const
 {
     if (getDirectlyDriven(0).empty()) return {};
