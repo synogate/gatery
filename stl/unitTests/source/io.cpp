@@ -47,7 +47,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
         auto sending = pinIn().setName("sending");
         sim_tap((Bit)sending);
 
-        simulator.addSimulationProcess([rx, &clock, &dataStream, sending, baudRate]()->SimProcess{
+        addSimulationProcess([rx, &clock, &dataStream, sending, baudRate]()->SimProcess{
             dataStream.clear();
             sim(rx) = '1';
             sim(sending) = '0';
@@ -74,7 +74,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
             }
         });
 
-        simulator.addSimulationProcess([=, &clock, &dataStream]()->SimProcess{
+        addSimulationProcess([=, &clock, &dataStream]()->SimProcess{
             sim(outReady) = false;
             co_await WaitFor(Seconds(1,2)/clock.getAbsoluteFrequency());
 
