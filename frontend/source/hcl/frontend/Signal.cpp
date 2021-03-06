@@ -81,3 +81,7 @@ hcl::core::frontend::ElementarySignal::ElementarySignal()
     if (auto* scope = ConditionalScope::get())
         m_initialScopeId = scope->getId();
 }
+
+hcl::core::frontend::ElementarySignal::~ElementarySignal()
+{
+}
