@@ -5,6 +5,7 @@ find_package (Boost COMPONENTS system filesystem unit_test_framework REQUIRED)
 add_executable(unitTestSTL
     source/main.cpp
     source/utils.cpp
+    source/io.cpp
     "source/hdmi.cpp"
   "source/crypto.cpp" "source/kvs.cpp")
 
