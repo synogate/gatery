@@ -21,6 +21,8 @@ struct UART
     };
 
     Stream recieve(core::frontend::Bit rx);
+
+    Bit send(Stream &stream);
 };
 
 }

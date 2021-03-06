@@ -113,5 +113,50 @@ UART::Stream UART::recieve(Bit rx)
     return stream;
 }
 
+Bit UART::send(Stream &stream)
+{
+    GroupScope entity(GroupScope::GroupType::ENTITY);
+    entity.setName("uart_send");
+
+    HCL_DESIGNCHECK_HINT(deriveClock == false, "Not implemented yet!");
+    HCL_DESIGNCHECK_HINT(startBits == 1, "Not implemented yet!");
+    HCL_DESIGNCHECK_HINT(stopBits == 1, "Not implemented yet!");
+
+    size_t bitLength = core::hlim::floor(ClockScope::getClk().getAbsoluteFrequency() / baudRate);
+
+    BVec counter = BitWidth(utils::Log2C(bitLength+2));
+    counter = reg(counter, 0);
+                                                                                            HCL_NAMED(counter);
+
+    BVec data = BitWidth(dataBits+3);
+    data = reg(data, 0);
+                                                                                            HCL_NAMED(data);
+
+    stream.ready = false;
+
+    Bit tx = true;
+
+    Bit idle;
+    idle = data == 0;
+    HCL_NAMED(idle);
+    IF (idle) {
+        stream.ready = true;
+        IF (stream.valid) {
+            data = cat("0b11", stream.data, '0');
+            counter = bitLength+1;
+        }
+    } ELSE {
+        tx = data.lsb();
+        IF (counter == 0) {
+            counter = bitLength;
+            data >>= 1;
+        }
+    }
+    counter -= 1;
+
+    return tx;
+}
+
+
 
 }
