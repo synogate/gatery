@@ -382,7 +382,7 @@ namespace hcl::core::frontend {
         {
             m_bitAlias.reserve(m_range.width);
             for (size_t i = 0; i < m_range.width; ++i)
-                m_bitAlias.emplace_back(m_node, m_range.bitOffset(i));
+                m_bitAlias.emplace_back(m_node, m_range.bitOffset(i), m_initialScopeId);
         }
         return m_bitAlias;
     }
@@ -392,9 +392,9 @@ namespace hcl::core::frontend {
         if (!m_msbAlias)
         {
             if (!m_range.subset)
-                m_msbAlias.emplace(m_node, ~0u);
+                m_msbAlias.emplace(m_node, ~0u, m_initialScopeId);
             else
-                m_msbAlias.emplace(m_node, m_range.bitOffset(m_range.width - 1));
+                m_msbAlias.emplace(m_node, m_range.bitOffset(m_range.width - 1), m_initialScopeId);
         }
         return *m_msbAlias;
     }
@@ -402,7 +402,7 @@ namespace hcl::core::frontend {
     Bit& BVec::aliasLsb() const
     {
         if (!m_lsbAlias)
-            m_lsbAlias.emplace(m_node, m_range.bitOffset(0));
+            m_lsbAlias.emplace(m_node, m_range.bitOffset(0), m_initialScopeId);
         return *m_lsbAlias;
     }
 

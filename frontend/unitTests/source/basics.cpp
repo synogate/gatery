@@ -230,6 +230,24 @@ BOOST_FIXTURE_TEST_CASE(SignalMoveAssignment, UnitTestSimulationFixture)
     eval();
 }
 
+BOOST_FIXTURE_TEST_CASE(BVecBitAliasConditionCheck, UnitTestSimulationFixture)
+{
+    using namespace hcl;
+
+    BVec a = "xFF";
+    Bit c = '0';
+
+    IF(c)
+    {
+        a.msb() = '0';
+        a.lsb() = '0';
+        a[1] = '0';
+    }
+    sim_assert(a == 255);
+
+    eval();
+}
+
 BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;

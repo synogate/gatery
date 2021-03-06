@@ -24,7 +24,7 @@ namespace hcl::core::frontend {
             ~Bit();
 
             Bit(const SignalReadPort& port);
-            Bit(hlim::Node_Signal* node, size_t offset); // alias Bit
+            Bit(hlim::Node_Signal* node, size_t offset, size_t initialScopeId); // alias Bit
 
             template<typename T, typename = std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, bool>>>
             Bit(T v) {

@@ -35,11 +35,12 @@ namespace hcl::core::frontend {
         m_node->connectInput(port);
     }
 
-    Bit::Bit(hlim::Node_Signal* node, size_t offset) :
+    Bit::Bit(hlim::Node_Signal* node, size_t offset, size_t initialScopeId) :
         m_node(node),
         m_offset(offset)
     {
         m_node->addRef();
+        m_initialScopeId = initialScopeId;
     }
 
     Bit& Bit::operator=(Bit&& rhs)
