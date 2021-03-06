@@ -76,17 +76,12 @@ hcl::core::frontend::SignalReadPort hcl::core::frontend::SignalReadPort::expand(
     return SignalReadPort{ ret, expansionPolicy };
 }
 
-#include <iostream>
-
 hcl::core::frontend::ElementarySignal::ElementarySignal()
 {
-    std::cout << "ElementarySignal " << size_t(this) << "\n";
-
     if (auto* scope = ConditionalScope::get())
         m_initialScopeId = scope->getId();
 }
 
 hcl::core::frontend::ElementarySignal::~ElementarySignal()
 {
-    std::cout << "~ElementarySignal " << size_t(this) << "\n";
 }

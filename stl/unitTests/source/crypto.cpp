@@ -486,12 +486,7 @@ BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, hcl::core::sim::UnitTestSimulatio
     pinOut(hash).setName("hash");
 
     *ctrl.write = pinIn().setName("update");
-    {
-        std::cout << "start\n";
-        ctrl.writeData = pinIn(16_b).setName("update_write_data");
-    }
-    std::cout << "end\n";
-
+    ctrl.writeData = pinIn(16_b).setName("update_write_data");
     HCL_NAMED(ctrl);
 
     addSimulationProcess([&]()->SimProcess {

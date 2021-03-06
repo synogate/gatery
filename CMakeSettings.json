@@ -15,6 +15,16 @@
           "name": "HCL_WITH_QT",
           "value": "True",
           "type": "BOOL"
+        },
+        {
+          "name": "CMAKE_C_COMPILER",
+          "value": "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.28.29333/bin/Hostx64/x64/cl.exe",
+          "type": "FILEPATH"
+        },
+        {
+          "name": "CMAKE_CXX_COMPILER",
+          "value": "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.28.29333/bin/Hostx64/x64/cl.exe",
+          "type": "FILEPATH"
         }
       ]
     },

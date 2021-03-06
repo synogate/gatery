@@ -7,25 +7,21 @@
 #include "../utils/Range.h"
 
 #include <algorithm>
-#include <iostream>
 
 namespace hcl::core::hlim {
 
 BaseNode::BaseNode()
 {
-    std::cout << "BaseNode " << size_t(this) << "\n";
 }
 
 BaseNode::BaseNode(size_t numInputs, size_t numOutputs)
 {
-    std::cout << "BaseNode2 " << size_t(this) << "\n";
     resizeInputs(numInputs);
     resizeOutputs(numOutputs);
 }
 
 BaseNode::~BaseNode()
 {
-    std::cout << "~BaseNode " << size_t(this) << "\n";
     HCL_ASSERT(m_refCounter == 0);
     moveToGroup(nullptr);
     for (auto i : utils::Range(m_clocks.size()))
