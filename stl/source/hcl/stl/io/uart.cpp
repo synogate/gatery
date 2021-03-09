@@ -142,7 +142,7 @@ Bit UART::send(Stream &stream)
     IF (idle) {
         stream.ready = true;
         IF (stream.valid) {
-            data = cat("0b11", stream.data, '0');
+            data = pack("0b11", stream.data, '0');
             counter = bitLength+1;
         }
     } ELSE {
