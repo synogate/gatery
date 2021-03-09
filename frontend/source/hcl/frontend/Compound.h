@@ -100,7 +100,7 @@ namespace hcl::core::frontend
 	template<typename T>
 	void visitForcedSignalCompound(const T& sig, CompoundVisitor& v)
 	{
-		VisitCompound<internal::is_signal<T>::sig_type>{}(
+		VisitCompound<typename internal::is_signal<T>::sig_type>{}(
 			internal::signalOTron(sig),
 			internal::signalOTron(sig),
 			v
