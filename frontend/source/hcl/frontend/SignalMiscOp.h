@@ -96,34 +96,6 @@ SignalType mux(const SelectorType &selector, const ContainerType &inputs)  {
 }
 #endif
 
-template<typename... Types>
-BVec cat(const Types&... allSignals)
-{
-    auto check_parameter = [](auto signal) {
-        static_assert(std::is_convertible_v<decltype(signal), BVec> ||
-                      std::is_convertible_v<decltype(signal), Bit> ||
-                      std::is_same_v<decltype(signal), char> ||
-                      std::is_same_v<decltype(signal), const char*>,
-            "argument passed to cat is not a signal or constant");
-    };
-    (check_parameter(allSignals), ...);
-
-    struct
-    {
-        hlim::Node_Rewire* node = DesignScope::createNode<hlim::Node_Rewire>(sizeof...(allSignals));
-        size_t offset = sizeof...(allSignals) - 1;
-
-        void operator () (const Bit& signal) { node->connectInput(offset--, signal.getReadPort()); }
-        void operator () (const BVec& signal) { node->connectInput(offset--, signal.getReadPort()); }
-    } assigner;
-
-    (assigner(allSignals), ...);
-    assigner.node->setConcat();
-    assigner.node->changeOutputType({ .interpretation = hlim::ConnectionType::BITVEC });
-
-    return SignalReadPort(assigner.node);
-}
-
 BVec swapEndian(const BVec& word, size_t byteSize = 8);
 
 /*

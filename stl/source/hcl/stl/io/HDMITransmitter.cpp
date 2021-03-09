@@ -67,7 +67,7 @@ core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::fronten
         
         IF (noPreviousImbalance | noImbalanceInQ_m) {
             result(0, 8) = mux(useXnor, {q_m, ~q_m});
-            result(8, 2) = cat(useXnor, ~useXnor);
+            result(8, 2) = pack(useXnor, ~useXnor);
             
             IF (useXnor) 
                 imbalance = imbalance.delay(1) - 8 + sumOfOnes_q_m + sumOfOnes_q_m;
@@ -83,14 +83,14 @@ core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::fronten
                 ((!positivePreviousImbalance) & (!positiveImbalanceInQ_m))) {
                 
                 result(0, 8) = ~q_m;
-                result(8, 2) = cat(useXnor, '1');
+                result(8, 2) = pack(useXnor, '1');
                 
                 imbalance = imbalance.delay(1) + 8 - sumOfOnes_q_m - sumOfOnes_q_m;
                 IF (useXnor)
                     imbalance = (BVec) imbalance + 2;
             } ELSE {
                 result(0, 8) = q_m;
-                result(8, 2) = cat(useXnor, '1');
+                result(8, 2) = pack(useXnor, '1');
                 
                 imbalance = imbalance.delay(1) + 8 - sumOfOnes_q_m - sumOfOnes_q_m;
                 IF (useXnor)
@@ -125,7 +125,7 @@ core::frontend::BVec tmdsEncodeReduceTransitions(const core::frontend::BVec& dat
     Bit invert = (sumOfOnes > 4u) | (sumOfOnes == 4u & !data.lsb());
 
     HCL_COMMENT << "Decode using 1=xor, 0=xnor";
-    BVec tmdsReduced = cat(~invert, data);
+    BVec tmdsReduced = pack(~invert, data);
     for (auto i : utils::Range<size_t>(1, data.size()))
         tmdsReduced[i] ^= tmdsReduced[i - 1] ^ invert;
 
@@ -159,14 +159,14 @@ core::frontend::BVec tmdsEncodeBitflip(const core::frontend::Clock& clk, const c
     Bit invert = word_counter[word_counter.getWidth() - 1] == global_counter.delay(1)[global_counter.getWidth() - 1];
     HCL_NAMED(invert);
 
-    BVec result = cat(invert, data); // TODO: data ^ invert
+    BVec result = pack(invert, data); // TODO: data ^ invert
     HCL_NAMED(result);
 
     IF(invert)
     {
         // TODO: add sub/add alu
         global_counter = global_counter.delay(1) - word_counter; // TODO: initialize registers with its own delay value
-        result = cat('1', ~data);
+        result = pack('1', ~data);
     }
     ELSE
     {

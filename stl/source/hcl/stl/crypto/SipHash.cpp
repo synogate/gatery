@@ -120,7 +120,7 @@ namespace hcl::stl
 		HCL_NAMED(paddedLength);
 
 		size_t zeroPad = (64 - (msgByteSize * 8 + 8)) % 64;
-		BVec paddedBlock = cat(paddedLength, zext(block(0, msgByteSize*8), zeroPad));
+		BVec paddedBlock = pack(paddedLength, zext(block(0, msgByteSize*8), zeroPad));
 		HCL_NAMED(paddedBlock);
 		return paddedBlock;
 	}

@@ -79,7 +79,7 @@ hcl::stl::EncoderResult hcl::stl::priorityEncoderTree(const BVec& in, bool regis
         }
 
     EncoderResult out{
-        cat(highSelect, lowSelect.index),
+        pack(highSelect, lowSelect.index),
         lowSelect.valid
     };
     HCL_NAMED(out);

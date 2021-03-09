@@ -1032,16 +1032,13 @@ BOOST_FIXTURE_TEST_CASE(SimpleCat, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-
-
     BVec vec = 42u;
-    BVec vec_2 = cat('1', vec, '0');
+    BVec vec_2 = pack('1', vec, '0');
     BOOST_TEST(vec_2.size() == 8);
     sim_assert(vec_2 == 42u * 2 + 128) << "result is " << vec_2;
 
     eval();
 }
-
 
 BOOST_FIXTURE_TEST_CASE(msbBroadcast, UnitTestSimulationFixture)
 {
