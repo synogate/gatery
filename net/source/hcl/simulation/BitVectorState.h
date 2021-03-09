@@ -147,6 +147,34 @@ std::ostream& operator << (std::ostream& s, const BitVectorState<Config>& state)
 }
 
 
+
+
+template<typename Config>
+void formatRange(std::ostream& s, const BitVectorState<Config>& state, unsigned base, size_t offset, size_t size)
+{
+    unsigned logBase = utils::Log2C(base);
+    HCL_ASSERT(size % logBase == 0);
+
+    for (auto i : utils::Range(size/logBase)) {
+        bool allDefined = true;
+        unsigned v = 0;
+        for (auto j : utils::Range(logBase)) {
+            v <<= 1;
+            allDefined  &= state.get(Config::DEFINED, offset + size - 1 - i*4-j);
+
+            if (state.get(Config::VALUE, offset + size - 1 - i*4-j))
+                v |= 1;
+        }
+        if (!allDefined)
+            s << 'X';
+        else
+            if (v < 10)
+                s << (unsigned) v;
+            else
+                s << (char)('A' + (v-10));
+    }
+}
+
 template<typename Config, typename Functor>
 BitVectorState<Config> createBitVectorState(std::size_t numWords, std::size_t wordSize, Functor functor) {
     BitVectorState<Config> state;
