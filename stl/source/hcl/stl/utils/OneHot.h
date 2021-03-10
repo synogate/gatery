@@ -3,7 +3,7 @@
 
 #include <hcl/frontend.h>
 
-#include "../algorithm/Stream.h"
+#include "../Stream.h"
 
 namespace hcl::stl
 {
@@ -57,7 +57,7 @@ namespace hcl::stl
 		{
 			it->ready = '0';
 
-			IF(it->valid & !anyValid)
+			IF(*it->valid & !anyValid)
 			{
 				anyValid = '1';
 				ret.value() = it->value();
