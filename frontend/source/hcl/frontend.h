@@ -16,6 +16,7 @@
 #include "frontend/Pack.h"
 #include "frontend/Pin.h"
 #include "frontend/PriorityConditional.h"
+#include "frontend/Reg.h"
 #include "frontend/Registers.h"
 #include "frontend/Scope.h"
 #include "frontend/Signal.h"

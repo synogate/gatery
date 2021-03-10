@@ -441,10 +441,10 @@ BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, UnitTestSimulationFixture)
     ClockScope clockScope(clock);
 
     {
-        BVec vec1 = reg("b01");
-        BVec vec2 = reg("b01", "2b");
-        Bit bit1 = reg('1');
-        Bit bit2 = reg('1', '0');
+        BVec vec1 = reg(BVec{ "b01" });
+        BVec vec2 = reg(BVec{ "b01" }, "2b");
+        Bit bit1 = reg(Bit{ '1' });
+        Bit bit2 = reg(Bit{ '1' }, '0');
 
         BVec ref(2_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
