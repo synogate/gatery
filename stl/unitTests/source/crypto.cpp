@@ -472,6 +472,7 @@ BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, hcl::core::sim::UnitTestSimulatio
 
     stl::TabulationHashing gen{16_b};
     BVec data = pinIn(16_b).setName("data");
+    HCL_NAMED(data);
     BVec hash = reg(gen(data));
     stl::AvalonMM ctrl = gen.singleUpdatePort();
 
@@ -512,18 +513,23 @@ BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, hcl::core::sim::UnitTestSimulatio
         for(size_t i = 0; i < 16; ++i)
             co_await WaitClk(clock);
 
-        for (size_t i = 0; i < (1 << 16); ++i)
+        for (size_t i = 0; i < (1 << 16); i += 97)
         {
             sim(data) = i;
             co_await WaitClk(clock);
+
+            const uint16_t refHash1 = reference[0][i & 0xFF];
+            const uint16_t refHash2 = reference[1][i >> 8];
+            const uint16_t refHash = refHash1 ^ refHash2;
+            BOOST_TEST(sim(hash) == refHash);
         }
     });
 
-    design.getCircuit().optimize(3);
-    design.visualize("TabulationHashingTest");
-    core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TabulationHashingTest.vcd");
-    vcd.addAllSignals();
+    //design.getCircuit().optimize(3);
+    //design.visualize("TabulationHashingTest");
+    //core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TabulationHashingTest.vcd");
+    //vcd.addAllSignals();
 
     design.getCircuit().optimize(3);
-    runTicks(design.getCircuit(), clock.getClk(), 129);
+    runTicks(design.getCircuit(), clock.getClk(), 1024);
 }
