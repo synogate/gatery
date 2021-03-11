@@ -2,7 +2,7 @@
 
 #include <hcl/frontend.h>
 
-#include "../algorithm/Stream.h"
+#include "../Stream.h"
 
 namespace hcl::stl {
 

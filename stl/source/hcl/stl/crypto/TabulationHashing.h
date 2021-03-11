@@ -1,7 +1,7 @@
 #pragma once
 
 #include <hcl/frontend.h>
-#include "../algorithm/Stream.h"
+#include "../Stream.h"
 #include "../Avalon.h"
 
 namespace hcl::stl

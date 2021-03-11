@@ -2,7 +2,7 @@
 #include <hcl/frontend.h>
 #include <tuple>
 
-#include "Stream.h"
+#include "../Stream.h"
 
 namespace hcl::stl
 {

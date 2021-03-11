@@ -106,8 +106,6 @@ BOOST_FIXTURE_TEST_CASE(CompoundUnpack, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-
-
     RichStruct in;
     in.vec = 5u;
     in.bit = '0';
@@ -124,12 +122,12 @@ BOOST_FIXTURE_TEST_CASE(CompoundUnpack, UnitTestSimulationFixture)
     out.list.resize(in.list.size());
     unpack(inPacked, out);
 
-    sim_assert(out.vec == 5u);
-    sim_assert(out.bit == '0');
+    sim_assert(out.vec == 5u) << 'a';
+    sim_assert(out.bit == '0') << 'b';
     for (size_t i = 0; i < 7; ++i)
     {
-        sim_assert(out.list[i].vec == ConstBVec(i, 3));
-        sim_assert(out.list[i].bit == (i < 4));
+        sim_assert(out.list[i].vec == ConstBVec(i, 3)) << 'c';
+        sim_assert(out.list[i].bit == (i < 4)) << 'd';
     }
 
     eval();

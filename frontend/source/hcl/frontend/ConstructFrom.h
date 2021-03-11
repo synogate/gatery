@@ -1,58 +1,21 @@
 #pragma once
-#include "BitVector.h"
-#include "Bit.h"
-
-#include <boost/spirit/home/support/container.hpp>
-#include <boost/hana/adapt_struct.hpp>
-#include <boost/hana/for_each.hpp>
-#include <boost/hana/fwd/accessors.hpp>
+#include "Compound.h"
 
 namespace hcl::core::frontend 
 {
-	namespace internal
-	{
-		template <typename T, typename = int>
-		struct resizable : std::false_type {};
-
-		template <typename T>
-		struct resizable <T, decltype((void)std::declval<T>().resize(1), 0)> : std::true_type {};
-	}
-
 	template<typename T>
 	void constructFrom(const T& src, T& dst)
 	{
-		if constexpr (boost::spirit::traits::is_container<T>::value)
+		struct ConstructFromVisitor : CompoundVisitor
 		{
-			if constexpr (internal::resizable<T>::value)
-				dst.resize(src.size());
+			void operator () (BVec& a, const BVec& b) override {
+				if (a.size() != b.size())
+					a = b.getWidth();
+			}
+		};
 
-			auto it_src = begin(src);
-			for (auto& d : dst)
-				constructFrom(*it_src++, d);
-		}
-		else if constexpr (boost::hana::Struct<T>::value)
-		{
-			boost::hana::for_each(boost::hana::accessors<std::remove_cv_t<T>>(), [&](auto member) {
-				constructFrom(boost::hana::second(member)(src), boost::hana::second(member)(dst));
-			});
-		}
-		else if constexpr (std::is_base_of_v<BVec, T>)
-		{
-			BitWidth dstWidth = dst.getWidth();
-			if (dstWidth.value == 0)
-				dst = src.getWidth();
-			else
-				HCL_DESIGNCHECK_HINT(dstWidth == src.getWidth(), "cannot change width of signal");
-		}
-		else if constexpr (std::is_base_of_v<Bit, T>)
-		{
-			// nothing todo
-		}
-		else
-		{
-			// copy meta data
-			dst = src;
-		}
+		ConstructFromVisitor v;
+		VisitCompound<T>{}(dst, src, v, 0);
 	}
 
 	template<typename T>
@@ -62,6 +25,4 @@ namespace hcl::core::frontend
 		constructFrom(src, ret);
 		return ret;
 	}
-
-
 }
