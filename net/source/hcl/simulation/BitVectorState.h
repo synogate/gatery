@@ -153,17 +153,21 @@ template<typename Config>
 void formatRange(std::ostream& s, const BitVectorState<Config>& state, unsigned base, size_t offset, size_t size)
 {
     unsigned logBase = utils::Log2C(base);
-    HCL_ASSERT(size % logBase == 0);
+    //HCL_ASSERT(size % logBase == 0);
+    unsigned roundUpSize = (size+logBase-1)/logBase*logBase;
 
-    for (auto i : utils::Range(size/logBase)) {
+    for (auto i : utils::Range(roundUpSize/logBase)) {
         bool allDefined = true;
         unsigned v = 0;
         for (auto j : utils::Range(logBase)) {
             v <<= 1;
-            allDefined  &= state.get(Config::DEFINED, offset + size - 1 - i*4-j);
+            auto idx = roundUpSize - 1 - i*logBase-j;
+            if (idx < size) {
+                allDefined  &= state.get(Config::DEFINED, offset + idx);
 
-            if (state.get(Config::VALUE, offset + size - 1 - i*4-j))
-                v |= 1;
+                if (state.get(Config::VALUE, offset + idx))
+                    v |= 1;
+            }
         }
         if (!allDefined)
             s << 'X';
