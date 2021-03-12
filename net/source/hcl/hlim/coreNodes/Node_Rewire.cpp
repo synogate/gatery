@@ -182,6 +182,8 @@ std::string Node_Rewire::getTypeName() const
 
 bool Node_Rewire::isNoOp() const
 {
+    if (getNumInputPorts() == 0) return false;
+    if (getDriver(0).node == nullptr) return false;
     if (getOutputConnectionType(0) != getDriverConnType(0)) return false;
 
     auto outWidth = getOutputConnectionType(0).width;

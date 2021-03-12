@@ -237,6 +237,8 @@ void Circuit::cullSequentiallyDuplicatedSignalNodes()
                 driverSignal->getGroup() == signal->getGroup() &&
                 driverSignal->getSignalGroup() == signal->getSignalGroup()) {
 
+                if (driverSignal == signal) continue;
+                
                 signal->bypassOutputToInput(0, 0);
                 signal->disconnectInput();
 
