@@ -77,8 +77,11 @@ void DepthFirstPolicy<forward>::init(NodePort nodePort)
             for (auto np : nodePort.node->getDirectlyDriven(nodePort.port))
                 m_stack.push(np);
     } else {
-        if (nodePort.node != nullptr)
-            m_stack.push(nodePort.node->getDriver(nodePort.port));
+        if (nodePort.node != nullptr) {
+            auto driver = nodePort.node->getDriver(nodePort.port);
+            if (driver.node != nullptr)
+                m_stack.push(driver);
+        }
     }
 }
 

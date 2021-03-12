@@ -32,7 +32,7 @@ namespace hcl::core::hlim {
 
         void setClock(Clock* clk);
 
-        bool hasSideEffects() const override { return false; }
+        bool hasSideEffects() const override { return hasRef(); }
 
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;

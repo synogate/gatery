@@ -50,7 +50,7 @@ class Node_Memory : public Node<Node_Memory>
         virtual void simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
         virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;
 
-        virtual bool hasSideEffects() const override { return false; } // for now
+        virtual bool hasSideEffects() const override { return hasRef(); } // for now
 
         bool isROM() const;
 

@@ -165,9 +165,12 @@ void Circuit::inferSignalNames()
         for (auto it = signalsToName.rbegin(); it != signalsToName.rend(); ++it) {
             if ((*it)->getName().empty()) {
                 auto driver = (*it)->getDriver(0);
-                auto name = driver.node->attemptInferOutputName(driver.port);
-                if (!name.empty())
-                    (*it)->setInferredName(std::move(name));
+                if (driver.node != nullptr) {
+                    auto name = driver.node->attemptInferOutputName(driver.port);
+                    if (!name.empty())
+                        (*it)->setInferredName(std::move(name));
+                } else
+                    (*it)->setInferredName("undefined");
             }
             unnamedSignals.erase(*it);
         }
