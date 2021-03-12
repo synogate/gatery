@@ -1,6 +1,7 @@
 #pragma once
 #include <hcl/frontend.h>
 #include <map>
+#include <list>
 #include <string_view>
 
 namespace hcl::stl
