@@ -97,7 +97,7 @@ namespace hcl::stl
 
 		avmm.address = m_symbolWidth;
 		avmm.write = Bit{};
-		avmm.writeData = m_symbolWidth;
+		avmm.writeData = m_hashWidth;
 
 		auto port = m_tables[tableIdx][avmm.address];
 		IF(*avmm.write)
@@ -108,5 +108,19 @@ namespace hcl::stl
 
 		HCL_NAMED(avmm);
 		return avmm;
+	}
+	
+	void TabulationHashing::updatePorts(AvalonNetworkSection& net)
+	{
+		HCL_ASSERT_HINT(!m_tables.empty(), "invalid state. call generator function first");
+		GroupScope entity(GroupScope::GroupType::ENTITY);
+		entity.setName("TabulationHashing_Update");
+
+
+		for (size_t i = 0; i < m_tables.size(); ++i)
+		{
+			std::string name = "table" + std::to_string(i);
+			net.add(std::move(name), tableUpdatePort(i, true));
+		}
 	}
 }

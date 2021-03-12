@@ -23,7 +23,7 @@ add_library(hcl_stl STATIC
     source/hcl/stl/algorithm/TreeReduce.cpp
     source/hcl/stl/algorithm/GCD.h
     source/hcl/stl/algorithm/GCD.cpp
-    "source/hcl/stl/Stream.h"
+    source/hcl/stl/Stream.h
     source/hcl/stl/utils/OneHot.h
     source/hcl/stl/utils/OneHot.cpp
     source/hcl/stl/crypto/sha1.h
@@ -41,7 +41,8 @@ add_library(hcl_stl STATIC
     source/hcl/stl/memoryMap/AvalonMM.cpp
     source/hcl/stl/crypto/TabulationHashing.h
     source/hcl/stl/crypto/TabulationHashing.cpp
-)
+    source/hcl/stl/Avalon.cpp
+    )
 
 set(data_files
 )

@@ -20,6 +20,30 @@ namespace hcl::stl
 
         std::map<std::string_view, Selection> addressSel;
         std::map<std::string_view, Selection> dataSel;
+
+        void pinIn(std::string_view prefix);
+
+        AvalonMM() = default;
+        AvalonMM(AvalonMM&&) = default;
+        AvalonMM(const AvalonMM&) = delete;
+        void operator=(const AvalonMM&) = delete;
+    };
+
+    class AvalonNetworkSection
+    {
+    public:
+        AvalonNetworkSection(std::string name = "");
+
+        void add(std::string name, AvalonMM port);
+        AvalonNetworkSection& addSection(std::string name);
+
+        AvalonMM& find(std::string_view path);
+
+        void assignPins();
+    protected:
+        std::string m_name;
+        std::vector<std::pair<std::string, AvalonMM>> m_port;
+        std::list<AvalonNetworkSection> m_subSections;
     };
 }
 

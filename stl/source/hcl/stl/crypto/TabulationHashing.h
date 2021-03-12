@@ -20,6 +20,8 @@ namespace hcl::stl
 		AvalonMM singleUpdatePort(bool readable = false);
 		AvalonMM tableUpdatePort(size_t tableIdx, bool readable = false);
 
+		void updatePorts(AvalonNetworkSection& net);
+
 	private:
 		BitWidth m_hashWidth;
 		BitWidth m_symbolWidth = 8_b;
