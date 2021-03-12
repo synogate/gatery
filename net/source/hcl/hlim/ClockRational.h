@@ -13,4 +13,10 @@ namespace hcl::core::hlim {
     inline ClockRational operator/(const ClockRational &lhs, int rhs) {
         return lhs / ClockRational(rhs, 1);
     }
+    inline ClockRational operator*(const ClockRational &lhs, size_t rhs) {
+        return lhs * ClockRational(rhs, 1);
+    }
+    inline ClockRational operator/(const ClockRational &lhs, size_t rhs) {
+        return lhs / ClockRational(rhs, 1);
+    }
 }

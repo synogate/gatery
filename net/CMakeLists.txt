@@ -129,6 +129,10 @@ add_library(hcl_net STATIC
     source/hcl/simulation/WaveformRecorder.h
     source/hcl/simulation/waveformFormats/VCDSink.cpp
     source/hcl/simulation/waveformFormats/VCDSink.h
+    source/hcl/simulation/waveformFormats/MemoryTrace.cpp
+    source/hcl/simulation/waveformFormats/MemoryTrace.h
+    source/hcl/simulation/waveformFormats/MemoryTraceRecorder.cpp
+    source/hcl/simulation/waveformFormats/MemoryTraceRecorder.h
 
     source/hcl/utils/BitManipulation.h
     source/hcl/utils/BitManipulation.cpp

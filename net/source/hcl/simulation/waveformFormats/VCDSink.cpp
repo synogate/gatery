@@ -123,7 +123,7 @@ void VCDSink::initialize()
         }
         for (const auto &sigId : module->signals) {
             if (m_id2Signal[sigId.second].isHidden) continue;
-            auto width = sigId.first.node->getOutputConnectionType(sigId.first.port).width;
+            auto width = hlim::getOutputWidth(sigId.first);
             m_vcdFile
                 << "$var wire " << width << " " << m_id2sigCode[sigId.second] << " " << m_id2Signal[sigId.second].name << " $end\n";
         }
@@ -131,7 +131,7 @@ void VCDSink::initialize()
             << "$scope module __hidden $end\n";
         for (const auto &sigId : module->signals) {
             if (!m_id2Signal[sigId.second].isHidden) continue;
-            auto width = sigId.first.node->getOutputConnectionType(sigId.first.port).width;
+            auto width = hlim::getOutputWidth(sigId.first);
             m_vcdFile
                 << "$var wire " << width << " " << m_id2sigCode[sigId.second] << " " << m_id2Signal[sigId.second].name << " $end\n";
         }
