@@ -50,7 +50,10 @@ void DotExport::operator()(const hlim::Circuit &circuit)
         else if (dynamic_cast<hlim::Node_SignalTap*>(node))
             file << " shape=\"cds\"";
         else
-            file << " shape=\"box\"";
+            if (node->hasRef())
+                file << " shape=\"box\" style=\"filled\" fillcolor=\"#eeeeee\"";
+            else
+                file << " shape=\"box\"";
 
     };
 
