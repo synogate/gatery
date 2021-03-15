@@ -123,6 +123,7 @@ namespace hcl::core::frontend {
 
             std::size_t size() const { return m_memoryNode->getSize(); }
             BitWidth wordSize() const { return BitWidth{m_wordWidth}; }
+            BitWidth addressWidth() const { return BitWidth{ utils::Log2C(numWords()) }; }
             std::size_t numWords() const { return size() / m_wordWidth; }
 
             MemoryPortFactory<Data> operator [] (const BVec& address)             { HCL_DESIGNCHECK(m_memoryNode != nullptr); return MemoryPortFactory<Data>(m_memoryNode, address, m_defaultValue); }

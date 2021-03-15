@@ -9,6 +9,10 @@ namespace hcl::core::frontend
 		uint64_t value;
 
 		operator unsigned long long() const { return value; }
+
+		BitWidth operator + (const BitWidth& rhs) const { return { value + rhs.value }; }
+		BitWidth operator * (size_t rhs) const { return { value * rhs }; }
+
 	};
 
 	inline namespace literals
