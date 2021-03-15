@@ -43,7 +43,12 @@ namespace hcl::stl
 	void AvalonNetworkSection::assignPins()
 	{
 		for (auto& port : m_port)
-			port.second.pinIn(m_name + '_' + port.first);
+		{
+			std::string name = m_name;
+			if (!name.empty())
+				name += '_';
+			port.second.pinIn(name + port.first);
+		}
 	}
 	
 	void AvalonMM::pinIn(std::string_view prefix)
@@ -61,4 +66,6 @@ namespace hcl::stl
 		if (readData) hcl::pinOut(*readData).setName(pinName + "readdata");
 		if (readDataValid) hcl::pinOut(*readDataValid).setName(pinName + "readdatavalid");
 	}
+
+	template void AvalonMM::connect<BVec>(Memory<BVec>&, BitWidth);
 }
