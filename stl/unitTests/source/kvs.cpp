@@ -10,6 +10,8 @@
 #include <hcl/simulation/UnitTestSimulationFixture.h>
 #include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
 
+#include <hcl/export/vhdl/VHDLExport.h>
+
 #include <random>
 
 #include <hcl/stl/kvs/TinyCuckoo.h>
@@ -155,66 +157,41 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCookuTable
 
     runTicks(design.getCircuit(), clock.getClk(), 4096);
 }
-#if 0
-#include <hcl/export/vhdl/VHDLExport.h>
-#include <hcl/stl/kvs/TinyCuckooCore.h>
 
-BOOST_FIXTURE_TEST_CASE(TinyCuckooCoreTest, hcl::core::sim::UnitTestSimulationFixture)
+
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCuckooTableLookup, data::xrange(3, 4), numTables)
 {
     DesignScope design;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000));
     ClockScope clockScope(clock);
 
-    stl::TinyCuckooCore generator(1024, 16_b, 16_b);
-    stl::TinyCuckooCoreInterface cuckoo = generator();
-    stl::AvalonMMSlave ctrl(4_b, 32_b);
-    generator.connectMemoryMap(cuckoo, ctrl);
-    pinIn(ctrl, "ctrl_");
+    const BitWidth keySize{ size_t(numTables * 10) };
+    InputPins lookupKey = pinIn(keySize).setName("key");
 
-    cuckoo.lookupOut.ready = '1';
-    cuckoo.lookupIn.valid = '1';
+    stl::TinyCuckoo<BVec, BVec> tc{ size_t(numTables * 1024), keySize, 4_b, size_t(numTables) };
+    BOOST_TEST(keySize.value == tc.hashWidth().value);
 
-    InputPins lookupKey = pinIn(cuckoo.lookupIn.value().getWidth()).setName("key");
-    cuckoo.lookupIn.value() = lookupKey;
-    HCL_NAMED(cuckoo);
+    auto cuckooPoo = tc(lookupKey, lookupKey);
+    cuckooPoo = reg(cuckooPoo);
+    pinOut(cuckooPoo.found).setName("out_found");
+    pinOut(cuckooPoo.value).setName("out_value");
 
-    OutputPin outFound = pinOut(cuckoo.lookupOut.value().found).setName("found");
-    OutputPins outValue = pinOut(cuckoo.lookupOut.value().value).setName("value");
+    stl::AvalonNetworkSection net;
+    tc.addCpuInterface(net);
+    net.assignPins();
+    
 
-    addSimulationProcess([&]()->SimProcess {
-        std::mt19937 rng{ 1337 };
-        sim(ctrl.write) = '0';
+    //design.visualize("TinyCookuTableLookup_before");
+    //design.getCircuit().optimize(3);
+    //design.visualize("TinyCookuTableLookup");
+    //core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TinyCookuTableLookup.vcd");
+    //vcd.addAllNamedSignals();
 
-        while (true)
-        {
-            size_t value = rng() & 0xFF;
-            size_t key = hcl::utils::bitfieldExtract(value * 23, 0, 10);
-
-
-            co_await WaitClk(clock);
-            sim(ctrl.write) = '0';
-        }
-        });
-
-    addSimulationProcess([&]()->SimProcess {
-        std::mt19937 rng{ 1338 };
-        while (true)
-        {
-            sim(lookupKey) = hcl::utils::bitfieldExtract(rng(), 0, 10);
-            co_await WaitClk(clock);
-        }
-        });
-
-
-    design.getCircuit().optimize(3);
-    design.visualize("cuckoo");
-    core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "cuckoo.vcd");
-    vcd.addAllNamedSignals();
-
-    hcl::core::vhdl::VHDLExport exp{ "cuckoo/" };
-    exp(design.getCircuit());
+    //hcl::core::vhdl::VHDLExport vhdl("vhdl/");
+    //vhdl(design.getCircuit());
 
     runTicks(design.getCircuit(), clock.getClk(), 4096);
 }
-#endif
+
+

@@ -5,6 +5,8 @@
 
 namespace hcl::stl
 {
+	template TinyCuckoo<BVec, BVec>;
+
 	TinyCuckooOut tinyCuckoo(const TinyCuckooIn& in)
 	{
 		GroupScope entity(GroupScope::GroupType::ENTITY);
