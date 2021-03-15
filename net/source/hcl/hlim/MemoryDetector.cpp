@@ -381,11 +381,11 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
                     } else {
                         if (writePort == nullptr) {
                             writePort = port;
-                            nh.backtrack();
-                            continue;
                         } else {
-                            HCL_ASSERT_HINT(false, "Duplicate write ports!");
+                            HCL_ASSERT_HINT(writePort == port, "Duplicate write ports!");
                         }
+                        nh.backtrack();
+                        continue;
                     }
                 }
             } else
@@ -603,12 +603,14 @@ void MemoryGroup::verify()
                     HCL_DESIGNCHECK_HINT(false, issue.str());
                 }
             }
+            /*
             if (m_readPorts.size() + m_writePorts.size() > 2) {
                 std::stringstream issue;
                 issue << "Memory can not become BRAM because it has too many memory ports.\nMemory from:\n"
                       << m_memory->getStackTrace();
                 HCL_DESIGNCHECK_HINT(false, issue.str());
             }
+            */
         break;
         case Node_Memory::MemType::LUTRAM:
             if (m_readPorts.size() > 1) {
