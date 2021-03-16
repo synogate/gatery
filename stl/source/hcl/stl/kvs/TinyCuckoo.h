@@ -38,7 +38,7 @@ namespace hcl::stl
 
 	};
 
-	extern template TinyCuckoo<BVec, BVec>;
+	extern template class TinyCuckoo<BVec, BVec>;
 
 
 	struct TinyCuckooItem

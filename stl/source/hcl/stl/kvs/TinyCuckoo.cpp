@@ -5,7 +5,7 @@
 
 namespace hcl::stl
 {
-	template TinyCuckoo<BVec, BVec>;
+	template class TinyCuckoo<BVec, BVec>;
 
 	TinyCuckooOut tinyCuckoo(const TinyCuckooIn& in)
 	{
