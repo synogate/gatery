@@ -35,6 +35,9 @@ namespace hcl::stl
         template<typename T>
         void connect(Memory<T>& mem, BitWidth dataWidth = 32_b);
 
+
+        void createReadDataValid();
+        void createReadLatency(size_t targetLatency);
     };
 
     class AvalonNetworkSection
@@ -42,12 +45,15 @@ namespace hcl::stl
     public:
         AvalonNetworkSection(std::string name = "");
 
+        void clear();
         void add(std::string name, AvalonMM port);
         AvalonNetworkSection& addSection(std::string name);
 
         AvalonMM& find(std::string_view path);
 
         void assignPins();
+        AvalonMM demux();
+
     protected:
         std::string m_name;
         std::vector<std::pair<std::string, AvalonMM>> m_port;

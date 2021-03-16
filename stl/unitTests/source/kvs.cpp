@@ -194,4 +194,40 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCuckooTabl
     runTicks(design.getCircuit(), clock.getClk(), 4096);
 }
 
+BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCuckooTableLookupDemuxed, data::xrange(3, 4), numTables)
+{
+    DesignScope design;
 
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000));
+    ClockScope clockScope(clock);
+
+    const BitWidth keySize{ size_t(numTables * 10) };
+    InputPins lookupKey = pinIn(keySize).setName("key");
+
+    stl::TinyCuckoo<BVec, BVec> tc{ size_t(numTables * 1024), keySize, 4_b, size_t(numTables) };
+    BOOST_TEST(keySize.value == tc.hashWidth().value);
+
+    auto cuckooPoo = tc(lookupKey, lookupKey);
+    cuckooPoo = reg(cuckooPoo);
+    pinOut(cuckooPoo.found).setName("out_found");
+    pinOut(cuckooPoo.value).setName("out_value");
+
+    stl::AvalonNetworkSection net;
+    tc.addCpuInterface(net);
+    stl::AvalonMM ctrl = net.demux();
+    net.clear();
+
+    ctrl.pinIn("ctrl");
+
+
+    design.visualize("TinyCuckooTableLookupDemuxed_before");
+    design.getCircuit().optimize(3);
+    design.visualize("TinyCuckooTableLookupDemuxed");
+    core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TinyCuckooTableLookupDemuxed.vcd");
+    vcd.addAllNamedSignals();
+
+    //hcl::core::vhdl::VHDLExport vhdl("vhdl/");
+    //vhdl(design.getCircuit());
+
+    runTicks(design.getCircuit(), clock.getClk(), 4096);
+}
