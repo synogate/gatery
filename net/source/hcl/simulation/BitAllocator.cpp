@@ -4,7 +4,7 @@
 
 namespace hcl::core::sim {
 
-size_t BitAllocator::allocate(unsigned size) {
+size_t BitAllocator::allocate(size_t size) {
     if (size == 0)
         return 0ull;
     

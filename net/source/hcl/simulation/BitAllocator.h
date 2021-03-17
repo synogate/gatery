@@ -18,13 +18,13 @@ class BitAllocator {
             NUM_BUCKETS
         };
 
-        size_t allocate(unsigned size);
+        size_t allocate(size_t size);
         void flushBuckets();
         inline size_t getTotalSize() const { return m_totalSize; }
     protected:
         struct Bucket {
             size_t offset = 0;
-            unsigned remaining = 0;
+            size_t remaining = 0;
         };
         std::array<Bucket, NUM_BUCKETS> m_buckets;
         size_t m_totalSize = 0;

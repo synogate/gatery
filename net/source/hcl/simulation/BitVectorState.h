@@ -133,7 +133,7 @@ std::ostream& operator << (std::ostream& s, const BitVectorState<Config>& state)
         }
         return s;
     } else {
-        for (int i = state.size()-1; i >= 0; --i)
+        for (size_t i = state.size()-1; i < state.size(); --i)
         {
             if (!state.get(Config::DEFINED, i))
                 s << 'X';
@@ -154,7 +154,7 @@ void formatRange(std::ostream& s, const BitVectorState<Config>& state, unsigned 
 {
     unsigned logBase = utils::Log2C(base);
     //HCL_ASSERT(size % logBase == 0);
-    unsigned roundUpSize = (size+logBase-1)/logBase*logBase;
+    size_t roundUpSize = (size+logBase-1)/logBase*logBase;
 
     for (auto i : utils::Range(roundUpSize/logBase)) {
         bool allDefined = true;

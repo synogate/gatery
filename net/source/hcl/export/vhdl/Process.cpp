@@ -469,7 +469,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
                         size_t inputIdx = i-1;
                         auto driverWidth = hlim::getOutputWidth(muxNode->getDriver(0));
                         for (auto bitIdx : utils::Range(driverWidth)) {
-                            bool b = inputIdx & (1 << (driverWidth - 1 - bitIdx));
+                            bool b = inputIdx & (size_t(1) << (driverWidth - 1 - bitIdx));
                             code << (b ? '1' : '0');
                         }
                         code << "\" => ";

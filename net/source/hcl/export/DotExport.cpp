@@ -149,18 +149,18 @@ void DotExport::operator()(const hlim::Circuit &circuit)
 
 
             std::int64_t creationDistance = (std::int64_t)node->getId() - (std::int64_t)producer.node->getId();
-            float weight;
+            double weight;
             if (creationDistance > 0)
-                weight = 100.0f / std::log(1+std::abs(creationDistance));
+                weight = 100 / std::log(1+std::abs(creationDistance));
             else {
                 //file << " constraint=false";
-                weight = 1.0f / std::log(1+std::abs(creationDistance));
+                weight = 1 / std::log(1+std::abs(creationDistance));
             }
 
             if (producer.node->getGroup() != node->getGroup())
-                weight *= 0.01f;
+                weight *= 0.01;
 
-            file << " weight="<<std::round(1+weight * 100.0f); // dot wants integers, so scale everything up
+            file << " weight="<<std::round(1+weight * 100); // dot wants integers, so scale everything up
 
             file << "];" << std::endl;
         }

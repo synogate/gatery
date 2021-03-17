@@ -27,8 +27,8 @@ namespace hcl::stl {
         for (auto i : utils::Range(vec.size()))
             subSums[i] = zext(vec[i], utils::Log2C(vec.size() + 1));
 
-        for (unsigned i = utils::nextPow2(vec.getWidth())/2; i > 0; i /= 2) {
-            for (unsigned j = 0; j < i; j++) {
+        for (uint64_t i = utils::nextPow2(vec.getWidth().value)/2; i > 0; i /= 2) {
+            for (uint64_t j = 0; j < i; j++) {
                 if (j*2+0 >= subSums.size()) {
                     subSums[j] = 0;
                     continue;

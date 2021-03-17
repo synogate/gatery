@@ -23,7 +23,7 @@ struct MemoryTrace {
     };
 
     struct SignalChange {
-        unsigned sigIdx;
+        size_t sigIdx;
         size_t dataOffset;
     };
 

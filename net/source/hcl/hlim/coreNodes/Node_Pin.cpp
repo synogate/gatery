@@ -13,7 +13,7 @@ void Node_Pin::setBool()
     setOutputConnectionType(0, {.interpretation = ConnectionType::BOOL, .width = 1});
 }
 
-void Node_Pin::setWidth(unsigned width)
+void Node_Pin::setWidth(size_t width)
 {
     setOutputConnectionType(0, {.interpretation = ConnectionType::BITVEC, .width = width});
 }

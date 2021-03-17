@@ -74,18 +74,16 @@ inline size_t Log2(boost::rational<std::uint64_t> v)
     return Log2(v.numerator() / v.denominator());
 }
 
-inline unsigned nextPow2(unsigned v) 
+template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+constexpr T nextPow2(T v)
 {
     v--;
-    v |= v >> 1;
-    v |= v >> 2;
-    v |= v >> 4;
-    v |= v >> 8;
-    v |= v >> 16;
+    for (T bit = 1; bit < sizeof(T) * 8; bit <<= 1)
+        v |= v >> bit;
     v++;
     return v;
 }
-    
+
 template<typename T>
 inline T andNot(T a, T b) {
     return ~a & b;

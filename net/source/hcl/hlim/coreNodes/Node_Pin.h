@@ -13,7 +13,7 @@ namespace hcl::core::hlim {
             inline void disconnect() { NodeIO::disconnectInput(0); }
 
             void setBool();
-            void setWidth(unsigned width);
+            void setWidth(size_t width);
 
             bool isOutputPin() const;
 

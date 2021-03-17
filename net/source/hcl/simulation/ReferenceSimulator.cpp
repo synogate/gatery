@@ -197,7 +197,7 @@ void Program::allocateSignals(const hlim::Circuit &circuit, const std::vector<hl
         if (auto *signalNode = dynamic_cast<hlim::Node_Signal*>(node)) {
             auto driver = signalNode->getNonSignalDriver(0);
 
-            unsigned width = signalNode->getOutputConnectionType(0).width;
+            size_t width = signalNode->getOutputConnectionType(0).width;
 
             if (driver.node != nullptr) {
                 auto it = m_stateMapping.outputToOffset.find(driver);
@@ -226,7 +226,7 @@ void Program::allocateSignals(const hlim::Circuit &circuit, const std::vector<hl
                 hlim::NodePort driver = {.node = node, .port = i};
                 auto it = m_stateMapping.outputToOffset.find(driver);
                 if (it == m_stateMapping.outputToOffset.end()) {
-                    unsigned width = node->getOutputConnectionType(i).width;
+                    size_t width = node->getOutputConnectionType(i).width;
                     m_stateMapping.outputToOffset[driver] = allocator.allocate(width);
                 }
             }
@@ -473,7 +473,7 @@ DefaultBitVectorState ReferenceSimulator::getValueOfInternalState(const hlim::Ba
     if (it == m_program.m_stateMapping.nodeToInternalOffset.end()) {
         value.resize(0);
     } else {
-        unsigned width = node->getInternalStateSizes()[idx];
+        size_t width = node->getInternalStateSizes()[idx];
         value = m_dataState.signalState.extract(it->second[idx], width);
     }
     return value;
@@ -489,7 +489,7 @@ DefaultBitVectorState ReferenceSimulator::getValueOfOutput(const hlim::NodePort 
     if (it == m_program.m_stateMapping.outputToOffset.end()) {
         value.resize(0);
     } else {
-        unsigned width = nodePort.node->getOutputConnectionType(nodePort.port).width;
+        size_t width = nodePort.node->getOutputConnectionType(nodePort.port).width;
         value = m_dataState.signalState.extract(it->second, width);
     }
     return value;

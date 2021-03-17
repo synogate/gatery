@@ -31,7 +31,7 @@ class MemoryTraceRecorder : public WaveformRecorder
         BitAllocator m_bitAllocator;
         MemoryTrace m_trace;
 
-        std::map<const hlim::Clock*, unsigned> m_clock2idx;
+        std::map<const hlim::Clock*, size_t> m_clock2idx;
 
         virtual void initialize() override;
         virtual void signalChanged(size_t id) override;
