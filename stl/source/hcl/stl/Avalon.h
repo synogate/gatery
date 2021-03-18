@@ -63,8 +63,6 @@ namespace hcl::stl
     template<typename T>
     inline void AvalonMM::connect(Memory<T>& mem, BitWidth dataWidth)
     {
-        std::cout << "test\n";
-       
         struct SigInfo
         {
             std::string name;
