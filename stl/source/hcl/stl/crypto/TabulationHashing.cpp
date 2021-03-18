@@ -34,7 +34,7 @@ namespace hcl::stl
 		const size_t numTables = (data.getWidth().value + m_symbolWidth.value - 1) / m_symbolWidth.value;
 		m_tables.resize(numTables);
 
-		BVec hash = ConstBVec(0, m_hashWidth.value);
+		BVec hash = zext(0, m_hashWidth.value);
 		for (size_t t = 0; t < numTables; ++t)
 		{
 			const size_t addrWidth = std::min(m_symbolWidth.value, data.size() - t * m_symbolWidth.value);
@@ -93,19 +93,7 @@ namespace hcl::stl
 		entity.setName("TabulationHashing_UpdatePort");
 
 		AvalonMM avmm;
-		avmm.addressSel["symbol"] = Selection::Slice(0, (int)m_symbolWidth.value);
-
-		avmm.address = m_symbolWidth;
-		avmm.write = Bit{};
-		avmm.writeData = m_hashWidth;
-
-		auto port = m_tables[tableIdx][avmm.address];
-		IF(*avmm.write)
-			port = *avmm.writeData;
-
-		if (avmm.readData)
-			avmm.readData = port;
-
+		avmm.connect(m_tables[tableIdx]);
 		HCL_NAMED(avmm);
 		return avmm;
 	}
