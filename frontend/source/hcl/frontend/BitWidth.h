@@ -6,7 +6,7 @@ namespace hcl::core::frontend
 	struct BitWidth
 	{
 		auto operator <=> (const BitWidth&) const = default;
-		uint64_t value;
+		uint64_t value = 0;
 
 		operator unsigned long long() const { return value; }
 
