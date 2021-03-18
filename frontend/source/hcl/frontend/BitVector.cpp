@@ -145,7 +145,7 @@ namespace hcl::core::frontend {
     {
         auto connType = node->getOutputConnectionType(0);
         HCL_DESIGNCHECK(connType.interpretation == hlim::ConnectionType::BITVEC);
-        HCL_DESIGNCHECK(connType.width > m_range.bitOffset(m_range.width-1));
+        HCL_DESIGNCHECK(m_range.width == 0 || connType.width > m_range.bitOffset(m_range.width-1));
         m_node->addRef();
     }
 
@@ -470,7 +470,8 @@ namespace hcl::core::frontend {
         offset += r.offset;
 
         subset = true;
-        HCL_DESIGNCHECK(bitOffset(width - 1) <= r.bitOffset(r.width - 1));
+
+        HCL_DESIGNCHECK(width == 0 || bitOffset(width - 1) <= r.bitOffset(r.width - 1));
     }
 
 }
