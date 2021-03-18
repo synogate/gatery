@@ -86,5 +86,54 @@ void VHDLExport::writeGHDLScript(const std::string &name)
     }
 }
 
+    void VHDLExport::writeVivadoScript(std::string_view filename)
+    {
+        std::fstream file((m_destination / filename).string().c_str(), std::fstream::out);
+        file.exceptions(std::fstream::failbit | std::fstream::badbit);
 
+        std::vector<std::filesystem::path> files;
+
+        for (auto&& package : m_ast->getPackages())
+            files.emplace_back(m_ast->getFilename("", package->getName()));
+
+        for (auto&& entity : m_ast->getDependencySortedEntities())
+            files.emplace_back(m_ast->getFilename("", entity->getName()));
+
+        for (auto& f : files)
+        {
+            file << "read_vhdl -vhdl2008 ";
+            if (!m_library.empty())
+                file << "-library " << m_library << ' ';
+            file << f.string() << '\n';
+        }
+
+        writeXdc("clocks.xdc");
+
+        file << R"(
+
+read_xdc clocks.xdc
+
+# reset_run synth_1
+# launch_runs impl_1
+
+# set run settings -> more options to "-mode out_of_context" for virtual pins
+
+)";
+    }
+
+    void VHDLExport::writeXdc(std::string_view filename)
+    {
+        std::fstream file((m_destination / filename).string().c_str(), std::fstream::out);
+        file.exceptions(std::fstream::failbit | std::fstream::badbit);
+
+        Entity* top = m_ast->getRootEntity();
+        for (core::hlim::Clock* clk : top->getClocks())
+        {
+            auto&& name = top->getNamespaceScope().getName(clk);
+            core::hlim::ClockRational freq = clk->getAbsoluteFrequency();
+            double ns = double(freq.denominator() * 1'000'000'000) / freq.numerator();
+
+            file << "create_clock -period " << std::fixed << std::setprecision(3) << ns << " [get_ports " << name << "]\n";
+        }
+    }
 }
