@@ -518,11 +518,12 @@ BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, hcl::core::sim::UnitTestSimulatio
 			BOOST_TEST(sim(hash) == refHash);
 		}
 		});
-	design.visualize("TabulationHashingTest_before");
-	design.getCircuit().optimize(3);
-	design.visualize("TabulationHashingTest");
-	core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TabulationHashingTest.vcd");
-	vcd.addAllSignals();
+
+	//design.visualize("TabulationHashingTest_before");
+	//design.getCircuit().optimize(3);
+	//design.visualize("TabulationHashingTest");
+	//core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TabulationHashingTest.vcd");
+	//vcd.addAllSignals();
 
 	design.getCircuit().optimize(3);
 	runTicks(design.getCircuit(), clock.getClk(), 1024);
