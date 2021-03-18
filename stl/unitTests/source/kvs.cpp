@@ -16,6 +16,11 @@
 
 #include <hcl/stl/kvs/TinyCuckoo.h>
 
+extern "C"
+{
+#include <hcl/stl/kvs/TinyCuckooDriver.h>
+}
+
 using namespace boost::unit_test;
 using namespace hcl;
 
@@ -230,4 +235,51 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCuckooTabl
     //vhdl(design.getCircuit());
 
     runTicks(design.getCircuit(), clock.getClk(), 4096);
+}
+
+extern "C"
+{
+    static void super_free(void* ptr, size_t)
+    {
+        free(ptr);
+    }
+
+    static void super_hash(void* ctx, uint32_t* key, uint32_t* hash)
+    {
+        hash[0] = *key * 609598081u;
+        hash[1] = *key * 1067102063u;
+    }
+}
+
+
+
+BOOST_AUTO_TEST_CASE(TinyCuckooDriverBaseTest)
+{
+    TinyCuckooContext* ctx = tiny_cuckoo_init(32 * 1024, 4, 32, 32, malloc, super_free);
+    BOOST_TEST(ctx);
+
+    tiny_cuckoo_set_hash(ctx, super_hash, NULL);
+
+    uint32_t testKey = 128;
+    uint32_t testVal = 1337;
+    BOOST_TEST(!tiny_cuckoo_lookup(ctx, &testKey));
+
+    BOOST_TEST(tiny_cuckoo_update(ctx, &testKey, &testVal));
+
+    uint32_t* lookupVal = tiny_cuckoo_lookup(ctx, &testKey);
+    BOOST_TEST(lookupVal);
+    BOOST_TEST(*lookupVal == testVal);
+
+    testVal = ~testVal;
+    BOOST_TEST(tiny_cuckoo_update(ctx, &testKey, &testVal));
+
+    lookupVal = tiny_cuckoo_lookup(ctx, &testKey);
+    BOOST_TEST(lookupVal);
+    BOOST_TEST(*lookupVal == testVal);
+
+    BOOST_TEST(tiny_cuckoo_remove(ctx, &testKey));
+    BOOST_TEST(!tiny_cuckoo_remove(ctx, &testKey));
+    BOOST_TEST(!tiny_cuckoo_lookup(ctx, &testKey));
+
+    tiny_cuckoo_destroy(ctx);
 }

@@ -36,6 +36,8 @@ add_library(hcl_stl STATIC
     source/hcl/stl/crypto/SipHash.cpp
     source/hcl/stl/kvs/TinyCuckoo.h
     source/hcl/stl/kvs/TinyCuckoo.cpp
+    source/hcl/stl/kvs/TinyCuckooDriver.h
+    source/hcl/stl/kvs/TinyCuckooDriver.c
     source/hcl/stl/memoryMap/MemoryMap.h
     source/hcl/stl/memoryMap/AvalonMM.h
     source/hcl/stl/memoryMap/AvalonMM.cpp
