@@ -246,8 +246,15 @@ extern "C"
 
     static void super_hash(void* ctx, uint32_t* key, uint32_t* hash)
     {
-        hash[0] = *key * 609598081u;
-        hash[1] = *key * 1067102063u;
+        const uint32_t k = *key;
+        hash[0] = k * 609598081u;
+        hash[1] = k * 1067102063u;
+        hash[2] = k * 190989923u;
+        hash[3] = k * 905010023u;
+        hash[4] = k * 2370688493u;
+        hash[5] = k * 3059132147u;
+        hash[6] = k * 1500458227u;
+        hash[7] = k * 1781057147u;
     }
 }
 
@@ -280,6 +287,61 @@ BOOST_AUTO_TEST_CASE(TinyCuckooDriverBaseTest)
     BOOST_TEST(tiny_cuckoo_remove(ctx, &testKey));
     BOOST_TEST(!tiny_cuckoo_remove(ctx, &testKey));
     BOOST_TEST(!tiny_cuckoo_lookup(ctx, &testKey));
+
+    tiny_cuckoo_destroy(ctx);
+}
+
+BOOST_DATA_TEST_CASE(TinyCuckooDriverFuzzTest, data::xrange(0, 3), tableShift)
+{
+    const uint32_t numTables = 2 << tableShift;
+    TinyCuckooContext* ctx = tiny_cuckoo_init(64 * 1024, numTables, 32, 32, malloc, super_free);
+    BOOST_TEST(ctx);
+    tiny_cuckoo_set_hash(ctx, super_hash, NULL);
+
+    std::map<uint32_t, uint32_t> ref;
+    const auto seed = std::random_device{}();
+    std::mt19937 rng{ seed };
+
+    for (size_t i = 0;; ++i)
+    {
+        uint32_t key = rng() & 0xFFFFF;
+        uint32_t val = rng();
+
+        uint32_t* uut = tiny_cuckoo_lookup(ctx, &key);
+        auto it_ref = ref.find(key);
+        if (it_ref == ref.end())
+        {
+            BOOST_TEST(uut == nullptr, "seed: " << seed);
+        }
+        else
+        {
+            BOOST_TEST(uut, "seed: " << seed);
+            BOOST_TEST(*uut = it_ref->second, "seed: " << seed);
+        }
+
+        if (!tiny_cuckoo_update(ctx, &key, &val))
+            break;
+        ref[key] = val;
+    }
+
+    BOOST_TEST(ref.size() > ctx->capacity / 3, "reached only " << ref.size() / double(ctx->capacity) << " of capacity using seed: " << seed);
+
+    const uint32_t* item_end = ctx->items + ctx->capacity * ctx->itemWords;
+    for (uint32_t* item = ctx->items; item != item_end; item += ctx->itemWords)
+    {
+        if (item[0])
+        {
+            auto it_ref = ref.find(item[1]);
+            bool is_end = it_ref == ref.end();
+            BOOST_TEST(!is_end);
+            if (!is_end)
+            {
+                BOOST_TEST(it_ref->second == item[2]);
+                ref.erase(it_ref);
+            }
+        }
+    }
+    BOOST_TEST(ref.empty());
 
     tiny_cuckoo_destroy(ctx);
 }

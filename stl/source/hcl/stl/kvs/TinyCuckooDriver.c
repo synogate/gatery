@@ -28,7 +28,8 @@ static uint32_t extract_bit_range(uint32_t* field, uint32_t index, uint32_t elem
 
 	uint32_t ret = 0;
 	ret |= low >> (offset % 32);
-	ret |= high << (32 - offset % 32);
+	if(offset % 32 != 0)
+		ret |= high << (32 - offset % 32);
 	ret &= (1ull << elementWidth) - 1;
 	return ret;
 }
@@ -64,8 +65,8 @@ TinyCuckooContext* tiny_cuckoo_init(
 	ctx->valueWords = (uint16_t)valueWords;
 	ctx->itemWords = (uint16_t)itemWords;
 
-	ctx->limitChainDepth = 1024;
-	ctx->limitChainJobs = ctx->limitChainDepth * numTables;
+	ctx->limitChainDepth = capacity / numTables;
+	ctx->limitChainJobs = capacity * 2;
 
 	ctx->hashBitPerTable = Log2C(ctx->capacity / ctx->numTables);
 	ctx->hashWords = (ctx->hashBitPerTable * ctx->numTables + 31) / 32;
@@ -240,6 +241,10 @@ static int tiny_cuckoo_update_insert_by_moving(TinyCuckooContext* ctx, uint32_t*
 	struct TinyCuckooMove* job;
 
 	memset(&uctx, 0, sizeof(uctx));
+	uctx.ctx = ctx;
+	uctx.front.next = &uctx.back;
+	uctx.back.prev = &uctx.front;
+
 	for (i = 0; i < ctx->numTables; ++i)
 	{
 		job = ctx->alloc(sizeof(struct TinyCuckooMove));
@@ -259,7 +264,7 @@ static int tiny_cuckoo_update_insert_by_moving(TinyCuckooContext* ctx, uint32_t*
 			break;
 	}
 
-	job = uctx.back.prev;
+	job = uctx.front.next;
 	if (!job->item->valid)
 	{
 		item = tiny_cuckoo_walk_chain(ctx, job);
