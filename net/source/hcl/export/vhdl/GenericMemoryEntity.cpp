@@ -274,7 +274,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                             auto reset = rp.outputReg->getDriver((unsigned)hlim::Node_Register::Input::RESET_VALUE);
                             if (reset.node != nullptr) {
                                 cf.indent(stream, indent);
-                                stream << "IF ("<< m_namespaceScope.getName(clock.first)<<clock.first->getResetName() << " = '1') THEN\n";
+                                stream << "IF ("<< m_namespaceScope.getName(clock.first)<<clock.first->getResetName() << " = '" << (clock.first->getResetHighActive()?'1':'0') << "') THEN\n";
                                 indent++;
 
                                     cf.indent(stream, indent);
@@ -299,7 +299,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                             auto reset = rp.outputReg->getDriver((unsigned)hlim::Node_Register::Input::RESET_VALUE);
                             if (reset.node != nullptr) {
                                 cf.indent(stream, indent);
-                                stream << "IF ("<< m_namespaceScope.getName(clock.first)<<clock.first->getResetName() << " = '1') THEN\n";
+                                stream << "IF ("<< m_namespaceScope.getName(clock.first)<<clock.first->getResetName() << " = '" << (clock.first->getResetHighActive()?'1':'0') << "') THEN\n";
                                 indent++;
 
                                     cf.indent(stream, indent);
