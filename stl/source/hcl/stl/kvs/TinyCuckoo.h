@@ -1,6 +1,7 @@
 #pragma once
 #include <hcl/frontend.h>
 #include "../Avalon.h"
+#include "../memoryMap/MemoryMap.h"
 
 namespace hcl::stl
 {
@@ -32,6 +33,7 @@ namespace hcl::stl
 		Out operator () (const Tkey& key, const BVec& hash);
 
 		void addCpuInterface(AvalonNetworkSection& net);
+		void addCpuInterface(MemoryMap& mmap);
 
 	protected:
 		std::vector<Memory<Item>> m_tables;
@@ -150,6 +152,12 @@ namespace hcl::stl
 			avmm.connect(m_tables[i]);
 			net.add("table" + std::to_string(i), std::move(avmm));
 		}
+	}
+
+	template<typename Tkey, typename Tval>
+	inline void TinyCuckoo<Tkey, Tval>::addCpuInterface(MemoryMap& mmap)
+	{
+		mmap.stage(m_tables);
 	}
 
 }

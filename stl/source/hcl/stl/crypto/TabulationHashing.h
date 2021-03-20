@@ -3,6 +3,7 @@
 #include <hcl/frontend.h>
 #include "../Stream.h"
 #include "../Avalon.h"
+#include "../memoryMap/MemoryMap.h"
 
 namespace hcl::stl
 {
@@ -21,6 +22,8 @@ namespace hcl::stl
 		AvalonMM tableUpdatePort(size_t tableIdx, bool readable = false);
 
 		void updatePorts(AvalonNetworkSection& net);
+
+		void addCpuInterface(MemoryMap& mmap) { mmap.stage(m_tables); }
 
 	private:
 		BitWidth m_hashWidth;

@@ -132,6 +132,8 @@ namespace hcl::core::frontend {
             template<typename DataNew>
             Memory<DataNew> view(DataNew def = DataNew{}) { return Memory<DataNew>(m_memoryNode, def); }
 
+            const Data& defaultValue() const { return m_defaultValue; }
+
         protected:
             hlim::NodePtr<hlim::Node_Memory> m_memoryNode;
             Data m_defaultValue;
