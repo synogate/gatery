@@ -324,7 +324,9 @@ BOOST_DATA_TEST_CASE(TinyCuckooDriverFuzzTest, data::xrange(0, 3), tableShift)
         ref[key] = val;
     }
 
-    BOOST_TEST(ref.size() > ctx->capacity / 3, "reached only " << ref.size() / double(ctx->capacity) << " of capacity using seed: " << seed);
+    size_t capacityExpectation = ctx->capacity / (numTables == 2 ? 4 : 2);
+    BOOST_TEST(ref.size() > capacityExpectation,
+        "reached only " << ref.size() / double(ctx->capacity) << " of capacity using seed: " << seed << ", tables: " << numTables);
 
     const uint32_t* item_end = ctx->items + ctx->capacity * ctx->itemWords;
     for (uint32_t* item = ctx->items; item != item_end; item += ctx->itemWords)
