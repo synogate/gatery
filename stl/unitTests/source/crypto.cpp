@@ -16,6 +16,13 @@
 #include <hcl/stl/crypto/SipHash.h>
 #include <hcl/stl/crypto/TabulationHashing.h>
 
+extern "C"
+{
+#include <hcl/stl/crypto/TabulationHashingDriver.h>
+}
+
+#include "driver_utils.h"
+
 using namespace boost::unit_test;
 using namespace hcl;
 
@@ -527,4 +534,33 @@ BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, hcl::core::sim::UnitTestSimulatio
 
 	design.getCircuit().optimize(3);
 	runTicks(design.getCircuit(), clock.getClk(), 1024);
+}
+
+BOOST_AUTO_TEST_CASE(TabulationHashingDriverBaseTest)
+{
+	TabulationHashingContext* ctx = tabulation_hashing_init(36, 36, 
+		driver_alloc, driver_free);
+
+	MmTestCtx mmCtx;
+	tabulation_hashing_set_mm(ctx, MmTestWrite, &mmCtx);
+
+	std::mt19937 rng{ 1337 };
+	tabulation_hashing_set_random_content(ctx, driver_random_generator, &rng);
+
+	std::set<std::array<uint32_t, 2>> seen;
+
+	std::array<uint32_t, 2> hash;
+	std::array<uint32_t, 2> key;
+	for (uint32_t i = 0; i < 2048; ++i)
+	{
+		key[0] = i * 609598081u;
+		key[1] = i * 1067102063u;
+		tabulation_hashing_hash(ctx, key.data(), hash.data());
+
+		bool known = seen.contains(hash);
+		BOOST_TEST(!known);
+		seen.insert(hash);
+	}
+
+	tabulation_hashing_destroy(ctx);
 }
