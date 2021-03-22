@@ -34,6 +34,8 @@ static uint32_t extract_bit_range(uint32_t* field, uint32_t index, uint32_t elem
 	return ret;
 }
 
+static void tiny_cuckoo_mmwrite_dummy(void* ctx, uint32_t offset, uint32_t value) {}
+
 TinyCuckooContext* tiny_cuckoo_init(
 	uint32_t capacity, uint32_t numTables,
 	uint32_t keyWidth, size_t valueWidth,
@@ -68,6 +70,9 @@ TinyCuckooContext* tiny_cuckoo_init(
 	ctx->limitChainDepth = capacity / numTables;
 	ctx->limitChainJobs = capacity * 2;
 
+	ctx->mmCtx = NULL;
+	ctx->mmwrite = &tiny_cuckoo_mmwrite_dummy;
+
 	ctx->hashBitPerTable = Log2C(ctx->capacity / ctx->numTables);
 	ctx->hashWords = (ctx->hashBitPerTable * ctx->numTables + 31) / 32;
 
@@ -86,12 +91,41 @@ void tiny_cuckoo_set_hash(TinyCuckooContext* ctx, void (*hash_proc)(void*, uint3
 	ctx->hashCtx = userData;
 }
 
+void tiny_cuckoo_set_limits(TinyCuckooContext* ctx, uint32_t numChainJobs, uint32_t maxChainDepth)
+{
+	ctx->limitChainJobs = numChainJobs;
+	ctx->limitChainDepth = maxChainDepth;
+}
+
+void tiny_cuckoo_set_mm(TinyCuckooContext* ctx, void(*mmwrite)(void* ctx, uint32_t offset, uint32_t value), void* userData)
+{
+	if (mmwrite)
+	{
+		ctx->mmCtx = userData;
+		ctx->mmwrite = mmwrite;
+	}
+	else
+	{
+		ctx->mmCtx = NULL;
+		ctx->mmwrite = &tiny_cuckoo_mmwrite_dummy;
+	}
+}
+
 static TinyCuckooItem* tiny_cuckoo_item(TinyCuckooContext* ctx, uint32_t table, uint32_t* hash)
 {
 	size_t index;
 	index = extract_bit_range(hash, table, ctx->hashBitPerTable);
 	index += table * ctx->capacity / ctx->numTables;
 	return (TinyCuckooItem*)(ctx->items + index * ctx->itemWords);
+}
+
+static void tiny_cuckoo_item_write(TinyCuckooContext* ctx, TinyCuckooItem* item)
+{
+	uint32_t itemOffset = (uint32_t)(((uint32_t*)item - ctx->items) / ctx->itemWords);
+
+	for (uint32_t i = 0; i < ctx->itemWords; ++i)
+		ctx->mmwrite(ctx->mmCtx, 1 + i, ((uint32_t*)item)[i]);
+	ctx->mmwrite(ctx->mmCtx, 0, itemOffset); // push to block ram cmd
 }
 
 static TinyCuckooItem* tiny_cuckoo_find(TinyCuckooContext* ctx, uint32_t* key)
@@ -178,6 +212,7 @@ static TinyCuckooItem* tiny_cuckoo_walk_chain(TinyCuckooContext* ctx, struct Tin
 	while (mv->parent)
 	{
 		memcpy(mv->item, mv->parent->item, ctx->itemWords * 4ull);
+		tiny_cuckoo_item_write(ctx, mv->item);
 		mv = mv->parent;
 	}
 	return mv->item;
@@ -207,6 +242,7 @@ static int tiny_cuckoo_update_existing(TinyCuckooContext* ctx, uint32_t* key, ui
 			if (!memcmp(item->key, key, ctx->keyWords * 4ull))
 			{
 				memcpy(item->key + ctx->keyWords, value, ctx->valueWords * 4ull);
+				tiny_cuckoo_item_write(ctx, item);
 				return 1;
 			}
 	}
@@ -226,6 +262,7 @@ static int tiny_cuckoo_update_insert_if_free(TinyCuckooContext* ctx, uint32_t* k
 			item->valid = 1;
 			memcpy(item->key, key, ctx->keyWords * 4ull);
 			memcpy(item->key + ctx->keyWords, value, ctx->valueWords * 4ull);
+			tiny_cuckoo_item_write(ctx, item);
 			return 1;
 		}
 	}

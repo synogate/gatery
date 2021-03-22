@@ -258,6 +258,20 @@ extern "C"
     }
 }
 
+struct TCDTestCtx
+{
+    uint32_t mem[4] = {};
+    bool oobAccess = false;
+};
+
+extern "C" static void TCDTestMmWrite(void* ctx, uint32_t offset, uint32_t value)
+{
+    auto* c = (TCDTestCtx*)ctx;
+    if (offset < 4)
+        c->mem[offset] = value;
+    else
+        c->oobAccess = true;
+}
 
 
 BOOST_AUTO_TEST_CASE(TinyCuckooDriverBaseTest)
@@ -265,6 +279,8 @@ BOOST_AUTO_TEST_CASE(TinyCuckooDriverBaseTest)
     TinyCuckooContext* ctx = tiny_cuckoo_init(32 * 1024, 4, 32, 32, malloc, super_free);
     BOOST_TEST(ctx);
 
+    TCDTestCtx mmCtx;
+    tiny_cuckoo_set_mm(ctx, TCDTestMmWrite, &mmCtx);
     tiny_cuckoo_set_hash(ctx, super_hash, NULL);
 
     uint32_t testKey = 128;
@@ -272,6 +288,11 @@ BOOST_AUTO_TEST_CASE(TinyCuckooDriverBaseTest)
     BOOST_TEST(!tiny_cuckoo_lookup(ctx, &testKey));
 
     BOOST_TEST(tiny_cuckoo_update(ctx, &testKey, &testVal));
+    BOOST_TEST(!mmCtx.oobAccess);
+    BOOST_TEST(mmCtx.mem[0] == 128);
+    BOOST_TEST(mmCtx.mem[1] == 1);
+    BOOST_TEST(mmCtx.mem[2] == testKey);
+    BOOST_TEST(mmCtx.mem[3] == testVal);
 
     uint32_t* lookupVal = tiny_cuckoo_lookup(ctx, &testKey);
     BOOST_TEST(lookupVal);
@@ -296,6 +317,9 @@ BOOST_DATA_TEST_CASE(TinyCuckooDriverFuzzTest, data::xrange(0, 3), tableShift)
     const uint32_t numTables = 2 << tableShift;
     TinyCuckooContext* ctx = tiny_cuckoo_init(64 * 1024, numTables, 32, 32, malloc, super_free);
     BOOST_TEST(ctx);
+
+    TCDTestCtx mmCtx;
+    tiny_cuckoo_set_mm(ctx, TCDTestMmWrite, &mmCtx);
     tiny_cuckoo_set_hash(ctx, super_hash, NULL);
 
     std::map<uint32_t, uint32_t> ref;
@@ -360,6 +384,7 @@ BOOST_DATA_TEST_CASE(TinyCuckooDriverFuzzTest, data::xrange(0, 3), tableShift)
         }
     }
     BOOST_TEST(ref.empty());
+    BOOST_TEST(!mmCtx.oobAccess);
 
     tiny_cuckoo_destroy(ctx);
 }

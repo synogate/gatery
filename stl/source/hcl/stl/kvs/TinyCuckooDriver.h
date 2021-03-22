@@ -20,10 +20,13 @@ typedef struct {
 	uint32_t limitChainDepth;
 
 	void* hashCtx;
+	void (*hash)(void* ctx, uint32_t* key, uint32_t* hash_out);
 
 	void* (*alloc)(size_t);
 	void (*free)(void*, size_t);
-	void (*hash)(void* ctx, uint32_t* key, uint32_t* hash_out);
+
+	void* mmCtx;
+	void (*mmwrite)(void* ctx, uint32_t offset, uint32_t value);
 
 	uint32_t items[1];
 } TinyCuckooContext;
@@ -36,6 +39,8 @@ TinyCuckooContext* tiny_cuckoo_init(
 void tiny_cuckoo_destroy(TinyCuckooContext* ctx);
 
 void tiny_cuckoo_set_hash(TinyCuckooContext* ctx, void (*hash_proc)(void*, uint32_t*, uint32_t*), void* userData);
+void tiny_cuckoo_set_limits(TinyCuckooContext* ctx, uint32_t numChainJobs, uint32_t maxChainDepth);
+void tiny_cuckoo_set_mm(TinyCuckooContext* ctx, void (*mmwrite)(void* ctx, uint32_t offset, uint32_t value), void* userData);
 
 int tiny_cuckoo_update(TinyCuckooContext* ctx, uint32_t* key, uint32_t* value);
 uint32_t* tiny_cuckoo_lookup(TinyCuckooContext* ctx, uint32_t* key);
