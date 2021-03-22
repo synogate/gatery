@@ -13,7 +13,7 @@ using namespace boost::unit_test;
 
 const auto optimizationLevels = data::make({0, 1, 2, 3});
 
-using UnitTestSimulationFixture = hcl::core::frontend::UnitTestSimulationFixture;
+using UnitTestSimulationFixture = hcl::core::frontend::BoostUnitTestSimulationFixture;
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLevels * data::xrange(8) * data::xrange(8) * data::xrange(1, 8), optimization, x, y, bitsize)
 {
@@ -70,7 +70,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLev
 
     design.getCircuit().optimize(optimization);
 
-    eval();
+    runEvalOnlyTest();
 }
 
 
@@ -101,7 +101,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicing, optimizationLevel
 
     design.getCircuit().optimize(optimization);
 
-    eval();
+    runEvalOnlyTest();
 }
 
 
@@ -120,7 +120,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicingModifications, data
         sim_assert(b == groundTruth) << "Clearing two bits out of " << a << " should be " << groundTruth << " but is " << b;
     }
 
-    eval();
+    runEvalOnlyTest();
 }
 
 
@@ -140,7 +140,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicingAddition, optimizat
 
     design.getCircuit().optimize(optimization);
 
-    eval();
+    runEvalOnlyTest();
 }
 
 
@@ -162,7 +162,8 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, SimpleAdditionNetwork, optimiz
     sim_assert(c == ConstBVec(x+y, bitsize)) << "The signal c should be " << x+y << " (with overflow in " << bitsize << "bits) but is " << c;
 
     design.getCircuit().optimize(optimization);
-    eval();
+
+    runEvalOnlyTest();
 }
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, BitFromBool, data::xrange(2) * data::xrange(2), l, r)
@@ -180,7 +181,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, BitFromBool, data::xrange(2) *
     sim_assert((a != true) == Bit(l == 0)) << "test 4: " << a << "," << b;
     sim_assert((true != a) == Bit(l == 0)) << "test 5: " << a << "," << b;
 
-    eval();
+    runEvalOnlyTest();
 }
 
 
@@ -205,7 +206,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, UnitTestSimulationFixture)
         sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);
     }
 
-    runTicks(clock.getClk(), 10);
+    runFixedLengthTest(10u / clock.getClk()->getAbsoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(SignalMoveAssignment, UnitTestSimulationFixture)
@@ -227,7 +228,7 @@ BOOST_FIXTURE_TEST_CASE(SignalMoveAssignment, UnitTestSimulationFixture)
         sim_assert(b == 1);
     }
 
-    eval();
+    runEvalOnlyTest();
 }
 
 BOOST_FIXTURE_TEST_CASE(BVecBitAliasConditionCheck, UnitTestSimulationFixture)
@@ -245,7 +246,7 @@ BOOST_FIXTURE_TEST_CASE(BVecBitAliasConditionCheck, UnitTestSimulationFixture)
     }
     sim_assert(a == 255);
 
-    eval();
+    runEvalOnlyTest();
 }
 
 BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, UnitTestSimulationFixture)
@@ -302,7 +303,7 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, UnitTestSimulationFixture)
         auto pinX = pinOut(x);
         auto pinY = pinOut(y);
 
-        addSimulationProcess([=, &clock]()->SimProcess {
+        addSimulationProcess([=, this, &clock]()->SimProcess {
 
             sim(pinConditionIn) = 0;
             BOOST_TEST(sim(pinC) == 0xC);
@@ -318,12 +319,14 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, UnitTestSimulationFixture)
             BOOST_TEST(sim(pinY) == 0);
             co_await WaitClk(clock);
 
+            stopTest();
         });
 
     }
 
     design.getCircuit().optimize(3);
-    runTicks(clock.getClk(), 100);
+
+    runTest(100u / clock.getClk()->getAbsoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, UnitTestSimulationFixture)
@@ -367,7 +370,7 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, UnitTestSimulationFixture)
         for (BVec& i : listB)
             out.emplace_back(i);
 
-        addSimulationProcess([=, &clock]()->SimProcess {
+        addSimulationProcess([=, this, &clock]()->SimProcess {
 
             for (size_t i = 0; i < in.size(); ++i)
                 sim(in[i]) = i;
@@ -382,12 +385,13 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, UnitTestSimulationFixture)
                 BOOST_TEST(sim(out[i]) == (i + 1) % 4);
             co_await WaitClk(clock);
 
+            stopTest();
         });
 
     }
 
     design.getCircuit().optimize(3);
-    runTicks(clock.getClk(), 100);
+    runTest(100u / clock.getClk()->getAbsoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(ConditionalLoopAssignment, UnitTestSimulationFixture)
@@ -406,7 +410,7 @@ BOOST_FIXTURE_TEST_CASE(ConditionalLoopAssignment, UnitTestSimulationFixture)
         counter += 1;
     counter = reg(counter);
 
-    runTicks(clock.getClk(), 100);
+    runFixedLengthTest(100u / clock.getClk()->getAbsoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, UnitTestSimulationFixture)
@@ -420,17 +424,20 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, UnitTestSimulationFixture)
         BVec counter(8_b);
         counter = reg(counter, "8b0");
 
-        BVec refCount(8_b);
-        simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
-            context.set(0, context.getTick());
-            }, refCount);
+        addSimulationProcess([=, this, &clock]()->SimProcess{
+            for (unsigned refCount = 0; refCount < 10; refCount++) {
+                BOOST_TEST(refCount == sim(counter));
+                BOOST_TEST(sim(counter).defined() == 0xFF);
 
-        sim_assert(counter == refCount) << "The counter should be " << refCount << " but is " << counter;
+                co_await WaitClk(clock);
+            }
+            stopTest();
+        });
 
         counter += 1;
     }
 
-    runTicks(clock.getClk(), 18);
+    runTest(100u / clock.getClk()->getAbsoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, UnitTestSimulationFixture)
@@ -457,7 +464,7 @@ BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, UnitTestSimulationFixture)
         sim_assert(bit2 == ref[0]) << "should be " << ref[0] << " but is " << bit2;
     }
 
-    runTicks(clock.getClk(), 3);
+    runFixedLengthTest(3u / clock.getClk()->getAbsoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, UnitTestSimulationFixture)
@@ -483,7 +490,7 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, UnitTestSimulationFixture)
         sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);
     }
 
-    runTicks(clock.getClk(), 10);
+    runFixedLengthTest(10u / clock.getClk()->getAbsoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, UnitTestSimulationFixture)
@@ -510,7 +517,7 @@ BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, UnitTestSimulationFixture)
         sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);
     }
 
-    runTicks(clock.getClk(), 6);
+    runFixedLengthTest(6u / clock.getClk()->getAbsoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, UnitTestSimulationFixture)
@@ -544,7 +551,7 @@ BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, UnitTestSimulationFixture
         sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);
     }
 
-    runTicks(clock.getClk(), 10);
+    runFixedLengthTest(10u / clock.getClk()->getAbsoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(StringLiteralParsing, UnitTestSimulationFixture)
@@ -563,7 +570,7 @@ BOOST_FIXTURE_TEST_CASE(StringLiteralParsing, UnitTestSimulationFixture)
     sim_assert(b == "b0111");
     sim_assert(b == "4o7");
 
-    eval();
+    runEvalOnlyTest();
 }
 
 BOOST_FIXTURE_TEST_CASE(ShiftOp, UnitTestSimulationFixture)
@@ -584,7 +591,7 @@ BOOST_FIXTURE_TEST_CASE(ShiftOp, UnitTestSimulationFixture)
     sim_assert(sshl("x0A", "x4") == "xA0") << "sshl failed";
     sim_assert(rotl("x4A", "x4") == "xA4") << "rotl failed";
 
-    eval();
+    runEvalOnlyTest();
 }
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, ConditionalAssignment, data::xrange(8) * data::xrange(8), x, y)
@@ -611,7 +618,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, ConditionalAssignment, data::x
 
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
 
-    eval();
+    runEvalOnlyTest();
 }
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, ConditionalAssignmentMultipleStatements, data::xrange(8) * data::xrange(8), x, y)
@@ -643,7 +650,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, ConditionalAssignmentMultipleS
 
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
 
-    eval();
+    runEvalOnlyTest();
 }
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, ConditionalAssignmentMultipleElseStatements, data::xrange(8) * data::xrange(8), x, y)
@@ -675,7 +682,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, ConditionalAssignmentMultipleE
 
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
 
-    eval();
+    runEvalOnlyTest();
 }
 
 
@@ -719,7 +726,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmen
 
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
 
-    eval();
+    runEvalOnlyTest();
 }
 
 
@@ -766,7 +773,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmen
 
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
 
-    eval();
+    runEvalOnlyTest();
 }
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiElseConditionalAssignment, data::xrange(8)* data::xrange(8), x, y)
@@ -811,7 +818,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiElseConditionalAssignment
 
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
 
-    eval();
+    runEvalOnlyTest();
 }
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignmentNoElse, data::xrange(8) * data::xrange(8), x, y)
@@ -842,7 +849,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmen
 
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
 
-    eval();
+    runEvalOnlyTest();
 }
 
 
@@ -873,7 +880,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmen
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
 
     design.getCircuit().optimize(optimization);
-    eval();
+    runEvalOnlyTest();
 }
 
 
@@ -911,7 +918,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmen
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
 
     design.getCircuit().optimize(optimization);
-    eval();
+    runEvalOnlyTest();
 }
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentIfElseIf, data::xrange(8) * data::xrange(8), x, y)
@@ -941,7 +948,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmen
 
     sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
 
-    eval();
+    runEvalOnlyTest();
 }
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, UnsignedCompare, data::xrange(8) * data::xrange(8), x, y)
@@ -986,7 +993,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, UnsignedCompare, data::xrange(
         sim_assert(!(a == b));
     }
 
-    eval();
+    runEvalOnlyTest();
 }
 
 BOOST_FIXTURE_TEST_CASE(BVecArithmeticOpSyntax, UnitTestSimulationFixture)
@@ -1037,7 +1044,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCat, UnitTestSimulationFixture)
     BOOST_TEST(vec_2.size() == 8);
     sim_assert(vec_2 == 42u * 2 + 128) << "result is " << vec_2;
 
-    eval();
+    runEvalOnlyTest();
 }
 
 BOOST_FIXTURE_TEST_CASE(msbBroadcast, UnitTestSimulationFixture)
@@ -1052,5 +1059,5 @@ BOOST_FIXTURE_TEST_CASE(msbBroadcast, UnitTestSimulationFixture)
 
     sim_assert(vec == "4b1111") << "result is " << vec << " but should be 1111";
 
-    eval();
+    runEvalOnlyTest();
 }
