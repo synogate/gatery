@@ -312,11 +312,20 @@ BOOST_DATA_TEST_CASE(TinyCuckooDriverFuzzTest, data::xrange(0, 3), tableShift)
         if (it_ref == ref.end())
         {
             BOOST_TEST(uut == nullptr, "seed: " << seed);
+            int ret = tiny_cuckoo_remove(ctx, &key);
+            BOOST_TEST(ret == 0);
         }
         else
         {
             BOOST_TEST(uut, "seed: " << seed);
             BOOST_TEST(*uut = it_ref->second, "seed: " << seed);
+
+            if (i % 3 == 0)
+            {
+                int ret = tiny_cuckoo_remove(ctx, &key);
+                BOOST_TEST(ret != 0);
+                ref.erase(key);
+            }
         }
 
         if (!tiny_cuckoo_update(ctx, &key, &val))
