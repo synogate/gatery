@@ -264,7 +264,7 @@ struct TCDTestCtx
     bool oobAccess = false;
 };
 
-extern "C" static void TCDTestMmWrite(void* ctx, uint32_t offset, uint32_t value)
+extern "C" void TCDTestMmWrite(void* ctx, uint32_t offset, uint32_t value)
 {
     auto* c = (TCDTestCtx*)ctx;
     if (offset < 4)
