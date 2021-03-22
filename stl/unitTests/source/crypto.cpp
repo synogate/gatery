@@ -547,7 +547,7 @@ BOOST_AUTO_TEST_CASE(TabulationHashingDriverBaseTest)
 	std::mt19937 rng{ 1337 };
 	tabulation_hashing_set_random_content(ctx, driver_random_generator, &rng);
 
-	std::set<std::array<uint32_t, 2>> seen;
+	std::map<std::array<uint32_t, 2>, uint32_t> seen;
 
 	std::array<uint32_t, 2> hash;
 	std::array<uint32_t, 2> key;
@@ -559,7 +559,18 @@ BOOST_AUTO_TEST_CASE(TabulationHashingDriverBaseTest)
 
 		bool known = seen.contains(hash);
 		BOOST_TEST(!known);
-		seen.insert(hash);
+		seen[hash] = i;
+	}
+
+	for (uint32_t i = 0; i < 2048; ++i)
+	{
+		key[0] = i * 609598081u;
+		key[1] = i * 1067102063u;
+		tabulation_hashing_hash(ctx, key.data(), hash.data());
+
+		bool known = seen.contains(hash);
+		BOOST_TEST(known);
+		BOOST_TEST(seen[hash] == i);
 	}
 
 	tabulation_hashing_destroy(ctx);
