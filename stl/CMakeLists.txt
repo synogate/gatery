@@ -44,7 +44,7 @@ add_library(hcl_stl STATIC
     source/hcl/stl/crypto/TabulationHashing.h
     source/hcl/stl/crypto/TabulationHashing.cpp
     source/hcl/stl/Avalon.cpp
-    )
+     "source/hcl/stl/crypto/TabulationHashingDriver.h" "source/hcl/stl/crypto/TabulationHashingDriver.c")
 
 set(data_files
 )

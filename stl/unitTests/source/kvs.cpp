@@ -21,6 +21,8 @@ extern "C"
 #include <hcl/stl/kvs/TinyCuckooDriver.h>
 }
 
+#include "driver_utils.h"
+
 using namespace boost::unit_test;
 using namespace hcl;
 
@@ -237,41 +239,26 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCuckooTabl
     runTicks(design.getCircuit(), clock.getClk(), 4096);
 }
 
-extern "C"
-{
-    static void super_free(void* ptr, size_t)
-    {
-        free(ptr);
-    }
-
-    static void super_hash(void* ctx, uint32_t* key, uint32_t* hash)
-    {
-        const uint32_t k = *key;
-        hash[0] = k * 609598081u;
-        hash[1] = k * 1067102063u;
-        hash[2] = k * 190989923u;
-        hash[3] = k * 905010023u;
-        hash[4] = k * 2370688493u;
-        hash[5] = k * 3059132147u;
-        hash[6] = k * 1500458227u;
-        hash[7] = k * 1781057147u;
-    }
-}
-
-
-
 BOOST_AUTO_TEST_CASE(TinyCuckooDriverBaseTest)
 {
-    TinyCuckooContext* ctx = tiny_cuckoo_init(32 * 1024, 4, 32, 32, malloc, super_free);
+    TinyCuckooContext* ctx = tiny_cuckoo_init(32 * 1024, 4, 32, 32, 
+        driver_alloc, driver_free);
     BOOST_TEST(ctx);
 
-    tiny_cuckoo_set_hash(ctx, super_hash, NULL);
+    MmTestCtx mmCtx;
+    tiny_cuckoo_set_mm(ctx, MmTestWrite, &mmCtx);
+    tiny_cuckoo_set_hash(ctx, driver_basic_hash, NULL);
 
     uint32_t testKey = 128;
     uint32_t testVal = 1337;
     BOOST_TEST(!tiny_cuckoo_lookup(ctx, &testKey));
 
     BOOST_TEST(tiny_cuckoo_update(ctx, &testKey, &testVal));
+    BOOST_TEST(mmCtx.mem.size() == 4);
+    BOOST_TEST(mmCtx.mem[0] == 128);
+    BOOST_TEST(mmCtx.mem[1] == 1);
+    BOOST_TEST(mmCtx.mem[2] == testKey);
+    BOOST_TEST(mmCtx.mem[3] == testVal);
 
     uint32_t* lookupVal = tiny_cuckoo_lookup(ctx, &testKey);
     BOOST_TEST(lookupVal);
@@ -294,9 +281,13 @@ BOOST_AUTO_TEST_CASE(TinyCuckooDriverBaseTest)
 BOOST_DATA_TEST_CASE(TinyCuckooDriverFuzzTest, data::xrange(0, 3), tableShift)
 {
     const uint32_t numTables = 2 << tableShift;
-    TinyCuckooContext* ctx = tiny_cuckoo_init(64 * 1024, numTables, 32, 32, malloc, super_free);
+    TinyCuckooContext* ctx = tiny_cuckoo_init(64 * 1024, numTables, 32, 32, 
+        driver_alloc, driver_free);
     BOOST_TEST(ctx);
-    tiny_cuckoo_set_hash(ctx, super_hash, NULL);
+
+    MmTestCtx mmCtx;
+    tiny_cuckoo_set_mm(ctx, MmTestWrite, &mmCtx);
+    tiny_cuckoo_set_hash(ctx, driver_basic_hash, NULL);
 
     std::map<uint32_t, uint32_t> ref;
     const auto seed = std::random_device{}();
@@ -312,11 +303,20 @@ BOOST_DATA_TEST_CASE(TinyCuckooDriverFuzzTest, data::xrange(0, 3), tableShift)
         if (it_ref == ref.end())
         {
             BOOST_TEST(uut == nullptr, "seed: " << seed);
+            int ret = tiny_cuckoo_remove(ctx, &key);
+            BOOST_TEST(ret == 0);
         }
         else
         {
             BOOST_TEST(uut, "seed: " << seed);
             BOOST_TEST(*uut = it_ref->second, "seed: " << seed);
+
+            if (i % 3 == 0)
+            {
+                int ret = tiny_cuckoo_remove(ctx, &key);
+                BOOST_TEST(ret != 0);
+                ref.erase(key);
+            }
         }
 
         if (!tiny_cuckoo_update(ctx, &key, &val))
@@ -324,9 +324,16 @@ BOOST_DATA_TEST_CASE(TinyCuckooDriverFuzzTest, data::xrange(0, 3), tableShift)
         ref[key] = val;
     }
 
-    size_t capacityExpectation = ctx->capacity / (numTables == 2 ? 4 : 2);
+    size_t capacityExpectation = ctx->capacity / (numTables == 2 ? 5 : 2);
     BOOST_TEST(ref.size() > capacityExpectation,
         "reached only " << ref.size() / double(ctx->capacity) << " of capacity using seed: " << seed << ", tables: " << numTables);
+
+    for (std::pair<uint32_t, uint32_t> kvp : ref)
+    {
+        const uint32_t* it = tiny_cuckoo_lookup(ctx, &kvp.first);
+        BOOST_TEST(it);
+        BOOST_TEST(*it == kvp.second);
+    }
 
     const uint32_t* item_end = ctx->items + ctx->capacity * ctx->itemWords;
     for (uint32_t* item = ctx->items; item != item_end; item += ctx->itemWords)
@@ -344,6 +351,7 @@ BOOST_DATA_TEST_CASE(TinyCuckooDriverFuzzTest, data::xrange(0, 3), tableShift)
         }
     }
     BOOST_TEST(ref.empty());
+    BOOST_TEST(mmCtx.mem.size() == 4);
 
     tiny_cuckoo_destroy(ctx);
 }
