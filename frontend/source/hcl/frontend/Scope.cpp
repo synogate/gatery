@@ -31,7 +31,7 @@ GroupScope &GroupScope::setComment(std::string comment)
 
 DesignScope::DesignScope() : BaseScope<DesignScope>(), m_rootScope(m_circuit.getRootNodeGroup())
 { 
-    m_rootScope.setName("root");
+    m_rootScope.setName("top");
     
     HCL_DESIGNCHECK_HINT(m_parentScope == nullptr, "Only one design scope can be active at a time!");
 }
