@@ -153,6 +153,8 @@ void BasicBlock::collectInstantiations(hlim::NodeGroup *nodeGroup, bool reccursi
         }
 
         for (const auto &childGroup : group->getChildren()) {
+            if (childGroup->isEmpty(true))
+                continue;
             switch (childGroup->getGroupType()) {
                 case hlim::NodeGroup::GroupType::ENTITY:
                     handleEntityInstantiation(childGroup.get());
@@ -199,14 +201,14 @@ void BasicBlock::handleExternalNodeInstantiaton(hlim::Node_External *externalNod
 
 void BasicBlock::handleSFUInstantiaton(hlim::NodeGroup *sfu)
 {
-    Entity *entity;
+    //Entity *entity;
     if (auto *memGrp = dynamic_cast<hlim::MemoryGroup*>(sfu)) {
         auto &memEntity = m_ast.createSpecialEntity<GenericMemoryEntity>(sfu->getName(), this);
         m_entities.push_back(&memEntity);
         m_entityInstanceNames.push_back(m_namespaceScope.allocateInstanceName(sfu->getInstanceName()));
         memEntity.buildFrom(memGrp);
 
-        entity = &memEntity;
+        //entity = &memEntity;
     } else
         throw hcl::utils::InternalError(__FILE__, __LINE__, "Unhandled SFU node group");
 

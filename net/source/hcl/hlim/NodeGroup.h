@@ -53,6 +53,7 @@ class NodeGroup
         inline const std::vector<std::unique_ptr<NodeGroup>> &getChildren() const { return m_children; }
 
         bool isChildOf(const NodeGroup *other) const;
+        bool isEmpty(bool recursive) const;
 
         inline GroupType getGroupType() const { return m_groupType; }
     protected:

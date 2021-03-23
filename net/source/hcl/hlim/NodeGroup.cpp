@@ -74,6 +74,17 @@ bool NodeGroup::isChildOf(const NodeGroup *other) const
     return false;
 }
 
+bool NodeGroup::isEmpty(bool recursive) const
+{
+    if (!m_nodes.empty()) return false;
+
+    if (recursive)
+        for (auto &c : m_children)
+            if (!c->isEmpty(recursive))
+                return false;
+
+    return true;
+}
 
 
 }
