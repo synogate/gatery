@@ -111,6 +111,11 @@ void tiny_cuckoo_set_mm(TinyCuckooContext* ctx, void(*mmwrite)(void* ctx, uint32
 	}
 }
 
+uint32_t tiny_cuckoo_get_hashwidth(TinyCuckooContext* ctx)
+{
+	return ctx->numTables * ctx->hashBitPerTable;
+}
+
 static TinyCuckooItem* tiny_cuckoo_item(TinyCuckooContext* ctx, uint32_t table, uint32_t* hash)
 {
 	size_t index;

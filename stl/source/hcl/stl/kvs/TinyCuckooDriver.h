@@ -41,6 +41,7 @@ void tiny_cuckoo_destroy(TinyCuckooContext* ctx);
 void tiny_cuckoo_set_hash(TinyCuckooContext* ctx, void (*hash_proc)(void*, uint32_t*, uint32_t*), void* userData);
 void tiny_cuckoo_set_limits(TinyCuckooContext* ctx, uint32_t numChainJobs, uint32_t maxChainDepth);
 void tiny_cuckoo_set_mm(TinyCuckooContext* ctx, void (*mmwrite)(void* ctx, uint32_t offset, uint32_t value), void* userData);
+uint32_t tiny_cuckoo_get_hashwidth(TinyCuckooContext* ctx);
 
 int tiny_cuckoo_update(TinyCuckooContext* ctx, uint32_t* key, uint32_t* value);
 uint32_t* tiny_cuckoo_lookup(TinyCuckooContext* ctx, uint32_t* key);
