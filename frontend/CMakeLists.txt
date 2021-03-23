@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.0)
 
-find_package(Boost COMPONENTS system thread REQUIRED)
+find_package(Boost COMPONENTS system thread unit_test_framework REQUIRED)
 
 LIST(APPEND HCL_ALL_LIBS hcl_frontend)
 SET(HCL_ALL_LIBS ${HCL_ALL_LIBS} PARENT_SCOPE)
@@ -74,6 +74,7 @@ target_include_directories(hcl_frontend SYSTEM PUBLIC
 target_link_libraries(hcl_frontend PUBLIC
     hcl_net
     ${Boost_LIBRARIES}
+    ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
 )
 
 hcl_setup_target(hcl_frontend)
