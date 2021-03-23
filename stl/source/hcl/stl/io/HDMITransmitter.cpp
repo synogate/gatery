@@ -193,23 +193,46 @@ TmdsEncoder::TmdsEncoder(core::frontend::Clock& clk) :
 
 void TmdsEncoder::addSync(const core::frontend::Bit& hsync, const core::frontend::Bit& vsync)
 {
+    GroupScope ent{ GroupScope::GroupType::ENTITY };
+    ent.setName("tmdsEncoderSync");
+
     IF(hsync)
         setSync(true, false);
     IF(vsync)
         setSync(false, true);
     IF(hsync & vsync)
         setSync(true, true);
+
+    setName(m_Channel, "channelSync");
 }
 
 void hcl::stl::hdmi::TmdsEncoder::setColor(const ColorRGB& color)
 {
-    m_Channel[0] = tmdsEncodeBitflip(m_Clk, tmdsEncodeReduceTransitions(color.r));
-    m_Channel[1] = tmdsEncodeBitflip(m_Clk, tmdsEncodeReduceTransitions(color.g));
-    m_Channel[2] = tmdsEncodeBitflip(m_Clk, tmdsEncodeReduceTransitions(color.b));
+    {
+        GroupScope ent{ GroupScope::GroupType::ENTITY };
+        ent.setName("tmdsEncoderChannel");
+        m_Channel[0] = tmdsEncodeBitflip(m_Clk, tmdsEncodeReduceTransitions(color.r));
+    }
+
+    {
+        GroupScope ent{ GroupScope::GroupType::ENTITY };
+        ent.setName("tmdsEncoderChannel");
+        m_Channel[1] = tmdsEncodeBitflip(m_Clk, tmdsEncodeReduceTransitions(color.g));
+    }
+
+    {
+        GroupScope ent{ GroupScope::GroupType::ENTITY };
+        ent.setName("tmdsEncoderChannel");
+        m_Channel[2] = tmdsEncodeBitflip(m_Clk, tmdsEncodeReduceTransitions(color.b));
+    }
+    setName(m_Channel, "channelColor");
 }
 
 void hcl::stl::hdmi::TmdsEncoder::setSync(bool hsync, bool vsync)
 {
+    m_Channel[0] = "b0010101011";
+    m_Channel[1] = "b0010101011";
+
     if (hsync && vsync)
         m_Channel[2] = "b1010101011";
     else if (hsync)
@@ -241,10 +264,10 @@ void hcl::stl::hdmi::TmdsEncoder::setTERC4(core::frontend::BVec ctrl)
         "b1011000011"
     };
 
-    HCL_ASSERT(ctrl.getWidth() == 6);
-    m_Channel[0] = mux(ctrl(0, 2), trec4lookup); // TODO: improve mux to accept any container as second input
-    m_Channel[1] = mux(ctrl(2, 2), trec4lookup); // TODO: subrange as argument for mux
-    m_Channel[2] = mux(ctrl(4, 2), trec4lookup);
+    HCL_ASSERT(ctrl.getWidth() == 12);
+    m_Channel[0] = mux(ctrl(0, 4), trec4lookup); // TODO: improve mux to accept any container as second input
+    m_Channel[1] = mux(ctrl(2, 4), trec4lookup); // TODO: subrange as argument for mux
+    m_Channel[2] = mux(ctrl(4, 4), trec4lookup);
 }
 
 SerialTMDS hcl::stl::hdmi::TmdsEncoder::serialOutput() const
@@ -288,6 +311,43 @@ SerialTMDS hcl::stl::hdmi::TmdsEncoder::serialOutput() const
     }
 
     return SerialTMDS();
+}
+
+SerialTMDS hcl::stl::hdmi::TmdsEncoder::serialOutputInPixelClock(Bit& tick) const
+{
+    GroupScope ent{ GroupScope::GroupType::ENTITY };
+    ent.setName("tmdsEncoderSerializer");
+
+    std::array<BVec, 3> channels = constructFrom(m_Channel);
+    BVec counter = 4_b;
+    counter += 1;
+
+    tick = '0';
+    IF(counter == 10)
+    {
+        counter = 0;
+        channels = m_Channel;
+        tick = '1';
+    }
+
+    SerialTMDS out;
+    out.clock.pos = reg(counter > 4);
+    out.clock.neg = ~out.clock.pos;
+
+    counter = reg(counter, 0);
+    channels = reg(channels);
+
+    for (size_t i = 0; i < channels.size(); ++i)
+    {
+        out.data[i].pos = channels[i].lsb();
+        out.data[i].neg = ~channels[i].lsb();
+    }
+
+    for (BVec& c : channels)
+        c = rotr(c, 1);
+
+    HCL_NAMED(out);
+    return out;
 }
 
 }

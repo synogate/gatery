@@ -64,6 +64,8 @@ public:
     SerialTMDS serialOutput() const;
     const auto& channels() const { return m_Channel; }
 
+    SerialTMDS serialOutputInPixelClock(Bit& tick) const;
+
 protected:
     core::frontend::Clock& m_Clk;
     std::array<core::frontend::BVec, 3> m_Channel;
