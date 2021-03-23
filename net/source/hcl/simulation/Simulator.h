@@ -38,11 +38,37 @@ class Simulator
 
         virtual void compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs = {}) = 0;
 
+        /// Reset circuit and simulation processes into the power-on state
         virtual void powerOn() = 0;
 
+        /// Forces a reevaluation of all combinatorics.
         virtual void reevaluate() = 0;
+
+        /**
+         * @brief Advance simulation to the next event
+         * @details First moves the simulation time to the next event, then announces the new
+         * time tick through SimulatorCallbacks::onNewTick. If the event is a clock event, it first advances the registers of the clock
+         * (if the clock is triggering on that edge) and then announces SimulatorCallbacks::onClock.
+         * After all registers (or register like node) have advanced, the driven combinatorial networks are evaluated.
+         * If any simulation processes resume at the same time, they are always resumed after evaluation of the combinatorics.
+         * Finally, if a simulation processes modified any inputs, any subsequent queries of the state from other simulation processes return the new state.
+         */
         virtual void advanceEvent() = 0;
+
+        /**
+         * @brief Advance simulation by given amount of time or until aborted.
+         * @details The equivalent of advancing through all scheduled events and those newly created in the process
+         * until all remaining events are in the future of m_simulationTime + seconds or until abort() is called.
+         * @param seconds Amount of time (in seconds) by which the simulation gets advanced.
+         */
         virtual void advance(hlim::ClockRational seconds) = 0;
+
+        /**
+         * @brief Aborts a running simulation mid step
+         * @details This immediately aborts calls to advanceEvent() or advance().
+         * Time steps are not brought to conclusion, leaving the simulation in a potential mid-step state.
+         */
+        virtual void abort() = 0;
 
         virtual void simProcSetInputPin(hlim::Node_Pin *pin, const DefaultBitVectorState &state) = 0;
         virtual DefaultBitVectorState simProcGetValueOfOutput(const hlim::NodePort &nodePort) = 0;

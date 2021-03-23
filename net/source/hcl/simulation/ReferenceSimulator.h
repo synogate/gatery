@@ -151,6 +151,7 @@ class ReferenceSimulator : public Simulator
         virtual void reevaluate() override;
         virtual void advanceEvent() override;
         virtual void advance(hlim::ClockRational seconds) override;
+        virtual void abort() override { m_abortCalled = true; }
 
         virtual void simProcSetInputPin(hlim::Node_Pin *pin, const DefaultBitVectorState &state) override;
         virtual DefaultBitVectorState simProcGetValueOfOutput(const hlim::NodePort &nodePort) override;
@@ -177,6 +178,9 @@ class ReferenceSimulator : public Simulator
         std::list<SimulationProcess> m_runningSimProcs;
         bool m_stateNeedsReevaluating = false;
         std::uint64_t m_nextSimProcInsertionId = 0;
+
+        bool m_currentTimeStepFinished = true;
+        bool m_abortCalled = false;
 };
 
 }

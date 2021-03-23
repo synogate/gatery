@@ -355,10 +355,14 @@ void ReferenceSimulator::reevaluate()
 
 void ReferenceSimulator::advanceEvent()
 {
+    m_abortCalled = false;
+
     if (m_nextEvents.empty()) return;
 
-    m_simulationTime = m_nextEvents.top().timeOfEvent;
-    m_callbackDispatcher.onNewTick(m_simulationTime);
+    if (m_currentTimeStepFinished) {
+        m_simulationTime = m_nextEvents.top().timeOfEvent;
+        m_callbackDispatcher.onNewTick(m_simulationTime);
+    }
 
     while (m_nextEvents.top().timeOfEvent == m_simulationTime) { // outer loop because fibers can do a waitFor(0) in which we need to run again.
         std::set<size_t> triggeredExecutionBlocks;
@@ -410,12 +414,17 @@ void ReferenceSimulator::advanceEvent()
             for (auto &event : simProcsResuming) {
                 HCL_ASSERT(event.simProcResumeEvt.handle);
                 event.simProcResumeEvt.handle.resume();
+
+                if (m_abortCalled)
+                    return;
             }
         }
 
         if (m_stateNeedsReevaluating)
             reevaluate();
     }
+
+    m_currentTimeStepFinished = true;
 }
 
 void ReferenceSimulator::advance(hlim::ClockRational seconds)
