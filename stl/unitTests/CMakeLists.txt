@@ -7,7 +7,8 @@ add_executable(unitTestSTL
     source/utils.cpp
     source/io.cpp
     "source/hdmi.cpp"
-  "source/crypto.cpp" "source/kvs.cpp" "source/driver_utils.h")
+  "source/crypto.cpp" 
+  "source/kvs.cpp" )
 
 target_include_directories (unitTestSTL PUBLIC
     ${Boost_INCLUDE_DIRS}

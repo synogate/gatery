@@ -15,13 +15,12 @@
 #include <hcl/stl/crypto/md5.h>
 #include <hcl/stl/crypto/SipHash.h>
 #include <hcl/stl/crypto/TabulationHashing.h>
+#include <hcl/stl/driver_utils.h>
 
 extern "C"
 {
 #include <hcl/stl/crypto/TabulationHashingDriver.h>
 }
-
-#include "driver_utils.h"
 
 using namespace boost::unit_test;
 using namespace hcl;

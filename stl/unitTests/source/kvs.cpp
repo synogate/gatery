@@ -14,14 +14,13 @@
 
 #include <random>
 
+#include <hcl/stl/driver_utils.h>
 #include <hcl/stl/kvs/TinyCuckoo.h>
 
 extern "C"
 {
 #include <hcl/stl/kvs/TinyCuckooDriver.h>
 }
-
-#include "driver_utils.h"
 
 using namespace boost::unit_test;
 using namespace hcl;
