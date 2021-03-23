@@ -45,7 +45,10 @@ void Node_Pin::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::Defa
 
 std::string Node_Pin::getTypeName() const
 {
-    return "ioPin";
+    if (m_differential)
+        return "ioPin_differential";
+    else
+        return "ioPin";
 }
 
 void Node_Pin::assertValidity() const
@@ -73,6 +76,13 @@ std::unique_ptr<BaseNode> Node_Pin::cloneUnconnected() const {
 std::string Node_Pin::attemptInferOutputName(size_t outputPort) const
 {
     return m_name;
+}
+
+void Node_Pin::setDifferential(std::string_view posPrefix, std::string_view negPrefix)
+{
+    m_differential = true;
+    m_differentialPosName = m_name + std::string(posPrefix);
+    m_differentialNegName = m_name + std::string(negPrefix);
 }
 
 

@@ -6,6 +6,11 @@ LIST(APPEND HCL_ALL_LIBS hcl_stl)
 SET(HCL_ALL_LIBS ${HCL_ALL_LIBS} PARENT_SCOPE)
 
 add_library(hcl_stl STATIC
+    source/hcl/stl/arch/xilinx/OBUFDS.h
+    source/hcl/stl/arch/xilinx/OBUFDS.cpp
+    source/hcl/stl/arch/xilinx.h
+    source/hcl/stl/arch/xilinx.cpp
+
     source/hcl/stl/buildCtrl/TargetVendor.h
     source/hcl/stl/buildCtrl/TargetVendor.cpp
     source/hcl/stl/hardCores/BlockRam.h

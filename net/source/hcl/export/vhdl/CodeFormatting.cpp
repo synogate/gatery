@@ -260,7 +260,7 @@ void DefaultCodeFormatting::formatConnectionType(std::ostream &stream, const hli
 }
 
 
-
+/*
 void DefaultCodeFormatting::addExternalNodeHandler(ExternalNodeHandler nodeHandler)
 {
     m_externalNodeHandlers.push_back(std::move(nodeHandler));
@@ -272,6 +272,6 @@ void DefaultCodeFormatting::instantiateExternal(std::ostream &stream, const hlim
         if (handler(this, stream, node, indent, inputSignalNames, outputSignalNames, clockNames))
             return;
 }
-
+*/
 
 }

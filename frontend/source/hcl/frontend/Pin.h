@@ -16,6 +16,8 @@ namespace hcl::core::frontend {
             inline OutputPin &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
             inline hlim::Node_Pin *getNode() { return m_pinNode.get(); }
             inline hlim::Node_Pin *getNode() const { return m_pinNode.get(); }
+
+            inline OutputPin &setDifferential(std::string_view posPrefix = "_p", std::string_view negPrefix = "_n") { m_pinNode->setDifferential(posPrefix, negPrefix); return *this; }
         protected:
             hlim::NodePtr<hlim::Node_Pin> m_pinNode;
     };
@@ -26,6 +28,8 @@ namespace hcl::core::frontend {
             inline OutputPins &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
             inline hlim::Node_Pin *getNode() { return m_pinNode.get(); }
             inline hlim::Node_Pin *getNode() const { return m_pinNode.get(); }
+
+            inline OutputPins &setDifferential(std::string_view posPrefix = "_p", std::string_view negPrefix = "_n") { m_pinNode->setDifferential(posPrefix, negPrefix); return *this; }
         protected:
             hlim::NodePtr<hlim::Node_Pin> m_pinNode;
     };

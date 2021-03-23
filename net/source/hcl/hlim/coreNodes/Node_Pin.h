@@ -31,6 +31,17 @@ namespace hcl::core::hlim {
             virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 
             virtual std::string attemptInferOutputName(size_t outputPort) const;
+
+            void setDifferential(std::string_view posPrefix = "_p", std::string_view negPrefix = "_n");
+            void setNormal() { m_differential = false; }
+
+            inline bool isDifferential() const { return m_differential; }
+            inline const std::string &getDifferentialPosName() { return m_differentialPosName; }
+            inline const std::string &getDifferentialNegName() { return m_differentialNegName; }
+        protected:
+            bool m_differential = false;
+            std::string m_differentialPosName;
+            std::string m_differentialNegName;
     };
 
 }

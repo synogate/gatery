@@ -189,11 +189,12 @@ void BasicBlock::handleEntityInstantiation(hlim::NodeGroup *nodeGroup)
 void BasicBlock::handleExternalNodeInstantiaton(hlim::Node_External *externalNode)
 {
     m_externalNodes.push_back(externalNode);
+    m_externalNodeInstanceNames.push_back(m_namespaceScope.allocateInstanceName(externalNode->getName()));
     m_ast.getMapping().assignNodeToScope(externalNode, this);
 
     ConcurrentStatement statement;
     statement.type = ConcurrentStatement::TYPE_EXT_NODE_INSTANTIATION;
-    statement.ref.externalNode = externalNode;
+    statement.ref.externalNodeIdx = m_externalNodes.size()-1;
     statement.sortIdx = 0; /// @todo
 
     m_statements.push_back(statement);
@@ -301,21 +302,52 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
                 subEntity->writeInstantiationVHDL(stream, indent, m_entityInstanceNames[statement.ref.entityIdx]);
             } break;
             case ConcurrentStatement::TYPE_EXT_NODE_INSTANTIATION: {
-                std::vector<std::string> inputSignalNames(statement.ref.externalNode->getNumInputPorts());
-                for (auto i : utils::Range(inputSignalNames.size()))
-                    if (statement.ref.externalNode->getDriver(i).node != nullptr)
-                        inputSignalNames[i] = m_namespaceScope.getName(statement.ref.externalNode->getDriver(i));
+                auto *node = m_externalNodes[statement.ref.externalNodeIdx];
+                cf.indent(stream, indent);
+                stream << m_externalNodeInstanceNames[statement.ref.externalNodeIdx] << " : entity " << node->getName() << " port map (" << std::endl;
 
-                std::vector<std::string> outputSignalNames(statement.ref.externalNode->getNumOutputPorts());
-                for (auto i : utils::Range(outputSignalNames.size()))
-                    outputSignalNames[i] = m_namespaceScope.getName(hlim::NodePort{.node = statement.ref.externalNode, .port = i});
+                std::vector<std::string> portmapList;
 
-                std::vector<std::string> clockNames(statement.ref.externalNode->getClocks().size());
-                for (auto i : utils::Range(clockNames.size()))
-                    if (statement.ref.externalNode->getClocks()[i] != nullptr)
-                        clockNames[i] = m_namespaceScope.getName(statement.ref.externalNode->getClocks()[i]);
+                for (auto i : utils::Range(node->getClocks().size()))
+                    if (node->getClocks()[i] != nullptr) {
+                        std::stringstream line;
+                        line << node->getClockNames()[i] << " => ";
+                        line << m_namespaceScope.getName(node->getClocks()[i]);
+                        portmapList.push_back(line.str());
+                        if (node->getClocks()[i]->getResetType() != hlim::Clock::ResetType::NONE) {
+                            std::stringstream line;
+                            line << node->getResetNames()[i] << " => ";
+                            line << m_namespaceScope.getName(node->getClocks()[i])<<node->getClocks()[i]->getResetName();
+                            portmapList.push_back(line.str());
+                        }
+                    }
 
-                cf.instantiateExternal(stream, statement.ref.externalNode, indent, inputSignalNames, outputSignalNames, clockNames);
+                for (auto i : utils::Range(node->getNumInputPorts()))
+                    if (node->getDriver(i).node != nullptr) {
+                        std::stringstream line;
+                        line << node->getInputName(i) << " => ";
+                        line << m_namespaceScope.getName(node->getDriver(i));
+                        portmapList.push_back(line.str());
+                    }
+
+                for (auto i : utils::Range(node->getNumOutputPorts())) {
+                    std::stringstream line;
+                    line << node->getOutputName(i) << " => ";
+                    line << m_namespaceScope.getName({.node = node, .port = i});
+                    portmapList.push_back(line.str());
+                }
+
+                for (auto i : utils::Range(portmapList.size())) {
+                    cf.indent(stream, indent+1);
+                    stream << portmapList[i];
+                    if (i+1 < portmapList.size())
+                        stream << ",";
+                    stream << std::endl;
+                }
+
+
+                cf.indent(stream, indent);
+                stream << ");" << std::endl;
             } break;
             case ConcurrentStatement::TYPE_BLOCK:
                 HCL_ASSERT(indent == 1);
