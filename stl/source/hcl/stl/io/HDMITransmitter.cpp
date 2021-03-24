@@ -159,6 +159,9 @@ core::frontend::BVec tmdsEncodeBitflip(const core::frontend::Clock& clk, const c
     Bit invert = word_counter[word_counter.getWidth() - 1] == global_counter.delay(1)[global_counter.getWidth() - 1];
     HCL_NAMED(invert);
 
+    IF ((global_counter == 0) | (word_counter == 0))
+        invert = ~data[8];
+
     BVec result = pack(invert, data); // TODO: data ^ invert
     HCL_NAMED(result);
 
@@ -166,7 +169,7 @@ core::frontend::BVec tmdsEncodeBitflip(const core::frontend::Clock& clk, const c
     {
         // TODO: add sub/add alu
         global_counter = global_counter.delay(1) - word_counter; // TODO: initialize registers with its own delay value
-        result = pack('1', ~data);
+        result = pack('1', data[8], ~data(0, 8));
     }
     ELSE
     {
@@ -186,9 +189,7 @@ TmdsEncoder::TmdsEncoder(core::frontend::Clock& clk) :
     m_Clk{clk}
 {
     m_Channel.fill("b0010101011"); // no data symbol
-    m_Channel[0].setName("redChannel"); // TODO: convinient method to name arrays
-    m_Channel[1].setName("greenChannel");
-    m_Channel[2].setName("blueChannel");
+    setName(m_Channel, "tmdsChannelReg");
 }
 
 void TmdsEncoder::addSync(const core::frontend::Bit& hsync, const core::frontend::Bit& vsync)
@@ -211,7 +212,7 @@ void hcl::stl::hdmi::TmdsEncoder::setColor(const ColorRGB& color)
     {
         GroupScope ent{ GroupScope::GroupType::ENTITY };
         ent.setName("tmdsEncoderChannel");
-        m_Channel[0] = tmdsEncodeBitflip(m_Clk, tmdsEncodeReduceTransitions(color.r));
+        m_Channel[2] = tmdsEncodeBitflip(m_Clk, tmdsEncodeReduceTransitions(color.r));
     }
 
     {
@@ -223,24 +224,21 @@ void hcl::stl::hdmi::TmdsEncoder::setColor(const ColorRGB& color)
     {
         GroupScope ent{ GroupScope::GroupType::ENTITY };
         ent.setName("tmdsEncoderChannel");
-        m_Channel[2] = tmdsEncodeBitflip(m_Clk, tmdsEncodeReduceTransitions(color.b));
+        m_Channel[0] = tmdsEncodeBitflip(m_Clk, tmdsEncodeReduceTransitions(color.b));
     }
     setName(m_Channel, "channelColor");
 }
 
 void hcl::stl::hdmi::TmdsEncoder::setSync(bool hsync, bool vsync)
 {
-    m_Channel[0] = "b0010101011";
-    m_Channel[1] = "b0010101011";
-
     if (hsync && vsync)
-        m_Channel[2] = "b1010101011";
+        m_Channel[0] = "b1010101011";
     else if (hsync)
-        m_Channel[2] = "b0010101011";
+        m_Channel[0] = "b0010101011";
     else if (vsync)
-        m_Channel[2] = "b0101010100";
+        m_Channel[0] = "b0101010100";
     else
-        m_Channel[2] = "b0010101011";
+        m_Channel[0] = "b0010101011";
 }
 
 void hcl::stl::hdmi::TmdsEncoder::setTERC4(core::frontend::BVec ctrl)
@@ -301,13 +299,9 @@ SerialTMDS hcl::stl::hdmi::TmdsEncoder::serialOutput() const
     SerialTMDS out;
     // TODO: convinient method to name signals in structs
 
-    out.clock.pos = true; // TODO: signal from clock
-    out.clock.neg = false;
-
     for (size_t i = 0; i < m_Channel.size(); ++i)
     {
-        out.data[i].pos = chan[i].lsb();
-        out.data[i].neg = ~chan[i].lsb();
+        out.data[i] = chan[i].lsb();
     }
 
     return SerialTMDS();
@@ -331,17 +325,13 @@ SerialTMDS hcl::stl::hdmi::TmdsEncoder::serialOutputInPixelClock(Bit& tick) cons
     }
 
     SerialTMDS out;
-    out.clock.pos = reg(counter > 4);
-    out.clock.neg = ~out.clock.pos;
+    out.clock = reg(counter > 4);
 
     counter = reg(counter, 0);
     channels = reg(channels);
 
     for (size_t i = 0; i < channels.size(); ++i)
-    {
-        out.data[i].pos = channels[i].lsb();
-        out.data[i].neg = ~channels[i].lsb();
-    }
+        out.data[i] = channels[i].lsb();
 
     for (BVec& c : channels)
         c = rotr(c, 1);
