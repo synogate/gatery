@@ -114,6 +114,44 @@ core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::fronten
     return result;
 }
 
+BVec tmdsEncodeSymbol(const BVec& data)
+{
+    GroupScope ent{ GroupScope::GroupType::ENTITY };
+    ent.setName("tmdsEncodeSymbol");
+
+    BVec sumOfOnes = bitcount(data);
+    HCL_NAMED(sumOfOnes);
+
+    // minimize number of transitions
+    Bit invertXor = (sumOfOnes > 4u) | (sumOfOnes == 4u & !data.lsb());
+    HCL_NAMED(invertXor);
+
+    HCL_COMMENT << "Decode using 1=xor, 0=xnor";
+    BVec transitionReduced = data;
+    for (auto i : utils::Range<size_t>(1, transitionReduced.size()))
+        transitionReduced[i] ^= transitionReduced[i - 1] ^ invertXor;
+    HCL_NAMED(transitionReduced);
+
+    // even out 0 and 1 bits
+    BVec word_counter = sumOfOnes - (data.size() / 2);
+    HCL_NAMED(word_counter);
+    BVec global_counter = word_counter.getWidth();
+    HCL_NAMED(global_counter);
+
+    Bit invert = word_counter.msb() == global_counter.msb();
+    IF((global_counter == 0) | (word_counter == 0))
+        invert = ~invertXor;
+    HCL_NAMED(invert);
+
+    // sub or add depending on invert
+    global_counter += (word_counter ^ invert) + invert;
+    global_counter = reg(global_counter, 0); // ConstBVec(0, global_counter.size()));
+
+    BVec result = pack(invert, ~invertXor, transitionReduced ^ invert);
+    HCL_NAMED(result);
+    return result;
+}
+
 core::frontend::BVec tmdsEncodeReduceTransitions(const core::frontend::BVec& data)
 {
     HCL_COMMENT << "Count the number of high bits in the input word";
@@ -146,9 +184,7 @@ core::frontend::BVec tmdsDecodeReduceTransitions(const core::frontend::BVec& dat
 core::frontend::BVec tmdsEncodeBitflip(const core::frontend::Clock& clk, const core::frontend::BVec& data)
 {
     HCL_COMMENT << "count the number of uncompensated ones";
-    Register<BVec> global_counter{ 3_b };
-    global_counter.setClock(clk);
-    global_counter.setReset("b000");
+    BVec global_counter = 3_b;
     HCL_NAMED(global_counter);
 
     // TODO: depend with and start value on data width
@@ -156,40 +192,31 @@ core::frontend::BVec tmdsEncodeBitflip(const core::frontend::Clock& clk, const c
     for (const Bit& b : data)
         word_counter += b;
 
-    Bit invert = word_counter[word_counter.getWidth() - 1] == global_counter.delay(1)[global_counter.getWidth() - 1];
+    Bit invert = word_counter.msb() == global_counter.msb();
+    IF ((global_counter == 0) | (word_counter == 0))
+        invert = ~data.msb();
     HCL_NAMED(invert);
 
-    IF ((global_counter == 0) | (word_counter == 0))
-        invert = ~data[8];
-
-    BVec result = pack(invert, data); // TODO: data ^ invert
+    BVec result = pack(invert, data.msb(), data(0, -1) ^ invert);
     HCL_NAMED(result);
 
-    IF(invert)
-    {
-        // TODO: add sub/add alu
-        global_counter = global_counter.delay(1) - word_counter; // TODO: initialize registers with its own delay value
-        result = pack('1', data[8], ~data(0, 8));
-    }
-    ELSE
-    {
-        global_counter = global_counter.delay(1) + word_counter;
-    }
+    // sub or add depending on invert
+    global_counter += word_counter ^ invert + zext(invert);
+    global_counter = clk(global_counter, 0);
 
     return result;
 }
 
 core::frontend::BVec tmdsDecodeBitflip(const core::frontend::BVec& data)
 {
-    // TODO: should be return data(0, -1) ^ data[back];
-    return data(0, data.getWidth() - 1) ^ data.msb();
+    return pack(data[-2], data(0, -2) ^ data[-1]);
 }
 
 TmdsEncoder::TmdsEncoder(core::frontend::Clock& clk) :
     m_Clk{clk}
 {
     m_Channel.fill("b0010101011"); // no data symbol
-    setName(m_Channel, "tmdsChannelReg");
+    setName(m_Channel, "channelBlank");
 }
 
 void TmdsEncoder::addSync(const core::frontend::Bit& hsync, const core::frontend::Bit& vsync)
@@ -209,23 +236,9 @@ void TmdsEncoder::addSync(const core::frontend::Bit& hsync, const core::frontend
 
 void hcl::stl::hdmi::TmdsEncoder::setColor(const ColorRGB& color)
 {
-    {
-        GroupScope ent{ GroupScope::GroupType::ENTITY };
-        ent.setName("tmdsEncoderChannel");
-        m_Channel[2] = tmdsEncodeBitflip(m_Clk, tmdsEncodeReduceTransitions(color.r));
-    }
-
-    {
-        GroupScope ent{ GroupScope::GroupType::ENTITY };
-        ent.setName("tmdsEncoderChannel");
-        m_Channel[1] = tmdsEncodeBitflip(m_Clk, tmdsEncodeReduceTransitions(color.g));
-    }
-
-    {
-        GroupScope ent{ GroupScope::GroupType::ENTITY };
-        ent.setName("tmdsEncoderChannel");
-        m_Channel[0] = tmdsEncodeBitflip(m_Clk, tmdsEncodeReduceTransitions(color.b));
-    }
+    m_Channel[0] = tmdsEncodeSymbol(color.b);
+    m_Channel[1] = tmdsEncodeSymbol(color.g);
+    m_Channel[2] = tmdsEncodeSymbol(color.r);
     setName(m_Channel, "channelColor");
 }
 

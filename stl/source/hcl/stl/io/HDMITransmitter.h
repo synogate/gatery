@@ -14,6 +14,8 @@ struct SerialTMDS {
     Bit clock;
 };
 
+BVec tmdsEncodeSymbol(const BVec& data);
+
 core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::frontend::Bit sendData, core::frontend::BVec data, core::frontend::BVec ctrl);
 
 core::frontend::BVec tmdsEncodeReduceTransitions(const core::frontend::BVec& data);
