@@ -10,6 +10,15 @@ namespace hcl::stl
 		{
 			std::string name;
 			std::string desc;
+			std::string scope;
+			size_t flags;
+
+			struct BitRange {
+				size_t offset, size;
+				std::string descShort;
+				std::string descLong;
+			};
+			std::vector<BitRange> usedRanges;
 		};
 
 		enum Flags
@@ -18,12 +27,15 @@ namespace hcl::stl
 			F_WRITE = 2
 		};
 
+		virtual void enterScope(std::string scope) { }
+		virtual void leaveScope() { }
+
 		virtual void ro(const BVec& value, RegDesc desc) {}
 		virtual void ro(const Bit& value, RegDesc desc) {}
 		virtual Bit rw(BVec& value, RegDesc desc) { return Bit{}; }
 		virtual Bit rw(Bit& value, RegDesc desc) { return Bit{}; }
-		virtual Bit wo(BVec& value, RegDesc desc) { return rw(value, desc); }
-		virtual Bit wo(Bit& value, RegDesc desc) { return rw(value, desc); }
+		virtual Bit wo(BVec& value, RegDesc desc) { return rw(value, std::move(desc)); }
+		virtual Bit wo(Bit& value, RegDesc desc) { return rw(value, std::move(desc)); }
 
 		Bit add(Bit& value, RegDesc desc);
 		Bit add(BVec& value, RegDesc desc);
@@ -85,8 +97,9 @@ namespace hcl::stl
 			MemoryMap* mmap;
 		};
 
+
 		BVec cmdAddr = "32xX";
-		Bit cmdTrigger = wo(cmdAddr, { 
+		Bit cmdTrigger = wo(cmdAddr, {
 			.name = "cmd"
 		});
 		HCL_NAMED(cmdTrigger);
@@ -145,21 +158,62 @@ namespace hcl::stl
 		for (const Memory<T>& m : mems)
 			memWidth.value = std::max(memWidth.value, m.addressWidth().value);
 
-		HCL_DESIGNCHECK_HINT(memWidth.value + memTabWidth.value + 2 <= 32, 
+		HCL_DESIGNCHECK_HINT(memWidth.value + memTabWidth.value + 2 <= 32,
 			"The memory vector stage command register is limited to 32bit including 2 command bits, the table selection bits and the memory address bits.");
 
 		Selection memTabSel = Selection::Slice((int)memWidth.value, (int)memTabWidth.value);
+
+		std::string desc;
+		std::string triggerDescShort;
+		std::string triggerDescLong;
+		if (readEnabled() && !writeEnabled()) {
+			desc = "Command register that controls and initiates transfer of data from one of the attached memories into the staging register(s). The transfer is initiated by writing to the command register.";
+			triggerDescShort = "Must be 1";
+			triggerDescLong = "This bit is reserved for the r/w mode, in which it is aserted if reading from memory.";
+		}
+		if (!readEnabled() && writeEnabled()) {
+			desc = "Command register that controls and initiates transfer of data from the staging register(s) into one of the attached memories. The transfer is initiated by writing to the command register.";
+			triggerDescShort = "Must be 0";
+			triggerDescLong = "This bit is reserved for the r/w mode, in which it is aserted if reading from memory.";
+		}
+		if (readEnabled() && writeEnabled()) {
+			desc = "Command register that controls and initiates transfer of data to and from one of the attached memories into the staging register(s). The transfer is initiated by writing to the command register.";
+			triggerDescShort = "Read from memory";
+			triggerDescLong = "Indicates the direction of the transfer. '0' transfers from the staging register(s) to the addressed memory, '1' transfers from addressed memory to the staging register(s).";
+		}
 		BVec cmdAddr = 32_b;
-		Bit cmdTrigger = rw(cmdAddr, {
-			.name = "cmd"
-			});
+		Bit cmdTrigger = rw(cmdAddr, RegDesc{
+			.name = "cmd",
+			.desc = desc,
+			.usedRanges = {
+				RegDesc::BitRange{
+					.offset = 0,
+					.size = memWidth.value,
+					.descShort = "Intra table address",
+					.descLong = "If the table has less address bits, the upper superfluous bits are ignored."
+				},
+				RegDesc::BitRange{
+					.offset = memWidth.value,
+					.size = memWidth.value+memTabWidth.value,
+					.descShort = "Table index"
+				},
+				RegDesc::BitRange{
+					.offset = cmdAddr.size()-1,
+					.size = 1,
+					.descShort = triggerDescShort,
+					.descLong = triggerDescLong
+				},
+			}
+		});
 		HCL_NAMED(cmdTrigger);
 		HCL_NAMED(cmdAddr);
 
 		T stage = constructFrom(mems.front().defaultValue());
 		SigVis v;
 		v.mmap = this;
+		enterScope("staging");
 		VisitCompound<T>{}(stage, v);
+		leaveScope();
 		stage = reg(stage);
 
 		Bit readTrigger = reg(readEnabled() & cmdTrigger & cmdAddr.msb() == '1', '0');
@@ -181,9 +235,9 @@ namespace hcl::stl
 		}
 
 		cmdAddr = pack(
-			ConstBVec(m_flags, 8), 
+			ConstBVec(m_flags, 8),
 			ConstBVec(mems.size(), 8),
-			ConstBVec(memWidth.value, 8), 
+			ConstBVec(memWidth.value, 8),
 			ConstBVec(v.regCount, 8)
 		);
 	}

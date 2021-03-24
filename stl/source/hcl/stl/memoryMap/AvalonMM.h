@@ -13,12 +13,19 @@ namespace hcl::stl
 		virtual Bit rw(BVec& value, RegDesc desc);
 		virtual Bit rw(Bit& value, RegDesc desc);
 
+		virtual void enterScope(std::string scope) override;
+		virtual void leaveScope() override;
+
 		BVec address;
 		Bit write;
 		BVec writeData;
 		BVec readData;
 
 		std::vector<RegDesc> addressMap;
+
+		protected:
+			std::vector<std::string> scopeStack;
+			void addRegDescChunk(const RegDesc &desc, size_t offset, size_t width);
 	};
 
 	void pinIn(AvalonMMSlave& avmm, std::string prefix);
