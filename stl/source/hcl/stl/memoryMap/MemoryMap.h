@@ -169,12 +169,12 @@ namespace hcl::stl
 		if (readEnabled() && !writeEnabled()) {
 			desc = "Command register that controls and initiates transfer of data from one of the attached memories into the staging register(s). The transfer is initiated by writing to the command register.";
 			triggerDescShort = "Must be 1";
-			triggerDescLong = "This bit is reserved for the r/w mode, in which it is aserted if reading from memory.";
+			triggerDescLong = "This bit is reserved for the r/w mode, in which it is asserted if reading from memory.";
 		}
 		if (!readEnabled() && writeEnabled()) {
 			desc = "Command register that controls and initiates transfer of data from the staging register(s) into one of the attached memories. The transfer is initiated by writing to the command register.";
 			triggerDescShort = "Must be 0";
-			triggerDescLong = "This bit is reserved for the r/w mode, in which it is aserted if reading from memory.";
+			triggerDescLong = "This bit is reserved for the r/w mode, in which it is asserted if reading from memory.";
 		}
 		if (readEnabled() && writeEnabled()) {
 			desc = "Command register that controls and initiates transfer of data to and from one of the attached memories into the staging register(s). The transfer is initiated by writing to the command register.";
