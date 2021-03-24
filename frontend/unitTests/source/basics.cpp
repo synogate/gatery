@@ -8,6 +8,7 @@
 #include <hcl/simulation/waveformFormats/VCDSink.h>
 
 #include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
+#include <hcl/utils.h>
 
 using namespace boost::unit_test;
 
@@ -15,20 +16,52 @@ const auto optimizationLevels = data::make({0, 1, 2, 3});
 
 using UnitTestSimulationFixture = hcl::core::frontend::BoostUnitTestSimulationFixture;
 
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLevels * data::xrange(8) * data::xrange(8) * data::xrange(1, 8), optimization, x, y, bitsize)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLevels * data::xrange(1, 8), optimization, bitsize)
 {
     using namespace hcl::core::frontend;
+    using namespace hcl::core::sim;
 
-    BVec a = ConstBVec(x, bitsize);
-    BVec b = ConstBVec(y, bitsize);
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    ClockScope clockScope(clock);
+
+    BVec a = pinIn(BitWidth{(unsigned)bitsize});
+    BVec b = pinIn(BitWidth{(unsigned)bitsize});
+
+    size_t x, y;
+    addSimulationProcess([=, this, &clock, &x, &y]()->SimProcess {
+
+        for (x = 0; x < 8; x++)
+            for (y = 0; y < 8; y++) {
+                sim(a) = x;
+                sim(b) = y;
+
+                co_await WaitClk(clock);
+            }
+
+        stopTest();
+    });
+
+
 
 #define op2str(op) #op
 #define buildOperatorTest(op)                                                                               \
     {                                                                                                       \
-        BVec c = a op b;                                                                         \
-        BVec groundTruth = ConstBVec(std::uint64_t(x) op std::uint64_t(y), bitsize);  \
-        sim_assert(c == groundTruth) << "The result of " << a << " " << op2str(op) << " " << b              \
-            << " should be " << groundTruth << " (with overflow in " << bitsize << "bits) but is " << c;    \
+        BVec c = a op b;                                                                                    \
+                                                                                                            \
+        addSimulationProcess([=, this, &clock, &x, &y]()->SimProcess {                                      \
+            while (true) {                                                                                  \
+                DefaultBitVectorState state = sim(c);                                                       \
+                                                                                                            \
+                BOOST_TEST(allDefinedNonStraddling(state, 0, bitsize));                                     \
+                auto v = state.extractNonStraddling(DefaultConfig::VALUE, 0, bitsize);                      \
+                std::uint64_t x_ = x & (~0ull >> (64 - bitsize));                                           \
+                std::uint64_t y_ = y & (~0ull >> (64 - bitsize));                                           \
+                std::uint64_t gt = x_ op y_;                                                                \
+                gt &= (~0ull >> (64 - bitsize));                                                            \
+                BOOST_TEST(v == gt);                                                                        \
+                co_await WaitClk(clock);                                                                    \
+            }                                                                                               \
+        });                                                                                                 \
     }
 
     buildOperatorTest(+)
@@ -47,13 +80,26 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLev
 #define op2str(op) #op
 #define buildOperatorTest(op)                                                                               \
     {                                                                                                       \
-        BVec c = a;                                                                              \
+        BVec c = a;                                                                                         \
         c op b;                                                                                             \
-        std::uint64_t gt = x;                                                                               \
-        gt op std::uint64_t(y);                                                                             \
-        BVec groundTruth = ConstBVec(gt, bitsize);                                    \
-        sim_assert(c == groundTruth) << "The result of (" << c << "="<<a << ") " << op2str(op) << " " << b  \
-            << " should be " << groundTruth << " (with overflow in " << bitsize << "bits) but is " << c;    \
+                                                                                                            \
+        addSimulationProcess([=, this, &clock, &x, &y]()->SimProcess {                                      \
+            while (true) {                                                                                  \
+                DefaultBitVectorState state = sim(c);                                                       \
+                                                                                                            \
+                BOOST_TEST(allDefinedNonStraddling(state, 0, bitsize));                                     \
+                auto v = state.extractNonStraddling(DefaultConfig::VALUE, 0, bitsize);                      \
+                                                                                                            \
+                std::uint64_t x_ = x & (~0ull >> (64 - bitsize));                                           \
+                std::uint64_t y_ = y & (~0ull >> (64 - bitsize));                                           \
+                std::uint64_t gt = x_;                                                                      \
+                gt op std::uint64_t(y_);                                                                    \
+                gt &= (~0ull >> (64 - bitsize));                                                            \
+                                                                                                            \
+                BOOST_TEST(v == gt);                                                                        \
+                co_await WaitClk(clock);                                                                    \
+            }                                                                                               \
+        });                                                                                                 \
     }
 
     buildOperatorTest(+=)
@@ -70,34 +116,37 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLev
 
     design.getCircuit().optimize(optimization);
 
-    runEvalOnlyTest();
+    runTest(hcl::core::hlim::ClockRational(100'000, 10'000));
 }
 
 
 
 
 
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicing, optimizationLevels * data::xrange(8) * data::xrange(3, 8), optimization, x, bitsize)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicing, optimizationLevels, optimization)
 {
     using namespace hcl::core::frontend;
 
-    BVec a = ConstBVec(x, bitsize);
+    for (auto bitsize : hcl::utils::Range(3, 8))
+        for (auto x : hcl::utils::Range(8)) {
+            BVec a = ConstBVec(x, bitsize);
 
-    {
-        BVec res = a(0, 1);
-        sim_assert(res == ConstBVec(x & 1, 1)) << "Slicing first bit of " << a << " failed: " << res;
-    }
+            {
+                BVec res = a(0, 1);
+                sim_assert(res == ConstBVec(x & 1, 1)) << "Slicing first bit of " << a << " failed: " << res;
+            }
 
-    {
-        BVec res = a(1, 2);
-        sim_assert(res == ConstBVec((x >> 1) & 3, 2)) << "Slicing second and third bit of " << a << " failed: " << res;
-    }
+            {
+                BVec res = a(1, 2);
+                sim_assert(res == ConstBVec((x >> 1) & 3, 2)) << "Slicing second and third bit of " << a << " failed: " << res;
+            }
 
-    {
-        BVec res = a(1, 2);
-        res = 0;
-        sim_assert(a == ConstBVec(x, bitsize)) << "Modifying copy of slice of a changes a to " << a << ", should be: " << x;
-    }
+            {
+                BVec res = a(1, 2);
+                res = 0;
+                sim_assert(a == ConstBVec(x, bitsize)) << "Modifying copy of slice of a changes a to " << a << ", should be: " << x;
+            }
+        }
 
     design.getCircuit().optimize(optimization);
 
@@ -106,37 +155,44 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicing, optimizationLevel
 
 
 
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicingModifications, data::xrange(8) * data::xrange(3, 8), x, bitsize)
+BOOST_FIXTURE_TEST_CASE(TestSlicingModifications, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    BVec a = ConstBVec(x, bitsize);
+    for (auto bitsize : hcl::utils::Range(3, 8))
+        for (auto x : hcl::utils::Range(8)) {
 
-    {
-        BVec b = a;
-        b(1, 2) = 0;
+            BVec a = ConstBVec(x, bitsize);
 
-        auto groundTruth = ConstBVec(unsigned(x) & ~0b110, bitsize);
-        sim_assert(b == groundTruth) << "Clearing two bits out of " << a << " should be " << groundTruth << " but is " << b;
-    }
+            {
+                BVec b = a;
+                b(1, 2) = 0;
+
+                auto groundTruth = ConstBVec(unsigned(x) & ~0b110, bitsize);
+                sim_assert(b == groundTruth) << "Clearing two bits out of " << a << " should be " << groundTruth << " but is " << b;
+            }
+        }
 
     runEvalOnlyTest();
 }
 
 
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicingAddition, optimizationLevels * data::xrange(8) * data::xrange(3, 8), optimization, x, bitsize)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicingAddition, optimizationLevels, optimization)
 {
     using namespace hcl::core::frontend;
 
-    BVec a = ConstBVec(x, bitsize);
+    for (auto bitsize : hcl::utils::Range(3, 8))
+        for (auto x : hcl::utils::Range(8)) {
+            BVec a = ConstBVec(x, bitsize);
 
-    {
-        BVec b = a;
-        b(1, 2) = b(1, 2) + 1;
+            {
+                BVec b = a;
+                b(1, 2) = b(1, 2) + 1;
 
-        auto groundTruth = ConstBVec((unsigned(x) & ~0b110) | (unsigned(x+2) & 0b110), bitsize);
-        sim_assert(b == groundTruth) << "Incrementing two bits out of " << a << " should be " << groundTruth << " but is " << b;
-    }
+                auto groundTruth = ConstBVec((unsigned(x) & ~0b110) | (unsigned(x+2) & 0b110), bitsize);
+                sim_assert(b == groundTruth) << "Incrementing two bits out of " << a << " should be " << groundTruth << " but is " << b;
+            }
+        }
 
     design.getCircuit().optimize(optimization);
 
@@ -146,40 +202,47 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicingAddition, optimizat
 
 
 
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, SimpleAdditionNetwork, optimizationLevels * data::xrange(8) * data::xrange(8) * data::xrange(1, 8), optimization, x, y, bitsize)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, SimpleAdditionNetwork, optimizationLevels, optimization)
 {
     using namespace hcl::core::frontend;
 
-    BVec a = ConstBVec(x, bitsize);
-    sim_debug() << "Signal a is " << a;
+    for (auto bitsize : hcl::utils::Range(1, 8))
+        for (auto x : hcl::utils::Range(8))
+            for (auto y : hcl::utils::Range(8)) {
+                BVec a = ConstBVec(x, bitsize);
+                sim_debug() << "Signal a is " << a;
 
-    BVec b = ConstBVec(y, bitsize);
-    sim_debug() << "Signal b is " << b;
+                BVec b = ConstBVec(y, bitsize);
+                sim_debug() << "Signal b is " << b;
 
-    BVec c = a + b;
-    sim_debug() << "Signal c (= a + b) is " << c;
+                BVec c = a + b;
+                sim_debug() << "Signal c (= a + b) is " << c;
 
-    sim_assert(c == ConstBVec(x+y, bitsize)) << "The signal c should be " << x+y << " (with overflow in " << bitsize << "bits) but is " << c;
-
+                sim_assert(c == ConstBVec(x+y, bitsize)) << "The signal c should be " << x+y << " (with overflow in " << bitsize << "bits) but is " << c;
+            }
     design.getCircuit().optimize(optimization);
 
     runEvalOnlyTest();
 }
 
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, BitFromBool, data::xrange(2) * data::xrange(2), l, r)
+BOOST_FIXTURE_TEST_CASE(BitFromBool, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
-    Bit a = l != 0;
-    Bit b;
-    b = r != 0;
+    for (auto l : hcl::utils::Range(2))
+        for (auto r : hcl::utils::Range(2)) {
 
-    sim_assert((a == b) == Bit{ l == r })  << "test 0: " << a << "," << b;
-    sim_assert((a != b) == Bit{ l != r })  << "test 1: " << a << "," << b;
-    sim_assert((a == true) == Bit(l != 0)) << "test 2: " << a << "," << b;
-    sim_assert((true == a) == Bit(l != 0)) << "test 3: " << a << "," << b;
-    sim_assert((a != true) == Bit(l == 0)) << "test 4: " << a << "," << b;
-    sim_assert((true != a) == Bit(l == 0)) << "test 5: " << a << "," << b;
+            Bit a = l != 0;
+            Bit b;
+            b = r != 0;
+
+            sim_assert((a == b) == Bit{ l == r })  << "test 0: " << a << "," << b;
+            sim_assert((a != b) == Bit{ l != r })  << "test 1: " << a << "," << b;
+            sim_assert((a == true) == Bit(l != 0)) << "test 2: " << a << "," << b;
+            sim_assert((true == a) == Bit(l != 0)) << "test 3: " << a << "," << b;
+            sim_assert((a != true) == Bit(l == 0)) << "test 4: " << a << "," << b;
+            sim_assert((true != a) == Bit(l == 0)) << "test 5: " << a << "," << b;
+        }
 
     runEvalOnlyTest();
 }
@@ -594,404 +657,426 @@ BOOST_FIXTURE_TEST_CASE(ShiftOp, UnitTestSimulationFixture)
     runEvalOnlyTest();
 }
 
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, ConditionalAssignment, data::xrange(8) * data::xrange(8), x, y)
+BOOST_FIXTURE_TEST_CASE(ConditionalAssignment, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
+    for (auto x : hcl::utils::Range(8))
+        for (auto y : hcl::utils::Range(8)) {
+            BVec a = ConstBVec(x, 8);
+            BVec b = ConstBVec(y, 8);
 
+            BVec c = ConstBVec(8);
+            IF (a[1])
+                c = a + b;
+            ELSE {
+                c = a - b;
+            }
 
-    BVec a = ConstBVec(x, 8);
-    BVec b = ConstBVec(y, 8);
+            unsigned groundTruth;
+            if (unsigned(x) & 2)
+                groundTruth = unsigned(x)+unsigned(y);
+            else
+                groundTruth = unsigned(x)-unsigned(y);
 
-    BVec c = ConstBVec(8);
-    IF (a[1])
-        c = a + b;
-    ELSE {
-        c = a - b;
-    }
-
-    unsigned groundTruth;
-    if (unsigned(x) & 2)
-        groundTruth = unsigned(x)+unsigned(y);
-    else
-        groundTruth = unsigned(x)-unsigned(y);
-
-    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+            sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+        }
 
     runEvalOnlyTest();
 }
 
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, ConditionalAssignmentMultipleStatements, data::xrange(8) * data::xrange(8), x, y)
+BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleStatements, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
+    for (auto x : hcl::utils::Range(8))
+        for (auto y : hcl::utils::Range(8)) {
 
+            BVec a = ConstBVec(x, 8);
+            BVec b = ConstBVec(y, 8);
 
-    BVec a = ConstBVec(x, 8);
-    BVec b = ConstBVec(y, 8);
+            BVec c = ConstBVec(8);
+            IF (a[1]) {
+                c = a + b;
+                c += a;
+                c += b;
+            } ELSE {
+                c = a - b;
+            }
 
-    BVec c = ConstBVec(8);
-    IF (a[1]) {
-        c = a + b;
-        c += a;
-        c += b;
-    } ELSE {
-        c = a - b;
-    }
+            unsigned groundTruth;
+            if (unsigned(x) & 2) {
+                groundTruth = unsigned(x)+unsigned(y);
+                groundTruth += x;
+                groundTruth += y;
+            } else {
+                groundTruth = unsigned(x)-unsigned(y);
+            }
 
-    unsigned groundTruth;
-    if (unsigned(x) & 2) {
-        groundTruth = unsigned(x)+unsigned(y);
-        groundTruth += x;
-        groundTruth += y;
-    } else {
-        groundTruth = unsigned(x)-unsigned(y);
-    }
-
-    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+            sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+        }
 
     runEvalOnlyTest();
 }
 
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, ConditionalAssignmentMultipleElseStatements, data::xrange(8) * data::xrange(8), x, y)
+BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleElseStatements, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
+    for (auto x : hcl::utils::Range(8))
+        for (auto y : hcl::utils::Range(8)) {
 
+            BVec a = ConstBVec(x, 8);
+            BVec b = ConstBVec(y, 8);
 
-    BVec a = ConstBVec(x, 8);
-    BVec b = ConstBVec(y, 8);
+            BVec c = ConstBVec(8);
+            IF (a[1])
+                c = a + b;
+            ELSE {
+                c = a - b;
+                c = c - b;
+                c = c - b;
+            }
 
-    BVec c = ConstBVec(8);
-    IF (a[1])
-        c = a + b;
-    ELSE {
-        c = a - b;
-        c = c - b;
-        c = c - b;
-    }
+            unsigned groundTruth;
+            if (unsigned(x) & 2)
+                groundTruth = unsigned(x)+unsigned(y);
+            else {
+                groundTruth = unsigned(x)-unsigned(y);
+                groundTruth = groundTruth-unsigned(y);
+                groundTruth = groundTruth-unsigned(y);
+            }
 
-    unsigned groundTruth;
-    if (unsigned(x) & 2)
-        groundTruth = unsigned(x)+unsigned(y);
-    else {
-        groundTruth = unsigned(x)-unsigned(y);
-        groundTruth = groundTruth-unsigned(y);
-        groundTruth = groundTruth-unsigned(y);
-    }
-
-    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
-
-    runEvalOnlyTest();
-}
-
-
-
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignment, data::xrange(8) * data::xrange(8), x, y)
-{
-    using namespace hcl::core::frontend;
-
-
-
-    BVec a = ConstBVec(x, 8);
-    BVec b = ConstBVec(y, 8);
-
-    BVec c = ConstBVec(8);
-    IF (a[2]) {
-        IF (a[1])
-            c = a + b;
-        ELSE {
-            c = a - b;
+            sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
         }
-    } ELSE {
-        IF (a[1])
-            c = a;
-        ELSE {
-            c = b;
-        }
-    }
-
-    unsigned groundTruth;
-    if (unsigned(x) & 4) {
-        if (unsigned(x) & 2)
-            groundTruth = x+y;
-        else
-            groundTruth = x-y;
-    } else {
-        if (unsigned(x) & 2)
-            groundTruth = x;
-        else
-            groundTruth = y;
-    }
-
-    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
-
-    runEvalOnlyTest();
-}
-
-
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentMultipleStatements, data::xrange(8) * data::xrange(8), x, y)
-{
-    using namespace hcl::core::frontend;
-
-
-
-    BVec a = ConstBVec(x, 8);
-    BVec b = ConstBVec(y, 8);
-
-    BVec c = ConstBVec(8);
-    IF (a[2]) {
-        IF (a[1]) {
-            c = a + b;
-            c += b;
-            c += a;
-        } ELSE {
-            c = a - b;
-        }
-    } ELSE {
-        IF (a[1])
-            c = a;
-        ELSE {
-            c = b;
-        }
-    }
-
-    unsigned groundTruth;
-    if (unsigned(x) & 4) {
-        if (unsigned(x) & 2) {
-            groundTruth = x+y;
-            groundTruth += y;
-            groundTruth += x;
-        } else
-            groundTruth = x-y;
-    } else {
-        if (unsigned(x) & 2)
-            groundTruth = x;
-        else
-            groundTruth = y;
-    }
-
-    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
-
-    runEvalOnlyTest();
-}
-
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiElseConditionalAssignment, data::xrange(8)* data::xrange(8), x, y)
-{
-    using namespace hcl::core::frontend;
-
-
-
-    BVec a = ConstBVec(x, 8);
-    BVec b = ConstBVec(y, 8);
-
-    BVec c = ConstBVec(8);
-    IF(a[2]) {
-        IF(a[1]) {
-            c = a + b;
-            c += b;
-            c += a;
-        } ELSE{
-            c = a - b;
-        }
-    } ELSE IF(a[1])
-        c = a;
-    ELSE
-        c = b;
-
-    unsigned groundTruth;
-    if (unsigned(x) & 4) {
-        if (unsigned(x) & 2) {
-            groundTruth = x + y;
-            groundTruth += y;
-            groundTruth += x;
-        }
-        else
-            groundTruth = x - y;
-    }
-    else
-        if (unsigned(x) & 2)
-            groundTruth = x;
-        else
-            groundTruth = y;
-
-
-    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
-
-    runEvalOnlyTest();
-}
-
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignmentNoElse, data::xrange(8) * data::xrange(8), x, y)
-{
-    using namespace hcl::core::frontend;
-
-
-
-    BVec a = ConstBVec(x, 8);
-    BVec b = ConstBVec(y, 8);
-
-    BVec c = a;
-    IF (a[2]) {
-        IF (a[1])
-            c = a + b;
-        ELSE {
-            c = a - b;
-        }
-    }
-
-    unsigned groundTruth = x;
-    if (unsigned(x) & 4) {
-        if (unsigned(x) & 2)
-            groundTruth = x+y;
-        else
-            groundTruth = x-y;
-    }
-
-    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
 
     runEvalOnlyTest();
 }
 
 
 
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignmentNoIf, optimizationLevels * data::xrange(8) * data::xrange(8), optimization, x, y)
+BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignment, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
 
+    for (auto x : hcl::utils::Range(8))
+        for (auto y : hcl::utils::Range(8)) {
 
-    BVec a = ConstBVec(x, 8);
-    BVec b = ConstBVec(y, 8);
+            BVec a = ConstBVec(x, 8);
+            BVec b = ConstBVec(y, 8);
 
-    BVec c = a;
-    IF (a[2]) {
-    } ELSE {
-        IF (a[1])
-            c = b;
-    }
+            BVec c = ConstBVec(8);
+            IF (a[2]) {
+                IF (a[1])
+                    c = a + b;
+                ELSE {
+                    c = a - b;
+                }
+            } ELSE {
+                IF (a[1])
+                    c = a;
+                ELSE {
+                    c = b;
+                }
+            }
 
-    unsigned groundTruth = x;
-    if (unsigned(x) & 4) {
-    } else {
-        if (unsigned(x) & 2)
-            groundTruth = y;
-    }
+            unsigned groundTruth;
+            if (unsigned(x) & 4) {
+                if (unsigned(x) & 2)
+                    groundTruth = x+y;
+                else
+                    groundTruth = x-y;
+            } else {
+                if (unsigned(x) & 2)
+                    groundTruth = x;
+                else
+                    groundTruth = y;
+            }
 
-    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+            sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+        }
+
+    runEvalOnlyTest();
+}
+
+
+BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentMultipleStatements, UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    for (auto x : hcl::utils::Range(8))
+        for (auto y : hcl::utils::Range(8)) {
+
+            BVec a = ConstBVec(x, 8);
+            BVec b = ConstBVec(y, 8);
+
+            BVec c = ConstBVec(8);
+            IF (a[2]) {
+                IF (a[1]) {
+                    c = a + b;
+                    c += b;
+                    c += a;
+                } ELSE {
+                    c = a - b;
+                }
+            } ELSE {
+                IF (a[1])
+                    c = a;
+                ELSE {
+                    c = b;
+                }
+            }
+
+            unsigned groundTruth;
+            if (unsigned(x) & 4) {
+                if (unsigned(x) & 2) {
+                    groundTruth = x+y;
+                    groundTruth += y;
+                    groundTruth += x;
+                } else
+                    groundTruth = x-y;
+            } else {
+                if (unsigned(x) & 2)
+                    groundTruth = x;
+                else
+                    groundTruth = y;
+            }
+
+            sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+        }
+
+    runEvalOnlyTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(MultiElseConditionalAssignment, UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    for (auto x : hcl::utils::Range(8))
+        for (auto y : hcl::utils::Range(8)) {
+
+            BVec a = ConstBVec(x, 8);
+            BVec b = ConstBVec(y, 8);
+
+            BVec c = ConstBVec(8);
+            IF(a[2]) {
+                IF(a[1]) {
+                    c = a + b;
+                    c += b;
+                    c += a;
+                } ELSE{
+                    c = a - b;
+                }
+            } ELSE IF(a[1])
+                c = a;
+            ELSE
+                c = b;
+
+            unsigned groundTruth;
+            if (unsigned(x) & 4) {
+                if (unsigned(x) & 2) {
+                    groundTruth = x + y;
+                    groundTruth += y;
+                    groundTruth += x;
+                }
+                else
+                    groundTruth = x - y;
+            }
+            else
+                if (unsigned(x) & 2)
+                    groundTruth = x;
+                else
+                    groundTruth = y;
+
+
+            sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+        }
+
+    runEvalOnlyTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentWithPreviousAssignmentNoElse, UnitTestSimulationFixture)
+{
+    using namespace hcl::core::frontend;
+
+    for (auto x : hcl::utils::Range(8))
+        for (auto y : hcl::utils::Range(8)) {
+
+            BVec a = ConstBVec(x, 8);
+            BVec b = ConstBVec(y, 8);
+
+            BVec c = a;
+            IF (a[2]) {
+                IF (a[1])
+                    c = a + b;
+                ELSE {
+                    c = a - b;
+                }
+            }
+
+            unsigned groundTruth = x;
+            if (unsigned(x) & 4) {
+                if (unsigned(x) & 2)
+                    groundTruth = x+y;
+                else
+                    groundTruth = x-y;
+            }
+
+            sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+        }
+
+    runEvalOnlyTest();
+}
+
+
+
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignmentNoIf, optimizationLevels, optimization)
+{
+    using namespace hcl::core::frontend;
+
+    for (auto x : hcl::utils::Range(8))
+        for (auto y : hcl::utils::Range(8)) {
+            BVec a = ConstBVec(x, 8);
+            BVec b = ConstBVec(y, 8);
+
+            BVec c = a;
+            IF (a[2]) {
+            } ELSE {
+                IF (a[1])
+                    c = b;
+            }
+
+            unsigned groundTruth = x;
+            if (unsigned(x) & 4) {
+            } else {
+                if (unsigned(x) & 2)
+                    groundTruth = y;
+            }
+
+            sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+        }
 
     design.getCircuit().optimize(optimization);
     runEvalOnlyTest();
 }
 
 
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignment, optimizationLevels * data::xrange(8) * data::xrange(8), optimization, x, y)
+BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignment, optimizationLevels, optimization)
 {
     using namespace hcl::core::frontend;
 
+    for (auto x : hcl::utils::Range(8))
+        for (auto y : hcl::utils::Range(8)) {
+            BVec a = ConstBVec(x, 8);
+            BVec b = ConstBVec(y, 8);
 
+            BVec c = a;
+            IF (a[2]) {
+                IF (a[1])
+                    c = a + b;
+                ELSE
+                    c = a - b;
+            } ELSE {
+                IF (a[1])
+                    c = b;
+            }
 
-    BVec a = ConstBVec(x, 8);
-    BVec b = ConstBVec(y, 8);
+            unsigned groundTruth = x;
+            if (unsigned(x) & 4) {
+                if (unsigned(x) & 2)
+                    groundTruth = x+y;
+                else
+                    groundTruth = x-y;
+            } else {
+                if (unsigned(x) & 2)
+                    groundTruth = y;
+            }
 
-    BVec c = a;
-    IF (a[2]) {
-        IF (a[1])
-            c = a + b;
-        ELSE
-            c = a - b;
-    } ELSE {
-        IF (a[1])
-            c = b;
-    }
-
-    unsigned groundTruth = x;
-    if (unsigned(x) & 4) {
-        if (unsigned(x) & 2)
-            groundTruth = x+y;
-        else
-            groundTruth = x-y;
-    } else {
-        if (unsigned(x) & 2)
-            groundTruth = y;
-    }
-
-    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+            sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+        }
 
     design.getCircuit().optimize(optimization);
     runEvalOnlyTest();
 }
 
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentIfElseIf, data::xrange(8) * data::xrange(8), x, y)
+BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentIfElseIf, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
 
+    for (auto x : hcl::utils::Range(8))
+        for (auto y : hcl::utils::Range(8)) {
 
-    BVec a = ConstBVec(x, 8);
-    BVec b = ConstBVec(y, 8);
+            BVec a = ConstBVec(x, 8);
+            BVec b = ConstBVec(y, 8);
 
-    BVec c = a;
-    IF (a[2]) {
-        c = a + b;
-    } ELSE {
-        IF (a[1])
-            c = b;
-    }
+            BVec c = a;
+            IF (a[2]) {
+                c = a + b;
+            } ELSE {
+                IF (a[1])
+                    c = b;
+            }
 
-    unsigned groundTruth = x;
-    if (unsigned(x) & 4) {
-        groundTruth = x+y;
-    } else {
-        if (unsigned(x) & 2)
-            groundTruth = y;
-    }
+            unsigned groundTruth = x;
+            if (unsigned(x) & 4) {
+                groundTruth = x+y;
+            } else {
+                if (unsigned(x) & 2)
+                    groundTruth = y;
+            }
 
-    sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+            sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
+        }
 
     runEvalOnlyTest();
 }
 
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, UnsignedCompare, data::xrange(8) * data::xrange(8), x, y)
+BOOST_FIXTURE_TEST_CASE(UnsignedCompare, UnitTestSimulationFixture)
 {
     using namespace hcl::core::frontend;
 
 
+    for (auto x : hcl::utils::Range(8))
+        for (auto y : hcl::utils::Range(8)) {
 
-    BVec a = ConstBVec(x, 8);
-    BVec b = ConstBVec(y, 8);
+            BVec a = ConstBVec(x, 8);
+            BVec b = ConstBVec(y, 8);
 
-    if (x > y)
-    {
-        sim_assert(a > b);
-        sim_assert(!(a <= b));
-    }
-    else
-    {
-        sim_assert(!(a > b));
-        sim_assert(a <= b);
-    }
+            if (x > y)
+            {
+                sim_assert(a > b);
+                sim_assert(!(a <= b));
+            }
+            else
+            {
+                sim_assert(!(a > b));
+                sim_assert(a <= b);
+            }
 
-    if (x < y)
-    {
-        sim_assert(a < b);
-        sim_assert(!(a >= b));
-    }
-    else
-    {
-        sim_assert(!(a < b));
-        sim_assert(a >= b);
-    }
+            if (x < y)
+            {
+                sim_assert(a < b);
+                sim_assert(!(a >= b));
+            }
+            else
+            {
+                sim_assert(!(a < b));
+                sim_assert(a >= b);
+            }
 
-    if (x == y)
-    {
-        sim_assert(a == b);
-        sim_assert(!(a != b));
-    }
-    else
-    {
-        sim_assert(a != b);
-        sim_assert(!(a == b));
-    }
+            if (x == y)
+            {
+                sim_assert(a == b);
+                sim_assert(!(a != b));
+            }
+            else
+            {
+                sim_assert(a != b);
+                sim_assert(!(a == b));
+            }
+        }
 
     runEvalOnlyTest();
 }
