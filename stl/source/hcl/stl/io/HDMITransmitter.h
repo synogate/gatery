@@ -10,9 +10,11 @@ struct SerialTMDSPair {
 };
 
 struct SerialTMDS {
-    SerialTMDSPair data[3];
-    SerialTMDSPair clock;
+    std::array<Bit, 3> data;
+    Bit clock;
 };
+
+BVec tmdsEncodeSymbol(const BVec& data);
 
 core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::frontend::Bit sendData, core::frontend::BVec data, core::frontend::BVec ctrl);
 
@@ -79,3 +81,5 @@ class Transmitter
 };
 
 }
+
+BOOST_HANA_ADAPT_STRUCT(hcl::stl::hdmi::SerialTMDS, data, clock);

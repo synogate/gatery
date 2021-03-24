@@ -16,10 +16,11 @@ namespace hcl::stl {
             .setName("bitcount")
             .setComment("Counts the number of high bits");
         
-#if 0
-        BVec sumOfOnes = "b0000";
-        for (auto i : utils::Range(data.getWidth()))
-            sumOfOnes += data[i].zext(1);
+#if 1
+        BVec sumOfOnes = BitWidth(utils::Log2C(vec.getWidth()+1));
+        sumOfOnes = 0;
+        for (auto i : utils::Range(vec.size()))
+            sumOfOnes += zext(vec[i]);
         return sumOfOnes;
 #else
         std::vector<BVec> subSums;
