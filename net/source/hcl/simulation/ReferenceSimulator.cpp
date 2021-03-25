@@ -449,7 +449,7 @@ void ReferenceSimulator::advance(hlim::ClockRational seconds)
 
     hlim::ClockRational targetTime = m_simulationTime + seconds;
 
-    while (hlim::clockLess(m_simulationTime, targetTime)) {
+    while (hlim::clockLess(m_simulationTime, targetTime) && !m_abortCalled) {
         auto &nextEvent = m_nextEvents.top();
         if (nextEvent.timeOfEvent > targetTime) {
             m_simulationTime = targetTime;
