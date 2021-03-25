@@ -81,7 +81,7 @@ void tabulation_hashing_set_random_content(TabulationHashingContext* ctx,
 			{
 				for (i = 0; i < slotWords; ++i)
 					ctx->mmwrite(ctx->mmCtx, 1 + i, slot[i]);
-				ctx->mmwrite(ctx->mmCtx, 0, offset);
+				ctx->mmwrite(ctx->mmCtx, 0, offset / slotWords);
 			}
 		}
 
