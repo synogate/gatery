@@ -27,17 +27,17 @@ TestbenchRecorder::~TestbenchRecorder()
 
 void TestbenchRecorder::writeHeader()
 {
-    m_testbenchFile << R"Delim(
+    m_testbenchFile << R"(
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.all;
 
-ENTITY testbench IS
-END testbench;
+ENTITY )" << m_name << R"( IS
+END )" << m_name << R"(;
 
-ARCHITECTURE tb OF testbench IS
+ARCHITECTURE tb OF )" << m_name << R"( IS
 
-)Delim";
+)";
 
     auto *rootEntity = m_ast->getRootEntity();
 
