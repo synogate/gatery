@@ -297,6 +297,16 @@ void BitVectorState<Config>::clearRange(typename Config::Plane plane, size_t off
 template<class Config>
 void BitVectorState<Config>::copyRange(size_t dstOffset, const BitVectorState<Config> &src, size_t srcOffset, size_t size)
 {
+    if (srcOffset % 8 == 0 && dstOffset % 8 == 0 && size >= 8) {
+        size_t bytes = size / 8;
+        for (auto i : utils::Range<size_t>(Config::NUM_PLANES))
+            memcpy((char*) data((typename Config::Plane) i) + dstOffset/8, (const char*) src.data((typename Config::Plane) i) + srcOffset/8, bytes);
+
+        dstOffset += bytes * 8;
+        srcOffset += bytes * 8;
+        size -= bytes*8;
+    }
+
     ///@todo: Optimize aligned cases (which happen quite frequently!)
     size_t width = size;
     size_t offset = 0;
@@ -305,7 +315,7 @@ void BitVectorState<Config>::copyRange(size_t dstOffset, const BitVectorState<Co
 
         for (auto i : utils::Range<size_t>(Config::NUM_PLANES))
             insert((typename Config::Plane) i, dstOffset + offset, chunkSize,
-                    src.extract((typename Config::Plane) i, srcOffset + offset, chunkSize));
+                    (typename Config::BaseType) src.extract((typename Config::Plane) i, srcOffset + offset, chunkSize));
 
         offset += chunkSize;
     }

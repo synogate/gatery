@@ -5,6 +5,21 @@
 namespace hcl::core::hlim {
     using ClockRational = boost::rational<std::uint64_t>;
 
+    inline bool clockLess(const ClockRational &lhs, const ClockRational &rhs) {
+        return lhs.numerator() * rhs.denominator() < rhs.numerator() * lhs.denominator();
+    }
+
+    inline bool clockMore(const ClockRational &lhs, const ClockRational &rhs) {
+        return lhs.numerator() * rhs.denominator() > rhs.numerator() * lhs.denominator();
+    }
+
+    inline bool operator<(const ClockRational &lhs, const ClockRational &rhs) {
+        return lhs.numerator() * rhs.denominator() < rhs.numerator() * lhs.denominator();
+    }
+    inline bool operator>(const ClockRational &lhs, const ClockRational &rhs) {
+        return lhs.numerator() * rhs.denominator() > rhs.numerator() * lhs.denominator();
+    }
+
     inline size_t floor(const ClockRational &v) { return v.numerator() / v.denominator(); }
 
     inline ClockRational operator*(const ClockRational &lhs, int rhs) {

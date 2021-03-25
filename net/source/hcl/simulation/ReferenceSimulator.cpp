@@ -29,8 +29,21 @@ namespace hcl::core::sim {
 
 void ExecutionBlock::evaluate(SimulatorCallbacks &simCallbacks, DataState &state) const
 {
+#if 1
     for (const auto &step : m_steps)
         step.node->simulateEvaluate(simCallbacks, state.signalState, step.internal.data(), step.inputs.data(), step.outputs.data());
+#else
+    for (auto i : utils::Range(m_steps.size())) {
+        if (i+3 < m_steps.size()) {
+            _mm_prefetch(m_steps[i+3].node, _MM_HINT_T0);
+     //       _mm_prefetch(m_steps[i+1].internal.data(), _MM_HINT_T0);
+     //       _mm_prefetch(m_steps[i+1].inputs.data(), _MM_HINT_T0);
+     //       _mm_prefetch(m_steps[i+1].outputs.data(), _MM_HINT_T0);
+        }
+        const auto &step = m_steps[i];
+        step.node->simulateEvaluate(simCallbacks, state.signalState, step.internal.data(), step.inputs.data(), step.outputs.data());
+    }
+#endif
 }
 
 void ExecutionBlock::addStep(MappedNode mappedNode)
@@ -436,7 +449,7 @@ void ReferenceSimulator::advance(hlim::ClockRational seconds)
 
     hlim::ClockRational targetTime = m_simulationTime + seconds;
 
-    while (m_simulationTime < targetTime) {
+    while (hlim::clockLess(m_simulationTime, targetTime)) {
         auto &nextEvent = m_nextEvents.top();
         if (nextEvent.timeOfEvent > targetTime) {
             m_simulationTime = targetTime;
@@ -493,15 +506,15 @@ DefaultBitVectorState ReferenceSimulator::getValueOfOutput(const hlim::NodePort 
     if (m_stateNeedsReevaluating)
         reevaluate();
 
-    DefaultBitVectorState value;
     auto it = m_program.m_stateMapping.outputToOffset.find(nodePort);
     if (it == m_program.m_stateMapping.outputToOffset.end()) {
+        DefaultBitVectorState value;
         value.resize(0);
+        return value;
     } else {
         size_t width = nodePort.node->getOutputConnectionType(nodePort.port).width;
-        value = m_dataState.signalState.extract(it->second, width);
+        return m_dataState.signalState.extract(it->second, width);
     }
-    return value;
 }
 
 std::array<bool, DefaultConfig::NUM_PLANES> ReferenceSimulator::getValueOfClock(const hlim::Clock *clk)

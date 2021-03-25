@@ -22,7 +22,7 @@ void Node_Logic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::De
 {
     size_t width = getOutputConnectionType(0).width;
 
-    NodePort leftDriver = getNonSignalDriver(0);
+    NodePort leftDriver = getDriver(0);
     bool leftAllUndefined = leftDriver.node == nullptr;
     /*
     if (leftDriver.node == nullptr) {
@@ -34,7 +34,7 @@ void Node_Logic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::De
     NodePort rightDriver;
     bool rightAllUndefined = true;
     if (m_op != NOT) {
-        rightDriver = getNonSignalDriver(0);
+        rightDriver = getDriver(1);
         rightAllUndefined = rightDriver.node == nullptr;
     }
 

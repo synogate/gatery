@@ -12,8 +12,8 @@ void Node_Multiplexer::connectInput(size_t operand, const NodePort &port)
 
 void Node_Multiplexer::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
-    auto selectorDriver = getNonSignalDriver(0);
-    if (selectorDriver.node == nullptr) {
+    auto selectorDriver = getDriver(0);
+    if (inputOffsets[0] == ~0ull) {
         state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
         return;
     }

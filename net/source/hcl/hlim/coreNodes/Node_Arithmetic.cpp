@@ -44,9 +44,9 @@ void Node_Arithmetic::disconnectInput(size_t operand)
 void Node_Arithmetic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
     HCL_ASSERT_HINT(getOutputConnectionType(0).width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
-    auto leftDriver = getNonSignalDriver(0);
-    auto rightDriver = getNonSignalDriver(1);
-    if (leftDriver.node == nullptr || rightDriver.node == nullptr) {
+    auto leftDriver = getDriver(0);
+    auto rightDriver = getDriver(1);
+    if (inputOffsets[0] == ~0ull || inputOffsets[1] == ~0ull) {
         state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
         return;
     }
