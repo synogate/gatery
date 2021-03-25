@@ -46,7 +46,8 @@ void Node_Arithmetic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, si
     HCL_ASSERT_HINT(getOutputConnectionType(0).width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
     auto leftDriver = getDriver(0);
     auto rightDriver = getDriver(1);
-    if (inputOffsets[0] == ~0ull || inputOffsets[1] == ~0ull) {
+    if (inputOffsets[0] == ~0ull || inputOffsets[1] == ~0ull ||
+        leftDriver.node== nullptr || rightDriver.node == nullptr) {
         state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
         return;
     }
