@@ -201,7 +201,7 @@ core::frontend::BVec tmdsEncodeBitflip(const core::frontend::Clock& clk, const c
     HCL_NAMED(result);
 
     // sub or add depending on invert
-    global_counter += word_counter ^ invert + zext(invert);
+    global_counter += (word_counter ^ invert) + invert;
     global_counter = clk(global_counter, 0);
 
     return result;
@@ -209,7 +209,7 @@ core::frontend::BVec tmdsEncodeBitflip(const core::frontend::Clock& clk, const c
 
 core::frontend::BVec tmdsDecodeBitflip(const core::frontend::BVec& data)
 {
-    return pack(data[-2], data(0, -2) ^ data[-1]);
+    return pack(data[data.size() - 2], data(0, -2) ^ data.msb());
 }
 
 TmdsEncoder::TmdsEncoder(core::frontend::Clock& clk) :

@@ -28,7 +28,6 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, tmdsReduction,
     BVec decoded = hcl::stl::hdmi::tmdsDecodeReduceTransitions(encoded);
     sim_assert(a == decoded) << "decode(encoder()) mismatch: input:" << a << " decoded " << decoded;
     sim_debug() << a << " => " << encoded << " => " << decoded << " | " << hcl::stl::bitcount(a);
-    ;
 
     eval(design.getCircuit());
 }
@@ -51,6 +50,7 @@ BOOST_FIXTURE_TEST_CASE(tmdsBitflip, hcl::core::sim::UnitTestSimulationFixture)
     BVec decoded = hcl::stl::hdmi::tmdsDecodeBitflip(encoded);
     sim_assert(decoded == test_counter.delay(1));
 
+    design.getCircuit().optimize(3);
     runTicks(design.getCircuit(), clock.getClk(), 260);
 }
 
