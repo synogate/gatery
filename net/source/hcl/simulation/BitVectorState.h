@@ -205,6 +205,8 @@ DefaultBitVectorState createDefaultBitVectorState(std::size_t numWords, std::siz
 }
 
 
+DefaultBitVectorState createDefaultBitVectorState(std::size_t size, const void *data);
+
 
 template<class Config>
 void BitVectorState<Config>::resize(size_t size)
