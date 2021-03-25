@@ -11,8 +11,28 @@ namespace hcl::stl
 		readData = 0;
 	}
 
+	void AvalonMMSlave::addRegDescChunk(const RegDesc &desc, size_t offset, size_t width)
+	{
+		RegDesc d = desc;
+		d.name += std::to_string(offset / readData.size());
+		d.desc += "Bitrange ";
+		d.desc += std::to_string(offset);
+		d.desc += " to ";
+		d.desc += std::to_string(offset + width);
+		d.usedRanges.clear();
+		for (auto r : desc.usedRanges)
+			if (r.offset > offset && r.offset < offset + readData.size()) {
+				r.offset -= offset;
+				r.size = std::min(r.size, readData.size());
+				d.usedRanges.push_back(std::move(r));
+			}
+		addressMap.push_back(d);
+	}
+
 	void AvalonMMSlave::ro(const BVec& value, RegDesc desc)
 	{
+		desc.flags = F_READ;
+		if (!scopeStack.empty()) desc.scope = scopeStack.back();
 		for (size_t offset = 0; offset < value.size(); offset += readData.size())
 		{
 			const size_t width = std::min(readData.size(), value.size() - offset);
@@ -20,15 +40,17 @@ namespace hcl::stl
 			IF(address == addressMap.size())
 				readData = zext(value(offset, width));
 
-			RegDesc d = desc;
 			if (readData.size() < value.size())
-				d.name += std::to_string(offset / readData.size());
-			addressMap.push_back(d);
+				addRegDescChunk(desc, offset, width);
+			else
+				addressMap.push_back(std::move(desc));
 		}
 	}
 
 	void AvalonMMSlave::ro(const Bit& value, RegDesc desc)
 	{
+		desc.flags = F_READ;
+		if (!scopeStack.empty()) desc.scope = scopeStack.back();
 		IF(address == addressMap.size())
 			readData = zext(value);
 		addressMap.push_back(desc);
@@ -36,6 +58,8 @@ namespace hcl::stl
 
 	Bit AvalonMMSlave::rw(BVec& value, RegDesc desc)
 	{
+		desc.flags = F_READ | F_WRITE;
+		if (!scopeStack.empty()) desc.scope = scopeStack.back();
 		Bit selected = '0';
 		for (size_t offset = 0; offset < value.size(); offset += readData.size())
 		{
@@ -51,10 +75,10 @@ namespace hcl::stl
 				}
 			}
 
-			RegDesc d = desc;
 			if (readData.size() < value.size())
-				d.name += std::to_string(offset / readData.size());
-			addressMap.push_back(d);
+				addRegDescChunk(desc, offset, width);
+			else
+				addressMap.push_back(std::move(desc));
 		}
 		setName(value, desc.name);
 		return selected;
@@ -62,6 +86,8 @@ namespace hcl::stl
 
 	Bit AvalonMMSlave::rw(Bit& value, RegDesc desc)
 	{
+		desc.flags = F_READ | F_WRITE;
+		if (!scopeStack.empty()) desc.scope = scopeStack.back();
 		Bit selected = '0';
 
 		IF(address == addressMap.size())
@@ -80,6 +106,17 @@ namespace hcl::stl
 		return selected;
 	}
 
+	void AvalonMMSlave::enterScope(std::string scope)
+	{
+		if (!scopeStack.empty())
+			scope = scopeStack.back() + '.' + scope;
+		scopeStack.push_back(scope);
+	}
+	void AvalonMMSlave::leaveScope()
+	{
+		scopeStack.pop_back();
+	}
+
 	void pinIn(AvalonMMSlave& avmm, std::string prefix)
 	{
 		avmm.address = hcl::pinIn(avmm.address.getWidth()).setName(prefix + "_address");
@@ -87,4 +124,5 @@ namespace hcl::stl
 		avmm.writeData = hcl::pinIn(avmm.writeData.getWidth()).setName(prefix + "_write_data");
 		hcl::pinOut(avmm.readData).setName(prefix + "_read_data");
 	}
+
 }

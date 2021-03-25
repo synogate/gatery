@@ -13,9 +13,10 @@ Node_Compare::Node_Compare(Op op) : Node(2, 1), m_op(op)
 
 void Node_Compare::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
-    auto leftDriver = getNonSignalDriver(0);
-    auto rightDriver = getNonSignalDriver(1);
-    if (leftDriver.node == nullptr || rightDriver.node == nullptr) {
+    auto leftDriver = getDriver(0);
+    auto rightDriver = getDriver(1);
+    if (inputOffsets[0] == ~0ull || inputOffsets[1] == ~0ull ||
+        leftDriver.node== nullptr || rightDriver.node == nullptr) {
         state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
         return;
     }

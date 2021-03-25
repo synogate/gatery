@@ -131,8 +131,8 @@ struct Event {
     } simProcResumeEvt;
 
     bool operator<(const Event &rhs) const {
-        if (timeOfEvent > rhs.timeOfEvent) return true;
-        if (timeOfEvent < rhs.timeOfEvent) return false;
+        if (hlim::clockMore(timeOfEvent, rhs.timeOfEvent)) return true;
+        if (hlim::clockLess(timeOfEvent, rhs.timeOfEvent)) return false;
         if ((unsigned)type > (unsigned) rhs.type) return true; // clocks before fibers
         if ((unsigned)type < (unsigned)rhs.type) return false; // clocks before fibers
         if (type == Type::simProcResume)
