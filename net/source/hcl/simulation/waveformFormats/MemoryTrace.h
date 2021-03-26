@@ -5,6 +5,8 @@
 #include "../../hlim/NodePort.h"
 #include "../../hlim/ClockRational.h"
 
+#include <map>
+
 namespace hcl::core::hlim {
 
 class Clock;
