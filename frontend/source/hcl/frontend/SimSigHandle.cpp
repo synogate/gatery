@@ -1,5 +1,8 @@
 #include "SimSigHandle.h"
 
+#include <hcl/simulation/SimulationContext.h>
+#include <hcl/simulation/Simulator.h>
+
 #include "Clock.h"
 
 namespace hcl::core::frontend {
@@ -47,6 +50,47 @@ sim::WaitClock WaitClk(const Clock &clk)
 {
     return sim::WaitClock(clk.getClk());
 }
+
+void simAnnotationStart(const std::string &id, std::string &desc)
+{
+    auto *sim = sim::SimulationContext::current()->getSimulator();
+    HCL_DESIGNCHECK_HINT(sim, "Can only annotate if running an actual simulation!");
+    sim->annotationStart(sim->getCurrentSimulationTime(), id, desc);
+}
+
+void simAnnotationStartDelayed(const std::string &id, std::string &desc, const Clock &clk, int cycles)
+{
+    auto *sim = sim::SimulationContext::current()->getSimulator();
+    HCL_DESIGNCHECK_HINT(sim, "Can only annotate if running an actual simulation!");
+
+    auto shift = std::abs(cycles) / clk.getAbsoluteFrequency();
+
+    if (cycles > 0)
+        sim->annotationStart(sim->getCurrentSimulationTime() + shift, id, desc);
+    else
+        sim->annotationStart(sim->getCurrentSimulationTime() - shift, id, desc);
+}
+
+void simAnnotationEnd(const std::string &id)
+{
+    auto *sim = sim::SimulationContext::current()->getSimulator();
+    HCL_DESIGNCHECK_HINT(sim, "Can only annotate if running an actual simulation!");
+    sim->annotationEnd(sim->getCurrentSimulationTime(), id);
+}
+
+void simAnnotationEndDelayed(const std::string &id, const Clock &clk, int cycles)
+{
+    auto *sim = sim::SimulationContext::current()->getSimulator();
+    HCL_DESIGNCHECK_HINT(sim, "Can only annotate if running an actual simulation!");
+
+    auto shift = std::abs(cycles) / clk.getAbsoluteFrequency();
+
+    if (cycles > 0)
+        sim->annotationEnd(sim->getCurrentSimulationTime() + shift, id);
+    else
+        sim->annotationEnd(sim->getCurrentSimulationTime() - shift, id);
+}
+
 
 
 }

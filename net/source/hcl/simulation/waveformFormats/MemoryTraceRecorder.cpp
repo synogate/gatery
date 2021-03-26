@@ -22,6 +22,22 @@ void MemoryTraceRecorder::stop()
 }
 
 
+void MemoryTraceRecorder::onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, std::string &desc)
+{
+    auto &an = m_trace.annotations[id];
+    an.ranges.push_back({.desc = desc, .start = simulationTime });
+}
+
+void MemoryTraceRecorder::onAnnotationEnd(const hlim::ClockRational &simulationTime, const std::string &id)
+{
+    auto it = m_trace.annotations.find(id);
+    HCL_DESIGNCHECK_HINT(it != m_trace.annotations.end(), "Ending an annotation that never started!");
+    HCL_DESIGNCHECK_HINT(!it->second.ranges.empty(), "Ending an annotation that never started!");
+    it->second.ranges.back().end = simulationTime;
+}
+
+
+
 void MemoryTraceRecorder::onDebugMessage(const hlim::BaseNode *src, std::string msg)
 {
 }

@@ -19,6 +19,9 @@ class MemoryTraceRecorder : public WaveformRecorder
         void start();
         void stop();
 
+        virtual void onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, std::string &desc) override;
+        virtual void onAnnotationEnd(const hlim::ClockRational &simulationTime, const std::string &id) override;
+
         virtual void onDebugMessage(const hlim::BaseNode *src, std::string msg) override;
         virtual void onWarning(const hlim::BaseNode *src, std::string msg) override;
         virtual void onAssert(const hlim::BaseNode *src, std::string msg) override;

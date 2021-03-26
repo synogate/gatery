@@ -3,6 +3,18 @@
 namespace hcl::core::sim {
 
 
+void Simulator::CallbackDispatcher::onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, std::string &desc)
+{
+    for (auto *c : m_callbacks) c->onAnnotationStart(simulationTime, id, desc);
+}
+
+void Simulator::CallbackDispatcher::onAnnotationEnd(const hlim::ClockRational &simulationTime, const std::string &id)
+{
+    for (auto *c : m_callbacks) c->onAnnotationEnd(simulationTime, id);
+}
+
+
+
 void Simulator::CallbackDispatcher::onNewTick(const hlim::ClockRational &simulationTime)
 {
     for (auto *c : m_callbacks) c->onNewTick(simulationTime);

@@ -7,7 +7,7 @@
 
 namespace hcl::core::sim {
 
-
+class Simulator;
 class WaitFor;
 class WaitUntil;
 class WaitClock;
@@ -25,6 +25,8 @@ class SimulationContext {
         virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock) = 0;
 
         static SimulationContext *current() { return m_current; }
+
+        virtual Simulator *getSimulator() = 0;
     protected:
         SimulationContext *m_overshadowed = nullptr;
         thread_local static SimulationContext *m_current;

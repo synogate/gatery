@@ -15,6 +15,8 @@ class ConstructionTimeSimulationContext : public SimulationContext {
         virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor) override;
         virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil) override;
         virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock) override;
+
+        virtual Simulator *getSimulator() override { return nullptr; }
     protected:
         std::map<hlim::NodePort, DefaultBitVectorState> m_overrides;
 };
