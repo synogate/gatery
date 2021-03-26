@@ -6,6 +6,8 @@
 #include "../../hlim/ClockRational.h"
 
 #include <map>
+#include <string>
+#include <vector>
 
 namespace hcl::core::hlim {
 
