@@ -71,7 +71,7 @@ void VHDLExport::writeGHDLScript(const std::string &name)
 
     auto sortedEntites = m_ast->getDependencySortedEntities();
 
-    file << "#!/bin/sh" << std::endl;
+    //file << "#!/bin/sh" << std::endl;
     for (auto &package : m_ast->getPackages())
         file << "ghdl -a --std=08 --ieee=synopsys " << m_ast->getFilename("", package->getName()) << std::endl;;
 
@@ -82,7 +82,7 @@ void VHDLExport::writeGHDLScript(const std::string &name)
         file << "ghdl -a --std=08 --ieee=synopsys " << m_ast->getFilename("", m_testbenchRecorder->getName()) << std::endl;;
 
         file << "ghdl -e --std=08 --ieee=synopsys " << m_testbenchRecorder->getName() << std::endl;
-        file << "ghdl -r " << m_testbenchRecorder->getName() << " --vcd=signals.vcd --wave=signals.ghw" << std::endl;
+        file << "ghdl -r --std=08 " << m_testbenchRecorder->getName() << " --ieee-asserts=disable --vcd=signals.vcd --wave=signals.ghw" << std::endl;
     }
 }
 

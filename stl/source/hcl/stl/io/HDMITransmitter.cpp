@@ -209,7 +209,7 @@ core::frontend::BVec tmdsEncodeBitflip(const core::frontend::Clock& clk, const c
 
 core::frontend::BVec tmdsDecodeBitflip(const core::frontend::BVec& data)
 {
-    return pack(data[-2], data(0, -2) ^ data[-1]);
+    return pack(data[data.size() - 2], data(0, -2) ^ data.msb());
 }
 
 TmdsEncoder::TmdsEncoder(core::frontend::Clock& clk) :

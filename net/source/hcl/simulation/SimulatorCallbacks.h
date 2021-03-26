@@ -19,6 +19,10 @@ namespace hcl::core::sim {
 class SimulatorCallbacks
 {
     public:
+
+        virtual void onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, std::string &desc) { }
+        virtual void onAnnotationEnd(const hlim::ClockRational &simulationTime, const std::string &id) { }
+
         virtual void onNewTick(const hlim::ClockRational &simulationTime) { }
         virtual void onClock(const hlim::Clock *clock, bool risingEdge) { }
         virtual void onDebugMessage(const hlim::BaseNode *src, std::string msg) { }

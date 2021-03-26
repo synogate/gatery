@@ -14,7 +14,9 @@ namespace hcl::stl
         AvalonMM() = default;
         AvalonMM(AvalonMM&&) = default;
         AvalonMM(const AvalonMM&) = delete;
-        void operator=(const AvalonMM&) = delete;
+
+        AvalonMM& operator=(AvalonMM&&) = default;
+        AvalonMM& operator=(const AvalonMM&) = delete;
 
         BVec address;
         std::optional<Bit> ready;
