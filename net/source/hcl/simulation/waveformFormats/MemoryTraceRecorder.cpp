@@ -4,8 +4,9 @@
 
 namespace hcl::core::sim {
 
-MemoryTraceRecorder::MemoryTraceRecorder(hlim::Circuit &circuit, Simulator &simulator, bool startImmediately) : WaveformRecorder(circuit, simulator)
+MemoryTraceRecorder::MemoryTraceRecorder(MemoryTrace &trace, hlim::Circuit &circuit, Simulator &simulator, bool startImmediately) : WaveformRecorder(circuit, simulator), m_trace(trace)
 {
+    m_trace.clear();
 }
 
 
@@ -22,7 +23,7 @@ void MemoryTraceRecorder::stop()
 }
 
 
-void MemoryTraceRecorder::onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, std::string &desc)
+void MemoryTraceRecorder::onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, const std::string &desc)
 {
     auto &an = m_trace.annotations[id];
     an.ranges.push_back({.desc = desc, .start = simulationTime });

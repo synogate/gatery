@@ -45,6 +45,18 @@ void WaveformRecorder::addAllWatchSignalTaps()
                 addSignal(tap->getDriver(0), false, tap->getName());
 }
 
+void WaveformRecorder::addAllPins()
+{
+    for (auto &node : m_circuit.getNodes())
+        if (auto *pin = dynamic_cast<hlim::Node_Pin*>(node.get())) {
+            auto driver = pin->getDriver(0);
+            if (driver.node != nullptr)
+                addSignal(driver, false, pin->getName());
+            if (!pin->getDirectlyDriven(0).empty())
+                addSignal({.node = pin, .port = 0}, false, pin->getName());
+        }
+}
+
 void WaveformRecorder::addAllOutPins()
 {
     for (auto &node : m_circuit.getNodes())

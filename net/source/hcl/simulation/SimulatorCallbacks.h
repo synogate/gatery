@@ -20,7 +20,7 @@ class SimulatorCallbacks
 {
     public:
 
-        virtual void onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, std::string &desc) { }
+        virtual void onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, const std::string &desc) { }
         virtual void onAnnotationEnd(const hlim::ClockRational &simulationTime, const std::string &id) { }
 
         virtual void onNewTick(const hlim::ClockRational &simulationTime) { }

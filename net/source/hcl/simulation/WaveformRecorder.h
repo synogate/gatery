@@ -25,6 +25,7 @@ class WaveformRecorder : public SimulatorCallbacks
 
         void addSignal(hlim::NodePort np, bool hidden, const std::string &nameOverride = {});
         void addAllWatchSignalTaps();
+        void addAllPins();
         void addAllOutPins();
         void addAllNamedSignals(bool appendNodeId = false);
         void addAllSignals(bool appendNodeId = false);

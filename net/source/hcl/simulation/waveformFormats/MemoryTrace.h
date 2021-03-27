@@ -50,6 +50,13 @@ struct MemoryTrace {
     };
 
     std::map<std::string, Annotation> annotations;
+
+    inline void clear() {
+        data.clear();
+        signals.clear();
+        events.clear();
+        annotations.clear();
+    }
 };
 
 }

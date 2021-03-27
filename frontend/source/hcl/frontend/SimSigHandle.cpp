@@ -52,14 +52,14 @@ sim::WaitClock WaitClk(const Clock &clk)
     return sim::WaitClock(clk.getClk());
 }
 
-void simAnnotationStart(const std::string &id, std::string &desc)
+void simAnnotationStart(const std::string &id, const std::string &desc)
 {
     auto *sim = sim::SimulationContext::current()->getSimulator();
     HCL_DESIGNCHECK_HINT(sim, "Can only annotate if running an actual simulation!");
     sim->annotationStart(sim->getCurrentSimulationTime(), id, desc);
 }
 
-void simAnnotationStartDelayed(const std::string &id, std::string &desc, const Clock &clk, int cycles)
+void simAnnotationStartDelayed(const std::string &id, const std::string &desc, const Clock &clk, int cycles)
 {
     auto *sim = sim::SimulationContext::current()->getSimulator();
     HCL_DESIGNCHECK_HINT(sim, "Can only annotate if running an actual simulation!");
