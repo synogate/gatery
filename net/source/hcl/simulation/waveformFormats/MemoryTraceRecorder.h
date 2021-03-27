@@ -14,12 +14,12 @@ namespace hcl::core::sim {
 class MemoryTraceRecorder : public WaveformRecorder
 {
     public:
-        MemoryTraceRecorder(hlim::Circuit &circuit, Simulator &simulator, bool startImmediately = true);
+        MemoryTraceRecorder(MemoryTrace &trace, hlim::Circuit &circuit, Simulator &simulator, bool startImmediately = true);
 
         void start();
         void stop();
 
-        virtual void onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, std::string &desc) override;
+        virtual void onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, const std::string &desc) override;
         virtual void onAnnotationEnd(const hlim::ClockRational &simulationTime, const std::string &id) override;
 
         virtual void onDebugMessage(const hlim::BaseNode *src, std::string msg) override;
@@ -32,7 +32,7 @@ class MemoryTraceRecorder : public WaveformRecorder
         bool m_record;
 
         BitAllocator m_bitAllocator;
-        MemoryTrace m_trace;
+        MemoryTrace &m_trace;
 
         std::map<const hlim::Clock*, size_t> m_clock2idx;
 
