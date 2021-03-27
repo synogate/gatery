@@ -101,6 +101,7 @@ namespace hcl::stl
 		{
 			mem.setup(capacity / numTables, it);
 			mem.setType(MemType::BRAM);
+			mem.setPowerOnStateZero();
 		}
 	}
 
@@ -124,11 +125,13 @@ namespace hcl::stl
 		Out ret;
 		ret.value = item0.value;
 		ret.found = item0.key == key;
+		setName(ret, "ret_tbl_0");
 
 		for (size_t i = 1; i < m_tables.size(); ++i)
 		{
 			Item item = m_tables[i][hash(hashSel[i])];
-			HCL_NAMED(item);
+			//HCL_NAMED(item);
+			setName(item, (boost::format("item_tbl_%d") % i).str());
 
 			IF(item.key == key)
 			{
