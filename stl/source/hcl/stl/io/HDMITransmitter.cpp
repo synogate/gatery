@@ -133,19 +133,17 @@ BVec tmdsEncodeSymbol(const BVec& data)
     HCL_NAMED(transitionReduced);
 
     // even out 0 and 1 bits
-    BVec word_counter = sumOfOnes - (data.size() / 2);
+    BVec word_counter = zext(sumOfOnes, 1) - zext(data.size() / 2);
     HCL_NAMED(word_counter);
     BVec global_counter = word_counter.getWidth();
     HCL_NAMED(global_counter);
 
     Bit invert = word_counter.msb() == global_counter.msb();
-    IF((global_counter == 0) | (word_counter == 0))
-        invert = ~invertXor;
     HCL_NAMED(invert);
 
     // sub or add depending on invert
     global_counter += (word_counter ^ invert) + invert;
-    global_counter = reg(global_counter, 0); // ConstBVec(0, global_counter.size()));
+    global_counter = reg(global_counter, 0);
 
     BVec result = pack(invert, ~invertXor, transitionReduced ^ invert);
     HCL_NAMED(result);
@@ -215,7 +213,7 @@ core::frontend::BVec tmdsDecodeBitflip(const core::frontend::BVec& data)
 TmdsEncoder::TmdsEncoder(core::frontend::Clock& clk) :
     m_Clk{clk}
 {
-    m_Channel.fill("b0010101011"); // no data symbol
+    m_Channel.fill("b1101010100"); // no data symbol
     setName(m_Channel, "channelBlank");
 }
 
@@ -251,7 +249,7 @@ void hcl::stl::hdmi::TmdsEncoder::setSync(bool hsync, bool vsync)
     else if (vsync)
         m_Channel[0] = "b0101010100";
     else
-        m_Channel[0] = "b0010101011";
+        m_Channel[0] = "b1101010100";
 }
 
 void hcl::stl::hdmi::TmdsEncoder::setTERC4(core::frontend::BVec ctrl)
