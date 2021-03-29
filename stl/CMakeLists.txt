@@ -52,6 +52,8 @@ add_library(hcl_stl STATIC
     source/hcl/stl/crypto/TabulationHashingDriver.h
     source/hcl/stl/crypto/TabulationHashingDriver.c
     source/hcl/stl/driver_utils.h
+    source/hcl/stl/io/DisplaySync.h
+    source/hcl/stl/io/DisplaySync.cpp
     )
 
 set(data_files
