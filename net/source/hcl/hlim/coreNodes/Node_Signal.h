@@ -28,6 +28,8 @@ namespace hcl::core::hlim {
         void moveToSignalGroup(SignalGroup *group);
 
         virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
+
+        std::string attemptInferOutputName(size_t outputPort) const override;
     protected:
         SignalGroup *m_signalGroup = nullptr;
     };
