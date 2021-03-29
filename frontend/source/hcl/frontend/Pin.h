@@ -44,7 +44,6 @@ namespace hcl::core::frontend {
 #else
                 auto* signal = DesignScope::createNode<hlim::Node_Signal>();
                 signal->connectInput({.node=m_pinNode, .port=0ull});
-                signal->setName(m_pinNode->getName());
                 signal->recordStackTrace();
                 return Bit(SignalReadPort(signal));
 #endif
