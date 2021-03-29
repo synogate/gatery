@@ -124,7 +124,7 @@ namespace hcl::stl
 
 		Out ret;
 		ret.value = item0.value;
-		ret.found = item0.key == key;
+		ret.found = item0.valid & item0.key == key;
 		setName(ret, "ret_tbl_0");
 
 		for (size_t i = 1; i < m_tables.size(); ++i)
