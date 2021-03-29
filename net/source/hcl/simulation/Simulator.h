@@ -86,10 +86,17 @@ class Simulator
         virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor, utils::RestrictTo<RunTimeSimulationContext>) = 0;
         virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil, utils::RestrictTo<RunTimeSimulationContext>) = 0;
         virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock, utils::RestrictTo<RunTimeSimulationContext>) = 0;
+
+        virtual void annotationStart(const hlim::ClockRational &simulationTime, const std::string &id, const std::string &desc) { m_callbackDispatcher.onAnnotationStart(simulationTime, id, desc); }
+        virtual void annotationEnd(const hlim::ClockRational &simulationTime, const std::string &id) { m_callbackDispatcher.onAnnotationEnd(simulationTime, id); }
+
     protected:
         class CallbackDispatcher : public SimulatorCallbacks {
             public:
                 std::vector<SimulatorCallbacks*> m_callbacks;
+
+                virtual void onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, const std::string &desc) override;
+                virtual void onAnnotationEnd(const hlim::ClockRational &simulationTime, const std::string &id) override;
 
                 virtual void onNewTick(const hlim::ClockRational &simulationTime) override;
                 virtual void onClock(const hlim::Clock *clock, bool risingEdge) override;

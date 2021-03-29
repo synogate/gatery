@@ -5,6 +5,10 @@
 #include "../../hlim/NodePort.h"
 #include "../../hlim/ClockRational.h"
 
+#include <map>
+#include <string>
+#include <vector>
+
 namespace hcl::core::hlim {
 
 class Clock;
@@ -35,6 +39,24 @@ struct MemoryTrace {
     DefaultBitVectorState data;
     std::vector<Signal> signals;
     std::vector<Event> events;
+
+    struct Annotation {
+        struct Range {
+            std::string desc;
+            hlim::ClockRational start;
+            hlim::ClockRational end;
+        };
+        std::vector<Range> ranges;
+    };
+
+    std::map<std::string, Annotation> annotations;
+
+    inline void clear() {
+        data.clear();
+        signals.clear();
+        events.clear();
+        annotations.clear();
+    }
 };
 
 }

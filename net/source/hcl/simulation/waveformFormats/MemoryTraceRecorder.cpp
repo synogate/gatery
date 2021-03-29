@@ -4,8 +4,9 @@
 
 namespace hcl::core::sim {
 
-MemoryTraceRecorder::MemoryTraceRecorder(hlim::Circuit &circuit, Simulator &simulator, bool startImmediately) : WaveformRecorder(circuit, simulator)
+MemoryTraceRecorder::MemoryTraceRecorder(MemoryTrace &trace, hlim::Circuit &circuit, Simulator &simulator, bool startImmediately) : WaveformRecorder(circuit, simulator), m_trace(trace)
 {
+    m_trace.clear();
 }
 
 
@@ -20,6 +21,22 @@ void MemoryTraceRecorder::stop()
     m_record = false;
     HCL_ASSERT_HINT(false, "Not implemented yet!");
 }
+
+
+void MemoryTraceRecorder::onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, const std::string &desc)
+{
+    auto &an = m_trace.annotations[id];
+    an.ranges.push_back({.desc = desc, .start = simulationTime });
+}
+
+void MemoryTraceRecorder::onAnnotationEnd(const hlim::ClockRational &simulationTime, const std::string &id)
+{
+    auto it = m_trace.annotations.find(id);
+    HCL_DESIGNCHECK_HINT(it != m_trace.annotations.end(), "Ending an annotation that never started!");
+    HCL_DESIGNCHECK_HINT(!it->second.ranges.empty(), "Ending an annotation that never started!");
+    it->second.ranges.back().end = simulationTime;
+}
+
 
 
 void MemoryTraceRecorder::onDebugMessage(const hlim::BaseNode *src, std::string msg)

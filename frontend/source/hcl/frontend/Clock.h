@@ -78,7 +78,7 @@ namespace hcl::core::frontend {
             Bit operator() (const Bit& signal, const Bit& reset) const;
 
             hlim::Clock *getClk() const { return m_clock; }
-            hlim::ClockRational getAbsoluteFrequency() { return m_clock->getAbsoluteFrequency(); }
+            hlim::ClockRational getAbsoluteFrequency() const { return m_clock->getAbsoluteFrequency(); }
 
             void setName(std::string name) { m_clock->setName(std::move(name)); }
         protected:

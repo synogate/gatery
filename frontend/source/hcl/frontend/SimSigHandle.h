@@ -32,4 +32,12 @@ using Seconds = hlim::ClockRational;
 
 sim::WaitClock WaitClk(const Clock &clk);
 
+void simAnnotationStart(const std::string &id, const std::string &desc);
+void simAnnotationStartDelayed(const std::string &id, const std::string &desc, const Clock &clk, int cycles);
+
+void simAnnotationEnd(const std::string &id);
+void simAnnotationEndDelayed(const std::string &id, const Clock &clk, int cycles);
+
+
+
 }
