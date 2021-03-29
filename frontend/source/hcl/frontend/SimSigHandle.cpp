@@ -45,7 +45,7 @@ hlim::Node_Pin *findOutputPin(hlim::NodePort driver)
             if (!nh.isSignal())
                 nh.backtrack();
     }
-    
+
     return nullptr;
 }
 
@@ -74,7 +74,7 @@ sim::SigHandle sim(const BVec &signal)
 {
     auto driver = signal.getReadPort();
     HCL_DESIGNCHECK(driver.node != nullptr);
-        
+
     hlim::Node_Pin* pin = findInputPin(driver);
     if (pin)
         return sim({ .node = pin, .port = 0ull });
@@ -131,8 +131,10 @@ void simAnnotationStartDelayed(const std::string &id, const std::string &desc, c
 
     if (cycles > 0)
         sim->annotationStart(sim->getCurrentSimulationTime() + shift, id, desc);
-    else
+    else {
+        HCL_DESIGNCHECK_HINT(sim->getCurrentSimulationTime() > shift, "Attempting to set annotation start to before simulation start!");
         sim->annotationStart(sim->getCurrentSimulationTime() - shift, id, desc);
+    }
 }
 
 void simAnnotationEnd(const std::string &id)
@@ -151,8 +153,10 @@ void simAnnotationEndDelayed(const std::string &id, const Clock &clk, int cycles
 
     if (cycles > 0)
         sim->annotationEnd(sim->getCurrentSimulationTime() + shift, id);
-    else
+    else {
+        HCL_DESIGNCHECK_HINT(sim->getCurrentSimulationTime() > shift, "Attempting to set annotation start to before simulation start!");
         sim->annotationEnd(sim->getCurrentSimulationTime() - shift, id);
+    }
 }
 
 
