@@ -218,6 +218,8 @@ namespace hcl::stl
 
 		Bit readTrigger = reg(readEnabled() & cmdTrigger & cmdAddr.msb() == '1', '0');
 		BVec readTabAddr = reg(cmdAddr(memTabSel));
+		HCL_NAMED(readTrigger);
+		HCL_NAMED(readTabAddr);
 
 		for (size_t t = 0; t < mems.size(); ++t)
 		{
