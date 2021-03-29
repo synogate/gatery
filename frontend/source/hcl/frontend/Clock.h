@@ -64,6 +64,7 @@ namespace hcl::core::frontend {
             using TriggerEvent = hlim::Clock::TriggerEvent;
             using ResetType = hlim::Clock::ResetType;
 
+            Clock(size_t freq);
             Clock(const ClockConfig &config);
             Clock deriveClock(const ClockConfig &config);
 

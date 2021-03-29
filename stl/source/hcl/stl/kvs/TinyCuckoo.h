@@ -30,6 +30,7 @@ namespace hcl::stl
 		TinyCuckoo(size_t capacity, const Tkey& key, const Tval& val, size_t numTables = 2);
 
 		BitWidth hashWidth() const;
+		size_t numTables() const { return m_tables.size(); }
 		Out operator () (const Tkey& key, const BVec& hash);
 
 		void addCpuInterface(AvalonNetworkSection& net);

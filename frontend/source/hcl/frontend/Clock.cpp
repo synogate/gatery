@@ -8,6 +8,10 @@
 namespace hcl::core::frontend {
 
 
+Clock::Clock(size_t freq) : Clock(ClockConfig{}.setAbsoluteFrequency({freq, 1}))
+{
+}
+
 Clock::Clock(const ClockConfig &config)
 {
     HCL_DESIGNCHECK_HINT(config.m_absoluteFrequency, "A root clock must have an absolute frequency defined through it's ClockConfig!");
