@@ -135,6 +135,9 @@ namespace hcl::stl
 		if (mems.empty())
 			return;
 
+		GroupScope ent{ GroupScope::GroupType::ENTITY };
+		ent.setName("MemoryMapRamStage");
+
 		struct SigVis : CompoundNameVisitor
 		{
 			virtual void operator () (BVec& a) final
