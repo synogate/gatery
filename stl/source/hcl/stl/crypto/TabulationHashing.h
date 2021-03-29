@@ -25,6 +25,10 @@ namespace hcl::stl
 
 		void addCpuInterface(MemoryMap& mmap) { mmap.stage(m_tables); }
 
+		size_t numTables() const { return m_tables.size(); }
+		BitWidth hashWidth() const { return m_hashWidth; }
+		BitWidth symbolWidth() const { return m_symbolWidth; }
+
 	private:
 		BitWidth m_hashWidth;
 		BitWidth m_symbolWidth = 8_b;
