@@ -128,8 +128,15 @@ static void tiny_cuckoo_item_write(TinyCuckooContext* ctx, TinyCuckooItem* item)
 {
 	uint32_t itemOffset = (uint32_t)(((uint32_t*)item - ctx->items) / ctx->itemWords);
 
-	for (uint32_t i = 0; i < ctx->itemWords; ++i)
-		ctx->mmwrite(ctx->mmCtx, 1 + i, ((uint32_t*)item)[i]);
+	if (!item->valid)
+	{
+		ctx->mmwrite(ctx->mmCtx, 1, 0);
+	}
+	else
+	{
+		for (uint32_t i = 0; i < ctx->itemWords; ++i)
+			ctx->mmwrite(ctx->mmCtx, 1 + i, ((uint32_t*)item)[i]);
+	}
 	ctx->mmwrite(ctx->mmCtx, 0, itemOffset); // push to block ram cmd
 }
 
@@ -315,6 +322,7 @@ static int tiny_cuckoo_update_insert_by_moving(TinyCuckooContext* ctx, uint32_t*
 		item->valid = 1;
 		memcpy(item->key, key, ctx->keyWords * 4ull);
 		memcpy(item->key + ctx->keyWords, value, ctx->valueWords * 4ull);
+		tiny_cuckoo_item_write(ctx, item);
 	}
 
 	tiny_cuckoo_free_jobs(&uctx);
@@ -356,6 +364,7 @@ int tiny_cuckoo_remove(TinyCuckooContext* ctx, uint32_t* key)
 	if (item)
 	{
 		item->valid = 0;
+		tiny_cuckoo_item_write(ctx, item);
 		return 1;
 	}
 	return 0;
@@ -367,3 +376,25 @@ void tiny_cuckoo_destroy(TinyCuckooContext* ctx)
 	ctx->free(ctx, sizeof(TinyCuckooContext) + tableWords * 4ull);
 }
 
+void* tiny_cuckoo_iterate(TinyCuckooContext* ctx, void* iterator, uint32_t* key, uint32_t* value)
+{
+	uint32_t* end = ctx->items + ctx->capacity * ctx->itemWords;
+	uint32_t* it = iterator;
+	
+	if (it)
+		it += ctx->itemWords;
+	else
+		it = ctx->items;
+
+	while (it != end && !*it)
+		it += ctx->itemWords;
+	
+	if(it == end)
+		return NULL;
+
+	if (key)
+		memcpy(key, it + 1, ctx->keyWords * 4);
+	if (value)
+		memcpy(value, it + 1 + ctx->keyWords, ctx->valueWords * 4);
+	return it;
+}

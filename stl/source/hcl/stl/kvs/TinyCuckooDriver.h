@@ -46,3 +46,5 @@ uint32_t tiny_cuckoo_get_hashwidth(TinyCuckooContext* ctx);
 int tiny_cuckoo_update(TinyCuckooContext* ctx, uint32_t* key, uint32_t* value);
 uint32_t* tiny_cuckoo_lookup(TinyCuckooContext* ctx, uint32_t* key);
 int tiny_cuckoo_remove(TinyCuckooContext* ctx, uint32_t* key);
+
+void* tiny_cuckoo_iterate(TinyCuckooContext* ctx, void* iterator, uint32_t* key, uint32_t* value);
