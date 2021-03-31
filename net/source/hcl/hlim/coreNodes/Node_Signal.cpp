@@ -61,15 +61,12 @@ std::string Node_Signal::attemptInferOutputName(size_t outputPort) const
     if (underscorePos == std::string::npos)
         return m_name + "_2";
 
-    std::string potentialDigits(m_name.begin()+underscorePos+1, m_name.end());
+    std::string potentialDigits(m_name.begin() + underscorePos + 1, m_name.end());
 
-    unsigned digits;
-    try {
-        digits = std::stoul(potentialDigits);
-    } catch (...) {
-        // not a digit
+    char* end;
+    unsigned digits = std::strtoul(potentialDigits.c_str(), &end, 10);
+    if(end != potentialDigits.c_str() + potentialDigits.size())
         return m_name + "_2";
-    }
 
     return std::string(m_name.begin(), m_name.begin()+underscorePos) + std::to_string(digits+1);
 }
