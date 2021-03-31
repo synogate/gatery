@@ -124,23 +124,30 @@ namespace hcl::stl
 		HCL_NAMED(item0);
 
 		Out ret;
-		ret.value = item0.value;
-		ret.found = item0.valid & item0.key == key;
-		setName(ret, "ret_tbl_0");
+		{
+			GroupScope entity(GroupScope::GroupType::ENTITY);
+			entity.setName("table");
+
+			ret.value = item0.value;
+			ret.found = item0.valid & item0.key == key;
+			HCL_NAMED(ret);
+		}
 
 		for (size_t i = 1; i < m_tables.size(); ++i)
 		{
-			Item item = m_tables[i][hash(hashSel[i])];
-			//HCL_NAMED(item);
-			setName(item, (boost::format("item_tbl_%d") % i).str());
+			GroupScope entity(GroupScope::GroupType::ENTITY);
+			entity.setName("table");
 
-			IF(item.key == key)
+			Item item = m_tables[i][hash(hashSel[i])];
+			HCL_NAMED(item);
+
+			IF(item.valid & item.key == key)
 			{
 				ret.value = item.value;
 				ret.found = '1';
 			}
+			HCL_NAMED(ret);
 		}
-		HCL_NAMED(ret);
 		return ret;
 	}
 
