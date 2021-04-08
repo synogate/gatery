@@ -1,3 +1,3 @@
 #### Gatery
 
-This is the repository of the gatery library which is supposed to be used as a git submodule in gatery project repositories.
+This is the repository of Gatery, a library for circuit design. Visit https://synogate.com/gatery.html for details.
