@@ -64,10 +64,11 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLev
 #define buildOperatorTest(op)                                                                               \
     {                                                                                                       \
         BVec c = a op b;                                                                                    \
+        auto pinC = pinOut(c);                                                                              \
                                                                                                             \
         addSimulationProcess([=, this, &clock, &x, &y]()->SimProcess {                                      \
             while (true) {                                                                                  \
-                DefaultBitVectorState state = sim(c);                                                       \
+                DefaultBitVectorState state = sim(pinC);                                                    \
                                                                                                             \
                 BOOST_TEST(allDefinedNonStraddling(state, 0, bitsize));                                     \
                 auto v = state.extractNonStraddling(DefaultConfig::VALUE, 0, bitsize);                      \
@@ -99,10 +100,10 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLev
     {                                                                                                       \
         BVec c = a;                                                                                         \
         c op b;                                                                                             \
-                                                                                                            \
+        auto pinC = pinOut(c);                                                                              \
         addSimulationProcess([=, this, &clock, &x, &y]()->SimProcess {                                      \
             while (true) {                                                                                  \
-                DefaultBitVectorState state = sim(c);                                                       \
+                DefaultBitVectorState state = sim(pinC);                                                    \
                                                                                                             \
                 BOOST_TEST(allDefinedNonStraddling(state, 0, bitsize));                                     \
                 auto v = state.extractNonStraddling(DefaultConfig::VALUE, 0, bitsize);                      \
