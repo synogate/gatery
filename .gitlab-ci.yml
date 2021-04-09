@@ -24,10 +24,7 @@ configure-job-windows:
   tags: 
     - windows
   script:
-    - rm -Force -Recurse -ErrorAction Ignore .\build\
-    - mkdir build
-    - cd build
-    - cmake ..
+    - cmake .
   artifacts:
     paths:
       - build/
