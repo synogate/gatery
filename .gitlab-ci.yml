@@ -56,19 +56,33 @@ documentation-job:
   only:
     - master
 
-test-job-frontend:
+test-linux-frontend:
   stage: test
+  tags:
+    - linux
   script:
     - cd build
     - frontend/unitTests/unitTestCore
-  dependencies:
-    - build-job-linux
 
-test-job-stl:
+test-linux-stl:
   stage: test
+  tags:
+    - linux
   script:
     - cd build
     - stl/unitTests/unitTestSTL
-  dependencies:
-    - build-job-linux
+
+test-windows-frontend:
+  stage: test
+  tags:
+    - windows
+  script:
+    - .\build\frontend\unitTests\Debug\unitTestCore.exe
+
+test-windows-stl:
+  stage: test
+  tags:
+    - windows
+  script:
+    - .\build\stl\unitTests\Debug\unitTestSTL.exe
 
