@@ -24,7 +24,7 @@ configure-job-windows:
   tags: 
     - windows
   script:
-    - rm -Force -Recurse .\build\
+    - rm -Force -Recurse -ErrorAction Ignore .\build\
     - mkdir build
     - cd build
     - cmake ..
