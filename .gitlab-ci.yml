@@ -19,16 +19,6 @@ configure-job-linux:
     paths:
       - build/
 
-configure-job-windows:
-  stage: configure
-  tags: 
-    - windows
-  script:
-    - cmake . -DCMAKE_TOOLCHAIN_FILE=C:/gitlab-runner/vcpkg/scripts/buildsystems/vcpkg.cmake
-  artifacts:
-    paths:
-      - build/
-
 build-job-linux:
   stage: build
   tags:
@@ -42,14 +32,13 @@ build-job-linux:
     paths:
       - build/
 
-build-job-windows:
+build-windows:
   stage: build
   tags:
     - windows
   script:
+    - cmake . -DCMAKE_TOOLCHAIN_FILE=C:/gitlab-runner/vcpkg/scripts/buildsystems/vcpkg.cmake
     - cmake --build .
-  dependencies:
-    - configure-job-windows
   artifacts:
     paths:
       - build/
