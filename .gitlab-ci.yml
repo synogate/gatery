@@ -8,7 +8,8 @@ stages:
 
 configure-job-linux:
   stage: configure
-  tags: linux
+  tags: 
+    - linux
   script:
     - rm -Rf build
     - mkdir build
@@ -20,7 +21,8 @@ configure-job-linux:
 
 configure-job-windows:
   stage: configure
-  tags: windows
+  tags: 
+    - windows
   script:
     - rd /S /Q build
     - md build
