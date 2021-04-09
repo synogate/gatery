@@ -24,18 +24,32 @@ configure-job-windows:
   tags: 
     - windows
   script:
-    - cmake .
+    - cmake . -DCMAKE_TOOLCHAIN_FILE=C:/gitlab-runner/vcpkg/scripts/buildsystems/vcpkg.cmake
   artifacts:
     paths:
       - build/
 
-build-job:
+build-job-linux:
   stage: build
+  tags:
+    - linux
   script:
     - cd build
     - make -j 8
   dependencies:
     - configure-job-linux
+  artifacts:
+    paths:
+      - build/
+
+build-job-windows:
+  stage: build
+  tags:
+    - windows
+  script:
+    - cmake --build .
+  dependencies:
+    - configure-job-windows
   artifacts:
     paths:
       - build/
@@ -56,7 +70,7 @@ test-job-frontend:
     - cd build
     - frontend/unitTests/unitTestCore
   dependencies:
-    - build-job
+    - build-job-linux
 
 test-job-stl:
   stage: test
@@ -64,5 +78,5 @@ test-job-stl:
     - cd build
     - stl/unitTests/unitTestSTL
   dependencies:
-    - build-job
+    - build-job-linux
 
