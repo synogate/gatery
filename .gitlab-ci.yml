@@ -1,33 +1,18 @@
 
 stages:
-  - configure
   - build
   - test
   - deploy
 
-
-configure-job-linux:
-  stage: configure
-  tags: 
+linux-build-job:
+  stage: build
+  tags:
     - linux
   script:
     - rm -Rf build
     - mkdir build
     - cd build
-    - cmake ..
-  artifacts:
-    paths:
-      - build/
-
-build-job-linux:
-  stage: build
-  tags:
-    - linux
-  script:
-    - cd build
-    - make -j 8
-  dependencies:
-    - configure-job-linux
+    - make -j 4
   artifacts:
     paths:
       - build/
@@ -47,12 +32,12 @@ build-windows:
       - build/
 
 documentation-job:
-  stage: configure
+  stage: build
   script:
     - doxygen doc/Doxyfile
     # commented out because it fails the build due to missing permissions
-    # - rm -rf /mnt/doxygenDocu/tech/doxygenDocu/gatery/*
-    # - mv doc/gen/html/ /mnt/doxygenDocu/tech/doxygenDocu/gatery
+    - rm -rf /mnt/doxygenDocu/gatery/*
+    - mv doc/gen/html/ /mnt/doxygenDocu/gatery
   only:
     - master
 
