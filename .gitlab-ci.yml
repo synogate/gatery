@@ -37,7 +37,9 @@ build-windows:
   tags:
     - windows
   script:
-    - cmake . -DCMAKE_TOOLCHAIN_FILE=C:/gitlab-runner/vcpkg/scripts/buildsystems/vcpkg.cmake
+    - mkdir build
+    - cd build
+    - cmake .. -DCMAKE_TOOLCHAIN_FILE=C:/gitlab-runner/vcpkg/scripts/buildsystems/vcpkg.cmake
     - cmake --build .
   artifacts:
     paths:
