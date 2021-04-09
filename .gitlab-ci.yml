@@ -24,8 +24,8 @@ configure-job-windows:
   tags: 
     - windows
   script:
-    - rd /S /Q build
-    - md build
+    - rm -Force -Recurse .\build\
+    - mkdir build
     - cd build
     - cmake ..
   artifacts:
