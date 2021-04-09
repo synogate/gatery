@@ -38,7 +38,7 @@ build-job:
     - cd build
     - make -j 8
   dependencies:
-    - configure-job
+    - configure-job-linux
   artifacts:
     paths:
       - build/
