@@ -6,11 +6,24 @@ stages:
   - deploy
 
 
-configure-job:
+configure-job-linux:
   stage: configure
+  tags: linux
   script:
     - rm -Rf build
     - mkdir build
+    - cd build
+    - cmake ..
+  artifacts:
+    paths:
+      - build/
+
+configure-job-windows:
+  stage: configure
+  tags: windows
+  script:
+    - rd /S /Q build
+    - md build
     - cd build
     - cmake ..
   artifacts:
