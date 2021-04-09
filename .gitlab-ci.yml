@@ -37,6 +37,7 @@ build-windows:
   tags:
     - windows
   script:
+    - if(Test-Path .\build\) { rm -Force -Recurse .\build\ }
     - mkdir build
     - cd build
     - cmake .. -DCMAKE_TOOLCHAIN_FILE=C:/gitlab-runner/vcpkg/scripts/buildsystems/vcpkg.cmake
