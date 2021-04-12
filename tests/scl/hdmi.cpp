@@ -20,8 +20,8 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
-#include <hcl/stl/io/HDMITransmitter.h>
-#include <hcl/stl/utils/BitCount.h>
+#include <hcl/scl/io/HDMITransmitter.h>
+#include <hcl/scl/utils/BitCount.h>
 
 #include <hcl/frontend.h>
 #include <hcl/simulation/UnitTestSimulationFixture.h>

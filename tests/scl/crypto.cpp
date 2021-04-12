@@ -27,16 +27,16 @@
 #include <hcl/simulation/UnitTestSimulationFixture.h>
 #include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
 
-#include <hcl/stl/crypto/sha1.h>
-#include <hcl/stl/crypto/sha2.h>
-#include <hcl/stl/crypto/md5.h>
-#include <hcl/stl/crypto/SipHash.h>
-#include <hcl/stl/crypto/TabulationHashing.h>
-#include <hcl/stl/driver_utils.h>
+#include <hcl/scl/crypto/sha1.h>
+#include <hcl/scl/crypto/sha2.h>
+#include <hcl/scl/crypto/md5.h>
+#include <hcl/scl/crypto/SipHash.h>
+#include <hcl/scl/crypto/TabulationHashing.h>
+#include <hcl/scl/driver_utils.h>
 
 extern "C"
 {
-#include <hcl/stl/crypto/TabulationHashingDriver.h>
+#include <hcl/scl/crypto/TabulationHashingDriver.h>
 }
 
 using namespace boost::unit_test;

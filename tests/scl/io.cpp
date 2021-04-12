@@ -24,7 +24,7 @@
 #include <hcl/frontend.h>
 #include <hcl/simulation/UnitTestSimulationFixture.h>
 
-#include <hcl/stl/io/uart.h>
+#include <hcl/scl/io/uart.h>
 
 #include <iostream>
 

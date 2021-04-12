@@ -21,8 +21,8 @@
 #include <boost/test/data/monomorphic.hpp>
 
 
-#include <hcl/stl/utils/BitCount.h>
-#include <hcl/stl/utils/OneHot.h>
+#include <hcl/scl/utils/BitCount.h>
+#include <hcl/scl/utils/OneHot.h>
 #include <hcl/utils/BitManipulation.h>
 
 

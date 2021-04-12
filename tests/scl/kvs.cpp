@@ -31,12 +31,12 @@
 
 #include <random>
 
-#include <hcl/stl/driver_utils.h>
-#include <hcl/stl/kvs/TinyCuckoo.h>
+#include <hcl/scl/driver_utils.h>
+#include <hcl/scl/kvs/TinyCuckoo.h>
 
 extern "C"
 {
-#include <hcl/stl/kvs/TinyCuckooDriver.h>
+#include <hcl/scl/kvs/TinyCuckooDriver.h>
 }
 
 using namespace boost::unit_test;
