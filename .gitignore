@@ -5,6 +5,7 @@ obj
 *.dot
 *.svg
 
+.vscode
 .vs
 *.sln
 *.user

@@ -14,9 +14,6 @@ function GateryWorkspaceDefaults()
         runtime "Release"
         optimize "On"
 
-    filter "system:windows"
-        defines "NOMINMAX"
-
     filter "system:linux"
         buildoptions { "-std=c++2a", "-fcoroutines" }
 
@@ -38,10 +35,18 @@ project "gatery"
         "hcl/scl/**.cpp", "hcl/scl/**.c", "hcl/scl/**.h",
         "hcl/simulation/**.cpp", "hcl/simulation/**.c", "hcl/simulation/**.h",
         "hcl/utils/**.cpp", "hcl/utils/**.c", "hcl/utils/**.h",
+        "hcl/*"
     }
+
+    pchsource "hcl/pch.cpp"
+    pchheader "hcl/pch.h"
 
     includedirs "%{prj.location}/"
     GateryProjectDefaults()
+
+    filter "files:**.c"
+        flags {"NoPCH"}
+
 
 require('vstudio')
 

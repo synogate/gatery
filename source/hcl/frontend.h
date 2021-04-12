@@ -17,6 +17,8 @@
 */
 #pragma once
 
+#include "pch.h"
+
 #include "frontend/Bit.h"
 #include "frontend/BitVector.h"
 #include "frontend/BitWidth.h"
@@ -46,14 +48,3 @@
 #include "frontend/SignalMiscOp.h"
 #include "frontend/SimSigHandle.h"
 #include "frontend/Vector.h"
-
-/**
- * @brief
- * @details
- */
-namespace hcl::core::frontend { }
-
-namespace hcl
-{
-	using namespace core::frontend;
-}
