@@ -17,9 +17,9 @@
 */
 #include "Adder.h"
 
-template class hcl::stl::Adder<hcl::BVec>;
+template class hcl::scl::Adder<hcl::BVec>;
 
-hcl::stl::CarrySafeAdder& hcl::stl::CarrySafeAdder::add(const BVec& b)
+hcl::scl::CarrySafeAdder& hcl::scl::CarrySafeAdder::add(const BVec& b)
 {
 	if (m_count == 0)
 		m_sum = b;
@@ -35,7 +35,7 @@ hcl::stl::CarrySafeAdder& hcl::stl::CarrySafeAdder::add(const BVec& b)
 	return *this;
 }
 
-hcl::BVec hcl::stl::CarrySafeAdder::sum() const
+hcl::BVec hcl::scl::CarrySafeAdder::sum() const
 {
 	if (m_count <= 1)
 		return m_sum;

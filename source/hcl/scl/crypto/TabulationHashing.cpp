@@ -17,15 +17,15 @@
 */
 #include "TabulationHashing.h"
 
-namespace hcl::stl
+namespace hcl::scl
 {
 
-	hcl::stl::TabulationHashing::TabulationHashing(BitWidth hashWidth) :
+	hcl::scl::TabulationHashing::TabulationHashing(BitWidth hashWidth) :
 		m_hashWidth(hashWidth)
 	{
 	}
 
-	TabulationHashing& hcl::stl::TabulationHashing::hashWidth(BitWidth width)
+	TabulationHashing& hcl::scl::TabulationHashing::hashWidth(BitWidth width)
 	{
 		HCL_ASSERT_HINT(m_tables.empty(), "invalid state");
 
@@ -33,7 +33,7 @@ namespace hcl::stl
 		return *this;
 	}
 
-	TabulationHashing& hcl::stl::TabulationHashing::symbolWidth(BitWidth width)
+	TabulationHashing& hcl::scl::TabulationHashing::symbolWidth(BitWidth width)
 	{
 		HCL_ASSERT_HINT(m_tables.empty(), "invalid state");
 
@@ -41,7 +41,7 @@ namespace hcl::stl
 		return *this;
 	}
 
-	BVec hcl::stl::TabulationHashing::operator()(const BVec& data)
+	BVec hcl::scl::TabulationHashing::operator()(const BVec& data)
 	{
 		HCL_ASSERT_HINT(m_tables.empty(), "invalid state");
 

@@ -17,7 +17,7 @@
 */
 #include "Avalon.h"
 
-namespace hcl::stl
+namespace hcl::scl
 {
 	AvalonNetworkSection::AvalonNetworkSection(std::string name) :
 		m_name(std::move(name))

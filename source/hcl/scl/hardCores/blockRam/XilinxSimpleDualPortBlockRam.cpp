@@ -24,7 +24,7 @@
 
 #include <string_view>
 
-namespace hcl::stl::blockram {
+namespace hcl::scl::blockram {
 
 using namespace hlim;
 

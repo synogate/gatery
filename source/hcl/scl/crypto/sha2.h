@@ -20,7 +20,7 @@
 #include "HashEngine.h"
 #include "../Adder.h"
 
-namespace hcl::stl
+namespace hcl::scl
 {
 	template<typename TAdder = CarrySafeAdder>
 	struct Sha2_256

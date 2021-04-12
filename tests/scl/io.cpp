@@ -48,7 +48,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
         auto rx = pinIn().setName("inRx");
         sim_tap((Bit)rx);
 
-        hcl::stl::UART uart;
+        hcl::scl::UART uart;
         uart.baudRate = baudRate;
 
 

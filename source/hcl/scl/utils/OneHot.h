@@ -22,7 +22,7 @@
 
 #include "../Stream.h"
 
-namespace hcl::stl
+namespace hcl::scl
 {
 	struct OneHot : BVec
 	{
@@ -87,4 +87,4 @@ namespace hcl::stl
 
 }
 
-BOOST_HANA_ADAPT_STRUCT(hcl::stl::EncoderResult, index, valid);
+BOOST_HANA_ADAPT_STRUCT(hcl::scl::EncoderResult, index, valid);

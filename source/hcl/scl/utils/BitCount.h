@@ -22,7 +22,7 @@
 
 #include <iostream>
 
-namespace hcl::stl {
+namespace hcl::scl {
  
 BVec bitcount(BVec vec);
     

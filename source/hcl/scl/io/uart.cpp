@@ -17,7 +17,7 @@
 */
 #include "uart.h"
 
-namespace hcl::stl {
+namespace hcl::scl {
 
 UART::Stream UART::recieve(Bit rx)
 {

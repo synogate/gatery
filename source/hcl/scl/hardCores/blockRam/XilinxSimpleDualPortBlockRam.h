@@ -24,7 +24,7 @@
 
 #include <vector>
 
-namespace hcl::stl::blockram {
+namespace hcl::scl::blockram {
 /*
 class XilinxSimpleDualPortBlockRam : public hlim::Node_External
 {

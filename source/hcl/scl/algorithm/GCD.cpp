@@ -20,7 +20,7 @@
 using namespace hcl;
 
 
-hcl::stl::StreamSource<hcl::stl::BVecPair> hcl::stl::binaryGCDStep1(StreamSink<BVecPair>& in, size_t iterationsPerClock)
+hcl::scl::StreamSource<hcl::scl::BVecPair> hcl::scl::binaryGCDStep1(StreamSink<BVecPair>& in, size_t iterationsPerClock)
 {
     const size_t width = in.first.getWidth();
     StreamSource<BVecPair> out(BVec{ width }, BVec{ width });
@@ -82,7 +82,7 @@ hcl::stl::StreamSource<hcl::stl::BVecPair> hcl::stl::binaryGCDStep1(StreamSink<B
     return out;
 }
 
-hcl::stl::StreamSource<hcl::BVec> hcl::stl::shiftLeft(StreamSink<BVecPair>& in, size_t iterationsPerClock)
+hcl::scl::StreamSource<hcl::BVec> hcl::scl::shiftLeft(StreamSink<BVecPair>& in, size_t iterationsPerClock)
 {
     Register<BVec> a{ BitWidth{in.first.getWidth()} };
     Register<BVec> b{ BitWidth{in.second.getWidth()} };
@@ -119,7 +119,7 @@ hcl::stl::StreamSource<hcl::BVec> hcl::stl::shiftLeft(StreamSink<BVecPair>& in, 
     return out;
 }
 
-hcl::stl::StreamSource<hcl::BVec> hcl::stl::binaryGCD(StreamSink<BVecPair>& in, size_t iterationsPerClock)
+hcl::scl::StreamSource<hcl::BVec> hcl::scl::binaryGCD(StreamSink<BVecPair>& in, size_t iterationsPerClock)
 {
     GroupScope entity(GroupScope::GroupType::ENTITY);
     entity

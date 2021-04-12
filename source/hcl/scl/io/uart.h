@@ -19,7 +19,7 @@
 
 #include <hcl/frontend.h>
 
-namespace hcl::stl {
+namespace hcl::scl {
 
 struct UART
 {

@@ -21,7 +21,7 @@
 
 #include "../Stream.h"
 
-namespace hcl::stl {
+namespace hcl::scl {
 
     enum class PortConflict
     {
@@ -211,4 +211,4 @@ namespace hcl::stl {
 
 }
 
-BOOST_HANA_ADAPT_STRUCT(hcl::stl::WritePort, address, writeData);
+BOOST_HANA_ADAPT_STRUCT(hcl::scl::WritePort, address, writeData);

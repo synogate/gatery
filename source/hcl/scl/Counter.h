@@ -18,7 +18,7 @@
 #pragma once
 #include <hcl/frontend.h>
 
-namespace hcl::stl
+namespace hcl::scl
 {
 	class Counter
 	{

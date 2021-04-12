@@ -17,7 +17,7 @@
 */
 #include "DisplaySync.h"
 
-namespace hcl::stl
+namespace hcl::scl
 {
 	namespace DisplayModeLines
 	{

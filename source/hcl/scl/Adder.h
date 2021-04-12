@@ -18,7 +18,7 @@
 #pragma once
 #include <hcl/frontend.h>
 
-namespace hcl::stl
+namespace hcl::scl
 {
 	template<typename TVec = BVec>
 	class Adder
@@ -52,7 +52,7 @@ namespace hcl::stl
 
 	};
 
-	extern template class hcl::stl::Adder<hcl::BVec>;
+	extern template class hcl::scl::Adder<hcl::BVec>;
 
 	class CarrySafeAdder
 	{

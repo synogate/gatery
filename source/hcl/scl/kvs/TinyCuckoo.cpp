@@ -20,7 +20,7 @@
 
 #include <hcl/simulation/BitVectorState.h>
 
-namespace hcl::stl
+namespace hcl::scl
 {
 	template class TinyCuckoo<BVec, BVec>;
 

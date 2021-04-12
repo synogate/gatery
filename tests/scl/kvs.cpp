@@ -61,7 +61,7 @@ BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, TinyCookuTableLookup
     InputPins updateItemKey = pinIn(keySize).setName("updateItemKey");
     InputPins updateItemValue = pinIn(8_b).setName("updateItemValue");
     
-    stl::TinyCuckooIn params = {
+    scl::TinyCuckooIn params = {
         .key = lookupKey,
         .hash = lookupKey,
         .userData = 0,
@@ -78,7 +78,7 @@ BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, TinyCookuTableLookup
         .numTables = size_t(numTables),
     };
     HCL_NAMED(params);
-    stl::TinyCuckooOut result = stl::tinyCuckoo(params);
+    scl::TinyCuckooOut result = scl::tinyCuckoo(params);
 
     OutputPin outFound = pinOut(result.found).setName("found");
     OutputPins outValue = pinOut(result.value).setName("value");
@@ -192,7 +192,7 @@ BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, TinyCuckooTableLooku
     const BitWidth keySize{ size_t(numTables * 10) };
     InputPins lookupKey = pinIn(keySize).setName("key");
 
-    stl::TinyCuckoo<BVec, BVec> tc{ size_t(numTables * 1024), keySize, 4_b, size_t(numTables) };
+    scl::TinyCuckoo<BVec, BVec> tc{ size_t(numTables * 1024), keySize, 4_b, size_t(numTables) };
     BOOST_TEST(keySize.value == tc.hashWidth().value);
 
     auto cuckooPoo = tc(lookupKey, lookupKey);
@@ -200,7 +200,7 @@ BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, TinyCuckooTableLooku
     pinOut(cuckooPoo.found).setName("out_found");
     pinOut(cuckooPoo.value).setName("out_value");
 
-    stl::AvalonNetworkSection net;
+    scl::AvalonNetworkSection net;
     tc.addCpuInterface(net);
     net.assignPins();
     
@@ -227,7 +227,7 @@ BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, TinyCuckooTableLooku
     const BitWidth keySize{ size_t(numTables * 10) };
     InputPins lookupKey = pinIn(keySize).setName("key");
 
-    stl::TinyCuckoo<BVec, BVec> tc{ size_t(numTables * 1024), keySize, 4_b, size_t(numTables) };
+    scl::TinyCuckoo<BVec, BVec> tc{ size_t(numTables * 1024), keySize, 4_b, size_t(numTables) };
     BOOST_TEST(keySize.value == tc.hashWidth().value);
 
     auto cuckooPoo = tc(lookupKey, lookupKey);
@@ -235,9 +235,9 @@ BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, TinyCuckooTableLooku
     pinOut(cuckooPoo.found).setName("out_found");
     pinOut(cuckooPoo.value).setName("out_value");
 
-    stl::AvalonNetworkSection net;
+    scl::AvalonNetworkSection net;
     tc.addCpuInterface(net);
-    stl::AvalonMM ctrl = net.demux();
+    scl::AvalonMM ctrl = net.demux();
     net.clear();
 
     ctrl.pinIn("ctrl");

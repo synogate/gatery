@@ -19,7 +19,7 @@
 #include <hcl/frontend.h>
 #include <optional>
 
-namespace hcl::stl
+namespace hcl::scl
 {
     template<typename Payload>
     struct Stream : Payload

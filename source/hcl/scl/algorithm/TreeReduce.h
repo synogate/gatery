@@ -25,7 +25,7 @@
 #include <vector>
 
 
-namespace hcl::stl
+namespace hcl::scl
 {
     
     template<typename Signal>

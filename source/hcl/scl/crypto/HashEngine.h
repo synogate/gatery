@@ -20,7 +20,7 @@
 
 #include "../Counter.h"
 
-namespace hcl::stl
+namespace hcl::scl
 {
 	template<typename THash>
 	class HashEngine

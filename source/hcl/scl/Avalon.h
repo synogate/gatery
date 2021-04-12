@@ -24,7 +24,7 @@
 #include <variant>
 #include <iostream>
 
-namespace hcl::stl
+namespace hcl::scl
 {
     struct AvalonMM
     {
@@ -176,4 +176,4 @@ namespace hcl::stl
     }
 }
 
-BOOST_HANA_ADAPT_STRUCT(hcl::stl::AvalonMM, address, ready, read, write, writeData, readData, readDataValid, readLatency, readyLatency, addressSel, dataSel);
+BOOST_HANA_ADAPT_STRUCT(hcl::scl::AvalonMM, address, ready, read, write, writeData, readData, readDataValid, readLatency, readyLatency, addressSel, dataSel);

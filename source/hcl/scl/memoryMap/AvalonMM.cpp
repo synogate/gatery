@@ -17,7 +17,7 @@
 */
 #include "AvalonMM.h"
 
-namespace hcl::stl
+namespace hcl::scl
 {
 	AvalonMMSlave::AvalonMMSlave(BitWidth addrWidth, BitWidth dataWidth) :
 		address(addrWidth),

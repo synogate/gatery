@@ -18,7 +18,7 @@
 #pragma once
 #include "MemoryMap.h"
 
-namespace hcl::stl
+namespace hcl::scl
 {
 	class AvalonMMSlave : public MemoryMap
 	{
@@ -48,4 +48,4 @@ namespace hcl::stl
 	void pinIn(AvalonMMSlave& avmm, std::string prefix);
 }
 
-BOOST_HANA_ADAPT_STRUCT(hcl::stl::AvalonMMSlave, address, write, writeData, readData);
+BOOST_HANA_ADAPT_STRUCT(hcl::scl::AvalonMMSlave, address, write, writeData, readData);

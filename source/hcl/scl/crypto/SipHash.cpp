@@ -17,7 +17,7 @@
 */
 #include "SipHash.h"
 
-namespace hcl::stl
+namespace hcl::scl
 {
 	SipHash::SipHash(size_t messageWordRounds, size_t finalizeRounds, size_t hashWidth) :
 		m_messageWordRounds(messageWordRounds),

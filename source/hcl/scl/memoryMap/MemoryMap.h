@@ -18,7 +18,7 @@
 #pragma once
 #include <hcl/frontend.h>
 
-namespace hcl::stl
+namespace hcl::scl
 {
 	class MemoryMap
 	{
@@ -68,7 +68,7 @@ namespace hcl::stl
 		size_t m_flags = F_READ | F_WRITE;
 	};
 
-	inline Bit hcl::stl::MemoryMap::add(Bit& value, RegDesc desc)
+	inline Bit hcl::scl::MemoryMap::add(Bit& value, RegDesc desc)
 	{
 		if (m_flags == (F_READ | F_WRITE))
 			return rw(value, desc);
@@ -82,7 +82,7 @@ namespace hcl::stl
 		return '0';
 	}
 
-	inline Bit stl::MemoryMap::add(BVec& value, RegDesc desc)
+	inline Bit scl::MemoryMap::add(BVec& value, RegDesc desc)
 	{
 		if (m_flags == (F_READ | F_WRITE))
 			return rw(value, desc);
@@ -147,7 +147,7 @@ namespace hcl::stl
 	}
 
 	template<typename T>
-	inline void stl::MemoryMap::stage(std::vector<Memory<T>>& mems)
+	inline void scl::MemoryMap::stage(std::vector<Memory<T>>& mems)
 	{
 		if (mems.empty())
 			return;

@@ -17,7 +17,7 @@
 */
 #include "OBUFDS.h"
 
-namespace hcl::stl::arch::xilinx {
+namespace hcl::scl::arch::xilinx {
 
 OBUFDS::OBUFDS()
 {

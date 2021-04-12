@@ -21,7 +21,7 @@
 
 #include "../Stream.h"
 
-namespace hcl::stl
+namespace hcl::scl
 {
 	using BVecPair = std::pair<BVec, BVec>;
 

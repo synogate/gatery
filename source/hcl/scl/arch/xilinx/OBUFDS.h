@@ -19,7 +19,7 @@
 
 #include <hcl/hlim/supportNodes/Node_External.h>
 
-namespace hcl::stl::arch::xilinx {
+namespace hcl::scl::arch::xilinx {
 
 class OBUFDS : public hcl::hlim::Node_External
 {

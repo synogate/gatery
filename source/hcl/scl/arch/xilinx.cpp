@@ -23,7 +23,7 @@
 #include <hcl/hlim/coreNodes/Node_Pin.h>
 #include <hcl/hlim/coreNodes/Node_Rewire.h>
 
-namespace hcl::stl {
+namespace hcl::scl {
 
 void handleDifferentialPin(hlim::Circuit &circuit, const XilinxSettings &settings, hlim::Node_Pin *pin)
 {

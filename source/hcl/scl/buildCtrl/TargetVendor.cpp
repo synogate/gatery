@@ -17,7 +17,7 @@
 */
 #include "TargetVendor.h"
 
-namespace hcl::stl::buildCtrl {
+namespace hcl::scl::buildCtrl {
 
 TargetVendor::TargetVendor(Vendor vendor) : BaseScope<TargetVendor>()
 {

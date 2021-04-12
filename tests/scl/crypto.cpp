@@ -50,7 +50,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundA, hcl::sim::UnitTestSimulationFixture)
 	BVec msgBlock = "512x0";
 	msgBlock.msb() = '1';
 
-	stl::Sha1Generator<> sha1, sha1ref;
+	scl::Sha1Generator<> sha1, sha1ref;
 	sha1.beginBlock(msgBlock);
 	sim_assert(sha1.w[0] == "x80000000") << "w0";
 
@@ -80,7 +80,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundB, hcl::sim::UnitTestSimulationFixture)
 	BVec msgBlock = "512x0";
 	msgBlock.msb() = '1';
 
-	stl::Sha1Generator<> sha1, sha1ref;
+	scl::Sha1Generator<> sha1, sha1ref;
 	sha1.beginBlock(msgBlock);
 	sim_assert(sha1.w[0] == "x80000000") << "w0";
 
@@ -110,7 +110,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundC, hcl::sim::UnitTestSimulationFixture)
 	BVec msgBlock = "512x0";
 	msgBlock.msb() = '1';
 
-	stl::Sha1Generator<> sha1, sha1ref;
+	scl::Sha1Generator<> sha1, sha1ref;
 	sha1.beginBlock(msgBlock);
 	sim_assert(sha1.w[0] == "x80000000") << "w0";
 
@@ -140,7 +140,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundD, hcl::sim::UnitTestSimulationFixture)
 	BVec msgBlock = "512x0";
 	msgBlock.msb() = '1';
 
-	stl::Sha1Generator<> sha1, sha1ref;
+	scl::Sha1Generator<> sha1, sha1ref;
 	sha1.beginBlock(msgBlock);
 	sim_assert(sha1.w[0] == "x80000000") << "w0";
 
@@ -170,10 +170,10 @@ BOOST_FIXTURE_TEST_CASE(Sha1, hcl::sim::UnitTestSimulationFixture)
 	BVec msgBlock = "512x0";
 	msgBlock.msb() = '1';
 
-	stl::Sha1Generator<> sha1;
+	scl::Sha1Generator<> sha1;
 
 	sha1.beginBlock(msgBlock);
-	stl::HashEngine<stl::Sha1Generator<>> sha1Engine(0, 0);
+	scl::HashEngine<scl::Sha1Generator<>> sha1Engine(0, 0);
 	sha1Engine.buildPipeline(sha1);
 	sha1.endBlock();
 
@@ -195,10 +195,10 @@ BOOST_FIXTURE_TEST_CASE(Sha2_256, hcl::sim::UnitTestSimulationFixture)
 	BVec msgBlock = "512x0";
 	msgBlock.msb() = '1';
 
-	stl::Sha2_256<> sha2;
+	scl::Sha2_256<> sha2;
 
 	sha2.beginBlock(msgBlock);
-	stl::HashEngine<stl::Sha2_256<>> sha2Engine(0, 0);
+	scl::HashEngine<scl::Sha2_256<>> sha2Engine(0, 0);
 	sha2Engine.buildPipeline(sha2);
 	sha2.endBlock();
 
@@ -261,7 +261,7 @@ BOOST_FIXTURE_TEST_CASE(Md5, hcl::sim::UnitTestSimulationFixture)
 	// create padded empty input
 	BVec msgBlock = "512x0";
 	msgBlock.msb() = '1';
-	stl::Md5Generator<> md5;
+	scl::Md5Generator<> md5;
 	md5.beginBlock(msgBlock);
 
 	md5ref refImpl;
@@ -304,10 +304,10 @@ BOOST_AUTO_TEST_CASE(SipHash64TestVisual)
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
 	ClockScope clockScope(clock);
 
-	stl::SipHash sip(2, 4);
+	scl::SipHash sip(2, 4);
 	sip.enableRegister(true);
 
-	stl::SipHashState state;
+	scl::SipHashState state;
 
 	BVec key = "x0F0E0D0C0B0A09080706050403020100";
 	sip.initialize(state, key);
@@ -384,10 +384,10 @@ BOOST_FIXTURE_TEST_CASE(SipHash64Test, hcl::sim::UnitTestSimulationFixture)
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
 	ClockScope clockScope(clock);
 
-	stl::SipHash sip(2, 4);
+	scl::SipHash sip(2, 4);
 	sip.enableRegister(true);
 
-	stl::SipHashState state;
+	scl::SipHashState state;
 
 	BVec key = "x0F0E0D0C0B0A09080706050403020100";
 	sip.initialize(state, key);
@@ -456,7 +456,7 @@ BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, hcl::sim::UnitTestSimulationFixture)
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
 	ClockScope clockScope(clock);
 
-	stl::SipHash sip;
+	scl::SipHash sip;
 
 	uint64_t blockVal = 0;
 	for (size_t i = 0; i < 7; ++i)
@@ -479,7 +479,7 @@ BOOST_FIXTURE_TEST_CASE(SipHash64HelperTest, hcl::sim::UnitTestSimulationFixture
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
 	ClockScope clockScope(clock);
 
-	auto [hash, latency] = stl::sipHash("x0100", "x0F0E0D0C0B0A09080706050403020100", false);
+	auto [hash, latency] = scl::sipHash("x0100", "x0F0E0D0C0B0A09080706050403020100", false);
 	BOOST_TEST(latency == 0);
 	sim_assert(hash == 0x0d6c8009d9a94f5a) << hash;
 
@@ -493,18 +493,18 @@ BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, hcl::sim::UnitTestSimulationFixtu
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000));
 	ClockScope clockScope(clock);
 
-	stl::TabulationHashing gen{ 16_b };
+	scl::TabulationHashing gen{ 16_b };
 	BVec data = pinIn(16_b).setName("data");
 	HCL_NAMED(data);
 	BVec hash = reg(gen(data));
 
-	stl::AvalonNetworkSection ports;
+	scl::AvalonNetworkSection ports;
 	gen.updatePorts(ports);
 	ports.assignPins();
 	pinOut(hash).setName("hash");
 
 	std::array<std::array<uint16_t, 256>, 2> reference;
-	std::array<stl::AvalonMM*, 2> mm = {{
+	std::array<scl::AvalonMM*, 2> mm = {{
 			&ports.find("table0"), &ports.find("table1")
 	}};
 
@@ -524,7 +524,7 @@ BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, hcl::sim::UnitTestSimulationFixtu
 			}
 			co_await WaitClk(clock);
 		}
-		for (stl::AvalonMM* p : mm)
+		for (scl::AvalonMM* p : mm)
 			simu(*p->write) = '0';
 
 		for (size_t i = 0; i < 16; ++i)

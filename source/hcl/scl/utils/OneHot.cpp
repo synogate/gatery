@@ -19,14 +19,14 @@
 
 using namespace hcl;
 
-hcl::stl::OneHot hcl::stl::decoder(const BVec& in)
+hcl::scl::OneHot hcl::scl::decoder(const BVec& in)
 {
     OneHot ret = BitWidth{ 1ull << in.size() };
     ret.setBit(in);
     return ret;
 }
 
-BVec hcl::stl::encoder(const OneHot& in)
+BVec hcl::scl::encoder(const OneHot& in)
 {
     BVec ret = BitWidth{ utils::Log2C(in.size()) };
 
@@ -37,7 +37,7 @@ BVec hcl::stl::encoder(const OneHot& in)
     return ret;
 }
 
-std::vector<hcl::stl::Stream<hcl::BVec>> hcl::stl::makeIndexList(const BVec& valids)
+std::vector<hcl::scl::Stream<hcl::BVec>> hcl::scl::makeIndexList(const BVec& valids)
 {
     std::vector<Stream<BVec>> ret(valids.size());
     for (size_t i = 0; i < valids.size(); ++i)
@@ -48,7 +48,7 @@ std::vector<hcl::stl::Stream<hcl::BVec>> hcl::stl::makeIndexList(const BVec& val
     return ret;
 }
 
-hcl::stl::EncoderResult hcl::stl::priorityEncoder(const BVec& in)
+hcl::scl::EncoderResult hcl::scl::priorityEncoder(const BVec& in)
 {
     if (in.empty())
         return { BVec(0_b), '0' };
@@ -62,13 +62,13 @@ hcl::stl::EncoderResult hcl::stl::priorityEncoder(const BVec& in)
     return { ret, in != 0 };
 }
 
-hcl::stl::EncoderResult hcl::stl::priorityEncoderTree(const BVec& in, bool registerStep, size_t bps)
+hcl::scl::EncoderResult hcl::scl::priorityEncoderTree(const BVec& in, bool registerStep, size_t bps)
 {
     const size_t stepBits = 1ull << bps;
     const size_t inBitsPerStep = utils::nextPow2((in.size() + stepBits - 1) / stepBits);
 
     if (inBitsPerStep <= 1)
-        return hcl::stl::priorityEncoder(in);
+        return hcl::scl::priorityEncoder(in);
 
     std::vector<EncoderResult> lowerStep;
     for (size_t i = 0; i < in.size(); i += inBitsPerStep)
@@ -110,7 +110,7 @@ hcl::stl::EncoderResult hcl::stl::priorityEncoderTree(const BVec& in, bool regis
     return out;
 }
 
-void hcl::stl::OneHot::setBit(const BVec& idx)
+void hcl::scl::OneHot::setBit(const BVec& idx)
 {
     // TODO: remove workaround false signal loop
     (BVec&)*this = 0;

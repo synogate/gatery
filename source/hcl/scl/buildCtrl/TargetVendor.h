@@ -19,7 +19,7 @@
 
 #include <hcl/frontend/Scope.h>
 
-namespace hcl::stl::buildCtrl {
+namespace hcl::scl::buildCtrl {
 
 class TargetVendor : public hcl::BaseScope<TargetVendor>
 {

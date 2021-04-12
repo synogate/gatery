@@ -23,7 +23,7 @@ namespace hcl::hlim {
     class Circuit;
 }
 
-namespace hcl::stl {
+namespace hcl::scl {
 
 struct XilinxSettings {
     enum Series {
