@@ -15,24 +15,11 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#include "pch.h"
 #include <boost/test/unit_test.hpp>
 #include <boost/test/data/dataset.hpp>
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
-
-#include <hcl/simulation/waveformFormats/VCDSink.h>
-
-#include <hcl/frontend.h>
-#include <hcl/utils.h>
-#include <hcl/simulation/UnitTestSimulationFixture.h>
-#include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
-
-#include <hcl/scl/crypto/sha1.h>
-#include <hcl/scl/crypto/sha2.h>
-#include <hcl/scl/crypto/md5.h>
-#include <hcl/scl/crypto/SipHash.h>
-#include <hcl/scl/crypto/TabulationHashing.h>
-#include <hcl/scl/driver_utils.h>
 
 extern "C"
 {

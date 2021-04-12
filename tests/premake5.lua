@@ -6,18 +6,23 @@ project "gatery-frontend-test"
     links "gatery"
     includedirs "%{prj.location}/../source"
 
+    pchheader "pch.h"
+    pchsource "frontend/pch.cpp"
+
     GateryProjectDefaults()
 
     defines "BOOST_TEST_DYN_LINK"
     filter "system:linux"
         links { "boost_unit_test_framework", "dl" }
 
-
-project "gatery-stl-test"
+project "gatery-scl-test"
     kind "ConsoleApp"
     files { "scl/**.cpp", "scl/**.h" }
     links "gatery"
     includedirs "%{prj.location}/../source"
+
+    pchheader "pch.h"
+    pchsource "scl/pch.cpp"
 
     GateryProjectDefaults()
 

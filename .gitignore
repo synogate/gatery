@@ -1,6 +1,10 @@
 ﻿bin
 obj
 
+*.vcd
+*.dot
+*.svg
+
 .vs
 *.sln
 *.user

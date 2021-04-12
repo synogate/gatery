@@ -15,18 +15,11 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#include "pch.h"
 #include <boost/test/unit_test.hpp>
 #include <boost/test/data/dataset.hpp>
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
-
-#include <hcl/scl/io/HDMITransmitter.h>
-#include <hcl/scl/utils/BitCount.h>
-
-#include <hcl/frontend.h>
-#include <hcl/simulation/UnitTestSimulationFixture.h>
-
-#include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
 
 
 using namespace boost::unit_test;
