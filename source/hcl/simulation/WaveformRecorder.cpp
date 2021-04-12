@@ -27,7 +27,7 @@
 
 #include <boost/format.hpp>
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 WaveformRecorder::WaveformRecorder(hlim::Circuit &circuit, Simulator &simulator) : m_circuit(circuit), m_simulator(simulator)
 {

@@ -23,7 +23,7 @@
 
 #include "../hlim/Circuit.h"
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 UnitTestSimulationFixture::UnitTestSimulationFixture()
 {

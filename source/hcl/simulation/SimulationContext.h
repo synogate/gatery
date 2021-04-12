@@ -22,7 +22,7 @@
 
 #include <coroutine>
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 class Simulator;
 class WaitFor;

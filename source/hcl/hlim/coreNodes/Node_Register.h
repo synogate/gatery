@@ -21,7 +21,7 @@
 
 #include <boost/format.hpp>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
     class Node_Register : public Node<Node_Register>
     {

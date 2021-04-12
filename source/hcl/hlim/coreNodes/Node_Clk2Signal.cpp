@@ -17,7 +17,7 @@
 */
 #include "Node_Clk2Signal.h"
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 Node_Clk2Signal::Node_Clk2Signal() : Node(0, 1)
 {

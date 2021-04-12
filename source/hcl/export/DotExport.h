@@ -21,7 +21,7 @@
 
 #include <filesystem>
 
-namespace hcl::core {
+namespace hcl {
 
 /**
  * @brief Export circuit into a .dot file for visualization

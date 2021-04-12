@@ -18,7 +18,7 @@
 #pragma once
 #include "../Node.h"
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 class Node_Arithmetic : public Node<Node_Arithmetic>
 {

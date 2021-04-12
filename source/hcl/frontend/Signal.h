@@ -29,7 +29,7 @@
 
 #include "BitWidth.h"
 
-namespace hcl::core::frontend {
+namespace hcl {
 
     class ConditionalScope;
     class SignalPort;

@@ -20,7 +20,7 @@
 #include "AST.h"
 #include "CodeFormatting.h"
 
-namespace hcl::core::vhdl {
+namespace hcl::vhdl {
 
 
 HelperPackage::HelperPackage(AST &ast) : Package(ast, "GateryHelperPackage")

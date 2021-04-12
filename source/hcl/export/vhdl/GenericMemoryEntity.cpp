@@ -29,7 +29,7 @@
 #include <map>
 #include <vector>
 
-namespace hcl::core::vhdl {
+namespace hcl::vhdl {
 
 GenericMemoryEntity::GenericMemoryEntity(AST &ast, const std::string &desiredName, BasicBlock *parent) : Entity(ast, desiredName, parent)
 {
@@ -183,8 +183,8 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
             cf.indent(stream, indent);
             stream << "memory("<<i<<") <= \"";
             for (auto j : utils::Range(wordSize)) {
-                bool defined = powerOnState.get(hcl::core::sim::DefaultConfig::DEFINED, i*wordSize + wordSize-1-j);
-                bool value = powerOnState.get(hcl::core::sim::DefaultConfig::VALUE, i*wordSize + wordSize-1-j);
+                bool defined = powerOnState.get(hcl::sim::DefaultConfig::DEFINED, i*wordSize + wordSize-1-j);
+                bool value = powerOnState.get(hcl::sim::DefaultConfig::VALUE, i*wordSize + wordSize-1-j);
                 if (!defined)
                     stream << 'x';
                 else

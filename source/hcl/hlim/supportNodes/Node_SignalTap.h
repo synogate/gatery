@@ -21,7 +21,7 @@
 
 #include <boost/variant.hpp>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 class Node_SignalTap : public Node<Node_SignalTap>
 {

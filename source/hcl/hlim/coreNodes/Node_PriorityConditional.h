@@ -21,7 +21,7 @@
 
 #include <boost/format.hpp>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
     
 class Node_PriorityConditional : public Node<Node_PriorityConditional>
 {

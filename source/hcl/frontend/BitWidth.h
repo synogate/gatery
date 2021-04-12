@@ -17,7 +17,7 @@
 */
 #pragma once
 
-namespace hcl::core::frontend 
+namespace hcl 
 {
 
 	struct BitWidth

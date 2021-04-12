@@ -35,11 +35,11 @@
 #include <vector>
 #include <coroutine>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
     class Node_Pin;
 }
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 class RunTimeSimulationContext;
 class WaitFor;

@@ -17,7 +17,7 @@
 */
 #pragma once
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 class Node_Arithmetic;
 class Node_Clk2Signal;

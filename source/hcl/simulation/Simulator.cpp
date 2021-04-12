@@ -17,7 +17,7 @@
 */
 #include "Simulator.h"
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 
 void Simulator::CallbackDispatcher::onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, const std::string &desc)

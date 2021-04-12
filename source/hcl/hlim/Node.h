@@ -36,7 +36,7 @@
 #include <set>
 #include <string>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 class NodeGroup;
 class Clock;

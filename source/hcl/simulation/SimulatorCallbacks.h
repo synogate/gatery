@@ -23,12 +23,12 @@
 
 #include <string>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
     class Clock;
     class BaseNode;
 }
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 /**
  * @todo write docs

@@ -42,7 +42,7 @@ extern "C"
 using namespace boost::unit_test;
 using namespace hcl;
 
-BOOST_FIXTURE_TEST_CASE(Sha1RoundA, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Sha1RoundA, hcl::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 
@@ -72,7 +72,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundA, hcl::core::sim::UnitTestSimulationFixture)
 	eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(Sha1RoundB, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Sha1RoundB, hcl::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 
@@ -102,7 +102,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundB, hcl::core::sim::UnitTestSimulationFixture)
 	eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(Sha1RoundC, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Sha1RoundC, hcl::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 
@@ -132,7 +132,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundC, hcl::core::sim::UnitTestSimulationFixture)
 	eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(Sha1RoundD, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Sha1RoundD, hcl::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 
@@ -162,7 +162,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundD, hcl::core::sim::UnitTestSimulationFixture)
 	eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(Sha1, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Sha1, hcl::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 
@@ -187,7 +187,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1, hcl::core::sim::UnitTestSimulationFixture)
 	eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(Sha2_256, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Sha2_256, hcl::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 
@@ -213,7 +213,7 @@ BOOST_FIXTURE_TEST_CASE(Sha2_256, hcl::core::sim::UnitTestSimulationFixture)
 	eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(Md5, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Md5, hcl::sim::UnitTestSimulationFixture)
 {
 	struct md5ref
 	{
@@ -350,18 +350,18 @@ BOOST_AUTO_TEST_CASE(SipHash64TestVisual)
 		for (size_t i = 0; i < 7; ++i)
 		{
 			blockVal |= i << (i * 8);
-			sim(msg) = blockVal + (i + 1) * (1ull << 56); // add padding
+			simu(msg) = blockVal + (i + 1) * (1ull << 56); // add padding
 			co_await WaitClk(clock);
-			//BOOST_TEST(sim(hash) == test_vector_sip64[i + 1]);
+			//BOOST_TEST(simu(hash) == test_vector_sip64[i + 1]);
 		}
-		sim(msg) = 0;
+		simu(msg) = 0;
 
 		for (size_t i = 7; i < sip.latency(1, 64); ++i)
 			co_await WaitClk(clock);
 
 		for (size_t i = 0; i < 7; ++i)
 		{
-			BOOST_TEST(sim(hash) == test_vector_sip64[i + 1]);
+			BOOST_TEST(simu(hash) == test_vector_sip64[i + 1]);
 			co_await WaitClk(clock);
 		}
 
@@ -377,7 +377,7 @@ BOOST_AUTO_TEST_CASE(SipHash64TestVisual)
 }
 #endif
 
-BOOST_FIXTURE_TEST_CASE(SipHash64Test, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SipHash64Test, hcl::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 
@@ -421,18 +421,18 @@ BOOST_FIXTURE_TEST_CASE(SipHash64Test, hcl::core::sim::UnitTestSimulationFixture
 		for (size_t i = 0; i < 7; ++i)
 		{
 			blockVal |= i << (i * 8);
-			sim(msg) = blockVal + (i + 1) * (1ull << 56); // add padding
+			simu(msg) = blockVal + (i + 1) * (1ull << 56); // add padding
 			co_await WaitClk(clock);
-			//BOOST_TEST(sim(hash) == test_vector_sip64[i + 1]);
+			//BOOST_TEST(simu(hash) == test_vector_sip64[i + 1]);
 		}
-		sim(msg) = 0;
+		simu(msg) = 0;
 
 		for (size_t i = 7; i < sip.latency(1, 64); ++i)
 			co_await WaitClk(clock);
 
 		for (size_t i = 0; i < 7; ++i)
 		{
-			BOOST_TEST(sim(hash) == test_vector_sip64[i + 1]);
+			BOOST_TEST(simu(hash) == test_vector_sip64[i + 1]);
 			co_await WaitClk(clock);
 		}
 
@@ -442,14 +442,14 @@ BOOST_FIXTURE_TEST_CASE(SipHash64Test, hcl::core::sim::UnitTestSimulationFixture
 
 	//design.getCircuit().optimize(3);
 	//design.visualize("siphash");
-	//core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "siphash.vcd");
+	//sim::VCDSink vcd(design.getCircuit(), getSimulator(), "siphash.vcd");
 	//vcd.addAllSignals();
 
 	design.getCircuit().optimize(3);
 	runTicks(design.getCircuit(), clock.getClk(), 24);
 }
 
-BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, hcl::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 
@@ -472,7 +472,7 @@ BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, hcl::core::sim::UnitTestSimulationFi
 	eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(SipHash64HelperTest, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SipHash64HelperTest, hcl::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 
@@ -486,7 +486,7 @@ BOOST_FIXTURE_TEST_CASE(SipHash64HelperTest, hcl::core::sim::UnitTestSimulationF
 	eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, hcl::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 
@@ -518,34 +518,34 @@ BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, hcl::core::sim::UnitTestSimulatio
 			{
 				reference[t][i] = rng() & 0xFFFF;
 
-				sim(mm[t]->address) = i;
-				sim(*mm[t]->write) = '1';
-				sim(*mm[t]->writeData) = reference[t][i];
+				simu(mm[t]->address) = i;
+				simu(*mm[t]->write) = '1';
+				simu(*mm[t]->writeData) = reference[t][i];
 			}
 			co_await WaitClk(clock);
 		}
 		for (stl::AvalonMM* p : mm)
-			sim(*p->write) = '0';
+			simu(*p->write) = '0';
 
 		for (size_t i = 0; i < 16; ++i)
 			co_await WaitClk(clock);
 
 		for (size_t i = 0; i < (1 << 16); i += 97)
 		{
-			sim(data) = i;
+			simu(data) = i;
 			co_await WaitClk(clock);
 
 			const uint16_t refHash1 = reference[0][i & 0xFF];
 			const uint16_t refHash2 = reference[1][i >> 8];
 			const uint16_t refHash = refHash1 ^ refHash2;
-			BOOST_TEST(sim(hash) == refHash);
+			BOOST_TEST(simu(hash) == refHash);
 		}
 		});
 
 	//design.visualize("TabulationHashingTest_before");
 	//design.getCircuit().optimize(3);
 	//design.visualize("TabulationHashingTest");
-	//core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TabulationHashingTest.vcd");
+	//sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TabulationHashingTest.vcd");
 	//vcd.addAllSignals();
 
 	design.getCircuit().optimize(3);

@@ -18,7 +18,7 @@
 #pragma once
 #include "Compound.h"
 
-namespace hcl::core::frontend 
+namespace hcl 
 {
 	template<typename T>
 	void constructFrom(const T& src, T& dst)

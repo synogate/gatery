@@ -25,25 +25,25 @@
 
 namespace hcl::stl {
 
-void handleDifferentialPin(core::hlim::Circuit &circuit, const XilinxSettings &settings, core::hlim::Node_Pin *pin)
+void handleDifferentialPin(hlim::Circuit &circuit, const XilinxSettings &settings, hlim::Node_Pin *pin)
 {
     HCL_ASSERT_HINT(pin->isOutputPin(), "Differential IO only implemented for output pins!");
 
     auto driver = pin->getDriver(0);
-    auto width = core::hlim::getOutputWidth(driver);
+    auto width = hlim::getOutputWidth(driver);
 
 
-    auto *mergeRewirePos = circuit.createNode<core::hlim::Node_Rewire>(width);
+    auto *mergeRewirePos = circuit.createNode<hlim::Node_Rewire>(width);
     mergeRewirePos->moveToGroup(pin->getGroup());
-    auto *mergeRewireNeg = circuit.createNode<core::hlim::Node_Rewire>(width);
+    auto *mergeRewireNeg = circuit.createNode<hlim::Node_Rewire>(width);
     mergeRewireNeg->moveToGroup(pin->getGroup());
 
     for (auto i : utils::Range(width)) {
-        auto *extractRewire = circuit.createNode<core::hlim::Node_Rewire>(1);
+        auto *extractRewire = circuit.createNode<hlim::Node_Rewire>(1);
         extractRewire->moveToGroup(pin->getGroup());
         extractRewire->connectInput(0, driver);
         extractRewire->setExtract(i, 1);
-        extractRewire->changeOutputType({.interpretation = core::hlim::ConnectionType::BOOL, .width=1});
+        extractRewire->changeOutputType({.interpretation = hlim::ConnectionType::BOOL, .width=1});
 
         auto *buffer = circuit.createNode<arch::xilinx::OBUFDS>();
         buffer->moveToGroup(pin->getGroup());
@@ -59,7 +59,7 @@ void handleDifferentialPin(core::hlim::Circuit &circuit, const XilinxSettings &s
     mergeRewirePos->changeOutputType(driver.node->getOutputConnectionType(driver.port));
     mergeRewireNeg->changeOutputType(driver.node->getOutputConnectionType(driver.port));
 
-    auto *negPin = circuit.createNode<core::hlim::Node_Pin>();
+    auto *negPin = circuit.createNode<hlim::Node_Pin>();
     negPin->moveToGroup(pin->getGroup());
     negPin->setName(pin->getDifferentialNegName());
     pin->setName(pin->getDifferentialPosName());
@@ -69,10 +69,10 @@ void handleDifferentialPin(core::hlim::Circuit &circuit, const XilinxSettings &s
     pin->setNormal();
 }
 
-void adaptToArchitecture(core::hlim::Circuit &circuit, const XilinxSettings &settings)
+void adaptToArchitecture(hlim::Circuit &circuit, const XilinxSettings &settings)
 {
     for (auto &node : circuit.getNodes())
-        if (auto *pin = dynamic_cast<core::hlim::Node_Pin*>(node.get())) {
+        if (auto *pin = dynamic_cast<hlim::Node_Pin*>(node.get())) {
             if (pin->isDifferential())
                 handleDifferentialPin(circuit, settings, pin);
         }

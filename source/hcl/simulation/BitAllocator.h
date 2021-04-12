@@ -21,7 +21,7 @@
 #include <vector>
 #include <array>
 
-namespace hcl::core::sim {
+namespace hcl::sim {
     
 class BitAllocator {
     public:

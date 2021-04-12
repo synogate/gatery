@@ -18,7 +18,7 @@
 #pragma once
 #include "../Node.h"
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 class Node_Compare : public Node<Node_Compare>
 {

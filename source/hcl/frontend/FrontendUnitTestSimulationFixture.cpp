@@ -23,7 +23,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-namespace hcl::core::frontend {
+namespace hcl {
 
 UnitTestSimulationFixture::~UnitTestSimulationFixture()
 {

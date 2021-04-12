@@ -30,8 +30,8 @@ OBUFDS::OBUFDS()
 
     resizeInputs(1);
     resizeOutputs(2);
-    setOutputConnectionType(0, {.interpretation = core::hlim::ConnectionType::BOOL, .width=1});
-    setOutputConnectionType(1, {.interpretation = core::hlim::ConnectionType::BOOL, .width=1});
+    setOutputConnectionType(0, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
+    setOutputConnectionType(1, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
 }
 
 std::string OBUFDS::getTypeName() const
@@ -56,7 +56,7 @@ std::string OBUFDS::getOutputName(size_t idx) const
         return "OB";
 }
 
-std::unique_ptr<core::hlim::BaseNode> OBUFDS::cloneUnconnected() const
+std::unique_ptr<hlim::BaseNode> OBUFDS::cloneUnconnected() const
 {
     OBUFDS *ptr;
     std::unique_ptr<BaseNode> res(ptr = new OBUFDS());

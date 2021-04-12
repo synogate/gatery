@@ -36,7 +36,7 @@
 #include <optional>
 #include <map>
 
-namespace hcl::core::frontend {
+namespace hcl {
 
     struct Selection {
         int start = 0;

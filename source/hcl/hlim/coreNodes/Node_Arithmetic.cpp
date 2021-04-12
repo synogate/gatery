@@ -19,7 +19,7 @@
 
 #include "../../utils/BitManipulation.h"
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 Node_Arithmetic::Node_Arithmetic(Op op) : Node(2, 1), m_op(op)
 {

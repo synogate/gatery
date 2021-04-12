@@ -22,7 +22,7 @@
 #include <hcl/hlim/coreNodes/Node_Clk2Signal.h>
 #include <hcl/hlim/coreNodes/Node_Register.h>
 
-namespace hcl::core::frontend {
+namespace hcl {
 
 
 Clock::Clock(size_t freq) : Clock(ClockConfig{}.setAbsoluteFrequency({freq, 1}))

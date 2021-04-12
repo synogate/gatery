@@ -23,7 +23,7 @@
 #include <hcl/utils/Preprocessor.h>
 
 
-namespace hcl::core::frontend {
+namespace hcl {
 
 
 SignalTapHelper::SignalTapHelper(hlim::Node_SignalTap::Level level)

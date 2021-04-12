@@ -19,7 +19,7 @@
 
 #include <stddef.h>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
     class Circuit;
 }
 
@@ -35,6 +35,6 @@ struct XilinxSettings {
 };
 
 
-void adaptToArchitecture(core::hlim::Circuit &circuit, const XilinxSettings &settings = {});
+void adaptToArchitecture(hlim::Circuit &circuit, const XilinxSettings &settings = {});
 
 }

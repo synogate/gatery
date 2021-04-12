@@ -25,7 +25,7 @@
 
 #include <vector>
 
-namespace hcl::core::frontend {
+namespace hcl {
     
 template<typename DataSignal, typename = std::enable_if_t<utils::isSignal<DataSignal>::value>>
 class PriorityConditional

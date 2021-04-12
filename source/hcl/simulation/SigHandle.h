@@ -22,12 +22,12 @@
 
 #include <boost/spirit/home/support/container.hpp>
 
-namespace hcl::core::frontend {
+namespace hcl {
     class Bit;
     class BVec;
 }
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 class SigHandle {
     public:
@@ -66,8 +66,8 @@ inline void SigHandle::operator=(const T& collection)
         size_t offset = 0;
         for (auto it = it_begin; it != it_end; ++it)
         {
-            state.insertNonStraddling(core::sim::DefaultConfig::VALUE, offset, sizeof(*it) * 8, *it);
-            state.insertNonStraddling(core::sim::DefaultConfig::DEFINED, offset, sizeof(*it) * 8, -1);
+            state.insertNonStraddling(sim::DefaultConfig::VALUE, offset, sizeof(*it) * 8, *it);
+            state.insertNonStraddling(sim::DefaultConfig::DEFINED, offset, sizeof(*it) * 8, -1);
             offset += sizeof(*it) * 8;
         }
     }

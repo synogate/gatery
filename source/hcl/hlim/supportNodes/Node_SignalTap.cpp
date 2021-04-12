@@ -21,7 +21,7 @@
 
 #include <sstream>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 void Node_SignalTap::addInput(hlim::NodePort input)
 {

@@ -25,12 +25,12 @@
 #include <memory>
 #include <string>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
     class Circuit;
     class BaseNode;
 }
 
-namespace hcl::core::vhdl {
+namespace hcl::vhdl {
 
 class Entity;
 class BaseGrouping;

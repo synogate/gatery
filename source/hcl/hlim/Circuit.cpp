@@ -40,7 +40,7 @@
 
 #include <iostream>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 Circuit::Circuit()
 {

@@ -21,7 +21,7 @@
 #include "AST.h"
 
 
-namespace hcl::core::vhdl {
+namespace hcl::vhdl {
 
 Block::Block(Entity *parent, const std::string &desiredName) : BasicBlock(parent->getAST(), parent, &parent->getNamespaceScope())
 {

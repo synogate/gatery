@@ -17,7 +17,7 @@
 */
 #include "Compound.h"
 
-namespace hcl::core::frontend
+namespace hcl
 {
 
 	void CompoundVisitor::enterPackStruct()

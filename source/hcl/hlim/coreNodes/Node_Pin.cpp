@@ -17,7 +17,7 @@
 */
 #include "Node_Pin.h"
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 
 Node_Pin::Node_Pin() : Node(1, 1)

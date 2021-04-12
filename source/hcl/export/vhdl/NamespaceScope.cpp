@@ -22,7 +22,7 @@
 #include "../../utils/Exceptions.h"
 #include "../../utils/Preprocessor.h"
 
-namespace hcl::core::vhdl {
+namespace hcl::vhdl {
 
 NamespaceScope::NamespaceScope(AST &ast, NamespaceScope *parent) : m_ast(ast), m_parent(parent)
 {

@@ -19,7 +19,7 @@
 
 #include "../../hlim/Circuit.h"
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 MemoryTraceRecorder::MemoryTraceRecorder(MemoryTrace &trace, hlim::Circuit &circuit, Simulator &simulator, bool startImmediately) : WaveformRecorder(circuit, simulator), m_trace(trace)
 {

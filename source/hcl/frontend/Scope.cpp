@@ -19,7 +19,7 @@
 
 #include <hcl/export/DotExport.h>
 
-namespace hcl::core::frontend {
+namespace hcl {
     
 GroupScope::GroupScope(hlim::NodeGroup::GroupType groupType) : BaseScope<GroupScope>()
 {

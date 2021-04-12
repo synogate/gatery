@@ -22,7 +22,7 @@
 
 #include "../hlim/Node.h"
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
     
 Clock::Clock()
 {

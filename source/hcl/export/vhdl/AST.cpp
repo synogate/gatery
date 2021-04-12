@@ -27,7 +27,7 @@
 #include <fstream>
 #include <functional>
 
-namespace hcl::core::vhdl {
+namespace hcl::vhdl {
 
 
 void Hlim2AstMapping::assignNodeToScope(hlim::BaseNode *node, BaseGrouping *block)

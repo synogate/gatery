@@ -18,7 +18,7 @@
 #include "Node_Register.h"
 #include "Node_Constant.h"
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 Node_Register::Node_Register() : Node(NUM_INPUTS, 1)
 {

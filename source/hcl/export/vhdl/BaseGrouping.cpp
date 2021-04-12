@@ -21,7 +21,7 @@
 
 #include "../../hlim/coreNodes/Node_Signal.h"
 
-namespace hcl::core::vhdl {
+namespace hcl::vhdl {
 
 BaseGrouping::BaseGrouping(AST &ast, BaseGrouping *parent, NamespaceScope *parentNamespace) : 
                     m_ast(ast), m_namespaceScope(ast, parentNamespace), m_parent(parent)

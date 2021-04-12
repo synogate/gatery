@@ -26,8 +26,7 @@
 
 namespace hcl::stl::blockram {
 
-using namespace core;
-using namespace core::hlim;
+using namespace hlim;
 
 /*
 XilinxSimpleDualPortBlockRam::XilinxSimpleDualPortBlockRam(Clock *writeClk, Clock *readClk, sim::DefaultBitVectorState initialData, size_t writeDataWidth, size_t readDataWidth, bool outputRegister) :
@@ -253,7 +252,7 @@ std::vector<size_t> XilinxSimpleDualPortBlockRam::getInternalStateSizes() const 
     return res;
 }
 
-bool XilinxSimpleDualPortBlockRam::writeVHDL(const core::vhdl::CodeFormatting *codeFormatting, std::ostream &file, const hlim::Node_External *node, unsigned indent,
+bool XilinxSimpleDualPortBlockRam::writeVHDL(const vhdl::CodeFormatting *codeFormatting, std::ostream &file, const hlim::Node_External *node, unsigned indent,
                 const std::vector<std::string> &inputSignalNames, const std::vector<std::string> &outputSignalNames, const std::vector<std::string> &clockNames)
 {
     const XilinxSimpleDualPortBlockRam *ram = dynamic_cast<const XilinxSimpleDualPortBlockRam*>(node);
@@ -337,7 +336,7 @@ bool XilinxSimpleDualPortBlockRam::writeVHDL(const core::vhdl::CodeFormatting *c
     return false;
 }
 
-bool XilinxSimpleDualPortBlockRam::writeIntelVHDL(const core::vhdl::CodeFormatting* codeFormatting, std::ostream& file, const core::hlim::Node_External* node, unsigned indent, const std::vector<std::string>& inputSignalNames, const std::vector<std::string>& outputSignalNames, const std::vector<std::string>& clockNames)
+bool XilinxSimpleDualPortBlockRam::writeIntelVHDL(const vhdl::CodeFormatting* codeFormatting, std::ostream& file, const hlim::Node_External* node, unsigned indent, const std::vector<std::string>& inputSignalNames, const std::vector<std::string>& outputSignalNames, const std::vector<std::string>& clockNames)
 {
     const XilinxSimpleDualPortBlockRam* ram = dynamic_cast<const XilinxSimpleDualPortBlockRam*>(node);
     if (!ram)

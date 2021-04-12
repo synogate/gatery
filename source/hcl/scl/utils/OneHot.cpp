@@ -17,7 +17,7 @@
 */
 #include "OneHot.h"
 
-using namespace hcl::core::frontend;
+using namespace hcl;
 
 hcl::stl::OneHot hcl::stl::decoder(const BVec& in)
 {
@@ -37,7 +37,7 @@ BVec hcl::stl::encoder(const OneHot& in)
     return ret;
 }
 
-std::vector<hcl::stl::Stream<hcl::core::frontend::BVec>> hcl::stl::makeIndexList(const core::frontend::BVec& valids)
+std::vector<hcl::stl::Stream<hcl::BVec>> hcl::stl::makeIndexList(const BVec& valids)
 {
     std::vector<Stream<BVec>> ret(valids.size());
     for (size_t i = 0; i < valids.size(); ++i)

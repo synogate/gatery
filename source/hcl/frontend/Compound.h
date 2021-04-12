@@ -28,7 +28,7 @@
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/fwd/accessors.hpp>
 
-namespace hcl::core::frontend
+namespace hcl
 {
 	class CompoundVisitor
 	{

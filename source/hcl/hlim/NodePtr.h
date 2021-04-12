@@ -19,7 +19,7 @@
 
 #include <type_traits>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 template<class NodeType>
 class NodePtr

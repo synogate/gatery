@@ -21,7 +21,7 @@
 
 #include <iostream>
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 WaitClock::WaitClock(const hlim::Clock *clock) : m_clock(clock)
 {

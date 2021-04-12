@@ -29,7 +29,7 @@
 #include <queue>
 #include <list>
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 struct ClockState {
     bool high;

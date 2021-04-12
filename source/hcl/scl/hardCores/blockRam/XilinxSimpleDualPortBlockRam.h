@@ -26,7 +26,7 @@
 
 namespace hcl::stl::blockram {
 /*
-class XilinxSimpleDualPortBlockRam : public core::hlim::Node_External
+class XilinxSimpleDualPortBlockRam : public hlim::Node_External
 {
     public:
         enum Input {
@@ -54,10 +54,10 @@ class XilinxSimpleDualPortBlockRam : public core::hlim::Node_External
             NUM_CLOCKS
         };
 
-        using Clock = hcl::core::hlim::Clock;
-        using NodePort = hcl::core::hlim::NodePort;
-        using DefaultBitVectorState = hcl::core::sim::DefaultBitVectorState;
-        using SimulatorCallbacks = hcl::core::sim::SimulatorCallbacks;
+        using Clock = hcl::hlim::Clock;
+        using NodePort = hcl::hlim::NodePort;
+        using DefaultBitVectorState = hcl::sim::DefaultBitVectorState;
+        using SimulatorCallbacks = hcl::sim::SimulatorCallbacks;
 
         XilinxSimpleDualPortBlockRam(Clock *writeClk, Clock *readClk, DefaultBitVectorState initialData,
                                 size_t writeDataWidth=1, size_t readDataWidth=1, bool outputRegister=false);
@@ -82,9 +82,9 @@ class XilinxSimpleDualPortBlockRam : public core::hlim::Node_External
         inline size_t getReadDataWidth() const { return m_readDataWidth; }
 
 
-        static bool writeVHDL(const core::vhdl::CodeFormatting *codeFormatting, std::ostream &file, const core::hlim::Node_External *node, unsigned indent,
+        static bool writeVHDL(const vhdl::CodeFormatting *codeFormatting, std::ostream &file, const hlim::Node_External *node, unsigned indent,
                         const std::vector<std::string> &inputSignalNames, const std::vector<std::string> &outputSignalNames, const std::vector<std::string> &clockNames);
-        static bool writeIntelVHDL(const core::vhdl::CodeFormatting* codeFormatting, std::ostream& file, const core::hlim::Node_External* node, unsigned indent,
+        static bool writeIntelVHDL(const vhdl::CodeFormatting* codeFormatting, std::ostream& file, const hlim::Node_External* node, unsigned indent,
             const std::vector<std::string>& inputSignalNames, const std::vector<std::string>& outputSignalNames, const std::vector<std::string>& clockNames);
 protected:
         DefaultBitVectorState m_initialData;

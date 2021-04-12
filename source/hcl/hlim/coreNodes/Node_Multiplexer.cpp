@@ -18,7 +18,7 @@
 #include "Node_Multiplexer.h"
 
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 void Node_Multiplexer::connectInput(size_t operand, const NodePort &port)
 {

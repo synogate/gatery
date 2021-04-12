@@ -26,14 +26,14 @@
 #include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
 
 using namespace boost::unit_test;
-using namespace hcl::core::frontend;
+using namespace hcl;
 
-using UnitTestSimulationFixture = hcl::core::frontend::UnitTestSimulationFixture;
+using UnitTestSimulationFixture = hcl::UnitTestSimulationFixture;
 
 struct SimpleStruct
 {
-    hcl::core::frontend::BVec vec = hcl::core::frontend::BVec(3_b);
-    hcl::core::frontend::Bit bit;
+    hcl::BVec vec = hcl::BVec(3_b);
+    hcl::Bit bit;
 };
 
 BOOST_HANA_ADAPT_STRUCT(SimpleStruct, vec, bit);
@@ -48,7 +48,7 @@ BOOST_HANA_ADAPT_STRUCT(RichStruct, vec, bit, list, parameter);
 
 BOOST_FIXTURE_TEST_CASE(CompoundName, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 
@@ -74,7 +74,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundName, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(CompoundWidth, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 
@@ -91,7 +91,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundWidth, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(CompoundPack, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 
@@ -121,7 +121,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundPack, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(CompoundUnpack, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     RichStruct in;
     in.vec = 5u;
@@ -152,7 +152,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundUnpack, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(ConstructFromSignal, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 
@@ -174,7 +174,7 @@ BOOST_FIXTURE_TEST_CASE(ConstructFromSignal, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(ConstructFromCompound, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 

@@ -28,7 +28,7 @@
 #include <sstream>
 #include <iostream>
 
-namespace hcl::core::vhdl {
+namespace hcl::vhdl {
 
 
 TestbenchRecorder::TestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, const std::string &name) : m_exporter(exporter), m_ast(ast), m_simulator(simulator), m_name(name)

@@ -21,7 +21,7 @@
 
 namespace hcl::stl::buildCtrl {
 
-class TargetVendor : public hcl::core::frontend::BaseScope<TargetVendor>
+class TargetVendor : public hcl::BaseScope<TargetVendor>
 {
     public:
         enum Vendor {

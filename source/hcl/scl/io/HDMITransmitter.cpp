@@ -21,10 +21,10 @@
 
 namespace hcl::stl::hdmi {
 
-using namespace hcl::core::frontend;
+using namespace hcl;
 
 
-core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::frontend::Bit dataEnable, core::frontend::BVec data, core::frontend::BVec ctrl)
+BVec tmdsEncode(Clock &pixelClock, Bit dataEnable, BVec data, BVec ctrl)
 {
     HCL_NAMED(dataEnable);
     HCL_NAMED(data);
@@ -67,7 +67,7 @@ core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::fronten
     imbalance.setClock(pixelClock);
     HCL_NAMED(imbalance);
     
-    core::frontend::BVec result(10_b, Expansion::none);
+    BVec result(10_b, Expansion::none);
     HCL_NAMED(result);
     
     HCL_COMMENT << "If sending data, 8/10 encode the data, otherwise encode the control bits";
@@ -115,7 +115,7 @@ core::frontend::BVec tmdsEncode(core::frontend::Clock &pixelClock, core::fronten
             }
         }
     } ELSE {
-        PriorityConditional<core::frontend::BVec> con;
+        PriorityConditional<BVec> con;
         
         con
             .addCondition(ctrl == "b00", "b1101010100")
@@ -167,7 +167,7 @@ BVec tmdsEncodeSymbol(const BVec& data)
     return result;
 }
 
-core::frontend::BVec tmdsEncodeReduceTransitions(const core::frontend::BVec& data)
+BVec tmdsEncodeReduceTransitions(const BVec& data)
 {
     HCL_COMMENT << "Count the number of high bits in the input word";
     BVec sumOfOnes = bitcount(data);
@@ -186,7 +186,7 @@ core::frontend::BVec tmdsEncodeReduceTransitions(const core::frontend::BVec& dat
     return tmdsReduced;
 }
 
-core::frontend::BVec tmdsDecodeReduceTransitions(const core::frontend::BVec& data)
+BVec tmdsDecodeReduceTransitions(const BVec& data)
 {
     BVec decoded = data(0, data.size() - 1);
     decoded ^= decoded << 1;
@@ -196,7 +196,7 @@ core::frontend::BVec tmdsDecodeReduceTransitions(const core::frontend::BVec& dat
     return decoded;
 }
 
-core::frontend::BVec tmdsEncodeBitflip(const core::frontend::Clock& clk, const core::frontend::BVec& data)
+BVec tmdsEncodeBitflip(const Clock& clk, const BVec& data)
 {
     HCL_COMMENT << "count the number of uncompensated ones";
     BVec global_counter = 3_b;
@@ -222,19 +222,19 @@ core::frontend::BVec tmdsEncodeBitflip(const core::frontend::Clock& clk, const c
     return result;
 }
 
-core::frontend::BVec tmdsDecodeBitflip(const core::frontend::BVec& data)
+BVec tmdsDecodeBitflip(const BVec& data)
 {
     return pack(data[data.size() - 2], data(0, -2) ^ data.msb());
 }
 
-TmdsEncoder::TmdsEncoder(core::frontend::Clock& clk) :
+TmdsEncoder::TmdsEncoder(Clock& clk) :
     m_Clk{clk}
 {
     m_Channel.fill("b1101010100"); // no data symbol
     setName(m_Channel, "channelBlank");
 }
 
-void TmdsEncoder::addSync(const core::frontend::Bit& hsync, const core::frontend::Bit& vsync)
+void TmdsEncoder::addSync(const Bit& hsync, const Bit& vsync)
 {
     GroupScope ent{ GroupScope::GroupType::ENTITY };
     ent.setName("tmdsEncoderSync");
@@ -269,7 +269,7 @@ void hcl::stl::hdmi::TmdsEncoder::setSync(bool hsync, bool vsync)
         m_Channel[0] = "b1101010100";
 }
 
-void hcl::stl::hdmi::TmdsEncoder::setTERC4(core::frontend::BVec ctrl)
+void hcl::stl::hdmi::TmdsEncoder::setTERC4(BVec ctrl)
 {
     std::array<BVec, 16> trec4lookup = {
         "b1010011100",

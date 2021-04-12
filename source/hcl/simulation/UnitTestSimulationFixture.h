@@ -22,11 +22,11 @@
 #include <memory>
 #include <functional>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
     class Circuit;
 }
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
     class Simulator;
     class SimulationProcess;

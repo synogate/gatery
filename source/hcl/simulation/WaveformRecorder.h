@@ -23,12 +23,12 @@
 #include <vector>
 #include <map>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
     class Circuit;
     struct NodePort;
 }
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 class Simulator;
 

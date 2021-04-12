@@ -45,12 +45,12 @@ namespace hcl::stl
         Valid() = default;
 
         template<typename... PayloadArgs>
-        Valid(const core::frontend::Bit& validValue, PayloadArgs... ctorArgs) :
+        Valid(const Bit& validValue, PayloadArgs... ctorArgs) :
             Payload(ctorArgs...),
             valid(validValue) 
         {}
 
-        core::frontend::Bit valid = '1';
+        Bit valid = '1';
 
         Payload& value() { return *this; }
         const Payload& value() const { return *this; }
@@ -67,8 +67,8 @@ namespace hcl::stl
         StreamSink(const StreamSink&) = delete;
         StreamSink(StreamSink&&) = default;
 
-        core::frontend::Bit valid;// = true;
-        core::frontend::Bit ready;// = true;
+        Bit valid;// = true;
+        Bit ready;// = true;
     };
 
     template<typename Payload>
@@ -78,8 +78,8 @@ namespace hcl::stl
         StreamSource(const StreamSource&) = delete;
         StreamSource(StreamSource&&) = default;
 
-        core::frontend::Bit valid;// = true;
-        core::frontend::Bit ready;// = true;
+        Bit valid;// = true;
+        Bit ready;// = true;
 
         void operator >> (StreamSink<Payload>& sink);
     };

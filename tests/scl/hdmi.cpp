@@ -31,9 +31,9 @@
 
 using namespace boost::unit_test;
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, tmdsReduction, data::xrange(255), val)
+BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, tmdsReduction, data::xrange(255), val)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     DesignScope design;
 
@@ -49,9 +49,9 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, tmdsReduction,
     eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(tmdsBitflip, hcl::core::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(tmdsBitflip, hcl::sim::UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
     DesignScope design;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));

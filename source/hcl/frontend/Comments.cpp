@@ -18,7 +18,7 @@
 #include "Comments.h"
 
 
-namespace hcl::core::frontend {
+namespace hcl {
     
 thread_local std::stringstream Comments::m_comments;
 

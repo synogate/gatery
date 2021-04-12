@@ -21,7 +21,7 @@
 
 #include <coroutine>
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 /**
  * @brief co_awaiting on a WaitFor continues the simulation for the specified amount of seconds.

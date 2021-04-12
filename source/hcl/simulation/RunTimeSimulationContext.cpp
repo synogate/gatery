@@ -23,7 +23,7 @@
 
 #include "Simulator.h"
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 RunTimeSimulationContext::RunTimeSimulationContext(Simulator *simulator) : m_simulator(simulator)
 {

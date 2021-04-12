@@ -23,7 +23,7 @@
 
 #include "Clock.h"
 
-namespace hcl::core::frontend {
+namespace hcl {
 
 
 hlim::Node_Pin* findInputPin(hlim::NodePort driver)
@@ -66,65 +66,65 @@ hlim::Node_Pin *findOutputPin(hlim::NodePort driver)
     return nullptr;
 }
 
-sim::SigHandle sim(hlim::NodePort output)
+sim::SigHandle simu(hlim::NodePort output)
 {
     return sim::SigHandle(output);
 }
 
-sim::SigHandle sim(const Bit &bit)
+sim::SigHandle simu(const Bit &bit)
 {
     auto driver = bit.getReadPort();
     HCL_DESIGNCHECK(driver.node != nullptr);
 
     hlim::Node_Pin* pin = findInputPin(driver);
     if (pin)
-        return sim({ .node = pin, .port = 0ull });
+        return simu({ .node = pin, .port = 0ull });
 
     pin = findOutputPin(driver);
     if (pin)
-        return sim(pin->getDriver(0));
+        return simu(pin->getDriver(0));
 
     HCL_DESIGNCHECK_HINT(false, "Found neither input nor output pin associated with signal");
 }
 
-sim::SigHandle sim(const BVec &signal)
+sim::SigHandle simu(const BVec &signal)
 {
     auto driver = signal.getReadPort();
     HCL_DESIGNCHECK(driver.node != nullptr);
 
     hlim::Node_Pin* pin = findInputPin(driver);
     if (pin)
-        return sim({ .node = pin, .port = 0ull });
+        return simu({ .node = pin, .port = 0ull });
 
     pin = findOutputPin(driver);
     if (pin)
-        return sim(pin->getDriver(0));
+        return simu(pin->getDriver(0));
 
     HCL_DESIGNCHECK_HINT(false, "Found neither input nor output pin associated with signal");
 }
 
-sim::SigHandle sim(const InputPin &pin)
+sim::SigHandle simu(const InputPin &pin)
 {
-    return sim({.node=pin.getNode(), .port=0ull});
+    return simu({.node=pin.getNode(), .port=0ull});
 }
 
-sim::SigHandle sim(const InputPins &pins)
+sim::SigHandle simu(const InputPins &pins)
 {
-    return sim({.node=pins.getNode(), .port=0ull});
+    return simu({.node=pins.getNode(), .port=0ull});
 }
 
-sim::SigHandle sim(const OutputPin &pin)
+sim::SigHandle simu(const OutputPin &pin)
 {
     auto driver = pin.getNode()->getDriver(0);
     HCL_DESIGNCHECK_HINT(driver.node != nullptr, "Can't read unbound output pin!");
-    return sim(driver);
+    return simu(driver);
 }
 
-sim::SigHandle sim(const OutputPins &pins)
+sim::SigHandle simu(const OutputPins &pins)
 {
     auto driver = pins.getNode()->getDriver(0);
     HCL_DESIGNCHECK_HINT(driver.node != nullptr, "Can't read unbound output pin!");
-    return sim(driver);
+    return simu(driver);
 }
 
 sim::WaitClock WaitClk(const Clock &clk)

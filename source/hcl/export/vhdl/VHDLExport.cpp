@@ -46,7 +46,7 @@
 #include <list>
 #include <map>
 
-namespace hcl::core::vhdl {
+namespace hcl::vhdl {
 
 
 VHDLExport::VHDLExport(std::filesystem::path destination)
@@ -144,10 +144,10 @@ read_xdc clocks.xdc
         file.exceptions(std::fstream::failbit | std::fstream::badbit);
 
         Entity* top = m_ast->getRootEntity();
-        for (core::hlim::Clock* clk : top->getClocks())
+        for (hlim::Clock* clk : top->getClocks())
         {
             auto&& name = top->getNamespaceScope().getName(clk);
-            core::hlim::ClockRational freq = clk->getAbsoluteFrequency();
+            hlim::ClockRational freq = clk->getAbsoluteFrequency();
             double ns = double(freq.denominator() * 1'000'000'000) / freq.numerator();
 
             file << "create_clock -period " << std::fixed << std::setprecision(3) << ns << " [get_ports " << name << "]\n";

@@ -23,7 +23,7 @@
 #include <string>
 #include <map>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 class Node_External : public Node<Node_External>
 {

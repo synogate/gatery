@@ -17,7 +17,7 @@
 */
 #include "GCD.h"
 
-using namespace hcl::core::frontend;
+using namespace hcl;
 
 
 hcl::stl::StreamSource<hcl::stl::BVecPair> hcl::stl::binaryGCDStep1(StreamSink<BVecPair>& in, size_t iterationsPerClock)
@@ -82,7 +82,7 @@ hcl::stl::StreamSource<hcl::stl::BVecPair> hcl::stl::binaryGCDStep1(StreamSink<B
     return out;
 }
 
-hcl::stl::StreamSource<hcl::core::frontend::BVec> hcl::stl::shiftLeft(StreamSink<BVecPair>& in, size_t iterationsPerClock)
+hcl::stl::StreamSource<hcl::BVec> hcl::stl::shiftLeft(StreamSink<BVecPair>& in, size_t iterationsPerClock)
 {
     Register<BVec> a{ BitWidth{in.first.getWidth()} };
     Register<BVec> b{ BitWidth{in.second.getWidth()} };
@@ -119,7 +119,7 @@ hcl::stl::StreamSource<hcl::core::frontend::BVec> hcl::stl::shiftLeft(StreamSink
     return out;
 }
 
-hcl::stl::StreamSource<hcl::core::frontend::BVec> hcl::stl::binaryGCD(StreamSink<BVecPair>& in, size_t iterationsPerClock)
+hcl::stl::StreamSource<hcl::BVec> hcl::stl::binaryGCD(StreamSink<BVecPair>& in, size_t iterationsPerClock)
 {
     GroupScope entity(GroupScope::GroupType::ENTITY);
     entity

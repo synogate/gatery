@@ -38,7 +38,6 @@ namespace hcl::stl
 
     template<typename Signal, class Functor>
     Signal treeReduceImpl(const std::vector<Signal> &input, size_t depth, size_t registersRemaining, size_t registerInterval, Functor functor) {
-        using namespace core::frontend;
         
         if (input.size() == 1)
             return delay(input.front(), registersRemaining);

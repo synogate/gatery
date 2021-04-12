@@ -27,7 +27,7 @@
 
 #include <hcl/utils/Preprocessor.h>
 
-namespace hcl::core::frontend {
+namespace hcl {
 
     inline SignalReadPort makeNode(hlim::Node_Compare::Op op, NormalizedWidthOperands ops)
     {

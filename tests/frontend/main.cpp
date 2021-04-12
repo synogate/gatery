@@ -20,7 +20,7 @@
 
 #include <hcl/frontend/FrontendUnitTestSimulationFixture.h>
 
-using namespace hcl::core::frontend;
+using namespace hcl;
 
 BOOST_TEST_GLOBAL_FIXTURE(BoostUnitTestGlobalFixture);
 

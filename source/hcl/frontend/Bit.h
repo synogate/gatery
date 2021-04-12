@@ -26,7 +26,7 @@
 #include <vector>
 #include <optional>
 
-namespace hcl::core::frontend {
+namespace hcl {
     
     class BVec;
     

@@ -19,7 +19,7 @@
 
 #include "Package.h"
 
-namespace hcl::core::vhdl {
+namespace hcl::vhdl {
 
 class HelperPackage : public Package {
     public:

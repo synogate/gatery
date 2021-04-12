@@ -24,7 +24,7 @@
 #include <hcl/hlim/coreNodes/Node_Signal.h>
 #include <hcl/hlim/NodePtr.h>
 
-namespace hcl::core::frontend {
+namespace hcl {
 
     class OutputPin {
         public:

@@ -22,7 +22,7 @@
 #include "../utils/Range.h"
 
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 template<bool forward, typename Policy>
 Exploration<forward, Policy>::NodePortHandle::NodePortHandle(iterator &iterator, NodePort nodePort) : m_iterator(iterator), m_nodePort(nodePort) { }

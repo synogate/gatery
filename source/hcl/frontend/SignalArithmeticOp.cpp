@@ -17,7 +17,7 @@
 */
 #include "SignalArithmeticOp.h"
 
-namespace hcl::core::frontend {
+namespace hcl {
 
 
 	SignalReadPort makeNode(hlim::Node_Arithmetic op, NormalizedWidthOperands ops)

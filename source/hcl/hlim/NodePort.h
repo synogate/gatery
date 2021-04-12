@@ -20,7 +20,7 @@
 #include <limits>
 #include <stddef.h>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 class BaseNode;
 class NodeIO;

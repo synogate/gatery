@@ -17,7 +17,7 @@
 */
 #include "SimulatorControl.h"
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 void SimulatorControl::bindSimulator(Simulator *simulator)
 {

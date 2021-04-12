@@ -26,7 +26,7 @@
 #include <hcl/hlim/coreNodes/Node_Signal.h>
 
 
-namespace hcl::core::frontend {
+namespace hcl {
 
     thread_local hlim::NodePort ConditionalScope::m_lastCondition;
     thread_local size_t ConditionalScope::s_nextId = 1;

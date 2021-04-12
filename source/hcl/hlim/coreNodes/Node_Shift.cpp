@@ -17,7 +17,7 @@
 */
 #include "Node_Shift.h"
 
-namespace hcl::core::hlim
+namespace hcl::hlim
 {
 	Node_Shift::Node_Shift(dir _direction, fill _fill) :
 		Node<Node_Shift>(2, 1),

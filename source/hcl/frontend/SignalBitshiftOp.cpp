@@ -19,7 +19,7 @@
 
 #include <hcl/hlim/coreNodes/Node_Shift.h>
 
-namespace hcl::core::frontend {
+namespace hcl {
 
 hlim::ConnectionType SignalBitShiftOp::getResultingType(const hlim::ConnectionType &operand) {
     return operand;

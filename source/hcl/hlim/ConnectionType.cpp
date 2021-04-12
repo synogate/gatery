@@ -17,7 +17,7 @@
 */
 #include "ConnectionType.h"
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 
 bool ConnectionType::operator==(const ConnectionType &rhs) const

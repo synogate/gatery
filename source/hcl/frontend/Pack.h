@@ -20,7 +20,7 @@
 
 #include <hcl/hlim/SignalGroup.h>
 
-namespace hcl::core::frontend
+namespace hcl
 {
 	template<typename... Comp>
 	BVec pack(const Comp& ...compound)

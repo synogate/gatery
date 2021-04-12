@@ -19,8 +19,6 @@
 
 namespace hcl::stl {
 
-using namespace core::frontend;
-
 UART::Stream UART::recieve(Bit rx)
 {
     GroupScope entity(GroupScope::GroupType::ENTITY);
@@ -34,7 +32,7 @@ UART::Stream UART::recieve(Bit rx)
     HCL_DESIGNCHECK_HINT(startBits == 1, "Not implemented yet!");
     HCL_DESIGNCHECK_HINT(stopBits == 1, "Not implemented yet!");
 
-    size_t bitLength = core::hlim::floor(ClockScope::getClk().getAbsoluteFrequency() / baudRate);
+    size_t bitLength = hlim::floor(ClockScope::getClk().getAbsoluteFrequency() / baudRate);
     size_t oneHalfBitLength = bitLength * 3 / 2;
 
     BVec counter = BitWidth(1+utils::Log2C(oneHalfBitLength));
@@ -139,7 +137,7 @@ Bit UART::send(Stream &stream)
     HCL_DESIGNCHECK_HINT(startBits == 1, "Not implemented yet!");
     HCL_DESIGNCHECK_HINT(stopBits == 1, "Not implemented yet!");
 
-    size_t bitLength = core::hlim::floor(ClockScope::getClk().getAbsoluteFrequency() / baudRate);
+    size_t bitLength = hlim::floor(ClockScope::getClk().getAbsoluteFrequency() / baudRate);
 
     BVec counter = BitWidth(utils::Log2C(bitLength+2));
     counter = reg(counter, 0);

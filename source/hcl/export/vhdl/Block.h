@@ -22,7 +22,7 @@
 #include <ostream>
 
 
-namespace hcl::core::vhdl {
+namespace hcl::vhdl {
 
 class Entity;
     

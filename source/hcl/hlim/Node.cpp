@@ -25,7 +25,7 @@
 
 #include <algorithm>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 BaseNode::BaseNode()
 {

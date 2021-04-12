@@ -19,7 +19,7 @@
 
 #include "Scope.h"
 
-namespace hcl::core::frontend {
+namespace hcl {
 
 
     OutputPin::OutputPin(const Bit &bit) {

@@ -26,7 +26,7 @@
 #include <map>
 #include <vector>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 
 NodeGroup::NodeGroup(GroupType groupType) : m_groupType(groupType)

@@ -25,7 +25,7 @@
 #include <string>
 #include <memory>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 class Node_Signal;
 class Node_Register;

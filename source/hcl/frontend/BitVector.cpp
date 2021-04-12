@@ -23,7 +23,7 @@
 #include <hcl/hlim/coreNodes/Node_Rewire.h>
 #include <hcl/hlim/coreNodes/Node_Multiplexer.h>
 
-namespace hcl::core::frontend {
+namespace hcl {
 
     Selection Selection::All()
     {

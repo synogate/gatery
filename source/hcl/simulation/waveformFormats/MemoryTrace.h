@@ -26,13 +26,13 @@
 #include <string>
 #include <vector>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 class Clock;
 
 }
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 struct MemoryTrace {
     struct Signal {

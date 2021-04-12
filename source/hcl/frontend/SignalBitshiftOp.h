@@ -34,7 +34,7 @@
 #include <optional>
 
 
-namespace hcl::core::frontend {
+namespace hcl {
 
 class SignalBitShiftOp
 {

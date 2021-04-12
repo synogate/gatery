@@ -19,7 +19,7 @@
 
 #include "coreNodes/Node_Signal.h"
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
     
 SignalGroup::SignalGroup(GroupType groupType) : m_groupType(groupType)

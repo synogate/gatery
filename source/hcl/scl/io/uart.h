@@ -32,12 +32,12 @@ struct UART
     unsigned baudRate = 19200;
 
     struct Stream {
-        core::frontend::BVec data;
-        core::frontend::Bit valid;
-        core::frontend::Bit ready;
+        BVec data;
+        Bit valid;
+        Bit ready;
     };
 
-    Stream recieve(core::frontend::Bit rx);
+    Stream recieve(Bit rx);
 
     Bit send(Stream &stream);
 };

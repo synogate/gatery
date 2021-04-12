@@ -31,7 +31,7 @@ namespace hcl::stl {
 
     namespace internal
     {
-        using namespace hcl::core::frontend;
+        using namespace hcl;
 
         struct MemoryPort
         {
@@ -39,15 +39,15 @@ namespace hcl::stl {
 
             BVec address;
 
-            std::optional<core::frontend::Bit> write;
-            std::optional<core::frontend::BVec> writeData;
+            std::optional<Bit> write;
+            std::optional<BVec> writeData;
         };
 
         struct Memory
         {
             std::vector<BVec> data;
             std::vector<BVec> readData;
-            std::map<hcl::core::frontend::SignalReadPort, MemoryPort> ports;
+            std::map<hcl::SignalReadPort, MemoryPort> ports;
 
             PortConflict samePortRead = PortConflict::inOrder;
             PortConflict differentPortRead = PortConflict::inOrder;
@@ -58,7 +58,7 @@ namespace hcl::stl {
     template<typename Data>
     class MemoryReadPort
     {
-        using BVec = core::frontend::BVec;
+        using BVec = BVec;
     public:
         MemoryReadPort(const MemoryReadPort&) = default;
         MemoryReadPort(std::shared_ptr<internal::Memory> mem, internal::MemoryPort& port, const Data& defaultValue) :
@@ -71,7 +71,7 @@ namespace hcl::stl {
 
         Data read() const
         {
-            core::frontend::BVec readData = mux(m_port.address, m_memory->readData);
+            BVec readData = mux(m_port.address, m_memory->readData);
 
             for (auto& it : m_memory->ports)
             {
@@ -92,7 +92,7 @@ namespace hcl::stl {
             }
 
             Data ret = m_defaultValue;
-            hcl::core::frontend::unpack(readData, ret);
+            hcl::unpack(readData, ret);
             return ret;
         }
 
@@ -108,7 +108,7 @@ namespace hcl::stl {
     template<typename Data>
     class MemoryPort : public MemoryReadPort<Data>
     {
-        using BVec = core::frontend::BVec;
+        using BVec = BVec;
     public:
         MemoryPort(const MemoryPort&) = default;
         using MemoryReadPort<Data>::MemoryReadPort;
@@ -117,14 +117,14 @@ namespace hcl::stl {
 
         MemoryPort& write(const Data& value)
         {
-            auto* scope = hcl::core::frontend::ConditionalScope::get();
+            auto* scope = hcl::ConditionalScope::get();
             if (!scope)
                 this->m_port.write = '1';
             else
-                this->m_port.write = hcl::core::frontend::SignalReadPort{ scope->getFullCondition() };
+                this->m_port.write = hcl::SignalReadPort{ scope->getFullCondition() };
 
             this->m_port.writeData = pack(value);
-            core::frontend::sim_debug() << "write " << *this->m_port.write << ", data " << *this->m_port.writeData << ", address " << this->m_port.address;
+            sim_debug() << "write " << *this->m_port.write << ", data " << *this->m_port.writeData << ", address " << this->m_port.address;
 
             for (size_t i = 0; i < this->m_memory->data.size(); ++i)
             {
@@ -139,11 +139,11 @@ namespace hcl::stl {
     };
 
 
-    template<typename Data = core::frontend::BVec>
+    template<typename Data = BVec>
     class Rom
     {
     public:
-        using BVec = core::frontend::BVec;
+        using BVec = BVec;
 
         template<typename DataInit>
         Rom(size_t size, DataInit def = Data{}) :
@@ -175,12 +175,12 @@ namespace hcl::stl {
         Data m_defaultValue;
     };
 
-    template<typename Data = core::frontend::BVec>
+    template<typename Data = BVec>
     class Ram : public Rom<Data>
     {
     public:
         using Rom<Data>::Rom;
-        using BVec = core::frontend::BVec;
+        using BVec = BVec;
         
         // - merge same bitvector node ports
         // - allow different address width for Data = BVec
@@ -198,16 +198,16 @@ namespace hcl::stl {
     struct WritePort
     {
         WritePort(size_t addrWidth, size_t dataWidth) :
-            address(hcl::core::frontend::BitWidth{ addrWidth }),
-            writeData(hcl::core::frontend::BitWidth{ dataWidth })
+            address(hcl::BitWidth{ addrWidth }),
+            writeData(hcl::BitWidth{ dataWidth })
         {}
 
-        hcl::core::frontend::BVec address;
-        hcl::core::frontend::BVec writeData;
+        hcl::BVec address;
+        hcl::BVec writeData;
     };
 
     // TODO remove simpleDualPortRam API
-    Stream<core::frontend::BVec> simpleDualPortRam(Stream<WritePort>& write, Stream<core::frontend::BVec> readAddress, std::string_view name);
+    Stream<BVec> simpleDualPortRam(Stream<WritePort>& write, Stream<BVec> readAddress, std::string_view name);
 
 }
 

@@ -26,12 +26,12 @@
 #include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
 
 using namespace boost::unit_test;
-using UnitTestSimulationFixture = hcl::core::frontend::UnitTestSimulationFixture;
+using UnitTestSimulationFixture = hcl::UnitTestSimulationFixture;
 /*
 BOOST_FIXTURE_TEST_CASE(ROM, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
-    using namespace hcl::core::sim;
+    using namespace hcl;
+    using namespace hcl::sim;
     using namespace hcl::utils;
 
 

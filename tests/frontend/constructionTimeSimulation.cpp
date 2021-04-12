@@ -24,13 +24,13 @@
 #include <hcl/simulation/UnitTestSimulationFixture.h>
 
 using namespace boost::unit_test;
-using namespace hcl::core::frontend;
+using namespace hcl;
 
-using UnitTestSimulationFixture = hcl::core::frontend::UnitTestSimulationFixture;
+using UnitTestSimulationFixture = hcl::UnitTestSimulationFixture;
 
 BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_arith, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
@@ -41,31 +41,31 @@ BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_arith, UnitTestSimulationFixture)
     BVec b(8_b);
     b = reg(b);
 
-    BOOST_TEST(sim(a).defined() == 0);
-    BOOST_TEST(sim(b).defined() == 0);
+    BOOST_TEST(simu(a).defined() == 0);
+    BOOST_TEST(simu(b).defined() == 0);
 
     BVec c = a + b;
 
-    BOOST_TEST(sim(c).defined() == 0);
+    BOOST_TEST(simu(c).defined() == 0);
 
-    sim(a) = 5;
-    BOOST_TEST(sim(c).defined() == 0);
+    simu(a) = 5;
+    BOOST_TEST(simu(c).defined() == 0);
 
-    sim(b) = 10;
+    simu(b) = 10;
 
-    BOOST_TEST(sim(c).defined() == 255);
-    BOOST_TEST(sim(c).value() == 15);
+    BOOST_TEST(simu(c).defined() == 255);
+    BOOST_TEST(simu(c).value() == 15);
 
     c += 42;
 
-    BOOST_TEST(sim(c).defined() == 255);
-    BOOST_TEST(sim(c).value() == 57);
+    BOOST_TEST(simu(c).defined() == 255);
+    BOOST_TEST(simu(c).value() == 57);
 }
 
 
 BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_logic, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
@@ -76,31 +76,31 @@ BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_logic, UnitTestSimulationFixture)
     BVec b(8_b);
     b = reg(b);
 
-    BOOST_TEST(sim(a).defined() == 0);
-    BOOST_TEST(sim(b).defined() == 0);
+    BOOST_TEST(simu(a).defined() == 0);
+    BOOST_TEST(simu(b).defined() == 0);
 
     BVec c = a & b;
 
-    BOOST_TEST(sim(c).defined() == 0);
+    BOOST_TEST(simu(c).defined() == 0);
 
-    sim(a) = 7;
-    BOOST_TEST(sim(c).defined() == 0);
+    simu(a) = 7;
+    BOOST_TEST(simu(c).defined() == 0);
 
-    sim(b) = 10;
+    simu(b) = 10;
 
-    BOOST_TEST(sim(c).defined() == 255);
-    BOOST_TEST(sim(c).value() == (10 & 7));
+    BOOST_TEST(simu(c).defined() == 255);
+    BOOST_TEST(simu(c).value() == (10 & 7));
 
     c |= 42;
 
-    BOOST_TEST(sim(c).defined() == 255);
-    BOOST_TEST(sim(c).value() == (10 & 7 | 42));
+    BOOST_TEST(simu(c).defined() == 255);
+    BOOST_TEST(simu(c).value() == (10 & 7 | 42));
 }
 
 
 BOOST_FIXTURE_TEST_CASE(CTS_TestRegisterReset, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
@@ -111,15 +111,15 @@ BOOST_FIXTURE_TEST_CASE(CTS_TestRegisterReset, UnitTestSimulationFixture)
     BVec b(8_b);
     b = reg(b);
 
-    BOOST_TEST(sim(a).defined() == 255);
-    BOOST_TEST(sim(b).defined() == 0);
+    BOOST_TEST(simu(a).defined() == 255);
+    BOOST_TEST(simu(b).defined() == 0);
 
     BVec c = a + b;
 
-    BOOST_TEST(sim(c).defined() == 0);
+    BOOST_TEST(simu(c).defined() == 0);
 
-    sim(b) = 10;
+    simu(b) = 10;
 
-    BOOST_TEST(sim(c).defined() == 255);
-    BOOST_TEST(sim(c).value() == 52);
+    BOOST_TEST(simu(c).defined() == 255);
+    BOOST_TEST(simu(c).value() == 52);
 }

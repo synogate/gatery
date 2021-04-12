@@ -26,7 +26,7 @@
 #include <vector>
 #include <string>
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 class SimulatorControl
 {

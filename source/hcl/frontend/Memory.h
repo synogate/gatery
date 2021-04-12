@@ -33,7 +33,7 @@
 
 #include <functional>
 
-namespace hcl::core::frontend {
+namespace hcl {
 
     template<typename Data>
     class MemoryPortFactory {
@@ -47,14 +47,14 @@ namespace hcl::core::frontend {
             {
                 auto *readPort = DesignScope::createNode<hlim::Node_MemPort>(m_wordSize);
                 readPort->connectMemory(m_memoryNode);
-                if (auto* scope = hcl::core::frontend::ConditionalScope::get())
+                if (auto* scope = hcl::ConditionalScope::get())
                     readPort->connectEnable(scope->getFullCondition());
 
                 readPort->connectAddress(m_address.getReadPort());
 
                 BVec rawData(SignalReadPort({.node=readPort, .port=(unsigned)hlim::Node_MemPort::Outputs::rdData}));
                 Data ret = m_defaultValue;
-                hcl::core::frontend::unpack(rawData, ret);
+                hcl::unpack(rawData, ret);
                 return ret;
             }
 
@@ -68,7 +68,7 @@ namespace hcl::core::frontend {
                 auto *writePort = DesignScope::createNode<hlim::Node_MemPort>(m_wordSize);
                 writePort->connectMemory(m_memoryNode);
                 //writePort->connectEnable(constructEnableBit().getReadPort());
-                if (auto* scope = hcl::core::frontend::ConditionalScope::get()) {
+                if (auto* scope = hcl::ConditionalScope::get()) {
                     writePort->connectEnable(scope->getFullCondition());
                     writePort->connectWrEnable(scope->getFullCondition());
                 }
@@ -86,8 +86,8 @@ namespace hcl::core::frontend {
 
             Bit constructEnableBit() const {
                 Bit enable;
-                if (auto* scope = hcl::core::frontend::ConditionalScope::get())
-                    enable = hcl::core::frontend::SignalReadPort{ scope->getFullCondition() };
+                if (auto* scope = hcl::ConditionalScope::get())
+                    enable = hcl::SignalReadPort{ scope->getFullCondition() };
                 else
                     enable = '1';
                 return enable;

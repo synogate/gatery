@@ -20,7 +20,7 @@
 #include "../Node.h"
 #include "../ConnectionType.h"
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
     class SignalGroup;
 

@@ -20,7 +20,7 @@
 #include "Bit.h"
 #include "BitVector.h"
 
-namespace hcl::core::frontend {
+namespace hcl {
 
 SimpleSignalGeneratorContext::SimpleSignalGeneratorContext(const hlim::Node_SignalGenerator *node, sim::DefaultBitVectorState *state, const size_t *outputOffsets, std::uint64_t tick) :
         m_node(node), m_state(state), m_outputOffsets(outputOffsets), m_tick(tick)
@@ -80,7 +80,7 @@ hlim::Node_SignalGenerator* internal::createSigGenNode(const Clock &refClk, std:
             std::vector<std::string> m_outputNames;
             std::function<void(SimpleSignalGeneratorContext &context)> m_genCallback;
             
-            virtual void produceSignals(hcl::core::sim::DefaultBitVectorState &state, const size_t *outputOffsets, size_t clockTick) const override {
+            virtual void produceSignals(hcl::sim::DefaultBitVectorState &state, const size_t *outputOffsets, size_t clockTick) const override {
                 SimpleSignalGeneratorContext context(this, &state, outputOffsets, clockTick);
                 m_genCallback(context);
             }

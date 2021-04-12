@@ -23,7 +23,7 @@
 #include <hcl/utils/Preprocessor.h>
 #include <hcl/simulation/ConstructionTimeSimulationContext.h>
 
-namespace hcl::core::frontend {
+namespace hcl {
     
     
 template<class FinalType>

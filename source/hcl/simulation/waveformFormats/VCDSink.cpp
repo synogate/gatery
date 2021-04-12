@@ -28,7 +28,7 @@
 #include <string>
 #include <functional>
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 
 VCDSink::VCDSink(hlim::Circuit &circuit, Simulator &simulator, const char *filename, const char *logFilename) : WaveformRecorder(circuit, simulator)

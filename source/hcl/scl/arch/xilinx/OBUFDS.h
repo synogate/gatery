@@ -21,7 +21,7 @@
 
 namespace hcl::stl::arch::xilinx {
 
-class OBUFDS : public hcl::core::hlim::Node_External
+class OBUFDS : public hcl::hlim::Node_External
 {
     public:
         OBUFDS();

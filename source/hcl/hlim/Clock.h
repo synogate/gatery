@@ -24,7 +24,7 @@
 #include <string>
 #include <memory>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 class Clock
 {

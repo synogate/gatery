@@ -24,35 +24,35 @@
 
 namespace hcl::stl
 {
-	struct OneHot : core::frontend::BVec
+	struct OneHot : BVec
 	{
 		OneHot() : BVec() {}
 		OneHot(const OneHot&) = default;
 
-		OneHot(core::frontend::BitWidth width) : BVec(width, core::frontend::Expansion::none) {}
-		explicit OneHot(const core::frontend::BVec& initValue) : BVec(initValue) {}
+		OneHot(BitWidth width) : BVec(width, Expansion::none) {}
+		explicit OneHot(const BVec& initValue) : BVec(initValue) {}
 
 		OneHot& operator = (const OneHot&) = default;
 
 		void setBit(const BVec& idx);
 	};
 
-	OneHot decoder(const core::frontend::BVec& in);
-	core::frontend::BVec encoder(const OneHot& in);
+	OneHot decoder(const BVec& in);
+	BVec encoder(const OneHot& in);
 
-	std::vector<Stream<core::frontend::BVec>> makeIndexList(const core::frontend::BVec& valids);
+	std::vector<Stream<BVec>> makeIndexList(const BVec& valids);
 
 	template<typename T, typename Iter>
 	Stream<T> priorityEncoder(Iter begin, Iter end);
 
 	struct EncoderResult
 	{
-		core::frontend::BVec index;
-		core::frontend::Bit valid;
+		BVec index;
+		Bit valid;
 	};
 
-	EncoderResult priorityEncoder(const core::frontend::BVec& in);
-	EncoderResult priorityEncoderTree(const core::frontend::BVec& in, bool registerStep, size_t resultBitsPerStep = 2);
+	EncoderResult priorityEncoder(const BVec& in);
+	EncoderResult priorityEncoderTree(const BVec& in, bool registerStep, size_t resultBitsPerStep = 2);
 
 
 	// implementation 
@@ -67,9 +67,9 @@ namespace hcl::stl
 		for (Iter it = begin; it != end; ++it)
 			if (maxWidth < it->size())
 				maxWidth = it->size();
-		ret.value() = hcl::core::frontend::ConstBVec(maxWidth);
+		ret.value() = hcl::ConstBVec(maxWidth);
 
-		core::frontend::Bit anyValid = '0';
+		Bit anyValid = '0';
 		for(Iter it = begin; it != end; ++it)
 		{
 			it->ready = '0';

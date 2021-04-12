@@ -22,7 +22,7 @@
 #include <string>
 #include <memory>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 #if 1
 struct ConnectionType

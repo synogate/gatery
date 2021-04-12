@@ -22,7 +22,7 @@
 #include <vector>
 #include <memory>
 
-namespace hcl::core::vhdl {
+namespace hcl::vhdl {
     
 class Entity;
 class Process;

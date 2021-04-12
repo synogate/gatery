@@ -32,7 +32,7 @@
 
 // Adopted from Andy's codebase
 
-namespace hcl::core {
+namespace hcl {
 
 DotExport::DotExport(std::filesystem::path destination) : m_destination(std::move(destination))
 {

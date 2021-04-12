@@ -29,18 +29,18 @@
 #include <hcl/simulation/simProc/WaitClock.h>
 
 
-namespace hcl::core::frontend {
+namespace hcl {
 
 class Clock;
 
-sim::SigHandle sim(hlim::NodePort output);
-sim::SigHandle sim(const Bit &bit);
-sim::SigHandle sim(const BVec &signal);
-sim::SigHandle sim(const InputPin &pin);
-sim::SigHandle sim(const InputPins &pins);
+sim::SigHandle simu(hlim::NodePort output);
+sim::SigHandle simu(const Bit &bit);
+sim::SigHandle simu(const BVec &signal);
+sim::SigHandle simu(const InputPin &pin);
+sim::SigHandle simu(const InputPins &pins);
 
-sim::SigHandle sim(const OutputPin &pin);
-sim::SigHandle sim(const OutputPins &pins);
+sim::SigHandle simu(const OutputPin &pin);
+sim::SigHandle simu(const OutputPins &pins);
 
 using SimProcess = sim::SimulationProcess;
 using WaitFor = sim::WaitFor;

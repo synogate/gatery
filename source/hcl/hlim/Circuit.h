@@ -27,7 +27,7 @@
 #include <memory>
 #include <map>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 class Circuit
 {

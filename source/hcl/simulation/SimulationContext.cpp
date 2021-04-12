@@ -20,7 +20,7 @@
 #include "../utils/Exceptions.h"
 #include "../utils/Preprocessor.h"
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 thread_local SimulationContext *SimulationContext::m_current = nullptr;
 

@@ -17,7 +17,7 @@
 */
 #include "SimulationProcess.h"
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 SimulationProcess::SimulationProcess(Handle handle) : m_handle(handle)
 {

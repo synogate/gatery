@@ -17,7 +17,7 @@
 */
 #pragma once
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 /**
  * @todo write docs

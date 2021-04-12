@@ -21,7 +21,7 @@
 
 #include <iostream>
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 void SimulatorConsoleOutput::onNewTick(const hlim::ClockRational &simulationTime)
 {

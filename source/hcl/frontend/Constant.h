@@ -24,7 +24,7 @@
 
 #include <string_view>
 
-namespace hcl::core::frontend 
+namespace hcl 
 {
     sim::DefaultBitVectorState parseBit(char value);
     sim::DefaultBitVectorState parseBit(bool value);

@@ -36,9 +36,9 @@
 
 using namespace boost::unit_test;
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, BitCountTest, data::xrange(255) * data::xrange(1, 8), val, bitsize)
+BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, BitCountTest, data::xrange(255) * data::xrange(1, 8), val, bitsize)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
     
     DesignScope design;
 
@@ -55,9 +55,9 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, BitCountTest, 
 }
 
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, Decoder, data::xrange(3), val)
+BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, Decoder, data::xrange(3), val)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
     using namespace hcl::stl;
 
     DesignScope design;
@@ -78,9 +78,9 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, Decoder, data:
     eval(design.getCircuit());
 }
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ListEncoder, data::xrange(3), val)
+BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, ListEncoder, data::xrange(3), val)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
     using namespace hcl::stl;
 
     DesignScope design;
@@ -106,9 +106,9 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, ListEncoder, d
 }
 
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, PriorityEncoderTreeTest, data::xrange(65), val)
+BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, PriorityEncoderTreeTest, data::xrange(65), val)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
     using namespace hcl::stl;
 
     DesignScope design;

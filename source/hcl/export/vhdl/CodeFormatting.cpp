@@ -21,7 +21,7 @@
 
 #include <boost/format.hpp>
 
-namespace hcl::core::vhdl {
+namespace hcl::vhdl {
 
 
 void CodeFormatting::indent(std::ostream &stream, unsigned depth) const

@@ -21,7 +21,7 @@
 
 #include <iostream>
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 WaitUntil::WaitUntil(hlim::NodePort np, Trigger trigger) : m_np(np), m_trigger(trigger)
 {

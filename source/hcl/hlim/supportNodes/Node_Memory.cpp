@@ -19,7 +19,7 @@
 
 #include "Node_MemPort.h"
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
     Node_Memory::Node_Memory()
     {

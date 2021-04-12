@@ -30,7 +30,7 @@
 #include "../../hlim/Clock.h"
 
 
-namespace hcl::core::vhdl {
+namespace hcl::vhdl {
 
 
 void NodeGroupInfo::buildFrom(hlim::NodeGroup *nodeGroup, bool mergeAreasReccursive)

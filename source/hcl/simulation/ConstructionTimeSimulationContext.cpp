@@ -28,7 +28,7 @@
 
 #include "../export/DotExport.h"
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 void ConstructionTimeSimulationContext::overrideSignal(hlim::NodePort output, const DefaultBitVectorState &state)
 {

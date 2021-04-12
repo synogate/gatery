@@ -34,7 +34,7 @@
 #endif
 
 
-#define HCL_NAMED(x) hcl::core::frontend::setName(x, #x)
+#define HCL_NAMED(x) hcl::setName(x, #x)
 
 
 #define HCL_ASSERT(x) { if (!(x)) { throw hcl::utils::InternalError(__FILE__, __LINE__, std::string("Assertion failed: ") + #x); }}

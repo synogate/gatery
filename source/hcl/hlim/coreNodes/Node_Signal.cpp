@@ -23,7 +23,7 @@
 
 #include <string>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 void Node_Signal::setConnectionType(const ConnectionType &connectionType)
 {

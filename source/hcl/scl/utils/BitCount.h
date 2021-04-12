@@ -24,6 +24,6 @@
 
 namespace hcl::stl {
  
-core::frontend::BVec bitcount(core::frontend::BVec vec);
+BVec bitcount(BVec vec);
     
 }

@@ -26,13 +26,13 @@
 #include <iostream>
 
 using namespace boost::unit_test;
-using namespace hcl::core::frontend;
+using namespace hcl;
 using namespace hcl::utils;
-using UnitTestSimulationFixture = hcl::core::frontend::UnitTestSimulationFixture;
+using UnitTestSimulationFixture = hcl::UnitTestSimulationFixture;
 
 BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 
@@ -49,7 +49,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
 
         addSimulationProcess([&]()->SimProcess{
             for (auto i : Range(10)) {
-                sim(incrementPin) = i;
+                simu(incrementPin) = i;
                 co_await WaitFor(Seconds(5)/clock.getAbsoluteFrequency());
             }
         });
@@ -60,10 +60,10 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
             unsigned expectedSum = 0;
 
             while (true) {
-                expectedSum += sim(incrementPin);
+                expectedSum += simu(incrementPin);
 
-                BOOST_TEST(expectedSum == sim(outputPin));
-                BOOST_TEST(sim(outputPin).defined() == 0xFF);
+                BOOST_TEST(expectedSum == simu(outputPin));
+                BOOST_TEST(simu(outputPin).defined() == 0xFF);
 
                 co_await WaitFor(Seconds(1)/clock.getAbsoluteFrequency());
             }
@@ -78,7 +78,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(SimProc_ExceptionForwarding, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(1));
@@ -96,7 +96,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_ExceptionForwarding, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(SimProc_PingPong, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 
@@ -111,9 +111,9 @@ BOOST_FIXTURE_TEST_CASE(SimProc_PingPong, UnitTestSimulationFixture)
         addSimulationProcess([&]()->SimProcess{
             unsigned i = 0;
             while (true) {
-                sim(A_in) = i;
+                simu(A_in) = i;
                 co_await WaitFor(Seconds(1)/clock.getAbsoluteFrequency());
-                BOOST_TEST(sim(B_out) == i);
+                BOOST_TEST(simu(B_out) == i);
                 i++;
             }
         });
@@ -122,7 +122,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_PingPong, UnitTestSimulationFixture)
             co_await WaitFor(Seconds(1,2)/clock.getAbsoluteFrequency());
 
             while (true) {
-                sim(B_in) = sim(A_out);
+                simu(B_in) = simu(A_out);
 
                 co_await WaitFor(Seconds(1)/clock.getAbsoluteFrequency());
             }

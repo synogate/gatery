@@ -19,7 +19,7 @@
 
 #include "../utils/BitManipulation.h"
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 size_t BitAllocator::allocate(size_t size) {
     if (size == 0)

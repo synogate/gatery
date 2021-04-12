@@ -43,7 +43,7 @@ using namespace boost::unit_test;
 using namespace hcl;
 
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCookuTableLookup, data::xrange(2, 4), numTables)
+BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, TinyCookuTableLookup, data::xrange(2, 4), numTables)
 {
     DesignScope design;
 
@@ -94,7 +94,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCookuTable
 
     addSimulationProcess([&]()->SimProcess {
         std::mt19937 rng{ 1337 };
-        sim(update) = '0';
+        simu(update) = '0';
 
         while(true)
         {
@@ -106,26 +106,26 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCookuTable
                 const size_t tableIdx = key % params.numTables;
                 const size_t itemIdx = (key >> (tableIdx * 4)) & 0xF;
 
-                sim(update) = '1';
-                sim(updateItemKey) = key;
-                sim(updateItemValue) = value;
-                sim(updateTableIdx) = tableIdx;
-                sim(updateItemIdx) = itemIdx;
+                simu(update) = '1';
+                simu(updateItemKey) = key;
+                simu(updateItemValue) = value;
+                simu(updateTableIdx) = tableIdx;
+                simu(updateItemIdx) = itemIdx;
 
                 if (rng() % 5 == 0)
                 {
-                    sim(updateItemValid) = '0';
+                    simu(updateItemValid) = '0';
                     state[tableIdx][itemIdx] = std::make_pair(invalid, invalid);
                 }
                 else
                 {
-                    sim(updateItemValid) = '1';
+                    simu(updateItemValid) = '1';
                     state[tableIdx][itemIdx] = std::make_pair(key, value);
                 }
             }
 
             co_await WaitClk(clock);
-            sim(update) = '0';
+            simu(update) = '0';
         }
     });
 
@@ -133,7 +133,7 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCookuTable
         std::mt19937 rng{ 1338 };
         while (true)
         {
-            sim(lookupKey) = hcl::utils::bitfieldExtract(rng(), 0, keySize.value);
+            simu(lookupKey) = hcl::utils::bitfieldExtract(rng(), 0, keySize.value);
             co_await WaitClk(clock);
         }
     });
@@ -146,18 +146,18 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCookuTable
         {
             if (lookupQueue.size() == params.latency)
             {
-                if (sim(outFound))
-                    BOOST_TEST(lookupQueue.back() == sim(outValue));
+                if (simu(outFound))
+                    BOOST_TEST(lookupQueue.back() == simu(outValue));
                 else
                     BOOST_TEST(lookupQueue.back() == invalid);
                 lookupQueue.pop_back();
             }
             else
             {
-                BOOST_TEST(sim(outFound) == 0);
+                BOOST_TEST(simu(outFound) == 0);
             }
 
-            const size_t key = sim(lookupKey);
+            const size_t key = simu(lookupKey);
             size_t tableKey = key;
             size_t value = invalid;
             for (const auto& t : state)
@@ -175,14 +175,14 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCookuTable
 
     design.getCircuit().optimize(3);
     //design.visualize("TinyCookuTableLookup");
-    //core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TinyCookuTableLookup.vcd");
+    //sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TinyCookuTableLookup.vcd");
     //vcd.addAllNamedSignals();
 
     runTicks(design.getCircuit(), clock.getClk(), 4096);
 }
 
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCuckooTableLookup, data::xrange(3, 4), numTables)
+BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, TinyCuckooTableLookup, data::xrange(3, 4), numTables)
 {
     DesignScope design;
 
@@ -208,16 +208,16 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCuckooTabl
     //design.visualize("TinyCookuTableLookup_before");
     //design.getCircuit().optimize(3);
     //design.visualize("TinyCookuTableLookup");
-    //core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TinyCookuTableLookup.vcd");
+    //sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TinyCookuTableLookup.vcd");
     //vcd.addAllNamedSignals();
 
-    //hcl::core::vhdl::VHDLExport vhdl("vhdl/");
+    //hcl::vhdl::VHDLExport vhdl("vhdl/");
     //vhdl(design.getCircuit());
 
     runTicks(design.getCircuit(), clock.getClk(), 4096);
 }
 
-BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCuckooTableLookupDemuxed, data::xrange(3, 4), numTables)
+BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, TinyCuckooTableLookupDemuxed, data::xrange(3, 4), numTables)
 {
     DesignScope design;
 
@@ -246,10 +246,10 @@ BOOST_DATA_TEST_CASE_F(hcl::core::sim::UnitTestSimulationFixture, TinyCuckooTabl
     design.visualize("TinyCuckooTableLookupDemuxed_before");
     design.getCircuit().optimize(3);
     design.visualize("TinyCuckooTableLookupDemuxed");
-    core::sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TinyCuckooTableLookupDemuxed.vcd");
+    sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TinyCuckooTableLookupDemuxed.vcd");
     vcd.addAllNamedSignals();
 
-    //hcl::core::vhdl::VHDLExport vhdl("vhdl/");
+    //hcl::vhdl::VHDLExport vhdl("vhdl/");
     //vhdl(design.getCircuit());
 
     runTicks(design.getCircuit(), clock.getClk(), 4096);

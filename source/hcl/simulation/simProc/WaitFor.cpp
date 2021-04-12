@@ -21,7 +21,7 @@
 
 #include <iostream>
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 WaitFor::WaitFor(const hlim::ClockRational &seconds) : m_seconds(seconds)
 {

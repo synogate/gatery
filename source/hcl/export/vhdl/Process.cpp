@@ -35,7 +35,7 @@
 #include "../../hlim/coreNodes/Node_Rewire.h"
 #include "../../hlim/coreNodes/Node_Pin.h"
 
-namespace hcl::core::vhdl {
+namespace hcl::vhdl {
 
 Process::Process(BasicBlock *parent) : BaseGrouping(parent->getAST(), parent, &parent->getNamespaceScope())
 {

@@ -26,7 +26,7 @@
 #include <ostream>
 #include <functional>
 
-namespace hcl::core::vhdl {
+namespace hcl::vhdl {
 
 
 /**

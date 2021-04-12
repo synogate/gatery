@@ -34,9 +34,9 @@ namespace hcl
 			size_t index = 0;
 			std::any instance;
 
-			std::function<void(core::frontend::CompoundVisitor& v)> visitCopy;
-			std::function<void(core::frontend::CompoundVisitor& v)> visitConst;
-			std::function<void(core::frontend::CompoundVisitor& v)> visitMutate;
+			std::function<void(CompoundVisitor& v)> visitCopy;
+			std::function<void(CompoundVisitor& v)> visitConst;
+			std::function<void(CompoundVisitor& v)> visitMutate;
 		};
 
 	public:

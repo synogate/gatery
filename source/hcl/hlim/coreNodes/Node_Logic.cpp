@@ -17,7 +17,7 @@
 */
 #include "Node_Logic.h"
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 Node_Logic::Node_Logic(Op op) : Node(op==NOT?1:2, 1), m_op(op)
 {

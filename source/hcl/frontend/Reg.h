@@ -17,7 +17,7 @@
 */
 #pragma once
 
-namespace hcl::core::frontend
+namespace hcl
 {
 	template<class T, class En = void>
 	struct Reg

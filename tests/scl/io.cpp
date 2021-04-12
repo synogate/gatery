@@ -29,14 +29,14 @@
 #include <iostream>
 
 using namespace boost::unit_test;
-using namespace hcl::core::frontend;
+using namespace hcl;
 using namespace hcl::utils;
-using UnitTestSimulationFixture = hcl::core::frontend::UnitTestSimulationFixture;
+using UnitTestSimulationFixture = hcl::UnitTestSimulationFixture;
 
 
 BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 
@@ -66,8 +66,8 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
 
         addSimulationProcess([rx, &clock, &dataStream, sending, baudRate]()->SimProcess{
             dataStream.clear();
-            sim(rx) = '1';
-            sim(sending) = '0';
+            simu(rx) = '1';
+            simu(sending) = '0';
 
             co_await WaitFor(Seconds(2)/clock.getAbsoluteFrequency());
             while (true) {
@@ -75,34 +75,34 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
                 dataStream.push_back(data);
 
 
-                sim(sending) = '1';
-                sim(rx) = '0'; // start bit
+                simu(sending) = '1';
+                simu(rx) = '0'; // start bit
                 co_await WaitFor(Seconds(1,baudRate));
                 for (auto i : hcl::utils::Range(8)) {
-                    sim(rx) = data & 1; // data bit
+                    simu(rx) = data & 1; // data bit
                     data >>= 1;
                     co_await WaitFor(Seconds(1,baudRate));
                 }
-                sim(rx) = '1'; // stop bit
+                simu(rx) = '1'; // stop bit
                 co_await WaitFor(Seconds(1,baudRate));
-                sim(sending) = '0';
+                simu(sending) = '0';
 
                 co_await WaitFor(Seconds(rand() % 100)/clock.getAbsoluteFrequency());
             }
         });
 
         addSimulationProcess([=, &clock, &dataStream]()->SimProcess{
-            sim(outReady) = false;
+            simu(outReady) = false;
             co_await WaitFor(Seconds(1,2)/clock.getAbsoluteFrequency());
 
-            sim(outReady) = true;
+            simu(outReady) = true;
 
             size_t readIdx = 0;
             while (true) {
-                while (!sim(outValid))
+                while (!simu(outValid))
                     co_await WaitClk(clock);
 
-                std::uint8_t data = sim(outData);
+                std::uint8_t data = simu(outData);
                 BOOST_TEST(readIdx < dataStream.size());
                 if (readIdx < dataStream.size())
                     BOOST_TEST(data == dataStream[readIdx]);

@@ -17,7 +17,7 @@
 */
 #include "Node_Rewire.h"
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 bool Node_Rewire::RewireOperation::isBitExtract(size_t& bitIndex) const
 {

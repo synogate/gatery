@@ -20,7 +20,7 @@
 #include <sstream>
 #include <iomanip>
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 Node_Constant::Node_Constant(sim::DefaultBitVectorState value, hlim::ConnectionType::Interpretation connectionType) :
     Node(0, 1),

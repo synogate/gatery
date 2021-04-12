@@ -18,7 +18,7 @@
 #include "Node_PriorityConditional.h"
 
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 void Node_PriorityConditional::connectDefault(const NodePort &port) 
 { 

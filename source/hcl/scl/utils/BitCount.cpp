@@ -21,10 +21,10 @@
 
 namespace hcl::stl {
 
-    core::frontend::BVec bitcount(core::frontend::BVec vec)
+    BVec bitcount(BVec vec)
     {
-        using namespace hcl::core::frontend;
-        using namespace hcl::core::hlim;
+        using namespace hcl;
+        using namespace hcl::hlim;
         
         HCL_NAMED(vec);
         

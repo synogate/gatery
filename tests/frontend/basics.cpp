@@ -31,12 +31,12 @@ using namespace boost::unit_test;
 
 const auto optimizationLevels = data::make({0, 1, 2, 3});
 
-using UnitTestSimulationFixture = hcl::core::frontend::BoostUnitTestSimulationFixture;
+using UnitTestSimulationFixture = hcl::BoostUnitTestSimulationFixture;
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLevels * data::xrange(1, 8), optimization, bitsize)
 {
-    using namespace hcl::core::frontend;
-    using namespace hcl::core::sim;
+    using namespace hcl;
+    using namespace hcl::sim;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
@@ -49,8 +49,8 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLev
 
         for (x = 0; x < 8; x++)
             for (y = 0; y < 8; y++) {
-                sim(a) = x;
-                sim(b) = y;
+                simu(a) = x;
+                simu(b) = y;
 
                 co_await WaitClk(clock);
             }
@@ -67,7 +67,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLev
                                                                                                             \
         addSimulationProcess([=, this, &clock, &x, &y]()->SimProcess {                                      \
             while (true) {                                                                                  \
-                DefaultBitVectorState state = sim(c);                                                       \
+                DefaultBitVectorState state = simu(c);                                                       \
                                                                                                             \
                 BOOST_TEST(allDefinedNonStraddling(state, 0, bitsize));                                     \
                 auto v = state.extractNonStraddling(DefaultConfig::VALUE, 0, bitsize);                      \
@@ -102,7 +102,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLev
                                                                                                             \
         addSimulationProcess([=, this, &clock, &x, &y]()->SimProcess {                                      \
             while (true) {                                                                                  \
-                DefaultBitVectorState state = sim(c);                                                       \
+                DefaultBitVectorState state = simu(c);                                                       \
                                                                                                             \
                 BOOST_TEST(allDefinedNonStraddling(state, 0, bitsize));                                     \
                 auto v = state.extractNonStraddling(DefaultConfig::VALUE, 0, bitsize);                      \
@@ -133,7 +133,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLev
 
     design.getCircuit().optimize(optimization);
 
-    runTest(hcl::core::hlim::ClockRational(100'000, 10'000));
+    runTest(hcl::hlim::ClockRational(100'000, 10'000));
 }
 
 
@@ -142,7 +142,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLev
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicing, optimizationLevels, optimization)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     for (auto bitsize : hcl::utils::Range(3, 8))
         for (auto x : hcl::utils::Range(8)) {
@@ -174,7 +174,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicing, optimizationLevel
 
 BOOST_FIXTURE_TEST_CASE(TestSlicingModifications, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     for (auto bitsize : hcl::utils::Range(3, 8))
         for (auto x : hcl::utils::Range(8)) {
@@ -196,7 +196,7 @@ BOOST_FIXTURE_TEST_CASE(TestSlicingModifications, UnitTestSimulationFixture)
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicingAddition, optimizationLevels, optimization)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     for (auto bitsize : hcl::utils::Range(3, 8))
         for (auto x : hcl::utils::Range(8)) {
@@ -221,7 +221,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicingAddition, optimizat
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, SimpleAdditionNetwork, optimizationLevels, optimization)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     for (auto bitsize : hcl::utils::Range(1, 8))
         for (auto x : hcl::utils::Range(8))
@@ -244,7 +244,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, SimpleAdditionNetwork, optimiz
 
 BOOST_FIXTURE_TEST_CASE(BitFromBool, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     for (auto l : hcl::utils::Range(2))
         for (auto r : hcl::utils::Range(2)) {
@@ -267,7 +267,7 @@ BOOST_FIXTURE_TEST_CASE(BitFromBool, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
@@ -291,7 +291,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(SignalMoveAssignment, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     {
         Bit a;
@@ -331,7 +331,7 @@ BOOST_FIXTURE_TEST_CASE(BVecBitAliasConditionCheck, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
@@ -385,18 +385,18 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, UnitTestSimulationFixture)
 
         addSimulationProcess([=, this, &clock]()->SimProcess {
 
-            sim(pinConditionIn) = 0;
-            BOOST_TEST(sim(pinC) == 0xC);
-            BOOST_TEST(sim(pinD) == 0xD);
-            BOOST_TEST(sim(pinX) == 0);
-            BOOST_TEST(sim(pinY) == 1);
+            simu(pinConditionIn) = 0;
+            BOOST_TEST(simu(pinC) == 0xC);
+            BOOST_TEST(simu(pinD) == 0xD);
+            BOOST_TEST(simu(pinX) == 0);
+            BOOST_TEST(simu(pinY) == 1);
             co_await WaitClk(clock);
 
-            sim(pinConditionIn) = 1;
-            BOOST_TEST(sim(pinC) == 0xD);
-            BOOST_TEST(sim(pinD) == 0xC);
-            BOOST_TEST(sim(pinX) == 1);
-            BOOST_TEST(sim(pinY) == 0);
+            simu(pinConditionIn) = 1;
+            BOOST_TEST(simu(pinC) == 0xD);
+            BOOST_TEST(simu(pinD) == 0xC);
+            BOOST_TEST(simu(pinX) == 1);
+            BOOST_TEST(simu(pinY) == 0);
             co_await WaitClk(clock);
 
             stopTest();
@@ -411,7 +411,7 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
@@ -453,16 +453,16 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, UnitTestSimulationFixture)
         addSimulationProcess([=, this, &clock]()->SimProcess {
 
             for (size_t i = 0; i < in.size(); ++i)
-                sim(in[i]) = i;
-            sim(pinConditionIn) = 0;
+                simu(in[i]) = i;
+            simu(pinConditionIn) = 0;
 
             for (size_t i = 0; i < in.size(); ++i)
-                BOOST_TEST(sim(out[i]) == i);
+                BOOST_TEST(simu(out[i]) == i);
             co_await WaitClk(clock);
 
-            sim(pinConditionIn) = 1;
+            simu(pinConditionIn) = 1;
             for (size_t i = 0; i < in.size(); ++i)
-                BOOST_TEST(sim(out[i]) == (i + 1) % 4);
+                BOOST_TEST(simu(out[i]) == (i + 1) % 4);
             co_await WaitClk(clock);
 
             stopTest();
@@ -476,7 +476,7 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(ConditionalLoopAssignment, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
@@ -495,7 +495,7 @@ BOOST_FIXTURE_TEST_CASE(ConditionalLoopAssignment, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
@@ -506,8 +506,8 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, UnitTestSimulationFixture)
 
         addSimulationProcess([=, this, &clock]()->SimProcess{
             for (unsigned refCount = 0; refCount < 10; refCount++) {
-                BOOST_TEST(refCount == sim(counter));
-                BOOST_TEST(sim(counter).defined() == 0xFF);
+                BOOST_TEST(refCount == simu(counter));
+                BOOST_TEST(simu(counter).defined() == 0xFF);
 
                 co_await WaitClk(clock);
             }
@@ -522,7 +522,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
@@ -549,7 +549,7 @@ BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
@@ -575,7 +575,7 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 
@@ -602,7 +602,7 @@ BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 
@@ -636,7 +636,7 @@ BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, UnitTestSimulationFixture
 
 BOOST_FIXTURE_TEST_CASE(StringLiteralParsing, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 
@@ -655,7 +655,7 @@ BOOST_FIXTURE_TEST_CASE(StringLiteralParsing, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(ShiftOp, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 
@@ -676,7 +676,7 @@ BOOST_FIXTURE_TEST_CASE(ShiftOp, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(ConditionalAssignment, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     for (auto x : hcl::utils::Range(8))
         for (auto y : hcl::utils::Range(8)) {
@@ -704,7 +704,7 @@ BOOST_FIXTURE_TEST_CASE(ConditionalAssignment, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleStatements, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     for (auto x : hcl::utils::Range(8))
         for (auto y : hcl::utils::Range(8)) {
@@ -738,7 +738,7 @@ BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleStatements, UnitTestSimulat
 
 BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleElseStatements, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     for (auto x : hcl::utils::Range(8))
         for (auto y : hcl::utils::Range(8)) {
@@ -774,7 +774,7 @@ BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleElseStatements, UnitTestSim
 
 BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignment, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
     for (auto x : hcl::utils::Range(8))
@@ -820,7 +820,7 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignment, UnitTestSimulationFixtu
 
 BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentMultipleStatements, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     for (auto x : hcl::utils::Range(8))
         for (auto y : hcl::utils::Range(8)) {
@@ -868,7 +868,7 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentMultipleStatements, UnitT
 
 BOOST_FIXTURE_TEST_CASE(MultiElseConditionalAssignment, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     for (auto x : hcl::utils::Range(8))
         for (auto y : hcl::utils::Range(8)) {
@@ -915,7 +915,7 @@ BOOST_FIXTURE_TEST_CASE(MultiElseConditionalAssignment, UnitTestSimulationFixtur
 
 BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentWithPreviousAssignmentNoElse, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     for (auto x : hcl::utils::Range(8))
         for (auto y : hcl::utils::Range(8)) {
@@ -950,7 +950,7 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentWithPreviousAssignmentNoE
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignmentNoIf, optimizationLevels, optimization)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     for (auto x : hcl::utils::Range(8))
         for (auto y : hcl::utils::Range(8)) {
@@ -981,7 +981,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmen
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignment, optimizationLevels, optimization)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     for (auto x : hcl::utils::Range(8))
         for (auto y : hcl::utils::Range(8)) {
@@ -1019,7 +1019,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmen
 
 BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentIfElseIf, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
     for (auto x : hcl::utils::Range(8))
@@ -1052,7 +1052,7 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentIfElseIf, UnitTestSimulat
 
 BOOST_FIXTURE_TEST_CASE(UnsignedCompare, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
     for (auto x : hcl::utils::Range(8))
@@ -1100,7 +1100,7 @@ BOOST_FIXTURE_TEST_CASE(UnsignedCompare, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(BVecArithmeticOpSyntax, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 
@@ -1126,7 +1126,7 @@ BOOST_FIXTURE_TEST_CASE(BVecArithmeticOpSyntax, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(LogicOpSyntax, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 
@@ -1139,7 +1139,7 @@ BOOST_FIXTURE_TEST_CASE(LogicOpSyntax, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(SimpleCat, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     BVec vec = 42u;
     BVec vec_2 = pack('1', vec, '0');
@@ -1151,7 +1151,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCat, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(msbBroadcast, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 

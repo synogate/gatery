@@ -17,7 +17,7 @@
 */
 #include "BitVectorState.h"
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 DefaultBitVectorState createDefaultBitVectorState(std::size_t size, const void *data) {
     BitVectorState<DefaultConfig> state;

@@ -41,7 +41,7 @@
 
 #include <immintrin.h>
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 
 void ExecutionBlock::evaluate(SimulatorCallbacks &simCallbacks, DataState &state) const

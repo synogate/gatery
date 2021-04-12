@@ -19,7 +19,7 @@
 
 #include "AST.h"
 
-namespace hcl::core::vhdl {
+namespace hcl::vhdl {
 
 Package::Package(AST &ast, const std::string &desiredName) : m_ast(ast)
 {

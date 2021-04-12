@@ -27,12 +27,12 @@
 
 using namespace boost::unit_test;
 
-using UnitTestSimulationFixture = hcl::core::frontend::UnitTestSimulationFixture;
+using UnitTestSimulationFixture = hcl::UnitTestSimulationFixture;
 
 
 BOOST_FIXTURE_TEST_CASE(BVecIterator, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 
@@ -76,7 +76,7 @@ BOOST_FIXTURE_TEST_CASE(BVecIterator, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(BVecIteratorArithmetic, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 
@@ -112,7 +112,7 @@ BOOST_FIXTURE_TEST_CASE(BVecIteratorArithmetic, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(BVecFrontBack, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 
@@ -133,7 +133,7 @@ BOOST_FIXTURE_TEST_CASE(BVecFrontBack, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(BitSignalLoopSemanticTest, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 
@@ -152,7 +152,7 @@ BOOST_FIXTURE_TEST_CASE(BitSignalLoopSemanticTest, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(BVecSignalLoopSemanticTest, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 
@@ -180,7 +180,7 @@ BOOST_FIXTURE_TEST_CASE(BVecSignalLoopSemanticTest, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(ConstantDataStringParser, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
     BOOST_CHECK(parseBVec("32x1bBXx").size() == 32);
     BOOST_CHECK(parseBVec("x1bBX").size() == 16);
@@ -190,7 +190,7 @@ BOOST_FIXTURE_TEST_CASE(ConstantDataStringParser, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(BVecSelectorAccess, UnitTestSimulationFixture)
 {
-    using namespace hcl::core::frontend;
+    using namespace hcl;
 
 
 

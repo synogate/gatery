@@ -23,7 +23,7 @@
 #include <hcl/hlim/coreNodes/Node_PriorityConditional.h>
 
 
-namespace hcl::core::frontend {
+namespace hcl {
     
     class Bit;
 
@@ -53,12 +53,12 @@ namespace hcl::core::frontend {
 
 
 #define IF(x) \
-    if (hcl::core::frontend::ConditionalScope ___condScope(x); true) 
+    if (hcl::ConditionalScope ___condScope(x); true) 
 
 
 #define ELSE \
     else { HCL_ASSERT(false); } \
-    if (hcl::core::frontend::ConditionalScope ___condScope{}; true)
+    if (hcl::ConditionalScope ___condScope{}; true)
 
 
 }

@@ -30,7 +30,7 @@
 #include <map>
 #include <optional>
 
-namespace hcl::core::frontend {
+namespace hcl {
 
 class Bit;
 
@@ -70,7 +70,7 @@ class Register : public SignalType
 
 template<typename SignalType>
 template<typename ...Args>
-inline frontend::Register<SignalType>::Register(Args ...signalParams) :
+inline Register<SignalType>::Register(Args ...signalParams) :
     SignalType{signalParams...},
     m_regNode{*DesignScope::createNode<hlim::Node_Register>()}
 {

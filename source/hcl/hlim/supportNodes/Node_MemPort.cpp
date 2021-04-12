@@ -19,7 +19,7 @@
 
 #include "Node_Memory.h"
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
 Node_MemPort::Node_MemPort(std::size_t bitWidth) : m_bitWidth(bitWidth)
 {

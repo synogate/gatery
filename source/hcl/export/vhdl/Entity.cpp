@@ -28,7 +28,7 @@
 
 #include <memory>
 
-namespace hcl::core::vhdl {
+namespace hcl::vhdl {
 
 Entity::Entity(AST &ast, const std::string &desiredName, BasicBlock *parent) : BasicBlock(ast, parent, &ast.getNamespaceScope())
 {

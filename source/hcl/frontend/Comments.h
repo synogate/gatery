@@ -20,7 +20,7 @@
 #include <sstream>
 #include <string>
 
-namespace hcl::core::frontend {
+namespace hcl {
     
 class Comments
 {
@@ -33,5 +33,5 @@ class Comments
 
 }
 
-#define HCL_COMMENT hcl::core::frontend::Comments::get()
+#define HCL_COMMENT hcl::Comments::get()
 

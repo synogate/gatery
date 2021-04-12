@@ -17,7 +17,7 @@
 */
 #include "SignalLogicOp.h"
 
-namespace hcl::core::frontend {
+namespace hcl {
 
     SignalReadPort makeNode(hlim::Node_Logic::Op op, NormalizedWidthOperands ops)
     {

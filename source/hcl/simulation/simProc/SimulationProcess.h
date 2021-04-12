@@ -19,7 +19,7 @@
 
 #include <coroutine>
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 class SimulationProcess {
     public:

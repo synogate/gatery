@@ -31,7 +31,7 @@
 #include <boost/format.hpp>
 
 
-namespace hcl::core::frontend {
+namespace hcl {
     
 
     SignalReadPort makeNode(hlim::Node_Logic::Op op, const ElementarySignal& in);

@@ -25,7 +25,7 @@
 #include <functional>
 #include <vector>
 
-namespace hcl::core::frontend {
+namespace hcl {
     
 class ElementarySignal;
 

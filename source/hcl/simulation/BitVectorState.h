@@ -27,7 +27,7 @@
 #include <cstdint>
 #include <string.h>
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 struct DefaultConfig
 {

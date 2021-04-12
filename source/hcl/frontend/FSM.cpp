@@ -29,7 +29,7 @@
 
 #include <hcl/utils/Exceptions.h>
 
-namespace hcl::core::frontend::fsm {
+namespace hcl::fsm {
 
 thread_local FSM *FSM::m_fsmContext = nullptr;
     

@@ -28,11 +28,11 @@
 #include <memory>
 #include <optional>
 
-namespace hcl::core::sim {
+namespace hcl::sim {
     class Simulator;
 }
 
-namespace hcl::core::vhdl {
+namespace hcl::vhdl {
 
 /**
  * @todo write docs

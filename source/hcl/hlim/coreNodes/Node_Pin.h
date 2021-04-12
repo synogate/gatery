@@ -19,7 +19,7 @@
 
 #include "../Node.h"
 
-namespace hcl::core::hlim {
+namespace hcl::hlim {
 
     class Node_Pin : public Node<Node_Pin>
     {

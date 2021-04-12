@@ -30,7 +30,7 @@
 #include <filesystem>
 
 
-namespace hcl::core::frontend {
+namespace hcl {
 
     /**
      * @brief Helper class to facilitate writing unit tests

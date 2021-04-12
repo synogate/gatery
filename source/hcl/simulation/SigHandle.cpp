@@ -20,7 +20,7 @@
 #include "SimulationContext.h"
 #include "../hlim/Node.h"
 
-namespace hcl::core::sim {
+namespace hcl::sim {
 
 void SigHandle::operator=(std::uint64_t v)
 {
