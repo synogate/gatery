@@ -1,2 +1,14 @@
-﻿.vs
-out
+﻿bin
+obj
+
+*.vcd
+*.dot
+*.svg
+
+.vscode
+.vs
+*.sln
+*.user
+*.vcxproj
+*.filters
+
