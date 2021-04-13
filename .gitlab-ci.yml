@@ -2,7 +2,6 @@
 stages:
   - build
   - test
-  - deploy
 
 linux-build-job:
   stage: build
@@ -62,6 +61,8 @@ test-windows-frontend:
     - windows
   script:
     - .\bin\windows-x86_64-Debug\gatery-frontend-test.exe
+  dependencies:
+    - build-windows
 
 test-windows-stl:
   stage: test
@@ -69,4 +70,6 @@ test-windows-stl:
     - windows
   script:
     - .\bin\windows-x86_64-Debug\gatery-scl-test.exe
+  dependencies:
+    - build-windows
 
