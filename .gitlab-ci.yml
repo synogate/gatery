@@ -14,7 +14,7 @@ linux-build:
     paths:
       - bin/
 
-build-windows:
+windows-build:
   stage: build
   tags:
     - windows
@@ -41,20 +41,14 @@ test-linux-frontend:
   tags:
     - linux
   script:
-    - cd build
-    - frontend/unitTests/unitTestCore
-  dependencies:
-    - linux-build
+    - bin/linux-x86_64-Debug/gatery-frontend-test
 
-test-linux-stl:
+test-linux-scl:
   stage: test
   tags:
     - linux
   script:
-    - cd build
-    - stl/unitTests/unitTestSTL
-  dependencies:
-    - linux-build
+    - bin/linux-x86_64-Debug/gatery-scl-test
 
 test-windows-frontend:
   stage: test
@@ -62,15 +56,11 @@ test-windows-frontend:
     - windows
   script:
     - .\bin\windows-x86_64-Debug\gatery-frontend-test.exe
-  dependencies:
-    - build-windows
 
-test-windows-stl:
+test-windows-scl:
   stage: test
   tags:
     - windows
   script:
     - .\bin\windows-x86_64-Debug\gatery-scl-test.exe
-  dependencies:
-    - build-windows
 
