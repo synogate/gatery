@@ -2,9 +2,8 @@
 stages:
   - build
   - test
-  - deploy
 
-linux-build-job:
+linux-build:
   stage: build
   tags:
     - linux
@@ -23,14 +22,12 @@ build-windows:
   tags:
     - windows
   script:
-    - if(Test-Path .\build\) { rm -Force -Recurse .\build\ }
-    - mkdir build
-    - cd build
-    - cmake .. -DCMAKE_TOOLCHAIN_FILE=C:/gitlab-runner/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_C_COMPILER:FILEPATH="C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.28.29333/bin/Hostx64/x64/cl.exe" -DCMAKE_CXX_COMPILER:FILEPATH="C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.28.29333/bin/Hostx64/x64/cl.exe" -DCMAKE_LINKER:FILEPATH="C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.28.29333/bin/HostX64/x64/link.exe"
-    - cmake --build .
+    - premake5 vs2019
+    - 'echo $Env:APPDATA'
+    - '& "${Env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\amd64\msbuild.exe"'
   artifacts:
     paths:
-      - build/
+      - bin/
 
 documentation-job:
   stage: build
@@ -49,6 +46,8 @@ test-linux-frontend:
   script:
     - cd build
     - frontend/unitTests/unitTestCore
+  dependencies:
+    - linux-build
 
 test-linux-stl:
   stage: test
@@ -57,18 +56,24 @@ test-linux-stl:
   script:
     - cd build
     - stl/unitTests/unitTestSTL
+  dependencies:
+    - linux-build
 
 test-windows-frontend:
   stage: test
   tags:
     - windows
   script:
-    - .\build\frontend\unitTests\Debug\unitTestCore.exe
+    - .\bin\windows-x86_64-Debug\gatery-frontend-test.exe
+  dependencies:
+    - build-windows
 
 test-windows-stl:
   stage: test
   tags:
     - windows
   script:
-    - .\build\stl\unitTests\Debug\unitTestSTL.exe
+    - .\bin\windows-x86_64-Debug\gatery-scl-test.exe
+  dependencies:
+    - build-windows
 
