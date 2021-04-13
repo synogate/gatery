@@ -24,7 +24,7 @@ build-windows:
     - windows
   script:
     - premake5 vs2019
-    - & "${Env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\amd64\msbuild.exe"
+    - \& "$${Env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\amd64\msbuild.exe"
   artifacts:
     paths:
       - build/
