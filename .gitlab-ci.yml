@@ -3,7 +3,7 @@ stages:
   - build
   - test
 
-linux-build-job:
+linux-build:
   stage: build
   tags:
     - linux
@@ -46,6 +46,8 @@ test-linux-frontend:
   script:
     - cd build
     - frontend/unitTests/unitTestCore
+  dependencies:
+    - linux-build
 
 test-linux-stl:
   stage: test
@@ -54,6 +56,8 @@ test-linux-stl:
   script:
     - cd build
     - stl/unitTests/unitTestSTL
+  dependencies:
+    - linux-build
 
 test-windows-frontend:
   stage: test
