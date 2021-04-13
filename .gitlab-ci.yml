@@ -28,7 +28,7 @@ build-windows:
     - '& "${Env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\amd64\msbuild.exe"'
   artifacts:
     paths:
-      - build/
+      - bin/
 
 documentation-job:
   stage: build
@@ -61,12 +61,12 @@ test-windows-frontend:
   tags:
     - windows
   script:
-    - .\build\frontend\unitTests\Debug\unitTestCore.exe
+    - .\bin\windows-x86_64-Debug\gatery-frontend-test.exe
 
 test-windows-stl:
   stage: test
   tags:
     - windows
   script:
-    - .\build\stl\unitTests\Debug\unitTestSTL.exe
+    - .\bin\windows-x86_64-Debug\gatery-scl-test.exe
 
