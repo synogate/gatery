@@ -4,9 +4,9 @@ project "gatery-frontend-test"
     kind "ConsoleApp"
     files { "frontend/**.cpp", "frontend/**.h" }
     links "gatery"
-    includedirs "%{prj.location}/../source"
+    includedirs { "%{prj.location}/../source", "%{prj.location}/" }
 
-    pchheader "pch.h"
+    pchheader "frontend/pch.h"
     pchsource "frontend/pch.cpp"
 
     GateryProjectDefaults()
@@ -19,9 +19,9 @@ project "gatery-scl-test"
     kind "ConsoleApp"
     files { "scl/**.cpp", "scl/**.h" }
     links "gatery"
-    includedirs "%{prj.location}/../source"
+    includedirs { "%{prj.location}/../source", "%{prj.location}/" }
 
-    pchheader "pch.h"
+    pchheader "scl/pch.h"
     pchsource "scl/pch.cpp"
 
     GateryProjectDefaults()

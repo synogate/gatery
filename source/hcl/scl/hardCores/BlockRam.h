@@ -58,7 +58,6 @@ namespace hcl::scl {
     template<typename Data>
     class MemoryReadPort
     {
-        using BVec = BVec;
     public:
         MemoryReadPort(const MemoryReadPort&) = default;
         MemoryReadPort(std::shared_ptr<internal::Memory> mem, internal::MemoryPort& port, const Data& defaultValue) :
@@ -108,7 +107,6 @@ namespace hcl::scl {
     template<typename Data>
     class MemoryPort : public MemoryReadPort<Data>
     {
-        using BVec = BVec;
     public:
         MemoryPort(const MemoryPort&) = default;
         using MemoryReadPort<Data>::MemoryReadPort;
@@ -143,8 +141,6 @@ namespace hcl::scl {
     class Rom
     {
     public:
-        using BVec = BVec;
-
         template<typename DataInit>
         Rom(size_t size, DataInit def = Data{}) :
             m_defaultValue(def)
@@ -180,7 +176,6 @@ namespace hcl::scl {
     {
     public:
         using Rom<Data>::Rom;
-        using BVec = BVec;
         
         // - merge same bitvector node ports
         // - allow different address width for Data = BVec
