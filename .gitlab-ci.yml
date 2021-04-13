@@ -23,11 +23,8 @@ build-windows:
   tags:
     - windows
   script:
-    - if(Test-Path .\build\) { rm -Force -Recurse .\build\ }
-    - mkdir build
-    - cd build
-    - cmake .. -DCMAKE_TOOLCHAIN_FILE=C:/gitlab-runner/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_C_COMPILER:FILEPATH="C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.28.29333/bin/Hostx64/x64/cl.exe" -DCMAKE_CXX_COMPILER:FILEPATH="C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.28.29333/bin/Hostx64/x64/cl.exe" -DCMAKE_LINKER:FILEPATH="C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.28.29333/bin/HostX64/x64/link.exe"
-    - cmake --build .
+    - premake5 vs2019
+    - & "${Env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\amd64\msbuild.exe"
   artifacts:
     paths:
       - build/
