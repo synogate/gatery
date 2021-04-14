@@ -18,7 +18,7 @@
 #include "gatery/pch.h"
 #include "SignalLogicOp.h"
 
-namespace hcl {
+namespace gtry {
 
     SignalReadPort makeNode(hlim::Node_Logic::Op op, NormalizedWidthOperands ops)
     {

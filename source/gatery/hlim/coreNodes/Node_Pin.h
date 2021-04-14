@@ -19,7 +19,7 @@
 
 #include "../Node.h"
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
     class Node_Pin : public Node<Node_Pin>
     {

@@ -26,7 +26,7 @@
 #include <vector>
 #include <string>
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 class SimulatorControl
 {

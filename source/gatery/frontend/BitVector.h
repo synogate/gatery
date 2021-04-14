@@ -36,7 +36,7 @@
 #include <optional>
 #include <map>
 
-namespace hcl {
+namespace gtry {
 
     struct Selection {
         int start = 0;

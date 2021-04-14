@@ -31,7 +31,7 @@
 #include <boost/format.hpp>
 
 
-namespace hcl {
+namespace gtry {
     
 
     SignalReadPort makeNode(hlim::Node_Logic::Op op, const ElementarySignal& in);

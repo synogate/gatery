@@ -24,7 +24,7 @@
 
 #include <vector>
 
-namespace hcl::scl::blockram {
+namespace gtry::scl::blockram {
 /*
 class XilinxSimpleDualPortBlockRam : public hlim::Node_External
 {
@@ -54,10 +54,10 @@ class XilinxSimpleDualPortBlockRam : public hlim::Node_External
             NUM_CLOCKS
         };
 
-        using Clock = hcl::hlim::Clock;
-        using NodePort = hcl::hlim::NodePort;
-        using DefaultBitVectorState = hcl::sim::DefaultBitVectorState;
-        using SimulatorCallbacks = hcl::sim::SimulatorCallbacks;
+        using Clock = gtry::hlim::Clock;
+        using NodePort = gtry::hlim::NodePort;
+        using DefaultBitVectorState = gtry::sim::DefaultBitVectorState;
+        using SimulatorCallbacks = gtry::sim::SimulatorCallbacks;
 
         XilinxSimpleDualPortBlockRam(Clock *writeClk, Clock *readClk, DefaultBitVectorState initialData,
                                 size_t writeDataWidth=1, size_t readDataWidth=1, bool outputRegister=false);

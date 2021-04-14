@@ -22,7 +22,7 @@
 
 #include <iostream>
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 void SimulatorConsoleOutput::onNewTick(const hlim::ClockRational &simulationTime)
 {

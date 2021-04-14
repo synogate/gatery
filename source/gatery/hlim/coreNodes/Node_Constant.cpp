@@ -21,7 +21,7 @@
 #include <sstream>
 #include <iomanip>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 Node_Constant::Node_Constant(sim::DefaultBitVectorState value, hlim::ConnectionType::Interpretation connectionType) :
     Node(0, 1),

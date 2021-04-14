@@ -20,7 +20,7 @@
 #include "HashEngine.h"
 #include "../Adder.h"
 
-namespace hcl::scl
+namespace gtry::scl
 {
 	template<typename TVec = BVec, typename TAdder = CarrySafeAdder>
 	struct Sha1Generator

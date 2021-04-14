@@ -18,7 +18,7 @@
 #include "gatery/pch.h"
 #include "Avalon.h"
 
-namespace hcl::scl
+namespace gtry::scl
 {
 	AvalonNetworkSection::AvalonNetworkSection(std::string name) :
 		m_name(std::move(name))
@@ -165,15 +165,15 @@ namespace hcl::scl
 		std::string pinName = std::string{ prefix } + '_';
 
 		// input pins
-		address = hcl::pinIn(address.getWidth()).setName(pinName + "address");
-		if (read) *read = hcl::pinIn().setName(pinName + "read");
-		if (write) *write = hcl::pinIn().setName(pinName + "write");
-		if (writeData) *writeData = hcl::pinIn(writeData->getWidth()).setName(pinName + "writedata");
+		address = gtry::pinIn(address.getWidth()).setName(pinName + "address");
+		if (read) *read = gtry::pinIn().setName(pinName + "read");
+		if (write) *write = gtry::pinIn().setName(pinName + "write");
+		if (writeData) *writeData = gtry::pinIn(writeData->getWidth()).setName(pinName + "writedata");
 
 		// output pins
-		if (ready) hcl::pinOut(*ready).setName(pinName + "waitrequest_n");
-		if (readData) hcl::pinOut(*readData).setName(pinName + "readdata");
-		if (readDataValid) hcl::pinOut(*readDataValid).setName(pinName + "readdatavalid");
+		if (ready) gtry::pinOut(*ready).setName(pinName + "waitrequest_n");
+		if (readData) gtry::pinOut(*readData).setName(pinName + "readdata");
+		if (readDataValid) gtry::pinOut(*readDataValid).setName(pinName + "readdatavalid");
 	}
 
 	void AvalonMM::createReadDataValid()

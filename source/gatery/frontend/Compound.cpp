@@ -18,7 +18,7 @@
 #include "gatery/pch.h"
 #include "Compound.h"
 
-namespace hcl
+namespace gtry
 {
 
 	void CompoundVisitor::enterPackStruct()

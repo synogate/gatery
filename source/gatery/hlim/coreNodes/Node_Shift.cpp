@@ -18,7 +18,7 @@
 #include "gatery/pch.h"
 #include "Node_Shift.h"
 
-namespace hcl::hlim
+namespace gtry::hlim
 {
 	Node_Shift::Node_Shift(dir _direction, fill _fill) :
 		Node<Node_Shift>(2, 1),

@@ -41,7 +41,7 @@
 
 #include <iostream>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 Circuit::Circuit()
 {

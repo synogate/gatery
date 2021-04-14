@@ -26,7 +26,7 @@
 #include <csignal>
 
 
-namespace hcl::utils {
+namespace gtry::utils {
 
 template<class BaseError>
 class MHDLError : public BaseError

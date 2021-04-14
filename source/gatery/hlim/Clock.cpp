@@ -23,7 +23,7 @@
 
 #include "../hlim/Node.h"
 
-namespace hcl::hlim {
+namespace gtry::hlim {
     
 Clock::Clock()
 {

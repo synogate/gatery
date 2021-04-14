@@ -18,16 +18,16 @@
 #include "gatery/pch.h"
 #include "OneHot.h"
 
-using namespace hcl;
+using namespace gtry;
 
-hcl::scl::OneHot hcl::scl::decoder(const BVec& in)
+gtry::scl::OneHot gtry::scl::decoder(const BVec& in)
 {
     OneHot ret = BitWidth{ 1ull << in.size() };
     ret.setBit(in);
     return ret;
 }
 
-BVec hcl::scl::encoder(const OneHot& in)
+BVec gtry::scl::encoder(const OneHot& in)
 {
     BVec ret = BitWidth{ utils::Log2C(in.size()) };
 
@@ -38,7 +38,7 @@ BVec hcl::scl::encoder(const OneHot& in)
     return ret;
 }
 
-std::vector<hcl::scl::Stream<hcl::BVec>> hcl::scl::makeIndexList(const BVec& valids)
+std::vector<gtry::scl::Stream<gtry::BVec>> gtry::scl::makeIndexList(const BVec& valids)
 {
     std::vector<Stream<BVec>> ret(valids.size());
     for (size_t i = 0; i < valids.size(); ++i)
@@ -49,7 +49,7 @@ std::vector<hcl::scl::Stream<hcl::BVec>> hcl::scl::makeIndexList(const BVec& val
     return ret;
 }
 
-hcl::scl::EncoderResult hcl::scl::priorityEncoder(const BVec& in)
+gtry::scl::EncoderResult gtry::scl::priorityEncoder(const BVec& in)
 {
     if (in.empty())
         return { BVec(0_b), '0' };
@@ -63,13 +63,13 @@ hcl::scl::EncoderResult hcl::scl::priorityEncoder(const BVec& in)
     return { ret, in != 0 };
 }
 
-hcl::scl::EncoderResult hcl::scl::priorityEncoderTree(const BVec& in, bool registerStep, size_t bps)
+gtry::scl::EncoderResult gtry::scl::priorityEncoderTree(const BVec& in, bool registerStep, size_t bps)
 {
     const size_t stepBits = 1ull << bps;
     const size_t inBitsPerStep = utils::nextPow2((in.size() + stepBits - 1) / stepBits);
 
     if (inBitsPerStep <= 1)
-        return hcl::scl::priorityEncoder(in);
+        return gtry::scl::priorityEncoder(in);
 
     std::vector<EncoderResult> lowerStep;
     for (size_t i = 0; i < in.size(); i += inBitsPerStep)
@@ -111,7 +111,7 @@ hcl::scl::EncoderResult hcl::scl::priorityEncoderTree(const BVec& in, bool regis
     return out;
 }
 
-void hcl::scl::OneHot::setBit(const BVec& idx)
+void gtry::scl::OneHot::setBit(const BVec& idx)
 {
     // TODO: remove workaround false signal loop
     (BVec&)*this = 0;

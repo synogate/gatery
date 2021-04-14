@@ -33,7 +33,7 @@
 #include <boost/format.hpp>
 
 
-namespace hcl {
+namespace gtry {
 
     SignalReadPort makeNode(hlim::Node_Arithmetic op, NormalizedWidthOperands ops);
 

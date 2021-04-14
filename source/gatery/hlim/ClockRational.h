@@ -19,7 +19,7 @@
 
 #include <boost/rational.hpp>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
     using ClockRational = boost::rational<std::uint64_t>;
 
     inline bool clockLess(const ClockRational &lhs, const ClockRational &rhs) {

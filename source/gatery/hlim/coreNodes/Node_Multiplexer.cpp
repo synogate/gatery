@@ -19,7 +19,7 @@
 #include "Node_Multiplexer.h"
 
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 void Node_Multiplexer::connectInput(size_t operand, const NodePort &port)
 {

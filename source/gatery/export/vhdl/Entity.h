@@ -24,7 +24,7 @@
 #include <memory>
 #include <ostream>
 
-namespace hcl::vhdl {
+namespace gtry::vhdl {
 
 class Block;
 

@@ -18,7 +18,7 @@
 #include "gatery/pch.h"
 #include "Node_Clk2Signal.h"
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 Node_Clk2Signal::Node_Clk2Signal() : Node(0, 1)
 {

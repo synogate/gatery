@@ -20,7 +20,7 @@
 
 #include <gatery/export/DotExport.h>
 
-namespace hcl {
+namespace gtry {
     
 GroupScope::GroupScope(hlim::NodeGroup::GroupType groupType) : BaseScope<GroupScope>()
 {

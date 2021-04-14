@@ -23,7 +23,7 @@
 #include <gatery/hlim/coreNodes/Node_PriorityConditional.h>
 
 
-namespace hcl {
+namespace gtry {
     
     class Bit;
 
@@ -53,12 +53,12 @@ namespace hcl {
 
 
 #define IF(x) \
-    if (hcl::ConditionalScope ___condScope(x); true) 
+    if (gtry::ConditionalScope ___condScope(x); true) 
 
 
 #define ELSE \
     else { HCL_ASSERT(false); } \
-    if (hcl::ConditionalScope ___condScope{}; true)
+    if (gtry::ConditionalScope ___condScope{}; true)
 
 
 }

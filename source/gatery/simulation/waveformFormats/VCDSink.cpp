@@ -29,7 +29,7 @@
 #include <string>
 #include <functional>
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 
 VCDSink::VCDSink(hlim::Circuit &circuit, Simulator &simulator, const char *filename, const char *logFilename) : WaveformRecorder(circuit, simulator)

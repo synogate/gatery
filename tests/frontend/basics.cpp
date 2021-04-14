@@ -25,12 +25,12 @@ using namespace boost::unit_test;
 
 const auto optimizationLevels = data::make({0, 1, 2, 3});
 
-using UnitTestSimulationFixture = hcl::BoostUnitTestSimulationFixture;
+using UnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLevels * data::xrange(1, 8), optimization, bitsize)
 {
-    using namespace hcl;
-    using namespace hcl::sim;
+    using namespace gtry;
+    using namespace gtry::sim;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
@@ -128,7 +128,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLev
 
     design.getCircuit().optimize(optimization);
 
-    runTest(hcl::hlim::ClockRational(100'000, 10'000));
+    runTest(gtry::hlim::ClockRational(100'000, 10'000));
 }
 
 
@@ -137,10 +137,10 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLev
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicing, optimizationLevels, optimization)
 {
-    using namespace hcl;
+    using namespace gtry;
 
-    for (auto bitsize : hcl::utils::Range(3, 8))
-        for (auto x : hcl::utils::Range(8)) {
+    for (auto bitsize : gtry::utils::Range(3, 8))
+        for (auto x : gtry::utils::Range(8)) {
             BVec a = ConstBVec(x, bitsize);
 
             {
@@ -169,10 +169,10 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicing, optimizationLevel
 
 BOOST_FIXTURE_TEST_CASE(TestSlicingModifications, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
-    for (auto bitsize : hcl::utils::Range(3, 8))
-        for (auto x : hcl::utils::Range(8)) {
+    for (auto bitsize : gtry::utils::Range(3, 8))
+        for (auto x : gtry::utils::Range(8)) {
 
             BVec a = ConstBVec(x, bitsize);
 
@@ -191,10 +191,10 @@ BOOST_FIXTURE_TEST_CASE(TestSlicingModifications, UnitTestSimulationFixture)
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicingAddition, optimizationLevels, optimization)
 {
-    using namespace hcl;
+    using namespace gtry;
 
-    for (auto bitsize : hcl::utils::Range(3, 8))
-        for (auto x : hcl::utils::Range(8)) {
+    for (auto bitsize : gtry::utils::Range(3, 8))
+        for (auto x : gtry::utils::Range(8)) {
             BVec a = ConstBVec(x, bitsize);
 
             {
@@ -216,11 +216,11 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicingAddition, optimizat
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, SimpleAdditionNetwork, optimizationLevels, optimization)
 {
-    using namespace hcl;
+    using namespace gtry;
 
-    for (auto bitsize : hcl::utils::Range(1, 8))
-        for (auto x : hcl::utils::Range(8))
-            for (auto y : hcl::utils::Range(8)) {
+    for (auto bitsize : gtry::utils::Range(1, 8))
+        for (auto x : gtry::utils::Range(8))
+            for (auto y : gtry::utils::Range(8)) {
                 BVec a = ConstBVec(x, bitsize);
                 sim_debug() << "Signal a is " << a;
 
@@ -239,10 +239,10 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, SimpleAdditionNetwork, optimiz
 
 BOOST_FIXTURE_TEST_CASE(BitFromBool, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
-    for (auto l : hcl::utils::Range(2))
-        for (auto r : hcl::utils::Range(2)) {
+    for (auto l : gtry::utils::Range(2))
+        for (auto r : gtry::utils::Range(2)) {
 
             Bit a = l != 0;
             Bit b;
@@ -262,7 +262,7 @@ BOOST_FIXTURE_TEST_CASE(BitFromBool, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
@@ -286,7 +286,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(SignalMoveAssignment, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
     {
         Bit a;
@@ -308,7 +308,7 @@ BOOST_FIXTURE_TEST_CASE(SignalMoveAssignment, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(BVecBitAliasConditionCheck, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
     BVec a = "xFF";
     Bit c = '0';
@@ -326,14 +326,14 @@ BOOST_FIXTURE_TEST_CASE(BVecBitAliasConditionCheck, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
 
     {
-        hcl::BVec a = "xa";
-        hcl::BVec b = "xb";
+        gtry::BVec a = "xa";
+        gtry::BVec b = "xb";
         HCL_NAMED(a);
         HCL_NAMED(b);
         std::swap(a, b);
@@ -343,8 +343,8 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, UnitTestSimulationFixture)
     }
 
     {
-        hcl::Bit x = '0';
-        hcl::Bit y = '1';
+        gtry::Bit x = '0';
+        gtry::Bit y = '1';
         HCL_NAMED(x);
         HCL_NAMED(y);
         std::swap(x, y);
@@ -354,17 +354,17 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, UnitTestSimulationFixture)
     }
 
     {
-        hcl::BVec c = 0xC;
-        hcl::BVec d = 0xD;
+        gtry::BVec c = 0xC;
+        gtry::BVec d = 0xD;
         HCL_NAMED(c);
         HCL_NAMED(d);
-        hcl::Bit x = '0';
-        hcl::Bit y = '1';
+        gtry::Bit x = '0';
+        gtry::Bit y = '1';
         HCL_NAMED(x);
         HCL_NAMED(y);
 
         InputPin pinConditionIn = pinIn(); // TODO default value for input pins (simulation and vhdl export)
-        hcl::Bit condition = pinConditionIn;
+        gtry::Bit condition = pinConditionIn;
         HCL_NAMED(condition);
 
         IF(condition)
@@ -406,13 +406,13 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
 
     {
-        hcl::Vector<BVec> listA(4);
+        gtry::Vector<BVec> listA(4);
         for (size_t i = 0; i < listA.size(); ++i)
             listA[i] = ConstBVec(i, 2);
         HCL_NAMED(listA);
@@ -426,7 +426,7 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, UnitTestSimulationFixture)
 
     {
         std::vector<InputPins> in;
-        hcl::Vector<BVec> listB;
+        gtry::Vector<BVec> listB;
         for (size_t i = 0; i < 4; ++i)
         {
             in.emplace_back(2_b);
@@ -435,7 +435,7 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, UnitTestSimulationFixture)
         HCL_NAMED(listB);
 
         InputPin pinConditionIn = pinIn();
-        hcl::Bit condition = pinConditionIn;
+        gtry::Bit condition = pinConditionIn;
         HCL_NAMED(condition);
 
         IF(condition)
@@ -471,13 +471,13 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(ConditionalLoopAssignment, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
 
-    hcl::Bit condition = '1';
-    hcl::BVec counter = 4_b;
+    gtry::Bit condition = '1';
+    gtry::BVec counter = 4_b;
     HCL_NAMED(condition);
     HCL_NAMED(counter);
 
@@ -490,7 +490,7 @@ BOOST_FIXTURE_TEST_CASE(ConditionalLoopAssignment, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
@@ -517,7 +517,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
@@ -544,7 +544,7 @@ BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
@@ -570,7 +570,7 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 
@@ -597,7 +597,7 @@ BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 
@@ -631,7 +631,7 @@ BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, UnitTestSimulationFixture
 
 BOOST_FIXTURE_TEST_CASE(StringLiteralParsing, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 
@@ -650,7 +650,7 @@ BOOST_FIXTURE_TEST_CASE(StringLiteralParsing, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(ShiftOp, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 
@@ -671,10 +671,10 @@ BOOST_FIXTURE_TEST_CASE(ShiftOp, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(ConditionalAssignment, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
-    for (auto x : hcl::utils::Range(8))
-        for (auto y : hcl::utils::Range(8)) {
+    for (auto x : gtry::utils::Range(8))
+        for (auto y : gtry::utils::Range(8)) {
             BVec a = ConstBVec(x, 8);
             BVec b = ConstBVec(y, 8);
 
@@ -699,10 +699,10 @@ BOOST_FIXTURE_TEST_CASE(ConditionalAssignment, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleStatements, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
-    for (auto x : hcl::utils::Range(8))
-        for (auto y : hcl::utils::Range(8)) {
+    for (auto x : gtry::utils::Range(8))
+        for (auto y : gtry::utils::Range(8)) {
 
             BVec a = ConstBVec(x, 8);
             BVec b = ConstBVec(y, 8);
@@ -733,10 +733,10 @@ BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleStatements, UnitTestSimulat
 
 BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleElseStatements, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
-    for (auto x : hcl::utils::Range(8))
-        for (auto y : hcl::utils::Range(8)) {
+    for (auto x : gtry::utils::Range(8))
+        for (auto y : gtry::utils::Range(8)) {
 
             BVec a = ConstBVec(x, 8);
             BVec b = ConstBVec(y, 8);
@@ -769,11 +769,11 @@ BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleElseStatements, UnitTestSim
 
 BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignment, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
-    for (auto x : hcl::utils::Range(8))
-        for (auto y : hcl::utils::Range(8)) {
+    for (auto x : gtry::utils::Range(8))
+        for (auto y : gtry::utils::Range(8)) {
 
             BVec a = ConstBVec(x, 8);
             BVec b = ConstBVec(y, 8);
@@ -815,10 +815,10 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignment, UnitTestSimulationFixtu
 
 BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentMultipleStatements, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
-    for (auto x : hcl::utils::Range(8))
-        for (auto y : hcl::utils::Range(8)) {
+    for (auto x : gtry::utils::Range(8))
+        for (auto y : gtry::utils::Range(8)) {
 
             BVec a = ConstBVec(x, 8);
             BVec b = ConstBVec(y, 8);
@@ -863,10 +863,10 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentMultipleStatements, UnitT
 
 BOOST_FIXTURE_TEST_CASE(MultiElseConditionalAssignment, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
-    for (auto x : hcl::utils::Range(8))
-        for (auto y : hcl::utils::Range(8)) {
+    for (auto x : gtry::utils::Range(8))
+        for (auto y : gtry::utils::Range(8)) {
 
             BVec a = ConstBVec(x, 8);
             BVec b = ConstBVec(y, 8);
@@ -910,10 +910,10 @@ BOOST_FIXTURE_TEST_CASE(MultiElseConditionalAssignment, UnitTestSimulationFixtur
 
 BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentWithPreviousAssignmentNoElse, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
-    for (auto x : hcl::utils::Range(8))
-        for (auto y : hcl::utils::Range(8)) {
+    for (auto x : gtry::utils::Range(8))
+        for (auto y : gtry::utils::Range(8)) {
 
             BVec a = ConstBVec(x, 8);
             BVec b = ConstBVec(y, 8);
@@ -945,10 +945,10 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentWithPreviousAssignmentNoE
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignmentNoIf, optimizationLevels, optimization)
 {
-    using namespace hcl;
+    using namespace gtry;
 
-    for (auto x : hcl::utils::Range(8))
-        for (auto y : hcl::utils::Range(8)) {
+    for (auto x : gtry::utils::Range(8))
+        for (auto y : gtry::utils::Range(8)) {
             BVec a = ConstBVec(x, 8);
             BVec b = ConstBVec(y, 8);
 
@@ -976,10 +976,10 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmen
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignment, optimizationLevels, optimization)
 {
-    using namespace hcl;
+    using namespace gtry;
 
-    for (auto x : hcl::utils::Range(8))
-        for (auto y : hcl::utils::Range(8)) {
+    for (auto x : gtry::utils::Range(8))
+        for (auto y : gtry::utils::Range(8)) {
             BVec a = ConstBVec(x, 8);
             BVec b = ConstBVec(y, 8);
 
@@ -1014,11 +1014,11 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmen
 
 BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentIfElseIf, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
-    for (auto x : hcl::utils::Range(8))
-        for (auto y : hcl::utils::Range(8)) {
+    for (auto x : gtry::utils::Range(8))
+        for (auto y : gtry::utils::Range(8)) {
 
             BVec a = ConstBVec(x, 8);
             BVec b = ConstBVec(y, 8);
@@ -1047,11 +1047,11 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentIfElseIf, UnitTestSimulat
 
 BOOST_FIXTURE_TEST_CASE(UnsignedCompare, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
-    for (auto x : hcl::utils::Range(8))
-        for (auto y : hcl::utils::Range(8)) {
+    for (auto x : gtry::utils::Range(8))
+        for (auto y : gtry::utils::Range(8)) {
 
             BVec a = ConstBVec(x, 8);
             BVec b = ConstBVec(y, 8);
@@ -1095,7 +1095,7 @@ BOOST_FIXTURE_TEST_CASE(UnsignedCompare, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(BVecArithmeticOpSyntax, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 
@@ -1121,7 +1121,7 @@ BOOST_FIXTURE_TEST_CASE(BVecArithmeticOpSyntax, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(LogicOpSyntax, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 
@@ -1134,7 +1134,7 @@ BOOST_FIXTURE_TEST_CASE(LogicOpSyntax, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(SimpleCat, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
     BVec vec = 42u;
     BVec vec_2 = pack('1', vec, '0');
@@ -1146,7 +1146,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCat, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(msbBroadcast, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 

@@ -18,7 +18,7 @@
 #include <vector>
 #include "Bit.h"
 
-namespace hcl
+namespace gtry
 {
 	template<typename T>
 	class Vector : public std::vector<T>

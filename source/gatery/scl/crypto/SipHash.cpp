@@ -18,7 +18,7 @@
 #include "gatery/pch.h"
 #include "SipHash.h"
 
-namespace hcl::scl
+namespace gtry::scl
 {
 	SipHash::SipHash(size_t messageWordRounds, size_t finalizeRounds, size_t hashWidth) :
 		m_messageWordRounds(messageWordRounds),

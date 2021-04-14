@@ -22,7 +22,7 @@
 #include "AST.h"
 
 
-namespace hcl::vhdl {
+namespace gtry::vhdl {
 
 Block::Block(Entity *parent, const std::string &desiredName) : BasicBlock(parent->getAST(), parent, &parent->getNamespaceScope())
 {

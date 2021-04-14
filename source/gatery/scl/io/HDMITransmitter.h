@@ -19,7 +19,7 @@
 
 #include <gatery/frontend.h>
 
-namespace hcl::scl::hdmi {
+namespace gtry::scl::hdmi {
     
 struct SerialTMDSPair {
     Bit pos;
@@ -99,4 +99,4 @@ class Transmitter
 
 }
 
-BOOST_HANA_ADAPT_STRUCT(hcl::scl::hdmi::SerialTMDS, data, clock);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::hdmi::SerialTMDS, data, clock);

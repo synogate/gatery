@@ -22,11 +22,11 @@
 #include <boost/test/data/monomorphic.hpp>
 
 using namespace boost::unit_test;
-using UnitTestSimulationFixture = hcl::UnitTestSimulationFixture;
+using UnitTestSimulationFixture = gtry::UnitTestSimulationFixture;
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestGCD, data::make({0, 1, 2, 3}) * data::make({1, 2, 3, 4, 5, 10, 42}) * data::make({1, 2, 3, 4, 5, 23, 56, 126}), optimize, x, y)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 
@@ -175,7 +175,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestGCD, data::make({0, 1, 2, 
 
 BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, FSMlessTestGCD, data::make({0, 1, 2, 3}) * data::make({ 1, 2, 3, 4, 5, 10, 42 })* data::make({ 1, 2, 3, 4, 5, 23, 56, 126 }), optimize, x, y)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 

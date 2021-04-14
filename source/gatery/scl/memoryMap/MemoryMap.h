@@ -18,7 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 
-namespace hcl::scl
+namespace gtry::scl
 {
 	class MemoryMap
 	{
@@ -68,7 +68,7 @@ namespace hcl::scl
 		size_t m_flags = F_READ | F_WRITE;
 	};
 
-	inline Bit hcl::scl::MemoryMap::add(Bit& value, RegDesc desc)
+	inline Bit gtry::scl::MemoryMap::add(Bit& value, RegDesc desc)
 	{
 		if (m_flags == (F_READ | F_WRITE))
 			return rw(value, desc);

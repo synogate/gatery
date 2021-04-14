@@ -30,18 +30,18 @@
 
 using namespace boost::unit_test;
 
-BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, BitCountTest, data::xrange(255) * data::xrange(1, 8), val, bitsize)
+BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, BitCountTest, data::xrange(255) * data::xrange(1, 8), val, bitsize)
 {
-    using namespace hcl;
+    using namespace gtry;
     
     DesignScope design;
 
     BVec a = ConstBVec(val, bitsize);
-    BVec count = hcl::scl::bitcount(a);
+    BVec count = gtry::scl::bitcount(a);
     
-    unsigned actualBitCount = hcl::utils::popcount(unsigned(val) & (0xFF >> (8-bitsize)));
+    unsigned actualBitCount = gtry::utils::popcount(unsigned(val) & (0xFF >> (8-bitsize)));
     
-    BOOST_REQUIRE(count.getWidth() >= (size_t)hcl::utils::Log2(bitsize)+1);
+    BOOST_REQUIRE(count.getWidth() >= (size_t)gtry::utils::Log2(bitsize)+1);
     //sim_debug() << "The bitcount of " << a << " should be " << actualBitCount << " and is " << count;
     sim_assert(count == ConstBVec(actualBitCount, count.getWidth())) << "The bitcount of " << a << " should be " << actualBitCount << " but is " << count;
     
@@ -49,10 +49,10 @@ BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, BitCountTest, data::
 }
 
 
-BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, Decoder, data::xrange(3), val)
+BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, Decoder, data::xrange(3), val)
 {
-    using namespace hcl;
-    using namespace hcl::scl;
+    using namespace gtry;
+    using namespace gtry::scl;
 
     DesignScope design;
 
@@ -72,10 +72,10 @@ BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, Decoder, data::xrang
     eval(design.getCircuit());
 }
 
-BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, ListEncoder, data::xrange(3), val)
+BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, ListEncoder, data::xrange(3), val)
 {
-    using namespace hcl;
-    using namespace hcl::scl;
+    using namespace gtry;
+    using namespace gtry::scl;
 
     DesignScope design;
 
@@ -100,10 +100,10 @@ BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, ListEncoder, data::x
 }
 
 
-BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, PriorityEncoderTreeTest, data::xrange(65), val)
+BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, PriorityEncoderTreeTest, data::xrange(65), val)
 {
-    using namespace hcl;
-    using namespace hcl::scl;
+    using namespace gtry;
+    using namespace gtry::scl;
 
     DesignScope design;
 
@@ -115,7 +115,7 @@ BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, PriorityEncoderTreeT
     
     if (testVector)
     {
-        BVec ref = hcl::utils::Log2(testVector & -testVector);
+        BVec ref = gtry::utils::Log2(testVector & -testVector);
         sim_assert(res.valid & res.index == ref) << "wrong index: " << res.index << " should be " << ref;
     }
     else

@@ -19,7 +19,7 @@
 
 #include <gatery/frontend.h>
 
-namespace hcl::scl {
+namespace gtry::scl {
 
 struct UART
 {

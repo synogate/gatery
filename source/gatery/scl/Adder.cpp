@@ -18,9 +18,9 @@
 #include "gatery/pch.h"
 #include "Adder.h"
 
-template class hcl::scl::Adder<hcl::BVec>;
+template class gtry::scl::Adder<gtry::BVec>;
 
-hcl::scl::CarrySafeAdder& hcl::scl::CarrySafeAdder::add(const BVec& b)
+gtry::scl::CarrySafeAdder& gtry::scl::CarrySafeAdder::add(const BVec& b)
 {
 	if (m_count == 0)
 		m_sum = b;
@@ -36,7 +36,7 @@ hcl::scl::CarrySafeAdder& hcl::scl::CarrySafeAdder::add(const BVec& b)
 	return *this;
 }
 
-hcl::BVec hcl::scl::CarrySafeAdder::sum() const
+gtry::BVec gtry::scl::CarrySafeAdder::sum() const
 {
 	if (m_count <= 1)
 		return m_sum;

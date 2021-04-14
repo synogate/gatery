@@ -21,7 +21,7 @@
 
 #include "../Stream.h"
 
-namespace hcl::scl {
+namespace gtry::scl {
 
     enum class PortConflict
     {
@@ -31,7 +31,7 @@ namespace hcl::scl {
 
     namespace internal
     {
-        using namespace hcl;
+        using namespace gtry;
 
         struct MemoryPort
         {
@@ -47,7 +47,7 @@ namespace hcl::scl {
         {
             std::vector<BVec> data;
             std::vector<BVec> readData;
-            std::map<hcl::SignalReadPort, MemoryPort> ports;
+            std::map<gtry::SignalReadPort, MemoryPort> ports;
 
             PortConflict samePortRead = PortConflict::inOrder;
             PortConflict differentPortRead = PortConflict::inOrder;
@@ -91,7 +91,7 @@ namespace hcl::scl {
             }
 
             Data ret = m_defaultValue;
-            hcl::unpack(readData, ret);
+            gtry::unpack(readData, ret);
             return ret;
         }
 
@@ -115,11 +115,11 @@ namespace hcl::scl {
 
         MemoryPort& write(const Data& value)
         {
-            auto* scope = hcl::ConditionalScope::get();
+            auto* scope = gtry::ConditionalScope::get();
             if (!scope)
                 this->m_port.write = '1';
             else
-                this->m_port.write = hcl::SignalReadPort{ scope->getFullCondition() };
+                this->m_port.write = gtry::SignalReadPort{ scope->getFullCondition() };
 
             this->m_port.writeData = pack(value);
             sim_debug() << "write " << *this->m_port.write << ", data " << *this->m_port.writeData << ", address " << this->m_port.address;
@@ -193,12 +193,12 @@ namespace hcl::scl {
     struct WritePort
     {
         WritePort(size_t addrWidth, size_t dataWidth) :
-            address(hcl::BitWidth{ addrWidth }),
-            writeData(hcl::BitWidth{ dataWidth })
+            address(gtry::BitWidth{ addrWidth }),
+            writeData(gtry::BitWidth{ dataWidth })
         {}
 
-        hcl::BVec address;
-        hcl::BVec writeData;
+        gtry::BVec address;
+        gtry::BVec writeData;
     };
 
     // TODO remove simpleDualPortRam API
@@ -206,4 +206,4 @@ namespace hcl::scl {
 
 }
 
-BOOST_HANA_ADAPT_STRUCT(hcl::scl::WritePort, address, writeData);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::WritePort, address, writeData);

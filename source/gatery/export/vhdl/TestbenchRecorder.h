@@ -25,11 +25,11 @@
 #include <map>
 #include <sstream>
 
-namespace hcl::sim {
+namespace gtry::sim {
     class Simulator;
 }
 
-namespace hcl::vhdl {
+namespace gtry::vhdl {
 
 class VHDLExport;
 class AST;

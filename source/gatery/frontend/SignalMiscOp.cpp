@@ -24,7 +24,7 @@
 #include <gatery/utils/Preprocessor.h>
 
 
-namespace hcl {
+namespace gtry {
 
 
 SignalTapHelper::SignalTapHelper(hlim::Node_SignalTap::Level level)

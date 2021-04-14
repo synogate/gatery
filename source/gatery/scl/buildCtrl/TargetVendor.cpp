@@ -18,7 +18,7 @@
 #include "gatery/pch.h"
 #include "TargetVendor.h"
 
-namespace hcl::scl::buildCtrl {
+namespace gtry::scl::buildCtrl {
 
 TargetVendor::TargetVendor(Vendor vendor) : BaseScope<TargetVendor>()
 {

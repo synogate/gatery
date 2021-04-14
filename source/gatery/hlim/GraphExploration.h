@@ -23,7 +23,7 @@
 
 #include <stack>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 class BaseNode;
 class NodeIO;

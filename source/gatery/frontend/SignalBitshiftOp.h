@@ -34,7 +34,7 @@
 #include <optional>
 
 
-namespace hcl {
+namespace gtry {
 
 class SignalBitShiftOp
 {

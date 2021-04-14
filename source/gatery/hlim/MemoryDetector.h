@@ -19,7 +19,7 @@
 
 #include "NodeGroup.h"
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 class Circuit;
 class Node_Memory;

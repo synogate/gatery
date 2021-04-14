@@ -21,7 +21,7 @@
 
 #include <filesystem>
 
-namespace hcl {
+namespace gtry {
 
 /**
  * @brief Export circuit into a .dot file for visualization

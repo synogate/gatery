@@ -33,7 +33,7 @@
 
 // Adopted from Andy's codebase
 
-namespace hcl {
+namespace gtry {
 
 DotExport::DotExport(std::filesystem::path destination) : m_destination(std::move(destination))
 {

@@ -19,7 +19,7 @@
 #include "Comments.h"
 
 
-namespace hcl {
+namespace gtry {
     
 thread_local std::stringstream Comments::m_comments;
 

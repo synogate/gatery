@@ -20,7 +20,7 @@
 #include "../Avalon.h"
 #include "../memoryMap/MemoryMap.h"
 
-namespace hcl::scl
+namespace gtry::scl
 {
 	template<typename Tkey, typename Tval>
 	class TinyCuckoo
@@ -190,7 +190,7 @@ namespace hcl::scl
 
 }
 
-BOOST_HANA_ADAPT_STRUCT(hcl::scl::TinyCuckooItem, valid, key, value);
-BOOST_HANA_ADAPT_STRUCT(hcl::scl::TinyCuckooUpdate, valid, tableIdx, itemIdx, item);
-BOOST_HANA_ADAPT_STRUCT(hcl::scl::TinyCuckooIn, key, hash, userData, update, numTables, latency);
-BOOST_HANA_ADAPT_STRUCT(hcl::scl::TinyCuckooOut, found, key, hash, value, userData);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::TinyCuckooItem, valid, key, value);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::TinyCuckooUpdate, valid, tableIdx, itemIdx, item);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::TinyCuckooIn, key, hash, userData, update, numTables, latency);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::TinyCuckooOut, found, key, hash, value, userData);

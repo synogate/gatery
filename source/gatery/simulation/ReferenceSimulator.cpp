@@ -42,7 +42,7 @@
 
 #include <immintrin.h>
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 
 void ExecutionBlock::evaluate(SimulatorCallbacks &simCallbacks, DataState &state) const

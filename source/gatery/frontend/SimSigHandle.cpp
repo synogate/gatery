@@ -24,7 +24,7 @@
 
 #include "Clock.h"
 
-namespace hcl {
+namespace gtry {
 
 
 hlim::Node_Pin* findInputPin(hlim::NodePort driver)

@@ -20,7 +20,7 @@
 
 #include "Scope.h"
 
-namespace hcl {
+namespace gtry {
 
 
     OutputPin::OutputPin(const Bit &bit) {

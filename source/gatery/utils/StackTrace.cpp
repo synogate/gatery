@@ -27,7 +27,7 @@
 #include <stdexcept>
 
 
-namespace hcl::utils {
+namespace gtry::utils {
 
 
 void StackTrace::record(size_t size, size_t skipTop) 

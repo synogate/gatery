@@ -20,9 +20,9 @@
 
 #include "../utils/BitCount.h"
 
-namespace hcl::scl::hdmi {
+namespace gtry::scl::hdmi {
 
-using namespace hcl;
+using namespace gtry;
 
 
 BVec tmdsEncode(Clock &pixelClock, Bit dataEnable, BVec data, BVec ctrl)
@@ -250,7 +250,7 @@ void TmdsEncoder::addSync(const Bit& hsync, const Bit& vsync)
     setName(m_Channel, "channelSync");
 }
 
-void hcl::scl::hdmi::TmdsEncoder::setColor(const ColorRGB& color)
+void gtry::scl::hdmi::TmdsEncoder::setColor(const ColorRGB& color)
 {
     m_Channel[0] = tmdsEncodeSymbol(color.b);
     m_Channel[1] = tmdsEncodeSymbol(color.g);
@@ -258,7 +258,7 @@ void hcl::scl::hdmi::TmdsEncoder::setColor(const ColorRGB& color)
     setName(m_Channel, "channelColor");
 }
 
-void hcl::scl::hdmi::TmdsEncoder::setSync(bool hsync, bool vsync)
+void gtry::scl::hdmi::TmdsEncoder::setSync(bool hsync, bool vsync)
 {
     if (hsync && vsync)
         m_Channel[0] = "b1010101011";
@@ -270,7 +270,7 @@ void hcl::scl::hdmi::TmdsEncoder::setSync(bool hsync, bool vsync)
         m_Channel[0] = "b1101010100";
 }
 
-void hcl::scl::hdmi::TmdsEncoder::setTERC4(BVec ctrl)
+void gtry::scl::hdmi::TmdsEncoder::setTERC4(BVec ctrl)
 {
     std::array<BVec, 16> trec4lookup = {
         "b1010011100",
@@ -297,7 +297,7 @@ void hcl::scl::hdmi::TmdsEncoder::setTERC4(BVec ctrl)
     m_Channel[2] = mux(ctrl(4, 4), trec4lookup);
 }
 
-SerialTMDS hcl::scl::hdmi::TmdsEncoder::serialOutput() const
+SerialTMDS gtry::scl::hdmi::TmdsEncoder::serialOutput() const
 {
     // TODO: use shift register/serdes lib for automatic vendor specific serdes usage
 
@@ -336,7 +336,7 @@ SerialTMDS hcl::scl::hdmi::TmdsEncoder::serialOutput() const
     return SerialTMDS();
 }
 
-SerialTMDS hcl::scl::hdmi::TmdsEncoder::serialOutputInPixelClock(Bit& tick) const
+SerialTMDS gtry::scl::hdmi::TmdsEncoder::serialOutputInPixelClock(Bit& tick) const
 {
     GroupScope ent{ GroupScope::GroupType::ENTITY };
     ent.setName("tmdsEncoderSerializer");

@@ -23,7 +23,7 @@
 #include <string>
 #include <memory>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 class Node_Signal;
     

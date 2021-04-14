@@ -18,7 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 
-namespace hcl::scl
+namespace gtry::scl
 {
 	class Counter
 	{

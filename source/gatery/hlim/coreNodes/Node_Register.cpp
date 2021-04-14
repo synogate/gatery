@@ -19,7 +19,7 @@
 #include "Node_Register.h"
 #include "Node_Constant.h"
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 Node_Register::Node_Register() : Node(NUM_INPUTS, 1)
 {

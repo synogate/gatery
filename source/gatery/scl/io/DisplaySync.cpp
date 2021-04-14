@@ -18,7 +18,7 @@
 #include "gatery/pch.h"
 #include "DisplaySync.h"
 
-namespace hcl::scl
+namespace gtry::scl
 {
 	namespace DisplayModeLines
 	{

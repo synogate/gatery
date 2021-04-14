@@ -24,27 +24,27 @@
 
 using namespace boost::unit_test;
 
-BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, tmdsReduction, data::xrange(255), val)
+BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, tmdsReduction, data::xrange(255), val)
 {
-    using namespace hcl;
+    using namespace gtry;
 
     DesignScope design;
 
     auto a = ConstBVec(val, 8);
 
-    BVec encoded = hcl::scl::hdmi::tmdsEncodeReduceTransitions(a);
+    BVec encoded = gtry::scl::hdmi::tmdsEncodeReduceTransitions(a);
     BOOST_TEST(encoded.getWidth() == a.getWidth() + 1);
 
-    BVec decoded = hcl::scl::hdmi::tmdsDecodeReduceTransitions(encoded);
+    BVec decoded = gtry::scl::hdmi::tmdsDecodeReduceTransitions(encoded);
     sim_assert(a == decoded) << "decode(encoder()) mismatch: input:" << a << " decoded " << decoded;
-    sim_debug() << a << " => " << encoded << " => " << decoded << " | " << hcl::scl::bitcount(a);
+    sim_debug() << a << " => " << encoded << " => " << decoded << " | " << gtry::scl::bitcount(a);
 
     eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(tmdsBitflip, hcl::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(tmdsBitflip, gtry::sim::UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
     DesignScope design;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
@@ -54,10 +54,10 @@ BOOST_FIXTURE_TEST_CASE(tmdsBitflip, hcl::sim::UnitTestSimulationFixture)
     test_counter.setReset("8b0");
     test_counter += 1;
 
-    BVec encoded = hcl::scl::hdmi::tmdsEncodeBitflip(clock, test_counter.delay(1));
+    BVec encoded = gtry::scl::hdmi::tmdsEncodeBitflip(clock, test_counter.delay(1));
     BOOST_TEST(test_counter.getWidth() == encoded.getWidth() - 1);
 
-    BVec decoded = hcl::scl::hdmi::tmdsDecodeBitflip(encoded);
+    BVec decoded = gtry::scl::hdmi::tmdsDecodeBitflip(encoded);
     sim_assert(decoded == test_counter.delay(1));
 
     design.getCircuit().optimize(3);

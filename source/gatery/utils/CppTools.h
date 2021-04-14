@@ -17,7 +17,7 @@
 */
 #pragma once
 
-namespace hcl::utils {
+namespace gtry::utils {
 
 template <typename T>
 class RestrictTo { friend T; RestrictTo() {} };

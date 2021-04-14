@@ -18,7 +18,7 @@
 #include "gatery/pch.h"
 #include "AvalonMM.h"
 
-namespace hcl::scl
+namespace gtry::scl
 {
 	AvalonMMSlave::AvalonMMSlave(BitWidth addrWidth, BitWidth dataWidth) :
 		address(addrWidth),
@@ -137,10 +137,10 @@ namespace hcl::scl
 
 	void pinIn(AvalonMMSlave& avmm, std::string prefix)
 	{
-		avmm.address = hcl::pinIn(avmm.address.getWidth()).setName(prefix + "_address");
-		avmm.write = hcl::pinIn().setName(prefix + "_write");
-		avmm.writeData = hcl::pinIn(avmm.writeData.getWidth()).setName(prefix + "_write_data");
-		hcl::pinOut(avmm.readData).setName(prefix + "_read_data");
+		avmm.address = gtry::pinIn(avmm.address.getWidth()).setName(prefix + "_address");
+		avmm.write = gtry::pinIn().setName(prefix + "_write");
+		avmm.writeData = gtry::pinIn(avmm.writeData.getWidth()).setName(prefix + "_write_data");
+		gtry::pinOut(avmm.readData).setName(prefix + "_read_data");
 	}
 
 }

@@ -19,9 +19,9 @@
 
 #include <gatery/hlim/supportNodes/Node_External.h>
 
-namespace hcl::scl::arch::xilinx {
+namespace gtry::scl::arch::xilinx {
 
-class OBUFDS : public hcl::hlim::Node_External
+class OBUFDS : public gtry::hlim::Node_External
 {
     public:
         OBUFDS();

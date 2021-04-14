@@ -30,7 +30,7 @@
 #include <set>
 #include <string>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 class BaseNode;
 class NodeIO;

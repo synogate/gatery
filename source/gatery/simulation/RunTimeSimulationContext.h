@@ -19,7 +19,7 @@
 
 #include "SimulationContext.h"
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 class Simulator;
 

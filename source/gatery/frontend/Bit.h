@@ -26,7 +26,7 @@
 #include <vector>
 #include <optional>
 
-namespace hcl {
+namespace gtry {
     
     class BVec;
     

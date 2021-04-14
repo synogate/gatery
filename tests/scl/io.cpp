@@ -22,14 +22,14 @@
 #include <boost/test/data/monomorphic.hpp>
 
 using namespace boost::unit_test;
-using namespace hcl;
-using namespace hcl::utils;
-using UnitTestSimulationFixture = hcl::UnitTestSimulationFixture;
+using namespace gtry;
+using namespace gtry::utils;
+using UnitTestSimulationFixture = gtry::UnitTestSimulationFixture;
 
 
 BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 
@@ -41,7 +41,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
         auto rx = pinIn().setName("inRx");
         sim_tap((Bit)rx);
 
-        hcl::scl::UART uart;
+        gtry::scl::UART uart;
         uart.baudRate = baudRate;
 
 
@@ -71,7 +71,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
                 simu(sending) = '1';
                 simu(rx) = '0'; // start bit
                 co_await WaitFor(Seconds(1,baudRate));
-                for (auto i : hcl::utils::Range(8)) {
+                for (auto i : gtry::utils::Range(8)) {
                     simu(rx) = data & 1; // data bit
                     data >>= 1;
                     co_await WaitFor(Seconds(1,baudRate));

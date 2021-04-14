@@ -24,7 +24,7 @@
 #include <gatery/hlim/coreNodes/Node_Pin.h>
 #include <gatery/hlim/coreNodes/Node_Rewire.h>
 
-namespace hcl::scl {
+namespace gtry::scl {
 
 void handleDifferentialPin(hlim::Circuit &circuit, const XilinxSettings &settings, hlim::Node_Pin *pin)
 {

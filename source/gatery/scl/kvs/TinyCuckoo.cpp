@@ -21,7 +21,7 @@
 
 #include <gatery/simulation/BitVectorState.h>
 
-namespace hcl::scl
+namespace gtry::scl
 {
 	template class TinyCuckoo<BVec, BVec>;
 

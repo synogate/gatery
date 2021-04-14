@@ -19,7 +19,7 @@
 
 #include "Package.h"
 
-namespace hcl::vhdl {
+namespace gtry::vhdl {
 
 class HelperPackage : public Package {
     public:

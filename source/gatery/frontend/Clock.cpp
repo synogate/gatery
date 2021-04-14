@@ -23,7 +23,7 @@
 #include <gatery/hlim/coreNodes/Node_Clk2Signal.h>
 #include <gatery/hlim/coreNodes/Node_Register.h>
 
-namespace hcl {
+namespace gtry {
 
 
 Clock::Clock(size_t freq) : Clock(ClockConfig{}.setAbsoluteFrequency({freq, 1}))

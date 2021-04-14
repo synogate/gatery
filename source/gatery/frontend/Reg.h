@@ -17,7 +17,7 @@
 */
 #pragma once
 
-namespace hcl
+namespace gtry
 {
 	template<class T, class En = void>
 	struct Reg

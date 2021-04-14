@@ -22,13 +22,13 @@
 #include <boost/test/data/monomorphic.hpp>
 
 using namespace boost::unit_test;
-using namespace hcl;
-using namespace hcl::utils;
-using UnitTestSimulationFixture = hcl::UnitTestSimulationFixture;
+using namespace gtry;
+using namespace gtry::utils;
+using UnitTestSimulationFixture = gtry::UnitTestSimulationFixture;
 
 BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 
@@ -74,7 +74,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(SimProc_ExceptionForwarding, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(1));
@@ -92,7 +92,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_ExceptionForwarding, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(SimProc_PingPong, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 

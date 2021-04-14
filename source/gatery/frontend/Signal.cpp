@@ -61,7 +61,7 @@
 */
    
 
-hcl::SignalReadPort hcl::SignalReadPort::expand(size_t width, hlim::ConnectionType::Interpretation resultType) const
+gtry::SignalReadPort gtry::SignalReadPort::expand(size_t width, hlim::ConnectionType::Interpretation resultType) const
 {
     hlim::ConnectionType type = connType(*this);
     HCL_DESIGNCHECK_HINT(type.width <= width, "signal width cannot be implicitly decreased");
@@ -94,12 +94,12 @@ hcl::SignalReadPort hcl::SignalReadPort::expand(size_t width, hlim::ConnectionTy
     return SignalReadPort{ ret, expansionPolicy };
 }
 
-hcl::ElementarySignal::ElementarySignal()
+gtry::ElementarySignal::ElementarySignal()
 {
     if (auto* scope = ConditionalScope::get())
         m_initialScopeId = scope->getId();
 }
 
-hcl::ElementarySignal::~ElementarySignal()
+gtry::ElementarySignal::~ElementarySignal()
 {
 }

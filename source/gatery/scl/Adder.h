@@ -18,7 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 
-namespace hcl::scl
+namespace gtry::scl
 {
 	template<typename TVec = BVec>
 	class Adder
@@ -52,7 +52,7 @@ namespace hcl::scl
 
 	};
 
-	extern template class hcl::scl::Adder<hcl::BVec>;
+	extern template class gtry::scl::Adder<gtry::BVec>;
 
 	class CarrySafeAdder
 	{

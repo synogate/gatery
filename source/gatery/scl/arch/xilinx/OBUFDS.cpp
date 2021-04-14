@@ -18,7 +18,7 @@
 #include "gatery/pch.h"
 #include "OBUFDS.h"
 
-namespace hcl::scl::arch::xilinx {
+namespace gtry::scl::arch::xilinx {
 
 OBUFDS::OBUFDS()
 {

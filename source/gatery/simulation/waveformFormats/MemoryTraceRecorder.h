@@ -26,7 +26,7 @@
 #include <string>
 #include <map>
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 class MemoryTraceRecorder : public WaveformRecorder
 {

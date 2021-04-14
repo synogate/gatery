@@ -34,14 +34,14 @@
 #endif
 
 
-#define HCL_NAMED(x) hcl::setName(x, #x)
+#define HCL_NAMED(x) gtry::setName(x, #x)
 
 
-#define HCL_ASSERT(x) { if (!(x)) { throw hcl::utils::InternalError(__FILE__, __LINE__, std::string("Assertion failed: ") + #x); }}
-#define HCL_ASSERT_HINT(x, message) { if (!(x)) { throw hcl::utils::InternalError(__FILE__, __LINE__, std::string("Assertion failed: ") + #x + " Hint: " + message); }}
+#define HCL_ASSERT(x) { if (!(x)) { throw gtry::utils::InternalError(__FILE__, __LINE__, std::string("Assertion failed: ") + #x); }}
+#define HCL_ASSERT_HINT(x, message) { if (!(x)) { throw gtry::utils::InternalError(__FILE__, __LINE__, std::string("Assertion failed: ") + #x + " Hint: " + message); }}
 
 
-#define HCL_DESIGNCHECK(x) { if (!(x)) { throw hcl::utils::DesignError(__FILE__, __LINE__, std::string("Design failed: ") + #x); }}
-#define HCL_DESIGNCHECK_HINT(x, message) { if (!(x)) { throw hcl::utils::DesignError(__FILE__, __LINE__, std::string("Design failed: ") + #x + " Hint: " + message); }}
+#define HCL_DESIGNCHECK(x) { if (!(x)) { throw gtry::utils::DesignError(__FILE__, __LINE__, std::string("Design failed: ") + #x); }}
+#define HCL_DESIGNCHECK_HINT(x, message) { if (!(x)) { throw gtry::utils::DesignError(__FILE__, __LINE__, std::string("Design failed: ") + #x + " Hint: " + message); }}
 
 

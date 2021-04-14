@@ -27,9 +27,9 @@ extern "C"
 }
 
 using namespace boost::unit_test;
-using namespace hcl;
+using namespace gtry;
 
-BOOST_FIXTURE_TEST_CASE(Sha1RoundA, hcl::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Sha1RoundA, gtry::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 
@@ -59,7 +59,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundA, hcl::sim::UnitTestSimulationFixture)
 	eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(Sha1RoundB, hcl::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Sha1RoundB, gtry::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 
@@ -89,7 +89,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundB, hcl::sim::UnitTestSimulationFixture)
 	eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(Sha1RoundC, hcl::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Sha1RoundC, gtry::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 
@@ -119,7 +119,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundC, hcl::sim::UnitTestSimulationFixture)
 	eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(Sha1RoundD, hcl::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Sha1RoundD, gtry::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 
@@ -149,7 +149,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundD, hcl::sim::UnitTestSimulationFixture)
 	eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(Sha1, hcl::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Sha1, gtry::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 
@@ -174,7 +174,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1, hcl::sim::UnitTestSimulationFixture)
 	eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(Sha2_256, hcl::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Sha2_256, gtry::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 
@@ -200,7 +200,7 @@ BOOST_FIXTURE_TEST_CASE(Sha2_256, hcl::sim::UnitTestSimulationFixture)
 	eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(Md5, hcl::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Md5, gtry::sim::UnitTestSimulationFixture)
 {
 	struct md5ref
 	{
@@ -310,7 +310,7 @@ BOOST_AUTO_TEST_CASE(SipHash64TestVisual)
 	int one = 1;
 	QApplication a(one, bla);
 
-	hcl::vis::MainWindowSimulate w(nullptr, design.getCircuit());
+	gtry::vis::MainWindowSimulate w(nullptr, design.getCircuit());
 
 	w.getSimulator().addSimulationProcess([&]()->SimProcess {
 
@@ -364,7 +364,7 @@ BOOST_AUTO_TEST_CASE(SipHash64TestVisual)
 }
 #endif
 
-BOOST_FIXTURE_TEST_CASE(SipHash64Test, hcl::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SipHash64Test, gtry::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 
@@ -436,7 +436,7 @@ BOOST_FIXTURE_TEST_CASE(SipHash64Test, hcl::sim::UnitTestSimulationFixture)
 	runTicks(design.getCircuit(), clock.getClk(), 24);
 }
 
-BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, hcl::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, gtry::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 
@@ -459,7 +459,7 @@ BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, hcl::sim::UnitTestSimulationFixture)
 	eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(SipHash64HelperTest, hcl::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SipHash64HelperTest, gtry::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 
@@ -473,7 +473,7 @@ BOOST_FIXTURE_TEST_CASE(SipHash64HelperTest, hcl::sim::UnitTestSimulationFixture
 	eval(design.getCircuit());
 }
 
-BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, hcl::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, gtry::sim::UnitTestSimulationFixture)
 {
 	DesignScope design;
 

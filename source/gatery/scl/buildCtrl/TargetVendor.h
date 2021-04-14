@@ -19,9 +19,9 @@
 
 #include <gatery/frontend/Scope.h>
 
-namespace hcl::scl::buildCtrl {
+namespace gtry::scl::buildCtrl {
 
-class TargetVendor : public hcl::BaseScope<TargetVendor>
+class TargetVendor : public gtry::BaseScope<TargetVendor>
 {
     public:
         enum Vendor {

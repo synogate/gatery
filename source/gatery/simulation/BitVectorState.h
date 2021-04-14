@@ -27,7 +27,7 @@
 #include <cstdint>
 #include <string.h>
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 struct DefaultConfig
 {

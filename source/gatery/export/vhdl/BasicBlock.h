@@ -22,7 +22,7 @@
 #include <vector>
 #include <memory>
 
-namespace hcl::vhdl {
+namespace gtry::vhdl {
 
 class Entity;
 class Process;

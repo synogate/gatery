@@ -25,7 +25,7 @@
 #include <functional>
 #include <vector>
 
-namespace hcl {
+namespace gtry {
     
 class ElementarySignal;
 

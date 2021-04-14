@@ -20,7 +20,7 @@
 
 #include "Node_MemPort.h"
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
     Node_Memory::Node_Memory()
     {

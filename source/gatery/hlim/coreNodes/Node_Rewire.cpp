@@ -18,7 +18,7 @@
 #include "gatery/pch.h"
 #include "Node_Rewire.h"
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 bool Node_Rewire::RewireOperation::isBitExtract(size_t& bitIndex) const
 {

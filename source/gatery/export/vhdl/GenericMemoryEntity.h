@@ -21,7 +21,7 @@
 
 #include "../../hlim/MemoryDetector.h"
 
-namespace hcl::vhdl {
+namespace gtry::vhdl {
 
     
 /**

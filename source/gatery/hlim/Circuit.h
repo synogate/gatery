@@ -27,7 +27,7 @@
 #include <memory>
 #include <map>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 class Circuit
 {

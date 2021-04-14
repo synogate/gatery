@@ -18,15 +18,15 @@
 #include "gatery/pch.h"
 #include "TabulationHashing.h"
 
-namespace hcl::scl
+namespace gtry::scl
 {
 
-	hcl::scl::TabulationHashing::TabulationHashing(BitWidth hashWidth) :
+	gtry::scl::TabulationHashing::TabulationHashing(BitWidth hashWidth) :
 		m_hashWidth(hashWidth)
 	{
 	}
 
-	TabulationHashing& hcl::scl::TabulationHashing::hashWidth(BitWidth width)
+	TabulationHashing& gtry::scl::TabulationHashing::hashWidth(BitWidth width)
 	{
 		HCL_ASSERT_HINT(m_tables.empty(), "invalid state");
 
@@ -34,7 +34,7 @@ namespace hcl::scl
 		return *this;
 	}
 
-	TabulationHashing& hcl::scl::TabulationHashing::symbolWidth(BitWidth width)
+	TabulationHashing& gtry::scl::TabulationHashing::symbolWidth(BitWidth width)
 	{
 		HCL_ASSERT_HINT(m_tables.empty(), "invalid state");
 
@@ -42,7 +42,7 @@ namespace hcl::scl
 		return *this;
 	}
 
-	BVec hcl::scl::TabulationHashing::operator()(const BVec& data)
+	BVec gtry::scl::TabulationHashing::operator()(const BVec& data)
 	{
 		HCL_ASSERT_HINT(m_tables.empty(), "invalid state");
 

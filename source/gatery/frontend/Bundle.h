@@ -24,7 +24,7 @@
 #include <vector>
 #include <functional>
 
-namespace hcl
+namespace gtry
 {
 	class Bundle
 	{

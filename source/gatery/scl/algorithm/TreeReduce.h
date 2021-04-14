@@ -25,7 +25,7 @@
 #include <vector>
 
 
-namespace hcl::scl
+namespace gtry::scl
 {
     
     template<typename Signal>

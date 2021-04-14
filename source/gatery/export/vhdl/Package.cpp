@@ -20,7 +20,7 @@
 
 #include "AST.h"
 
-namespace hcl::vhdl {
+namespace gtry::vhdl {
 
 Package::Package(AST &ast, const std::string &desiredName) : m_ast(ast)
 {

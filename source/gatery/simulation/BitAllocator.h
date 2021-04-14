@@ -21,7 +21,7 @@
 #include <vector>
 #include <array>
 
-namespace hcl::sim {
+namespace gtry::sim {
     
 class BitAllocator {
     public:

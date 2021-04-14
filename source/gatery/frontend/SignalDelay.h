@@ -17,7 +17,7 @@
 */
 #pragma once
 
-namespace hcl {
+namespace gtry {
     
     
 class SignalDelay

@@ -18,7 +18,7 @@
 #include "gatery/pch.h"
 #include "SimulatorControl.h"
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 void SimulatorControl::bindSimulator(Simulator *simulator)
 {

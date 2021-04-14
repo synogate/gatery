@@ -18,7 +18,7 @@
 #include "gatery/pch.h"
 #include "BitVectorState.h"
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 DefaultBitVectorState createDefaultBitVectorState(std::size_t size, const void *data) {
     BitVectorState<DefaultConfig> state;

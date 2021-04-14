@@ -21,7 +21,7 @@
 #include "AST.h"
 #include "CodeFormatting.h"
 
-namespace hcl::vhdl {
+namespace gtry::vhdl {
 
 
 HelperPackage::HelperPackage(AST &ast) : Package(ast, "GateryHelperPackage")

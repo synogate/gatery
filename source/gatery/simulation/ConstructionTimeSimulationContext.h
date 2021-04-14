@@ -22,7 +22,7 @@
 #include <map>
 
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 class ConstructionTimeSimulationContext : public SimulationContext {
     public:

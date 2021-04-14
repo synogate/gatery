@@ -30,7 +30,7 @@
 
 #include <gatery/utils/Exceptions.h>
 
-namespace hcl::fsm {
+namespace gtry::fsm {
 
 thread_local FSM *FSM::m_fsmContext = nullptr;
     

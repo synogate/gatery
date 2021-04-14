@@ -17,7 +17,7 @@
 */
 #pragma once
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 class Node_Arithmetic;
 class Node_Clk2Signal;

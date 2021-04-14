@@ -26,7 +26,7 @@
 
 #include <algorithm>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 NodeIO::~NodeIO()
 {

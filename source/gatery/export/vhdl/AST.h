@@ -25,12 +25,12 @@
 #include <memory>
 #include <string>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
     class Circuit;
     class BaseNode;
 }
 
-namespace hcl::vhdl {
+namespace gtry::vhdl {
 
 class Entity;
 class BaseGrouping;

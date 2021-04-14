@@ -38,7 +38,7 @@
 #endif
 
 
-namespace hcl::utils {
+namespace gtry::utils {
 
 #ifdef _MSC_VER
     template<typename T>

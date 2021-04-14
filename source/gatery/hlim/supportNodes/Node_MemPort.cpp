@@ -20,7 +20,7 @@
 
 #include "Node_Memory.h"
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 Node_MemPort::Node_MemPort(std::size_t bitWidth) : m_bitWidth(bitWidth)
 {

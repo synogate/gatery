@@ -20,7 +20,7 @@
 
 #include "../Counter.h"
 
-namespace hcl::scl
+namespace gtry::scl
 {
 	template<typename THash>
 	class HashEngine

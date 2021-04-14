@@ -22,7 +22,7 @@
 
 #include "../Stream.h"
 
-namespace hcl::scl
+namespace gtry::scl
 {
 	struct OneHot : BVec
 	{
@@ -67,7 +67,7 @@ namespace hcl::scl
 		for (Iter it = begin; it != end; ++it)
 			if (maxWidth < it->size())
 				maxWidth = it->size();
-		ret.value() = hcl::ConstBVec(maxWidth);
+		ret.value() = gtry::ConstBVec(maxWidth);
 
 		Bit anyValid = '0';
 		for(Iter it = begin; it != end; ++it)
@@ -87,4 +87,4 @@ namespace hcl::scl
 
 }
 
-BOOST_HANA_ADAPT_STRUCT(hcl::scl::EncoderResult, index, valid);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::EncoderResult, index, valid);

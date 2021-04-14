@@ -23,7 +23,7 @@
 #include <string>
 #include <map>
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 class VCDSink : public WaveformRecorder
 {

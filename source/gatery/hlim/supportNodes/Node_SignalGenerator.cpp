@@ -20,7 +20,7 @@
 
 #include "../../utils/Range.h"
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 Node_SignalGenerator::Node_SignalGenerator(Clock *clk) {
     m_clocks.resize(1);

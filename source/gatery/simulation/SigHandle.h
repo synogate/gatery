@@ -22,12 +22,12 @@
 
 #include <boost/spirit/home/support/container.hpp>
 
-namespace hcl {
+namespace gtry {
     class Bit;
     class BVec;
 }
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 class SigHandle {
     public:

@@ -18,7 +18,7 @@
 #include "gatery/pch.h"
 #include "ConnectionType.h"
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 
 bool ConnectionType::operator==(const ConnectionType &rhs) const

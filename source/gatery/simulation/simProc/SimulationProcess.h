@@ -19,7 +19,7 @@
 
 #include <coroutine>
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 class SimulationProcess {
     public:

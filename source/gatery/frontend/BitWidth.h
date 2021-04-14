@@ -17,7 +17,7 @@
 */
 #pragma once
 
-namespace hcl 
+namespace gtry 
 {
 
 	struct BitWidth

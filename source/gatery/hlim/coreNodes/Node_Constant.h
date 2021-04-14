@@ -20,7 +20,7 @@
 
 #include <string_view>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
     class Node_Constant : public Node<Node_Constant>
     {

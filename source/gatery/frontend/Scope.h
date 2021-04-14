@@ -23,7 +23,7 @@
 #include <gatery/utils/Preprocessor.h>
 #include <gatery/simulation/ConstructionTimeSimulationContext.h>
 
-namespace hcl {
+namespace gtry {
     
     
 template<class FinalType>

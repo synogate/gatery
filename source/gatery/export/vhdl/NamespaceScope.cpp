@@ -23,7 +23,7 @@
 #include "../../utils/Exceptions.h"
 #include "../../utils/Preprocessor.h"
 
-namespace hcl::vhdl {
+namespace gtry::vhdl {
 
 NamespaceScope::NamespaceScope(AST &ast, NamespaceScope *parent) : m_ast(ast), m_parent(parent)
 {

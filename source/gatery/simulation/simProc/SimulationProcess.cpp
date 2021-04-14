@@ -18,7 +18,7 @@
 #include "gatery/pch.h"
 #include "SimulationProcess.h"
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 SimulationProcess::SimulationProcess(Handle handle) : m_handle(handle)
 {

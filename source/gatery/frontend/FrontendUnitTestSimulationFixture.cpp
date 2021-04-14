@@ -24,7 +24,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-namespace hcl {
+namespace gtry {
 
 UnitTestSimulationFixture::~UnitTestSimulationFixture()
 {

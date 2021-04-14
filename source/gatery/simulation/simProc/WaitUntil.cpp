@@ -22,7 +22,7 @@
 
 #include <iostream>
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 WaitUntil::WaitUntil(hlim::NodePort np, Trigger trigger) : m_np(np), m_trigger(trigger)
 {

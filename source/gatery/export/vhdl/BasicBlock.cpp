@@ -31,7 +31,7 @@
 #include "../../hlim/Clock.h"
 
 
-namespace hcl::vhdl {
+namespace gtry::vhdl {
 
 
 void NodeGroupInfo::buildFrom(hlim::NodeGroup *nodeGroup, bool mergeAreasReccursive)
@@ -229,7 +229,7 @@ void BasicBlock::handleSFUInstantiaton(hlim::NodeGroup *sfu)
 
         //entity = &memEntity;
     } else
-        throw hcl::utils::InternalError(__FILE__, __LINE__, "Unhandled SFU node group");
+        throw gtry::utils::InternalError(__FILE__, __LINE__, "Unhandled SFU node group");
 
     ConcurrentStatement statement;
     statement.type = ConcurrentStatement::TYPE_ENTITY_INSTANTIATION;

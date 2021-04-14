@@ -18,7 +18,7 @@
 #include "gatery/pch.h"
 #include "uart.h"
 
-namespace hcl::scl {
+namespace gtry::scl {
 
 UART::Stream UART::recieve(Bit rx)
 {

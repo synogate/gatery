@@ -24,7 +24,7 @@
 
 #include "../hlim/Circuit.h"
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 UnitTestSimulationFixture::UnitTestSimulationFixture()
 {

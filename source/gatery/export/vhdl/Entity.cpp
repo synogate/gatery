@@ -29,7 +29,7 @@
 
 #include <memory>
 
-namespace hcl::vhdl {
+namespace gtry::vhdl {
 
 Entity::Entity(AST &ast, const std::string &desiredName, BasicBlock *parent) : BasicBlock(ast, parent, &ast.getNamespaceScope())
 {

@@ -29,7 +29,7 @@
 
 #include "BitWidth.h"
 
-namespace hcl {
+namespace gtry {
 
     class ConditionalScope;
     class SignalPort;

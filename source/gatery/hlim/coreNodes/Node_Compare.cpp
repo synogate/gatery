@@ -19,7 +19,7 @@
 #include "Node_Compare.h"
 
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 Node_Compare::Node_Compare(Op op) : Node(2, 1), m_op(op)
 {

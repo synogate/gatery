@@ -27,7 +27,7 @@
 #include <gatery/hlim/coreNodes/Node_Signal.h>
 
 
-namespace hcl {
+namespace gtry {
 
     thread_local hlim::NodePort ConditionalScope::m_lastCondition;
     thread_local size_t ConditionalScope::s_nextId = 1;

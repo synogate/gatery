@@ -22,7 +22,7 @@
 
 #include <sstream>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 void Node_SignalTap::addInput(hlim::NodePort input)
 {

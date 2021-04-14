@@ -23,7 +23,7 @@
 #include <string>
 #include <map>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 class Node_External : public Node<Node_External>
 {

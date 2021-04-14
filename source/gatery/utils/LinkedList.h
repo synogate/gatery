@@ -19,7 +19,7 @@
 
 #include <iterator>
 
-namespace hcl::utils {
+namespace gtry::utils {
 
 template<class Elements>
 class LinkedList;

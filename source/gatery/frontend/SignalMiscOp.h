@@ -40,7 +40,7 @@
 
 #include <type_traits>
 
-namespace hcl {
+namespace gtry {
 
 ///@todo overload for compound signals
 template<typename ContainerType>//, typename = std::enable_if_t<utils::isContainer<ContainerType>::value>>

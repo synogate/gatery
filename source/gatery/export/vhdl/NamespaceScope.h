@@ -30,7 +30,7 @@
 #include <vector>
 
 
-namespace hcl::vhdl {
+namespace gtry::vhdl {
 
 class AST;
 

@@ -27,7 +27,7 @@
 
 #include <gatery/utils/Preprocessor.h>
 
-namespace hcl {
+namespace gtry {
 
     inline SignalReadPort makeNode(hlim::Node_Compare::Op op, NormalizedWidthOperands ops)
     {

@@ -21,7 +21,7 @@
 #include "SimulationContext.h"
 #include "../hlim/Node.h"
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 void SigHandle::operator=(std::uint64_t v)
 {

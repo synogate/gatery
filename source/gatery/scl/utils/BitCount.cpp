@@ -20,12 +20,12 @@
 
 #include <gatery/utils/BitManipulation.h>
 
-namespace hcl::scl {
+namespace gtry::scl {
 
     BVec bitcount(BVec vec)
     {
-        using namespace hcl;
-        using namespace hcl::hlim;
+        using namespace gtry;
+        using namespace gtry::hlim;
         
         HCL_NAMED(vec);
         

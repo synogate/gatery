@@ -18,7 +18,7 @@
 #include "gatery/pch.h"
 #include "Node_Pin.h"
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 
 Node_Pin::Node_Pin() : Node(1, 1)

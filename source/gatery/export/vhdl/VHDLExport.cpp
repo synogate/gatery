@@ -47,7 +47,7 @@
 #include <list>
 #include <map>
 
-namespace hcl::vhdl {
+namespace gtry::vhdl {
 
 
 VHDLExport::VHDLExport(std::filesystem::path destination)

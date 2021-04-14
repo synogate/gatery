@@ -22,7 +22,7 @@
 
 #include <vector>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 class Node_Rewire : public Node<Node_Rewire>
 {

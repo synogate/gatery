@@ -27,10 +27,10 @@ extern "C"
 }
 
 using namespace boost::unit_test;
-using namespace hcl;
+using namespace gtry;
 
 
-BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, TinyCookuTableLookup, data::xrange(2, 4), numTables)
+BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, TinyCookuTableLookup, data::xrange(2, 4), numTables)
 {
     DesignScope design;
 
@@ -38,7 +38,7 @@ BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, TinyCookuTableLookup
     ClockScope clockScope(clock);
 
     const BitWidth keySize{ size_t(numTables * 4) };
-    const BitWidth tableIdxWidth{ hcl::utils::Log2C(size_t(numTables)) };
+    const BitWidth tableIdxWidth{ gtry::utils::Log2C(size_t(numTables)) };
 
     InputPins lookupKey = pinIn(keySize).setName("key");
     InputPin update = pinIn().setName("update");
@@ -86,7 +86,7 @@ BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, TinyCookuTableLookup
         while(true)
         {
             size_t value = rng() & 0xFF;
-            size_t key = hcl::utils::bitfieldExtract(value * 23, 0, keySize.value);
+            size_t key = gtry::utils::bitfieldExtract(value * 23, 0, keySize.value);
 
             if (rng() % 3 == 0)
             {
@@ -120,7 +120,7 @@ BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, TinyCookuTableLookup
         std::mt19937 rng{ 1338 };
         while (true)
         {
-            simu(lookupKey) = hcl::utils::bitfieldExtract(rng(), 0, keySize.value);
+            simu(lookupKey) = gtry::utils::bitfieldExtract(rng(), 0, keySize.value);
             co_await WaitClk(clock);
         }
     });
@@ -169,7 +169,7 @@ BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, TinyCookuTableLookup
 }
 
 
-BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, TinyCuckooTableLookup, data::xrange(3, 4), numTables)
+BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, TinyCuckooTableLookup, data::xrange(3, 4), numTables)
 {
     DesignScope design;
 
@@ -198,13 +198,13 @@ BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, TinyCuckooTableLooku
     //sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TinyCookuTableLookup.vcd");
     //vcd.addAllNamedSignals();
 
-    //hcl::vhdl::VHDLExport vhdl("vhdl/");
+    //gtry::vhdl::VHDLExport vhdl("vhdl/");
     //vhdl(design.getCircuit());
 
     runTicks(design.getCircuit(), clock.getClk(), 4096);
 }
 
-BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, TinyCuckooTableLookupDemuxed, data::xrange(3, 4), numTables)
+BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, TinyCuckooTableLookupDemuxed, data::xrange(3, 4), numTables)
 {
     DesignScope design;
 
@@ -236,7 +236,7 @@ BOOST_DATA_TEST_CASE_F(hcl::sim::UnitTestSimulationFixture, TinyCuckooTableLooku
     sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TinyCuckooTableLookupDemuxed.vcd");
     vcd.addAllNamedSignals();
 
-    //hcl::vhdl::VHDLExport vhdl("vhdl/");
+    //gtry::vhdl::VHDLExport vhdl("vhdl/");
     //vhdl(design.getCircuit());
 
     runTicks(design.getCircuit(), clock.getClk(), 4096);

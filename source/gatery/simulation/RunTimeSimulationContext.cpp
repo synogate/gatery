@@ -24,7 +24,7 @@
 
 #include "Simulator.h"
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 RunTimeSimulationContext::RunTimeSimulationContext(Simulator *simulator) : m_simulator(simulator)
 {

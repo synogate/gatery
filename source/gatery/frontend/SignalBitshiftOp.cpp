@@ -20,7 +20,7 @@
 
 #include <gatery/hlim/coreNodes/Node_Shift.h>
 
-namespace hcl {
+namespace gtry {
 
 hlim::ConnectionType SignalBitShiftOp::getResultingType(const hlim::ConnectionType &operand) {
     return operand;

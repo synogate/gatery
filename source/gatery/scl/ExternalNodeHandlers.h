@@ -19,7 +19,7 @@
 
 #include "blockRam/XilinxSimpleDualPortBlockRam.h"
 
-namespace hcl::scl {
+namespace gtry::scl {
     
 template<class CodeFormatter>
 void registerExternalNodeHandlerVHDL(CodeFormatter *codeFormatter) 

@@ -20,7 +20,7 @@
 
 #include <gatery/hlim/SignalGroup.h>
 
-namespace hcl
+namespace gtry
 {
 	template<typename... Comp>
 	BVec pack(const Comp& ...compound)

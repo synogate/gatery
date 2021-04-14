@@ -17,7 +17,7 @@
 */
 #pragma once
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 /**
  * @todo write docs

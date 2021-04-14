@@ -23,12 +23,12 @@
 
 #include <string>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
     class Clock;
     class BaseNode;
 }
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 /**
  * @todo write docs

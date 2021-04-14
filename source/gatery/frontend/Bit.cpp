@@ -27,7 +27,7 @@
 #include <gatery/hlim/coreNodes/Node_Rewire.h>
 #include <gatery/hlim/coreNodes/Node_Multiplexer.h>
 
-namespace hcl {
+namespace gtry {
 
     Bit::Bit()
     {

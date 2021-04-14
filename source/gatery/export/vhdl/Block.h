@@ -22,7 +22,7 @@
 #include <ostream>
 
 
-namespace hcl::vhdl {
+namespace gtry::vhdl {
 
 class Entity;
     

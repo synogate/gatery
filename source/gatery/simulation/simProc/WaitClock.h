@@ -20,11 +20,11 @@
 
 #include <coroutine>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
     class Clock;
 }
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 /**
  * @brief co_awaiting on a WaitClock continues the simulation until the clock "activates".

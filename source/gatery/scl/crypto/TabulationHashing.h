@@ -22,7 +22,7 @@
 #include "../Avalon.h"
 #include "../memoryMap/MemoryMap.h"
 
-namespace hcl::scl
+namespace gtry::scl
 {
 	class TabulationHashing
 	{

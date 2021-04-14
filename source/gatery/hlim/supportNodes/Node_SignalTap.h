@@ -21,7 +21,7 @@
 
 #include <boost/variant.hpp>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 class Node_SignalTap : public Node<Node_SignalTap>
 {

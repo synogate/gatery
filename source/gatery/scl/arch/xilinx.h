@@ -19,11 +19,11 @@
 
 #include <stddef.h>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
     class Circuit;
 }
 
-namespace hcl::scl {
+namespace gtry::scl {
 
 struct XilinxSettings {
     enum Series {

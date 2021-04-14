@@ -22,7 +22,7 @@
 
 #include <iostream>
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 WaitFor::WaitFor(const hlim::ClockRational &seconds) : m_seconds(seconds)
 {

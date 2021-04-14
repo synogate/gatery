@@ -29,7 +29,7 @@
 #include <gatery/simulation/simProc/WaitClock.h>
 
 
-namespace hcl {
+namespace gtry {
 
 class Clock;
 

@@ -18,9 +18,9 @@
 #include "gatery/pch.h"
 #include "Bundle.h"
 
-namespace hcl
+namespace gtry
 {
-	Bundle::Item* hcl::Bundle::find(const std::type_info& type, std::string_view name, size_t index)
+	Bundle::Item* gtry::Bundle::find(const std::type_info& type, std::string_view name, size_t index)
 	{
 		for (Item& it : m_member)
 		{
@@ -31,7 +31,7 @@ namespace hcl
 		return nullptr;
 	}
 
-	const Bundle::Item* hcl::Bundle::find(const std::type_info& type, std::string_view name, size_t index) const
+	const Bundle::Item* gtry::Bundle::find(const std::type_info& type, std::string_view name, size_t index) const
 	{
 		for (const Item& it : m_member)
 		{

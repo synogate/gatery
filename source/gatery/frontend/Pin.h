@@ -24,7 +24,7 @@
 #include <gatery/hlim/coreNodes/Node_Signal.h>
 #include <gatery/hlim/NodePtr.h>
 
-namespace hcl {
+namespace gtry {
 
     class OutputPin {
         public:

@@ -21,7 +21,7 @@
 
 #include <boost/format.hpp>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
     class Node_Register : public Node<Node_Register>
     {

@@ -20,7 +20,7 @@
 
 #include "../utils/BitManipulation.h"
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 size_t BitAllocator::allocate(size_t size) {
     if (size == 0)

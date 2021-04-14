@@ -18,7 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 
-namespace hcl::scl
+namespace gtry::scl
 {
 	struct DisplayModeDimension
 	{
@@ -63,7 +63,7 @@ namespace hcl::scl
 
 }
 
-BOOST_HANA_ADAPT_STRUCT(hcl::scl::DisplayModeDimension, resolution, syncStart, syncEnd, total);
-BOOST_HANA_ADAPT_STRUCT(hcl::scl::DisplayMode, w, h);
-BOOST_HANA_ADAPT_STRUCT(hcl::scl::DisplaySync, x, y, onScreen, vsync, hsync);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::DisplayModeDimension, resolution, syncStart, syncEnd, total);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::DisplayMode, w, h);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::DisplaySync, x, y, onScreen, vsync, hsync);
 

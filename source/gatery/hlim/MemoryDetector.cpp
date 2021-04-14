@@ -35,7 +35,7 @@
 #include <set>
 #include <optional>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 
 MemoryGroup::MemoryGroup() : NodeGroup(GroupType::SFU)

@@ -22,7 +22,7 @@
 
 #include <boost/format.hpp>
 
-namespace hcl::vhdl {
+namespace gtry::vhdl {
 
 
 void CodeFormatting::indent(std::ostream &stream, unsigned depth) const

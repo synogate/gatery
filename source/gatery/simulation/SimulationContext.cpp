@@ -21,7 +21,7 @@
 #include "../utils/Exceptions.h"
 #include "../utils/Preprocessor.h"
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 thread_local SimulationContext *SimulationContext::m_current = nullptr;
 

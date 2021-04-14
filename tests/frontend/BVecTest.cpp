@@ -23,12 +23,12 @@
 
 using namespace boost::unit_test;
 
-using UnitTestSimulationFixture = hcl::UnitTestSimulationFixture;
+using UnitTestSimulationFixture = gtry::UnitTestSimulationFixture;
 
 
 BOOST_FIXTURE_TEST_CASE(BVecIterator, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 
@@ -72,7 +72,7 @@ BOOST_FIXTURE_TEST_CASE(BVecIterator, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(BVecIteratorArithmetic, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 
@@ -108,7 +108,7 @@ BOOST_FIXTURE_TEST_CASE(BVecIteratorArithmetic, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(BVecFrontBack, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 
@@ -129,7 +129,7 @@ BOOST_FIXTURE_TEST_CASE(BVecFrontBack, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(BitSignalLoopSemanticTest, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 
@@ -148,7 +148,7 @@ BOOST_FIXTURE_TEST_CASE(BitSignalLoopSemanticTest, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(BVecSignalLoopSemanticTest, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 
@@ -176,7 +176,7 @@ BOOST_FIXTURE_TEST_CASE(BVecSignalLoopSemanticTest, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(ConstantDataStringParser, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
     BOOST_CHECK(parseBVec("32x1bBXx").size() == 32);
     BOOST_CHECK(parseBVec("x1bBX").size() == 16);
@@ -186,7 +186,7 @@ BOOST_FIXTURE_TEST_CASE(ConstantDataStringParser, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(BVecSelectorAccess, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 

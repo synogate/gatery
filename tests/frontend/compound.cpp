@@ -22,14 +22,14 @@
 #include <boost/test/data/monomorphic.hpp>
 
 using namespace boost::unit_test;
-using namespace hcl;
+using namespace gtry;
 
-using UnitTestSimulationFixture = hcl::UnitTestSimulationFixture;
+using UnitTestSimulationFixture = gtry::UnitTestSimulationFixture;
 
 struct SimpleStruct
 {
-    hcl::BVec vec = hcl::BVec(3_b);
-    hcl::Bit bit;
+    gtry::BVec vec = gtry::BVec(3_b);
+    gtry::Bit bit;
 };
 
 BOOST_HANA_ADAPT_STRUCT(SimpleStruct, vec, bit);
@@ -44,7 +44,7 @@ BOOST_HANA_ADAPT_STRUCT(RichStruct, vec, bit, list, parameter);
 
 BOOST_FIXTURE_TEST_CASE(CompoundName, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 
@@ -70,7 +70,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundName, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(CompoundWidth, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 
@@ -87,7 +87,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundWidth, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(CompoundPack, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 
@@ -117,7 +117,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundPack, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(CompoundUnpack, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
     RichStruct in;
     in.vec = 5u;
@@ -148,7 +148,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundUnpack, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(ConstructFromSignal, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 
@@ -170,7 +170,7 @@ BOOST_FIXTURE_TEST_CASE(ConstructFromSignal, UnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(ConstructFromCompound, UnitTestSimulationFixture)
 {
-    using namespace hcl;
+    using namespace gtry;
 
 
 

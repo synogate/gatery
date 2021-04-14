@@ -18,7 +18,7 @@
 #pragma once
 #include "../Node.h"
 
-namespace hcl::hlim 
+namespace gtry::hlim 
 {
     class Node_Shift : public Node<Node_Shift>
     {

@@ -20,21 +20,21 @@
 
 #include "blockRam/XilinxSimpleDualPortBlockRam.h"
 
-using namespace hcl::scl;
-using namespace hcl;
+using namespace gtry::scl;
+using namespace gtry;
 
 /*
-Stream<BVec> hcl::scl::simpleDualPortRam(Stream<WritePort>& write, Stream<BVec> readAddress, std::string_view name)
+Stream<BVec> gtry::scl::simpleDualPortRam(Stream<WritePort>& write, Stream<BVec> readAddress, std::string_view name)
 {
     HCL_ASSERT_HINT(write.address.size() == readAddress.size(), "not yet implemented");
 
     const size_t wordWidth = write.writeData.size();
 
-    hcl::scl::blockram::XilinxSimpleDualPortBlockRam::DefaultBitVectorState initVec;
+    gtry::scl::blockram::XilinxSimpleDualPortBlockRam::DefaultBitVectorState initVec;
     initVec.resize(wordWidth * (1ull << write.address.size()));
-    initVec.clearRange(hcl::sim::DefaultConfig::DEFINED, 0, initVec.size());
+    initVec.clearRange(gtry::sim::DefaultConfig::DEFINED, 0, initVec.size());
 
-    using XilinxRam = hcl::scl::blockram::XilinxSimpleDualPortBlockRam;
+    using XilinxRam = gtry::scl::blockram::XilinxSimpleDualPortBlockRam;
 
     auto* clock = ClockScope::getClk().getClk();
     auto* xram = DesignScope::createNode<XilinxRam>(

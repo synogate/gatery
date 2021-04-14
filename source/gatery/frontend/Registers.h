@@ -30,7 +30,7 @@
 #include <map>
 #include <optional>
 
-namespace hcl {
+namespace gtry {
 
 class Bit;
 

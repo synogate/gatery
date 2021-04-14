@@ -24,7 +24,7 @@
 
 #include <string>
 
-namespace hcl::hlim {
+namespace gtry::hlim {
 
 void Node_Signal::setConnectionType(const ConnectionType &connectionType)
 {

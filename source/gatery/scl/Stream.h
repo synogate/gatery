@@ -19,7 +19,7 @@
 #include <gatery/frontend.h>
 #include <optional>
 
-namespace hcl::scl
+namespace gtry::scl
 {
     template<typename Payload>
     struct Stream : Payload

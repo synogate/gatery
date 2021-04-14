@@ -30,7 +30,7 @@
 #include <filesystem>
 
 
-namespace hcl {
+namespace gtry {
 
     /**
      * @brief Helper class to facilitate writing unit tests

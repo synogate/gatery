@@ -25,9 +25,9 @@
 #include <optional>
 #include <boost/spirit/home/x3.hpp>
 
-using namespace hcl;
+using namespace gtry;
 
-sim::DefaultBitVectorState hcl::parseBit(char value)
+sim::DefaultBitVectorState gtry::parseBit(char value)
 {
     HCL_DESIGNCHECK(value == '0' || value == '1' || value == 'x' || value == 'X');
 
@@ -38,12 +38,12 @@ sim::DefaultBitVectorState hcl::parseBit(char value)
     return ret;
 }
 
-sim::DefaultBitVectorState hcl::parseBit(bool value)
+sim::DefaultBitVectorState gtry::parseBit(bool value)
 {
     return parseBit(value ? '1' : '0');
 }
 
-sim::DefaultBitVectorState hcl::parseBVec(std::string_view value)
+sim::DefaultBitVectorState gtry::parseBVec(std::string_view value)
 {
     using namespace boost::spirit::x3;
 
@@ -120,7 +120,7 @@ sim::DefaultBitVectorState hcl::parseBVec(std::string_view value)
     return ret;
 }
 
-sim::DefaultBitVectorState hcl::parseBVec(uint64_t value, size_t width)
+sim::DefaultBitVectorState gtry::parseBVec(uint64_t value, size_t width)
 {
     HCL_ASSERT(width <= sizeof(size_t) * 8);
 
@@ -131,13 +131,13 @@ sim::DefaultBitVectorState hcl::parseBVec(uint64_t value, size_t width)
     return ret;
 }
 
-hcl::BVec hcl::ConstBVec(uint64_t value, size_t width)
+gtry::BVec gtry::ConstBVec(uint64_t value, size_t width)
 {
     auto* node = DesignScope::createNode<hlim::Node_Constant>(parseBVec(value, width), hlim::ConnectionType::BITVEC);
     return SignalReadPort(node);
 }
 
-hcl::BVec hcl::ConstBVec(size_t width)
+gtry::BVec gtry::ConstBVec(size_t width)
 {
     sim::DefaultBitVectorState value;
     value.resize(width);

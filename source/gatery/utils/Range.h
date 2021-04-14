@@ -20,7 +20,7 @@
 #include <iterator>
 #include <type_traits>
 
-namespace hcl::utils {
+namespace gtry::utils {
 
 template<typename ExposedType, typename = void>
 struct RangeIntegralType { using type = ExposedType; };

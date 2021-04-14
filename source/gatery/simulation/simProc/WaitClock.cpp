@@ -22,7 +22,7 @@
 
 #include <iostream>
 
-namespace hcl::sim {
+namespace gtry::sim {
 
 WaitClock::WaitClock(const hlim::Clock *clock) : m_clock(clock)
 {

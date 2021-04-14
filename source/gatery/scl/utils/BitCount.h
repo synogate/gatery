@@ -22,7 +22,7 @@
 
 #include <iostream>
 
-namespace hcl::scl {
+namespace gtry::scl {
  
 BVec bitcount(BVec vec);
     
