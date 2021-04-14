@@ -1,20 +1,20 @@
 #pragma once
 
-#include <hcl/frontend.h>
-#include <hcl/simulation/UnitTestSimulationFixture.h>
-#include <hcl/simulation/waveformFormats/VCDSink.h>
+#include <gatery/frontend.h>
+#include <gatery/simulation/UnitTestSimulationFixture.h>
+#include <gatery/simulation/waveformFormats/VCDSink.h>
 
-#include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
-#include <hcl/utils.h>
+#include <gatery/hlim/supportNodes/Node_SignalGenerator.h>
+#include <gatery/utils.h>
 
-#include <hcl/scl/crypto/sha1.h>
-#include <hcl/scl/crypto/sha2.h>
-#include <hcl/scl/crypto/md5.h>
-#include <hcl/scl/crypto/SipHash.h>
-#include <hcl/scl/crypto/TabulationHashing.h>
-#include <hcl/scl/driver_utils.h>
-#include <hcl/scl/io/HDMITransmitter.h>
-#include <hcl/scl/io/uart.h>
-#include <hcl/scl/utils/BitCount.h>
-#include <hcl/scl/utils/OneHot.h>
-#include <hcl/scl/kvs/TinyCuckoo.h>
+#include <gatery/scl/crypto/sha1.h>
+#include <gatery/scl/crypto/sha2.h>
+#include <gatery/scl/crypto/md5.h>
+#include <gatery/scl/crypto/SipHash.h>
+#include <gatery/scl/crypto/TabulationHashing.h>
+#include <gatery/scl/driver_utils.h>
+#include <gatery/scl/io/HDMITransmitter.h>
+#include <gatery/scl/io/uart.h>
+#include <gatery/scl/utils/BitCount.h>
+#include <gatery/scl/utils/OneHot.h>
+#include <gatery/scl/kvs/TinyCuckoo.h>

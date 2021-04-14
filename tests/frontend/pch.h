@@ -1,8 +1,8 @@
 #pragma once
 
-#include <hcl/frontend.h>
-#include <hcl/simulation/UnitTestSimulationFixture.h>
-#include <hcl/simulation/waveformFormats/VCDSink.h>
+#include <gatery/frontend.h>
+#include <gatery/simulation/UnitTestSimulationFixture.h>
+#include <gatery/simulation/waveformFormats/VCDSink.h>
 
-#include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
-#include <hcl/utils.h>
+#include <gatery/hlim/supportNodes/Node_SignalGenerator.h>
+#include <gatery/utils.h>

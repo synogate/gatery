@@ -23,7 +23,7 @@
 
 extern "C"
 {
-#include <hcl/scl/crypto/TabulationHashingDriver.h>
+#include <gatery/scl/crypto/TabulationHashingDriver.h>
 }
 
 using namespace boost::unit_test;
@@ -276,7 +276,7 @@ BOOST_FIXTURE_TEST_CASE(Md5, hcl::sim::UnitTestSimulationFixture)
 }
 
 #if 0
-#include <hcl/vis/MainWindowSimulate.h>
+#include <gatery/vis/MainWindowSimulate.h>
 #include <QApplication>
 
 #include <locale.h>

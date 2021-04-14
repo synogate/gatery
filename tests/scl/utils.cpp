@@ -21,11 +21,11 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
-#include <hcl/frontend.h>
-#include <hcl/utils.h>
-#include <hcl/simulation/UnitTestSimulationFixture.h>
+#include <gatery/frontend.h>
+#include <gatery/utils.h>
+#include <gatery/simulation/UnitTestSimulationFixture.h>
 
-#include <hcl/hlim/supportNodes/Node_SignalGenerator.h>
+#include <gatery/hlim/supportNodes/Node_SignalGenerator.h>
 
 
 using namespace boost::unit_test;

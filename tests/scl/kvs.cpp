@@ -23,7 +23,7 @@
 
 extern "C"
 {
-#include <hcl/scl/kvs/TinyCuckooDriver.h>
+#include <gatery/scl/kvs/TinyCuckooDriver.h>
 }
 
 using namespace boost::unit_test;

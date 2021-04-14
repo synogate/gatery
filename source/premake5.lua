@@ -29,17 +29,17 @@ end
 project "gatery"
     kind "StaticLib"
     files { 
-        "hcl/export/**.cpp", "hcl/export/**.c", "hcl/export/**.h",
-        "hcl/frontend/**.cpp", "hcl/frontend/**.c", "hcl/frontend/**.h",
-        "hcl/hlim/**.cpp", "hcl/hlim/**.c", "hcl/hlim/**.h",
-        "hcl/scl/**.cpp", "hcl/scl/**.c", "hcl/scl/**.h",
-        "hcl/simulation/**.cpp", "hcl/simulation/**.c", "hcl/simulation/**.h",
-        "hcl/utils/**.cpp", "hcl/utils/**.c", "hcl/utils/**.h",
-        "hcl/*"
+        "gatery/export/**.cpp", "gatery/export/**.c", "gatery/export/**.h",
+        "gatery/frontend/**.cpp", "gatery/frontend/**.c", "gatery/frontend/**.h",
+        "gatery/hlim/**.cpp", "gatery/hlim/**.c", "gatery/hlim/**.h",
+        "gatery/scl/**.cpp", "gatery/scl/**.c", "gatery/scl/**.h",
+        "gatery/simulation/**.cpp", "gatery/simulation/**.c", "gatery/simulation/**.h",
+        "gatery/utils/**.cpp", "gatery/utils/**.c", "gatery/utils/**.h",
+        "gatery/*"
     }
 
-    pchsource "hcl/pch.cpp"
-    pchheader "hcl/pch.h"
+    pchsource "gatery/pch.cpp"
+    pchheader "gatery/pch.h"
 
     includedirs "%{prj.location}/"
     GateryProjectDefaults()
