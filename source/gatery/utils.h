@@ -17,6 +17,8 @@
 */
 #pragma once
 
+#include "pch.h"
+
 #include "utils/BitManipulation.h"
 #include "utils/CppTools.h"
 #include "utils/Enumerate.h"
