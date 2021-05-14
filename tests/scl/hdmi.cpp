@@ -60,7 +60,7 @@ BOOST_FIXTURE_TEST_CASE(tmdsBitflip, gtry::sim::UnitTestSimulationFixture)
     BVec decoded = gtry::scl::hdmi::tmdsDecodeBitflip(encoded);
     sim_assert(decoded == test_counter.delay(1));
 
-    design.getCircuit().optimize(3);
+    design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     runTicks(design.getCircuit(), clock.getClk(), 260);
 }
 

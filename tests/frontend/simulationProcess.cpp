@@ -67,7 +67,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
     }
 
 
-    design.getCircuit().optimize(3);
+    design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     runTicks(clock.getClk(), 5*10 + 3); // do some extra rounds without generator changing the input
 }
 
@@ -126,6 +126,6 @@ BOOST_FIXTURE_TEST_CASE(SimProc_PingPong, UnitTestSimulationFixture)
     }
 
 
-    design.getCircuit().optimize(3);
+    design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     runTicks(clock.getClk(), 10);
 }

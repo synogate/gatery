@@ -29,6 +29,50 @@
 
 namespace gtry::hlim {
 
+/*
+class Circuit;
+class Report;
+class PostProcessor;
+
+class PostProcessingStep {
+    public:
+        virtual ~PostProcessingStep() = default;
+        virtual void perform(PostProcessor &postProcessor, Circuit &circuit, Report &report);
+    protected:
+};
+
+class PostProcessor {
+    public:
+        enum Phase {
+            OPTIMIZATION,
+            COMPLEX_OPERATION_DECOMPOSITION,
+            SIGNAL_NAMING,
+            PLATFORM_ADAPTATION,
+            NUM_PHASES
+        };
+
+        PostProcessor &setReport(Report &report) { m_report = &report; return *this; }
+
+        void addPass(Phase phase, std::unique_ptr<PostProcessingStep> pass) { m_passes[phase].push_back(std::move(pass)); }
+    protected:
+        Report *m_report = nullptr;
+        std::array<std::vector<std::unique_ptr<PostProcessingStep>>, NUM_PHASES> m_passes;
+};
+*/
+
+
+class PostProcessor {
+    // For things to come
+};
+
+class DefaultPostprocessing : public PostProcessor
+{
+    public:
+        DefaultPostprocessing() {
+
+        }
+};
+
 class Circuit
 {
     public:
@@ -75,7 +119,7 @@ class Circuit
 
         void ensureSignalNodePlacement();
 
-        void optimize(size_t level);
+        void postprocess(const PostProcessor &postProcessor);
 
         Node_Signal *appendSignal(NodePort &nodePort);
     protected:

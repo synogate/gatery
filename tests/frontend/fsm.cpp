@@ -169,7 +169,10 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestGCD, data::make({0, 1, 2, 
         sim_assert((ticks < ConstBVec(maxTicks-1, 8)) | (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
     }
 
-    design.getCircuit().optimize(optimize);
+    // @TODO: Choose optimization postprocessor accordingly
+    //design.getCircuit().postprocess(optimize);
+    design.getCircuit().postprocess(DefaultPostprocessing{});
+
     runTicks(clock.getClk(), maxTicks);
 }
 
@@ -254,6 +257,9 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, FSMlessTestGCD, data::make({0,
         sim_assert((ticks < ConstBVec(maxTicks - 1, 8)) | (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
     }
 
-    design.getCircuit().optimize(optimize);
+    // @TODO: Choose optimization postprocessor accordingly
+    //design.getCircuit().postprocess(optimize);
+    design.getCircuit().postprocess(DefaultPostprocessing{});
+
     runTicks(clock.getClk(), maxTicks);
 }

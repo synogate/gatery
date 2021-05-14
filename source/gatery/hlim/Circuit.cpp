@@ -854,8 +854,9 @@ void Circuit::ensureSignalNodePlacement()
 }
 
 
-void Circuit::optimize(size_t level)
+void Circuit::postprocess(const PostProcessor &postProcessor)
 {
+    /*
     switch (level) {
         case 0:
         break;
@@ -868,6 +869,7 @@ void Circuit::optimize(size_t level)
             cullUnusedNodes();
         break;
         case 3:
+        */
             propagateConstants();
             cullOrphanedSignalNodes();
             cullUnnamedSignalNodes();
@@ -888,8 +890,10 @@ void Circuit::optimize(size_t level)
             cullUnusedNodes(); // do again after memory group extraction with potential register retiming
 
             inferSignalNames();
+            /*
         break;
     };
+    */
     m_root->reccurInferInstanceNames();
 }
 

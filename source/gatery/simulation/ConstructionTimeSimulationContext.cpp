@@ -179,7 +179,7 @@ void ConstructionTimeSimulationContext::getSignal(hlim::NodePort output, Default
     //visualize(simCircuit, "/tmp/circuit_04");
 
     // optimize
-    simCircuit.optimize(3);
+    simCircuit.postprocess(gtry::hlim::DefaultPostprocessing{});
 
     // Reestablish output from pin
     newOutput = pin->getDriver(0);

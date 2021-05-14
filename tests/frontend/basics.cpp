@@ -126,7 +126,9 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLev
 #undef op2str
 #undef buildOperatorTest
 
-    design.getCircuit().optimize(optimization);
+    // @TODO: Choose optimization postprocessor accordingly
+    //design.getCircuit().postprocess(optimization);
+    design.getCircuit().postprocess(DefaultPostprocessing{});
 
     runTest(gtry::hlim::ClockRational(100'000, 10'000));
 }
@@ -160,7 +162,10 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicing, optimizationLevel
             }
         }
 
-    design.getCircuit().optimize(optimization);
+    // @TODO: Choose optimization postprocessor accordingly
+    //design.getCircuit().postprocess(optimization);
+    design.getCircuit().postprocess(DefaultPostprocessing{});
+
 
     runEvalOnlyTest();
 }
@@ -206,7 +211,10 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicingAddition, optimizat
             }
         }
 
-    design.getCircuit().optimize(optimization);
+    // @TODO: Choose optimization postprocessor accordingly
+    //design.getCircuit().postprocess(optimization);
+    design.getCircuit().postprocess(DefaultPostprocessing{});
+
 
     runEvalOnlyTest();
 }
@@ -232,7 +240,10 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, SimpleAdditionNetwork, optimiz
 
                 sim_assert(c == ConstBVec(x+y, bitsize)) << "The signal c should be " << x+y << " (with overflow in " << bitsize << "bits) but is " << c;
             }
-    design.getCircuit().optimize(optimization);
+    // @TODO: Choose optimization postprocessor accordingly
+    //design.getCircuit().postprocess(optimization);
+    design.getCircuit().postprocess(DefaultPostprocessing{});
+
 
     runEvalOnlyTest();
 }
@@ -399,7 +410,7 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, UnitTestSimulationFixture)
 
     }
 
-    design.getCircuit().optimize(3);
+    design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 
     runTest(100u / clock.getClk()->getAbsoluteFrequency());
 }
@@ -465,7 +476,7 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, UnitTestSimulationFixture)
 
     }
 
-    design.getCircuit().optimize(3);
+    design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     runTest(100u / clock.getClk()->getAbsoluteFrequency());
 }
 
@@ -969,7 +980,10 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmen
             sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
         }
 
-    design.getCircuit().optimize(optimization);
+    // @TODO: Choose optimization postprocessor accordingly
+    //design.getCircuit().postprocess(optimization);
+    design.getCircuit().postprocess(DefaultPostprocessing{});
+
     runEvalOnlyTest();
 }
 
@@ -1008,7 +1022,10 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmen
             sim_assert(c == ConstBVec(groundTruth, 8)) << "The signal should be " << groundTruth << " but is " << c;
         }
 
-    design.getCircuit().optimize(optimization);
+    // @TODO: Choose optimization postprocessor accordingly
+    //design.getCircuit().postprocess(optimization);
+    design.getCircuit().postprocess(DefaultPostprocessing{});
+
     runEvalOnlyTest();
 }
 

@@ -160,7 +160,7 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, TinyCookuTableLooku
     });
 
 
-    design.getCircuit().optimize(3);
+    design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     //design.visualize("TinyCookuTableLookup");
     //sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TinyCookuTableLookup.vcd");
     //vcd.addAllNamedSignals();
@@ -193,7 +193,7 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, TinyCuckooTableLook
     
 
     //design.visualize("TinyCookuTableLookup_before");
-    //design.getCircuit().optimize(3);
+    //design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     //design.visualize("TinyCookuTableLookup");
     //sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TinyCookuTableLookup.vcd");
     //vcd.addAllNamedSignals();
@@ -231,7 +231,7 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, TinyCuckooTableLook
 
 
     design.visualize("TinyCuckooTableLookupDemuxed_before");
-    design.getCircuit().optimize(3);
+    design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     design.visualize("TinyCuckooTableLookupDemuxed");
     sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TinyCuckooTableLookupDemuxed.vcd");
     vcd.addAllNamedSignals();

@@ -78,7 +78,7 @@ void adaptToArchitecture(hlim::Circuit &circuit, const XilinxSettings &settings)
                 handleDifferentialPin(circuit, settings, pin);
         }
 
-    circuit.optimize(settings.optimizationLevel);
+    circuit.postprocess(hlim::DefaultPostprocessing{});
 }
 
 

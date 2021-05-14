@@ -51,3 +51,7 @@
 #if _MSC_FULL_VER > 192829336
 #error The current msvc is buggy use MSVC 14.28.29333
 #endif
+
+namespace gtry {
+    using DefaultPostprocessing = hlim::DefaultPostprocessing;
+}
