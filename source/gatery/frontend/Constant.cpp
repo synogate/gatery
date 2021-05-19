@@ -131,17 +131,17 @@ sim::DefaultBitVectorState gtry::parseBVec(uint64_t value, size_t width)
     return ret;
 }
 
-gtry::BVec gtry::ConstBVec(uint64_t value, size_t width)
+gtry::BVec gtry::ConstBVec(uint64_t value, BitWidth width)
 {
-    auto* node = DesignScope::createNode<hlim::Node_Constant>(parseBVec(value, width), hlim::ConnectionType::BITVEC);
+    auto* node = DesignScope::createNode<hlim::Node_Constant>(parseBVec(value, width.value), hlim::ConnectionType::BITVEC);
     return SignalReadPort(node);
 }
 
-gtry::BVec gtry::ConstBVec(size_t width)
+gtry::BVec gtry::ConstBVec(BitWidth width)
 {
     sim::DefaultBitVectorState value;
-    value.resize(width);
-    value.setRange(sim::DefaultConfig::DEFINED, 0, width, false);
+    value.resize(width.value);
+    value.setRange(sim::DefaultConfig::DEFINED, 0, width.value, false);
 
     auto* node = DesignScope::createNode<hlim::Node_Constant>(value, hlim::ConnectionType::BITVEC);
     return SignalReadPort(node);

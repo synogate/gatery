@@ -54,8 +54,7 @@ gtry::scl::EncoderResult gtry::scl::priorityEncoder(const BVec& in)
     if (in.empty())
         return { BVec(0_b), '0' };
 
-    BVec ret = ConstBVec(utils::Log2C(in.size()));
-
+    BVec ret = ConstBVec(BitWidth::count(in.size()));
     for (size_t i = in.size() - 1; i < in.size(); --i)
         IF(in[i])
             ret = i;
@@ -80,12 +79,12 @@ gtry::scl::EncoderResult gtry::scl::priorityEncoderTree(const BVec& in, bool reg
     setName(lowerStep, "lowerStep");
 
     EncoderResult lowSelect{
-        ConstBVec(utils::Log2(inBitsPerStep)),
+        ConstBVec(BitWidth::count(inBitsPerStep)),
         '0'
     };
     setName(lowSelect, "lowSelect");
 
-    BVec highSelect = ConstBVec(bps);
+    BVec highSelect = ConstBVec(BitWidth{ bps });
     HCL_NAMED(highSelect);
 
     for (size_t i = lowerStep.size() - 1; i < lowerStep.size(); --i)

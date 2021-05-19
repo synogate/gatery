@@ -72,16 +72,14 @@ BOOST_FIXTURE_TEST_CASE(CompoundWidth, UnitTestSimulationFixture)
 {
     using namespace gtry;
 
-
-
     Bit bit;
-    BOOST_TEST(width(bit) == 1);
+    BOOST_TEST(width(bit) == 1_b);
 
     BVec vec{ 4_b };
-    BOOST_TEST(width(vec) == 4);
+    BOOST_TEST(width(vec) == 4_b);
 
     std::vector<BVec> vecvec( 3, vec );
-    BOOST_TEST(width(vecvec) == 3*4);
+    BOOST_TEST(width(vecvec) == 3 * 4_b);
 
 }
 
@@ -125,7 +123,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundUnpack, UnitTestSimulationFixture)
     for (size_t i = 0; i < 7; ++i)
     {
         in.list.emplace_back();
-        in.list.back().vec = ConstBVec(i, 3);
+        in.list.back().vec = ConstBVec(i, 3_b);
         in.list.back().bit = i < 4;
     }
 
@@ -139,7 +137,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundUnpack, UnitTestSimulationFixture)
     sim_assert(out.bit == '0') << 'b';
     for (size_t i = 0; i < 7; ++i)
     {
-        sim_assert(out.list[i].vec == ConstBVec(i, 3)) << 'c';
+        sim_assert(out.list[i].vec == ConstBVec(i, 3_b)) << 'c';
         sim_assert(out.list[i].bit == (i < 4)) << 'd';
     }
 
@@ -189,7 +187,7 @@ BOOST_FIXTURE_TEST_CASE(ConstructFromCompound, UnitTestSimulationFixture)
     for (size_t i = 0; i < 7; ++i)
     {
         in.list.emplace_back();
-        in.list.back().vec = ConstBVec(i, 3);
+        in.list.back().vec = ConstBVec(i, 3_b);
         in.list.back().bit = i < 4;
     }
 

@@ -84,7 +84,7 @@ namespace gtry::scl
 		avmm.writeData = m_hashWidth;
 
 		if (readable)
-			avmm.readData = ConstBVec(m_hashWidth.value);
+			avmm.readData = m_hashWidth;
 
 		for (size_t t = 0; t < m_tables.size(); ++t)
 		{

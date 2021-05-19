@@ -140,7 +140,7 @@ namespace gtry::scl
         
         write = Bit{};
         writeData = dataWidth;
-        readData = ConstBVec(0, dataWidth.value);
+        readData = ConstBVec(0, dataWidth);
         BVec regAddress = address(0, regAddrWidth.value);
         HCL_NAMED(regAddress);
         for (size_t r = 0; r < v.regMap.size(); ++r)

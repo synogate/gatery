@@ -46,8 +46,8 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestGCD, data::make({0, 1, 2, 
     unsigned maxTicks = 200;
 
     {
-        BVec x_vec = ConstBVec(x, 8);
-        BVec y_vec = ConstBVec(y, 8);
+        BVec x_vec = ConstBVec(x, 8_b);
+        BVec y_vec = ConstBVec(x, 8_b);
 
         Bit start;
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
@@ -109,7 +109,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestGCD, data::make({0, 1, 2, 
                 IF (start) {
                     a = x_vec;
                     b = y_vec;
-                    d = ConstBVec(0, 4);
+                    d = ConstBVec(0, 4_b);
                     fsm::delayedSwitch(running);
                 }
             });
@@ -143,7 +143,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestGCD, data::make({0, 1, 2, 
                 }
             });
             shifting.onActive([&]{
-                IF(d == ConstBVec(0, 4)) {
+                IF(d == ConstBVec(0, 4_b)) {
                     fsm::immediateSwitch(idle);
                 } ELSE {
                     a <<= 1;
@@ -164,9 +164,9 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestGCD, data::make({0, 1, 2, 
             context.set(0, context.getTick());
         }, ticks);
 
-        sim_assert((ticks < ConstBVec(maxTicks-1, 8)) | done) << "The state machine should be idle after " << maxTicks << " cycles";
-        BVec gtruth = ConstBVec(gcd_ref(x, y), 8);
-        sim_assert((ticks < ConstBVec(maxTicks-1, 8)) | (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
+        sim_assert((ticks < ConstBVec(maxTicks-1, 8_b)) | done) << "The state machine should be idle after " << maxTicks << " cycles";
+        BVec gtruth = ConstBVec(x, 8_b);
+        sim_assert((ticks < ConstBVec(maxTicks-1, 8_b)) | (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
     }
 
     // @TODO: Choose optimization postprocessor accordingly
@@ -199,8 +199,8 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, FSMlessTestGCD, data::make({0,
     unsigned maxTicks = 200;
 
     {
-        BVec x_vec = ConstBVec(x, 8);
-        BVec y_vec = ConstBVec(y, 8);
+        BVec x_vec = ConstBVec(x, 8_b);
+        BVec y_vec = ConstBVec(x, 8_b);
 
         Bit start;
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
@@ -252,9 +252,9 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, FSMlessTestGCD, data::make({0,
             context.set(0, context.getTick());
             }, ticks);
 
-        sim_assert((ticks < ConstBVec(maxTicks - 1, 8)) | done) << "The state machine should be idle after " << maxTicks << " cycles";
-        BVec gtruth = ConstBVec(gcd_ref(x, y), 8);
-        sim_assert((ticks < ConstBVec(maxTicks - 1, 8)) | (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
+        sim_assert((ticks < ConstBVec(maxTicks - 1, 8_b)) | done) << "The state machine should be idle after " << maxTicks << " cycles";
+        BVec gtruth = ConstBVec(x, 8_b);
+        sim_assert((ticks < ConstBVec(maxTicks - 1, 8_b)) | (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
     }
 
     // @TODO: Choose optimization postprocessor accordingly

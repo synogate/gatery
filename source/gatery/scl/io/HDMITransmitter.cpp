@@ -37,8 +37,8 @@ BVec tmdsEncode(Clock &pixelClock, Bit dataEnable, BVec data, BVec ctrl)
         .setComment("Encodes 8-bit data words to 10-bit TMDS words with control bits");
         
 
-    HCL_DESIGNCHECK_HINT(data.getWidth() == 8, "data must be 8 bit wide");
-    HCL_DESIGNCHECK_HINT(ctrl.getWidth() == 2, "data must be 8 bit wide");
+    HCL_DESIGNCHECK_HINT(data.getWidth() == 8_b, "data must be 8 bit wide");
+    HCL_DESIGNCHECK_HINT(ctrl.getWidth() == 2_b, "data must be 8 bit wide");
     
     HCL_COMMENT << "Count the number of high bits in the input word";
     BVec sumOfOnes_data = bitcount(data);
@@ -46,7 +46,7 @@ BVec tmdsEncode(Clock &pixelClock, Bit dataEnable, BVec data, BVec ctrl)
 
     HCL_COMMENT << "Prepare XORed and XNORed data words to select from based on number of high bits";
 
-    const size_t subWidth = data.getWidth() - 1;
+    const size_t subWidth = data.size() - 1;
     BVec dataXNOR = data;
     dataXNOR(1, subWidth) = lxnor(dataXNOR(1, subWidth), dataXNOR(0, subWidth));
     BVec dataXOR = data;
@@ -191,7 +191,7 @@ BVec tmdsDecodeReduceTransitions(const BVec& data)
 {
     BVec decoded = data(0, data.size() - 1);
     decoded ^= decoded << 1;
-    decoded(1, decoded.getWidth() - 1) ^= ~data.msb();
+    decoded(1, decoded.size() - 1) ^= ~data.msb();
 
     HCL_NAMED(decoded);
     return decoded;
@@ -291,7 +291,7 @@ void gtry::scl::hdmi::TmdsEncoder::setTERC4(BVec ctrl)
         "b1011000011"
     };
 
-    HCL_ASSERT(ctrl.getWidth() == 12);
+    HCL_ASSERT(ctrl.getWidth() == 12_b);
     m_Channel[0] = mux(ctrl(0, 4), trec4lookup); // TODO: improve mux to accept any container as second input
     m_Channel[1] = mux(ctrl(2, 4), trec4lookup); // TODO: subrange as argument for mux
     m_Channel[2] = mux(ctrl(4, 4), trec4lookup);

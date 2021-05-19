@@ -88,7 +88,7 @@ namespace gtry::scl
 
 		state[2] ^= (m_hashWidth == 64 ? 0xFF : 0xEE);
 
-		BVec sipHashResult = ConstBVec(0, m_hashWidth);
+		BVec sipHashResult = ConstBVec(0, BitWidth{ m_hashWidth });
 		HCL_NAMED(sipHashResult);
 
 		for (size_t w = 0; w < m_hashWidth; w += 64)
@@ -134,7 +134,7 @@ namespace gtry::scl
 		GroupScope entity(GroupScope::GroupType::ENTITY);
 		entity.setName("SipHashPad");
 
-		BVec paddedLength = ConstBVec(msgByteSize, 8);
+		BVec paddedLength = ConstBVec(msgByteSize, 8_b);
 		HCL_NAMED(paddedLength);
 
 		size_t zeroPad = (64 - (msgByteSize * 8 + 8)) % 64;

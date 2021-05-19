@@ -66,7 +66,7 @@ namespace gtry
 				node->recordStackTrace();
 				node->connectInput(0, m_packed.getReadPort());
 				m_totalWidth -= vec.size();
-				node->setExtract(m_totalWidth, vec.getWidth());
+				node->setExtract(m_totalWidth, vec.size());
 
 				vec = BVec{ SignalReadPort(node) };
 			}

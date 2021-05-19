@@ -16,6 +16,7 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
+#include "BitWidth.h"
 
 #include <gatery/simulation/BitVectorState.h>
 
@@ -33,6 +34,6 @@ namespace gtry
     
     class BVec;
 
-    BVec ConstBVec(uint64_t value, size_t width);
-    BVec ConstBVec(size_t width); // undefined constant
+    BVec ConstBVec(uint64_t value, BitWidth width);
+    BVec ConstBVec(BitWidth width); // undefined constant
 }

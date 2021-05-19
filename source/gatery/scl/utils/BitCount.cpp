@@ -35,7 +35,7 @@ namespace gtry::scl {
             .setComment("Counts the number of high bits");
         
 #if 1
-        BVec sumOfOnes = BitWidth(utils::Log2C(vec.getWidth()+1));
+        BVec sumOfOnes = BitWidth::last(vec.size());
         sumOfOnes = 0;
         for (auto i : utils::Range(vec.size()))
             sumOfOnes += zext(vec[i]);

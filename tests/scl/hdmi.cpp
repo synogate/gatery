@@ -30,7 +30,7 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, tmdsReduction, data
 
     DesignScope design;
 
-    auto a = ConstBVec(val, 8);
+    auto a = ConstBVec(val, 8_b);
 
     BVec encoded = gtry::scl::hdmi::tmdsEncodeReduceTransitions(a);
     BOOST_TEST(encoded.getWidth() == a.getWidth() + 1);
