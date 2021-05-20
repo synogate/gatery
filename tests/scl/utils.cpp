@@ -36,12 +36,12 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, BitCountTest, data:
     
     DesignScope design;
 
-    BVec a = ConstBVec(val, bitsize);
+    BVec a = ConstBVec(val, BitWidth{ uint64_t(bitsize) });
     BVec count = gtry::scl::bitcount(a);
     
     unsigned actualBitCount = gtry::utils::popcount(unsigned(val) & (0xFF >> (8-bitsize)));
     
-    BOOST_REQUIRE(count.getWidth() >= (size_t)gtry::utils::Log2(bitsize)+1);
+    BOOST_REQUIRE(count.size() >= (size_t)gtry::utils::Log2(bitsize)+1);
     //sim_debug() << "The bitcount of " << a << " should be " << actualBitCount << " and is " << count;
     sim_assert(count == ConstBVec(actualBitCount, count.getWidth())) << "The bitcount of " << a << " should be " << actualBitCount << " but is " << count;
     
@@ -56,7 +56,7 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, Decoder, data::xran
 
     DesignScope design;
 
-    OneHot result = decoder(ConstBVec(val, 2));
+    OneHot result = decoder(ConstBVec(val, 2_b));
     BOOST_CHECK(result.size() == 4);
     sim_assert(result == (1u << val)) << "decoded to " << result;
 
@@ -79,7 +79,7 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, ListEncoder, data::
 
     DesignScope design;
 
-    OneHot result = decoder(ConstBVec(val, 2));
+    OneHot result = decoder(ConstBVec(val, 2_b));
     BOOST_CHECK(result.size() == 4);
     sim_assert(result == (1u << val)) << "decoded to " << result;
 
@@ -111,7 +111,7 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, PriorityEncoderTree
     if (val == 54) testVector |= 7;
     if (val == 64) testVector = 0;
 
-    auto res = priorityEncoderTree(ConstBVec(testVector, 64), false);
+    auto res = priorityEncoderTree(ConstBVec(testVector, 64_b), false);
     
     if (testVector)
     {

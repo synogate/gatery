@@ -40,7 +40,7 @@ namespace gtry {
         public:
             MemoryPortFactory(hlim::Node_Memory *memoryNode, const BVec &address, Data defaultValue) : m_memoryNode(memoryNode), m_defaultValue(defaultValue) {
                 m_address = address;
-                m_wordSize = width(m_defaultValue);
+                m_wordSize = width(m_defaultValue).value;
             }
 
             Data read() const
@@ -115,7 +115,7 @@ namespace gtry {
             void setup(std::size_t count, Data def = Data{}) {
                 HCL_DESIGNCHECK(m_memoryNode == nullptr);
                 m_defaultValue = std::move(def);
-                m_wordWidth = width(m_defaultValue);
+                m_wordWidth = width(m_defaultValue).value;
                 m_memoryNode = DesignScope::createNode<hlim::Node_Memory>();
                 sim::DefaultBitVectorState state;
                 state.resize(count * m_wordWidth);

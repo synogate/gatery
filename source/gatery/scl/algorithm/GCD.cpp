@@ -23,7 +23,7 @@ using namespace gtry;
 
 gtry::scl::StreamSource<gtry::scl::BVecPair> gtry::scl::binaryGCDStep1(StreamSink<BVecPair>& in, size_t iterationsPerClock)
 {
-    const size_t width = in.first.getWidth();
+    const size_t width = in.first.size();
     StreamSource<BVecPair> out(BVec{ width }, BVec{ width });
 
     Register<BVec> a(BitWidth{ width });

@@ -67,7 +67,7 @@ namespace gtry::scl
 		for (Iter it = begin; it != end; ++it)
 			if (maxWidth < it->size())
 				maxWidth = it->size();
-		ret.value() = gtry::ConstBVec(maxWidth);
+		ret.value() = gtry::ConstBVec(BitWidth{ maxWidth });
 
 		Bit anyValid = '0';
 		for(Iter it = begin; it != end; ++it)

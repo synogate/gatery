@@ -16,20 +16,23 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
+#include <gatery/utils.h>
 
 namespace gtry 
 {
-
 	struct BitWidth
 	{
 		auto operator <=> (const BitWidth&) const = default;
 		uint64_t value = 0;
 
-		operator unsigned long long() const { return value; }
+		constexpr uint64_t count() const { return 1ull << value; }
+		constexpr uint64_t last() const { return count() - 1; }
 
-		BitWidth operator + (const BitWidth& rhs) const { return { value + rhs.value }; }
-		BitWidth operator * (size_t rhs) const { return { value * rhs }; }
+		constexpr bool divisibleBy(uint64_t divisor) const { return value % divisor == 0; }
+		constexpr bool divisibleBy(BitWidth divisor) const { return value % divisor.value == 0; }
 
+		inline static BitWidth last(uint64_t value) { return BitWidth{ utils::Log2C(value + 1) }; }
+		inline static BitWidth count(uint64_t count) { return BitWidth{ utils::Log2C(count) }; }
 	};
 
 	inline namespace literals
@@ -50,4 +53,55 @@ namespace gtry
 		constexpr BitWidth operator"" _GiB(unsigned long long gibibyte) { return BitWidth{ gibibyte * 1024 * 1024 * 1024 * 8 }; }
 	}
 
+	inline BitWidth operator + (BitWidth l, BitWidth r) { return BitWidth{ l.value + r.value }; }
+	inline BitWidth operator + (BitWidth l, uint64_t r) { return BitWidth{ l.value + r }; }
+	inline BitWidth operator + (uint64_t l, BitWidth r) { return BitWidth{ l + r.value }; }
+
+	inline BitWidth operator - (BitWidth l, BitWidth r) { return BitWidth{ l.value - r.value }; }
+	inline BitWidth operator - (BitWidth l, uint64_t r) { return BitWidth{ l.value - r }; }
+	inline BitWidth operator - (uint64_t l, BitWidth r) { return BitWidth{ l - r.value }; }
+
+	inline BitWidth operator * (BitWidth l, BitWidth r) { return BitWidth{ l.value * r.value }; }
+	inline BitWidth operator * (BitWidth l, uint64_t r) { return BitWidth{ l.value * r }; }
+	inline BitWidth operator * (uint64_t l, BitWidth r) { return BitWidth{ l * r.value }; }
+
+	inline uint64_t operator / (BitWidth l, BitWidth r) { HCL_DESIGNCHECK(l.divisibleBy(r)); return l.value / r.value; }
+	inline uint64_t operator / (BitWidth l, uint64_t r) { HCL_DESIGNCHECK(l.divisibleBy(r)); return l.value / r; }
+	inline uint64_t operator / (uint64_t l, BitWidth r) { HCL_DESIGNCHECK(BitWidth{ l }.divisibleBy(r)); return l / r.value; }
+
+	inline std::ostream& operator << (std::ostream& s, BitWidth width) 
+	{ 
+		uint64_t val = width.value;
+		char u1 = 'b';
+		const char* u2 = "";
+
+		if (val % 8 == 0)
+		{
+			val /= 8;
+			u1 = 'B';
+		}
+
+		if (val % 1'000'000 == 0)
+		{
+			val /= 1'000'000;
+			u2 = "M";
+		}
+		else if (val % (1024 * 1024) == 0)
+		{
+			val /= 1024 * 1024;
+			u2 = "Mi";
+		}
+		else if (val % 1000 == 0)
+		{
+			val /= 1000;
+			u2 = "K";
+		}
+		else if (val % 1024 == 0)
+		{
+			val /= 1024;
+			u2 = "Ki";
+		}
+
+		s << val << u2 << u1; return s; 
+	}
 }

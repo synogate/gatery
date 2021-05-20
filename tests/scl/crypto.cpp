@@ -451,7 +451,7 @@ BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, gtry::sim::UnitTestSimulationFixture
 		blockVal |= i << (i * 8);
 		uint64_t ref = blockVal + (i + 1) * (1ull << 56); // add padding
 
-		BVec paddedBlock = sip.pad(ConstBVec(blockVal, (i + 1) * 8), i + 1);
+		BVec paddedBlock = sip.pad(ConstBVec(blockVal, (i + 1) * 8_b), i + 1);
 		HCL_NAMED(paddedBlock);
 		sim_assert(paddedBlock == ref);
 	}

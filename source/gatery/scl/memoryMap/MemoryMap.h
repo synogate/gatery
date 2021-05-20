@@ -257,10 +257,10 @@ namespace gtry::scl
 		}
 
 		cmdAddr = pack(
-			ConstBVec(m_flags, 8),
-			ConstBVec(mems.size(), 8),
-			ConstBVec(memWidth.value, 8),
-			ConstBVec(v.regCount, 8)
+			ConstBVec(m_flags, 8_b),
+			ConstBVec(mems.size(), 8_b),
+			ConstBVec(memWidth.value, 8_b),
+			ConstBVec(v.regCount, 8_b)
 		);
 	}
 
