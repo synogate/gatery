@@ -48,6 +48,8 @@ class SigHandle {
         std::uint64_t value() const;
 
         DefaultBitVectorState eval() const;
+
+        hlim::NodePort getOutput() const { return m_output; }
     protected:
         hlim::NodePort m_output;
 };

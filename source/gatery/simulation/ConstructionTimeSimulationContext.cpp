@@ -21,6 +21,8 @@
 
 #include "ReferenceSimulator.h"
 #include "BitAllocator.h"
+#include "SigHandle.h"
+
 #include "../hlim/Circuit.h"
 #include "../hlim/Node.h"
 #include "../hlim/coreNodes/Node_Register.h"
@@ -31,24 +33,24 @@
 
 namespace gtry::sim {
 
-void ConstructionTimeSimulationContext::overrideSignal(hlim::NodePort output, const DefaultBitVectorState &state)
+void ConstructionTimeSimulationContext::overrideSignal(const SigHandle &handle, const DefaultBitVectorState &state)
 {
-    m_overrides[output] = state;
+    m_overrides[handle.getOutput()] = state;
 }
 
-void ConstructionTimeSimulationContext::getSignal(hlim::NodePort output, DefaultBitVectorState &state)
+void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, DefaultBitVectorState &state)
 {
     // Basic idea: Find and copy the combinatorial subnet. Then optimize and execute the subnet to find the value.
     hlim::Circuit simCircuit;
 
     std::vector<hlim::NodePort> inputPorts;
-    std::vector<hlim::NodePort> outputPorts = {output};
+    std::vector<hlim::NodePort> outputPorts = {handle.getOutput()};
 
     std::map<hlim::NodePort, hlim::NodePort> outputsTranslated;
     std::map<hlim::NodePort, hlim::NodePort> outputsShorted;
     std::set<hlim::NodePort> outputsHandled;
     std::vector<hlim::NodePort> openList;
-    openList.push_back(output);
+    openList.push_back(handle.getOutput());
 
     // Find all inputs/limits to combinatorial subnets, create constant nodes for those inputs
     while (!openList.empty()) {
@@ -163,13 +165,13 @@ void ConstructionTimeSimulationContext::getSignal(hlim::NodePort output, Default
     //visualize(simCircuit, "/tmp/circuit_03");
 
     // Translate the output of interest
-    hlim::NodePort newOutput = output;
+    hlim::NodePort newOutput = handle.getOutput();
     {
-        auto it = outputsTranslated.find(output);
+        auto it = outputsTranslated.find(handle.getOutput());
         if (it != outputsTranslated.end())
             newOutput = it->second;
         else
-            newOutput.node = mapSrc2Dst.find(output.node)->second;
+            newOutput.node = mapSrc2Dst.find(handle.getOutput().node)->second;
     }
 
     // Force output's existance throughout optimization

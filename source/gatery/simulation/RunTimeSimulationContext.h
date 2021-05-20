@@ -19,6 +19,12 @@
 
 #include "SimulationContext.h"
 
+#include <map>
+
+namespace gtry::hlim {
+    class Node_Pin;
+}
+
 namespace gtry::sim {
 
 class Simulator;
@@ -27,8 +33,8 @@ class RunTimeSimulationContext : public SimulationContext {
     public:
         RunTimeSimulationContext(Simulator *simulator);
 
-        virtual void overrideSignal(hlim::NodePort output, const DefaultBitVectorState &state) override;
-        virtual void getSignal(hlim::NodePort output, DefaultBitVectorState &state) override;
+        virtual void overrideSignal(const SigHandle &handle, const DefaultBitVectorState &state) override;
+        virtual void getSignal(const SigHandle &handle, DefaultBitVectorState &state) override;
 
         virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor) override;
         virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil) override;
@@ -37,6 +43,11 @@ class RunTimeSimulationContext : public SimulationContext {
         virtual Simulator *getSimulator() override { return m_simulator; }
     protected:
         Simulator *m_simulator;
+
+        hlim::Node_Pin *findInputPin(hlim::NodePort output) const;
+        hlim::Node_Pin *findOutputPin(hlim::NodePort output) const;
+
+        std::map<hlim::NodePort, hlim::Node_Pin*> m_sigOverridePinCache;
 };
 
 }
