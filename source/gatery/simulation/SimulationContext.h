@@ -28,14 +28,15 @@ class Simulator;
 class WaitFor;
 class WaitUntil;
 class WaitClock;
+class SigHandle;
 
 class SimulationContext {
     public:
         SimulationContext();
         virtual ~SimulationContext();
 
-        virtual void overrideSignal(hlim::NodePort output, const DefaultBitVectorState &state) = 0;
-        virtual void getSignal(hlim::NodePort output, DefaultBitVectorState &state) = 0;
+        virtual void overrideSignal(const SigHandle &handle, const DefaultBitVectorState &state) = 0;
+        virtual void getSignal(const SigHandle &handle, DefaultBitVectorState &state) = 0;
 
         virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor) = 0;
         virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil) = 0;

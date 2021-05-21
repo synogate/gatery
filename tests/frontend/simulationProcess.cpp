@@ -43,13 +43,13 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
         auto outputPin = pinOut(counter);
         counter += incrementPin;
 
-        addSimulationProcess([&]()->SimProcess{
+        addSimulationProcess([=]()->SimProcess{
             for (auto i : Range(10)) {
                 simu(incrementPin) = i;
                 co_await WaitFor(Seconds(5)/clock.getAbsoluteFrequency());
             }
         });
-        addSimulationProcess([&]()->SimProcess{
+        addSimulationProcess([=]()->SimProcess{
 
             co_await WaitClk(clock);
 
@@ -80,7 +80,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_ExceptionForwarding, UnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(1));
 
 
-    addSimulationProcess([&]()->SimProcess{
+    addSimulationProcess([=]()->SimProcess{
         co_await WaitFor(Seconds(3));
         throw std::runtime_error("Test exception");
     });
@@ -104,7 +104,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_PingPong, UnitTestSimulationFixture)
         auto B_in = pinIn(8_b);
         auto B_out = pinOut(B_in);
 
-        addSimulationProcess([&]()->SimProcess{
+        addSimulationProcess([=]()->SimProcess{
             unsigned i = 0;
             while (true) {
                 simu(A_in) = i;
@@ -113,7 +113,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_PingPong, UnitTestSimulationFixture)
                 i++;
             }
         });
-        addSimulationProcess([&]()->SimProcess{
+        addSimulationProcess([=]()->SimProcess{
 
             co_await WaitFor(Seconds(1,2)/clock.getAbsoluteFrequency());
 

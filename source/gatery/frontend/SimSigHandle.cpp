@@ -27,46 +27,6 @@
 namespace gtry {
 
 
-hlim::Node_Pin* findInputPin(hlim::NodePort driver)
-{
-    hlim::Node_Pin* res;
-    if (res = dynamic_cast<hlim::Node_Pin*>(driver.node))
-        return res;
-
-    HCL_DESIGNCHECK(driver.node != nullptr);
-    if (dynamic_cast<hlim::Node_Signal*>(driver.node) == nullptr)
-        return nullptr;
-
-    for (auto nh : driver.node->exploreInput(0)) {
-        if (res = dynamic_cast<hlim::Node_Pin*>(nh.node()))
-            return res;
-        else
-            if (!nh.isSignal())
-                nh.backtrack();
-    }
-    return nullptr;
-}
-
-
-hlim::Node_Pin *findOutputPin(hlim::NodePort driver)
-{
-    hlim::Node_Pin *res;
-    if (res = dynamic_cast<hlim::Node_Pin*>(driver.node))
-        return res;
-
-    HCL_DESIGNCHECK(driver.node != nullptr);
-
-    for (auto nh : driver.node->exploreOutput(driver.port)) {
-        if (res = dynamic_cast<hlim::Node_Pin*>(nh.node()))
-            return res;
-        else
-            if (!nh.isSignal())
-                nh.backtrack();
-    }
-
-    return nullptr;
-}
-
 sim::SigHandle simu(hlim::NodePort output)
 {
     return sim::SigHandle(output);
@@ -77,15 +37,7 @@ sim::SigHandle simu(const Bit &bit)
     auto driver = bit.getReadPort();
     HCL_DESIGNCHECK(driver.node != nullptr);
 
-    hlim::Node_Pin* pin = findInputPin(driver);
-    if (pin)
-        return simu({ .node = pin, .port = 0ull });
-
-    pin = findOutputPin(driver);
-    if (pin)
-        return simu(pin->getDriver(0));
-
-    HCL_DESIGNCHECK_HINT(false, "Found neither input nor output pin associated with signal");
+    return simu(driver);
 }
 
 sim::SigHandle simu(const BVec &signal)
@@ -93,15 +45,7 @@ sim::SigHandle simu(const BVec &signal)
     auto driver = signal.getReadPort();
     HCL_DESIGNCHECK(driver.node != nullptr);
 
-    hlim::Node_Pin* pin = findInputPin(driver);
-    if (pin)
-        return simu({ .node = pin, .port = 0ull });
-
-    pin = findOutputPin(driver);
-    if (pin)
-        return simu(pin->getDriver(0));
-
-    HCL_DESIGNCHECK_HINT(false, "Found neither input nor output pin associated with signal");
+    return simu(driver);
 }
 
 sim::SigHandle simu(const InputPin &pin)

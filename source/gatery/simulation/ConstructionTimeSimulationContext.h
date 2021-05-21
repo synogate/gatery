@@ -26,8 +26,8 @@ namespace gtry::sim {
 
 class ConstructionTimeSimulationContext : public SimulationContext {
     public:
-        virtual void overrideSignal(hlim::NodePort output, const DefaultBitVectorState &state) override;
-        virtual void getSignal(hlim::NodePort output, DefaultBitVectorState &state) override;
+        virtual void overrideSignal(const SigHandle &handle, const DefaultBitVectorState &state) override;
+        virtual void getSignal(const SigHandle &handle, DefaultBitVectorState &state) override;
 
         virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor) override;
         virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil) override;
