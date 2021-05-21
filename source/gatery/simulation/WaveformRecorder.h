@@ -19,6 +19,7 @@
 
 #include "SimulatorCallbacks.h"
 #include "BitVectorState.h"
+#include "../hlim/NodePtr.h"
 
 #include <vector>
 #include <map>
@@ -26,6 +27,7 @@
 namespace gtry::hlim {
     class Circuit;
     struct NodePort;
+    class BaseNode;
 }
 
 namespace gtry::sim {
@@ -54,6 +56,7 @@ class WaveformRecorder : public SimulatorCallbacks
         bool m_initialized = false;
 
         std::map<hlim::NodePort, size_t> m_signal2id;
+        std::vector<hlim::NodePtr<hlim::BaseNode>> m_nodeRefCtrHandles;  /// @todo create ref counting NodePort wrapper
 
         struct StateOffsetSize {
             size_t offset, size;

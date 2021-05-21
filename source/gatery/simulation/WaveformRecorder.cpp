@@ -40,6 +40,7 @@ void WaveformRecorder::addSignal(hlim::NodePort np, bool hidden, const std::stri
     HCL_ASSERT(!hlim::outputIsDependency(np));
     if (!m_signal2id.contains(np)) {
         m_signal2id.insert({np, m_id2Signal.size()});
+        m_nodeRefCtrHandles.push_back(hlim::NodePtr<hlim::BaseNode>(np.node));
         Signal signal;
         if (!nameOverride.empty()) {
             signal.name = nameOverride;
