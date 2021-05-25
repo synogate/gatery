@@ -6,28 +6,23 @@ namespace gtry::scl
 	template<typename TData>
 	class Fifo
 	{
-		struct Port
-		{
-			BVec put;
-			BVec get;
-
-		};
-
 	public:
 		Fifo() = default;
 		Fifo(size_t depth, TData ref) : Fifo() { setup(depth, std::move(ref)); }
 		void setup(size_t depth, TData ref);
 
-		void push(const TData& data, const Bit& valid);
+		void push(TData data, Bit valid);
 		void pop(TData& data, const Bit& ready);
 
 		const Bit& empty() const { return m_empty; }
 		const Bit& full() const { return m_full; }
 
-		Bit almostEmpty(const BVec& level) const { HCL_DESIGNCHECK_HINT(m_hasMem, "fifo not initialized"); return reg(m_size < level, '1'); }
-		Bit almostFull(const BVec& level) const { HCL_DESIGNCHECK_HINT(m_hasMem, "fifo not initialized"); return reg(m_size >= level, '0'); }
+		Bit almostEmpty(const BVec& level) const;
+		Bit almostFull(const BVec& level) const;
 
 	private:
+		Area m_area = "fifo";
+
 		Memory<TData>	m_mem;
 		BVec m_put;
 		BVec m_get;
@@ -46,6 +41,7 @@ namespace gtry::scl
 	template<typename TData>
 	inline void Fifo<TData>::setup(size_t depth, TData ref)
 	{
+		auto scope = m_area.enter();
 		HCL_DESIGNCHECK_HINT(!m_hasMem, "fifo already initialized");
 		m_hasMem = true;
 		m_mem.setup(depth, std::move(ref));
@@ -70,11 +66,14 @@ namespace gtry::scl
 	}
 
 	template<typename TData>
-	inline void Fifo<TData>::push(const TData& data, const Bit& valid)
+	inline void Fifo<TData>::push(TData data, Bit valid)
 	{
+		auto scope = m_area.enter();
 		HCL_DESIGNCHECK_HINT(m_hasMem, "fifo not initialized");
 		HCL_DESIGNCHECK_HINT(!m_hasPush, "fifo push port already constructed");
 		m_hasPush = true;
+
+		sim_assert(!valid | !m_full) << "push into full fifo";
 
 		BVec put = m_put.getWidth();
 		put = reg(put, 0);
@@ -93,9 +92,12 @@ namespace gtry::scl
 	template<typename TData>
 	inline void Fifo<TData>::pop(TData& data, const Bit& ready)
 	{
+		auto scope = m_area.enter();
 		HCL_DESIGNCHECK_HINT(m_hasMem, "fifo not initialized");
 		HCL_DESIGNCHECK_HINT(!m_hasPop, "fifo pop port already constructed");
 		m_hasPop = true;
+
+		sim_assert(!ready | !m_empty) << "pop from empty fifo";
 
 		BVec get = m_get.getWidth();
 		get = reg(get, 0);
@@ -107,5 +109,21 @@ namespace gtry::scl
 
 		m_get = get;
 		HCL_NAMED(m_get);
+	}
+
+	template<typename TData>
+	inline Bit gtry::scl::Fifo<TData>::almostEmpty(const BVec& level) const 
+	{ 
+		auto scope = m_area.enter();
+		HCL_DESIGNCHECK_HINT(m_hasMem, "fifo not initialized");
+		return reg(m_size < level, '1'); 
+	}
+
+	template<typename TData>
+	inline Bit gtry::scl::Fifo<TData>::almostFull(const BVec& level) const 
+	{ 
+		auto scope = m_area.enter();
+		HCL_DESIGNCHECK_HINT(m_hasMem, "fifo not initialized");
+		return reg(m_size >= level, '0'); 
 	}
 }
