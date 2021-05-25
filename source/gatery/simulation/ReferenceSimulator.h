@@ -73,6 +73,7 @@ class ExecutionBlock
 {
     public:
         void evaluate(SimulatorCallbacks &simCallbacks, DataState &state) const;
+        void commitState(SimulatorCallbacks &simCallbacks, DataState &state) const;
 
         void addStep(MappedNode mappedNode);
     protected:
@@ -164,8 +165,10 @@ class ReferenceSimulator : public Simulator
         ReferenceSimulator();
         virtual void compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs = {}) override;
 
+
         virtual void powerOn() override;
         virtual void reevaluate() override;
+        virtual void commitState() override;
         virtual void advanceEvent() override;
         virtual void advance(hlim::ClockRational seconds) override;
         virtual void abort() override { m_abortCalled = true; }

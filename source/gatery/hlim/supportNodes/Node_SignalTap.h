@@ -55,7 +55,7 @@ class Node_SignalTap : public Node<Node_SignalTap>
         void addInput(hlim::NodePort input);
         inline void addMessagePart(LogMessagePart part) { m_logMessage.push_back(std::move(part)); }
         
-        virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const;
+        virtual void simulateCommit(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets) const override;
         
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;

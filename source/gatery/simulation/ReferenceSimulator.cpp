@@ -64,6 +64,12 @@ void ExecutionBlock::evaluate(SimulatorCallbacks &simCallbacks, DataState &state
 #endif
 }
 
+void ExecutionBlock::commitState(SimulatorCallbacks &simCallbacks, DataState &state) const
+{
+    for (const auto &step : m_steps)
+        step.node->simulateCommit(simCallbacks, state.signalState, step.internal.data(), step.inputs.data());
+}
+
 void ExecutionBlock::addStep(MappedNode mappedNode)
 {
     m_steps.push_back(mappedNode);
@@ -384,6 +390,14 @@ void ReferenceSimulator::reevaluate()
     m_stateNeedsReevaluating = false;
 }
 
+void ReferenceSimulator::commitState()
+{
+    for (auto &block : m_program.m_executionBlocks)
+        block.commitState(m_callbackDispatcher, m_dataState);
+
+    m_callbackDispatcher.onCommitState();
+}
+
 void ReferenceSimulator::advanceEvent()
 {
     m_abortCalled = false;
@@ -391,6 +405,7 @@ void ReferenceSimulator::advanceEvent()
     if (m_nextEvents.empty()) return;
 
     if (m_currentTimeStepFinished) {
+        commitState();
         m_simulationTime = m_nextEvents.top().timeOfEvent;
         m_callbackDispatcher.onNewTick(m_simulationTime);
     }

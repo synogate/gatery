@@ -61,6 +61,10 @@ class Simulator
         /// Forces a reevaluation of all combinatorics.
         virtual void reevaluate() = 0;
 
+        /// Declare current state the final state for this time step. 
+        /// @details Evaluates asserts, triggers waveform recorders, etc.
+        virtual void commitState() = 0;
+
         /**
          * @brief Advance simulation to the next event
          * @details First moves the simulation time to the next event, then announces the new
@@ -115,6 +119,7 @@ class Simulator
                 virtual void onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, const std::string &desc) override;
                 virtual void onAnnotationEnd(const hlim::ClockRational &simulationTime, const std::string &id) override;
 
+                virtual void onCommitState() override;
                 virtual void onNewTick(const hlim::ClockRational &simulationTime) override;
                 virtual void onClock(const hlim::Clock *clock, bool risingEdge) override;
                 virtual void onDebugMessage(const hlim::BaseNode *src, std::string msg) override;

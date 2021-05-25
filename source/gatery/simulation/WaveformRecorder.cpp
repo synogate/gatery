@@ -126,7 +126,7 @@ void WaveformRecorder::initializeStates()
 }
 
 
-void WaveformRecorder::onNewTick(const hlim::ClockRational &simulationTime)
+void WaveformRecorder::onCommitState()
 {
     if (!m_initialized) {
         initializeStates();
@@ -157,6 +157,11 @@ void WaveformRecorder::onNewTick(const hlim::ClockRational &simulationTime)
             signalChanged(id);
         }
     }
+}
+
+
+void WaveformRecorder::onNewTick(const hlim::ClockRational &simulationTime)
+{
     advanceTick(simulationTime);
 }
 

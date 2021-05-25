@@ -47,6 +47,7 @@ void UnitTestSimulationFixture::eval(hlim::Circuit &circuit)
     m_simulator->compileProgram(circuit);
     m_simulator->powerOn();
     //m_simulator->reevaluate();
+    m_simulator->commitState();
 }
 
 void UnitTestSimulationFixture::runTicks(hlim::Circuit &circuit, const hlim::Clock *clock, unsigned numTicks)
@@ -58,6 +59,7 @@ void UnitTestSimulationFixture::runTicks(hlim::Circuit &circuit, const hlim::Clo
     m_simulator->powerOn();
     while (m_runLimTicks < numTicks)
         m_simulator->advanceEvent();
+    m_simulator->commitState();
 }
 
 
