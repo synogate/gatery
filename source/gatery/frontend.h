@@ -19,6 +19,7 @@
 
 #include "pch.h"
 
+#include "frontend/Area.h"
 #include "frontend/Bit.h"
 #include "frontend/BitVector.h"
 #include "frontend/BitWidth.h"
