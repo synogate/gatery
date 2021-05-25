@@ -11,7 +11,9 @@ namespace gtry::scl
 		Fifo(size_t depth, TData ref) : Fifo() { setup(depth, std::move(ref)); }
 		void setup(size_t depth, TData ref);
 
-		void push(TData data, Bit valid);
+		// NOTE: always push before pop for correct conflict resulution
+		// TODO: fix above note by adding explicit write before read conflict resulution to bram
+		void push(const TData& data, const Bit& valid);
 		void pop(TData& data, const Bit& ready);
 
 		const Bit& empty() const { return m_empty; }
@@ -31,8 +33,6 @@ namespace gtry::scl
 		Bit m_full;
 		Bit m_empty;
 
-		TData m_readData;
-
 		bool m_hasMem = false;
 		bool m_hasPush = false;
 		bool m_hasPop = false;
@@ -45,7 +45,6 @@ namespace gtry::scl
 		HCL_DESIGNCHECK_HINT(!m_hasMem, "fifo already initialized");
 		m_hasMem = true;
 		m_mem.setup(depth, std::move(ref));
-		m_mem.noConflicts();
 
 		const BitWidth ctrWidth = m_mem.addressWidth() + 1;
 		m_put = ctrWidth;
@@ -66,7 +65,7 @@ namespace gtry::scl
 	}
 
 	template<typename TData>
-	inline void Fifo<TData>::push(TData data, Bit valid)
+	inline void Fifo<TData>::push(const TData& data, const Bit& valid)
 	{
 		auto scope = m_area.enter();
 		HCL_DESIGNCHECK_HINT(m_hasMem, "fifo not initialized");
@@ -81,7 +80,7 @@ namespace gtry::scl
 
 		IF(valid)
 		{
-			m_mem[put] = data;
+			m_mem[put(0, -1)] = data;
 			put += 1;
 		}
 
@@ -103,9 +102,10 @@ namespace gtry::scl
 		get = reg(get, 0);
 		HCL_NAMED(get);
 
-		data = m_mem[get];
 		IF(ready)
 			get += 1;
+
+		data = reg(m_mem[get(0, -1)]);
 
 		m_get = get;
 		HCL_NAMED(m_get);

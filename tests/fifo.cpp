@@ -36,7 +36,7 @@ struct FifoTest
 
     scl::Fifo<BVec> create(size_t depth, BitWidth width)
     {
-        scl::Fifo<BVec> fifo{ depth, width };
+        scl::Fifo<BVec> fifo{ depth, BVec{ width } };
         pushData = width;
         popData = width;
         fifo.push(pushData, push);
@@ -72,11 +72,16 @@ struct FifoTest
             if (!simu(empty))
             {
                 uint8_t peekValue = (uint8_t)simu(popData);
-                BOOST_TEST(peekValue == model.front());
+                BOOST_TEST(!model.empty());
+                if(!model.empty())
+                    BOOST_TEST(peekValue == model.front());
             }
 
             if (simu(pop) && !simu(empty))
-                model.pop();
+            {
+                if(!model.empty())
+                    model.pop();
+            }
 
             co_await WaitClk(clk);
         }
@@ -182,12 +187,12 @@ BOOST_FIXTURE_TEST_CASE(Fifo_basic, UnitTestSimulationFixture)
 
     addSimulationProcess(fifo);
 
-    //sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "fifo.vcd" };
-    //vcd.addAllPins();
-    //vcd.addAllNamedSignals();
+    sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "fifo.vcd" };
+    vcd.addAllPins();
+    vcd.addAllNamedSignals();
 
     design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-    //design.visualize("after");
+    design.visualize("after");
 
     runTicks(clock.getClk(), 190);
 }
