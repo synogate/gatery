@@ -58,6 +58,7 @@ namespace gtry {
             BitWidth getWidth() const final;
             hlim::ConnectionType getConnType() const final;
             SignalReadPort getReadPort() const final;
+            SignalReadPort getOutPort() const final;
             std::string_view getName() const final;
             void setName(std::string name) override;
             void addToSignalGroup(hlim::SignalGroup *signalGroup);
@@ -67,6 +68,8 @@ namespace gtry {
             std::optional<bool> getResetValue() const { return m_resetValue; }
 
         protected:
+            SignalReadPort rewireAlias(SignalReadPort port) const;
+
             void createNode();
             void assign(bool);
             void assign(char);

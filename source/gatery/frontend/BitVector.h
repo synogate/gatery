@@ -166,7 +166,8 @@ namespace gtry {
         BitWidth getWidth() const final { return BitWidth{ m_range.width }; }
 		hlim::ConnectionType getConnType() const final;
 		SignalReadPort getReadPort() const final;
-		std::string_view getName() const final;
+        SignalReadPort getOutPort() const final;
+        std::string_view getName() const final;
 		void setName(std::string name) override;
         void addToSignalGroup(hlim::SignalGroup *signalGroup);
 

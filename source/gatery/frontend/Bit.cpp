@@ -100,21 +100,31 @@ namespace gtry {
     SignalReadPort Bit::getReadPort() const
     {
         SignalReadPort ret = getRawDriver();
+        return rewireAlias(ret);
+    }
 
-        hlim::ConnectionType type = hlim::getOutputConnectionType(ret);
+    SignalReadPort Bit::getOutPort() const
+    {
+        SignalReadPort ret{ m_node };
+        return rewireAlias(ret);
+    }
+
+    SignalReadPort gtry::Bit::rewireAlias(SignalReadPort port) const
+    {
+        hlim::ConnectionType type = hlim::getOutputConnectionType(port);
         if (type.interpretation != hlim::ConnectionType::BOOL)
         {
             // TODO: cache rewire node if m_node's input is unchanged
             auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-            rewire->connectInput(0, ret);
+            rewire->connectInput(0, port);
             rewire->changeOutputType(getConnType());
 
-            size_t offset = std::min(m_offset, type.width-1); // used for msb alias, but can alias any future offset
+            size_t offset = std::min(m_offset, type.width - 1); // used for msb alias, but can alias any future offset
             rewire->setExtract(offset, 1);
 
-            ret = SignalReadPort(rewire);
+            port = SignalReadPort(rewire);
         }
-        return ret;
+        return port;
     }
 
     std::string_view Bit::getName() const

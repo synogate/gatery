@@ -147,8 +147,11 @@ namespace gtry {
     BVec::BVec(BVec&& rhs) :
         ElementarySignal()
     {
-        assign(rhs.getReadPort());
-        rhs.assign(SignalReadPort(m_node, rhs.m_expansionPolicy));
+        if (rhs.m_node)
+        {
+            assign(rhs.getReadPort());
+            rhs.assign(SignalReadPort(m_node, rhs.m_expansionPolicy));
+        }
     }
 
     BVec::~BVec()
@@ -244,6 +247,20 @@ namespace gtry {
             }
         }
         return m_readPort;
+    }
+
+    SignalReadPort BVec::getOutPort() const
+    {
+        SignalReadPort port{ m_node, m_expansionPolicy };
+
+        if (m_range.subset)
+        {
+            auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
+            rewire->connectInput(0, m_readPort);
+            rewire->setOp(pickSelection(m_range));
+            port = SignalReadPort(rewire, m_expansionPolicy);
+        }
+        return port;
     }
 
     std::string_view BVec::getName() const

@@ -72,6 +72,7 @@ namespace gtry {
         virtual BitWidth getWidth() const = 0;
         virtual hlim::ConnectionType getConnType() const = 0;
         virtual SignalReadPort getReadPort() const = 0;
+        virtual SignalReadPort getOutPort() const = 0;
         virtual std::string_view getName() const = 0;
         virtual void setName(std::string name) = 0;
 
