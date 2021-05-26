@@ -271,6 +271,9 @@ namespace gtry
 		v.leave();
 	}
 
+	void setName(const Bit&, std::string_view) = delete;
+	void setName(const BVec&, std::string_view) = delete;
+
 	template<typename T>
 	struct Reg<T, std::enable_if_t<boost::spirit::traits::is_container<T>::value>>
 	{

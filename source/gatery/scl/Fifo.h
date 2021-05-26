@@ -52,7 +52,7 @@ namespace gtry::scl
 		m_size = m_put - m_get;
 		HCL_NAMED(m_size);
 
-		const Bit eq = m_put(0, -1) == m_get(0, -1);
+		Bit eq = m_put(0, -1) == m_get(0, -1);
 		HCL_NAMED(eq);
 
 		m_full = eq & (m_put.msb() != m_get.msb());
