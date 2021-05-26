@@ -57,14 +57,13 @@ class WaveformRecorder : public SimulatorCallbacks
         Simulator &m_simulator;
         bool m_initialized = false;
 
-        std::map<hlim::NodePort, size_t> m_signal2id;
-        std::vector<hlim::NodePtr<hlim::BaseNode>> m_nodeRefCtrHandles;  /// @todo create ref counting NodePort wrapper
-
         struct StateOffsetSize {
             size_t offset, size;
         };
         struct Signal {
             std::string name;
+            hlim::NodePort driver;
+            hlim::NodePtr<hlim::BaseNode> nodeRefCtrHandle;  /// @todo create ref counting NodePort wrapper
             hlim::NodeGroup *nodeGroup = nullptr;
             bool isBVec;
             bool isHidden;

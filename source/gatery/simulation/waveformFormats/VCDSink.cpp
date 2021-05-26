@@ -103,7 +103,7 @@ void VCDSink::initialize()
 
 
     VCDIdentifierGenerator identifierGenerator;
-    m_id2sigCode.resize(m_signal2id.size());
+    m_id2sigCode.resize(m_id2Signal.size());
 
 
 
@@ -115,11 +115,12 @@ void VCDSink::initialize()
 
     Module root;
 
-    for (auto &sigId : m_signal2id) {
-        m_id2sigCode[sigId.second] = identifierGenerator.getIdentifer();
+    for (auto id : utils::Range(m_id2Signal.size())) {
+        auto &signal = m_id2Signal[id];
+        m_id2sigCode[id] = identifierGenerator.getIdentifer();
 
         std::vector<const hlim::NodeGroup*> nodeGroupTrace;
-        const hlim::NodeGroup *grp = m_id2Signal[sigId.second].nodeGroup;
+        const hlim::NodeGroup *grp = signal.nodeGroup;
         while (grp != nullptr) {
             nodeGroupTrace.push_back(grp);
             grp = grp->getParent();
@@ -127,7 +128,7 @@ void VCDSink::initialize()
         Module *m = &root;
         for (auto it = nodeGroupTrace.rbegin(); it != nodeGroupTrace.rend(); ++it)
             m = &m->subModules[*it];
-        m->signals.push_back(sigId);
+        m->signals.push_back({signal.driver, id});
     }
 
     std::function<void(const Module*)> reccurWriteModules;

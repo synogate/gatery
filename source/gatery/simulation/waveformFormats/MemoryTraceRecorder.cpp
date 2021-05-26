@@ -86,16 +86,13 @@ void MemoryTraceRecorder::initialize()
 {
     for (auto &sig : m_id2Signal) {
         m_trace.signals.push_back({
+            .driver = sig.driver,
             .name = sig.name,
-            .isBool = !sig.isBVec
+            .width = hlim::getOutputWidth(sig.driver),
+            .isBool = !sig.isBVec,
         });
     }
 
-    for (auto &sigId : m_signal2id) {
-        auto width = hlim::getOutputWidth(sigId.first);
-        m_trace.signals[sigId.second].driver = sigId.first;
-        m_trace.signals[sigId.second].width = width;
-    }
 
     for (auto &clk : m_circuit.getClocks()) {
         m_clock2idx[clk.get()] = m_trace.signals.size();

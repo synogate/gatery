@@ -38,23 +38,21 @@ WaveformRecorder::WaveformRecorder(hlim::Circuit &circuit, Simulator &simulator)
 void WaveformRecorder::addSignal(hlim::NodePort np, bool hidden, hlim::NodeGroup *group, const std::string &nameOverride)
 {
     HCL_ASSERT(!hlim::outputIsDependency(np));
-    if (!m_signal2id.contains(np)) {
-        m_signal2id.insert({np, m_id2Signal.size()});
-        m_nodeRefCtrHandles.push_back(hlim::NodePtr<hlim::BaseNode>(np.node));
-        Signal signal;
-        if (!nameOverride.empty()) {
-            signal.name = nameOverride;
-        } else {
-            std::string baseName = np.node->getName();
-            if (baseName.empty())
-                baseName = "unnamed";
-            signal.name = (boost::format("%s_id_%d") % baseName % np.node->getId()).str();
-        }
-        signal.nodeGroup = group;
-        signal.isHidden = hidden;
-        signal.isBVec = hlim::outputIsBVec(np);
-        m_id2Signal.push_back(signal);
+    Signal signal;
+    signal.driver = np;
+    signal.nodeRefCtrHandle = np.node;
+    if (!nameOverride.empty()) {
+        signal.name = nameOverride;
+    } else {
+        std::string baseName = np.node->getName();
+        if (baseName.empty())
+            baseName = "unnamed";
+        signal.name = (boost::format("%s_id_%d") % baseName % np.node->getId()).str();
     }
+    signal.nodeGroup = group;
+    signal.isHidden = hidden;
+    signal.isBVec = hlim::outputIsBVec(np);
+    m_id2Signal.push_back(signal);
 }
 
 void WaveformRecorder::addAllWatchSignalTaps()
@@ -114,10 +112,10 @@ void WaveformRecorder::initializeStates()
 {
     BitAllocator allocator;
 
-    m_id2StateOffsetSize.resize(m_signal2id.size());
-    for (auto &sigId : m_signal2id) {
-        auto id = sigId.second;
-        auto size = sigId.first.node->getOutputConnectionType(sigId.first.port).width;
+    m_id2StateOffsetSize.resize(m_id2Signal.size());
+    for (auto id : utils::Range(m_id2Signal.size())) {
+        auto &signal = m_id2Signal[id];
+        auto size = signal.driver.node->getOutputConnectionType(signal.driver.port).width;
         auto offset = allocator.allocate((unsigned int)size);
         m_id2StateOffsetSize[id].offset = offset;
         m_id2StateOffsetSize[id].size = size;
@@ -135,12 +133,12 @@ void WaveformRecorder::onCommitState()
         m_initialized = true;
     }
 
-    for (auto &sigId : m_signal2id) {
-        auto id = sigId.second;
+    for (auto id : utils::Range(m_id2Signal.size())) {
+        auto &signal = m_id2Signal[id];
         auto offset = m_id2StateOffsetSize[id].offset;
         auto size = m_id2StateOffsetSize[id].size;
 
-        auto newState = m_simulator.getValueOfOutput(sigId.first);
+        auto newState = m_simulator.getValueOfOutput(signal.driver);
         if (newState.size() == 0) continue;
 
         bool stateChanged = false;
