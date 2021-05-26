@@ -7,7 +7,7 @@ namespace gtry::scl
 	class Fifo
 	{
 	public:
-		Fifo() = default;
+		Fifo() : m_area("fifo") { }
 		Fifo(size_t depth, TData ref) : Fifo() { setup(depth, std::move(ref)); }
 		void setup(size_t depth, TData ref);
 
@@ -23,7 +23,7 @@ namespace gtry::scl
 		Bit almostFull(const BVec& level) const;
 
 	private:
-		Area m_area = "fifo";
+		Area m_area;
 
 		Memory<TData>	m_mem;
 		BVec m_put;
