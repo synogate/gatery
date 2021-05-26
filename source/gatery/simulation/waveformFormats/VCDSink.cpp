@@ -119,7 +119,7 @@ void VCDSink::initialize()
         m_id2sigCode[sigId.second] = identifierGenerator.getIdentifer();
 
         std::vector<const hlim::NodeGroup*> nodeGroupTrace;
-        const hlim::NodeGroup *grp = sigId.first.node->getGroup();
+        const hlim::NodeGroup *grp = m_id2Signal[sigId.second].nodeGroup;
         while (grp != nullptr) {
             nodeGroupTrace.push_back(grp);
             grp = grp->getParent();

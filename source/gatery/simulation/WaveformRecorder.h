@@ -28,6 +28,7 @@ namespace gtry::hlim {
     class Circuit;
     struct NodePort;
     class BaseNode;
+    class NodeGroup;
 }
 
 namespace gtry::sim {
@@ -42,7 +43,7 @@ class WaveformRecorder : public SimulatorCallbacks
     public:
         WaveformRecorder(hlim::Circuit &circuit, Simulator &simulator);
 
-        void addSignal(hlim::NodePort np, bool hidden, const std::string &nameOverride = {});
+        void addSignal(hlim::NodePort np, bool hidden, hlim::NodeGroup *group, const std::string &nameOverride = {});
         void addAllWatchSignalTaps();
         void addAllPins();
         void addAllOutPins();
@@ -64,6 +65,7 @@ class WaveformRecorder : public SimulatorCallbacks
         };
         struct Signal {
             std::string name;
+            hlim::NodeGroup *nodeGroup = nullptr;
             bool isBVec;
             bool isHidden;
         };
