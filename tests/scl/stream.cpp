@@ -22,8 +22,10 @@
 #include <boost/test/data/monomorphic.hpp>
 
 #include <gatery/simulation/waveformFormats/VCDSink.h>
+#include <gatery/simulation/Simulator.h>
 
 #include <gatery/scl/StreamArbiter.h>
+
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -46,7 +48,7 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, UnitTestSimulationFixture)
     in1.ready = Bit{};
     pinOut(*in1.ready).setName("in1_ready");
 
-    scl::arbitrateInOrder uut{ in0, in1, 4 };
+    scl::arbitrateInOrder uut{ in0, in1 };
     pinOut(uut.value()).setName("out_data");
     pinOut(*uut.valid).setName("out_valid");
     *uut.ready = pinIn().setName("out_ready");
@@ -74,18 +76,18 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, UnitTestSimulationFixture)
         simu(in0.value()) = 3;
         simu(in1.value()) = 4;
         co_await WaitClk(clock);
+        co_await WaitClk(clock);
 
         simu(*in1.valid) = 1;
         simu(*in0.valid) = 1;
         simu(in0.value()) = 5;
         simu(in1.value()) = 6;
-        simu(*uut.ready) = 0;
+        co_await WaitClk(clock);
         co_await WaitClk(clock);
 
         simu(*in0.valid) = 0;
         simu(*in1.valid) = 1;
         simu(in1.value()) = 7;
-        simu(*uut.ready) = 1;
         co_await WaitClk(clock);
 
         simu(*in1.valid) = 0;
@@ -119,12 +121,12 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, UnitTestSimulationFixture)
 
     });
 
-    //sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "arbitrateInOrder_basic.vcd" };
-    //vcd.addAllPins();
-    //vcd.addAllNamedSignals();
+    sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "arbitrateInOrder_basic.vcd" };
+    vcd.addAllPins();
+    vcd.addAllNamedSignals();
 
     design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-    //design.visualize("arbitrateInOrder_basic");
+    design.visualize("arbitrateInOrder_basic");
 
     runTicks(clock.getClk(), 16);
 }
@@ -147,7 +149,7 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, UnitTestSimulationFixture)
     in1.ready = Bit{};
     pinOut(*in1.ready).setName("in1_ready");
 
-    scl::arbitrateInOrder uut{ in0, in1, 4 };
+    scl::arbitrateInOrder uut{ in0, in1 };
     pinOut(uut.value()).setName("out_data");
     pinOut(*uut.valid).setName("out_valid");
     *uut.ready = pinIn().setName("out_ready");
@@ -159,9 +161,10 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, UnitTestSimulationFixture)
 
         std::mt19937 rng{ 10179 };
         size_t counter = 1;
+        bool wasReady = false;
         while (true)
         {
-            if (simu(*in0.ready))
+            if (wasReady)
             {
                 if (rng() % 2 == 0)
                 {
@@ -187,6 +190,8 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, UnitTestSimulationFixture)
             // chaos monkey
             simu(*uut.ready) = rng() % 8 != 0 ? 1 : 0;
 
+            wasReady = simu(*in0.ready) != 0;
+
             co_await WaitClk(clock);
         }
     });
@@ -207,12 +212,12 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, UnitTestSimulationFixture)
 
     });
 
-    //sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "arbitrateInOrder_fuzz.vcd" };
-    //vcd.addAllPins();
-    //vcd.addAllNamedSignals();
+    sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "arbitrateInOrder_fuzz.vcd" };
+    vcd.addAllPins();
+    vcd.addAllNamedSignals();
 
     design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-    //design.visualize("arbitrateInOrder_fuzz");
+    design.visualize("arbitrateInOrder_fuzz");
 
     runTicks(clock.getClk(), 256);
 }

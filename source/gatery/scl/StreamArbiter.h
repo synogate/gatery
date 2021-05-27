@@ -26,64 +26,46 @@ namespace gtry::scl
 	template<typename T>
 	struct arbitrateInOrder : Stream<T>
 	{
-		arbitrateInOrder(Stream<T>& in0, Stream<T>& in1, size_t queueDepth);
-
-		Fifo<std::array<Valid<T>, 2>> queue;
+		arbitrateInOrder(Stream<T>& in0, Stream<T>& in1);
 	};
 
 	template<typename T>
-	inline arbitrateInOrder<T>::arbitrateInOrder(Stream<T>& in0, Stream<T>& in1, size_t queueDepth)
+	inline arbitrateInOrder<T>::arbitrateInOrder(Stream<T>& in0, Stream<T>& in1)
 	{
 		auto entity = Area{ "arbitrateInOrder" }.enter();
 
-		std::array<Valid<T>, 2> inData = {
-			Valid<T>{*in0.valid, in0.value()},
-			Valid<T>{*in1.valid, in1.value()}
-		};
-		HCL_NAMED(inData);
-
-		queue.setup(queueDepth, inData);
-		queue.push(inData, (*in0.valid | *in1.valid) & !queue.full());
-
-		Bit selectionSetPop;
-		std::array<Valid<T>, 2> selectionSet;
-		constructFrom(inData, selectionSet);
-		queue.pop(selectionSet, selectionSetPop);
-		HCL_NAMED(selectionSet);
-		HCL_NAMED(selectionSetPop);
-
-		in0.ready = !queue.full();
-		in1.ready = !queue.full();
+		Stream<T>::ready = Bit{};
+		in0.ready = *Stream<T>::ready;
+		in1.ready = *Stream<T>::ready;
 
 		// simple fsm state 0 is initial and state 1 is push upper input
 		Bit selectionState;
 		HCL_NAMED(selectionState);
 
-		Stream<T>::value() = selectionSet[0].value();
-		Stream<T>::valid = selectionSet[0].valid;
-		IF(selectionState == '1' | !selectionSet[0].valid)
+		Stream<T>::value() = in0.value();
+		Stream<T>::valid = in0.valid;
+		IF(selectionState == '1' | !*in0.valid)
 		{
-			Stream<T>::value() = selectionSet[1].value();
-			Stream<T>::valid = selectionSet[1].valid;
+			Stream<T>::value() = in1.value();
+			Stream<T>::valid = in1.valid;
 		}
-		IF(queue.empty())
-			Stream<T>::valid = '0';
 
-		selectionSetPop = '0';
-		Stream<T>::ready = Bit{};
 		IF(*Stream<T>::ready)
 		{
-			selectionSetPop = !queue.empty();
 			IF(	selectionState == '0' & 
-				selectionSet[0].valid & selectionSet[1].valid &
-				!queue.empty())
+				*in0.valid & *in1.valid)
 			{
-				selectionSetPop = '0';
 				selectionState = '1';
 			}
 			ELSE
 			{
 				selectionState = '0';
+			}
+
+			IF(selectionState == '1')
+			{
+				in0.ready = '0';
+				in1.ready = '0';
 			}
 		}
 		selectionState = reg(selectionState, '0');
