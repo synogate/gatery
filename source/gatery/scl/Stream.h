@@ -40,20 +40,23 @@ namespace gtry::scl
     };
 
     template<typename Payload>
-    struct Valid : Payload
+    struct Valid
     {
         Valid() = default;
 
         template<typename... PayloadArgs>
         Valid(const Bit& validValue, PayloadArgs... ctorArgs) :
-            Payload(ctorArgs...),
+            data(ctorArgs...),
             valid(validValue) 
         {}
 
-        Bit valid = '1';
+        BOOST_HANA_DEFINE_STRUCT(Valid,
+            (Bit, valid),
+            (Payload, data)
+        );
 
-        Payload& value() { return *this; }
-        const Payload& value() const { return *this; }
+        Payload& value() { return data; }
+        const Payload& value() const { return data; }
     };
 
     template<typename Payload>
