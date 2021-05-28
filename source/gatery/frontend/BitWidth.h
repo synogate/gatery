@@ -23,6 +23,13 @@ namespace gtry
 	struct BitWidth
 	{
 		auto operator <=> (const BitWidth&) const = default;
+		bool operator >= (const BitWidth&) const = default;
+		bool operator <= (const BitWidth&) const = default;
+		bool operator > (const BitWidth&) const = default;
+		bool operator < (const BitWidth&) const = default;
+		bool operator == (const BitWidth&) const = default;
+		bool operator != (const BitWidth&) const = default;
+
 		uint64_t value = 0;
 
 		constexpr uint64_t count() const { return 1ull << value; }
