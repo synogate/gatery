@@ -199,6 +199,16 @@ namespace gtry {
         return *this;
     }
 
+    BVec& BVec::operator()(size_t offset, BitWidth size, size_t stride)
+    {
+        return (*this)(Selection::StridedSlice(int(offset), int(size.value), stride));
+    }
+
+    const BVec& BVec::operator()(size_t offset, BitWidth size, size_t stride) const
+    {
+        return (*this)(Selection::StridedSlice(int(offset), int(size.value), stride));
+    }
+
     void BVec::resize(size_t width)
     {
         HCL_DESIGNCHECK_HINT(!m_range.subset, "BVec::resize is not allowed for alias BVec's. use zext instead.");
