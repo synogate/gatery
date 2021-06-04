@@ -53,15 +53,15 @@ namespace gtry {
 		static Selection Slice(int offset, int size);
 		static Selection StridedSlice(int offset, int size, size_t stride);
 
-		static Selection Symbol(int idx, size_t symbolWidth);
-		static Selection Symbol(size_t idx, size_t symbolWidth) { return Symbol(int(idx), symbolWidth); }
+		static Selection Symbol(int idx, BitWidth symbolWidth);
+		static Selection Symbol(size_t idx, BitWidth symbolWidth) { return Symbol(int(idx), symbolWidth); }
 
 		auto operator <=> (const Selection& rhs) const = default;
 	};
 
 	struct SymbolSelect
 	{
-		size_t symbolWidth;
+		BitWidth symbolWidth;
 		Selection operator [] (int idx) const { return Selection::Symbol(idx, symbolWidth); }
 		Selection operator [] (size_t idx) const { return Selection::Symbol(int(idx), symbolWidth); }
 	};

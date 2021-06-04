@@ -91,11 +91,11 @@ namespace gtry {
         };
     }
 
-    Selection Selection::Symbol(int idx, size_t symbolWidth)
+    Selection Selection::Symbol(int idx, BitWidth symbolWidth)
     {
         return {
-            .start = idx * int(symbolWidth),
-            .width = int(symbolWidth),
+            .start = idx * int(symbolWidth.value),
+            .width = int(symbolWidth.value),
             .stride = 1,
             .untilEndOfSource = false
         };
