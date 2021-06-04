@@ -70,12 +70,16 @@ namespace gtry::scl
 			ELSE IF(round < 60)
 				k = 0x8F1BBCDC;
 
+			HCL_NAMED(k);
+
 			// select round function
 			TVec f = b ^ c ^ d;
 			IF(round < 20)
 				f = (b & c) | (~b & d);
 			ELSE IF(round >= 40 & round < 60)
 				f = (b & c) | (b & d) | (c & d);
+
+			HCL_NAMED(f);
 
 			// update state
 			TVec tmp = TAdder{} + rotl(a, 5) + e + w[0] + k + f;
@@ -89,10 +93,17 @@ namespace gtry::scl
 			BVec next_w = w[13] ^ w[8] ^ w[2] ^ w[0];
 			if(rotateW) // do not rotate for sha0
 				next_w = rotl(next_w, 1);
-			
+
 			for (size_t i = 0; i < 15; ++i)
 				w[i] = w[i + 1];
 			w[15] = next_w;
+
+			HCL_NAMED(a);
+			HCL_NAMED(b);
+			HCL_NAMED(c);
+			HCL_NAMED(d);
+			HCL_NAMED(e);
+			HCL_NAMED(w);
 		}
 
 		void endBlock()
@@ -104,10 +115,12 @@ namespace gtry::scl
 			e += hash(Selection::Symbol(0, 32));
 
 			hash = pack(a, b, c, d, e);
+			HCL_NAMED(hash);
 		}
 
 		const TVec& finalize() { return hash; }
 	};
+
 
 	template<typename TVec = BVec, typename TAdder = CarrySafeAdder>
 	struct Sha0Generator : Sha1Generator<TVec, TAdder>
