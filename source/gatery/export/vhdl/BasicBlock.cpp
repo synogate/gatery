@@ -121,6 +121,9 @@ void BasicBlock::extractSignals()
 
 void BasicBlock::allocateNames()
 {
+    for (auto &constant : m_constants)
+        m_namespaceScope.allocateName(constant, findNearestDesiredName(constant), CodeFormatting::SIG_CONSTANT);
+
     for (auto &local : m_localSignals)
         m_namespaceScope.allocateName(local, findNearestDesiredName(local), CodeFormatting::SIG_LOCAL_SIGNAL);
 

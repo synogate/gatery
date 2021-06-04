@@ -37,3 +37,17 @@ namespace gtry
     BVec ConstBVec(uint64_t value, BitWidth width);
     BVec ConstBVec(BitWidth width); // undefined constant
 }
+
+#define GTRY_CONST_BVEC(x, value) \
+    struct x { operator BVec () { \
+        BVec res = value; \
+        res.getNode()->getNonSignalDriver(0).node->setName(#x); \
+        return res; \
+    } };
+
+#define GTRY_CONST_BIT(x, value) \
+    struct x { operator Bit () { \
+        Bit res = value; \
+        res.getNode()->getNonSignalDriver(0).node->setName(#x); \
+        return res; \
+    } };

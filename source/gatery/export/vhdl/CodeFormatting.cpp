@@ -21,6 +21,7 @@
 #include "../../utils/Range.h"
 
 #include <boost/format.hpp>
+#include <boost/algorithm/string.hpp>
 
 namespace gtry::vhdl {
 
@@ -72,6 +73,7 @@ std::string DefaultCodeFormatting::getSignalName(const std::string &desiredName,
         case SIG_REGISTER_OUTPUT: initialName = std::string("r_out_") + initialName; break;
         case SIG_LOCAL_SIGNAL: initialName = std::string("s_") + initialName; break;
         case SIG_LOCAL_VARIABLE: initialName = std::string("v_") + initialName; break;
+        case SIG_CONSTANT: boost::to_upper(initialName); initialName = std::string("C_") + initialName; break;
     }
 
     if (attempt == 0)

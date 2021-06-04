@@ -52,6 +52,8 @@ void Process::buildFromNodes(const std::vector<hlim::BaseNode*> &nodes)
 void Process::extractSignals()
 {
     std::set<hlim::NodePort> potentialLocalSignals;
+    std::set<hlim::NodePort> potentialConstants;
+
     // In the first pass, insert everything as local signals, then remove from that list everything that also ended up as input, output, or is a pin
     for (auto node : m_nodes) {
         // Check IO
@@ -83,6 +85,15 @@ void Process::extractSignals()
             potentialLocalSignals.insert(driver);
         }
 #endif
+
+#if 1
+        // Named constants are explicit
+        if (dynamic_cast<hlim::Node_Constant*>(node) != nullptr && node->hasGivenName()) {
+            hlim::NodePort driver = {.node = node, .port = 0};
+            potentialConstants.insert(driver);
+        }
+#endif
+
         // Check for multiple use
         for (auto i : utils::Range(node->getNumOutputPorts())) {
             if (node->getDirectlyDriven(i).size() > 1 && node->getOutputConnectionType(i).interpretation != hlim::ConnectionType::BOOL) {
@@ -130,6 +141,13 @@ void Process::extractSignals()
         if (!m_outputs.contains(driver) && !m_inputs.contains(driver) && !dynamic_cast<hlim::Node_Pin*>(driver.node))
             m_localSignals.insert(driver);
 
+    for (auto driver : potentialConstants)
+        if (!m_outputs.contains(driver))
+            m_constants.insert(driver);
+        else
+            std::cout << "Warning: Not turning constant into VHDL constant because it is directly wired to output!" << std::endl;
+
+
     verifySignalsDisjoint();
 }
 
@@ -142,6 +160,9 @@ CombinatoryProcess::CombinatoryProcess(BasicBlock *parent, const std::string &de
 
 void CombinatoryProcess::allocateNames()
 {
+    for (auto &constant : m_constants)
+        m_namespaceScope.allocateName(constant, findNearestDesiredName(constant), CodeFormatting::SIG_CONSTANT);
+
     for (auto &local : m_localSignals)
         m_namespaceScope.allocateName(local, findNearestDesiredName(local), CodeFormatting::SIG_LOCAL_VARIABLE);
 }
@@ -159,7 +180,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
         comments << nodePort.node->getComment() << std::endl;
 
     if (!forceUnfold) {
-        if (m_inputs.contains(nodePort) || m_outputs.contains(nodePort) || m_localSignals.contains(nodePort)) {
+        if (m_inputs.contains(nodePort) || m_outputs.contains(nodePort) || m_localSignals.contains(nodePort) || m_constants.contains(nodePort)) {
             stream << m_namespaceScope.getName(nodePort);
             switch (context) {
                 case Context::BOOL:
@@ -364,25 +385,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
 
     if (const hlim::Node_Constant* constNode = dynamic_cast<const hlim::Node_Constant*>(nodePort.node))
     {
-        const auto& conType = constNode->getOutputConnectionType(0);
-
-        if (context == Context::BOOL) {
-            HCL_ASSERT(conType.interpretation == hlim::ConnectionType::BOOL);
-            const auto &v = constNode->getValue();
-            HCL_ASSERT(v.get(sim::DefaultConfig::DEFINED, 0));
-            if (v.get(sim::DefaultConfig::VALUE, 0))
-                stream << "true";
-            else
-                stream << "false";
-        } else {
-            char sep = '"';
-            if (conType.interpretation == hlim::ConnectionType::BOOL)
-                sep = '\'';
-
-            stream << sep;
-            stream << constNode->getValue();
-            stream << sep;
-        }
+        formatConstant(stream, constNode, context);
         return;
     }
 
@@ -401,12 +404,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
     cf.indent(stream, indentation);
     stream << m_name << " : PROCESS(all)" << std::endl;
 
-    for (const auto &signal : m_localSignals) {
-        cf.indent(stream, indentation+1);
-        stream << "VARIABLE " << m_namespaceScope.getName(signal) << " : ";
-        cf.formatConnectionType(stream, hlim::getOutputConnectionType(signal));
-        stream << "; "<< std::endl;
-    }
+    declareLocalSignals(stream, true, indentation);
 
     cf.indent(stream, indentation);
     stream << "BEGIN" << std::endl;
@@ -580,6 +578,9 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
         for (auto s : m_inputs)
             signalsReady.insert(s);
 
+        for (auto s : m_constants)
+            signalsReady.insert(s);
+
         for (auto s : m_ioPins) {
             if (!s->getDirectlyDriven(0).empty())
                 signalsReady.insert({.node=s, .port=0});
@@ -638,6 +639,9 @@ RegisterProcess::RegisterProcess(BasicBlock *parent, const std::string &desiredN
 
 void RegisterProcess::allocateNames()
 {
+    for (auto &constant : m_constants)
+        m_namespaceScope.allocateName(constant, findNearestDesiredName(constant), CodeFormatting::SIG_CONSTANT);
+
     for (auto &local : m_localSignals)
         m_namespaceScope.allocateName(local, local.node->getName(), CodeFormatting::SIG_LOCAL_VARIABLE);
 }
@@ -660,12 +664,7 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
     else
         stream << m_name << " : PROCESS(" << clockName << ")" << std::endl;
 
-    for (const auto &signal : m_localSignals) {
-        cf.indent(stream, indentation+1);
-        stream << "VARIABLE " << m_namespaceScope.getName(signal) << " : ";
-        cf.formatConnectionType(stream, hlim::getOutputConnectionType(signal));
-        stream << "; "<< std::endl;
-    }
+    declareLocalSignals(stream, true, indentation);
 
     cf.indent(stream, indentation);
     stream << "BEGIN" << std::endl;

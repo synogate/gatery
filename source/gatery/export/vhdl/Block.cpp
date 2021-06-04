@@ -61,12 +61,7 @@ void Block::writeVHDL(std::ostream &stream)
     cf.indent(stream, 1);
     stream << m_name << " : BLOCK" << std::endl;
 
-    for (const auto &signal : m_localSignals) {
-        cf.indent(stream, 2);
-        stream << "SIGNAL " << m_namespaceScope.getName(signal) << " : ";
-        cf.formatConnectionType(stream, hlim::getOutputConnectionType(signal));
-        stream << "; "<< std::endl;
-    }
+    declareLocalSignals(stream, false, 1);
 
     cf.indent(stream, 1);
     stream << "BEGIN" << std::endl;
