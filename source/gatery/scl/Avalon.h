@@ -55,6 +55,7 @@ namespace gtry::scl
         std::map<std::string_view, Selection> dataSel;
 
         void pinIn(std::string_view prefix);
+        void pinOut(std::string_view prefix);
         
         template<typename T>
         void connect(Memory<T>& mem, BitWidth dataWidth = 32_b);
