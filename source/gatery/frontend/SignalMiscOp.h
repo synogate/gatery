@@ -113,7 +113,8 @@ SignalType mux(const SelectorType &selector, const ContainerType &inputs)  {
 }
 #endif
 
-BVec swapEndian(const BVec& word, size_t byteSize = 8);
+BVec swapEndian(const BVec& word, BitWidth byteSize, BitWidth wordSize);
+BVec swapEndian(const BVec& word, BitWidth byteSize = 8_b);
 
 /*
 template<typename SignalType, typename = std::enable_if_t<utils::isBitVectorSignal<SignalType>::value>>
