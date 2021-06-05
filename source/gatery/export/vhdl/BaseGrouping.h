@@ -22,6 +22,10 @@
 #include <vector>
 #include <memory>
 
+namespace gtry::hlim {
+    class Node_Constant;
+}
+
 namespace gtry::vhdl {
     
 class Entity;
@@ -59,6 +63,7 @@ class BaseGrouping
         std::string m_name;
         std::string m_comment;
         
+        std::set<hlim::NodePort> m_constants;
         std::set<hlim::NodePort> m_localSignals;
         std::set<hlim::NodePort> m_inputs;
         std::set<hlim::NodePort> m_outputs;
@@ -72,6 +77,15 @@ class BaseGrouping
         std::string findNearestDesiredName(hlim::NodePort nodePort);
 
         void verifySignalsDisjoint();
+
+        enum class Context {
+            BOOL,
+            STD_LOGIC,
+            STD_LOGIC_VECTOR
+        };
+
+        void formatConstant(std::ostream &stream, const hlim::Node_Constant *constant, Context context);
+        void declareLocalSignals(std::ostream &stream, bool asVariables, unsigned indentation);
 };
 
 

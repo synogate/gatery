@@ -57,6 +57,7 @@ class CodeFormatting
             SIG_REGISTER_OUTPUT,
             SIG_LOCAL_SIGNAL,
             SIG_LOCAL_VARIABLE,
+            SIG_CONSTANT,
         };
 
         virtual std::string getNodeName(const hlim::BaseNode *node, unsigned attempt) const = 0;

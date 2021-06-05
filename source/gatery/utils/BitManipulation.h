@@ -110,12 +110,20 @@ inline T andNot(T a, T b) {
 #ifdef AMD64
 template<>
 inline std::uint64_t andNot(std::uint64_t a, std::uint64_t b) {
+#ifdef _MSC_VER
     return _andn_u64(a, b);
+#else
+    return __andn_u64(a, b);
+#endif
 }
 #endif
 template<>
 inline std::uint32_t andNot(std::uint32_t a, std::uint32_t b) {
+#ifdef _MSC_VER
     return _andn_u32(a, b);
+#else
+    return __andn_u32(a, b);
+#endif
 }
 #endif
 

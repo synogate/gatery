@@ -66,7 +66,7 @@ SignalTapHelper &SignalTapHelper::operator<<(const std::string &msg)
 
 BVec swapEndian(const BVec& word, BitWidth byteSize)
 {
-    const size_t numSymbols = (word.size() + byteSize - 1) / byteSize;
+    const size_t numSymbols = (word.size() + byteSize - 1) / byteSize.value;
     const size_t srcWidth = numSymbols * byteSize.value;
 
     hlim::Node_Rewire* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);

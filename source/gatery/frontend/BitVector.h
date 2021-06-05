@@ -163,7 +163,8 @@ namespace gtry {
 		const_reverse_iterator crend() const { return aliasVec().crend(); }
 
 
-		bool valid() const final { return m_node != nullptr; }
+        bool valid() const final { return m_node != nullptr; }
+        hlim::Node_Signal* getNode() { return m_node; }
 
 		// these methods are undefined for invalid signals (uninitialized)
 		BitWidth getWidth() const final { return BitWidth{ m_range.width }; }

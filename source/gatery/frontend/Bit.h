@@ -67,6 +67,8 @@ namespace gtry {
             void setResetValue(char v);
             std::optional<bool> getResetValue() const { return m_resetValue; }
 
+            hlim::Node_Signal* getNode() { return m_node; }
+
         protected:
             SignalReadPort rewireAlias(SignalReadPort port) const;
 

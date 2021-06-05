@@ -93,6 +93,9 @@ void Entity::extractSignals()
 
 void Entity::allocateNames()
 {
+    for (auto &constant : m_constants)
+        m_namespaceScope.allocateName(constant, findNearestDesiredName(constant), CodeFormatting::SIG_CONSTANT);
+
     for (auto &input : m_inputs)
         m_namespaceScope.allocateName(input, findNearestDesiredName(input), CodeFormatting::SIG_ENTITY_INPUT);
 
@@ -174,14 +177,7 @@ std::vector<std::string> Entity::getPortsVHDL()
 
 void Entity::writeLocalSignalsVHDL(std::ostream &stream)
 {
-    CodeFormatting &cf = m_ast.getCodeFormatting();
-
-    for (const auto &signal : m_localSignals) {
-        cf.indent(stream, 1);
-        stream << "SIGNAL " << m_namespaceScope.getName(signal) << " : ";
-        cf.formatConnectionType(stream, hlim::getOutputConnectionType(signal));
-        stream << "; "<< std::endl;
-    }
+    declareLocalSignals(stream, false, 0);
 }
 
 
