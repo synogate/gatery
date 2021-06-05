@@ -75,7 +75,7 @@ void gtry::scl::pci::AvmmBridge::generateFifoBridge(Stream<Tlp>& rx, AvalonMM& a
 	avmm.writeData = rx.data;
 
 	// store cpl data for command
-	size_t pipelineDepth = std::max( avmm.maximumPendingReadTransactions, 1ull );
+	size_t pipelineDepth = std::max<size_t>(avmm.maximumPendingReadTransactions, 1);
 	Fifo<MemTlpCplData> resQueue{ pipelineDepth , MemTlpCplData{} };
 	
 	MemTlpCplData req;
