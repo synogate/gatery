@@ -32,58 +32,58 @@ namespace gtry {
     
     class Bit : public ElementarySignal
     {
-        public:
-            using isBitSignal = void;
+    public:
+        using isBitSignal = void;
         
-            Bit();
-            Bit(const Bit& rhs);
-            Bit(Bit&& rhs);
-            ~Bit();
+        Bit();
+        Bit(const Bit& rhs);
+        Bit(Bit&& rhs);
+        ~Bit();
 
-            Bit(const SignalReadPort& port);
-            Bit(hlim::Node_Signal* node, size_t offset, size_t initialScopeId); // alias Bit
+        Bit(const SignalReadPort& port);
+        Bit(hlim::Node_Signal* node, size_t offset, size_t initialScopeId); // alias Bit
 
-            template<typename T, typename = std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, bool>>>
-            Bit(T v) {
-                createNode();
-                assign(v);
-            }
+        template<typename T, typename = std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, bool>>>
+        Bit(T v) {
+            createNode();
+            assign(v);
+        }
         
-            Bit& operator=(const Bit& rhs) { assign(rhs.getReadPort()); return *this; }
-            Bit& operator=(Bit&& rhs);
+        Bit& operator=(const Bit& rhs) { assign(rhs.getReadPort()); return *this; }
+        Bit& operator=(Bit&& rhs);
 
-            template<typename T, typename = std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, bool>>>
-            Bit& operator=(T rhs) { assign(rhs); return *this; }
+        template<typename T, typename = std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, bool>>>
+        Bit& operator=(T rhs) { assign(rhs); return *this; }
 
-            BitWidth getWidth() const final;
-            hlim::ConnectionType getConnType() const final;
-            SignalReadPort getReadPort() const final;
-            SignalReadPort getOutPort() const final;
-            std::string_view getName() const final;
-            void setName(std::string name) override;
-            void addToSignalGroup(hlim::SignalGroup *signalGroup);
+        BitWidth getWidth() const final;
+        hlim::ConnectionType getConnType() const final;
+        SignalReadPort getReadPort() const final;
+        SignalReadPort getOutPort() const final;
+        std::string_view getName() const final;
+        void setName(std::string name) override;
+        void addToSignalGroup(hlim::SignalGroup *signalGroup);
 
-            void setResetValue(bool v);
-            void setResetValue(char v);
-            std::optional<bool> getResetValue() const { return m_resetValue; }
+        void setResetValue(bool v);
+        void setResetValue(char v);
+        std::optional<bool> getResetValue() const { return m_resetValue; }
 
-            hlim::Node_Signal* getNode() { return m_node; }
+        hlim::Node_Signal* getNode() { return m_node; }
 
-        protected:
-            SignalReadPort rewireAlias(SignalReadPort port) const;
+    protected:
+        SignalReadPort rewireAlias(SignalReadPort port) const;
 
-            void createNode();
-            void assign(bool);
-            void assign(char);
-            virtual void assign(SignalReadPort in);
+        void createNode();
+        void assign(bool);
+        void assign(char);
+        virtual void assign(SignalReadPort in);
 
-            bool valid() const final; // hide method since Bit is always valid
-            SignalReadPort getRawDriver() const;
+        bool valid() const final; // hide method since Bit is always valid
+        SignalReadPort getRawDriver() const;
 
-        private:
-            hlim::Node_Signal* m_node = nullptr;
-            size_t m_offset = 0;
-            std::optional<bool> m_resetValue;
+    private:
+        hlim::Node_Signal* m_node = nullptr;
+        size_t m_offset = 0;
+        std::optional<bool> m_resetValue;
     };
 
 }
