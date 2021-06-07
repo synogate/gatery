@@ -24,8 +24,7 @@
 #include "../../hlim/coreNodes/Node_Register.h"
 #include "../../hlim/supportNodes/Node_Memory.h"
 #include "../../hlim/supportNodes/Node_MemPort.h"
-#include "../../hlim/MemoryDetector.h"
-
+#include "../../hlim/postprocessing/MemoryDetector.h"
 
 #include <map>
 #include <vector>

@@ -25,6 +25,7 @@
 #include "AST.h"
 
 #include "GenericMemoryEntity.h"
+#include "../../hlim/postprocessing/MemoryDetector.h"
 
 
 #include "../../hlim/coreNodes/Node_Register.h"

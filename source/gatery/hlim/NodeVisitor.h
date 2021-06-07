@@ -37,6 +37,7 @@ class Node_SignalTap;
 
 class Node_Memory;
 class Node_MemPort;
+class Node_Default;
     
 class NodeVisitor
 {
@@ -58,6 +59,7 @@ class NodeVisitor
         virtual void operator()(Node_SignalTap &node) = 0;
         virtual void operator()(Node_Memory &node) = 0;
         virtual void operator()(Node_MemPort &node) = 0;
+        virtual void operator()(Node_Default &node) = 0;
 };
 
 class ConstNodeVisitor
@@ -80,6 +82,7 @@ class ConstNodeVisitor
         virtual void operator()(const Node_SignalTap &node) = 0;
         virtual void operator()(const Node_Memory &node) = 0;
         virtual void operator()(const Node_MemPort &node) = 0;
+        virtual void operator()(const Node_Default &node) = 0;
 };
 
 

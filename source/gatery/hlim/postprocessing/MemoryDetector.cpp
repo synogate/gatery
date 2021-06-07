@@ -18,17 +18,17 @@
 #include "gatery/pch.h"
 #include "MemoryDetector.h"
 
-#include "Circuit.h"
+#include "../Circuit.h"
 
-#include "coreNodes/Node_Signal.h"
-#include "coreNodes/Node_Register.h"
-#include "coreNodes/Node_Constant.h"
-#include "coreNodes/Node_Compare.h"
-#include "coreNodes/Node_Logic.h"
-#include "coreNodes/Node_Multiplexer.h"
-#include "supportNodes/Node_Memory.h"
-#include "supportNodes/Node_MemPort.h"
-#include "GraphExploration.h"
+#include "../coreNodes/Node_Signal.h"
+#include "../coreNodes/Node_Register.h"
+#include "../coreNodes/Node_Constant.h"
+#include "../coreNodes/Node_Compare.h"
+#include "../coreNodes/Node_Logic.h"
+#include "../coreNodes/Node_Multiplexer.h"
+#include "../supportNodes/Node_Memory.h"
+#include "../supportNodes/Node_MemPort.h"
+#include "../GraphExploration.h"
 
 #include <sstream>
 #include <vector>

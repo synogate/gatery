@@ -17,29 +17,10 @@
 */
 #pragma once
 
-#include "Entity.h"
-
-
 namespace gtry::hlim {
-    class MemoryGroup;
-}
 
-namespace gtry::vhdl {
+class Circuit;
 
-/**
- * @todo write docs
- */
-class GenericMemoryEntity : public Entity
-{
-    public:
-        GenericMemoryEntity(AST &ast, const std::string &desiredName, BasicBlock *parent);
-        
-        void buildFrom(hlim::MemoryGroup *memGrp);
-    protected:        
-        hlim::MemoryGroup *m_memGrp;
-
-        virtual void writeLocalSignalsVHDL(std::ostream &stream) override;
-        virtual void writeStatementsVHDL(std::ostream &stream, unsigned indent);
-};
+void defaultValueResolution(Circuit &circuit);
 
 }

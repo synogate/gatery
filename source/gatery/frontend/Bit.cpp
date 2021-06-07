@@ -22,12 +22,37 @@
 #include "BitVector.h"
 #include "ConditionalScope.h"
 #include "Constant.h"
+#include "Scope.h"
 
 #include <gatery/hlim/coreNodes/Node_Constant.h>
 #include <gatery/hlim/coreNodes/Node_Rewire.h>
 #include <gatery/hlim/coreNodes/Node_Multiplexer.h>
+#include <gatery/hlim/supportNodes/Node_Default.h>
 
 namespace gtry {
+
+    BitDefault::BitDefault(const Bit& rhs)
+    {
+        m_nodePort = rhs.getReadPort();
+    }
+
+    void BitDefault::assign(bool value)
+    {
+        auto* constant = DesignScope::createNode<hlim::Node_Constant>(
+            parseBit(value), hlim::ConnectionType::BOOL
+            );
+        m_nodePort = {.node = constant, .port = 0ull };
+    }
+
+    void BitDefault::assign(char value)
+    {
+        auto* constant = DesignScope::createNode<hlim::Node_Constant>(
+            parseBit(value), hlim::ConnectionType::BOOL
+            );
+        m_nodePort = {.node = constant, .port = 0ull };
+    }
+
+
 
     Bit::Bit()
     {
@@ -43,6 +68,12 @@ namespace gtry {
         assign(rhs.getReadPort());
         rhs.assign(SignalReadPort{ m_node });
     }
+
+    Bit::Bit(const BitDefault &defaultValue) : Bit()
+    {
+        (*this) = defaultValue;
+    } 
+
 
     Bit::~Bit()
     {
@@ -81,6 +112,17 @@ namespace gtry {
             outRange = SignalReadPort(rewire);
         }
         rhs.assign(outRange);
+        return *this;
+    }
+
+    Bit& Bit::operator=(const BitDefault &defaultValue)
+    {
+        hlim::Node_Default* node = DesignScope::createNode<hlim::Node_Default>();
+        node->recordStackTrace();
+        node->connectInput(getReadPort());
+        node->connectDefault(defaultValue.getNodePort());
+
+        assign(SignalReadPort(node));
         return *this;
     }
 

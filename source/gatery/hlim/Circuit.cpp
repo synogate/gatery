@@ -28,7 +28,8 @@
 #include "coreNodes/Node_Rewire.h"
 #include "coreNodes/Node_Register.h"
 
-#include "MemoryDetector.h"
+#include "postprocessing/MemoryDetector.h"
+#include "postprocessing/DefaultValueResolution.h"
 
 
 #include "../simulation/BitVectorState.h"
@@ -870,6 +871,9 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
         break;
         case 3:
         */
+            defaultValueResolution(*this);
+            cullUnusedNodes(); // Dirty way of getting rid of default nodes
+            
             propagateConstants();
             cullOrphanedSignalNodes();
             cullUnnamedSignalNodes();

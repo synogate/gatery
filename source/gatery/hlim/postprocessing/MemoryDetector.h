@@ -17,7 +17,7 @@
 */
 #pragma once
 
-#include "NodeGroup.h"
+#include "../NodeGroup.h"
 
 namespace gtry::hlim {
 
