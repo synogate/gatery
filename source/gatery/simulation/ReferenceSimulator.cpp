@@ -32,6 +32,7 @@
 #include "../hlim/coreNodes/Node_Rewire.h"
 #include "../hlim/coreNodes/Node_Pin.h"
 #include "../hlim/NodeVisitor.h"
+#include "../hlim/supportNodes/Node_ExportOverride.h"
 
 #include "simProc/WaitFor.h"
 #include "simProc/WaitUntil.h"
@@ -109,8 +110,12 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
         MappedNode mappedNode;
         mappedNode.node = node;
         mappedNode.internal = m_stateMapping.nodeToInternalOffset[node];
-        for (auto i : utils::Range(node->getNumInputPorts()))
-            mappedNode.inputs.push_back(m_stateMapping.outputToOffset[node->getNonSignalDriver(i)]);
+        for (auto i : utils::Range(node->getNumInputPorts())) {
+            auto driver = node->getNonSignalDriver(i);
+            while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) // Skip all export override nodes
+                driver = driver.node->getNonSignalDriver(0);
+            mappedNode.inputs.push_back(m_stateMapping.outputToOffset[driver]);
+        }
         for (auto i : utils::Range(node->getNumOutputPorts()))
             mappedNode.outputs.push_back(m_stateMapping.outputToOffset[{.node = node, .port = i}]);
 
@@ -161,7 +166,9 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
             bool allInputsReady = true;
             for (auto i : utils::Range(node->getNumInputPorts())) {
                 auto driver = node->getNonSignalDriver(i);
-                if (driver.node != nullptr && (outputsReady.find(node->getNonSignalDriver(i)) == outputsReady.end())) {
+                while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) // Skip all export override nodes
+                    driver = driver.node->getNonSignalDriver(0);
+                if (driver.node != nullptr && !outputsReady.contains(driver)) {
                     allInputsReady = false;
                     break;
                 }
@@ -180,7 +187,9 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
                 std::cout << node->getName() << "  " << node->getTypeName() << "  " << std::hex << (size_t)node << std::endl;
                 for (auto i : utils::Range(node->getNumInputPorts())) {
                     auto driver = node->getNonSignalDriver(i);
-                    if (driver.node != nullptr && (outputsReady.find(node->getNonSignalDriver(i)) == outputsReady.end())) {
+                    while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) // Skip all export override nodes
+                        driver = driver.node->getNonSignalDriver(0);
+                    if (driver.node != nullptr && !outputsReady.contains(driver)) {
                         std::cout << "    Input " << i << " not ready." << std::endl;
                         std::cout << "        " << driver.node->getName() << "  " << driver.node->getTypeName() << "  " << std::hex << (size_t)driver.node << std::endl;
                     }
@@ -195,8 +204,13 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
         MappedNode mappedNode;
         mappedNode.node = readyNode;
         mappedNode.internal = m_stateMapping.nodeToInternalOffset[readyNode];
-        for (auto i : utils::Range(readyNode->getNumInputPorts()))
-            mappedNode.inputs.push_back(m_stateMapping.outputToOffset[readyNode->getNonSignalDriver(i)]);
+        for (auto i : utils::Range(readyNode->getNumInputPorts())) {
+            auto driver = readyNode->getNonSignalDriver(i);
+            while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) // Skip all export override nodes
+                driver = driver.node->getNonSignalDriver(0);
+            mappedNode.inputs.push_back(m_stateMapping.outputToOffset[driver]);
+        }
+
         for (auto i : utils::Range(readyNode->getNumOutputPorts()))
             mappedNode.outputs.push_back(m_stateMapping.outputToOffset[{.node = readyNode, .port = i}]);
 
@@ -295,6 +309,7 @@ ReferenceSimulator::ReferenceSimulator()
 
 void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs)
 {
+#if 0
     std::vector<hlim::BaseNode*> nodes;
     if (outputs.empty()) {
         nodes.reserve(circuit.getNodes().size());
@@ -322,6 +337,43 @@ void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const std:
         for (const auto &node : nodeSet)
             nodes.push_back(node);
     }
+#else
+    std::set<hlim::BaseNode*> nodeSet;
+    {
+        std::vector<hlim::BaseNode*> stack;
+        if (outputs.empty()) {
+            for (auto &node : circuit.getNodes())
+                if (node->hasSideEffects())
+                    stack.push_back(node.get());
+        } else {
+            for (auto nodePort : outputs)
+                stack.push_back(nodePort.node);
+        }
+
+        while (!stack.empty()) {
+            hlim::BaseNode *node = stack.back();
+            stack.pop_back();
+            if (nodeSet.find(node) == nodeSet.end()) {
+                // Ignore the export-only part as well as the export node
+                if (auto *expOverride = dynamic_cast<hlim::Node_ExportOverride*>(node)) {
+                    if (node->getDriver(0).node != nullptr)
+                        stack.push_back(node->getDriver(0).node);
+                } else {
+                    nodeSet.insert(node);
+                    for (auto i : utils::Range(node->getNumInputPorts()))
+                        if (node->getDriver(i).node != nullptr)
+                            stack.push_back(node->getDriver(i).node);
+                }
+            }
+        }
+    }
+
+    std::vector<hlim::BaseNode*> nodes;
+    nodes.reserve(nodeSet.size());
+    for (const auto &node : nodeSet)
+        nodes.push_back(node);
+
+#endif    
 
     m_program.compileProgram(circuit, nodes);
 }

@@ -115,6 +115,8 @@ namespace gtry {
         BVec& operator = (BVec&& rhs);
         BVec& operator = (BitWidth width);
 
+        void setExportOverride(const BVec& exportOverride);
+
         template<typename Int1, typename Int2, typename = std::enable_if_t<std::is_integral_v<Int1> && std::is_integral_v<Int2>>>
         BVec& operator()(Int1 offset, Int2 size, size_t stride = 1) { return (*this)(Selection::StridedSlice(int(offset), int(size), stride)); }
         template<typename Int1, typename Int2, typename = std::enable_if_t<std::is_integral_v<Int1>&& std::is_integral_v<Int2>>>

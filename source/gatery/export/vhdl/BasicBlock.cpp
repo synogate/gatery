@@ -326,7 +326,28 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
             case ConcurrentStatement::TYPE_EXT_NODE_INSTANTIATION: {
                 auto *node = m_externalNodes[statement.ref.externalNodeIdx];
                 cf.indent(stream, indent);
-                stream << m_externalNodeInstanceNames[statement.ref.externalNodeIdx] << " : entity " << node->getName() << " port map (" << std::endl;
+                stream << m_externalNodeInstanceNames[statement.ref.externalNodeIdx] << " : entity " << node->getName() << std::endl;
+                
+                if (!node->getGenericParameters().empty()) {
+                    cf.indent(stream, indent);
+                    stream << " generic map (" << std::endl;
+
+                    unsigned i = 0;
+                    for (const auto &p : node->getGenericParameters()) {
+                        cf.indent(stream, indent+1);
+                        stream << p.first << " => " << p.second;
+                        if (i+1 < node->getGenericParameters().size())
+                            stream << ',';
+                        stream << std::endl;
+                        i++;
+                    }
+
+                    cf.indent(stream, indent);
+                    stream << ")" << std::endl;
+                }
+                
+                cf.indent(stream, indent);
+                stream << " port map (" << std::endl;
 
                 std::vector<std::string> portmapList;
 

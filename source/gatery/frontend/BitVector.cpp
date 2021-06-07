@@ -23,6 +23,7 @@
 #include <gatery/hlim/coreNodes/Node_Constant.h>
 #include <gatery/hlim/coreNodes/Node_Rewire.h>
 #include <gatery/hlim/coreNodes/Node_Multiplexer.h>
+#include <gatery/hlim/supportNodes/Node_ExportOverride.h>
 
 namespace gtry {
 
@@ -197,6 +198,14 @@ namespace gtry {
         HCL_DESIGNCHECK(!m_node);
         createNode(width.value, m_expansionPolicy);
         return *this;
+    }
+
+    void BVec::setExportOverride(const BVec& exportOverride)
+    {
+        auto* expOverride = DesignScope::createNode<hlim::Node_ExportOverride>();
+        expOverride->connectInput(getReadPort());
+        expOverride->connectOverride(exportOverride.getReadPort());
+        assign(SignalReadPort(expOverride));
     }
 
     void BVec::resize(size_t width)

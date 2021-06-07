@@ -75,6 +75,8 @@ namespace gtry {
             template<typename T, typename = std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, bool>>>
             Bit& operator=(T rhs) { assign(rhs); return *this; }
 
+            void setExportOverride(const Bit& exportOverride);
+
             BitWidth getWidth() const final;
             hlim::ConnectionType getConnType() const final;
             SignalReadPort getReadPort() const final;

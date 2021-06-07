@@ -28,6 +28,8 @@
 #include <gatery/hlim/coreNodes/Node_Rewire.h>
 #include <gatery/hlim/coreNodes/Node_Multiplexer.h>
 #include <gatery/hlim/supportNodes/Node_Default.h>
+#include <gatery/hlim/supportNodes/Node_ExportOverride.h>
+
 
 namespace gtry {
 
@@ -125,6 +127,15 @@ namespace gtry {
         assign(SignalReadPort(node));
         return *this;
     }
+
+    void Bit::setExportOverride(const Bit& exportOverride)
+    {
+        auto* expOverride = DesignScope::createNode<hlim::Node_ExportOverride>();
+        expOverride->connectInput(getReadPort());
+        expOverride->connectOverride(exportOverride.getReadPort());
+        assign(SignalReadPort(expOverride));
+    }
+
 
     BitWidth Bit::getWidth() const
     {
