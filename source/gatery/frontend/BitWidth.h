@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
 #include <gatery/utils.h>
@@ -23,10 +23,18 @@ namespace gtry
 	struct BitWidth
 	{
 		auto operator <=> (const BitWidth&) const = default;
+		bool operator >= (const BitWidth&) const = default;
+		bool operator <= (const BitWidth&) const = default;
+		bool operator > (const BitWidth&) const = default;
+		bool operator < (const BitWidth&) const = default;
+		bool operator == (const BitWidth&) const = default;
+		bool operator != (const BitWidth&) const = default;
+
 		uint64_t value = 0;
 
 		constexpr uint64_t count() const { return 1ull << value; }
 		constexpr uint64_t last() const { return count() - 1; }
+		constexpr size_t numBeats(BitWidth beatSize) const { return (value + beatSize.value - 1) / beatSize.value; }
 
 		constexpr bool divisibleBy(uint64_t divisor) const { return value % divisor == 0; }
 		constexpr bool divisibleBy(BitWidth divisor) const { return value % divisor.value == 0; }

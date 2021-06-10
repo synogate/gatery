@@ -72,7 +72,7 @@ namespace gtry::scl
 		void beginBlock(const BVec& _block)
 		{
 			for (size_t i = 0; i < w.size(); ++i)
-				w[i] = _block(Selection::Symbol(w.size() - 1 - i, 32));
+				w[i] = _block(Selection::Symbol(w.size() - 1 - i, 32_b));
 		}
 
 		void round(const BVec& round)
@@ -106,14 +106,14 @@ namespace gtry::scl
 
 		void endBlock()
 		{
-			a += hash(Selection::Symbol(7, 32));
-			b += hash(Selection::Symbol(6, 32));
-			c += hash(Selection::Symbol(5, 32));
-			d += hash(Selection::Symbol(4, 32));
-			e += hash(Selection::Symbol(3, 32));
-			f += hash(Selection::Symbol(2, 32));
-			g += hash(Selection::Symbol(1, 32));
-			h += hash(Selection::Symbol(0, 32));
+			a += hash(Selection::Symbol(7, 32_b));
+			b += hash(Selection::Symbol(6, 32_b));
+			c += hash(Selection::Symbol(5, 32_b));
+			d += hash(Selection::Symbol(4, 32_b));
+			e += hash(Selection::Symbol(3, 32_b));
+			f += hash(Selection::Symbol(2, 32_b));
+			g += hash(Selection::Symbol(1, 32_b));
+			h += hash(Selection::Symbol(0, 32_b));
 
 			hash = pack(a, b, c, d, e, f, g, h);
 		}

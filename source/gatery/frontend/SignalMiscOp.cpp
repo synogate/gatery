@@ -64,10 +64,10 @@ SignalTapHelper &SignalTapHelper::operator<<(const std::string &msg)
     return *this;
 }
 
-BVec swapEndian(const BVec& word, size_t byteSize)
+BVec swapEndian(const BVec& word, BitWidth byteSize)
 {
-    const size_t numSymbols = (word.size() + byteSize - 1) / byteSize;
-    const size_t srcWidth = numSymbols * byteSize;
+    const size_t numSymbols = word.getWidth().numBeats(byteSize);
+    const size_t srcWidth = numSymbols * byteSize.value;
 
     hlim::Node_Rewire* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
     rewire->connectInput(0, word.getReadPort().expand(srcWidth, hlim::ConnectionType::BITVEC));
@@ -75,12 +75,23 @@ BVec swapEndian(const BVec& word, size_t byteSize)
     hlim::Node_Rewire::RewireOperation op;
     op.ranges.reserve(numSymbols);
     for (size_t i = 0; i < numSymbols; ++i)
-        op.addInput(0, srcWidth - byteSize * (i + 1), byteSize);
+        op.addInput(0, srcWidth - byteSize.value * (i + 1), byteSize.value);
     rewire->setOp(std::move(op));
 
     BVec ret{ SignalReadPort(rewire) };
     if (!word.getName().empty())
         ret.setName(std::string(word.getName()) + "_swapped");
+    return ret;
+}
+
+BVec swapEndian(const BVec& word, BitWidth byteSize, BitWidth wordSize)
+{
+    BVec ret = word.getWidth();
+    for (size_t i = 0; i < word.getWidth() / wordSize; ++i)
+    {
+        auto sym = Selection::Symbol(i, wordSize);
+        ret(sym) = swapEndian(word(sym), byteSize);
+    }
     return ret;
 }
 

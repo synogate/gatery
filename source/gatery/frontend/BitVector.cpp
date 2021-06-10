@@ -92,11 +92,11 @@ namespace gtry {
         };
     }
 
-    Selection Selection::Symbol(int idx, size_t symbolWidth)
+    Selection Selection::Symbol(int idx, BitWidth symbolWidth)
     {
         return {
-            .start = idx * int(symbolWidth),
-            .width = int(symbolWidth),
+            .start = idx * int(symbolWidth.value),
+            .width = int(symbolWidth.value),
             .stride = 1,
             .untilEndOfSource = false
         };
@@ -200,12 +200,22 @@ namespace gtry {
         return *this;
     }
 
-    void BVec::setExportOverride(const BVec& exportOverride)
+	void BVec::setExportOverride(const BVec& exportOverride)
+	{
+		auto* expOverride = DesignScope::createNode<hlim::Node_ExportOverride>();
+		expOverride->connectInput(getReadPort());
+		expOverride->connectOverride(exportOverride.getReadPort());
+		assign(SignalReadPort(expOverride));
+	}
+
+    BVec& BVec::operator()(size_t offset, BitWidth size, size_t stride)
     {
-        auto* expOverride = DesignScope::createNode<hlim::Node_ExportOverride>();
-        expOverride->connectInput(getReadPort());
-        expOverride->connectOverride(exportOverride.getReadPort());
-        assign(SignalReadPort(expOverride));
+        return (*this)(Selection::StridedSlice(int(offset), int(size.value), stride));
+    }
+
+    const BVec& BVec::operator()(size_t offset, BitWidth size, size_t stride) const
+    {
+        return (*this)(Selection::StridedSlice(int(offset), int(size.value), stride));
     }
 
     void BVec::resize(size_t width)

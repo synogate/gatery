@@ -121,10 +121,10 @@ namespace gtry::scl
 
 		void endBlock()
 		{
-			a += hash(Selection::Symbol(0, 32));
-			b += hash(Selection::Symbol(1, 32));
-			c += hash(Selection::Symbol(2, 32));
-			d += hash(Selection::Symbol(3, 32));
+			a += hash(Selection::Symbol(0, 32_b));
+			b += hash(Selection::Symbol(1, 32_b));
+			c += hash(Selection::Symbol(2, 32_b));
+			d += hash(Selection::Symbol(3, 32_b));
 
 			hash = pack(d, c, b, a);
 		}

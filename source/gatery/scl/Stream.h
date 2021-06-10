@@ -35,6 +35,7 @@ namespace gtry::scl
         std::optional<Bit> eop;
         std::optional<Bit> error;
 
+        Bit transfer() const;
         Payload& value() { return *this; }
         const Payload& value() const { return *this; }
     };
@@ -105,5 +106,17 @@ namespace gtry::scl
     inline StreamSink<Payload>::StreamSink(StreamSource<Payload>& source)
     {
         connect(source, *this);
+    }
+    
+    template<typename Payload>
+    inline Bit Stream<Payload>::transfer() const
+    {
+        Bit transaction = '1';
+        if (valid)
+            transaction &= *valid;
+        if (ready)
+            transaction &= *ready;
+        HCL_NAMED(transaction);
+        return transaction;
     }
 }

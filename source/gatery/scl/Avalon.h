@@ -42,21 +42,34 @@ namespace gtry::scl
         std::optional<BVec> writeData;
         std::optional<BVec> readData;
         std::optional<Bit> readDataValid;
+        std::optional<BVec> response;
+        std::optional<Bit> writeResponseValid;
 
         size_t readLatency = 0;
         size_t readyLatency = 0;
+        size_t maximumPendingReadTransactions = 1;
+        size_t maximumPendingWriteTransactions = 0;
+        size_t minimumResponseLatency = 1;
 
         std::map<std::string_view, Selection> addressSel;
         std::map<std::string_view, Selection> dataSel;
 
         void pinIn(std::string_view prefix);
+        void pinOut(std::string_view prefix);
         
         template<typename T>
         void connect(Memory<T>& mem, BitWidth dataWidth = 32_b);
 
-
         void createReadDataValid();
         void createReadLatency(size_t targetLatency);
+
+        enum class ResponseCode
+        {
+            OKAY = 0,
+            RESERVED = 1,   // reserved address
+            SLVERR = 2,     // unsuccessful transfer
+            DECODEERROR = 3 // undefined address
+        };
     };
 
     class AvalonNetworkSection
