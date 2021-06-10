@@ -48,6 +48,11 @@ OSERDESE2::OSERDESE2(unsigned width)
         setOutputConnectionType(i, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
 }
 
+void OSERDESE2::setSlave()
+{
+    m_genericParameters["SERDES_MODE"] = "\"SLAVE\"";  // MASTER, SLAVE
+}
+
 std::string OSERDESE2::getTypeName() const
 {
     return "OSERDESE2";
@@ -99,6 +104,17 @@ std::string OSERDESE2::getOutputName(size_t idx) const
             return "invalid";
     }
 }
+
+void OSERDESE2::setInput(Inputs input, const Bit &bit)
+{
+    rewireInput(input, bit.getReadPort());
+}
+
+Bit OSERDESE2::getOutput(Outputs output)
+{
+    return Bit(SignalReadPort(hlim::NodePort{.node = this, .port = (size_t)output}));
+}
+
 
 std::unique_ptr<hlim::BaseNode> OSERDESE2::cloneUnconnected() const
 {

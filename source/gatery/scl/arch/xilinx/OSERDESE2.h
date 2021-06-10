@@ -19,18 +19,20 @@
 
 #include <gatery/hlim/supportNodes/Node_External.h>
 
+#include <gatery/frontend.h>
+
 namespace gtry::scl::arch::xilinx {
 
 class OSERDESE2 : public gtry::hlim::Node_External
 {
     public:
-        enum CLOCKS {
+        enum Clocks {
             CLK, // fast clock
             CLKDIV, // slow clock
             CLK_COUNT
         };
 
-        enum INPUTS {
+        enum Inputs {
             // D1 - D8: 1-bit (each) input: Parallel data inputs (1-bit each)
             IN_D1, 
             IN_D2, 
@@ -53,7 +55,7 @@ class OSERDESE2 : public gtry::hlim::Node_External
             IN_TCE,     // 1-bit input: 3-state clock enable
             IN_COUNT
         };
-        enum OUTPUTS {
+        enum Outputs {
             OUT_OFB, // 1-bit output: Feedback path for data
             OUT_OQ,  // 1-bit output: Data path output
             // SHIFTOUT1 / SHIFTOUT2: 1-bit (each) output: Data output expansion (1-bit each)
@@ -66,6 +68,11 @@ class OSERDESE2 : public gtry::hlim::Node_External
         };
 
         OSERDESE2(unsigned width);
+
+        void setSlave();
+
+        void setInput(Inputs input, const Bit &bit);
+        Bit getOutput(Outputs output);
 
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;
