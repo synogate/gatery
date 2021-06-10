@@ -112,8 +112,6 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
         mappedNode.internal = m_stateMapping.nodeToInternalOffset[node];
         for (auto i : utils::Range(node->getNumInputPorts())) {
             auto driver = node->getNonSignalDriver(i);
-            while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) // Skip all export override nodes
-                driver = driver.node->getNonSignalDriver(0);
             mappedNode.inputs.push_back(m_stateMapping.outputToOffset[driver]);
         }
         for (auto i : utils::Range(node->getNumOutputPorts()))
@@ -206,8 +204,6 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
         mappedNode.internal = m_stateMapping.nodeToInternalOffset[readyNode];
         for (auto i : utils::Range(readyNode->getNumInputPorts())) {
             auto driver = readyNode->getNonSignalDriver(i);
-            while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) // Skip all export override nodes
-                driver = driver.node->getNonSignalDriver(0);
             mappedNode.inputs.push_back(m_stateMapping.outputToOffset[driver]);
         }
 
@@ -244,21 +240,23 @@ void Program::allocateSignals(const hlim::Circuit &circuit, const std::vector<hl
     // First, loop through all nodes and allocate state and output state space.
     // Keep a list of nodes that refer to other node's internal state to fill in once all internal state has been allocated.
     for (auto node : nodes) {
-        // Signals simply point to the actual producer's output
-        if (auto *signalNode = dynamic_cast<hlim::Node_Signal*>(node)) {
-            auto driver = signalNode->getNonSignalDriver(0);
+        // Signals simply point to the actual producer's output, as do export overrides
+        if (dynamic_cast<hlim::Node_Signal*>(node) || dynamic_cast<hlim::Node_ExportOverride*>(node)) {
+            auto driver = node->getNonSignalDriver(0);
+            while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node))
+                driver = driver.node->getNonSignalDriver(0);
 
-            size_t width = signalNode->getOutputConnectionType(0).width;
+            size_t width = node->getOutputConnectionType(0).width;
 
             if (driver.node != nullptr) {
                 auto it = m_stateMapping.outputToOffset.find(driver);
                 if (it == m_stateMapping.outputToOffset.end()) {
                     auto offset = allocator.allocate(width);
                     m_stateMapping.outputToOffset[driver] = offset;
-                    m_stateMapping.outputToOffset[{.node = signalNode, .port = 0ull}] = offset;
+                    m_stateMapping.outputToOffset[{.node = node, .port = 0ull}] = offset;
                 } else {
                     // point to same output port
-                    m_stateMapping.outputToOffset[{.node = signalNode, .port = 0ull}] = it->second;
+                    m_stateMapping.outputToOffset[{.node = node, .port = 0ull}] = it->second;
                 }
             }
         } else {
