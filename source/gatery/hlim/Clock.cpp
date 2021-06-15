@@ -30,9 +30,6 @@ Clock::Clock()
     m_name = "clk";
     m_resetName = "reset";
     m_triggerEvent = TriggerEvent::RISING;
-    m_resetType = ResetType::SYNCHRONOUS;
-    m_initializeRegs = true;
-    m_resetHighActive = true;
     m_phaseSynchronousWithParent = false;
     m_parentClock = nullptr;
 }
@@ -57,9 +54,7 @@ std::unique_ptr<Clock> Clock::cloneUnconnected(Clock *newParent)
     res->m_name = m_name;
     res->m_resetName = m_resetName;
     res->m_triggerEvent = m_triggerEvent;
-    res->m_resetType = m_resetType;
-    res->m_initializeRegs = m_initializeRegs;
-    res->m_resetHighActive = m_resetHighActive;
+    res->m_registerAttributes = m_registerAttributes;
     res->m_phaseSynchronousWithParent = m_phaseSynchronousWithParent;
     return res;
 }
@@ -99,9 +94,9 @@ DerivedClock::DerivedClock(Clock *parentClock)
     
     m_resetName = m_parentClock->getResetName();
     m_triggerEvent = m_parentClock->getTriggerEvent();
-    m_resetType = m_parentClock->getResetType();
-    m_resetHighActive = m_parentClock->getResetHighActive();
     m_phaseSynchronousWithParent = m_parentClock->getPhaseSynchronousWithParent();
+
+    m_registerAttributes = m_parentClock->getRegAttribs();
 }
 
     

@@ -19,6 +19,7 @@
 
 #include "NodeIO.h"
 #include "ClockRational.h"
+#include "Attributes.h"
 
 
 #include <string>
@@ -34,53 +35,44 @@ class Clock
             FALLING,
             RISING_AND_FALLING
         };
-        
-        enum class ResetType {
-            SYNCHRONOUS,
-            ASYNCHRONOUS,
-            NONE
-        };
-        
+
+
         Clock();
         virtual ~Clock();
-        
+
         virtual ClockRational getAbsoluteFrequency() = 0;
         virtual ClockRational getFrequencyRelativeTo(Clock &other) = 0;
-        
+
         inline Clock *getParentClock() const { return m_parentClock; }
-        
+
 //        Clock &createClockDivider(ClockRational frequencyDivider, ClockRational phaseShift = 0);
-        
+
         inline const std::string &getName() const { return m_name; }        
         inline const std::string &getResetName() const { return m_resetName; }
         inline const TriggerEvent &getTriggerEvent() const { return m_triggerEvent; }
-        inline const ResetType &getResetType() const { return m_resetType; }
-        inline const bool &getInitializeRegs() const { return m_initializeRegs; }
-        inline const bool &getResetHighActive() const { return m_resetHighActive; }
         inline const bool &getPhaseSynchronousWithParent() const { return m_phaseSynchronousWithParent; }
-        
+
         inline void setName(std::string name) { m_name = std::move(name); }
         inline void setResetName(std::string name) { m_resetName = std::move(name); }
         inline void setTriggerEvent(TriggerEvent trigEvt) { m_triggerEvent = trigEvt; }
-        inline void setResetType(ResetType rstType) { m_resetType = rstType; }
-        inline void setInitializeRegs(bool initializeRegs) { m_initializeRegs = initializeRegs; }
-        inline void setResetHighActive(bool rstHigh) { m_resetHighActive = rstHigh; }
         inline void setPhaseSynchronousWithParent(bool phaseSync) { m_phaseSynchronousWithParent = phaseSync; }
-        
+
+        inline RegisterAttributes &getRegAttribs() { return m_registerAttributes; }
+        inline const RegisterAttributes &getRegAttribs() const { return m_registerAttributes; }
+
         virtual std::unique_ptr<Clock> cloneUnconnected(Clock *newParent);
     protected:
         Clock *m_parentClock = nullptr;
 
         virtual std::unique_ptr<Clock> allocateClone(Clock *newParent) = 0;
-        
+
         std::string m_name;
-        
         std::string m_resetName;
         TriggerEvent m_triggerEvent;
-        ResetType m_resetType;
-        bool m_initializeRegs;
-        bool m_resetHighActive;
         bool m_phaseSynchronousWithParent;
+
+        RegisterAttributes m_registerAttributes;
+
         // todo:
         /*
             * clock enable

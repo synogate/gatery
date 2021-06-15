@@ -357,7 +357,7 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
                         line << node->getClockNames()[i] << " => ";
                         line << m_namespaceScope.getName(node->getClocks()[i]);
                         portmapList.push_back(line.str());
-                        if (node->getClocks()[i]->getResetType() != hlim::Clock::ResetType::NONE && !node->getResetNames()[i].empty()) {
+                        if (node->getClocks()[i]->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE && !node->getResetNames()[i].empty()) {
                             std::stringstream line;
                             line << node->getResetNames()[i] << " => ";
                             line << m_namespaceScope.getName(node->getClocks()[i])<<node->getClocks()[i]->getResetName();

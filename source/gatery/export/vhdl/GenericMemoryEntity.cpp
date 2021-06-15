@@ -127,6 +127,25 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
     cf.indent(stream, 1);
     stream << "SIGNAL memory : mem_type;\n";
 
+    /*
+    Xilinx:
+    attribute ram_style : string;
+    attribute ram_style of myram : signal is "distributed";
+
+    attribute rom_style : string;
+    attribute rom_style of myrom : signal is "distributed";
+
+    attribute rw_addr_collision : string;
+    attribute rw_addr_collision of my_ram : signal is "yes";
+
+    Inel:
+
+    ramstyle
+    romstyle
+
+
+    */
+
 
     for (auto &rp : m_memGrp->getReadPorts())
         if (rp.outputReg != nullptr) {
@@ -287,11 +306,11 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                             stream << "END IF;\n";
                         }
 
-                        if (clock.first->getResetType() == hlim::Clock::ResetType::SYNCHRONOUS) {
+                        if (clock.first->getRegAttribs().resetType == hlim::RegisterAttributes::ResetType::SYNCHRONOUS) {
                             auto reset = rp.outputReg->getDriver((unsigned)hlim::Node_Register::Input::RESET_VALUE);
                             if (reset.node != nullptr) {
                                 cf.indent(stream, indent);
-                                stream << "IF ("<< m_namespaceScope.getName(clock.first)<<clock.first->getResetName() << " = '" << (clock.first->getResetHighActive()?'1':'0') << "') THEN\n";
+                                stream << "IF ("<< m_namespaceScope.getName(clock.first)<<clock.first->getResetName() << " = '" << (clock.first->getRegAttribs().resetHighActive?'1':'0') << "') THEN\n";
                                 indent++;
 
                                     cf.indent(stream, indent);
@@ -310,13 +329,13 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                 cf.indent(stream, indent);
                 stream << "END IF;\n";
 
-                if (clock.first->getResetType() == hlim::Clock::ResetType::ASYNCHRONOUS) {
+                if (clock.first->getRegAttribs().resetType == hlim::RegisterAttributes::ResetType::ASYNCHRONOUS) {
                     for (auto &rp : clock.second.readPorts) {
                         if (rp.outputReg != nullptr) {
                             auto reset = rp.outputReg->getDriver((unsigned)hlim::Node_Register::Input::RESET_VALUE);
                             if (reset.node != nullptr) {
                                 cf.indent(stream, indent);
-                                stream << "IF ("<< m_namespaceScope.getName(clock.first)<<clock.first->getResetName() << " = '" << (clock.first->getResetHighActive()?'1':'0') << "') THEN\n";
+                                stream << "IF ("<< m_namespaceScope.getName(clock.first)<<clock.first->getResetName() << " = '" << (clock.first->getRegAttribs().resetHighActive?'1':'0') << "') THEN\n";
                                 indent++;
 
                                     cf.indent(stream, indent);

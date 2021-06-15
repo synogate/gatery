@@ -21,6 +21,7 @@
 #include "BitVector.h"
 #include "Scope.h"
 #include "Reg.h"
+#include "../hlim/Attributes.h"
 
 #include <gatery/hlim/Clock.h>
 
@@ -40,7 +41,8 @@ namespace gtry {
         public:
             using ClockRational = hlim::ClockRational;
             using TriggerEvent = hlim::Clock::TriggerEvent;
-            using ResetType = hlim::Clock::ResetType;
+            using ResetType = hlim::RegisterAttributes::ResetType;
+            using UsageType = hlim::RegisterAttributes::UsageType;
 
         protected:
             boost::optional<ClockRational> m_absoluteFrequency;
@@ -48,13 +50,26 @@ namespace gtry {
             boost::optional<std::string> m_name;
             boost::optional<std::string> m_resetName;
             boost::optional<TriggerEvent> m_triggerEvent;
+            boost::optional<bool> m_phaseSynchronousWithParent;
+
+
             boost::optional<ResetType> m_resetType;
             boost::optional<bool> m_initializeRegs;
             boost::optional<bool> m_resetHighActive;
-            boost::optional<bool> m_phaseSynchronousWithParent;
+
+        	boost::optional<UsageType> m_registerResetPinUsage;
+	        boost::optional<UsageType> m_registerEnablePinUsage;
+
+            std::map<std::string, hlim::VendorSpecificAttributes> m_additionalUserDefinedVendorAttributes;
+
 
             friend class Clock;
         public:
+            inline ClockConfig &addRegisterAttribute(const std::string &vendor, const std::string &attrib, const std::string &type, const std::string &value) { 
+                m_additionalUserDefinedVendorAttributes[vendor][attrib] = {.type = type, .value = value};
+                return *this; 
+            }
+
     #define BUILD_SET(varname, settername) \
             inline ClockConfig &settername(decltype(varname)::value_type v) { varname = std::move(v); return *this; }
 
@@ -63,10 +78,15 @@ namespace gtry {
             BUILD_SET(m_name, setName)
             BUILD_SET(m_resetName, setResetName)
             BUILD_SET(m_triggerEvent, setTriggerEvent)
-            BUILD_SET(m_initializeRegs, setInitializeRegs)
-            BUILD_SET(m_resetType, setResetType)
-            BUILD_SET(m_resetHighActive, setResetHighActive)
             BUILD_SET(m_phaseSynchronousWithParent, setPhaseSynchronousWithParent)
+
+            BUILD_SET(m_resetType, setResetType)
+            BUILD_SET(m_initializeRegs, setInitializeRegs)
+            BUILD_SET(m_resetHighActive, setResetHighActive)
+
+            BUILD_SET(m_registerResetPinUsage, setRegisterResetPinUsage)
+            BUILD_SET(m_registerEnablePinUsage, setRegisterEnablePinUsage)
+
     #undef BUILD_SET
     };
 
@@ -79,7 +99,7 @@ namespace gtry {
         public:
             using ClockRational = hlim::ClockRational;
             using TriggerEvent = hlim::Clock::TriggerEvent;
-            using ResetType = hlim::Clock::ResetType;
+            using ResetType = hlim::RegisterAttributes::ResetType;
 
             Clock(size_t freq);
             Clock(const ClockConfig &config);

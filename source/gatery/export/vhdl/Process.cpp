@@ -661,7 +661,7 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
     cf.formatProcessComment(stream, indentation, m_name, m_comment);
     cf.indent(stream, indentation);
 
-    if (m_config.hasResetSignal && m_config.clock->getResetType() == hlim::Clock::ResetType::ASYNCHRONOUS)
+    if (m_config.hasResetSignal && m_config.clock->getRegAttribs().resetType == hlim::RegisterAttributes::ResetType::ASYNCHRONOUS)
         stream << m_name << " : PROCESS(" << clockName << ", " << resetName << ")" << std::endl;
     else
         stream << m_name << " : PROCESS(" << clockName << ")" << std::endl;
@@ -671,9 +671,9 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
     cf.indent(stream, indentation);
     stream << "BEGIN" << std::endl;
 
-    if (m_config.hasResetSignal && m_config.clock->getResetType() == hlim::Clock::ResetType::ASYNCHRONOUS) {
+    if (m_config.hasResetSignal && m_config.clock->getRegAttribs().resetType == hlim::RegisterAttributes::ResetType::ASYNCHRONOUS) {
         cf.indent(stream, indentation+1);
-        stream << "IF (" << m_config.clock->getResetName() << " = '" << (m_config.clock->getResetHighActive()?'1':'0') << "') THEN" << std::endl;
+        stream << "IF (" << m_config.clock->getResetName() << " = '" << (m_config.clock->getRegAttribs().resetHighActive?'1':'0') << "') THEN" << std::endl;
 
         for (auto node : m_nodes) {
             hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
@@ -707,9 +707,9 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
     }
 
     unsigned indentationOffset = 0;
-    if (m_config.hasResetSignal && m_config.clock->getResetType() == hlim::Clock::ResetType::SYNCHRONOUS) {
+    if (m_config.hasResetSignal && m_config.clock->getRegAttribs().resetType == hlim::RegisterAttributes::ResetType::SYNCHRONOUS) {
         cf.indent(stream, indentation+2);
-        stream << "IF (" << resetName << " = '" << (m_config.clock->getResetHighActive()?'1':'0') << "') THEN" << std::endl;
+        stream << "IF (" << resetName << " = '" << (m_config.clock->getRegAttribs().resetHighActive?'1':'0') << "') THEN" << std::endl;
 
         for (auto node : m_nodes) {
             hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);

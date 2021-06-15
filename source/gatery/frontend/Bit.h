@@ -44,7 +44,7 @@ namespace gtry {
             void assign(bool);
             void assign(char);
 
-            hlim::NodePort m_nodePort;  
+            hlim::RefCtdNodePort m_nodePort;
     };
 
     

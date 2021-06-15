@@ -65,12 +65,20 @@ void Clock::applyConfig(const ClockConfig &config)
     if (config.m_name) m_clock->setName(*config.m_name);
     if (config.m_resetName) m_clock->setResetName(*config.m_resetName);
     if (config.m_triggerEvent) m_clock->setTriggerEvent(*config.m_triggerEvent);
-    if (config.m_resetType) m_clock->setResetType(*config.m_resetType);
-    if (config.m_initializeRegs) m_clock->setInitializeRegs(*config.m_initializeRegs);
-    if (config.m_resetHighActive) m_clock->setResetHighActive(*config.m_resetHighActive);
     if (config.m_phaseSynchronousWithParent) m_clock->setPhaseSynchronousWithParent(*config.m_phaseSynchronousWithParent);
 
-    HCL_DESIGNCHECK_HINT(m_clock->getResetType() != ResetType::NONE || m_clock->getInitializeRegs(), "Either a type of reset, or the initialization for registers should be enabled!");
+    if (config.m_resetType) m_clock->getRegAttribs().resetType = *config.m_resetType;
+    if (config.m_initializeRegs) m_clock->getRegAttribs().initializeRegs = *config.m_initializeRegs;
+    if (config.m_resetHighActive) m_clock->getRegAttribs().resetHighActive = *config.m_resetHighActive;
+
+    if (config.m_registerEnablePinUsage) m_clock->getRegAttribs().registerEnablePinUsage = *config.m_registerEnablePinUsage;
+    if (config.m_registerResetPinUsage) m_clock->getRegAttribs().registerResetPinUsage = *config.m_registerResetPinUsage;
+
+    HCL_DESIGNCHECK_HINT(m_clock->getRegAttribs().resetType != ResetType::NONE || m_clock->getRegAttribs().initializeRegs, "Either a type of reset, or the initialization for registers should be enabled!");
+
+    for (const auto &vendor : config.m_additionalUserDefinedVendorAttributes)
+        for (const auto &attrib : vendor.second)
+            m_clock->getRegAttribs().userDefinedVendorAttributes[vendor.first][attrib.first] = attrib.second;
 }
 
 

@@ -212,6 +212,12 @@ void Circuit::cullUnnamedSignalNodes()
         if (!signal->getName().empty())
             continue;
 
+        // Don't cull signals with comments
+        if (!signal->getComment().empty())
+            continue;
+
+        //TODO don't cull signals with attributes
+
         // Don't cull signals that are still referenced by frontend objects
         if (signal->hasRef()) continue;
 
@@ -224,7 +230,6 @@ void Circuit::cullUnnamedSignalNodes()
         }
 
         if (inputIsSignalOrUnconnected || allOutputsAreSignals) {
-
             if (signal->getDriver(0).node != signal)
                 signal->bypassOutputToInput(0, 0);
             signal->disconnectInput();
@@ -258,6 +263,7 @@ void Circuit::cullSequentiallyDuplicatedSignalNodes()
                 driverSignal->getComment() == signal->getComment() &&
                 driverSignal->getGroup() == signal->getGroup() &&
                 driverSignal->getSignalGroup() == signal->getSignalGroup()) {
+                // todo: Check attributes
 
                 if (driverSignal == signal) continue;
                 
@@ -914,5 +920,16 @@ Node_Signal *Circuit::appendSignal(NodePort &nodePort)
     return sig;
 }
 
+Node_Signal *Circuit::appendSignal(RefCtdNodePort &nodePort)
+{
+    Node_Signal *sig = createNode<Node_Signal>();
+    sig->recordStackTrace();
+    if (nodePort.node != nullptr) {
+        sig->connectInput(nodePort);
+        sig->moveToGroup(nodePort.node->getGroup());
+    }
+    nodePort = {.node=sig, .port=0ull};
+    return sig;
+}
 
 }

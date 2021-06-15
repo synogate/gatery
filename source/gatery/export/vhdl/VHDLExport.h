@@ -28,6 +28,10 @@
 #include <memory>
 #include <optional>
 
+namespace gtry {
+    class SynthesisTool;
+}
+
 namespace gtry::sim {
     class Simulator;
 }
@@ -41,7 +45,9 @@ class VHDLExport
 {
     public:
         VHDLExport(std::filesystem::path destination);
+        ~VHDLExport();
 
+        VHDLExport &targetSynthesisTool(SynthesisTool *synthesisTool);
         VHDLExport &setFormatting(CodeFormatting *codeFormatting);
         CodeFormatting *getFormatting();
 
@@ -50,14 +56,19 @@ class VHDLExport
 
         void operator()(const hlim::Circuit &circuit);
 
+        AST *getAST() { return m_ast.get(); }
+        const std::filesystem::path &getDestination() { return m_destination; }
+
         void recordTestbench(sim::Simulator &simulator, const std::string &name);
 
-        void writeGHDLScript(const std::string &name);
-        void writeVivadoScript(std::string_view filename);
         void writeXdc(std::string_view filename);
+        void writeProjectFile(std::string_view filename);
+
+        inline const std::optional<TestbenchRecorder> &getTestbenchRecorder() const { return m_testbenchRecorder; }
     protected:
         std::filesystem::path m_destination;
         std::unique_ptr<CodeFormatting> m_codeFormatting;
+        std::unique_ptr<SynthesisTool> m_synthesisTool;
         std::optional<TestbenchRecorder> m_testbenchRecorder;
         std::unique_ptr<AST> m_ast;
         std::string m_library;

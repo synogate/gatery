@@ -62,8 +62,7 @@ class WaveformRecorder : public SimulatorCallbacks
         };
         struct Signal {
             std::string name;
-            hlim::NodePort driver;
-            hlim::NodePtr<hlim::BaseNode> nodeRefCtrHandle;  /// @todo create ref counting NodePort wrapper
+            hlim::RefCtdNodePort driver;
             hlim::NodeGroup *nodeGroup = nullptr;
             bool isBVec;
             bool isHidden;

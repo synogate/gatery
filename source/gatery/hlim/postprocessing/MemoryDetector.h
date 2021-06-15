@@ -17,6 +17,8 @@
 */
 #pragma once
 
+#include "../NodePtr.h"
+
 #include "../NodeGroup.h"
 
 namespace gtry::hlim {
@@ -30,15 +32,15 @@ class MemoryGroup : public NodeGroup
 {
     public:
         struct WritePort {
-            Node_MemPort *node = nullptr;
+            NodePtr<Node_MemPort> node;
         };
 
         struct ReadPort {
-            Node_MemPort *node = nullptr;
-            Node_Register *syncReadDataReg = nullptr;
-            Node_Register *outputReg = nullptr;
+            NodePtr<Node_MemPort> node;
+            NodePtr<Node_Register> syncReadDataReg;
+            NodePtr<Node_Register> outputReg;
             
-            NodePort dataOutput;
+            RefCtdNodePort dataOutput;
         };
 
         MemoryGroup();
@@ -53,7 +55,7 @@ class MemoryGroup : public NodeGroup
         const std::vector<WritePort> &getWritePorts() { return m_writePorts; }
         const std::vector<ReadPort> &getReadPorts() { return m_readPorts; }
     protected:
-        Node_Memory *m_memory = nullptr;
+        NodePtr<Node_Memory> m_memory;
         std::vector<WritePort> m_writePorts;
         std::vector<ReadPort> m_readPorts;
 

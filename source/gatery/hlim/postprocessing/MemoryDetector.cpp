@@ -55,12 +55,12 @@ void MemoryGroup::formAround(Node_Memory *memory, Circuit &circuit)
         // Check all write ports
         if (port->isWritePort()) {
             HCL_ASSERT_HINT(!port->isReadPort(), "For now I don't want to mix read and write ports");
-            m_writePorts.push_back({.node=port});
+            m_writePorts.push_back({.node=NodePtr<Node_MemPort>{port}});
             port->moveToGroup(this);
         }
         // Check all read ports
         if (port->isReadPort()) {
-            m_readPorts.push_back({.node = port});
+            m_readPorts.push_back({.node = NodePtr<Node_MemPort>{port}});
             ReadPort &rp = m_readPorts.back();
             port->moveToGroup(this);
             rp.dataOutput = {.node = port, .port = (size_t)Node_MemPort::Outputs::rdData};
@@ -480,7 +480,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
         if (!enable)
             enable = NodePort{};
 
-        auto insertDelayOutput = [&](NodePort &np, NodeGroup *ng, const char *name, const char *comment)->Node_Register* {
+        auto insertDelayOutput = [&](RefCtdNodePort &np, NodeGroup *ng, const char *name, const char *comment)->Node_Register* {
             std::vector<NodePort> consumers = np.node->getDirectlyDriven(np.port);
 
             auto *reg = circuit.createNode<Node_Register>();
