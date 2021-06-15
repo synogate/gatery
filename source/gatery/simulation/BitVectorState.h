@@ -148,7 +148,6 @@ std::ostream& operator << (std::ostream& s, const BitVectorState<Config>& state)
             }
             s << v;
         }
-        return s;
     } else {
         for (size_t i = state.size()-1; i < state.size(); --i)
         {
@@ -159,11 +158,45 @@ std::ostream& operator << (std::ostream& s, const BitVectorState<Config>& state)
             else
                 s << '0';
         }
-        return s;
     }
+    return s;
 }
 
+template<typename Config>
+void formatState(std::ostream& s, const BitVectorState<Config>& state, unsigned base, bool dropLeadingZeros)
+{
+    bool dropping = dropLeadingZeros;
+    if ((base == 16) && (state.size() % 4 == 0)) {
+        for (auto i : utils::Range(state.size()/4)) {
+            bool allDefined = true;
+            unsigned v = 0;
+            for (auto j : utils::Range(4)) {
+                v <<= 1;
+                allDefined  &= state.get(Config::DEFINED, state.size() - 1 - i*4-j);
 
+                if (state.get(Config::VALUE, state.size() - 1 - i*4-j))
+                    v |= 1;
+            }
+            if (!dropping || v != 0 || i+1 >= state.size()/4) {
+                s << v;
+                dropping = false;
+            }
+        }
+    } else {
+        for (size_t i = state.size()-1; i < state.size(); --i)
+        {
+            if (!state.get(Config::DEFINED, i)) {
+                s << 'X';
+                dropping = false;
+            } else if (state.get(Config::VALUE, i)) {
+                s << '1';
+                dropping = false;
+            } else
+                if (!dropping || i == 0)
+                    s << '0';
+        }
+    }
+}
 
 
 template<typename Config>

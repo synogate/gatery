@@ -71,7 +71,8 @@ std::string Node_Constant::attemptInferOutputName(size_t outputPort) const
     if (!m_name.empty()) return m_name;
     
     std::stringstream bitStream;
-    bitStream << "const_" << std::hex << m_Value;
+    bitStream << "const_";
+    sim::formatState(bitStream, m_Value, 16, true);
     return bitStream.str();
 }
 
