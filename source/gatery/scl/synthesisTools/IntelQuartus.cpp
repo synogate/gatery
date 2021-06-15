@@ -25,6 +25,11 @@
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Preprocessor.h>
 
+#include <gatery/export/vhdl/VHDLExport.h>
+#include <gatery/export/vhdl/Entity.h>
+#include <gatery/export/vhdl/Package.h>
+
+
 namespace gtry {
 
 IntelQuartus::IntelQuartus()
@@ -75,7 +80,37 @@ void IntelQuartus::resolveAttributes(const hlim::SignalAttributes &attribs, hlim
 
 void IntelQuartus::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename)
 {
-	HCL_ASSERT_HINT(false, "Not implemented yet!");
+	std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
+	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+	file << R"(
+# Warning: untested!
+package require ::quartus::project
+
+)" << std::endl;
+
+	std::vector<std::filesystem::path> files;
+
+	for (auto&& package : vhdlExport.getAST()->getPackages())
+		files.emplace_back(vhdlExport.getAST()->getFilename("", package->getName()));
+
+	for (auto&& entity : vhdlExport.getAST()->getDependencySortedEntities())
+		files.emplace_back(vhdlExport.getAST()->getFilename("", entity->getName()));
+
+	for (auto& f : files)
+	{
+		file << "set_global_assignment -name VHDL_FILE ";
+		file << f.string();
+		if (!vhdlExport.getName().empty())
+			file << "-library " << vhdlExport.getName() << ' ';
+		file << '\n';
+	}
+
+//	vhdlExport.writeXdc("clocks.xdc");
+
+	file << R"(
+export_assignments
+)";
+
 }
 
 }
