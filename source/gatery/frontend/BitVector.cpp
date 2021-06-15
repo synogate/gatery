@@ -24,6 +24,7 @@
 #include <gatery/hlim/coreNodes/Node_Rewire.h>
 #include <gatery/hlim/coreNodes/Node_Multiplexer.h>
 #include <gatery/hlim/supportNodes/Node_ExportOverride.h>
+#include <gatery/hlim/supportNodes/Node_Attributes.h>
 
 namespace gtry {
 
@@ -208,6 +209,15 @@ namespace gtry {
 		assign(SignalReadPort(expOverride));
 	}
 
+    void BVec::setAttrib(hlim::SignalAttributes attributes)
+    {
+        auto* node = DesignScope::createNode<hlim::Node_Attributes>();
+        node->getAttribs() = std::move(attributes);
+        node->connectInput(getReadPort());
+        assign(SignalReadPort(node));
+    }
+
+
     BVec& BVec::operator()(size_t offset, BitWidth size, size_t stride)
     {
         return (*this)(Selection::StridedSlice(int(offset), int(size.value), stride));
@@ -337,25 +347,27 @@ namespace gtry {
             rewire->setOp(replaceSelection(m_range, m_node->getOutputConnectionType(0).width));
             in.node = rewire;
             in.port = 0;
-
+/*
             {
                 auto* signal = DesignScope::createNode<hlim::Node_Signal>();
                 signal->connectInput(in);
                 signal->recordStackTrace();
                 in = SignalReadPort(signal);
             }
+*/
         }
 
         if (auto* scope = ConditionalScope::get(); scope && scope->getId() > m_initialScopeId)
         {
             SignalReadPort oldSignal = getRawDriver();
-
+/*
             if (dynamic_cast<hlim::Node_Signal*>(oldSignal.node) == nullptr) {
                 auto* signal = DesignScope::createNode<hlim::Node_Signal>();
                 signal->connectInput(oldSignal);
                 signal->recordStackTrace();
                 oldSignal = SignalReadPort{ signal };
             }
+*/
 
             if (incrementWidth)
             {
@@ -383,14 +395,14 @@ namespace gtry {
             mux->setConditionId(scope->getId());
             in = SignalReadPort{ mux };
         }
-
+/*
         if (dynamic_cast<hlim::Node_Signal*>(in.node) == nullptr) {
             auto* signal = DesignScope::createNode<hlim::Node_Signal>();
             signal->connectInput(in);
             signal->recordStackTrace();
             in = SignalReadPort(signal);
         }
-
+*/
         if (!m_node->getDirectlyDriven(0).empty() && incrementWidth)
         {
             const auto nodeInputs = m_node->getDirectlyDriven(0);

@@ -41,7 +41,6 @@ XilinxVivado::XilinxVivado()
 
 void XilinxVivado::resolveAttributes(const hlim::RegisterAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
 {
-	resolvedAttribs.clear();
 	switch (attribs.registerEnablePinUsage) {		
 		case hlim::RegisterAttributes::UsageType::USE: {
 			resolvedAttribs.insert({"extract_enable", {"string", "\"yes\""}});
@@ -67,7 +66,6 @@ void XilinxVivado::resolveAttributes(const hlim::RegisterAttributes &attribs, hl
 
 void XilinxVivado::resolveAttributes(const hlim::SignalAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
 {
-	resolvedAttribs.clear();
 	if (attribs.maxFanout != 0) 
 		resolvedAttribs.insert({"max_fanout", {"integer", std::to_string(attribs.maxFanout)}});
 

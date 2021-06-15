@@ -37,7 +37,6 @@ Synopsys::Synopsys()
 
 void Synopsys::resolveAttributes(const hlim::RegisterAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
 {
-	resolvedAttribs.clear();
 	switch (attribs.registerEnablePinUsage) {		
 		case hlim::RegisterAttributes::UsageType::USE: {
 			resolvedAttribs.insert({"syn_direct_enable", {"boolean", "true"}});
@@ -65,7 +64,6 @@ void Synopsys::resolveAttributes(const hlim::RegisterAttributes &attribs, hlim::
 
 void Synopsys::resolveAttributes(const hlim::SignalAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
 {
-	resolvedAttribs.clear();
 	if (attribs.maxFanout != 0) 
 		resolvedAttribs.insert({"syn_maxfan", {"integer", std::to_string(attribs.maxFanout)}});
 

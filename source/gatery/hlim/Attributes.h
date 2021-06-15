@@ -42,6 +42,8 @@ struct SignalAttributes : public Attributes {
 	size_t maxFanout = 0; 
 	/// Signal crosses a clock domain
 	bool crossingClockDomain = false;
+	/// Whether the signal may be removed (if e.g. unsused) or fused (e.g. regs to shiftregs)
+	bool allowRemoval = true;
 };
 
 struct RegisterAttributes : public Attributes {

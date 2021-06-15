@@ -23,6 +23,7 @@
 #include "../../hlim/coreNodes/Node_Constant.h"
 #include "../../hlim/coreNodes/Node_Signal.h"
 #include "../../hlim/coreNodes/Node_Register.h"
+#include "../../hlim/supportNodes/Node_Attributes.h"
 #include "../../hlim/Clock.h"
 #include "../../frontend/SynthesisTool.h"
 
@@ -163,35 +164,46 @@ void BaseGrouping::declareLocalSignals(std::ostream &stream, bool asVariables, u
     std::map<std::string, std::string> alreadyDeclaredAttribs;
 
     hlim::ResolvedAttributes resolvedAttribs;
-    // find signals driven by registers
+
     for (const auto &signal : m_localSignals) {
+
+        resolvedAttribs.clear();
+
+        // find signals driven by registers
         if (auto *reg = dynamic_cast<hlim::Node_Register*>(signal.node)) {
             auto *clock = reg->getClocks()[0];
             HCL_ASSERT(clock != nullptr);
             
             m_ast.getSynthesisTool().resolveAttributes(clock->getRegAttribs(), resolvedAttribs);
+        }
 
-            for (const auto &attrib : resolvedAttribs) {
-                auto it = alreadyDeclaredAttribs.find(attrib.first);
-                if (it == alreadyDeclaredAttribs.end()) {
-                    alreadyDeclaredAttribs[attrib.first] = attrib.second.value;
+        // Find and accumulate all attribute nodes
+        for (auto nh : signal.node->exploreOutput(signal.port)) {
+            if (const auto *attrib = dynamic_cast<const hlim::Node_Attributes*>(nh.node())) {
+                m_ast.getSynthesisTool().resolveAttributes(attrib->getAttribs(), resolvedAttribs);
+            } else if (!nh.isSignal()) nh.backtrack();
+        }
 
-                    cf.indent(stream, indentation+1);
-                    stream << "ATTRIBUTE " << attrib.first << " : " << attrib.second.type << ';' << std::endl;
-                } else
-                    HCL_DESIGNCHECK_HINT(it->second == attrib.second.type, "Same attribute can't have different types!");
+        // write out all attribs
+        for (const auto &attrib : resolvedAttribs) {
+            auto it = alreadyDeclaredAttribs.find(attrib.first);
+            if (it == alreadyDeclaredAttribs.end()) {
+                alreadyDeclaredAttribs[attrib.first] = attrib.second.value;
 
                 cf.indent(stream, indentation+1);
-                stream << "ATTRIBUTE " << attrib.first << " of " << m_namespaceScope.getName(signal) << " : ";
-                if (asVariables)
-                    stream << "VARIABLE";
-                else
-                    stream << "SIGNAL";
-                stream << " is " << attrib.second.value << ';' << std::endl;
-            }
+                stream << "ATTRIBUTE " << attrib.first << " : " << attrib.second.type << ';' << std::endl;
+            } else
+                HCL_DESIGNCHECK_HINT(it->second == attrib.second.type, "Same attribute can't have different types!");
+
+            cf.indent(stream, indentation+1);
+            stream << "ATTRIBUTE " << attrib.first << " of " << m_namespaceScope.getName(signal) << " : ";
+            if (asVariables)
+                stream << "VARIABLE";
+            else
+                stream << "SIGNAL";
+            stream << " is " << attrib.second.value << ';' << std::endl;
         }
     }
-
 }
 
 

@@ -21,6 +21,7 @@
 #include "Scope.h"
 
 #include <gatery/hlim/coreNodes/Node_Signal.h>
+#include <gatery/hlim/Attributes.h>
 #include <gatery/utils/Exceptions.h>
 
 #include <vector>
@@ -76,6 +77,8 @@ namespace gtry {
         Bit& operator=(T rhs) { assign(rhs); return *this; }
 
         void setExportOverride(const Bit& exportOverride);
+
+        void setAttrib(hlim::SignalAttributes attributes);
 
         BitWidth getWidth() const final;
         hlim::ConnectionType getConnType() const final;

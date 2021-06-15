@@ -29,6 +29,7 @@
 #include <gatery/hlim/coreNodes/Node_Multiplexer.h>
 #include <gatery/hlim/supportNodes/Node_Default.h>
 #include <gatery/hlim/supportNodes/Node_ExportOverride.h>
+#include <gatery/hlim/supportNodes/Node_Attributes.h>
 
 
 namespace gtry {
@@ -134,6 +135,14 @@ namespace gtry {
         expOverride->connectInput(getReadPort());
         expOverride->connectOverride(exportOverride.getReadPort());
         assign(SignalReadPort(expOverride));
+    }
+
+    void Bit::setAttrib(hlim::SignalAttributes attributes)
+    {
+        auto* node = DesignScope::createNode<hlim::Node_Attributes>();
+        node->getAttribs() = std::move(attributes);
+        node->connectInput(getReadPort());
+        assign(SignalReadPort(node));
     }
 
 
@@ -254,12 +263,14 @@ namespace gtry {
             rewire->setReplaceRange(offset);
 
             in = SignalReadPort(rewire);
+/*
             {
                 auto* signal = DesignScope::createNode<hlim::Node_Signal>();
                 signal->connectInput(in);
                 signal->recordStackTrace();
                 in = SignalReadPort(signal);
             }
+*/
         }
 
         if (auto* scope = ConditionalScope::get(); scope && scope->getId() > m_initialScopeId)
@@ -275,14 +286,14 @@ namespace gtry {
 
             in = SignalReadPort(mux);
         }
-
+/*
         if (dynamic_cast<hlim::Node_Signal*>(in.node) == nullptr) {
             auto* signal = DesignScope::createNode<hlim::Node_Signal>();
             signal->connectInput(in);
             signal->recordStackTrace();
             in = SignalReadPort(signal);
         }
-
+*/
         m_node->connectInput(in);
     }
 

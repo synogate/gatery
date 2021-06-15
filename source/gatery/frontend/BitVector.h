@@ -24,6 +24,8 @@
 
 #include "Constant.h"
 
+#include <gatery/hlim/Attributes.h>
+
 #include <gatery/hlim/coreNodes/Node_Constant.h>
 #include <gatery/hlim/coreNodes/Node_Signal.h>
 #include <gatery/hlim/coreNodes/Node_Rewire.h>
@@ -116,6 +118,7 @@ namespace gtry {
 		BVec& operator = (BitWidth width);
 
 		void setExportOverride(const BVec& exportOverride);
+		void setAttrib(hlim::SignalAttributes attributes);
 
 		template<typename Int1, typename Int2, typename = std::enable_if_t<std::is_integral_v<Int1> && std::is_integral_v<Int2>>>
 		BVec& operator()(Int1 offset, Int2 size, size_t stride = 1) { return (*this)(Selection::StridedSlice(int(offset), int(size), stride)); }

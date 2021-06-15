@@ -35,6 +35,7 @@
 #include "../../hlim/coreNodes/Node_Register.h"
 #include "../../hlim/coreNodes/Node_Rewire.h"
 #include "../../hlim/coreNodes/Node_Pin.h"
+#include "../../hlim/supportNodes/Node_Attributes.h"
 
 #include <iostream>
 
@@ -206,9 +207,13 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
     HCL_ASSERT(dynamic_cast<const hlim::Node_Register*>(nodePort.node) == nullptr);
     HCL_ASSERT(dynamic_cast<const hlim::Node_Multiplexer*>(nodePort.node) == nullptr);
 
-    const hlim::Node_Signal *signalNode = dynamic_cast<const hlim::Node_Signal *>(nodePort.node);
-    if (signalNode != nullptr) {
+    if (const auto *signalNode = dynamic_cast<const hlim::Node_Signal *>(nodePort.node)) {
         formatExpression(stream, comments, signalNode->getDriver(0), dependentInputs, context);
+        return;
+    }
+
+    if (const auto *attribNode = dynamic_cast<const hlim::Node_Attributes *>(nodePort.node)) {
+        formatExpression(stream, comments, attribNode->getDriver(0), dependentInputs, context);
         return;
     }
 

@@ -39,14 +39,12 @@ GHDL::GHDL()
 
 void GHDL::resolveAttributes(const hlim::RegisterAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
 {
-	resolvedAttribs.clear();
 	// ghdl doesn't support any
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }
 
 void GHDL::resolveAttributes(const hlim::SignalAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
 {
-	resolvedAttribs.clear();
 	// ghdl doesn't support any
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }

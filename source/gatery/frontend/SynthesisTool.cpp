@@ -64,13 +64,11 @@ DefaultSynthesisTool::DefaultSynthesisTool()
 
 void DefaultSynthesisTool::resolveAttributes(const hlim::RegisterAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
 {
-	resolvedAttribs.clear();
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }
 
 void DefaultSynthesisTool::resolveAttributes(const hlim::SignalAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
 {
-	resolvedAttribs.clear();
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }
 
