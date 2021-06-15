@@ -32,10 +32,6 @@ class Node_Attributes : public Node<Node_Attributes>
     public:
         Node_Attributes();
 
-        virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;
-
-        void setConnectionType(const ConnectionType &connectionType);
-
         void connectInput(const NodePort &nodePort);
         void disconnectInput();
 

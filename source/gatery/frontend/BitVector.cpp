@@ -214,7 +214,6 @@ namespace gtry {
         auto* node = DesignScope::createNode<hlim::Node_Attributes>();
         node->getAttribs() = std::move(attributes);
         node->connectInput(getReadPort());
-        assign(SignalReadPort(node));
     }
 
 

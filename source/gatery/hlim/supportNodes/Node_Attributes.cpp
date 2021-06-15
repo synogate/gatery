@@ -23,28 +23,13 @@
 namespace gtry::hlim {
 
 
-Node_Attributes::Node_Attributes() : Node(1, 1)
+Node_Attributes::Node_Attributes() : Node(1, 0)
 {
 
-}
-
-
-void Node_Attributes::setConnectionType(const ConnectionType &connectionType)
-{
-    setOutputConnectionType(0, connectionType);
 }
 
 void Node_Attributes::connectInput(const NodePort &nodePort)
 {
-    if (nodePort.node != nullptr) {
-        auto paramType = hlim::getOutputConnectionType(nodePort);
-        auto myType = getOutputConnectionType(0);
-        if (!getDirectlyDriven(0).empty()) {
-            HCL_ASSERT_HINT( paramType == myType, "The connection type of a node that is driving other nodes can not change");
-        } else
-            setConnectionType(paramType);
-    }
-
     NodeIO::connectInput(0, nodePort);
 }
 
@@ -56,11 +41,6 @@ void Node_Attributes::disconnectInput()
 
 
 
-void Node_Attributes::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, 
-                    const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
-{
-    HCL_ASSERT_HINT(false, "TODO: Can not simulate Node_Attributes!");
-}
 
 std::string Node_Attributes::getTypeName() const
 {
@@ -78,7 +58,7 @@ std::string Node_Attributes::getInputName(size_t idx) const
 
 std::string Node_Attributes::getOutputName(size_t idx) const
 {
-    return "out";
+    return "";
 }
 
 
