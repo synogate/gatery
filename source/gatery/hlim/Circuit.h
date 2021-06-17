@@ -122,6 +122,7 @@ class Circuit
         void postprocess(const PostProcessor &postProcessor);
 
         Node_Signal *appendSignal(NodePort &nodePort);
+        Node_Signal *appendSignal(RefCtdNodePort &nodePort);
     protected:
         std::vector<std::unique_ptr<BaseNode>> m_nodes;
         std::unique_ptr<NodeGroup> m_root;

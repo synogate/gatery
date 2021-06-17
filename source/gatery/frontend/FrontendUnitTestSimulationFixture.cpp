@@ -58,7 +58,7 @@ void UnitTestSimulationFixture::outputVHDL(const std::filesystem::path &destinat
 
     if (includeTest) {
         m_vhdlExport->recordTestbench(*m_simulator, "testbench");
-        m_vhdlExport->writeGHDLScript("runGHDL.sh");
+        //m_vhdlExport->writeGHDLScript("runGHDL.sh");
     }
 }
 

@@ -36,7 +36,7 @@ namespace gtry::sim {
 
 struct MemoryTrace {
     struct Signal {
-        hlim::NodePort driver;
+        hlim::RefCtdNodePort driver;
         const hlim::Clock *clock = nullptr;
         std::string name;
         size_t width;

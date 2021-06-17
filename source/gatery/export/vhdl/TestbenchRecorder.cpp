@@ -66,7 +66,7 @@ ARCHITECTURE tb OF )" << m_name << R"( IS
 
     for (auto clock : allClocks) {
         m_testbenchFile << "    SIGNAL " << rootEntity->getNamespaceScope().getName(clock) << " : STD_LOGIC;" << std::endl;
-        if (clock->getResetType() != hlim::Clock::ResetType::NONE)
+        if (clock->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE)
             m_testbenchFile << "    SIGNAL " << rootEntity->getNamespaceScope().getName(clock)<<clock->getResetName() << " : STD_LOGIC;" << std::endl;
     }
 
@@ -106,7 +106,7 @@ ARCHITECTURE tb OF )" << m_name << R"( IS
         line << rootEntity->getNamespaceScope().getName(s) << " => ";
         line << rootEntity->getNamespaceScope().getName(s);
         portmapList.push_back(line.str());
-        if (s->getResetType() != hlim::Clock::ResetType::NONE) {
+        if (s->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
             std::stringstream line;
             line << rootEntity->getNamespaceScope().getName(s)<<s->getResetName() << " => ";
             line << rootEntity->getNamespaceScope().getName(s)<<s->getResetName();
@@ -141,7 +141,7 @@ ARCHITECTURE tb OF )" << m_name << R"( IS
     for (auto &s : allClocks) {
         cf.indent(m_testbenchFile, 2);
         m_testbenchFile << rootEntity->getNamespaceScope().getName(s) << " <= '0';" << std::endl;
-        if (s->getResetType() != hlim::Clock::ResetType::NONE) {
+        if (s->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
             cf.indent(m_testbenchFile, 2);
             m_testbenchFile << rootEntity->getNamespaceScope().getName(s)<<s->getResetName() << " <= '1';" << std::endl;
         }
@@ -159,7 +159,7 @@ ARCHITECTURE tb OF )" << m_name << R"( IS
     for (auto &s : allClocks) {
         cf.indent(m_testbenchFile, 2);
         m_testbenchFile << rootEntity->getNamespaceScope().getName(s) << " <= '0';" << std::endl;
-        if (s->getResetType() != hlim::Clock::ResetType::NONE) {
+        if (s->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
             cf.indent(m_testbenchFile, 2);
             m_testbenchFile << rootEntity->getNamespaceScope().getName(s)<<s->getResetName() << " <= '0';" << std::endl;
         }

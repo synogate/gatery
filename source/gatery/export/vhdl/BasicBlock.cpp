@@ -25,6 +25,7 @@
 #include "AST.h"
 
 #include "GenericMemoryEntity.h"
+#include "../../hlim/postprocessing/MemoryDetector.h"
 
 
 #include "../../hlim/coreNodes/Node_Register.h"
@@ -325,7 +326,28 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
             case ConcurrentStatement::TYPE_EXT_NODE_INSTANTIATION: {
                 auto *node = m_externalNodes[statement.ref.externalNodeIdx];
                 cf.indent(stream, indent);
-                stream << m_externalNodeInstanceNames[statement.ref.externalNodeIdx] << " : entity " << node->getName() << " port map (" << std::endl;
+                stream << m_externalNodeInstanceNames[statement.ref.externalNodeIdx] << " : entity " << node->getName() << std::endl;
+                
+                if (!node->getGenericParameters().empty()) {
+                    cf.indent(stream, indent);
+                    stream << " generic map (" << std::endl;
+
+                    unsigned i = 0;
+                    for (const auto &p : node->getGenericParameters()) {
+                        cf.indent(stream, indent+1);
+                        stream << p.first << " => " << p.second;
+                        if (i+1 < node->getGenericParameters().size())
+                            stream << ',';
+                        stream << std::endl;
+                        i++;
+                    }
+
+                    cf.indent(stream, indent);
+                    stream << ")" << std::endl;
+                }
+                
+                cf.indent(stream, indent);
+                stream << " port map (" << std::endl;
 
                 std::vector<std::string> portmapList;
 
@@ -335,7 +357,7 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
                         line << node->getClockNames()[i] << " => ";
                         line << m_namespaceScope.getName(node->getClocks()[i]);
                         portmapList.push_back(line.str());
-                        if (node->getClocks()[i]->getResetType() != hlim::Clock::ResetType::NONE && !node->getResetNames()[i].empty()) {
+                        if (node->getClocks()[i]->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE && !node->getResetNames()[i].empty()) {
                             std::stringstream line;
                             line << node->getResetNames()[i] << " => ";
                             line << m_namespaceScope.getName(node->getClocks()[i])<<node->getClocks()[i]->getResetName();

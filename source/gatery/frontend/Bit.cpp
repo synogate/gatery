@@ -22,12 +22,40 @@
 #include "BitVector.h"
 #include "ConditionalScope.h"
 #include "Constant.h"
+#include "Scope.h"
 
 #include <gatery/hlim/coreNodes/Node_Constant.h>
 #include <gatery/hlim/coreNodes/Node_Rewire.h>
 #include <gatery/hlim/coreNodes/Node_Multiplexer.h>
+#include <gatery/hlim/supportNodes/Node_Default.h>
+#include <gatery/hlim/supportNodes/Node_ExportOverride.h>
+#include <gatery/hlim/supportNodes/Node_Attributes.h>
+
 
 namespace gtry {
+
+    BitDefault::BitDefault(const Bit& rhs)
+    {
+        m_nodePort = rhs.getReadPort();
+    }
+
+    void BitDefault::assign(bool value)
+    {
+        auto* constant = DesignScope::createNode<hlim::Node_Constant>(
+            parseBit(value), hlim::ConnectionType::BOOL
+            );
+        m_nodePort = {.node = constant, .port = 0ull };
+    }
+
+    void BitDefault::assign(char value)
+    {
+        auto* constant = DesignScope::createNode<hlim::Node_Constant>(
+            parseBit(value), hlim::ConnectionType::BOOL
+            );
+        m_nodePort = {.node = constant, .port = 0ull };
+    }
+
+
 
     Bit::Bit()
     {
@@ -43,6 +71,12 @@ namespace gtry {
         assign(rhs.getReadPort());
         rhs.assign(SignalReadPort{ m_node });
     }
+
+    Bit::Bit(const BitDefault &defaultValue) : Bit()
+    {
+        (*this) = defaultValue;
+    } 
+
 
     Bit::~Bit()
     {
@@ -83,6 +117,33 @@ namespace gtry {
         rhs.assign(outRange);
         return *this;
     }
+
+    Bit& Bit::operator=(const BitDefault &defaultValue)
+    {
+        hlim::Node_Default* node = DesignScope::createNode<hlim::Node_Default>();
+        node->recordStackTrace();
+        node->connectInput(getReadPort());
+        node->connectDefault(defaultValue.getNodePort());
+
+        assign(SignalReadPort(node));
+        return *this;
+    }
+
+    void Bit::setExportOverride(const Bit& exportOverride)
+    {
+        auto* expOverride = DesignScope::createNode<hlim::Node_ExportOverride>();
+        expOverride->connectInput(getReadPort());
+        expOverride->connectOverride(exportOverride.getReadPort());
+        assign(SignalReadPort(expOverride));
+    }
+
+    void Bit::setAttrib(hlim::SignalAttributes attributes)
+    {
+        auto* node = DesignScope::createNode<hlim::Node_Attributes>();
+        node->getAttribs() = std::move(attributes);
+        node->connectInput(getReadPort());
+    }
+
 
     BitWidth Bit::getWidth() const
     {
@@ -201,12 +262,14 @@ namespace gtry {
             rewire->setReplaceRange(offset);
 
             in = SignalReadPort(rewire);
+/*
             {
                 auto* signal = DesignScope::createNode<hlim::Node_Signal>();
                 signal->connectInput(in);
                 signal->recordStackTrace();
                 in = SignalReadPort(signal);
             }
+*/
         }
 
         if (auto* scope = ConditionalScope::get(); scope && scope->getId() > m_initialScopeId)
@@ -222,14 +285,14 @@ namespace gtry {
 
             in = SignalReadPort(mux);
         }
-
+/*
         if (dynamic_cast<hlim::Node_Signal*>(in.node) == nullptr) {
             auto* signal = DesignScope::createNode<hlim::Node_Signal>();
             signal->connectInput(in);
             signal->recordStackTrace();
             in = SignalReadPort(signal);
         }
-
+*/
         m_node->connectInput(in);
     }
 

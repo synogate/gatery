@@ -21,6 +21,7 @@
 #include "Scope.h"
 
 #include <gatery/hlim/coreNodes/Node_Signal.h>
+#include <gatery/hlim/Attributes.h>
 #include <gatery/utils/Exceptions.h>
 
 #include <vector>
@@ -29,6 +30,24 @@
 namespace gtry {
     
     class BVec;
+
+    class Bit;
+
+
+    class BitDefault {
+        public:
+            BitDefault(const Bit& rhs);
+            template<typename T, typename = std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, bool>>>
+            BitDefault(T v) { assign(v); }
+
+            hlim::NodePort getNodePort() const { return m_nodePort; }
+        protected:
+            void assign(bool);
+            void assign(char);
+
+            hlim::RefCtdNodePort m_nodePort;
+    };
+
     
     class Bit : public ElementarySignal
     {
@@ -38,6 +57,7 @@ namespace gtry {
         Bit();
         Bit(const Bit& rhs);
         Bit(Bit&& rhs);
+        Bit(const BitDefault &defaultValue);
         ~Bit();
 
         Bit(const SignalReadPort& port);
@@ -48,12 +68,17 @@ namespace gtry {
             createNode();
             assign(v);
         }
-        
+    
         Bit& operator=(const Bit& rhs) { assign(rhs.getReadPort()); return *this; }
         Bit& operator=(Bit&& rhs);
+        Bit& operator=(const BitDefault &defaultValue);
 
         template<typename T, typename = std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, bool>>>
         Bit& operator=(T rhs) { assign(rhs); return *this; }
+
+        void setExportOverride(const Bit& exportOverride);
+
+        void setAttrib(hlim::SignalAttributes attributes);
 
         BitWidth getWidth() const final;
         hlim::ConnectionType getConnType() const final;

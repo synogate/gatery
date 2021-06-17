@@ -19,11 +19,13 @@
 
 #include "Entity.h"
 
-#include "../../hlim/MemoryDetector.h"
+
+namespace gtry::hlim {
+    class MemoryGroup;
+}
 
 namespace gtry::vhdl {
 
-    
 /**
  * @todo write docs
  */

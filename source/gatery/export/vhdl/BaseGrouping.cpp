@@ -22,6 +22,10 @@
 
 #include "../../hlim/coreNodes/Node_Constant.h"
 #include "../../hlim/coreNodes/Node_Signal.h"
+#include "../../hlim/coreNodes/Node_Register.h"
+#include "../../hlim/supportNodes/Node_Attributes.h"
+#include "../../hlim/Clock.h"
+#include "../../frontend/SynthesisTool.h"
 
 namespace gtry::vhdl {
 
@@ -134,6 +138,7 @@ void BaseGrouping::declareLocalSignals(std::ostream &stream, bool asVariables, u
 {
    CodeFormatting &cf = m_ast.getCodeFormatting();
 
+
     for (const auto &signal : m_constants) {
         auto targetContext = hlim::outputIsBVec(signal)?Context::STD_LOGIC_VECTOR:Context::STD_LOGIC;
 
@@ -154,6 +159,50 @@ void BaseGrouping::declareLocalSignals(std::ostream &stream, bool asVariables, u
         stream << m_namespaceScope.getName(signal) << " : ";
         cf.formatConnectionType(stream, hlim::getOutputConnectionType(signal));
         stream << "; "<< std::endl;
+    }
+
+    std::map<std::string, std::string> alreadyDeclaredAttribs;
+
+    hlim::ResolvedAttributes resolvedAttribs;
+
+    for (const auto &signal : m_localSignals) {
+
+        resolvedAttribs.clear();
+
+        // find signals driven by registers
+        if (auto *reg = dynamic_cast<hlim::Node_Register*>(signal.node)) {
+            auto *clock = reg->getClocks()[0];
+            HCL_ASSERT(clock != nullptr);
+            
+            m_ast.getSynthesisTool().resolveAttributes(clock->getRegAttribs(), resolvedAttribs);
+        }
+
+        // Find and accumulate all attribute nodes
+        for (auto nh : signal.node->exploreOutput(signal.port)) {
+            if (const auto *attrib = dynamic_cast<const hlim::Node_Attributes*>(nh.node())) {
+                m_ast.getSynthesisTool().resolveAttributes(attrib->getAttribs(), resolvedAttribs);
+            } else if (!nh.isSignal()) nh.backtrack();
+        }
+
+        // write out all attribs
+        for (const auto &attrib : resolvedAttribs) {
+            auto it = alreadyDeclaredAttribs.find(attrib.first);
+            if (it == alreadyDeclaredAttribs.end()) {
+                alreadyDeclaredAttribs[attrib.first] = attrib.second.value;
+
+                cf.indent(stream, indentation+1);
+                stream << "ATTRIBUTE " << attrib.first << " : " << attrib.second.type << ';' << std::endl;
+            } else
+                HCL_DESIGNCHECK_HINT(it->second == attrib.second.type, "Same attribute can't have different types!");
+
+            cf.indent(stream, indentation+1);
+            stream << "ATTRIBUTE " << attrib.first << " of " << m_namespaceScope.getName(signal) << " : ";
+            if (asVariables)
+                stream << "VARIABLE";
+            else
+                stream << "SIGNAL";
+            stream << " is " << attrib.second.value << ';' << std::endl;
+        }
     }
 }
 

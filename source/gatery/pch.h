@@ -6,6 +6,8 @@
  #include <Windows.h>
 #endif
 
+#ifndef GTRY_NO_PCH
+
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
@@ -47,3 +49,5 @@
 #include <utility>
 #include <variant>
 #include <vector>
+
+#endif

@@ -134,7 +134,7 @@ std::vector<std::string> Entity::getPortsVHDL()
         std::stringstream line;
         line << m_namespaceScope.getName(clk) << " : IN STD_LOGIC";
         portList.push_back(line.str());
-        if (clk->getResetType() != hlim::Clock::ResetType::NONE) {
+        if (clk->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
             std::stringstream line;
             line << m_namespaceScope.getName(clk)<<clk->getResetName() << " : IN STD_LOGIC";
             portList.push_back(line.str());
@@ -236,7 +236,7 @@ void Entity::writeInstantiationVHDL(std::ostream &stream, unsigned indent, const
         line << m_namespaceScope.getName(s) << " => ";
         line << m_parent->getNamespaceScope().getName(s);
         portmapList.push_back(line.str());
-        if (s->getResetType() != hlim::Clock::ResetType::NONE) {
+        if (s->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
             std::stringstream line;
             line << m_namespaceScope.getName(s)<<s->getResetName() << " => ";
             line << m_parent->getNamespaceScope().getName(s)<<s->getResetName();

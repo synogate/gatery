@@ -40,7 +40,6 @@ void WaveformRecorder::addSignal(hlim::NodePort np, bool hidden, hlim::NodeGroup
     HCL_ASSERT(!hlim::outputIsDependency(np));
     Signal signal;
     signal.driver = np;
-    signal.nodeRefCtrHandle = np.node;
     if (!nameOverride.empty()) {
         signal.name = nameOverride;
     } else {

@@ -25,6 +25,10 @@
 #include <memory>
 #include <string>
 
+namespace gtry {
+    class SynthesisTool;
+}
+
 namespace gtry::hlim {
     class Circuit;
     class BaseNode;
@@ -51,7 +55,7 @@ class Hlim2AstMapping
 class AST
 {
     public:
-        AST(CodeFormatting *codeFormatting);
+        AST(CodeFormatting *codeFormatting, SynthesisTool *synthesisTool);
         ~AST();
 
         void convert(hlim::Circuit &circuit);
@@ -65,6 +69,7 @@ class AST
         }
 
         inline CodeFormatting &getCodeFormatting() { return *m_codeFormatting; }
+        inline SynthesisTool &getSynthesisTool() { return *m_synthesisTool; }
         inline NamespaceScope &getNamespaceScope() { return m_namespaceScope; }
         inline Hlim2AstMapping &getMapping() { return m_mapping; }
 
@@ -80,6 +85,7 @@ class AST
         std::vector<Entity*> getDependencySortedEntities();
     protected:
         CodeFormatting *m_codeFormatting;
+        SynthesisTool *m_synthesisTool;
         NamespaceScope m_namespaceScope;
         std::vector<std::unique_ptr<Entity>> m_entities;
         std::vector<std::unique_ptr<Package>> m_packages;

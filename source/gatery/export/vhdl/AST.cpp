@@ -45,7 +45,7 @@ BaseGrouping *Hlim2AstMapping::getScope(hlim::BaseNode *node) const
 }
 
 
-AST::AST(CodeFormatting *codeFormatting) : m_codeFormatting(codeFormatting), m_namespaceScope(*this, nullptr)
+AST::AST(CodeFormatting *codeFormatting, SynthesisTool *synthesisTool) : m_codeFormatting(codeFormatting), m_synthesisTool(synthesisTool), m_namespaceScope(*this, nullptr)
 {
     m_packages.push_back(std::make_unique<HelperPackage>(*this));
 }
