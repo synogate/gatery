@@ -19,6 +19,9 @@
 #include "SignalMiscOp.h"
 
 #include "SignalLogicOp.h"
+#include "SignalCompareOp.h"
+#include "Area.h"
+#include "Compound.h"
 
 #include <gatery/utils/Range.h>
 #include <gatery/utils/Preprocessor.h>
@@ -82,6 +85,44 @@ BVec swapEndian(const BVec& word, BitWidth byteSize)
     if (!word.getName().empty())
         ret.setName(std::string(word.getName()) + "_swapped");
     return ret;
+}
+
+BVec mux(BVec selector, BVec flat_array)
+{
+    size_t num_entries = selector.getWidth().count();
+    if (num_entries == 0)
+        return 0u;
+
+    auto entity = Area{ "flat_mux" }.enter();
+    HCL_NAMED(selector);
+    HCL_NAMED(flat_array);
+
+    SymbolSelect sym{ flat_array.getWidth() / num_entries };
+    BVec selected = flat_array(sym[0]);
+    for (size_t i = 1; i < num_entries; ++i)
+    {
+        IF(selector == i)
+            selected = flat_array(sym[i]);
+    }
+    HCL_NAMED(selected);
+    return selected;
+}
+
+BVec mux(Bit selector, BVec flat_array)
+{
+    HCL_DESIGNCHECK_HINT(flat_array.getWidth().divisibleBy(2), "flat array must be evenly divisible");
+
+    auto entity = Area{ "flat_mux" }.enter();
+    HCL_NAMED(selector);
+    HCL_NAMED(flat_array);
+
+    SymbolSelect sym{ flat_array.getWidth() / 2 };
+    BVec selected = flat_array(sym[0]);
+    IF(selector)
+        selected = flat_array(sym[1]);
+
+    HCL_NAMED(selected);
+    return selected;
 }
 
 BVec swapEndian(const BVec& word, BitWidth byteSize, BitWidth wordSize)

@@ -82,7 +82,8 @@ ElemType mux(const ElementarySignal &selector, const std::initializer_list<ElemT
     return mux<std::initializer_list<ElemType>>(selector, table);
 }
 
-
+BVec mux(BVec selector, BVec flat_array);
+BVec mux(Bit selector, BVec flat_array);
 
 ///@todo overload for compound signals
 ///@todo doesn't work yet
