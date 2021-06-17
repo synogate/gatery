@@ -46,16 +46,3 @@ project "gatery"
 
     filter "files:**.c"
         flags {"NoPCH"}
-
-
-require('vstudio')
-
-local function MSVCToolsetVersion(prj)
-    premake.w('<VCToolsVersion>14.28.29333</VCToolsVersion>')
-end
-
-premake.override(premake.vstudio.vc2010.elements, "configurationProperties", function(base, prj)
-	local calls = base(prj)
-	table.insertafter(calls, premake.vstudio.vc2010.platformToolset, MSVCToolsetVersion)
-	return calls
-end)
