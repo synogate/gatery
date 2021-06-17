@@ -71,6 +71,8 @@ inline BVec rotr(const BVec& signal, int amount) { return rot(signal, -amount); 
 inline BVec rotl(const BVec& signal, size_t amount) { return rot(signal, int(amount)); }  // TODO (remove)
 inline BVec rotr(const BVec& signal, size_t amount) { return rot(signal, -int(amount)); }  // TODO (remove)
 
+BVec shr(const BVec& signal, size_t amount, const Bit& arithmetic);
+BVec shr(const BVec& signal, const BVec& amount, const Bit& arithmetic);
 
 BVec zshl(const BVec& signal, const BVec& amount);
 BVec oshl(const BVec& signal, const BVec& amount);
