@@ -1056,20 +1056,22 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, UnitTestSimulationFixture)
 			simu(*avmm.readData) = data;
 			rv.r1(opA).r2(rng()).ip(rng());
 			rv.op().typeI(rv::op::LOAD, rv::func::WORD, 0, 0, offset);
+			BOOST_TEST(simu(*avmm.read) == 1);
 
 			for (size_t j = 0; j < delay; ++j)
 			{
 				BOOST_TEST(rv.isStall());
 				co_await WaitClk(clock);
+				BOOST_TEST(simu(*avmm.read) == 0);
 			}
 
 			simu(*avmm.readDataValid) = 1;
+			co_await WaitClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			BOOST_TEST(rv.result() == data);
 			BOOST_TEST(!rv.isStall());
 			BOOST_TEST(simu(avmm.address) == ((opA + offset) & ~3));
-			BOOST_TEST(simu(*avmm.read) == 1);
 			BOOST_TEST(simu(*avmm.byteEnable) == 0xF);
 		}
 
