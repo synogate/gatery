@@ -132,3 +132,14 @@ gtry::scl::StreamSource<gtry::BVec> gtry::scl::binaryGCD(StreamSink<BVecPair>& i
     auto step2 = shiftLeft(step1, iterationsPerClock);
     return step2;
 }
+
+uint64_t gtry::scl::gcd(uint64_t a, uint64_t b)
+{
+    while (b)
+    {
+        uint64_t t = b;
+        b = a % b;
+        a = t;
+    }
+    return a;
+}

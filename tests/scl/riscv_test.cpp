@@ -24,6 +24,7 @@
 #include <gatery/simulation/waveformFormats/VCDSink.h>
 
 #include <gatery/scl/riscv/riscv.h>
+#include <gatery/scl/algorithm/GCD.h>
 
 #include <queue>
 
@@ -1077,9 +1078,9 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, UnitTestSimulationFixture)
 
 	});
 
-	sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "riscv_load.vcd" };
-	vcd.addAllPins();
-	vcd.addAllNamedSignals();
+	//sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "riscv_load.vcd" };
+	//vcd.addAllPins();
+	//vcd.addAllNamedSignals();
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(clock.getClk(), 512);
@@ -1120,11 +1121,13 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, UnitTestSimulationFixture)
 	avmm.read = Bit{};
 	avmm.readDataValid = reg(*avmm.read, '0');
 	rv.execute(avmm);
+
+	std::random_device rng;
 	
 	Memory<BVec> dmem(1024, 32_b);
 	std::vector<unsigned char> dmemData(4096, 0);
-	dmemData[0] = 50;
-	dmemData[4] = 15;
+	dmemData[0] = (rng() & 0x3F) + 1;
+	dmemData[4] = (rng() & 0x3F) + 1;
 	dmem.setPowerOnState(sim::createDefaultBitVectorState(dmemData.size(), dmemData.data()));
 	auto dport = dmem[avmm.address(2, 10_b)];
 	
@@ -1132,21 +1135,37 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, UnitTestSimulationFixture)
 		dport = *avmm.writeData;
 	*avmm.readData = reg(dport.read());
 	avmm.readData->setName("avmm_readdata");
-	avmm.writeData->setName("avmm_writedata");
 	avmm.read->setName("avmm_read");
-	avmm.write->setName("avmm_write");
-	avmm.address.setName("avmm_address");
 	avmm.readDataValid->setName("avmm_readdatavalid");
 
-	//addSimulationProcess([&]()->SimProcess {
-	//	
-	//});
+	pinOut(avmm.address).setName("avmm_address");
+	pinOut(*avmm.write).setName("avmm_write");
+	pinOut(*avmm.writeData).setName("avmm_writedata");
+
+	uint64_t expectedResult = scl::gcd(dmemData[0], dmemData[4]);
+	size_t timeout = std::max(dmemData[0], dmemData[4]) * 4ull + 32;
+	addSimulationProcess([&]()->SimProcess {
+	
+		bool found = false;
+		for (size_t i = 0; i < timeout; ++i)
+		{
+			co_await WaitClk(clock);
+			if (simu(*avmm.write))
+			{
+				BOOST_TEST(simu(avmm.address) == 8);
+				BOOST_TEST(simu(*avmm.writeData) == expectedResult);
+				found = true;
+			}
+		}
+		BOOST_TEST(found);
+
+	});
 
 	sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "riscv_single_cycle_test.vcd" };
 	vcd.addAllPins();
 	vcd.addAllNamedSignals();
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-	design.visualize("single_cycle_riscv");
-	runTicks(clock.getClk(), 128);
+	//design.visualize("single_cycle_riscv");
+	runTicks(clock.getClk(), timeout + 2);
 }
