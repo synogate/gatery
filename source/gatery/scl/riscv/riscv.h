@@ -58,6 +58,7 @@ namespace gtry::scl::riscv
 	};
 
 
+
 	class RV32I
 	{
 	public:
@@ -125,3 +126,7 @@ namespace gtry::scl::riscv
 
 
 }
+
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::riscv::Instruction, opcode, rd, rs1, rs2, func3, func7, immI, immS, immB, immU, immJ);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::riscv::IntAluResult, sum, zero, overflow, sign, carry);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::riscv::IntAluCtrl, op1, op2, sub);

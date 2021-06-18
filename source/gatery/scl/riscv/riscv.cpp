@@ -65,7 +65,7 @@ void gtry::scl::riscv::RV32I::lui()
 void gtry::scl::riscv::RV32I::auipc()
 {
 	IF(m_instr.opcode == "b00101")
-		setResult(m_instr.immU + m_IP);
+		setResult(m_instr.immU + zext(m_IP));
 }
 
 void gtry::scl::riscv::RV32I::jal()
@@ -74,7 +74,7 @@ void gtry::scl::riscv::RV32I::jal()
 	IF(m_instr.opcode == "b11011")
 	{
 		setResult(m_IPnext);
-		setIP(m_IP + m_instr.immJ);
+		setIP(zext(m_IP) + m_instr.immJ);
 	}
 
 	// JALR
@@ -91,7 +91,7 @@ void gtry::scl::riscv::RV32I::branch()
 {
 	IF(m_instr.opcode == "b11000")
 	{
-		BVec target = m_IP + m_instr.immB;	
+		BVec target = m_IP + m_instr.immB(0, m_IP.getWidth());	
 		
 		m_alu.sub = '1';
 
@@ -229,17 +229,20 @@ void gtry::scl::riscv::RV32I::mem(AvalonMM& mem)
 	IF(m_instr.opcode == "b00000")
 	{
 		m_alu.op2 = m_instr.immI;
-		mem.read = '1';
 
 		Bit readStallState;
 		readStallState = reg(readStallState, '0');
+
+		IF(!readStallState)
+			mem.read = '1';
+
 		IF(*mem.read)
 			readStallState = '1';
 
 		mem.createReadDataValid();
 		IF(*mem.readDataValid)
 			readStallState = '0';
-		setStall(readStallState);
+		setStall(!*mem.readDataValid);
 
 		BVec value = *mem.readData;
 
@@ -290,30 +293,41 @@ void gtry::scl::riscv::IntAluCtrl::result(IntAluResult& out) const
 
 gtry::scl::riscv::SingleCycleI::SingleCycleI(BitWidth instructionAddrWidth, BitWidth dataAddrWidth) :
 	RV32I(instructionAddrWidth, dataAddrWidth),
-	m_stall('0'),
-	m_resultValid('0'),
-	m_resultData(ConstBVec(0, 32_b)),
 	m_resultIP(instructionAddrWidth)
 {
-	m_IP = reg(m_IP, 0);
 
-	IF(!m_stall)
-		m_IP = m_resultIP;
-
-	m_resultIP = m_IPnext;
 }
 
 gtry::Memory<gtry::BVec>& gtry::scl::riscv::SingleCycleI::fetch()
 {
 	m_instructionMem.setup(m_IP.getWidth().count(), 32_b);
-	BVec instruction = reg(m_instructionMem[m_resultIP]);
+
+	BVec instruction = 32_b;
+	IF(!m_stall)
+	{
+		instruction = m_instructionMem[m_resultIP >> 2].read();
+	}
+	instruction = reg(instruction, 0);
+	HCL_NAMED(instruction);
 	m_instr.decode(instruction);
+	HCL_NAMED(m_instr);
+
+	IF(!m_stall)
+		m_IP = m_resultIP;
+
+	m_IP = reg(m_IP, 0);
+	HCL_NAMED(m_IP);
+
+	HCL_NAMED(m_resultIP);
+	m_resultIP = m_IPnext;
+
 	return m_instructionMem;
 }
 
 gtry::BVec gtry::scl::riscv::SingleCycleI::fetch(const BVec& instruction)
 {
 	m_instr.decode(instruction);
+	HCL_NAMED(m_instr);
 	return m_resultIP;
 }
 
@@ -322,27 +336,44 @@ void gtry::scl::riscv::SingleCycleI::fetchOperands(BitWidth regAddrWidth)
 	m_rf.setup(regAddrWidth.count(), 32_b);
 	m_rf.setPowerOnStateZero();
 
+	m_r1 = m_rf[m_instr.rs1(0, regAddrWidth)];
+	m_r2 = m_rf[m_instr.rs2(0, regAddrWidth)];
+	HCL_NAMED(m_r1);
+	HCL_NAMED(m_r2);
+
+	HCL_NAMED(m_alu);
+	m_alu.result(m_aluResult);
+	HCL_NAMED(m_aluResult);
+
+	m_alu.op1 = m_r1;
+	m_alu.op2 = m_r2;
+	m_alu.sub = '0';
+
 	// this should move into write back (requires write before read policy)
+	HCL_NAMED(m_resultData);
+	HCL_NAMED(m_resultValid);
+	HCL_NAMED(m_stall);
 	IF(m_resultValid & !m_stall & m_instr.rd != 0)
 		m_rf[m_instr.rd(0, regAddrWidth)] = m_resultData;
 
-	m_r1 = m_rf[m_instr.rs1(0, regAddrWidth)];
-	m_r2 = m_rf[m_instr.rs2(0, regAddrWidth)];
+	m_resultData = 0;
+	m_resultValid = '0';
+	m_stall = '0';
 }
 
 
 void gtry::scl::riscv::SingleCycleI::setIP(const BVec& ip)
 {
-	m_resultIP = ip;
+	m_resultIP = ip(0, m_IP.getWidth());
 }
 
 void gtry::scl::riscv::SingleCycleI::setResult(const BVec& result)
 {
 	m_resultValid = '1';
-	m_resultData = result;
+	m_resultData = zext(result);
 }
 
 void gtry::scl::riscv::SingleCycleI::setStall(const Bit& wait)
 {
-	m_stall = wait;
+	m_stall |= wait;
 }
