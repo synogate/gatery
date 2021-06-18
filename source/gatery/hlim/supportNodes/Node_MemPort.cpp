@@ -146,7 +146,7 @@ void Node_MemPort::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
     }
 
     // First, do an asynchronous read.
-    if (outputOffsets[(unsigned)Outputs::rdData] != 0ull) {
+    if (outputOffsets[(unsigned)Outputs::rdData] != ~0ull) {
 
         // If not enabled (or undefined) output undefined since this is an asynchronous read. For synchronous (BRAM) behavior,
         // the register after the read ports holds the read value on a disabled read.
