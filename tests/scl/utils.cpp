@@ -28,12 +28,12 @@
 #include <gatery/hlim/supportNodes/Node_SignalGenerator.h>
 
 
+using namespace gtry;
+using namespace gtry::scl;
 using namespace boost::unit_test;
 
 BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, BitCountTest, data::xrange(255) * data::xrange(1, 8), val, bitsize)
 {
-    using namespace gtry;
-    
     DesignScope design;
 
     BVec a = ConstBVec(val, BitWidth{ uint64_t(bitsize) });
@@ -51,9 +51,6 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, BitCountTest, data:
 
 BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, Decoder, data::xrange(3), val)
 {
-    using namespace gtry;
-    using namespace gtry::scl;
-
     DesignScope design;
 
     OneHot result = decoder(ConstBVec(val, 2_b));
@@ -74,9 +71,6 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, Decoder, data::xran
 
 BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, ListEncoder, data::xrange(3), val)
 {
-    using namespace gtry;
-    using namespace gtry::scl;
-
     DesignScope design;
 
     OneHot result = decoder(ConstBVec(val, 2_b));
@@ -102,9 +96,6 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, ListEncoder, data::
 
 BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, PriorityEncoderTreeTest, data::xrange(65), val)
 {
-    using namespace gtry;
-    using namespace gtry::scl;
-
     DesignScope design;
 
     uint64_t testVector = 1ull << val;
@@ -124,4 +115,52 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, PriorityEncoderTree
     }
 
     eval(design.getCircuit());
+}
+
+BOOST_FIXTURE_TEST_CASE(addWithCarry, UnitTestSimulationFixture)
+{
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    ClockScope clkScp(clock);
+
+    BVec a = pinIn(4_b).setName("a");
+    BVec b = pinIn(4_b).setName("b");
+    Bit cin = pinIn().setName("cin");
+
+    auto [sum, carry] = add(a, b, cin);
+    pinOut(sum).setName("sum");
+    pinOut(carry).setName("carry");
+
+    addSimulationProcess([&]()->SimProcess {
+
+        for (size_t carryMode = 0; carryMode < 2; ++carryMode)
+        {
+            simu(cin) = carryMode;
+
+            for (size_t i = 0; i < a.getWidth().count(); ++i)
+            {
+                simu(a) = i;
+            
+                for (size_t j = 0; j < b.getWidth().count(); ++j)
+                {
+                    simu(b) = j;
+                    co_await WaitClk(clock);
+
+                    size_t expectedSum = (i + j + carryMode) & sum.getWidth().mask();
+                    BOOST_TEST(simu(sum) == expectedSum);
+
+                    size_t expectedCarry = 0;
+                    for (size_t k = 0; k < carry.getWidth().value; ++k)
+                    {
+                        size_t mask = (1ull << k + 1) - 1;
+                        size_t subsum = (i & mask) + (j & mask) + carryMode;
+                        expectedCarry |= (subsum & ~mask) >> 1;
+                    }
+                    BOOST_TEST(simu(carry) == expectedCarry);
+                }
+            }
+        }
+    });
+
+    design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+    runTicks(clock.getClk(), 2048);
 }

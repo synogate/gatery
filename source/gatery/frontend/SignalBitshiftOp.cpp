@@ -17,8 +17,12 @@
 */
 #include "gatery/pch.h"
 #include "SignalBitshiftOp.h"
+#include "SignalLogicOp.h"
+#include "ConditionalScope.h"
+#include "Pack.h"
 
 #include <gatery/hlim/coreNodes/Node_Shift.h>
+
 
 namespace gtry {
 
@@ -150,6 +154,28 @@ static BVec internal_shift(const BVec& signal, const BVec& amount, hlim::Node_Sh
     node->connectOperand(signal.getReadPort());
     node->connectAmount(amount.getReadPort());
     return SignalReadPort(node);
+}
+
+BVec shr(const BVec& signal, size_t amount, const Bit& arithmetic)
+{
+    Bit inShift = arithmetic & signal.msb();
+
+    BVec shiftedHigh = sext(inShift, amount - 1);
+    BVec shiftedLow = signal(amount, signal.getWidth() - amount);
+    return pack(shiftedHigh, shiftedLow);
+}
+
+BVec shr(const BVec& signal, const BVec& amount, const Bit& arithmetic)
+{
+    HCL_DESIGNCHECK_HINT(signal.size() == amount.getWidth().count(), "not implpemented");
+
+    BVec acc = signal;
+    for (size_t i = 0; i < amount.getWidth().value; ++i)
+    {
+        IF(amount[i])
+            acc = shr(acc, 1ull << i, arithmetic);
+    }
+    return acc;
 }
 
 BVec zshl(const BVec& signal, const BVec& amount)

@@ -185,6 +185,7 @@ namespace gtry::scl
 		if (read) gtry::pinOut(*read).setName(pinName + "read");
 		if (write) gtry::pinOut(*write).setName(pinName + "write");
 		if (writeData) gtry::pinOut(*writeData).setName(pinName + "writedata");
+		if (byteEnable) gtry::pinOut(*byteEnable).setName(pinName + "byteenable");
 
 		// input pins
 		if (ready) *ready = gtry::pinIn().setName(pinName + "waitrequest_n");

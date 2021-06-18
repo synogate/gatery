@@ -182,7 +182,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
             std::cout << "nodesRemaining : " << nodesRemaining.size() << std::endl;
 
             for (auto node : nodesRemaining) {
-                std::cout << node->getName() << "  " << node->getTypeName() << "  " << std::hex << (size_t)node << std::endl;
+                std::cout << node->getName() << " - " << std::dec << node->getId()  << " -  " << node->getTypeName() << "  " << std::hex << (size_t)node << std::endl;
                 for (auto i : utils::Range(node->getNumInputPorts())) {
                     auto driver = node->getNonSignalDriver(i);
                     while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) // Skip all export override nodes
@@ -192,6 +192,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
                         std::cout << "        " << driver.node->getName() << "  " << driver.node->getTypeName() << "  " << std::hex << (size_t)driver.node << std::endl;
                     }
                 }
+                std::cout << "  stack trace:" << std::endl << node->getStackTrace() << std::endl;
             }
         }
 

@@ -34,6 +34,7 @@ namespace gtry
 
 		constexpr uint64_t count() const { return 1ull << value; }
 		constexpr uint64_t last() const { return count() - 1; }
+		constexpr uint64_t mask() const { return (value == 64) ? -1 : (1ull << value) - 1; }
 		constexpr size_t numBeats(BitWidth beatSize) const { return (value + beatSize.value - 1) / beatSize.value; }
 
 		constexpr bool divisibleBy(uint64_t divisor) const { return value % divisor == 0; }
@@ -74,7 +75,7 @@ namespace gtry
 	inline BitWidth operator * (uint64_t l, BitWidth r) { return BitWidth{ l * r.value }; }
 
 	inline uint64_t operator / (BitWidth l, BitWidth r) { HCL_DESIGNCHECK(l.divisibleBy(r)); return l.value / r.value; }
-	inline uint64_t operator / (BitWidth l, uint64_t r) { HCL_DESIGNCHECK(l.divisibleBy(r)); return l.value / r; }
+	inline BitWidth operator / (BitWidth l, uint64_t r) { HCL_DESIGNCHECK(l.divisibleBy(r)); return BitWidth{ l.value / r }; }
 	inline uint64_t operator / (uint64_t l, BitWidth r) { HCL_DESIGNCHECK(BitWidth{ l }.divisibleBy(r)); return l / r.value; }
 
 	inline std::ostream& operator << (std::ostream& s, BitWidth width) 

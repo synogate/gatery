@@ -44,6 +44,7 @@ namespace gtry::scl
         std::optional<Bit> readDataValid;
         std::optional<BVec> response;
         std::optional<Bit> writeResponseValid;
+        std::optional<BVec> byteEnable;
 
         size_t readLatency = 0;
         size_t readyLatency = 0;
