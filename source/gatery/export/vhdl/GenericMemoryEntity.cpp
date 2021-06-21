@@ -125,7 +125,47 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
     stream << "TYPE mem_type IS array(NUM_WORDS-1 downto 0) of mem_word_type;\n";
 
     cf.indent(stream, 1);
-    stream << "SIGNAL memory : mem_type;\n";
+    stream << "SIGNAL memory : mem_type := (\n";
+
+    {
+        auto memorySize = m_memGrp->getMemory()->getSize();
+
+        std::set<size_t> portSizes;
+
+        for (auto &wp : m_memGrp->getWritePorts())
+            portSizes.insert(wp.node->getBitWidth());
+
+        for (auto &rp : m_memGrp->getReadPorts())
+            portSizes.insert(rp.node->getBitWidth());
+
+        HCL_ASSERT_HINT(portSizes.size() == 1, "Memory with mixed port sizes not yet supported!");
+
+        size_t wordSize = *portSizes.begin();
+
+        HCL_ASSERT_HINT(memorySize % wordSize == 0, "Memory size is not a multiple of the word size!");
+
+        const auto &powerOnState = m_memGrp->getMemory()->getPowerOnState();
+        unsigned indent = 2;
+
+        for (auto i : utils::Range(memorySize/wordSize)) {
+            cf.indent(stream, indent);
+            stream << i << " => \"";
+            for (auto j : utils::Range(wordSize)) {
+                bool defined = powerOnState.get(gtry::sim::DefaultConfig::DEFINED, i*wordSize + wordSize-1-j);
+                bool value = powerOnState.get(gtry::sim::DefaultConfig::VALUE, i*wordSize + wordSize-1-j);
+                if (!defined)
+                    stream << 'x';
+                else
+                    if (value)
+                        stream << '1';
+                    else
+                        stream << '0';
+            }
+            stream << "\",\n";
+        }
+    }
+    cf.indent(stream, 2);
+    stream << "others => (others => 'X'));\n";
 
     /*
     Xilinx:
@@ -176,47 +216,6 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
         else
             clocks[nullptr].readPorts.push_back(rp);
 
-    // If ROM, initialize in combinatorial process
-    if (m_memGrp->getWritePorts().empty()) {
-
-        auto memorySize = m_memGrp->getMemory()->getSize();
-
-        std::set<size_t> portSizes;
-
-        for (auto &wp : m_memGrp->getWritePorts())
-            portSizes.insert(wp.node->getBitWidth());
-
-        for (auto &rp : m_memGrp->getReadPorts())
-            portSizes.insert(rp.node->getBitWidth());
-
-        HCL_ASSERT_HINT(portSizes.size() == 1, "Memory with mixed port sizes not yet supported!");
-
-        size_t wordSize = *portSizes.begin();
-
-        HCL_ASSERT_HINT(memorySize % wordSize == 0, "Memory size is not a multiple of the word size!");
-
-        const auto &powerOnState = m_memGrp->getMemory()->getPowerOnState();
-        unsigned indent = 1;
-
-        for (auto i : utils::Range(memorySize/wordSize)) {
-            cf.indent(stream, indent);
-            stream << "memory("<<i<<") <= \"";
-            for (auto j : utils::Range(wordSize)) {
-                bool defined = powerOnState.get(gtry::sim::DefaultConfig::DEFINED, i*wordSize + wordSize-1-j);
-                bool value = powerOnState.get(gtry::sim::DefaultConfig::VALUE, i*wordSize + wordSize-1-j);
-                if (!defined)
-                    stream << 'x';
-                else
-                    if (value)
-                        stream << '1';
-                    else
-                        stream << '0';
-            }
-            stream << "\";\n";
-        }
-        stream << "\n";
-    }
-
     for (auto clock : clocks) {
         if (clock.first != nullptr) {
             unsigned indent = 1;
@@ -256,7 +255,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                     auto dataPort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrData);
 
                     cf.indent(stream, indent);
-                    stream << "memory(to_integer(" << m_namespaceScope.getName(addrPort) << ") mod NUM_WORDS) <= " << m_namespaceScope.getName(dataPort) << ";\n";
+                    stream << "memory(to_integer(" << m_namespaceScope.getName(addrPort) << ")) <= " << m_namespaceScope.getName(dataPort) << ";\n";
 
                     if (enablePort.node != nullptr) {
                         indent--;
@@ -282,7 +281,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                     } else {
                         stream << m_namespaceScope.getName(dataPort) << "_outputReg";
                     }
-                    stream << " <= memory(to_integer(" << m_namespaceScope.getName(addrPort) << ") mod NUM_WORDS);\n";
+                    stream << " <= memory(to_integer(" << m_namespaceScope.getName(addrPort) << "));\n";
 
                     if (enablePort.node != nullptr) {
                         indent--;
@@ -374,7 +373,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                     auto dataPort = rp.dataOutput;
 
                     cf.indent(stream, indent);
-                    stream << m_namespaceScope.getName(dataPort) << " <= memory(to_integer(" << m_namespaceScope.getName(addrPort) << ") mod NUM_WORDS);\n";
+                    stream << m_namespaceScope.getName(dataPort) << " <= memory(to_integer(" << m_namespaceScope.getName(addrPort) << "));\n";
 
                     if (enablePort.node != nullptr) {
                         indent--;
