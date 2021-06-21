@@ -148,20 +148,29 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
         unsigned indent = 2;
 
         for (auto i : utils::Range(memorySize/wordSize)) {
-            cf.indent(stream, indent);
-            stream << i << " => \"";
-            for (auto j : utils::Range(wordSize)) {
-                bool defined = powerOnState.get(gtry::sim::DefaultConfig::DEFINED, i*wordSize + wordSize-1-j);
-                bool value = powerOnState.get(gtry::sim::DefaultConfig::VALUE, i*wordSize + wordSize-1-j);
-                if (!defined)
-                    stream << 'x';
-                else
-                    if (value)
-                        stream << '1';
+            bool anyDefined = false;
+            for (auto j : utils::Range(wordSize))
+                if (powerOnState.get(gtry::sim::DefaultConfig::DEFINED, i*wordSize + wordSize-1-j)) {
+                    anyDefined = true;
+                    break;
+                }
+
+            if (anyDefined) {
+                cf.indent(stream, indent);
+                stream << i << " => \"";
+                for (auto j : utils::Range(wordSize)) {
+                    bool defined = powerOnState.get(gtry::sim::DefaultConfig::DEFINED, i*wordSize + wordSize-1-j);
+                    bool value = powerOnState.get(gtry::sim::DefaultConfig::VALUE, i*wordSize + wordSize-1-j);
+                    if (!defined)
+                        stream << 'x';
                     else
-                        stream << '0';
+                        if (value)
+                            stream << '1';
+                        else
+                            stream << '0';
+                }
+                stream << "\",\n";
             }
-            stream << "\",\n";
         }
     }
     cf.indent(stream, 2);
