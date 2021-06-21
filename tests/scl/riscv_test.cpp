@@ -1111,7 +1111,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, UnitTestSimulationFixture)
 
 	scl::riscv::SingleCycleI rv(8_b, 32_b);
 	Memory<BVec>& imem = rv.fetch();
-	imem.setPowerOnState(sim::createDefaultBitVectorState(gcd_bin_len, gcd_bin));
+	imem.fillPowerOnState(sim::createDefaultBitVectorState(gcd_bin_len, gcd_bin));
 	rv.fetchOperands();
 
 	scl::AvalonMM avmm;
@@ -1128,7 +1128,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, UnitTestSimulationFixture)
 	std::vector<unsigned char> dmemData(4096, 0);
 	dmemData[0] = (rng() & 0x3F) + 1;
 	dmemData[4] = (rng() & 0x3F) + 1;
-	dmem.setPowerOnState(sim::createDefaultBitVectorState(dmemData.size(), dmemData.data()));
+	dmem.fillPowerOnState(sim::createDefaultBitVectorState(dmemData.size(), dmemData.data()));
 	auto dport = dmem[avmm.address(2, 10_b)];
 	
 	IF(*avmm.write)

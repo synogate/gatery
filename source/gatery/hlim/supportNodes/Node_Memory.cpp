@@ -52,6 +52,18 @@ namespace gtry::hlim {
         m_powerOnState = std::move(powerOnState);
     }
 
+    void  Node_Memory::fillPowerOnState(sim::DefaultBitVectorState powerOnState) 
+    {
+        HCL_DESIGNCHECK_HINT(powerOnState.size() <= m_powerOnState.size(), "Power-on state does not fit into memory!");
+        if (powerOnState.size() == m_powerOnState.size())
+            m_powerOnState = std::move(powerOnState);
+        else {
+            m_powerOnState.copyRange(0, powerOnState, 0, powerOnState.size());
+            m_powerOnState.clearRange(sim::DefaultConfig::DEFINED, powerOnState.size(), m_powerOnState.size()-powerOnState.size());
+        }
+    }
+
+
     void Node_Memory::simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
     {
         state.copyRange(internalOffsets[0], m_powerOnState, 0, m_powerOnState.size());

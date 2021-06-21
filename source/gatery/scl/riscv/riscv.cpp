@@ -301,6 +301,7 @@ gtry::scl::riscv::SingleCycleI::SingleCycleI(BitWidth instructionAddrWidth, BitW
 gtry::Memory<gtry::BVec>& gtry::scl::riscv::SingleCycleI::fetch()
 {
 	m_instructionMem.setup(m_IP.getWidth().count(), 32_b);
+	m_instructionMem.setType(MemType::LUTRAM);
 
 	BVec instruction = 32_b;
 	IF(!m_stall)

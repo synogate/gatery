@@ -128,7 +128,7 @@ namespace gtry {
             void noConflicts() { m_memoryNode->setNoConflicts(); }
             bool valid() { return m_memoryNode != nullptr; }
 
-            void setPowerOnState(sim::DefaultBitVectorState powerOnState) { m_memoryNode->setPowerOnState(std::move(powerOnState)); }
+            void fillPowerOnState(sim::DefaultBitVectorState powerOnState) { m_memoryNode->fillPowerOnState(std::move(powerOnState)); }
             void setPowerOnStateZero() {
                 auto &state = m_memoryNode->getPowerOnState();
                 state.clearRange(sim::DefaultConfig::VALUE, 0, state.size());
