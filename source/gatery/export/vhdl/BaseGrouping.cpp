@@ -27,6 +27,8 @@
 #include "../../hlim/Clock.h"
 #include "../../frontend/SynthesisTool.h"
 
+#include <iostream>
+
 namespace gtry::vhdl {
 
 BaseGrouping::BaseGrouping(AST &ast, BaseGrouping *parent, NamespaceScope *parentNamespace) : 
@@ -182,6 +184,20 @@ void BaseGrouping::declareLocalSignals(std::ostream &stream, bool asVariables, u
             if (const auto *attrib = dynamic_cast<const hlim::Node_Attributes*>(nh.node())) {
                 m_ast.getSynthesisTool().resolveAttributes(attrib->getAttribs(), resolvedAttribs);
             } else if (!nh.isSignal()) nh.backtrack();
+
+            if (nh.node() == signal.node) {
+
+                std::cout << "Loop: " << std::endl;
+                hlim::BaseNode* n = nh.node();
+                do {
+                    std::cout << n->getName() << " - " << n->getId() << " - " << n->getTypeName() << std::endl;
+                    std::cout << n->getStackTrace() << std::endl << std::endl;
+                    n = n->getDriver(0).node;
+                } while (n != signal.node);
+
+
+                HCL_DESIGNCHECK_HINT(false, "Loop detected!");
+            }
         }
 
         // write out all attribs
