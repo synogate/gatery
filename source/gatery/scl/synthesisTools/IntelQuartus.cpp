@@ -75,6 +75,12 @@ void IntelQuartus::resolveAttributes(const hlim::SignalAttributes &attribs, hlim
 	if (attribs.maxFanout != 0) 
 		resolvedAttribs.insert({"maxfan", {"integer", std::to_string(attribs.maxFanout)}});
 
+	if (attribs.crossingClockDomain)
+		resolvedAttribs.insert({"keep", {"boolean", "true"}});
+
+	if (!attribs.allowFusing)
+		resolvedAttribs.insert({"keep", {"boolean", "true"}});
+
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }
 

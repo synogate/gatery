@@ -22,6 +22,7 @@
 
 #include "AST.h"
 #include "Package.h"
+#include "Process.h"
 
 #include "../../hlim/Clock.h"
 #include "../../hlim/coreNodes/Node_Pin.h"
@@ -287,5 +288,49 @@ Entity *Entity::getParentEntity()
     }
     return nullptr;
 }
+
+bool Entity::findLocalDeclaration(hlim::NodePort driver, std::vector<BaseGrouping*> &reversePath)
+{
+    if (BaseGrouping::findLocalDeclaration(driver, reversePath))
+        return true;
+    
+    for (auto &p : m_processes) {
+        if (p->findLocalDeclaration(driver, reversePath)) {
+            reversePath.push_back(this);
+            return true;
+        }
+    }
+
+    for (auto &e : m_entities) {
+        if (e->findLocalDeclaration(driver, reversePath)) {
+            reversePath.push_back(this);
+            return true;
+        }
+    }
+
+    for (auto &b : m_blocks) {
+        if (b->findLocalDeclaration(driver, reversePath)) {
+            reversePath.push_back(this);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+std::string Entity::getInstanceName()
+{
+    if (m_parent == nullptr) return "";
+
+    /// @todo: This is ugly
+    // We don't track instance names, so loop over all entities of parent until we find ourselves and check what instance name is being used.
+    auto *pbb = (const BasicBlock*) m_parent;
+    for (auto i : utils::Range(pbb->getSubEntities().size()))
+        if (pbb->getSubEntities()[i] == this)
+            return pbb->getSubEntityInstanceNames()[i];
+
+    HCL_ASSERT_HINT(false, "Did not find entity instantiation in parent's list of entities!");
+}
+
 
 }

@@ -41,6 +41,7 @@ class Node_MemPort;
 class Node_Default;
 class Node_ExportOverride;
 class Node_Attributes;
+class Node_PathAttributes;
     
 class NodeVisitor
 {
@@ -65,6 +66,7 @@ class NodeVisitor
         virtual void operator()(Node_Default &node) = 0;
         virtual void operator()(Node_ExportOverride &node) = 0;
         virtual void operator()(Node_Attributes &node) = 0;
+        virtual void operator()(Node_PathAttributes &node) = 0;
 };
 
 class ConstNodeVisitor
@@ -90,6 +92,7 @@ class ConstNodeVisitor
         virtual void operator()(const Node_Default &node) = 0;
         virtual void operator()(const Node_ExportOverride &node) = 0;
         virtual void operator()(const Node_Attributes &node) = 0;
+        virtual void operator()(const Node_PathAttributes &node) = 0;
 };
 
 

@@ -50,7 +50,11 @@ class Entity : public BasicBlock
 
         Entity *getParentEntity();
 
+        virtual bool findLocalDeclaration(hlim::NodePort driver, std::vector<BaseGrouping*> &reversePath) override;
+
         inline const std::vector<std::unique_ptr<Block>> &getBlocks() const { return m_blocks; }
+
+        virtual std::string getInstanceName() override;
     protected:
         std::vector<std::unique_ptr<Block>> m_blocks;
 

@@ -134,6 +134,28 @@ void BasicBlock::allocateNames()
         ent->allocateNames();
 }
 
+bool BasicBlock::findLocalDeclaration(hlim::NodePort driver, std::vector<BaseGrouping*> &reversePath)
+{
+    
+    if (BaseGrouping::findLocalDeclaration(driver, reversePath))
+        return true;
+    
+    for (auto &p : m_processes) {
+        if (p->findLocalDeclaration(driver, reversePath)) {
+            reversePath.push_back(this);
+            return true;
+        }
+    }
+
+    for (auto &e : m_entities) {
+        if (e->findLocalDeclaration(driver, reversePath)) {
+            reversePath.push_back(this);
+            return true;
+        }
+    }
+
+    return false;
+}
 
 void BasicBlock::routeChildIOUpwards(BaseGrouping *child)
 {

@@ -119,4 +119,12 @@ std::vector<Entity*> AST::getDependencySortedEntities()
     return {reverseList.rbegin(), reverseList.rend()};
 }
 
+bool AST::findLocalDeclaration(hlim::NodePort driver, std::vector<BaseGrouping*> &reversePath)
+{
+    if (m_entities.empty()) return false;
+
+    return m_entities.front()->findLocalDeclaration(driver, reversePath);
+}
+
+
 }

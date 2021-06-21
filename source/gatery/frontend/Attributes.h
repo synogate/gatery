@@ -25,8 +25,12 @@ class Bit;
 class BVec;
 
 using hlim::SignalAttributes;
+using hlim::PathAttributes;
 
 void setAttrib(Bit &bit, SignalAttributes attributes);
 void setAttrib(BVec &bvec, SignalAttributes attributes);
+
+void setPathAttrib(Bit &start, Bit &end, PathAttributes attributes);
+void setPathAttrib(BVec &start, BVec &end, PathAttributes attributes);
 
 }

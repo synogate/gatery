@@ -67,6 +67,15 @@ void Synopsys::resolveAttributes(const hlim::SignalAttributes &attribs, hlim::Re
 	if (attribs.maxFanout != 0) 
 		resolvedAttribs.insert({"syn_maxfan", {"integer", std::to_string(attribs.maxFanout)}});
 
+	if (attribs.crossingClockDomain)
+		resolvedAttribs.insert({"keep", {"boolean", "true"}});
+		// syn_replicate ?
+
+	if (!attribs.allowFusing) {
+		resolvedAttribs.insert({"alspreserve", {"boolean", "true"}});
+		resolvedAttribs.insert({"syn_keep", {"boolean", "true"}});
+	}
+
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }
 

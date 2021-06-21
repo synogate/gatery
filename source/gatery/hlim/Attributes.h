@@ -42,8 +42,8 @@ struct SignalAttributes : public Attributes {
 	size_t maxFanout = 0; 
 	/// Signal crosses a clock domain
 	bool crossingClockDomain = false;
-	/// Whether the signal may be removed (if e.g. unsused) or fused (e.g. regs to shiftregs)
-	bool allowRemoval = true;
+	/// Whether the signal may be fused away (e.g. signal between regs to shiftreg)
+	bool allowFusing = true;
 };
 
 struct RegisterAttributes : public Attributes {
@@ -65,6 +65,12 @@ struct RegisterAttributes : public Attributes {
 
 	UsageType registerResetPinUsage = UsageType::DONT_CARE;
 	UsageType registerEnablePinUsage = UsageType::DONT_CARE;
+};
+
+// all used defined attributes ignore type and value and replace $src and $dst in the attrib name with source and destination cells
+struct PathAttributes : public Attributes {
+	size_t multiCycle = 0; 
+	bool falsePath = false;
 };
 
 }

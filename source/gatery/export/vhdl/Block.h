@@ -38,6 +38,8 @@ class Block : public BasicBlock
         void buildFrom(hlim::NodeGroup *nodeGroup);
         
         void writeVHDL(std::ostream &stream);
+
+        virtual std::string getInstanceName() override { return m_name; }
     protected:
         
 };
