@@ -22,9 +22,11 @@
 #include <boost/test/data/monomorphic.hpp>
 
 #include <gatery/simulation/waveformFormats/VCDSink.h>
+#include <gatery/export/vhdl/VHDLExport.h>
 
 #include <gatery/scl/riscv/riscv.h>
 #include <gatery/scl/algorithm/GCD.h>
+#include <gatery/scl/io/uart.h>
 
 #include <queue>
 
@@ -223,11 +225,7 @@ public:
 		m_r1 = pinIn(32_b).setName("r1");
 		m_r2 = pinIn(32_b).setName("r2");
 
-		HCL_NAMED(m_alu);
-		m_alu.result(m_aluResult);
-		m_alu.op1 = m_r1;
-		m_alu.op2 = m_r2;
-		m_alu.sub = '0';
+		setupAlu();
 		
 		pinOut(m_aluResult.sum).setName("alu_sum");
 		pinOut(m_aluResult.carry).setName("alu_carry");
@@ -1120,7 +1118,8 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, UnitTestSimulationFixture)
 
 	avmm.read = Bit{};
 	avmm.readDataValid = reg(*avmm.read, '0');
-	rv.execute(avmm);
+	rv.execute();
+	rv.mem(avmm);
 
 	std::random_device rng;
 	
@@ -1167,5 +1166,90 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, UnitTestSimulationFixture)
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	//design.visualize("single_cycle_riscv");
-	runTicks(clock.getClk(), timeout + 2);
+	runTicks(clock.getClk(), (uint32_t)timeout + 2);
 }
+
+// hello world demo
+#if 0
+
+BOOST_FIXTURE_TEST_CASE(riscv_single_cycle_export, UnitTestSimulationFixture)
+{
+	unsigned char linked_text[] = {
+	  0x13, 0x00, 0x00, 0x00, 0xb7, 0x07, 0x00, 0x80, 0x03, 0xa1, 0x07, 0x10,
+	  0xef, 0x00, 0xc0, 0x02, 0x6f, 0x00, 0x00, 0x00, 0x23, 0x20, 0xa0, 0x00,
+	  0x13, 0x07, 0x00, 0x00, 0x6f, 0x00, 0xc0, 0x00, 0x13, 0x00, 0x00, 0x00,
+	  0x13, 0x07, 0x17, 0x00, 0xb7, 0x27, 0x00, 0x00, 0x93, 0x87, 0xf7, 0x70,
+	  0xe3, 0xf8, 0xe7, 0xfe, 0x67, 0x80, 0x00, 0x00, 0x13, 0x01, 0x01, 0xff,
+	  0x23, 0x26, 0x11, 0x00, 0x6f, 0x00, 0x80, 0x01, 0x13, 0x07, 0x17, 0x00,
+	  0xb7, 0xc7, 0x2d, 0x00, 0x93, 0x87, 0xf7, 0x6b, 0xe3, 0xfa, 0xe7, 0xfe,
+	  0x13, 0x00, 0x00, 0x00, 0x13, 0x05, 0x80, 0x04, 0xef, 0xf0, 0x9f, 0xfb,
+	  0x13, 0x05, 0x50, 0x06, 0xef, 0xf0, 0x1f, 0xfb, 0x13, 0x05, 0xc0, 0x06,
+	  0xef, 0xf0, 0x9f, 0xfa, 0x13, 0x05, 0xc0, 0x06, 0xef, 0xf0, 0x1f, 0xfa,
+	  0x13, 0x05, 0xf0, 0x06, 0xef, 0xf0, 0x9f, 0xf9, 0x13, 0x05, 0x00, 0x02,
+	  0xef, 0xf0, 0x1f, 0xf9, 0x13, 0x05, 0x70, 0x05, 0xef, 0xf0, 0x9f, 0xf8,
+	  0x13, 0x05, 0xf0, 0x06, 0xef, 0xf0, 0x1f, 0xf8, 0x13, 0x05, 0x20, 0x07,
+	  0xef, 0xf0, 0x9f, 0xf7, 0x13, 0x05, 0xc0, 0x06, 0xef, 0xf0, 0x1f, 0xf7,
+	  0x13, 0x05, 0x40, 0x06, 0xef, 0xf0, 0x9f, 0xf6, 0x13, 0x05, 0x10, 0x02,
+	  0xef, 0xf0, 0x1f, 0xf6, 0x13, 0x05, 0xa0, 0x00, 0xef, 0xf0, 0x9f, 0xf5,
+	  0x13, 0x07, 0x00, 0x00, 0x6f, 0xf0, 0x5f, 0xf8
+	};
+	unsigned int linked_text_len = 200;
+	{
+		Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000'000).setName("clock").setResetHighActive(false));
+		ClockScope clkScp(clock);
+
+		scl::riscv::SingleCycleI rv(8_b, 32_b);
+		Memory<BVec>& imem = rv.fetch();
+		imem.fillPowerOnState(sim::createDefaultBitVectorState(linked_text_len, linked_text));
+		rv.fetchOperands();
+
+		scl::AvalonMM avmm;
+		avmm.readLatency = 1;
+		avmm.readData = 32_b;
+		avmm.read = Bit{};
+		avmm.readDataValid = reg(*avmm.read, '0');
+		rv.execute();
+		rv.mem(avmm, false, false);
+
+		Memory<BVec> dmem(1024, 32_b);
+		dmem.noConflicts();
+		std::vector<unsigned char> dmemData(4096, 0);
+		//dmemData[0] = (rng() & 0x3F) + 1;
+		//dmemData[4] = (rng() & 0x3F) + 1;
+		//dmem.setPowerOnState(sim::createDefaultBitVectorState(dmemData.size(), dmemData.data()));
+		auto dport = dmem[avmm.address(2, 10_b)];
+
+		scl::UART::Stream uart_tx;
+		uart_tx.valid = '0';
+		uart_tx.data = (*avmm.writeData)(0, 8_b);
+
+		*avmm.readData = reg(dport.read());
+		IF(*avmm.write)
+		{
+			IF(avmm.address == 0)
+			{
+				pinOut(reg(~(*avmm.writeData)(0, 8_b), 0)).setName("led");
+				uart_tx.valid = '1';
+			}
+
+			dport = *avmm.writeData;
+		}
+
+		//IF(avmm.address == 0)
+		//	avmm.readData = zext(reg(pinIn(2_b).setName("sw")));
+		//avmm.readData = reg(*avmm.readData, 0);
+
+		scl::UART uart;
+		Bit uart_tx_pin = uart.send(uart_tx);
+		pinOut(uart_tx_pin).setName("uart_tx");
+	}
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.visualize("scrv32i");
+
+	vhdl::VHDLExport vhdl("rv32i_gcd");
+	vhdl(design.getCircuit());
+
+}
+
+#endif

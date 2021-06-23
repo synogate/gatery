@@ -38,13 +38,17 @@ void gtry::scl::riscv::Instruction::decode(const BVec& inst)
 
 gtry::scl::riscv::RV32I::RV32I(BitWidth instructionAddrWidth, BitWidth dataAddrWidth) :
 	m_IP(instructionAddrWidth),
-	m_dataAddrWidth(dataAddrWidth)
+	m_dataAddrWidth(dataAddrWidth),
+	m_area{"rv32i"}
 {
+	auto ent = m_area.enter();
 	m_IPnext = m_IP + 4;
 }
 
-void gtry::scl::riscv::RV32I::execute(AvalonMM& m)
+void gtry::scl::riscv::RV32I::execute()
 {
+	auto entRV = m_area.enter("execute");
+
 	lui();
 	auipc();
 	jal();
@@ -53,7 +57,6 @@ void gtry::scl::riscv::RV32I::execute(AvalonMM& m)
 	logic();
 	setcmp();
 	shift();
-	mem(m);
 }
 
 void gtry::scl::riscv::RV32I::lui()
@@ -65,7 +68,10 @@ void gtry::scl::riscv::RV32I::lui()
 void gtry::scl::riscv::RV32I::auipc()
 {
 	IF(m_instr.opcode == "b00101")
+	{
+		auto entAuipc = Area{"auipc"}.enter();
 		setResult(m_instr.immU + zext(m_IP));
+	}
 }
 
 void gtry::scl::riscv::RV32I::jal()
@@ -73,6 +79,7 @@ void gtry::scl::riscv::RV32I::jal()
 	// JAL
 	IF(m_instr.opcode == "b11011")
 	{
+		auto ent = Area{ "jal" }.enter();
 		setResult(m_IPnext);
 		setIP(zext(m_IP) + m_instr.immJ);
 	}
@@ -80,6 +87,7 @@ void gtry::scl::riscv::RV32I::jal()
 	// JALR
 	IF(m_instr.opcode == "b11001")
 	{
+		auto ent = Area{ "jalr" }.enter();
 		m_alu.op2 = m_instr.immI;
 
 		setResult(m_IPnext);
@@ -91,7 +99,8 @@ void gtry::scl::riscv::RV32I::branch()
 {
 	IF(m_instr.opcode == "b11000")
 	{
-		BVec target = m_IP + m_instr.immB(0, m_IP.getWidth());	
+		auto ent = Area{ "branch" }.enter();
+		BVec target = m_IP + m_instr.immB(0, m_IP.getWidth());
 		
 		m_alu.sub = '1';
 
@@ -125,6 +134,8 @@ void gtry::scl::riscv::RV32I::arith()
 {
 	IF(m_instr.func3 == 0)
 	{
+		auto ent = Area{ "arith" }.enter();
+
 		IF(m_instr.opcode == "b00100")
 		{
 			m_alu.op2 = m_instr.immI;
@@ -143,6 +154,8 @@ void gtry::scl::riscv::RV32I::logic()
 {
 	IF(m_instr.opcode[4] == '0' & m_instr.opcode(0, 3) == "b100")
 	{
+		auto ent = Area{ "logic" }.enter();
+
 		BVec op2 = m_instr.immI;
 		IF(m_instr.opcode[3])
 			op2 = m_r2;
@@ -160,6 +173,8 @@ void gtry::scl::riscv::RV32I::setcmp()
 {
 	IF(m_instr.opcode[4] == '0' & m_instr.opcode(0,3_b) == "b100" & m_instr.func3(1, 2) == "b01")
 	{
+		auto ent = Area{ "setcmp" }.enter();
+
 		IF(m_instr.opcode[3] == '0')
 			m_alu.op2 = m_instr.immI;
 		m_alu.sub = '1';
@@ -176,6 +191,8 @@ void gtry::scl::riscv::RV32I::shift()
 {
 	IF(m_instr.opcode[4] == '0' & m_instr.opcode(0, 3_b) == "b100" & m_instr.func3(0, 2) == "b01")
 	{
+		auto ent = Area{ "shift" }.enter();
+
 		BVec amount = m_r2(0, 5_b);
 		IF(m_instr.opcode[3] == '0')
 			amount = m_instr.immI(0, 5_b);
@@ -196,8 +213,10 @@ void gtry::scl::riscv::RV32I::shift()
 	}
 }
 
-void gtry::scl::riscv::RV32I::mem(AvalonMM& mem)
+void gtry::scl::riscv::RV32I::mem(AvalonMM& mem, bool byte, bool halfword)
 {
+	auto entRV = m_area.enter();
+
 	mem.read = '0';
 	mem.write = '0';
 	mem.address = m_aluResult.sum(0, m_dataAddrWidth);
@@ -205,33 +224,51 @@ void gtry::scl::riscv::RV32I::mem(AvalonMM& mem)
 	mem.writeData = m_r2;
 	mem.byteEnable = "b1111";
 
-	// store
+	store(mem, byte, halfword);
+	load(mem, byte, halfword);
+}
+
+void gtry::scl::riscv::RV32I::store(AvalonMM& mem, bool byte, bool halfword)
+{
 	IF(m_instr.opcode == "b01000")
 	{
+		auto ent = Area{ "store" }.enter();
+
 		m_alu.op2 = m_instr.immS;
 		mem.write = '1';
 
-		IF(m_instr.func3 == 0)
+		if (byte)
 		{
-			mem.writeData = pack(m_r2(0, 8_b), m_r2(0, 8_b), m_r2(0, 8_b), m_r2(0, 8_b));
-			mem.byteEnable = decoder(m_aluResult.sum(0, 2_b));
+			IF(m_instr.func3 == 0)
+			{
+				mem.writeData = pack(m_r2(0, 8_b), m_r2(0, 8_b), m_r2(0, 8_b), m_r2(0, 8_b));
+				mem.byteEnable = decoder(m_aluResult.sum(0, 2_b));
+			}
 		}
-		ELSE IF(m_instr.func3 == 1)
+		if (halfword)
 		{
-			mem.writeData = pack(m_r2(0, 16_b), m_r2(0, 16_b));
+			IF(m_instr.func3 == 1)
+			{
+				mem.writeData = pack(m_r2(0, 16_b), m_r2(0, 16_b));
 
-			Bit highWord = m_aluResult.sum[1];
-			mem.byteEnable = pack(highWord, highWord, !highWord, !highWord);
+				Bit highWord = m_aluResult.sum[1];
+				mem.byteEnable = pack(highWord, highWord, !highWord, !highWord);
+			}
 		}
 	}
+}
 
-	// load
+void gtry::scl::riscv::RV32I::load(AvalonMM& mem, bool byte, bool halfword)
+{
 	IF(m_instr.opcode == "b00000")
 	{
+		auto ent = Area{ "load" }.enter();
+
 		m_alu.op2 = m_instr.immI;
 
 		Bit readStallState;
 		readStallState = reg(readStallState, '0');
+		HCL_NAMED(readStallState);
 
 		IF(!readStallState)
 			mem.read = '1';
@@ -250,34 +287,53 @@ void gtry::scl::riscv::RV32I::mem(AvalonMM& mem)
 		BVec offset = m_aluResult.sum(0, 2_b);
 		BVec type = m_instr.func3(0, 2_b);
 		Bit zero = m_instr.func3.msb();
-		IF(type == 0) // byte load
+		if (byte)
 		{
-			BVec byte = mux(offset, value);
-			IF(zero)
-				value = zext(byte);
-			ELSE
-				value = sext(byte);
+			IF(type == 0) // byte load
+			{
+				BVec byte = mux(offset, value);
+				IF(zero)
+					value = zext(byte);
+				ELSE
+					value = sext(byte);
 
-			mem.byteEnable = decoder(m_aluResult.sum(0, 2_b));
+				mem.byteEnable = decoder(m_aluResult.sum(0, 2_b));
+			}
 		}
-		ELSE IF(type == 1) // word load
+		if (halfword)
 		{
-			BVec word = mux(offset[1], value);
-			IF(zero)
-				value = zext(word);
-			ELSE
-				value = sext(word);
+			IF(type == 1) // word load
+			{
+				BVec word = mux(offset[1], value);
+				IF(zero)
+					value = zext(word);
+				ELSE
+					value = sext(word);
 
-			Bit highWord = m_aluResult.sum[1];
-			mem.byteEnable = pack(highWord, highWord, !highWord, !highWord);
+				Bit highWord = m_aluResult.sum[1];
+				mem.byteEnable = pack(highWord, highWord, !highWord, !highWord);
+			}
 		}
-
 		setResult(value);
 	}
 }
 
+void gtry::scl::riscv::RV32I::setupAlu()
+{
+	// int alu
+	HCL_NAMED(m_alu);
+	m_alu.result(m_aluResult);
+	HCL_NAMED(m_aluResult);
+
+	m_alu.op1 = m_r1;
+	m_alu.op2 = m_r2;
+	m_alu.sub = '0';
+}
+
 void gtry::scl::riscv::IntAluCtrl::result(IntAluResult& out) const
 {
+	auto ent = Area{ "IntAlu" }.enter();
+
 	auto [sum, carry] = add(op1, op2 ^ sub, sub);
 
 	out.sum = sum;
@@ -300,27 +356,26 @@ gtry::scl::riscv::SingleCycleI::SingleCycleI(BitWidth instructionAddrWidth, BitW
 
 gtry::Memory<gtry::BVec>& gtry::scl::riscv::SingleCycleI::fetch()
 {
-	m_instructionMem.setup(m_IP.getWidth().count(), 32_b);
+	auto entRV = m_area.enter("fetch");
+
+	BitWidth memWidth = m_IP.getWidth() - 2;
+	m_instructionMem.setup(memWidth.count(), 32_b);
 	m_instructionMem.setType(MemType::LUTRAM);
 
-	BVec instruction = 32_b;
-	IF(!m_stall)
+	BVec addr = m_IP.getWidth();
+	BVec instruction = reg(m_instructionMem[addr(2, memWidth)].read());
+	//BVec instruction = m_instructionMem[reg(addr(2, memWidth))];
+
+	Bit firstInstr = reg(Bit{ '0' }, '1');
+	HCL_NAMED(firstInstr);
+	IF(firstInstr) // noop first instruction
 	{
-		instruction = m_instructionMem[m_resultIP >> 2].read();
+		setStall('1');
+		instruction = 0x13;
 	}
-	instruction = reg(instruction, 0);
+
 	HCL_NAMED(instruction);
-	m_instr.decode(instruction);
-	HCL_NAMED(m_instr);
-
-	IF(!m_stall)
-		m_IP = m_resultIP;
-
-	m_IP = reg(m_IP, 0);
-	HCL_NAMED(m_IP);
-
-	HCL_NAMED(m_resultIP);
-	m_resultIP = m_IPnext;
+	addr = fetch(instruction);
 
 	return m_instructionMem;
 }
@@ -329,37 +384,51 @@ gtry::BVec gtry::scl::riscv::SingleCycleI::fetch(const BVec& instruction)
 {
 	m_instr.decode(instruction);
 	HCL_NAMED(m_instr);
-	return m_resultIP;
+
+	IF(!m_stall)
+		m_IP = m_resultIP;
+
+	BVec ifetchAddr = m_IP;
+	HCL_NAMED(ifetchAddr);
+
+	m_IP = reg(m_IP, 0);
+	HCL_NAMED(m_IP);
+	HCL_NAMED(m_resultIP);
+	m_resultIP = m_IPnext;
+	return ifetchAddr;
 }
 
 void gtry::scl::riscv::SingleCycleI::fetchOperands(BitWidth regAddrWidth)
 {
-	m_rf.setup(regAddrWidth.count(), 32_b);
-	m_rf.setPowerOnStateZero();
+	{
+		auto entRV = m_area.enter("fetchOperands1");
 
-	m_r1 = m_rf[m_instr.rs1(0, regAddrWidth)];
-	m_r2 = m_rf[m_instr.rs2(0, regAddrWidth)];
-	HCL_NAMED(m_r1);
-	HCL_NAMED(m_r2);
+		m_rf.setup(regAddrWidth.count(), 32_b);
+		m_rf.setPowerOnStateZero();
 
-	HCL_NAMED(m_alu);
-	m_alu.result(m_aluResult);
-	HCL_NAMED(m_aluResult);
+		m_r1 = m_rf[m_instr.rs1(0, regAddrWidth)];
+		m_r2 = m_rf[m_instr.rs2(0, regAddrWidth)];
+		HCL_NAMED(m_r1);
+		HCL_NAMED(m_r2);
+	}
+	setName(m_r1, "r1");
+	setName(m_r2, "r2"); // work around for out port used as instance input
 
-	m_alu.op1 = m_r1;
-	m_alu.op2 = m_r2;
-	m_alu.sub = '0';
+	{
+		auto entRV = m_area.enter("fetchOperands2");
+		setupAlu();
 
-	// this should move into write back (requires write before read policy)
-	HCL_NAMED(m_resultData);
-	HCL_NAMED(m_resultValid);
-	HCL_NAMED(m_stall);
-	IF(m_resultValid & !m_stall & m_instr.rd != 0)
-		m_rf[m_instr.rd(0, regAddrWidth)] = m_resultData;
+		// this should move into write back (requires write before read policy)
+		HCL_NAMED(m_resultData);
+		HCL_NAMED(m_resultValid);
+		HCL_NAMED(m_stall);
+		IF(m_resultValid & !m_stall & m_instr.rd != 0)
+			m_rf[m_instr.rd(0, regAddrWidth)] = m_resultData;
 
-	m_resultData = 0;
-	m_resultValid = '0';
-	m_stall = '0';
+		m_resultData = 0;
+		m_resultValid = '0';
+		m_stall = '0';
+	}
 }
 
 
