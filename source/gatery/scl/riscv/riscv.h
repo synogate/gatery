@@ -57,14 +57,12 @@ namespace gtry::scl::riscv
 		void result(IntAluResult& result) const;
 	};
 
-
-
 	class RV32I
 	{
 	public:
 		RV32I(BitWidth instructionAddrWidth = 32_b, BitWidth dataAddrWidth = 32_b);
 
-		virtual void execute(AvalonMM& mem);
+		virtual void execute();
 
 		// instruction implementations
 		virtual void lui();
@@ -75,9 +73,11 @@ namespace gtry::scl::riscv
 		virtual void logic();
 		virtual void setcmp();
 		virtual void shift();
-		virtual void mem(AvalonMM& mem);
+		virtual void mem(AvalonMM& mem, bool byte = true, bool halfword = true);
+		virtual void store(AvalonMM& mem, bool byte, bool halfword);
+		virtual void load(AvalonMM& mem, bool byte, bool halfword);
 
-
+		void setupAlu();
 
 	protected:
 		// helper for instructions
@@ -97,6 +97,8 @@ namespace gtry::scl::riscv
 		IntAluResult m_aluResult;
 
 		BitWidth m_dataAddrWidth;
+
+		Area m_area;
 
 	};
 
