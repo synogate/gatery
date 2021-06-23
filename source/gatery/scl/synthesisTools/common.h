@@ -17,24 +17,15 @@
 */
 #pragma once
 
-#include <gatery/frontend/SynthesisTool.h>
-
-#include <vector>
 #include <string>
 
+namespace gtry::vhdl {
+	class AST;
+}
 
 namespace gtry {
 
-class IntelQuartus : public SynthesisTool {
-	public:
-		IntelQuartus();
-
-		virtual void resolveAttributes(const hlim::RegisterAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs) override;
-		virtual void resolveAttributes(const hlim::SignalAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs) override;
-
-        virtual void writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename) override;
-		virtual void writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename) override { }
-		virtual void writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename) override;
-};
+void writeClockXDC(const vhdl::AST &ast, const std::string &fullPath);
+void writeClockSDC(const vhdl::AST &ast, const std::string &fullPath);
 
 }

@@ -19,14 +19,17 @@
 #include "gatery/pch.h"
 
 #include "XilinxVivado.h"
+#include "common.h"
 
 #include <gatery/hlim/Attributes.h>
 #include <gatery/hlim/supportNodes/Node_PathAttributes.h>
+#include <gatery/hlim/supportNodes/Node_Attributes.h>
 
 #include <gatery/export/vhdl/VHDLExport.h>
 #include <gatery/export/vhdl/Entity.h>
 #include <gatery/export/vhdl/Package.h>
 
+#include <fstream>
 
 namespace gtry {
 
@@ -38,6 +41,22 @@ XilinxVivado::XilinxVivado()
 		"xilinx_vivado",
 		"xilinx_vivado_2019.2",
 	};
+}
+
+void XilinxVivado::prepareCircuit(hlim::Circuit &circuit)
+{
+    for (auto &n : circuit.getNodes()) {
+        if (auto *pa = dynamic_cast<hlim::Node_PathAttributes*>(n.get())) {
+
+			// Keep start and end driver of all paths
+			for (unsigned i = 0; i < 2; i++) {
+				auto driver = pa->getNonSignalDriver(i);
+				auto *attrib = circuit.getCreateAttribNode(driver);
+				attrib->getAttribs().allowFusing = false;
+			}
+
+		}
+	}
 }
 
 void XilinxVivado::resolveAttributes(const hlim::RegisterAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
@@ -67,20 +86,25 @@ void XilinxVivado::resolveAttributes(const hlim::RegisterAttributes &attribs, hl
 
 void XilinxVivado::resolveAttributes(const hlim::SignalAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
 {
-	if (attribs.maxFanout != 0) 
-		resolvedAttribs.insert({"max_fanout", {"integer", std::to_string(attribs.maxFanout)}});
+	if (attribs.maxFanout) 
+		resolvedAttribs.insert({"max_fanout", {"integer", std::to_string(*attribs.maxFanout)}});
 
-	if (attribs.crossingClockDomain) {
+	if (attribs.crossingClockDomain && *attribs.crossingClockDomain) {
 		resolvedAttribs.insert({"ASYNC_REG", {"string", "\"true\""}});
 		resolvedAttribs.insert({"DONT_TOUCH", {"string", "\"true\""}});
 	}
 
-	if (!attribs.allowFusing) {
+	if (attribs.allowFusing && !*attribs.allowFusing) {
 		resolvedAttribs.insert({"SHREG_EXTRACT", {"string", "\"no\""}});
 		resolvedAttribs.insert({"DONT_TOUCH", {"string", "\"true\""}});
 	}
 
 	addUserDefinedAttributes(attribs, resolvedAttribs);
+}
+
+void XilinxVivado::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
+{
+	writeClockXDC(*vhdlExport.getAST(), (vhdlExport.getDestination() / filename).string());
 }
 
 void XilinxVivado::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
@@ -103,10 +127,12 @@ void XilinxVivado::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 				<< "set net_start [get_nets " << start << "]\n";
 
 		file << R"(# get driver pin(s)
-set pin_start [get_pin -of_object $net_start -filter {DIRECTION == OUT} ]
-
+set pin_start [get_pin -of_object $net_start -filter {DIRECTION == OUT && IS_LEAF} ]
 # get driver(s)
 set cell_start [get_cells -of_object $pin_start]
+# get clock pin
+set cell_start_clk_pin [get_pin -of_object $cell_start -filter {IS_CLOCK}]
+
 )";
 
 
@@ -120,10 +146,11 @@ set cell_start [get_cells -of_object $pin_start]
 				<< "set net_end [get_nets " << end << "]\n";
 
 		file << R"(# get driver pin(s)
-set pin_end [get_pin -of_object $net_end -filter {DIRECTION == OUT} ]
-
+set pin_end [get_pin -of_object $net_end -filter {DIRECTION == OUT && IS_LEAF} ]
 # get driver(s)
 set cell_end [get_cells -of_object $pin_end]
+# get input data pin
+set cell_end_input_pin [get_pin -of_object $cell_end -filter {DIRECTION == IN && REF_PIN_NAME == "D"}]
 )";
 
 		const auto &attribs = pa->getAttribs();
@@ -131,7 +158,7 @@ set cell_end [get_cells -of_object $pin_end]
 		if (attribs.falsePath)
 			file 
 				<< "# set false path\n"
-				<< "set_false_path -from $cell_start -to $cell_end";
+				<< "set_false_path -from $cell_start_clk_pin -to $cell_end_input_pin";
 
 		HCL_ASSERT_HINT(attribs.multiCycle == 0, "Not implemented yet!");
 
@@ -161,16 +188,16 @@ void XilinxVivado::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::str
 		file << f.string() << '\n';
 	}
 
-	vhdlExport.writeXdc("clocks.xdc");
+	if (!vhdlExport.getConstraintsFilename().empty())
+		file << "read_xdc " << vhdlExport.getConstraintsFilename() << std::endl;
+	if (!vhdlExport.getClocksFilename().empty())
+		file << "read_xdc " << vhdlExport.getClocksFilename() << std::endl;
 
 	file << R"(
-read_xdc clocks.xdc
-
 # reset_run synth_1
 # launch_runs impl_1
 
 # set run settings -> more options to "-mode out_of_context" for virtual pins
-
 )";
 }
 

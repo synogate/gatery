@@ -19,8 +19,11 @@
 #include "gatery/pch.h"
 
 #include "Synopsys.h"
+#include "common.h"
 
 #include <gatery/hlim/Attributes.h>
+
+#include <gatery/export/vhdl/VHDLExport.h>
 
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Preprocessor.h>
@@ -64,20 +67,26 @@ void Synopsys::resolveAttributes(const hlim::RegisterAttributes &attribs, hlim::
 
 void Synopsys::resolveAttributes(const hlim::SignalAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
 {
-	if (attribs.maxFanout != 0) 
-		resolvedAttribs.insert({"syn_maxfan", {"integer", std::to_string(attribs.maxFanout)}});
+	if (attribs.maxFanout) 
+		resolvedAttribs.insert({"syn_maxfan", {"integer", std::to_string(*attribs.maxFanout)}});
 
-	if (attribs.crossingClockDomain)
-		resolvedAttribs.insert({"keep", {"boolean", "true"}});
+	if (attribs.crossingClockDomain && *attribs.crossingClockDomain)
+		resolvedAttribs.insert({"syn_keep", {"boolean", "true"}});
 		// syn_replicate ?
 
-	if (!attribs.allowFusing) {
-		resolvedAttribs.insert({"alspreserve", {"boolean", "true"}});
-		resolvedAttribs.insert({"syn_keep", {"boolean", "true"}});
+	if (attribs.allowFusing) {
+		resolvedAttribs.insert({"alspreserve", {"boolean", (*attribs.allowFusing?"true":"false")}});
+		resolvedAttribs.insert({"syn_keep", {"boolean", (*attribs.allowFusing?"true":"false")}});
 	}
 
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }
+
+void Synopsys::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
+{
+	writeClockSDC(*vhdlExport.getAST(), (vhdlExport.getDestination() / filename).string());
+}
+
 
 void Synopsys::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename)
 {

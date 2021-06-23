@@ -19,6 +19,7 @@
 #include "gatery/pch.h"
 
 #include "IntelQuartus.h"
+#include "common.h"
 
 #include <gatery/hlim/Attributes.h>
 
@@ -72,17 +73,24 @@ void IntelQuartus::resolveAttributes(const hlim::RegisterAttributes &attribs, hl
 
 void IntelQuartus::resolveAttributes(const hlim::SignalAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
 {
-	if (attribs.maxFanout != 0) 
-		resolvedAttribs.insert({"maxfan", {"integer", std::to_string(attribs.maxFanout)}});
+	if (attribs.maxFanout) 
+		resolvedAttribs.insert({"maxfan", {"integer", std::to_string(*attribs.maxFanout)}});
 
-	if (attribs.crossingClockDomain)
+	if (attribs.crossingClockDomain && *attribs.crossingClockDomain)
 		resolvedAttribs.insert({"keep", {"boolean", "true"}});
 
-	if (!attribs.allowFusing)
+	if (attribs.allowFusing && !*attribs.allowFusing)
 		resolvedAttribs.insert({"keep", {"boolean", "true"}});
 
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }
+
+
+void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
+{
+	writeClockSDC(*vhdlExport.getAST(), (vhdlExport.getDestination() / filename).string());
+}
+
 
 void IntelQuartus::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename)
 {
