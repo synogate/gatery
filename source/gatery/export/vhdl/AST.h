@@ -81,6 +81,7 @@ class AST
         inline const std::vector<std::unique_ptr<Package>> &getPackages() { return m_packages; }
 
         inline Entity *getRootEntity() { return m_entities.front().get(); }
+        inline const Entity *getRootEntity() const { return m_entities.front().get(); }
 
         bool findLocalDeclaration(hlim::NodePort driver, std::vector<BaseGrouping*> &reversePath);
 

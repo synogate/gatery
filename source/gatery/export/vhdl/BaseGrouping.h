@@ -44,6 +44,7 @@ class BaseGrouping
         
         inline AST &getAST() { return m_ast; }
         inline NamespaceScope &getNamespaceScope() { return m_namespaceScope; }
+        inline const NamespaceScope &getNamespaceScope() const { return m_namespaceScope; }
         inline BaseGrouping *getParent() { return m_parent; }
         inline const BaseGrouping *getParent() const { return m_parent; }
         bool isChildOf(const BaseGrouping *other) const;
@@ -55,11 +56,11 @@ class BaseGrouping
 
         virtual bool findLocalDeclaration(hlim::NodePort driver, std::vector<BaseGrouping*> &reversePath);
 
-        inline const std::set<hlim::NodePort> &getLocalSignals() { return m_localSignals; }
-        inline const std::set<hlim::NodePort> &getInputs() { return m_inputs; }
-        inline const std::set<hlim::NodePort> &getOutputs() { return m_outputs; }
-        inline const std::set<hlim::Clock *> &getClocks() { return m_inputClocks; }
-        inline const std::set<hlim::Node_Pin *> &getIoPins() { return m_ioPins; }
+        inline const std::set<hlim::NodePort> &getLocalSignals() const { return m_localSignals; }
+        inline const std::set<hlim::NodePort> &getInputs() const { return m_inputs; }
+        inline const std::set<hlim::NodePort> &getOutputs() const { return m_outputs; }
+        inline const std::set<hlim::Clock *> &getClocks() const { return m_inputClocks; }
+        inline const std::set<hlim::Node_Pin *> &getIoPins() const { return m_ioPins; }
     protected:
         AST &m_ast;
         NamespaceScope m_namespaceScope;

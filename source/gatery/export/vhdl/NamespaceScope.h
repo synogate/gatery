@@ -64,16 +64,16 @@ class NamespaceScope
         virtual ~NamespaceScope() { }
 
         std::string allocateName(hlim::NodePort nodePort, const std::string &desiredName, CodeFormatting::SignalType type);
-        const std::string &getName(hlim::NodePort nodePort) const;
+        const std::string &getName(const hlim::NodePort nodePort) const;
 
         std::string allocateName(NodeInternalStorageSignal nodePort, const std::string &desiredName);
         const std::string &getName(NodeInternalStorageSignal nodePort) const;
 
         std::string allocateName(hlim::Clock *clock, const std::string &desiredName);
-        const std::string &getName(hlim::Clock *clock) const;
+        const std::string &getName(const hlim::Clock *clock) const;
 
         std::string allocateName(hlim::Node_Pin *ioPin, const std::string &desiredName);
-        const std::string &getName(hlim::Node_Pin *ioPin) const;
+        const std::string &getName(const hlim::Node_Pin *ioPin) const;
 
         std::string allocatePackageName(const std::string &desiredName);
         std::string allocateEntityName(const std::string &desiredName);
