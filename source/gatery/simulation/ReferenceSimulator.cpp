@@ -34,6 +34,9 @@
 #include "../hlim/NodeVisitor.h"
 #include "../hlim/supportNodes/Node_ExportOverride.h"
 
+
+#include <gatery/export/DotExport.h>
+
 #include "simProc/WaitFor.h"
 #include "simProc/WaitUntil.h"
 #include "simProc/WaitClock.h"
@@ -181,8 +184,44 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
         if (readyNode == nullptr) {
             std::cout << "nodesRemaining : " << nodesRemaining.size() << std::endl;
 
-            for (auto node : nodesRemaining) {
-                std::cout << node->getName() << " - " << std::dec << node->getId()  << " -  " << node->getTypeName() << "  " << std::hex << (size_t)node << std::endl;
+            
+            std::set<hlim::BaseNode*> loopNodes = nodesRemaining;
+            while (true) {
+                std::set<hlim::BaseNode*> tmp = std::move(loopNodes);
+                loopNodes.clear();
+
+                bool done = true;
+                for (auto* n : tmp) {
+                    bool anyDrivenInLoop = false;
+                    for (auto i : utils::Range(n->getNumOutputPorts()))
+                        for (auto nh : n->exploreOutput(i)) {
+                            if (!nh.isSignal()) {
+                                if (tmp.contains(nh.node())) {
+                                    anyDrivenInLoop = true;
+                                    break;
+                                }
+                                nh.backtrack();
+                            }
+                        }
+
+                    if (anyDrivenInLoop)
+                        loopNodes.insert(n);
+                    else
+                        done = false;
+                }
+
+                if (done) break;
+            }
+
+
+            auto& nonConstCircuit = const_cast<hlim::Circuit&>(circuit);
+
+            auto* loopGroup = nonConstCircuit.getRootNodeGroup()->addChildNodeGroup(hlim::NodeGroup::GroupType::ENTITY);
+            loopGroup->setInstanceName("loopGroup");
+            loopGroup->setName("loopGroup");
+
+            for (auto node : loopNodes) {
+                std::cout << node->getName() << " in group " << node->getGroup()->getName() << " - " << std::dec << node->getId() << " -  " << node->getTypeName() << "  " << std::hex << (size_t)node << std::endl;
                 for (auto i : utils::Range(node->getNumInputPorts())) {
                     auto driver = node->getNonSignalDriver(i);
                     while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) // Skip all export override nodes
@@ -193,7 +232,21 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
                     }
                 }
                 std::cout << "  stack trace:" << std::endl << node->getStackTrace() << std::endl;
+
+                node->moveToGroup(loopGroup);
+
+                for (auto i : utils::Range(node->getNumOutputPorts()))
+                    for (auto nh : node->exploreOutput(i)) {
+                        if (nh.isSignal())
+                            nh.node()->moveToGroup(loopGroup);
+                        else
+                            nh.backtrack();
+                    }
             }
+
+            DotExport exp("loop.dot");
+            exp(circuit);
+            exp.runGraphViz("loop.svg");
         }
 
         HCL_DESIGNCHECK_HINT(readyNode != nullptr, "Cyclic dependency!");
