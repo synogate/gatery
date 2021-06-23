@@ -62,6 +62,7 @@ class NodeGroup
             return (Type*)m_children.back().get();
         }
 
+        inline NodeGroup *getParent() { return m_parent; }
         inline const NodeGroup *getParent() const { return m_parent; }
         inline const std::string &getName() const { return m_name; }
         inline const std::string &getInstanceName() const { return m_instanceName; }
