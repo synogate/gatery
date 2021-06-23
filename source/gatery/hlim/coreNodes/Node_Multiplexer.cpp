@@ -32,7 +32,7 @@ void Node_Multiplexer::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, s
 {
     auto selectorDriver = getDriver(0);
     if (inputOffsets[0] == ~0ull) {
-        state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+        state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width);
         return;
     }
 
@@ -40,14 +40,52 @@ void Node_Multiplexer::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, s
     HCL_ASSERT_HINT(selectorType.width <= 64, "Multiplexer with more than 64 bit selector not possible!");
 
     if (!allDefinedNonStraddling(state, inputOffsets[0], selectorType.width)) {
-        state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+
+#if 0
+        // Check if all inputs equal (should be more fine grained based on the individual bits!)
+        bool allInputsEqual = true;
+
+        // All must be equal to first in which bits are defined and in the defined bits
+        for (unsigned i = 2; i < getNumInputPorts(); i++)
+            allInputsEqual &= equalOnDefinedValues(state, inputOffsets[1], state, inputOffsets[i], getOutputConnectionType(0).width);
+
+        if (allInputsEqual && getNumInputPorts() > 1) {
+            // arbitrarily copy first
+            state.copyRange(outputOffsets[0], state, inputOffsets[1], getOutputConnectionType(0).width);
+        } else
+            state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width);
+#else
+        ///@todo: This is probably slow
+
+        for (auto b : utils::Range(getOutputConnectionType(0).width)) {
+            bool value = state.get(sim::DefaultConfig::VALUE, inputOffsets[1]+b);
+            bool defined = state.get(sim::DefaultConfig::DEFINED, inputOffsets[1]+b);
+
+            // while still defined, check all corresponding bits in other inputs
+            // if defined and same value, remain defined
+            if (defined)
+                for (unsigned i = 2; i < getNumInputPorts(); i++) {
+                    bool v = state.get(sim::DefaultConfig::VALUE, inputOffsets[i]+b);
+                    bool d = state.get(sim::DefaultConfig::DEFINED, inputOffsets[i]+b);
+
+                    if (!d || value != v) {
+                        defined = false;
+                        break;
+                    }
+                }
+
+            state.set(sim::DefaultConfig::VALUE, outputOffsets[0]+b, value);
+            state.set(sim::DefaultConfig::DEFINED, outputOffsets[0]+b, defined);
+        }
+#endif
+
         return;
     }
 
     std::uint64_t selector = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0], selectorType.width);
 
     if (selector >= getNumInputPorts()-1) {
-        state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+        state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width);
         return;
     }
     if (inputOffsets[1+selector] != ~0ull)

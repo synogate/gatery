@@ -15,30 +15,12 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
-
-#include "Attributes.h"
+#pragma once
 
 namespace gtry::hlim {
 
-void Attributes::fuseWith(const Attributes &rhs)
-{
-    for (const auto &v : rhs.userDefinedVendorAttributes)
-        for (const auto &a : v.second)
-            userDefinedVendorAttributes[v.first][a.first] = a.second;
-}
-	
+class Circuit;
 
-void SignalAttributes::fuseWith(const SignalAttributes &rhs)
-{
-    Attributes::fuseWith(rhs);
-
-    if (rhs.maxFanout)
-        maxFanout = rhs.maxFanout;
-    if (rhs.crossingClockDomain)
-        crossingClockDomain = rhs.crossingClockDomain;
-    if (rhs.allowFusing)
-        allowFusing = rhs.allowFusing;
-}
+void attributeFusion(Circuit &circuit);
 
 }

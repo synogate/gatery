@@ -40,8 +40,8 @@ class Clock
         Clock();
         virtual ~Clock();
 
-        virtual ClockRational getAbsoluteFrequency() = 0;
-        virtual ClockRational getFrequencyRelativeTo(Clock &other) = 0;
+        virtual ClockRational getAbsoluteFrequency() const = 0;
+        virtual ClockRational getFrequencyRelativeTo(Clock &other) const = 0;
 
         inline Clock *getParentClock() const { return m_parentClock; }
 
@@ -89,8 +89,8 @@ class RootClock : public Clock
     public:
         RootClock(std::string name, ClockRational frequency);
         
-        virtual ClockRational getAbsoluteFrequency() override { return m_frequency; }
-        virtual ClockRational getFrequencyRelativeTo(Clock &other) override;
+        virtual ClockRational getAbsoluteFrequency() const override { return m_frequency; }
+        virtual ClockRational getFrequencyRelativeTo(Clock &other) const override;
         
         void setFrequency(ClockRational frequency) { m_frequency = m_frequency; }
 
@@ -106,8 +106,8 @@ class DerivedClock : public Clock
     public:
         DerivedClock(Clock *parentClock);
         
-        virtual ClockRational getAbsoluteFrequency() override;
-        virtual ClockRational getFrequencyRelativeTo(Clock &other) override;
+        virtual ClockRational getAbsoluteFrequency() const override;
+        virtual ClockRational getFrequencyRelativeTo(Clock &other) const override;
         
         inline void setFrequencyMuliplier(ClockRational m) { m_parentRelativeMultiplicator = m; }
 

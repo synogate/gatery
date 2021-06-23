@@ -49,22 +49,26 @@ class VHDLExport
 
         VHDLExport &targetSynthesisTool(SynthesisTool *synthesisTool);
         VHDLExport &setFormatting(CodeFormatting *codeFormatting);
+        VHDLExport &writeClocksFile(std::string filename);
+        VHDLExport &writeConstraintsFile(std::string filename);
+        VHDLExport &writeProjectFile(std::string filename);
         CodeFormatting *getFormatting();
 
         VHDLExport& setLibrary(std::string name) { m_library = std::move(name); return *this; }
         std::string_view getName() const { return m_library; }
 
-        void operator()(const hlim::Circuit &circuit);
+        void operator()(hlim::Circuit &circuit);
 
         AST *getAST() { return m_ast.get(); }
         const std::filesystem::path &getDestination() { return m_destination; }
 
         void recordTestbench(sim::Simulator &simulator, const std::string &name);
 
-        void writeXdc(std::string_view filename);
-        void writeProjectFile(std::string_view filename);
-
         inline const std::optional<TestbenchRecorder> &getTestbenchRecorder() const { return m_testbenchRecorder; }
+
+        inline const std::string &getProjectFilename() const { return m_projectFilename; }
+        inline const std::string &getConstraintsFilename() const { return m_constraintsFilename; }
+        inline const std::string &getClocksFilename() const { return m_clocksFilename; }
     protected:
         std::filesystem::path m_destination;
         std::unique_ptr<CodeFormatting> m_codeFormatting;
@@ -72,6 +76,10 @@ class VHDLExport
         std::optional<TestbenchRecorder> m_testbenchRecorder;
         std::unique_ptr<AST> m_ast;
         std::string m_library;
+
+        std::string m_projectFilename;
+        std::string m_constraintsFilename;
+        std::string m_clocksFilename;
 };
 
 }

@@ -15,30 +15,17 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#pragma once
 
-#include "Attributes.h"
+#include <string>
 
-namespace gtry::hlim {
-
-void Attributes::fuseWith(const Attributes &rhs)
-{
-    for (const auto &v : rhs.userDefinedVendorAttributes)
-        for (const auto &a : v.second)
-            userDefinedVendorAttributes[v.first][a.first] = a.second;
+namespace gtry::vhdl {
+	class AST;
 }
-	
 
-void SignalAttributes::fuseWith(const SignalAttributes &rhs)
-{
-    Attributes::fuseWith(rhs);
+namespace gtry {
 
-    if (rhs.maxFanout)
-        maxFanout = rhs.maxFanout;
-    if (rhs.crossingClockDomain)
-        crossingClockDomain = rhs.crossingClockDomain;
-    if (rhs.allowFusing)
-        allowFusing = rhs.allowFusing;
-}
+void writeClockXDC(const vhdl::AST &ast, const std::string &fullPath);
+void writeClockSDC(const vhdl::AST &ast, const std::string &fullPath);
 
 }

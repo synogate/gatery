@@ -54,7 +54,7 @@ std::string NamespaceScope::allocateName(hlim::NodePort nodePort, const std::str
     m_nodeNames[nodePort] = name;
     return name;
 }
-const std::string &NamespaceScope::getName(hlim::NodePort nodePort) const
+const std::string &NamespaceScope::getName(const hlim::NodePort nodePort) const
 {
     auto it = m_nodeNames.find(nodePort);
     if (it != m_nodeNames.end())
@@ -82,9 +82,9 @@ std::string NamespaceScope::allocateName(hlim::Clock *clock, const std::string &
     return name;
 }
 
-const std::string &NamespaceScope::getName(hlim::Clock *clock) const
+const std::string &NamespaceScope::getName(const hlim::Clock *clock) const
 {
-    auto it = m_clockNames.find(clock);
+    auto it = m_clockNames.find(const_cast<hlim::Clock*>(clock));
     if (it != m_clockNames.end())
         return it->second;
 
@@ -111,9 +111,9 @@ std::string NamespaceScope::allocateName(hlim::Node_Pin *ioPin, const std::strin
     return name;
 }
 
-const std::string &NamespaceScope::getName(hlim::Node_Pin *ioPin) const
+const std::string &NamespaceScope::getName(const hlim::Node_Pin *ioPin) const
 {
-    auto it = m_ioPinNames.find(ioPin);
+    auto it = m_ioPinNames.find(const_cast<hlim::Node_Pin*>(ioPin));
     if (it != m_ioPinNames.end())
         return it->second;
 

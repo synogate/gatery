@@ -19,6 +19,7 @@
 
 #include <map>
 #include <string>
+#include <optional>
 
 
 namespace gtry::hlim {
@@ -34,16 +35,20 @@ typedef std::map<std::string, AttribValue> VendorSpecificAttributes;
 
 struct Attributes {
 	std::map<std::string, VendorSpecificAttributes> userDefinedVendorAttributes;
+
+	void fuseWith(const Attributes &rhs);
 };
 
 
 struct SignalAttributes : public Attributes {
 	/// Max fanout of this signal before it's driver is duplicated. 0 is don't care.
-	size_t maxFanout = 0; 
+	std::optional<size_t> maxFanout; 
 	/// Signal crosses a clock domain
-	bool crossingClockDomain = false;
+	std::optional<bool> crossingClockDomain;
 	/// Whether the signal may be fused away (e.g. signal between regs to shiftreg)
-	bool allowFusing = true;
+	std::optional<bool> allowFusing;
+
+	void fuseWith(const SignalAttributes &rhs);
 };
 
 struct RegisterAttributes : public Attributes {

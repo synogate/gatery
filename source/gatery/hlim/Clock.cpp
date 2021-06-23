@@ -34,7 +34,7 @@ Clock::Clock()
     m_parentClock = nullptr;
 }
 
-    
+
 Clock::~Clock()
 {
     while (!m_clockedNodes.empty())
@@ -65,7 +65,7 @@ RootClock::RootClock(std::string name, ClockRational frequency) : m_frequency(fr
 }
     
 
-ClockRational RootClock::getFrequencyRelativeTo(Clock &other)
+ClockRational RootClock::getFrequencyRelativeTo(Clock &other) const
 {
     return {};
 }
@@ -100,12 +100,12 @@ DerivedClock::DerivedClock(Clock *parentClock)
 }
 
     
-ClockRational DerivedClock::getAbsoluteFrequency()
+ClockRational DerivedClock::getAbsoluteFrequency() const
 {
     return m_parentClock->getAbsoluteFrequency() * m_parentRelativeMultiplicator;
 }
 
-ClockRational DerivedClock::getFrequencyRelativeTo(Clock &other)
+ClockRational DerivedClock::getFrequencyRelativeTo(Clock &other) const
 {
     return {};
 }

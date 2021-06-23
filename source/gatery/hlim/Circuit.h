@@ -98,6 +98,7 @@ class Circuit
         inline NodeGroup *getRootNodeGroup() { return m_root.get(); }
         inline const NodeGroup *getRootNodeGroup() const { return m_root.get(); }
 
+        inline std::vector<std::unique_ptr<BaseNode>> &getNodes() { return m_nodes; }
         inline const std::vector<std::unique_ptr<BaseNode>> &getNodes() const { return m_nodes; }
         inline const std::vector<std::unique_ptr<Clock>> &getClocks() const { return m_clocks; }
 
@@ -123,6 +124,8 @@ class Circuit
 
         Node_Signal *appendSignal(NodePort &nodePort);
         Node_Signal *appendSignal(RefCtdNodePort &nodePort);
+
+        Node_Attributes *getCreateAttribNode(NodePort &nodePort);
     protected:
         std::vector<std::unique_ptr<BaseNode>> m_nodes;
         std::unique_ptr<NodeGroup> m_root;

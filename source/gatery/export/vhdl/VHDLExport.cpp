@@ -34,6 +34,8 @@
 #include "../../hlim/coreNodes/Node_Register.h"
 #include "../../hlim/coreNodes/Node_Rewire.h"
 
+#include "../../hlim/supportNodes/Node_PathAttributes.h"
+
 
 #include "../../simulation/Simulator.h"
 
@@ -76,17 +78,48 @@ VHDLExport &VHDLExport::setFormatting(CodeFormatting *codeFormatting)
     return *this;
 }
 
+VHDLExport &VHDLExport::writeClocksFile(std::string filename)
+{
+    m_clocksFilename = std::move(filename);
+    return *this;
+}
+
+VHDLExport &VHDLExport::writeConstraintsFile(std::string filename)
+{
+    m_constraintsFilename = std::move(filename);
+    return *this;
+}
+
+VHDLExport &VHDLExport::writeProjectFile(std::string filename)
+{
+    m_projectFilename = std::move(filename);
+    return *this;
+}
+
+
+
+
 CodeFormatting *VHDLExport::getFormatting()
 {
     return m_codeFormatting.get();
 }
 
-
-void VHDLExport::operator()(const hlim::Circuit &circuit)
+void VHDLExport::operator()(hlim::Circuit &circuit)
 {
+    m_synthesisTool->prepareCircuit(circuit);
+
     m_ast.reset(new AST(m_codeFormatting.get(), m_synthesisTool.get()));
     m_ast->convert((hlim::Circuit &)circuit);
     m_ast->writeVHDL(m_destination);
+    
+    if (!m_constraintsFilename.empty())
+        m_synthesisTool->writeConstraintFile(*this, circuit, m_constraintsFilename);
+
+    if (!m_clocksFilename.empty())
+        m_synthesisTool->writeClocksFile(*this, circuit, m_clocksFilename);
+
+    if (!m_projectFilename.empty())
+        m_synthesisTool->writeVhdlProjectScript(*this, m_projectFilename);
 }
 
 void VHDLExport::recordTestbench(sim::Simulator &simulator, const std::string &name)
@@ -96,23 +129,51 @@ void VHDLExport::recordTestbench(sim::Simulator &simulator, const std::string &n
 }
 
 
-    void VHDLExport::writeXdc(std::string_view filename)
-    {
-        std::fstream file((m_destination / filename).string().c_str(), std::fstream::out);
-        file.exceptions(std::fstream::failbit | std::fstream::badbit);
-
-        Entity* top = m_ast->getRootEntity();
-        for (hlim::Clock* clk : top->getClocks())
-        {
-            auto&& name = top->getNamespaceScope().getName(clk);
-            hlim::ClockRational freq = clk->getAbsoluteFrequency();
-            double ns = double(freq.denominator() * 1'000'000'000) / freq.numerator();
-
-            file << "create_clock -period " << std::fixed << std::setprecision(3) << ns << " [get_ports " << name << "]\n";
-        }
-    }
-    void VHDLExport::writeProjectFile(std::string_view filename)
-    {
-        m_synthesisTool->writeVhdlProjectScript(*this, filename);
-    }
 }
+
+
+
+            // create_generated_clock  for derived clocks?
+
+            // "An auto-generated clock is not created if a user-def ined clock (primar y or generated) is also defined on the same netlist object, that is, on the same definition point (net or pin)."
+
+            // CLOCK_DELAY_GROUP
+
+            //set_property CLOCK_DELAY_GROUP my_group [get_nets {clockA, clockB, clockC}]
+
+            // set_false_path -through [get_pins design_1_i/rst_processing_system7_0_100M/U0/ext_reset_in]
+            // set_multicycle_path 2 -setup -start -from [get_clocks Cpu_ss_clk_100M] -to [get_clocks cpussclks_coresight_clk_50M]
+            // set_multicycle_path 1 -hold -start -from [get_clocks Cpu_ss_clk_100M] -to [get_clocks cpussclks_coresight_clk_50M]
+
+            // set_max_delay between synchronizer regs?
+
+            /*
+                Same clock domain or between synchronous clock domains with same period and no phase-shift
+                    set_multicycle_path N –setup –from CLK1 –to CLK2
+                    set_multicycle_path N-1 –hold –from CLK1 –to CLK2
+                    
+                Between SLOW-to FAST synchronous clock domains
+                    set_multicycle_path N –setup –from CLK1 –to CLK2
+                    set_multicycle_path N-1 –hold -end –from CLK1 –to CLK2
+                    
+                Between FAST-to SLOW synchronous clock domains
+                    set_multicycle_path N –setup -start –from CLK1 –to CLK2
+                    set_multicycle_path N-1 –hold –from CLK1 –to CLK2
+            */
+
+
+            /*
+    	        Vivado:
+
+                    # get net of signal, must be KEEP
+                    set net [get_nets some_entity_inst/s_counter[0]] 
+
+                    # get driver pin
+                    set pin [get_pin -of_object $net  -filter {DIRECTION == OUT} ] 
+
+                    # get driver (hopefully flip flop)
+                    set cell [get_cells -of_object $pin]
+                    
+                    # set multicycle
+                    set_multicycle_path N –setup -start –from $cell –to ????
+            */

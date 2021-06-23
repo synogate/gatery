@@ -28,8 +28,11 @@
 #include "coreNodes/Node_Rewire.h"
 #include "coreNodes/Node_Register.h"
 
+#include "supportNodes/Node_Attributes.h"
+
 #include "postprocessing/MemoryDetector.h"
 #include "postprocessing/DefaultValueResolution.h"
+#include "postprocessing/AttributeFusion.h"
 
 
 #include "../simulation/BitVectorState.h"
@@ -892,6 +895,7 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
             removeConstSelectMuxes();
             propagateConstants(); // do again after muxes are removed
             cullUnusedNodes();
+            attributeFusion(*this);
             ensureSignalNodePlacement();
 
             findMemoryGroups(*this);
@@ -930,6 +934,21 @@ Node_Signal *Circuit::appendSignal(RefCtdNodePort &nodePort)
     }
     nodePort = {.node=sig, .port=0ull};
     return sig;
+}
+
+Node_Attributes *Circuit::getCreateAttribNode(NodePort &nodePort)
+{
+    for (auto nh : nodePort.node->exploreOutput(nodePort.port)) {
+        if (auto *attribNode = dynamic_cast<Node_Attributes*>(nh.node())) return attribNode;
+        if (!nh.isSignal()) nh.backtrack();
+    }
+
+    
+    auto *attribNode = createNode<Node_Attributes>();
+    attribNode->connectInput(nodePort); /// @todo: place after signal node?
+    attribNode->recordStackTrace();
+    attribNode->moveToGroup(nodePort.node->getGroup());
+    return attribNode;
 }
 
 }

@@ -157,6 +157,23 @@ void DefaultSynthesisTool::writeConstraintFile(vhdl::VHDLExport &vhdlExport, con
 	});
 }
 
+void DefaultSynthesisTool::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
+{
+	std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
+	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+
+	file << "# List of clocks:" << std::endl;
+
+	vhdl::Entity* top = vhdlExport.getAST()->getRootEntity();
+	for (hlim::Clock* clk : top->getClocks()) {
+		auto&& name = top->getNamespaceScope().getName(clk);
+		hlim::ClockRational freq = clk->getAbsoluteFrequency();
+		double ns = double(freq.denominator() * 1'000'000'000) / freq.numerator();
+
+		file << "clock: " << name << " period " << std::fixed << std::setprecision(3) << ns << " ns\n";
+	}
+}
+
 void DefaultSynthesisTool::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename)
 {
 	std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
@@ -175,11 +192,11 @@ void DefaultSynthesisTool::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, 
 	for (auto& f : files)
 		file << f.string() << '\n';
 
-	vhdlExport.writeXdc("clocks.xdc");
-
-	file << "# List of xdcs:" << std::endl;
-
-	file << "clocks.xdc" << std::endl;
+	file << "# List of constraints:" << std::endl;
+	if (!vhdlExport.getConstraintsFilename().empty())
+		file << vhdlExport.getConstraintsFilename() << std::endl;
+	if (!vhdlExport.getClocksFilename().empty())
+		file << vhdlExport.getClocksFilename() << std::endl;
 }
 
 

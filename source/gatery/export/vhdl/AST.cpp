@@ -136,7 +136,7 @@ bool AST::findLocalDeclaration(hlim::NodePort driver, std::vector<BaseGrouping*>
 {
     if (m_entities.empty()) return false;
 
-    return m_entities.front()->findLocalDeclaration(driver, reversePath);
+    return getRootEntity()->findLocalDeclaration(driver, reversePath);
 }
 
 
