@@ -82,6 +82,8 @@ class AST
 
         inline Entity *getRootEntity() { return m_entities.front().get(); }
 
+        bool findLocalDeclaration(hlim::NodePort driver, std::vector<BaseGrouping*> &reversePath);
+
         std::vector<Entity*> getDependencySortedEntities();
     protected:
         CodeFormatting *m_codeFormatting;

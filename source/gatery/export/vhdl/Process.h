@@ -53,6 +53,8 @@ class Process : public BaseGrouping
         void buildFromNodes(const std::vector<hlim::BaseNode*> &nodes);
         virtual void extractSignals() override;
         virtual void writeVHDL(std::ostream &stream, unsigned indentation) = 0;
+
+        virtual std::string getInstanceName() override { return m_name; }
     protected:
         std::vector<hlim::BaseNode*> m_nodes;
 };

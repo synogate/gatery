@@ -80,8 +80,11 @@ class BasicBlock : public BaseGrouping
 
         virtual void extractSignals() override;
         virtual void allocateNames() override;
+        
+        virtual bool findLocalDeclaration(hlim::NodePort driver, std::vector<BaseGrouping*> &reversePath) override;
 
         inline const std::vector<Entity*> &getSubEntities() const { return m_entities; }
+        inline const std::vector<std::string> &getSubEntityInstanceNames() const { return m_entityInstanceNames; }
     protected:
         void collectInstantiations(hlim::NodeGroup *nodeGroup, bool reccursive);
         void processifyNodes(const std::string &desiredProcessName, hlim::NodeGroup *nodeGroup, bool reccursive);

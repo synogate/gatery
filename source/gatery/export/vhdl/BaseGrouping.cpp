@@ -20,9 +20,13 @@
 
 #include "AST.h"
 
+#include "../../utils/Exceptions.h"
+#include "../../utils/Preprocessor.h"
+
 #include "../../hlim/coreNodes/Node_Constant.h"
 #include "../../hlim/coreNodes/Node_Signal.h"
 #include "../../hlim/coreNodes/Node_Register.h"
+#include "../../hlim/coreNodes/Node_Pin.h"
 #include "../../hlim/supportNodes/Node_Attributes.h"
 #include "../../hlim/Clock.h"
 #include "../../frontend/SynthesisTool.h"
@@ -163,7 +167,7 @@ void BaseGrouping::declareLocalSignals(std::ostream &stream, bool asVariables, u
         stream << "; "<< std::endl;
     }
 
-    std::map<std::string, std::string> alreadyDeclaredAttribs;
+    std::map<std::string, hlim::AttribValue> alreadyDeclaredAttribs;
 
     hlim::ResolvedAttributes resolvedAttribs;
 
@@ -204,12 +208,12 @@ void BaseGrouping::declareLocalSignals(std::ostream &stream, bool asVariables, u
         for (const auto &attrib : resolvedAttribs) {
             auto it = alreadyDeclaredAttribs.find(attrib.first);
             if (it == alreadyDeclaredAttribs.end()) {
-                alreadyDeclaredAttribs[attrib.first] = attrib.second.value;
+                alreadyDeclaredAttribs[attrib.first] = attrib.second;
 
                 cf.indent(stream, indentation+1);
                 stream << "ATTRIBUTE " << attrib.first << " : " << attrib.second.type << ';' << std::endl;
             } else
-                HCL_DESIGNCHECK_HINT(it->second == attrib.second.type, "Same attribute can't have different types!");
+                HCL_DESIGNCHECK_HINT(it->second.type == attrib.second.type, "Same attribute can't have different types!");
 
             cf.indent(stream, indentation+1);
             stream << "ATTRIBUTE " << attrib.first << " of " << m_namespaceScope.getName(signal) << " : ";
@@ -220,6 +224,17 @@ void BaseGrouping::declareLocalSignals(std::ostream &stream, bool asVariables, u
             stream << " is " << attrib.second.value << ';' << std::endl;
         }
     }
+}
+
+bool BaseGrouping::findLocalDeclaration(hlim::NodePort driver, std::vector<BaseGrouping*> &reversePath)
+{
+    if (m_localSignals.contains(driver)) {
+        reversePath = {this};
+        return true;
+    }
+    HCL_ASSERT_HINT(!m_ioPins.contains(dynamic_cast<hlim::Node_Pin*>(driver.node)), "Requesting base group of an IO-pin which is always top entity!");
+
+    return false;
 }
 
 

@@ -47,9 +47,13 @@ class BaseGrouping
         inline BaseGrouping *getParent() { return m_parent; }
         inline const BaseGrouping *getParent() const { return m_parent; }
         bool isChildOf(const BaseGrouping *other) const;
+
+        virtual std::string getInstanceName() = 0;
         
         virtual void extractSignals() = 0;
         virtual void allocateNames() = 0;
+
+        virtual bool findLocalDeclaration(hlim::NodePort driver, std::vector<BaseGrouping*> &reversePath);
 
         inline const std::set<hlim::NodePort> &getLocalSignals() { return m_localSignals; }
         inline const std::set<hlim::NodePort> &getInputs() { return m_inputs; }
@@ -69,7 +73,7 @@ class BaseGrouping
         std::set<hlim::NodePort> m_outputs;
         std::set<hlim::Clock *> m_inputClocks;
         std::set<hlim::Node_Pin*> m_ioPins;
-        
+
         
         bool isProducedExternally(hlim::NodePort nodePort);
         bool isConsumedExternally(hlim::NodePort nodePort);

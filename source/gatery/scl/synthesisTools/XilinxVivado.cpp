@@ -21,6 +21,7 @@
 #include "XilinxVivado.h"
 
 #include <gatery/hlim/Attributes.h>
+#include <gatery/hlim/supportNodes/Node_PathAttributes.h>
 
 #include <gatery/export/vhdl/VHDLExport.h>
 #include <gatery/export/vhdl/Entity.h>
@@ -69,7 +70,74 @@ void XilinxVivado::resolveAttributes(const hlim::SignalAttributes &attribs, hlim
 	if (attribs.maxFanout != 0) 
 		resolvedAttribs.insert({"max_fanout", {"integer", std::to_string(attribs.maxFanout)}});
 
+	if (attribs.crossingClockDomain) {
+		resolvedAttribs.insert({"ASYNC_REG", {"string", "\"true\""}});
+		resolvedAttribs.insert({"DONT_TOUCH", {"string", "\"true\""}});
+	}
+
+	if (!attribs.allowFusing) {
+		resolvedAttribs.insert({"SHREG_EXTRACT", {"string", "\"no\""}});
+		resolvedAttribs.insert({"DONT_TOUCH", {"string", "\"true\""}});
+	}
+
 	addUserDefinedAttributes(attribs, resolvedAttribs);
+}
+
+void XilinxVivado::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
+{
+	std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
+	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+
+	forEachPathAttribute(vhdlExport, circuit, [&](hlim::Node_PathAttributes* pa, std::string start, std::string end) {
+		const auto &startConType = hlim::getOutputConnectionType(pa->getDriver(0));
+		const auto &endConType = hlim::getOutputConnectionType(pa->getDriver(1));
+
+
+		if (startConType.interpretation == hlim::ConnectionType::BITVEC)
+			file 
+				<< "# get net of start signal, must be KEEP\n"
+				<< "set net_start [get_nets " << start << "[*]]\n";
+		else
+			file 
+				<< "# get net of start signal, must be KEEP\n"
+				<< "set net_start [get_nets " << start << "]\n";
+
+		file << R"(# get driver pin(s)
+set pin_start [get_pin -of_object $net_start -filter {DIRECTION == OUT} ]
+
+# get driver(s)
+set cell_start [get_cells -of_object $pin_start]
+)";
+
+
+		if (endConType.interpretation == hlim::ConnectionType::BITVEC)
+			file 
+				<< "# get net of end signal, must be KEEP\n"
+				<< "set net_end [get_nets " << end << "[*]]\n";
+		else
+			file 
+				<< "# get net of end signal, must be KEEP\n"
+				<< "set net_end [get_nets " << end << "]\n";
+
+		file << R"(# get driver pin(s)
+set pin_end [get_pin -of_object $net_end -filter {DIRECTION == OUT} ]
+
+# get driver(s)
+set cell_end [get_cells -of_object $pin_end]
+)";
+
+		const auto &attribs = pa->getAttribs();
+		
+		if (attribs.falsePath)
+			file 
+				<< "# set false path\n"
+				<< "set_false_path -from $cell_start -to $cell_end";
+
+		HCL_ASSERT_HINT(attribs.multiCycle == 0, "Not implemented yet!");
+
+		writeUserDefinedPathAttributes(file, attribs, "$cell_start", "$cell_end");
+	});
+
 }
 
 void XilinxVivado::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename)

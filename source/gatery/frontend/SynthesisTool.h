@@ -17,15 +17,21 @@
 */
 #pragma once
 
-#include <vector>
-
 #include "../hlim/Attributes.h"
 
+#include <string>
+#include <functional>
+#include <vector>
+
 namespace gtry::vhdl {
-
 	class VHDLExport;
-
 }
+
+namespace gtry::hlim {
+	class Node_PathAttributes;
+    class Circuit;
+}
+
 
 namespace gtry {
 
@@ -36,13 +42,16 @@ class SynthesisTool {
 		virtual void resolveAttributes(const hlim::RegisterAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs) = 0;
 		virtual void resolveAttributes(const hlim::SignalAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs) = 0;
 
-		// virtual void writeConstraintFile(/*todo*/) = 0;
+		virtual void writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename) = 0;
 		virtual void writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename) = 0;
 	protected:
         std::vector<std::string> m_vendors;
 
         void addUserDefinedAttributes(const hlim::RegisterAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs);
         void addUserDefinedAttributes(const hlim::SignalAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs);
+        void writeUserDefinedPathAttributes(std::fstream &stream, const hlim::PathAttributes &attribs, const std::string &start, const std::string &end);
+
+        void forEachPathAttribute(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::function<void(hlim::Node_PathAttributes*, std::string, std::string)> functor);
 };
 
 
@@ -53,6 +62,7 @@ class DefaultSynthesisTool : public SynthesisTool {
 		virtual void resolveAttributes(const hlim::RegisterAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs) override;
 		virtual void resolveAttributes(const hlim::SignalAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs) override;
 
+        virtual void writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename) override;
 		virtual void writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename) override;
 };
 

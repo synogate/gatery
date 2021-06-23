@@ -23,7 +23,10 @@
 #include "../export/vhdl/VHDLExport.h"
 #include "../export/vhdl/Entity.h"
 #include "../export/vhdl/Package.h"
+#include "../export/vhdl/BaseGrouping.h"
+#include "../export/vhdl/AST.h"
 
+#include "../hlim/supportNodes/Node_PathAttributes.h"
 
 #include <fstream>
 
@@ -54,6 +57,64 @@ void SynthesisTool::addUserDefinedAttributes(const hlim::SignalAttributes &attri
 	}
 }
 
+void SynthesisTool::writeUserDefinedPathAttributes(std::fstream &stream, const hlim::PathAttributes &attribs, const std::string &start, const std::string &end)
+{
+	for (const auto &vendor : m_vendors) {
+		auto it = attribs.userDefinedVendorAttributes.find(vendor);
+		if (it != attribs.userDefinedVendorAttributes.end()) {
+			const auto &userDefinedList = it->second;
+			for (const auto &e : userDefinedList) {
+
+				std::string invocation = e.first;
+				
+				size_t pos;
+				while ((pos = invocation.find("$src")) != std::string::npos)
+					invocation.replace(pos, 4, start);
+
+				while ((pos = invocation.find("$end")) != std::string::npos)
+					invocation.replace(pos, 4, end);
+
+				stream << invocation;
+			}
+		}
+	}
+}
+
+void SynthesisTool::forEachPathAttribute(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::function<void(hlim::Node_PathAttributes*, std::string, std::string)> functor)
+{
+    for (auto &n : circuit.getNodes()) {
+        if (auto *pa = dynamic_cast<hlim::Node_PathAttributes*>(n.get())) {
+            auto start = pa->getNonSignalDriver(0);
+            auto end = pa->getNonSignalDriver(1);
+
+            HCL_ASSERT_HINT(start.node, "Path attribute with unconnected start node");
+            HCL_ASSERT_HINT(end.node, "Path attribute with unconnected end node");
+
+            std::vector<vhdl::BaseGrouping*> startNodeReversePath;
+            HCL_ASSERT_HINT(vhdlExport.getAST()->findLocalDeclaration(start, startNodeReversePath), "Could not locate path attribute start node or did not result in a signal");
+
+            std::vector<vhdl::BaseGrouping*> endNodeReversePath;
+            HCL_ASSERT_HINT(vhdlExport.getAST()->findLocalDeclaration(start, endNodeReversePath), "Could not locate path attribute end node or did not result in a signal");
+
+            auto path2vhdl = [](hlim::NodePort np, const std::vector<vhdl::BaseGrouping*> &revPath)->std::string {
+                std::stringstream identifier;
+                for (int i = (int)revPath.size()-2; i >= 0; i--) {
+                    auto *grouping = revPath[i];
+                    identifier << grouping->getInstanceName() << '/';
+                }
+                identifier << revPath.front()->getNamespaceScope().getName(np);
+                return identifier.str();
+            };
+
+            std::string startIdentifier = path2vhdl(start, startNodeReversePath);
+            std::string endIdentifier = path2vhdl(end, endNodeReversePath);
+
+            functor(pa, std::move(startIdentifier), std::move(endIdentifier));
+        }
+    }
+}
+
+
 
 DefaultSynthesisTool::DefaultSynthesisTool()
 {
@@ -70,6 +131,30 @@ void DefaultSynthesisTool::resolveAttributes(const hlim::RegisterAttributes &att
 void DefaultSynthesisTool::resolveAttributes(const hlim::SignalAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
 {
 	addUserDefinedAttributes(attribs, resolvedAttribs);
+}
+
+void DefaultSynthesisTool::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
+{
+	std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
+	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+
+	file << "# List of constraints:" << std::endl;
+
+	forEachPathAttribute(vhdlExport, circuit, [&](hlim::Node_PathAttributes* pa, std::string start, std::string end) {
+		const auto &startConType = hlim::getOutputConnectionType(pa->getDriver(0));
+		const auto &endConType = hlim::getOutputConnectionType(pa->getDriver(1));
+
+
+		const auto &attribs = pa->getAttribs();
+		
+		if (attribs.falsePath)
+			file << "false path: " << start << " --- " << end << '\n';
+
+		if (attribs.multiCycle)
+			file << "multi cycle(" << attribs.multiCycle << "): " << start << " --- " << end << '\n';
+
+		writeUserDefinedPathAttributes(file, attribs, start, end);
+	});
 }
 
 void DefaultSynthesisTool::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename)
