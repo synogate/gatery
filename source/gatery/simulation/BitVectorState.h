@@ -127,6 +127,50 @@ bool allDefinedNonStraddling(const BitVectorState<Config> &vec, size_t start, si
     return !utils::andNot(vec.extractNonStraddling(Config::DEFINED, start, size), utils::bitMaskRange(0, size));
 }
 
+template<typename Config>
+bool allDefined(const BitVectorState<Config> &vec, size_t start, size_t size) {
+
+    size_t startFullChunk = (start + Config::NUM_BITS_PER_BLOCK-1) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
+    size_t endFullChunk = (start+size) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
+
+    for (size_t c = startFullChunk / Config::NUM_BITS_PER_BLOCK; c < endFullChunk / Config::NUM_BITS_PER_BLOCK; c++)
+        if (~vec.data(Config::DEFINED)[startFullChunk / Config::NUM_BITS_PER_BLOCK]) return false;
+
+    for (size_t i = start; i < startFullChunk; i++)
+        if (!vec.get(Config::DEFINED, i)) return false;
+
+    for (size_t i = endFullChunk; i < start+size; i++)
+        if (!vec.get(Config::DEFINED, i)) return false;
+
+    return true;
+}
+
+template<typename Config>
+bool compareValues(const BitVectorState<Config> &vecA, size_t startA, const BitVectorState<Config> &vecB, size_t startB, size_t size) {
+
+    /// @todo: optimize
+    for (size_t i = 0; i < size; i++)
+        if (vecA.get(Config::VALUE, startA+i) != vecB.get(Config::VALUE, startB+i)) return false;
+
+    return true;
+}
+
+
+template<typename Config>
+bool equalOnDefinedValues(const BitVectorState<Config> &vecA, size_t startA, const BitVectorState<Config> &vecB, size_t startB, size_t size) {
+
+    /// @todo: optimize
+
+    for (size_t i = 0; i < size; i++) {
+        bool aDef = vecA.get(Config::DEFINED, startA+i);
+        bool bDef = vecB.get(Config::DEFINED, startB+i);
+        if (aDef != bDef) return false;
+        if (aDef)
+            if (vecA.get(Config::VALUE, startA+i) != vecB.get(Config::VALUE, startB+i)) return false;
+    }
+
+    return true;
+}
 
 
 
@@ -254,9 +298,7 @@ DefaultBitVectorState createDefaultBitVectorState(std::size_t numWords, std::siz
     return createBitVectorState<DefaultConfig, Functor>(numWords, wordSize, functor);
 }
 
-
 DefaultBitVectorState createDefaultBitVectorState(std::size_t size, const void *data);
-
 
 template<class Config>
 void BitVectorState<Config>::resize(size_t size)
