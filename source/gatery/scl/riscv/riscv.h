@@ -36,6 +36,8 @@ namespace gtry::scl::riscv
 		BVec immU = 32_b;
 		BVec immJ = 32_b;
 
+		BVec name = 32_b;
+
 		void decode(const BVec& inst);
 	};
 
@@ -89,6 +91,7 @@ namespace gtry::scl::riscv
 		BVec m_IPnext;
 
 		Instruction m_instr;
+		Bit m_instructionValid;
 		
 		BVec m_r1 = 32_b;
 		BVec m_r2 = 32_b;
@@ -129,6 +132,6 @@ namespace gtry::scl::riscv
 
 }
 
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::riscv::Instruction, opcode, rd, rs1, rs2, func3, func7, immI, immS, immB, immU, immJ);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::riscv::Instruction, opcode, rd, rs1, rs2, func3, func7, immI, immS, immB, immU, immJ, name);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::riscv::IntAluResult, sum, zero, overflow, sign, carry);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::riscv::IntAluCtrl, op1, op2, sub);
