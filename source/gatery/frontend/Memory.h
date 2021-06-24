@@ -125,6 +125,7 @@ namespace gtry {
 
 
             void setType(MemType type) { m_memoryNode->setType(type); }
+            void setName(std::string name) { m_memoryNode->setName(std::move(name)); }
             void noConflicts() { m_memoryNode->setNoConflicts(); }
             bool valid() { return m_memoryNode != nullptr; }
 

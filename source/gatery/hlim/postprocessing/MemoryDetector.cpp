@@ -654,7 +654,10 @@ void findMemoryGroups(Circuit &circuit)
     for (auto &node : circuit.getNodes())
         if (auto *memory = dynamic_cast<Node_Memory*>(node.get())) {
             auto *memoryGroup = memory->getGroup()->addSpecialChildNodeGroup<MemoryGroup>();
-            memoryGroup->setName("memory");
+            if (memory->getName().empty())
+                memoryGroup->setName("memory");
+            else
+                memoryGroup->setName(memory->getName());
             memoryGroup->setComment("Auto generated");
             memoryGroup->formAround(memory, circuit);
         }
