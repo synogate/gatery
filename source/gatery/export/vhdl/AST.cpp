@@ -87,7 +87,7 @@ void AST::writeVHDL(std::filesystem::path destination)
         for (auto& package : m_packages)
             package->writeVHDL(file);
 
-        for (auto& entity : m_entities)
+        for (auto* entity : this->getDependencySortedEntities())
             entity->writeVHDL(file);
     }
     else
