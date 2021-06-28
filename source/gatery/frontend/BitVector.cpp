@@ -25,6 +25,7 @@
 #include <gatery/hlim/coreNodes/Node_Multiplexer.h>
 #include <gatery/hlim/supportNodes/Node_ExportOverride.h>
 #include <gatery/hlim/supportNodes/Node_Attributes.h>
+#include <gatery/hlim/supportNodes/Node_Default.h>
 
 namespace gtry {
 
@@ -146,6 +147,20 @@ namespace gtry {
         return op;
     }
 
+    BVecDefault::BVecDefault(const BVec& rhs) {
+        m_nodePort = rhs.getReadPort();
+    }
+
+    void BVecDefault::assign(std::string_view value) {
+        auto* constant = DesignScope::createNode<hlim::Node_Constant>(
+            parseBVec(value),
+            hlim::ConnectionType::BITVEC
+        );
+
+        m_nodePort = {.node = constant, .port = 0ull };
+    }
+
+
     BVec::BVec(BVec&& rhs) :
         ElementarySignal()
     {
@@ -177,6 +192,11 @@ namespace gtry {
         createNode(width.value, expansionPolicy);
     }
 
+    BVec::BVec(const BVecDefault &defaultValue)
+    {
+        (*this) = defaultValue;
+    }
+
     BVec& BVec::operator=(BVec&& rhs)
     {
         assign(rhs.getReadPort());
@@ -198,6 +218,17 @@ namespace gtry {
     {
         HCL_DESIGNCHECK(!m_node);
         createNode(width.value, m_expansionPolicy);
+        return *this;
+    }
+
+    BVec& BVec::operator=(const BVecDefault &defaultValue)
+    {
+        hlim::Node_Default* node = DesignScope::createNode<hlim::Node_Default>();
+        node->recordStackTrace();
+        node->connectInput(getReadPort());
+        node->connectDefault(defaultValue.getNodePort());
+
+        assign(SignalReadPort(node));
         return *this;
     }
 
