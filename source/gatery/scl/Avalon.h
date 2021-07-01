@@ -57,6 +57,7 @@ namespace gtry::scl
 
         void pinIn(std::string_view prefix);
         void pinOut(std::string_view prefix);
+        void setName(std::string_view prefix);
         
         template<typename T>
         void connect(Memory<T>& mem, BitWidth dataWidth = 32_b);
