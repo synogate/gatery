@@ -27,6 +27,8 @@
 #include <gatery/scl/riscv/riscv.h>
 #include <gatery/scl/riscv/DualCycleRV.h>
 #include <gatery/scl/algorithm/GCD.h>
+#include <gatery/scl/riscv/ElfLoader.h>
+#include <gatery/scl/riscv/EmbeddedSystemBuilder.h>
 #include <gatery/scl/io/uart.h>
 
 #include <queue>
@@ -1255,6 +1257,40 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, UnitTestSimulationFixture)
 	//design.visualize("riscv_dual_cycle");
 	runTicks(clock.getClk(), (uint32_t)timeout + 2);
 }
+
+#if 0
+BOOST_FIXTURE_TEST_CASE(riscv_embedded_system_builder, UnitTestSimulationFixture)
+{
+	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000'000).setName("clock").setResetHighActive(false));
+	ClockScope clkScp(clock);
+
+	{
+		std::filesystem::path elfPath = "C:/Users/mio.SYNOGATE/Downloads/riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-x86_64-w64-mingw32/bin/a.out";
+
+		scl::riscv::EmbeddedSystemBuilder esb;
+		esb.addCpu(elfPath, 512_B);
+
+		Bit uart_rx = pinIn().setName("uart_rx");
+		Bit uart_tx = esb.addUART(0x8000'0000, 115200, uart_rx);
+		pinOut(uart_tx).setName("uart_tx");
+
+	}
+
+	sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "export/rv32i_esb/rv32i_esb.vcd" };
+	vcd.addAllPins();
+	vcd.addAllNamedSignals();
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	//design.visualize("export/rv32i_esb/rv32i_esb");
+	vhdl::VHDLExport vhdl("export/rv32i_esb/rv32i_esb.vhd");
+	vhdl(design.getCircuit());
+
+
+	runTicks(clock.getClk(), 2048);
+
+}
+
+#endif
 
 // hello world demo
 #if 0
