@@ -106,7 +106,7 @@ class BitVectorState
         const typename Config::BaseType *data(typename Config::Plane plane) const;
 
         BitVectorState<Config> extract(size_t start, size_t size) const;
-        void insert(const BitVectorState& state, size_t offset);
+        void insert(const BitVectorState& state, size_t offset, size_t size = 0);
 
         typename Config::BaseType extract(typename Config::Plane plane, size_t offset, size_t size) const;
         typename Config::BaseType extractNonStraddling(typename Config::Plane plane, size_t start, size_t size) const;
@@ -443,9 +443,9 @@ BitVectorState<Config> BitVectorState<Config>::extract(size_t start, size_t size
 }
 
 template<class Config>
-inline void BitVectorState<Config>::insert(const BitVectorState& state, size_t offset)
+inline void BitVectorState<Config>::insert(const BitVectorState& state, size_t offset, size_t size)
 {
-    const size_t width = state.size();
+    const size_t width = size ? size : state.size();
     size_t srcOffset = 0;
 
     while (srcOffset < width) {
