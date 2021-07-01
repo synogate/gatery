@@ -757,7 +757,7 @@ void Circuit::propagateConstants()
             // Attempt to compute the output of this node.
             // Build a state vector with all inputs. Set all non-const inputs to undefined.
             sim::DefaultBitVectorState state;
-            std::vector<size_t> inputOffsets(successor.node->getNumInputPorts());
+            std::vector<size_t> inputOffsets(successor.node->getNumInputPorts(), ~0ull);
             for (size_t port : utils::Range(successor.node->getNumInputPorts())) {
                 auto driver = successor.node->getNonSignalDriver(port);
                 if (driver.node != nullptr) {
@@ -775,7 +775,7 @@ void Circuit::propagateConstants()
             }
 
             // Allocate Outputs
-            std::vector<size_t> outputOffsets(successor.node->getNumOutputPorts());
+            std::vector<size_t> outputOffsets(successor.node->getNumOutputPorts(), ~0ull);
             for (size_t port : utils::Range(successor.node->getNumOutputPorts())) {
                 auto conType = successor.node->getOutputConnectionType(port);
                 size_t offset = state.size();
