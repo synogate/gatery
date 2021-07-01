@@ -68,6 +68,48 @@ namespace gtry {
 		Selection operator [] (size_t idx) const { return Selection::Symbol(int(idx), symbolWidth); }
 	};
 
+
+
+    class BVecDefault {
+        public:
+            BVecDefault(const BVec& rhs);
+
+			template <typename Int, typename = std::enable_if_t<std::is_integral_v<Int> & !std::is_same_v<Int, char> & !std::is_same_v<Int, bool>> >
+			BVecDefault(Int vec) { assign(vec); }
+
+            hlim::NodePort getNodePort() const { return m_nodePort; }
+        protected:
+			template <typename Int, typename = std::enable_if_t<std::is_integral_v<Int> & !std::is_same_v<Int, char> & !std::is_same_v<Int, bool>> >
+			void assign(Int);
+			void assign(std::string_view);
+
+            hlim::RefCtdNodePort m_nodePort;
+    };
+
+	template <typename Int, typename>
+	void BVecDefault::assign(Int value) {
+		size_t width;
+		//Expansion policy;
+
+		if (value >= 0)
+		{
+			//policy = Expansion::zero;
+			width = utils::Log2C(value + 1);
+		}
+		else
+		{
+			//policy = Expansion::sign;
+			width = utils::Log2C(~value + 1) + 1;
+		}
+
+		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
+			parseBVec(uint64_t(value), width),
+			hlim::ConnectionType::BITVEC
+		);
+		m_nodePort = {.node = constant, .port = 0ull };
+	}
+
+
 	class BVec : public ElementarySignal
 	{
 	public:
@@ -97,6 +139,7 @@ namespace gtry {
 		BVec() = default;
 		BVec(const BVec& rhs) { if(rhs.m_node) assign(rhs.getReadPort()); }
 		BVec(BVec&& rhs);
+		BVec(const BVecDefault &defaultValue);
 		~BVec();
 
 		BVec(const SignalReadPort& port) { assign(port); }
@@ -116,6 +159,7 @@ namespace gtry {
 		BVec& operator = (const BVec& rhs) { assign(rhs.getReadPort()); return *this; }
 		BVec& operator = (BVec&& rhs);
 		BVec& operator = (BitWidth width);
+		BVec& operator = (const BVecDefault &defaultValue);
 
 		void setExportOverride(const BVec& exportOverride);
 		void setAttrib(hlim::SignalAttributes attributes);
