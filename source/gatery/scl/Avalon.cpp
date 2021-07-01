@@ -193,6 +193,22 @@ namespace gtry::scl
 		if (readDataValid) *readDataValid = gtry::pinIn().setName(pinName + "readdatavalid");
 	}
 
+	void AvalonMM::setName(std::string_view prefix)
+	{
+		std::string name = std::string{ prefix } + '_';
+
+		address.setName(name + "address");
+		if (read) (*read).setName(name + "read");
+		if (write) (*write).setName(name + "write");
+		if (writeData) (*writeData).setName(name + "writedata");
+		if (byteEnable) (*byteEnable).setName(name + "byteenable");
+
+		// input pins
+		if (ready) (*ready).setName(name + "waitrequest_n");
+		if (readData) (*readData).setName(name + "readdata");
+		if (readDataValid) (*readDataValid).setName(name + "readdatavalid");
+	}
+
 	void AvalonMM::createReadDataValid()
 	{
 		if (readDataValid)

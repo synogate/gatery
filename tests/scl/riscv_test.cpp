@@ -25,7 +25,10 @@
 #include <gatery/export/vhdl/VHDLExport.h>
 
 #include <gatery/scl/riscv/riscv.h>
+#include <gatery/scl/riscv/DualCycleRV.h>
 #include <gatery/scl/algorithm/GCD.h>
+#include <gatery/scl/riscv/ElfLoader.h>
+#include <gatery/scl/riscv/EmbeddedSystemBuilder.h>
 #include <gatery/scl/io/uart.h>
 
 #include <queue>
@@ -215,6 +218,8 @@ class RV32I_stub : public scl::riscv::RV32I
 public:
 	RV32I_stub()
 	{
+		m_instructionValid = '1';
+
 		m_IP = pinIn(32_b).setName("IP");
 		m_IPnext = m_IP + 4;
 
@@ -1125,8 +1130,8 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, UnitTestSimulationFixture)
 	
 	Memory<BVec> dmem(1024, 32_b);
 	std::vector<unsigned char> dmemData(4096, 0);
-	dmemData[0] = (rng() & 0x3F) + 1;
-	dmemData[4] = (rng() & 0x3F) + 1;
+	dmemData[0] = 15; // (rng() & 0x3F) + 1;
+	dmemData[4] = 5; // (rng() & 0x3F) + 1;
 	dmem.fillPowerOnState(sim::createDefaultBitVectorState(dmemData.size(), dmemData.data()));
 	auto dport = dmem[avmm.address(2, 10_b)];
 	
@@ -1169,6 +1174,124 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, UnitTestSimulationFixture)
 	runTicks(clock.getClk(), (uint32_t)timeout + 2);
 }
 
+BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, UnitTestSimulationFixture)
+{
+	unsigned char gcd_bin[] = {
+	  0x13, 0x00, 0x00, 0x00, 0x13, 0x01, 0x00, 0x40, 0x93, 0x00, 0x00, 0x00,
+	  0x93, 0x04, 0x40, 0x00, 0x13, 0x09, 0x80, 0x00, 0x83, 0xa0, 0x00, 0x00,
+	  0x83, 0xa4, 0x04, 0x00, 0x63, 0x8c, 0x90, 0x00, 0x63, 0xd6, 0x14, 0x00,
+	  0xb3, 0x80, 0x90, 0x40, 0x6f, 0xf0, 0x5f, 0xff, 0xb3, 0x84, 0x14, 0x40,
+	  0x6f, 0xf0, 0xdf, 0xfe, 0x23, 0x20, 0x19, 0x00, 0x6f, 0xf0, 0x1f, 0xfd,
+	  0x13, 0x01, 0x01, 0xfe, 0x23, 0x2e, 0x81, 0x00, 0x13, 0x04, 0x01, 0x02,
+	  0x23, 0x26, 0xa4, 0xfe, 0x23, 0x24, 0xb4, 0xfe, 0x03, 0x27, 0xc4, 0xfe,
+	  0x83, 0x27, 0x84, 0xfe, 0x63, 0x0c, 0xf7, 0x02, 0x03, 0x27, 0xc4, 0xfe,
+	  0x83, 0x27, 0x84, 0xfe, 0x63, 0xdc, 0xe7, 0x00, 0x03, 0x27, 0xc4, 0xfe,
+	  0x83, 0x27, 0x84, 0xfe, 0xb3, 0x07, 0xf7, 0x40, 0x23, 0x26, 0xf4, 0xfe,
+	  0x6f, 0xf0, 0x9f, 0xfd, 0x03, 0x27, 0x84, 0xfe, 0x83, 0x27, 0xc4, 0xfe,
+	  0xb3, 0x07, 0xf7, 0x40, 0x23, 0x24, 0xf4, 0xfe, 0x6f, 0xf0, 0x5f, 0xfc,
+	  0x83, 0x27, 0xc4, 0xfe, 0x13, 0x85, 0x07, 0x00, 0x03, 0x24, 0xc1, 0x01,
+	  0x13, 0x01, 0x01, 0x02, 0x67, 0x80, 0x00, 0x00
+	};
+	unsigned int gcd_bin_len = 164;
+
+	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+	scl::riscv::DualCycleRV rv(8_b, 32_b);
+	Memory<BVec>& imem = rv.fetch();
+	imem.fillPowerOnState(sim::createDefaultBitVectorState(gcd_bin_len, gcd_bin));
+
+	scl::AvalonMM avmm;
+	avmm.readLatency = 1;
+	avmm.readData = 32_b;
+
+	avmm.read = Bit{};
+	avmm.readDataValid = reg(*avmm.read, '0');
+	rv.execute();
+	rv.mem(avmm);
+
+	std::random_device rng;
+
+	Memory<BVec> dmem(1024, 32_b);
+	std::vector<unsigned char> dmemData(4096, 0);
+	dmemData[0] = 15; // (rng() & 0x3F) + 1;
+	dmemData[4] = 5; // (rng() & 0x3F) + 1;
+	dmem.fillPowerOnState(sim::createDefaultBitVectorState(dmemData.size(), dmemData.data()));
+	auto dport = dmem[avmm.address(2, 10_b)];
+
+	IF(*avmm.write)
+		dport = *avmm.writeData;
+	*avmm.readData = reg(dport.read());
+	avmm.readData->setName("avmm_readdata");
+	avmm.read->setName("avmm_read");
+	avmm.readDataValid->setName("avmm_readdatavalid");
+
+	pinOut(avmm.address).setName("avmm_address");
+	pinOut(*avmm.write).setName("avmm_write");
+	pinOut(*avmm.writeData).setName("avmm_writedata");
+
+	uint64_t expectedResult = scl::gcd(dmemData[0], dmemData[4]);
+	size_t timeout = std::max(dmemData[0], dmemData[4]) * 8ull + 32;
+	addSimulationProcess([&]()->SimProcess {
+
+		bool found = false;
+		for (size_t i = 0; i < timeout; ++i)
+		{
+			co_await WaitClk(clock);
+			if (simu(*avmm.write))
+			{
+				BOOST_TEST(simu(avmm.address) == 8);
+				BOOST_TEST(simu(*avmm.writeData) == expectedResult);
+				found = true;
+			}
+		}
+		BOOST_TEST(found);
+
+		});
+
+	sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "riscv_dual_cycle.vcd" };
+	vcd.addAllPins();
+	vcd.addAllNamedSignals();
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	//design.visualize("riscv_dual_cycle");
+	runTicks(clock.getClk(), (uint32_t)timeout + 2);
+}
+
+#if 0
+BOOST_FIXTURE_TEST_CASE(riscv_embedded_system_builder, UnitTestSimulationFixture)
+{
+	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000'000).setName("clock").setResetHighActive(false));
+	ClockScope clkScp(clock);
+
+	{
+		std::filesystem::path elfPath = "C:/Users/mio.SYNOGATE/Downloads/riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-x86_64-w64-mingw32/bin/a.out";
+
+		scl::riscv::EmbeddedSystemBuilder esb;
+		esb.addCpu(elfPath, 512_B);
+
+		Bit uart_rx = pinIn().setName("uart_rx");
+		Bit uart_tx = esb.addUART(0x8000'0000, 115200, uart_rx);
+		pinOut(uart_tx).setName("uart_tx");
+
+	}
+
+	sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "export/rv32i_esb/rv32i_esb.vcd" };
+	vcd.addAllPins();
+	vcd.addAllNamedSignals();
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	//design.visualize("export/rv32i_esb/rv32i_esb");
+	vhdl::VHDLExport vhdl("export/rv32i_esb/rv32i_esb.vhd");
+	vhdl(design.getCircuit());
+
+
+	runTicks(clock.getClk(), 2048);
+
+}
+
+#endif
+
 // hello world demo
 #if 0
 
@@ -1198,10 +1321,11 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle_export, UnitTestSimulationFixture)
 		Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000'000).setName("clock").setResetHighActive(false));
 		ClockScope clkScp(clock);
 
-		scl::riscv::SingleCycleI rv(8_b, 32_b);
+		//scl::riscv::SingleCycleI rv(8_b, 32_b);
+		scl::riscv::DualCycleRV rv(8_b, 32_b);
 		Memory<BVec>& imem = rv.fetch();
 		imem.fillPowerOnState(sim::createDefaultBitVectorState(linked_text_len, linked_text));
-		rv.fetchOperands();
+		//rv.fetchOperands();
 
 		scl::AvalonMM avmm;
 		avmm.readLatency = 1;
@@ -1209,7 +1333,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle_export, UnitTestSimulationFixture)
 		avmm.read = Bit{};
 		avmm.readDataValid = reg(*avmm.read, '0');
 		rv.execute();
-		rv.mem(avmm, false, false);
+		rv.mem(avmm, true, true);
 
 		Memory<BVec> dmem(1024, 32_b);
 		dmem.noConflicts();
@@ -1245,9 +1369,9 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle_export, UnitTestSimulationFixture)
 	}
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-	design.visualize("scrv32i");
+	//design.visualize("scrv32i");
 
-	vhdl::VHDLExport vhdl("rv32i_gcd");
+	vhdl::VHDLExport vhdl("rv32i_gcd/rv32i_gcd.vhd");
 	vhdl(design.getCircuit());
 
 }

@@ -34,6 +34,96 @@ void gtry::scl::riscv::Instruction::decode(const BVec& inst)
 	immB = sext(pack(inst.msb(), inst[7], inst(25, 6), inst(8, 4), '0'));
 	immU = pack(inst(20, 12), inst(12, 8), "12b0");
 	immJ = sext(pack(inst.msb(), inst(12, 8), inst[20], inst(25, 6), inst(21, 4), '0'));
+
+	// for waveform debugging
+	name = 0;
+	IF(opcode == "b01101")
+		name = 'LUI';
+	IF(opcode == "b00101")
+		name = 'AUIP';
+	IF(opcode == "b11011")
+		name = 'JAL';
+	IF(opcode == "b11001" & func3 == 0)
+		name = 'JALR';
+	IF(opcode == "b11000" & func3 == 0)
+		name = 'BEQ';
+	IF(opcode == "b11000" & func3 == 1)
+		name = 'BNE';
+	IF(opcode == "b11000" & func3 == 4)
+		name = 'BLT';
+	IF(opcode == "b11000" & func3 == 5)
+		name = 'BGE';
+	IF(opcode == "b11000" & func3 == 6)
+		name = 'BLTU';
+	IF(opcode == "b11000" & func3 == 7)
+		name = 'BGEU';
+
+	IF(opcode == "b00000" & func3 == 0)
+		name = 'LB';
+	IF(opcode == "b00000" & func3 == 1)
+		name = 'LH';
+	IF(opcode == "b00000" & func3 == 2)
+		name = 'LW';
+	IF(opcode == "b00000" & func3 == 4)
+		name = 'LBU';
+	IF(opcode == "b00000" & func3 == 5)
+		name = 'LHU';
+
+	IF(opcode == "b01000" & func3 == 0)
+		name = 'SB';
+	IF(opcode == "b01000" & func3 == 1)
+		name = 'SH';
+	IF(opcode == "b01000" & func3 == 2)
+		name = 'SW';
+
+	IF(opcode == "b00100" & func3 == 0)
+		name = 'ADDI';
+	IF(opcode == "b00100" & func3 == 1)
+		name = 'SLLI';
+	IF(opcode == "b00100" & func3 == 2)
+		name = 'SLTI';
+	IF(opcode == "b00100" & func3 == 3)
+		name = 'SLTU';
+	IF(opcode == "b00100" & func3 == 4)
+		name = 'XORI';
+	IF(opcode == "b00100" & func3 == 5)
+		name = 'SRLI';
+	IF(opcode == "b00100" & func3 == 5 & func7[5])
+		name = 'SRAI';
+	IF(opcode == "b00100" & func3 == 6)
+		name = 'ORI';
+	IF(opcode == "b00100" & func3 == 7)
+		name = 'ANDI';
+	IF(opcode == "b00100" & rd == 0)
+		name = 'NOOP';
+
+	IF(opcode == "b01100" & func3 == 0)
+		name = 'ADD';
+	IF(opcode == "b01100" & func3 == 0 & func7[5])
+		name = 'SUB';
+	IF(opcode == "b01100" & func3 == 1)
+		name = 'SLL';
+	IF(opcode == "b01100" & func3 == 2)
+		name = 'SLT';
+	IF(opcode == "b01100" & func3 == 3)
+		name = 'SLTU';
+	IF(opcode == "b01100" & func3 == 4)
+		name = 'XOR';
+	IF(opcode == "b01100" & func3 == 5)
+		name = 'SRL';
+	IF(opcode == "b01100" & func3 == 5 & func7[5])
+		name = 'SRA';
+	IF(opcode == "b01100" & func3 == 6)
+		name = 'ORI';
+	IF(opcode == "b01100" & func3 == 7)
+		name = 'AND';
+	IF(opcode == "b01100" & rd == 0)
+		name = 'NOOP';
+
+	IF(opcode == "b00011")
+		name = 'FENC';
+	IF(opcode == "b11100")
+		name = 'ESYS';
 }
 
 gtry::scl::riscv::RV32I::RV32I(BitWidth instructionAddrWidth, BitWidth dataAddrWidth) :
@@ -230,7 +320,7 @@ void gtry::scl::riscv::RV32I::mem(AvalonMM& mem, bool byte, bool halfword)
 
 void gtry::scl::riscv::RV32I::store(AvalonMM& mem, bool byte, bool halfword)
 {
-	IF(m_instr.opcode == "b01000")
+	IF(m_instr.opcode == "b01000" & m_instructionValid)
 	{
 		auto ent = Area{ "store" }.enter();
 
@@ -260,7 +350,7 @@ void gtry::scl::riscv::RV32I::store(AvalonMM& mem, bool byte, bool halfword)
 
 void gtry::scl::riscv::RV32I::load(AvalonMM& mem, bool byte, bool halfword)
 {
-	IF(m_instr.opcode == "b00000")
+	IF(m_instr.opcode == "b00000" & m_instructionValid)
 	{
 		auto ent = Area{ "load" }.enter();
 
@@ -314,7 +404,9 @@ void gtry::scl::riscv::RV32I::load(AvalonMM& mem, bool byte, bool halfword)
 				mem.byteEnable = pack(highWord, highWord, !highWord, !highWord);
 			}
 		}
-		setResult(value);
+
+		IF(*mem.readDataValid)
+			setResult(value);
 	}
 }
 
@@ -339,7 +431,7 @@ void gtry::scl::riscv::IntAluCtrl::result(IntAluResult& out) const
 	out.sum = sum;
 	out.carry = carry.msb();
 
-	out.zero = sum == 0;
+	out.zero = op1 == op2;
 	out.sign = sum.msb();
 
 	out.overflow = carry[carry.size() - 2] ^ carry.msb();
@@ -351,10 +443,10 @@ gtry::scl::riscv::SingleCycleI::SingleCycleI(BitWidth instructionAddrWidth, BitW
 	RV32I(instructionAddrWidth, dataAddrWidth),
 	m_resultIP(instructionAddrWidth)
 {
-
+	m_instructionValid = '1';
 }
 
-gtry::Memory<gtry::BVec>& gtry::scl::riscv::SingleCycleI::fetch()
+gtry::Memory<gtry::BVec>& gtry::scl::riscv::SingleCycleI::fetch(uint32_t firstInstructionAddr)
 {
 	auto entRV = m_area.enter("fetch");
 
@@ -375,12 +467,12 @@ gtry::Memory<gtry::BVec>& gtry::scl::riscv::SingleCycleI::fetch()
 	}
 
 	HCL_NAMED(instruction);
-	addr = fetch(instruction);
+	addr = fetch(instruction, firstInstructionAddr);
 
 	return m_instructionMem;
 }
 
-gtry::BVec gtry::scl::riscv::SingleCycleI::fetch(const BVec& instruction)
+gtry::BVec gtry::scl::riscv::SingleCycleI::fetch(const BVec& instruction, uint32_t firstInstructionAddr)
 {
 	m_instr.decode(instruction);
 	HCL_NAMED(m_instr);
@@ -391,7 +483,7 @@ gtry::BVec gtry::scl::riscv::SingleCycleI::fetch(const BVec& instruction)
 	BVec ifetchAddr = m_IP;
 	HCL_NAMED(ifetchAddr);
 
-	m_IP = reg(m_IP, 0);
+	m_IP = reg(m_IP, firstInstructionAddr);
 	HCL_NAMED(m_IP);
 	HCL_NAMED(m_resultIP);
 	m_resultIP = m_IPnext;

@@ -79,24 +79,39 @@ std::filesystem::path AST::getFilename(std::filesystem::path basePath, const std
 
 void AST::writeVHDL(std::filesystem::path destination)
 {
-    std::filesystem::create_directories(destination);
+    if (destination.has_extension())
+    {
+        std::filesystem::create_directories(destination.parent_path());
 
-    for (auto &package : m_packages) {
-        std::filesystem::path filePath = getFilename(destination, package->getName());
-
-        std::fstream file(filePath.string().c_str(), std::fstream::out);
+        std::ofstream file{ destination.c_str(), std::ofstream::binary };
         file.exceptions(std::fstream::failbit | std::fstream::badbit);
-        package->writeVHDL(file);
+
+        for (auto& package : m_packages)
+            package->writeVHDL(file);
+
+        for (auto* entity : this->getDependencySortedEntities())
+            entity->writeVHDL(file);
     }
+    else
+    {
+        std::filesystem::create_directories(destination);
 
-    for (auto &entity : m_entities) {
-        std::filesystem::path filePath = getFilename(destination, entity->getName());
+        for (auto& package : m_packages) {
+            std::filesystem::path filePath = getFilename(destination, package->getName());
 
-        std::fstream file(filePath.string().c_str(), std::fstream::out);
-        file.exceptions(std::fstream::failbit | std::fstream::badbit);
-        entity->writeVHDL(file);
+            std::fstream file(filePath.string().c_str(), std::fstream::out);
+            file.exceptions(std::fstream::failbit | std::fstream::badbit);
+            package->writeVHDL(file);
+        }
+
+        for (auto& entity : m_entities) {
+            std::filesystem::path filePath = getFilename(destination, entity->getName());
+
+            std::fstream file(filePath.string().c_str(), std::fstream::out);
+            file.exceptions(std::fstream::failbit | std::fstream::badbit);
+            entity->writeVHDL(file);
+        }
     }
-
 }
 
 std::vector<Entity*> AST::getDependencySortedEntities()
