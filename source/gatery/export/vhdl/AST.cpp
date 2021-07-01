@@ -81,6 +81,8 @@ void AST::writeVHDL(std::filesystem::path destination)
 {
     if (destination.has_extension())
     {
+        std::filesystem::create_directories(destination.parent_path());
+
         std::ofstream file{ destination.c_str(), std::ofstream::binary };
         file.exceptions(std::fstream::failbit | std::fstream::badbit);
 
