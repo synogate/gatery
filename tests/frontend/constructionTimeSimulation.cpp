@@ -82,7 +82,7 @@ BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_logic, UnitTestSimulationFixture)
     BOOST_TEST(simu(c).defined() == 0);
 
     simu(a) = 7;
-    BOOST_TEST(simu(c).defined() == 0);
+    BOOST_TEST(simu(c).defined() == 248);
 
     simu(b) = 10;
 
