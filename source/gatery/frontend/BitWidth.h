@@ -30,12 +30,18 @@ namespace gtry
 		bool operator == (const BitWidth&) const = default;
 		bool operator != (const BitWidth&) const = default;
 
+		explicit operator bool() const { return value != 0; }
+
 		uint64_t value = 0;
 
 		constexpr uint64_t count() const { return 1ull << value; }
 		constexpr uint64_t last() const { return count() - 1; }
 		constexpr uint64_t mask() const { return (value == 64) ? -1 : (1ull << value) - 1; }
+		constexpr size_t bytes() const { return value / 8; }
+		constexpr uint64_t bits() const { return value; }
 		constexpr size_t numBeats(BitWidth beatSize) const { return (value + beatSize.value - 1) / beatSize.value; }
+
+		constexpr BitWidth nextPow2() const { return BitWidth{ utils::nextPow2(value) }; }
 
 		constexpr bool divisibleBy(uint64_t divisor) const { return value % divisor == 0; }
 		constexpr bool divisibleBy(BitWidth divisor) const { return value % divisor.value == 0; }
