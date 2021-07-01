@@ -135,8 +135,6 @@ Bit UART::send(Stream &stream)
     entity.setName("uart_send");
 
     HCL_DESIGNCHECK_HINT(deriveClock == false, "Not implemented yet!");
-    HCL_DESIGNCHECK_HINT(startBits == 1, "Not implemented yet!");
-    HCL_DESIGNCHECK_HINT(stopBits == 1, "Not implemented yet!");
 
     size_t bitLength = hlim::floor(ClockScope::getClk().getAbsoluteFrequency() / baudRate);
 
@@ -144,7 +142,7 @@ Bit UART::send(Stream &stream)
     counter = reg(counter, 0);
                                                                                             HCL_NAMED(counter);
 
-    BVec data = BitWidth(dataBits+3);
+    BVec data = BitWidth(uint64_t(dataBits) + startBits + stopBits);
     data = reg(data, 0);
                                                                                             HCL_NAMED(data);
 
@@ -158,7 +156,7 @@ Bit UART::send(Stream &stream)
     IF (idle) {
         stream.ready = true;
         IF (stream.valid) {
-            data = pack("0b11", stream.data, '0');
+            data = oext(pack(stream.data, ConstBVec(0, BitWidth{startBits})));
             counter = bitLength+1;
         }
     } ELSE {
