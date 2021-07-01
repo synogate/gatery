@@ -83,11 +83,11 @@ void Node_Logic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::De
         switch (m_op) {
             case AND:
                 result = left & right;
-                resultDefined = (leftDefined & !left) | (rightDefined & !right) | (leftDefined & rightDefined);
+                resultDefined = (leftDefined & ~left) | (rightDefined & ~right) | (leftDefined & rightDefined);
             break;
             case NAND:
                 result = ~(left & right);
-                resultDefined = (leftDefined & !left) | (rightDefined & !right) | (leftDefined & rightDefined);
+                resultDefined = (leftDefined & ~left) | (rightDefined & ~right) | (leftDefined & rightDefined);
             break;
             case OR:
                 result = left | right;
@@ -95,7 +95,7 @@ void Node_Logic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::De
             break;
             case NOR:
                 result = ~(left | right);
-                resultDefined = (leftDefined & left) | (rightDefined & right) | (leftDefined  & rightDefined);
+                resultDefined = (leftDefined & left) | (rightDefined & right) | (leftDefined & rightDefined);
             break;
             case XOR:
                 result = left ^ right;
