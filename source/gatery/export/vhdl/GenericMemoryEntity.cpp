@@ -162,7 +162,7 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
                     bool defined = powerOnState.get(gtry::sim::DefaultConfig::DEFINED, i*wordSize + wordSize-1-j);
                     bool value = powerOnState.get(gtry::sim::DefaultConfig::VALUE, i*wordSize + wordSize-1-j);
                     if (!defined)
-                        stream << 'x';
+                        stream << 'X';
                     else
                         if (value)
                             stream << '1';
