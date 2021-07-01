@@ -111,8 +111,8 @@ namespace gtry::scl::riscv
 
 		SingleCycleI(BitWidth instructionAddrWidth = 32_b, BitWidth dataAddrWidth = 32_b);
 
-		virtual Memory<BVec>& fetch();
-		virtual BVec fetch(const BVec& instruction);
+		virtual Memory<BVec>& fetch(uint32_t firstInstructionAddr = 0);
+		virtual BVec fetch(const BVec& instruction, uint32_t firstInstructionAddr = 0);
 		virtual void fetchOperands(BitWidth regAddrWidth = 5_b);
 
 	protected:

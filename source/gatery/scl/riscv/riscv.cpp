@@ -446,7 +446,7 @@ gtry::scl::riscv::SingleCycleI::SingleCycleI(BitWidth instructionAddrWidth, BitW
 	m_instructionValid = '1';
 }
 
-gtry::Memory<gtry::BVec>& gtry::scl::riscv::SingleCycleI::fetch()
+gtry::Memory<gtry::BVec>& gtry::scl::riscv::SingleCycleI::fetch(uint32_t firstInstructionAddr)
 {
 	auto entRV = m_area.enter("fetch");
 
@@ -467,12 +467,12 @@ gtry::Memory<gtry::BVec>& gtry::scl::riscv::SingleCycleI::fetch()
 	}
 
 	HCL_NAMED(instruction);
-	addr = fetch(instruction);
+	addr = fetch(instruction, firstInstructionAddr);
 
 	return m_instructionMem;
 }
 
-gtry::BVec gtry::scl::riscv::SingleCycleI::fetch(const BVec& instruction)
+gtry::BVec gtry::scl::riscv::SingleCycleI::fetch(const BVec& instruction, uint32_t firstInstructionAddr)
 {
 	m_instr.decode(instruction);
 	HCL_NAMED(m_instr);
@@ -483,7 +483,7 @@ gtry::BVec gtry::scl::riscv::SingleCycleI::fetch(const BVec& instruction)
 	BVec ifetchAddr = m_IP;
 	HCL_NAMED(ifetchAddr);
 
-	m_IP = reg(m_IP, 0);
+	m_IP = reg(m_IP, firstInstructionAddr);
 	HCL_NAMED(m_IP);
 	HCL_NAMED(m_resultIP);
 	m_resultIP = m_IPnext;

@@ -26,8 +26,8 @@ namespace gtry::scl::riscv
 
 		DualCycleRV(BitWidth instructionAddrWidth = 32_b, BitWidth dataAddrWidth = 32_b);
 
-		virtual Memory<BVec>& fetch();
-		virtual BVec fetch(const BVec& instruction);
+		virtual Memory<BVec>& fetch(uint64_t entryPoint = 0);
+		virtual BVec fetch(const BVec& instruction, uint64_t entryPoint);
 
 	protected:
 		virtual void setIP(const BVec& ip);
@@ -47,6 +47,4 @@ namespace gtry::scl::riscv
 		Memory<BVec> m_instructionMem;
 
 	};
-
-
 }
