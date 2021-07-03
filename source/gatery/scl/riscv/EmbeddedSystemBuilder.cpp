@@ -18,6 +18,9 @@
 #include "gatery/pch.h"
 #include "EmbeddedSystemBuilder.h"
 #include "DualCycleRV.h"
+#include "RiscVAssembler.h"
+
+#include <format>
 
 using namespace gtry::scl::riscv;
 
@@ -35,6 +38,7 @@ gtry::scl::riscv::EmbeddedSystemBuilder::EmbeddedSystemBuilder() :
 {
 	auto ent = m_area.enter();
 
+	m_dataBus.address = 32_b;
 	m_dataBus.read = Bit{};
 	m_dataBus.write = Bit{};
 	m_dataBus.writeData = 32_b;
@@ -43,29 +47,57 @@ gtry::scl::riscv::EmbeddedSystemBuilder::EmbeddedSystemBuilder() :
 	m_dataBus.readData = 32_b;
 }
 
-void gtry::scl::riscv::EmbeddedSystemBuilder::addCpu(const ElfLoader& elf, BitWidth scratchMemSize)
+void gtry::scl::riscv::EmbeddedSystemBuilder::addCpu(const ElfLoader& orgelf, BitWidth scratchMemSize)
 {
 	auto ent = m_area.enter();
 
-	sim::DefaultBitVectorState codeSection = loadCodeMemState(elf);
-	HCL_DESIGNCHECK_HINT(codeSection.size(), "empty code section");
+	ElfLoader elf = orgelf;
+	elf.splitTextAndRoData();
+	addDataMemory(elf, scratchMemSize);
 
-	const BitWidth codeAddrWidth = BitWidth::count(codeSection.size() / 8);
-	const uint64_t entryPoint = elf.entryPoint() & codeAddrWidth.mask();
+	ElfLoader::MegaSegment codeMeg = elf.segments(1, 0, 0);
+	if(codeMeg.subSections.empty())
+	{
+		m_dataBus.address = "32b0";
+		m_dataBus.read = '0';
+		m_dataBus.write = '0';
+		m_dataBus.writeData = "32b0";
+		m_dataBus.byteEnable = "0000";
+		return; // no code -> no cpu
+	}
 
-	DualCycleRV rv(codeAddrWidth);
-	Memory<BVec>& imem = rv.fetch(entryPoint);
-	imem.fillPowerOnState(codeSection);
+	uint64_t entryPoint = elf.entryPoint();
+	ElfLoader::Segment initCodeSeg;
+	if (!m_initCode.empty())
+	{
+		initCodeSeg.offset = codeMeg.offset + codeMeg.size.bytes();
+
+		uint64_t jumpOffset = initCodeSeg.offset + m_initCode.size() * 4;
+		m_initCode.push_back(assembler::jal(0, int32_t(entryPoint - jumpOffset)));
+
+		assembler::printCode(std::cout, m_initCode, initCodeSeg.offset);
+		initCodeSeg.alignment = codeMeg.subSections.front()->alignment;
+		initCodeSeg.flags = 1;
+		initCodeSeg.size = BitWidth{ m_initCode.size() * 4 * 8 };
+		initCodeSeg.data = std::span((const uint8_t*)m_initCode.data(), m_initCode.size() * 4);
+
+		codeMeg.subSections.push_back(&initCodeSeg);
+		codeMeg.size = codeMeg.size + m_initCode.size() * 8;
+
+		entryPoint = initCodeSeg.offset;
+	}
+
+	const Segment codeSeg = loadSegment(codeMeg, 0_b);
+	DualCycleRV rv(codeSeg.addrWidth);
+
+	Memory<BVec>& imem = rv.fetch(entryPoint & codeSeg.addrWidth.mask());
+	imem.fillPowerOnState(codeSeg.resetState);
 	
 	rv.execute();
-
-	*m_dataBus.readDataValid = reg(*m_dataBus.readDataValid, '0');
-	*m_dataBus.readData = reg(*m_dataBus.readData);
 	rv.mem(m_dataBus);
+	m_dataBus.setName("databus");
 	m_dataBus.readData = 0;
 	m_dataBus.readDataValid = '0';
-	
-	m_dataBus.setName("databus");
 }
 
 gtry::Bit gtry::scl::riscv::EmbeddedSystemBuilder::addUART(uint64_t offset, UART& config, const Bit& rx)
@@ -74,34 +106,163 @@ gtry::Bit gtry::scl::riscv::EmbeddedSystemBuilder::addUART(uint64_t offset, UART
 
 	UART::Stream txStream, rxStream = config.recieve(rx);
 
-	txStream.data = (*m_dataBus.writeData)(0, 8_b);
-	txStream.valid = *m_dataBus.write & m_dataBus.address == offset;
+	AvalonMM bus = addAvalonMemMapped(offset, 0_b);
+	txStream.data = (*bus.writeData)(0, 8_b);
+	txStream.valid = *bus.write;
 	
-	rxStream.ready = '0';
-	IF(m_dataBus.address == offset & *m_dataBus.read)
-	{
-		m_dataBus.readData = zext(pack(txStream.ready, rxStream.valid, rxStream.data));
-		m_dataBus.ready = '1';
-	}
-	
+	bus.readData = zext(pack(txStream.ready, rxStream.valid, rxStream.data));
+	bus.readDataValid = reg(*bus.read, '0');
+	rxStream.ready = *bus.readDataValid;
 	return config.send(txStream);
 }
 
 gtry::Bit gtry::scl::riscv::EmbeddedSystemBuilder::addUART(uint64_t offset, size_t baudRate, const Bit& rx)
 {
 	UART uart;
-	uart.baudRate = baudRate;
+	uart.baudRate = (unsigned)baudRate;
 	return addUART(offset, uart, rx);
 }
 
-gtry::sim::DefaultBitVectorState gtry::scl::riscv::EmbeddedSystemBuilder::loadCodeMemState(const ElfLoader& elf) const
+gtry::scl::AvalonMM gtry::scl::riscv::EmbeddedSystemBuilder::addAvalonMemMapped(uint64_t offset, BitWidth addrWidth)
 {
-	ElfLoader::MegaSection codeSection = elf.sections(1, 0, 0);
+	auto ent = m_area.enter(std::format("avmm_slave_{:x}", offset));
 
-	// TODO: insert init code
-	codeSection.size = codeSection.size.nextPow2();
+	Bit selected = m_dataBus.address(addrWidth.bits(), 32_b - addrWidth.bits()) == (offset >> addrWidth.bits());
+	HCL_NAMED(selected);
 
-	const BitWidth codeAddrWidth = BitWidth::count(codeSection.size.bytes());
-	const BitWidth codeOffset{ (codeSection.offset & codeAddrWidth.mask()) * 8 };
-	return stateRotateRight(codeSection.memoryState(), codeOffset);
+	AvalonMM ret;
+	ret.address = m_dataBus.address(0, addrWidth);
+	ret.read = selected & *m_dataBus.read;
+	ret.write = selected & *m_dataBus.write;
+	ret.writeData = *m_dataBus.writeData;
+	ret.byteEnable = *m_dataBus.byteEnable;
+	ret.readLatency = 1;
+
+	ret.readDataValid = Bit{};
+	ret.readData = m_dataBus.readData->getWidth();
+
+	IF(*ret.readDataValid)
+	{
+		m_dataBus.readDataValid = '1';
+		m_dataBus.readData = *ret.readData;
+	}
+	return ret;
+}
+
+EmbeddedSystemBuilder::Segment gtry::scl::riscv::EmbeddedSystemBuilder::loadSegment(ElfLoader::MegaSegment seg, BitWidth additionalMemSize) const
+{
+	Segment ret;
+	ret.offset = seg.offset;
+	ret.size = (seg.size + additionalMemSize).nextPow2();
+	ret.addrWidth = BitWidth::count(ret.size.bytes());
+	ret.start = ret.offset & ret.addrWidth.mask();
+	ret.offset -= ret.start;
+
+	seg.size = ret.size;
+	ret.resetState = stateRotateRight(seg.memoryState(), BitWidth{ ret.start * 8 });
+	return ret;
+}
+
+void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const ElfLoader& elf, BitWidth scratchMemSize)
+{
+	ElfLoader::MegaSegment rwMega = elf.segments(6, 0, 1);
+	ElfLoader::MegaSegment roMega = elf.segments(4, 0, 3);
+	
+	std::list<ElfLoader::Segment> newSegments;
+	for (const ElfLoader::Segment* seg : rwMega.subSections)
+	{
+		// make a copy for each data member
+		ElfLoader::Segment& seg_no_bss = newSegments.emplace_back(*seg);
+		seg_no_bss.size = BitWidth{ seg->data.size() * 8 }; // strip zero area
+		seg_no_bss.offset = roMega.offset + roMega.size.bytes();
+		seg_no_bss.flags &= ~2;
+
+		roMega.size = roMega.size + seg->size;
+		roMega.subSections.push_back(&seg_no_bss);
+
+		// generate initialization code
+		assembler::genMeminit(
+			seg->offset, seg->offset + seg->size.bytes(),
+			seg_no_bss.offset, seg_no_bss.offset + seg_no_bss.size.bytes(),
+			m_initCode
+		);
+	}
+
+	EmbeddedSystemBuilder::Segment rwSeg = loadSegment(rwMega, scratchMemSize);
+	
+	uint64_t stackPointer = rwSeg.offset + rwSeg.start + rwSeg.size.bytes();
+	assembler::loadConstant((uint32_t)stackPointer, 2, m_initCode);
+
+	addDataMemory(rwSeg, "rw_data", true);
+	addDataMemory(loadSegment(roMega, 0_b), "ro_data", false);
+}
+
+gtry::hlim::NodeGroup* dbg_group = nullptr;
+
+void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const Segment& seg, std::string_view name, bool writable)
+{
+	auto ent = m_area.enter(name);
+	if(name == "rw_data")
+		dbg_group = GroupScope::getCurrentNodeGroup();
+
+	Memory<BVec> mem{ seg.addrWidth.count(), 32_b };
+	//mem.noConflicts();
+	mem.fillPowerOnState(seg.resetState);
+	mem.setName(std::string{ name });
+
+	// alias memory in consecutive address space for ring buffer trick
+	AvalonMM bus1 = addAvalonMemMapped(seg.offset, seg.addrWidth);
+	AvalonMM bus2 = addAvalonMemMapped(seg.offset + seg.size.bytes(), seg.addrWidth);
+	bus1.setName("bus1");
+	bus2.setName("bus2");
+
+	BVec addr = bus1.address(2, seg.addrWidth.bits() - 2);
+	BVec data = mem[addr];
+
+	bus1.readData = reg(data);
+	bus2.readData = *bus1.readData;
+	bus1.readDataValid = reg(*bus1.read, '0');
+	bus2.readDataValid = reg(*bus2.read, '0');
+
+	if (writable)
+	{
+#if 0
+		BVec maskedData = data;
+
+		BVec dbgReadData = reg(maskedData);
+		HCL_NAMED(dbgReadData);
+
+		// TODO: implement byte enable
+		for (size_t i = 0; i < 4; ++i)
+			IF((*bus1.byteEnable)[i])
+				maskedData(i * 8, 8_b) = (*bus1.writeData)(i * 8, 8_b);
+		//setName(data, "mem_writedata");
+
+		BVec dbgMaskedData = reg(maskedData);
+		HCL_NAMED(dbgMaskedData);
+
+		IF(*bus1.write | *bus2.write)
+			mem[addr] = maskedData;
+#else
+
+		Bit doWrite = reg(*bus1.write | *bus2.write, '0');
+
+		BVec writeAddr = reg(addr);
+		BVec writeMask = reg(*bus1.byteEnable);
+		BVec writeData = reg(*bus1.writeData);
+		BVec maskedData = *bus1.readData;
+		for (size_t i = 0; i < 4; ++i)
+			IF(writeMask[i])
+			maskedData(i * 8, 8_b) = writeData(i * 8, 8_b);
+
+		HCL_NAMED(doWrite);
+		HCL_NAMED(writeAddr);
+		HCL_NAMED(writeMask);
+		HCL_NAMED(writeData);
+		HCL_NAMED(maskedData);
+
+		IF(doWrite)
+			mem[writeAddr] = maskedData;
+#endif
+	}
 }

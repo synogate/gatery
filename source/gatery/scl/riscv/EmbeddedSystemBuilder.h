@@ -25,6 +25,15 @@ namespace gtry::scl::riscv
 {
 	class EmbeddedSystemBuilder
 	{
+		struct Segment
+		{
+			uint64_t offset;
+			uint64_t start;
+			BitWidth size;
+			BitWidth addrWidth;
+			sim::DefaultBitVectorState resetState;
+		};
+
 	public:
 		EmbeddedSystemBuilder();
 
@@ -33,12 +42,16 @@ namespace gtry::scl::riscv
 		Bit addUART(uint64_t offset, UART& config, const Bit& rx);
 		Bit addUART(uint64_t offset, size_t baudRate, const Bit& rx);
 
+		AvalonMM addAvalonMemMapped(uint64_t offset, BitWidth addrWidth);
 	private:
-		sim::DefaultBitVectorState loadCodeMemState(const ElfLoader& elf) const;
-
+		Segment loadSegment(ElfLoader::MegaSegment elf, BitWidth additionalMemSize) const;
+		void addDataMemory(const ElfLoader& elf, BitWidth scratchMemSize);
+		void addDataMemory(const Segment& seg, std::string_view name, bool writable);
 
 		Area m_area;
 		AvalonMM m_dataBus;
+
+		std::vector<uint32_t> m_initCode;
 
 	};
 

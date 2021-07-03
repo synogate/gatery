@@ -1259,6 +1259,8 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, UnitTestSimulationFixture)
 }
 
 #if 0
+extern gtry::hlim::NodeGroup* dbg_group;
+
 BOOST_FIXTURE_TEST_CASE(riscv_embedded_system_builder, UnitTestSimulationFixture)
 {
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000'000).setName("clock").setResetHighActive(false));
@@ -1272,16 +1274,23 @@ BOOST_FIXTURE_TEST_CASE(riscv_embedded_system_builder, UnitTestSimulationFixture
 
 		Bit uart_rx = pinIn().setName("uart_rx");
 		Bit uart_tx = esb.addUART(0x8000'0000, 115200, uart_rx);
+		//Bit uart_tx = esb.addUART(0x8000'0000, 5'000'000, uart_rx);
 		pinOut(uart_tx).setName("uart_tx");
 
+		addSimulationProcess([=]()->SimProcess {
+			simu(uart_rx) = 0;
+			co_return;
+		});
 	}
+
+
 
 	sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "export/rv32i_esb/rv32i_esb.vcd" };
 	vcd.addAllPins();
 	vcd.addAllNamedSignals();
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-	//design.visualize("export/rv32i_esb/rv32i_esb");
+	//design.visualize("export/rv32i_esb/rv32i_esb", dbg_group);
 	vhdl::VHDLExport vhdl("export/rv32i_esb/rv32i_esb.vhd");
 	vhdl(design.getCircuit());
 
