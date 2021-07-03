@@ -54,11 +54,11 @@ DesignScope::DesignScope() : BaseScope<DesignScope>(), m_rootScope(m_circuit.get
     HCL_DESIGNCHECK_HINT(m_parentScope == nullptr, "Only one design scope can be active at a time!");
 }
 
-void DesignScope::visualize(const std::string &filename)
+void DesignScope::visualize(const std::string& filename, hlim::NodeGroup* nodeGroup)
 {
-    DotExport exp(filename+".dot");
-    exp(get()->getCircuit());
-    exp.runGraphViz(filename+".svg");
+    DotExport exp(filename + ".dot");
+    exp(get()->getCircuit(), nodeGroup);
+    exp.runGraphViz(filename + ".svg");
 }
 
 }

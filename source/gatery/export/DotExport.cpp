@@ -39,7 +39,7 @@ DotExport::DotExport(std::filesystem::path destination) : m_destination(std::mov
 {
 }
 
-void DotExport::operator()(const hlim::Circuit &circuit)
+void DotExport::operator()(const hlim::Circuit &circuit, hlim::NodeGroup *nodeGroup)
 {
     std::fstream file(m_destination.string().c_str(), std::fstream::out);
     if (!file.is_open())
@@ -117,7 +117,10 @@ void DotExport::operator()(const hlim::Circuit &circuit)
 
             file << "}" << std::endl;
         };
-        reccurWalkNodeGroup(circuit.getRootNodeGroup());
+        if (nodeGroup == nullptr)
+            reccurWalkNodeGroup(circuit.getRootNodeGroup());
+        else
+            reccurWalkNodeGroup(nodeGroup);
 
         for (auto &node : circuit.getNodes()) {
             if (node->getGroup() == nullptr) {
@@ -130,13 +133,17 @@ void DotExport::operator()(const hlim::Circuit &circuit)
         }
     }
 
-    for (auto &node : circuit.getNodes()) {
-        unsigned nodeId = node2idx.find(node.get())->second;
+    for (auto &nodeIdx : node2idx) {
+        auto &node = nodeIdx.first;
+        unsigned nodeId = nodeIdx.second;
 
         for (auto port : utils::Range(node->getNumInputPorts())) {
             auto producer = node->getDriver(port);
             if (producer.node == nullptr) continue;
 
+            auto producerIt = node2idx.find(producer.node);
+            if (producerIt == node2idx.end()) continue;
+            
             unsigned producerId = node2idx.find(producer.node)->second;
 
             auto type = hlim::getOutputConnectionType(producer);
@@ -195,10 +202,10 @@ void DotExport::runGraphViz(std::filesystem::path destination)
 
 
 
-void visualize(const hlim::Circuit &circuit, const std::string &filename)
+void visualize(const hlim::Circuit &circuit, const std::string &filename, hlim::NodeGroup *nodeGroup)
 {
     DotExport exp(filename+".dot");
-    exp(circuit);
+    exp(circuit, nodeGroup);
     exp.runGraphViz(filename+".svg");
 }
 

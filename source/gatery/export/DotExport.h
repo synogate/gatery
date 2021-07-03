@@ -39,7 +39,7 @@ class DotExport
          * @brief Invokes the export
          * @param circuit The circuit to export into the .dot file.
          */
-        void operator()(const hlim::Circuit &circuit);
+        void operator()(const hlim::Circuit &circuit, hlim::NodeGroup *nodeGroup = nullptr);
 
         /**
          * @brief Executes graphviz on the .dot file to produce an svg.
@@ -51,6 +51,6 @@ class DotExport
         std::filesystem::path m_destination;
 };
 
-void visualize(const hlim::Circuit &circuit, const std::string &filename);
+void visualize(const hlim::Circuit &circuit, const std::string &filename, hlim::NodeGroup *nodeGroup = nullptr);
 
 }
