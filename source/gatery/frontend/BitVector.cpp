@@ -176,7 +176,7 @@ namespace gtry {
         if (m_node) m_node->removeRef();
     }
 
-    BVec::BVec(hlim::Node_Signal* node, Range range, Expansion expansionPolicy) :
+    BVec::BVec(hlim::Node_Signal* node, Range range, Expansion expansionPolicy, size_t initialScopeId) :
         m_node(node),
         m_range(range),
         m_expansionPolicy(expansionPolicy)
@@ -185,6 +185,8 @@ namespace gtry {
         HCL_DESIGNCHECK(connType.interpretation == hlim::ConnectionType::BITVEC);
         HCL_DESIGNCHECK(m_range.width == 0 || connType.width > m_range.bitOffset(m_range.width-1));
         m_node->addRef();
+
+        m_initialScopeId = initialScopeId;
     }
 
     BVec::BVec(BitWidth width, Expansion expansionPolicy)
@@ -504,7 +506,7 @@ namespace gtry {
 
     BVec& BVec::aliasRange(const Range& range) const
     {
-        auto [it, exists] = m_rangeAlias.try_emplace(range, m_node, range, m_expansionPolicy);
+        auto [it, exists] = m_rangeAlias.try_emplace(range, m_node, range, m_expansionPolicy, m_initialScopeId);
         return it->second;
     }
 

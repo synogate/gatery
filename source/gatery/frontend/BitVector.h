@@ -143,7 +143,7 @@ namespace gtry {
 		~BVec();
 
 		BVec(const SignalReadPort& port) { assign(port); }
-		BVec(hlim::Node_Signal* node, Range range, Expansion expansionPolicy); // alias
+		BVec(hlim::Node_Signal* node, Range range, Expansion expansionPolicy, size_t initialScopeId); // alias
 		BVec(BitWidth width, Expansion expansionPolicy = Expansion::none);
 
 		template<unsigned S>
