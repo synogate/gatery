@@ -39,7 +39,7 @@ namespace gtry::scl::riscv
 	class ElfLoader
 	{
 	public:
-		struct Section
+		struct Segment
 		{
 			std::span<const uint8_t> data;
 			BitWidth size;
@@ -48,33 +48,54 @@ namespace gtry::scl::riscv
 			uint64_t alignment;
 		};
 
-		struct MegaSection
+		struct MegaSegment
 		{
 			uint64_t offset = 0;
 			BitWidth size;
-			std::vector<const Section*> subSections;
+			std::vector<const Segment*> subSections;
 
 			sim::DefaultBitVectorState memoryState() const;
+		};
+
+		struct Section
+		{
+			std::string_view name;
+			std::span<const uint8_t> data;
+			uint64_t offset;
+			uint32_t type;
+			uint64_t flags;
 		};
 
 	public:
 		ElfLoader(const std::filesystem::path& file) { load(file); }
 		void load(const std::filesystem::path& file);
 
+		void splitTextAndRoData();
+
 		Bitness bitness() const;
 		Endianness endianness() const;
 		uint64_t entryPoint() const;
 
-		const std::vector<Section>& sections() const { return m_ProgramSections; }
-		MegaSection sections(size_t allOfFlags, size_t anyOfFlags, size_t excludeFlags) const;
+		const std::vector<Segment>& segments() const { return m_ProgramSegments; }
+		MegaSegment segments(size_t allOfFlags, size_t anyOfFlags, size_t excludeFlags) const;
+
+
+		const Section* section(std::string_view name) const;
+		const std::map<std::string_view, Section>& sections() const { return m_Sections; }
 
 
 	protected:
 		template<typename T>
 		T load(size_t offset) const;
 
+		void loadProgramHeader();
+		void loadSectionHeader();
+
 	private:
 		boost::iostreams::mapped_file_source m_Binary;
-		std::vector<Section> m_ProgramSections;
+		std::vector<Segment> m_ProgramSegments;
+		std::map<std::string_view, Section> m_Sections;
+
+
 	};
 }
