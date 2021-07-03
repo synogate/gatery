@@ -74,6 +74,8 @@ namespace gtry::scl
         };
     };
 
+    Memory<BVec> attachMem(AvalonMM& avmm, BitWidth addrWidth = BitWidth{});
+
     class AvalonNetworkSection
     {
     public:

@@ -231,5 +231,43 @@ namespace gtry::scl
 		readLatency = targetLatency;
 	}
 
+	Memory<BVec> attachMem(AvalonMM& avmm, BitWidth addrWidth)
+	{
+		BitWidth dataWidth;
+		if (avmm.readData)
+			dataWidth = avmm.readData->getWidth();
+		else if (avmm.writeData)
+			dataWidth = avmm.writeData->getWidth();
+
+		if (!addrWidth)
+			addrWidth = avmm.address.getWidth();
+
+		Memory<BVec> mem{ avmm.address.getWidth().count(), dataWidth };
+
+		if (avmm.readData)
+		{
+			avmm.readData = mem[avmm.address(0, addrWidth)];
+
+			if (avmm.readDataValid)
+				avmm.readDataValid = *avmm.read;
+
+			for (size_t i = 0; i < avmm.readLatency; ++i)
+			{
+				avmm.readData = reg(*avmm.readData);
+
+				if (avmm.readDataValid)
+					avmm.readDataValid = reg(*avmm.readDataValid, '0');
+			}
+		}
+
+		if (avmm.writeData)
+		{
+			IF(*avmm.write)
+				mem[avmm.address(0, addrWidth)] = *avmm.writeData;
+		}
+
+		return mem;
+	}
+
 	template void AvalonMM::connect<BVec>(Memory<BVec>&, BitWidth);
 }
