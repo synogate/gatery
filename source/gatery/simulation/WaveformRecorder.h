@@ -23,6 +23,7 @@
 
 #include <vector>
 #include <map>
+#include <set>
 
 namespace gtry::hlim {
     class Circuit;
@@ -70,6 +71,7 @@ class WaveformRecorder : public SimulatorCallbacks
         std::vector<StateOffsetSize> m_id2StateOffsetSize;
         std::vector<Signal> m_id2Signal;
         sim::DefaultBitVectorState m_trackedState;
+        std::set<hlim::NodePort> m_alreadyAddedNodePorts;
 
         void initializeStates();
         virtual void initialize() = 0;

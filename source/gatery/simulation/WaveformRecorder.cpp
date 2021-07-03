@@ -38,6 +38,9 @@ WaveformRecorder::WaveformRecorder(hlim::Circuit &circuit, Simulator &simulator)
 void WaveformRecorder::addSignal(hlim::NodePort np, bool hidden, hlim::NodeGroup *group, const std::string &nameOverride)
 {
     HCL_ASSERT(!hlim::outputIsDependency(np));
+    if (m_alreadyAddedNodePorts.contains(np)) return;
+    m_alreadyAddedNodePorts.insert(np);
+
     Signal signal;
     signal.driver = np;
     if (!nameOverride.empty()) {
