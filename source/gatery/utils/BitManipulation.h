@@ -209,6 +209,12 @@ inline T bitMaskRange(size_t start, size_t count) {
     return ((T{ 1 } << count) - 1) << start;
 }
 
+template<typename T = std::size_t>
+inline bool isMaskSet(T a, size_t start, size_t count) {
+    T mask = bitMaskRange<T>(start, count);
+    return (a & mask) == mask;
+}
+
 template<typename T>
 inline T bitfieldExtract(T a, size_t start, size_t count) {
     start &= 0xFF;

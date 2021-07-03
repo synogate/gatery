@@ -160,7 +160,7 @@ void Node_MemPort::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
             std::uint64_t addressValue   = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[(unsigned)Inputs::address], addrType.width);
             std::uint64_t addressDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[(unsigned)Inputs::address], addrType.width);
 
-            if (addressDefined != (~0ull >> (64 - addrType.width))) {
+            if (!utils::isMaskSet(addressDefined, 0, addrType.width)) {
                 state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[(unsigned)Outputs::rdData], getBitWidth());
             } else {
                 auto memSize = getMemory()->getSize();
@@ -199,7 +199,7 @@ void Node_MemPort::simulateAdvance(sim::SimulatorCallbacks &simCallbacks, sim::D
         std::uint64_t addressDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, internalOffsets[(unsigned)Internal::address], addrType.width);
 
         if (doWrite) {
-            if (addressDefined != (~0ull >> (64 - addrType.width))) {
+            if (!utils::isMaskSet(addressDefined, 0, addrType.width)) {
                 // If the address is undefined, make the entire RAM undefined
                 state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[(unsigned)RefInternal::memory], getMemory()->getSize());
             } else {
