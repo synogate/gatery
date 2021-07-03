@@ -497,7 +497,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
                 c.node->rewireInput(c.port, np);
             return reg;
         };
-        auto insertDelayInput = [&](NodePort np, NodeGroup *ng, const char *name, const char *comment)->Node_Register* {
+        auto insertDelayInput = [&](NodePort np, bool resetToZero, NodeGroup *ng, const char *name, const char *comment)->Node_Register* {
             auto driver = np.node->getDriver(np.port);
             auto *reg = circuit.createNode<Node_Register>();
             reg->recordStackTrace();
@@ -507,6 +507,19 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 
             reg->connectInput(Node_Register::Input::ENABLE, *enable);
             reg->connectInput(Node_Register::Input::DATA, driver);
+
+            if (resetToZero) {
+                HCL_ASSERT(getOutputConnectionType(driver).interpretation == ConnectionType::BOOL);
+                
+                sim::DefaultBitVectorState state;
+                state.resize(1);
+                state.set(sim::DefaultConfig::VALUE, 0, false);
+                state.set(sim::DefaultConfig::DEFINED, 0);
+                auto* constZero = circuit.createNode<Node_Constant>(state, ConnectionType::BOOL);
+                constZero->moveToGroup(ng);
+                
+                reg->connectInput(Node_Register::Input::RESET_VALUE, { .node = constZero, .port = 0ull });
+            }
 
             NodePort newNp = {.node = reg, .port = 0ull};
             circuit.appendSignal(newNp)->setName(name);
@@ -529,7 +542,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
                 if (driver.node == nullptr) continue;
                 if (hlim::outputIsDependency(driver)) continue; // TODO: think about this
                 if (!delayedNodes.contains(driver.node) && driver.node != rp.syncReadDataReg) {
-                    insertDelayInput({.node=n, .port=i}, n->getGroup(), (n->getName()+"delayed").c_str(), "Auto generated register on signal going into a subnet that was delayed due to register retiming for BRAM sync read formation.");
+                    insertDelayInput({.node=n, .port=i}, false, n->getGroup(), (n->getName()+"delayed").c_str(), "Auto generated register on signal going into a subnet that was delayed due to register retiming for BRAM sync read formation.");
                 }
             }
         }
@@ -549,10 +562,10 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
             NodePort delayedWrDataNP = {.node = delayedWrData, .port = 0ull};
             circuit.appendSignal(delayedWrDataNP)->setName("delayed_wr_data");
 
-            insertDelayInput({.node=writePort, .port=(unsigned)Node_MemPort::Inputs::address}, m_fixupNodeGroup, "delayed_wr_addr", "");
+            insertDelayInput({.node=writePort, .port=(unsigned)Node_MemPort::Inputs::address}, false, m_fixupNodeGroup, "delayed_wr_addr", "");
 
             HCL_ASSERT(writePort->getNonSignalDriver((unsigned)Node_MemPort::Inputs::enable) == writePort->getNonSignalDriver((unsigned)Node_MemPort::Inputs::wrEnable));
-            insertDelayInput({.node=writePort, .port=(unsigned)Node_MemPort::Inputs::enable}, m_fixupNodeGroup, "delayed_wr_enable", "");
+            insertDelayInput({.node=writePort, .port=(unsigned)Node_MemPort::Inputs::enable}, true, m_fixupNodeGroup, "delayed_wr_enable", "");
             writePort->rewireInput((unsigned)Node_MemPort::Inputs::wrEnable, writePort->getDriver((unsigned)Node_MemPort::Inputs::enable));
 
             auto *addrCompNode = circuit.createNode<Node_Compare>(Node_Compare::EQ);
