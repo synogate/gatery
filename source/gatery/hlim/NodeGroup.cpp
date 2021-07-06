@@ -29,6 +29,7 @@
 
 namespace gtry::hlim {
 
+NodeGroupMetaInfo::~NodeGroupMetaInfo() { }
 
 NodeGroup::NodeGroup(GroupType groupType) : m_groupType(groupType)
 {
@@ -65,6 +66,15 @@ NodeGroup *NodeGroup::addChildNodeGroup(GroupType groupType)
     m_children.push_back(std::make_unique<NodeGroup>(groupType));
     m_children.back()->m_parent = this;
     return m_children.back().get();
+}
+
+NodeGroup *NodeGroup::findChild(std::string_view name)
+{
+    for (auto &child : m_children)
+        if (child->getName() == name)
+            return child.get();
+
+    return nullptr;
 }
 
 void NodeGroup::moveInto(NodeGroup *newParent)
