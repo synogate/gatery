@@ -120,6 +120,23 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, UnitTestSimulationFixture)
     // stream in bfm
     std::queue<TbReq> reqQueue;
     std::queue<TlpBuilder> cplQueue;
+
+
+    addSimulationProcess([&]()->SimProcess {
+        simu(*avmm.ready) = 1;
+
+        co_await WaitClk(clock);
+
+        for (uint32_t i = 0; i < 16; ++i)
+            reqQueue.push(TbReq{ .write = true, .address = i * 4, .data = i });
+
+        for (uint32_t i = 0; i < 16; ++i)
+            reqQueue.push(TbReq{ .read = true, .address = i * 4 });
+
+
+    });
+
+
     addSimulationProcess([&]()->SimProcess {
 
         std::mt19937 rng{ 18057 };
@@ -192,20 +209,6 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, UnitTestSimulationFixture)
             }
             co_await WaitClk(clock);
         }
-
-
-    });
-
-    addSimulationProcess([&]()->SimProcess {
-        simu(*avmm.ready) = 1;
-
-        co_await WaitClk(clock);
-
-        for (uint32_t i = 0; i < 16; ++i)
-            reqQueue.push(TbReq{ .write = true, .address = i * 4, .data = i });
-
-        for (uint32_t i = 0; i < 16; ++i)
-            reqQueue.push(TbReq{ .read = true, .address = i * 4 });
 
 
     });
