@@ -53,7 +53,7 @@ namespace gtry {
                 readPort->connectAddress(m_address.getReadPort());
 
                 BVec rawData(SignalReadPort({.node=readPort, .port=(unsigned)hlim::Node_MemPort::Outputs::rdData}));
-                Data ret = m_defaultValue;
+                Data ret = constructFrom(m_defaultValue);
                 gtry::unpack(rawData, ret);
                 return ret;
             }
