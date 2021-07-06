@@ -22,19 +22,17 @@
 
 #include <iostream>
 
+#include "GlobalBuffer.h"
+
+
 namespace gtry::scl {
+
 
 /**
  * @brief Constructs a global buffer for a signal
  * @details Actually nothing more than a noop signal node in a group, but allows technology mapping to
  * insert a global buffer to route a signal onto an FPGA's global routing network.
  */
-template<typename T>
-T bufG(const T &src) {
-	auto scope = Area("scl_globalBuffer").enter();
-	T copy = src;
-	copy.setName("globalBufferPlaceholder");
-	return copy;
-}
+Bit bufG(const Bit &src);
 
 }

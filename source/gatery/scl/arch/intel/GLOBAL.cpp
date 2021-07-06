@@ -16,18 +16,19 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
-#include "BUFG.h"
+#include "GLOBAL.h"
 
 #include <gatery/frontend/GraphTools.h>
+
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Preprocessor.h>
 
-namespace gtry::scl::arch::xilinx {
+namespace gtry::scl::arch::intel {
 
-BUFG::BUFG()
+GLOBAL::GLOBAL()
 {
-    m_libraryName = "UNISIM";
-    m_name = "BUFG";
+    m_libraryName = "altera";
+    m_name = "GLOBAL";
     m_clockNames = {};
     m_resetNames = {};
 
@@ -35,18 +36,19 @@ BUFG::BUFG()
     resizeOutputs(1);
 }
 
-void BUFG::connectInput(const Bit &bit)
+void GLOBAL::connectInput(const Bit &bit)
 {
 	connectInput(bit.getReadPort());
 }
+
 /*
-void BUFG::connectInput(const BVec &bvec)
+void GLOBAL::connectInput(const BVec &bvec)
 {
 	connectInput(bvec.getReadPort());
 }
 */
 
-void BUFG::connectInput(hlim::NodePort nodePort)
+void GLOBAL::connectInput(hlim::NodePort nodePort)
 {
     if (nodePort.node != nullptr) {
         auto paramType = nodePort.node->getOutputConnectionType(nodePort.port);
@@ -59,29 +61,29 @@ void BUFG::connectInput(hlim::NodePort nodePort)
     NodeIO::connectInput(0, nodePort);
 }
 
-std::string BUFG::getTypeName() const
+std::string GLOBAL::getTypeName() const
 {
-    return "BUFG";
+    return "GLOBAL";
 }
 
-void BUFG::assertValidity() const
+void GLOBAL::assertValidity() const
 {
 }
 
-std::string BUFG::getInputName(size_t idx) const
+std::string GLOBAL::getInputName(size_t idx) const
 {
-    return "I";
+    return "a_in";
 }
 
-std::string BUFG::getOutputName(size_t idx) const
+std::string GLOBAL::getOutputName(size_t idx) const
 {
-    return "O";
+    return "a_out";
 }
 
-std::unique_ptr<hlim::BaseNode> BUFG::cloneUnconnected() const
+std::unique_ptr<hlim::BaseNode> GLOBAL::cloneUnconnected() const
 {
-    BUFG *ptr;
-    std::unique_ptr<BaseNode> res(ptr = new BUFG());
+    GLOBAL *ptr;
+    std::unique_ptr<BaseNode> res(ptr = new GLOBAL());
     copyBaseToClone(res.get());
 
     ptr->m_libraryName = m_libraryName;
@@ -91,7 +93,7 @@ std::unique_ptr<hlim::BaseNode> BUFG::cloneUnconnected() const
     return res;
 }
 
-std::string BUFG::attemptInferOutputName(size_t outputPort) const
+std::string GLOBAL::attemptInferOutputName(size_t outputPort) const
 {
     auto driver = getDriver(0);
     
@@ -105,12 +107,9 @@ std::string BUFG::attemptInferOutputName(size_t outputPort) const
 }
 
 
-bool BUFGPattern::attemptApply(hlim::NodeGroup *nodeGroup)
+bool GLOBALPattern::attemptApply(hlim::NodeGroup *nodeGroup)
 {
 	if (nodeGroup->getName() != "scl_globalBuffer") return false;
-
-
-	/// @todo: Make it work for bundles as well
 
 //	HCL_ASSERT_HINT(nodeGroup->getNodes().size() == 1, "scl_globalBuffer should only contain a single signal node (not working for bundles yet)");
 //	HCL_ASSERT_HINT(dynamic_cast<hlim::Node_Signal*>(nodeGroup->getNodes().front()), "scl_globalBuffer should only contain a single signal node (not working for bundles yet)");
@@ -120,26 +119,13 @@ bool BUFGPattern::attemptApply(hlim::NodeGroup *nodeGroup)
 	if (io.inputBits.contains("globalBufferPlaceholder")) {
 		Bit &input = io.inputBits["globalBufferPlaceholder"];
 
-		HCL_ASSERT_HINT(io.outputBits.contains("globalBufferPlaceholder"), "Missing output for global buffer, probably because not yet implemented for bundles!");
+		HCL_ASSERT_HINT(io.outputBits.contains("globalBufferPlaceholder"), "Missing output for global buffer!");
 		Bit &output = io.outputBits["globalBufferPlaceholder"];
 
-    	auto *bufg = DesignScope::createNode<BUFG>();
-		bufg->connectInput(input);
-	    output.setExportOverride(SignalReadPort(bufg));
-	}/* else {
-		
-		HCL_ASSERT_HINT(io.inputBVecs.contains("globalBufferPlaceholder"), "Missing output for global buffer, probably because not yet implemented for bundles!");
-		BVec &input = io.inputBVecs["globalBufferPlaceholder"];
-
-		HCL_ASSERT_HINT(io.outputBVecs.contains("globalBufferPlaceholder"), "Missing output for global buffer, probably because not yet implemented for bundles!");
-		BVec &output = io.outputBVecs["globalBufferPlaceholder"];
-
-		HCL_ASSERT(input.getWidth() == output.getWidth());
-
-    	auto *bufg = DesignScope::createNode<BUFG>();
-		bufg->connectInput(input);
-	    output.setExportOverride(SignalReadPort(bufg));
-	}*/
+    	auto *global = DesignScope::createNode<GLOBAL>();
+		global->connectInput(input);
+	    output.setExportOverride(SignalReadPort(global));
+	}
 
 	return true;
 }

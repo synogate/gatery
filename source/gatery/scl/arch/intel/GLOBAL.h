@@ -20,12 +20,12 @@
 #include <gatery/frontend/TechnologyMapping.h>
 #include <gatery/hlim/supportNodes/Node_External.h>
 
-namespace gtry::scl::arch::xilinx {
+namespace gtry::scl::arch::intel {
 
-class BUFG : public gtry::hlim::Node_External
+class GLOBAL : public gtry::hlim::Node_External
 {
     public:
-        BUFG();
+        GLOBAL();
 
 		void connectInput(const Bit &bit);
 
@@ -42,10 +42,10 @@ class BUFG : public gtry::hlim::Node_External
 };
 
 
-class BUFGPattern : public TechnologyMappingPattern
+class GLOBALPattern : public TechnologyMappingPattern
 {
 	public:
-		virtual ~BUFGPattern() = default;
+		virtual ~GLOBALPattern() = default;
 
 		virtual bool attemptApply(hlim::NodeGroup *nodeGroup) override;
 	protected:
