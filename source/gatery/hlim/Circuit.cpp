@@ -303,38 +303,39 @@ void Circuit::cullOrphanedSignalNodes()
     }
 }
 
-static bool isUnusedNode(const BaseNode& node)
-{
-    if (node.hasSideEffects())
-        return false;
-
-    if (node.hasRef()) return false;
-/*
-    auto* signalNode = dynamic_cast<const Node_Signal*>(&node);
-    if (signalNode && !signalNode->getName().empty())
-        return false;
-*/
-
-    for (auto j : utils::Range(node.getNumOutputPorts()))
-        if (!node.getDirectlyDriven(j).empty())
-            return false;
-
-    return true;
-}
-
 void Circuit::cullUnusedNodes()
 {
-    //std::cout << "cullUnusedNodes()" << std::endl;
+    // Do multiple times since some nodes (memory write ports) might loose their side effects when others vanish
     bool done;
     do {
         done = true;
 
+        std::vector<BaseNode*> openList;
+        std::set<BaseNode*> usedNodes;
+
+        // Find roots
+        for (auto &n : m_nodes)
+            if (n->hasSideEffects() || n->hasRef())
+                openList.push_back(n.get());
+
+        // Find dependencies
+        while (!openList.empty()) {
+            auto *n = openList.back();
+            openList.pop_back();
+
+            if (usedNodes.contains(n)) continue; // already handled
+            usedNodes.insert(n);
+            
+            for (auto i : utils::Range(n->getNumInputPorts())) {
+                auto driver = n->getDriver(i);
+                if (driver.node != nullptr)
+                    openList.push_back(driver.node);
+            }
+        }
+
+        // Remove everything that isn't used
         for (size_t i = 0; i < m_nodes.size(); i++) {
-
-            if (isUnusedNode(*m_nodes[i]))
-            {
-                //std::cout << "    Culling node " << m_nodes[i]->getTypeName() << " "  << m_nodes[i]->getName() << std::endl;
-
+            if (!usedNodes.contains(m_nodes[i].get())) {
                 m_nodes[i] = std::move(m_nodes.back());
                 m_nodes.pop_back();
                 i--;
@@ -343,6 +344,10 @@ void Circuit::cullUnusedNodes()
         }
     } while (!done);
 }
+
+
+
+
 
 
 struct HierarchyCondition {
