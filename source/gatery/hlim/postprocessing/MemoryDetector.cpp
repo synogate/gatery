@@ -207,7 +207,7 @@ void MemoryGroup::convertPortDependencyToLogic(Circuit &circuit)
                 logicAnd->connectInput(0, conflict);
                 logicAnd->connectInput(1, rp.node->getDriver((unsigned)Node_MemPort::Inputs::enable));
                 conflict = {.node = logicAnd, .port = 0ull};
-                circuit.appendSignal(conflict)->setName("conflict");
+                circuit.appendSignal(conflict)->setName("conflict_and_rdEn");
             }
 
             HCL_ASSERT(wp.node->getNonSignalDriver((unsigned)Node_MemPort::Inputs::enable) == wp.node->getNonSignalDriver((unsigned)Node_MemPort::Inputs::wrEnable));
@@ -218,7 +218,7 @@ void MemoryGroup::convertPortDependencyToLogic(Circuit &circuit)
                 logicAnd->connectInput(0, conflict);
                 logicAnd->connectInput(1, wp.node->getDriver((unsigned)Node_MemPort::Inputs::enable));
                 conflict = {.node = logicAnd, .port = 0ull};
-                circuit.appendSignal(conflict)->setName("conflict");
+                circuit.appendSignal(conflict)->setName("conflict_and_wrEn");
             }
 
             NodePort wrData = wp.node->getDriver((unsigned)Node_MemPort::Inputs::wrData);
@@ -480,6 +480,23 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
         if (!enable)
             enable = NodePort{};
 
+
+        auto appendRegister = [&](NodePort &np, bool resetToZero, NodeGroup *ng, const char *name, const char *comment)->Node_Register* {
+            std::vector<NodePort> consumers = np.node->getDirectlyDriven(np.port);
+
+            auto *reg = circuit.createNode<Node_Register>();
+            reg->recordStackTrace();
+            reg->moveToGroup(ng);
+            reg->setComment(comment);
+            reg->setClock(clock);
+
+            reg->connectInput(Node_Register::Input::ENABLE, *enable);
+            reg->connectInput(Node_Register::Input::DATA, np);
+            np = {.node = reg, .port = 0ull};
+            circuit.appendSignal(np)->setName(name);
+            return reg;
+        };
+
         auto insertDelayOutput = [&](RefCtdNodePort &np, NodeGroup *ng, const char *name, const char *comment)->Node_Register* {
             std::vector<NodePort> consumers = np.node->getDirectlyDriven(np.port);
 
@@ -585,7 +602,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
                 logicAnd->connectInput(0, conflict);
                 logicAnd->connectInput(1, rp.node->getDriver((unsigned)Node_MemPort::Inputs::enable));
                 conflict = {.node = logicAnd, .port = 0ull};
-                circuit.appendSignal(conflict)->setName("conflict");
+                circuit.appendSignal(conflict)->setName("conflict_rdEn");
             }
 
             if (writePort->getDriver((unsigned)Node_MemPort::Inputs::enable).node != nullptr) {
@@ -595,10 +612,12 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
                 logicAnd->connectInput(0, conflict);
                 logicAnd->connectInput(1, writePort->getDriver((unsigned)Node_MemPort::Inputs::enable));
                 conflict = {.node = logicAnd, .port = 0ull};
-                circuit.appendSignal(conflict)->setName("conflict");
+                circuit.appendSignal(conflict)->setName("conflict_wrEn");
             }
 
             std::vector<NodePort> consumers = rp.dataOutput.node->getDirectlyDriven(rp.dataOutput.port);
+
+            appendRegister(conflict, true, m_fixupNodeGroup, "conflict_delayed", "");
 
             // Finally the actual mux to arbitrate between the actual read and the forwarded write data.
             auto *muxNode = circuit.createNode<Node_Multiplexer>(2);
