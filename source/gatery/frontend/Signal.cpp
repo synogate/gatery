@@ -18,6 +18,7 @@
 #include "gatery/pch.h"
 #include "Signal.h"
 #include "ConditionalScope.h"
+#include "DesignScope.h"
 
 #include <gatery/hlim/coreNodes/Node_Rewire.h>
 

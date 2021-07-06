@@ -15,47 +15,25 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-
 #include "gatery/pch.h"
-
-#include "Attributes.h"
-
-#include "Bit.h"
-#include "BitVector.h"
-
 #include "DesignScope.h"
-#include "../hlim/supportNodes/Node_PathAttributes.h"
+
+#include <gatery/export/DotExport.h>
 
 namespace gtry {
 
-void setAttrib(Bit &bit, SignalAttributes attributes)
-{
-	bit.setAttrib(std::move(attributes));
+DesignScope::DesignScope() : BaseScope<DesignScope>(), m_rootScope(m_circuit.getRootNodeGroup())
+{ 
+    m_rootScope.setName("top");
+    
+    HCL_DESIGNCHECK_HINT(m_parentScope == nullptr, "Only one design scope can be active at a time!");
 }
 
-void setAttrib(BVec &bvec, SignalAttributes attributes)
+void DesignScope::visualize(const std::string &filename, hlim::NodeGroup *nodeGroup)
 {
-	bvec.setAttrib(std::move(attributes));
+    DotExport exp(filename+".dot");
+    exp(get()->getCircuit(), nodeGroup);
+    exp.runGraphViz(filename+".svg");
 }
-
-template<class Signal>
-void setPathAttribImpl(Signal &start, Signal &end, PathAttributes attributes)
-{
-    auto* node = DesignScope::createNode<hlim::Node_PathAttributes>();
-    node->getAttribs() = std::move(attributes);
-    node->connectStart(start.getReadPort());
-    node->connectEnd(end.getReadPort());
-}
-
-void setPathAttrib(Bit &start, Bit &end, PathAttributes attributes)
-{
-    setPathAttribImpl(start, end, std::move(attributes));
-}
-
-void setPathAttrib(BVec &start, BVec &end, PathAttributes attributes)
-{
-    setPathAttribImpl(start, end, std::move(attributes));
-}
-
 
 }
