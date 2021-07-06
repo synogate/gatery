@@ -20,7 +20,7 @@
 #include "DualCycleRV.h"
 #include "RiscVAssembler.h"
 
-#include <format>
+#include <boost/format.hpp>
 
 using namespace gtry::scl::riscv;
 
@@ -125,7 +125,7 @@ gtry::Bit gtry::scl::riscv::EmbeddedSystemBuilder::addUART(uint64_t offset, size
 
 gtry::scl::AvalonMM gtry::scl::riscv::EmbeddedSystemBuilder::addAvalonMemMapped(uint64_t offset, BitWidth addrWidth)
 {
-	auto ent = m_area.enter(std::format("avmm_slave_{:x}", offset));
+	auto ent = m_area.enter((boost::format("avmm_slave_%x") % offset).str());
 
 	Bit selected = m_dataBus.address(addrWidth.bits(), 32_b - addrWidth.bits()) == (offset >> addrWidth.bits());
 	HCL_NAMED(selected);
@@ -226,7 +226,7 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const Segment& seg, 
 
 	if (writable)
 	{
-#if 0
+#if 1
 		BVec maskedData = data;
 
 		BVec dbgReadData = reg(maskedData);
