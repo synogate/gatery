@@ -81,7 +81,18 @@ void Node_MemPort::orderAfter(Node_MemPort *writePort)
 
 bool Node_MemPort::hasSideEffects() const
 {
-    return getDriver((unsigned)Inputs::memory).node != nullptr && getDriver((unsigned)Inputs::wrData).node != nullptr;
+    auto *memory = getMemory();
+    if (memory == nullptr) return false;
+    
+    if (!isWritePort()) return false;
+
+    for (const auto &np : memory->getDirectlyDriven(0)) {
+        auto *port = dynamic_cast<Node_MemPort*>(np.node);
+        if (port->isReadPort()) return true;
+    }
+
+    // No one is reading what we are writing
+    return false;
 }
 
 
