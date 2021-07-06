@@ -31,8 +31,10 @@
 #include "frontend/ConditionalScope.h"
 #include "frontend/Constant.h"
 #include "frontend/ConstructFrom.h"
+#include "frontend/DesignScope.h"
 #include "frontend/FrontendUnitTestSimulationFixture.h"
 #include "frontend/FSM.h"
+#include "frontend/GraphTools.h"
 #include "frontend/Memory.h"
 #include "frontend/Pack.h"
 #include "frontend/Pin.h"
@@ -49,6 +51,7 @@
 #include "frontend/SignalLogicOp.h"
 #include "frontend/SignalMiscOp.h"
 #include "frontend/SimSigHandle.h"
+#include "frontend/TechnologyMapping.h"
 #include "frontend/Vector.h"
 
 namespace gtry {
