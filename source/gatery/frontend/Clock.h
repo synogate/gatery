@@ -108,6 +108,8 @@ namespace gtry {
             Clock(const Clock &other);
             Clock &operator=(const Clock &other);
 
+            Clock(hlim::Clock *clock) : m_clock(clock) { }
+
             //Bit driveSignal();
 
             BVec operator() (const BVec& signal) const;

@@ -28,6 +28,7 @@ namespace gtry
 		GroupScope enter() const;
 		std::pair<GroupScope, GroupScope> enter(std::string_view subName) const;
 	
+		inline hlim::NodeGroup* getNodeGroup() { return m_nodeGroup; }
 	private:
 		hlim::NodeGroup* m_nodeGroup;
 	};
