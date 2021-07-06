@@ -21,28 +21,483 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
+#include <cstdint>
+
 using namespace boost::unit_test;
-using UnitTestSimulationFixture = gtry::UnitTestSimulationFixture;
-/*
-BOOST_FIXTURE_TEST_CASE(ROM, UnitTestSimulationFixture)
+using UnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
+
+BOOST_FIXTURE_TEST_CASE(async_ROM, UnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;
     using namespace gtry::utils;
 
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
 
+    std::vector<unsigned> contents;
+    contents.resize(16);
+    std::mt19937 rng{ 18055 };
+    for (auto &e : contents)
+        e = rng() % 16;
 
-    Memory<BVec> rom(16, 4_b);
-    rom.setPowerOnState(createDefaultBitVectorState(16, 4, [](std::size_t i, std::size_t *words){
-        words[DefaultConfig::VALUE] = i;
+    Memory<BVec> rom(contents.size(), 4_b);
+    rom.fillPowerOnState(createDefaultBitVectorState(16, 4, [&contents](std::size_t i, std::size_t *words){
+        words[DefaultConfig::VALUE] = contents[i];
         words[DefaultConfig::DEFINED] = ~0ull;
     }));
 
-    for (auto i : Range(16)) {
-        BVec v = rom[i];
-        sim_assert(v == i) << "rom["<<i<<"] is " << v << " but should be " << i;
-    }
 
-    eval(design.getCircuit());
+    BVec addr = pinIn(4_b);
+    auto output = pinOut(rom[addr]);
+
+
+	addSimulationProcess([=,this,&contents]()->SimProcess {
+        
+        for (auto i : Range(16)) {
+            simu(addr) = i;
+			BOOST_TEST(simu(output).value() == contents[i]);
+            co_await WaitClk(clock); // for waveforms
+        }
+
+        stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
 }
-*/
+
+
+
+BOOST_FIXTURE_TEST_CASE(sync_ROM, UnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    std::vector<unsigned> contents;
+    contents.resize(16);
+    std::mt19937 rng{ 18055 };
+    for (auto &e : contents)
+        e = rng() % 16;
+
+    Memory<BVec> rom(contents.size(), 4_b);
+    rom.fillPowerOnState(createDefaultBitVectorState(16, 4, [&contents](std::size_t i, std::size_t *words){
+        words[DefaultConfig::VALUE] = contents[i];
+        words[DefaultConfig::DEFINED] = ~0ull;
+    }));
+
+
+    BVec addr = pinIn(4_b);
+    auto output = pinOut(reg(rom[addr]));
+
+
+	addSimulationProcess([=,this,&contents]()->SimProcess {
+        
+        for (auto i : Range(16)) {
+            simu(addr) = i;
+            co_await WaitClk(clock);
+			BOOST_TEST(simu(output).value() == contents[i]);
+        }
+
+        stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(async_mem, UnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    std::vector<unsigned> contents;
+    contents.resize(16);
+    std::mt19937 rng{ 18055 };
+    for (auto &e : contents)
+        e = rng() % 16;
+
+    Memory<BVec> mem(contents.size(), 4_b);
+    mem.noConflicts();
+
+    BVec addr = pinIn(4_b);
+    auto output = pinOut(mem[addr]);
+    BVec input = pinIn(4_b);
+    Bit wrEn = pinIn();
+    IF (wrEn)
+        mem[addr] = input;
+
+	addSimulationProcess([=,this,&contents]()->SimProcess {
+
+        simu(wrEn) = '0';
+        co_await WaitClk(clock);
+
+        simu(wrEn) = '1';
+        for (auto i : Range(16)) {
+            simu(addr) = i;
+            simu(input) = contents[i];
+            co_await WaitClk(clock);
+        }
+        simu(wrEn) = '0';
+
+        for (auto i : Range(16)) {
+            simu(addr) = i;
+			BOOST_TEST(simu(output).value() == contents[i]);
+            co_await WaitClk(clock);
+        }        
+
+        stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
+}
+
+
+BOOST_FIXTURE_TEST_CASE(sync_mem, UnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    std::vector<unsigned> contents;
+    contents.resize(16);
+    std::mt19937 rng{ 18055 };
+    for (auto &e : contents)
+        e = rng() % 16;
+
+    Memory<BVec> mem(contents.size(), 4_b);
+    mem.noConflicts();
+
+    BVec addr = pinIn(4_b);
+    auto output = pinOut(reg(mem[addr]));
+    BVec input = pinIn(4_b);
+    Bit wrEn = pinIn();
+    IF (wrEn)
+        mem[addr] = input;
+
+	addSimulationProcess([=,this,&contents]()->SimProcess {
+
+        simu(wrEn) = '0';
+        co_await WaitClk(clock);
+
+        simu(wrEn) = '1';
+        for (auto i : Range(16)) {
+            simu(addr) = i;
+            simu(input) = contents[i];
+            co_await WaitClk(clock);
+        }
+        simu(wrEn) = '0';
+
+        for (auto i : Range(16)) {
+            simu(addr) = i;
+            co_await WaitClk(clock);
+			BOOST_TEST(simu(output).value() == contents[i]);
+        }        
+
+        stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(async_mem_read_before_write, UnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    std::vector<unsigned> contents;
+    contents.resize(16);
+    std::mt19937 rng{ 18055 };
+    for (auto &e : contents)
+        e = rng() % 16;
+
+    Memory<BVec> mem(contents.size(), 4_b);
+
+    BVec rdAddr = pinIn(4_b);
+    auto output = pinOut(mem[rdAddr]);
+
+    BVec wrAddr = pinIn(4_b);
+    BVec input = pinIn(4_b);
+    Bit wrEn = pinIn();
+    IF (wrEn)
+        mem[wrAddr] = input;
+
+	addSimulationProcess([=,this,&contents]()->SimProcess {
+
+        simu(wrEn) = '0';
+        co_await WaitClk(clock);
+
+        simu(wrEn) = '1';
+        for (auto i : Range(16)) {
+            simu(wrAddr) = i;
+            simu(input) = contents[i];
+            co_await WaitClk(clock);
+        }
+        simu(wrEn) = '0';
+
+        for (auto i : Range(16)) {
+
+            bool doWrite = i % 2;
+            bool writeSameAddr = i % 3;
+
+            simu(wrEn) = doWrite;
+            if (writeSameAddr)
+                simu(wrAddr) = i;
+            else
+                simu(wrAddr) = 0;
+
+            simu(input) = 0;
+
+            simu(rdAddr) = i;
+
+			BOOST_TEST(simu(output).value() == contents[i]);
+            co_await WaitClk(clock);
+        }        
+
+        stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(async_mem_write_before_read, UnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    std::vector<unsigned> contents;
+    contents.resize(16);
+    std::mt19937 rng{ 18055 };
+    for (auto &e : contents)
+        e = rng() % 16;
+
+    Memory<BVec> mem(contents.size(), 4_b);
+
+    BVec rdAddr = pinIn(4_b);
+
+    BVec wrAddr = pinIn(4_b);
+    BVec input = pinIn(4_b);
+    Bit wrEn = pinIn();
+    IF (wrEn)
+        mem[wrAddr] = input;
+
+    auto output = pinOut(mem[rdAddr]);
+
+	addSimulationProcess([=,this,&contents]()->SimProcess {
+
+        simu(wrEn) = '0';
+        co_await WaitClk(clock);
+
+        simu(wrEn) = '1';
+        for (auto i : Range(16)) {
+            simu(wrAddr) = i;
+            simu(input) = contents[i];
+            co_await WaitClk(clock);
+        }
+        simu(wrEn) = '0';
+
+        for (auto i : Range(16)) {
+
+            bool doWrite = i % 2;
+            bool writeSameAddr = i % 3;
+
+            simu(wrEn) = doWrite;
+            if (writeSameAddr)
+                simu(wrAddr) = i;
+            else
+                simu(wrAddr) = 0;
+
+            simu(input) = 0;
+
+            simu(rdAddr) = i;
+
+            if (doWrite && writeSameAddr)
+                BOOST_TEST(simu(output).value() == 0);
+            else
+			    BOOST_TEST(simu(output).value() == contents[i]);
+            co_await WaitClk(clock);
+        }        
+
+        stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
+}
+
+BOOST_FIXTURE_TEST_CASE(async_mem_read_modify_write, UnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    std::vector<unsigned> contents;
+    contents.resize(4, 0);
+    std::mt19937 rng{ 18055 };
+
+    Memory<BVec> mem(contents.size(), 32_b);
+    mem.setType(MemType::LUTRAM);
+    mem.setPowerOnStateZero();
+
+    BVec addr = pinIn(4_b);
+    BVec output;
+    Bit wrEn = pinIn();
+    {
+        BVec elem = mem[addr];
+        output = reg(elem);
+
+        IF (wrEn)
+            mem[addr] = elem + 1;
+    }
+    pinOut(output);
+
+	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
+
+        simu(wrEn) = '0';
+        co_await WaitClk(clock);
+
+        std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
+        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
+
+        unsigned collisions = 0;
+
+        bool lastWasWrite = false;
+        unsigned lastAddr = 0;
+        for (auto i : Range(10000)) {
+            bool doInc = zeroOne(rng) > 0.1f;
+            unsigned incAddr = randomAddr(rng);
+            simu(wrEn) = doInc;
+            simu(addr) = incAddr;
+            if (doInc)
+                contents[incAddr]++;
+
+            if (lastWasWrite && lastAddr == incAddr)
+                collisions++;
+
+            lastWasWrite = doInc;
+            lastAddr = incAddr;
+            co_await WaitClk(clock);
+        }
+
+        BOOST_TEST(collisions > 1000, "Too few collisions to verify correct RMW behavior");
+
+        simu(wrEn) = '0';
+
+        for (auto i : Range(4)) {
+            simu(addr) = i;
+            co_await WaitClk(clock);
+            BOOST_TEST(simu(output).value() == contents[i]);
+        }        
+
+        stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->getAbsoluteFrequency());
+}
+
+
+BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write, UnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    std::vector<unsigned> contents;
+    contents.resize(4, 0);
+    std::mt19937 rng{ 18055 };
+
+    Memory<BVec> mem(contents.size(), 32_b);
+    mem.setType(MemType::BRAM);
+    mem.setPowerOnStateZero();
+
+    BVec addr = pinIn(4_b);
+    BVec output;
+    Bit wrEn = pinIn();
+    {
+        BVec elem = mem[addr];
+        output = reg(elem);
+
+        IF (wrEn)
+            mem[addr] = elem + 1;
+    }
+    pinOut(output);
+
+	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
+
+        simu(wrEn) = '0';
+        co_await WaitClk(clock);
+
+        std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
+        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
+
+        unsigned collisions = 0;
+
+        bool lastWasWrite = false;
+        unsigned lastAddr = 0;
+        for (auto i : Range(10000)) {
+            bool doInc = zeroOne(rng) > 0.1f;
+            unsigned incAddr = randomAddr(rng);
+            simu(wrEn) = doInc;
+            simu(addr) = incAddr;
+            if (doInc)
+                contents[incAddr]++;
+
+            if (lastWasWrite && lastAddr == incAddr)
+                collisions++;
+
+            lastWasWrite = doInc;
+            lastAddr = incAddr;
+            co_await WaitClk(clock);
+        }
+
+        BOOST_TEST(collisions > 1000, "Too few collisions to verify correct RMW behavior");
+
+        simu(wrEn) = '0';
+
+        for (auto i : Range(4)) {
+            simu(addr) = i;
+            co_await WaitClk(clock);
+            BOOST_TEST(simu(output).value() == contents[i]);
+        }        
+
+        stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->getAbsoluteFrequency());
+}
