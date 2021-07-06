@@ -33,26 +33,38 @@ namespace gtry::hlim {
 
 namespace gtry {
 
-class TechnologyMappingPattern
-{
-	public:
-		TechnologyMappingPattern();
-		virtual ~TechnologyMappingPattern() = default;
+struct NodeGroupIO {
+	std::map<std::string, BVec> inputBVecs;
+	std::map<std::string, Bit> inputBits;
+	std::map<std::string, BVec> outputBVecs;
+	std::map<std::string, Bit> outputBits;
 
-		virtual bool attemptApply(hlim::NodeGroup *nodeGroup) = 0;
-	protected:
+	NodeGroupIO(hlim::NodeGroup *nodeGroup);
 };
 
-class TechnologyMapping
-{
+class NodeGroupSurgeryHelper {
 	public:
-		void addPattern(std::unique_ptr<TechnologyMappingPattern> pattern) { m_patterns.push_back(std::move(pattern)); }
+		NodeGroupSurgeryHelper(hlim::NodeGroup *nodeGroup);
 
-		void apply();
-		void apply(hlim::NodeGroup *nodeGroup);
+		bool containsSignal(std::string_view name);
+
+		BVec hookBVecBefore(std::string_view name);
+		BVec hookBVecAfter(std::string_view name);
+		Bit hookBitBefore(std::string_view name);
+		Bit hookBitAfter(std::string_view name);
+
+		Bit getBit(std::string_view name);
+		BVec getBVec(std::string_view name);
+
+		const std::vector<hlim::Node_Signal*> &getAllSignals(std::string_view name);
 	protected:
-		std::vector<std::unique_ptr<TechnologyMappingPattern>> m_patterns;
+		std::vector<hlim::Node_Signal*> m_empty;
+		std::map<std::string, std::vector<hlim::Node_Signal*>, std::less<>> m_namedSignalNodes;
 };
+
+sim::DefaultBitVectorState evaluateStatically(hlim::NodePort output);
+sim::DefaultBitVectorState evaluateStatically(const Bit &bit);
+sim::DefaultBitVectorState evaluateStatically(const BVec &bvec);
 
 
 }

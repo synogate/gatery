@@ -30,77 +30,6 @@
 
 namespace gtry {
 
-NodeGroupIO::NodeGroupIO(hlim::NodeGroup *nodeGroup)
-{	
-	std::set<hlim::NodePort> inputs;
-	std::set<hlim::NodePort> outputs;
-
-	for (auto &n : nodeGroup->getNodes()) {
-		for (auto i : utils::Range(n->getNumInputPorts())) {
-			auto driver = n->getDriver(i);
-			if (driver.node && driver.node->getGroup() != nodeGroup && !driver.node->getGroup()->isChildOf(nodeGroup))
-				inputs.insert({.node=n, .port=i});
-		}
-		for (auto i : utils::Range(n->getNumOutputPorts())) {
-			for (auto driven : n->getDirectlyDriven(i)) {
-				if (driven.node && driven.node->getGroup() != nodeGroup && !driven.node->getGroup()->isChildOf(nodeGroup))
-					outputs.insert({.node=n, .port=i});
-			}
-		}
-	}
-	
-	std::set<std::string> usedNames;
-	for (auto np : inputs) {
-		auto *signal = dynamic_cast<hlim::Node_Signal*>(np.node);
-		HCL_ASSERT_HINT(signal, "First node of signal entering node group must be a signal node at this stage!");
-		HCL_ASSERT_HINT(!usedNames.contains(signal->getName()), "input-output signal name duplicates!");
-		usedNames.insert(signal->getName());
-
-		switch (signal->getOutputConnectionType(0).interpretation) {
-			case hlim::ConnectionType::BITVEC: {
-				inputBVecs[signal->getName()] = SignalReadPort(signal->getDriver(0));
-				auto &bvec = inputBVecs[signal->getName()];
-				signal->connectInput(bvec.getOutPort());
-			} break;
-			case hlim::ConnectionType::BOOL: {
-				inputBits[signal->getName()] = SignalReadPort(signal->getDriver(0));
-				auto &bit = inputBits[signal->getName()];
-				signal->connectInput(bit.getOutPort());
-			} break;
-		}
-	}
-	usedNames.clear();
-	for (auto np : outputs) {
-		auto *signal = dynamic_cast<hlim::Node_Signal*>(np.node);
-		HCL_ASSERT_HINT(signal, "Last node of signal leaving node group must be a signal node at this stage!");
-		HCL_ASSERT_HINT(!usedNames.contains(signal->getName()), "input-output signal name duplicates!");
-		usedNames.insert(signal->getName());
-
-		switch (signal->getOutputConnectionType(0).interpretation) {
-			case hlim::ConnectionType::BITVEC: {
-				outputBVecs[signal->getName()] = BitWidth(signal->getOutputConnectionType(0).width);
-				auto &bvec = outputBVecs[signal->getName()];
-
-				while (!signal->getDirectlyDriven(0).empty()) {
-					auto np = signal->getDirectlyDriven(0).front();
-					np.node->rewireInput(np.port, bvec.getOutPort());
-				}
-				bvec = SignalReadPort(signal);
-			} break;
-			case hlim::ConnectionType::BOOL: {
-				outputBits[signal->getName()] = {};
-				auto &bit = outputBits[signal->getName()];
-				while (!signal->getDirectlyDriven(0).empty()) {
-					auto np = signal->getDirectlyDriven(0).front();
-					np.node->rewireInput(np.port, bit.getOutPort());
-				}
-				bit = SignalReadPort(signal);
-			} break;
-		}
-	}
-}
-
-
 
 TechnologyMappingPattern::TechnologyMappingPattern()
 {
@@ -131,7 +60,7 @@ void TechnologyMapping::apply(hlim::NodeGroup *nodeGroup)
 	if (!handled)
 		for (auto &g : nodeGroup->getChildren())
 			apply(g.get());
-}		
+}
 
 
 }
