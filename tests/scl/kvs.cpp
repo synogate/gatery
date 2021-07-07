@@ -230,11 +230,11 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, TinyCuckooTableLook
     ctrl.pinIn("ctrl");
 
 
-    design.visualize("TinyCuckooTableLookupDemuxed_before");
+    //design.visualize("TinyCuckooTableLookupDemuxed_before");
     design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-    design.visualize("TinyCuckooTableLookupDemuxed");
-    sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TinyCuckooTableLookupDemuxed.vcd");
-    vcd.addAllNamedSignals();
+    //design.visualize("TinyCuckooTableLookupDemuxed");
+    //sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TinyCuckooTableLookupDemuxed.vcd");
+    //vcd.addAllNamedSignals();
 
     //gtry::vhdl::VHDLExport vhdl("vhdl/");
     //vhdl(design.getCircuit());

@@ -121,12 +121,12 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, UnitTestSimulationFixture)
 
     });
 
-    sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "arbitrateInOrder_basic.vcd" };
-    vcd.addAllPins();
-    vcd.addAllNamedSignals();
+    //sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "arbitrateInOrder_basic.vcd" };
+   //vcd.addAllPins();
+    //vcd.addAllNamedSignals();
 
     design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-    design.visualize("arbitrateInOrder_basic");
+    //design.visualize("arbitrateInOrder_basic");
 
     runTicks(clock.getClk(), 16);
 }
@@ -212,12 +212,12 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, UnitTestSimulationFixture)
 
     });
 
-    sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "arbitrateInOrder_fuzz.vcd" };
-    vcd.addAllPins();
-    vcd.addAllNamedSignals();
+    //sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "arbitrateInOrder_fuzz.vcd" };
+    //vcd.addAllPins();
+    //vcd.addAllNamedSignals();
 
     design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-    design.visualize("arbitrateInOrder_fuzz");
+   // design.visualize("arbitrateInOrder_fuzz");
 
     runTicks(clock.getClk(), 256);
 }
