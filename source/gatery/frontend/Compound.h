@@ -125,6 +125,71 @@ namespace gtry
 		);
 	}
 
+	template<typename... T>
+	struct VisitCompound<std::tuple<T...>>
+	{
+		template<typename T>
+		static constexpr std::string_view usableName()
+		{
+			std::string_view name = typeid(T).name();
+
+			auto pos_s = name.find("::", 0);
+			if (pos_s == std::string_view::npos)
+				pos_s = 0;
+			else
+				pos_s += 2;
+
+			auto pos_e = pos_s;
+			do
+			{
+				if (name[pos_e] >= 'a' && name[pos_e] <= 'z')
+					continue;
+				if (name[pos_e] >= 'A' && name[pos_e] <= 'Z')
+					continue;
+				if (pos_e == pos_s)
+					break;
+				if (name[pos_e] >= '0' && name[pos_e] <= '9')
+					continue;
+				if (name[pos_e] == '_')
+					continue;
+				if (name[pos_e] == '-')
+					continue;
+				break;
+			} while (++pos_e < name.length());
+
+			return name.substr(pos_s, pos_e - pos_s);
+		}
+
+		void operator () (std::tuple<T...>& a, const std::tuple<T...>& b, CompoundVisitor& v, size_t flags)
+		{
+			static_assert(!"no impl");
+		}
+
+		void operator () (std::tuple<T...>& a, CompoundVisitor& v)
+		{
+			v.enterPackStruct();
+			boost::hana::for_each(a, [&](auto& elem) {
+				v.enter(usableName<decltype(elem)>());
+				VisitCompound<std::remove_cvref_t<decltype(elem)>>{}(elem, v);
+				v.leave();
+			});
+			v.leavePack();
+		}
+
+		void operator () (const std::tuple<T...>& a, const std::tuple<T...>& b, CompoundVisitor& v)
+		{
+			static_assert(!"no impl");
+
+			v.enterPackStruct();
+			boost::hana::for_each(boost::hana::zip(a, b), [&](auto& elem) {
+				v.enter(usableName<decltype(elem)>());
+				VisitCompound<std::remove_cvref_t<decltype(elem)>>{}(elem, v);
+				v.leave();
+			});
+			v.leavePack();
+		}
+	};
+
 	template<typename T>
 	struct VisitCompound<T, std::enable_if_t<boost::spirit::traits::is_container<T>::value>>
 	{
@@ -305,7 +370,7 @@ namespace gtry
 		T operator () (const T& signal)
 		{
 			T ret = signal;
-			boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto member) {
+			boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto&& member) {
 				auto& subSig = boost::hana::second(member)(ret);
 				subSig = reg(subSig);
 			});

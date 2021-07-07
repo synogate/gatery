@@ -697,13 +697,15 @@ void findMemoryGroups(Circuit &circuit)
 
 void buildExplicitMemoryCircuitry(Circuit &circuit)
 {
-    for (auto &node : circuit.getNodes())
-        if (auto *memory = dynamic_cast<Node_Memory*>(node.get())) {
-            auto *memoryGroup = dynamic_cast<MemoryGroup*>(memory->getGroup());
+    for (auto i : utils::Range(circuit.getNodes().size())) {
+        auto& node = circuit.getNodes()[i];
+        if (auto* memory = dynamic_cast<Node_Memory*>(node.get())) {
+            auto* memoryGroup = dynamic_cast<MemoryGroup*>(memory->getGroup());
             memoryGroup->convertPortDependencyToLogic(circuit);
             memoryGroup->attemptRegisterRetiming(circuit);
             memoryGroup->verify();
         }
+    }
 }
 
 

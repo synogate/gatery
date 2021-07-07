@@ -141,13 +141,13 @@ BVec Clock::operator()(const BVec& signal, const BVec& reset) const
 
 Bit Clock::operator()(const Bit& signal) const
 {
-    if (signal.getResetValue())
-        return (*this)(signal, *signal.getResetValue());
-
     auto* reg = DesignScope::createNode<hlim::Node_Register>();
     reg->setName(std::string{ signal.getName() });
     reg->setClock(m_clock);
     reg->connectInput(hlim::Node_Register::DATA, signal.getReadPort());
+
+    if(signal.getResetValue())
+        reg->connectInput(hlim::Node_Register::RESET_VALUE, Bit{ *signal.getResetValue() }.getReadPort());
 
     ConditionalScope* scope = ConditionalScope::get();
     if (scope)
@@ -156,7 +156,10 @@ Bit Clock::operator()(const Bit& signal) const
         reg->setConditionId(scope->getId());
     }
 
-    return SignalReadPort(reg);
+    Bit ret{ SignalReadPort{reg} };
+    if (signal.getResetValue())
+        ret.setResetValue(*signal.getResetValue());
+    return ret;
 }
 
 Bit Clock::operator()(const Bit& signal, const Bit& reset) const

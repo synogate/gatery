@@ -69,7 +69,7 @@ namespace gtry {
             assign(v);
         }
     
-        Bit& operator=(const Bit& rhs) { assign(rhs.getReadPort()); return *this; }
+        Bit& operator=(const Bit& rhs) { m_resetValue = rhs.m_resetValue; assign(rhs.getReadPort());  return *this; }
         Bit& operator=(Bit&& rhs);
         Bit& operator=(const BitDefault &defaultValue);
 
