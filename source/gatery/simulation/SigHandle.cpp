@@ -29,9 +29,12 @@ void SigHandle::operator=(std::uint64_t v)
     HCL_ASSERT(width <= 64);
     DefaultBitVectorState state;
     state.resize(width);
-    state.data(DefaultConfig::DEFINED)[0] = 0;
-    state.setRange(DefaultConfig::DEFINED, 0, width);
-    state.data(DefaultConfig::VALUE)[0] = v;
+    if (width)
+    {
+        state.data(DefaultConfig::DEFINED)[0] = 0;
+        state.setRange(DefaultConfig::DEFINED, 0, width);
+        state.data(DefaultConfig::VALUE)[0] = v;
+    }
 
     SimulationContext::current()->overrideSignal(*this, state);
 }
@@ -45,6 +48,9 @@ void SigHandle::operator=(const DefaultBitVectorState &state)
 std::uint64_t SigHandle::value() const
 {
     auto width = m_output.node->getOutputConnectionType(m_output.port).width;
+    if (!width)
+        return 0;
+
     HCL_ASSERT(width <= 64);
     DefaultBitVectorState state;
     SimulationContext::current()->getSignal(*this, state);
@@ -63,6 +69,9 @@ DefaultBitVectorState SigHandle::eval() const
 std::uint64_t SigHandle::defined() const
 {
     auto width = m_output.node->getOutputConnectionType(m_output.port).width;
+    if (!width)
+        return 0;
+
     HCL_ASSERT(width <= 64);
     DefaultBitVectorState state;
     SimulationContext::current()->getSignal(*this, state);
