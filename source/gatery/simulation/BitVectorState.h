@@ -234,7 +234,10 @@ std::ostream& operator << (std::ostream& s, const BitVectorState<Config>& state)
                 if (state.get(Config::VALUE, state.size() - 1 - i*4-j))
                     v |= 1;
             }
-            s << v;
+            if (allDefined)
+                s << v;
+            else
+                s << 'X';
         }
     } else {
         for (size_t i = state.size()-1; i < state.size(); --i)

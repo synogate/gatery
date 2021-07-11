@@ -49,6 +49,9 @@ class SubnetTemplate {
 		/// Adds just a single node
 		FinalType &add(NodeType *node);
 
+		/// Removes a single node
+		FinalType &remove(NodeType *node);
+
 		/// Adds everything that is driven directly or indirectly by the specified outputs, stopping at the limiting input or at dead ends like output pins or signal taps
 		/// @details A subset specified by this function does include nodes with potential side effects that don't seem to contribute to the limiting inputs.
 		FinalType &addAllDrivenByOutputs(std::span<NodePort> outputs, std::span<NodePort> limitingInputs);

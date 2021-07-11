@@ -21,6 +21,7 @@
 
 #include "Circuit.h"
 #include "Subnet.h"
+#include "SignalDelay.h"
 #include "Node.h"
 #include "NodePort.h"
 #include "coreNodes/Node_Register.h"
@@ -98,7 +99,7 @@ void determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 			std::stringstream error;
 
 			error 
-				<< "An error occured attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << "):\n"
+				<< "An error occured attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
 				<< "Node from:\n" << output.node->getStackTrace() << "\n";
 
 			error 
@@ -114,7 +115,7 @@ void determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 			std::stringstream error;
 
 			error 
-				<< "An error occured attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << "):\n"
+				<< "An error occured attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
 				<< "Node from:\n" << output.node->getStackTrace() << "\n";
 
 			error 
@@ -134,7 +135,7 @@ void determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 					std::stringstream error;
 
 					error 
-						<< "An error occured attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << "):\n"
+						<< "An error occured attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
 						<< "Node from:\n" << output.node->getStackTrace() << "\n";
 
 					error 
@@ -152,7 +153,7 @@ void determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 			std::stringstream error;
 
 			error 
-				<< "An error occured attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << "):\n"
+				<< "An error occured attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
 				<< "Node from:\n" << output.node->getStackTrace() << "\n";
 
 			error 
@@ -179,7 +180,16 @@ void determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 			} else {
 				// Found a register to retime forward, stop here.
 				registersToBeRetimed.insert(reg);
+				areaToBeRetimed.add(node);
 			}
+		} else if (auto *memPort = dynamic_cast<Node_MemPort*>(node)) { // If it is a memory port (can only be a read port, attempt to retime entire memory)
+			areaToBeRetimed.add(node);
+			auto *memory = memPort->getMemory();
+			areaToBeRetimed.add(memory);
+			
+			// add all memory ports to open list
+			for (auto np : memory->getDirectlyDriven(0)) 
+				openList.push_back(np.node);
 		} else {
 			// Regular nodes just get added to the retiming area and their inputs are further explored
 			areaToBeRetimed.add(node);
@@ -192,7 +202,7 @@ void determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 	}
 }
 
-void retimeForwardToOutput(Circuit &circuit, const Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, bool ignoreRefs)
+void retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, bool ignoreRefs)
 {
 	Subnet areaToBeRetimed;
 	std::set<Node_Register*> registersToBeRetimed;
@@ -246,6 +256,8 @@ void retimeForwardToOutput(Circuit &circuit, const Subnet &area, const std::set<
 		reg->connectInput(Node_Register::DATA, np);
 		// add to the node group of its new driver
 		reg->moveToGroup(np.node->getGroup());
+		
+		area.add(reg);
 
 
 		// If any input bit is defined uppon reset, add that as a reset value
@@ -254,6 +266,7 @@ void retimeForwardToOutput(Circuit &circuit, const Subnet &area, const std::set<
 			auto *resetConst = circuit.createNode<Node_Constant>(resetValue, getOutputConnectionType(np).interpretation);
 			resetConst->recordStackTrace();
 			resetConst->moveToGroup(reg->getGroup());
+			area.add(resetConst);
 			reg->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0ull});
 		}
 
@@ -275,9 +288,125 @@ void retimeForwardToOutput(Circuit &circuit, const Subnet &area, const std::set<
 
 
 
-void retimeForward(Circuit &circuit, const Subnet &subnet)
+void retimeForward(Circuit &circuit, Subnet &subnet)
 {
+	std::set<Node_Register*> anchoredRegisters;
 
+	// Anchor all registers driven by memory
+	for (auto &n : subnet)
+		if (auto *reg = dynamic_cast<Node_Register*>(n)) {
+			bool drivenByMemory = false;
+			for (auto nh : reg->exploreInput((unsigned)Node_Register::Input::DATA)) {
+				if (nh.isNodeType<Node_MemPort>()) {
+					drivenByMemory = true;
+					break;
+				}
+				if (!nh.node()->isCombinatorial()) {
+					nh.backtrack();
+					continue;
+				}
+			}
+			if (drivenByMemory)
+				anchoredRegisters.insert(reg);
+		}
+
+	bool done = false;
+	while (!done) {
+
+		// estimate signal delays
+		hlim::SignalDelay delays;
+		delays.compute(subnet);
+
+		// Find critical output
+		hlim::NodePort criticalOutput;
+		unsigned criticalBit = ~0u;
+		float criticalTime = 0.0f;
+		for (auto &n : subnet)
+			for (auto i : utils::Range(n->getNumOutputPorts())) {
+				hlim::NodePort np = {.node = n, .port = i};
+				auto d = delays.getDelay(np);
+				for (auto i : utils::Range(d.size())) {   
+					if (d[i] > criticalTime) {
+						criticalTime = d[i];
+						criticalOutput = np;
+						criticalBit = i;
+					}
+				}
+			}
+
+		{
+            DotExport exp("signalDelays.dot");
+            exp(circuit, (hlim::ConstSubnet &)subnet, delays);
+            exp.runGraphViz("signalDelays.svg");
+
+
+			hlim::ConstSubnet criticalPathSubnet;
+			{
+				hlim::NodePort np = criticalOutput;
+				unsigned bit = criticalBit;
+				while (np.node != nullptr) {
+					criticalPathSubnet.add(np.node);
+					unsigned criticalInputPort, criticalInputBit;
+					np.node->estimateSignalDelayCriticalInput(delays, np.port, bit, criticalInputPort, criticalInputBit);
+					if (criticalInputPort == ~0u)
+						np.node = nullptr;
+					else {
+						np = np.node->getDriver(criticalInputPort);
+						bit = criticalInputBit;
+					}
+				}
+			}
+
+            DotExport exp2("criticalPath.dot");
+            exp2(circuit, criticalPathSubnet, delays);
+            exp2.runGraphViz("criticalPath.svg");
+		}
+
+		// Split in half
+		float splitTime = criticalTime * 0.5f;
+
+		// Trace back critical path to find point where to retime register to
+		hlim::NodePort retimingTarget;
+		{
+			hlim::NodePort np = criticalOutput;
+			unsigned bit = criticalBit;
+			while (np.node != nullptr) {
+
+				float thisTime = delays.getDelay(np)[bit];
+				if (thisTime < splitTime) {
+					retimingTarget = np;
+					break;
+				}
+
+				unsigned criticalInputPort, criticalInputBit;
+				np.node->estimateSignalDelayCriticalInput(delays, np.port, bit, criticalInputPort, criticalInputBit);
+				if (criticalInputPort == ~0u)
+					np.node = nullptr;
+				else {
+					float nextTime = delays.getDelay(np.node->getDriver(criticalInputPort))[criticalInputBit];
+					if ((thisTime + nextTime) * 0.5f < splitTime) {
+						retimingTarget = np;
+						break;
+					}
+
+					np = np.node->getDriver(criticalInputPort);
+					bit = criticalInputBit;
+				}
+			}
+		}
+
+		if (retimingTarget.node != nullptr) {
+			try {
+				retimeForwardToOutput(circuit, subnet, anchoredRegisters, retimingTarget);
+			} catch (...) {
+				done = true;
+			}
+		} else
+			done = true;
+		
+// For debugging
+circuit.optimizeSubnet(subnet);
+	}
 }
 
 

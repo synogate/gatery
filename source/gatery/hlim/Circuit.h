@@ -109,19 +109,20 @@ class Circuit
         void cullSequentiallyDuplicatedSignalNodes();
         void cullUnnamedSignalNodes();
         void cullOrphanedSignalNodes();
-        void cullUnusedNodes();
-        void mergeMuxes();
-        void cullMuxConditionNegations();
-        void removeIrrelevantMuxes();
-        void removeNoOps();
-        void foldRegisterMuxEnableLoops();
-        void propagateConstants();
-        void removeConstSelectMuxes();
+        void cullUnusedNodes(Subnet &subnet);
+        void mergeMuxes(Subnet &subnet);
+        void cullMuxConditionNegations(Subnet &subnet);
+        void removeIrrelevantMuxes(Subnet &subnet);
+        void removeNoOps(Subnet &subnet);
+        void foldRegisterMuxEnableLoops(Subnet &subnet);
+        void propagateConstants(Subnet &subnet);
+        void removeConstSelectMuxes(Subnet &subnet);
 
         void removeFalseLoops();
 
         void ensureSignalNodePlacement();
 
+        void optimizeSubnet(Subnet &subnet);
         void postprocess(const PostProcessor &postProcessor);
 
         Node_Signal *appendSignal(NodePort &nodePort);

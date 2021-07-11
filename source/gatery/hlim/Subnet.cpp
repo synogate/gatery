@@ -93,6 +93,14 @@ FinalType &SubnetTemplate<makeConst, FinalType>::add(NodeType *node)
 }
 
 template<bool makeConst, typename FinalType>
+FinalType &SubnetTemplate<makeConst, FinalType>::remove(NodeType *node)
+{
+    m_nodes.erase(node);
+    return (FinalType&)*this;
+}
+
+
+template<bool makeConst, typename FinalType>
 FinalType &SubnetTemplate<makeConst, FinalType>::addAllDrivenByOutputs(std::span<NodePort> outputs, std::span<NodePort> limitingInputs)
 {
     HCL_ASSERT_HINT(false, "Not yet implemented");

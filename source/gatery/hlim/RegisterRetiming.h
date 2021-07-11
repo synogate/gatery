@@ -33,18 +33,18 @@ class Subnet;
  * @brief Retimes registers forward such that a register is placed after the specified output port without changing functionality.
  * @details Retiming is limited to the specified area.
  * @param circuit The circuit to operate on
- * @param area The area to which retiming is to be restricted.
+ * @param area The area to which retiming is to be restricted. The Subnet is modified to include the newly created registers.
  * @param anchoredRegisters Set of registers that are not to be moved (e.g. because they are already deemed in a good location).
  * @param output The output that shall recieve a register.
  * @param ignoreRefs Whether or not to throw an exception if a node has to be retimed to which a reference exists.
  */
-void retimeForwardToOutput(Circuit &circuit, const Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, bool ignoreRefs = false);
+void retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, bool ignoreRefs = false);
 
 /**
  * @brief Performs forward retiming on an area based on rough timing estimates.
  * @param circuit The circuit to operate on
- * @param subnet The area to which retiming is to be restricted.
+ * @param subnet The area to which retiming is to be restricted. The Subnet is modified to include the newly created registers.
  */
-void retimeForward(Circuit &circuit, const Subnet &subnet);
+void retimeForward(Circuit &circuit, Subnet &subnet);
 
 }
