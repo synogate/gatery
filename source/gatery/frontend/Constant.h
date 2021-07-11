@@ -34,8 +34,33 @@ namespace gtry
     
     class BVec;
 
-    BVec ConstBVec(uint64_t value, BitWidth width);
-    BVec ConstBVec(BitWidth width); // undefined constant
+#if 0 // ConstBVec as class study
+
+    class ConstBVec
+    {
+    public:
+        constexpr ConstBVec(uint64_t value, BitWidth width, std::string_view name = "") : m_intValue(value), m_width(width), m_name(name) {}
+        constexpr ConstBVec(BitWidth width, std::string_view name = "") : m_width(width), m_name(name) {}
+        constexpr ConstBVec(std::string_view value, std::string_view name = "") : m_stringValue(value), m_name(name) {}
+
+        BVec get() const;
+        operator BVec () const;
+
+        sim::DefaultBitVectorState state() const;
+
+    private:
+        std::optional<std::string_view> m_stringValue;
+        std::optional<uint64_t> m_intValue;
+        BitWidth m_width;
+        std::string_view m_name;
+    };
+
+    std::ostream& operator << (std::ostream&, const ConstBVec&);
+#else
+    BVec ConstBVec(uint64_t value, BitWidth width, std::string_view name = "");
+    BVec ConstBVec(BitWidth width, std::string_view name = ""); // undefined constant
+#endif
+
 }
 
 #define GTRY_CONST_BVEC(x, value) \
