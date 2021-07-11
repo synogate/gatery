@@ -20,6 +20,7 @@
 
 #include "NodeGroup.h"
 #include "Clock.h"
+#include "SignalDelay.h"
 
 #include "../utils/Exceptions.h"
 #include "../utils/Range.h"
@@ -153,5 +154,27 @@ std::string BaseNode::attemptInferOutputName(size_t outputPort) const
     return name.str();
 }
 
+
+void BaseNode::estimateSignalDelay(SignalDelay &sigDelay)
+{
+    HCL_ASSERT_HINT(getNumOutputPorts() == 0, "estimateSignalDelay not implemented for node type " + getTypeName());
+}
+
+void BaseNode::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit)
+{
+    HCL_ASSERT_HINT(false, "estimateSignalDelayCriticalInput not implemented for node type " + getTypeName());
+}
+
+void BaseNode::forwardSignalDelay(SignalDelay &sigDelay, unsigned input, unsigned output)
+{
+    auto in = sigDelay.getDelay(getDriver(input));
+
+    HCL_ASSERT(sigDelay.contains({.node = this, .port = output}));
+    auto out = sigDelay.getDelay({.node = this, .port = output});
+
+    HCL_ASSERT(in.size() == out.size());
+    for (auto i : utils::Range(out.size()))
+        out[i] = in[i];
+}
 
 }

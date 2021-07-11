@@ -50,6 +50,10 @@ class Node_Default : public Node<Node_Default>
         virtual std::vector<size_t> getInternalStateSizes() const override;
 
         virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
+
+        virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
+
+        virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit) override;
     protected:
 };
 

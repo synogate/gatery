@@ -15,6 +15,32 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#pragma once
 
-#include "NodeVisitor.h"
+#include <vector>
+#include <set>
+
+namespace gtry::hlim {
+
+class BaseNode;
+class Subnet;
+
+class TopologicalSort {
+	public:
+		enum LoopHandling {
+			LOOPS_ARE_ERRORS,
+			SPLIT_LOOPS_LOWEST_ID,
+			SET_LOOPS_ASIDE
+		};
+
+		const std::vector<BaseNode*> &sort(const Subnet &subnet, LoopHandling loopHandling = LOOPS_ARE_ERRORS);
+
+		const std::set<BaseNode*> &getUnsortedNodes() const { return m_unsortedNodes; }
+		std::set<BaseNode*> getLoop();
+	protected:
+		std::vector<BaseNode*> m_sortedNodes;
+		std::set<BaseNode*> m_unsortedNodes;
+};
+
+
+}

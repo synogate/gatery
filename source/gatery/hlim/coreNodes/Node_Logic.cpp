@@ -18,6 +18,9 @@
 #include "gatery/pch.h"
 #include "Node_Logic.h"
 
+#include "../SignalDelay.h"
+
+
 namespace gtry::hlim {
 
 Node_Logic::Node_Logic(Op op) : Node(op==NOT?1:2, 1), m_op(op)
@@ -208,5 +211,46 @@ std::string Node_Logic::attemptInferOutputName(size_t outputPort) const
     }
     return name.str();
 }
+
+
+void Node_Logic::estimateSignalDelay(SignalDelay &sigDelay)
+{
+    auto inDelay0 = sigDelay.getDelay(getDriver(0));
+
+    HCL_ASSERT(sigDelay.contains({.node = this, .port = 0ull}));
+    auto outDelay = sigDelay.getDelay({.node = this, .port = 0ull});
+
+    auto width = getOutputConnectionType(0).width;
+
+    if (m_op == NOT) {
+        for (auto i : utils::Range(width))
+            outDelay[i] = inDelay0[i] + 0.1f;
+    } else {
+        auto inDelay1 = sigDelay.getDelay(getDriver(1));
+
+        float routing = 2 * 0.8f;
+        float compute = 0.1f;
+
+        for (auto i : utils::Range(width))
+            outDelay[i] = std::max(inDelay0[i], inDelay1[i]) + routing + compute;
+    }
+}
+
+void Node_Logic::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit)
+{
+    inputBit = outputBit;
+    if (m_op == NOT) {
+        inputPort = 0;
+    } else {
+        auto inDelay0 = sigDelay.getDelay(getDriver(0));
+        auto inDelay1 = sigDelay.getDelay(getDriver(1));
+
+        if (inDelay0[outputBit] > inDelay1[outputBit]) 
+            inputPort = 0;
+        else
+            inputPort = 1;
+    }
+}
+
 
 }

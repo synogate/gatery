@@ -19,6 +19,7 @@
 #include "Node_Signal.h"
 
 #include "../SignalGroup.h"
+#include "../SIgnalDelay.h"
 
 #include "../../utils/Exceptions.h"
 
@@ -87,6 +88,19 @@ std::string Node_Signal::attemptInferOutputName(size_t outputPort) const
         return m_name + "_2";
 
     return std::string(m_name.begin(), m_name.begin()+underscorePos) + std::to_string(digits+1);
+}
+
+
+void Node_Signal::estimateSignalDelay(SignalDelay &sigDelay)
+{
+    forwardSignalDelay(sigDelay, 0, 0);
+}
+
+
+void Node_Signal::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit)
+{
+    inputPort = 0;
+    inputBit = outputBit;
 }
 
 

@@ -48,6 +48,9 @@ namespace gtry::hlim {
 
             virtual std::string attemptInferOutputName(size_t outputPort) const;
 
+            virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
+
+            virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit) override;
         protected:
             size_t m_conditionId = 0;
     };

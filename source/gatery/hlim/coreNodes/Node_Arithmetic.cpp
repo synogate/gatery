@@ -19,6 +19,10 @@
 #include "Node_Arithmetic.h"
 
 #include "../../utils/BitManipulation.h"
+#include "../../utils/Exceptions.h"
+#include "../../utils/Preprocessor.h"
+
+#include "../SignalDelay.h"
 
 namespace gtry::hlim {
 
@@ -185,6 +189,71 @@ std::string Node_Arithmetic::attemptInferOutputName(size_t outputPort) const
     return name.str();
 }
 
+
+void Node_Arithmetic::estimateSignalDelay(SignalDelay &sigDelay)
+{
+    auto inDelay0 = sigDelay.getDelay(getDriver(0));
+    auto inDelay1 = sigDelay.getDelay(getDriver(1));
+
+    HCL_ASSERT(sigDelay.contains({.node = this, .port = 0ull}));
+    auto outDelay = sigDelay.getDelay({.node = this, .port = 0ull});
+
+    auto width = getOutputConnectionType(0).width;
+
+
+    switch (m_op) {
+        case ADD:
+        case SUB: {
+            float routing = width * 0.8f;
+            float compute = width * 0.2f;
+
+            // very rough for now
+            float maxDelay = 0.0f;
+            for (auto i : utils::Range(width)) {
+                maxDelay = std::max(maxDelay, inDelay0[i]);
+                maxDelay = std::max(maxDelay, inDelay1[i]);
+            }
+            for (auto i : utils::Range(width)) {
+                outDelay[i] = maxDelay + routing + compute;
+            }
+        } break;
+        case MUL:
+        case DIV:
+        case REM:
+        default:
+            HCL_ASSERT_HINT(false, "Unhandled arithmetic operation for timing analysis!");
+        break;
+    }
+}
+
+void Node_Arithmetic::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit)
+{
+    auto inDelay0 = sigDelay.getDelay(getDriver(0));
+    auto inDelay1 = sigDelay.getDelay(getDriver(1));
+
+    auto width = getOutputConnectionType(0).width;
+
+    float maxDelay = 0.0f;
+    unsigned maxIP = 0;
+    unsigned maxIB = 0;
+
+    for (auto i : utils::Range(width))
+        if (inDelay0[i] > maxDelay) {
+            maxDelay = inDelay0[i];
+            maxIP = 0;
+            maxIB = i;
+        }
+
+    for (auto i : utils::Range(width))
+        if (inDelay1[i] > maxDelay) {
+            maxDelay = inDelay1[i];
+            maxIP = 1;
+            maxIB = i;
+        }
+
+    inputPort = maxIP;
+    inputBit = maxIB;
+}
 
 
 }

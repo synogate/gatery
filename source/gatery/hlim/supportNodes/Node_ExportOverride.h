@@ -39,6 +39,8 @@ class Node_ExportOverride : public Node<Node_ExportOverride>
         void connectOverride(const NodePort &nodePort);
         void disconnectInput();
 
+        // todo: Simulation handling
+
         virtual bool hasSideEffects() const override { return false; }
 
         virtual std::string getTypeName() const override;

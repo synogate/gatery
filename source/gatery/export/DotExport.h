@@ -21,6 +21,14 @@
 
 #include <filesystem>
 
+namespace gtry::hlim {
+
+class Subnet;
+class ConstSubnet;
+class SignalDelay;
+
+}
+
 namespace gtry {
 
 /**
@@ -40,6 +48,10 @@ class DotExport
          * @param circuit The circuit to export into the .dot file.
          */
         void operator()(const hlim::Circuit &circuit, hlim::NodeGroup *nodeGroup = nullptr);
+        
+        void operator()(const hlim::Circuit &circuit, const hlim::ConstSubnet &subnet);
+
+        void operator()(const hlim::Circuit &circuit, const hlim::ConstSubnet &subnet, const hlim::SignalDelay &signalDelays);
 
         /**
          * @brief Executes graphviz on the .dot file to produce an svg.
@@ -49,6 +61,9 @@ class DotExport
         void runGraphViz(std::filesystem::path destination);
     protected:
         std::filesystem::path m_destination;
+
+        void writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubnet &subnet, hlim::NodeGroup *nodeGroup, const hlim::SignalDelay *signalDelays);
+
 };
 
 void visualize(const hlim::Circuit &circuit, const std::string &filename, hlim::NodeGroup *nodeGroup = nullptr);

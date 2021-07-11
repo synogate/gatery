@@ -18,6 +18,7 @@
 #include "gatery/pch.h"
 #include "Node_Multiplexer.h"
 
+#include "../SignalDelay.h"
 
 namespace gtry::hlim {
 
@@ -142,6 +143,77 @@ std::string Node_Multiplexer::attemptInferOutputName(size_t outputPort) const
     name << "_mux";
     return name.str();
 #endif
+}
+
+
+
+void Node_Multiplexer::estimateSignalDelay(SignalDelay &sigDelay)
+{
+    std::vector<std::span<float>> inDelays;
+    inDelays.resize(getNumInputPorts());
+    for (auto i : utils::Range(getNumInputPorts()))
+        inDelays[i] = sigDelay.getDelay(getDriver(i));
+
+    auto selectorBits = inDelays[0].size();
+
+    HCL_ASSERT(sigDelay.contains({.node = this, .port = 0ull}));
+    auto outDelay = sigDelay.getDelay({.node = this, .port = 0ull});
+
+    auto width = getOutputConnectionType(0).width;
+    auto numInputs = inDelays.size()-1;
+
+    HCL_ASSERT(inDelays.size() >= 2);
+    float routing = (numInputs + selectorBits) * 0.8f;
+    float compute = (numInputs-1) * 0.3f;
+
+    float selectorMax = 0.0f;
+    for (auto &f : inDelays[0])
+        selectorMax = std::max(selectorMax, f);
+
+    for (auto i : utils::Range(width)) {
+        float maxInput = selectorMax;
+
+        for (auto j : utils::Range<std::size_t>(1, inDelays.size()))
+            maxInput = std::max(maxInput, inDelays[j][i]);
+
+        outDelay[i] = maxInput + routing + compute;
+    }
+}
+
+
+void Node_Multiplexer::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit)
+{
+
+    std::vector<std::span<float>> inDelays;
+    inDelays.resize(getNumInputPorts());
+    for (auto i : utils::Range(getNumInputPorts()))
+        inDelays[i] = sigDelay.getDelay(getDriver(i));
+
+    auto selectorBits = inDelays[0].size();
+    auto width = getOutputConnectionType(0).width;
+
+    float maxDelay = 0.0f;
+    unsigned maxIP = 0;
+    unsigned maxIB = 0;
+    for (auto i : utils::Range(selectorBits)) {
+        auto f = inDelays[0][i];
+        if (f > maxDelay) {
+            maxDelay = f;
+            maxIB = i;
+        }
+    }
+
+    for (auto j : utils::Range<std::size_t>(1, inDelays.size())) {
+        auto f = inDelays[j][outputBit];
+        if (f > maxDelay) {
+            maxDelay = f;
+            maxIP = j;
+            maxIB = outputBit;
+        }
+    }
+
+    inputPort = maxIP;
+    inputBit = maxIB;
 }
 
 

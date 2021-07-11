@@ -20,6 +20,8 @@
 
 #include "Node_Memory.h"
 
+#include "../SignalDelay.h"
+
 namespace gtry::hlim {
 
 Node_MemPort::Node_MemPort(std::size_t bitWidth) : m_bitWidth(bitWidth)
@@ -298,7 +300,87 @@ std::unique_ptr<BaseNode> Node_MemPort::cloneUnconnected() const
     return res;
 }
 
+void Node_MemPort::estimateSignalDelay(SignalDelay &sigDelay)
+{
+    /*
+    {
+        HCL_ASSERT(sigDelay.contains({.node = this, .port = (unsigned)Outputs::orderBefore}));
+        auto outDelay = sigDelay.getDelay({.node = this, .port = (unsigned)Outputs::orderBefore});
+        for (auto &f : outDelay)
+            f = 0.0f; 
+    }
+    */
 
+
+    // Ideally, the memory and all it's ports are one cell (e.g. BRAM), so all those signals need to go there
+    // So to account for routing delays, count all signals going to this memory, not just those going to this port.
+    unsigned totalInSignals = 0;
+    auto *memory = getMemory();
+    for (const auto &np : memory->getDirectlyDriven(0)) {
+        auto *port = dynamic_cast<Node_MemPort*>(np.node);
+
+        if (port->getDriver((unsigned)Inputs::enable).node != nullptr)
+            totalInSignals++;
+
+        if (port->getDriver((unsigned)Inputs::wrEnable).node != nullptr)
+            totalInSignals++;
+
+        if (port->getDriver((unsigned)Inputs::address).node != nullptr)
+            totalInSignals += getOutputWidth(port->getDriver((unsigned)Inputs::address));
+
+        if (port->getDriver((unsigned)Inputs::wrData).node != nullptr)
+            totalInSignals += getOutputWidth(port->getDriver((unsigned)Inputs::wrData));
+    }
+
+    {
+        auto enableDelay = sigDelay.getDelay(getDriver((unsigned)Inputs::enable));
+        auto addrDelay = sigDelay.getDelay(getDriver((unsigned)Inputs::address));
+
+        HCL_ASSERT(sigDelay.contains({.node = this, .port = (unsigned)Outputs::rdData}));
+        auto outDelay = sigDelay.getDelay({.node = this, .port = (unsigned)Outputs::rdData});
+
+        auto width = getOutputConnectionType((unsigned)Outputs::rdData).width;
+
+        float routing = totalInSignals * 0.8f;
+        float compute = 6.0f;
+
+        float maxDelay = 0.0f;
+        for (auto f : enableDelay)
+            maxDelay = std::max(maxDelay, f);
+        for (auto f : addrDelay)
+            maxDelay = std::max(maxDelay, f);
+
+        for (auto i : utils::Range(width))
+            outDelay[i] = maxDelay + routing + compute;
+    }
+}
+
+void Node_MemPort::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit)
+{
+    auto enableDelay = sigDelay.getDelay(getDriver((unsigned)Inputs::enable));
+    auto addrDelay = sigDelay.getDelay(getDriver((unsigned)Inputs::address));
+
+    float maxDelay = 0.0f;
+    inputPort = ~0u;
+    inputBit = ~0u;
+    for (auto i : utils::Range(enableDelay.size())) {
+        auto f = enableDelay[i];
+        if (f > maxDelay) {
+            maxDelay = f;
+            inputPort = (unsigned)Inputs::enable;
+            inputBit = i;
+        }
+    }
+
+    for (auto i : utils::Range(addrDelay.size())) {
+        auto f = addrDelay[i];
+        if (f > maxDelay) {
+            maxDelay = f;
+            inputPort = (unsigned)Inputs::address;
+            inputBit = i;
+        }
+    }
+}
 
 
 }

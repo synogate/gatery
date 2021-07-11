@@ -29,6 +29,8 @@
 
 namespace gtry::hlim {
 
+class Subnet;
+
 /*
 class Circuit;
 class Report;

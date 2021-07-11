@@ -18,6 +18,9 @@
 #include "gatery/pch.h"
 #include "Node_Constant.h"
 
+#include "../SignalDelay.h"
+
+
 #include <sstream>
 #include <iomanip>
 
@@ -74,6 +77,19 @@ std::string Node_Constant::attemptInferOutputName(size_t outputPort) const
     bitStream << "const_";
     sim::formatState(bitStream, m_Value, 16, true);
     return bitStream.str();
+}
+
+void Node_Constant::estimateSignalDelay(SignalDelay &sigDelay)
+{
+    HCL_ASSERT(sigDelay.contains({.node = this, .port = 0ull}));
+    auto outDelay = sigDelay.getDelay({.node = this, .port = 0ull});
+    for (auto &f : outDelay) f = 0.0f;
+}
+
+void Node_Constant::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit)
+{
+    inputPort = ~0u;
+    inputBit = ~0u;
 }
 
 

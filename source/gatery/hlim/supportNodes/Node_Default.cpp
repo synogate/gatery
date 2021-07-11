@@ -20,6 +20,8 @@
 
 #include "Node_Default.h"
 
+#include "../SignalDelay.h"
+
 namespace gtry::hlim {
 
 
@@ -121,6 +123,21 @@ std::unique_ptr<BaseNode> Node_Default::cloneUnconnected() const
     return copy;
 }
 
+
+void Node_Default::estimateSignalDelay(SignalDelay &sigDelay)
+{
+    HCL_ASSERT(sigDelay.contains({.node = this, .port = 0ull}));
+    auto outDelay = sigDelay.getDelay({.node = this, .port = 0ull});
+
+    for (auto &f : outDelay)
+        f = 0.0f;
+}
+
+void Node_Default::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit)
+{
+    inputPort = ~0u;
+    inputBit = ~0u;
+}
 
 
 }

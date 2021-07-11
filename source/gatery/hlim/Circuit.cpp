@@ -36,7 +36,10 @@
 
 
 #include "../simulation/BitVectorState.h"
+#include "../simulation/ReferenceSimulator.h"
 #include "../utils/Range.h"
+
+#include "Subnet.h"
 
 
 #include <set>
@@ -310,32 +313,11 @@ void Circuit::cullUnusedNodes()
     do {
         done = true;
 
-        std::vector<BaseNode*> openList;
-        std::set<BaseNode*> usedNodes;
-
-        // Find roots
-        for (auto &n : m_nodes)
-            if (n->hasSideEffects() || n->hasRef())
-                openList.push_back(n.get());
-
-        // Find dependencies
-        while (!openList.empty()) {
-            auto *n = openList.back();
-            openList.pop_back();
-
-            if (usedNodes.contains(n)) continue; // already handled
-            usedNodes.insert(n);
-            
-            for (auto i : utils::Range(n->getNumInputPorts())) {
-                auto driver = n->getDriver(i);
-                if (driver.node != nullptr)
-                    openList.push_back(driver.node);
-            }
-        }
+        auto usedNodes = Subnet::allUsedNodes(*this);
 
         // Remove everything that isn't used
         for (size_t i = 0; i < m_nodes.size(); i++) {
-            if (!usedNodes.contains(m_nodes[i].get())) {
+            if (!usedNodes.getNodes().contains(m_nodes[i].get())) {
                 m_nodes[i] = std::move(m_nodes.back());
                 m_nodes.pop_back();
                 i--;
@@ -742,15 +724,37 @@ void Circuit::propagateConstants()
                 continue;
             }
 
-            // Remove registers without reset on the path
-            if (auto *regNode = dynamic_cast<Node_Register*>(successor.node))
-                if (regNode->getNonSignalDriver((unsigned)Node_Register::Input::RESET_VALUE).node == nullptr) {
+            // Remove registers without reset or whose reset is compatible with the constant input
+            if (auto *regNode = dynamic_cast<Node_Register*>(successor.node)) {
+                bool bypassRegister = false;
 
+                auto dataDriver = regNode->getNonSignalDriver((unsigned)Node_Register::Input::DATA);
+                auto resetDriver = regNode->getNonSignalDriver((unsigned)Node_Register::Input::RESET_VALUE);
+                auto *constNode = dynamic_cast<Node_Constant*>(dataDriver.node);
+
+                // Only bypass if input driven by constant node
+                if (constNode != nullptr) {
+                    if (resetDriver.node == nullptr)
+                        bypassRegister = true;
+                    else if (dataDriver.node != nullptr) {
+                        // evaluate reset value. Note that it is ok to only evaluate the reset value (it need not be constant) because the register only evaluates it during the reset.
+                        sim::ReferenceSimulator simulator;
+                        simulator.compileProgram(*this, {resetDriver});
+                        simulator.powerOn();
+
+                        auto resetValue = simulator.getValueOfOutput(resetDriver);
+                        if (sim::canBeReplacedWith(resetValue, constNode->getValue())) 
+                            bypassRegister = true;
+                    }
+                }
+
+                if (bypassRegister) {
                     regNode->bypassOutputToInput(0, (unsigned)Node_Register::Input::DATA);
                     regNode->disconnectInput(Node_Register::Input::DATA);
-                    openList.push_back(constPort);
+                    regNode->disconnectInput(Node_Register::Input::RESET_VALUE);
                     continue;
-                }
+                } 
+            }
 
             // Only work on combinatory nodes
             if (!successor.node->isCombinatorial()) continue;

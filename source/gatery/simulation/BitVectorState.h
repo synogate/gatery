@@ -146,6 +146,24 @@ bool allDefined(const BitVectorState<Config> &vec, size_t start, size_t size) {
 }
 
 template<typename Config>
+bool anyDefined(const BitVectorState<Config> &vec, size_t start, size_t size) {
+
+    size_t startFullChunk = (start + Config::NUM_BITS_PER_BLOCK-1) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
+    size_t endFullChunk = (start+size) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
+
+    for (size_t c = startFullChunk / Config::NUM_BITS_PER_BLOCK; c < endFullChunk / Config::NUM_BITS_PER_BLOCK; c++)
+        if (vec.data(Config::DEFINED)[startFullChunk / Config::NUM_BITS_PER_BLOCK]) return true;
+
+    for (size_t i = start; i < startFullChunk; i++)
+        if (vec.get(Config::DEFINED, i)) return true;
+
+    for (size_t i = endFullChunk; i < start+size; i++)
+        if (vec.get(Config::DEFINED, i)) return true;
+
+    return false;
+}
+
+template<typename Config>
 bool compareValues(const BitVectorState<Config> &vecA, size_t startA, const BitVectorState<Config> &vecB, size_t startB, size_t size) {
 
     /// @todo: optimize
@@ -171,6 +189,32 @@ bool equalOnDefinedValues(const BitVectorState<Config> &vecA, size_t startA, con
 
     return true;
 }
+
+
+template<typename Config>
+bool canBeReplacedWith(const BitVectorState<Config> &vecA, const BitVectorState<Config> &vecB, size_t startA = 0, size_t startB = 0, size_t size = ~0ull) {
+
+    /// @todo: optimize
+
+    if (size == ~0ull)
+        size = vecA.size() - startA;
+
+    for (size_t i = 0; i < size; i++) {
+        bool aDef = vecA.get(Config::DEFINED, startA+i);
+        if (!aDef) continue; // If A is undefined, any value in B is fine
+
+        bool bDef = vecB.get(Config::DEFINED, startB+i);
+        if (!bDef) return false; // If A is defined and B is undefined, A can't be replaced by B
+
+        bool aVal = vecA.get(Config::VALUE, startA+i);
+        bool bVal = vecB.get(Config::VALUE, startB+i);
+
+        if (aVal != bVal) return false;
+    }
+
+    return true;
+}
+
 
 
 

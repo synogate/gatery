@@ -49,6 +49,9 @@ class Node_Arithmetic : public Node<Node_Arithmetic>
 
         virtual std::string attemptInferOutputName(size_t outputPort) const;
 
+        virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
+
+        virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit) override;
     protected:
         Op m_op;
         // extend or not, etc...

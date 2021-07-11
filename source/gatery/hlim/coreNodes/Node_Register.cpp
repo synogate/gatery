@@ -19,6 +19,8 @@
 #include "Node_Register.h"
 #include "Node_Constant.h"
 
+#include "../SignalDelay.h"
+
 namespace gtry::hlim {
 
 Node_Register::Node_Register() : Node(NUM_INPUTS, 1)
@@ -138,6 +140,21 @@ std::string Node_Register::attemptInferOutputName(size_t outputPort) const
 
     name << driver0.node->getName() << "_last";
     return name.str();
+}
+
+
+void Node_Register::estimateSignalDelay(SignalDelay &sigDelay)
+{
+    HCL_ASSERT(sigDelay.contains({.node = this, .port = 0ull}));
+    auto outDelay = sigDelay.getDelay({.node = this, .port = 0ull});
+    for (auto &f : outDelay)
+        f = 0.0f;
+}
+
+void Node_Register::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit)
+{
+    inputPort = ~0u;
+    inputBit = ~0u;
 }
 
 
