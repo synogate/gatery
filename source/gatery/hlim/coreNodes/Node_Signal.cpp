@@ -19,7 +19,7 @@
 #include "Node_Signal.h"
 
 #include "../SignalGroup.h"
-#include "../SIgnalDelay.h"
+#include "../SignalDelay.h"
 
 #include "../../utils/Exceptions.h"
 
