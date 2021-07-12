@@ -128,10 +128,10 @@ namespace gtry
 	template<typename... T>
 	struct VisitCompound<std::tuple<T...>>
 	{
-		template<typename T>
+		template<typename TComp>
 		static constexpr std::string_view usableName()
 		{
-			std::string_view name = typeid(T).name();
+			std::string_view name = typeid(TComp).name();
 
 			auto pos_s = name.find("::", 0);
 			if (pos_s == std::string_view::npos)
@@ -162,7 +162,7 @@ namespace gtry
 
 		void operator () (std::tuple<T...>& a, const std::tuple<T...>& b, CompoundVisitor& v, size_t flags)
 		{
-			static_assert(!"no impl");
+			HCL_ASSERT(!"no impl");
 		}
 
 		void operator () (std::tuple<T...>& a, CompoundVisitor& v)
@@ -178,7 +178,7 @@ namespace gtry
 
 		void operator () (const std::tuple<T...>& a, const std::tuple<T...>& b, CompoundVisitor& v)
 		{
-			static_assert(!"no impl");
+			HCL_ASSERT(!"no impl");
 
 			v.enterPackStruct();
 			boost::hana::for_each(boost::hana::zip(a, b), [&](auto& elem) {
