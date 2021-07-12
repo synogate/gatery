@@ -26,6 +26,8 @@ class BaseNode;
 struct NodePort;
 class Circuit;
 
+class ConstSubnet;
+
 template<bool makeConst, typename FinalType>
 class SubnetTemplate {
 	public:
@@ -70,6 +72,9 @@ class SubnetTemplate {
 		FinalType &addAllForExport(CircuitType &circuit);
 		/// Adds all nodes that are used or have side effects
 		FinalType &addAllUsedNodes(CircuitType &circuit);
+
+
+		ConstSubnet &asConst() const { return (ConstSubnet&)*this; }
 
 		void dilate(bool forward, bool backward);
 

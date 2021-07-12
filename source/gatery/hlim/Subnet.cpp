@@ -184,7 +184,7 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllForSimulation(CircuitType
 
     // Find roots
     for (auto &n : circuit.getNodes())
-        if (n->hasSideEffects())
+        if (n->hasSideEffects() || n->hasRef())
             openList.push_back(n.get());
 
     // Find dependencies

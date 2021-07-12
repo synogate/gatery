@@ -532,7 +532,7 @@ void Circuit::removeIrrelevantMuxes(Subnet &subnet)
                             if (closedList.contains(input)) continue;
                             closedList.insert(input);
 
-                            if (input.node->hasSideEffects() || !input.node->isCombinatorial()) {
+                            if (input.node->hasSideEffects() || input.node->hasRef() || !input.node->isCombinatorial()) {
                                 allSubnetOutputsMuxed = false;
                                 //std::cout << "Internal node with sideeffects, skipping" << std::endl;
                                 break;
@@ -779,6 +779,8 @@ void Circuit::propagateConstants(Subnet &subnet)
             if (!successor.node->isCombinatorial()) continue;
             // Nodes with side-effects can't be removed/bypassed
             if (successor.node->hasSideEffects()) continue;
+            // Nodes with references can't be removed/bypassed
+            if (successor.node->hasRef()) continue;
 
             if (!successor.node->getInternalStateSizes().empty()) continue; // can't be good for const propagation
 

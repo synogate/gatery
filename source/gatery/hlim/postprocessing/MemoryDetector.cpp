@@ -30,6 +30,14 @@
 #include "../supportNodes/Node_MemPort.h"
 #include "../GraphExploration.h"
 
+
+#define DEBUG_OUTPUT
+
+#ifdef DEBUG_OUTPUT
+#include "../Subnet.h"
+#include "../../export/DotExport.h"
+#endif
+
 #include <sstream>
 #include <vector>
 #include <set>
@@ -348,12 +356,28 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 {
     if (m_memory->type() != Node_Memory::MemType::BRAM) return;
 
+#ifdef DEBUG_OUTPUT
+    hlim::Subnet subnet;
+    auto writeSubnet = [&]{
+        subnet.dilate(true, true);
+
+        DotExport exp("retiming_area.dot");
+        exp(circuit, subnet.asConst());
+        exp.runGraphViz("retiming_area.svg");
+    };
+    subnet.add(m_memory);
+#endif
+
     // If we are aiming for blockrams:
     // Check if any read ports are lacking the register that make them synchronous.
     // If they do, scan the read data output bus for any registers buried in the combinatorics that could be pulled back and fused.
     // While doing that, also check for and build read modify write mechanics w. hazard detection in case those combinatorics feed back into
     // a write port of the same memory with same addr and enables.
     for (auto &rp : m_readPorts) {
+#ifdef DEBUG_OUTPUT
+        subnet.add(rp.node);
+#endif            
+
         // It's fine if it is already synchronous.
         if (rp.syncReadDataReg != nullptr) continue;
         HCL_ASSERT(rp.outputReg == nullptr);
@@ -368,6 +392,9 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
         std::stringstream issues;
         issues << "Can't turn memory into blockram because an asynchronous read can not be turned into a synchronous one:\n";
         for (auto nh : rp.node->exploreOutput((unsigned)Node_MemPort::Outputs::rdData).skipDependencies()) {
+#ifdef DEBUG_OUTPUT
+            subnet.add(nh.node());
+#endif            
             if (auto *port = dynamic_cast<Node_MemPort*>(nh.node())) {
                 if (port->isReadPort()) {
                     HCL_ASSERT(!port->isWritePort());
@@ -409,12 +436,16 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
             } else
             if (auto *reg = dynamic_cast<Node_Register*>(nh.node())) {
                 if (reg->getNonSignalDriver((unsigned)Node_Register::Input::RESET_VALUE).node != nullptr) {
+#ifdef DEBUG_OUTPUT
+                    writeSubnet();
+#endif            
                     issues
                         << "Async read port feeds through combinatory nodes into a register with a reset value. The reset can value would change upon moving the register backwards.\n"
                         << "Read port from:\n";
                     issues << rp.node->getStackTrace();
                     issues
-                        << "Register:\n";
+                        << "Offending register: " << nh.node()->getName() << " (" << nh.node()->getTypeName() << ", id: " << nh.node()->getId() << ")\n"
+                        << "from:\n";
                     issues << reg->getStackTrace();
                     HCL_DESIGNCHECK_HINT(false, issues.str());
                 }
@@ -424,13 +455,31 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
                 continue;
             } else
             if (!nh.node()->isCombinatorial() || nh.node()->hasSideEffects()) {
+
+#ifdef DEBUG_OUTPUT
+                writeSubnet();
+#endif            
                 issues
-                    << "Async read port feeds into a non-combinatorial node or a node with side effects. Can't insert register.\n";
+                    << "Async read port feeds into a";
+
+                if (!nh.node()->isCombinatorial())
+                    issues << " non-combinatorial";
+
+                issues << " node";
+
+                if (nh.node()->hasSideEffects())
+                    issues << " with side effects";
+
+                if (nh.node()->hasRef())
+                    issues << " with references";
+
+                issues << ". Can't insert register.\n";
                 issues
                     << "Read port from:\n";
                 issues << rp.node->getStackTrace();
                 issues
-                    << "Offending node from:\n";
+                    << "Offending node: " << nh.node()->getName() << " (" << nh.node()->getTypeName() << ", id: " << nh.node()->getId() << ")\n"
+                    << "from:\n";
                 issues << nh.node()->getStackTrace();
                 HCL_DESIGNCHECK_HINT(false, issues.str());
             } else
@@ -582,8 +631,10 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
             insertDelayInput({.node=writePort, .port=(unsigned)Node_MemPort::Inputs::address}, false, m_fixupNodeGroup, "delayed_wr_addr", "");
 
             HCL_ASSERT(writePort->getNonSignalDriver((unsigned)Node_MemPort::Inputs::enable) == writePort->getNonSignalDriver((unsigned)Node_MemPort::Inputs::wrEnable));
-            insertDelayInput({.node=writePort, .port=(unsigned)Node_MemPort::Inputs::enable}, true, m_fixupNodeGroup, "delayed_wr_enable", "");
-            writePort->rewireInput((unsigned)Node_MemPort::Inputs::wrEnable, writePort->getDriver((unsigned)Node_MemPort::Inputs::enable));
+            if (writePort->getNonSignalDriver((unsigned)Node_MemPort::Inputs::enable).node != nullptr) {
+                insertDelayInput({.node=writePort, .port=(unsigned)Node_MemPort::Inputs::enable}, true, m_fixupNodeGroup, "delayed_wr_enable", "");
+                writePort->rewireInput((unsigned)Node_MemPort::Inputs::wrEnable, writePort->getDriver((unsigned)Node_MemPort::Inputs::enable));
+            }
 
             auto *addrCompNode = circuit.createNode<Node_Compare>(Node_Compare::EQ);
             addrCompNode->recordStackTrace();

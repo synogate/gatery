@@ -38,6 +38,8 @@
 #include <sstream>
 #include <iostream>
 
+#define DEBUG_OUTPUT
+
 namespace gtry::hlim {
 
 /**
@@ -52,7 +54,7 @@ namespace gtry::hlim {
  * @param failureIsError Whether to throw an exception if a retiming area limited by registers can be determined
  * @returns Whether a valid retiming area could be determined
  */
-bool determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, 
+bool determineAreaToBeRetimed(Circuit &circuit, const Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, 
 								Subnet &areaToBeRetimed, std::set<Node_Register*> &registersToBeRetimed, bool ignoreRefs = false, bool failureIsError = true)
 {
 	BaseNode *clockGivingNode = nullptr;
@@ -60,6 +62,18 @@ bool determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 
 	std::vector<BaseNode*> openList;
 	openList.push_back(output.node);
+
+
+#ifdef DEBUG_OUTPUT
+    auto writeSubnet = [&]{
+		Subnet subnet = areaToBeRetimed;
+		subnet.dilate(true, true);
+
+        DotExport exp("retiming_area.dot");
+        exp(circuit, subnet.asConst());
+        exp.runGraphViz("retiming_area.svg");
+    };
+#endif
 
 	while (!openList.empty()) {
 		auto *node = openList.back();
@@ -73,6 +87,10 @@ bool determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 		// Do not leave the specified playground, abort if no register is found before.
 		if (!area.contains(node)) {
 			if (!failureIsError) return false;
+
+#ifdef DEBUG_OUTPUT
+    writeSubnet();
+#endif
 
 			std::stringstream error;
 
@@ -92,6 +110,10 @@ bool determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 		if (node->hasRef() && !ignoreRefs) {
 			if (!failureIsError) return false;
 
+#ifdef DEBUG_OUTPUT
+    writeSubnet();
+#endif
+
 			std::stringstream error;
 
 			error 
@@ -99,7 +121,7 @@ bool determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 				<< "Node from:\n" << output.node->getStackTrace() << "\n";
 
 			error 
-				<< "The fanning-in signals are driven by a node to which references are still being held " << node->getName() << " (" << node->getTypeName() << ").\n"
+				<< "The fanning-in signals are driven by a node to which references are still being held " << node->getName() << " (" << node->getTypeName() << ", id " << node->getId() << ").\n"
 				<< "Node with references from:\n" << node->getStackTrace() << "\n";
 
 			HCL_ASSERT_HINT(false, error.str());
@@ -114,6 +136,10 @@ bool determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 				} else {
 					if (clock != c) {
 						if (!failureIsError) return false;
+
+#ifdef DEBUG_OUTPUT
+    writeSubnet();
+#endif
 
 						std::stringstream error;
 
@@ -134,8 +160,12 @@ bool determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 
 		// We can not retime nodes with a side effect
 		// Memory ports are handled separately below
-		if (node->hasSideEffects() && dynamic_cast<Node_MemPort*>(node) == nullptr && dynamic_cast<Node_Signal*>(node) == nullptr) {
+		if (node->hasSideEffects() && dynamic_cast<Node_MemPort*>(node) == nullptr) {
 			if (!failureIsError) return false;
+
+#ifdef DEBUG_OUTPUT
+    writeSubnet();
+#endif
 
 			std::stringstream error;
 
@@ -196,7 +226,7 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
 {
 	Subnet areaToBeRetimed;
 	std::set<Node_Register*> registersToBeRetimed;
-	if (!determineAreaToBeRetimed(area, anchoredRegisters, output, areaToBeRetimed, registersToBeRetimed, ignoreRefs, failureIsError))
+	if (!determineAreaToBeRetimed(circuit, area, anchoredRegisters, output, areaToBeRetimed, registersToBeRetimed, ignoreRefs, failureIsError))
 		return false;
 
 /*
@@ -392,7 +422,7 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
 		}
 
 		if (retimingTarget.node != nullptr && dynamic_cast<Node_Register*>(retimingTarget.node) == nullptr) {
-			done = !retimeForwardToOutput(circuit, subnet, anchoredRegisters, retimingTarget);
+			done = !retimeForwardToOutput(circuit, subnet, anchoredRegisters, retimingTarget, false, false);
 		} else
 			done = true;
 	
