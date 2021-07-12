@@ -48,13 +48,13 @@ struct Option {
 };
 
 namespace details {
+    template<typename BaseType>
     struct RequestWrapper {    
-        template<typename BaseType>
         using wrap = Option<BaseType>;
     };
 
+    template<typename BaseType>
     struct ChoiceWrapper {    
-        template<typename BaseType>
         using wrap = BaseType;
     };
 }
@@ -73,10 +73,10 @@ class SerdesCapabilities : public Capabilities {
             DDR,
         };
 
-        template<typename Wrapper>
+        template<template <typename> class Wrapper>
         struct Settings {
-            typename Wrapper::wrap<unsigned> width;
-            typename Wrapper::wrap<DataRate> dataRate;
+            typename Wrapper<unsigned>::wrap width;
+            typename Wrapper<DataRate>::wrap dataRate;
         };
 
         using Request = Settings<details::RequestWrapper>;
@@ -91,12 +91,12 @@ class IOCapabilities : public Capabilities {
 class MemoryCapabilities : public Capabilities {
     public:
 
-        template<typename Wrapper>
+        template<template <typename> class Wrapper>
         struct Settings {
-            typename Wrapper::wrap<unsigned> width;
-            typename Wrapper::wrap<unsigned> depth;
-            typename Wrapper::wrap<bool> addrRegister;
-            typename Wrapper::wrap<bool> outputRegister;
+            typename Wrapper<unsigned>::wrap width;
+            typename Wrapper<unsigned>::wrap depth;
+            typename Wrapper<bool>::wrap addrRegister;
+            typename Wrapper<bool>::wrap outputRegister;
             struct Port {
                 bool canRead;
                 bool canWrite;
@@ -104,7 +104,7 @@ class MemoryCapabilities : public Capabilities {
                 // aspect ratio
 
                 // same port / mixed port Read during write order
-                typename Wrapper::wrap<unsigned> order;
+                typename Wrapper<unsigned>::wrap order;
             };
             std::vector<Port> ports;
         };
@@ -116,26 +116,26 @@ class MemoryCapabilities : public Capabilities {
 
 class FifoCapabilities : public Capabilities {
     public:
-        template<typename Wrapper>
+        template<template <typename> class Wrapper>
         struct Settings {
-            typename Wrapper::wrap<unsigned> readWidth;
-            typename Wrapper::wrap<unsigned> readDepth;
-            typename Wrapper::wrap<unsigned> writeWidth;
+            typename Wrapper<unsigned>::wrap readWidth;
+            typename Wrapper<unsigned>::wrap readDepth;
+            typename Wrapper<unsigned>::wrap writeWidth;
 
-			typename Wrapper::wrap<bool> outputIsFallthrough;
-			typename Wrapper::wrap<bool> singleClock;
+			typename Wrapper<bool>::wrap outputIsFallthrough;
+			typename Wrapper<bool>::wrap singleClock;
 
-            typename Wrapper::wrap<bool> useECCEncoder;
-            typename Wrapper::wrap<bool> useECCDecoder;
+            typename Wrapper<bool>::wrap useECCEncoder;
+            typename Wrapper<bool>::wrap useECCDecoder;
 
-			typename Wrapper::wrap<size_t> latency_write_empty;
-			typename Wrapper::wrap<size_t> latency_read_empty;
-			typename Wrapper::wrap<size_t> latency_write_full;
-			typename Wrapper::wrap<size_t> latency_read_full;
-			typename Wrapper::wrap<size_t> latency_write_almostEmpty;
-			typename Wrapper::wrap<size_t> latency_read_almostEmpty;
-			typename Wrapper::wrap<size_t> latency_write_almostFull;
-			typename Wrapper::wrap<size_t> latency_read_almostFull;
+			typename Wrapper<size_t>::wrap latency_write_empty;
+			typename Wrapper<size_t>::wrap latency_read_empty;
+			typename Wrapper<size_t>::wrap latency_write_full;
+			typename Wrapper<size_t>::wrap latency_read_full;
+			typename Wrapper<size_t>::wrap latency_write_almostEmpty;
+			typename Wrapper<size_t>::wrap latency_read_almostEmpty;
+			typename Wrapper<size_t>::wrap latency_write_almostFull;
+			typename Wrapper<size_t>::wrap latency_read_almostFull;
         };
 
         using Request = Settings<details::RequestWrapper>;
