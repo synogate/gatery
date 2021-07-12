@@ -28,7 +28,6 @@ class BUFG : public gtry::hlim::Node_External
         BUFG();
 
 		void connectInput(const Bit &bit);
-		void connectInput(const BVec &bvec);
 
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;

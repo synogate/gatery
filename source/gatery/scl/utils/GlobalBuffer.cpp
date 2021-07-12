@@ -16,3 +16,16 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
+
+#include "GlobalBuffer.h"
+
+namespace gtry::scl {
+
+Bit bufG(const Bit &src) {
+	auto scope = Area("scl_globalBuffer").enter();
+	Bit copy = src;
+	copy.setName("globalBufferPlaceholder");
+	return copy;
+}
+
+}

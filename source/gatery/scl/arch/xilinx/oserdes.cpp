@@ -24,7 +24,7 @@
 namespace gtry::scl::arch::xilinx {
 
 Bit serdes(BVec data) {
-    Area serdesArea{"oserdes"};
+    Area serdesArea{"scl_oserdes"};
     auto scope = serdesArea.enter();
 
     BVec slow_data = reg(data);
@@ -58,7 +58,6 @@ Bit serdes(BVec data) {
 
 
     auto *oserdese2_master = DesignScope::createNode<OSERDESE2>(data.size());
-    oserdese2_master->recordStackTrace();
     for (auto i : utils::Range(std::min<unsigned>(8u, data.size())))
         oserdese2_master->setInput((OSERDESE2::Inputs) (OSERDESE2::IN_D1+i), data[i]);
 
@@ -108,7 +107,7 @@ Bit serdes(BVec data) {
 
     tx.setExportOverride(SignalReadPort(oserdese2_master));
 
-    tx.setName("tx_after_override");
+    tx.setName("tx");
 
     return tx;
 }

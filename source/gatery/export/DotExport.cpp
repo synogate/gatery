@@ -27,6 +27,9 @@
 #include "../hlim/coreNodes/Node_Pin.h"
 #include "../hlim/supportNodes/Node_SignalTap.h"
 
+#include "../hlim/Subnet.h"
+#include "../hlim/SignalDelay.h"
+
 #include <fstream>
 #include <stdexcept>
 #include <cstdlib>
@@ -39,7 +42,22 @@ DotExport::DotExport(std::filesystem::path destination) : m_destination(std::mov
 {
 }
 
+void DotExport::operator()(const hlim::Circuit &circuit, const hlim::ConstSubnet &subnet)
+{
+    writeDotFile(circuit, subnet, nullptr, nullptr);
+}
+
+void DotExport::operator()(const hlim::Circuit &circuit, const hlim::ConstSubnet &subnet, const hlim::SignalDelay &signalDelays)
+{
+    writeDotFile(circuit, subnet, nullptr, &signalDelays);
+}
+
 void DotExport::operator()(const hlim::Circuit &circuit, hlim::NodeGroup *nodeGroup)
+{
+    writeDotFile(circuit, hlim::ConstSubnet::all(circuit), nodeGroup, nullptr);
+}
+
+void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubnet &subnet, hlim::NodeGroup *nodeGroup, const hlim::SignalDelay *signalDelays)
 {
     std::fstream file(m_destination.string().c_str(), std::fstream::out);
     if (!file.is_open())
@@ -103,6 +121,8 @@ void DotExport::operator()(const hlim::Circuit &circuit, hlim::NodeGroup *nodeGr
                 reccurWalkNodeGroup(subGroup.get());
 
             for (auto *node : nodeGroup->getNodes()) {
+                if (!subnet.contains(node)) continue;
+                
                 file << "node_" << idx << "[label=\"";
                 if (node->getName().length() < 30)
                     file << node->getName();
@@ -124,6 +144,7 @@ void DotExport::operator()(const hlim::Circuit &circuit, hlim::NodeGroup *nodeGr
 
         for (auto &node : circuit.getNodes()) {
             if (node->getGroup() == nullptr) {
+                if (!subnet.contains(node.get())) continue;
                 file << "node_" << idx << "[label=\"" << node->getName() << " - " << node->getId() << " - " << node->getTypeName() << "\"";
                 styleNode(file, node.get());
                 file << "];" << std::endl;
@@ -150,23 +171,11 @@ void DotExport::operator()(const hlim::Circuit &circuit, hlim::NodeGroup *nodeGr
 
             file << "node_" << producerId << " -> node_" << nodeId << " [";
 
-            file << " label=\"";
-            switch (type.interpretation) {
-                case hlim::ConnectionType::BOOL:
-                    file << "BOOL"; break;
-                case hlim::ConnectionType::BITVEC:
-                    file << "BVEC(" << type.width << ')'; break;
-                case hlim::ConnectionType::DEPENDENCY:
-                    file << "DEPENDENCY"; break;
-            }
-            file << "\"";
-
             switch (producer.node->getOutputType(producer.port)) {
                 case hlim::NodeIO::OUTPUT_LATCHED:
                     file << " style=\"dashed\"";
                 break;
                 case hlim::NodeIO::OUTPUT_CONSTANT:
-                    file << " color=\"blue\"";
                 case hlim::NodeIO::OUTPUT_IMMEDIATE:
                 default:
                 break;
@@ -186,6 +195,36 @@ void DotExport::operator()(const hlim::Circuit &circuit, hlim::NodeGroup *nodeGr
                 weight *= 0.01;
 
             file << " weight="<<std::round(1+weight * 100); // dot wants integers, so scale everything up
+
+            std::string auxLabel;
+            if (signalDelays) {
+                auto delay = signalDelays->getDelay(producer);
+
+                float maxDelay = 0.0;
+                for (auto f : delay)
+                    maxDelay = std::max(maxDelay, f);
+
+                auxLabel = std::to_string(maxDelay);
+
+                maxDelay /= 32.0f;
+                int red = std::min<int>(255, std::floor(std::max(0.0f, maxDelay - 1.0f) * 255));
+                int blue = std::min<int>(255, std::floor(std::max(0.0f, 1.0f-maxDelay) * 255));
+
+                file << (boost::format(" color=\"#%02x00%02x\"") % red % blue);
+            }
+
+            file << " label=\"";
+            switch (type.interpretation) {
+                case hlim::ConnectionType::BOOL:
+                    file << "BOOL"; break;
+                case hlim::ConnectionType::BITVEC:
+                    file << "BVEC(" << type.width << ')'; break;
+                case hlim::ConnectionType::DEPENDENCY:
+                    file << "DEPENDENCY"; break;
+            }
+            if (!auxLabel.empty())
+                file << " " << auxLabel;
+            file << "\"";
 
             file << "];" << std::endl;
         }

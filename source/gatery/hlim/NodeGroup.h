@@ -30,6 +30,12 @@ namespace gtry::hlim {
 class Node_Signal;
 class Node_Register;
 
+class NodeGroupMetaInfo {
+    public:
+        virtual ~NodeGroupMetaInfo();
+};
+
+
 class NodeGroup
 {
     public:
@@ -52,6 +58,7 @@ class NodeGroup
         inline void setComment(std::string comment) { m_comment = std::move(comment); }
 
         NodeGroup *addChildNodeGroup(GroupType groupType);
+        NodeGroup *findChild(std::string_view name);
 
         void moveInto(NodeGroup *newParent);
 
@@ -74,6 +81,12 @@ class NodeGroup
         bool isEmpty(bool recursive) const;
 
         inline GroupType getGroupType() const { return m_groupType; }
+
+
+        template<typename MetaType, typename... Args>
+        void createMetaInfo(Args&&... args);
+
+        NodeGroupMetaInfo *getMetaInfo() { return m_metaInfo.get(); }
     protected:
         std::string m_name;
         std::string m_instanceName;
@@ -86,7 +99,17 @@ class NodeGroup
 
         utils::StackTrace m_stackTrace;
 
+        std::unique_ptr<NodeGroupMetaInfo> m_metaInfo;
+
         friend class BaseNode;
 };
+
+
+template<typename MetaType, typename... Args>
+void NodeGroup::createMetaInfo(Args&&... args)
+{
+    m_metaInfo.reset(new MetaType(std::forward<Args>(args)...));
+}
+
 
 }

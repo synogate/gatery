@@ -23,6 +23,7 @@
 #include "ConditionalScope.h"
 #include "Constant.h"
 #include "Scope.h"
+#include "DesignScope.h"
 
 #include <gatery/hlim/coreNodes/Node_Constant.h>
 #include <gatery/hlim/coreNodes/Node_Rewire.h>

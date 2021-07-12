@@ -23,7 +23,7 @@
 #include "Bit.h"
 #include "BitVector.h"
 
-#include "Scope.h"
+#include "DesignScope.h"
 #include "../hlim/supportNodes/Node_PathAttributes.h"
 
 namespace gtry {

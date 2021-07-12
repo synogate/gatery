@@ -21,6 +21,7 @@
 #include "BitWidth.h"
 #include "Signal.h"
 #include "Scope.h"
+#include "DesignScope.h"
 
 #include "Constant.h"
 

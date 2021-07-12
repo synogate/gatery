@@ -17,7 +17,7 @@
 */
 #pragma once
 
-#include "Scope.h"
+#include "DesignScope.h"
 #include "Bit.h"
 
 #include <gatery/utils/Traits.h>

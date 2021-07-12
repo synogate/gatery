@@ -193,7 +193,6 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
     sim::ReferenceSimulator simulator;
     simulator.compileProgram(simCircuit);
     simulator.powerOn();
-    simulator.reevaluate();
 
     // Fetch result
     state = simulator.getValueOfOutput(newOutput);

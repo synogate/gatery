@@ -18,6 +18,8 @@
 #include "gatery/pch.h"
 #include "Node_Pin.h"
 
+#include "../SignalDelay.h"
+
 namespace gtry::hlim {
 
 
@@ -101,6 +103,24 @@ void Node_Pin::setDifferential(std::string_view posPrefix, std::string_view negP
     m_differential = true;
     m_differentialPosName = m_name + std::string(posPrefix);
     m_differentialNegName = m_name + std::string(negPrefix);
+}
+
+
+
+void Node_Pin::estimateSignalDelay(SignalDelay &sigDelay)
+{
+    for (auto i : utils::Range(getNumOutputPorts())) {
+        HCL_ASSERT(sigDelay.contains({.node = this, .port = i}));
+        auto outDelay = sigDelay.getDelay({.node = this, .port = i});
+        for (auto &f : outDelay)
+            f = 0.0f;
+    }
+}
+
+void Node_Pin::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit)
+{
+    inputPort = ~0u;
+    inputBit = ~0u;
 }
 
 

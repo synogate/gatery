@@ -39,6 +39,10 @@ namespace gtry::hlim {
         virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 
         virtual std::string attemptInferOutputName(size_t outputPort) const;
+
+        virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
+
+        virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit) override;
     protected:
         sim::DefaultBitVectorState m_Value;
     };

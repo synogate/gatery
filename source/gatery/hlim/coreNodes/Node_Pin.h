@@ -55,6 +55,10 @@ namespace gtry::hlim {
             inline bool isDifferential() const { return m_differential; }
             inline const std::string &getDifferentialPosName() { return m_differentialPosName; }
             inline const std::string &getDifferentialNegName() { return m_differentialNegName; }
+
+             virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
+
+             virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit) override;
         protected:
             bool m_differential = false;
             std::string m_differentialPosName;

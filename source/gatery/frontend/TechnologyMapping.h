@@ -20,24 +20,18 @@
 #include "BitVector.h"
 #include "Bit.h"
 
+#include "../simulation/BitVectorState.h"
+
 #include <vector>
 #include <memory>
 #include <map>
+#include <set>
 
 namespace gtry::hlim {
-	class GroupScope;
+	class Node_Signal;
 }
 
 namespace gtry {
-
-struct NodeGroupIO {
-	std::map<std::string, BVec> inputBVecs;
-	std::map<std::string, Bit> inputBits;
-	std::map<std::string, BVec> outputBVecs;
-	std::map<std::string, Bit> outputBits;
-
-	NodeGroupIO(hlim::NodeGroup *nodeGroup);
-};
 
 class TechnologyMappingPattern
 {

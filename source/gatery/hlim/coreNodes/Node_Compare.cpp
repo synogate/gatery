@@ -19,6 +19,9 @@
 #include "Node_Compare.h"
 
 
+#include "../SignalDelay.h"
+
+
 namespace gtry::hlim {
 
 Node_Compare::Node_Compare(Op op) : Node(2, 1), m_op(op)
@@ -168,6 +171,67 @@ std::string Node_Compare::attemptInferOutputName(size_t outputPort) const
     return name.str();
 }
 
+
+
+void Node_Compare::estimateSignalDelay(SignalDelay &sigDelay)
+{
+    auto inDelay0 = sigDelay.getDelay(getDriver(0));
+    auto inDelay1 = sigDelay.getDelay(getDriver(1));
+
+    HCL_ASSERT(sigDelay.contains({.node = this, .port = 0}));
+    auto outDelay = sigDelay.getDelay({.node = this, .port = 0});
+
+    auto width = getOutputConnectionType(0).width;
+
+
+    float routing = width * 0.8f;
+    float compute;
+    
+    if (m_op == EQ || m_op == NEQ)
+        compute = width * 0.15f; // still a reduce, but maybe slightly faster than through half adders
+    else
+        compute = width * 0.2f; // same as addition/subtraction
+
+    // very rough for now
+    float maxDelay = 0.0f;
+    for (auto i : utils::Range(width)) {
+        maxDelay = std::max(maxDelay, inDelay0[i]);
+        maxDelay = std::max(maxDelay, inDelay1[i]);
+    }
+
+    for (auto i : utils::Range(width)) {
+        outDelay[i] = maxDelay + routing + compute;
+    }
+}
+
+void Node_Compare::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit)
+{
+    auto inDelay0 = sigDelay.getDelay(getDriver(0));
+    auto inDelay1 = sigDelay.getDelay(getDriver(1));
+
+    auto width = getOutputConnectionType(0).width;
+
+    float maxDelay = 0.0f;
+    unsigned maxIP = 0;
+    unsigned maxIB = 0;
+
+    for (auto i : utils::Range(width))
+        if (inDelay0[i] > maxDelay) {
+            maxDelay = inDelay0[i];
+            maxIP = 0;
+            maxIB = i;
+        }
+
+    for (auto i : utils::Range(width))
+        if (inDelay1[i] > maxDelay) {
+            maxDelay = inDelay1[i];
+            maxIP = 1;
+            maxIB = i;
+        }
+
+    inputPort = maxIP;
+    inputBit = maxIB;
+}
 
 
 }

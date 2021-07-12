@@ -22,15 +22,16 @@
 #include "../supportNodes/Node_Default.h"
 
 #include "../Circuit.h"
+#include "../Subnet.h"
 
 #include <set>
 
 namespace gtry::hlim {
 
-void defaultValueResolution(Circuit &circuit)
+void defaultValueResolution(Circuit &circuit, Subnet &subnet)
 {
-    for (auto &n : circuit.getNodes()) {
-        if (auto *defaultNode = dynamic_cast<Node_Default*>(n.get())) {
+    for (auto &n : subnet) {
+        if (auto *defaultNode = dynamic_cast<Node_Default*>(n)) {
 
             std::set<BaseNode*> nodesAlreadyVisited;
             bool isLoopy = false;

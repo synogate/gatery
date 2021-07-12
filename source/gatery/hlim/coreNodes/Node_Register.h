@@ -64,6 +64,10 @@ namespace gtry::hlim {
         virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 
         virtual std::string attemptInferOutputName(size_t outputPort) const override;
+
+        virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
+
+        virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit) override;
     protected:
         size_t m_conditionId = 0;
     };

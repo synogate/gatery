@@ -18,6 +18,7 @@
 #include "gatery/pch.h"
 #include "BUFG.h"
 
+#include <gatery/frontend/GraphTools.h>
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Preprocessor.h>
 
@@ -38,11 +39,12 @@ void BUFG::connectInput(const Bit &bit)
 {
 	connectInput(bit.getReadPort());
 }
-
+/*
 void BUFG::connectInput(const BVec &bvec)
 {
 	connectInput(bvec.getReadPort());
 }
+*/
 
 void BUFG::connectInput(hlim::NodePort nodePort)
 {
@@ -124,7 +126,7 @@ bool BUFGPattern::attemptApply(hlim::NodeGroup *nodeGroup)
     	auto *bufg = DesignScope::createNode<BUFG>();
 		bufg->connectInput(input);
 	    output.setExportOverride(SignalReadPort(bufg));
-	} else {
+	}/* else {
 		
 		HCL_ASSERT_HINT(io.inputBVecs.contains("globalBufferPlaceholder"), "Missing output for global buffer, probably because not yet implemented for bundles!");
 		BVec &input = io.inputBVecs["globalBufferPlaceholder"];
@@ -137,7 +139,7 @@ bool BUFGPattern::attemptApply(hlim::NodeGroup *nodeGroup)
     	auto *bufg = DesignScope::createNode<BUFG>();
 		bufg->connectInput(input);
 	    output.setExportOverride(SignalReadPort(bufg));
-	}
+	}*/
 
 	return true;
 }

@@ -36,7 +36,10 @@
 
 
 #include "../simulation/BitVectorState.h"
+#include "../simulation/ReferenceSimulator.h"
 #include "../utils/Range.h"
+
+#include "Subnet.h"
 
 
 #include <set>
@@ -303,38 +306,21 @@ void Circuit::cullOrphanedSignalNodes()
     }
 }
 
-static bool isUnusedNode(const BaseNode& node)
+void Circuit::cullUnusedNodes(Subnet &subnet)
 {
-    if (node.hasSideEffects())
-        return false;
-
-    if (node.hasRef()) return false;
-/*
-    auto* signalNode = dynamic_cast<const Node_Signal*>(&node);
-    if (signalNode && !signalNode->getName().empty())
-        return false;
-*/
-
-    for (auto j : utils::Range(node.getNumOutputPorts()))
-        if (!node.getDirectlyDriven(j).empty())
-            return false;
-
-    return true;
-}
-
-void Circuit::cullUnusedNodes()
-{
-    //std::cout << "cullUnusedNodes()" << std::endl;
+    // Do multiple times since some nodes (memory write ports) might loose their side effects when others vanish
     bool done;
     do {
         done = true;
 
+        auto usedNodes = Subnet::allUsedNodes(*this);
+
+        // intersect usedNudes with subnet
+
+        // Remove everything that isn't used
         for (size_t i = 0; i < m_nodes.size(); i++) {
-
-            if (isUnusedNode(*m_nodes[i]))
-            {
-                //std::cout << "    Culling node " << m_nodes[i]->getTypeName() << " "  << m_nodes[i]->getName() << std::endl;
-
+            if (!usedNodes.getNodes().contains(m_nodes[i].get()) && subnet.contains(m_nodes[i].get())) {
+                subnet.remove(m_nodes[i].get());
                 m_nodes[i] = std::move(m_nodes.back());
                 m_nodes.pop_back();
                 i--;
@@ -343,6 +329,10 @@ void Circuit::cullUnusedNodes()
         }
     } while (!done);
 }
+
+
+
+
 
 
 struct HierarchyCondition {
@@ -428,7 +418,7 @@ struct HierarchyCondition {
     }
 };
 
-void Circuit::mergeMuxes()
+void Circuit::mergeMuxes(Subnet &subnet)
 {
     bool done;
     do {
@@ -453,6 +443,7 @@ void Circuit::mergeMuxes()
 
                     if (Node_Multiplexer *prevMuxNode = dynamic_cast<Node_Multiplexer*>(input0.node)) {
                         if (prevMuxNode == muxNode) continue; // sad thing
+                        if (!subnet.contains(prevMuxNode)) continue; // todo: Optimize
 
                         //std::cout << "Found 2 chained muxes" << std::endl;
 
@@ -512,14 +503,14 @@ void Circuit::mergeMuxes()
 }
 
 
-void Circuit::removeIrrelevantMuxes()
+void Circuit::removeIrrelevantMuxes(Subnet &subnet)
 {
     bool done;
     do {
         done = true;
 
-        for (size_t i = 0; i < m_nodes.size(); i++) {
-            if (Node_Multiplexer *muxNode = dynamic_cast<Node_Multiplexer*>(m_nodes[i].get())) {
+        for (auto n : subnet) {
+            if (Node_Multiplexer *muxNode = dynamic_cast<Node_Multiplexer*>(n)) {
                 if (muxNode->getNumInputPorts() != 3) continue;
 
                 //std::cout << "Found 2-input mux" << std::endl;
@@ -586,27 +577,31 @@ void Circuit::removeIrrelevantMuxes()
 }
 
 
-void Circuit::cullMuxConditionNegations()
+void Circuit::cullMuxConditionNegations(Subnet &subnet)
 {
-    for (size_t i = 0; i < m_nodes.size(); i++) {
-        if (Node_Multiplexer *muxNode = dynamic_cast<Node_Multiplexer*>(m_nodes[i].get())) {
+    for (auto n : subnet) {
+        if (Node_Multiplexer *muxNode = dynamic_cast<Node_Multiplexer*>(n)) {
             if (muxNode->getNumInputPorts() != 3) continue;
 
-            auto condition = muxNode->getNonSignalDriver(0);
+            bool done;
+            do {
+                done = true;
+                auto condition = muxNode->getNonSignalDriver(0);
 
-            if (Node_Logic *logicNode = dynamic_cast<Node_Logic*>(condition.node)) {
-                if (logicNode->getOp() == Node_Logic::NOT) {
-                    muxNode->connectSelector(logicNode->getDriver(0));
+                if (Node_Logic *logicNode = dynamic_cast<Node_Logic*>(condition.node)) {
+                    if (logicNode->getOp() == Node_Logic::NOT) {
+                        muxNode->connectSelector(logicNode->getDriver(0));
 
-                    auto input0 = muxNode->getDriver(1);
-                    auto input1 = muxNode->getDriver(2);
+                        auto input0 = muxNode->getDriver(1);
+                        auto input1 = muxNode->getDriver(2);
 
-                    muxNode->connectInput(0, input1);
-                    muxNode->connectInput(1, input0);
+                        muxNode->connectInput(0, input1);
+                        muxNode->connectInput(1, input0);
 
-                    i--; // check same mux again to unravel chain of nots
+                        done = false; // check same mux again to unravel chain of NOTs
+                    }
                 }
-            }
+            } while (!done);
         }
     }
 }
@@ -615,9 +610,10 @@ void Circuit::cullMuxConditionNegations()
  * @details So far only removes no-op rewire nodes since they prevent block-ram detection
  *
  */
-void Circuit::removeNoOps()
+void Circuit::removeNoOps(Subnet &subnet)
 {
-    for (size_t i = 0; i < m_nodes.size(); i++) {
+    for (unsigned i = 0; i < m_nodes.size(); i++) {
+        if (!subnet.contains(m_nodes[i].get())) continue;
         bool removeNode = false;
 
         if (auto *rewire = dynamic_cast<Node_Rewire*>(m_nodes[i].get())) {
@@ -628,6 +624,7 @@ void Circuit::removeNoOps()
         }
 
         if (removeNode && !m_nodes[i]->hasRef()) {
+            subnet.remove(m_nodes[i].get());
             m_nodes[i] = std::move(m_nodes.back());
             m_nodes.pop_back();
             i--;
@@ -635,10 +632,11 @@ void Circuit::removeNoOps()
     }
 }
 
-void Circuit::foldRegisterMuxEnableLoops()
+void Circuit::foldRegisterMuxEnableLoops(Subnet &subnet)
 {
-    for (size_t i = 0; i < m_nodes.size(); i++) {
-        if (auto *regNode = dynamic_cast<Node_Register*>(m_nodes[i].get())) {
+    std::vector<BaseNode*> newNodes;
+    for (auto n : subnet) {
+        if (auto *regNode = dynamic_cast<Node_Register*>(n)) {
             auto enableCondition = regNode->getNonSignalDriver((unsigned)Node_Register::Input::ENABLE);
 
             auto data = regNode->getNonSignalDriver((unsigned)Node_Register::Input::DATA);
@@ -653,6 +651,7 @@ void Circuit::foldRegisterMuxEnableLoops()
                     if (muxInput1.node == regNode) {
                         if (enableCondition.node != nullptr) {
                             auto *andNode = createNode<Node_Logic>(Node_Logic::AND);
+                            newNodes.push_back(andNode);
                             andNode->recordStackTrace();
                             andNode->moveToGroup(regNode->getGroup());
                             andNode->connectInput(0, enableCondition);
@@ -665,12 +664,14 @@ void Circuit::foldRegisterMuxEnableLoops()
                         regNode->connectInput(Node_Register::Input::DATA, muxNode->getDriver(2));
                     } else if (muxInput2.node == regNode) {
                         auto *notNode = createNode<Node_Logic>(Node_Logic::NOT);
+                        newNodes.push_back(notNode);
                         notNode->recordStackTrace();
                         notNode->moveToGroup(regNode->getGroup());
                         notNode->connectInput(0, muxCondition);
 
                         if (enableCondition.node != nullptr) {
                             auto *andNode = createNode<Node_Logic>(Node_Logic::AND);
+                            newNodes.push_back(andNode);
                             andNode->recordStackTrace();
                             andNode->moveToGroup(regNode->getGroup());
                             andNode->connectInput(0, enableCondition);
@@ -686,12 +687,15 @@ void Circuit::foldRegisterMuxEnableLoops()
             }
         }
     }
+
+    for (auto n : newNodes)
+        subnet.add(n);
 }
 
-void Circuit::removeConstSelectMuxes()
+void Circuit::removeConstSelectMuxes(Subnet &subnet)
 {
-    for (size_t i = 0; i < m_nodes.size(); i++) {
-        if (auto *muxNode = dynamic_cast<Node_Multiplexer*>(m_nodes[i].get())) {
+    for (auto n : subnet) {
+        if (auto *muxNode = dynamic_cast<Node_Multiplexer*>(n)) {
             auto sel = muxNode->getNonSignalDriver(0);
             if (auto *constNode = dynamic_cast<Node_Constant*>(sel.node)) {
                 HCL_ASSERT(constNode->getValue().size() < 64);
@@ -705,7 +709,7 @@ void Circuit::removeConstSelectMuxes()
     }
 }
 
-void Circuit::propagateConstants()
+void Circuit::propagateConstants(Subnet &subnet)
 {
     //std::cout << "propagateConstants()" << std::endl;
     sim::SimulatorCallbacks ignoreCallbacks;
@@ -714,8 +718,8 @@ void Circuit::propagateConstants()
     // std::set<NodePort> closedList;
 
     // Start walking the graph from the const nodes
-    for (size_t i = 0; i < m_nodes.size(); i++) {
-        if (Node_Constant *constNode = dynamic_cast<Node_Constant*>(m_nodes[i].get())) {
+    for (auto n : subnet) {
+        if (Node_Constant *constNode = dynamic_cast<Node_Constant*>(n)) {
             openList.push_back({.node = constNode, .port = 0});
         }
     }
@@ -731,21 +735,45 @@ void Circuit::propagateConstants()
         // The output constPort is constant, loop over all nodes driven by this and look for nodes that can be computed
         for (auto successor : constPort.node->getDirectlyDriven(constPort.port)) {
 
+            if (!subnet.contains(successor.node)) continue;
+
             // Signal nodes don't do anything, so add the output of the signal node to the openList
             if (Node_Signal *signalNode = dynamic_cast<Node_Signal*>(successor.node)) {
                 openList.push_back({.node = signalNode, .port = 0});
                 continue;
             }
 
-            // Remove registers without reset on the path
-            if (auto *regNode = dynamic_cast<Node_Register*>(successor.node))
-                if (regNode->getNonSignalDriver((unsigned)Node_Register::Input::RESET_VALUE).node == nullptr) {
+            // Remove registers without reset or whose reset is compatible with the constant input
+            if (auto *regNode = dynamic_cast<Node_Register*>(successor.node)) {
+                bool bypassRegister = false;
 
+                auto dataDriver = regNode->getNonSignalDriver((unsigned)Node_Register::Input::DATA);
+                auto resetDriver = regNode->getNonSignalDriver((unsigned)Node_Register::Input::RESET_VALUE);
+                auto *constNode = dynamic_cast<Node_Constant*>(dataDriver.node);
+
+                // Only bypass if input driven by constant node
+                if (constNode != nullptr) {
+                    if (resetDriver.node == nullptr)
+                        bypassRegister = true;
+                    else if (dataDriver.node != nullptr) {
+                        // evaluate reset value. Note that it is ok to only evaluate the reset value (it need not be constant) because the register only evaluates it during the reset.
+                        sim::ReferenceSimulator simulator;
+                        simulator.compileProgram(*this, {resetDriver});
+                        simulator.powerOn();
+
+                        auto resetValue = simulator.getValueOfOutput(resetDriver);
+                        if (sim::canBeReplacedWith(resetValue, constNode->getValue())) 
+                            bypassRegister = true;
+                    }
+                }
+
+                if (bypassRegister) {
                     regNode->bypassOutputToInput(0, (unsigned)Node_Register::Input::DATA);
                     regNode->disconnectInput(Node_Register::Input::DATA);
-                    openList.push_back(constPort);
+                    regNode->disconnectInput(Node_Register::Input::RESET_VALUE);
                     continue;
-                }
+                } 
+            }
 
             // Only work on combinatory nodes
             if (!successor.node->isCombinatorial()) continue;
@@ -803,6 +831,7 @@ void Circuit::propagateConstants()
 
                     auto* constant = createNode<Node_Constant>(state.extract(outputOffsets[port], conType.width), conType.interpretation);
                     constant->moveToGroup(successor.node->getGroup());
+                    subnet.add(constant);
                     NodePort newConstOutputPort{.node = constant, .port = 0};
 
                     while (!successor.node->getDirectlyDriven(port).empty()) {
@@ -864,8 +893,26 @@ void Circuit::ensureSignalNodePlacement()
 }
 
 
+void Circuit::optimizeSubnet(Subnet &subnet)
+{
+    //defaultValueResolution(*this, subnet);
+    //cullUnusedNodes(subnet); // Dirty way of getting rid of default nodes
+    
+    propagateConstants(subnet);
+    mergeMuxes(subnet);
+    removeIrrelevantMuxes(subnet);
+    cullMuxConditionNegations(subnet);
+    removeNoOps(subnet);
+    foldRegisterMuxEnableLoops(subnet);
+    removeConstSelectMuxes(subnet);
+    propagateConstants(subnet); // do again after muxes are removed
+    cullUnusedNodes(subnet);
+}
+
+
 void Circuit::postprocess(const PostProcessor &postProcessor)
 {
+    Subnet subnet = Subnet::all(*this);
     /*
     switch (level) {
         case 0:
@@ -880,28 +927,32 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
         break;
         case 3:
         */
-            defaultValueResolution(*this);
-            cullUnusedNodes(); // Dirty way of getting rid of default nodes
+            defaultValueResolution(*this, subnet);
+            cullUnusedNodes(subnet); // Dirty way of getting rid of default nodes
             
-            propagateConstants();
+            propagateConstants(subnet);
             cullOrphanedSignalNodes();
             cullUnnamedSignalNodes();
             cullSequentiallyDuplicatedSignalNodes();
-            mergeMuxes();
-            removeIrrelevantMuxes();
-            cullMuxConditionNegations();
-            removeNoOps();
-            foldRegisterMuxEnableLoops();
-            removeConstSelectMuxes();
-            propagateConstants(); // do again after muxes are removed
-            cullUnusedNodes();
+            subnet = Subnet::all(*this);
+            mergeMuxes(subnet);
+            removeIrrelevantMuxes(subnet);
+            cullMuxConditionNegations(subnet);
+            removeNoOps(subnet);
+            foldRegisterMuxEnableLoops(subnet);
+            removeConstSelectMuxes(subnet);
+            propagateConstants(subnet); // do again after muxes are removed
+            cullUnusedNodes(subnet);
+
             attributeFusion(*this);
             ensureSignalNodePlacement();
 
             findMemoryGroups(*this);
             buildExplicitMemoryCircuitry(*this);
             cullUnnamedSignalNodes();
-            cullUnusedNodes(); // do again after memory group extraction with potential register retiming
+
+            subnet = Subnet::all(*this);
+            cullUnusedNodes(subnet); // do again after memory group extraction with potential register retiming
 
             inferSignalNames();
             /*

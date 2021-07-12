@@ -57,8 +57,6 @@ class BaseScope
 template<class FinalType>
 thread_local FinalType *BaseScope<FinalType>::m_currentScope = nullptr;
     
-
-
 class GroupScope : public BaseScope<GroupScope>
 {
     public:
@@ -75,55 +73,6 @@ class GroupScope : public BaseScope<GroupScope>
     protected:
         hlim::NodeGroup *m_nodeGroup;
 };
-
-class FactoryOverride : public BaseScope<FactoryOverride>
-{
-    public:
-        static FactoryOverride *get() { return m_currentScope; }
-    protected:
-};
-
-
-class DesignScope : public BaseScope<DesignScope>
-{
-    public:
-        DesignScope();
-
-        static void visualize(const std::string &filename, hlim::NodeGroup* nodeGroup = nullptr);
-
-        static DesignScope *get() { return m_currentScope; }
-        hlim::Circuit &getCircuit() { return m_circuit; }
-        
-        template<typename NodeType, typename... Args>
-        static NodeType *createNode(Args&&... args);        
-        
-        template<typename ClockType, typename... Args>
-        static ClockType *createClock(Args&&... args);        
-    protected:
-        hlim::Circuit m_circuit;
-        GroupScope m_rootScope;
-
-        sim::ConstructionTimeSimulationContext m_simContext;
-        
-        // design affecting settings and their overrides go here, as well as tweaking settings (e.g. speed vs area parameters)
-};
-
-template<typename NodeType, typename... Args>
-NodeType *DesignScope::createNode(Args&&... args) {
-    HCL_ASSERT(GroupScope::getCurrentNodeGroup() != nullptr);
-    
-    NodeType *node = m_currentScope->m_circuit.createNode<NodeType>(std::forward<Args>(args)...);
-    node->recordStackTrace();
-    node->moveToGroup(GroupScope::getCurrentNodeGroup());
-    node->setComment(Comments::retrieve());
-    return node;
-}
-
-template<typename ClockType, typename... Args>
-ClockType *DesignScope::createClock(Args&&... args) {
-    ClockType *node = m_currentScope->m_circuit.createClock<ClockType>(std::forward<Args>(args)...);
-    return node;
-}
 
 template<class FinalType>
 inline BaseScope<FinalType>::Lock::~Lock()

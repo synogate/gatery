@@ -20,7 +20,8 @@
 namespace gtry::hlim {
 
 class Circuit;
+class Subnet;
 
-void defaultValueResolution(Circuit &circuit);
+void defaultValueResolution(Circuit &circuit, Subnet &subnet);
 
 }

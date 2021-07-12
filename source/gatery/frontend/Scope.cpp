@@ -18,7 +18,6 @@
 #include "gatery/pch.h"
 #include "Scope.h"
 
-#include <gatery/export/DotExport.h>
 
 namespace gtry {
     
@@ -46,19 +45,5 @@ GroupScope &GroupScope::setComment(std::string comment)
     return *this;
 }
 
-
-DesignScope::DesignScope() : BaseScope<DesignScope>(), m_rootScope(m_circuit.getRootNodeGroup())
-{ 
-    m_rootScope.setName("top");
-    
-    HCL_DESIGNCHECK_HINT(m_parentScope == nullptr, "Only one design scope can be active at a time!");
-}
-
-void DesignScope::visualize(const std::string& filename, hlim::NodeGroup* nodeGroup)
-{
-    DotExport exp(filename + ".dot");
-    exp(get()->getCircuit(), nodeGroup);
-    exp.runGraphViz(filename + ".svg");
-}
 
 }

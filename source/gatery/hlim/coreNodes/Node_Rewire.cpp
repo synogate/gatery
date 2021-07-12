@@ -18,6 +18,8 @@
 #include "gatery/pch.h"
 #include "Node_Rewire.h"
 
+#include "../SignalDelay.h"
+
 namespace gtry::hlim {
 
 bool Node_Rewire::RewireOperation::isBitExtract(size_t& bitIndex) const
@@ -265,6 +267,52 @@ std::string Node_Rewire::attemptInferOutputName(size_t outputPort) const
     }
 }
 
+
+
+void Node_Rewire::estimateSignalDelay(SignalDelay &sigDelay)
+{
+    std::vector<std::span<float>> inDelays;
+    inDelays.resize(getNumInputPorts());
+    for (auto i : utils::Range(getNumInputPorts()))
+        inDelays[i] = sigDelay.getDelay(getDriver(i));
+
+    HCL_ASSERT(sigDelay.contains({.node = this, .port = 0ull}));
+    auto outDelay = sigDelay.getDelay({.node = this, .port = 0ull});
+
+    auto width = getOutputConnectionType(0).width;
+
+    size_t outputOffset = 0;
+    for (const auto &range : m_rewireOperation.ranges) {
+        if (range.source == OutputRange::INPUT) {
+            for (auto i : utils::Range(range.subwidth))
+                outDelay[outputOffset+i] = inDelays[range.inputIdx][range.inputOffset+i];
+        } else {
+            for (auto i : utils::Range(range.subwidth))
+                outDelay[outputOffset+i] = 0.0f;
+        }
+        outputOffset += range.subwidth;
+    }    
+}
+
+void Node_Rewire::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit)
+{
+    size_t outputOffset = 0;
+    for (const auto &range : m_rewireOperation.ranges) {
+        if (outputBit >= outputOffset && outputBit < outputOffset+range.subwidth) {
+            if (range.source == OutputRange::INPUT) {
+                inputPort = range.inputIdx;
+                inputBit = outputBit - outputOffset + range.inputOffset;
+            } else {
+                inputPort = ~0u;
+                inputBit = ~0u;
+            }
+            return;
+        }
+        outputOffset += range.subwidth;
+    }    
+
+    HCL_ASSERT(false);
+}
 
 
 

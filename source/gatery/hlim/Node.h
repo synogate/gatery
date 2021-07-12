@@ -40,6 +40,7 @@ namespace gtry::hlim {
 
 class NodeGroup;
 class Clock;
+class SignalDelay;
 
 class BaseNode : public NodeIO
 {
@@ -106,6 +107,8 @@ class BaseNode : public NodeIO
         /// Attempts to create a reasonable name based on its input names and operations.
         virtual std::string attemptInferOutputName(size_t outputPort) const;
 
+        virtual void estimateSignalDelay(SignalDelay &sigDelay);
+        virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit);
     protected:
         std::uint64_t m_nodeId = ~0ull;
 
@@ -120,6 +123,8 @@ class BaseNode : public NodeIO
 
 
         void copyBaseToClone(BaseNode *copy) const;
+
+        void forwardSignalDelay(SignalDelay &sigDelay, unsigned input, unsigned output);
 };
 
 

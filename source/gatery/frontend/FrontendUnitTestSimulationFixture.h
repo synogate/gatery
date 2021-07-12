@@ -17,7 +17,7 @@
 */
 #pragma once
 
-#include "Scope.h"
+#include "DesignScope.h"
 
 #include <gatery/simulation/UnitTestSimulationFixture.h>
 

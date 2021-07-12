@@ -20,6 +20,8 @@
 
 #include "Node_MemPort.h"
 
+#include "../SignalDelay.h"
+
 namespace gtry::hlim {
 
     Node_Memory::Node_Memory()
@@ -132,5 +134,14 @@ namespace gtry::hlim {
         return res;
     }
 
+    void Node_Memory::estimateSignalDelay(SignalDelay &sigDelay)
+    {
+        /*
+        HCL_ASSERT(sigDelay.contains({.node = this, .port = 0ull}));
+        auto outDelay = sigDelay.getDelay({.node = this, .port = 0ull});
+        for (auto &f : outDelay)
+            f = 0.0f; 
+        */
+    }
 
 }
