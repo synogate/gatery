@@ -143,7 +143,7 @@ class FifoCapabilities : public Capabilities {
 
         virtual ~FifoCapabilities() = default;
 
-        virtual int makeBid(const Request &request, Choice &choice) const { }
+        //virtual int makeBid(const Request &request, Choice &choice) const { }
     protected:
 };
 
