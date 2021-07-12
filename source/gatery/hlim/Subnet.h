@@ -23,7 +23,7 @@
 namespace gtry::hlim {
 
 class BaseNode;
-class NodePort;
+struct NodePort;
 class Circuit;
 
 template<bool makeConst, typename FinalType>

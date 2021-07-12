@@ -25,7 +25,7 @@
 namespace gtry::hlim {
 
 class Node_Register;
-class NodePort;
+struct NodePort;
 class Circuit;
 class Subnet;
 
