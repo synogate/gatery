@@ -208,7 +208,7 @@ void retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
 	std::set<Node_Register*> registersToBeRetimed;
 	determineAreaToBeRetimed(area, anchoredRegisters, output, areaToBeRetimed, registersToBeRetimed, ignoreRefs);
 
-
+/*
 	{
 		std::array<const BaseNode*,1> arr{output.node};
 		ConstSubnet csub = ConstSubnet::allNecessaryForNodes({}, arr);
@@ -225,7 +225,7 @@ void retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
 		exp(circuit, csub);
 		exp.runGraphViz("areaToBeRetimed.svg");
 	}
-
+*/
 	std::set<hlim::NodePort> outputsLeavingRetimingArea;
 	// Find every output leaving the area
 	for (auto n : areaToBeRetimed)
@@ -333,7 +333,7 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
 					}
 				}
 			}
-
+/*
 		{
             DotExport exp("signalDelays.dot");
             exp(circuit, (hlim::ConstSubnet &)subnet, delays);
@@ -361,7 +361,7 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
             exp2(circuit, criticalPathSubnet, delays);
             exp2.runGraphViz("criticalPath.svg");
 		}
-
+*/
 		// Split in half
 		float splitTime = criticalTime * 0.5f;
 
@@ -385,6 +385,7 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
 				else {
 					float nextTime = delays.getDelay(np.node->getDriver(criticalInputPort))[criticalInputBit];
 					if ((thisTime + nextTime) * 0.5f < splitTime) {
+					//if (nextTime < splitTime) {
 						retimingTarget = np;
 						break;
 					}
@@ -395,7 +396,7 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
 			}
 		}
 
-		if (retimingTarget.node != nullptr) {
+		if (retimingTarget.node != nullptr && dynamic_cast<Node_Register*>(retimingTarget.node) == nullptr) {
 			try {
 				retimeForwardToOutput(circuit, subnet, anchoredRegisters, retimingTarget);
 			} catch (...) {
@@ -405,7 +406,7 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
 			done = true;
 		
 // For debugging
-circuit.optimizeSubnet(subnet);
+//circuit.optimizeSubnet(subnet);
 	}
 }
 
