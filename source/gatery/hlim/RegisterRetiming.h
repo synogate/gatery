@@ -37,8 +37,10 @@ class Subnet;
  * @param anchoredRegisters Set of registers that are not to be moved (e.g. because they are already deemed in a good location).
  * @param output The output that shall recieve a register.
  * @param ignoreRefs Whether or not to throw an exception if a node has to be retimed to which a reference exists.
+ * @param failureIsError Whether to throw an exception if the retiming is unsuccessful
+ * @returns Whether the retiming was successful
  */
-void retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, bool ignoreRefs = false);
+bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, bool ignoreRefs = false, bool failureIsError = true);
 
 /**
  * @brief Performs forward retiming on an area based on rough timing estimates.

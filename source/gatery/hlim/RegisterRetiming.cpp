@@ -39,36 +39,6 @@
 
 namespace gtry::hlim {
 
-/*
-void retimeRegisterForward(Subnet &area, Node_Register *reg, NodePort output)
-{
-	Subnet areaToBeRetimed;
-
-	std::set<NodePort> retimedAreaOutputs;
-
-	for (auto nh : reg->exploreOutput(0)) {
-		auto driver = nh.node()->getDriver(nh.port);
-		if (!area.contains(nh.node()) {
-			retimedAreaOutputs.insert(driver);
-			nh.backtrack();
-			continue;
-		} 
-
-		if (driver == output) {
-			nh.backtrack();
-			continue;
-		}
-
-		if (nh.node->hasSideEffects()) {
-			nh.backtrack();
-			continue;
-		}
-		if (areaToBeRetimed.contains(nh.node())) continue;
-		areaToBeRetimed.insert(nh.node());
-	}
-}
-*/
-
 /**
  * @brief Determines the exact area to be retimed (but doesn't do any retiming).
  * @details This is the entire fan in up to registers that can be retimed forward.
@@ -78,9 +48,11 @@ void retimeRegisterForward(Subnet &area, Node_Register *reg, NodePort output)
  * @param areaToBeRetimed Outputs the area that will be retimed forward (excluding the registers).
  * @param registersToBeRetimed Output of the registers that lead into areaToBeRetimed and which will have to be removed.
  * @param ignoreRefs Whether or not to throw an exception if a node has to be retimed to which a reference exists.
+ * @param failureIsError Whether to throw an exception if a retiming area limited by registers can be determined
+ * @returns Whether a valid retiming area could be determined
  */
-void determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, 
-								Subnet &areaToBeRetimed, std::set<Node_Register*> &registersToBeRetimed, bool ignoreRefs = false)
+bool determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, 
+								Subnet &areaToBeRetimed, std::set<Node_Register*> &registersToBeRetimed, bool ignoreRefs = false, bool failureIsError = true)
 {
 	BaseNode *clockGivingNode = nullptr;
 	Clock *clock = nullptr;
@@ -94,9 +66,13 @@ void determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 		// Continue if the node was already encountered.
 		if (areaToBeRetimed.contains(node)) continue;
 
+		//std::cout << "determineAreaToBeRetimed: processing node " << node->getId() << std::endl;
+
 
 		// Do not leave the specified playground, abort if no register is found before.
 		if (!area.contains(node)) {
+			if (!failureIsError) return false;
+
 			std::stringstream error;
 
 			error 
@@ -113,6 +89,8 @@ void determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 
 		// We may not want to retime nodes to which references are still being held
 		if (node->hasRef() && !ignoreRefs) {
+			if (!failureIsError) return false;
+
 			std::stringstream error;
 
 			error 
@@ -134,6 +112,8 @@ void determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 					clockGivingNode = node;
 				} else {
 					if (clock != c) {
+						if (!failureIsError) return false;
+
 						std::stringstream error;
 
 						error 
@@ -154,6 +134,8 @@ void determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 		// We can not retime nodes with a side effect
 		// Memory ports are handled separately below
 		if (node->hasSideEffects() && dynamic_cast<Node_MemPort*>(node) == nullptr) {
+			if (!failureIsError) return false;
+
 			std::stringstream error;
 
 			error 
@@ -186,14 +168,6 @@ void determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 				registersToBeRetimed.insert(reg);
 				areaToBeRetimed.add(node);
 			}
-		} else if (auto *memPort = dynamic_cast<Node_MemPort*>(node)) { // If it is a memory port (can only be a read port, attempt to retime entire memory)
-			areaToBeRetimed.add(node);
-			auto *memory = memPort->getMemory();
-			areaToBeRetimed.add(memory);
-			
-			// add all memory ports to open list
-			for (auto np : memory->getDirectlyDriven(0)) 
-				openList.push_back(np.node);
 		} else {
 			// Regular nodes just get added to the retiming area and their inputs are further explored
 			areaToBeRetimed.add(node);
@@ -202,15 +176,27 @@ void determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 				if (driver.node != nullptr)
 					openList.push_back(driver.node);
 			}
+
+ 			if (auto *memPort = dynamic_cast<Node_MemPort*>(node)) { // If it is a memory port (can only be a read port, attempt to retime entire memory)
+				auto *memory = memPort->getMemory();
+				areaToBeRetimed.add(memory);
+			
+				// add all memory ports to open list
+				for (auto np : memory->getDirectlyDriven(0)) 
+					openList.push_back(np.node);
+			 }
 		}
 	}
+
+	return true;
 }
 
-void retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, bool ignoreRefs)
+bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, bool ignoreRefs, bool failureIsError)
 {
 	Subnet areaToBeRetimed;
 	std::set<Node_Register*> registersToBeRetimed;
-	determineAreaToBeRetimed(area, anchoredRegisters, output, areaToBeRetimed, registersToBeRetimed, ignoreRefs);
+	if (!determineAreaToBeRetimed(area, anchoredRegisters, output, areaToBeRetimed, registersToBeRetimed, ignoreRefs, failureIsError))
+		return false;
 
 /*
 	{
@@ -288,6 +274,8 @@ void retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
 	// Remove input registers that have now been retimed forward
 	for (auto *reg : registersToBeRetimed)
 		reg->bypassOutputToInput(0, (unsigned)Node_Register::DATA);
+
+	return true;
 }
 
 
@@ -403,17 +391,10 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
 		}
 
 		if (retimingTarget.node != nullptr && dynamic_cast<Node_Register*>(retimingTarget.node) == nullptr) {
-			try {
-				retimeForwardToOutput(circuit, subnet, anchoredRegisters, retimingTarget);
-			} catch (const std::exception &e) {
-				std::cout << "Retiming failed with: " << e.what() << std::endl;
-				done = true;
-			}
+			done = !retimeForwardToOutput(circuit, subnet, anchoredRegisters, retimingTarget);
 		} else
 			done = true;
-
-		break;
-		
+	
 // For debugging
 //circuit.optimizeSubnet(subnet);
 	}
