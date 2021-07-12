@@ -26,6 +26,7 @@
 #include "NodePort.h"
 #include "coreNodes/Node_Register.h"
 #include "coreNodes/Node_Constant.h"
+#include "coreNodes/Node_Signal.h"
 #include "supportNodes/Node_Memory.h"
 #include "supportNodes/Node_MemPort.h"
 
@@ -133,7 +134,7 @@ bool determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 
 		// We can not retime nodes with a side effect
 		// Memory ports are handled separately below
-		if (node->hasSideEffects() && dynamic_cast<Node_MemPort*>(node) == nullptr) {
+		if (node->hasSideEffects() && dynamic_cast<Node_MemPort*>(node) == nullptr && dynamic_cast<Node_Signal*>(node) == nullptr) {
 			if (!failureIsError) return false;
 
 			std::stringstream error;
