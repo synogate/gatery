@@ -214,12 +214,12 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, UnitTestSimulationFixture)
     });
 
 
-    sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "pci_AvmmBridge_basic.vcd" };
-    vcd.addAllPins();
-    vcd.addAllNamedSignals();
+    //sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "pci_AvmmBridge_basic.vcd" };
+    //vcd.addAllPins();
+    //vcd.addAllNamedSignals();
 
     design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-    design.visualize("pci_AvmmBridge_basic");
+    //design.visualize("pci_AvmmBridge_basic");
 
     runTicks(clock.getClk(), 190);
 }

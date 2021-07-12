@@ -187,12 +187,12 @@ BOOST_FIXTURE_TEST_CASE(Fifo_basic, UnitTestSimulationFixture)
 
     addSimulationProcess(fifo);
 
-    sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "fifo.vcd" };
-    vcd.addAllPins();
-    vcd.addAllNamedSignals();
+    //sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "fifo.vcd" };
+    //vcd.addAllPins();
+    //vcd.addAllNamedSignals();
 
     design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-    design.visualize("after");
+    //design.visualize("after");
 
     runTicks(clock.getClk(), 190);
 }

@@ -65,12 +65,14 @@ namespace gtry {
 
     Bit::Bit(const Bit& rhs) : Bit(rhs.getReadPort())
     {
+        m_resetValue = rhs.m_resetValue;
     }
 
     Bit::Bit(Bit&& rhs) : Bit()
     {
         assign(rhs.getReadPort());
         rhs.assign(SignalReadPort{ m_node });
+        m_resetValue = rhs.m_resetValue;
     }
 
     Bit::Bit(const BitDefault &defaultValue) : Bit()
@@ -100,6 +102,8 @@ namespace gtry {
 
     Bit& Bit::operator=(Bit&& rhs)
     {
+        m_resetValue = rhs.m_resetValue;
+
         assign(rhs.getReadPort());
 
         SignalReadPort outRange{ m_node };

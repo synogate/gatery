@@ -16,6 +16,9 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
+#include <boost/hana/ext/std/tuple.hpp>
+#include <boost/hana/transform.hpp>
+#include <boost/hana/zip.hpp>
 
 namespace gtry
 {
@@ -24,6 +27,18 @@ namespace gtry
 	{
 		T operator () (const T& val) { return val; }
 	};
+
+    struct RegTransform
+    {
+        template<typename T>
+        T operator() (const T& val) { return Reg<T>{}(val); }
+    };
+    
+    template<typename ...T>
+    struct Reg<std::tuple<T...>>
+    {
+        std::tuple<T...> operator () (const std::tuple<T...>& val) { return boost::hana::transform(val, RegTransform{}); }
+    };
 
 	template<typename T>
 	T reg(const T& val) { return Reg<T>{}(val); }
