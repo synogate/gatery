@@ -583,8 +583,9 @@ void Circuit::cullMuxConditionNegations(Subnet &subnet)
         if (Node_Multiplexer *muxNode = dynamic_cast<Node_Multiplexer*>(n)) {
             if (muxNode->getNumInputPorts() != 3) continue;
 
-            bool done = true;
+            bool done;
             do {
+                done = true;
                 auto condition = muxNode->getNonSignalDriver(0);
 
                 if (Node_Logic *logicNode = dynamic_cast<Node_Logic*>(condition.node)) {

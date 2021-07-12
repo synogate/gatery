@@ -35,6 +35,7 @@
 #include "../export/DotExport.h"
 
 #include <sstream>
+#include <iostream>
 
 namespace gtry::hlim {
 
@@ -127,29 +128,32 @@ void determineAreaToBeRetimed(const Subnet &area, const std::set<Node_Register*>
 
 		// Check that everything is using the same clock.
 		for (auto *c : node->getClocks()) {
-			if (clock == nullptr) {
-				clock = c;
-				clockGivingNode = node;
-			} else {
-				if (clock != c) {
-					std::stringstream error;
+			if (c != nullptr) {
+				if (clock == nullptr) {
+					clock = c;
+					clockGivingNode = node;
+				} else {
+					if (clock != c) {
+						std::stringstream error;
 
-					error 
-						<< "An error occured attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
-						<< "Node from:\n" << output.node->getStackTrace() << "\n";
+						error 
+							<< "An error occured attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
+							<< "Node from:\n" << output.node->getStackTrace() << "\n";
 
-					error 
-						<< "The fanning-in signals are driven by different clocks. Clocks differe between nodes " << clockGivingNode->getName() << " (" << clockGivingNode->getTypeName() << ") and  " << node->getName() << " (" << node->getTypeName() << ").\n"
-						<< "First node from:\n" << clockGivingNode->getStackTrace() << "\n"
-						<< "Second node from:\n" << node->getStackTrace() << "\n";
+						error 
+							<< "The fanning-in signals are driven by different clocks. Clocks differ between nodes " << clockGivingNode->getName() << " (" << clockGivingNode->getTypeName() << ") and  " << node->getName() << " (" << node->getTypeName() << ").\n"
+							<< "First node from:\n" << clockGivingNode->getStackTrace() << "\n"
+							<< "Second node from:\n" << node->getStackTrace() << "\n";
 
-					HCL_ASSERT_HINT(false, error.str());
+						HCL_ASSERT_HINT(false, error.str());
+					}
 				}
 			}
 		}
 
 		// We can not retime nodes with a side effect
-		if (node->hasSideEffects()) {
+		// Memory ports are handled separately below
+		if (node->hasSideEffects() && dynamic_cast<Node_MemPort*>(node) == nullptr) {
 			std::stringstream error;
 
 			error 
@@ -365,6 +369,8 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
 		// Split in half
 		float splitTime = criticalTime * 0.5f;
 
+		std::cout << "Critical path time: " << criticalTime << " Attempting to split at " << splitTime << std::endl;
+
 		// Trace back critical path to find point where to retime register to
 		hlim::NodePort retimingTarget;
 		{
@@ -399,11 +405,14 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
 		if (retimingTarget.node != nullptr && dynamic_cast<Node_Register*>(retimingTarget.node) == nullptr) {
 			try {
 				retimeForwardToOutput(circuit, subnet, anchoredRegisters, retimingTarget);
-			} catch (...) {
+			} catch (const std::exception &e) {
+				std::cout << "Retiming failed with: " << e.what() << std::endl;
 				done = true;
 			}
 		} else
 			done = true;
+
+		break;
 		
 // For debugging
 //circuit.optimizeSubnet(subnet);

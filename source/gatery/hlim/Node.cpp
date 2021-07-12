@@ -167,14 +167,20 @@ void BaseNode::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned 
 
 void BaseNode::forwardSignalDelay(SignalDelay &sigDelay, unsigned input, unsigned output)
 {
-    auto in = sigDelay.getDelay(getDriver(input));
+    auto driver = getDriver(input);
 
     HCL_ASSERT(sigDelay.contains({.node = this, .port = output}));
     auto out = sigDelay.getDelay({.node = this, .port = output});
 
-    HCL_ASSERT(in.size() == out.size());
-    for (auto i : utils::Range(out.size()))
-        out[i] = in[i];
+    if (driver.node == nullptr) {
+        for (auto i : utils::Range(out.size()))
+            out[i] = 0.0f;
+    } else {
+        auto in = sigDelay.getDelay(getDriver(input));
+        HCL_ASSERT(in.size() == out.size());
+        for (auto i : utils::Range(out.size()))
+            out[i] = in[i];
+    }
 }
 
 }
