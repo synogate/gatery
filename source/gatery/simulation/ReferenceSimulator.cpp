@@ -395,7 +395,7 @@ void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const std:
         std::vector<hlim::BaseNode*> stack;
         if (outputs.empty()) {
             for (auto &node : circuit.getNodes())
-                if (node->hasSideEffects())
+                if (node->hasSideEffects() || node->hasRef())
                     stack.push_back(node.get());
         } else {
             for (auto nodePort : outputs)
