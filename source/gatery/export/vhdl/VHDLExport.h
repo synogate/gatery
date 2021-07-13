@@ -20,6 +20,7 @@
 #include "CodeFormatting.h"
 
 #include "TestbenchRecorder.h"
+#include "FileBasedTestbenchRecorder.h"
 #include "AST.h"
 
 #include "../../hlim/Circuit.h"
@@ -64,7 +65,8 @@ class VHDLExport
 
         void recordTestbench(sim::Simulator &simulator, const std::string &name);
 
-        inline const std::optional<TestbenchRecorder> &getTestbenchRecorder() const { return m_testbenchRecorder; }
+//        inline const std::optional<TestbenchRecorder> &getTestbenchRecorder() const { return m_testbenchRecorder; }
+        inline const std::optional<FileBasedTestbenchRecorder> &getTestbenchRecorder() const { return m_testbenchRecorder; }
 
         inline const std::string &getProjectFilename() const { return m_projectFilename; }
         inline const std::string &getConstraintsFilename() const { return m_constraintsFilename; }
@@ -73,7 +75,8 @@ class VHDLExport
         std::filesystem::path m_destination;
         std::unique_ptr<CodeFormatting> m_codeFormatting;
         std::unique_ptr<SynthesisTool> m_synthesisTool;
-        std::optional<TestbenchRecorder> m_testbenchRecorder;
+//        std::optional<TestbenchRecorder> m_testbenchRecorder;
+        std::optional<FileBasedTestbenchRecorder> m_testbenchRecorder;
         std::unique_ptr<AST> m_ast;
         std::string m_library;
 
