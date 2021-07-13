@@ -122,7 +122,7 @@ void VHDLExport::operator()(hlim::Circuit &circuit)
         m_synthesisTool->writeVhdlProjectScript(*this, m_projectFilename);
 }
 
-const std::filesystem::path& VHDLExport::getDestination()
+std::filesystem::path VHDLExport::getDestination()
 {
     if (m_destination.has_extension())
         return m_destination.parent_path();
@@ -131,7 +131,7 @@ const std::filesystem::path& VHDLExport::getDestination()
 
 void VHDLExport::recordTestbench(sim::Simulator &simulator, const std::string &name)
 {
-    m_testbenchRecorder.emplace(*this, m_ast.get(), simulator, m_destination, name);
+    m_testbenchRecorder.emplace(*this, m_ast.get(), simulator, getDestination(), name);
     simulator.addCallbacks(&*m_testbenchRecorder);
 }
 

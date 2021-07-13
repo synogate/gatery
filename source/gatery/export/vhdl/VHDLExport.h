@@ -60,7 +60,7 @@ class VHDLExport
         void operator()(hlim::Circuit &circuit);
 
         AST *getAST() { return m_ast.get(); }
-        const std::filesystem::path& getDestination();
+        std::filesystem::path getDestination();
 
         void recordTestbench(sim::Simulator &simulator, const std::string &name);
 

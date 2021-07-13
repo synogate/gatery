@@ -23,6 +23,7 @@
 
 #include <fstream>
 #include <map>
+#include <set>
 #include <sstream>
 
 namespace gtry::sim {
@@ -59,6 +60,8 @@ class TestbenchRecorder : public sim::SimulatorCallbacks
         std::string m_name;
         std::fstream m_testbenchFile;
         hlim::ClockRational m_lastSimulationTime;
+
+        std::set<const hlim::Clock*> m_clocksOfInterest;
 
         std::map<hlim::NodePort, std::string> m_outputToIoPinName;
 
