@@ -381,7 +381,7 @@ void gtry::scl::riscv::RV32I::load(AvalonMM& mem, bool byte, bool halfword)
 		{
 			IF(type == 0) // byte load
 			{
-				BVec byte = mux(offset, value);
+				BVec byte = muxWord(offset, value);
 				IF(zero)
 					value = zext(byte);
 				ELSE
@@ -394,7 +394,7 @@ void gtry::scl::riscv::RV32I::load(AvalonMM& mem, bool byte, bool halfword)
 		{
 			IF(type == 1) // word load
 			{
-				BVec word = mux(offset[1], value);
+				BVec word = muxWord(offset[1], value);
 				IF(zero)
 					value = zext(word);
 				ELSE

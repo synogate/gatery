@@ -54,7 +54,7 @@ std::uint64_t SigHandle::value() const
     HCL_ASSERT(width <= 64);
     DefaultBitVectorState state;
     SimulationContext::current()->getSignal(*this, state);
-    HCL_ASSERT(sim::allDefinedNonStraddling(state, 0, width));
+    //HCL_ASSERT(sim::allDefinedNonStraddling(state, 0, width));
     return state.extractNonStraddling(DefaultConfig::VALUE, 0, width);
 }
 

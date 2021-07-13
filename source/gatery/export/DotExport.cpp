@@ -222,6 +222,10 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
                 case hlim::ConnectionType::DEPENDENCY:
                     file << "DEPENDENCY"; break;
             }
+
+            if (dynamic_cast<hlim::Node_Register*>(node) && port == hlim::Node_Register::Input::RESET_VALUE)
+                file << " (reset)";
+
             if (!auxLabel.empty())
                 file << " " << auxLabel;
             file << "\"";

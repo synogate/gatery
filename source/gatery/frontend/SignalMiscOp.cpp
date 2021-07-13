@@ -87,7 +87,7 @@ BVec swapEndian(const BVec& word, BitWidth byteSize)
     return ret;
 }
 
-BVec mux(BVec selector, BVec flat_array)
+BVec muxWord(BVec selector, BVec flat_array)
 {
     size_t num_entries = selector.getWidth().count();
     if (num_entries == 0)
@@ -108,7 +108,7 @@ BVec mux(BVec selector, BVec flat_array)
     return selected;
 }
 
-BVec mux(Bit selector, BVec flat_array)
+BVec muxWord(Bit selector, BVec flat_array)
 {
     HCL_DESIGNCHECK_HINT(flat_array.getWidth().divisibleBy(2), "flat array must be evenly divisible");
 

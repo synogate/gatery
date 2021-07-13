@@ -238,7 +238,7 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
 	if (!determineAreaToBeRetimedForward(circuit, area, anchoredRegisters, output, areaToBeRetimed, registersToBeRemoved, ignoreRefs, failureIsError))
 		return false;
 
-/*
+	/*
 	{
 		std::array<const BaseNode*,1> arr{output.node};
 		ConstSubnet csub = ConstSubnet::allNecessaryForNodes({}, arr);
@@ -249,13 +249,12 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
 		exp.runGraphViz("DriversOfOutput.svg");
 	}
 	{
-		ConstSubnet csub;
-		for (auto n : areaToBeRetimed) csub.add(n);
 		DotExport exp("areaToBeRetimed.dot");
-		exp(circuit, csub);
+		exp(circuit, areaToBeRetimed.asConst());
 		exp.runGraphViz("areaToBeRetimed.svg");
 	}
-*/
+	*/
+
 	std::set<hlim::NodePort> outputsLeavingRetimingArea;
 	// Find every output leaving the area
 	for (auto n : areaToBeRetimed)

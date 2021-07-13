@@ -387,6 +387,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
         // If we encounter any issues that would prevent BRAM formation, compile a list of those issues.
         // Also keep track of all nodes that would be delayed to later insert registers on their inputs from external networks.
         Node_MemPort *writePort = nullptr;
+        std::set<unsigned> writePortInputPorts; // Could be data, address, or enable
         std::vector<Node_Register*> registers;
         std::set<BaseNode*> delayedNodes;
         std::stringstream issues;
@@ -427,15 +428,16 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
                         if (writePort == nullptr) {
                             writePort = port;
                         } else {
-                            HCL_ASSERT_HINT(writePort == port, "Duplicate write ports!");
+                            HCL_ASSERT_HINT(writePort == port, "Multiple write ports!");
                         }
+                        writePortInputPorts.insert(nh.port());
                         nh.backtrack();
                         continue;
                     }
                 }
             } else
             if (auto *reg = dynamic_cast<Node_Register*>(nh.node())) {
-                if (reg->getNonSignalDriver((unsigned)Node_Register::Input::RESET_VALUE).node != nullptr) {
+                if (reg->getNonSignalDriver((unsigned)Node_Register::Input::RESET_VALUE).node != nullptr && false) {
 #ifdef DEBUG_OUTPUT
                     writeSubnet();
 #endif            
@@ -616,6 +618,10 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 
         if (writePort != nullptr) {
             lazyCreateFixupNodeGroup();
+
+            //HCL_ASSERT_HINT(writePortInputPorts.size() == 1, "can only do singular RMW logic");
+            for (auto p : writePortInputPorts)
+                HCL_ASSERT_HINT(p == (unsigned)Node_MemPort::Inputs::wrData, "can only do RMW on memory data input");
 
             auto *delayedWrData = circuit.createNode<Node_Register>();
             delayedWrData->recordStackTrace();

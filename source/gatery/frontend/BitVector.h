@@ -253,6 +253,11 @@ namespace gtry {
 		mutable void* m_readPortDriver = nullptr;
 	};
 
+	inline BVec::iterator begin(BVec& bvec) { return bvec.begin(); }
+	inline BVec::iterator end(BVec& bvec) { return bvec.end(); }
+	inline BVec::const_iterator begin(const BVec& bvec) { return bvec.begin(); }
+	inline BVec::const_iterator end(const BVec& bvec) { return bvec.end(); }
+
 	BVec ext(const Bit& bvec, size_t increment);
 	BVec ext(const Bit& bit, size_t increment, Expansion policy);
 	inline BVec zext(const Bit& bit, size_t increment = 0) { return ext(bit, increment, Expansion::zero); }
