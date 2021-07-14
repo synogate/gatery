@@ -34,7 +34,8 @@ namespace gtry::vhdl {
 
 TestbenchRecorder::TestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, const std::string &name) : m_exporter(exporter), m_ast(ast), m_simulator(simulator), m_name(name)
 {
-    m_testbenchFile.open(m_ast->getFilename(basePath, name).c_str(), std::fstream::out);
+    m_dependencySortedEntities.push_back(m_name);
+    m_testbenchFile.open(m_ast->getFilename(basePath, m_name).c_str(), std::fstream::out);
     writeHeader();
 }
 

@@ -21,6 +21,9 @@
 #include "Package.h"
 #include "Entity.h"
 
+#include "TestbenchRecorder.h"
+#include "FileBasedTestbenchRecorder.h"
+
 #include "../../utils/Range.h"
 #include "../../utils/Enumerate.h"
 #include "../../utils/Exceptions.h"
@@ -129,9 +132,13 @@ std::filesystem::path VHDLExport::getDestination()
     return m_destination;
 }
 
-void VHDLExport::recordTestbench(sim::Simulator &simulator, const std::string &name)
+void VHDLExport::recordTestbench(sim::Simulator &simulator, const std::string &name, bool inlineTestData)
 {
-    m_testbenchRecorder.emplace(*this, m_ast.get(), simulator, getDestination(), name);
+    if (inlineTestData)
+        m_testbenchRecorder = std::make_unique<TestbenchRecorder>(*this, m_ast.get(), simulator, getDestination(), name);
+    else
+        m_testbenchRecorder = std::make_unique<FileBasedTestbenchRecorder>(*this, m_ast.get(), simulator, getDestination(), name);
+        
     simulator.addCallbacks(&*m_testbenchRecorder);
 }
 

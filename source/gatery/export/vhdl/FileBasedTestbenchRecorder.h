@@ -17,7 +17,7 @@
 */
 #pragma once
 
-#include "../../simulation/SimulatorCallbacks.h"
+#include "BaseTestbenchRecorder.h"
 
 #include <filesystem>
 
@@ -35,13 +35,11 @@ namespace gtry::vhdl {
 class VHDLExport;
 class AST;
 
-class FileBasedTestbenchRecorder : public sim::SimulatorCallbacks
+class FileBasedTestbenchRecorder : public BaseTestbenchRecorder
 {
     public:
         FileBasedTestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, const std::string &name);
         ~FileBasedTestbenchRecorder();
-
-        const std::string &getName() const { return m_name; }
 
         virtual void onNewTick(const hlim::ClockRational &simulationTime) override;
         virtual void onClock(const hlim::Clock *clock, bool risingEdge) override;
@@ -57,7 +55,6 @@ class FileBasedTestbenchRecorder : public sim::SimulatorCallbacks
         VHDLExport &m_exporter;
         AST *m_ast;
         sim::Simulator &m_simulator;
-        std::string m_name;
         std::fstream m_testbenchFile;
         hlim::ClockRational m_lastSimulationTime;
 
