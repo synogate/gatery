@@ -24,6 +24,7 @@
 #include "../../simulation/Simulator.h"
 
 #include "../../hlim/coreNodes/Node_Pin.h"
+#include "../../hlim/coreNodes/Node_Signal.h"
 
 
 #include <sstream>
@@ -462,7 +463,15 @@ void FileBasedTestbenchRecorder::onSimProcOutputRead(hlim::NodePort output, cons
     }    
 
     auto name_it = m_outputToIoPinName.find(output);
-    HCL_ASSERT_HINT(name_it != m_outputToIoPinName.end(), "Can only record asserts for signals that are output pins!");
+    if (name_it == m_outputToIoPinName.end()) {
+        if (dynamic_cast<hlim::Node_Pin*>(output.node)) return;
+
+        if (auto *signal = dynamic_cast<hlim::Node_Signal*>(output.node))
+            if (dynamic_cast<hlim::Node_Pin*>(signal->getNonSignalDriver(0).node))
+                return;
+
+        HCL_ASSERT_HINT(false, "Can only record asserts for signals that are output pins!");
+    }
 
     const auto& conType = hlim::getOutputConnectionType(output);
     if (conType.interpretation == hlim::ConnectionType::BOOL) {
