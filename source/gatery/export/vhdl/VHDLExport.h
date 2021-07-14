@@ -81,6 +81,13 @@ class VHDLExport
         std::string m_projectFilename;
         std::string m_constraintsFilename;
         std::string m_clocksFilename;
+
+        struct TestbenchRecorderSettings {
+            sim::Simulator *simulator;
+            std::string name;
+            bool inlineTestData;
+        };
+        std::optional<TestbenchRecorderSettings> m_testbenchRecorderSettings;
 };
 
 }
