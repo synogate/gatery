@@ -122,7 +122,7 @@ void VHDLExport::operator()(hlim::Circuit &circuit)
         m_synthesisTool->writeVhdlProjectScript(*this, m_projectFilename);
 }
 
-const std::filesystem::path& VHDLExport::getDestination()
+std::filesystem::path VHDLExport::getDestination()
 {
     if (m_destination.has_extension())
         return m_destination.parent_path();
