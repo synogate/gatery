@@ -34,7 +34,8 @@ namespace gtry::vhdl {
 
 TestbenchRecorder::TestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, const std::string &name) : m_exporter(exporter), m_ast(ast), m_simulator(simulator), m_name(name)
 {
-    m_testbenchFile.open(m_ast->getFilename(basePath, name).c_str(), std::fstream::out);
+    m_dependencySortedEntities.push_back(m_name);
+    m_testbenchFile.open(m_ast->getFilename(basePath, m_name).c_str(), std::fstream::out);
     writeHeader();
 }
 
@@ -61,6 +62,8 @@ ARCHITECTURE tb OF )" << m_name << R"( IS
 
     const auto &allClocks = rootEntity->getClocks();
     const auto &allIOPins = rootEntity->getIoPins();
+
+    m_clocksOfInterest.insert(allClocks.begin(), allClocks.end());
 
     CodeFormatting &cf = m_ast->getCodeFormatting();
 
@@ -227,6 +230,8 @@ void TestbenchRecorder::onNewTick(const hlim::ClockRational &simulationTime)
 
 void TestbenchRecorder::onClock(const hlim::Clock *clock, bool risingEdge)
 {
+    if (!m_clocksOfInterest.contains(clock)) return;
+
     CodeFormatting &cf = m_ast->getCodeFormatting();
     auto *rootEntity = m_ast->getRootEntity();
 
@@ -261,8 +266,17 @@ void TestbenchRecorder::onSimProcOutputOverridden(hlim::NodePort output, const s
 
 void TestbenchRecorder::onSimProcOutputRead(hlim::NodePort output, const sim::DefaultBitVectorState &state)
 {
+    // find output driving output pin
+    for (auto nh : output.node->exploreOutput(output.port)) {
+        if (auto* res = dynamic_cast<hlim::Node_Pin*>(nh.node())) {
+            output = nh.node()->getDriver(0);
+        } else
+            if (!nh.isSignal())
+                nh.backtrack();
+    }    
+
     auto name_it = m_outputToIoPinName.find(output);
-    HCL_ASSERT(name_it != m_outputToIoPinName.end());
+    HCL_ASSERT_HINT(name_it != m_outputToIoPinName.end(), "Can only record asserts for signals that are output pins!");
 
     CodeFormatting &cf = m_ast->getCodeFormatting();
 

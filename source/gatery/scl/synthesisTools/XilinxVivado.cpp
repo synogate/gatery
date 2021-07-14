@@ -188,16 +188,30 @@ void XilinxVivado::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::str
 		file << f.string() << '\n';
 	}
 
+    if (vhdlExport.getTestbenchRecorder()) {
+        for (const auto &name : vhdlExport.getTestbenchRecorder()->getDependencySortedEntities()) {
+			file << "read_vhdl -vhdl2008 ";
+			if (!vhdlExport.getName().empty())
+				file << "-library " << vhdlExport.getName() << ' ';
+            file << vhdlExport.getAST()->getFilename("", name) << std::endl;
+		}
+
+        for (const auto &name : vhdlExport.getTestbenchRecorder()->getAuxiliaryDataFiles()) {
+			file << "add_files \"" << name << '\"' << std::endl;
+		}
+    }
+
+
 	if (!vhdlExport.getConstraintsFilename().empty())
 		file << "read_xdc " << vhdlExport.getConstraintsFilename() << std::endl;
 	if (!vhdlExport.getClocksFilename().empty())
 		file << "read_xdc " << vhdlExport.getClocksFilename() << std::endl;
 
 	file << R"(
-# reset_run synth_1
-# launch_runs impl_1
+# set_property -name {steps.synth_design.args.more options} -value {-mode out_of_context} -objects [get_runs * -filter IS_SYNTHESIS]
 
-# set run settings -> more options to "-mode out_of_context" for virtual pins
+# reset_run [get_runs * -filter IS_SYNTHESIS]
+# launch_runs [get_runs * -filter IS_IMPLEMENTATION]
 )";
 }
 

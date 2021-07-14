@@ -38,8 +38,10 @@ namespace gtry::scl
 	{
 	public:
 		Fifo() : m_area("scl_fifo") { m_area.getNodeGroup()->createMetaInfo<FifoMeta>(); }
-		Fifo(size_t depth, TData ref) : Fifo() { setup(depth, std::move(ref)); }
-		void setup(size_t depth, TData ref);
+		Fifo(size_t minDepth, TData ref) : Fifo() { setup(minDepth, std::move(ref)); }
+		void setup(size_t minDepth, TData ref);
+
+		size_t getDepth();
 
 		// NOTE: always push before pop for correct conflict resolution
 		// TODO: fix above note by adding explicit write before read conflict resulution to bram
@@ -70,7 +72,14 @@ namespace gtry::scl
 	};
 
 	template<typename TData>
-	inline void Fifo<TData>::setup(size_t depth, TData ref)
+	inline size_t Fifo<TData>::getDepth() {
+		auto *meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
+		FifoCapabilities::Choice &fifoChoice = meta->fifoChoice;
+		return fifoChoice.readDepth;
+	}
+
+	template<typename TData>
+	inline void Fifo<TData>::setup(size_t minDepth, TData ref)
 	{
 		auto scope = m_area.enter();
 
@@ -78,7 +87,7 @@ namespace gtry::scl
 		auto wordWidth = width(m_defaultValue);
 
 		FifoCapabilities::Request fifoRequest;
-		fifoRequest.readDepth.atLeast(depth);
+		fifoRequest.readDepth.atLeast(minDepth);
 		fifoRequest.readWidth = wordWidth.value;
 		fifoRequest.writeWidth = wordWidth.value;
 		fifoRequest.outputIsFallthrough = true;

@@ -64,10 +64,11 @@ void GHDL::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view
         file << "ghdl -a --std=08 --ieee=synopsys " << vhdlExport.getAST()->getFilename("", entity->getName()) << std::endl;;
 
     if (vhdlExport.getTestbenchRecorder()) {
-        file << "ghdl -a --std=08 --ieee=synopsys " << vhdlExport.getAST()->getFilename("", vhdlExport.getTestbenchRecorder()->getName()) << std::endl;;
+        for (const auto &name : vhdlExport.getTestbenchRecorder()->getDependencySortedEntities())
+            file << "ghdl -a --std=08 --ieee=synopsys " << vhdlExport.getAST()->getFilename("", name) << std::endl;;
 
-        file << "ghdl -e --std=08 --ieee=synopsys " << vhdlExport.getTestbenchRecorder()->getName() << std::endl;
-        file << "ghdl -r --std=08 " << vhdlExport.getTestbenchRecorder()->getName() << " --ieee-asserts=disable --vcd=signals.vcd --wave=signals.ghw" << std::endl;
+        file << "ghdl -e --std=08 --ieee=synopsys " << vhdlExport.getTestbenchRecorder()->getDependencySortedEntities().back() << std::endl;
+        file << "ghdl -r --std=08 " << vhdlExport.getTestbenchRecorder()->getDependencySortedEntities().back() << " --ieee-asserts=disable --vcd=signals.vcd --wave=signals.ghw" << std::endl;
     }
 }
 

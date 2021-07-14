@@ -35,11 +35,11 @@ namespace gtry::vhdl {
 class VHDLExport;
 class AST;
 
-class TestbenchRecorder : public BaseTestbenchRecorder
+class FileBasedTestbenchRecorder : public BaseTestbenchRecorder
 {
     public:
-        TestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, const std::string &name);
-        ~TestbenchRecorder();
+        FileBasedTestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, const std::string &name);
+        ~FileBasedTestbenchRecorder();
 
         virtual void onNewTick(const hlim::ClockRational &simulationTime) override;
         virtual void onClock(const hlim::Clock *clock, bool risingEdge) override;
@@ -55,7 +55,6 @@ class TestbenchRecorder : public BaseTestbenchRecorder
         VHDLExport &m_exporter;
         AST *m_ast;
         sim::Simulator &m_simulator;
-        std::string m_name;
         std::fstream m_testbenchFile;
         hlim::ClockRational m_lastSimulationTime;
 
@@ -65,8 +64,7 @@ class TestbenchRecorder : public BaseTestbenchRecorder
 
         std::stringstream m_assertStatements;
 
-        void writeHeader();
-        void writeFooter();
+        void writeVHDL(std::filesystem::path path, const std::string &testVectorFilename);
 };
 
 

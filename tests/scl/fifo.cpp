@@ -37,6 +37,8 @@ struct FifoTest
     scl::Fifo<BVec> create(size_t depth, BitWidth width)
     {
         scl::Fifo<BVec> fifo{ depth, BVec{ width } };
+        actualDepth = fifo.getDepth();
+
         pushData = width;
         popData = width;
         fifo.push(pushData, push);
@@ -98,9 +100,11 @@ struct FifoTest
     Bit empty;
     Bit full;
 
+    size_t actualDepth;
+
 };
 
-BOOST_FIXTURE_TEST_CASE(Fifo_basic, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Fifo_basic, BoostUnitTestSimulationFixture)
 {
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
     ClockScope clkScp(clock);
@@ -108,10 +112,12 @@ BOOST_FIXTURE_TEST_CASE(Fifo_basic, UnitTestSimulationFixture)
     FifoTest fifo{ clock };
     auto&& uut = fifo.create(16, 8_b);
 
-    OutputPin halfEmpty = pinOut(uut.almostEmpty(8)).setName("half_empty");
-    OutputPin halfFull = pinOut(uut.almostFull(8)).setName("half_full");
+    size_t actualDepth = fifo.actualDepth;
+
+    OutputPin halfEmpty = pinOut(uut.almostEmpty(actualDepth/2)).setName("half_empty");
+    OutputPin halfFull = pinOut(uut.almostFull(actualDepth/2)).setName("half_full");
     
-    addSimulationProcess([&]()->SimProcess {
+    addSimulationProcess([=,this]()->SimProcess {
         simu(fifo.pushData) = 0;
         simu(fifo.push) = 0;
         simu(fifo.pop) = 0;
@@ -124,7 +130,7 @@ BOOST_FIXTURE_TEST_CASE(Fifo_basic, UnitTestSimulationFixture)
         BOOST_TEST(simu(halfEmpty) == 1);
         BOOST_TEST(simu(halfFull) == 0);
 
-        for (size_t i = 0; i < 16; ++i)
+        for (size_t i = 0; i < actualDepth; ++i)
         {
             simu(fifo.push) = '1';
             simu(fifo.pushData) = i * 3;
@@ -138,7 +144,7 @@ BOOST_FIXTURE_TEST_CASE(Fifo_basic, UnitTestSimulationFixture)
         BOOST_TEST(simu(halfEmpty) == 0);
         BOOST_TEST(simu(halfFull) == 1);
 
-        for (size_t i = 0; i < 16; ++i)
+        for (size_t i = 0; i < actualDepth; ++i)
         {
             simu(fifo.pop) = '1';
             co_await WaitClk(clock);
@@ -152,12 +158,17 @@ BOOST_FIXTURE_TEST_CASE(Fifo_basic, UnitTestSimulationFixture)
         BOOST_TEST(simu(halfEmpty) == 1);
         BOOST_TEST(simu(halfFull) == 0);
 
-        for (size_t i = 0; i < 128; ++i)
+        for (size_t i = 0, count = 0; count < actualDepth/2; ++i)
         {
-            simu(fifo.push) = i % 15 != 0 ? 1 : 0;
+            bool doPush = i % 15 != 0;
+            bool doPop = count > 0 && (i % 8 != 0);
+            simu(fifo.push) = doPush;
             simu(fifo.pushData) = uint8_t(i * 5);
+            simu(fifo.pop) = doPop;
             co_await WaitClk(clock);
-            simu(fifo.pop) = i % 8 != 0 ? 1 : 0;
+
+            if (doPush) count++;
+            if (doPop) count--;
         }
 
         simu(fifo.push) = '0';
@@ -166,10 +177,10 @@ BOOST_FIXTURE_TEST_CASE(Fifo_basic, UnitTestSimulationFixture)
 
         BOOST_TEST(simu(fifo.empty) == 0);
         BOOST_TEST(simu(fifo.full) == 0);
-        BOOST_TEST(simu(halfEmpty) == 0);
+        BOOST_TEST(simu(halfEmpty) == 1);
         BOOST_TEST(simu(halfFull) == 1);
 
-        for (size_t i = 0; i < 8; ++i)
+        for (size_t i = 0; i < actualDepth/2; ++i)
         {
             simu(fifo.pop) = '1';
             co_await WaitClk(clock);
@@ -183,18 +194,19 @@ BOOST_FIXTURE_TEST_CASE(Fifo_basic, UnitTestSimulationFixture)
         BOOST_TEST(simu(halfEmpty) == 1);
         BOOST_TEST(simu(halfFull) == 0);
 
+        stopTest();
     });
 
     addSimulationProcess(fifo);
 
-    //sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "fifo.vcd" };
-    //vcd.addAllPins();
-    //vcd.addAllNamedSignals();
+    sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "fifo.vcd" };
+    vcd.addAllPins();
+    vcd.addAllNamedSignals();
 
     design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-    //design.visualize("after");
+    design.visualize("after");
 
-    runTicks(clock.getClk(), 190);
+    runTest(hlim::ClockRational(20000, 1) / clock.getClk()->getAbsoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(Fifo_fuzz, UnitTestSimulationFixture)
