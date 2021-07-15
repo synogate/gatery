@@ -63,7 +63,7 @@ class FIFO_SYNC_MACRO : public gtry::hlim::Node_External
 			SIZE_36Kb
 		};
 
-        FIFO_SYNC_MACRO(unsigned width, FIFOSize fifoSize);
+        FIFO_SYNC_MACRO(size_t width, FIFOSize fifoSize);
 
 		FIFO_SYNC_MACRO &setAlmostEmpty(size_t numOccupied);
 		FIFO_SYNC_MACRO &setAlmostFull(size_t numVacant);
@@ -83,7 +83,7 @@ class FIFO_SYNC_MACRO : public gtry::hlim::Node_External
 
         virtual std::string attemptInferOutputName(size_t outputPort) const override;
     protected:
-		unsigned m_width;
+		size_t m_width;
         FIFOSize m_fifoSize;
 };
 
