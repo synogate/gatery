@@ -20,6 +20,7 @@
 #include "NamespaceScope.h"
 
 #include <vector>
+#include <map>
 #include <memory>
 
 namespace gtry::hlim {
@@ -70,6 +71,7 @@ class BaseGrouping
         
         std::set<hlim::NodePort> m_constants;
         std::set<hlim::NodePort> m_localSignals;
+        std::map<hlim::NodePort, hlim::Node_Constant*> m_localSignalDefaultValues;
         std::set<hlim::NodePort> m_inputs;
         std::set<hlim::NodePort> m_outputs;
         std::set<hlim::Clock *> m_inputClocks;

@@ -198,6 +198,10 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 
     for (auto &rp : m_memGrp->getReadPorts())
         if (rp.outputReg != nullptr) {
+
+            HCL_ASSERT_HINT(rp.outputReg->getDriver(hlim::Node_Register::RESET_VALUE).node == nullptr || rp.outputReg->getClocks()[0]->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE,
+                        "Power on reset values not implemented yet for memory registers!");
+
             cf.indent(stream, 1);
             stream << "SIGNAL " << m_namespaceScope.getName(rp.dataOutput) << "_outputReg : ";
             cf.formatConnectionType(stream, hlim::getOutputConnectionType(rp.dataOutput));

@@ -164,6 +164,15 @@ void BaseGrouping::declareLocalSignals(std::ostream &stream, bool asVariables, u
             stream << "SIGNAL ";
         stream << m_namespaceScope.getName(signal) << " : ";
         cf.formatConnectionType(stream, hlim::getOutputConnectionType(signal));
+
+        auto it = m_localSignalDefaultValues.find(signal);
+        if (it != m_localSignalDefaultValues.end()) {
+            auto targetContext = hlim::outputIsBVec(signal)?Context::STD_LOGIC_VECTOR:Context::STD_LOGIC;
+
+            stream << " := ";
+            formatConstant(stream, it->second, targetContext);
+        }
+
         stream << "; "<< std::endl;
     }
 

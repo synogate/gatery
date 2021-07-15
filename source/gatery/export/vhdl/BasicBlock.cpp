@@ -29,6 +29,7 @@
 
 
 #include "../../hlim/coreNodes/Node_Register.h"
+#include "../../hlim/coreNodes/Node_Constant.h"
 #include "../../hlim/Clock.h"
 
 
@@ -293,6 +294,15 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
                     .hasResetSignal = regNode->getNonSignalDriver(hlim::Node_Register::RESET_VALUE).node != nullptr
                 };
                 registerNodes[config].push_back(regNode);
+
+                auto reset = regNode->getNonSignalDriver(hlim::Node_Register::RESET_VALUE);
+                if (reset.node != nullptr && regNode->getClocks()[0]->getRegAttribs().resetType == hlim::RegisterAttributes::ResetType::NONE) {
+                    auto *constReset = dynamic_cast<hlim::Node_Constant*>(reset.node);
+                    HCL_DESIGNCHECK_HINT(constReset, "Resets of registers must be constants uppon export!");
+
+                    m_localSignalDefaultValues[{.node = regNode, .port = 0ull}] = constReset;
+                }
+
                 continue;
             }
 
