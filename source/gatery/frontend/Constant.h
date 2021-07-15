@@ -68,11 +68,11 @@ namespace gtry
         BVec res = value; \
         res.getNode()->getNonSignalDriver(0).node->setName(#x); \
         return res; \
-    } };
+    } const char *getName() const { return #x; } auto getValue() const { return value; } };
 
 #define GTRY_CONST_BIT(x, value) \
     struct x { operator Bit () { \
         Bit res = value; \
         res.getNode()->getNonSignalDriver(0).node->setName(#x); \
         return res; \
-    } };
+    } const char *getName() const { return #x; } auto getValue() const { return value; } };
