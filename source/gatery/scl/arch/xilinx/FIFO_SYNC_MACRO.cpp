@@ -26,7 +26,7 @@
 
 namespace gtry::scl::arch::xilinx {
 
-FIFO_SYNC_MACRO::FIFO_SYNC_MACRO(unsigned width, FIFOSize fifoSize)
+FIFO_SYNC_MACRO::FIFO_SYNC_MACRO(size_t width, FIFOSize fifoSize)
 {
     m_libraryName = "UNISIM";
     m_name = "FIFO_SYNC_MACRO";
@@ -83,7 +83,6 @@ FIFO_SYNC_MACRO::FIFO_SYNC_MACRO(unsigned width, FIFOSize fifoSize)
 FIFO_SYNC_MACRO &FIFO_SYNC_MACRO::setAlmostEmpty(size_t numOccupied)
 {
 	m_genericParameters["ALMOST_EMPTY_OFFSET"] = (boost::format("X\"%00000X\"") % numOccupied).str();
-	std::to_string(numOccupied);
 	return *this;
 }
 

@@ -54,7 +54,7 @@ bool FifoPattern::attemptApply(hlim::NodeGroup *nodeGroup)
 
     // As of now, only support one almost_full and one almost_empty signal, don't try to emulate, and skip entire instantiation if that is not possible
     if (meta->almostEmptySignalLevel.size() > 1) return false;
-    unsigned almostEmptyLevel = 0;
+    size_t almostEmptyLevel = 0;
     if (!meta->almostEmptySignalLevel.empty()) {
         HCL_ASSERT(groupHelper.getAllSignals(meta->almostEmptySignalLevel.front().second).size() == 1);
 
@@ -69,7 +69,7 @@ bool FifoPattern::attemptApply(hlim::NodeGroup *nodeGroup)
     }
 
     if (meta->almostFullSignalLevel.size() > 1) return false;
-    unsigned almostFullLevel = 0;
+    size_t almostFullLevel = 0;
     if (!meta->almostFullSignalLevel.empty()) {
         HCL_ASSERT(groupHelper.getAllSignals(meta->almostFullSignalLevel.front().second).size() == 1);
 
@@ -105,8 +105,8 @@ bool FifoPattern::attemptApply(hlim::NodeGroup *nodeGroup)
 
     // Decide on number and type of fifos (only stretch to cover width)
     // todo: use better algorithm to also cover depth
-    unsigned perFifoWidth_18k;
-    unsigned perFifoWidth_36k;
+    size_t perFifoWidth_18k;
+    size_t perFifoWidth_36k;
     switch (fifoChoice.readDepth) {
         case 512: 
             perFifoWidth_18k = 36; 
@@ -143,12 +143,12 @@ bool FifoPattern::attemptApply(hlim::NodeGroup *nodeGroup)
 
 
 
-    unsigned num_18k = 0;
-    unsigned num_36k = 0;
+    size_t num_18k = 0;
+    size_t num_36k = 0;
 
     {
         num_36k = fifoChoice.readWidth / perFifoWidth_36k;
-        unsigned remaining = fifoChoice.readWidth % perFifoWidth_36k;
+        size_t remaining = fifoChoice.readWidth % perFifoWidth_36k;
         if (remaining) {
             if (perFifoWidth_18k > 0 && remaining <= perFifoWidth_18k)
                 num_18k++;
@@ -192,7 +192,7 @@ bool FifoPattern::attemptApply(hlim::NodeGroup *nodeGroup)
     BVec out_data_accu = constructFrom(out_data);
     out_data_accu = 0;
 
-    unsigned width = in_data.getWidth().value;
+    size_t width = in_data.getWidth().value;
     HCL_ASSERT(width == fifoChoice.readWidth);
 
 
@@ -204,11 +204,11 @@ bool FifoPattern::attemptApply(hlim::NodeGroup *nodeGroup)
         fifoMacro->connectInput(FIFO_SYNC_MACRO::IN_RDEN, out_ready);
         fifoMacro->attachClock(clock, FIFO_SYNC_MACRO::CLK);
 
-        unsigned start = i * perFifoWidth_36k;
-        unsigned end = start + perFifoWidth_36k;
+        size_t start = i * perFifoWidth_36k;
+        size_t end = start + perFifoWidth_36k;
         end = std::min(end, width);
 
-        unsigned sectionWidth = end - start;
+        size_t sectionWidth = end - start;
 
 
         BVec inSection = BitWidth(perFifoWidth_36k);
@@ -230,11 +230,11 @@ bool FifoPattern::attemptApply(hlim::NodeGroup *nodeGroup)
         fifoMacro->connectInput(FIFO_SYNC_MACRO::IN_RDEN, out_ready);
         fifoMacro->attachClock(clock, FIFO_SYNC_MACRO::CLK);
 
-        unsigned start = num_36k*perFifoWidth_36k + i * perFifoWidth_18k;
-        unsigned end = start + perFifoWidth_18k;
+        size_t start = num_36k*perFifoWidth_36k + i * perFifoWidth_18k;
+        size_t end = start + perFifoWidth_18k;
         end = std::min(end, width);
 
-        unsigned sectionWidth = end - start;
+        size_t sectionWidth = end - start;
 
         BVec inSection = BitWidth(perFifoWidth_18k);
         inSection = zext(in_data(start, sectionWidth));
@@ -325,13 +325,13 @@ Xilinx7SeriesFifoCapabilities::Choice Xilinx7SeriesFifoCapabilities::select(cons
             choice = defaultValue;
     };
 
-    auto handlePreferredMinimum = [](auto &choice, const auto &request, auto preferredMinimum) {
+    auto handlePreferredMinimum = [](size_t &choice, const auto &request, size_t preferredMinimum) {
         switch (request.choice) {
             case Preference::MIN_VALUE: 
-                choice = std::max<int>(request.value, preferredMinimum);
+                choice = std::max<size_t>(request.value, preferredMinimum);
             break;
             case Preference::MAX_VALUE:
-                choice = std::min<int>(request.value, preferredMinimum);
+                choice = std::min<size_t>(request.value, preferredMinimum);
             break;
             case Preference::SPECIFIC_VALUE:
                 choice = request.value;
@@ -347,12 +347,12 @@ Xilinx7SeriesFifoCapabilities::Choice Xilinx7SeriesFifoCapabilities::select(cons
 
     switch (request.readDepth.choice) {
         case Preference::MIN_VALUE: 
-            choice.readDepth = utils::nextPow2(std::max(512u, request.readDepth.value));
+            choice.readDepth = utils::nextPow2(std::max<size_t>(512, request.readDepth.value));
             if (choice.readDepth > 8192)
                 choice.readDepth = request.readDepth.value; // can't do it (without concatenating fifos)
         break;
         case Preference::MAX_VALUE:
-            choice.readDepth = std::min<int>(request.readDepth.value, 512);
+            choice.readDepth = std::min<size_t>(request.readDepth.value, 512);
         break;
         case Preference::SPECIFIC_VALUE:
             choice.readDepth = request.readDepth.value;

@@ -64,7 +64,7 @@ namespace gtry::scl
 		Bit m_full;
 		Bit m_empty;
 
-		TData m_defaultValue;
+		std::optional<TData> m_defaultValue;
 
 		bool m_hasMem = false;
 		bool m_hasPush = false;
@@ -84,10 +84,10 @@ namespace gtry::scl
 		auto scope = m_area.enter();
 
 		m_defaultValue = std::move(ref);
-		auto wordWidth = width(m_defaultValue);
+		auto wordWidth = width(*m_defaultValue);
 
 		FifoCapabilities::Request fifoRequest;
-		fifoRequest.readDepth.atLeast(minDepth);
+		fifoRequest.readDepth.atLeast((uint32_t)minDepth);
 		fifoRequest.readWidth = wordWidth.value;
 		fifoRequest.writeWidth = wordWidth.value;
 		fifoRequest.outputIsFallthrough = true;
@@ -186,7 +186,7 @@ namespace gtry::scl
 		HCL_NAMED(m_get);
 
 		setName(packedData, "out_data_packed");
-		data = constructFrom(m_defaultValue);
+		constructFrom(*m_defaultValue, data);
 		unpack(packedData, data);
 		setName(data, "out_data");
 	}

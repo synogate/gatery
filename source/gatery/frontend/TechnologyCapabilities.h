@@ -118,9 +118,9 @@ class FifoCapabilities : public Capabilities {
     public:
         template<template <typename> class Wrapper>
         struct Settings {
-            typename Wrapper<unsigned>::wrap readWidth;
-            typename Wrapper<unsigned>::wrap readDepth;
-            typename Wrapper<unsigned>::wrap writeWidth;
+            typename Wrapper<size_t>::wrap readWidth;
+            typename Wrapper<size_t>::wrap readDepth;
+            typename Wrapper<size_t>::wrap writeWidth;
 
 			typename Wrapper<bool>::wrap outputIsFallthrough;
 			typename Wrapper<bool>::wrap singleClock;

@@ -138,9 +138,14 @@ void VHDLExport::operator()(hlim::Circuit &circuit)
         m_synthesisTool->writeVhdlProjectScript(*this, m_projectFilename);
 }
 
+bool VHDLExport::isSingleFileExport()
+{
+    return m_destination.has_extension();
+}
+
 std::filesystem::path VHDLExport::getDestination()
 {
-    if (m_destination.has_extension())
+    if (isSingleFileExport())
         return m_destination.parent_path();
     return m_destination;
 }

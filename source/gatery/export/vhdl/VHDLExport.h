@@ -64,6 +64,8 @@ class VHDLExport
 
         AST *getAST() { return m_ast.get(); }
         std::filesystem::path getDestination();
+        std::filesystem::path getSingleFileFilename() { return m_destination.filename(); }
+        bool isSingleFileExport();
 
         void recordTestbench(sim::Simulator &simulator, const std::string &name, bool inlineTestData = false);
 
