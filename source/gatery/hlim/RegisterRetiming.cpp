@@ -275,7 +275,7 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
 	/// @todo Clone and optimize to prevent issues with loops
     sim::SimulatorCallbacks ignoreCallbacks;
     sim::ReferenceSimulator simulator;
-    simulator.compileProgram(circuit, {outputsLeavingRetimingArea});
+    simulator.compileStaticEvaluation(circuit, {outputsLeavingRetimingArea});
     simulator.powerOn();
 
 	// Insert registers

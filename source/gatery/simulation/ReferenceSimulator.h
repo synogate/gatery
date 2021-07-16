@@ -164,6 +164,7 @@ class ReferenceSimulator : public Simulator
     public:
         ReferenceSimulator();
         virtual void compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs = {}) override;
+        void compileStaticEvaluation(const hlim::Circuit& circuit, const std::set<hlim::NodePort>& outputs);
 
 
         virtual void powerOn() override;

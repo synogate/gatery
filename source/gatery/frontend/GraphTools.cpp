@@ -217,7 +217,7 @@ sim::DefaultBitVectorState evaluateStatically(hlim::NodePort output)
 {
     sim::SimulatorCallbacks ignoreCallbacks;
     sim::ReferenceSimulator simulator;
-    simulator.compileProgram(DesignScope::get()->getCircuit(), {output});
+    simulator.compileStaticEvaluation(DesignScope::get()->getCircuit(), {output});
     simulator.powerOn();
 
     // Fetch result
