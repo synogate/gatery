@@ -33,6 +33,7 @@
 #include "../hlim/coreNodes/Node_Pin.h"
 #include "../hlim/NodeVisitor.h"
 #include "../hlim/supportNodes/Node_ExportOverride.h"
+#include "../hlim/Subnet.h"
 
 
 #include <gatery/export/DotExport.h>
@@ -220,6 +221,8 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
             loopGroup->setInstanceName("loopGroup");
             loopGroup->setName("loopGroup");
 
+            hlim::Subnet loopSubnet;
+
             for (auto node : loopNodes) {
                 std::cout << node->getName() << " in group " << node->getGroup()->getName() << " - " << std::dec << node->getId() << " -  " << node->getTypeName() << "  " << std::hex << (size_t)node << std::endl;
                 for (auto i : utils::Range(node->getNumInputPorts())) {
@@ -234,19 +237,31 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
                 std::cout << "  stack trace:" << std::endl << node->getStackTrace() << std::endl;
 
                 node->moveToGroup(loopGroup);
+                loopSubnet.add(node);
 
                 for (auto i : utils::Range(node->getNumOutputPorts()))
                     for (auto nh : node->exploreOutput(i)) {
-                        if (nh.isSignal())
+                        if (nh.isSignal()) {
                             nh.node()->moveToGroup(loopGroup);
+                            loopSubnet.add(nh.node());
+                        } 
                         else
                             nh.backtrack();
                     }
             }
 
-            DotExport exp("loop.dot");
-            exp(circuit);
-            exp.runGraphViz("loop.svg");
+            {
+                DotExport exp("loop.dot");
+                exp(circuit);
+                exp.runGraphViz("loop.svg");
+            }
+            {
+                //loopSubnet.dilate(true, true);
+
+                DotExport exp("loop_only.dot");
+                exp(circuit, loopSubnet.asConst());
+                exp.runGraphViz("loop_only.svg");
+            }
         }
 
         HCL_DESIGNCHECK_HINT(readyNode != nullptr, "Cyclic dependency!");
