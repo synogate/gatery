@@ -25,6 +25,8 @@
 
 #include "Simulator.h"
 
+#include <set>
+
 namespace gtry::sim {
 
 RunTimeSimulationContext::RunTimeSimulationContext(Simulator *simulator) : m_simulator(simulator)
@@ -80,8 +82,15 @@ hlim::Node_Pin *RunTimeSimulationContext::findInputPin(hlim::NodePort output) co
     if (dynamic_cast<const hlim::Node_Signal*>(output.node) == nullptr)
         return nullptr;
 
+    std::set<hlim::BaseNode*> encounteredNodes;
+
     // Any preceeding node must be a signal node or the pin we look for
     for (auto nh : output.node->exploreInput(0)) {
+        if (encounteredNodes.contains(nh.node())) {
+            nh.backtrack();
+            continue;
+        }
+        encounteredNodes.insert(nh.node());
         if (res = dynamic_cast<hlim::Node_Pin*>(nh.node()))
             return res;
         else // If we hit s.th. that is neither pin nor signal, there is nothing we can do.
