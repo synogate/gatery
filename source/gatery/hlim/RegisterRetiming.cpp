@@ -265,6 +265,9 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
 					break;
 				}
 
+	if (registersToBeRemoved.empty()) // no registers found to retime, probably everything is constant, so no clock available
+		return false;
+
 	HCL_ASSERT(!registersToBeRemoved.empty());
 	auto *clock = (*registersToBeRemoved.begin())->getClocks()[0];
 
