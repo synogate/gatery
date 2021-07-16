@@ -164,12 +164,12 @@ namespace gtry
 		void operator () (std::tuple<T...>& a, const std::tuple<T...>& b, CompoundVisitor& v, size_t flags)
 		{
 			v.enterPackStruct();
-			auto zipped = boost::hana::zip(a, b);
+			auto zipped = boost::hana::zip_with([](auto&&... args) { return std::tie(args...); }, a, b);
 			boost::hana::for_each(zipped, [&](auto& elem) {
-				using namespace boost::hana::literals;
-
-				v.enter(usableName<decltype(elem[0_c])>());
-				VisitCompound<std::remove_cvref_t<decltype(elem[0_c])>>{}(elem[0_c], elem[1_c], v, flags);
+				v.enter(usableName<decltype(std::get<0>(elem))>());
+				VisitCompound<std::remove_cvref_t<decltype(std::get<0>(elem))>>{}(
+					std::get<0>(elem), std::get<1>(elem), v, flags
+				);
 				v.leave();
 			});
 			v.leavePack();
@@ -189,12 +189,12 @@ namespace gtry
 		void operator () (const std::tuple<T...>& a, const std::tuple<T...>& b, CompoundVisitor& v)
 		{
 			v.enterPackStruct();
-			auto zipped = boost::hana::zip(a, b);
+			auto zipped = boost::hana::zip_with([](auto&&... args) { return std::tie(args...); }, a, b);
 			boost::hana::for_each(zipped, [&](auto& elem) {
-				using namespace boost::hana::literals;
-
-				v.enter(usableName<decltype(elem[0_c])>());
-				VisitCompound<std::remove_cvref_t<decltype(elem[0_c])>>{}(elem[0_c], elem[1_c], v);
+				v.enter(usableName<decltype(std::get<0>(elem))>());
+				VisitCompound<std::remove_cvref_t<decltype(std::get<0>(elem))>>{}(
+					std::get<0>(elem), std::get<1>(elem), v
+				);
 				v.leave();
 			});
 			v.leavePack();
