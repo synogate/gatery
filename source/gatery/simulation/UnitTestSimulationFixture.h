@@ -57,6 +57,9 @@ namespace gtry::sim {
 
         const hlim::Clock *m_runLimClock = nullptr;
         unsigned m_runLimTicks = 0;
+
+        std::vector<std::string> m_warnings;
+        std::vector<std::string> m_errors;
 };
 
 
