@@ -94,6 +94,8 @@ namespace gtry {
 
         hlim::Node_Signal* getNode() { return m_node; }
 
+        Bit final() const;
+
     protected:
         SignalReadPort rewireAlias(SignalReadPort port) const;
 
