@@ -23,6 +23,8 @@
 #include "BaseTestbenchRecorder.h"
 #include "AST.h"
 
+#include "InterfacePackage.h"
+
 #include "../../hlim/Circuit.h"
 
 #include <filesystem>
@@ -72,12 +74,15 @@ class VHDLExport
         inline const std::string &getProjectFilename() const { return m_projectFilename; }
         inline const std::string &getConstraintsFilename() const { return m_constraintsFilename; }
         inline const std::string &getClocksFilename() const { return m_clocksFilename; }
+
+        InterfacePackageContent &getInterfacePackage() { return m_interfacePackageContent; }
     protected:
         std::filesystem::path m_destination;
         std::unique_ptr<CodeFormatting> m_codeFormatting;
         std::unique_ptr<SynthesisTool> m_synthesisTool;
         std::unique_ptr<BaseTestbenchRecorder> m_testbenchRecorder;
         std::unique_ptr<AST> m_ast;
+        InterfacePackageContent m_interfacePackageContent;
         std::string m_library;
 
         std::string m_projectFilename;

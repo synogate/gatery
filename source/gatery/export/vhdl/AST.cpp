@@ -22,6 +22,7 @@
 #include "CodeFormatting.h"
 #include "HelperPackage.h"
 #include "Block.h"
+#include "InterfacePackage.h"
 
 #include "../../hlim/Circuit.h"
 
@@ -52,6 +53,11 @@ AST::AST(CodeFormatting *codeFormatting, SynthesisTool *synthesisTool) : m_codeF
 
 AST::~AST()
 {
+}
+
+void AST::generateInterfacePackage(InterfacePackageContent &content)
+{
+    m_packages.push_back(std::make_unique<InterfacePackage>(*this, content));
 }
 
 void AST::convert(hlim::Circuit &circuit)

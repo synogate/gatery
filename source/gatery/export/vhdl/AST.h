@@ -42,6 +42,8 @@ class BasicBlock;
 class CodeFormatting;
 class Package;
 
+class InterfacePackageContent;
+
 class Hlim2AstMapping
 {
     public:
@@ -57,6 +59,8 @@ class AST
     public:
         AST(CodeFormatting *codeFormatting, SynthesisTool *synthesisTool);
         ~AST();
+
+        void generateInterfacePackage(InterfacePackageContent &content);
 
         void convert(hlim::Circuit &circuit);
 

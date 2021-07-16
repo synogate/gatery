@@ -19,6 +19,7 @@
 #include "VHDLExport.h"
 
 #include "Package.h"
+#include "InterfacePackage.h"
 #include "Entity.h"
 
 #include "TestbenchRecorder.h"
@@ -112,6 +113,9 @@ void VHDLExport::operator()(hlim::Circuit &circuit)
     m_synthesisTool->prepareCircuit(circuit);
 
     m_ast.reset(new AST(m_codeFormatting.get(), m_synthesisTool.get()));
+    if (!m_interfacePackageContent.empty())
+        m_ast->generateInterfacePackage(m_interfacePackageContent);
+
     m_ast->convert((hlim::Circuit &)circuit);
     m_ast->writeVHDL(m_destination);
 
@@ -150,6 +154,7 @@ void VHDLExport::recordTestbench(sim::Simulator &simulator, const std::string &n
 {
     m_testbenchRecorderSettings.emplace(TestbenchRecorderSettings{&simulator, name, inlineTestData});
 }
+
 
 
 }
