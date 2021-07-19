@@ -122,12 +122,14 @@ sim::DefaultBitVectorState gtry::parseBVec(std::string_view value)
 
 sim::DefaultBitVectorState gtry::parseBVec(uint64_t value, size_t width)
 {
-    HCL_ASSERT(width <= sizeof(size_t) * 8);
+    //HCL_ASSERT(width <= sizeof(size_t) * 8);
 
     sim::DefaultBitVectorState ret;
     ret.resize(width);
-    ret.insertNonStraddling(sim::DefaultConfig::VALUE, 0, width, value);
-    ret.setRange(sim::DefaultConfig::DEFINED, 0, width, true);
+    ret.clearRange(sim::DefaultConfig::VALUE, 0, width);
+    ret.setRange(sim::DefaultConfig::DEFINED, 0, width);
+
+    ret.insertNonStraddling(sim::DefaultConfig::VALUE, 0, std::min(sizeof(size_t) * 8, width), value);
     return ret;
 }
 
