@@ -72,6 +72,9 @@ std::unique_ptr<BaseNode> Node_Constant::cloneUnconnected() const
 std::string Node_Constant::attemptInferOutputName(size_t outputPort) const
 {
     if (!m_name.empty()) return m_name;
+
+    if (m_Value.size() == 0)
+        return "const_empty";
     
     std::stringstream bitStream;
     bitStream << "const_";
