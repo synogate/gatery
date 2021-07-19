@@ -175,6 +175,11 @@ namespace gtry {
         return rewireAlias(ret);
     }
 
+    Bit Bit::final() const
+    {
+        return rewireAlias(SignalReadPort{ m_node });
+    }
+
     SignalReadPort gtry::Bit::rewireAlias(SignalReadPort port) const
     {
         hlim::ConnectionType type = hlim::getOutputConnectionType(port);

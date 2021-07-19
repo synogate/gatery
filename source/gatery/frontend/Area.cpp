@@ -18,12 +18,15 @@
 #include "gatery/pch.h"
 #include "Area.h"
 
-gtry::Area::Area(std::string_view name)
+gtry::Area::Area(std::string_view name, bool instantEnter)
 {
 	auto* parent = GroupScope::getCurrentNodeGroup();
 	m_nodeGroup = parent->addChildNodeGroup(hlim::NodeGroup::GroupType::ENTITY);
 	m_nodeGroup->recordStackTrace();
 	m_nodeGroup->setName(std::string(name));
+
+	if (instantEnter)
+		m_inScope.emplace(m_nodeGroup);
 }
 
 gtry::GroupScope gtry::Area::enter() const

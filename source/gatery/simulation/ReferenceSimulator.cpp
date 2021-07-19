@@ -33,6 +33,7 @@
 #include "../hlim/coreNodes/Node_Pin.h"
 #include "../hlim/NodeVisitor.h"
 #include "../hlim/supportNodes/Node_ExportOverride.h"
+#include "../hlim/Subnet.h"
 
 
 #include <gatery/export/DotExport.h>
@@ -101,6 +102,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
         });
     }
 
+    std::set<hlim::BaseNode*> subnetToConsider(nodes.begin(), nodes.end());
 
     std::set<hlim::NodePort> outputsReady;
 
@@ -169,7 +171,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
                 auto driver = node->getNonSignalDriver(i);
                 while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) // Skip all export override nodes
                     driver = driver.node->getNonSignalDriver(0);
-                if (driver.node != nullptr && !outputsReady.contains(driver)) {
+                if (driver.node != nullptr && !outputsReady.contains(driver) && subnetToConsider.contains(driver.node)) {
                     allInputsReady = false;
                     break;
                 }
@@ -220,6 +222,8 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
             loopGroup->setInstanceName("loopGroup");
             loopGroup->setName("loopGroup");
 
+            hlim::Subnet loopSubnet;
+
             for (auto node : loopNodes) {
                 std::cout << node->getName() << " in group " << node->getGroup()->getName() << " - " << std::dec << node->getId() << " -  " << node->getTypeName() << "  " << std::hex << (size_t)node << std::endl;
                 for (auto i : utils::Range(node->getNumInputPorts())) {
@@ -234,19 +238,41 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
                 std::cout << "  stack trace:" << std::endl << node->getStackTrace() << std::endl;
 
                 node->moveToGroup(loopGroup);
+                loopSubnet.add(node);
 
                 for (auto i : utils::Range(node->getNumOutputPorts()))
                     for (auto nh : node->exploreOutput(i)) {
-                        if (nh.isSignal())
+                        if (nh.isSignal()) {
                             nh.node()->moveToGroup(loopGroup);
+                            loopSubnet.add(nh.node());
+                        } 
                         else
                             nh.backtrack();
                     }
             }
 
-            DotExport exp("loop.dot");
-            exp(circuit);
-            exp.runGraphViz("loop.svg");
+            {
+                DotExport exp("loop.dot");
+                exp(circuit);
+                exp.runGraphViz("loop.svg");
+            }
+            {
+                //loopSubnet.dilate(true, true);
+
+                DotExport exp("loop_only.dot");
+                exp(circuit, loopSubnet.asConst());
+                exp.runGraphViz("loop_only.svg");
+            }
+            {
+                hlim::Subnet all;
+                for (auto n : nodes)
+                    all.add(n);
+
+
+                DotExport exp("all.dot");
+                exp(circuit, all.asConst());
+                exp.runGraphViz("all.svg");
+            }
         }
 
         HCL_DESIGNCHECK_HINT(readyNode != nullptr, "Cyclic dependency!");
@@ -431,6 +457,41 @@ void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const std:
 }
 
 
+void ReferenceSimulator::compileStaticEvaluation(const hlim::Circuit& circuit, const std::set<hlim::NodePort>& outputs)
+{
+    std::set<hlim::BaseNode*> nodeSet;
+    {
+        std::vector<hlim::BaseNode*> stack;
+        for (auto nodePort : outputs)
+            stack.push_back(nodePort.node);
+
+        while (!stack.empty()) {
+            hlim::BaseNode* node = stack.back();
+            stack.pop_back();
+            if (nodeSet.find(node) == nodeSet.end()) {
+                // Ignore the export-only part as well as the export node
+                if (auto* expOverride = dynamic_cast<hlim::Node_ExportOverride*>(node)) {
+                    if (node->getDriver(0).node != nullptr)
+                        stack.push_back(node->getDriver(0).node);
+                } else if (auto* expOverride = dynamic_cast<hlim::Node_Register*>(node)) { // add registers but stop there
+                    nodeSet.insert(node);
+                } else {
+                    nodeSet.insert(node);
+                    for (auto i : utils::Range(node->getNumInputPorts()))
+                        if (node->getDriver(i).node != nullptr)
+                            stack.push_back(node->getDriver(i).node);
+                }
+            }
+        }
+    }
+
+    std::vector<hlim::BaseNode*> nodes;
+    nodes.reserve(nodeSet.size());
+    for (const auto& node : nodeSet)
+        nodes.push_back(node);
+
+    m_program.compileProgram(circuit, nodes);
+}
 
 
 void ReferenceSimulator::powerOn()

@@ -28,19 +28,28 @@
 
 namespace gtry::utils {
     
-    
+    class FrameResolver
+    {
+    public:
+        std::string to_string(const boost::stacktrace::frame& frame);
 
-class StackTrace
-{
+    private:
+#ifdef WIN32
+        boost::stacktrace::detail::debugging_symbols idebug; 
+#endif
+    };
+
+    class StackTrace
+    {
     public:
         void record(size_t size, size_t skipTop);
         const std::vector<boost::stacktrace::frame> &getTrace() const { return m_trace; }
         std::vector<std::string> formatEntries() const;
     protected:
         std::vector<boost::stacktrace::frame> m_trace;
-};
+    };
 
-std::ostream &operator<<(std::ostream &stream, const StackTrace &trace);
+    std::ostream &operator<<(std::ostream &stream, const StackTrace &trace);
 
 
 }

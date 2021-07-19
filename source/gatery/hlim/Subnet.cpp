@@ -25,6 +25,7 @@
 #include "Circuit.h"
 #include "Node.h"
 #include "NodePort.h"
+#include "NodeGroup.h"
 
 
 namespace gtry::hlim {
@@ -82,6 +83,14 @@ FinalType SubnetTemplate<makeConst, FinalType>::allUsedNodes(CircuitType &circui
 {
     FinalType res;
     res.addAllUsedNodes(circuit);
+    return res;
+}
+
+template<bool makeConst, typename FinalType>
+FinalType SubnetTemplate<makeConst, FinalType>::fromNodeGroup(NodeGroup* nodeGroup, bool reccursive)
+{
+    FinalType res;
+    res.addAllFromNodeGroup(nodeGroup, reccursive);
     return res;
 }
 
@@ -281,6 +290,18 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllUsedNodes(CircuitType &ci
 
 
 template<bool makeConst, typename FinalType>
+FinalType &SubnetTemplate<makeConst, FinalType>::addAllFromNodeGroup(NodeGroup* nodeGroup, bool reccursive)
+{
+    m_nodes.insert(nodeGroup->getNodes().begin(), nodeGroup->getNodes().end());
+    if (reccursive)
+        for (auto& c : nodeGroup->getChildren())
+            addAllFromNodeGroup(c.get(), reccursive);
+
+    return (FinalType&)*this;
+}
+
+
+template<bool makeConst, typename FinalType>
 void SubnetTemplate<makeConst, FinalType>::dilate(bool forward, bool backward)
 {
     std::vector<NodeType*> newNodes;
@@ -302,6 +323,7 @@ void SubnetTemplate<makeConst, FinalType>::dilate(bool forward, bool backward)
 
     m_nodes.insert(newNodes.begin(), newNodes.end());
 }
+
 
 
 template class SubnetTemplate<false, Subnet>;
