@@ -119,6 +119,16 @@ package require ::quartus::project
 		file << '\n';
 	}
 
+	for (const auto &e : vhdlExport.getTestbenchRecorder()) {
+        for (const auto &name : e->getDependencySortedEntities()) {
+			file << "set_global_assignment -name VHDL_FILE ";
+			file <<vhdlExport.getAST()->getFilename("", name);
+			if (!vhdlExport.getName().empty())
+				file << "-library " << vhdlExport.getName() << ' ';
+			file << '\n';
+		}
+	}	
+
 //	vhdlExport.writeXdc("clocks.xdc");
 
 	file << R"(

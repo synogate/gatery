@@ -38,7 +38,7 @@ class AST;
 class TestbenchRecorder : public BaseTestbenchRecorder
 {
     public:
-        TestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, const std::string &name);
+        TestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, std::string name);
         ~TestbenchRecorder();
 
         virtual void onNewTick(const hlim::ClockRational &simulationTime) override;
@@ -55,7 +55,6 @@ class TestbenchRecorder : public BaseTestbenchRecorder
         VHDLExport &m_exporter;
         AST *m_ast;
         sim::Simulator &m_simulator;
-        std::string m_name;
         std::fstream m_testbenchFile;
         hlim::ClockRational m_lastSimulationTime;
 

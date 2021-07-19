@@ -119,13 +119,13 @@ void VHDLExport::operator()(hlim::Circuit &circuit)
     m_ast->convert((hlim::Circuit &)circuit);
     m_ast->writeVHDL(m_destination);
 
-    if (m_testbenchRecorderSettings) {
-        if (m_testbenchRecorderSettings->inlineTestData)
-            m_testbenchRecorder = std::make_unique<TestbenchRecorder>(*this, m_ast.get(), *m_testbenchRecorderSettings->simulator, getDestination(), m_testbenchRecorderSettings->name);
+    for (auto &e : m_testbenchRecorderSettings) {
+        if (e.inlineTestData)
+            m_testbenchRecorder.push_back(std::make_unique<TestbenchRecorder>(*this, m_ast.get(), *e.simulator, getDestination(), e.name));
         else
-            m_testbenchRecorder = std::make_unique<FileBasedTestbenchRecorder>(*this, m_ast.get(), *m_testbenchRecorderSettings->simulator, getDestination(), m_testbenchRecorderSettings->name);
+            m_testbenchRecorder.push_back(std::make_unique<FileBasedTestbenchRecorder>(*this, m_ast.get(), *e.simulator, getDestination(), e.name));
             
-        m_testbenchRecorderSettings->simulator->addCallbacks(&*m_testbenchRecorder);
+        e.simulator->addCallbacks(m_testbenchRecorder.back().get());
     }
     
     if (!m_constraintsFilename.empty())
@@ -150,9 +150,9 @@ std::filesystem::path VHDLExport::getDestination()
     return m_destination;
 }
 
-void VHDLExport::recordTestbench(sim::Simulator &simulator, const std::string &name, bool inlineTestData)
+void VHDLExport::addTestbenchRecorder(sim::Simulator &simulator, const std::string &name, bool inlineTestData)
 {
-    m_testbenchRecorderSettings.emplace(TestbenchRecorderSettings{&simulator, name, inlineTestData});
+    m_testbenchRecorderSettings.emplace_back(TestbenchRecorderSettings{&simulator, name, inlineTestData});
 }
 
 

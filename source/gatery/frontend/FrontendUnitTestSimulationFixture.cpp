@@ -57,7 +57,7 @@ void UnitTestSimulationFixture::outputVHDL(const std::filesystem::path &destinat
     (*m_vhdlExport)(design.getCircuit());
 
     if (includeTest) {
-        m_vhdlExport->recordTestbench(*m_simulator, "testbench");
+        m_vhdlExport->addTestbenchRecorder(*m_simulator, "testbench");
         //m_vhdlExport->writeGHDLScript("runGHDL.sh");
     }
 }

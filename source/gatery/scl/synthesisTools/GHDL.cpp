@@ -63,12 +63,12 @@ void GHDL::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view
     for (auto entity : sortedEntites)
         file << "ghdl -a --std=08 --ieee=synopsys " << vhdlExport.getAST()->getFilename("", entity->getName()) << std::endl;;
 
-    if (vhdlExport.getTestbenchRecorder()) {
-        for (const auto &name : vhdlExport.getTestbenchRecorder()->getDependencySortedEntities())
+    for (const auto &e : vhdlExport.getTestbenchRecorder()) {
+        for (const auto &name : e->getDependencySortedEntities())
             file << "ghdl -a --std=08 --ieee=synopsys " << vhdlExport.getAST()->getFilename("", name) << std::endl;;
 
-        file << "ghdl -e --std=08 --ieee=synopsys " << vhdlExport.getTestbenchRecorder()->getDependencySortedEntities().back() << std::endl;
-        file << "ghdl -r --std=08 " << vhdlExport.getTestbenchRecorder()->getDependencySortedEntities().back() << " --ieee-asserts=disable --vcd=signals.vcd --wave=signals.ghw" << std::endl;
+        file << "ghdl -e --std=08 --ieee=synopsys " << e->getDependencySortedEntities().back() << std::endl;
+        file << "ghdl -r --std=08 " << e->getDependencySortedEntities().back() << " --ieee-asserts=disable --vcd=" << e->getName() << "_signals.vcd --wave=" << e->getName() << "_signals.ghw" << std::endl;
     }
 }
 

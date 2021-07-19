@@ -192,15 +192,15 @@ void XilinxVivado::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::str
 		file << f.string() << '\n';
 	}
 
-    if (vhdlExport.getTestbenchRecorder()) {
-        for (const auto &name : vhdlExport.getTestbenchRecorder()->getDependencySortedEntities()) {
+	for (const auto &e : vhdlExport.getTestbenchRecorder()) {
+        for (const auto &name : e->getDependencySortedEntities()) {
 			file << "read_vhdl -vhdl2008 ";
 			if (!vhdlExport.getName().empty())
 				file << "-library " << vhdlExport.getName() << ' ';
             file << vhdlExport.getAST()->getFilename("", name) << std::endl;
 		}
 
-        for (const auto &name : vhdlExport.getTestbenchRecorder()->getAuxiliaryDataFiles()) {
+        for (const auto &name : e->getAuxiliaryDataFiles()) {
 			file << "add_files \"" << name << '\"' << std::endl;
 		}
     }
@@ -220,3 +220,11 @@ void XilinxVivado::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::str
 }
 
 }
+
+/*
+
+
+set_property SOURCE_SET sources_1 [get_filesets sim_1]
+add_files -fileset sim_1 -norecurse C:/Users/LocalAndy/Documents/code/products/anti-replay-core/bin/export/AntiReplay_qdr_export_test/AntiReplay_qdr_export_test_TB.testvectors
+
+*/

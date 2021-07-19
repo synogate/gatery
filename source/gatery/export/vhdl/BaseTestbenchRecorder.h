@@ -28,11 +28,15 @@ class BaseTestbenchRecorder : public sim::SimulatorCallbacks
 {
     public:
         //BaseTestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, const std::string &name);
+        BaseTestbenchRecorder(std::string name);
         virtual ~BaseTestbenchRecorder();
 
 		inline const std::vector<std::string> &getDependencySortedEntities() const { return m_dependencySortedEntities; }
 		inline const std::vector<std::string> &getAuxiliaryDataFiles() const { return m_auxiliaryDataFiles; }
+
+        inline const std::string &getName() const { return m_name; }
 	protected:
+        std::string m_name;
 		std::vector<std::string> m_dependencySortedEntities;
 		std::vector<std::string> m_auxiliaryDataFiles;
 };

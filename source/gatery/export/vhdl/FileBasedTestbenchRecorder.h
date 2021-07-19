@@ -38,7 +38,7 @@ class AST;
 class FileBasedTestbenchRecorder : public BaseTestbenchRecorder
 {
     public:
-        FileBasedTestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, const std::string &name);
+        FileBasedTestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, std::string name);
         ~FileBasedTestbenchRecorder();
 
         virtual void onNewTick(const hlim::ClockRational &simulationTime) override;

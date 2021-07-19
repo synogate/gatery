@@ -23,6 +23,10 @@
 
 namespace gtry::vhdl {
 
+BaseTestbenchRecorder::BaseTestbenchRecorder(std::string name) : m_name(std::move(name))
+{
+}
+
 BaseTestbenchRecorder::~BaseTestbenchRecorder()
 {
 }

@@ -192,6 +192,15 @@ void DefaultSynthesisTool::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, 
 	for (auto& f : files)
 		file << f.string() << '\n';
 
+	file << "# testbench files:" << std::endl;
+    for (const auto &e : vhdlExport.getTestbenchRecorder()) {
+		file << "## testbench " << e->getName() << ':' << std::endl;
+        for (const auto &name : e->getDependencySortedEntities())
+            file << vhdlExport.getAST()->getFilename("", name) << std::endl;;
+
+    }
+
+
 	file << "# List of constraints:" << std::endl;
 	if (!vhdlExport.getConstraintsFilename().empty())
 		file << vhdlExport.getConstraintsFilename() << std::endl;

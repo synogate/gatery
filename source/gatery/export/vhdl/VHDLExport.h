@@ -67,9 +67,9 @@ class VHDLExport
         std::filesystem::path getSingleFileFilename() { return m_destination.filename(); }
         bool isSingleFileExport();
 
-        void recordTestbench(sim::Simulator &simulator, const std::string &name, bool inlineTestData = false);
+        void addTestbenchRecorder(sim::Simulator &simulator, const std::string &name, bool inlineTestData = false);
 
-        inline const BaseTestbenchRecorder *getTestbenchRecorder() const { return m_testbenchRecorder.get(); }
+        inline const std::vector<std::unique_ptr<BaseTestbenchRecorder>> &getTestbenchRecorder() const { return m_testbenchRecorder; }
 
         inline const std::string &getProjectFilename() const { return m_projectFilename; }
         inline const std::string &getConstraintsFilename() const { return m_constraintsFilename; }
@@ -80,7 +80,7 @@ class VHDLExport
         std::filesystem::path m_destination;
         std::unique_ptr<CodeFormatting> m_codeFormatting;
         std::unique_ptr<SynthesisTool> m_synthesisTool;
-        std::unique_ptr<BaseTestbenchRecorder> m_testbenchRecorder;
+        std::vector<std::unique_ptr<BaseTestbenchRecorder>> m_testbenchRecorder;
         std::unique_ptr<AST> m_ast;
         InterfacePackageContent m_interfacePackageContent;
         std::string m_library;
@@ -94,7 +94,7 @@ class VHDLExport
             std::string name;
             bool inlineTestData;
         };
-        std::optional<TestbenchRecorderSettings> m_testbenchRecorderSettings;
+        std::vector<TestbenchRecorderSettings> m_testbenchRecorderSettings;
 };
 
 }
