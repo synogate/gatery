@@ -130,15 +130,18 @@ std::vector<std::string> Entity::getPortsVHDL()
 {
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
-    std::vector<std::string> portList;
+    std::vector<std::pair<size_t, std::string>> unsortedPortList;
+
+    size_t clockOffset = 0;
+
     for (const auto &clk : m_inputClocks) {
         std::stringstream line;
         line << m_namespaceScope.getName(clk) << " : IN STD_LOGIC";
-        portList.push_back(line.str());
+        unsortedPortList.push_back({clockOffset++, line.str()});
         if (clk->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
             std::stringstream line;
             line << m_namespaceScope.getName(clk)<<clk->getResetName() << " : IN STD_LOGIC";
-            portList.push_back(line.str());
+            unsortedPortList.push_back({clockOffset++, line.str()});
         }
     }
     for (auto &ioPin : m_ioPins) {
@@ -159,21 +162,27 @@ std::vector<std::string> Entity::getPortsVHDL()
             cf.formatConnectionType(line, hlim::getOutputConnectionType(driver));
         } else
             continue;
-        portList.push_back(line.str());
+        unsortedPortList.push_back({clockOffset + ioPin->getId(), line.str()});
     }
     for (const auto &signal : m_inputs) {
         std::stringstream line;
         line << m_namespaceScope.getName(signal) << " : IN ";
         cf.formatConnectionType(line, hlim::getOutputConnectionType(signal));
-        portList.push_back(line.str());
+        unsortedPortList.push_back({clockOffset + signal.node->getId(), line.str()});
     }
     for (const auto &signal : m_outputs) {
         std::stringstream line;
         line << m_namespaceScope.getName(signal) << " : OUT ";
         cf.formatConnectionType(line, hlim::getOutputConnectionType(signal));
-        portList.push_back(line.str());
+        unsortedPortList.push_back({clockOffset + signal.node->getId(), line.str()});
     }
-    return portList;
+
+    std::sort(unsortedPortList.begin(), unsortedPortList.end());
+
+    std::vector<std::string> sortedPortList;
+    sortedPortList.reserve(unsortedPortList.size());
+    for (auto &p : unsortedPortList) sortedPortList.push_back(p.second);
+    return sortedPortList;
 }
 
 void Entity::writeLocalSignalsVHDL(std::ostream &stream)
