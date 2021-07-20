@@ -40,6 +40,7 @@ class SigHandle {
 
         void operator=(std::uint64_t v);
         void operator=(const DefaultBitVectorState &state);
+        void invalidate();
 
         operator std::uint64_t () const { return value(); }
         operator DefaultBitVectorState () const { return eval(); }

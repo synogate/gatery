@@ -44,6 +44,14 @@ void SigHandle::operator=(const DefaultBitVectorState &state)
     SimulationContext::current()->overrideSignal(*this, state);
 }
 
+void SigHandle::invalidate()
+{
+    auto width = m_output.node->getOutputConnectionType(m_output.port).width;
+    DefaultBitVectorState state;
+    state.resize(width);
+    SimulationContext::current()->overrideSignal(*this, state);
+}
+
 
 std::uint64_t SigHandle::value() const
 {
