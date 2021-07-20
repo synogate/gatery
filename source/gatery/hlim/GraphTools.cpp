@@ -71,7 +71,7 @@ Node_Pin *findOutputPin(NodePort output)
     HCL_DESIGNCHECK(output.node != nullptr);
     // First: Find the non-signal driver that drives output:
     NodePort driver;
-    if (dynamic_cast<const Node_Signal*>(output.node) != nullptr)
+    if (dynamic_cast<const Node_Signal*>(output.node) == nullptr)
         driver = output;
     else
         driver = output.node->getNonSignalDriver(0);
