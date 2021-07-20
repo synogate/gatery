@@ -44,11 +44,9 @@ class RunTimeSimulationContext : public SimulationContext {
     protected:
         Simulator *m_simulator;
 
-        hlim::Node_Pin *findInputPin(hlim::NodePort output) const;
-        hlim::Node_Pin *findOutputPin(hlim::NodePort output) const;
-
         ///@todo: This is not being cached because RunTimeSimulationContext is a very temporary object in the simulator
         std::map<hlim::NodePort, hlim::Node_Pin*> m_sigOverridePinCache; 
 };
+
 
 }

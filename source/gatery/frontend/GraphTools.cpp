@@ -25,6 +25,7 @@
 #include "../hlim/NodeGroup.h"
 #include "../hlim/Circuit.h"
 #include "../hlim/coreNodes/Node_Signal.h"
+#include "../hlim/GraphTools.h"
 
 #include "../simulation/ReferenceSimulator.h"
 
@@ -234,6 +235,17 @@ sim::DefaultBitVectorState evaluateStatically(const BVec &bvec)
 	return evaluateStatically(bvec.getReadPort());
 }
 
+
+
+hlim::Node_Pin *findInputPin(ElementarySignal &sig)
+{
+	return hlim::findInputPin(sig.getReadPort());
+}
+
+hlim::Node_Pin *findOutputPin(ElementarySignal &sig)
+{
+	return hlim::findOutputPin(sig.getReadPort());
+}
 
 }
 

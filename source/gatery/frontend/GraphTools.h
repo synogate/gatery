@@ -66,5 +66,9 @@ sim::DefaultBitVectorState evaluateStatically(hlim::NodePort output);
 sim::DefaultBitVectorState evaluateStatically(const Bit &bit);
 sim::DefaultBitVectorState evaluateStatically(const BVec &bvec);
 
+hlim::Node_Pin *findInputPin(ElementarySignal &sig);
+hlim::Node_Pin *findOutputPin(ElementarySignal &sig);
+
+
 
 }
