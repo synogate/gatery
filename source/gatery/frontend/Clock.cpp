@@ -45,7 +45,8 @@ Clock::Clock(const Clock &other)
 
 Clock &Clock::operator=(const Clock &other)
 {
-    m_clock = DesignScope::get()->getCircuit().createUnconnectedClock(other.m_clock, other.m_clock->getParentClock());
+    //m_clock = DesignScope::get()->getCircuit().createUnconnectedClock(other.m_clock, other.m_clock->getParentClock());
+    m_clock = other.m_clock;
     return *this;
 }
 
