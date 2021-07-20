@@ -116,6 +116,9 @@ class BitVectorState
 
         std::pair<iterator, iterator> range(typename Config::Plane plane, size_t offset, size_t size);
 
+        bool operator == (const BitVectorState& o) const;
+        bool operator != (const BitVectorState& o) const { return !(*this == o); }
+
 protected:
         size_t m_size = 0;
         std::array<std::vector<typename Config::BaseType>, Config::NUM_PLANES> m_values;
@@ -569,6 +572,23 @@ BitVectorState<Config>::range(typename Config::Plane plane, size_t offset, size_
         iterator{*this, plane, offset, endOffset},
         iterator{*this, plane, endOffset, endOffset}
     };
+}
+
+template<class Config>
+inline bool BitVectorState<Config>::operator==(const BitVectorState& o) const
+{
+    if (size() != o.size())
+        return false;
+
+    for (size_t p = 0; p < m_values.size(); ++p)
+    {
+        for (size_t i = 0; i < m_values[p].size(); ++i)
+        {
+            if (m_values[p][i] != o.m_values[p][i])
+                return false;
+        }
+    }
+    return true;
 }
 
 
