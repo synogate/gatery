@@ -108,6 +108,7 @@ namespace gtry::scl
 
 		arch::xilinx::Xilinx7SeriesFifoCapabilities tmp;
 		fifoChoice = tmp.select(fifoRequest);
+		fifoChoice.readDepth = utils::nextPow2(minDepth);
 
 		HCL_DESIGNCHECK_HINT(!m_hasMem, "fifo already initialized");
 		m_hasMem = true;
