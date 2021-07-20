@@ -480,13 +480,20 @@ void FileBasedTestbenchRecorder::onSimProcOutputRead(hlim::NodePort output, cons
         }
     } else {
         bool allDefined = true;
-        for (auto i : utils::Range(conType.width))
-            allDefined &= state.get(sim::DefaultConfig::DEFINED, i);
+        bool anyDefined = false;
+        for (auto i : utils::Range(conType.width)) {
+            bool d = state.get(sim::DefaultConfig::DEFINED, i);
+            allDefined &= d;
+            anyDefined |= d;
+        }
 
-        if (allDefined) {
-            m_assertStatements << "CHECK" << std::endl << name_it->second << std::endl << state << std::endl;
-        } else {
-            HCL_ASSERT_HINT(false, "Can't yet export testvector checks with partially defined vectors!");
+        if (anyDefined) {
+            if (allDefined) {
+                m_assertStatements << "CHECK" << std::endl << name_it->second << std::endl << state << std::endl;
+            } else {
+                //HCL_ASSERT_HINT(false, "Can't yet export testvector checks with partially defined vectors!");
+                m_assertStatements << "CHECK" << std::endl << name_it->second << std::endl << state << std::endl;
+            }
         }
     }
 }
