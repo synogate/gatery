@@ -31,23 +31,32 @@ namespace gtry::vhdl {
 class InterfacePackageContent {
     public:
 		template<typename T>
-		void addBVecConstant(const T &c, std::string_view comment = "");
+		void addBVecConstant(const T &c, std::string_view comment);
 
 		template<typename T>
-		void addBitConstant(const T &c, std::string_view comment = "");
+		void addBitConstant(const T &c, std::string_view comment);
 
-		void addInteger(std::string name, int value, std::string_view comment = "") { m_integerConstants[std::move(name)] = IntegerConstant{.value = value, .comment = std::string(comment)}; }
+		template<typename T>
+		void addBVecConstant(const T &c);
+
+		template<typename T>
+		void addBitConstant(const T &c);
+
+		void addInteger(std::string name, int value, std::string_view comment = "") { m_integerConstants.emplace_back(std::move(name), value, std::string(comment)); }
 
 		struct IntegerConstant {
+			std::string name;
 			int value;
 			std::string comment;
 		};
 		struct BVecConstant {
+			std::string name;
 			std::string value;
 			size_t width;
 			std::string comment;
 		};
 		struct BitConstant {
+			std::string name;
 			std::string value;
 			std::string comment;
 		};
@@ -57,14 +66,14 @@ class InterfacePackageContent {
 
 		inline bool empty() { return m_integerConstants.empty() && m_BVecConstants.empty() && m_BitConstants.empty(); }
 
-		inline const std::map<std::string, IntegerConstant> &getIntegerConstants() const { return m_integerConstants; }
-		inline const std::map<std::string, BVecConstant> &getBVecConstants() const { return m_BVecConstants; }
-		inline const std::map<std::string, BitConstant> &getBitConstants() const { return m_BitConstants; }
+		inline const std::vector<IntegerConstant> &getIntegerConstants() const { return m_integerConstants; }
+		inline const std::vector<BVecConstant> &getBVecConstants() const { return m_BVecConstants; }
+		inline const std::vector<BitConstant> &getBitConstants() const { return m_BitConstants; }
     protected:
 		std::string m_name = "interface_package";
-		std::map<std::string, IntegerConstant> m_integerConstants;
-		std::map<std::string, BVecConstant> m_BVecConstants;
-		std::map<std::string, BitConstant> m_BitConstants;
+		std::vector<IntegerConstant> m_integerConstants;
+		std::vector<BVecConstant> m_BVecConstants;
+		std::vector<BitConstant> m_BitConstants;
 };
 
 
@@ -76,7 +85,7 @@ void InterfacePackageContent::addBVecConstant(const T &c, std::string_view comme
 	std::stringstream v_str;
 	v_str << '"' << v << '"';	
 
-	m_BVecConstants[c.getName()] = BVecConstant{v_str.str(), v.size(), std::string(comment)};
+	m_BVecConstants.push_back(BVecConstant{c.getName(), v_str.str(), v.size(), std::string(comment)});
 }
 
 template<typename T>
@@ -87,7 +96,30 @@ void InterfacePackageContent::addBitConstant(const T &c, std::string_view commen
 	std::stringstream v_str;
 	v_str << '\'' << v << '\'';	
 
-	m_BitConstants[c.getName()] = BitConstant{v_str.str(), std::string(comment)};
+	m_BitConstants.push_back(BitConstant{c.getName(), v_str.str(), std::string(comment)});
+}
+
+
+template<typename T>
+void InterfacePackageContent::addBVecConstant(const T &c)
+{
+	auto v = parseBVec(c.getValue());
+
+	std::stringstream v_str;
+	v_str << '"' << v << '"';	
+
+	m_BVecConstants.push_back(BVecConstant{c.getName(), v_str.str(), v.size(), std::string(c.getDescription())});
+}
+
+template<typename T>
+void InterfacePackageContent::addBitConstant(const T &c)
+{
+	auto v = parseBVec(c.getValue());
+
+	std::stringstream v_str;
+	v_str << '\'' << v << '\'';	
+
+	m_BitConstants.push_back(BitConstant{c.getName(), v_str.str(), std::string(c.getDescription())});
 }
 
 

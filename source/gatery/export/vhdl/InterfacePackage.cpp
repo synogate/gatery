@@ -40,35 +40,35 @@ void InterfacePackage::writeVHDL(std::ostream &stream)
     stream << "PACKAGE " << m_name << " IS" << std::endl;
 
 	for (const auto &p : m_content.getIntegerConstants()) {
-        if (!p.second.comment.empty()) {
+        if (!p.comment.empty()) {
             cf.indent(stream, 1);
-            stream << "-- " << p.second.comment << std::endl;
+            stream << "-- " << p.comment << std::endl;
         }
 		cf.indent(stream, 1);
-		stream << "constant " << p.first << " : integer := " << p.second.value << ";" << std::endl;
+		stream << "constant " << p.name << " : integer := " << p.value << ";" << std::endl;
 	}
 
 	for (const auto &p : m_content.getBVecConstants()) {
-        if (!p.second.comment.empty()) {
+        if (!p.comment.empty()) {
             cf.indent(stream, 1);
-            stream << "-- " << p.second.comment << std::endl;
+            stream << "-- " << p.comment << std::endl;
         }
 
 		cf.indent(stream, 1);
-		if (p.second.width == 0)
-			stream << "constant " << p.first << " : std_logic_vector(-1 downto 0);" << std::endl;
+		if (p.width == 0)
+			stream << "constant " << p.name << " : std_logic_vector(-1 downto 0);" << std::endl;
 		else
-			stream << "constant " << p.first << " : std_logic_vector(" << p.second.width-1 << " downto 0) := " << p.second.value << ";" << std::endl;
+			stream << "constant " << p.name << " : std_logic_vector(" << p.width-1 << " downto 0) := " << p.value << ";" << std::endl;
 	}
 
 	for (const auto &p : m_content.getBitConstants()) {
-        if (!p.second.comment.empty()) {
+        if (!p.comment.empty()) {
             cf.indent(stream, 1);
-            stream << "-- " << p.second.comment << std::endl;
+            stream << "-- " << p.comment << std::endl;
         }
 
 		cf.indent(stream, 1);
-		stream << "constant " << p.first << " : std_logic := " << p.second.value << ";" << std::endl;
+		stream << "constant " << p.name << " : std_logic := " << p.value << ";" << std::endl;
 	}
 
     stream << "END PACKAGE " << m_name << ';' << std::endl << std::endl;
