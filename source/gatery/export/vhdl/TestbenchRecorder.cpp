@@ -305,5 +305,37 @@ void TestbenchRecorder::onSimProcOutputRead(hlim::NodePort output, const sim::De
     }
 }
 
+void TestbenchRecorder::onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, const std::string &desc)
+{
+    CodeFormatting &cf = m_ast->getCodeFormatting();
+
+    m_testbenchFile << std::endl;
+    cf.indent(m_testbenchFile, 2);
+    m_testbenchFile << "-- Begin: " << id << std::endl;
+    if (!desc.empty()) {
+        cf.indent(m_testbenchFile, 2);
+        m_testbenchFile << "-- ";
+        for (auto i : utils::Range(desc.size())) {
+            m_testbenchFile << desc[i];
+            if (desc[i] == '\n' && i+1 < desc.size()) {
+                cf.indent(m_testbenchFile, 2);
+                m_testbenchFile << "-- ";
+            }
+        }
+        m_testbenchFile << std::endl;
+    }
+}
+
+void TestbenchRecorder::onAnnotationEnd(const hlim::ClockRational &simulationTime, const std::string &id)
+{
+    CodeFormatting &cf = m_ast->getCodeFormatting();
+
+    cf.indent(m_testbenchFile, 2);
+    m_testbenchFile << "-- End: " << id << std::endl;
+    m_testbenchFile << std::endl;
+}
+
+
+
 
 }

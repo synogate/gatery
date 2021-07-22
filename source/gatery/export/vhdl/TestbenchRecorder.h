@@ -51,6 +51,10 @@ class TestbenchRecorder : public BaseTestbenchRecorder
         virtual void onSimProcOutputOverridden(hlim::NodePort output, const sim::DefaultBitVectorState &state) override;
         virtual void onSimProcOutputRead(hlim::NodePort output, const sim::DefaultBitVectorState &state) override;
 
+
+        virtual void onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, const std::string &desc) override;
+        virtual void onAnnotationEnd(const hlim::ClockRational &simulationTime, const std::string &id) override;
+
     protected:
         VHDLExport &m_exporter;
         AST *m_ast;
