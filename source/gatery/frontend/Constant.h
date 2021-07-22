@@ -63,16 +63,23 @@ namespace gtry
 
 }
 
-#define GTRY_CONST_BVEC(x, value) \
+#define GTRY_CONST_BVEC_DESC(x, value, desc) \
     struct x { operator BVec () { \
         BVec res = value; \
         res.getNode()->getNonSignalDriver(0).node->setName(#x); \
         return res; \
-    } const char *getName() const { return #x; } auto getValue() const { return value; } };
+    } const char *getName() const { return #x; } auto getValue() const { return value; } const char *getDescription() const { return desc; } };
 
-#define GTRY_CONST_BIT(x, value) \
+#define GTRY_CONST_BVEC(x, value) \
+    GTRY_CONST_BVEC_DESC(x, value, "")
+
+#define GTRY_CONST_BIT_DESC(x, value, desc) \
     struct x { operator Bit () { \
         Bit res = value; \
         res.getNode()->getNonSignalDriver(0).node->setName(#x); \
         return res; \
-    } const char *getName() const { return #x; } auto getValue() const { return value; } };
+    } const char *getName() const { return #x; } auto getValue() const { return value; } const char *getDescription() const { return desc; } };
+
+#define GTRY_CONST_BIT(x, value) \
+    GTRY_CONST_BIT_DESC(x, value, "")
+
