@@ -308,7 +308,7 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
             else
                 vhdlFile << "bread(v_line, v_" << p.second << ");" << std::endl;
             cf.indent(vhdlFile, 5);
-            vhdlFile << "ASSERT " << p.second << " = v_" << p.second << " severity failure;" << std::endl;
+            vhdlFile << "ASSERT std_match(" << p.second << ", v_" << p.second << ") severity failure;" << std::endl;
         }
         cf.indent(vhdlFile, 4);
         vhdlFile << "ELSE" << std::endl;
@@ -488,12 +488,16 @@ void FileBasedTestbenchRecorder::onSimProcOutputRead(hlim::NodePort output, cons
         }
 
         if (anyDefined) {
-            if (allDefined) {
-                m_assertStatements << "CHECK" << std::endl << name_it->second << std::endl << state << std::endl;
-            } else {
-                //HCL_ASSERT_HINT(false, "Can't yet export testvector checks with partially defined vectors!");
-                m_assertStatements << "CHECK" << std::endl << name_it->second << std::endl << state << std::endl;
+            m_assertStatements << "CHECK" << std::endl << name_it->second << std::endl;
+            for (int i = (int)conType.width - 1; i >= 0; i--) {
+                bool d = state.get(sim::DefaultConfig::DEFINED, i);
+                bool v = state.get(sim::DefaultConfig::VALUE, i);
+                if (d)
+                    m_assertStatements << (v?'1':'0');
+                else
+                    m_assertStatements << '-';
             }
+            m_assertStatements << std::endl;
         }
     }
 }
