@@ -42,11 +42,11 @@ class InterfacePackageContent {
 		template<typename T>
 		void addBitConstant(const T &c);
 
-		void addInteger(std::string name, int value, std::string_view comment = "") { m_integerConstants.emplace_back(std::move(name), value, std::string(comment)); }
+		void addNatural(std::string name, uint64_t value, std::string_view comment = "") { m_naturalConstants.emplace_back(std::move(name), value, std::string(comment)); }
 
-		struct IntegerConstant {
+		struct NaturalConstant {
 			std::string name;
-			int value;
+			uint64_t value;
 			std::string comment;
 		};
 		struct BVecConstant {
@@ -64,14 +64,14 @@ class InterfacePackageContent {
 		inline void setName(std::string name) { m_name = std::move(name); }
 		inline const std::string &getName() const { return m_name; }
 
-		inline bool empty() { return m_integerConstants.empty() && m_BVecConstants.empty() && m_BitConstants.empty(); }
+		inline bool empty() { return m_naturalConstants.empty() && m_BVecConstants.empty() && m_BitConstants.empty(); }
 
-		inline const std::vector<IntegerConstant> &getIntegerConstants() const { return m_integerConstants; }
+		inline const std::vector<NaturalConstant> &getNaturalConstants() const { return m_naturalConstants; }
 		inline const std::vector<BVecConstant> &getBVecConstants() const { return m_BVecConstants; }
 		inline const std::vector<BitConstant> &getBitConstants() const { return m_BitConstants; }
     protected:
 		std::string m_name = "interface_package";
-		std::vector<IntegerConstant> m_integerConstants;
+		std::vector<NaturalConstant> m_naturalConstants;
 		std::vector<BVecConstant> m_BVecConstants;
 		std::vector<BitConstant> m_BitConstants;
 };

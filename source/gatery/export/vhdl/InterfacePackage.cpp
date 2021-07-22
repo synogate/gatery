@@ -39,13 +39,13 @@ void InterfacePackage::writeVHDL(std::ostream &stream)
 
     stream << "PACKAGE " << m_name << " IS" << std::endl;
 
-	for (const auto &p : m_content.getIntegerConstants()) {
+	for (const auto &p : m_content.getNaturalConstants()) {
         if (!p.comment.empty()) {
             cf.indent(stream, 1);
             stream << "-- " << p.comment << std::endl;
         }
 		cf.indent(stream, 1);
-		stream << "constant " << p.name << " : integer := " << p.value << ";" << std::endl;
+		stream << "constant " << p.name << " : natural := " << p.value << ";" << std::endl;
 	}
 
 	for (const auto &p : m_content.getBVecConstants()) {
