@@ -22,10 +22,10 @@ namespace gtry::scl
 {
 	namespace DisplayModeLines
 	{
-		extern std::string_view _1080p_60hz = "148.5 1920 2008 2052 2200 1080 1084 1089 1125 +hsync +vsync";
-		extern std::string_view _1080p_50hz = "148.5 1920 2448 2492 2640 1080 1084 1089 1125 +hsync +vsync";
-		extern std::string_view _720p_60hz = "74.25 1280 1390 1430 1650 720 725 730 750 +hsync +vsync";
-		extern std::string_view _720p_50hz = "74.25 1280 1720 1760 1980 720 725 730 750 +hsync +vsync";
+		std::string_view _1080p_60hz = "148.5 1920 2008 2052 2200 1080 1084 1089 1125 +hsync +vsync";
+		std::string_view _1080p_50hz = "148.5 1920 2448 2492 2640 1080 1084 1089 1125 +hsync +vsync";
+		std::string_view _720p_60hz = "74.25 1280 1390 1430 1650 720 725 730 750 +hsync +vsync";
+		std::string_view _720p_50hz = "74.25 1280 1720 1760 1980 720 725 730 750 +hsync +vsync";
 	}
 
 	std::istream& operator>>(std::istream& s, DisplayModeDimension& dim)
