@@ -91,6 +91,13 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 	writeClockSDC(*vhdlExport.getAST(), (vhdlExport.getDestination() / filename).string());
 }
 
+void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
+{
+	std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
+	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+
+	// todo: write constraints
+}
 
 void IntelQuartus::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename)
 {
@@ -125,6 +132,16 @@ export_assignments
 
 	void IntelQuartus::writeStandAloneProject(vhdl::VHDLExport& vhdlExport, std::string_view filename)
 	{
+		{
+			// because quartus
+
+			std::filesystem::path path = vhdlExport.getDestination() / filename;
+			path.replace_extension(".qpf");
+
+			std::fstream file(path.string().c_str(), std::fstream::out);
+
+		}
+
 		std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
 
 		file << R"(
