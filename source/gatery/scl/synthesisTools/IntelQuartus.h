@@ -38,6 +38,7 @@ namespace gtry {
 		virtual void writeStandAloneProject(vhdl::VHDLExport& vhdlExport, std::string_view filename) override;
 
 	protected:
+		void writeModelsimScripts(vhdl::VHDLExport& vhdlExport);
 
 	};
 

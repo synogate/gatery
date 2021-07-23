@@ -172,6 +172,30 @@ set_global_assignment -name ALLOW_REGISTER_RETIMING OFF
 				file << " -library " << vhdlExport.getName();
 			file << '\n';
 		}
+
+		// TODO: remove and support modelsim as simulator
+		writeModelsimScripts(vhdlExport);
 	}
 
+	void IntelQuartus::writeModelsimScripts(vhdl::VHDLExport& vhdlExport)
+	{
+		for (std::filesystem::path& tb : sourceFiles(vhdlExport, false, true))
+		{
+			const std::string top = tb.stem().string();
+
+			std::filesystem::path path = vhdlExport.getDestination() / ("modelsim_" + top + ".do");
+			std::ofstream file{ path.string().c_str(), std::ofstream::binary };
+
+			for (std::filesystem::path& source : sourceFiles(vhdlExport, true, false))
+				file << "vcom -quiet -2008 -createlib -work " << vhdlExport.getName() << " " << source.string() << '\n';
+			file << "vcom -quiet -2008 -work " << vhdlExport.getName() << " " << tb.string() << '\n';
+
+			file << "vsim " << top << '\n';
+			file << "set StdArithNoWarnings 1\n";
+			file << "set NumericStdNoWarnings 1\n";
+			file << "add wave *\n";
+			file << "config wave -signalnamewidth 1\n";
+			file << "run -all\n";
+		}
+	}
 }
