@@ -140,6 +140,13 @@ ARCHITECTURE tb OF )" << m_name << R"( IS
     cf.indent(m_testbenchFile, 1);
     m_testbenchFile << "BEGIN" << std::endl;
 
+    bool anyClockNeedsReset = false;
+    for (auto &s : allClocks) 
+        if (s->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
+            anyClockNeedsReset = true;
+            break;
+        }
+
 
     for (auto &s : allClocks) {
         cf.indent(m_testbenchFile, 2);
@@ -150,25 +157,27 @@ ARCHITECTURE tb OF )" << m_name << R"( IS
         }
     }
 
-    cf.indent(m_testbenchFile, 2);
-    m_testbenchFile << "WAIT FOR 1 us;" << std::endl;
-    for (auto &s : allClocks) {
+    if (anyClockNeedsReset) {
         cf.indent(m_testbenchFile, 2);
-        m_testbenchFile << rootEntity->getNamespaceScope().getName(s) << " <= '1';" << std::endl;
-    }
-    cf.indent(m_testbenchFile, 2);
-    m_testbenchFile << "WAIT FOR 1 us;" << std::endl;
-
-    for (auto &s : allClocks) {
-        cf.indent(m_testbenchFile, 2);
-        m_testbenchFile << rootEntity->getNamespaceScope().getName(s) << " <= '0';" << std::endl;
-        if (s->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
+        m_testbenchFile << "WAIT FOR 1 ns;" << std::endl;
+        for (auto &s : allClocks) {
             cf.indent(m_testbenchFile, 2);
-            m_testbenchFile << rootEntity->getNamespaceScope().getName(s)<<s->getResetName() << " <= '0';" << std::endl;
+            m_testbenchFile << rootEntity->getNamespaceScope().getName(s) << " <= '1';" << std::endl;
         }
+        cf.indent(m_testbenchFile, 2);
+        m_testbenchFile << "WAIT FOR 1 ns;" << std::endl;
+
+        for (auto &s : allClocks) {
+            cf.indent(m_testbenchFile, 2);
+            m_testbenchFile << rootEntity->getNamespaceScope().getName(s) << " <= '0';" << std::endl;
+            if (s->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
+                cf.indent(m_testbenchFile, 2);
+                m_testbenchFile << rootEntity->getNamespaceScope().getName(s)<<s->getResetName() << " <= '0';" << std::endl;
+            }
+        }
+        cf.indent(m_testbenchFile, 2);
+        m_testbenchFile << "WAIT FOR 1 ns;" << std::endl;
     }
-    cf.indent(m_testbenchFile, 2);
-    m_testbenchFile << "WAIT FOR 1 us;" << std::endl;
 
     m_lastSimulationTime = 0;
 }
