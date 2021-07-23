@@ -452,7 +452,7 @@ void FileBasedTestbenchRecorder::onClock(const hlim::Clock *clock, bool risingEd
     if (risingEdge)
         m_testbenchFile << "1\n";
     else
-        m_testbenchFile << "1\n";
+        m_testbenchFile << "0\n";
 }
 
 void FileBasedTestbenchRecorder::onSimProcOutputOverridden(hlim::NodePort output, const sim::DefaultBitVectorState &state)
