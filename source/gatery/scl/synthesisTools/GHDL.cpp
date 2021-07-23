@@ -1,3 +1,4 @@
+#include "GHDL.h"
 /*  This file is part of Gatery, a library for circuit design.
     Copyright (C) 2021 Michael Offel, Andreas Ley
 
@@ -50,6 +51,11 @@ void GHDL::resolveAttributes(const hlim::SignalAttributes &attribs, hlim::Resolv
 }
 
 void GHDL::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename)
+{
+
+}
+
+void GHDL::writeStandAloneProject(vhdl::VHDLExport& vhdlExport, std::string_view filename)
 {
     std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
     file.exceptions(std::fstream::failbit | std::fstream::badbit);

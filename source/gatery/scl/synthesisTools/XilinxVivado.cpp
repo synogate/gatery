@@ -1,3 +1,4 @@
+#include "XilinxVivado.h"
 /*  This file is part of Gatery, a library for circuit design.
     Copyright (C) 2021 Michael Offel, Andreas Ley
 
@@ -217,6 +218,12 @@ void XilinxVivado::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::str
 # reset_run [get_runs * -filter IS_SYNTHESIS]
 # launch_runs [get_runs * -filter IS_IMPLEMENTATION]
 )";
+}
+
+void XilinxVivado::writeStandAloneProject(vhdl::VHDLExport& vhdlExport, std::string_view filename)
+{
+	// TODO
+
 }
 
 }

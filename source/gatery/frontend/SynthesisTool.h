@@ -47,7 +47,8 @@ class SynthesisTool {
         virtual void writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename) = 0;
 		virtual void writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename) = 0;
 		virtual void writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename) = 0;
-	protected:
+        virtual void writeStandAloneProject(vhdl::VHDLExport& vhdlExport, std::string_view filename) = 0;
+protected:
         std::vector<std::string> m_vendors;
 
         void addUserDefinedAttributes(const hlim::RegisterAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs);
@@ -55,6 +56,8 @@ class SynthesisTool {
         void writeUserDefinedPathAttributes(std::fstream &stream, const hlim::PathAttributes &attribs, const std::string &start, const std::string &end);
 
         void forEachPathAttribute(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::function<void(hlim::Node_PathAttributes*, std::string, std::string)> functor);
+
+        std::vector<std::filesystem::path> sourceFiles(vhdl::VHDLExport& vhdlExport, bool synthesis, bool simulation);
 };
 
 
@@ -68,6 +71,7 @@ class DefaultSynthesisTool : public SynthesisTool {
         virtual void writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename) override;
 		virtual void writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename) override;
 		virtual void writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename) override;
+        virtual void writeStandAloneProject(vhdl::VHDLExport& vhdlExport, std::string_view filename) override;
 };
 
 }

@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "gatery/pch.h"
@@ -82,36 +82,66 @@ void SynthesisTool::writeUserDefinedPathAttributes(std::fstream &stream, const h
 
 void SynthesisTool::forEachPathAttribute(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::function<void(hlim::Node_PathAttributes*, std::string, std::string)> functor)
 {
-    for (auto &n : circuit.getNodes()) {
-        if (auto *pa = dynamic_cast<hlim::Node_PathAttributes*>(n.get())) {
-            auto start = pa->getNonSignalDriver(0);
-            auto end = pa->getNonSignalDriver(1);
+	for (auto &n : circuit.getNodes()) {
+		if (auto *pa = dynamic_cast<hlim::Node_PathAttributes*>(n.get())) {
+			auto start = pa->getNonSignalDriver(0);
+			auto end = pa->getNonSignalDriver(1);
 
-            HCL_ASSERT_HINT(start.node, "Path attribute with unconnected start node");
-            HCL_ASSERT_HINT(end.node, "Path attribute with unconnected end node");
+			HCL_ASSERT_HINT(start.node, "Path attribute with unconnected start node");
+			HCL_ASSERT_HINT(end.node, "Path attribute with unconnected end node");
 
-            std::vector<vhdl::BaseGrouping*> startNodeReversePath;
-            HCL_ASSERT_HINT(vhdlExport.getAST()->findLocalDeclaration(start, startNodeReversePath), "Could not locate path attribute start node or did not result in a signal");
+			std::vector<vhdl::BaseGrouping*> startNodeReversePath;
+			HCL_ASSERT_HINT(vhdlExport.getAST()->findLocalDeclaration(start, startNodeReversePath), "Could not locate path attribute start node or did not result in a signal");
 
-            std::vector<vhdl::BaseGrouping*> endNodeReversePath;
-            HCL_ASSERT_HINT(vhdlExport.getAST()->findLocalDeclaration(start, endNodeReversePath), "Could not locate path attribute end node or did not result in a signal");
+			std::vector<vhdl::BaseGrouping*> endNodeReversePath;
+			HCL_ASSERT_HINT(vhdlExport.getAST()->findLocalDeclaration(start, endNodeReversePath), "Could not locate path attribute end node or did not result in a signal");
 
-            auto path2vhdl = [](hlim::NodePort np, const std::vector<vhdl::BaseGrouping*> &revPath)->std::string {
-                std::stringstream identifier;
-                for (int i = (int)revPath.size()-2; i >= 0; i--) {
-                    auto *grouping = revPath[i];
-                    identifier << grouping->getInstanceName() << '/';
-                }
-                identifier << revPath.front()->getNamespaceScope().getName(np);
-                return identifier.str();
-            };
+			auto path2vhdl = [](hlim::NodePort np, const std::vector<vhdl::BaseGrouping*> &revPath)->std::string {
+				std::stringstream identifier;
+				for (int i = (int)revPath.size()-2; i >= 0; i--) {
+					auto *grouping = revPath[i];
+					identifier << grouping->getInstanceName() << '/';
+				}
+				identifier << revPath.front()->getNamespaceScope().getName(np);
+				return identifier.str();
+			};
 
-            std::string startIdentifier = path2vhdl(start, startNodeReversePath);
-            std::string endIdentifier = path2vhdl(end, endNodeReversePath);
+			std::string startIdentifier = path2vhdl(start, startNodeReversePath);
+			std::string endIdentifier = path2vhdl(end, endNodeReversePath);
 
-            functor(pa, std::move(startIdentifier), std::move(endIdentifier));
-        }
-    }
+			functor(pa, std::move(startIdentifier), std::move(endIdentifier));
+		}
+	}
+}
+
+std::vector<std::filesystem::path> SynthesisTool::sourceFiles(vhdl::VHDLExport& vhdlExport, bool synthesis, bool simulation)
+{
+	std::vector<std::filesystem::path> files;
+
+	if (synthesis)
+	{
+		if (!vhdlExport.isSingleFileExport()) {
+			for (auto&& package : vhdlExport.getAST()->getPackages())
+				files.emplace_back(vhdlExport.getAST()->getFilename("", package->getName()));
+
+			for (auto&& entity : vhdlExport.getAST()->getDependencySortedEntities())
+				files.emplace_back(vhdlExport.getAST()->getFilename("", entity->getName()));
+		}
+		else {
+			files.push_back(vhdlExport.getSingleFileFilename());
+		}
+	}
+
+	if (simulation)
+	{
+		for (const auto& e : vhdlExport.getTestbenchRecorder()) {
+			for (const auto& name : e->getDependencySortedEntities()) {
+				files.push_back(vhdlExport.getAST()->getFilename("", name));
+			}
+		}
+	}
+
+	return files;
 }
 
 
@@ -197,12 +227,12 @@ void DefaultSynthesisTool::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, 
 		file << f.string() << '\n';
 
 	file << "# testbench files:" << std::endl;
-    for (const auto &e : vhdlExport.getTestbenchRecorder()) {
+	for (const auto &e : vhdlExport.getTestbenchRecorder()) {
 		file << "## testbench " << e->getName() << ':' << std::endl;
-        for (const auto &name : e->getDependencySortedEntities())
-            file << vhdlExport.getAST()->getFilename("", name) << std::endl;;
+		for (const auto &name : e->getDependencySortedEntities())
+			file << vhdlExport.getAST()->getFilename("", name) << std::endl;;
 
-    }
+	}
 
 
 	file << "# List of constraints:" << std::endl;
@@ -210,6 +240,11 @@ void DefaultSynthesisTool::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, 
 		file << vhdlExport.getConstraintsFilename() << std::endl;
 	if (!vhdlExport.getClocksFilename().empty())
 		file << vhdlExport.getClocksFilename() << std::endl;
+}
+
+void DefaultSynthesisTool::writeStandAloneProject(vhdl::VHDLExport& vhdlExport, std::string_view filename)
+{
+	DefaultSynthesisTool::writeVhdlProjectScript(vhdlExport, filename);
 }
 
 

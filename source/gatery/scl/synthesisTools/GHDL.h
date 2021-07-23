@@ -35,6 +35,7 @@ class GHDL : public SynthesisTool {
         virtual void writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename) override { }
 		virtual void writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename) override { }
 		virtual void writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename) override;
+        virtual void writeStandAloneProject(vhdl::VHDLExport& vhdlExport, std::string_view filename) override;
 };
 
 }

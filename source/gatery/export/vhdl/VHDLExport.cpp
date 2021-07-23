@@ -1,3 +1,4 @@
+#include "VHDLExport.h"
 /*  This file is part of Gatery, a library for circuit design.
     Copyright (C) 2021 Michael Offel, Andreas Ley
 
@@ -100,6 +101,12 @@ VHDLExport &VHDLExport::writeProjectFile(std::string filename)
     return *this;
 }
 
+VHDLExport& VHDLExport::writeStandAloneProjectFile(std::string filename)
+{
+    m_standAloneProjectFilename = std::move(filename);
+    return *this;
+}
+
 
 
 
@@ -136,6 +143,9 @@ void VHDLExport::operator()(hlim::Circuit &circuit)
 
     if (!m_projectFilename.empty())
         m_synthesisTool->writeVhdlProjectScript(*this, m_projectFilename);
+
+    if (!m_standAloneProjectFilename.empty())
+        m_synthesisTool->writeStandAloneProject(*this, m_standAloneProjectFilename);
 }
 
 bool VHDLExport::isSingleFileExport()
