@@ -259,7 +259,6 @@ void TestbenchRecorder::onSimProcOutputOverridden(hlim::NodePort output, const s
     auto *rootEntity = m_ast->getRootEntity();
 
     std::stringstream str_state;
-    str_state << state;
 
     cf.indent(str_state, 2);
     str_state << name_it->second << " <= ";
