@@ -202,6 +202,12 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
     cf.indent(vhdlFile, 1);
     vhdlFile << "BEGIN" << std::endl;
 
+    bool anyClockNeedsReset = false;
+    for (auto &s : allClocks) 
+        if (s->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
+            anyClockNeedsReset = true;
+            break;
+        }
 
     for (auto &s : allClocks) {
         cf.indent(vhdlFile, 2);
@@ -212,25 +218,27 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
         }
     }
 
-    cf.indent(vhdlFile, 2);
-    vhdlFile << "WAIT FOR 1 ns;" << std::endl;
-    for (auto &s : allClocks) {
+    if (anyClockNeedsReset) {
         cf.indent(vhdlFile, 2);
-        vhdlFile << rootEntity->getNamespaceScope().getName(s) << " <= '1';" << std::endl;
-    }
-    cf.indent(vhdlFile, 2);
-    vhdlFile << "WAIT FOR 1 ns;" << std::endl;
-
-    for (auto &s : allClocks) {
-        cf.indent(vhdlFile, 2);
-        vhdlFile << rootEntity->getNamespaceScope().getName(s) << " <= '0';" << std::endl;
-        if (s->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
+        vhdlFile << "WAIT FOR 1 ns;" << std::endl;
+        for (auto &s : allClocks) {
             cf.indent(vhdlFile, 2);
-            vhdlFile << rootEntity->getNamespaceScope().getName(s)<<s->getResetName() << " <= '0';" << std::endl;
+            vhdlFile << rootEntity->getNamespaceScope().getName(s) << " <= '1';" << std::endl;
         }
+        cf.indent(vhdlFile, 2);
+        vhdlFile << "WAIT FOR 1 ns;" << std::endl;
+
+        for (auto &s : allClocks) {
+            cf.indent(vhdlFile, 2);
+            vhdlFile << rootEntity->getNamespaceScope().getName(s) << " <= '0';" << std::endl;
+            if (s->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
+                cf.indent(vhdlFile, 2);
+                vhdlFile << rootEntity->getNamespaceScope().getName(s)<<s->getResetName() << " <= '0';" << std::endl;
+            }
+        }
+        cf.indent(vhdlFile, 2);
+        vhdlFile << "WAIT FOR 1 ns;" << std::endl;
     }
-    cf.indent(vhdlFile, 2);
-    vhdlFile << "WAIT FOR 1 ns;" << std::endl;
 
     cf.indent(vhdlFile, 2);
     vhdlFile << "file_open(test_vector_file, \"" << testVectorFilename << "\", read_mode);" << std::endl;
