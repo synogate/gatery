@@ -62,6 +62,8 @@ class FileBasedTestbenchRecorder : public BaseTestbenchRecorder
 
         std::map<hlim::NodePort, std::string> m_outputToIoPinName;
 
+        std::map<std::string, std::string> m_signalOverrides;
+
         std::stringstream m_assertStatements;
 
         void writeVHDL(std::filesystem::path path, const std::string &testVectorFilename);

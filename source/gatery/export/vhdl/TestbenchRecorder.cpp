@@ -203,6 +203,14 @@ void TestbenchRecorder::onNewTick(const hlim::ClockRational &simulationTime)
 {
     CodeFormatting &cf = m_ast->getCodeFormatting();
 
+    for (const auto &p : m_signalOverrides) {
+        cf.indent(m_testbenchFile, 2);
+        m_testbenchFile << p.second;
+    }
+
+    m_signalOverrides.clear();
+
+
     auto timeDiff = simulationTime - m_lastSimulationTime;
     m_lastSimulationTime = simulationTime;
 
@@ -250,8 +258,11 @@ void TestbenchRecorder::onSimProcOutputOverridden(hlim::NodePort output, const s
     CodeFormatting &cf = m_ast->getCodeFormatting();
     auto *rootEntity = m_ast->getRootEntity();
 
-    cf.indent(m_testbenchFile, 2);
-    m_testbenchFile << name_it->second << " <= ";
+    std::stringstream str_state;
+    str_state << state;
+
+    cf.indent(str_state, 2);
+    str_state << name_it->second << " <= ";
 
     const auto& conType = hlim::getOutputConnectionType(output);
 
@@ -259,9 +270,12 @@ void TestbenchRecorder::onSimProcOutputOverridden(hlim::NodePort output, const s
     if (conType.interpretation == hlim::ConnectionType::BOOL)
         sep = '\'';
 
-    m_testbenchFile << sep;
-    m_testbenchFile << state;
-    m_testbenchFile << sep << ';' << std::endl;
+    str_state << sep;
+    str_state << state;
+    str_state << sep << ';' << std::endl;
+
+
+    m_signalOverrides[name_it->second] = str_state.str();
 }
 
 void TestbenchRecorder::onSimProcOutputRead(hlim::NodePort output, const sim::DefaultBitVectorState &state)

@@ -65,6 +65,7 @@ class TestbenchRecorder : public BaseTestbenchRecorder
         std::set<const hlim::Clock*> m_clocksOfInterest;
 
         std::map<hlim::NodePort, std::string> m_outputToIoPinName;
+        std::map<std::string, std::string> m_signalOverrides;
 
         std::stringstream m_assertStatements;
 

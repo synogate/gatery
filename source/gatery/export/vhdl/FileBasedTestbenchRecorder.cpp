@@ -409,6 +409,11 @@ void FileBasedTestbenchRecorder::onNewTick(const hlim::ClockRational &simulation
 {
     CodeFormatting &cf = m_ast->getCodeFormatting();
 
+    for (const auto &p : m_signalOverrides) 
+        m_testbenchFile << "SET\n" << p.first << '\n' << p.second << '\n';
+
+    m_signalOverrides.clear();
+
     auto timeDiff = simulationTime - m_lastSimulationTime;
     m_lastSimulationTime = simulationTime;
 
@@ -417,14 +422,14 @@ void FileBasedTestbenchRecorder::onNewTick(const hlim::ClockRational &simulation
 
     // All asserts are collected to be triggered halfway between the last tick (when signals were set) and the next tick (when new stuff happens).
     if (m_assertStatements.str().empty()) {
-        m_testbenchFile << "ADV" << std::endl << roundedTimeDiffInPS << std::endl;
+        m_testbenchFile << "ADV\n" << roundedTimeDiffInPS << std::endl;
     } else {
-        m_testbenchFile << "ADV" << std::endl << roundedTimeDiffInPS/2 << std::endl;
+        m_testbenchFile << "ADV\n" << roundedTimeDiffInPS/2 << std::endl;
 
         m_testbenchFile << m_assertStatements.str();
         m_assertStatements.str(std::string());
 
-        m_testbenchFile << "ADV" << std::endl << roundedTimeDiffInPS/2 << std::endl;
+        m_testbenchFile << "ADV\n" << roundedTimeDiffInPS/2 << std::endl;
     }
 }
 
@@ -434,12 +439,12 @@ void FileBasedTestbenchRecorder::onClock(const hlim::Clock *clock, bool risingEd
 
     auto *rootEntity = m_ast->getRootEntity();
 
-    m_testbenchFile << "CLK" << std::endl << rootEntity->getNamespaceScope().getName((hlim::Clock *) clock) << std::endl;
+    m_testbenchFile << "CLK\n" << rootEntity->getNamespaceScope().getName((hlim::Clock *) clock) << std::endl;
 
     if (risingEdge)
-        m_testbenchFile << '1' << std::endl;
+        m_testbenchFile << "1\n";
     else
-        m_testbenchFile << '0' << std::endl;
+        m_testbenchFile << "1\n";
 }
 
 void FileBasedTestbenchRecorder::onSimProcOutputOverridden(hlim::NodePort output, const sim::DefaultBitVectorState &state)
@@ -447,8 +452,10 @@ void FileBasedTestbenchRecorder::onSimProcOutputOverridden(hlim::NodePort output
     auto name_it = m_outputToIoPinName.find(output);
     HCL_ASSERT(name_it != m_outputToIoPinName.end());
 
-    m_testbenchFile << "SET" << std::endl << name_it->second << std::endl;
-    m_testbenchFile << state << std::endl;
+    std::stringstream str_state;
+    str_state << state;
+
+    m_signalOverrides[name_it->second] = str_state.str();
 }
 
 void FileBasedTestbenchRecorder::onSimProcOutputRead(hlim::NodePort output, const sim::DefaultBitVectorState &state)
