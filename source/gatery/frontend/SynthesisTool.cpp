@@ -183,11 +183,15 @@ void DefaultSynthesisTool::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, 
 
 	std::vector<std::filesystem::path> files;
 
-	for (auto&& package : vhdlExport.getAST()->getPackages())
-		files.emplace_back(vhdlExport.getAST()->getFilename("", package->getName()));
+	if (!vhdlExport.isSingleFileExport()) { // todo: refactor this into base class
+		for (auto&& package : vhdlExport.getAST()->getPackages())
+			files.emplace_back(vhdlExport.getAST()->getFilename("", package->getName()));
 
-	for (auto&& entity : vhdlExport.getAST()->getDependencySortedEntities())
-		files.emplace_back(vhdlExport.getAST()->getFilename("", entity->getName()));
+		for (auto&& entity : vhdlExport.getAST()->getDependencySortedEntities())
+			files.emplace_back(vhdlExport.getAST()->getFilename("", entity->getName()));
+	} else {
+		files.push_back(vhdlExport.getSingleFileFilename());
+	}
 
 	for (auto& f : files)
 		file << f.string() << '\n';

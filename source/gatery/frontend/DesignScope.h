@@ -41,7 +41,9 @@ class DesignScope : public BaseScope<DesignScope>
         static NodeType *createNode(Args&&... args);        
         
         template<typename ClockType, typename... Args>
-        static ClockType *createClock(Args&&... args);        
+        static ClockType *createClock(Args&&... args);
+
+        inline GroupScope &getRootGroup() { return m_rootScope; }
     protected:
         hlim::Circuit m_circuit;
         GroupScope m_rootScope;
