@@ -90,7 +90,9 @@ namespace gtry
 		char u1 = 'b';
 		const char* u2 = "";
 
-		if (val % 1'000'000 == 0)
+		if (val == 0) {
+			// nothing
+		} else if (val % 1'000'000 == 0)
 		{
 			val /= 1'000'000;
 			u2 = "M";
