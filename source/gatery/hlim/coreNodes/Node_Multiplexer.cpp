@@ -59,15 +59,15 @@ void Node_Multiplexer::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, s
         ///@todo: This is probably slow
 
         for (auto b : utils::Range(getOutputConnectionType(0).width)) {
-            bool value = state.get(sim::DefaultConfig::VALUE, inputOffsets[1]+b);
-            bool defined = state.get(sim::DefaultConfig::DEFINED, inputOffsets[1]+b);
+            bool value = inputOffsets[1] == ~0ull ? false : state.get(sim::DefaultConfig::VALUE, inputOffsets[1]+b);
+            bool defined = inputOffsets[1] == ~0ull ? false : state.get(sim::DefaultConfig::DEFINED, inputOffsets[1]+b);
 
             // while still defined, check all corresponding bits in other inputs
             // if defined and same value, remain defined
             if (defined)
                 for (unsigned i = 2; i < getNumInputPorts(); i++) {
-                    bool v = state.get(sim::DefaultConfig::VALUE, inputOffsets[i]+b);
-                    bool d = state.get(sim::DefaultConfig::DEFINED, inputOffsets[i]+b);
+                    bool v = inputOffsets[i] == ~0ull ? false : state.get(sim::DefaultConfig::VALUE, inputOffsets[i]+b);
+                    bool d = inputOffsets[i] == ~0ull ? false : state.get(sim::DefaultConfig::DEFINED, inputOffsets[i]+b);
 
                     if (!d || value != v) {
                         defined = false;
