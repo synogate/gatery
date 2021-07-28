@@ -106,6 +106,9 @@ class Circuit
 
         void inferSignalNames();
 
+        void disconnectZeroBitSignalNodes();
+        void disconnectZeroBitOutputPins();
+        void removeZeroBitsFromRewire();
         void cullSequentiallyDuplicatedSignalNodes();
         void cullUnnamedSignalNodes();
         void cullOrphanedSignalNodes();

@@ -145,21 +145,18 @@ std::vector<std::string> Entity::getPortsVHDL()
         }
     }
     for (auto &ioPin : m_ioPins) {
-        bool isInput = !ioPin->getDirectlyDriven(0).empty();
-        bool isOutput = ioPin->getNonSignalDriver(0).node != nullptr;
-
         std::stringstream line;
         line << m_namespaceScope.getName(ioPin) << " : ";
-        if (isInput && isOutput) {
+        if (ioPin->isInputPin() && ioPin->isOutputPin()) {
             line << "INOUT "; // this will need more thought at other places to work
-            cf.formatConnectionType(line, ioPin->getOutputConnectionType(0));
-        } else if (isInput) {
+            cf.formatConnectionType(line, ioPin->getConnectionType());
+        } else if (ioPin->isInputPin()) {
             line << "IN ";
-            cf.formatConnectionType(line, ioPin->getOutputConnectionType(0));
-        } else if (isOutput) {
+            cf.formatConnectionType(line, ioPin->getConnectionType());
+        } else if (ioPin->isOutputPin()) {
             line << "OUT ";
             auto driver = ioPin->getNonSignalDriver(0);
-            cf.formatConnectionType(line, hlim::getOutputConnectionType(driver));
+            cf.formatConnectionType(line, ioPin->getConnectionType());
         } else
             continue;
         unsortedPortList.push_back({clockOffset + ioPin->getId(), line.str()});

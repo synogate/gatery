@@ -69,10 +69,12 @@ void WaveformRecorder::addAllPins()
 {
     for (auto &node : m_circuit.getNodes())
         if (auto *pin = dynamic_cast<hlim::Node_Pin*>(node.get())) {
-            auto driver = pin->getDriver(0);
-            if (driver.node != nullptr)
-                addSignal(driver, false, pin->getGroup(), pin->getName());
-            if (!pin->getDirectlyDriven(0).empty())
+            if (pin->isOutputPin()) {
+                auto driver = pin->getDriver(0);
+                if (driver.node != nullptr)
+                    addSignal(driver, false, pin->getGroup(), pin->getName());
+            }
+            if (pin->isInputPin())
                 addSignal({.node = pin, .port = 0}, false, pin->getGroup(), pin->getName());
         }
 }
@@ -81,6 +83,7 @@ void WaveformRecorder::addAllOutPins()
 {
     for (auto &node : m_circuit.getNodes())
         if (auto *pin = dynamic_cast<hlim::Node_Pin*>(node.get())) {
+            if (!pin->isOutputPin()) continue;
             auto driver = pin->getDriver(0);
             if (driver.node != nullptr)
                 addSignal(driver, false, pin->getGroup(), pin->getName());

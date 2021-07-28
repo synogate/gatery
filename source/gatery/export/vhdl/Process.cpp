@@ -83,7 +83,7 @@ void Process::extractSignals()
         }
 #if 1
         // Named signals are explicit
-        if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr && node->hasGivenName()) {
+        if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr && node->hasGivenName() && node->getOutputConnectionType(0).width > 0) {
             hlim::NodePort driver = {.node = node, .port = 0};
             potentialLocalSignals.insert(driver);
         }
@@ -184,6 +184,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
 
     if (!forceUnfold) {
         if (m_inputs.contains(nodePort) || m_outputs.contains(nodePort) || m_localSignals.contains(nodePort) || m_constants.contains(nodePort)) {
+            HCL_ASSERT(!m_namespaceScope.getName(nodePort).empty());
             stream << m_namespaceScope.getName(nodePort);
             switch (context) {
                 case Context::BOOL:
@@ -322,6 +323,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
 
     const hlim::Node_Rewire *rewireNode = dynamic_cast<const hlim::Node_Rewire*>(nodePort.node);
     if (rewireNode != nullptr) {
+        HCL_ASSERT(rewireNode->getOutputConnectionType(0).width > 0);
 
         size_t bitExtractIdx;
         if (rewireNode->getOp().isBitExtract(bitExtractIdx)) {
@@ -589,10 +591,10 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
             signalsReady.insert(s);
 
         for (auto s : m_ioPins) {
-            if (!s->getDirectlyDriven(0).empty())
+            if (s->isInputPin())
                 signalsReady.insert({.node=s, .port=0});
 
-            if (s->getNonSignalDriver(0).node != nullptr)
+            if (s->isOutputPin() && s->getNonSignalDriver(0).node != nullptr)
                 constructStatementsFor({.node=s, .port=0});
         }
 

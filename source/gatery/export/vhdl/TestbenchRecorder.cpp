@@ -76,27 +76,21 @@ ARCHITECTURE tb OF )" << m_name << R"( IS
 
     for (auto ioPin : allIOPins) {
         const std::string &name = rootEntity->getNamespaceScope().getName(ioPin);
-        bool isInput = !ioPin->getDirectlyDriven(0).empty();
-        bool isOutput = ioPin->getNonSignalDriver(0).node != nullptr;
-
-        hlim::ConnectionType conType;
-        if (isOutput) {
-            auto driver = ioPin->getNonSignalDriver(0);
-            conType = hlim::getOutputConnectionType(driver);
-        } else
-            conType = ioPin->getOutputConnectionType(0);
+        auto conType = ioPin->getConnectionType();
 
         m_testbenchFile << "    SIGNAL " << name << " : ";
         cf.formatConnectionType(m_testbenchFile, conType);
         m_testbenchFile << ';' << std::endl;
 
-        if (isOutput)
+        if (ioPin->isOutputPin())
             m_outputToIoPinName[ioPin->getDriver(0)] = name;
 
-        if (isInput)
+        if (ioPin->isInputPin())
             m_outputToIoPinName[{.node=ioPin, .port=0}] = name;
-
     }
+
+
+
     m_testbenchFile << "BEGIN" << std::endl;
 
     cf.indent(m_testbenchFile, 1);

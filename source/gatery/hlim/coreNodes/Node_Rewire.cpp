@@ -314,6 +314,33 @@ void Node_Rewire::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsign
     HCL_ASSERT(false);
 }
 
+void Node_Rewire::removeZeroWidthInputs()
+{
+    for (size_t i = 0; i < m_rewireOperation.ranges.size(); i++) {
+        if (m_rewireOperation.ranges[i].subwidth == 0) {
+            m_rewireOperation.ranges.erase(m_rewireOperation.ranges.begin()+i); 
+            i--;
+        }
+    }
 
+
+    for (size_t inp = 1; inp < getNumInputPorts(); inp++) {
+        auto np = getDriver(inp);
+        HCL_ASSERT(np.node != nullptr);
+        if (np.node->getOutputConnectionType(np.port).width == 0) {
+
+            if (inp+1 < getNumInputPorts())
+                rewireInput(inp, getDriver(getNumInputPorts()-1));
+            resizeInputs(getNumInputPorts()-1);
+
+            for (size_t i = 0; i < m_rewireOperation.ranges.size(); i++)
+                if (m_rewireOperation.ranges[i].source == OutputRange::INPUT && m_rewireOperation.ranges[i].inputIdx == getNumInputPorts())
+                    m_rewireOperation.ranges[i].inputIdx = inp;
+
+            inp--;
+        }
+    }
+
+}
 
 }

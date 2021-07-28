@@ -85,29 +85,19 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 
     for (auto ioPin : allIOPins) {
         const std::string &name = rootEntity->getNamespaceScope().getName(ioPin);
-        bool isInput = !ioPin->getDirectlyDriven(0).empty();
-        bool isOutput = ioPin->getNonSignalDriver(0).node != nullptr;
-
-        hlim::ConnectionType conType;
-        if (isOutput) {
-            auto driver = ioPin->getNonSignalDriver(0);
-            conType = hlim::getOutputConnectionType(driver);
-        } else
-            conType = ioPin->getOutputConnectionType(0);
+        auto conType = ioPin->getConnectionType();
 
         vhdlFile << "    SIGNAL " << name << " : ";
         cf.formatConnectionType(vhdlFile, conType);
         vhdlFile << ';' << std::endl;
 
-        
-
-        if (isOutput) {
+        if (ioPin->isOutputPin()) {
             m_outputToIoPinName[ioPin->getDriver(0)] = name;
             outputIsBool[ioPin->getDriver(0)] = conType.interpretation == hlim::ConnectionType::BOOL;
             outputIsDrivenByNetwork.insert(ioPin->getDriver(0));
         }
 
-        if (isInput) {
+        if (ioPin->isInputPin()) {
             m_outputToIoPinName[{.node=ioPin, .port=0}] = name;
             outputIsBool[{.node=ioPin, .port=0}] = conType.interpretation == hlim::ConnectionType::BOOL;
         }
@@ -174,14 +164,8 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 
     for (auto ioPin : allIOPins) {
         const std::string &name = rootEntity->getNamespaceScope().getName(ioPin);
-        bool isOutput = ioPin->getNonSignalDriver(0).node != nullptr;
 
-        hlim::ConnectionType conType;
-        if (isOutput) {
-            auto driver = ioPin->getNonSignalDriver(0);
-            conType = hlim::getOutputConnectionType(driver);
-        } else
-            conType = ioPin->getOutputConnectionType(0);
+        hlim::ConnectionType conType = ioPin->getConnectionType();
 
         vhdlFile << "    VARIABLE v_" << name << " : ";
         cf.formatConnectionType(vhdlFile, conType);
