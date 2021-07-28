@@ -25,7 +25,7 @@ namespace gtry::utils {
 
 void ConfigTree::loadFromFile(const std::filesystem::path &filename)
 {
-    m_node = YAML::LoadFile(filename);
+    m_node = YAML::LoadFile(filename.string());
 }
 
 void ConfigTree::saveToFile(const std::filesystem::path &filename)
