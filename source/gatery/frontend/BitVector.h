@@ -157,7 +157,7 @@ namespace gtry {
 		BVec& operator = (Int rhs) { assign(rhs); return *this; }
 		template<unsigned S>
 		BVec& operator = (const char (&rhs)[S]) { assign(std::string_view(rhs)); return *this; }
-		BVec& operator = (const BVec& rhs) { assign(rhs.getReadPort()); return *this; }
+		BVec& operator = (const BVec& rhs) { if(rhs.m_node) assign(rhs.getReadPort()); return *this; }
 		BVec& operator = (BVec&& rhs);
 		BVec& operator = (BitWidth width);
 		BVec& operator = (const BVecDefault &defaultValue);
