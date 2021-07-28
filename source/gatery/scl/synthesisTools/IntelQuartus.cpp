@@ -30,6 +30,7 @@
 #include <gatery/export/vhdl/Entity.h>
 #include <gatery/export/vhdl/Package.h>
 
+#include <string_view>
 
 namespace gtry {
 
@@ -182,15 +183,18 @@ set_global_assignment -name ALLOW_REGISTER_RETIMING OFF
 		for (std::filesystem::path& tb : sourceFiles(vhdlExport, false, true))
 		{
 			const std::string top = tb.stem().string();
+			std::string_view library = vhdlExport.getName().empty() ? 
+				std::string_view{ "work" } : 
+				vhdlExport.getName();
 
 			std::filesystem::path path = vhdlExport.getDestination() / ("modelsim_" + top + ".do");
 			std::ofstream file{ path.string().c_str(), std::ofstream::binary };
 
 			for (std::filesystem::path& source : sourceFiles(vhdlExport, true, false))
-				file << "vcom -quiet -2008 -createlib -work " << vhdlExport.getName() << " " << source.string() << '\n';
-			file << "vcom -quiet -2008 -work " << vhdlExport.getName() << " " << tb.string() << '\n';
+				file << "vcom -quiet -2008 -createlib -work " << library << " " << source.string() << '\n';
+			file << "vcom -quiet -2008 -work " << library << " " << tb.string() << '\n';
 
-			file << "vsim " << top << '\n';
+			file << "vsim " << library << "." << top << '\n';
 			file << "set StdArithNoWarnings 1\n";
 			file << "set NumericStdNoWarnings 1\n";
 			file << "add wave *\n";
