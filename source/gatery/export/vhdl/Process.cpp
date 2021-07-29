@@ -61,6 +61,10 @@ void Process::extractSignals()
     for (auto node : m_nodes) {
         // Check IO
         for (auto i : utils::Range(node->getNumInputPorts())) {
+
+            // ignore reset values as they are hard coded anyways.
+            if (dynamic_cast<hlim::Node_Register*>(node) && i == hlim::Node_Register::RESET_VALUE) continue;
+
             auto driver = node->getDriver(i);
             if (driver.node != nullptr) {
                 if (isProducedExternally(driver))
@@ -687,11 +691,17 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
             HCL_ASSERT(regNode != nullptr);
 
             hlim::NodePort output = {.node = regNode, .port = 0};
-            hlim::NodePort resetValue = regNode->getDriver(hlim::Node_Register::RESET_VALUE);
+            hlim::NodePort resetValue = regNode->getNonSignalDriver(hlim::Node_Register::RESET_VALUE);
 
             HCL_ASSERT(resetValue.node != nullptr);
+            auto *constReset = dynamic_cast<hlim::Node_Constant*>(resetValue.node);
+            HCL_DESIGNCHECK_HINT(constReset, "Resets of registers must be constants uppon export!");
+
             cf.indent(stream, indentation+2);
-            stream << m_namespaceScope.getName(output) << " <= " << m_namespaceScope.getName(resetValue) << ";" << std::endl;
+            auto context = hlim::outputIsBVec(resetValue)?Context::STD_LOGIC_VECTOR:Context::STD_LOGIC;
+            stream << m_namespaceScope.getName(output) << " <= ";
+            formatConstant(stream, constReset, context );
+            stream << ";" << std::endl;
         }
 
         cf.indent(stream, indentation+1);
@@ -723,10 +733,17 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
             HCL_ASSERT(regNode != nullptr);
 
             hlim::NodePort output = {.node = regNode, .port = 0};
-            hlim::NodePort resetValue = regNode->getDriver(hlim::Node_Register::RESET_VALUE);
+            hlim::NodePort resetValue = regNode->getNonSignalDriver(hlim::Node_Register::RESET_VALUE);
+
+            HCL_ASSERT(resetValue.node != nullptr);
+            auto *constReset = dynamic_cast<hlim::Node_Constant*>(resetValue.node);
+            HCL_DESIGNCHECK_HINT(constReset, "Resets of registers must be constants uppon export!");
 
             cf.indent(stream, indentation+3);
-            stream << m_namespaceScope.getName(output) << " <= " << m_namespaceScope.getName(resetValue) << ";" << std::endl;
+            auto context = hlim::outputIsBVec(resetValue)?Context::STD_LOGIC_VECTOR:Context::STD_LOGIC;
+            stream << m_namespaceScope.getName(output) << " <= ";
+            formatConstant(stream, constReset, context );
+            stream << ";" << std::endl;
         }
 
         cf.indent(stream, indentation+2);
