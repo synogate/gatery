@@ -229,7 +229,7 @@ namespace gtry {
 		template <typename Int, typename = std::enable_if_t<std::is_integral_v<Int> & !std::is_same_v<Int, char> & !std::is_same_v<Int, bool>> >
 		void assign(Int);
 		void assign(std::string_view);
-		virtual void assign(SignalReadPort);
+		virtual void assign(SignalReadPort, bool ignoreConditions = false);
 
 		void createNode(size_t width, Expansion policy);
 		SignalReadPort getRawDriver() const;

@@ -212,7 +212,7 @@ namespace gtry {
         signal->setName(name);
         signal->recordStackTrace();
 
-        assign(SignalReadPort(signal));
+        assign(SignalReadPort(signal), true);
     }
 
     void Bit::addToSignalGroup(hlim::SignalGroup *signalGroup)
@@ -255,7 +255,7 @@ namespace gtry {
         assign(SignalReadPort(constant));
     }
 
-    void Bit::assign(SignalReadPort in)
+    void Bit::assign(SignalReadPort in, bool ignoreConditions)
     {
         hlim::ConnectionType type = m_node->getOutputConnectionType(0);
 
@@ -272,17 +272,9 @@ namespace gtry {
             rewire->setReplaceRange(offset);
 
             in = SignalReadPort(rewire);
-/*
-            {
-                auto* signal = DesignScope::createNode<hlim::Node_Signal>();
-                signal->connectInput(in);
-                signal->recordStackTrace();
-                in = SignalReadPort(signal);
-            }
-*/
         }
 
-        if (auto* scope = ConditionalScope::get(); scope && scope->getId() > m_initialScopeId)
+        if (auto* scope = ConditionalScope::get(); !ignoreConditions && scope && scope->getId() > m_initialScopeId)
         {
             auto* signal_in = DesignScope::createNode<hlim::Node_Signal>();
             signal_in->connectInput(getRawDriver());
@@ -295,14 +287,7 @@ namespace gtry {
 
             in = SignalReadPort(mux);
         }
-/*
-        if (dynamic_cast<hlim::Node_Signal*>(in.node) == nullptr) {
-            auto* signal = DesignScope::createNode<hlim::Node_Signal>();
-            signal->connectInput(in);
-            signal->recordStackTrace();
-            in = SignalReadPort(signal);
-        }
-*/
+
         m_node->connectInput(in);
     }
 

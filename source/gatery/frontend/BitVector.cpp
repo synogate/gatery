@@ -340,7 +340,7 @@ namespace gtry {
         signal->setName(name);
         signal->recordStackTrace();
 
-        assign(SignalReadPort(signal));
+        assign(SignalReadPort(signal), true);
     }
 
     void BVec::addToSignalGroup(hlim::SignalGroup *signalGroup)
@@ -359,7 +359,7 @@ namespace gtry {
         assign(SignalReadPort(constant, Expansion::none));
     }
 
-    void BVec::assign(SignalReadPort in)
+    void BVec::assign(SignalReadPort in, bool ignoreConditions)
     {
         if (!m_node)
             createNode(width(in), in.expansionPolicy);
@@ -379,27 +379,12 @@ namespace gtry {
             rewire->setOp(replaceSelection(m_range, m_node->getOutputConnectionType(0).width));
             in.node = rewire;
             in.port = 0;
-/*
-            {
-                auto* signal = DesignScope::createNode<hlim::Node_Signal>();
-                signal->connectInput(in);
-                signal->recordStackTrace();
-                in = SignalReadPort(signal);
-            }
-*/
         }
 
-        if (auto* scope = ConditionalScope::get(); scope && scope->getId() > m_initialScopeId)
+        if (auto* scope = ConditionalScope::get(); !ignoreConditions && scope && scope->getId() > m_initialScopeId)
         {
             SignalReadPort oldSignal = getRawDriver();
-/*
-            if (dynamic_cast<hlim::Node_Signal*>(oldSignal.node) == nullptr) {
-                auto* signal = DesignScope::createNode<hlim::Node_Signal>();
-                signal->connectInput(oldSignal);
-                signal->recordStackTrace();
-                oldSignal = SignalReadPort{ signal };
-            }
-*/
+
 
             if (incrementWidth)
             {
@@ -427,14 +412,7 @@ namespace gtry {
             mux->setConditionId(scope->getId());
             in = SignalReadPort{ mux };
         }
-/*
-        if (dynamic_cast<hlim::Node_Signal*>(in.node) == nullptr) {
-            auto* signal = DesignScope::createNode<hlim::Node_Signal>();
-            signal->connectInput(in);
-            signal->recordStackTrace();
-            in = SignalReadPort(signal);
-        }
-*/
+
         if (!m_node->getDirectlyDriven(0).empty() && incrementWidth)
         {
             const auto nodeInputs = m_node->getDirectlyDriven(0);
