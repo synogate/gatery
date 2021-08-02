@@ -36,17 +36,53 @@ void Node_Compare::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
 {
     auto leftDriver = getDriver(0);
     auto rightDriver = getDriver(1);
-    if (inputOffsets[0] == ~0ull || inputOffsets[1] == ~0ull ||
-        leftDriver.node== nullptr || rightDriver.node == nullptr) {
+
+    if (leftDriver.node== nullptr || rightDriver.node == nullptr) {
         state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
         return;
-    }
+    }    
 
     const auto &leftType = hlim::getOutputConnectionType(leftDriver);
     const auto &rightType = hlim::getOutputConnectionType(rightDriver);
     HCL_ASSERT_HINT(leftType.width <= 64, "Compare with more than 64 bits not yet implemented!");
     HCL_ASSERT_HINT(rightType.width <= 64, "Compare with more than 64 bits not yet implemented!");
     HCL_ASSERT_HINT(leftType.interpretation == rightType.interpretation, "Comparing signals with different interpretations not yet implemented!");
+
+    // Special handling for zero-width inputs
+    if (leftType.width == 0) {
+        bool result;
+        switch (m_op) {
+            case EQ:
+                result = true;
+            break;
+            case NEQ:
+                result = false;
+            break;
+            case LT:
+                result = false;
+            break;
+            case GT:
+                result = false;
+            break;
+            case LEQ:
+                result = true;
+            break;
+            case GEQ:
+                result = true;
+            break;
+            default:
+                HCL_ASSERT_HINT(false, "Unhandled case!");
+        }
+        state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0], 1, result?1:0);
+        state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0], 1, 1);
+        return;
+    }
+
+    if (inputOffsets[0] == ~0ull || inputOffsets[1] == ~0ull) {
+        state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+        return;
+    }
+
 
     if (!allDefinedNonStraddling(state, inputOffsets[0], leftType.width)) {
         state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
