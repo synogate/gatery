@@ -202,6 +202,8 @@ set_global_assignment -name ALLOW_REGISTER_RETIMING OFF
 
 	void IntelQuartus::writeModelsimScripts(vhdl::VHDLExport& vhdlExport)
 	{
+		auto relativePath = std::filesystem::relative(vhdlExport.getDestination(), vhdlExport.getTestbenchDestination());
+
 		for (std::filesystem::path& tb : sourceFiles(vhdlExport, false, true))
 		{
 			const std::string top = tb.stem().string();
@@ -209,11 +211,11 @@ set_global_assignment -name ALLOW_REGISTER_RETIMING OFF
 				std::string_view{ "work" } : 
 				vhdlExport.getName();
 
-			std::filesystem::path path = vhdlExport.getDestination() / ("modelsim_" + top + ".do");
+			std::filesystem::path path = vhdlExport.getTestbenchDestination() / ("modelsim_" + top + ".do");
 			std::ofstream file{ path.string().c_str(), std::ofstream::binary };
 
 			for (std::filesystem::path& source : sourceFiles(vhdlExport, true, false))
-				file << "vcom -quiet -2008 -createlib -work " << library << " " << source.string() << '\n';
+				file << "vcom -quiet -2008 -createlib -work " << library << " " << (relativePath/source).string() << '\n';
 			file << "vcom -quiet -2008 -work " << library << " " << tb.string() << '\n';
 
 			file << "vsim " << library << "." << top << '\n';
