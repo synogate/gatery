@@ -49,7 +49,7 @@ void Node_ExportOverride::connectInput(const NodePort &nodePort)
         HCL_ASSERT_HINT(hlim::getOutputConnectionType(getDriver(0)) == hlim::getOutputConnectionType(getDriver(1)), 
                     "The signal and override value connection types must be the same.");
 
-    NodeIO::connectInput(0, nodePort);
+    NodeIO::connectInput(SIM_INPUT, nodePort);
 }
 
 void Node_ExportOverride::connectOverride(const NodePort &nodePort)
@@ -67,7 +67,7 @@ void Node_ExportOverride::connectOverride(const NodePort &nodePort)
         HCL_ASSERT_HINT(hlim::getOutputConnectionType(getDriver(0)) == hlim::getOutputConnectionType(getDriver(1)), 
                     "The signal and override value connection types must be the same.");
 
-    NodeIO::connectInput(1, nodePort);
+    NodeIO::connectInput(EXP_INPUT, nodePort);
 }
 
 

@@ -31,6 +31,11 @@ namespace gtry::hlim {
 class Node_ExportOverride : public Node<Node_ExportOverride>
 {
     public:
+        enum Inputs {
+            SIM_INPUT,
+            EXP_INPUT
+        };
+
         Node_ExportOverride();
 
         void setConnectionType(const ConnectionType &connectionType);

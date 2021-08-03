@@ -21,7 +21,11 @@
 #include "IntelQuartus.h"
 #include "common.h"
 
+#include <gatery/hlim/coreNodes/Node_Pin.h>
+#include <gatery/hlim/coreNodes/Node_Register.h>
+
 #include <gatery/hlim/Attributes.h>
+#include <gatery/hlim/GraphTools.h>
 
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Preprocessor.h>
@@ -31,8 +35,34 @@
 #include <gatery/export/vhdl/Package.h>
 
 #include <string_view>
+#include <boost/range/adaptor/reversed.hpp>
 
-namespace gtry {
+namespace gtry 
+{
+
+	std::string registerClockPin(vhdl::AST& ast, hlim::Node_Register* regNode)
+	{
+		hlim::NodePort regOutput = { .node = regNode, .port = 0ull };
+
+		std::vector<vhdl::BaseGrouping*> regOutputReversePath;
+		if (!ast.findLocalDeclaration(regOutput, regOutputReversePath))
+		{
+			HCL_ASSERT(false);
+			return "node|clk";
+		}
+		
+		std::stringstream regOutputIdentifier;
+		for (size_t i = regOutputReversePath.size() - 2; i < regOutputReversePath.size(); --i)
+			regOutputIdentifier << regOutputReversePath[i]->getInstanceName() << '|';
+		regOutputIdentifier << regOutputReversePath.front()->getNamespaceScope().getName(regOutput);
+
+		auto type = regNode->getOutputConnectionType(0);
+		if (type.interpretation == hlim::ConnectionType::BITVEC)
+			regOutputIdentifier << "[0]";
+
+		regOutputIdentifier << "|clk";
+		return regOutputIdentifier.str();
+	}
 
 IntelQuartus::IntelQuartus()
 {
@@ -89,7 +119,61 @@ void IntelQuartus::resolveAttributes(const hlim::SignalAttributes &attribs, hlim
 
 void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
 {
-	writeClockSDC(*vhdlExport.getAST(), (vhdlExport.getDestination() / filename).string());
+	std::string fullPath = (vhdlExport.getDestination() / filename).string();
+	std::fstream file(fullPath.c_str(), std::fstream::out);
+	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+
+	writeClockSDC(*vhdlExport.getAST(), file);
+
+	for (auto& pin : vhdlExport.getAST()->getRootEntity()->getIoPins()) 
+	{
+		std::string_view direction;
+		std::vector<hlim::Node_Register*> allRegs;
+		if (pin->isInputPin())
+		{
+			direction = "input";
+			allRegs = hlim::findAllOutputRegisters({ .node = pin, .port = 0ull });
+		}
+		else if (pin->isOutputPin())
+		{
+			direction = "output";
+			allRegs = hlim::findAllInputRegisters({ .node = pin, .port = 0ull });
+		}
+		else
+		{
+			continue;
+		}
+
+		if (allRegs.empty())
+		{
+			file << "# no clock found for " << direction << ' ' << pin->getName() << '\n';
+			continue;
+		}
+		hlim::Node_Register* regNode = allRegs.front();
+		hlim::Clock* clock = regNode->getClocks().front();
+
+		bool allOnSameClock = std::all_of(allRegs.begin(), allRegs.end(), [=](hlim::Node_Register* regNode) {
+			return regNode->getClocks().front() == clock;
+		});
+		if (!allOnSameClock)
+		{
+			file << "# multiple clocks found for " << direction << ' ' << pin->getName() << '\n';
+			continue;
+		}
+
+		float period = clock->getAbsoluteFrequency().denominator() / float(clock->getAbsoluteFrequency().numerator());
+		period *= 1e9f;
+		file << "set_" << direction << "_delay " << period / 2;
+		file << " -clock " << clock->getName();
+
+		file << " [get_ports " << pin->getName();
+
+		if (pin->getConnectionType().interpretation == hlim::ConnectionType::BITVEC)
+			file << "\\[*\\]";
+		file << "]";
+
+		file << " -reference_pin " << registerClockPin(*vhdlExport.getAST(), regNode) << "\n";
+	}
 }
 
 void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
@@ -148,7 +232,7 @@ if {$currentDirectory != $projectDirectory} {
 //	vhdlExport.writeXdc("clocks.xdc");
 
 	file << R"(
-    export_assignments
+	export_assignments
 }
 )";
 }

@@ -20,15 +20,23 @@
 
 namespace gtry::hlim {
 
-class BaseNode;
-struct NodePort;
-class Circuit;
-class NodeGroup;
-class Node_Pin;
+	class BaseNode;
+	struct NodePort;
+	class Circuit;
+	class NodeGroup;
+	class Node_Pin;
+	class Clock;
+	class Node_Register;
 
 
-Node_Pin *findInputPin(NodePort output);
-Node_Pin *findOutputPin(NodePort output);
+	Node_Pin* findInputPin(NodePort output);
+	Node_Pin* findOutputPin(NodePort output);
+
+	Clock* findFirstOutputClock(NodePort output);
+	Clock* findFirstInputClock(NodePort input);
+
+	std::vector<Node_Register*> findAllOutputRegisters(NodePort output);
+	std::vector<Node_Register*> findAllInputRegisters(NodePort input);
 
 
 }
