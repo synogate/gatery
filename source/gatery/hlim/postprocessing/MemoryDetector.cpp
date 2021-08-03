@@ -104,7 +104,8 @@ void MemoryGroup::formAround(Node_Memory *memory, Circuit &circuit)
                 rp.dataOutput = {.node = rp.syncReadDataReg, .port = 0};
 
                 dataRegisterComponents.clear();
-
+#if 0
+// todo: Not desired and also not correctly working with RMW hazards
                 // Figure out if the optional output register is active.
                 for (auto nh : rp.syncReadDataReg->exploreOutput(0)) {
                     // Any branches in the signal path would mean the unregistered output is also used, preventing register fusion.
@@ -130,6 +131,7 @@ void MemoryGroup::formAround(Node_Memory *memory, Circuit &circuit)
                         opt->moveToGroup(this);
                     rp.dataOutput = {.node = rp.outputReg, .port = 0};
                 }
+#endif
             }
         }
     }

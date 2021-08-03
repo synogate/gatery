@@ -17,7 +17,7 @@
 */
 #pragma once
 
-#include <string>
+#include <ostream>
 
 namespace gtry::vhdl {
 	class AST;
@@ -25,7 +25,7 @@ namespace gtry::vhdl {
 
 namespace gtry {
 
-void writeClockXDC(const vhdl::AST &ast, const std::string &fullPath);
-void writeClockSDC(const vhdl::AST &ast, const std::string &fullPath);
+void writeClockXDC(const vhdl::AST &ast, std::ostream &out);
+void writeClockSDC(const vhdl::AST &ast, std::ostream &out);
 
 }
