@@ -56,7 +56,7 @@
 #include <yaml-cpp/yaml.h>
 
 
-extern template boost::rational<std::uint64_t>;
+extern template class boost::rational<std::uint64_t>;
 
 #pragma warning(pop)
 
