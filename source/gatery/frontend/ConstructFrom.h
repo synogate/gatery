@@ -26,7 +26,7 @@ namespace gtry
 		struct ConstructFromVisitor : CompoundVisitor
 		{
 			void operator () (BVec& a, const BVec& b) override {
-				if (a.size() != b.size())
+				if (a.size() != b.size() || !a.getNode())
 					a = b.getWidth();
 			}
 		};

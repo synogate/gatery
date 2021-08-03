@@ -66,14 +66,15 @@ class Exploration {
                 using iterator_category = std::forward_iterator_tag;                
 
                 iterator() : m_isEndIterator(true) { }
-                iterator(bool skipDependencies, NodePort nodePort) : m_skipDependencies(skipDependencies), m_isEndIterator(false) { m_policy.init(nodePort); }
+                iterator(bool skipDependencies, bool skipExportOnly, NodePort nodePort) : m_skipDependencies(skipDependencies), m_skipExportOnly(skipExportOnly), m_isEndIterator(false) { m_policy.init(nodePort); }
 
-                iterator &operator++() { if (m_ignoreAdvance) m_ignoreAdvance = false; else m_policy.advance(m_skipDependencies); return *this; }
+                iterator &operator++() { if (m_ignoreAdvance) m_ignoreAdvance = false; else m_policy.advance(m_skipDependencies, m_skipExportOnly); return *this; }
                 bool operator!=(const iterator &rhs) const { HCL_ASSERT(rhs.m_isEndIterator); return !m_policy.done(); }
                 NodePortHandle operator*() { return NodePortHandle(*this, m_policy.getCurrent()); }
                 void backtrack() { m_policy.backtrack(); m_ignoreAdvance = true; }
             protected:
                 bool m_skipDependencies;
+                bool m_skipExportOnly;
                 bool m_isEndIterator;
                 Policy m_policy;
                 bool m_ignoreAdvance = false;
@@ -86,11 +87,17 @@ class Exploration {
             res.m_skipDependencies = true;
             return res;
         }
+        Exploration<forward, Policy> skipExportOnly() {
+            Exploration<forward, Policy> res(m_nodePort);
+            res.m_skipExportOnly = true;
+            return res;
+        }
 
         iterator begin();
         iterator end();
     protected:
         bool m_skipDependencies = false;
+        bool m_skipExportOnly = false;
         NodePort m_nodePort;
 };
 
@@ -98,7 +105,7 @@ template<bool forward>
 class DepthFirstPolicy {
     public:
         void init(NodePort nodePort);
-        void advance(bool skipDependencies);
+        void advance(bool skipDependencies, bool skipExportOnly);
         void backtrack();
         bool done() const;
         NodePort getCurrent();

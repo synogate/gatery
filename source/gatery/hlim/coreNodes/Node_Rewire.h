@@ -80,6 +80,8 @@ class Node_Rewire : public Node<Node_Rewire>
         virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
 
         virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit) override;
+
+        void removeZeroWidthInputs();
     protected:
         ConnectionType m_desiredConnectionType;
 

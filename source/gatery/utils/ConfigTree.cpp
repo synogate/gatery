@@ -15,17 +15,32 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#pragma once
+#include "gatery/pch.h"
 
-#include <ostream>
+#include "ConfigTree.h"
 
-namespace gtry::vhdl {
-	class AST;
+#include <fstream>
+
+namespace gtry::utils {
+
+void ConfigTree::loadFromFile(const std::filesystem::path &filename)
+{
+    m_node = YAML::LoadFile(filename.string());
 }
 
-namespace gtry {
+void ConfigTree::saveToFile(const std::filesystem::path &filename)
+{
+    auto path = filename.parent_path();
+    if (!path.empty())
+        std::filesystem::create_directories(path);
 
-void writeClockXDC(const vhdl::AST &ast, std::ostream &out);
-void writeClockSDC(const vhdl::AST &ast, std::ostream &out);
+    std::ofstream file{ filename.c_str(), std::ofstream::binary };
+    file.exceptions(std::fstream::failbit | std::fstream::badbit);
+
+    YAML::Emitter emitter(file);
+    emitter << m_node;
+}
+
+
 
 }

@@ -311,6 +311,31 @@ namespace gtry
 		}
 	};
 
+	template<typename T>
+	struct VisitCompound<std::optional<T>>
+	{
+		void operator () (std::optional<T>& a, const std::optional<T>& b, CompoundVisitor& v, size_t flags)
+		{
+			if (b && !a)
+				a.emplace(constructFrom(b));
+
+			if (b)
+				VisitCompound<std::remove_cvref_t<T>>{}(*a, *b, v, flags);
+		}
+
+		void operator () (std::optional<T>& a, CompoundVisitor& v)
+		{
+			if (a)
+				VisitCompound<std::remove_cvref_t<T>>{}(*a, v);
+		}
+
+		void operator () (const std::optional<T>& a, const std::optional<T>& b, CompoundVisitor& v)
+		{
+			if(a && b)
+				VisitCompound<std::remove_cvref_t<T>>{}(*a, *b, v);
+		}
+	};
+
 	template<typename... Comp>
 	BitWidth width(const Comp& ... compound)
 	{

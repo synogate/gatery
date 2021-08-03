@@ -157,7 +157,7 @@ namespace gtry {
 		BVec& operator = (Int rhs) { assign(rhs); return *this; }
 		template<unsigned S>
 		BVec& operator = (const char (&rhs)[S]) { assign(std::string_view(rhs)); return *this; }
-		BVec& operator = (const BVec& rhs) { assign(rhs.getReadPort()); return *this; }
+		BVec& operator = (const BVec& rhs) { if (rhs.m_node) assign(rhs.getReadPort()); return *this; }
 		BVec& operator = (BitWidth width);
 		BVec& operator = (const BVecDefault &defaultValue);
 
@@ -228,7 +228,7 @@ namespace gtry {
 		template <typename Int, typename = std::enable_if_t<std::is_integral_v<Int> & !std::is_same_v<Int, char> & !std::is_same_v<Int, bool>> >
 		void assign(Int);
 		void assign(std::string_view);
-		virtual void assign(SignalReadPort);
+		virtual void assign(SignalReadPort, bool ignoreConditions = false);
 
 		void createNode(size_t width, Expansion policy);
 		SignalReadPort getRawDriver() const;

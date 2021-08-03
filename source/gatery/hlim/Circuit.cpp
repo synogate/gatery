@@ -203,6 +203,41 @@ void Circuit::inferSignalNames()
 }
 
 
+void Circuit::disconnectZeroBitSignalNodes()
+{
+    for (size_t i = 0; i < m_nodes.size(); i++) {
+        Node_Signal *signal = dynamic_cast<Node_Signal*>(m_nodes[i].get());
+        if (signal == nullptr)
+            continue;
+
+        if (signal->getOutputConnectionType(0).width == 0) {
+            signal->disconnectInput();
+        }
+    }
+}
+
+void Circuit::disconnectZeroBitOutputPins()
+{
+    for (size_t i = 0; i < m_nodes.size(); i++) {
+        Node_Pin *pin = dynamic_cast<Node_Pin*>(m_nodes[i].get());
+        if (pin == nullptr)
+            continue;
+
+        if (pin->isOutputPin() && pin->getConnectionType().width == 0) {
+            pin->disconnect();
+        }
+    }
+}
+
+void Circuit::removeZeroBitsFromRewire()
+{
+    for (auto &n : m_nodes) {
+        if (Node_Rewire *rewireNode = dynamic_cast<Node_Rewire*>(n.get())) {
+            rewireNode->removeZeroWidthInputs();
+        }
+    }
+}
+
 /**
  * @brief Removes unnecessary and unnamed signal nodes
  *
@@ -895,6 +930,8 @@ void Circuit::ensureSignalNodePlacement()
 }
 
 
+
+
 void Circuit::optimizeSubnet(Subnet &subnet)
 {
     //defaultValueResolution(*this, subnet);
@@ -929,6 +966,9 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
         break;
         case 3:
         */
+            disconnectZeroBitSignalNodes();
+            disconnectZeroBitOutputPins();
+            removeZeroBitsFromRewire();
             defaultValueResolution(*this, subnet);
             cullUnusedNodes(subnet); // Dirty way of getting rid of default nodes
             

@@ -101,7 +101,7 @@ namespace gtry {
         void createNode();
         void assign(bool);
         void assign(char);
-        virtual void assign(SignalReadPort in);
+        virtual void assign(SignalReadPort in, bool ignoreConditions = false);
 
         bool valid() const final; // hide method since Bit is always valid
         SignalReadPort getRawDriver() const;

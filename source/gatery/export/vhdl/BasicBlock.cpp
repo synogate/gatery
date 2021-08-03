@@ -306,7 +306,25 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
                 continue;
             }
 
-            normalNodes.push_back(node);
+            bool nodeFeedingIntoAnythingElse = false;
+            bool nodeFeedingIntoReset = false;
+
+            for (auto i : utils::Range(node->getNumOutputPorts())) {
+                for (auto nh : node->exploreOutput(i)) {
+                    if (nh.isNodeType<hlim::Node_Register>() && nh.port() == hlim::Node_Register::RESET_VALUE) {
+                        nodeFeedingIntoReset = true;
+                        nh.backtrack();                        
+                    } else if (!nh.isSignal()) {
+                        nodeFeedingIntoAnythingElse = true;
+                        break;
+                    }
+                }
+            }
+
+            bool onlyUsedForReset = nodeFeedingIntoReset && !nodeFeedingIntoAnythingElse;
+
+            if (!onlyUsedForReset)
+                normalNodes.push_back(node);
         }
 
 

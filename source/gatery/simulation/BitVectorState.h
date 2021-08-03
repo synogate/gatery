@@ -136,14 +136,19 @@ bool allDefined(const BitVectorState<Config> &vec, size_t start, size_t size) {
     size_t startFullChunk = (start + Config::NUM_BITS_PER_BLOCK-1) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
     size_t endFullChunk = (start+size) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
 
-    for (size_t c = startFullChunk / Config::NUM_BITS_PER_BLOCK; c < endFullChunk / Config::NUM_BITS_PER_BLOCK; c++)
-        if (~vec.data(Config::DEFINED)[startFullChunk / Config::NUM_BITS_PER_BLOCK]) return false;
+    if (startFullChunk < endFullChunk) {
+        for (size_t c = startFullChunk / Config::NUM_BITS_PER_BLOCK; c < endFullChunk / Config::NUM_BITS_PER_BLOCK; c++)
+            if (~vec.data(Config::DEFINED)[c]) return false;
 
-    for (size_t i = start; i < startFullChunk; i++)
-        if (!vec.get(Config::DEFINED, i)) return false;
+        for (size_t i = start; i < startFullChunk; i++)
+            if (!vec.get(Config::DEFINED, i)) return false;
 
-    for (size_t i = endFullChunk; i < start+size; i++)
-        if (!vec.get(Config::DEFINED, i)) return false;
+        for (size_t i = endFullChunk; i < start+size; i++)
+            if (!vec.get(Config::DEFINED, i)) return false;
+    } else {
+        for (size_t i = start; i < start+size; i++)
+            if (!vec.get(Config::DEFINED, i)) return false;
+    }
 
     return true;
 }
@@ -154,14 +159,19 @@ bool anyDefined(const BitVectorState<Config> &vec, size_t start, size_t size) {
     size_t startFullChunk = (start + Config::NUM_BITS_PER_BLOCK-1) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
     size_t endFullChunk = (start+size) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
 
-    for (size_t c = startFullChunk / Config::NUM_BITS_PER_BLOCK; c < endFullChunk / Config::NUM_BITS_PER_BLOCK; c++)
-        if (vec.data(Config::DEFINED)[startFullChunk / Config::NUM_BITS_PER_BLOCK]) return true;
+    if (startFullChunk < endFullChunk) {
+        for (size_t c = startFullChunk / Config::NUM_BITS_PER_BLOCK; c < endFullChunk / Config::NUM_BITS_PER_BLOCK; c++)
+            if (vec.data(Config::DEFINED)[c]) return true;
 
-    for (size_t i = start; i < startFullChunk; i++)
-        if (vec.get(Config::DEFINED, i)) return true;
+        for (size_t i = start; i < startFullChunk; i++)
+            if (vec.get(Config::DEFINED, i)) return true;
 
-    for (size_t i = endFullChunk; i < start+size; i++)
-        if (vec.get(Config::DEFINED, i)) return true;
+        for (size_t i = endFullChunk; i < start+size; i++)
+            if (vec.get(Config::DEFINED, i)) return true;
+    } else {
+        for (size_t i = start; i < start+size; i++)
+            if (vec.get(Config::DEFINED, i)) return true;
+    }
 
     return false;
 }

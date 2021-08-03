@@ -24,15 +24,18 @@ namespace gtry::hlim {
     class Node_Pin : public Node<Node_Pin>
     {
         public:
-            Node_Pin();
+            Node_Pin(bool inputPin);
 
-            inline void connect(const NodePort &port) { NodeIO::connectInput(0, port); }
+            void connect(const NodePort &port);
             inline void disconnect() { NodeIO::disconnectInput(0); }
 
             void setBool();
             void setWidth(size_t width);
 
-            bool isOutputPin() const;
+            bool isInputPin() const { return m_isInputPin; }
+            bool isOutputPin() const { return !m_isInputPin; }
+
+            inline ConnectionType &getConnectionType() { return m_connectionType; }
 
             virtual bool hasSideEffects() const override { return true; }
             virtual std::vector<size_t> getInternalStateSizes() const override;
@@ -60,7 +63,10 @@ namespace gtry::hlim {
 
              virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit) override;
         protected:
-            bool m_differential = false;
+            bool m_isInputPin;
+            ConnectionType m_connectionType;
+
+            bool m_differential = false;            
             std::string m_differentialPosName;
             std::string m_differentialNegName;
     };
