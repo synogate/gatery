@@ -68,11 +68,12 @@ namespace gtry {
         m_resetValue = rhs.m_resetValue;
     }
 
-    Bit::Bit(Bit&& rhs) : Bit()
+    Bit::Bit(Bit&& rhs) noexcept :
+        m_node(rhs.m_node),
+        m_offset(rhs.m_offset),
+        m_resetValue(rhs.m_resetValue)
     {
-        assign(rhs.getReadPort());
-        rhs.assign(SignalReadPort{ m_node });
-        m_resetValue = rhs.m_resetValue;
+        rhs.m_node = nullptr;
     }
 
     Bit::Bit(const BitDefault &defaultValue) : Bit()
@@ -83,7 +84,8 @@ namespace gtry {
 
     Bit::~Bit()
     {
-        m_node->removeRef();
+        if(m_node)
+            m_node->removeRef();
     }
 
     Bit::Bit(const SignalReadPort& port)
@@ -98,29 +100,6 @@ namespace gtry {
     {
         m_node->addRef();
         m_initialScopeId = initialScopeId;
-    }
-
-    Bit& Bit::operator=(Bit&& rhs)
-    {
-        m_resetValue = rhs.m_resetValue;
-
-        assign(rhs.getReadPort());
-
-        SignalReadPort outRange{ m_node };
-        hlim::ConnectionType type = m_node->getOutputConnectionType(0);
-        if (type.interpretation != hlim::ConnectionType::BOOL)
-        {
-            auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-            rewire->connectInput(0, outRange);
-            rewire->changeOutputType(getConnType());
-
-            size_t offset = std::min(m_offset, type.width - 1); // used for msb alias, but can alias any future offset
-            rewire->setExtract(offset, 1);
-
-            outRange = SignalReadPort(rewire);
-        }
-        rhs.assign(outRange);
-        return *this;
     }
 
     Bit& Bit::operator=(const BitDefault &defaultValue)
@@ -257,6 +236,9 @@ namespace gtry {
 
     void Bit::assign(SignalReadPort in)
     {
+        if (!m_node)
+            createNode();
+
         hlim::ConnectionType type = m_node->getOutputConnectionType(0);
 
         if (type.interpretation != hlim::ConnectionType::BOOL)

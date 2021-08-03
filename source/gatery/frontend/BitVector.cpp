@@ -161,13 +161,16 @@ namespace gtry {
     }
 
 
-    BVec::BVec(BVec&& rhs) :
-        ElementarySignal()
+    BVec::BVec(BVec&& rhs) noexcept :
+        ElementarySignal(),
+        m_node(rhs.m_node),
+        m_range(rhs.m_range),
+        m_expansionPolicy(rhs.m_expansionPolicy)
     {
         if (rhs.m_node)
         {
-            assign(rhs.getReadPort());
-            rhs.assign(SignalReadPort(m_node, rhs.m_expansionPolicy));
+            rhs.clearCache();
+            rhs.m_node = nullptr;
         }
     }
 
@@ -197,23 +200,6 @@ namespace gtry {
     BVec::BVec(const BVecDefault &defaultValue)
     {
         (*this) = defaultValue;
-    }
-
-    BVec& BVec::operator=(BVec&& rhs)
-    {
-        assign(rhs.getReadPort());
-
-        SignalReadPort outRange{ m_node, m_expansionPolicy };
-        if (m_range.subset)
-        {
-            auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-            rewire->connectInput(0, outRange);
-            rewire->setOp(pickSelection(m_range));
-            outRange = SignalReadPort(rewire, m_expansionPolicy);
-        }
-
-        rhs.assign(outRange);
-        return *this;
     }
 
     BVec& BVec::operator=(BitWidth width)
@@ -472,6 +458,19 @@ namespace gtry {
         if (!driver.node)
             driver = hlim::NodePort{ .node = m_node, .port = 0ull };
         return SignalReadPort(driver, m_expansionPolicy);
+    }
+
+    void BVec::clearCache()
+    {
+        if (m_node)
+        {
+            m_bitAlias.clear();
+            m_lsbAlias.reset();
+            m_msbAlias.reset();
+            m_rangeAlias.clear();
+            m_readPortDriver = nullptr;
+        }
+
     }
 
     std::vector<Bit>& BVec::aliasVec() const
