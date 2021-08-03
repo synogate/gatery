@@ -236,7 +236,7 @@ void Node_Logic::estimateSignalDelay(SignalDelay &sigDelay)
     }
 }
 
-void Node_Logic::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit)
+void Node_Logic::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit)
 {
     inputBit = outputBit;
     if (m_op == NOT) {

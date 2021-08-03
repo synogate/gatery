@@ -106,7 +106,7 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, PriorityEncoderTree
     
     if (testVector)
     {
-        BVec ref = gtry::utils::Log2(testVector & -testVector);
+        BVec ref = gtry::utils::Log2(gtry::utils::lowestSetBitMask(testVector));
         sim_assert(res.valid & res.index == ref) << "wrong index: " << res.index << " should be " << ref;
     }
     else
@@ -151,7 +151,7 @@ BOOST_FIXTURE_TEST_CASE(addWithCarry, UnitTestSimulationFixture)
                     size_t expectedCarry = 0;
                     for (size_t k = 0; k < carry.getWidth().value; ++k)
                     {
-                        size_t mask = (1ull << k + 1) - 1;
+                        size_t mask = gtry::utils::bitMaskRange(0, k + 1);
                         size_t subsum = (i & mask) + (j & mask) + carryMode;
                         expectedCarry |= (subsum & ~mask) >> 1;
                     }

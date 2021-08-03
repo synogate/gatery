@@ -108,7 +108,7 @@ class BaseNode : public NodeIO
         virtual std::string attemptInferOutputName(size_t outputPort) const;
 
         virtual void estimateSignalDelay(SignalDelay &sigDelay);
-        virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit);
+        virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t& inputPort, size_t& inputBit);
     protected:
         std::uint64_t m_nodeId = ~0ull;
 

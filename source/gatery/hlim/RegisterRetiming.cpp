@@ -211,7 +211,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, const Subnet &area, const
 		} else {
 			// Regular nodes just get added to the retiming area and their inputs are further explored
 			areaToBeRetimed.add(node);
-			for (unsigned i : utils::Range(node->getNumInputPorts())) {
+			for (size_t i : utils::Range(node->getNumInputPorts())) {
 				auto driver = node->getDriver(i);
 				if (driver.node != nullptr)
 					openList.push_back(driver.node);
@@ -359,7 +359,7 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
 
 		// Find critical output
 		hlim::NodePort criticalOutput;
-		unsigned criticalBit = ~0u;
+		size_t criticalBit = ~0u;
 		float criticalTime = 0.0f;
 		for (auto &n : subnet)
 			for (auto i : utils::Range(n->getNumOutputPorts())) {
@@ -411,7 +411,7 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
 		hlim::NodePort retimingTarget;
 		{
 			hlim::NodePort np = criticalOutput;
-			unsigned bit = criticalBit;
+			size_t bit = criticalBit;
 			while (np.node != nullptr) {
 
 				float thisTime = delays.getDelay(np)[bit];
@@ -420,7 +420,7 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
 					break;
 				}
 
-				unsigned criticalInputPort, criticalInputBit;
+				size_t criticalInputPort, criticalInputBit;
 				np.node->estimateSignalDelayCriticalInput(delays, np.port, bit, criticalInputPort, criticalInputBit);
 				if (criticalInputPort == ~0u)
 					np.node = nullptr;
@@ -601,7 +601,7 @@ bool determineAreaToBeRetimedBackward(Circuit &circuit, const Subnet &area, cons
 			if (anchoredRegisters.contains(reg) || reg->getNonSignalDriver(Node_Register::ENABLE).node != nullptr) {
 				// Retime over this register.
 				areaToBeRetimed.add(node);
-				for (unsigned i : utils::Range(node->getNumOutputPorts()))
+				for (size_t i : utils::Range(node->getNumOutputPorts()))
 					for (auto np : node->getDirectlyDriven(i))
 						openList.push_back(np.node);
 			} else {
@@ -612,7 +612,7 @@ bool determineAreaToBeRetimedBackward(Circuit &circuit, const Subnet &area, cons
 		} else {
 			// Regular nodes just get added to the retiming area and their outputs are further explored
 			areaToBeRetimed.add(node);
-			for (unsigned i : utils::Range(node->getNumOutputPorts()))
+			for (size_t i : utils::Range(node->getNumOutputPorts()))
 				for (auto np : node->getDirectlyDriven(i))
 					openList.push_back(np.node);
 

@@ -181,7 +181,7 @@ void Node_Multiplexer::estimateSignalDelay(SignalDelay &sigDelay)
 }
 
 
-void Node_Multiplexer::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit)
+void Node_Multiplexer::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit)
 {
 
     std::vector<std::span<float>> inDelays;
@@ -193,8 +193,8 @@ void Node_Multiplexer::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, u
     auto width = getOutputConnectionType(0).width;
 
     float maxDelay = 0.0f;
-    unsigned maxIP = 0;
-    unsigned maxIB = 0;
+    size_t maxIP = 0;
+    size_t maxIB = 0;
     for (auto i : utils::Range(selectorBits)) {
         auto f = inDelays[0][i];
         if (f > maxDelay) {

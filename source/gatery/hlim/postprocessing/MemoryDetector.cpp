@@ -389,7 +389,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
         // If we encounter any issues that would prevent BRAM formation, compile a list of those issues.
         // Also keep track of all nodes that would be delayed to later insert registers on their inputs from external networks.
         Node_MemPort *writePort = nullptr;
-        std::set<unsigned> writePortInputPorts; // Could be data, address, or enable
+        std::set<size_t> writePortInputPorts; // Could be data, address, or enable
         std::vector<Node_Register*> registers;
         std::set<BaseNode*> delayedNodes;
         std::stringstream issues;

@@ -41,7 +41,7 @@ BaseNode::BaseNode(size_t numInputs, size_t numOutputs)
 
 BaseNode::~BaseNode()
 {
-    HCL_ASSERT(m_refCounter == 0);
+    HCL_ASSERT_NOTHROW(m_refCounter == 0);
     moveToGroup(nullptr);
     for (auto i : utils::Range(m_clocks.size()))
         detachClock(i);
@@ -159,7 +159,7 @@ void BaseNode::estimateSignalDelay(SignalDelay &sigDelay)
     HCL_ASSERT_HINT(getNumOutputPorts() == 0, "estimateSignalDelay not implemented for node type " + getTypeName());
 }
 
-void BaseNode::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit)
+void BaseNode::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t& inputPort, size_t& inputBit)
 {
     HCL_ASSERT_HINT(false, "estimateSignalDelayCriticalInput not implemented for node type " + getTypeName());
 }

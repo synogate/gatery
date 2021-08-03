@@ -294,7 +294,7 @@ void Node_Rewire::estimateSignalDelay(SignalDelay &sigDelay)
     }    
 }
 
-void Node_Rewire::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit)
+void Node_Rewire::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit)
 {
     size_t outputOffset = 0;
     for (const auto &range : m_rewireOperation.ranges) {

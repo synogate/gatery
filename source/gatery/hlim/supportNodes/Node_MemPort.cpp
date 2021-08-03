@@ -314,32 +314,32 @@ void Node_MemPort::estimateSignalDelay(SignalDelay &sigDelay)
 
     // Ideally, the memory and all it's ports are one cell (e.g. BRAM), so all those signals need to go there
     // So to account for routing delays, count all signals going to this memory, not just those going to this port.
-    unsigned totalInSignals = 0;
+    size_t totalInSignals = 0;
     auto *memory = getMemory();
     for (const auto &np : memory->getDirectlyDriven(0)) {
         auto *port = dynamic_cast<Node_MemPort*>(np.node);
 
-        if (port->getDriver((unsigned)Inputs::enable).node != nullptr)
+        if (port->getDriver((size_t)Inputs::enable).node != nullptr)
             totalInSignals++;
 
-        if (port->getDriver((unsigned)Inputs::wrEnable).node != nullptr)
+        if (port->getDriver((size_t)Inputs::wrEnable).node != nullptr)
             totalInSignals++;
 
-        if (port->getDriver((unsigned)Inputs::address).node != nullptr)
-            totalInSignals += getOutputWidth(port->getDriver((unsigned)Inputs::address));
+        if (port->getDriver((size_t)Inputs::address).node != nullptr)
+            totalInSignals += getOutputWidth(port->getDriver((size_t)Inputs::address));
 
-        if (port->getDriver((unsigned)Inputs::wrData).node != nullptr)
-            totalInSignals += getOutputWidth(port->getDriver((unsigned)Inputs::wrData));
+        if (port->getDriver((size_t)Inputs::wrData).node != nullptr)
+            totalInSignals += getOutputWidth(port->getDriver((size_t)Inputs::wrData));
     }
 
     {
-        auto enableDelay = sigDelay.getDelay(getDriver((unsigned)Inputs::enable));
-        auto addrDelay = sigDelay.getDelay(getDriver((unsigned)Inputs::address));
+        auto enableDelay = sigDelay.getDelay(getDriver((size_t)Inputs::enable));
+        auto addrDelay = sigDelay.getDelay(getDriver((size_t)Inputs::address));
 
-        HCL_ASSERT(sigDelay.contains({.node = this, .port = (unsigned)Outputs::rdData}));
-        auto outDelay = sigDelay.getDelay({.node = this, .port = (unsigned)Outputs::rdData});
+        HCL_ASSERT(sigDelay.contains({.node = this, .port = (size_t)Outputs::rdData}));
+        auto outDelay = sigDelay.getDelay({.node = this, .port = (size_t)Outputs::rdData});
 
-        auto width = getOutputConnectionType((unsigned)Outputs::rdData).width;
+        auto width = getOutputConnectionType((size_t)Outputs::rdData).width;
 
         float routing = totalInSignals * 0.8f;
         float compute = 6.0f;
@@ -355,7 +355,7 @@ void Node_MemPort::estimateSignalDelay(SignalDelay &sigDelay)
     }
 }
 
-void Node_MemPort::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit)
+void Node_MemPort::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit)
 {
     auto enableDelay = sigDelay.getDelay(getDriver((unsigned)Inputs::enable));
     auto addrDelay = sigDelay.getDelay(getDriver((unsigned)Inputs::address));

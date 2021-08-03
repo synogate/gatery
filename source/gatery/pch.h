@@ -8,6 +8,8 @@
 
 #ifndef GTRY_NO_PCH
 
+#pragma warning(push, 0)
+
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
@@ -28,6 +30,7 @@
 #include <csignal>
 #include <cstdint>
 #include <deque>
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <immintrin.h>
@@ -49,5 +52,12 @@
 #include <utility>
 #include <variant>
 #include <vector>
+
+#include <yaml-cpp/yaml.h>
+
+
+extern template boost::rational<std::uint64_t>;
+
+#pragma warning(pop)
 
 #endif

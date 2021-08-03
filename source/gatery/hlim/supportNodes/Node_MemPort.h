@@ -91,7 +91,7 @@ class Node_MemPort : public Node<Node_MemPort>
         virtual std::vector<std::pair<BaseNode*, size_t>> getReferencedInternalStateSizes() const override;
 
         virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
-        virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit) override;
+        virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
     protected:
         friend class Node_Memory;
         std::size_t m_bitWidth;

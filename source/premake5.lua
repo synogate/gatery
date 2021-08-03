@@ -28,6 +28,8 @@ end
 
 project "gatery"
     kind "StaticLib"
+    flags { "FatalCompileWarnings" }
+    
     files { 
         "gatery/export/**.cpp", "gatery/export/**.c", "gatery/export/**.h",
         "gatery/frontend/**.cpp", "gatery/frontend/**.c", "gatery/frontend/**.h",

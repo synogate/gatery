@@ -91,7 +91,7 @@ class Node_Memory : public Node<Node_Memory>
         virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 
         virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
-        //virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit) override;
+        //virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
     protected:
         sim::DefaultBitVectorState m_powerOnState;
 

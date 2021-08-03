@@ -53,7 +53,7 @@ namespace gtry {
 		static Selection RangeIncl(int start, int endIncl);
 		static Selection StridedRange(int start, int end, size_t stride);
 
-		static Selection Slice(int offset, int size);
+		static Selection Slice(size_t offset, size_t size);
 		static Selection StridedSlice(int offset, int size, size_t stride);
 
 		static Selection Symbol(int idx, BitWidth symbolWidth);

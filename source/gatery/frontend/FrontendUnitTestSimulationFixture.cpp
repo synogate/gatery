@@ -81,7 +81,7 @@ bool UnitTestSimulationFixture::runHitsTimeout(const hlim::ClockRational &timeou
 void BoostUnitTestGlobalFixture::setup()
 {
     auto &testSuite = boost::unit_test::framework::master_test_suite();
-    for (unsigned i = 1; i < testSuite.argc; i++) {
+    for (int i = 1; i < testSuite.argc; i++) {
         std::string arg(testSuite.argv[i]);
         if (arg == "--vcd") {
             if (i+1 < testSuite.argc)

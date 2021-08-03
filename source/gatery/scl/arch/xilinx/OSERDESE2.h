@@ -67,7 +67,7 @@ class OSERDESE2 : public gtry::hlim::Node_External
             OUT_COUNT
         };
 
-        OSERDESE2(unsigned width);
+        OSERDESE2(size_t width);
 
         void setSlave();
 

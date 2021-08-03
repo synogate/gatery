@@ -390,7 +390,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_modify_write, UnitTestSimulationFixture)
         std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
         std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
 
-        unsigned collisions = 0;
+        size_t collisions = 0;
 
         bool lastWasWrite = false;
         unsigned lastAddr = 0;
@@ -410,7 +410,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_modify_write, UnitTestSimulationFixture)
             co_await WaitClk(clock);
         }
 
-        BOOST_TEST(collisions > 1000, "Too few collisions to verify correct RMW behavior");
+        BOOST_TEST(collisions > 1000u);
 
         simu(wrEn) = '0';
 
@@ -465,13 +465,13 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write, UnitTestSimulationFixture)
         std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
         std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
 
-        unsigned collisions = 0;
+        size_t collisions = 0;
 
         bool lastWasWrite = false;
-        unsigned lastAddr = 0;
+        size_t lastAddr = 0;
         for (auto i : Range(10000)) {
             bool doInc = zeroOne(rng) > 0.1f;
-            unsigned incAddr = randomAddr(rng);
+            size_t incAddr = randomAddr(rng);
             simu(wrEn) = doInc;
             simu(addr) = incAddr;
             if (doInc)
@@ -485,7 +485,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write, UnitTestSimulationFixture)
             co_await WaitClk(clock);
         }
 
-        BOOST_TEST(collisions > 1000, "Too few collisions to verify correct RMW behavior");
+        BOOST_TEST(collisions > 1000u, "Too few collisions to verify correct RMW behavior");
 
         simu(wrEn) = '0';
 
