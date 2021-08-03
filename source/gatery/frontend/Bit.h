@@ -56,7 +56,7 @@ namespace gtry {
         
         Bit();
         Bit(const Bit& rhs);
-        Bit(Bit&& rhs) noexcept;
+        Bit(Bit&& rhs);
         Bit(const BitDefault &defaultValue);
         ~Bit();
 
@@ -70,6 +70,7 @@ namespace gtry {
         }
     
         Bit& operator=(const Bit& rhs) { m_resetValue = rhs.m_resetValue; assign(rhs.getReadPort());  return *this; }
+        Bit& operator=(Bit&& rhs);
         Bit& operator=(const BitDefault &defaultValue);
 
         template<typename T, typename = std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, bool>>>

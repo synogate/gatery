@@ -139,7 +139,7 @@ namespace gtry {
 
 		BVec() = default;
 		BVec(const BVec& rhs) { if(rhs.m_node) assign(rhs.getReadPort()); }
-		BVec(BVec&& rhs) noexcept;
+		BVec(BVec&& rhs);
 		BVec(const BVecDefault &defaultValue);
 		~BVec();
 
@@ -158,6 +158,7 @@ namespace gtry {
 		template<unsigned S>
 		BVec& operator = (const char (&rhs)[S]) { assign(std::string_view(rhs)); return *this; }
 		BVec& operator = (const BVec& rhs) { if (rhs.m_node) assign(rhs.getReadPort()); return *this; }
+		BVec& operator = (BVec&& rhs);
 		BVec& operator = (BitWidth width);
 		BVec& operator = (const BVecDefault &defaultValue);
 
@@ -238,7 +239,6 @@ namespace gtry {
 		Range m_range;
 		Expansion m_expansionPolicy = Expansion::none;
 
-		void clearCache();
 		std::vector<Bit>& aliasVec() const;
 		Bit& aliasMsb() const;
 		Bit& aliasLsb() const;
