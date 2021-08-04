@@ -100,7 +100,7 @@ void VCDSink::initialize()
 #ifdef WIN32
     localtime_s(&now_tb, &now);
 #else
-    localtime_s(&now, &now_tb);
+    localtime_r(&now, &now_tb);
 #endif
 
     m_vcdFile
