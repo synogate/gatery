@@ -58,10 +58,12 @@ class MemoryGroup : public NodeGroup
         NodePtr<Node_Memory> m_memory;
         std::vector<WritePort> m_writePorts;
         std::vector<ReadPort> m_readPorts;
-
+        
         NodeGroup *m_fixupNodeGroup = nullptr;
 
         void lazyCreateFixupNodeGroup();
+
+        void ensureNotEnabledFirstCycle(Circuit &circuit, NodeGroup *ng, Node_MemPort *writePort);
 };
 
 

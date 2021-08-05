@@ -25,11 +25,6 @@
 #include "../hlim/NodeGroup.h"
 #include "../hlim/Circuit.h"
 #include "../hlim/coreNodes/Node_Signal.h"
-#include "../hlim/GraphTools.h"
-
-#include "../simulation/ReferenceSimulator.h"
-
-
 
 #include <set>
 
@@ -213,17 +208,11 @@ const std::vector<hlim::Node_Signal*> &NodeGroupSurgeryHelper::getAllSignals(std
 }
 
 
-
 sim::DefaultBitVectorState evaluateStatically(hlim::NodePort output)
 {
-    sim::SimulatorCallbacks ignoreCallbacks;
-    sim::ReferenceSimulator simulator;
-    simulator.compileStaticEvaluation(DesignScope::get()->getCircuit(), {output});
-    simulator.powerOn();
-
-    // Fetch result
-    return simulator.getValueOfOutput(output);
+	return hlim::evaluateStatically(DesignScope::get()->getCircuit(), output);
 }
+
 
 sim::DefaultBitVectorState evaluateStatically(const Bit &bit)
 {

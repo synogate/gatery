@@ -17,6 +17,7 @@
 */
 #pragma once
 
+#include "../simulation/BitVectorState.h"
 
 namespace gtry::hlim {
 
@@ -26,7 +27,7 @@ class Circuit;
 class NodeGroup;
 class Node_Pin;
 
-
+sim::DefaultBitVectorState evaluateStatically(Circuit &circuit, hlim::NodePort output);
 Node_Pin *findInputPin(NodePort output);
 Node_Pin *findOutputPin(NodePort output);
 

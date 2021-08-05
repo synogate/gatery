@@ -18,6 +18,7 @@
 #pragma once
 
 #include "../Node.h"
+#include "../../utils/BitFlags.h"
 
 #include <boost/format.hpp>
 
@@ -26,6 +27,12 @@ namespace gtry::hlim {
     class Node_Register : public Node<Node_Register>
     {
     public:
+        enum Flags {
+            ALLOW_RETIMING_FORWARD  = 0b0001,
+            ALLOW_RETIMING_BACKWARD = 0b0010,
+            IS_BOUND_TO_MEMORY      = 0b0100,
+        };
+
         enum Input {
             DATA,
             RESET_VALUE,
@@ -49,8 +56,6 @@ namespace gtry::hlim {
 
         void setClock(Clock* clk);
 
-        bool hasSideEffects() const override { return hasRef(); }
-
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;
         virtual std::string getInputName(size_t idx) const override;
@@ -68,8 +73,12 @@ namespace gtry::hlim {
         virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
 
         virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit) override;
+
+        inline const utils::BitFlags<Flags> &getFlags() const { return m_flags; }
+        inline utils::BitFlags<Flags> &getFlags() { return m_flags; }
     protected:
         size_t m_conditionId = 0;
+        utils::BitFlags<Flags> m_flags;
     };
 
 }

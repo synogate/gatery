@@ -23,10 +23,22 @@
 #include "coreNodes/Node_Signal.h"
 #include "NodePort.h"
 #include "Node.h"
+#include "../simulation/ReferenceSimulator.h"
 
 #include <set>
 
 namespace gtry::hlim {
+
+sim::DefaultBitVectorState evaluateStatically(Circuit &circuit, hlim::NodePort output)
+{
+    sim::SimulatorCallbacks ignoreCallbacks;
+    sim::ReferenceSimulator simulator;
+    simulator.compileStaticEvaluation(circuit, {output});
+    simulator.powerOn();
+
+    // Fetch result
+    return simulator.getValueOfOutput(output);
+}
 
 Node_Pin *findInputPin(hlim::NodePort output)
 {

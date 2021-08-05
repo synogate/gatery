@@ -86,6 +86,7 @@ class SubnetTemplate {
 		inline const std::set<NodeType*> &getNodes() const { return m_nodes; }
 
 		inline bool contains(NodeType *node) const { return m_nodes.contains(node); }
+		inline bool empty() const { return m_nodes.empty(); }
 
 		auto begin() const { return m_nodes.begin(); }
 		auto end() const { return m_nodes.end(); }

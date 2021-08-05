@@ -70,7 +70,7 @@ namespace gtry::utils
 		idebug.to_string_impl(frame.address(), res);
 		return res;
 #else
-		return to_string(frame);
+		return (boost::format("[%08X] %s - %s(%d)") % frame.address() % frame.name() % frame.source_file() % frame.source_line()).str();
 #endif
 	}
 }

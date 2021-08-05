@@ -277,7 +277,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                     }
                 }
                 for (auto &rp : clock.second.readPorts) {
-                    auto enablePort = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
+                    auto enablePort = rp.syncReadDataReg->getDriver((unsigned)hlim::Node_Register::Input::ENABLE); //rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
                     if (enablePort.node != nullptr) {
                         cf.indent(stream, indent);
                         stream << "IF ("<< m_namespaceScope.getName(enablePort) << " = '1') THEN\n";
