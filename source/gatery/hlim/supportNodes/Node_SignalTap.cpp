@@ -32,7 +32,7 @@ void Node_SignalTap::addInput(hlim::NodePort input)
 
 void Node_SignalTap::simulateCommit(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets) const
 {
-    if (m_trigger == LVL_WATCH)
+    if (m_level == LVL_WATCH)
         return;
 
     bool triggered;

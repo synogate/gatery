@@ -21,6 +21,8 @@
 
 #include "coreNodes/Node_Pin.h"
 #include "coreNodes/Node_Signal.h"
+#include "coreNodes/Node_Register.h"
+#include "supportNodes/Node_External.h"
 #include "NodePort.h"
 #include "Node.h"
 #include "../simulation/ReferenceSimulator.h"
@@ -100,6 +102,75 @@ Node_Pin *findOutputPin(NodePort output)
 
     return nullptr;
 }
+
+Clock* findFirstOutputClock(NodePort output)
+{
+    Clock* clockFound = nullptr;
+    for (auto nh : output.node->exploreOutput(output.port)) {
+        if (auto* reg = dynamic_cast<Node_Register*>(nh.node())) {
+            if (clockFound == nullptr)
+                clockFound = reg->getClocks()[0];
+            else
+                if (clockFound != reg->getClocks()[0])
+                    return nullptr;
+            nh.backtrack();
+        }
+        else if (nh.isNodeType<Node_External>()) {
+            nh.backtrack();
+        }
+    }
+    return clockFound;
+}
+
+Clock* findFirstInputClock(NodePort input)
+{
+    Clock* clockFound = nullptr;
+    for (auto nh : input.node->exploreInput(input.port).skipExportOnly().skipDependencies()) {
+        if (auto* reg = dynamic_cast<Node_Register*>(nh.node())) {
+            if (clockFound == nullptr)
+                clockFound = reg->getClocks()[0];
+            else
+                if (clockFound != reg->getClocks()[0])
+                    return nullptr;
+            nh.backtrack();
+        }
+        else if (nh.isNodeType<Node_External>()) {
+            nh.backtrack();
+        }
+    }
+    return clockFound;
+}
+
+std::vector<Node_Register*> findAllOutputRegisters(NodePort output)
+{
+    std::vector<Node_Register*> result;
+    for (auto nh : output.node->exploreOutput(output.port)) {
+        if (auto* reg = dynamic_cast<Node_Register*>(nh.node())) {
+            result.push_back(reg);
+            nh.backtrack();
+        }
+        else if (nh.isNodeType<Node_External>()) {
+            nh.backtrack();
+        }
+    }
+    return result;
+}
+
+std::vector<Node_Register*> findAllInputRegisters(NodePort input)
+{
+    std::vector<Node_Register*> result;
+    for (auto nh : input.node->exploreInput(input.port).skipExportOnly().skipDependencies()) {
+        if (auto* reg = dynamic_cast<Node_Register*>(nh.node())) {
+            result.push_back(reg);
+            nh.backtrack();
+        }
+        else if (nh.isNodeType<Node_External>()) {
+            nh.backtrack();
+        }
+    }
+    return result;
+}
+
 
 
 }

@@ -5,7 +5,7 @@ function GateryWorkspaceDefaults()
     architecture "x64"
     symbols "On"
     flags { "MultiProcessorCompile" }
-    cppdialect "C++latest"
+    cppdialect "c++latest"
 
     filter "configurations:Debug"
         runtime "Debug"
@@ -14,8 +14,10 @@ function GateryWorkspaceDefaults()
         runtime "Release"
         optimize "On"
 
-    filter "system:linux"
+    filter { "system:linux" }
         buildoptions { "-std=c++2a", "-fcoroutines" }
+
+    filter {}
 
 end
 
@@ -28,6 +30,7 @@ end
 
 project "gatery"
     kind "StaticLib"
+
     files { 
         "gatery/export/**.cpp", "gatery/export/**.c", "gatery/export/**.h",
         "gatery/frontend/**.cpp", "gatery/frontend/**.c", "gatery/frontend/**.h",
@@ -43,6 +46,9 @@ project "gatery"
 
     includedirs "%{prj.location}/"
     GateryProjectDefaults()
+
+    filter "system:windows"
+        flags { "FatalCompileWarnings" }
 
     filter "files:**.c"
         flags {"NoPCH"}

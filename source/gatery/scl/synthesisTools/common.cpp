@@ -29,11 +29,8 @@
 
 namespace gtry {
 
-void writeClockXDC(const vhdl::AST &ast, const std::string &fullPath)
+void writeClockXDC(const vhdl::AST &ast, std::ostream& out)
 {
-	std::fstream file(fullPath.c_str(), std::fstream::out);
-	file.exceptions(std::fstream::failbit | std::fstream::badbit);
-
 	const vhdl::Entity* top = ast.getRootEntity();
 	for (const hlim::Clock* clk : top->getClocks())
 	{
@@ -41,14 +38,14 @@ void writeClockXDC(const vhdl::AST &ast, const std::string &fullPath)
 		hlim::ClockRational freq = clk->getAbsoluteFrequency();
 		double ns = double(freq.denominator() * 1'000'000'000) / freq.numerator();
 
-		file << "create_clock -period " << std::fixed << std::setprecision(3) << ns << " [get_ports " << name << "]\n";
+		out << "create_clock -period " << std::fixed << std::setprecision(3) << ns << " [get_ports " << name << "]\n";
 	}
 }
 
-void writeClockSDC(const vhdl::AST &ast, const std::string &fullPath)
+void writeClockSDC(const vhdl::AST &ast, std::ostream& out)
 {
 	// Actually for now the same syntax
-	writeClockXDC(ast, fullPath);
+	writeClockXDC(ast, out);
 }
 
 

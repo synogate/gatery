@@ -74,11 +74,11 @@ namespace gtry {
         };
     }
 
-    Selection Selection::Slice(int offset, int size)
+    Selection Selection::Slice(size_t offset, size_t size)
     {
         return {
-            .start = offset,
-            .width = size,
+            .start = (int)offset,
+            .width = (int)size,
             .stride = 1,
             .untilEndOfSource = false,
         };

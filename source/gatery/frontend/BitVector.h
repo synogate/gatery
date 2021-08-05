@@ -53,7 +53,7 @@ namespace gtry {
 		static Selection RangeIncl(int start, int endIncl);
 		static Selection StridedRange(int start, int end, size_t stride);
 
-		static Selection Slice(int offset, int size);
+		static Selection Slice(size_t offset, size_t size);
 		static Selection StridedSlice(int offset, int size, size_t stride);
 
 		static Selection Symbol(int idx, BitWidth symbolWidth);
@@ -157,7 +157,7 @@ namespace gtry {
 		BVec& operator = (Int rhs) { assign(rhs); return *this; }
 		template<unsigned S>
 		BVec& operator = (const char (&rhs)[S]) { assign(std::string_view(rhs)); return *this; }
-		BVec& operator = (const BVec& rhs) { if(rhs.m_node) assign(rhs.getReadPort()); return *this; }
+		BVec& operator = (const BVec& rhs) { if (rhs.m_node) assign(rhs.getReadPort()); return *this; }
 		BVec& operator = (BVec&& rhs);
 		BVec& operator = (BitWidth width);
 		BVec& operator = (const BVecDefault &defaultValue);

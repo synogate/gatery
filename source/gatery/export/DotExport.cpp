@@ -207,8 +207,8 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
                 auxLabel = std::to_string(maxDelay);
 
                 maxDelay /= 32.0f;
-                int red = std::min<int>(255, std::floor(std::max(0.0f, maxDelay - 1.0f) * 255));
-                int blue = std::min<int>(255, std::floor(std::max(0.0f, 1.0f-maxDelay) * 255));
+                int red = std::min<int>(255, (int)std::floor(std::max(0.0f, maxDelay - 1.0f) * 255));
+                int blue = std::min<int>(255, (int)std::floor(std::max(0.0f, 1.0f-maxDelay) * 255));
 
                 file << (boost::format(" color=\"#%02x00%02x\"") % red % blue);
             }

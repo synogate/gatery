@@ -38,6 +38,7 @@
 
 
 #define HCL_ASSERT(x) { if (!(x)) { throw gtry::utils::InternalError(__FILE__, __LINE__, std::string("Assertion failed: ") + #x); }}
+#define HCL_ASSERT_NOTHROW(x) { if (!(x)) { std::cerr << "Assertion failed: " << #x << '\n'; exit(1); }}
 #define HCL_ASSERT_HINT(x, message) { if (!(x)) { throw gtry::utils::InternalError(__FILE__, __LINE__, std::string("Assertion failed: ") + #x + " Hint: " + message); }}
 
 

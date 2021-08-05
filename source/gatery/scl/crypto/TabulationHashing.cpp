@@ -74,8 +74,8 @@ namespace gtry::scl
 
 		AvalonMM avmm;
 
-		const Selection symbolAddrRange = Selection::Slice(0, (int)m_symbolWidth.value);
-		const Selection tableAddrRange = Selection::Slice(symbolAddrRange.width, (int)utils::Log2C(m_tables.size()));
+		const Selection symbolAddrRange = Selection::Slice(0, m_symbolWidth.value);
+		const Selection tableAddrRange = Selection::Slice(symbolAddrRange.width, utils::Log2C(m_tables.size()));
 		avmm.addressSel["symbol"] = symbolAddrRange;
 		avmm.addressSel["table"] = tableAddrRange;
 

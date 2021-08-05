@@ -44,7 +44,7 @@ R"Delim(
 --------------------------------------------------------------------
 )Delim";
 
-    m_filenameExtension = ".vhdl";
+    m_filenameExtension = ".vhd";
 }
 
 std::string DefaultCodeFormatting::getNodeName(const hlim::BaseNode *node, unsigned attempt) const

@@ -53,7 +53,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
 
             co_await WaitClk(clock);
 
-            unsigned expectedSum = 0;
+            size_t expectedSum = 0;
 
             while (true) {
                 expectedSum += simu(incrementPin);
