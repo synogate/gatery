@@ -279,6 +279,12 @@ inline std::uint64_t parallelBitDeposit(std::uint64_t a, std::uint64_t mask) {
     return result;
 }
 #endif
+
+template<typename T>
+inline T lowestSetBitMask(T val)
+{
+    return val & (0-val);
+}
     
 }
     

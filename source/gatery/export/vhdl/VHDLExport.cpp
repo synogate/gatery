@@ -62,6 +62,16 @@ namespace gtry::vhdl {
 VHDLExport::VHDLExport(std::filesystem::path destination)
 {
     m_destination = std::move(destination);
+    m_destinationTestbench = getDestination();
+    m_codeFormatting.reset(new DefaultCodeFormatting());
+    m_synthesisTool.reset(new DefaultSynthesisTool());
+}
+
+
+VHDLExport::VHDLExport(std::filesystem::path destination, std::filesystem::path destinationTestbench)
+{
+    m_destination = std::move(destination);
+    m_destinationTestbench = std::move(destinationTestbench);
     m_codeFormatting.reset(new DefaultCodeFormatting());
     m_synthesisTool.reset(new DefaultSynthesisTool());
 }
@@ -117,6 +127,9 @@ CodeFormatting *VHDLExport::getFormatting()
 
 void VHDLExport::operator()(hlim::Circuit &circuit)
 {
+    std::filesystem::create_directories(getDestination());
+    std::filesystem::create_directories(m_destinationTestbench);
+
     m_synthesisTool->prepareCircuit(circuit);
 
     m_ast.reset(new AST(m_codeFormatting.get(), m_synthesisTool.get()));
@@ -128,9 +141,9 @@ void VHDLExport::operator()(hlim::Circuit &circuit)
 
     for (auto &e : m_testbenchRecorderSettings) {
         if (e.inlineTestData)
-            m_testbenchRecorder.push_back(std::make_unique<TestbenchRecorder>(*this, m_ast.get(), *e.simulator, getDestination(), e.name));
+            m_testbenchRecorder.push_back(std::make_unique<TestbenchRecorder>(*this, m_ast.get(), *e.simulator, m_destinationTestbench, e.name));
         else
-            m_testbenchRecorder.push_back(std::make_unique<FileBasedTestbenchRecorder>(*this, m_ast.get(), *e.simulator, getDestination(), e.name));
+            m_testbenchRecorder.push_back(std::make_unique<FileBasedTestbenchRecorder>(*this, m_ast.get(), *e.simulator, m_destinationTestbench, e.name));
             
         e.simulator->addCallbacks(m_testbenchRecorder.back().get());
     }

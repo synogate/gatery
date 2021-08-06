@@ -95,7 +95,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
                 while (!simu(outValid))
                     co_await WaitClk(clock);
 
-                std::uint8_t data = simu(outData);
+                size_t data = simu(outData);
                 BOOST_TEST(readIdx < dataStream.size());
                 if (readIdx < dataStream.size())
                     BOOST_TEST(data == dataStream[readIdx]);

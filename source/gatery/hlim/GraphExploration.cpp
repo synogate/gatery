@@ -19,6 +19,7 @@
 #include "GraphExploration.h"
 
 #include "coreNodes/Node_Signal.h"
+#include "supportNodes/Node_ExportOverride.h"
 
 #include "../utils/Range.h"
 
@@ -77,7 +78,7 @@ Exploration<forward, Policy>::Exploration(NodePort nodePort) : m_nodePort(nodePo
 template<bool forward, typename Policy>
 typename Exploration<forward, Policy>::iterator Exploration<forward, Policy>::begin()
 {
-    return iterator(m_skipDependencies, m_nodePort);
+    return iterator(m_skipDependencies, m_skipExportOnly, m_nodePort);
 }
 
 template<bool forward, typename Policy>
@@ -104,7 +105,7 @@ void DepthFirstPolicy<forward>::init(NodePort nodePort)
 }
 
 template<bool forward>
-void DepthFirstPolicy<forward>::advance(bool skipDependencies)
+void DepthFirstPolicy<forward>::advance(bool skipDependencies, bool skipExportOnly)
 {
     if (m_stack.empty()) return;
     BaseNode *currentNode = m_stack.top().node;
@@ -115,11 +116,13 @@ void DepthFirstPolicy<forward>::advance(bool skipDependencies)
                 for (auto np : currentNode->getDirectlyDriven(i))
                     m_stack.push(np);
     } else {
+        bool isExpOverride = dynamic_cast<Node_ExportOverride*>(currentNode);
         for (auto i : utils::Range(currentNode->getNumInputPorts())) {
             auto driver = currentNode->getDriver(i);
             if (driver.node != nullptr)
                 if (!skipDependencies || !hlim::outputIsDependency(driver))
-                    m_stack.push(driver);
+                    if (!skipExportOnly || isExpOverride || i != Node_ExportOverride::EXP_INPUT)
+                        m_stack.push(driver);
         }
     }
 }

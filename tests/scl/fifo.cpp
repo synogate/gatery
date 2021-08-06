@@ -199,12 +199,12 @@ BOOST_FIXTURE_TEST_CASE(Fifo_basic, BoostUnitTestSimulationFixture)
 
     addSimulationProcess(fifo);
 
-    sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "fifo.vcd" };
-    vcd.addAllPins();
-    vcd.addAllNamedSignals();
+    //sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "fifo.vcd" };
+    //vcd.addAllPins();
+    //vcd.addAllNamedSignals();
 
     design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-    design.visualize("after");
+    //design.visualize("after");
 
     runTest(hlim::ClockRational(20000, 1) / clock.getClk()->getAbsoluteFrequency());
 }

@@ -20,7 +20,7 @@
 
 namespace gtry::scl::arch::xilinx {
 
-OSERDESE2::OSERDESE2(unsigned width)
+OSERDESE2::OSERDESE2(size_t width)
 {
     m_libraryName = "UNISIM";
     m_name = "OSERDESE2";

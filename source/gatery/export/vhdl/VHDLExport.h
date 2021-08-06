@@ -48,6 +48,7 @@ class VHDLExport
 {
     public:
         VHDLExport(std::filesystem::path destination);
+        VHDLExport(std::filesystem::path destination, std::filesystem::path destinationTestbench);
         ~VHDLExport();
 
         VHDLExport &targetSynthesisTool(SynthesisTool *synthesisTool);
@@ -65,6 +66,7 @@ class VHDLExport
 
         AST *getAST() { return m_ast.get(); }
         std::filesystem::path getDestination();
+        const std::filesystem::path &getTestbenchDestination() { return m_destinationTestbench; }
         std::filesystem::path getSingleFileFilename() { return m_destination.filename(); }
         bool isSingleFileExport();
 
@@ -79,6 +81,7 @@ class VHDLExport
         InterfacePackageContent &getInterfacePackage() { return m_interfacePackageContent; }
     protected:
         std::filesystem::path m_destination;
+        std::filesystem::path m_destinationTestbench;
         std::unique_ptr<CodeFormatting> m_codeFormatting;
         std::unique_ptr<SynthesisTool> m_synthesisTool;
         std::vector<std::unique_ptr<BaseTestbenchRecorder>> m_testbenchRecorder;

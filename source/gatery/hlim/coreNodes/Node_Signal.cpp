@@ -97,7 +97,7 @@ void Node_Signal::estimateSignalDelay(SignalDelay &sigDelay)
 }
 
 
-void Node_Signal::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, unsigned outputPort, unsigned outputBit, unsigned &inputPort, unsigned &inputBit)
+void Node_Signal::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit)
 {
     inputPort = 0;
     inputBit = outputBit;

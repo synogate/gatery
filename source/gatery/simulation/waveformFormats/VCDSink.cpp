@@ -96,8 +96,15 @@ void VCDSink::initialize()
 {
     auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
+    tm now_tb;
+#ifdef WIN32
+    localtime_s(&now_tb, &now);
+#else
+    localtime_r(&now, &now_tb);
+#endif
+
     m_vcdFile
-        << "$date\n" << std::put_time(std::localtime(&now), "%Y-%m-%d %X") << "\n$end\n"
+        << "$date\n" << std::put_time(&now_tb, "%Y-%m-%d %X") << "\n$end\n"
         << "$version\nGatery simulation output\n$end\n"
         << "$timescale\n1ps\n$end\n";
 

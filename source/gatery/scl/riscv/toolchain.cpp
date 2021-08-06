@@ -80,14 +80,9 @@ void RiscVToolchain::build()
 	{
 		std::fstream linkerScript(linkerScriptFilename.string().c_str(), std::fstream::out);
 
-		std::uint32_t romSize, ramSize;
-		if (m_instructionRomAddr < m_dataRamAddr) {
-			romSize = m_dataRamAddr - m_instructionRomAddr;
-			ramSize = -romSize;
-		} else {
-			ramSize = m_instructionRomAddr - m_dataRamAddr;
-			romSize = -ramSize;
-		}
+		HCL_ASSERT(m_instructionRomAddr < m_dataRamAddr);
+		std::uint32_t romSize = m_dataRamAddr - m_instructionRomAddr;
+		std::uint32_t ramSize = 0 - m_dataRamAddr;
 
 		linkerScript  << std::hex
 			<< "MEMORY {" << std::endl

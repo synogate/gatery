@@ -1165,9 +1165,9 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, UnitTestSimulationFixture)
 
 	});
 
-	sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "riscv_single_cycle_test.vcd" };
-	vcd.addAllPins();
-	vcd.addAllNamedSignals();
+	//sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "riscv_single_cycle_test.vcd" };
+	//vcd.addAllPins();
+	//vcd.addAllNamedSignals();
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	//design.visualize("single_cycle_riscv");
@@ -1249,9 +1249,9 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, UnitTestSimulationFixture)
 
 		});
 
-	sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "riscv_dual_cycle.vcd" };
-	vcd.addAllPins();
-	vcd.addAllNamedSignals();
+	//sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "riscv_dual_cycle.vcd" };
+	//vcd.addAllPins();
+	//vcd.addAllNamedSignals();
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	//design.visualize("riscv_dual_cycle");

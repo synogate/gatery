@@ -105,7 +105,11 @@ void XilinxVivado::resolveAttributes(const hlim::SignalAttributes &attribs, hlim
 
 void XilinxVivado::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
 {
-	writeClockXDC(*vhdlExport.getAST(), (vhdlExport.getDestination() / filename).string());
+	std::string fullPath = (vhdlExport.getDestination() / filename).string();
+	std::fstream file(fullPath.c_str(), std::fstream::out);
+	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+
+	writeClockXDC(*vhdlExport.getAST(), file);
 }
 
 void XilinxVivado::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)

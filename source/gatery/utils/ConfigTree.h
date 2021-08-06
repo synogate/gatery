@@ -19,10 +19,6 @@
 
 #include "../frontend/BitWidth.h"
 
-#include <string_view>
-#include <filesystem>
-#include <yaml-cpp/yaml.h>
-
 namespace gtry::utils {
 
 class ConfigTree {
@@ -69,7 +65,7 @@ class ConfigTree {
             inline std::string operator()(std::string v) { return std::move(v); }
         };
         struct BitWidthTranslator {
-            typedef int YamlType;
+            typedef uint64_t YamlType;
             typedef BitWidth Type;
 
             inline Type operator()(YamlType v) { return BitWidth(v); }

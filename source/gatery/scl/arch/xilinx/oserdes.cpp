@@ -58,7 +58,7 @@ Bit serdes(BVec data) {
 
 
     auto *oserdese2_master = DesignScope::createNode<OSERDESE2>(data.size());
-    for (auto i : utils::Range(std::min<unsigned>(8u, data.size())))
+    for (auto i : utils::Range(std::min<size_t>(8u, data.size())))
         oserdese2_master->setInput((OSERDESE2::Inputs) (OSERDESE2::IN_D1+i), data[i]);
 
     oserdese2_master->attachClock(fastClk.getClk(), OSERDESE2::CLK);

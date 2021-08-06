@@ -181,7 +181,7 @@ namespace gtry::scl
 		HCL_DESIGNCHECK_HINT(memWidth.value + memTabWidth.value + 2 <= 32,
 			"The memory vector stage command register is limited to 32bit including 2 command bits, the table selection bits and the memory address bits.");
 
-		Selection memTabSel = Selection::Slice((int)memWidth.value, (int)memTabWidth.value);
+		Selection memTabSel = Selection::Slice(memWidth.value, memTabWidth.value);
 
 		std::string desc;
 		std::string triggerDescShort;
