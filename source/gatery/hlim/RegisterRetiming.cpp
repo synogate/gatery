@@ -682,12 +682,23 @@ writeSubnet();
 					openList.push_back(np);
 
  			if (auto *memPort = dynamic_cast<Node_MemPort*>(node)) { // If it is a memory port		 	
+				auto *memory = memPort->getMemory();
+
 				// Check if it is a write port that will be fixed later on
 				if (retimeableWritePorts.contains(memPort)) {
-					areaToBeRetimed.add(memPort);
+
+					// It is a write port that may be retimed back wrt. to the read ports of the same memory because the change wrt. the read ports will be fixed with RMW logic later on.
+					// However, the order wrt. other write ports must not change, so we need to retime all write ports of the same memory (and later on build RMW logic for all of them).
+
+					// add all memory *write* ports to open list
+					for (auto np : memory->getDirectlyDriven(0)) {
+						auto *otherMemPort = dynamic_cast<Node_MemPort*>(np.node);
+						if (otherMemPort->isWritePort())
+							openList.push_back(np);
+					}
+
 				} else {
 					// attempt to retime entire memory
-					auto *memory = memPort->getMemory();
 					areaToBeRetimed.add(memory);
 				
 					// add all memory ports to open list
@@ -731,13 +742,13 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 	std::set<Node_Register*> registersToBeRemoved;
 	if (!determineAreaToBeRetimedBackward(circuit, area, anchoredRegisters, output, retimeableWritePorts, retimedArea, registersToBeRemoved, ignoreRefs, failureIsError))
 		return false;
-
+/*
 	{
 		DotExport exp("areaToBeRetimed.dot");
 		exp(circuit, retimedArea.asConst());
 		exp.runGraphViz("areaToBeRetimed.svg");
 	}
-
+*/
 	if (retimedArea.empty()) return true; // immediately hit a register, so empty retiming area, nothing to do.
 
 	std::set<hlim::NodePort> outputsEnteringRetimingArea;
@@ -745,7 +756,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 	for (auto n : retimedArea)
 		for (auto i : utils::Range(n->getNumInputPorts())) {
 			auto driver = n->getDriver(i);
-			if (!outputIsDependency(driver) && !retimedArea.contains(driver.node))
+			if (driver.node != nullptr && !outputIsDependency(driver) && !retimedArea.contains(driver.node))
 				outputsEnteringRetimingArea.insert(driver);
 		}
 

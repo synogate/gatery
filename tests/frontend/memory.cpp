@@ -500,9 +500,9 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write, UnitTestSimulationFixture)
         stopTest();
 	});
 
-    design.visualize("before");
+    //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-    design.visualize("after");
+    //design.visualize("after");
 	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->getAbsoluteFrequency());
 }
 
@@ -586,9 +586,9 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads, UnitTestSimul
         stopTest();
 	});
 
-    design.visualize("before");
+    //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-    design.visualize("after");
+    //design.visualize("after");
 	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->getAbsoluteFrequency());
 }
 
@@ -668,8 +668,525 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_on_wrEn, UnitTestSimulationFi
         stopTest();
 	});
 
-    design.visualize("before");
+    //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-    design.visualize("after");
+    //design.visualize("after");
 	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->getAbsoluteFrequency());
 }
+
+BOOST_FIXTURE_TEST_CASE(sync_mem_multiple_writes, UnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    std::vector<unsigned> contents;
+    contents.resize(4, 0);
+    std::mt19937 rng{ 18055 };
+
+    Memory<BVec> mem(contents.size(), 32_b);
+    mem.setType(MemType::BRAM);
+    mem.setPowerOnStateZero();
+
+    BVec wrData1 = pinIn(32_b).setName("wr_data1");
+    BVec wrAddr1 = pinIn(4_b).setName("wr_addr1");
+
+    BVec wrData2 = pinIn(32_b).setName("wr_data2");
+    BVec wrAddr2 = pinIn(4_b).setName("wr_addr2");
+
+    BVec rd_addr = pinIn(4_b).setName("rd_addr");
+    BVec readOutputBefore = reg(mem[rd_addr]);
+    pinOut(readOutputBefore).setName("readOutputBefore");
+
+    mem[wrAddr1] = wrData1;
+    mem[wrAddr2] = wrData2;
+
+    BVec readOutputAfter = reg(mem[rd_addr]);
+    pinOut(readOutputAfter).setName("readOutputAfter");
+
+	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
+
+        std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
+        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
+        std::uniform_int_distribution<unsigned> randomData(0, 1000);
+
+        unsigned collisions = 0;
+
+        for ([[maybe_unused]] auto i : Range(100000)) {
+
+            unsigned read_addr = randomAddr(rng);
+            simu(rd_addr) = read_addr;
+            unsigned expectedReadContentBefore = contents[read_addr];
+
+
+            unsigned write_addr1 = randomAddr(rng);
+            simu(wrAddr1) =  write_addr1;
+            unsigned write_data1 = randomData(rng);
+            simu(wrData1) = write_data1;
+            contents[write_addr1] = write_data1;
+
+
+            unsigned write_addr2 = randomAddr(rng);
+            simu(wrAddr2) =  write_addr2;
+            unsigned write_data2 = randomData(rng);
+            simu(wrData2) = write_data2;
+            contents[write_addr2] = write_data2;
+
+            if (write_addr2 == write_addr1) collisions++;
+
+            unsigned expectedReadContentAfter = contents[read_addr];
+
+            co_await WaitClk(clock);
+
+            BOOST_TEST(simu(readOutputBefore).value() == expectedReadContentBefore);
+            BOOST_TEST(simu(readOutputAfter).value() == expectedReadContentAfter);
+        }
+
+        BOOST_TEST(collisions > 1000, "Too few collisions to verify correct behavior");
+
+        stopTest();
+	});
+
+    //design.visualize("before");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+    //design.visualize("after");
+	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->getAbsoluteFrequency());
+}
+
+BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrFirst, UnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    std::vector<unsigned> contents;
+    contents.resize(4, 0);
+    std::mt19937 rng{ 18055 };
+
+    Memory<BVec> mem(contents.size(), 32_b);
+    mem.setType(MemType::BRAM);
+    mem.setPowerOnStateZero();
+
+    BVec wrData = pinIn(32_b).setName("wr_data");
+    BVec wrAddr = pinIn(4_b).setName("wr_addr");
+    BVec addr = pinIn(4_b).setName("rmw_addr");
+    BVec rd_addr = pinIn(4_b).setName("rd_addr");
+    Bit wrEn = pinIn().setName("wr_en");
+    BVec readOutputBefore = reg(mem[rd_addr]);
+    pinOut(readOutputBefore).setName("readOutputBefore");
+    {
+        mem[wrAddr] = wrData;
+
+        BVec elem = mem[addr];
+        IF (wrEn)
+            mem[addr] = elem + 1;
+    }
+
+	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
+
+        std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
+        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
+        std::uniform_int_distribution<unsigned> randomData(0, 1000);
+
+        unsigned collisions = 0;
+
+        bool lastWasWrite = false;
+        unsigned lastAddr = 0;
+        for ([[maybe_unused]] auto i : Range(100000)) {
+            unsigned read_addr = randomAddr(rng);
+            simu(rd_addr) = read_addr;
+            unsigned expectedReadContentBefore = contents[read_addr];
+
+            unsigned write_addr = randomAddr(rng);
+            simu(wrAddr) =  write_addr;
+            unsigned write_data = randomData(rng);
+            simu(wrData) = write_data;
+            contents[write_addr] = write_data;
+
+            bool doInc = zeroOne(rng) > 0.1f;
+            unsigned incAddr = randomAddr(rng);
+            simu(wrEn) = doInc;
+            simu(addr) = incAddr;
+            if (doInc)
+                contents[incAddr]++;
+
+            if (lastWasWrite && lastAddr == incAddr)
+                collisions++;
+
+            co_await WaitClk(clock);
+
+            unsigned actualReadContentBefore = simu(readOutputBefore).value();
+            BOOST_TEST(actualReadContentBefore == expectedReadContentBefore, 
+                "Read-port (before RMW) yields " << actualReadContentBefore << " but expected " << expectedReadContentBefore << ". Read-port address: " << read_addr << " RMW address: " << incAddr << " last clock cycle RMW addr: " << lastAddr);
+
+            lastWasWrite = doInc;
+            lastAddr = incAddr;
+        }
+
+        BOOST_TEST(collisions > 1000, "Too few collisions to verify correct RMW behavior");
+
+        stopTest();
+	});
+
+    //design.visualize("before");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+    //design.visualize("after");
+	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->getAbsoluteFrequency());
+}
+
+
+BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrLast, UnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    std::vector<unsigned> contents;
+    contents.resize(4, 0);
+    std::mt19937 rng{ 18055 };
+
+    Memory<BVec> mem(contents.size(), 32_b);
+    mem.setType(MemType::BRAM);
+    mem.setPowerOnStateZero();
+
+    BVec wrData = pinIn(32_b).setName("wr_data");
+    BVec wrAddr = pinIn(4_b).setName("wr_addr");
+    BVec addr = pinIn(4_b).setName("rmw_addr");
+    Bit wrEn = pinIn().setName("wr_en");
+    
+    BVec elem = mem[addr];
+    IF (wrEn)
+        mem[addr] = elem + 1;
+
+    mem[wrAddr] = wrData;
+    pinOut(reg(elem)).setName("read");
+
+	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
+
+        std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
+        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
+        std::uniform_int_distribution<unsigned> randomData(0, 1000);
+
+        unsigned collisions = 0;
+
+        bool lastWasWrite = false;
+        unsigned lastAddr = 0;
+        for ([[maybe_unused]] auto i : Range(100000)) {
+
+            bool doInc = zeroOne(rng) > 0.1f;
+            unsigned incAddr = randomAddr(rng);
+            simu(wrEn) = doInc;
+            simu(addr) = incAddr;
+            unsigned expectedReadContent = contents[incAddr];
+            if (doInc)
+                contents[incAddr]++;
+
+            unsigned write_addr = randomAddr(rng);
+            simu(wrAddr) =  write_addr;
+            unsigned write_data = randomData(rng);
+            simu(wrData) = write_data;
+            contents[write_addr] = write_data;
+
+
+            if (lastWasWrite && lastAddr == incAddr)
+                collisions++;
+
+            co_await WaitClk(clock);
+
+            unsigned actualReadContent = simu(elem).value();
+            BOOST_TEST(actualReadContent == expectedReadContent, 
+                "Read-port (before RMW) yields " << actualReadContent << " but expected " << expectedReadContent << ". RMW address: " << incAddr << " last clock cycle RMW addr: " << lastAddr << " wrAddr " << write_addr << " wrData " << write_data);
+
+            lastWasWrite = doInc;
+            lastAddr = incAddr;
+        }
+
+        BOOST_TEST(collisions > 1000, "Too few collisions to verify correct RMW behavior");
+
+        stopTest();
+	});
+
+    //design.visualize("before");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+    //design.visualize("after");
+	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->getAbsoluteFrequency());
+}
+
+BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_writes_wrFirst, UnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    std::vector<unsigned> contents;
+    contents.resize(4, 0);
+    std::mt19937 rng{ 18055 };
+
+    Memory<BVec> mem(contents.size(), 32_b);
+    mem.setType(MemType::BRAM);
+    mem.setPowerOnStateZero();
+
+    BVec wrData = pinIn(32_b).setName("wr_data");
+    BVec wrAddr = pinIn(4_b).setName("wr_addr");
+    BVec addr = pinIn(4_b).setName("rmw_addr");
+    BVec rd_addr = pinIn(4_b).setName("rd_addr");
+    Bit wrEn = pinIn().setName("wr_en");
+    BVec readOutputBefore = reg(mem[rd_addr]);
+    pinOut(readOutputBefore).setName("readOutputBefore");
+    {
+        mem[wrAddr] = wrData;
+
+        BVec elem = mem[addr];
+        IF (wrEn)
+            mem[addr] = elem + 1;
+    }
+    BVec readOutputAfter = reg(mem[rd_addr]);
+    pinOut(readOutputAfter).setName("readOutputAfter");
+
+	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
+
+        std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
+        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
+        std::uniform_int_distribution<unsigned> randomData(0, 1000);
+
+        unsigned collisions = 0;
+
+        bool lastWasWrite = false;
+        unsigned lastAddr = 0;
+        for ([[maybe_unused]] auto i : Range(100000)) {
+            unsigned read_addr = randomAddr(rng);
+            simu(rd_addr) = read_addr;
+            unsigned expectedReadContentBefore = contents[read_addr];
+
+            unsigned write_addr = randomAddr(rng);
+            simu(wrAddr) =  write_addr;
+            unsigned write_data = randomData(rng);
+            simu(wrData) = write_data;
+            contents[write_addr] = write_data;
+
+            bool doInc = zeroOne(rng) > 0.1f;
+            unsigned incAddr = randomAddr(rng);
+            simu(wrEn) = doInc;
+            simu(addr) = incAddr;
+            if (doInc)
+                contents[incAddr]++;
+
+            if (lastWasWrite && lastAddr == incAddr)
+                collisions++;
+
+            unsigned expectedReadContentAfter = contents[read_addr];
+
+            co_await WaitClk(clock);
+
+            unsigned actualReadContentBefore = simu(readOutputBefore).value();
+            BOOST_TEST(actualReadContentBefore == expectedReadContentBefore, 
+                "Read-port (before RMW) yields " << actualReadContentBefore << " but expected " << expectedReadContentBefore << ". Read-port address: " << read_addr << " RMW address: " << incAddr << " last clock cycle RMW addr: " << lastAddr);
+            BOOST_TEST(simu(readOutputAfter).value() == expectedReadContentAfter);
+
+            lastWasWrite = doInc;
+            lastAddr = incAddr;
+        }
+
+        BOOST_TEST(collisions > 1000, "Too few collisions to verify correct RMW behavior");
+
+        stopTest();
+	});
+
+    //design.visualize("before");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+    //design.visualize("after");
+	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->getAbsoluteFrequency());
+}
+
+BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_writes_wrLast, UnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    std::vector<unsigned> contents;
+    contents.resize(4, 0);
+    std::mt19937 rng{ 18055 };
+
+    Memory<BVec> mem(contents.size(), 32_b);
+    mem.setType(MemType::BRAM);
+    mem.setPowerOnStateZero();
+
+    BVec wrData = pinIn(32_b).setName("wr_data");
+    BVec wrAddr = pinIn(4_b).setName("wr_addr");
+    BVec addr = pinIn(4_b).setName("rmw_addr");
+    BVec rd_addr = pinIn(4_b).setName("rd_addr");
+    Bit wrEn = pinIn().setName("wr_en");
+    BVec readOutputBefore = reg(mem[rd_addr]);
+    pinOut(readOutputBefore).setName("readOutputBefore");
+    {
+        BVec elem = mem[addr];
+        IF (wrEn)
+            mem[addr] = elem + 1;
+
+    }
+    BVec readOutputAfter = reg(mem[rd_addr]);
+    pinOut(readOutputAfter).setName("readOutputAfter");
+
+    mem[wrAddr] = wrData;
+
+	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
+
+        std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
+        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
+        std::uniform_int_distribution<unsigned> randomData(0, 1000);
+
+        unsigned collisions = 0;
+
+        bool lastWasWrite = false;
+        unsigned lastAddr = 0;
+        for ([[maybe_unused]] auto i : Range(100000)) {
+            unsigned read_addr = randomAddr(rng);
+            simu(rd_addr) = read_addr;
+            unsigned expectedReadContentBefore = contents[read_addr];
+
+            bool doInc = zeroOne(rng) > 0.1f;
+            unsigned incAddr = randomAddr(rng);
+            simu(wrEn) = doInc;
+            simu(addr) = incAddr;
+            if (doInc)
+                contents[incAddr]++;
+
+            if (lastWasWrite && lastAddr == incAddr)
+                collisions++;
+
+            unsigned expectedReadContentAfter = contents[read_addr];
+
+            unsigned write_addr = randomAddr(rng);
+            simu(wrAddr) =  write_addr;
+            unsigned write_data = randomData(rng);
+            simu(wrData) = write_data;
+            contents[write_addr] = write_data;
+
+            co_await WaitClk(clock);
+
+            unsigned actualReadContentBefore = simu(readOutputBefore).value();
+            BOOST_TEST(actualReadContentBefore == expectedReadContentBefore, 
+                "Read-port (before RMW) yields " << actualReadContentBefore << " but expected " << expectedReadContentBefore << ". Read-port address: " << read_addr << " RMW address: " << incAddr << " last clock cycle RMW addr: " << lastAddr);
+            BOOST_TEST(simu(readOutputAfter).value() == expectedReadContentAfter);
+
+            lastWasWrite = doInc;
+            lastAddr = incAddr;
+        }
+
+        BOOST_TEST(collisions > 1000, "Too few collisions to verify correct RMW behavior");
+
+        stopTest();
+	});
+
+    //design.visualize("before");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+    //design.visualize("after");
+	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->getAbsoluteFrequency());
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(sync_mem_dual_read_modify_write, UnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    std::vector<unsigned> contents;
+    contents.resize(4, 0);
+    std::mt19937 rng{ 18055 };
+
+    Memory<BVec> mem(contents.size(), 32_b);
+    mem.setType(MemType::BRAM);
+    mem.setPowerOnStateZero();
+
+    BVec addr1 = pinIn(4_b);
+    BVec output1;
+    Bit wrEn1 = pinIn();
+    {
+        BVec elem = mem[addr1];
+        output1 = reg(elem);
+
+        IF (wrEn1)
+            mem[addr1] = elem + 1;
+    }
+    pinOut(output1);
+
+
+    BVec addr2 = pinIn(4_b);
+    BVec output2;
+    Bit wrEn2 = pinIn();
+    {
+        BVec elem = mem[addr2];
+        output2 = reg(elem);
+
+        IF (wrEn2)
+            mem[addr2] = elem + 1;
+    }
+    pinOut(output2);    
+
+	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
+
+        simu(wrEn1) = '0';
+        simu(wrEn2) = '0';
+        co_await WaitClk(clock);
+
+        std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
+        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
+
+        for ([[maybe_unused]] auto i : Range(10000)) {
+            bool doInc1 = zeroOne(rng) > 0.1f;
+            unsigned incAddr1 = randomAddr(rng);
+            simu(wrEn1) = doInc1;
+            simu(addr1) = incAddr1;
+            if (doInc1)
+                contents[incAddr1]++;
+
+            bool doInc2 = zeroOne(rng) > 0.1f;
+            unsigned incAddr2 = randomAddr(rng);
+            simu(wrEn2) = doInc2;
+            simu(addr2) = incAddr2;
+            if (doInc2)
+                contents[incAddr2]++;
+
+            co_await WaitClk(clock);
+        }
+
+
+        simu(wrEn1) = '0';
+        simu(wrEn2) = '0';
+
+        for (auto i : Range(4)) {
+            simu(addr1) = i;
+            co_await WaitClk(clock);
+            BOOST_TEST(simu(output1).value() == contents[i]);
+        }        
+
+        stopTest();
+	});
+
+    //design.visualize("before");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+    //design.visualize("after");
+	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->getAbsoluteFrequency());
+}
+

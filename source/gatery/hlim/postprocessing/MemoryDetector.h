@@ -47,7 +47,8 @@ class MemoryGroup : public NodeGroup
         
         void formAround(Node_Memory *memory, Circuit &circuit);
 
-        void convertPortDependencyToLogic(Circuit &circuit);
+        void convertToReadBeforeWrite(Circuit &circuit);
+        void resolveWriteOrder(Circuit &circuit);
         void attemptRegisterRetiming(Circuit &circuit);
         void verify();
 

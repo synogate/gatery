@@ -178,7 +178,7 @@ void MemoryGroup::lazyCreateFixupNodeGroup()
 
 
 
-void MemoryGroup::convertPortDependencyToLogic(Circuit &circuit)
+void MemoryGroup::convertToReadBeforeWrite(Circuit &circuit)
 {
     // If an async read happens after a write, it must
     // check if an address collision occured and if so directly forward the new value.
@@ -281,6 +281,32 @@ void MemoryGroup::convertPortDependencyToLogic(Circuit &circuit)
         }
     }
 
+
+    std::vector<Node_MemPort*> sortedWritePorts;
+    for (auto &wp : m_writePorts)
+        sortedWritePorts.push_back(wp.node);
+
+    std::sort(sortedWritePorts.begin(), sortedWritePorts.end(), [](Node_MemPort *left, Node_MemPort *right)->bool{
+        return left->isOrderedBefore(right);
+    });
+
+
+    // Reorder all writes to happen after all reads
+    Node_MemPort *lastPort = nullptr;
+    for (auto &rp : m_readPorts) {
+        rp.node->orderAfter(lastPort);
+        lastPort = rp.node;
+    }
+    // But preserve write order for now
+    if (!sortedWritePorts.empty())
+        sortedWritePorts[0]->orderAfter(lastPort);
+    for (size_t i = 1; i < sortedWritePorts.size(); i++)
+        sortedWritePorts[i]->orderAfter(sortedWritePorts[i-1]);
+}
+
+
+void MemoryGroup::resolveWriteOrder(Circuit &circuit)
+{
     // If two write ports have an explicit ordering, then the later write always trumps the former if both happen to the same address.
     // Search for such cases and build explicit logic that disables the earlier write.
     for (auto &wp1 : m_writePorts)
@@ -355,6 +381,7 @@ void MemoryGroup::convertPortDependencyToLogic(Circuit &circuit)
 }
 
 
+
 void MemoryGroup::ensureNotEnabledFirstCycle(Circuit &circuit, NodeGroup *ng, Node_MemPort *writePort)
 {
     // Ensure enable is low in first cycle
@@ -427,16 +454,23 @@ void MemoryGroup::ensureNotEnabledFirstCycle(Circuit &circuit, NodeGroup *ng, No
     reg->connectInput(Node_Register::Input::DATA, {.node = constOne, .port = 0ull});
     reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
 
-    // And register to enable input
-    auto *logicAnd = circuit.createNode<Node_Logic>(Node_Logic::AND);
-    logicAnd->moveToGroup(ng);
-    logicAnd->recordStackTrace();
-    logicAnd->setComment("Force the enable port to zero on first cycle after reset since the retiming delayed the entire write port by one cycle!");
-    logicAnd->connectInput(0, {.node = reg, .port = 0ull});
-    logicAnd->connectInput(1, wrEnableDriver);
+    NodePort newEnable = {.node = reg, .port = 0ull};
 
-    writePort->connectEnable({.node = logicAnd, .port = 0ull});
-    writePort->connectWrEnable({.node = logicAnd, .port = 0ull});
+    if (wrEnableDriver.node != nullptr) {
+
+        // And register to enable input
+        auto *logicAnd = circuit.createNode<Node_Logic>(Node_Logic::AND);
+        logicAnd->moveToGroup(ng);
+        logicAnd->recordStackTrace();
+        logicAnd->setComment("Force the enable port to zero on first cycle after reset since the retiming delayed the entire write port by one cycle!");
+        logicAnd->connectInput(0, newEnable);
+        logicAnd->connectInput(1, wrEnableDriver);
+
+        newEnable = {.node = logicAnd, .port = 0ull};
+    }
+
+    writePort->connectEnable(newEnable);
+    writePort->connectWrEnable(newEnable);
 }
 
 
@@ -517,13 +551,16 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
         sortedWritePorts.push_back(wp);
 
     std::sort(sortedWritePorts.begin(), sortedWritePorts.end(), [](Node_MemPort *left, Node_MemPort *right)->bool{
-        return left->isOrderedAfter(right);
+        return left->isOrderedBefore(right);
     });
+
+    if (sortedWritePorts.size() >= 2)
+        HCL_ASSERT(sortedWritePorts[0]->isOrderedBefore(sortedWritePorts[1]));
 
     auto *clock = sortedWritePorts.front()->getClocks()[0];
     ReadModifyWriteHazardLogicBuilder rmwBuilder(circuit, clock);
     rmwBuilder.setReadLatency(1);
-    rmwBuilder.retimeRegisterToMux();
+    //rmwBuilder.retimeRegisterToMux();
     
     for (auto &rp : m_readPorts)
         rmwBuilder.addReadPort(ReadModifyWriteHazardLogicBuilder::ReadPort{
@@ -547,6 +584,15 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
     const auto &newNodes = rmwBuilder.getNewNodes();
     for (auto n : newNodes) 
         n->moveToGroup(m_fixupNodeGroup);
+
+/*
+    {
+        auto all = ConstSubnet::all(circuit);
+        DotExport exp("afterRMW.dot");
+        exp(circuit, all);
+        exp.runGraphViz("afterRMW.svg");            
+    }        
+*/    
 }
 
 void MemoryGroup::verify()
@@ -609,8 +655,9 @@ void buildExplicitMemoryCircuitry(Circuit &circuit)
         auto& node = circuit.getNodes()[i];
         if (auto* memory = dynamic_cast<Node_Memory*>(node.get())) {
             auto* memoryGroup = dynamic_cast<MemoryGroup*>(memory->getGroup());
-            memoryGroup->convertPortDependencyToLogic(circuit);
+            memoryGroup->convertToReadBeforeWrite(circuit);
             memoryGroup->attemptRegisterRetiming(circuit);
+            memoryGroup->resolveWriteOrder(circuit);
             memoryGroup->verify();
         }
     }
