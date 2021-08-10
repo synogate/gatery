@@ -32,6 +32,59 @@
 
 namespace gtry::vhdl {
 
+
+struct NodeGroupInfo
+{
+    std::vector<hlim::BaseNode*> nodes;
+    std::vector<hlim::Node_External*> externalNodes;
+    std::vector<hlim::NodeGroup*> subEntities;
+    std::vector<hlim::NodeGroup*> subAreas;
+    std::vector<hlim::NodeGroup*> SFUs;
+
+    void buildFrom(AST &ast, hlim::NodeGroup *nodeGroup, bool mergeAreasReccursive);
+};
+
+
+void NodeGroupInfo::buildFrom(AST &ast, hlim::NodeGroup *nodeGroup, bool mergeAreasReccursive)
+{
+    std::vector<hlim::NodeGroup*> nodeGroupStack = { nodeGroup };
+
+    while (!nodeGroupStack.empty()) {
+        hlim::NodeGroup *group = nodeGroupStack.back();
+        nodeGroupStack.pop_back();
+
+        for (auto node : group->getNodes()) {
+            if (!ast.isPartOfExport(node)) continue;
+
+            hlim::Node_External *extNode = dynamic_cast<hlim::Node_External *>(node);
+            if (extNode != nullptr) {
+                externalNodes.push_back(extNode);
+            } else
+                nodes.push_back(node);
+        }
+
+        for (const auto &childGroup : group->getChildren()) {
+            switch (childGroup->getGroupType()) {
+                case hlim::NodeGroup::GroupType::ENTITY:
+                    subEntities.push_back(childGroup.get());
+                break;
+                case hlim::NodeGroup::GroupType::AREA:
+                    if (mergeAreasReccursive)
+                        nodeGroupStack.push_back(childGroup.get());
+                    else
+                        subAreas.push_back(childGroup.get());
+                break;
+                case hlim::NodeGroup::GroupType::SFU:
+                    SFUs.push_back(childGroup.get());
+                break;
+            }
+        }
+    }
+}
+
+
+
+
 Entity::Entity(AST &ast, const std::string &desiredName, BasicBlock *parent) : BasicBlock(ast, parent, &ast.getNamespaceScope())
 {
     m_name = m_ast.getNamespaceScope().allocateEntityName(desiredName);
@@ -49,7 +102,7 @@ void Entity::buildFrom(hlim::NodeGroup *nodeGroup)
     m_comment = nodeGroup->getComment();
 
     NodeGroupInfo grpInfo;
-    grpInfo.buildFrom(nodeGroup, false);
+    grpInfo.buildFrom(m_ast, nodeGroup, false);
 
     collectInstantiations(nodeGroup, false);
 
@@ -57,7 +110,7 @@ void Entity::buildFrom(hlim::NodeGroup *nodeGroup)
 
     for (auto &subArea : grpInfo.subAreas) {
         NodeGroupInfo areaInfo;
-        areaInfo.buildFrom(subArea, false);
+        areaInfo.buildFrom(m_ast, subArea, false);
 
         // If there is nothing but logic inside it's a process, otherwise a block
         if (areaInfo.externalNodes.empty() &&

@@ -19,6 +19,8 @@
 
 #include "NamespaceScope.h"
 
+#include "../../hlim/Subnet.h"
+
 #include <filesystem>
 
 #include <vector>
@@ -32,6 +34,7 @@ namespace gtry {
 namespace gtry::hlim {
     class Circuit;
     class BaseNode;
+    class NodeGroup;
 }
 
 namespace gtry::vhdl {
@@ -90,6 +93,9 @@ class AST
         bool findLocalDeclaration(hlim::NodePort driver, std::vector<BaseGrouping*> &reversePath);
 
         std::vector<Entity*> getDependencySortedEntities();
+
+        inline bool isPartOfExport(const hlim::BaseNode *node) const { return m_exportArea.contains(node); }
+        bool isEmpty(const hlim::NodeGroup *group, bool reccursive) const;
     protected:
         CodeFormatting *m_codeFormatting;
         SynthesisTool *m_synthesisTool;
@@ -97,6 +103,8 @@ class AST
         std::vector<std::unique_ptr<Entity>> m_entities;
         std::vector<std::unique_ptr<Package>> m_packages;
         Hlim2AstMapping m_mapping;
+
+        hlim::ConstSubnet m_exportArea;
 
 };
 

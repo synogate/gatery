@@ -17,6 +17,8 @@
 */
 #pragma once
 
+#include "../utils/ConfigTree.h"
+
 #include <set>
 #include <span>
 
@@ -46,7 +48,7 @@ class SubnetTemplate {
 		static FinalType allNecessaryForInputs(std::span<NodePort> limitingOutputs, std::span<NodePort> inputs);
 		static FinalType allNecessaryForNodes(std::span<NodeType*> limitingNodes, std::span<NodeType*> nodes);
 		static FinalType allForSimulation(CircuitType &circuit);
-		static FinalType allForExport(CircuitType &circuit);
+		static FinalType allForExport(CircuitType &circuit, const utils::ConfigTree &exportSelectionConfig = {});
 		static FinalType allUsedNodes(CircuitType &circuit);
 		static FinalType fromNodeGroup(NodeGroup *nodeGroup, bool reccursive = true);
 
@@ -71,7 +73,7 @@ class SubnetTemplate {
 		/// Adds all nodes that a simulation might want (skips export side of export overrides)
 		FinalType &addAllForSimulation(CircuitType &circuit);
 		/// Adds all nodes that an export might want (skips simulation side of export overrides)
-		FinalType &addAllForExport(CircuitType &circuit);
+		FinalType &addAllForExport(CircuitType &circuit, const utils::ConfigTree &exportSelectionConfig = {});
 		/// Adds all nodes that are used or have side effects
 		FinalType &addAllUsedNodes(CircuitType &circuit);
 

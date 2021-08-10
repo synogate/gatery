@@ -58,6 +58,9 @@ class Node_Memory : public Node<Node_Memory>
         void setType(MemType type) { m_type = type; }
         void setNoConflicts();
 
+        size_t createWriteDependencyInputPort();
+        void destroyWriteDependencyInputPort(size_t port);
+
         std::size_t getSize() const { return m_powerOnState.size(); }
         std::size_t getMaxPortWidth() const;
         void setPowerOnState(sim::DefaultBitVectorState powerOnState);
@@ -72,7 +75,7 @@ class Node_Memory : public Node<Node_Memory>
         virtual void simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
         virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;
 
-        virtual bool hasSideEffects() const override { return hasRef(); } // for now
+        //virtual bool hasSideEffects() const override { return hasRef(); } // for now
 
         bool isROM() const;
 

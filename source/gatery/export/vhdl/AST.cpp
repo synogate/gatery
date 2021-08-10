@@ -25,6 +25,7 @@
 #include "InterfacePackage.h"
 
 #include "../../hlim/Circuit.h"
+#include "../../hlim/NodeGroup.h"
 
 #include <fstream>
 #include <functional>
@@ -62,6 +63,8 @@ void AST::generateInterfacePackage(InterfacePackageContent &content)
 
 void AST::convert(hlim::Circuit &circuit)
 {
+    m_exportArea.addAllForExport(circuit);
+
     auto rootNode = circuit.getRootNodeGroup();
     auto &entity = createEntity(rootNode->getName(), nullptr);
     entity.buildFrom(rootNode);
@@ -145,6 +148,18 @@ bool AST::findLocalDeclaration(hlim::NodePort driver, std::vector<BaseGrouping*>
     if (m_entities.empty()) return false;
 
     return getRootEntity()->findLocalDeclaration(driver, reversePath);
+}
+
+bool AST::isEmpty(const hlim::NodeGroup *group, bool reccursive) const
+{
+    for (auto n : group->getNodes())
+        if (isPartOfExport(n)) return false;
+
+    if (reccursive)
+        for (const auto &c : group->getChildren())
+            if (!isEmpty(c.get(), reccursive)) return false;
+
+    return true;
 }
 
 

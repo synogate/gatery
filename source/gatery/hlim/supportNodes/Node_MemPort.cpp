@@ -26,10 +26,12 @@ namespace gtry::hlim {
 
 Node_MemPort::Node_MemPort(std::size_t bitWidth) : m_bitWidth(bitWidth)
 {
-    resizeInputs((unsigned)Inputs::count);
-    resizeOutputs((unsigned)Outputs::count);
-    setOutputConnectionType((unsigned)Outputs::rdData, {.interpretation = ConnectionType::BITVEC, .width=bitWidth});
-    setOutputConnectionType((unsigned)Outputs::orderBefore, {.interpretation = ConnectionType::ConnectionType::DEPENDENCY, .width=0});
+    resizeInputs((size_t)Inputs::count);
+    resizeOutputs((size_t)Outputs::count);
+    setOutputConnectionType((size_t)Outputs::rdData, {.interpretation = ConnectionType::BITVEC, .width=bitWidth});
+    setOutputConnectionType((size_t)Outputs::orderBefore, {.interpretation = ConnectionType::ConnectionType::DEPENDENCY, .width=0});
+    setOutputConnectionType((size_t)Outputs::memoryWriteDependency, {.interpretation = ConnectionType::ConnectionType::DEPENDENCY, .width=0});
+    setOutputType((size_t)Outputs::memoryWriteDependency, OUTPUT_LATCHED);
     m_clocks.resize(1);
 }
 
@@ -40,80 +42,72 @@ void Node_MemPort::connectMemory(Node_Memory *memory)
         if (lastMemPort != nullptr)
             orderAfter(lastMemPort);
     }
-    connectInput((unsigned)Inputs::memory, {.node=memory, .port=0});
+    connectInput((size_t)Inputs::memoryReadDependency, {.node=memory, .port=0});
+    size_t wrDepInput = memory->createWriteDependencyInputPort();
+    memory->rewireInput(wrDepInput, {.node = this, .port = (size_t) Outputs::memoryWriteDependency});
 }
 
 void Node_MemPort::disconnectMemory()
 {
-    disconnectInput((unsigned)Inputs::memory);
+    disconnectInput((size_t)Inputs::memoryReadDependency);
+    HCL_ASSERT(getDirectlyDriven((size_t) Outputs::memoryWriteDependency).size() == 1);
+
+    auto np = getDirectlyDriven((size_t) Outputs::memoryWriteDependency).front();
+    auto *memory = getMemory();
+    HCL_ASSERT(np.node == memory);
+
+    memory->destroyWriteDependencyInputPort(np.port);
 }
 
 
 Node_Memory *Node_MemPort::getMemory() const
 {
-    return dynamic_cast<Node_Memory *>(getDriver((unsigned)Inputs::memory).node);
+    return dynamic_cast<Node_Memory *>(getDriver((size_t)Inputs::memoryReadDependency).node);
 }
 
 void Node_MemPort::connectEnable(const NodePort &output)
 {
-    connectInput((unsigned)Inputs::enable, output);
+    connectInput((size_t)Inputs::enable, output);
 }
 
 void Node_MemPort::connectWrEnable(const NodePort &output)
 {
     HCL_ASSERT_HINT(!isReadPort(), "For now I don't want to mix read and write ports");
-    connectInput((unsigned)Inputs::wrEnable, output);
+    connectInput((size_t)Inputs::wrEnable, output);
 }
 
 void Node_MemPort::connectAddress(const NodePort &output)
 {
-    connectInput((unsigned)Inputs::address, output);
+    connectInput((size_t)Inputs::address, output);
 }
 
 void Node_MemPort::connectWrData(const NodePort &output)
 {
     HCL_ASSERT_HINT(!isReadPort(), "For now I don't want to mix read and write ports");
-    connectInput((unsigned)Inputs::wrData, output);
+    connectInput((size_t)Inputs::wrData, output);
 }
 
 void Node_MemPort::orderAfter(Node_MemPort *writePort)
 {
-    connectInput((unsigned)Inputs::orderAfter, {.node=writePort, .port=(unsigned)Node_MemPort::Outputs::orderBefore});
+    connectInput((size_t)Inputs::orderAfter, {.node=writePort, .port=(size_t)Node_MemPort::Outputs::orderBefore});
 }
-
-bool Node_MemPort::hasSideEffects() const
-{
-    auto *memory = getMemory();
-    if (memory == nullptr) return false;
-    
-    if (!isWritePort()) return false;
-
-    for (const auto &np : memory->getDirectlyDriven(0)) {
-        auto *port = dynamic_cast<Node_MemPort*>(np.node);
-        if (port->isReadPort()) return true;
-    }
-
-    // No one is reading what we are writing
-    return false;
-}
-
 
 bool Node_MemPort::isOrderedAfter(Node_MemPort *port) const
 {
-    auto *p = (Node_MemPort *)getDriver((unsigned)Inputs::orderAfter).node;
+    auto *p = (Node_MemPort *)getDriver((size_t)Inputs::orderAfter).node;
     while (p != nullptr) {
         if (p == port) return true;
-        p = (Node_MemPort *)p->getDriver((unsigned)Inputs::orderAfter).node;
+        p = (Node_MemPort *)p->getDriver((size_t)Inputs::orderAfter).node;
     }
     return false;
 }
 
 bool Node_MemPort::isOrderedBefore(Node_MemPort *port) const
 {
-    auto *p = (Node_MemPort *)port->getDriver((unsigned)Inputs::orderAfter).node;
+    auto *p = (Node_MemPort *)port->getDriver((size_t)Inputs::orderAfter).node;
     while (p != nullptr) {
         if (p == this) return true;
-        p = (Node_MemPort *)p->getDriver((unsigned)Inputs::orderAfter).node;
+        p = (Node_MemPort *)p->getDriver((size_t)Inputs::orderAfter).node;
     }
     return false;
 }
@@ -126,12 +120,12 @@ void Node_MemPort::setClock(Clock* clk)
 
 bool Node_MemPort::isReadPort() const
 {
-    return !getDirectlyDriven((unsigned)Outputs::rdData).empty();
+    return !getDirectlyDriven((size_t)Outputs::rdData).empty();
 }
 
 bool Node_MemPort::isWritePort() const
 {
-    return getDriver((unsigned)Inputs::wrData).node != nullptr;
+    return getDriver((size_t)Inputs::wrData).node != nullptr;
 }
 
 
@@ -140,46 +134,46 @@ void Node_MemPort::simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::Def
 {
     // clean all internal stuff
     if (isWritePort()) {
-        state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[(unsigned)Internal::address], getDriverConnType((unsigned)Inputs::address).width);
-        state.clearRange(sim::DefaultConfig::DEFINED,internalOffsets[(unsigned)Internal::wrData], getBitWidth());
-        state.clear(sim::DefaultConfig::VALUE, internalOffsets[(unsigned)Internal::wrEnable]);
+        state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[(size_t)Internal::address], getDriverConnType((size_t)Inputs::address).width);
+        state.clearRange(sim::DefaultConfig::DEFINED,internalOffsets[(size_t)Internal::wrData], getBitWidth());
+        state.clear(sim::DefaultConfig::VALUE, internalOffsets[(size_t)Internal::wrEnable]);
     }
 }
 
 void Node_MemPort::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
-    const auto &addrType = getDriverConnType((unsigned)Inputs::address);
+    const auto &addrType = getDriverConnType((size_t)Inputs::address);
 
     // optional enables, defaults to true
     bool enableValue = true;
     bool enableDefined = true;
-    if (inputOffsets[(unsigned)Inputs::enable] != ~0ull) {
-        enableValue   = state.get(sim::DefaultConfig::VALUE, inputOffsets[(unsigned)Inputs::enable]);
-        enableDefined = state.get(sim::DefaultConfig::DEFINED, inputOffsets[(unsigned)Inputs::enable]);
+    if (inputOffsets[(size_t)Inputs::enable] != ~0ull) {
+        enableValue   = state.get(sim::DefaultConfig::VALUE, inputOffsets[(size_t)Inputs::enable]);
+        enableDefined = state.get(sim::DefaultConfig::DEFINED, inputOffsets[(size_t)Inputs::enable]);
     }
 
     // First, do an asynchronous read.
-    if (outputOffsets[(unsigned)Outputs::rdData] != ~0ull) {
+    if (outputOffsets[(size_t)Outputs::rdData] != ~0ull) {
 
         // If not enabled (or undefined) output undefined since this is an asynchronous read. For synchronous (BRAM) behavior,
         // the register after the read ports holds the read value on a disabled read.
         if (!enableValue || !enableDefined) {
-            state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[(unsigned)Outputs::rdData], getBitWidth());
+            state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[(size_t)Outputs::rdData], getBitWidth());
         } else {
             // Output is undefined if any address bits are undefined.
             // Otherwise the data is read from memory with a (not necessarily pow2) wrap around of the
             // address is larger than the memory.
 
-            std::uint64_t addressValue   = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[(unsigned)Inputs::address], addrType.width);
-            std::uint64_t addressDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[(unsigned)Inputs::address], addrType.width);
+            std::uint64_t addressValue   = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[(size_t)Inputs::address], addrType.width);
+            std::uint64_t addressDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[(size_t)Inputs::address], addrType.width);
 
             if (!utils::isMaskSet(addressDefined, 0, addrType.width)) {
-                state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[(unsigned)Outputs::rdData], getBitWidth());
+                state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[(size_t)Outputs::rdData], getBitWidth());
             } else {
                 auto memSize = getMemory()->getSize();
                 HCL_ASSERT(memSize % getBitWidth() == 0);
                 auto index = (addressValue * getBitWidth()) % memSize;
-                state.copyRange(outputOffsets[(unsigned)Outputs::rdData], state, internalOffsets[(unsigned)RefInternal::memory] + index, getBitWidth());
+                state.copyRange(outputOffsets[(size_t)Outputs::rdData], state, internalOffsets[(size_t)RefInternal::memory] + index, getBitWidth());
             }
         }
     }
@@ -187,40 +181,40 @@ void Node_MemPort::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
     // If this is also a write port, store all information needed for the write in internal state
     // to perform the write on the clock edge.
     if (isWritePort()) {
-        state.copyRange(internalOffsets[(unsigned)Internal::address], state, inputOffsets[(unsigned)Inputs::address], addrType.width);
+        state.copyRange(internalOffsets[(size_t)Internal::address], state, inputOffsets[(size_t)Inputs::address], addrType.width);
 
-        const auto &wrDataType = getDriverConnType((unsigned)Inputs::wrData);
-        state.copyRange(internalOffsets[(unsigned)Internal::wrData], state, inputOffsets[(unsigned)Inputs::wrData], wrDataType.width);
+        const auto &wrDataType = getDriverConnType((size_t)Inputs::wrData);
+        state.copyRange(internalOffsets[(size_t)Internal::wrData], state, inputOffsets[(size_t)Inputs::wrData], wrDataType.width);
 
         bool doWrite = enableValue || !enableDefined;
         // optional enables, defaults to true
-        if (inputOffsets[(unsigned)Inputs::wrEnable] != ~0ull) {
-            doWrite &= state.get(sim::DefaultConfig::VALUE, inputOffsets[(unsigned)Inputs::wrEnable]) ||
-                        !state.get(sim::DefaultConfig::DEFINED, inputOffsets[(unsigned)Inputs::wrEnable]);
+        if (inputOffsets[(size_t)Inputs::wrEnable] != ~0ull) {
+            doWrite &= state.get(sim::DefaultConfig::VALUE, inputOffsets[(size_t)Inputs::wrEnable]) ||
+                        !state.get(sim::DefaultConfig::DEFINED, inputOffsets[(size_t)Inputs::wrEnable]);
         }
-        state.set(sim::DefaultConfig::VALUE, internalOffsets[(unsigned)Internal::wrEnable], doWrite);
+        state.set(sim::DefaultConfig::VALUE, internalOffsets[(size_t)Internal::wrEnable], doWrite);
     }
 }
 
 void Node_MemPort::simulateAdvance(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const
 {
     if (isWritePort()) {
-        bool doWrite = state.get(sim::DefaultConfig::VALUE, internalOffsets[(unsigned)Internal::wrEnable]);
+        bool doWrite = state.get(sim::DefaultConfig::VALUE, internalOffsets[(size_t)Internal::wrEnable]);
 
-        const auto &addrType = getDriverConnType((unsigned)Inputs::address);
-        std::uint64_t addressValue   = state.extractNonStraddling(sim::DefaultConfig::VALUE, internalOffsets[(unsigned)Internal::address], addrType.width);
-        std::uint64_t addressDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, internalOffsets[(unsigned)Internal::address], addrType.width);
+        const auto &addrType = getDriverConnType((size_t)Inputs::address);
+        std::uint64_t addressValue   = state.extractNonStraddling(sim::DefaultConfig::VALUE, internalOffsets[(size_t)Internal::address], addrType.width);
+        std::uint64_t addressDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, internalOffsets[(size_t)Internal::address], addrType.width);
 
         if (doWrite) {
             if (!utils::isMaskSet(addressDefined, 0, addrType.width)) {
                 // If the address is undefined, make the entire RAM undefined
-                state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[(unsigned)RefInternal::memory], getMemory()->getSize());
+                state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[(size_t)RefInternal::memory], getMemory()->getSize());
             } else {
                 // Perform write, same index computation/behavior as for reads
                 auto memSize = getMemory()->getSize();
                 HCL_ASSERT(memSize % getBitWidth() == 0);
                 auto index = (addressValue * getBitWidth()) % memSize;
-                state.copyRange(internalOffsets[(unsigned)RefInternal::memory] + index, state, internalOffsets[(unsigned)Internal::wrData], getBitWidth());
+                state.copyRange(internalOffsets[(size_t)RefInternal::memory] + index, state, internalOffsets[(size_t)Internal::wrData], getBitWidth());
             }
         }
     }
@@ -241,17 +235,17 @@ void Node_MemPort::assertValidity() const
 std::string Node_MemPort::getInputName(size_t idx) const
 {
     switch (idx) {
-        case (unsigned)Inputs::memory:
-            return "memory";
-        case (unsigned)Inputs::address:
+        case (size_t)Inputs::memoryReadDependency:
+            return "memoryReadDependency";
+        case (size_t)Inputs::address:
             return "addr";
-        case (unsigned)Inputs::enable:
+        case (size_t)Inputs::enable:
             return "enable";
-        case (unsigned)Inputs::wrEnable:
+        case (size_t)Inputs::wrEnable:
             return "wrEnable";
-        case (unsigned)Inputs::wrData:
+        case (size_t)Inputs::wrData:
             return "wrData";
-        case (unsigned)Inputs::orderAfter:
+        case (size_t)Inputs::orderAfter:
             return "orderAfter";
         default:
             return "unknown";
@@ -261,10 +255,12 @@ std::string Node_MemPort::getInputName(size_t idx) const
 std::string Node_MemPort::getOutputName(size_t idx) const
 {
     switch (idx) {
-        case (unsigned)Outputs::rdData:
+        case (size_t)Outputs::rdData:
             return "rdData";
-        case (unsigned)Outputs::orderBefore:
+        case (size_t)Outputs::orderBefore:
             return "orderBefore";
+        case (size_t)Outputs::memoryWriteDependency:
+            return "memoryWriteDependency";
         default:
             return "unknown";
     }
@@ -273,16 +269,16 @@ std::string Node_MemPort::getOutputName(size_t idx) const
 
 std::vector<size_t> Node_MemPort::getInternalStateSizes() const
 {
-    std::vector<size_t> sizes((unsigned)Internal::count, 0);
+    std::vector<size_t> sizes((size_t)Internal::count, 0);
     if (isWritePort()) {
 
-        if (auto driver = getDriver((unsigned)Inputs::wrData); driver.node != nullptr)
-            sizes[(unsigned)Internal::wrData] = driver.node->getOutputConnectionType(driver.port).width;
+        if (auto driver = getDriver((size_t)Inputs::wrData); driver.node != nullptr)
+            sizes[(size_t)Internal::wrData] = driver.node->getOutputConnectionType(driver.port).width;
 
-        sizes[(unsigned)Internal::wrEnable] = 1;
+        sizes[(size_t)Internal::wrEnable] = 1;
 
-        if (auto driver = getDriver((unsigned)Inputs::address); driver.node != nullptr)
-            sizes[(unsigned)Internal::address] = driver.node->getOutputConnectionType(driver.port).width;
+        if (auto driver = getDriver((size_t)Inputs::address); driver.node != nullptr)
+            sizes[(size_t)Internal::address] = driver.node->getOutputConnectionType(driver.port).width;
     }
 
     return sizes;
@@ -290,7 +286,7 @@ std::vector<size_t> Node_MemPort::getInternalStateSizes() const
 
 std::vector<std::pair<BaseNode*, size_t>> Node_MemPort::getReferencedInternalStateSizes() const
 {
-    return {{getMemory(), (unsigned)Node_Memory::Internal::data}};
+    return {{getMemory(), (size_t)Node_Memory::Internal::data}};
 }
 
 std::unique_ptr<BaseNode> Node_MemPort::cloneUnconnected() const
@@ -304,8 +300,8 @@ void Node_MemPort::estimateSignalDelay(SignalDelay &sigDelay)
 {
     /*
     {
-        HCL_ASSERT(sigDelay.contains({.node = this, .port = (unsigned)Outputs::orderBefore}));
-        auto outDelay = sigDelay.getDelay({.node = this, .port = (unsigned)Outputs::orderBefore});
+        HCL_ASSERT(sigDelay.contains({.node = this, .port = (size_t)Outputs::orderBefore}));
+        auto outDelay = sigDelay.getDelay({.node = this, .port = (size_t)Outputs::orderBefore});
         for (auto &f : outDelay)
             f = 0.0f; 
     }
@@ -357,8 +353,8 @@ void Node_MemPort::estimateSignalDelay(SignalDelay &sigDelay)
 
 void Node_MemPort::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit)
 {
-    auto enableDelay = sigDelay.getDelay(getDriver((unsigned)Inputs::enable));
-    auto addrDelay = sigDelay.getDelay(getDriver((unsigned)Inputs::address));
+    auto enableDelay = sigDelay.getDelay(getDriver((size_t)Inputs::enable));
+    auto addrDelay = sigDelay.getDelay(getDriver((size_t)Inputs::address));
 
     float maxDelay = 0.0f;
     inputPort = ~0u;
@@ -367,7 +363,7 @@ void Node_MemPort::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_
         auto f = enableDelay[i];
         if (f > maxDelay) {
             maxDelay = f;
-            inputPort = (unsigned)Inputs::enable;
+            inputPort = (size_t)Inputs::enable;
             inputBit = i;
         }
     }
@@ -376,7 +372,7 @@ void Node_MemPort::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_
         auto f = addrDelay[i];
         if (f > maxDelay) {
             maxDelay = f;
-            inputPort = (unsigned)Inputs::address;
+            inputPort = (size_t)Inputs::address;
             inputBit = i;
         }
     }

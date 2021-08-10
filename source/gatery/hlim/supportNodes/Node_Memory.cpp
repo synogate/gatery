@@ -38,6 +38,19 @@ namespace gtry::hlim {
                 port->orderAfter(nullptr);
     }
 
+    size_t Node_Memory::createWriteDependencyInputPort() 
+    {
+        resizeInputs(getNumInputPorts()+1);
+        return getNumInputPorts()-1;
+    }
+
+    void Node_Memory::destroyWriteDependencyInputPort(size_t port) 
+    {
+        connectInput(port, getDriver(getNumInputPorts()-1));
+        resizeInputs(getNumInputPorts()-1);
+    }
+
+
     std::size_t Node_Memory::getMaxPortWidth() const {
         std::size_t size = 0;
 

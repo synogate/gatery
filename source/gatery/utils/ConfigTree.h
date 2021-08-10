@@ -19,6 +19,10 @@
 
 #include "../frontend/BitWidth.h"
 
+#include <yaml-cpp/yaml.h>
+
+#include <filesystem>
+
 namespace gtry::utils {
 
 class ConfigTree {
@@ -75,12 +79,15 @@ class ConfigTree {
         ConfigTree operator[](const std::string &name) {
             return m_node[name];
         }
-
-        inline bool contains(const std::string &name) {
+        const ConfigTree operator[](const std::string &name) const {
             return m_node[name];
         }
 
-        inline bool isSequence() { return m_node.IsSequence(); }
+        inline bool contains(const std::string &name) const {
+            return m_node[name];
+        }
+
+        inline bool isSequence() const { return m_node.IsSequence(); }
 
         struct iterator {
             YAML::Node::iterator it;
@@ -88,11 +95,25 @@ class ConfigTree {
             void operator++() { ++it; }
             ConfigTree operator*() { return ConfigTree(*it); }
             bool operator==(const iterator &rhs) const { return it == rhs.it; }
-            bool operator!=(const iterator &rhs) const { return it == rhs.it; }
+            bool operator!=(const iterator &rhs) const { return it != rhs.it; }
         };
 
         inline auto begin() { return iterator{m_node.begin()}; }
         inline auto end() { return iterator{m_node.end()}; }
+
+
+        struct const_iterator {
+            YAML::Node::const_iterator it;
+
+            void operator++() { ++it; }
+            const ConfigTree operator*() { return ConfigTree(*it); }
+            bool operator==(const const_iterator &rhs) const { return it == rhs.it; }
+            bool operator!=(const const_iterator &rhs) const { return it != rhs.it; }
+        };
+
+        inline auto begin() const { return const_iterator{m_node.begin()}; }
+        inline auto end() const { return const_iterator{m_node.end()}; }
+
 
         int get(const std::string &name, int def) { return get(name, def, IntTranslator()); }
         size_t get(const std::string &name, size_t def) { return get(name, def, SizeTTranslator()); }
@@ -111,9 +132,23 @@ class ConfigTree {
             }
         }
 
+        int get(const std::string &name, int def) const { return get(name, def, IntTranslator()); }
+        size_t get(const std::string &name, size_t def) const { return get(name, def, SizeTTranslator()); }
+        bool get(const std::string &name, bool def) const { return get(name, def, BoolTranslator()); }
+        BitWidth get(const std::string &name, BitWidth def) const { return get(name, def, BitWidthTranslator()); }
+        std::string get(const std::string &name, const std::string &def) const { return get(name, def, StringTranslator()); }
+        std::string get(const std::string &name, const char *def) const { return get(name, def, StringTranslator()); }
+
+        template<typename T>
+        typename T::Type get(const std::string &name, const typename T::Type &def, T translator) const {
+            if (m_node[name])
+                return translator(m_node[name].as<typename T::YamlType>());
+            else
+                return def;
+        }
 
         void loadFromFile(const std::filesystem::path &filename);
-        void saveToFile(const std::filesystem::path &filename);
+        void saveToFile(const std::filesystem::path &filename) const;
 
         ConfigTree() = default;
     protected:

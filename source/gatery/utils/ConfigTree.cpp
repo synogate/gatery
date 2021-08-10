@@ -28,7 +28,7 @@ void ConfigTree::loadFromFile(const std::filesystem::path &filename)
     m_node = YAML::LoadFile(filename.string());
 }
 
-void ConfigTree::saveToFile(const std::filesystem::path &filename)
+void ConfigTree::saveToFile(const std::filesystem::path &filename) const
 {
     auto path = filename.parent_path();
     if (!path.empty())

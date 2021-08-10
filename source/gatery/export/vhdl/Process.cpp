@@ -36,6 +36,7 @@
 #include "../../hlim/coreNodes/Node_Rewire.h"
 #include "../../hlim/coreNodes/Node_Pin.h"
 #include "../../hlim/supportNodes/Node_Attributes.h"
+#include "../../hlim/supportNodes/Node_ExportOverride.h"
 
 #include <iostream>
 
@@ -219,6 +220,11 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
 
     if (const auto *attribNode = dynamic_cast<const hlim::Node_Attributes *>(nodePort.node)) {
         formatExpression(stream, comments, attribNode->getDriver(0), dependentInputs, context);
+        return;
+    }
+
+    if (const auto *expOverrideNode = dynamic_cast<const hlim::Node_ExportOverride*>(nodePort.node)) {
+        formatExpression(stream, comments, expOverrideNode->getDriver(hlim::Node_ExportOverride::EXP_INPUT), dependentInputs, context);
         return;
     }
 
