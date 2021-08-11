@@ -1517,7 +1517,7 @@ Node_Memory *ReadModifyWriteHazardLogicBuilder::buildWritePortRingBuffer(NodePor
 	memory->setNoConflicts();
 	{
 		sim::DefaultBitVectorState state;
-		state.resize((1 << counterWidth) * wordWidth);
+		state.resize((1ull << counterWidth) * wordWidth);
 		memory->setPowerOnState(std::move(state));
 	}
 
