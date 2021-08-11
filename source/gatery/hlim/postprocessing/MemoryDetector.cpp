@@ -479,14 +479,8 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 {
     if (m_memory->type() != Node_Memory::MemType::BRAM) return;
 
-/*
-        {
-            auto all = ConstSubnet::all(circuit);
-            DotExport exp("beforeRetiming.dot");
-            exp(circuit, all);
-            exp.runGraphViz("beforeRetiming.svg");            
-        }
-*/
+    //visualize(circuit, "beforeRetiming");
+
     std::set<Node_MemPort*> retimeableWritePorts;
     for (auto np : m_memory->getDirectlyDriven(0)) {
         auto *memPort = dynamic_cast<Node_MemPort*>(np.node);
@@ -516,14 +510,9 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
         Subnet retimedArea;
         // On multi-readport memories there can already appear a register due to the retiming of other read ports. In this case, retimeBackwardtoOutput is a no-op.
         retimeBackwardtoOutput(circuit, subnet, {}, retimeableWritePorts, retimedArea, rp.dataOutput, true, true);
-/*
-        {
-            auto all = ConstSubnet::all(circuit);
-            DotExport exp("afterRetiming.dot");
-            exp(circuit, all);
-            exp.runGraphViz("afterRetiming.svg");            
-        }
-*/
+
+        //visualize(circuit, "afterRetiming");
+
         // Find register
         HCL_ASSERT(rp.node->getDirectlyDriven((size_t)Node_MemPort::Outputs::rdData).size() == 1);
         rp.syncReadDataReg = dynamic_cast<Node_Register*>(rp.node->getDirectlyDriven((size_t)Node_MemPort::Outputs::rdData)[0].node);
@@ -586,6 +575,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
     for (auto n : newNodes) 
         n->moveToGroup(m_fixupNodeGroup);
 
+    //visualize(circuit, "afterRMW");
 /*
     {
         auto all = ConstSubnet::all(circuit);
@@ -634,28 +624,35 @@ void MemoryGroup::verify()
     }
 }
 
-
+MemoryGroup *formMemoryGroupIfNecessary(Circuit &circuit, Node_Memory *memory)
+{
+    auto* memoryGroup = dynamic_cast<MemoryGroup*>(memory->getGroup());
+    if (memoryGroup == nullptr) {
+        memoryGroup = memory->getGroup()->addSpecialChildNodeGroup<MemoryGroup>();
+        if (memory->getName().empty())
+            memoryGroup->setName("memory");
+        else
+            memoryGroup->setName(memory->getName());
+        memoryGroup->setComment("Auto generated");
+        memoryGroup->formAround(memory, circuit);
+    }
+    return memoryGroup;
+}
 
 void findMemoryGroups(Circuit &circuit)
 {
     for (auto &node : circuit.getNodes())
-        if (auto *memory = dynamic_cast<Node_Memory*>(node.get())) {
-            auto *memoryGroup = memory->getGroup()->addSpecialChildNodeGroup<MemoryGroup>();
-            if (memory->getName().empty())
-                memoryGroup->setName("memory");
-            else
-                memoryGroup->setName(memory->getName());
-            memoryGroup->setComment("Auto generated");
-            memoryGroup->formAround(memory, circuit);
-        }
+        if (auto *memory = dynamic_cast<Node_Memory*>(node.get()))
+            formMemoryGroupIfNecessary(circuit, memory);
 }
 
 void buildExplicitMemoryCircuitry(Circuit &circuit)
 {
-    for (auto i : utils::Range(circuit.getNodes().size())) {
+    for (size_t i = 0; i < circuit.getNodes().size(); i++) {
         auto& node = circuit.getNodes()[i];
         if (auto* memory = dynamic_cast<Node_Memory*>(node.get())) {
-            auto* memoryGroup = dynamic_cast<MemoryGroup*>(memory->getGroup());
+            auto* memoryGroup = formMemoryGroupIfNecessary(circuit, memory);
+
             memoryGroup->convertToReadBeforeWrite(circuit);
             memoryGroup->attemptRegisterRetiming(circuit);
             memoryGroup->resolveWriteOrder(circuit);

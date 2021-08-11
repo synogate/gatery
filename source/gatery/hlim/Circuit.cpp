@@ -985,9 +985,9 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
             removeConstSelectMuxes(subnet);
             propagateConstants(subnet); // do again after muxes are removed
             cullUnusedNodes(subnet);
+ensureSignalNodePlacement();
 
             attributeFusion(*this);
-            ensureSignalNodePlacement();
 
             findMemoryGroups(*this);
             buildExplicitMemoryCircuitry(*this);
@@ -996,6 +996,9 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
             subnet = Subnet::all(*this);
             cullUnusedNodes(subnet); // do again after memory group extraction with potential register retiming
 
+            removeNoOps(subnet); // do again because buildExplicitMemoryCircuitry may have created some
+
+            ensureSignalNodePlacement();
             inferSignalNames();
             /*
         break;

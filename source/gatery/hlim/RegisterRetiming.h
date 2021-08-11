@@ -36,6 +36,7 @@ class Circuit;
 class NodeGroup;
 class Subnet;
 class Node_MemPort;
+class Node_Memory;
 class Clock;
 
 /**
@@ -76,7 +77,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &subnet, const std::set<Nod
 
 
 /**
-* @brief Builds read-modify-write logic for circuits where the write has to happen potentially multiple cycles after the corresponding read, but must appear for following reads to happen instantaneous.
+* @brief Builds read-modify-write logic for circuits where the write has to happen potentially multiple cycles after the corresponding read, but must appear for following reads to happen instantaneously.
 */
 class ReadModifyWriteHazardLogicBuilder
 {
@@ -118,11 +119,7 @@ class ReadModifyWriteHazardLogicBuilder
         /// Adds a new write port. Write ports are assumed to write (and overwrite) in the order in which they are given.
         inline void addWritePort(const WritePort &writePort) { m_writePorts.push_back(writePort); }
 
-        /**
-         * @param failureIsError Whether to throw an exception if the retiming is unsuccessful
-         * @returns Whether the rmw logic was successfuly created
-         */
-        bool build(bool failureIsError = true);
+        void build(bool useMemory = false);
 
         /// Returns a subnet in which all newly created nodes were placed.
         inline const Subnet &getNewNodes() const { return m_newNodes; }
@@ -141,10 +138,28 @@ class ReadModifyWriteHazardLogicBuilder
 
         NodePort createRegister(NodePort nodePort, const sim::DefaultBitVectorState &resetValue);
 
-        NodePort buildConflictDetection(NodePort rdAddr, NodePort rdEn, NodePort wrAddr, NodePort wrEn, NodePort mask, size_t maskBit);
+        NodePort buildConflictDetection(NodePort rdAddr, NodePort rdEn, NodePort wrAddr, NodePort wrEn);
+        NodePort andWithMaskBit(NodePort input, NodePort mask, size_t maskBit);
 
         std::vector<NodePort> splitWords(NodePort data, NodePort mask);
         NodePort joinWords(const std::vector<NodePort> &words);
+
+        // Describes a word in the data bus and which byte-enable-mask-bit of each write port affects it
+        struct DataWord {
+            std::vector<size_t> writePortEnableBit;
+            size_t offset;
+            size_t width;
+            size_t representationWidth; // In case we use memory and only store pointers
+        };
+        std::vector<DataWord> findDataPartitionining();
+
+        std::vector<NodePort> splitWords(NodePort data, const std::vector<DataWord> &words);
+
+        NodePort buildConflictOr(NodePort a, NodePort b);
+        NodePort buildConflictMux(NodePort oldData, NodePort newData, NodePort conflict);
+
+        NodePort buildRingBufferCounter();
+        Node_Memory *buildWritePortRingBuffer(NodePort wordData, NodePort ringBufferCounter);
 };
 
 }

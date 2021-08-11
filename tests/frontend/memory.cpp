@@ -21,6 +21,8 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
+#include <gatery/hlim/RegisterRetiming.h>
+
 #include <cstdint>
 
 using namespace boost::unit_test;
@@ -1189,4 +1191,126 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_dual_read_modify_write, UnitTestSimulationFixtu
     //design.visualize("after");
 	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->getAbsoluteFrequency());
 }
+
+
+
+
+BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, UnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+
+    size_t memReadLatency = 5;
+
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    std::vector<unsigned> contents;
+    contents.resize(4, 0);
+    std::mt19937 rng{ 18055 };
+
+    Memory<BVec> mem(contents.size(), 32_b);
+    mem.setType(MemType::BRAM);
+    mem.setPowerOnStateZero();
+    mem.noConflicts();
+
+    BVec addr = pinIn(4_b);
+    BVec output;
+    Bit wrEn = pinIn();
+    {
+
+        BVec elem = mem[addr];
+        for ([[maybe_unused]] auto i : Range(memReadLatency))
+            elem = reg(elem);
+        output = elem;
+
+        BVec delayedAddr = addr;
+        for ([[maybe_unused]] auto i : Range(memReadLatency))
+            delayedAddr = reg(delayedAddr);
+
+        Bit delayedWrEn = wrEn;
+        for ([[maybe_unused]] auto i : Range(memReadLatency))
+            delayedWrEn = reg(delayedWrEn, false);
+
+        BVec modifiedElem = elem + 1;
+
+        IF (delayedWrEn)
+            mem[delayedAddr] = modifiedElem;
+
+        hlim::ReadModifyWriteHazardLogicBuilder rmwBuilder(DesignScope::get()->getCircuit(), clock.getClk());
+        rmwBuilder.setReadLatency(memReadLatency);
+//rmwBuilder.retimeRegisterToMux(); // Still broken
+        
+        rmwBuilder.addReadPort(hlim::ReadModifyWriteHazardLogicBuilder::ReadPort{
+            .addrInputDriver = addr.getReadPort(),
+            .enableInputDriver = {},
+            .dataOutOutputDriver = elem.getReadPort(),
+        });
+
+        rmwBuilder.addWritePort(hlim::ReadModifyWriteHazardLogicBuilder::WritePort{
+            .addrInputDriver = delayedAddr.getReadPort(),
+            .enableInputDriver = delayedWrEn.getReadPort(),
+            .enableMaskInputDriver = {},
+            .dataInInputDriver = modifiedElem.getReadPort(),
+        });
+
+        rmwBuilder.build(true);
+        const auto &newNodes = rmwBuilder.getNewNodes();
+        for (auto n : newNodes) 
+            n->moveToGroup(DesignScope::get()->getCircuit().getRootNodeGroup());
+
+    }
+    pinOut(output);
+
+	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
+
+        simu(wrEn) = '0';
+        co_await WaitClk(clock);
+
+        std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
+        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
+
+        size_t collisions = 0;
+
+        bool lastWasWrite = false;
+        size_t lastAddr = 0;
+        for ([[maybe_unused]] auto i : Range(10000)) {
+            bool doInc = zeroOne(rng) > 0.1f;
+            size_t incAddr = randomAddr(rng);
+            simu(wrEn) = doInc;
+            simu(addr) = incAddr;
+            if (doInc)
+                contents[incAddr]++;
+
+            if (lastWasWrite && lastAddr == incAddr)
+                collisions++;
+
+            lastWasWrite = doInc;
+            lastAddr = incAddr;
+            co_await WaitClk(clock);
+        }
+
+        BOOST_TEST(collisions > 1000u, "Too few collisions to verify correct RMW behavior");
+
+        simu(wrEn) = '0';
+
+        for (auto i : Range(4)) {
+            simu(addr) = i;
+            for ([[maybe_unused]] auto i : Range(memReadLatency))
+                co_await WaitClk(clock);
+            BOOST_TEST(simu(output).value() == contents[i]);
+        }        
+
+        stopTest();
+	});
+
+    //design.visualize("before");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+    //design.visualize("after");
+	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->getAbsoluteFrequency());
+}
+
 
