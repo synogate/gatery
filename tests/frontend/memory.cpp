@@ -1242,7 +1242,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, UnitTestSimulationFi
 
         hlim::ReadModifyWriteHazardLogicBuilder rmwBuilder(DesignScope::get()->getCircuit(), clock.getClk());
         rmwBuilder.setReadLatency(memReadLatency);
-//rmwBuilder.retimeRegisterToMux(); // Still broken
+        rmwBuilder.retimeRegisterToMux();
         
         rmwBuilder.addReadPort(hlim::ReadModifyWriteHazardLogicBuilder::ReadPort{
             .addrInputDriver = addr.getReadPort(),

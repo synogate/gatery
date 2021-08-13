@@ -80,22 +80,33 @@ void MemoryGroup::formAround(Node_Memory *memory, Circuit &circuit)
             // Figure out if the data output is registered (== synchronous).
             std::vector<BaseNode*> dataRegisterComponents;
             for (auto nh : port->exploreOutput((size_t)Node_MemPort::Outputs::rdData)) {
-                // Any branches in the signal path would mean the unregistered output is also used, preventing register fusion.
-                if (nh.isBranchingForward()) break;
-
-                if (nh.isNodeType<Node_Register>()) {
-                    auto dataReg = (Node_Register *) nh.node();
-                    // The register can't have a reset (since it's essentially memory).
-                    if (dataReg->getNonSignalDriver(Node_Register::Input::RESET_VALUE).node != nullptr)
+                if (nh.isSignal()) {
+                    dataRegisterComponents.push_back(nh.node());
+                } else {
+                    if (nh.isNodeType<Node_Register>()) {
+                        auto dataReg = (Node_Register *) nh.node();
+                        // The register can't have a reset (since it's essentially memory).
+                        if (dataReg->getNonSignalDriver(Node_Register::Input::RESET_VALUE).node != nullptr)
+                            break;
+                        dataRegisterComponents.push_back(nh.node());
+                        if (rp.syncReadDataReg == nullptr)
+                            rp.syncReadDataReg = dataReg;
+                        else {
+                            // if multiple registers are driven, don't fuse them here but let the register retiming handle the fusion
+                            rp.syncReadDataReg = nullptr;
+                            break;
+                        }
+                    } else {
+                        // Don't make use of the regsister if other stuff is also directly driven by the port's output
+                        rp.syncReadDataReg = nullptr;
                         break;
-                    dataRegisterComponents.push_back(nh.node());
-                    rp.syncReadDataReg = dataReg;
-                    break;
-                } else if (nh.isSignal()) {
-                    dataRegisterComponents.push_back(nh.node());
-                } else break;
+                    }
+                    nh.backtrack();
+                }
             }
 
+
+            // If there is a register, move it and all the signal nodes on the way into the memory group.
             if (rp.syncReadDataReg != nullptr) {
                 rp.syncReadDataReg->getFlags().clear(Node_Register::ALLOW_RETIMING_BACKWARD).clear(Node_Register::ALLOW_RETIMING_FORWARD).insert(Node_Register::IS_BOUND_TO_MEMORY);
                 // Move the entire signal path and the data register into the memory group
@@ -243,6 +254,7 @@ void MemoryGroup::convertToReadBeforeWrite(Circuit &circuit)
                 for (auto i : {Node_Register::Input::ENABLE, Node_Register::Input::RESET_VALUE})
                     reg->connectInput(i, refReg->getDriver(i));
                 reg->connectInput(Node_Register::Input::DATA, np);
+                reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
                 np = {.node = reg, .port = 0ull};
                 circuit.appendSignal(np)->setName(name);
             };
@@ -550,7 +562,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
     auto *clock = sortedWritePorts.front()->getClocks()[0];
     ReadModifyWriteHazardLogicBuilder rmwBuilder(circuit, clock);
     rmwBuilder.setReadLatency(1);
-    //rmwBuilder.retimeRegisterToMux();
+    rmwBuilder.retimeRegisterToMux();
     
     for (auto &rp : m_readPorts)
         rmwBuilder.addReadPort(ReadModifyWriteHazardLogicBuilder::ReadPort{

@@ -985,7 +985,6 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
             removeConstSelectMuxes(subnet);
             propagateConstants(subnet); // do again after muxes are removed
             cullUnusedNodes(subnet);
-ensureSignalNodePlacement();
 
             attributeFusion(*this);
 

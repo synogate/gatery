@@ -488,6 +488,12 @@ bool determineAreaToBeRetimedBackward(Circuit &circuit, const Subnet &area, cons
 
 #ifdef DEBUG_OUTPUT
     auto writeSubnet = [&]{
+		{
+        	DotExport exp("areaToBeRetimed.dot");
+        	exp(circuit, areaToBeRetimed.asConst());
+        	exp.runGraphViz("areaToBeRetimed.svg");	
+		}
+
 		Subnet subnet = areaToBeRetimed;
 		subnet.dilate(false, true);
 		subnet.dilate(false, true);
@@ -740,6 +746,21 @@ writeSubnet();
 bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_Register*> &anchoredRegisters, const std::set<Node_MemPort*> &retimeableWritePorts,
                         Subnet &retimedArea, NodePort output, bool ignoreRefs, bool failureIsError)
 {
+
+	// In case of multiple nodes being driven, pop in a single signal node so that this signal node can be part of the retiming area and do the broadcast
+	if (output.node->getDirectlyDriven(output.port).size() > 1) {
+		auto consumers = output.node->getDirectlyDriven(output.port);
+
+		auto *sig = circuit.createNode<Node_Signal>();
+		sig->recordStackTrace();
+		sig->connectInput(output);
+		sig->moveToGroup(output.node->getGroup());
+		area.add(sig);
+
+		for (auto c : consumers)
+			c.node->rewireInput(c.port, {.node=sig, .port=0ull});
+	}
+
 	std::set<Node_Register*> registersToBeRemoved;
 	if (!determineAreaToBeRetimedBackward(circuit, area, anchoredRegisters, output, retimeableWritePorts, retimedArea, registersToBeRemoved, ignoreRefs, failureIsError))
 		return false;
@@ -1194,15 +1215,6 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 			muxNode->connectInput(0, rpOutput[wordIdx]);
 			muxNode->connectInput(1, overrideData);
 			rpOutput[wordIdx] = {.node = muxNode, .port=0ull};
-
-			// If required, move one of the registers as close as possible to the mux to reduce critical path length
-			if (m_retimeToMux) {
-				/// @todo: Add new nodes to subnet of new nodes
-				Subnet area = Subnet::all(m_circuit);
-				for (auto i : utils::Range(muxNode->getNumInputPorts()))
-					retimeForwardToOutput(m_circuit, area, {}, muxNode->getDriver(i), false, true);
-			}
-
 		}
 		
 		NodePort data = joinWords(rpOutput);
@@ -1210,6 +1222,21 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 		// Rewire  all original consumers to use the new, potentially forwarded data
 		for (auto np : consumers)
 			np.node->rewireInput(np.port, data);		
+
+		// If required, move one of the registers as close as possible to the mux to reduce critical path length
+		if (m_retimeToMux) {
+//visualize(m_circuit, "before_retiming_to_mux");
+			for (auto wordIdx : utils::Range(dataWords.size())) {
+				auto *muxNode = dynamic_cast<Node_Multiplexer*>(rpOutput[wordIdx].node);
+				/// @todo: Add new nodes to subnet of new nodes
+				Subnet area = Subnet::all(m_circuit);
+				for (auto i : {0, 2}) // don't retime memory read port register, only override data and conflict signal
+					if (!dynamic_cast<Node_Register*>(muxNode->getNonSignalDriver(i).node))
+						retimeForwardToOutput(m_circuit, area, {}, muxNode->getDriver(i), true, true);
+			}
+//visualize(m_circuit, "after_retiming_to_mux");
+		}
+
 	}
 }
 
@@ -1349,6 +1376,9 @@ std::vector<NodePort> ReadModifyWriteHazardLogicBuilder::splitWords(NodePort dat
 
 std::vector<NodePort> ReadModifyWriteHazardLogicBuilder::splitWords(NodePort data, const std::vector<DataWord> &words)
 {
+	if (words.size() == 1)
+		return {data};
+
 	std::vector<NodePort> dataWords;
 	dataWords.resize(words.size());
 	for (auto i : utils::Range(dataWords.size())) {
