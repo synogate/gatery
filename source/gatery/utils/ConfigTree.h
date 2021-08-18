@@ -77,7 +77,7 @@ class ConfigTree {
         }
 
         inline bool contains(const std::string &name) {
-            return m_node[name];
+            return m_node[name].IsDefined();
         }
 
         inline bool isSequence() { return m_node.IsSequence(); }
