@@ -226,11 +226,12 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, const Subnet &area, const
 			}
 
  			if (auto *memPort = dynamic_cast<Node_MemPort*>(node)) { // If it is a memory port (can only be a read port, attempt to retime entire memory)
+				HCL_ASSERT(!memPort->isWritePort());
 				auto *memory = memPort->getMemory();
 				areaToBeRetimed.add(memory);
 			
 				// add all memory ports to open list
-				for (auto np : memory->getDirectlyDriven(0)) 
+				for (auto np : memory->getPorts()) 
 					openList.push_back(np.node);
 			 }
 		}
@@ -246,7 +247,7 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
 	if (!determineAreaToBeRetimedForward(circuit, area, anchoredRegisters, output, areaToBeRetimed, registersToBeRemoved, ignoreRefs, failureIsError))
 		return false;
 
-	/*
+	
 	{
 		std::array<const BaseNode*,1> arr{output.node};
 		ConstSubnet csub = ConstSubnet::allNecessaryForNodes({}, arr);
@@ -261,7 +262,7 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
 		exp(circuit, areaToBeRetimed.asConst());
 		exp.runGraphViz("areaToBeRetimed.svg");
 	}
-	*/
+	
 
 	std::set<hlim::NodePort> outputsLeavingRetimingArea;
 	// Find every output leaving the area
@@ -698,7 +699,7 @@ writeSubnet();
 					// However, the order wrt. other write ports must not change, so we need to retime all write ports of the same memory (and later on build RMW logic for all of them).
 
 					// add all memory *write* ports to open list
-					for (auto np : memory->getDirectlyDriven(0)) {
+					for (auto np : memory->getPorts()) {
 						auto *otherMemPort = dynamic_cast<Node_MemPort*>(np.node);
 						if (otherMemPort->isWritePort())
 							openList.push_back(np);
@@ -709,7 +710,7 @@ writeSubnet();
 					areaToBeRetimed.add(memory);
 				
 					// add all memory ports to open list
-					for (auto np : memory->getDirectlyDriven(0)) 
+					for (auto np : memory->getPorts()) 
 						openList.push_back(np);
 				}
 			 }
@@ -850,6 +851,13 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 
 	// Insert registers
 	for (auto np : outputsEnteringRetimingArea) {
+
+		// Don't insert registers on constants
+		if (dynamic_cast<Node_Constant*>(np.node)) continue;
+		// Don't insert registers on signals leading to constants
+		if (auto *signal = dynamic_cast<Node_Signal*>(np.node))
+			if (dynamic_cast<Node_Constant*>(signal->getNonSignalDriver(0).node)) continue;
+
 		auto *reg = circuit.createNode<Node_Register>();
 		reg->recordStackTrace();
 		// Setup clock
@@ -894,139 +902,14 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 	return true;
 }
 
-// Old version
-#if 0
-
-bool ReadModifyWriteHazardLogicBuilder::build(bool failureIsError)
-{
-	HCL_ASSERT(m_readLatency != ~0u);
-
-	if (m_readLatency == 0) return true;
-
-
-	// First, determine reset values for all places where we may want to insert registers.
-	std::map<NodePort, sim::DefaultBitVectorState> resetValues;
-	for (auto &wrPort : m_writePorts) {
-		resetValues.insert({wrPort.addrInputDriver, {}});
-		resetValues.insert({wrPort.enableInputDriver, {}});
-		resetValues.insert({wrPort.enableMaskInputDriver, {}});
-		resetValues.insert({wrPort.dataInInputDriver, {}});
-	}
-
-	for (auto &rdPort : m_readPorts) {
-		resetValues.insert({rdPort.addrInputDriver, {}});
-		resetValues.insert({rdPort.enableInputDriver, {}});
-	}
-	determineResetValues(resetValues);
-
-
-
-	// Second, build shift registers for all write ports so they can be reused for each read port
-	struct WritePortDelayedSignals {
-		NodePort delayedAddrDriver;
-		NodePort delayedEnableDriver;
-		NodePort delayedMaskDriver;
-		NodePort delayedWrDataDriver;
-		std::vector<NodePort> delayedWrDataWords;
-	};	
-
-	std::vector<std::vector<WritePortDelayedSignals>> wrPortDelayedSignals;
-	wrPortDelayedSignals.resize(m_writePorts.size());
-
-	for (auto [wrPort, wrDelayed] : utils::Zip(m_writePorts, wrPortDelayedSignals)) {
-		wrDelayed.resize(m_readLatency);
-
-		WritePortDelayedSignals last;
-		last.delayedAddrDriver = wrPort.addrInputDriver;
-		last.delayedEnableDriver = wrPort.enableInputDriver;
-		last.delayedMaskDriver = wrPort.enableMaskInputDriver;
-		last.delayedWrDataDriver = wrPort.dataInInputDriver;
-
-		for (auto &s : wrDelayed) {
-			s.delayedAddrDriver = createRegister(last.delayedAddrDriver, resetValues[wrPort.addrInputDriver]);
-			s.delayedEnableDriver = createRegister(last.delayedEnableDriver, resetValues[wrPort.enableInputDriver]);
-			s.delayedMaskDriver = createRegister(last.delayedMaskDriver, resetValues[wrPort.enableMaskInputDriver]);
-			s.delayedWrDataDriver = createRegister(last.delayedWrDataDriver, resetValues[wrPort.dataInInputDriver]);
-			s.delayedWrDataWords = splitWords(s.delayedWrDataDriver, s.delayedMaskDriver);
-
-			last = s;
-		}
-	}
-
-
-	// Now loop over all read ports, build the shift register to delay addr and enable inputs, and build the actual conflict resolution
-	for (auto &rdPort : m_readPorts) {
-
-		NodePort addr = rdPort.addrInputDriver;
-		NodePort enable = rdPort.enableInputDriver;
-
-		// Build shift register of inputs
-		for ([[maybe_unused]] auto i : utils::Range(m_readLatency)) {
-			addr = createRegister(addr, resetValues[rdPort.addrInputDriver]);
-			enable = createRegister(enable, resetValues[rdPort.enableInputDriver]);
-		}
-
-		// Fetch a list of all consumers (before we build consumers of our own) for later to rewire
-		std::vector<NodePort> consumers = rdPort.dataOutOutputDriver.node->getDirectlyDriven(rdPort.dataOutOutputDriver.port);
-
-		// Build sequence of multiplexers (should usually be short since number of write ports should be low)
-		NodePort data = rdPort.dataOutOutputDriver;
-		for (auto [wrPort, wrDelayed] : utils::Zip(m_writePorts, wrPortDelayedSignals)) {
-
-			// Split by enable mask chunks
-			std::vector<NodePort> dataWords = splitWords(data, wrPort.enableMaskInputDriver);
-
-			// Walk from oldest to newest write and potentially override data.
-			for (size_t i = wrDelayed.size()-1; i < wrDelayed.size(); i--) {
-
-				// Check whether a conflict exists in general:
-				NodePort conflict = buildConflictDetection(addr, enable, wrDelayed[i].delayedAddrDriver, wrDelayed[i].delayedEnableDriver);
-
-				for (auto wordIdx : utils::Range(dataWords.size())) {
-					// Check whether a conflict exists for this word:
-					NodePort wordConflict = andWithMaskBit(conflict, wrDelayed[i].delayedMaskDriver, wordIdx);
-
-					// Mux between actual read and forwarded written data
-					auto *muxNode = m_circuit.createNode<Node_Multiplexer>(2);
-					m_newNodes.add(muxNode);
-					muxNode->recordStackTrace();
-					muxNode->setComment("If read and write addr match and read and write are enabled and write is not masked, forward write data to read output.");
-					muxNode->connectSelector(conflict);
-					muxNode->connectInput(0, dataWords[wordIdx]);
-					muxNode->connectInput(1, wrDelayed[i].delayedWrDataWords[wordIdx]);
-
-					NodePort muxOut = {.node = muxNode, .port=0ull};
-
-					dataWords[wordIdx] = muxOut;
-
-					// If required, move one of the registers as close as possible to the mux to reduce critical path length
-					if (m_retimeToMux) {
-						/// @todo: Add new nodes to subnet of new nodes
-						Subnet area = Subnet::all(m_circuit);
-						retimeForwardToOutput(m_circuit, area, {}, conflict, false, true);
-					}
-
-				}
-			}
-
-			data = joinWords(dataWords);
-		}
-
-		// Rewire  all original consumers to use the new, potentially forwarded data
-		for (auto np : consumers)
-			np.node->rewireInput(np.port, data);		
-	}
-
-	return true;
-}
-
-#endif
-
 void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 {
-	HCL_ASSERT(m_readLatency != ~0u);
+	size_t maxLatencyCompensation = 0;
+	for (const auto &wp : m_writePorts)
+		maxLatencyCompensation = std::max(maxLatencyCompensation, wp.latencyCompensation);
 
-	if (m_readLatency == 0) return;
+
+	if (maxLatencyCompensation == 0) return;
 	if (m_readPorts.empty()) return;
 	if (m_writePorts.empty()) return;
 
@@ -1053,7 +936,7 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 	NodePort ringBufferCounter;
 	if (useMemory) {
 		// In memory mode, we need one write pointer for all ring buffers
-		ringBufferCounter = buildRingBufferCounter();
+		ringBufferCounter = buildRingBufferCounter(maxLatencyCompensation);
 
 		for (auto &dw : dataWords)
 			dw.representationWidth = getOutputWidth(ringBufferCounter);
@@ -1126,39 +1009,46 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 
 		// Build address shift register 
 		std::vector<NodePort> rdPortAddrShiftReg;
-		rdPortAddrShiftReg.resize(m_readLatency);
+		rdPortAddrShiftReg.resize(maxLatencyCompensation);
 		rdPortAddrShiftReg[0] = rdPort.addrInputDriver;
-		for (auto i : utils::Range<size_t>(1, m_readLatency))
+		for (auto i : utils::Range<size_t>(1, maxLatencyCompensation))
 			rdPortAddrShiftReg[i] = createRegister(rdPortAddrShiftReg[i-1], {});
 
 
 		// Build each stage
-		for (auto &rdAddr : rdPortAddrShiftReg) {
+		for (auto stageIdx : utils::Range(rdPortAddrShiftReg.size())) {
+			auto &rdAddr = rdPortAddrShiftReg[stageIdx];
 
 			// Build muxes in write port write order
 			for (auto [wrPort, wrPortSignals] : utils::Zip(m_writePorts, allWrPortSignals)) {
+				if (wrPort.latencyCompensation > stageIdx) {
+					// Check whether a conflict can exists based on addr and enable
+					NodePort conflict = buildConflictDetection(rdAddr, {}, wrPort.addrInputDriver, wrPort.enableInputDriver);
 
-				// Check whether a conflict can exists based on addr and enable
-				NodePort conflict = buildConflictDetection(rdAddr, {}, wrPort.addrInputDriver, wrPort.enableInputDriver);
+					for (auto wordIdx : utils::Range(dataWords.size())) {
+						// Check whether a conflict exists for this word:
+						NodePort wordConflict = andWithMaskBit(conflict, wrPort.enableMaskInputDriver, wordIdx);
 
-				for (auto wordIdx : utils::Range(dataWords.size())) {
-					// Check whether a conflict exists for this word:
-					NodePort wordConflict = andWithMaskBit(conflict, wrPort.enableMaskInputDriver, wordIdx);
-
-					// Build multiplexers for each word to override data and idx if they exist.
-					// buildConflictOr and buildConflictMux just wire through if one of the operands is a nullptr (as is the case for the first stage and for the idx in non-memory-mode).
-					wordSignals[wordIdx].conflict = buildConflictOr(wordSignals[wordIdx].conflict, wordConflict);
-					wordSignals[wordIdx].overrideData = buildConflictMux(wordSignals[wordIdx].overrideData, wrPortSignals.words[wordIdx], wordConflict);
-					wordSignals[wordIdx].overrideWpIdx = buildConflictMux(wordSignals[wordIdx].overrideWpIdx, wrPortSignals.wpIdx, wordConflict);
+						// Build multiplexers for each word to override data and idx if they exist.
+						// buildConflictOr and buildConflictMux just wire through if one of the operands is a nullptr (as is the case for the first stage and for the idx in non-memory-mode).
+						wordSignals[wordIdx].conflict = buildConflictOr(wordSignals[wordIdx].conflict, wordConflict);
+						wordSignals[wordIdx].overrideData = buildConflictMux(wordSignals[wordIdx].overrideData, wrPortSignals.words[wordIdx], wordConflict);
+						wordSignals[wordIdx].overrideWpIdx = buildConflictMux(wordSignals[wordIdx].overrideWpIdx, wrPortSignals.wpIdx, wordConflict);
+					}
+				} else {
+					// This write port needs less than the maximum latency compensation, usually because it already had a manually placed register in its path.
+					// Skip the last multiplexers for this write port.
 				}
 			}
 
 			// Add registers to each word
-			for (auto wordIdx : utils::Range(dataWords.size())) {
-				wordSignals[wordIdx].conflict = createRegister(wordSignals[wordIdx].conflict, {});
-				wordSignals[wordIdx].overrideData = createRegister(wordSignals[wordIdx].overrideData, {});
-				wordSignals[wordIdx].overrideWpIdx = createRegister(wordSignals[wordIdx].overrideWpIdx, {});
-			}
+			// If using m_retimeToMux and useMemory, then we skip the last set of registers, put them after the read ports, and set the memory to write-first
+			if ((stageIdx+1 < rdPortAddrShiftReg.size()) || !(m_retimeToMux && useMemory))
+				for (auto wordIdx : utils::Range(dataWords.size())) {
+					wordSignals[wordIdx].conflict = createRegister(wordSignals[wordIdx].conflict, {});
+					wordSignals[wordIdx].overrideData = createRegister(wordSignals[wordIdx].overrideData, {});
+					wordSignals[wordIdx].overrideWpIdx = createRegister(wordSignals[wordIdx].overrideWpIdx, {});
+				}
 		}
 
 		// Finally, mux back to override what the read port appears to read
@@ -1189,6 +1079,10 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 						readPort->connectMemory(allWrPortSignals[wrIdx].ringbuffers[wordIdx]);
 						readPort->connectAddress(wordSignals[wordIdx].overrideData);
 
+						// If using m_retimeToMux and useMemory, then we need to set the memory to write-first
+						if (m_retimeToMux)
+							readPort->orderAfter(allWrPortSignals[wrIdx].ringbuffers[wordIdx]->getLastPort());
+
 						muxNode->connectInput(wrIdx, {.node = readPort, .port = (unsigned)hlim::Node_MemPort::Outputs::rdData});
 					}
 
@@ -1199,6 +1093,9 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 					readPort->recordStackTrace();
 					readPort->connectMemory(allWrPortSignals[0].ringbuffers[wordIdx]);
 					readPort->connectAddress(wordSignals[wordIdx].overrideData);
+					// If using m_retimeToMux and useMemory, then we need to set the memory to write-first
+					if (m_retimeToMux)
+						readPort->orderAfter(allWrPortSignals[0].ringbuffers[wordIdx]->getLastPort());
 
 					overrideData = {.node = readPort, .port = (unsigned)hlim::Node_MemPort::Outputs::rdData};
 				}
@@ -1206,12 +1103,20 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 			} else 
 				overrideData = wordSignals[wordIdx].overrideData;
 
+			auto conflict = wordSignals[wordIdx].conflict;
+
+			// If using m_retimeToMux and useMemory, then we put the last set of registers here explicitely
+			if (m_retimeToMux && useMemory) {
+				conflict = createRegister(conflict, {});
+				overrideData = createRegister(overrideData, {});
+			}
+
 			// Mux between actual read and forwarded written data
 			auto *muxNode = m_circuit.createNode<Node_Multiplexer>(2);
 			m_newNodes.add(muxNode);
 			muxNode->recordStackTrace();
 			muxNode->setComment("If read and write addr match and read and write are enabled and write is not masked, forward write data to read output.");
-			muxNode->connectSelector(wordSignals[wordIdx].conflict);
+			muxNode->connectSelector(conflict);
 			muxNode->connectInput(0, rpOutput[wordIdx]);
 			muxNode->connectInput(1, overrideData);
 			rpOutput[wordIdx] = {.node = muxNode, .port=0ull};
@@ -1224,7 +1129,7 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 			np.node->rewireInput(np.port, data);		
 
 		// If required, move one of the registers as close as possible to the mux to reduce critical path length
-		if (m_retimeToMux) {
+		if (m_retimeToMux && !useMemory) {
 //visualize(m_circuit, "before_retiming_to_mux");
 			for (auto wordIdx : utils::Range(dataWords.size())) {
 				auto *muxNode = dynamic_cast<Node_Multiplexer*>(rpOutput[wordIdx].node);
@@ -1238,6 +1143,7 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 		}
 
 	}
+//visualize(m_circuit, "after_rmw");
 }
 
 
@@ -1495,9 +1401,9 @@ NodePort ReadModifyWriteHazardLogicBuilder::buildConflictMux(NodePort oldData, N
 	return {.node = muxNode, .port=0ull};
 }
 
-NodePort ReadModifyWriteHazardLogicBuilder::buildRingBufferCounter()
+NodePort ReadModifyWriteHazardLogicBuilder::buildRingBufferCounter(size_t maxLatencyCompensation)
 {
-	auto counterWidth = utils::Log2C(m_readLatency+1);
+	auto counterWidth = utils::Log2C(maxLatencyCompensation+1);
 
 	auto *reg = m_circuit.createNode<Node_Register>();
 	m_newNodes.add(reg);
@@ -1545,6 +1451,7 @@ Node_Memory *ReadModifyWriteHazardLogicBuilder::buildWritePortRingBuffer(NodePor
 	m_newNodes.add(memory);
 	memory->recordStackTrace();
 	memory->setNoConflicts();
+	memory->setType(Node_Memory::MemType::LUTRAM);
 	{
 		sim::DefaultBitVectorState state;
 		state.resize((1ull << counterWidth) * wordWidth);

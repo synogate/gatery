@@ -102,17 +102,17 @@ class ReadModifyWriteHazardLogicBuilder
             NodePort enableMaskInputDriver;
             /// Data input of this port
             NodePort dataInInputDriver;
+
+            /// How many cycles earlier this write is supposed to appear to happen
+            size_t latencyCompensation;
         };
 
         ReadModifyWriteHazardLogicBuilder(Circuit &circuit, Clock *clockDomain) : m_circuit(circuit), m_clockDomain(clockDomain) { }
 
-        /// Workaround for now until I can detect the read delay automatically
-        void setReadLatency(size_t readLatency) { m_readLatency = readLatency; }
-
         /// Whether to retime one register to the input of the bypass mux to improve timing.
         void retimeRegisterToMux() { m_retimeToMux = true; }
         /// Global enable to attach to all new registers (e.g. for stalling).
-        void setGlobalEnable(NodePort globalEnable) { m_globalEnable = globalEnable; }
+        //void setGlobalEnable(NodePort globalEnable) { m_globalEnable = globalEnable; }
 
         /// Adds a new read port to consider. Within a cycle, all read ports are assumed to be read before write wrt. all write ports.
         inline void addReadPort(const ReadPort &readPort) { m_readPorts.push_back(readPort); }
@@ -131,8 +131,6 @@ class ReadModifyWriteHazardLogicBuilder
         std::vector<ReadPort> m_readPorts;
         std::vector<WritePort> m_writePorts;
         bool m_retimeToMux = false;
-
-        size_t m_readLatency = ~0u;
 
         void determineResetValues(std::map<NodePort, sim::DefaultBitVectorState> &resetValues);
 
@@ -158,7 +156,7 @@ class ReadModifyWriteHazardLogicBuilder
         NodePort buildConflictOr(NodePort a, NodePort b);
         NodePort buildConflictMux(NodePort oldData, NodePort newData, NodePort conflict);
 
-        NodePort buildRingBufferCounter();
+        NodePort buildRingBufferCounter(size_t maxLatencyCompensation);
         Node_Memory *buildWritePortRingBuffer(NodePort wordData, NodePort ringBufferCounter);
 };
 

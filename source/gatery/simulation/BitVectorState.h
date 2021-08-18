@@ -131,7 +131,9 @@ bool allDefinedNonStraddling(const BitVectorState<Config> &vec, size_t start, si
 }
 
 template<typename Config>
-bool allDefined(const BitVectorState<Config> &vec, size_t start, size_t size) {
+bool allDefined(const BitVectorState<Config> &vec, size_t start = 0ull, size_t size = ~0ull) {
+
+    size = std::min(size, vec.size());
 
     size_t startFullChunk = (start + Config::NUM_BITS_PER_BLOCK-1) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
     size_t endFullChunk = (start+size) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
@@ -154,7 +156,8 @@ bool allDefined(const BitVectorState<Config> &vec, size_t start, size_t size) {
 }
 
 template<typename Config>
-bool anyDefined(const BitVectorState<Config> &vec, size_t start, size_t size) {
+bool anyDefined(const BitVectorState<Config> &vec, size_t start = 0ull, size_t size = ~0ull) {
+    size = std::min(size, vec.size());
 
     size_t startFullChunk = (start + Config::NUM_BITS_PER_BLOCK-1) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
     size_t endFullChunk = (start+size) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;

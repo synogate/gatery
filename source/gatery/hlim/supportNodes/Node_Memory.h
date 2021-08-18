@@ -42,10 +42,22 @@ class Node_MemPort;
 class Node_Memory : public Node<Node_Memory>
 {
     public:
+        enum class Inputs {
+            INITIALIZATION_DATA,
+            WRITE_DEPENDENCIES
+        };
+        enum class Outputs {
+            INITIALIZATION_ADDR,
+            READ_DEPENDENCIES,
+            COUNT
+        };
+
+
         enum class MemType {
             DONT_CARE,
             LUTRAM,
             BRAM,
+            EXTERNAL,
         };
 
         enum class Internal {
@@ -55,11 +67,15 @@ class Node_Memory : public Node<Node_Memory>
 
         Node_Memory();
 
-        void setType(MemType type) { m_type = type; }
+        void setInitializationNetDataWidth(size_t width);
+
+        void setType(MemType type, size_t requiredReadLatency = ~0ull);
         void setNoConflicts();
 
         size_t createWriteDependencyInputPort();
         void destroyWriteDependencyInputPort(size_t port);
+
+        const auto &getPorts() const { return getDirectlyDriven((size_t)Outputs::READ_DEPENDENCIES); }
 
         std::size_t getSize() const { return m_powerOnState.size(); }
         std::size_t getMaxPortWidth() const;
@@ -90,6 +106,7 @@ class Node_Memory : public Node<Node_Memory>
 
         MemType type() const { return m_type; }
         bool noConflicts() const { return m_noConflicts; }
+        size_t getRequiredReadLatency() const { return m_requiredReadLatency; }
 
         virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 
@@ -100,6 +117,8 @@ class Node_Memory : public Node<Node_Memory>
 
         MemType m_type = MemType::DONT_CARE;
         bool m_noConflicts = false;
+        size_t m_initializationDataWidth = 0ul;
+        size_t m_requiredReadLatency = 0;
 };
 
 }

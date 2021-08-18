@@ -37,10 +37,10 @@ class MemoryGroup : public NodeGroup
 
         struct ReadPort {
             NodePtr<Node_MemPort> node;
-            NodePtr<Node_Register> syncReadDataReg;
-            NodePtr<Node_Register> outputReg;
-            
+            std::vector<NodePtr<Node_Register>> dedicatedReadLatencyRegisters;
             RefCtdNodePort dataOutput;
+
+            bool findOutputRegisters(size_t readLatency, NodeGroup *memoryNodeGroup);
         };
 
         MemoryGroup();
@@ -50,6 +50,7 @@ class MemoryGroup : public NodeGroup
         void convertToReadBeforeWrite(Circuit &circuit);
         void resolveWriteOrder(Circuit &circuit);
         void attemptRegisterRetiming(Circuit &circuit);
+        void buildReset(Circuit &circuit);
         void verify();
 
         Node_Memory *getMemory() { return m_memory; }
@@ -64,7 +65,12 @@ class MemoryGroup : public NodeGroup
 
         void lazyCreateFixupNodeGroup();
 
-        void ensureNotEnabledFirstCycle(Circuit &circuit, NodeGroup *ng, Node_MemPort *writePort);
+        void ensureNotEnabledFirstCycles(Circuit &circuit, NodeGroup *ng, Node_MemPort *writePort, size_t numCycles);
+
+
+        void buildResetLogic(Circuit &circuit);
+        void buildResetRom(Circuit &circuit);
+
 };
 
 

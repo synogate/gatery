@@ -42,7 +42,7 @@ void Node_MemPort::connectMemory(Node_Memory *memory)
         if (lastMemPort != nullptr)
             orderAfter(lastMemPort);
     }
-    connectInput((size_t)Inputs::memoryReadDependency, {.node=memory, .port=0});
+    connectInput((size_t)Inputs::memoryReadDependency, {.node=memory, .port=(size_t)Node_Memory::Outputs::READ_DEPENDENCIES});
     size_t wrDepInput = memory->createWriteDependencyInputPort();
     memory->rewireInput(wrDepInput, {.node = this, .port = (size_t) Outputs::memoryWriteDependency});
 }
@@ -312,7 +312,7 @@ void Node_MemPort::estimateSignalDelay(SignalDelay &sigDelay)
     // So to account for routing delays, count all signals going to this memory, not just those going to this port.
     size_t totalInSignals = 0;
     auto *memory = getMemory();
-    for (const auto &np : memory->getDirectlyDriven(0)) {
+    for (const auto &np : memory->getPorts()) {
         auto *port = dynamic_cast<Node_MemPort*>(np.node);
 
         if (port->getDriver((size_t)Inputs::enable).node != nullptr)

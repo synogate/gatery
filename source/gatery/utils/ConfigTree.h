@@ -66,7 +66,7 @@ class ConfigTree {
             typedef std::string YamlType;
             typedef std::string Type;
 
-            inline std::string operator()(std::string v) { return std::move(v); }
+            inline std::string operator()(std::string v) { return v; }
         };
         struct BitWidthTranslator {
             typedef uint64_t YamlType;

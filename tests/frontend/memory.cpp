@@ -1241,8 +1241,6 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, UnitTestSimulationFi
             mem[delayedAddr] = modifiedElem;
 
         hlim::ReadModifyWriteHazardLogicBuilder rmwBuilder(DesignScope::get()->getCircuit(), clock.getClk());
-        rmwBuilder.setReadLatency(memReadLatency);
-        rmwBuilder.retimeRegisterToMux();
         
         rmwBuilder.addReadPort(hlim::ReadModifyWriteHazardLogicBuilder::ReadPort{
             .addrInputDriver = addr.getReadPort(),
@@ -1255,8 +1253,10 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, UnitTestSimulationFi
             .enableInputDriver = delayedWrEn.getReadPort(),
             .enableMaskInputDriver = {},
             .dataInInputDriver = modifiedElem.getReadPort(),
+            .latencyCompensation = memReadLatency,
         });
 
+        rmwBuilder.retimeRegisterToMux();
         rmwBuilder.build(true);
         const auto &newNodes = rmwBuilder.getNewNodes();
         for (auto n : newNodes) 
@@ -1307,10 +1307,97 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, UnitTestSimulationFi
         stopTest();
 	});
 
-    //design.visualize("before");
+    design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-    //design.visualize("after");
+    design.visualize("after");
 	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->getAbsoluteFrequency());
 }
 
 
+
+
+BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, UnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+
+    size_t memReadLatency = 8;
+
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    std::vector<unsigned> contents;
+    contents.resize(4, 0);
+    std::mt19937 rng{ 18055 };
+
+    Memory<BVec> mem(contents.size(), 32_b);
+    mem.setType(MemType::EXTERNAL, memReadLatency);
+    mem.setPowerOnStateZero();
+
+    BVec addr = pinIn(4_b);
+    BVec output;
+    Bit wrEn = pinIn();
+    {
+        BVec elem = mem[addr];
+        BVec modifiedElem = elem + 1;
+
+        IF (wrEn)
+            mem[addr] = modifiedElem;
+
+        output = elem;
+        for ([[maybe_unused]] auto i : Range(memReadLatency))
+            output = reg(output);
+    }
+    pinOut(output);
+
+	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
+
+        simu(wrEn) = '0';
+        co_await WaitClk(clock);
+
+        std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
+        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
+
+        size_t collisions = 0;
+
+        bool lastWasWrite = false;
+        size_t lastAddr = 0;
+        for ([[maybe_unused]] auto i : Range(10000)) {
+            bool doInc = zeroOne(rng) > 0.1f;
+            size_t incAddr = randomAddr(rng);
+            simu(wrEn) = doInc;
+            simu(addr) = incAddr;
+            if (doInc)
+                contents[incAddr]++;
+
+            if (lastWasWrite && lastAddr == incAddr)
+                collisions++;
+
+            lastWasWrite = doInc;
+            lastAddr = incAddr;
+            co_await WaitClk(clock);
+        }
+
+        BOOST_TEST(collisions > 1000u, "Too few collisions to verify correct RMW behavior");
+
+        simu(wrEn) = '0';
+
+        for (auto i : Range(4)) {
+            simu(addr) = i;
+            for ([[maybe_unused]] auto i : Range(memReadLatency))
+                co_await WaitClk(clock);
+            BOOST_TEST(simu(output).value() == contents[i]);
+        }        
+
+        stopTest();
+	});
+
+    design.visualize("before");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+    design.visualize("after");
+    recordVCD("test.vcd");
+	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->getAbsoluteFrequency());
+}

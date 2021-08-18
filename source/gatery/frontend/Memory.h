@@ -124,7 +124,7 @@ namespace gtry {
             }
 
 
-            void setType(MemType type) { m_memoryNode->setType(type); }
+            void setType(MemType type, size_t readLatency = ~0ull) { m_memoryNode->setType(type, readLatency); }
             void setName(std::string name) { m_memoryNode->setName(std::move(name)); }
             void noConflicts() { m_memoryNode->setNoConflicts(); }
             bool valid() { return m_memoryNode != nullptr; }

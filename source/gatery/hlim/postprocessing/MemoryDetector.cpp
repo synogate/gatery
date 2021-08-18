@@ -26,6 +26,8 @@
 #include "../coreNodes/Node_Compare.h"
 #include "../coreNodes/Node_Logic.h"
 #include "../coreNodes/Node_Multiplexer.h"
+#include "../coreNodes/Node_Rewire.h"
+#include "../coreNodes/Node_Arithmetic.h"
 #include "../supportNodes/Node_Memory.h"
 #include "../supportNodes/Node_MemPort.h"
 #include "../GraphExploration.h"
@@ -48,6 +50,75 @@
 namespace gtry::hlim {
 
 
+bool MemoryGroup::ReadPort::findOutputRegisters(size_t readLatency, NodeGroup *memoryNodeGroup)
+{
+    // keep a list of encoutnered signal nodes to move into memory group.
+    std::vector<BaseNode*> signalNodes;
+
+    // Clear all and start from scratch
+    dedicatedReadLatencyRegisters.resize(readLatency);
+    for (auto &reg : dedicatedReadLatencyRegisters)
+        reg = nullptr;
+
+    Clock *clock = nullptr;
+
+    // Start from the read port
+    dataOutput = {.node = node.get(), .port = (size_t)Node_MemPort::Outputs::rdData};
+    for (auto i : utils::Range(dedicatedReadLatencyRegisters.size())) {
+        signalNodes.clear();
+
+        // For each output (read port or register in the chain) ensure that it only drives another register, then add that register to the list
+        Node_Register *reg = nullptr;
+        for (auto nh : dataOutput.node->exploreOutput(dataOutput.port)) {
+            if (nh.isSignal()) {
+                signalNodes.push_back(nh.node());
+            } else {
+                if (nh.isNodeType<Node_Register>()) {
+                    auto dataReg = (Node_Register *) nh.node();
+                    // The register can't have a reset (since it's essentially memory).
+                    if (dataReg->getNonSignalDriver(Node_Register::Input::RESET_VALUE).node != nullptr)
+                        break;
+                    if (reg == nullptr)
+                        reg = dataReg;
+                    else {
+                        // if multiple registers are driven, don't fuse them here but, but fail and let the register retiming handle the fusion
+                        reg = nullptr;
+                        break;
+                    }
+                } else {
+                    // Don't make use of the regsister if other stuff is also directly driven by the port's output
+                    reg = nullptr;
+                    break;
+                }
+                nh.backtrack();
+            }
+        }
+
+        // If there is a register, move it and all the signal nodes on the way into the memory group.
+        if (reg != nullptr) {
+            if (clock == nullptr)
+                clock = reg->getClocks()[0];
+            else if (clock != reg->getClocks()[0])
+                break; // Hit a clock domain crossing, break early
+
+            reg->getFlags().clear(Node_Register::ALLOW_RETIMING_BACKWARD).clear(Node_Register::ALLOW_RETIMING_FORWARD).insert(Node_Register::IS_BOUND_TO_MEMORY);
+            // Move the entire signal path and the data register into the memory node group
+            for (auto opt : signalNodes)
+                opt->moveToGroup(memoryNodeGroup);
+            reg->moveToGroup(memoryNodeGroup);
+            dedicatedReadLatencyRegisters[i] = reg;
+            
+            // continue from this register and mark it as the output of the read port
+            dataOutput = {.node = reg, .port = 0};
+
+            signalNodes.clear();
+        } else 
+            break;
+    }
+
+    return dedicatedReadLatencyRegisters.back() != nullptr; // return true if all were found
+}
+
 MemoryGroup::MemoryGroup() : NodeGroup(GroupType::SFU)
 {
     m_name = "memory";
@@ -59,7 +130,7 @@ void MemoryGroup::formAround(Node_Memory *memory, Circuit &circuit)
     m_memory->moveToGroup(this);
 
     // Initial naive grabbing of everything that might be usefull
-    for (auto &np : m_memory->getDirectlyDriven(0)) {
+    for (auto &np : m_memory->getPorts()) {
         auto *port = dynamic_cast<Node_MemPort*>(np.node);
         HCL_ASSERT(port->isWritePort() || port->isReadPort());
         // Check all write ports
@@ -77,100 +148,37 @@ void MemoryGroup::formAround(Node_Memory *memory, Circuit &circuit)
 
             NodePort readPortEnable = port->getNonSignalDriver((unsigned)Node_MemPort::Inputs::enable);
 
-            // Figure out if the data output is registered (== synchronous).
-            std::vector<BaseNode*> dataRegisterComponents;
-            for (auto nh : port->exploreOutput((size_t)Node_MemPort::Outputs::rdData)) {
-                if (nh.isSignal()) {
-                    dataRegisterComponents.push_back(nh.node());
-                } else {
-                    if (nh.isNodeType<Node_Register>()) {
-                        auto dataReg = (Node_Register *) nh.node();
-                        // The register can't have a reset (since it's essentially memory).
-                        if (dataReg->getNonSignalDriver(Node_Register::Input::RESET_VALUE).node != nullptr)
-                            break;
-                        dataRegisterComponents.push_back(nh.node());
-                        if (rp.syncReadDataReg == nullptr)
-                            rp.syncReadDataReg = dataReg;
-                        else {
-                            // if multiple registers are driven, don't fuse them here but let the register retiming handle the fusion
-                            rp.syncReadDataReg = nullptr;
-                            break;
-                        }
-                    } else {
-                        // Don't make use of the regsister if other stuff is also directly driven by the port's output
-                        rp.syncReadDataReg = nullptr;
-                        break;
-                    }
-                    nh.backtrack();
-                }
-            }
-
-
-            // If there is a register, move it and all the signal nodes on the way into the memory group.
-            if (rp.syncReadDataReg != nullptr) {
-                rp.syncReadDataReg->getFlags().clear(Node_Register::ALLOW_RETIMING_BACKWARD).clear(Node_Register::ALLOW_RETIMING_FORWARD).insert(Node_Register::IS_BOUND_TO_MEMORY);
-                // Move the entire signal path and the data register into the memory group
-                for (auto opt : dataRegisterComponents)
-                    opt->moveToGroup(this);
-                rp.dataOutput = {.node = rp.syncReadDataReg, .port = 0};
-
-                dataRegisterComponents.clear();
-#if 0
-// todo: Not desired and also not correctly working with RMW hazards
-                // Figure out if the optional output register is active.
-                for (auto nh : rp.syncReadDataReg->exploreOutput(0)) {
-                    // Any branches in the signal path would mean the unregistered output is also used, preventing register fusion.
-                    if (nh.isBranchingForward()) break;
-
-                    if (nh.isNodeType<Node_Register>()) {
-                        auto dataReg = (Node_Register *) nh.node();
-                        // Optional output register must be with the same clock as the sync memory read access.
-                        // TODO: Actually, apparently this is not the case for intel?
-                        if (dataReg->getClocks()[0] != rp.syncReadDataReg->getClocks()[0])
-                            break;
-                        dataRegisterComponents.push_back(nh.node());
-                        rp.outputReg = dataReg;
-                        break;
-                    } else if (nh.isSignal()) {
-                        dataRegisterComponents.push_back(nh.node());
-                    } else break;
-                }
-
-                if (rp.outputReg) {
-                    rp.outputReg->getFlags().clear(Node_Register::ALLOW_RETIMING_BACKWARD).clear(Node_Register::ALLOW_RETIMING_FORWARD).insert(Node_Register::IS_BOUND_TO_MEMORY);
-                    // Move the entire signal path and the optional output data register into the memory group
-                    for (auto opt : dataRegisterComponents)
-                        opt->moveToGroup(this);
-                    rp.dataOutput = {.node = rp.outputReg, .port = 0};
-                }
-#endif
-            }
+            // Try and grab as many output registers as possible (up to read latency)
+            // rp.findOutputRegisters(m_memory->getRequiredReadLatency(), this);
+            // Actually, don't do this yet, makes things easier
         }
     }
 
     // Verify writing is only happening with one clock:
     {
         Node_MemPort *firstWritePort = nullptr;
-        for (auto &np : m_memory->getDirectlyDriven(0)) {
+        for (auto &np : m_memory->getPorts()) {
             auto *port = dynamic_cast<Node_MemPort*>(np.node);
             if (port->isWritePort()) {
                 if (firstWritePort == nullptr)
                     firstWritePort = port;
                 else {
-                    std::stringstream issues;
-                    issues << "All write ports to a memory must have the same clock!\n";
-                    issues << "from:\n" << firstWritePort->getStackTrace() << "\n and from:\n" << port->getStackTrace();
-                    HCL_DESIGNCHECK_HINT(firstWritePort->getClocks()[0] == port->getClocks()[0], issues.str());
+                    if (firstWritePort->getClocks()[0] != port->getClocks()[0]) {
+                        std::stringstream issues;
+                        issues << "All write ports to a memory must have the same clock!\n";
+                        issues << "from:\n" << firstWritePort->getStackTrace() << "\n and from:\n" << port->getStackTrace();
+                        HCL_DESIGNCHECK_HINT(false, issues.str());
+                    }
                 }
             }
         }
     }
 
     if (m_memory->type() == Node_Memory::MemType::DONT_CARE) {
-        if (!m_memory->getDirectlyDriven(0).empty()) {
+        if (!m_memory->getPorts().empty()) {
             size_t numWords = m_memory->getSize() / m_memory->getMaxPortWidth();
             if (numWords > 64)
-                m_memory->setType(Node_Memory::MemType::BRAM);
+                m_memory->setType(Node_Memory::MemType::BRAM, std::max<size_t>(1, m_memory->getRequiredReadLatency()));
             // todo: Also depend on other things
         }
     }
@@ -187,8 +195,6 @@ void MemoryGroup::lazyCreateFixupNodeGroup()
         moveInto(m_fixupNodeGroup);
     }
 }
-
-
 
 void MemoryGroup::convertToReadBeforeWrite(Circuit &circuit)
 {
@@ -259,6 +265,11 @@ void MemoryGroup::convertToReadBeforeWrite(Circuit &circuit)
                 circuit.appendSignal(np)->setName(name);
             };
 
+
+            // If the read data gets delayed, we will have to delay the write data and conflict decision as well
+            // Actually: Don't fetch them beforehand, makes things easier
+            HCL_ASSERT(rp.dedicatedReadLatencyRegisters.empty());
+            /*
             if (rp.syncReadDataReg != nullptr) {
                 // read data gets delayed so we will have to delay the write data and conflict decision as well
                 delayLike(rp.syncReadDataReg, wrData, "delayedWrData", "The memory read gets delayed by a register so the write data bypass also needs to be delayed.");
@@ -270,6 +281,7 @@ void MemoryGroup::convertToReadBeforeWrite(Circuit &circuit)
                     delayLike(rp.syncReadDataReg, conflict, "delayed_2_Conflict", "The memory read gets delayed by an additional register so the collision detection decision also needs to be delayed.");
                 }
             }
+            */
 
             std::vector<NodePort> consumers = rp.dataOutput.node->getDirectlyDriven(rp.dataOutput.port);
 
@@ -395,39 +407,76 @@ void MemoryGroup::resolveWriteOrder(Circuit &circuit)
 
 
 
-void MemoryGroup::ensureNotEnabledFirstCycle(Circuit &circuit, NodeGroup *ng, Node_MemPort *writePort)
+void MemoryGroup::ensureNotEnabledFirstCycles(Circuit &circuit, NodeGroup *ng, Node_MemPort *writePort, size_t numCycles)
 {
-    // Ensure enable is low in first cycle
+    std::vector<BaseNode*> nodesToMove;
+    auto moveNodes = [&] {
+        for (auto n : nodesToMove)
+            n->moveToGroup(ng);
+        nodesToMove.clear();
+    };
+
+
+    // Ensure enable is low in first cycles
     auto enableDriver = writePort->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable);
     auto wrEnableDriver = writePort->getNonSignalDriver((size_t)Node_MemPort::Inputs::wrEnable);
-
     HCL_ASSERT(enableDriver == wrEnableDriver);
 
-    // Check if already driven by register
-    if (auto *enableReg = dynamic_cast<Node_Register*>(enableDriver.node)) {
+    NodePort input = {.node = writePort, .port = (size_t)Node_MemPort::Inputs::enable};
+    size_t unhandledCycles = numCycles;
+    while (unhandledCycles > 0) {
+        auto driver = input.node->getDriver(input.port);
 
-        // If that register is already resetting to zero everything is fine
-		auto resetDriver = enableReg->getNonSignalDriver(Node_Register::RESET_VALUE);
-		if (resetDriver.node != nullptr) {
-            auto resetValue = evaluateStatically(circuit, resetDriver);
-            HCL_ASSERT(resetValue.size() == 1);
-            if (resetValue.get(sim::DefaultConfig::DEFINED, 0) && !resetValue.get(sim::DefaultConfig::VALUE, 0))
-                return;
-        }
+        if (driver.node == nullptr) break;
 
-        // Check if that register is only driving the memory port so that the reset can be changed
+        // something else is driven by the same signal, abort here
         bool onlyUser = true;
-        for (auto nh : enableReg->exploreOutput(0)) {
+        std::set<BaseNode*> alreadyEncountered;
+        for (auto nh : driver.node->exploreOutput(driver.port)) {
+            if (alreadyEncountered.contains(nh.node())) {
+                nh.backtrack();
+                continue;
+            }
+            alreadyEncountered.insert(nh.node());
+
             if (nh.isSignal()) continue;
             if (nh.node() == writePort && (nh.port() == (size_t)Node_MemPort::Inputs::enable || nh.port() == (size_t)Node_MemPort::Inputs::wrEnable)) {
                 nh.backtrack();
                 continue;
             }
+            if (nh.nodePort() == input) {
+                nh.backtrack();
+                continue;
+            }
             onlyUser = false;
             break;
+        }        
+        if (!onlyUser)
+            break;
+
+        nodesToMove.push_back(driver.node);
+
+        // If signal, continue scanning input chain
+        if (auto *signal = dynamic_cast<Node_Signal*>(driver.node)) {
+            input = {.node = signal, .port = 0ull};
+            continue;
         }
 
-        if (onlyUser) {
+        // Check if already driven by register
+        if (auto *enableReg = dynamic_cast<Node_Register*>(driver.node)) {
+
+            // If that register is already resetting to zero everything is fine
+            auto resetDriver = enableReg->getNonSignalDriver(Node_Register::RESET_VALUE);
+            if (resetDriver.node != nullptr) {
+                auto resetValue = evaluateStatically(circuit, resetDriver);
+                HCL_ASSERT(resetValue.size() == 1);
+                if (resetValue.get(sim::DefaultConfig::DEFINED, 0) && !resetValue.get(sim::DefaultConfig::VALUE, 0)) {
+                    input = {.node = enableReg, .port = 0ull};
+                    unhandledCycles--;
+                    continue;
+                }
+            }
+
             sim::DefaultBitVectorState state;
             state.resize(1);
             state.set(sim::DefaultConfig::DEFINED, 0);
@@ -437,64 +486,142 @@ void MemoryGroup::ensureNotEnabledFirstCycle(Circuit &circuit, NodeGroup *ng, No
             constZero->moveToGroup(ng);
             enableReg->connectInput(Node_Register::RESET_VALUE, {.node = constZero, .port = 0ull});
 
-            return;
+            input = {.node = enableReg, .port = 0ull};
+            unhandledCycles--;
+            moveNodes();
+            continue;
         }
 
+        break;
     }
 
-    // Build single register with reset 0 and input 1 
+    // if there are cycles remaining, build counter and AND the enable signal
+    if (unhandledCycles > 0) {
+        moveNodes();
 
-    sim::DefaultBitVectorState state;
-    state.resize(1);
-    state.set(sim::DefaultConfig::DEFINED, 0);
-    state.set(sim::DefaultConfig::VALUE, 0, false);
-    auto *constZero = circuit.createNode<Node_Constant>(state, ConnectionType::BOOL);
-    constZero->recordStackTrace();
-    constZero->moveToGroup(ng);
+        NodePort newEnable;
 
-    state.set(sim::DefaultConfig::VALUE, 0, true);
-    auto *constOne = circuit.createNode<Node_Constant>(state, ConnectionType::BOOL);
-    constOne->recordStackTrace();
-    constOne->moveToGroup(ng);
+        // no counter necessary, just use a single register
+        if (unhandledCycles == 1) {
 
-    auto *reg = circuit.createNode<Node_Register>();
-    reg->recordStackTrace();
-    reg->moveToGroup(ng);
-    reg->setComment("Register that generates a zero after reset and a one on all later cycles");
-    reg->setClock(writePort->getClocks()[0]);
+            // Build single register with reset 0 and input 1 
+            sim::DefaultBitVectorState state;
+            state.resize(1);
+            state.set(sim::DefaultConfig::DEFINED, 0);
+            state.set(sim::DefaultConfig::VALUE, 0, false);
+            auto *constZero = circuit.createNode<Node_Constant>(state, ConnectionType::BOOL);
+            constZero->recordStackTrace();
+            constZero->moveToGroup(ng);
 
-    reg->connectInput(Node_Register::Input::RESET_VALUE, {.node = constZero, .port = 0ull});
-    reg->connectInput(Node_Register::Input::DATA, {.node = constOne, .port = 0ull});
-    reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
+            state.set(sim::DefaultConfig::VALUE, 0, true);
+            auto *constOne = circuit.createNode<Node_Constant>(state, ConnectionType::BOOL);
+            constOne->recordStackTrace();
+            constOne->moveToGroup(ng);
 
-    NodePort newEnable = {.node = reg, .port = 0ull};
+            auto *reg = circuit.createNode<Node_Register>();
+            reg->recordStackTrace();
+            reg->moveToGroup(ng);
+            reg->setComment("Register that generates a zero after reset and a one on all later cycles");
+            reg->setClock(writePort->getClocks()[0]);
 
-    if (wrEnableDriver.node != nullptr) {
+            reg->connectInput(Node_Register::Input::RESET_VALUE, {.node = constZero, .port = 0ull});
+            reg->connectInput(Node_Register::Input::DATA, {.node = constOne, .port = 0ull});
+            reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
 
-        // And register to enable input
-        auto *logicAnd = circuit.createNode<Node_Logic>(Node_Logic::AND);
-        logicAnd->moveToGroup(ng);
-        logicAnd->recordStackTrace();
-        logicAnd->setComment("Force the enable port to zero on first cycle after reset since the retiming delayed the entire write port by one cycle!");
-        logicAnd->connectInput(0, newEnable);
-        logicAnd->connectInput(1, wrEnableDriver);
+            newEnable = {.node = reg, .port = 0ull};
+        } else {
+            size_t counterWidth = utils::Log2C(unhandledCycles)+1;
 
-        newEnable = {.node = logicAnd, .port = 0ull};
+            /*
+                Build a counter which starts at unhandledCycles-1 but with one bit more than needed.
+                Subtract from it and use the MSB as the indicator that zero was reached, which is the output but also, when negated, the enable to the register.
+            */
+
+
+
+            auto *reg = circuit.createNode<Node_Register>();
+            reg->moveToGroup(ng);
+            reg->recordStackTrace();
+            reg->setClock(writePort->getClocks()[0]);
+            reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
+
+            sim::DefaultBitVectorState state;
+            state.resize(counterWidth);
+            state.setRange(sim::DefaultConfig::DEFINED, 0, counterWidth);
+            state.insertNonStraddling(sim::DefaultConfig::VALUE, 0, counterWidth, unhandledCycles-1);
+
+            auto *resetConst = circuit.createNode<Node_Constant>(state, ConnectionType::BITVEC);
+            resetConst->moveToGroup(ng);
+            resetConst->recordStackTrace();
+            reg->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0ull});
+
+
+            NodePort counter = {.node = reg, .port = 0ull};
+            circuit.appendSignal(counter)->setName("delayedWrEnableCounter");
+
+
+            // build a one
+            state.insertNonStraddling(sim::DefaultConfig::VALUE, 0, counterWidth, 1);
+            auto *constOne = circuit.createNode<Node_Constant>(state, ConnectionType::BITVEC);
+            constOne->moveToGroup(ng);
+            constOne->recordStackTrace();
+
+            auto *subNode = circuit.createNode<Node_Arithmetic>(Node_Arithmetic::SUB);
+            subNode->moveToGroup(ng);
+            subNode->recordStackTrace();
+            subNode->connectInput(0, counter);
+            subNode->connectInput(1, {.node = constOne, .port = 0ull});
+
+            reg->connectInput(Node_Register::DATA, {.node = subNode, .port = 0ull});
+
+
+            auto *rewireNode = circuit.createNode<Node_Rewire>(1);
+            rewireNode->moveToGroup(ng);
+            rewireNode->recordStackTrace();
+            rewireNode->connectInput(0, counter);
+            rewireNode->setExtract(counterWidth-1, 1);
+            rewireNode->changeOutputType({.interpretation = ConnectionType::BOOL, .width = 1});
+
+            NodePort counterExpired = {.node = rewireNode, .port = 0ull};
+            circuit.appendSignal(counterExpired)->setName("delayedWrEnableCounterExpired");
+
+            auto *logicNot = circuit.createNode<Node_Logic>(Node_Logic::NOT);
+            logicNot->moveToGroup(ng);
+            logicNot->recordStackTrace();
+            logicNot->connectInput(0, counterExpired);
+            reg->connectInput(Node_Register::ENABLE, {.node = logicNot, .port = 0ull});
+
+            newEnable = counterExpired;
+        }
+
+        auto driver = input.node->getDriver(input.port);
+        if (driver.node != nullptr) {
+
+            // AND to existing enable input
+            auto *logicAnd = circuit.createNode<Node_Logic>(Node_Logic::AND);
+            logicAnd->moveToGroup(ng);
+            logicAnd->recordStackTrace();
+            logicAnd->connectInput(0, newEnable);
+            logicAnd->connectInput(1, driver);
+
+            newEnable = {.node = logicAnd, .port = 0ull};
+        }
+
+        input.node->rewireInput(input.port, newEnable);
+
+        writePort->rewireInput((size_t)Node_MemPort::Inputs::wrEnable, writePort->getDriver((size_t)Node_MemPort::Inputs::enable));
     }
-
-    writePort->connectEnable(newEnable);
-    writePort->connectWrEnable(newEnable);
 }
 
 
 void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 {
-    if (m_memory->type() != Node_Memory::MemType::BRAM) return;
+    if (m_memory->getRequiredReadLatency() == 0) return;
 
     //visualize(circuit, "beforeRetiming");
 
     std::set<Node_MemPort*> retimeableWritePorts;
-    for (auto np : m_memory->getDirectlyDriven(0)) {
+    for (auto np : m_memory->getPorts()) {
         auto *memPort = dynamic_cast<Node_MemPort*>(np.node);
         if (memPort->isWritePort()) {
             HCL_ASSERT_HINT(!memPort->isReadPort(), "Retiming for combined read and write ports not yet implemented!");
@@ -504,65 +631,59 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 
 
 
-    std::set<Node_MemPort*> actuallyRetimedWritePorts;
+    std::map<Node_MemPort*, size_t> actuallyRetimedWritePorts;
 
-    // If we are aiming for blockrams:
-    // Check if any read ports are lacking the register that make them synchronous.
+    // If we are aiming for memory with a read latency > 0
+    // Check if any read ports are lacking the registers that models that read latency.
     // If they do, scan the read data output bus for any registers buried in the combinatorics that could be pulled back and fused.
-    // Keep note of which write ports are "delayed" through this retiming to then, in a second step, build 
-    // While doing that, also check for and build read modify write mechanics w. hazard detection in case those combinatorics feed back into
-    // a write port of the same memory with same addr and enables.
+    // Keep note of which write ports are "delayed" through this retiming to then, in a second step, build rw hazard bypass logic.
 
     for (auto &rp : m_readPorts) {
-        // It's fine if it is already synchronous.
-        if (rp.syncReadDataReg != nullptr) continue;
-        HCL_ASSERT(rp.outputReg == nullptr);
+        while (!rp.findOutputRegisters(m_memory->getRequiredReadLatency(), this)) {
+            auto subnet = Subnet::all(circuit);
+            Subnet retimedArea;
+            // On multi-readport memories there can already appear a register due to the retiming of other read ports. In this case, retimeBackwardtoOutput is a no-op.
+            retimeBackwardtoOutput(circuit, subnet, {}, retimeableWritePorts, retimedArea, rp.dataOutput, true, true);
 
-        auto subnet = Subnet::all(circuit);
-        Subnet retimedArea;
-        // On multi-readport memories there can already appear a register due to the retiming of other read ports. In this case, retimeBackwardtoOutput is a no-op.
-        retimeBackwardtoOutput(circuit, subnet, {}, retimeableWritePorts, retimedArea, rp.dataOutput, true, true);
+            //visualize(circuit, "afterRetiming");
 
-        //visualize(circuit, "afterRetiming");
-
-        // Find register
-        HCL_ASSERT(rp.node->getDirectlyDriven((size_t)Node_MemPort::Outputs::rdData).size() == 1);
-        rp.syncReadDataReg = dynamic_cast<Node_Register*>(rp.node->getDirectlyDriven((size_t)Node_MemPort::Outputs::rdData)[0].node);
-        HCL_ASSERT(rp.syncReadDataReg != nullptr);
-        rp.syncReadDataReg->getFlags().clear(Node_Register::ALLOW_RETIMING_BACKWARD).clear(Node_Register::ALLOW_RETIMING_FORWARD).insert(Node_Register::IS_BOUND_TO_MEMORY);
-        // find output of register
-        rp.dataOutput = {.node = rp.syncReadDataReg, .port = 0ull};
-
-
-        for (auto wp : retimeableWritePorts) {
-            if (retimedArea.contains(wp)) {
-                // Handle write port
-                lazyCreateFixupNodeGroup();
-                ensureNotEnabledFirstCycle(circuit, m_fixupNodeGroup, wp);
-
-                // take note that this write port is delayed.
-                actuallyRetimedWritePorts.insert(wp);
+            for (auto wp : retimeableWritePorts) {
+                if (retimedArea.contains(wp)) {
+                    // Take note that this write port is delayed by one more cycle
+                    actuallyRetimedWritePorts[wp]++;
+                }
             }
         }
     }
 
+    //visualize(circuit, "afterRetiming");
+
     if (actuallyRetimedWritePorts.empty()) return;
 
-    std::vector<Node_MemPort*> sortedWritePorts;
-    for (auto wp : actuallyRetimedWritePorts)
-        sortedWritePorts.push_back(wp);
+    lazyCreateFixupNodeGroup();
 
-    std::sort(sortedWritePorts.begin(), sortedWritePorts.end(), [](Node_MemPort *left, Node_MemPort *right)->bool{
-        return left->isOrderedBefore(right);
+    // For all WPs that got retimed:
+    std::vector<std::pair<Node_MemPort*, size_t>> sortedWritePorts;
+    for (auto wp : actuallyRetimedWritePorts) {
+        // ... prep a list to sort them in write order
+        sortedWritePorts.push_back(wp);
+        // ... Ensure their (write-)enable is deasserted for at least as long as they were delayed.
+        ensureNotEnabledFirstCycles(circuit, m_fixupNodeGroup, wp.first, wp.second); 
+    }
+
+    //visualize(circuit, "afterEnableFix");    
+
+    std::sort(sortedWritePorts.begin(), sortedWritePorts.end(), [](const auto &left, const auto &right)->bool{
+        return left.first->isOrderedBefore(right.first);
     });
 
     if (sortedWritePorts.size() >= 2)
-        HCL_ASSERT(sortedWritePorts[0]->isOrderedBefore(sortedWritePorts[1]));
+        HCL_ASSERT(sortedWritePorts[0].first->isOrderedBefore(sortedWritePorts[1].first));
 
-    auto *clock = sortedWritePorts.front()->getClocks()[0];
+    auto *clock = sortedWritePorts.front().first->getClocks()[0];
     ReadModifyWriteHazardLogicBuilder rmwBuilder(circuit, clock);
-    rmwBuilder.setReadLatency(1);
-    rmwBuilder.retimeRegisterToMux();
+    
+    size_t maxLatency = 0;
     
     for (auto &rp : m_readPorts)
         rmwBuilder.addReadPort(ReadModifyWriteHazardLogicBuilder::ReadPort{
@@ -572,16 +693,21 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
         });
 
     for (auto wp : sortedWritePorts) {
-        HCL_ASSERT(wp->getDriver((size_t)Node_MemPort::Inputs::enable) == wp->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
+        HCL_ASSERT(wp.first->getDriver((size_t)Node_MemPort::Inputs::enable) == wp.first->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
         rmwBuilder.addWritePort(ReadModifyWriteHazardLogicBuilder::WritePort{
-            .addrInputDriver = wp->getDriver((size_t)Node_MemPort::Inputs::address),
-            .enableInputDriver = wp->getDriver((size_t)Node_MemPort::Inputs::enable),
+            .addrInputDriver = wp.first->getDriver((size_t)Node_MemPort::Inputs::address),
+            .enableInputDriver = wp.first->getDriver((size_t)Node_MemPort::Inputs::enable),
             .enableMaskInputDriver = {},
-            .dataInInputDriver = wp->getDriver((size_t)Node_MemPort::Inputs::wrData),
+            .dataInInputDriver = wp.first->getDriver((size_t)Node_MemPort::Inputs::wrData),
+            .latencyCompensation = wp.second
         });
+
+        maxLatency = std::max(maxLatency, wp.second);
     }
 
-    rmwBuilder.build();
+    bool useMemory = maxLatency > 2;
+    rmwBuilder.retimeRegisterToMux();
+    rmwBuilder.build(useMemory);
 
     const auto &newNodes = rmwBuilder.getNewNodes();
     for (auto n : newNodes) 
@@ -598,12 +724,31 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 */    
 }
 
+void MemoryGroup::buildReset(Circuit &circuit)
+{
+    if (m_memory->getNonSignalDriver((size_t)Node_Memory::Inputs::INITIALIZATION_DATA).node != nullptr) {
+        buildResetLogic(circuit);
+    } else {
+        if (sim::anyDefined(m_memory->getPowerOnState())) 
+            buildResetRom(circuit);
+    }
+}
+
+void MemoryGroup::buildResetLogic(Circuit &circuit)
+{
+
+}
+
+void MemoryGroup::buildResetRom(Circuit &circuit)
+{
+}
+
 void MemoryGroup::verify()
 {
     switch (m_memory->type()) {
         case Node_Memory::MemType::BRAM:
             for (auto &rp : m_readPorts) {
-                if (rp.syncReadDataReg == nullptr) {
+                if (rp.dedicatedReadLatencyRegisters.size() < 1) {
                     std::stringstream issue;
                     issue << "Memory can not become BRAM because a read port is missing it's data register.\nMemory from:\n"
                         << m_memory->getStackTrace() << "\nRead port from:\n" << rp.node->getStackTrace();
