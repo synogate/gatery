@@ -192,17 +192,19 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
     */
 
 
-    for (auto &rp : m_memGrp->getReadPorts())
-        for (auto i : utils::Range(rp.dedicatedReadLatencyRegisters.size()-1)) {
-            auto reg = rp.dedicatedReadLatencyRegisters[i];
+    for (auto &rp : m_memGrp->getReadPorts()) {
+        for (auto &reg : rp.dedicatedReadLatencyRegisters)
             HCL_ASSERT_HINT(reg->getDriver(hlim::Node_Register::RESET_VALUE).node == nullptr || reg->getClocks()[0]->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE,
                         "Power on reset values not implemented yet for memory registers!");
 
-            cf.indent(stream, 1);
-            stream << "SIGNAL " << m_namespaceScope.getName(rp.dataOutput) << "_outputReg_" << i << " : ";
-            cf.formatConnectionType(stream, hlim::getOutputConnectionType(rp.dataOutput));
-            stream << "; "<< std::endl;
-        }
+        if (!rp.dedicatedReadLatencyRegisters.empty())
+            for (auto i : utils::Range<size_t>(rp.dedicatedReadLatencyRegisters.size()-1)) {
+                cf.indent(stream, 1);
+                stream << "SIGNAL " << m_namespaceScope.getName(rp.dataOutput) << "_outputReg_" << i << " : ";
+                cf.formatConnectionType(stream, hlim::getOutputConnectionType(rp.dataOutput));
+                stream << "; "<< std::endl;
+            }
+    }
 }
 
 void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned indent)

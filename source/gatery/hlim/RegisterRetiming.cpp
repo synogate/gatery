@@ -225,8 +225,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, const Subnet &area, const
 						openList.push_back(driver.node);
 			}
 
- 			if (auto *memPort = dynamic_cast<Node_MemPort*>(node)) { // If it is a memory port (can only be a read port, attempt to retime entire memory)
-				HCL_ASSERT(!memPort->isWritePort());
+ 			if (auto *memPort = dynamic_cast<Node_MemPort*>(node)) { // If it is a memory port attempt to retime entire memory
 				auto *memory = memPort->getMemory();
 				areaToBeRetimed.add(memory);
 			
@@ -247,7 +246,7 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
 	if (!determineAreaToBeRetimedForward(circuit, area, anchoredRegisters, output, areaToBeRetimed, registersToBeRemoved, ignoreRefs, failureIsError))
 		return false;
 
-	
+	/*
 	{
 		std::array<const BaseNode*,1> arr{output.node};
 		ConstSubnet csub = ConstSubnet::allNecessaryForNodes({}, arr);
@@ -262,7 +261,7 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
 		exp(circuit, areaToBeRetimed.asConst());
 		exp.runGraphViz("areaToBeRetimed.svg");
 	}
-	
+	*/
 
 	std::set<hlim::NodePort> outputsLeavingRetimingArea;
 	// Find every output leaving the area
