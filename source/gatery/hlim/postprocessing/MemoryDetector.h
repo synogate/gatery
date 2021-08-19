@@ -52,6 +52,7 @@ class MemoryGroup : public NodeGroup
         void attemptRegisterRetiming(Circuit &circuit);
         void buildReset(Circuit &circuit);
         void verify();
+        void replaceWithIOPins(Circuit &circuit);
 
         Node_Memory *getMemory() { return m_memory; }
         const std::vector<WritePort> &getWritePorts() { return m_writePorts; }

@@ -22,10 +22,12 @@
 #include "Node.h"
 #include "ConnectionType.h"
 #include "Clock.h"
+#include "../simulation/simProc/SimulationProcess.h"
 
 #include <vector>
 #include <memory>
 #include <map>
+#include <functional>
 
 namespace gtry::hlim {
 
@@ -132,6 +134,9 @@ class Circuit
         Node_Signal *appendSignal(RefCtdNodePort &nodePort);
 
         Node_Attributes *getCreateAttribNode(NodePort &nodePort);
+
+        void addSimulationProcess(std::function<sim::SimulationProcess()> simProc) { m_simulationProcesses.push_back(std::move(simProc)); }
+        inline const std::vector<std::function<sim::SimulationProcess()>> &getSimulationProcesses() const { return m_simulationProcesses; }
     protected:
         std::vector<std::unique_ptr<BaseNode>> m_nodes;
         std::unique_ptr<NodeGroup> m_root;
@@ -139,6 +144,8 @@ class Circuit
         std::vector<std::unique_ptr<Clock>> m_clocks;
 
         std::uint64_t m_nextNodeId = 0;
+
+        std::vector<std::function<sim::SimulationProcess()>> m_simulationProcesses;
 };
 
 

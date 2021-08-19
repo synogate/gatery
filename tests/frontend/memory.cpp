@@ -1213,7 +1213,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, UnitTestSimulationFi
     std::mt19937 rng{ 18055 };
 
     Memory<BVec> mem(contents.size(), 32_b);
-    mem.setType(MemType::BRAM);
+    mem.setType(MemType::BRAM, memReadLatency);
     mem.setPowerOnStateZero();
     mem.noConflicts();
 
@@ -1333,30 +1333,52 @@ BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, UnitTestSimulati
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
-    Memory<BVec> mem(contents.size(), 32_b);
-    mem.setType(MemType::EXTERNAL, memReadLatency);
-    mem.setPowerOnStateZero();
-
-    BVec addr = pinIn(4_b);
+    BVec addr = pinIn(4_b).setName("addr");
     BVec output;
-    Bit wrEn = pinIn();
+    Bit wrEn = pinIn().setName("wrEn");
+    Bit initOverride = pinIn().setName("initOverride");
     {
-        BVec elem = mem[addr];
-        BVec modifiedElem = elem + 1;
+        // extra regs to separate simulation processes
+        BVec addr_ = reg(addr);
+        Bit wrEn_ = reg(wrEn, false);
+        Bit initOverride_ = reg(initOverride);
 
-        IF (wrEn)
-            mem[addr] = modifiedElem;
+        Memory<BVec> mem(contents.size(), 32_b);
+        mem.setName("second_stage_emif");
+        mem.setType(MemType::EXTERNAL, memReadLatency);
+        //mem.setType(MemType::BRAM, memReadLatency);
+        //mem.setPowerOnStateZero(); // Not possible with external memory, needs explicit initialization
+
+        BVec elem = mem[addr_];
+        HCL_NAMED(elem);
+        BVec modifiedElem = elem + 1;
+        HCL_NAMED(modifiedElem);
+
+        IF (initOverride_)
+            modifiedElem = 0;
+
+        IF (wrEn_)
+            mem[addr_] = modifiedElem;
 
         output = elem;
+        HCL_NAMED(output);
         for ([[maybe_unused]] auto i : Range(memReadLatency))
             output = reg(output);
+
+        output = reg(output);// extra regs to separate simulation processes
     }
-    pinOut(output);
+    pinOut(output).setName("output");
 
 	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
 
+        simu(wrEn) = '1';
+        simu(initOverride) = '1';
+        for (auto i : Range(4)) {
+            simu(addr) = i;
+            co_await WaitClk(clock);
+        }
         simu(wrEn) = '0';
-        co_await WaitClk(clock);
+        simu(initOverride) = '0';
 
         std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
         std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
@@ -1370,8 +1392,9 @@ BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, UnitTestSimulati
             size_t incAddr = randomAddr(rng);
             simu(wrEn) = doInc;
             simu(addr) = incAddr;
-            if (doInc)
+            if (doInc) {
                 contents[incAddr]++;
+            }
 
             if (lastWasWrite && lastAddr == incAddr)
                 collisions++;
@@ -1387,17 +1410,21 @@ BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, UnitTestSimulati
 
         for (auto i : Range(4)) {
             simu(addr) = i;
-            for ([[maybe_unused]] auto i : Range(memReadLatency))
+            for ([[maybe_unused]] auto i : Range(memReadLatency+2))
                 co_await WaitClk(clock);
             BOOST_TEST(simu(output).value() == contents[i]);
         }        
 
+        co_await WaitClk(clock);
+        co_await WaitClk(clock);
+        co_await WaitClk(clock);
+
         stopTest();
 	});
 
-    design.visualize("before");
+    //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-    design.visualize("after");
-    recordVCD("test.vcd");
+    //design.visualize("after");
+    //recordVCD("test.vcd");
 	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->getAbsoluteFrequency());
 }
