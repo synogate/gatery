@@ -21,6 +21,8 @@
 
 #include "../SignalDelay.h"
 
+#include <regex>
+
 namespace gtry::hlim {
 
 Node_Register::Node_Register() : Node(NUM_INPUTS, 1)
@@ -138,7 +140,12 @@ std::string Node_Register::attemptInferOutputName(size_t outputPort) const
     if (driver0.node == nullptr) return "";
     if (driver0.node->getName().empty()) return "";
 
-    name << driver0.node->getName() << "_last";
+    std::regex expression("(.*)_delayed(\\d+)");
+    std::smatch matches;
+    if (std::regex_match(driver0.node->getName(), matches, expression)) {
+        name << matches[1].str() << "_delayed" << (boost::lexical_cast<size_t>(matches[2].str())+1);
+    } else
+        name << driver0.node->getName() << "_delayed1";
     return name.str();
 }
 
