@@ -292,7 +292,12 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
                         } else {
                             stream << m_namespaceScope.getName(dataPort) << "_outputReg_" << i;
                         }
-                        stream << " <= memory(to_integer(" << m_namespaceScope.getName(addrPort) << "));\n";
+
+                        if (i == 0) {
+                            stream << " <= memory(to_integer(" << m_namespaceScope.getName(addrPort) << "));\n";
+                        } else {
+                            stream << " <= " << m_namespaceScope.getName(dataPort) << "_outputReg_" << i-1 << ";\n";
+                        }
 
                         if (enablePort.node != nullptr) {
                             indent--;
