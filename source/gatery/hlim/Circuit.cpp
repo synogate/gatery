@@ -1004,7 +1004,7 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
     };
     */
     m_root->reccurInferInstanceNames();
-
+/*
     for (auto &n : m_nodes)
         if (n->getGroup() == nullptr) {
             std::stringstream error;
@@ -1012,6 +1012,7 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
             error << n->getStackTrace();
             HCL_ASSERT_HINT(false, error.str());
         }
+*/
 }
 
 
