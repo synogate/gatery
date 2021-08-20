@@ -101,7 +101,7 @@ namespace gtry::utils
 		std::vector<YAML::Node> matches;
 	};
 
-	YamlConfigTree YamlConfigTree::operator[](std::string_view path)
+	YamlConfigTree YamlConfigTree::operator[](std::string_view path) const
 	{
 		for(auto it = m_nodes.rbegin(); it != m_nodes.rend(); ++it)
 		{
@@ -144,9 +144,40 @@ namespace gtry::utils
 		return !m_nodes.empty() && m_nodes.front().IsMap();
 	}
 
+	YamlConfigTree::iterator YamlConfigTree::begin() const
+	{
+		if (isSequence())
+			return iterator{ m_nodes.front().begin() };
+		return iterator();
+	}
+
+	YamlConfigTree::iterator YamlConfigTree::end() const
+	{
+		if(isSequence())
+			return iterator{ m_nodes.front().end() };
+		return iterator();
+	}
+
+	size_t YamlConfigTree::size() const
+	{
+		if (isSequence())
+			return m_nodes.front().size();
+		return 0;
+	}
+
+	YamlConfigTree YamlConfigTree::operator[](size_t index) const
+	{
+		if (isSequence())
+			return m_nodes.front()[index];
+		return YamlConfigTree();
+	}
+
 	void YamlConfigTree::loadFromFile(const std::filesystem::path &filename)
 	{
 		m_nodes.push_back(YAML::LoadFile(filename.string()));
+
+		if (m_nodes.size() > 1 && !m_nodes.back().IsMap())
+			throw std::runtime_error(filename.string() + " is not a yaml map");
 	}
 
 #endif // USE_YAMLCPP

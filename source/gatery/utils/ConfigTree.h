@@ -38,17 +38,11 @@ namespace gtry::utils
 
 		explicit operator bool() const { return isDefined(); }
 
-		//	struct iterator {
-		//		YAML::Node::iterator it;
-		//
-		//		void operator++() { ++it; }
-		//		YamlConfigTree operator*() { return YamlConfigTree(*it); }
-		//		bool operator==(const iterator &rhs) const { return it == rhs.it; }
-		//		bool operator!=(const iterator &rhs) const { return it == rhs.it; }
-		//	};
-		//
-		//	inline auto begin() { return iterator{m_node.begin()}; }
-		//	inline auto end() { return iterator{m_node.end()}; }
+		using iterator = const DummyConfigTree*;
+		iterator begin() const { return nullptr; }
+		iterator end() const { return nullptr; }
+		size_t size() const { return 0; }
+		DummyConfigTree operator[](size_t index) const { return {}; }
 
 		template<typename T> T as(const T& def) const { return def; }
 
@@ -64,52 +58,33 @@ namespace gtry::utils
 	class YamlConfigTree 
 	{
 	public:
+		struct iterator {
+			YAML::Node::const_iterator it;
+
+			void operator++() { ++it; }
+			YamlConfigTree operator*() { return YamlConfigTree(*it); }
+			bool operator==(const iterator& rhs) const { return it == rhs.it; }
+			bool operator!=(const iterator& rhs) const { return it != rhs.it; }
+		};
+
+	public:
 		YamlConfigTree() = default;
 		YamlConfigTree(YAML::Node node) { m_nodes.push_back(node); }
 
-		YamlConfigTree operator[](std::string_view path);
-
+		explicit operator bool() const { return isDefined(); }
 		bool isDefined() const;
 		bool isNull() const;
 		bool isScalar() const;
 		bool isSequence() const;
 		bool isMap() const;
 
-		explicit operator bool() const { return isDefined(); }
+		iterator begin() const;
+		iterator end() const;
+		size_t size() const;
+		YamlConfigTree operator[](size_t index) const;
 
-	//	struct iterator {
-	//		YAML::Node::iterator it;
-	//
-	//		void operator++() { ++it; }
-	//		YamlConfigTree operator*() { return YamlConfigTree(*it); }
-	//		bool operator==(const iterator &rhs) const { return it == rhs.it; }
-	//		bool operator!=(const iterator &rhs) const { return it == rhs.it; }
-	//	};
-	//
-	//	inline auto begin() { return iterator{m_node.begin()}; }
-	//	inline auto end() { return iterator{m_node.end()}; }
-
+		YamlConfigTree operator[](std::string_view path) const;
 		template<typename T> T as(const T& def) const;
-
-		//int get(const std::string &name, int def) { return get(name, def, IntTranslator()); }
-		//size_t get(const std::string &name, size_t def) { return get(name, def, SizeTTranslator()); }
-		//bool get(const std::string &name, bool def) { return get(name, def, BoolTranslator()); }
-		//BitWidth get(const std::string &name, BitWidth def) { return get(name, def, BitWidthTranslator()); }
-		//std::string get(const std::string &name, const std::string &def) { return get(name, def, StringTranslator()); }
-		//std::string get(const std::string &name, const char *def) { return get(name, def, StringTranslator()); }
-
-		//template<typename T>
-		//typename T::Type get(const std::string &name, const typename T::Type &def, T translator) 
-		//{
-		//	for (auto it = m_nodes.rbegin(); it != m_nodes.rend(); ++it)
-		//	{
-		//		YAML::Node node = (*it)[name];
-		//		if(node)
-		//			return translator(node.as<typename T::YamlType>());
-		//	}
-		//	return def;
-		//}
-
 
 		void loadFromFile(const std::filesystem::path &filename);
 

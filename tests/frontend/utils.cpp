@@ -143,4 +143,26 @@ BOOST_AUTO_TEST_CASE(ConfigTreeEnumLoad)
 	BOOST_TEST((cfg["v5"].as(TestEnum::TE_1) == TestEnum::TE_1));
 }
 
+BOOST_AUTO_TEST_CASE(ConfigTreeLists)
+{
+	YAML::Node root;
+	root.push_back(1);
+	root.push_back(2);
+	root.push_back(3);
+
+	YamlConfigTree cfg{ root };
+	BOOST_TEST(cfg.isSequence());
+	BOOST_TEST(cfg.size() == 3);
+
+	BOOST_TEST((cfg[0].as(0) == 1));
+	BOOST_TEST((cfg[1].as(0) == 2));
+	BOOST_TEST((cfg[2].as(0) == 3));
+
+	size_t check = 1;
+	for (const YamlConfigTree& n : cfg)
+		BOOST_TEST((n.as(0) == check++));
+
+}
+
+
 #endif
