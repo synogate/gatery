@@ -50,7 +50,7 @@ class Clock;
  * @param failureIsError Whether to throw an exception if the retiming is unsuccessful
  * @returns Whether the retiming was successful
  */
-bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, bool ignoreRefs = false, bool failureIsError = true);
+bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, bool ignoreRefs = false, bool failureIsError = true, Subnet *newNodes = nullptr);
 
 /**
  * @brief Performs forward retiming on an area based on rough timing estimates.
@@ -73,7 +73,7 @@ void retimeForward(Circuit &circuit, Subnet &subnet);
  * @returns Whether the retiming was successful
  */
 bool retimeBackwardtoOutput(Circuit &circuit, Subnet &subnet, const std::set<Node_Register*> &anchoredRegisters, const std::set<Node_MemPort*> &retimeableWritePorts,
-                        Subnet &retimedArea, NodePort output, bool ignoreRefs = false, bool failureIsError = true);
+                        Subnet &retimedArea, NodePort output, bool ignoreRefs = false, bool failureIsError = true, Subnet *newNodes = nullptr);
 
 
 /**

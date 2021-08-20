@@ -793,7 +793,7 @@ void Circuit::propagateConstants(Subnet &subnet)
                     else if (dataDriver.node != nullptr) {
                         // evaluate reset value. Note that it is ok to only evaluate the reset value (it need not be constant) because the register only evaluates it during the reset.
                         sim::ReferenceSimulator simulator;
-                        simulator.compileProgram(*this, {resetDriver});
+                        simulator.compileProgram(*this, {resetDriver}, true);
                         simulator.powerOn();
 
                         auto resetValue = simulator.getValueOfOutput(resetDriver);
@@ -1004,6 +1004,14 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
     };
     */
     m_root->reccurInferInstanceNames();
+
+    for (auto &n : m_nodes)
+        if (n->getGroup() == nullptr) {
+            std::stringstream error;
+            error << "Node " << n->getName() << " " << n->getTypeName() << " "  << n->getId() << " is not in a node group!\nNode From: \n";
+            error << n->getStackTrace();
+            HCL_ASSERT_HINT(false, error.str());
+        }
 }
 
 

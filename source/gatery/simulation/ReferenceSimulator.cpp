@@ -385,11 +385,12 @@ ReferenceSimulator::ReferenceSimulator()
 {
 }
 
-void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs)
+void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs, bool ignoreSimulationProcesses)
 {
 
-    for (const auto &simProc : circuit.getSimulationProcesses())
-        addSimulationProcess(simProc);
+    if (!ignoreSimulationProcesses)
+        for (const auto &simProc : circuit.getSimulationProcesses())
+            addSimulationProcess(simProc);
 
 #if 0
     std::vector<hlim::BaseNode*> nodes;

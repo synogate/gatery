@@ -144,7 +144,7 @@ Clock* findFirstInputClock(NodePort input)
 std::vector<Node_Register*> findAllOutputRegisters(NodePort output)
 {
     std::vector<Node_Register*> result;
-    for (auto nh : output.node->exploreOutput(output.port)) {
+    for (auto nh : output.node->exploreOutput(output.port).skipDependencies()) {
         if (auto* reg = dynamic_cast<Node_Register*>(nh.node())) {
             result.push_back(reg);
             nh.backtrack();

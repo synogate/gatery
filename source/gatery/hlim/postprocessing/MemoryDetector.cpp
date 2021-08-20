@@ -822,6 +822,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
     for (auto &rp : m_readPorts) {
         for (auto &r : rp.dedicatedReadLatencyRegisters) {
             HCL_ASSERT(r->getNonSignalDriver(Node_Register::ENABLE).node == nullptr);
+            HCL_ASSERT(r->getNonSignalDriver(Node_Register::RESET_VALUE).node == nullptr);
             if (clock == nullptr)
                 clock = r->getClocks()[0];
             else
@@ -829,7 +830,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
         }
 
         auto *pinRdAddr = circuit.createNode<Node_Pin>(false);
-        pinRdAddr->setName(memName+"_rdAddr");
+        pinRdAddr->setName(memName+"_rd_address");
         pinRdAddr->moveToGroup(m_fixupNodeGroup);
         pinRdAddr->recordStackTrace();
         pinRdAddr->connect(rp.node->getDriver((size_t)Node_MemPort::Inputs::address));
@@ -837,14 +838,14 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
         Node_Pin *pinRdEn = nullptr;
         if (rp.node->getDriver((size_t)Node_MemPort::Inputs::enable).node != nullptr) {
             pinRdEn = circuit.createNode<Node_Pin>(false);
-            pinRdEn->setName(memName+"_rdEn");
+            pinRdEn->setName(memName+"_rd_read");
             pinRdEn->moveToGroup(m_fixupNodeGroup);
             pinRdEn->recordStackTrace();
             pinRdEn->connect(rp.node->getDriver((size_t)Node_MemPort::Inputs::enable));
         }
 
         auto *pinRdData = circuit.createNode<Node_Pin>(true);
-        pinRdData->setName(memName+"_rdData");
+        pinRdData->setName(memName+"_rd_readdata");
         pinRdData->moveToGroup(m_fixupNodeGroup);
         pinRdData->recordStackTrace();
         if (getOutputConnectionType(rp.dataOutput).interpretation == ConnectionType::BOOL)
@@ -874,13 +875,13 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 
 
         auto *pinWrAddr = circuit.createNode<Node_Pin>(false);
-        pinWrAddr->setName(memName+"_wrAddr");
+        pinWrAddr->setName(memName+"_wr_address");
         pinWrAddr->moveToGroup(m_fixupNodeGroup);
         pinWrAddr->recordStackTrace();
         pinWrAddr->connect(wp.node->getDriver((size_t)Node_MemPort::Inputs::address));
 
         auto *pinWrData = circuit.createNode<Node_Pin>(false);
-        pinWrData->setName(memName+"_wrData");
+        pinWrData->setName(memName+"_wr_writedata");
         pinWrData->moveToGroup(m_fixupNodeGroup);
         pinWrData->recordStackTrace();
         pinWrData->connect(wp.node->getDriver((size_t)Node_MemPort::Inputs::wrData));
@@ -888,7 +889,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
         Node_Pin *pinWrEn = nullptr;
         if (wp.node->getDriver((size_t)Node_MemPort::Inputs::wrEnable).node != nullptr) {
             pinWrEn = circuit.createNode<Node_Pin>(false);
-            pinWrEn->setName(memName+"_wrEn");
+            pinWrEn->setName(memName+"_wr_write");
             pinWrEn->moveToGroup(m_fixupNodeGroup);
             pinWrEn->recordStackTrace();
             pinWrEn->connect(wp.node->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
@@ -938,6 +939,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
         while (true) {
             for (auto i : utils::Range(convertedReadPorts.size())) {
                 auto addr = convertedReadPorts[i].addr.eval();
+                HCL_ASSERT(addr.size() > 0);
                 size_t rdAddr = addr.extractNonStraddling(sim::DefaultConfig::VALUE, 0, addr.size());
                 bool readUndefined = !sim::allDefinedNonStraddling(addr, 0, addr.size());
 
@@ -946,6 +948,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 
                 if (convertedReadPorts[i].en) {
                     auto enabled = convertedReadPorts[i].en->eval();
+                    HCL_ASSERT(enabled.size() == 1);
                     readUndefined |= !enabled.get(sim::DefaultConfig::DEFINED, 0);
                     readUndefined |= !enabled.get(sim::DefaultConfig::VALUE, 0);
                 }
@@ -968,6 +971,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 
             for (auto i : utils::Range(convertedWritePorts.size())) {
                 auto addr = convertedWritePorts[i].addr.eval();
+                HCL_ASSERT(addr.size() > 0);
                 size_t wrAddr = addr.extractNonStraddling(sim::DefaultConfig::VALUE, 0, addr.size());
                 bool writeAddrUndefined = !sim::allDefinedNonStraddling(addr, 0, addr.size());
 
@@ -978,6 +982,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
                 bool writeEnabled = true;
                 if (convertedWritePorts[i].en) {
                     auto enabled = convertedWritePorts[i].en->eval();
+                    HCL_ASSERT(enabled.size() == 1);
                     writeEnableUndefined = !enabled.get(sim::DefaultConfig::DEFINED, 0);
                     writeEnabled = enabled.get(sim::DefaultConfig::VALUE, 0);
                 }
@@ -994,6 +999,9 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
                             mem.clearRange(sim::DefaultConfig::DEFINED, wrAddr*convertedWritePorts[i].width, convertedWritePorts[i].width);
                         } else {
                             auto wrData = convertedWritePorts[i].data.eval();
+//    wrData.set(sim::DefaultConfig::VALUE, rand() % wrData.size(), rand() & 1);
+//if (rand() % 10 == 0)
+//wrData.clearRange(sim::DefaultConfig::VALUE, 0, wrData.size());
                             //std::cout << "wrData: " << wrData << std::endl;
                             HCL_ASSERT(wrData.size() == convertedWritePorts[i].width);
                             mem.copyRange(wrAddr*convertedWritePorts[i].width, wrData, 0, convertedWritePorts[i].width);

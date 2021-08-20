@@ -239,7 +239,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, const Subnet &area, const
 	return true;
 }
 
-bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, bool ignoreRefs, bool failureIsError)
+bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, bool ignoreRefs, bool failureIsError, Subnet *newNodes)
 {
 	Subnet areaToBeRetimed;
 	std::set<Node_Register*> registersToBeRemoved;
@@ -300,6 +300,7 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
 		reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
 		
 		area.add(reg);
+		if (newNodes) newNodes->add(reg);
 
 
 		// If any input bit is defined uppon reset, add that as a reset value
@@ -309,6 +310,7 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
 			resetConst->recordStackTrace();
 			resetConst->moveToGroup(reg->getGroup());
 			area.add(resetConst);
+			if (newNodes) newNodes->add(resetConst);
 			reg->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0ull});
 		}
 
@@ -744,7 +746,7 @@ writeSubnet();
 }
 
 bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_Register*> &anchoredRegisters, const std::set<Node_MemPort*> &retimeableWritePorts,
-                        Subnet &retimedArea, NodePort output, bool ignoreRefs, bool failureIsError)
+                        Subnet &retimedArea, NodePort output, bool ignoreRefs, bool failureIsError, Subnet *newNodes)
 {
 
 	// In case of multiple nodes being driven, pop in a single signal node so that this signal node can be part of the retiming area and do the broadcast
@@ -811,7 +813,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 	/// @todo Clone and optimize to prevent issues with loops
     sim::SimulatorCallbacks ignoreCallbacks;
     sim::ReferenceSimulator simulator;
-    simulator.compileProgram(circuit, {outputsLeavingRetimingArea});
+    simulator.compileProgram(circuit, {outputsLeavingRetimingArea}, true);
     simulator.powerOn();
 
 	for (auto reg : registersToBeRemoved) {
@@ -871,6 +873,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 		reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
 		
 		area.add(reg);
+		if (newNodes) newNodes->add(reg);
 
 
 		// If any input bit is defined uppon reset, add that as a reset value
@@ -880,6 +883,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 			resetConst->recordStackTrace();
 			resetConst->moveToGroup(reg->getGroup());
 			area.add(resetConst);
+			if (newNodes) newNodes->add(resetConst);
 			reg->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0ull});
 		}
 
@@ -1136,7 +1140,7 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 				Subnet area = Subnet::all(m_circuit);
 				for (auto i : {0, 2}) // don't retime memory read port register, only override data and conflict signal
 					if (!dynamic_cast<Node_Register*>(muxNode->getNonSignalDriver(i).node))
-						retimeForwardToOutput(m_circuit, area, {}, muxNode->getDriver(i), true, true);
+						retimeForwardToOutput(m_circuit, area, {}, muxNode->getDriver(i), true, true, &m_newNodes);
 			}
 //visualize(m_circuit, "after_retiming_to_mux");
 		}
