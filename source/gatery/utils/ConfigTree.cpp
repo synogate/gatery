@@ -50,6 +50,28 @@ namespace gtry::utils
 		return best_match;
 	}
 
+	std::string replaceEnvVars(const std::string& src)
+	{
+		using namespace boost::spirit::x3;
+
+		std::string ret;
+		ret.reserve(src.size());
+
+		auto append_var = [&](auto& ctx) {
+			const char* var_name = _attr(ctx).c_str();
+			const char* var = getenv(_attr(ctx).c_str());
+			if (!var)
+				throw std::runtime_error("environment variable '" + _attr(ctx) + "' not found.");
+			_attr(ctx) = var;
+		};
+
+		auto parser = *((lit('$') >> '(' >> (*(char_ - ')'))[append_var] >> ')') | char_);
+		bool valid = parse(src.cbegin(), src.cend(), parser, ret);
+		HCL_ASSERT(valid);
+		return ret;
+	}
+
+#ifdef USE_YAMLCPP
 
 	struct PathMatcher
 	{
@@ -79,16 +101,47 @@ namespace gtry::utils
 		std::vector<YAML::Node> matches;
 	};
 
-
 	YamlConfigTree YamlConfigTree::operator[](std::string_view path)
 	{
+		for(auto it = m_nodes.rbegin(); it != m_nodes.rend(); ++it)
+		{
+			YAML::Node element = (*it)[std::string{ path }];
+			if (element && !element.IsMap())
+				return YamlConfigTree{ element };
+		}
+
 		PathMatcher	m;
-		for(YAML::Node& n : m_nodes)
+		for (const YAML::Node& n : m_nodes)
 			m(n, path);
 
 		YamlConfigTree ret;
-		ret.m_nodes = m.matches;
+		ret.m_nodes = std::move(m.matches);
 		return ret;
+	}
+
+	bool YamlConfigTree::isDefined() const
+	{
+		return !m_nodes.empty() && m_nodes.front().IsDefined();
+	}
+
+	bool YamlConfigTree::isNull() const
+	{
+		return m_nodes.size() == 1 && m_nodes.front().IsNull();
+	}
+
+	bool YamlConfigTree::isScalar() const
+	{
+		return m_nodes.size() == 1 && m_nodes.front().IsScalar();
+	}
+
+	bool YamlConfigTree::isSequence() const
+	{
+		return m_nodes.size() == 1 && m_nodes.front().IsSequence();
+	}
+
+	bool YamlConfigTree::isMap() const
+	{
+		return !m_nodes.empty() && m_nodes.front().IsMap();
 	}
 
 	void YamlConfigTree::loadFromFile(const std::filesystem::path &filename)
@@ -96,7 +149,5 @@ namespace gtry::utils
 		m_nodes.push_back(YAML::LoadFile(filename.string()));
 	}
 
-	void YamlConfigTree::saveToFile(const std::filesystem::path &filename)
-	{
-	}
+#endif // USE_YAMLCPP
 }

@@ -27,6 +27,7 @@
 using namespace boost::unit_test;
 using namespace gtry::utils;
 
+
 BOOST_AUTO_TEST_CASE(GlobbingMatchPath)
 {
 	{
@@ -79,6 +80,18 @@ BOOST_AUTO_TEST_CASE(GlobbingMatchPath)
 	}
 }
 
+BOOST_AUTO_TEST_CASE(EnvVarReplacement)
+{
+	BOOST_TEST(replaceEnvVars("test") == "test");
+
+	BOOST_CHECK_THROW(replaceEnvVars("$(var)"), std::runtime_error);
+	BOOST_CHECK_THROW(replaceEnvVars("test$(var)"), std::runtime_error);
+
+	_putenv("var=str str");
+	BOOST_TEST(replaceEnvVars("test $(var) tust") == "test str str tust");
+}
+
+#ifdef USE_YAMLCPP
 
 BOOST_AUTO_TEST_CASE(ConfigTreePathSearch)
 {
@@ -90,7 +103,7 @@ BOOST_AUTO_TEST_CASE(ConfigTreePathSearch)
 	root["sub1/sub2/sub3"]["2"] = 7;
 	root["sub1/donotmatch/sub3"]["2"] = 1;
 	root["sub1/*/sub3"]["3"] = 8;
-	root["sub1/*"]["sub3"]["4"] = 9;
+	root["sub1/*"]["sub3"]["4"] = "9";
 
 	// overload resolution
 	root["sub1"]["sub2"]["sub3"]["overload"] = 1;
@@ -99,10 +112,35 @@ BOOST_AUTO_TEST_CASE(ConfigTreePathSearch)
 	YamlConfigTree cfg{ root };
 
 	auto node = cfg["sub1/sub2/sub3"];
-	BOOST_TEST(node.get("0", 0) == 5);
-	BOOST_TEST(node.get("1", 0) == 6);
-	BOOST_TEST(node.get("2", 0) == 7);
-	BOOST_TEST(node.get("3", 0) == 8);
-	BOOST_TEST(node.get("4", 0) == 9);
-	BOOST_TEST(node.get("overload", 0) == 2);
+	BOOST_TEST(node["0"].as(0) == 5);
+	BOOST_TEST(node["1"].as(0) == 6);
+	BOOST_TEST(node["2"].as(0) == 7);
+	BOOST_TEST(node["3"].as(0) == 8);
+	BOOST_TEST(node["4"].as<std::string>("0") == "9");
+	BOOST_TEST(node["overload"].as(0) == 2);
 }
+
+BOOST_AUTO_TEST_CASE(ConfigTreeEnumLoad)
+{
+	enum class TestEnum
+	{
+		TE_1,
+		TE_2,
+		TE_3
+	};
+
+	YAML::Node root;
+	root["v1"] = "TE_1";
+	root["v2"] = "TE_2";
+	root["v3"] = "TE_3";
+	root["v4"] = "TE_4";
+	YamlConfigTree cfg{ root };
+
+	BOOST_TEST((cfg["v1"].as(TestEnum::TE_3) == TestEnum::TE_1));
+	BOOST_TEST((cfg["v2"].as(TestEnum::TE_3) == TestEnum::TE_2));
+	BOOST_TEST((cfg["v3"].as(TestEnum::TE_1) == TestEnum::TE_3));
+	BOOST_CHECK_THROW((cfg["v4"].as(TestEnum::TE_1)), std::runtime_error);
+	BOOST_TEST((cfg["v5"].as(TestEnum::TE_1) == TestEnum::TE_1));
+}
+
+#endif

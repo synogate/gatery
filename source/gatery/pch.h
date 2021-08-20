@@ -3,6 +3,7 @@
   #define NOMINMAX
  #endif
  #define WIN32_LEAN_AND_MEAN
+ #define _CRT_SECURE_NO_WARNINGS
  #include <Windows.h>
 #endif
 
@@ -53,8 +54,13 @@
 #include <variant>
 #include <vector>
 
-#include <yaml-cpp/yaml.h>
-
+#if __has_include(<yaml-cpp/yaml.h>)
+# include <yaml-cpp/yaml.h>
+# include <external/magic_enum.hpp>
+# define USE_YAMLCPP
+#else
+# pragma message ("yaml-cpp not found. compiling without config file support")
+#endif
 
 extern template class boost::rational<std::uint64_t>;
 
