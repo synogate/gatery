@@ -87,7 +87,11 @@ BOOST_AUTO_TEST_CASE(EnvVarReplacement)
 	BOOST_CHECK_THROW(replaceEnvVars("$(var)"), std::runtime_error);
 	BOOST_CHECK_THROW(replaceEnvVars("test$(var)"), std::runtime_error);
 
+#ifdef WIN32
 	_putenv("var=str str");
+#else
+	putenv("var=str str");
+#endif	
 	BOOST_TEST(replaceEnvVars("test $(var) tust") == "test str str tust");
 }
 

@@ -226,7 +226,7 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllForSimulation(CircuitType
 template<bool makeConst, typename FinalType>
 FinalType &SubnetTemplate<makeConst, FinalType>::addAllForExport(CircuitType &circuit, const utils::ConfigTree &exportSelectionConfig)
 {
-    bool includeAsserts = exportSelectionConfig.get("include_asserts", false);
+    bool includeAsserts = exportSelectionConfig["include_asserts"].as(false);
 
     std::vector<NodeType*> openList;
     std::set<NodeType*> handledNodes;
