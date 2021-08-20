@@ -40,16 +40,13 @@
 namespace gtry 
 {
 
-	std::string registerClockPin(vhdl::AST& ast, hlim::Node_Register* regNode)
+	bool registerClockPin(vhdl::AST& ast, hlim::Node_Register* regNode, std::string &path)
 	{
 		hlim::NodePort regOutput = { .node = regNode, .port = 0ull };
 
 		std::vector<vhdl::BaseGrouping*> regOutputReversePath;
 		if (!ast.findLocalDeclaration(regOutput, regOutputReversePath))
-		{
-			HCL_ASSERT(false);
-			return "node|clk";
-		}
+			return false;
 		
 		std::stringstream regOutputIdentifier;
 		for (size_t i = regOutputReversePath.size() - 2; i < regOutputReversePath.size(); --i)
@@ -61,7 +58,8 @@ namespace gtry
 			regOutputIdentifier << "[0]";
 
 		regOutputIdentifier << "|clk";
-		return regOutputIdentifier.str();
+		path = regOutputIdentifier.str();
+		return true;
 	}
 
 IntelQuartus::IntelQuartus()
@@ -144,12 +142,20 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 			continue;
 		}
 
-		if (allRegs.empty())
+		hlim::Node_Register* regNode = nullptr;
+		std::string path;
+		for (auto &reg : allRegs)
+			if (registerClockPin(*vhdlExport.getAST(), reg, path)) {
+				regNode = reg;
+				break;
+			}
+
+
+		if (regNode == nullptr)
 		{
 			file << "# no clock found for " << direction << ' ' << pin->getName() << '\n';
 			continue;
 		}
-		hlim::Node_Register* regNode = allRegs.front();
 		hlim::Clock* clock = regNode->getClocks().front();
 
 		bool allOnSameClock = std::all_of(allRegs.begin(), allRegs.end(), [=](hlim::Node_Register* regNode) {
@@ -172,7 +178,7 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 			file << "\\[*\\]";
 		file << "]";
 
-		file << " -reference_pin " << registerClockPin(*vhdlExport.getAST(), regNode) << "\n";
+		file << " -reference_pin " << path << "\n";
 	}
 }
 
