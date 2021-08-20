@@ -27,18 +27,19 @@ class Node_MemPort : public Node<Node_MemPort>
 {
     public:
         enum class Inputs {
-            memory,
             enable,
             wrEnable,
             address,
             wrData,
             orderAfter,
+            memoryReadDependency,
             count
         };
 
         enum class Outputs {
             rdData,
             orderBefore,
+            memoryWriteDependency,
             count
         };
 
@@ -71,8 +72,6 @@ class Node_MemPort : public Node<Node_MemPort>
 
         bool isReadPort() const;
         bool isWritePort() const;
-
-        virtual bool hasSideEffects() const override;
 
         virtual void simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
         virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;

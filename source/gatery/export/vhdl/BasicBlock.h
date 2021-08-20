@@ -28,17 +28,6 @@ class Entity;
 class Process;
 class Block;
 
-struct NodeGroupInfo
-{
-    std::vector<hlim::BaseNode*> nodes;
-    std::vector<hlim::Node_External*> externalNodes;
-    std::vector<hlim::NodeGroup*> subEntities;
-    std::vector<hlim::NodeGroup*> subAreas;
-    std::vector<hlim::NodeGroup*> SFUs;
-
-    void buildFrom(hlim::NodeGroup *nodeGroup, bool mergeAreasReccursive);
-};
-
 
 struct ConcurrentStatement
 {

@@ -24,11 +24,19 @@
 #include "SignalDelay.h"
 #include "Node.h"
 #include "NodePort.h"
+#include "GraphTools.h"
 #include "coreNodes/Node_Register.h"
 #include "coreNodes/Node_Constant.h"
 #include "coreNodes/Node_Signal.h"
+#include "coreNodes/Node_Multiplexer.h"
+#include "coreNodes/Node_Logic.h"
+#include "coreNodes/Node_Compare.h"
+#include "coreNodes/Node_Rewire.h"
+#include "coreNodes/Node_Arithmetic.h"
 #include "supportNodes/Node_Memory.h"
 #include "supportNodes/Node_MemPort.h"
+#include "../utils/Enumerate.h"
+#include "../utils/Zip.h"
 
 #include "../simulation/ReferenceSimulator.h"
 
@@ -160,8 +168,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, const Subnet &area, const
 		}
 
 		// We can not retime nodes with a side effect
-		// Memory ports are handled separately below
-		if (node->hasSideEffects() && dynamic_cast<Node_MemPort*>(node) == nullptr) {
+		if (node->hasSideEffects()) {
 			if (!failureIsError) return false;
 
 #ifdef DEBUG_OUTPUT
@@ -187,7 +194,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, const Subnet &area, const
 			if (registersToBeRemoved.contains(reg)) continue;
 
 			// Retime over anchored registers and registers with enable signals (since we can't move them yet).
-			if (anchoredRegisters.contains(reg) || reg->getNonSignalDriver(Node_Register::ENABLE).node != nullptr) {
+			if (!reg->getFlags().containsAnyOf(Node_Register::ALLOW_RETIMING_FORWARD) || anchoredRegisters.contains(reg) || reg->getNonSignalDriver(Node_Register::ENABLE).node != nullptr) {
 				// Retime over this register. This means the enable port is part of the fan-in and we also need to search it for a register.
 				areaToBeRetimed.add(node);
 				for (unsigned i : {Node_Register::DATA, Node_Register::ENABLE}) {
@@ -214,15 +221,16 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, const Subnet &area, const
 			for (size_t i : utils::Range(node->getNumInputPorts())) {
 				auto driver = node->getDriver(i);
 				if (driver.node != nullptr)
-					openList.push_back(driver.node);
+					if (driver.node->getOutputConnectionType(driver.port).interpretation != ConnectionType::DEPENDENCY)
+						openList.push_back(driver.node);
 			}
 
- 			if (auto *memPort = dynamic_cast<Node_MemPort*>(node)) { // If it is a memory port (can only be a read port, attempt to retime entire memory)
+ 			if (auto *memPort = dynamic_cast<Node_MemPort*>(node)) { // If it is a memory port attempt to retime entire memory
 				auto *memory = memPort->getMemory();
 				areaToBeRetimed.add(memory);
 			
 				// add all memory ports to open list
-				for (auto np : memory->getDirectlyDriven(0)) 
+				for (auto np : memory->getPorts()) 
 					openList.push_back(np.node);
 			 }
 		}
@@ -231,7 +239,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, const Subnet &area, const
 	return true;
 }
 
-bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, bool ignoreRefs, bool failureIsError)
+bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, bool ignoreRefs, bool failureIsError, Subnet *newNodes)
 {
 	Subnet areaToBeRetimed;
 	std::set<Node_Register*> registersToBeRemoved;
@@ -288,8 +296,11 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
 		reg->connectInput(Node_Register::DATA, np);
 		// add to the node group of its new driver
 		reg->moveToGroup(np.node->getGroup());
+		// allow further retiming by default
+		reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
 		
 		area.add(reg);
+		if (newNodes) newNodes->add(reg);
 
 
 		// If any input bit is defined uppon reset, add that as a reset value
@@ -299,6 +310,7 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
 			resetConst->recordStackTrace();
 			resetConst->moveToGroup(reg->getGroup());
 			area.add(resetConst);
+			if (newNodes) newNodes->add(resetConst);
 			reg->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0ull});
 		}
 
@@ -471,14 +483,23 @@ bool determineAreaToBeRetimedBackward(Circuit &circuit, const Subnet &area, cons
 	BaseNode *clockGivingNode = nullptr;
 	Clock *clock = nullptr;
 
-	std::vector<BaseNode*> openList;
+	std::vector<NodePort> openList;
 	for (auto np : output.node->getDirectlyDriven(output.port))
-		openList.push_back(np.node);
+		openList.push_back(np);
 
 
 #ifdef DEBUG_OUTPUT
     auto writeSubnet = [&]{
+		{
+        	DotExport exp("areaToBeRetimed.dot");
+        	exp(circuit, areaToBeRetimed.asConst());
+        	exp.runGraphViz("areaToBeRetimed.svg");	
+		}
+
 		Subnet subnet = areaToBeRetimed;
+		subnet.dilate(false, true);
+		subnet.dilate(false, true);
+		subnet.dilate(false, true);
 		subnet.dilate(true, true);
 
         DotExport exp("retiming_area.dot");
@@ -487,8 +508,12 @@ bool determineAreaToBeRetimedBackward(Circuit &circuit, const Subnet &area, cons
     };
 #endif
 
+	Node_Register *enableGivingRegister = nullptr;
+	std::optional<NodePort> registerEnable;
+
 	while (!openList.empty()) {
-		auto *node = openList.back();
+		auto nodePort = openList.back();
+		auto *node = nodePort.node;
 		openList.pop_back();
 		// Continue if the node was already encountered.
 		if (areaToBeRetimed.contains(node)) continue;
@@ -571,8 +596,7 @@ bool determineAreaToBeRetimedBackward(Circuit &circuit, const Subnet &area, cons
 		}
 
 		// We can not retime nodes with a side effect
-		// Memory ports are handled separately below
-		if (node->hasSideEffects() && dynamic_cast<Node_MemPort*>(node) == nullptr) {
+		if (node->hasSideEffects()) {
 			if (!failureIsError) return false;
 
 #ifdef DEBUG_OUTPUT
@@ -595,107 +619,261 @@ bool determineAreaToBeRetimedBackward(Circuit &circuit, const Subnet &area, cons
 		// Everything seems good with this node, so proceeed
 
 		if (auto *reg = dynamic_cast<Node_Register*>(node)) {  // Registers need special handling
+
+			if (nodePort.port != (size_t)Node_Register::DATA) {
+				if (!failureIsError) return false;
+#ifdef DEBUG_OUTPUT
+writeSubnet();
+#endif
+				std::stringstream error;
+
+				error 
+					<< "An error occured attempting to retime backward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
+					<< "Node from:\n" << output.node->getStackTrace() << "\n";
+
+				error 
+					<< "The fanning-out signals are driving a non-data port of a register.\n    Register: " << node->getName() << " (" << node->getTypeName() << ", id " << enableGivingRegister->getId() << ").\n"
+					<< "    From:\n" << node->getStackTrace() << "\n";
+
+				HCL_ASSERT_HINT(false, error.str());
+			}
+
 			if (registersToBeRemoved.contains(reg)) continue;
 
+			if (registerEnable) {
+				if (reg->getNonSignalDriver(Node_Register::ENABLE) != *registerEnable) {
+					if (!failureIsError) return false;
+
+#ifdef DEBUG_OUTPUT
+    writeSubnet();
+#endif
+					std::stringstream error;
+
+					error 
+						<< "An error occured attempting to retime backward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
+						<< "Node from:\n" << output.node->getStackTrace() << "\n";
+
+					error 
+						<< "The fanning-out signals are driving register with different enables.\n    Register 1: " << node->getName() << " (" << node->getTypeName() << ", id " << enableGivingRegister->getId() << ").\n"
+						<< "    From:\n" << node->getStackTrace() << "\n"
+						<< "    Register 2: " << enableGivingRegister->getName() << " (" << enableGivingRegister->getTypeName() << ", id " << enableGivingRegister->getId() << ").\n"
+						<< "    From:\n" << enableGivingRegister->getStackTrace() << "\n";
+
+					HCL_ASSERT_HINT(false, error.str());
+				}
+			}
+
 			// Retime over anchored registers and registers with enable signals (since we can't move them yet).
-			if (anchoredRegisters.contains(reg) || reg->getNonSignalDriver(Node_Register::ENABLE).node != nullptr) {
+			if (!reg->getFlags().containsAnyOf(Node_Register::ALLOW_RETIMING_BACKWARD) || anchoredRegisters.contains(reg)) {
 				// Retime over this register.
 				areaToBeRetimed.add(node);
 				for (size_t i : utils::Range(node->getNumOutputPorts()))
 					for (auto np : node->getDirectlyDriven(i))
-						openList.push_back(np.node);
+						openList.push_back(np);
 			} else {
 				// Found a register to retime backward, stop here.
 				registersToBeRemoved.insert(reg);
-				areaToBeRetimed.add(node);
+
+				registerEnable = reg->getNonSignalDriver(Node_Register::ENABLE);
+				enableGivingRegister = reg;
+
+				// It is important to not add the register to the area to be retimed!
+				// If the register is part of a loop that is part of the retiming area, 
+				// the output of the register effectively leaves the retiming area, thus forcing the placement
+				// of a new register and a reset value check.
 			}
 		} else {
 			// Regular nodes just get added to the retiming area and their outputs are further explored
 			areaToBeRetimed.add(node);
 			for (size_t i : utils::Range(node->getNumOutputPorts()))
-				for (auto np : node->getDirectlyDriven(i))
-					openList.push_back(np.node);
+				if (node->getOutputConnectionType(i).interpretation != ConnectionType::DEPENDENCY)
+					for (auto np : node->getDirectlyDriven(i))
+						openList.push_back(np);
 
  			if (auto *memPort = dynamic_cast<Node_MemPort*>(node)) { // If it is a memory port		 	
+				auto *memory = memPort->getMemory();
+
 				// Check if it is a write port that will be fixed later on
 				if (retimeableWritePorts.contains(memPort)) {
-					areaToBeRetimed.add(memPort);
+
+					// It is a write port that may be retimed back wrt. to the read ports of the same memory because the change wrt. the read ports will be fixed with RMW logic later on.
+					// However, the order wrt. other write ports must not change, so we need to retime all write ports of the same memory (and later on build RMW logic for all of them).
+
+					// add all memory *write* ports to open list
+					for (auto np : memory->getPorts()) {
+						auto *otherMemPort = dynamic_cast<Node_MemPort*>(np.node);
+						if (otherMemPort->isWritePort())
+							openList.push_back(np);
+					}
+
 				} else {
 					// attempt to retime entire memory
-					auto *memory = memPort->getMemory();
 					areaToBeRetimed.add(memory);
 				
 					// add all memory ports to open list
-					for (auto np : memory->getDirectlyDriven(0)) 
-						openList.push_back(np.node);
+					for (auto np : memory->getPorts()) 
+						openList.push_back(np);
 				}
 			 }
+		}
+	}
+
+	if (registerEnable) {
+		if (registerEnable->node != nullptr) {
+			if (areaToBeRetimed.contains(registerEnable->node)) {
+				if (!failureIsError) return false;
+
+#ifdef DEBUG_OUTPUT
+writeSubnet();
+#endif
+				std::stringstream error;
+
+				error 
+					<< "An error occured attempting to retime backward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
+					<< "Node from:\n" << output.node->getStackTrace() << "\n";
+
+				error 
+					<< "The fanning-out signals are driving register with enable signals that are driven from within the area that is to be retimed.\n"
+					<< "    Register: " << enableGivingRegister->getName() << " (" << enableGivingRegister->getTypeName() << ", id " << enableGivingRegister->getId() << ").\n"
+					<< "    From:\n" << enableGivingRegister->getStackTrace() << "\n";
+
+				HCL_ASSERT_HINT(false, error.str());
+			}
 		}
 	}
 
 	return true;
 }
 
-#if 0
-
-bool retimeBackwardtoOutput(Circuit &circuit, Subnet &subnet, const std::set<Node_Register*> &anchoredRegisters, const std::set<Node_MemPort*> &retimeableWritePorts,
-                        Subnet &retimedArea, NodePort output, bool ignoreRefs, bool failureIsError)
+bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_Register*> &anchoredRegisters, const std::set<Node_MemPort*> &retimeableWritePorts,
+                        Subnet &retimedArea, NodePort output, bool ignoreRefs, bool failureIsError, Subnet *newNodes)
 {
-	std::set<Node_Register*> registersToBeRemoved;
-	if (!determineAreaToBeRetimedBackward(circuit, subnet, anchoredRegisters, output, retimeableWritePorts, retimedArea, registersToBeRemoved, ignoreRefs, failureIsError))
-		return false;
 
+	// In case of multiple nodes being driven, pop in a single signal node so that this signal node can be part of the retiming area and do the broadcast
+	if (output.node->getDirectlyDriven(output.port).size() > 1) {
+		auto consumers = output.node->getDirectlyDriven(output.port);
+
+		auto *sig = circuit.createNode<Node_Signal>();
+		sig->recordStackTrace();
+		sig->connectInput(output);
+		sig->moveToGroup(output.node->getGroup());
+		area.add(sig);
+
+		for (auto c : consumers)
+			c.node->rewireInput(c.port, {.node=sig, .port=0ull});
+	}
+
+	std::set<Node_Register*> registersToBeRemoved;
+	if (!determineAreaToBeRetimedBackward(circuit, area, anchoredRegisters, output, retimeableWritePorts, retimedArea, registersToBeRemoved, ignoreRefs, failureIsError))
+		return false;
 /*
 	{
-		std::array<const BaseNode*,1> arr{output.node};
-		ConstSubnet csub = ConstSubnet::allNecessaryForNodes({}, arr);
-		csub.add(output.node);
-
-		DotExport exp("DriversOfOutput.dot");
-		exp(circuit, csub);
-		exp.runGraphViz("DriversOfOutput.svg");
-	}
-	{
-		ConstSubnet csub;
-		for (auto n : areaToBeRetimed) csub.add(n);
 		DotExport exp("areaToBeRetimed.dot");
-		exp(circuit, csub);
+		exp(circuit, retimedArea.asConst());
 		exp.runGraphViz("areaToBeRetimed.svg");
 	}
 */
+	if (retimedArea.empty()) return true; // immediately hit a register, so empty retiming area, nothing to do.
+
 	std::set<hlim::NodePort> outputsEnteringRetimingArea;
-	// Find every output leaving the area
+	// Find every output entering the area
 	for (auto n : retimedArea)
 		for (auto i : utils::Range(n->getNumInputPorts())) {
 			auto driver = n->getDriver(i);
-			if (!retimedArea.contains(driver.node)) {
+			if (driver.node != nullptr && !outputIsDependency(driver) && !retimedArea.contains(driver.node))
 				outputsEnteringRetimingArea.insert(driver);
-				break;
-			}
 		}
 
-	HCL_ASSERT(!registersToBeRemoved.empty());
-	auto *clock = (*registersToBeRemoved.begin())->getClocks()[0];
+	std::set<hlim::NodePort> outputsLeavingRetimingArea;
+	// Find every output leaving the area
+	for (auto n : retimedArea)
+		for (auto i : utils::Range(n->getNumOutputPorts()))
+			for (auto np : n->getDirectlyDriven(i))
+				if (!retimedArea.contains(np.node)) {
+					outputsLeavingRetimingArea.insert({.node = n, .port = i});
+					break;
+				}
 
-	// Run a simulation to determine the reset values of the registers that will be placed there
+	// Find the clock domain. Try a register first.
+	Clock *clock = nullptr;
+	if (!registersToBeRemoved.empty()) {
+		clock = (*registersToBeRemoved.begin())->getClocks()[0];
+	} else {
+		// No register, this must be a RMW loop, find a write port and grab clock from there.
+		for (auto wp : retimeableWritePorts) 
+			if (retimedArea.contains(wp)) {
+				clock = wp->getClocks()[0];
+				break;
+			}
+	}
+
+	HCL_ASSERT(clock != nullptr);
+
+	// Run a simulation to determine the reset values of the registers that will be removed to check the validity of removing them
 	/// @todo Clone and optimize to prevent issues with loops
     sim::SimulatorCallbacks ignoreCallbacks;
     sim::ReferenceSimulator simulator;
-    simulator.compileProgram(circuit, {outputsEnteringRetimingArea});
+    simulator.compileProgram(circuit, {outputsLeavingRetimingArea}, true);
     simulator.powerOn();
 
+	for (auto reg : registersToBeRemoved) {
+
+		auto resetDriver = reg->getNonSignalDriver(Node_Register::RESET_VALUE);
+		if (resetDriver.node != nullptr) {
+			auto resetValue = evaluateStatically(circuit, resetDriver);
+			auto inputValue = simulator.getValueOfOutput(reg->getDriver(0));
+
+			HCL_ASSERT(resetValue.size() == inputValue.size());
+			
+			if (!sim::canBeReplacedWith(resetValue, inputValue)) {
+				if (!failureIsError) return false;
+
+				std::stringstream error;
+
+				error 
+					<< "An error occured attempting to retime backward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
+					<< "Node from:\n" << output.node->getStackTrace() << "\n";
+
+				error 
+					<< "One of the registers that would have to be removed " << reg->getName() << " (" << reg->getTypeName() <<  ", id " << reg->getId() << ") can not be retimed because its reset value is not compatible with its input uppon reset.\n"
+					<< "Register from:\n" << reg->getStackTrace() << "\n"
+					<< "Reset value: " << resetValue << "\n"
+					<< "Value uppon reset: " << inputValue << "\n";
+
+				HCL_ASSERT_HINT(false, error.str());
+			}
+		}
+	}
+
+
+	NodePort enableSignal;
+	if (!registersToBeRemoved.empty())
+		enableSignal = (*registersToBeRemoved.begin())->getDriver(Node_Register::ENABLE);
+
 	// Insert registers
-	for (auto np : outputsLeavingRetimingArea) {
+	for (auto np : outputsEnteringRetimingArea) {
+
+		// Don't insert registers on constants
+		if (dynamic_cast<Node_Constant*>(np.node)) continue;
+		// Don't insert registers on signals leading to constants
+		if (auto *signal = dynamic_cast<Node_Signal*>(np.node))
+			if (dynamic_cast<Node_Constant*>(signal->getNonSignalDriver(0).node)) continue;
+
 		auto *reg = circuit.createNode<Node_Register>();
 		reg->recordStackTrace();
 		// Setup clock
 		reg->setClock(clock);
 		// Setup input data
 		reg->connectInput(Node_Register::DATA, np);
+		// Connect to same enable as all the removed registers
+		reg->connectInput(Node_Register::ENABLE, enableSignal);
 		// add to the node group of its new driver
 		reg->moveToGroup(np.node->getGroup());
+		// allow further retiming by default
+		reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
 		
 		area.add(reg);
+		if (newNodes) newNodes->add(reg);
 
 
 		// If any input bit is defined uppon reset, add that as a reset value
@@ -705,27 +883,595 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &subnet, const std::set<Nod
 			resetConst->recordStackTrace();
 			resetConst->moveToGroup(reg->getGroup());
 			area.add(resetConst);
+			if (newNodes) newNodes->add(resetConst);
 			reg->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0ull});
 		}
 
-		// Find all signals leaving the retiming area and rewire them to the register's output
+		// Find all signals entering the retiming area and rewire them to the register's output
 		std::vector<NodePort> inputsToRewire;
 		for (auto inputNP : np.node->getDirectlyDriven(np.port))
 			if (inputNP.node != reg) // don't rewire the register we just attached
-				if (!areaToBeRetimed.contains(inputNP.node))
+				if (retimedArea.contains(inputNP.node))
 					inputsToRewire.push_back(inputNP);
 
 		for (auto inputNP : inputsToRewire)
 			inputNP.node->rewireInput(inputNP.port, {.node = reg, .port = 0ull});
 	}
 
-	// Remove input registers that have now been retimed forward
+	// Remove output registers that have now been retimed forward
 	for (auto *reg : registersToBeRemoved)
 		reg->bypassOutputToInput(0, (unsigned)Node_Register::DATA);
 
 	return true;
 }
 
-#endif
+void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
+{
+	size_t maxLatencyCompensation = 0;
+	for (const auto &wp : m_writePorts)
+		maxLatencyCompensation = std::max(maxLatencyCompensation, wp.latencyCompensation);
+
+
+	if (maxLatencyCompensation == 0) return;
+	if (m_readPorts.empty()) return;
+	if (m_writePorts.empty()) return;
+
+
+	size_t totalDataWidth = getOutputWidth(m_readPorts.front().dataOutOutputDriver);
+	for (auto &rdPort : m_readPorts)
+		HCL_DESIGNCHECK_HINT(getOutputWidth(rdPort.dataOutOutputDriver) == totalDataWidth, "The RMW hazard logic builder requires all data busses of all read ports to be the same width.");
+
+	for (auto &wrPort : m_writePorts)
+		HCL_DESIGNCHECK_HINT(getOutputWidth(wrPort.dataInInputDriver) == totalDataWidth, "The RMW hazard logic builder requires the data busses of the write ports to be the same width as the read ports.");
+
+
+	// First, determine reset values for all places where we may want to insert registers.
+	std::map<NodePort, sim::DefaultBitVectorState> resetValues;
+	for (auto &rdPort : m_readPorts) {
+		resetValues.insert({rdPort.addrInputDriver, {}});
+	}
+	determineResetValues(resetValues);
+
+
+	// Find a minimal partitioning of the data such that each byte-enable-able symbol of each write port spans a whole multiple of these words.
+	std::vector<DataWord> dataWords = findDataPartitionining();
+
+	NodePort ringBufferCounter;
+	if (useMemory) {
+		// In memory mode, we need one write pointer for all ring buffers
+		ringBufferCounter = buildRingBufferCounter(maxLatencyCompensation);
+
+		for (auto &dw : dataWords)
+			dw.representationWidth = getOutputWidth(ringBufferCounter);
+	} else {
+		for (auto &dw : dataWords)
+			dw.representationWidth = dw.width;
+	}
+
+
+	// Setup write port structures
+	struct WritePortSignals {
+		NodePort wpIdx;
+		std::vector<NodePort> words;
+		std::vector<Node_Memory*> ringbuffers;
+	};
+	std::vector<WritePortSignals> allWrPortSignals;
+	allWrPortSignals.resize(m_writePorts.size());
+
+	if (useMemory) {
+		for (auto wrIdx : utils::Range(m_writePorts.size())) {
+			// Split the input into individual words
+			auto words = splitWords(m_writePorts[wrIdx].dataInInputDriver, dataWords);
+
+			// Build one ringbuffer per write port and per word, since they must be read individually.
+			allWrPortSignals[wrIdx].ringbuffers.resize(dataWords.size());
+			allWrPortSignals[wrIdx].words.resize(dataWords.size());
+			for (auto wordIdx : utils::Range(dataWords.size())) {
+				allWrPortSignals[wrIdx].ringbuffers[wordIdx] = buildWritePortRingBuffer(words[wordIdx], ringBufferCounter);
+
+				// The data to pass through the registers is the write pointer where the data is stored...
+				allWrPortSignals[wrIdx].words[wordIdx] = ringBufferCounter;
+			}
+
+			// ... as well as the index of the write port if there are multiple.
+			if (m_writePorts.size() > 1) {
+				auto idxWidth = utils::Log2C(m_writePorts.size());
+				sim::DefaultBitVectorState state;
+				state.resize(idxWidth);
+				state.setRange(sim::DefaultConfig::DEFINED, 0, idxWidth);
+				state.insertNonStraddling(sim::DefaultConfig::VALUE, 0, idxWidth, wrIdx);
+
+				auto *constNode = m_circuit.createNode<Node_Constant>(state, ConnectionType::BITVEC);
+				m_newNodes.add(constNode);
+				constNode->recordStackTrace();
+
+				allWrPortSignals[wrIdx].wpIdx = {.node = constNode, .port = 0ull};
+			}
+		}
+	} else {
+		for (auto wrIdx : utils::Range(m_writePorts.size())) {
+			// Just split data into words.
+			allWrPortSignals[wrIdx].words = splitWords(m_writePorts[wrIdx].dataInInputDriver, dataWords);
+			// .wpIdx not needed in non-memory mode
+		}
+	}
+
+	// The rest has to be build for each read port individually
+	for (auto rdPort : m_readPorts) {
+
+		// Keep a list of per-word signals to update as we move through the stages
+		struct PerWord {
+			NodePort conflict;
+			NodePort overrideData;
+			NodePort overrideWpIdx;
+		};
+		std::vector<PerWord> wordSignals;
+		wordSignals.resize(dataWords.size());
+
+
+
+		// Build address shift register 
+		std::vector<NodePort> rdPortAddrShiftReg;
+		rdPortAddrShiftReg.resize(maxLatencyCompensation);
+		rdPortAddrShiftReg[0] = rdPort.addrInputDriver;
+		for (auto i : utils::Range<size_t>(1, maxLatencyCompensation))
+			rdPortAddrShiftReg[i] = createRegister(rdPortAddrShiftReg[i-1], {});
+
+
+		// Build each stage
+		for (auto stageIdx : utils::Range(rdPortAddrShiftReg.size())) {
+			auto &rdAddr = rdPortAddrShiftReg[stageIdx];
+
+			// Build muxes in write port write order
+			for (auto [wrPort, wrPortSignals] : utils::Zip(m_writePorts, allWrPortSignals)) {
+				if (wrPort.latencyCompensation > stageIdx) {
+					// Check whether a conflict can exists based on addr and enable
+					NodePort conflict = buildConflictDetection(rdAddr, {}, wrPort.addrInputDriver, wrPort.enableInputDriver);
+
+					for (auto wordIdx : utils::Range(dataWords.size())) {
+						// Check whether a conflict exists for this word:
+						NodePort wordConflict = andWithMaskBit(conflict, wrPort.enableMaskInputDriver, wordIdx);
+
+						// Build multiplexers for each word to override data and idx if they exist.
+						// buildConflictOr and buildConflictMux just wire through if one of the operands is a nullptr (as is the case for the first stage and for the idx in non-memory-mode).
+						wordSignals[wordIdx].conflict = buildConflictOr(wordSignals[wordIdx].conflict, wordConflict);
+						wordSignals[wordIdx].overrideData = buildConflictMux(wordSignals[wordIdx].overrideData, wrPortSignals.words[wordIdx], wordConflict);
+						wordSignals[wordIdx].overrideWpIdx = buildConflictMux(wordSignals[wordIdx].overrideWpIdx, wrPortSignals.wpIdx, wordConflict);
+					}
+				} else {
+					// This write port needs less than the maximum latency compensation, usually because it already had a manually placed register in its path.
+					// Skip the last multiplexers for this write port.
+				}
+			}
+
+			// Add registers to each word
+			// If using m_retimeToMux and useMemory, then we skip the last set of registers, put them after the read ports, and set the memory to write-first
+			if ((stageIdx+1 < rdPortAddrShiftReg.size()) || !(m_retimeToMux && useMemory))
+				for (auto wordIdx : utils::Range(dataWords.size())) {
+					wordSignals[wordIdx].conflict = createRegister(wordSignals[wordIdx].conflict, {});
+					wordSignals[wordIdx].overrideData = createRegister(wordSignals[wordIdx].overrideData, {});
+					wordSignals[wordIdx].overrideWpIdx = createRegister(wordSignals[wordIdx].overrideWpIdx, {});
+				}
+		}
+
+		// Finally, mux back to override what the read port appears to read
+
+		// Fetch a list of all consumers (before we build consumers of our own) for later to rewire
+		std::vector<NodePort> consumers = rdPort.dataOutOutputDriver.node->getDirectlyDriven(rdPort.dataOutOutputDriver.port);
+
+		// Split What we read into words
+		auto rpOutput = splitWords(rdPort.dataOutOutputDriver, dataWords);
+
+		for (auto wordIdx : utils::Range(dataWords.size())) {
+			NodePort overrideData;
+			if (useMemory) {
+
+				// Mux between write ports, if there are multiple
+				if (m_writePorts.size() > 1) {
+					auto *muxNode = m_circuit.createNode<Node_Multiplexer>(m_writePorts.size());
+					m_newNodes.add(muxNode);
+					muxNode->recordStackTrace();
+					muxNode->setComment("Mux between write port overrides from each write port.");
+					muxNode->connectSelector(wordSignals[wordIdx].overrideWpIdx);
+
+					for (auto wrIdx : utils::Range(m_writePorts.size())) {
+						// For each word, read what each write port may have written there
+						auto *readPort = m_circuit.createNode<hlim::Node_MemPort>(dataWords[wordIdx].width);
+						m_newNodes.add(readPort);
+						readPort->recordStackTrace();
+						readPort->connectMemory(allWrPortSignals[wrIdx].ringbuffers[wordIdx]);
+						readPort->connectAddress(wordSignals[wordIdx].overrideData);
+
+						// If using m_retimeToMux and useMemory, then we need to set the memory to write-first
+						if (m_retimeToMux)
+							readPort->orderAfter(allWrPortSignals[wrIdx].ringbuffers[wordIdx]->getLastPort());
+
+						muxNode->connectInput(wrIdx, {.node = readPort, .port = (unsigned)hlim::Node_MemPort::Outputs::rdData});
+					}
+
+					overrideData = {.node = muxNode, .port=0ull};
+				} else {
+					auto *readPort = m_circuit.createNode<hlim::Node_MemPort>(dataWords[wordIdx].width);
+					m_newNodes.add(readPort);
+					readPort->recordStackTrace();
+					readPort->connectMemory(allWrPortSignals[0].ringbuffers[wordIdx]);
+					readPort->connectAddress(wordSignals[wordIdx].overrideData);
+					// If using m_retimeToMux and useMemory, then we need to set the memory to write-first
+					if (m_retimeToMux)
+						readPort->orderAfter(allWrPortSignals[0].ringbuffers[wordIdx]->getLastPort());
+
+					overrideData = {.node = readPort, .port = (unsigned)hlim::Node_MemPort::Outputs::rdData};
+				}
+
+			} else 
+				overrideData = wordSignals[wordIdx].overrideData;
+
+			auto conflict = wordSignals[wordIdx].conflict;
+
+			// If using m_retimeToMux and useMemory, then we put the last set of registers here explicitely
+			if (m_retimeToMux && useMemory) {
+				conflict = createRegister(conflict, {});
+				overrideData = createRegister(overrideData, {});
+			}
+
+			// Mux between actual read and forwarded written data
+			auto *muxNode = m_circuit.createNode<Node_Multiplexer>(2);
+			m_newNodes.add(muxNode);
+			muxNode->recordStackTrace();
+			muxNode->setComment("If read and write addr match and read and write are enabled and write is not masked, forward write data to read output.");
+			muxNode->connectSelector(conflict);
+			muxNode->connectInput(0, rpOutput[wordIdx]);
+			muxNode->connectInput(1, overrideData);
+			rpOutput[wordIdx] = {.node = muxNode, .port=0ull};
+		}
+		
+		NodePort data = joinWords(rpOutput);
+		
+		// Rewire  all original consumers to use the new, potentially forwarded data
+		for (auto np : consumers)
+			np.node->rewireInput(np.port, data);		
+
+		// If required, move one of the registers as close as possible to the mux to reduce critical path length
+		if (m_retimeToMux && !useMemory) {
+//visualize(m_circuit, "before_retiming_to_mux");
+			for (auto wordIdx : utils::Range(dataWords.size())) {
+				auto *muxNode = dynamic_cast<Node_Multiplexer*>(rpOutput[wordIdx].node);
+				/// @todo: Add new nodes to subnet of new nodes
+				Subnet area = Subnet::all(m_circuit);
+				for (auto i : {0, 2}) // don't retime memory read port register, only override data and conflict signal
+					if (!dynamic_cast<Node_Register*>(muxNode->getNonSignalDriver(i).node))
+						retimeForwardToOutput(m_circuit, area, {}, muxNode->getDriver(i), true, true, &m_newNodes);
+			}
+//visualize(m_circuit, "after_retiming_to_mux");
+		}
+
+	}
+//visualize(m_circuit, "after_rmw");
+}
+
+
+
+void ReadModifyWriteHazardLogicBuilder::determineResetValues(std::map<NodePort, sim::DefaultBitVectorState> &resetValues)
+{
+	std::set<NodePort> requiredNodePorts;
+
+	for (auto &p : resetValues)
+		if (p.first.node != nullptr)
+			requiredNodePorts.insert(p.first);
+
+	// Run a simulation to determine the reset values of the registers that will be placed there
+	/// @todo Clone and optimize to prevent issues with loops
+    sim::SimulatorCallbacks ignoreCallbacks;
+    sim::ReferenceSimulator simulator;
+    simulator.compileStaticEvaluation(m_circuit, requiredNodePorts);
+    simulator.powerOn();
+
+	for (auto &p : resetValues)
+		if (p.first.node != nullptr)
+			p.second = simulator.getValueOfOutput(p.first);
+}
+
+NodePort ReadModifyWriteHazardLogicBuilder::createRegister(NodePort nodePort, const sim::DefaultBitVectorState &resetValue)
+{
+	if (nodePort.node == nullptr)
+		return {};
+
+	auto *reg = m_circuit.createNode<Node_Register>();
+	m_newNodes.add(reg);
+
+	reg->recordStackTrace();
+	reg->setClock(m_clockDomain);
+	reg->connectInput(Node_Register::DATA, nodePort);
+	reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
+
+	// If any input bit is defined uppon reset, add that as a reset value
+	if (sim::anyDefined(resetValue, 0, resetValue.size())) {
+		auto *resetConst = m_circuit.createNode<Node_Constant>(resetValue, getOutputConnectionType(nodePort).interpretation);
+		m_newNodes.add(resetConst);
+		resetConst->recordStackTrace();
+		resetConst->moveToGroup(reg->getGroup());
+		reg->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0ull});
+	}	
+	return {.node = reg, .port = 0ull};
+}
+
+NodePort ReadModifyWriteHazardLogicBuilder::buildConflictDetection(NodePort rdAddr, NodePort rdEn, NodePort wrAddr, NodePort wrEn)
+{
+	auto *addrCompNode = m_circuit.createNode<Node_Compare>(Node_Compare::EQ);
+	m_newNodes.add(addrCompNode);
+	addrCompNode->recordStackTrace();
+	addrCompNode->setComment("Compare read and write addr for conflicts");
+	addrCompNode->connectInput(0, rdAddr);
+	addrCompNode->connectInput(1, wrAddr);
+
+	NodePort conflict = {.node = addrCompNode, .port = 0ull};
+//	m_circuit.appendSignal(conflict)->setName("conflict_same_addr");
+
+	if (rdEn.node != nullptr) {
+		auto *logicAnd = m_circuit.createNode<Node_Logic>(Node_Logic::AND);
+		m_newNodes.add(logicAnd);
+		logicAnd->recordStackTrace();
+		logicAnd->connectInput(0, conflict);
+		logicAnd->connectInput(1, rdEn);
+		conflict = {.node = logicAnd, .port = 0ull};
+//		m_circuit.appendSignal(conflict)->setName("conflict_and_rdEn");
+	}
+
+	if (wrEn.node != nullptr) {
+		auto *logicAnd = m_circuit.createNode<Node_Logic>(Node_Logic::AND);
+		m_newNodes.add(logicAnd);
+		logicAnd->recordStackTrace();
+		logicAnd->connectInput(0, conflict);
+		logicAnd->connectInput(1, wrEn);
+		conflict = {.node = logicAnd, .port = 0ull};
+//		m_circuit.appendSignal(conflict)->setName("conflict_and_wrEn");
+	}
+
+	return conflict;
+}
+
+NodePort ReadModifyWriteHazardLogicBuilder::andWithMaskBit(NodePort input, NodePort mask, size_t maskBit)
+{
+	if (mask.node != nullptr) {
+		auto *rewireNode = m_circuit.createNode<Node_Rewire>(1);
+		m_newNodes.add(rewireNode);
+		rewireNode->recordStackTrace();
+		rewireNode->connectInput(0, mask);
+		rewireNode->changeOutputType({.interpretation = ConnectionType::BOOL, .width=1});
+		rewireNode->setExtract(maskBit, 1);
+
+		auto *logicAnd = m_circuit.createNode<Node_Logic>(Node_Logic::AND);
+		m_newNodes.add(logicAnd);
+		logicAnd->recordStackTrace();
+		logicAnd->connectInput(0, input);
+		logicAnd->connectInput(1, {.node = rewireNode, .port = 0ull});
+
+		input = {.node = logicAnd, .port = 0ull};
+	}
+	return input;
+}
+
+std::vector<NodePort> ReadModifyWriteHazardLogicBuilder::splitWords(NodePort data, NodePort mask)
+{
+	std::vector<NodePort> words;
+	if (mask.node == nullptr) {
+		words.resize(1);
+		words[0] = data;
+		return words;
+	}
+
+	size_t numWords = getOutputWidth(mask);
+	HCL_ASSERT(getOutputWidth(data) % numWords == 0);
+
+	size_t wordSize = getOutputWidth(data) / numWords;
+
+	words.resize(numWords);
+	for (auto i : utils::Range(numWords)) {
+		auto *rewireNode = m_circuit.createNode<Node_Rewire>(1);
+		m_newNodes.add(rewireNode);
+		rewireNode->recordStackTrace();
+		rewireNode->setComment("Because of (byte) enable mask of write port, extract each (byte/)word and mux individually.");
+		rewireNode->connectInput(0, data);
+		rewireNode->changeOutputType(getOutputConnectionType(data));
+		rewireNode->setExtract(i*wordSize, wordSize);
+		NodePort individualWord = {.node = rewireNode, .port = 0ull};
+//		m_circuit.appendSignal(individualWord)->setName(std::string("word_") + std::to_string(i));
+
+		words[i] = individualWord;
+	}
+	return words;
+}
+
+
+std::vector<NodePort> ReadModifyWriteHazardLogicBuilder::splitWords(NodePort data, const std::vector<DataWord> &words)
+{
+	if (words.size() == 1)
+		return {data};
+
+	std::vector<NodePort> dataWords;
+	dataWords.resize(words.size());
+	for (auto i : utils::Range(dataWords.size())) {
+		auto *rewireNode = m_circuit.createNode<Node_Rewire>(1);
+		m_newNodes.add(rewireNode);
+		rewireNode->recordStackTrace();
+		rewireNode->setComment("Because of (byte) enable mask of write port, extract each (byte/)word");
+		rewireNode->connectInput(0, data);
+		rewireNode->changeOutputType(getOutputConnectionType(data));
+		rewireNode->setExtract(words[i].offset, words[i].width);
+		NodePort individualWord = {.node = rewireNode, .port = 0ull};
+
+		dataWords[i] = individualWord;
+	}
+	return dataWords;
+}
+
+
+
+NodePort ReadModifyWriteHazardLogicBuilder::joinWords(const std::vector<NodePort> &words)
+{
+	HCL_ASSERT(!words.empty());
+
+	if (words.size() == 1)
+		return words.front();
+
+	auto *rewireNode = m_circuit.createNode<Node_Rewire>(words.size());
+	m_newNodes.add(rewireNode);
+	rewireNode->recordStackTrace();
+	rewireNode->setComment("Join individual words back together");
+	for (auto i : utils::Range(words.size()))
+		rewireNode->connectInput(i, words[i]);
+
+	rewireNode->changeOutputType(getOutputConnectionType(words.front()));
+	rewireNode->setConcat();
+	NodePort joined = {.node = rewireNode, .port = 0ull};
+	return joined;
+}
+
+std::vector<ReadModifyWriteHazardLogicBuilder::DataWord> ReadModifyWriteHazardLogicBuilder::findDataPartitionining()
+{
+	size_t totalDataWidth = getOutputWidth(m_readPorts.front().dataOutOutputDriver);
+
+	std::vector<size_t> wordSizes;
+	wordSizes.resize(m_writePorts.size());
+	for (auto [wrPort, wordSize] : utils::Zip(m_writePorts, wordSizes)) {
+		auto mask = wrPort.enableMaskInputDriver;
+		if (mask.node == nullptr)
+			wordSize = totalDataWidth;
+		else {
+			size_t numWords = getOutputWidth(mask);
+			HCL_ASSERT(totalDataWidth % numWords == 0);
+			wordSize = totalDataWidth / numWords;
+		}
+	}
+
+
+
+	std::vector<DataWord> words;
+	size_t lastSplit = 0;
+
+	for (auto bitIdx : utils::Range(totalDataWidth)) {
+		bool needsSplit = false;
+		for (auto portSize : wordSizes)
+			if ((bitIdx+1) % portSize == 0) {
+				needsSplit = true;
+				break;
+			}
+
+		if (needsSplit) {
+			DataWord newWord;
+			newWord.offset = lastSplit;
+			newWord.width = bitIdx+1 - lastSplit;
+			newWord.writePortEnableBit.resize(m_writePorts.size());
+			for (auto portIdx : utils::Range(m_writePorts.size()))
+				if (wordSizes[portIdx] == totalDataWidth)
+					newWord.writePortEnableBit[portIdx] = ~0u;
+				else
+					newWord.writePortEnableBit[portIdx] = bitIdx / wordSizes[portIdx];
+
+			words.push_back(std::move(newWord));
+			lastSplit = bitIdx;
+		}
+	}
+	
+	return words;
+}
+
+NodePort ReadModifyWriteHazardLogicBuilder::buildConflictOr(NodePort a, NodePort b)
+{
+	if (a.node == nullptr) return b;
+	if (b.node == nullptr) return a;
+
+	auto *logicOr = m_circuit.createNode<Node_Logic>(Node_Logic::OR);
+	m_newNodes.add(logicOr);
+	logicOr->recordStackTrace();
+	logicOr->connectInput(0, a);
+	logicOr->connectInput(1, b);
+	return {.node = logicOr, .port = 0ull};
+}
+
+NodePort ReadModifyWriteHazardLogicBuilder::buildConflictMux(NodePort oldData, NodePort newData, NodePort conflict)
+{
+	if (oldData.node == nullptr) return newData;
+	if (newData.node == nullptr) return oldData;
+
+	auto *muxNode = m_circuit.createNode<Node_Multiplexer>(2);
+	m_newNodes.add(muxNode);
+	muxNode->recordStackTrace();
+	muxNode->connectSelector(conflict);
+	muxNode->connectInput(0, oldData);
+	muxNode->connectInput(1, newData);
+
+	return {.node = muxNode, .port=0ull};
+}
+
+NodePort ReadModifyWriteHazardLogicBuilder::buildRingBufferCounter(size_t maxLatencyCompensation)
+{
+	auto counterWidth = utils::Log2C(maxLatencyCompensation+1);
+
+	auto *reg = m_circuit.createNode<Node_Register>();
+	m_newNodes.add(reg);
+
+	reg->recordStackTrace();
+	reg->setClock(m_clockDomain);
+	reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
+
+
+	sim::DefaultBitVectorState state;
+	state.resize(counterWidth);
+	state.setRange(sim::DefaultConfig::DEFINED, 0, counterWidth);
+	state.clearRange(sim::DefaultConfig::VALUE, 0, counterWidth);
+
+	auto *resetConst = m_circuit.createNode<Node_Constant>(state, ConnectionType::BITVEC);
+	m_newNodes.add(resetConst);
+	resetConst->recordStackTrace();
+	reg->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0ull});
+
+
+	// build a one
+	state.setRange(sim::DefaultConfig::VALUE, 0, 1);
+	auto *constOne = m_circuit.createNode<Node_Constant>(state, ConnectionType::BITVEC);
+	m_newNodes.add(constOne);
+	constOne->recordStackTrace();
+
+
+	auto *addNode = m_circuit.createNode<Node_Arithmetic>(Node_Arithmetic::ADD);
+	m_newNodes.add(addNode);
+	addNode->recordStackTrace();
+	addNode->connectInput(0, {.node = reg, .port = 0ull});
+	addNode->connectInput(1, {.node = constOne, .port = 0ull});
+
+	reg->connectInput(Node_Register::DATA, {.node = addNode, .port = 0ull});
+
+	return {.node = reg, .port = 0ull};
+}
+
+Node_Memory *ReadModifyWriteHazardLogicBuilder::buildWritePortRingBuffer(NodePort wordData, NodePort ringBufferCounter)
+{
+	auto wordWidth = getOutputWidth(wordData);
+	auto counterWidth = getOutputWidth(ringBufferCounter);
+
+	auto *memory = m_circuit.createNode<Node_Memory>();
+	m_newNodes.add(memory);
+	memory->recordStackTrace();
+	memory->setNoConflicts();
+	memory->setType(Node_Memory::MemType::LUTRAM);
+	{
+		sim::DefaultBitVectorState state;
+		state.resize((1ull << counterWidth) * wordWidth);
+		memory->setPowerOnState(std::move(state));
+	}
+
+	auto *writePort = m_circuit.createNode<hlim::Node_MemPort>(wordWidth);
+	m_newNodes.add(writePort);
+	writePort->recordStackTrace();
+	writePort->connectMemory(memory);
+	writePort->connectAddress(ringBufferCounter);
+	writePort->connectWrData(wordData);
+	writePort->setClock(m_clockDomain);
+
+	return memory;
+}
+
 
 }
+

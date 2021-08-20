@@ -25,10 +25,22 @@
 #include "supportNodes/Node_External.h"
 #include "NodePort.h"
 #include "Node.h"
+#include "../simulation/ReferenceSimulator.h"
 
 #include <set>
 
 namespace gtry::hlim {
+
+sim::DefaultBitVectorState evaluateStatically(Circuit &circuit, hlim::NodePort output)
+{
+    sim::SimulatorCallbacks ignoreCallbacks;
+    sim::ReferenceSimulator simulator;
+    simulator.compileStaticEvaluation(circuit, {output});
+    simulator.powerOn();
+
+    // Fetch result
+    return simulator.getValueOfOutput(output);
+}
 
 Node_Pin *findInputPin(hlim::NodePort output)
 {
@@ -132,7 +144,7 @@ Clock* findFirstInputClock(NodePort input)
 std::vector<Node_Register*> findAllOutputRegisters(NodePort output)
 {
     std::vector<Node_Register*> result;
-    for (auto nh : output.node->exploreOutput(output.port)) {
+    for (auto nh : output.node->exploreOutput(output.port).skipDependencies()) {
         if (auto* reg = dynamic_cast<Node_Register*>(nh.node())) {
             result.push_back(reg);
             nh.backtrack();

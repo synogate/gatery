@@ -36,40 +36,6 @@
 namespace gtry::vhdl {
 
 
-void NodeGroupInfo::buildFrom(hlim::NodeGroup *nodeGroup, bool mergeAreasReccursive)
-{
-    std::vector<hlim::NodeGroup*> nodeGroupStack = { nodeGroup };
-
-    while (!nodeGroupStack.empty()) {
-        hlim::NodeGroup *group = nodeGroupStack.back();
-        nodeGroupStack.pop_back();
-
-        for (auto node : group->getNodes()) {
-            hlim::Node_External *extNode = dynamic_cast<hlim::Node_External *>(node);
-            if (extNode != nullptr) {
-                externalNodes.push_back(extNode);
-            } else
-                nodes.push_back(node);
-        }
-
-        for (const auto &childGroup : group->getChildren()) {
-            switch (childGroup->getGroupType()) {
-                case hlim::NodeGroup::GroupType::ENTITY:
-                    subEntities.push_back(childGroup.get());
-                break;
-                case hlim::NodeGroup::GroupType::AREA:
-                    if (mergeAreasReccursive)
-                        nodeGroupStack.push_back(childGroup.get());
-                    else
-                        subAreas.push_back(childGroup.get());
-                break;
-                case hlim::NodeGroup::GroupType::SFU:
-                    SFUs.push_back(childGroup.get());
-                break;
-            }
-        }
-    }
-}
 
 
 BasicBlock::BasicBlock(AST &ast, BasicBlock *parent, NamespaceScope *parentNamespace) : BaseGrouping(ast, parent, parentNamespace)
@@ -192,13 +158,15 @@ void BasicBlock::collectInstantiations(hlim::NodeGroup *nodeGroup, bool reccursi
         nodeGroupStack.pop_back();
 
         for (auto node : group->getNodes()) {
+            if (!m_ast.isPartOfExport(node)) continue;
+
             hlim::Node_External *extNode = dynamic_cast<hlim::Node_External *>(node);
             if (extNode != nullptr)
                 handleExternalNodeInstantiaton(extNode);
         }
 
         for (const auto &childGroup : group->getChildren()) {
-            if (childGroup->isEmpty(true))
+            if (m_ast.isEmpty(childGroup.get(), true))
                 continue;
             switch (childGroup->getGroupType()) {
                 case hlim::NodeGroup::GroupType::ENTITY:
@@ -281,6 +249,8 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
 
 
         for (auto node : group->getNodes()) {
+            if (!m_ast.isPartOfExport(node)) continue;
+
             hlim::Node_External *extNode = dynamic_cast<hlim::Node_External *>(node);
             if (extNode != nullptr)
                 continue;

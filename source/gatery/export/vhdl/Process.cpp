@@ -36,6 +36,8 @@
 #include "../../hlim/coreNodes/Node_Rewire.h"
 #include "../../hlim/coreNodes/Node_Pin.h"
 #include "../../hlim/supportNodes/Node_Attributes.h"
+#include "../../hlim/supportNodes/Node_ExportOverride.h"
+#include "../../hlim/supportNodes/Node_SignalTap.h"
 
 #include <iostream>
 
@@ -219,6 +221,11 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
 
     if (const auto *attribNode = dynamic_cast<const hlim::Node_Attributes *>(nodePort.node)) {
         formatExpression(stream, comments, attribNode->getDriver(0), dependentInputs, context);
+        return;
+    }
+
+    if (const auto *expOverrideNode = dynamic_cast<const hlim::Node_ExportOverride*>(nodePort.node)) {
+        formatExpression(stream, comments, expOverrideNode->getDriver(hlim::Node_ExportOverride::EXP_INPUT), dependentInputs, context);
         return;
     }
 
@@ -600,6 +607,44 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 
             if (s->isOutputPin() && s->getNonSignalDriver(0).node != nullptr)
                 constructStatementsFor({.node=s, .port=0});
+        }
+
+        for (auto &n : m_nodes) {
+            if (auto *sig_tap = dynamic_cast<hlim::Node_SignalTap*>(n)) {
+
+                HCL_ASSERT(sig_tap->getLevel() == hlim::Node_SignalTap::LVL_ASSERT || sig_tap->getLevel() == hlim::Node_SignalTap::LVL_WARN);
+                HCL_ASSERT(sig_tap->getTrigger() == hlim::Node_SignalTap::TRIG_FIRST_INPUT_HIGH || sig_tap->getTrigger() == hlim::Node_SignalTap::TRIG_FIRST_INPUT_LOW);
+
+                std::stringstream code;
+                cf.indent(code, indentation+1);
+
+                std::stringstream comment;
+                Statement statement;
+                statement.weakOrderIdx = n->getId(); // chronological order
+
+                code << "ASSERT ";
+                if (sig_tap->getTrigger() == hlim::Node_SignalTap::TRIG_FIRST_INPUT_HIGH)
+                    code << "not (";
+
+                formatExpression(code, comment, sig_tap->getDriver(0), statement.inputs, Context::BOOL, false);
+                
+                if (sig_tap->getTrigger() == hlim::Node_SignalTap::TRIG_FIRST_INPUT_HIGH)                
+                    code << ")";
+
+                switch (sig_tap->getLevel()) {
+                    case hlim::Node_SignalTap::LVL_ASSERT:
+                        code << " severity error"; break;
+                    case hlim::Node_SignalTap::LVL_WARN:
+                        code << " severity warning"; break;
+                    default: break;
+                }
+
+                code << ";" << std::endl;
+
+                statement.code = code.str();
+                statement.comment = comment.str();
+                statements.push_back(std::move(statement));
+            }
         }
 
 

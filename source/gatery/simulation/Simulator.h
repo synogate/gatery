@@ -53,7 +53,7 @@ class Simulator
 
         void addCallbacks(SimulatorCallbacks *simCallbacks) { m_callbackDispatcher.m_callbacks.push_back(simCallbacks); }
 
-        virtual void compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs = {}) = 0;
+        virtual void compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs = {}, bool ignoreSimulationProcesses = false) = 0;
 
         /// Reset circuit and simulation processes into the power-on state
         virtual void powerOn() = 0;

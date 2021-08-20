@@ -21,6 +21,8 @@
 #include "Subnet.h"
 
 #include "supportNodes/Node_ExportOverride.h"
+#include "supportNodes/Node_SignalTap.h"
+
 
 #include "Circuit.h"
 #include "Node.h"
@@ -71,10 +73,10 @@ FinalType SubnetTemplate<makeConst, FinalType>::allForSimulation(CircuitType &ci
 }
 
 template<bool makeConst, typename FinalType>
-FinalType SubnetTemplate<makeConst, FinalType>::allForExport(CircuitType &circuit)
+FinalType SubnetTemplate<makeConst, FinalType>::allForExport(CircuitType &circuit, const utils::ConfigTree &exportSelectionConfig)
 {
     FinalType res;
-    res.addAllForExport(circuit);
+    res.addAllForExport(circuit, exportSelectionConfig);
     return res;
 }
 
@@ -222,15 +224,23 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllForSimulation(CircuitType
 }
 
 template<bool makeConst, typename FinalType>
-FinalType &SubnetTemplate<makeConst, FinalType>::addAllForExport(CircuitType &circuit)
+FinalType &SubnetTemplate<makeConst, FinalType>::addAllForExport(CircuitType &circuit, const utils::ConfigTree &exportSelectionConfig)
 {
+    bool includeAsserts = exportSelectionConfig.get("include_asserts", false);
+
     std::vector<NodeType*> openList;
     std::set<NodeType*> handledNodes;
 
     // Find roots
     for (auto &n : circuit.getNodes())
-        if (n->hasSideEffects())
+        if (n->hasSideEffects()) {
+            if (auto sigTap = dynamic_cast<Node_SignalTap*>(n.get())) {
+                if (sigTap->getLevel() != Node_SignalTap::LVL_ASSERT && sigTap->getLevel() != Node_SignalTap::LVL_WARN) continue; // Only (potentially) want asserts in export.
+                if (sigTap->getTrigger() != Node_SignalTap::TRIG_FIRST_INPUT_HIGH && sigTap->getTrigger() != Node_SignalTap::TRIG_FIRST_INPUT_LOW) continue; 
+                if (!includeAsserts) continue; // ... and potentially not even those.
+            }
             openList.push_back(n.get());
+        }
 
     // Find dependencies
     while (!openList.empty()) {

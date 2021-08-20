@@ -62,9 +62,6 @@ bool BaseNode::isOrphaned() const
 
 bool BaseNode::hasSideEffects() const
 {
-    for (auto i : utils::Range(getNumOutputPorts()))
-        if (getOutputType(i) == OUTPUT_LATCHED)
-            return true;
     return false;
 }
 

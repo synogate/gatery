@@ -21,6 +21,7 @@
 #include "Bit.h"
 
 #include "../simulation/BitVectorState.h"
+#include "../hlim/GraphTools.h"
 
 #include <vector>
 #include <memory>

@@ -109,6 +109,7 @@ BVec Clock::operator()(const BVec& signal) const
     reg->setName(std::string{ signal.getName() });
     reg->setClock(m_clock);
     reg->connectInput(hlim::Node_Register::DATA, data);
+    reg->getFlags().insert(hlim::Node_Register::ALLOW_RETIMING_FORWARD).insert(hlim::Node_Register::ALLOW_RETIMING_BACKWARD);
 
     ConditionalScope* scope = ConditionalScope::get();
     if (scope)
@@ -130,6 +131,8 @@ BVec Clock::operator()(const BVec& signal, const BVec& reset) const
     reg->connectInput(hlim::Node_Register::DATA, ops.lhs);
     reg->connectInput(hlim::Node_Register::RESET_VALUE, ops.rhs);
 
+    reg->getFlags().insert(hlim::Node_Register::ALLOW_RETIMING_FORWARD).insert(hlim::Node_Register::ALLOW_RETIMING_BACKWARD);
+
     ConditionalScope* scope = ConditionalScope::get();
     if (scope)
     {
@@ -146,6 +149,8 @@ Bit Clock::operator()(const Bit& signal) const
     reg->setName(std::string{ signal.getName() });
     reg->setClock(m_clock);
     reg->connectInput(hlim::Node_Register::DATA, signal.getReadPort());
+
+    reg->getFlags().insert(hlim::Node_Register::ALLOW_RETIMING_FORWARD).insert(hlim::Node_Register::ALLOW_RETIMING_BACKWARD);
 
     if(signal.getResetValue())
         reg->connectInput(hlim::Node_Register::RESET_VALUE, Bit{ *signal.getResetValue() }.getReadPort());
@@ -170,6 +175,8 @@ Bit Clock::operator()(const Bit& signal, const Bit& reset) const
     reg->setClock(m_clock);
     reg->connectInput(hlim::Node_Register::DATA, signal.getReadPort());
     reg->connectInput(hlim::Node_Register::RESET_VALUE, reset.getReadPort());
+
+    reg->getFlags().insert(hlim::Node_Register::ALLOW_RETIMING_FORWARD).insert(hlim::Node_Register::ALLOW_RETIMING_BACKWARD);
 
     ConditionalScope* scope = ConditionalScope::get();
     if (scope)

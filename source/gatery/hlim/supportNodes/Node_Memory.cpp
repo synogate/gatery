@@ -26,22 +26,77 @@ namespace gtry::hlim {
 
     Node_Memory::Node_Memory()
     {
-        resizeOutputs(1);
-        setOutputConnectionType(0, {.interpretation = ConnectionType::DEPENDENCY, .width=1});
+        resizeInputs(1); // at least one initialization data port
+        resizeOutputs((size_t)Outputs::COUNT);
+        setOutputConnectionType((size_t)Outputs::INITIALIZATION_ADDR, {.interpretation = ConnectionType::BITVEC, .width=0});
+        setOutputConnectionType((size_t)Outputs::READ_DEPENDENCIES, {.interpretation = ConnectionType::DEPENDENCY, .width=1});
+
+        setType(MemType::DONT_CARE);
+    }
+
+    void Node_Memory::setInitializationNetDataWidth(size_t width)
+    {
+        HCL_ASSERT_HINT(getDirectlyDriven((size_t)Outputs::INITIALIZATION_ADDR).empty(), "Can't change memory initialization width when initialization network is already attached!");
+        HCL_ASSERT_HINT(getDriver((size_t)Inputs::INITIALIZATION_DATA).node == nullptr, "Can't change memory initialization width when initialization network is already attached!");
+
+        m_initializationDataWidth = width;
+        if (width == 0ull) {
+            setOutputConnectionType((size_t)Outputs::INITIALIZATION_ADDR, {.interpretation = ConnectionType::BITVEC, .width=0});
+        } else {
+            auto numAddresses = getSize() / width;
+            setOutputConnectionType((size_t)Outputs::INITIALIZATION_ADDR, {.interpretation = ConnectionType::BITVEC, .width=utils::Log2C(numAddresses)});
+        }
+    }
+
+    void Node_Memory::setType(MemType type, size_t requiredReadLatency)
+    { 
+        m_type = type; 
+        m_requiredReadLatency = requiredReadLatency;
+        switch (m_type) {
+            case MemType::DONT_CARE:
+                if (m_requiredReadLatency == ~0ull)
+                    m_requiredReadLatency = 0;
+            break;
+            case MemType::LUTRAM:
+                if (m_requiredReadLatency == ~0ull)
+                    m_requiredReadLatency = 0;
+            break;
+            case MemType::BRAM:
+                if (m_requiredReadLatency == ~0ull)
+                    m_requiredReadLatency = 1;
+            break;
+            case MemType::EXTERNAL:
+                if (m_requiredReadLatency == ~0ull)
+                    m_requiredReadLatency = 1;
+            break;
+        }
     }
 
     void Node_Memory::setNoConflicts()
     {
         m_noConflicts = true;
-        for (auto np : getDirectlyDriven(0))
+        for (auto np : getPorts())
             if (auto *port = dynamic_cast<Node_MemPort*>(np.node))
                 port->orderAfter(nullptr);
     }
 
+    size_t Node_Memory::createWriteDependencyInputPort() 
+    {
+        resizeInputs(getNumInputPorts()+1);
+        return getNumInputPorts()-1;
+    }
+
+    void Node_Memory::destroyWriteDependencyInputPort(size_t port) 
+    {
+        connectInput(port, getDriver(getNumInputPorts()-1));
+        resizeInputs(getNumInputPorts()-1);
+    }
+
+
     std::size_t Node_Memory::getMaxPortWidth() const {
         std::size_t size = 0;
 
-        for (auto np : getDirectlyDriven(0)) {
+        for (auto np : getPorts()) {
             auto *port = dynamic_cast<Node_MemPort*>(np.node);
             size = std::max(size, port->getBitWidth());
         }
@@ -52,6 +107,7 @@ namespace gtry::hlim {
     void Node_Memory::setPowerOnState(sim::DefaultBitVectorState powerOnState)
     {
         m_powerOnState = std::move(powerOnState);
+        setInitializationNetDataWidth(m_initializationDataWidth);
     }
 
     void  Node_Memory::fillPowerOnState(sim::DefaultBitVectorState powerOnState) 
@@ -69,16 +125,16 @@ namespace gtry::hlim {
     void Node_Memory::simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
     {
         state.copyRange(internalOffsets[0], m_powerOnState, 0, m_powerOnState.size());
-        state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], 1);
+        state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[(size_t)Outputs::READ_DEPENDENCIES], 1);
     }
 
     void Node_Memory::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
     {
-        state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], 1);
+        state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[(size_t)Outputs::READ_DEPENDENCIES], 1);
     }
 
     bool Node_Memory::isROM() const {
-        for (auto np : getDirectlyDriven(0))
+        for (auto np : getPorts())
             if (auto *port = dynamic_cast<Node_MemPort*>(np.node))
                 if (port->isWritePort()) return false;
 
@@ -87,7 +143,7 @@ namespace gtry::hlim {
 
     Node_MemPort *Node_Memory::getLastPort()
     {
-        for (auto np : getDirectlyDriven(0)) {
+        for (auto np : getPorts()) {
             if (auto *port = dynamic_cast<Node_MemPort*>(np.node)) {
                 if (port->getDirectlyDriven((unsigned)Node_MemPort::Outputs::orderBefore).empty())
                     return port;
@@ -107,12 +163,16 @@ namespace gtry::hlim {
 
     std::string Node_Memory::getInputName(size_t idx) const
     {
-        return "";
+        if (idx == 0)
+            return "INITIALIZATION_DATA";
+        return "WRITE_DEPENDENCY";
     }
 
     std::string Node_Memory::getOutputName(size_t idx) const
     {
-        return "memory_ports";
+        if (idx == 0)
+            return "INITIALIZATION_ADDR";
+        return "READ_DEPENDENCY";
     }
 
     std::vector<size_t> Node_Memory::getInternalStateSizes() const
