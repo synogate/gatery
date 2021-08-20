@@ -1307,9 +1307,9 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, UnitTestSimulationFi
         stopTest();
 	});
 
-    design.visualize("before");
+    //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-    design.visualize("after");
+    //design.visualize("after");
 	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->getAbsoluteFrequency());
 }
 

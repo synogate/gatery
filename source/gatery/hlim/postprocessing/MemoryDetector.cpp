@@ -80,9 +80,13 @@ bool MemoryGroup::ReadPort::findOutputRegisters(size_t readLatency, NodeGroup *m
             } else {
                 if (nh.isNodeType<Node_Register>()) {
                     auto dataReg = (Node_Register *) nh.node();
+/*
+    Actually, this must be possible (or be added by additional logic if not possible).
+
                     // The register can't have a reset (since it's essentially memory).
                     if (dataReg->getNonSignalDriver(Node_Register::Input::RESET_VALUE).node != nullptr)
                         break;
+*/
                     if (reg == nullptr)
                         reg = dataReg;
                     else {
@@ -1008,6 +1012,13 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
     m_memory = nullptr;
 }
 
+void MemoryGroup::bypassSignalNodes()
+{
+    for (auto n : getNodes())
+        if (dynamic_cast<Node_Signal*>(n))
+            n->bypassOutputToInput(0, 0);
+}
+
 
 MemoryGroup *formMemoryGroupIfNecessary(Circuit &circuit, Node_Memory *memory)
 {
@@ -1041,6 +1052,7 @@ void buildExplicitMemoryCircuitry(Circuit &circuit)
             memoryGroup->convertToReadBeforeWrite(circuit);
             memoryGroup->attemptRegisterRetiming(circuit);
             memoryGroup->resolveWriteOrder(circuit);
+            memoryGroup->bypassSignalNodes();
             memoryGroup->verify();
             if (memory->type() == Node_Memory::MemType::EXTERNAL)
                 memoryGroup->replaceWithIOPins(circuit);

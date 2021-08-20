@@ -53,6 +53,7 @@ class MemoryGroup : public NodeGroup
         void buildReset(Circuit &circuit);
         void verify();
         void replaceWithIOPins(Circuit &circuit);
+        void bypassSignalNodes();
 
         Node_Memory *getMemory() { return m_memory; }
         const std::vector<WritePort> &getWritePorts() { return m_writePorts; }
