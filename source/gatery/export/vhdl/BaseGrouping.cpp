@@ -66,6 +66,8 @@ bool BaseGrouping::isProducedExternally(hlim::NodePort nodePort)
 bool BaseGrouping::isConsumedExternally(hlim::NodePort nodePort)
 {
     for (auto driven : nodePort.node->getDirectlyDriven(nodePort.port)) {
+        if (!m_ast.isPartOfExport(driven.node)) continue;
+        
         auto drivenNodeGroup = m_ast.getMapping().getScope(driven.node);
         if (drivenNodeGroup == nullptr || (drivenNodeGroup != this && !drivenNodeGroup->isChildOf(this))) 
             return true;
