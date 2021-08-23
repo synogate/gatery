@@ -50,6 +50,7 @@ class MemoryGroup : public NodeGroup
         void convertToReadBeforeWrite(Circuit &circuit);
         void resolveWriteOrder(Circuit &circuit);
         void attemptRegisterRetiming(Circuit &circuit);
+        void updateNoConflictsAttrib();
         void buildReset(Circuit &circuit);
         void verify();
         void replaceWithIOPins(Circuit &circuit);
@@ -62,7 +63,7 @@ class MemoryGroup : public NodeGroup
         NodePtr<Node_Memory> m_memory;
         std::vector<WritePort> m_writePorts;
         std::vector<ReadPort> m_readPorts;
-        
+
         NodeGroup *m_fixupNodeGroup = nullptr;
 
         void lazyCreateFixupNodeGroup();
