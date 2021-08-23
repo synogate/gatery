@@ -114,6 +114,7 @@ namespace gtry::scl
 		m_hasMem = true;
 		m_mem.setup(fifoChoice.readDepth, wordWidth);
 		m_mem.setType(MemType::DONT_CARE, 1);
+		m_mem.setName("scl_fifo_memory");
 
 		const BitWidth ctrWidth = m_mem.addressWidth() + 1;
 		m_put = ctrWidth;
