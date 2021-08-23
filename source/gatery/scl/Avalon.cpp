@@ -253,7 +253,7 @@ namespace gtry::scl
 
 			for (size_t i = 0; i < avmm.readLatency; ++i)
 			{
-				avmm.readData = reg(*avmm.readData);
+				avmm.readData = reg(*avmm.readData, {.allowRetimingBackward=true});
 
 				if (avmm.readDataValid)
 					avmm.readDataValid = reg(*avmm.readDataValid, '0');

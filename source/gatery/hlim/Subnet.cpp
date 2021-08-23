@@ -64,6 +64,15 @@ FinalType SubnetTemplate<makeConst, FinalType>::allNecessaryForNodes(std::span<N
     return res;
 }
 
+
+template<bool makeConst, typename FinalType>
+FinalType SubnetTemplate<makeConst, FinalType>::allDrivenCombinatoricallyByOutputs(std::span<NodePort> outputs)
+{
+    FinalType res;
+    res.addAllDrivenCombinatoricallyByOutputs(outputs);
+    return res;
+}
+
 template<bool makeConst, typename FinalType>
 FinalType SubnetTemplate<makeConst, FinalType>::allForSimulation(CircuitType &circuit)
 {
@@ -178,6 +187,38 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllNecessaryForNodes(std::sp
 
     return (FinalType&)*this;
 }
+
+
+template<bool makeConst, typename FinalType>
+FinalType &SubnetTemplate<makeConst, FinalType>::addAllDrivenCombinatoricallyByOutputs(std::span<NodePort> outputs)
+{
+    std::vector<NodeType*> openList;
+
+    for (auto &o : outputs)
+        for (auto &c : o.node->getDirectlyDriven(o.port))
+            openList.push_back(c.node);
+
+    std::set<NodeType*> foundNodes;
+
+    // Find dependencies
+    while (!openList.empty()) {
+        auto *n = openList.back();
+        openList.pop_back();
+
+        if (foundNodes.contains(n)) continue; // already handled
+        foundNodes.insert(n);
+
+        if (!n->isCombinatorial()) continue;
+        m_nodes.insert(n);
+        
+        for (auto i : utils::Range(n->getNumOutputPorts())) 
+            for (auto &c : n->getDirectlyDriven(i))
+                openList.push_back(c.node);
+    }
+
+    return (FinalType&)*this;
+}
+
 
 template<bool makeConst, typename FinalType>
 FinalType &SubnetTemplate<makeConst, FinalType>::addAll(CircuitType &circuit)

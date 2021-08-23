@@ -218,7 +218,7 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, TinyCuckooTableLook
     BOOST_TEST(keySize.value == tc.hashWidth().value);
 
     auto cuckooPoo = tc(lookupKey, lookupKey);
-    cuckooPoo = reg(cuckooPoo);
+    cuckooPoo = reg(cuckooPoo, {.allowRetimingBackward=true});
     pinOut(cuckooPoo.found).setName("out_found");
     pinOut(cuckooPoo.value).setName("out_value");
 

@@ -113,6 +113,7 @@ namespace gtry::scl
 		HCL_DESIGNCHECK_HINT(!m_hasMem, "fifo already initialized");
 		m_hasMem = true;
 		m_mem.setup(fifoChoice.readDepth, wordWidth);
+		m_mem.setType(MemType::DONT_CARE, 1);
 
 		const BitWidth ctrWidth = m_mem.addressWidth() + 1;
 		m_put = ctrWidth;
@@ -181,7 +182,7 @@ namespace gtry::scl
 		IF(ready)
 			get += 1;
 
-		BVec packedData = reg(m_mem[get(0, -1)]);
+		BVec packedData = reg(m_mem[get(0, -1)], {.allowRetimingBackward=true});
 
 		m_get = get;
 		HCL_NAMED(m_get);

@@ -39,6 +39,19 @@ class Node_MemPort;
 class Node_Memory;
 class Clock;
 
+struct RetimingSetting {
+    /// Whether or not to throw an exception/fail if a node has to be retimed to which a reference exists.
+    bool ignoreRefs = false;
+    /// Whether to throw an exception if the retiming is unsuccessful
+    bool failureIsError = true;
+    /// Subnet to add all new nodes into
+    Subnet *newNodes = nullptr;
+
+    /// Whether to disable forward retiming for all registers that are placed downstream (combinatorically driven) of the retiming target output.
+    bool downstreamDisableForwardRT = false;
+};
+
+
 /**
  * @brief Retimes registers forward such that a register is placed after the specified output port without changing functionality.
  * @details Retiming is limited to the specified area.
@@ -46,11 +59,10 @@ class Clock;
  * @param area The area to which retiming is to be restricted. The Subnet is modified to include the newly created registers.
  * @param anchoredRegisters Set of registers that are not to be moved (e.g. because they are already deemed in a good location).
  * @param output The output that shall recieve a register.
- * @param ignoreRefs Whether or not to throw an exception if a node has to be retimed to which a reference exists.
- * @param failureIsError Whether to throw an exception if the retiming is unsuccessful
+ * @param settings Optional settings
  * @returns Whether the retiming was successful
  */
-bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, bool ignoreRefs = false, bool failureIsError = true, Subnet *newNodes = nullptr);
+bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, const RetimingSetting &settings = {});
 
 /**
  * @brief Performs forward retiming on an area based on rough timing estimates.
@@ -72,7 +84,7 @@ void retimeForward(Circuit &circuit, Subnet &subnet);
  * @param failureIsError Whether to throw an exception if the retiming is unsuccessful
  * @returns Whether the retiming was successful
  */
-bool retimeBackwardtoOutput(Circuit &circuit, Subnet &subnet, const std::set<Node_Register*> &anchoredRegisters, const std::set<Node_MemPort*> &retimeableWritePorts,
+bool retimeBackwardtoOutput(Circuit &circuit, Subnet &subnet, const std::set<Node_MemPort*> &retimeableWritePorts,
                         Subnet &retimedArea, NodePort output, bool ignoreRefs = false, bool failureIsError = true, Subnet *newNodes = nullptr);
 
 

@@ -378,24 +378,24 @@ namespace gtry
 	template<typename T>
 	struct Reg<T, std::enable_if_t<boost::spirit::traits::is_container<T>::value>>
 	{
-		T operator () (const T& signal)
+		T operator () (const T& signal, const RegisterSettings &settings = {})
 		{
 			T ret = signal;
 			for (auto& item : ret)
-				item = reg(item);
+				item = reg(item, settings);
 			return ret;
 		}
 
-		T operator () (const T& signal, const T& reset)
+		T operator () (const T& signal, const T& reset, const RegisterSettings &settings = {})
 		{
 			T ret = signal;
 
 			auto itS = begin(ret);
 			auto itR = begin(reset);
 			for (; itS != end(ret) && itR != end(reset); ++itR, ++itS)
-				*itS = reg(*itS, *itR);
+				*itS = reg(*itS, *itR, settings);
 			for (; itS != end(ret); ++itS)
-				*itS = reg(*itS);
+				*itS = reg(*itS, settings);
 			return ret;
 		}
 	};
@@ -403,23 +403,23 @@ namespace gtry
 	template<typename T>
 	struct Reg<T, std::enable_if_t<boost::hana::Struct<T>::value>>
 	{
-		T operator () (const T& signal)
+		T operator () (const T& signal, const RegisterSettings &settings = {})
 		{
 			T ret = signal;
 			boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto&& member) {
 				auto& subSig = boost::hana::second(member)(ret);
-				subSig = reg(subSig);
+				subSig = reg(subSig, settings);
 			});
 			return ret;
 		}
 
-		T operator () (const T& signal, const T& reset)
+		T operator () (const T& signal, const T& reset, const RegisterSettings &settings = {})
 		{
 			T ret = signal;
 			boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto member) {
 				auto& subSig = boost::hana::second(member)(ret);
 				const auto& subResetSig = boost::hana::second(member)(reset);
-				subSig = reg(subSig, subResetSig);
+				subSig = reg(subSig, subResetSig, settings);
 				});
 			return ret;
 		}

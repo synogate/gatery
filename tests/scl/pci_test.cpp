@@ -109,8 +109,8 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, UnitTestSimulationFixture)
     *avmm.readDataValid = *avmm.read;
     for (size_t i = 0; i < 6; ++i)
     {
-        *avmm.readData = reg(*avmm.readData);
-        *avmm.readDataValid = reg(*avmm.readDataValid, '0');
+        *avmm.readData = reg(*avmm.readData, {.allowRetimingBackward=true});
+        *avmm.readDataValid = reg(*avmm.readDataValid, '0', {.allowRetimingBackward=true});
     }
     *avmm.ready = pinIn().setName("avmm_ready_sim");
 

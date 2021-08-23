@@ -483,7 +483,7 @@ BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, gtry::sim::UnitTestSimulationFixt
 	scl::TabulationHashing gen{ 16_b };
 	BVec data = pinIn(16_b).setName("data");
 	HCL_NAMED(data);
-	BVec hash = reg(gen(data));
+	BVec hash = reg(gen(data), {.allowRetimingBackward=true});
 
 	scl::AvalonNetworkSection ports;
 	gen.updatePorts(ports);

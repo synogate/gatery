@@ -22,27 +22,38 @@
 
 namespace gtry
 {
+
+    struct RegisterSettings {
+        bool allowRetimingBackward = false;
+        bool allowRetimingForward = false;
+    };
+
+
 	template<class T, class En = void>
 	struct Reg
 	{
-		T operator () (const T& val) { return val; }
+		T operator () (const T& val, const RegisterSettings &settings = {}) { return val; }
 	};
 
     struct RegTransform
     {
+        RegTransform(const RegisterSettings &settings = {}) : settings(settings) { }
+
         template<typename T>
-        T operator() (const T& val) { return Reg<T>{}(val); }
+        T operator() (const T& val) { return Reg<T>{}(val, settings); }
+
+        const RegisterSettings &settings;
     };
     
     template<typename ...T>
     struct Reg<std::tuple<T...>>
     {
-        std::tuple<T...> operator () (const std::tuple<T...>& val) { return boost::hana::transform(val, RegTransform{}); }
+        std::tuple<T...> operator () (const std::tuple<T...>& val, const RegisterSettings &settings = {}) { return boost::hana::transform(val, RegTransform{settings}); }
     };
 
 	template<typename T>
-	T reg(const T& val) { return Reg<T>{}(val); }
+	T reg(const T& val, const RegisterSettings &settings = {}) { return Reg<T>{}(val, settings); }
 
 	template<typename T, typename Tr>
-	T reg(const T& val, const Tr& resetVal) { return Reg<T>{}(val, resetVal); }
+	T reg(const T& val, const Tr& resetVal, const RegisterSettings &settings = {}) { return Reg<T>{}(val, resetVal, settings); }
 }

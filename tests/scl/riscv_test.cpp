@@ -1137,7 +1137,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, UnitTestSimulationFixture)
 	
 	IF(*avmm.write)
 		dport = *avmm.writeData;
-	*avmm.readData = reg(dport.read());
+	*avmm.readData = reg(dport.read(), {.allowRetimingBackward=true});
 	avmm.readData->setName("avmm_readdata");
 	avmm.read->setName("avmm_read");
 	avmm.readDataValid->setName("avmm_readdatavalid");
@@ -1221,7 +1221,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, UnitTestSimulationFixture)
 
 	IF(*avmm.write)
 		dport = *avmm.writeData;
-	*avmm.readData = reg(dport.read());
+	*avmm.readData = reg(dport.read(), {.allowRetimingBackward=true});
 	avmm.readData->setName("avmm_readdata");
 	avmm.read->setName("avmm_read");
 	avmm.readDataValid->setName("avmm_readdatavalid");

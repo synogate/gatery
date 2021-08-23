@@ -25,7 +25,7 @@ gtry::Memory<gtry::BVec>& gtry::scl::riscv::DualCycleRV::fetch(uint64_t entryPoi
 
 		IF(!m_stall)
 			instruction = m_instructionMem[addr(2, memWidth)];
-		instruction = reg(instruction);
+		instruction = reg(instruction, {.allowRetimingBackward=true});
 
 		HCL_NAMED(instruction);
 	}
@@ -54,8 +54,8 @@ gtry::BVec gtry::scl::riscv::DualCycleRV::fetch(const BVec& instruction, uint64_
 		m_r1 = m_rf[pre_inst.rs1];
 		m_r2 = m_rf[pre_inst.rs2];
 	}
-	m_r1 = reg(m_r1);
-	m_r2 = reg(m_r2);
+	m_r1 = reg(m_r1, {.allowRetimingBackward=true});
+	m_r2 = reg(m_r2, {.allowRetimingBackward=true});
 	HCL_NAMED(m_r1);
 	HCL_NAMED(m_r2);
 

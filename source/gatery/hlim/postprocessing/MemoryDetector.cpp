@@ -652,7 +652,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
             auto subnet = Subnet::all(circuit);
             Subnet retimedArea;
             // On multi-readport memories there can already appear a register due to the retiming of other read ports. In this case, retimeBackwardtoOutput is a no-op.
-            retimeBackwardtoOutput(circuit, subnet, {}, retimeableWritePorts, retimedArea, rp.dataOutput, true, true);
+            retimeBackwardtoOutput(circuit, subnet, retimeableWritePorts, retimedArea, rp.dataOutput, true, true);
 
             //visualize(circuit, "afterRetiming");
 
