@@ -1,4 +1,3 @@
-#include "Scope.h"
 /*  This file is part of Gatery, a library for circuit design.
 	Copyright (C) 2021 Michael Offel, Andreas Ley
 
@@ -17,39 +16,20 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
-#include "Scope.h"
 #include "trace.h"
 
 namespace gtry 
 {
+	std::ostream* trace::ms_dst = nullptr;
 
-	GroupScope::GroupScope(hlim::NodeGroup::GroupType groupType) : BaseScope<GroupScope>()
+	gtry::trace::~trace()
 	{
-		m_nodeGroup = m_parentScope->m_nodeGroup->addChildNodeGroup(groupType);
-		m_nodeGroup->recordStackTrace();
+		if(ms_dst)
+			*ms_dst << '\n';
 	}
 
-	GroupScope::GroupScope(hlim::NodeGroup* nodeGroup) : BaseScope<GroupScope>()
+	void gtry::trace::outputStream(std::ostream* dst)
 	{
-		m_nodeGroup = nodeGroup;
-	}
-
-
-	GroupScope& GroupScope::setName(std::string name)
-	{
-		m_nodeGroup->setName(std::move(name));
-		return *this;
-	}
-
-	GroupScope& GroupScope::setComment(std::string comment)
-	{
-		m_nodeGroup->setComment(std::move(comment));
-		return *this;
-	}
-
-	utils::ConfigTree GroupScope::instanceConfig() const
-	{
-		trace() << "configurable instance: " << instancePath();
-		return m_nodeGroup->instanceConfig();
+		ms_dst = dst;
 	}
 }

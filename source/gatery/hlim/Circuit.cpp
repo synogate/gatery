@@ -1003,7 +1003,6 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
         break;
     };
     */
-    m_root->reccurInferInstanceNames();
 /*
     for (auto &n : m_nodes)
         if (n->getGroup() == nullptr) {

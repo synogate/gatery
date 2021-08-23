@@ -795,7 +795,9 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
     HCL_ASSERT_HINT(!sim::anyDefined(m_memory->getPowerOnState()), "No power on state for external memory possible!");
 
     lazyCreateFixupNodeGroup();
-    std::string memName = m_memory->getName();
+    std::string prefix;
+    if(!m_memory->getName().empty())
+        prefix = m_memory->getName() + '_';
 
     struct RdPrtNodePorts {
         sim::SigHandle addr;
@@ -830,7 +832,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
         }
 
         auto *pinRdAddr = circuit.createNode<Node_Pin>(false);
-        pinRdAddr->setName(memName+"_rd_address");
+        pinRdAddr->setName(prefix +"rd_address");
         pinRdAddr->moveToGroup(m_fixupNodeGroup);
         pinRdAddr->recordStackTrace();
         pinRdAddr->connect(rp.node->getDriver((size_t)Node_MemPort::Inputs::address));
@@ -838,14 +840,14 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
         Node_Pin *pinRdEn = nullptr;
         if (rp.node->getDriver((size_t)Node_MemPort::Inputs::enable).node != nullptr) {
             pinRdEn = circuit.createNode<Node_Pin>(false);
-            pinRdEn->setName(memName+"_rd_read");
+            pinRdEn->setName(prefix +"rd_read");
             pinRdEn->moveToGroup(m_fixupNodeGroup);
             pinRdEn->recordStackTrace();
             pinRdEn->connect(rp.node->getDriver((size_t)Node_MemPort::Inputs::enable));
         }
 
         auto *pinRdData = circuit.createNode<Node_Pin>(true);
-        pinRdData->setName(memName+"_rd_readdata");
+        pinRdData->setName(prefix +"rd_readdata");
         pinRdData->moveToGroup(m_fixupNodeGroup);
         pinRdData->recordStackTrace();
         if (getOutputConnectionType(rp.dataOutput).interpretation == ConnectionType::BOOL)
@@ -875,13 +877,13 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 
 
         auto *pinWrAddr = circuit.createNode<Node_Pin>(false);
-        pinWrAddr->setName(memName+"_wr_address");
+        pinWrAddr->setName(prefix +"wr_address");
         pinWrAddr->moveToGroup(m_fixupNodeGroup);
         pinWrAddr->recordStackTrace();
         pinWrAddr->connect(wp.node->getDriver((size_t)Node_MemPort::Inputs::address));
 
         auto *pinWrData = circuit.createNode<Node_Pin>(false);
-        pinWrData->setName(memName+"_wr_writedata");
+        pinWrData->setName(prefix +"wr_writedata");
         pinWrData->moveToGroup(m_fixupNodeGroup);
         pinWrData->recordStackTrace();
         pinWrData->connect(wp.node->getDriver((size_t)Node_MemPort::Inputs::wrData));
@@ -889,7 +891,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
         Node_Pin *pinWrEn = nullptr;
         if (wp.node->getDriver((size_t)Node_MemPort::Inputs::wrEnable).node != nullptr) {
             pinWrEn = circuit.createNode<Node_Pin>(false);
-            pinWrEn->setName(memName+"_wr_write");
+            pinWrEn->setName(prefix +"wr_write");
             pinWrEn->moveToGroup(m_fixupNodeGroup);
             pinWrEn->recordStackTrace();
             pinWrEn->connect(wp.node->getDriver((size_t)Node_MemPort::Inputs::wrEnable));

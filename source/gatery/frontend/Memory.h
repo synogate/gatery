@@ -17,6 +17,7 @@
 */
 #pragma once
 
+#include "Area.h"
 #include "Bit.h"
 #include "BitVector.h"
 #include "BitWidth.h"
@@ -112,6 +113,8 @@ namespace gtry
 		Memory(std::size_t numWords, Data def = Data{}) { setup(numWords, std::move(def)); }
 
 		void setup(std::size_t numWords, Data def = Data{}) {
+			auto ent = m_area.enter();
+
 			HCL_DESIGNCHECK(m_memoryNode == nullptr);
 			m_defaultValue = std::move(def);
 			m_wordWidth = width(m_defaultValue).value;
@@ -119,12 +122,27 @@ namespace gtry
 
 			if (m_numWords > 32) // TODO ask platform
 				m_readLatencyHint = 1;
-
+			
 			m_memoryNode = DesignScope::createNode<hlim::Node_Memory>();
 			sim::DefaultBitVectorState state;
 			state.resize(m_numWords * m_wordWidth);
 			state.clearRange(sim::DefaultConfig::DEFINED, 0, m_numWords * m_wordWidth);
 			m_memoryNode->setPowerOnState(std::move(state));
+
+
+			auto&& cfg = ent.instanceConfig();
+			m_readLatencyHint = cfg["readLatency"].as(m_readLatencyHint);
+
+			if (cfg["type"])
+			{
+				if (cfg["readLatency"])
+					setType(cfg["type"].as(MemType::DONT_CARE), m_readLatencyHint);
+				else
+					setType(cfg["type"].as(MemType::DONT_CARE));
+			}
+
+			if (cfg["name"])
+				setName(cfg["name"].as<std::string>(""));
 		}
 
 		size_t readLatencyHint() const { return m_readLatencyHint; }
@@ -160,6 +178,7 @@ namespace gtry
 		const Data& defaultValue() const { return m_defaultValue; }
 
 	protected:
+		Area m_area = "Memory";
 		hlim::NodePtr<hlim::Node_Memory> m_memoryNode;
 		Data m_defaultValue;
 		size_t m_numWords = 0;

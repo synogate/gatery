@@ -67,6 +67,9 @@ class GroupScope : public BaseScope<GroupScope>
         
         GroupScope &setName(std::string name);
         GroupScope &setComment(std::string comment);
+
+        std::string instancePath() const { return m_nodeGroup->instancePath(); }
+        utils::ConfigTree instanceConfig() const;
         
         static GroupScope *get() { return m_currentScope; }
         static hlim::NodeGroup *getCurrentNodeGroup() { return m_currentScope==nullptr?nullptr:m_currentScope->m_nodeGroup; }
