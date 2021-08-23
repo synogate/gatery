@@ -47,6 +47,7 @@ class SubnetTemplate {
 		static FinalType allDrivenByOutputs(std::span<NodePort> outputs, std::span<NodePort> limitingInputs);
 		static FinalType allNecessaryForInputs(std::span<NodePort> limitingOutputs, std::span<NodePort> inputs);
 		static FinalType allNecessaryForNodes(std::span<NodeType*> limitingNodes, std::span<NodeType*> nodes);
+		static FinalType allDrivenCombinatoricallyByOutputs(std::span<NodePort> outputs);
 		static FinalType allForSimulation(CircuitType &circuit);
 		static FinalType allForExport(CircuitType &circuit, const utils::ConfigTree &exportSelectionConfig = {});
 		static FinalType allUsedNodes(CircuitType &circuit);
@@ -67,6 +68,8 @@ class SubnetTemplate {
 		/// Adds everything that drives directly or indirectly the specified nodes, stopping at the limiting nodes or at dead ends like input pins
 		/// @details A subset specified by this function does NOT include nodes with potential side effects that don't seem to contribute to the inputs.
 		FinalType &addAllNecessaryForNodes(std::span<NodeType*> limitingNodes, std::span<NodeType*> nodes);
+		/// Adds everything that is driven directly (combinatorically) by the specified outputs
+		FinalType &addAllDrivenCombinatoricallyByOutputs(std::span<NodePort> outputs);
 
 		/// Adds all nodes
 		FinalType &addAll(CircuitType &circuit);

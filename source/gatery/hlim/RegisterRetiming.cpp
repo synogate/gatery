@@ -54,7 +54,6 @@ namespace gtry::hlim {
  * @brief Determines the exact area to be forward retimed (but doesn't do any retiming).
  * @details This is the entire fan in up to registers that can be retimed forward.
  * @param area The area to which retiming is to be restricted.
- * @param anchoredRegisters Set of registers that are not to be moved (e.g. because they are already deemed in a good location).
  * @param output The output that shall recieve a register.
  * @param areaToBeRetimed Outputs the area that will be retimed forward (excluding the registers).
  * @param registersToBeRemoved Output of the registers that lead into areaToBeRetimed and which will have to be removed.
@@ -62,7 +61,7 @@ namespace gtry::hlim {
  * @param failureIsError Whether to throw an exception if a retiming area limited by registers can be determined
  * @returns Whether a valid retiming area could be determined
  */
-bool determineAreaToBeRetimedForward(Circuit &circuit, const Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, 
+bool determineAreaToBeRetimedForward(Circuit &circuit, const Subnet &area, NodePort output, 
 								Subnet &areaToBeRetimed, std::set<Node_Register*> &registersToBeRemoved, bool ignoreRefs = false, bool failureIsError = true)
 {
 	BaseNode *clockGivingNode = nullptr;
@@ -194,7 +193,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, const Subnet &area, const
 			if (registersToBeRemoved.contains(reg)) continue;
 
 			// Retime over anchored registers and registers with enable signals (since we can't move them yet).
-			if (!reg->getFlags().containsAnyOf(Node_Register::ALLOW_RETIMING_FORWARD) || anchoredRegisters.contains(reg) || reg->getNonSignalDriver(Node_Register::ENABLE).node != nullptr) {
+			if (!reg->getFlags().containsAnyOf(Node_Register::ALLOW_RETIMING_FORWARD) || reg->getNonSignalDriver(Node_Register::ENABLE).node != nullptr) {
 				// Retime over this register. This means the enable port is part of the fan-in and we also need to search it for a register.
 				areaToBeRetimed.add(node);
 				for (unsigned i : {Node_Register::DATA, Node_Register::ENABLE}) {
@@ -239,11 +238,11 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, const Subnet &area, const
 	return true;
 }
 
-bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, bool ignoreRefs, bool failureIsError, Subnet *newNodes)
+bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, const RetimingSetting &settings)
 {
 	Subnet areaToBeRetimed;
 	std::set<Node_Register*> registersToBeRemoved;
-	if (!determineAreaToBeRetimedForward(circuit, area, anchoredRegisters, output, areaToBeRetimed, registersToBeRemoved, ignoreRefs, failureIsError))
+	if (!determineAreaToBeRetimedForward(circuit, area, output, areaToBeRetimed, registersToBeRemoved, settings.ignoreRefs, settings.failureIsError))
 		return false;
 
 	/*
@@ -286,6 +285,9 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
     simulator.compileStaticEvaluation(circuit, {outputsLeavingRetimingArea});
     simulator.powerOn();
 
+	auto arr = std::array{output};
+	auto combinatoricallyDrivenArea = Subnet::allDrivenCombinatoricallyByOutputs(arr);
+
 	// Insert registers
 	for (auto np : outputsLeavingRetimingArea) {
 		auto *reg = circuit.createNode<Node_Register>();
@@ -296,11 +298,21 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
 		reg->connectInput(Node_Register::DATA, np);
 		// add to the node group of its new driver
 		reg->moveToGroup(np.node->getGroup());
+
 		// allow further retiming by default
-		reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
+		reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD);
+
+		if (settings.downstreamDisableForwardRT) {
+			bool isDownstream = combinatoricallyDrivenArea.contains(np.node);
+
+			if (!isDownstream)
+				reg->getFlags().insert(Node_Register::ALLOW_RETIMING_FORWARD);
+		} else {
+			reg->getFlags().insert(Node_Register::ALLOW_RETIMING_FORWARD);
+		}
 		
 		area.add(reg);
-		if (newNodes) newNodes->add(reg);
+		if (settings.newNodes) settings.newNodes->add(reg);
 
 
 		// If any input bit is defined uppon reset, add that as a reset value
@@ -310,7 +322,7 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
 			resetConst->recordStackTrace();
 			resetConst->moveToGroup(reg->getGroup());
 			area.add(resetConst);
-			if (newNodes) newNodes->add(resetConst);
+			if (settings.newNodes) settings.newNodes->add(resetConst);
 			reg->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0ull});
 		}
 
@@ -342,26 +354,6 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, const std::set<Node_R
 
 void retimeForward(Circuit &circuit, Subnet &subnet)
 {
-	std::set<Node_Register*> anchoredRegisters;
-
-	// Anchor all registers driven by memory
-	for (auto &n : subnet)
-		if (auto *reg = dynamic_cast<Node_Register*>(n)) {
-			bool drivenByMemory = false;
-			for (auto nh : reg->exploreInput((unsigned)Node_Register::Input::DATA)) {
-				if (nh.isNodeType<Node_MemPort>()) {
-					drivenByMemory = true;
-					break;
-				}
-				if (!nh.node()->isCombinatorial()) {
-					nh.backtrack();
-					continue;
-				}
-			}
-			if (drivenByMemory)
-				anchoredRegisters.insert(reg);
-		}
-
 	bool done = false;
 	while (!done) {
 
@@ -451,7 +443,7 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
 		}
 
 		if (retimingTarget.node != nullptr && dynamic_cast<Node_Register*>(retimingTarget.node) == nullptr) {
-			done = !retimeForwardToOutput(circuit, subnet, anchoredRegisters, retimingTarget, false, false);
+			done = !retimeForwardToOutput(circuit, subnet, retimingTarget, {.failureIsError=false});
 		} else
 			done = true;
 	
@@ -468,7 +460,6 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
  * @brief Determines the exact area to be backward retimed (but doesn't do any retiming).
  * @details This is the entire fan in up to registers that can be retimed forward.
  * @param area The area to which retiming is to be restricted.
- * @param anchoredRegisters Set of registers that are not to be moved (e.g. because they are already deemed in a good location).
  * @param output The output that shall recieve a register.
  * @param retimeableWritePorts List of write ports that may be retimed individually without retiming all other ports as well.
  * @param areaToBeRetimed Outputs the area that will be retimed forward (excluding the registers).
@@ -477,7 +468,7 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
  * @param failureIsError Whether to throw an exception if a retiming area limited by registers can be determined
  * @returns Whether a valid retiming area could be determined
  */
-bool determineAreaToBeRetimedBackward(Circuit &circuit, const Subnet &area, const std::set<Node_Register*> &anchoredRegisters, NodePort output, const std::set<Node_MemPort*> &retimeableWritePorts, 
+bool determineAreaToBeRetimedBackward(Circuit &circuit, const Subnet &area, NodePort output, const std::set<Node_MemPort*> &retimeableWritePorts, 
 								Subnet &areaToBeRetimed, std::set<Node_Register*> &registersToBeRemoved, bool ignoreRefs = false, bool failureIsError = true)
 {
 	BaseNode *clockGivingNode = nullptr;
@@ -664,7 +655,7 @@ writeSubnet();
 			}
 
 			// Retime over anchored registers and registers with enable signals (since we can't move them yet).
-			if (!reg->getFlags().containsAnyOf(Node_Register::ALLOW_RETIMING_BACKWARD) || anchoredRegisters.contains(reg)) {
+			if (!reg->getFlags().containsAnyOf(Node_Register::ALLOW_RETIMING_BACKWARD)) {
 				// Retime over this register.
 				areaToBeRetimed.add(node);
 				for (size_t i : utils::Range(node->getNumOutputPorts()))
@@ -745,7 +736,7 @@ writeSubnet();
 	return true;
 }
 
-bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_Register*> &anchoredRegisters, const std::set<Node_MemPort*> &retimeableWritePorts,
+bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_MemPort*> &retimeableWritePorts,
                         Subnet &retimedArea, NodePort output, bool ignoreRefs, bool failureIsError, Subnet *newNodes)
 {
 
@@ -764,7 +755,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 	}
 
 	std::set<Node_Register*> registersToBeRemoved;
-	if (!determineAreaToBeRetimedBackward(circuit, area, anchoredRegisters, output, retimeableWritePorts, retimedArea, registersToBeRemoved, ignoreRefs, failureIsError))
+	if (!determineAreaToBeRetimedBackward(circuit, area, output, retimeableWritePorts, retimedArea, registersToBeRemoved, ignoreRefs, failureIsError))
 		return false;
 /*
 	{
@@ -1140,7 +1131,7 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 				Subnet area = Subnet::all(m_circuit);
 				for (auto i : {0, 2}) // don't retime memory read port register, only override data and conflict signal
 					if (!dynamic_cast<Node_Register*>(muxNode->getNonSignalDriver(i).node))
-						retimeForwardToOutput(m_circuit, area, {}, muxNode->getDriver(i), true, true, &m_newNodes);
+						retimeForwardToOutput(m_circuit, area, muxNode->getDriver(i), {.ignoreRefs=true, .newNodes=&m_newNodes});
 			}
 //visualize(m_circuit, "after_retiming_to_mux");
 		}
