@@ -196,8 +196,6 @@ namespace {
         if (time.denominator() > 1) { unit = "ps"; time *= 1000; }
         if (time.denominator() > 1) { unit = "fs"; time *= 1000; }
 
-        if (time.denominator() > 1) std::cout << "Warning, rounding fractional to nearest integer femtosecond" << std::endl;
-
         stream << time.numerator() / time.denominator() << ' ' << unit;
     }
 }
