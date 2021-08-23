@@ -632,7 +632,7 @@ writeSubnet();
 					<< "Node from:\n" << output.node->getStackTrace() << "\n";
 
 				error 
-					<< "The fanning-out signals are driving a non-data port of a register.\n    Register: " << node->getName() << " (" << node->getTypeName() << ", id " << enableGivingRegister->getId() << ").\n"
+					<< "The fanning-out signals are driving a non-data port of a register.\n    Register: " << node->getName() << " (" << node->getTypeName() << ", id " << node->getId() << ").\n"
 					<< "    From:\n" << node->getStackTrace() << "\n";
 
 				HCL_ASSERT_HINT(false, error.str());
@@ -875,7 +875,6 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 		area.add(reg);
 		if (newNodes) newNodes->add(reg);
 
-
 		// If any input bit is defined uppon reset, add that as a reset value
 		auto resetValue = simulator.getValueOfOutput(np);
 		if (sim::anyDefined(resetValue, 0, resetValue.size())) {
@@ -886,6 +885,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 			if (newNodes) newNodes->add(resetConst);
 			reg->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0ull});
 		}
+
 
 		// Find all signals entering the retiming area and rewire them to the register's output
 		std::vector<NodePort> inputsToRewire;
