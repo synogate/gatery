@@ -52,6 +52,8 @@ namespace gtry {
             boost::optional<TriggerEvent> m_triggerEvent;
             boost::optional<bool> m_phaseSynchronousWithParent;
 
+            //boost::optional<bool> 
+
 
             boost::optional<ResetType> m_resetType;
             boost::optional<bool> m_initializeRegs;
@@ -112,10 +114,10 @@ namespace gtry {
 
             //Bit driveSignal();
 
-            BVec operator() (const BVec& signal) const;
-            BVec operator() (const BVec& signal, const BVec& reset) const;
-            Bit operator() (const Bit& signal) const;
-            Bit operator() (const Bit& signal, const Bit& reset) const;
+            BVec operator() (const BVec& signal, const RegisterSettings &settings = {}) const;
+            BVec operator() (const BVec& signal, const BVec& reset, const RegisterSettings &settings = {}) const;
+            Bit operator() (const Bit& signal, const RegisterSettings &settings = {}) const;
+            Bit operator() (const Bit& signal, const Bit& reset, const RegisterSettings &settings = {}) const;
 
             hlim::Clock *getClk() const { return m_clock; }
             hlim::ClockRational getAbsoluteFrequency() const { return m_clock->getAbsoluteFrequency(); }
@@ -144,14 +146,14 @@ namespace gtry {
     template<>
     struct Reg<BVec>
     {
-        BVec operator () (const BVec& signal) { return ClockScope::getClk()(signal); }
-        BVec operator () (const BVec& signal, const BVec& reset) { return ClockScope::getClk()(signal, reset); }
+        BVec operator () (const BVec& signal, const RegisterSettings &settings = {}) { return ClockScope::getClk()(signal, settings); }
+        BVec operator () (const BVec& signal, const BVec& reset, const RegisterSettings &settings = {}) { return ClockScope::getClk()(signal, reset, settings); }
     };
 
     template<>
     struct Reg<Bit>
     {
-        Bit operator () (const Bit& signal) { return ClockScope::getClk()(signal); }
-        Bit operator () (const Bit& signal, const Bit& reset) { return ClockScope::getClk()(signal, reset); }
+        Bit operator () (const Bit& signal, const RegisterSettings &settings = {}) { return ClockScope::getClk()(signal, settings); }
+        Bit operator () (const Bit& signal, const Bit& reset, const RegisterSettings &settings = {}) { return ClockScope::getClk()(signal, reset, settings); }
     };
 }

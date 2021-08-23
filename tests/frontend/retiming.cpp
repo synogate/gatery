@@ -56,9 +56,9 @@ BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_new, UnitTestSimulationFixture)
 
     BVec counter = 32_b;
 	counter = counter + 1;
-	counter = reg(counter, 0);
+	counter = reg(counter, 0, {.allowRetimingForward=true});
 
-	BVec output = counter | reg(input, 0);
+	BVec output = counter | reg(input, 0, {.allowRetimingForward=true});
 
 	stripSignalNodes(design.getCircuit());
 	auto subnet = hlim::Subnet::all(design.getCircuit());
@@ -101,10 +101,10 @@ BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_old, UnitTestSimulationFixture)
 	BVec output = 32_b;
 
 	BVec counter = 32_b;
-	counter = reg(counter, 0);
+	counter = reg(counter, 0, {.allowRetimingForward=true});
 	counter = counter + 1;
 
-	output = counter | reg(input, 0);
+	output = counter | reg(input, 0, {.allowRetimingForward=true});
 
 	stripSignalNodes(design.getCircuit());
 	auto subnet = hlim::Subnet::all(design.getCircuit());

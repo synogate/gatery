@@ -101,7 +101,7 @@ Bit Clock::driveSignal()
 }
 */
 
-BVec Clock::operator()(const BVec& signal) const
+BVec Clock::operator()(const BVec& signal, const RegisterSettings &settings) const
 {
     SignalReadPort data = signal.getReadPort();
 
@@ -109,7 +109,12 @@ BVec Clock::operator()(const BVec& signal) const
     reg->setName(std::string{ signal.getName() });
     reg->setClock(m_clock);
     reg->connectInput(hlim::Node_Register::DATA, data);
-    reg->getFlags().insert(hlim::Node_Register::ALLOW_RETIMING_FORWARD).insert(hlim::Node_Register::ALLOW_RETIMING_BACKWARD);
+
+    if (settings.allowRetimingForward)
+        reg->getFlags().insert(hlim::Node_Register::Flags::ALLOW_RETIMING_FORWARD);
+
+    if (settings.allowRetimingBackward)
+        reg->getFlags().insert(hlim::Node_Register::Flags::ALLOW_RETIMING_BACKWARD);
 
     ConditionalScope* scope = ConditionalScope::get();
     if (scope)
@@ -121,7 +126,7 @@ BVec Clock::operator()(const BVec& signal) const
     return SignalReadPort(reg, data.expansionPolicy);
 }
 
-BVec Clock::operator()(const BVec& signal, const BVec& reset) const
+BVec Clock::operator()(const BVec& signal, const BVec& reset, const RegisterSettings &settings) const
 {
     NormalizedWidthOperands ops(signal, reset);
 
@@ -131,7 +136,12 @@ BVec Clock::operator()(const BVec& signal, const BVec& reset) const
     reg->connectInput(hlim::Node_Register::DATA, ops.lhs);
     reg->connectInput(hlim::Node_Register::RESET_VALUE, ops.rhs);
 
-    reg->getFlags().insert(hlim::Node_Register::ALLOW_RETIMING_FORWARD).insert(hlim::Node_Register::ALLOW_RETIMING_BACKWARD);
+    if (settings.allowRetimingForward)
+        reg->getFlags().insert(hlim::Node_Register::Flags::ALLOW_RETIMING_FORWARD);
+
+    if (settings.allowRetimingBackward)
+        reg->getFlags().insert(hlim::Node_Register::Flags::ALLOW_RETIMING_BACKWARD);
+
 
     ConditionalScope* scope = ConditionalScope::get();
     if (scope)
@@ -143,14 +153,18 @@ BVec Clock::operator()(const BVec& signal, const BVec& reset) const
     return SignalReadPort(reg, ops.lhs.expansionPolicy);
 }
 
-Bit Clock::operator()(const Bit& signal) const
+Bit Clock::operator()(const Bit& signal, const RegisterSettings &settings) const
 {
     auto* reg = DesignScope::createNode<hlim::Node_Register>();
     reg->setName(std::string{ signal.getName() });
     reg->setClock(m_clock);
     reg->connectInput(hlim::Node_Register::DATA, signal.getReadPort());
 
-    reg->getFlags().insert(hlim::Node_Register::ALLOW_RETIMING_FORWARD).insert(hlim::Node_Register::ALLOW_RETIMING_BACKWARD);
+    if (settings.allowRetimingForward)
+        reg->getFlags().insert(hlim::Node_Register::Flags::ALLOW_RETIMING_FORWARD);
+
+    if (settings.allowRetimingBackward)
+        reg->getFlags().insert(hlim::Node_Register::Flags::ALLOW_RETIMING_BACKWARD);
 
     if(signal.getResetValue())
         reg->connectInput(hlim::Node_Register::RESET_VALUE, Bit{ *signal.getResetValue() }.getReadPort());
@@ -168,7 +182,7 @@ Bit Clock::operator()(const Bit& signal) const
     return ret;
 }
 
-Bit Clock::operator()(const Bit& signal, const Bit& reset) const
+Bit Clock::operator()(const Bit& signal, const Bit& reset, const RegisterSettings &settings) const
 {
     auto* reg = DesignScope::createNode<hlim::Node_Register>();
     reg->setName(std::string{ signal.getName() });
@@ -176,7 +190,12 @@ Bit Clock::operator()(const Bit& signal, const Bit& reset) const
     reg->connectInput(hlim::Node_Register::DATA, signal.getReadPort());
     reg->connectInput(hlim::Node_Register::RESET_VALUE, reset.getReadPort());
 
-    reg->getFlags().insert(hlim::Node_Register::ALLOW_RETIMING_FORWARD).insert(hlim::Node_Register::ALLOW_RETIMING_BACKWARD);
+    if (settings.allowRetimingForward)
+        reg->getFlags().insert(hlim::Node_Register::Flags::ALLOW_RETIMING_FORWARD);
+
+    if (settings.allowRetimingBackward)
+        reg->getFlags().insert(hlim::Node_Register::Flags::ALLOW_RETIMING_BACKWARD);
+
 
     ConditionalScope* scope = ConditionalScope::get();
     if (scope)

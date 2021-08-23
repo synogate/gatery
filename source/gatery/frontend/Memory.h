@@ -95,7 +95,7 @@ namespace gtry {
     };
 
     template<typename Data>
-    Data reg(MemoryPortFactory<Data> readPort) { return reg((Data)readPort); }
+    Data reg(MemoryPortFactory<Data> readPort, const RegisterSettings &settings = {}) { return reg((Data)readPort, settings); }
 
     template<typename Data>
     void sim_tap(MemoryPortFactory<Data> readPort) { sim_tap((Data)readPort); }

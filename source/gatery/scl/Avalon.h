@@ -185,7 +185,7 @@ namespace gtry::scl
             }
         }
 
-        *readData = reg(*readData);
+        *readData = reg(*readData, {.allowRetimingBackward=true});
         
         IF(*write)
             port = memContent;

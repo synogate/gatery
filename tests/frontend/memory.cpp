@@ -94,7 +94,7 @@ BOOST_FIXTURE_TEST_CASE(sync_ROM, UnitTestSimulationFixture)
 
 
     BVec addr = pinIn(4_b);
-    auto output = pinOut(reg(rom[addr]));
+    auto output = pinOut(reg(rom[addr], {.allowRetimingBackward=true}));
 
 
 	addSimulationProcess([=,this,&contents]()->SimProcess {
@@ -185,7 +185,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem, UnitTestSimulationFixture)
     mem.noConflicts();
 
     BVec addr = pinIn(4_b);
-    auto output = pinOut(reg(mem[addr]));
+    auto output = pinOut(reg(mem[addr], {.allowRetimingBackward=true}));
     BVec input = pinIn(4_b);
     Bit wrEn = pinIn();
     IF (wrEn)
@@ -377,7 +377,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_modify_write, UnitTestSimulationFixture)
     Bit wrEn = pinIn();
     {
         BVec elem = mem[addr];
-        output = reg(elem);
+        output = reg(elem, {.allowRetimingBackward=true});
 
         IF (wrEn)
             mem[addr] = elem + 1;
@@ -454,7 +454,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write, UnitTestSimulationFixture)
     Bit wrEn = pinIn();
     {
         BVec elem = mem[addr];
-        output = reg(elem);
+        output = reg(elem, {.allowRetimingBackward=true});
 
         IF (wrEn)
             mem[addr] = elem + 1;
@@ -532,14 +532,14 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads, UnitTestSimul
     BVec addr = pinIn(4_b).setName("rmw_addr");
     BVec rd_addr = pinIn(4_b).setName("rd_addr");
     Bit wrEn = pinIn().setName("wr_en");
-    BVec readOutputBefore = reg(mem[rd_addr]);
+    BVec readOutputBefore = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputBefore).setName("readOutputBefore");
     {
         BVec elem = mem[addr];
         IF (wrEn)
             mem[addr] = elem + 1;
     }
-    BVec readOutputAfter = reg(mem[rd_addr]);
+    BVec readOutputAfter = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputAfter).setName("readOutputAfter");
 
 	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
@@ -617,7 +617,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_on_wrEn, UnitTestSimulationFi
     Bit shuffler = pinIn().setName("shuffler");
 
     BVec rd_addr = pinIn(4_b).setName("rd_addr");
-    BVec readOutputBefore = reg(mem[rd_addr]);
+    BVec readOutputBefore = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputBefore).setName("readOutputBefore");
     {
         BVec elem = mem[addr];
@@ -700,13 +700,13 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_multiple_writes, UnitTestSimulationFixture)
     BVec wrAddr2 = pinIn(4_b).setName("wr_addr2");
 
     BVec rd_addr = pinIn(4_b).setName("rd_addr");
-    BVec readOutputBefore = reg(mem[rd_addr]);
+    BVec readOutputBefore = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputBefore).setName("readOutputBefore");
 
     mem[wrAddr1] = wrData1;
     mem[wrAddr2] = wrData2;
 
-    BVec readOutputAfter = reg(mem[rd_addr]);
+    BVec readOutputAfter = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputAfter).setName("readOutputAfter");
 
 	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
@@ -780,7 +780,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrFirst, Unit
     BVec addr = pinIn(4_b).setName("rmw_addr");
     BVec rd_addr = pinIn(4_b).setName("rd_addr");
     Bit wrEn = pinIn().setName("wr_en");
-    BVec readOutputBefore = reg(mem[rd_addr]);
+    BVec readOutputBefore = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputBefore).setName("readOutputBefore");
     {
         mem[wrAddr] = wrData;
@@ -870,7 +870,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrLast, UnitT
         mem[addr] = elem + 1;
 
     mem[wrAddr] = wrData;
-    pinOut(reg(elem)).setName("read");
+    pinOut(reg(elem, {.allowRetimingBackward=true})).setName("read");
 
 	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
 
@@ -945,7 +945,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
     BVec addr = pinIn(4_b).setName("rmw_addr");
     BVec rd_addr = pinIn(4_b).setName("rd_addr");
     Bit wrEn = pinIn().setName("wr_en");
-    BVec readOutputBefore = reg(mem[rd_addr]);
+    BVec readOutputBefore = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputBefore).setName("readOutputBefore");
     {
         mem[wrAddr] = wrData;
@@ -954,7 +954,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
         IF (wrEn)
             mem[addr] = elem + 1;
     }
-    BVec readOutputAfter = reg(mem[rd_addr]);
+    BVec readOutputAfter = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputAfter).setName("readOutputAfter");
 
 	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
@@ -1034,7 +1034,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
     BVec addr = pinIn(4_b).setName("rmw_addr");
     BVec rd_addr = pinIn(4_b).setName("rd_addr");
     Bit wrEn = pinIn().setName("wr_en");
-    BVec readOutputBefore = reg(mem[rd_addr]);
+    BVec readOutputBefore = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputBefore).setName("readOutputBefore");
     {
         BVec elem = mem[addr];
@@ -1042,7 +1042,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
             mem[addr] = elem + 1;
 
     }
-    BVec readOutputAfter = reg(mem[rd_addr]);
+    BVec readOutputAfter = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputAfter).setName("readOutputAfter");
 
     mem[wrAddr] = wrData;
@@ -1126,7 +1126,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_dual_read_modify_write, UnitTestSimulationFixtu
     Bit wrEn1 = pinIn();
     {
         BVec elem = mem[addr1];
-        output1 = reg(elem);
+        output1 = reg(elem, {.allowRetimingBackward=true});
 
         IF (wrEn1)
             mem[addr1] = elem + 1;
@@ -1139,7 +1139,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_dual_read_modify_write, UnitTestSimulationFixtu
     Bit wrEn2 = pinIn();
     {
         BVec elem = mem[addr2];
-        output2 = reg(elem);
+        output2 = reg(elem, {.allowRetimingBackward=true});
 
         IF (wrEn2)
             mem[addr2] = elem + 1;
@@ -1224,16 +1224,16 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, UnitTestSimulationFi
 
         BVec elem = mem[addr];
         for ([[maybe_unused]] auto i : Range(memReadLatency))
-            elem = reg(elem);
+            elem = reg(elem, {.allowRetimingBackward=true});
         output = elem;
 
         BVec delayedAddr = addr;
         for ([[maybe_unused]] auto i : Range(memReadLatency))
-            delayedAddr = reg(delayedAddr);
+            delayedAddr = reg(delayedAddr, {.allowRetimingBackward=true});
 
         Bit delayedWrEn = wrEn;
         for ([[maybe_unused]] auto i : Range(memReadLatency))
-            delayedWrEn = reg(delayedWrEn, false);
+            delayedWrEn = reg(delayedWrEn, false, {.allowRetimingBackward=true});
 
         BVec modifiedElem = elem + 1;
 
@@ -1363,7 +1363,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, UnitTestSimulati
         output = elem;
         HCL_NAMED(output);
         for ([[maybe_unused]] auto i : Range(memReadLatency))
-            output = reg(output);
+            output = reg(output, {.allowRetimingBackward=true});
 
         output = reg(output);// extra regs to separate simulation processes
     }
