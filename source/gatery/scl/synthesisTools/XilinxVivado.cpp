@@ -103,6 +103,14 @@ void XilinxVivado::resolveAttributes(const hlim::SignalAttributes &attribs, hlim
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }
 
+void XilinxVivado::resolveAttributes(const hlim::MemoryAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
+{
+	if (attribs.noConflicts) 
+		resolvedAttribs.insert({"RW_ADDR_COLLISION", {"string", "\"no\""}});
+	addUserDefinedAttributes(attribs, resolvedAttribs);
+}
+
+
 void XilinxVivado::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
 {
 	std::string fullPath = (vhdlExport.getDestination() / filename).string();

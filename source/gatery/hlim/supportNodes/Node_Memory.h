@@ -18,7 +18,7 @@
 #pragma once
 
 #include "../Node.h"
-
+#include "../Attributes.h"
 
 namespace gtry::hlim {
 
@@ -105,18 +105,21 @@ class Node_Memory : public Node<Node_Memory>
         virtual std::vector<size_t> getInternalStateSizes() const override;
 
         MemType type() const { return m_type; }
-        bool noConflicts() const { return m_noConflicts; }
+        bool noConflicts() const { return m_attributes.noConflicts; }
         size_t getRequiredReadLatency() const { return m_requiredReadLatency; }
 
         virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 
         virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
         //virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
+
+        inline MemoryAttributes &getAttribs() { return m_attributes; }
+        inline const MemoryAttributes &getAttribs() const { return m_attributes; }        
     protected:
         sim::DefaultBitVectorState m_powerOnState;
 
         MemType m_type = MemType::DONT_CARE;
-        bool m_noConflicts = false;
+        MemoryAttributes m_attributes;
         size_t m_initializationDataWidth = 0ul;
         size_t m_requiredReadLatency = 0;
 };

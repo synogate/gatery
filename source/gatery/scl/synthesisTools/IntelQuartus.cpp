@@ -114,6 +114,14 @@ void IntelQuartus::resolveAttributes(const hlim::SignalAttributes &attribs, hlim
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }
 
+void IntelQuartus::resolveAttributes(const hlim::MemoryAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
+{
+	if (attribs.noConflicts) 
+		resolvedAttribs.insert({"RAMSTYLE", {"string", "\"no_rw_check\""}});
+
+	addUserDefinedAttributes(attribs, resolvedAttribs);
+}
+
 
 void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
 {

@@ -78,4 +78,8 @@ struct PathAttributes : public Attributes {
 	bool falsePath = false;
 };
 
+struct MemoryAttributes : public Attributes {
+	bool noConflicts = false;
+};
+
 }
