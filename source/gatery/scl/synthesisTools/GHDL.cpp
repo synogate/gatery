@@ -50,6 +50,13 @@ void GHDL::resolveAttributes(const hlim::SignalAttributes &attribs, hlim::Resolv
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }
 
+void GHDL::resolveAttributes(const hlim::MemoryAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
+{
+	// ghdl doesn't support any
+	addUserDefinedAttributes(attribs, resolvedAttribs);
+}
+
+
 void GHDL::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename)
 {
 

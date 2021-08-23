@@ -155,7 +155,7 @@ void MemoryGroup::formAround(Node_Memory *memory, Circuit &circuit)
             port->moveToGroup(this);
             rp.dataOutput = {.node = port, .port = (size_t)Node_MemPort::Outputs::rdData};
 
-            NodePort readPortEnable = port->getNonSignalDriver((unsigned)Node_MemPort::Inputs::enable);
+            NodePort readPortEnable = port->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable);
 
             // Try and grab as many output registers as possible (up to read latency)
             // rp.findOutputRegisters(m_memory->getRequiredReadLatency(), this);
@@ -199,7 +199,10 @@ void MemoryGroup::lazyCreateFixupNodeGroup()
     if (m_fixupNodeGroup == nullptr) {
         m_fixupNodeGroup = m_parent->addChildNodeGroup(GroupType::ENTITY);
         m_fixupNodeGroup->recordStackTrace();
-        m_fixupNodeGroup->setName("Memory_Helper");
+        if (m_memory->getName().empty())
+            m_fixupNodeGroup->setName("Memory_Helper");
+        else
+            m_fixupNodeGroup->setName(m_memory->getName()+"_Memory_Helper");
         m_fixupNodeGroup->setComment("Auto generated to handle various memory access issues such as read during write and read modify write hazards.");
         moveInto(m_fixupNodeGroup);
     }
@@ -210,132 +213,88 @@ void MemoryGroup::convertToReadBeforeWrite(Circuit &circuit)
     // If an async read happens after a write, it must
     // check if an address collision occured and if so directly forward the new value.
     for (auto &rp : m_readPorts) {
-        // Collect a list of all potentially conflicting write ports and sort them in write order, so that conflict resolution can also happen in write order
-        std::vector<WritePort*> sortedWritePorts;
-        for (auto &wp : m_writePorts)
-            if (wp.node->isOrderedBefore(rp.node))
-                sortedWritePorts.push_back(&wp);
 
-        // sort last to first because multiplexers are prepended.
-        // todo: this assumes that write ports do have an order.
-        std::sort(sortedWritePorts.begin(), sortedWritePorts.end(), [](WritePort *left, WritePort *right)->bool{
-            return left->node->isOrderedAfter(right->node);
-        });
+        // Iteratively push the read port up the dependency chain until the top is reached.
+        // If dependent on a write port, build explicit hazard logic.
+        // If any ports are dependent on us, make them dependent on the previous port.
+        // Afterwards make this port dependent on whatever the previous port depends on.
 
-        for (auto wp_ptr : sortedWritePorts) {
-            auto &wp = *wp_ptr;
+        while (rp.node->getDriver((size_t)Node_MemPort::Inputs::orderAfter).node != nullptr) {
+            auto *prevPort = dynamic_cast<Node_MemPort*>(rp.node->getDriver((size_t)Node_MemPort::Inputs::orderAfter).node);
 
-            lazyCreateFixupNodeGroup();
+            if (prevPort->isWritePort()) {
+                auto *wp = prevPort;
+                lazyCreateFixupNodeGroup();
 
-            auto *addrCompNode = circuit.createNode<Node_Compare>(Node_Compare::EQ);
-            addrCompNode->recordStackTrace();
-            addrCompNode->moveToGroup(m_fixupNodeGroup);
-            addrCompNode->setComment("Compare read and write addr for conflicts");
-            addrCompNode->connectInput(0, rp.node->getDriver((unsigned)Node_MemPort::Inputs::address));
-            addrCompNode->connectInput(1, wp.node->getDriver((unsigned)Node_MemPort::Inputs::address));
+                auto *addrCompNode = circuit.createNode<Node_Compare>(Node_Compare::EQ);
+                addrCompNode->recordStackTrace();
+                addrCompNode->moveToGroup(m_fixupNodeGroup);
+                addrCompNode->setComment("Compare read and write addr for conflicts");
+                addrCompNode->connectInput(0, rp.node->getDriver((size_t)Node_MemPort::Inputs::address));
+                addrCompNode->connectInput(1, wp->getDriver((size_t)Node_MemPort::Inputs::address));
 
-            NodePort conflict = {.node = addrCompNode, .port = 0ull};
-            circuit.appendSignal(conflict)->setName("conflict");
+                NodePort conflict = {.node = addrCompNode, .port = 0ull};
+                circuit.appendSignal(conflict)->setName("conflict");
 
-            if (rp.node->getDriver((unsigned)Node_MemPort::Inputs::enable).node != nullptr) {
-                auto *logicAnd = circuit.createNode<Node_Logic>(Node_Logic::AND);
-                logicAnd->moveToGroup(m_fixupNodeGroup);
-                logicAnd->recordStackTrace();
-                logicAnd->connectInput(0, conflict);
-                logicAnd->connectInput(1, rp.node->getDriver((unsigned)Node_MemPort::Inputs::enable));
-                conflict = {.node = logicAnd, .port = 0ull};
-                circuit.appendSignal(conflict)->setName("conflict_and_rdEn");
-            }
-
-            HCL_ASSERT(wp.node->getNonSignalDriver((unsigned)Node_MemPort::Inputs::enable) == wp.node->getNonSignalDriver((unsigned)Node_MemPort::Inputs::wrEnable));
-            if (wp.node->getDriver((unsigned)Node_MemPort::Inputs::enable).node != nullptr) {
-                auto *logicAnd = circuit.createNode<Node_Logic>(Node_Logic::AND);
-                logicAnd->moveToGroup(m_fixupNodeGroup);
-                logicAnd->recordStackTrace();
-                logicAnd->connectInput(0, conflict);
-                logicAnd->connectInput(1, wp.node->getDriver((unsigned)Node_MemPort::Inputs::enable));
-                conflict = {.node = logicAnd, .port = 0ull};
-                circuit.appendSignal(conflict)->setName("conflict_and_wrEn");
-            }
-
-            NodePort wrData = wp.node->getDriver((unsigned)Node_MemPort::Inputs::wrData);
-
-            auto delayLike = [&](Node_Register *refReg, NodePort &np, const char *name, const char *comment) {
-                auto *reg = circuit.createNode<Node_Register>();
-                reg->recordStackTrace();
-                reg->moveToGroup(m_fixupNodeGroup);
-                reg->setComment(comment);
-                reg->setClock(refReg->getClocks()[0]);
-                for (auto i : {Node_Register::Input::ENABLE, Node_Register::Input::RESET_VALUE})
-                    reg->connectInput(i, refReg->getDriver(i));
-                reg->connectInput(Node_Register::Input::DATA, np);
-                reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
-                np = {.node = reg, .port = 0ull};
-                circuit.appendSignal(np)->setName(name);
-            };
-
-
-            // If the read data gets delayed, we will have to delay the write data and conflict decision as well
-            // Actually: Don't fetch them beforehand, makes things easier
-            HCL_ASSERT(rp.dedicatedReadLatencyRegisters.empty());
-            /*
-            if (rp.syncReadDataReg != nullptr) {
-                // read data gets delayed so we will have to delay the write data and conflict decision as well
-                delayLike(rp.syncReadDataReg, wrData, "delayedWrData", "The memory read gets delayed by a register so the write data bypass also needs to be delayed.");
-                delayLike(rp.syncReadDataReg, conflict, "delayedConflict", "The memory read gets delayed by a register so the collision detection decision also needs to be delayed.");
-
-                if (rp.outputReg != nullptr) {
-                    // need to delay even more
-                    delayLike(rp.syncReadDataReg, wrData, "delayed_2_WrData", "The memory read gets delayed by an additional register so the write data bypass also needs to be delayed.");
-                    delayLike(rp.syncReadDataReg, conflict, "delayed_2_Conflict", "The memory read gets delayed by an additional register so the collision detection decision also needs to be delayed.");
+                if (rp.node->getDriver((size_t)Node_MemPort::Inputs::enable).node != nullptr) {
+                    auto *logicAnd = circuit.createNode<Node_Logic>(Node_Logic::AND);
+                    logicAnd->moveToGroup(m_fixupNodeGroup);
+                    logicAnd->recordStackTrace();
+                    logicAnd->connectInput(0, conflict);
+                    logicAnd->connectInput(1, rp.node->getDriver((size_t)Node_MemPort::Inputs::enable));
+                    conflict = {.node = logicAnd, .port = 0ull};
+                    circuit.appendSignal(conflict)->setName("conflict_and_rdEn");
                 }
+
+                HCL_ASSERT(wp->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable) == wp->getNonSignalDriver((size_t)Node_MemPort::Inputs::wrEnable));
+                if (wp->getDriver((size_t)Node_MemPort::Inputs::enable).node != nullptr) {
+                    auto *logicAnd = circuit.createNode<Node_Logic>(Node_Logic::AND);
+                    logicAnd->moveToGroup(m_fixupNodeGroup);
+                    logicAnd->recordStackTrace();
+                    logicAnd->connectInput(0, conflict);
+                    logicAnd->connectInput(1, wp->getDriver((size_t)Node_MemPort::Inputs::enable));
+                    conflict = {.node = logicAnd, .port = 0ull};
+                    circuit.appendSignal(conflict)->setName("conflict_and_wrEn");
+                }
+
+                NodePort wrData = wp->getDriver((size_t)Node_MemPort::Inputs::wrData);
+
+                // If the read data gets delayed, we will have to delay the write data and conflict decision as well
+                // Actually: Don't fetch them beforehand, makes things easier
+                HCL_ASSERT(rp.dedicatedReadLatencyRegisters.empty());
+
+                std::vector<NodePort> consumers = rp.dataOutput.node->getDirectlyDriven(rp.dataOutput.port);
+
+                // Finally the actual mux to arbitrate between the actual read and the forwarded write data.
+                auto *muxNode = circuit.createNode<Node_Multiplexer>(2);
+
+                // Then bind the mux
+                muxNode->recordStackTrace();
+                muxNode->moveToGroup(m_fixupNodeGroup);
+                muxNode->setComment("If read and write addr match and read and write are enabled, forward write data to read output.");
+                muxNode->connectSelector(conflict);
+                muxNode->connectInput(0, rp.dataOutput);
+                muxNode->connectInput(1, wrData);
+
+                NodePort muxOut = {.node = muxNode, .port=0ull};
+
+                circuit.appendSignal(muxOut)->setName("conflict_bypass_mux");
+
+                // Rewire all original consumers to the mux output
+                for (auto np : consumers)
+                    np.node->rewireInput(np.port, muxOut);
             }
-            */
 
-            std::vector<NodePort> consumers = rp.dataOutput.node->getDirectlyDriven(rp.dataOutput.port);
+            // Make everything that was dependent on us depend on the prev port
+            while (!rp.node->getDirectlyDriven((size_t)Node_MemPort::Outputs::orderBefore).empty()) {
+                auto np = rp.node->getDirectlyDriven((size_t)Node_MemPort::Outputs::orderBefore).back();
+                np.node->rewireInput(np.port, {.node = prevPort, .port = (size_t)Node_MemPort::Outputs::orderBefore});
+            }
 
-            // Finally the actual mux to arbitrate between the actual read and the forwarded write data.
-            auto *muxNode = circuit.createNode<Node_Multiplexer>(2);
-
-            // Then bind the mux
-            muxNode->recordStackTrace();
-            muxNode->moveToGroup(m_fixupNodeGroup);
-            muxNode->setComment("If read and write addr match and read and write are enabled, forward write data to read output.");
-            muxNode->connectSelector(conflict);
-            muxNode->connectInput(0, rp.dataOutput);
-            muxNode->connectInput(1, wrData);
-
-            NodePort muxOut = {.node = muxNode, .port=0ull};
-
-            circuit.appendSignal(muxOut)->setName("conflict_bypass_mux");
-
-            // Rewire all original consumers to the mux output
-            for (auto np : consumers)
-                np.node->rewireInput(np.port, muxOut);
+            // Move up the chain
+            rp.node->rewireInput((size_t)Node_MemPort::Inputs::orderAfter, prevPort->getDriver((size_t)Node_MemPort::Inputs::orderAfter));
         }
     }
-
-
-    std::vector<Node_MemPort*> sortedWritePorts;
-    for (auto &wp : m_writePorts)
-        sortedWritePorts.push_back(wp.node);
-
-    std::sort(sortedWritePorts.begin(), sortedWritePorts.end(), [](Node_MemPort *left, Node_MemPort *right)->bool{
-        return left->isOrderedBefore(right);
-    });
-
-
-    // Reorder all writes to happen after all reads
-    Node_MemPort *lastPort = nullptr;
-    for (auto &rp : m_readPorts) {
-        rp.node->orderAfter(lastPort);
-        lastPort = rp.node;
-    }
-    // But preserve write order for now
-    if (!sortedWritePorts.empty())
-        sortedWritePorts[0]->orderAfter(lastPort);
-    for (size_t i = 1; i < sortedWritePorts.size(); i++)
-        sortedWritePorts[i]->orderAfter(sortedWritePorts[i-1]);
 }
 
 
@@ -343,13 +302,24 @@ void MemoryGroup::resolveWriteOrder(Circuit &circuit)
 {
     // If two write ports have an explicit ordering, then the later write always trumps the former if both happen to the same address.
     // Search for such cases and build explicit logic that disables the earlier write.
+
+    // NOT: THIS ASSUMES THAT THERE IS NO MORE ANY WRITE BEFORE READ!!!
+
+    // For each write port:
     for (auto &wp1 : m_writePorts)
-        for (auto &wp2 : m_writePorts) {
-            if (&wp1 == &wp2) continue;
+        // Scan dependency chain for other write ports
+        while (wp1.node->getDriver((size_t)Node_MemPort::Inputs::orderAfter).node != nullptr) {
+            auto *prevPort = dynamic_cast<Node_MemPort*>(wp1.node->getDriver((size_t)Node_MemPort::Inputs::orderAfter).node);
 
-            if (wp1.node->isOrderedBefore(wp2.node)) {
-                // Potential addr conflict, build hazard logic
+            if (prevPort->isReadPort()) {
+                HCL_ASSERT_HINT(prevPort->getDriver((size_t)Node_MemPort::Inputs::orderAfter).node == nullptr, "MemoryGroup::resolveWriteOrder assumes that there is no write-before-read anymore!");
+                break;
+            }
 
+            if (prevPort->isWritePort()) {
+                auto *wp2 = prevPort;
+                // wp2 is supposed to happen before wp1. Write conflict detection logic and disable wp2 if a conflict happens
+         
                 lazyCreateFixupNodeGroup();
 
 
@@ -357,61 +327,60 @@ void MemoryGroup::resolveWriteOrder(Circuit &circuit)
                 addrCompNode->recordStackTrace();
                 addrCompNode->moveToGroup(m_fixupNodeGroup);
                 addrCompNode->setComment("We can enable the former write if the write adresses differ.");
-                addrCompNode->connectInput(0, wp1.node->getDriver((unsigned)Node_MemPort::Inputs::address));
-                addrCompNode->connectInput(1, wp2.node->getDriver((unsigned)Node_MemPort::Inputs::address));
+                addrCompNode->connectInput(0, wp1.node->getDriver((size_t)Node_MemPort::Inputs::address));
+                addrCompNode->connectInput(1, wp2->getDriver((size_t)Node_MemPort::Inputs::address));
 
                 // Enable write if addresses differ
-                NodePort newWrEn1 = {.node = addrCompNode, .port = 0ull};
-                circuit.appendSignal(newWrEn1)->setName("newWrEn");
+                NodePort newWrEn2 = {.node = addrCompNode, .port = 0ull};
+                circuit.appendSignal(newWrEn2)->setName("newWrEn");
 
-                // Alternatively, enable write if wp2 does not write (no connection on enable means yes)
-                HCL_ASSERT(wp2.node->getNonSignalDriver((unsigned)Node_MemPort::Inputs::enable) == wp2.node->getNonSignalDriver((unsigned)Node_MemPort::Inputs::wrEnable));
-                if (wp2.node->getDriver((unsigned)Node_MemPort::Inputs::enable).node != nullptr) {
+                // Alternatively, enable write if wp1 does not write (no connection on enable means yes)
+                HCL_ASSERT(wp1.node->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable) == wp1.node->getNonSignalDriver((size_t)Node_MemPort::Inputs::wrEnable));
+                if (wp1.node->getDriver((size_t)Node_MemPort::Inputs::enable).node != nullptr) {
 
                     auto *logicNot = circuit.createNode<Node_Logic>(Node_Logic::NOT);
                     logicNot->moveToGroup(m_fixupNodeGroup);
                     logicNot->recordStackTrace();
-                    logicNot->connectInput(0, wp2.node->getDriver((unsigned)Node_MemPort::Inputs::enable));
+                    logicNot->connectInput(0, wp1.node->getDriver((size_t)Node_MemPort::Inputs::enable));
 
                     auto *logicOr = circuit.createNode<Node_Logic>(Node_Logic::OR);
                     logicOr->moveToGroup(m_fixupNodeGroup);
                     logicOr->setComment("We can also enable the former write if the latter write is disabled.");
                     logicOr->recordStackTrace();
-                    logicOr->connectInput(0, newWrEn1);
+                    logicOr->connectInput(0, newWrEn2);
                     logicOr->connectInput(1, {.node = logicNot, .port = 0ull});
-                    newWrEn1 = {.node = logicOr, .port = 0ull};
-                    circuit.appendSignal(newWrEn1)->setName("newWrEn");
+                    newWrEn2 = {.node = logicOr, .port = 0ull};
+                    circuit.appendSignal(newWrEn2)->setName("newWrEn");
                 }
 
-                // But only enable write if wp1 actually wants to write (no connection on enable means yes)
-                HCL_ASSERT(wp1.node->getNonSignalDriver((unsigned)Node_MemPort::Inputs::enable) == wp1.node->getNonSignalDriver((unsigned)Node_MemPort::Inputs::wrEnable));
-                if (wp1.node->getDriver((unsigned)Node_MemPort::Inputs::enable).node != nullptr) {
+                // But only enable write if wp2 actually wants to write (no connection on enable means yes)
+                HCL_ASSERT(wp2->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable) == wp2->getNonSignalDriver((size_t)Node_MemPort::Inputs::wrEnable));
+                if (wp2->getDriver((size_t)Node_MemPort::Inputs::enable).node != nullptr) {
                     auto *logicAnd = circuit.createNode<Node_Logic>(Node_Logic::AND);
                     logicAnd->moveToGroup(m_fixupNodeGroup);
                     logicAnd->setComment("But we can only enable the former write if the former write actually wants to write.");
                     logicAnd->recordStackTrace();
-                    logicAnd->connectInput(0, newWrEn1);
-                    logicAnd->connectInput(1, wp1.node->getDriver((unsigned)Node_MemPort::Inputs::enable));
-                    newWrEn1 = {.node = logicAnd, .port = 0ull};
-                    circuit.appendSignal(newWrEn1)->setName("newWrEn");
+                    logicAnd->connectInput(0, newWrEn2);
+                    logicAnd->connectInput(1, wp2->getDriver((size_t)Node_MemPort::Inputs::enable));
+                    newWrEn2 = {.node = logicAnd, .port = 0ull};
+                    circuit.appendSignal(newWrEn2)->setName("newWrEn");
                 }
 
 
-                wp1.node->rewireInput((unsigned)Node_MemPort::Inputs::enable, newWrEn1);
-                wp1.node->rewireInput((unsigned)Node_MemPort::Inputs::wrEnable, newWrEn1);
+                wp2->rewireInput((size_t)Node_MemPort::Inputs::enable, newWrEn2);
+                wp2->rewireInput((size_t)Node_MemPort::Inputs::wrEnable, newWrEn2);
             }
+
+            // Make everything that was dependent on us depend on the prev port
+            while (!wp1.node->getDirectlyDriven((size_t)Node_MemPort::Outputs::orderBefore).empty()) {
+                auto np = wp1.node->getDirectlyDriven((size_t)Node_MemPort::Outputs::orderBefore).back();
+                np.node->rewireInput(np.port, {.node = prevPort, .port = (size_t)Node_MemPort::Outputs::orderBefore});
+            }
+
+            // Move up the chain
+            wp1.node->rewireInput((size_t)Node_MemPort::Inputs::orderAfter, prevPort->getDriver((size_t)Node_MemPort::Inputs::orderAfter));
         }
 
-
-    // Reorder all writes to happen after all reads
-    Node_MemPort *lastPort = nullptr;
-    for (auto &rp : m_readPorts) {
-        rp.node->orderAfter(lastPort);
-        lastPort = rp.node;
-    }
-    // Writes can happen in any order now, but after the last read
-    for (auto &wp : m_writePorts)
-        wp.node->orderAfter(lastPort);
 }
 
 
@@ -733,6 +702,26 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 */    
 }
 
+void MemoryGroup::updateNoConflictsAttrib()
+{
+    bool conflicts = false;
+    for (auto &rp : m_readPorts)    
+        if (rp.node->getDriver((size_t)Node_MemPort::Inputs::orderAfter).node != nullptr) {
+            conflicts = true;
+            break;
+        }
+
+    if (!conflicts) {
+        for (auto &wp : m_writePorts)
+            if (wp.node->getDriver((size_t)Node_MemPort::Inputs::orderAfter).node != nullptr) {
+                conflicts = true;
+                break;
+            }
+    }
+
+    m_memory->getAttribs().noConflicts = !conflicts;
+}
+
 void MemoryGroup::buildReset(Circuit &circuit)
 {
     if (m_memory->getNonSignalDriver((size_t)Node_Memory::Inputs::INITIALIZATION_DATA).node != nullptr) {
@@ -938,7 +927,10 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
             );
         }
 
+        std::set<size_t> readAddresses;
         while (true) {
+            readAddresses.clear();
+
             for (auto i : utils::Range(convertedReadPorts.size())) {
                 auto addr = convertedReadPorts[i].addr.eval();
                 HCL_ASSERT(addr.size() > 0);
@@ -959,8 +951,10 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 
                 if (readUndefined)
                     readPortRegs[i].writeUndefined();
-                else 
+                else {
                     readPortRegs[i].writeData(mem, rdAddr);
+                    readAddresses.insert(rdAddr);
+                }
 
                 //std::cout << "shiftreg: " << readPortRegs[i].shiftReg << std::endl;
                 //std::cout << "writeOffset: " << readPortRegs[i].writeOffset() << std::endl;
@@ -993,9 +987,12 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 
                 if (writeEnabled || writeEnableUndefined) {
                     if (writeAddrUndefined) {
-                        std::cout << "Warning: Nuking memory" << std::endl;
+                        std::cout << "Warning: Nuking external memory" << std::endl;
                         mem.clearRange(sim::DefaultConfig::DEFINED, 0, mem.size());
                     } else {
+                        if (readAddresses.contains(wrAddr))
+                            std::cout << "Warning: Read during write on external memory" << std::endl;
+
                         if (writeEnableUndefined) {
                             //std::cout << "Write enable undefined" << std::endl;
                             mem.clearRange(sim::DefaultConfig::DEFINED, wrAddr*convertedWritePorts[i].width, convertedWritePorts[i].width);
@@ -1062,6 +1059,7 @@ void buildExplicitMemoryCircuitry(Circuit &circuit)
             memoryGroup->convertToReadBeforeWrite(circuit);
             memoryGroup->attemptRegisterRetiming(circuit);
             memoryGroup->resolveWriteOrder(circuit);
+            memoryGroup->updateNoConflictsAttrib();
             memoryGroup->bypassSignalNodes();
             memoryGroup->verify();
             if (memory->type() == Node_Memory::MemType::EXTERNAL)
@@ -1069,6 +1067,5 @@ void buildExplicitMemoryCircuitry(Circuit &circuit)
         }
     }
 }
-
 
 }

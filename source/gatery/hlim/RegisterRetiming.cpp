@@ -1446,6 +1446,7 @@ Node_Memory *ReadModifyWriteHazardLogicBuilder::buildWritePortRingBuffer(NodePor
 	memory->recordStackTrace();
 	memory->setNoConflicts();
 	memory->setType(Node_Memory::MemType::LUTRAM);
+	memory->setName("read_write_hazard_ringbuffer");
 	{
 		sim::DefaultBitVectorState state;
 		state.resize((1ull << counterWidth) * wordWidth);

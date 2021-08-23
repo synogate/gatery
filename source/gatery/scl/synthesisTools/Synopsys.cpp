@@ -82,6 +82,13 @@ void Synopsys::resolveAttributes(const hlim::SignalAttributes &attribs, hlim::Re
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }
 
+void Synopsys::resolveAttributes(const hlim::MemoryAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
+{
+	
+	addUserDefinedAttributes(attribs, resolvedAttribs);
+}
+
+
 void Synopsys::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
 {
 	std::string fullPath = (vhdlExport.getDestination() / filename).string();

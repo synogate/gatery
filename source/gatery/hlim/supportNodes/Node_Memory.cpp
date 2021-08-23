@@ -74,7 +74,7 @@ namespace gtry::hlim {
 
     void Node_Memory::setNoConflicts()
     {
-        m_noConflicts = true;
+        m_attributes.noConflicts = true;
         for (auto np : getPorts())
             if (auto *port = dynamic_cast<Node_MemPort*>(np.node))
                 port->orderAfter(nullptr);
@@ -190,7 +190,7 @@ namespace gtry::hlim {
         copyBaseToClone(res.get());
         ((Node_Memory*)res.get())->m_powerOnState = m_powerOnState;
         ((Node_Memory*)res.get())->m_type = m_type;
-        ((Node_Memory*)res.get())->m_noConflicts = m_noConflicts;
+        ((Node_Memory*)res.get())->m_attributes = m_attributes;
         return res;
     }
 

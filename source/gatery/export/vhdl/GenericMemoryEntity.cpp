@@ -25,6 +25,7 @@
 #include "../../hlim/supportNodes/Node_Memory.h"
 #include "../../hlim/supportNodes/Node_MemPort.h"
 #include "../../hlim/postprocessing/MemoryDetector.h"
+#include "../../frontend/SynthesisTool.h"
 
 #include <map>
 #include <vector>
@@ -194,13 +195,31 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 	attribute rw_addr_collision : string;
 	attribute rw_addr_collision of my_ram : signal is "yes";
 
-	Inel:
-
-	ramstyle
-	romstyle
 
 
 	*/
+
+
+    hlim::ResolvedAttributes resolvedAttribs;
+    m_ast.getSynthesisTool().resolveAttributes(m_memGrp->getMemory()->getAttribs(), resolvedAttribs);
+
+
+    std::map<std::string, hlim::AttribValue> alreadyDeclaredAttribs;
+    // write out all memory attribs
+    for (const auto &attrib : resolvedAttribs) {
+        auto it = alreadyDeclaredAttribs.find(attrib.first);
+        if (it == alreadyDeclaredAttribs.end()) {
+            alreadyDeclaredAttribs[attrib.first] = attrib.second;
+
+            cf.indent(stream, 1);
+            stream << "ATTRIBUTE " << attrib.first << " : " << attrib.second.type << ';' << std::endl;
+        } else
+            HCL_DESIGNCHECK_HINT(it->second.type == attrib.second.type, "Same attribute can't have different types!");
+
+        cf.indent(stream, 1);
+        stream << "ATTRIBUTE " << attrib.first << " of memory : ";
+        stream << "SIGNAL is " << attrib.second.value << ';' << std::endl;
+    }
 
 
 	for (auto &rp : m_memGrp->getReadPorts()) {

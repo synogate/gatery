@@ -32,20 +32,7 @@
 
 namespace gtry {
 
-
-void SynthesisTool::addUserDefinedAttributes(const hlim::RegisterAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
-{
-	for (const auto &vendor : m_vendors) {
-		auto it = attribs.userDefinedVendorAttributes.find(vendor);
-		if (it != attribs.userDefinedVendorAttributes.end()) {
-			const auto &userDefinedList = it->second;
-			for (const auto &e : userDefinedList)
-				resolvedAttribs.insert(e);
-		}
-	}
-}
-
-void SynthesisTool::addUserDefinedAttributes(const hlim::SignalAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
+void SynthesisTool::addUserDefinedAttributes(const hlim::Attributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
 {
 	for (const auto &vendor : m_vendors) {
 		auto it = attribs.userDefinedVendorAttributes.find(vendor);
@@ -159,6 +146,11 @@ void DefaultSynthesisTool::resolveAttributes(const hlim::RegisterAttributes &att
 }
 
 void DefaultSynthesisTool::resolveAttributes(const hlim::SignalAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
+{
+	addUserDefinedAttributes(attribs, resolvedAttribs);
+}
+
+void DefaultSynthesisTool::resolveAttributes(const hlim::MemoryAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
 {
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }
