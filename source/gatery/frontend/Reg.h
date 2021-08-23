@@ -37,14 +37,18 @@ namespace gtry
 
     struct RegTransform
     {
+        RegTransform(const RegisterSettings &settings = {}) : settings(settings) { }
+
         template<typename T>
-        T operator() (const T& val, const RegisterSettings &settings = {}) { return Reg<T>{}(val, settings); }
+        T operator() (const T& val) { return Reg<T>{}(val, settings); }
+
+        const RegisterSettings &settings;
     };
     
     template<typename ...T>
     struct Reg<std::tuple<T...>>
     {
-        std::tuple<T...> operator () (const std::tuple<T...>& val) { return boost::hana::transform(val, RegTransform{}); }
+        std::tuple<T...> operator () (const std::tuple<T...>& val, const RegisterSettings &settings = {}) { return boost::hana::transform(val, RegTransform{settings}); }
     };
 
 	template<typename T>
