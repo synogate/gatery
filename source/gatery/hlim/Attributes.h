@@ -65,9 +65,14 @@ struct RegisterAttributes : public Attributes {
 		DONT_USE
 	};
 
+	enum class Active {
+		LOW,
+		HIGH
+	};
+
 	ResetType resetType = ResetType::SYNCHRONOUS;
 	bool initializeRegs = true;
-	bool resetHighActive = true;
+	Active resetActive = Active::HIGH;
 
 	UsageType registerResetPinUsage = UsageType::DONT_CARE;
 	UsageType registerEnablePinUsage = UsageType::DONT_CARE;

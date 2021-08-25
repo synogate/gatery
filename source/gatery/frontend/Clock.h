@@ -36,6 +36,8 @@ namespace gtry {
 
     class Clock;
 
+    hlim::ClockRational clockFromString(std::string text);
+
     class ClockConfig
     {
         public:
@@ -43,6 +45,23 @@ namespace gtry {
             using TriggerEvent = hlim::Clock::TriggerEvent;
             using ResetType = hlim::RegisterAttributes::ResetType;
             using UsageType = hlim::RegisterAttributes::UsageType;
+            using ResetActive = hlim::RegisterAttributes::Active;
+
+            void loadConfig(const utils::ConfigTree& config);
+            void print(std::ostream& s) const;
+
+            const auto& absoluteFrequency() const { return m_absoluteFrequency; }
+            const auto& frequencyMultiplier() const { return m_frequencyMultiplier; }
+            const auto& name() const { return m_name; }
+            const auto& resetName() const { return m_resetName; }
+            const auto& triggerEvent() const { return m_triggerEvent; }
+            const auto& phaseSynchronousWithParent() const { return m_phaseSynchronousWithParent; }
+            const auto& resetType() const { return m_resetType; }
+            const auto& initializeRegs() const { return m_initializeRegs; }
+            const auto& resetActive() const { return m_resetActive; }
+            const auto& registerResetPinUsage() const { return m_registerResetPinUsage; }
+            const auto& registerEnablePinUsage() const { return m_registerEnablePinUsage; }
+            const auto& attributes() const { return m_attributes; }
 
         protected:
             boost::optional<ClockRational> m_absoluteFrequency;
@@ -52,23 +71,19 @@ namespace gtry {
             boost::optional<TriggerEvent> m_triggerEvent;
             boost::optional<bool> m_phaseSynchronousWithParent;
 
-            //boost::optional<bool> 
-
-
             boost::optional<ResetType> m_resetType;
             boost::optional<bool> m_initializeRegs;
-            boost::optional<bool> m_resetHighActive;
+            boost::optional<ResetActive> m_resetActive;
 
         	boost::optional<UsageType> m_registerResetPinUsage;
 	        boost::optional<UsageType> m_registerEnablePinUsage;
 
-            std::map<std::string, hlim::VendorSpecificAttributes> m_additionalUserDefinedVendorAttributes;
-
+            hlim::Attributes m_attributes;
 
             friend class Clock;
         public:
             inline ClockConfig &addRegisterAttribute(const std::string &vendor, const std::string &attrib, const std::string &type, const std::string &value) { 
-                m_additionalUserDefinedVendorAttributes[vendor][attrib] = {.type = type, .value = value};
+                m_attributes.userDefinedVendorAttributes[vendor][attrib] = {.type = type, .value = value};
                 return *this; 
             }
 
@@ -84,7 +99,7 @@ namespace gtry {
 
             BUILD_SET(m_resetType, setResetType)
             BUILD_SET(m_initializeRegs, setInitializeRegs)
-            BUILD_SET(m_resetHighActive, setResetHighActive)
+            BUILD_SET(m_resetActive, setResetActive)
 
             BUILD_SET(m_registerResetPinUsage, setRegisterResetPinUsage)
             BUILD_SET(m_registerEnablePinUsage, setRegisterEnablePinUsage)
@@ -92,6 +107,7 @@ namespace gtry {
     #undef BUILD_SET
     };
 
+    std::ostream& operator << (std::ostream&, const ClockConfig&);
 
     /**
      * @todo write docs
