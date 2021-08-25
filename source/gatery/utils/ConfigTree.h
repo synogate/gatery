@@ -38,6 +38,10 @@ namespace gtry::utils
 
 		explicit operator bool() const { return isDefined(); }
 
+		using map_iterator = const DummyConfigTree*;
+		map_iterator mapBegin() const { return nullptr; }
+		map_iterator mapEnd() const { return nullptr; }
+
 		using iterator = const DummyConfigTree*;
 		iterator begin() const { return nullptr; }
 		iterator end() const { return nullptr; }
@@ -67,6 +71,18 @@ namespace gtry::utils
 			bool operator!=(const iterator& rhs) const { return it != rhs.it; }
 		};
 
+		struct map_iterator
+		{
+			YAML::Node::const_iterator it;
+
+			void operator++() { ++it; }
+			YamlConfigTree operator*() { return YamlConfigTree(it->second); }
+			bool operator==(const map_iterator& rhs) const { return it == rhs.it; }
+			bool operator!=(const map_iterator& rhs) const { return it != rhs.it; }
+
+			std::string key() const { return it->first.as<std::string>(); }
+		};
+
 	public:
 		YamlConfigTree() = default;
 		YamlConfigTree(YAML::Node node) { m_nodes.push_back(node); }
@@ -77,6 +93,9 @@ namespace gtry::utils
 		bool isScalar() const;
 		bool isSequence() const;
 		bool isMap() const;
+
+		map_iterator mapBegin() const;
+		map_iterator mapEnd() const;
 
 		iterator begin() const;
 		iterator end() const;

@@ -144,6 +144,26 @@ namespace gtry::utils
 		return !m_nodes.empty() && m_nodes.front().IsMap();
 	}
 
+	YamlConfigTree::map_iterator YamlConfigTree::mapBegin() const
+	{
+		if (isMap())
+		{
+			HCL_ASSERT_HINT(m_nodes.size() == 1, "no impl");
+			return map_iterator{ m_nodes.front().begin() };
+		}
+		return map_iterator();
+	}
+
+	YamlConfigTree::map_iterator YamlConfigTree::mapEnd() const
+	{
+		if (isMap())
+		{
+			HCL_ASSERT_HINT(m_nodes.size() == 1, "no impl");
+			return map_iterator{ m_nodes.front().end() };
+		}
+		return map_iterator();
+	}
+
 	YamlConfigTree::iterator YamlConfigTree::begin() const
 	{
 		if (isSequence())
