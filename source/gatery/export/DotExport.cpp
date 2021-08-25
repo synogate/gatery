@@ -128,7 +128,16 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
                     file << node->getName();
                 else
                     file << "[zip]";
-                file << " - " << node->getId() << " - " << node->getTypeName() << "\"";
+                file << " - " << node->getId() << " - " << node->getTypeName();
+                if (auto* reg = dynamic_cast<hlim::Node_Register*>(node)) {
+                    file << '[';
+                    if (reg->getFlags().containsAnyOf(hlim::Node_Register::Flags::ALLOW_RETIMING_FORWARD))
+                        file << 'F';
+                    if (reg->getFlags().containsAnyOf(hlim::Node_Register::Flags::ALLOW_RETIMING_BACKWARD))
+                        file << 'B';
+                    file << ']';
+                }
+                file << "\"";
                 styleNode(file, node);
                 file << "];" << std::endl;
                 node2idx[node] = idx;
@@ -145,7 +154,16 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
         for (auto &node : circuit.getNodes()) {
             if (node->getGroup() == nullptr) {
                 if (!subnet.contains(node.get())) continue;
-                file << "node_" << idx << "[label=\"" << node->getName() << " - " << node->getId() << " - " << node->getTypeName() << "\"";
+                file << "node_" << idx << "[label=\"" << node->getName() << " - " << node->getId() << " - " << node->getTypeName();
+                if (auto *reg = dynamic_cast<hlim::Node_Register*>(node.get())) {
+                    file << '[';
+                    if (reg->getFlags().containsAnyOf(hlim::Node_Register::Flags::ALLOW_RETIMING_FORWARD))
+                        file << 'F';
+                    if (reg->getFlags().containsAnyOf(hlim::Node_Register::Flags::ALLOW_RETIMING_BACKWARD))
+                        file << 'B';
+                    file << ']';
+                }
+                file << "\"";
                 styleNode(file, node.get());
                 file << "];" << std::endl;
                 node2idx[node.get()] = idx;
