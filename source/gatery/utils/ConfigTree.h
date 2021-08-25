@@ -173,7 +173,9 @@ namespace YAML
 		static auto decode(const Node& node, T& out) -> std::enable_if_t<std::is_enum_v<T>, bool>
 		{
 			const std::string value = node.as<std::string>();
-			const std::optional<T> eval = magic_enum::enum_cast<T>(value);
+			const std::optional<T> eval = magic_enum::enum_cast<T>(value,
+				[](char a, char b) { return std::tolower(a) == std::tolower(b); });
+
 			if (eval)
 			{
 				out = *eval;
