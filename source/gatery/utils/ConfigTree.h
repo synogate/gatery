@@ -183,9 +183,17 @@ namespace YAML
 			{
 				std::ostringstream err;
 				err << "unknown value '" << value << "' for enum " << magic_enum::enum_type_name<T>()
-					<< ". Valid values are:";
-				for (auto&& name : magic_enum::enum_names<T>())
-					err << ' ' << name;
+					<< ". Valid values are ";
+
+				auto names = magic_enum::enum_names<T>();
+				for (size_t i = 0; i < names.size(); ++i)
+				{
+					if (i == names.size() - 1 && names.size() > 1)
+						err << " or ";
+					else if (i != 0)
+						err << ", ";
+					err << names[i];
+				}
 				err << '\n';
 
 				throw std::runtime_error{ err.str() };
