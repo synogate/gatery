@@ -1028,6 +1028,9 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 						wordSignals[wordIdx].conflict = buildConflictOr(wordSignals[wordIdx].conflict, wordConflict);
 						wordSignals[wordIdx].overrideData = buildConflictMux(wordSignals[wordIdx].overrideData, wrPortSignals.words[wordIdx], wordConflict);
 						wordSignals[wordIdx].overrideWpIdx = buildConflictMux(wordSignals[wordIdx].overrideWpIdx, wrPortSignals.wpIdx, wordConflict);
+
+						giveName(wordSignals[wordIdx].conflict, (boost::format("conflict_word_%d_stage_%d") % wordIdx % stageIdx).str());
+						giveName(wordSignals[wordIdx].overrideData, (boost::format("bypass_data_word_%d_stage_%d") % wordIdx % stageIdx).str());
 					}
 				} else {
 					// This write port needs less than the maximum latency compensation, usually because it already had a manually placed register in its path.
@@ -1099,6 +1102,10 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 
 			auto conflict = wordSignals[wordIdx].conflict;
 
+			giveName(conflict, (boost::format("final_conflict_word_%d") % wordIdx).str());
+			giveName(overrideData, (boost::format("final_override_data_word_%d") % wordIdx).str());
+
+
 			// If using m_retimeToMux and useMemory, then we put the last set of registers here explicitely
 			if (m_retimeToMux && useMemory) {
 				conflict = createRegister(conflict, {});
@@ -1117,6 +1124,7 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 		}
 		
 		NodePort data = joinWords(rpOutput);
+		giveName(data, "hazard_corrected_data");
 		
 		// Rewire  all original consumers to use the new, potentially forwarded data
 		for (auto np : consumers)
@@ -1428,12 +1436,16 @@ NodePort ReadModifyWriteHazardLogicBuilder::buildRingBufferCounter(size_t maxLat
 	auto *addNode = m_circuit.createNode<Node_Arithmetic>(Node_Arithmetic::ADD);
 	m_newNodes.add(addNode);
 	addNode->recordStackTrace();
-	addNode->connectInput(0, {.node = reg, .port = 0ull});
 	addNode->connectInput(1, {.node = constOne, .port = 0ull});
 
 	reg->connectInput(Node_Register::DATA, {.node = addNode, .port = 0ull});
 
-	return {.node = reg, .port = 0ull};
+	NodePort counter = {.node = reg, .port = 0ull};
+	giveName(counter, "ringbuffer_write_pointer");
+
+	addNode->connectInput(0, counter);
+
+	return counter;
 }
 
 Node_Memory *ReadModifyWriteHazardLogicBuilder::buildWritePortRingBuffer(NodePort wordData, NodePort ringBufferCounter)
@@ -1446,7 +1458,7 @@ Node_Memory *ReadModifyWriteHazardLogicBuilder::buildWritePortRingBuffer(NodePor
 	memory->recordStackTrace();
 	memory->setNoConflicts();
 	memory->setType(Node_Memory::MemType::LUTRAM, 1);
-	memory->setName("read_write_hazard_ringbuffer");
+	memory->setName("read_write_hazard_bypass_ringbuffer");
 	{
 		sim::DefaultBitVectorState state;
 		state.resize((1ull << counterWidth) * wordWidth);
@@ -1462,6 +1474,13 @@ Node_Memory *ReadModifyWriteHazardLogicBuilder::buildWritePortRingBuffer(NodePor
 	writePort->setClock(m_clockDomain);
 
 	return memory;
+}
+
+void ReadModifyWriteHazardLogicBuilder::giveName(NodePort &nodePort, std::string name)
+{
+	auto *sig = m_circuit.appendSignal(nodePort);
+	sig->setName(std::move(name));
+	m_newNodes.add(sig);
 }
 
 

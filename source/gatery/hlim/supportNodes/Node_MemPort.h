@@ -50,7 +50,8 @@ class Node_MemPort : public Node<Node_MemPort>
             count
         };
         enum class RefInternal {
-            memory = (unsigned)Internal::count
+            memory = (unsigned)Internal::count,
+            prevWritePorts = (unsigned)Internal::count+1,
         };
 
 
@@ -94,6 +95,8 @@ class Node_MemPort : public Node<Node_MemPort>
     protected:
         friend class Node_Memory;
         std::size_t m_bitWidth;
+
+        std::vector<Node_MemPort*> getPrevWritePorts() const;
 };
 
 }

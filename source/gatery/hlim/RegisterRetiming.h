@@ -170,6 +170,8 @@ class ReadModifyWriteHazardLogicBuilder
 
         NodePort buildRingBufferCounter(size_t maxLatencyCompensation);
         Node_Memory *buildWritePortRingBuffer(NodePort wordData, NodePort ringBufferCounter);
+
+        void giveName(NodePort &nodePort, std::string name);
 };
 
 }

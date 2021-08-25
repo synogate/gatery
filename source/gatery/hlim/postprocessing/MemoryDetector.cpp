@@ -927,9 +927,38 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
             );
         }
 
-        std::set<size_t> readAddresses;
+        struct WritePortStatus {
+            bool writeEnabled;
+            bool writeEnabledUndefined;
+            size_t writeAddr;
+            bool writeAddrUndefined;
+        };
+
+        std::vector<WritePortStatus> writePortStatus;
+        writePortStatus.resize(convertedWritePorts.size());
+
         while (true) {
-            readAddresses.clear();
+            // Check the write port status first so that the read ports can check for and return undefined on address collisions.
+
+            for (auto i : utils::Range(convertedWritePorts.size())) {
+                auto addr = convertedWritePorts[i].addr.eval();
+                HCL_ASSERT(addr.size() > 0);
+                writePortStatus[i].writeAddr = addr.extractNonStraddling(sim::DefaultConfig::VALUE, 0, addr.size());
+                writePortStatus[i].writeAddrUndefined = !sim::allDefinedNonStraddling(addr, 0, addr.size());
+
+                if (writePortStatus[i].writeAddr >= mem.size() / convertedWritePorts[i].width)
+                    writePortStatus[i].writeAddrUndefined = true;
+
+                writePortStatus[i].writeEnabledUndefined = false;
+                writePortStatus[i].writeEnabled = true;
+                if (convertedWritePorts[i].en) {
+                    auto enabled = convertedWritePorts[i].en->eval();
+                    HCL_ASSERT(enabled.size() == 1);
+                    writePortStatus[i].writeEnabledUndefined = !enabled.get(sim::DefaultConfig::DEFINED, 0);
+                    writePortStatus[i].writeEnabled = enabled.get(sim::DefaultConfig::VALUE, 0);
+                }           
+            }
+
 
             for (auto i : utils::Range(convertedReadPorts.size())) {
                 auto addr = convertedReadPorts[i].addr.eval();
@@ -947,66 +976,64 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
                     readUndefined |= !enabled.get(sim::DefaultConfig::VALUE, 0);
                 }
 
-                //std::cout << "rdAddr: " << rdAddr << " readUndefined: " << readUndefined << std::endl;
-
-                if (readUndefined)
+                bool writePortAddrCollision = false;
+                for (auto &wp : writePortStatus)
+                    if (wp.writeEnabled || wp.writeEnabledUndefined)
+                        if (wp.writeAddr == rdAddr) {
+                            writePortAddrCollision = true;
+                            break;
+                        }
+/*
+                if (writePortAddrCollision)
+                    std::cout << "Read write addr collision!" << std::endl;
+*/
+                if (readUndefined || writePortAddrCollision)
                     readPortRegs[i].writeUndefined();
-                else {
+                else
                     readPortRegs[i].writeData(mem, rdAddr);
-                    readAddresses.insert(rdAddr);
-                }
-
-                //std::cout << "shiftreg: " << readPortRegs[i].shiftReg << std::endl;
-                //std::cout << "writeOffset: " << readPortRegs[i].writeOffset() << std::endl;
-                //std::cout << "readOffset: " << readPortRegs[i].readOffset() << std::endl;
 
                 convertedReadPorts[i].data = readPortRegs[i].read();
 
                 readPortRegs[i].push();
             }
 
+            // Actually performs write after outputing read information in case there is a combinatorical loop from a read port to a write port
+
             for (auto i : utils::Range(convertedWritePorts.size())) {
-                auto addr = convertedWritePorts[i].addr.eval();
-                HCL_ASSERT(addr.size() > 0);
-                size_t wrAddr = addr.extractNonStraddling(sim::DefaultConfig::VALUE, 0, addr.size());
-                bool writeAddrUndefined = !sim::allDefinedNonStraddling(addr, 0, addr.size());
-
-                if (wrAddr >= mem.size() / convertedWritePorts[i].width)
-                    writeAddrUndefined = true;
-
-                bool writeEnableUndefined = false;
-                bool writeEnabled = true;
-                if (convertedWritePorts[i].en) {
-                    auto enabled = convertedWritePorts[i].en->eval();
-                    HCL_ASSERT(enabled.size() == 1);
-                    writeEnableUndefined = !enabled.get(sim::DefaultConfig::DEFINED, 0);
-                    writeEnabled = enabled.get(sim::DefaultConfig::VALUE, 0);
-                }
-
-                //std::cout << "wrAddr: " << wrAddr << " writeAddrUndefined: " << writeAddrUndefined << " writeEnableUndefined: " << writeEnableUndefined << " writeEnabled: " << writeEnabled << std::endl;
-
-                if (writeEnabled || writeEnableUndefined) {
-                    if (writeAddrUndefined) {
-                        std::cout << "Warning: Nuking external memory" << std::endl;
+                if (writePortStatus[i].writeEnabled || writePortStatus[i].writeEnabledUndefined) {
+                    if (writePortStatus[i].writeAddrUndefined) {
+                        std::cout << "Warning: Nuking external memory with write enabled (or undefined) and undefined address." << std::endl;
                         mem.clearRange(sim::DefaultConfig::DEFINED, 0, mem.size());
                     } else {
-                        if (readAddresses.contains(wrAddr))
-                            std::cout << "Warning: Read during write on external memory" << std::endl;
 
-                        if (writeEnableUndefined) {
-                            //std::cout << "Write enable undefined" << std::endl;
-                            mem.clearRange(sim::DefaultConfig::DEFINED, wrAddr*convertedWritePorts[i].width, convertedWritePorts[i].width);
+                        bool writeAddrCollision = false;
+                        for (auto j : utils::Range(i)) {
+                            if (writePortStatus[j].writeEnabled || writePortStatus[j].writeEnabledUndefined)
+                                if (writePortStatus[j].writeAddr == writePortStatus[i].writeAddr) {
+                                    writeAddrCollision = true;
+                                    break;
+                                }
+                        }
+
+                        if (writeAddrCollision)
+                            std::cout << "Warning: Two write ports are trying to write to the same memory location." << std::endl;
+
+                        if (writePortStatus[i].writeEnabledUndefined || writeAddrCollision) {
+                            std::cout << "Writing undefined data" << std::endl;
+                            mem.clearRange(sim::DefaultConfig::DEFINED, writePortStatus[i].writeAddr*convertedWritePorts[i].width, convertedWritePorts[i].width);
                         } else {
-                            auto wrData = convertedWritePorts[i].data.eval();
+                            auto wrData = convertedWritePorts[i].data.eval();             
+
+// For corrupting the memory
 //    wrData.set(sim::DefaultConfig::VALUE, rand() % wrData.size(), rand() & 1);
 //if (rand() % 10 == 0)
 //wrData.clearRange(sim::DefaultConfig::VALUE, 0, wrData.size());
-                            //std::cout << "wrData: " << wrData << std::endl;
+
                             HCL_ASSERT(wrData.size() == convertedWritePorts[i].width);
-                            mem.copyRange(wrAddr*convertedWritePorts[i].width, wrData, 0, convertedWritePorts[i].width);
+                            mem.copyRange(writePortStatus[i].writeAddr*convertedWritePorts[i].width, wrData, 0, convertedWritePorts[i].width);
                         }
                     }
-                }
+                }              
             }
 
             co_await sim::WaitClock(clock);

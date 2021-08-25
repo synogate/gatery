@@ -152,6 +152,8 @@ void Node_MemPort::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
         enableDefined = state.get(sim::DefaultConfig::DEFINED, inputOffsets[(size_t)Inputs::enable]);
     }
 
+    auto prevWPs = getPrevWritePorts();
+
     // First, do an asynchronous read.
     if (outputOffsets[(size_t)Outputs::rdData] != ~0ull) {
 
@@ -170,10 +172,39 @@ void Node_MemPort::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
             if (!utils::isMaskSet(addressDefined, 0, addrType.width)) {
                 state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[(size_t)Outputs::rdData], getBitWidth());
             } else {
+                // Fetch value from memory
                 auto memSize = getMemory()->getSize();
                 HCL_ASSERT(memSize % getBitWidth() == 0);
                 auto index = (addressValue * getBitWidth()) % memSize;
                 state.copyRange(outputOffsets[(size_t)Outputs::rdData], state, internalOffsets[(size_t)RefInternal::memory] + index, getBitWidth());
+
+                // Check for overrides. Check in order of write ports (they are added last to first).
+                // Potentially overwrite what we just read.
+                for (size_t i = prevWPs.size()-1; i < prevWPs.size(); i--) {
+                    // Same order as in  Node_MemPort::getReferencedInternalStateSizes()
+                    size_t addrOffset = (size_t)RefInternal::prevWritePorts+i*3+0;
+                    size_t wrDataOffset = (size_t)RefInternal::prevWritePorts+i*3+1;
+                    size_t wrEnableOffset = (size_t)RefInternal::prevWritePorts+i*3+2;
+
+                    const auto &wrAddrType = prevWPs[i]->getDriverConnType((size_t)Inputs::address);
+                    HCL_ASSERT_HINT(prevWPs[i]->getBitWidth() == getBitWidth(), "Mixed width memory ports not yet supported in simulation!");
+
+                    std::uint64_t wrAddressValue   = state.extractNonStraddling(sim::DefaultConfig::VALUE, internalOffsets[addrOffset], wrAddrType.width);
+                    std::uint64_t wrAddressDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, internalOffsets[addrOffset], wrAddrType.width);
+
+                    bool isWriting = state.get(sim::DefaultConfig::VALUE, internalOffsets[wrEnableOffset]);
+
+                    if (isWriting) {
+                        // It's writing something (though write enable might be undefined in which case the stored write dta is undefined).
+                        if (!utils::isMaskSet(wrAddressDefined, 0, wrAddrType.width)) {
+                            // It's nuking the memory, but since we are dependent, we get a preview.
+                            state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[(size_t)Outputs::rdData], getBitWidth());
+                        } else if (wrAddressValue == addressValue) {
+                            // actual collision, forward to-be-written data
+                            state.copyRange(outputOffsets[(size_t)Outputs::rdData], state, internalOffsets[wrDataOffset], getBitWidth());
+                        }
+                    }
+                }
             }
         }
     }
@@ -187,12 +218,17 @@ void Node_MemPort::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
         state.copyRange(internalOffsets[(size_t)Internal::wrData], state, inputOffsets[(size_t)Inputs::wrData], wrDataType.width);
 
         bool doWrite = enableValue || !enableDefined;
+        bool writingDefined = enableDefined;
         // optional enables, defaults to true
         if (inputOffsets[(size_t)Inputs::wrEnable] != ~0ull) {
             doWrite &= state.get(sim::DefaultConfig::VALUE, inputOffsets[(size_t)Inputs::wrEnable]) ||
                         !state.get(sim::DefaultConfig::DEFINED, inputOffsets[(size_t)Inputs::wrEnable]);
+            writingDefined &= state.get(sim::DefaultConfig::DEFINED, inputOffsets[(size_t)Inputs::wrEnable]);
         }
         state.set(sim::DefaultConfig::VALUE, internalOffsets[(size_t)Internal::wrEnable], doWrite);
+
+        if (!writingDefined) // If it's unclear whether the write is enabled, do the write but write undefined
+            state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[(size_t)Internal::wrData], wrDataType.width);
     }
 }
 
@@ -284,9 +320,36 @@ std::vector<size_t> Node_MemPort::getInternalStateSizes() const
     return sizes;
 }
 
+std::vector<Node_MemPort*> Node_MemPort::getPrevWritePorts() const
+{
+    std::vector<Node_MemPort*> res;
+
+    auto *prevNode = (Node_MemPort*)getDriver((size_t)Inputs::orderAfter).node;
+    while (prevNode != nullptr) {
+        if (prevNode->isWritePort())
+            res.push_back(prevNode);
+        
+        prevNode = (Node_MemPort*)prevNode->getDriver((size_t)Inputs::orderAfter).node;
+    }
+
+    return res;
+}
+
 std::vector<std::pair<BaseNode*, size_t>> Node_MemPort::getReferencedInternalStateSizes() const
 {
-    return {{getMemory(), (size_t)Node_Memory::Internal::data}};
+    auto prevWPs = getPrevWritePorts();
+
+    std::vector<std::pair<BaseNode*, size_t>> res;
+    res.reserve(prevWPs.size()+1);
+
+    res.push_back({getMemory(), (size_t)Node_Memory::Internal::data});
+    for (auto wp : prevWPs) {
+        res.push_back({wp, (size_t)Internal::address});
+        res.push_back({wp, (size_t)Internal::wrData});
+        res.push_back({wp, (size_t)Internal::wrEnable});
+    }
+
+    return res;
 }
 
 std::unique_ptr<BaseNode> Node_MemPort::cloneUnconnected() const
