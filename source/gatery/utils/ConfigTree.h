@@ -49,6 +49,7 @@ namespace gtry::utils
 		DummyConfigTree operator[](size_t index) const { return {}; }
 
 		template<typename T> T as(const T& def) const { return def; }
+		template<typename T> T as() const { throw std::runtime_error{ "get unknown config tree" }; }
 
 		void loadFromFile(const std::filesystem::path& filename) {}
 	};
@@ -104,6 +105,7 @@ namespace gtry::utils
 
 		YamlConfigTree operator[](std::string_view path) const;
 		template<typename T> T as(const T& def) const;
+		template<typename T> T as() const;
 
 		void loadFromFile(const std::filesystem::path &filename);
 
@@ -120,6 +122,15 @@ namespace gtry::utils
 		return m_nodes.front().as<T>();
 	}
 
+	template<typename T>
+	inline T YamlConfigTree::as() const
+	{
+		if (m_nodes.size() != 1)
+			throw std::runtime_error{ "non optional config value not found" };
+
+		return m_nodes.front().as<T>();
+	}
+
 	template<>
 	inline std::string YamlConfigTree::as(const std::string& def) const
 	{
@@ -130,6 +141,15 @@ namespace gtry::utils
 			ret = m_nodes.front().as<std::string>();
 
 		return replaceEnvVars(ret);
+	}
+
+	template<>
+	inline std::string YamlConfigTree::as() const
+	{
+		if (m_nodes.size() != 1)
+			throw std::runtime_error{ "non optional config value not found" };
+
+		return replaceEnvVars(m_nodes.front().as<std::string>());
 	}
 
 	using ConfigTree = YamlConfigTree;
