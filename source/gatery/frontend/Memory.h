@@ -129,20 +129,9 @@ namespace gtry
 			state.clearRange(sim::DefaultConfig::DEFINED, 0, m_numWords * m_wordWidth);
 			m_memoryNode->setPowerOnState(std::move(state));
 
-
 			auto&& cfg = ent.instanceConfig();
 			m_readLatencyHint = cfg["readLatency"].as(m_readLatencyHint);
-
-			if (cfg["type"])
-			{
-				if (cfg["readLatency"])
-					setType(cfg["type"].as(MemType::DONT_CARE), m_readLatencyHint);
-				else
-					setType(cfg["type"].as(MemType::DONT_CARE));
-			}
-
-			if (cfg["name"])
-				setName(cfg["name"].as<std::string>(""));
+			m_memoryNode->loadConfig(cfg);
 		}
 
 		size_t readLatencyHint() const { return m_readLatencyHint; }
