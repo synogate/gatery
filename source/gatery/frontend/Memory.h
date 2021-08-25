@@ -167,7 +167,7 @@ namespace gtry
 		const Data& defaultValue() const { return m_defaultValue; }
 
 	protected:
-		Area m_area = "Memory";
+		Area m_area{ "Memory" };
 		hlim::NodePtr<hlim::Node_Memory> m_memoryNode;
 		Data m_defaultValue;
 		size_t m_numWords = 0;
