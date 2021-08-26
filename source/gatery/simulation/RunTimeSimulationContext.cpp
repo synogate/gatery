@@ -36,6 +36,9 @@ RunTimeSimulationContext::RunTimeSimulationContext(Simulator *simulator) : m_sim
 
 void RunTimeSimulationContext::overrideSignal(const SigHandle &handle, const DefaultBitVectorState &state)
 {
+    if (state.size() == 0)
+        return;
+
     hlim::Node_Pin *pin = nullptr;
     
     auto it = m_sigOverridePinCache.find(handle.getOutput());
