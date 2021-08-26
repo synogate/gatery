@@ -30,7 +30,7 @@ Clock::Clock()
     m_name = "clk";
     m_resetName = "reset";
     m_triggerEvent = TriggerEvent::RISING;
-    m_phaseSynchronousWithParent = false;
+    m_phaseSynchronousWithParent = true;
     m_parentClock = nullptr;
 }
 
@@ -58,6 +58,63 @@ std::unique_ptr<Clock> Clock::cloneUnconnected(Clock *newParent)
     res->m_phaseSynchronousWithParent = m_phaseSynchronousWithParent;
     return res;
 }
+
+
+ClockRational Clock::getMinResetTime() const
+{
+    ClockRational res = m_minResetTime;
+
+    if (m_registerAttributes.resetType == RegisterAttributes::ResetType::ASYNCHRONOUS)
+        res = std::max(res, ClockRational{1,1}/getAbsoluteFrequency());
+
+    for (auto d : m_derivedClocks)
+        res = std::max(res, d->getMinResetTime());
+    return res;
+}
+
+size_t Clock::getMinResetCycles() const
+{
+    size_t res = m_minResetCycles;
+
+    if (m_registerAttributes.resetType == RegisterAttributes::ResetType::SYNCHRONOUS)
+        res = std::max<size_t>(res, 1);
+
+    for (auto d : m_derivedClocks) {
+        HCL_ASSERT(d->m_phaseSynchronousWithParent);
+        auto cycles = d->getFrequencyMuliplier() * d->getMinResetCycles();
+
+        res = std::max(res, ceil(cycles));
+    }
+    return res;
+}
+
+
+Clock *Clock::getClockPinSource()
+{
+    if (m_parentClock == nullptr)
+        return this;
+
+    if (m_parentClock->getName() != getName() ||
+        m_parentClock->getAbsoluteFrequency() != getAbsoluteFrequency() ||
+        !m_phaseSynchronousWithParent)
+        return this;
+
+    return m_parentClock->getClockPinSource();
+}
+
+Clock *Clock::getResetPinSource()
+{
+    if (m_parentClock == nullptr)
+        return this;
+
+    if (m_parentClock->getResetName() != getResetName())
+        return this;
+
+    return m_parentClock->getResetPinSource();
+}
+
+
+
 
 RootClock::RootClock(std::string name, ClockRational frequency) : m_frequency(frequency)
 {
@@ -97,6 +154,7 @@ DerivedClock::DerivedClock(Clock *parentClock)
     m_phaseSynchronousWithParent = m_parentClock->getPhaseSynchronousWithParent();
 
     m_registerAttributes = m_parentClock->getRegAttribs();
+    m_parentClock->addDerivedClock(this);
 }
 
     
@@ -122,6 +180,5 @@ std::unique_ptr<Clock> DerivedClock::allocateClone(Clock *newParent)
 {
     return std::unique_ptr<Clock>(new DerivedClock(newParent));
 }
-
         
 }

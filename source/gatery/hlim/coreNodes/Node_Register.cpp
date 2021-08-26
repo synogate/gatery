@@ -18,6 +18,7 @@
 #include "gatery/pch.h"
 #include "Node_Register.h"
 #include "Node_Constant.h"
+#include "../Clock.h"
 
 #include "../SignalDelay.h"
 
@@ -44,47 +45,76 @@ void Node_Register::setClock(Clock *clk)
     attachClock(clk, 0);
 }
 
-void Node_Register::simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
+void Node_Register::simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
 {
-    auto resetDriver = getNonSignalDriver(RESET_VALUE);
-    if (resetDriver.node == nullptr) {
-        state.setRange(sim::DefaultConfig::DEFINED, internalOffsets[0], getOutputConnectionType(0).width, false);
-        state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
-        return;
+    if (m_clocks[0]->getRegAttribs().initializeRegs) {
+        Node_Constant *constNode = getResetValue();
+        if (constNode == nullptr) {
+            state.setRange(sim::DefaultConfig::DEFINED, internalOffsets[0], getOutputConnectionType(0).width, false);
+            state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+        } else
+            state.insert(constNode->getValue(), outputOffsets[0]);
     }
+}
 
-    Node_Constant *constNode = dynamic_cast<Node_Constant *>(resetDriver.node);
-    HCL_ASSERT_HINT(constNode != nullptr, "Constant value propagation is not yet implemented, so for simulation the register reset value must be connected to a constant node via signals only!");
+void Node_Register::simulateResetChange(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort, bool resetHigh) const
+{
+    bool inReset = resetHigh ^ !m_clocks[0]->getRegAttribs().resetHighActive;
+    state.set(sim::DefaultConfig::VALUE, internalOffsets[INT_IN_RESET], inReset);
 
-    state.insert(constNode->getValue(), outputOffsets[0]);
+    if (inReset && m_clocks[0]->getRegAttribs().resetType == RegisterAttributes::ResetType::ASYNCHRONOUS) {
+        Node_Constant *constNode = getResetValue();
+        if (constNode == nullptr) {
+            state.setRange(sim::DefaultConfig::DEFINED, internalOffsets[0], getOutputConnectionType(0).width, false);
+            state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+        } else
+            state.insert(constNode->getValue(), outputOffsets[0]);    
+    }
 }
 
 void Node_Register::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
-    if (inputOffsets[DATA] == ~0ull)
-        state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[INT_DATA], getOutputConnectionType(0).width);
-    else
-        state.copyRange(internalOffsets[INT_DATA], state, inputOffsets[DATA], getOutputConnectionType(0).width);
+    if (!state.get(sim::DefaultConfig::VALUE, internalOffsets[INT_IN_RESET])) {
+        if (inputOffsets[DATA] == ~0ull)
+            state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[INT_DATA], getOutputConnectionType(0).width);
+        else
+            state.copyRange(internalOffsets[INT_DATA], state, inputOffsets[DATA], getOutputConnectionType(0).width);
 
-    if (inputOffsets[ENABLE] == ~0ull) {
-        state.setRange(sim::DefaultConfig::DEFINED, internalOffsets[INT_ENABLE], 1);
-        state.setRange(sim::DefaultConfig::VALUE, internalOffsets[INT_ENABLE], 1);
-    } else
-        state.copyRange(internalOffsets[INT_ENABLE], state, inputOffsets[ENABLE], 1);
+        if (inputOffsets[ENABLE] == ~0ull) {
+            state.set(sim::DefaultConfig::DEFINED, internalOffsets[INT_ENABLE], 1);
+            state.set(sim::DefaultConfig::VALUE, internalOffsets[INT_ENABLE], 1);
+        } else
+            state.copyRange(internalOffsets[INT_ENABLE], state, inputOffsets[ENABLE], 1);
+    } else {
+        // If ASYNCHRONOUS, output was already set in simulatePowerOn
+    }
 }
 
 void Node_Register::simulateAdvance(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const
 {
     HCL_ASSERT(clockPort == 0);
 
-    bool enableDefined = state.get(sim::DefaultConfig::DEFINED, internalOffsets[INT_ENABLE]);
-    bool enable = state.get(sim::DefaultConfig::VALUE, internalOffsets[INT_ENABLE]);
+    if (state.get(sim::DefaultConfig::VALUE, internalOffsets[INT_IN_RESET])) {
+        if (m_clocks[0]->getRegAttribs().resetType == RegisterAttributes::ResetType::SYNCHRONOUS) {           
+            Node_Constant *constNode = getResetValue();
+            if (constNode == nullptr) {
+                state.setRange(sim::DefaultConfig::DEFINED, internalOffsets[0], getOutputConnectionType(0).width, false);
+                state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+            } else {
+                state.insert(constNode->getValue(), internalOffsets[0]);
+                state.insert(constNode->getValue(), outputOffsets[0]);
+            }
+        }
+    } else {
+        bool enableDefined = state.get(sim::DefaultConfig::DEFINED, internalOffsets[INT_ENABLE]);
+        bool enable = state.get(sim::DefaultConfig::VALUE, internalOffsets[INT_ENABLE]);
 
-    if (!enableDefined) {
-        state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width);
-    } else
-        if (enable)
-            state.copyRange(outputOffsets[0], state, internalOffsets[INT_DATA], getOutputConnectionType(0).width);
+        if (!enableDefined) {
+            state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width);
+        } else
+            if (enable)
+                state.copyRange(outputOffsets[0], state, internalOffsets[INT_DATA], getOutputConnectionType(0).width);
+    }
 }
 
 
@@ -119,6 +149,7 @@ std::vector<size_t> Node_Register::getInternalStateSizes() const
     std::vector<size_t> res(NUM_INTERNALS);
     res[INT_DATA] = getOutputConnectionType(0).width;
     res[INT_ENABLE] = 1;
+    res[INT_IN_RESET] = 1;
     return res;
 }
 
@@ -162,6 +193,18 @@ void Node_Register::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size
 {
     inputPort = ~0u;
     inputBit = ~0u;
+}
+
+Node_Constant *Node_Register::getResetValue() const
+{
+    auto resetDriver = getNonSignalDriver(RESET_VALUE);
+    if (resetDriver.node == nullptr)
+        return nullptr;
+
+    Node_Constant *constNode = dynamic_cast<Node_Constant *>(resetDriver.node);
+    HCL_ASSERT_HINT(constNode != nullptr, "For simulation the register reset value must be connected to a constant node via signals only!");
+
+    return constNode;
 }
 
 

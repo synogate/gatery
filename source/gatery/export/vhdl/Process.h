@@ -18,6 +18,8 @@
 #pragma once
 
 #include "BaseGrouping.h"
+#include "../../hlim/Attributes.h"
+#include "../../hlim/Clock.h"
 
 #include <ostream>
 
@@ -74,9 +76,13 @@ class CombinatoryProcess : public Process
 
 struct RegisterConfig
 {
-    hlim::Clock *clock;
-    bool hasResetSignal;
-    inline bool operator<(const RegisterConfig &rhs) const { if (clock < rhs.clock) return true; if (clock > rhs.clock) return false; return hasResetSignal < rhs.hasResetSignal; }
+    hlim::Clock *clock = nullptr;
+    hlim::Clock *reset = nullptr;
+    hlim::Clock::TriggerEvent triggerEvent = hlim::Clock::TriggerEvent::RISING;
+    hlim::RegisterAttributes::ResetType resetType = hlim::RegisterAttributes::ResetType::NONE;
+    bool resetHighActive = true;
+
+    auto operator<=>(const RegisterConfig&) const = default;
 };
 
 class RegisterProcess : public Process
@@ -84,6 +90,7 @@ class RegisterProcess : public Process
     public:
         RegisterProcess(BasicBlock *parent, const std::string &desiredName, const RegisterConfig &config);
 
+        virtual void extractSignals() override;
         virtual void allocateNames() override;
 
         virtual void writeVHDL(std::ostream &stream, unsigned indentation) override;

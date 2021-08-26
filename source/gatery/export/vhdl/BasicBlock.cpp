@@ -80,8 +80,11 @@ void BasicBlock::extractSignals()
                 m_localSignals.insert(driver);
         }
         for (auto i : utils::Range(node->getClocks().size())) {
-            if (node->getClocks()[i] != nullptr)
-                m_inputClocks.insert(node->getClocks()[i]);
+            if (node->getClocks()[i] != nullptr) {
+                m_inputClocks.insert(node->getClocks()[i]->getClockPinSource());
+                if (!node->getResetNames()[i].empty())
+                    m_inputResets.insert(node->getClocks()[i]->getResetPinSource());
+            }
         }
     }
     verifySignalsDisjoint();
@@ -140,6 +143,9 @@ void BasicBlock::routeChildIOUpwards(BaseGrouping *child)
     }
     for (auto &clock : child->getClocks()) {
         m_inputClocks.insert(clock);
+    }
+    for (auto &clock : child->getResets()) {
+        m_inputResets.insert(clock);
     }
     for (auto &ioPin : child->getIoPins()) {
         m_ioPins.insert(ioPin);
@@ -260,13 +266,20 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
                 //hlim::NodePort resetValue = regNode->getDriver(hlim::Node_Register::RESET_VALUE);
 
                 RegisterConfig config = {
-                    .clock = regNode->getClocks()[0],
-                    .hasResetSignal = regNode->getNonSignalDriver(hlim::Node_Register::RESET_VALUE).node != nullptr
+                    .clock = regNode->getClocks()[0]->getClockPinSource(),
+                    .triggerEvent = regNode->getClocks()[0]->getTriggerEvent(),
+                    .resetType = regNode->getClocks()[0]->getRegAttribs().resetType,
                 };
+
+                if (regNode->getNonSignalDriver(hlim::Node_Register::RESET_VALUE).node != nullptr && regNode->getClocks()[0]->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
+                    config.reset = regNode->getClocks()[0]->getResetPinSource();
+                    config.resetHighActive = regNode->getClocks()[0]->getRegAttribs().resetHighActive;
+                }
+
                 registerNodes[config].push_back(regNode);
 
                 auto reset = regNode->getNonSignalDriver(hlim::Node_Register::RESET_VALUE);
-                if (reset.node != nullptr && regNode->getClocks()[0]->getRegAttribs().resetType == hlim::RegisterAttributes::ResetType::NONE) {
+                if (reset.node != nullptr && regNode->getClocks()[0]->getRegAttribs().initializeRegs) {
                     auto *constReset = dynamic_cast<hlim::Node_Constant*>(reset.node);
                     HCL_DESIGNCHECK_HINT(constReset, "Resets of registers must be constants uppon export!");
 
@@ -375,12 +388,12 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
                     if (node->getClocks()[i] != nullptr) {
                         std::stringstream line;
                         line << node->getClockNames()[i] << " => ";
-                        line << m_namespaceScope.getName(node->getClocks()[i]);
+                        line << m_namespaceScope.getName(node->getClocks()[i]->getClockPinSource());
                         portmapList.push_back(line.str());
                         if (node->getClocks()[i]->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE && !node->getResetNames()[i].empty()) {
                             std::stringstream line;
                             line << node->getResetNames()[i] << " => ";
-                            line << m_namespaceScope.getName(node->getClocks()[i])<<node->getClocks()[i]->getResetName();
+                            line << m_namespaceScope.getResetName(node->getClocks()[i]->getResetPinSource());
                             portmapList.push_back(line.str());
                         }
                     }

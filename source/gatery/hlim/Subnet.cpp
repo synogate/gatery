@@ -74,10 +74,10 @@ FinalType SubnetTemplate<makeConst, FinalType>::allDrivenCombinatoricallyByOutpu
 }
 
 template<bool makeConst, typename FinalType>
-FinalType SubnetTemplate<makeConst, FinalType>::allForSimulation(CircuitType &circuit)
+FinalType SubnetTemplate<makeConst, FinalType>::allForSimulation(CircuitType &circuit, const std::set<hlim::NodePort> &outputs)
 {
     FinalType res;
-    res.addAllForSimulation(circuit);
+    res.addAllForSimulation(circuit, outputs);
     return res;
 }
 
@@ -229,15 +229,20 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAll(CircuitType &circuit)
 }
 
 template<bool makeConst, typename FinalType>
-FinalType &SubnetTemplate<makeConst, FinalType>::addAllForSimulation(CircuitType &circuit)
+FinalType &SubnetTemplate<makeConst, FinalType>::addAllForSimulation(CircuitType &circuit, const std::set<hlim::NodePort> &outputs)
 {
     std::vector<NodeType*> openList;
     std::set<NodeType*> handledNodes;
 
     // Find roots
-    for (auto &n : circuit.getNodes())
-        if (n->hasSideEffects() || n->hasRef())
-            openList.push_back(n.get());
+    if (outputs.empty()) {
+        for (auto &n : circuit.getNodes())
+            if (n->hasSideEffects() || n->hasRef())
+                openList.push_back(n.get());
+    } else {
+        for (auto np : outputs)
+            openList.push_back(np.node);
+    }
 
     // Find dependencies
     while (!openList.empty()) {

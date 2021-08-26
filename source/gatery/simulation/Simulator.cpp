@@ -48,6 +48,11 @@ void Simulator::CallbackDispatcher::onClock(const hlim::Clock *clock, bool risin
     for (auto *c : m_callbacks) c->onClock(clock, risingEdge);
 }
 
+void Simulator::CallbackDispatcher::onReset(const hlim::Clock *clock, bool resetAsserted)
+{
+    for (auto *c : m_callbacks) c->onReset(clock, resetAsserted);
+}
+
 void Simulator::CallbackDispatcher::onDebugMessage(const hlim::BaseNode *src, std::string msg)
 {
     for (auto *c : m_callbacks) c->onDebugMessage(src, msg);

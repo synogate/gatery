@@ -88,7 +88,7 @@ class Node_Memory : public Node<Node_Memory>
         const sim::DefaultBitVectorState &getPowerOnState() const { return m_powerOnState; }
         sim::DefaultBitVectorState &getPowerOnState() { return m_powerOnState; }
 
-        virtual void simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
+        virtual void simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
         virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;
 
         //virtual bool hasSideEffects() const override { return hasRef(); } // for now
@@ -115,6 +115,7 @@ class Node_Memory : public Node<Node_Memory>
 
         inline MemoryAttributes &getAttribs() { return m_attributes; }
         inline const MemoryAttributes &getAttribs() const { return m_attributes; }        
+        inline size_t getInitializationDataWidth() const { return m_initializationDataWidth; }
     protected:
         sim::DefaultBitVectorState m_powerOnState;
 

@@ -68,8 +68,14 @@ void Clock::applyConfig(const ClockConfig &config)
     if (config.m_triggerEvent) m_clock->setTriggerEvent(*config.m_triggerEvent);
     if (config.m_phaseSynchronousWithParent) m_clock->setPhaseSynchronousWithParent(*config.m_phaseSynchronousWithParent);
 
-    if (config.m_resetType) m_clock->getRegAttribs().resetType = *config.m_resetType;
-    if (config.m_initializeRegs) m_clock->getRegAttribs().initializeRegs = *config.m_initializeRegs;
+    // By default, use the same behavior for memory and registers ...
+    if (config.m_resetType) m_clock->getRegAttribs().memoryResetType = m_clock->getRegAttribs().resetType = *config.m_resetType;
+    if (config.m_initializeRegs) m_clock->getRegAttribs().initializeMemory = m_clock->getRegAttribs().initializeRegs = *config.m_initializeRegs;
+
+    // ... unless overruled explicitely
+    if (config.m_memoryResetType) m_clock->getRegAttribs().memoryResetType = *config.m_memoryResetType;
+    if (config.m_initializeMemory) m_clock->getRegAttribs().initializeMemory = *config.m_initializeMemory;
+
     if (config.m_resetHighActive) m_clock->getRegAttribs().resetHighActive = *config.m_resetHighActive;
 
     if (config.m_registerEnablePinUsage) m_clock->getRegAttribs().registerEnablePinUsage = *config.m_registerEnablePinUsage;

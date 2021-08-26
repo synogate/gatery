@@ -65,7 +65,10 @@ struct RegisterAttributes : public Attributes {
 	};
 
 	ResetType resetType = ResetType::SYNCHRONOUS;
+	ResetType memoryResetType = ResetType::SYNCHRONOUS;
 	bool initializeRegs = true;
+	bool initializeMemory = true;
+	
 	bool resetHighActive = true;
 
 	UsageType registerResetPinUsage = UsageType::DONT_CARE;

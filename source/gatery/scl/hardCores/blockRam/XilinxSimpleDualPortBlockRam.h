@@ -67,9 +67,9 @@ class XilinxSimpleDualPortBlockRam : public hlim::Node_External
 
         bool isRom() const;
 
-        virtual void simulateReset(SimulatorCallbacks &simCallbacks, DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
+        virtual void simulatePowerOn(SimulatorCallbacks &simCallbacks, DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
         virtual void simulateEvaluate(SimulatorCallbacks &simCallbacks, DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;
-        virtual void simulateAdvance(SimulatorCallbacks &simCallbacks, DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const override;
+        virtual void simulateAdvance(SimulatorCallbacks &simCallbacks, DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort, bool resetHigh) const override;
 
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;

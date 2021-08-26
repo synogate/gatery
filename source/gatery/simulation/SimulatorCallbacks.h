@@ -43,6 +43,7 @@ class SimulatorCallbacks
         virtual void onCommitState() { };
         virtual void onNewTick(const hlim::ClockRational &simulationTime) { }
         virtual void onClock(const hlim::Clock *clock, bool risingEdge) { }
+        virtual void onReset(const hlim::Clock *clock, bool resetAsserted) { }
         virtual void onDebugMessage(const hlim::BaseNode *src, std::string msg) { }
         virtual void onWarning(const hlim::BaseNode *src, std::string msg) { }
         virtual void onAssert(const hlim::BaseNode *src, std::string msg) { }

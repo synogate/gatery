@@ -56,7 +56,9 @@ namespace gtry {
 
 
             boost::optional<ResetType> m_resetType;
+            boost::optional<ResetType> m_memoryResetType;
             boost::optional<bool> m_initializeRegs;
+            boost::optional<bool> m_initializeMemory;
             boost::optional<bool> m_resetHighActive;
 
         	boost::optional<UsageType> m_registerResetPinUsage;
@@ -83,7 +85,9 @@ namespace gtry {
             BUILD_SET(m_phaseSynchronousWithParent, setPhaseSynchronousWithParent)
 
             BUILD_SET(m_resetType, setResetType)
+            BUILD_SET(m_memoryResetType, setMemoryResetType)
             BUILD_SET(m_initializeRegs, setInitializeRegs)
+            BUILD_SET(m_initializeMemory, setInitializeMemory)
             BUILD_SET(m_resetHighActive, setResetHighActive)
 
             BUILD_SET(m_registerResetPinUsage, setRegisterResetPinUsage)
