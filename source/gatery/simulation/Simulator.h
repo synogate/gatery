@@ -119,6 +119,7 @@ class Simulator
                 virtual void onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, const std::string &desc) override;
                 virtual void onAnnotationEnd(const hlim::ClockRational &simulationTime, const std::string &id) override;
 
+                virtual void onPowerOn() override;
                 virtual void onCommitState() override;
                 virtual void onNewTick(const hlim::ClockRational &simulationTime) override;
                 virtual void onClock(const hlim::Clock *clock, bool risingEdge) override;

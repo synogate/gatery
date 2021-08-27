@@ -41,8 +41,10 @@ class FileBasedTestbenchRecorder : public BaseTestbenchRecorder
         FileBasedTestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, std::string name);
         ~FileBasedTestbenchRecorder();
 
+        virtual void onPowerOn() override;
         virtual void onNewTick(const hlim::ClockRational &simulationTime) override;
         virtual void onClock(const hlim::Clock *clock, bool risingEdge) override;
+        virtual void onReset(const hlim::Clock *clock, bool resetAsserted) override;
         /*
         virtual void onDebugMessage(const hlim::BaseNode *src, std::string msg) override;
         virtual void onWarning(const hlim::BaseNode *src, std::string msg) override;
@@ -53,18 +55,19 @@ class FileBasedTestbenchRecorder : public BaseTestbenchRecorder
 
     protected:
         VHDLExport &m_exporter;
-        AST *m_ast;
-        sim::Simulator &m_simulator;
         std::fstream m_testbenchFile;
         hlim::ClockRational m_lastSimulationTime;
 
         std::set<const hlim::Clock*> m_clocksOfInterest;
+        std::set<const hlim::Clock*> m_resetsOfInterest;
 
         std::map<hlim::NodePort, std::string> m_outputToIoPinName;
-
         std::map<std::string, std::string> m_signalOverrides;
 
         std::stringstream m_assertStatements;
+
+        std::string m_testVectorFilename;
+        std::string m_vhdlFilename;
 
         void writeVHDL(std::filesystem::path path, const std::string &testVectorFilename);
 };

@@ -40,7 +40,8 @@ class SimulatorCallbacks
         virtual void onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, const std::string &desc) { }
         virtual void onAnnotationEnd(const hlim::ClockRational &simulationTime, const std::string &id) { }
 
-        virtual void onCommitState() { };
+        virtual void onPowerOn() { }
+        virtual void onCommitState() { }
         virtual void onNewTick(const hlim::ClockRational &simulationTime) { }
         virtual void onClock(const hlim::Clock *clock, bool risingEdge) { }
         virtual void onReset(const hlim::Clock *clock, bool resetAsserted) { }

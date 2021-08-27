@@ -19,15 +19,115 @@
 
 #include "BaseTestbenchRecorder.h"
 
+#include "AST.h"
+#include "Entity.h"
+
+#include "../../simulation/Simulator.h"
+#include "../../hlim/coreNodes/Node_Pin.h"
+
 namespace gtry::vhdl {
 
-BaseTestbenchRecorder::BaseTestbenchRecorder(std::string name) : m_name(std::move(name))
+BaseTestbenchRecorder::BaseTestbenchRecorder(AST *ast, sim::Simulator &simulator, std::string name) : m_ast(ast), m_simulator(simulator), m_name(std::move(name))
 {
 }
 
 BaseTestbenchRecorder::~BaseTestbenchRecorder()
 {
 }
+
+void BaseTestbenchRecorder::declareSignals(std::ostream &stream, const std::set<hlim::Clock*> &allClocks, const std::set<hlim::Clock*> &allResets, const std::set<hlim::Node_Pin*> &allIOPins)
+{
+    auto *rootEntity = m_ast->getRootEntity();
+    CodeFormatting &cf = m_ast->getCodeFormatting();
+
+    for (auto clock : allClocks) {
+        stream << "    SIGNAL " << rootEntity->getNamespaceScope().getName(clock) << " : STD_LOGIC;" << std::endl;
+    }
+    for (auto clock : allResets) {
+        stream << "    SIGNAL " << rootEntity->getNamespaceScope().getResetName(clock) << " : STD_LOGIC;" << std::endl;
+    }
+
+    for (auto ioPin : allIOPins) {
+        const std::string &name = rootEntity->getNamespaceScope().getName(ioPin);
+        auto conType = ioPin->getConnectionType();
+
+        stream << "    SIGNAL " << name << " : ";
+        cf.formatConnectionType(stream, conType);
+        stream << ';' << std::endl;
+    }
+}
+
+void BaseTestbenchRecorder::writePortmap(std::ostream &stream, const std::set<hlim::Clock*> &allClocks, const std::set<hlim::Clock*> &allResets, const std::set<hlim::Node_Pin*> &allIOPins)
+{
+    auto *rootEntity = m_ast->getRootEntity();
+    CodeFormatting &cf = m_ast->getCodeFormatting();
+
+    std::vector<std::string> portmapList;
+
+    for (auto &s : allClocks) {
+        std::stringstream line;
+        line << rootEntity->getNamespaceScope().getName(s) << " => ";
+        line << rootEntity->getNamespaceScope().getName(s);
+        portmapList.push_back(line.str());
+    }
+    for (auto &s : allResets) {
+        std::stringstream line;
+        line << rootEntity->getNamespaceScope().getResetName(s) << " => ";
+        line << rootEntity->getNamespaceScope().getResetName(s);
+        portmapList.push_back(line.str());
+    }
+    for (auto &s : allIOPins) {
+        std::stringstream line;
+        line << rootEntity->getNamespaceScope().getName(s) << " => ";
+        line << rootEntity->getNamespaceScope().getName(s);
+        portmapList.push_back(line.str());
+    }
+
+    for (auto i : utils::Range(portmapList.size())) {
+        cf.indent(stream, 2);
+        stream << portmapList[i];
+        if (i+1 < portmapList.size())
+            stream << ",";
+        stream << std::endl;
+    }
+
+}
+
+void BaseTestbenchRecorder::initClocks(std::ostream &stream, const std::set<hlim::Clock*> &allClocks, const std::set<hlim::Clock*> &allResets)
+{
+    auto *rootEntity = m_ast->getRootEntity();
+    CodeFormatting &cf = m_ast->getCodeFormatting();
+
+    for (auto &s : allClocks) {
+        auto val = m_simulator.getValueOfClock(s);
+        cf.indent(stream, 2);
+        stream << rootEntity->getNamespaceScope().getName(s) << " <= ";
+
+        if (!val[sim::DefaultConfig::DEFINED])
+            stream << "'X';" << std::endl;
+        else
+            if (val[sim::DefaultConfig::VALUE])
+                stream << "'1';" << std::endl;
+            else
+                stream << "'0';" << std::endl;
+    }
+
+    for (auto &s : allResets) {
+        auto val = m_simulator.getValueOfReset(s);
+        cf.indent(stream, 2);
+        stream << rootEntity->getNamespaceScope().getResetName(s) << " <= ";
+
+        if (!val[sim::DefaultConfig::DEFINED])
+            stream << "'X';" << std::endl;
+        else
+            if (val[sim::DefaultConfig::VALUE])
+                stream << "'1';" << std::endl;
+            else
+                stream << "'0';" << std::endl;
+    }
+
+}
+
 
 
 }

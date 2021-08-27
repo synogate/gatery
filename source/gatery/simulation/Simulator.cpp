@@ -31,7 +31,10 @@ void Simulator::CallbackDispatcher::onAnnotationEnd(const hlim::ClockRational &s
     for (auto *c : m_callbacks) c->onAnnotationEnd(simulationTime, id);
 }
 
-
+void Simulator::CallbackDispatcher::onPowerOn()
+{
+    for (auto *c : m_callbacks) c->onPowerOn();
+}
 
 void Simulator::CallbackDispatcher::onCommitState()
 {

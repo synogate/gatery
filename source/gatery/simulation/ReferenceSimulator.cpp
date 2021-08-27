@@ -509,18 +509,25 @@ void ReferenceSimulator::powerOn()
     // reevaluate, to provide fibers with power-on state
     reevaluate();
 
-    {
-        RunTimeSimulationContext context(this);
-        // start all fibers
-        m_runningSimProcs.clear();
-        for (auto &f : m_simProcs) {
-            m_runningSimProcs.push_back(f());
-            m_runningSimProcs.back().resume();
+    HCL_ASSERT_HINT(m_program.m_stateMapping.clockPinAllocation.resetPins.size() < 2, "For now, only one reset is supported!");
+
+    if (m_program.m_stateMapping.clockPinAllocation.resetPins.empty()) {
+        // For now, start fibers after reset
+        {
+            RunTimeSimulationContext context(this);
+            // start all fibers
+            m_runningSimProcs.clear();
+            for (auto &f : m_simProcs) {
+                m_runningSimProcs.push_back(f());
+                m_runningSimProcs.back().resume();
+            }
         }
+
+        if (m_stateNeedsReevaluating)
+            reevaluate();
     }
 
-    if (m_stateNeedsReevaluating)
-        reevaluate();
+    m_callbackDispatcher.onPowerOn();
 }
 
 void ReferenceSimulator::reevaluate()
@@ -573,6 +580,22 @@ void ReferenceSimulator::advanceEvent()
                         cn.changeReset(m_callbackDispatcher, m_dataState, rstEvent.newResetHigh);
 
                     m_callbackDispatcher.onReset(rstEvent.clock, rstEvent.newResetHigh);
+
+                    if (rstEvent.newResetHigh ^ rstEvent.clock->getRegAttribs().resetHighActive) {
+                        // For now, start fibers after reset
+                        {
+                            RunTimeSimulationContext context(this);
+                            // start all fibers
+                            m_runningSimProcs.clear();
+                            for (auto &f : m_simProcs) {
+                                m_runningSimProcs.push_back(f());
+                                m_runningSimProcs.back().resume();
+                            }
+                        }
+
+                        if (m_stateNeedsReevaluating)
+                            reevaluate();
+                    }
                 } break;
                 case Event::Type::clock: {
                     auto &clkEvent = event.clockEvt;

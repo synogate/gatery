@@ -50,10 +50,12 @@ void Node_Register::simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::
     if (m_clocks[0]->getRegAttribs().initializeRegs) {
         Node_Constant *constNode = getResetValue();
         if (constNode == nullptr) {
-            state.setRange(sim::DefaultConfig::DEFINED, internalOffsets[0], getOutputConnectionType(0).width, false);
+            state.setRange(sim::DefaultConfig::DEFINED, internalOffsets[INT_DATA], getOutputConnectionType(0).width, false);
             state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
-        } else
+        } else {
+            state.insert(constNode->getValue(), internalOffsets[INT_DATA]);
             state.insert(constNode->getValue(), outputOffsets[0]);
+        }
     }
 }
 
@@ -64,30 +66,25 @@ void Node_Register::simulateResetChange(sim::SimulatorCallbacks &simCallbacks, s
 
     if (inReset && m_clocks[0]->getRegAttribs().resetType == RegisterAttributes::ResetType::ASYNCHRONOUS) {
         Node_Constant *constNode = getResetValue();
-        if (constNode == nullptr) {
-            state.setRange(sim::DefaultConfig::DEFINED, internalOffsets[0], getOutputConnectionType(0).width, false);
-            state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
-        } else
-            state.insert(constNode->getValue(), outputOffsets[0]);    
+        if (constNode != nullptr) {
+            state.insert(constNode->getValue(), internalOffsets[INT_DATA]);
+            state.insert(constNode->getValue(), outputOffsets[0]);
+        }
     }
 }
 
 void Node_Register::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
-    if (!state.get(sim::DefaultConfig::VALUE, internalOffsets[INT_IN_RESET])) {
-        if (inputOffsets[DATA] == ~0ull)
-            state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[INT_DATA], getOutputConnectionType(0).width);
-        else
-            state.copyRange(internalOffsets[INT_DATA], state, inputOffsets[DATA], getOutputConnectionType(0).width);
+    if (inputOffsets[DATA] == ~0ull)
+        state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[INT_DATA], getOutputConnectionType(0).width);
+    else
+        state.copyRange(internalOffsets[INT_DATA], state, inputOffsets[DATA], getOutputConnectionType(0).width);
 
-        if (inputOffsets[ENABLE] == ~0ull) {
-            state.set(sim::DefaultConfig::DEFINED, internalOffsets[INT_ENABLE], 1);
-            state.set(sim::DefaultConfig::VALUE, internalOffsets[INT_ENABLE], 1);
-        } else
-            state.copyRange(internalOffsets[INT_ENABLE], state, inputOffsets[ENABLE], 1);
-    } else {
-        // If ASYNCHRONOUS, output was already set in simulatePowerOn
-    }
+    if (inputOffsets[ENABLE] == ~0ull) {
+        state.set(sim::DefaultConfig::DEFINED, internalOffsets[INT_ENABLE], 1);
+        state.set(sim::DefaultConfig::VALUE, internalOffsets[INT_ENABLE], 1);
+    } else
+        state.copyRange(internalOffsets[INT_ENABLE], state, inputOffsets[ENABLE], 1);
 }
 
 void Node_Register::simulateAdvance(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const
@@ -97,24 +94,24 @@ void Node_Register::simulateAdvance(sim::SimulatorCallbacks &simCallbacks, sim::
     if (state.get(sim::DefaultConfig::VALUE, internalOffsets[INT_IN_RESET])) {
         if (m_clocks[0]->getRegAttribs().resetType == RegisterAttributes::ResetType::SYNCHRONOUS) {           
             Node_Constant *constNode = getResetValue();
-            if (constNode == nullptr) {
-                state.setRange(sim::DefaultConfig::DEFINED, internalOffsets[0], getOutputConnectionType(0).width, false);
-                state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
-            } else {
-                state.insert(constNode->getValue(), internalOffsets[0]);
+            if (constNode != nullptr) {
+                state.insert(constNode->getValue(), internalOffsets[INT_DATA]);
                 state.insert(constNode->getValue(), outputOffsets[0]);
+                return;
             }
+        } else {
+            // Is being handled in Node_Register::simulateResetChange
         }
-    } else {
-        bool enableDefined = state.get(sim::DefaultConfig::DEFINED, internalOffsets[INT_ENABLE]);
-        bool enable = state.get(sim::DefaultConfig::VALUE, internalOffsets[INT_ENABLE]);
-
-        if (!enableDefined) {
-            state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width);
-        } else
-            if (enable)
-                state.copyRange(outputOffsets[0], state, internalOffsets[INT_DATA], getOutputConnectionType(0).width);
     }
+
+    bool enableDefined = state.get(sim::DefaultConfig::DEFINED, internalOffsets[INT_ENABLE]);
+    bool enable = state.get(sim::DefaultConfig::VALUE, internalOffsets[INT_ENABLE]);
+
+    if (!enableDefined) {
+        state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width);
+    } else
+        if (enable)
+            state.copyRange(outputOffsets[0], state, internalOffsets[INT_DATA], getOutputConnectionType(0).width);
 }
 
 
