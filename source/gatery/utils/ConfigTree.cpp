@@ -103,20 +103,40 @@ namespace gtry::utils
 
 	YamlConfigTree YamlConfigTree::operator[](std::string_view path) const
 	{
+		YamlConfigTree ret;
+		for (auto& recorder : m_recorder)
+			ret.addRecorder(recorder[path]);
+
 		for(auto it = m_nodes.rbegin(); it != m_nodes.rend(); ++it)
 		{
 			YAML::Node element = (*it)[std::string{ path }];
 			if (element && !element.IsMap())
-				return YamlConfigTree{ element };
+			{
+				ret.m_nodes.push_back(element);
+				break;
+			}
 		}
 
-		PathMatcher	m;
-		for (const YAML::Node& n : m_nodes)
-			m(n, path);
+		if (ret.m_nodes.empty())
+		{
+			PathMatcher	m;
+			for (const YAML::Node& n : m_nodes)
+				m(n, path);
 
-		YamlConfigTree ret;
-		ret.m_nodes = std::move(m.matches);
+			ret.m_nodes = std::move(m.matches);
+		}
 		return ret;
+	}
+
+	YamlConfigTree::YamlConfigTree(YAML::Node node, const std::vector<PropertyTree>& recorder) :
+		m_nodes{node},
+		m_recorder(recorder)
+	{
+	}
+
+	void YamlConfigTree::addRecorder(PropertyTree recorder)
+	{
+		m_recorder.push_back(std::move(recorder));
 	}
 
 	bool YamlConfigTree::isDefined() const
@@ -149,9 +169,9 @@ namespace gtry::utils
 		if (isMap())
 		{
 			HCL_ASSERT_HINT(m_nodes.size() == 1, "no impl");
-			return map_iterator{ m_nodes.front().begin() };
+			return map_iterator{ *this, m_nodes.front().begin() };
 		}
-		return map_iterator();
+		return map_iterator{*this};
 	}
 
 	YamlConfigTree::map_iterator YamlConfigTree::mapEnd() const
@@ -159,23 +179,23 @@ namespace gtry::utils
 		if (isMap())
 		{
 			HCL_ASSERT_HINT(m_nodes.size() == 1, "no impl");
-			return map_iterator{ m_nodes.front().end() };
+			return map_iterator{ *this, m_nodes.front().end() };
 		}
-		return map_iterator();
+		return map_iterator{ *this };
 	}
 
 	YamlConfigTree::iterator YamlConfigTree::begin() const
 	{
 		if (isSequence())
-			return iterator{ m_nodes.front().begin() };
-		return iterator();
+			return iterator{ *this, m_nodes.front().begin() };
+		return iterator{ *this };
 	}
 
 	YamlConfigTree::iterator YamlConfigTree::end() const
 	{
 		if(isSequence())
-			return iterator{ m_nodes.front().end() };
-		return iterator();
+			return iterator{ *this, m_nodes.front().end() };
+		return iterator{ *this };
 	}
 
 	size_t YamlConfigTree::size() const
@@ -188,7 +208,7 @@ namespace gtry::utils
 	YamlConfigTree YamlConfigTree::operator[](size_t index) const
 	{
 		if (isSequence())
-			return m_nodes.front()[index];
+			return YamlConfigTree{ m_nodes.front()[index], m_recorder };
 		return YamlConfigTree();
 	}
 

@@ -18,6 +18,7 @@
 #pragma once
 
 #include "../frontend/BitWidth.h"
+#include "PropertyTree.h"
 
 namespace gtry::utils
 {
@@ -64,20 +65,22 @@ namespace gtry::utils
 	{
 	public:
 		struct iterator {
+			const YamlConfigTree& src;
 			YAML::Node::const_iterator it;
 
 			void operator++() { ++it; }
-			YamlConfigTree operator*() { return YamlConfigTree(*it); }
+			YamlConfigTree operator*() { return YamlConfigTree(*it, src.m_recorder); }
 			bool operator==(const iterator& rhs) const { return it == rhs.it; }
 			bool operator!=(const iterator& rhs) const { return it != rhs.it; }
 		};
 
 		struct map_iterator
 		{
+			const YamlConfigTree& src;
 			YAML::Node::const_iterator it;
 
 			void operator++() { ++it; }
-			YamlConfigTree operator*() { return YamlConfigTree(it->second); }
+			YamlConfigTree operator*() { return YamlConfigTree(it->second, src.m_recorder); }
 			bool operator==(const map_iterator& rhs) const { return it == rhs.it; }
 			bool operator!=(const map_iterator& rhs) const { return it != rhs.it; }
 
@@ -86,7 +89,9 @@ namespace gtry::utils
 
 	public:
 		YamlConfigTree() = default;
-		YamlConfigTree(YAML::Node node) { m_nodes.push_back(node); }
+		YamlConfigTree(YAML::Node node, const std::vector<PropertyTree>& recorder = {});
+
+		void addRecorder(PropertyTree recorder);
 
 		explicit operator bool() const { return isDefined(); }
 		bool isDefined() const;
@@ -111,15 +116,23 @@ namespace gtry::utils
 
 	protected:
 		std::vector<YAML::Node> m_nodes;
+		mutable std::vector<PropertyTree> m_recorder;
 	};
 
 	template<typename T>
 	inline T YamlConfigTree::as(const T& def) const
 	{
 		if (m_nodes.size() != 1)
+		{
+			for (auto& rec : m_recorder)
+				rec = def;
 			return def;
+		}
 
-		return m_nodes.front().as<T>();
+		T ret = m_nodes.front().as<T>();
+		for (auto& rec : m_recorder)
+			rec = ret;
+		return std::move(ret);
 	}
 
 	template<typename T>
@@ -128,7 +141,10 @@ namespace gtry::utils
 		if (m_nodes.size() != 1)
 			throw std::runtime_error{ "non optional config value not found" };
 
-		return m_nodes.front().as<T>();
+		T ret = m_nodes.front().as<T>();
+		for (auto& rec : m_recorder)
+			rec = ret;
+		return std::move(ret);
 	}
 
 	template<>
@@ -140,7 +156,10 @@ namespace gtry::utils
 		else
 			ret = m_nodes.front().as<std::string>();
 
-		return replaceEnvVars(ret);
+		ret = replaceEnvVars(ret);
+		for (auto& rec : m_recorder)
+			rec = ret;
+		return std::move(ret);
 	}
 
 	template<>
@@ -149,7 +168,11 @@ namespace gtry::utils
 		if (m_nodes.size() != 1)
 			throw std::runtime_error{ "non optional config value not found" };
 
-		return replaceEnvVars(m_nodes.front().as<std::string>());
+		std::string ret = m_nodes.front().as<std::string>();
+		ret = replaceEnvVars(ret);
+		for (auto& rec : m_recorder)
+			rec = ret;
+		return std::move(ret);
 	}
 
 	using ConfigTree = YamlConfigTree;
@@ -160,6 +183,11 @@ namespace YAML
 	template<>
 	struct convert<gtry::BitWidth>
 	{
+		static Node encode(gtry::BitWidth rhs)
+		{
+			return Node{ rhs.bits() };
+		}
+
 		static bool decode(const Node& node, gtry::BitWidth& out)
 		{
 			out = gtry::BitWidth{ node.as<uint64_t>() };
@@ -170,6 +198,12 @@ namespace YAML
 	template<typename T>
 	struct convert
 	{
+		static auto encode(T value) -> std::enable_if_t<std::is_enum_v<T>, Node>
+		{
+			return Node{ std::string{ magic_enum::enum_name(value) } };
+		}
+
+
 		static auto decode(const Node& node, T& out) -> std::enable_if_t<std::is_enum_v<T>, bool>
 		{
 			const std::string value = node.as<std::string>();

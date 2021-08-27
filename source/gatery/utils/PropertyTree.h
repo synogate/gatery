@@ -16,26 +16,40 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-#include "Scope.h"
 
-namespace gtry
+namespace gtry::utils
 {
-	class Area
+	class YamlPropertyTree
 	{
 	public:
-		Area(std::string_view name, bool instantEnter = false);
-		
-		auto operator [] (std::string_view key) { return m_nodeGroup->properties()[key]; }
+		YamlPropertyTree() = default;
+		void dump(std::ostream&) const;
 
-		GroupScope enter() const;
-		std::pair<GroupScope, GroupScope> enter(std::string_view subName) const;
-	
-		void leave() { m_inScope.reset(); }
-		inline hlim::NodeGroup* getNodeGroup() { return m_nodeGroup; }
+		YamlPropertyTree operator[](std::string_view path);
 
-	private:
-		hlim::NodeGroup* m_nodeGroup;
+		template<typename T>
+		YamlPropertyTree& operator = (T&&);
+		YamlPropertyTree& operator = (const YamlPropertyTree& val);
+		YamlPropertyTree& operator = (YamlPropertyTree& val);
 
-		std::optional<GroupScope> m_inScope;
+		void push_back(YamlPropertyTree value);
+	protected:
+		YamlPropertyTree(YAML::Node node) : m_node(std::move(node)) {}
+		YAML::Node m_node{ YAML::NodeType::Map };
 	};
+
+	template<typename T>
+	inline YamlPropertyTree& YamlPropertyTree::operator=(T&& val)
+	{
+		m_node = val;
+		return *this;
+	}
+
+	inline std::ostream& operator << (std::ostream& s, const YamlPropertyTree& tree)
+	{
+		tree.dump(s);
+		return s;
+	}
+
+	using PropertyTree = YamlPropertyTree;
 }

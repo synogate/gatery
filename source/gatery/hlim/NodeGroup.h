@@ -70,13 +70,16 @@ namespace gtry::hlim {
 			return (Type*)m_children.back().get();
 		}
 
-		inline NodeGroup* getParent() { return m_parent; }
-		inline const NodeGroup* getParent() const { return m_parent; }
-		inline const std::string& getName() const { return m_name; }
-		inline const std::string& getInstanceName() const { return m_instanceName; }
-		inline const std::string& getComment() const { return m_comment; }
-		inline const std::vector<BaseNode*>& getNodes() const { return m_nodes; }
-		inline const std::vector<std::unique_ptr<NodeGroup>>& getChildren() const { return m_children; }
+		NodeGroup* getParent() { return m_parent; }
+		const NodeGroup* getParent() const { return m_parent; }
+		const std::string& getName() const { return m_name; }
+		const std::string& getInstanceName() const { return m_instanceName; }
+		const std::string& getComment() const { return m_comment; }
+		const std::vector<BaseNode*>& getNodes() const { return m_nodes; }
+		const std::vector<std::unique_ptr<NodeGroup>>& getChildren() const { return m_children; }
+		utils::PropertyTree& properties() { return m_properties; }
+
+		void buildProperyTree(utils::PropertyTree& out) const;
 
 		bool isChildOf(const NodeGroup* other) const;
 		bool isEmpty(bool recursive) const;
@@ -97,6 +100,7 @@ namespace gtry::hlim {
 		std::string m_instanceName;
 		std::string m_comment;
 		GroupType m_groupType;
+		utils::PropertyTree m_properties;
 
 		boost::container::flat_map<std::string, size_t> m_childInstanceCounter;
 

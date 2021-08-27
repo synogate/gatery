@@ -168,5 +168,36 @@ BOOST_AUTO_TEST_CASE(ConfigTreeLists)
 
 }
 
+BOOST_AUTO_TEST_CASE(ConfigTreeRecorder)
+{
+	YAML::Node root;
+	root["sub1"]["sub2"]["sub3"]["0"] = 5;
+	root["sub1"]["sub2/sub3"]["1"] = 6;
+	root["sub1/sub2/sub3"]["2"] = 7;
+	root["sub1/donotmatch/sub3"]["2"] = 1;
+	root["sub1/*/sub3"]["3"] = 8;
+	root["sub1/*"]["sub3"]["4"] = "9";
+
+	YamlConfigTree config{ root };
+
+	YamlPropertyTree recorder;
+	recorder[""] = "test";
+
+	config.addRecorder(recorder);
+
+	config["sub1/sub2/sub3"]["0"].as(0);
+	config["sub1/sub2/sub3"]["1"].as(0);
+	config["sub1/sub2/sub3"]["2"].as(0);
+	config["sub1/sub2/sub3"]["3"].as(0);
+	config["sub1/sub5/sub3"]["4"].as<std::string>();
+
+	std::ostringstream out;
+	recorder.dump(out);
+	std::string result = out.str();
+
+	BOOST_TEST(result.find("donotmatch") == std::string::npos);
+	BOOST_TEST(result.find("sub2") != std::string::npos);
+	BOOST_TEST(result.find("sub5") != std::string::npos);
+}
 
 #endif
