@@ -50,6 +50,11 @@ namespace gtry::hlim
 				size_t index = m_parent->m_childInstanceCounter[name]++;
 				setInstanceName("i_" + name + "_" + std::to_string(index));
 			}
+			else if (m_instanceName.empty())
+			{
+				setInstanceName(name);
+			}
+
 			m_name = move(name);
 		}
 	}
