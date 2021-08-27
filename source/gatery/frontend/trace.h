@@ -16,26 +16,22 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-#include "Scope.h"
+
+#include <ostream>
 
 namespace gtry
 {
-	class Area
+	class trace
 	{
 	public:
-		Area(std::string_view name, bool instantEnter = false);
-		
-		auto operator [] (std::string_view key) { return m_nodeGroup->properties()[key]; }
+		~trace();
 
-		GroupScope enter() const;
-		std::pair<GroupScope, GroupScope> enter(std::string_view subName) const;
-	
-		void leave() { m_inScope.reset(); }
-		inline hlim::NodeGroup* getNodeGroup() { return m_nodeGroup; }
+		template<typename T>
+		trace& operator << (T&& value) { if(ms_dst) *ms_dst << value; return *this; }
+
+		static void outputStream(std::ostream* dst);
 
 	private:
-		hlim::NodeGroup* m_nodeGroup;
-
-		std::optional<GroupScope> m_inScope;
+		static std::ostream* ms_dst;
 	};
 }

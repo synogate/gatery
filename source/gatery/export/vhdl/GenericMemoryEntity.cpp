@@ -356,7 +356,8 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
 							auto reset = rp.dedicatedReadLatencyRegisters[i]->getDriver((unsigned)hlim::Node_Register::Input::RESET_VALUE);
 							if (reset.node != nullptr) {
 								cf.indent(stream, indent);
-								stream << "IF ("<< m_namespaceScope.getName(clock.first)<<clock.first->getResetName() << " = '" << (clock.first->getRegAttribs().resetHighActive?'1':'0') << "') THEN\n";
+								const char resetValue = clock.first->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH ? '1' : '0';
+								stream << "IF ("<< m_namespaceScope.getName(clock.first)<<clock.first->getResetName() << " = '" << resetValue << "') THEN\n";
 								indent++;
 
 								cf.indent(stream, indent);
@@ -386,7 +387,8 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
 							auto reset = rp.dedicatedReadLatencyRegisters[i]->getDriver((unsigned)hlim::Node_Register::Input::RESET_VALUE);
 							if (reset.node != nullptr) {
 								cf.indent(stream, indent);
-								stream << "IF ("<< m_namespaceScope.getName(clock.first)<<clock.first->getResetName() << " = '" << (clock.first->getRegAttribs().resetHighActive?'1':'0') << "') THEN\n";
+								const char resetValue = clock.first->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH ? '1' : '0';
+								stream << "IF ("<< m_namespaceScope.getName(clock.first)<<clock.first->getResetName() << " = '" << resetValue << "') THEN\n";
 								indent++;
 
 								cf.indent(stream, indent);

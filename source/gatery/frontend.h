@@ -52,6 +52,7 @@
 #include "frontend/SignalMiscOp.h"
 #include "frontend/SimSigHandle.h"
 #include "frontend/TechnologyMapping.h"
+#include "frontend/trace.h"
 #include "frontend/Vector.h"
 
 namespace gtry {

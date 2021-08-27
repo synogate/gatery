@@ -15,27 +15,43 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#pragma once
-#include "Scope.h"
+#include "gatery/pch.h"
+#include "PropertyTree.h"
+#include "Exceptions.h"
 
-namespace gtry
+namespace gtry::utils
 {
-	class Area
+	void YamlPropertyTree::dump(std::ostream& out) const
 	{
-	public:
-		Area(std::string_view name, bool instantEnter = false);
-		
-		auto operator [] (std::string_view key) { return m_nodeGroup->properties()[key]; }
+		out << m_node;
+	}
 
-		GroupScope enter() const;
-		std::pair<GroupScope, GroupScope> enter(std::string_view subName) const;
-	
-		void leave() { m_inScope.reset(); }
-		inline hlim::NodeGroup* getNodeGroup() { return m_nodeGroup; }
+	YamlPropertyTree gtry::utils::YamlPropertyTree::operator[](std::string_view path)
+	{
+		if (!m_node.IsMap())
+			m_node = YAML::Node{ YAML::NodeType::Map };
 
-	private:
-		hlim::NodeGroup* m_nodeGroup;
+		YAML::Node child = m_node[std::string(path).c_str()];
+		HCL_ASSERT(m_node.IsMap());
 
-		std::optional<GroupScope> m_inScope;
-	};
+		return std::move(child);
+	}
+
+	void gtry::utils::YamlPropertyTree::push_back(YamlPropertyTree value)
+	{
+		m_node.push_back(value.m_node);
+	}
+
+	YamlPropertyTree& YamlPropertyTree::operator = (const YamlPropertyTree& val)
+	{
+		m_node = val.m_node;
+		return *this;
+	}
+
+	YamlPropertyTree& YamlPropertyTree::operator = (YamlPropertyTree& val)
+	{
+		m_node = val.m_node;
+		return *this;
+	}
+
 }

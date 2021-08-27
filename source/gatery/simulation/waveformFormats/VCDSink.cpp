@@ -151,6 +151,7 @@ void VCDSink::initialize()
     std::function<void(const Module*)> reccurWriteModules;
     reccurWriteModules = [&](const Module *module){
         for (const auto &p : module->subModules) {
+            HCL_ASSERT(!p.first->getInstanceName().empty()); // gtkwave has some weird glitches if a module name is empty, so better fail here than wonder what happened.
             m_vcdFile
                 << "$scope module " << p.first->getInstanceName() << " $end\n";
             reccurWriteModules(&p.second);

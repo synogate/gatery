@@ -47,7 +47,7 @@ namespace gtry
 		constexpr bool divisibleBy(BitWidth divisor) const { return value % divisor.value == 0; }
 
 		inline static BitWidth last(uint64_t value) { return BitWidth{ utils::Log2C(value + 1) }; }
-		inline static BitWidth count(uint64_t count) { return BitWidth{ utils::Log2C(count) }; }
+		inline static BitWidth count(uint64_t count) { return BitWidth{ count <= 1 ? 0 : utils::Log2C(count) }; }
 	};
 
 	inline namespace literals

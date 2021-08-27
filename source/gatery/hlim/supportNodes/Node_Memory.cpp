@@ -1,3 +1,4 @@
+#include "Node_Memory.h"
 /*  This file is part of Gatery, a library for circuit design.
     Copyright (C) 2021 Michael Offel, Andreas Ley
 
@@ -78,6 +79,31 @@ namespace gtry::hlim {
         for (auto np : getPorts())
             if (auto *port = dynamic_cast<Node_MemPort*>(np.node))
                 port->orderAfter(nullptr);
+    }
+
+    void Node_Memory::loadConfig(const utils::ConfigTree& cfg)
+    {
+        size_t readLatency = ~0ull;
+        
+        if(cfg["readLatency"])
+            readLatency = cfg["readLatency"].as<size_t>();
+
+        if (cfg["type"])
+        {
+            MemType memType = cfg["type"].as(MemType::DONT_CARE);
+            setType(memType, readLatency);
+        }
+        else
+        {
+            setType(MemType::DONT_CARE, readLatency);
+        }
+
+        if (cfg["prefix"])
+        {
+            setName(cfg["prefix"].as<std::string>(""));
+        }
+
+        m_attributes.loadConfig(cfg["attributes"]);
     }
 
     size_t Node_Memory::createWriteDependencyInputPort() 

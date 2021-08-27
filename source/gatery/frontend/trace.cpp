@@ -15,27 +15,21 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#pragma once
-#include "Scope.h"
+#include "gatery/pch.h"
+#include "trace.h"
 
-namespace gtry
+namespace gtry 
 {
-	class Area
+	std::ostream* trace::ms_dst = nullptr;
+
+	gtry::trace::~trace()
 	{
-	public:
-		Area(std::string_view name, bool instantEnter = false);
-		
-		auto operator [] (std::string_view key) { return m_nodeGroup->properties()[key]; }
+		if(ms_dst)
+			*ms_dst << '\n';
+	}
 
-		GroupScope enter() const;
-		std::pair<GroupScope, GroupScope> enter(std::string_view subName) const;
-	
-		void leave() { m_inScope.reset(); }
-		inline hlim::NodeGroup* getNodeGroup() { return m_nodeGroup; }
-
-	private:
-		hlim::NodeGroup* m_nodeGroup;
-
-		std::optional<GroupScope> m_inScope;
-	};
+	void gtry::trace::outputStream(std::ostream* dst)
+	{
+		ms_dst = dst;
+	}
 }
