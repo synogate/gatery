@@ -143,6 +143,7 @@ namespace gtry {
                 HCL_DESIGNCHECK_HINT(m_currentScope != nullptr, "No clock scope active!");
                 return m_currentScope->m_clock;
             }
+            static bool anyActive() { return m_currentScope != nullptr; }
         protected:
             Clock &m_clock;
     };

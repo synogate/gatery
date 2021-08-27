@@ -32,7 +32,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
 
 
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000).setResetType(ClockConfig::ResetType::NONE));
     {
         ClockScope clkScp(clock);
 
@@ -44,6 +44,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
         counter += incrementPin;
 
         addSimulationProcess([=]()->SimProcess{
+            co_await WaitFor(Seconds(1, 2)/clock.getAbsoluteFrequency());
             for (auto i : Range(10)) {
                 simu(incrementPin) = i;
                 co_await WaitFor(Seconds(5)/clock.getAbsoluteFrequency());

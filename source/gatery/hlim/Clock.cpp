@@ -64,7 +64,7 @@ ClockRational Clock::getMinResetTime() const
 {
     ClockRational res = m_minResetTime;
 
-    if (m_registerAttributes.resetType == RegisterAttributes::ResetType::ASYNCHRONOUS)
+    if (m_registerAttributes.resetType == RegisterAttributes::ResetType::ASYNCHRONOUS && !m_clockedNodes.empty())
         res = std::max(res, ClockRational{1,1}/getAbsoluteFrequency());
 
     for (auto d : m_derivedClocks)
@@ -76,7 +76,7 @@ size_t Clock::getMinResetCycles() const
 {
     size_t res = m_minResetCycles;
 
-    if (m_registerAttributes.resetType == RegisterAttributes::ResetType::SYNCHRONOUS)
+    if (m_registerAttributes.resetType == RegisterAttributes::ResetType::SYNCHRONOUS && !m_clockedNodes.empty())
         res = std::max<size_t>(res, 1);
 
     for (auto d : m_derivedClocks) {

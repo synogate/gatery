@@ -22,6 +22,10 @@
 #include "SignalCompareOp.h"
 #include "Area.h"
 #include "Compound.h"
+#include "Clock.h"
+
+#include "../hlim/coreNodes/Node_ClkRst2Signal.h"
+#include "../hlim/coreNodes/Node_Logic.h"
 
 #include <gatery/utils/Range.h>
 #include <gatery/utils/Preprocessor.h>
@@ -48,15 +52,71 @@ size_t SignalTapHelper::addInput(hlim::NodePort nodePort)
 
 void SignalTapHelper::triggerIf(const Bit &condition)
 {
+    hlim::NodePort conditionNP = condition.getReadPort();
+
+    if (ClockScope::anyActive()) {
+        auto *clk = ClockScope::getClk().getClk();
+        if (clk->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
+            auto *rstSignal = DesignScope::createNode<hlim::Node_ClkRst2Signal>();
+            rstSignal->recordStackTrace();
+            rstSignal->setClock(clk);
+
+            hlim::NodePort rstNotActive;
+
+            if (clk->getRegAttribs().resetHighActive) {
+                auto *logic = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::NOT);
+                logic->recordStackTrace();
+                logic->connectInput(0, {.node = rstSignal, .port = 0ull});
+                rstNotActive = {.node = logic, .port = 0ull};
+            } else {
+                rstNotActive = {.node = rstSignal, .port = 0ull};
+            }
+
+            auto *logic = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::AND);
+            logic->recordStackTrace();
+            logic->connectInput(0, conditionNP);
+            logic->connectInput(1, rstNotActive);
+            conditionNP = {.node = logic, .port = 0ull};
+        }
+    }
+
     HCL_ASSERT_HINT(m_node->getNumInputPorts() == 0, "Condition must be the first input to signal tap!");
-    addInput(condition.getReadPort());
+    addInput(conditionNP);
     m_node->setTrigger(hlim::Node_SignalTap::TRIG_FIRST_INPUT_HIGH);
 }
 
 void SignalTapHelper::triggerIfNot(const Bit &condition)
 {
+    hlim::NodePort conditionNP = condition.getReadPort();
+
+    if (ClockScope::anyActive()) {
+        auto *clk = ClockScope::getClk().getClk();
+        if (clk->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
+            auto *rstSignal = DesignScope::createNode<hlim::Node_ClkRst2Signal>();
+            rstSignal->recordStackTrace();
+            rstSignal->setClock(clk);
+
+            hlim::NodePort rstActive;
+
+            if (clk->getRegAttribs().resetHighActive) {
+                rstActive = {.node = rstSignal, .port = 0ull};
+            } else {
+                auto *logic = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::NOT);
+                logic->recordStackTrace();
+                logic->connectInput(0, {.node = rstSignal, .port = 0ull});
+                rstActive = {.node = logic, .port = 0ull};
+            }
+
+            auto *logic = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::OR);
+            logic->recordStackTrace();
+            logic->connectInput(0, conditionNP);
+            logic->connectInput(1, rstActive);
+            conditionNP = {.node = logic, .port = 0ull};
+        }
+    }
+
     HCL_ASSERT_HINT(m_node->getNumInputPorts() == 0, "Condition must be the first input to signal tap!");
-    addInput(condition.getReadPort());
+    addInput(conditionNP);
     m_node->setTrigger(hlim::Node_SignalTap::TRIG_FIRST_INPUT_LOW);
 }
 

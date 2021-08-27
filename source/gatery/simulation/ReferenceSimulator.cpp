@@ -475,35 +475,45 @@ void ReferenceSimulator::powerOn()
         m_nextEvents.push(e);
     }
 
+
+    bool resetsInFlight = false;
     for (auto i : utils::Range(m_program.m_stateMapping.clockPinAllocation.resetPins.size())) {
         auto clock = m_program.m_stateMapping.clockPinAllocation.resetPins[i].source;
 
         auto &rs = m_dataState.resetState[i];
+        auto &rstDom = m_program.m_resetDomains[i];
 
         rs.resetHigh = clock->getRegAttribs().resetHighActive;
 
-        // Activate reset
-        Event e;
-        e.type = Event::Type::reset;
-        e.resetEvt.clock = clock;
-        e.resetEvt.resetDomainIdx = i;
-        e.resetEvt.newResetHigh = rs.resetHigh;
-        e.timeOfEvent = m_simulationTime;
+        for (auto &cn : rstDom.clockedNodes)
+            cn.changeReset(m_callbackDispatcher, m_dataState, rs.resetHigh);
+        m_callbackDispatcher.onReset(clock, rs.resetHigh);
 
-        m_nextEvents.push(e);
 
         // Deactivate reset
-
-        e.resetEvt.newResetHigh = !rs.resetHigh;
-
         auto minTime = m_program.m_stateMapping.clockPinAllocation.resetPins[i].minResetTime;
         auto minCycles = m_program.m_stateMapping.clockPinAllocation.resetPins[i].minResetCycles;
         auto minCyclesTime = hlim::ClockRational(minCycles, 1) / clock->getAbsoluteFrequency();
         
         minTime = std::max(minTime, minCyclesTime);
-        e.timeOfEvent = m_simulationTime + minTime;
+        if (minTime == hlim::ClockRational(0, 1)) {
+            // Immediately disable again
+            rs.resetHigh = !rs.resetHigh;
+            for (auto &cn : rstDom.clockedNodes)
+                cn.changeReset(m_callbackDispatcher, m_dataState, rs.resetHigh);
+            m_callbackDispatcher.onReset(clock, rs.resetHigh);
+        } else {
+            // Schedule disabling
+            resetsInFlight = true;
+            Event e;
+            e.type = Event::Type::reset;
+            e.resetEvt.clock = clock;
+            e.resetEvt.resetDomainIdx = i;
+            e.resetEvt.newResetHigh = !rs.resetHigh;
+            e.timeOfEvent = m_simulationTime + minTime;
 
-        m_nextEvents.push(e);
+            m_nextEvents.push(e);
+        }
     }    
 
     // reevaluate, to provide fibers with power-on state
@@ -511,7 +521,7 @@ void ReferenceSimulator::powerOn()
 
     HCL_ASSERT_HINT(m_program.m_stateMapping.clockPinAllocation.resetPins.size() < 2, "For now, only one reset is supported!");
 
-    if (m_program.m_stateMapping.clockPinAllocation.resetPins.empty()) {
+    if (!resetsInFlight) {
         // For now, start fibers after reset
         {
             RunTimeSimulationContext context(this);
@@ -559,10 +569,10 @@ void ReferenceSimulator::advanceEvent()
         m_callbackDispatcher.onNewTick(m_simulationTime);
     }
 
-    while (m_nextEvents.top().timeOfEvent == m_simulationTime) { // outer loop because fibers can do a waitFor(0) in which we need to run again.
+    while (!m_nextEvents.empty() && m_nextEvents.top().timeOfEvent == m_simulationTime) { // outer loop because fibers can do a waitFor(0) in which we need to run again.
         std::set<size_t> triggeredExecutionBlocks;
-        std::vector<Event> simProcsResuming;
-        while (m_nextEvents.top().timeOfEvent == m_simulationTime) {
+        std::vector<std::coroutine_handle<>> simProcsResuming;
+        while (!m_nextEvents.empty() && m_nextEvents.top().timeOfEvent == m_simulationTime) {
             auto event = m_nextEvents.top();
             m_nextEvents.pop();
 
@@ -592,7 +602,6 @@ void ReferenceSimulator::advanceEvent()
                                 m_runningSimProcs.back().resume();
                             }
                         }
-
                         if (m_stateNeedsReevaluating)
                             reevaluate();
                     }
@@ -624,7 +633,7 @@ void ReferenceSimulator::advanceEvent()
                     m_nextEvents.push(event);
                 } break;
                 case Event::Type::simProcResume: {
-                    simProcsResuming.push_back(event);
+                    simProcsResuming.push_back(event.simProcResumeEvt.handle);
                 } break;
                 default:
                     HCL_ASSERT_HINT(false, "Not implemented!");
@@ -637,9 +646,9 @@ void ReferenceSimulator::advanceEvent()
 
         {
             RunTimeSimulationContext context(this);
-            for (auto &event : simProcsResuming) {
-                HCL_ASSERT(event.simProcResumeEvt.handle);
-                event.simProcResumeEvt.handle.resume();
+            for (auto &handle : simProcsResuming) {
+                HCL_ASSERT(handle);
+                handle.resume();
 
                 if (m_abortCalled)
                     return;
@@ -655,14 +664,14 @@ void ReferenceSimulator::advanceEvent()
 
 void ReferenceSimulator::advance(hlim::ClockRational seconds)
 {
-    if (m_nextEvents.empty()) {
-        m_simulationTime += seconds;
-        return;
-    }
-
     hlim::ClockRational targetTime = m_simulationTime + seconds;
 
     while (hlim::clockLess(m_simulationTime, targetTime) && !m_abortCalled) {
+        if (m_nextEvents.empty()) {
+            m_simulationTime = targetTime;
+            return;
+        }
+
         auto &nextEvent = m_nextEvents.top();
         if (nextEvent.timeOfEvent > targetTime) {
             m_simulationTime = targetTime;
@@ -785,14 +794,29 @@ void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> han
 void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock, utils::RestrictTo<RunTimeSimulationContext>)
 {
     auto it = m_program.m_stateMapping.clockPinAllocation.clock2ClockPinIdx.find(const_cast<hlim::Clock*>(waitClock.getClock()));
-    HCL_ASSERT_HINT(it != m_program.m_stateMapping.clockPinAllocation.clock2ClockPinIdx.end(), "Simulation process is trying to wait on a clock that is not part of the simulation!");
 
-    Event e;
-    e.type = Event::Type::simProcResume;
-    e.timeOfEvent = m_dataState.clockState[it->second].nextTrigger;
-    e.simProcResumeEvt.handle = handle;
-    e.simProcResumeEvt.insertionId = m_nextSimProcInsertionId++;
-    m_nextEvents.push(e);
+    if (it == m_program.m_stateMapping.clockPinAllocation.clock2ClockPinIdx.end()) {
+        // This clock is not part of the simulation, so just wait for as long as it would take for the next tick to arrive if it was there.
+
+        size_t ticksSoFar = hlim::floor(m_simulationTime * waitClock.getClock()->getAbsoluteFrequency());
+        size_t nextTick = ticksSoFar + 1;
+
+        auto nextTickTime = hlim::ClockRational(nextTick, 1) / waitClock.getClock()->getAbsoluteFrequency();
+
+        Event e;
+        e.type = Event::Type::simProcResume;
+        e.timeOfEvent = nextTickTime;
+        e.simProcResumeEvt.handle = handle;
+        e.simProcResumeEvt.insertionId = m_nextSimProcInsertionId++;
+        m_nextEvents.push(e);
+    } else {
+        Event e;
+        e.type = Event::Type::simProcResume;
+        e.timeOfEvent = m_dataState.clockState[it->second].nextTrigger;
+        e.simProcResumeEvt.handle = handle;
+        e.simProcResumeEvt.insertionId = m_nextSimProcInsertionId++;
+        m_nextEvents.push(e);
+    }
 }
 
 

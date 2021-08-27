@@ -34,9 +34,6 @@ BOOST_FIXTURE_TEST_CASE(async_ROM, UnitTestSimulationFixture)
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
-	ClockScope clkScp(clock);
-
     std::vector<unsigned> contents;
     contents.resize(16);
     std::mt19937 rng{ 18055 };
@@ -59,14 +56,14 @@ BOOST_FIXTURE_TEST_CASE(async_ROM, UnitTestSimulationFixture)
         for (auto i : Range(16)) {
             simu(addr) = i;
 			BOOST_TEST(simu(output).value() == contents[i]);
-            co_await WaitClk(clock); // for waveforms
+            co_await WaitFor({1, 1000});
         }
 
         stopTest();
 	});
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest({1, 1});
 }
 
 

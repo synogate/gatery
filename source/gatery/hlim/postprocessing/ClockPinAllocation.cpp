@@ -109,6 +109,7 @@ ClockPinAllocation extractClockPins(Circuit &circuit, const Subnet &subnet)
             } else {
                 idx = res.clockPins.size();
                 res.clockPins.push_back({});
+                res.clock2ClockPinIdx[clockPin] = idx;
             }
             res.clockPins[idx].clocks.push_back(clock);
             res.clock2ClockPinIdx[clock] = idx;
@@ -126,6 +127,7 @@ ClockPinAllocation extractClockPins(Circuit &circuit, const Subnet &subnet)
             } else {
                 idx = res.resetPins.size();
                 res.resetPins.push_back({});
+                res.clock2ResetPinIdx[resetPin] = idx;
             }
 
             res.resetPins[idx].clocks.push_back(clock);
@@ -137,6 +139,15 @@ ClockPinAllocation extractClockPins(Circuit &circuit, const Subnet &subnet)
                 res.resetPins[idx].minResetTime = clock->getMinResetTime();
             }
         }
+    }
+
+    for (auto &c : res.clockPins) {
+        HCL_ASSERT(c.source != nullptr);
+        HCL_ASSERT(!c.clocks.empty());
+    }
+    for (auto &c : res.resetPins) {
+        HCL_ASSERT(c.source != nullptr);
+        HCL_ASSERT(!c.clocks.empty());
     }
 
     return res;

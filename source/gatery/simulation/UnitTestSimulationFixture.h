@@ -45,8 +45,6 @@ namespace gtry::sim {
         void eval(hlim::Circuit& circuit);
         void runTicks(hlim::Circuit& circuit, const hlim::Clock* clock, unsigned numTicks);
 
-        virtual void onNewTick(const hlim::ClockRational& simulationTime) override;
-        virtual void onClock(const hlim::Clock* clock, bool risingEdge) override;
         virtual void onDebugMessage(const hlim::BaseNode* src, std::string msg) override;
         virtual void onWarning(const hlim::BaseNode* src, std::string msg) override;
         virtual void onAssert(const hlim::BaseNode* src, std::string msg) override;

@@ -62,25 +62,13 @@ void UnitTestSimulationFixture::runTicks(hlim::Circuit &circuit, const hlim::Clo
 
     m_simulator->compileProgram(circuit);
     m_simulator->powerOn();
-    while (m_runLimTicks < numTicks)
-        m_simulator->advanceEvent();
+    m_simulator->advance(hlim::ClockRational(numTicks) / clock->getAbsoluteFrequency());
     m_simulator->commitState();
 
     if (!m_errors.empty())
         BOOST_FAIL(m_errors.front());
     if (!m_warnings.empty())
         BOOST_ERROR(m_warnings.front());
-}
-
-
-void UnitTestSimulationFixture::onNewTick(const hlim::ClockRational &simulationTime)
-{
-}
-
-void UnitTestSimulationFixture::onClock(const hlim::Clock *clock, bool risingEdge)
-{
-    if (clock == m_runLimClock && risingEdge)
-        m_runLimTicks++;
 }
 
 void UnitTestSimulationFixture::onDebugMessage(const hlim::BaseNode *src, std::string msg)
