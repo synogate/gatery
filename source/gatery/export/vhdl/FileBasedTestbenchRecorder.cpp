@@ -119,7 +119,7 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
     cf.indent(vhdlFile, 1);
     vhdlFile << "inst_root : entity work." << rootEntity->getName() << "(impl) port map (" << std::endl;
 
-    writePortmap(m_testbenchFile, allClocks, allResets, allIOPins);
+    writePortmap(vhdlFile, allClocks, allResets, allIOPins);
 
     cf.indent(vhdlFile, 1);
     vhdlFile << ");" << std::endl;
