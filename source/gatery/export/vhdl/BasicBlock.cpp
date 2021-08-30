@@ -273,7 +273,7 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
 
                 if (regNode->getNonSignalDriver(hlim::Node_Register::RESET_VALUE).node != nullptr && regNode->getClocks()[0]->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
                     config.reset = regNode->getClocks()[0]->getResetPinSource();
-                    config.resetHighActive = regNode->getClocks()[0]->getRegAttribs().resetHighActive;
+                    config.resetHighActive = regNode->getClocks()[0]->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH;
                 }
 
                 registerNodes[config].push_back(regNode);

@@ -63,7 +63,7 @@ void SignalTapHelper::triggerIf(const Bit &condition)
 
             hlim::NodePort rstNotActive;
 
-            if (clk->getRegAttribs().resetHighActive) {
+            if (clk->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH) {
                 auto *logic = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::NOT);
                 logic->recordStackTrace();
                 logic->connectInput(0, {.node = rstSignal, .port = 0ull});
@@ -98,7 +98,7 @@ void SignalTapHelper::triggerIfNot(const Bit &condition)
 
             hlim::NodePort rstActive;
 
-            if (clk->getRegAttribs().resetHighActive) {
+            if (clk->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH) {
                 rstActive = {.node = rstSignal, .port = 0ull};
             } else {
                 auto *logic = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::NOT);

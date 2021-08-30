@@ -80,6 +80,13 @@ struct RegisterAttributes : public Attributes {
 	UsageType registerEnablePinUsage = UsageType::DONT_CARE;
 };
 
+inline RegisterAttributes::Active operator!(RegisterAttributes::Active v)
+{
+	if (v == RegisterAttributes::Active::HIGH) 
+		return RegisterAttributes::Active::LOW;
+	return RegisterAttributes::Active::HIGH;
+}
+
 // all used defined attributes ignore type and value and replace $src and $dst in the attrib name with source and destination cells
 struct PathAttributes : public Attributes {
 	size_t multiCycle = 0; 

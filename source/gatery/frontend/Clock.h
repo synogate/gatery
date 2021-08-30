@@ -74,12 +74,8 @@ namespace gtry {
             boost::optional<ResetType> m_resetType;
             boost::optional<ResetType> m_memoryResetType;
             boost::optional<bool> m_initializeRegs;
-<<<<<<< HEAD
-            boost::optional<bool> m_resetHighActive;
-=======
             boost::optional<bool> m_initializeMemory;
             boost::optional<ResetActive> m_resetActive;
->>>>>>> origin/master
 
         	boost::optional<UsageType> m_registerResetPinUsage;
 	        boost::optional<UsageType> m_registerEnablePinUsage;

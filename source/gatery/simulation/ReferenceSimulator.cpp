@@ -483,7 +483,7 @@ void ReferenceSimulator::powerOn()
         auto &rs = m_dataState.resetState[i];
         auto &rstDom = m_program.m_resetDomains[i];
 
-        rs.resetHigh = clock->getRegAttribs().resetHighActive;
+        rs.resetHigh = clock->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH;
 
         for (auto &cn : rstDom.clockedNodes)
             cn.changeReset(m_callbackDispatcher, m_dataState, rs.resetHigh);
@@ -591,7 +591,7 @@ void ReferenceSimulator::advanceEvent()
 
                     m_callbackDispatcher.onReset(rstEvent.clock, rstEvent.newResetHigh);
 
-                    if (rstEvent.newResetHigh ^ rstEvent.clock->getRegAttribs().resetHighActive) {
+                    if (rstEvent.newResetHigh ^ (rstEvent.clock->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH)) {
                         // For now, start fibers after reset
                         {
                             RunTimeSimulationContext context(this);

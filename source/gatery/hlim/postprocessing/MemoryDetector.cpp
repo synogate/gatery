@@ -156,7 +156,7 @@ void MemoryGroup::formAround(Node_Memory *memory, Circuit &circuit)
             port->moveToGroup(this);
             rp.dataOutput = {.node = port, .port = (size_t)Node_MemPort::Outputs::rdData};
 
-            NodePort readPortEnable = port->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable);
+            //NodePort readPortEnable = port->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable);
 
             // Try and grab as many output registers as possible (up to read latency)
             // rp.findOutputRegisters(m_memory->getRequiredReadLatency(), this);
@@ -748,7 +748,7 @@ void MemoryGroup::buildResetRom(Circuit &circuit)
     if (clockDomain->getRegAttribs().resetType == RegisterAttributes::ResetType::NONE) return;
 
     Clock *resetClock = circuit.createClock<DerivedClock>(clockDomain);
-    resetClock->getRegAttribs().resetHighActive = !clockDomain->getRegAttribs().resetHighActive;
+    resetClock->getRegAttribs().resetActive = !clockDomain->getRegAttribs().resetActive;
     resetClock->getRegAttribs().initializeRegs = true;
 
 
@@ -810,7 +810,7 @@ void MemoryGroup::buildResetRom(Circuit &circuit)
     resetPin->setClock(clockDomain);
     NodePort inResetMode = {.node = resetPin, .port = 0ull};
 
-    if (!clockDomain->getRegAttribs().resetHighActive) {
+    if (!(clockDomain->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH)) {
         auto *notNode = circuit.createNode<Node_Logic>(Node_Logic::NOT);
         notNode->moveToGroup(m_fixupNodeGroup);
         notNode->recordStackTrace();
@@ -944,6 +944,8 @@ void MemoryGroup::verify()
                       << m_memory->getStackTrace();
                 HCL_DESIGNCHECK_HINT(false, issue.str());
             }
+        break;
+        default:
         break;
     }
 }
