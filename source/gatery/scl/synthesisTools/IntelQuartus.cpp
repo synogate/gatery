@@ -161,35 +161,66 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 				break;
 			}
 
+		const std::string &vhdlPinName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().getName(pin);
 
 		if (regNode == nullptr)
 		{
-			file << "# no clock found for " << direction << ' ' << pin->getName() << '\n';
+			file << "# no clock found for " << direction << ' ' << vhdlPinName << '\n';
 			continue;
 		}
-		hlim::Clock* clock = regNode->getClocks().front();
+		hlim::Clock* clock = regNode->getClocks().front()->getClockPinSource();
+
+		const std::string &vhdlClockName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().getName(clock);
 
 		bool allOnSameClock = std::all_of(allRegs.begin(), allRegs.end(), [=](hlim::Node_Register* regNode) {
-			return regNode->getClocks().front() == clock;
+			return regNode->getClocks().front()->getClockPinSource() == clock;
 		});
 		if (!allOnSameClock)
 		{
-			file << "# multiple clocks found for " << direction << ' ' << pin->getName() << '\n';
+			file << "# multiple clocks found for " << direction << ' ' << vhdlPinName << '\n';
 			continue;
 		}
 
 		float period = clock->getAbsoluteFrequency().denominator() / float(clock->getAbsoluteFrequency().numerator());
 		period *= 1e9f;
 		file << "set_" << direction << "_delay " << period / 2;
-		file << " -clock " << clock->getName();
+		file << " -clock " << vhdlClockName;
 
-		file << " [get_ports " << pin->getName();
+		file << " [get_ports " << vhdlPinName;
 
 		if (pin->getConnectionType().interpretation == hlim::ConnectionType::BITVEC)
 			file << "\\[*\\]";
 		file << "]";
 
 		file << " -reference_pin " << path << "\n";
+	}
+	for (auto& reset : vhdlExport.getAST()->getRootEntity()->getResets()) {
+
+		std::vector<hlim::Node_Register*> allRegs = hlim::findRegistersAffectedByReset(reset);
+
+		hlim::Node_Register* regNode = nullptr;
+		std::string path;
+		for (auto &reg : allRegs)
+			if (registerClockPin(*vhdlExport.getAST(), reg, path)) {
+				regNode = reg;
+				break;
+			}
+
+
+		const std::string &vhdlResetName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().getResetName(reset);
+
+		if (regNode == nullptr)
+		{
+			file << "# no clock found for reset " << vhdlResetName << '\n';
+			continue;
+		}
+		hlim::Clock* clock = regNode->getClocks().front();
+
+		float period = clock->getAbsoluteFrequency().denominator() / float(clock->getAbsoluteFrequency().numerator());
+		period *= 1e9f;
+		file << "set_input_delay " << period / 2;
+		file << " -clock " << clock->getName();
+		file << " [get_ports " << vhdlResetName << "] -reference_pin " << path << "\n";
 	}
 }
 

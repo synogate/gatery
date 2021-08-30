@@ -19,6 +19,7 @@
 
 #include "GraphTools.h"
 
+#include "Attributes.h"
 #include "coreNodes/Node_Pin.h"
 #include "coreNodes/Node_Signal.h"
 #include "coreNodes/Node_Register.h"
@@ -168,6 +169,29 @@ std::vector<Node_Register*> findAllInputRegisters(NodePort input)
             nh.backtrack();
         }
     }
+    return result;
+}
+
+
+
+void reccurFindRegistersAffectedByReset(std::vector<Node_Register*> &regs, Clock *clock)
+{
+    if (clock->getRegAttribs().resetType != RegisterAttributes::ResetType::NONE)
+        for (auto node : clock->getClockedNodes())
+            if (auto *reg = dynamic_cast<Node_Register*>(node.node))
+                regs.push_back(reg);
+
+    for (auto derivedClock : clock->getDerivedClocks())
+        if (derivedClock->inheritsResetPinSource())
+            reccurFindRegistersAffectedByReset(regs, derivedClock);
+}
+
+
+
+std::vector<Node_Register*> findRegistersAffectedByReset(Clock *clock)
+{
+    std::vector<Node_Register*> result;
+    reccurFindRegistersAffectedByReset(result, clock);
     return result;
 }
 

@@ -40,5 +40,7 @@ namespace gtry::hlim {
 	std::vector<Node_Register*> findAllOutputRegisters(NodePort output);
 	std::vector<Node_Register*> findAllInputRegisters(NodePort input);
 
+	std::vector<Node_Register*> findRegistersAffectedByReset(Clock *clock);
+
 
 }
