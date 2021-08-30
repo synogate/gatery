@@ -20,6 +20,10 @@
 
 #include "../../hlim/NodeGroup.h"
 #include "../../hlim/Circuit.h"
+#include "../Simulator.h"
+#include "../../hlim/postprocessing/ClockPinAllocation.h"
+#include "../../hlim/Subnet.h"
+
 
 #include <boost/format.hpp>
 
@@ -42,8 +46,14 @@ VCDSink::VCDSink(hlim::Circuit &circuit, Simulator &simulator, const char *filen
     } else
         m_doWriteLogFile = false;
 
-    for (auto &clk : circuit.getClocks())
-        m_allClocks.push_back(clk.get());
+
+    auto clockPins = hlim::extractClockPins(circuit, hlim::Subnet::allForSimulation(circuit));
+
+    for (auto &clk : clockPins.clockPins)
+        m_clocks.push_back(clk.source);
+
+    for (auto &rst : clockPins.resetPins)
+        m_resets.push_back(rst.source);
 }
 
 void VCDSink::onDebugMessage(const hlim::BaseNode *src, std::string msg)
@@ -172,11 +182,18 @@ void VCDSink::initialize()
     m_vcdFile
         << "$scope module clocks $end\n";
 
-    for (auto &clk : m_allClocks) {
+    for (auto &clk : m_clocks) {
         std::string id = identifierGenerator.getIdentifer();
         m_clock2code[clk] = id;
         m_vcdFile
             << "$var wire 1 " << id << " " << clk->getName() << " $end\n";
+    }
+
+    for (auto &rst : m_resets) {
+        std::string id = identifierGenerator.getIdentifer();
+        m_rst2code[rst] = id;
+        m_vcdFile
+            << "$var wire 1 " << id << " " << rst->getResetName() << " $end\n";
     }
 
     m_vcdFile
@@ -187,6 +204,28 @@ void VCDSink::initialize()
         << "$enddefinitions $end\n"
         << "$dumpvars\n";
 
+
+    for (auto &c : m_clock2code) {
+        auto value = m_simulator.getValueOfClock(c.first);
+        if (value[DefaultConfig::DEFINED]) {
+            if (value[DefaultConfig::VALUE])
+                m_vcdFile << '1';
+            else
+                m_vcdFile << '0';
+            m_vcdFile << c.second << "\n";
+        }
+    }
+
+    for (auto &c : m_rst2code) {
+        auto value = m_simulator.getValueOfReset(c.first);
+        if (value[DefaultConfig::DEFINED]) {
+            if (value[DefaultConfig::VALUE])
+                m_vcdFile << '1';
+            else
+                m_vcdFile << '0';
+            m_vcdFile << c.second << "\n";
+        }
+    }
 }
 
 void VCDSink::signalChanged(size_t id)
@@ -228,13 +267,29 @@ void VCDSink::stateToFile(size_t offset, size_t size)
 
 void VCDSink::onClock(const hlim::Clock *clock, bool risingEdge)
 {
-    if (risingEdge)
-        m_vcdFile << '1';
-    else
-        m_vcdFile << '0';
+    auto it = m_clock2code.find((hlim::Clock *)clock);
+    if (it != m_clock2code.end()) {
+        if (risingEdge)
+            m_vcdFile << '1';
+        else
+            m_vcdFile << '0';
 
-    m_vcdFile << m_clock2code[(hlim::Clock *)clock] << "\n";
+        m_vcdFile << it->second << "\n";
+    }
 }
 
+
+void VCDSink::onReset(const hlim::Clock *clock, bool inReset)
+{
+    auto it = m_rst2code.find((hlim::Clock *)clock);
+    if (it != m_rst2code.end()) {
+        if (inReset)
+            m_vcdFile << '1';
+        else
+            m_vcdFile << '0';
+
+        m_vcdFile << it->second << "\n";
+    }
+}
 
 }

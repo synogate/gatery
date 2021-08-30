@@ -163,10 +163,6 @@ void DefaultSynthesisTool::writeConstraintFile(vhdl::VHDLExport &vhdlExport, con
 	file << "# List of constraints:" << std::endl;
 
 	forEachPathAttribute(vhdlExport, circuit, [&](hlim::Node_PathAttributes* pa, std::string start, std::string end) {
-		const auto &startConType = hlim::getOutputConnectionType(pa->getDriver(0));
-		const auto &endConType = hlim::getOutputConnectionType(pa->getDriver(1));
-
-
 		const auto &attribs = pa->getAttribs();
 		
 		if (attribs.falsePath)

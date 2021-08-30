@@ -92,6 +92,34 @@ const std::string &NamespaceScope::getName(const hlim::Clock *clock) const
     return m_parent->getName(clock);
 }
 
+std::string NamespaceScope::allocateResetName(hlim::Clock *clock, const std::string &desiredName)
+{
+    CodeFormatting &cf = m_ast.getCodeFormatting();
+
+    HCL_ASSERT(m_resetNames.find(clock) == m_resetNames.end());
+
+    unsigned attempt = 0;
+    std::string name, upperCaseName;
+    do {
+        name = cf.getClockName(desiredName, attempt++);
+        upperCaseName = boost::to_upper_copy(name);
+    } while (isNameInUse(upperCaseName));
+
+    m_namesInUse.insert(upperCaseName);
+    m_resetNames[clock] = name;
+    return name;
+}
+
+const std::string &NamespaceScope::getResetName(const hlim::Clock *clock) const
+{
+    auto it = m_resetNames.find(const_cast<hlim::Clock*>(clock));
+    if (it != m_resetNames.end())
+        return it->second;
+
+    HCL_ASSERT_HINT(m_parent != nullptr, "End of namespace scope chain reached, it seems no name was allocated for the given reset!");
+    return m_parent->getResetName(clock);
+}
+
 
 std::string NamespaceScope::allocateName(hlim::Node_Pin *ioPin, const std::string &desiredName)
 {

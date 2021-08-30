@@ -32,11 +32,10 @@
 namespace gtry::vhdl {
 
 
-TestbenchRecorder::TestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, std::string name) : BaseTestbenchRecorder(std::move(name)), m_exporter(exporter), m_ast(ast), m_simulator(simulator)
+TestbenchRecorder::TestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, std::string name) : BaseTestbenchRecorder(ast, simulator, std::move(name)), m_exporter(exporter)
 {
     m_dependencySortedEntities.push_back(m_name);
     m_testbenchFile.open(m_ast->getFilename(basePath, m_name).c_str(), std::fstream::out);
-    writeHeader();
 }
 
 TestbenchRecorder::~TestbenchRecorder()
@@ -61,26 +60,18 @@ ARCHITECTURE tb OF )" << m_name << R"( IS
     auto *rootEntity = m_ast->getRootEntity();
 
     const auto &allClocks = rootEntity->getClocks();
+    const auto &allResets = rootEntity->getResets();
     const auto &allIOPins = rootEntity->getIoPins();
 
     m_clocksOfInterest.insert(allClocks.begin(), allClocks.end());
+    m_resetsOfInterest.insert(allResets.begin(), allResets.end());
 
     CodeFormatting &cf = m_ast->getCodeFormatting();
 
-    for (auto clock : allClocks) {
-        m_testbenchFile << "    SIGNAL " << rootEntity->getNamespaceScope().getName(clock) << " : STD_LOGIC;" << std::endl;
-        if (clock->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE)
-            m_testbenchFile << "    SIGNAL " << rootEntity->getNamespaceScope().getName(clock)<<clock->getResetName() << " : STD_LOGIC;" << std::endl;
-    }
-
+    declareSignals(m_testbenchFile, allClocks, allResets, allIOPins);
 
     for (auto ioPin : allIOPins) {
         const std::string &name = rootEntity->getNamespaceScope().getName(ioPin);
-        auto conType = ioPin->getConnectionType();
-
-        m_testbenchFile << "    SIGNAL " << name << " : ";
-        cf.formatConnectionType(m_testbenchFile, conType);
-        m_testbenchFile << ';' << std::endl;
 
         if (ioPin->isOutputPin())
             m_outputToIoPinName[ioPin->getDriver(0)] = name;
@@ -96,36 +87,8 @@ ARCHITECTURE tb OF )" << m_name << R"( IS
     cf.indent(m_testbenchFile, 1);
     m_testbenchFile << "inst_root : entity work." << rootEntity->getName() << "(impl) port map (" << std::endl;
 
-    std::vector<std::string> portmapList;
-
-    for (auto &s : allClocks) {
-        std::stringstream line;
-        line << rootEntity->getNamespaceScope().getName(s) << " => ";
-        line << rootEntity->getNamespaceScope().getName(s);
-        portmapList.push_back(line.str());
-        if (s->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
-            std::stringstream line;
-            line << rootEntity->getNamespaceScope().getName(s)<<s->getResetName() << " => ";
-            line << rootEntity->getNamespaceScope().getName(s)<<s->getResetName();
-            portmapList.push_back(line.str());
-        }
-    }
-    for (auto &s : allIOPins) {
-        std::stringstream line;
-        line << rootEntity->getNamespaceScope().getName(s) << " => ";
-        line << rootEntity->getNamespaceScope().getName(s);
-        portmapList.push_back(line.str());
-    }
-
-    for (auto i : utils::Range(portmapList.size())) {
-        cf.indent(m_testbenchFile, 2);
-        m_testbenchFile << portmapList[i];
-        if (i+1 < portmapList.size())
-            m_testbenchFile << ",";
-        m_testbenchFile << std::endl;
-    }
-
-
+    writePortmap(m_testbenchFile, allClocks, allResets, allIOPins);
+   
     cf.indent(m_testbenchFile, 1);
     m_testbenchFile << ");" << std::endl;
 
@@ -134,44 +97,8 @@ ARCHITECTURE tb OF )" << m_name << R"( IS
     cf.indent(m_testbenchFile, 1);
     m_testbenchFile << "BEGIN" << std::endl;
 
-    bool anyClockNeedsReset = false;
-    for (auto &s : allClocks) 
-        if (s->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
-            anyClockNeedsReset = true;
-            break;
-        }
+    initClocks(m_testbenchFile, allClocks, allResets);
 
-
-    for (auto &s : allClocks) {
-        cf.indent(m_testbenchFile, 2);
-        m_testbenchFile << rootEntity->getNamespaceScope().getName(s) << " <= '0';" << std::endl;
-        if (s->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
-            cf.indent(m_testbenchFile, 2);
-            m_testbenchFile << rootEntity->getNamespaceScope().getName(s)<<s->getResetName() << " <= '1';" << std::endl;
-        }
-    }
-
-    if (anyClockNeedsReset) {
-        cf.indent(m_testbenchFile, 2);
-        m_testbenchFile << "WAIT FOR 1 ns;" << std::endl;
-        for (auto &s : allClocks) {
-            cf.indent(m_testbenchFile, 2);
-            m_testbenchFile << rootEntity->getNamespaceScope().getName(s) << " <= '1';" << std::endl;
-        }
-        cf.indent(m_testbenchFile, 2);
-        m_testbenchFile << "WAIT FOR 1 ns;" << std::endl;
-
-        for (auto &s : allClocks) {
-            cf.indent(m_testbenchFile, 2);
-            m_testbenchFile << rootEntity->getNamespaceScope().getName(s) << " <= '0';" << std::endl;
-            if (s->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
-                cf.indent(m_testbenchFile, 2);
-                m_testbenchFile << rootEntity->getNamespaceScope().getName(s)<<s->getResetName() << " <= '0';" << std::endl;
-            }
-        }
-        cf.indent(m_testbenchFile, 2);
-        m_testbenchFile << "WAIT FOR 1 ns;" << std::endl;
-    }
 
     m_lastSimulationTime = 0;
 }
@@ -199,6 +126,13 @@ namespace {
         stream << time.numerator() / time.denominator() << ' ' << unit;
     }
 }
+
+
+void TestbenchRecorder::onPowerOn()
+{
+    writeHeader();
+}
+
 
 void TestbenchRecorder::onNewTick(const hlim::ClockRational &simulationTime)
 {
@@ -249,6 +183,20 @@ void TestbenchRecorder::onClock(const hlim::Clock *clock, bool risingEdge)
         m_testbenchFile << rootEntity->getNamespaceScope().getName((hlim::Clock *) clock) << " <= '1';" << std::endl;
     else
         m_testbenchFile << rootEntity->getNamespaceScope().getName((hlim::Clock *) clock) << " <= '0';" << std::endl;
+}
+
+void TestbenchRecorder::onReset(const hlim::Clock *clock, bool resetAsserted)
+{
+    if (!m_resetsOfInterest.contains(clock)) return;
+
+    CodeFormatting &cf = m_ast->getCodeFormatting();
+    auto *rootEntity = m_ast->getRootEntity();
+
+    cf.indent(m_testbenchFile, 2);
+    if (resetAsserted)
+        m_testbenchFile << rootEntity->getNamespaceScope().getResetName((hlim::Clock *) clock) << " <= '1';" << std::endl;
+    else
+        m_testbenchFile << rootEntity->getNamespaceScope().getResetName((hlim::Clock *) clock) << " <= '0';" << std::endl;
 }
 
 void TestbenchRecorder::onSimProcOutputOverridden(hlim::NodePort output, const sim::DefaultBitVectorState &state)

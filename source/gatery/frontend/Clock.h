@@ -72,7 +72,9 @@ namespace gtry {
             boost::optional<bool> m_phaseSynchronousWithParent;
 
             boost::optional<ResetType> m_resetType;
+            boost::optional<ResetType> m_memoryResetType;
             boost::optional<bool> m_initializeRegs;
+            boost::optional<bool> m_initializeMemory;
             boost::optional<ResetActive> m_resetActive;
 
         	boost::optional<UsageType> m_registerResetPinUsage;
@@ -98,7 +100,9 @@ namespace gtry {
             BUILD_SET(m_phaseSynchronousWithParent, setPhaseSynchronousWithParent)
 
             BUILD_SET(m_resetType, setResetType)
+            BUILD_SET(m_memoryResetType, setMemoryResetType)
             BUILD_SET(m_initializeRegs, setInitializeRegs)
+            BUILD_SET(m_initializeMemory, setInitializeMemory)
             BUILD_SET(m_resetActive, setResetActive)
 
             BUILD_SET(m_registerResetPinUsage, setRegisterResetPinUsage)
@@ -155,6 +159,7 @@ namespace gtry {
                 HCL_DESIGNCHECK_HINT(m_currentScope != nullptr, "No clock scope active!");
                 return m_currentScope->m_clock;
             }
+            static bool anyActive() { return m_currentScope != nullptr; }
         protected:
             Clock &m_clock;
     };

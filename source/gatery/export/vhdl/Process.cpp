@@ -35,6 +35,7 @@
 #include "../../hlim/coreNodes/Node_Register.h"
 #include "../../hlim/coreNodes/Node_Rewire.h"
 #include "../../hlim/coreNodes/Node_Pin.h"
+#include "../../hlim/coreNodes/Node_ClkRst2Signal.h"
 #include "../../hlim/supportNodes/Node_Attributes.h"
 #include "../../hlim/supportNodes/Node_ExportOverride.h"
 #include "../../hlim/supportNodes/Node_SignalTap.h"
@@ -82,11 +83,11 @@ void Process::extractSignals()
             if (isConsumedExternally(driver))
                 m_outputs.insert(driver);
         }
-        // Handle clocks
-        for (auto i : utils::Range(node->getClocks().size())) {
-            if (node->getClocks()[i] != nullptr)
-                m_inputClocks.insert(node->getClocks()[i]);
+
+        if (auto *rstSig = dynamic_cast<hlim::Node_ClkRst2Signal*>(node)) {
+            m_inputResets.insert(rstSig->getClocks()[0]->getResetPinSource());
         }
+
 #if 1
         // Named signals are explicit
         if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr && node->hasGivenName() && node->getOutputConnectionType(0).width > 0) {
@@ -226,6 +227,15 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
 
     if (const auto *expOverrideNode = dynamic_cast<const hlim::Node_ExportOverride*>(nodePort.node)) {
         formatExpression(stream, comments, expOverrideNode->getDriver(hlim::Node_ExportOverride::EXP_INPUT), dependentInputs, context);
+        return;
+    }
+
+    if (const auto *rstSig = dynamic_cast<const hlim::Node_ClkRst2Signal*>(nodePort.node)) {
+        HCL_ASSERT(context == Context::BOOL || context == Context::STD_LOGIC);
+        stream << m_namespaceScope.getResetName(rstSig->getClocks()[0]->getResetPinSource());
+        if (context == Context::BOOL)
+            stream << " = '1'";
+            
         return;
     }
 
@@ -695,6 +705,26 @@ RegisterProcess::RegisterProcess(BasicBlock *parent, const std::string &desiredN
     m_name = m_parent->getNamespaceScope().allocateProcessName(desiredName, true);
 }
 
+
+void RegisterProcess::extractSignals()
+{
+    for (auto node : m_nodes) {
+        // Handle clocks
+        if (auto *reg = dynamic_cast<hlim::Node_Register*>(node)) {
+            m_inputClocks.insert(node->getClocks()[0]->getClockPinSource());
+
+			auto resetValue = reg->getDriver((unsigned)hlim::Node_Register::Input::RESET_VALUE);
+			if (resetValue.node != nullptr)
+				if (reg->getClocks()[0]->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE)
+                    m_inputResets.insert(node->getClocks()[0]->getResetPinSource());
+        } else {
+            HCL_ASSERT(node->getClocks().empty());
+        }
+    }
+    Process::extractSignals();
+}
+
+
 void RegisterProcess::allocateNames()
 {
     for (auto &constant : m_constants)
@@ -712,12 +742,14 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     std::string clockName = m_namespaceScope.getName(m_config.clock);
-    std::string resetName = clockName + m_config.clock->getResetName();
+    std::string resetName;
+    if (m_config.reset != nullptr)
+        resetName = m_namespaceScope.getResetName(m_config.reset);
 
     cf.formatProcessComment(stream, indentation, m_name, m_comment);
     cf.indent(stream, indentation);
 
-    if (m_config.hasResetSignal && m_config.clock->getRegAttribs().resetType == hlim::RegisterAttributes::ResetType::ASYNCHRONOUS)
+    if (m_config.reset != nullptr && m_config.resetType == hlim::RegisterAttributes::ResetType::ASYNCHRONOUS)
         stream << m_name << " : PROCESS(" << clockName << ", " << resetName << ")" << std::endl;
     else
         stream << m_name << " : PROCESS(" << clockName << ")" << std::endl;
@@ -727,10 +759,10 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
     cf.indent(stream, indentation);
     stream << "BEGIN" << std::endl;
 
-    if (m_config.hasResetSignal && m_config.clock->getRegAttribs().resetType == hlim::RegisterAttributes::ResetType::ASYNCHRONOUS) {
+    if (m_config.reset != nullptr && m_config.resetType == hlim::RegisterAttributes::ResetType::ASYNCHRONOUS) {
         cf.indent(stream, indentation+1);
         const char resetValue = m_config.clock->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH ? '1' : '0';
-        stream << "IF (" << m_config.clock->getResetName() << " = '" << resetValue << "') THEN" << std::endl;
+        stream << "IF (" << resetName << " = '" << resetValue << "') THEN" << std::endl;
 
         for (auto node : m_nodes) {
             hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
@@ -757,7 +789,7 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
         stream << "IF";
     }
 
-    switch (m_config.clock->getTriggerEvent()) {
+    switch (m_config.triggerEvent) {
         case hlim::Clock::TriggerEvent::RISING:
             stream << " (rising_edge(" << clockName << ")) THEN" << std::endl;
         break;
@@ -770,7 +802,7 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
     }
 
     unsigned indentationOffset = 0;
-    if (m_config.hasResetSignal && m_config.clock->getRegAttribs().resetType == hlim::RegisterAttributes::ResetType::SYNCHRONOUS) {
+    if (m_config.reset != nullptr && m_config.resetType == hlim::RegisterAttributes::ResetType::SYNCHRONOUS) {
         cf.indent(stream, indentation+2);
         const char resetValue = m_config.clock->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH ? '1' : '0';
         stream << "IF (" << resetName << " = '" << resetValue << "') THEN" << std::endl;

@@ -31,7 +31,10 @@ void Simulator::CallbackDispatcher::onAnnotationEnd(const hlim::ClockRational &s
     for (auto *c : m_callbacks) c->onAnnotationEnd(simulationTime, id);
 }
 
-
+void Simulator::CallbackDispatcher::onPowerOn()
+{
+    for (auto *c : m_callbacks) c->onPowerOn();
+}
 
 void Simulator::CallbackDispatcher::onCommitState()
 {
@@ -46,6 +49,11 @@ void Simulator::CallbackDispatcher::onNewTick(const hlim::ClockRational &simulat
 void Simulator::CallbackDispatcher::onClock(const hlim::Clock *clock, bool risingEdge)
 {
     for (auto *c : m_callbacks) c->onClock(clock, risingEdge);
+}
+
+void Simulator::CallbackDispatcher::onReset(const hlim::Clock *clock, bool resetAsserted)
+{
+    for (auto *c : m_callbacks) c->onReset(clock, resetAsserted);
 }
 
 void Simulator::CallbackDispatcher::onDebugMessage(const hlim::BaseNode *src, std::string msg)

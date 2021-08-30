@@ -22,6 +22,8 @@
 #include "BitVectorState.h"
 #include "../hlim/NodeIO.h"
 #include "../utils/BitManipulation.h"
+#include "../hlim/postprocessing/ClockPinAllocation.h"
+#include "../hlim/Subnet.h"
 
 #include <vector>
 #include <functional>
@@ -36,29 +38,31 @@ struct ClockState {
     hlim::ClockRational nextTrigger;
 };
 
+struct ResetState {
+    bool resetHigh;
+};
+
 struct DataState
 {
     DefaultBitVectorState signalState;
     std::vector<ClockState> clockState;
+    std::vector<ResetState> resetState;
 };
 
 struct StateMapping
 {
     std::map<hlim::NodePort, size_t> outputToOffset;
     std::map<hlim::BaseNode*, std::vector<size_t>> nodeToInternalOffset;
-    std::map<hlim::Clock*, size_t> clockToClkDomain;
+    hlim::ClockPinAllocation clockPinAllocation;
     /*
     std::map<hlim::Clock*, size_t> clockToSignalIdx;
     std::map<hlim::Clock*, size_t> clockToClkIdx;
     */
-//    std::map<std::string, size_t> resetToSignalIdx;
 
     StateMapping() { clear(); }
 
     void clear() {
         outputToOffset.clear(); outputToOffset[{}] = SIZE_MAX; //clockToSignalIdx.clear(); clockToClkIdx.clear();
-        clockToClkDomain.clear();
-        //resetToSignalIdx.clear();
     }
 };
 
@@ -94,6 +98,7 @@ class ClockedNode
         ClockedNode(MappedNode mappedNode, size_t clockPort);
 
         void advance(SimulatorCallbacks &simCallbacks, DataState &state) const;
+        void changeReset(SimulatorCallbacks &simCallbacks, DataState &state, bool resetHigh) const;
     protected:
         MappedNode m_mappedNode;
         size_t m_clockPort;
@@ -115,7 +120,7 @@ struct ClockDriver
 */
 struct Program
 {
-    void compileProgram(const hlim::Circuit &circuit, const std::vector<hlim::BaseNode*> &nodes);
+    void compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &nodes);
 
     size_t m_fullStateWidth;
 
@@ -124,15 +129,17 @@ struct Program
     std::vector<MappedNode> m_powerOnNodes;
     //std::vector<ClockDriver> m_clockDrivers;
     std::vector<ClockDomain> m_clockDomains;
+    std::vector<ClockDomain> m_resetDomains;
     std::vector<ExecutionBlock> m_executionBlocks;
 
     protected:
-        void allocateSignals(const hlim::Circuit &circuit, const std::vector<hlim::BaseNode*> &nodes);
+        void allocateSignals(const hlim::Circuit &circuit, const hlim::Subnet &nodes);
 };
 
 struct Event {
     enum class Type {
         clock,
+        reset,
         simProcResume
     };
     Type type;
@@ -143,6 +150,11 @@ struct Event {
         size_t clockDomainIdx;
         bool risingEdge;
     } clockEvt;
+    struct {
+        hlim::Clock *clock;
+        size_t resetDomainIdx;
+        bool newResetHigh;
+    } resetEvt;
     struct {
         std::coroutine_handle<> handle;
         std::uint64_t insertionId;
@@ -182,7 +194,7 @@ class ReferenceSimulator : public Simulator
         virtual DefaultBitVectorState getValueOfInternalState(const hlim::BaseNode *node, size_t idx) override;
         virtual DefaultBitVectorState getValueOfOutput(const hlim::NodePort &nodePort) override;
         virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfClock(const hlim::Clock *clk) override;
-        //virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfReset(const std::string &reset) override;
+        virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfReset(const hlim::Clock *clk) override;
 
         virtual void addSimulationProcess(std::function<SimulationProcess()> simProc) override;
 

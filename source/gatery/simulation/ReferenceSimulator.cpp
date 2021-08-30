@@ -89,18 +89,19 @@ void ClockedNode::advance(SimulatorCallbacks &simCallbacks, DataState &state) co
     m_mappedNode.node->simulateAdvance(simCallbacks, state.signalState, m_mappedNode.internal.data(), m_mappedNode.outputs.data(), m_clockPort);
 }
 
+void ClockedNode::changeReset(SimulatorCallbacks &simCallbacks, DataState &state, bool resetHigh) const
+{
+    m_mappedNode.node->simulateResetChange(simCallbacks, state.signalState, m_mappedNode.internal.data(), m_mappedNode.outputs.data(), m_clockPort, resetHigh);
+}
 
-void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hlim::BaseNode*> &nodes)
+
+void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &nodes)
 {
     allocateSignals(circuit, nodes);
 
-
-    for (const auto &clock : circuit.getClocks()) {
-        m_stateMapping.clockToClkDomain[clock.get()] = m_clockDomains.size();
-        m_clockDomains.push_back({
-            .clockedNodes={}
-        });
-    }
+    m_stateMapping.clockPinAllocation = hlim::extractClockPins(const_cast<hlim::Circuit &>(circuit), nodes);
+    m_clockDomains.resize(m_stateMapping.clockPinAllocation.clockPins.size());
+    m_resetDomains.resize(m_stateMapping.clockPinAllocation.resetPins.size());
 
     std::set<hlim::BaseNode*> subnetToConsider(nodes.begin(), nodes.end());
 
@@ -150,11 +151,17 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
 
         for (auto clockPort : utils::Range(node->getClocks().size())) {
             if (node->getClocks()[clockPort] != nullptr) {
-                size_t clockDomainIdx = m_stateMapping.clockToClkDomain[node->getClocks()[clockPort]];
+                size_t clockDomainIdx = m_stateMapping.clockPinAllocation.clock2ClockPinIdx[node->getClocks()[clockPort]];
                 auto &clockDomain = m_clockDomains[clockDomainIdx];
                 clockDomain.clockedNodes.push_back(ClockedNode(mappedNode, clockPort));
                 if (clockDomain.dependentExecutionBlocks.empty()) /// @todo only attach those that actually need to be recomputed
                     clockDomain.dependentExecutionBlocks.push_back(0ull);
+
+                size_t resetDomainIdx = m_stateMapping.clockPinAllocation.clock2ResetPinIdx[node->getClocks()[clockPort]];
+                auto &resetDomain = m_resetDomains[resetDomainIdx];
+                resetDomain.clockedNodes.push_back(ClockedNode(mappedNode, clockPort));
+                if (resetDomain.dependentExecutionBlocks.empty()) /// @todo only attach those that actually need to be recomputed
+                    resetDomain.dependentExecutionBlocks.push_back(0ull);
             }
         }
     }
@@ -302,7 +309,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const std::vector<hli
 
 }
 
-void Program::allocateSignals(const hlim::Circuit &circuit, const std::vector<hlim::BaseNode*> &nodes)
+void Program::allocateSignals(const hlim::Circuit &circuit, const hlim::Subnet &nodes)
 {
     m_stateMapping.clear();
 
@@ -392,71 +399,7 @@ void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const std:
         for (const auto &simProc : circuit.getSimulationProcesses())
             addSimulationProcess(simProc);
 
-#if 0
-    std::vector<hlim::BaseNode*> nodes;
-    if (outputs.empty()) {
-        nodes.reserve(circuit.getNodes().size());
-        for (const auto &node : circuit.getNodes())
-            nodes.push_back(node.get());
-    } else {
-        std::set<hlim::BaseNode*> nodeSet;
-        {
-            std::vector<hlim::BaseNode*> stack;
-            for (auto nodePort : outputs)
-                stack.push_back(nodePort.node);
-
-            while (!stack.empty()) {
-                hlim::BaseNode *node = stack.back();
-                stack.pop_back();
-                if (nodeSet.find(node) == nodeSet.end()) {
-                    nodeSet.insert(node);
-                    for (auto i : utils::Range(node->getNumInputPorts()))
-                        if (node->getDriver(i).node != nullptr)
-                            stack.push_back(node->getDriver(i).node);
-                }
-            }
-        }
-        nodes.reserve(nodeSet.size());
-        for (const auto &node : nodeSet)
-            nodes.push_back(node);
-    }
-#else
-    std::set<hlim::BaseNode*> nodeSet;
-    {
-        std::vector<hlim::BaseNode*> stack;
-        if (outputs.empty()) {
-            for (auto &node : circuit.getNodes())
-                if (node->hasSideEffects() || node->hasRef())
-                    stack.push_back(node.get());
-        } else {
-            for (auto nodePort : outputs)
-                stack.push_back(nodePort.node);
-        }
-
-        while (!stack.empty()) {
-            hlim::BaseNode *node = stack.back();
-            stack.pop_back();
-            if (nodeSet.find(node) == nodeSet.end()) {
-                // Ignore the export-only part as well as the export node
-                if (auto *expOverride = dynamic_cast<hlim::Node_ExportOverride*>(node)) {
-                    if (node->getDriver(0).node != nullptr)
-                        stack.push_back(node->getDriver(0).node);
-                } else {
-                    nodeSet.insert(node);
-                    for (auto i : utils::Range(node->getNumInputPorts()))
-                        if (node->getDriver(i).node != nullptr)
-                            stack.push_back(node->getDriver(i).node);
-                }
-            }
-        }
-    }
-
-    std::vector<hlim::BaseNode*> nodes;
-    nodes.reserve(nodeSet.size());
-    for (const auto &node : nodeSet)
-        nodes.push_back(node);
-
-#endif    
+    auto nodes = hlim::Subnet::allForSimulation(const_cast<hlim::Circuit&>(circuit), outputs);
 
     m_program.compileProgram(circuit, nodes);
 }
@@ -464,7 +407,7 @@ void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const std:
 
 void ReferenceSimulator::compileStaticEvaluation(const hlim::Circuit& circuit, const std::set<hlim::NodePort>& outputs)
 {
-    std::set<hlim::BaseNode*> nodeSet;
+    hlim::Subnet nodeSet;
     {
         std::vector<hlim::BaseNode*> stack;
         for (auto nodePort : outputs)
@@ -473,15 +416,15 @@ void ReferenceSimulator::compileStaticEvaluation(const hlim::Circuit& circuit, c
         while (!stack.empty()) {
             hlim::BaseNode* node = stack.back();
             stack.pop_back();
-            if (nodeSet.find(node) == nodeSet.end()) {
+            if (!nodeSet.contains(node)) {
                 // Ignore the export-only part as well as the export node
                 if (auto* expOverride = dynamic_cast<hlim::Node_ExportOverride*>(node)) {
                     if (node->getDriver(0).node != nullptr)
                         stack.push_back(node->getDriver(0).node);
                 } else if (auto* expOverride = dynamic_cast<hlim::Node_Register*>(node)) { // add registers but stop there
-                    nodeSet.insert(node);
+                    nodeSet.add(node);
                 } else {
-                    nodeSet.insert(node);
+                    nodeSet.add(node);
                     for (auto i : utils::Range(node->getNumInputPorts()))
                         if (node->getDriver(i).node != nullptr)
                             stack.push_back(node->getDriver(i).node);
@@ -489,13 +432,7 @@ void ReferenceSimulator::compileStaticEvaluation(const hlim::Circuit& circuit, c
             }
         }
     }
-
-    std::vector<hlim::BaseNode*> nodes;
-    nodes.reserve(nodeSet.size());
-    for (const auto& node : nodeSet)
-        nodes.push_back(node);
-
-    m_program.compileProgram(circuit, nodes);
+    m_program.compileProgram(circuit, nodeSet);
 }
 
 
@@ -508,47 +445,99 @@ void ReferenceSimulator::powerOn()
     m_dataState.signalState.clearRange(DefaultConfig::DEFINED, 0, m_program.m_fullStateWidth);
 
     for (const auto &mappedNode : m_program.m_powerOnNodes)
-        mappedNode.node->simulateReset(m_callbackDispatcher, m_dataState.signalState, mappedNode.internal.data(), mappedNode.outputs.data());
+        mappedNode.node->simulatePowerOn(m_callbackDispatcher, m_dataState.signalState, mappedNode.internal.data(), mappedNode.outputs.data());
 
-    m_dataState.clockState.resize(m_program.m_clockDomains.size());
-    for (auto &cs : m_dataState.clockState)
-        cs.high = false;
+    m_dataState.clockState.resize(m_program.m_stateMapping.clockPinAllocation.clockPins.size());
+    m_dataState.resetState.resize(m_program.m_stateMapping.clockPinAllocation.resetPins.size());
+    for (auto i : utils::Range(m_program.m_stateMapping.clockPinAllocation.clockPins.size())) {
+        auto clock = m_program.m_stateMapping.clockPinAllocation.clockPins[i].source;
+        
+        auto &cs = m_dataState.clockState[i];
+        auto trigType = clock->getTriggerEvent();
 
-    for (auto &p : m_program.m_stateMapping.clockToClkDomain) {
+        cs.high = trigType == hlim::Clock::TriggerEvent::RISING;
+
         Event e;
         e.type = Event::Type::clock;
-        e.clockEvt.clock = p.first;
-        e.clockEvt.clockDomainIdx = p.second;
-        e.clockEvt.risingEdge = !m_dataState.clockState[e.clockEvt.clockDomainIdx].high;
-        e.timeOfEvent = m_simulationTime + hlim::ClockRational(1,2) / e.clockEvt.clock->getAbsoluteFrequency();
+        e.clockEvt.clock = clock;
+        e.clockEvt.clockDomainIdx = i;
+        e.clockEvt.risingEdge = !cs.high;
+        e.timeOfEvent = m_simulationTime + hlim::ClockRational(1,2) / clock->getAbsoluteFrequency();
 
-        auto trigType = p.first->getTriggerEvent();
         if (trigType == hlim::Clock::TriggerEvent::RISING_AND_FALLING ||
             (trigType == hlim::Clock::TriggerEvent::RISING && e.clockEvt.risingEdge) ||
             (trigType == hlim::Clock::TriggerEvent::FALLING && !e.clockEvt.risingEdge)) {
 
-            m_dataState.clockState[e.clockEvt.clockDomainIdx].nextTrigger = e.timeOfEvent;
+            cs.nextTrigger = e.timeOfEvent;
         } else
-            m_dataState.clockState[e.clockEvt.clockDomainIdx].nextTrigger = e.timeOfEvent + hlim::ClockRational(1,2) / e.clockEvt.clock->getAbsoluteFrequency();
+            cs.nextTrigger = e.timeOfEvent + hlim::ClockRational(1,2) / clock->getAbsoluteFrequency();
 
         m_nextEvents.push(e);
     }
 
+
+    bool resetsInFlight = false;
+    for (auto i : utils::Range(m_program.m_stateMapping.clockPinAllocation.resetPins.size())) {
+        auto clock = m_program.m_stateMapping.clockPinAllocation.resetPins[i].source;
+
+        auto &rs = m_dataState.resetState[i];
+        auto &rstDom = m_program.m_resetDomains[i];
+
+        rs.resetHigh = clock->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH;
+
+        for (auto &cn : rstDom.clockedNodes)
+            cn.changeReset(m_callbackDispatcher, m_dataState, rs.resetHigh);
+        m_callbackDispatcher.onReset(clock, rs.resetHigh);
+
+
+        // Deactivate reset
+        auto minTime = m_program.m_stateMapping.clockPinAllocation.resetPins[i].minResetTime;
+        auto minCycles = m_program.m_stateMapping.clockPinAllocation.resetPins[i].minResetCycles;
+        auto minCyclesTime = hlim::ClockRational(minCycles, 1) / clock->getAbsoluteFrequency();
+        
+        minTime = std::max(minTime, minCyclesTime);
+        if (minTime == hlim::ClockRational(0, 1)) {
+            // Immediately disable again
+            rs.resetHigh = !rs.resetHigh;
+            for (auto &cn : rstDom.clockedNodes)
+                cn.changeReset(m_callbackDispatcher, m_dataState, rs.resetHigh);
+            m_callbackDispatcher.onReset(clock, rs.resetHigh);
+        } else {
+            // Schedule disabling
+            resetsInFlight = true;
+            Event e;
+            e.type = Event::Type::reset;
+            e.resetEvt.clock = clock;
+            e.resetEvt.resetDomainIdx = i;
+            e.resetEvt.newResetHigh = !rs.resetHigh;
+            e.timeOfEvent = m_simulationTime + minTime;
+
+            m_nextEvents.push(e);
+        }
+    }    
+
     // reevaluate, to provide fibers with power-on state
     reevaluate();
 
-    {
-        RunTimeSimulationContext context(this);
-        // start all fibers
-        m_runningSimProcs.clear();
-        for (auto &f : m_simProcs) {
-            m_runningSimProcs.push_back(f());
-            m_runningSimProcs.back().resume();
+    HCL_ASSERT_HINT(m_program.m_stateMapping.clockPinAllocation.resetPins.size() < 2, "For now, only one reset is supported!");
+
+    if (!resetsInFlight) {
+        // For now, start fibers after reset
+        {
+            RunTimeSimulationContext context(this);
+            // start all fibers
+            m_runningSimProcs.clear();
+            for (auto &f : m_simProcs) {
+                m_runningSimProcs.push_back(f());
+                m_runningSimProcs.back().resume();
+            }
         }
+
+        if (m_stateNeedsReevaluating)
+            reevaluate();
     }
 
-    if (m_stateNeedsReevaluating)
-        reevaluate();
+    m_callbackDispatcher.onPowerOn();
 }
 
 void ReferenceSimulator::reevaluate()
@@ -580,17 +569,47 @@ void ReferenceSimulator::advanceEvent()
         m_callbackDispatcher.onNewTick(m_simulationTime);
     }
 
-    while (m_nextEvents.top().timeOfEvent == m_simulationTime) { // outer loop because fibers can do a waitFor(0) in which we need to run again.
+    while (!m_nextEvents.empty() && m_nextEvents.top().timeOfEvent == m_simulationTime) { // outer loop because fibers can do a waitFor(0) in which we need to run again.
         std::set<size_t> triggeredExecutionBlocks;
-        std::vector<Event> simProcsResuming;
-        while (m_nextEvents.top().timeOfEvent == m_simulationTime) {
+        std::vector<std::coroutine_handle<>> simProcsResuming;
+        while (!m_nextEvents.empty() && m_nextEvents.top().timeOfEvent == m_simulationTime) {
             auto event = m_nextEvents.top();
             m_nextEvents.pop();
 
             switch (event.type) {
+                case Event::Type::reset: {
+                    auto &rstEvent = event.resetEvt;
+                    m_dataState.resetState[rstEvent.resetDomainIdx].resetHigh = rstEvent.newResetHigh;
+
+                    auto &rstDom = m_program.m_resetDomains[rstEvent.resetDomainIdx];
+
+                    for (auto id : rstDom.dependentExecutionBlocks)
+                        triggeredExecutionBlocks.insert(id);
+
+                    for (auto &cn : rstDom.clockedNodes)
+                        cn.changeReset(m_callbackDispatcher, m_dataState, rstEvent.newResetHigh);
+
+                    m_callbackDispatcher.onReset(rstEvent.clock, rstEvent.newResetHigh);
+
+                    if (rstEvent.newResetHigh ^ (rstEvent.clock->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH)) {
+                        // For now, start fibers after reset
+                        {
+                            RunTimeSimulationContext context(this);
+                            // start all fibers
+                            m_runningSimProcs.clear();
+                            for (auto &f : m_simProcs) {
+                                m_runningSimProcs.push_back(f());
+                                m_runningSimProcs.back().resume();
+                            }
+                        }
+                        if (m_stateNeedsReevaluating)
+                            reevaluate();
+                    }
+                } break;
                 case Event::Type::clock: {
                     auto &clkEvent = event.clockEvt;
-                    m_dataState.clockState[clkEvent.clockDomainIdx].high = clkEvent.risingEdge;
+                    auto &cs = m_dataState.clockState[clkEvent.clockDomainIdx];
+                    cs.high = clkEvent.risingEdge;
 
                     auto trigType = clkEvent.clock->getTriggerEvent();
                     if (trigType == hlim::Clock::TriggerEvent::RISING_AND_FALLING ||
@@ -605,7 +624,7 @@ void ReferenceSimulator::advanceEvent()
                         for (auto &cn : clkDom.clockedNodes)
                             cn.advance(m_callbackDispatcher, m_dataState);
 
-                        m_dataState.clockState[clkEvent.clockDomainIdx].nextTrigger = event.timeOfEvent + hlim::ClockRational(1) / clkEvent.clock->getAbsoluteFrequency();
+                        cs.nextTrigger = event.timeOfEvent + hlim::ClockRational(1) / clkEvent.clock->getAbsoluteFrequency();
                     }
                     m_callbackDispatcher.onClock(clkEvent.clock, clkEvent.risingEdge);
 
@@ -614,7 +633,7 @@ void ReferenceSimulator::advanceEvent()
                     m_nextEvents.push(event);
                 } break;
                 case Event::Type::simProcResume: {
-                    simProcsResuming.push_back(event);
+                    simProcsResuming.push_back(event.simProcResumeEvt.handle);
                 } break;
                 default:
                     HCL_ASSERT_HINT(false, "Not implemented!");
@@ -627,9 +646,9 @@ void ReferenceSimulator::advanceEvent()
 
         {
             RunTimeSimulationContext context(this);
-            for (auto &event : simProcsResuming) {
-                HCL_ASSERT(event.simProcResumeEvt.handle);
-                event.simProcResumeEvt.handle.resume();
+            for (auto &handle : simProcsResuming) {
+                HCL_ASSERT(handle);
+                handle.resume();
 
                 if (m_abortCalled)
                     return;
@@ -645,14 +664,14 @@ void ReferenceSimulator::advanceEvent()
 
 void ReferenceSimulator::advance(hlim::ClockRational seconds)
 {
-    if (m_nextEvents.empty()) {
-        m_simulationTime += seconds;
-        return;
-    }
-
     hlim::ClockRational targetTime = m_simulationTime + seconds;
 
     while (hlim::clockLess(m_simulationTime, targetTime) && !m_abortCalled) {
+        if (m_nextEvents.empty()) {
+            m_simulationTime = targetTime;
+            return;
+        }
+
         auto &nextEvent = m_nextEvents.top();
         if (nextEvent.timeOfEvent > targetTime) {
             m_simulationTime = targetTime;
@@ -724,8 +743,8 @@ std::array<bool, DefaultConfig::NUM_PLANES> ReferenceSimulator::getValueOfClock(
 {
     std::array<bool, DefaultConfig::NUM_PLANES> res;
 
-    auto it = m_program.m_stateMapping.clockToClkDomain.find((hlim::Clock *)clk);
-    if (it == m_program.m_stateMapping.clockToClkDomain.end()) {
+    auto it = m_program.m_stateMapping.clockPinAllocation.clock2ClockPinIdx.find((hlim::Clock *)clk);
+    if (it == m_program.m_stateMapping.clockPinAllocation.clock2ClockPinIdx.end()) {
         res[DefaultConfig::DEFINED] = false;
         return res;
     }
@@ -735,12 +754,20 @@ std::array<bool, DefaultConfig::NUM_PLANES> ReferenceSimulator::getValueOfClock(
     return res;
 }
 
-/*
-std::array<bool, DefaultConfig::NUM_PLANES> ReferenceSimulator::getValueOfReset(const std::string &reset)
+std::array<bool, DefaultConfig::NUM_PLANES> ReferenceSimulator::getValueOfReset(const hlim::Clock *clk)
 {
-    return {};
+    std::array<bool, DefaultConfig::NUM_PLANES> res;
+
+    auto it = m_program.m_stateMapping.clockPinAllocation.clock2ResetPinIdx.find((hlim::Clock *)clk);
+    if (it == m_program.m_stateMapping.clockPinAllocation.clock2ResetPinIdx.end()) {
+        res[DefaultConfig::DEFINED] = false;
+        return res;
+    }
+
+    res[DefaultConfig::DEFINED] = true;
+    res[DefaultConfig::VALUE] = m_dataState.resetState[it->second].resetHigh;
+    return res;
 }
-*/
 
 void ReferenceSimulator::addSimulationProcess(std::function<SimulationProcess()> simProc)
 {
@@ -766,15 +793,30 @@ void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> han
 
 void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock, utils::RestrictTo<RunTimeSimulationContext>)
 {
-    auto it = m_program.m_stateMapping.clockToClkDomain.find(const_cast<hlim::Clock*>(waitClock.getClock()));
-    HCL_ASSERT_HINT(it != m_program.m_stateMapping.clockToClkDomain.end(), "Simulation process is trying to wait on a clock that is not part of the simulation!");
+    auto it = m_program.m_stateMapping.clockPinAllocation.clock2ClockPinIdx.find(const_cast<hlim::Clock*>(waitClock.getClock()));
 
-    Event e;
-    e.type = Event::Type::simProcResume;
-    e.timeOfEvent = m_dataState.clockState[it->second].nextTrigger;
-    e.simProcResumeEvt.handle = handle;
-    e.simProcResumeEvt.insertionId = m_nextSimProcInsertionId++;
-    m_nextEvents.push(e);
+    if (it == m_program.m_stateMapping.clockPinAllocation.clock2ClockPinIdx.end()) {
+        // This clock is not part of the simulation, so just wait for as long as it would take for the next tick to arrive if it was there.
+
+        size_t ticksSoFar = hlim::floor(m_simulationTime * waitClock.getClock()->getAbsoluteFrequency());
+        size_t nextTick = ticksSoFar + 1;
+
+        auto nextTickTime = hlim::ClockRational(nextTick, 1) / waitClock.getClock()->getAbsoluteFrequency();
+
+        Event e;
+        e.type = Event::Type::simProcResume;
+        e.timeOfEvent = nextTickTime;
+        e.simProcResumeEvt.handle = handle;
+        e.simProcResumeEvt.insertionId = m_nextSimProcInsertionId++;
+        m_nextEvents.push(e);
+    } else {
+        Event e;
+        e.type = Event::Type::simProcResume;
+        e.timeOfEvent = m_dataState.clockState[it->second].nextTrigger;
+        e.simProcResumeEvt.handle = handle;
+        e.simProcResumeEvt.insertionId = m_nextSimProcInsertionId++;
+        m_nextEvents.push(e);
+    }
 }
 
 

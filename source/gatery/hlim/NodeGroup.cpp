@@ -149,7 +149,7 @@ namespace gtry::hlim
 		auto&& path = instancePath();
 		utils::ConfigTree config = ms_config[path];
 		config.addRecorder(m_properties);
-		return std::move(config);
+		return config;
 	}
 
 	void NodeGroup::configTree(utils::ConfigTree config)

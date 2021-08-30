@@ -18,32 +18,26 @@
 #pragma once
 #include "../Node.h"
 
-#include <string_view>
-
 namespace gtry::hlim {
-
-    class Node_Constant : public Node<Node_Constant>
-    {
+    
+class Node_ClkRst2Signal : public Node<Node_ClkRst2Signal>
+{
     public:
-        Node_Constant(sim::DefaultBitVectorState value, hlim::ConnectionType::Interpretation connectionType);
-
-        virtual void simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
-
+        Node_ClkRst2Signal();
+        
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;
         virtual std::string getInputName(size_t idx) const override;
         virtual std::string getOutputName(size_t idx) const override;
 
-        const sim::DefaultBitVectorState& getValue() const { return m_Value; }
+        void setClock(Clock *clk);
 
+        virtual void simulateResetChange(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort, bool resetHigh) const override;
+        
         virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
+        virtual std::string attemptInferOutputName(size_t outputPort) const override;
 
-        virtual std::string attemptInferOutputName(size_t outputPort) const;
-
-        virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
-
-        virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
     protected:
-        sim::DefaultBitVectorState m_Value;
-    };
+};
+
 }

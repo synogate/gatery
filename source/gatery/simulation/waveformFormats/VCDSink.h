@@ -34,6 +34,7 @@ class VCDSink : public WaveformRecorder
         virtual void onWarning(const hlim::BaseNode *src, std::string msg) override;
         virtual void onAssert(const hlim::BaseNode *src, std::string msg) override;
         virtual void onClock(const hlim::Clock *clock, bool risingEdge) override;
+        virtual void onReset(const hlim::Clock *clock, bool inReset) override;
     protected:
         std::fstream m_vcdFile;
         std::fstream m_logFile;
@@ -41,7 +42,9 @@ class VCDSink : public WaveformRecorder
 
         std::vector<std::string> m_id2sigCode;
         std::map<hlim::Clock*, std::string> m_clock2code;
-        std::vector<hlim::Clock*> m_allClocks;
+        std::map<hlim::Clock*, std::string> m_rst2code;
+        std::vector<hlim::Clock*> m_clocks;
+        std::vector<hlim::Clock*> m_resets;
 
         virtual void initialize() override;
         virtual void signalChanged(size_t id) override;

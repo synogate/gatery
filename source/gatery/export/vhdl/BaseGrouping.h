@@ -61,6 +61,7 @@ class BaseGrouping
         inline const std::set<hlim::NodePort> &getInputs() const { return m_inputs; }
         inline const std::set<hlim::NodePort> &getOutputs() const { return m_outputs; }
         inline const std::set<hlim::Clock *> &getClocks() const { return m_inputClocks; }
+        inline const std::set<hlim::Clock *> &getResets() const { return m_inputResets; }
         inline const std::set<hlim::Node_Pin *> &getIoPins() const { return m_ioPins; }
     protected:
         AST &m_ast;
@@ -75,6 +76,7 @@ class BaseGrouping
         std::set<hlim::NodePort> m_inputs;
         std::set<hlim::NodePort> m_outputs;
         std::set<hlim::Clock *> m_inputClocks;
+        std::set<hlim::Clock *> m_inputResets;
         std::set<hlim::Node_Pin*> m_ioPins;
 
         

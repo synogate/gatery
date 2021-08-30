@@ -60,7 +60,7 @@ void GenericMemoryEntity::buildFrom(hlim::MemoryGroup *memGrp)
 		if (dataInput.node != nullptr)
 			m_inputs.insert(dataInput);
 
-		m_inputClocks.insert(wp.node->getClocks()[0]);
+		m_inputClocks.insert(wp.node->getClocks()[0]->getClockPinSource());
 	}
 	for (auto &rp : memGrp->getReadPorts()) {
 		auto addrInput = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
@@ -75,15 +75,19 @@ void GenericMemoryEntity::buildFrom(hlim::MemoryGroup *memGrp)
 		m_outputs.insert(dataOutput);
 
 		for (auto reg : rp.dedicatedReadLatencyRegisters) {
-			m_inputClocks.insert(reg->getClocks()[0]);
+			m_inputClocks.insert(reg->getClocks()[0]->getClockPinSource());
 
 			auto enInput = reg->getDriver((unsigned)hlim::Node_Register::Input::ENABLE);
-			if (enInput.node != nullptr)
+			if (enInput.node != nullptr) 
 				m_inputs.insert(enInput);
 
 			auto resetValue = reg->getDriver((unsigned)hlim::Node_Register::Input::RESET_VALUE);
-			if (resetValue.node != nullptr)
+			if (enInput.node != nullptr && resetValue.node != nullptr) {
 				m_inputs.insert(resetValue);
+
+				if (reg->getClocks()[0]->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE)
+					m_inputResets.insert(reg->getClocks()[0]->getResetPinSource());
+			}
 		}
 	}
 }
@@ -98,11 +102,24 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 
 	std::set<size_t> portSizes;
 
-	for (auto &wp : m_memGrp->getWritePorts())
+	std::optional<bool> initializeMemory;
+
+	for (auto &wp : m_memGrp->getWritePorts()) {
 		portSizes.insert(wp.node->getBitWidth());
+
+		if (!initializeMemory)
+			initializeMemory = wp.node->getClocks()[0]->getRegAttribs().initializeMemory;
+		else
+			HCL_ASSERT_HINT(*initializeMemory == wp.node->getClocks()[0]->getRegAttribs().initializeMemory, "Memory has conflicting memory initialization directives from register attributes from different clocks!");
+	}
+
+	// This can only happen if there is no write port, which means the memory is a rom. ROMs must always be initalized.
+	if (!initializeMemory)
+		initializeMemory = true; 
 
 	for (auto &rp : m_memGrp->getReadPorts())
 		portSizes.insert(rp.node->getBitWidth());
+
 
 	HCL_ASSERT_HINT(portSizes.size() == 1, "Memory with mixed port sizes not yet supported!");
 
@@ -131,7 +148,7 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 		return val != 0; 
 	});
 
-	if(isDefined)
+	if(isDefined && *initializeMemory)
 	{
 		stream << " := (\n";
 
@@ -248,11 +265,11 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
 	std::map<hlim::Clock*, RWPorts> clocks;
 
 	for (auto &wp : m_memGrp->getWritePorts())
-		clocks[wp.node->getClocks()[0]].writePorts.push_back(wp);
+		clocks[wp.node->getClocks()[0]->getClockPinSource()].writePorts.push_back(wp);
 
 	for (auto &rp : m_memGrp->getReadPorts())
 		if (!rp.dedicatedReadLatencyRegisters.empty())
-			clocks[rp.dedicatedReadLatencyRegisters.front()->getClocks()[0]].readPorts.push_back(rp);
+			clocks[rp.dedicatedReadLatencyRegisters.front()->getClocks()[0]->getClockPinSource()].readPorts.push_back(rp);
 		else
 			clocks[nullptr].readPorts.push_back(rp);
 

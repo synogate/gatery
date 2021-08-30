@@ -32,21 +32,18 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLev
     using namespace gtry;
     using namespace gtry::sim;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
-    ClockScope clockScope(clock);
-
     BVec a = pinIn(BitWidth{(unsigned)bitsize});
     BVec b = pinIn(BitWidth{(unsigned)bitsize});
 
     size_t x, y;
-    addSimulationProcess([=, this, &clock, &x, &y]()->SimProcess {
+    addSimulationProcess([=, this, &x, &y]()->SimProcess {
 
         for (x = 0; x < 8; x++)
             for (y = 0; y < 8; y++) {
                 simu(a) = x;
                 simu(b) = y;
 
-                co_await WaitClk(clock);
+                co_await WaitFor({1,1000});
             }
 
         stopTest();
@@ -60,7 +57,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLev
         BVec c = a op b;                                                                                    \
         auto pinC = pinOut(c);                                                                              \
                                                                                                             \
-        addSimulationProcess([=, this, &clock, &x, &y]()->SimProcess {                                      \
+        addSimulationProcess([=, this, &x, &y]()->SimProcess {                                              \
             while (true) {                                                                                  \
                 DefaultBitVectorState state = simu(pinC);                                                   \
                                                                                                             \
@@ -71,7 +68,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLev
                 std::uint64_t gt = x_ op y_;                                                                \
                 gt &= (~0ull >> (64 - bitsize));                                                            \
                 BOOST_TEST(v == gt);                                                                        \
-                co_await WaitClk(clock);                                                                    \
+                co_await WaitFor({1,1000});                                                                 \
             }                                                                                               \
         });                                                                                                 \
     }
@@ -95,7 +92,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLev
         BVec c = a;                                                                                         \
         c op b;                                                                                             \
         auto pinC = pinOut(c);                                                                              \
-        addSimulationProcess([=, this, &clock, &x, &y]()->SimProcess {                                      \
+        addSimulationProcess([=, this, &x, &y]()->SimProcess {                                              \
             while (true) {                                                                                  \
                 DefaultBitVectorState state = simu(pinC);                                                   \
                                                                                                             \
@@ -109,7 +106,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLev
                 gt &= (~0ull >> (64 - bitsize));                                                            \
                                                                                                             \
                 BOOST_TEST(v == gt);                                                                        \
-                co_await WaitClk(clock);                                                                    \
+                co_await WaitFor({1,1000});                                                                 \
             }                                                                                               \
         });                                                                                                 \
     }
@@ -339,8 +336,6 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, UnitTestSimulationFixture)
 {
     using namespace gtry;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
-    ClockScope clockScope(clock);
 
     {
         gtry::BVec a = "xa";
@@ -389,21 +384,21 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, UnitTestSimulationFixture)
         auto pinX = pinOut(x);
         auto pinY = pinOut(y);
 
-        addSimulationProcess([=, this, &clock]()->SimProcess {
+        addSimulationProcess([=, this]()->SimProcess {
 
             simu(pinConditionIn) = 0;
             BOOST_TEST(simu(pinC) == 0xC);
             BOOST_TEST(simu(pinD) == 0xD);
             BOOST_TEST(simu(pinX) == 0);
             BOOST_TEST(simu(pinY) == 1);
-            co_await WaitClk(clock);
+            co_await WaitFor({1, 1000});
 
             simu(pinConditionIn) = 1;
             BOOST_TEST(simu(pinC) == 0xD);
             BOOST_TEST(simu(pinD) == 0xC);
             BOOST_TEST(simu(pinX) == 1);
             BOOST_TEST(simu(pinY) == 0);
-            co_await WaitClk(clock);
+            co_await WaitFor({1, 1000});
 
             stopTest();
         });
@@ -412,15 +407,12 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, UnitTestSimulationFixture)
 
     design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 
-    runTest(100u / clock.getClk()->getAbsoluteFrequency());
+    runTest({1,1});
 }
 
 BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, UnitTestSimulationFixture)
 {
     using namespace gtry;
-
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
-    ClockScope clockScope(clock);
 
     {
         gtry::Vector<BVec> listA(4);
@@ -456,7 +448,7 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, UnitTestSimulationFixture)
         for (BVec& i : listB)
             out.emplace_back(i);
 
-        addSimulationProcess([=, this, &clock]()->SimProcess {
+        addSimulationProcess([=, this]()->SimProcess {
 
             for (size_t i = 0; i < in.size(); ++i)
                 simu(in[i]) = i;
@@ -464,12 +456,12 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, UnitTestSimulationFixture)
 
             for (size_t i = 0; i < in.size(); ++i)
                 BOOST_TEST(simu(out[i]) == i);
-            co_await WaitClk(clock);
+            co_await WaitFor({1, 1000});
 
             simu(pinConditionIn) = 1;
             for (size_t i = 0; i < in.size(); ++i)
                 BOOST_TEST(simu(out[i]) == (i + 1) % 4);
-            co_await WaitClk(clock);
+            co_await WaitFor({1, 1000});
 
             stopTest();
         });
@@ -477,7 +469,7 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, UnitTestSimulationFixture)
     }
 
     design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-    runTest(100u / clock.getClk()->getAbsoluteFrequency());
+    runTest({1, 1});
 }
 
 BOOST_FIXTURE_TEST_CASE(ConditionalLoopAssignment, UnitTestSimulationFixture)

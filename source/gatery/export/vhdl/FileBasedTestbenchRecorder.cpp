@@ -33,15 +33,14 @@
 namespace gtry::vhdl {
 
 
-FileBasedTestbenchRecorder::FileBasedTestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, std::string name) : BaseTestbenchRecorder(std::move(name)), m_exporter(exporter), m_ast(ast), m_simulator(simulator)
+FileBasedTestbenchRecorder::FileBasedTestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, std::string name) : BaseTestbenchRecorder(ast, simulator, std::move(name)), m_exporter(exporter)
 {
     m_dependencySortedEntities.push_back(m_name);
-    std::string testVectorFilename = m_name + ".testvectors";
-    m_auxiliaryDataFiles.push_back(testVectorFilename);
-    m_testbenchFile.open((basePath / testVectorFilename).string().c_str(), std::fstream::out);
+    m_testVectorFilename = m_name + ".testvectors";
+    m_auxiliaryDataFiles.push_back(m_testVectorFilename);
+    m_testbenchFile.open((basePath / m_testVectorFilename).string().c_str(), std::fstream::out);
 
-    writeVHDL(m_ast->getFilename(basePath, m_name), testVectorFilename);
-
+    m_vhdlFilename = m_ast->getFilename(basePath, m_name).string();
 }
 
 FileBasedTestbenchRecorder::~FileBasedTestbenchRecorder()
@@ -68,17 +67,15 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
     auto *rootEntity = m_ast->getRootEntity();
 
     const auto &allClocks = rootEntity->getClocks();
+    const auto &allResets = rootEntity->getResets();
     const auto &allIOPins = rootEntity->getIoPins();
 
     m_clocksOfInterest.insert(allClocks.begin(), allClocks.end());
+    m_resetsOfInterest.insert(allResets.begin(), allResets.end());
 
     CodeFormatting &cf = m_ast->getCodeFormatting();
 
-    for (auto clock : allClocks) {
-        vhdlFile << "    SIGNAL " << rootEntity->getNamespaceScope().getName(clock) << " : STD_LOGIC;" << std::endl;
-        if (clock->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE)
-            vhdlFile << "    SIGNAL " << rootEntity->getNamespaceScope().getName(clock)<<clock->getResetName() << " : STD_LOGIC;" << std::endl;
-    }
+    declareSignals(vhdlFile, allClocks, allResets, allIOPins);
 
     std::map<hlim::NodePort, bool> outputIsBool;    
     std::set<hlim::NodePort> outputIsDrivenByNetwork;
@@ -86,10 +83,6 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
     for (auto ioPin : allIOPins) {
         const std::string &name = rootEntity->getNamespaceScope().getName(ioPin);
         auto conType = ioPin->getConnectionType();
-
-        vhdlFile << "    SIGNAL " << name << " : ";
-        cf.formatConnectionType(vhdlFile, conType);
-        vhdlFile << ';' << std::endl;
 
         if (ioPin->isOutputPin()) {
             m_outputToIoPinName[ioPin->getDriver(0)] = name;
@@ -126,35 +119,7 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
     cf.indent(vhdlFile, 1);
     vhdlFile << "inst_root : entity work." << rootEntity->getName() << "(impl) port map (" << std::endl;
 
-    std::vector<std::string> portmapList;
-
-    for (auto &s : allClocks) {
-        std::stringstream line;
-        line << rootEntity->getNamespaceScope().getName(s) << " => ";
-        line << rootEntity->getNamespaceScope().getName(s);
-        portmapList.push_back(line.str());
-        if (s->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
-            std::stringstream line;
-            line << rootEntity->getNamespaceScope().getName(s)<<s->getResetName() << " => ";
-            line << rootEntity->getNamespaceScope().getName(s)<<s->getResetName();
-            portmapList.push_back(line.str());
-        }
-    }
-    for (auto &s : allIOPins) {
-        std::stringstream line;
-        line << rootEntity->getNamespaceScope().getName(s) << " => ";
-        line << rootEntity->getNamespaceScope().getName(s);
-        portmapList.push_back(line.str());
-    }
-
-    for (auto i : utils::Range(portmapList.size())) {
-        cf.indent(vhdlFile, 2);
-        vhdlFile << portmapList[i];
-        if (i+1 < portmapList.size())
-            vhdlFile << ",";
-        vhdlFile << std::endl;
-    }
-
+    writePortmap(vhdlFile, allClocks, allResets, allIOPins);
 
     cf.indent(vhdlFile, 1);
     vhdlFile << ");" << std::endl;
@@ -186,43 +151,7 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
     cf.indent(vhdlFile, 1);
     vhdlFile << "BEGIN" << std::endl;
 
-    bool anyClockNeedsReset = false;
-    for (auto &s : allClocks) 
-        if (s->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
-            anyClockNeedsReset = true;
-            break;
-        }
-
-    for (auto &s : allClocks) {
-        cf.indent(vhdlFile, 2);
-        vhdlFile << rootEntity->getNamespaceScope().getName(s) << " <= '0';" << std::endl;
-        if (s->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
-            cf.indent(vhdlFile, 2);
-            vhdlFile << rootEntity->getNamespaceScope().getName(s)<<s->getResetName() << " <= '1';" << std::endl;
-        }
-    }
-
-    if (anyClockNeedsReset) {
-        cf.indent(vhdlFile, 2);
-        vhdlFile << "WAIT FOR 1 ns;" << std::endl;
-        for (auto &s : allClocks) {
-            cf.indent(vhdlFile, 2);
-            vhdlFile << rootEntity->getNamespaceScope().getName(s) << " <= '1';" << std::endl;
-        }
-        cf.indent(vhdlFile, 2);
-        vhdlFile << "WAIT FOR 1 ns;" << std::endl;
-
-        for (auto &s : allClocks) {
-            cf.indent(vhdlFile, 2);
-            vhdlFile << rootEntity->getNamespaceScope().getName(s) << " <= '0';" << std::endl;
-            if (s->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
-                cf.indent(vhdlFile, 2);
-                vhdlFile << rootEntity->getNamespaceScope().getName(s)<<s->getResetName() << " <= '0';" << std::endl;
-            }
-        }
-        cf.indent(vhdlFile, 2);
-        vhdlFile << "WAIT FOR 1 ns;" << std::endl;
-    }
+    initClocks(vhdlFile, allClocks, allResets);
 
     cf.indent(vhdlFile, 2);
     vhdlFile << "file_open(test_vector_file, \"" << testVectorFilename << "\", read_mode);" << std::endl;
@@ -349,6 +278,42 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
         vhdlFile << "END IF;" << std::endl;
 
     cf.indent(vhdlFile, 3);
+    vhdlFile << "ELSIF stringcompare(v_line(1 to v_line'length), \"RST\") THEN" << std::endl;
+
+        cf.indent(vhdlFile, 4);
+        vhdlFile << "readline(test_vector_file, v_line);" << std::endl;
+
+        cf.indent(vhdlFile, 4);
+        vhdlFile << "IF false THEN" << std::endl;
+        for (auto c : m_resetsOfInterest) {
+
+            auto *rootEntity = m_ast->getRootEntity();
+            std::string resetName =  rootEntity->getNamespaceScope().getResetName((hlim::Clock *) c);
+
+
+            cf.indent(vhdlFile, 4);
+            vhdlFile << "ELSIF stringcompare(v_line(1 to v_line'length), \"" << resetName << "\") THEN" << std::endl;
+
+            cf.indent(vhdlFile, 5);
+            vhdlFile << "readline(test_vector_file, v_line);" << std::endl;
+
+            cf.indent(vhdlFile, 5);
+            vhdlFile << "read(v_line, v_clk);" << std::endl;
+
+            cf.indent(vhdlFile, 5);
+            vhdlFile << resetName << " <= v_clk;" << std::endl;
+        }
+        cf.indent(vhdlFile, 4);
+        vhdlFile << "ELSE" << std::endl;
+        cf.indent(vhdlFile, 5);
+        vhdlFile << "REPORT \"An error occured while parsing the test vector file: unknown clock:\" & v_line(1 to v_line'length);" << std::endl;
+        cf.indent(vhdlFile, 5);
+        vhdlFile << "ASSERT FALSE severity failure;" << std::endl;
+
+        cf.indent(vhdlFile, 4);
+        vhdlFile << "END IF;" << std::endl;
+
+    cf.indent(vhdlFile, 3);
     vhdlFile << "ELSIF stringcompare(v_line(1 to v_line'length), \"ADV\") THEN" << std::endl;
 
         cf.indent(vhdlFile, 4);
@@ -395,6 +360,12 @@ namespace {
     }
 }
 
+void FileBasedTestbenchRecorder::onPowerOn()
+{
+    writeVHDL(m_vhdlFilename, m_testVectorFilename);
+}
+
+
 void FileBasedTestbenchRecorder::onNewTick(const hlim::ClockRational &simulationTime)
 {
     CodeFormatting &cf = m_ast->getCodeFormatting();
@@ -432,6 +403,20 @@ void FileBasedTestbenchRecorder::onClock(const hlim::Clock *clock, bool risingEd
     m_testbenchFile << "CLK\n" << rootEntity->getNamespaceScope().getName((hlim::Clock *) clock) << std::endl;
 
     if (risingEdge)
+        m_testbenchFile << "1\n";
+    else
+        m_testbenchFile << "0\n";
+}
+
+void FileBasedTestbenchRecorder::onReset(const hlim::Clock *clock, bool resetAsserted)
+{
+    if (!m_resetsOfInterest.contains(clock)) return;
+
+    auto *rootEntity = m_ast->getRootEntity();
+
+    m_testbenchFile << "RST\n" << rootEntity->getNamespaceScope().getResetName((hlim::Clock *) clock) << std::endl;
+
+    if (resetAsserted)
         m_testbenchFile << "1\n";
     else
         m_testbenchFile << "0\n";

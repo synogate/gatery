@@ -27,6 +27,8 @@
 
 namespace gtry::hlim {
 
+class DerivedClock;
+
 class Clock
 {
     public:
@@ -61,10 +63,36 @@ class Clock
         inline const RegisterAttributes &getRegAttribs() const { return m_registerAttributes; }
 
         virtual std::unique_ptr<Clock> cloneUnconnected(Clock *newParent);
+
+        inline void setMinResetTime(ClockRational time) { m_minResetTime = std::max(m_minResetTime, time); }
+        inline void setMinResetCycles(size_t cycles) { m_minResetCycles = std::max(m_minResetCycles, cycles); }
+
+        /// Returns the (reccursively determined) minimum time that this reset needs to be held.
+        /// @details For clocks with asynchronous resets, this is at least one clock cycle. For synchronous clocks, this may be zero.
+        ClockRational getMinResetTime() const;
+
+        /// Returns the (reccursively determined) minimum number of cycles that this reset needs to be held.
+        /// @details For clocks with synchronous resets, this is at least one.
+        size_t getMinResetCycles() const;
+
+        inline const std::vector<NodePort> &getClockedNodes() const { return m_clockedNodes; }
+        inline const std::vector<DerivedClock*> &getDerivedClocks() const { return m_derivedClocks; }
+        inline void addDerivedClock(DerivedClock *clock) { m_derivedClocks.push_back(clock); }
+
+        /// Which clock provides the actual clock signal for this clock
+        /// @details For derived clocks, this may be the parent clock if the frequency, name, etc. is the same
+        Clock *getClockPinSource();
+
+        /// Which clock provides the actual reset signal for this clock
+        /// @details For derived clocks, this may be the parent clock if the name is the same
+        Clock *getResetPinSource();
     protected:
         Clock *m_parentClock = nullptr;
 
         virtual std::unique_ptr<Clock> allocateClone(Clock *newParent) = 0;
+
+        ClockRational m_minResetTime = 0;
+        size_t m_minResetCycles = 0;
 
         std::string m_name;
         std::string m_resetName;
@@ -81,6 +109,7 @@ class Clock
             */
         
         std::vector<NodePort> m_clockedNodes;
+        std::vector<DerivedClock*> m_derivedClocks;
         friend class BaseNode;        
 };
 
@@ -88,10 +117,10 @@ class RootClock : public Clock
 {
     public:
         RootClock(std::string name, ClockRational frequency);
-        
+
         virtual ClockRational getAbsoluteFrequency() const override { return m_frequency; }
         virtual ClockRational getFrequencyRelativeTo(Clock &other) const override;
-        
+
         void setFrequency(ClockRational frequency) { m_frequency = m_frequency; }
 
         virtual std::unique_ptr<Clock> cloneUnconnected(Clock *newParent) override;
@@ -110,6 +139,7 @@ class DerivedClock : public Clock
         virtual ClockRational getFrequencyRelativeTo(Clock &other) const override;
         
         inline void setFrequencyMuliplier(ClockRational m) { m_parentRelativeMultiplicator = m; }
+        inline ClockRational getFrequencyMuliplier() const { return m_parentRelativeMultiplicator; }
 
         virtual std::unique_ptr<Clock> cloneUnconnected(Clock *newParent) override;
     protected:

@@ -94,7 +94,7 @@ bool XilinxSimpleDualPortBlockRam::isRom() const
 
 
 
-void XilinxSimpleDualPortBlockRam::simulateReset(SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
+void XilinxSimpleDualPortBlockRam::simulatePowerOn(SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
 {
     if (isRom()) {
         state.copyRange(internalOffsets[0], m_initialData, 0, m_initialData.size());
@@ -199,7 +199,7 @@ void XilinxSimpleDualPortBlockRam::simulateEvaluate(SimulatorCallbacks &simCallb
 
 }
 
-void XilinxSimpleDualPortBlockRam::simulateAdvance(SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const
+void XilinxSimpleDualPortBlockRam::simulateAdvance(SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort, bool resetHigh) const
 {
     if (clockPort == READ_CLK) {
         bool readEnableDefined = state.get(sim::DefaultConfig::DEFINED, internalOffsets[INT_READ_ENABLE]);

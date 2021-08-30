@@ -24,6 +24,8 @@
 
 namespace gtry::hlim {
 
+    class Node_Constant;
+
     class Node_Register : public Node<Node_Register>
     {
     public:
@@ -42,6 +44,7 @@ namespace gtry::hlim {
         enum Internal {
             INT_DATA,
             INT_ENABLE,
+            INT_IN_RESET,
             NUM_INTERNALS
         };
 
@@ -50,7 +53,8 @@ namespace gtry::hlim {
         void connectInput(Input input, const NodePort& port);
         inline void disconnectInput(Input input) { NodeIO::disconnectInput(input); }
 
-        virtual void simulateReset(sim::SimulatorCallbacks& simCallbacks, sim::DefaultBitVectorState& state, const size_t* internalOffsets, const size_t* outputOffsets) const override;
+        virtual void simulatePowerOn(sim::SimulatorCallbacks& simCallbacks, sim::DefaultBitVectorState& state, const size_t* internalOffsets, const size_t* outputOffsets) const override;
+        virtual void simulateResetChange(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort, bool resetHigh) const override;
         virtual void simulateEvaluate(sim::SimulatorCallbacks& simCallbacks, sim::DefaultBitVectorState& state, const size_t* internalOffsets, const size_t* inputOffsets, const size_t* outputOffsets) const override;
         virtual void simulateAdvance(sim::SimulatorCallbacks& simCallbacks, sim::DefaultBitVectorState& state, const size_t* internalOffsets, const size_t* outputOffsets, size_t clockPort) const override;
 
@@ -79,6 +83,8 @@ namespace gtry::hlim {
     protected:
         size_t m_conditionId = 0;
         utils::BitFlags<Flags> m_flags;
+
+        Node_Constant *getResetValue() const;
     };
 
 }

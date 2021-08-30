@@ -89,11 +89,17 @@ namespace gtry
 		if (config["reset_type"])
 			m_resetType = config["reset_type"].as<ResetType>();
 
+		if (config["memory_reset_type"])
+			m_memoryResetType = config["memory_reset_type"].as<ResetType>();
+
 		if (config["reset_active"])
 			m_resetActive = config["reset_active"].as<ResetActive>();
 
 		if (config["initialize_registers"])
 			m_initializeRegs = config["initialize_registers"].as<bool>();
+		
+		if (config["initialize_memory"])
+			m_initializeMemory = config["initialize_memory"].as<bool>();
 
 		m_attributes.loadConfig(config["attributes"]);
 	}
@@ -125,8 +131,10 @@ namespace gtry
 		print("clock edge", m_triggerEvent);
 		print("reset name", m_resetName);
 		print("reset type", m_resetType);
+		print("memory reset type", m_memoryResetType);
 		print("reset active", m_resetActive);
 		print("initialize registers", m_initializeRegs);
+		print("initialize memory", m_initializeMemory);
 
 		auto it = m_attributes.userDefinedVendorAttributes.find("all");
 		if(it != m_attributes.userDefinedVendorAttributes.end())
@@ -178,8 +186,14 @@ namespace gtry
 		if (config.m_triggerEvent) m_clock->setTriggerEvent(*config.m_triggerEvent);
 		if (config.m_phaseSynchronousWithParent) m_clock->setPhaseSynchronousWithParent(*config.m_phaseSynchronousWithParent);
 
-		if (config.m_resetType) m_clock->getRegAttribs().resetType = *config.m_resetType;
-		if (config.m_initializeRegs) m_clock->getRegAttribs().initializeRegs = *config.m_initializeRegs;
+		// By default, use the same behavior for memory and registers ...
+		if (config.m_resetType) m_clock->getRegAttribs().memoryResetType = m_clock->getRegAttribs().resetType = *config.m_resetType;
+		if (config.m_initializeRegs) m_clock->getRegAttribs().initializeMemory = m_clock->getRegAttribs().initializeRegs = *config.m_initializeRegs;
+
+		// ... unless overruled explicitely
+		if (config.m_memoryResetType) m_clock->getRegAttribs().memoryResetType = *config.m_memoryResetType;
+		if (config.m_initializeMemory) m_clock->getRegAttribs().initializeMemory = *config.m_initializeMemory;
+
 		if (config.m_resetActive) m_clock->getRegAttribs().resetActive = *config.m_resetActive;
 
 		if (config.m_registerEnablePinUsage) m_clock->getRegAttribs().registerEnablePinUsage = *config.m_registerEnablePinUsage;

@@ -279,7 +279,7 @@ void Node_Rewire::estimateSignalDelay(SignalDelay &sigDelay)
     HCL_ASSERT(sigDelay.contains({.node = this, .port = 0ull}));
     auto outDelay = sigDelay.getDelay({.node = this, .port = 0ull});
 
-    auto width = getOutputConnectionType(0).width;
+    //auto width = getOutputConnectionType(0).width;
 
     size_t outputOffset = 0;
     for (const auto &range : m_rewireOperation.ranges) {

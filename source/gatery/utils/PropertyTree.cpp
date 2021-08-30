@@ -34,7 +34,7 @@ namespace gtry::utils
 		YAML::Node child = m_node[std::string(path).c_str()];
 		HCL_ASSERT(m_node.IsMap());
 
-		return std::move(child);
+		return child;
 	}
 
 	void gtry::utils::YamlPropertyTree::push_back(YamlPropertyTree value)

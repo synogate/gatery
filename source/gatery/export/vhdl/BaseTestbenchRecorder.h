@@ -21,14 +21,27 @@
 
 #include <string>
 #include <vector>
+#include <set>
+#include <ostream>
+
+namespace gtry::sim {
+    class Simulator;
+}
+
+
+namespace gtry::hlim {
+    class Node_Pin;
+}
 
 namespace gtry::vhdl {
+
+class AST;
 
 class BaseTestbenchRecorder : public sim::SimulatorCallbacks
 {
     public:
         //BaseTestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, const std::string &name);
-        BaseTestbenchRecorder(std::string name);
+        BaseTestbenchRecorder(AST *ast, sim::Simulator &simulator, std::string name);
         virtual ~BaseTestbenchRecorder();
 
 		inline const std::vector<std::string> &getDependencySortedEntities() const { return m_dependencySortedEntities; }
@@ -36,9 +49,16 @@ class BaseTestbenchRecorder : public sim::SimulatorCallbacks
 
         inline const std::string &getName() const { return m_name; }
 	protected:
+        AST *m_ast;
+        sim::Simulator &m_simulator;
         std::string m_name;
 		std::vector<std::string> m_dependencySortedEntities;
 		std::vector<std::string> m_auxiliaryDataFiles;
+
+        void declareSignals(std::ostream &stream, const std::set<hlim::Clock*> &allClocks, const std::set<hlim::Clock*> &allResets, const std::set<hlim::Node_Pin*> &allIOPins);
+        void writePortmap(std::ostream &stream, const std::set<hlim::Clock*> &allClocks, const std::set<hlim::Clock*> &allResets, const std::set<hlim::Node_Pin*> &allIOPins);
+        void initClocks(std::ostream &stream, const std::set<hlim::Clock*> &allClocks, const std::set<hlim::Clock*> &allResets);
+
 };
 
 

@@ -71,12 +71,21 @@ struct RegisterAttributes : public Attributes {
 	};
 
 	ResetType resetType = ResetType::SYNCHRONOUS;
+	ResetType memoryResetType = ResetType::SYNCHRONOUS;
 	bool initializeRegs = true;
+	bool initializeMemory = true;
 	Active resetActive = Active::HIGH;
 
 	UsageType registerResetPinUsage = UsageType::DONT_CARE;
 	UsageType registerEnablePinUsage = UsageType::DONT_CARE;
 };
+
+inline RegisterAttributes::Active operator!(RegisterAttributes::Active v)
+{
+	if (v == RegisterAttributes::Active::HIGH) 
+		return RegisterAttributes::Active::LOW;
+	return RegisterAttributes::Active::HIGH;
+}
 
 // all used defined attributes ignore type and value and replace $src and $dst in the attrib name with source and destination cells
 struct PathAttributes : public Attributes {

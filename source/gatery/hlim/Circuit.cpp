@@ -832,7 +832,7 @@ void Circuit::propagateConstants(Subnet &subnet)
                     inputOffsets[port] = offset;
                     if (Node_Constant *constNode = dynamic_cast<Node_Constant*>(driver.node)) {
                         size_t arr[] = {offset};
-                        constNode->simulateReset(ignoreCallbacks, state, nullptr, arr); // import const data
+                        constNode->simulatePowerOn(ignoreCallbacks, state, nullptr, arr); // import const data
                     } else {
                         state.clearRange(sim::DefaultConfig::DEFINED, offset, conType.width);   // set non-const data to undefined
                     }

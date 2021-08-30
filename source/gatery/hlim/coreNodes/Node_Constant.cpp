@@ -34,7 +34,7 @@ Node_Constant::Node_Constant(sim::DefaultBitVectorState value, hlim::ConnectionT
     setOutputType(0, OUTPUT_CONSTANT);
 }
 
-void Node_Constant::simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
+void Node_Constant::simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
 {
     state.insert(m_Value, outputOffsets[0]);
 }

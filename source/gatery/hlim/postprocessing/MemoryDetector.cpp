@@ -29,6 +29,7 @@
 #include "../coreNodes/Node_Rewire.h"
 #include "../coreNodes/Node_Arithmetic.h"
 #include "../coreNodes/Node_Pin.h"
+#include "../coreNodes/Node_ClkRst2Signal.h"
 #include "../supportNodes/Node_Memory.h"
 #include "../supportNodes/Node_MemPort.h"
 #include "../GraphExploration.h"
@@ -155,7 +156,7 @@ void MemoryGroup::formAround(Node_Memory *memory, Circuit &circuit)
             port->moveToGroup(this);
             rp.dataOutput = {.node = port, .port = (size_t)Node_MemPort::Outputs::rdData};
 
-            NodePort readPortEnable = port->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable);
+            //NodePort readPortEnable = port->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable);
 
             // Try and grab as many output registers as possible (up to read latency)
             // rp.findOutputRegisters(m_memory->getRequiredReadLatency(), this);
@@ -727,19 +728,187 @@ void MemoryGroup::buildReset(Circuit &circuit)
     if (m_memory->getNonSignalDriver((size_t)Node_Memory::Inputs::INITIALIZATION_DATA).node != nullptr) {
         buildResetLogic(circuit);
     } else {
-        if (sim::anyDefined(m_memory->getPowerOnState())) 
+        if (sim::anyDefined(m_memory->getPowerOnState()) && !m_memory->isROM())
             buildResetRom(circuit);
     }
 }
 
 void MemoryGroup::buildResetLogic(Circuit &circuit)
 {
-
+    HCL_ASSERT_HINT(false, "Not implemented yet!");
 }
 
 void MemoryGroup::buildResetRom(Circuit &circuit)
-{
+{   
+    lazyCreateFixupNodeGroup();
+
+    auto *resetWritePort = findSuitableResetWritePort();
+    auto *clockDomain = resetWritePort->getClocks()[0];
+
+    if (clockDomain->getRegAttribs().resetType == RegisterAttributes::ResetType::NONE) return;
+
+    Clock *resetClock = circuit.createClock<DerivedClock>(clockDomain);
+    resetClock->getRegAttribs().resetActive = !clockDomain->getRegAttribs().resetActive;
+    resetClock->getRegAttribs().initializeRegs = true;
+
+
+	auto *memory = circuit.createNode<Node_Memory>();
+	memory->moveToGroup(m_fixupNodeGroup);
+	memory->recordStackTrace();
+	memory->setNoConflicts();
+    memory->setPowerOnState(m_memory->getPowerOnState());
+    if (m_memory->getName().empty())
+        memory->setName("reset_value_rom");
+    else
+        memory->setName(m_memory->getName()+"_reset_value_rom");
+
+    size_t wordWidth = resetWritePort->getBitWidth();
+    HCL_ASSERT(m_memory->getPowerOnState().size() % wordWidth == 0);
+    size_t numEntries = m_memory->getPowerOnState().size() / wordWidth;
+
+    size_t numRequiredCycles = numEntries + 1;
+    if (clockDomain->getRegAttribs().resetType == RegisterAttributes::ResetType::ASYNCHRONOUS)
+        numRequiredCycles += 1;
+    resetClock->setMinResetCycles(numRequiredCycles);
+
+    size_t addrCounterSize = utils::Log2C(numEntries);
+
+    NodePort addrCounter = buildResetAddrCounter(circuit, addrCounterSize, resetClock);
+
+
+	auto *romReadPort = circuit.createNode<hlim::Node_MemPort>(wordWidth);
+	romReadPort->moveToGroup(m_fixupNodeGroup);
+	romReadPort->recordStackTrace();
+	romReadPort->connectMemory(memory);
+	romReadPort->connectAddress(addrCounter);
+	romReadPort->setClock(clockDomain);
+
+
+	auto *addrReg = circuit.createNode<Node_Register>();
+    addrReg->moveToGroup(m_fixupNodeGroup);
+	addrReg->recordStackTrace();
+	addrReg->setClock(resetClock);
+	addrReg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
+    addrReg->connectInput(Node_Register::DATA, addrCounter);
+    NodePort writeAddr = {.node = addrReg, .port = 0ull};
+    giveName(circuit, writeAddr, "reset_write_addr");
+
+
+	auto *dataReg = circuit.createNode<Node_Register>();
+    dataReg->moveToGroup(m_fixupNodeGroup);
+	dataReg->recordStackTrace();
+	dataReg->setClock(resetClock);
+	dataReg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
+    dataReg->connectInput(Node_Register::DATA, {.node = romReadPort, .port = (size_t)hlim::Node_MemPort::Outputs::rdData});
+    NodePort writeData = {.node = dataReg, .port = 0ull};
+    giveName(circuit, writeData, "reset_write_data");
+
+
+	auto *resetPin = circuit.createNode<Node_ClkRst2Signal>();
+    resetPin->moveToGroup(m_fixupNodeGroup);
+	resetPin->recordStackTrace();
+    resetPin->setClock(clockDomain);
+    NodePort inResetMode = {.node = resetPin, .port = 0ull};
+
+    if (!(clockDomain->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH)) {
+        auto *notNode = circuit.createNode<Node_Logic>(Node_Logic::NOT);
+        notNode->moveToGroup(m_fixupNodeGroup);
+        notNode->recordStackTrace();
+        notNode->setComment("The clock domain uses a low-active reset so we need to negate it.");
+        notNode->connectInput(0, inResetMode);
+        inResetMode = {.node = notNode, .port = 0ull};
+    }
+
+    auto *muxNodeAddr = circuit.createNode<Node_Multiplexer>(2);
+    muxNodeAddr->moveToGroup(m_fixupNodeGroup);
+    muxNodeAddr->recordStackTrace();
+    muxNodeAddr->setComment("For reset, mux address between actual address (non-reset case) and initializaiton counter (reset case).");
+    muxNodeAddr->connectSelector(inResetMode);
+    muxNodeAddr->connectInput(0, resetWritePort->getDriver((size_t)Node_MemPort::Inputs::address));
+    muxNodeAddr->connectInput(1, writeAddr);
+    resetWritePort->rewireInput((size_t)Node_MemPort::Inputs::address, {.node = muxNodeAddr, .port = 0ull});
+
+
+    auto *muxNodeData = circuit.createNode<Node_Multiplexer>(2);
+    muxNodeData->moveToGroup(m_fixupNodeGroup);
+    muxNodeData->recordStackTrace();
+    muxNodeData->setComment("For reset, mux data between actual write data (non-reset case) and the initialization data (reset case).");
+    muxNodeData->connectSelector(inResetMode);
+    muxNodeData->connectInput(0, resetWritePort->getDriver((size_t)Node_MemPort::Inputs::wrData));
+    muxNodeData->connectInput(1, writeData);
+    resetWritePort->rewireInput((size_t)Node_MemPort::Inputs::wrData, {.node = muxNodeData, .port = 0ull});
+
+    HCL_ASSERT(resetWritePort->getDriver((size_t)Node_MemPort::Inputs::enable) == resetWritePort->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
+    if (resetWritePort->getDriver((size_t)Node_MemPort::Inputs::wrEnable).node == nullptr) {
+        resetWritePort->rewireInput((size_t)Node_MemPort::Inputs::enable, inResetMode);
+        resetWritePort->rewireInput((size_t)Node_MemPort::Inputs::wrEnable, inResetMode);
+    } else {
+        auto *orNodeEnable = circuit.createNode<Node_Logic>(Node_Logic::OR);
+        orNodeEnable->moveToGroup(m_fixupNodeGroup);
+        orNodeEnable->recordStackTrace();
+        orNodeEnable->setComment("During reset, enable write to initialize the memory.");
+        orNodeEnable->connectInput(0, resetWritePort->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
+        orNodeEnable->connectInput(1, inResetMode);
+
+        resetWritePort->rewireInput((size_t)Node_MemPort::Inputs::enable, {.node = orNodeEnable, .port = 0ull});
+        resetWritePort->rewireInput((size_t)Node_MemPort::Inputs::wrEnable, {.node = orNodeEnable, .port = 0ull});
+    }
+
 }
+
+Node_MemPort *MemoryGroup::findSuitableResetWritePort()
+{
+    if (m_writePorts.empty()) return nullptr;
+    for (auto &wp : m_writePorts)
+        if (wp.node->getBitWidth() == m_memory->getInitializationDataWidth() || m_memory->getInitializationDataWidth() == 0)
+            return wp.node.get();
+
+    HCL_ASSERT_HINT(false, "No write port matches the size of the initialization width!");
+    return nullptr;
+}
+
+NodePort MemoryGroup::buildResetAddrCounter(Circuit &circuit, size_t width, Clock *resetClock)
+{
+	auto *reg = circuit.createNode<Node_Register>();
+    reg->moveToGroup(m_fixupNodeGroup);
+	reg->recordStackTrace();
+	reg->setClock(resetClock);
+	reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
+
+
+	sim::DefaultBitVectorState state;
+	state.resize(width);
+	state.setRange(sim::DefaultConfig::DEFINED, 0, width);
+	state.clearRange(sim::DefaultConfig::VALUE, 0, width);
+
+	auto *resetConst = circuit.createNode<Node_Constant>(state, ConnectionType::BITVEC);
+	resetConst->moveToGroup(m_fixupNodeGroup);
+	resetConst->recordStackTrace();
+	reg->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0ull});
+
+
+	// build a one
+	state.setRange(sim::DefaultConfig::VALUE, 0, 1);
+	auto *constOne = circuit.createNode<Node_Constant>(state, ConnectionType::BITVEC);
+	constOne->moveToGroup(m_fixupNodeGroup);
+	constOne->recordStackTrace();
+
+
+	auto *addNode = circuit.createNode<Node_Arithmetic>(Node_Arithmetic::ADD);
+	addNode->moveToGroup(m_fixupNodeGroup);
+	addNode->recordStackTrace();
+	addNode->connectInput(1, {.node = constOne, .port = 0ull});
+
+	reg->connectInput(Node_Register::DATA, {.node = addNode, .port = 0ull});
+
+    NodePort counter = {.node = reg, .port = 0ull};
+    giveName(circuit, counter, "reset_addr_counter");
+
+	addNode->connectInput(0, counter);
+
+	return counter;
+}
+
 
 void MemoryGroup::verify()
 {
@@ -775,6 +944,8 @@ void MemoryGroup::verify()
                       << m_memory->getStackTrace();
                 HCL_DESIGNCHECK_HINT(false, issue.str());
             }
+        break;
+        default:
         break;
     }
 }
@@ -1053,6 +1224,14 @@ void MemoryGroup::bypassSignalNodes()
             n->bypassOutputToInput(0, 0);
 }
 
+void MemoryGroup::giveName(Circuit &circuit, NodePort &nodePort, std::string name)
+{
+    lazyCreateFixupNodeGroup();
+	auto *sig = circuit.appendSignal(nodePort);
+	sig->setName(std::move(name));
+    sig->moveToGroup(m_fixupNodeGroup);
+}
+
 
 MemoryGroup *formMemoryGroupIfNecessary(Circuit &circuit, Node_Memory *memory)
 {
@@ -1087,6 +1266,7 @@ void buildExplicitMemoryCircuitry(Circuit &circuit)
             memoryGroup->attemptRegisterRetiming(circuit);
             memoryGroup->resolveWriteOrder(circuit);
             memoryGroup->updateNoConflictsAttrib();
+            memoryGroup->buildReset(circuit);
             memoryGroup->bypassSignalNodes();
             memoryGroup->verify();
             if (memory->type() == Node_Memory::MemType::EXTERNAL)

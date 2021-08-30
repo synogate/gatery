@@ -72,6 +72,9 @@ class NamespaceScope
         std::string allocateName(hlim::Clock *clock, const std::string &desiredName);
         const std::string &getName(const hlim::Clock *clock) const;
 
+        std::string allocateResetName(hlim::Clock *clock, const std::string &desiredName);
+        const std::string &getResetName(const hlim::Clock *clock) const;
+
         std::string allocateName(hlim::Node_Pin *ioPin, const std::string &desiredName);
         const std::string &getName(const hlim::Node_Pin *ioPin) const;
 
@@ -89,6 +92,7 @@ class NamespaceScope
         std::map<hlim::NodePort, std::string> m_nodeNames;
         std::map<NodeInternalStorageSignal, std::string> m_nodeStorageNames;
         std::map<hlim::Clock*, std::string> m_clockNames;
+        std::map<hlim::Clock*, std::string> m_resetNames;
         std::map<hlim::Node_Pin*, std::string> m_ioPinNames;
         std::vector<TypeDefinition> m_typeDefinitions;
 };

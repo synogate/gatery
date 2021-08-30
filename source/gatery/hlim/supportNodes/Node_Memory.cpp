@@ -148,7 +148,7 @@ namespace gtry::hlim {
     }
 
 
-    void Node_Memory::simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
+    void Node_Memory::simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
     {
         state.copyRange(internalOffsets[0], m_powerOnState, 0, m_powerOnState.size());
         state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[(size_t)Outputs::READ_DEPENDENCIES], 1);

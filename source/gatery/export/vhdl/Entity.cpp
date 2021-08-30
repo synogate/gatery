@@ -159,6 +159,9 @@ void Entity::allocateNames()
     for (auto &clock : m_inputClocks)
         m_namespaceScope.allocateName(clock, clock->getName());
 
+    for (auto &clock : m_inputResets)
+        m_namespaceScope.allocateResetName(clock, clock->getResetName());
+
     for (auto &ioPin : m_ioPins)
         m_namespaceScope.allocateName(ioPin, ioPin->getName());
 
@@ -191,12 +194,14 @@ std::vector<std::string> Entity::getPortsVHDL()
         std::stringstream line;
         line << m_namespaceScope.getName(clk) << " : IN STD_LOGIC";
         unsortedPortList.push_back({clockOffset++, line.str()});
-        if (clk->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
-            std::stringstream line;
-            line << m_namespaceScope.getName(clk)<<clk->getResetName() << " : IN STD_LOGIC";
-            unsortedPortList.push_back({clockOffset++, line.str()});
-        }
     }
+
+    for (const auto &clk : m_inputResets) {
+        std::stringstream line;
+        line << m_namespaceScope.getResetName(clk) << " : IN STD_LOGIC";
+        unsortedPortList.push_back({clockOffset++, line.str()});
+    }
+
     for (auto &ioPin : m_ioPins) {
         std::stringstream line;
         line << m_namespaceScope.getName(ioPin) << " : ";
@@ -208,7 +213,6 @@ std::vector<std::string> Entity::getPortsVHDL()
             cf.formatConnectionType(line, ioPin->getConnectionType());
         } else if (ioPin->isOutputPin()) {
             line << "OUT ";
-            auto driver = ioPin->getNonSignalDriver(0);
             cf.formatConnectionType(line, ioPin->getConnectionType());
         } else
             continue;
@@ -296,13 +300,13 @@ void Entity::writeInstantiationVHDL(std::ostream &stream, unsigned indent, const
         line << m_namespaceScope.getName(s) << " => ";
         line << m_parent->getNamespaceScope().getName(s);
         portmapList.push_back(line.str());
-        if (s->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE) {
-            std::stringstream line;
-            line << m_namespaceScope.getName(s)<<s->getResetName() << " => ";
-            line << m_parent->getNamespaceScope().getName(s)<<s->getResetName();
-            portmapList.push_back(line.str());
-        }
     }
+    for (auto &s : m_inputResets) {
+        std::stringstream line;
+        line << m_namespaceScope.getResetName(s) << " => ";
+        line << m_parent->getNamespaceScope().getResetName(s);
+        portmapList.push_back(line.str());
+    }    
     for (auto &s : m_ioPins) {
         std::stringstream line;
         line << m_namespaceScope.getName(s) << " => ";

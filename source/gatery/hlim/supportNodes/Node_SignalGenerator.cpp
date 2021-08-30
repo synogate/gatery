@@ -52,7 +52,7 @@ void Node_SignalGenerator::resetDataUndefinedZero(sim::DefaultBitVectorState &st
     }
 }
 
-void Node_SignalGenerator::simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
+void Node_SignalGenerator::simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
 {
     std::uint64_t &tick = state.data(sim::DefaultConfig::VALUE)[internalOffsets[0]/64];
     tick = 0;

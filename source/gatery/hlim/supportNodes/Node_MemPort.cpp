@@ -130,7 +130,7 @@ bool Node_MemPort::isWritePort() const
 
 
 
-void Node_MemPort::simulateReset(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
+void Node_MemPort::simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
 {
     // clean all internal stuff
     if (isWritePort()) {
