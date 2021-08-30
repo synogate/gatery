@@ -28,4 +28,6 @@ namespace gtry {
 void writeClockXDC(const vhdl::AST &ast, std::ostream &out);
 void writeClockSDC(const vhdl::AST &ast, std::ostream &out);
 
+std::string escapeTcl(const std::string &str);
+
 }
