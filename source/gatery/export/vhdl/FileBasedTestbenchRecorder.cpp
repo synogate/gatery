@@ -40,7 +40,7 @@ FileBasedTestbenchRecorder::FileBasedTestbenchRecorder(VHDLExport &exporter, AST
     m_auxiliaryDataFiles.push_back(m_testVectorFilename);
     m_testbenchFile.open((basePath / m_testVectorFilename).string().c_str(), std::fstream::out);
 
-    m_vhdlFilename = m_ast->getFilename(basePath, m_name);
+    m_vhdlFilename = m_ast->getFilename(basePath, m_name).string();
 }
 
 FileBasedTestbenchRecorder::~FileBasedTestbenchRecorder()
