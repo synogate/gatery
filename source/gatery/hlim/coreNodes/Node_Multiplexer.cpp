@@ -190,7 +190,7 @@ void Node_Multiplexer::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, s
         inDelays[i] = sigDelay.getDelay(getDriver(i));
 
     auto selectorBits = inDelays[0].size();
-    auto width = getOutputConnectionType(0).width;
+    //auto width = getOutputConnectionType(0).width;
 
     float maxDelay = 0.0f;
     size_t maxIP = 0;

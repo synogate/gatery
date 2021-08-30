@@ -159,7 +159,7 @@ namespace gtry::utils
 		ret = replaceEnvVars(ret);
 		for (auto& rec : m_recorder)
 			rec = ret;
-		return std::move(ret);
+		return ret;
 	}
 
 	template<>
@@ -172,7 +172,7 @@ namespace gtry::utils
 		ret = replaceEnvVars(ret);
 		for (auto& rec : m_recorder)
 			rec = ret;
-		return std::move(ret);
+		return ret;
 	}
 
 	using ConfigTree = YamlConfigTree;

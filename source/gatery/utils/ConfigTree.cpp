@@ -58,7 +58,7 @@ namespace gtry::utils
 		ret.reserve(src.size());
 
 		auto append_var = [&](auto& ctx) {
-			const char* var_name = _attr(ctx).c_str();
+			//const char* var_name = _attr(ctx).c_str();
 			const char* var = getenv(_attr(ctx).c_str());
 			if (!var)
 				throw std::runtime_error("environment variable '" + _attr(ctx) + "' not found.");

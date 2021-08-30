@@ -213,7 +213,6 @@ std::vector<std::string> Entity::getPortsVHDL()
             cf.formatConnectionType(line, ioPin->getConnectionType());
         } else if (ioPin->isOutputPin()) {
             line << "OUT ";
-            auto driver = ioPin->getNonSignalDriver(0);
             cf.formatConnectionType(line, ioPin->getConnectionType());
         } else
             continue;

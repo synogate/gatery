@@ -31,7 +31,7 @@ inline T ElfLoader::load(size_t offset) const
 void ElfLoader::load(const std::filesystem::path& file)
 {
 	m_Binary.open(file.string());
-	const char* ptr = m_Binary.data();
+	//const char* ptr = m_Binary.data();
 
 	if (load<uint32_t>(0) != 0x464c457f)
 		throw std::runtime_error{ "elf magic missmatch" };
