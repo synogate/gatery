@@ -117,9 +117,9 @@ void IntelQuartus::resolveAttributes(const hlim::SignalAttributes &attribs, hlim
 void IntelQuartus::resolveAttributes(const hlim::MemoryAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
 {
 	/*
-	* Too dangerous, because it maz breake with LUTRAMs
+	* Too dangerous, because it may brake with LUTRAMs
 	if (attribs.noConflicts) 
-		resolvedAttribs.insert({"RAMSTYLE", {"string", "\"no_rw_check\""}});
+		resolvedAttribs.insert({"ramstyle", {"string", "\"no_rw_check\""}});
 	*/
 
 	addUserDefinedAttributes(attribs, resolvedAttribs);
