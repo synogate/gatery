@@ -120,6 +120,9 @@ namespace gtry
 			m_wordWidth = width(m_defaultValue).value;
 			m_numWords = numWords;
 
+			ent["word_width"] = m_wordWidth;
+			ent["num_words"] = numWords;
+
 			if (m_numWords > 32) // TODO ask platform
 				m_readLatencyHint = 1;
 			

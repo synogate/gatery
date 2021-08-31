@@ -83,6 +83,8 @@ class Clock
         /// @details For derived clocks, this may be the parent clock if the frequency, name, etc. is the same
         Clock *getClockPinSource();
 
+        bool inheritsResetPinSource() const;
+
         /// Which clock provides the actual reset signal for this clock
         /// @details For derived clocks, this may be the parent clock if the name is the same
         Clock *getResetPinSource();

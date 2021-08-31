@@ -102,15 +102,23 @@ Clock *Clock::getClockPinSource()
     return m_parentClock->getClockPinSource();
 }
 
-Clock *Clock::getResetPinSource()
+bool Clock::inheritsResetPinSource() const
 {
     if (m_parentClock == nullptr)
-        return this;
+        return false;
 
     if (m_parentClock->getResetName() != getResetName())
-        return this;
+        return false;
 
-    return m_parentClock->getResetPinSource();
+    return true;
+}
+
+Clock *Clock::getResetPinSource()
+{
+    if (inheritsResetPinSource())
+        return m_parentClock->getResetPinSource();
+    else
+        return this;
 }
 
 

@@ -423,8 +423,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
 					auto enablePort = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
 					if (enablePort.node != nullptr) {
 						cf.indent(stream, indent);
-						stream << "IF ("<< m_namespaceScope.getName(enablePort) << " = '1') THEN\n";
-						indent++;
+						stream << "-- Ignoring read enable signal "<< m_namespaceScope.getName(enablePort) << " for asynchronous internal memory.\n";
 					}
 
 
@@ -433,12 +432,6 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
 
 					cf.indent(stream, indent);
 					stream << m_namespaceScope.getName(dataPort) << " <= memory(to_integer(" << m_namespaceScope.getName(addrPort) << "));\n";
-
-					if (enablePort.node != nullptr) {
-						indent--;
-						cf.indent(stream, indent);
-						stream << "END IF;\n";
-					}
 				}
 
 			indent--;
