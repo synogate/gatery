@@ -119,7 +119,7 @@ namespace gtry::scl
 		{
 			mem.setup(capacity / numTables, it);
 			mem.setType(MemType::BRAM);
-			mem.setPowerOnStateZero();
+			mem.initZero();
 		}
 	}
 

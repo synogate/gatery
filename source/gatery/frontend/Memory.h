@@ -152,9 +152,18 @@ namespace gtry
 			state.clearRange(sim::DefaultConfig::VALUE, 0, state.size());
 			state.setRange(sim::DefaultConfig::DEFINED, 0, state.size());
 		}
-		//void setReset(std::size_t address, Data constWord);
+		void addResetLogic(std::function<Data(BVec)> address2data) {
+			m_memoryNode->setInitializationNetDataWidth(m_wordWidth);
+			BVec data = pack(address2data(hlim::NodePort{m_memoryNode, (size_t)hlim::Node_Memory::Outputs::INITIALIZATION_ADDR}));
+			m_memoryNode->rewireInput((size_t)hlim::Node_Memory::Inputs::INITIALIZATION_DATA, data.getReadPort());
+		}
 
-		void addResetLogic(std::function<BVec(BVec)> address2data);
+		void initZero() {
+			setPowerOnStateZero();
+			m_memoryNode->setInitializationNetDataWidth(m_wordWidth);
+			BVec data = ConstBVec(0, BitWidth(m_wordWidth));
+			m_memoryNode->rewireInput((size_t)hlim::Node_Memory::Inputs::INITIALIZATION_DATA, data.getReadPort());
+		}
 
 		std::size_t size() const { return m_memoryNode->getSize(); }
 		BitWidth wordSize() const { return BitWidth{ m_wordWidth }; }

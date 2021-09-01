@@ -73,6 +73,10 @@ class MemoryGroup : public NodeGroup
 
         void buildResetLogic(Circuit &circuit);
         void buildResetRom(Circuit &circuit);
+        void buildResetOverrides(Circuit &circuit, NodePort writeAddr, NodePort writeData, Node_MemPort *resetWritePort);
+        Clock *buildResetClock(Circuit &circuit,Clock *clockDomain);
+
+
         Node_MemPort *findSuitableResetWritePort();
         NodePort buildResetAddrCounter(Circuit &circuit,size_t width, Clock *resetClock);
 
