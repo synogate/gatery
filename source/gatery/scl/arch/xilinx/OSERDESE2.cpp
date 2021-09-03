@@ -22,8 +22,10 @@ namespace gtry::scl::arch::xilinx {
 
 OSERDESE2::OSERDESE2(size_t width)
 {
-    m_libraryName = "UNISIM";
+    m_libraryName = "UNIMACRO";
+    m_packageName = "VCOMPONENTS";
     m_name = "OSERDESE2";
+    m_isEntity = false;
     m_genericParameters["DATA_RATE_OQ"] = "\"DDR\"";    // DDR, SDR
     m_genericParameters["DATA_RATE_TQ"] = "\"DDR\"";    // DDR, BUF, SDR
     HCL_DESIGNCHECK_HINT((width >= 2 && width <= 8) || (width == 10 || width == 14), "Invalid bit width of OSERDESE2: Valid widths are: 2-8,10,14");

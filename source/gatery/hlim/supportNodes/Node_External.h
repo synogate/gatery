@@ -29,11 +29,15 @@ class Node_External : public Node<Node_External>
 {
     public:
         inline const std::string &getLibraryName() const { return m_libraryName; }
+        inline const std::string &getPackageName() const { return m_packageName; }
+        inline bool isEntity() const { return m_isEntity; }
         inline const std::map<std::string, std::string> &getGenericParameters() const { return m_genericParameters; }
         inline const std::vector<std::string> &getClockNames() const { return m_clockNames; }
         inline const std::vector<std::string> &getResetNames() const { return m_resetNames; }
     protected:
+        bool m_isEntity = false;
         std::string m_libraryName;
+        std::string m_packageName;
         std::map<std::string, std::string> m_genericParameters;
         std::vector<std::string> m_clockNames;
         std::vector<std::string> m_resetNames;
