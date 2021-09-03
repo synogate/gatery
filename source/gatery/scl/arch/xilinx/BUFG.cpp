@@ -26,8 +26,10 @@ namespace gtry::scl::arch::xilinx {
 
 BUFG::BUFG()
 {
-    m_libraryName = "UNISIM";
+    m_libraryName = "UNIMACRO";
+    m_packageName = "VCOMPONENTS";
     m_name = "BUFG";
+    m_isEntity = false;
     m_clockNames = {};
     m_resetNames = {};
 

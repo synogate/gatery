@@ -74,6 +74,8 @@ class BasicBlock : public BaseGrouping
 
         inline const std::vector<Entity*> &getSubEntities() const { return m_entities; }
         inline const std::vector<std::string> &getSubEntityInstanceNames() const { return m_entityInstanceNames; }
+        inline const std::vector<hlim::Node_External*> getExternalNodes() const { return m_externalNodes; }
+        void addNeededLibraries(std::set<std::string> &libs) const;
     protected:
         void collectInstantiations(hlim::NodeGroup *nodeGroup, bool reccursive);
         void processifyNodes(const std::string &desiredProcessName, hlim::NodeGroup *nodeGroup, bool reccursive);

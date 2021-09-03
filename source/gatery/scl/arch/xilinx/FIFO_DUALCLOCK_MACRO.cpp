@@ -26,8 +26,10 @@ namespace gtry::scl::arch::xilinx {
 
 FIFO_DUALCLOCK_MACRO::FIFO_DUALCLOCK_MACRO(unsigned width, FIFOSize fifoSize)
 {
-    m_libraryName = "UNISIM";
+    m_libraryName = "UNIMACRO";
+	m_packageName = "VCOMPONENTS";
     m_name = "FIFO_DUALCLOCK_MACRO";
+	m_isEntity = false;
     m_clockNames = {"RDCLK", "WRCLK"};
     m_resetNames = {"RST", ""}; // TODO: Just one reset, async, for both
 

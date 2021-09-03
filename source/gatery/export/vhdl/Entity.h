@@ -55,6 +55,8 @@ class Entity : public BasicBlock
         inline const std::vector<std::unique_ptr<Block>> &getBlocks() const { return m_blocks; }
 
         virtual std::string getInstanceName() override;
+
+        std::set<std::string> collectNeededLibraries();
     protected:
         std::vector<std::unique_ptr<Block>> m_blocks;
 

@@ -28,8 +28,10 @@ namespace gtry::scl::arch::xilinx {
 
 FIFO_SYNC_MACRO::FIFO_SYNC_MACRO(size_t width, FIFOSize fifoSize)
 {
-    m_libraryName = "UNISIM";
+    m_libraryName = "UNIMACRO";
+	m_packageName = "VCOMPONENTS";
     m_name = "FIFO_SYNC_MACRO";
+	m_isEntity = false;
     m_clockNames = {"CLK"};
     m_resetNames = {"RST"};
 	m_clocks.resize(CLK_COUNT);

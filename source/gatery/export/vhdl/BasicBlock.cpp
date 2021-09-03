@@ -154,6 +154,13 @@ void BasicBlock::routeChildIOUpwards(BaseGrouping *child)
     verifySignalsDisjoint();
 }
 
+void BasicBlock::addNeededLibraries(std::set<std::string> &libs) const
+{
+    for (auto n : m_externalNodes)
+        if (!n->getLibraryName().empty())
+            libs.insert(n->getLibraryName());
+}
+
 
 void BasicBlock::collectInstantiations(hlim::NodeGroup *nodeGroup, bool reccursive)
 {
@@ -359,7 +366,13 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
             case ConcurrentStatement::TYPE_EXT_NODE_INSTANTIATION: {
                 auto *node = m_externalNodes[statement.ref.externalNodeIdx];
                 cf.indent(stream, indent);
-                stream << m_externalNodeInstanceNames[statement.ref.externalNodeIdx] << " : entity " << node->getName() << std::endl;
+                stream << m_externalNodeInstanceNames[statement.ref.externalNodeIdx] << " : ";
+                if (node->isEntity())
+                    stream << " entity ";
+                stream << node->getLibraryName();
+                if (!node->getPackageName().empty())
+                    stream << '.' << node->getPackageName();
+                stream << '.' << node->getName() << std::endl;
                 
                 if (!node->getGenericParameters().empty()) {
                     cf.indent(stream, indent);

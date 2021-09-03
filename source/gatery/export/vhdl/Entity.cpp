@@ -170,12 +170,26 @@ void Entity::allocateNames()
         block->allocateNames();
 }
 
+std::set<std::string> Entity::collectNeededLibraries()
+{
+    std::set<std::string> libs;
+    addNeededLibraries(libs);
+    for (auto &block : m_blocks)
+        block->addNeededLibraries(libs);
+
+    return libs;
+}
+
 
 void Entity::writeLibrariesVHDL(std::ostream &stream)
 {
-    stream << "LIBRARY ieee;" << std::endl
-           << "USE ieee.std_logic_1164.ALL;" << std::endl
-           << "USE ieee.numeric_std.all;" << std::endl << std::endl;
+    stream << "LIBRARY ieee;\n"
+           << "USE ieee.std_logic_1164.ALL;\n"
+           << "USE ieee.numeric_std.all;\n\n";
+
+    auto additionalLibs = collectNeededLibraries();
+    for (auto &lib : additionalLibs)
+        stream << "LIBRARY " << lib << ";\n\n";
 
     // Import everything for now
     for (const auto &package : m_ast.getPackages())
@@ -201,6 +215,8 @@ std::vector<std::string> Entity::getPortsVHDL()
         line << m_namespaceScope.getResetName(clk) << " : IN STD_LOGIC";
         unsortedPortList.push_back({clockOffset++, line.str()});
     }
+
+
 
     for (auto &ioPin : m_ioPins) {
         std::stringstream line;
