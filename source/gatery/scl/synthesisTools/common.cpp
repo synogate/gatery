@@ -26,6 +26,7 @@
 #include <gatery/export/vhdl/Entity.h>
 
 #include <fstream>
+#include <sstream>
 
 namespace gtry {
 
@@ -48,5 +49,20 @@ void writeClockSDC(const vhdl::AST &ast, std::ostream& out)
 	writeClockXDC(ast, out);
 }
 
+std::string escapeTcl(const std::string &str)
+{
+    std::stringstream result;
+    
+    for (auto c : str)
+        switch (c) {
+            case '\\':
+                result << '\\' << '\\';
+            break;
+            default:
+                result << c;
+        }
+
+    return result.str();
+}
 
 }
