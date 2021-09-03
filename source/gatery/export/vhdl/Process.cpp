@@ -192,6 +192,8 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
     if (!forceUnfold) {
         if (m_inputs.contains(nodePort) || m_outputs.contains(nodePort) || m_localSignals.contains(nodePort) || m_constants.contains(nodePort)) {
             HCL_ASSERT(!m_namespaceScope.getName(nodePort).empty());
+            if (context == Context::STD_LOGIC_VECTOR)
+                stream << "STD_LOGIC_VECTOR(";
             stream << m_namespaceScope.getName(nodePort);
             switch (context) {
                 case Context::BOOL:
@@ -202,6 +204,10 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
                         stream << "(0)";
                 break;
                 case Context::STD_LOGIC_VECTOR:
+                    stream << ')';
+                    HCL_ASSERT(hlim::outputIsBVec(nodePort));
+                break;
+                case Context::UNSIGNED:
                     HCL_ASSERT(hlim::outputIsBVec(nodePort));
                 break;
                 default:
@@ -242,6 +248,8 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
     // not ideal but works for now
     hlim::Node_Pin *ioPinNode = dynamic_cast<hlim::Node_Pin *>(nodePort.node);
     if (ioPinNode != nullptr) {
+        if (context == Context::UNSIGNED)
+            stream << "UNSIGNED(";
         stream << m_namespaceScope.getName(ioPinNode);
         switch (context) {
             case Context::BOOL:
@@ -254,6 +262,10 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
             case Context::STD_LOGIC_VECTOR:
                 HCL_ASSERT(hlim::outputIsBVec(nodePort));
             break;
+            case Context::UNSIGNED:
+                stream << ')';
+                HCL_ASSERT(hlim::outputIsBVec(nodePort));
+            break;
             default:
                 HCL_ASSERT_HINT(false, "Unhandled case!");
         }
@@ -262,23 +274,11 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
 
     const hlim::Node_Arithmetic *arithmeticNode = dynamic_cast<const hlim::Node_Arithmetic*>(nodePort.node);
     if (arithmeticNode != nullptr) {
-#if 0
-        stream << "STD_LOGIC_VECTOR(UNSIGNED(";
-        formatExpression(stream, comments, arithmeticNode->getDriver(0), dependentInputs);
-        switch (arithmeticNode->getOp()) {
-            case hlim::Node_Arithmetic::ADD: stream << ") + UNSIGNED("; break;
-            case hlim::Node_Arithmetic::SUB: stream << ") - UNSIGNED("; break;
-            case hlim::Node_Arithmetic::MUL: stream << ") * UNSIGNED("; break;
-            case hlim::Node_Arithmetic::DIV: stream << ") / UNSIGNED("; break;
-            case hlim::Node_Arithmetic::REM: stream << ") MOD UNSIGNED("; break;
-            default:
-                HCL_ASSERT_HINT(false, "Unhandled operation!");
-        };
-        formatExpression(stream, comments, arithmeticNode->getDriver(1), dependentInputs);
-        stream << "))";
-#else
-        stream << "(";
-        formatExpression(stream, comments, arithmeticNode->getDriver(0), dependentInputs, Context::STD_LOGIC_VECTOR);
+        if (context == Context::STD_LOGIC_VECTOR)
+            stream << "STD_LOGIC_VECTOR(";
+        else
+            stream << '(';
+        formatExpression(stream, comments, arithmeticNode->getDriver(0), dependentInputs, Context::UNSIGNED);
         switch (arithmeticNode->getOp()) {
             case hlim::Node_Arithmetic::ADD: stream << " + "; break;
             case hlim::Node_Arithmetic::SUB: stream << " - "; break;
@@ -288,16 +288,15 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
             default:
                 HCL_ASSERT_HINT(false, "Unhandled operation!");
         };
-        formatExpression(stream, comments, arithmeticNode->getDriver(1), dependentInputs, Context::STD_LOGIC_VECTOR);
-        stream << ")";
-#endif
+        formatExpression(stream, comments, arithmeticNode->getDriver(1), dependentInputs, Context::UNSIGNED);
+        stream << ')';
         return;
     }
 
 
     const hlim::Node_Logic *logicNode = dynamic_cast<const hlim::Node_Logic*>(nodePort.node);
     if (logicNode != nullptr) {
-        stream << "(";
+        stream << '(';
         if (logicNode->getOp() == hlim::Node_Logic::NOT) {
             stream << " not "; formatExpression(stream, comments, logicNode->getDriver(0), dependentInputs, context);
         } else {
@@ -314,7 +313,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
             };
             formatExpression(stream, comments, logicNode->getDriver(1), dependentInputs, context);
         }
-        stream << ")";
+        stream << ')';
         return;
     }
 
@@ -325,7 +324,11 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
             stream << "bool2stdlogic(";
         else
             stream << "(";
-        auto subContext = compareNode->getDriverConnType(0).interpretation == hlim::ConnectionType::BITVEC?Context::STD_LOGIC_VECTOR:Context::STD_LOGIC;
+
+        Context subContext = Context::UNSIGNED;
+        if (compareNode->getDriverConnType(0).interpretation == hlim::ConnectionType::BOOL)
+            subContext = Context::STD_LOGIC;
+
         formatExpression(stream, comments, compareNode->getDriver(0), dependentInputs, subContext);
         switch (compareNode->getOp()) {
             case hlim::Node_Compare::EQ: stream << " = "; break;
@@ -346,20 +349,32 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
     if (rewireNode != nullptr) {
         HCL_ASSERT(rewireNode->getOutputConnectionType(0).width > 0);
 
+        // Note: VHDL doesn't allow indexing the result of a type conversion (i.e. UNSIGNED(a)(7 downto 0) )
+        // one has to convert the result of it (i.e. UNSIGNED(a(7 downto 0)) )
+
+        // Also note that the result of a concatenation must not be explicitly cast but can implicitely be cast to STD_LOGIC_VECTOR or UNSIGNED
+
         size_t bitExtractIdx;
         if (rewireNode->getOp().isBitExtract(bitExtractIdx)) {
             if (hlim::outputIsBVec(rewireNode->getDriver(0))) {
-                formatExpression(stream, comments, rewireNode->getDriver(0), dependentInputs, Context::STD_LOGIC_VECTOR);
 
                 switch (context) {
                     case Context::BOOL:
+                        formatExpression(stream, comments, rewireNode->getDriver(0), dependentInputs, Context::UNSIGNED);
                         stream << "(" << bitExtractIdx << ") = '1'";
                     break;
                     case Context::STD_LOGIC:
+                        formatExpression(stream, comments, rewireNode->getDriver(0), dependentInputs, Context::UNSIGNED);
                         stream << "(" << bitExtractIdx << ")";
                     break;
-                    case Context::STD_LOGIC_VECTOR:
+                    case Context::UNSIGNED:
+                        formatExpression(stream, comments, rewireNode->getDriver(0), dependentInputs, Context::UNSIGNED);
                         stream << "(" << bitExtractIdx << " downto " << bitExtractIdx << ")";
+                    break;
+                    case Context::STD_LOGIC_VECTOR:
+                        stream << "STD_LOGIC_VECTOR(";
+                        formatExpression(stream, comments, rewireNode->getDriver(0), dependentInputs, context);
+                        stream << "(" << bitExtractIdx << " downto " << bitExtractIdx << "))";
                     break;
                     default:
                         HCL_ASSERT_HINT(false, "Unhandled case!");
@@ -371,10 +386,13 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
                 stream << ")";
             }
         } else {
-
             const auto &op = rewireNode->getOp().ranges;
             if (op.size() > 1)
-                stream << "(";
+                stream << "("; // Must not cast since concatenation
+            else
+                if (context == Context::STD_LOGIC_VECTOR) // Cast, to be on the safe side
+                    stream << "STD_LOGIC_VECTOR(";
+
 
             for (auto i : utils::Range(op.size())) {
                 if (i > 0)
@@ -383,7 +401,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
                 switch (range.source) {
                     case hlim::Node_Rewire::OutputRange::INPUT: {
                         auto driver = rewireNode->getDriver(range.inputIdx);
-                        auto subContext = hlim::outputIsBVec(driver)?Context::STD_LOGIC_VECTOR:Context::STD_LOGIC;
+                        auto subContext = hlim::outputIsBVec(driver)?Context::UNSIGNED:Context::STD_LOGIC;
                         formatExpression(stream, comments, driver, dependentInputs, subContext);
                         if (driver.node != nullptr)
                             if (range.inputOffset != 0 || range.subwidth != hlim::getOutputWidth(driver))
@@ -407,7 +425,10 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
             }
 
             if (op.size() > 1)
-                stream << ")";
+                stream << ')';
+            else
+                if (context == Context::STD_LOGIC_VECTOR)
+                    stream << ')';
         }
 
         return;
@@ -462,6 +483,8 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
             hlim::Node_Multiplexer *muxNode = dynamic_cast<hlim::Node_Multiplexer *>(nodePort.node);
             hlim::Node_PriorityConditional *prioCon = dynamic_cast<hlim::Node_PriorityConditional *>(nodePort.node);
 
+            Context targetContext;
+
             bool isLocalSignal = m_localSignals.contains(nodePort);
             std::string assignmentPrefix;
             bool forceUnfold;
@@ -469,12 +492,14 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
                 assignmentPrefix = m_namespaceScope.getName(ioPin);
                 forceUnfold = false; // assigning to pin, can directly do with a signal/variable;
                 nodePort = ioPin->getDriver(0);
+
+                targetContext = hlim::outputIsBVec(nodePort)?Context::STD_LOGIC_VECTOR:Context::STD_LOGIC;
             } else {
+                targetContext = hlim::outputIsBVec(nodePort)?Context::UNSIGNED:Context::STD_LOGIC;
                 assignmentPrefix = m_namespaceScope.getName(nodePort);
                 forceUnfold = true; // referring to target, must force unfolding
             }
 
-            auto targetContext = hlim::outputIsBVec(nodePort)?Context::STD_LOGIC_VECTOR:Context::STD_LOGIC;
 
             if (isLocalSignal)
                 assignmentPrefix += " := ";
@@ -506,7 +531,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
                     code << "END IF;" << std::endl;
                 } else {
                     code << "CASE ";
-                    formatExpression(code, comment, muxNode->getDriver(0), statement.inputs, Context::STD_LOGIC_VECTOR, false);
+                    formatExpression(code, comment, muxNode->getDriver(0), statement.inputs, Context::UNSIGNED, false);
                     code << " IS"<< std::endl;
 
                     for (auto i : utils::Range<size_t>(1, muxNode->getNumInputPorts())) {
@@ -528,7 +553,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
                     code << "WHEN OTHERS => ";
                     code << assignmentPrefix;
 
-                    if (targetContext == Context::STD_LOGIC_VECTOR) {
+                    if (targetContext == Context::UNSIGNED) {
                         code << "\"";
                         for ([[maybe_unused]] auto bitIdx : utils::Range(hlim::getOutputWidth(muxNode->getDriver(1))))
                             code << "X";
@@ -776,7 +801,7 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
             HCL_DESIGNCHECK_HINT(constReset, "Resets of registers must be constants uppon export!");
 
             cf.indent(stream, indentation+2);
-            auto context = hlim::outputIsBVec(resetValue)?Context::STD_LOGIC_VECTOR:Context::STD_LOGIC;
+            auto context = hlim::outputIsBVec(resetValue)?Context::UNSIGNED:Context::STD_LOGIC;
             stream << m_namespaceScope.getName(output) << " <= ";
             formatConstant(stream, constReset, context );
             stream << ";" << std::endl;
@@ -819,7 +844,7 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
             HCL_DESIGNCHECK_HINT(constReset, "Resets of registers must be constants uppon export!");
 
             cf.indent(stream, indentation+3);
-            auto context = hlim::outputIsBVec(resetValue)?Context::STD_LOGIC_VECTOR:Context::STD_LOGIC;
+            auto context = hlim::outputIsBVec(resetValue)?Context::UNSIGNED:Context::STD_LOGIC;
             stream << m_namespaceScope.getName(output) << " <= ";
             formatConstant(stream, constReset, context );
             stream << ";" << std::endl;

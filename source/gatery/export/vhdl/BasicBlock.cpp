@@ -402,13 +402,20 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
                     if (node->getDriver(i).node != nullptr) {
                         std::stringstream line;
                         line << node->getInputName(i) << " => ";
+                        if (hlim::getOutputConnectionType(node->getDriver(i)).interpretation == hlim::ConnectionType::BITVEC)
+                            line << "STD_LOGIC_VECTOR(";
                         line << m_namespaceScope.getName(node->getDriver(i));
+                        if (hlim::getOutputConnectionType(node->getDriver(i)).interpretation == hlim::ConnectionType::BITVEC)
+                            line << ')';
                         portmapList.push_back(line.str());
                     }
 
                 for (auto i : utils::Range(node->getNumOutputPorts())) {
                     std::stringstream line;
-                    line << node->getOutputName(i) << " => ";
+                    if (node->getOutputConnectionType(i).interpretation == hlim::ConnectionType::BITVEC)
+                        line << "UNSIGNED(" << node->getOutputName(i) << ") => ";
+                    else
+                        line << node->getOutputName(i) << " => ";
                     line << m_namespaceScope.getName({.node = node, .port = i});
                     portmapList.push_back(line.str());
                 }

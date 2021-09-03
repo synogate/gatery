@@ -202,32 +202,36 @@ std::vector<std::string> Entity::getPortsVHDL()
         unsortedPortList.push_back({clockOffset++, line.str()});
     }
 
+    // On top entity, use STANDARD_LOGIC_VECTOR instead of UNSIGNED
+    bool preferSLV = m_parent == nullptr;
+
     for (auto &ioPin : m_ioPins) {
         std::stringstream line;
         line << m_namespaceScope.getName(ioPin) << " : ";
         if (ioPin->isInputPin() && ioPin->isOutputPin()) {
             line << "INOUT "; // this will need more thought at other places to work
-            cf.formatConnectionType(line, ioPin->getConnectionType());
+            cf.formatConnectionType(line, ioPin->getConnectionType(), preferSLV);
         } else if (ioPin->isInputPin()) {
             line << "IN ";
-            cf.formatConnectionType(line, ioPin->getConnectionType());
+            cf.formatConnectionType(line, ioPin->getConnectionType(), preferSLV);
         } else if (ioPin->isOutputPin()) {
             line << "OUT ";
-            cf.formatConnectionType(line, ioPin->getConnectionType());
+            cf.formatConnectionType(line, ioPin->getConnectionType(), preferSLV);
         } else
             continue;
         unsortedPortList.push_back({clockOffset + ioPin->getId(), line.str()});
     }
+
     for (const auto &signal : m_inputs) {
         std::stringstream line;
         line << m_namespaceScope.getName(signal) << " : IN ";
-        cf.formatConnectionType(line, hlim::getOutputConnectionType(signal));
+        cf.formatConnectionType(line, hlim::getOutputConnectionType(signal), preferSLV);
         unsortedPortList.push_back({clockOffset + signal.node->getId(), line.str()});
     }
     for (const auto &signal : m_outputs) {
         std::stringstream line;
         line << m_namespaceScope.getName(signal) << " : OUT ";
-        cf.formatConnectionType(line, hlim::getOutputConnectionType(signal));
+        cf.formatConnectionType(line, hlim::getOutputConnectionType(signal), preferSLV);
         unsortedPortList.push_back({clockOffset + signal.node->getId(), line.str()});
     }
 

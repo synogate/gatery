@@ -263,18 +263,22 @@ void DefaultCodeFormatting::formatCodeComment(std::ostream &stream, unsigned ind
 }
 
 
-void DefaultCodeFormatting::formatConnectionType(std::ostream &stream, const hlim::ConnectionType &connectionType)
+void DefaultCodeFormatting::formatConnectionType(std::ostream &stream, const hlim::ConnectionType &connectionType, bool useSLV)
 {
     switch (connectionType.interpretation) {
         case hlim::ConnectionType::BOOL:
             stream << "STD_LOGIC";
         break;
         case hlim::ConnectionType::BITVEC:
-            //stream << "STD_LOGIC_VECTOR("<<connectionType.width-1 << " downto 0)";
+            if (useSLV) {
+                stream << "STD_LOGIC_VECTOR";
+            } else {
+                stream << "UNSIGNED";
+            }
             if (connectionType.width == 0)
-                stream << "UNSIGNED(-1 downto 0)";
+                stream << "(-1 downto 0)";
             else
-                stream << "UNSIGNED("<<connectionType.width-1 << " downto 0)";
+                stream << "("<<connectionType.width-1 << " downto 0)";
         break;
         default:
             stream << "UNHANDLED_DATA_TYPE";

@@ -46,7 +46,7 @@ class CodeFormatting
         virtual void formatProcessComment(std::ostream &stream, unsigned indentation, const std::string &processName, const std::string &comment) = 0;
         virtual void formatCodeComment(std::ostream &stream, unsigned indentation, const std::string &comment) = 0;
 
-        virtual void formatConnectionType(std::ostream &stream, const hlim::ConnectionType &connectionType) = 0;
+        virtual void formatConnectionType(std::ostream &stream, const hlim::ConnectionType &connectionType, bool useSLV = false) = 0;
 
         enum SignalType {
             SIG_ENTITY_INPUT,
@@ -103,7 +103,7 @@ class DefaultCodeFormatting : public CodeFormatting
         virtual void formatProcessComment(std::ostream &stream, unsigned indentation, const std::string &processName, const std::string &comment) override;
         virtual void formatCodeComment(std::ostream &stream, unsigned indentation, const std::string &comment) override;
 
-        virtual void formatConnectionType(std::ostream &stream, const hlim::ConnectionType &connectionType) override;
+        virtual void formatConnectionType(std::ostream &stream, const hlim::ConnectionType &connectionType, bool useSLV = false) override;
 /*
         void addExternalNodeHandler(ExternalNodeHandler nodeHandler);
         virtual void instantiateExternal(std::ostream &stream, const hlim::Node_External *node, unsigned indent,
