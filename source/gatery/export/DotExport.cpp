@@ -26,6 +26,8 @@
 #include "../hlim/coreNodes/Node_Compare.h"
 #include "../hlim/coreNodes/Node_Pin.h"
 #include "../hlim/coreNodes/Node_Signal.h"
+#include "../hlim/supportNodes/Node_Memory.h"
+#include "../hlim/supportNodes/Node_MemPort.h"
 #include "../hlim/supportNodes/Node_SignalTap.h"
 
 #include "../hlim/Subnet.h"
@@ -278,6 +280,12 @@ void DotExport::writeMergedDotFile(const hlim::Circuit &circuit, const hlim::Con
     std::vector<CombinatoryArea> areas;
     std::map<const hlim::BaseNode*, size_t> node2idx;
     std::vector<const hlim::Node_Register*> registers;
+    std::vector<const hlim::Node_Memory*> memories;
+    std::vector<const hlim::Node_Signal*> signals;
+
+    const bool mergeLatched = true;
+    const bool hideInternalRegisters = false;
+    const bool hideInternalMemories = false;
 
     {
         std::set<const hlim::BaseNode*> handledNodes;
@@ -289,7 +297,12 @@ void DotExport::writeMergedDotFile(const hlim::Circuit &circuit, const hlim::Con
 
                 continue;
             }
-            if (dynamic_cast<const hlim::Node_Signal*>(n)) continue;
+            if (auto *sig = dynamic_cast<const hlim::Node_Signal*>(n)) {
+                signals.push_back(sig);
+                continue;
+            }
+            if (dynamic_cast<const hlim::Node_Constant*>(n)) continue;
+            //if (dynamic_cast<const hlim::Node_MemPort*>(n)) continue;
 
             openList.clear();
             openList.push_back(n);
@@ -302,34 +315,158 @@ void DotExport::writeMergedDotFile(const hlim::Circuit &circuit, const hlim::Con
                 if (handledNodes.contains(node)) continue;
                 handledNodes.insert(node);
 
+                if (auto *mem = dynamic_cast<const hlim::Node_Memory*>(node)) {
+                    memories.push_back(mem);
+                    continue;
+                }
+
                 newArea.nodes.push_back(node);
 
-                for (auto i : utils::Range(node->getNumInputPorts())) {
-                    auto driver = node->getDriver(i);
-                    if (driver.node ==  nullptr) continue;
-                    if (auto *reg = dynamic_cast<const hlim::Node_Register*>(driver.node)) {
-                        newArea.inputRegisters.push_back(reg);
-                    } else openList.push_back(driver.node);
-                }
+                //bool followInputs
 
-                for (auto i : utils::Range(node->getNumOutputPorts())) {
-                    for (auto driven : node->getDirectlyDriven(i)) {
-                        if (auto *reg = dynamic_cast<const hlim::Node_Register*>(driven.node)) {
-                            newArea.outputRegisters.push_back(reg);
-                        } else openList.push_back(driven.node);
+                for (auto i : utils::Range(node->getNumInputPorts())) {
+                    auto driver = node->getNonSignalDriver(i);
+                    if (driver.node ==  nullptr) continue;
+                    if (dynamic_cast<const hlim::Node_Constant*>(driver.node)) {
+                        // Don't include to not merge stuff that is actually independent
+                    } else if (auto *reg = dynamic_cast<const hlim::Node_Register*>(driver.node)) {
+                        newArea.inputRegisters.push_back(reg);
+                    } else {
+                        if (mergeLatched || driver.node->getOutputType(i) != hlim::NodeIO::OUTPUT_LATCHED)
+                            openList.push_back(driver.node);
                     }
                 }
+
+
+                for (auto i : utils::Range(node->getNumOutputPorts())) {
+                    for (auto nh : const_cast<hlim::BaseNode*>(node)->exploreOutput(i)) {
+                        if (nh.isSignal()) continue;
+
+                        if (dynamic_cast<const hlim::Node_Constant*>(nh.node())) {
+                            // Don't include to not merge stuff that is actually independent
+                        } else if (auto *reg = dynamic_cast<const hlim::Node_Register*>(nh.node())) {
+                            newArea.outputRegisters.push_back(reg);
+                        } else {
+                            if (mergeLatched || nh.node()->getOutputType(nh.port()) != hlim::NodeIO::OUTPUT_LATCHED)
+                                openList.push_back(nh.node());
+                        }
+                        nh.backtrack();
+                    }                
+                }                
             }
 
             if (!newArea.nodes.empty()) {
                 areas.push_back(std::move(newArea));
                 for (auto n : areas.back().nodes) {
                     node2idx[n] = areas.size()-1;
-                    areas.back().nodeGroups.insert(n->getGroup());
+                    if (!dynamic_cast<const hlim::Node_Signal*>(n))
+                        areas.back().nodeGroups.insert(n->getGroup());
                 }
             }
         }
     }
+
+
+
+    std::set<size_t> connectedNodes;
+    for (auto *sig : signals) {
+        connectedNodes.clear();
+
+        for (auto i : { 0 }) {
+            auto driver = sig->getDriver(i);
+            auto nonSignalDriver = sig->getNonSignalDriver(i);
+            if (nonSignalDriver.node ==  nullptr) continue;
+
+            auto it = node2idx.find(nonSignalDriver.node);
+            if (it != node2idx.end()) {
+                connectedNodes.insert(it->second);
+            }
+        }
+        for (auto nh : const_cast<hlim::Node_Signal*>(sig)->exploreOutput(0)) {
+            if (nh.isSignal()) continue;
+
+            auto it = node2idx.find(nh.node());
+            if (it != node2idx.end()) {
+                connectedNodes.insert(it->second);
+            }
+            nh.backtrack();
+        }
+
+        for (auto c : connectedNodes)
+            if (c < areas.size())
+                areas[c].nodes.push_back(sig);
+    }
+
+    for (auto idx : utils::Range(memories.size())) {
+        node2idx[memories[idx]] = areas.size() + idx;
+    }
+
+    for (auto i : utils::Range(registers.size())) {
+        auto *reg = registers[i];
+        node2idx[reg] = areas.size()+memories.size()+i;
+    }    
+
+    std::vector<bool> hideNode(node2idx.size(), false);
+
+
+    struct Connection {
+        std::string label;
+    };
+
+    std::map<std::pair<size_t, size_t>, Connection> connections;
+
+    for (auto idx : utils::Range(memories.size())) {
+        auto *mem = memories[idx];
+        connectedNodes.clear();
+
+        for (auto port  : mem->getPorts()) {
+            auto it = node2idx.find(port.node);
+            if (it != node2idx.end()) {
+                connectedNodes.insert(it->second);
+                connections[std::pair<size_t, size_t>( it->second, node2idx[mem] )].label += "memory dependency";
+                connections[std::pair<size_t, size_t>( node2idx[mem], it->second )].label += "memory dependency";
+            }
+        }
+        if (hideInternalMemories && connectedNodes.size() == 1)
+            hideNode[areas.size() + idx] = true;
+    }
+
+    for (auto i : utils::Range(registers.size())) {
+        auto *reg = registers[i];
+        connectedNodes.clear();
+
+        //for (auto i : { hlim::Node_Register::Input::DATA, hlim::Node_Register::Input::ENABLE, hlim::Node_Register::Input::RESET_VALUE }) {
+        for (auto i : { hlim::Node_Register::Input::DATA, hlim::Node_Register::Input::ENABLE }) {
+            auto driver = reg->getDriver(i);
+            auto nonSignalDriver = reg->getNonSignalDriver(i);
+            if (nonSignalDriver.node ==  nullptr) continue;
+
+            auto it = node2idx.find(nonSignalDriver.node);
+            if (it != node2idx.end()) {
+                connectedNodes.insert(it->second);
+                std::pair<size_t, size_t> link = { it->second, node2idx[reg] };
+                connections[link].label += driver.node->attemptInferOutputName(driver.port);
+            }
+        }
+        for (auto nh : const_cast<hlim::Node_Register*>(reg)->exploreOutput(0)) {
+            if (nh.isSignal()) continue;
+
+            auto it = node2idx.find(nh.node());
+            if (it != node2idx.end()) {
+                connectedNodes.insert(it->second);
+                std::pair<size_t, size_t> link = { node2idx[reg], it->second };
+                auto &con = connections[link];
+                con.label = reg->attemptInferOutputName(0) + "\\n";
+            }
+            nh.backtrack();
+        }
+
+        if (hideInternalRegisters && connectedNodes.size() == 1)
+            hideNode[areas.size()+memories.size() + i] = true;
+    }
+
+
+
 
     std::fstream file(m_destination.string().c_str(), std::fstream::out);
     if (!file.is_open())
@@ -337,22 +474,61 @@ void DotExport::writeMergedDotFile(const hlim::Circuit &circuit, const hlim::Con
     file << "digraph G {" << std::endl;
 
     for (auto idx : utils::Range(areas.size())) {
+        if (hideNode[idx]) continue;
         file << "node_" << idx << "[label=\"";
+        file << "Area_" << idx << "\\n";
         for (auto *g : areas[idx].nodeGroups) {
             file << g->getInstanceName() << " : " << g->getName() << "\\n";
         }
+        std::map<std::string, size_t> nodeCount;
+        for (auto *n : areas[idx].nodes) {
+            if (const auto *pin = dynamic_cast<const hlim::Node_Pin*>(n))
+                file << "io-pin: " << pin->getName() << "\\n";
+            nodeCount[n->getTypeName()]++;
+        }
+/*        
+        for (auto &p : nodeCount)
+            file << "node type: " << p.first << " : " << p.second << "\\n";
+*/        
         file << "\"";
         file << " shape=\"box\"";
+        file << "];" << std::endl;
+
+        {
+            std::string filename = (boost::format("area_%i") % idx).str();
+
+            hlim::ConstSubnet areaSubnet;
+            for (auto *n : areas[idx].nodes)
+                //if (subnet.contains(n))
+                    areaSubnet.add(n);
+
+            DotExport subexport(m_destination.parent_path()/(filename+".dot"));
+            subexport(circuit, areaSubnet);
+            subexport.runGraphViz(m_destination.parent_path()/(filename+".svg"));
+        }
+    }
+
+
+    for (auto idx : utils::Range(memories.size())) {
+        if (hideNode[areas.size() + idx]) continue;
+        file << "node_" << areas.size() + idx << "[label=\"";
+        file << "Memory " << memories[idx]->getName() << "\\n";
+        if (memories[idx]->getGroup() != nullptr)
+            file << memories[idx]->getGroup()->getInstanceName() << " : " << memories[idx]->getGroup()->getName() << "\\n";
+
+        file << "\"";
+        file << " shape=\"box\" style=\"filled\" fillcolor=\"beige\"";
         file << "];" << std::endl;
     }
 
 
     for (auto i : utils::Range(registers.size())) {
+        if (hideNode[areas.size()+memories.size() + i]) continue;
+
         auto *reg = registers[i];
-        node2idx[reg] = areas.size()+i;
 
         auto type = reg->getOutputConnectionType(0);
-        file << "node_" << areas.size() + i << "[label=\"";
+        file << "node_" << areas.size()+memories.size() + i << "[label=\"";
         file << "Register ";
         switch (type.interpretation) {
             case hlim::ConnectionType::BOOL:
@@ -362,53 +538,36 @@ void DotExport::writeMergedDotFile(const hlim::Circuit &circuit, const hlim::Con
             case hlim::ConnectionType::DEPENDENCY:
                 file << "DEPENDENCY"; break;
         }
+        file << '[';
+        if (reg->getFlags().containsAnyOf(hlim::Node_Register::Flags::ALLOW_RETIMING_FORWARD))
+            file << 'F';
+        if (reg->getFlags().containsAnyOf(hlim::Node_Register::Flags::ALLOW_RETIMING_BACKWARD))
+            file << 'B';
+        if (reg->getFlags().containsAnyOf(hlim::Node_Register::Flags::IS_BOUND_TO_MEMORY))
+            file << 'M';
+        file << ']';
+
         file << "\"";
         file << " shape=\"box\" style=\"filled\" fillcolor=\"#a0a0ff\"";
         file << "];" << std::endl;
     }    
 
 
-    struct Connection {
-        std::string label;
-    };
-
-    std::map<std::pair<size_t, size_t>, Connection> connections;
-
-    for (auto i : utils::Range(registers.size())) {
-        auto *reg = registers[i];
-
-        for (auto i : utils::Range(reg->getNumInputPorts())) {
-            auto driver = reg->getDriver(i);
-            if (driver.node ==  nullptr) continue;
-
-            auto it = node2idx.find(driver.node);
-            if (it != node2idx.end()) {
-                std::pair<size_t, size_t> link = { it->second, node2idx[reg] };
-                connections[link].label += driver.node->attemptInferOutputName(driver.port);
-            }
-        }
-        for (auto driven : reg->getDirectlyDriven(0)) {
-            auto it = node2idx.find(driven.node);
-            if (it != node2idx.end()) {
-                std::pair<size_t, size_t> link = { node2idx[reg], it->second };
-                auto &con = connections[link];
-                if (con.label.empty())
-                    con.label = reg->attemptInferOutputName(0);
-                else {
-                    con.label += "\\n";
-                    con.label += reg->attemptInferOutputName(0);
-                }
-            }
-        }
-    }
-
-
     for (auto &connection : connections) {
+        if (hideNode[connection.first.first] || hideNode[connection.first.second]) continue;
+
         file << "node_" << connection.first.first << " -> node_" << connection.first.second << " [";
 
         file << " label=\"";
         file << connection.second.label;
         file << "\"";
+
+        bool bothRegisters = connection.first.first > areas.size() && connection.first.second > areas.size();
+
+        if (bothRegisters)
+            file << " weight=1000";
+        else
+            file << " weight=1";
 
         file << "];" << std::endl;
     }
