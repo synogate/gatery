@@ -367,7 +367,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_modify_write, UnitTestSimulationFixture)
 
     Memory<BVec> mem(contents.size(), 32_b);
     mem.setType(MemType::LUTRAM);
-    mem.setPowerOnStateZero();
+    mem.initZero();
 
     BVec addr = pinIn(4_b);
     BVec output;
@@ -444,7 +444,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write, UnitTestSimulationFixture)
 
     Memory<BVec> mem(contents.size(), 32_b);
     mem.setType(MemType::BRAM);
-    mem.setPowerOnStateZero();
+    mem.initZero();
 
     BVec addr = pinIn(4_b);
     BVec output;
@@ -524,7 +524,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads, UnitTestSimul
 
     Memory<BVec> mem(contents.size(), 32_b);
     mem.setType(MemType::BRAM);
-    mem.setPowerOnStateZero();
+    mem.initZero();
 
     BVec addr = pinIn(4_b).setName("rmw_addr");
     BVec rd_addr = pinIn(4_b).setName("rd_addr");
@@ -608,7 +608,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_on_wrEn, UnitTestSimulationFi
 
     Memory<BVec> mem(contents.size(), 32_b);
     mem.setType(MemType::BRAM);
-    mem.setPowerOnStateZero();
+    mem.initZero();
 
     BVec addr = pinIn(4_b).setName("rmw_addr");
     Bit shuffler = pinIn().setName("shuffler");
@@ -688,7 +688,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_multiple_writes, UnitTestSimulationFixture)
 
     Memory<BVec> mem(contents.size(), 32_b);
     mem.setType(MemType::BRAM);
-    mem.setPowerOnStateZero();
+    mem.initZero();
 
     BVec wrData1 = pinIn(32_b).setName("wr_data1");
     BVec wrAddr1 = pinIn(4_b).setName("wr_addr1");
@@ -770,7 +770,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrFirst, Unit
 
     Memory<BVec> mem(contents.size(), 32_b);
     mem.setType(MemType::BRAM);
-    mem.setPowerOnStateZero();
+    mem.initZero();
 
     BVec wrData = pinIn(32_b).setName("wr_data");
     BVec wrAddr = pinIn(4_b).setName("wr_addr");
@@ -855,7 +855,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrLast, UnitT
 
     Memory<BVec> mem(contents.size(), 32_b);
     mem.setType(MemType::BRAM);
-    mem.setPowerOnStateZero();
+    mem.initZero();
 
     BVec wrData = pinIn(32_b).setName("wr_data");
     BVec wrAddr = pinIn(4_b).setName("wr_addr");
@@ -935,7 +935,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
 
     Memory<BVec> mem(contents.size(), 32_b);
     mem.setType(MemType::BRAM);
-    mem.setPowerOnStateZero();
+    mem.initZero();
 
     BVec wrData = pinIn(32_b).setName("wr_data");
     BVec wrAddr = pinIn(4_b).setName("wr_addr");
@@ -1024,7 +1024,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
 
     Memory<BVec> mem(contents.size(), 32_b);
     mem.setType(MemType::BRAM);
-    mem.setPowerOnStateZero();
+    mem.initZero();
 
     BVec wrData = pinIn(32_b).setName("wr_data");
     BVec wrAddr = pinIn(4_b).setName("wr_addr");
@@ -1116,7 +1116,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_dual_read_modify_write, UnitTestSimulationFixtu
 
     Memory<BVec> mem(contents.size(), 32_b);
     mem.setType(MemType::BRAM);
-    mem.setPowerOnStateZero();
+    mem.initZero();
 
     BVec addr1 = pinIn(4_b);
     BVec output1;
@@ -1211,7 +1211,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, UnitTestSimulationFi
 
     Memory<BVec> mem(contents.size(), 32_b);
     mem.setType(MemType::BRAM, memReadLatency);
-    mem.setPowerOnStateZero();
+    mem.initZero();
     mem.noConflicts();
 
     BVec addr = pinIn(4_b);
@@ -1344,7 +1344,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, UnitTestSimulati
         mem.setName("second_stage_emif");
         mem.setType(MemType::EXTERNAL, memReadLatency);
         //mem.setType(MemType::BRAM, memReadLatency);
-        //mem.setPowerOnStateZero(); // Not possible with external memory, needs explicit initialization
+        //mem.initZero(); // Not possible with external memory, needs explicit initialization
 
         BVec elem = mem[addr_];
         HCL_NAMED(elem);

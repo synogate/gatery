@@ -47,7 +47,7 @@ namespace gtry::scl
 
 			Memory<TinyCuckooItem> mem(1ull << in.tableWidth().value, in.update.item);
 			//mem.setType(MemType::BRAM);
-			mem.setPowerOnStateZero();
+			mem.initZero();
 
 			IF(in.update.valid & in.update.tableIdx == i)
 				mem[in.update.itemIdx] = in.update.item;
@@ -61,7 +61,7 @@ namespace gtry::scl
 				lookupData = reg(lookupData);
 			HCL_NAMED(lookupData);
 
-			IF(lookupData.valid & lookupData.key == out.key)
+			IF(lookupData.valid & (lookupData.key == out.key))
 			{
 				out.found = '1';
 				out.value = lookupData.value;
