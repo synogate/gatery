@@ -89,7 +89,7 @@ void SynthesisTool::forEachPathAttribute(vhdl::VHDLExport &vhdlExport, const hli
 					auto *grouping = revPath[i];
 					identifier << grouping->getInstanceName() << '/';
 				}
-				identifier << revPath.front()->getNamespaceScope().getName(np);
+				identifier << revPath.front()->getNamespaceScope().get(np).name;
 				return identifier.str();
 			};
 
@@ -184,7 +184,7 @@ void DefaultSynthesisTool::writeClocksFile(vhdl::VHDLExport &vhdlExport, const h
 
 	vhdl::Entity* top = vhdlExport.getAST()->getRootEntity();
 	for (hlim::Clock* clk : top->getClocks()) {
-		auto&& name = top->getNamespaceScope().getName(clk);
+		auto&& name = top->getNamespaceScope().getClock(clk).name;
 		hlim::ClockRational freq = clk->getAbsoluteFrequency();
 		double ns = double(freq.denominator() * 1'000'000'000) / freq.numerator();
 

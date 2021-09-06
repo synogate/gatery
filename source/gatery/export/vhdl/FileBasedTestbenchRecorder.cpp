@@ -81,7 +81,7 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
     std::set<hlim::NodePort> outputIsDrivenByNetwork;
 
     for (auto ioPin : allIOPins) {
-        const std::string &name = rootEntity->getNamespaceScope().getName(ioPin);
+        const std::string &name = rootEntity->getNamespaceScope().get(ioPin).name;
         auto conType = ioPin->getConnectionType();
 
         if (ioPin->isOutputPin()) {
@@ -128,12 +128,12 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
     vhdlFile << "sim_process : PROCESS" << std::endl;
 
     for (auto ioPin : allIOPins) {
-        const std::string &name = rootEntity->getNamespaceScope().getName(ioPin);
+        const auto &decl = rootEntity->getNamespaceScope().get(ioPin);
 
         hlim::ConnectionType conType = ioPin->getConnectionType();
 
-        vhdlFile << "    VARIABLE v_" << name << " : ";
-        cf.formatConnectionType(vhdlFile, conType);
+        vhdlFile << "    VARIABLE v_" << decl.name << " : ";
+        cf.formatConnectionType(vhdlFile, decl);
         vhdlFile << ';' << std::endl;
     }
 
@@ -252,7 +252,7 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
         for (auto c : m_clocksOfInterest) {
 
             auto *rootEntity = m_ast->getRootEntity();
-            std::string clockName =  rootEntity->getNamespaceScope().getName((hlim::Clock *) c);
+            std::string clockName =  rootEntity->getNamespaceScope().getClock((hlim::Clock *) c).name;
 
 
             cf.indent(vhdlFile, 4);
@@ -288,7 +288,7 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
         for (auto c : m_resetsOfInterest) {
 
             auto *rootEntity = m_ast->getRootEntity();
-            std::string resetName =  rootEntity->getNamespaceScope().getResetName((hlim::Clock *) c);
+            std::string resetName =  rootEntity->getNamespaceScope().getReset((hlim::Clock *) c).name;
 
 
             cf.indent(vhdlFile, 4);
@@ -400,7 +400,7 @@ void FileBasedTestbenchRecorder::onClock(const hlim::Clock *clock, bool risingEd
 
     auto *rootEntity = m_ast->getRootEntity();
 
-    m_testbenchFile << "CLK\n" << rootEntity->getNamespaceScope().getName((hlim::Clock *) clock) << std::endl;
+    m_testbenchFile << "CLK\n" << rootEntity->getNamespaceScope().getClock((hlim::Clock *) clock).name << std::endl;
 
     if (risingEdge)
         m_testbenchFile << "1\n";
@@ -414,7 +414,7 @@ void FileBasedTestbenchRecorder::onReset(const hlim::Clock *clock, bool resetAss
 
     auto *rootEntity = m_ast->getRootEntity();
 
-    m_testbenchFile << "RST\n" << rootEntity->getNamespaceScope().getResetName((hlim::Clock *) clock) << std::endl;
+    m_testbenchFile << "RST\n" << rootEntity->getNamespaceScope().getReset((hlim::Clock *) clock).name << std::endl;
 
     if (resetAsserted)
         m_testbenchFile << "1\n";

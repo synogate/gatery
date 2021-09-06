@@ -35,7 +35,7 @@ void writeClockXDC(const vhdl::AST &ast, std::ostream& out)
 	const vhdl::Entity* top = ast.getRootEntity();
 	for (const hlim::Clock* clk : top->getClocks())
 	{
-		auto&& name = top->getNamespaceScope().getName(clk);
+		auto&& name = top->getNamespaceScope().getClock(clk).name;
 		hlim::ClockRational freq = clk->getAbsoluteFrequency();
 		double ns = double(freq.denominator() * 1'000'000'000) / freq.numerator();
 

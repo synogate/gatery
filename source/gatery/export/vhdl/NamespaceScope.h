@@ -21,6 +21,7 @@
 #include "../../hlim/SignalGroup.h"
 
 #include "CodeFormatting.h"
+#include "VHDLSignalDeclaration.h"
 
 #include <boost/algorithm/string.hpp>
 
@@ -53,7 +54,6 @@ struct TypeDefinition
     bool compatibleWith(hlim::SignalGroup *signalGroup);
 };
 
-
 /**
  * @todo write docs
  */
@@ -63,20 +63,20 @@ class NamespaceScope
         NamespaceScope(AST &ast, NamespaceScope *parent);
         virtual ~NamespaceScope() { }
 
-        std::string allocateName(hlim::NodePort nodePort, const std::string &desiredName, CodeFormatting::SignalType type);
-        const std::string &getName(const hlim::NodePort nodePort) const;
+        std::string allocateName(hlim::NodePort nodePort, const std::string &desiredName, VHDLDataType dataType, CodeFormatting::SignalType type);
+        const VHDLSignalDeclaration &get(const hlim::NodePort nodePort) const;
 
         std::string allocateName(NodeInternalStorageSignal nodePort, const std::string &desiredName);
         const std::string &getName(NodeInternalStorageSignal nodePort) const;
 
         std::string allocateName(hlim::Clock *clock, const std::string &desiredName);
-        const std::string &getName(const hlim::Clock *clock) const;
+        const VHDLSignalDeclaration &getClock(const hlim::Clock *clock) const;
 
         std::string allocateResetName(hlim::Clock *clock, const std::string &desiredName);
-        const std::string &getResetName(const hlim::Clock *clock) const;
+        const VHDLSignalDeclaration &getReset(const hlim::Clock *clock) const;
 
-        std::string allocateName(hlim::Node_Pin *ioPin, const std::string &desiredName);
-        const std::string &getName(const hlim::Node_Pin *ioPin) const;
+        std::string allocateName(hlim::Node_Pin *ioPin, const std::string &desiredName, VHDLDataType dataType);
+        const VHDLSignalDeclaration &get(const hlim::Node_Pin *ioPin) const;
 
         std::string allocatePackageName(const std::string &desiredName);
         std::string allocateEntityName(const std::string &desiredName);
@@ -89,11 +89,11 @@ class NamespaceScope
         NamespaceScope *m_parent;
 
         std::set<std::string> m_namesInUse;
-        std::map<hlim::NodePort, std::string> m_nodeNames;
+        std::map<hlim::NodePort, VHDLSignalDeclaration> m_nodeNames;
         std::map<NodeInternalStorageSignal, std::string> m_nodeStorageNames;
-        std::map<hlim::Clock*, std::string> m_clockNames;
-        std::map<hlim::Clock*, std::string> m_resetNames;
-        std::map<hlim::Node_Pin*, std::string> m_ioPinNames;
+        std::map<hlim::Clock*, VHDLSignalDeclaration> m_clockNames;
+        std::map<hlim::Clock*, VHDLSignalDeclaration> m_resetNames;
+        std::map<hlim::Node_Pin*, VHDLSignalDeclaration> m_ioPinNames;
         std::vector<TypeDefinition> m_typeDefinitions;
 };
 

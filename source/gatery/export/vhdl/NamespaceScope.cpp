@@ -23,6 +23,8 @@
 #include "../../utils/Exceptions.h"
 #include "../../utils/Preprocessor.h"
 
+#include "../../hlim/coreNodes/Node_Pin.h"
+
 namespace gtry::vhdl {
 
 NamespaceScope::NamespaceScope(AST &ast, NamespaceScope *parent) : m_ast(ast), m_parent(parent)
@@ -36,8 +38,10 @@ NamespaceScope::NamespaceScope(AST &ast, NamespaceScope *parent) : m_ast(ast), m
         m_namesInUse.insert(keyword);
 }
 
-std::string NamespaceScope::allocateName(hlim::NodePort nodePort, const std::string &desiredName, CodeFormatting::SignalType type)
+std::string NamespaceScope::allocateName(hlim::NodePort nodePort, const std::string &desiredName, VHDLDataType dataType, CodeFormatting::SignalType type)
 {
+    HCL_ASSERT(!desiredName.empty());
+
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     HCL_ASSERT(m_nodeNames.find(nodePort) == m_nodeNames.end());
@@ -51,21 +55,25 @@ std::string NamespaceScope::allocateName(hlim::NodePort nodePort, const std::str
     } while (isNameInUse(upperCaseName));
 
     m_namesInUse.insert(upperCaseName);
-    m_nodeNames[nodePort] = name;
+    auto &data = m_nodeNames[nodePort];
+    data.name = name;
+    data.dataType = dataType;
+    data.width = hlim::getOutputWidth(nodePort);
     return name;
 }
-const std::string &NamespaceScope::getName(const hlim::NodePort nodePort) const
+const VHDLSignalDeclaration &NamespaceScope::get(const hlim::NodePort nodePort) const
 {
     auto it = m_nodeNames.find(nodePort);
     if (it != m_nodeNames.end())
         return it->second;
 
     HCL_ASSERT_HINT(m_parent != nullptr, "End of namespace scope chain reached, it seems no name was allocated for the given NodePort!");
-    return m_parent->getName(nodePort);
+    return m_parent->get(nodePort);
 }
 
 std::string NamespaceScope::allocateName(hlim::Clock *clock, const std::string &desiredName)
 {
+    HCL_ASSERT(!desiredName.empty());
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     HCL_ASSERT(m_clockNames.find(clock) == m_clockNames.end());
@@ -78,22 +86,26 @@ std::string NamespaceScope::allocateName(hlim::Clock *clock, const std::string &
     } while (isNameInUse(upperCaseName));
 
     m_namesInUse.insert(upperCaseName);
-    m_clockNames[clock] = name;
+    auto &data = m_clockNames[clock];
+    data.name = name;
+    data.dataType = VHDLDataType::STD_LOGIC;
+    data.width = 1;
     return name;
 }
 
-const std::string &NamespaceScope::getName(const hlim::Clock *clock) const
+const VHDLSignalDeclaration &NamespaceScope::getClock(const hlim::Clock *clock) const
 {
     auto it = m_clockNames.find(const_cast<hlim::Clock*>(clock));
     if (it != m_clockNames.end())
         return it->second;
 
     HCL_ASSERT_HINT(m_parent != nullptr, "End of namespace scope chain reached, it seems no name was allocated for the given clock!");
-    return m_parent->getName(clock);
+    return m_parent->getClock(clock);
 }
 
 std::string NamespaceScope::allocateResetName(hlim::Clock *clock, const std::string &desiredName)
 {
+    HCL_ASSERT(!desiredName.empty());
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     HCL_ASSERT(m_resetNames.find(clock) == m_resetNames.end());
@@ -106,23 +118,27 @@ std::string NamespaceScope::allocateResetName(hlim::Clock *clock, const std::str
     } while (isNameInUse(upperCaseName));
 
     m_namesInUse.insert(upperCaseName);
-    m_resetNames[clock] = name;
+    auto &data = m_resetNames[clock];
+    data.name = name;
+    data.dataType = VHDLDataType::STD_LOGIC;
+    data.width = 1;
     return name;
 }
 
-const std::string &NamespaceScope::getResetName(const hlim::Clock *clock) const
+const VHDLSignalDeclaration &NamespaceScope::getReset(const hlim::Clock *clock) const
 {
     auto it = m_resetNames.find(const_cast<hlim::Clock*>(clock));
     if (it != m_resetNames.end())
         return it->second;
 
     HCL_ASSERT_HINT(m_parent != nullptr, "End of namespace scope chain reached, it seems no name was allocated for the given reset!");
-    return m_parent->getResetName(clock);
+    return m_parent->getReset(clock);
 }
 
 
-std::string NamespaceScope::allocateName(hlim::Node_Pin *ioPin, const std::string &desiredName)
+std::string NamespaceScope::allocateName(hlim::Node_Pin *ioPin, const std::string &desiredName, VHDLDataType dataType)
 {
+    HCL_ASSERT(!desiredName.empty());
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     HCL_ASSERT(m_ioPinNames.find(ioPin) == m_ioPinNames.end());
@@ -135,22 +151,26 @@ std::string NamespaceScope::allocateName(hlim::Node_Pin *ioPin, const std::strin
     } while (isNameInUse(upperCaseName));
 
     m_namesInUse.insert(upperCaseName);
-    m_ioPinNames[ioPin] = name;
+    auto &data = m_ioPinNames[ioPin];
+    data.name = name;
+    data.dataType = dataType;
+    data.width = ioPin->getConnectionType().width;
     return name;
 }
 
-const std::string &NamespaceScope::getName(const hlim::Node_Pin *ioPin) const
+const VHDLSignalDeclaration &NamespaceScope::get(const hlim::Node_Pin *ioPin) const
 {
     auto it = m_ioPinNames.find(const_cast<hlim::Node_Pin*>(ioPin));
     if (it != m_ioPinNames.end())
         return it->second;
 
     HCL_ASSERT_HINT(m_parent != nullptr, "End of namespace scope chain reached, it seems no name was allocated for the given ioPin!");
-    return m_parent->getName(ioPin);
+    return m_parent->get(ioPin);
 }
 
 std::string NamespaceScope::allocatePackageName(const std::string &desiredName)
 {
+    HCL_ASSERT(!desiredName.empty());
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     unsigned attempt = 0;
@@ -167,6 +187,7 @@ std::string NamespaceScope::allocatePackageName(const std::string &desiredName)
 
 std::string NamespaceScope::allocateEntityName(const std::string &desiredName)
 {
+    HCL_ASSERT(!desiredName.empty());
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     unsigned attempt = 0;
@@ -182,6 +203,7 @@ std::string NamespaceScope::allocateEntityName(const std::string &desiredName)
 
 std::string NamespaceScope::allocateBlockName(const std::string &desiredName)
 {
+    HCL_ASSERT(!desiredName.empty());
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     unsigned attempt = 0;
@@ -197,6 +219,7 @@ std::string NamespaceScope::allocateBlockName(const std::string &desiredName)
 
 std::string NamespaceScope::allocateProcessName(const std::string &desiredName, bool clocked)
 {
+    HCL_ASSERT(!desiredName.empty());
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     unsigned attempt = 0;
@@ -212,6 +235,7 @@ std::string NamespaceScope::allocateProcessName(const std::string &desiredName, 
 
 std::string NamespaceScope::allocateInstanceName(const std::string &desiredName)
 {
+    HCL_ASSERT(!desiredName.empty());
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     unsigned attempt = 0;

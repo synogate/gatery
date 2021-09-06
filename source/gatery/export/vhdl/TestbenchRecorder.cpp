@@ -71,7 +71,7 @@ ARCHITECTURE tb OF )" << m_name << R"( IS
     declareSignals(m_testbenchFile, allClocks, allResets, allIOPins);
 
     for (auto ioPin : allIOPins) {
-        const std::string &name = rootEntity->getNamespaceScope().getName(ioPin);
+        const std::string &name = rootEntity->getNamespaceScope().get(ioPin).name;
 
         if (ioPin->isOutputPin())
             m_outputToIoPinName[ioPin->getDriver(0)] = name;
@@ -180,9 +180,9 @@ void TestbenchRecorder::onClock(const hlim::Clock *clock, bool risingEdge)
 
     cf.indent(m_testbenchFile, 2);
     if (risingEdge)
-        m_testbenchFile << rootEntity->getNamespaceScope().getName((hlim::Clock *) clock) << " <= '1';" << std::endl;
+        m_testbenchFile << rootEntity->getNamespaceScope().getClock((hlim::Clock *) clock).name << " <= '1';" << std::endl;
     else
-        m_testbenchFile << rootEntity->getNamespaceScope().getName((hlim::Clock *) clock) << " <= '0';" << std::endl;
+        m_testbenchFile << rootEntity->getNamespaceScope().getClock((hlim::Clock *) clock).name << " <= '0';" << std::endl;
 }
 
 void TestbenchRecorder::onReset(const hlim::Clock *clock, bool resetAsserted)
@@ -194,9 +194,9 @@ void TestbenchRecorder::onReset(const hlim::Clock *clock, bool resetAsserted)
 
     cf.indent(m_testbenchFile, 2);
     if (resetAsserted)
-        m_testbenchFile << rootEntity->getNamespaceScope().getResetName((hlim::Clock *) clock) << " <= '1';" << std::endl;
+        m_testbenchFile << rootEntity->getNamespaceScope().getReset((hlim::Clock *) clock).name << " <= '1';" << std::endl;
     else
-        m_testbenchFile << rootEntity->getNamespaceScope().getResetName((hlim::Clock *) clock) << " <= '0';" << std::endl;
+        m_testbenchFile << rootEntity->getNamespaceScope().getReset((hlim::Clock *) clock).name << " <= '0';" << std::endl;
 }
 
 void TestbenchRecorder::onSimProcOutputOverridden(hlim::NodePort output, const sim::DefaultBitVectorState &state)

@@ -78,8 +78,7 @@ bool BaseGrouping::isConsumedExternally(hlim::NodePort nodePort)
 
 std::string BaseGrouping::findNearestDesiredName(hlim::NodePort nodePort)
 {
-    if (nodePort.node == nullptr)
-        return "";
+    HCL_ASSERT(nodePort.node != nullptr);
 
     if (nodePort.node->hasGivenName())
         return nodePort.node->getName();
@@ -91,7 +90,11 @@ std::string BaseGrouping::findNearestDesiredName(hlim::NodePort nodePort)
         if (dynamic_cast<hlim::Node_Signal*>(driven.node) != nullptr)
             return driven.node->getName();
     
-    return "";
+    auto name = nodePort.node->attemptInferOutputName(nodePort.port);
+    if (!name.empty()) 
+        return name;
+        
+    return "unnamed";
 }
 
 void BaseGrouping::verifySignalsDisjoint()
@@ -119,11 +122,11 @@ void BaseGrouping::verifySignalsDisjoint()
 }
 
 /// @todo: Better move to code formatting
-void BaseGrouping::formatConstant(std::ostream &stream, const hlim::Node_Constant *constant, Context context)
+void BaseGrouping::formatConstant(std::ostream &stream, const hlim::Node_Constant *constant, VHDLDataType targetType)
 {
     const auto& conType = constant->getOutputConnectionType(0);
 
-    if (context == Context::BOOL) {
+    if (targetType == VHDLDataType::BOOL) {
         HCL_ASSERT(conType.interpretation == hlim::ConnectionType::BOOL);
         const auto &v = constant->getValue();
         HCL_ASSERT(v.get(sim::DefaultConfig::DEFINED, 0));
@@ -148,31 +151,30 @@ void BaseGrouping::declareLocalSignals(std::ostream &stream, bool asVariables, u
 
 
     for (const auto &signal : m_constants) {
-        auto targetContext = hlim::outputIsBVec(signal)?Context::STD_LOGIC_VECTOR:Context::STD_LOGIC;
+        const auto &decl = m_namespaceScope.get(signal);
 
         cf.indent(stream, indentation+1);
-        stream << "CONSTANT " << m_namespaceScope.getName(signal) << " : ";
-        cf.formatConnectionType(stream, hlim::getOutputConnectionType(signal));
+        stream << "CONSTANT ";
+        cf.formatDeclaration(stream, decl);
         stream << " := ";
-        formatConstant(stream, dynamic_cast<hlim::Node_Constant*>(signal.node), targetContext);
+        formatConstant(stream, dynamic_cast<hlim::Node_Constant*>(signal.node), decl.dataType);
         stream << "; "<< std::endl;
     }
 
     for (const auto &signal : m_localSignals) {
+        const auto &decl = m_namespaceScope.get(signal);
+
         cf.indent(stream, indentation+1);
         if (asVariables)
             stream << "VARIABLE ";
         else
             stream << "SIGNAL ";
-        stream << m_namespaceScope.getName(signal) << " : ";
-        cf.formatConnectionType(stream, hlim::getOutputConnectionType(signal));
+        cf.formatDeclaration(stream, decl);
 
         auto it = m_localSignalDefaultValues.find(signal);
         if (it != m_localSignalDefaultValues.end()) {
-            auto targetContext = hlim::outputIsBVec(signal)?Context::STD_LOGIC_VECTOR:Context::STD_LOGIC;
-
             stream << " := ";
-            formatConstant(stream, it->second, targetContext);
+            formatConstant(stream, it->second, decl.dataType);
         }
 
         stream << "; "<< std::endl;
@@ -227,7 +229,7 @@ void BaseGrouping::declareLocalSignals(std::ostream &stream, bool asVariables, u
                 HCL_DESIGNCHECK_HINT(it->second.type == attrib.second.type, "Same attribute can't have different types!");
 
             cf.indent(stream, indentation+1);
-            stream << "ATTRIBUTE " << attrib.first << " of " << m_namespaceScope.getName(signal) << " : ";
+            stream << "ATTRIBUTE " << attrib.first << " of " << m_namespaceScope.get(signal).name << " : ";
             if (asVariables)
                 stream << "VARIABLE";
             else

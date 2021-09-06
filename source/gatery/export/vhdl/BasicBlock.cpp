@@ -93,10 +93,10 @@ void BasicBlock::extractSignals()
 void BasicBlock::allocateNames()
 {
     for (auto &constant : m_constants)
-        m_namespaceScope.allocateName(constant, findNearestDesiredName(constant), CodeFormatting::SIG_CONSTANT);
+        m_namespaceScope.allocateName(constant, findNearestDesiredName(constant), chooseDataTypeFromOutput(constant), CodeFormatting::SIG_CONSTANT);
 
-    for (auto &local : m_localSignals)
-        m_namespaceScope.allocateName(local, findNearestDesiredName(local), CodeFormatting::SIG_LOCAL_SIGNAL);
+    for (auto &local : m_localSignals) 
+        m_namespaceScope.allocateName(local, findNearestDesiredName(local), chooseDataTypeFromOutput(local), CodeFormatting::SIG_LOCAL_SIGNAL);
 
     for (auto &proc : m_processes)
         proc->allocateNames();
@@ -401,35 +401,40 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
                     if (node->getClocks()[i] != nullptr) {
                         std::stringstream line;
                         line << node->getClockNames()[i] << " => ";
-                        line << m_namespaceScope.getName(node->getClocks()[i]->getClockPinSource());
+                        line << m_namespaceScope.getClock(node->getClocks()[i]->getClockPinSource()).name;
                         portmapList.push_back(line.str());
                         if (node->getClocks()[i]->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE && !node->getResetNames()[i].empty()) {
                             std::stringstream line;
                             line << node->getResetNames()[i] << " => ";
-                            line << m_namespaceScope.getResetName(node->getClocks()[i]->getResetPinSource());
+                            line << m_namespaceScope.getReset(node->getClocks()[i]->getResetPinSource()).name;
                             portmapList.push_back(line.str());
                         }
                     }
+
 
                 for (auto i : utils::Range(node->getNumInputPorts()))
                     if (node->getDriver(i).node != nullptr) {
                         std::stringstream line;
                         line << node->getInputName(i) << " => ";
-                        if (hlim::getOutputConnectionType(node->getDriver(i)).interpretation == hlim::ConnectionType::BITVEC)
+
+                        const auto &decl = m_namespaceScope.get(node->getDriver(i));
+
+                        if (decl.dataType == VHDLDataType::UNSIGNED)
                             line << "STD_LOGIC_VECTOR(";
-                        line << m_namespaceScope.getName(node->getDriver(i));
-                        if (hlim::getOutputConnectionType(node->getDriver(i)).interpretation == hlim::ConnectionType::BITVEC)
+                        line << decl.name;
+                        if (decl.dataType == VHDLDataType::UNSIGNED)
                             line << ')';
                         portmapList.push_back(line.str());
                     }
 
                 for (auto i : utils::Range(node->getNumOutputPorts())) {
+                    const auto &decl = m_namespaceScope.get({.node = node, .port = i});
+
                     std::stringstream line;
-                    if (node->getOutputConnectionType(i).interpretation == hlim::ConnectionType::BITVEC)
-                        line << "UNSIGNED(" << node->getOutputName(i) << ") => ";
+                        if (decl.dataType == VHDLDataType::UNSIGNED)
+                        line << "UNSIGNED(" << node->getOutputName(i) << ") => " << decl.name;
                     else
-                        line << node->getOutputName(i) << " => ";
-                    line << m_namespaceScope.getName({.node = node, .port = i});
+                        line << node->getOutputName(i) << " => " << decl.name;
                     portmapList.push_back(line.str());
                 }
 

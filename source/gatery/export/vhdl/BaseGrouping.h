@@ -87,13 +87,7 @@ class BaseGrouping
 
         void verifySignalsDisjoint();
 
-        enum class Context {
-            BOOL,
-            STD_LOGIC,
-            STD_LOGIC_VECTOR
-        };
-
-        void formatConstant(std::ostream &stream, const hlim::Node_Constant *constant, Context context);
+        void formatConstant(std::ostream &stream, const hlim::Node_Constant *constant, VHDLDataType targetType);
         void declareLocalSignals(std::ostream &stream, bool asVariables, unsigned indentation);
 };
 

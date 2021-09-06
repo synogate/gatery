@@ -51,7 +51,7 @@ namespace gtry
 		std::stringstream regOutputIdentifier;
 		for (size_t i = regOutputReversePath.size() - 2; i < regOutputReversePath.size(); --i)
 			regOutputIdentifier << regOutputReversePath[i]->getInstanceName() << '|';
-		regOutputIdentifier << regOutputReversePath.front()->getNamespaceScope().getName(regOutput);
+		regOutputIdentifier << regOutputReversePath.front()->getNamespaceScope().get(regOutput).name;
 
 		auto type = regNode->getOutputConnectionType(0);
 		if (type.interpretation == hlim::ConnectionType::BITVEC)
@@ -161,7 +161,7 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 				break;
 			}
 
-		const std::string &vhdlPinName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().getName(pin);
+		const std::string &vhdlPinName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().get(pin).name;
 
 		if (regNode == nullptr)
 		{
@@ -170,7 +170,7 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 		}
 		hlim::Clock* clock = regNode->getClocks().front()->getClockPinSource();
 
-		const std::string &vhdlClockName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().getName(clock);
+		const std::string &vhdlClockName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().getClock(clock).name;
 
 		bool allOnSameClock = std::all_of(allRegs.begin(), allRegs.end(), [=](hlim::Node_Register* regNode) {
 			return regNode->getClocks().front()->getClockPinSource() == clock;
@@ -207,7 +207,7 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 			}
 
 
-		const std::string &vhdlResetName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().getResetName(reset);
+		const std::string &vhdlResetName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().getReset(reset).name;
 
 		if (regNode == nullptr)
 		{

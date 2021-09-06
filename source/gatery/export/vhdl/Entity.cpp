@@ -148,13 +148,13 @@ void Entity::extractSignals()
 void Entity::allocateNames()
 {
     for (auto &constant : m_constants)
-        m_namespaceScope.allocateName(constant, findNearestDesiredName(constant), CodeFormatting::SIG_CONSTANT);
+        m_namespaceScope.allocateName(constant, findNearestDesiredName(constant), chooseDataTypeFromOutput(constant), CodeFormatting::SIG_CONSTANT);
 
     for (auto &input : m_inputs)
-        m_namespaceScope.allocateName(input, findNearestDesiredName(input), CodeFormatting::SIG_ENTITY_INPUT);
+        m_namespaceScope.allocateName(input, findNearestDesiredName(input), chooseDataTypeFromOutput(input), CodeFormatting::SIG_ENTITY_INPUT);
 
     for (auto &output : m_outputs)
-        m_namespaceScope.allocateName(output, findNearestDesiredName(output), CodeFormatting::SIG_ENTITY_OUTPUT);
+        m_namespaceScope.allocateName(output, findNearestDesiredName(output), chooseDataTypeFromOutput(output), CodeFormatting::SIG_ENTITY_OUTPUT);
 
     for (auto &clock : m_inputClocks)
         m_namespaceScope.allocateName(clock, clock->getName());
@@ -162,8 +162,14 @@ void Entity::allocateNames()
     for (auto &clock : m_inputResets)
         m_namespaceScope.allocateResetName(clock, clock->getResetName());
 
-    for (auto &ioPin : m_ioPins)
-        m_namespaceScope.allocateName(ioPin, ioPin->getName());
+    for (auto &ioPin : m_ioPins) {
+        VHDLDataType dataType;
+        if (ioPin->getConnectionType().interpretation == hlim::ConnectionType::BOOL)
+            dataType = VHDLDataType::STD_LOGIC;
+        else
+            dataType = VHDLDataType::STD_LOGIC_VECTOR;
+        m_namespaceScope.allocateName(ioPin, ioPin->getName(), dataType);
+    }
 
     BasicBlock::allocateNames();
     for (auto &block : m_blocks)
@@ -206,46 +212,49 @@ std::vector<std::string> Entity::getPortsVHDL()
 
     for (const auto &clk : m_inputClocks) {
         std::stringstream line;
-        line << m_namespaceScope.getName(clk) << " : IN STD_LOGIC";
+        line << m_namespaceScope.getClock(clk).name << " : IN STD_LOGIC";
         unsortedPortList.push_back({clockOffset++, line.str()});
     }
 
     for (const auto &clk : m_inputResets) {
         std::stringstream line;
-        line << m_namespaceScope.getResetName(clk) << " : IN STD_LOGIC";
+        line << m_namespaceScope.getReset(clk).name << " : IN STD_LOGIC";
         unsortedPortList.push_back({clockOffset++, line.str()});
     }
 
-    // On top entity, use STANDARD_LOGIC_VECTOR instead of UNSIGNED
-    bool preferSLV = m_parent == nullptr;
-
     for (auto &ioPin : m_ioPins) {
+        const auto &decl = m_namespaceScope.get(ioPin);
+
         std::stringstream line;
-        line << m_namespaceScope.getName(ioPin) << " : ";
+        line << decl.name << " : ";
         if (ioPin->isInputPin() && ioPin->isOutputPin()) {
             line << "INOUT "; // this will need more thought at other places to work
-            cf.formatConnectionType(line, ioPin->getConnectionType(), preferSLV);
+            cf.formatConnectionType(line, decl);
         } else if (ioPin->isInputPin()) {
             line << "IN ";
-            cf.formatConnectionType(line, ioPin->getConnectionType(), preferSLV);
+            cf.formatConnectionType(line, decl);
         } else if (ioPin->isOutputPin()) {
             line << "OUT ";
-            cf.formatConnectionType(line, ioPin->getConnectionType(), preferSLV);
+            cf.formatConnectionType(line, decl);
         } else
             continue;
         unsortedPortList.push_back({clockOffset + ioPin->getId(), line.str()});
     }
 
     for (const auto &signal : m_inputs) {
+        const auto &decl = m_namespaceScope.get(signal);
+
         std::stringstream line;
-        line << m_namespaceScope.getName(signal) << " : IN ";
-        cf.formatConnectionType(line, hlim::getOutputConnectionType(signal), preferSLV);
+        line << decl.name << " : IN ";
+        cf.formatConnectionType(line, decl);
         unsortedPortList.push_back({clockOffset + signal.node->getId(), line.str()});
     }
     for (const auto &signal : m_outputs) {
+        const auto &decl = m_namespaceScope.get(signal);
+
         std::stringstream line;
-        line << m_namespaceScope.getName(signal) << " : OUT ";
-        cf.formatConnectionType(line, hlim::getOutputConnectionType(signal), preferSLV);
+        line << decl.name << " : OUT ";
+        cf.formatConnectionType(line, decl);
         unsortedPortList.push_back({clockOffset + signal.node->getId(), line.str()});
     }
 
@@ -315,32 +324,63 @@ void Entity::writeInstantiationVHDL(std::ostream &stream, unsigned indent, const
 
     for (auto &s : m_inputClocks) {
         std::stringstream line;
-        line << m_namespaceScope.getName(s) << " => ";
-        line << m_parent->getNamespaceScope().getName(s);
+        line << m_namespaceScope.getClock(s).name << " => ";
+        line << m_parent->getNamespaceScope().getClock(s).name;
         portmapList.push_back(line.str());
     }
     for (auto &s : m_inputResets) {
         std::stringstream line;
-        line << m_namespaceScope.getResetName(s) << " => ";
-        line << m_parent->getNamespaceScope().getResetName(s);
+        line << m_namespaceScope.getReset(s).name << " => ";
+        line << m_parent->getNamespaceScope().getReset(s).name;
         portmapList.push_back(line.str());
     }    
     for (auto &s : m_ioPins) {
+        const auto &decl = m_namespaceScope.get(s);
+        const auto &parentDecl = m_parent->getNamespaceScope().get(s);
+
         std::stringstream line;
-        line << m_namespaceScope.getName(s) << " => ";
-        line << m_parent->getNamespaceScope().getName(s);
+
+        if (decl.dataType != parentDecl.dataType) {
+            if (s->isInputPin()) {
+                line << decl.name << " => ";
+                cf.formatDataType(line, decl.dataType);
+                line << '(' << parentDecl.name << ')';
+            } else {
+                cf.formatDataType(line, decl.dataType);
+                line << '(' << decl.name << ") => ";
+                line << parentDecl.name;
+            }
+        } else {
+            line << decl.name << " => " << parentDecl.name;
+        }
         portmapList.push_back(line.str());
     }
     for (auto &s : m_inputs) {
+        const auto &decl = m_namespaceScope.get(s);
+        const auto &parentDecl = m_parent->getNamespaceScope().get(s);
+
         std::stringstream line;
-        line << m_namespaceScope.getName(s) << " => ";
-        line << m_parent->getNamespaceScope().getName(s);
+        if (decl.dataType != parentDecl.dataType) {
+            line << decl.name << " => ";
+            cf.formatDataType(line, decl.dataType);
+            line << '(' << parentDecl.name << ')';
+        } else {
+            line << decl.name << " => " << parentDecl.name;
+        }
         portmapList.push_back(line.str());
     }
     for (auto &s : m_outputs) {
+        const auto &decl = m_namespaceScope.get(s);
+        const auto &parentDecl = m_parent->getNamespaceScope().get(s);
+
         std::stringstream line;
-        line << m_namespaceScope.getName(s) << " => ";
-        line << m_parent->getNamespaceScope().getName(s);
+        if (decl.dataType != parentDecl.dataType) {
+            cf.formatDataType(line, decl.dataType);
+            line << '(' << decl.name << ") => ";
+            line << parentDecl.name;
+        } else {
+            line << decl.name << " => " << parentDecl.name;
+        }
         portmapList.push_back(line.str());
     }
 

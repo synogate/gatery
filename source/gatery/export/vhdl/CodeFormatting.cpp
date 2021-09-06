@@ -263,26 +263,44 @@ void DefaultCodeFormatting::formatCodeComment(std::ostream &stream, unsigned ind
 }
 
 
-void DefaultCodeFormatting::formatConnectionType(std::ostream &stream, const hlim::ConnectionType &connectionType, bool useSLV)
+void DefaultCodeFormatting::formatConnectionType(std::ostream &stream, const VHDLSignalDeclaration &declaration)
 {
-    switch (connectionType.interpretation) {
-        case hlim::ConnectionType::BOOL:
-            stream << "STD_LOGIC";
-        break;
-        case hlim::ConnectionType::BITVEC:
-            if (useSLV) {
-                stream << "STD_LOGIC_VECTOR";
-            } else {
-                stream << "UNSIGNED";
-            }
-            if (connectionType.width == 0)
+    formatDataType(stream, declaration.dataType);
+    switch (declaration.dataType) {
+        case VHDLDataType::STD_LOGIC_VECTOR:
+        case VHDLDataType::UNSIGNED:
+            if (declaration.width == 0)
                 stream << "(-1 downto 0)";
             else
-                stream << "("<<connectionType.width-1 << " downto 0)";
+                stream << "("<<declaration.width-1 << " downto 0)";
+        break;
+    }
+}
+
+void DefaultCodeFormatting::formatDeclaration(std::ostream &stream, const VHDLSignalDeclaration &declaration)
+{
+    stream << declaration.name << " : ";
+    formatConnectionType(stream, declaration);
+}
+
+void DefaultCodeFormatting::formatDataType(std::ostream &stream, VHDLDataType dataType)
+{
+    switch (dataType) {
+        case VHDLDataType::BOOL:
+            stream << "BOOL";
+        break;
+        case VHDLDataType::STD_LOGIC:
+            stream << "STD_LOGIC";
+        break;
+        case VHDLDataType::STD_LOGIC_VECTOR:
+            stream << "STD_LOGIC_VECTOR";
+        break;
+        case VHDLDataType::UNSIGNED:
+            stream << "UNSIGNED";
         break;
         default:
             stream << "UNHANDLED_DATA_TYPE";
-    };
+    }
 }
 
 

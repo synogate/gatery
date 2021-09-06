@@ -20,6 +20,8 @@
 #include "../../hlim/NodeGroup.h"
 #include "../../hlim/supportNodes/Node_External.h"
 
+#include "VHDLSignalDeclaration.h"
+
 #include <filesystem>
 
 #include <string>
@@ -46,7 +48,10 @@ class CodeFormatting
         virtual void formatProcessComment(std::ostream &stream, unsigned indentation, const std::string &processName, const std::string &comment) = 0;
         virtual void formatCodeComment(std::ostream &stream, unsigned indentation, const std::string &comment) = 0;
 
-        virtual void formatConnectionType(std::ostream &stream, const hlim::ConnectionType &connectionType, bool useSLV = false) = 0;
+        virtual void formatConnectionType(std::ostream &stream, const VHDLSignalDeclaration &declaration) = 0;
+        virtual void formatDeclaration(std::ostream &stream, const VHDLSignalDeclaration &declaration) = 0;
+        
+        virtual void formatDataType(std::ostream &stream, VHDLDataType dataType) = 0;
 
         enum SignalType {
             SIG_ENTITY_INPUT,
@@ -103,7 +108,9 @@ class DefaultCodeFormatting : public CodeFormatting
         virtual void formatProcessComment(std::ostream &stream, unsigned indentation, const std::string &processName, const std::string &comment) override;
         virtual void formatCodeComment(std::ostream &stream, unsigned indentation, const std::string &comment) override;
 
-        virtual void formatConnectionType(std::ostream &stream, const hlim::ConnectionType &connectionType, bool useSLV = false) override;
+        virtual void formatConnectionType(std::ostream &stream, const VHDLSignalDeclaration &declaration) override;
+        virtual void formatDeclaration(std::ostream &stream, const VHDLSignalDeclaration &declaration) override;
+        virtual void formatDataType(std::ostream &stream, VHDLDataType dataType) override;
 /*
         void addExternalNodeHandler(ExternalNodeHandler nodeHandler);
         virtual void instantiateExternal(std::ostream &stream, const hlim::Node_External *node, unsigned indent,
