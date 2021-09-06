@@ -735,7 +735,51 @@ void MemoryGroup::buildReset(Circuit &circuit)
 
 void MemoryGroup::buildResetLogic(Circuit &circuit)
 {
-    HCL_ASSERT_HINT(false, "Not implemented yet!");
+    lazyCreateFixupNodeGroup();
+
+    auto *resetWritePort = findSuitableResetWritePort();
+    auto *clockDomain = resetWritePort->getClocks()[0];
+
+    if (clockDomain->getRegAttribs().resetType == RegisterAttributes::ResetType::NONE) return;
+
+    Clock *resetClock = buildResetClock(circuit, clockDomain);
+
+    // Move entire initialization netowork into the helper group
+    for (auto nh : m_memory->exploreInput((size_t)Node_Memory::Inputs::INITIALIZATION_DATA)) {
+        if (nh.node() == m_memory) {
+            nh.backtrack();
+        } else {
+            nh.node()->moveToGroup(m_fixupNodeGroup);        
+        }
+    }
+
+    NodePort initData = m_memory->getDriver((size_t)Node_Memory::Inputs::INITIALIZATION_DATA);
+
+    // Compute required writes
+    size_t wordWidth = resetWritePort->getBitWidth();
+    HCL_ASSERT(m_memory->getPowerOnState().size() % wordWidth == 0);
+    HCL_ASSERT(wordWidth == getOutputWidth(initData));
+    size_t numEntries = m_memory->getPowerOnState().size() / wordWidth;
+    size_t numRequiredCycles = numEntries;
+    if (clockDomain->getRegAttribs().resetType == RegisterAttributes::ResetType::ASYNCHRONOUS)
+        numRequiredCycles += 1;
+    resetClock->setMinResetCycles(numRequiredCycles);
+
+    // Build counter for writes
+    size_t addrCounterSize = utils::Log2C(numEntries);
+    NodePort addrCounter = buildResetAddrCounter(circuit, addrCounterSize, resetClock);
+
+    // Rewire initializaiton network's input to the counter
+    while (!m_memory->getDirectlyDriven((size_t)Node_Memory::Outputs::INITIALIZATION_ADDR).empty()) {
+        auto np = m_memory->getDirectlyDriven((size_t)Node_Memory::Outputs::INITIALIZATION_ADDR).back();
+        np.node->rewireInput(np.port, addrCounter);
+    }
+
+    // Build overrides
+    buildResetOverrides(circuit, addrCounter, initData, resetWritePort);
+
+    // Disconnect initialization network's output from memory node
+    m_memory->rewireInput((size_t)Node_Memory::Inputs::INITIALIZATION_DATA, {});
 }
 
 void MemoryGroup::buildResetRom(Circuit &circuit)
@@ -747,10 +791,7 @@ void MemoryGroup::buildResetRom(Circuit &circuit)
 
     if (clockDomain->getRegAttribs().resetType == RegisterAttributes::ResetType::NONE) return;
 
-    Clock *resetClock = circuit.createClock<DerivedClock>(clockDomain);
-    resetClock->getRegAttribs().resetActive = !clockDomain->getRegAttribs().resetActive;
-    resetClock->getRegAttribs().initializeRegs = true;
-
+    Clock *resetClock = buildResetClock(circuit, clockDomain);
 
 	auto *memory = circuit.createNode<Node_Memory>();
 	memory->moveToGroup(m_fixupNodeGroup);
@@ -803,6 +844,12 @@ void MemoryGroup::buildResetRom(Circuit &circuit)
     NodePort writeData = {.node = dataReg, .port = 0ull};
     giveName(circuit, writeData, "reset_write_data");
 
+    buildResetOverrides(circuit, writeAddr, writeData, resetWritePort);
+}
+
+void MemoryGroup::buildResetOverrides(Circuit &circuit, NodePort writeAddr, NodePort writeData, Node_MemPort *resetWritePort)
+{
+    auto *clockDomain = resetWritePort->getClocks()[0];
 
 	auto *resetPin = circuit.createNode<Node_ClkRst2Signal>();
     resetPin->moveToGroup(m_fixupNodeGroup);
@@ -853,7 +900,15 @@ void MemoryGroup::buildResetRom(Circuit &circuit)
         resetWritePort->rewireInput((size_t)Node_MemPort::Inputs::enable, {.node = orNodeEnable, .port = 0ull});
         resetWritePort->rewireInput((size_t)Node_MemPort::Inputs::wrEnable, {.node = orNodeEnable, .port = 0ull});
     }
+}
 
+Clock *MemoryGroup::buildResetClock(Circuit &circuit, Clock *clockDomain)
+{
+    Clock *resetClock = circuit.createClock<DerivedClock>(clockDomain);
+    resetClock->getRegAttribs().resetActive = !clockDomain->getRegAttribs().resetActive;
+    resetClock->getRegAttribs().initializeRegs = true;
+
+    return resetClock;
 }
 
 Node_MemPort *MemoryGroup::findSuitableResetWritePort()

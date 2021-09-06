@@ -53,6 +53,8 @@ class DotExport
 
         void operator()(const hlim::Circuit &circuit, const hlim::ConstSubnet &subnet, const hlim::SignalDelay &signalDelays);
 
+        void mergeCombinatoryNodes() { m_mergeCombinatoryNodes = true; }
+
         /**
          * @brief Executes graphviz on the .dot file to produce an svg.
          * @details Requires prior invocation of the export.
@@ -61,8 +63,10 @@ class DotExport
         void runGraphViz(std::filesystem::path destination);
     protected:
         std::filesystem::path m_destination;
+        bool m_mergeCombinatoryNodes = false;
 
         void writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubnet &subnet, hlim::NodeGroup *nodeGroup, const hlim::SignalDelay *signalDelays);
+        void writeMergedDotFile(const hlim::Circuit &circuit, const hlim::ConstSubnet &subnet);
 
 };
 

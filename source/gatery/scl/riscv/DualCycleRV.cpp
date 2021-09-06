@@ -43,7 +43,7 @@ gtry::BVec gtry::scl::riscv::DualCycleRV::fetch(const BVec& instruction, uint64_
 	// setup register file
 	m_rf.setup(32, 32_b);
 	m_rf.setType(MemType::BRAM);
-	m_rf.setPowerOnStateZero();
+	m_rf.initZero();
 	m_rf.setName("register_file");
 
 	IF(m_resultValid & m_storeResult & !m_stall)

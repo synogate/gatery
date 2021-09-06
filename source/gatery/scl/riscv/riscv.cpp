@@ -496,7 +496,7 @@ void gtry::scl::riscv::SingleCycleI::fetchOperands(BitWidth regAddrWidth)
 		auto entRV = m_area.enter("fetchOperands1");
 
 		m_rf.setup(regAddrWidth.count(), 32_b);
-		m_rf.setPowerOnStateZero();
+		m_rf.initZero();
 
 		m_r1 = m_rf[m_instr.rs1(0, regAddrWidth)];
 		m_r2 = m_rf[m_instr.rs2(0, regAddrWidth)];
