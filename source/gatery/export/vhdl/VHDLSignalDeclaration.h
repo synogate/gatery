@@ -20,7 +20,7 @@
 #include <string>
 
 namespace gtry::hlim {
-    class NodePort;
+    struct NodePort;
 }
 
 namespace gtry::vhdl {
