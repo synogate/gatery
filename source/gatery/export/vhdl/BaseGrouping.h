@@ -22,6 +22,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <tuple>
 
 namespace gtry::hlim {
     class Node_Constant;
@@ -82,6 +83,7 @@ class BaseGrouping
         
         bool isProducedExternally(hlim::NodePort nodePort);
         bool isConsumedExternally(hlim::NodePort nodePort);
+        std::tuple<bool,bool,bool> isConsumedInternallyHigherLower(hlim::NodePort nodePort);
         
         std::string findNearestDesiredName(hlim::NodePort nodePort);
 

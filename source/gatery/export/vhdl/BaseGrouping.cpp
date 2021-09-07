@@ -76,6 +76,29 @@ bool BaseGrouping::isConsumedExternally(hlim::NodePort nodePort)
     return false;
 }
 
+std::tuple<bool,bool,bool> BaseGrouping::isConsumedInternallyHigherLower(hlim::NodePort nodePort)
+{
+    bool internally = false;
+    bool higher = false;
+    bool lower = false;
+
+    for (auto driven : nodePort.node->getDirectlyDriven(nodePort.port)) {
+        if (!m_ast.isPartOfExport(driven.node)) continue;
+        
+        auto drivenNodeGroup = m_ast.getMapping().getScope(driven.node);
+        if (drivenNodeGroup == this) {
+            internally = true;
+        } else if (drivenNodeGroup == nullptr) {
+            higher = true;
+        } else if (drivenNodeGroup->isChildOf(this)) {
+            lower = true;
+        } else 
+            higher = true;
+    }
+
+    return {internally, higher, lower};
+}
+
 std::string BaseGrouping::findNearestDesiredName(hlim::NodePort nodePort)
 {
     HCL_ASSERT(nodePort.node != nullptr);
