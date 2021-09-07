@@ -953,18 +953,19 @@ void Circuit::duplicateSignalsFeedingLowerAndHigherAreas()
             for (auto driven : node->getDirectlyDriven(0)) {
                 if (driven.node->getGroup() == node->getGroup()) 
                     consumedInternally = true;
-                else if (driven.node->getGroup() == nullptr || node->getGroup()->isChildOf(driven.node->getGroup())) {
+                else if (driven.node->getGroup() != nullptr && driven.node->getGroup()->isChildOf(node->getGroup())) {
+                    consumedLower = true;
+                } else {
                     consumedHigher = true;
                     higherDriven.push_back(driven);
-                } else
-                    consumedLower = true;
+                }
             }
 
             if (consumedHigher && consumedLower) {
                 auto *sigNode = createNode<Node_Signal>();
                 sigNode->moveToGroup(node->getGroup());
                 sigNode->connectInput({.node = node, .port = i});
-                
+
                 for (auto driven : higherDriven)
                     driven.node->rewireInput(driven.port, {.node = sigNode, .port = 0});
             }
