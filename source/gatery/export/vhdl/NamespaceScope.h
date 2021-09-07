@@ -84,7 +84,7 @@ class NamespaceScope
         std::string allocateProcessName(const std::string &desiredName, bool clocked);
         std::string allocateInstanceName(const std::string &desiredName);
     protected:
-        bool isNameInUse(const std::string &upperCaseName) const;
+        bool isNameInUse(const std::string &lowerCaseName) const;
         AST &m_ast;
         NamespaceScope *m_parent;
 

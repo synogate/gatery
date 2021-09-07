@@ -48,13 +48,13 @@ std::string NamespaceScope::allocateName(hlim::NodePort nodePort, const std::str
 
     unsigned attempt = 0;
     std::string name;
-    std::string upperCaseName;
+    std::string lowerCaseName;
     do {
         name = cf.getSignalName(desiredName, type, attempt++);
-        upperCaseName = boost::to_upper_copy(name);
-    } while (isNameInUse(upperCaseName));
+        lowerCaseName = boost::to_lower_copy(name);
+    } while (isNameInUse(lowerCaseName));
 
-    m_namesInUse.insert(upperCaseName);
+    m_namesInUse.insert(lowerCaseName);
     auto &data = m_nodeNames[nodePort];
     data.name = name;
     data.dataType = dataType;
@@ -79,13 +79,13 @@ std::string NamespaceScope::allocateName(hlim::Clock *clock, const std::string &
     HCL_ASSERT(m_clockNames.find(clock) == m_clockNames.end());
 
     unsigned attempt = 0;
-    std::string name, upperCaseName;
+    std::string name, lowerCaseName;
     do {
         name = cf.getClockName(desiredName, attempt++);
-        upperCaseName = boost::to_upper_copy(name);
-    } while (isNameInUse(upperCaseName));
+        lowerCaseName = boost::to_lower_copy(name);
+    } while (isNameInUse(lowerCaseName));
 
-    m_namesInUse.insert(upperCaseName);
+    m_namesInUse.insert(lowerCaseName);
     auto &data = m_clockNames[clock];
     data.name = name;
     data.dataType = VHDLDataType::STD_LOGIC;
@@ -111,13 +111,13 @@ std::string NamespaceScope::allocateResetName(hlim::Clock *clock, const std::str
     HCL_ASSERT(m_resetNames.find(clock) == m_resetNames.end());
 
     unsigned attempt = 0;
-    std::string name, upperCaseName;
+    std::string name, lowerCaseName;
     do {
         name = cf.getClockName(desiredName, attempt++);
-        upperCaseName = boost::to_upper_copy(name);
-    } while (isNameInUse(upperCaseName));
+        lowerCaseName = boost::to_lower_copy(name);
+    } while (isNameInUse(lowerCaseName));
 
-    m_namesInUse.insert(upperCaseName);
+    m_namesInUse.insert(lowerCaseName);
     auto &data = m_resetNames[clock];
     data.name = name;
     data.dataType = VHDLDataType::STD_LOGIC;
@@ -144,13 +144,13 @@ std::string NamespaceScope::allocateName(hlim::Node_Pin *ioPin, const std::strin
     HCL_ASSERT(m_ioPinNames.find(ioPin) == m_ioPinNames.end());
 
     unsigned attempt = 0;
-    std::string name, upperCaseName;
+    std::string name, lowerCaseName;
     do {
         name = cf.getIoPinName(desiredName, attempt++);
-        upperCaseName = boost::to_upper_copy(name);
-    } while (isNameInUse(upperCaseName));
+        lowerCaseName = boost::to_lower_copy(name);
+    } while (isNameInUse(lowerCaseName));
 
-    m_namesInUse.insert(upperCaseName);
+    m_namesInUse.insert(lowerCaseName);
     auto &data = m_ioPinNames[ioPin];
     data.name = name;
     data.dataType = dataType;
@@ -174,13 +174,13 @@ std::string NamespaceScope::allocatePackageName(const std::string &desiredName)
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     unsigned attempt = 0;
-    std::string name, upperCaseName;
+    std::string name, lowerCaseName;
     do {
         name = cf.getPackageName(desiredName, attempt++);
-        upperCaseName = boost::to_upper_copy(name);
-    } while (isNameInUse(upperCaseName));
+        lowerCaseName = boost::to_lower_copy(name);
+    } while (isNameInUse(lowerCaseName));
 
-    m_namesInUse.insert(upperCaseName);
+    m_namesInUse.insert(lowerCaseName);
     return name;
 }
 
@@ -191,13 +191,13 @@ std::string NamespaceScope::allocateEntityName(const std::string &desiredName)
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     unsigned attempt = 0;
-    std::string name, upperCaseName;
+    std::string name, lowerCaseName;
     do {
         name = cf.getEntityName(desiredName, attempt++);
-        upperCaseName = boost::to_upper_copy(name);
-    } while (isNameInUse(upperCaseName));
+        lowerCaseName = boost::to_lower_copy(name);
+    } while (isNameInUse(lowerCaseName));
 
-    m_namesInUse.insert(upperCaseName);
+    m_namesInUse.insert(lowerCaseName);
     return name;
 }
 
@@ -207,13 +207,13 @@ std::string NamespaceScope::allocateBlockName(const std::string &desiredName)
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     unsigned attempt = 0;
-    std::string name, upperCaseName;
+    std::string name, lowerCaseName;
     do {
         name = cf.getBlockName(desiredName, attempt++);
-        upperCaseName = boost::to_upper_copy(name);
-    } while (isNameInUse(upperCaseName));
+        lowerCaseName = boost::to_lower_copy(name);
+    } while (isNameInUse(lowerCaseName));
 
-    m_namesInUse.insert(upperCaseName);
+    m_namesInUse.insert(lowerCaseName);
     return name;
 }
 
@@ -223,13 +223,13 @@ std::string NamespaceScope::allocateProcessName(const std::string &desiredName, 
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     unsigned attempt = 0;
-    std::string name, upperCaseName;
+    std::string name, lowerCaseName;
     do {
         name = cf.getProcessName(desiredName, clocked, attempt++);
-        upperCaseName = boost::to_upper_copy(name);
-    } while (isNameInUse(upperCaseName));
+        lowerCaseName = boost::to_lower_copy(name);
+    } while (isNameInUse(lowerCaseName));
 
-    m_namesInUse.insert(upperCaseName);
+    m_namesInUse.insert(lowerCaseName);
     return name;
 }
 
@@ -239,22 +239,22 @@ std::string NamespaceScope::allocateInstanceName(const std::string &desiredName)
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     unsigned attempt = 0;
-    std::string name, upperCaseName;
+    std::string name, lowerCaseName;
     do {
         name = cf.getInstanceName(desiredName, attempt++);
-        upperCaseName = boost::to_upper_copy(name);
-    } while (isNameInUse(upperCaseName));
+        lowerCaseName = boost::to_lower_copy(name);
+    } while (isNameInUse(lowerCaseName));
 
-    m_namesInUse.insert(upperCaseName);
+    m_namesInUse.insert(lowerCaseName);
     return name;
 }
 
 
-bool NamespaceScope::isNameInUse(const std::string &upperCaseName) const
+bool NamespaceScope::isNameInUse(const std::string &lowerCaseName) const
 {
-    if (m_namesInUse.find(upperCaseName) != m_namesInUse.end()) return true;
+    if (m_namesInUse.find(lowerCaseName) != m_namesInUse.end()) return true;
     if (m_parent != nullptr)
-        return m_parent->isNameInUse(upperCaseName);
+        return m_parent->isNameInUse(lowerCaseName);
     return false;
 
 }
