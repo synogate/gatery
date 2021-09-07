@@ -126,6 +126,7 @@ class Circuit
         void removeFalseLoops();
 
         void ensureSignalNodePlacement();
+        void duplicateSignalsFeedingLowerAndHigherAreas();
 
         void optimizeSubnet(Subnet &subnet);
         void postprocess(const PostProcessor &postProcessor);
