@@ -85,6 +85,8 @@ ElemType mux(const ElementarySignal &selector, const std::initializer_list<ElemT
 BVec muxWord(BVec selector, BVec flat_array);
 BVec muxWord(Bit selector, BVec flat_array);
 
+BVec demux(const BVec& selector, const Bit& input, const Bit& inactiveOutput = '0');
+BVec demux(const BVec& selector); // optimized version for input = '1' and invactive output = '0'
 
 ///@todo overload for compound signals
 ///@todo doesn't work yet

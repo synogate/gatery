@@ -1153,6 +1153,42 @@ BOOST_FIXTURE_TEST_CASE(SimpleCat, UnitTestSimulationFixture)
     runEvalOnlyTest();
 }
 
+BOOST_FIXTURE_TEST_CASE(SimpleVectorCat, UnitTestSimulationFixture)
+{
+    using namespace gtry;
+
+    BVec vec1 = 4u;
+    std::vector<Bit> vec2{ vec1.size() };
+    for(size_t i = 0; i < vec2.size(); ++i)
+        vec2[i] = vec1[i];
+
+    sim_assert(vec1 == pack(vec2));
+    runEvalOnlyTest();
+}
+
+struct TestRecord
+{
+    gtry::Bit a, b, c;
+};
+BOOST_HANA_ADAPT_STRUCT(TestRecord, a, b, c);
+
+BOOST_FIXTURE_TEST_CASE(SimpleStructCat, UnitTestSimulationFixture)
+{
+    using namespace gtry;
+
+    BVec vec1 = 4u;
+    TestRecord vec2{
+        .a = vec1[0],
+        .b = vec1[1],
+        .c = vec1[2],
+    };
+   
+    BVec ref2 = pack(vec2);
+    sim_assert(vec1 == ref2) << vec1 << " != " << ref2;
+    runEvalOnlyTest();
+}
+
+
 BOOST_FIXTURE_TEST_CASE(msbBroadcast, UnitTestSimulationFixture)
 {
     using namespace gtry;

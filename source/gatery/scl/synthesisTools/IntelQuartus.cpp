@@ -183,7 +183,7 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 
 		float period = clock->getAbsoluteFrequency().denominator() / float(clock->getAbsoluteFrequency().numerator());
 		period *= 1e9f;
-		file << "set_" << direction << "_delay " << period / 2;
+		file << "set_" << direction << "_delay " << period / 3;
 		file << " -clock " << vhdlClockName;
 
 		file << " [get_ports " << vhdlPinName;
@@ -194,6 +194,8 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 
 		file << " -reference_pin " << path << "\n";
 	}
+
+
 	for (auto& reset : vhdlExport.getAST()->getRootEntity()->getResets()) {
 
 		std::vector<hlim::Node_Register*> allRegs = hlim::findRegistersAffectedByReset(reset);
