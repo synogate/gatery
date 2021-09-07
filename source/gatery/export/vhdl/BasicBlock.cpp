@@ -313,8 +313,12 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
 
             bool onlyUsedForReset = nodeFeedingIntoReset && !nodeFeedingIntoAnythingElse;
 
-            if (!onlyUsedForReset)
-                normalNodes.push_back(node);
+            if (onlyUsedForReset) continue;
+            
+            
+            
+            
+            normalNodes.push_back(node);
         }
 
 
@@ -327,7 +331,7 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
     if (!normalNodes.empty()) {
         m_processes.push_back(std::make_unique<CombinatoryProcess>(this, desiredProcessName));
         Process &process = *m_processes.back();
-        process.buildFromNodes(normalNodes);
+        process.buildFromNodes(std::move(normalNodes));
 
         ConcurrentStatement statement;
         statement.type = ConcurrentStatement::TYPE_PROCESS;

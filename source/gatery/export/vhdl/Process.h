@@ -52,7 +52,7 @@ class Process : public BaseGrouping
     public:
         Process(BasicBlock *parent);
 
-        void buildFromNodes(const std::vector<hlim::BaseNode*> &nodes);
+        void buildFromNodes(std::vector<hlim::BaseNode*> nodes);
         virtual void extractSignals() override;
         virtual void writeVHDL(std::ostream &stream, unsigned indentation) = 0;
 

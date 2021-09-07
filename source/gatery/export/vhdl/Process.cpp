@@ -48,9 +48,9 @@ Process::Process(BasicBlock *parent) : BaseGrouping(parent->getAST(), parent, &p
 {
 }
 
-void Process::buildFromNodes(const std::vector<hlim::BaseNode*> &nodes)
+void Process::buildFromNodes(std::vector<hlim::BaseNode*> nodes)
 {
-    m_nodes = nodes;
+    m_nodes = std::move(nodes);
     for (auto node : m_nodes)
         m_ast.getMapping().assignNodeToScope(node, this);
 }
@@ -77,6 +77,7 @@ void Process::extractSignals()
                     m_inputs.insert(driver);
             }
         }
+
         for (auto i : utils::Range(node->getNumOutputPorts())) {
             hlim::NodePort driver = {
                 .node = node,
