@@ -524,6 +524,8 @@ void ReferenceSimulator::powerOn()
     // reevaluate, to provide fibers with power-on state
     reevaluate();
 
+    m_callbackDispatcher.onPowerOn();
+
     HCL_ASSERT_HINT(m_program.m_stateMapping.clockPinAllocation.resetPins.size() < 2, "For now, only one reset is supported!");
 
     if (!resetsInFlight) {
@@ -541,8 +543,6 @@ void ReferenceSimulator::powerOn()
         if (m_stateNeedsReevaluating)
             reevaluate();
     }
-
-    m_callbackDispatcher.onPowerOn();
 }
 
 void ReferenceSimulator::reevaluate()

@@ -26,6 +26,8 @@
 #include "Clock.h"
 #include "SignalMiscOp.h"
 
+#include "TechnologyCapabilities.h"
+
 
 #include <gatery/hlim/supportNodes/Node_Memory.h>
 #include <gatery/hlim/supportNodes/Node_MemPort.h>
@@ -125,10 +127,7 @@ namespace gtry
 
 			ent["word_width"] = m_wordWidth;
 			ent["num_words"] = numWords;
-
-			if (m_numWords > 32) // TODO ask platform
-				m_readLatencyHint = 1;
-			
+		
 			m_memoryNode = DesignScope::createNode<hlim::Node_Memory>();
 			sim::DefaultBitVectorState state;
 			state.resize(m_numWords * m_wordWidth);
@@ -136,14 +135,29 @@ namespace gtry
 			m_memoryNode->setPowerOnState(std::move(state));
 
 			auto&& cfg = ent.instanceConfig();
-			m_readLatencyHint = cfg["readLatency"].as(m_readLatencyHint);
 			m_memoryNode->loadConfig(cfg);
 		}
 
-		size_t readLatencyHint() const { return m_readLatencyHint; }
+		size_t readLatencyHint() const { return m_memoryNode->getRequiredReadLatency(); }
 
-		void setType(MemType type) { m_memoryNode->setType(type, ~0ull); }
-		void setType(MemType type, size_t readLatency) { m_memoryNode->setType(type, readLatency); m_readLatencyHint = readLatency; }
+		void setType(MemType type) { 
+			if (type == MemType::EXTERNAL)
+				m_memoryNode->setType(type, ~0ull);
+			else {
+				auto c = getTargetRequirementsForType(type);
+				m_memoryNode->setType(type, c.totalReadLatency);
+			}
+		}
+		void setType(MemType type, size_t readLatency) { 
+			if (type != MemType::EXTERNAL) {
+				auto c = getTargetRequirementsForType(type);
+				// TODO: This prevents things like: Set to DONT_CARE, choose a large size, and fore it into lutrams with a read latency of 0. Do we want that?
+				HCL_DESIGNCHECK_HINT(readLatency >= c.totalReadLatency, "The specified read latency is less than what the target device reports is necessary for this kind of memory!");
+			}
+			m_memoryNode->setType(type, readLatency); 
+		}
+
+		MemoryCapabilities::Choice getTargetRequirements() const { return getTargetRequirementsForType(m_memoryNode->type()); }
 
 		void setName(std::string name) { m_memoryNode->setName(std::move(name)); }
 		void noConflicts() { m_memoryNode->setNoConflicts(); }
@@ -185,9 +199,23 @@ namespace gtry
 		Data m_defaultValue;
 		size_t m_numWords = 0;
 		size_t m_wordWidth = 0;
-		size_t m_readLatencyHint = 0;
 
 		Memory(hlim::Node_Memory* memoryNode, Data def = Data{}) : m_memoryNode(memoryNode) {}
+
+		MemoryCapabilities::Choice getTargetRequirementsForType(MemType type) const {
+			MemoryCapabilities::Request request = {
+				.size = size(),
+				.maxDepth = numWords() // only consideres this view and not others, this must be fixed once we use views (mixed port widths)
+			};
+			HCL_DESIGNCHECK_HINT(type != MemType::EXTERNAL, "Can't query the target device for properties of external memory!");
+			switch (type) {
+				case MemType::SMALL: request.sizeCategory = MemoryCapabilities::SizeCategory::SMALL; break;
+				case MemType::MEDIUM: request.sizeCategory = MemoryCapabilities::SizeCategory::MEDIUM; break;
+				case MemType::LARGE: request.sizeCategory = MemoryCapabilities::SizeCategory::LARGE; break;
+				default: break;
+			};
+			return TechnologyScope::getCap<MemoryCapabilities>().select(request);
+		}
 	};
 
 	template<typename DataOld, typename DataNew>

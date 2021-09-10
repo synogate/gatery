@@ -21,6 +21,8 @@
 
 #include "../NodeGroup.h"
 
+#include "TechnologyMapping.h"
+
 namespace gtry::hlim {
 
 class Circuit;
@@ -55,10 +57,13 @@ class MemoryGroup : public NodeGroupMetaInfo
         void verify();
         void replaceWithIOPins(Circuit &circuit);
         void bypassSignalNodes();
+        NodeGroup *lazyCreateFixupNodeGroup();
 
         Node_Memory *getMemory() { return m_memory; }
         const std::vector<WritePort> &getWritePorts() { return m_writePorts; }
         const std::vector<ReadPort> &getReadPorts() { return m_readPorts; }
+
+        inline NodeGroup *getFixupNodeGroup() const { return m_fixupNodeGroup; }
     protected:
         NodePtr<Node_Memory> m_memory;
         std::vector<WritePort> m_writePorts;
@@ -67,7 +72,6 @@ class MemoryGroup : public NodeGroupMetaInfo
         NodeGroup *m_nodeGroup;
         NodeGroup *m_fixupNodeGroup = nullptr;
 
-        void lazyCreateFixupNodeGroup();
 
         void ensureNotEnabledFirstCycles(Circuit &circuit, NodeGroup *ng, Node_MemPort *writePort, size_t numCycles);
 
@@ -85,6 +89,12 @@ class MemoryGroup : public NodeGroupMetaInfo
 
 };
 
+	class Memory2VHDLPattern : public TechnologyMappingPattern
+	{
+		public:
+			Memory2VHDLPattern();
+			virtual bool attemptApply(Circuit &circuit, hlim::NodeGroup *nodeGroup) const override;
+	};
 
 
 void findMemoryGroups(Circuit &circuit);

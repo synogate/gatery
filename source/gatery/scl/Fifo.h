@@ -20,8 +20,6 @@
 
 #include <gatery/frontend/TechnologyCapabilities.h>
 
-#include "arch/xilinx/FifoPattern.h"
-
 namespace gtry::scl
 {
 
@@ -106,9 +104,8 @@ namespace gtry::scl
 		auto *meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
 		FifoCapabilities::Choice &fifoChoice = meta->fifoChoice;
 
-		arch::xilinx::Xilinx7SeriesFifoCapabilities tmp;
-		fifoChoice = tmp.select(fifoRequest);
-		fifoChoice.readDepth = utils::nextPow2(minDepth);
+		fifoChoice = TechnologyScope::getCap<FifoCapabilities>().select(fifoRequest);
+		HCL_DESIGNCHECK_HINT(utils::isPow2(fifoChoice.readDepth), "The SCL fifo implementation only works for power of 2 depths!");
 
 		HCL_DESIGNCHECK_HINT(!m_hasMem, "fifo already initialized");
 		m_hasMem = true;

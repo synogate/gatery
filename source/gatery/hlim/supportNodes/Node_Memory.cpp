@@ -53,24 +53,6 @@ namespace gtry::hlim {
     { 
         m_type = type; 
         m_requiredReadLatency = requiredReadLatency;
-        switch (m_type) {
-            case MemType::DONT_CARE:
-                if (m_requiredReadLatency == ~0ull)
-                    m_requiredReadLatency = 0;
-            break;
-            case MemType::LUTRAM:
-                if (m_requiredReadLatency == ~0ull)
-                    m_requiredReadLatency = 0;
-            break;
-            case MemType::BRAM:
-                if (m_requiredReadLatency == ~0ull)
-                    m_requiredReadLatency = 1;
-            break;
-            case MemType::EXTERNAL:
-                if (m_requiredReadLatency == ~0ull)
-                    m_requiredReadLatency = 1;
-            break;
-        }
     }
 
     void Node_Memory::setNoConflicts()

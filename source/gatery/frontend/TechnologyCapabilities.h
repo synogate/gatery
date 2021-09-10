@@ -19,6 +19,8 @@
 
 #include "Scope.h"
 
+#include <gatery/utils/BitFlags.h>
+
 namespace gtry {
 
 enum class Preference {
@@ -90,6 +92,7 @@ class IOCapabilities : public Capabilities {
 
 class MemoryCapabilities : public Capabilities {
     public:
+    /*
         enum class ReadDuringWrite {
             READ_FIRST,
             WRITE_FIRST,
@@ -120,8 +123,28 @@ class MemoryCapabilities : public Capabilities {
 
         using Request = Settings<details::RequestWrapper>;
         using Choice = Settings<details::ChoiceWrapper>;
+    */
+        enum class SizeCategory {
+            SMALL,  // LUTRAMS, MLABS, ...
+            MEDIUM, // BlockRAMs, BRAM, MxK, ...
+            LARGE   // UltraRAMS, eSRAM, ...
+        };
 
-        virtual Choice select(const Request &request) const = 0;
+        struct Request {
+            size_t size;
+            size_t maxDepth;
+            utils::BitFlags<SizeCategory> sizeCategory = utils::BitFlags<SizeCategory>::ALL;
+        };
+
+        struct Choice {
+            bool inputRegs;
+            size_t outputRegs;
+            size_t totalReadLatency;
+        };
+
+        virtual Choice select(const Request &request) const;
+
+        static const char *getName() { return "mem"; }
     protected:
 };
 
@@ -154,7 +177,9 @@ class FifoCapabilities : public Capabilities {
 
         virtual ~FifoCapabilities() = default;
 
-        //virtual int makeBid(const Request &request, Choice &choice) const { }
+        virtual Choice select(const Request &request) const;
+
+        static const char *getName() { return "fifo"; }
     protected:
 };
 
@@ -177,26 +202,44 @@ struct Directives {
 
 class TechnologyCapabilities {
     public:
-        virtual std::string getName() = 0;
-/*
         template<class Cap>
-        Cap &operator[](std::string_view type) { 
-            auto it = m_capabilities.find(type);
-            HCL_DESIGNCHECK_HINT(it != m_capabilities.end(), "Could not find handler for tech capability " + type);
+        Cap &getCap() {
+            auto it = m_capabilities.find(Cap::getName());
+            HCL_DESIGNCHECK_HINT(it != m_capabilities.end(), std::string("Could not find handler for tech capability ") + Cap::getName());
             return dynamic_cast<Cap&>(*it->second);
         }
-        */
+
+        template<class Cap>
+        void registerCap(Cap *cap) { m_capabilities[Cap::getName()] = cap; }
     protected:
-        std::map<std::string, Capabilities*> m_capabilities;
+        std::map<std::string, Capabilities*, std::less<>> m_capabilities;
 };
 
 
 class TechnologyScope : public BaseScope<TechnologyScope> {
-
     public:
         static TechnologyScope *get() { return m_currentScope; }
-    protected:
 
+        TechnologyScope(TechnologyCapabilities &techCaps) : m_techCaps(techCaps) { }
+
+        inline TechnologyCapabilities &getTechCaps() const { return m_techCaps; }
+
+        template<class Cap>
+        static Cap &getCap() { 
+            HCL_ASSERT_HINT(m_currentScope != nullptr, "No technology scope active!");
+            return m_currentScope->m_techCaps.getCap<Cap>();
+        }
+    protected:
+        TechnologyCapabilities &m_techCaps;
+};
+
+
+class DefaultTechnologyCapabilities : public TechnologyCapabilities {
+    public:
+        DefaultTechnologyCapabilities();
+    protected:
+        MemoryCapabilities m_defaultMemCaps;
+        FifoCapabilities m_defaultFifoCaps;
 };
 
 

@@ -40,9 +40,24 @@ bool IntelMemoryPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 {
 	auto *memGrp = dynamic_cast<hlim::MemoryGroup*>(nodeGroup->getMetaInfo());
 	if (memGrp == nullptr) return false;
+	if (memGrp->getMemory()->type() == hlim::Node_Memory::MemType::EXTERNAL)
+		return false;
 
 	if (memGrp->getReadPorts().size() != 1) return false;
 	if (memGrp->getWritePorts().size() > 1) return false;
+
+    auto &circuit = DesignScope::get()->getCircuit();
+
+    memGrp->convertToReadBeforeWrite(circuit);
+    memGrp->attemptRegisterRetiming(circuit);
+    memGrp->resolveWriteOrder(circuit);
+    memGrp->updateNoConflictsAttrib();
+    memGrp->buildReset(circuit);
+    memGrp->bypassSignalNodes();
+    memGrp->verify();
+
+    GroupScope scope(memGrp->lazyCreateFixupNodeGroup());
+
 
     auto &rp = memGrp->getReadPorts().front();
 
@@ -145,8 +160,12 @@ void IntelDevice::setupArria10(std::string device)
 	m_embeddedMemories.push_back(buildM20KDesc(M20KVariants::Arria10_TDP_woBE));
 
 	m_memoryCapabilities = std::make_unique<GenericMemoryCapabilities>(*this); // Instantiate overload, if s.th. specific needed
+    m_techCaps.registerCap<GenericMemoryCapabilities>(m_memoryCapabilities.get());
+
 	m_technologyMapping.addPattern(std::make_unique<IntelMemoryPattern>(*this));
     m_technologyMapping.addPattern(std::make_unique<GLOBALPattern>());
+
+
 }
 
 

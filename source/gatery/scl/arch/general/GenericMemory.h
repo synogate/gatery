@@ -33,12 +33,7 @@ class TargetDevice;
 struct GenericMemoryDesc {
 	std::string memoryName;
 
-	enum class SizeCategory {
-		SMALL,
-		MEDIUM,
-		LARGE
-	};
-	SizeCategory sizeCategory;
+	MemoryCapabilities::SizeCategory sizeCategory;
 
 	struct SizeConfig {
 		size_t width;
@@ -91,6 +86,8 @@ class GenericMemoryCapabilities : public MemoryCapabilities
         virtual ~GenericMemoryCapabilities();
 
 		virtual Choice select(const Request &request) const override;
+
+		static const char *getName() { return "mem"; }
 	protected:
 		const TargetDevice &m_targetDevice;
 };

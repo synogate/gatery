@@ -27,6 +27,13 @@ class BitFlags {
 	public:
 		typedef BitFlags<EnumType> Self;
 
+        enum AllEnum {
+            ALL
+        };
+
+        BitFlags() = default;
+        BitFlags(AllEnum) { m_flags = ~0ull; }
+
 		Self &operator=(EnumType e) { m_flags = 1ull << size_t(e); return *this; }
 		operator EnumType() { return EnumType(m_flags); }
 
@@ -39,4 +46,3 @@ class BitFlags {
 
     
 }
-

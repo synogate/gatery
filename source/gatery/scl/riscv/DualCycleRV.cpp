@@ -20,7 +20,7 @@ gtry::Memory<gtry::BVec>& gtry::scl::riscv::DualCycleRV::fetch(uint64_t entryPoi
 
 		BitWidth memWidth = m_IP.getWidth() - 2;
 		m_instructionMem.setup(memWidth.count(), 32_b);
-		m_instructionMem.setType(MemType::BRAM);
+		m_instructionMem.setType(MemType::MEDIUM);
 		m_instructionMem.setName("instruction_memory");
 
 		IF(!m_stall)
@@ -42,7 +42,7 @@ gtry::BVec gtry::scl::riscv::DualCycleRV::fetch(const BVec& instruction, uint64_
 
 	// setup register file
 	m_rf.setup(32, 32_b);
-	m_rf.setType(MemType::BRAM);
+	m_rf.setType(MemType::MEDIUM);
 	m_rf.initZero();
 	m_rf.setName("register_file");
 

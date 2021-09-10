@@ -56,8 +56,9 @@ class Node_Memory : public Node<Node_Memory>
 
         enum class MemType {
             DONT_CARE,
-            LUTRAM,
-            BRAM,
+            SMALL,  // LUTRAMS, MLABS, ...
+            MEDIUM, // BlockRAMs, BRAM, MxK, ...
+            LARGE,   // UltraRAMS, eSRAM, ...
             EXTERNAL,
         };
 

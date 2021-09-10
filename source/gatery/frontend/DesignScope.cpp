@@ -22,7 +22,7 @@
 
 namespace gtry {
 
-DesignScope::DesignScope() : BaseScope<DesignScope>(), m_rootScope(m_circuit.getRootNodeGroup())
+DesignScope::DesignScope() : BaseScope<DesignScope>(), m_rootScope(m_circuit.getRootNodeGroup()), m_defaultTechScope(m_defaultTechCaps)
 { 
     m_rootScope.setName("top");
     

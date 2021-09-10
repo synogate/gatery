@@ -27,7 +27,7 @@ namespace gtry {
 			TechnologyMappingPattern();
 			virtual ~TechnologyMappingPattern() = default;
 
-			virtual bool attemptApply(hlim::NodeGroup *nodeGroup) const final override;
+			virtual bool attemptApply(hlim::Circuit &circuit, hlim::NodeGroup *nodeGroup) const final override;
 			virtual bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const = 0;
 		protected:
 	};

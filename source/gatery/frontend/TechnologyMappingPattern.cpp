@@ -28,7 +28,7 @@ TechnologyMappingPattern::TechnologyMappingPattern()
 {
 }
 
-bool TechnologyMappingPattern::attemptApply(hlim::NodeGroup *nodeGroup) const
+bool TechnologyMappingPattern::attemptApply(hlim::Circuit &circuit, hlim::NodeGroup *nodeGroup) const
 {
 	if (nodeGroup == nullptr) return false;
 	if (nodeGroup->getParent() == nullptr) return false;

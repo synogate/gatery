@@ -182,19 +182,9 @@ void MemoryGroup::pullInPorts(Node_Memory *memory)
             }
         }
     }
-
-    if (m_memory->type() == Node_Memory::MemType::DONT_CARE) {
-        if (!m_memory->getPorts().empty()) {
-            size_t numWords = m_memory->getSize() / m_memory->getMaxPortWidth();
-            if (numWords > 64)
-                m_memory->setType(Node_Memory::MemType::BRAM, std::max<size_t>(1, m_memory->getRequiredReadLatency()));
-            // todo: Also depend on other things
-        }
-    }
-
 }
 
-void MemoryGroup::lazyCreateFixupNodeGroup()
+NodeGroup *MemoryGroup::lazyCreateFixupNodeGroup()
 {
     if (m_fixupNodeGroup == nullptr) {
         m_fixupNodeGroup = m_nodeGroup->getParent()->addChildNodeGroup(NodeGroup::GroupType::ENTITY);
@@ -206,6 +196,7 @@ void MemoryGroup::lazyCreateFixupNodeGroup()
         m_fixupNodeGroup->setComment("Auto generated to handle various memory access issues such as read during write and read modify write hazards.");
         m_nodeGroup->moveInto(m_fixupNodeGroup);
     }
+    return m_fixupNodeGroup;
 }
 
 void MemoryGroup::convertToReadBeforeWrite(Circuit &circuit)
@@ -971,7 +962,7 @@ NodePort MemoryGroup::buildResetAddrCounter(Circuit &circuit, size_t width, Cloc
 void MemoryGroup::verify()
 {
     switch (m_memory->type()) {
-        case Node_Memory::MemType::BRAM:
+        case Node_Memory::MemType::MEDIUM:
             for (auto &rp : m_readPorts) {
                 if (rp.dedicatedReadLatencyRegisters.size() < 1) {
                     std::stringstream issue;
@@ -989,7 +980,7 @@ void MemoryGroup::verify()
             }
             */
         break;
-        case Node_Memory::MemType::LUTRAM:
+        case Node_Memory::MemType::SMALL:
             if (m_readPorts.size() > 1) {
                 std::stringstream issue;
                 issue << "Memory can not become LUTRAM because it has too many read ports.\nMemory from:\n"
@@ -1309,24 +1300,29 @@ void findMemoryGroups(Circuit &circuit)
             formMemoryGroupIfNecessary(circuit, memory);
 }
 
-void buildExplicitMemoryCircuitry(Circuit &circuit)
+Memory2VHDLPattern::Memory2VHDLPattern()
 {
-    for (size_t i = 0; i < circuit.getNodes().size(); i++) {
-        auto& node = circuit.getNodes()[i];
-        if (auto* memory = dynamic_cast<Node_Memory*>(node.get())) {
-            auto* memoryGroup = formMemoryGroupIfNecessary(circuit, memory);
+    m_priority = EXPORT_LANGUAGE_MAPPING + 100;
+}
 
-            memoryGroup->convertToReadBeforeWrite(circuit);
-            memoryGroup->attemptRegisterRetiming(circuit);
-            memoryGroup->resolveWriteOrder(circuit);
-            memoryGroup->updateNoConflictsAttrib();
-            memoryGroup->buildReset(circuit);
-            memoryGroup->bypassSignalNodes();
-            memoryGroup->verify();
-            if (memory->type() == Node_Memory::MemType::EXTERNAL)
-                memoryGroup->replaceWithIOPins(circuit);
-        }
-    }
+bool Memory2VHDLPattern::attemptApply(Circuit &circuit, hlim::NodeGroup *nodeGroup) const
+{
+    auto* memoryGroup = dynamic_cast<MemoryGroup*>(nodeGroup->getMetaInfo());
+
+    if (!memoryGroup)
+        return false;
+
+    memoryGroup->convertToReadBeforeWrite(circuit);
+    memoryGroup->attemptRegisterRetiming(circuit);
+    memoryGroup->resolveWriteOrder(circuit);
+    memoryGroup->updateNoConflictsAttrib();
+    memoryGroup->buildReset(circuit);
+    memoryGroup->bypassSignalNodes();
+    memoryGroup->verify();
+    if (memoryGroup->getMemory()->type() == Node_Memory::MemType::EXTERNAL)
+        memoryGroup->replaceWithIOPins(circuit);
+
+    return true;
 }
 
 }

@@ -452,7 +452,7 @@ gtry::Memory<gtry::BVec>& gtry::scl::riscv::SingleCycleI::fetch(uint32_t firstIn
 
 	BitWidth memWidth = m_IP.getWidth() - 2;
 	m_instructionMem.setup(memWidth.count(), 32_b);
-	m_instructionMem.setType(MemType::LUTRAM);
+	m_instructionMem.setType(MemType::SMALL);
 
 	BVec addr = m_IP.getWidth();
 	BVec instruction = reg(m_instructionMem[addr(2, memWidth)].read());

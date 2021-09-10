@@ -35,7 +35,7 @@ GenericMemoryCapabilities::~GenericMemoryCapabilities()
 
 GenericMemoryCapabilities::Choice GenericMemoryCapabilities::select(const Request &request) const
 {
-	HCL_ASSERT(false);
+	return MemoryCapabilities::select(request); // todo
 }
 
 

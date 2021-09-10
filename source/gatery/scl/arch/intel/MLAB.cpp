@@ -28,7 +28,7 @@ GenericMemoryDesc buildMLABDesc(MLABVariants variant, bool withOutputReg)
 	const size_t size = 640;
 
 	res.memoryName = "MLAB";
-	res.sizeCategory = GenericMemoryDesc::SizeCategory::SMALL;
+	res.sizeCategory = MemoryCapabilities::SizeCategory::SMALL;
 
 	// Embedded Memory User Guide "Table 6. Valid Range of Maximum Block Depth for Various Embedded Memory Blocks"
 	size_t maxDepth = 64;

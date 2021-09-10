@@ -24,6 +24,7 @@
 #include <gatery/simulation/ConstructionTimeSimulationContext.h>
 
 #include "Scope.h"
+#include "TechnologyCapabilities.h"
 
 namespace gtry {
 
@@ -50,7 +51,8 @@ class DesignScope : public BaseScope<DesignScope>
 
         sim::ConstructionTimeSimulationContext m_simContext;
         
-        // design affecting settings and their overrides go here, as well as tweaking settings (e.g. speed vs area parameters)
+        DefaultTechnologyCapabilities m_defaultTechCaps;
+        TechnologyScope m_defaultTechScope;
 };
 
 template<typename NodeType, typename... Args>

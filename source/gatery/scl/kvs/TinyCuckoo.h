@@ -118,7 +118,7 @@ namespace gtry::scl
 		for (Memory<Item>& mem : m_tables)
 		{
 			mem.setup(capacity / numTables, it);
-			mem.setType(MemType::BRAM);
+			mem.setType(MemType::MEDIUM);
 			mem.initZero();
 		}
 	}

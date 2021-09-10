@@ -22,23 +22,35 @@
 
 namespace gtry::hlim {
 	class NodeGroup;
+	class Circuit;
 
 	class TechnologyMappingPattern
 	{
 		public:
+			enum Priority {
+				OVERRIDE = 0,
+				TECH_MAPPING = 1'000,
+				EXPORT_LANGUAGE_MAPPING = 1'000'000,
+			};
+
 			TechnologyMappingPattern();
 			virtual ~TechnologyMappingPattern() = default;
 
-			virtual bool attemptApply(hlim::NodeGroup *nodeGroup) const = 0;
+			virtual bool attemptApply(Circuit &circuit, hlim::NodeGroup *nodeGroup) const = 0;
+
+			inline size_t getPriority() const { return m_priority; }
 		protected:
+			size_t m_priority = TECH_MAPPING + 100;
 	};
 
 	class TechnologyMapping
 	{
 		public:
-			void addPattern(std::unique_ptr<TechnologyMappingPattern> pattern) { m_patterns.push_back(std::move(pattern)); }
+			TechnologyMapping();
 
-			void apply(hlim::NodeGroup *nodeGroup) const;
+			void addPattern(std::unique_ptr<TechnologyMappingPattern> pattern);
+
+			void apply(Circuit &circuit, hlim::NodeGroup *nodeGroup) const;
 		protected:
 			std::vector<std::unique_ptr<TechnologyMappingPattern>> m_patterns;
 	};

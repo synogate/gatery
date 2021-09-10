@@ -19,6 +19,7 @@
 #include "gatery/pch.h"
 
 #include "TechnologyMapping.h"
+#include "MemoryDetector.h"
 
 #include "../NodeGroup.h"
 #include "../Circuit.h"
@@ -28,14 +29,29 @@ namespace gtry::hlim {
 
 TechnologyMappingPattern::TechnologyMappingPattern()
 {
+
 }
 
-void TechnologyMapping::apply(hlim::NodeGroup *nodeGroup) const
+TechnologyMapping::TechnologyMapping()
+{
+	addPattern(std::make_unique<Memory2VHDLPattern>());
+}
+
+void TechnologyMapping::addPattern(std::unique_ptr<TechnologyMappingPattern> pattern) 
+{ 
+	m_patterns.push_back(std::move(pattern));
+	std::sort(m_patterns.begin(), m_patterns.end(), [](const auto &lhs, const auto &rhs)->bool{
+		return lhs->getPriority() < rhs->getPriority();
+	});
+}
+
+
+void TechnologyMapping::apply(Circuit &circuit, hlim::NodeGroup *nodeGroup) const
 {
 	bool handled = false;
 	{
 		for (auto &pattern : m_patterns)
-			if (pattern->attemptApply(nodeGroup)) {
+			if (pattern->attemptApply(circuit, nodeGroup)) {
 				handled = true;
 				break;
 			}
@@ -44,7 +60,7 @@ void TechnologyMapping::apply(hlim::NodeGroup *nodeGroup) const
 	if (!handled)
 		for (size_t i = 0; i < nodeGroup->getChildren().size(); i++) {
 			auto &g = nodeGroup->getChildren()[i];
-			apply(g.get());
+			apply(circuit, g.get());
 		}
 }
 

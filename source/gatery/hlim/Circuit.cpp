@@ -1026,7 +1026,6 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 void DefaultPostprocessing::memoryDetection(Circuit &circuit) const
 {
     findMemoryGroups(circuit);
-    buildExplicitMemoryCircuitry(circuit);
     circuit.cullUnnamedSignalNodes();
 
     Subnet subnet = Subnet::all(circuit);
@@ -1046,10 +1045,15 @@ void DefaultPostprocessing::run(Circuit &circuit) const
 {
     generalOptimization(circuit);
     memoryDetection(circuit);
+
     if (m_techMapping) {
-        m_techMapping->apply(circuit.getRootNodeGroup());
-        generalOptimization(circuit); // Because we ran frontend code for tech mapping
+        m_techMapping->apply(circuit, circuit.getRootNodeGroup());
+    } else {
+        TechnologyMapping mapping;
+        mapping.apply(circuit, circuit.getRootNodeGroup());
     }
+    generalOptimization(circuit); // Because we ran frontend code for tech mapping
+
     exportPreparation(circuit);
 }
 

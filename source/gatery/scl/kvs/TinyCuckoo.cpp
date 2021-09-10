@@ -46,7 +46,7 @@ namespace gtry::scl
 			entity.setName("TinyCuckooTable");
 
 			Memory<TinyCuckooItem> mem(1ull << in.tableWidth().value, in.update.item);
-			//mem.setType(MemType::BRAM);
+			//mem.setType(MemType::MEDIUM);
 			mem.initZero();
 
 			IF(in.update.valid & in.update.tableIdx == i)

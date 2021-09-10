@@ -366,7 +366,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_modify_write, UnitTestSimulationFixture)
     std::mt19937 rng{ 18055 };
 
     Memory<BVec> mem(contents.size(), 32_b);
-    mem.setType(MemType::LUTRAM);
+    mem.setType(MemType::SMALL);
     mem.initZero();
 
     BVec addr = pinIn(4_b);
@@ -443,7 +443,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write, UnitTestSimulationFixture)
     std::mt19937 rng{ 18055 };
 
     Memory<BVec> mem(contents.size(), 32_b);
-    mem.setType(MemType::BRAM);
+    mem.setType(MemType::MEDIUM);
     mem.initZero();
 
     BVec addr = pinIn(4_b);
@@ -523,7 +523,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads, UnitTestSimul
     std::mt19937 rng{ 18055 };
 
     Memory<BVec> mem(contents.size(), 32_b);
-    mem.setType(MemType::BRAM);
+    mem.setType(MemType::MEDIUM);
     mem.initZero();
 
     BVec addr = pinIn(4_b).setName("rmw_addr");
@@ -607,7 +607,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_on_wrEn, UnitTestSimulationFi
     std::mt19937 rng{ 18055 };
 
     Memory<BVec> mem(contents.size(), 32_b);
-    mem.setType(MemType::BRAM);
+    mem.setType(MemType::MEDIUM);
     mem.initZero();
 
     BVec addr = pinIn(4_b).setName("rmw_addr");
@@ -687,7 +687,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_multiple_writes, UnitTestSimulationFixture)
     std::mt19937 rng{ 18055 };
 
     Memory<BVec> mem(contents.size(), 32_b);
-    mem.setType(MemType::BRAM);
+    mem.setType(MemType::MEDIUM);
     mem.initZero();
 
     BVec wrData1 = pinIn(32_b).setName("wr_data1");
@@ -769,7 +769,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrFirst, Unit
     std::mt19937 rng{ 18055 };
 
     Memory<BVec> mem(contents.size(), 32_b);
-    mem.setType(MemType::BRAM);
+    mem.setType(MemType::MEDIUM);
     mem.initZero();
 
     BVec wrData = pinIn(32_b).setName("wr_data");
@@ -854,7 +854,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrLast, UnitT
     std::mt19937 rng{ 18055 };
 
     Memory<BVec> mem(contents.size(), 32_b);
-    mem.setType(MemType::BRAM);
+    mem.setType(MemType::MEDIUM);
     mem.initZero();
 
     BVec wrData = pinIn(32_b).setName("wr_data");
@@ -934,7 +934,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
     std::mt19937 rng{ 18055 };
 
     Memory<BVec> mem(contents.size(), 32_b);
-    mem.setType(MemType::BRAM);
+    mem.setType(MemType::MEDIUM);
     mem.initZero();
 
     BVec wrData = pinIn(32_b).setName("wr_data");
@@ -1023,7 +1023,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
     std::mt19937 rng{ 18055 };
 
     Memory<BVec> mem(contents.size(), 32_b);
-    mem.setType(MemType::BRAM);
+    mem.setType(MemType::MEDIUM);
     mem.initZero();
 
     BVec wrData = pinIn(32_b).setName("wr_data");
@@ -1115,7 +1115,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_dual_read_modify_write, UnitTestSimulationFixtu
     std::mt19937 rng{ 18055 };
 
     Memory<BVec> mem(contents.size(), 32_b);
-    mem.setType(MemType::BRAM);
+    mem.setType(MemType::MEDIUM);
     mem.initZero();
 
     BVec addr1 = pinIn(4_b);
@@ -1210,7 +1210,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, UnitTestSimulationFi
     std::mt19937 rng{ 18055 };
 
     Memory<BVec> mem(contents.size(), 32_b);
-    mem.setType(MemType::BRAM, memReadLatency);
+    mem.setType(MemType::MEDIUM, memReadLatency);
     mem.initZero();
     mem.noConflicts();
 
@@ -1343,7 +1343,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, UnitTestSimulati
         Memory<BVec> mem(contents.size(), 32_b);
         mem.setName("second_stage_emif");
         mem.setType(MemType::EXTERNAL, memReadLatency);
-        //mem.setType(MemType::BRAM, memReadLatency);
+        //mem.setType(MemType::MEDIUM, memReadLatency);
         //mem.initZero(); // Not possible with external memory, needs explicit initialization
 
         BVec elem = mem[addr_];

@@ -28,7 +28,7 @@ GenericMemoryDesc buildM20KDesc(M20KVariants variant)
 	const size_t size = 20 << 10;
 
 	res.memoryName = "M20K";
-	res.sizeCategory = GenericMemoryDesc::SizeCategory::MEDIUM;
+	res.sizeCategory = MemoryCapabilities::SizeCategory::MEDIUM;
 
 	// Embedded Memory User Guide "Table 6. Valid Range of Maximum Block Depth for Various Embedded Memory Blocks"
 	for (size_t i = 512; i <= 16384; i *= 2) {
