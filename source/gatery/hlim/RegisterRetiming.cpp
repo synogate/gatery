@@ -193,7 +193,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, const Subnet &area, NodeP
 			if (registersToBeRemoved.contains(reg)) continue;
 
 			// Retime over anchored registers and registers with enable signals (since we can't move them yet).
-			if (!reg->getFlags().containsAnyOf(Node_Register::ALLOW_RETIMING_FORWARD) || reg->getNonSignalDriver(Node_Register::ENABLE).node != nullptr) {
+			if (!reg->getFlags().contains(Node_Register::Flags::ALLOW_RETIMING_FORWARD) || reg->getNonSignalDriver(Node_Register::ENABLE).node != nullptr) {
 				// Retime over this register. This means the enable port is part of the fan-in and we also need to search it for a register.
 				areaToBeRetimed.add(node);
 				for (unsigned i : {Node_Register::DATA, Node_Register::ENABLE}) {
@@ -300,15 +300,15 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 		reg->moveToGroup(np.node->getGroup());
 
 		// allow further retiming by default
-		reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD);
+		reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD);
 
 		if (settings.downstreamDisableForwardRT) {
 			bool isDownstream = combinatoricallyDrivenArea.contains(np.node);
 
 			if (!isDownstream)
-				reg->getFlags().insert(Node_Register::ALLOW_RETIMING_FORWARD);
+				reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
 		} else {
-			reg->getFlags().insert(Node_Register::ALLOW_RETIMING_FORWARD);
+			reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
 		}
 		
 		area.add(reg);
@@ -655,7 +655,7 @@ writeSubnet();
 			}
 
 			// Retime over anchored registers and registers with enable signals (since we can't move them yet).
-			if (!reg->getFlags().containsAnyOf(Node_Register::ALLOW_RETIMING_BACKWARD)) {
+			if (!reg->getFlags().contains(Node_Register::Flags::ALLOW_RETIMING_BACKWARD)) {
 				// Retime over this register.
 				areaToBeRetimed.add(node);
 				for (size_t i : utils::Range(node->getNumOutputPorts()))
@@ -861,7 +861,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 		// add to the node group of its new driver
 		reg->moveToGroup(np.node->getGroup());
 		// allow further retiming by default
-		reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
+		reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD).insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
 		
 		area.add(reg);
 		if (newNodes) newNodes->add(reg);
@@ -1181,7 +1181,7 @@ NodePort ReadModifyWriteHazardLogicBuilder::createRegister(NodePort nodePort, co
 	reg->recordStackTrace();
 	reg->setClock(m_clockDomain);
 	reg->connectInput(Node_Register::DATA, nodePort);
-	reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
+	reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD).insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
 
 	// If any input bit is defined uppon reset, add that as a reset value
 	if (sim::anyDefined(resetValue, 0, resetValue.size())) {
@@ -1412,7 +1412,7 @@ NodePort ReadModifyWriteHazardLogicBuilder::buildRingBufferCounter(size_t maxLat
 
 	reg->recordStackTrace();
 	reg->setClock(m_clockDomain);
-	reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
+	reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD).insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
 
 
 	sim::DefaultBitVectorState state;

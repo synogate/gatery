@@ -17,3 +17,19 @@
 */
 #include "gatery/pch.h"
 #include "Node_External.h"
+
+namespace gtry::hlim {
+
+void Node_External::copyBaseToClone(BaseNode *copy) const
+{
+    Node_External *other = (Node_External*)copy;
+
+    other->m_isEntity = m_isEntity;
+    other->m_libraryName = m_libraryName;
+    other->m_packageName = m_packageName;
+    other->m_genericParameters = m_genericParameters;
+    other->m_clockNames = m_clockNames;
+    other->m_resetNames = m_resetNames;
+}
+
+}

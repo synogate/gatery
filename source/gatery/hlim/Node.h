@@ -123,7 +123,7 @@ class BaseNode : public NodeIO
         size_t m_refCounter = 0;
 
 
-        void copyBaseToClone(BaseNode *copy) const;
+        virtual void copyBaseToClone(BaseNode *copy) const;
 
         void forwardSignalDelay(SignalDelay &sigDelay, unsigned input, unsigned output);
 };

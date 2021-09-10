@@ -87,10 +87,11 @@ namespace gtry::hlim {
 		std::string instancePath() const;
 		utils::ConfigTree instanceConfig() const;
 
+		inline void setGroupType(GroupType groupType) { m_groupType = groupType; }
 		inline GroupType getGroupType() const { return m_groupType; }
 
 		template<typename MetaType, typename... Args>
-		void createMetaInfo(Args&&... args);
+		MetaType *createMetaInfo(Args&&... args);
 
 		NodeGroupMetaInfo* getMetaInfo() { return m_metaInfo.get(); }
 
@@ -119,8 +120,9 @@ namespace gtry::hlim {
 	};
 
 	template<typename MetaType, typename... Args>
-	void NodeGroup::createMetaInfo(Args&&... args)
+	MetaType *NodeGroup::createMetaInfo(Args&&... args)
 	{
 		m_metaInfo.reset(new MetaType(std::forward<Args>(args)...));
+		return (MetaType*)m_metaInfo.get();
 	}
 }

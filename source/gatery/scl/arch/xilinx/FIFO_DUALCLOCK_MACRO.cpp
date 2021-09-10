@@ -172,9 +172,8 @@ std::unique_ptr<hlim::BaseNode> FIFO_DUALCLOCK_MACRO::cloneUnconnected() const
     std::unique_ptr<BaseNode> res(ptr = new FIFO_DUALCLOCK_MACRO(m_width, m_fifoSize));
     copyBaseToClone(res.get());
 
-    ptr->m_libraryName = m_libraryName;
-    ptr->m_name = m_name;
-    ptr->m_genericParameters = m_genericParameters;
+    ptr->m_width = m_width;
+    ptr->m_fifoSize = m_fifoSize;
 
     return res;
 }

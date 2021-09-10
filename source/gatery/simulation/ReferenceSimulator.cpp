@@ -110,6 +110,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
     std::set<hlim::BaseNode*> nodesRemaining;
     for (auto node : nodes) {
         if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr) continue;
+        if (dynamic_cast<hlim::Node_ExportOverride*>(node) != nullptr) continue;
         nodesRemaining.insert(node);
 
 
@@ -177,7 +178,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
             for (auto i : utils::Range(node->getNumInputPorts())) {
                 auto driver = node->getNonSignalDriver(i);
                 while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) // Skip all export override nodes
-                    driver = driver.node->getNonSignalDriver(0);
+                    driver = driver.node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
                 if (driver.node != nullptr && !outputsReady.contains(driver) && subnetToConsider.contains(driver.node)) {
                     allInputsReady = false;
                     break;
@@ -236,7 +237,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
                 for (auto i : utils::Range(node->getNumInputPorts())) {
                     auto driver = node->getNonSignalDriver(i);
                     while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) // Skip all export override nodes
-                        driver = driver.node->getNonSignalDriver(0);
+                        driver = driver.node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
                     if (driver.node != nullptr && !outputsReady.contains(driver)) {
                         std::cout << "    Input " << i << " not ready." << std::endl;
                         std::cout << "        " << driver.node->getName() << "  " << driver.node->getTypeName() << "  " << std::hex << (size_t)driver.node << std::endl;
@@ -329,9 +330,13 @@ void Program::allocateSignals(const hlim::Circuit &circuit, const hlim::Subnet &
     for (auto node : nodes) {
         // Signals simply point to the actual producer's output, as do export overrides
         if (dynamic_cast<hlim::Node_Signal*>(node) || dynamic_cast<hlim::Node_ExportOverride*>(node)) {
-            auto driver = node->getNonSignalDriver(0);
+            hlim::NodePort driver;
+            if (dynamic_cast<hlim::Node_Signal*>(node))
+                driver = node->getNonSignalDriver(0);
+            else
+                driver = node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
             while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node))
-                driver = driver.node->getNonSignalDriver(0);
+                driver = driver.node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
 
             size_t width = node->getOutputConnectionType(0).width;
 
@@ -419,8 +424,8 @@ void ReferenceSimulator::compileStaticEvaluation(const hlim::Circuit& circuit, c
             if (!nodeSet.contains(node)) {
                 // Ignore the export-only part as well as the export node
                 if (auto* expOverride = dynamic_cast<hlim::Node_ExportOverride*>(node)) {
-                    if (node->getDriver(0).node != nullptr)
-                        stack.push_back(node->getDriver(0).node);
+                    if (node->getDriver(hlim::Node_ExportOverride::SIM_INPUT).node != nullptr)
+                        stack.push_back(node->getDriver(hlim::Node_ExportOverride::SIM_INPUT).node);
                 } else if (auto* expOverride = dynamic_cast<hlim::Node_Register*>(node)) { // add registers but stop there
                     nodeSet.add(node);
                 } else {

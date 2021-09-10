@@ -69,6 +69,8 @@ void BasicBlock::extractSignals()
             }
         }
         for (auto i : utils::Range(node->getNumOutputPorts())) {
+            if (node->getDirectlyDriven(i).empty()) continue;
+
             hlim::NodePort driver = {
                 .node = node,
                 .port = i
@@ -81,7 +83,8 @@ void BasicBlock::extractSignals()
         }
         for (auto i : utils::Range(node->getClocks().size())) {
             if (node->getClocks()[i] != nullptr) {
-                m_inputClocks.insert(node->getClocks()[i]->getClockPinSource());
+                if (!node->getClockNames()[i].empty())
+                    m_inputClocks.insert(node->getClocks()[i]->getClockPinSource());
                 if (!node->getResetNames()[i].empty())
                     m_inputResets.insert(node->getClocks()[i]->getResetPinSource());
             }
@@ -229,11 +232,11 @@ void BasicBlock::handleExternalNodeInstantiaton(hlim::Node_External *externalNod
 void BasicBlock::handleSFUInstantiaton(hlim::NodeGroup *sfu)
 {
     //Entity *entity;
-    if (auto *memGrp = dynamic_cast<hlim::MemoryGroup*>(sfu)) {
+    if (dynamic_cast<hlim::MemoryGroup*>(sfu->getMetaInfo())) {
         auto &memEntity = m_ast.createSpecialEntity<GenericMemoryEntity>(sfu->getName(), this);
         m_entities.push_back(&memEntity);
         m_entityInstanceNames.push_back(m_namespaceScope.allocateInstanceName(sfu->getInstanceName()));
-        memEntity.buildFrom(memGrp);
+        memEntity.buildFrom(sfu);
 
         //entity = &memEntity;
     } else
@@ -403,10 +406,12 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
 
                 for (auto i : utils::Range(node->getClocks().size()))
                     if (node->getClocks()[i] != nullptr) {
-                        std::stringstream line;
-                        line << node->getClockNames()[i] << " => ";
-                        line << m_namespaceScope.getClock(node->getClocks()[i]->getClockPinSource()).name;
-                        portmapList.push_back(line.str());
+                        if (!node->getClockNames()[i].empty()) {
+                            std::stringstream line;
+                            line << node->getClockNames()[i] << " => ";
+                            line << m_namespaceScope.getClock(node->getClocks()[i]->getClockPinSource()).name;
+                            portmapList.push_back(line.str());
+                        }
                         if (node->getClocks()[i]->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE && !node->getResetNames()[i].empty()) {
                             std::stringstream line;
                             line << node->getResetNames()[i] << " => ";
@@ -432,6 +437,8 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
                     }
 
                 for (auto i : utils::Range(node->getNumOutputPorts())) {
+                    if (node->getDirectlyDriven(i).empty()) continue;
+
                     const auto &decl = m_namespaceScope.get({.node = node, .port = i});
 
                     std::stringstream line;

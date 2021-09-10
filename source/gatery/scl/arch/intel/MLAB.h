@@ -17,29 +17,16 @@
 */
 #pragma once
 
-#include <gatery/hlim/supportNodes/Node_External.h>
+#include "../general/GenericMemory.h"
 
-#include <gatery/frontend/TechnologyMappingPattern.h>
-#include <gatery/frontend/TechnologyCapabilities.h>
+namespace gtry::scl::arch::intel {
 
-namespace gtry::scl::arch::xilinx {
-
-
-class FifoPattern : public TechnologyMappingPattern
-{
-	public:
-		virtual ~FifoPattern() = default;
-
-		virtual bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const override;
-	protected:
+enum class MLABVariants {
+	Default,
+	ArriaV,
+	CycloneV,
 };
 
-class Xilinx7SeriesFifoCapabilities : public FifoCapabilities
-{
-    public:
-        virtual ~Xilinx7SeriesFifoCapabilities();
-        virtual Choice select(const Request &request) const;
-};
-
+GenericMemoryDesc buildMLABDesc(MLABVariants variant, bool withOutputReg);
 
 }

@@ -63,6 +63,18 @@ class NodeGroupSurgeryHelper {
 		std::map<std::string, std::vector<hlim::Node_Signal*>, std::less<>> m_namedSignalNodes;
 };
 
+
+BVec hookBVecBefore(hlim::NodePort nodePort);
+BVec hookBVecAfter(hlim::NodePort nodePort);
+Bit hookBitBefore(hlim::NodePort nodePort);
+Bit hookBitAfter(hlim::NodePort nodePort);
+
+BVec hookBVecBefore(hlim::Node_Signal *signal);
+BVec hookBVecAfter(hlim::Node_Signal *signal);
+Bit hookBitBefore(hlim::Node_Signal *signal);
+Bit hookBitAfter(hlim::Node_Signal *signal);
+
+
 sim::DefaultBitVectorState evaluateStatically(hlim::NodePort output);
 sim::DefaultBitVectorState evaluateStatically(const Bit &bit);
 sim::DefaultBitVectorState evaluateStatically(const BVec &bvec);

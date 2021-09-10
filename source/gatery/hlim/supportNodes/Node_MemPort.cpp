@@ -175,33 +175,37 @@ void Node_MemPort::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
                 // Fetch value from memory
                 auto memSize = getMemory()->getSize();
                 HCL_ASSERT(memSize % getBitWidth() == 0);
-                auto index = (addressValue * getBitWidth()) % memSize;
-                state.copyRange(outputOffsets[(size_t)Outputs::rdData], state, internalOffsets[(size_t)RefInternal::memory] + index, getBitWidth());
+                auto index = addressValue * getBitWidth();
+                if (index >= memSize) {
+                    state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[(size_t)Outputs::rdData], getBitWidth());
+                } else {
+                    state.copyRange(outputOffsets[(size_t)Outputs::rdData], state, internalOffsets[(size_t)RefInternal::memory] + index, getBitWidth());
 
-                // Check for overrides. Check in order of write ports (they are added last to first).
-                // Potentially overwrite what we just read.
-                for (size_t i = prevWPs.size()-1; i < prevWPs.size(); i--) {
-                    // Same order as in  Node_MemPort::getReferencedInternalStateSizes()
-                    size_t addrOffset = (size_t)RefInternal::prevWritePorts+i*3+0;
-                    size_t wrDataOffset = (size_t)RefInternal::prevWritePorts+i*3+1;
-                    size_t wrEnableOffset = (size_t)RefInternal::prevWritePorts+i*3+2;
+                    // Check for overrides. Check in order of write ports (they are added last to first).
+                    // Potentially overwrite what we just read.
+                    for (size_t i = prevWPs.size()-1; i < prevWPs.size(); i--) {
+                        // Same order as in  Node_MemPort::getReferencedInternalStateSizes()
+                        size_t addrOffset = (size_t)RefInternal::prevWritePorts+i*3+0;
+                        size_t wrDataOffset = (size_t)RefInternal::prevWritePorts+i*3+1;
+                        size_t wrEnableOffset = (size_t)RefInternal::prevWritePorts+i*3+2;
 
-                    const auto &wrAddrType = prevWPs[i]->getDriverConnType((size_t)Inputs::address);
-                    HCL_ASSERT_HINT(prevWPs[i]->getBitWidth() == getBitWidth(), "Mixed width memory ports not yet supported in simulation!");
+                        const auto &wrAddrType = prevWPs[i]->getDriverConnType((size_t)Inputs::address);
+                        HCL_ASSERT_HINT(prevWPs[i]->getBitWidth() == getBitWidth(), "Mixed width memory ports not yet supported in simulation!");
 
-                    std::uint64_t wrAddressValue   = state.extractNonStraddling(sim::DefaultConfig::VALUE, internalOffsets[addrOffset], wrAddrType.width);
-                    std::uint64_t wrAddressDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, internalOffsets[addrOffset], wrAddrType.width);
+                        std::uint64_t wrAddressValue   = state.extractNonStraddling(sim::DefaultConfig::VALUE, internalOffsets[addrOffset], wrAddrType.width);
+                        std::uint64_t wrAddressDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, internalOffsets[addrOffset], wrAddrType.width);
 
-                    bool isWriting = state.get(sim::DefaultConfig::VALUE, internalOffsets[wrEnableOffset]);
+                        bool isWriting = state.get(sim::DefaultConfig::VALUE, internalOffsets[wrEnableOffset]);
 
-                    if (isWriting) {
-                        // It's writing something (though write enable might be undefined in which case the stored write dta is undefined).
-                        if (!utils::isMaskSet(wrAddressDefined, 0, wrAddrType.width)) {
-                            // It's nuking the memory, but since we are dependent, we get a preview.
-                            state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[(size_t)Outputs::rdData], getBitWidth());
-                        } else if (wrAddressValue == addressValue) {
-                            // actual collision, forward to-be-written data
-                            state.copyRange(outputOffsets[(size_t)Outputs::rdData], state, internalOffsets[wrDataOffset], getBitWidth());
+                        if (isWriting) {
+                            // It's writing something (though write enable might be undefined in which case the stored write dta is undefined).
+                            if (!utils::isMaskSet(wrAddressDefined, 0, wrAddrType.width)) {
+                                // It's nuking the memory, but since we are dependent, we get a preview.
+                                state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[(size_t)Outputs::rdData], getBitWidth());
+                            } else if (wrAddressValue == addressValue) {
+                                // actual collision, forward to-be-written data
+                                state.copyRange(outputOffsets[(size_t)Outputs::rdData], state, internalOffsets[wrDataOffset], getBitWidth());
+                            }
                         }
                     }
                 }

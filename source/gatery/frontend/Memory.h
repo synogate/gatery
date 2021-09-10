@@ -113,12 +113,15 @@ namespace gtry
 		Memory(std::size_t numWords, Data def = Data{}) { setup(numWords, std::move(def)); }
 
 		void setup(std::size_t numWords, Data def = Data{}) {
-			auto ent = m_area.enter();
 
 			HCL_DESIGNCHECK(m_memoryNode == nullptr);
 			m_defaultValue = std::move(def);
 			m_wordWidth = width(m_defaultValue).value;
 			m_numWords = numWords;
+
+
+			Area area{ "Memory" };
+			auto ent = area.enter();
 
 			ent["word_width"] = m_wordWidth;
 			ent["num_words"] = numWords;
@@ -177,9 +180,7 @@ namespace gtry
 		Memory<DataNew> view(DataNew def = DataNew{}) { return Memory<DataNew>(m_memoryNode, def); }
 
 		const Data& defaultValue() const { return m_defaultValue; }
-
 	protected:
-		Area m_area{ "Memory" };
 		hlim::NodePtr<hlim::Node_Memory> m_memoryNode;
 		Data m_defaultValue;
 		size_t m_numWords = 0;
@@ -187,7 +188,6 @@ namespace gtry
 		size_t m_readLatencyHint = 0;
 
 		Memory(hlim::Node_Memory* memoryNode, Data def = Data{}) : m_memoryNode(memoryNode) {}
-
 	};
 
 	template<typename DataOld, typename DataNew>

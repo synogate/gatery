@@ -36,16 +36,18 @@ GenericMemoryEntity::GenericMemoryEntity(AST &ast, const std::string &desiredNam
 {
 }
 
-void GenericMemoryEntity::buildFrom(hlim::MemoryGroup *memGrp)
+void GenericMemoryEntity::buildFrom(hlim::NodeGroup *memNodeGrp)
 {
-	m_memGrp = memGrp;
+	m_memNodeGrp = memNodeGrp;
+	m_memGrp = dynamic_cast<hlim::MemoryGroup*>(m_memNodeGrp->getMetaInfo());
+	HCL_ASSERT(m_memGrp != nullptr);
 	// probably not the best place to do it....
-	m_namespaceScope.allocateName({.node=memGrp->getMemory(), .port=0}, "memory", {}, CodeFormatting::SIG_LOCAL_SIGNAL);
+	m_namespaceScope.allocateName({.node=m_memGrp->getMemory(), .port=0}, "memory", {}, CodeFormatting::SIG_LOCAL_SIGNAL);
 
-	for (auto node : memGrp->getNodes())
+	for (auto node : m_memNodeGrp->getNodes())
 		m_ast.getMapping().assignNodeToScope(node, this);
 
-	for (auto &wp : memGrp->getWritePorts()) {
+	for (auto &wp : m_memGrp->getWritePorts()) {
 		auto addrInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
 		auto enInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
 		auto wrEnInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrEnable);
@@ -62,7 +64,7 @@ void GenericMemoryEntity::buildFrom(hlim::MemoryGroup *memGrp)
 
 		m_inputClocks.insert(wp.node->getClocks()[0]->getClockPinSource());
 	}
-	for (auto &rp : memGrp->getReadPorts()) {
+	for (auto &rp : m_memGrp->getReadPorts()) {
 		auto addrInput = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
 		auto enInput = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
 		auto dataOutput = rp.dataOutput;

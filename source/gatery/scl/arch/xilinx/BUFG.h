@@ -17,7 +17,9 @@
 */
 #pragma once
 
-#include <gatery/frontend/TechnologyMapping.h>
+#include <gatery/frontend/Bit.h>
+
+#include <gatery/frontend/TechnologyMappingPattern.h>
 #include <gatery/hlim/supportNodes/Node_External.h>
 
 namespace gtry::scl::arch::xilinx {
@@ -47,7 +49,7 @@ class BUFGPattern : public TechnologyMappingPattern
 	public:
 		virtual ~BUFGPattern() = default;
 
-		virtual bool attemptApply(hlim::NodeGroup *nodeGroup) override;
+		virtual bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const override;
 	protected:
 };
 

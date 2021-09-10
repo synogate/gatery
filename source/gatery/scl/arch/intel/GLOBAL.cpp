@@ -28,6 +28,7 @@ namespace gtry::scl::arch::intel {
 GLOBAL::GLOBAL()
 {
     m_libraryName = "altera";
+    m_packageName = "altera_primitives_components";
     m_name = "GLOBAL";
     m_clockNames = {};
     m_resetNames = {};
@@ -86,10 +87,6 @@ std::unique_ptr<hlim::BaseNode> GLOBAL::cloneUnconnected() const
     std::unique_ptr<BaseNode> res(ptr = new GLOBAL());
     copyBaseToClone(res.get());
 
-    ptr->m_libraryName = m_libraryName;
-    ptr->m_name = m_name;
-    ptr->m_genericParameters = m_genericParameters;
-
     return res;
 }
 
@@ -107,7 +104,7 @@ std::string GLOBAL::attemptInferOutputName(size_t outputPort) const
 }
 
 
-bool GLOBALPattern::attemptApply(hlim::NodeGroup *nodeGroup)
+bool GLOBALPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 {
 	if (nodeGroup->getName() != "scl_globalBuffer") return false;
 

@@ -32,6 +32,7 @@
 namespace gtry::hlim {
 
 class Subnet;
+class Circuit;
 
 /*
 class Circuit;
@@ -66,15 +67,24 @@ class PostProcessor {
 
 
 class PostProcessor {
-    // For things to come
+    public:
+        virtual void run(Circuit &circuit) const = 0;
 };
+
+class TechnologyMapping;
 
 class DefaultPostprocessing : public PostProcessor
 {
     public:
-        DefaultPostprocessing() {
+        DefaultPostprocessing() { }
+        DefaultPostprocessing(const TechnologyMapping &techMapping) : m_techMapping(&techMapping) { }
+        virtual void run(Circuit &circuit) const override;
+    protected:
+        const TechnologyMapping *m_techMapping = nullptr;
 
-        }
+        void generalOptimization(Circuit &circuit) const;
+        void memoryDetection(Circuit &circuit) const;
+        void exportPreparation(Circuit &circuit) const;
 };
 
 class Circuit

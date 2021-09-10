@@ -107,7 +107,7 @@ std::string BUFG::attemptInferOutputName(size_t outputPort) const
 }
 
 
-bool BUFGPattern::attemptApply(hlim::NodeGroup *nodeGroup)
+bool BUFGPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 {
 	if (nodeGroup->getName() != "scl_globalBuffer") return false;
 

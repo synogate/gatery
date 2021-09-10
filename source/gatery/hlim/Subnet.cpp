@@ -74,10 +74,10 @@ FinalType SubnetTemplate<makeConst, FinalType>::allDrivenCombinatoricallyByOutpu
 }
 
 template<bool makeConst, typename FinalType>
-FinalType SubnetTemplate<makeConst, FinalType>::allForSimulation(CircuitType &circuit, const std::set<hlim::NodePort> &outputs)
+FinalType SubnetTemplate<makeConst, FinalType>::allForSimulation(CircuitType &circuit, const std::set<hlim::NodePort> &outputs, bool includeRefed)
 {
     FinalType res;
-    res.addAllForSimulation(circuit, outputs);
+    res.addAllForSimulation(circuit, outputs, includeRefed);
     return res;
 }
 
@@ -229,7 +229,7 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAll(CircuitType &circuit)
 }
 
 template<bool makeConst, typename FinalType>
-FinalType &SubnetTemplate<makeConst, FinalType>::addAllForSimulation(CircuitType &circuit, const std::set<hlim::NodePort> &outputs)
+FinalType &SubnetTemplate<makeConst, FinalType>::addAllForSimulation(CircuitType &circuit, const std::set<hlim::NodePort> &outputs, bool includeRefed)
 {
     std::vector<NodeType*> openList;
     std::set<NodeType*> handledNodes;
@@ -237,7 +237,7 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllForSimulation(CircuitType
     // Find roots
     if (outputs.empty()) {
         for (auto &n : circuit.getNodes())
-            if (n->hasSideEffects() || n->hasRef())
+            if (n->hasSideEffects() || (includeRefed && n->hasRef()))
                 openList.push_back(n.get());
     } else {
         for (auto np : outputs)
@@ -252,12 +252,11 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllForSimulation(CircuitType
         if (handledNodes.contains(n)) continue; // already handled
         handledNodes.insert(n);
 
-        // Ignore the export-only part as well as the export node
+        // Ignore the export-only part
         if (dynamic_cast<ConstAdaptor<makeConst, hlim::Node_ExportOverride>::type*>(n)) {
             if (n->getDriver(0).node != nullptr)
                 openList.push_back(n->getDriver(0).node);
         } else {
-            m_nodes.insert(n);
             for (auto i : utils::Range(n->getNumInputPorts())) {
                 auto driver = n->getDriver(i);
                 if (driver.node != nullptr)
@@ -265,6 +264,7 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllForSimulation(CircuitType
             }
         }
     }
+    m_nodes.insert(handledNodes.begin(), handledNodes.end());
 
     return (FinalType&)*this;
 }

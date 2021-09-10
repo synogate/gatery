@@ -63,10 +63,6 @@ std::unique_ptr<hlim::BaseNode> OBUFDS::cloneUnconnected() const
     std::unique_ptr<BaseNode> res(ptr = new OBUFDS());
     copyBaseToClone(res.get());
 
-    ptr->m_libraryName = m_libraryName;
-    ptr->m_name = m_name;
-    ptr->m_genericParameters = m_genericParameters;
-
     return res;
 }
 

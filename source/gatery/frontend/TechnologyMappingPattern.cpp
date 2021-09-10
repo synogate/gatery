@@ -15,31 +15,26 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#pragma once
 
-#include <gatery/hlim/supportNodes/Node_External.h>
+#include "gatery/pch.h"
 
-#include <gatery/frontend/TechnologyMappingPattern.h>
-#include <gatery/frontend/TechnologyCapabilities.h>
+#include "Scope.h"
 
-namespace gtry::scl::arch::xilinx {
+#include "TechnologyMappingPattern.h"
 
+namespace gtry {
 
-class FifoPattern : public TechnologyMappingPattern
+TechnologyMappingPattern::TechnologyMappingPattern()
 {
-	public:
-		virtual ~FifoPattern() = default;
+}
 
-		virtual bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const override;
-	protected:
-};
-
-class Xilinx7SeriesFifoCapabilities : public FifoCapabilities
+bool TechnologyMappingPattern::attemptApply(hlim::NodeGroup *nodeGroup) const
 {
-    public:
-        virtual ~Xilinx7SeriesFifoCapabilities();
-        virtual Choice select(const Request &request) const;
-};
-
+	if (nodeGroup == nullptr) return false;
+	if (nodeGroup->getParent() == nullptr) return false;
+	GroupScope scope(nodeGroup->getParent());
+	return scopedAttemptApply(nodeGroup);
+}
 
 }
+

@@ -15,53 +15,20 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#pragma once
 
-#include "gatery/pch.h"
+#include "../general/GenericMemory.h"
 
-#include "Scope.h"
+namespace gtry::scl::arch::intel {
 
-#include "TechnologyMapping.h"
+enum class M20KVariants {
+	Default,
+	Arria10_SDP_woBE,
+	Arria10_TDP_woBE,
+	Arria10_SDP_wBE,
+	Arria10_TDP_wBE,
+};
 
-#include "../hlim/NodeGroup.h"
-#include "../hlim/Circuit.h"
-#include "../hlim/coreNodes/Node_Signal.h"
-
-#include <set>
-
-namespace gtry {
-
-
-TechnologyMappingPattern::TechnologyMappingPattern()
-{
-}
-
-
-void TechnologyMapping::apply()
-{
-	for (auto &g : DesignScope::get()->getCircuit().getRootNodeGroup()->getChildren())
-		apply(g.get());
-}
-
-void TechnologyMapping::apply(hlim::NodeGroup *nodeGroup)
-{
-	bool handled = false;
-	{
-		// put everything by default into parent group
-		GroupScope scope(nodeGroup->getParent());
-
-		for (auto &pattern : m_patterns)
-			if (pattern->attemptApply(nodeGroup)) {
-				handled = true;
-				break;
-			}
-
-	}
-
-	if (!handled)
-		for (auto &g : nodeGroup->getChildren())
-			apply(g.get());
-}
-
+GenericMemoryDesc buildM20KDesc(M20KVariants variant);
 
 }
-

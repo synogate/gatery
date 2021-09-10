@@ -17,7 +17,9 @@
 */
 #pragma once
 
-#include <gatery/frontend/TechnologyMapping.h>
+#include <gatery/frontend/Bit.h>
+
+#include <gatery/frontend/TechnologyMappingPattern.h>
 #include <gatery/hlim/supportNodes/Node_External.h>
 
 namespace gtry::scl::arch::intel {
@@ -47,7 +49,7 @@ class GLOBALPattern : public TechnologyMappingPattern
 	public:
 		virtual ~GLOBALPattern() = default;
 
-		virtual bool attemptApply(hlim::NodeGroup *nodeGroup) override;
+		virtual bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const override;
 	protected:
 };
 

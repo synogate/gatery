@@ -93,6 +93,8 @@ namespace gtry::hlim
 		m_parent->m_children[parentIdx] = std::move(m_parent->m_children.back());
 		m_parent->m_children.pop_back();
 
+		m_parent = newParent;
+
 		size_t index = m_parent->m_childInstanceCounter[m_name]++;
 		setInstanceName("i_" + m_name + "_" + std::to_string(index));
 	}

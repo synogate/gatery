@@ -41,6 +41,8 @@ class Node_External : public Node<Node_External>
         std::map<std::string, std::string> m_genericParameters;
         std::vector<std::string> m_clockNames;
         std::vector<std::string> m_resetNames;
+
+        virtual void copyBaseToClone(BaseNode *copy) const override;
 };
 
 }

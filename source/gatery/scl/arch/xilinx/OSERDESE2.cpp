@@ -124,10 +124,6 @@ std::unique_ptr<hlim::BaseNode> OSERDESE2::cloneUnconnected() const
     std::unique_ptr<BaseNode> res(ptr = new OSERDESE2(0)); // width replaced by copying generic parameters
     copyBaseToClone(res.get());
 
-    ptr->m_libraryName = m_libraryName;
-    ptr->m_name = m_name;
-    ptr->m_genericParameters = m_genericParameters;
-
     return res;
 }
 

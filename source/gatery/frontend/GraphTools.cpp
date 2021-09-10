@@ -31,48 +31,73 @@
 namespace gtry {
 
 
+BVec hookBVecBefore(hlim::NodePort input)
+{
+	HCL_DESIGNCHECK_HINT(input.node != nullptr, "Can't bvec-hook unconnected input, can't figure out width!");
+	auto driver = input.node->getDriver(input.port);
+	HCL_DESIGNCHECK_HINT(getOutputConnectionType(driver).interpretation == hlim::ConnectionType::BITVEC, "Attempting to create BVec hook from a signal node that is not a BVec");
+
+	BVec res = SignalReadPort(driver);
+	input.node->rewireInput(input.port, res.getOutPort());
+	return res;
+}
+
+BVec hookBVecAfter(hlim::NodePort output)
+{
+	HCL_DESIGNCHECK_HINT(getOutputConnectionType(output).interpretation == hlim::ConnectionType::BITVEC, "Attempting to create BVec hook from a signal node that is not a BVec");
+
+	BVec res = BitWidth(getOutputConnectionType(output).width);
+	while (!output.node->getDirectlyDriven(output.port).empty()) {
+		auto np = output.node->getDirectlyDriven(output.port).front();
+		np.node->rewireInput(np.port, res.getOutPort());
+	}
+	res = SignalReadPort(output);
+	return res;
+}
+
+Bit hookBitBefore(hlim::NodePort input)
+{
+	Bit res;
+	if (input.node != nullptr) {
+		auto driver = input.node->getDriver(input.port);
+		HCL_DESIGNCHECK_HINT(getOutputConnectionType(driver).interpretation == hlim::ConnectionType::BOOL, "Attempting to create Bit hook from a signal node that is not a Bit");
+		res = SignalReadPort(driver);
+	}
+	input.node->rewireInput(input.port, res.getOutPort());
+	return res;
+}
+
+Bit hookBitAfter(hlim::NodePort output)
+{
+	HCL_DESIGNCHECK_HINT(getOutputConnectionType(output).interpretation == hlim::ConnectionType::BOOL, "Attempting to create Bit hook from a signal node that is not a Bit");
+
+	Bit res;
+	while (!output.node->getDirectlyDriven(output.port).empty()) {
+		auto np = output.node->getDirectlyDriven(output.port).front();
+		np.node->rewireInput(np.port, res.getOutPort());
+	}
+	res = SignalReadPort(output);
+	return res;
+}
+
 BVec hookBVecBefore(hlim::Node_Signal *signal)
 {
-	HCL_DESIGNCHECK_HINT(signal->getOutputConnectionType(0).interpretation == hlim::ConnectionType::BITVEC, "Attempting to create BVec hook from a signal node that is not a BVec");
-
-	BVec res = SignalReadPort(signal->getDriver(0));
-	signal->connectInput(res.getOutPort());
-	return res;
+	return hookBVecBefore({.node = signal, .port = 0ull});
 }
 
 BVec hookBVecAfter(hlim::Node_Signal *signal)
 {
-	HCL_DESIGNCHECK_HINT(signal->getOutputConnectionType(0).interpretation == hlim::ConnectionType::BITVEC, "Attempting to create BVec hook from a signal node that is not a BVec");
-
-	BVec res = BitWidth(signal->getOutputConnectionType(0).width);
-	while (!signal->getDirectlyDriven(0).empty()) {
-		auto np = signal->getDirectlyDriven(0).front();
-		np.node->rewireInput(np.port, res.getOutPort());
-	}
-	res = SignalReadPort(signal);
-	return res;
+	return hookBVecAfter({.node = signal, .port = 0ull});
 }
 
 Bit hookBitBefore(hlim::Node_Signal *signal)
 {
-	HCL_DESIGNCHECK_HINT(signal->getOutputConnectionType(0).interpretation == hlim::ConnectionType::BOOL, "Attempting to create Bit hook from a signal node that is not a Bit");
-
-	Bit res = SignalReadPort(signal->getDriver(0));
-	signal->connectInput(res.getOutPort());
-	return res;
+	return hookBitBefore({.node = signal, .port = 0ull});
 }
 
 Bit hookBitAfter(hlim::Node_Signal *signal)
 {
-	HCL_DESIGNCHECK_HINT(signal->getOutputConnectionType(0).interpretation == hlim::ConnectionType::BOOL, "Attempting to create Bit hook from a signal node that is not a Bit");
-
-	Bit res;
-	while (!signal->getDirectlyDriven(0).empty()) {
-		auto np = signal->getDirectlyDriven(0).front();
-		np.node->rewireInput(np.port, res.getOutPort());
-	}
-	res = SignalReadPort(signal);
-	return res;
+	return hookBitAfter({.node = signal, .port = 0ull});
 }
 
 

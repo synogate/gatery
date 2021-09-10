@@ -90,27 +90,38 @@ class IOCapabilities : public Capabilities {
 
 class MemoryCapabilities : public Capabilities {
     public:
+        enum class ReadDuringWrite {
+            READ_FIRST,
+            WRITE_FIRST,
+            READ_UNDEFINED,
+            WRITE_UNDEFINED,
+            ALL_MEMORY_UNDEFINED,
+            PHYSICAL_DAMAGE,                
+        };
 
         template<template <typename> class Wrapper>
         struct Settings {
-            typename Wrapper<unsigned>::wrap width;
-            typename Wrapper<unsigned>::wrap depth;
+            typename Wrapper<unsigned>::wrap size;
             typename Wrapper<bool>::wrap addrRegister;
             typename Wrapper<bool>::wrap outputRegister;
+            typename Wrapper<unsigned>::wrap readLatency;
             struct Port {
-                bool canRead;
-                bool canWrite;
-                // byte enable
-                // aspect ratio
-
-                // same port / mixed port Read during write order
-                typename Wrapper<unsigned>::wrap order;
+                typename Wrapper<unsigned>::wrap width;
+                typename Wrapper<unsigned>::wrap byteEnableByteWidth;
             };
             std::vector<Port> ports;
+            typename Wrapper<unsigned>::wrap numWritePorts;
+            typename Wrapper<bool>::wrap individualClocks;
+            typename Wrapper<bool>::wrap portsCanDisable;
+
+            typename Wrapper<ReadDuringWrite>::wrap samePortReadDuringWrite;
+            typename Wrapper<ReadDuringWrite>::wrap mixedPortReadDuringWrite;
         };
 
         using Request = Settings<details::RequestWrapper>;
         using Choice = Settings<details::ChoiceWrapper>;
+
+        virtual Choice select(const Request &request) const = 0;
     protected:
 };
 

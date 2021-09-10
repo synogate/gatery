@@ -143,9 +143,9 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
                 file << " - " << node->getId() << " - " << node->getTypeName();
                 if (auto* reg = dynamic_cast<hlim::Node_Register*>(node)) {
                     file << '[';
-                    if (reg->getFlags().containsAnyOf(hlim::Node_Register::Flags::ALLOW_RETIMING_FORWARD))
+                    if (reg->getFlags().contains(hlim::Node_Register::Flags::ALLOW_RETIMING_FORWARD))
                         file << 'F';
-                    if (reg->getFlags().containsAnyOf(hlim::Node_Register::Flags::ALLOW_RETIMING_BACKWARD))
+                    if (reg->getFlags().contains(hlim::Node_Register::Flags::ALLOW_RETIMING_BACKWARD))
                         file << 'B';
                     file << ']';
                 }
@@ -169,9 +169,9 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
                 file << "node_" << idx << "[label=\"" << node->getName() << " - " << node->getId() << " - " << node->getTypeName();
                 if (auto *reg = dynamic_cast<hlim::Node_Register*>(node.get())) {
                     file << '[';
-                    if (reg->getFlags().containsAnyOf(hlim::Node_Register::Flags::ALLOW_RETIMING_FORWARD))
+                    if (reg->getFlags().contains(hlim::Node_Register::Flags::ALLOW_RETIMING_FORWARD))
                         file << 'F';
-                    if (reg->getFlags().containsAnyOf(hlim::Node_Register::Flags::ALLOW_RETIMING_BACKWARD))
+                    if (reg->getFlags().contains(hlim::Node_Register::Flags::ALLOW_RETIMING_BACKWARD))
                         file << 'B';
                     file << ']';
                 }
@@ -539,11 +539,11 @@ void DotExport::writeMergedDotFile(const hlim::Circuit &circuit, const hlim::Con
                 file << "DEPENDENCY"; break;
         }
         file << '[';
-        if (reg->getFlags().containsAnyOf(hlim::Node_Register::Flags::ALLOW_RETIMING_FORWARD))
+        if (reg->getFlags().contains(hlim::Node_Register::Flags::ALLOW_RETIMING_FORWARD))
             file << 'F';
-        if (reg->getFlags().containsAnyOf(hlim::Node_Register::Flags::ALLOW_RETIMING_BACKWARD))
+        if (reg->getFlags().contains(hlim::Node_Register::Flags::ALLOW_RETIMING_BACKWARD))
             file << 'B';
-        if (reg->getFlags().containsAnyOf(hlim::Node_Register::Flags::IS_BOUND_TO_MEMORY))
+        if (reg->getFlags().contains(hlim::Node_Register::Flags::IS_BOUND_TO_MEMORY))
             file << 'M';
         file << ']';
 

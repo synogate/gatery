@@ -111,7 +111,7 @@ bool MemoryGroup::ReadPort::findOutputRegisters(size_t readLatency, NodeGroup *m
             else if (clock != reg->getClocks()[0])
                 break; // Hit a clock domain crossing, break early
 
-            reg->getFlags().clear(Node_Register::ALLOW_RETIMING_BACKWARD).clear(Node_Register::ALLOW_RETIMING_FORWARD).insert(Node_Register::IS_BOUND_TO_MEMORY);
+            reg->getFlags().clear(Node_Register::Flags::ALLOW_RETIMING_BACKWARD).clear(Node_Register::Flags::ALLOW_RETIMING_FORWARD).insert(Node_Register::Flags::IS_BOUND_TO_MEMORY);
             // Move the entire signal path and the data register into the memory node group
             for (auto opt : signalNodes)
                 opt->moveToGroup(memoryNodeGroup);
@@ -129,15 +129,14 @@ bool MemoryGroup::ReadPort::findOutputRegisters(size_t readLatency, NodeGroup *m
     return dedicatedReadLatencyRegisters.back() != nullptr; // return true if all were found
 }
 
-MemoryGroup::MemoryGroup() : NodeGroup(GroupType::SFU)
+MemoryGroup::MemoryGroup(NodeGroup *group) : m_nodeGroup(group)
 {
-    m_name = "memory";
+    m_nodeGroup->setGroupType(NodeGroup::GroupType::SFU);
 }
 
-void MemoryGroup::formAround(Node_Memory *memory, Circuit &circuit)
+void MemoryGroup::pullInPorts(Node_Memory *memory)
 {
     m_memory = memory;
-    m_memory->moveToGroup(this);
 
     // Initial naive grabbing of everything that might be usefull
     for (auto &np : m_memory->getPorts()) {
@@ -147,13 +146,13 @@ void MemoryGroup::formAround(Node_Memory *memory, Circuit &circuit)
         if (port->isWritePort()) {
             HCL_ASSERT_HINT(!port->isReadPort(), "For now I don't want to mix read and write ports");
             m_writePorts.push_back({.node=NodePtr<Node_MemPort>{port}});
-            port->moveToGroup(this);
+            port->moveToGroup(m_nodeGroup);
         }
         // Check all read ports
         if (port->isReadPort()) {
             m_readPorts.push_back({.node = NodePtr<Node_MemPort>{port}});
             ReadPort &rp = m_readPorts.back();
-            port->moveToGroup(this);
+            port->moveToGroup(m_nodeGroup);
             rp.dataOutput = {.node = port, .port = (size_t)Node_MemPort::Outputs::rdData};
 
             //NodePort readPortEnable = port->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable);
@@ -198,14 +197,14 @@ void MemoryGroup::formAround(Node_Memory *memory, Circuit &circuit)
 void MemoryGroup::lazyCreateFixupNodeGroup()
 {
     if (m_fixupNodeGroup == nullptr) {
-        m_fixupNodeGroup = m_parent->addChildNodeGroup(GroupType::ENTITY);
+        m_fixupNodeGroup = m_nodeGroup->getParent()->addChildNodeGroup(NodeGroup::GroupType::ENTITY);
         m_fixupNodeGroup->recordStackTrace();
         if (m_memory->getName().empty())
             m_fixupNodeGroup->setName("Memory_Helper");
         else
             m_fixupNodeGroup->setName(m_memory->getName()+"_Memory_Helper");
         m_fixupNodeGroup->setComment("Auto generated to handle various memory access issues such as read during write and read modify write hazards.");
-        moveInto(m_fixupNodeGroup);
+        m_nodeGroup->moveInto(m_fixupNodeGroup);
     }
 }
 
@@ -505,7 +504,7 @@ void MemoryGroup::ensureNotEnabledFirstCycles(Circuit &circuit, NodeGroup *ng, N
 
             reg->connectInput(Node_Register::Input::RESET_VALUE, {.node = constZero, .port = 0ull});
             reg->connectInput(Node_Register::Input::DATA, {.node = constOne, .port = 0ull});
-            reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
+            reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD).insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
 
             newEnable = {.node = reg, .port = 0ull};
         } else {
@@ -522,7 +521,7 @@ void MemoryGroup::ensureNotEnabledFirstCycles(Circuit &circuit, NodeGroup *ng, N
             reg->moveToGroup(ng);
             reg->recordStackTrace();
             reg->setClock(writePort->getClocks()[0]);
-            reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
+            reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD).insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
 
             sim::DefaultBitVectorState state;
             state.resize(counterWidth);
@@ -618,7 +617,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
     // Keep note of which write ports are "delayed" through this retiming to then, in a second step, build rw hazard bypass logic.
 
     for (auto &rp : m_readPorts) {
-        while (!rp.findOutputRegisters(m_memory->getRequiredReadLatency(), this)) {
+        while (!rp.findOutputRegisters(m_memory->getRequiredReadLatency(), m_nodeGroup)) {
             auto subnet = Subnet::all(circuit);
             Subnet retimedArea;
             // On multi-readport memories there can already appear a register due to the retiming of other read ports. In this case, retimeBackwardtoOutput is a no-op.
@@ -690,7 +689,11 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 
     const auto &newNodes = rmwBuilder.getNewNodes();
     for (auto n : newNodes) 
-        n->moveToGroup(m_fixupNodeGroup);
+        if (dynamic_cast<Node_Memory*>(n)) {
+            NodeGroup *subMemGrp = m_fixupNodeGroup->addChildNodeGroup(NodeGroup::GroupType::ENTITY);
+            n->moveToGroup(subMemGrp);
+        } else 
+            n->moveToGroup(m_fixupNodeGroup);
 
     //visualize(circuit, "afterRMW");
 /*
@@ -744,7 +747,7 @@ void MemoryGroup::buildResetLogic(Circuit &circuit)
 
     Clock *resetClock = buildResetClock(circuit, clockDomain);
 
-    // Move entire initialization netowork into the helper group
+    // Move entire initialization network into the helper group
     for (auto nh : m_memory->exploreInput((size_t)Node_Memory::Inputs::INITIALIZATION_DATA)) {
         if (nh.node() == m_memory) {
             nh.backtrack();
@@ -829,7 +832,7 @@ void MemoryGroup::buildResetRom(Circuit &circuit)
     addrReg->moveToGroup(m_fixupNodeGroup);
 	addrReg->recordStackTrace();
 	addrReg->setClock(resetClock);
-	addrReg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
+	addrReg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD).insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
     addrReg->connectInput(Node_Register::DATA, addrCounter);
     NodePort writeAddr = {.node = addrReg, .port = 0ull};
     giveName(circuit, writeAddr, "reset_write_addr");
@@ -839,7 +842,7 @@ void MemoryGroup::buildResetRom(Circuit &circuit)
     dataReg->moveToGroup(m_fixupNodeGroup);
 	dataReg->recordStackTrace();
 	dataReg->setClock(resetClock);
-	dataReg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
+	dataReg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD).insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
     dataReg->connectInput(Node_Register::DATA, {.node = romReadPort, .port = (size_t)hlim::Node_MemPort::Outputs::rdData});
     NodePort writeData = {.node = dataReg, .port = 0ull};
     giveName(circuit, writeData, "reset_write_data");
@@ -928,7 +931,7 @@ NodePort MemoryGroup::buildResetAddrCounter(Circuit &circuit, size_t width, Cloc
     reg->moveToGroup(m_fixupNodeGroup);
 	reg->recordStackTrace();
 	reg->setClock(resetClock);
-	reg->getFlags().insert(Node_Register::ALLOW_RETIMING_BACKWARD).insert(Node_Register::ALLOW_RETIMING_FORWARD);
+	reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD).insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
 
 
 	sim::DefaultBitVectorState state;
@@ -1274,7 +1277,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 
 void MemoryGroup::bypassSignalNodes()
 {
-    for (auto n : getNodes())
+    for (auto n : m_nodeGroup->getNodes())
         if (dynamic_cast<Node_Signal*>(n))
             n->bypassOutputToInput(0, 0);
 }
@@ -1290,15 +1293,11 @@ void MemoryGroup::giveName(Circuit &circuit, NodePort &nodePort, std::string nam
 
 MemoryGroup *formMemoryGroupIfNecessary(Circuit &circuit, Node_Memory *memory)
 {
-    auto* memoryGroup = dynamic_cast<MemoryGroup*>(memory->getGroup());
+    auto* memoryGroup = dynamic_cast<MemoryGroup*>(memory->getGroup()->getMetaInfo());
     if (memoryGroup == nullptr) {
-        memoryGroup = memory->getGroup()->addSpecialChildNodeGroup<MemoryGroup>();
-        if (memory->getName().empty())
-            memoryGroup->setName("memory");
-        else
-            memoryGroup->setName(memory->getName());
-        memoryGroup->setComment("Auto generated");
-        memoryGroup->formAround(memory, circuit);
+        HCL_ASSERT(memory->getGroup()->getMetaInfo() == nullptr);
+        memoryGroup = memory->getGroup()->createMetaInfo<MemoryGroup>(memory->getGroup());
+        memoryGroup->pullInPorts(memory);
     }
     return memoryGroup;
 }

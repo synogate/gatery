@@ -86,7 +86,6 @@ class Node_Memory : public Node<Node_Memory>
         /// Overwrites the head of the power on state without resizing, rest is undefined
         void fillPowerOnState(sim::DefaultBitVectorState powerOnState);
 
-
         const sim::DefaultBitVectorState &getPowerOnState() const { return m_powerOnState; }
         sim::DefaultBitVectorState &getPowerOnState() { return m_powerOnState; }
 

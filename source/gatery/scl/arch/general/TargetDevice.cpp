@@ -15,44 +15,16 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#pragma once
+#include "gatery/pch.h"
 
-#include "BitVector.h"
-#include "Bit.h"
+#include "TargetDevice.h"
 
-#include "../simulation/BitVectorState.h"
 
-#include <vector>
-#include <memory>
-#include <map>
-#include <set>
+namespace gtry::scl::arch {
 
-namespace gtry::hlim {
-	class Node_Signal;
+TargetDevice::TargetDevice() 
+{
+
 }
-
-namespace gtry {
-
-class TechnologyMappingPattern
-{
-	public:
-		TechnologyMappingPattern();
-		virtual ~TechnologyMappingPattern() = default;
-
-		virtual bool attemptApply(hlim::NodeGroup *nodeGroup) = 0;
-	protected:
-};
-
-class TechnologyMapping
-{
-	public:
-		void addPattern(std::unique_ptr<TechnologyMappingPattern> pattern) { m_patterns.push_back(std::move(pattern)); }
-
-		void apply();
-		void apply(hlim::NodeGroup *nodeGroup);
-	protected:
-		std::vector<std::unique_ptr<TechnologyMappingPattern>> m_patterns;
-};
-
 
 }

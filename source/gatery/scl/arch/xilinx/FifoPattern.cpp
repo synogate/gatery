@@ -26,7 +26,7 @@
 
 namespace gtry::scl::arch::xilinx {
 
-bool FifoPattern::attemptApply(hlim::NodeGroup *nodeGroup)
+bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 {
     // Only attempt to replace fifos
     if (nodeGroup->getName() != "scl_fifo") return false;

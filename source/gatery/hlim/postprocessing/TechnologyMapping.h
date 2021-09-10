@@ -17,29 +17,31 @@
 */
 #pragma once
 
-#include <gatery/hlim/supportNodes/Node_External.h>
+#include <vector>
+#include <memory>
 
-#include <gatery/frontend/TechnologyMappingPattern.h>
-#include <gatery/frontend/TechnologyCapabilities.h>
+namespace gtry::hlim {
+	class NodeGroup;
 
-namespace gtry::scl::arch::xilinx {
+	class TechnologyMappingPattern
+	{
+		public:
+			TechnologyMappingPattern();
+			virtual ~TechnologyMappingPattern() = default;
 
+			virtual bool attemptApply(hlim::NodeGroup *nodeGroup) const = 0;
+		protected:
+	};
 
-class FifoPattern : public TechnologyMappingPattern
-{
-	public:
-		virtual ~FifoPattern() = default;
+	class TechnologyMapping
+	{
+		public:
+			void addPattern(std::unique_ptr<TechnologyMappingPattern> pattern) { m_patterns.push_back(std::move(pattern)); }
 
-		virtual bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const override;
-	protected:
-};
-
-class Xilinx7SeriesFifoCapabilities : public FifoCapabilities
-{
-    public:
-        virtual ~Xilinx7SeriesFifoCapabilities();
-        virtual Choice select(const Request &request) const;
-};
+			void apply(hlim::NodeGroup *nodeGroup) const;
+		protected:
+			std::vector<std::unique_ptr<TechnologyMappingPattern>> m_patterns;
+	};
 
 
 }

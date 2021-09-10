@@ -29,10 +29,10 @@ namespace gtry::hlim {
     class Node_Register : public Node<Node_Register>
     {
     public:
-        enum Flags {
-            ALLOW_RETIMING_FORWARD  = 0b0001,
-            ALLOW_RETIMING_BACKWARD = 0b0010,
-            IS_BOUND_TO_MEMORY      = 0b0100,
+        enum class Flags {
+            ALLOW_RETIMING_FORWARD,
+            ALLOW_RETIMING_BACKWARD,
+            IS_BOUND_TO_MEMORY,
         };
 
         enum Input {

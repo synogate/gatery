@@ -17,29 +17,23 @@
 */
 #pragma once
 
-#include <gatery/hlim/supportNodes/Node_External.h>
+#include "../general/TargetDevice.h"
 
-#include <gatery/frontend/TechnologyMappingPattern.h>
-#include <gatery/frontend/TechnologyCapabilities.h>
+namespace gtry::scl::arch::intel {
 
-namespace gtry::scl::arch::xilinx {
-
-
-class FifoPattern : public TechnologyMappingPattern
+class IntelMemoryPattern : public GenericMemoryPattern
 {
 	public:
-		virtual ~FifoPattern() = default;
+		IntelMemoryPattern(const TargetDevice &targetDevice) : GenericMemoryPattern(targetDevice) { }
+		virtual ~IntelMemoryPattern() = default;
 
 		virtual bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const override;
+};
+
+class IntelDevice : public TargetDevice {
+	public:
+		void setupArria10(std::string device);
 	protected:
 };
-
-class Xilinx7SeriesFifoCapabilities : public FifoCapabilities
-{
-    public:
-        virtual ~Xilinx7SeriesFifoCapabilities();
-        virtual Choice select(const Request &request) const;
-};
-
 
 }

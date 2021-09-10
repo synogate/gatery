@@ -34,8 +34,9 @@ class GenericMemoryEntity : public Entity
     public:
         GenericMemoryEntity(AST &ast, const std::string &desiredName, BasicBlock *parent);
         
-        void buildFrom(hlim::MemoryGroup *memGrp);
+        void buildFrom(hlim::NodeGroup *memNodeGrp);
     protected:        
+        hlim::NodeGroup *m_memNodeGrp;
         hlim::MemoryGroup *m_memGrp;
 
         virtual void writeLocalSignalsVHDL(std::ostream &stream) override;

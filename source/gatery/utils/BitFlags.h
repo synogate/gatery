@@ -27,14 +27,14 @@ class BitFlags {
 	public:
 		typedef BitFlags<EnumType> Self;
 
-		Self &operator=(EnumType e) { m_flags = e; return *this; }
-		operator EnumType() { return m_flags; }
+		Self &operator=(EnumType e) { m_flags = 1ull << size_t(e); return *this; }
+		operator EnumType() { return EnumType(m_flags); }
 
-		Self &insert(EnumType e) { m_flags = EnumType(m_flags | e); return *this; }
-		Self &clear(EnumType e) { m_flags = EnumType(m_flags & ~e); return *this; }
-		bool containsAnyOf(EnumType e) const { return m_flags & e; }
+		Self &insert(EnumType e) { m_flags = m_flags | (1ull << size_t(e)); return *this; }
+		Self &clear(EnumType e) { m_flags = m_flags & ~(1ull << size_t(e)); return *this; }
+		bool contains(EnumType e) const { return m_flags & (1ull << size_t(e)); }
 	protected:
-		EnumType m_flags = EnumType(0);
+		size_t m_flags = 0;
 };
 
     

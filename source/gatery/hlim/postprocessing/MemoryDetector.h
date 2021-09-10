@@ -28,7 +28,7 @@ class Node_Memory;
 class Node_MemPort;
 class Node_Register;
 
-class MemoryGroup : public NodeGroup
+class MemoryGroup : public NodeGroupMetaInfo
 {
     public:
         struct WritePort {
@@ -43,9 +43,9 @@ class MemoryGroup : public NodeGroup
             bool findOutputRegisters(size_t readLatency, NodeGroup *memoryNodeGroup);
         };
 
-        MemoryGroup();
+        MemoryGroup(NodeGroup *group);
         
-        void formAround(Node_Memory *memory, Circuit &circuit);
+        void pullInPorts(Node_Memory *memory);
 
         void convertToReadBeforeWrite(Circuit &circuit);
         void resolveWriteOrder(Circuit &circuit);
@@ -64,6 +64,7 @@ class MemoryGroup : public NodeGroup
         std::vector<WritePort> m_writePorts;
         std::vector<ReadPort> m_readPorts;
 
+        NodeGroup *m_nodeGroup;
         NodeGroup *m_fixupNodeGroup = nullptr;
 
         void lazyCreateFixupNodeGroup();

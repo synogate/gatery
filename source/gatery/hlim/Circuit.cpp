@@ -33,6 +33,7 @@
 #include "postprocessing/MemoryDetector.h"
 #include "postprocessing/DefaultValueResolution.h"
 #include "postprocessing/AttributeFusion.h"
+#include "postprocessing/TechnologyMapping.h"
 
 
 #include "../simulation/BitVectorState.h"
@@ -993,68 +994,63 @@ void Circuit::optimizeSubnet(Subnet &subnet)
 
 void Circuit::postprocess(const PostProcessor &postProcessor)
 {
-    Subnet subnet = Subnet::all(*this);
-    /*
-    switch (level) {
-        case 0:
-        break;
-        case 1:
-            cullOrphanedSignalNodes();
-        break;
-        case 2:
-            cullOrphanedSignalNodes();
-            cullUnnamedSignalNodes();
-            cullUnusedNodes();
-        break;
-        case 3:
-        */
-            disconnectZeroBitSignalNodes();
-            disconnectZeroBitOutputPins();
-            removeZeroBitsFromRewire();
-            defaultValueResolution(*this, subnet);
-            cullUnusedNodes(subnet); // Dirty way of getting rid of default nodes
-            
-            propagateConstants(subnet);
-            cullOrphanedSignalNodes();
-            cullUnnamedSignalNodes();
-            cullSequentiallyDuplicatedSignalNodes();
-            subnet = Subnet::all(*this);
-            mergeMuxes(subnet);
-            removeIrrelevantMuxes(subnet);
-            cullMuxConditionNegations(subnet);
-            removeNoOps(subnet);
-            foldRegisterMuxEnableLoops(subnet);
-            removeConstSelectMuxes(subnet);
-            propagateConstants(subnet); // do again after muxes are removed
-            cullUnusedNodes(subnet);
+    postProcessor.run(*this);
+}
 
-            attributeFusion(*this);
+void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
+{
+    Subnet subnet = Subnet::all(circuit);
+    circuit.disconnectZeroBitSignalNodes();
+    circuit.disconnectZeroBitOutputPins();
+    circuit.removeZeroBitsFromRewire();
+    defaultValueResolution(circuit, subnet);
+    circuit.cullUnusedNodes(subnet); // Dirty way of getting rid of default nodes
+    
+    circuit.propagateConstants(subnet);
+    circuit.cullOrphanedSignalNodes();
+    circuit.cullUnnamedSignalNodes();
+    circuit.cullSequentiallyDuplicatedSignalNodes();
+    subnet = Subnet::all(circuit);
+    circuit.mergeMuxes(subnet);
+    circuit.removeIrrelevantMuxes(subnet);
+    circuit.cullMuxConditionNegations(subnet);
+    circuit.removeNoOps(subnet);
+    circuit.foldRegisterMuxEnableLoops(subnet);
+    circuit.removeConstSelectMuxes(subnet);
+    circuit.propagateConstants(subnet); // do again after muxes are removed
+    circuit.cullUnusedNodes(subnet);
 
-            findMemoryGroups(*this);
-            buildExplicitMemoryCircuitry(*this);
-            cullUnnamedSignalNodes();
+    attributeFusion(circuit);
+}
 
-            subnet = Subnet::all(*this);
-            cullUnusedNodes(subnet); // do again after memory group extraction with potential register retiming
+void DefaultPostprocessing::memoryDetection(Circuit &circuit) const
+{
+    findMemoryGroups(circuit);
+    buildExplicitMemoryCircuitry(circuit);
+    circuit.cullUnnamedSignalNodes();
 
-            removeNoOps(subnet); // do again because buildExplicitMemoryCircuitry may have created some
+    Subnet subnet = Subnet::all(circuit);
+    circuit.cullUnusedNodes(subnet); // do again after memory group extraction with potential register retiming
+}
 
-            ensureSignalNodePlacement();
-            duplicateSignalsFeedingLowerAndHigherAreas();
-            inferSignalNames();
-            /*
-        break;
-    };
-    */
-/*
-    for (auto &n : m_nodes)
-        if (n->getGroup() == nullptr) {
-            std::stringstream error;
-            error << "Node " << n->getName() << " " << n->getTypeName() << " "  << n->getId() << " is not in a node group!\nNode From: \n";
-            error << n->getStackTrace();
-            HCL_ASSERT_HINT(false, error.str());
-        }
-*/
+void DefaultPostprocessing::exportPreparation(Circuit &circuit) const
+{
+    circuit.ensureSignalNodePlacement();
+    circuit.duplicateSignalsFeedingLowerAndHigherAreas();
+    circuit.inferSignalNames();
+}
+
+
+
+void DefaultPostprocessing::run(Circuit &circuit) const
+{
+    generalOptimization(circuit);
+    memoryDetection(circuit);
+    if (m_techMapping) {
+        m_techMapping->apply(circuit.getRootNodeGroup());
+        generalOptimization(circuit); // Because we ran frontend code for tech mapping
+    }
+    exportPreparation(circuit);
 }
 
 

@@ -106,11 +106,11 @@ std::string BaseGrouping::findNearestDesiredName(hlim::NodePort nodePort)
     if (nodePort.node->hasGivenName())
         return nodePort.node->getName();
 
-    if (dynamic_cast<hlim::Node_Signal*>(nodePort.node) != nullptr)
+    if (dynamic_cast<hlim::Node_Signal*>(nodePort.node) != nullptr && !nodePort.node->getName().empty())
         return nodePort.node->getName();
 
     for (auto driven : nodePort.node->getDirectlyDriven(nodePort.port))
-        if (dynamic_cast<hlim::Node_Signal*>(driven.node) != nullptr)
+        if (dynamic_cast<hlim::Node_Signal*>(driven.node) != nullptr && !driven.node->getName().empty())
             return driven.node->getName();
     
     auto name = nodePort.node->attemptInferOutputName(nodePort.port);
