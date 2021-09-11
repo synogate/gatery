@@ -150,14 +150,11 @@ namespace gtry
 
 	BVec muxWord(BVec selector, BVec flat_array)
 	{
-		size_t num_entries = selector.getWidth().count();
-		if (num_entries == 0)
-			return 0u;
-
 		auto entity = Area{ "flat_mux" }.enter();
 		HCL_NAMED(selector);
 		HCL_NAMED(flat_array);
 
+		const size_t num_entries = selector.getWidth().count();
 		SymbolSelect sym{ flat_array.getWidth() / num_entries };
 		BVec selected = flat_array(sym[0]);
 		for (size_t i = 1; i < num_entries; ++i)
