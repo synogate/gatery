@@ -16,8 +16,9 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "TechnologyCapabilities.h"
 #include "gatery/pch.h"
+
+#include "TechnologyCapabilities.h"
 
 
 namespace gtry {
