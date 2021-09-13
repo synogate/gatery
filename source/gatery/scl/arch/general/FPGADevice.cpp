@@ -22,8 +22,9 @@
 
 namespace gtry::scl::arch {
 
-FPGADevice::FPGADevice() 
+FPGADevice::FPGADevice() : m_memoryCapabilities(*this)
 {
+    m_techCaps.registerCap(&m_memoryCapabilities);
     m_techCaps.registerCap(&m_defaultFifoCaps);
 }
 

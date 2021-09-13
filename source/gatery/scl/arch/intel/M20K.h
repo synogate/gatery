@@ -20,7 +20,7 @@
 #include "../general/GenericMemory.h"
 
 namespace gtry::scl::arch::intel {
-
+/*
 enum class M20KVariants {
 	Default,
 	Arria10_SDP_woBE,
@@ -30,5 +30,18 @@ enum class M20KVariants {
 };
 
 GenericMemoryDesc buildM20KDesc(M20KVariants variant);
+*/
+
+class IntelDevice;
+
+class M20K : public EmbeddedMemory 
+{
+    public:
+        M20K(const IntelDevice &intelDevice);
+
+		virtual bool apply(hlim::NodeGroup *nodeGroup) const override;
+    protected:
+        const IntelDevice &m_intelDevice;
+};
 
 }

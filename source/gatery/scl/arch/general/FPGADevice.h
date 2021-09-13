@@ -21,6 +21,7 @@
 #include <gatery/frontend/tech/TargetTechnology.h>
 
 #include <string>
+#include <memory>
 #include <vector>
 
 namespace gtry::scl::arch {
@@ -30,7 +31,7 @@ class GenericMemoryCapabilities;
 class FPGADevice : public TargetTechnology {
 	public:
         FPGADevice();
-        inline const std::vector<GenericMemoryDesc> &getEmbeddedMemories() const { return m_embeddedMemories; }
+        inline const EmbeddedMemoryList &getEmbeddedMemories() const { return *m_embeddedMemoryList; }
 
 		inline const std::string &getVendor() const { return m_vendor; }
 		inline const std::string &getFamily() const { return m_family; }
@@ -41,8 +42,8 @@ class FPGADevice : public TargetTechnology {
 		std::string m_family;
 		std::string m_device;
 
-        std::vector<GenericMemoryDesc> m_embeddedMemories;
-        std::unique_ptr<GenericMemoryCapabilities> m_memoryCapabilities;
+        std::unique_ptr<EmbeddedMemoryList> m_embeddedMemoryList;
+        GenericMemoryCapabilities m_memoryCapabilities;
         FifoCapabilities m_defaultFifoCaps; // for now
 };
 

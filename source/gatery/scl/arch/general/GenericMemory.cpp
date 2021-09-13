@@ -24,6 +24,7 @@
 
 #include <gatery/hlim/postprocessing/MemoryDetector.h>
 #include <gatery/hlim/supportNodes/Node_MemPort.h>
+#include <gatery/hlim/supportNodes/Node_Memory.h>
 
 namespace gtry::scl::arch {
 
@@ -35,85 +36,75 @@ GenericMemoryCapabilities::~GenericMemoryCapabilities()
 
 GenericMemoryCapabilities::Choice GenericMemoryCapabilities::select(const Request &request) const
 {
-	return MemoryCapabilities::select(request); // todo
+	const auto &embeddedMems = m_targetDevice.getEmbeddedMemories();
+
+	auto *memChoice = embeddedMems.selectMemFor(request);
+
+	HCL_DESIGNCHECK_HINT(memChoice != nullptr, "No suitable memory configuration could be found. Usually this means that the memory was restricted to a single size category that doesn't exist on the target device.");
+
+    MemoryCapabilities::Choice result;
+	const auto &desc = memChoice->getDesc();
+	result.inputRegs = desc.inputRegs;
+	result.outputRegs = desc.outputRegs;
+	result.totalReadLatency = desc.outputRegs + (desc.inputRegs?1:0);
+	return result;
 }
 
 
-bool GenericMemoryPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
+void EmbeddedMemoryList::add(std::unique_ptr<EmbeddedMemory> mem)
+{
+	m_embeddedMemories.push_back(std::move(mem));
+	std::sort(m_embeddedMemories.begin(), m_embeddedMemories.end(), [](const auto &lhs, const auto &rhs) {
+		return lhs->getPriority() > rhs->getPriority();
+	});
+}
+
+const EmbeddedMemory *EmbeddedMemoryList::selectMemFor(GenericMemoryCapabilities::Request request) const
+{
+	EmbeddedMemory *memChoice = nullptr;
+	
+	for (auto &mem : m_embeddedMemories) {
+		const auto &desc = mem->getDesc();
+		if (request.sizeCategory.contains(desc.sizeCategory) && 
+			(1ull << mem->getDesc().addressBits) >= request.maxDepth) {
+				memChoice = mem.get();
+				break;
+			}
+	}
+
+	if (memChoice == nullptr) {
+		// Pick largest that works
+		size_t choiceSize = 0;
+		for (auto &mem : m_embeddedMemories) {
+			const auto &desc = mem->getDesc();
+			size_t size = (1ull << mem->getDesc().addressBits);
+			if (request.sizeCategory.contains(desc.sizeCategory)) {
+				if (memChoice == nullptr || size > choiceSize) {
+					memChoice = mem.get();
+					choiceSize = size;
+				}
+			}
+		}
+	}
+	return memChoice;
+}
+
+
+bool EmbeddedMemoryPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 {
 	auto *memGrp = dynamic_cast<hlim::MemoryGroup*>(nodeGroup->getMetaInfo());
 	if (memGrp == nullptr) return false;
 
+	const auto &embeddedMems = m_targetDevice.getEmbeddedMemories();
 
-	// simplifications for now:
-	// - not building extra read/write ports
-	// - only extend width
-	// - read latency must match (not building extra regs)
+	GenericMemoryCapabilities::Request request;
+	request.size = memGrp->getMemory()->getSize();
+	request.maxDepth = memGrp->getMemory()->getMaxDepth();
 
-	if (memGrp->getReadPorts().size() + memGrp->getWritePorts().size() > 2) return false;
-
-	bool requiresCrossPortReadFirst = false;
-	bool requiresCrossPortWriteFirst = false;
-	//bool portsMustDisable = 
-
-	size_t readLateny = ~0ull;
-	if (!memGrp->getReadPorts().empty())
-		readLateny = memGrp->getReadPorts().front().dedicatedReadLatencyRegisters.size();
-
-	for (auto &rp : memGrp->getReadPorts()) {
-		HCL_ASSERT(readLateny == rp.dedicatedReadLatencyRegisters.size());
-		for (auto &wp : memGrp->getWritePorts()) {
-			if (rp.node->isOrderedBefore(wp.node.get()))
-				requiresCrossPortReadFirst = true;
-			if (wp.node->isOrderedBefore(rp.node.get()))
-				requiresCrossPortWriteFirst = true;
-		}
-	}
-
-
-	auto &memoryTypes = m_targetDevice.getEmbeddedMemories();
-
-	std::vector<bool> compatibleMemTypes(memoryTypes.size(), true);
-	for (auto i : utils::Range(memoryTypes.size())) {
-		if (
-				memGrp->getReadPorts().size() > memoryTypes[i].numReadPorts + memoryTypes[i].numReadWritePorts ||
-				memGrp->getWritePorts().size() > memoryTypes[i].numWritePorts + memoryTypes[i].numReadWritePorts ||
-				memGrp->getReadPorts().size() + memGrp->getWritePorts().size() > memoryTypes[i].numReadWritePorts + memoryTypes[i].numWritePorts + memoryTypes[i].numReadWritePorts
-				) {
-			compatibleMemTypes[i] = false;
-			continue;
-		}
-
-		if (requiresCrossPortReadFirst) {
-			if (!memoryTypes[i].crossPortReadDuringWrite.contains(GenericMemoryDesc::ReadDuringWriteBehavior::READ_FIRST)) {
-				compatibleMemTypes[i] = false;
-				continue;
-			}
-		}
-		if (requiresCrossPortWriteFirst) {
-			if (!memoryTypes[i].crossPortReadDuringWrite.contains(GenericMemoryDesc::ReadDuringWriteBehavior::WRITE_FIRST)) {
-				compatibleMemTypes[i] = false;
-				continue;
-			}
-		}
-
-		if (memoryTypes[i].crossPortReadDuringWrite.contains(GenericMemoryDesc::ReadDuringWriteBehavior::ALL_MEMORY_UNDEFINED) ||
-			memoryTypes[i].crossPortReadDuringWrite.contains(GenericMemoryDesc::ReadDuringWriteBehavior::MUST_NOT_HAPPEN)) {
-			// Can't detect that yet, so don't touch that stuff
-			compatibleMemTypes[i] = false;
-			continue;
-		}
-
-		const auto &latencies = memoryTypes[i].readLatencies;
-		if (std::find(latencies.begin(), latencies.end(), readLateny) == latencies.end()) {
-			compatibleMemTypes[i] = false;
-			continue;
-		}
-	}
-
-
-	return true;
+	auto *memChoice = embeddedMems.selectMemFor(request);
+	return memChoice->apply(nodeGroup);
 }
+
 
 }
 

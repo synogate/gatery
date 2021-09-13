@@ -92,38 +92,8 @@ class IOCapabilities : public Capabilities {
 
 class MemoryCapabilities : public Capabilities {
     public:
-    /*
-        enum class ReadDuringWrite {
-            READ_FIRST,
-            WRITE_FIRST,
-            READ_UNDEFINED,
-            WRITE_UNDEFINED,
-            ALL_MEMORY_UNDEFINED,
-            PHYSICAL_DAMAGE,                
-        };
-
-        template<template <typename> class Wrapper>
-        struct Settings {
-            typename Wrapper<unsigned>::wrap size;
-            typename Wrapper<bool>::wrap addrRegister;
-            typename Wrapper<bool>::wrap outputRegister;
-            typename Wrapper<unsigned>::wrap readLatency;
-            struct Port {
-                typename Wrapper<unsigned>::wrap width;
-                typename Wrapper<unsigned>::wrap byteEnableByteWidth;
-            };
-            std::vector<Port> ports;
-            typename Wrapper<unsigned>::wrap numWritePorts;
-            typename Wrapper<bool>::wrap individualClocks;
-            typename Wrapper<bool>::wrap portsCanDisable;
-
-            typename Wrapper<ReadDuringWrite>::wrap samePortReadDuringWrite;
-            typename Wrapper<ReadDuringWrite>::wrap mixedPortReadDuringWrite;
-        };
-
-        using Request = Settings<details::RequestWrapper>;
-        using Choice = Settings<details::ChoiceWrapper>;
-    */
+        // More options in git history!
+        
         enum class SizeCategory {
             SMALL,  // LUTRAMS, MLABS, ...
             MEDIUM, // BlockRAMs, BRAM, MxK, ...
@@ -182,23 +152,6 @@ class FifoCapabilities : public Capabilities {
         static const char *getName() { return "fifo"; }
     protected:
 };
-
-
-/*
-struct Directives {
-//    std::regex areaPrefix;
-
-    enum Optimize {
-        OPT_DONTCARE,
-        OPT_SPEED,
-        OPT_AREA,
-    };
-    Optimize optimize = OPT_DONTCARE;
-
-    //std::map<std::string, std::string> 
-};
-*/
-
 
 class TechnologyCapabilities {
     public:

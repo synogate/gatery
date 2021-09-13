@@ -112,6 +112,24 @@ namespace gtry::hlim {
         return size;
     }
 
+    std::size_t Node_Memory::getMinPortWidth() const {
+        std::size_t size = ~0ull;
+
+        for (auto np : getPorts()) {
+            auto *port = dynamic_cast<Node_MemPort*>(np.node);
+            size = std::min(size, port->getBitWidth());
+        }
+
+        return size;
+    }
+
+    std::size_t Node_Memory::getMaxDepth() const {
+        size_t minWidth = getMinPortWidth();
+        HCL_ASSERT(getSize() % minWidth == 0);
+        return getSize() / minWidth;
+    }
+
+
     void Node_Memory::setPowerOnState(sim::DefaultBitVectorState powerOnState)
     {
         m_powerOnState = std::move(powerOnState);

@@ -200,13 +200,23 @@ namespace gtry
 		size_t m_numWords = 0;
 		size_t m_wordWidth = 0;
 
-		Memory(hlim::Node_Memory* memoryNode, Data def = Data{}) : m_memoryNode(memoryNode) {}
+		Memory(hlim::Node_Memory* memoryNode, Data def = Data{}) : m_memoryNode(memoryNode) { 
+			m_defaultValue = std::move(def);
+			m_wordWidth = width(m_defaultValue).value;
+			m_numWords = m_memoryNode->getSize() / m_wordWidth;
+			HCL_DESIGNCHECK(m_memoryNode->getSize() % m_wordWidth == 0);
+		}
 
 		MemoryCapabilities::Choice getTargetRequirementsForType(MemType type) const {
 			MemoryCapabilities::Request request = {
-				.size = size(),
-				.maxDepth = numWords() // only consideres this view and not others, this must be fixed once we use views (mixed port widths)
+				.size = m_memoryNode->getSize(),
 			};
+
+			if (m_memoryNode->getPorts().empty())
+				request.maxDepth = m_numWords;
+			else
+				request.maxDepth = m_memoryNode->getMaxDepth();
+
 			HCL_DESIGNCHECK_HINT(type != MemType::EXTERNAL, "Can't query the target device for properties of external memory!");
 			switch (type) {
 				case MemType::SMALL: request.sizeCategory = MemoryCapabilities::SizeCategory::SMALL; break;

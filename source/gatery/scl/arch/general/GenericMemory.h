@@ -30,52 +30,30 @@ namespace gtry::scl::arch {
 
 class FPGADevice;
 
-struct GenericMemoryDesc {
-	std::string memoryName;
 
-	MemoryCapabilities::SizeCategory sizeCategory;
+class EmbeddedMemory {
+	public:
+		virtual ~EmbeddedMemory() = default;
 
-	struct SizeConfig {
-		size_t width;
-		size_t depth;
-	};
+		struct Desc {
+			std::string memoryName;
 
-	std::vector<SizeConfig> sizeConfigs;
-	std::vector<size_t> mixedWidthRatios;
-	std::vector<size_t> byteEnableByteWidths;
+			MemoryCapabilities::SizeCategory sizeCategory;
 
-	size_t numWritePorts;
-	size_t numReadPorts;
-	size_t numReadWritePorts;
+			bool inputRegs;
+			size_t outputRegs;
 
-	bool portsCanDisable;
-	bool portsMustShareClocks;
+			size_t addressBits;
 
-	enum class ReadDuringWriteBehavior : size_t {
-		READ_FIRST,
-		WRITE_FIRST,
-		READ_UNDEFINED,
-		WRITE_UNDEFINED,
-		ALL_MEMORY_UNDEFINED,
-		MUST_NOT_HAPPEN,
-	};
+			// More in git history!
+		};
 
-	utils::BitFlags<ReadDuringWriteBehavior> samePortReadDuringWrite;
-	utils::BitFlags<ReadDuringWriteBehavior> crossPortReadDuringWrite;
+		virtual bool apply(hlim::NodeGroup *nodeGroup) const = 0;
+		inline const Desc &getDesc() const { return m_desc; }
 
-	enum class RegisterFlags : size_t {
-		EXISTS,
-		OPTIONAL,
-		CAN_RESET,
-		CAN_RESET_NONZERO,
-		CAN_STALL
-	};
-	utils::BitFlags<RegisterFlags> readAddrRegister;
-	utils::BitFlags<RegisterFlags> dataOutputRegisters;
-	std::vector<size_t> readLatencies;
-
-	size_t costPerUnitSize;
-	size_t unitSize;
+		virtual size_t getPriority() const { return (size_t)m_desc.sizeCategory * 1000; }
+	protected:
+		Desc m_desc;
 };
 
 
@@ -92,15 +70,28 @@ class GenericMemoryCapabilities : public MemoryCapabilities
 		const FPGADevice &m_targetDevice;
 };
 
-class GenericMemoryPattern : public TechnologyMappingPattern
+class EmbeddedMemoryList
 {
 	public:
-		GenericMemoryPattern(const FPGADevice &targetDevice) : m_targetDevice(targetDevice) { }
-		virtual ~GenericMemoryPattern() = default;
+		EmbeddedMemoryList() { }
+		virtual ~EmbeddedMemoryList() = default;
+
+		virtual void add(std::unique_ptr<EmbeddedMemory> mem);
+		virtual const EmbeddedMemory *selectMemFor(GenericMemoryCapabilities::Request request) const;
+
+		inline const std::vector<std::unique_ptr<EmbeddedMemory>> &getList() const { return m_embeddedMemories; }
+	protected:
+		std::vector<std::unique_ptr<EmbeddedMemory>> m_embeddedMemories;
+};
+
+class EmbeddedMemoryPattern : public TechnologyMappingPattern
+{
+	public:
+		EmbeddedMemoryPattern(const FPGADevice &targetDevice) : m_targetDevice(targetDevice) { }
+		virtual ~EmbeddedMemoryPattern() = default;
 
 		virtual bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const override;
 	protected:
-		//virtual void buildMemory() = 0;
 		const FPGADevice &m_targetDevice;
 };
 

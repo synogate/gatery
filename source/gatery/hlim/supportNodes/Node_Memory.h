@@ -82,6 +82,8 @@ class Node_Memory : public Node<Node_Memory>
 
         std::size_t getSize() const { return m_powerOnState.size(); }
         std::size_t getMaxPortWidth() const;
+        std::size_t getMinPortWidth() const;
+        std::size_t getMaxDepth() const;
         void setPowerOnState(sim::DefaultBitVectorState powerOnState);
 
         /// Overwrites the head of the power on state without resizing, rest is undefined

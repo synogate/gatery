@@ -20,7 +20,7 @@
 #include "../general/GenericMemory.h"
 
 namespace gtry::scl::arch::intel {
-
+/*
 enum class MLABVariants {
 	Default,
 	ArriaV,
@@ -28,5 +28,6 @@ enum class MLABVariants {
 };
 
 GenericMemoryDesc buildMLABDesc(MLABVariants variant, bool withOutputReg);
+*/
 
 }

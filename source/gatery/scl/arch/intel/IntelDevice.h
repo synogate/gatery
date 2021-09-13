@@ -21,15 +21,6 @@
 
 namespace gtry::scl::arch::intel {
 
-class IntelMemoryPattern : public GenericMemoryPattern
-{
-	public:
-		IntelMemoryPattern(const FPGADevice &targetDevice) : GenericMemoryPattern(targetDevice) { }
-		virtual ~IntelMemoryPattern() = default;
-
-		virtual bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const override;
-};
-
 class IntelDevice : public FPGADevice {
 	public:
 		void setupArria10(std::string device);

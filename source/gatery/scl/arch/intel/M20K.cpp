@@ -16,9 +16,131 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
+
 #include "M20K.h"
+#include "IntelDevice.h"
+
+#include "ALTSYNCRAM.h"
+#include <gatery/hlim/postprocessing/MemoryDetector.h>
+#include <gatery/hlim/supportNodes/Node_MemPort.h>
 
 namespace gtry::scl::arch::intel {
+
+M20K::M20K(const IntelDevice &intelDevice) : m_intelDevice(intelDevice)
+{
+	m_desc.memoryName = "M20K";
+	m_desc.sizeCategory = MemoryCapabilities::SizeCategory::MEDIUM;
+	m_desc.inputRegs = true;
+	m_desc.outputRegs = 0;
+	// Embedded Memory User Guide "Table 6. Valid Range of Maximum Block Depth for Various Embedded Memory Blocks"
+	m_desc.addressBits = 14; // 16384
+}
+
+bool M20K::apply(hlim::NodeGroup *nodeGroup) const
+{
+	auto *memGrp = dynamic_cast<hlim::MemoryGroup*>(nodeGroup->getMetaInfo());
+	if (memGrp == nullptr) return false;
+	if (memGrp->getMemory()->type() == hlim::Node_Memory::MemType::EXTERNAL)
+		return false;
+
+	if (memGrp->getReadPorts().size() != 1) return false;
+	if (memGrp->getWritePorts().size() > 1) return false;
+
+    auto &circuit = DesignScope::get()->getCircuit();
+
+    memGrp->convertToReadBeforeWrite(circuit);
+    memGrp->attemptRegisterRetiming(circuit);
+    memGrp->resolveWriteOrder(circuit);
+    memGrp->updateNoConflictsAttrib();
+    memGrp->buildReset(circuit);
+    memGrp->bypassSignalNodes();
+    memGrp->verify();
+
+    GroupScope scope(memGrp->lazyCreateFixupNodeGroup());
+
+
+    auto &rp = memGrp->getReadPorts().front();
+
+    auto *altsyncram = DesignScope::createNode<ALTSYNCRAM>(memGrp->getMemory()->getSize());
+
+    if (memGrp->getWritePorts().size() == 0)
+        altsyncram->setupROM();
+    else
+        altsyncram->setupSimpleDualPort();
+
+    //altsyncram->setupRamType(desc.memoryName);
+    altsyncram->setupSimulationDeviceFamily(m_intelDevice.getFamily());
+   
+    bool readFirst = false;
+    bool writeFirst = false;
+    if (memGrp->getWritePorts().size() > 1) {
+        auto &wp = memGrp->getWritePorts().front();
+        if (wp.node->isOrderedBefore(rp.node.get()))
+            writeFirst = true;
+        if (rp.node->isOrderedBefore(wp.node.get()))
+            readFirst = true;
+    }
+
+    if (readFirst)
+        altsyncram->setupMixedPortRdw(ALTSYNCRAM::RDWBehavior::OLD_DATA);
+    else if (writeFirst)
+        altsyncram->setupMixedPortRdw(ALTSYNCRAM::RDWBehavior::NEW_DATA_MASKED_UNDEFINED);
+    else
+        altsyncram->setupMixedPortRdw(ALTSYNCRAM::RDWBehavior::DONT_CARE);
+
+
+
+    if (memGrp->getWritePorts().size() > 0) {
+        auto &wp = memGrp->getWritePorts().front();
+        ALTSYNCRAM::PortSetup portSetup;
+portSetup.rdw = ALTSYNCRAM::RDWBehavior::OLD_DATA;
+        altsyncram->setupPortA(wp.node->getBitWidth(), portSetup);
+
+        BVec wrData = hookBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
+        BVec addr = hookBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+        Bit wrEn = hookBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrEnable});
+
+        altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_DATA_A, wrData);
+        altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_ADDRESS_A, addr);
+        altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_WREN_A, wrEn);
+
+        altsyncram->attachClock(wp.node->getClocks()[0], (size_t)ALTSYNCRAM::Clocks::CLK_0);
+
+        {
+            ALTSYNCRAM::PortSetup portSetup;
+portSetup.rdw = ALTSYNCRAM::RDWBehavior::OLD_DATA;
+            portSetup.outputRegs = rp.dedicatedReadLatencyRegisters.size() > 1;
+            altsyncram->setupPortB(rp.node->getBitWidth(), portSetup);
+
+            BVec addr = hookBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+            BVec data = hookBVecAfter(rp.dataOutput);
+
+            altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_ADDRESS_B, addr);
+            data.setExportOverride(altsyncram->getOutputBVec(ALTSYNCRAM::Outputs::OUT_Q_B));
+
+            altsyncram->attachClock(rp.dedicatedReadLatencyRegisters.front()->getClocks()[0], (size_t)ALTSYNCRAM::Clocks::CLK_1);
+        }        
+    } else {
+        ALTSYNCRAM::PortSetup portSetup;
+portSetup.rdw = ALTSYNCRAM::RDWBehavior::OLD_DATA;
+        portSetup.outputRegs = rp.dedicatedReadLatencyRegisters.size() > 1;
+        altsyncram->setupPortA(rp.node->getBitWidth(), portSetup);
+
+        BVec addr = hookBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+        BVec data = hookBVecAfter(rp.dataOutput);
+
+        altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_ADDRESS_A, addr);
+        data.setExportOverride(altsyncram->getOutputBVec(ALTSYNCRAM::Outputs::OUT_Q_A));
+
+        altsyncram->attachClock(rp.dedicatedReadLatencyRegisters.front()->getClocks()[0], (size_t)ALTSYNCRAM::Clocks::CLK_0);    
+    }
+
+	return true;
+}
+
+
+
+#if 0
 
 GenericMemoryDesc buildM20KDesc(M20KVariants variant)
 {
@@ -93,5 +215,6 @@ GenericMemoryDesc buildM20KDesc(M20KVariants variant)
 	return res;
 }
 
+#endif
 
 }

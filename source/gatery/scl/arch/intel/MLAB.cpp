@@ -20,6 +20,8 @@
 
 namespace gtry::scl::arch::intel {
 
+
+#if 0
 GenericMemoryDesc buildMLABDesc(MLABVariants variant, bool withOutputReg)
 {
 	GenericMemoryDesc res;
@@ -78,5 +80,6 @@ GenericMemoryDesc buildMLABDesc(MLABVariants variant, bool withOutputReg)
 	return res;
 }
 
+#endif
 
 }
