@@ -24,7 +24,7 @@
 #include <gatery/simulation/ConstructionTimeSimulationContext.h>
 
 #include "Scope.h"
-#include "tech/targetTechnology.h"
+#include "tech/TargetTechnology.h"
 
 namespace gtry {
 
