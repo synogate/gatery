@@ -51,7 +51,7 @@ namespace gtry::utils {
 #endif
 
 template<typename T>
-bool isPow2(T v) { return popcount(v) == 1;
+bool isPow2(T v) { return popcount(v) == 1; }
 
 template<typename T>
 T Log2(T v)

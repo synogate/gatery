@@ -15,26 +15,35 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#pragma once
 
-#include "gatery/pch.h"
+#include "GenericMemory.h"
+#include <gatery/frontend/tech/TargetTechnology.h>
 
-#include "Scope.h"
+#include <string>
+#include <vector>
 
-#include "TechnologyMappingPattern.h"
+namespace gtry::scl::arch {
 
-namespace gtry {
+class GenericMemoryCapabilities;
 
-TechnologyMappingPattern::TechnologyMappingPattern()
-{
+class FPGADevice : public TargetTechnology {
+	public:
+        FPGADevice();
+        inline const std::vector<GenericMemoryDesc> &getEmbeddedMemories() const { return m_embeddedMemories; }
+
+		inline const std::string &getVendor() const { return m_vendor; }
+		inline const std::string &getFamily() const { return m_family; }
+		inline const std::string &getDevice() const { return m_device; }
+
+	protected:
+		std::string m_vendor;
+		std::string m_family;
+		std::string m_device;
+
+        std::vector<GenericMemoryDesc> m_embeddedMemories;
+        std::unique_ptr<GenericMemoryCapabilities> m_memoryCapabilities;
+        FifoCapabilities m_defaultFifoCaps; // for now
+};
+
 }
-
-bool TechnologyMappingPattern::attemptApply(hlim::Circuit &circuit, hlim::NodeGroup *nodeGroup) const
-{
-	if (nodeGroup == nullptr) return false;
-	if (nodeGroup->getParent() == nullptr) return false;
-	GroupScope scope(nodeGroup->getParent());
-	return scopedAttemptApply(nodeGroup);
-}
-
-}
-

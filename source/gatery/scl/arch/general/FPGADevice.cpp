@@ -15,21 +15,16 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#pragma once
+#include "gatery/pch.h"
 
-#include "../hlim/postprocessing/TechnologyMapping.h"
+#include "FPGADevice.h"
 
-namespace gtry {
 
-	class TechnologyMappingPattern : public hlim::TechnologyMappingPattern
-	{
-		public:
-			TechnologyMappingPattern();
-			virtual ~TechnologyMappingPattern() = default;
+namespace gtry::scl::arch {
 
-			virtual bool attemptApply(hlim::Circuit &circuit, hlim::NodeGroup *nodeGroup) const final override;
-			virtual bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const = 0;
-		protected:
-	};
+FPGADevice::FPGADevice() 
+{
+    m_techCaps.registerCap(&m_defaultFifoCaps);
+}
 
 }

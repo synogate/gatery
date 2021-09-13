@@ -16,32 +16,17 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
-#include "DesignScope.h"
 
-#include <gatery/export/DotExport.h>
+#include "TargetTechnology.h"
+
 
 namespace gtry {
 
-DesignScope::DesignScope() : DesignScope(std::make_unique<DefaultTargetTechnology>())
-{ 
-}
 
-DesignScope::DesignScope(std::unique_ptr<TargetTechnology> targetTech) : 
-            BaseScope<DesignScope>(), 
-            m_rootScope(m_circuit.getRootNodeGroup()), 
-            m_targetTech(std::move(targetTech)),
-            m_defaultTechScope(m_targetTech->enterTechScope())
-{ 
-    m_rootScope.setName("top");
-    
-    HCL_DESIGNCHECK_HINT(m_parentScope == nullptr, "Only one design scope can be active at a time!");
-}
-
-void DesignScope::visualize(const std::string &filename, hlim::NodeGroup *nodeGroup)
+DefaultTargetTechnology::DefaultTargetTechnology()
 {
-    DotExport exp(filename+".dot");
-    exp(get()->getCircuit(), nodeGroup);
-    exp.runGraphViz(filename+".svg");
+    m_techCaps.registerCap(&m_defaultMemCaps);
+    m_techCaps.registerCap(&m_defaultFifoCaps);
 }
 
 }

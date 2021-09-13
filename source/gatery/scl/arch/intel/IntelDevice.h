@@ -17,20 +17,20 @@
 */
 #pragma once
 
-#include "../general/TargetDevice.h"
+#include "../general/FPGADevice.h"
 
 namespace gtry::scl::arch::intel {
 
 class IntelMemoryPattern : public GenericMemoryPattern
 {
 	public:
-		IntelMemoryPattern(const TargetDevice &targetDevice) : GenericMemoryPattern(targetDevice) { }
+		IntelMemoryPattern(const FPGADevice &targetDevice) : GenericMemoryPattern(targetDevice) { }
 		virtual ~IntelMemoryPattern() = default;
 
 		virtual bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const override;
 };
 
-class IntelDevice : public TargetDevice {
+class IntelDevice : public FPGADevice {
 	public:
 		void setupArria10(std::string device);
 	protected:

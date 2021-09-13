@@ -17,7 +17,7 @@
 */
 #pragma once
 
-#include "Scope.h"
+#include "../Scope.h"
 
 #include <gatery/utils/BitFlags.h>
 
@@ -232,15 +232,5 @@ class TechnologyScope : public BaseScope<TechnologyScope> {
     protected:
         TechnologyCapabilities &m_techCaps;
 };
-
-
-class DefaultTechnologyCapabilities : public TechnologyCapabilities {
-    public:
-        DefaultTechnologyCapabilities();
-    protected:
-        MemoryCapabilities m_defaultMemCaps;
-        FifoCapabilities m_defaultFifoCaps;
-};
-
 
 }

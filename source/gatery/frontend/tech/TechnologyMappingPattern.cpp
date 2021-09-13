@@ -15,33 +15,26 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
-#include "DesignScope.h"
 
-#include <gatery/export/DotExport.h>
+#include "gatery/pch.h"
+
+#include "../Scope.h"
+
+#include "TechnologyMappingPattern.h"
 
 namespace gtry {
 
-DesignScope::DesignScope() : DesignScope(std::make_unique<DefaultTargetTechnology>())
-{ 
-}
-
-DesignScope::DesignScope(std::unique_ptr<TargetTechnology> targetTech) : 
-            BaseScope<DesignScope>(), 
-            m_rootScope(m_circuit.getRootNodeGroup()), 
-            m_targetTech(std::move(targetTech)),
-            m_defaultTechScope(m_targetTech->enterTechScope())
-{ 
-    m_rootScope.setName("top");
-    
-    HCL_DESIGNCHECK_HINT(m_parentScope == nullptr, "Only one design scope can be active at a time!");
-}
-
-void DesignScope::visualize(const std::string &filename, hlim::NodeGroup *nodeGroup)
+TechnologyMappingPattern::TechnologyMappingPattern()
 {
-    DotExport exp(filename+".dot");
-    exp(get()->getCircuit(), nodeGroup);
-    exp.runGraphViz(filename+".svg");
+}
+
+bool TechnologyMappingPattern::attemptApply(hlim::Circuit &circuit, hlim::NodeGroup *nodeGroup) const
+{
+	if (nodeGroup == nullptr) return false;
+	if (nodeGroup->getParent() == nullptr) return false;
+	GroupScope scope(nodeGroup->getParent());
+	return scopedAttemptApply(nodeGroup);
 }
 
 }
+

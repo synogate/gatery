@@ -19,7 +19,7 @@
 
 #include <gatery/frontend/Bit.h>
 
-#include <gatery/frontend/TechnologyMappingPattern.h>
+#include <gatery/frontend/tech/TechnologyMappingPattern.h>
 #include <gatery/hlim/supportNodes/Node_External.h>
 
 namespace gtry::scl::arch::xilinx {

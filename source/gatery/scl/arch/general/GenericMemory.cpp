@@ -18,7 +18,7 @@
 #include "gatery/pch.h"
 
 #include "GenericMemory.h"
-#include "TargetDevice.h"
+#include "FPGADevice.h"
 
 #include <gatery/frontend/GraphTools.h>
 
@@ -27,7 +27,7 @@
 
 namespace gtry::scl::arch {
 
-GenericMemoryCapabilities::GenericMemoryCapabilities(const TargetDevice &targetDevice) : m_targetDevice(targetDevice) { }
+GenericMemoryCapabilities::GenericMemoryCapabilities(const FPGADevice &targetDevice) : m_targetDevice(targetDevice) { }
 
 GenericMemoryCapabilities::~GenericMemoryCapabilities()
 {

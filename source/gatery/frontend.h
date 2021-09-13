@@ -51,8 +51,9 @@
 #include "frontend/SignalLogicOp.h"
 #include "frontend/SignalMiscOp.h"
 #include "frontend/SimSigHandle.h"
-#include "frontend/TechnologyMappingPattern.h"
-#include "frontend/TechnologyCapabilities.h"
+#include "frontend/tech/TechnologyMappingPattern.h"
+#include "frontend/tech/TechnologyCapabilities.h"
+#include "frontend/tech/TargetTechnology.h"
 #include "frontend/trace.h"
 #include "frontend/Vector.h"
 

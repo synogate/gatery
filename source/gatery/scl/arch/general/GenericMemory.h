@@ -17,8 +17,8 @@
 */
 #pragma once
 
-#include <gatery/frontend/TechnologyCapabilities.h>
-#include <gatery/frontend/TechnologyMappingPattern.h>
+#include <gatery/frontend/tech/TechnologyCapabilities.h>
+#include <gatery/frontend/tech/TechnologyMappingPattern.h>
 #include <gatery/utils/BitFlags.h>
 
 #include <gatery/hlim/supportNodes/Node_External.h>
@@ -28,7 +28,7 @@
 
 namespace gtry::scl::arch {
 
-class TargetDevice;
+class FPGADevice;
 
 struct GenericMemoryDesc {
 	std::string memoryName;
@@ -82,26 +82,26 @@ struct GenericMemoryDesc {
 class GenericMemoryCapabilities : public MemoryCapabilities
 {
     public:
-		GenericMemoryCapabilities(const TargetDevice &targetDevice);
+		GenericMemoryCapabilities(const FPGADevice &targetDevice);
         virtual ~GenericMemoryCapabilities();
 
 		virtual Choice select(const Request &request) const override;
 
 		static const char *getName() { return "mem"; }
 	protected:
-		const TargetDevice &m_targetDevice;
+		const FPGADevice &m_targetDevice;
 };
 
 class GenericMemoryPattern : public TechnologyMappingPattern
 {
 	public:
-		GenericMemoryPattern(const TargetDevice &targetDevice) : m_targetDevice(targetDevice) { }
+		GenericMemoryPattern(const FPGADevice &targetDevice) : m_targetDevice(targetDevice) { }
 		virtual ~GenericMemoryPattern() = default;
 
 		virtual bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const override;
 	protected:
 		//virtual void buildMemory() = 0;
-		const TargetDevice &m_targetDevice;
+		const FPGADevice &m_targetDevice;
 };
 
 

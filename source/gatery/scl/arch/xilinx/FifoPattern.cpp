@@ -32,6 +32,7 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
     if (nodeGroup->getName() != "scl_fifo") return false;
 
     const auto *meta = dynamic_cast<FifoMeta*>(nodeGroup->getMetaInfo());
+    if (meta == nullptr) return false;
     const FifoCapabilities::Choice &fifoChoice = meta->fifoChoice;
 
     // Validate that we can handle the chosen fifo capabilities

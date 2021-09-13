@@ -26,7 +26,7 @@
 #include "Clock.h"
 #include "SignalMiscOp.h"
 
-#include "TechnologyCapabilities.h"
+#include "tech/TechnologyCapabilities.h"
 
 
 #include <gatery/hlim/supportNodes/Node_Memory.h>

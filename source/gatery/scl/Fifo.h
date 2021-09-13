@@ -18,7 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 
-#include <gatery/frontend/TechnologyCapabilities.h>
+#include <gatery/frontend/tech/TechnologyCapabilities.h>
 
 namespace gtry::scl
 {

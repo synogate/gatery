@@ -19,8 +19,8 @@
 
 #include <gatery/hlim/supportNodes/Node_External.h>
 
-#include <gatery/frontend/TechnologyMappingPattern.h>
-#include <gatery/frontend/TechnologyCapabilities.h>
+#include <gatery/frontend/tech/TechnologyMappingPattern.h>
+#include <gatery/frontend/tech/TechnologyCapabilities.h>
 
 namespace gtry::scl::arch::xilinx {
 

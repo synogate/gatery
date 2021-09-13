@@ -15,16 +15,21 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#pragma once
 
-#include "TargetDevice.h"
+#include <gatery/hlim/postprocessing/TechnologyMapping.h>
 
+namespace gtry {
 
-namespace gtry::scl::arch {
+	class TechnologyMappingPattern : public hlim::TechnologyMappingPattern
+	{
+		public:
+			TechnologyMappingPattern();
+			virtual ~TechnologyMappingPattern() = default;
 
-TargetDevice::TargetDevice() 
-{
-
-}
+			virtual bool attemptApply(hlim::Circuit &circuit, hlim::NodeGroup *nodeGroup) const final override;
+			virtual bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const = 0;
+		protected:
+	};
 
 }

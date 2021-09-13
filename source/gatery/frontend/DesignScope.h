@@ -24,7 +24,7 @@
 #include <gatery/simulation/ConstructionTimeSimulationContext.h>
 
 #include "Scope.h"
-#include "TechnologyCapabilities.h"
+#include "tech/targetTechnology.h"
 
 namespace gtry {
 
@@ -32,6 +32,7 @@ class DesignScope : public BaseScope<DesignScope>
 {
     public:
         DesignScope();
+        DesignScope(std::unique_ptr<TargetTechnology> targetTech);
 
         static void visualize(const std::string &filename, hlim::NodeGroup *nodeGroup = nullptr);
 
@@ -45,13 +46,15 @@ class DesignScope : public BaseScope<DesignScope>
         static ClockType *createClock(Args&&... args);
 
         inline GroupScope &getRootGroup() { return m_rootScope; }
+
+        
     protected:
         hlim::Circuit m_circuit;
         GroupScope m_rootScope;
 
         sim::ConstructionTimeSimulationContext m_simContext;
         
-        DefaultTechnologyCapabilities m_defaultTechCaps;
+        std::unique_ptr<TargetTechnology> m_targetTech;
         TechnologyScope m_defaultTechScope;
 };
 

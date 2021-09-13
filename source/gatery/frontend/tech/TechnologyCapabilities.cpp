@@ -137,11 +137,6 @@ FifoCapabilities::Choice FifoCapabilities::select(const Request &request) const
     return choice;
 }
 
-DefaultTechnologyCapabilities::DefaultTechnologyCapabilities()
-{
-    registerCap(&m_defaultMemCaps);
-    registerCap(&m_defaultFifoCaps);
-}
 
 
 }
