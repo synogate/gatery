@@ -97,18 +97,6 @@ namespace gtry::hlim
 		setInstanceName("i_" + m_name + "_" + std::to_string(index));
 	}
 
-	void NodeGroup::buildProperyTree(utils::PropertyTree& out) const
-	{
-		utils::PropertyTree me = out[m_instanceName];
-		me = m_properties;
-		
-		for (auto& child : m_children)
-		{
-			if(!child->getInstanceName().empty())
-				child->buildProperyTree(me);
-		}
-	}
-
 	bool NodeGroup::isChildOf(const NodeGroup* other) const
 	{
 		const NodeGroup* parent = getParent();
@@ -149,6 +137,7 @@ namespace gtry::hlim
 		auto&& path = instancePath();
 		utils::ConfigTree config = ms_config[path];
 		config.addRecorder(m_properties);
+		config.addRecorder(m_usedSettings);
 		return config;
 	}
 
