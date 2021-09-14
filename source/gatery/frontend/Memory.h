@@ -136,6 +136,7 @@ namespace gtry
 
 			auto&& cfg = ent.instanceConfig();
 			m_memoryNode->loadConfig(cfg);
+			setType(m_memoryNode->type());
 		}
 
 		size_t readLatencyHint() const { return m_memoryNode->getRequiredReadLatency(); }
