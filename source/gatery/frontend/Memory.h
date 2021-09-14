@@ -135,8 +135,14 @@ namespace gtry
 			m_memoryNode->setPowerOnState(std::move(state));
 
 			auto&& cfg = ent.instanceConfig();
+
+			MemType memType = cfg["type"].as(MemType::DONT_CARE);
+			if (cfg["readLatency"])
+				setType(memType, cfg["readLatency"].as<size_t>());
+			else
+				setType(memType);
+
 			m_memoryNode->loadConfig(cfg);
-			setType(m_memoryNode->type());
 		}
 
 		size_t readLatencyHint() const { return m_memoryNode->getRequiredReadLatency(); }

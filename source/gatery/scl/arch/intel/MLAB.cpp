@@ -57,13 +57,6 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 
 	if (memGrp->getWritePorts().size() > 1) return false;
 
-    for (auto reg : rp.dedicatedReadLatencyRegisters) {
-        if (reg->hasResetValue()) return false;
-        if (reg->hasEnable()) return false;
-		if (memGrp->getWritePorts().size() > 0 && memGrp->getWritePorts().front().node->getClocks()[0] != reg->getClocks()[0]) return false;
-		if (rp.dedicatedReadLatencyRegisters.front()->getClocks()[0] != reg->getClocks()[0]) return false;
-    }
-
     size_t width = rp.node->getBitWidth();
     size_t depth = memGrp->getMemory()->getSize()/width;
     size_t addrBits = utils::Log2C(depth);
@@ -76,6 +69,15 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 
 	memGrp->convertToReadBeforeWrite(circuit);
     memGrp->attemptRegisterRetiming(circuit);
+
+
+    for (auto reg : rp.dedicatedReadLatencyRegisters) {
+        if (reg->hasResetValue()) return false;
+        if (reg->hasEnable()) return false;
+		if (memGrp->getWritePorts().size() > 0 && memGrp->getWritePorts().front().node->getClocks()[0] != reg->getClocks()[0]) return false;
+		if (rp.dedicatedReadLatencyRegisters.front()->getClocks()[0] != reg->getClocks()[0]) return false;
+    }
+
     memGrp->resolveWriteOrder(circuit);
     memGrp->updateNoConflictsAttrib();
     memGrp->buildReset(circuit);

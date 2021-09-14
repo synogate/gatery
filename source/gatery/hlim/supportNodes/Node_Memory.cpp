@@ -51,8 +51,9 @@ namespace gtry::hlim {
 
     void Node_Memory::setType(MemType type, size_t requiredReadLatency)
     { 
-        m_type = type; 
-        m_requiredReadLatency = requiredReadLatency;
+        m_type = type;
+        if (requiredReadLatency != ~0ull)
+            m_requiredReadLatency = requiredReadLatency;
     }
 
     void Node_Memory::setNoConflicts()
@@ -66,7 +67,7 @@ namespace gtry::hlim {
     void Node_Memory::loadConfig(const utils::ConfigTree& cfg)
     {
         size_t readLatency = ~0ull;
-        
+/*        
         if(cfg["readLatency"])
             readLatency = cfg["readLatency"].as<size_t>();
 
@@ -79,7 +80,7 @@ namespace gtry::hlim {
         {
             setType(MemType::DONT_CARE, readLatency);
         }
-
+*/
         if (cfg["prefix"])
         {
             setName(cfg["prefix"].as<std::string>(""));

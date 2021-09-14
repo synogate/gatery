@@ -48,21 +48,29 @@ bool M20K::apply(hlim::NodeGroup *nodeGroup) const
 		return false;
 
 	if (memGrp->getReadPorts().size() != 1) return false;
-	if (memGrp->getWritePorts().size() > 1) return false;
-    if (memGrp->getMemory()->getRequiredReadLatency() == 0 || memGrp->getMemory()->getRequiredReadLatency() > 2) return false;
-    for (auto reg : memGrp->getReadPorts().front().dedicatedReadLatencyRegisters) {
-        if (reg->hasResetValue()) return false;
-        if (reg->hasEnable()) return false;
+    const auto &rp = memGrp->getReadPorts().front();
 
-        // For now, no true dual port, so only single clock
-		if (memGrp->getWritePorts().size() > 0 && memGrp->getWritePorts().front().node->getClocks()[0] != reg->getClocks()[0]) return false;
-		if (memGrp->getReadPorts().front().dedicatedReadLatencyRegisters.front()->getClocks()[0] != reg->getClocks()[0]) return false;        
-    }
+	if (memGrp->getWritePorts().size() > 1) return false;
+    if (memGrp->getMemory()->getRequiredReadLatency() == 0) return false;
+
 
     auto &circuit = DesignScope::get()->getCircuit();
 
     memGrp->convertToReadBeforeWrite(circuit);
     memGrp->attemptRegisterRetiming(circuit);
+
+    auto *readClock = rp.dedicatedReadLatencyRegisters.front()->getClocks()[0];
+
+    for (auto reg : rp.dedicatedReadLatencyRegisters) {
+        if (reg->hasResetValue()) return false;
+        if (reg->hasEnable()) return false;
+
+        // For now, no true dual port, so only single clock
+		if (memGrp->getWritePorts().size() > 0 && memGrp->getWritePorts().front().node->getClocks()[0] != reg->getClocks()[0]) return false;
+		if (readClock != reg->getClocks()[0]) return false;        
+    }
+
+
     memGrp->resolveWriteOrder(circuit);
     memGrp->updateNoConflictsAttrib();
     memGrp->buildReset(circuit);
@@ -70,8 +78,6 @@ bool M20K::apply(hlim::NodeGroup *nodeGroup) const
     memGrp->verify();
 
     GroupScope scope(memGrp->lazyCreateFixupNodeGroup());
-
-    auto &rp = memGrp->getReadPorts().front();
 
     auto *altsyncram = DesignScope::createNode<ALTSYNCRAM>(memGrp->getMemory()->getSize());
 
@@ -101,6 +107,11 @@ bool M20K::apply(hlim::NodeGroup *nodeGroup) const
         altsyncram->setupMixedPortRdw(ALTSYNCRAM::RDWBehavior::DONT_CARE);
 
 
+    bool useInternalOutputRegister = false;
+
+    size_t numExternalOutputRegisters = rp.dedicatedReadLatencyRegisters.size()-1;
+    if (useInternalOutputRegister) 
+        numExternalOutputRegisters--;
 
     if (memGrp->getWritePorts().size() > 0) {
         auto &wp = memGrp->getWritePorts().front();
@@ -121,30 +132,46 @@ bool M20K::apply(hlim::NodeGroup *nodeGroup) const
         {
             ALTSYNCRAM::PortSetup portSetup;
             portSetup.inputRegs = true;
-            portSetup.outputRegs = rp.dedicatedReadLatencyRegisters.size() > 1;
+            portSetup.outputRegs = (rp.dedicatedReadLatencyRegisters.size() > 1) && useInternalOutputRegister;
             altsyncram->setupPortB(rp.node->getBitWidth(), portSetup);
 
             BVec addr = hookBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
             BVec data = hookBVecAfter(rp.dataOutput);
 
             altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_ADDRESS_B, addr);
-            data.setExportOverride(altsyncram->getOutputBVec(ALTSYNCRAM::Outputs::OUT_Q_B));
 
-            altsyncram->attachClock(rp.dedicatedReadLatencyRegisters.front()->getClocks()[0], (size_t)ALTSYNCRAM::Clocks::CLK_0);
+            BVec readData = altsyncram->getOutputBVec(ALTSYNCRAM::Outputs::OUT_Q_B);
+
+            {
+                Clock clock(readClock);
+                ClockScope cscope(clock);
+                for (auto i : utils::Range(numExternalOutputRegisters)) 
+                    readData = reg(readData);
+            }
+            data.setExportOverride(readData);
+
+            altsyncram->attachClock(readClock, (size_t)ALTSYNCRAM::Clocks::CLK_0);
         }        
     } else {
         ALTSYNCRAM::PortSetup portSetup;
         portSetup.inputRegs = true;
-        portSetup.outputRegs = rp.dedicatedReadLatencyRegisters.size() > 1;
+        portSetup.outputRegs = (rp.dedicatedReadLatencyRegisters.size() > 1) && useInternalOutputRegister;
         altsyncram->setupPortA(rp.node->getBitWidth(), portSetup);
 
         BVec addr = hookBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
         BVec data = hookBVecAfter(rp.dataOutput);
 
         altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_ADDRESS_A, addr);
-        data.setExportOverride(altsyncram->getOutputBVec(ALTSYNCRAM::Outputs::OUT_Q_A));
+        BVec readData = altsyncram->getOutputBVec(ALTSYNCRAM::Outputs::OUT_Q_A);
+        {
+            Clock clock(readClock);
+            ClockScope cscope(clock);
+            for (auto i : utils::Range(numExternalOutputRegisters)) 
+                readData = reg(readData);
+        }
+        data.setExportOverride(readData);
 
-        altsyncram->attachClock(rp.dedicatedReadLatencyRegisters.front()->getClocks()[0], (size_t)ALTSYNCRAM::Clocks::CLK_0);    
+        altsyncram->attachClock(readClock, (size_t)ALTSYNCRAM::Clocks::CLK_0);    
     }
 
 	return true;
