@@ -70,7 +70,9 @@ class ALTDPRAM : public gtry::hlim::Node_External
 			bool inputRegs = false;
 			bool outputRegs = false;
 			bool resetAddr = false;
+            bool resetRdEnable = false;
 			bool resetWrEn = false;
+			bool resetWrData = false;
 			bool outReset = false;
 		};
 

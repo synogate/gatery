@@ -80,16 +80,25 @@ ALTDPRAM &ALTDPRAM::setupReadPort(PortSetup portSetup)
 	else
 		m_genericParameters["OUTDATA_REG"] = "\"UNREGISTERED\"";
 
+	if (portSetup.outReset) 
+		m_genericParameters["OUTDATA_ACLR"] = "\"ON\"";
+	else
+		m_genericParameters["OUTDATA_ACLR"] = "\"OFF\"";
+
 	if (portSetup.resetAddr)
 		m_genericParameters["RDADDRESS_ACLR"] = "\"ON\"";
 	else
 		m_genericParameters["RDADDRESS_ACLR"] = "\"OFF\"";
 
+	if (portSetup.resetRdEnable)
+		m_genericParameters["RDCONTROL_ACLR"] = "\"ON\"";
+	else
+		m_genericParameters["RDCONTROL_ACLR"] = "\"OFF\"";
 
 	if (portSetup.inputRegs || portSetup.outputRegs)
 		m_clockNames[1] = "outclock";
 
-	if (portSetup.resetAddr)
+	if (portSetup.resetAddr || portSetup.resetRdEnable || portSetup.outReset)
 		m_resetNames[1] = "aclr";
 
 	return *this;
@@ -100,9 +109,11 @@ ALTDPRAM &ALTDPRAM::setupWritePort(PortSetup portSetup)
 	if (portSetup.inputRegs) {
 		m_genericParameters["WRCONTROL_REG"] 				= "\"INCLOCK\"";
 		m_genericParameters["WRADDRESS_REG"] 				= "\"INCLOCK\"";
+		m_genericParameters["INDATA_REG"] 					= "\"INCLOCK\"";
 	} else {
 		m_genericParameters["WRCONTROL_REG"] 				= "\"UNREGISTERED\"";
 		m_genericParameters["WRADDRESS_REG"] 				= "\"UNREGISTERED\"";
+		m_genericParameters["INDATA_REG"] 					= "\"UNREGISTERED\"";
 	}
 
 	if (portSetup.resetAddr)
@@ -115,10 +126,15 @@ ALTDPRAM &ALTDPRAM::setupWritePort(PortSetup portSetup)
 	else
 		m_genericParameters["WRCONTROL_ACLR"] = "\"OFF\"";
 
+	if (portSetup.resetWrData)
+		m_genericParameters["INDATA_ACLR"] = "\"ON\"";
+	else
+		m_genericParameters["INDATA_ACLR"] = "\"OFF\"";
+
 	if (portSetup.inputRegs)
 		m_clockNames[0] = "inclock";
 
-	if (portSetup.resetAddr || portSetup.resetWrEn)
+	if (portSetup.resetAddr || portSetup.resetWrEn || portSetup.resetWrData)
 		m_resetNames[0] = "aclr";
 
 	return *this;
