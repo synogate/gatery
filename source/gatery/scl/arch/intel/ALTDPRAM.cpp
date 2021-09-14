@@ -201,11 +201,11 @@ void ALTDPRAM::connectInput(Inputs input, const BVec &bvec)
 		break;
 		case IN_RDADDRESS:
 			NodeIO::connectInput(input, bvec.getReadPort());
-			HCL_DESIGNCHECK_HINT((1 << bvec.size()) == m_depth, "RD-Address input bvec to ALTDPRAM has different width than previously specified!");
+			HCL_DESIGNCHECK_HINT((1ull << bvec.size()) == m_depth, "RD-Address input bvec to ALTDPRAM has different width than previously specified!");
 		break;
 		case IN_WRADDRESS:
 			NodeIO::connectInput(input, bvec.getReadPort());
-			HCL_DESIGNCHECK_HINT((1 << bvec.size()) == m_depth, "WR-Address input bvec to ALTDPRAM has different width than previously specified!");
+			HCL_DESIGNCHECK_HINT((1ull << bvec.size()) == m_depth, "WR-Address input bvec to ALTDPRAM has different width than previously specified!");
 		break;
 		case IN_BYTEENA:
 			NodeIO::connectInput(input, bvec.getReadPort());
