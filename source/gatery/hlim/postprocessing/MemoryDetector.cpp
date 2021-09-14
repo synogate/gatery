@@ -194,7 +194,6 @@ NodeGroup *MemoryGroup::lazyCreateFixupNodeGroup()
         else
             m_fixupNodeGroup->setName(m_memory->getName()+"_Memory_Helper");
         m_fixupNodeGroup->setComment("Auto generated to handle various memory access issues such as read during write and read modify write hazards.");
-        m_nodeGroup->moveInto(m_fixupNodeGroup);
     }
     return m_fixupNodeGroup;
 }
@@ -1286,6 +1285,18 @@ MemoryGroup *formMemoryGroupIfNecessary(Circuit &circuit, Node_Memory *memory)
     auto* memoryGroup = dynamic_cast<MemoryGroup*>(memory->getGroup()->getMetaInfo());
     if (memoryGroup == nullptr) {
         HCL_ASSERT(memory->getGroup()->getMetaInfo() == nullptr);
+
+        auto *logicalMemNodeGroup = memory->getGroup();
+
+        auto *physMemNodeGroup = logicalMemNodeGroup->addChildNodeGroup(NodeGroup::GroupType::ENTITY);
+        physMemNodeGroup->recordStackTrace();
+        if (memory->getName().empty())
+            physMemNodeGroup->setName("physical_memory");
+        else
+            physMemNodeGroup->setName(memory->getName()+"_physical_memory");
+
+        memory->moveToGroup(physMemNodeGroup);
+
         memoryGroup = memory->getGroup()->createMetaInfo<MemoryGroup>(memory->getGroup());
         memoryGroup->pullInPorts(memory);
     }
