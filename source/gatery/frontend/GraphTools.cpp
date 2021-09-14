@@ -58,8 +58,8 @@ BVec hookBVecAfter(hlim::NodePort output)
 Bit hookBitBefore(hlim::NodePort input)
 {
 	Bit res;
-	if (input.node != nullptr) {
-		auto driver = input.node->getDriver(input.port);
+	auto driver = input.node->getDriver(input.port);
+	if (driver.node != nullptr) {
 		HCL_DESIGNCHECK_HINT(getOutputConnectionType(driver).interpretation == hlim::ConnectionType::BOOL, "Attempting to create Bit hook from a signal node that is not a Bit");
 		res = SignalReadPort(driver);
 	}
@@ -79,6 +79,40 @@ Bit hookBitAfter(hlim::NodePort output)
 	res = SignalReadPort(output);
 	return res;
 }
+
+
+BVec getBVecBefore(hlim::NodePort input)
+{
+	auto driver = input.node->getDriver(input.port);
+	HCL_DESIGNCHECK(driver.node != nullptr);
+	return BVec(SignalReadPort(driver));
+}
+
+BVec getBVecBefore(hlim::NodePort input, BVec defaultValue)
+{
+	auto driver = input.node->getDriver(input.port);
+	if (driver.node == nullptr)
+		return defaultValue;
+	return BVec(SignalReadPort(driver));
+}
+
+Bit getBitBefore(hlim::NodePort input)
+{
+	auto driver = input.node->getDriver(input.port);
+	HCL_DESIGNCHECK(driver.node != nullptr);
+	return Bit(SignalReadPort(driver));
+}
+
+Bit getBitBefore(hlim::NodePort input, Bit defaultValue)
+{
+	auto driver = input.node->getDriver(input.port);
+	if (driver.node == nullptr)
+		return defaultValue;
+	return Bit(SignalReadPort(driver));
+}
+
+
+
 
 BVec hookBVecBefore(hlim::Node_Signal *signal)
 {

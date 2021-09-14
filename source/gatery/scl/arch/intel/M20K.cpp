@@ -77,8 +77,6 @@ bool M20K::apply(hlim::NodeGroup *nodeGroup) const
     memGrp->bypassSignalNodes();
     memGrp->verify();
 
-    GroupScope scope(memGrp->lazyCreateFixupNodeGroup());
-
     auto *altsyncram = DesignScope::createNode<ALTSYNCRAM>(memGrp->getMemory()->getSize());
 
     if (memGrp->getWritePorts().size() == 0)
@@ -119,9 +117,9 @@ bool M20K::apply(hlim::NodeGroup *nodeGroup) const
         portSetup.inputRegs = true;
         altsyncram->setupPortA(wp.node->getBitWidth(), portSetup);
 
-        BVec wrData = hookBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
-        BVec addr = hookBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-        Bit wrEn = hookBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrEnable});
+        BVec wrData = getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
+        BVec addr = getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+        Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrEnable}, '1');
 
         altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_DATA_A, wrData);
         altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_ADDRESS_A, addr);
@@ -135,7 +133,7 @@ bool M20K::apply(hlim::NodeGroup *nodeGroup) const
             portSetup.outputRegs = (rp.dedicatedReadLatencyRegisters.size() > 1) && useInternalOutputRegister;
             altsyncram->setupPortB(rp.node->getBitWidth(), portSetup);
 
-            BVec addr = hookBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+            BVec addr = getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
             BVec data = hookBVecAfter(rp.dataOutput);
 
             altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_ADDRESS_B, addr);
@@ -158,7 +156,7 @@ bool M20K::apply(hlim::NodeGroup *nodeGroup) const
         portSetup.outputRegs = (rp.dedicatedReadLatencyRegisters.size() > 1) && useInternalOutputRegister;
         altsyncram->setupPortA(rp.node->getBitWidth(), portSetup);
 
-        BVec addr = hookBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+        BVec addr = getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
         BVec data = hookBVecAfter(rp.dataOutput);
 
         altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_ADDRESS_A, addr);

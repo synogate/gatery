@@ -64,10 +64,16 @@ class NodeGroupSurgeryHelper {
 };
 
 
-BVec hookBVecBefore(hlim::NodePort nodePort);
-BVec hookBVecAfter(hlim::NodePort nodePort);
-Bit hookBitBefore(hlim::NodePort nodePort);
-Bit hookBitAfter(hlim::NodePort nodePort);
+BVec hookBVecBefore(hlim::NodePort input);
+BVec hookBVecAfter(hlim::NodePort output);
+Bit hookBitBefore(hlim::NodePort input);
+Bit hookBitAfter(hlim::NodePort output);
+
+BVec getBVecBefore(hlim::NodePort input);
+BVec getBVecBefore(hlim::NodePort input, BVec defaultValue);
+Bit getBitBefore(hlim::NodePort input);
+Bit getBitBefore(hlim::NodePort input, Bit defaultValue);
+
 
 BVec hookBVecBefore(hlim::Node_Signal *signal);
 BVec hookBVecAfter(hlim::Node_Signal *signal);

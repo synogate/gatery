@@ -55,6 +55,36 @@
 
 namespace gtry::hlim {
 
+MemoryGroup *formMemoryGroupIfNecessary(Circuit &circuit, Node_Memory *memory)
+{
+    auto* memoryGroup = dynamic_cast<MemoryGroup*>(memory->getGroup()->getMetaInfo());
+    if (memoryGroup == nullptr) {
+        HCL_ASSERT(memory->getGroup()->getMetaInfo() == nullptr);
+
+        auto *logicalMemNodeGroup = memory->getGroup();
+
+        auto *physMemNodeGroup = logicalMemNodeGroup->addChildNodeGroup(NodeGroup::GroupType::ENTITY);
+        physMemNodeGroup->recordStackTrace();
+        if (memory->getName().empty())
+            physMemNodeGroup->setName("physical_memory");
+        else
+            physMemNodeGroup->setName(memory->getName()+"_physical_memory");
+
+        memory->moveToGroup(physMemNodeGroup);
+
+        memoryGroup = memory->getGroup()->createMetaInfo<MemoryGroup>(memory->getGroup());
+        memoryGroup->pullInPorts(memory);
+    }
+    return memoryGroup;
+}
+
+void findMemoryGroups(Circuit &circuit)
+{
+    for (auto &node : circuit.getNodes())
+        if (auto *memory = dynamic_cast<Node_Memory*>(node.get()))
+            formMemoryGroupIfNecessary(circuit, memory);
+}
+
 
 bool MemoryGroup::ReadPort::findOutputRegisters(size_t readLatency, NodeGroup *memoryNodeGroup)
 {
@@ -679,11 +709,14 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 
     const auto &newNodes = rmwBuilder.getNewNodes();
     for (auto n : newNodes) 
-        if (dynamic_cast<Node_Memory*>(n)) {
+        if (auto *memNode = dynamic_cast<Node_Memory*>(n)) {
             NodeGroup *subMemGrp = m_fixupNodeGroup->addChildNodeGroup(NodeGroup::GroupType::ENTITY);
+            subMemGrp->setName(n->getName() + "_logical_memory");
             n->moveToGroup(subMemGrp);
+            formMemoryGroupIfNecessary(circuit, memNode);
         } else 
-            n->moveToGroup(m_fixupNodeGroup);
+            if (dynamic_cast<Node_MemPort*>(n) == nullptr)
+                n->moveToGroup(m_fixupNodeGroup);
 
     //visualize(circuit, "afterRMW");
 /*
@@ -1040,7 +1073,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 
         auto *pinRdAddr = circuit.createNode<Node_Pin>(false);
         pinRdAddr->setName(prefix +"rd_address");
-        pinRdAddr->moveToGroup(m_fixupNodeGroup);
+        pinRdAddr->moveToGroup(m_nodeGroup->getParent());
         pinRdAddr->recordStackTrace();
         pinRdAddr->connect(rp.node->getDriver((size_t)Node_MemPort::Inputs::address));
 
@@ -1048,14 +1081,14 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
         if (rp.node->getDriver((size_t)Node_MemPort::Inputs::enable).node != nullptr) {
             pinRdEn = circuit.createNode<Node_Pin>(false);
             pinRdEn->setName(prefix +"rd_read");
-            pinRdEn->moveToGroup(m_fixupNodeGroup);
+            pinRdEn->moveToGroup(m_nodeGroup->getParent());
             pinRdEn->recordStackTrace();
             pinRdEn->connect(rp.node->getDriver((size_t)Node_MemPort::Inputs::enable));
         }
 
         auto *pinRdData = circuit.createNode<Node_Pin>(true);
         pinRdData->setName(prefix +"rd_readdata");
-        pinRdData->moveToGroup(m_fixupNodeGroup);
+        pinRdData->moveToGroup(m_nodeGroup->getParent());
         pinRdData->recordStackTrace();
         if (getOutputConnectionType(rp.dataOutput).interpretation == ConnectionType::BOOL)
             pinRdData->setBool();
@@ -1085,13 +1118,13 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 
         auto *pinWrAddr = circuit.createNode<Node_Pin>(false);
         pinWrAddr->setName(prefix +"wr_address");
-        pinWrAddr->moveToGroup(m_fixupNodeGroup);
+        pinWrAddr->moveToGroup(m_nodeGroup->getParent());
         pinWrAddr->recordStackTrace();
         pinWrAddr->connect(wp.node->getDriver((size_t)Node_MemPort::Inputs::address));
 
         auto *pinWrData = circuit.createNode<Node_Pin>(false);
         pinWrData->setName(prefix +"wr_writedata");
-        pinWrData->moveToGroup(m_fixupNodeGroup);
+        pinWrData->moveToGroup(m_nodeGroup->getParent());
         pinWrData->recordStackTrace();
         pinWrData->connect(wp.node->getDriver((size_t)Node_MemPort::Inputs::wrData));
 
@@ -1099,7 +1132,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
         if (wp.node->getDriver((size_t)Node_MemPort::Inputs::wrEnable).node != nullptr) {
             pinWrEn = circuit.createNode<Node_Pin>(false);
             pinWrEn->setName(prefix +"wr_write");
-            pinWrEn->moveToGroup(m_fixupNodeGroup);
+            pinWrEn->moveToGroup(m_nodeGroup->getParent());
             pinWrEn->recordStackTrace();
             pinWrEn->connect(wp.node->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
         }
@@ -1279,36 +1312,6 @@ void MemoryGroup::giveName(Circuit &circuit, NodePort &nodePort, std::string nam
     sig->moveToGroup(m_fixupNodeGroup);
 }
 
-
-MemoryGroup *formMemoryGroupIfNecessary(Circuit &circuit, Node_Memory *memory)
-{
-    auto* memoryGroup = dynamic_cast<MemoryGroup*>(memory->getGroup()->getMetaInfo());
-    if (memoryGroup == nullptr) {
-        HCL_ASSERT(memory->getGroup()->getMetaInfo() == nullptr);
-
-        auto *logicalMemNodeGroup = memory->getGroup();
-
-        auto *physMemNodeGroup = logicalMemNodeGroup->addChildNodeGroup(NodeGroup::GroupType::ENTITY);
-        physMemNodeGroup->recordStackTrace();
-        if (memory->getName().empty())
-            physMemNodeGroup->setName("physical_memory");
-        else
-            physMemNodeGroup->setName(memory->getName()+"_physical_memory");
-
-        memory->moveToGroup(physMemNodeGroup);
-
-        memoryGroup = memory->getGroup()->createMetaInfo<MemoryGroup>(memory->getGroup());
-        memoryGroup->pullInPorts(memory);
-    }
-    return memoryGroup;
-}
-
-void findMemoryGroups(Circuit &circuit)
-{
-    for (auto &node : circuit.getNodes())
-        if (auto *memory = dynamic_cast<Node_Memory*>(node.get()))
-            formMemoryGroupIfNecessary(circuit, memory);
-}
 
 Memory2VHDLPattern::Memory2VHDLPattern()
 {

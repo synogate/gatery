@@ -84,8 +84,6 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
     memGrp->bypassSignalNodes();
     memGrp->verify();
 
-    GroupScope scope(memGrp->lazyCreateFixupNodeGroup());
-
     auto *altdpram = DesignScope::createNode<ALTDPRAM>(width, depth);
 
     altdpram->setupRamType(m_desc.memoryName);
@@ -111,9 +109,9 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 		portSetup.inputRegs = true;
         altdpram->setupWritePort(portSetup);
 
-        BVec wrData = hookBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
-        BVec addr = hookBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-        Bit wrEn = hookBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrEnable});
+        BVec wrData = getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
+        BVec addr = getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+        Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrEnable}, '1');
 
         altdpram->connectInput(ALTDPRAM::Inputs::IN_DATA, wrData);
         altdpram->connectInput(ALTDPRAM::Inputs::IN_WRADDRESS, addr(0, addrBits));
@@ -127,7 +125,7 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
         portSetup.outputRegs = rp.dedicatedReadLatencyRegisters.size() > 0;
         altdpram->setupReadPort(portSetup);
 
-        BVec addr = hookBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+        BVec addr = getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
         BVec data = hookBVecAfter(rp.dataOutput);
 
         altdpram->connectInput(ALTDPRAM::Inputs::IN_RDADDRESS, addr(0, addrBits));
