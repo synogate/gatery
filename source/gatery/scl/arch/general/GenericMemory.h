@@ -38,6 +38,8 @@ class EmbeddedMemory {
 		struct Desc {
 			std::string memoryName;
 
+			size_t size;
+
 			MemoryCapabilities::SizeCategory sizeCategory;
 
 			bool inputRegs;

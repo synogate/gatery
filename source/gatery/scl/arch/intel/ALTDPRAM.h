@@ -22,45 +22,39 @@
 
 namespace gtry::scl::arch::intel {
 
-class ALTSYNCRAM : public gtry::hlim::Node_External
+class ALTDPRAM : public gtry::hlim::Node_External
 {
     public:
         // Asynchronous reset of all FIFO functions, flags, and pointers. RST must be asserted for five read and write clock cycles.
 
         enum Clocks {
-            CLK_0,
-            CLK_1,
+            INCLOCK,
+            OUTCLOCK,
             CLK_COUNT
         };
 
         // WREN and RDEN must be held Low before RST is asserted and during the Reset cycle.
         enum Inputs {
 			// Bits
-            IN_WREN_A,
-            IN_RDEN_A,
-            IN_WREN_B,
-            IN_RDEN_B,
-
-			IN_CLOCKEN_0,
-			IN_CLOCKEN_1,
-
-			IN_ACLR_0,
-			IN_ACLR_1,
+            IN_RDADDRESSSTALL,
+            IN_WRADDRESSSTALL,
+            IN_WREN,
+            IN_INCLOCKEN,
+            IN_RDEN,
+            IN_OUTCLOCKEN,
+			IN_ACLR,
 
 			// BVecs
-			IN_DATA_A,
-			IN_ADDRESS_A,
-			IN_BYTEENA_A,
-			IN_DATA_B,
-			IN_ADDRESS_B,
-			IN_BYTEENA_B,
+			IN_DATA,
+			IN_RDADDRESS,
+			IN_WRADDRESS,
+			IN_BYTEENA,
 
             IN_COUNT
         };
         enum Outputs {
 			// BVecs
-            OUT_Q_A,
-            OUT_Q_B,
+            OUT_Q,
 
             OUT_COUNT
         };
@@ -73,29 +67,22 @@ class ALTSYNCRAM : public gtry::hlim::Node_External
 		};
 
 		struct PortSetup {
-			RDWBehavior rdw = RDWBehavior::DONT_CARE;
 			bool inputRegs = false;
 			bool outputRegs = false;
-			bool dualClock = false;
 			bool resetAddr = false;
 			bool resetWrEn = false;
 			bool outReset = false;
 		};
 
-        ALTSYNCRAM(size_t size);
+        ALTDPRAM(size_t width, size_t depth);
 
-		ALTSYNCRAM &setupSinglePort(); // In single port mode, only port A can be used
-		ALTSYNCRAM &setupSimpleDualPort(); // port A must be the write port and port B the read port
-		ALTSYNCRAM &setupTrueDualPort();
-		ALTSYNCRAM &setupROM();
+		ALTDPRAM &setupReadPort(PortSetup portSetup);
+		ALTDPRAM &setupWritePort(PortSetup portSetup);
 
-		ALTSYNCRAM &setupPortA(size_t width, PortSetup portSetup);
-		ALTSYNCRAM &setupPortB(size_t width, PortSetup portSetup);
+        ALTDPRAM &setupMixedPortRdw(RDWBehavior rdw);
 
-        ALTSYNCRAM &setupMixedPortRdw(RDWBehavior rdw);
-
-		ALTSYNCRAM &setupRamType(const std::string &type);
-		ALTSYNCRAM &setupSimulationDeviceFamily(const std::string &devFamily);
+		ALTDPRAM &setupRamType(const std::string &type);
+		ALTDPRAM &setupSimulationDeviceFamily(const std::string &devFamily);
 
 		void connectInput(Inputs input, const Bit &bit);
 		void connectInput(Inputs input, const BVec &bvec);
@@ -110,7 +97,8 @@ class ALTSYNCRAM : public gtry::hlim::Node_External
 
         virtual std::string attemptInferOutputName(size_t outputPort) const override;
     protected:
-		size_t m_size;
+		size_t m_width;
+		size_t m_depth;
 
 		static std::string RDWBehavior2Str(RDWBehavior rdw);
 };

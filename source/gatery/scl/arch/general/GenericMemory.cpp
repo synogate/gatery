@@ -55,7 +55,7 @@ void EmbeddedMemoryList::add(std::unique_ptr<EmbeddedMemory> mem)
 {
 	m_embeddedMemories.push_back(std::move(mem));
 	std::sort(m_embeddedMemories.begin(), m_embeddedMemories.end(), [](const auto &lhs, const auto &rhs) {
-		return lhs->getPriority() > rhs->getPriority();
+		return lhs->getPriority() < rhs->getPriority();
 	});
 }
 
@@ -100,6 +100,22 @@ bool EmbeddedMemoryPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 	GenericMemoryCapabilities::Request request;
 	request.size = memGrp->getMemory()->getSize();
 	request.maxDepth = memGrp->getMemory()->getMaxDepth();
+
+	switch (memGrp->getMemory()->type()) {
+		case hlim::Node_Memory::MemType::SMALL:
+			request.sizeCategory = MemoryCapabilities::SizeCategory::SMALL;
+		break;
+		case hlim::Node_Memory::MemType::MEDIUM:
+			request.sizeCategory = MemoryCapabilities::SizeCategory::MEDIUM;
+		break;
+		case hlim::Node_Memory::MemType::LARGE:
+			request.sizeCategory = MemoryCapabilities::SizeCategory::LARGE;
+		break;
+		case hlim::Node_Memory::MemType::EXTERNAL:
+			return false;
+		default:
+		break;
+	}
 
 	auto *memChoice = embeddedMems.selectMemFor(request);
 	return memChoice->apply(nodeGroup);

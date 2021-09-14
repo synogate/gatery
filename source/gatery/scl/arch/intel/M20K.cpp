@@ -32,6 +32,10 @@ M20K::M20K(const IntelDevice &intelDevice) : m_intelDevice(intelDevice)
 	m_desc.sizeCategory = MemoryCapabilities::SizeCategory::MEDIUM;
 	m_desc.inputRegs = true;
 	m_desc.outputRegs = 0;
+
+	// Embedded Memory User Guide "Table 3. Embedded Memory Blocks in Intel FPGA Devices"
+    m_desc.size = 20 << 10;
+    
 	// Embedded Memory User Guide "Table 6. Valid Range of Maximum Block Depth for Various Embedded Memory Blocks"
 	m_desc.addressBits = 14; // 16384
 }
@@ -45,6 +49,15 @@ bool M20K::apply(hlim::NodeGroup *nodeGroup) const
 
 	if (memGrp->getReadPorts().size() != 1) return false;
 	if (memGrp->getWritePorts().size() > 1) return false;
+    if (memGrp->getMemory()->getRequiredReadLatency() == 0 || memGrp->getMemory()->getRequiredReadLatency() > 2) return false;
+    for (auto reg : memGrp->getReadPorts().front().dedicatedReadLatencyRegisters) {
+        if (reg->hasResetValue()) return false;
+        if (reg->hasEnable()) return false;
+
+        // For now, no true dual port, so only single clock
+		if (memGrp->getWritePorts().size() > 0 && memGrp->getWritePorts().front().node->getClocks()[0] != reg->getClocks()[0]) return false;
+		if (memGrp->getReadPorts().front().dedicatedReadLatencyRegisters.front()->getClocks()[0] != reg->getClocks()[0]) return false;        
+    }
 
     auto &circuit = DesignScope::get()->getCircuit();
 
@@ -58,7 +71,6 @@ bool M20K::apply(hlim::NodeGroup *nodeGroup) const
 
     GroupScope scope(memGrp->lazyCreateFixupNodeGroup());
 
-
     auto &rp = memGrp->getReadPorts().front();
 
     auto *altsyncram = DesignScope::createNode<ALTSYNCRAM>(memGrp->getMemory()->getSize());
@@ -68,7 +80,7 @@ bool M20K::apply(hlim::NodeGroup *nodeGroup) const
     else
         altsyncram->setupSimpleDualPort();
 
-    //altsyncram->setupRamType(desc.memoryName);
+    altsyncram->setupRamType(m_desc.memoryName);
     altsyncram->setupSimulationDeviceFamily(m_intelDevice.getFamily());
    
     bool readFirst = false;
@@ -93,7 +105,7 @@ bool M20K::apply(hlim::NodeGroup *nodeGroup) const
     if (memGrp->getWritePorts().size() > 0) {
         auto &wp = memGrp->getWritePorts().front();
         ALTSYNCRAM::PortSetup portSetup;
-portSetup.rdw = ALTSYNCRAM::RDWBehavior::OLD_DATA;
+        portSetup.inputRegs = true;
         altsyncram->setupPortA(wp.node->getBitWidth(), portSetup);
 
         BVec wrData = hookBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
@@ -108,7 +120,7 @@ portSetup.rdw = ALTSYNCRAM::RDWBehavior::OLD_DATA;
 
         {
             ALTSYNCRAM::PortSetup portSetup;
-portSetup.rdw = ALTSYNCRAM::RDWBehavior::OLD_DATA;
+            portSetup.inputRegs = true;
             portSetup.outputRegs = rp.dedicatedReadLatencyRegisters.size() > 1;
             altsyncram->setupPortB(rp.node->getBitWidth(), portSetup);
 
@@ -118,11 +130,11 @@ portSetup.rdw = ALTSYNCRAM::RDWBehavior::OLD_DATA;
             altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_ADDRESS_B, addr);
             data.setExportOverride(altsyncram->getOutputBVec(ALTSYNCRAM::Outputs::OUT_Q_B));
 
-            altsyncram->attachClock(rp.dedicatedReadLatencyRegisters.front()->getClocks()[0], (size_t)ALTSYNCRAM::Clocks::CLK_1);
+            altsyncram->attachClock(rp.dedicatedReadLatencyRegisters.front()->getClocks()[0], (size_t)ALTSYNCRAM::Clocks::CLK_0);
         }        
     } else {
         ALTSYNCRAM::PortSetup portSetup;
-portSetup.rdw = ALTSYNCRAM::RDWBehavior::OLD_DATA;
+        portSetup.inputRegs = true;
         portSetup.outputRegs = rp.dedicatedReadLatencyRegisters.size() > 1;
         altsyncram->setupPortA(rp.node->getBitWidth(), portSetup);
 

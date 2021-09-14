@@ -24,6 +24,7 @@ namespace gtry::scl::arch::intel {
 class IntelDevice : public FPGADevice {
 	public:
 		void setupArria10(std::string device);
+		void setupCyclone10(std::string device);
 	protected:
 };
 

@@ -30,4 +30,18 @@ enum class MLABVariants {
 GenericMemoryDesc buildMLABDesc(MLABVariants variant, bool withOutputReg);
 */
 
+
+class IntelDevice;
+
+class MLAB : public EmbeddedMemory 
+{
+    public:
+        MLAB(const IntelDevice &intelDevice);
+
+		virtual bool apply(hlim::NodeGroup *nodeGroup) const override;
+    protected:
+        const IntelDevice &m_intelDevice;
+};
+
+
 }

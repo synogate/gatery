@@ -16,9 +16,127 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
+
 #include "MLAB.h"
+#include "IntelDevice.h"
+
+#include "ALTDPRAM.h"
+#include <gatery/hlim/postprocessing/MemoryDetector.h>
+#include <gatery/hlim/supportNodes/Node_MemPort.h>
 
 namespace gtry::scl::arch::intel {
+
+MLAB::MLAB(const IntelDevice &intelDevice) : m_intelDevice(intelDevice)
+{
+	m_desc.memoryName = "MLAB";
+	m_desc.sizeCategory = MemoryCapabilities::SizeCategory::SMALL;
+	m_desc.inputRegs = false;
+	m_desc.outputRegs = 1;
+
+	// Embedded Memory User Guide "Table 3. Embedded Memory Blocks in Intel FPGA Devices"
+	m_desc.size = 640;
+
+	// Embedded Memory User Guide "Table 6. Valid Range of Maximum Block Depth for Various Embedded Memory Blocks"
+	m_desc.addressBits = 8; // 64
+//	if (m_intelDevice.getFamily() == "Arria 5" || m_intelDevice.getFamily() == "Cyclone 5" || m_intelDevice.getFamily() == "Stratix 10")
+//		m_desc.addressBits = 4; // 32
+
+}
+
+bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
+{
+	auto *memGrp = dynamic_cast<hlim::MemoryGroup*>(nodeGroup->getMetaInfo());
+	if (memGrp == nullptr) return false;
+	if (memGrp->getMemory()->type() == hlim::Node_Memory::MemType::EXTERNAL)
+		return false;
+
+	if (memGrp->getReadPorts().size() != 1) return false;
+    const auto &rp = memGrp->getReadPorts().front();
+	if (memGrp->getWritePorts().size() > 1) return false;
+    if (memGrp->getMemory()->getRequiredReadLatency() > 1) return false;
+
+	if (memGrp->getWritePorts().size() > 1) return false;
+
+    for (auto reg : rp.dedicatedReadLatencyRegisters) {
+        if (reg->hasResetValue()) return false;
+        if (reg->hasEnable()) return false;
+		if (memGrp->getWritePorts().size() > 0 && memGrp->getWritePorts().front().node->getClocks()[0] != reg->getClocks()[0]) return false;
+		if (rp.dedicatedReadLatencyRegisters.front()->getClocks()[0] != reg->getClocks()[0]) return false;
+    }
+
+    size_t width = rp.node->getBitWidth();
+    size_t depth = memGrp->getMemory()->getSize()/width;
+    size_t addrBits = utils::Log2C(depth);
+
+	bool supportsWriteFirst = memGrp->getMemory()->getRequiredReadLatency() == 1;
+
+    if (memGrp->getWritePorts().size() != 0 && !supportsWriteFirst) return false; // Todo: Needs extra handling
+
+    auto &circuit = DesignScope::get()->getCircuit();
+
+	memGrp->convertToReadBeforeWrite(circuit);
+    memGrp->attemptRegisterRetiming(circuit);
+    memGrp->resolveWriteOrder(circuit);
+    memGrp->updateNoConflictsAttrib();
+    memGrp->buildReset(circuit);
+    memGrp->bypassSignalNodes();
+    memGrp->verify();
+
+    GroupScope scope(memGrp->lazyCreateFixupNodeGroup());
+
+    auto *altdpram = DesignScope::createNode<ALTDPRAM>(width, depth);
+
+    altdpram->setupRamType(m_desc.memoryName);
+    altdpram->setupSimulationDeviceFamily(m_intelDevice.getFamily());
+   
+    bool readFirst = false;
+    bool writeFirst = false;
+    if (memGrp->getWritePorts().size() > 1) {
+        auto &wp = memGrp->getWritePorts().front();
+        if (wp.node->isOrderedBefore(rp.node.get()))
+            writeFirst = true;
+        if (rp.node->isOrderedBefore(wp.node.get()))
+            readFirst = true;
+    }
+
+
+	altdpram->setupMixedPortRdw(ALTDPRAM::RDWBehavior::NEW_DATA_MASKED_UNDEFINED);
+
+
+    if (memGrp->getWritePorts().size() > 0) {
+        auto &wp = memGrp->getWritePorts().front();
+        ALTDPRAM::PortSetup portSetup;
+		portSetup.inputRegs = true;
+        altdpram->setupWritePort(portSetup);
+
+        BVec wrData = hookBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
+        BVec addr = hookBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+        Bit wrEn = hookBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrEnable});
+
+        altdpram->connectInput(ALTDPRAM::Inputs::IN_DATA, wrData);
+        altdpram->connectInput(ALTDPRAM::Inputs::IN_WRADDRESS, addr(0, addrBits));
+        altdpram->connectInput(ALTDPRAM::Inputs::IN_WREN, wrEn);
+
+        altdpram->attachClock(wp.node->getClocks()[0], (size_t)ALTDPRAM::Clocks::INCLOCK);
+    }
+
+    {
+        ALTDPRAM::PortSetup portSetup;
+        portSetup.outputRegs = rp.dedicatedReadLatencyRegisters.size() > 0;
+        altdpram->setupReadPort(portSetup);
+
+        BVec addr = hookBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+        BVec data = hookBVecAfter(rp.dataOutput);
+
+        altdpram->connectInput(ALTDPRAM::Inputs::IN_RDADDRESS, addr(0, addrBits));
+        data.setExportOverride(altdpram->getOutputBVec(ALTDPRAM::Outputs::OUT_Q));
+
+        altdpram->attachClock(rp.dedicatedReadLatencyRegisters.front()->getClocks()[0], (size_t)ALTDPRAM::Clocks::OUTCLOCK);
+    }
+	return true;
+}
+
+
 
 
 #if 0

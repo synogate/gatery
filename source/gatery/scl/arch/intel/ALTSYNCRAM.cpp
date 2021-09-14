@@ -50,6 +50,8 @@ std::string ALTSYNCRAM::RDWBehavior2Str(RDWBehavior rdw)
 	switch (rdw) {
 		case RDWBehavior::DONT_CARE:
 			return "\"DONT_CARE\"";
+		case RDWBehavior::CONSTRAINED_DONT_CARE:
+			return "\"CONSTRAINED_DONT_CARE\"";
 		case RDWBehavior::OLD_DATA:
 			return "\"OLD_DATA\"";
 		case RDWBehavior::NEW_DATA_MASKED_UNDEFINED:
@@ -64,6 +66,8 @@ ALTSYNCRAM &ALTSYNCRAM::setupPortA(size_t width, PortSetup portSetup)
 	m_genericParameters["width_a"] = std::to_string(width);
 	m_genericParameters["numwords_a"] = std::to_string(m_size / width);
 	m_genericParameters["read_during_write_mode_port_a"] = RDWBehavior2Str(portSetup.rdw);
+
+	HCL_ASSERT(portSetup.inputRegs);
 
 	if (portSetup.outputRegs)
 		m_genericParameters["outdata_reg_a"] = "\"CLOCK0\"";
@@ -99,27 +103,38 @@ ALTSYNCRAM &ALTSYNCRAM::setupPortB(size_t width, PortSetup portSetup)
 	m_genericParameters["numwords_b"] = std::to_string(m_size / width);
 	m_genericParameters["read_during_write_mode_port_b"] = RDWBehavior2Str(portSetup.rdw);
 
-	if (portSetup.dualClock) {
-		m_genericParameters["rdcontrol_reg_b"] = "\"CLOCK1\"";
-		m_genericParameters["address_reg_b"] = "\"CLOCK1\"";
-		m_genericParameters["indata_reg_b"] = "\"CLOCK1\"";
-		m_genericParameters["wrcontrol_wraddress_reg_b"] = "\"CLOCK1\"";
-		m_genericParameters["byteena_reg_b"] = "\"CLOCK1\"";
 
+	if ((portSetup.inputRegs || portSetup.outputRegs) && portSetup.dualClock) {
 		m_clockNames[1] = "clock1";
+	}
+
+	if (portSetup.inputRegs) {
+		if (portSetup.dualClock) {
+			m_genericParameters["rdcontrol_reg_b"] 				= "\"CLOCK1\"";
+			m_genericParameters["address_reg_b"] 				= "\"CLOCK1\"";
+			m_genericParameters["indata_reg_b"] 				= "\"CLOCK1\"";
+			m_genericParameters["wrcontrol_wraddress_reg_b"]	= "\"CLOCK1\"";
+			m_genericParameters["byteena_reg_b"] 				= "\"CLOCK1\"";
+		} else {
+			m_genericParameters["rdcontrol_reg_b"] 				= "\"CLOCK0\"";
+			m_genericParameters["address_reg_b"] 				= "\"CLOCK0\"";
+			m_genericParameters["indata_reg_b"] 				= "\"CLOCK0\"";
+			m_genericParameters["wrcontrol_wraddress_reg_b"] 	= "\"CLOCK0\"";
+			m_genericParameters["byteena_reg_b"]				= "\"CLOCK0\"";
+		}
 	} else {
-		m_genericParameters["rdcontrol_reg_b"] = "\"CLOCK0\"";
-		m_genericParameters["address_reg_b"] = "\"CLOCK0\"";
-		m_genericParameters["indata_reg_b"] = "\"CLOCK0\"";
-		m_genericParameters["wrcontrol_wraddress_reg_b"] = "\"CLOCK0\"";
-		m_genericParameters["byteena_reg_b"] = "\"CLOCK0\"";
+			m_genericParameters["rdcontrol_reg_b"] 				= "\"UNREGISTERED\"";
+			m_genericParameters["address_reg_b"] 				= "\"UNREGISTERED\"";
+			m_genericParameters["indata_reg_b"] 				= "\"UNREGISTERED\"";
+			m_genericParameters["wrcontrol_wraddress_reg_b"] 	= "\"UNREGISTERED\"";
+			m_genericParameters["byteena_reg_b"]				= "\"UNREGISTERED\"";
 	}
 
 	if (portSetup.outputRegs)
 		if (portSetup.dualClock)
-			m_genericParameters["outdata_reg_b"] = "\"CLOCK0\"";
-		else
 			m_genericParameters["outdata_reg_b"] = "\"CLOCK1\"";
+		else
+			m_genericParameters["outdata_reg_b"] = "\"CLOCK0\"";
 	else
 		m_genericParameters["outdata_reg_b"] = "\"UNREGISTERED\"";
 
@@ -194,6 +209,9 @@ ALTSYNCRAM &ALTSYNCRAM::setupMixedPortRdw(RDWBehavior rdw)
 	switch (rdw) {
 		case RDWBehavior::DONT_CARE:
 			m_genericParameters["read_during_write_mode_mixed_ports"] = "\"DONT_CARE\"";
+		break;
+		case RDWBehavior::CONSTRAINED_DONT_CARE:
+			m_genericParameters["read_during_write_mode_mixed_ports"] = "\"CONSTRAINED_DONT_CARE\"";
 		break;
 		case RDWBehavior::OLD_DATA:
 			m_genericParameters["read_during_write_mode_mixed_ports"] = "\"OLD_DATA\"";

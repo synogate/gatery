@@ -85,7 +85,7 @@ bool MemoryGroup::ReadPort::findOutputRegisters(size_t readLatency, NodeGroup *m
     Actually, this must be possible (or be added by additional logic if not possible).
 
                     // The register can't have a reset (since it's essentially memory).
-                    if (dataReg->getNonSignalDriver(Node_Register::Input::RESET_VALUE).node != nullptr)
+                    if (dataReg->hasResetValue())
                         break;
 */
                     if (reg == nullptr)
@@ -721,6 +721,8 @@ void MemoryGroup::buildReset(Circuit &circuit)
 {
     if (m_memory->getNonSignalDriver((size_t)Node_Memory::Inputs::INITIALIZATION_DATA).node != nullptr) {
         buildResetLogic(circuit);
+        // Disconnect initialization network's output from memory node
+        m_memory->rewireInput((size_t)Node_Memory::Inputs::INITIALIZATION_DATA, {});
     } else {
         if (sim::anyDefined(m_memory->getPowerOnState()) && !m_memory->isROM())
             buildResetRom(circuit);
@@ -771,9 +773,6 @@ void MemoryGroup::buildResetLogic(Circuit &circuit)
 
     // Build overrides
     buildResetOverrides(circuit, addrCounter, initData, resetWritePort);
-
-    // Disconnect initialization network's output from memory node
-    m_memory->rewireInput((size_t)Node_Memory::Inputs::INITIALIZATION_DATA, {});
 }
 
 void MemoryGroup::buildResetRom(Circuit &circuit)

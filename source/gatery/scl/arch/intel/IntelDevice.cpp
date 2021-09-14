@@ -38,11 +38,27 @@ void IntelDevice::setupArria10(std::string device)
 	m_device = std::move(device);
 
     m_embeddedMemoryList = std::make_unique<EmbeddedMemoryList>();
+    m_embeddedMemoryList->add(std::make_unique<MLAB>(*this));
     m_embeddedMemoryList->add(std::make_unique<M20K>(*this));
 
     m_technologyMapping.addPattern(std::make_unique<EmbeddedMemoryPattern>(*this));
     m_technologyMapping.addPattern(std::make_unique<GLOBALPattern>());
 }
+
+void IntelDevice::setupCyclone10(std::string device)
+{
+	m_vendor = "intel";
+	m_family = "Cyclone 10";
+	m_device = std::move(device);
+
+    m_embeddedMemoryList = std::make_unique<EmbeddedMemoryList>();
+    m_embeddedMemoryList->add(std::make_unique<MLAB>(*this));
+    m_embeddedMemoryList->add(std::make_unique<M20K>(*this));
+
+    m_technologyMapping.addPattern(std::make_unique<EmbeddedMemoryPattern>(*this));
+    m_technologyMapping.addPattern(std::make_unique<GLOBALPattern>());
+}
+
 
 
 }
