@@ -46,13 +46,8 @@ class DesignScope : public BaseScope<DesignScope>
         static ClockType *createClock(Args&&... args);
 
         inline GroupScope &getRootGroup() { return m_rootScope; }
-<<<<<<< HEAD
-
-        
-=======
         utils::PropertyTree instanceProperties(bool settingsOnly = false) const;
 
->>>>>>> master
     protected:
         hlim::Circuit m_circuit;
         GroupScope m_rootScope;
