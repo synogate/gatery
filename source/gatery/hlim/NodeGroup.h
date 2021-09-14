@@ -77,9 +77,10 @@ namespace gtry::hlim {
 		const std::string& getComment() const { return m_comment; }
 		const std::vector<BaseNode*>& getNodes() const { return m_nodes; }
 		const std::vector<std::unique_ptr<NodeGroup>>& getChildren() const { return m_children; }
+		
+		const utils::PropertyTree& usedSettings() const { return m_usedSettings; }
+		const utils::PropertyTree& properties() const { return m_properties; }
 		utils::PropertyTree& properties() { return m_properties; }
-
-		void buildProperyTree(utils::PropertyTree& out) const;
 
 		bool isChildOf(const NodeGroup* other) const;
 		bool isEmpty(bool recursive) const;
@@ -102,6 +103,7 @@ namespace gtry::hlim {
 		std::string m_comment;
 		GroupType m_groupType;
 		utils::PropertyTree m_properties;
+		utils::PropertyTree m_usedSettings;
 
 		boost::container::flat_map<std::string, size_t> m_childInstanceCounter;
 

@@ -23,6 +23,9 @@ namespace gtry::utils
 	{
 	public:
 		YamlPropertyTree() = default;
+		YamlPropertyTree(YamlPropertyTree&&) = default;
+		YamlPropertyTree(const YamlPropertyTree&) = default;
+
 		void dump(std::ostream&) const;
 
 		YamlPropertyTree operator[](std::string_view path);
@@ -30,9 +33,11 @@ namespace gtry::utils
 		template<typename T>
 		YamlPropertyTree& operator = (T&&);
 		YamlPropertyTree& operator = (const YamlPropertyTree& val);
+		YamlPropertyTree& operator = (YamlPropertyTree&& val);
 		YamlPropertyTree& operator = (YamlPropertyTree& val);
 
 		void push_back(YamlPropertyTree value);
+		bool empty() const;
 	protected:
 		YamlPropertyTree(YAML::Node node) : m_node(std::move(node)) {}
 		YAML::Node m_node{ YAML::NodeType::Map };

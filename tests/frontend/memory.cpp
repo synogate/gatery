@@ -34,7 +34,7 @@ BOOST_FIXTURE_TEST_CASE(async_ROM, UnitTestSimulationFixture)
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    std::vector<unsigned> contents;
+    std::vector<size_t> contents;
     contents.resize(16);
     std::mt19937 rng{ 18055 };
     for (auto &e : contents)
@@ -77,7 +77,7 @@ BOOST_FIXTURE_TEST_CASE(sync_ROM, UnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    std::vector<unsigned> contents;
+    std::vector<size_t> contents;
     contents.resize(16);
     std::mt19937 rng{ 18055 };
     for (auto &e : contents)
@@ -120,7 +120,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem, UnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    std::vector<unsigned> contents;
+    std::vector<size_t> contents;
     contents.resize(16);
     std::mt19937 rng{ 18055 };
     for (auto &e : contents)
@@ -172,7 +172,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem, UnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    std::vector<unsigned> contents;
+    std::vector<size_t> contents;
     contents.resize(16);
     std::mt19937 rng{ 18055 };
     for (auto &e : contents)
@@ -225,7 +225,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_before_write, UnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    std::vector<unsigned> contents;
+    std::vector<size_t> contents;
     contents.resize(16);
     std::mt19937 rng{ 18055 };
     for (auto &e : contents)
@@ -292,7 +292,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem_write_before_read, UnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    std::vector<unsigned> contents;
+    std::vector<size_t> contents;
     contents.resize(16);
     std::mt19937 rng{ 18055 };
     for (auto &e : contents)
@@ -361,7 +361,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_modify_write, UnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    std::vector<unsigned> contents;
+    std::vector<size_t> contents;
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
@@ -387,15 +387,15 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_modify_write, UnitTestSimulationFixture)
         co_await WaitClk(clock);
 
         std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
-        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
+        std::uniform_int_distribution<size_t> randomAddr(0, 3);        
 
         size_t collisions = 0;
 
         bool lastWasWrite = false;
-        unsigned lastAddr = 0;
+        size_t lastAddr = 0;
         for ([[maybe_unused]] auto i : Range(10000)) {
             bool doInc = zeroOne(rng) > 0.1f;
-            unsigned incAddr = randomAddr(rng);
+            size_t incAddr = randomAddr(rng);
             simu(wrEn) = doInc;
             simu(addr) = incAddr;
             if (doInc)
@@ -438,7 +438,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write, UnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    std::vector<unsigned> contents;
+    std::vector<size_t> contents;
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
@@ -464,7 +464,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write, UnitTestSimulationFixture)
         co_await WaitClk(clock);
 
         std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
-        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
+        std::uniform_int_distribution<size_t> randomAddr(0, 3);        
 
         size_t collisions = 0;
 
@@ -518,7 +518,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads, UnitTestSimul
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    std::vector<unsigned> contents;
+    std::vector<size_t> contents;
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
@@ -545,20 +545,20 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads, UnitTestSimul
         co_await WaitClk(clock);
 
         std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
-        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
+        std::uniform_int_distribution<uint64_t> randomAddr(0, 3);
 
-        unsigned collisions = 0;
+        uint64_t collisions = 0;
 
         bool lastWasWrite = false;
-        unsigned lastAddr = 0;
+        uint64_t lastAddr = 0;
         for ([[maybe_unused]] auto i : Range(100000)) {
 
-            unsigned read_addr = randomAddr(rng);
+            uint64_t read_addr = randomAddr(rng);
             simu(rd_addr) = read_addr;
-            unsigned expectedReadContentBefore = contents[read_addr];
+            uint64_t expectedReadContentBefore = contents[read_addr];
 
             bool doInc = zeroOne(rng) > 0.1f;
-            unsigned incAddr = randomAddr(rng);
+            uint64_t incAddr = randomAddr(rng);
             simu(wrEn) = doInc;
             simu(addr) = incAddr;
             if (doInc)
@@ -567,11 +567,11 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads, UnitTestSimul
             if (lastWasWrite && lastAddr == incAddr)
                 collisions++;
 
-            unsigned expectedReadContentAfter = contents[read_addr];
+            uint64_t expectedReadContentAfter = contents[read_addr];
 
             co_await WaitClk(clock);
 
-            unsigned actualReadContentBefore = simu(readOutputBefore).value();
+            uint64_t actualReadContentBefore = simu(readOutputBefore).value();
             BOOST_TEST(actualReadContentBefore == expectedReadContentBefore, 
                 "Read-port (before RMW) yields " << actualReadContentBefore << " but expected " << expectedReadContentBefore << ". Read-port address: " << read_addr << " RMW address: " << incAddr << " last clock cycle RMW addr: " << lastAddr);
             BOOST_TEST(simu(readOutputAfter).value() == expectedReadContentAfter);
@@ -602,7 +602,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_on_wrEn, UnitTestSimulationFi
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    std::vector<unsigned> contents;
+    std::vector<size_t> contents;
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
@@ -628,20 +628,20 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_on_wrEn, UnitTestSimulationFi
 	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
 
         std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
-        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
+        std::uniform_int_distribution<size_t> randomAddr(0, 3);        
 
-        unsigned collisions = 0;
+        size_t collisions = 0;
 
         bool lastWasWrite = false;
-        unsigned lastAddr = 0;
+        size_t lastAddr = 0;
         for ([[maybe_unused]] auto i : Range(100000)) {
 
-            unsigned read_addr = randomAddr(rng);
+            size_t read_addr = randomAddr(rng);
             simu(rd_addr) = read_addr;
-            unsigned expectedReadContentBefore = contents[read_addr];
+            size_t expectedReadContentBefore = contents[read_addr];
 
             bool shfl = zeroOne(rng) > 0.5f;
-            unsigned incAddr = randomAddr(rng);
+            size_t incAddr = randomAddr(rng);
             simu(shuffler) = shfl;
             simu(addr) = incAddr;
 
@@ -654,7 +654,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_on_wrEn, UnitTestSimulationFi
 
             co_await WaitClk(clock);
 
-            unsigned actualReadContentBefore = simu(readOutputBefore).value();
+            uint64_t actualReadContentBefore = simu(readOutputBefore).value();
             BOOST_TEST(actualReadContentBefore == expectedReadContentBefore, 
                 "Read-port (before RMW) yields " << actualReadContentBefore << " but expected " << expectedReadContentBefore << ". Read-port address: " << read_addr << " RMW address: " << incAddr << " last clock cycle RMW addr: " << lastAddr);
 
@@ -682,7 +682,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_multiple_writes, UnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    std::vector<unsigned> contents;
+    std::vector<size_t> contents;
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
@@ -709,34 +709,34 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_multiple_writes, UnitTestSimulationFixture)
 	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
 
         std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
-        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
-        std::uniform_int_distribution<unsigned> randomData(0, 1000);
+        std::uniform_int_distribution<size_t> randomAddr(0, 3);        
+        std::uniform_int_distribution<size_t> randomData(0, 1000);
 
-        unsigned collisions = 0;
+        size_t collisions = 0;
 
         for ([[maybe_unused]] auto i : Range(100000)) {
 
-            unsigned read_addr = randomAddr(rng);
+            size_t read_addr = randomAddr(rng);
             simu(rd_addr) = read_addr;
-            unsigned expectedReadContentBefore = contents[read_addr];
+            size_t expectedReadContentBefore = contents[read_addr];
 
 
-            unsigned write_addr1 = randomAddr(rng);
+            size_t write_addr1 = randomAddr(rng);
             simu(wrAddr1) =  write_addr1;
-            unsigned write_data1 = randomData(rng);
+            size_t write_data1 = randomData(rng);
             simu(wrData1) = write_data1;
             contents[write_addr1] = write_data1;
 
 
-            unsigned write_addr2 = randomAddr(rng);
+            size_t write_addr2 = randomAddr(rng);
             simu(wrAddr2) =  write_addr2;
-            unsigned write_data2 = randomData(rng);
+            size_t write_data2 = randomData(rng);
             simu(wrData2) = write_data2;
             contents[write_addr2] = write_data2;
 
             if (write_addr2 == write_addr1) collisions++;
 
-            unsigned expectedReadContentAfter = contents[read_addr];
+            size_t expectedReadContentAfter = contents[read_addr];
 
             co_await WaitClk(clock);
 
@@ -764,7 +764,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrFirst, Unit
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    std::vector<unsigned> contents;
+    std::vector<size_t> contents;
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
@@ -790,26 +790,26 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrFirst, Unit
 	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
 
         std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
-        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
-        std::uniform_int_distribution<unsigned> randomData(0, 1000);
+        std::uniform_int_distribution<size_t> randomAddr(0, 3);        
+        std::uniform_int_distribution<size_t> randomData(0, 1000);
 
-        unsigned collisions = 0;
+        size_t collisions = 0;
 
         bool lastWasWrite = false;
-        unsigned lastAddr = 0;
+        size_t lastAddr = 0;
         for ([[maybe_unused]] auto i : Range(100000)) {
-            unsigned read_addr = randomAddr(rng);
+            size_t read_addr = randomAddr(rng);
             simu(rd_addr) = read_addr;
-            unsigned expectedReadContentBefore = contents[read_addr];
+            size_t expectedReadContentBefore = contents[read_addr];
 
-            unsigned write_addr = randomAddr(rng);
+            size_t write_addr = randomAddr(rng);
             simu(wrAddr) =  write_addr;
-            unsigned write_data = randomData(rng);
+            size_t write_data = randomData(rng);
             simu(wrData) = write_data;
             contents[write_addr] = write_data;
 
             bool doInc = zeroOne(rng) > 0.1f;
-            unsigned incAddr = randomAddr(rng);
+            size_t incAddr = randomAddr(rng);
             simu(wrEn) = doInc;
             simu(addr) = incAddr;
             if (doInc)
@@ -820,7 +820,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrFirst, Unit
 
             co_await WaitClk(clock);
 
-            unsigned actualReadContentBefore = simu(readOutputBefore).value();
+            size_t actualReadContentBefore = simu(readOutputBefore).value();
             BOOST_TEST(actualReadContentBefore == expectedReadContentBefore, 
                 "Read-port (before RMW) yields " << actualReadContentBefore << " but expected " << expectedReadContentBefore << ". Read-port address: " << read_addr << " RMW address: " << incAddr << " last clock cycle RMW addr: " << lastAddr);
 
@@ -849,7 +849,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrLast, UnitT
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    std::vector<unsigned> contents;
+    std::vector<size_t> contents;
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
@@ -872,26 +872,26 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrLast, UnitT
 	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
 
         std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
-        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
-        std::uniform_int_distribution<unsigned> randomData(0, 1000);
+        std::uniform_int_distribution<size_t> randomAddr(0, 3);        
+        std::uniform_int_distribution<size_t> randomData(0, 1000);
 
-        unsigned collisions = 0;
+        size_t collisions = 0;
 
         bool lastWasWrite = false;
-        unsigned lastAddr = 0;
+        size_t lastAddr = 0;
         for ([[maybe_unused]] auto i : Range(100000)) {
 
             bool doInc = zeroOne(rng) > 0.1f;
-            unsigned incAddr = randomAddr(rng);
+            size_t incAddr = randomAddr(rng);
             simu(wrEn) = doInc;
             simu(addr) = incAddr;
-            unsigned expectedReadContent = contents[incAddr];
+            size_t expectedReadContent = contents[incAddr];
             if (doInc)
                 contents[incAddr]++;
 
-            unsigned write_addr = randomAddr(rng);
+            size_t write_addr = randomAddr(rng);
             simu(wrAddr) =  write_addr;
-            unsigned write_data = randomData(rng);
+            size_t write_data = randomData(rng);
             simu(wrData) = write_data;
             contents[write_addr] = write_data;
 
@@ -901,7 +901,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrLast, UnitT
 
             co_await WaitClk(clock);
 
-            unsigned actualReadContent = simu(elem).value();
+            size_t actualReadContent = simu(elem).value();
             BOOST_TEST(actualReadContent == expectedReadContent, 
                 "Read-port (before RMW) yields " << actualReadContent << " but expected " << expectedReadContent << ". RMW address: " << incAddr << " last clock cycle RMW addr: " << lastAddr << " wrAddr " << write_addr << " wrData " << write_data);
 
@@ -929,7 +929,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    std::vector<unsigned> contents;
+    std::vector<size_t> contents;
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
@@ -957,26 +957,26 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
 	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
 
         std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
-        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
-        std::uniform_int_distribution<unsigned> randomData(0, 1000);
+        std::uniform_int_distribution<size_t> randomAddr(0, 3);        
+        std::uniform_int_distribution<size_t> randomData(0, 1000);
 
-        unsigned collisions = 0;
+        size_t collisions = 0;
 
         bool lastWasWrite = false;
-        unsigned lastAddr = 0;
+        size_t lastAddr = 0;
         for ([[maybe_unused]] auto i : Range(100000)) {
-            unsigned read_addr = randomAddr(rng);
+            size_t read_addr = randomAddr(rng);
             simu(rd_addr) = read_addr;
-            unsigned expectedReadContentBefore = contents[read_addr];
+            size_t expectedReadContentBefore = contents[read_addr];
 
-            unsigned write_addr = randomAddr(rng);
+            size_t write_addr = randomAddr(rng);
             simu(wrAddr) =  write_addr;
-            unsigned write_data = randomData(rng);
+            size_t write_data = randomData(rng);
             simu(wrData) = write_data;
             contents[write_addr] = write_data;
 
             bool doInc = zeroOne(rng) > 0.1f;
-            unsigned incAddr = randomAddr(rng);
+            size_t incAddr = randomAddr(rng);
             simu(wrEn) = doInc;
             simu(addr) = incAddr;
             if (doInc)
@@ -985,11 +985,11 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
             if (lastWasWrite && lastAddr == incAddr)
                 collisions++;
 
-            unsigned expectedReadContentAfter = contents[read_addr];
+            size_t expectedReadContentAfter = contents[read_addr];
 
             co_await WaitClk(clock);
 
-            unsigned actualReadContentBefore = simu(readOutputBefore).value();
+            size_t actualReadContentBefore = simu(readOutputBefore).value();
             BOOST_TEST(actualReadContentBefore == expectedReadContentBefore, 
                 "Read-port (before RMW) yields " << actualReadContentBefore << " but expected " << expectedReadContentBefore << ". Read-port address: " << read_addr << " RMW address: " << incAddr << " last clock cycle RMW addr: " << lastAddr);
             BOOST_TEST(simu(readOutputAfter).value() == expectedReadContentAfter);
@@ -1018,7 +1018,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    std::vector<unsigned> contents;
+    std::vector<size_t> contents;
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
@@ -1047,20 +1047,20 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
 	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
 
         std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
-        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
-        std::uniform_int_distribution<unsigned> randomData(0, 1000);
+        std::uniform_int_distribution<size_t> randomAddr(0, 3);        
+        std::uniform_int_distribution<size_t> randomData(0, 1000);
 
-        unsigned collisions = 0;
+        size_t collisions = 0;
 
         bool lastWasWrite = false;
-        unsigned lastAddr = 0;
+        size_t lastAddr = 0;
         for ([[maybe_unused]] auto i : Range(100000)) {
-            unsigned read_addr = randomAddr(rng);
+            size_t read_addr = randomAddr(rng);
             simu(rd_addr) = read_addr;
-            unsigned expectedReadContentBefore = contents[read_addr];
+            size_t expectedReadContentBefore = contents[read_addr];
 
             bool doInc = zeroOne(rng) > 0.1f;
-            unsigned incAddr = randomAddr(rng);
+            size_t incAddr = randomAddr(rng);
             simu(wrEn) = doInc;
             simu(addr) = incAddr;
             if (doInc)
@@ -1069,17 +1069,17 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
             if (lastWasWrite && lastAddr == incAddr)
                 collisions++;
 
-            unsigned expectedReadContentAfter = contents[read_addr];
+            size_t expectedReadContentAfter = contents[read_addr];
 
-            unsigned write_addr = randomAddr(rng);
+            size_t write_addr = randomAddr(rng);
             simu(wrAddr) =  write_addr;
-            unsigned write_data = randomData(rng);
+            size_t write_data = randomData(rng);
             simu(wrData) = write_data;
             contents[write_addr] = write_data;
 
             co_await WaitClk(clock);
 
-            unsigned actualReadContentBefore = simu(readOutputBefore).value();
+            size_t actualReadContentBefore = simu(readOutputBefore).value();
             BOOST_TEST(actualReadContentBefore == expectedReadContentBefore, 
                 "Read-port (before RMW) yields " << actualReadContentBefore << " but expected " << expectedReadContentBefore << ". Read-port address: " << read_addr << " RMW address: " << incAddr << " last clock cycle RMW addr: " << lastAddr);
             BOOST_TEST(simu(readOutputAfter).value() == expectedReadContentAfter);
@@ -1110,7 +1110,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_dual_read_modify_write, UnitTestSimulationFixtu
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    std::vector<unsigned> contents;
+    std::vector<size_t> contents;
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
@@ -1150,18 +1150,18 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_dual_read_modify_write, UnitTestSimulationFixtu
         co_await WaitClk(clock);
 
         std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
-        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
+        std::uniform_int_distribution<size_t> randomAddr(0, 3);        
 
         for ([[maybe_unused]] auto i : Range(10000)) {
             bool doInc1 = zeroOne(rng) > 0.1f;
-            unsigned incAddr1 = randomAddr(rng);
+            size_t incAddr1 = randomAddr(rng);
             simu(wrEn1) = doInc1;
             simu(addr1) = incAddr1;
             if (doInc1)
                 contents[incAddr1]++;
 
             bool doInc2 = zeroOne(rng) > 0.1f;
-            unsigned incAddr2 = randomAddr(rng);
+            size_t incAddr2 = randomAddr(rng);
             simu(wrEn2) = doInc2;
             simu(addr2) = incAddr2;
             if (doInc2)
@@ -1205,7 +1205,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, UnitTestSimulationFi
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    std::vector<unsigned> contents;
+    std::vector<size_t> contents;
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
@@ -1268,7 +1268,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, UnitTestSimulationFi
         co_await WaitClk(clock);
 
         std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
-        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
+        std::uniform_int_distribution<size_t> randomAddr(0, 3);        
 
         size_t collisions = 0;
 
@@ -1326,7 +1326,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, UnitTestSimulati
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    std::vector<unsigned> contents;
+    std::vector<size_t> contents;
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
@@ -1378,7 +1378,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, UnitTestSimulati
         simu(initOverride) = '0';
 
         std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
-        std::uniform_int_distribution<unsigned> randomAddr(0, 3);        
+        std::uniform_int_distribution<size_t> randomAddr(0, 3);        
 
         size_t collisions = 0;
 

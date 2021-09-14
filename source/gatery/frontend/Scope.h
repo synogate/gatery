@@ -71,6 +71,7 @@ class GroupScope : public BaseScope<GroupScope>
         std::string instancePath() const { return m_nodeGroup->instancePath(); }
         utils::ConfigTree instanceConfig() const;
         
+        const hlim::NodeGroup* nodeGroup() const { return m_nodeGroup; }
         hlim::NodeGroup* nodeGroup() { return m_nodeGroup; }
 
         auto operator [] (std::string_view key) { return m_nodeGroup->properties()[key]; }
