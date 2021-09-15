@@ -243,7 +243,7 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 
 	for (auto &rp : m_memGrp->getReadPorts()) {
 		for (auto &reg : rp.dedicatedReadLatencyRegisters)
-			HCL_ASSERT_HINT(reg->getDriver(hlim::Node_Register::RESET_VALUE).node == nullptr || reg->getClocks()[0]->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE,
+			HCL_ASSERT_HINT(reg->getDriver(hlim::Node_Register::RESET_VALUE).node == nullptr || !reg->getClocks()[0]->getRegAttribs().initializeRegs,
 						"Power on reset values not implemented yet for memory registers!");
 
 		if (!rp.dedicatedReadLatencyRegisters.empty())
