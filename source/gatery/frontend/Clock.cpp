@@ -77,31 +77,34 @@ namespace gtry
 		std::optional<std::string> period;
 		if (config.isScalar())
 			setAbsoluteFrequency(clockFromString(config.as<std::string>()));
-		else if (config["period"])
-			setAbsoluteFrequency(clockFromString(config["period"].as<std::string>()));
+		else
+		{
+			if (config["period"])
+				setAbsoluteFrequency(clockFromString(config["period"].as<std::string>()));
 
-		if (config["clock_edge"])
-			m_triggerEvent = config["clock_edge"].as<TriggerEvent>();
+			if (config["clock_edge"])
+				m_triggerEvent = config["clock_edge"].as<TriggerEvent>();
 
-		if (config["reset_name"])
-			m_resetName = config["reset_name"].as<std::string>();
+			if (config["reset_name"])
+				m_resetName = config["reset_name"].as<std::string>();
 
-		if (config["reset_type"])
-			m_resetType = config["reset_type"].as<ResetType>();
+			if (config["reset_type"])
+				m_resetType = config["reset_type"].as<ResetType>();
 
-		if (config["memory_reset_type"])
-			m_memoryResetType = config["memory_reset_type"].as<ResetType>();
+			if (config["memory_reset_type"])
+				m_memoryResetType = config["memory_reset_type"].as<ResetType>();
 
-		if (config["reset_active"])
-			m_resetActive = config["reset_active"].as<ResetActive>();
+			if (config["reset_active"])
+				m_resetActive = config["reset_active"].as<ResetActive>();
 
-		if (config["initialize_registers"])
-			m_initializeRegs = config["initialize_registers"].as<bool>();
+			if (config["initialize_registers"])
+				m_initializeRegs = config["initialize_registers"].as<bool>();
 		
-		if (config["initialize_memory"])
-			m_initializeMemory = config["initialize_memory"].as<bool>();
+			if (config["initialize_memory"])
+				m_initializeMemory = config["initialize_memory"].as<bool>();
 
-		m_attributes.loadConfig(config["attributes"]);
+			m_attributes.loadConfig(config["attributes"]);
+		}
 	}
 
 	void ClockConfig::print(std::ostream& s) const
