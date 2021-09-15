@@ -49,6 +49,7 @@ void TestbenchRecorder::writeHeader()
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.all;
+use std.env.finish;
 
 ENTITY )" << m_name << R"( IS
 END )" << m_name << R"(;
@@ -80,8 +81,6 @@ ARCHITECTURE tb OF )" << m_name << R"( IS
             m_outputToIoPinName[{.node=ioPin, .port=0}] = name;
     }
 
-
-
     m_testbenchFile << "BEGIN" << std::endl;
 
     cf.indent(m_testbenchFile, 1);
@@ -92,21 +91,24 @@ ARCHITECTURE tb OF )" << m_name << R"( IS
     cf.indent(m_testbenchFile, 1);
     m_testbenchFile << ");" << std::endl;
 
+    for (auto &clock : allClocks)
+        buildClockProcess(m_testbenchFile, clock);
+
     cf.indent(m_testbenchFile, 1);
     m_testbenchFile << "sim_process : PROCESS" << std::endl;
     cf.indent(m_testbenchFile, 1);
     m_testbenchFile << "BEGIN" << std::endl;
 
-    initClocks(m_testbenchFile, allClocks, allResets);
 
-
-    m_lastSimulationTime = 0;
+    m_vhdlSimulationTime = 0;
+    m_currentSimulationTime = 0;
 }
 
 void TestbenchRecorder::writeFooter()
 {
 //    CodeFormatting &cf = m_ast->getCodeFormatting();
 //    cf.indent(m_testbenchFile, 1);
+    m_testbenchFile << "TB_testbench_is_done <= '1';" << std::endl;
     m_testbenchFile << "WAIT;" << std::endl;
     m_testbenchFile << "END PROCESS;" << std::endl;
     m_testbenchFile << "END;" << std::endl;
@@ -114,18 +116,6 @@ void TestbenchRecorder::writeFooter()
 
 
 
-namespace {
-    void formatTime(std::ostream &stream, hlim::ClockRational time) {
-        std::string unit = "sec";
-        if (time.denominator() > 1) { unit = "ms"; time *= 1000; }
-        if (time.denominator() > 1) { unit = "us"; time *= 1000; }
-        if (time.denominator() > 1) { unit = "ns"; time *= 1000; }
-        if (time.denominator() > 1) { unit = "ps"; time *= 1000; }
-        if (time.denominator() > 1) { unit = "fs"; time *= 1000; }
-
-        stream << time.numerator() / time.denominator() << ' ' << unit;
-    }
-}
 
 
 void TestbenchRecorder::onPowerOn()
@@ -133,46 +123,84 @@ void TestbenchRecorder::onPowerOn()
     writeHeader();
 }
 
+void TestbenchRecorder::advanceTimeTo(hlim::ClockRational simulationTime)
+{
+    auto deltaT = simulationTime - m_vhdlSimulationTime;
+
+    const std::array<std::string, 6> unit2str = {"sec", "ms", "us", "ns", "ps", "fs"};
+    const std::array<size_t, 6> unit2denom = {1ull, 1'000ull, 1'000'000ull, 1'000'000'000ull, 1'000'000'000'000ull, 1'000'000'000'000'000ull};
+
+    size_t unit = 0;
+    while (deltaT.denominator() > 1 && unit+1 < unit2str.size()) { 
+        unit++; 
+        deltaT *= 1000; 
+    }
+
+    CodeFormatting &cf = m_ast->getCodeFormatting();
+
+    size_t t = deltaT.numerator() / deltaT.denominator();
+    if (t > 1'000'000 && unit > 1) {
+        cf.indent(m_testbenchFile, 2);
+        m_testbenchFile << "WAIT FOR " << (t / 1'000'000) << ' ' << unit2str[unit-2] << ";\n";
+        m_vhdlSimulationTime += hlim::ClockRational(t / 1'000'000, unit2denom[unit-2]);
+
+        t = t % 1'000'000;
+    }
+
+    cf.indent(m_testbenchFile, 2);
+    m_testbenchFile << "WAIT FOR " << t << ' ' << unit2str[unit] << ";\n";
+    m_vhdlSimulationTime += hlim::ClockRational(t, unit2denom[unit]);
+}
+
+void TestbenchRecorder::commitTime()
+{
+    advanceTimeTo(m_currentSimulationTime);
+}
 
 void TestbenchRecorder::onNewTick(const hlim::ClockRational &simulationTime)
 {
-    CodeFormatting &cf = m_ast->getCodeFormatting();
-
-    for (const auto &p : m_signalOverrides) {
-        cf.indent(m_testbenchFile, 2);
-        m_testbenchFile << p.second;
+    if (m_assertStatements.str().empty() && m_signalOverrides.empty() && m_resetOverrides.empty()) {
+        m_currentSimulationTime = simulationTime;
+        return;
     }
 
-    m_signalOverrides.clear();
+    CodeFormatting &cf = m_ast->getCodeFormatting();
+
+    auto timeDiff = simulationTime - m_currentSimulationTime;
+
+    auto updateTime = m_currentSimulationTime + timeDiff * hlim::ClockRational(1,2);
+    auto checkTime = m_currentSimulationTime + timeDiff * hlim::ClockRational(3,4);
+    m_currentSimulationTime = simulationTime;
 
 
-    auto timeDiff = simulationTime - m_lastSimulationTime;
-    m_lastSimulationTime = simulationTime;
+    // Split stuff up in between the time step to allow the vhdl simulators to correctly schedule their processes.
+    // Set signals first, check asserts after.
+    
+    if (!m_signalOverrides.empty() || !m_resetOverrides.empty()) {
+        advanceTimeTo(updateTime);
 
-    // All asserts are collected to be triggered halfway between the last tick (when signals were set) and the next tick (when new stuff happens).
-    if (m_assertStatements.str().empty()) {
-        cf.indent(m_testbenchFile, 2);
-        m_testbenchFile << "WAIT FOR ";
-        formatTime(m_testbenchFile, timeDiff);
-        m_testbenchFile << ';' << std::endl;
-    } else {
-        cf.indent(m_testbenchFile, 2);
-        m_testbenchFile << "WAIT FOR ";
-        formatTime(m_testbenchFile, timeDiff * hlim::ClockRational(1,2));
-        m_testbenchFile << ';' << std::endl;
+        for (const auto &p : m_signalOverrides)
+            m_testbenchFile << p.second;
 
+        for (const auto &p : m_resetOverrides)
+            m_testbenchFile << p.second;
+    
+        m_signalOverrides.clear();
+        m_resetOverrides.clear();    
+    }
+
+    if (!m_assertStatements.str().empty()) {
+        advanceTimeTo(checkTime);
         m_testbenchFile << m_assertStatements.str();
-        m_assertStatements.str(std::string());
 
-        cf.indent(m_testbenchFile, 2);
-        m_testbenchFile << "WAIT FOR ";
-        formatTime(m_testbenchFile, timeDiff * hlim::ClockRational(1,2));
-        m_testbenchFile << ';' << std::endl;
+        m_assertStatements.str(std::string());
     }
 }
 
 void TestbenchRecorder::onClock(const hlim::Clock *clock, bool risingEdge)
 {
+    // handled by separate clock process
+/*
     if (!m_clocksOfInterest.contains(clock)) return;
 
     CodeFormatting &cf = m_ast->getCodeFormatting();
@@ -183,6 +211,7 @@ void TestbenchRecorder::onClock(const hlim::Clock *clock, bool risingEdge)
         m_testbenchFile << rootEntity->getNamespaceScope().getClock((hlim::Clock *) clock).name << " <= '1';" << std::endl;
     else
         m_testbenchFile << rootEntity->getNamespaceScope().getClock((hlim::Clock *) clock).name << " <= '0';" << std::endl;
+*/
 }
 
 void TestbenchRecorder::onReset(const hlim::Clock *clock, bool resetAsserted)
@@ -192,11 +221,13 @@ void TestbenchRecorder::onReset(const hlim::Clock *clock, bool resetAsserted)
     CodeFormatting &cf = m_ast->getCodeFormatting();
     auto *rootEntity = m_ast->getRootEntity();
 
-    cf.indent(m_testbenchFile, 2);
-    if (resetAsserted)
-        m_testbenchFile << rootEntity->getNamespaceScope().getReset((hlim::Clock *) clock).name << " <= '1';" << std::endl;
-    else
-        m_testbenchFile << rootEntity->getNamespaceScope().getReset((hlim::Clock *) clock).name << " <= '0';" << std::endl;
+    const std::string rst = rootEntity->getNamespaceScope().getReset((hlim::Clock *) clock).name;
+
+    std::stringstream assignment;
+    cf.indent(assignment, 2);
+    assignment << rst << " <= " << (resetAsserted?"'1'":"'0'") << ";\n";
+
+    m_resetOverrides[rst] = assignment.str();
 }
 
 void TestbenchRecorder::onSimProcOutputOverridden(hlim::NodePort output, const sim::DefaultBitVectorState &state)
@@ -271,6 +302,8 @@ void TestbenchRecorder::onAnnotationStart(const hlim::ClockRational &simulationT
 {
     CodeFormatting &cf = m_ast->getCodeFormatting();
 
+    commitTime();
+
     m_testbenchFile << std::endl;
     cf.indent(m_testbenchFile, 2);
     m_testbenchFile << "-- Begin: " << id << std::endl;
@@ -291,6 +324,8 @@ void TestbenchRecorder::onAnnotationStart(const hlim::ClockRational &simulationT
 void TestbenchRecorder::onAnnotationEnd(const hlim::ClockRational &simulationTime, const std::string &id)
 {
     CodeFormatting &cf = m_ast->getCodeFormatting();
+
+    commitTime();
 
     cf.indent(m_testbenchFile, 2);
     m_testbenchFile << "-- End: " << id << std::endl;
