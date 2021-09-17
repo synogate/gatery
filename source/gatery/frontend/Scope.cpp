@@ -46,10 +46,4 @@ namespace gtry
 		m_nodeGroup->setComment(std::move(comment));
 		return *this;
 	}
-
-	utils::ConfigTree GroupScope::instanceConfig() const
-	{
-		trace() << "configurable instance: " << instancePath();
-		return m_nodeGroup->instanceConfig();
-	}
 }

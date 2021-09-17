@@ -36,8 +36,12 @@ namespace gtry::utils
 		YamlPropertyTree& operator = (YamlPropertyTree&& val);
 		YamlPropertyTree& operator = (YamlPropertyTree& val);
 
+		auto begin() const { return m_node.begin(); }
+		auto end() const { return m_node.end(); }
+
 		void push_back(YamlPropertyTree value);
 		bool empty() const;
+		size_t size() const;
 	protected:
 		YamlPropertyTree(YAML::Node node) : m_node(std::move(node)) {}
 		YAML::Node m_node{ YAML::NodeType::Map };

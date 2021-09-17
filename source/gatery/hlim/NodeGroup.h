@@ -25,6 +25,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <regex>
 
 #include <boost/container/flat_map.hpp>
 
@@ -38,6 +39,26 @@ namespace gtry::hlim {
 		virtual ~NodeGroupMetaInfo() = default;
 	};
 
+	class NodeGroupConfig
+	{
+	public:
+		void load(utils::ConfigTree config);
+		void add(std::string_view key, std::string_view filter, utils::ConfigTree setting);
+		void finalize();
+
+		std::optional<utils::ConfigTree> operator ()(std::string_view key, std::string_view instancePath) const;
+
+	private:
+		struct Setting
+		{
+			std::string key;
+			std::variant<std::string,std::regex> filter;
+			utils::ConfigTree value;
+		};
+		
+		std::vector<Setting> m_config;
+		std::vector<std::tuple<std::string, std::string, utils::ConfigTree>> m_usedConfig;
+	};
 
 	class NodeGroup
 	{
@@ -86,7 +107,8 @@ namespace gtry::hlim {
 		bool isEmpty(bool recursive) const;
 
 		std::string instancePath() const;
-		utils::ConfigTree instanceConfig() const;
+
+		utils::ConfigTree config(std::string_view attribute);
 
 		inline void setGroupType(GroupType groupType) { m_groupType = groupType; }
 		inline GroupType getGroupType() const { return m_groupType; }
@@ -118,7 +140,7 @@ namespace gtry::hlim {
 		friend class BaseNode;
 
 	private:
-		static utils::ConfigTree ms_config;
+		static NodeGroupConfig ms_config;
 	};
 
 	template<typename MetaType, typename... Args>

@@ -29,7 +29,7 @@
 
 namespace gtry::hlim 
 {
-	utils::ConfigTree NodeGroup::ms_config;
+	NodeGroupConfig NodeGroup::ms_config;
 
 	NodeGroup::NodeGroup(GroupType groupType) : m_groupType(groupType)
 	{
@@ -48,7 +48,7 @@ namespace gtry::hlim
 			if (m_parent)
 			{
 				size_t index = m_parent->m_childInstanceCounter[name]++;
-				setInstanceName("i_" + name + "_" + std::to_string(index));
+				setInstanceName(name + std::to_string(index));
 			}
 			else if (m_instanceName.empty())
 			{
@@ -96,7 +96,7 @@ namespace gtry::hlim
 		m_parent = newParent;
 
 		size_t index = m_parent->m_childInstanceCounter[m_name]++;
-		setInstanceName("i_" + m_name + "_" + std::to_string(index));
+		setInstanceName(m_name + std::to_string(index));
 	}
 
 	bool NodeGroup::isChildOf(const NodeGroup* other) const
@@ -124,27 +124,121 @@ namespace gtry::hlim
 
 	std::string NodeGroup::instancePath() const
 	{
-		std::string ret = m_instanceName;
-		for (NodeGroup* group = m_parent; group; group = group->m_parent)
-			if(group->m_parent) // skip root instance
-				ret = group->m_instanceName + '/' + ret;
+		std::string ret;
+
+		if (m_parent)
+			ret = m_instanceName;
+
+		for (NodeGroup* group = m_parent; group && group->m_parent; group = group->m_parent)
+			ret = group->m_instanceName + '/' + ret;
+
+		ret = '/' + ret;
 		return ret;
 	}
 
-	utils::ConfigTree NodeGroup::instanceConfig() const
+	utils::ConfigTree NodeGroup::config(std::string_view attribute)
 	{
-		if (!m_parent)
-			return ms_config;
-		
-		auto&& path = instancePath();
-		utils::ConfigTree config = ms_config[path];
-		config.addRecorder(m_properties);
-		config.addRecorder(m_usedSettings);
-		return config;
+		utils::ConfigTree ret;
+		if (auto&& setting = ms_config(attribute, instancePath()))
+			ret = *setting;
+	
+		ret.addRecorder(m_properties[attribute]);
+		ret.addRecorder(m_usedSettings[attribute]);
+		return ret;
 	}
 
 	void NodeGroup::configTree(utils::ConfigTree config)
 	{
-		ms_config = std::move(config);
+		ms_config.load(config);
+	}
+	
+	void NodeGroupConfig::load(utils::ConfigTree config)
+	{
+		for (auto it = config.mapBegin(); it != config.mapEnd(); ++it)
+		{
+			std::string instance = it.key();
+			for (auto itc = (*it).mapBegin(); itc != (*it).mapEnd(); ++itc)
+			{
+				add(itc.key(), instance, *itc);
+			}
+		}
+		finalize();
+	}
+
+	void NodeGroupConfig::add(std::string_view key, std::string_view filter, utils::ConfigTree setting)
+	{
+		if (filter.find('*') == std::string::npos)
+		{
+			std::string pattern;
+			m_config.emplace_back(Setting{
+				.key = std::string{key},
+				.filter = std::string{filter} + '/',
+				.value = setting
+			});
+		}
+		else
+		{
+			std::string pattern;
+			if (filter.front() == '/')
+				pattern += '^';
+			else
+				pattern += '/';
+
+			for (size_t i = 0; i < filter.size(); ++i)
+			{
+				if (std::isalnum(filter[i]) || filter[i] == '_' || filter[i] == '/')
+					pattern += filter[i];
+				else if (filter.substr(i, 2) == "**")
+					pattern += ".*";
+				else if (filter[i] == '*')
+					pattern += "[^/]*";
+				else
+				{
+					HCL_DESIGNCHECK_HINT(false, "found invalid character in config filter pattern");
+					pattern += '.';
+				}
+			}
+			pattern += '/';
+
+			m_config.emplace_back(Setting{
+				.key = std::string{key},
+				.filter = std::regex{pattern, std::regex_constants::optimize},
+				.value = setting
+			});
+		}
+
+	}
+
+	void NodeGroupConfig::finalize()
+	{
+		std::ranges::stable_sort(m_config, {}, &Setting::key);
+	}
+	
+	std::optional<utils::ConfigTree> NodeGroupConfig::operator()(std::string_view key, std::string_view instancePath) const
+	{
+		std::string extPath{ instancePath };
+		extPath += '/';
+
+		for (const Setting& elem : std::ranges::equal_range(m_config, key, {}, &Setting::key))
+		{
+			if (const std::string* path = get_if<std::string>(&elem.filter))
+			{
+				if (path->front() == '/')
+				{
+					if (*path == extPath)
+						return elem.value;
+				}
+				else
+				{
+					if (extPath.ends_with(*path))
+						return elem.value;
+				}
+			}
+			else if(std::regex_search(extPath, get<std::regex>(elem.filter)))
+			{
+				return elem.value;
+			}
+		}
+		return std::nullopt;
 	}
 }

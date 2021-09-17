@@ -1,4 +1,5 @@
 #include "PropertyTree.h"
+#include "PropertyTree.h"
 /*  This file is part of Gatery, a library for circuit design.
 	Copyright (C) 2021 Michael Offel, Andreas Ley
 
@@ -52,6 +53,11 @@ namespace gtry::utils
 			return false;
 
 		return true;
+	}
+
+	size_t YamlPropertyTree::size() const
+	{
+		return m_node.size();
 	}
 
 	YamlPropertyTree& YamlPropertyTree::operator = (const YamlPropertyTree& val)

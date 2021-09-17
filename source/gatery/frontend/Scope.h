@@ -69,7 +69,8 @@ class GroupScope : public BaseScope<GroupScope>
         GroupScope &setComment(std::string comment);
 
         std::string instancePath() const { return m_nodeGroup->instancePath(); }
-        utils::ConfigTree instanceConfig() const;
+
+        utils::ConfigTree config(std::string_view attribute) const { return m_nodeGroup->config(attribute); }
         
         const hlim::NodeGroup* nodeGroup() const { return m_nodeGroup; }
         hlim::NodeGroup* nodeGroup() { return m_nodeGroup; }

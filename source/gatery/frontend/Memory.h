@@ -122,7 +122,7 @@ namespace gtry
 			m_numWords = numWords;
 
 
-			Area area{ "Memory" };
+			Area area{ "scl_memory" };
 			auto ent = area.enter();
 
 			ent["word_width"] = m_wordWidth;
@@ -134,15 +134,13 @@ namespace gtry
 			state.clearRange(sim::DefaultConfig::DEFINED, 0, m_numWords * m_wordWidth);
 			m_memoryNode->setPowerOnState(std::move(state));
 
-			auto&& cfg = ent.instanceConfig();
-
-			MemType memType = cfg["type"].as(MemType::DONT_CARE);
-			if (cfg["readLatency"])
-				setType(memType, cfg["readLatency"].as<size_t>());
+			MemType memType = ent.config("type").as(MemType::DONT_CARE);
+			if (utils::ConfigTree lat = ent.config("readLatency"))
+				setType(memType, lat.as<size_t>());
 			else
 				setType(memType);
 
-			m_memoryNode->loadConfig(cfg);
+			m_memoryNode->loadConfig();
 		}
 
 		size_t readLatencyHint() const { return m_memoryNode->getRequiredReadLatency(); }

@@ -73,7 +73,7 @@ class Node_Memory : public Node<Node_Memory>
 
         void setType(MemType type, size_t requiredReadLatency = ~0ull);
         void setNoConflicts();
-        void loadConfig(const utils::ConfigTree& config);
+        void loadConfig();
 
         size_t createWriteDependencyInputPort();
         void destroyWriteDependencyInputPort(size_t port);

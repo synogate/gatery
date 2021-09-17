@@ -21,6 +21,7 @@
 
 #include "Node_MemPort.h"
 
+#include "../NodeGroup.h"
 #include "../SignalDelay.h"
 
 namespace gtry::hlim {
@@ -64,7 +65,7 @@ namespace gtry::hlim {
                 port->orderAfter(nullptr);
     }
 
-    void Node_Memory::loadConfig(const utils::ConfigTree& cfg)
+    void Node_Memory::loadConfig()
     {
         size_t readLatency = ~0ull;
 /*        
@@ -81,12 +82,12 @@ namespace gtry::hlim {
             setType(MemType::DONT_CARE, readLatency);
         }
 */
-        if (cfg["prefix"])
+        if (utils::ConfigTree prefix = m_nodeGroup->config("prefix"))
         {
-            setName(cfg["prefix"].as<std::string>(""));
+            setName(prefix.as<std::string>(""));
         }
 
-        m_attributes.loadConfig(cfg["attributes"]);
+        m_attributes.loadConfig(m_nodeGroup->config("attributes"));
     }
 
     size_t Node_Memory::createWriteDependencyInputPort() 
