@@ -60,18 +60,23 @@ class TestbenchRecorder : public BaseTestbenchRecorder
     protected:
         VHDLExport &m_exporter;
         std::fstream m_testbenchFile;
-        hlim::ClockRational m_lastSimulationTime;
+        hlim::ClockRational m_vhdlSimulationTime;
+        hlim::ClockRational m_currentSimulationTime;
 
         std::set<const hlim::Clock*> m_clocksOfInterest;
         std::set<const hlim::Clock*> m_resetsOfInterest;
 
         std::map<hlim::NodePort, std::string> m_outputToIoPinName;
         std::map<std::string, std::string> m_signalOverrides;
+        std::map<std::string, std::string> m_resetOverrides;
 
         std::stringstream m_assertStatements;
 
         void writeHeader();
         void writeFooter();
+
+        void commitTime();
+        void advanceTimeTo(hlim::ClockRational simulationTime);
 };
 
 

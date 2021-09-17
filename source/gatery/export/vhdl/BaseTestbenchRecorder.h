@@ -57,8 +57,8 @@ class BaseTestbenchRecorder : public sim::SimulatorCallbacks
 
         void declareSignals(std::ostream &stream, const std::set<hlim::Clock*> &allClocks, const std::set<hlim::Clock*> &allResets, const std::set<hlim::Node_Pin*> &allIOPins);
         void writePortmap(std::ostream &stream, const std::set<hlim::Clock*> &allClocks, const std::set<hlim::Clock*> &allResets, const std::set<hlim::Node_Pin*> &allIOPins);
-        void initClocks(std::ostream &stream, const std::set<hlim::Clock*> &allClocks, const std::set<hlim::Clock*> &allResets);
 
+        void buildClockProcess(std::ostream &stream, hlim::Clock *clock);
 };
 
 

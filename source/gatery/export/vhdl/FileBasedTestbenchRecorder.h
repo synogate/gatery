@@ -63,6 +63,7 @@ class FileBasedTestbenchRecorder : public BaseTestbenchRecorder
 
         std::map<hlim::NodePort, std::string> m_outputToIoPinName;
         std::map<std::string, std::string> m_signalOverrides;
+        std::map<std::string, std::string> m_resetOverrides;
 
         std::stringstream m_assertStatements;
 

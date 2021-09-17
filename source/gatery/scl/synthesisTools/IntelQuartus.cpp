@@ -352,7 +352,7 @@ set_global_assignment -name ALLOW_REGISTER_RETIMING OFF
 				file << "vcom -quiet -2008 -createlib -work " << library << " " << escapeTcl((relativePath/source).string()) << '\n';
 			file << "vcom -quiet -2008 -work " << library << " " << escapeTcl(tb.string()) << '\n';
 
-			file << "vsim -t ps " << library << "." << top << '\n';
+			file << "vsim -t fs " << library << "." << top << '\n';
 			file << "set StdArithNoWarnings 1\n";
 			file << "set NumericStdNoWarnings 1\n";
 			file << "add wave *\n";

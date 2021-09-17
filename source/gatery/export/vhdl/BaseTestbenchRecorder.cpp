@@ -41,10 +41,26 @@ void BaseTestbenchRecorder::declareSignals(std::ostream &stream, const std::set<
     CodeFormatting &cf = m_ast->getCodeFormatting();
 
     for (auto clock : allClocks) {
-        stream << "    SIGNAL " << rootEntity->getNamespaceScope().getClock(clock).name << " : STD_LOGIC;" << std::endl;
+        stream << "    SIGNAL " << rootEntity->getNamespaceScope().getClock(clock).name << " : STD_LOGIC := ";
+        auto val = m_simulator.getValueOfReset(clock);
+        if (!val[sim::DefaultConfig::DEFINED])
+            stream << "'X';" << std::endl;
+        else
+            if (val[sim::DefaultConfig::VALUE])
+                stream << "'1';" << std::endl;
+            else
+                stream << "'0';" << std::endl;        
     }
     for (auto clock : allResets) {
-        stream << "    SIGNAL " << rootEntity->getNamespaceScope().getReset(clock).name << " : STD_LOGIC;" << std::endl;
+        stream << "    SIGNAL " << rootEntity->getNamespaceScope().getReset(clock).name << " : STD_LOGIC := ";
+        auto val = m_simulator.getValueOfReset(clock);
+        if (!val[sim::DefaultConfig::DEFINED])
+            stream << "'X';" << std::endl;
+        else
+            if (val[sim::DefaultConfig::VALUE])
+                stream << "'1';" << std::endl;
+            else
+                stream << "'0';" << std::endl;
     }
 
     for (auto ioPin : allIOPins) {
@@ -54,6 +70,9 @@ void BaseTestbenchRecorder::declareSignals(std::ostream &stream, const std::set<
         cf.formatConnectionType(stream, decl);
         stream << ';' << std::endl;
     }
+
+    stream << "    SIGNAL TB_testbench_is_done : STD_LOGIC := '0';\n";
+
 }
 
 void BaseTestbenchRecorder::writePortmap(std::ostream &stream, const std::set<hlim::Clock*> &allClocks, const std::set<hlim::Clock*> &allResets, const std::set<hlim::Node_Pin*> &allIOPins)
@@ -92,41 +111,50 @@ void BaseTestbenchRecorder::writePortmap(std::ostream &stream, const std::set<hl
 
 }
 
-void BaseTestbenchRecorder::initClocks(std::ostream &stream, const std::set<hlim::Clock*> &allClocks, const std::set<hlim::Clock*> &allResets)
-{
-    auto *rootEntity = m_ast->getRootEntity();
-    CodeFormatting &cf = m_ast->getCodeFormatting();
 
-    for (auto &s : allClocks) {
-        auto val = m_simulator.getValueOfClock(s);
-        cf.indent(stream, 2);
-        stream << rootEntity->getNamespaceScope().getClock(s).name << " <= ";
+namespace {
+    void formatTime(std::ostream &stream, hlim::ClockRational time) {
+        std::string unit = "sec";
+        if (time.denominator() > 1) { unit = "ms"; time *= 1000; }
+        if (time.denominator() > 1) { unit = "us"; time *= 1000; }
+        if (time.denominator() > 1) { unit = "ns"; time *= 1000; }
+        if (time.denominator() > 1) { unit = "ps"; time *= 1000; }
+        if (time.denominator() > 1) { unit = "fs"; time *= 1000; }
 
-        if (!val[sim::DefaultConfig::DEFINED])
-            stream << "'X';" << std::endl;
-        else
-            if (val[sim::DefaultConfig::VALUE])
-                stream << "'1';" << std::endl;
-            else
-                stream << "'0';" << std::endl;
+        stream << time.numerator() / time.denominator() << ' ' << unit;
     }
-
-    for (auto &s : allResets) {
-        auto val = m_simulator.getValueOfReset(s);
-        cf.indent(stream, 2);
-        stream << rootEntity->getNamespaceScope().getReset(s).name << " <= ";
-
-        if (!val[sim::DefaultConfig::DEFINED])
-            stream << "'X';" << std::endl;
-        else
-            if (val[sim::DefaultConfig::VALUE])
-                stream << "'1';" << std::endl;
-            else
-                stream << "'0';" << std::endl;
-    }
-
 }
 
+
+
+void BaseTestbenchRecorder::buildClockProcess(std::ostream &stream, hlim::Clock *clock)
+{
+    CodeFormatting &cf = m_ast->getCodeFormatting();
+    auto *rootEntity = m_ast->getRootEntity();
+    const std::string &clockName = rootEntity->getNamespaceScope().getClock(clock).name;
+
+    cf.indent(stream, 1);
+    stream << "clock_process_" << clockName << " : PROCESS" << std::endl;
+    cf.indent(stream, 1);
+    stream << "BEGIN" << std::endl;    
+
+    auto halfPeriod = hlim::ClockRational(1,2) / clock->getAbsoluteFrequency();
+
+    cf.indent(stream, 2);
+    stream << "WAIT FOR ";
+    formatTime(stream, halfPeriod);
+    stream << ';' << std::endl;
+
+    cf.indent(stream, 2);
+    stream << clockName << " <= not " << clockName << ";\n";
+
+    cf.indent(stream, 2);
+    stream << "IF TB_testbench_is_done = '1' THEN WAIT; END IF;" << std::endl;  
+
+    cf.indent(stream, 1);
+    stream << "END PROCESS;" << std::endl;
+
+}
 
 
 }
