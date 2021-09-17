@@ -30,12 +30,19 @@ namespace gtry {
 	DesignScope::DesignScope(std::unique_ptr<TargetTechnology> targetTech) : 
 				BaseScope<DesignScope>(), 
 				m_rootScope(m_circuit.getRootNodeGroup()), 
-				m_targetTech(std::move(targetTech)),
-				m_defaultTechScope(m_targetTech->enterTechScope())
+				m_targetTech(std::move(targetTech))
 	{ 
 		m_rootScope.setName("top");
 		
 		HCL_DESIGNCHECK_HINT(m_parentScope == nullptr, "Only one design scope can be active at a time!");
+		m_defaultTechScope.emplace(m_targetTech->getTechCaps());
+	}
+
+	void DesignScope::setTargetTechnology(std::unique_ptr<TargetTechnology> targetTech)
+	{
+		HCL_DESIGNCHECK_HINT(m_circuit.getNodes().empty(), "The target technology must be set before constructing the circuit!");
+		m_targetTech = std::move(targetTech);
+		m_defaultTechScope.emplace(m_targetTech->getTechCaps());
 	}
 
 	void DesignScope::visualize(const std::string &filename, hlim::NodeGroup *nodeGroup)
@@ -64,5 +71,10 @@ namespace gtry {
 		fill_ptree(*m_rootScope.nodeGroup());
 
 		return ptree;
+	}
+
+	void DesignScope::postprocess() 
+	{
+	    m_circuit.postprocess(hlim::DefaultPostprocessing{m_targetTech->getTechnologyMapping()});
 	}
 }

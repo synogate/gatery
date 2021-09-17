@@ -34,11 +34,11 @@ GenericMemoryCapabilities::~GenericMemoryCapabilities()
 {
 }
 
-GenericMemoryCapabilities::Choice GenericMemoryCapabilities::select(const Request &request) const
+GenericMemoryCapabilities::Choice GenericMemoryCapabilities::select(hlim::NodeGroup *group, const Request &request) const
 {
 	const auto &embeddedMems = m_targetDevice.getEmbeddedMemories();
 
-	auto *memChoice = embeddedMems.selectMemFor(request);
+	auto *memChoice = embeddedMems.selectMemFor(group, request);
 
 	HCL_DESIGNCHECK_HINT(memChoice != nullptr, "No suitable memory configuration could be found. Usually this means that the memory was restricted to a single size category that doesn't exist on the target device.");
 
@@ -59,29 +59,42 @@ void EmbeddedMemoryList::add(std::unique_ptr<EmbeddedMemory> mem)
 	});
 }
 
-const EmbeddedMemory *EmbeddedMemoryList::selectMemFor(GenericMemoryCapabilities::Request request) const
+const EmbeddedMemory *EmbeddedMemoryList::selectMemFor(hlim::NodeGroup *group, GenericMemoryCapabilities::Request request) const
 {
 	EmbeddedMemory *memChoice = nullptr;
-	
-	for (auto &mem : m_embeddedMemories) {
-		const auto &desc = mem->getDesc();
-		if (request.sizeCategory.contains(desc.sizeCategory) && 
-			(1ull << mem->getDesc().addressBits) >= request.maxDepth) {
+
+	if (group->config("memory_block")) {
+		auto name = group->config("memory_block").as<std::string>();
+
+		for (auto &mem : m_embeddedMemories) {
+			const auto &desc = mem->getDesc();
+			if (desc.memoryName == name) {
 				memChoice = mem.get();
 				break;
 			}
-	}
-
-	if (memChoice == nullptr) {
-		// Pick largest that works
-		size_t choiceSize = 0;
+		}
+		HCL_DESIGNCHECK_HINT(memChoice != nullptr, "The specified memory_block " + name + " is unknown or not available for the targeted device!");
+	} else {
 		for (auto &mem : m_embeddedMemories) {
 			const auto &desc = mem->getDesc();
-			size_t size = (1ull << mem->getDesc().addressBits);
-			if (request.sizeCategory.contains(desc.sizeCategory)) {
-				if (memChoice == nullptr || size > choiceSize) {
+			if (request.sizeCategory.contains(desc.sizeCategory) && 
+				(1ull << mem->getDesc().addressBits) >= request.maxDepth) {
 					memChoice = mem.get();
-					choiceSize = size;
+					break;
+				}
+		}
+
+		if (memChoice == nullptr) {
+			// Pick largest that works
+			size_t choiceSize = 0;
+			for (auto &mem : m_embeddedMemories) {
+				const auto &desc = mem->getDesc();
+				size_t size = (1ull << mem->getDesc().addressBits);
+				if (request.sizeCategory.contains(desc.sizeCategory)) {
+					if (memChoice == nullptr || size > choiceSize) {
+						memChoice = mem.get();
+						choiceSize = size;
+					}
 				}
 			}
 		}
@@ -117,7 +130,7 @@ bool EmbeddedMemoryPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 		break;
 	}
 
-	auto *memChoice = embeddedMems.selectMemFor(request);
+	auto *memChoice = embeddedMems.selectMemFor(nodeGroup, request);
 	return memChoice->apply(nodeGroup);
 }
 

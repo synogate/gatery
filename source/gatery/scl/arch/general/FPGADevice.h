@@ -37,6 +37,7 @@ class FPGADevice : public TargetTechnology {
 		inline const std::string &getFamily() const { return m_family; }
 		inline const std::string &getDevice() const { return m_device; }
 
+        virtual void fromConfig(const gtry::utils::ConfigTree &configTree);
 	protected:
 		std::string m_vendor;
 		std::string m_family;

@@ -23,9 +23,18 @@ namespace gtry::scl::arch::intel {
 
 class IntelDevice : public FPGADevice {
 	public:
-		void setupArria10(std::string device);
-		void setupCyclone10GX(std::string device);
+        void fromConfig(const gtry::utils::ConfigTree &configTree) override;
+
+
+		void setupAgilex();
+		void setupArria10();
+		void setupStratix10();
+		void setupCyclone10();
+		void setupMAX10();
+
+        void setupDevice(std::string device);
 	protected:
+        void setupCustomComposition(const gtry::utils::ConfigTree &customComposition);
 };
 
 }

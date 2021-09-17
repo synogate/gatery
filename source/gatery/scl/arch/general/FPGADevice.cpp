@@ -28,4 +28,11 @@ FPGADevice::FPGADevice() : m_memoryCapabilities(*this)
     m_techCaps.registerCap(&m_defaultFifoCaps);
 }
 
+void FPGADevice::fromConfig(const gtry::utils::ConfigTree &configTree)
+{
+    m_vendor = configTree["vendor"].as<std::string>("");
+    m_family = configTree["family"].as<std::string>("");
+    m_device = configTree["device"].as<std::string>("");
+}
+
 }

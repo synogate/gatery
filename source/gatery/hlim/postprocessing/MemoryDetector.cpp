@@ -1332,8 +1332,12 @@ bool Memory2VHDLPattern::attemptApply(Circuit &circuit, hlim::NodeGroup *nodeGro
     memoryGroup->buildReset(circuit);
     memoryGroup->bypassSignalNodes();
     memoryGroup->verify();
-    if (memoryGroup->getMemory()->type() == Node_Memory::MemType::EXTERNAL)
+    if (memoryGroup->getMemory()->type() == Node_Memory::MemType::EXTERNAL) {
+        //nodeGroup->properties()["memory_type"] = "none";
         memoryGroup->replaceWithIOPins(circuit);
+    } else {
+        //nodeGroup->properties()["memory_type"] = "vhdl array";
+    }
 
     return true;
 }

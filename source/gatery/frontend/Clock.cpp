@@ -100,8 +100,8 @@ namespace gtry
 			if (config["initialize_registers"])
 				m_initializeRegs = config["initialize_registers"].as<bool>();
 		
-			if (config["initialize_memory"])
-				m_initializeMemory = config["initialize_memory"].as<bool>();
+			if (config["initialize_memories"])
+				m_initializeMemory = config["initialize_memories"].as<bool>();
 
 			m_attributes.loadConfig(config["attributes"]);
 		}

@@ -21,6 +21,9 @@
 #include "IntelQuartus.h"
 #include "common.h"
 
+#include <gatery/frontend/DesignScope.h>
+#include "../arch/general/FPGADevice.h"
+
 #include <gatery/hlim/coreNodes/Node_Pin.h>
 #include <gatery/hlim/coreNodes/Node_Register.h>
 
@@ -303,12 +306,15 @@ if {$currentDirectory != $projectDirectory} {
 
 		file << R"(
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
-set_global_assignment -name DEVICE 10AX115N2F40I1SG
-set_global_assignment -name FAMILY "Arria 10"
 set_global_assignment -name VHDL_INPUT_VERSION VHDL_2008
 set_instance_assignment -name VIRTUAL_PIN ON -to *
 set_global_assignment -name ALLOW_REGISTER_RETIMING OFF
 )";
+
+		if (auto *fpga = DesignScope::get()->getTargetTechnology<scl::arch::FPGADevice>()) {
+			file << "set_global_assignment -name DEVICE " << fpga->getDevice() << "\n";
+			file << "set_global_assignment -name FAMILY \"" << fpga->getFamily() << "\"\n";
+		}
 
 		auto&& topEntity = vhdlExport.getAST()->getRootEntity()->getName();
 		file << "set_global_assignment -name TOP_LEVEL_ENTITY " << topEntity << '\n';

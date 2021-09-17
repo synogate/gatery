@@ -34,6 +34,8 @@ class DesignScope : public BaseScope<DesignScope>
         DesignScope();
         DesignScope(std::unique_ptr<TargetTechnology> targetTech);
 
+        void setTargetTechnology(std::unique_ptr<TargetTechnology> targetTech);
+
         static void visualize(const std::string &filename, hlim::NodeGroup *nodeGroup = nullptr);
 
         static DesignScope *get() { return m_currentScope; }
@@ -48,6 +50,10 @@ class DesignScope : public BaseScope<DesignScope>
         inline GroupScope &getRootGroup() { return m_rootScope; }
         utils::PropertyTree instanceProperties(bool settingsOnly = false) const;
 
+        template<typename Type = TargetTechnology>
+        inline Type *getTargetTechnology() { return dynamic_cast<Type*>(m_targetTech.get()); }
+
+        void postprocess();
     protected:
         hlim::Circuit m_circuit;
         GroupScope m_rootScope;
@@ -55,7 +61,7 @@ class DesignScope : public BaseScope<DesignScope>
         sim::ConstructionTimeSimulationContext m_simContext;
         
         std::unique_ptr<TargetTechnology> m_targetTech;
-        TechnologyScope m_defaultTechScope;
+        std::optional<TechnologyScope> m_defaultTechScope;
 };
 
 template<typename NodeType, typename... Args>

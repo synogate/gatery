@@ -26,7 +26,10 @@ namespace gtry {
 
 class TargetTechnology {
     public:
+        virtual ~TargetTechnology() = default;
+
         inline const hlim::TechnologyMapping &getTechnologyMapping() const { return m_technologyMapping; }
+        inline const TechnologyCapabilities &getTechCaps() { return m_techCaps; }
         TechnologyScope enterTechScope() { return TechnologyScope(m_techCaps); }
     protected:
         TechnologyCapabilities m_techCaps;

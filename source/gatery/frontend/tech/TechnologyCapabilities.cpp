@@ -20,11 +20,17 @@
 
 #include "TechnologyCapabilities.h"
 
+#include "../Scope.h"
 
 namespace gtry {
 
 
 MemoryCapabilities::Choice MemoryCapabilities::select(const Request &request) const
+{
+    return select(GroupScope::getCurrentNodeGroup(), request);
+}
+
+MemoryCapabilities::Choice MemoryCapabilities::select(hlim::NodeGroup *group, const Request &request) const
 {
     /*
     * Default assumption:
@@ -52,7 +58,13 @@ MemoryCapabilities::Choice MemoryCapabilities::select(const Request &request) co
     return result;
 }
 
+
 FifoCapabilities::Choice FifoCapabilities::select(const Request &request) const
+{
+    return select(GroupScope::getCurrentNodeGroup(), request);
+}
+
+FifoCapabilities::Choice FifoCapabilities::select(hlim::NodeGroup *group, const Request &request) const
 {
     /*
     * Default assumption:

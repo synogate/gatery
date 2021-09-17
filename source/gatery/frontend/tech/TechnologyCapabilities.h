@@ -112,7 +112,8 @@ class MemoryCapabilities : public Capabilities {
             size_t totalReadLatency;
         };
 
-        virtual Choice select(const Request &request) const;
+        Choice select(const Request &request) const;
+        virtual Choice select(hlim::NodeGroup *group, const Request &request) const;
 
         static const char *getName() { return "mem"; }
     protected:
@@ -147,7 +148,8 @@ class FifoCapabilities : public Capabilities {
 
         virtual ~FifoCapabilities() = default;
 
-        virtual Choice select(const Request &request) const;
+        Choice select(const Request &request) const;
+        virtual Choice select(hlim::NodeGroup *group, const Request &request) const;
 
         static const char *getName() { return "fifo"; }
     protected:
@@ -156,10 +158,10 @@ class FifoCapabilities : public Capabilities {
 class TechnologyCapabilities {
     public:
         template<class Cap>
-        Cap &getCap() {
+        const Cap &getCap() const {
             auto it = m_capabilities.find(Cap::getName());
             HCL_DESIGNCHECK_HINT(it != m_capabilities.end(), std::string("Could not find handler for tech capability ") + Cap::getName());
-            return dynamic_cast<Cap&>(*it->second);
+            return dynamic_cast<const Cap&>(*it->second);
         }
 
         template<class Cap>
@@ -173,17 +175,17 @@ class TechnologyScope : public BaseScope<TechnologyScope> {
     public:
         static TechnologyScope *get() { return m_currentScope; }
 
-        TechnologyScope(TechnologyCapabilities &techCaps) : m_techCaps(techCaps) { }
+        TechnologyScope(const TechnologyCapabilities &techCaps) : m_techCaps(techCaps) { }
 
-        inline TechnologyCapabilities &getTechCaps() const { return m_techCaps; }
+        inline const TechnologyCapabilities &getTechCaps() const { return m_techCaps; }
 
         template<class Cap>
-        static Cap &getCap() { 
+        static const Cap &getCap() { 
             HCL_ASSERT_HINT(m_currentScope != nullptr, "No technology scope active!");
             return m_currentScope->m_techCaps.getCap<Cap>();
         }
     protected:
-        TechnologyCapabilities &m_techCaps;
+        const TechnologyCapabilities &m_techCaps;
 };
 
 }

@@ -65,7 +65,7 @@ class GenericMemoryCapabilities : public MemoryCapabilities
 		GenericMemoryCapabilities(const FPGADevice &targetDevice);
         virtual ~GenericMemoryCapabilities();
 
-		virtual Choice select(const Request &request) const override;
+		virtual Choice select(hlim::NodeGroup *group, const Request &request) const override;
 
 		static const char *getName() { return "mem"; }
 	protected:
@@ -79,7 +79,7 @@ class EmbeddedMemoryList
 		virtual ~EmbeddedMemoryList() = default;
 
 		virtual void add(std::unique_ptr<EmbeddedMemory> mem);
-		virtual const EmbeddedMemory *selectMemFor(GenericMemoryCapabilities::Request request) const;
+		virtual const EmbeddedMemory *selectMemFor(hlim::NodeGroup *group, GenericMemoryCapabilities::Request request) const;
 
 		inline const std::vector<std::unique_ptr<EmbeddedMemory>> &getList() const { return m_embeddedMemories; }
 	protected:

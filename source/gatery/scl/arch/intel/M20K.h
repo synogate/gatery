@@ -19,29 +19,17 @@
 
 #include "../general/GenericMemory.h"
 
-namespace gtry::scl::arch::intel {
-/*
-enum class M20KVariants {
-	Default,
-	Arria10_SDP_woBE,
-	Arria10_TDP_woBE,
-	Arria10_SDP_wBE,
-	Arria10_TDP_wBE,
-};
+#include "IntelBlockram.h"
 
-GenericMemoryDesc buildM20KDesc(M20KVariants variant);
-*/
+namespace gtry::scl::arch::intel {
 
 class IntelDevice;
 
-class M20K : public EmbeddedMemory 
+class M20K : public IntelBlockram 
 {
     public:
         M20K(const IntelDevice &intelDevice);
 
-		virtual bool apply(hlim::NodeGroup *nodeGroup) const override;
-    protected:
-        const IntelDevice &m_intelDevice;
 };
 
 }

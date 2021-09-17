@@ -156,8 +156,9 @@ namespace gtry::hlim
 	{
 		for (auto it = config.mapBegin(); it != config.mapEnd(); ++it)
 		{
+			auto it_ = *it;
 			std::string instance = it.key();
-			for (auto itc = (*it).mapBegin(); itc != (*it).mapEnd(); ++itc)
+			for (auto itc = it_.mapBegin(); itc != it_.mapEnd(); ++itc)
 			{
 				add(itc.key(), instance, *itc);
 			}
