@@ -64,16 +64,15 @@ Circuit::Circuit()
  * @param subnetOutputs Output ports from where to start copying.
  * @param mapSrc2Dst Map from all copied nodes in the source circuit to the corresponding node in the destination circuit.
  */
-void Circuit::copySubnet(const std::vector<NodePort> &subnetInputs,
-                         const std::vector<NodePort> &subnetOutputs,
-                         std::map<BaseNode*, BaseNode*> &mapSrc2Dst)
+void Circuit::copySubnet(const std::set<NodePort> &subnetInputs,
+                         const std::set<NodePort> &subnetOutputs,
+                         std::map<BaseNode*, BaseNode*> &mapSrc2Dst,
+                         bool copyClocks)
 {
     mapSrc2Dst.clear();
 
-    std::set<NodePort> subnetInputSet(subnetInputs.begin(), subnetInputs.end());
-
     std::set<BaseNode*> closedList;
-    std::vector<NodePort> openList = subnetOutputs;
+    std::vector<NodePort> openList = std::vector<NodePort>(subnetOutputs.begin(), subnetOutputs.end());
 
     std::vector<std::pair<std::uint64_t, BaseNode*>> sortedNodes;
 
@@ -90,7 +89,7 @@ void Circuit::copySubnet(const std::vector<NodePort> &subnetInputs,
         for (auto i : utils::Range(nodePort.node->getNumInputPorts())) {
             auto driver = nodePort.node->getDriver(i);
             if (driver.node == nullptr) continue;
-            if (subnetInputSet.contains({.node=nodePort.node, .port=i})) continue;
+            if (subnetInputs.contains({.node=nodePort.node, .port=i})) continue;
             openList.push_back(driver);
         }
     }
@@ -130,7 +129,10 @@ void Circuit::copySubnet(const std::vector<NodePort> &subnetInputs,
         for (auto i : utils::Range(oldNode->getClocks().size())) {
             auto *oldClock = oldNode->getClocks()[i];
             if (oldClock != nullptr)
-                newNode->attachClock(lazyCreateClockNetwork(oldClock), i);
+                if (copyClocks)
+                    newNode->attachClock(lazyCreateClockNetwork(oldClock), i);
+                else
+                    newNode->attachClock(oldClock, i);
         }
     }
 }
@@ -160,8 +162,15 @@ void Circuit::inferSignalNames()
     std::set<Node_Signal*> unnamedSignals;
     for (size_t i = 0; i < m_nodes.size(); i++)
         if (auto *signal = dynamic_cast<Node_Signal*>(m_nodes[i].get()))
-            if (signal->getName().empty())
-                unnamedSignals.insert(signal);
+            if (signal->getName().empty()) {
+                auto driver = signal->getDriver(0);
+                if (driver.node != nullptr) {
+                    auto name = driver.node->attemptInferOutputName(driver.port);
+                    if (!name.empty())
+                        signal->setInferredName(std::move(name));
+                } else 
+                    unnamedSignals.insert(signal);
+            }
 
 
     while (!unnamedSignals.empty()) {

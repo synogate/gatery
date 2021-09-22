@@ -92,9 +92,10 @@ class Circuit
     public:
         Circuit();
 
-        void copySubnet(const std::vector<NodePort> &subnetInputs,
-                        const std::vector<NodePort> &subnetOutputs,
-                        std::map<BaseNode*, BaseNode*> &mapSrc2Dst);
+        void copySubnet(const std::set<NodePort> &subnetInputs,
+                        const std::set<NodePort> &subnetOutputs,
+                        std::map<BaseNode*, BaseNode*> &mapSrc2Dst,
+                        bool copyClocks = true);
 
         template<typename NodeType, typename... Args>
         NodeType *createNode(Args&&... args);
