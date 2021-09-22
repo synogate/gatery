@@ -24,15 +24,24 @@
 
 namespace gtry::hlim {
 
-Node_MemPort::Node_MemPort(std::size_t bitWidth) : m_bitWidth(bitWidth)
+Node_MemPort::Node_MemPort(std::size_t bitWidth)
 {
     resizeInputs((size_t)Inputs::count);
     resizeOutputs((size_t)Outputs::count);
-    setOutputConnectionType((size_t)Outputs::rdData, {.interpretation = ConnectionType::BITVEC, .width=bitWidth});
+    changeBitWidth(bitWidth);
     setOutputConnectionType((size_t)Outputs::orderBefore, {.interpretation = ConnectionType::ConnectionType::DEPENDENCY, .width=0});
     setOutputConnectionType((size_t)Outputs::memoryWriteDependency, {.interpretation = ConnectionType::ConnectionType::DEPENDENCY, .width=0});
     setOutputType((size_t)Outputs::memoryWriteDependency, OUTPUT_LATCHED);
     m_clocks.resize(1);
+}
+
+void Node_MemPort::changeBitWidth(std::size_t bitWidth)
+{
+    HCL_ASSERT(getDirectlyDriven((size_t)Outputs::rdData).empty());
+    HCL_ASSERT(getDriver((size_t)Inputs::address).node == nullptr);
+    
+    m_bitWidth = bitWidth;
+    setOutputConnectionType((size_t)Outputs::rdData, {.interpretation = ConnectionType::BITVEC, .width=bitWidth});
 }
 
 void Node_MemPort::connectMemory(Node_Memory *memory)
@@ -59,6 +68,12 @@ void Node_MemPort::disconnectMemory()
     memory->destroyWriteDependencyInputPort(np.port);
 }
 
+size_t Node_MemPort::getExpectedAddressBits() const
+{
+    size_t depth = (getMemory()->getSize() + m_bitWidth-1) / m_bitWidth;
+    size_t expectedBits = utils::Log2C(depth);
+    return expectedBits;
+}
 
 Node_Memory *Node_MemPort::getMemory() const
 {
@@ -78,6 +93,8 @@ void Node_MemPort::connectWrEnable(const NodePort &output)
 
 void Node_MemPort::connectAddress(const NodePort &output)
 {
+    HCL_ASSERT_HINT(getExpectedAddressBits() == getOutputWidth(output), "Address bus has wrong number of bits!");
+
     connectInput((size_t)Inputs::address, output);
 }
 

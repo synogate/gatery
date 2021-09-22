@@ -57,8 +57,12 @@ class Node_MemPort : public Node<Node_MemPort>
 
         Node_MemPort(std::size_t bitWidth);
 
+        void changeBitWidth(std::size_t bitWidth);
+
         void connectMemory(Node_Memory *memory);
         void disconnectMemory();
+
+        size_t getExpectedAddressBits() const;
 
         Node_Memory *getMemory() const;
         void connectEnable(const NodePort &output);
