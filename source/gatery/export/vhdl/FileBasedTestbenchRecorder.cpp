@@ -450,6 +450,7 @@ void FileBasedTestbenchRecorder::onSimProcOutputRead(hlim::NodePort output, cons
     for (auto nh : output.node->exploreOutput(output.port)) {
         if (auto* res = dynamic_cast<hlim::Node_Pin*>(nh.node())) {
             output = nh.node()->getDriver(0);
+            break;
         } else
             if (!nh.isSignal())
                 nh.backtrack();
