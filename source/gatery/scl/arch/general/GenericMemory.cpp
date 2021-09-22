@@ -47,6 +47,12 @@ GenericMemoryCapabilities::Choice GenericMemoryCapabilities::select(hlim::NodeGr
 	result.inputRegs = desc.inputRegs;
 	result.outputRegs = desc.outputRegs;
 	result.totalReadLatency = desc.outputRegs + (desc.inputRegs?1:0);
+
+	// Heuristic: If the depth is more than the memory can handle, add one input (addr/wrData) and one output register per additional bit to allow for memory cascades to be build.
+	size_t reqAddrBits = utils::Log2C(request.maxDepth);
+	if (reqAddrBits > desc.addressBits)
+		result.totalReadLatency += (reqAddrBits - desc.addressBits) * 2;
+
 	return result;
 }
 
@@ -131,6 +137,8 @@ bool EmbeddedMemoryPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 	}
 
 	auto *memChoice = embeddedMems.selectMemFor(nodeGroup, request);
+	if (memChoice == nullptr)
+		return false;
 	return memChoice->apply(nodeGroup);
 }
 
