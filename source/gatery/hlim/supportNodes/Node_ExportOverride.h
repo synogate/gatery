@@ -56,6 +56,8 @@ class Node_ExportOverride : public Node<Node_ExportOverride>
         virtual std::vector<size_t> getInternalStateSizes() const override;
 
         virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
+
+        virtual std::string attemptInferOutputName(size_t outputPort) const override;
     protected:
 };
 
