@@ -219,6 +219,8 @@ namespace gtry::hlim {
         ((Node_Memory*)res.get())->m_powerOnState = m_powerOnState;
         ((Node_Memory*)res.get())->m_type = m_type;
         ((Node_Memory*)res.get())->m_attributes = m_attributes;
+        ((Node_Memory*)res.get())->m_initializationDataWidth = m_initializationDataWidth;
+        ((Node_Memory*)res.get())->m_requiredReadLatency = m_requiredReadLatency;
         return res;
     }
 
