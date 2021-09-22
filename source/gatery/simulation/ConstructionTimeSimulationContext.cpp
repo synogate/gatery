@@ -43,8 +43,8 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
     // Basic idea: Find and copy the combinatorial subnet. Then optimize and execute the subnet to find the value.
     hlim::Circuit simCircuit;
 
-    std::vector<hlim::NodePort> inputPorts;
-    std::vector<hlim::NodePort> outputPorts = {handle.getOutput()};
+    std::set<hlim::NodePort> inputPorts;
+    std::set<hlim::NodePort> outputPorts = {handle.getOutput()};
 
     std::map<hlim::NodePort, hlim::NodePort> outputsTranslated;
     std::map<hlim::NodePort, hlim::NodePort> outputsShorted;
@@ -70,7 +70,7 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
                 outputsTranslated[nodePort] = {.node = c_node, .port = 0ull};
 
                 for (auto c : nodePort.node->getDirectlyDriven(nodePort.port))
-                    inputPorts.push_back(c);
+                    inputPorts.insert(c);
 
                 continue;
             }
@@ -82,7 +82,7 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
 
             auto reset = reg->getNonSignalDriver(hlim::Node_Register::Input::RESET_VALUE);
             if (reset.node != nullptr) {
-                outputPorts.push_back(reset);
+                outputPorts.insert(reset);
                 openList.push_back(reset);
 
                 for (auto c : nodePort.node->getDirectlyDriven(nodePort.port))
@@ -97,7 +97,7 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
             }
 
             for (auto c : nodePort.node->getDirectlyDriven(nodePort.port))
-                inputPorts.push_back(c);
+                inputPorts.insert(c);
 
             continue;
         }
@@ -114,7 +114,7 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
             outputsTranslated[nodePort] = {.node = c_node, .port = 0ull};
 
             for (auto c : nodePort.node->getDirectlyDriven(nodePort.port))
-                inputPorts.push_back(c);
+                inputPorts.insert(c);
 
             continue;
         }
