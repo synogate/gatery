@@ -107,7 +107,16 @@ Node_Pin *findOutputPin(NodePort output)
 Clock* findFirstOutputClock(NodePort output)
 {
     Clock* clockFound = nullptr;
+    std::set<BaseNode*> alreadySeen;
+    alreadySeen.insert(output.node);
     for (auto nh : output.node->exploreOutput(output.port)) {
+        if (alreadySeen.contains(nh.node())) {
+            nh.backtrack();
+            continue;
+        }
+
+        alreadySeen.insert(nh.node());
+
         if (auto* reg = dynamic_cast<Node_Register*>(nh.node())) {
             if (clockFound == nullptr)
                 clockFound = reg->getClocks()[0];
