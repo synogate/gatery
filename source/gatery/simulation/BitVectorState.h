@@ -285,7 +285,10 @@ void formatState(std::ostream& s, const BitVectorState<Config>& state, unsigned 
                     v |= 1;
             }
             if (!dropping || v != 0 || i+1 >= state.size()/4) {
-                s << v;
+                if (allDefined)
+                    s << v;
+                else
+                    s << 'X';
                 dropping = false;
             }
         }
