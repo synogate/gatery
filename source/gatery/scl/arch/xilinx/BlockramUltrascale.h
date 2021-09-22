@@ -17,24 +17,29 @@
 */
 #pragma once
 
-#include "../general/FPGADevice.h"
+#include "../general/GenericMemory.h"
+
+#include "XilinxBlockram.h"
+
+namespace gtry::hlim {
+    class MemoryGroup;
+}
 
 namespace gtry::scl::arch::xilinx {
 
-class XilinxDevice : public FPGADevice {
-	public:
-        void fromConfig(const gtry::utils::ConfigTree &configTree) override;
+class XilinxDevice;
+class RAMBxE2;
 
-		void setupZynq7();
-        void setupKintexUltrascale();
+class BlockramUltrascale : public XilinxBlockram 
+{
+    public:
+        BlockramUltrascale(const XilinxDevice &xilinxDevice);
 
-        void setupDevice(std::string device);
-	protected:
-        void setupCustomComposition(const gtry::utils::ConfigTree &customComposition);
+        virtual bool apply(hlim::NodeGroup *nodeGroup) const override;
+    protected:
+        void reccursiveBuild(hlim::NodeGroup *nodeGroup) const;
+
+        void hookUpSingleBRam(RAMBxE2 *bram, size_t addrSize, size_t width, hlim::MemoryGroup *memGrp) const;
 };
 
-}
-
-namespace gtry::scl {
-    using XilinxDevice = gtry::scl::arch::xilinx::XilinxDevice;
 }

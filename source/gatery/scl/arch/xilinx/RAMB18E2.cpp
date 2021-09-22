@@ -15,26 +15,15 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#pragma once
+#include "gatery/pch.h"
 
-#include "../general/FPGADevice.h"
+#include "RAMB18E2.h"
 
 namespace gtry::scl::arch::xilinx {
 
-class XilinxDevice : public FPGADevice {
-	public:
-        void fromConfig(const gtry::utils::ConfigTree &configTree) override;
-
-		void setupZynq7();
-        void setupKintexUltrascale();
-
-        void setupDevice(std::string device);
-	protected:
-        void setupCustomComposition(const gtry::utils::ConfigTree &customComposition);
-};
+RAMB18E2::RAMB18E2() : RAMBxE2(RAMBxE2::RAMB18E2)
+{
 
 }
 
-namespace gtry::scl {
-    using XilinxDevice = gtry::scl::arch::xilinx::XilinxDevice;
 }

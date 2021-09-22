@@ -164,6 +164,24 @@ MemoryGroup::MemoryGroup(NodeGroup *group) : m_nodeGroup(group)
     m_nodeGroup->setGroupType(NodeGroup::GroupType::SFU);
 }
 
+const MemoryGroup::ReadPort &MemoryGroup::findReadPort(Node_MemPort *memPort)
+{
+    for (auto &rp : m_readPorts)
+        if (rp.node == memPort)
+            return rp;
+        
+    HCL_ASSERT(false);
+}
+
+const MemoryGroup::WritePort &MemoryGroup::findWritePort(Node_MemPort *memPort)
+{
+    for (auto &wp : m_writePorts)
+        if (wp.node == memPort)
+            return wp;
+        
+    HCL_ASSERT(false);
+}
+
 void MemoryGroup::pullInPorts(Node_Memory *memory)
 {
     m_memory = memory;
@@ -611,6 +629,12 @@ void MemoryGroup::ensureNotEnabledFirstCycles(Circuit &circuit, NodeGroup *ng, N
     }
 }
 
+
+void MemoryGroup::findRegisters()
+{
+    for (auto &rp : m_readPorts)
+        HCL_ASSERT(rp.findOutputRegisters(m_memory->getRequiredReadLatency(), m_nodeGroup));
+}
 
 void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 {

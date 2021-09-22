@@ -51,6 +51,7 @@ class MemoryGroup : public NodeGroupMetaInfo
 
         void convertToReadBeforeWrite(Circuit &circuit);
         void resolveWriteOrder(Circuit &circuit);
+        void findRegisters();
         void attemptRegisterRetiming(Circuit &circuit);
         void updateNoConflictsAttrib();
         void buildReset(Circuit &circuit);
@@ -63,6 +64,10 @@ class MemoryGroup : public NodeGroupMetaInfo
         const std::vector<WritePort> &getWritePorts() { return m_writePorts; }
         const std::vector<ReadPort> &getReadPorts() { return m_readPorts; }
 
+        const ReadPort &findReadPort(Node_MemPort *memPort);
+        const WritePort &findWritePort(Node_MemPort *memPort);
+
+        inline NodeGroup *getNodeGroup() const { return m_nodeGroup; }
         inline NodeGroup *getFixupNodeGroup() const { return m_fixupNodeGroup; }
     protected:
         NodePtr<Node_Memory> m_memory;

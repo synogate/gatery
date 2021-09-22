@@ -26,6 +26,7 @@
 #include <string>
 #include <memory>
 #include <regex>
+#include <variant>
 
 #include <boost/container/flat_map.hpp>
 
@@ -115,6 +116,8 @@ namespace gtry::hlim {
 
 		template<typename MetaType, typename... Args>
 		MetaType *createMetaInfo(Args&&... args);
+
+		void dropMetaInfo() { m_metaInfo.reset(); }
 
 		NodeGroupMetaInfo* getMetaInfo() { return m_metaInfo.get(); }
 

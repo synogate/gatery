@@ -24,6 +24,7 @@
 #include "OBUFDS.h"
 #include "BUFG.h"
 #include "FifoPattern.h"
+#include "BlockramUltrascale.h"
 
 #include <regex>
 
@@ -45,7 +46,7 @@ struct Zynq7DeviceString {
         std::smatch matchResult;
 
         if (!std::regex_match(device, matchResult, deviceRegex)) return false;
-        lowPower = matchResult[3].str() == "L";
+        lowPower = matchResult[2].str() == "L";
         fabricSpeedGrade = boost::lexical_cast<size_t>(matchResult[3].str());
 
         valueIndex = boost::lexical_cast<size_t>(matchResult[1].str());
@@ -90,6 +91,28 @@ struct Zynq7DeviceString {
 };
 
 
+struct KintexVirtexUltrascaleDeviceString {
+    char KintexVirtex;
+    bool lowPower;
+    size_t fabricSpeedGrade;
+    size_t valueIndex;
+    //size_t logicCells;
+    
+    bool parse(const std::string &device) {
+        static auto deviceRegex = std::regex("XC(K|V)U(\\d\\d\\d)-(L|H)?(\\d)(F|S)(F|L|B)(V|G)A(\\d?\\d\\d\\d)(C|E|I)");
+
+        std::smatch matchResult;
+
+        if (!std::regex_match(device, matchResult, deviceRegex)) return false;
+        KintexVirtex = matchResult[1].str()[0];
+        valueIndex = boost::lexical_cast<size_t>(matchResult[2].str());
+    
+        lowPower = matchResult[3].str() == "L";
+        fabricSpeedGrade = boost::lexical_cast<size_t>(matchResult[4].str());
+        
+        return true;
+    }
+};
 
 
 
@@ -119,6 +142,10 @@ void XilinxDevice::setupZynq7()
     setupDevice("XC7Z100-3FFG900I");
 }
 
+void XilinxDevice::setupKintexUltrascale()
+{
+    setupDevice("XCKU035-1FBVA900C");
+}
 
 void XilinxDevice::setupCustomComposition(const gtry::utils::ConfigTree &customComposition)
 {
@@ -143,12 +170,23 @@ void XilinxDevice::setupDevice(std::string device)
     m_technologyMapping.addPattern(std::make_unique<EmbeddedMemoryPattern>(*this));
 
     Zynq7DeviceString zynq7DevStr;
+    KintexVirtexUltrascaleDeviceString kintexVirtexUltraDevStr;
 
     if (zynq7DevStr.parse(m_device)) {
     	m_family = "Zynq7";
 
+        m_technologyMapping.addPattern(std::make_unique<BUFGPattern>());
+
+    } else if (kintexVirtexUltraDevStr.parse(m_device)) {
+        if (kintexVirtexUltraDevStr.KintexVirtex == 'K')
+    	    m_family = "Kintex Ultrascale";
+        else
+    	    m_family = "Virtex Ultrascale";
+
+        m_embeddedMemoryList->add(std::make_unique<BlockramUltrascale>(*this));
 
         m_technologyMapping.addPattern(std::make_unique<BUFGPattern>());
+
     } else
         HCL_DESIGNCHECK_HINT(false, "The device string " + m_device + " does not match the pattern of any of the known device families. Specify a familiy or use custom_composition to specify the device's hardware features.");
 }

@@ -15,26 +15,21 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#pragma once
+#include "gatery/pch.h"
 
-#include "../general/FPGADevice.h"
+#include "XilinxBlockram.h"
+#include "XilinxDevice.h"
+
+#include <gatery/hlim/postprocessing/MemoryDetector.h>
+#include <gatery/hlim/supportNodes/Node_MemPort.h>
 
 namespace gtry::scl::arch::xilinx {
 
-class XilinxDevice : public FPGADevice {
-	public:
-        void fromConfig(const gtry::utils::ConfigTree &configTree) override;
-
-		void setupZynq7();
-        void setupKintexUltrascale();
-
-        void setupDevice(std::string device);
-	protected:
-        void setupCustomComposition(const gtry::utils::ConfigTree &customComposition);
-};
-
+XilinxBlockram::XilinxBlockram(const XilinxDevice &xilinxDevice) : m_xilinxDevice(xilinxDevice)
+{
+	m_desc.sizeCategory = MemoryCapabilities::SizeCategory::MEDIUM;
+	m_desc.inputRegs = true;
+	m_desc.outputRegs = 0;
 }
 
-namespace gtry::scl {
-    using XilinxDevice = gtry::scl::arch::xilinx::XilinxDevice;
 }

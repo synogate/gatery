@@ -17,24 +17,18 @@
 */
 #pragma once
 
-#include "../general/FPGADevice.h"
+#include "../general/GenericMemory.h"
 
 namespace gtry::scl::arch::xilinx {
 
-class XilinxDevice : public FPGADevice {
-	public:
-        void fromConfig(const gtry::utils::ConfigTree &configTree) override;
+class XilinxDevice;
 
-		void setupZynq7();
-        void setupKintexUltrascale();
-
-        void setupDevice(std::string device);
-	protected:
-        void setupCustomComposition(const gtry::utils::ConfigTree &customComposition);
+class XilinxBlockram : public EmbeddedMemory 
+{
+    public:
+        XilinxBlockram(const XilinxDevice &xilinxDevice);
+    protected:
+        const XilinxDevice &m_xilinxDevice;
 };
 
-}
-
-namespace gtry::scl {
-    using XilinxDevice = gtry::scl::arch::xilinx::XilinxDevice;
 }
