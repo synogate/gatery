@@ -52,14 +52,21 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
     memGrp->convertToReadBeforeWrite(circuit);
     memGrp->attemptRegisterRetiming(circuit);
 
+    hlim::Clock* writeClock = nullptr;
+    if (memGrp->getWritePorts().size() > 0) {
+        writeClock = memGrp->getWritePorts().front().node->getClocks()[0];
+        if (writeClock->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING) return false;
+    }
+
     auto *readClock = rp.dedicatedReadLatencyRegisters.front()->getClocks()[0];
+    if (readClock->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING) return false;
 
     for (auto reg : rp.dedicatedReadLatencyRegisters) {
         if (reg->hasResetValue()) return false;
         if (reg->hasEnable()) return false;
 
         // For now, no true dual port, so only single clock
-		if (memGrp->getWritePorts().size() > 0 && memGrp->getWritePorts().front().node->getClocks()[0] != reg->getClocks()[0]) return false;
+		if (memGrp->getWritePorts().size() > 0 && writeClock != reg->getClocks()[0]) return false;
 		if (readClock != reg->getClocks()[0]) return false;        
     }
 
@@ -82,7 +89,7 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
    
     bool readFirst = false;
     bool writeFirst = false;
-    if (memGrp->getWritePorts().size() > 1) {
+    if (memGrp->getWritePorts().size() > 0) {
         auto &wp = memGrp->getWritePorts().front();
         if (wp.node->isOrderedBefore(rp.node.get()))
             writeFirst = true;
@@ -99,6 +106,9 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 
 
     bool useInternalOutputRegister = false;
+
+    if (readClock->getRegAttribs().resetActive != hlim::RegisterAttributes::Active::HIGH)
+        useInternalOutputRegister = false; // Anyways aborting if they have a reset, but just so this case is not forgotten once we build in support for resets.
 
     size_t numExternalOutputRegisters = rp.dedicatedReadLatencyRegisters.size()-1;
     if (useInternalOutputRegister) 

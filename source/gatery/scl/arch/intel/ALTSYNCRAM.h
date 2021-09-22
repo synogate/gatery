@@ -25,15 +25,12 @@ namespace gtry::scl::arch::intel {
 class ALTSYNCRAM : public gtry::hlim::Node_External
 {
     public:
-        // Asynchronous reset of all FIFO functions, flags, and pointers. RST must be asserted for five read and write clock cycles.
-
         enum Clocks {
             CLK_0,
             CLK_1,
             CLK_COUNT
         };
 
-        // WREN and RDEN must be held Low before RST is asserted and during the Reset cycle.
         enum Inputs {
 			// Bits
             IN_WREN_A,

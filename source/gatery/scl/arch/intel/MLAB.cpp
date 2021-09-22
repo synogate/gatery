@@ -91,7 +91,7 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
    
     bool readFirst = false;
     bool writeFirst = false;
-    if (memGrp->getWritePorts().size() > 1) {
+    if (memGrp->getWritePorts().size() > 0) {
         auto &wp = memGrp->getWritePorts().front();
         if (wp.node->isOrderedBefore(rp.node.get()))
             writeFirst = true;
@@ -133,6 +133,8 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 
         altdpram->attachClock(rp.dedicatedReadLatencyRegisters.front()->getClocks()[0], (size_t)ALTDPRAM::Clocks::OUTCLOCK);
     }
+
+	nodeGroup->properties()["memory_type"] = m_desc.memoryName;
 	return true;
 }
 
