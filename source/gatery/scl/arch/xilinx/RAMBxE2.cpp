@@ -103,6 +103,12 @@ void RAMBxE2::defaultInputs(bool writePortA, bool writePortB)
 	connectInput(IN_CAS_DOMUXEN_A, oneB);
 	connectInput(IN_CAS_DOMUXEN_B, oneB);
 
+	connectInput(IN_CAS_OREG_IMUX_A, zeroB);
+	connectInput(IN_CAS_OREG_IMUX_B, zeroB);
+
+	connectInput(IN_CAS_OREG_IMUXEN_A, oneB);
+	connectInput(IN_CAS_OREG_IMUXEN_B, oneB);
+
 
 	connectInput(IN_DIN_A_DIN, undefinedData);
 	connectInput(IN_DIN_B_DIN, undefinedData);
@@ -143,13 +149,6 @@ void RAMBxE2::defaultInputs(bool writePortA, bool writePortB)
 		else
 			connectInput(IN_WE_B_WE, "b0000");	
 	}
-
-
-	// Contrary to docu, this also seems to be required for RAMB18E2
-		connectInput(IN_CAS_OREG_IMUX_A, zeroB);
-		connectInput(IN_CAS_OREG_IMUX_B, zeroB);
-		connectInput(IN_CAS_OREG_IMUXEN_A, oneB);
-		connectInput(IN_CAS_OREG_IMUXEN_B, oneB);
 
 	if (m_type == RAMB36E2) {
 		connectInput(IN_CAS_IND_BITERR, undefB);
@@ -244,6 +243,10 @@ void RAMBxE2::connectInput(Inputs input, const Bit &bit)
         case IN_CAS_DOMUX_B:
         case IN_CAS_DOMUXEN_A:
         case IN_CAS_DOMUXEN_B:
+		case IN_CAS_OREG_IMUX_A:
+		case IN_CAS_OREG_IMUX_B:
+		case IN_CAS_OREG_IMUXEN_A:
+		case IN_CAS_OREG_IMUXEN_B:
         case IN_EN_A_RD_EN:
         case IN_EN_B_WR_EN:
         case IN_REG_CE_A_REG_CE:
@@ -253,21 +256,11 @@ void RAMBxE2::connectInput(Inputs input, const Bit &bit)
 		case IN_RST_REG_A_RST_REG:
 		case IN_RST_REG_B:
         case IN_SLEEP:
-case IN_CAS_OREG_IMUX_A:
-case IN_CAS_OREG_IMUX_B:
-case IN_CAS_OREG_IMUXEN_A:
-case IN_CAS_OREG_IMUXEN_B:
 			NodeIO::connectInput(input, bit.getReadPort());
 		break;
 
 		case IN_CAS_IND_BITERR:
 		case IN_CAS_INS_BITERR:
-		/*
-		case IN_CAS_OREG_IMUX_A:
-		case IN_CAS_OREG_IMUX_B:
-		case IN_CAS_OREG_IMUXEN_A:
-		case IN_CAS_OREG_IMUXEN_B:
-		*/
 		case IN_ECC_PIPE_CE:
 		case IN_INJECT_D_BITERR:
 		case IN_INJECT_S_BITERR:
@@ -363,21 +356,19 @@ Bit RAMBxE2::getOutputBit(Outputs output)
 
 BVec RAMBxE2::getReadData(size_t width, bool portA)
 {
-	BVec result = BitWidth(width);
+	BVec result;
 
 	switch (width) {
 		case 36:
 			HCL_ASSERT_HINT(m_type == RAMB36E2, "Invalid width for bram type!");
-			result(0, 32) = getOutputBVec(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT);
-			result(32, 4) = getOutputBVec(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP);
+			// std::array<BVec, 2> is needed to ensure pack order doesn't reverse (we need to change that)
+			result = pack(std::array<BVec, 2>{getOutputBVec(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT), getOutputBVec(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)});
 		break;
 		case 18:
-			result(0, 16) = getOutputBVec(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, 16);
-			result(16, 2) = getOutputBVec(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)(0, 2);
+			result = pack(std::array<BVec, 2>{getOutputBVec(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, 16), getOutputBVec(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)(0, 2)});
 		break;
 		case 9:
-			result(0, 8) = getOutputBVec(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, 8);
-			result(8, 1) = getOutputBVec(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)(0, 1);
+			result = pack(std::array<BVec, 2>{getOutputBVec(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, 8), getOutputBVec(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)(0, 1)});
 		break;
 		case 4:
 		case 2:
@@ -458,6 +449,10 @@ std::string RAMBxE2::getInputName(size_t idx) const
 		case IN_CAS_DIN_B: return "CASDINB";
 		case IN_CAS_DINP_A: return "CASDINPA";
 		case IN_CAS_DINP_B: return "CASDINPB";
+		case IN_CAS_OREG_IMUX_A: return "CASOREGIMUXA";
+		case IN_CAS_OREG_IMUX_B: return "CASOREGIMUXB";
+		case IN_CAS_OREG_IMUXEN_A: return "CASOREGIMUXEN_A";
+		case IN_CAS_OREG_IMUXEN_B: return "CASOREGIMUXEN_B";
 		case IN_DIN_A_DIN: return "DINADIN";
 		case IN_DIN_B_DIN: return "DINBDIN";
 		case IN_DINP_A_DINP: return "DINPADINP";
@@ -472,10 +467,6 @@ std::string RAMBxE2::getInputName(size_t idx) const
 		// 36k
 		case IN_CAS_IND_BITERR: return "CASINDBITERR";
 		case IN_CAS_INS_BITERR: return "CASINSBITERR";
-		case IN_CAS_OREG_IMUX_A: return "CASOREGIMUXA";
-		case IN_CAS_OREG_IMUX_B: return "CASOREGIMUXB";
-		case IN_CAS_OREG_IMUXEN_A: return "CASOREGIMUXEN_A";
-		case IN_CAS_OREG_IMUXEN_B: return "CASOREGIMUXEN_B";
 		case IN_ECC_PIPE_CE: return "ECCPIPECE";
 		case IN_INJECT_D_BITERR: return "INJECTDBITERR";
 		case IN_INJECT_S_BITERR : return "INJECTSBITERR";

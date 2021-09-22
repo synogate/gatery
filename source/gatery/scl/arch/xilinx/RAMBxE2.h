@@ -54,7 +54,11 @@ class RAMBxE2 : public gtry::hlim::Node_External
             IN_CAS_DOMUX_B,
             IN_CAS_DOMUXEN_A,
             IN_CAS_DOMUXEN_B,
-
+			IN_CAS_OREG_IMUX_A,
+			IN_CAS_OREG_IMUX_B,
+			IN_CAS_OREG_IMUXEN_A,
+			IN_CAS_OREG_IMUXEN_B,
+			
 			IN_DIN_A_DIN,
 			IN_DIN_B_DIN,
 			IN_DINP_A_DINP,
@@ -76,14 +80,11 @@ class RAMBxE2 : public gtry::hlim::Node_External
 			IN_WE_A,
 			IN_WE_B_WE,
 			
+			
 			// 36k
 
 			IN_CAS_IND_BITERR,
 			IN_CAS_INS_BITERR,
-			IN_CAS_OREG_IMUX_A,
-			IN_CAS_OREG_IMUX_B,
-			IN_CAS_OREG_IMUXEN_A,
-			IN_CAS_OREG_IMUXEN_B,
 
 			IN_ECC_PIPE_CE,
 			IN_INJECT_D_BITERR,
