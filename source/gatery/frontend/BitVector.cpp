@@ -531,11 +531,16 @@ namespace gtry {
             offset = size_t(s.start + r.width);
         }
 
-        if (s.width >= 0)
+        if (s.untilEndOfSource) {
+            HCL_DESIGNCHECK(s.stride <= 1); // not yet defined
+            width = r.width - offset;
+        } else if (s.width >= 0)
             width = size_t(s.width);
         else
         {
             HCL_DESIGNCHECK(s.stride <= 1); // not yet defined
+            HCL_ASSERT_HINT(offset == 0, "TODO: Check this!");
+            ///@todo Not sure if this is correct, wouldn't one have to subtract offset?
             width = size_t(s.width + r.width);
         }
 
