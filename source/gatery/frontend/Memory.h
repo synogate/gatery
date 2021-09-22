@@ -43,8 +43,18 @@ namespace gtry
 	class MemoryPortFactory {
 	public:
 		MemoryPortFactory(hlim::Node_Memory* memoryNode, const BVec& address, Data defaultValue) : m_memoryNode(memoryNode), m_defaultValue(defaultValue) {
-			m_address = address;
 			m_wordSize = width(m_defaultValue).value;
+
+    		size_t depth = (memoryNode->getSize() + m_wordSize-1) / m_wordSize;
+    		size_t expectedAddrBits = utils::Log2C(depth);
+
+			if (address.size() < expectedAddrBits)
+				m_address = zext(address, expectedAddrBits-address.size());
+			else if (address.size() > expectedAddrBits) {
+				m_address = address(0, expectedAddrBits);
+			} else {
+				m_address = address;
+			}
 		}
 
 		Data read() const
