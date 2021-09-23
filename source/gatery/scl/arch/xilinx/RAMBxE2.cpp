@@ -211,6 +211,8 @@ RAMBxE2 &RAMBxE2::setupPortA(PortSetup portSetup)
 
 	m_genericParameters["DOA_REG"] = portSetup.outputRegs?"1":"0";
 
+	m_portSetups[0] = portSetup;
+
 	return *this;
 }
 
@@ -222,12 +224,16 @@ RAMBxE2 &RAMBxE2::setupPortB(PortSetup portSetup)
 	m_genericParameters["WRITE_MODE_B"] = WriteMode2Str(portSetup.writeMode);
 
 	m_genericParameters["DOB_REG"] = portSetup.outputRegs?"1":"0";
+
+	m_portSetups[1] = portSetup;
+
 	return *this;
 }
 
 RAMBxE2 &RAMBxE2::setupClockDomains(ClockDomains clkDom)
 {
 	m_genericParameters["CLOCK_DOMAINS"] = ClockDomains2Str(clkDom);
+	m_clockDomains = clkDom;
 	return *this;
 }
 
@@ -358,11 +364,33 @@ BVec RAMBxE2::getReadData(size_t width, bool portA)
 {
 	BVec result;
 
+	// std::array<BVec, xx> is needed to ensure pack order doesn't reverse (we need to change that)
+
 	switch (width) {
-		case 36:
+		case 72:
 			HCL_ASSERT_HINT(m_type == RAMB36E2, "Invalid width for bram type!");
-			// std::array<BVec, 2> is needed to ensure pack order doesn't reverse (we need to change that)
-			result = pack(std::array<BVec, 2>{getOutputBVec(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT), getOutputBVec(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)});
+			HCL_ASSERT_HINT(isSimpleDualPort() || isRom(), "Width only available in simple dual port mode!");
+			HCL_ASSERT_HINT(portA, "In SDP mode, only port A can read!");
+			result = pack(std::array<BVec, 4>{
+				getOutputBVec(OUT_DOUT_A_DOUT), 
+				getOutputBVec(OUT_DOUT_B_DOUT), 
+				getOutputBVec(OUT_DOUTP_A_DOUTP),
+				getOutputBVec(OUT_DOUTP_B_DOUTP),
+			});
+		break;
+		case 36:
+			if (m_type == RAMB36E2) {
+				result = pack(std::array<BVec, 2>{getOutputBVec(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT), getOutputBVec(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)});
+			} else {
+				HCL_ASSERT_HINT(isSimpleDualPort() || isRom(), "Width only available for RAMB36E2 or in simple dual port mode RAMB18E2!");
+				HCL_ASSERT_HINT(portA, "In SDP mode, only port A can read!");
+				result = pack(std::array<BVec, 4>{
+					getOutputBVec(OUT_DOUT_A_DOUT), 
+					getOutputBVec(OUT_DOUT_B_DOUT), 
+					getOutputBVec(OUT_DOUTP_A_DOUTP),
+					getOutputBVec(OUT_DOUTP_B_DOUTP),
+				});
+			}
 		break;
 		case 18:
 			result = pack(std::array<BVec, 2>{getOutputBVec(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, 16), getOutputBVec(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)(0, 2)});
@@ -392,10 +420,28 @@ void RAMBxE2::connectWriteData(const BVec &input, bool portA)
 	}
 
 	switch (input.size()) {
-		case 36:
+		case 72:
 			HCL_ASSERT_HINT(m_type == RAMB36E2, "Invalid width for bram type!");
-			connectInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, input(0, 32));
-			connectInput(portA?IN_DINP_A_DINP:IN_DINP_B_DINP, input(32, 4));
+			HCL_ASSERT_HINT(isSimpleDualPort() || isRom(), "Width only available in simple dual port mode!");
+			HCL_ASSERT_HINT(!portA, "In SDP mode, only port B can write!");
+
+			connectInput(IN_DIN_A_DIN, input(0, 32));
+			connectInput(IN_DIN_B_DIN, input(32, 32));
+			connectInput(IN_DINP_A_DINP, input(64, 4));
+			connectInput(IN_DINP_B_DINP, input(68, 4));
+		break;
+		case 36:
+			if (m_type == RAMB36E2) {
+				connectInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, input(0, 32));
+				connectInput(portA?IN_DINP_A_DINP:IN_DINP_B_DINP, input(32, 4));
+			} else {
+				HCL_ASSERT_HINT(isSimpleDualPort() || isRom(), "Width only available for RAMB36E2 or in simple dual port mode RAMB18E2!");
+				HCL_ASSERT_HINT(!portA, "In SDP mode, only port B can write!");
+				connectInput(IN_DIN_A_DIN, input(0, 16));
+				connectInput(IN_DIN_B_DIN, input(16, 16));
+				connectInput(IN_DINP_A_DINP, input(32, 2));
+				connectInput(IN_DINP_B_DINP, input(34, 2));
+			}
 		break;
 		case 18:
 			connectInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, zext(input(0, 16), dPortWidth-16));

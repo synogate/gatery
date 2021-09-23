@@ -75,7 +75,7 @@ bool BlockramUltrascale::apply(hlim::NodeGroup *nodeGroup) const
 
 void BlockramUltrascale::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
 {
-  //  DesignScope::visualize("process");
+//    DesignScope::visualize("process");
 
 
 	auto *memGrp = dynamic_cast<hlim::MemoryGroup*>(nodeGroup->getMetaInfo());
@@ -110,7 +110,8 @@ void BlockramUltrascale::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
         case 13: widthSingle36k = 4; break;
         case 12: widthSingle36k = 9; break;
         case 11: widthSingle36k = 18; break;
-        default: widthSingle36k = 36; break;
+        case 10: widthSingle36k = 36; break;
+        default: widthSingle36k = 72; break; // only in SDP
     }
 
     if (widthSingle36k < width) {
@@ -143,7 +144,8 @@ void BlockramUltrascale::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
         case 13: widthSingle18k = 2; break;
         case 12: widthSingle18k = 4; break;
         case 11: widthSingle18k = 9; break;
-        default: widthSingle18k = 18; break;
+        case 10: widthSingle18k = 18; break;
+        default: widthSingle18k = 36; break; // only in SDP
     }
 
     size_t num36kPerCascade = (width + widthSingle36k-1) / widthSingle36k;
@@ -164,15 +166,15 @@ void BlockramUltrascale::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
     if (num18kPerCascade == 1 && numCascadesNeeded18k == 1) {
         // Yep
         auto *bram = DesignScope::createNode<RAMB18E2>();
-        hookUpSingleBRam(bram, m_desc.addressBits-1, widthSingle18k, memGrp);
+        hookUpSingleBRamSDP(bram, m_desc.addressBits-1, widthSingle18k, memGrp);
     } else {
         // Nope, need a RAMB36K
         auto *bram = DesignScope::createNode<RAMB36E2>();
-        hookUpSingleBRam(bram, m_desc.addressBits, widthSingle36k, memGrp);
+        hookUpSingleBRamSDP(bram, m_desc.addressBits, widthSingle36k, memGrp);
     }
 }
 
-void BlockramUltrascale::hookUpSingleBRam(RAMBxE2 *bram, size_t addrSize, size_t width, hlim::MemoryGroup *memGrp) const
+void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, size_t width, hlim::MemoryGroup *memGrp) const
 {
     bool hasWritePort = !memGrp->getWritePorts().empty();
     auto &rp = memGrp->getReadPorts().front();

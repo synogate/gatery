@@ -39,7 +39,7 @@ class BlockramUltrascale : public XilinxBlockram
     protected:
         void reccursiveBuild(hlim::NodeGroup *nodeGroup) const;
 
-        void hookUpSingleBRam(RAMBxE2 *bram, size_t addrSize, size_t width, hlim::MemoryGroup *memGrp) const;
+        void hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, size_t width, hlim::MemoryGroup *memGrp) const;
 };
 
 }

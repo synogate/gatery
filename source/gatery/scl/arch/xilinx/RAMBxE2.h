@@ -151,6 +151,10 @@ class RAMBxE2 : public gtry::hlim::Node_External
 
 		void defaultInputs(bool writePortA, bool writePortB);
 
+		bool isRom() const { return m_portSetups[0].writeWidth == 0 && m_portSetups[1].readWidth == 0 && m_portSetups[1].writeWidth == 0; }
+		bool isSinglePort() const { return m_portSetups[1].readWidth == 0 && m_portSetups[1].writeWidth == 0; }
+		bool isSimpleDualPort() const { return m_portSetups[0].writeWidth == 0 && m_portSetups[1].readWidth == 0; }
+
 		RAMBxE2 &setupClockDomains(ClockDomains clkDom);
 
 		RAMBxE2 &setupPortA(PortSetup portSetup);
@@ -184,6 +188,9 @@ class RAMBxE2 : public gtry::hlim::Node_External
         virtual std::string attemptInferOutputName(size_t outputPort) const override;
     protected:
 		Type m_type;
+
+		PortSetup m_portSetups[2];
+		ClockDomains m_clockDomains;
 
 		static std::string WriteMode2Str(WriteMode wm);
 		static std::string ClockDomains2Str(ClockDomains cd);
