@@ -99,7 +99,7 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
             readFirst = true;
     }
 
-
+	HCL_ASSERT(!writeFirst);
 	altdpram->setupMixedPortRdw(ALTDPRAM::RDWBehavior::NEW_DATA_MASKED_UNDEFINED);
 
 
