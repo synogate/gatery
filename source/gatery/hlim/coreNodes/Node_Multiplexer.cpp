@@ -121,6 +121,8 @@ std::string Node_Multiplexer::attemptInferOutputName(size_t outputPort) const
             longestInput = driver.node->getName();
     }
 
+    if (longestInput.empty()) return "";
+
     std::stringstream name;
     name << longestInput << "_mux";
     return name.str();

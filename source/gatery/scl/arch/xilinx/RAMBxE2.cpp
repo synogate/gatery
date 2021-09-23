@@ -407,6 +407,18 @@ BVec RAMBxE2::getReadData(size_t width, bool portA)
 			HCL_ASSERT_HINT(false, "Invalid width for bram type!");
 		break;
 	}
+	if (m_type == RAMB18E2) {
+		if (portA)
+			result.setName("RAMB18E2_rdData_portA");
+		else
+			result.setName("RAMB18E2_rdData_portB");
+	} else {
+		if (portA)
+			result.setName("RAMB36E2_rdData_portA");
+		else
+			result.setName("RAMB36E2_rdData_portB");
+	}
+
 	return result;
 }
 
