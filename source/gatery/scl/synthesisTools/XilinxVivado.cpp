@@ -205,16 +205,18 @@ void XilinxVivado::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::str
 		file << f.string() << '\n';
 	}
 
+	auto testbenchRelativePath = std::filesystem::relative(vhdlExport.getTestbenchDestination(), vhdlExport.getDestination());
+
 	for (const auto &e : vhdlExport.getTestbenchRecorder()) {
         for (const auto &name : e->getDependencySortedEntities()) {
 			file << "read_vhdl -vhdl2008 ";
 			if (!vhdlExport.getName().empty())
 				file << "-library " << vhdlExport.getName() << ' ';
-            file << vhdlExport.getAST()->getFilename("", name) << std::endl;
+            file << (testbenchRelativePath / vhdlExport.getAST()->getFilename("", name)).string() << std::endl;
 		}
 
         for (const auto &name : e->getAuxiliaryDataFiles()) {
-			file << "add_files \"" << name << '\"' << std::endl;
+			file << "add_files \"" << (testbenchRelativePath / name).string() << '\"' << std::endl;
 		}
     }
 
