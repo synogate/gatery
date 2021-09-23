@@ -484,7 +484,7 @@ void RAMBxE2::connectAddress(const BVec &input, bool portA)
 		case 72:
 			HCL_ASSERT_HINT(m_type == RAMB36E2, "Invalid width for bram type!");
 			HCL_ASSERT_HINT(isSimpleDualPort() || isRom(), "Width only available in simple dual port mode!");
-			lowerZeros = 5;
+			lowerZeros = 6;
 		break;
 		case 36:
 			if (m_type == RAMB36E2) {
