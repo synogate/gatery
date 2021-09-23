@@ -178,6 +178,10 @@ class RAMBxE2 : public gtry::hlim::Node_External
 		void connectWriteDataPortA(const BVec &input) { connectWriteData(input, true); }
 		void connectWriteDataPortB(const BVec &input) { connectWriteData(input, false); }
 
+		void connectAddress(const BVec &input, bool portA);
+		void connectAddressPortA(const BVec &input) { connectAddress(input, true); }
+		void connectAddressPortB(const BVec &input) { connectAddress(input, false); }
+
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;
         virtual std::string getInputName(size_t idx) const override;

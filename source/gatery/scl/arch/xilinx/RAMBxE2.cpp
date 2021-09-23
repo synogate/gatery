@@ -474,6 +474,56 @@ void RAMBxE2::connectWriteData(const BVec &input, bool portA)
 	}
 }
 
+void RAMBxE2::connectAddress(const BVec &input, bool portA)
+{
+	size_t lowerZeros = 0;
+
+	size_t width = std::max(m_portSetups[portA?0:1].writeWidth, m_portSetups[portA?0:1].readWidth);
+
+	switch (width) {
+		case 72:
+			HCL_ASSERT_HINT(m_type == RAMB36E2, "Invalid width for bram type!");
+			HCL_ASSERT_HINT(isSimpleDualPort() || isRom(), "Width only available in simple dual port mode!");
+			lowerZeros = 5;
+		break;
+		case 36:
+			if (m_type == RAMB36E2) {
+				lowerZeros = 5;
+			} else {
+				HCL_ASSERT_HINT(isSimpleDualPort() || isRom(), "Width only available for RAMB36E2 or in simple dual port mode RAMB18E2!");
+				HCL_ASSERT_HINT(!portA, "In SDP mode, only port B can write!");
+				lowerZeros = 5;
+			}
+		break;
+		case 18:
+			lowerZeros = 4;
+		break;
+		case 9:
+			lowerZeros = 3;
+		break;
+		case 4:
+			lowerZeros = 2;
+		break;
+		case 2:
+			lowerZeros = 1;
+		break;
+		case 1:
+			lowerZeros = 0;
+		break;
+		default:
+			HCL_ASSERT_HINT(false, "Invalid width for bram type!");
+		break;
+	}
+
+	size_t totalAddrBits = m_type == RAMB36E2?15:14;
+
+	BVec properAddr = ConstBVec(0, BitWidth(totalAddrBits));
+	properAddr(lowerZeros, input.size()) = input;
+
+	connectInput(portA?IN_ADDR_A_RDADDR:IN_ADDR_B_WRADDR, properAddr);
+}
+
+
 
 std::string RAMBxE2::getTypeName() const
 {

@@ -28,6 +28,8 @@
 
 #include "../general/MemoryTools.h"
 
+#include <iostream>
+
 namespace gtry::scl::arch::xilinx {
 
 BlockramUltrascale::BlockramUltrascale(const XilinxDevice &xilinxDevice) : XilinxBlockram(xilinxDevice)
@@ -97,6 +99,7 @@ void BlockramUltrascale::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
         return;
     } 
 
+    bool isSDP = true;
 
     size_t numCascadesNeeded36k = (maxDepth + maxDepth36k-1) / maxDepth36k;
     size_t depthHandledBy36k = std::min(maxDepth, numCascadesNeeded36k * maxDepth36k);
@@ -111,7 +114,7 @@ void BlockramUltrascale::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
         case 12: widthSingle36k = 9; break;
         case 11: widthSingle36k = 18; break;
         case 10: widthSingle36k = 36; break;
-        default: widthSingle36k = 72; break; // only in SDP
+        default: widthSingle36k = isSDP?72:36; break; // only in SDP
     }
 
     if (widthSingle36k < width) {
@@ -145,7 +148,7 @@ void BlockramUltrascale::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
         case 12: widthSingle18k = 4; break;
         case 11: widthSingle18k = 9; break;
         case 10: widthSingle18k = 18; break;
-        default: widthSingle18k = 36; break; // only in SDP
+        default: widthSingle18k = isSDP?36:18; break; // only in SDP
     }
 
     size_t num36kPerCascade = (width + widthSingle36k-1) / widthSingle36k;
@@ -181,6 +184,19 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 
     bool crossPortReadFirst = false;
 
+    bool readFirst = false;
+    bool writeFirst = false;
+    if (hasWritePort) {
+        auto &wp = memGrp->getWritePorts().front();
+        if (wp.node->isOrderedBefore(rp.node.get()))
+            writeFirst = true;
+        if (rp.node->isOrderedBefore(wp.node.get()))
+            readFirst = true;
+    }
+
+    HCL_ASSERT(!writeFirst);
+
+    crossPortReadFirst = readFirst;
 
 
     bram->defaultInputs(false, hasWritePort);
@@ -194,7 +210,7 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
     BVec rdAddr = getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
     Bit rdEn = getBitBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::enable}, '1');
 
-    bram->connectInput(RAMBxE2::Inputs::IN_ADDR_A_RDADDR, zext(rdAddr, addrSize - rdAddr.size()));
+    bram->connectAddressPortA(rdAddr);
     bram->connectInput(RAMBxE2::Inputs::IN_EN_A_RD_EN, rdEn);
 
     auto *readClock = rp.dedicatedReadLatencyRegisters.front()->getClocks()[0];
@@ -227,7 +243,7 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
             .writeWidth = width,
         };
         bram->setupPortB(wrPortSetup);
-        bram->connectInput(RAMBxE2::Inputs::IN_ADDR_B_WRADDR, zext(wrAddr, addrSize - wrAddr.size()));
+        bram->connectAddressPortB(wrAddr);
         bram->connectInput(RAMBxE2::Inputs::IN_EN_B_WR_EN, wrEn);
         bram->connectWriteDataPortB(zext(wrData, width - wrData.size()));
 
