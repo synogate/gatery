@@ -198,7 +198,7 @@ void CombinatoryProcess::allocateNames()
 }
 
 
-void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &comments, const hlim::NodePort &nodePort, std::set<hlim::NodePort> &dependentInputs, VHDLDataType context, bool forceUnfold)
+void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentation, std::ostream &comments, const hlim::NodePort &nodePort, std::set<hlim::NodePort> &dependentInputs, VHDLDataType context, bool forceUnfold)
 {
     if (nodePort.node == nullptr) {
         comments << "-- Warning: Unconnected node, using others=>X" << std::endl;
@@ -246,17 +246,17 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
     HCL_ASSERT(dynamic_cast<const hlim::Node_Multiplexer*>(nodePort.node) == nullptr);
 
     if (const auto *signalNode = dynamic_cast<const hlim::Node_Signal *>(nodePort.node)) {
-        formatExpression(stream, comments, signalNode->getDriver(0), dependentInputs, context);
+        formatExpression(stream, indentation, comments, signalNode->getDriver(0), dependentInputs, context);
         return;
     }
 
     if (const auto *attribNode = dynamic_cast<const hlim::Node_Attributes *>(nodePort.node)) {
-        formatExpression(stream, comments, attribNode->getDriver(0), dependentInputs, context);
+        formatExpression(stream, indentation, comments, attribNode->getDriver(0), dependentInputs, context);
         return;
     }
 
     if (const auto *expOverrideNode = dynamic_cast<const hlim::Node_ExportOverride*>(nodePort.node)) {
-        formatExpression(stream, comments, expOverrideNode->getDriver(hlim::Node_ExportOverride::EXP_INPUT), dependentInputs, context);
+        formatExpression(stream, indentation, comments, expOverrideNode->getDriver(hlim::Node_ExportOverride::EXP_INPUT), dependentInputs, context);
         return;
     }
 
@@ -305,7 +305,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
             stream << "STD_LOGIC_VECTOR(";
         else
             stream << '(';
-        formatExpression(stream, comments, arithmeticNode->getDriver(0), dependentInputs, VHDLDataType::UNSIGNED);
+        formatExpression(stream, indentation, comments, arithmeticNode->getDriver(0), dependentInputs, VHDLDataType::UNSIGNED);
         switch (arithmeticNode->getOp()) {
             case hlim::Node_Arithmetic::ADD: stream << " + "; break;
             case hlim::Node_Arithmetic::SUB: stream << " - "; break;
@@ -315,7 +315,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
             default:
                 HCL_ASSERT_HINT(false, "Unhandled operation!");
         };
-        formatExpression(stream, comments, arithmeticNode->getDriver(1), dependentInputs, VHDLDataType::UNSIGNED);
+        formatExpression(stream, indentation, comments, arithmeticNode->getDriver(1), dependentInputs, VHDLDataType::UNSIGNED);
         stream << ')';
         return;
     }
@@ -325,9 +325,9 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
     if (logicNode != nullptr) {
         stream << '(';
         if (logicNode->getOp() == hlim::Node_Logic::NOT) {
-            stream << " not "; formatExpression(stream, comments, logicNode->getDriver(0), dependentInputs, context);
+            stream << " not "; formatExpression(stream, indentation, comments, logicNode->getDriver(0), dependentInputs, context);
         } else {
-            formatExpression(stream, comments, logicNode->getDriver(0), dependentInputs, context);
+            formatExpression(stream, indentation, comments, logicNode->getDriver(0), dependentInputs, context);
             switch (logicNode->getOp()) {
                 case hlim::Node_Logic::AND: stream << " and "; break;
                 case hlim::Node_Logic::NAND: stream << " nand "; break;
@@ -338,7 +338,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
                 default:
                     HCL_ASSERT_HINT(false, "Unhandled operation!");
             };
-            formatExpression(stream, comments, logicNode->getDriver(1), dependentInputs, context);
+            formatExpression(stream, indentation, comments, logicNode->getDriver(1), dependentInputs, context);
         }
         stream << ')';
         return;
@@ -356,7 +356,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
         if (compareNode->getDriverConnType(0).interpretation == hlim::ConnectionType::BOOL)
             subContext = VHDLDataType::STD_LOGIC;
 
-        formatExpression(stream, comments, compareNode->getDriver(0), dependentInputs, subContext);
+        formatExpression(stream, indentation, comments, compareNode->getDriver(0), dependentInputs, subContext);
         switch (compareNode->getOp()) {
             case hlim::Node_Compare::EQ: stream << " = "; break;
             case hlim::Node_Compare::NEQ: stream << " /= "; break;
@@ -367,7 +367,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
             default:
                 HCL_ASSERT_HINT(false, "Unhandled operation!");
         };
-        formatExpression(stream, comments, compareNode->getDriver(1), dependentInputs, subContext);
+        formatExpression(stream, indentation, comments, compareNode->getDriver(1), dependentInputs, subContext);
         stream << ")";
         return;
     }
@@ -387,20 +387,20 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
 
                 switch (context) {
                     case VHDLDataType::BOOL:
-                        formatExpression(stream, comments, rewireNode->getDriver(0), dependentInputs, VHDLDataType::UNSIGNED);
+                        formatExpression(stream, indentation, comments, rewireNode->getDriver(0), dependentInputs, VHDLDataType::UNSIGNED);
                         stream << "(" << bitExtractIdx << ") = '1'";
                     break;
                     case VHDLDataType::STD_LOGIC:
-                        formatExpression(stream, comments, rewireNode->getDriver(0), dependentInputs, VHDLDataType::UNSIGNED);
+                        formatExpression(stream, indentation, comments, rewireNode->getDriver(0), dependentInputs, VHDLDataType::UNSIGNED);
                         stream << "(" << bitExtractIdx << ")";
                     break;
                     case VHDLDataType::UNSIGNED:
-                        formatExpression(stream, comments, rewireNode->getDriver(0), dependentInputs, VHDLDataType::UNSIGNED);
+                        formatExpression(stream, indentation, comments, rewireNode->getDriver(0), dependentInputs, VHDLDataType::UNSIGNED);
                         stream << "(" << bitExtractIdx << " downto " << bitExtractIdx << ")";
                     break;
                     case VHDLDataType::STD_LOGIC_VECTOR:
                         stream << "STD_LOGIC_VECTOR(";
-                        formatExpression(stream, comments, rewireNode->getDriver(0), dependentInputs, VHDLDataType::UNSIGNED);
+                        formatExpression(stream, indentation, comments, rewireNode->getDriver(0), dependentInputs, VHDLDataType::UNSIGNED);
                         stream << "(" << bitExtractIdx << " downto " << bitExtractIdx << "))";
                     break;
                     default:
@@ -409,7 +409,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
             } else { // is bool->bvec type cast
                 HCL_ASSERT(bitExtractIdx == 0);
                 stream << "(0 => ";
-                formatExpression(stream, comments, rewireNode->getDriver(0), dependentInputs, VHDLDataType::STD_LOGIC);
+                formatExpression(stream, indentation, comments, rewireNode->getDriver(0), dependentInputs, VHDLDataType::STD_LOGIC);
                 stream << ")";
             }
         } else {
@@ -422,14 +422,19 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, std::ostream &co
 
 
             for (auto i : utils::Range(op.size())) {
-                if (i > 0)
+                if (i > 0) {
                     stream << " & ";
+                    if (i % 16 == 15) {
+                        stream << '\n';
+                        cf.indent(stream, indentation);
+                    }
+                }
                 const auto &range = op[op.size()-1-i];
                 switch (range.source) {
                     case hlim::Node_Rewire::OutputRange::INPUT: {
                         auto driver = rewireNode->getDriver(range.inputIdx);
                         auto subContext = hlim::outputIsBVec(driver)?VHDLDataType::UNSIGNED:VHDLDataType::STD_LOGIC;
-                        formatExpression(stream, comments, driver, dependentInputs, subContext);
+                        formatExpression(stream, indentation, comments, driver, dependentInputs, subContext);
                         if (driver.node != nullptr)
                             if (range.inputOffset != 0 || range.subwidth != hlim::getOutputWidth(driver))
                                 stream << "(" << range.inputOffset + range.subwidth - 1 << " downto " << range.inputOffset << ")";
@@ -538,13 +543,13 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
             if (muxNode != nullptr) {
                 if (muxNode->getNumInputPorts() == 3) {
                     code << "IF ";
-                    formatExpression(code, comment, muxNode->getDriver(0), statement.inputs, VHDLDataType::BOOL, false);
+                    formatExpression(code, indentation+2, comment, muxNode->getDriver(0), statement.inputs, VHDLDataType::BOOL, false);
                     code << " THEN"<< std::endl;
 
                         cf.indent(code, indentation+2);
                         code << assignmentPrefix;
 
-                        formatExpression(code, comment, muxNode->getDriver(2), statement.inputs, targetContext, false);
+                        formatExpression(code, indentation+3, comment, muxNode->getDriver(2), statement.inputs, targetContext, false);
                         code << ";" << std::endl;
 
                     cf.indent(code, indentation+1);
@@ -553,14 +558,14 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
                         cf.indent(code, indentation+2);
                         code << assignmentPrefix;
 
-                        formatExpression(code, comment, muxNode->getDriver(1), statement.inputs, targetContext, false);
+                        formatExpression(code, indentation+3, comment, muxNode->getDriver(1), statement.inputs, targetContext, false);
                         code << ";" << std::endl;
 
                     cf.indent(code, indentation+1);
                     code << "END IF;" << std::endl;
                 } else {
                     code << "CASE ";
-                    formatExpression(code, comment, muxNode->getDriver(0), statement.inputs, VHDLDataType::UNSIGNED, false);
+                    formatExpression(code, indentation+2, comment, muxNode->getDriver(0), statement.inputs, VHDLDataType::UNSIGNED, false);
                     code << " IS"<< std::endl;
 
                     for (auto i : utils::Range<size_t>(1, muxNode->getNumInputPorts())) {
@@ -575,7 +580,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
                         code << "\" => ";
                         code << assignmentPrefix;
 
-                        formatExpression(code, comment, muxNode->getDriver(i), statement.inputs, targetContext, false);
+                        formatExpression(code, indentation+3, comment, muxNode->getDriver(i), statement.inputs, targetContext, false);
                         code << ";" << std::endl;
                     }
                     cf.indent(code, indentation+2);
@@ -606,7 +611,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
                 if (prioCon->getNumChoices() == 0) {
                     code << assignmentPrefix;
 
-                    formatExpression(code, comment, prioCon->getDriver(hlim::Node_PriorityConditional::inputPortDefault()), statement.inputs, targetContext, false);
+                    formatExpression(code, indentation+2, comment, prioCon->getDriver(hlim::Node_PriorityConditional::inputPortDefault()), statement.inputs, targetContext, false);
                     code << ";" << std::endl;
                 } else {
                     for (auto choice : utils::Range(prioCon->getNumChoices())) {
@@ -616,13 +621,13 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
                             cf.indent(code, indentation+1);
                             code << "ELSIF ";
                         }
-                        formatExpression(code, comment, prioCon->getDriver(hlim::Node_PriorityConditional::inputPortChoiceCondition(choice)), statement.inputs, VHDLDataType::BOOL, false);
+                        formatExpression(code, indentation+2, comment, prioCon->getDriver(hlim::Node_PriorityConditional::inputPortChoiceCondition(choice)), statement.inputs, VHDLDataType::BOOL, false);
                         code << " THEN"<< std::endl;
 
                             cf.indent(code, indentation+2);
                             code << assignmentPrefix;
 
-                            formatExpression(code, comment, prioCon->getDriver(hlim::Node_PriorityConditional::inputPortChoiceValue(choice)), statement.inputs, targetContext, false);
+                            formatExpression(code, indentation+3, comment, prioCon->getDriver(hlim::Node_PriorityConditional::inputPortChoiceValue(choice)), statement.inputs, targetContext, false);
                             code << ";" << std::endl;
                     }
 
@@ -632,7 +637,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
                         cf.indent(code, indentation+2);
                         code << assignmentPrefix;
 
-                        formatExpression(code, comment, prioCon->getDriver(hlim::Node_PriorityConditional::inputPortDefault()), statement.inputs, targetContext, false);
+                        formatExpression(code, indentation+3, comment, prioCon->getDriver(hlim::Node_PriorityConditional::inputPortDefault()), statement.inputs, targetContext, false);
                         code << ";" << std::endl;
 
                     cf.indent(code, indentation+1);
@@ -643,7 +648,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
             } else {
                 code << assignmentPrefix;
 
-                formatExpression(code, comment, nodePort, statement.inputs, targetContext, forceUnfold);
+                formatExpression(code, indentation+2, comment, nodePort, statement.inputs, targetContext, forceUnfold);
                 code << ";" << std::endl;
             }
             statement.code = code.str();
@@ -690,7 +695,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
                 if (sig_tap->getTrigger() == hlim::Node_SignalTap::TRIG_FIRST_INPUT_HIGH)
                     code << "not (";
 
-                formatExpression(code, comment, sig_tap->getDriver(0), statement.inputs, VHDLDataType::BOOL, false);
+                formatExpression(code, indentation+2, comment, sig_tap->getDriver(0), statement.inputs, VHDLDataType::BOOL, false);
                 
                 if (sig_tap->getTrigger() == hlim::Node_SignalTap::TRIG_FIRST_INPUT_HIGH)                
                     code << ")";

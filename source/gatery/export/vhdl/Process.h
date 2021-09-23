@@ -70,7 +70,7 @@ class CombinatoryProcess : public Process
 
         virtual void writeVHDL(std::ostream &stream, unsigned indentation) override;
     protected:
-        void formatExpression(std::ostream &stream, std::ostream &comments, const hlim::NodePort &nodePort,
+        void formatExpression(std::ostream &stream, size_t indentation, std::ostream &comments, const hlim::NodePort &nodePort,
                                 std::set<hlim::NodePort> &dependentInputs, VHDLDataType context, bool forceUnfold = false);
 };
 

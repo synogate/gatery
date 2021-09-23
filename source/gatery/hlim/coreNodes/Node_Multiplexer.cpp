@@ -20,6 +20,8 @@
 
 #include "../SignalDelay.h"
 
+#include <regex>
+
 namespace gtry::hlim {
 
 void Node_Multiplexer::connectInput(size_t operand, const NodePort &port)
@@ -124,7 +126,14 @@ std::string Node_Multiplexer::attemptInferOutputName(size_t outputPort) const
     if (longestInput.empty()) return "";
 
     std::stringstream name;
-    name << longestInput << "_mux";
+
+    std::regex expression("(.*)_mux(\\d+)");
+    std::smatch matches;
+    if (std::regex_match(longestInput, matches, expression)) {
+        name << matches[1].str() << "_mux" << (boost::lexical_cast<size_t>(matches[2].str())+1);
+    } else
+        name << longestInput << "_mux1";
+
     return name.str();
 #else
     std::stringstream name;
