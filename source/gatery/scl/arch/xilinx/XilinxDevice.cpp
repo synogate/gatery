@@ -25,6 +25,8 @@
 #include "BUFG.h"
 #include "FifoPattern.h"
 #include "BlockramUltrascale.h"
+#include "Lutram7Series.h"
+#include "LutramUltrascale.h"
 
 #include <regex>
 
@@ -129,6 +131,8 @@ void XilinxDevice::fromConfig(const gtry::utils::ConfigTree &configTree)
         else if (!m_family.empty()) {
             if (m_family == "Zynq7")
                 setupZynq7();
+            else if (m_family == "Kintex Ultrascale")
+                setupKintexUltrascale();
             else
                 HCL_DESIGNCHECK_HINT(false, "The device family " + m_family + " is not among the supported device families. Use custom_composition to specify the device's hardware features.");
         } else {
@@ -150,10 +154,16 @@ void XilinxDevice::setupKintexUltrascale()
 void XilinxDevice::setupCustomComposition(const gtry::utils::ConfigTree &customComposition)
 {
     m_embeddedMemoryList = std::make_unique<EmbeddedMemoryList>();
-/*
-    if (customComposition["OBUFDS"].as(false))
-        m_embeddedMemoryList->add(std::make_unique<OBUFDS>(*this));
-*/
+
+    if (customComposition["Lutram7Series"].as(false))
+        m_embeddedMemoryList->add(std::make_unique<Lutram7Series>(*this));
+
+    if (customComposition["LutramUltrascale"].as(false))
+        m_embeddedMemoryList->add(std::make_unique<LutramUltrascale>(*this));
+
+    if (customComposition["BlockramUltrascale"].as(false))
+        m_embeddedMemoryList->add(std::make_unique<BlockramUltrascale>(*this));
+
     m_technologyMapping.addPattern(std::make_unique<EmbeddedMemoryPattern>(*this));
 
     if (customComposition["BUFG"].as(false))
@@ -163,7 +173,7 @@ void XilinxDevice::setupCustomComposition(const gtry::utils::ConfigTree &customC
 
 void XilinxDevice::setupDevice(std::string device)
 {
-	m_vendor = "intel";
+	m_vendor = "xilinx";
 	m_device = std::move(device);
 
     m_embeddedMemoryList = std::make_unique<EmbeddedMemoryList>();
@@ -175,6 +185,8 @@ void XilinxDevice::setupDevice(std::string device)
     if (zynq7DevStr.parse(m_device)) {
     	m_family = "Zynq7";
 
+        m_embeddedMemoryList->add(std::make_unique<Lutram7Series>(*this));
+
         m_technologyMapping.addPattern(std::make_unique<BUFGPattern>());
 
     } else if (kintexVirtexUltraDevStr.parse(m_device)) {
@@ -183,6 +195,7 @@ void XilinxDevice::setupDevice(std::string device)
         else
     	    m_family = "Virtex Ultrascale";
 
+        m_embeddedMemoryList->add(std::make_unique<LutramUltrascale>(*this));
         m_embeddedMemoryList->add(std::make_unique<BlockramUltrascale>(*this));
 
         m_technologyMapping.addPattern(std::make_unique<BUFGPattern>());
