@@ -133,8 +133,7 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 
         altdpram->attachClock(rp.dedicatedReadLatencyRegisters.front()->getClocks()[0], (size_t)ALTDPRAM::Clocks::OUTCLOCK);
     }
-
-	nodeGroup->properties()["memory_type"] = m_desc.memoryName;
+	
 	return true;
 }
 

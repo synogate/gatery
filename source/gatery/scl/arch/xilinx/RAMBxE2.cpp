@@ -491,7 +491,6 @@ void RAMBxE2::connectAddress(const BVec &input, bool portA)
 				lowerZeros = 5;
 			} else {
 				HCL_ASSERT_HINT(isSimpleDualPort() || isRom(), "Width only available for RAMB36E2 or in simple dual port mode RAMB18E2!");
-				HCL_ASSERT_HINT(!portA, "In SDP mode, only port B can write!");
 				lowerZeros = 5;
 			}
 		break;

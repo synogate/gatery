@@ -59,9 +59,6 @@ bool XilinxLutram::apply(hlim::NodeGroup *nodeGroup) const
 
     // At this point we are sure we can handle it (as long as register retiming doesn't fail of course).
 
-    nodeGroup->properties()["memory_type"] = m_desc.memoryName;
-
-
     // Everything else needs this, so do it first. Also we want rmw logic as far outside as possible
     // The reset could potentially be delayed for shorter resets (but with more reset logic).
     auto &circuit = DesignScope::get()->getCircuit();

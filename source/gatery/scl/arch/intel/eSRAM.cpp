@@ -183,8 +183,6 @@ bool eSRAM::apply(hlim::NodeGroup *nodeGroup) const
         altsyncram->attachClock(readClock, (size_t)ALTSYNCRAM::Clocks::CLK_0);    
     }
 
-    nodeGroup->properties()["memory_type"] = m_desc.memoryName;
-
 	return true;
 }
 
