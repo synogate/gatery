@@ -28,6 +28,24 @@
 
 namespace gtry::scl::arch {
 
+MemoryCapabilities::Choice EmbeddedMemory::select(hlim::NodeGroup *group, const MemoryCapabilities::Request &request) const
+{
+    MemoryCapabilities::Choice result;
+	result.inputRegs = m_desc.inputRegs;
+	result.outputRegs = m_desc.outputRegs;
+	result.totalReadLatency = m_desc.outputRegs + (m_desc.inputRegs?1:0);
+
+    if (result.outputRegs == 0 && m_desc.sizeCategory == MemoryCapabilities::SizeCategory::MEDIUM) {
+        size_t numBlocksEstimate = (request.size + m_desc.size-1) / m_desc.size;
+        if (numBlocksEstimate > 7) {
+            result.outputRegs++;
+            result.totalReadLatency++;
+        }
+    }	
+
+	return result;
+}
+
 GenericMemoryCapabilities::GenericMemoryCapabilities(const FPGADevice &targetDevice) : m_targetDevice(targetDevice) { }
 
 GenericMemoryCapabilities::~GenericMemoryCapabilities()
@@ -41,19 +59,7 @@ GenericMemoryCapabilities::Choice GenericMemoryCapabilities::select(hlim::NodeGr
 	auto *memChoice = embeddedMems.selectMemFor(group, request);
 
 	HCL_DESIGNCHECK_HINT(memChoice != nullptr, "No suitable memory configuration could be found. Usually this means that the memory was restricted to a single size category that doesn't exist on the target device.");
-
-    MemoryCapabilities::Choice result;
-	const auto &desc = memChoice->getDesc();
-	result.inputRegs = desc.inputRegs;
-	result.outputRegs = desc.outputRegs;
-	result.totalReadLatency = desc.outputRegs + (desc.inputRegs?1:0);
-
-	// Heuristic: If the depth is more than the memory can handle, add one input (addr/wrData) and one output register per additional bit to allow for memory cascades to be build.
-	size_t reqAddrBits = utils::Log2C(request.maxDepth);
-	if (reqAddrBits > desc.addressBits)
-		result.totalReadLatency += (reqAddrBits - desc.addressBits) * 2;
-
-	return result;
+	return memChoice->select(group, request);
 }
 
 

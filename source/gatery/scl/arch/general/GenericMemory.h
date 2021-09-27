@@ -54,6 +54,8 @@ class EmbeddedMemory {
 		inline const Desc &getDesc() const { return m_desc; }
 
 		virtual size_t getPriority() const { return (size_t)m_desc.sizeCategory * 1000; }
+
+		virtual MemoryCapabilities::Choice select(hlim::NodeGroup *group, const MemoryCapabilities::Request &request) const;
 	protected:
 		Desc m_desc;
 };
