@@ -65,11 +65,7 @@ MemoryGroup *formMemoryGroupIfNecessary(Circuit &circuit, Node_Memory *memory)
 
         auto *physMemNodeGroup = logicalMemNodeGroup->addChildNodeGroup(NodeGroup::GroupType::ENTITY);
         physMemNodeGroup->recordStackTrace();
-        if (memory->getName().empty())
-            physMemNodeGroup->setName("physical_memory");
-        else
-            physMemNodeGroup->setName(memory->getName()+"_physical_memory");
-
+        physMemNodeGroup->setName("physical_memory");
         memory->moveToGroup(physMemNodeGroup);
 
         memoryGroup = memory->getGroup()->createMetaInfo<MemoryGroup>(memory->getGroup());
@@ -729,18 +725,8 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 
     bool useMemory = maxLatency > 2;
     rmwBuilder.retimeRegisterToMux();
+    rmwBuilder.placeNewNodesIn(m_fixupNodeGroup);
     rmwBuilder.build(useMemory);
-
-    const auto &newNodes = rmwBuilder.getNewNodes();
-    for (auto n : newNodes) 
-        if (auto *memNode = dynamic_cast<Node_Memory*>(n)) {
-            NodeGroup *subMemGrp = m_fixupNodeGroup->addChildNodeGroup(NodeGroup::GroupType::ENTITY);
-            subMemGrp->setName(n->getName() + "_logical_memory");
-            n->moveToGroup(subMemGrp);
-            formMemoryGroupIfNecessary(circuit, memNode);
-        } else 
-            if (dynamic_cast<Node_MemPort*>(n) == nullptr)
-                n->moveToGroup(m_fixupNodeGroup);
 
     //visualize(circuit, "afterRMW");
 /*
@@ -1058,6 +1044,8 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 {
     HCL_ASSERT_HINT(!sim::anyDefined(m_memory->getPowerOnState()), "No power on state for external memory possible!");
 
+    auto &memGroupProps = m_memory->getGroup()->properties();
+
     lazyCreateFixupNodeGroup();
     std::string prefix;
     if(!m_memory->getName().empty())
@@ -1085,6 +1073,11 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 
     Clock *clock = nullptr;
 
+    size_t portIdx = 0;
+
+    memGroupProps["numPorts"] = m_readPorts.size() + m_writePorts.size();
+    memGroupProps["crossPortReadDuringWrite"] = "DONT_CARE";
+
     for (auto &rp : m_readPorts) {
         for (auto &r : rp.dedicatedReadLatencyRegisters) {
             HCL_ASSERT(r->getNonSignalDriver(Node_Register::ENABLE).node == nullptr);
@@ -1101,6 +1094,8 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
         pinRdAddr->recordStackTrace();
         pinRdAddr->connect(rp.node->getDriver((size_t)Node_MemPort::Inputs::address));
 
+        memGroupProps[(boost::format("port_%d_pinName_addr") % portIdx).str()] = pinRdAddr->getName();
+
         Node_Pin *pinRdEn = nullptr;
         if (rp.node->getDriver((size_t)Node_MemPort::Inputs::enable).node != nullptr) {
             pinRdEn = circuit.createNode<Node_Pin>(false);
@@ -1108,7 +1103,11 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
             pinRdEn->moveToGroup(m_nodeGroup->getParent());
             pinRdEn->recordStackTrace();
             pinRdEn->connect(rp.node->getDriver((size_t)Node_MemPort::Inputs::enable));
-        }
+
+            memGroupProps[(boost::format("port_%d_has_readEnable") % portIdx).str()] = true;
+            memGroupProps[(boost::format("port_%d_pinName_readEnable") % portIdx).str()] = pinRdEn->getName();
+        } else
+            memGroupProps[(boost::format("port_%d_has_readEnable") % portIdx).str()] = false;
 
         auto *pinRdData = circuit.createNode<Node_Pin>(true);
         pinRdData->setName(prefix +"rd_readdata");
@@ -1118,6 +1117,8 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
             pinRdData->setBool();
         else
             pinRdData->setWidth(getOutputWidth(rp.dataOutput));
+
+        memGroupProps[(boost::format("port_%d_pinName_readData") % portIdx).str()] = pinRdData->getName();
         
         while (!rp.dataOutput.node->getDirectlyDriven(rp.dataOutput.port).empty()) {
             auto input = rp.dataOutput.node->getDirectlyDriven(rp.dataOutput.port).front();
@@ -1131,6 +1132,8 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
             .latency = rp.dedicatedReadLatencyRegisters.size(),
         });
         if (pinRdEn) convertedReadPorts.back().en = sim::SigHandle(pinRdEn->getDriver(0));
+
+        portIdx++;
     }
 
     for (auto &wp : m_writePorts) {
@@ -1146,11 +1149,15 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
         pinWrAddr->recordStackTrace();
         pinWrAddr->connect(wp.node->getDriver((size_t)Node_MemPort::Inputs::address));
 
+        memGroupProps[(boost::format("port_%d_pinName_addr") % portIdx).str()] = pinWrAddr->getName();
+
         auto *pinWrData = circuit.createNode<Node_Pin>(false);
         pinWrData->setName(prefix +"wr_writedata");
         pinWrData->moveToGroup(m_nodeGroup->getParent());
         pinWrData->recordStackTrace();
         pinWrData->connect(wp.node->getDriver((size_t)Node_MemPort::Inputs::wrData));
+
+        memGroupProps[(boost::format("port_%d_pinName_writeData") % portIdx).str()] = pinWrData->getName();
 
         Node_Pin *pinWrEn = nullptr;
         if (wp.node->getDriver((size_t)Node_MemPort::Inputs::wrEnable).node != nullptr) {
@@ -1159,7 +1166,11 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
             pinWrEn->moveToGroup(m_nodeGroup->getParent());
             pinWrEn->recordStackTrace();
             pinWrEn->connect(wp.node->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
-        }
+
+            memGroupProps[(boost::format("port_%d_has_writeEnable") % portIdx).str()] = true;
+            memGroupProps[(boost::format("port_%d_pinName_writeEnable") % portIdx).str()] = pinWrEn->getName();
+        } else 
+            memGroupProps[(boost::format("port_%d_has_writeEnable") % portIdx).str()] = false;
 
         convertedWritePorts.push_back({
             .addr = sim::SigHandle(pinWrAddr->getDriver(0)),
@@ -1168,6 +1179,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
         });
         if (pinWrEn) convertedWritePorts.back().en = sim::SigHandle(pinWrEn->getDriver(0));
 
+        portIdx++;
     }
 
     size_t size = m_memory->getSize();
@@ -1357,10 +1369,10 @@ bool Memory2VHDLPattern::attemptApply(Circuit &circuit, hlim::NodeGroup *nodeGro
     memoryGroup->bypassSignalNodes();
     memoryGroup->verify();
     if (memoryGroup->getMemory()->type() == Node_Memory::MemType::EXTERNAL) {
-        //nodeGroup->properties()["memory_type"] = "none";
+        nodeGroup->getParent()->properties()["primitive"] = "io-pins";
         memoryGroup->replaceWithIOPins(circuit);
     } else {
-        //nodeGroup->properties()["memory_type"] = "vhdl array";
+        nodeGroup->getParent()->properties()["primitive"] = "vhdl";
     }
 
     return true;

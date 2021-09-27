@@ -1255,10 +1255,6 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, UnitTestSimulationFi
 
         rmwBuilder.retimeRegisterToMux();
         rmwBuilder.build(true);
-        const auto &newNodes = rmwBuilder.getNewNodes();
-        for (auto n : newNodes) 
-            n->moveToGroup(DesignScope::get()->getCircuit().getRootNodeGroup());
-
     }
     pinOut(output);
 

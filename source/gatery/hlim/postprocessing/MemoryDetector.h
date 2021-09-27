@@ -102,6 +102,8 @@ class MemoryGroup : public NodeGroupMetaInfo
 	};
 
 
+MemoryGroup *formMemoryGroupIfNecessary(Circuit &circuit, Node_Memory *memory);
+
 void findMemoryGroups(Circuit &circuit);
 void buildExplicitMemoryCircuitry(Circuit &circuit);
 
