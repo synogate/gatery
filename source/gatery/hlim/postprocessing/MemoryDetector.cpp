@@ -1095,6 +1095,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
         pinRdAddr->connect(rp.node->getDriver((size_t)Node_MemPort::Inputs::address));
 
         memGroupProps[(boost::format("port_%d_pinName_addr") % portIdx).str()] = pinRdAddr->getName();
+        memGroupProps[(boost::format("port_%d_width_addr") % portIdx).str()] = getOutputWidth(pinRdAddr->getDriver(0));
 
         Node_Pin *pinRdEn = nullptr;
         if (rp.node->getDriver((size_t)Node_MemPort::Inputs::enable).node != nullptr) {
@@ -1119,6 +1120,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
             pinRdData->setWidth(getOutputWidth(rp.dataOutput));
 
         memGroupProps[(boost::format("port_%d_pinName_readData") % portIdx).str()] = pinRdData->getName();
+        memGroupProps[(boost::format("port_%d_width_readData") % portIdx).str()] = getOutputWidth({.node = pinRdData, .port = 0ull});
         
         while (!rp.dataOutput.node->getDirectlyDriven(rp.dataOutput.port).empty()) {
             auto input = rp.dataOutput.node->getDirectlyDriven(rp.dataOutput.port).front();
@@ -1150,6 +1152,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
         pinWrAddr->connect(wp.node->getDriver((size_t)Node_MemPort::Inputs::address));
 
         memGroupProps[(boost::format("port_%d_pinName_addr") % portIdx).str()] = pinWrAddr->getName();
+        memGroupProps[(boost::format("port_%d_width_addr") % portIdx).str()] = getOutputWidth(pinWrAddr->getDriver(0));
 
         auto *pinWrData = circuit.createNode<Node_Pin>(false);
         pinWrData->setName(prefix +"wr_writedata");
@@ -1158,6 +1161,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
         pinWrData->connect(wp.node->getDriver((size_t)Node_MemPort::Inputs::wrData));
 
         memGroupProps[(boost::format("port_%d_pinName_writeData") % portIdx).str()] = pinWrData->getName();
+        memGroupProps[(boost::format("port_%d_width_writeData") % portIdx).str()] = getOutputWidth(pinWrData->getDriver(0));
 
         Node_Pin *pinWrEn = nullptr;
         if (wp.node->getDriver((size_t)Node_MemPort::Inputs::wrEnable).node != nullptr) {
