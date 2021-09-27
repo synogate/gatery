@@ -40,6 +40,8 @@
 
 #include "../simulation/ReferenceSimulator.h"
 
+#include "postprocessing/MemoryDetector.h"
+
 
 #include "../export/DotExport.h"
 
@@ -902,6 +904,7 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 	for (const auto &wp : m_writePorts)
 		maxLatencyCompensation = std::max(maxLatencyCompensation, wp.latencyCompensation);
 
+	std::vector<Node_Memory*> newMemoriesBuild;
 
 	if (maxLatencyCompensation == 0) return;
 	if (m_readPorts.empty()) return;
@@ -959,6 +962,7 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 			allWrPortSignals[wrIdx].words.resize(dataWords.size());
 			for (auto wordIdx : utils::Range(dataWords.size())) {
 				allWrPortSignals[wrIdx].ringbuffers[wordIdx] = buildWritePortRingBuffer(words[wordIdx], ringBufferCounter);
+				newMemoriesBuild.push_back(allWrPortSignals[wrIdx].ringbuffers[wordIdx]);
 
 				// The data to pass through the registers is the write pointer where the data is stored...
 				allWrPortSignals[wrIdx].words[wordIdx] = ringBufferCounter;
@@ -973,7 +977,7 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 				state.insertNonStraddling(sim::DefaultConfig::VALUE, 0, idxWidth, wrIdx);
 
 				auto *constNode = m_circuit.createNode<Node_Constant>(state, ConnectionType::BITVEC);
-				m_newNodes.add(constNode);
+				constNode->moveToGroup(m_newNodesNodeGroup);
 				constNode->recordStackTrace();
 
 				allWrPortSignals[wrIdx].wpIdx = {.node = constNode, .port = 0ull};
@@ -1063,7 +1067,7 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 				// Mux between write ports, if there are multiple
 				if (m_writePorts.size() > 1) {
 					auto *muxNode = m_circuit.createNode<Node_Multiplexer>(m_writePorts.size());
-					m_newNodes.add(muxNode);
+					muxNode->moveToGroup(m_newNodesNodeGroup);
 					muxNode->recordStackTrace();
 					muxNode->setComment("Mux between write port overrides from each write port.");
 					muxNode->connectSelector(wordSignals[wordIdx].overrideWpIdx);
@@ -1071,7 +1075,7 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 					for (auto wrIdx : utils::Range(m_writePorts.size())) {
 						// For each word, read what each write port may have written there
 						auto *readPort = m_circuit.createNode<hlim::Node_MemPort>(dataWords[wordIdx].width);
-						m_newNodes.add(readPort);
+						readPort->moveToGroup(m_newNodesNodeGroup);
 						readPort->recordStackTrace();
 						readPort->connectMemory(allWrPortSignals[wrIdx].ringbuffers[wordIdx]);
 						readPort->connectAddress(wordSignals[wordIdx].overrideData);
@@ -1086,7 +1090,7 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 					overrideData = {.node = muxNode, .port=0ull};
 				} else {
 					auto *readPort = m_circuit.createNode<hlim::Node_MemPort>(dataWords[wordIdx].width);
-					m_newNodes.add(readPort);
+					readPort->moveToGroup(m_newNodesNodeGroup);
 					readPort->recordStackTrace();
 					readPort->connectMemory(allWrPortSignals[0].ringbuffers[wordIdx]);
 					readPort->connectAddress(wordSignals[wordIdx].overrideData);
@@ -1114,7 +1118,7 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 
 			// Mux between actual read and forwarded written data
 			auto *muxNode = m_circuit.createNode<Node_Multiplexer>(2);
-			m_newNodes.add(muxNode);
+			muxNode->moveToGroup(m_newNodesNodeGroup);
 			muxNode->recordStackTrace();
 			muxNode->setComment("If read and write addr match and read and write are enabled and write is not masked, forward write data to read output.");
 			muxNode->connectSelector(conflict);
@@ -1137,14 +1141,22 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 				auto *muxNode = dynamic_cast<Node_Multiplexer*>(rpOutput[wordIdx].node);
 				/// @todo: Add new nodes to subnet of new nodes
 				Subnet area = Subnet::all(m_circuit);
+				Subnet newNodes;
 				for (auto i : {0, 2}) // don't retime memory read port register, only override data and conflict signal
 					if (!dynamic_cast<Node_Register*>(muxNode->getNonSignalDriver(i).node))
-						retimeForwardToOutput(m_circuit, area, muxNode->getDriver(i), {.ignoreRefs=true, .newNodes=&m_newNodes});
+						retimeForwardToOutput(m_circuit, area, muxNode->getDriver(i), {.ignoreRefs=true, .newNodes=&newNodes});
+
+				for (auto n : newNodes)
+					n->moveToGroup(m_newNodesNodeGroup);
 			}
 //visualize(m_circuit, "after_retiming_to_mux");
 		}
 
 	}
+
+
+	for (auto m : newMemoriesBuild)
+		formMemoryGroupIfNecessary(m_circuit, m);
 //visualize(m_circuit, "after_rmw");
 }
 
@@ -1176,7 +1188,7 @@ NodePort ReadModifyWriteHazardLogicBuilder::createRegister(NodePort nodePort, co
 		return {};
 
 	auto *reg = m_circuit.createNode<Node_Register>();
-	m_newNodes.add(reg);
+	reg->moveToGroup(m_newNodesNodeGroup);
 
 	reg->recordStackTrace();
 	reg->setClock(m_clockDomain);
@@ -1186,7 +1198,7 @@ NodePort ReadModifyWriteHazardLogicBuilder::createRegister(NodePort nodePort, co
 	// If any input bit is defined uppon reset, add that as a reset value
 	if (sim::anyDefined(resetValue, 0, resetValue.size())) {
 		auto *resetConst = m_circuit.createNode<Node_Constant>(resetValue, getOutputConnectionType(nodePort).interpretation);
-		m_newNodes.add(resetConst);
+		resetConst->moveToGroup(m_newNodesNodeGroup);
 		resetConst->recordStackTrace();
 		resetConst->moveToGroup(reg->getGroup());
 		reg->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0ull});
@@ -1197,7 +1209,7 @@ NodePort ReadModifyWriteHazardLogicBuilder::createRegister(NodePort nodePort, co
 NodePort ReadModifyWriteHazardLogicBuilder::buildConflictDetection(NodePort rdAddr, NodePort rdEn, NodePort wrAddr, NodePort wrEn)
 {
 	auto *addrCompNode = m_circuit.createNode<Node_Compare>(Node_Compare::EQ);
-	m_newNodes.add(addrCompNode);
+	addrCompNode->moveToGroup(m_newNodesNodeGroup);
 	addrCompNode->recordStackTrace();
 	addrCompNode->setComment("Compare read and write addr for conflicts");
 	addrCompNode->connectInput(0, rdAddr);
@@ -1208,7 +1220,7 @@ NodePort ReadModifyWriteHazardLogicBuilder::buildConflictDetection(NodePort rdAd
 
 	if (rdEn.node != nullptr) {
 		auto *logicAnd = m_circuit.createNode<Node_Logic>(Node_Logic::AND);
-		m_newNodes.add(logicAnd);
+		logicAnd->moveToGroup(m_newNodesNodeGroup);
 		logicAnd->recordStackTrace();
 		logicAnd->connectInput(0, conflict);
 		logicAnd->connectInput(1, rdEn);
@@ -1218,7 +1230,7 @@ NodePort ReadModifyWriteHazardLogicBuilder::buildConflictDetection(NodePort rdAd
 
 	if (wrEn.node != nullptr) {
 		auto *logicAnd = m_circuit.createNode<Node_Logic>(Node_Logic::AND);
-		m_newNodes.add(logicAnd);
+		logicAnd->moveToGroup(m_newNodesNodeGroup);
 		logicAnd->recordStackTrace();
 		logicAnd->connectInput(0, conflict);
 		logicAnd->connectInput(1, wrEn);
@@ -1233,14 +1245,14 @@ NodePort ReadModifyWriteHazardLogicBuilder::andWithMaskBit(NodePort input, NodeP
 {
 	if (mask.node != nullptr) {
 		auto *rewireNode = m_circuit.createNode<Node_Rewire>(1);
-		m_newNodes.add(rewireNode);
+		rewireNode->moveToGroup(m_newNodesNodeGroup);
 		rewireNode->recordStackTrace();
 		rewireNode->connectInput(0, mask);
 		rewireNode->changeOutputType({.interpretation = ConnectionType::BOOL, .width=1});
 		rewireNode->setExtract(maskBit, 1);
 
 		auto *logicAnd = m_circuit.createNode<Node_Logic>(Node_Logic::AND);
-		m_newNodes.add(logicAnd);
+		logicAnd->moveToGroup(m_newNodesNodeGroup);
 		logicAnd->recordStackTrace();
 		logicAnd->connectInput(0, input);
 		logicAnd->connectInput(1, {.node = rewireNode, .port = 0ull});
@@ -1267,7 +1279,7 @@ std::vector<NodePort> ReadModifyWriteHazardLogicBuilder::splitWords(NodePort dat
 	words.resize(numWords);
 	for (auto i : utils::Range(numWords)) {
 		auto *rewireNode = m_circuit.createNode<Node_Rewire>(1);
-		m_newNodes.add(rewireNode);
+		rewireNode->moveToGroup(m_newNodesNodeGroup);
 		rewireNode->recordStackTrace();
 		rewireNode->setComment("Because of (byte) enable mask of write port, extract each (byte/)word and mux individually.");
 		rewireNode->connectInput(0, data);
@@ -1291,7 +1303,7 @@ std::vector<NodePort> ReadModifyWriteHazardLogicBuilder::splitWords(NodePort dat
 	dataWords.resize(words.size());
 	for (auto i : utils::Range(dataWords.size())) {
 		auto *rewireNode = m_circuit.createNode<Node_Rewire>(1);
-		m_newNodes.add(rewireNode);
+		rewireNode->moveToGroup(m_newNodesNodeGroup);
 		rewireNode->recordStackTrace();
 		rewireNode->setComment("Because of (byte) enable mask of write port, extract each (byte/)word");
 		rewireNode->connectInput(0, data);
@@ -1314,7 +1326,7 @@ NodePort ReadModifyWriteHazardLogicBuilder::joinWords(const std::vector<NodePort
 		return words.front();
 
 	auto *rewireNode = m_circuit.createNode<Node_Rewire>(words.size());
-	m_newNodes.add(rewireNode);
+	rewireNode->moveToGroup(m_newNodesNodeGroup);
 	rewireNode->recordStackTrace();
 	rewireNode->setComment("Join individual words back together");
 	for (auto i : utils::Range(words.size()))
@@ -1381,7 +1393,7 @@ NodePort ReadModifyWriteHazardLogicBuilder::buildConflictOr(NodePort a, NodePort
 	if (b.node == nullptr) return a;
 
 	auto *logicOr = m_circuit.createNode<Node_Logic>(Node_Logic::OR);
-	m_newNodes.add(logicOr);
+	logicOr->moveToGroup(m_newNodesNodeGroup);
 	logicOr->recordStackTrace();
 	logicOr->connectInput(0, a);
 	logicOr->connectInput(1, b);
@@ -1394,7 +1406,7 @@ NodePort ReadModifyWriteHazardLogicBuilder::buildConflictMux(NodePort oldData, N
 	if (newData.node == nullptr) return oldData;
 
 	auto *muxNode = m_circuit.createNode<Node_Multiplexer>(2);
-	m_newNodes.add(muxNode);
+	muxNode->moveToGroup(m_newNodesNodeGroup);
 	muxNode->recordStackTrace();
 	muxNode->connectSelector(conflict);
 	muxNode->connectInput(0, oldData);
@@ -1408,7 +1420,7 @@ NodePort ReadModifyWriteHazardLogicBuilder::buildRingBufferCounter(size_t maxLat
 	auto counterWidth = utils::Log2C(maxLatencyCompensation+1);
 
 	auto *reg = m_circuit.createNode<Node_Register>();
-	m_newNodes.add(reg);
+	reg->moveToGroup(m_newNodesNodeGroup);
 
 	reg->recordStackTrace();
 	reg->setClock(m_clockDomain);
@@ -1421,7 +1433,7 @@ NodePort ReadModifyWriteHazardLogicBuilder::buildRingBufferCounter(size_t maxLat
 	state.clearRange(sim::DefaultConfig::VALUE, 0, counterWidth);
 
 	auto *resetConst = m_circuit.createNode<Node_Constant>(state, ConnectionType::BITVEC);
-	m_newNodes.add(resetConst);
+	resetConst->moveToGroup(m_newNodesNodeGroup);
 	resetConst->recordStackTrace();
 	reg->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0ull});
 
@@ -1429,12 +1441,12 @@ NodePort ReadModifyWriteHazardLogicBuilder::buildRingBufferCounter(size_t maxLat
 	// build a one
 	state.setRange(sim::DefaultConfig::VALUE, 0, 1);
 	auto *constOne = m_circuit.createNode<Node_Constant>(state, ConnectionType::BITVEC);
-	m_newNodes.add(constOne);
+	constOne->moveToGroup(m_newNodesNodeGroup);
 	constOne->recordStackTrace();
 
 
 	auto *addNode = m_circuit.createNode<Node_Arithmetic>(Node_Arithmetic::ADD);
-	m_newNodes.add(addNode);
+	addNode->moveToGroup(m_newNodesNodeGroup);
 	addNode->recordStackTrace();
 	addNode->connectInput(1, {.node = constOne, .port = 0ull});
 
@@ -1453,8 +1465,14 @@ Node_Memory *ReadModifyWriteHazardLogicBuilder::buildWritePortRingBuffer(NodePor
 	auto wordWidth = getOutputWidth(wordData);
 	auto counterWidth = getOutputWidth(ringBufferCounter);
 
+	NodeGroup *memGroup;
+	if (m_newNodesNodeGroup)
+		memGroup = m_newNodesNodeGroup;
+	else
+		memGroup = m_circuit.getRootNodeGroup();
+	
 	auto *memory = m_circuit.createNode<Node_Memory>();
-	m_newNodes.add(memory);
+	memory->moveToGroup(memGroup);
 	memory->recordStackTrace();
 	memory->setNoConflicts();
 	memory->setType(Node_Memory::MemType::SMALL, 1);
@@ -1466,7 +1484,7 @@ Node_Memory *ReadModifyWriteHazardLogicBuilder::buildWritePortRingBuffer(NodePor
 	}
 
 	auto *writePort = m_circuit.createNode<hlim::Node_MemPort>(wordWidth);
-	m_newNodes.add(writePort);
+	writePort->moveToGroup(m_newNodesNodeGroup);
 	writePort->recordStackTrace();
 	writePort->connectMemory(memory);
 	writePort->connectAddress(ringBufferCounter);
@@ -1480,7 +1498,7 @@ void ReadModifyWriteHazardLogicBuilder::giveName(NodePort &nodePort, std::string
 {
 	auto *sig = m_circuit.appendSignal(nodePort);
 	sig->setName(std::move(name));
-	m_newNodes.add(sig);
+	sig->moveToGroup(m_newNodesNodeGroup);
 }
 
 

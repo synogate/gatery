@@ -53,8 +53,10 @@ namespace gtry::hlim {
     void Node_Memory::setType(MemType type, size_t requiredReadLatency)
     { 
         m_type = type;
-        if (requiredReadLatency != ~0ull)
+        if (requiredReadLatency != ~0ull) {
             m_requiredReadLatency = requiredReadLatency;
+            m_nodeGroup->properties()["readLatency"] = m_requiredReadLatency;
+        }
     }
 
     void Node_Memory::setNoConflicts()

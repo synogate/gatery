@@ -426,7 +426,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
                     stream << " & ";
                     if (i % 16 == 15) {
                         stream << '\n';
-                        cf.indent(stream, indentation);
+                        cf.indent(stream, (unsigned) indentation);
                     }
                 }
                 const auto &range = op[op.size()-1-i];

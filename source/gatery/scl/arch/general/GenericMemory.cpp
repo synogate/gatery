@@ -145,7 +145,13 @@ bool EmbeddedMemoryPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 	auto *memChoice = embeddedMems.selectMemFor(nodeGroup, request);
 	if (memChoice == nullptr)
 		return false;
-	return memChoice->apply(nodeGroup);
+	if (memChoice->apply(nodeGroup)) {
+		nodeGroup->getParent()->properties()["type"] = memChoice->getDesc().sizeCategory;
+		nodeGroup->getParent()->properties()["primitive"] = memChoice->getDesc().memoryName;
+		return true;
+	} else {
+		return false;
+	}
 }
 
 

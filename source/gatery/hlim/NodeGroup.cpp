@@ -70,7 +70,7 @@ namespace gtry::hlim
 	NodeGroup* NodeGroup::findChild(std::string_view name)
 	{
 		for (auto& child : m_children)
-			if (child->getName() == name)
+			if (child->getInstanceName() == name)
 				return child.get();
 
 		return nullptr;

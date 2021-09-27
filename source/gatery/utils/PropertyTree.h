@@ -42,6 +42,9 @@ namespace gtry::utils
 		void push_back(YamlPropertyTree value);
 		bool empty() const;
 		size_t size() const;
+
+		template<typename T> T as(const T& def) const;
+		template<typename T> T as() const;
 	protected:
 		YamlPropertyTree(YAML::Node node) : m_node(std::move(node)) {}
 		YAML::Node m_node{ YAML::NodeType::Map };
@@ -59,6 +62,40 @@ namespace gtry::utils
 		tree.dump(s);
 		return s;
 	}
+
+	template<typename T>
+	inline T YamlPropertyTree::as(const T& def) const
+	{
+		return m_node.as<T>(def);
+	}
+
+	template<typename T>
+	inline T YamlPropertyTree::as() const
+	{
+		return m_node.as<T>();
+	}
+
+	template<>
+	inline std::string YamlPropertyTree::as(const std::string& def) const
+	{
+		std::string ret;
+		if (m_node.IsNull())
+			ret = def;
+		else
+			ret = m_node.as<std::string>();
+
+		//ret = replaceEnvVars(ret);
+		return ret;
+	}
+
+	template<>
+	inline std::string YamlPropertyTree::as() const
+	{
+		std::string ret = m_node.as<std::string>();
+		//ret = replaceEnvVars(ret);
+		return ret;
+	}
+
 
 	using PropertyTree = YamlPropertyTree;
 }
