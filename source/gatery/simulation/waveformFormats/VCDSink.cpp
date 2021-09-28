@@ -38,14 +38,15 @@ namespace gtry::sim {
 
 VCDSink::VCDSink(hlim::Circuit &circuit, Simulator &simulator, const char *filename, const char *logFilename) : WaveformRecorder(circuit, simulator)
 {
-    m_vcdFile.open(filename, std::fstream::out);
-    if (!m_vcdFile) throw std::runtime_error(std::string("Could not open vcd file for writing!") + filename);
-    if (logFilename != nullptr) {
-        m_logFile.open(logFilename, std::fstream::out);
-        if (!m_logFile) throw std::runtime_error(std::string("Could not open log file for writing: ") + logFilename);
-    } else
-        m_doWriteLogFile = false;
+    m_vcdFile.open(filename, std::fstream::binary);
+    if (!m_vcdFile) 
+        throw std::runtime_error(std::string("Could not open vcd file for writing!") + filename);
 
+    if (logFilename != nullptr) {
+        m_logFile.open(logFilename, std::fstream::binary);
+        if (!m_logFile)
+            throw std::runtime_error(std::string("Could not open log file for writing: ") + logFilename);
+    }
 
     auto clockPins = hlim::extractClockPins(circuit, hlim::Subnet::allForSimulation(circuit));
 

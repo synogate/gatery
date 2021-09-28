@@ -36,9 +36,8 @@ class VCDSink : public WaveformRecorder
         virtual void onClock(const hlim::Clock *clock, bool risingEdge) override;
         virtual void onReset(const hlim::Clock *clock, bool inReset) override;
     protected:
-        std::fstream m_vcdFile;
-        std::fstream m_logFile;
-        bool m_doWriteLogFile;
+        std::ofstream m_vcdFile;
+        std::ofstream m_logFile;
 
         std::vector<std::string> m_id2sigCode;
         std::map<hlim::Clock*, std::string> m_clock2code;
