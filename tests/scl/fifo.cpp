@@ -209,7 +209,7 @@ BOOST_FIXTURE_TEST_CASE(Fifo_basic, BoostUnitTestSimulationFixture)
     runTest(hlim::ClockRational(20000, 1) / clock.getClk()->getAbsoluteFrequency());
 }
 
-BOOST_FIXTURE_TEST_CASE(Fifo_fuzz, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Fifo_fuzz, BoostUnitTestSimulationFixture)
 {
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
     ClockScope clkScp(clock);

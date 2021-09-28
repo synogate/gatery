@@ -30,7 +30,7 @@
 using namespace boost::unit_test;
 using namespace gtry;
 
-BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
 {
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
     ClockScope clkScp(clock);
@@ -131,7 +131,7 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, UnitTestSimulationFixture)
     runTicks(clock.getClk(), 16);
 }
 
-BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 {
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
     ClockScope clkScp(clock);

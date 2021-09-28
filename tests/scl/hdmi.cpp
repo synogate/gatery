@@ -24,11 +24,9 @@
 
 using namespace boost::unit_test;
 
-BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, tmdsReduction, data::xrange(255), val)
+BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, tmdsReduction, data::xrange(255), val)
 {
     using namespace gtry;
-
-    DesignScope design;
 
     auto a = ConstBVec(val, 8_b);
 
@@ -39,13 +37,12 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, tmdsReduction, data
     sim_assert(a == decoded) << "decode(encoder()) mismatch: input:" << a << " decoded " << decoded;
     sim_debug() << a << " => " << encoded << " => " << decoded << " | " << gtry::scl::bitcount(a);
 
-    eval(design.getCircuit());
+    eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(tmdsBitflip, gtry::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(tmdsBitflip, gtry::BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
-    DesignScope design;
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope scope(clock);
@@ -61,6 +58,6 @@ BOOST_FIXTURE_TEST_CASE(tmdsBitflip, gtry::sim::UnitTestSimulationFixture)
     sim_assert(decoded == test_counter.delay(1));
 
     design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-    runTicks(design.getCircuit(), clock.getClk(), 260);
+    runTicks(clock.getClk(), 260);
 }
 

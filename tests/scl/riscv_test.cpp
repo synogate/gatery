@@ -299,7 +299,7 @@ protected:
 };
 
 
-BOOST_FIXTURE_TEST_CASE(riscv_exec_arith, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(riscv_exec_arith, BoostUnitTestSimulationFixture)
 {
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
@@ -360,7 +360,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_arith, UnitTestSimulationFixture)
 	runTicks(clock.getClk(), 128);
 }
 
-BOOST_FIXTURE_TEST_CASE(riscv_exec_logic, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(riscv_exec_logic, BoostUnitTestSimulationFixture)
 {
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
@@ -414,7 +414,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_logic, UnitTestSimulationFixture)
 	runTicks(clock.getClk(), 256);
 }
 
-BOOST_FIXTURE_TEST_CASE(riscv_exec_shift, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(riscv_exec_shift, BoostUnitTestSimulationFixture)
 {
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
@@ -512,7 +512,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_shift, UnitTestSimulationFixture)
 	runTicks(clock.getClk(), 32 * 6);
 }
 
-BOOST_FIXTURE_TEST_CASE(riscv_exec_setcmp, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(riscv_exec_setcmp, BoostUnitTestSimulationFixture)
 {
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
@@ -589,7 +589,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_setcmp, UnitTestSimulationFixture)
 	runTicks(clock.getClk(), 32 * 4);
 }
 
-BOOST_FIXTURE_TEST_CASE(riscv_exec_lui, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(riscv_exec_lui, BoostUnitTestSimulationFixture)
 {
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
@@ -639,7 +639,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_lui, UnitTestSimulationFixture)
 	runTicks(clock.getClk(), 32 * 2);
 }
 
-BOOST_FIXTURE_TEST_CASE(riscv_exec_jal, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(riscv_exec_jal, BoostUnitTestSimulationFixture)
 {
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
@@ -694,7 +694,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_jal, UnitTestSimulationFixture)
 	runTicks(clock.getClk(), 32 * 2);
 }
 
-BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 {
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
@@ -831,7 +831,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, UnitTestSimulationFixture)
 	runTicks(clock.getClk(), 32 * 6);
 }
 
-BOOST_FIXTURE_TEST_CASE(riscv_exec_store, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(riscv_exec_store, BoostUnitTestSimulationFixture)
 {
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
@@ -917,7 +917,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_store, UnitTestSimulationFixture)
 }
 
 
-BOOST_FIXTURE_TEST_CASE(riscv_exec_load, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 {
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
@@ -1089,7 +1089,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, UnitTestSimulationFixture)
 	runTicks(clock.getClk(), 512);
 }
 
-BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, BoostUnitTestSimulationFixture)
 {
 	unsigned char gcd_bin[] = {
 	  0x13, 0x00, 0x00, 0x00, 0x13, 0x01, 0x00, 0x40, 0x93, 0x00, 0x00, 0x00,
@@ -1174,7 +1174,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, UnitTestSimulationFixture)
 	runTicks(clock.getClk(), (uint32_t)timeout + 2);
 }
 
-BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, BoostUnitTestSimulationFixture)
 {
 	unsigned char gcd_bin[] = {
 	  0x13, 0x00, 0x00, 0x00, 0x13, 0x01, 0x00, 0x40, 0x93, 0x00, 0x00, 0x00,
@@ -1261,7 +1261,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, UnitTestSimulationFixture)
 #if 0
 extern gtry::hlim::NodeGroup* dbg_group;
 
-BOOST_FIXTURE_TEST_CASE(riscv_embedded_system_builder, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(riscv_embedded_system_builder, BoostUnitTestSimulationFixture)
 {
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000'000).setName("clock").setResetHighActive(false));
 	ClockScope clkScp(clock);
@@ -1304,7 +1304,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_embedded_system_builder, UnitTestSimulationFixture
 // hello world demo
 #if 0
 
-BOOST_FIXTURE_TEST_CASE(riscv_single_cycle_export, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(riscv_single_cycle_export, BoostUnitTestSimulationFixture)
 {
 	unsigned char linked_text[] = {
 	  0x13, 0x00, 0x00, 0x00, 0xb7, 0x07, 0x00, 0x80, 0x03, 0xa1, 0x07, 0x10,

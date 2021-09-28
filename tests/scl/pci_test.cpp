@@ -65,7 +65,7 @@ struct TlpBuilder
     }
 };
 
-BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 {
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
     ClockScope clkScp(clock);

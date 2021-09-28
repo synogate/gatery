@@ -30,10 +30,8 @@ using namespace boost::unit_test;
 using namespace gtry;
 
 
-BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, TinyCookuTableLookup, data::xrange(2, 4), numTables)
+BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, TinyCookuTableLookup, data::xrange(2, 4), numTables)
 {
-    DesignScope design;
-
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000));
     ClockScope clockScope(clock);
 
@@ -165,14 +163,12 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, TinyCookuTableLooku
     //sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TinyCookuTableLookup.vcd");
     //vcd.addAllNamedSignals();
 
-    runTicks(design.getCircuit(), clock.getClk(), 4096);
+    runTicks(clock.getClk(), 4096);
 }
 
 
-BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, TinyCuckooTableLookup, data::xrange(3, 4), numTables)
+BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, TinyCuckooTableLookup, data::xrange(3, 4), numTables)
 {
-    DesignScope design;
-
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000));
     ClockScope clockScope(clock);
 
@@ -201,13 +197,11 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, TinyCuckooTableLook
     //gtry::vhdl::VHDLExport vhdl("vhdl/");
     //vhdl(design.getCircuit());
 
-    runTicks(design.getCircuit(), clock.getClk(), 4096);
+    runTicks(clock.getClk(), 4096);
 }
 
-BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, TinyCuckooTableLookupDemuxed, data::xrange(3, 4), numTables)
+BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, TinyCuckooTableLookupDemuxed, data::xrange(3, 4), numTables)
 {
-    DesignScope design;
-
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000));
     ClockScope clockScope(clock);
 
@@ -239,7 +233,7 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, TinyCuckooTableLook
     //gtry::vhdl::VHDLExport vhdl("vhdl/");
     //vhdl(design.getCircuit());
 
-    runTicks(design.getCircuit(), clock.getClk(), 4096);
+    runTicks(clock.getClk(), 4096);
 }
 
 BOOST_AUTO_TEST_CASE(TinyCuckooDriverBaseTest)

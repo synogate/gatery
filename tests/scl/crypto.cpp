@@ -29,10 +29,8 @@ extern "C"
 using namespace boost::unit_test;
 using namespace gtry;
 
-BOOST_FIXTURE_TEST_CASE(Sha1RoundA, gtry::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Sha1RoundA, gtry::BoostUnitTestSimulationFixture)
 {
-	DesignScope design;
-
 	// create padded empty input
 	BVec msgBlock = "512x0";
 	msgBlock.msb() = '1';
@@ -56,13 +54,11 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundA, gtry::sim::UnitTestSimulationFixture)
 	sim_assert(sha1.d == sha1ref.c);
 	sim_assert(sha1.e == sha1ref.d);
 
-	eval(design.getCircuit());
+	eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(Sha1RoundB, gtry::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Sha1RoundB, gtry::BoostUnitTestSimulationFixture)
 {
-	DesignScope design;
-
 	// create padded empty input
 	BVec msgBlock = "512x0";
 	msgBlock.msb() = '1';
@@ -86,13 +82,11 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundB, gtry::sim::UnitTestSimulationFixture)
 	sim_assert(sha1.d == sha1ref.c);
 	sim_assert(sha1.e == sha1ref.d);
 
-	eval(design.getCircuit());
+	eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(Sha1RoundC, gtry::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Sha1RoundC, gtry::BoostUnitTestSimulationFixture)
 {
-	DesignScope design;
-
 	// create padded empty input
 	BVec msgBlock = "512x0";
 	msgBlock.msb() = '1';
@@ -116,13 +110,11 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundC, gtry::sim::UnitTestSimulationFixture)
 	sim_assert(sha1.d == sha1ref.c);
 	sim_assert(sha1.e == sha1ref.d);
 
-	eval(design.getCircuit());
+	eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(Sha1RoundD, gtry::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Sha1RoundD, gtry::BoostUnitTestSimulationFixture)
 {
-	DesignScope design;
-
 	// create padded empty input
 	BVec msgBlock = "512x0";
 	msgBlock.msb() = '1';
@@ -146,13 +138,11 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundD, gtry::sim::UnitTestSimulationFixture)
 	sim_assert(sha1.d == sha1ref.c);
 	sim_assert(sha1.e == sha1ref.d);
 
-	eval(design.getCircuit());
+	eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(Sha1, gtry::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Sha1, gtry::BoostUnitTestSimulationFixture)
 {
-	DesignScope design;
-
 	// create padded empty input
 	BVec msgBlock = "512x0";
 	msgBlock.msb() = '1';
@@ -171,13 +161,11 @@ BOOST_FIXTURE_TEST_CASE(Sha1, gtry::sim::UnitTestSimulationFixture)
 	sim_assert(hash(64, 64) == ref(64, 64));
 	sim_assert(hash(128, 32) == ref(128, 32));
 
-	eval(design.getCircuit());
+	eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(Sha2_256, gtry::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Sha2_256, gtry::BoostUnitTestSimulationFixture)
 {
-	DesignScope design;
-
 	// create padded empty input
 	BVec msgBlock = "512x0";
 	msgBlock.msb() = '1';
@@ -197,10 +185,10 @@ BOOST_FIXTURE_TEST_CASE(Sha2_256, gtry::sim::UnitTestSimulationFixture)
 	sim_assert(hash(128, 32) == ref(128, 32));
 	sim_assert(hash(160, 32) == ref(160, 32));
 
-	eval(design.getCircuit());
+	eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(Md5, gtry::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(Md5, gtry::BoostUnitTestSimulationFixture)
 {
 	struct md5ref
 	{
@@ -243,8 +231,6 @@ BOOST_FIXTURE_TEST_CASE(Md5, gtry::sim::UnitTestSimulationFixture)
 		}
 	};
 
-	DesignScope design;
-
 	// create padded empty input
 	BVec msgBlock = "512x0";
 	msgBlock.msb() = '1';
@@ -272,7 +258,7 @@ BOOST_FIXTURE_TEST_CASE(Md5, gtry::sim::UnitTestSimulationFixture)
 	sim_assert(hash(0, 64) == ref(0, 64)) << hash << " != " << ref; // TODO: implement large compare simulation
 	sim_assert(hash(64, 64) == ref(64, 64)) << hash << " != " << ref;
 
-	eval(design.getCircuit());
+	eval();
 }
 
 #if 0
@@ -364,10 +350,8 @@ BOOST_AUTO_TEST_CASE(SipHash64TestVisual)
 }
 #endif
 
-BOOST_FIXTURE_TEST_CASE(SipHash64Test, gtry::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SipHash64Test, gtry::BoostUnitTestSimulationFixture)
 {
-	DesignScope design;
-
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
 	ClockScope clockScope(clock);
 
@@ -433,13 +417,11 @@ BOOST_FIXTURE_TEST_CASE(SipHash64Test, gtry::sim::UnitTestSimulationFixture)
 	//vcd.addAllSignals();
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-	runTicks(design.getCircuit(), clock.getClk(), 24);
+	runTicks(clock.getClk(), 24);
 }
 
-BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, gtry::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, gtry::BoostUnitTestSimulationFixture)
 {
-	DesignScope design;
-
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
 	ClockScope clockScope(clock);
 
@@ -456,13 +438,11 @@ BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, gtry::sim::UnitTestSimulationFixture
 		sim_assert(paddedBlock == ref);
 	}
 
-	eval(design.getCircuit());
+	eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(SipHash64HelperTest, gtry::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SipHash64HelperTest, gtry::BoostUnitTestSimulationFixture)
 {
-	DesignScope design;
-
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
 	ClockScope clockScope(clock);
 
@@ -470,13 +450,11 @@ BOOST_FIXTURE_TEST_CASE(SipHash64HelperTest, gtry::sim::UnitTestSimulationFixtur
 	BOOST_TEST(latency == 0);
 	sim_assert(hash == 0x0d6c8009d9a94f5a) << hash;
 
-	eval(design.getCircuit());
+	eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, gtry::sim::UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, gtry::BoostUnitTestSimulationFixture)
 {
-	DesignScope design;
-
 	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000));
 	ClockScope clockScope(clock);
 
@@ -536,7 +514,7 @@ BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, gtry::sim::UnitTestSimulationFixt
 	//vcd.addAllSignals();
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-	runTicks(design.getCircuit(), clock.getClk(), 1024);
+	runTicks(clock.getClk(), 1024);
 }
 
 BOOST_AUTO_TEST_CASE(TabulationHashingDriverBaseTest)

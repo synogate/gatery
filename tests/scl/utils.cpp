@@ -23,7 +23,6 @@
 
 #include <gatery/frontend.h>
 #include <gatery/utils.h>
-#include <gatery/simulation/UnitTestSimulationFixture.h>
 
 #include <gatery/hlim/supportNodes/Node_SignalGenerator.h>
 
@@ -32,10 +31,8 @@ using namespace gtry;
 using namespace gtry::scl;
 using namespace boost::unit_test;
 
-BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, BitCountTest, data::xrange(255) * data::xrange(1, 8), val, bitsize)
+BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, BitCountTest, data::xrange(255) * data::xrange(1, 8), val, bitsize)
 {
-    DesignScope design;
-
     BVec a = ConstBVec(val, BitWidth{ uint64_t(bitsize) });
     BVec count = gtry::scl::bitcount(a);
     
@@ -45,14 +42,12 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, BitCountTest, data:
     //sim_debug() << "The bitcount of " << a << " should be " << actualBitCount << " and is " << count;
     sim_assert(count == ConstBVec(actualBitCount, count.getWidth())) << "The bitcount of " << a << " should be " << actualBitCount << " but is " << count;
     
-    eval(design.getCircuit());
+    eval();
 }
 
 
-BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, Decoder, data::xrange(3), val)
+BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, Decoder, data::xrange(3), val)
 {
-    DesignScope design;
-
     OneHot result = decoder(ConstBVec(val, 2_b));
     BOOST_CHECK(result.size() == 4);
     sim_assert(result == (1u << val)) << "decoded to " << result;
@@ -66,13 +61,11 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, Decoder, data::xran
     sim_assert(prio.valid);
     sim_assert(prio.index == val) << "encoded to " << prio.index;
 
-    eval(design.getCircuit());
+    eval();
 }
 
-BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, ListEncoder, data::xrange(3), val)
+BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, ListEncoder, data::xrange(3), val)
 {
-    DesignScope design;
-
     OneHot result = decoder(ConstBVec(val, 2_b));
     BOOST_CHECK(result.size() == 4);
     sim_assert(result == (1u << val)) << "decoded to " << result;
@@ -90,14 +83,12 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, ListEncoder, data::
     sim_assert(*encoded.valid);
     sim_assert(encoded.value() == val);
 
-    eval(design.getCircuit());
+    eval();
 }
 
 
-BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, PriorityEncoderTreeTest, data::xrange(65), val)
+BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, PriorityEncoderTreeTest, data::xrange(65), val)
 {
-    DesignScope design;
-
     uint64_t testVector = 1ull << val;
     if (val == 54) testVector |= 7;
     if (val == 64) testVector = 0;
@@ -114,10 +105,10 @@ BOOST_DATA_TEST_CASE_F(gtry::sim::UnitTestSimulationFixture, PriorityEncoderTree
         sim_assert(!res.valid) << "wrong valid: " << res.valid;
     }
 
-    eval(design.getCircuit());
+    eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(addWithCarry, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(addWithCarry, BoostUnitTestSimulationFixture)
 {
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
     ClockScope clkScp(clock);
