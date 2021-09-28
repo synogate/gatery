@@ -728,6 +728,16 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
     rmwBuilder.placeNewNodesIn(m_fixupNodeGroup);
     rmwBuilder.build(useMemory);
 
+
+    // The rmw builder also builds logic for read during write collision, so we can set read ports to be independent of write ports
+    for (auto &rp : m_readPorts) {
+        rp.node->rewireInput((size_t)Node_MemPort::Inputs::orderAfter, {});
+        while (!rp.node->getDirectlyDriven((size_t)Node_MemPort::Outputs::orderBefore).empty()) {
+            auto driven = rp.node->getDirectlyDriven((size_t)Node_MemPort::Outputs::orderBefore).back();
+            driven.node->rewireInput(driven.port, {});
+        }
+    }
+
     //visualize(circuit, "afterRMW");
 /*
     {
@@ -1076,7 +1086,29 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
     size_t portIdx = 0;
 
     memGroupProps["numPorts"] = m_readPorts.size() + m_writePorts.size();
-    memGroupProps["crossPortReadDuringWrite"] = "DONT_CARE";
+
+    bool isReadFirst = false;
+    bool isWriteFirst = false;
+    bool isDontCare = false;
+
+    if (m_writePorts.size() == 0) {
+        memGroupProps["crossPortReadDuringWrite"] = "DONT_CARE";
+        isDontCare = true;
+    } else if (m_readPorts.size() == 1 && m_writePorts.size() == 1) {
+        auto *readNode = m_readPorts.front().node.get();
+        auto *writeNode = m_writePorts.front().node.get();
+
+        if (readNode->isOrderedBefore(writeNode)) {
+            memGroupProps["crossPortReadDuringWrite"] = "READ_FIRST";
+            isReadFirst = true;
+        } else if (writeNode->isOrderedBefore(readNode)) {
+            memGroupProps["crossPortReadDuringWrite"] = "WRITE_FIRST";
+            isWriteFirst = true;
+        } else {
+            memGroupProps["crossPortReadDuringWrite"] = "DONT_CARE";
+            isDontCare = true;
+        }
+    }
 
     for (auto &rp : m_readPorts) {
         for (auto &r : rp.dedicatedReadLatencyRegisters) {
@@ -1185,6 +1217,8 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 
         portIdx++;
     }
+
+    HCL_ASSERT_HINT(isDontCare, "The simulation model for external memory only supports DONT_CARE as the cross port read during write policy. However, the memory ended up in a different configuration!");
 
     size_t size = m_memory->getSize();
     circuit.addSimulationProcess([convertedReadPorts, convertedWritePorts, size, clock]()mutable->sim::SimulationProcess{
