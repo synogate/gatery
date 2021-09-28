@@ -120,7 +120,7 @@ void BoostUnitTestSimulationFixture::prepRun()
             recordVCD(filename + ".vcd");
         else if (arg == "--vhdl")
             outputVHDL(filename + ".vhd");
-        else if (arg == "--graph-vis")
+        else if (arg == "--graph-vis" || arg == "--dot")
             design.visualize(filename);
     }
 }
