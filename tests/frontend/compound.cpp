@@ -24,7 +24,7 @@
 using namespace boost::unit_test;
 using namespace gtry;
 
-using UnitTestSimulationFixture = gtry::UnitTestSimulationFixture;
+using BoostUnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
 
 struct SimpleStruct
 {
@@ -42,7 +42,7 @@ struct RichStruct : SimpleStruct
 
 BOOST_HANA_ADAPT_STRUCT(RichStruct, vec, bit, list, parameter);
 
-BOOST_FIXTURE_TEST_CASE(CompoundName, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(CompoundName, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -68,7 +68,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundName, UnitTestSimulationFixture)
     BOOST_CHECK(obj.list[0].vec.getName() == "obj_list0_vec");
 }
 
-BOOST_FIXTURE_TEST_CASE(CompoundWidth, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(CompoundWidth, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -83,7 +83,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundWidth, UnitTestSimulationFixture)
 
 }
 
-BOOST_FIXTURE_TEST_CASE(CompoundPack, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(CompoundPack, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -113,7 +113,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundPack, UnitTestSimulationFixture)
     eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(CompoundUnpack, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(CompoundUnpack, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -144,7 +144,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundUnpack, UnitTestSimulationFixture)
     eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(ConstructFromSignal, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(ConstructFromSignal, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -166,7 +166,7 @@ BOOST_FIXTURE_TEST_CASE(ConstructFromSignal, UnitTestSimulationFixture)
     eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(ConstructFromCompound, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(ConstructFromCompound, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 

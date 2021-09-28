@@ -26,9 +26,9 @@
 #include <cstdint>
 
 using namespace boost::unit_test;
-using UnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
+using BoostUnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
 
-BOOST_FIXTURE_TEST_CASE(async_ROM, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(async_ROM, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;
@@ -68,7 +68,7 @@ BOOST_FIXTURE_TEST_CASE(async_ROM, UnitTestSimulationFixture)
 
 
 
-BOOST_FIXTURE_TEST_CASE(sync_ROM, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(sync_ROM, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;
@@ -111,7 +111,7 @@ BOOST_FIXTURE_TEST_CASE(sync_ROM, UnitTestSimulationFixture)
 
 
 
-BOOST_FIXTURE_TEST_CASE(async_mem, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(async_mem, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;
@@ -163,7 +163,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem, UnitTestSimulationFixture)
 }
 
 
-BOOST_FIXTURE_TEST_CASE(sync_mem, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(sync_mem, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;
@@ -216,7 +216,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem, UnitTestSimulationFixture)
 
 
 
-BOOST_FIXTURE_TEST_CASE(async_mem_read_before_write, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(async_mem_read_before_write, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;
@@ -283,7 +283,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_before_write, UnitTestSimulationFixture)
 
 
 
-BOOST_FIXTURE_TEST_CASE(async_mem_write_before_read, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(async_mem_write_before_read, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;
@@ -352,7 +352,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem_write_before_read, UnitTestSimulationFixture)
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
 }
 
-BOOST_FIXTURE_TEST_CASE(async_mem_read_modify_write, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(async_mem_read_modify_write, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;
@@ -429,7 +429,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_modify_write, UnitTestSimulationFixture)
 }
 
 
-BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;
@@ -509,7 +509,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write, UnitTestSimulationFixture)
 
 
 
-BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;
@@ -593,7 +593,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads, UnitTestSimul
 
 
 
-BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_on_wrEn, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_on_wrEn, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;
@@ -673,7 +673,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_on_wrEn, UnitTestSimulationFi
 	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->getAbsoluteFrequency());
 }
 
-BOOST_FIXTURE_TEST_CASE(sync_mem_multiple_writes, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(sync_mem_multiple_writes, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;
@@ -755,7 +755,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_multiple_writes, UnitTestSimulationFixture)
 	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->getAbsoluteFrequency());
 }
 
-BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrFirst, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrFirst, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;
@@ -840,7 +840,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrFirst, Unit
 }
 
 
-BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrLast, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrLast, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;
@@ -920,7 +920,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrLast, UnitT
 	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->getAbsoluteFrequency());
 }
 
-BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_writes_wrFirst, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_writes_wrFirst, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;
@@ -1009,7 +1009,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
 	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->getAbsoluteFrequency());
 }
 
-BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_writes_wrLast, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_writes_wrLast, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;
@@ -1101,7 +1101,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
 
 
 
-BOOST_FIXTURE_TEST_CASE(sync_mem_dual_read_modify_write, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(sync_mem_dual_read_modify_write, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;
@@ -1192,7 +1192,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_dual_read_modify_write, UnitTestSimulationFixtu
 
 
 
-BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;
@@ -1309,7 +1309,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, UnitTestSimulationFi
 
 
 
-BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;

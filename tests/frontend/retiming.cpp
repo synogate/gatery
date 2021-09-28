@@ -30,7 +30,7 @@
 #include <cstdint>
 
 using namespace boost::unit_test;
-using UnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
+using BoostUnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
 
 void stripSignalNodes(gtry::hlim::Circuit &circuit)
 {
@@ -40,7 +40,7 @@ void stripSignalNodes(gtry::hlim::Circuit &circuit)
 	}
 }
 
-BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_new, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_new, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;
@@ -85,7 +85,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_new, UnitTestSimulationFixture)
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
 }
 
-BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_old, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_old, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
     using namespace gtry::sim;

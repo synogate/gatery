@@ -24,9 +24,9 @@
 using namespace boost::unit_test;
 using namespace gtry;
 using namespace gtry::utils;
-using UnitTestSimulationFixture = gtry::UnitTestSimulationFixture;
+using BoostUnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
 
-BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -73,7 +73,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, UnitTestSimulationFixture)
 }
 
 
-BOOST_FIXTURE_TEST_CASE(SimProc_ExceptionForwarding, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SimProc_ExceptionForwarding, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -91,7 +91,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_ExceptionForwarding, UnitTestSimulationFixture)
 }
 
 
-BOOST_FIXTURE_TEST_CASE(SimProc_PingPong, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SimProc_PingPong, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 

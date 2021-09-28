@@ -24,9 +24,9 @@
 using namespace boost::unit_test;
 using namespace gtry;
 
-using UnitTestSimulationFixture = gtry::UnitTestSimulationFixture;
+using BoostUnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
 
-BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_arith, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_arith, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -61,7 +61,7 @@ BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_arith, UnitTestSimulationFixture)
 }
 
 
-BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_logic, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_logic, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -96,7 +96,7 @@ BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_logic, UnitTestSimulationFixture)
 }
 
 
-BOOST_FIXTURE_TEST_CASE(CTS_TestRegisterReset, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(CTS_TestRegisterReset, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 

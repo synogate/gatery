@@ -23,10 +23,10 @@
 
 using namespace boost::unit_test;
 
-using UnitTestSimulationFixture = gtry::UnitTestSimulationFixture;
+using BoostUnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
 
 
-BOOST_FIXTURE_TEST_CASE(BVecIterator, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(BVecIterator, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -70,7 +70,7 @@ BOOST_FIXTURE_TEST_CASE(BVecIterator, UnitTestSimulationFixture)
     eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(BVecIteratorArithmetic, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(BVecIteratorArithmetic, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -106,7 +106,7 @@ BOOST_FIXTURE_TEST_CASE(BVecIteratorArithmetic, UnitTestSimulationFixture)
     BOOST_CHECK(it5 == a.begin());
 }
 
-BOOST_FIXTURE_TEST_CASE(BVecFrontBack, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(BVecFrontBack, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -127,7 +127,7 @@ BOOST_FIXTURE_TEST_CASE(BVecFrontBack, UnitTestSimulationFixture)
     eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(BitSignalLoopSemanticTest, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(BitSignalLoopSemanticTest, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -146,7 +146,7 @@ BOOST_FIXTURE_TEST_CASE(BitSignalLoopSemanticTest, UnitTestSimulationFixture)
     eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(BVecSignalLoopSemanticTest, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(BVecSignalLoopSemanticTest, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -174,7 +174,7 @@ BOOST_FIXTURE_TEST_CASE(BVecSignalLoopSemanticTest, UnitTestSimulationFixture)
     eval();
 }
 
-BOOST_FIXTURE_TEST_CASE(ConstantDataStringParser, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(ConstantDataStringParser, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -184,7 +184,7 @@ BOOST_FIXTURE_TEST_CASE(ConstantDataStringParser, UnitTestSimulationFixture)
     BOOST_CHECK(parseBVec("b10xX").size() == 4);
 }
 
-BOOST_FIXTURE_TEST_CASE(BVecSelectorAccess, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(BVecSelectorAccess, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 

@@ -23,10 +23,10 @@
 
 using namespace boost::unit_test;
 
-using UnitTestSimulationFixture = gtry::UnitTestSimulationFixture;
+using BoostUnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
 
 
-BOOST_FIXTURE_TEST_CASE(SimpleDefault, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SimpleDefault, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -43,7 +43,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleDefault, UnitTestSimulationFixture)
 
 
 
-BOOST_FIXTURE_TEST_CASE(LogicWithDefault, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(LogicWithDefault, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -64,7 +64,7 @@ BOOST_FIXTURE_TEST_CASE(LogicWithDefault, UnitTestSimulationFixture)
 }
 
 
-BOOST_FIXTURE_TEST_CASE(ConditionalsWithDefault, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(ConditionalsWithDefault, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -84,7 +84,7 @@ BOOST_FIXTURE_TEST_CASE(ConditionalsWithDefault, UnitTestSimulationFixture)
 
 
 
-BOOST_FIXTURE_TEST_CASE(NonLoopWithDefault, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(NonLoopWithDefault, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -109,7 +109,7 @@ struct MyStruct {
     gtry::Bit value = gtry::BitDefault('1');
 };
 
-BOOST_FIXTURE_TEST_CASE(StructsWithDefault, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(StructsWithDefault, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 

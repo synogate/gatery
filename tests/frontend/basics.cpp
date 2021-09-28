@@ -25,9 +25,9 @@ using namespace boost::unit_test;
 
 const auto optimizationLevels = data::make({0, 1, 2, 3});
 
-using UnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
+using BoostUnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
 
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLevels * data::xrange(1, 8), optimization, bitsize)
+BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestOperators, optimizationLevels * data::xrange(1, 8), optimization, bitsize)
 {
     using namespace gtry;
     using namespace gtry::sim;
@@ -134,7 +134,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestOperators, optimizationLev
 
 
 
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicing, optimizationLevels, optimization)
+BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestSlicing, optimizationLevels, optimization)
 {
     using namespace gtry;
 
@@ -169,7 +169,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicing, optimizationLevel
 
 
 
-BOOST_FIXTURE_TEST_CASE(TestSlicingModifications, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(TestSlicingModifications, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -191,7 +191,7 @@ BOOST_FIXTURE_TEST_CASE(TestSlicingModifications, UnitTestSimulationFixture)
 }
 
 
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicingAddition, optimizationLevels, optimization)
+BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestSlicingAddition, optimizationLevels, optimization)
 {
     using namespace gtry;
 
@@ -219,7 +219,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, TestSlicingAddition, optimizat
 
 
 
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, SimpleAdditionNetwork, optimizationLevels, optimization)
+BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, SimpleAdditionNetwork, optimizationLevels, optimization)
 {
     using namespace gtry;
 
@@ -245,7 +245,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, SimpleAdditionNetwork, optimiz
     runEvalOnlyTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(BitFromBool, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(BitFromBool, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -268,7 +268,7 @@ BOOST_FIXTURE_TEST_CASE(BitFromBool, UnitTestSimulationFixture)
 }
 
 
-BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -292,7 +292,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, UnitTestSimulationFixture)
     runFixedLengthTest(10u / clock.getClk()->getAbsoluteFrequency());
 }
 
-BOOST_FIXTURE_TEST_CASE(SignalMoveAssignment, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SignalMoveAssignment, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -314,7 +314,7 @@ BOOST_FIXTURE_TEST_CASE(SignalMoveAssignment, UnitTestSimulationFixture)
     runEvalOnlyTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(BVecBitAliasConditionCheck, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(BVecBitAliasConditionCheck, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -332,7 +332,7 @@ BOOST_FIXTURE_TEST_CASE(BVecBitAliasConditionCheck, UnitTestSimulationFixture)
     runEvalOnlyTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -410,7 +410,7 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, UnitTestSimulationFixture)
     runTest({1,1});
 }
 
-BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -472,7 +472,7 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, UnitTestSimulationFixture)
     runTest({1, 1});
 }
 
-BOOST_FIXTURE_TEST_CASE(ConditionalLoopAssignment, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(ConditionalLoopAssignment, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -491,7 +491,7 @@ BOOST_FIXTURE_TEST_CASE(ConditionalLoopAssignment, UnitTestSimulationFixture)
     runFixedLengthTest(100u / clock.getClk()->getAbsoluteFrequency());
 }
 
-BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -518,7 +518,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, UnitTestSimulationFixture)
     runTest(100u / clock.getClk()->getAbsoluteFrequency());
 }
 
-BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -545,7 +545,7 @@ BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, UnitTestSimulationFixture)
     runFixedLengthTest(3u / clock.getClk()->getAbsoluteFrequency());
 }
 
-BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -571,7 +571,7 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, UnitTestSimulationFixture)
     runFixedLengthTest(10u / clock.getClk()->getAbsoluteFrequency());
 }
 
-BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -598,7 +598,7 @@ BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, UnitTestSimulationFixture)
     runFixedLengthTest(6u / clock.getClk()->getAbsoluteFrequency());
 }
 
-BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -632,7 +632,7 @@ BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, UnitTestSimulationFixture
     runFixedLengthTest(10u / clock.getClk()->getAbsoluteFrequency());
 }
 
-BOOST_FIXTURE_TEST_CASE(StringLiteralParsing, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(StringLiteralParsing, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -651,7 +651,7 @@ BOOST_FIXTURE_TEST_CASE(StringLiteralParsing, UnitTestSimulationFixture)
     runEvalOnlyTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(ShiftOp, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(ShiftOp, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -672,7 +672,7 @@ BOOST_FIXTURE_TEST_CASE(ShiftOp, UnitTestSimulationFixture)
     runEvalOnlyTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(ConditionalAssignment, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(ConditionalAssignment, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -700,7 +700,7 @@ BOOST_FIXTURE_TEST_CASE(ConditionalAssignment, UnitTestSimulationFixture)
     runEvalOnlyTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleStatements, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleStatements, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -734,7 +734,7 @@ BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleStatements, UnitTestSimulat
     runEvalOnlyTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleElseStatements, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleElseStatements, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -770,7 +770,7 @@ BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleElseStatements, UnitTestSim
 
 
 
-BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignment, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignment, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -816,7 +816,7 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignment, UnitTestSimulationFixtu
 }
 
 
-BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentMultipleStatements, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentMultipleStatements, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -864,7 +864,7 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentMultipleStatements, UnitT
     runEvalOnlyTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(MultiElseConditionalAssignment, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(MultiElseConditionalAssignment, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -911,7 +911,7 @@ BOOST_FIXTURE_TEST_CASE(MultiElseConditionalAssignment, UnitTestSimulationFixtur
     runEvalOnlyTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentWithPreviousAssignmentNoElse, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentWithPreviousAssignmentNoElse, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -946,7 +946,7 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentWithPreviousAssignmentNoE
 
 
 
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignmentNoIf, optimizationLevels, optimization)
+BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignmentNoIf, optimizationLevels, optimization)
 {
     using namespace gtry;
 
@@ -980,7 +980,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmen
 }
 
 
-BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignment, optimizationLevels, optimization)
+BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignment, optimizationLevels, optimization)
 {
     using namespace gtry;
 
@@ -1021,7 +1021,7 @@ BOOST_DATA_TEST_CASE_F(UnitTestSimulationFixture, MultiLevelConditionalAssignmen
     runEvalOnlyTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentIfElseIf, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentIfElseIf, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -1054,7 +1054,7 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentIfElseIf, UnitTestSimulat
     runEvalOnlyTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(UnsignedCompare, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(UnsignedCompare, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -1102,7 +1102,7 @@ BOOST_FIXTURE_TEST_CASE(UnsignedCompare, UnitTestSimulationFixture)
     runEvalOnlyTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(BVecArithmeticOpSyntax, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(BVecArithmeticOpSyntax, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -1128,7 +1128,7 @@ BOOST_FIXTURE_TEST_CASE(BVecArithmeticOpSyntax, UnitTestSimulationFixture)
 
 }
 
-BOOST_FIXTURE_TEST_CASE(LogicOpSyntax, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(LogicOpSyntax, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -1141,7 +1141,7 @@ BOOST_FIXTURE_TEST_CASE(LogicOpSyntax, UnitTestSimulationFixture)
 
 }
 
-BOOST_FIXTURE_TEST_CASE(SimpleCat, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SimpleCat, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -1153,7 +1153,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCat, UnitTestSimulationFixture)
     runEvalOnlyTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(SimpleVectorCat, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SimpleVectorCat, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -1172,7 +1172,7 @@ struct TestRecord
 };
 BOOST_HANA_ADAPT_STRUCT(TestRecord, a, b, c);
 
-BOOST_FIXTURE_TEST_CASE(SimpleStructCat, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SimpleStructCat, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
@@ -1189,7 +1189,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleStructCat, UnitTestSimulationFixture)
 }
 
 
-BOOST_FIXTURE_TEST_CASE(msbBroadcast, UnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(msbBroadcast, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
