@@ -90,8 +90,6 @@ void AST::writeVHDL(std::filesystem::path destination)
 {
     if (destination.has_extension())
     {
-        std::filesystem::create_directories(destination.parent_path());
-
         std::ofstream file{ destination.c_str(), std::ofstream::binary };
         file.exceptions(std::fstream::failbit | std::fstream::badbit);
 
@@ -103,8 +101,6 @@ void AST::writeVHDL(std::filesystem::path destination)
     }
     else
     {
-        std::filesystem::create_directories(destination);
-
         for (auto& package : m_packages) {
             std::filesystem::path filePath = getFilename(destination, package->getName());
 
