@@ -21,7 +21,7 @@
 #include <gatery/simulation/Simulator.h>
 #include <gatery/simulation/waveformFormats/VCDSink.h>
 #include <gatery/export/vhdl/VHDLExport.h>
-
+#include <gatery/hlim/Circuit.h>
 #include <boost/test/unit_test.hpp>
 
 namespace gtry {
@@ -34,26 +34,27 @@ UnitTestSimulationFixture::~UnitTestSimulationFixture()
 
 void UnitTestSimulationFixture::eval()
 {
+    prepRun();
     sim::UnitTestSimulationFixture::eval(design.getCircuit());
 }
 
 void UnitTestSimulationFixture::runTicks(const hlim::Clock* clock, unsigned numTicks)
 {
+    prepRun();
     sim::UnitTestSimulationFixture::runTicks(design.getCircuit(), clock, numTicks);
 }
 
 
-void UnitTestSimulationFixture::recordVCD(const std::filesystem::path &destination)
+void UnitTestSimulationFixture::recordVCD(const std::string& filename)
 {
-    m_vcdSink.emplace(design.getCircuit(), *m_simulator, destination.string().c_str());
-    m_vcdSink->addAllOutPins();
-    m_vcdSink->addAllWatchSignalTaps();
-    m_vcdSink->addAllSignals();
+    m_vcdSink.emplace(design.getCircuit(), *m_simulator, filename.c_str());
+    m_vcdSink->addAllPins();
+    m_vcdSink->addAllNamedSignals();
 }
 
-void UnitTestSimulationFixture::outputVHDL(const std::filesystem::path &destination, bool includeTest)
+void UnitTestSimulationFixture::outputVHDL(const std::string& filename, bool includeTest)
 {
-    m_vhdlExport.emplace(destination);
+    m_vhdlExport.emplace(filename);
     (*m_vhdlExport)(design.getCircuit());
 
     if (includeTest) {
@@ -70,6 +71,7 @@ void UnitTestSimulationFixture::stopTest()
 
 bool UnitTestSimulationFixture::runHitsTimeout(const hlim::ClockRational &timeoutSeconds)
 {
+    prepRun();
     m_stopTestCalled = false;
     m_simulator->compileProgram(design.getCircuit());
     m_simulator->powerOn();
@@ -77,71 +79,71 @@ bool UnitTestSimulationFixture::runHitsTimeout(const hlim::ClockRational &timeou
     return !m_stopTestCalled;
 }
 
-
-void BoostUnitTestGlobalFixture::setup()
+void UnitTestSimulationFixture::setup()
 {
-    auto &testSuite = boost::unit_test::framework::master_test_suite();
-    for (int i = 1; i < testSuite.argc; i++) {
-        std::string arg(testSuite.argv[i]);
-        if (arg == "--vcd") {
-            if (i+1 < testSuite.argc)
-                vcdPath = testSuite.argv[++i];
-            else
-                BOOST_CHECK_MESSAGE(false, "Missing command line argument");
-        } else
-        if (arg == "--vhdl") {
-            if (i+1 < testSuite.argc)
-                vhdlPath = testSuite.argv[++i];
-            else
-                BOOST_CHECK_MESSAGE(false, "Missing command line argument");
-        } else
-        if (arg == "--graph-vis") {
-            if (i+1 < testSuite.argc)
-                graphVisPath = testSuite.argv[++i];
-            else
-                BOOST_CHECK_MESSAGE(false, "Missing command line argument");
-        } else
-            BOOST_CHECK_MESSAGE(false, std::string("Unknown argument: ") + arg);
-    }
 }
 
+void UnitTestSimulationFixture::teardown()
+{
+}
 
-std::filesystem::path BoostUnitTestGlobalFixture::graphVisPath;
-std::filesystem::path BoostUnitTestGlobalFixture::vcdPath;
-std::filesystem::path BoostUnitTestGlobalFixture::vhdlPath;
-
+void UnitTestSimulationFixture::prepRun()
+{
+}
 
 void BoostUnitTestSimulationFixture::runFixedLengthTest(const hlim::ClockRational &seconds)
 {
-    prepRun();
     runHitsTimeout(seconds);
 }
 
 void BoostUnitTestSimulationFixture::runEvalOnlyTest()
 {
-    prepRun();
     eval();
 }
 
 void BoostUnitTestSimulationFixture::runTest(const hlim::ClockRational &timeoutSeconds)
 {
-    prepRun();
     BOOST_CHECK_MESSAGE(!runHitsTimeout(timeoutSeconds), "Simulation timed out without being called to a stop by any simulation process!");
 }
 
 
 void BoostUnitTestSimulationFixture::prepRun()
 {
-    if (!BoostUnitTestGlobalFixture::graphVisPath.empty())
-        design.visualize(BoostUnitTestGlobalFixture::graphVisPath.string());
+    UnitTestSimulationFixture::prepRun();
 
-    if (!BoostUnitTestGlobalFixture::vhdlPath.empty())
-        outputVHDL(BoostUnitTestGlobalFixture::vhdlPath);
+    const std::string& filename = boost::unit_test::framework::current_test_case().p_name;
+    auto& testSuite = boost::unit_test::framework::master_test_suite();
+    for (int i = 1; i < testSuite.argc; i++) {
+        std::string_view arg(testSuite.argv[i]);
 
-    if (!BoostUnitTestGlobalFixture::vcdPath.empty())
-        recordVCD(BoostUnitTestGlobalFixture::vcdPath);
+        if (arg == "--vcd")
+            recordVCD(filename + ".vcd");
+        else if (arg == "--vhdl")
+            outputVHDL(filename + ".vhd");
+        else if (arg == "--graph-vis")
+            design.visualize(filename);
+    }
 }
 
 
+void ClockedTest::setup()
+{
+    BoostUnitTestSimulationFixture::setup();
+
+    m_clock.emplace(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock").setResetType(ClockConfig::ResetType::NONE));
+    m_clockScope.emplace(*m_clock);
+}
+
+void ClockedTest::teardown()
+{
+    m_clockScope.reset();
+
+    design.getCircuit().postprocess(gtry::hlim::DefaultPostprocessing{});
+    runTest(m_timeout);
+
+    m_clock.reset();
+
+    BoostUnitTestSimulationFixture::teardown();
+}
 
 }

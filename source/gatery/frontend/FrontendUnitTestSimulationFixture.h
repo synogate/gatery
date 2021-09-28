@@ -23,7 +23,7 @@
 
 #include <gatery/simulation/waveformFormats/VCDSink.h>
 #include <gatery/export/vhdl/VHDLExport.h>
-
+#include <gatery/frontend/Clock.h>
 
 #include <memory>
 #include <functional>
@@ -46,9 +46,9 @@ namespace gtry {
             void runTicks(const hlim::Clock* clock, unsigned numTicks);
 
             /// Enables recording of a waveform for a subsequent simulation run
-            void recordVCD(const std::filesystem::path &destination);
+            void recordVCD(const std::string& filename);
             /// Exports as VHDL and (optionally) writes a vhdl tes6tbench of the subsequent simulation run
-            void outputVHDL(const std::filesystem::path &destination, bool includeTest = true);
+            void outputVHDL(const std::string& filename, bool includeTest = true);
 
             /// Stops an ongoing simulation (to be used during runHitsTimeout)
             void stopTest();
@@ -58,20 +58,18 @@ namespace gtry {
             bool runHitsTimeout(const hlim::ClockRational &timeoutSeconds);
 
             DesignScope design;
-        protected:
+
+            virtual void setup();
+            virtual void teardown();
+
+    protected:
+            virtual void prepRun();
+
+
             bool m_stopTestCalled = false;
             std::optional<sim::VCDSink> m_vcdSink;
             std::optional<vhdl::VHDLExport> m_vhdlExport;
     };
-
-    struct BoostUnitTestGlobalFixture {
-        void setup();
-
-        static std::filesystem::path graphVisPath;
-        static std::filesystem::path vcdPath;
-        static std::filesystem::path vhdlPath;
-    };
-
 
     /**
      * @brief Helper class to facilitate writing unit tests
@@ -82,7 +80,24 @@ namespace gtry {
             void runEvalOnlyTest();
             void runTest(const hlim::ClockRational &timeoutSeconds);
         protected:
-            void prepRun();
+            void prepRun() override;
+    };
+
+    class ClockedTest : protected BoostUnitTestSimulationFixture
+    {
+    public:
+        Clock& clock() { return *m_clock; }
+        void timeout(hlim::ClockRational value) { m_timeout = value; }
+
+        void setup() override;
+        void teardown() override;
+
+    private:
+        std::optional<Clock> m_clock;
+        std::optional<ClockScope> m_clockScope;
+
+        hlim::ClockRational m_timeout = { 1, 1'000 };
+
     };
 
 }

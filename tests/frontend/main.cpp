@@ -22,7 +22,4 @@
 
 #include <gatery/frontend/FrontendUnitTestSimulationFixture.h>
 
-using namespace gtry;
-
-BOOST_TEST_GLOBAL_FIXTURE(BoostUnitTestGlobalFixture);
 
