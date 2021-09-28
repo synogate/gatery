@@ -169,7 +169,12 @@ bool VHDLExport::isSingleFileExport()
 std::filesystem::path VHDLExport::getDestination()
 {
     if (isSingleFileExport())
-        return m_destination.parent_path();
+    {
+        std::filesystem::path dir = m_destination.parent_path();
+        if (dir.empty())
+            dir = ".";
+        return dir;
+    }
     return m_destination;
 }
 
