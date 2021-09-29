@@ -57,6 +57,7 @@ class VHDLExport
         VHDLExport &writeConstraintsFile(std::string filename);
         VHDLExport &writeProjectFile(std::string filename);
         VHDLExport &writeStandAloneProjectFile(std::string filename);
+        VHDLExport &writeInstantiationTemplateVHDL(std::filesystem::path filename);
         CodeFormatting *getFormatting();
 
         VHDLExport& setLibrary(std::string name) { m_library = std::move(name); return *this; }
@@ -93,6 +94,7 @@ class VHDLExport
         std::string m_standAloneProjectFilename;
         std::string m_constraintsFilename;
         std::string m_clocksFilename;
+        std::filesystem::path m_instantiationTemplateVHDL;
 
         struct TestbenchRecorderSettings {
             sim::Simulator *simulator;
@@ -100,6 +102,8 @@ class VHDLExport
             bool inlineTestData;
         };
         std::vector<TestbenchRecorderSettings> m_testbenchRecorderSettings;
+
+        void doWriteInstantiationTemplateVHDL(std::filesystem::path destination);
 };
 
 }

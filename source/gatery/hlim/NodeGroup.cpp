@@ -31,7 +31,7 @@ namespace gtry::hlim
 {
 	NodeGroupConfig NodeGroup::ms_config;
 
-	NodeGroup::NodeGroup(GroupType groupType) : m_groupType(groupType)
+	NodeGroup::NodeGroup(Circuit &circuit, GroupType groupType) : m_circuit(circuit), m_groupType(groupType)
 	{
 	}
 
@@ -62,7 +62,7 @@ namespace gtry::hlim
 
 	NodeGroup* NodeGroup::addChildNodeGroup(GroupType groupType)
 	{
-		auto& child = *m_children.emplace_back(std::make_unique<NodeGroup>(groupType));
+		auto& child = *m_children.emplace_back(std::make_unique<NodeGroup>(m_circuit, groupType));
 		child.m_parent = this;
 		return &child;
 	}

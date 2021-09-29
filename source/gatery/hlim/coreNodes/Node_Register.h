@@ -22,6 +22,8 @@
 
 #include <boost/format.hpp>
 
+#include <array>
+
 namespace gtry::hlim {
 
     class Node_Constant;
@@ -87,7 +89,7 @@ namespace gtry::hlim {
         size_t m_conditionId = 0;
         utils::BitFlags<Flags> m_flags;
 
-        Node_Constant *getResetValue() const;
+        void writeResetValueTo(sim::DefaultBitVectorState &state, const std::array<size_t, 2> &offsets, size_t width, bool clearDefinedIfUnconnected) const;
     };
 
 }

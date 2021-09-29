@@ -38,6 +38,7 @@
 #include "../../hlim/coreNodes/Node_Signal.h"
 #include "../../hlim/coreNodes/Node_Register.h"
 #include "../../hlim/coreNodes/Node_Rewire.h"
+#include "../../hlim/coreNodes/Node_Pin.h"
 
 #include "../../hlim/supportNodes/Node_PathAttributes.h"
 
@@ -118,6 +119,13 @@ VHDLExport& VHDLExport::writeStandAloneProjectFile(std::string filename)
 }
 
 
+VHDLExport& VHDLExport::writeInstantiationTemplateVHDL(std::filesystem::path filename)
+{
+    m_instantiationTemplateVHDL = std::move(filename);
+    return *this;
+}
+
+
 
 
 CodeFormatting *VHDLExport::getFormatting()
@@ -159,6 +167,9 @@ void VHDLExport::operator()(hlim::Circuit &circuit)
 
     if (!m_standAloneProjectFilename.empty())
         m_synthesisTool->writeStandAloneProject(*this, m_standAloneProjectFilename);
+
+    if (!m_instantiationTemplateVHDL.empty())
+        doWriteInstantiationTemplateVHDL(m_instantiationTemplateVHDL);
 }
 
 bool VHDLExport::isSingleFileExport()
@@ -183,53 +194,122 @@ void VHDLExport::addTestbenchRecorder(sim::Simulator &simulator, const std::stri
     m_testbenchRecorderSettings.emplace_back(TestbenchRecorderSettings{&simulator, name, inlineTestData});
 }
 
+void VHDLExport::doWriteInstantiationTemplateVHDL(std::filesystem::path destination)
+{
+    CodeFormatting &cf = m_ast->getCodeFormatting();
+    auto *rootEntity = m_ast->getRootEntity();
 
+
+
+    std::vector<hlim::Clock*> clocks(rootEntity->getClocks().begin(), rootEntity->getClocks().end());
+    std::vector<hlim::Clock*> resets(rootEntity->getResets().begin(), rootEntity->getResets().end());
+    std::vector<hlim::Node_Pin*> ioPins(rootEntity->getIoPins().begin(), rootEntity->getIoPins().end());
+
+    // Preserve creation order
+    std::sort(ioPins.begin(), ioPins.end(), [](const hlim::Node_Pin *lhs, const hlim::Node_Pin *rhs) {
+        return lhs->getId() > rhs->getId();
+    });
+
+
+
+    std::filesystem::create_directories(destination.parent_path());
+
+    std::ofstream file{ destination.c_str(), std::ofstream::binary };
+    file.exceptions(std::fstream::failbit | std::fstream::badbit);
+
+    file << "library ieee;\n"
+           << "use ieee.std_logic_1164.ALL;\n"
+           << "use ieee.numeric_std.all;\n\n";
+
+    if (!m_library.empty())
+        file << "library " << m_library << ";\nuse " << m_library << ".all;\n\n";
+
+    file << "entity example is\nend example;\n\n";
+
+    file << "architecture rtl of example is\n";
+
+    /////////////    Signals
+
+    for (auto clock : clocks) {
+        cf.indent(file, 1);
+        file << "signal " << rootEntity->getNamespaceScope().getClock(clock).name << " : STD_LOGIC;\n";
+    }
+    file << '\n';
+
+    for (auto clock : resets) {
+        cf.indent(file, 1);
+        file << "signal " << rootEntity->getNamespaceScope().getReset(clock).name << " : STD_LOGIC;\n";
+    }
+    file << '\n';
+    file << '\n';
+
+    for (auto ioPin : ioPins) {
+        const auto &decl = rootEntity->getNamespaceScope().get(ioPin);
+
+        cf.indent(file, 1);
+        file << "signal " << decl.name << " : ";
+        cf.formatConnectionType(file, decl);
+        file << ';' << std::endl;
+    }
+
+    file << '\n';
+    file << '\n';
+
+
+    std::string fullName;
+    if (!m_library.empty())
+        fullName = m_library + '.' + rootEntity->getName();
+    else
+        fullName = rootEntity->getName();
+
+#if 0
+    /////////////    Component declaration
+    cf.indent(file, 1);
+    file << "component " << fullName << '\n';
+    rootEntity->writePortDeclaration(file, 3);
+    cf.indent(file, 1);
+    file << "end component " << fullName << ";\n\n";
+#endif
+
+    file << "begin\n\n";
+
+    /////////////    Component instantiation
+
+    cf.indent(file, 1);
+//    file << "example_instance : " << fullName << " port map (\n";
+    file << "example_instance : entity " << fullName << " port map (\n";
+
+    {
+        std::vector<std::string> portmapList;
+
+        for (auto &s : clocks) {
+            const auto &name = rootEntity->getNamespaceScope().getClock(s).name;
+            portmapList.push_back(name + " => " + name);
+        }
+        for (auto &s : resets) {
+            const auto &name = rootEntity->getNamespaceScope().getReset(s).name;
+            portmapList.push_back(name + " => " + name);
+        }
+        for (auto &s : ioPins) {
+            const auto &name = rootEntity->getNamespaceScope().get(s).name;
+            portmapList.push_back(name + " => " + name);
+        }
+
+        for (auto i : utils::Range(portmapList.size())) {
+            cf.indent(file, 2);
+            file << portmapList[i];
+            if (i+1 < portmapList.size())
+                file << ',';
+            file << '\n';
+        }
+    }
+
+    cf.indent(file, 1);
+    file << ");\n\n";
+
+    file << "end architecture;\n";
 
 }
 
 
-
-            // create_generated_clock  for derived clocks?
-
-            // "An auto-generated clock is not created if a user-def ined clock (primar y or generated) is also defined on the same netlist object, that is, on the same definition point (net or pin)."
-
-            // CLOCK_DELAY_GROUP
-
-            //set_property CLOCK_DELAY_GROUP my_group [get_nets {clockA, clockB, clockC}]
-
-            // set_false_path -through [get_pins design_1_i/rst_processing_system7_0_100M/U0/ext_reset_in]
-            // set_multicycle_path 2 -setup -start -from [get_clocks Cpu_ss_clk_100M] -to [get_clocks cpussclks_coresight_clk_50M]
-            // set_multicycle_path 1 -hold -start -from [get_clocks Cpu_ss_clk_100M] -to [get_clocks cpussclks_coresight_clk_50M]
-
-            // set_max_delay between synchronizer regs?
-
-            /*
-                Same clock domain or between synchronous clock domains with same period and no phase-shift
-                    set_multicycle_path N –setup –from CLK1 –to CLK2
-                    set_multicycle_path N-1 –hold –from CLK1 –to CLK2
-                    
-                Between SLOW-to FAST synchronous clock domains
-                    set_multicycle_path N –setup –from CLK1 –to CLK2
-                    set_multicycle_path N-1 –hold -end –from CLK1 –to CLK2
-                    
-                Between FAST-to SLOW synchronous clock domains
-                    set_multicycle_path N –setup -start –from CLK1 –to CLK2
-                    set_multicycle_path N-1 –hold –from CLK1 –to CLK2
-            */
-
-
-            /*
-    	        Vivado:
-
-                    # get net of signal, must be KEEP
-                    set net [get_nets some_entity_inst/s_counter[0]] 
-
-                    # get driver pin
-                    set pin [get_pin -of_object $net  -filter {DIRECTION == OUT} ] 
-
-                    # get driver (hopefully flip flop)
-                    set cell [get_cells -of_object $pin]
-                    
-                    # set multicycle
-                    set_multicycle_path N –setup -start –from $cell –to ????
-            */
+}

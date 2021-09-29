@@ -46,6 +46,8 @@ class Entity : public BasicBlock
 
         void writeVHDL(std::ostream &stream);
 
+        void writePortDeclaration(std::ostream &stream, size_t indentation);
+
         virtual void writeInstantiationVHDL(std::ostream &stream, unsigned indent, const std::string &instanceName);
 
         Entity *getParentEntity();

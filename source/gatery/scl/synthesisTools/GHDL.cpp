@@ -64,29 +64,26 @@ void GHDL::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view
 
 void GHDL::writeStandAloneProject(vhdl::VHDLExport& vhdlExport, std::string_view filename)
 {
-    std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
+    std::fstream file((vhdlExport.getTestbenchDestination() / filename).string().c_str(), std::fstream::out);
     file.exceptions(std::fstream::failbit | std::fstream::badbit);
 
     // "-frelaxed" is necessary for the vivado simulation models
+    std::string library;
+    if (!vhdlExport.getName().empty())
+        library = std::string("--work=") + std::string(vhdlExport.getName()) + ' ';
 
-    if (vhdlExport.isSingleFileExport()) {
-        file << "ghdl -a --std=08 --ieee=synopsys -frelaxed " << vhdlExport.getSingleFileFilename() << std::endl;;
-    } else {
-        auto sortedEntites = vhdlExport.getAST()->getDependencySortedEntities();
+	auto relativePath = std::filesystem::relative(vhdlExport.getDestination(), vhdlExport.getTestbenchDestination());
 
-        //file << "#!/bin/sh" << std::endl;
-        for (auto &package : vhdlExport.getAST()->getPackages())
-            file << "ghdl -a --std=08 --ieee=synopsys -frelaxed " << vhdlExport.getAST()->getFilename("", package->getName()) << std::endl;;
 
-        for (auto entity : sortedEntites)
-            file << "ghdl -a --std=08 --ieee=synopsys -frelaxed " << vhdlExport.getAST()->getFilename("", entity->getName()) << std::endl;;
-    }
+    for (std::filesystem::path& vhdl_file : sourceFiles(vhdlExport, true, false))
+        file << "ghdl -a --std=08 --ieee=synopsys -frelaxed " << library << (relativePath/vhdl_file) << std::endl;;
+
     for (const auto &e : vhdlExport.getTestbenchRecorder()) {
         for (const auto &name : e->getDependencySortedEntities())
-            file << "ghdl -a --std=08 --ieee=synopsys -frelaxed " << vhdlExport.getAST()->getFilename("", name) << std::endl;;
+            file << "ghdl -a --std=08 --ieee=synopsys -frelaxed " << library << vhdlExport.getAST()->getFilename("", name) << std::endl;;
 
-        file << "ghdl -e --std=08 --ieee=synopsys -frelaxed " << e->getDependencySortedEntities().back() << std::endl;
-        file << "ghdl -r --std=08 " << e->getDependencySortedEntities().back() << " --ieee-asserts=disable --vcd=" << e->getName() << "_signals.vcd --wave=" << e->getName() << "_signals.ghw" << std::endl;
+        file << "ghdl -e --std=08 --ieee=synopsys -frelaxed " << library << e->getDependencySortedEntities().back() << std::endl;
+        file << "ghdl -r --std=08 " << library << e->getDependencySortedEntities().back() << " --ieee-asserts=disable --vcd=" << e->getName() << "_signals.vcd --wave=" << e->getName() << "_signals.ghw" << std::endl;
     }
 }
 
