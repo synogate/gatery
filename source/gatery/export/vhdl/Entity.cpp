@@ -284,21 +284,7 @@ void Entity::writeVHDL(std::ostream &stream)
     cf.formatEntityComment(stream, m_name, m_comment);
 
     stream << "ENTITY " << m_name << " IS " << std::endl;
-    cf.indent(stream, 1); stream << "PORT(" << std::endl;
-
-    {
-        std::vector<std::string> portList = getPortsVHDL();
-
-        for (auto i : utils::Range(portList.size())) {
-            cf.indent(stream, 2);
-            stream << portList[i];
-            if (i+1 < portList.size())
-                stream << ";";
-            stream << std::endl;
-        }
-    }
-
-    cf.indent(stream, 1); stream << ");" << std::endl;
+    writePortDeclaration(stream, 1);
     stream << "END " << m_name << ";" << std::endl << std::endl;
 
     stream << "ARCHITECTURE impl OF " << m_name << " IS " << std::endl;
@@ -310,6 +296,25 @@ void Entity::writeVHDL(std::ostream &stream)
     writeStatementsVHDL(stream, 1);
 
     stream << "END impl;" << std::endl;
+}
+
+void Entity::writePortDeclaration(std::ostream &stream, size_t indentation)
+{
+    CodeFormatting &cf = m_ast.getCodeFormatting();
+
+    cf.indent(stream, 1); stream << "PORT(" << std::endl;
+
+    std::vector<std::string> portList = getPortsVHDL();
+
+    for (auto i : utils::Range(portList.size())) {
+        cf.indent(stream, 2);
+        stream << portList[i];
+        if (i+1 < portList.size())
+            stream << ';';
+        stream << '\n';
+    }
+
+    cf.indent(stream, 1); stream << ");" << std::endl;
 }
 
 void Entity::writeInstantiationVHDL(std::ostream &stream, unsigned indent, const std::string &instanceName)
