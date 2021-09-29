@@ -176,7 +176,7 @@ void Node_MemPort::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
 
         // If not enabled (or undefined) output undefined since this is an asynchronous read. For synchronous (BRAM) behavior,
         // the register after the read ports holds the read value on a disabled read.
-        if (!enableValue || !enableDefined) {
+        if (!enableValue || !enableDefined || inputOffsets[(size_t)Inputs::address] == ~0ull) {
             state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[(size_t)Outputs::rdData], getBitWidth());
         } else {
             // Output is undefined if any address bits are undefined.
@@ -233,10 +233,16 @@ void Node_MemPort::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
     // If this is also a write port, store all information needed for the write in internal state
     // to perform the write on the clock edge.
     if (isWritePort()) {
-        state.copyRange(internalOffsets[(size_t)Internal::address], state, inputOffsets[(size_t)Inputs::address], addrType.width);
+        if (inputOffsets[(size_t)Inputs::address] != ~0ull)
+            state.copyRange(internalOffsets[(size_t)Internal::address], state, inputOffsets[(size_t)Inputs::address], addrType.width);
+        else
+            state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[(size_t)Internal::address], addrType.width);
 
         const auto &wrDataType = getDriverConnType((size_t)Inputs::wrData);
-        state.copyRange(internalOffsets[(size_t)Internal::wrData], state, inputOffsets[(size_t)Inputs::wrData], wrDataType.width);
+        if (inputOffsets[(size_t)Inputs::wrData] != ~0ull)
+            state.copyRange(internalOffsets[(size_t)Internal::wrData], state, inputOffsets[(size_t)Inputs::wrData], wrDataType.width);
+        else
+            state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[(size_t)Internal::wrData], wrDataType.width);
 
         bool doWrite = enableValue || !enableDefined;
         bool writingDefined = enableDefined;
