@@ -21,6 +21,8 @@
 #include "../Clock.h"
 
 #include "../SignalDelay.h"
+#include "../GraphTools.h"
+#include "../NodeGroup.h"
 
 #include <regex>
 
@@ -48,14 +50,7 @@ void Node_Register::setClock(Clock *clk)
 void Node_Register::simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
 {
     if (m_clocks[0]->getRegAttribs().initializeRegs) {
-        Node_Constant *constNode = getResetValue();
-        if (constNode == nullptr) {
-            state.setRange(sim::DefaultConfig::DEFINED, internalOffsets[INT_DATA], getOutputConnectionType(0).width, false);
-            state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
-        } else {
-            state.insert(constNode->getValue(), internalOffsets[INT_DATA]);
-            state.insert(constNode->getValue(), outputOffsets[0]);
-        }
+        writeResetValueTo(state, { internalOffsets[INT_DATA],  outputOffsets[0] }, getOutputConnectionType(0).width, true);
     }
 }
 
@@ -65,11 +60,7 @@ void Node_Register::simulateResetChange(sim::SimulatorCallbacks &simCallbacks, s
     state.set(sim::DefaultConfig::VALUE, internalOffsets[INT_IN_RESET], inReset);
 
     if (inReset && m_clocks[0]->getRegAttribs().resetType == RegisterAttributes::ResetType::ASYNCHRONOUS) {
-        Node_Constant *constNode = getResetValue();
-        if (constNode != nullptr) {
-            state.insert(constNode->getValue(), internalOffsets[INT_DATA]);
-            state.insert(constNode->getValue(), outputOffsets[0]);
-        }
+        writeResetValueTo(state, { internalOffsets[INT_DATA],  outputOffsets[0] }, getOutputConnectionType(0).width, false);
     }
 }
 
@@ -92,13 +83,9 @@ void Node_Register::simulateAdvance(sim::SimulatorCallbacks &simCallbacks, sim::
     HCL_ASSERT(clockPort == 0);
 
     if (state.get(sim::DefaultConfig::VALUE, internalOffsets[INT_IN_RESET])) {
-        if (m_clocks[0]->getRegAttribs().resetType == RegisterAttributes::ResetType::SYNCHRONOUS) {           
-            Node_Constant *constNode = getResetValue();
-            if (constNode != nullptr) {
-                state.insert(constNode->getValue(), internalOffsets[INT_DATA]);
-                state.insert(constNode->getValue(), outputOffsets[0]);
-                return;
-            }
+        if (m_clocks[0]->getRegAttribs().resetType == RegisterAttributes::ResetType::SYNCHRONOUS) {
+            writeResetValueTo(state, { internalOffsets[INT_DATA],  outputOffsets[0] }, getOutputConnectionType(0).width, false);
+            return;
         } else {
             // Is being handled in Node_Register::simulateResetChange
         }
@@ -193,17 +180,31 @@ void Node_Register::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size
     inputBit = ~0u;
 }
 
-Node_Constant *Node_Register::getResetValue() const
+
+void Node_Register::writeResetValueTo(sim::DefaultBitVectorState &state, const std::array<size_t, 2> &offsets, size_t width, bool clearDefinedIfUnconnected) const
 {
     auto resetDriver = getNonSignalDriver(RESET_VALUE);
-    if (resetDriver.node == nullptr)
-        return nullptr;
-
+    if (resetDriver.node == nullptr) {
+        if (clearDefinedIfUnconnected)
+            for (auto offset : offsets)
+                state.clearRange(sim::DefaultConfig::DEFINED, offset, width);
+        return;
+    }
     Node_Constant *constNode = dynamic_cast<Node_Constant *>(resetDriver.node);
-    HCL_ASSERT_HINT(constNode != nullptr, "For simulation the register reset value must be connected to a constant node via signals only!");
 
-    return constNode;
+    if (constNode != nullptr) {
+        HCL_ASSERT(constNode->getValue().size() == width);
+        for (auto offset : offsets)
+            state.insert(constNode->getValue(), offset);
+
+        return;
+    }
+
+    auto evalState = evaluateStatically(m_nodeGroup->getCircuit(), resetDriver);
+    HCL_ASSERT(evalState.size() == width);
+    HCL_ASSERT_HINT(sim::allDefined(evalState), "Can not determine reset value of register!");    
+    for (auto offset : offsets)
+        state.insert(evalState, offset);
 }
-
 
 }

@@ -32,6 +32,7 @@
 
 namespace gtry::hlim {
 
+	class Circuit;
 	class Node_Signal;
 	class Node_Register;
 
@@ -70,7 +71,7 @@ namespace gtry::hlim {
 			SFU = 0x03,
 		};
 
-		NodeGroup(GroupType groupType);
+		NodeGroup(Circuit &circuit, GroupType groupType);
 		virtual ~NodeGroup();
 
 		void recordStackTrace() { m_stackTrace.record(10, 1); }
@@ -87,7 +88,7 @@ namespace gtry::hlim {
 
 		template<typename Type, typename... Args>
 		Type* addSpecialChildNodeGroup(Args&&... args) {
-			m_children.push_back(std::make_unique<Type>(std::forward<Args>(args)...));
+			m_children.push_back(std::make_unique<Type>(m_circuit, std::forward<Args>(args)...));
 			m_children.back()->m_parent = this;
 			return (Type*)m_children.back().get();
 		}
@@ -122,7 +123,10 @@ namespace gtry::hlim {
 		NodeGroupMetaInfo* getMetaInfo() { return m_metaInfo.get(); }
 
 		static void configTree(utils::ConfigTree config);
+
+		inline Circuit &getCircuit() { return m_circuit; }
 	protected:
+		Circuit &m_circuit;
 		std::string m_name;
 		std::string m_instanceName;
 		std::string m_comment;

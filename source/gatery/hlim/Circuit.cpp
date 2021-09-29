@@ -53,7 +53,7 @@ namespace gtry::hlim {
 
 Circuit::Circuit()
 {
-    m_root.reset(new NodeGroup(NodeGroup::GroupType::ENTITY));
+    m_root.reset(new NodeGroup(*this, NodeGroup::GroupType::ENTITY));
 }
 
 /**
@@ -676,6 +676,7 @@ void Circuit::removeNoOps(Subnet &subnet)
         }
     }
 }
+
 
 void Circuit::foldRegisterMuxEnableLoops(Subnet &subnet)
 {
