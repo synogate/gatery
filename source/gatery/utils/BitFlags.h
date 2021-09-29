@@ -40,6 +40,9 @@ class BitFlags {
 		Self &insert(EnumType e) { m_flags = m_flags | (1ull << size_t(e)); return *this; }
 		Self &clear(EnumType e) { m_flags = m_flags & ~(1ull << size_t(e)); return *this; }
 		bool contains(EnumType e) const { return m_flags & (1ull << size_t(e)); }
+
+        bool operator==(EnumType e) const { return m_flags == (1ull << size_t(e)); }
+        bool operator!=(EnumType e) const { return m_flags != (1ull << size_t(e)); }
 	protected:
 		size_t m_flags = 0;
 };

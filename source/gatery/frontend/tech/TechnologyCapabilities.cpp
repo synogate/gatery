@@ -42,7 +42,7 @@ MemoryCapabilities::Choice MemoryCapabilities::select(hlim::NodeGroup *group, co
     */
 
     MemoryCapabilities::Choice result;
-    if (request.maxDepth <= 64 && request.sizeCategory.contains(SizeCategory::SMALL)) {
+    if ((request.maxDepth <= 64 && request.sizeCategory.contains(SizeCategory::SMALL)) || request.sizeCategory == SizeCategory::SMALL) {
         // SizeCategory::SMALL;
         result.inputRegs = false;
         result.outputRegs = 0;
