@@ -262,21 +262,22 @@ void VHDLExport::doWriteInstantiationTemplateVHDL(std::filesystem::path destinat
     else
         fullName = rootEntity->getName();
 
+#if 0
     /////////////    Component declaration
-
     cf.indent(file, 1);
     file << "component " << fullName << '\n';
     rootEntity->writePortDeclaration(file, 3);
     cf.indent(file, 1);
     file << "end component " << fullName << ";\n\n";
-
+#endif
 
     file << "begin\n\n";
 
     /////////////    Component instantiation
 
     cf.indent(file, 1);
-    file << "example_instance : " << fullName << " port map (\n";
+//    file << "example_instance : " << fullName << " port map (\n";
+    file << "example_instance : entity " << fullName << " port map (\n";
 
     {
         std::vector<std::string> portmapList;
