@@ -222,7 +222,10 @@ void VHDLExport::doWriteInstantiationTemplateVHDL(std::filesystem::path destinat
            << "use ieee.numeric_std.all;\n\n";
 
     if (!m_library.empty())
-        file << "library " << m_library << ";\nuse " << m_library << ".all;\n\n";
+    {
+        file << "library " << m_library << ";\n" <<
+                "use " << m_library << "." << rootEntity->getName() << "; \n\n";
+    }
 
     file << "entity example is\nend example;\n\n";
 
@@ -253,22 +256,20 @@ void VHDLExport::doWriteInstantiationTemplateVHDL(std::filesystem::path destinat
     }
 
     file << '\n';
-    file << '\n';
-
 
     std::string fullName;
     if (!m_library.empty())
         fullName = m_library + '.' + rootEntity->getName();
     else
-        fullName = rootEntity->getName();
+        fullName = "work." + rootEntity->getName();
 
 #if 0
     /////////////    Component declaration
     cf.indent(file, 1);
-    file << "component " << fullName << '\n';
+    file << "component " << rootEntity->getName() << '\n';
     rootEntity->writePortDeclaration(file, 3);
     cf.indent(file, 1);
-    file << "end component " << fullName << ";\n\n";
+    file << "end component " << rootEntity->getName() << ";\n\n";
 #endif
 
     file << "begin\n\n";
@@ -277,7 +278,7 @@ void VHDLExport::doWriteInstantiationTemplateVHDL(std::filesystem::path destinat
 
     cf.indent(file, 1);
 //    file << "example_instance : " << fullName << " port map (\n";
-    file << "example_instance : entity " << fullName << " port map (\n";
+    file << "example_instance: entity " << fullName << " port map (\n";
 
     {
         std::vector<std::string> portmapList;
