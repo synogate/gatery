@@ -87,7 +87,6 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 
     scl::AvalonMM avmm;
     avmm.ready = Bit{};
-    avmm.address = 16_b;
     avmm.read = Bit{};
     avmm.write = Bit{};
     avmm.writeData = 32_b;
@@ -102,10 +101,10 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
     pinOut(out.header).setName("out_header");
     pinOut(out.data).setName("out_data");
 
-    Memory<BVec> testMem{ avmm.address.getWidth().count(), avmm.writeData->getWidth() };
+    Memory<BVec> testMem{ 1 << 16, avmm.writeData->getWidth() };
     IF(*avmm.write & *avmm.ready)
-        testMem[avmm.address] = *avmm.writeData;
-    *avmm.readData = testMem[avmm.address];
+        testMem[avmm.address(0, 16_b)] = *avmm.writeData;
+    *avmm.readData = testMem[avmm.address(0, 16_b)];
     *avmm.readDataValid = *avmm.read;
     for (size_t i = 0; i < 6; ++i)
     {

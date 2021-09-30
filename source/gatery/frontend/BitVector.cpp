@@ -413,18 +413,20 @@ namespace gtry {
             in = SignalReadPort{ mux };
         }
 
-        if (!m_node->getDirectlyDriven(0).empty() && incrementWidth)
+        if (incrementWidth)
         {
-            const auto nodeInputs = m_node->getDirectlyDriven(0);
+            if (const auto nodeInputs = m_node->getDirectlyDriven(0); !nodeInputs.empty())
+            {
+                auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
+                rewire->connectInput(0, SignalReadPort{ m_node });
+                rewire->setExtract(0, m_range.width);
 
-            auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-            rewire->connectInput(0, SignalReadPort{ m_node });
-            rewire->setExtract(0, m_range.width);
+                for (const hlim::NodePort& port : nodeInputs)
+                    port.node->rewireInput(port.port, SignalReadPort{ rewire });
 
-            for (const hlim::NodePort& port : nodeInputs)
-                port.node->rewireInput(port.port, SignalReadPort{ rewire });
+                HCL_ASSERT(!m_range.subset);
+            }
 
-            HCL_ASSERT(!m_range.subset);
             m_range.width = width(in);
         }
 
