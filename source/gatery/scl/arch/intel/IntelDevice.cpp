@@ -219,7 +219,7 @@ void IntelDevice::fromConfig(const gtry::utils::ConfigTree &configTree)
 
 void IntelDevice::setupAgilex()
 {
-    setupDevice("AGFA023R25A1I1V");
+    setupDevice("AGFA012R24B1E1V");
 }
 
 void IntelDevice::setupArria10()
