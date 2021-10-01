@@ -133,6 +133,8 @@ void XilinxDevice::fromConfig(const gtry::utils::ConfigTree &configTree)
                 setupZynq7();
             else if (m_family == "Kintex Ultrascale")
                 setupKintexUltrascale();
+            else if (m_family == "Virtex Ultrascale")
+                setupVirtexUltrascale();
             else
                 HCL_DESIGNCHECK_HINT(false, "The device family " + m_family + " is not among the supported device families. Use custom_composition to specify the device's hardware features.");
         } else {
@@ -149,6 +151,11 @@ void XilinxDevice::setupZynq7()
 void XilinxDevice::setupKintexUltrascale()
 {
     setupDevice("XCKU035-1FBVA900C");
+}
+
+void XilinxDevice::setupVirtexUltrascale()
+{
+    setupDevice("XCVU190-1FBVA900C");
 }
 
 void XilinxDevice::setupCustomComposition(const gtry::utils::ConfigTree &customComposition)

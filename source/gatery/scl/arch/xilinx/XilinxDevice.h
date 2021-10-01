@@ -27,6 +27,7 @@ class XilinxDevice : public FPGADevice {
 
 		void setupZynq7();
         void setupKintexUltrascale();
+        void setupVirtexUltrascale();
 
         void setupDevice(std::string device);
 	protected:

@@ -57,7 +57,9 @@ namespace gtry {
             const auto& triggerEvent() const { return m_triggerEvent; }
             const auto& phaseSynchronousWithParent() const { return m_phaseSynchronousWithParent; }
             const auto& resetType() const { return m_resetType; }
+            const auto& memoryResetType() const { return m_memoryResetType; }
             const auto& initializeRegs() const { return m_initializeRegs; }
+            const auto& initializeMemory() const { return m_initializeMemory; }
             const auto& resetActive() const { return m_resetActive; }
             const auto& registerResetPinUsage() const { return m_registerResetPinUsage; }
             const auto& registerEnablePinUsage() const { return m_registerEnablePinUsage; }
