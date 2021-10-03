@@ -49,9 +49,9 @@ void Node_Register::setClock(Clock *clk)
 
 void Node_Register::simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
 {
-    if (m_clocks[0]->getRegAttribs().initializeRegs) {
+    //if (m_clocks[0]->getRegAttribs().initializeRegs) {
         writeResetValueTo(state, { internalOffsets[INT_DATA],  outputOffsets[0] }, getOutputConnectionType(0).width, true);
-    }
+    //}
 }
 
 void Node_Register::simulateResetChange(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort, bool resetHigh) const
