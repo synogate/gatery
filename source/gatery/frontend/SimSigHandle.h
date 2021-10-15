@@ -47,6 +47,8 @@ using WaitFor = sim::WaitFor;
 using WaitUntil = sim::WaitUntil;
 using Seconds = hlim::ClockRational;
 
+using BigInt = sim::SigHandle::BigInt;
+
 sim::WaitClock WaitClk(const Clock &clk);
 
 void simAnnotationStart(const std::string &id, const std::string &desc);

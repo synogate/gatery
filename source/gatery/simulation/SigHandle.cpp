@@ -73,6 +73,16 @@ DefaultBitVectorState SigHandle::eval() const
     return state;
 }
 
+bool SigHandle::allDefined() const
+{
+    auto width = m_output.node->getOutputConnectionType(m_output.port).width;
+    if (!width)
+        return true;
+
+    DefaultBitVectorState state;
+    SimulationContext::current()->getSignal(*this, state);
+    return sim::allDefined<DefaultConfig>(state);
+}
 
 std::uint64_t SigHandle::defined() const
 {
@@ -85,5 +95,45 @@ std::uint64_t SigHandle::defined() const
     SimulationContext::current()->getSignal(*this, state);
     return state.extractNonStraddling(DefaultConfig::DEFINED, 0, width);
 }
+
+void SigHandle::operator=(const BigInt &v)
+{
+    auto width = m_output.node->getOutputConnectionType(m_output.port).width;
+    DefaultBitVectorState state;
+    state.resize(width);
+    if (width)
+    {
+        state.setRange(DefaultConfig::DEFINED, 0, width);
+        state.clearRange(DefaultConfig::VALUE, 0, width);
+
+        boost::multiprecision::export_bits(
+            v, 
+            state.data(DefaultConfig::VALUE), 
+            sim::DefaultConfig::NUM_BITS_PER_BLOCK,
+            false
+        );
+    }
+
+    SimulationContext::current()->overrideSignal(*this, state);
+}
+
+SigHandle::operator BigInt () const
+{
+    auto state = eval();
+    auto range = state.range(DefaultConfig::VALUE, 0, state.size());
+
+    BigInt result;
+    boost::multiprecision::import_bits(
+        result, 
+        state.data(DefaultConfig::VALUE), 
+        state.data(DefaultConfig::VALUE) + state.getNumBlocks(),
+        DefaultConfig::NUM_BITS_PER_BLOCK,
+        false
+    );
+
+    return result;
+}
+
+
 
 }
