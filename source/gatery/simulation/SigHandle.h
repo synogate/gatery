@@ -33,7 +33,8 @@ namespace gtry::sim {
 
 class SigHandle {
     public:
-        typedef boost::multiprecision::number<boost::multiprecision::cpp_int_backend<0, 0, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked, void>> BigInt;
+        //typedef boost::multiprecision::number<boost::multiprecision::cpp_int_backend<64, 0, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked, void>> BigInt;
+        typedef boost::multiprecision::cpp_int BigInt;
 
 
         SigHandle(hlim::NodePort output) : m_output(output) { }

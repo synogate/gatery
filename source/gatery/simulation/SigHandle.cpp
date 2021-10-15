@@ -96,6 +96,17 @@ std::uint64_t SigHandle::defined() const
     return state.extractNonStraddling(DefaultConfig::DEFINED, 0, width);
 }
 
+
+struct StateBlockOutputIterator {
+    StateBlockOutputIterator(DefaultBitVectorState &state) : state(state) { }
+
+    void operator++() { offset++; }
+    auto &operator*() { HCL_ASSERT(offset < state.getNumBlocks()); return state.data(DefaultConfig::VALUE)[offset]; }
+
+    DefaultBitVectorState &state;
+    size_t offset = 0;
+};
+
 void SigHandle::operator=(const BigInt &v)
 {
     auto width = m_output.node->getOutputConnectionType(m_output.port).width;
@@ -108,7 +119,7 @@ void SigHandle::operator=(const BigInt &v)
 
         boost::multiprecision::export_bits(
             v, 
-            state.data(DefaultConfig::VALUE), 
+            StateBlockOutputIterator{state}, 
             sim::DefaultConfig::NUM_BITS_PER_BLOCK,
             false
         );
