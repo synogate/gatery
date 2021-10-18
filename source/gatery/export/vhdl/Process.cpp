@@ -414,12 +414,10 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
             }
         } else {
             const auto &op = rewireNode->getOp().ranges;
-            if (op.size() > 1)
+            if (context == VHDLDataType::STD_LOGIC_VECTOR) // Cast, to be on the safe side
+                stream << "STD_LOGIC_VECTOR(";
+            else if (op.size() > 1 )
                 stream << "("; // Must not cast since concatenation
-            else
-                if (context == VHDLDataType::STD_LOGIC_VECTOR) // Cast, to be on the safe side
-                    stream << "STD_LOGIC_VECTOR(";
-
 
             for (auto i : utils::Range(op.size())) {
                 if (i > 0) {
