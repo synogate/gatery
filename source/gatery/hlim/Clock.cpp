@@ -38,7 +38,7 @@ Clock::Clock()
 Clock::~Clock()
 {
     while (!m_clockedNodes.empty())
-        m_clockedNodes.front().node->detachClock(m_clockedNodes.front().port);
+        m_clockedNodes.begin()->node->detachClock(m_clockedNodes.begin()->port);
 }
 /*
 Clock &Clock::createClockDivider(ClockRational frequencyDivider, ClockRational phaseShift = 0)
@@ -86,6 +86,16 @@ size_t Clock::getMinResetCycles() const
         res = std::max(res, ceil(cycles));
     }
     return res;
+}
+
+const std::vector<NodePort>& Clock::getClockedNodes() const
+{
+    if (m_clockedNodesCache.empty())
+    {
+        m_clockedNodesCache.reserve(m_clockedNodes.size());
+        std::copy(m_clockedNodes.begin(), m_clockedNodes.end(), std::back_inserter(m_clockedNodesCache));
+    }
+    return m_clockedNodesCache;
 }
 
 

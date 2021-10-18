@@ -75,7 +75,7 @@ class Clock
         /// @details For clocks with synchronous resets, this is at least one.
         size_t getMinResetCycles() const;
 
-        inline const std::vector<NodePort> &getClockedNodes() const { return m_clockedNodes; }
+        const std::vector<NodePort>& getClockedNodes() const;
         inline const std::vector<DerivedClock*> &getDerivedClocks() const { return m_derivedClocks; }
         inline void addDerivedClock(DerivedClock *clock) { m_derivedClocks.push_back(clock); }
 
@@ -110,7 +110,8 @@ class Clock
             * clock2signal
             */
         
-        std::vector<NodePort> m_clockedNodes;
+        std::set<NodePort> m_clockedNodes;
+        mutable std::vector<NodePort> m_clockedNodesCache;
         std::vector<DerivedClock*> m_derivedClocks;
         friend class BaseNode;        
 };
