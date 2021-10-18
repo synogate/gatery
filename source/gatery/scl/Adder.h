@@ -67,6 +67,9 @@ namespace gtry::scl
         BVec sum() const;
         operator BVec () const { return sum(); }
 
+        const BVec& intermediateSum() const { return m_sum; }
+        const BVec& intermediateCarry() const { return m_carry; }
+
     private:
         size_t m_count = 0;
         BVec m_sum;
