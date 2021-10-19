@@ -414,7 +414,20 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
             }
         } else {
             const auto &op = rewireNode->getOp().ranges;
-            if (context == VHDLDataType::STD_LOGIC_VECTOR) // Cast, to be on the safe side
+
+            bool mustCastToSLV = false;
+            for (auto range : op) {
+                if (range.source == hlim::Node_Rewire::OutputRange::INPUT) {
+                    auto driver = rewireNode->getDriver(range.inputIdx);
+                    if (hlim::outputIsBVec(driver)) {
+                        mustCastToSLV = true;
+                        break;
+                    }
+                }
+            }
+
+
+            if (context == VHDLDataType::STD_LOGIC_VECTOR && mustCastToSLV)
                 stream << "STD_LOGIC_VECTOR(";
             else if (op.size() > 1 )
                 stream << "("; // Must not cast since concatenation
