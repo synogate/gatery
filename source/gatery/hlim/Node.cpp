@@ -98,7 +98,8 @@ void BaseNode::attachClock(Clock *clk, size_t clockPort)
     detachClock(clockPort);
 
     m_clocks[clockPort] = clk;
-    clk->m_clockedNodes.push_back({.node = this, .port = clockPort});
+    clk->m_clockedNodes.emplace(NodePort{.node = this, .port = clockPort});
+    clk->m_clockedNodesCache.emplace_back(NodePort{ .node = this, .port = clockPort });
 }
 
 void BaseNode::detachClock(size_t clockPort)
@@ -106,12 +107,8 @@ void BaseNode::detachClock(size_t clockPort)
     if (m_clocks[clockPort] == nullptr) return;
 
     auto clock = m_clocks[clockPort];
-
-    auto it = std::find(clock->m_clockedNodes.begin(), clock->m_clockedNodes.end(), NodePort{.node = this, .port = clockPort});
-    HCL_ASSERT(it != clock->m_clockedNodes.end());
-
-    *it = clock->m_clockedNodes.back();
-    clock->m_clockedNodes.pop_back();
+    clock->m_clockedNodes.erase(NodePort{ .node = this, .port = clockPort });
+    clock->m_clockedNodesCache.clear();
 
     m_clocks[clockPort] = nullptr;
 }

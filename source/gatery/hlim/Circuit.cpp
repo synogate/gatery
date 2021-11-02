@@ -752,11 +752,18 @@ void Circuit::removeConstSelectMuxes(Subnet &subnet)
         if (auto *muxNode = dynamic_cast<Node_Multiplexer*>(n)) {
             auto sel = muxNode->getNonSignalDriver(0);
             if (auto *constNode = dynamic_cast<Node_Constant*>(sel.node)) {
-                HCL_ASSERT(constNode->getValue().size() < 64);
-                std::uint64_t selDefined = constNode->getValue().extractNonStraddling(sim::DefaultConfig::DEFINED, 0, constNode->getValue().size());
-                std::uint64_t selValue = constNode->getValue().extractNonStraddling(sim::DefaultConfig::VALUE, 0, constNode->getValue().size());
-                if ((selDefined ^ (~0ull >> (64 - constNode->getValue().size()))) == 0) {
-                    muxNode->bypassOutputToInput(0, 1+selValue);
+                if (constNode->getValue().size() == 0)
+                {
+                    muxNode->bypassOutputToInput(0, 1);
+                }
+                else
+                {
+                    HCL_ASSERT(constNode->getValue().size() < 64);
+                    std::uint64_t selDefined = constNode->getValue().extractNonStraddling(sim::DefaultConfig::DEFINED, 0, constNode->getValue().size());
+                    std::uint64_t selValue = constNode->getValue().extractNonStraddling(sim::DefaultConfig::VALUE, 0, constNode->getValue().size());
+                    if ((selDefined ^ (~0ull >> (64 - constNode->getValue().size()))) == 0) {
+                        muxNode->bypassOutputToInput(0, 1+selValue);
+                    }
                 }
             }
         }
@@ -787,7 +794,10 @@ void Circuit::propagateConstants(Subnet &subnet)
         */
 
         // The output constPort is constant, loop over all nodes driven by this and look for nodes that can be computed
-        for (auto successor : constPort.node->getDirectlyDriven(constPort.port)) {
+        auto& nodeList = constPort.node->getDirectlyDriven(constPort.port);
+        for(size_t i = 0; i < nodeList.size(); ++i)
+        {
+            NodePort successor = nodeList[i];
 
             if (!subnet.contains(successor.node)) continue;
 
@@ -823,8 +833,6 @@ void Circuit::propagateConstants(Subnet &subnet)
 
                 if (bypassRegister) {
                     regNode->bypassOutputToInput(0, (unsigned)Node_Register::Input::DATA);
-                    regNode->disconnectInput(Node_Register::Input::DATA);
-                    regNode->disconnectInput(Node_Register::Input::RESET_VALUE);
                     continue;
                 } 
             }

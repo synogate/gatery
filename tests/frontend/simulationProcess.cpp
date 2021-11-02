@@ -73,6 +73,102 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
 }
 
 
+
+BOOST_FIXTURE_TEST_CASE(SimProc_BigInt_small, BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000).setResetType(ClockConfig::ResetType::NONE));
+    {
+        ClockScope clkScp(clock);
+
+        BVec counter(40_b);
+        counter = reg(counter, 0);
+
+        auto incrementPin = pinIn(40_b);
+        auto outputPin = pinOut(counter);
+        counter += incrementPin;
+
+        addSimulationProcess([=]()->SimProcess{
+            co_await WaitFor(Seconds(1, 2)/clock.getAbsoluteFrequency());
+            for (auto i : Range(10)) {
+                BigInt v = i;
+                v |= BigInt(i*13) << 20;
+                simu(incrementPin) = v;
+                co_await WaitFor(Seconds(5)/clock.getAbsoluteFrequency());
+            }
+        });
+        addSimulationProcess([=]()->SimProcess{
+
+            co_await WaitClk(clock);
+
+            BigInt expectedSum = 0;
+
+            while (true) {
+                expectedSum += (BigInt) simu(incrementPin);
+
+                BOOST_TEST(expectedSum == (BigInt) simu(outputPin));
+                BOOST_TEST(simu(outputPin).allDefined());
+
+                co_await WaitFor(Seconds(1)/clock.getAbsoluteFrequency());
+            }
+        });
+    }
+
+
+    design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+    runTicks(clock.getClk(), 5*10 + 3); // do some extra rounds without generator changing the input
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(SimProc_BigInt, BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000).setResetType(ClockConfig::ResetType::NONE));
+    {
+        ClockScope clkScp(clock);
+
+        BVec counter(128_b);
+        counter = reg(counter, 0);
+
+        auto incrementPin = pinIn(128_b);
+        auto outputPin = pinOut(counter);
+        counter ^= incrementPin;
+
+        addSimulationProcess([=]()->SimProcess{
+            co_await WaitFor(Seconds(1, 2)/clock.getAbsoluteFrequency());
+            for (auto i : Range(10)) {
+                BigInt v = i;
+                v |= BigInt(i*13) << 90;
+                simu(incrementPin) = v;
+                co_await WaitFor(Seconds(5)/clock.getAbsoluteFrequency());
+            }
+        });
+        addSimulationProcess([=]()->SimProcess{
+
+            co_await WaitClk(clock);
+
+            BigInt expectedSum = 0;
+
+            while (true) {
+                expectedSum ^= (BigInt) simu(incrementPin);
+
+                BOOST_TEST(expectedSum == (BigInt) simu(outputPin));
+                BOOST_TEST(simu(outputPin).allDefined());
+
+                co_await WaitFor(Seconds(1)/clock.getAbsoluteFrequency());
+            }
+        });
+    }
+
+
+    design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+    runTicks(clock.getClk(), 5*10 + 3); // do some extra rounds without generator changing the input
+}
+
+
 BOOST_FIXTURE_TEST_CASE(SimProc_ExceptionForwarding, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
