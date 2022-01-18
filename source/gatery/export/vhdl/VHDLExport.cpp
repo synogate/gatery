@@ -135,8 +135,10 @@ CodeFormatting *VHDLExport::getFormatting()
 
 void VHDLExport::operator()(hlim::Circuit &circuit)
 {
-    std::filesystem::create_directories(getDestination());
-    std::filesystem::create_directories(m_destinationTestbench);
+    if (!getDestination().empty())
+        std::filesystem::create_directories(getDestination());
+    if (!m_destinationTestbench.empty())
+        std::filesystem::create_directories(m_destinationTestbench);
 
     m_synthesisTool->prepareCircuit(circuit);
 
@@ -211,8 +213,8 @@ void VHDLExport::doWriteInstantiationTemplateVHDL(std::filesystem::path destinat
     });
 
 
-
-    std::filesystem::create_directories(destination.parent_path());
+    if (!destination.parent_path().empty())
+        std::filesystem::create_directories(destination.parent_path());
 
     std::ofstream file{ destination.c_str(), std::ofstream::binary };
     file.exceptions(std::fstream::failbit | std::fstream::badbit);
