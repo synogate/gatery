@@ -90,7 +90,8 @@ namespace gtry::hlim
 			}
 
 		newParent->m_children.push_back(std::move(m_parent->m_children[parentIdx]));
-		m_parent->m_children[parentIdx] = std::move(m_parent->m_children.back());
+		if (parentIdx+1 != m_parent->m_children.size())
+			m_parent->m_children[parentIdx] = std::move(m_parent->m_children.back());
 		m_parent->m_children.pop_back();
 
 		m_parent = newParent;

@@ -76,7 +76,8 @@ void attributeFusion(Circuit &circuit)
     // Sweep through graph and remove all now irrelevant attrib nodes
     for (size_t i = 0; i < circuit.getNodes().size(); i++) {
         if (nodesToDelete.contains(circuit.getNodes()[i].get())) {
-            circuit.getNodes()[i] = std::move(circuit.getNodes().back());
+            if (i+1 != circuit.getNodes().size())
+                circuit.getNodes()[i] = std::move(circuit.getNodes().back());
             circuit.getNodes().pop_back();
             i--;
         }

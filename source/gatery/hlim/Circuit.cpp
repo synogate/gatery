@@ -293,7 +293,8 @@ void Circuit::cullUnnamedSignalNodes()
                 signal->bypassOutputToInput(0, 0);
             signal->disconnectInput();
 
-            m_nodes[i] = std::move(m_nodes.back());
+            if (i+1 != m_nodes.size())
+                m_nodes[i] = std::move(m_nodes.back());
             m_nodes.pop_back();
             i--;
         }
@@ -329,7 +330,8 @@ void Circuit::cullSequentiallyDuplicatedSignalNodes()
                 signal->bypassOutputToInput(0, 0);
                 signal->disconnectInput();
 
-                m_nodes[i] = std::move(m_nodes.back());
+                if (i+1 != m_nodes.size())
+                    m_nodes[i] = std::move(m_nodes.back());
                 m_nodes.pop_back();
                 i--;
             }
@@ -352,7 +354,8 @@ void Circuit::cullOrphanedSignalNodes()
         if (signal->hasRef()) continue;
 
         if (signal->isOrphaned()) {
-            m_nodes[i] = std::move(m_nodes.back());
+            if (i+1 != m_nodes.size())
+                m_nodes[i] = std::move(m_nodes.back());
             m_nodes.pop_back();
             i--;
         }
@@ -374,7 +377,8 @@ void Circuit::cullUnusedNodes(Subnet &subnet)
         for (size_t i = 0; i < m_nodes.size(); i++) {
             if (!usedNodes.getNodes().contains(m_nodes[i].get()) && subnet.contains(m_nodes[i].get())) {
                 subnet.remove(m_nodes[i].get());
-                m_nodes[i] = std::move(m_nodes.back());
+                if (i+1 != m_nodes.size())
+                    m_nodes[i] = std::move(m_nodes.back());
                 m_nodes.pop_back();
                 i--;
                 done = false;
@@ -678,7 +682,8 @@ void Circuit::removeNoOps(Subnet &subnet)
 
         if (removeNode && !m_nodes[i]->hasRef()) {
             subnet.remove(m_nodes[i].get());
-            m_nodes[i] = std::move(m_nodes.back());
+            if (i+1 != m_nodes.size())
+                m_nodes[i] = std::move(m_nodes.back());
             m_nodes.pop_back();
             i--;
         }
@@ -919,7 +924,8 @@ void Circuit::removeFalseLoops()
 //
 //        if (signalNode && !signalNode->getNonSignalDriver(0).node)
 //        {
-//            m_nodes[i] = std::move(m_nodes.back());
+//            if (i+1 != m_nodes.size())
+//              m_nodes[i] = std::move(m_nodes.back());
 //            m_nodes.pop_back();
 //            i--;
 //        }
