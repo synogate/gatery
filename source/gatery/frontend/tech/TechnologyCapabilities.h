@@ -101,8 +101,8 @@ class MemoryCapabilities : public Capabilities {
         };
 
         struct Request {
-            size_t size;
-            size_t maxDepth;
+            uint64_t size;
+            uint64_t maxDepth;
             utils::BitFlags<SizeCategory> sizeCategory = utils::BitFlags<SizeCategory>::ALL;
         };
 
