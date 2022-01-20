@@ -31,7 +31,7 @@ namespace gtry::sim {
 
 struct DefaultConfig
 {
-    using BaseType = std::size_t;
+    using BaseType = std::uint64_t;
     enum {
         NUM_BITS_PER_BLOCK = sizeof(BaseType)*8
     };
@@ -127,7 +127,7 @@ protected:
 
 template<typename Config>
 bool allDefinedNonStraddling(const BitVectorState<Config> &vec, size_t start, size_t size) {
-    return !utils::andNot(vec.extractNonStraddling(Config::DEFINED, start, size), utils::bitMaskRange(0, size));
+    return !utils::andNot<typename Config::BaseType>(vec.extractNonStraddling(Config::DEFINED, start, size), utils::bitMaskRange<typename Config::BaseType>(0, size));
 }
 
 template<typename Config>
