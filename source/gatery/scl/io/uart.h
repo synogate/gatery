@@ -37,7 +37,7 @@ struct UART
         Bit ready;
     };
 
-    Stream recieve(Bit rx);
+    Stream receive(Bit rx);
 
     Bit send(Stream &stream);
 };

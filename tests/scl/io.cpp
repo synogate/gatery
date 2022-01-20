@@ -45,7 +45,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
         uart.baudRate = baudRate;
 
 
-        auto stream = uart.recieve(rx);
+        auto stream = uart.receive(rx);
 
         auto outData = pinOut(stream.data).setName("outData");
         auto outValid = pinOut(stream.valid).setName("outValid");
