@@ -56,7 +56,7 @@ Bit RAM256X1D::setupSDP(const BVec &wrAddr, const Bit &wrData, const Bit &wrEn, 
 	HCL_ASSERT(rdAddr.size() == 8);
 	NodeIO::connectInput(IN_DPRA, rdAddr.getReadPort());
 
-	return SignalReadPort(hlim::NodePort(this, OUT_DPO));
+	return SignalReadPort(hlim::NodePort{this, static_cast<size_t>(OUT_DPO)});
 }
 
 

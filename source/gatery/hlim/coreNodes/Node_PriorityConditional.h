@@ -43,10 +43,10 @@ class Node_PriorityConditional : public Node<Node_PriorityConditional>
         
         inline size_t getNumChoices() const { return (getNumInputPorts()-1)/2; }
         
-        virtual std::string getTypeName() const;
-        virtual void assertValidity() const;
-        virtual std::string getInputName(size_t idx) const;
-        virtual std::string getOutputName(size_t idx) const;
+        virtual std::string getTypeName() const override;
+        virtual void assertValidity() const override;
+        virtual std::string getInputName(size_t idx) const override;
+        virtual std::string getOutputName(size_t idx) const override;
 
         virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 };

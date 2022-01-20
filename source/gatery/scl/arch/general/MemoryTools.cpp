@@ -162,7 +162,7 @@ void splitMemoryAlongDepthMux(hlim::NodeGroup *group, size_t log2SplitDepth, boo
 	GroupScope scope(group);
 
 	// Split memory
-	std::array<size_t, 1> splitPos = { 1ull << log2SplitDepth };
+	std::array<size_t, 1> splitPos = { (size_t)1ull << log2SplitDepth };
 	auto subMems = createDepthSplitMemories(group, splitPos);
 
 	// These need to be drawn/removed from the sub memories

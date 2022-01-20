@@ -30,6 +30,7 @@ void Attributes::fuseWith(const Attributes &rhs)
 
 void Attributes::loadConfig(const utils::ConfigTree& config)
 {
+#ifdef USE_YAMLCPP
 	for (auto it = config.mapBegin(); it != config.mapEnd(); ++it)
 	{
 		auto&& configValue = *it;
@@ -48,6 +49,9 @@ void Attributes::loadConfig(const utils::ConfigTree& config)
 		VendorSpecificAttributes& attr = userDefinedVendorAttributes["all"];
 		attr[it.key()] = value;
 	}
+#else
+	#warning "Loading attributes from ConfigTree is disabled for non yaml-cpp builds!"
+#endif
 }
 	
 void SignalAttributes::fuseWith(const SignalAttributes &rhs)

@@ -242,7 +242,7 @@ namespace gtry::scl
 		if (!addrWidth)
 			addrWidth = avmm.address.getWidth();
 
-		Memory<BVec> mem{ avmm.address.getWidth().count(), dataWidth };
+		Memory<BVec> mem{ (size_t) avmm.address.getWidth().count(), dataWidth };
 
 		if (avmm.readData)
 		{

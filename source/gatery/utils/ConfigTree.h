@@ -53,6 +53,8 @@ namespace gtry::utils
 		template<typename T> T as() const { throw std::runtime_error{ "get unknown config tree" }; }
 
 		void loadFromFile(const std::filesystem::path& filename) {}
+
+		void addRecorder(PropertyTree recorder) { }
 	};
 }
 

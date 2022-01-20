@@ -50,7 +50,7 @@ namespace gtry::hlim {
 
             virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 
-            virtual std::string attemptInferOutputName(size_t outputPort) const;
+            virtual std::string attemptInferOutputName(size_t outputPort) const override;
 
             void setDifferential(std::string_view posPrefix = "_p", std::string_view negPrefix = "_n");
             void setNormal() { m_differential = false; }

@@ -20,7 +20,7 @@
 #include "../hlim/NodePort.h"
 #include "BitVectorState.h"
 
-#include <coroutine>
+#include "../utils/CoroutineWrapper.h"
 
 namespace gtry::sim {
 

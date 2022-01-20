@@ -33,7 +33,8 @@
 #include <map>
 #include <set>
 #include <vector>
-#include <coroutine>
+
+#include "../utils/CoroutineWrapper.h"
 
 namespace gtry::hlim {
     class Node_Pin;
