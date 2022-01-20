@@ -122,9 +122,9 @@ namespace gtry
 	{
 	public:
 		Memory() = default;
-		Memory(std::size_t numWords, Data def = Data{}) { setup(numWords, std::move(def)); }
+		Memory(std::uint64_t numWords, Data def = Data{}) { setup(numWords, std::move(def)); }
 
-		void setup(std::size_t numWords, Data def = Data{}) {
+		void setup(std::uint64_t numWords, Data def = Data{}) {
 
 			HCL_DESIGNCHECK(m_memoryNode == nullptr);
 			m_defaultValue = std::move(def);
@@ -212,7 +212,7 @@ namespace gtry
 	protected:
 		hlim::NodePtr<hlim::Node_Memory> m_memoryNode;
 		Data m_defaultValue;
-		size_t m_numWords = 0;
+		uint64_t m_numWords = 0;
 		size_t m_wordWidth = 0;
 
 		Memory(hlim::Node_Memory* memoryNode, Data def = Data{}) : m_memoryNode(memoryNode) { 
