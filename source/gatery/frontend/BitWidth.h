@@ -17,6 +17,7 @@
 */
 #pragma once
 #include <gatery/utils.h>
+#include <compare>
 
 namespace gtry 
 {
@@ -33,6 +34,9 @@ namespace gtry
 		explicit operator bool() const { return value != 0; }
 
 		uint64_t value = 0;
+
+		BitWidth() = default;
+		constexpr BitWidth(uint64_t v) : value(v) { }
 
 		constexpr uint64_t count() const { return 1ull << value; }
 		constexpr uint64_t last() const { return count() - 1; }

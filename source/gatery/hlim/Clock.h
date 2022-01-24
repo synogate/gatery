@@ -124,7 +124,7 @@ class RootClock : public Clock
         virtual ClockRational getAbsoluteFrequency() const override { return m_frequency; }
         virtual ClockRational getFrequencyRelativeTo(Clock &other) const override;
 
-        void setFrequency(ClockRational frequency) { m_frequency = m_frequency; }
+        void setFrequency(ClockRational frequency) { m_frequency = frequency; }
 
         virtual std::unique_ptr<Clock> cloneUnconnected(Clock *newParent) override;
     protected:

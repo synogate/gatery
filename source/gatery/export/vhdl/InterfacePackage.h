@@ -30,20 +30,6 @@ namespace gtry::vhdl {
 
 class InterfacePackageContent {
     public:
-		template<typename T>
-		void addBVecConstant(const T &c, std::string_view comment);
-
-		template<typename T>
-		void addBitConstant(const T &c, std::string_view comment);
-
-		template<typename T>
-		void addBVecConstant(const T &c);
-
-		template<typename T>
-		void addBitConstant(const T &c);
-
-		void addNatural(std::string name, uint64_t value, std::string_view comment = "") { m_naturalConstants.emplace_back(std::move(name), value, std::string(comment)); }
-
 		struct NaturalConstant {
 			std::string name;
 			uint64_t value;
@@ -60,6 +46,28 @@ class InterfacePackageContent {
 			std::string value;
 			std::string comment;
 		};
+		template<typename T>
+
+		void addBVecConstant(const T &c, std::string_view comment);
+
+		template<typename T>
+		void addBitConstant(const T &c, std::string_view comment);
+
+		template<typename T>
+		void addBVecConstant(const T &c);
+
+		template<typename T>
+		void addBitConstant(const T &c);
+
+		void addNatural(std::string name, uint64_t value, std::string_view comment = "") { 
+			//m_naturalConstants.emplace_back(std::move(name), value, std::string(comment)); 
+			NaturalConstant nc {
+				.name = std::move(name),
+				.value = value,
+				.comment = std::string(comment),
+			};
+			m_naturalConstants.push_back(std::move(nc));
+		}
 
 		inline void setName(std::string name) { m_name = std::move(name); }
 		inline const std::string &getName() const { return m_name; }

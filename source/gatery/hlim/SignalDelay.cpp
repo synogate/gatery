@@ -59,7 +59,7 @@ void SignalDelay::allocate(const Subnet &subnet)
 
 	m_delays.resize(totalSize);
 	for (auto &alloc : allocations)
-		m_outputToBitDelays[alloc.first] = std::span(m_delays.begin() + alloc.second.first, alloc.second.second);
+		m_outputToBitDelays[alloc.first] = std::span<float>(m_delays.data() + alloc.second.first, alloc.second.second);
 }
 
 void SignalDelay::zero()
@@ -78,7 +78,7 @@ std::span<float> SignalDelay::getDelay(const NodePort &np)
 		width = getOutputWidth(np);
 
 	m_zeros.resize(std::max(m_zeros.size(), width));
-	return std::span<float>(m_zeros.begin(), width);
+	return std::span<float>(m_zeros.data(), width);
 }
 
 std::span<const float> SignalDelay::getDelay(const NodePort &np) const
@@ -92,7 +92,7 @@ std::span<const float> SignalDelay::getDelay(const NodePort &np) const
 		width = getOutputWidth(np);
 
 	m_zeros.resize(std::max(m_zeros.size(), width));
-	return std::span<const float>(m_zeros.begin(), width);
+	return std::span<const float>(m_zeros.data(), width);
 }
 
 }

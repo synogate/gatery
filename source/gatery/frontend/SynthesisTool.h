@@ -54,7 +54,7 @@ protected:
         std::vector<std::string> m_vendors;
 
         void addUserDefinedAttributes(const hlim::Attributes &attribs, hlim::ResolvedAttributes &resolvedAttribs);
-        void writeUserDefinedPathAttributes(std::fstream &stream, const hlim::PathAttributes &attribs, const std::string &start, const std::string &end);
+        void writeUserDefinedPathAttributes(std::ostream &stream, const hlim::PathAttributes &attribs, const std::string &start, const std::string &end);
 
         void forEachPathAttribute(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::function<void(hlim::Node_PathAttributes*, std::string, std::string)> functor);
 

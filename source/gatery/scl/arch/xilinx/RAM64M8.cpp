@@ -70,7 +70,7 @@ BVec RAM64M8::setup64x7_SDP(const BVec &wrAddr, const BVec &wrData, const Bit &w
 
 	std::array<Bit, 7> readBits;
 	for (auto i : utils::Range(7))
-		readBits[i] = SignalReadPort(hlim::NodePort(this, OUT_DO_A+i));
+		readBits[i] = SignalReadPort(hlim::NodePort{this, static_cast<size_t>(OUT_DO_A+i)});
 
 	return pack(readBits);
 }

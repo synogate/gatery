@@ -253,7 +253,7 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllForSimulation(CircuitType
         handledNodes.insert(n);
 
         // Ignore the export-only part
-        if (dynamic_cast<ConstAdaptor<makeConst, hlim::Node_ExportOverride>::type*>(n)) {
+        if (dynamic_cast<typename ConstAdaptor<makeConst, hlim::Node_ExportOverride>::type*>(n)) {
             if (n->getDriver(0).node != nullptr)
                 openList.push_back(n->getDriver(0).node);
         } else {
@@ -297,7 +297,7 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllForExport(CircuitType &ci
         handledNodes.insert(n);
 
         // Ignore the simulation-only part
-        if (dynamic_cast<ConstAdaptor<makeConst, hlim::Node_ExportOverride>::type*>(n)) {
+        if (dynamic_cast<typename ConstAdaptor<makeConst, hlim::Node_ExportOverride>::type*>(n)) {
             if (n->getDriver(1).node != nullptr)
                 openList.push_back(n->getDriver(1).node);
         } else {

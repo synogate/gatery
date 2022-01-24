@@ -80,7 +80,7 @@ Node_Pin *findOutputPin(NodePort output)
 {
     // Explore the local graph, traveling along all signal nodes to find any
     // output pin that is driven by whatever drives (directly or indirectly) output. 
-    // All such output pins (if there are multiple) recieve the same signal and
+    // All such output pins (if there are multiple) receive the same signal and
     // are thus equivalent, so we can just pick any.
 
     HCL_DESIGNCHECK(output.node != nullptr);

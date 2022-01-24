@@ -144,8 +144,8 @@ ElfLoader::MegaSegment ElfLoader::segments(size_t allOfFlags, size_t anyOfFlags,
 		bool exclude = (s.flags & excludeFlags) != 0;
 		if (!exclude && (allOf || anyOf))
 		{
-			sectionBegin = std::min(sectionBegin, s.offset);
-			sectionEnd = std::max(sectionEnd, s.offset + s.size.bytes());
+			sectionBegin = std::min<size_t>(sectionBegin, s.offset);
+			sectionEnd = std::max<size_t>(sectionEnd, s.offset + s.size.bytes());
 			ret.subSections.push_back(&s);
 		}
 	}

@@ -218,7 +218,7 @@ void ALTDPRAM::connectInput(Inputs input, const BVec &bvec)
 
 BVec ALTDPRAM::getOutputBVec(Outputs output)
 {
-	return SignalReadPort(hlim::NodePort(this, output));
+	return SignalReadPort(hlim::NodePort{this, (size_t) output});
 }
 
 

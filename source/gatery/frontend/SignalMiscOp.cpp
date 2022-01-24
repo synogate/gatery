@@ -185,7 +185,7 @@ namespace gtry
 
 	BVec demux(const BVec& selector, const Bit& input, const Bit& inactiveOutput)
 	{
-		std::vector<Bit> ret{ selector.getWidth().count(), inactiveOutput };
+		std::vector<Bit> ret{ (size_t)selector.getWidth().count(), inactiveOutput };
 		for (size_t i = 0; i < ret.size(); ++i)
 			IF(selector == i)
 				ret[i] = input;

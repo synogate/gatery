@@ -128,7 +128,7 @@ void TestbenchRecorder::advanceTimeTo(hlim::ClockRational simulationTime)
     auto deltaT = simulationTime - m_vhdlSimulationTime;
 
     const std::array<std::string, 6> unit2str = {"sec", "ms", "us", "ns", "ps", "fs"};
-    const std::array<size_t, 6> unit2denom = {1ull, 1'000ull, 1'000'000ull, 1'000'000'000ull, 1'000'000'000'000ull, 1'000'000'000'000'000ull};
+    const std::array<uint64_t, 6> unit2denom = {1ull, 1'000ull, 1'000'000ull, 1'000'000'000ull, 1'000'000'000'000ull, 1'000'000'000'000'000ull};
 
     size_t unit = 0;
     while (deltaT.denominator() > 1 && unit+1 < unit2str.size()) { 

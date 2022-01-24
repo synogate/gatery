@@ -426,7 +426,6 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
                 }
             }
 
-
             if (context == VHDLDataType::STD_LOGIC_VECTOR && mustCastToSLV)
                 stream << "STD_LOGIC_VECTOR(";
             else if (op.size() > 1 )
@@ -760,7 +759,8 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
             for (auto s : statements[bestStatement].outputs)
                 signalsReady.insert(s);
 
-            statements[bestStatement] = std::move(statements.back());
+            if (bestStatement+1 != statements.size())
+                statements[bestStatement] = std::move(statements.back());
             statements.pop_back();
         }
     }

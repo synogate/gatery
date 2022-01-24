@@ -27,7 +27,9 @@
 #include <boost/stacktrace.hpp>
 
 #include <bit>
-#include <coroutine>
+
+#include "utils/CoroutineWrapper.h"
+
 #include <csignal>
 #include <cstdint>
 #include <deque>

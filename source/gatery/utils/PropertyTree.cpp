@@ -23,6 +23,9 @@
 
 namespace gtry::utils
 {
+
+#ifdef USE_YAMLCPP
+
 	void YamlPropertyTree::dump(std::ostream& out) const
 	{
 		out << m_node;
@@ -77,4 +80,7 @@ namespace gtry::utils
 		m_node = val.m_node;
 		return *this;
 	}
+	
+#endif
+
 }

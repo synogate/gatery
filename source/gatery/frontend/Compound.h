@@ -99,7 +99,7 @@ namespace gtry
 		struct is_signal : std::false_type {
 			using sig_type = T;
 		};
-
+#ifndef __clang__
 		template<typename T>
 		struct is_signal<T, decltype((void)BVec{ std::declval<T>() }, 0)> : std::true_type {
 			using sig_type = BVec;
@@ -109,7 +109,17 @@ namespace gtry
 		struct is_signal<T, decltype((void)Bit{ std::declval<T>() }, 0)> : std::true_type {
 			using sig_type = Bit;
 		};
+#else
+		template<typename T>
+		struct is_signal<T, decltype(BVec{ std::declval<T>() })> : std::true_type {
+			using sig_type = BVec;
+		};
 
+		template<typename T>
+		struct is_signal<T, decltype(Bit{ std::declval<T>() })> : std::true_type {
+			using sig_type = Bit;
+		};
+#endif
 		template<typename T, typename = std::enable_if_t<!is_signal<T>::value>>
 		const T& signalOTron(const T& ret) { return ret; }
 		inline const BVec& signalOTron(const BVec& vec) { return vec; }

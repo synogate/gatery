@@ -199,7 +199,11 @@ NodeGroupSurgeryHelper::NodeGroupSurgeryHelper(hlim::NodeGroup *nodeGroup)
 
 bool NodeGroupSurgeryHelper::containsSignal(std::string_view name)
 {
+#ifdef __clang__
+	return m_namedSignalNodes.contains(std::string(name));
+#else
 	return m_namedSignalNodes.contains(name);
+#endif
 }
 
 BVec NodeGroupSurgeryHelper::hookBVecBefore(std::string_view name)
