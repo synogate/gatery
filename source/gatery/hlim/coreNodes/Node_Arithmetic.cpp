@@ -24,6 +24,8 @@
 
 #include "../SignalDelay.h"
 
+#include <boost/multiprecision/cpp_int.hpp>
+
 namespace gtry::hlim {
 
 Node_Arithmetic::Node_Arithmetic(Op op) : Node(2, 1), m_op(op)
@@ -65,7 +67,6 @@ void Node_Arithmetic::disconnectInput(size_t operand)
 
 void Node_Arithmetic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
-    HCL_ASSERT_HINT(getOutputConnectionType(0).width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
     auto leftDriver = getDriver(0);
     auto rightDriver = getDriver(1);
     if (inputOffsets[0] == ~0ull || inputOffsets[1] == ~0ull ||
@@ -76,8 +77,6 @@ void Node_Arithmetic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, si
 
     const auto &leftType = hlim::getOutputConnectionType(leftDriver);
     const auto &rightType = hlim::getOutputConnectionType(rightDriver);
-    HCL_ASSERT_HINT(leftType.width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
-    HCL_ASSERT_HINT(rightType.width <= 64, "Arithmetic with more than 64 bits not yet implemented!");
 
     if (!allDefinedNonStraddling(state, inputOffsets[0], leftType.width)) {
         state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
@@ -89,41 +88,92 @@ void Node_Arithmetic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, si
         return;
     }
 
-    std::uint64_t left = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0], leftType.width);
-    std::uint64_t right = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[1], rightType.width);
-    std::uint64_t result;
+    if (getOutputConnectionType(0).width <= 64 && leftType.width <= 64 && rightType.width <= 64) {
+        std::uint64_t left = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0], leftType.width);
+        std::uint64_t right = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[1], rightType.width);
+        std::uint64_t result;
 
-    switch (getOutputConnectionType(0).interpretation) {
-        case ConnectionType::BOOL:
-            HCL_ASSERT_HINT(false, "Can't do arithmetic on booleans!");
-        break;
-        case ConnectionType::BITVEC:
-            switch (m_op) {
-                case ADD:
-                    result = left + right;
-                break;
-                case SUB:
-                    result = left - right;
-                break;
-                case MUL:
-                    result = left * right;
-                break;
-                case DIV:
-                    result = left / right;
-                break;
-                case REM:
-                    result = left % right;
-                break;
-                default:
-                    HCL_ASSERT_HINT(false, "Unhandled case!");
-            }
-        break;
-        default:
-            HCL_ASSERT_HINT(false, "Unhandled case!");
+        switch (getOutputConnectionType(0).interpretation) {
+            case ConnectionType::BOOL:
+                HCL_ASSERT_HINT(false, "Can't do arithmetic on booleans!");
+            break;
+            case ConnectionType::BITVEC:
+                switch (m_op) {
+                    case ADD:
+                        result = left + right;
+                    break;
+                    case SUB:
+                        result = left - right;
+                    break;
+                    case MUL:
+                        result = left * right;
+                    break;
+                    case DIV:
+                        result = left / right;
+                    break;
+                    case REM:
+                        result = left % right;
+                    break;
+                    default:
+                        HCL_ASSERT_HINT(false, "Unhandled case!");
+                }
+            break;
+            default:
+                HCL_ASSERT_HINT(false, "Unhandled case!");
+        }
+
+        state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0], getOutputConnectionType(0).width, result);
+        state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, ~0ull);
+    } else {
+    /*
+        typedef boost::multiprecision::number<boost::multiprecision::cpp_int_backend<64, 0, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked, void>> BigInt;
+
+        BigInt left, right, result;
+
+
+        boost::multiprecision::import_bits(
+            left, 
+            state.data(DefaultConfig::VALUE), 
+            state.data(DefaultConfig::VALUE) + state.getNumBlocks(),
+            DefaultConfig::NUM_BITS_PER_BLOCK,
+            false
+        );
+        std::uint64_t left = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0], leftType.width);
+        std::uint64_t right = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[1], rightType.width);
+
+
+
+        switch (getOutputConnectionType(0).interpretation) {
+            case ConnectionType::BOOL:
+                HCL_ASSERT_HINT(false, "Can't do arithmetic on booleans!");
+            break;
+            case ConnectionType::BITVEC:
+                switch (m_op) {
+                    case ADD:
+                        result = left + right;
+                    break;
+                    case SUB:
+                        result = left - right;
+                    break;
+                    case MUL:
+                        result = left * right;
+                    break;
+                    case DIV:
+                        result = left / right;
+                    break;
+                    case REM:
+                        result = left % right;
+                    break;
+                    default:
+                        HCL_ASSERT_HINT(false, "Unhandled case!");
+                }
+            break;
+            default:
+                HCL_ASSERT_HINT(false, "Unhandled case!");
+        }
+
+*/
     }
-
-    state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0], getOutputConnectionType(0).width, result);
-    state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, ~0ull);
 }
 
 
