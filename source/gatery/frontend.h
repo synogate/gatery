@@ -38,6 +38,7 @@
 #include "frontend/Memory.h"
 #include "frontend/Pack.h"
 #include "frontend/Pin.h"
+#include "frontend/Pipeline.h"
 #include "frontend/PriorityConditional.h"
 #include "frontend/Reg.h"
 #include "frontend/Registers.h"
