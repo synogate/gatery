@@ -34,6 +34,7 @@
 #include "postprocessing/DefaultValueResolution.h"
 #include "postprocessing/AttributeFusion.h"
 #include "postprocessing/TechnologyMapping.h"
+#include "postprocessing/Retiming.h"
 
 
 #include "../simulation/BitVectorState.h"
@@ -1038,6 +1039,8 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
     defaultValueResolution(circuit, subnet);
     circuit.cullUnusedNodes(subnet); // Dirty way of getting rid of default nodes
     
+    resolveRetimingHints(circuit);
+
     circuit.propagateConstants(subnet);
     circuit.cullOrphanedSignalNodes();
     circuit.cullUnnamedSignalNodes();
