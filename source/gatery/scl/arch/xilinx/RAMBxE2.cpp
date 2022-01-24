@@ -340,7 +340,7 @@ BVec RAMBxE2::getOutputBVec(Outputs output)
 		break;
 	}
 
-	return SignalReadPort(hlim::NodePort{this, output});
+	return SignalReadPort(hlim::NodePort{this, (size_t)output});
 }
 
 Bit RAMBxE2::getOutputBit(Outputs output)
@@ -356,7 +356,7 @@ Bit RAMBxE2::getOutputBit(Outputs output)
 			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit from bvec output of RAMBxE2!");
 	}
 
-	return SignalReadPort(hlim::NodePort{this, output});
+	return SignalReadPort(hlim::NodePort{this, (size_t)output});
 }
 
 
