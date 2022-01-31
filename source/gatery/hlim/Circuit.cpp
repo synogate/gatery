@@ -1039,7 +1039,9 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
     defaultValueResolution(circuit, subnet);
     circuit.cullUnusedNodes(subnet); // Dirty way of getting rid of default nodes
     
-    resolveRetimingHints(circuit);
+    subnet = Subnet::all(circuit);
+    resolveRetimingHints(circuit, subnet);
+    bypassRegSpawners(circuit);
 
     circuit.propagateConstants(subnet);
     circuit.cullOrphanedSignalNodes();

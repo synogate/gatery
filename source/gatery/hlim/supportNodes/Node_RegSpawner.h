@@ -22,6 +22,8 @@
 
 namespace gtry::hlim {
 
+class Node_Register;
+
 /**
  * @brief Spawns registers for retiming
  * @details Defines a source of infinite registers that the forward retiming can pull from.
@@ -38,7 +40,7 @@ class Node_RegSpawner : public Node<Node_RegSpawner>
         void setClock(Clock* clk);
 
         void bypass();
-		void spawnForward();
+		Node_Register *spawnForward(size_t reg2return = 0);
 
         virtual bool hasSideEffects() const override { return false; }
 		virtual bool isCombinatorial() const { return true; }

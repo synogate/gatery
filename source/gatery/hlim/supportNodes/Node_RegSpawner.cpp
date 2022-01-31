@@ -44,9 +44,11 @@ void Node_RegSpawner::bypass()
 		bypassOutputToInput(i, i*2);
 }
 
-void Node_RegSpawner::spawnForward()
+Node_Register* Node_RegSpawner::spawnForward(size_t reg2return)
 {
 	auto &circuit = m_nodeGroup->getCircuit();
+
+	Node_Register *returnReg = nullptr;
 
 	// For each signal passing through
 	for (auto i : utils::Range(getNumOutputPorts())) {
@@ -61,16 +63,22 @@ void Node_RegSpawner::spawnForward()
 		// Set reset value
 		reg->connectInput(Node_Register::RESET_VALUE, getDriver(i*2+1));
 
-		// Fetch everything driven by the signal passing through and reassign to register
+		// Fetch everything driven by the signal passing through
 		auto driven = getDirectlyDriven(i);
-		for (auto &np : driven)
-			np.node->rewireInput(np.port, {.node = reg, .port = 0ull});
 
 		// Drive register with signal passing through (thus putting the register behind the spawner node).
 		reg->connectInput(Node_Register::DATA, {.node = this, .port = i});
+
+		// Reassign everything driven by reg spawner to register
+		for (auto &np : driven)
+			np.node->rewireInput(np.port, {.node = reg, .port = 0ull});
+
+		if (i == reg2return)
+			returnReg = reg;
 	}
 
 	m_numStagesSpawned++;
+	return returnReg;
 }
 
 size_t Node_RegSpawner::addInput(const NodePort &value, const NodePort &reset)

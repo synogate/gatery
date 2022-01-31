@@ -21,6 +21,7 @@ namespace gtry::hlim {
 
 class Circuit;
 
-void resolveRetimingHints(Circuit &circuit);
+void resolveRetimingHints(Circuit &circuit, Subnet &subnet);
+void bypassRegSpawners(Circuit &circuit);
 
 }
