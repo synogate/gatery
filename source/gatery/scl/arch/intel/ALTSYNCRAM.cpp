@@ -278,7 +278,7 @@ void ALTSYNCRAM::connectInput(Inputs input, const BVec &bvec)
 
 BVec ALTSYNCRAM::getOutputBVec(Outputs output)
 {
-	return SignalReadPort(hlim::NodePort{this, output});
+	return SignalReadPort(hlim::NodePort{this, (size_t)output});
 }
 
 
