@@ -78,11 +78,16 @@ namespace gtry::scl
 		void round(const BVec& round)
 		{
 			// update state
-			const BVec s0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
-			const BVec s1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
-			const BVec ch = (e & f) ^ (~e & g);
-			const BVec maj = (a & b) ^ (a & c) ^ (b & c);
-			const BVec k = mux(round, kTable);
+			BVec s0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+			BVec s1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+			BVec ch = (e & f) ^ (~e & g);
+			BVec maj = (a & b) ^ (a & c) ^ (b & c);
+			BVec k = mux(round, kTable);
+			HCL_NAMED(s0);
+			HCL_NAMED(s1);
+			HCL_NAMED(ch);
+			HCL_NAMED(maj);
+			HCL_NAMED(k);
 
 			TAdder tmp = TAdder{} + h + w[0] + k + s1 + ch;
 			h = g;
@@ -95,8 +100,10 @@ namespace gtry::scl
 			a = tmp + s0 + maj;
 
 			// extend message
-			const BVec ws0 = rotr(w[ 1],  7) ^ rotr(w[ 1], 18) ^ zshr(w[ 1],  3);
-			const BVec ws1 = rotr(w[14], 17) ^ rotr(w[14], 19) ^ zshr(w[14], 10);
+			BVec ws0 = rotr(w[ 1],  7) ^ rotr(w[ 1], 18) ^ shr(w[ 1],  3, '0');
+			BVec ws1 = rotr(w[14], 17) ^ rotr(w[14], 19) ^ shr(w[14], 10, '0');
+			HCL_NAMED(ws0);
+			HCL_NAMED(ws1);
 			TAdder next_w = TAdder{} + w[0] + w[9] + ws0 + ws1;
 
 			for (size_t i = 0; i < 15; ++i)

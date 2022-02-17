@@ -89,6 +89,9 @@ namespace gtry::scl
 
 		for (size_t i = 0; i < THash::NUM_ROUNDS; ++i)
 		{
+			auto ent = Area{ "round" + std::to_string(i) }.enter();
+
+			HCL_NAMED(hash);
 			hash.round(i);
 
 			if (i % regInterval == regInterval - 1)
