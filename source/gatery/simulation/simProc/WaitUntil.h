@@ -19,7 +19,7 @@
 
 #include "../../hlim/NodePort.h"
 
-#include <coroutine>
+#include "../../utils/CoroutineWrapper.h"
 
 namespace gtry::sim {
 

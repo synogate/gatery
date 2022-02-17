@@ -90,7 +90,8 @@ namespace gtry::hlim
 			}
 
 		newParent->m_children.push_back(std::move(m_parent->m_children[parentIdx]));
-		m_parent->m_children[parentIdx] = std::move(m_parent->m_children.back());
+		if (parentIdx+1 != m_parent->m_children.size())
+			m_parent->m_children[parentIdx] = std::move(m_parent->m_children.back());
 		m_parent->m_children.pop_back();
 
 		m_parent = newParent;
@@ -154,6 +155,7 @@ namespace gtry::hlim
 	
 	void NodeGroupConfig::load(utils::ConfigTree config)
 	{
+#ifdef USE_YAMLCPP
 		for (auto it = config.mapBegin(); it != config.mapEnd(); ++it)
 		{
 			auto it_ = *it;
@@ -164,10 +166,12 @@ namespace gtry::hlim
 			}
 		}
 		finalize();
+#endif
 	}
 
 	void NodeGroupConfig::add(std::string_view key, std::string_view filter, utils::ConfigTree setting)
 	{
+#ifdef USE_YAMLCPP
 		if (filter.find('*') == std::string::npos)
 		{
 			std::string pattern;
@@ -207,16 +211,19 @@ namespace gtry::hlim
 				.value = setting
 			});
 		}
-
+#endif
 	}
 
 	void NodeGroupConfig::finalize()
 	{
+#ifdef USE_YAMLCPP
 		std::ranges::stable_sort(m_config, {}, &Setting::key);
+#endif
 	}
 	
 	std::optional<utils::ConfigTree> NodeGroupConfig::operator()(std::string_view key, std::string_view instancePath) const
 	{
+#ifdef USE_YAMLCPP
 		std::string extPath{ instancePath };
 		extPath += '/';
 
@@ -240,6 +247,7 @@ namespace gtry::hlim
 				return elem.value;
 			}
 		}
+#endif
 		return std::nullopt;
 	}
 }

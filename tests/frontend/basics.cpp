@@ -545,6 +545,34 @@ BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, BoostUnitTestSimulationFixture)
     runFixedLengthTest(3u / clock.getClk()->getAbsoluteFrequency());
 }
 
+BOOST_FIXTURE_TEST_CASE(ClockRegisterReset_explicit, BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000).setInitializeRegs(false));
+    ClockScope clockScope(clock);
+
+    {
+        BVec vec1 = reg(BVec{ "b01" });
+        BVec vec2 = reg(BVec{ "b01" }, "2b");
+        Bit bit1 = reg(Bit{ '1' });
+        Bit bit2 = reg(Bit{ '1' }, '0');
+
+        BVec ref(2_b);
+        simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
+            context.set(0, context.getTick() ? 1 : 0);
+            }, ref);
+
+        sim_assert((ref == 0) | (vec1 == ref)) << "should be " << ref << " but is " << vec1;
+        sim_assert((ref == 0) | (bit1 == ref[0])) << "should be " << ref[0] << " but is " << bit1;
+        sim_assert(vec2 == ref) << "should be " << ref << " but is " << vec2;
+        sim_assert(bit2 == ref[0]) << "should be " << ref[0] << " but is " << bit2;
+    }
+
+    runFixedLengthTest(3u / clock.getClk()->getAbsoluteFrequency());
+}
+
+
 BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
@@ -570,6 +598,34 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, BoostUnitTestSimulationFixture)
 
     runFixedLengthTest(10u / clock.getClk()->getAbsoluteFrequency());
 }
+
+
+BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax_explicitreset, BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000).setInitializeRegs(false));
+    ClockScope clockScope(clock);
+
+    {
+        Register<BVec> counter(8_b);
+        counter.setReset("8b0");
+
+        counter += 1;
+        counter += 1;
+        sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
+
+        BVec refCount(8_b);
+        simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
+            context.set(0, context.getTick()*2);
+        }, refCount);
+
+        sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);
+    }
+
+    runFixedLengthTest(10u / clock.getClk()->getAbsoluteFrequency());
+}
+
 
 BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, BoostUnitTestSimulationFixture)
 {

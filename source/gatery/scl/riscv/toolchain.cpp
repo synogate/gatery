@@ -43,7 +43,8 @@ static unsigned gcc_mabi_len = 1;
 void RiscVToolchain::build()
 {
 	auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
-	boost::filesystem::create_directories(path);
+	if (!path.empty())
+		boost::filesystem::create_directories(path);
 
 	std::cout << "Using " << path << std::endl;
 

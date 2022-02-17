@@ -284,7 +284,12 @@ namespace gtry {
 		size_t width;
 		Expansion policy;
 
-		if (value >= 0)
+		if (value + 1 == 0)
+		{
+			policy = Expansion::zero;
+			width = sizeof(value) * 8;
+		}
+		else if (value >= 0)
 		{
 			policy = Expansion::zero;
 			width = utils::Log2C(value + 1);

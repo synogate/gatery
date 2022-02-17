@@ -22,6 +22,8 @@
 
 #include <boost/spirit/home/support/container.hpp>
 
+#include <boost/multiprecision/cpp_int.hpp>
+
 namespace gtry {
     class Bit;
     class BVec;
@@ -31,6 +33,10 @@ namespace gtry::sim {
 
 class SigHandle {
     public:
+        //typedef boost::multiprecision::number<boost::multiprecision::cpp_int_backend<64, 0, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked, void>> BigInt;
+        typedef boost::multiprecision::cpp_int BigInt;
+
+
         SigHandle(hlim::NodePort output) : m_output(output) { }
         void operator=(const SigHandle &rhs) { this->operator=(rhs.eval()); }
 
@@ -45,6 +51,10 @@ class SigHandle {
         operator std::uint64_t () const { return value(); }
         operator DefaultBitVectorState () const { return eval(); }
 
+        void operator=(const BigInt &v);
+        operator BigInt () const;
+
+        bool allDefined() const;
         std::uint64_t defined() const;
         std::uint64_t value() const;
 

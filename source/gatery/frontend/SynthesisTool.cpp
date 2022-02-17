@@ -44,7 +44,7 @@ void SynthesisTool::addUserDefinedAttributes(const hlim::Attributes &attribs, hl
 	}
 }
 
-void SynthesisTool::writeUserDefinedPathAttributes(std::fstream &stream, const hlim::PathAttributes &attribs, const std::string &start, const std::string &end)
+void SynthesisTool::writeUserDefinedPathAttributes(std::ostream &stream, const hlim::PathAttributes &attribs, const std::string &start, const std::string &end)
 {
 	for (const auto &vendor : m_vendors) {
 		auto it = attribs.userDefinedVendorAttributes.find(vendor);

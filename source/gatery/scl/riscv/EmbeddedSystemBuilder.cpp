@@ -104,7 +104,7 @@ gtry::Bit gtry::scl::riscv::EmbeddedSystemBuilder::addUART(uint64_t offset, UART
 {
 	auto ent = m_area.enter();
 
-	UART::Stream txStream, rxStream = config.recieve(rx);
+	UART::Stream txStream, rxStream = config.receive(rx);
 
 	AvalonMM bus = addAvalonMemMapped(offset, 0_b);
 	txStream.data = (*bus.writeData)(0, 8_b);

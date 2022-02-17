@@ -19,6 +19,44 @@
 
 namespace gtry::utils
 {
+	class DummyPropertyTree
+	{
+	public:
+		DummyPropertyTree operator[](std::string_view path) const { return {}; }
+
+		void dump(std::ostream&) const { }
+
+		DummyPropertyTree() = default;
+		DummyPropertyTree(DummyPropertyTree&&) = default;
+		DummyPropertyTree(const DummyPropertyTree&) = default;
+
+		DummyPropertyTree operator[](std::string_view path) { return {}; }
+
+		template<typename T>
+		DummyPropertyTree& operator = (T&&) { return *this; }
+		DummyPropertyTree& operator = (const DummyPropertyTree& val) { return *this; }
+		DummyPropertyTree& operator = (DummyPropertyTree&& val) { return *this; }
+		DummyPropertyTree& operator = (DummyPropertyTree& val) { return *this; }
+
+		using iterator = const DummyPropertyTree*;
+		iterator begin() const { return nullptr; }
+		iterator end() const { return nullptr; }
+
+		void push_back(DummyPropertyTree value) { }
+		bool empty() const { return true; }
+		size_t size() const { return 0; }
+
+		template<typename T> T as(const T& def) const { return def; }
+		template<typename T> T as() const { throw std::runtime_error{ "get unknown prop tree" }; }
+	};
+}
+
+
+namespace gtry::utils
+{
+
+#ifdef USE_YAMLCPP
+
 	class YamlPropertyTree
 	{
 	public:
@@ -98,4 +136,7 @@ namespace gtry::utils
 
 
 	using PropertyTree = YamlPropertyTree;
+#else
+	using PropertyTree = DummyPropertyTree;
+#endif
 }

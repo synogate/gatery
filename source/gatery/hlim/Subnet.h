@@ -39,8 +39,8 @@ class SubnetTemplate {
 		template<typename baseType>
 		struct ConstAdaptor<true, baseType> { typedef const baseType type; };
 
-		typedef ConstAdaptor<makeConst, Circuit>::type CircuitType;
-		typedef ConstAdaptor<makeConst, BaseNode>::type NodeType;
+		typedef typename ConstAdaptor<makeConst, Circuit>::type CircuitType;
+		typedef typename ConstAdaptor<makeConst, BaseNode>::type NodeType;
 
 
 		static FinalType all(CircuitType &circuit);

@@ -208,13 +208,13 @@ namespace gtry::scl
 			.usedRanges = {
 				RegDesc::BitRange{
 					.offset = 0,
-					.size = memWidth.value,
+					.size = (size_t) memWidth.value,
 					.descShort = "Intra table address",
 					.descLong = "If the table has less address bits, the upper superfluous bits are ignored."
 				},
 				RegDesc::BitRange{
-					.offset = memWidth.value,
-					.size = memWidth.value+memTabWidth.value,
+					.offset = (size_t) memWidth.value,
+					.size = (size_t) (memWidth.value+memTabWidth.value),
 					.descShort = "Table index"
 				},
 				RegDesc::BitRange{

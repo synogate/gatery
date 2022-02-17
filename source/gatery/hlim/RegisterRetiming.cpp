@@ -56,7 +56,7 @@ namespace gtry::hlim {
  * @brief Determines the exact area to be forward retimed (but doesn't do any retiming).
  * @details This is the entire fan in up to registers that can be retimed forward.
  * @param area The area to which retiming is to be restricted.
- * @param output The output that shall recieve a register.
+ * @param output The output that shall receive a register.
  * @param areaToBeRetimed Outputs the area that will be retimed forward (excluding the registers).
  * @param registersToBeRemoved Output of the registers that lead into areaToBeRetimed and which will have to be removed.
  * @param ignoreRefs Whether or not to throw an exception if a node has to be retimed to which a reference exists.
@@ -462,7 +462,7 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
  * @brief Determines the exact area to be backward retimed (but doesn't do any retiming).
  * @details This is the entire fan in up to registers that can be retimed forward.
  * @param area The area to which retiming is to be restricted.
- * @param output The output that shall recieve a register.
+ * @param output The output that shall receive a register.
  * @param retimeableWritePorts List of write ports that may be retimed individually without retiming all other ports as well.
  * @param areaToBeRetimed Outputs the area that will be retimed forward (excluding the registers).
  * @param registersToBeRemoved Output of the registers that lead into areaToBeRetimed and which will have to be removed.

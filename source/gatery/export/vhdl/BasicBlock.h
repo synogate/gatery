@@ -21,6 +21,7 @@
 
 #include <vector>
 #include <memory>
+#include <compare>
 
 namespace gtry::vhdl {
 
@@ -46,7 +47,7 @@ struct ConcurrentStatement
     } ref;
     size_t sortIdx = 0;
 
-    inline bool operator<(const ConcurrentStatement &rhs) { return sortIdx < rhs.sortIdx; }
+    inline bool operator<(const ConcurrentStatement &rhs) const { return sortIdx < rhs.sortIdx; }
 };
 
 

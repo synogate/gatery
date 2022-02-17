@@ -107,7 +107,14 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 
     std::set<hlim::NodePort> outputsReady;
 
-    std::set<hlim::BaseNode*> nodesRemaining;
+    struct CompareById {
+        bool operator()(const hlim::BaseNode* lhs, const hlim::BaseNode* rhs) const {
+            return lhs->getId() < rhs->getId();
+        }
+    };
+       
+    std::set<hlim::BaseNode*, CompareById> nodesRemaining;
+
     for (auto node : nodes) {
         if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr) continue;
         if (dynamic_cast<hlim::Node_ExportOverride*>(node) != nullptr) continue;
@@ -195,9 +202,9 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
             std::cout << "nodesRemaining : " << nodesRemaining.size() << std::endl;
 
             
-            std::set<hlim::BaseNode*> loopNodes = nodesRemaining;
+            std::set<hlim::BaseNode*, CompareById> loopNodes = nodesRemaining;
             while (true) {
-                std::set<hlim::BaseNode*> tmp = std::move(loopNodes);
+                std::set<hlim::BaseNode*, CompareById> tmp = std::move(loopNodes);
                 loopNodes.clear();
 
                 bool done = true;

@@ -134,7 +134,7 @@ Bit FIFO_SYNC_MACRO::getOutputBit(Outputs output)
 		case OUT_FULL:
 		case OUT_RDERR:
 		case OUT_WRERR:
-			return SignalReadPort(hlim::NodePort(this, output));
+			return SignalReadPort(hlim::NodePort{this, (size_t)output});
 		break;
 		default:
 			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to bvec output of FIFO_SYNC_MACRO!");
@@ -147,7 +147,7 @@ BVec FIFO_SYNC_MACRO::getOutputBVec(Outputs output)
 		case OUT_DO:
 		case OUT_RDCOUNT:
 		case OUT_WRCOUNT:
-			return SignalReadPort(hlim::NodePort(this, output));
+			return SignalReadPort(hlim::NodePort{this, (size_t)output});
 		break;
 		default:
 			HCL_DESIGNCHECK_HINT(false, "Trying to connect bvec to bit output of FIFO_SYNC_MACRO!");

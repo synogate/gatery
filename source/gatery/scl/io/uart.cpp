@@ -20,18 +20,21 @@
 
 namespace gtry::scl {
 
-UART::Stream UART::recieve(Bit rx)
+UART::Stream UART::receive(Bit rx)
 {
     GroupScope entity(GroupScope::GroupType::ENTITY);
     entity.setName("uart_recv");
                                                                                             HCL_NAMED(rx);
-    for (auto i : utils::Range(stabilize_rx))
+    for (auto i : utils::Range(stabilize_rx)) {
         rx = reg(rx, true);
+        setAttrib(rx, {.allowFusing=false});
+    }
+    if (stabilize_rx > 0)
                                                                                             rx.setName("rx_stabilized");
 
     HCL_DESIGNCHECK_HINT(deriveClock == false, "Not implemented yet!");
     HCL_DESIGNCHECK_HINT(startBits == 1, "Not implemented yet!");
-    HCL_DESIGNCHECK_HINT(stopBits == 1, "Not implemented yet!");
+    //HCL_DESIGNCHECK_HINT(stopBits == 1, "Not implemented yet!");
 
     size_t bitLength = hlim::floor(ClockScope::getClk().getAbsoluteFrequency() / baudRate);
     size_t oneHalfBitLength = bitLength * 3 / 2;
