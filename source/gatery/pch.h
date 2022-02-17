@@ -55,7 +55,19 @@
 #include <vector>
 
 #if __has_include(<yaml-cpp/yaml.h>)
+
+#ifdef _WIN32
+#pragma warning (push)
+#pragma warning (disable : 4251) // yaml-cpp wrong dll interface export for stl
+#pragma warning (disable : 4275) // yaml-cpp wrong dll interface export for stl
+#endif
+
 # include <yaml-cpp/yaml.h>
+
+#ifdef _WIN32
+#pragma warning (pop)
+#endif
+
 # include <external/magic_enum.hpp>
 # define USE_YAMLCPP
 #else
