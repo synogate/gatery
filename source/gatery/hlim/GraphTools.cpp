@@ -18,12 +18,16 @@
 #include "gatery/pch.h"
 
 #include "GraphTools.h"
+#include "GraphExploration.h"
 
 #include "Attributes.h"
 #include "coreNodes/Node_Pin.h"
 #include "coreNodes/Node_Signal.h"
 #include "coreNodes/Node_Register.h"
 #include "supportNodes/Node_External.h"
+#include "supportNodes/Node_RegSpawner.h"
+#include "supportNodes/Node_RegHint.h"
+
 #include "NodePort.h"
 #include "Node.h"
 #include "../simulation/ReferenceSimulator.h"
@@ -204,6 +208,76 @@ std::vector<Node_Register*> findRegistersAffectedByReset(Clock *clock)
     return result;
 }
 
+
+
+std::vector<std::pair<size_t, Node_RegHint*>> getRegHintDistanceToSpawners(std::span<Node_RegSpawner*> spawners, const Subnet &subnet)
+{
+    DijkstraExploreNodesForward forwardExploration;
+
+    // Start from spawners
+    for (auto spawner : spawners)
+        forwardExploration.addAllOutputPorts(spawner);
+
+    std::vector<std::pair<size_t, Node_RegHint*>> result;
+
+    for (auto handle : forwardExploration) {
+        // Stay inside subnet
+        if (!subnet.contains(handle.node())) {
+            handle.skip();
+            continue;
+        }
+
+        if (auto *regHint = dynamic_cast<Node_RegHint*>(handle.node())) {
+            // Add it to the result list, using distance to count the number of Node_RegHint encountered
+            result.emplace_back(handle.getDistance(), regHint);
+            // Proceed with a cost of 1 to increase "distance" for everything that is found through this node
+            handle.proceed(1);
+        }
+    }
+
+    return result;
+}   
+
+
+size_t getMinRegsBetween(NodePort sourceOutput, NodePort destinationInput)
+{
+    DijkstraExploreNodesForward forwardExploration;
+
+    forwardExploration.addOutputPort(sourceOutput);
+
+    for (auto handle : forwardExploration) {
+        // Return cumulative distance if reached destination.
+        if (handle.input() == destinationInput)
+            return handle.getDistance();
+
+        if (auto *reg = dynamic_cast<Node_Register*>(handle.node()))
+            // Proceed with a cost of 1 to increase "distance" for everything that is found through this node
+            handle.proceed(1);
+    }
+
+    // No connection found, return max
+    return ~0ull;
+}
+
+size_t getMinRegHintsBetween(NodePort sourceOutput, NodePort destinationInput)
+{
+    DijkstraExploreNodesForward forwardExploration;
+
+    forwardExploration.addOutputPort(sourceOutput);
+
+    for (auto handle : forwardExploration) {
+        // Return cumulative distance if reached destination.
+        if (handle.input() == destinationInput)
+            return handle.getDistance();
+
+        if (auto *regHint = dynamic_cast<Node_RegHint*>(handle.node()))
+            // Proceed with a cost of 1 to increase "distance" for everything that is found through this node
+            handle.proceed(1);
+    }
+
+    // No connection found, return max
+    return ~0ull;
+}
 
 
 }

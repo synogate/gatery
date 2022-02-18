@@ -21,6 +21,7 @@
 #include <gatery/hlim/RegisterRetiming.h>
 #include <gatery/hlim/Subnet.h>
 #include <gatery/hlim/coreNodes/Node_Signal.h>
+#include <gatery/hlim/GraphTools.h>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/data/dataset.hpp>
@@ -130,4 +131,135 @@ BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_old, BoostUnitTestSimulationFix
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
 }
 
+BOOST_FIXTURE_TEST_CASE(retiming_hint_simple, BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
 
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    BVec input = pinIn(32_b);
+
+    Pipeline pipeline;
+	input = pipeline(input);
+
+
+	BVec output = input;
+    for (auto i : Range(3))
+        output = regHint(output);
+
+	pinOut(output);
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+
+	BOOST_TEST(pipeline.getNumPipelineStages() == 3);
+}
+
+
+struct TestStruct
+{
+	gtry::Bit a;
+	gtry::BVec b;
+};
+
+BOOST_HANA_ADAPT_STRUCT(TestStruct, a, b);
+
+BOOST_FIXTURE_TEST_CASE(retiming_hint_struct, BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+	TestStruct s;
+    s.a = pinIn();
+    s.b = pinIn(32_b);
+
+    Pipeline pipeline;
+	s = pipeline(s);
+
+
+    for (auto i : Range(3))
+        s = regHint(s);
+
+	pinOut(s.a);
+	pinOut(s.b);
+
+//design.visualize("before");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+//design.visualize("after");
+
+	BOOST_TEST(pipeline.getNumPipelineStages() == 3);
+}
+
+
+BOOST_FIXTURE_TEST_CASE(retiming_hint_branching, BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    BVec input1 = pinIn(32_b);
+    BVec input2 = pinIn(32_b);
+
+    Pipeline pipeline;
+	input1 = pipeline(input1);
+	input2 = pipeline(input2);
+
+	input2 = regHint(input2);
+
+	BVec output = input1 + input2;
+	output = regHint(output);
+
+	pinOut(output);
+
+//design.visualize("before");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+//design.visualize("after");
+
+	BOOST_TEST(pipeline.getNumPipelineStages() == 2);
+}
+
+
+BOOST_FIXTURE_TEST_CASE(retiming_hint_memory_rmw, BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    BVec addr = pinIn(4_b);
+    BVec data = pinIn(32_b);
+	Bit enable = pinIn();
+
+    Pipeline pipeline;
+	addr = pipeline(addr);
+	data = pipeline(data);
+	enable = pipeline(enable);
+
+	Memory<BVec> mem(16, 32_b);
+	mem.setType(MemType::MEDIUM, 1);
+
+	BVec rd = mem[addr];
+	rd = regHint(rd);
+
+	IF (enable)
+		mem[addr] = rd+data;
+
+	pinOut(regHint(rd));
+
+design.visualize("before");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+design.visualize("after");
+
+	BOOST_TEST(pipeline.getNumPipelineStages() == 2);
+}
