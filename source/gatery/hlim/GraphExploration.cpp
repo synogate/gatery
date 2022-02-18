@@ -173,6 +173,7 @@ DijkstraExploreNodesForward::iterator &DijkstraExploreNodesForward::iterator::op
 
 void DijkstraExploreNodesForward::iterator::proceed(size_t cost, std::uint64_t proceedPortMask) 
 {
+    m_autoProceed = false;
     auto newDistance = m_current.distance + cost;
 
     for (auto i : utils::Range(m_current.nodePort.node->getNumOutputPorts()))
