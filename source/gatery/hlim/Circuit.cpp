@@ -1041,7 +1041,6 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
     
     subnet = Subnet::all(circuit);
     resolveRetimingHints(circuit, subnet);
-    bypassRegSpawners(circuit);
 
     circuit.propagateConstants(subnet);
     circuit.cullOrphanedSignalNodes();

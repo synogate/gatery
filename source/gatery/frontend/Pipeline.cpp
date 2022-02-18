@@ -27,6 +27,13 @@ Pipeline::Pipeline()
 	m_regSpawner = DesignScope::createNode<hlim::Node_RegSpawner>();
 }
 
+size_t Pipeline::getNumPipelineStages() const
+{ 
+    HCL_DESIGNCHECK_HINT(m_regSpawner->wasResolved(), "The number of pipeline stages can only be queries after the retiming, at least on the part of the graph that is affected, has been performed!");
+    return m_regSpawner->getNumStagesSpawned(); 
+}
+
+
 Bit placeRegHint(const Bit &signal)
 {
 	auto* regHint = DesignScope::createNode<hlim::Node_RegHint>();

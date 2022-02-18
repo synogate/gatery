@@ -38,17 +38,21 @@ void Node_RegSpawner::setClock(Clock *clk)
     attachClock(clk, 0);
 }
 
-void Node_RegSpawner::bypass()
+void Node_RegSpawner::markResolved()
 {
+	m_wasResolved = true;
 	for (auto i : utils::Range(getNumOutputPorts()))
 		bypassOutputToInput(i, i*2);
 }
 
-Node_Register* Node_RegSpawner::spawnForward(size_t reg2return)
+std::vector<Node_Register*> Node_RegSpawner::spawnForward()
 {
+	HCL_DESIGNCHECK_HINT(!m_wasResolved, "Trying to use a register spawner for register retiming that was already resolved in an earlier retiming run."
+		"This is not allowed as other design choices might have been made on the number of spawned registers (pipeline stages) that the spawner comitted to before!");
 	auto &circuit = m_nodeGroup->getCircuit();
 
-	Node_Register *returnReg = nullptr;
+	std::vector<Node_Register*> result;
+	result.reserve(getNumOutputPorts());
 
 	// For each signal passing through
 	for (auto i : utils::Range(getNumOutputPorts())) {
@@ -56,6 +60,10 @@ Node_Register* Node_RegSpawner::spawnForward(size_t reg2return)
 		auto *reg = circuit.createNode<Node_Register>();
 		reg->moveToGroup(m_nodeGroup);
 	    reg->recordStackTrace();
+
+		// allow further retiming as this is their primary purpose
+		reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD);
+		reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
 
 		// With our clock
 		reg->setClock(m_clocks[0]);
@@ -73,12 +81,11 @@ Node_Register* Node_RegSpawner::spawnForward(size_t reg2return)
 		for (auto &np : driven)
 			np.node->rewireInput(np.port, {.node = reg, .port = 0ull});
 
-		if (i == reg2return)
-			returnReg = reg;
+		result.push_back(reg);
 	}
 
 	m_numStagesSpawned++;
-	return returnReg;
+	return result;
 }
 
 size_t Node_RegSpawner::addInput(const NodePort &value, const NodePort &reset)

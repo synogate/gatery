@@ -38,20 +38,19 @@ namespace gtry {
 		public:
 			template<typename T>
 			T operator()(const T &input) {
+				HCL_DESIGNCHECK_HINT(!m_regSpawner->wasResolved(), "This pipeline has already been involved and resolved in retiming and can no longer be modified!");
 				return PipelineInput<T>{}(input, *this);
 			}
 
 			template<typename T, typename ResetT>
 			T operator()(const T &input, const ResetT &reset) {
+				HCL_DESIGNCHECK_HINT(!m_regSpawner->wasResolved(), "This pipeline has already been involved and resolved in retiming and can no longer be modified!");
 				return PipelineInput<T>{}(input, reset, *this);
 			}
 
-
-			// actually needs to be computed
-			///size_t getNumPipelineStages() const { return m_regSpawner->getNumStagesSpawned(); }
-
 			Pipeline();
 
+			size_t getNumPipelineStages() const;
 			inline hlim::Node_RegSpawner *getRegSpawner() { return m_regSpawner.get(); }
 		protected:
 			hlim::NodePtr<hlim::Node_RegSpawner> m_regSpawner;
@@ -86,6 +85,70 @@ namespace gtry {
 			return SignalReadPort{hlim::NodePort{.node = pipeline.getRegSpawner(), .port = port}};
 		}
     };
+
+
+    struct PipelineInputTransform
+    {
+        PipelineInputTransform() { }
+
+        template<typename T>
+        T operator() (const T& val) { return PipelineInput<T>{}(val); }
+    };
+
+    template<typename ...T>
+    struct PipelineInput<std::tuple<T...>>
+    {
+        std::tuple<T...> operator () (const std::tuple<T...>& val) { return boost::hana::transform(val, PipelineInputTransform{}); }
+    };
+
+	template<typename T>
+	struct PipelineInput<T, std::enable_if_t<boost::spirit::traits::is_container<T>::value>>
+	{
+		T operator () (const T& signal, Pipeline &pipeline) {
+			T ret = signal;
+			for (auto& item : ret)
+				item = PipelineInput<decltype(item)>{}(item, pipeline);
+			return ret;
+		}
+
+		T operator () (const T& signal, const T& reset, Pipeline &pipeline)
+		{
+			T ret = signal;
+
+			auto itS = begin(ret);
+			auto itR = begin(reset);
+			for (; itS != end(ret) && itR != end(reset); ++itR, ++itS)
+				*itS = PipelineInput<decltype(*itS)>{}(*itS, *itR, pipeline);
+			for (; itS != end(ret); ++itS)
+				*itS = PipelineInput<decltype(*itS)>{}(*itS, pipeline);
+			return ret;
+		}
+	};
+
+	template<typename T>
+	struct PipelineInput<T, std::enable_if_t<boost::hana::Struct<T>::value>>
+	{
+		T operator () (const T& signal, Pipeline &pipeline)
+		{
+			T ret = signal;
+			boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto&& member) {
+				auto& subSig = boost::hana::second(member)(ret);
+				subSig = PipelineInput<std::remove_cvref_t<decltype(subSig)>>{}(subSig, pipeline);
+			});
+			return ret;
+		}
+
+		T operator () (const T& signal, const T& reset, Pipeline &pipeline)
+		{
+			T ret = signal;
+			boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto member) {
+				auto& subSig = boost::hana::second(member)(ret);
+				const auto& subResetSig = boost::hana::second(member)(reset);
+				subSig = PipelineInput<std::remove_cvref_t<decltype(subSig)>>{}(subSig, subResetSig, pipeline);
+				});
+			return ret;
+		}
+	};
 
 
 
@@ -129,5 +192,32 @@ namespace gtry {
     {
         Bit operator () (const Bit& signal) { return placeRegHint(signal); }
     };	
+
+	template<typename T>
+	struct RegHint<T, std::enable_if_t<boost::spirit::traits::is_container<T>::value>>
+	{
+		T operator () (const T& signal)
+		{
+			T ret = signal;
+			for (auto& item : ret)
+				item = regHint(item);
+			return ret;
+		}
+	};
+
+	template<typename T>
+	struct RegHint<T, std::enable_if_t<boost::hana::Struct<T>::value>>
+	{
+		T operator () (const T& signal)
+		{
+			T ret = signal;
+			boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto&& member) {
+				auto& subSig = boost::hana::second(member)(ret);
+				subSig = regHint(subSig);
+			});
+			return ret;
+		}
+	};
+
 
 }

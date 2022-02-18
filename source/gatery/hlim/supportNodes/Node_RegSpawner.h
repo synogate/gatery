@@ -39,8 +39,9 @@ class Node_RegSpawner : public Node<Node_RegSpawner>
         size_t addInput(const NodePort &value, const NodePort &reset = {});
         void setClock(Clock* clk);
 
-        void bypass();
-		Node_Register *spawnForward(size_t reg2return = 0);
+        bool wasResolved() const { return m_wasResolved; }
+        void markResolved();
+		std::vector<Node_Register*> spawnForward();
 
         virtual bool hasSideEffects() const override { return false; }
 		virtual bool isCombinatorial() const { return true; }
@@ -61,6 +62,7 @@ class Node_RegSpawner : public Node<Node_RegSpawner>
 		inline size_t getNumStagesSpawned() const { return m_numStagesSpawned; }
     protected:
 		size_t m_numStagesSpawned = 0ull;
+        bool m_wasResolved = false;
 };
 
 }

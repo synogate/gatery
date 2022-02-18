@@ -19,6 +19,8 @@
 
 #include "../simulation/BitVectorState.h"
 
+#include <span>
+
 namespace gtry::hlim {
 
 	class BaseNode;
@@ -28,6 +30,9 @@ namespace gtry::hlim {
 	class Node_Pin;
 	class Clock;
 	class Node_Register;
+	class Node_RegSpawner;
+	class Node_RegHint;
+	class Subnet;
 
 	sim::DefaultBitVectorState evaluateStatically(Circuit &circuit, hlim::NodePort output);
 
@@ -41,6 +46,38 @@ namespace gtry::hlim {
 	std::vector<Node_Register*> findAllInputRegisters(NodePort input);
 
 	std::vector<Node_Register*> findRegistersAffectedByReset(Clock *clock);
+
+
+
+	/**
+	* @brief Finds and returns all Node_RegHints along with their distance (in Node_RegHint on the way) to Node_RegSpawner nodes.
+	* @details Search is a forward-only dijkstra search from the Node_RegSpawner and confined to the given subnet.
+	* @param spawners Where to start
+	* @param subnet Confines the search
+	* @return List of found Node_RegHints with their distance (as in number of Node_RegHints on the way) to the nearest Node_RegSpawner.
+	*/
+	std::vector<std::pair<size_t, Node_RegHint*>> getRegHintDistanceToSpawners(std::span<Node_RegSpawner*> spawners, const Subnet &subnet);
+
+	/**
+	 * @brief Get the number of registers between sourceOutput and destinationInput.
+	 * @details Since multiple (potentially infinite) paths can exist between sourceOutput and destinationInput, the 
+	 * path with the minimal number of registers is considered.
+	 * @param sourceOutput Start of the path, given as an node output
+	 * @param destinationInput End of the path, given as a node input
+	 * @return Number of registers on the path or ~0ull if no path can be found
+	 */
+	size_t getMinRegsBetween(NodePort sourceOutput, NodePort destinationInput);
+
+	/**
+	 * @brief Get the number of register hints between sourceOutput and destinationInput.
+	 * @details Since multiple (potentially infinite) paths can exist between sourceOutput and destinationInput, the 
+	 * path with the minimal number of register hints is considered.
+	 * @param sourceOutput Start of the path, given as an node output
+	 * @param destinationInput End of the path, given as a node input
+	 * @return Number of register hints on the path or ~0ull if no path can be found
+	 */
+	size_t getMinRegHintsBetween(NodePort sourceOutput, NodePort destinationInput);
+
 
 
 }

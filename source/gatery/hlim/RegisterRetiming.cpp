@@ -49,7 +49,7 @@
 #include <sstream>
 #include <iostream>
 
-#define DEBUG_OUTPUT
+//#define DEBUG_OUTPUT
 
 namespace gtry::hlim {
 
@@ -120,8 +120,11 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 			HCL_ASSERT_HINT(false, error.str());
 		}
 
+		auto *regSpawner = dynamic_cast<Node_RegSpawner*>(nodePort.node);
+
 		// We may not want to retime nodes to which references are still being held
-		if (nodePort.node->hasRef() && !ignoreRefs) {
+		// References to node spawners are ok (?)
+		if (nodePort.node->hasRef() && !ignoreRefs && !regSpawner) {
 			if (!failureIsError) return false;
 
 #ifdef DEBUG_OUTPUT
@@ -158,7 +161,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 						std::stringstream error;
 
 						error 
-							<< "An error occured attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
+							<< "An error occurred attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
 							<< "Node from:\n" << output.node->getStackTrace() << "\n";
 
 						error 
@@ -183,7 +186,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 			std::stringstream error;
 
 			error 
-				<< "An error occured attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
+				<< "An error occurred attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
 				<< "Node from:\n" << output.node->getStackTrace() << "\n";
 
 			error 
@@ -194,8 +197,9 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 			HCL_ASSERT_HINT(false, error.str());
 		}		
 
+
 		// Everything seems good with this node, so proceed
-		if (auto *regSpawner = dynamic_cast<Node_RegSpawner*>(nodePort.node)) {  // Register spawners spawn registers, so stop here
+		if (regSpawner) {  // Register spawners spawn registers, so stop here
 
 			regSpawnersToSpawn.insert(regSpawner);
 			regSpawnersToRegistersToBeRemoved.insert(nodePort);
@@ -296,10 +300,13 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 	}
 
 	// Spawn register spawners
-	for (auto *spawner : regSpawnersToSpawn)
-		spawner->spawnForward();
+	for (auto *spawner : regSpawnersToSpawn) {
+		auto regs = spawner->spawnForward();
+		// Add new regs to area subnet to keep that up to date
+		for (auto r : regs) area.add(r);
+	}
 
-	// Collect subset of spawed registers for removal
+	// Collect subset of spawned registers for removal
 	for (auto spawnerOutput : regSpawnersToRegistersToBeRemoved) {
 		const auto &driven = spawnerOutput.node->getDirectlyDriven(spawnerOutput.port);
 		HCL_ASSERT(driven.size() == 1);

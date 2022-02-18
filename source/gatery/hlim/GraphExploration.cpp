@@ -153,4 +153,77 @@ template class DepthFirstPolicy<false>;
 template class Exploration<true, DepthFirstPolicy<true>>;
 template class Exploration<false, DepthFirstPolicy<false>>;
 
+
+
+
+
+
+DijkstraExploreNodesForward::iterator::iterator(const std::vector<OpenNode> &start) : BaseIterator(start) 
+{ 
+    uncoverNext();
+}
+
+DijkstraExploreNodesForward::iterator &DijkstraExploreNodesForward::iterator::operator++() 
+{
+    if (m_autoProceed)
+        proceed(0, ~0ull);
+    uncoverNext();
+    return *this; 
+}
+
+void DijkstraExploreNodesForward::iterator::proceed(size_t cost, std::uint64_t proceedPortMask) 
+{
+    auto newDistance = m_current.distance + cost;
+
+    for (auto i : utils::Range(m_current.nodePort.node->getNumOutputPorts()))
+        if (proceedPortMask & (1ull << i))
+            for (auto &consumer : m_current.nodePort.node->getDirectlyDriven(i))
+                m_openList.push({.distance = newDistance, .nodePort = consumer});
+}
+
+bool DijkstraExploreNodesForward::iterator::operator!=(const iterator &rhs) const 
+{ 
+    HCL_ASSERT(rhs.m_current.nodePort.node == nullptr); 
+    return m_current.nodePort.node != nullptr;
+}
+
+void DijkstraExploreNodesForward::iterator::skip() 
+{
+    m_autoProceed = false;
+}
+
+void DijkstraExploreNodesForward::iterator::uncoverNext()
+{
+    while (!m_openList.empty() && m_closedList.contains(m_openList.top().nodePort.node))
+        m_openList.pop();
+    
+    if (!m_openList.empty()) {
+        m_current = m_openList.top();
+        m_openList.pop();
+        m_closedList.insert(m_current.nodePort.node);
+    } else {
+        m_current = {};
+    }
+
+    m_autoProceed = true;
+}
+
+
+void DijkstraExploreNodesForward::addInputPort(NodePort inputPort) 
+{
+    m_start.push_back({.distance = 0, .nodePort = inputPort});
+}
+
+void DijkstraExploreNodesForward::addOutputPort(NodePort outputPort) 
+{
+    for (auto consumer : outputPort.node->getDirectlyDriven(outputPort.port))
+        m_start.push_back({.distance = 0, .nodePort = consumer});
+}
+
+void DijkstraExploreNodesForward::addAllOutputPorts(BaseNode *node) 
+{
+    for (auto i : utils::Range(node->getNumOutputPorts()))
+        addOutputPort({.node = node, .port = i});
+}
+
 }

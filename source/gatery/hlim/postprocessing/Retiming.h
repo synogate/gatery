@@ -20,8 +20,8 @@
 namespace gtry::hlim {
 
 class Circuit;
+class Subnet;
 
 void resolveRetimingHints(Circuit &circuit, Subnet &subnet);
-void bypassRegSpawners(Circuit &circuit);
 
 }
