@@ -207,25 +207,48 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct, BoostUnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-	TestStruct s;
-    s.a = pinIn();
-    s.b = pinIn(32_b);
+	TestStruct s_in;
+    s_in.a = pinIn();
+    s_in.b = pinIn(32_b);
 
     Pipeline pipeline;
-	s = pipeline(s);
+	TestStruct s_out = pipeline(s_in);
 
 
     for (auto i : Range(3))
-        s = regHint(s);
+        s_out = regHint(s_out);
 
-	pinOut(s.a);
-	pinOut(s.b);
+	pinOut(s_out.a);
+	pinOut(s_out.b);
+
+
+
+	addSimulationProcess([=,this]()->SimProcess {
+		simu(s_in.a) = false;
+		simu(s_in.b) = 42;
+        
+	    for (auto i : Range(3)) {
+			BOOST_TEST(!simu(s_out.a).defined());
+			BOOST_TEST(!simu(s_out.b).defined());
+
+			co_await WaitClk(clock);
+		}
+
+		BOOST_TEST(simu(s_out.a).defined());
+		BOOST_TEST(simu(s_out.a).value() == false);
+		BOOST_TEST(simu(s_out.b).defined());
+		BOOST_TEST(simu(s_out.b).value() == 42);
+
+        stopTest();
+	});	
 
 //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 //design.visualize("after");
 
 	BOOST_TEST(pipeline.getNumPipelineStages() == 3);
+
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());	
 }
 
 
@@ -238,29 +261,55 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct_reset, BoostUnitTestSimulationFixtu
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-	TestStruct s;
-    s.a = pinIn();
-    s.b = pinIn(32_b);
+	TestStruct s_in;
+    s_in.a = pinIn();
+    s_in.b = pinIn(32_b);
 
 	TestStruct r;
 	r.a = '1';
 	r.b = "32b0";
 
     Pipeline pipeline;
-	s = pipeline(s, r);
+	TestStruct s_out = pipeline(s_in, r);
 
 
     for (auto i : Range(3))
-        s = regHint(s);
+        s_out = regHint(s_out);
 
-	pinOut(s.a);
-	pinOut(s.b);
+	pinOut(s_out.a);
+	pinOut(s_out.b);
+
+
+
+	addSimulationProcess([=,this]()->SimProcess {
+		simu(s_in.a) = false;
+		simu(s_in.b) = 42;
+        
+	    for (auto i : Range(3)) {
+			BOOST_TEST(simu(s_out.a).defined());
+			BOOST_TEST(simu(s_out.a).value() == true);
+			BOOST_TEST(simu(s_out.b).defined());
+			BOOST_TEST(simu(s_out.b).value() == 0);
+
+			co_await WaitClk(clock);
+		}
+
+		BOOST_TEST(simu(s_out.a).defined());
+		BOOST_TEST(simu(s_out.a).value() == false);
+		BOOST_TEST(simu(s_out.b).defined());
+		BOOST_TEST(simu(s_out.b).value() == 42);
+
+        stopTest();
+	});
 
 //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 //design.visualize("after");
 
 	BOOST_TEST(pipeline.getNumPipelineStages() == 3);
+
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
+
 }
 
 
@@ -278,21 +327,41 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching, BoostUnitTestSimulationFixture)
     BVec input2 = pinIn(32_b);
 
     Pipeline pipeline;
-	input1 = pipeline(input1);
-	input2 = pipeline(input2);
+	auto a = pipeline(input1);
+	auto b = pipeline(input2);
 
-	input2 = regHint(input2);
+	b = regHint(b);
 
-	BVec output = input1 + input2;
+	BVec output = a + b;
 	output = regHint(output);
 
 	pinOut(output);
+
+
+	addSimulationProcess([=,this]()->SimProcess {
+		simu(input1) = 1337;
+		simu(input2) = 42;
+        
+	    for (auto i : Range(2)) {
+			BOOST_TEST(!simu(output).defined());
+
+			co_await WaitClk(clock);
+		}
+
+		BOOST_TEST(simu(output).defined());
+		BOOST_TEST(simu(output).value() == 1337+42);
+
+        stopTest();
+	});
 
 //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 //design.visualize("after");
 
 	BOOST_TEST(pipeline.getNumPipelineStages() == 2);
+
+
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());		
 }
 
 
@@ -309,21 +378,42 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching_reset, BoostUnitTestSimulationFi
     BVec input2 = pinIn(32_b);
 
     Pipeline pipeline;
-	input1 = pipeline(input1, 0);
-	input2 = pipeline(input2, 1);
+	auto a = pipeline(input1, 0);
+	auto b = pipeline(input2, 1);
 
-	input2 = regHint(input2);
+	b = regHint(b);
 
-	BVec output = input1 + input2;
+	BVec output = a + b;
 	output = regHint(output);
 
 	pinOut(output);
 
-design.visualize("before");
+
+	addSimulationProcess([=,this]()->SimProcess {
+		simu(input1) = 1337;
+		simu(input2) = 42;
+        
+	    for (auto i : Range(2)) {
+			BOOST_TEST(simu(output).defined());
+			BOOST_TEST(simu(output).value() == 0+1);
+
+			co_await WaitClk(clock);
+		}
+
+		BOOST_TEST(simu(output).defined());
+		BOOST_TEST(simu(output).value() == 1337+42);
+
+        stopTest();
+	});	
+
+//design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-design.visualize("after");
+//design.visualize("after");
 
 	BOOST_TEST(pipeline.getNumPipelineStages() == 2);
+
+
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());		
 }
 
 
