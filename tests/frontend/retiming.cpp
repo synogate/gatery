@@ -223,9 +223,9 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching, BoostUnitTestSimulationFixture)
 
 	pinOut(output);
 
-design.visualize("before");
+//design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-design.visualize("after");
+//design.visualize("after");
 
 	BOOST_TEST(pipeline.getNumPipelineStages() == 2);
 }

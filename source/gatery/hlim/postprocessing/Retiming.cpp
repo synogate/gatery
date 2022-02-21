@@ -26,8 +26,11 @@
 #include "../RegisterRetiming.h"
 #include "../GraphTools.h"
 
+#include "../../export/DotExport.h"
+
 #include <queue>
 #include <limits>
+#include <iostream>
 
 namespace gtry::hlim {
 
@@ -43,11 +46,30 @@ void resolveRetimingHints(Circuit &circuit, Subnet &subnet)
     // Locate all register hints in subnet that can be reached from the spawners
     auto regHints = getRegHintDistanceToSpawners(spawner, subnet);
     std::sort(regHints.begin(), regHints.end());
+    /**
+     * @todo This sorting is actually not sufficient. They need to be properly topologically sorted (with the added difficult that the graph can be cyclic).
+     * For now, we get around this by disabling forward retiming for downstream registers, but this is not a good solution.
+     */
 
     // Resolve all register hints back to front
     for (std::size_t i = regHints.size()-1; i < regHints.size(); i--) {
         auto node = regHints[i].second;
+/*
+        {
+            DotExport exp("state.dot");
+            exp(circuit);
+            exp.runGraphViz("state.svg");
 
+            std::cout << "Retiming node " << node->getId() << std::endl;
+        }
+        {
+            DotExport exp("subnet.dot");
+            exp(circuit, subnet.asConst());
+            exp.runGraphViz("subnet.svg");
+
+            std::cout << "Retiming node " << node->getId() << std::endl;
+        }
+*/
         retimeForwardToOutput(circuit, subnet, {.node = node, .port = 0}, {.downstreamDisableForwardRT = true});
         node->bypassOutputToInput(0, 0);
     }

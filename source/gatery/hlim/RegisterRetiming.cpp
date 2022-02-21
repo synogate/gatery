@@ -349,7 +349,7 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 		reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD);
 
 		if (settings.downstreamDisableForwardRT) {
-			bool isDownstream = combinatoricallyDrivenArea.contains(np.node);
+			bool isDownstream = combinatoricallyDrivenArea.contains(np.node) || (np == output);
 
 			if (!isDownstream)
 				reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
