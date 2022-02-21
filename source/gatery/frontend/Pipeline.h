@@ -65,8 +65,10 @@ namespace gtry {
 			return SignalReadPort{hlim::NodePort{.node = pipeline.getRegSpawner(), .port = port}};
 		}
         BVec operator () (const BVec& signal, const BVec& reset, Pipeline &pipeline) {
+			NormalizedWidthOperands ops(signal, reset);
+
 			pipeline.getRegSpawner()->setClock(ClockScope::getClk().getClk());
-			auto port = pipeline.getRegSpawner()->addInput(signal.getReadPort(), reset.getReadPort());
+			auto port = pipeline.getRegSpawner()->addInput(ops.lhs, ops.rhs);
 			return SignalReadPort{hlim::NodePort{.node = pipeline.getRegSpawner(), .port = port}};
 		}
     };
@@ -174,9 +176,6 @@ namespace gtry {
 
 	template<typename T>
 	T regHint(const T& val) { return RegHint<T>{}(val); }
-
-	template<typename T, typename Tr>
-	T regHint(const T& val, const Tr& resetVal) { return RegHint<T>{}(val, resetVal); }
 
 	Bit placeRegHint(const Bit &bit);
 	BVec placeRegHint(const BVec &bvec);

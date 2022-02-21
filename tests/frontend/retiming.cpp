@@ -160,6 +160,35 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_simple, BoostUnitTestSimulationFixture)
 	BOOST_TEST(pipeline.getNumPipelineStages() == 3);
 }
 
+BOOST_FIXTURE_TEST_CASE(retiming_hint_simple_reset, BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    BVec input = pinIn(32_b);
+
+    Pipeline pipeline;
+	input = pipeline(input, 0);
+
+
+	BVec output = input;
+    for (auto i : Range(3))
+        output = regHint(output);
+
+	pinOut(output);
+
+//design.visualize("before");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+//design.visualize("after");
+
+
+	BOOST_TEST(pipeline.getNumPipelineStages() == 3);
+}
+
 
 struct TestStruct
 {
@@ -200,6 +229,42 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct, BoostUnitTestSimulationFixture)
 }
 
 
+BOOST_FIXTURE_TEST_CASE(retiming_hint_struct_reset, BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+	TestStruct s;
+    s.a = pinIn();
+    s.b = pinIn(32_b);
+
+	TestStruct r;
+	r.a = '1';
+	r.b = "32b0";
+
+    Pipeline pipeline;
+	s = pipeline(s, r);
+
+
+    for (auto i : Range(3))
+        s = regHint(s);
+
+	pinOut(s.a);
+	pinOut(s.b);
+
+//design.visualize("before");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+//design.visualize("after");
+
+	BOOST_TEST(pipeline.getNumPipelineStages() == 3);
+}
+
+
+
 BOOST_FIXTURE_TEST_CASE(retiming_hint_branching, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
@@ -226,6 +291,37 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching, BoostUnitTestSimulationFixture)
 //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 //design.visualize("after");
+
+	BOOST_TEST(pipeline.getNumPipelineStages() == 2);
+}
+
+
+BOOST_FIXTURE_TEST_CASE(retiming_hint_branching_reset, BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+    using namespace gtry::sim;
+    using namespace gtry::utils;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+    BVec input1 = pinIn(32_b);
+    BVec input2 = pinIn(32_b);
+
+    Pipeline pipeline;
+	input1 = pipeline(input1, 0);
+	input2 = pipeline(input2, 1);
+
+	input2 = regHint(input2);
+
+	BVec output = input1 + input2;
+	output = regHint(output);
+
+	pinOut(output);
+
+design.visualize("before");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+design.visualize("after");
 
 	BOOST_TEST(pipeline.getNumPipelineStages() == 2);
 }
