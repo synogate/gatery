@@ -10,6 +10,7 @@
 #ifndef GTRY_NO_PCH
 
 #pragma warning(push, 0)
+#pragma warning(disable : 4146) // boost rational "unary minus operator applied to unsigned type, result still unsigned"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>

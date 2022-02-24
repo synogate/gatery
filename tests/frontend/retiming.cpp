@@ -235,7 +235,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct, BoostUnitTestSimulationFixture)
 		}
 
 		BOOST_TEST(simu(s_out.a).defined());
-		BOOST_TEST(simu(s_out.a).value() == false);
+		BOOST_TEST(simu(s_out.a).value() == 0);
 		BOOST_TEST(simu(s_out.b).defined());
 		BOOST_TEST(simu(s_out.b).value() == 42);
 
@@ -287,7 +287,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct_reset, BoostUnitTestSimulationFixtu
         
 	    for (auto i : Range(3)) {
 			BOOST_TEST(simu(s_out.a).defined());
-			BOOST_TEST(simu(s_out.a).value() == true);
+			BOOST_TEST(simu(s_out.a).value() != 0);
 			BOOST_TEST(simu(s_out.b).defined());
 			BOOST_TEST(simu(s_out.b).value() == 0);
 
@@ -295,7 +295,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct_reset, BoostUnitTestSimulationFixtu
 		}
 
 		BOOST_TEST(simu(s_out.a).defined());
-		BOOST_TEST(simu(s_out.a).value() == false);
+		BOOST_TEST(simu(s_out.a).value() == 0);
 		BOOST_TEST(simu(s_out.b).defined());
 		BOOST_TEST(simu(s_out.b).value() == 42);
 
