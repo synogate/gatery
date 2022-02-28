@@ -270,14 +270,6 @@ namespace gtry {
 	inline BVec oext(const BVec& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::one); }
 	inline BVec sext(const BVec& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::sign); }
 
-	struct NormalizedWidthOperands
-	{
-		template<typename SigA, typename SigB>
-		NormalizedWidthOperands(const SigA&, const SigB&);
-
-		SignalReadPort lhs, rhs;
-	};
-
 	template<typename Int, typename>
 	inline void BVec::assign(Int value)
 	{
@@ -305,24 +297,6 @@ namespace gtry {
 			hlim::ConnectionType::BITVEC
 		);
 		assign(SignalReadPort(constant, policy));
-	}
-
-	template<typename SigA, typename SigB>
-	inline NormalizedWidthOperands::NormalizedWidthOperands(const SigA& l, const SigB& r)
-	{
-		lhs = l.getReadPort();
-		rhs = r.getReadPort();
-
-		const size_t maxWidth = std::max(width(lhs), width(rhs));
-
-		hlim::ConnectionType::Interpretation type = hlim::ConnectionType::BITVEC;
-		if (maxWidth == 1 &&
-			(l.getConnType().interpretation != r.getConnType().interpretation ||
-			 l.getConnType().interpretation == hlim::ConnectionType::BOOL))
-			type = hlim::ConnectionType::BOOL;
-
-		lhs = lhs.expand(maxWidth, type);
-		rhs = rhs.expand(maxWidth, type);
 	}
 
 }

@@ -41,7 +41,7 @@ namespace gtry::scl
 			(std::array<TVec,16>, w)
 		);
 
-		Sha1Generator()
+		void init()
 		{
 			a = "x67452301";
 			b = "xEFCDAB89";

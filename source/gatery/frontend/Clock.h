@@ -166,17 +166,4 @@ namespace gtry {
             Clock &m_clock;
     };
 
-    template<>
-    struct Reg<BVec>
-    {
-        BVec operator () (const BVec& signal, const RegisterSettings &settings = {}) { return ClockScope::getClk()(signal, settings); }
-        BVec operator () (const BVec& signal, const BVec& reset, const RegisterSettings &settings = {}) { return ClockScope::getClk()(signal, reset, settings); }
-    };
-
-    template<>
-    struct Reg<Bit>
-    {
-        Bit operator () (const Bit& signal, const RegisterSettings &settings = {}) { return ClockScope::getClk()(signal, settings); }
-        Bit operator () (const Bit& signal, const Bit& reset, const RegisterSettings &settings = {}) { return ClockScope::getClk()(signal, reset, settings); }
-    };
 }
