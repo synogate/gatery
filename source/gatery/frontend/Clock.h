@@ -23,7 +23,7 @@
 #include "Bit.h"
 #include "BVec.h"
 #include "UInt.h"
-#include "sint.h"
+#include "SInt.h"
 
 
 #include <gatery/hlim/Clock.h>
@@ -180,12 +180,4 @@ namespace gtry {
             Clock &m_clock;
     };
 
-    template<IsElementarySignal T>
-    struct Reg<T>
-    {
-        T operator () (const T& signal, const RegisterSettings &settings = {}) { return ClockScope::getClk()(signal, settings); }
-        
-        template <std::convertible_to<T> RT>
-        T operator () (const T& signal, const RT& reset, const RegisterSettings &settings = {}) { return ClockScope::getClk()(signal, reset, settings); }
-    };
 }

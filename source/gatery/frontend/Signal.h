@@ -86,6 +86,126 @@ namespace gtry {
 
     };
 
+    struct NormalizedWidthOperands
+    {
+        template<typename SigA, typename SigB>
+        NormalizedWidthOperands(const SigA&, const SigB&);
+
+        SignalReadPort lhs, rhs;
+    };
+
+    template<typename T, typename = void>
+    struct is_signal : std::false_type
+    {};
+    
+    //// base signal like Bit, BVec, UInt, SInt
+
     template<typename T>
-    concept IsElementarySignal = std::is_base_of<ElementarySignal, T>::value;
+    concept ReadableBaseSignal = requires(T v)
+    {
+        { v.getReadPort() } -> std::same_as<SignalReadPort>;
+        { v.getName() } -> std::convertible_to<std::string_view>;
+    };
+
+    template<typename T>
+    concept BaseSignal = ReadableBaseSignal<T> and requires(SignalReadPort& port)
+    {
+        std::remove_reference_t<T>{ port };
+    };
+
+    template<BaseSignal T>
+    struct is_signal<T> : std::true_type
+    {};
+
+    //// dynamic container like std vector, map, list, deque .... of signals 
+
+    namespace internal
+    {
+        template<typename T>
+        concept DynamicContainer = not BaseSignal<T> and requires(T v, typename T::value_type e)
+        {
+            *v.begin();
+            v.end();
+            v.size();
+            v.insert(v.end(), e);
+        };
+    }
+
+    template<internal::DynamicContainer T>
+    struct is_signal<T, std::enable_if_t<is_signal<typename T::value_type>::value>> : std::true_type
+    {};
+
+    template<typename T>
+    concept ContainerSignal = internal::DynamicContainer<T> and is_signal<T>::value;
+
+    //// compound (simple aggregate for signales and metadata)
+    // this is the most loose definition of signal as a struc may also contain no signal
+
+    namespace internal
+    {
+        template<typename T>
+        struct is_std_array : std::false_type
+        {};
+
+        template<typename T, size_t N>
+        struct is_std_array<std::array<T, N>> : std::true_type
+        {};
+    }
+
+    template<typename T>
+    concept CompoundSiganl =
+        std::is_class_v<T> and
+        std::is_aggregate_v<T> and
+        !internal::DynamicContainer<T> and
+        !internal::is_std_array<T>::value;
+
+    template<CompoundSiganl T>
+    struct is_signal<T> : std::true_type
+    {};
+
+    //// static tuple/array. note C arrays are not supported due to simple aggregate limitation
+
+    template<typename T>
+    concept TupleSignal = 
+        not CompoundSiganl<T> and (
+            (internal::is_std_array<T>::value and is_signal<typename T::value_type>::value) or
+            (!internal::is_std_array<T>::value and requires(T v) {
+                    std::tuple_size<T>::value;
+                }
+            )
+        );
+
+    template<TupleSignal T>
+    struct is_signal<T> : std::true_type
+    {};
+
+    ////
+
+    template<typename T>
+    concept Signal =
+        BaseSignal<T> or
+        CompoundSiganl<T> or
+        ContainerSignal<T> or
+        TupleSignal<T>;
+
+
+    template<typename SigA, typename SigB>
+    inline NormalizedWidthOperands::NormalizedWidthOperands(const SigA& l, const SigB& r)
+    {
+        lhs = l.getReadPort();
+        rhs = r.getReadPort();
+
+        const size_t maxWidth = std::max(width(lhs), width(rhs));
+
+        hlim::ConnectionType::Interpretation type = hlim::ConnectionType::BITVEC;
+        if(maxWidth == 1 &&
+            (l.getConnType().interpretation != r.getConnType().interpretation ||
+            l.getConnType().interpretation == hlim::ConnectionType::BOOL))
+            type = hlim::ConnectionType::BOOL;
+
+        lhs = lhs.expand(maxWidth, type);
+        rhs = rhs.expand(maxWidth, type);
+    }
+
+
 }

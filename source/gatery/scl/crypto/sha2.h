@@ -45,8 +45,9 @@ namespace gtry::scl
 			(std::vector<UInt>, kTable)
 		);
 
-		Sha2_256() :
-			kTable{ {
+		void init()
+		{
+			kTable = std::vector<BVec>{
 				"x428a2f98", "x71374491", "xb5c0fbcf", "xe9b5dba5", "x3956c25b", "x59f111f1", "x923f82a4", "xab1c5ed5",
 				"xd807aa98", "x12835b01", "x243185be", "x550c7dc3", "x72be5d74", "x80deb1fe", "x9bdc06a7", "xc19bf174",
 				"xe49b69c1", "xefbe4786", "x0fc19dc6", "x240ca1cc", "x2de92c6f", "x4a7484aa", "x5cb0a9dc", "x76f988da",
@@ -55,8 +56,8 @@ namespace gtry::scl
 				"xa2bfe8a1", "xa81a664b", "xc24b8b70", "xc76c51a3", "xd192e819", "xd6990624", "xf40e3585", "x106aa070",
 				"x19a4c116", "x1e376c08", "x2748774c", "x34b0bcb5", "x391c0cb3", "x4ed8aa4a", "x5b9cca4f", "x682e6ff3",
 				"x748f82ee", "x78a5636f", "x84c87814", "x8cc70208", "x90befffa", "xa4506ceb", "xbef9a3f7", "xc67178f2"
-			} }
-		{
+			};
+
 			a = "x6a09e667";
 			b = "xbb67ae85";
 			c = "x3c6ef372";

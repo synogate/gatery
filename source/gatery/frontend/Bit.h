@@ -110,4 +110,8 @@ namespace gtry {
         std::optional<bool> m_resetValue;
     };
 
+    // ovreload to implement reset value override
+    struct RegisterSettings;
+    Bit reg(const Bit& val, const RegisterSettings& settings);
+    Bit reg(const Bit& val);
 }

@@ -250,31 +250,4 @@ namespace gtry {
 		mutable std::map<Range, FinalType> m_rangeAlias;
 	};
 
-
-	struct NormalizedWidthOperands
-	{
-		template<typename SigA, typename SigB>
-		NormalizedWidthOperands(const SigA&, const SigB&);
-
-		SignalReadPort lhs, rhs;
-	};
-
-	template<typename SigA, typename SigB>
-	inline NormalizedWidthOperands::NormalizedWidthOperands(const SigA& l, const SigB& r)
-	{
-		lhs = l.getReadPort();
-		rhs = r.getReadPort();
-
-		const size_t maxWidth = std::max(width(lhs), width(rhs));
-
-		hlim::ConnectionType::Interpretation type = hlim::ConnectionType::BITVEC;
-		if (maxWidth == 1 &&
-			(l.getConnType().interpretation != r.getConnType().interpretation ||
-			 l.getConnType().interpretation == hlim::ConnectionType::BOOL))
-			type = hlim::ConnectionType::BOOL;
-
-		lhs = lhs.expand(maxWidth, type);
-		rhs = rhs.expand(maxWidth, type);
-	}
-
 }

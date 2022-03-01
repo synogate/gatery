@@ -36,6 +36,9 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundA, gtry::BoostUnitTestSimulationFixture)
 	msgBlock.msb() = '1';
 
 	scl::Sha1Generator<> sha1, sha1ref;
+	sha1.init();
+	sha1ref.init();
+
 	sha1.beginBlock(msgBlock);
 	sim_assert(sha1.w[0] == "x80000000") << "w0";
 
@@ -64,6 +67,9 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundB, gtry::BoostUnitTestSimulationFixture)
 	msgBlock.msb() = '1';
 
 	scl::Sha1Generator<> sha1, sha1ref;
+	sha1.init();
+	sha1ref.init();
+
 	sha1.beginBlock(msgBlock);
 	sim_assert(sha1.w[0] == "x80000000") << "w0";
 
@@ -92,6 +98,9 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundC, gtry::BoostUnitTestSimulationFixture)
 	msgBlock.msb() = '1';
 
 	scl::Sha1Generator<> sha1, sha1ref;
+	sha1.init();
+	sha1ref.init();
+
 	sha1.beginBlock(msgBlock);
 	sim_assert(sha1.w[0] == "x80000000") << "w0";
 
@@ -120,6 +129,9 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundD, gtry::BoostUnitTestSimulationFixture)
 	msgBlock.msb() = '1';
 
 	scl::Sha1Generator<> sha1, sha1ref;
+	sha1.init();
+	sha1ref.init();
+
 	sha1.beginBlock(msgBlock);
 	sim_assert(sha1.w[0] == "x80000000") << "w0";
 
@@ -148,6 +160,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1, gtry::BoostUnitTestSimulationFixture)
 	msgBlock.msb() = '1';
 
 	scl::Sha1Generator<> sha1;
+	sha1.init();
 
 	sha1.beginBlock(msgBlock);
 	scl::HashEngine<scl::Sha1Generator<>> sha1Engine(0, 0);
@@ -171,6 +184,7 @@ BOOST_FIXTURE_TEST_CASE(Sha2_256, gtry::BoostUnitTestSimulationFixture)
 	msgBlock.msb() = '1';
 
 	scl::Sha2_256<> sha2;
+	sha2.init();
 
 	sha2.beginBlock(msgBlock);
 	scl::HashEngine<scl::Sha2_256<>> sha2Engine(0, 0);

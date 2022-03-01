@@ -107,7 +107,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_BigInt_small, BoostUnitTestSimulationFixture)
             while (true) {
                 expectedSum += (BigInt) simu(incrementPin);
 
-                BOOST_TEST(expectedSum == (BigInt) simu(outputPin));
+                BOOST_TEST((expectedSum == (BigInt) simu(outputPin)));
                 BOOST_TEST(simu(outputPin).allDefined());
 
                 co_await WaitFor(Seconds(1)/clock.getAbsoluteFrequency());
@@ -155,7 +155,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_BigInt, BoostUnitTestSimulationFixture)
             while (true) {
                 expectedSum ^= (BigInt) simu(incrementPin);
 
-                BOOST_TEST(expectedSum == (BigInt) simu(outputPin));
+                BOOST_TEST((expectedSum == (BigInt) simu(outputPin)));
                 BOOST_TEST(simu(outputPin).allDefined());
 
                 co_await WaitFor(Seconds(1)/clock.getAbsoluteFrequency());

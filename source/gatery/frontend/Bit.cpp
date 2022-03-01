@@ -22,8 +22,9 @@
 #include "BVec.h"
 #include "ConditionalScope.h"
 #include "Constant.h"
-#include "Scope.h"
 #include "DesignScope.h"
+#include "Reg.h"
+#include "Scope.h"
 
 #include <gatery/hlim/coreNodes/Node_Constant.h>
 #include <gatery/hlim/coreNodes/Node_Rewire.h>
@@ -56,7 +57,18 @@ namespace gtry {
         m_nodePort = {.node = constant, .port = 0ull };
     }
 
+    Bit gtry::reg(const Bit& val, const RegisterSettings& settings)
+    {
+        if(auto rval = val.getResetValue())
+            return reg<Bit>(val, *rval, settings);
 
+        return reg<Bit>(val, settings);
+    }
+
+    Bit gtry::reg(const Bit& val)
+    {
+        return reg(val, RegisterSettings{});
+    }
 
     Bit::Bit()
     {
