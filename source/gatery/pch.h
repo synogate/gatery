@@ -18,6 +18,8 @@
 #include <boost/hana/adapt_struct.hpp>
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/ext/std/array.hpp>
+#include <boost/hana/ext/std/tuple.hpp>
+#include <boost/hana/ext/std/pair.hpp>
 #include <boost/hana/fwd/accessors.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>

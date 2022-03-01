@@ -117,21 +117,21 @@ namespace gtry {
     namespace internal
     {
         template<typename T>
-        concept PushBackContainer = not BaseSignal<T> and requires(T v, typename T::value_type e)
+        concept DynamicContainer = not BaseSignal<T> and requires(T v, typename T::value_type e)
         {
             *v.begin();
             v.end();
             v.size();
-            v.push_back(e);
+            v.insert(v.end(), e);
         };
     }
 
-    template<internal::PushBackContainer T>
+    template<internal::DynamicContainer T>
     struct is_signal<T, std::enable_if_t<is_signal<typename T::value_type>::value>> : std::true_type
     {};
 
     template<typename T>
-    concept ContainerSignal = internal::PushBackContainer<T> and is_signal<T>::value;
+    concept ContainerSignal = internal::DynamicContainer<T> and is_signal<T>::value;
 
     //// compound (simple aggregate for signales and metadata)
     // this is the most loose definition of signal as a struc may also contain no signal
@@ -151,21 +151,28 @@ namespace gtry {
     concept CompoundSiganl =
         std::is_class_v<T> and
         std::is_aggregate_v<T> and
-        !internal::PushBackContainer<T> and
+        !internal::DynamicContainer<T> and
         !internal::is_std_array<T>::value;
 
     template<CompoundSiganl T>
     struct is_signal<T> : std::true_type
     {};
 
-    //// static array. note C arrays are not supported due to simple aggregate limitation
-
-    template<typename T, size_t N>
-    struct is_signal<std::array<T, N>, std::enable_if_t<is_signal<T>::value>> : std::true_type
-    {};
+    //// static tuple/array. note C arrays are not supported due to simple aggregate limitation
 
     template<typename T>
-    concept ArraySignal = internal::is_std_array<T>::value and is_signal<T>::value;
+    concept TupleSignal = 
+        not CompoundSiganl<T> and (
+            (internal::is_std_array<T>::value and is_signal<typename T::value_type>::value) or
+            (!internal::is_std_array<T>::value and requires(T v) {
+                    std::tuple_size<T>::value;
+                }
+            )
+        );
+
+    template<TupleSignal T>
+    struct is_signal<T> : std::true_type
+    {};
 
     ////
 
@@ -174,7 +181,7 @@ namespace gtry {
         BaseSignal<T> or
         CompoundSiganl<T> or
         ContainerSignal<T> or
-        ArraySignal<T>;
+        TupleSignal<T>;
 
 
     template<typename SigA, typename SigB>

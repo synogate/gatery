@@ -50,14 +50,14 @@ namespace gtry
 	template<ContainerSignal T>
 	T reg(const T& val, const RegisterSettings& settings = {});
 
-	template<ContainerSignal T, std::convertible_to<T> Tr>
+	template<ContainerSignal T, ContainerSignal Tr>
 	T reg(const T& val, const Tr& resetVal, const RegisterSettings& settings = {});
 
-	template<ArraySignal T>
+	template<TupleSignal T>
 	T reg(const T& val, const RegisterSettings& settings = {});
 
-	template<ArraySignal T, std::convertible_to<typename T::value_type> Tr, size_t N>
-	T reg(const T& val, const std::array<Tr, N>& resetVal, const RegisterSettings& settings = {});
+	template<TupleSignal T, TupleSignal Tr>
+	T reg(const T& val, const Tr& resetVal, const RegisterSettings& settings = {});
 
 	// implementation
 	namespace internal
@@ -65,10 +65,22 @@ namespace gtry
 		SignalReadPort reg(SignalReadPort val, std::string_view name, std::optional<SignalReadPort> reset, const RegisterSettings& settings);
 
 		template<typename T>
-		T operator + (const T& v, const RegisterSettings& s) { return reg(v, s); }
+		T operator + (const T& v, const RegisterSettings& s) 
+		{ 
+			if constexpr(Signal<T>)
+				return reg(v, s);
+			else
+				return v;
+		}
 
-		template<typename T>
-		T operator + (std::tuple<const T&, const T&> v, const RegisterSettings& s) { return reg(get<0>(v), get<1>(v), s); }
+		template<typename T, std::convertible_to<T> Tr>
+		T operator + (std::tuple<const T&, const Tr&> v, const RegisterSettings& s) 
+		{ 
+			if constexpr(Signal<T>)
+				return reg(get<0>(v), get<1>(v), s);
+			else
+				return get<1>(v);
+		}
 	}
 	
 
@@ -138,12 +150,12 @@ namespace gtry
 			ret.reserve(val.size());
 
 		for(auto&& it : val)
-			ret.push_back(reg(it, settings));
+			ret.insert(ret.end(), reg(it, settings));
 
 		return ret;
 	}
 
-	template<ContainerSignal T, std::convertible_to<T> Tr>
+	template<ContainerSignal T, ContainerSignal Tr>
 	T reg(const T& val, const Tr& resetVal, const RegisterSettings& settings)
 	{
 		HCL_DESIGNCHECK(val.size() == resetVal.size());
@@ -153,15 +165,15 @@ namespace gtry
 		if constexpr(requires { ret.reserve(val.size()); })
 			ret.reserve(val.size());
 
-		const T& resetValT = resetVal;
-		auto it_reset = resetValT.begin();
+//		const T& resetValT = resetVal;
+		auto it_reset = resetVal.begin();
 		for(auto&& it : val)
-			ret.push_back(reg(it, *it_reset++, settings));
+			ret.insert(ret.end(), reg(it, *it_reset++, settings));
 
 		return ret;
 	}
 
-	template<ArraySignal T>
+	template<TupleSignal T>
 	T reg(const T& val, const RegisterSettings& settings)
 	{
 		using namespace internal;
@@ -171,28 +183,29 @@ namespace gtry
 		});
 
 		return boost::hana::unpack(in2, [&](auto&&... args) {
-			return T{ { (args + settings)... } };
+			return T{ (args + settings)... };
 		});
 	}
 
-	template<ArraySignal T, std::convertible_to<typename T::value_type> Tr, size_t N>
-	T reg(const T& val, const std::array<Tr, N>& resetVal, const RegisterSettings& settings)
+	template<TupleSignal T, TupleSignal Tr>
+	T reg(const T& val, const Tr& resetVal, const RegisterSettings& settings)
 	{
 		using namespace internal;
-
+	
 		auto in2 = boost::hana::unpack(val, [](auto&&... args) {
 			return std::tie(args...);
 		});
 		auto in2r = boost::hana::unpack(resetVal, [](auto&&... args) {
 			return std::tie(args...);
 		});
-
-		auto in3 = boost::hana::zip_with(std::tie<const typename T::value_type&, const typename T::value_type&>, in2, in2r);
-
+	
+		auto in3 = boost::hana::zip_with([](auto&& a, auto&& b) {
+			static_assert(std::is_constructible_v<decltype(a), decltype(b)>, "reset type is not convertable to signal type");
+			return std::tie(a, b);
+		}, in2, in2r);
+	
 		return boost::hana::unpack(in3, [&](auto&&... args) {
-			return T{ { (args + settings)... } };
+			return T{ (args + settings)... };
 		});
 	}
-
-
 }

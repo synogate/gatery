@@ -155,3 +155,75 @@ BOOST_FIXTURE_TEST_CASE(ArrayRegister, gtry::BoostUnitTestSimulationFixture)
     design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     runTest({ 1,1 });
 }
+
+BOOST_FIXTURE_TEST_CASE(TupleRegister, gtry::BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+
+    static_assert(Signal<std::tuple<int, BVec>>);
+    static_assert(Signal<std::pair<BVec, int>>);
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    ClockScope clockScope(clock);
+
+    std::tuple<int, BVec> inSignal{ 0, BVec{pinIn(2_b)} };
+    std::tuple<int, unsigned> inSignalReset{ 1, 3 };
+
+    std::tuple<int, BVec> outSignal = reg(inSignal);
+    pinOut(get<1>(outSignal));
+
+    std::tuple<int, BVec> outSignalReset = reg(inSignal, inSignalReset);
+    pinOut(get<1>(outSignalReset));
+
+    addSimulationProcess([=, this]()->SimProcess {
+
+        BOOST_TEST(get<0>(outSignalReset) == 1);
+        BOOST_TEST(simu(get<1>(outSignalReset)) == 3);
+
+        simu(get<1>(inSignal)) = 2;
+
+        co_await WaitClk(clock);
+
+        BOOST_TEST(simu(get<1>(outSignal)) == 2);
+        BOOST_TEST(simu(get<1>(outSignalReset)) == 2);
+
+        stopTest();
+    });
+
+    design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+    runTest({ 1,1 });
+}
+
+BOOST_FIXTURE_TEST_CASE(MapRegister, gtry::BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+
+    static_assert(Signal<std::map<int, BVec>>);
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    ClockScope clockScope(clock);
+
+    std::map<int, BVec> inSignal;
+    inSignal[0] = pinIn(2_b);
+
+    std::map<int, int> inSignalReset = { {0,3} };
+    
+    std::map<int, BVec> outSignal = reg(inSignal);
+    std::map<int, BVec> outSignalReset = reg(inSignal, inSignalReset);
+    
+    addSimulationProcess([&, this]()->SimProcess {
+
+        simu(inSignal[0]) = 2;
+        BOOST_TEST(simu(outSignalReset[0]) == 3);
+
+        co_await WaitClk(clock);
+
+        BOOST_TEST(simu(outSignal[0]) == 2);
+        BOOST_TEST(simu(outSignalReset[0]) == 2);
+
+        stopTest();
+    });
+
+    design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+    runTest({ 1,1 });
+}
