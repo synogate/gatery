@@ -21,7 +21,7 @@
 #include "../Fifo.h"
 #include "../StreamArbiter.h"
 
-gtry::Bit gtry::scl::pci::isCompletionTlp(const BVec& tlpHeader)
+gtry::Bit gtry::scl::pci::isCompletionTlp(const UInt& tlpHeader)
 {
 	HCL_DESIGNCHECK_HINT(tlpHeader.getWidth() >= 8_b, "first 8b of tlp header required for decoding");
 	Bit completion_tlp = tlpHeader(0, 5) == "b01010";
@@ -29,7 +29,7 @@ gtry::Bit gtry::scl::pci::isCompletionTlp(const BVec& tlpHeader)
 	return completion_tlp;
 }
 
-gtry::Bit gtry::scl::pci::isMemTlp(const BVec& tlpHeader)
+gtry::Bit gtry::scl::pci::isMemTlp(const UInt& tlpHeader)
 {
 	HCL_DESIGNCHECK_HINT(tlpHeader.getWidth() >= 8_b, "first 8b of tlp header required for decoding");
 	Bit mem_tlp = tlpHeader(0, 5) == 0;
@@ -37,7 +37,7 @@ gtry::Bit gtry::scl::pci::isMemTlp(const BVec& tlpHeader)
 	return mem_tlp;
 }
 
-gtry::Bit gtry::scl::pci::isDataTlp(const BVec& tlpHeader)
+gtry::Bit gtry::scl::pci::isDataTlp(const UInt& tlpHeader)
 {
 	HCL_DESIGNCHECK_HINT(tlpHeader.getWidth() >= 32_b, "first word of tlp header required for decoding");
 	Bit data_tlp = tlpHeader[30];
@@ -117,7 +117,7 @@ gtry::scl::pci::Tlp gtry::scl::pci::Tlp::discardHighAddressBits() const
 	return tlpHdr;
 }
 
-void gtry::scl::pci::MemTlpCplData::decode(const BVec& tlpHdr)
+void gtry::scl::pci::MemTlpCplData::decode(const UInt& tlpHdr)
 {
 	attr.trafficClass = tlpHdr(20, 3_b);
 	attr.idBasedOrdering = tlpHdr[18];
@@ -131,7 +131,7 @@ void gtry::scl::pci::MemTlpCplData::decode(const BVec& tlpHdr)
 	requester.bus = tlpHdr(56, 8_b);
 }
 
-void gtry::scl::pci::MemTlpCplData::encode(BVec& tlpHdr) const
+void gtry::scl::pci::MemTlpCplData::encode(UInt& tlpHdr) const
 {
 	tlpHdr(20, 3_b) = attr.trafficClass;
 	tlpHdr[18] = attr.idBasedOrdering;
@@ -156,7 +156,7 @@ void gtry::scl::pci::IntelPTileCompleter::generate()
 		in[i].header = 128_b;
 		in[i].data = 32_b;
 
-		BVec header = swapEndian(in[i].header, 8_b, 32_b);
+		UInt header = swapEndian(in[i].header, 8_b, 32_b);
 		IF(header[29]) // 4 DW tlp header
 			header(64, 32_b) = header(96, 32_b);
 

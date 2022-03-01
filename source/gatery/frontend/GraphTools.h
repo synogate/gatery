@@ -17,7 +17,9 @@
 */
 #pragma once
 
-#include "BitVector.h"
+#include "BVec.h"
+#include "UInt.h"
+#include "SInt.h"
 #include "Bit.h"
 
 #include "../simulation/BitVectorState.h"
@@ -35,9 +37,9 @@ namespace gtry::hlim {
 namespace gtry {
 
 struct NodeGroupIO {
-	std::map<std::string, BVec> inputBVecs;
+	std::map<std::string, UInt> inputUInts;
 	std::map<std::string, Bit> inputBits;
-	std::map<std::string, BVec> outputBVecs;
+	std::map<std::string, UInt> outputUInts;
 	std::map<std::string, Bit> outputBits;
 
 	NodeGroupIO(hlim::NodeGroup *nodeGroup);
@@ -49,13 +51,13 @@ class NodeGroupSurgeryHelper {
 
 		bool containsSignal(std::string_view name);
 
-		BVec hookBVecBefore(std::string_view name);
-		BVec hookBVecAfter(std::string_view name);
+		UInt hookUIntBefore(std::string_view name);
+		UInt hookUIntAfter(std::string_view name);
 		Bit hookBitBefore(std::string_view name);
 		Bit hookBitAfter(std::string_view name);
 
 		Bit getBit(std::string_view name);
-		BVec getBVec(std::string_view name);
+		UInt getUInt(std::string_view name);
 
 		const std::vector<hlim::Node_Signal*> &getAllSignals(std::string_view name);
 	protected:
@@ -64,26 +66,25 @@ class NodeGroupSurgeryHelper {
 };
 
 
-BVec hookBVecBefore(hlim::NodePort input);
-BVec hookBVecAfter(hlim::NodePort output);
+UInt hookUIntBefore(hlim::NodePort input);
+UInt hookUIntAfter(hlim::NodePort output);
 Bit hookBitBefore(hlim::NodePort input);
 Bit hookBitAfter(hlim::NodePort output);
 
-BVec getBVecBefore(hlim::NodePort input);
-BVec getBVecBefore(hlim::NodePort input, BVec defaultValue);
+UInt getUIntBefore(hlim::NodePort input);
+UInt getUIntBefore(hlim::NodePort input, UInt defaultValue);
 Bit getBitBefore(hlim::NodePort input);
 Bit getBitBefore(hlim::NodePort input, Bit defaultValue);
 
 
-BVec hookBVecBefore(hlim::Node_Signal *signal);
-BVec hookBVecAfter(hlim::Node_Signal *signal);
+UInt hookUIntBefore(hlim::Node_Signal *signal);
+UInt hookUIntAfter(hlim::Node_Signal *signal);
 Bit hookBitBefore(hlim::Node_Signal *signal);
 Bit hookBitAfter(hlim::Node_Signal *signal);
 
 
 sim::DefaultBitVectorState evaluateStatically(hlim::NodePort output);
-sim::DefaultBitVectorState evaluateStatically(const Bit &bit);
-sim::DefaultBitVectorState evaluateStatically(const BVec &bvec);
+sim::DefaultBitVectorState evaluateStatically(const ElementarySignal &signal);
 
 hlim::Node_Pin *findInputPin(ElementarySignal &sig);
 hlim::Node_Pin *findOutputPin(ElementarySignal &sig);

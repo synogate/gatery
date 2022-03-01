@@ -18,7 +18,7 @@
 #pragma once
 
 #include "Bit.h"
-#include "BitVector.h"
+#include "BVec.h"
 #include "Clock.h"
 
 #include <gatery/hlim/supportNodes/Node_RegSpawner.h>
@@ -57,14 +57,14 @@ namespace gtry {
 	};
 
     template<>
-    struct PipelineInput<BVec>
+    struct PipelineInput<UInt>
     {
-        BVec operator () (const BVec& signal, Pipeline &pipeline) {
+        UInt operator () (const UInt& signal, Pipeline &pipeline) {
 			pipeline.getRegSpawner()->setClock(ClockScope::getClk().getClk());
 			auto port = pipeline.getRegSpawner()->addInput(signal.getReadPort(), {});
 			return SignalReadPort{hlim::NodePort{.node = pipeline.getRegSpawner(), .port = port}};
 		}
-        BVec operator () (const BVec& signal, const BVec& reset, Pipeline &pipeline) {
+        UInt operator () (const UInt& signal, const UInt& reset, Pipeline &pipeline) {
 			NormalizedWidthOperands ops(signal, reset);
 
 			pipeline.getRegSpawner()->setClock(ClockScope::getClk().getClk());
@@ -178,12 +178,12 @@ namespace gtry {
 	T regHint(const T& val) { return RegHint<T>{}(val); }
 
 	Bit placeRegHint(const Bit &bit);
-	BVec placeRegHint(const BVec &bvec);
+	UInt placeRegHint(const UInt &UInt);
 
     template<>
-    struct RegHint<BVec>
+    struct RegHint<UInt>
     {
-        BVec operator () (const BVec& signal) { return placeRegHint(signal); }
+        UInt operator () (const UInt& signal) { return placeRegHint(signal); }
     };
 
     template<>

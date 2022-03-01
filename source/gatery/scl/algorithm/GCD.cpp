@@ -21,20 +21,20 @@
 using namespace gtry;
 
 
-gtry::scl::StreamSource<gtry::scl::BVecPair> gtry::scl::binaryGCDStep1(StreamSink<BVecPair>& in, size_t iterationsPerClock)
+gtry::scl::StreamSource<gtry::scl::UIntPair> gtry::scl::binaryGCDStep1(StreamSink<UIntPair>& in, size_t iterationsPerClock)
 {
     const size_t width = in.first.size();
-    StreamSource<BVecPair> out(BVec{ width }, BVec{ width });
+    StreamSource<UIntPair> out(UInt{ width }, UInt{ width });
 
-    Register<BVec> a(BitWidth{ width });
-    Register<BVec> b(BitWidth{ width });
-    Register<BVec> d(BitWidth{ utils::Log2C(width) });
-    Register<Bit> active;
+    UInt a = BitWidth{ width };
+    UInt b = BitWidth{ width };
+    UInt d = BitWidth{ utils::Log2C(width) };
+    Bit active;
+
     HCL_NAMED(a);
     HCL_NAMED(b);
     HCL_NAMED(d);
     HCL_NAMED(active);
-    active.setReset('0');
 
     in.ready = !active;
 
@@ -42,7 +42,7 @@ gtry::scl::StreamSource<gtry::scl::BVecPair> gtry::scl::binaryGCDStep1(StreamSin
     {
         a = in.first;
         b = in.second;
-        d = ConstBVec(0, d.getWidth());
+        d = ConstUInt(0, d.getWidth());
         active = true;
     }
 
@@ -63,8 +63,8 @@ gtry::scl::StreamSource<gtry::scl::BVecPair> gtry::scl::binaryGCDStep1(StreamSin
 
             IF(a_odd & b_odd)
             {
-                BVec abs = pack('0', (BVec&)a) - pack('0', (BVec&)b);
-                a = mux(abs.msb(), { (BVec&)a, (BVec&)b }); // TODO: (BVec&) cast?
+                UInt abs = pack('0', a) - pack('0', b);
+                a = mux(abs.msb(), { a, b });
 
                 HCL_COMMENT << "a - b is always even, it is sufficient to build the 1s complement";
                 b = (abs(0, b.size()) ^ abs.msb()) >> 1;
@@ -80,18 +80,23 @@ gtry::scl::StreamSource<gtry::scl::BVecPair> gtry::scl::binaryGCDStep1(StreamSin
     IF(out.valid & out.ready)
         active = false;
 
+    a = reg(a);
+    b = reg(a);
+    d = reg(a);
+    active = reg(active, '0');
+
     return out;
 }
 
-gtry::scl::StreamSource<gtry::BVec> gtry::scl::shiftLeft(StreamSink<BVecPair>& in, size_t iterationsPerClock)
+gtry::scl::StreamSource<gtry::UInt> gtry::scl::shiftLeft(StreamSink<UIntPair>& in, size_t iterationsPerClock)
 {
-    Register<BVec> a{ BitWidth{in.first.getWidth()} };
-    Register<BVec> b{ BitWidth{in.second.getWidth()} };
-    Register<Bit> active;
+    UInt a = BitWidth{in.first.getWidth()};
+    UInt b = BitWidth{in.second.getWidth()};
+    Bit active;
     HCL_NAMED(a);
     HCL_NAMED(b);
     HCL_NAMED(active);
-    active.setReset('0');
+
     in.ready = !active;
 
     IF(in.valid & in.ready)
@@ -110,17 +115,22 @@ gtry::scl::StreamSource<gtry::BVec> gtry::scl::shiftLeft(StreamSink<BVecPair>& i
         }
     }
 
-    StreamSource<BVec> out{ in.first.getWidth() };
+    StreamSource<UInt> out{ in.first.getWidth() };
     out.valid = active & (b != 0);
-    (BVec&)out = a;
+    (UInt&)out = a;
 
     IF(out.valid & out.ready)
         active = false;
 
+
+    a = reg(a);
+    b = reg(a);
+    active = reg(active, '0');
+
     return out;
 }
 
-gtry::scl::StreamSource<gtry::BVec> gtry::scl::binaryGCD(StreamSink<BVecPair>& in, size_t iterationsPerClock)
+gtry::scl::StreamSource<gtry::UInt> gtry::scl::binaryGCD(StreamSink<UIntPair>& in, size_t iterationsPerClock)
 {
     GroupScope entity(GroupScope::GroupType::ENTITY);
     entity
@@ -128,7 +138,7 @@ gtry::scl::StreamSource<gtry::BVec> gtry::scl::binaryGCD(StreamSink<BVecPair>& i
         .setComment("Compute the greatest common divisor of two integers using binary GCD.");
 
     StreamSource source = binaryGCDStep1(in, iterationsPerClock);
-    StreamSink<BVecPair> step1 = source;
+    StreamSink<UIntPair> step1 = source;
     auto step2 = shiftLeft(step1, iterationsPerClock);
     return step2;
 }

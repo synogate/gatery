@@ -19,11 +19,15 @@
 
 #include "Signal.h"
 #include "Bit.h"
-#include "BitVector.h"
+#include "BVec.h"
+#include "UInt.h"
+#include "SInt.h"
 #include "Scope.h"
 
 #include <gatery/hlim/coreNodes/Node_Signal.h>
 #include <gatery/hlim/coreNodes/Node_Rewire.h>
+#include <gatery/hlim/coreNodes/Node_Shift.h>
+
 
 #include <gatery/utils/Preprocessor.h>
 #include <gatery/utils/Traits.h>
@@ -36,56 +40,112 @@
 
 namespace gtry {
 
-class SignalBitShiftOp
-{
-    public:
-        SignalBitShiftOp(int shift) : m_shift(shift) { }
-
-        inline SignalBitShiftOp &setFillLeft(bool bit) { m_fillLeft = bit; return *this; }
-        inline SignalBitShiftOp &setFillRight(bool bit) { m_fillRight = bit; return *this; }
-        inline SignalBitShiftOp &duplicateLeft() { m_duplicateLeft = true; m_rotate = false; return *this; }
-        inline SignalBitShiftOp &duplicateRight() { m_duplicateRight = true; m_rotate = false; return *this; }
-        inline SignalBitShiftOp &rotate() { m_rotate = true; m_duplicateLeft = m_duplicateRight = false; return *this; }
-
-        hlim::ConnectionType getResultingType(const hlim::ConnectionType &operand);
-
-        BVec operator()(const BVec &operand);
-    protected:
-        int m_shift;
-        bool m_duplicateLeft = false;
-        bool m_duplicateRight = false;
-        bool m_rotate = false;
-        bool m_fillLeft = false;
-        bool m_fillRight = false;
-};
 
 
-BVec operator<<(const BVec &signal, int amount); // TODO (remove)
-BVec operator>>(const BVec &signal, int amount); // TODO (remove)
-BVec &operator<<=(BVec &signal, int amount); // TODO (remove)
-BVec &operator>>=(BVec &signal, int amount); // TODO (remove)
+BVec shl(const BVec& signal, int amount); // TODO (remove)
+BVec shr(const BVec& signal, int amount); // TODO (remove)
+
+UInt shl(const UInt& signal, int amount); // TODO (remove)
+UInt shr(const UInt& signal, int amount); // TODO (remove)
+
+SInt shl(const SInt& signal, int amount); // TODO (remove)
+SInt shr(const SInt& signal, int amount); // TODO (remove)
+
+inline BVec operator<<(const BVec &signal, int amount) { return shl(signal, amount); } // TODO (remove)
+inline BVec operator>>(const BVec &signal, int amount) { return shr(signal, amount); } // TODO (remove)
+
+inline UInt operator<<(const UInt &signal, int amount) { return shl(signal, amount); } // TODO (remove)
+inline UInt operator>>(const UInt &signal, int amount) { return shr(signal, amount); } // TODO (remove)
+
+inline SInt operator<<(const SInt &signal, int amount) { return shl(signal, amount); } // TODO (remove)
+inline SInt operator>>(const SInt &signal, int amount) { return shr(signal, amount); } // TODO (remove)
+
+template<BitVectorDerived T> 
+inline T &operator<<=(T &signal, int amount) { return signal = shl(signal, amount); } // TODO (remove)
+template<BitVectorDerived T> 
+inline T &operator>>=(T &signal, int amount)  { return signal = shr(signal, amount); } // TODO (remove)
+
+
 
 BVec rot(const BVec& signal, int amount); // TODO (remove)
+UInt rot(const UInt& signal, int amount); // TODO (remove)
+SInt rot(const SInt& signal, int amount); // TODO (remove)
+
 inline BVec rotl(const BVec& signal, int amount) { return rot(signal, amount); }  // TODO (remove)
 inline BVec rotr(const BVec& signal, int amount) { return rot(signal, -amount); }  // TODO (remove)
 inline BVec rotl(const BVec& signal, size_t amount) { return rot(signal, int(amount)); }  // TODO (remove)
 inline BVec rotr(const BVec& signal, size_t amount) { return rot(signal, -int(amount)); }  // TODO (remove)
 
-BVec shr(const BVec& signal, size_t amount, const Bit& arithmetic);
-BVec shr(const BVec& signal, const BVec& amount, const Bit& arithmetic);
+inline UInt rotl(const UInt& signal, int amount) { return rot(signal, amount); }  // TODO (remove)
+inline UInt rotr(const UInt& signal, int amount) { return rot(signal, -amount); }  // TODO (remove)
+inline UInt rotl(const UInt& signal, size_t amount) { return rot(signal, int(amount)); }  // TODO (remove)
+inline UInt rotr(const UInt& signal, size_t amount) { return rot(signal, -int(amount)); }  // TODO (remove)
 
-BVec zshl(const BVec& signal, const BVec& amount);
-BVec oshl(const BVec& signal, const BVec& amount);
-BVec sshl(const BVec& signal, const BVec& amount);
-BVec zshr(const BVec& signal, const BVec& amount);
-BVec oshr(const BVec& signal, const BVec& amount);
-BVec sshr(const BVec& signal, const BVec& amount);
-BVec rotl(const BVec& signal, const BVec& amount);
-BVec rotr(const BVec& signal, const BVec& amount);
+inline SInt rotl(const SInt& signal, int amount) { return rot(signal, amount); }  // TODO (remove)
+inline SInt rotr(const SInt& signal, int amount) { return rot(signal, -amount); }  // TODO (remove)
+inline SInt rotl(const SInt& signal, size_t amount) { return rot(signal, int(amount)); }  // TODO (remove)
+inline SInt rotr(const SInt& signal, size_t amount) { return rot(signal, -int(amount)); }  // TODO (remove)
 
-inline BVec operator<<(const BVec& signal, const BVec& amount) { return zshl(signal, amount); }
-inline BVec operator>>(const BVec& signal, const BVec& amount) { return zshr(signal, amount); }
-inline BVec& operator<<=(BVec& signal, const BVec& amount) { return signal = zshl(signal, amount); }
-inline BVec& operator>>=(BVec& signal, const BVec& amount) { return signal = zshr(signal, amount); }
+SignalReadPort internal_shift(const SignalReadPort& signal, const SignalReadPort& amount, hlim::Node_Shift::dir direction, hlim::Node_Shift::fill fill);
+UInt shr(const UInt& signal, size_t amount, const Bit& arithmetic);
+UInt shr(const UInt& signal, const UInt& amount, const Bit& arithmetic);
+
+inline BVec zshl(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::zero)}; }
+inline BVec oshl(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::one)}; }
+inline BVec sshl(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::last)}; }
+inline BVec zshr(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::zero)}; }
+inline BVec oshr(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::one)}; }
+inline BVec sshr(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::last)}; }
+inline BVec rotl(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::rotate)}; }
+inline BVec rotr(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::rotate)}; }
+
+inline UInt zshl(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::zero)}; }
+inline UInt oshl(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::one)}; }
+inline UInt sshl(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::last)}; }
+inline UInt zshr(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::zero)}; }
+inline UInt oshr(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::one)}; }
+inline UInt sshr(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::last)}; }
+inline UInt rotl(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::rotate)}; }
+inline UInt rotr(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::rotate)}; }
+
+
+inline SInt zshl(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::zero)}; }
+inline SInt oshl(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::one)}; }
+inline SInt sshl(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::last)}; }
+inline SInt zshr(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::zero)}; }
+inline SInt oshr(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::one)}; }
+inline SInt sshr(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::last)}; }
+inline SInt rotl(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::rotate)}; }
+inline SInt rotr(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::rotate)}; }
+
+
+
+inline BVec shl(const BVec& signal, const UInt& amount) { return zshl(signal, amount); }
+inline BVec shr(const BVec& signal, const UInt& amount) { return zshr(signal, amount); }
+
+inline UInt shl(const UInt& signal, const UInt& amount) { return zshl(signal, amount); }
+inline UInt shr(const UInt& signal, const UInt& amount) { return zshr(signal, amount); }
+
+inline SInt shl(const SInt& signal, const UInt& amount) { return zshl(signal, amount); }
+inline SInt shr(const SInt& signal, const UInt& amount) { return sshr(signal, amount); }
+
+
+
+// These are explicit (non-templated) for now to allow implicit parameter conversion
+inline BVec operator<<(const BVec& signal, const UInt& amount) { return shl(signal, amount); }
+inline BVec operator>>(const BVec& signal, const UInt& amount) { return shr(signal, amount); }
+
+inline UInt operator<<(const UInt& signal, const UInt& amount) { return shl(signal, amount); }
+inline UInt operator>>(const UInt& signal, const UInt& amount) { return shr(signal, amount); }
+
+inline SInt operator<<(const SInt& signal, const UInt& amount) { return shl(signal, amount); }
+inline SInt operator>>(const SInt& signal, const UInt& amount) { return shr(signal, amount); }
+
+
+template<BitVectorDerived T>
+inline T& operator<<=(T& signal, const UInt& amount) { return signal = shl(signal, amount); }
+
+template<BitVectorDerived T>
+inline T& operator>>=(T& signal, const UInt& amount) { return signal = shr(signal, amount); }
 
 }

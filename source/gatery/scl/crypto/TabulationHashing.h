@@ -32,7 +32,7 @@ namespace gtry::scl
 		TabulationHashing& hashWidth(BitWidth width);
 		TabulationHashing& symbolWidth(BitWidth width);
 
-		virtual BVec operator () (const BVec& data);
+		virtual UInt operator () (const UInt& data);
 		size_t latency() const { return 1; }
 
 		AvalonMM singleUpdatePort(bool readable = false);
@@ -49,6 +49,6 @@ namespace gtry::scl
 	private:
 		BitWidth m_hashWidth;
 		BitWidth m_symbolWidth = 8_b;
-		std::vector<Memory<BVec>> m_tables;
+		std::vector<Memory<UInt>> m_tables;
 	};
 }

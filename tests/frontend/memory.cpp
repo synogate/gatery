@@ -40,14 +40,14 @@ BOOST_FIXTURE_TEST_CASE(async_ROM, BoostUnitTestSimulationFixture)
     for (auto &e : contents)
         e = rng() % 16;
 
-    Memory<BVec> rom(contents.size(), 4_b);
+    Memory<UInt> rom(contents.size(), 4_b);
     rom.fillPowerOnState(createDefaultBitVectorState(16, 4, [&contents](std::size_t i, std::size_t *words){
         words[DefaultConfig::VALUE] = contents[i];
         words[DefaultConfig::DEFINED] = ~0ull;
     }));
 
 
-    BVec addr = pinIn(4_b);
+    UInt addr = pinIn(4_b);
     auto output = pinOut(rom[addr]);
 
 
@@ -83,14 +83,14 @@ BOOST_FIXTURE_TEST_CASE(sync_ROM, BoostUnitTestSimulationFixture)
     for (auto &e : contents)
         e = rng() % 16;
 
-    Memory<BVec> rom(contents.size(), 4_b);
+    Memory<UInt> rom(contents.size(), 4_b);
     rom.fillPowerOnState(createDefaultBitVectorState(16, 4, [&contents](std::size_t i, std::size_t *words){
         words[DefaultConfig::VALUE] = contents[i];
         words[DefaultConfig::DEFINED] = ~0ull;
     }));
 
 
-    BVec addr = pinIn(4_b);
+    UInt addr = pinIn(4_b);
     auto output = pinOut(reg(rom[addr], {.allowRetimingBackward=true}));
 
 
@@ -126,12 +126,12 @@ BOOST_FIXTURE_TEST_CASE(async_mem, BoostUnitTestSimulationFixture)
     for (auto &e : contents)
         e = rng() % 16;
 
-    Memory<BVec> mem(contents.size(), 4_b);
+    Memory<UInt> mem(contents.size(), 4_b);
     mem.noConflicts();
 
-    BVec addr = pinIn(4_b);
+    UInt addr = pinIn(4_b);
     auto output = pinOut(mem[addr]);
-    BVec input = pinIn(4_b);
+    UInt input = pinIn(4_b);
     Bit wrEn = pinIn();
     IF (wrEn)
         mem[addr] = input;
@@ -178,12 +178,12 @@ BOOST_FIXTURE_TEST_CASE(sync_mem, BoostUnitTestSimulationFixture)
     for (auto &e : contents)
         e = rng() % 16;
 
-    Memory<BVec> mem(contents.size(), 4_b);
+    Memory<UInt> mem(contents.size(), 4_b);
     mem.noConflicts();
 
-    BVec addr = pinIn(4_b);
+    UInt addr = pinIn(4_b);
     auto output = pinOut(reg(mem[addr], {.allowRetimingBackward=true}));
-    BVec input = pinIn(4_b);
+    UInt input = pinIn(4_b);
     Bit wrEn = pinIn();
     IF (wrEn)
         mem[addr] = input;
@@ -231,13 +231,13 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_before_write, BoostUnitTestSimulationFixt
     for (auto &e : contents)
         e = rng() % 16;
 
-    Memory<BVec> mem(contents.size(), 4_b);
+    Memory<UInt> mem(contents.size(), 4_b);
 
-    BVec rdAddr = pinIn(4_b);
+    UInt rdAddr = pinIn(4_b);
     auto output = pinOut(mem[rdAddr]);
 
-    BVec wrAddr = pinIn(4_b);
-    BVec input = pinIn(4_b);
+    UInt wrAddr = pinIn(4_b);
+    UInt input = pinIn(4_b);
     Bit wrEn = pinIn();
     IF (wrEn)
         mem[wrAddr] = input;
@@ -298,12 +298,12 @@ BOOST_FIXTURE_TEST_CASE(async_mem_write_before_read, BoostUnitTestSimulationFixt
     for (auto &e : contents)
         e = rng() % 16;
 
-    Memory<BVec> mem(contents.size(), 4_b);
+    Memory<UInt> mem(contents.size(), 4_b);
 
-    BVec rdAddr = pinIn(4_b);
+    UInt rdAddr = pinIn(4_b);
 
-    BVec wrAddr = pinIn(4_b);
-    BVec input = pinIn(4_b);
+    UInt wrAddr = pinIn(4_b);
+    UInt input = pinIn(4_b);
     Bit wrEn = pinIn();
     IF (wrEn)
         mem[wrAddr] = input;
@@ -365,15 +365,15 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_modify_write, BoostUnitTestSimulationFixt
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
-    Memory<BVec> mem(contents.size(), 32_b);
+    Memory<UInt> mem(contents.size(), 32_b);
     mem.setType(MemType::SMALL);
     mem.initZero();
 
-    BVec addr = pinIn(4_b);
-    BVec output;
+    UInt addr = pinIn(4_b);
+    UInt output;
     Bit wrEn = pinIn();
     {
-        BVec elem = mem[addr];
+        UInt elem = mem[addr];
         output = reg(elem, {.allowRetimingBackward=true});
 
         IF (wrEn)
@@ -442,15 +442,15 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write, BoostUnitTestSimulationFixtu
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
-    Memory<BVec> mem(contents.size(), 32_b);
+    Memory<UInt> mem(contents.size(), 32_b);
     mem.setType(MemType::MEDIUM);
     mem.initZero();
 
-    BVec addr = pinIn(4_b);
-    BVec output;
+    UInt addr = pinIn(4_b);
+    UInt output;
     Bit wrEn = pinIn();
     {
-        BVec elem = mem[addr];
+        UInt elem = mem[addr];
         output = reg(elem, {.allowRetimingBackward=true});
 
         IF (wrEn)
@@ -522,21 +522,21 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads, BoostUnitTest
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
-    Memory<BVec> mem(contents.size(), 32_b);
+    Memory<UInt> mem(contents.size(), 32_b);
     mem.setType(MemType::MEDIUM);
     mem.initZero();
 
-    BVec addr = pinIn(4_b).setName("rmw_addr");
-    BVec rd_addr = pinIn(4_b).setName("rd_addr");
+    UInt addr = pinIn(4_b).setName("rmw_addr");
+    UInt rd_addr = pinIn(4_b).setName("rd_addr");
     Bit wrEn = pinIn().setName("wr_en");
-    BVec readOutputBefore = reg(mem[rd_addr], {.allowRetimingBackward=true});
+    UInt readOutputBefore = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputBefore).setName("readOutputBefore");
     {
-        BVec elem = mem[addr];
+        UInt elem = mem[addr];
         IF (wrEn)
             mem[addr] = elem + 1;
     }
-    BVec readOutputAfter = reg(mem[rd_addr], {.allowRetimingBackward=true});
+    UInt readOutputAfter = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputAfter).setName("readOutputAfter");
 
 	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
@@ -606,18 +606,18 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_on_wrEn, BoostUnitTestSimulat
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
-    Memory<BVec> mem(contents.size(), 32_b);
+    Memory<UInt> mem(contents.size(), 32_b);
     mem.setType(MemType::MEDIUM);
     mem.initZero();
 
-    BVec addr = pinIn(4_b).setName("rmw_addr");
+    UInt addr = pinIn(4_b).setName("rmw_addr");
     Bit shuffler = pinIn().setName("shuffler");
 
-    BVec rd_addr = pinIn(4_b).setName("rd_addr");
-    BVec readOutputBefore = reg(mem[rd_addr], {.allowRetimingBackward=true});
+    UInt rd_addr = pinIn(4_b).setName("rd_addr");
+    UInt readOutputBefore = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputBefore).setName("readOutputBefore");
     {
-        BVec elem = mem[addr];
+        UInt elem = mem[addr];
         Bit doWrite = elem[0] ^ shuffler;
         elem += 1;
         IF (doWrite)
@@ -686,24 +686,24 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_multiple_writes, BoostUnitTestSimulationFixture
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
-    Memory<BVec> mem(contents.size(), 32_b);
+    Memory<UInt> mem(contents.size(), 32_b);
     mem.setType(MemType::MEDIUM);
     mem.initZero();
 
-    BVec wrData1 = pinIn(32_b).setName("wr_data1");
-    BVec wrAddr1 = pinIn(4_b).setName("wr_addr1");
+    UInt wrData1 = pinIn(32_b).setName("wr_data1");
+    UInt wrAddr1 = pinIn(4_b).setName("wr_addr1");
 
-    BVec wrData2 = pinIn(32_b).setName("wr_data2");
-    BVec wrAddr2 = pinIn(4_b).setName("wr_addr2");
+    UInt wrData2 = pinIn(32_b).setName("wr_data2");
+    UInt wrAddr2 = pinIn(4_b).setName("wr_addr2");
 
-    BVec rd_addr = pinIn(4_b).setName("rd_addr");
-    BVec readOutputBefore = reg(mem[rd_addr], {.allowRetimingBackward=true});
+    UInt rd_addr = pinIn(4_b).setName("rd_addr");
+    UInt readOutputBefore = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputBefore).setName("readOutputBefore");
 
     mem[wrAddr1] = wrData1;
     mem[wrAddr2] = wrData2;
 
-    BVec readOutputAfter = reg(mem[rd_addr], {.allowRetimingBackward=true});
+    UInt readOutputAfter = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputAfter).setName("readOutputAfter");
 
 	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
@@ -768,21 +768,21 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrFirst, Boos
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
-    Memory<BVec> mem(contents.size(), 32_b);
+    Memory<UInt> mem(contents.size(), 32_b);
     mem.setType(MemType::MEDIUM);
     mem.initZero();
 
-    BVec wrData = pinIn(32_b).setName("wr_data");
-    BVec wrAddr = pinIn(4_b).setName("wr_addr");
-    BVec addr = pinIn(4_b).setName("rmw_addr");
-    BVec rd_addr = pinIn(4_b).setName("rd_addr");
+    UInt wrData = pinIn(32_b).setName("wr_data");
+    UInt wrAddr = pinIn(4_b).setName("wr_addr");
+    UInt addr = pinIn(4_b).setName("rmw_addr");
+    UInt rd_addr = pinIn(4_b).setName("rd_addr");
     Bit wrEn = pinIn().setName("wr_en");
-    BVec readOutputBefore = reg(mem[rd_addr], {.allowRetimingBackward=true});
+    UInt readOutputBefore = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputBefore).setName("readOutputBefore");
     {
         mem[wrAddr] = wrData;
 
-        BVec elem = mem[addr];
+        UInt elem = mem[addr];
         IF (wrEn)
             mem[addr] = elem + 1;
     }
@@ -853,16 +853,16 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrLast, Boost
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
-    Memory<BVec> mem(contents.size(), 32_b);
+    Memory<UInt> mem(contents.size(), 32_b);
     mem.setType(MemType::MEDIUM);
     mem.initZero();
 
-    BVec wrData = pinIn(32_b).setName("wr_data");
-    BVec wrAddr = pinIn(4_b).setName("wr_addr");
-    BVec addr = pinIn(4_b).setName("rmw_addr");
+    UInt wrData = pinIn(32_b).setName("wr_data");
+    UInt wrAddr = pinIn(4_b).setName("wr_addr");
+    UInt addr = pinIn(4_b).setName("rmw_addr");
     Bit wrEn = pinIn().setName("wr_en");
     
-    BVec elem = mem[addr];
+    UInt elem = mem[addr];
     IF (wrEn)
         mem[addr] = elem + 1;
 
@@ -933,25 +933,25 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
-    Memory<BVec> mem(contents.size(), 32_b);
+    Memory<UInt> mem(contents.size(), 32_b);
     mem.setType(MemType::MEDIUM);
     mem.initZero();
 
-    BVec wrData = pinIn(32_b).setName("wr_data");
-    BVec wrAddr = pinIn(4_b).setName("wr_addr");
-    BVec addr = pinIn(4_b).setName("rmw_addr");
-    BVec rd_addr = pinIn(4_b).setName("rd_addr");
+    UInt wrData = pinIn(32_b).setName("wr_data");
+    UInt wrAddr = pinIn(4_b).setName("wr_addr");
+    UInt addr = pinIn(4_b).setName("rmw_addr");
+    UInt rd_addr = pinIn(4_b).setName("rd_addr");
     Bit wrEn = pinIn().setName("wr_en");
-    BVec readOutputBefore = reg(mem[rd_addr], {.allowRetimingBackward=true});
+    UInt readOutputBefore = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputBefore).setName("readOutputBefore");
     {
         mem[wrAddr] = wrData;
 
-        BVec elem = mem[addr];
+        UInt elem = mem[addr];
         IF (wrEn)
             mem[addr] = elem + 1;
     }
-    BVec readOutputAfter = reg(mem[rd_addr], {.allowRetimingBackward=true});
+    UInt readOutputAfter = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputAfter).setName("readOutputAfter");
 
 	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
@@ -1022,24 +1022,24 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
-    Memory<BVec> mem(contents.size(), 32_b);
+    Memory<UInt> mem(contents.size(), 32_b);
     mem.setType(MemType::MEDIUM);
     mem.initZero();
 
-    BVec wrData = pinIn(32_b).setName("wr_data");
-    BVec wrAddr = pinIn(4_b).setName("wr_addr");
-    BVec addr = pinIn(4_b).setName("rmw_addr");
-    BVec rd_addr = pinIn(4_b).setName("rd_addr");
+    UInt wrData = pinIn(32_b).setName("wr_data");
+    UInt wrAddr = pinIn(4_b).setName("wr_addr");
+    UInt addr = pinIn(4_b).setName("rmw_addr");
+    UInt rd_addr = pinIn(4_b).setName("rd_addr");
     Bit wrEn = pinIn().setName("wr_en");
-    BVec readOutputBefore = reg(mem[rd_addr], {.allowRetimingBackward=true});
+    UInt readOutputBefore = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputBefore).setName("readOutputBefore");
     {
-        BVec elem = mem[addr];
+        UInt elem = mem[addr];
         IF (wrEn)
             mem[addr] = elem + 1;
 
     }
-    BVec readOutputAfter = reg(mem[rd_addr], {.allowRetimingBackward=true});
+    UInt readOutputAfter = reg(mem[rd_addr], {.allowRetimingBackward=true});
     pinOut(readOutputAfter).setName("readOutputAfter");
 
     mem[wrAddr] = wrData;
@@ -1114,15 +1114,15 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_dual_read_modify_write, BoostUnitTestSimulation
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
-    Memory<BVec> mem(contents.size(), 32_b);
+    Memory<UInt> mem(contents.size(), 32_b);
     mem.setType(MemType::MEDIUM);
     mem.initZero();
 
-    BVec addr1 = pinIn(4_b);
-    BVec output1;
+    UInt addr1 = pinIn(4_b);
+    UInt output1;
     Bit wrEn1 = pinIn();
     {
-        BVec elem = mem[addr1];
+        UInt elem = mem[addr1];
         output1 = reg(elem, {.allowRetimingBackward=true});
 
         IF (wrEn1)
@@ -1131,11 +1131,11 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_dual_read_modify_write, BoostUnitTestSimulation
     pinOut(output1);
 
 
-    BVec addr2 = pinIn(4_b);
-    BVec output2;
+    UInt addr2 = pinIn(4_b);
+    UInt output2;
     Bit wrEn2 = pinIn();
     {
-        BVec elem = mem[addr2];
+        UInt elem = mem[addr2];
         output2 = reg(elem, {.allowRetimingBackward=true});
 
         IF (wrEn2)
@@ -1209,22 +1209,22 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, BoostUnitTestSimulat
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
-    Memory<BVec> mem(contents.size(), 32_b);
+    Memory<UInt> mem(contents.size(), 32_b);
     mem.setType(MemType::MEDIUM, memReadLatency);
     mem.initZero();
     mem.noConflicts();
 
-    BVec addr = pinIn(4_b);
-    BVec output;
+    UInt addr = pinIn(4_b);
+    UInt output;
     Bit wrEn = pinIn();
     {
 
-        BVec elem = mem[addr];
+        UInt elem = mem[addr];
         for ([[maybe_unused]] auto i : Range(memReadLatency))
             elem = reg(elem, {.allowRetimingBackward=true});
         output = elem;
 
-        BVec delayedAddr = addr;
+        UInt delayedAddr = addr;
         for ([[maybe_unused]] auto i : Range(memReadLatency))
             delayedAddr = reg(delayedAddr, {.allowRetimingBackward=true});
 
@@ -1232,7 +1232,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, BoostUnitTestSimulat
         for ([[maybe_unused]] auto i : Range(memReadLatency))
             delayedWrEn = reg(delayedWrEn, false, {.allowRetimingBackward=true});
 
-        BVec modifiedElem = elem + 1;
+        UInt modifiedElem = elem + 1;
 
         IF (delayedWrEn)
             mem[delayedAddr] = modifiedElem;
@@ -1326,25 +1326,25 @@ BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, BoostUnitTestSim
     contents.resize(4, 0);
     std::mt19937 rng{ 18055 };
 
-    BVec addr = pinIn(4_b).setName("addr");
-    BVec output;
+    UInt addr = pinIn(4_b).setName("addr");
+    UInt output;
     Bit wrEn = pinIn().setName("wrEn");
     Bit initOverride = pinIn().setName("initOverride");
     {
         // extra regs to separate simulation processes
-        BVec addr_ = reg(addr);
+        UInt addr_ = reg(addr);
         Bit wrEn_ = reg(wrEn, false);
         Bit initOverride_ = reg(initOverride);
 
-        Memory<BVec> mem(contents.size(), 32_b);
+        Memory<UInt> mem(contents.size(), 32_b);
         mem.setName("second_stage_emif");
         mem.setType(MemType::EXTERNAL, memReadLatency);
         //mem.setType(MemType::MEDIUM, memReadLatency);
         //mem.initZero(); // Not possible with external memory, needs explicit initialization
 
-        BVec elem = mem[addr_];
+        UInt elem = mem[addr_];
         HCL_NAMED(elem);
-        BVec modifiedElem = elem + 1;
+        UInt modifiedElem = elem + 1;
         HCL_NAMED(modifiedElem);
 
         IF (initOverride_)

@@ -19,7 +19,7 @@
 #include "gatery/pch.h"
 
 #include "Bit.h"
-#include "BitVector.h"
+#include "BVec.h"
 #include "ConditionalScope.h"
 #include "Constant.h"
 #include "Scope.h"
@@ -141,14 +141,6 @@ namespace gtry {
         expOverride->connectOverride(exportOverride.getReadPort());
         assign(SignalReadPort(expOverride));
     }
-
-    void Bit::setAttrib(hlim::SignalAttributes attributes)
-    {
-        auto* node = DesignScope::createNode<hlim::Node_Attributes>();
-        node->getAttribs() = std::move(attributes);
-        node->connectInput(getReadPort());
-    }
-
 
     BitWidth Bit::getWidth() const
     {

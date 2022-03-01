@@ -44,7 +44,7 @@ class ALTSYNCRAM : public gtry::hlim::Node_External
 			IN_ACLR_0,
 			IN_ACLR_1,
 
-			// BVecs
+			// UInts
 			IN_DATA_A,
 			IN_ADDRESS_A,
 			IN_BYTEENA_A,
@@ -55,7 +55,7 @@ class ALTSYNCRAM : public gtry::hlim::Node_External
             IN_COUNT
         };
         enum Outputs {
-			// BVecs
+			// UInts
             OUT_Q_A,
             OUT_Q_B,
 
@@ -95,8 +95,8 @@ class ALTSYNCRAM : public gtry::hlim::Node_External
 		ALTSYNCRAM &setupSimulationDeviceFamily(const std::string &devFamily);
 
 		void connectInput(Inputs input, const Bit &bit);
-		void connectInput(Inputs input, const BVec &bvec);
-		BVec getOutputBVec(Outputs output);
+		void connectInput(Inputs input, const UInt &UInt);
+		UInt getOutputUInt(Outputs output);
 
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;

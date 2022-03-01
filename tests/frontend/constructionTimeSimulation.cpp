@@ -34,15 +34,15 @@ BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_arith, BoostUnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clkScp(clock);
 
-    BVec a(8_b);
+    UInt a(8_b);
     a = reg(a);
-    BVec b(8_b);
+    UInt b(8_b);
     b = reg(b);
 
     BOOST_TEST(simu(a).defined() == 0);
     BOOST_TEST(simu(b).defined() == 0);
 
-    BVec c = a + b;
+    UInt c = a + b;
 
     BOOST_TEST(simu(c).defined() == 0);
 
@@ -69,15 +69,15 @@ BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_logic, BoostUnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clkScp(clock);
 
-    BVec a(8_b);
+    UInt a(8_b);
     a = reg(a);
-    BVec b(8_b);
+    UInt b(8_b);
     b = reg(b);
 
     BOOST_TEST(simu(a).defined() == 0);
     BOOST_TEST(simu(b).defined() == 0);
 
-    BVec c = a & b;
+    UInt c = a & b;
 
     BOOST_TEST(simu(c).defined() == 0);
 
@@ -104,15 +104,15 @@ BOOST_FIXTURE_TEST_CASE(CTS_TestRegisterReset, BoostUnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clkScp(clock);
 
-    BVec a(8_b);
+    UInt a(8_b);
     a = reg(a, 42);
-    BVec b(8_b);
+    UInt b(8_b);
     b = reg(b);
 
     BOOST_TEST(simu(a).defined() == 255);
     BOOST_TEST(simu(b).defined() == 0);
 
-    BVec c = a + b;
+    UInt c = a + b;
 
     BOOST_TEST(simu(c).defined() == 0);
 

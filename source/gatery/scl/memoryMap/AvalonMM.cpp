@@ -47,7 +47,7 @@ namespace gtry::scl
 		addressMap.push_back(d);
 	}
 
-	void AvalonMMSlave::ro(const BVec& value, RegDesc desc)
+	void AvalonMMSlave::ro(const UInt& value, RegDesc desc)
 	{
 		desc.flags = F_READ;
 		if (!scopeStack.empty()) desc.scope = scopeStack.back();
@@ -74,7 +74,7 @@ namespace gtry::scl
 		addressMap.push_back(desc);
 	}
 
-	Bit AvalonMMSlave::rw(BVec& value, RegDesc desc)
+	Bit AvalonMMSlave::rw(UInt& value, RegDesc desc)
 	{
 		desc.flags = F_READ | F_WRITE;
 		if (!scopeStack.empty()) desc.scope = scopeStack.back();

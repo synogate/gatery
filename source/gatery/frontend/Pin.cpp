@@ -18,6 +18,11 @@
 #include "gatery/pch.h"
 #include "Pin.h"
 
+#include "Bit.h"
+#include "BVec.h"
+#include "UInt.h"
+#include "SInt.h"
+
 #include "Scope.h"
 
 namespace gtry {
@@ -29,9 +34,19 @@ namespace gtry {
         m_pinNode->setName(std::string(bit.getName()));
     }
 
-
-
     OutputPins::OutputPins(const BVec &bitVector) {
+        m_pinNode = DesignScope::createNode<hlim::Node_Pin>(false);
+        m_pinNode->connect(bitVector.getReadPort());
+        m_pinNode->setName(std::string(bitVector.getName()));
+    }
+
+    OutputPins::OutputPins(const UInt &bitVector) {
+        m_pinNode = DesignScope::createNode<hlim::Node_Pin>(false);
+        m_pinNode->connect(bitVector.getReadPort());
+        m_pinNode->setName(std::string(bitVector.getName()));
+    }
+
+    OutputPins::OutputPins(const SInt &bitVector) {
         m_pinNode = DesignScope::createNode<hlim::Node_Pin>(false);
         m_pinNode->connect(bitVector.getReadPort());
         m_pinNode->setName(std::string(bitVector.getName()));
@@ -42,9 +57,28 @@ namespace gtry {
         m_pinNode->setBool();
     }
 
+
+    InputPin::operator Bit () const
+    {
+#if 0
+        return Bit(SignalReadPort({.node=m_pinNode, .port=0ull}));
+#else
+        auto* signal = DesignScope::createNode<hlim::Node_Signal>();
+        signal->connectInput({.node=m_pinNode, .port=0ull});
+        signal->recordStackTrace();
+        return Bit(SignalReadPort(signal));
+#endif
+    }
+
     InputPins::InputPins(BitWidth width) {
         m_pinNode = DesignScope::createNode<hlim::Node_Pin>(true);
         m_pinNode->setWidth(width.value);
     }
+
+    InputPins::operator BVec () const { return BVec(SignalReadPort({.node=m_pinNode, .port=0ull})); }
+    InputPins::operator UInt () const { return UInt(SignalReadPort({.node=m_pinNode, .port=0ull})); }
+    InputPins::operator SInt () const { return SInt(SignalReadPort({.node=m_pinNode, .port=0ull})); }
+
+    OutputPins pinOut(const InputPins &input) { return OutputPins((BVec)input); }
 
 }

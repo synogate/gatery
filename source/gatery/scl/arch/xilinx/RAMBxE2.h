@@ -166,21 +166,21 @@ class RAMBxE2 : public gtry::hlim::Node_External
 		//RAMBxE2 &setupInitData(const sim::DefaultBitVectorState &init, bool useParity = false);
 
 		void connectInput(Inputs input, const Bit &bit);
-		void connectInput(Inputs input, const BVec &bvec);
-		BVec getOutputBVec(Outputs output);
+		void connectInput(Inputs input, const UInt &input);
+		UInt getOutputUInt(Outputs output);
 		Bit getOutputBit(Outputs output);
 
-		BVec getReadData(size_t width, bool portA);
-		BVec getReadDataPortA(size_t width) { return getReadData(width, true); }
-		BVec getReadDataPortB(size_t width) { return getReadData(width, false); }
+		UInt getReadData(size_t width, bool portA);
+		UInt getReadDataPortA(size_t width) { return getReadData(width, true); }
+		UInt getReadDataPortB(size_t width) { return getReadData(width, false); }
 
-		void connectWriteData(const BVec &input, bool portA);
-		void connectWriteDataPortA(const BVec &input) { connectWriteData(input, true); }
-		void connectWriteDataPortB(const BVec &input) { connectWriteData(input, false); }
+		void connectWriteData(const UInt &input, bool portA);
+		void connectWriteDataPortA(const UInt &input) { connectWriteData(input, true); }
+		void connectWriteDataPortB(const UInt &input) { connectWriteData(input, false); }
 
-		void connectAddress(const BVec &input, bool portA);
-		void connectAddressPortA(const BVec &input) { connectAddress(input, true); }
-		void connectAddressPortB(const BVec &input) { connectAddress(input, false); }
+		void connectAddress(const UInt &input, bool portA);
+		void connectAddressPortA(const UInt &input) { connectAddress(input, true); }
+		void connectAddressPortB(const UInt &input) { connectAddress(input, false); }
 
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;

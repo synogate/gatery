@@ -33,12 +33,12 @@ namespace gtry::scl
 		}
 		
 		void reset() { m_value = 0; }
-		const BVec& value() const { return m_value; }
+		const UInt& value() const { return m_value; }
 		const Bit& isLast() const { return m_last; }
 		Bit isFirst() const { return m_value == 0; }
 
 	private:
-		BVec m_value;
+		UInt m_value;
 		Bit m_last;
 	};
 

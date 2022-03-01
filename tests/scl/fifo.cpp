@@ -34,9 +34,9 @@ struct FifoTest
 {
     FifoTest(Clock& clk) : clk(clk) {}
 
-    scl::Fifo<BVec> create(size_t depth, BitWidth width)
+    scl::Fifo<UInt> create(size_t depth, BitWidth width)
     {
-        scl::Fifo<BVec> fifo{ depth, BVec{ width } };
+        scl::Fifo<UInt> fifo{ depth, UInt{ width } };
         actualDepth = fifo.getDepth();
 
         pushData = width;
@@ -91,10 +91,10 @@ struct FifoTest
 
     Clock clk;
 
-    BVec pushData;
+    UInt pushData;
     Bit push;
 
-    BVec popData;
+    UInt popData;
     Bit pop;
 
     Bit empty;

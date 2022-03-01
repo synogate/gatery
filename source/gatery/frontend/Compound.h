@@ -18,7 +18,9 @@
 #pragma once
 #include "Bit.h"
 #include "BitVector.h"
+#include "UInt.h"
 #include "Reg.h"
+#include "../utils/Traits.h"
 
 #include <string_view>
 #include <type_traits>
@@ -41,13 +43,17 @@ namespace gtry
 		virtual void enter(std::string_view name);
 		virtual void leave();
 
-		virtual void operator () (const BVec& a, const BVec& b);
-		virtual void operator () (BVec& a);
-		virtual void operator () (BVec& a, const BVec& b);
+		virtual void operator () (const BVec& a, const BVec& b) { }
+		virtual void operator () (BVec& a) { }
+		virtual void operator () (BVec& a, const BVec& b) { }
 
-		virtual void operator () (const Bit& a, const Bit& b);
-		virtual void operator () (Bit& a);
-		virtual void operator () (Bit& vec, const Bit& b);
+		virtual void operator () (const UInt& a, const UInt& b) { }
+		virtual void operator () (UInt& a) { }
+		virtual void operator () (UInt& a, const UInt& b) { }
+
+		virtual void operator () (const Bit& a, const Bit& b) { }
+		virtual void operator () (Bit& a) { }
+		virtual void operator () (Bit& vec, const Bit& b) { }
 	};
 
 	class CompoundNameVisitor : public CompoundVisitor
@@ -79,6 +85,14 @@ namespace gtry
 	};
 
 	template<>
+	struct VisitCompound<UInt>
+	{
+		void operator () (UInt& a, const UInt& b, CompoundVisitor& v, size_t flags) { v(a, b); }
+		void operator () (UInt& a, CompoundVisitor& v) { v(a); }
+		void operator () (const UInt& a, const UInt& b, CompoundVisitor& v) { v(a, b); }
+	};
+
+	template<>
 	struct VisitCompound<Bit>
 	{
 		void operator () (Bit& a, const Bit& b, CompoundVisitor& v, size_t flags) { v(a, b); }
@@ -88,48 +102,24 @@ namespace gtry
 
 	namespace internal
 	{
-		template <typename T, typename = int>
-		struct resizable : std::false_type {};
-
-		template <typename T>
-		struct resizable <T, decltype((void)std::declval<T>().resize(1), 0)> : std::true_type {};
-
-
-		template<typename T, typename = int>
-		struct is_signal : std::false_type {
-			using sig_type = T;
-		};
-#ifndef __clang__
-		template<typename T>
-		struct is_signal<T, decltype((void)BVec{ std::declval<T>() }, 0)> : std::true_type {
-			using sig_type = BVec;
-		};
-
-		template<typename T>
-		struct is_signal<T, decltype((void)Bit{ std::declval<T>() }, 0)> : std::true_type {
-			using sig_type = Bit;
-		};
-#else
-		template<typename T>
-		struct is_signal<T, decltype(BVec{ std::declval<T>() })> : std::true_type {
-			using sig_type = BVec;
-		};
-
-		template<typename T>
-		struct is_signal<T, decltype(Bit{ std::declval<T>() })> : std::true_type {
-			using sig_type = Bit;
-		};
-#endif
-		template<typename T, typename = std::enable_if_t<!is_signal<T>::value>>
+		// Forward all meta data
+		template<typename T> requires (!signal_convertible<T>)
 		const T& signalOTron(const T& ret) { return ret; }
+
+		// Forward all signals without copy or conversion
 		inline const BVec& signalOTron(const BVec& vec) { return vec; }
+		inline const UInt& signalOTron(const UInt& vec) { return vec; }
 		inline const Bit& signalOTron(const Bit& bit) { return bit; }
+
+		// Convert everything that can be converted to a signal
+		template<signal_convertible T>
+		auto signalOTron(const T& ret) { return typename is_signal<T>::sig_type{ret}; }
 	}
 
 	template<typename T>
 	void visitForcedSignalCompound(const T& sig, CompoundVisitor& v)
 	{
-		VisitCompound<typename internal::is_signal<T>::sig_type>{}(
+		VisitCompound<typename is_signal<T>::sig_type>{}(
 			internal::signalOTron(sig),
 			internal::signalOTron(sig),
 			v
@@ -216,7 +206,7 @@ namespace gtry
 	{
 		void operator () (T& a, const T& b, CompoundVisitor& v, size_t flags)
 		{
-			if constexpr (internal::resizable<T>::value)
+			if constexpr (resizable<T>::value)
 				if (a.size() != b.size())
 					a.resize(b.size());
 
@@ -351,7 +341,7 @@ namespace gtry
 	{
 		struct WidthVisitor : CompoundVisitor
 		{
-			void operator () (const BVec& vec, const BVec&) final {
+			void operator () (const UInt& vec, const UInt&) final {
 				m_totalWidth += vec.size();
 			}
 
@@ -372,7 +362,7 @@ namespace gtry
 	{
 		struct NameVisitor : CompoundNameVisitor
 		{
-			void operator () (BVec& vec) override { vec.setName(makeName()); }
+			void operator () (UInt& vec) override { vec.setName(makeName()); }
 			void operator () (Bit& vec) override { vec.setName(makeName()); }
 		};
 
@@ -383,7 +373,7 @@ namespace gtry
 	}
 
 	void setName(const Bit&, std::string_view) = delete;
-	void setName(const BVec&, std::string_view) = delete;
+	void setName(const UInt&, std::string_view) = delete;
 
 	template<typename T>
 	struct Reg<T, std::enable_if_t<boost::spirit::traits::is_container<T>::value>>

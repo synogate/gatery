@@ -20,7 +20,7 @@
 
 namespace gtry::scl
 {
-    template<typename TVec = BVec>
+    template<typename TVec = UInt>
     class Adder
     {
     public:
@@ -52,7 +52,7 @@ namespace gtry::scl
 
     };
 
-    extern template class gtry::scl::Adder<gtry::BVec>;
+    extern template class gtry::scl::Adder<gtry::UInt>;
 
     class CarrySafeAdder
     {
@@ -60,22 +60,22 @@ namespace gtry::scl
         CarrySafeAdder() = default;
         CarrySafeAdder(const CarrySafeAdder&) = default;
 
-        CarrySafeAdder& add(const BVec&);
-        CarrySafeAdder operator + (const BVec& b) { CarrySafeAdder ret = *this; ret.add(b); return ret; }
-        CarrySafeAdder& operator += (const BVec& b) { return add(b); }
+        CarrySafeAdder& add(const UInt&);
+        CarrySafeAdder operator + (const UInt& b) { CarrySafeAdder ret = *this; ret.add(b); return ret; }
+        CarrySafeAdder& operator += (const UInt& b) { return add(b); }
 
-        BVec sum() const;
-        operator BVec () const { return sum(); }
+        UInt sum() const;
+        operator UInt () const { return sum(); }
 
-        const BVec& intermediateSum() const { return m_sum; }
-        const BVec& intermediateCarry() const { return m_carry; }
+        const UInt& intermediateSum() const { return m_sum; }
+        const UInt& intermediateCarry() const { return m_carry; }
 
     private:
         size_t m_count = 0;
-        BVec m_sum;
-        BVec m_carry;
+        UInt m_sum;
+        UInt m_carry;
     };
 
-    std::tuple<BVec, BVec> add(const BVec& a, const BVec& b, const Bit& cin = '0');
+    std::tuple<UInt, UInt> add(const UInt& a, const UInt& b, const Bit& cin = '0');
 
 }

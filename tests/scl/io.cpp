@@ -71,7 +71,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
                 simu(sending) = '1';
                 simu(rx) = '0'; // start bit
                 co_await WaitFor(Seconds(1,baudRate));
-                for (auto i : gtry::utils::Range(8)) {
+                for ([[maybe_unused]]  auto i : gtry::utils::Range(8)) {
                     simu(rx) = data & 1; // data bit
                     data >>= 1;
                     co_await WaitFor(Seconds(1,baudRate));

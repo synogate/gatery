@@ -29,6 +29,14 @@ namespace gtry
 				if (a.size() != b.size() || !a.getNode())
 					a = b.getWidth();
 			}
+			void operator () (UInt& a, const UInt& b) override {
+				if (a.size() != b.size() || !a.getNode())
+					a = b.getWidth();
+			}
+			void operator () (SInt& a, const SInt& b) override {
+				if (a.size() != b.size() || !a.getNode())
+					a = b.getWidth();
+			}
 		};
 
 		ConstructFromVisitor v;

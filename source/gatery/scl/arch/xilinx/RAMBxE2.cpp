@@ -68,18 +68,18 @@ RAMBxE2::RAMBxE2(Type type) : m_type(type)
 
 void RAMBxE2::defaultInputs(bool writePortA, bool writePortB)
 {
-	BVec undefinedData;
-	BVec undefinedParity;
-	BVec undefinedAddr;
+	UInt undefinedData;
+	UInt undefinedParity;
+	UInt undefinedAddr;
 
 	if (m_type == RAMB18E2) {
-		undefinedData = ConstBVec(BitWidth(16));
-		undefinedParity = ConstBVec(BitWidth(2));
-		undefinedAddr = ConstBVec(BitWidth(14));
+		undefinedData = ConstUInt(BitWidth(16));
+		undefinedParity = ConstUInt(BitWidth(2));
+		undefinedAddr = ConstUInt(BitWidth(14));
 	} else {
-		undefinedData = ConstBVec(BitWidth(32));
-		undefinedParity = ConstBVec(BitWidth(4));
-		undefinedAddr = ConstBVec(BitWidth(15));
+		undefinedData = ConstUInt(BitWidth(32));
+		undefinedParity = ConstUInt(BitWidth(4));
+		undefinedAddr = ConstUInt(BitWidth(15));
 	}
 
 	Bit oneB = '1';
@@ -275,11 +275,11 @@ void RAMBxE2::connectInput(Inputs input, const Bit &bit)
 		break;
 
 		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to bvec input of RAMBxE2!");
+			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to UInt input of RAMBxE2!");
 	}
 }
 
-void RAMBxE2::connectInput(Inputs input, const BVec &bvec)
+void RAMBxE2::connectInput(Inputs input, const UInt &input)
 {
 	size_t mult = 1;
 	if (m_type == RAMB36E2)
@@ -289,39 +289,39 @@ void RAMBxE2::connectInput(Inputs input, const BVec &bvec)
 		case IN_ADDR_A_RDADDR:
 		case IN_ADDR_B_WRADDR:
 			if (m_type == RAMB36E2) {
-				HCL_DESIGNCHECK_HINT(bvec.size() == 15, "Data input bvec has wrong width!");
+				HCL_DESIGNCHECK_HINT(input.size() == 15, "Data input UInt has wrong width!");
 			} else
-				HCL_DESIGNCHECK_HINT(bvec.size() == 14, "Data input bvec has wrong width!");
+				HCL_DESIGNCHECK_HINT(input.size() == 14, "Data input UInt has wrong width!");
 		break;
 		case IN_CAS_DIN_A:
 		case IN_CAS_DIN_B:
-			HCL_DESIGNCHECK_HINT(bvec.size() == 16*mult, "Data input bvec has wrong width!");
+			HCL_DESIGNCHECK_HINT(input.size() == 16*mult, "Data input UInt has wrong width!");
 		break;
 		case IN_CAS_DINP_A:
 		case IN_CAS_DINP_B:
-			HCL_DESIGNCHECK_HINT(bvec.size() == 2*mult, "Data input bvec has wrong width!");
+			HCL_DESIGNCHECK_HINT(input.size() == 2*mult, "Data input UInt has wrong width!");
 		break;
 		case IN_DIN_A_DIN:
 		case IN_DIN_B_DIN:
-			HCL_DESIGNCHECK_HINT(bvec.size() == 16*mult, "Data input bvec has wrong width!");
+			HCL_DESIGNCHECK_HINT(input.size() == 16*mult, "Data input UInt has wrong width!");
 		break;
 		case IN_DINP_A_DINP:
 		case IN_DINP_B_DINP:
-			HCL_DESIGNCHECK_HINT(bvec.size() == 2*mult, "Data input bvec has wrong width!");
+			HCL_DESIGNCHECK_HINT(input.size() == 2*mult, "Data input UInt has wrong width!");
 		break;
 		case IN_WE_A:
-			HCL_DESIGNCHECK_HINT(bvec.size() == 2*mult, "Data input bvec has wrong width!");
+			HCL_DESIGNCHECK_HINT(input.size() == 2*mult, "Data input UInt has wrong width!");
 		break;
 		case IN_WE_B_WE:
-			HCL_DESIGNCHECK_HINT(bvec.size() == 4*mult, "Data input bvec has wrong width!");
+			HCL_DESIGNCHECK_HINT(input.size() == 4*mult, "Data input UInt has wrong width!");
 		break;		
 		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect bvec to bit input!");
+			HCL_DESIGNCHECK_HINT(false, "Trying to connect UInt to bit input!");
 	}
-	NodeIO::connectInput(input, bvec.getReadPort());
+	NodeIO::connectInput(input, input.getReadPort());
 }
 
-BVec RAMBxE2::getOutputBVec(Outputs output)
+UInt RAMBxE2::getOutputUInt(Outputs output)
 {
 	switch (output) {
 		case OUT_CAS_OUTD_BITERR:
@@ -329,7 +329,7 @@ BVec RAMBxE2::getOutputBVec(Outputs output)
 		case OUT_D_BITERR:
 		case OUT_S_BITERR:
 			HCL_DESIGNCHECK_HINT(m_type == RAMB36E2, "Trying to get output that is not available in RAMB18E2!");
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect bvec from bit output of RAMBxE2!");
+			HCL_DESIGNCHECK_HINT(false, "Trying to connect UInt from bit output of RAMBxE2!");
 		break;
 
 		case OUT_ECC_PARITY:
@@ -353,55 +353,55 @@ Bit RAMBxE2::getOutputBit(Outputs output)
 			HCL_DESIGNCHECK_HINT(m_type == RAMB36E2, "Trying to get output that is not available in RAMB18E2!");
 		break;
 		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit from bvec output of RAMBxE2!");
+			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit from UInt output of RAMBxE2!");
 	}
 
 	return SignalReadPort(hlim::NodePort{this, (size_t)output});
 }
 
 
-BVec RAMBxE2::getReadData(size_t width, bool portA)
+UInt RAMBxE2::getReadData(size_t width, bool portA)
 {
-	BVec result;
+	UInt result;
 
-	// std::array<BVec, xx> is needed to ensure pack order doesn't reverse (we need to change that)
+	// std::array<UInt, xx> is needed to ensure pack order doesn't reverse (we need to change that)
 
 	switch (width) {
 		case 72:
 			HCL_ASSERT_HINT(m_type == RAMB36E2, "Invalid width for bram type!");
 			HCL_ASSERT_HINT(isSimpleDualPort() || isRom(), "Width only available in simple dual port mode!");
 			HCL_ASSERT_HINT(portA, "In SDP mode, only port A can read!");
-			result = pack(std::array<BVec, 4>{
-				getOutputBVec(OUT_DOUT_A_DOUT), 
-				getOutputBVec(OUT_DOUT_B_DOUT), 
-				getOutputBVec(OUT_DOUTP_A_DOUTP),
-				getOutputBVec(OUT_DOUTP_B_DOUTP),
+			result = pack(std::array<UInt, 4>{
+				getOutputUInt(OUT_DOUT_A_DOUT), 
+				getOutputUInt(OUT_DOUT_B_DOUT), 
+				getOutputUInt(OUT_DOUTP_A_DOUTP),
+				getOutputUInt(OUT_DOUTP_B_DOUTP),
 			});
 		break;
 		case 36:
 			if (m_type == RAMB36E2) {
-				result = pack(std::array<BVec, 2>{getOutputBVec(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT), getOutputBVec(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)});
+				result = pack(std::array<UInt, 2>{getOutputUInt(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT), getOutputUInt(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)});
 			} else {
 				HCL_ASSERT_HINT(isSimpleDualPort() || isRom(), "Width only available for RAMB36E2 or in simple dual port mode RAMB18E2!");
 				HCL_ASSERT_HINT(portA, "In SDP mode, only port A can read!");
-				result = pack(std::array<BVec, 4>{
-					getOutputBVec(OUT_DOUT_A_DOUT), 
-					getOutputBVec(OUT_DOUT_B_DOUT), 
-					getOutputBVec(OUT_DOUTP_A_DOUTP),
-					getOutputBVec(OUT_DOUTP_B_DOUTP),
+				result = pack(std::array<UInt, 4>{
+					getOutputUInt(OUT_DOUT_A_DOUT), 
+					getOutputUInt(OUT_DOUT_B_DOUT), 
+					getOutputUInt(OUT_DOUTP_A_DOUTP),
+					getOutputUInt(OUT_DOUTP_B_DOUTP),
 				});
 			}
 		break;
 		case 18:
-			result = pack(std::array<BVec, 2>{getOutputBVec(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, 16), getOutputBVec(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)(0, 2)});
+			result = pack(std::array<UInt, 2>{getOutputUInt(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, 16), getOutputUInt(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)(0, 2)});
 		break;
 		case 9:
-			result = pack(std::array<BVec, 2>{getOutputBVec(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, 8), getOutputBVec(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)(0, 1)});
+			result = pack(std::array<UInt, 2>{getOutputUInt(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, 8), getOutputUInt(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)(0, 1)});
 		break;
 		case 4:
 		case 2:
 		case 1:
-			result = getOutputBVec(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, width);
+			result = getOutputUInt(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, width);
 		break;
 		default:
 			HCL_ASSERT_HINT(false, "Invalid width for bram type!");
@@ -422,7 +422,7 @@ BVec RAMBxE2::getReadData(size_t width, bool portA)
 	return result;
 }
 
-void RAMBxE2::connectWriteData(const BVec &input, bool portA)
+void RAMBxE2::connectWriteData(const UInt &input, bool portA)
 {
 	size_t dPortWidth = 32;
 	size_t pPortWidth = 4;
@@ -474,7 +474,7 @@ void RAMBxE2::connectWriteData(const BVec &input, bool portA)
 	}
 }
 
-void RAMBxE2::connectAddress(const BVec &input, bool portA)
+void RAMBxE2::connectAddress(const UInt &input, bool portA)
 {
 	size_t lowerZeros = 0;
 
@@ -516,7 +516,7 @@ void RAMBxE2::connectAddress(const BVec &input, bool portA)
 
 	size_t totalAddrBits = m_type == RAMB36E2?15:14;
 
-	BVec properAddr = ConstBVec(0, BitWidth(totalAddrBits));
+	UInt properAddr = ConstUInt(0, BitWidth(totalAddrBits));
 	properAddr(lowerZeros, input.size()) = input;
 
 	connectInput(portA?IN_ADDR_A_RDADDR:IN_ADDR_B_WRADDR, properAddr);

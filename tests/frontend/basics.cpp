@@ -32,8 +32,8 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestOperators, optimizati
     using namespace gtry;
     using namespace gtry::sim;
 
-    BVec a = pinIn(BitWidth{(unsigned)bitsize});
-    BVec b = pinIn(BitWidth{(unsigned)bitsize});
+    UInt a = pinIn(BitWidth{(unsigned)bitsize});
+    UInt b = pinIn(BitWidth{(unsigned)bitsize});
 
     size_t x, y;
     addSimulationProcess([=, this, &x, &y]()->SimProcess {
@@ -54,7 +54,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestOperators, optimizati
 #define op2str(op) #op
 #define buildOperatorTest(op)                                                                               \
     {                                                                                                       \
-        BVec c = a op b;                                                                                    \
+        UInt c = a op b;                                                                                    \
         auto pinC = pinOut(c);                                                                              \
                                                                                                             \
         addSimulationProcess([=, this, &x, &y]()->SimProcess {                                              \
@@ -89,7 +89,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestOperators, optimizati
 #define op2str(op) #op
 #define buildOperatorTest(op)                                                                               \
     {                                                                                                       \
-        BVec c = a;                                                                                         \
+        UInt c = a;                                                                                         \
         c op b;                                                                                             \
         auto pinC = pinOut(c);                                                                              \
         addSimulationProcess([=, this, &x, &y]()->SimProcess {                                              \
@@ -140,22 +140,22 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestSlicing, optimization
 
     for (auto bitsize : gtry::utils::Range(3, 8))
         for (auto x : gtry::utils::Range(8)) {
-            BVec a = ConstBVec(x, BitWidth{ uint64_t(bitsize) });
+            UInt a = ConstUInt(x, BitWidth{ uint64_t(bitsize) });
 
             {
-                BVec res = a(0, 1);
-                sim_assert(res == ConstBVec(x & 1, 1_b)) << "Slicing first bit of " << a << " failed: " << res;
+                UInt res = a(0, 1);
+                sim_assert(res == ConstUInt(x & 1, 1_b)) << "Slicing first bit of " << a << " failed: " << res;
             }
 
             {
-                BVec res = a(1, 2);
-                sim_assert(res == ConstBVec((x >> 1) & 3, 2_b)) << "Slicing second and third bit of " << a << " failed: " << res;
+                UInt res = a(1, 2);
+                sim_assert(res == ConstUInt((x >> 1) & 3, 2_b)) << "Slicing second and third bit of " << a << " failed: " << res;
             }
 
             {
-                BVec res = a(1, 2);
+                UInt res = a(1, 2);
                 res = 0;
-                sim_assert(a == ConstBVec(x, BitWidth{ uint64_t(bitsize) })) << "Modifying copy of slice of a changes a to " << a << ", should be: " << x;
+                sim_assert(a == ConstUInt(x, BitWidth{ uint64_t(bitsize) })) << "Modifying copy of slice of a changes a to " << a << ", should be: " << x;
             }
         }
 
@@ -176,13 +176,13 @@ BOOST_FIXTURE_TEST_CASE(TestSlicingModifications, BoostUnitTestSimulationFixture
     for (auto bitsize : gtry::utils::Range(3, 8))
         for (auto x : gtry::utils::Range(8)) {
 
-            BVec a = ConstBVec(x, BitWidth{ uint64_t(bitsize) });
+            UInt a = ConstUInt(x, BitWidth{ uint64_t(bitsize) });
 
             {
-                BVec b = a;
+                UInt b = a;
                 b(1, 2) = 0;
 
-                auto groundTruth = ConstBVec(unsigned(x) & ~0b110, BitWidth{ uint64_t(bitsize) });
+                auto groundTruth = ConstUInt(unsigned(x) & ~0b110, BitWidth{ uint64_t(bitsize) });
                 sim_assert(b == groundTruth) << "Clearing two bits out of " << a << " should be " << groundTruth << " but is " << b;
             }
         }
@@ -197,13 +197,13 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestSlicingAddition, opti
 
     for (auto bitsize : gtry::utils::Range(3, 8))
         for (auto x : gtry::utils::Range(8)) {
-            BVec a = ConstBVec(x, BitWidth{ uint64_t(bitsize) });
+            UInt a = ConstUInt(x, BitWidth{ uint64_t(bitsize) });
 
             {
-                BVec b = a;
-                b(1, 2) = b(1, 2) + 1;
+                UInt b = a;
+                b(1, 2) = b(1, 2) + 1u;
 
-                auto groundTruth = ConstBVec((unsigned(x) & ~0b110) | (unsigned(x+2) & 0b110), BitWidth{ uint64_t(bitsize) });
+                auto groundTruth = ConstUInt((unsigned(x) & ~0b110) | (unsigned(x+2) & 0b110), BitWidth{ uint64_t(bitsize) });
                 sim_assert(b == groundTruth) << "Incrementing two bits out of " << a << " should be " << groundTruth << " but is " << b;
             }
         }
@@ -226,16 +226,16 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, SimpleAdditionNetwork, op
     for (auto bitsize : gtry::utils::Range(1, 8))
         for (auto x : gtry::utils::Range(8))
             for (auto y : gtry::utils::Range(8)) {
-                BVec a = ConstBVec(x, BitWidth{ uint64_t(bitsize) });
+                UInt a = ConstUInt(x, BitWidth{ uint64_t(bitsize) });
                 sim_debug() << "Signal a is " << a;
 
-                BVec b = ConstBVec(y, BitWidth{ uint64_t(bitsize) });
+                UInt b = ConstUInt(y, BitWidth{ uint64_t(bitsize) });
                 sim_debug() << "Signal b is " << b;
 
-                BVec c = a + b;
+                UInt c = a + b;
                 sim_debug() << "Signal c (= a + b) is " << c;
 
-                sim_assert(c == ConstBVec(x+y, BitWidth{ uint64_t(bitsize) })) << "The signal c should be " << x+y << " (with overflow in " << bitsize << "bits) but is " << c;
+                sim_assert(c == ConstUInt(x+y, BitWidth{ uint64_t(bitsize) })) << "The signal c should be " << x+y << " (with overflow in " << bitsize << "bits) but is " << c;
             }
     // @TODO: Choose optimization postprocessor accordingly
     //design.getCircuit().postprocess(optimization);
@@ -276,17 +276,16 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, BoostUnitTestSimulationFixture)
     ClockScope clockScope(clock);
 
     {
-        Register<BVec> counter(8_b);
-        counter.setReset("8b0");
-        counter += 1;
-        sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
+        UInt counter = 8_b;
+        counter += 1u;
+        counter = reg(counter, "8b0");
 
-        BVec refCount(8_b);
+        UInt refCount(8_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick());
         }, refCount);
 
-        sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);
+        sim_assert(counter == refCount) << "The counter should be " << refCount << " but is " << counter;
     }
 
     runFixedLengthTest(10u / clock.getClk()->getAbsoluteFrequency());
@@ -301,24 +300,23 @@ BOOST_FIXTURE_TEST_CASE(SignalMoveAssignment, BoostUnitTestSimulationFixture)
         Bit b = a;
         Bit c = std::move(a);
         c = '1';
-        sim_assert(b == '1');
+        sim_assert(b == '1') << "b should be 1 but is " << b;
     }
     {
-        BVec a = 4_b;
-        BVec b = a;
-        BVec c = std::move(a);
+        UInt a = 4_b;
+        UInt b = a;
+        UInt c = std::move(a);
         c = 1;
-        sim_assert(b == 1);
+        sim_assert(b == 1) << "b should be 1 but is " << b;
     }
-
     runEvalOnlyTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(BVecBitAliasConditionCheck, BoostUnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(UIntBitAliasConditionCheck, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-    BVec a = "xFF";
+    UInt a = "xFF";
     Bit c = '0';
 
     IF(c)
@@ -338,8 +336,8 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, BoostUnitTestSimulationFixture)
 
 
     {
-        gtry::BVec a = "xa";
-        gtry::BVec b = "xb";
+        gtry::UInt a = "xa";
+        gtry::UInt b = "xb";
         HCL_NAMED(a);
         HCL_NAMED(b);
         std::swap(a, b);
@@ -360,8 +358,8 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, BoostUnitTestSimulationFixture)
     }
 
     {
-        gtry::BVec c = 0xC;
-        gtry::BVec d = 0xD;
+        gtry::UInt c = 0xC;
+        gtry::UInt d = 0xD;
         HCL_NAMED(c);
         HCL_NAMED(d);
         gtry::Bit x = '0';
@@ -415,9 +413,9 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, BoostUnitTestSimulationFixture)
     using namespace gtry;
 
     {
-        gtry::Vector<BVec> listA(4);
+        gtry::Vector<UInt> listA(4);
         for (size_t i = 0; i < listA.size(); ++i)
-            listA[i] = ConstBVec(i, 2_b);
+            listA[i] = ConstUInt(i, 2_b);
         HCL_NAMED(listA);
         std::rotate(listA.begin(), listA.begin() + 1, listA.end());
 
@@ -429,7 +427,7 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, BoostUnitTestSimulationFixture)
 
     {
         std::vector<InputPins> in;
-        gtry::Vector<BVec> listB;
+        gtry::Vector<UInt> listB;
         for (size_t i = 0; i < 4; ++i)
         {
             in.emplace_back(2_b);
@@ -445,7 +443,7 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, BoostUnitTestSimulationFixture)
             std::rotate(listB.begin(), listB.begin() + 1, listB.end());
 
         std::vector<OutputPins> out;
-        for (BVec& i : listB)
+        for (UInt& i : listB)
             out.emplace_back(i);
 
         addSimulationProcess([=, this]()->SimProcess {
@@ -480,12 +478,12 @@ BOOST_FIXTURE_TEST_CASE(ConditionalLoopAssignment, BoostUnitTestSimulationFixtur
     ClockScope clockScope(clock);
 
     gtry::Bit condition = '1';
-    gtry::BVec counter = 4_b;
+    gtry::UInt counter = 4_b;
     HCL_NAMED(condition);
     HCL_NAMED(counter);
 
     IF(condition)
-        counter += 1;
+        counter += 1u;
     counter = reg(counter);
 
     runFixedLengthTest(100u / clock.getClk()->getAbsoluteFrequency());
@@ -499,7 +497,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, BoostUnitTestSimulationFixture
     ClockScope clockScope(clock);
 
     {
-        BVec counter(8_b);
+        UInt counter(8_b);
         counter = reg(counter, "8b0");
 
         addSimulationProcess([=, this, &clock]()->SimProcess{
@@ -512,7 +510,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, BoostUnitTestSimulationFixture
             stopTest();
         });
 
-        counter += 1;
+        counter += 1u;
     }
 
     runTest(100u / clock.getClk()->getAbsoluteFrequency());
@@ -526,12 +524,12 @@ BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, BoostUnitTestSimulationFixture)
     ClockScope clockScope(clock);
 
     {
-        BVec vec1 = reg(BVec{ "b01" });
-        BVec vec2 = reg(BVec{ "b01" }, "2b");
+        UInt vec1 = reg(UInt{ "b01" });
+        UInt vec2 = reg(UInt{ "b01" }, "2b");
         Bit bit1 = reg(Bit{ '1' });
         Bit bit2 = reg(Bit{ '1' }, '0');
 
-        BVec ref(2_b);
+        UInt ref(2_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
             context.set(0, context.getTick() ? 1 : 0);
             }, ref);
@@ -553,12 +551,12 @@ BOOST_FIXTURE_TEST_CASE(ClockRegisterReset_explicit, BoostUnitTestSimulationFixt
     ClockScope clockScope(clock);
 
     {
-        BVec vec1 = reg(BVec{ "b01" });
-        BVec vec2 = reg(BVec{ "b01" }, "2b");
+        UInt vec1 = reg(UInt{ "b01" });
+        UInt vec2 = reg(UInt{ "b01" }, "2b");
         Bit bit1 = reg(Bit{ '1' });
         Bit bit2 = reg(Bit{ '1' }, '0');
 
-        BVec ref(2_b);
+        UInt ref(2_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
             context.set(0, context.getTick() ? 1 : 0);
             }, ref);
@@ -581,19 +579,18 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, BoostUnitTestSimulationFixture)
     ClockScope clockScope(clock);
 
     {
-        Register<BVec> counter(8_b);
-        counter.setReset("8b0");
+        UInt counter = 8_b;
+        counter += 1u;
+        counter += 1u;
+        counter = reg(counter, "8b0");
 
-        counter += 1;
-        counter += 1;
-        sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
-        BVec refCount(8_b);
+        UInt refCount(8_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick()*2);
         }, refCount);
 
-        sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);
+        sim_assert(counter == refCount) << "The counter should be " << refCount << " but is " << counter;
     }
 
     runFixedLengthTest(10u / clock.getClk()->getAbsoluteFrequency());
@@ -608,19 +605,17 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax_explicitreset, BoostUnitTestSimul
     ClockScope clockScope(clock);
 
     {
-        Register<BVec> counter(8_b);
-        counter.setReset("8b0");
+        UInt counter = 8_b;
+        counter += 1u;
+        counter += 1u;
+        counter = reg(counter, "8b0");
 
-        counter += 1;
-        counter += 1;
-        sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
-
-        BVec refCount(8_b);
+        UInt refCount(8_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick()*2);
         }, refCount);
 
-        sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);
+        sim_assert(counter == refCount) << "The counter should be " << refCount << " but is " << counter;
     }
 
     runFixedLengthTest(10u / clock.getClk()->getAbsoluteFrequency());
@@ -637,18 +632,16 @@ BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, BoostUnitTestSimulationFixture)
     ClockScope clockScope(clock);
 
     {
-        Register<BVec> counter(8_b);
-        counter.setReset("8b1");
-
+        UInt counter = 8_b;
         counter <<= 1;
-        sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
+        counter = reg(counter, "8b1");
 
-        BVec refCount(8_b);
+        UInt refCount(8_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, 1ull << context.getTick());
         }, refCount);
 
-        sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);
+        sim_assert(counter == refCount) << "The counter should be " << refCount << " but is " << counter;
     }
 
     runFixedLengthTest(6u / clock.getClk()->getAbsoluteFrequency());
@@ -669,20 +662,18 @@ BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, BoostUnitTestSimulationFi
         }, condition);
 
 
-        Register<BVec> counter(8_b);
-        counter.setReset("8b0");
-
+        UInt counter = 8_b;
         IF (condition)
             counter += 1;
+        counter = reg(counter, "8b0");
 
-        sim_debug() << "Counter value is " << counter.delay(1) << " and next counter value is " << counter;
 
-        BVec refCount(8_b);
+        UInt refCount(8_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick()/2);
         }, refCount);
 
-        sim_assert(counter.delay(1) == refCount) << "The counter should be " << refCount << " but is " << counter.delay(1);
+        sim_assert(counter == refCount) << "The counter should be " << refCount << " but is " << counter;
     }
 
     runFixedLengthTest(10u / clock.getClk()->getAbsoluteFrequency());
@@ -694,10 +685,10 @@ BOOST_FIXTURE_TEST_CASE(StringLiteralParsing, BoostUnitTestSimulationFixture)
 
 
 
-    BVec a = "d7";
+    UInt a = "d7";
     BOOST_TEST(a.size() == 3);
 
-    BVec b = "4d7";
+    UInt b = "4d7";
     BOOST_TEST(b.size() == 4);
     sim_assert(b == "x7");
     sim_assert(b == 7);
@@ -734,10 +725,10 @@ BOOST_FIXTURE_TEST_CASE(ConditionalAssignment, BoostUnitTestSimulationFixture)
 
     for (auto x : gtry::utils::Range(8))
         for (auto y : gtry::utils::Range(8)) {
-            BVec a = ConstBVec(x, 8_b);
-            BVec b = ConstBVec(y, 8_b);
+            UInt a = ConstUInt(x, 8_b);
+            UInt b = ConstUInt(y, 8_b);
 
-            BVec c = ConstBVec(8_b);
+            UInt c = ConstUInt(8_b);
             IF (a[1])
                 c = a + b;
             ELSE {
@@ -750,7 +741,7 @@ BOOST_FIXTURE_TEST_CASE(ConditionalAssignment, BoostUnitTestSimulationFixture)
             else
                 groundTruth = unsigned(x)-unsigned(y);
 
-            sim_assert(c == ConstBVec(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
+            sim_assert(c == ConstUInt(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
         }
 
     runEvalOnlyTest();
@@ -763,10 +754,10 @@ BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleStatements, BoostUnitTestSi
     for (auto x : gtry::utils::Range(8))
         for (auto y : gtry::utils::Range(8)) {
 
-            BVec a = ConstBVec(x, 8_b);
-            BVec b = ConstBVec(y, 8_b);
+            UInt a = ConstUInt(x, 8_b);
+            UInt b = ConstUInt(y, 8_b);
 
-            BVec c = ConstBVec(8_b);
+            UInt c = ConstUInt(8_b);
             IF (a[1]) {
                 c = a + b;
                 c += a;
@@ -784,7 +775,7 @@ BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleStatements, BoostUnitTestSi
                 groundTruth = unsigned(x)-unsigned(y);
             }
 
-            sim_assert(c == ConstBVec(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
+            sim_assert(c == ConstUInt(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
         }
 
     runEvalOnlyTest();
@@ -797,10 +788,10 @@ BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleElseStatements, BoostUnitTe
     for (auto x : gtry::utils::Range(8))
         for (auto y : gtry::utils::Range(8)) {
 
-            BVec a = ConstBVec(x, 8_b);
-            BVec b = ConstBVec(y, 8_b);
+            UInt a = ConstUInt(x, 8_b);
+            UInt b = ConstUInt(y, 8_b);
 
-            BVec c = ConstBVec(8_b);
+            UInt c = ConstUInt(8_b);
             IF (a[1])
                 c = a + b;
             ELSE {
@@ -818,7 +809,7 @@ BOOST_FIXTURE_TEST_CASE(ConditionalAssignmentMultipleElseStatements, BoostUnitTe
                 groundTruth = groundTruth-unsigned(y);
             }
 
-            sim_assert(c == ConstBVec(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
+            sim_assert(c == ConstUInt(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
         }
 
     runEvalOnlyTest();
@@ -834,10 +825,10 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignment, BoostUnitTestSimulation
     for (auto x : gtry::utils::Range(8))
         for (auto y : gtry::utils::Range(8)) {
 
-            BVec a = ConstBVec(x, 8_b);
-            BVec b = ConstBVec(y, 8_b);
+            UInt a = ConstUInt(x, 8_b);
+            UInt b = ConstUInt(y, 8_b);
 
-            BVec c = ConstBVec(8_b);
+            UInt c = ConstUInt(8_b);
             IF (a[2]) {
                 IF (a[1])
                     c = a + b;
@@ -865,7 +856,7 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignment, BoostUnitTestSimulation
                     groundTruth = y;
             }
 
-            sim_assert(c == ConstBVec(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
+            sim_assert(c == ConstUInt(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
         }
 
     runEvalOnlyTest();
@@ -879,10 +870,10 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentMultipleStatements, Boost
     for (auto x : gtry::utils::Range(8))
         for (auto y : gtry::utils::Range(8)) {
 
-            BVec a = ConstBVec(x, 8_b);
-            BVec b = ConstBVec(y, 8_b);
+            UInt a = ConstUInt(x, 8_b);
+            UInt b = ConstUInt(y, 8_b);
 
-            BVec c = ConstBVec(8_b);
+            UInt c = ConstUInt(8_b);
             IF (a[2]) {
                 IF (a[1]) {
                     c = a + b;
@@ -914,7 +905,7 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentMultipleStatements, Boost
                     groundTruth = y;
             }
 
-            sim_assert(c == ConstBVec(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
+            sim_assert(c == ConstUInt(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
         }
 
     runEvalOnlyTest();
@@ -927,10 +918,10 @@ BOOST_FIXTURE_TEST_CASE(MultiElseConditionalAssignment, BoostUnitTestSimulationF
     for (auto x : gtry::utils::Range(8))
         for (auto y : gtry::utils::Range(8)) {
 
-            BVec a = ConstBVec(x, 8_b);
-            BVec b = ConstBVec(y, 8_b);
+            UInt a = ConstUInt(x, 8_b);
+            UInt b = ConstUInt(y, 8_b);
 
-            BVec c = ConstBVec(8_b);
+            UInt c = ConstUInt(8_b);
             IF(a[2]) {
                 IF(a[1]) {
                     c = a + b;
@@ -961,7 +952,7 @@ BOOST_FIXTURE_TEST_CASE(MultiElseConditionalAssignment, BoostUnitTestSimulationF
                     groundTruth = y;
 
 
-            sim_assert(c == ConstBVec(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
+            sim_assert(c == ConstUInt(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
         }
 
     runEvalOnlyTest();
@@ -974,10 +965,10 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentWithPreviousAssignmentNoE
     for (auto x : gtry::utils::Range(8))
         for (auto y : gtry::utils::Range(8)) {
 
-            BVec a = ConstBVec(x, 8_b);
-            BVec b = ConstBVec(y, 8_b);
+            UInt a = ConstUInt(x, 8_b);
+            UInt b = ConstUInt(y, 8_b);
 
-            BVec c = a;
+            UInt c = a;
             IF (a[2]) {
                 IF (a[1])
                     c = a + b;
@@ -994,7 +985,7 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentWithPreviousAssignmentNoE
                     groundTruth = x-y;
             }
 
-            sim_assert(c == ConstBVec(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
+            sim_assert(c == ConstUInt(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
         }
 
     runEvalOnlyTest();
@@ -1008,10 +999,10 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, MultiLevelConditionalAssi
 
     for (auto x : gtry::utils::Range(8))
         for (auto y : gtry::utils::Range(8)) {
-            BVec a = ConstBVec(x, 8_b);
-            BVec b = ConstBVec(y, 8_b);
+            UInt a = ConstUInt(x, 8_b);
+            UInt b = ConstUInt(y, 8_b);
 
-            BVec c = a;
+            UInt c = a;
             IF (a[2]) {
             } ELSE {
                 IF (a[1])
@@ -1025,7 +1016,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, MultiLevelConditionalAssi
                     groundTruth = y;
             }
 
-            sim_assert(c == ConstBVec(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
+            sim_assert(c == ConstUInt(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
         }
 
     // @TODO: Choose optimization postprocessor accordingly
@@ -1042,10 +1033,10 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, MultiLevelConditionalAssi
 
     for (auto x : gtry::utils::Range(8))
         for (auto y : gtry::utils::Range(8)) {
-            BVec a = ConstBVec(x, 8_b);
-            BVec b = ConstBVec(y, 8_b);
+            UInt a = ConstUInt(x, 8_b);
+            UInt b = ConstUInt(y, 8_b);
 
-            BVec c = a;
+            UInt c = a;
             IF (a[2]) {
                 IF (a[1])
                     c = a + b;
@@ -1067,7 +1058,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, MultiLevelConditionalAssi
                     groundTruth = y;
             }
 
-            sim_assert(c == ConstBVec(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
+            sim_assert(c == ConstUInt(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
         }
 
     // @TODO: Choose optimization postprocessor accordingly
@@ -1085,10 +1076,10 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentIfElseIf, BoostUnitTestSi
     for (auto x : gtry::utils::Range(8))
         for (auto y : gtry::utils::Range(8)) {
 
-            BVec a = ConstBVec(x, 8_b);
-            BVec b = ConstBVec(y, 8_b);
+            UInt a = ConstUInt(x, 8_b);
+            UInt b = ConstUInt(y, 8_b);
 
-            BVec c = a;
+            UInt c = a;
             IF (a[2]) {
                 c = a + b;
             } ELSE {
@@ -1104,7 +1095,7 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentIfElseIf, BoostUnitTestSi
                     groundTruth = y;
             }
 
-            sim_assert(c == ConstBVec(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
+            sim_assert(c == ConstUInt(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
         }
 
     runEvalOnlyTest();
@@ -1118,8 +1109,8 @@ BOOST_FIXTURE_TEST_CASE(UnsignedCompare, BoostUnitTestSimulationFixture)
     for (auto x : gtry::utils::Range(8))
         for (auto y : gtry::utils::Range(8)) {
 
-            BVec a = ConstBVec(x, 8_b);
-            BVec b = ConstBVec(y, 8_b);
+            UInt a = ConstUInt(x, 8_b);
+            UInt b = ConstUInt(y, 8_b);
 
             if (x > y)
             {
@@ -1158,14 +1149,14 @@ BOOST_FIXTURE_TEST_CASE(UnsignedCompare, BoostUnitTestSimulationFixture)
     runEvalOnlyTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(BVecArithmeticOpSyntax, BoostUnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(UIntArithmeticOpSyntax, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
 
 
-    BVec in = 5;
-    BVec res = in + 5u;
+    UInt in = 5;
+    UInt res = in + 5u;
     in - 5u;
     in * 5u;
     in / 5u;
@@ -1190,7 +1181,7 @@ BOOST_FIXTURE_TEST_CASE(LogicOpSyntax, BoostUnitTestSimulationFixture)
 
 
 
-    BVec in = 5;
+    UInt in = 5;
 
     '1' & in;
     in & '1';
@@ -1201,8 +1192,8 @@ BOOST_FIXTURE_TEST_CASE(SimpleCat, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-    BVec vec = 42u;
-    BVec vec_2 = pack('1', vec, '0');
+    UInt vec = 42u;
+    UInt vec_2 = pack('1', vec, '0');
     BOOST_TEST(vec_2.size() == 8);
     sim_assert(vec_2 == 42u * 2 + 128) << "result is " << vec_2;
 
@@ -1213,7 +1204,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleVectorCat, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-    BVec vec1 = 4u;
+    UInt vec1 = 4u;
     std::vector<Bit> vec2{ vec1.size() };
     for(size_t i = 0; i < vec2.size(); ++i)
         vec2[i] = vec1[i];
@@ -1232,14 +1223,14 @@ BOOST_FIXTURE_TEST_CASE(SimpleStructCat, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-    BVec vec1 = 4u;
+    UInt vec1 = 4u;
     TestRecord vec2{
         .a = vec1[0],
         .b = vec1[1],
         .c = vec1[2],
     };
    
-    BVec ref2 = pack(vec2);
+    UInt ref2 = pack(vec2);
     sim_assert(vec1 == ref2) << vec1 << " != " << ref2;
     runEvalOnlyTest();
 }
@@ -1251,8 +1242,8 @@ BOOST_FIXTURE_TEST_CASE(msbBroadcast, BoostUnitTestSimulationFixture)
 
 
 
-    BVec vec = "4b0000";
-    BVec vec_2 = "4b1000";
+    UInt vec = "4b0000";
+    UInt vec_2 = "4b1000";
     vec ^= vec_2.msb();
 
     sim_assert(vec == "4b1111") << "result is " << vec << " but should be 1111";

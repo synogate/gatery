@@ -23,11 +23,11 @@
 
 namespace gtry::scl::arch::xilinx {
 
-Bit serdes(BVec data) {
+Bit serdes(UInt data) {
     Area serdesArea{"scl_oserdes"};
     auto scope = serdesArea.enter();
 
-    BVec slow_data = reg(data);
+    UInt slow_data = reg(data);
     Bit slow_sync;
     slow_sync = reg(~slow_sync, '0');
     HCL_NAMED(slow_sync);
@@ -39,7 +39,7 @@ Bit serdes(BVec data) {
 
     // todo: This is not DDR!!
     
-    BVec fast_data = slow_data.getWidth();
+    UInt fast_data = slow_data.getWidth();
     fast_data >>= 1;
 
     Bit fast_sync;
@@ -56,7 +56,7 @@ Bit serdes(BVec data) {
 
     tx.setName("tx_before_override");
 
-
+/*
     auto *oserdese2_master = DesignScope::createNode<OSERDESE2>(data.size());
     for (auto i : utils::Range(std::min<size_t>(8u, data.size())))
         oserdese2_master->setInput((OSERDESE2::Inputs) (OSERDESE2::IN_D1+i), data[i]);
@@ -106,7 +106,7 @@ Bit serdes(BVec data) {
 
 
     tx.setExportOverride(SignalReadPort(oserdese2_master));
-
+*/
     tx.setName("tx");
 
     return tx;

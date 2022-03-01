@@ -20,7 +20,7 @@
 #include "Pin.h"
 #include "Signal.h"
 #include "Bit.h"
-#include "BitVector.h"
+#include "BVec.h"
 
 #include <gatery/simulation/SigHandle.h>
 #include <gatery/simulation/simProc/SimulationProcess.h>

@@ -28,12 +28,12 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, tmdsReduction, data
 {
     using namespace gtry;
 
-    auto a = ConstBVec(val, 8_b);
+    auto a = ConstUInt(val, 8_b);
 
-    BVec encoded = gtry::scl::hdmi::tmdsEncodeReduceTransitions(a);
+    UInt encoded = gtry::scl::hdmi::tmdsEncodeReduceTransitions(a);
     BOOST_TEST(encoded.getWidth() == a.getWidth() + 1);
 
-    BVec decoded = gtry::scl::hdmi::tmdsDecodeReduceTransitions(encoded);
+    UInt decoded = gtry::scl::hdmi::tmdsDecodeReduceTransitions(encoded);
     sim_assert(a == decoded) << "decode(encoder()) mismatch: input:" << a << " decoded " << decoded;
     sim_debug() << a << " => " << encoded << " => " << decoded << " | " << gtry::scl::bitcount(a);
 
@@ -47,15 +47,16 @@ BOOST_FIXTURE_TEST_CASE(tmdsBitflip, gtry::BoostUnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope scope(clock);
     
-    Register<BVec> test_counter(8_b);
-    test_counter.setReset("8b0");
-    test_counter += 1;
+    UInt test_counter = 8_b;
+    test_counter = reg(test_counter, "8b0");
 
-    BVec encoded = gtry::scl::hdmi::tmdsEncodeBitflip(clock, test_counter.delay(1));
+    UInt encoded = gtry::scl::hdmi::tmdsEncodeBitflip(clock, test_counter);
     BOOST_TEST(test_counter.getWidth() == encoded.getWidth() - 1);
 
-    BVec decoded = gtry::scl::hdmi::tmdsDecodeBitflip(encoded);
-    sim_assert(decoded == test_counter.delay(1));
+    UInt decoded = gtry::scl::hdmi::tmdsDecodeBitflip(encoded);
+    sim_assert(decoded == test_counter);
+
+    test_counter += 1;
 
     design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     runTicks(clock.getClk(), 260);

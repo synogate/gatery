@@ -19,7 +19,7 @@
 #include "SignalGenerator.h"
 
 #include "Bit.h"
-#include "BitVector.h"
+#include "BVec.h"
 
 namespace gtry {
 

@@ -29,22 +29,23 @@ namespace gtry
 {
     sim::DefaultBitVectorState parseBit(char value);
     sim::DefaultBitVectorState parseBit(bool value);
-    sim::DefaultBitVectorState parseBVec(std::string_view);
-    sim::DefaultBitVectorState parseBVec(uint64_t value, size_t width);
+    sim::DefaultBitVectorState parseBitVector(std::string_view);
+    sim::DefaultBitVectorState parseBitVector(uint64_t value, size_t width);
     
-    class BVec;
+    class UInt;
+    class UInt;
 
-#if 0 // ConstBVec as class study
+#if 0 // ConstUInt as class study
 
-    class ConstBVec
+    class ConstUInt
     {
     public:
-        constexpr ConstBVec(uint64_t value, BitWidth width, std::string_view name = "") : m_intValue(value), m_width(width), m_name(name) {}
-        constexpr ConstBVec(BitWidth width, std::string_view name = "") : m_width(width), m_name(name) {}
-        constexpr ConstBVec(std::string_view value, std::string_view name = "") : m_stringValue(value), m_name(name) {}
+        constexpr ConstUInt(uint64_t value, BitWidth width, std::string_view name = "") : m_intValue(value), m_width(width), m_name(name) {}
+        constexpr ConstUInt(BitWidth width, std::string_view name = "") : m_width(width), m_name(name) {}
+        constexpr ConstUInt(std::string_view value, std::string_view name = "") : m_stringValue(value), m_name(name) {}
 
-        BVec get() const;
-        operator BVec () const;
+        UInt get() const;
+        operator UInt () const;
 
         sim::DefaultBitVectorState state() const;
 
@@ -55,17 +56,26 @@ namespace gtry
         std::string_view m_name;
     };
 
-    std::ostream& operator << (std::ostream&, const ConstBVec&);
+    std::ostream& operator << (std::ostream&, const ConstUInt&);
 #else
+
     BVec ConstBVec(uint64_t value, BitWidth width, std::string_view name = "");
     BVec ConstBVec(BitWidth width, std::string_view name = ""); // undefined constant
+
+    UInt ConstUInt(uint64_t value, BitWidth width, std::string_view name = "");
+    UInt ConstUInt(BitWidth width, std::string_view name = ""); // undefined constant
+
+/*
+    SInt ConstSInt(int64_t value, BitWidth width, std::string_view name = "");
+    SInt ConstSInt(BitWidth width, std::string_view name = ""); // undefined constant
+*/
 #endif
 
 }
 
 #define GTRY_CONST_BVEC_DESC(x, value, desc) \
-    struct x { operator BVec () { \
-        BVec res = value; \
+    struct x { operator UInt () { \
+        UInt res = value; \
         res.getNode()->getNonSignalDriver(0).node->setName(#x); \
         return res; \
     } const char *getName() const { return #x; } auto getValue() const { return value; } const char *getDescription() const { return desc; } };

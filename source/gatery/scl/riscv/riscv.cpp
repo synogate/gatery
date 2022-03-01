@@ -20,7 +20,7 @@
 #include "../Adder.h"
 #include "../utils/OneHot.h"
 
-void gtry::scl::riscv::Instruction::decode(const BVec& inst)
+void gtry::scl::riscv::Instruction::decode(const UInt& inst)
 {
 	opcode = inst(2, 5);
 	rd = inst(7, 5);
@@ -190,7 +190,7 @@ void gtry::scl::riscv::RV32I::branch()
 	IF(m_instr.opcode == "b11000")
 	{
 		auto ent = Area{ "branch" }.enter();
-		BVec target = m_IP + m_instr.immB(0, m_IP.getWidth());
+		UInt target = m_IP + m_instr.immB(0, m_IP.getWidth());
 		
 		m_alu.sub = '1';
 
@@ -246,7 +246,7 @@ void gtry::scl::riscv::RV32I::logic()
 	{
 		auto ent = Area{ "logic" }.enter();
 
-		BVec op2 = m_instr.immI;
+		UInt op2 = m_instr.immI;
 		IF(m_instr.opcode[3])
 			op2 = m_r2;
 
@@ -283,11 +283,11 @@ void gtry::scl::riscv::RV32I::shift()
 	{
 		auto ent = Area{ "shift" }.enter();
 
-		BVec amount = m_r2(0, 5_b);
+		UInt amount = m_r2(0, 5_b);
 		IF(m_instr.opcode[3] == '0')
 			amount = m_instr.immI(0, 5_b);
 
-		BVec number = m_r1;
+		UInt number = m_r1;
 
 		Bit left = !m_instr.func3[2];
 		IF(left)
@@ -371,17 +371,17 @@ void gtry::scl::riscv::RV32I::load(AvalonMM& mem, bool byte, bool halfword)
 			readStallState = '0';
 		setStall(!*mem.readDataValid);
 
-		BVec value = *mem.readData;
+		UInt value = *mem.readData;
 
 		// LB, LBU, LH, LHU
-		BVec offset = m_aluResult.sum(0, 2_b);
-		BVec type = m_instr.func3(0, 2_b);
+		UInt offset = m_aluResult.sum(0, 2_b);
+		UInt type = m_instr.func3(0, 2_b);
 		Bit zero = m_instr.func3.msb();
 		if (byte)
 		{
 			IF(type == 0) // byte load
 			{
-				BVec byte = muxWord(offset, value);
+				UInt byte = muxWord(offset, value);
 				IF(zero)
 					value = zext(byte);
 				ELSE
@@ -394,7 +394,7 @@ void gtry::scl::riscv::RV32I::load(AvalonMM& mem, bool byte, bool halfword)
 		{
 			IF(type == 1) // word load
 			{
-				BVec word = muxWord(offset[1], value);
+				UInt word = muxWord(offset[1], value);
 				IF(zero)
 					value = zext(word);
 				ELSE
@@ -446,7 +446,7 @@ gtry::scl::riscv::SingleCycleI::SingleCycleI(BitWidth instructionAddrWidth, BitW
 	m_instructionValid = '1';
 }
 
-gtry::Memory<gtry::BVec>& gtry::scl::riscv::SingleCycleI::fetch(uint32_t firstInstructionAddr)
+gtry::Memory<gtry::UInt>& gtry::scl::riscv::SingleCycleI::fetch(uint32_t firstInstructionAddr)
 {
 	auto entRV = m_area.enter("fetch");
 
@@ -454,9 +454,9 @@ gtry::Memory<gtry::BVec>& gtry::scl::riscv::SingleCycleI::fetch(uint32_t firstIn
 	m_instructionMem.setup(memWidth.count(), 32_b);
 	m_instructionMem.setType(MemType::SMALL);
 
-	BVec addr = m_IP.getWidth();
-	BVec instruction = reg(m_instructionMem[addr(2, memWidth)].read());
-	//BVec instruction = m_instructionMem[reg(addr(2, memWidth))];
+	UInt addr = m_IP.getWidth();
+	UInt instruction = reg(m_instructionMem[addr(2, memWidth)].read());
+	//UInt instruction = m_instructionMem[reg(addr(2, memWidth))];
 
 	Bit firstInstr = reg(Bit{ '0' }, '1');
 	HCL_NAMED(firstInstr);
@@ -472,7 +472,7 @@ gtry::Memory<gtry::BVec>& gtry::scl::riscv::SingleCycleI::fetch(uint32_t firstIn
 	return m_instructionMem;
 }
 
-gtry::BVec gtry::scl::riscv::SingleCycleI::fetch(const BVec& instruction, uint32_t firstInstructionAddr)
+gtry::UInt gtry::scl::riscv::SingleCycleI::fetch(const UInt& instruction, uint32_t firstInstructionAddr)
 {
 	m_instr.decode(instruction);
 	HCL_NAMED(m_instr);
@@ -480,7 +480,7 @@ gtry::BVec gtry::scl::riscv::SingleCycleI::fetch(const BVec& instruction, uint32
 	IF(!m_stall)
 		m_IP = m_resultIP;
 
-	BVec ifetchAddr = m_IP;
+	UInt ifetchAddr = m_IP;
 	HCL_NAMED(ifetchAddr);
 
 	m_IP = reg(m_IP, firstInstructionAddr);
@@ -524,12 +524,12 @@ void gtry::scl::riscv::SingleCycleI::fetchOperands(BitWidth regAddrWidth)
 }
 
 
-void gtry::scl::riscv::SingleCycleI::setIP(const BVec& ip)
+void gtry::scl::riscv::SingleCycleI::setIP(const UInt& ip)
 {
 	m_resultIP = ip(0, m_IP.getWidth());
 }
 
-void gtry::scl::riscv::SingleCycleI::setResult(const BVec& result)
+void gtry::scl::riscv::SingleCycleI::setResult(const UInt& result)
 {
 	m_resultValid = '1';
 	m_resultData = zext(result);

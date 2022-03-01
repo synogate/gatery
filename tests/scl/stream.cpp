@@ -35,8 +35,8 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
     ClockScope clkScp(clock);
 
-    scl::Stream<BVec> in0;
-    scl::Stream<BVec> in1;
+    scl::Stream<UInt> in0;
+    scl::Stream<UInt> in1;
 
     in0.value() = pinIn(8_b).setName("in0_data");
     in0.valid = pinIn().setName("in0_valid");
@@ -136,8 +136,8 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
     ClockScope clkScp(clock);
 
-    scl::Stream<BVec> in0;
-    scl::Stream<BVec> in1;
+    scl::Stream<UInt> in0;
+    scl::Stream<UInt> in1;
 
     in0.value() = pinIn(8_b).setName("in0_data");
     in0.valid = pinIn().setName("in0_valid");

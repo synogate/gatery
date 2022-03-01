@@ -53,13 +53,13 @@ BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_new, BoostUnitTestSimulationFix
 
 
 
-    BVec input = pinIn(32_b);
+    UInt input = pinIn(32_b);
 
-    BVec counter = 32_b;
+    UInt counter = 32_b;
 	counter = counter + 1;
 	counter = reg(counter, 0, {.allowRetimingForward=true});
 
-	BVec output = counter | reg(input, 0, {.allowRetimingForward=true});
+	UInt output = counter | reg(input, 0, {.allowRetimingForward=true});
 
 	stripSignalNodes(design.getCircuit());
 	auto subnet = hlim::Subnet::all(design.getCircuit());
@@ -98,10 +98,10 @@ BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_old, BoostUnitTestSimulationFix
 
 
 
-    BVec input = pinIn(32_b);
-	BVec output = 32_b;
+    UInt input = pinIn(32_b);
+	UInt output = 32_b;
 
-	BVec counter = 32_b;
+	UInt counter = 32_b;
 	counter = reg(counter, 0, {.allowRetimingForward=true});
 	counter = counter + 1;
 
@@ -140,15 +140,15 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_simple, BoostUnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    BVec input = pinIn(32_b);
+    UInt input = pinIn(32_b);
 
     Pipeline pipeline;
 	input = pipeline(input);
 
 
-	BVec output = input;
-    for (auto i : Range(3))
-        output = regHint(output);
+	UInt output = input;
+	for (auto i : Range(3))
+		output = regHint(output);
 
 	pinOut(output);
 
@@ -169,15 +169,15 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_simple_reset, BoostUnitTestSimulationFixtu
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    BVec input = pinIn(32_b);
+    UInt input = pinIn(32_b);
 
     Pipeline pipeline;
 	input = pipeline(input, 0);
 
 
-	BVec output = input;
-    for (auto i : Range(3))
-        output = regHint(output);
+	UInt output = input;
+	for ([[maybe_unused]] auto i : Range(3))
+		output = regHint(output);
 
 	pinOut(output);
 
@@ -193,7 +193,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_simple_reset, BoostUnitTestSimulationFixtu
 struct TestStruct
 {
 	gtry::Bit a;
-	gtry::BVec b;
+	gtry::UInt b;
 };
 
 BOOST_HANA_ADAPT_STRUCT(TestStruct, a, b);
@@ -215,8 +215,8 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct, BoostUnitTestSimulationFixture)
 	TestStruct s_out = pipeline(s_in);
 
 
-    for (auto i : Range(3))
-        s_out = regHint(s_out);
+	for ([[maybe_unused]] auto i : Range(3))
+		s_out = regHint(s_out);
 
 	pinOut(s_out.a);
 	pinOut(s_out.b);
@@ -227,7 +227,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct, BoostUnitTestSimulationFixture)
 		simu(s_in.a) = false;
 		simu(s_in.b) = 42;
         
-	    for (auto i : Range(3)) {
+	    for ([[maybe_unused]] auto i : Range(3)) {
 			BOOST_TEST(!simu(s_out.a).defined());
 			BOOST_TEST(!simu(s_out.b).defined());
 
@@ -273,7 +273,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct_reset, BoostUnitTestSimulationFixtu
 	TestStruct s_out = pipeline(s_in, r);
 
 
-    for (auto i : Range(3))
+    for ([[maybe_unused]] auto i : Range(3))
         s_out = regHint(s_out);
 
 	pinOut(s_out.a);
@@ -285,7 +285,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct_reset, BoostUnitTestSimulationFixtu
 		simu(s_in.a) = false;
 		simu(s_in.b) = 42;
         
-	    for (auto i : Range(3)) {
+	    for ([[maybe_unused]] auto i : Range(3)) {
 			BOOST_TEST(simu(s_out.a).defined());
 			BOOST_TEST(simu(s_out.a).value() == true);
 			BOOST_TEST(simu(s_out.b).defined());
@@ -323,8 +323,8 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching, BoostUnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    BVec input1 = pinIn(32_b);
-    BVec input2 = pinIn(32_b);
+    UInt input1 = pinIn(32_b);
+    UInt input2 = pinIn(32_b);
 
     Pipeline pipeline;
 	auto a = pipeline(input1);
@@ -332,7 +332,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching, BoostUnitTestSimulationFixture)
 
 	b = regHint(b);
 
-	BVec output = a + b;
+	UInt output = a + b;
 	output = regHint(output);
 
 	pinOut(output);
@@ -342,7 +342,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching, BoostUnitTestSimulationFixture)
 		simu(input1) = 1337;
 		simu(input2) = 42;
         
-	    for (auto i : Range(2)) {
+	    for ([[maybe_unused]] auto i : Range(2)) {
 			BOOST_TEST(!simu(output).defined());
 
 			co_await WaitClk(clock);
@@ -374,8 +374,8 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching_reset, BoostUnitTestSimulationFi
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    BVec input1 = pinIn(32_b);
-    BVec input2 = pinIn(32_b);
+    UInt input1 = pinIn(32_b);
+    UInt input2 = pinIn(32_b);
 
     Pipeline pipeline;
 	auto a = pipeline(input1, 0);
@@ -383,7 +383,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching_reset, BoostUnitTestSimulationFi
 
 	b = regHint(b);
 
-	BVec output = a + b;
+	UInt output = a + b;
 	output = regHint(output);
 
 	pinOut(output);
@@ -393,7 +393,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching_reset, BoostUnitTestSimulationFi
 		simu(input1) = 1337;
 		simu(input2) = 42;
         
-	    for (auto i : Range(2)) {
+	    for ([[maybe_unused]] auto i : Range(2)) {
 			BOOST_TEST(simu(output).defined());
 			BOOST_TEST(simu(output).value() == 0+1);
 
@@ -426,8 +426,8 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_memory_rmw, BoostUnitTestSimulationFixture
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
 	ClockScope clkScp(clock);
 
-    BVec addr = pinIn(4_b);
-    BVec data = pinIn(32_b);
+    UInt addr = pinIn(4_b);
+    UInt data = pinIn(32_b);
 	Bit enable = pinIn();
 
     Pipeline pipeline;
@@ -435,10 +435,10 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_memory_rmw, BoostUnitTestSimulationFixture
 	data = pipeline(data);
 	enable = pipeline(enable);
 
-	Memory<BVec> mem(16, 32_b);
+	Memory<UInt> mem(16, 32_b);
 	mem.setType(MemType::MEDIUM, 1);
 
-	BVec rd = mem[addr];
+	UInt rd = mem[addr];
 	rd = regHint(rd);
 
 	IF (enable)

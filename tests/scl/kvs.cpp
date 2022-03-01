@@ -175,7 +175,7 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, TinyCuckooTableLook
     const BitWidth keySize{ size_t(numTables * 10) };
     InputPins lookupKey = pinIn(keySize).setName("key");
 
-    scl::TinyCuckoo<BVec, BVec> tc{ size_t(numTables * 1024), keySize, 4_b, size_t(numTables) };
+    scl::TinyCuckoo<UInt, UInt> tc{ size_t(numTables * 1024), keySize, 4_b, size_t(numTables) };
     BOOST_TEST(keySize.value == tc.hashWidth().value);
 
     auto cuckooPoo = tc(lookupKey, lookupKey);
@@ -208,7 +208,7 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, TinyCuckooTableLook
     const BitWidth keySize{ size_t(numTables * 10) };
     InputPins lookupKey = pinIn(keySize).setName("key");
 
-    scl::TinyCuckoo<BVec, BVec> tc{ size_t(numTables * 1024), keySize, 4_b, size_t(numTables) };
+    scl::TinyCuckoo<UInt, UInt> tc{ size_t(numTables * 1024), keySize, 4_b, size_t(numTables) };
     BOOST_TEST(keySize.value == tc.hashWidth().value);
 
     auto cuckooPoo = tc(lookupKey, lookupKey);

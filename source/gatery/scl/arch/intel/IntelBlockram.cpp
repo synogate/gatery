@@ -23,6 +23,7 @@
 #include "ALTSYNCRAM.h"
 #include <gatery/hlim/postprocessing/MemoryDetector.h>
 #include <gatery/hlim/supportNodes/Node_MemPort.h>
+#include <gatery/hlim/coreNodes/Node_Register.h>
 
 namespace gtry::scl::arch::intel {
 
@@ -120,8 +121,8 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
         portSetup.inputRegs = true;
         altsyncram->setupPortA(wp.node->getBitWidth(), portSetup);
 
-        BVec wrData = getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
-        BVec addr = getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+        UInt wrData = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
+        UInt addr = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
         Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrEnable}, '1');
 
         altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_DATA_A, wrData);
@@ -136,17 +137,17 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
             portSetup.outputRegs = (rp.dedicatedReadLatencyRegisters.size() > 1) && useInternalOutputRegister;
             altsyncram->setupPortB(rp.node->getBitWidth(), portSetup);
 
-            BVec addr = getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-            BVec data = hookBVecAfter(rp.dataOutput);
+            UInt addr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+            UInt data = hookUIntAfter(rp.dataOutput);
 
             altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_ADDRESS_B, addr);
 
-            BVec readData = altsyncram->getOutputBVec(ALTSYNCRAM::Outputs::OUT_Q_B);
+            UInt readData = altsyncram->getOutputUInt(ALTSYNCRAM::Outputs::OUT_Q_B);
 
             {
                 Clock clock(readClock);
                 ClockScope cscope(clock);
-                for (auto i : utils::Range(numExternalOutputRegisters)) 
+                for ([[maybe_unused]] auto i : utils::Range(numExternalOutputRegisters)) 
                     if (useInternalOutputRegister)
                         readData = reg(readData);
                     else
@@ -162,15 +163,15 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
         portSetup.outputRegs = (rp.dedicatedReadLatencyRegisters.size() > 1) && useInternalOutputRegister;
         altsyncram->setupPortA(rp.node->getBitWidth(), portSetup);
 
-        BVec addr = getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-        BVec data = hookBVecAfter(rp.dataOutput);
+        UInt addr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+        UInt data = hookUIntAfter(rp.dataOutput);
 
         altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_ADDRESS_A, addr);
-        BVec readData = altsyncram->getOutputBVec(ALTSYNCRAM::Outputs::OUT_Q_A);
+        UInt readData = altsyncram->getOutputUInt(ALTSYNCRAM::Outputs::OUT_Q_A);
         {
             Clock clock(readClock);
             ClockScope cscope(clock);
-            for (auto i : utils::Range(numExternalOutputRegisters)) 
+            for ([[maybe_unused]] auto i : utils::Range(numExternalOutputRegisters)) 
 				if (useInternalOutputRegister)
 					readData = reg(readData);
 				else

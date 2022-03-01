@@ -35,16 +35,16 @@ namespace gtry::scl
         AvalonMM& operator=(AvalonMM&&) = default;
         AvalonMM& operator=(const AvalonMM&) = delete;
 
-        BVec address;
+        UInt address;
         std::optional<Bit> ready;
         std::optional<Bit> read;
         std::optional<Bit> write;
-        std::optional<BVec> writeData;
-        std::optional<BVec> readData;
+        std::optional<UInt> writeData;
+        std::optional<UInt> readData;
         std::optional<Bit> readDataValid;
-        std::optional<BVec> response;
+        std::optional<UInt> response;
         std::optional<Bit> writeResponseValid;
-        std::optional<BVec> byteEnable;
+        std::optional<UInt> byteEnable;
 
         size_t readLatency = 0;
         size_t readyLatency = 0;
@@ -74,7 +74,7 @@ namespace gtry::scl
         };
     };
 
-    Memory<BVec> attachMem(AvalonMM& avmm, BitWidth addrWidth = BitWidth{});
+    Memory<UInt> attachMem(AvalonMM& avmm, BitWidth addrWidth = BitWidth{});
 
     class AvalonNetworkSection
     {
@@ -102,7 +102,7 @@ namespace gtry::scl
         struct SigInfo
         {
             std::string name;
-            BVec* signalVec = nullptr;
+            UInt* signalVec = nullptr;
             Bit* signalBit = nullptr;
         
             Selection from;
@@ -110,7 +110,7 @@ namespace gtry::scl
         
         struct SigVis : CompoundNameVisitor
         {
-            virtual void operator () (BVec& a) final
+            virtual void operator () (UInt& a) final
             {
                 for (size_t i = 0; i < a.size(); i += regWidthLimit)
                 {
@@ -141,7 +141,7 @@ namespace gtry::scl
             size_t regWidthLimit = 1;
         };
         
-        BVec memAddress = mem.addressWidth();
+        UInt memAddress = mem.addressWidth();
         HCL_NAMED(memAddress);
         
         auto&& port = mem[memAddress];
@@ -157,8 +157,8 @@ namespace gtry::scl
         
         write = Bit{};
         writeData = dataWidth;
-        readData = ConstBVec(0, dataWidth);
-        BVec regAddress = address(0, regAddrWidth.value);
+        readData = ConstUInt(0, dataWidth);
+        UInt regAddress = address(0, regAddrWidth.value);
         HCL_NAMED(regAddress);
         for (size_t r = 0; r < v.regMap.size(); ++r)
         {
@@ -168,7 +168,7 @@ namespace gtry::scl
                 if (reg.size() == 1 && reg.front().signalVec)
                 {
                     SigInfo& sig = reg.front();
-                    BVec& source = (*sig.signalVec)(sig.from);
+                    UInt& source = (*sig.signalVec)(sig.from);
                     readData = zext(source);
         
                     IF(*write)

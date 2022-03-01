@@ -47,7 +47,7 @@ class RAM256X1D : public gtry::hlim::Node_External
 
         RAM256X1D();
 
-		Bit setupSDP(const BVec &wrAddr, const Bit &wrData, const Bit &wrEn, const BVec &rdAddr);
+		Bit setupSDP(const UInt &wrAddr, const Bit &wrData, const Bit &wrEn, const UInt &rdAddr);
 
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;

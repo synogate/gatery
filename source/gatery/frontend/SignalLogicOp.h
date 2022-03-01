@@ -19,8 +19,9 @@
 
 #include "Signal.h"
 #include "Bit.h"
-#include "BitVector.h"
-#include "Registers.h"
+#include "BVec.h"
+#include "UInt.h"
+#include "SInt.h"
 
 #include <gatery/hlim/coreNodes/Node_Logic.h>
 
@@ -33,7 +34,6 @@
 
 namespace gtry {
     
-
     SignalReadPort makeNode(hlim::Node_Logic::Op op, const ElementarySignal& in);
     SignalReadPort makeNode(hlim::Node_Logic::Op op, NormalizedWidthOperands ops);
 
@@ -51,9 +51,46 @@ namespace gtry {
     inline BVec operator ^ (const BVec& lhs, const BVec& rhs) { return lxor(lhs, rhs); }
     inline BVec operator ~ (const BVec& lhs) { return lnot(lhs); }
 
-    template<typename SignalType> SignalType& operator &= (SignalType& lhs, const BVec& rhs) { return lhs = land(lhs, rhs); }
-    template<typename SignalType> SignalType& operator |= (SignalType& lhs, const BVec& rhs) { return lhs = lor(lhs, rhs); }
-    template<typename SignalType> SignalType& operator ^= (SignalType& lhs, const BVec& rhs) { return lhs = lxor(lhs, rhs); }
+
+
+    inline UInt land(const UInt& lhs, const UInt& rhs) { return makeNode(hlim::Node_Logic::AND, {lhs, rhs}); }
+    inline UInt lnand(const UInt& lhs, const UInt& rhs) { return makeNode(hlim::Node_Logic::NAND, {lhs, rhs}); }
+    inline UInt lor(const UInt& lhs, const UInt& rhs) { return makeNode(hlim::Node_Logic::OR, {lhs, rhs}); }
+    inline UInt lnor(const UInt& lhs, const UInt& rhs) { return makeNode(hlim::Node_Logic::NOR, {lhs, rhs}); }
+    inline UInt lxor(const UInt& lhs, const UInt& rhs) { return makeNode(hlim::Node_Logic::XOR, {lhs, rhs}); }
+    inline UInt lxnor(const UInt& lhs, const UInt& rhs) { return makeNode(hlim::Node_Logic::EQ, {lhs, rhs}); }
+    inline UInt lnot(const UInt& lhs) { return makeNode(hlim::Node_Logic::NOT, lhs); }
+
+    inline UInt operator & (const UInt& lhs, const UInt& rhs) { return land(lhs, rhs); }
+    inline UInt operator | (const UInt& lhs, const UInt& rhs) { return lor(lhs, rhs); }
+    inline UInt operator ^ (const UInt& lhs, const UInt& rhs) { return lxor(lhs, rhs); }
+    inline UInt operator ~ (const UInt& lhs) { return lnot(lhs); }
+
+
+
+
+    inline SInt land(const SInt& lhs, const SInt& rhs) { return makeNode(hlim::Node_Logic::AND, {lhs, rhs}); }
+    inline SInt lnand(const SInt& lhs, const SInt& rhs) { return makeNode(hlim::Node_Logic::NAND, {lhs, rhs}); }
+    inline SInt lor(const SInt& lhs, const SInt& rhs) { return makeNode(hlim::Node_Logic::OR, {lhs, rhs}); }
+    inline SInt lnor(const SInt& lhs, const SInt& rhs) { return makeNode(hlim::Node_Logic::NOR, {lhs, rhs}); }
+    inline SInt lxor(const SInt& lhs, const SInt& rhs) { return makeNode(hlim::Node_Logic::XOR, {lhs, rhs}); }
+    inline SInt lxnor(const SInt& lhs, const SInt& rhs) { return makeNode(hlim::Node_Logic::EQ, {lhs, rhs}); }
+    inline SInt lnot(const SInt& lhs) { return makeNode(hlim::Node_Logic::NOT, lhs); }
+
+    inline SInt operator & (const SInt& lhs, const SInt& rhs) { return land(lhs, rhs); }
+    inline SInt operator | (const SInt& lhs, const SInt& rhs) { return lor(lhs, rhs); }
+    inline SInt operator ^ (const SInt& lhs, const SInt& rhs) { return lxor(lhs, rhs); }
+    inline SInt operator ~ (const SInt& lhs) { return lnot(lhs); }
+
+
+
+
+    template<BitVectorDerived SignalType, std::convertible_to<SignalType> RType> 
+    inline SignalType& operator &= (SignalType& lhs, const RType& rhs) { return lhs = land(lhs, rhs); }
+    template<BitVectorDerived SignalType, std::convertible_to<SignalType> RType> 
+    inline SignalType& operator |= (SignalType& lhs, const RType& rhs) { return lhs = lor(lhs, rhs); }
+    template<BitVectorDerived SignalType, std::convertible_to<SignalType> RType> 
+    inline SignalType& operator ^= (SignalType& lhs, const RType& rhs) { return lhs = lxor(lhs, rhs); }
 
 
 
@@ -71,30 +108,57 @@ namespace gtry {
     inline Bit operator ~ (const Bit& lhs) { return lnot(lhs); }
     inline Bit operator ! (const Bit& lhs) { return lnot(lhs); }
 
-    inline Bit& operator &= (Bit& lhs, const Bit& rhs) { return lhs = land(lhs, rhs); }
-    inline Bit& operator |= (Bit& lhs, const Bit& rhs) { return lhs = lor(lhs, rhs); }
-    inline Bit& operator ^= (Bit& lhs, const Bit& rhs) { return lhs = lxor(lhs, rhs); }
+
+    // All bitvector derived types can be logically combined with bits, which are implicitly broadcast to the size of the vector.
+    template<BitVectorDerived Type>
+    inline Type land(const Type& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::AND, {lhs, sext(rhs)}); }
+    template<BitVectorDerived Type>
+    inline Type lnand(const Type& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::NAND, {lhs, sext(rhs)}); }
+    template<BitVectorDerived Type>
+    inline Type lor(const Type& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::OR, {lhs, sext(rhs)}); }
+    template<BitVectorDerived Type>
+    inline Type lnor(const Type& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::NOR, {lhs, sext(rhs)}); }
+    template<BitVectorDerived Type>
+    inline Type lxor(const Type& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::XOR, {lhs, sext(rhs)}); }
+    template<BitVectorDerived Type>
+    inline Type lxnor(const Type& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::EQ, {lhs, sext(rhs)}); }
+
+
+    // allow implicit conversion from literals to signals when used in a logical operation with Bit
+    template<BitVectorLiteral Type>
+    inline auto land(const Type& lhs, const Bit& rhs) { return land<typename is_signal<Type>::sig_type>(lhs, rhs); }
+    template<BitVectorLiteral Type>
+    inline auto lnand(const Type& lhs, const Bit& rhs) { return lnand<typename is_signal<Type>::sig_type>(lhs, rhs); }
+    template<BitVectorLiteral Type>
+    inline auto lor(const Type& lhs, const Bit& rhs) { return lor<typename is_signal<Type>::sig_type>(lhs, rhs); }
+    template<BitVectorLiteral Type>
+    inline auto lnor(const Type& lhs, const Bit& rhs) { return lnor<typename is_signal<Type>::sig_type>(lhs, rhs); }
+    template<BitVectorLiteral Type>
+    inline auto lxor(const Type& lhs, const Bit& rhs) { return lxor<typename is_signal<Type>::sig_type>(lhs, rhs); }
+    template<BitVectorLiteral Type>
+    inline auto lxnor(const Type& lhs, const Bit& rhs) { return lxnor<typename is_signal<Type>::sig_type>(lhs, rhs); }
+
+    template<BitVectorValue Type>
+    inline auto operator & (const Type& lhs, const Bit& rhs) { return land(lhs, rhs); }
+    template<BitVectorValue Type>
+    inline auto operator | (const Type& lhs, const Bit& rhs) { return lor(lhs, rhs); }
+    template<BitVectorValue Type>
+    inline auto operator ^ (const Type& lhs, const Bit& rhs) { return lxor(lhs, rhs); }
+    template<BitVectorValue Type>
+    inline auto operator & (const Bit& lhs, const Type& rhs) { return land(rhs, lhs); }
+    template<BitVectorValue Type>
+    inline auto operator | (const Bit& lhs, const Type& rhs) { return lor(rhs, lhs); }
+    template<BitVectorValue Type>
+    inline auto operator ^ (const Bit& lhs, const Type& rhs) { return lxor(rhs, lhs); }
 
 
 
-    inline BVec land(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::AND, {lhs, sext(rhs)}); }
-    inline BVec lnand(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::NAND, {lhs, sext(rhs)}); }
-    inline BVec lor(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::OR, {lhs, sext(rhs)}); }
-    inline BVec lnor(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::NOR, {lhs, sext(rhs)}); }
-    inline BVec lxor(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::XOR, {lhs, sext(rhs)}); }
-    inline BVec lxnor(const BVec& lhs, const Bit& rhs) { return makeNode(hlim::Node_Logic::EQ, {lhs, sext(rhs)}); }
-
-
-    inline BVec operator & (const BVec& lhs, const Bit& rhs) { return land(lhs, rhs); }
-    inline BVec operator | (const BVec& lhs, const Bit& rhs) { return lor(lhs, rhs); }
-    inline BVec operator ^ (const BVec& lhs, const Bit& rhs) { return lxor(lhs, rhs); }
-    inline BVec operator & (const Bit& lhs, const BVec& rhs) { return land(rhs, lhs); }
-    inline BVec operator | (const Bit& lhs, const BVec& rhs) { return lor(rhs, lhs); }
-    inline BVec operator ^ (const Bit& lhs, const BVec& rhs) { return lxor(rhs, lhs); }
-
-    inline BVec& operator &= (BVec& lhs, const Bit& rhs) { return lhs = land(lhs, rhs); }
-    inline BVec& operator |= (BVec& lhs, const Bit& rhs) { return lhs = lor(lhs, rhs); }
-    inline BVec& operator ^= (BVec& lhs, const Bit& rhs) { return lhs = lxor(lhs, rhs); }
+    template<IsElementarySignal SignalType>
+    inline SignalType& operator &= (SignalType& lhs, const Bit& rhs) { return lhs = land(lhs, rhs); }
+    template<IsElementarySignal SignalType>
+    inline SignalType& operator |= (SignalType& lhs, const Bit& rhs) { return lhs = lor(lhs, rhs); }
+    template<IsElementarySignal SignalType>
+    inline SignalType& operator ^= (SignalType& lhs, const Bit& rhs) { return lhs = lxor(lhs, rhs); }
 
 
 

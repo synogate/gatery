@@ -25,6 +25,7 @@
 
 #include <gatery/hlim/postprocessing/MemoryDetector.h>
 #include <gatery/hlim/supportNodes/Node_MemPort.h>
+#include <gatery/hlim/coreNodes/Node_Register.h>
 
 #include "../general/MemoryTools.h"
 
@@ -129,19 +130,19 @@ void XilinxLutram::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
 
     GroupScope scope(nodeGroup->getParent());
 
-	BVec readData;
+	UInt readData;
 
     if (widthSingleLutram == 1) {
         auto *ram = DesignScope::createNode<RAM256X1D>();
 
-    	BVec rdAddr = getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+    	UInt rdAddr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 
 		HCL_ASSERT(hasWritePort);
 		if (hasWritePort) {
 			auto &wp = memGrp->getWritePorts().front();
 
-			BVec wrAddr = getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-			BVec wrData = getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
+			UInt wrAddr = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+			UInt wrData = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
 			Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::enable}, '1');
 
 			HCL_ASSERT(wrAddr.size() <= 8);
@@ -160,14 +161,14 @@ void XilinxLutram::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
     } else {
         auto *ram = DesignScope::createNode<RAM64M8>();
 
-    	BVec rdAddr = getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+    	UInt rdAddr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 
 		HCL_ASSERT(hasWritePort);
 		if (hasWritePort) {
 			auto &wp = memGrp->getWritePorts().front();
 
-			BVec wrAddr = getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-			BVec wrData = getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
+			UInt wrAddr = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+			UInt wrData = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
 			Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::enable}, '1');
 
 			HCL_ASSERT(wrAddr.size() <= 6);
@@ -175,7 +176,7 @@ void XilinxLutram::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
 			HCL_ASSERT(rdAddr.size() <= 6);
 			HCL_ASSERT(rp.node->getBitWidth() <= 7);
 
-			BVec rdData_7wide = ram->setup64x7_SDP(zext(wrAddr, 6-wrAddr.size()), zext(wrData, 7-wrData.size()), wrEn, zext(rdAddr, 6-rdAddr.size()));
+			UInt rdData_7wide = ram->setup64x7_SDP(zext(wrAddr, 6-wrAddr.size()), zext(wrData, 7-wrData.size()), wrEn, zext(rdAddr, 6-rdAddr.size()));
 			readData = rdData_7wide(0, rp.node->getBitWidth());
 
 			hlim::Clock* writeClock = memGrp->getWritePorts().front().node->getClocks()[0];
@@ -193,7 +194,7 @@ void XilinxLutram::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
         	setAttrib(readData, {.allowFusing = false});
     }        
 
-    BVec rdDataHook = hookBVecAfter(rp.dataOutput);
+    UInt rdDataHook = hookUIntAfter(rp.dataOutput);
     rdDataHook.setExportOverride(readData(0, rdDataHook.size()));	
 }
 

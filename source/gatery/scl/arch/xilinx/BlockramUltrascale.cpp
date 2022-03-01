@@ -25,6 +25,7 @@
 
 #include <gatery/hlim/postprocessing/MemoryDetector.h>
 #include <gatery/hlim/supportNodes/Node_MemPort.h>
+#include <gatery/hlim/coreNodes/Node_Register.h>
 
 #include "../general/MemoryTools.h"
 
@@ -205,7 +206,7 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
     };
     bram->setupPortA(rdPortSetup);
 
-    BVec rdAddr = getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+    UInt rdAddr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
     Bit rdEn = getBitBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::enable}, '1');
 
     bram->connectAddressPortA(rdAddr);
@@ -215,7 +216,7 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
     HCL_ASSERT(readClock->getTriggerEvent() == hlim::Clock::TriggerEvent::RISING);        
     bram->attachClock(readClock, (size_t)RAMBxE2::Clocks::CLK_A_RD);   
 
-    BVec readData = bram->getReadDataPortA(width);
+    UInt readData = bram->getReadDataPortA(width);
     
     for (size_t i = 1; i < rp.dedicatedReadLatencyRegisters.size(); i++) {
         auto &reg = rp.dedicatedReadLatencyRegisters[i];
@@ -224,14 +225,14 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
         setAttrib(readData, {.allowFusing = false});
     }        
 
-    BVec rdDataHook = hookBVecAfter(rp.dataOutput);
+    UInt rdDataHook = hookUIntAfter(rp.dataOutput);
     rdDataHook.setExportOverride(readData(0, rdDataHook.size()));
 
     if (hasWritePort) {
         auto &wp = memGrp->getWritePorts().front();
 
-        BVec wrAddr = getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-        BVec wrData = getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
+        UInt wrAddr = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+        UInt wrData = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
         Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::enable}, '1');
 
         HCL_ASSERT(rdAddr.size() == wrAddr.size());
@@ -350,12 +351,12 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
         }
     }
 
-    BVec readData = ConstBVec(BitWidth(width));
+    UInt readData = ConstUInt(BitWidth(width));
 
     for (auto cascade : utils::Range(numCascadesNeeded36k)) {
         Bit cascadeRdEnabled = rdEn;
         if (rdAddr.size() > addrWidth36k) {
-            BVec addrHighBits = rdAddr(addrWidth36k, rdAddr.size()-addrWidth36k);
+            UInt addrHighBits = rdAddr(addrWidth36k, rdAddr.size()-addrWidth36k);
             cascadeRdEnabled &= addrHighBits == cascade;
             //cascadeRdEnabled &= rdAddr(Selection::From(addrWidth36k)) == cascade;
         }
@@ -370,7 +371,7 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
             cascadeWrEnabled.setName((boost::format("wrEn_cascade_%d") % cascade).str());
         }
 
-        BVec cascadeReadData = ConstBVec(BitWidth(width));
+        UInt cascadeReadData = ConstUInt(BitWidth(width));
 
         for (auto widthInst : utils::Range(num36kPerCascade)) {
             auto *bram = DesignScope::createNode<RAMB36E2>();

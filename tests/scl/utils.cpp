@@ -33,14 +33,14 @@ using namespace boost::unit_test;
 
 BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, BitCountTest, data::xrange(255) * data::xrange(1, 8), val, bitsize)
 {
-    BVec a = ConstBVec(val, BitWidth{ uint64_t(bitsize) });
-    BVec count = gtry::scl::bitcount(a);
+    UInt a = ConstUInt(val, BitWidth{ uint64_t(bitsize) });
+    UInt count = gtry::scl::bitcount(a);
     
     unsigned actualBitCount = gtry::utils::popcount(unsigned(val) & (0xFF >> (8-bitsize)));
     
     BOOST_REQUIRE(count.size() >= (size_t)gtry::utils::Log2(bitsize)+1);
     //sim_debug() << "The bitcount of " << a << " should be " << actualBitCount << " and is " << count;
-    sim_assert(count == ConstBVec(actualBitCount, count.getWidth())) << "The bitcount of " << a << " should be " << actualBitCount << " but is " << count;
+    sim_assert(count == ConstUInt(actualBitCount, count.getWidth())) << "The bitcount of " << a << " should be " << actualBitCount << " but is " << count;
     
     eval();
 }
@@ -48,11 +48,11 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, BitCountTest, data:
 
 BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, Decoder, data::xrange(3), val)
 {
-    OneHot result = decoder(ConstBVec(val, 2_b));
+    OneHot result = decoder(ConstUInt(val, 2_b));
     BOOST_CHECK(result.size() == 4);
     sim_assert(result == (1u << val)) << "decoded to " << result;
 
-    BVec back = encoder(result);
+    UInt back = encoder(result);
     BOOST_CHECK(back.size() == 2);
     sim_assert(back == val) << "encoded to " << back;
 
@@ -66,7 +66,7 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, Decoder, data::xran
 
 BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, ListEncoder, data::xrange(3), val)
 {
-    OneHot result = decoder(ConstBVec(val, 2_b));
+    OneHot result = decoder(ConstUInt(val, 2_b));
     BOOST_CHECK(result.size() == 4);
     sim_assert(result == (1u << val)) << "decoded to " << result;
 
@@ -79,7 +79,7 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, ListEncoder, data::
         sim_assert(*indexList[i].valid == ((size_t)val == i)) << *indexList[i].valid << " != " << ((size_t)val == i);
     }
 
-    auto encoded = priorityEncoder<BVec>(indexList.begin(), indexList.end());
+    auto encoded = priorityEncoder<UInt>(indexList.begin(), indexList.end());
     sim_assert(*encoded.valid);
     sim_assert(encoded.value() == val);
 
@@ -93,11 +93,11 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, PriorityEncoderTree
     if (val == 54) testVector |= 7;
     if (val == 64) testVector = 0;
 
-    auto res = priorityEncoderTree(ConstBVec(testVector, 64_b), false);
+    auto res = priorityEncoderTree(ConstUInt(testVector, 64_b), false);
     
     if (testVector)
     {
-        BVec ref = gtry::utils::Log2(gtry::utils::lowestSetBitMask(testVector));
+        UInt ref = gtry::utils::Log2(gtry::utils::lowestSetBitMask(testVector));
         sim_assert(res.valid & res.index == ref) << "wrong index: " << res.index << " should be " << ref;
     }
     else
@@ -113,8 +113,8 @@ BOOST_FIXTURE_TEST_CASE(addWithCarry, BoostUnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
     ClockScope clkScp(clock);
 
-    BVec a = pinIn(4_b).setName("a");
-    BVec b = pinIn(4_b).setName("b");
+    UInt a = pinIn(4_b).setName("a");
+    UInt b = pinIn(4_b).setName("b");
     Bit cin = pinIn().setName("cin");
 
     auto [sum, carry] = add(a, b, cin);

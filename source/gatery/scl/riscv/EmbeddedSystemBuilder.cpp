@@ -90,7 +90,7 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addCpu(const ElfLoader& orgelf, Bi
 	const Segment codeSeg = loadSegment(codeMeg, 0_b);
 	DualCycleRV rv(codeSeg.addrWidth);
 
-	Memory<BVec>& imem = rv.fetch(entryPoint & codeSeg.addrWidth.mask());
+	Memory<UInt>& imem = rv.fetch(entryPoint & codeSeg.addrWidth.mask());
 	imem.fillPowerOnState(codeSeg.resetState);
 	
 	rv.execute();
@@ -205,7 +205,7 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const Segment& seg, 
 	if(name == "rw_data")
 		dbg_group = GroupScope::getCurrentNodeGroup();
 
-	Memory<BVec> mem{ seg.addrWidth.count(), 32_b };
+	Memory<UInt> mem{ seg.addrWidth.count(), 32_b };
 	//mem.noConflicts();
 	mem.fillPowerOnState(seg.resetState);
 	mem.setName(std::string{ name });
@@ -216,8 +216,8 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const Segment& seg, 
 	bus1.setName("bus1");
 	bus2.setName("bus2");
 
-	BVec addr = bus1.address(2, seg.addrWidth.bits() - 2);
-	BVec data = mem[addr];
+	UInt addr = bus1.address(2, seg.addrWidth.bits() - 2);
+	UInt data = mem[addr];
 
 	bus1.readData = reg(data);
 	bus2.readData = *bus1.readData;
@@ -227,9 +227,9 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const Segment& seg, 
 	if (writable)
 	{
 #if 1
-		BVec maskedData = data;
+		UInt maskedData = data;
 
-		BVec dbgReadData = reg(maskedData);
+		UInt dbgReadData = reg(maskedData);
 		HCL_NAMED(dbgReadData);
 
 		// TODO: implement byte enable
@@ -238,7 +238,7 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const Segment& seg, 
 				maskedData(i * 8, 8_b) = (*bus1.writeData)(i * 8, 8_b);
 		//setName(data, "mem_writedata");
 
-		BVec dbgMaskedData = reg(maskedData);
+		UInt dbgMaskedData = reg(maskedData);
 		HCL_NAMED(dbgMaskedData);
 
 		IF(*bus1.write | *bus2.write)
@@ -247,10 +247,10 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const Segment& seg, 
 
 		Bit doWrite = reg(*bus1.write | *bus2.write, '0');
 
-		BVec writeAddr = reg(addr);
-		BVec writeMask = reg(*bus1.byteEnable);
-		BVec writeData = reg(*bus1.writeData);
-		BVec maskedData = *bus1.readData;
+		UInt writeAddr = reg(addr);
+		UInt writeMask = reg(*bus1.byteEnable);
+		UInt writeData = reg(*bus1.writeData);
+		UInt maskedData = *bus1.readData;
 		for (size_t i = 0; i < 4; ++i)
 			IF(writeMask[i])
 			maskedData(i * 8, 8_b) = writeData(i * 8, 8_b);

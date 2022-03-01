@@ -25,7 +25,7 @@ namespace gtry::scl::hdmi {
 using namespace gtry;
 
 
-BVec tmdsEncode(Clock &pixelClock, Bit dataEnable, BVec data, BVec ctrl)
+UInt tmdsEncode(Clock &pixelClock, Bit dataEnable, UInt data, UInt ctrl)
 {
     HCL_NAMED(dataEnable);
     HCL_NAMED(data);
@@ -41,15 +41,15 @@ BVec tmdsEncode(Clock &pixelClock, Bit dataEnable, BVec data, BVec ctrl)
     HCL_DESIGNCHECK_HINT(ctrl.getWidth() == 2_b, "data must be 8 bit wide");
     
     HCL_COMMENT << "Count the number of high bits in the input word";
-    BVec sumOfOnes_data = bitcount(data);
+    UInt sumOfOnes_data = bitcount(data);
     HCL_NAMED(sumOfOnes_data);   
 
     HCL_COMMENT << "Prepare XORed and XNORed data words to select from based on number of high bits";
 
     const size_t subWidth = data.size() - 1;
-    BVec dataXNOR = data;
+    UInt dataXNOR = data;
     dataXNOR(1, subWidth) = lxnor(dataXNOR(1, subWidth), dataXNOR(0, subWidth));
-    BVec dataXOR = data;
+    UInt dataXOR = data;
     dataXOR(1, subWidth) ^= dataXOR(0, subWidth);
 
     HCL_NAMED(dataXNOR);
@@ -57,28 +57,28 @@ BVec tmdsEncode(Clock &pixelClock, Bit dataEnable, BVec data, BVec ctrl)
     
     Bit useXnor = !((sumOfOnes_data > 4) | ((sumOfOnes_data == 4) & (!data[0])));
     HCL_NAMED(useXnor);
-    BVec q_m = dataXOR;
+    UInt q_m = dataXOR;
     HCL_NAMED(q_m);
     IF (useXnor)
         q_m = dataXNOR;
     
     HCL_COMMENT << "Keep a running (signed) counter of the imbalance on the line, to modify future data encodings accordingly";
-    Register<BVec> imbalance{ 4_b };
-    imbalance.setReset("b0000");
-    imbalance.setClock(pixelClock);
+    UInt imbalance = 4_b;
+
+    imbalance = pixelClock(imbalance, "b0000");
     HCL_NAMED(imbalance);
     
-    BVec result(10_b, Expansion::none);
+    UInt result(10_b, Expansion::none);
     HCL_NAMED(result);
     
     HCL_COMMENT << "If sending data, 8/10 encode the data, otherwise encode the control bits";
     IF (dataEnable) {
         
         HCL_COMMENT << "Count the number of high bits in the xor/xnor word";
-        BVec sumOfOnes_q_m = bitcount(q_m);
+        UInt sumOfOnes_q_m = bitcount(q_m);
         HCL_NAMED(sumOfOnes_q_m);   
         
-        Bit noPreviousImbalance = imbalance.delay(1) == 0;
+        Bit noPreviousImbalance = imbalance == 0;
         HCL_NAMED(noPreviousImbalance);
         Bit noImbalanceInQ_m = sumOfOnes_q_m == 4;
         HCL_NAMED(noImbalanceInQ_m);
@@ -88,12 +88,12 @@ BVec tmdsEncode(Clock &pixelClock, Bit dataEnable, BVec data, BVec ctrl)
             result(8, 2) = pack(useXnor, ~useXnor);
             
             IF (useXnor) 
-                imbalance = imbalance.delay(1) - 8 + sumOfOnes_q_m + sumOfOnes_q_m;
+                imbalance -= 8 + sumOfOnes_q_m + sumOfOnes_q_m;
             ELSE
-                imbalance = imbalance.delay(1) + 8 - sumOfOnes_q_m - sumOfOnes_q_m;
+                imbalance += 8 - sumOfOnes_q_m - sumOfOnes_q_m;
             
         } ELSE {
-            Bit positivePreviousImbalance = !imbalance.delay(1).msb(); // Sign bit
+            Bit positivePreviousImbalance = !imbalance.msb(); // Sign bit
             HCL_NAMED(positivePreviousImbalance);
             Bit positiveImbalanceInQ_m = sumOfOnes_q_m > 4;
             HCL_NAMED(positiveImbalanceInQ_m);
@@ -103,20 +103,20 @@ BVec tmdsEncode(Clock &pixelClock, Bit dataEnable, BVec data, BVec ctrl)
                 result(0, 8) = ~q_m;
                 result(8, 2) = pack(useXnor, '1');
                 
-                imbalance = imbalance.delay(1) + 8 - sumOfOnes_q_m - sumOfOnes_q_m;
+                imbalance += 8 - sumOfOnes_q_m - sumOfOnes_q_m;
                 IF (useXnor)
-                    imbalance = (BVec) imbalance + 2;
+                    imbalance += 2;
             } ELSE {
                 result(0, 8) = q_m;
                 result(8, 2) = pack(useXnor, '1');
                 
-                imbalance = imbalance.delay(1) + 8 - sumOfOnes_q_m - sumOfOnes_q_m;
+                imbalance += 8 - sumOfOnes_q_m - sumOfOnes_q_m;
                 IF (useXnor)
-                    imbalance = (BVec) imbalance + 2;
+                    imbalance += 2;
             }
         }
     } ELSE {
-        PriorityConditional<BVec> con;
+        PriorityConditional<UInt> con;
         
         con
             .addCondition(ctrl == "b00", "b1101010100")
@@ -132,12 +132,12 @@ BVec tmdsEncode(Clock &pixelClock, Bit dataEnable, BVec data, BVec ctrl)
     return result;
 }
 
-BVec tmdsEncodeSymbol(const BVec& data)
+UInt tmdsEncodeSymbol(const UInt& data)
 {
     GroupScope ent{ GroupScope::GroupType::ENTITY };
     ent.setName("tmdsEncodeSymbol");
 
-    BVec sumOfOnes = bitcount(data);
+    UInt sumOfOnes = bitcount(data);
     HCL_NAMED(sumOfOnes);
 
     // minimize number of transitions
@@ -145,15 +145,15 @@ BVec tmdsEncodeSymbol(const BVec& data)
     HCL_NAMED(invertXor);
 
     HCL_COMMENT << "Decode using 1=xor, 0=xnor";
-    BVec transitionReduced = data;
+    UInt transitionReduced = data;
     for (auto i : utils::Range<size_t>(1, transitionReduced.size()))
         transitionReduced[i] ^= transitionReduced[i - 1] ^ invertXor;
     HCL_NAMED(transitionReduced);
 
     // even out 0 and 1 bits
-    BVec word_counter = zext(sumOfOnes, 1) - zext(data.size() / 2);
+    UInt word_counter = zext(sumOfOnes, 1) - zext(data.size() / 2);
     HCL_NAMED(word_counter);
-    BVec global_counter = word_counter.getWidth();
+    UInt global_counter = word_counter.getWidth();
     HCL_NAMED(global_counter);
 
     Bit invert = word_counter.msb() == global_counter.msb();
@@ -163,15 +163,15 @@ BVec tmdsEncodeSymbol(const BVec& data)
     global_counter += (word_counter ^ invert) + invert;
     global_counter = reg(global_counter, 0);
 
-    BVec result = pack(invert, ~invertXor, transitionReduced ^ invert);
+    UInt result = pack(invert, ~invertXor, transitionReduced ^ invert);
     HCL_NAMED(result);
     return result;
 }
 
-BVec tmdsEncodeReduceTransitions(const BVec& data)
+UInt tmdsEncodeReduceTransitions(const UInt& data)
 {
     HCL_COMMENT << "Count the number of high bits in the input word";
-    BVec sumOfOnes = bitcount(data);
+    UInt sumOfOnes = bitcount(data);
     HCL_NAMED(sumOfOnes);
 
     HCL_COMMENT << "Prepare XORed and XNORed data words to select from based on number of high bits";
@@ -179,7 +179,7 @@ BVec tmdsEncodeReduceTransitions(const BVec& data)
     Bit invert = (sumOfOnes > 4u) | (sumOfOnes == 4u & !data.lsb());
 
     HCL_COMMENT << "Decode using 1=xor, 0=xnor";
-    BVec tmdsReduced = pack(~invert, data);
+    UInt tmdsReduced = pack(~invert, data);
     for (auto i : utils::Range<size_t>(1, data.size()))
         tmdsReduced[i] ^= tmdsReduced[i - 1] ^ invert;
 
@@ -187,9 +187,9 @@ BVec tmdsEncodeReduceTransitions(const BVec& data)
     return tmdsReduced;
 }
 
-BVec tmdsDecodeReduceTransitions(const BVec& data)
+UInt tmdsDecodeReduceTransitions(const UInt& data)
 {
-    BVec decoded = data(0, data.size() - 1);
+    UInt decoded = data(0, data.size() - 1);
     decoded ^= decoded << 1;
     decoded(1, decoded.size() - 1) ^= ~data.msb();
 
@@ -197,14 +197,14 @@ BVec tmdsDecodeReduceTransitions(const BVec& data)
     return decoded;
 }
 
-BVec tmdsEncodeBitflip(const Clock& clk, const BVec& data)
+UInt tmdsEncodeBitflip(const Clock& clk, const UInt& data)
 {
     HCL_COMMENT << "count the number of uncompensated ones";
-    BVec global_counter = 3_b;
+    UInt global_counter = 3_b;
     HCL_NAMED(global_counter);
 
     // TODO: depend with and start value on data width
-    BVec word_counter = "b100";
+    UInt word_counter = "b100";
     for (const Bit& b : data)
         word_counter += b;
 
@@ -213,7 +213,7 @@ BVec tmdsEncodeBitflip(const Clock& clk, const BVec& data)
         invert = ~data.msb();
     HCL_NAMED(invert);
 
-    BVec result = pack(invert, data.msb(), data(0, -1) ^ invert);
+    UInt result = pack(invert, data.msb(), data(0, -1) ^ invert);
     HCL_NAMED(result);
 
     // sub or add depending on invert
@@ -223,7 +223,7 @@ BVec tmdsEncodeBitflip(const Clock& clk, const BVec& data)
     return result;
 }
 
-BVec tmdsDecodeBitflip(const BVec& data)
+UInt tmdsDecodeBitflip(const UInt& data)
 {
     return pack(data[data.size() - 2], data(0, -2) ^ data.msb());
 }
@@ -270,9 +270,9 @@ void gtry::scl::hdmi::TmdsEncoder::setSync(bool hsync, bool vsync)
         m_Channel[0] = "b1101010100";
 }
 
-void gtry::scl::hdmi::TmdsEncoder::setTERC4(BVec ctrl)
+void gtry::scl::hdmi::TmdsEncoder::setTERC4(UInt ctrl)
 {
-    std::array<BVec, 16> trec4lookup = {
+    std::array<UInt, 16> trec4lookup = {
         "b1010011100",
         "b1001100011",
         "b1011100100",
@@ -296,14 +296,14 @@ void gtry::scl::hdmi::TmdsEncoder::setTERC4(BVec ctrl)
     m_Channel[1] = mux(ctrl(2, 4), trec4lookup); // TODO: subrange as argument for mux
     m_Channel[2] = mux(ctrl(4, 4), trec4lookup);
 }
-
+/*
 SerialTMDS gtry::scl::hdmi::TmdsEncoder::serialOutput() const
 {
     // TODO: use shift register/serdes lib for automatic vendor specific serdes usage
 
     Clock fastClk = m_Clk.deriveClock(ClockConfig{}.setFrequencyMultiplier(10).setName("TmdsEncoderFastClock"));
 
-    Register<BVec> chan[3];
+    Register<UInt> chan[3];
     chan[0].setClock(fastClk);
     chan[1].setClock(fastClk);
     chan[2].setClock(fastClk);
@@ -311,7 +311,7 @@ SerialTMDS gtry::scl::hdmi::TmdsEncoder::serialOutput() const
     for (auto& c : chan)
         c = c.delay(1) >> 1;
 
-    Register<BVec> shiftCounter(4_b);
+    Register<UInt> shiftCounter(4_b);
     shiftCounter.setReset("4b0");
     shiftCounter.setClock(fastClk);
     HCL_NAMED(shiftCounter);
@@ -335,14 +335,14 @@ SerialTMDS gtry::scl::hdmi::TmdsEncoder::serialOutput() const
 
     return SerialTMDS();
 }
-
+*/
 SerialTMDS gtry::scl::hdmi::TmdsEncoder::serialOutputInPixelClock(Bit& tick) const
 {
     GroupScope ent{ GroupScope::GroupType::ENTITY };
     ent.setName("tmdsEncoderSerializer");
 
-    std::array<BVec, 3> channels = constructFrom(m_Channel);
-    BVec counter = 4_b;
+    std::array<UInt, 3> channels = constructFrom(m_Channel);
+    UInt counter = 4_b;
     counter += 1;
 
     tick = '0';
@@ -362,7 +362,7 @@ SerialTMDS gtry::scl::hdmi::TmdsEncoder::serialOutputInPixelClock(Bit& tick) con
     for (size_t i = 0; i < channels.size(); ++i)
         out.data[i] = channels[i].lsb();
 
-    for (BVec& c : channels)
+    for (UInt& c : channels)
         c = rotr(c, 1);
 
     HCL_NAMED(out);

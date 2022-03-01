@@ -69,7 +69,7 @@ FIFO_DUALCLOCK_MACRO::FIFO_DUALCLOCK_MACRO(unsigned width, FIFOSize fifoSize)
     resizeInputs(IN_COUNT);
     resizeOutputs(OUT_COUNT);
 
-	// default to bool, then override BVecs
+	// default to bool, then override UInts
 	for (auto i : utils::Range(OUT_COUNT))
 		setOutputConnectionType(i, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
 
@@ -113,19 +113,19 @@ void FIFO_DUALCLOCK_MACRO::connectInput(Inputs input, const Bit &bit)
 			NodeIO::connectInput(input, bit.getReadPort());
 		break;
 		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to bvec input of FIFO_DUALCLOCK_MACRO!");
+			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to UInt input of FIFO_DUALCLOCK_MACRO!");
 	}
 }
 
-void FIFO_DUALCLOCK_MACRO::connectInput(Inputs input, const BVec &bvec)
+void FIFO_DUALCLOCK_MACRO::connectInput(Inputs input, const UInt &UInt)
 {
 	switch (input) {
 		case IN_DI:
-			HCL_DESIGNCHECK_HINT(bvec.size() == m_width, "Data input bvec to FIFO_DUALCLOCK_MACRO has different width than previously specified!");
-			NodeIO::connectInput(input, bvec.getReadPort());
+			HCL_DESIGNCHECK_HINT(UInt.size() == m_width, "Data input UInt to FIFO_DUALCLOCK_MACRO has different width than previously specified!");
+			NodeIO::connectInput(input, UInt.getReadPort());
 		break;
 		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect bvec to bit input of FIFO_DUALCLOCK_MACRO!");
+			HCL_DESIGNCHECK_HINT(false, "Trying to connect UInt to bit input of FIFO_DUALCLOCK_MACRO!");
 	}
 }
 

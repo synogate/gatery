@@ -188,9 +188,9 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
     }
     
 
-    BVec in_data = groupHelper.getBVec("in_data_packed");
-    BVec out_data = groupHelper.hookBVecBefore("out_data_packed");
-    BVec out_data_accu = constructFrom(out_data);
+    UInt in_data = groupHelper.getUInt("in_data_packed");
+    UInt out_data = groupHelper.hookUIntBefore("out_data_packed");
+    UInt out_data_accu = constructFrom(out_data);
     out_data_accu = 0;
 
     size_t width = in_data.getWidth().value;
@@ -212,12 +212,12 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
         size_t sectionWidth = end - start;
 
 
-        BVec inSection = BitWidth(perFifoWidth_36k);
+        UInt inSection = BitWidth(perFifoWidth_36k);
         inSection = zext(in_data(start, sectionWidth));
         inSection.setName((boost::format("inSection_%d_%d") % start % end).str());
         fifoMacro->connectInput(FIFO_SYNC_MACRO::IN_DI, inSection);
 
-        BVec outSection = fifoMacro->getOutputBVec(FIFO_SYNC_MACRO::OUT_DO);
+        UInt outSection = fifoMacro->getOutputUInt(FIFO_SYNC_MACRO::OUT_DO);
         out_data_accu(start, sectionWidth) = outSection(0, sectionWidth);
 
         out_data_accu.setName((boost::format("out_data_accu_0_%d") % end).str());
@@ -237,12 +237,12 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 
         size_t sectionWidth = end - start;
 
-        BVec inSection = BitWidth(perFifoWidth_18k);
+        UInt inSection = BitWidth(perFifoWidth_18k);
         inSection = zext(in_data(start, sectionWidth));
         inSection.setName((boost::format("inSection_%d_%d") % start % end).str());
         fifoMacro->connectInput(FIFO_SYNC_MACRO::IN_DI, inSection);
 
-        BVec outSection = fifoMacro->getOutputBVec(FIFO_SYNC_MACRO::OUT_DO);
+        UInt outSection = fifoMacro->getOutputUInt(FIFO_SYNC_MACRO::OUT_DO);
         out_data_accu(start, sectionWidth) = outSection(0, sectionWidth);
         out_data_accu.setName((boost::format("out_data_accu_0_%d") % end).str());
 

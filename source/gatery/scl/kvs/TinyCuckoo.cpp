@@ -23,7 +23,7 @@
 
 namespace gtry::scl
 {
-	template class TinyCuckoo<BVec, BVec>;
+	template class TinyCuckoo<UInt, UInt>;
 
 	TinyCuckooOut tinyCuckoo(const TinyCuckooIn& in)
 	{
@@ -53,7 +53,7 @@ namespace gtry::scl
 				mem[in.update.itemIdx] = in.update.item;
 
 			SymbolSelect hashPart{ in.tableWidth().value };
-			BVec lookupAddress = in.hash(hashPart[i]);
+			UInt lookupAddress = in.hash(hashPart[i]);
 			HCL_NAMED(lookupAddress);
 
 			TinyCuckooItem lookupData = mem[lookupAddress];

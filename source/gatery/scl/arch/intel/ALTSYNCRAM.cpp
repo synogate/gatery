@@ -237,46 +237,46 @@ void ALTSYNCRAM::connectInput(Inputs input, const Bit &bit)
 			NodeIO::connectInput(input, bit.getReadPort());
 		break;
 		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to bvec input of ALTSYNCRAM!");
+			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to UInt input of ALTSYNCRAM!");
 	}
 }
 
-void ALTSYNCRAM::connectInput(Inputs input, const BVec &bvec)
+void ALTSYNCRAM::connectInput(Inputs input, const UInt &UInt)
 {
 	size_t sizeA = getOutputConnectionType(OUT_Q_A).width;
 	size_t sizeB = getOutputConnectionType(OUT_Q_B).width;
 
 	switch (input) {
 		case IN_DATA_A:
-			HCL_DESIGNCHECK_HINT(bvec.size() == sizeA, "Data input bvec to ALTSYNCRAM has different width than previously specified!");
-			NodeIO::connectInput(input, bvec.getReadPort());			
+			HCL_DESIGNCHECK_HINT(UInt.size() == sizeA, "Data input UInt to ALTSYNCRAM has different width than previously specified!");
+			NodeIO::connectInput(input, UInt.getReadPort());			
 		break;
 		case IN_ADDRESS_A:
-			NodeIO::connectInput(input, bvec.getReadPort());
-			m_genericParameters["widthad_a"] = std::to_string(bvec.size());
+			NodeIO::connectInput(input, UInt.getReadPort());
+			m_genericParameters["widthad_a"] = std::to_string(UInt.size());
 		break;
 		case IN_BYTEENA_A:
-			NodeIO::connectInput(input, bvec.getReadPort());
-			m_genericParameters["width_byteena_a"] = std::to_string(bvec.size());
+			NodeIO::connectInput(input, UInt.getReadPort());
+			m_genericParameters["width_byteena_a"] = std::to_string(UInt.size());
 		break;
 		case IN_DATA_B:
-			HCL_DESIGNCHECK_HINT(bvec.size() == sizeB, "Data input bvec to ALTSYNCRAM has different width than previously specified!");
-			NodeIO::connectInput(input, bvec.getReadPort());			
+			HCL_DESIGNCHECK_HINT(UInt.size() == sizeB, "Data input UInt to ALTSYNCRAM has different width than previously specified!");
+			NodeIO::connectInput(input, UInt.getReadPort());			
 		break;
 		case IN_ADDRESS_B:
-			NodeIO::connectInput(input, bvec.getReadPort());
-			m_genericParameters["widthad_b"] = std::to_string(bvec.size());
+			NodeIO::connectInput(input, UInt.getReadPort());
+			m_genericParameters["widthad_b"] = std::to_string(UInt.size());
 		break;
 		case IN_BYTEENA_B:
-			NodeIO::connectInput(input, bvec.getReadPort());
-			m_genericParameters["width_byteena_b"] = std::to_string(bvec.size());
+			NodeIO::connectInput(input, UInt.getReadPort());
+			m_genericParameters["width_byteena_b"] = std::to_string(UInt.size());
 		break;
 		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect bvec to bit input of ALTSYNCRAM!");
+			HCL_DESIGNCHECK_HINT(false, "Trying to connect UInt to bit input of ALTSYNCRAM!");
 	}
 }
 
-BVec ALTSYNCRAM::getOutputBVec(Outputs output)
+UInt ALTSYNCRAM::getOutputUInt(Outputs output)
 {
 	return SignalReadPort(hlim::NodePort{this, (size_t)output});
 }

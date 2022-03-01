@@ -22,7 +22,7 @@
 
 namespace gtry::scl
 {
-	template<typename TVec = BVec, typename TAdder = CarrySafeAdder>
+	template<typename TVec = UInt, typename TAdder = CarrySafeAdder>
 	struct Md5Generator
 	{
 		enum {
@@ -39,7 +39,7 @@ namespace gtry::scl
 			(TVec, d),
 			(std::array<TVec, 16>, w),
 			(std::array<TVec, NUM_ROUNDS>, constants),
-			(std::array<BVec, NUM_ROUNDS>, s)
+			(std::array<UInt, NUM_ROUNDS>, s)
 		);
 
 		Md5Generator() :
@@ -83,13 +83,13 @@ namespace gtry::scl
 				w[i] = swappedBlock(i * 32, 32);
 		}
 
-		void round(const BVec& round)
+		void round(const UInt& round)
 		{
 			TVec k = mux(round, constants);
 			
 			// select round function
 			TVec f = c ^ (b | ~d);
-			BVec g = zext(round, 4)(0, 4); // TODO: allow without first extend if not needed
+			UInt g = zext(round, 4)(0, 4); // TODO: allow without first extend if not needed
 
 			IF(round < 16)
 			{

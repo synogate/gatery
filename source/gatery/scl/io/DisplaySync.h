@@ -22,10 +22,10 @@ namespace gtry::scl
 {
 	struct DisplayModeDimension
 	{
-		BVec resolution;
-		BVec syncStart;
-		BVec syncEnd;
-		BVec total;
+		UInt resolution;
+		UInt syncStart;
+		UInt syncEnd;
+		UInt total;
 	};
 
 	struct DisplayMode
@@ -43,7 +43,7 @@ namespace gtry::scl
 
 		void init(DisplayMode& mode);
 
-		BVec x, y;
+		UInt x, y;
 		Bit onScreen;
 		Bit vsync;
 		Bit hsync;

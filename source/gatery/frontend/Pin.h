@@ -17,14 +17,18 @@
 */
 #pragma once
 
-#include "Bit.h"
-#include "BitVector.h"
+#include "DesignScope.h"
 
 #include <gatery/hlim/coreNodes/Node_Pin.h>
 #include <gatery/hlim/coreNodes/Node_Signal.h>
 #include <gatery/hlim/NodePtr.h>
 
 namespace gtry {
+
+    class Bit;
+    class BVec;
+    class UInt;
+    class SInt;
 
     class OutputPin {
         public:
@@ -38,9 +42,12 @@ namespace gtry {
         protected:
             hlim::NodePtr<hlim::Node_Pin> m_pinNode;
     };
+
     class OutputPins {
         public:
             OutputPins(const BVec &bitVector);
+            OutputPins(const UInt &bitVector);
+            OutputPins(const SInt &bitVector);
 
             inline OutputPins &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
             inline hlim::Node_Pin *getNode() { return m_pinNode.get(); }
@@ -55,16 +62,7 @@ namespace gtry {
         public:
             InputPin();
 
-            inline operator Bit () {
-#if 0
-                return Bit(SignalReadPort({.node=m_pinNode, .port=0ull}));
-#else
-                auto* signal = DesignScope::createNode<hlim::Node_Signal>();
-                signal->connectInput({.node=m_pinNode, .port=0ull});
-                signal->recordStackTrace();
-                return Bit(SignalReadPort(signal));
-#endif
-            }
+            operator Bit () const;
 
             inline InputPin &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
             inline hlim::Node_Pin *getNode() { return m_pinNode.get(); }
@@ -76,7 +74,9 @@ namespace gtry {
     class InputPins {
         public:
             InputPins(BitWidth width);
-            inline operator BVec () { return BVec(SignalReadPort({.node=m_pinNode, .port=0ull})); }
+            operator BVec () const;
+            operator UInt () const;
+            operator SInt () const;
 
             inline InputPins &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
             inline hlim::Node_Pin *getNode() { return m_pinNode.get(); }
@@ -87,6 +87,10 @@ namespace gtry {
 
     inline OutputPin pinOut(const Bit &bit) { return OutputPin(bit); }
     inline OutputPins pinOut(const BVec &bitVector) { return OutputPins(bitVector); }
+    inline OutputPins pinOut(const UInt &bitVector) { return OutputPins(bitVector); }
+    inline OutputPins pinOut(const SInt &bitVector) { return OutputPins(bitVector); }
+
+    OutputPins pinOut(const InputPins &input);
 
     inline InputPin pinIn() { return InputPin(); }
     inline InputPins pinIn(BitWidth width) { return InputPins(width); }

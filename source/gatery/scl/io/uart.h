@@ -32,7 +32,7 @@ struct UART
     unsigned baudRate = 19200;
 
     struct Stream {
-        BVec data;
+        UInt data;
         Bit valid;
         Bit ready;
     };

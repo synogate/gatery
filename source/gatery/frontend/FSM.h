@@ -18,7 +18,7 @@
 #pragma once
 
 #include "Bit.h"
-#include "Registers.h"
+#include "UInt.h"
 
 
 #include <string>
@@ -27,6 +27,9 @@
 #include <vector>
 #include <functional>
 
+namespace gtry {
+    class Clock;
+}
 
 namespace gtry::fsm {
 
@@ -65,6 +68,7 @@ class ImmediateState : public BaseState
         friend class FSM;
 };
 
+
 /**
  * @todo write docs
  */
@@ -79,10 +83,11 @@ class FSM
         static void immediateSwitch(const ImmediateState &nextState);
     protected:
         std::vector<const BaseState*> m_unhandledStates;
-        const BaseState* m_currentState;
-        Register<BVec> m_stateReg;
+        const BaseState* m_currentlyConstructingState;
+        UInt m_currentState;
+        UInt m_nextState;
         size_t m_nextStateId = 0;
-        std::map<const BaseState*, std::unique_ptr<BVec>> m_state2encoding;
+        std::map<const BaseState*, std::unique_ptr<UInt>> m_state2encoding;
         std::map<const BaseState*, size_t> m_state2id;
         
         static thread_local FSM *m_fsmContext;

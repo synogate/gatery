@@ -23,12 +23,12 @@
 
 namespace gtry::scl
 {
-    using BVecPair = std::pair<BVec, BVec>;
+    using UIntPair = std::pair<UInt, UInt>;
 
-    StreamSource<BVecPair> binaryGCDStep1(StreamSink<BVecPair>& in, size_t iterationsPerClock = 1);
-    StreamSource<BVec> shiftLeft(StreamSink<BVecPair>& in, size_t iterationsPerClock = 1);
+    StreamSource<UIntPair> binaryGCDStep1(StreamSink<UIntPair>& in, size_t iterationsPerClock = 1);
+    StreamSource<UInt> shiftLeft(StreamSink<UIntPair>& in, size_t iterationsPerClock = 1);
 
-    StreamSource<BVec> binaryGCD(StreamSink<BVecPair>& in, size_t iterationsPerClock = 1);
+    StreamSource<UInt> binaryGCD(StreamSink<UIntPair>& in, size_t iterationsPerClock = 1);
 
 
     uint64_t gcd(uint64_t a, uint64_t b);

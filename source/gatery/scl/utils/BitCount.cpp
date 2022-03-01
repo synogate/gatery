@@ -22,7 +22,7 @@
 
 namespace gtry::scl {
 
-    BVec bitcount(BVec vec)
+    UInt bitcount(UInt vec)
     {
         using namespace gtry;
         using namespace gtry::hlim;
@@ -35,13 +35,13 @@ namespace gtry::scl {
             .setComment("Counts the number of high bits");
         
 #if 1
-        BVec sumOfOnes = BitWidth::last(vec.size());
+        UInt sumOfOnes = BitWidth::last(vec.size());
         sumOfOnes = 0;
         for (auto i : utils::Range(vec.size()))
             sumOfOnes += zext(vec[i]);
         return sumOfOnes;
 #else
-        std::vector<BVec> subSums;
+        std::vector<UInt> subSums;
         subSums.resize(vec.getWidth());
         for (auto i : utils::Range(vec.size()))
             subSums[i] = zext(vec[i], utils::Log2C(vec.size() + 1));

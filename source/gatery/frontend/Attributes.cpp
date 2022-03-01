@@ -20,42 +20,24 @@
 
 #include "Attributes.h"
 
-#include "Bit.h"
-#include "BitVector.h"
+#include "Signal.h"
 
 #include "DesignScope.h"
 #include "../hlim/supportNodes/Node_PathAttributes.h"
 
 namespace gtry {
 
-void setAttrib(Bit &bit, SignalAttributes attributes)
+void setAttrib(ElementarySignal &signal, SignalAttributes attributes)
 {
-	bit.setAttrib(std::move(attributes));
+	signal.setAttrib(std::move(attributes));
 }
 
-void setAttrib(BVec &bvec, SignalAttributes attributes)
-{
-	bvec.setAttrib(std::move(attributes));
-}
-
-template<class Signal>
-void setPathAttribImpl(Signal &start, Signal &end, PathAttributes attributes)
+void setPathAttrib(ElementarySignal &start, ElementarySignal &end, PathAttributes attributes)
 {
     auto* node = DesignScope::createNode<hlim::Node_PathAttributes>();
     node->getAttribs() = std::move(attributes);
     node->connectStart(start.getReadPort());
     node->connectEnd(end.getReadPort());
 }
-
-void setPathAttrib(Bit &start, Bit &end, PathAttributes attributes)
-{
-    setPathAttribImpl(start, end, std::move(attributes));
-}
-
-void setPathAttrib(BVec &start, BVec &end, PathAttributes attributes)
-{
-    setPathAttribImpl(start, end, std::move(attributes));
-}
-
 
 }

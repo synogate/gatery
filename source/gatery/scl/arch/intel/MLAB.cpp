@@ -23,6 +23,7 @@
 #include "ALTDPRAM.h"
 #include <gatery/hlim/postprocessing/MemoryDetector.h>
 #include <gatery/hlim/supportNodes/Node_MemPort.h>
+#include <gatery/hlim/coreNodes/Node_Register.h>
 
 namespace gtry::scl::arch::intel {
 
@@ -109,8 +110,8 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 		portSetup.inputRegs = true;
         altdpram->setupWritePort(portSetup);
 
-        BVec wrData = getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
-        BVec addr = getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+        UInt wrData = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
+        UInt addr = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
         Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrEnable}, '1');
 
         altdpram->connectInput(ALTDPRAM::Inputs::IN_DATA, wrData);
@@ -125,11 +126,11 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
         portSetup.outputRegs = rp.dedicatedReadLatencyRegisters.size() > 0;
         altdpram->setupReadPort(portSetup);
 
-        BVec addr = getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-        BVec data = hookBVecAfter(rp.dataOutput);
+        UInt addr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+        UInt data = hookUIntAfter(rp.dataOutput);
 
         altdpram->connectInput(ALTDPRAM::Inputs::IN_RDADDRESS, addr(0, addrBits));
-        data.setExportOverride(altdpram->getOutputBVec(ALTDPRAM::Outputs::OUT_Q));
+        data.setExportOverride(altdpram->getOutputUInt(ALTDPRAM::Outputs::OUT_Q));
 
         altdpram->attachClock(rp.dedicatedReadLatencyRegisters.front()->getClocks()[0], (size_t)ALTDPRAM::Clocks::OUTCLOCK);
     }

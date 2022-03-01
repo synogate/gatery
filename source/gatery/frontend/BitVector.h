@@ -25,7 +25,7 @@
 
 #include "Constant.h"
 
-#include <gatery/hlim/Attributes.h>
+#include <gatery/utils/Traits.h>
 
 #include <gatery/hlim/coreNodes/Node_Constant.h>
 #include <gatery/hlim/coreNodes/Node_Signal.h>
@@ -44,17 +44,14 @@ namespace gtry {
 	struct Selection {
 		int start = 0;
 		int width = 0;
-		size_t stride = 1;
 		bool untilEndOfSource = false;
 
 		static Selection All();
 		static Selection From(int start);
 		static Selection Range(int start, int end);
 		static Selection RangeIncl(int start, int endIncl);
-		static Selection StridedRange(int start, int end, size_t stride);
 
 		static Selection Slice(size_t offset, size_t size);
-		static Selection StridedSlice(int offset, int size, size_t stride);
 
 		static Selection Symbol(int idx, BitWidth symbolWidth);
 		static Selection Symbol(size_t idx, BitWidth symbolWidth) { return Symbol(int(idx), symbolWidth); }
@@ -70,48 +67,21 @@ namespace gtry {
 	};
 
 
-
-    class BVecDefault {
+    class BaseBitVectorDefault {
         public:
-            BVecDefault(const BVec& rhs);
-
-			template <typename Int, typename = std::enable_if_t<std::is_integral_v<Int> & !std::is_same_v<Int, char> & !std::is_same_v<Int, bool>> >
-			BVecDefault(Int vec) { assign(vec); }
+            BaseBitVectorDefault(const BaseBitVector& rhs);
 
             hlim::NodePort getNodePort() const { return m_nodePort; }
         protected:
-			template <typename Int, typename = std::enable_if_t<std::is_integral_v<Int> & !std::is_same_v<Int, char> & !std::is_same_v<Int, bool>> >
-			void assign(Int);
+			void assign(std::int64_t value);
+			void assign(std::uint64_t value);
 			void assign(std::string_view);
 
             hlim::RefCtdNodePort m_nodePort;
     };
 
-	template <typename Int, typename>
-	void BVecDefault::assign(Int value) {
-		size_t width;
-		//Expansion policy;
 
-		if (value >= 0)
-		{
-			//policy = Expansion::zero;
-			width = utils::Log2C(value + 1);
-		}
-		else
-		{
-			//policy = Expansion::sign;
-			width = utils::Log2C(~value + 1) + 1;
-		}
-
-		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
-			parseBVec(uint64_t(value), width),
-			hlim::ConnectionType::BITVEC
-		);
-		m_nodePort = {.node = constant, .port = 0ull };
-	}
-
-
-	class BVec : public ElementarySignal
+	class BaseBitVector : public ElementarySignal
 	{
 	public:
 		struct Range {
@@ -121,11 +91,10 @@ namespace gtry {
 
 			auto operator <=> (const Range&) const = default;
 
-			size_t bitOffset(size_t idx) const { HCL_ASSERT(idx < width); return offset + idx * stride; }
+			size_t bitOffset(size_t idx) const { HCL_ASSERT(idx < width); return offset + idx; }
 
 			size_t width = 0;
 			size_t offset = 0;
-			size_t stride = 1;
 			bool subset = false;
 		};
 
@@ -137,45 +106,10 @@ namespace gtry {
 		using const_reverse_iterator = std::vector<Bit>::const_reverse_iterator;
 		using value_type = Bit;
 
-		BVec() = default;
-		BVec(const BVec& rhs) { if(rhs.m_node) assign(rhs.getReadPort()); }
-		BVec(BVec&& rhs);
-		BVec(const BVecDefault &defaultValue);
-		~BVec();
+		~BaseBitVector();
 
-		BVec(const SignalReadPort& port) { assign(port); }
-		BVec(hlim::Node_Signal* node, Range range, Expansion expansionPolicy, size_t initialScopeId); // alias
-		BVec(BitWidth width, Expansion expansionPolicy = Expansion::none);
-
-		template<unsigned S>
-		BVec(const char(&rhs)[S]) { assign(std::string_view(rhs)); }
-
-		template <typename Int, typename = std::enable_if_t<std::is_integral_v<Int> & !std::is_same_v<Int, char> & !std::is_same_v<Int, bool>> >
-		BVec(Int vec) { assign(vec); }
-
-		template <typename Int, typename = std::enable_if_t<std::is_integral_v<Int> & !std::is_same_v<Int, char> & !std::is_same_v<Int, bool>> >
-		BVec& operator = (Int rhs) { assign(rhs); return *this; }
-		template<unsigned S>
-		BVec& operator = (const char (&rhs)[S]) { assign(std::string_view(rhs)); return *this; }
-		BVec& operator = (const BVec& rhs) { if (rhs.m_node) assign(rhs.getReadPort()); return *this; }
-		BVec& operator = (BVec&& rhs);
-		BVec& operator = (BitWidth width);
-		BVec& operator = (const BVecDefault &defaultValue);
-
-		void setExportOverride(const BVec& exportOverride);
-		void setAttrib(hlim::SignalAttributes attributes);
-
-		template<typename Int1, typename Int2, typename = std::enable_if_t<std::is_integral_v<Int1> && std::is_integral_v<Int2>>>
-		BVec& operator()(Int1 offset, Int2 size, size_t stride = 1) { return (*this)(Selection::StridedSlice(int(offset), int(size), stride)); }
-		template<typename Int1, typename Int2, typename = std::enable_if_t<std::is_integral_v<Int1>&& std::is_integral_v<Int2>>>
-		const BVec& operator() (Int1 offset, Int2 size, size_t stride = 1) const { return (*this)(Selection::StridedSlice(int(offset), int(size), stride)); }
-		
-		BVec& operator() (size_t offset, BitWidth size, size_t stride = 1);
-		const BVec& operator() (size_t offset, BitWidth size, size_t stride = 1) const;
-
-		BVec& operator()(const Selection& selection) { return aliasRange(Range(selection, m_range)); }
-		const BVec& operator() (const Selection& selection) const { return aliasRange(Range(selection, m_range)); }
-
+		template<BitVectorDerived T>
+		explicit operator T() const { if (m_node) return T(getReadPort()); else return T{}; }
 
 		virtual void resize(size_t width);
 
@@ -226,14 +160,34 @@ namespace gtry {
 		void addToSignalGroup(hlim::SignalGroup *signalGroup);
 
 	protected:
-		template <typename Int, typename = std::enable_if_t<std::is_integral_v<Int> & !std::is_same_v<Int, char> & !std::is_same_v<Int, bool>> >
-		void assign(Int);
-		void assign(std::string_view);
+		BaseBitVector() = default;
+		BaseBitVector(const BaseBitVector& rhs) { if(rhs.m_node) assign(rhs.getReadPort()); }
+		BaseBitVector(BaseBitVector&& rhs);
+		BaseBitVector(const BaseBitVectorDefault &defaultValue);
+
+		BaseBitVector(const SignalReadPort& port) { assign(port); }
+		BaseBitVector(hlim::Node_Signal* node, Range range, Expansion expansionPolicy, size_t initialScopeId); // alias
+		BaseBitVector(BitWidth width, Expansion expansionPolicy = Expansion::none);
+
+
+		BaseBitVector& operator = (const BaseBitVector& rhs) { if (rhs.m_node) assign(rhs.getReadPort()); return *this; }
+		BaseBitVector& operator = (BaseBitVector&& rhs);
+		BaseBitVector& operator = (BitWidth width);
+		BaseBitVector& operator = (const BaseBitVectorDefault &defaultValue);
+	protected:
+		void setExportOverride(const BaseBitVector& exportOverride);
+
+		void assign(std::uint64_t value, Expansion policy);
+		void assign(std::int64_t value, Expansion policy);
+		void assign(std::string_view, Expansion policy);
 		virtual void assign(SignalReadPort, bool ignoreConditions = false);
 
 		void createNode(size_t width, Expansion policy);
 		SignalReadPort getRawDriver() const;
 
+		inline hlim::Node_Signal* getNode() const { return m_node; }
+		inline const Range &getRange() const { return m_range; }
+		inline const Expansion &getExpansionPolicy() const { return m_expansionPolicy; }
 	private:
 		hlim::Node_Signal* m_node = nullptr;
 		Range m_range;
@@ -242,33 +196,60 @@ namespace gtry {
 		std::vector<Bit>& aliasVec() const;
 		Bit& aliasMsb() const;
 		Bit& aliasLsb() const;
-		BVec& aliasRange(const Range& range) const;
 
 		mutable std::vector<Bit> m_bitAlias;
 		mutable std::optional<Bit> m_lsbAlias;
 		mutable std::optional<Bit> m_msbAlias;
-		mutable std::map<Range, BVec> m_rangeAlias;
 
 		mutable SignalReadPort m_readPort;
 		mutable void* m_readPortDriver = nullptr;
 	};
 
-	inline BVec::iterator begin(BVec& bvec) { return bvec.begin(); }
-	inline BVec::iterator end(BVec& bvec) { return bvec.end(); }
-	inline BVec::const_iterator begin(const BVec& bvec) { return bvec.begin(); }
-	inline BVec::const_iterator end(const BVec& bvec) { return bvec.end(); }
+	inline BaseBitVector::iterator begin(BaseBitVector& bvec) { return bvec.begin(); }
+	inline BaseBitVector::iterator end(BaseBitVector& bvec) { return bvec.end(); }
+	inline BaseBitVector::const_iterator begin(const BaseBitVector& bvec) { return bvec.begin(); }
+	inline BaseBitVector::const_iterator end(const BaseBitVector& bvec) { return bvec.end(); }
 
-	BVec ext(const Bit& bvec, size_t increment);
-	BVec ext(const Bit& bit, size_t increment, Expansion policy);
-	inline BVec zext(const Bit& bit, size_t increment = 0) { return ext(bit, increment, Expansion::zero); }
-	inline BVec oext(const Bit& bit, size_t increment = 0) { return ext(bit, increment, Expansion::one); }
-	inline BVec sext(const Bit& bit, size_t increment = 0) { return ext(bit, increment, Expansion::sign); }
+	template<typename FinalType, typename DefaultValueType>
+	class SliceableBitVector : public BaseBitVector
+	{
+	public:
+		using Range = BaseBitVector::Range;
+		using OwnType = SliceableBitVector<FinalType, DefaultValueType>;
 
-	BVec ext(const BVec& bvec, size_t increment);
-	BVec ext(const BVec& bvec, size_t increment, Expansion policy);
-	inline BVec zext(const BVec& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::zero); }
-	inline BVec oext(const BVec& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::one); }
-	inline BVec sext(const BVec& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::sign); }
+
+		SliceableBitVector() = default;
+		SliceableBitVector(OwnType&& rhs) : BaseBitVector(std::move(rhs)) { }
+		SliceableBitVector(const DefaultValueType &defaultValue) : BaseBitVector(defaultValue) { }
+
+		SliceableBitVector(const SignalReadPort& port) : BaseBitVector(port) { }
+		SliceableBitVector(hlim::Node_Signal* node, Range range, Expansion expansionPolicy, size_t initialScopeId) : BaseBitVector(node, range, expansionPolicy, initialScopeId) { } // alias
+		SliceableBitVector(BitWidth width, Expansion expansionPolicy = Expansion::none) : BaseBitVector(width, expansionPolicy) { }
+
+		SliceableBitVector(const OwnType &rhs) : BaseBitVector(rhs) { } // Necessary because otherwise deleted copy ctor takes precedence over templated ctor.
+
+		FinalType& operator = (BitWidth width) { BaseBitVector::operator=(width); return (FinalType&)*this; }
+		FinalType& operator = (const DefaultValueType &defaultValue) { BaseBitVector::operator=(defaultValue); return (FinalType&)*this; }
+
+		void setExportOverride(const FinalType& exportOverride) { BaseBitVector::setExportOverride(exportOverride); }
+
+		template<std::integral Int1, std::integral Int2>
+		FinalType& operator()(Int1 offset, Int2 size) { return (*this)(Selection::Slice(int(offset), int(size))); }
+		template<std::integral Int1, std::integral Int2>
+		const FinalType& operator() (Int1 offset, Int2 size) const { return (*this)(Selection::Slice(int(offset), int(size))); }
+		FinalType& operator() (size_t offset, BitWidth size) { return (*this)(Selection::Slice(int(offset), int(size.value))); }
+		const FinalType& operator() (size_t offset, BitWidth size) const { return (*this)(Selection::Slice(int(offset), int(size.value))); }
+
+		FinalType& operator()(const Selection& selection) { return aliasRange(Range(selection, getRange())); }
+		const FinalType& operator() (const Selection& selection) const { return aliasRange(Range(selection, getRange())); }
+	protected:
+		inline FinalType& aliasRange(const Range& range) const {
+        	auto [it, exists] = m_rangeAlias.try_emplace(range, getNode(), range, getExpansionPolicy(), m_initialScopeId);
+        	return it->second;
+		}
+		mutable std::map<Range, FinalType> m_rangeAlias;
+	};
+
 
 	struct NormalizedWidthOperands
 	{
@@ -277,35 +258,6 @@ namespace gtry {
 
 		SignalReadPort lhs, rhs;
 	};
-
-	template<typename Int, typename>
-	inline void BVec::assign(Int value)
-	{
-		size_t width;
-		Expansion policy;
-
-		if (value + 1 == 0)
-		{
-			policy = Expansion::zero;
-			width = sizeof(value) * 8;
-		}
-		else if (value >= 0)
-		{
-			policy = Expansion::zero;
-			width = utils::Log2C(value + 1);
-		}
-		else
-		{
-			policy = Expansion::sign;
-			width = utils::Log2C(~value + 1) + 1;
-		}
-
-		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
-			parseBVec(uint64_t(value), width),
-			hlim::ConnectionType::BITVEC
-		);
-		assign(SignalReadPort(constant, policy));
-	}
 
 	template<typename SigA, typename SigB>
 	inline NormalizedWidthOperands::NormalizedWidthOperands(const SigA& l, const SigB& r)

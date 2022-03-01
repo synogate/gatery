@@ -41,7 +41,7 @@ class ALTDPRAM : public gtry::hlim::Node_External
             IN_OUTCLOCKEN,
 			IN_ACLR,
 
-			// BVecs
+			// UInts
 			IN_DATA,
 			IN_RDADDRESS,
 			IN_WRADDRESS,
@@ -50,7 +50,7 @@ class ALTDPRAM : public gtry::hlim::Node_External
             IN_COUNT
         };
         enum Outputs {
-			// BVecs
+			// UInts
             OUT_Q,
 
             OUT_COUNT
@@ -84,8 +84,8 @@ class ALTDPRAM : public gtry::hlim::Node_External
 		ALTDPRAM &setupSimulationDeviceFamily(const std::string &devFamily);
 
 		void connectInput(Inputs input, const Bit &bit);
-		void connectInput(Inputs input, const BVec &bvec);
-		BVec getOutputBVec(Outputs output);
+		void connectInput(Inputs input, const UInt &UInt);
+		UInt getOutputUInt(Outputs output);
 
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;

@@ -210,7 +210,7 @@ struct RVOP
 		return *this;
 	}
 
-	BVec m_instructionWord = 32_b;
+	UInt m_instructionWord = 32_b;
 };
 
 class RV32I_stub : public scl::riscv::RV32I
@@ -285,15 +285,15 @@ public:
 	RV32I_stub& ip(uint32_t val) { simu(m_IP) = val; return *this; }
 
 protected:
-	virtual void setIP(const BVec& ip) { m_setIP = ip; }
-	virtual void setResult(const BVec& result) { m_setResultValid = '1'; m_setResult = result; }
+	virtual void setIP(const UInt& ip) { m_setIP = ip; }
+	virtual void setResult(const UInt& result) { m_setResultValid = '1'; m_setResult = result; }
 	virtual void setStall(const Bit& wait) { m_setStall = wait; }
 
 	RVOP m_op;
 	Bit m_setStall;
 	Bit m_setResultValid;
-	BVec m_setResult = 32_b;
-	BVec m_setIP = 32_b;
+	UInt m_setResult = 32_b;
+	UInt m_setIP = 32_b;
 	scl::AvalonMM m_avmm;
 
 };
@@ -1113,7 +1113,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, BoostUnitTestSimulationFixture)
 	ClockScope clkScp(clock);
 
 	scl::riscv::SingleCycleI rv(8_b, 32_b);
-	Memory<BVec>& imem = rv.fetch();
+	Memory<UInt>& imem = rv.fetch();
 	imem.fillPowerOnState(sim::createDefaultBitVectorState(gcd_bin_len, gcd_bin));
 	rv.fetchOperands();
 
@@ -1128,7 +1128,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, BoostUnitTestSimulationFixture)
 
 	std::random_device rng;
 	
-	Memory<BVec> dmem(1024, 32_b);
+	Memory<UInt> dmem(1024, 32_b);
 	std::vector<unsigned char> dmemData(4096, 0);
 	dmemData[0] = 15; // (rng() & 0x3F) + 1;
 	dmemData[4] = 5; // (rng() & 0x3F) + 1;
@@ -1198,7 +1198,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, BoostUnitTestSimulationFixture)
 	ClockScope clkScp(clock);
 
 	scl::riscv::DualCycleRV rv(8_b, 32_b);
-	Memory<BVec>& imem = rv.fetch();
+	Memory<UInt>& imem = rv.fetch();
 	imem.fillPowerOnState(sim::createDefaultBitVectorState(gcd_bin_len, gcd_bin));
 
 	scl::AvalonMM avmm;
@@ -1212,7 +1212,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, BoostUnitTestSimulationFixture)
 
 	std::random_device rng;
 
-	Memory<BVec> dmem(1024, 32_b);
+	Memory<UInt> dmem(1024, 32_b);
 	std::vector<unsigned char> dmemData(4096, 0);
 	dmemData[0] = 15; // (rng() & 0x3F) + 1;
 	dmemData[4] = 5; // (rng() & 0x3F) + 1;
@@ -1332,7 +1332,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle_export, BoostUnitTestSimulationFixtur
 
 		//scl::riscv::SingleCycleI rv(8_b, 32_b);
 		scl::riscv::DualCycleRV rv(8_b, 32_b);
-		Memory<BVec>& imem = rv.fetch();
+		Memory<UInt>& imem = rv.fetch();
 		imem.fillPowerOnState(sim::createDefaultBitVectorState(linked_text_len, linked_text));
 		//rv.fetchOperands();
 
@@ -1344,7 +1344,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle_export, BoostUnitTestSimulationFixtur
 		rv.execute();
 		rv.mem(avmm, true, true);
 
-		Memory<BVec> dmem(1024, 32_b);
+		Memory<UInt> dmem(1024, 32_b);
 		dmem.noConflicts();
 		std::vector<unsigned char> dmemData(4096, 0);
 		//dmemData[0] = (rng() & 0x3F) + 1;

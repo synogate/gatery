@@ -23,14 +23,13 @@
 #include <gatery/hlim/coreNodes/Node_Signal.h>
 #include <gatery/hlim/Attributes.h>
 #include <gatery/utils/Exceptions.h>
+#include <gatery/utils/Traits.h>
 
 #include <vector>
 #include <optional>
 
 namespace gtry {
     
-    class BVec;
-
     class Bit;
 
 
@@ -63,7 +62,7 @@ namespace gtry {
         Bit(const SignalReadPort& port);
         Bit(hlim::Node_Signal* node, size_t offset, size_t initialScopeId); // alias Bit
 
-        template<typename T, typename = std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, bool>>>
+        template<BitLiteral T>
         Bit(T v) {
             createNode();
             assign(v);
@@ -73,12 +72,10 @@ namespace gtry {
         Bit& operator=(Bit&& rhs);
         Bit& operator=(const BitDefault &defaultValue);
 
-        template<typename T, typename = std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, bool>>>
+        template<BitLiteral T>
         Bit& operator=(T rhs) { assign(rhs); return *this; }
 
         void setExportOverride(const Bit& exportOverride);
-
-        void setAttrib(hlim::SignalAttributes attributes);
 
         BitWidth getWidth() const final;
         hlim::ConnectionType getConnType() const final;

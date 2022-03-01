@@ -44,7 +44,7 @@ RAM256X1D::RAM256X1D()
 	setOutputConnectionType(OUT_DPO, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
 }
 
-Bit RAM256X1D::setupSDP(const BVec &wrAddr, const Bit &wrData, const Bit &wrEn, const BVec &rdAddr)
+Bit RAM256X1D::setupSDP(const UInt &wrAddr, const Bit &wrData, const Bit &wrEn, const UInt &rdAddr)
 {
 	HCL_ASSERT(wrAddr.size() == 8);
 	NodeIO::connectInput(IN_A, wrAddr.getReadPort());

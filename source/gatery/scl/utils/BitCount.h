@@ -24,6 +24,6 @@
 
 namespace gtry::scl {
  
-BVec bitcount(BVec vec);
+UInt bitcount(UInt vec);
     
 }

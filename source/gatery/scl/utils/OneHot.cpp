@@ -20,16 +20,16 @@
 
 using namespace gtry;
 
-gtry::scl::OneHot gtry::scl::decoder(const BVec& in)
+gtry::scl::OneHot gtry::scl::decoder(const UInt& in)
 {
     OneHot ret = BitWidth{ 1ull << in.size() };
     ret.setBit(in);
     return ret;
 }
 
-BVec gtry::scl::encoder(const OneHot& in)
+UInt gtry::scl::encoder(const OneHot& in)
 {
-    BVec ret = BitWidth{ utils::Log2C(in.size()) };
+    UInt ret = BitWidth{ utils::Log2C(in.size()) };
 
     ret = 0;
     for (size_t i = 0; i < in.size(); ++i)
@@ -38,9 +38,9 @@ BVec gtry::scl::encoder(const OneHot& in)
     return ret;
 }
 
-std::vector<gtry::scl::Stream<gtry::BVec>> gtry::scl::makeIndexList(const BVec& valids)
+std::vector<gtry::scl::Stream<gtry::UInt>> gtry::scl::makeIndexList(const UInt& valids)
 {
-    std::vector<Stream<BVec>> ret(valids.size());
+    std::vector<Stream<UInt>> ret(valids.size());
     for (size_t i = 0; i < valids.size(); ++i)
     {
         ret[i].value() = i;
@@ -49,12 +49,12 @@ std::vector<gtry::scl::Stream<gtry::BVec>> gtry::scl::makeIndexList(const BVec& 
     return ret;
 }
 
-gtry::scl::EncoderResult gtry::scl::priorityEncoder(const BVec& in)
+gtry::scl::EncoderResult gtry::scl::priorityEncoder(const UInt& in)
 {
     if (in.empty())
-        return { BVec(0_b), '0' };
+        return { UInt(0_b), '0' };
 
-    BVec ret = ConstBVec(BitWidth::count(in.size()));
+    UInt ret = ConstUInt(BitWidth::count(in.size()));
     for (size_t i = in.size() - 1; i < in.size(); --i)
         IF(in[i])
             ret = i;
@@ -62,7 +62,7 @@ gtry::scl::EncoderResult gtry::scl::priorityEncoder(const BVec& in)
     return { ret, in != 0 };
 }
 
-gtry::scl::EncoderResult gtry::scl::priorityEncoderTree(const BVec& in, bool registerStep, size_t bps)
+gtry::scl::EncoderResult gtry::scl::priorityEncoderTree(const UInt& in, bool registerStep, size_t bps)
 {
     const size_t stepBits = 1ull << bps;
     const size_t inBitsPerStep = utils::nextPow2((in.size() + stepBits - 1) / stepBits);
@@ -79,12 +79,12 @@ gtry::scl::EncoderResult gtry::scl::priorityEncoderTree(const BVec& in, bool reg
     setName(lowerStep, "lowerStep");
 
     EncoderResult lowSelect{
-        ConstBVec(BitWidth::count(inBitsPerStep)),
+        ConstUInt(BitWidth::count(inBitsPerStep)),
         '0'
     };
     setName(lowSelect, "lowSelect");
 
-    BVec highSelect = ConstBVec(BitWidth{ bps });
+    UInt highSelect = ConstUInt(BitWidth{ bps });
     HCL_NAMED(highSelect);
 
     for (size_t i = lowerStep.size() - 1; i < lowerStep.size(); --i)
@@ -110,10 +110,10 @@ gtry::scl::EncoderResult gtry::scl::priorityEncoderTree(const BVec& in, bool reg
     return out;
 }
 
-void gtry::scl::OneHot::setBit(const BVec& idx)
+void gtry::scl::OneHot::setBit(const UInt& idx)
 {
     // TODO: remove workaround false signal loop
-    (BVec&)*this = 0;
+    (UInt&)*this = 0;
 
     for (size_t i = 0; i < size(); ++i)
         at(i) = idx == i;

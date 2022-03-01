@@ -22,7 +22,7 @@
 
 namespace gtry::scl
 {
-	template<typename TVec = BVec, typename TAdder = CarrySafeAdder>
+	template<typename TVec = UInt, typename TAdder = CarrySafeAdder>
 	struct Sha1Generator
 	{
 		enum {
@@ -58,7 +58,7 @@ namespace gtry::scl
 				w[i] = _block(Selection::Symbol(w.size() - 1 - i, 32_b));
 		}
 
-		void round(const BVec& round, bool rotateW = true)
+		void round(const UInt& round, bool rotateW = true)
 		{
 			// select round constant
 			TVec k = 0xCA62C1D6;
@@ -90,7 +90,7 @@ namespace gtry::scl
 			a = tmp;
 
 			// extend message
-			BVec next_w = w[13] ^ w[8] ^ w[2] ^ w[0];
+			UInt next_w = w[13] ^ w[8] ^ w[2] ^ w[0];
 			if(rotateW) // do not rotate for sha0
 				next_w = rotl(next_w, 1);
 
@@ -122,11 +122,11 @@ namespace gtry::scl
 	};
 
 
-	template<typename TVec = BVec, typename TAdder = CarrySafeAdder>
+	template<typename TVec = UInt, typename TAdder = CarrySafeAdder>
 	struct Sha0Generator : Sha1Generator<TVec, TAdder>
 	{
 		// same as sha1 but without rotation during message extension
-		void round(const BVec& round)
+		void round(const UInt& round)
 		{
 			Sha1Generator<TVec, TAdder>::round(round, false);
 		}

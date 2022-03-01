@@ -41,30 +41,6 @@ namespace gtry
 	{
 	}
 
-	void CompoundVisitor::operator()(const BVec& a, const BVec& b)
-	{
-	}
-
-	void CompoundVisitor::operator()(BVec& a)
-	{
-	}
-
-	void CompoundVisitor::operator()(BVec& a, const BVec& b)
-	{
-	}
-
-	void CompoundVisitor::operator()(const Bit& a, const Bit& b)
-	{
-	}
-
-	void CompoundVisitor::operator()(Bit& a)
-	{
-	}
-
-	void CompoundVisitor::operator()(Bit& a, const Bit& b)
-	{
-	}
-
 	void CompoundNameVisitor::enter(std::string_view name)
 	{
 		m_names.push_back(name);

@@ -26,7 +26,7 @@ namespace gtry
 	{
 		struct PackVisitor : CompoundVisitor
 		{
-			virtual void operator () (const BVec& a, const BVec&) override
+			virtual void operator () (const UInt& a, const UInt&) override
 			{
 				m_ports.emplace_back(a.getReadPort());
 			}
@@ -50,7 +50,7 @@ namespace gtry
 	}
 
 	template<typename... Comp>
-	BVec pack(const Comp& ...compound)
+	UInt pack(const Comp& ...compound)
 	{
 		internal::PackVisitor v;
 		internal::pack(v, compound...);
@@ -66,11 +66,11 @@ namespace gtry
 	{
 		struct UnpackVisitor : CompoundVisitor
 		{
-			UnpackVisitor(const BVec& out) : 
+			UnpackVisitor(const UInt& out) : 
 				m_packed(out)
 			{}
 
-			virtual void operator () (BVec& vec, const BVec&) override
+			virtual void operator () (UInt& vec, const UInt&) override
 			{
 				auto* node = DesignScope::createNode<hlim::Node_Rewire>(1);
 				node->recordStackTrace();
@@ -78,7 +78,7 @@ namespace gtry
 				node->setExtract(m_totalWidth, vec.size());
 				m_totalWidth += vec.size();
 
-				vec = BVec{ SignalReadPort(node) };
+				vec = UInt{ SignalReadPort(node) };
 			}
 
 			virtual void operator () (Bit& vec, const Bit&) override
@@ -93,7 +93,7 @@ namespace gtry
 				vec = Bit{ SignalReadPort(node) };
 			}
 
-			const BVec& m_packed;
+			const UInt& m_packed;
 			size_t m_totalWidth = 0;
 		};
 
@@ -108,7 +108,7 @@ namespace gtry
 	}
 	
 	template<typename... Comp>
-	void unpack(const BVec& vec, Comp& ... compound)
+	void unpack(const UInt& vec, Comp& ... compound)
 	{
 		HCL_DESIGNCHECK(vec.getWidth() == width(compound...));
 

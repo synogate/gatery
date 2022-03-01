@@ -128,7 +128,8 @@ namespace gtry
 		return *this;
 	}
 
-	BVec swapEndian(const BVec& word, BitWidth byteSize)
+	template<BitVectorDerived T>
+	T swapEndian(const T& word, BitWidth byteSize)
 	{
 		const size_t numSymbols = word.getWidth().numBeats(byteSize);
 		const size_t srcWidth = numSymbols * byteSize.value;
@@ -142,13 +143,35 @@ namespace gtry
 			op.addInput(0, srcWidth - byteSize.value * (i + 1), byteSize.value);
 		rewire->setOp(std::move(op));
 
-		BVec ret{ SignalReadPort(rewire) };
+		T ret{ SignalReadPort(rewire) };
 		if (!word.getName().empty())
 			ret.setName(std::string(word.getName()) + "_swapped");
 		return ret;
 	}
 
-	BVec muxWord(BVec selector, BVec flat_array)
+	template<BitVectorDerived T>
+	T swapEndian(const T& word, BitWidth byteSize, BitWidth wordSize)
+	{
+		T ret = word.getWidth();
+		for (size_t i = 0; i < word.getWidth() / wordSize; ++i)
+		{
+			auto sym = Selection::Symbol(i, wordSize);
+			ret(sym) = swapEndian(word(sym), byteSize);
+		}
+		return ret;
+	}
+
+	BVec swapEndian(const BVec& word, BitWidth byteSize, BitWidth wordSize) { return swapEndian<BVec>(word, byteSize, wordSize); }
+	BVec swapEndian(const BVec& word, BitWidth byteSize) { return swapEndian<BVec>(word, byteSize); }
+
+	UInt swapEndian(const UInt& word, BitWidth byteSize, BitWidth wordSize) { return swapEndian<UInt>(word, byteSize, wordSize); }
+	UInt swapEndian(const UInt& word, BitWidth byteSize) { return swapEndian<UInt>(word, byteSize); }
+
+	SInt swapEndian(const SInt& word, BitWidth byteSize, BitWidth wordSize) { return swapEndian<SInt>(word, byteSize, wordSize); }
+	SInt swapEndian(const SInt& word, BitWidth byteSize) { return swapEndian<SInt>(word, byteSize); }
+
+	template<BitVectorDerived T>
+	T muxWord(UInt selector, T flat_array)
 	{
 		auto entity = Area{ "flat_mux" }.enter();
 		HCL_NAMED(selector);
@@ -156,17 +179,31 @@ namespace gtry
 
 		const size_t num_entries = selector.getWidth().count();
 		SymbolSelect sym{ flat_array.getWidth() / num_entries };
-		BVec selected = flat_array(sym[0]);
+#if 0		
+		T selected = flat_array(sym[0]);
 		for (size_t i = 1; i < num_entries; ++i)
 		{
 			IF(selector == i)
 				selected = flat_array(sym[i]);
 		}
+#else
+		hlim::Node_Multiplexer *node = DesignScope::createNode<hlim::Node_Multiplexer>(num_entries);
+		node->recordStackTrace();
+		node->connectSelector(selector.getReadPort());
+
+		for (size_t i = 0; i < num_entries; ++i) {
+			T input = flat_array(sym[i]);
+			node->connectInput(i, input.getReadPort());
+		}
+
+		T selected{SignalReadPort(node)};
+#endif		
 		HCL_NAMED(selected);
 		return selected;
 	}
 
-	BVec muxWord(Bit selector, BVec flat_array)
+	template<BitVectorDerived T>
+	T muxWord(Bit selector, T flat_array)
 	{
 		HCL_DESIGNCHECK_HINT(flat_array.getWidth().divisibleBy(2), "flat array must be evenly divisible");
 
@@ -175,7 +212,7 @@ namespace gtry
 		HCL_NAMED(flat_array);
 
 		SymbolSelect sym{ flat_array.getWidth() / 2 };
-		BVec selected = flat_array(sym[0]);
+		T selected = flat_array(sym[0]);
 		IF(selector)
 			selected = flat_array(sym[1]);
 
@@ -183,7 +220,14 @@ namespace gtry
 		return selected;
 	}
 
-	BVec demux(const BVec& selector, const Bit& input, const Bit& inactiveOutput)
+	BVec muxWord(UInt selector, BVec flat_array) { return muxWord<BVec>(selector, flat_array); }
+	BVec muxWord(Bit selector, BVec flat_array) { return muxWord<BVec>(selector, flat_array); }
+	UInt muxWord(UInt selector, UInt flat_array) { return muxWord<UInt>(selector, flat_array); }
+	UInt muxWord(Bit selector, UInt flat_array) { return muxWord<UInt>(selector, flat_array); }
+	SInt muxWord(UInt selector, SInt flat_array) { return muxWord<SInt>(selector, flat_array); }
+	SInt muxWord(Bit selector, SInt flat_array) { return muxWord<SInt>(selector, flat_array); }
+
+	UInt demux(const UInt& selector, const Bit& input, const Bit& inactiveOutput)
 	{
 		std::vector<Bit> ret{ (size_t)selector.getWidth().count(), inactiveOutput };
 		for (size_t i = 0; i < ret.size(); ++i)
@@ -192,24 +236,13 @@ namespace gtry
 		return pack(ret);
 	}
 
-	BVec demux(const BVec& selector)
+	UInt demux(const UInt& selector)
 	{
 		std::vector<Bit> ret;
 		ret.reserve(selector.getWidth().count());
 		for (size_t i = 0; i < selector.getWidth().count(); ++i)
 			ret.emplace_back(selector == i);
 		return pack(ret);
-	}
-
-	BVec swapEndian(const BVec& word, BitWidth byteSize, BitWidth wordSize)
-	{
-		BVec ret = word.getWidth();
-		for (size_t i = 0; i < word.getWidth() / wordSize; ++i)
-		{
-			auto sym = Selection::Symbol(i, wordSize);
-			ret(sym) = swapEndian(word(sym), byteSize);
-		}
-		return ret;
 	}
 
 	SignalTapHelper sim_assert(const Bit &condition)

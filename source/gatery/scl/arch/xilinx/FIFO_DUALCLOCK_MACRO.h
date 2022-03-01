@@ -38,7 +38,7 @@ class FIFO_DUALCLOCK_MACRO : public gtry::hlim::Node_External
 			// Bits
             IN_RDEN, 
             IN_WREN, 
-			// BVecs
+			// UInts
             IN_DI,
 
             IN_COUNT
@@ -51,7 +51,7 @@ class FIFO_DUALCLOCK_MACRO : public gtry::hlim::Node_External
             OUT_FULL,
             OUT_RDERR,
             OUT_WRERR,
-			// BVecs
+			// UInts
             OUT_DO,
             OUT_RDCOUNT,
             OUT_WRCOUNT,
@@ -72,9 +72,9 @@ class FIFO_DUALCLOCK_MACRO : public gtry::hlim::Node_External
 		FIFO_DUALCLOCK_MACRO &setFirstWordFallThrough(bool enable);
 
 		void connectInput(Inputs input, const Bit &bit);
-		void connectInput(Inputs input, const BVec &bvec);
+		void connectInput(Inputs input, const UInt &UInt);
 		Bit getOutputBit(Outputs output);
-		BVec getOutputBVec(Outputs output);
+		UInt getOutputUInt(Outputs output);
 
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;

@@ -45,7 +45,7 @@ Bit placeRegHint(const Bit &signal)
 	return ret;
 }
 
-BVec placeRegHint(const BVec &signal)
+UInt placeRegHint(const UInt &signal)
 {
 	SignalReadPort data = signal.getReadPort();
 

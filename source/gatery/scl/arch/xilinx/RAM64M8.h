@@ -68,7 +68,7 @@ class RAM64M8 : public gtry::hlim::Node_External
 
         RAM64M8();
 
-		BVec setup64x7_SDP(const BVec &wrAddr, const BVec &wrData, const Bit &wrEn, const BVec &rdAddr);
+		UInt setup64x7_SDP(const UInt &wrAddr, const UInt &wrData, const Bit &wrEn, const UInt &rdAddr);
 
         virtual std::string getTypeName() const override;
         virtual void assertValidity() const override;

@@ -19,6 +19,7 @@
 #include "SignalBitshiftOp.h"
 #include "SignalLogicOp.h"
 #include "ConditionalScope.h"
+#include "SignalArithmeticOp.h"
 #include "Pack.h"
 
 #include <gatery/hlim/coreNodes/Node_Shift.h>
@@ -26,41 +27,30 @@
 
 namespace gtry {
 
-hlim::ConnectionType SignalBitShiftOp::getResultingType(const hlim::ConnectionType &operand) {
-    return operand;
-}
 
-
-BVec SignalBitShiftOp::operator()(const BVec &operand) {
-    const size_t width = operand.size();
-    
-    hlim::Node_Rewire *node = DesignScope::createNode<hlim::Node_Rewire>(1);
-    node->recordStackTrace();
-    
-    node->changeOutputType(operand.getConnType());
-    
-    size_t absShift = std::abs(m_shift);
-    
+hlim::Node_Rewire::RewireOperation rightShiftRewireOp(size_t width, size_t amount, hlim::Node_Shift::fill fill)
+{
     hlim::Node_Rewire::RewireOperation rewireOp;
-    if (m_shift < 0) {            
-        if (absShift < width) {
+    if (amount < width) {
+        rewireOp.ranges.push_back({
+            .subwidth = width - amount,
+            .source = hlim::Node_Rewire::OutputRange::INPUT,
+            .inputIdx = 0,
+            .inputOffset = (size_t) amount,
+        });
+    }
+        
+    switch (fill) {
+        case hlim::Node_Shift::fill::rotate:
             rewireOp.ranges.push_back({
-                .subwidth = width - absShift,
-                .source = hlim::Node_Rewire::OutputRange::INPUT,
-                .inputIdx = 0,
-                .inputOffset = (size_t) absShift,
-            });
-        }
-            
-        if (m_rotate) {
-            rewireOp.ranges.push_back({
-                .subwidth = absShift,
+                .subwidth = amount,
                 .source = hlim::Node_Rewire::OutputRange::INPUT,
                 .inputIdx = 0,
                 .inputOffset = 0
             });
-        } else if (m_duplicateLeft) {
-            for (size_t i = 0; i < (size_t) absShift; i++) {
+        break;
+        case hlim::Node_Shift::fill::last:
+            for (size_t i = 0; i < amount; i++) {
                 rewireOp.ranges.push_back({
                     .subwidth = 1,
                     .source = hlim::Node_Rewire::OutputRange::INPUT,
@@ -68,22 +58,38 @@ BVec SignalBitShiftOp::operator()(const BVec &operand) {
                     .inputOffset = width -1,
                 });
             }
-        } else {
+        break;
+        case hlim::Node_Shift::fill::one:
             rewireOp.ranges.push_back({
-                .subwidth = absShift,
-                .source = (m_fillLeft? hlim::Node_Rewire::OutputRange::CONST_ONE : hlim::Node_Rewire::OutputRange::CONST_ZERO),
+                .subwidth = amount,
+                .source = hlim::Node_Rewire::OutputRange::CONST_ONE,
             });
-        }
-    } else {
-        if (m_rotate) {
+        break;
+        case hlim::Node_Shift::fill::zero:
             rewireOp.ranges.push_back({
-                .subwidth = absShift,
+                .subwidth = amount,
+                .source = hlim::Node_Rewire::OutputRange::CONST_ZERO,
+            });
+        break;
+    }
+    return rewireOp;
+}
+
+hlim::Node_Rewire::RewireOperation leftShiftRewireOp(size_t width, size_t amount, hlim::Node_Shift::fill fill)
+{
+    hlim::Node_Rewire::RewireOperation rewireOp;
+
+    switch (fill) {
+        case hlim::Node_Shift::fill::rotate:
+            rewireOp.ranges.push_back({
+                .subwidth = amount,
                 .source = hlim::Node_Rewire::OutputRange::INPUT,
                 .inputIdx = 0,
-                .inputOffset = width - absShift
+                .inputOffset = width - amount
             });
-        } else if (m_duplicateRight) {
-            for (size_t i = 0; i < (size_t) absShift; i++) {
+        break;
+        case hlim::Node_Shift::fill::last:
+            for (size_t i = 0; i < amount; i++) {
                 rewireOp.ranges.push_back({
                     .subwidth = 1,
                     .source = hlim::Node_Rewire::OutputRange::INPUT,
@@ -91,21 +97,47 @@ BVec SignalBitShiftOp::operator()(const BVec &operand) {
                     .inputOffset = 0,
                 });
             }
-        } else {
+        break;
+        case hlim::Node_Shift::fill::one:
             rewireOp.ranges.push_back({
-                .subwidth = absShift,
-                .source = (m_fillLeft? hlim::Node_Rewire::OutputRange::CONST_ONE : hlim::Node_Rewire::OutputRange::CONST_ZERO),
+                .subwidth = amount,
+                .source = hlim::Node_Rewire::OutputRange::CONST_ONE,
             });
-        }
-        if (absShift < width) {
+        break;
+        case hlim::Node_Shift::fill::zero:
             rewireOp.ranges.push_back({
-                .subwidth = width - absShift,
-                .source = hlim::Node_Rewire::OutputRange::INPUT,
-                .inputIdx = 0,
-                .inputOffset = 0,
+                .subwidth = amount,
+                .source = hlim::Node_Rewire::OutputRange::CONST_ZERO,
             });
-        }
+        break;
     }
+    if (amount < width) {
+        rewireOp.ranges.push_back({
+            .subwidth = width - amount,
+            .source = hlim::Node_Rewire::OutputRange::INPUT,
+            .inputIdx = 0,
+            .inputOffset = 0,
+        });
+    }
+
+    return rewireOp;
+}
+
+
+template<typename T, hlim::Node_Shift::dir direction>
+T shift(const T &operand, size_t amount, hlim::Node_Shift::fill fill) {
+    const size_t width = operand.size();
+    
+    hlim::Node_Rewire *node = DesignScope::createNode<hlim::Node_Rewire>(1);
+    node->recordStackTrace();
+    
+    node->changeOutputType(operand.getConnType());
+    
+    hlim::Node_Rewire::RewireOperation rewireOp;
+    if (direction == hlim::Node_Shift::dir::right)
+        rewireOp = rightShiftRewireOp(width, amount, fill);
+    else
+        rewireOp = leftShiftRewireOp(width, amount, fill);
 
     node->setOp(std::move(rewireOp));
     node->connectInput(0, operand.getReadPort());
@@ -113,63 +145,52 @@ BVec SignalBitShiftOp::operator()(const BVec &operand) {
 }
 
 
-
-
-BVec operator<<(const BVec &signal, int amount)  {                                 
+BVec shl(const BVec &signal, int amount)  {
     HCL_DESIGNCHECK_HINT(amount >= 0, "Shifting by negative amount not allowed!");
-    SignalBitShiftOp op((int) amount);                                                              
-    return op(signal);                                                                              
+    return shift<BVec, hlim::Node_Shift::dir::left>(signal, (size_t) amount, hlim::Node_Shift::fill::zero);
 }
 
-BVec operator>>(const BVec &signal, int amount)  {                                 
+BVec shr(const BVec &signal, int amount)  {
     HCL_DESIGNCHECK_HINT(amount >= 0, "Shifting by negative amount not allowed!");
-    SignalBitShiftOp op(- (int)amount);                                                              
-//    if (utils::isSignedIntegerSignal<BVec>::value)
-//        op.duplicateLeft();
-    return op(signal);                                                                              
+    return shift<BVec, hlim::Node_Shift::dir::right>(signal, (size_t) amount, hlim::Node_Shift::fill::zero);
 }
 
-BVec &operator<<=(BVec &signal, int amount)  {
-    signal = signal << amount;
-    return signal; 
+UInt shl(const UInt &signal, int amount)  {
+    HCL_DESIGNCHECK_HINT(amount >= 0, "Shifting by negative amount not allowed!");
+    return shift<UInt, hlim::Node_Shift::dir::left>(signal, (size_t) amount, hlim::Node_Shift::fill::zero);
 }
 
-BVec &operator>>=(BVec &signal, int amount)  {
-    signal = signal >> amount;
-    return signal;
+UInt shr(const UInt &signal, int amount)  {
+    HCL_DESIGNCHECK_HINT(amount >= 0, "Shifting by negative amount not allowed!");
+    return shift<UInt, hlim::Node_Shift::dir::right>(signal, (size_t) amount, hlim::Node_Shift::fill::zero);
 }
 
-BVec rot(const BVec& signal, int amount)
-{
-    SignalBitShiftOp op((int)amount);
-    op.rotate();
-    return op(signal);
+SInt shl(const SInt &signal, int amount)  {
+    HCL_DESIGNCHECK_HINT(amount >= 0, "Shifting by negative amount not allowed!");
+    return shift<SInt, hlim::Node_Shift::dir::left>(signal, (size_t) amount, hlim::Node_Shift::fill::zero);
 }
 
-static BVec internal_shift(const BVec& signal, const BVec& amount, hlim::Node_Shift::dir direction, hlim::Node_Shift::fill fill)
-{
-    hlim::Node_Shift* node = DesignScope::createNode<hlim::Node_Shift>(direction, fill);
-    node->recordStackTrace();
-
-    node->connectOperand(signal.getReadPort());
-    node->connectAmount(amount.getReadPort());
-    return SignalReadPort(node);
+SInt shr(const SInt &signal, int amount)  {
+    HCL_DESIGNCHECK_HINT(amount >= 0, "Shifting by negative amount not allowed!");
+    return shift<SInt, hlim::Node_Shift::dir::right>(signal, (size_t) amount, hlim::Node_Shift::fill::zero);
 }
 
-BVec shr(const BVec& signal, size_t amount, const Bit& arithmetic)
+
+
+UInt shr(const UInt& signal, size_t amount, const Bit& arithmetic)
 {
     Bit inShift = arithmetic & signal.msb();
 
-    BVec shiftedHigh = sext(inShift, amount - 1);
-    BVec shiftedLow = signal(amount, signal.getWidth() - amount);
+    auto shiftedHigh = sext(inShift, amount - 1);
+    auto shiftedLow = signal(amount, signal.getWidth() - amount);
     return pack(shiftedHigh, shiftedLow);
 }
 
-BVec shr(const BVec& signal, const BVec& amount, const Bit& arithmetic)
+UInt shr(const UInt& signal, const UInt& amount, const Bit& arithmetic)
 {
-    HCL_DESIGNCHECK_HINT(signal.size() == amount.getWidth().count(), "not implpemented");
+    HCL_DESIGNCHECK_HINT(signal.size() == amount.getWidth().count(), "not implemented");
 
-    BVec acc = signal;
+    UInt acc(signal);
     for (size_t i = 0; i < amount.getWidth().value; ++i)
     {
         IF(amount[i])
@@ -178,44 +199,59 @@ BVec shr(const BVec& signal, const BVec& amount, const Bit& arithmetic)
     return acc;
 }
 
-BVec zshl(const BVec& signal, const BVec& amount)
-{
-    return internal_shift(signal, amount, hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::zero);
+
+
+/*
+
+UInt shl(const UInt &signal, int amount)  {
+    HCL_DESIGNCHECK_HINT(amount >= 0, "Shifting by negative amount not allowed!");
+    return shift<UInt, hlim::Node_Shift::dir::left>(signal, (size_t) amount, hlim::Node_Shift::fill::zero);
 }
 
-BVec oshl(const BVec& signal, const BVec& amount)
-{
-    return internal_shift(signal, amount, hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::one);
+UInt shr(const UInt &signal, int amount)  {
+    HCL_DESIGNCHECK_HINT(amount >= 0, "Shifting by negative amount not allowed!");
+    return shift<UInt, hlim::Node_Shift::dir::right>(signal, (size_t) amount, hlim::Node_Shift::fill::last);
 }
 
-BVec sshl(const BVec& signal, const BVec& amount)
+*/
+
+
+
+
+BVec rot(const BVec& signal, int amount)
 {
-    return internal_shift(signal, amount, hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::last);
+    if (amount > 0)
+        return shift<BVec, hlim::Node_Shift::dir::left>(signal, amount, hlim::Node_Shift::fill::rotate);
+    else
+        return shift<BVec, hlim::Node_Shift::dir::right>(signal, amount, hlim::Node_Shift::fill::rotate);
 }
 
-BVec zshr(const BVec& signal, const BVec& amount)
+
+UInt rot(const UInt& signal, int amount)
 {
-    return internal_shift(signal, amount, hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::zero);
+    if (amount > 0)
+        return shift<UInt, hlim::Node_Shift::dir::left>(signal, amount, hlim::Node_Shift::fill::rotate);
+    else
+        return shift<UInt, hlim::Node_Shift::dir::right>(signal, amount, hlim::Node_Shift::fill::rotate);
 }
 
-BVec oshr(const BVec& signal, const BVec& amount)
+SInt rot(const SInt& signal, int amount)
 {
-    return internal_shift(signal, amount, hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::one);
+    if (amount > 0)
+        return shift<SInt, hlim::Node_Shift::dir::left>(signal, amount, hlim::Node_Shift::fill::rotate);
+    else
+        return shift<SInt, hlim::Node_Shift::dir::right>(signal, amount, hlim::Node_Shift::fill::rotate);
 }
 
-BVec sshr(const BVec& signal, const BVec& amount)
-{
-    return internal_shift(signal, amount, hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::last);
-}
 
-BVec rotl(const BVec& signal, const BVec& amount)
+SignalReadPort internal_shift(const SignalReadPort& signal, const SignalReadPort& amount, hlim::Node_Shift::dir direction, hlim::Node_Shift::fill fill)
 {
-    return internal_shift(signal, amount, hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::rotate);
-}
+    hlim::Node_Shift* node = DesignScope::createNode<hlim::Node_Shift>(direction, fill);
+    node->recordStackTrace();
 
-BVec rotr(const BVec& signal, const BVec& amount)
-{
-    return internal_shift(signal, amount, hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::rotate);
+    node->connectOperand(signal);
+    node->connectAmount(amount);
+    return SignalReadPort(node);
 }
 
 }

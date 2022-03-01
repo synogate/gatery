@@ -31,15 +31,15 @@ struct SerialTMDS {
     Bit clock;
 };
 
-BVec tmdsEncodeSymbol(const BVec& data);
+UInt tmdsEncodeSymbol(const UInt& data);
 
-BVec tmdsEncode(Clock &pixelClock, Bit sendData, BVec data, BVec ctrl);
+UInt tmdsEncode(Clock &pixelClock, Bit sendData, UInt data, UInt ctrl);
 
-BVec tmdsEncodeReduceTransitions(const BVec& data);
-BVec tmdsDecodeReduceTransitions(const BVec& data);
+UInt tmdsEncodeReduceTransitions(const UInt& data);
+UInt tmdsDecodeReduceTransitions(const UInt& data);
 
-BVec tmdsEncodeBitflip(const Clock& clk, const BVec& data);
-BVec tmdsDecodeBitflip(const BVec& data);
+UInt tmdsEncodeBitflip(const Clock& clk, const UInt& data);
+UInt tmdsDecodeBitflip(const UInt& data);
 
 template<typename T>
 class UnpackScope : public ConditionalScope
@@ -63,7 +63,7 @@ struct Valid : T
 
 struct ColorRGB
 {
-    BVec r, g, b;
+    UInt r, g, b;
 };
 
 class TmdsEncoder
@@ -73,12 +73,12 @@ public:
 
     void addColorStream(const Valid<ColorRGB>& color) { setColor(color.unpack()); }
     void addSync(const Bit& hsync, const Bit& vsync);
-    void addTERC4(const Valid<BVec>& ctrl) { setTERC4(ctrl.unpack()); }
+    void addTERC4(const Valid<UInt>& ctrl) { setTERC4(ctrl.unpack()); }
 
     // alternative interface using conditionals
     void setColor(const ColorRGB& color);
     void setSync(bool hsync, bool vsync);
-    void setTERC4(BVec ctrl);
+    void setTERC4(UInt ctrl);
 
     SerialTMDS serialOutput() const;
     const auto& channels() const { return m_Channel; }
@@ -87,7 +87,7 @@ public:
 
 protected:
     Clock& m_Clk;
-    std::array<BVec, 3> m_Channel;
+    std::array<UInt, 3> m_Channel;
 };
 
 class Transmitter

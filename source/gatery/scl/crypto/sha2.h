@@ -32,17 +32,17 @@ namespace gtry::scl
 		};
 
 		BOOST_HANA_DEFINE_STRUCT(Sha2_256,
-			(BVec, hash),
-			(BVec, a),
-			(BVec, b),
-			(BVec, c),
-			(BVec, d),
-			(BVec, e),
-			(BVec, f),
-			(BVec, g),
-			(BVec, h),
-			(std::array<BVec, 16>, w),
-			(std::vector<BVec>, kTable)
+			(UInt, hash),
+			(UInt, a),
+			(UInt, b),
+			(UInt, c),
+			(UInt, d),
+			(UInt, e),
+			(UInt, f),
+			(UInt, g),
+			(UInt, h),
+			(std::array<UInt, 16>, w),
+			(std::vector<UInt>, kTable)
 		);
 
 		Sha2_256() :
@@ -69,20 +69,20 @@ namespace gtry::scl
 			hash = pack(a, b, c, d, e, f, g, h);
 		}
 
-		void beginBlock(const BVec& _block)
+		void beginBlock(const UInt& _block)
 		{
 			for (size_t i = 0; i < w.size(); ++i)
 				w[i] = _block(Selection::Symbol(w.size() - 1 - i, 32_b));
 		}
 
-		void round(const BVec& round)
+		void round(const UInt& round)
 		{
 			// update state
-			BVec s0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
-			BVec s1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
-			BVec ch = (e & f) ^ (~e & g);
-			BVec maj = (a & b) ^ (a & c) ^ (b & c);
-			BVec k = mux(round, kTable);
+			UInt s0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+			UInt s1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+			UInt ch = (e & f) ^ (~e & g);
+			UInt maj = (a & b) ^ (a & c) ^ (b & c);
+			UInt k = mux(round, kTable);
 			HCL_NAMED(s0);
 			HCL_NAMED(s1);
 			HCL_NAMED(ch);
@@ -100,8 +100,8 @@ namespace gtry::scl
 			a = tmp + s0 + maj;
 
 			// extend message
-			BVec ws0 = rotr(w[ 1],  7) ^ rotr(w[ 1], 18) ^ shr(w[ 1],  3, '0');
-			BVec ws1 = rotr(w[14], 17) ^ rotr(w[14], 19) ^ shr(w[14], 10, '0');
+			UInt ws0 = rotr(w[ 1],  7) ^ rotr(w[ 1], 18) ^ shr(w[ 1],  3);
+			UInt ws1 = rotr(w[14], 17) ^ rotr(w[14], 19) ^ shr(w[14], 10);
 			HCL_NAMED(ws0);
 			HCL_NAMED(ws1);
 			TAdder next_w = TAdder{} + w[0] + w[9] + ws0 + ws1;
@@ -125,6 +125,6 @@ namespace gtry::scl
 			hash = pack(a, b, c, d, e, f, g, h);
 		}
 
-		const BVec& finalize() { return hash; }
+		const UInt& finalize() { return hash; }
 	};
 }

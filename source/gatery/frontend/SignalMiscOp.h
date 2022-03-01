@@ -19,7 +19,7 @@
 
 #include "Signal.h"
 #include "Bit.h"
-#include "BitVector.h"
+#include "BVec.h"
 #include "Scope.h"
 #include "ConditionalScope.h"
 
@@ -82,52 +82,26 @@ ElemType mux(const ElementarySignal &selector, const std::initializer_list<ElemT
     return mux<std::initializer_list<ElemType>>(selector, table);
 }
 
-BVec muxWord(BVec selector, BVec flat_array);
+BVec muxWord(UInt selector, BVec flat_array);
 BVec muxWord(Bit selector, BVec flat_array);
 
-BVec demux(const BVec& selector, const Bit& input, const Bit& inactiveOutput = '0');
-BVec demux(const BVec& selector); // optimized version for input = '1' and invactive output = '0'
+UInt muxWord(UInt selector, UInt flat_array);
+UInt muxWord(Bit selector, UInt flat_array);
 
-///@todo overload for compound signals
-///@todo doesn't work yet
-#if 0
-template<typename SelectorType, typename ContainerType, typename SignalType = typename ContainerType::value_type, typename = std::enable_if_t<
-                                                                                                utils::isElementarySignal<SignalType>::value &&
-                                                                                                utils::isUnsignedIntegerSignal<SelectorType>::value &&
-                                                                                                utils::isContainer<ContainerType>::value
-                                                                                            >>
-SignalType mux(const SelectorType &selector, const ContainerType &inputs)  {
-    HCL_DESIGNCHECK_HINT(!inputs.empty(), "Inputs can not be empty");
+SInt muxWord(UInt selector, SInt flat_array);
+SInt muxWord(Bit selector, SInt flat_array);
 
-    const hlim::Node_Signal *firstSignal = inputs.begin()->getNode();
-    HCL_ASSERT(firstSignal != nullptr);
-
-    hlim::Node_Multiplexer *node = DesignScope::createNode<hlim::Node_Multiplexer>(inputs.size());
-    node->recordStackTrace();
-    selector.getNode()->getOutput(0).connect(node->getInput(0));
-    for (const auto &pair : ConstEnumerate(inputs)) {
-        const hlim::Node_Signal *thisSignal = pair.second.getNode();
-        HCL_ASSERT(thisSignal != nullptr);
-        HCL_DESIGNCHECK_HINT(firstSignal->getConnectionType() == thisSignal->getConnectionType(), "Can only multiplex operands of same type (e.g. width).");
-
-        pair.second.getNode()->getOutput(0).connect(node->getInput(pair.first+1));
-    }
-
-    return SignalType(&node->getOutput(0), firstSignal->getConnectionType());
-}
-#endif
+UInt demux(const UInt& selector, const Bit& input, const Bit& inactiveOutput = '0');
+UInt demux(const UInt& selector); // optimized version for input = '1' and invactive output = '0'
 
 BVec swapEndian(const BVec& word, BitWidth byteSize, BitWidth wordSize);
 BVec swapEndian(const BVec& word, BitWidth byteSize = 8_b);
 
-/*
-template<typename SignalType, typename = std::enable_if_t<utils::isBitVectorSignal<SignalType>::value>>
-class hex
-{
-};
+UInt swapEndian(const UInt& word, BitWidth byteSize, BitWidth wordSize);
+UInt swapEndian(const UInt& word, BitWidth byteSize = 8_b);
 
-todo: pretty printing functions
-*/
+SInt swapEndian(const SInt& word, BitWidth byteSize, BitWidth wordSize);
+SInt swapEndian(const SInt& word, BitWidth byteSize = 8_b);
 
 
 class SignalTapHelper

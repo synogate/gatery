@@ -17,7 +17,7 @@
 */
 #include "gatery/pch.h"
 #include "Clock.h"
-#include "Bit.h"
+
 #include "ConditionalScope.h"
 #include "trace.h"
 
@@ -228,14 +228,11 @@ namespace gtry
 	}
 	*/
 
-	BVec Clock::operator()(const BVec& signal, const RegisterSettings& settings) const
+	hlim::Node_Register *Clock::prepRegister(std::string_view name, const RegisterSettings& settings) const
 	{
-		SignalReadPort data = signal.getReadPort();
-
 		auto* reg = DesignScope::createNode<hlim::Node_Register>();
-		reg->setName(std::string{ signal.getName() });
+		reg->setName(std::string{ name });
 		reg->setClock(m_clock);
-		reg->connectInput(hlim::Node_Register::DATA, data);
 
 		if (settings.allowRetimingForward)
 			reg->getFlags().insert(hlim::Node_Register::Flags::ALLOW_RETIMING_FORWARD);
@@ -249,59 +246,70 @@ namespace gtry
 			reg->connectInput(hlim::Node_Register::ENABLE, scope->getFullCondition());
 			reg->setConditionId(scope->getId());
 		}
+		return reg;
+	}
+
+	template<BitVectorDerived T>
+	T Clock::buildReg(const T& signal, const RegisterSettings& settings) const
+	{
+		SignalReadPort data = signal.getReadPort();
+
+		auto* reg = prepRegister(signal.getName(), settings);
+		reg->connectInput(hlim::Node_Register::DATA, data);
 
 		return SignalReadPort(reg, data.expansionPolicy);
 	}
 
-	BVec Clock::operator()(const BVec& signal, const BVec& reset, const RegisterSettings& settings) const
+	template<BitVectorDerived T>
+	T Clock::buildReg(const T& signal, const T& reset, const RegisterSettings& settings) const
 	{
 		NormalizedWidthOperands ops(signal, reset);
 
-		auto* reg = DesignScope::createNode<hlim::Node_Register>();
-		reg->setName(std::string{ signal.getName() });
-		reg->setClock(m_clock);
+		auto* reg = prepRegister(signal.getName(), settings);
 		reg->connectInput(hlim::Node_Register::DATA, ops.lhs);
 		reg->connectInput(hlim::Node_Register::RESET_VALUE, ops.rhs);
-
-		if (settings.allowRetimingForward)
-			reg->getFlags().insert(hlim::Node_Register::Flags::ALLOW_RETIMING_FORWARD);
-
-		if (settings.allowRetimingBackward)
-			reg->getFlags().insert(hlim::Node_Register::Flags::ALLOW_RETIMING_BACKWARD);
-
-
-		ConditionalScope* scope = ConditionalScope::get();
-		if (scope)
-		{
-			reg->connectInput(hlim::Node_Register::ENABLE, scope->getFullCondition());
-			reg->setConditionId(scope->getId());
-		}
 
 		return SignalReadPort(reg, ops.lhs.expansionPolicy);
 	}
 
+	BVec Clock::operator() (const BVec& signal, const RegisterSettings &settings) const 
+	{
+		return buildReg(signal, settings);
+	}
+
+	BVec Clock::operator() (const BVec& signal, const BVec& reset, const RegisterSettings &settings) const
+	{
+		return buildReg(signal, reset, settings);
+	}
+
+	UInt Clock::operator() (const UInt& signal, const RegisterSettings &settings) const
+	{
+		return buildReg(signal, settings);
+	}
+
+	UInt Clock::operator() (const UInt& signal, const UInt& reset, const RegisterSettings &settings) const
+	{
+		return buildReg(signal, reset, settings);
+	}
+
+	SInt Clock::operator() (const SInt& signal, const RegisterSettings &settings) const
+	{
+		return buildReg(signal, settings);
+	}
+
+	SInt Clock::operator() (const SInt& signal, const SInt& reset, const RegisterSettings &settings) const
+	{
+		return buildReg(signal, reset, settings);
+	}
+
+
 	Bit Clock::operator()(const Bit& signal, const RegisterSettings& settings) const
 	{
-		auto* reg = DesignScope::createNode<hlim::Node_Register>();
-		reg->setName(std::string{ signal.getName() });
-		reg->setClock(m_clock);
+		auto* reg = prepRegister(signal.getName(), settings);
 		reg->connectInput(hlim::Node_Register::DATA, signal.getReadPort());
-
-		if (settings.allowRetimingForward)
-			reg->getFlags().insert(hlim::Node_Register::Flags::ALLOW_RETIMING_FORWARD);
-
-		if (settings.allowRetimingBackward)
-			reg->getFlags().insert(hlim::Node_Register::Flags::ALLOW_RETIMING_BACKWARD);
 
 		if (signal.getResetValue())
 			reg->connectInput(hlim::Node_Register::RESET_VALUE, Bit{ *signal.getResetValue() }.getReadPort());
-
-		ConditionalScope* scope = ConditionalScope::get();
-		if (scope)
-		{
-			reg->connectInput(hlim::Node_Register::ENABLE, scope->getFullCondition());
-			reg->setConditionId(scope->getId());
-		}
 
 		Bit ret{ SignalReadPort{reg} };
 		if (signal.getResetValue())
@@ -311,25 +319,9 @@ namespace gtry
 
 	Bit Clock::operator()(const Bit& signal, const Bit& reset, const RegisterSettings& settings) const
 	{
-		auto* reg = DesignScope::createNode<hlim::Node_Register>();
-		reg->setName(std::string{ signal.getName() });
-		reg->setClock(m_clock);
+		auto* reg = prepRegister(signal.getName(), settings);
 		reg->connectInput(hlim::Node_Register::DATA, signal.getReadPort());
 		reg->connectInput(hlim::Node_Register::RESET_VALUE, reset.getReadPort());
-
-		if (settings.allowRetimingForward)
-			reg->getFlags().insert(hlim::Node_Register::Flags::ALLOW_RETIMING_FORWARD);
-
-		if (settings.allowRetimingBackward)
-			reg->getFlags().insert(hlim::Node_Register::Flags::ALLOW_RETIMING_BACKWARD);
-
-
-		ConditionalScope* scope = ConditionalScope::get();
-		if (scope)
-		{
-			reg->connectInput(hlim::Node_Register::ENABLE, scope->getFullCondition());
-			reg->setConditionId(scope->getId());
-		}
 
 		return SignalReadPort(reg);
 	}

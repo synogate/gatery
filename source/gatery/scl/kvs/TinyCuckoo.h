@@ -48,7 +48,7 @@ namespace gtry::scl
 
 		BitWidth hashWidth() const;
 		size_t numTables() const { return m_tables.size(); }
-		Out operator () (const Tkey& key, const BVec& hash);
+		Out operator () (const Tkey& key, const UInt& hash);
 
 		void addCpuInterface(AvalonNetworkSection& net);
 		void addCpuInterface(MemoryMap& mmap);
@@ -58,29 +58,29 @@ namespace gtry::scl
 
 	};
 
-	extern template class TinyCuckoo<BVec, BVec>;
+	extern template class TinyCuckoo<UInt, UInt>;
 
 
 	struct TinyCuckooItem
 	{
 		Bit valid;
-		BVec key;
-		BVec value;
+		UInt key;
+		UInt value;
 	};
 
 	struct TinyCuckooUpdate
 	{
 		Bit valid;
-		BVec tableIdx;
-		BVec itemIdx;
+		UInt tableIdx;
+		UInt itemIdx;
 		TinyCuckooItem item;
 	};
 
 	struct TinyCuckooIn
 	{
-		BVec key;
-		BVec hash;
-		BVec userData;
+		UInt key;
+		UInt hash;
+		UInt userData;
 
 		TinyCuckooUpdate update;
 
@@ -95,10 +95,10 @@ namespace gtry::scl
 	struct TinyCuckooOut
 	{
 		Bit found;
-		BVec key;
-		BVec hash;
-		BVec value;
-		BVec userData;
+		UInt key;
+		UInt hash;
+		UInt value;
+		UInt userData;
 	};
 
 	TinyCuckooOut tinyCuckoo(const TinyCuckooIn& in);
@@ -130,7 +130,7 @@ namespace gtry::scl
 	}
 
 	template<typename Tkey, typename Tval>
-	inline typename TinyCuckoo<Tkey, Tval>::Out TinyCuckoo<Tkey, Tval>::operator()(const Tkey& key, const BVec& hash)
+	inline typename TinyCuckoo<Tkey, Tval>::Out TinyCuckoo<Tkey, Tval>::operator()(const Tkey& key, const UInt& hash)
 	{
 		GroupScope entity(GroupScope::GroupType::ENTITY);
 		entity.setName("TinyCuckoo_lookup");

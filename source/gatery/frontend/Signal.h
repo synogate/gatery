@@ -20,6 +20,8 @@
 #include <gatery/hlim/coreNodes/Node_Signal.h>
 #include <gatery/hlim/NodeIO.h>
 #include <gatery/hlim/Node.h>
+#include <gatery/hlim/Attributes.h>
+
 
 #include <gatery/utils/Enumerate.h>
 #include <gatery/utils/Preprocessor.h>
@@ -76,9 +78,14 @@ namespace gtry {
         virtual std::string_view getName() const = 0;
         virtual void setName(std::string name) = 0;
 
+
+        void setAttrib(hlim::SignalAttributes attributes);
+
     protected:
         size_t m_initialScopeId = 0;
 
     };
 
+    template<typename T>
+    concept IsElementarySignal = std::is_base_of<ElementarySignal, T>::value;
 }

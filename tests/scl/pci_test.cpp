@@ -73,8 +73,8 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
     scl::Stream<scl::pci::Tlp> in;
     in.valid = pinIn().setName("in_valid");
 
-    BVec inHeader = pinIn(64_b).setName("in_header");
-    BVec inAddress = pinIn(32_b).setName("in_address");
+    UInt inHeader = pinIn(64_b).setName("in_header");
+    UInt inAddress = pinIn(32_b).setName("in_address");
     in.header = pack(inAddress, inHeader);
     in.data = pinIn(32_b).setName("in_data");
     in.ready = Bit{};
@@ -101,7 +101,7 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
     pinOut(out.header).setName("out_header");
     pinOut(out.data).setName("out_data");
 
-    Memory<BVec> testMem{ 1 << 16, avmm.writeData->getWidth() };
+    Memory<UInt> testMem{ 1 << 16, avmm.writeData->getWidth() };
     IF(*avmm.write & *avmm.ready)
         testMem[avmm.address(0, 16_b)] = *avmm.writeData;
     *avmm.readData = testMem[avmm.address(0, 16_b)];

@@ -17,11 +17,14 @@
 */
 #pragma once
 
-#include "Bit.h"
-#include "BitVector.h"
 #include "Scope.h"
 #include "Reg.h"
 #include "../hlim/Attributes.h"
+#include "Bit.h"
+#include "BVec.h"
+#include "UInt.h"
+#include "sint.h"
+
 
 #include <gatery/hlim/Clock.h>
 
@@ -135,9 +138,12 @@ namespace gtry {
             Clock(hlim::Clock *clock) : m_clock(clock) { }
 
             //Bit driveSignal();
-
             BVec operator() (const BVec& signal, const RegisterSettings &settings = {}) const;
             BVec operator() (const BVec& signal, const BVec& reset, const RegisterSettings &settings = {}) const;
+            UInt operator() (const UInt& signal, const RegisterSettings &settings = {}) const;
+            UInt operator() (const UInt& signal, const UInt& reset, const RegisterSettings &settings = {}) const;
+            SInt operator() (const SInt& signal, const RegisterSettings &settings = {}) const;
+            SInt operator() (const SInt& signal, const SInt& reset, const RegisterSettings &settings = {}) const;
             Bit operator() (const Bit& signal, const RegisterSettings &settings = {}) const;
             Bit operator() (const Bit& signal, const Bit& reset, const RegisterSettings &settings = {}) const;
 
@@ -150,8 +156,16 @@ namespace gtry {
             Clock(hlim::Clock *clock, const ClockConfig &config);
 
             void applyConfig(const ClockConfig &config);
-    };
 
+
+            template<BitVectorDerived T>
+            T buildReg(const T& signal, const RegisterSettings &settings = {}) const;
+            template<BitVectorDerived T>
+            T buildReg(const T& signal, const T& reset, const RegisterSettings &settings = {}) const;
+
+            hlim::Node_Register *prepRegister(std::string_view name, const RegisterSettings& settings) const;
+
+    };
 
     class ClockScope : public BaseScope<ClockScope>
     {
@@ -166,17 +180,12 @@ namespace gtry {
             Clock &m_clock;
     };
 
-    template<>
-    struct Reg<BVec>
+    template<IsElementarySignal T>
+    struct Reg<T>
     {
-        BVec operator () (const BVec& signal, const RegisterSettings &settings = {}) { return ClockScope::getClk()(signal, settings); }
-        BVec operator () (const BVec& signal, const BVec& reset, const RegisterSettings &settings = {}) { return ClockScope::getClk()(signal, reset, settings); }
-    };
-
-    template<>
-    struct Reg<Bit>
-    {
-        Bit operator () (const Bit& signal, const RegisterSettings &settings = {}) { return ClockScope::getClk()(signal, settings); }
-        Bit operator () (const Bit& signal, const Bit& reset, const RegisterSettings &settings = {}) { return ClockScope::getClk()(signal, reset, settings); }
+        T operator () (const T& signal, const RegisterSettings &settings = {}) { return ClockScope::getClk()(signal, settings); }
+        
+        template <std::convertible_to<T> RT>
+        T operator () (const T& signal, const RT& reset, const RegisterSettings &settings = {}) { return ClockScope::getClk()(signal, reset, settings); }
     };
 }

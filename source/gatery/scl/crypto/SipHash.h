@@ -20,7 +20,7 @@
 
 namespace gtry::scl
 {
-	using SipHashState = std::array<BVec, 4>;
+	using SipHashState = std::array<UInt, 4>;
 
 	class SipHash
 	{
@@ -30,13 +30,13 @@ namespace gtry::scl
 		virtual void enableRegister(bool state) { m_placeRegister = state; }
 		virtual size_t latency(size_t numBlocks, size_t blockSize) const { return m_placeRegister ? 2 * (m_messageWordRounds * (blockSize / 64) + m_finalizeRounds) : 0; }
 
-		virtual void initialize(SipHashState& state, const BVec& key);
-		virtual void block(SipHashState& state, const BVec& block);
-		virtual BVec finalize(SipHashState& state);
+		virtual void initialize(SipHashState& state, const UInt& key);
+		virtual void block(SipHashState& state, const UInt& block);
+		virtual UInt finalize(SipHashState& state);
 
-		virtual void sipOp(BVec& a, BVec& b, size_t aShift, size_t bShift);
+		virtual void sipOp(UInt& a, UInt& b, size_t aShift, size_t bShift);
 		virtual void round(SipHashState& state);
-		virtual BVec pad(const BVec& block, size_t msgByteSize);
+		virtual UInt pad(const UInt& block, size_t msgByteSize);
 
 	protected:
 		const size_t m_messageWordRounds;
@@ -45,6 +45,6 @@ namespace gtry::scl
 		bool m_placeRegister = false;
 	};
 
-	std::tuple<BVec, size_t> sipHash(const BVec& block, const BVec& key, bool placeregister = true);
+	std::tuple<UInt, size_t> sipHash(const UInt& block, const UInt& key, bool placeregister = true);
 
 }

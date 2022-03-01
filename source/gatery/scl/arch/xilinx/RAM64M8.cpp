@@ -50,7 +50,7 @@ RAM64M8::RAM64M8()
 	setOutputConnectionType(OUT_DO_H, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
 }
 
-BVec RAM64M8::setup64x7_SDP(const BVec &wrAddr, const BVec &wrData, const Bit &wrEn, const BVec &rdAddr)
+UInt RAM64M8::setup64x7_SDP(const UInt &wrAddr, const UInt &wrData, const Bit &wrEn, const UInt &rdAddr)
 {
 	Bit zero = '0';
 	NodeIO::connectInput(IN_DI_H, zero.getReadPort());

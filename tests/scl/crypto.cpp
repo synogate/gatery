@@ -32,7 +32,7 @@ using namespace gtry;
 BOOST_FIXTURE_TEST_CASE(Sha1RoundA, gtry::BoostUnitTestSimulationFixture)
 {
 	// create padded empty input
-	BVec msgBlock = "512x0";
+	UInt msgBlock = "512x0";
 	msgBlock.msb() = '1';
 
 	scl::Sha1Generator<> sha1, sha1ref;
@@ -47,7 +47,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundA, gtry::BoostUnitTestSimulationFixture)
 	uint32_t f = (h1 & h2) | (~h1 & h3);
 	uint32_t k = 0x5A827999;
 
-	BVec checkA = rotl(sha1ref.a, 5) + sha1ref.e + 0x80000000u + k + f;
+	UInt checkA = rotl(sha1ref.a, 5) + sha1ref.e + 0x80000000u + k + f;
 	sim_assert(sha1.a == checkA) << "a wrong " << sha1.a << " != " << checkA;
 	sim_assert(sha1.b == sha1ref.a) << "b " << sha1.b << " != " << sha1ref.a;
 	sim_assert(sha1.c == rotl(sha1ref.b, 30));
@@ -60,7 +60,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundA, gtry::BoostUnitTestSimulationFixture)
 BOOST_FIXTURE_TEST_CASE(Sha1RoundB, gtry::BoostUnitTestSimulationFixture)
 {
 	// create padded empty input
-	BVec msgBlock = "512x0";
+	UInt msgBlock = "512x0";
 	msgBlock.msb() = '1';
 
 	scl::Sha1Generator<> sha1, sha1ref;
@@ -75,7 +75,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundB, gtry::BoostUnitTestSimulationFixture)
 	uint32_t f = h1 ^ h2 ^ h3;
 	uint32_t k = 0x6ED9EBA1;
 
-	BVec checkA = rotl(sha1ref.a, 5) + sha1ref.e + 0x80000000u + k + f;
+	UInt checkA = rotl(sha1ref.a, 5) + sha1ref.e + 0x80000000u + k + f;
 	sim_assert(sha1.a == checkA) << "a wrong " << sha1.a << " != " << checkA;
 	sim_assert(sha1.b == sha1ref.a) << "b " << sha1.b << " != " << sha1ref.a;
 	sim_assert(sha1.c == rotl(sha1ref.b, 30));
@@ -88,7 +88,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundB, gtry::BoostUnitTestSimulationFixture)
 BOOST_FIXTURE_TEST_CASE(Sha1RoundC, gtry::BoostUnitTestSimulationFixture)
 {
 	// create padded empty input
-	BVec msgBlock = "512x0";
+	UInt msgBlock = "512x0";
 	msgBlock.msb() = '1';
 
 	scl::Sha1Generator<> sha1, sha1ref;
@@ -103,7 +103,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundC, gtry::BoostUnitTestSimulationFixture)
 	uint32_t f = (b & c) | (b & d) | (c & d);
 	uint32_t k = 0x8F1BBCDC;
 
-	BVec checkA = rotl(sha1ref.a, 5) + sha1ref.e + 0x80000000u + k + f;
+	UInt checkA = rotl(sha1ref.a, 5) + sha1ref.e + 0x80000000u + k + f;
 	sim_assert(sha1.a == checkA) << "a wrong " << sha1.a << " != " << checkA;
 	sim_assert(sha1.b == sha1ref.a) << "b " << sha1.b << " != " << sha1ref.a;
 	sim_assert(sha1.c == rotl(sha1ref.b, 30));
@@ -116,7 +116,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundC, gtry::BoostUnitTestSimulationFixture)
 BOOST_FIXTURE_TEST_CASE(Sha1RoundD, gtry::BoostUnitTestSimulationFixture)
 {
 	// create padded empty input
-	BVec msgBlock = "512x0";
+	UInt msgBlock = "512x0";
 	msgBlock.msb() = '1';
 
 	scl::Sha1Generator<> sha1, sha1ref;
@@ -131,7 +131,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundD, gtry::BoostUnitTestSimulationFixture)
 	uint32_t f = h1 ^ h2 ^ h3;
 	uint32_t k = 0xCA62C1D6;
 
-	BVec checkA = rotl(sha1ref.a, 5) + sha1ref.e + 0x80000000u + k + f;
+	UInt checkA = rotl(sha1ref.a, 5) + sha1ref.e + 0x80000000u + k + f;
 	sim_assert(sha1.a == checkA) << "a wrong " << sha1.a << " != " << checkA;
 	sim_assert(sha1.b == sha1ref.a) << "b " << sha1.b << " != " << sha1ref.a;
 	sim_assert(sha1.c == rotl(sha1ref.b, 30));
@@ -144,7 +144,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundD, gtry::BoostUnitTestSimulationFixture)
 BOOST_FIXTURE_TEST_CASE(Sha1, gtry::BoostUnitTestSimulationFixture)
 {
 	// create padded empty input
-	BVec msgBlock = "512x0";
+	UInt msgBlock = "512x0";
 	msgBlock.msb() = '1';
 
 	scl::Sha1Generator<> sha1;
@@ -154,8 +154,8 @@ BOOST_FIXTURE_TEST_CASE(Sha1, gtry::BoostUnitTestSimulationFixture)
 	sha1Engine.buildPipeline(sha1);
 	sha1.endBlock();
 
-	BVec hash = sha1.finalize();
-	BVec ref = "xDA39A3EE5E6B4B0D3255BFEF95601890AFD80709";
+	UInt hash = sha1.finalize();
+	UInt ref = "xDA39A3EE5E6B4B0D3255BFEF95601890AFD80709";
 
 	sim_assert(hash(0, 64) == ref(0, 64)); // TODO: implement large compare simulation
 	sim_assert(hash(64, 64) == ref(64, 64));
@@ -167,7 +167,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1, gtry::BoostUnitTestSimulationFixture)
 BOOST_FIXTURE_TEST_CASE(Sha2_256, gtry::BoostUnitTestSimulationFixture)
 {
 	// create padded empty input
-	BVec msgBlock = "512x0";
+	UInt msgBlock = "512x0";
 	msgBlock.msb() = '1';
 
 	scl::Sha2_256<> sha2;
@@ -177,8 +177,8 @@ BOOST_FIXTURE_TEST_CASE(Sha2_256, gtry::BoostUnitTestSimulationFixture)
 	sha2Engine.buildPipeline(sha2);
 	sha2.endBlock();
 
-	BVec hash = sha2.finalize();
-	BVec ref = "xE3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855";
+	UInt hash = sha2.finalize();
+	UInt ref = "xE3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855";
 
 	sim_assert(hash(0, 64) == ref(0, 64)); // TODO: implement large compare simulation
 	sim_assert(hash(64, 64) == ref(64, 64));
@@ -232,7 +232,7 @@ BOOST_FIXTURE_TEST_CASE(Md5, gtry::BoostUnitTestSimulationFixture)
 	};
 
 	// create padded empty input
-	BVec msgBlock = "512x0";
+	UInt msgBlock = "512x0";
 	msgBlock.msb() = '1';
 	scl::Md5Generator<> md5;
 	md5.beginBlock(msgBlock);
@@ -252,8 +252,8 @@ BOOST_FIXTURE_TEST_CASE(Md5, gtry::BoostUnitTestSimulationFixture)
 	BOOST_TEST(refImpl.a + 0x67452301 == 0xd98c1dd4);
 	md5.endBlock();
 
-	BVec hash = md5.finalize();
-	BVec ref = "xD41D8CD98F00B204E9800998ECF8427E";
+	UInt hash = md5.finalize();
+	UInt ref = "xD41D8CD98F00B204E9800998ECF8427E";
 
 	sim_assert(hash(0, 64) == ref(0, 64)) << hash << " != " << ref; // TODO: implement large compare simulation
 	sim_assert(hash(64, 64) == ref(64, 64)) << hash << " != " << ref;
@@ -282,7 +282,7 @@ BOOST_AUTO_TEST_CASE(SipHash64TestVisual)
 
 	scl::SipHashState state;
 
-	BVec key = "x0F0E0D0C0B0A09080706050403020100";
+	UInt key = "x0F0E0D0C0B0A09080706050403020100";
 	sip.initialize(state, key);
 
 	InputPins msg = pinIn(64_b).setName("msg");
@@ -360,7 +360,7 @@ BOOST_FIXTURE_TEST_CASE(SipHash64Test, gtry::BoostUnitTestSimulationFixture)
 
 	scl::SipHashState state;
 
-	BVec key = "x0F0E0D0C0B0A09080706050403020100";
+	UInt key = "x0F0E0D0C0B0A09080706050403020100";
 	sip.initialize(state, key);
 
 	InputPins msg = pinIn(64_b).setName("msg");
@@ -433,7 +433,7 @@ BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, gtry::BoostUnitTestSimulationFixture
 		blockVal |= i << (i * 8);
 		uint64_t ref = blockVal + (i + 1) * (1ull << 56); // add padding
 
-		BVec paddedBlock = sip.pad(ConstBVec(blockVal, (i + 1) * 8_b), i + 1);
+		UInt paddedBlock = sip.pad(ConstUInt(blockVal, (i + 1) * 8_b), i + 1);
 		HCL_NAMED(paddedBlock);
 		sim_assert(paddedBlock == ref);
 	}
@@ -459,9 +459,9 @@ BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, gtry::BoostUnitTestSimulationFixt
 	ClockScope clockScope(clock);
 
 	scl::TabulationHashing gen{ 16_b };
-	BVec data = pinIn(16_b).setName("data");
+	UInt data = pinIn(16_b).setName("data");
 	HCL_NAMED(data);
-	BVec hash = reg(gen(data), {.allowRetimingBackward=true});
+	UInt hash = reg(gen(data), {.allowRetimingBackward=true});
 
 	scl::AvalonNetworkSection ports;
 	gen.updatePorts(ports);

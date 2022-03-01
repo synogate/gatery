@@ -72,7 +72,7 @@ void GHDL::writeStandAloneProject(vhdl::VHDLExport& vhdlExport, std::string_view
     if (!vhdlExport.getName().empty())
         library = std::string("--work=") + std::string(vhdlExport.getName()) + ' ';
 
-	auto relativePath = std::filesystem::relative(vhdlExport.getDestination(), vhdlExport.getTestbenchDestination());
+    auto relativePath = std::filesystem::relative(vhdlExport.getDestination(), vhdlExport.getTestbenchDestination());
 
 
     for (std::filesystem::path& vhdl_file : sourceFiles(vhdlExport, true, false))

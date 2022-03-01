@@ -24,35 +24,35 @@
 
 namespace gtry::scl
 {
-	struct OneHot : BVec
+	struct OneHot : UInt
 	{
-		OneHot() : BVec() {}
+		OneHot() : UInt() {}
 		OneHot(const OneHot&) = default;
 
-		OneHot(BitWidth width) : BVec(width, Expansion::none) {}
-		explicit OneHot(const BVec& initValue) : BVec(initValue) {}
+		OneHot(BitWidth width) : UInt(width, Expansion::none) {}
+		explicit OneHot(const UInt& initValue) : UInt(initValue) {}
 
 		OneHot& operator = (const OneHot&) = default;
 
-		void setBit(const BVec& idx);
+		void setBit(const UInt& idx);
 	};
 
-	OneHot decoder(const BVec& in);
-	BVec encoder(const OneHot& in);
+	OneHot decoder(const UInt& in);
+	UInt encoder(const OneHot& in);
 
-	std::vector<Stream<BVec>> makeIndexList(const BVec& valids);
+	std::vector<Stream<UInt>> makeIndexList(const UInt& valids);
 
 	template<typename T, typename Iter>
 	Stream<T> priorityEncoder(Iter begin, Iter end);
 
 	struct EncoderResult
 	{
-		BVec index;
+		UInt index;
 		Bit valid;
 	};
 
-	EncoderResult priorityEncoder(const BVec& in);
-	EncoderResult priorityEncoderTree(const BVec& in, bool registerStep, size_t resultBitsPerStep = 2);
+	EncoderResult priorityEncoder(const UInt& in);
+	EncoderResult priorityEncoderTree(const UInt& in, bool registerStep, size_t resultBitsPerStep = 2);
 
 
 	// implementation 
@@ -67,7 +67,7 @@ namespace gtry::scl
 		for (Iter it = begin; it != end; ++it)
 			if (maxWidth < it->size())
 				maxWidth = it->size();
-		ret.value() = gtry::ConstBVec(BitWidth{ maxWidth });
+		ret.value() = gtry::ConstUInt(BitWidth{ maxWidth });
 
 		Bit anyValid = '0';
 		for(Iter it = begin; it != end; ++it)

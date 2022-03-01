@@ -11,10 +11,10 @@ gtry::scl::riscv::DualCycleRV::DualCycleRV(BitWidth instructionAddrWidth, BitWid
 
 }
 
-gtry::Memory<gtry::BVec>& gtry::scl::riscv::DualCycleRV::fetch(uint64_t entryPoint)
+gtry::Memory<gtry::UInt>& gtry::scl::riscv::DualCycleRV::fetch(uint64_t entryPoint)
 {
-	BVec addr = m_IP.getWidth();
-	BVec instruction = 32_b;
+	UInt addr = m_IP.getWidth();
+	UInt instruction = 32_b;
 	{
 		auto entRV = m_area.enter();
 
@@ -34,7 +34,7 @@ gtry::Memory<gtry::BVec>& gtry::scl::riscv::DualCycleRV::fetch(uint64_t entryPoi
 	return m_instructionMem;
 }
 
-gtry::BVec gtry::scl::riscv::DualCycleRV::fetch(const BVec& instruction, uint64_t entryPoint)
+gtry::UInt gtry::scl::riscv::DualCycleRV::fetch(const UInt& instruction, uint64_t entryPoint)
 {
 	Instruction pre_inst;
 	pre_inst.decode(instruction);
@@ -85,14 +85,14 @@ gtry::BVec gtry::scl::riscv::DualCycleRV::fetch(const BVec& instruction, uint64_
 	HCL_NAMED(m_storeResult);
 
 	// decode instruction in execute cycle
-	BVec instruction_execute = 32_b;
+	UInt instruction_execute = 32_b;
 	IF(!m_stall)
 		instruction_execute = instruction;
 	instruction_execute = reg(instruction_execute);
 	m_instr.decode(instruction_execute);
 	HCL_NAMED(m_instr);
 
-	BVec ip = m_IP.getWidth();
+	UInt ip = m_IP.getWidth();
 	ip = reg(ip, entryPoint);
 	HCL_NAMED(ip);
 
@@ -125,7 +125,7 @@ gtry::BVec gtry::scl::riscv::DualCycleRV::fetch(const BVec& instruction, uint64_
 	return ip;
 }
 
-void gtry::scl::riscv::DualCycleRV::setIP(const BVec& ip)
+void gtry::scl::riscv::DualCycleRV::setIP(const UInt& ip)
 {
 	IF(m_instructionValid)
 	{
@@ -134,7 +134,7 @@ void gtry::scl::riscv::DualCycleRV::setIP(const BVec& ip)
 	}
 }
 
-void gtry::scl::riscv::DualCycleRV::setResult(const BVec& result)
+void gtry::scl::riscv::DualCycleRV::setResult(const UInt& result)
 {
 	m_resultValid = '1';
 	m_resultData = zext(result);

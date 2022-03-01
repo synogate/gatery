@@ -430,10 +430,10 @@ void ReferenceSimulator::compileStaticEvaluation(const hlim::Circuit& circuit, c
             stack.pop_back();
             if (!nodeSet.contains(node)) {
                 // Ignore the export-only part as well as the export node
-                if (auto* expOverride = dynamic_cast<hlim::Node_ExportOverride*>(node)) {
+                if (dynamic_cast<hlim::Node_ExportOverride*>(node)) {
                     if (node->getDriver(hlim::Node_ExportOverride::SIM_INPUT).node != nullptr)
                         stack.push_back(node->getDriver(hlim::Node_ExportOverride::SIM_INPUT).node);
-                } else if (auto* expOverride = dynamic_cast<hlim::Node_Register*>(node)) { // add registers but stop there
+                } else if (dynamic_cast<hlim::Node_Register*>(node)) { // add registers but stop there
                     nodeSet.add(node);
                 } else {
                     nodeSet.add(node);

@@ -23,6 +23,6 @@
 
 namespace gtry::scl::arch::xilinx {
 
-Bit serdes(BVec data);
+Bit serdes(UInt data);
 
 }

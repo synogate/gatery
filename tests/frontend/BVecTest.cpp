@@ -32,7 +32,7 @@ BOOST_FIXTURE_TEST_CASE(BVecIterator, BoostUnitTestSimulationFixture)
 
 
 
-    BVec a = "b1100";
+    BVec a = BVec("b1100");
     BOOST_TEST(a.size() == 4);
     BOOST_TEST(!a.empty());
 
@@ -76,7 +76,7 @@ BOOST_FIXTURE_TEST_CASE(BVecIteratorArithmetic, BoostUnitTestSimulationFixture)
 
 
 
-    BVec a = "b1100";
+    BVec a = BVec("b1100");
 
     auto it1 = a.begin();
     auto it2 = it1 + 1;
@@ -112,7 +112,7 @@ BOOST_FIXTURE_TEST_CASE(BVecFrontBack, BoostUnitTestSimulationFixture)
 
 
 
-    BVec a = "b1100";
+    BVec a = BVec("b1100");
     sim_assert(!a.front());
     sim_assert(a.back());
     sim_assert(!a.lsb());
@@ -178,10 +178,10 @@ BOOST_FIXTURE_TEST_CASE(ConstantDataStringParser, BoostUnitTestSimulationFixture
 {
     using namespace gtry;
 
-    BOOST_CHECK(parseBVec("32x1bBXx").size() == 32);
-    BOOST_CHECK(parseBVec("x1bBX").size() == 16);
-    BOOST_CHECK(parseBVec("o170X").size() == 12);
-    BOOST_CHECK(parseBVec("b10xX").size() == 4);
+    BOOST_CHECK(parseBitVector("32x1bBXx").size() == 32);
+    BOOST_CHECK(parseBitVector("x1bBX").size() == 16);
+    BOOST_CHECK(parseBitVector("o170X").size() == 12);
+    BOOST_CHECK(parseBitVector("b10xX").size() == 4);
 }
 
 BOOST_FIXTURE_TEST_CASE(BVecSelectorAccess, BoostUnitTestSimulationFixture)
@@ -190,18 +190,18 @@ BOOST_FIXTURE_TEST_CASE(BVecSelectorAccess, BoostUnitTestSimulationFixture)
 
 
 
-    BVec a = "b11001110";
+    BVec a = BVec("b11001110");
 
     sim_assert(a(2, 4) == "b0011");
 
     sim_assert(a(1, -1) == "b1100111");
     sim_assert(a(-2, 2) == "b11");
-
+/*
     sim_assert(a(0, 4, 2) == "b1010");
     sim_assert(a(1, 4, 2) == "b1011");
 
     sim_assert(a(0, 4, 2)(0, 2, 2) == "b00");
     sim_assert(a(0, 4, 2)(1, 2, 2) == "b11");
-
+*/
     eval();
 }

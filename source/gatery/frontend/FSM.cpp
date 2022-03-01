@@ -20,13 +20,13 @@
 
 #include "Signal.h"
 #include "Bit.h"
-#include "BitVector.h"
+#include "BVec.h"
 #include "Scope.h"
 #include "ConditionalScope.h"
-#include "Registers.h"
 #include "Constant.h"
 #include "SignalMiscOp.h"
 #include "SignalCompareOp.h"
+#include "Clock.h"
 
 #include <gatery/utils/Exceptions.h>
 
@@ -36,26 +36,27 @@ thread_local FSM *FSM::m_fsmContext = nullptr;
     
     
 FSM::FSM(const Clock &clock, const BaseState &startState) : 
-    m_stateReg(8_b)
+    m_nextState(8_b)
 {
     m_fsmContext = this;
     
-    m_stateReg.setClock(clock);
-    m_stateReg.setReset("8b0");
-    m_stateReg.setName("fsm_state");
+    m_currentState = clock(m_nextState, "8b0");
+    m_currentState.setName("fsm_state");
+    
+    m_nextState = m_currentState;
 
-    m_state2encoding[&startState] = std::make_unique<BVec>(8_b);
+    m_state2encoding[&startState] = std::make_unique<UInt>(8_b);
     m_state2encoding[&startState]->setName(startState.m_name);
     m_state2id[&startState] = m_nextStateId++;
     m_unhandledStates.push_back(&startState);
     
     while (!m_unhandledStates.empty()) {
-        m_currentState = m_unhandledStates.back();
+        m_currentlyConstructingState = m_unhandledStates.back();
         m_unhandledStates.pop_back();
 
-        IF (m_stateReg.delay(1) == *m_state2encoding[m_currentState]) {
-            if (m_currentState->m_onActive)
-                m_currentState->m_onActive();
+        IF (m_currentState == *m_state2encoding[m_currentlyConstructingState]) {
+            if (m_currentlyConstructingState->m_onActive)
+                m_currentlyConstructingState->m_onActive();
         }
     }
     
@@ -68,14 +69,14 @@ void FSM::delayedSwitch(const BaseState &nextState)
 {
     if (!m_fsmContext->m_state2encoding.contains(&nextState)) {
         m_fsmContext->m_unhandledStates.push_back(&nextState);
-        m_fsmContext->m_state2encoding[&nextState] = std::make_unique<BVec>(8_b);
+        m_fsmContext->m_state2encoding[&nextState] = std::make_unique<UInt>(8_b);
         m_fsmContext->m_state2encoding[&nextState]->setName(nextState.m_name);
         m_fsmContext->m_state2id[&nextState] = m_fsmContext->m_nextStateId++;
     }    
     
-    m_fsmContext->m_stateReg = *m_fsmContext->m_state2encoding[&nextState];
-    if (m_fsmContext->m_currentState->m_onExit)
-        m_fsmContext->m_currentState->m_onExit();
+    m_fsmContext->m_nextState = *m_fsmContext->m_state2encoding[&nextState];
+    if (m_fsmContext->m_currentlyConstructingState->m_onExit)
+        m_fsmContext->m_currentlyConstructingState->m_onExit();
 }
 
 void FSM::delayedSwitch(const DelayedState &nextState)
@@ -89,15 +90,15 @@ void FSM::immediateSwitch(const ImmediateState &nextState)
 {
     if (!m_fsmContext->m_state2encoding.contains(&nextState)) {
         m_fsmContext->m_unhandledStates.push_back(&nextState);
-        m_fsmContext->m_state2encoding[&nextState] = std::make_unique<BVec>(8_b);
+        m_fsmContext->m_state2encoding[&nextState] = std::make_unique<UInt>(8_b);
         m_fsmContext->m_state2encoding[&nextState]->setName(nextState.m_name);
         m_fsmContext->m_state2id[&nextState] = m_fsmContext->m_nextStateId++;
     }
     
-    m_fsmContext->m_stateReg = *m_fsmContext->m_state2encoding[&nextState];
-    if (m_fsmContext->m_currentState->m_onExit)
-        m_fsmContext->m_currentState->m_onExit();
-    m_fsmContext->m_currentState = &nextState;
+    m_fsmContext->m_nextState = *m_fsmContext->m_state2encoding[&nextState];
+    if (m_fsmContext->m_currentlyConstructingState->m_onExit)
+        m_fsmContext->m_currentlyConstructingState->m_onExit();
+    m_fsmContext->m_currentlyConstructingState = &nextState;
     if (nextState.m_onActive)
         nextState.m_onActive();
 }
@@ -105,7 +106,7 @@ void FSM::immediateSwitch(const ImmediateState &nextState)
 Bit FSM::isInState(const BaseState &state) 
 {
     HCL_DESIGNCHECK_HINT(m_state2encoding.contains(&state), "State is unreachable in this FSM!");
-    return m_stateReg.delay(1) == *m_state2encoding[&state];
+    return m_currentState == *m_state2encoding[&state];
 }
 
 void delayedSwitch(const DelayedState &nextState)
@@ -124,5 +125,3 @@ void immediateSwitch(const ImmediateState &nextState)
 
 
 }
-
-

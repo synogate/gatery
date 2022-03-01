@@ -25,7 +25,7 @@ UART::Stream UART::receive(Bit rx)
     GroupScope entity(GroupScope::GroupType::ENTITY);
     entity.setName("uart_recv");
                                                                                             HCL_NAMED(rx);
-    for (auto i : utils::Range(stabilize_rx)) {
+    for ([[maybe_unused]] auto i : utils::Range(stabilize_rx)) {
         rx = reg(rx, true);
         setAttrib(rx, {.allowFusing=false});
     }
@@ -39,7 +39,7 @@ UART::Stream UART::receive(Bit rx)
     size_t bitLength = hlim::floor(ClockScope::getClk().getAbsoluteFrequency() / baudRate);
     size_t oneHalfBitLength = bitLength * 3 / 2;
 
-    BVec counter = BitWidth(1+utils::Log2C(oneHalfBitLength));
+    UInt counter = BitWidth(1+utils::Log2C(oneHalfBitLength));
     counter = reg(counter, 0);
                                                                                             HCL_NAMED(counter);
 
@@ -50,11 +50,11 @@ UART::Stream UART::receive(Bit rx)
     Bit dataValid = false;
                                                                                             HCL_NAMED(dataValid);
 
-    BVec data = BitWidth(dataBits);
+    UInt data = BitWidth(dataBits);
     data = reg(data);
                                                                                             HCL_NAMED(data);
 
-    BVec bitCounter = BitWidth(utils::Log2C(dataBits));
+    UInt bitCounter = BitWidth(utils::Log2C(dataBits));
     bitCounter = reg(bitCounter, 0);
                                                                                             HCL_NAMED(bitCounter);
 
@@ -88,7 +88,7 @@ UART::Stream UART::receive(Bit rx)
             Bit done = bitCounter == dataBits-1;
                                                                                             HCL_NAMED(done);
 
-            if ((1 << bitCounter.size()) == dataBits) {
+            if ((1u << bitCounter.size()) == dataBits) {
                 bitCounter += 1;
             } else {
                 IF (done)
@@ -141,11 +141,11 @@ Bit UART::send(Stream &stream)
 
     size_t bitLength = hlim::floor(ClockScope::getClk().getAbsoluteFrequency() / baudRate);
 
-    BVec counter = BitWidth(utils::Log2C(bitLength+2));
+    UInt counter = BitWidth(utils::Log2C(bitLength+2));
     counter = reg(counter, 0);
                                                                                             HCL_NAMED(counter);
 
-    BVec data = BitWidth(uint64_t(dataBits) + startBits + stopBits);
+    UInt data = BitWidth(uint64_t(dataBits) + startBits + stopBits);
     data = reg(data, 0);
                                                                                             HCL_NAMED(data);
 
@@ -159,7 +159,7 @@ Bit UART::send(Stream &stream)
     IF (idle) {
         stream.ready = true;
         IF (stream.valid) {
-            data = oext(pack(stream.data, ConstBVec(0, BitWidth{startBits})));
+            data = oext(pack(stream.data, ConstUInt(0, BitWidth{startBits})));
             counter = bitLength+1;
         }
     } ELSE {

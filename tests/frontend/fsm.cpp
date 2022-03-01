@@ -46,8 +46,8 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestGCD, data::make({0, 1
     unsigned maxTicks = 200;
 
     {
-        BVec x_vec = ConstBVec(x, 8_b);
-        BVec y_vec = ConstBVec(x, 8_b);
+        UInt x_vec = ConstUInt(x, 8_b);
+        UInt y_vec = ConstUInt(x, 8_b);
 
         Bit start;
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
@@ -55,7 +55,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestGCD, data::make({0, 1
         }, start);
 
 
-        BVec result;
+        UInt result;
         Bit done;
 
         {
@@ -73,10 +73,12 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestGCD, data::make({0, 1
             fsm::DelayedState running;
             HCL_NAMED(running);
 
-            Register<BVec> a(8_b);
-            a.setReset("b00000000");
-            Register<BVec> b(8_b);
-            b.setReset("b00000000");
+            UInt a = 8_b;
+            a = reg(a, "b00000000");
+            result = a;
+
+            UInt b = 8_b;
+            b = reg(b, "b00000000");
 #if 0
             // Euclid's gcd
             idle.onActive([&]{
@@ -102,14 +104,14 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestGCD, data::make({0, 1
             fsm::ImmediateState shifting;
             HCL_NAMED(shifting);
 
-            Register<BVec> d(4_b);
-            d.setReset("b0000");
+            UInt d = 4_b;
+            d = reg(d, "b0000");
 
             idle.onActive([&]{
                 IF (start) {
                     a = x_vec;
                     b = y_vec;
-                    d = ConstBVec(0, 4_b);
+                    d = ConstUInt(0, 4_b);
                     fsm::delayedSwitch(running);
                 }
             });
@@ -132,18 +134,18 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestGCD, data::make({0, 1
                     }
                     IF (a_odd & b_odd) {
                         IF (a < b) {
-                            BVec help = a;
+                            UInt help = a;
                             a = b;
                             b = help;
                         } ELSE {
-                            BVec difference = a - b;
+                            UInt difference = a - b;
                             a = difference >> 1;
                         }
                     }
                 }
             });
             shifting.onActive([&]{
-                IF(d == ConstBVec(0, 4_b)) {
+                IF(d == ConstUInt(0, 4_b)) {
                     fsm::immediateSwitch(idle);
                 } ELSE {
                     a <<= 1;
@@ -152,25 +154,25 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestGCD, data::make({0, 1
             });
 #endif
             fsm::FSM stateMachine(clock, idle);
-            result = a.delay(1);
-            sim_debug() << result << "," << a << "," << a.delay(1);
+            sim_debug() << result << "," << a;
             HCL_NAMED(result);
             done = stateMachine.isInState(idle);
             HCL_NAMED(done);
         }
 
-        BVec ticks(8_b);
+        UInt ticks(8_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
             context.set(0, context.getTick());
         }, ticks);
 
-        sim_assert((ticks < ConstBVec(maxTicks-1, 8_b)) | done) << "The state machine should be idle after " << maxTicks << " cycles";
-        BVec gtruth = ConstBVec(x, 8_b);
-        sim_assert((ticks < ConstBVec(maxTicks-1, 8_b)) | (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
+        sim_assert((ticks < ConstUInt(maxTicks-1, 8_b)) | done) << "The state machine should be idle after " << maxTicks << " cycles";
+        UInt gtruth = ConstUInt(x, 8_b);
+        sim_assert((ticks < ConstUInt(maxTicks-1, 8_b)) | (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
     }
 
     // @TODO: Choose optimization postprocessor accordingly
     //design.getCircuit().postprocess(optimize);
+
     design.getCircuit().postprocess(DefaultPostprocessing{});
 
     runTicks(clock.getClk(), maxTicks);
@@ -199,15 +201,15 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, FSMlessTestGCD, data::mak
     unsigned maxTicks = 200;
 
     {
-        BVec x_vec = ConstBVec(x, 8_b);
-        BVec y_vec = ConstBVec(x, 8_b);
+        UInt x_vec = ConstUInt(x, 8_b);
+        UInt y_vec = ConstUInt(x, 8_b);
 
         Bit start;
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
             context.set(0, context.getTick() == 0);
             }, start);
 
-        BVec result;
+        UInt result;
         Bit done = false;
 
         {
@@ -220,10 +222,10 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, FSMlessTestGCD, data::mak
                 .setComment("Statemachine to compute the GCD of two 8-bit integers.");
 
 
-            Register<BVec> a(8_b);
-            a.setReset("b00000000");
-            Register<BVec> b(8_b);
-            b.setReset("b00000000");
+            UInt a = 8_b;
+            a = reg(a, "b00000000");
+            UInt b = 8_b;
+            b = reg(b, "b00000000");
 
             IF(start) {
                 a = x_vec;
@@ -244,17 +246,17 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, FSMlessTestGCD, data::mak
             HCL_NAMED(result);
             HCL_NAMED(done);
 
-            sim_debug() << "a is " << a.delay(1) << " and b is " << b.delay(1);
+            sim_debug() << "a is " << a << " and b is " << b;
         }
 
-        BVec ticks(8_b);
+        UInt ticks(8_b);
         simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
             context.set(0, context.getTick());
             }, ticks);
 
-        sim_assert((ticks < ConstBVec(maxTicks - 1, 8_b)) | done) << "The state machine should be idle after " << maxTicks << " cycles";
-        BVec gtruth = ConstBVec(x, 8_b);
-        sim_assert((ticks < ConstBVec(maxTicks - 1, 8_b)) | (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
+        sim_assert((ticks < ConstUInt(maxTicks - 1, 8_b)) | done) << "The state machine should be idle after " << maxTicks << " cycles";
+        UInt gtruth = ConstUInt(x, 8_b);
+        sim_assert((ticks < ConstUInt(maxTicks - 1, 8_b)) | (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
     }
 
     // @TODO: Choose optimization postprocessor accordingly

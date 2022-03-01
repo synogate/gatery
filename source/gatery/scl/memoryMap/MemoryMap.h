@@ -47,15 +47,15 @@ namespace gtry::scl
 		virtual void enterScope(std::string scope) { }
 		virtual void leaveScope() { }
 
-		virtual void ro(const BVec& value, RegDesc desc) {}
+		virtual void ro(const UInt& value, RegDesc desc) {}
 		virtual void ro(const Bit& value, RegDesc desc) {}
-		virtual Bit rw(BVec& value, RegDesc desc) { return Bit{}; }
+		virtual Bit rw(UInt& value, RegDesc desc) { return Bit{}; }
 		virtual Bit rw(Bit& value, RegDesc desc) { return Bit{}; }
-		virtual Bit wo(BVec& value, RegDesc desc) { return rw(value, std::move(desc)); }
+		virtual Bit wo(UInt& value, RegDesc desc) { return rw(value, std::move(desc)); }
 		virtual Bit wo(Bit& value, RegDesc desc) { return rw(value, std::move(desc)); }
 
 		Bit add(Bit& value, RegDesc desc);
-		Bit add(BVec& value, RegDesc desc);
+		Bit add(UInt& value, RegDesc desc);
 
 		template<typename T> void stage(Memory<T>& mem);
 		template<typename T> void stage(std::vector<Memory<T>>& mem);
@@ -82,7 +82,7 @@ namespace gtry::scl
 		return '0';
 	}
 
-	inline Bit scl::MemoryMap::add(BVec& value, RegDesc desc)
+	inline Bit scl::MemoryMap::add(UInt& value, RegDesc desc)
 	{
 		if (m_flags == (F_READ | F_WRITE))
 			return rw(value, desc);
@@ -101,7 +101,7 @@ namespace gtry::scl
 	{
 		struct SigVis : CompoundNameVisitor
 		{
-			virtual void operator () (BVec& a) final
+			virtual void operator () (UInt& a) final
 			{
 				mmap->add(a, { .name = makeName() });
 			}
@@ -115,7 +115,7 @@ namespace gtry::scl
 		};
 
 
-		BVec cmdAddr = "32xX";
+		UInt cmdAddr = "32xX";
 		Bit cmdTrigger = wo(cmdAddr, {
 			.name = "cmd"
 		});
@@ -157,7 +157,7 @@ namespace gtry::scl
 
 		struct SigVis : CompoundNameVisitor
 		{
-			virtual void operator () (BVec& a) final
+			virtual void operator () (UInt& a) final
 			{
 				mmap->add(a, { .name = makeName() });
 				regCount++;
@@ -201,7 +201,7 @@ namespace gtry::scl
 			triggerDescShort = "Read from memory";
 			triggerDescLong = "Indicates the direction of the transfer. '0' transfers from the staging register(s) to the addressed memory, '1' transfers from addressed memory to the staging register(s).";
 		}
-		BVec cmdAddr = 32_b;
+		UInt cmdAddr = 32_b;
 		Bit cmdTrigger = rw(cmdAddr, RegDesc{
 			.name = "cmd",
 			.desc = desc,
@@ -237,7 +237,7 @@ namespace gtry::scl
 		stage = reg(stage);
 
 		Bit readTrigger = reg(readEnabled() & cmdTrigger & cmdAddr.msb() == '1', '0');
-		BVec readTabAddr = reg(cmdAddr(memTabSel));
+		UInt readTabAddr = reg(cmdAddr(memTabSel));
 		HCL_NAMED(readTrigger);
 		HCL_NAMED(readTabAddr);
 
@@ -257,10 +257,10 @@ namespace gtry::scl
 		}
 
 		cmdAddr = pack(
-			ConstBVec(m_flags, 8_b),
-			ConstBVec(mems.size(), 8_b),
-			ConstBVec(memWidth.value, 8_b),
-			ConstBVec(v.regCount, 8_b)
+			ConstUInt(m_flags, 8_b),
+			ConstUInt(mems.size(), 8_b),
+			ConstUInt(memWidth.value, 8_b),
+			ConstUInt(v.regCount, 8_b)
 		);
 	}
 

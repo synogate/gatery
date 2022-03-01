@@ -42,7 +42,7 @@ namespace gtry::scl
 		return *this;
 	}
 
-	BVec gtry::scl::TabulationHashing::operator()(const BVec& data)
+	UInt gtry::scl::TabulationHashing::operator()(const UInt& data)
 	{
 		HCL_ASSERT_HINT(m_tables.empty(), "invalid state");
 
@@ -52,14 +52,14 @@ namespace gtry::scl
 		const size_t numTables = (data.getWidth().value + m_symbolWidth.value - 1) / m_symbolWidth.value;
 		m_tables.resize(numTables);
 
-		BVec hash = zext(0, m_hashWidth.value);
+		UInt hash = zext(0, m_hashWidth.value);
 		for (size_t t = 0; t < numTables; ++t)
 		{
 			const size_t addrWidth = std::min(m_symbolWidth.value, data.size() - t * m_symbolWidth.value);
-			Memory<BVec>& table = m_tables[t];
+			Memory<UInt>& table = m_tables[t];
 			table.setup(1ull << addrWidth, m_hashWidth);
 
-			const BVec& addr = data(t * m_symbolWidth.value, addrWidth);
+			const UInt& addr = data(t * m_symbolWidth.value, addrWidth);
 			hash ^= table[addr];
 		}
 		HCL_NAMED(hash);

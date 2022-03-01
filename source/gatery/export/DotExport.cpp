@@ -248,7 +248,7 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
                 case hlim::ConnectionType::BOOL:
                     file << "BOOL"; break;
                 case hlim::ConnectionType::BITVEC:
-                    file << "BVEC(" << type.width << ')'; break;
+                    file << "UInt(" << type.width << ')'; break;
                 case hlim::ConnectionType::DEPENDENCY:
                     file << "DEPENDENCY"; break;
             }
@@ -534,7 +534,7 @@ void DotExport::writeMergedDotFile(const hlim::Circuit &circuit, const hlim::Con
             case hlim::ConnectionType::BOOL:
                 file << "BOOL"; break;
             case hlim::ConnectionType::BITVEC:
-                file << "BVEC(" << type.width << ')'; break;
+                file << "UInt(" << type.width << ')'; break;
             case hlim::ConnectionType::DEPENDENCY:
                 file << "DEPENDENCY"; break;
         }

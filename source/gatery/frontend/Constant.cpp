@@ -18,7 +18,8 @@
 #include "gatery/pch.h"
 #include "Constant.h"
 
-#include "BitVector.h"
+#include "BVec.h"
+#include "UInt.h"
 
 #include <gatery/hlim/coreNodes/Node_Constant.h>
 
@@ -43,7 +44,7 @@ sim::DefaultBitVectorState gtry::parseBit(bool value)
     return parseBit(value ? '1' : '0');
 }
 
-sim::DefaultBitVectorState gtry::parseBVec(std::string_view value)
+sim::DefaultBitVectorState gtry::parseBitVector(std::string_view value)
 {
     using namespace boost::spirit::x3;
 
@@ -67,7 +68,7 @@ sim::DefaultBitVectorState gtry::parseBVec(std::string_view value)
             ret.resize(num.size() * bps);
         }
         else
-            HCL_DESIGNCHECK_HINT(ret.size() >= num.size() * bps, "string BVec constant width is to small for its value");
+            HCL_DESIGNCHECK_HINT(ret.size() >= num.size() * bps, "string UInt constant width is to small for its value");
 
         for (size_t i = 0; i < num.size(); ++i)
         {
@@ -95,7 +96,7 @@ sim::DefaultBitVectorState gtry::parseBVec(std::string_view value)
 
         if (ret.size() == 0)
             ret.resize(width);
-        HCL_DESIGNCHECK_HINT(ret.size() >= width, "string BVec constant width is to small for its value");
+        HCL_DESIGNCHECK_HINT(ret.size() >= width, "string UInt constant width is to small for its value");
 
         ret.setRange(sim::DefaultConfig::DEFINED, 0, width, true);
         for (size_t i = 0; i < width; ++i)
@@ -114,13 +115,13 @@ sim::DefaultBitVectorState gtry::parseBVec(std::string_view value)
     }
     catch (const expectation_failure<std::string_view::iterator>&)
     {
-        HCL_DESIGNCHECK_HINT(false, "parsing of BVec literal failed (32xF, b0, ...)");
+        HCL_DESIGNCHECK_HINT(false, "parsing of UInt literal failed (32xF, b0, ...)");
     }
 
     return ret;
 }
 
-sim::DefaultBitVectorState gtry::parseBVec(uint64_t value, size_t width)
+sim::DefaultBitVectorState gtry::parseBitVector(uint64_t value, size_t width)
 {
     //HCL_ASSERT(width <= sizeof(size_t) * 8);
 
@@ -133,9 +134,10 @@ sim::DefaultBitVectorState gtry::parseBVec(uint64_t value, size_t width)
     return ret;
 }
 
+
 gtry::BVec gtry::ConstBVec(uint64_t value, BitWidth width, std::string_view name)
 {
-    auto* node = DesignScope::createNode<hlim::Node_Constant>(parseBVec(value, width.value), hlim::ConnectionType::BITVEC);
+    auto* node = DesignScope::createNode<hlim::Node_Constant>(parseBitVector(value, width.value), hlim::ConnectionType::BITVEC);
     if (!name.empty())
         node->setName(std::string(name));
 
@@ -143,6 +145,27 @@ gtry::BVec gtry::ConstBVec(uint64_t value, BitWidth width, std::string_view name
 }
 
 gtry::BVec gtry::ConstBVec(BitWidth width, std::string_view name)
+{
+    sim::DefaultBitVectorState value;
+    value.resize(width.value);
+    value.setRange(sim::DefaultConfig::DEFINED, 0, width.value, false);
+
+    auto* node = DesignScope::createNode<hlim::Node_Constant>(value, hlim::ConnectionType::BITVEC);
+    if (!name.empty())
+        node->setName(std::string(name));
+    return SignalReadPort(node);
+}
+
+gtry::UInt gtry::ConstUInt(uint64_t value, BitWidth width, std::string_view name)
+{
+    auto* node = DesignScope::createNode<hlim::Node_Constant>(parseBitVector(value, width.value), hlim::ConnectionType::BITVEC);
+    if (!name.empty())
+        node->setName(std::string(name));
+
+    return SignalReadPort(node);
+}
+
+gtry::UInt gtry::ConstUInt(BitWidth width, std::string_view name)
 {
     sim::DefaultBitVectorState value;
     value.resize(width.value);

@@ -88,7 +88,7 @@ class InterfacePackageContent {
 template<typename T>
 void InterfacePackageContent::addBVecConstant(const T &c, std::string_view comment)
 {
-	auto v = parseBVec(c.getValue());
+	auto v = parseBitVector(c.getValue());
 
 	std::stringstream v_str;
 	v_str << '"' << v << '"';	
@@ -99,7 +99,7 @@ void InterfacePackageContent::addBVecConstant(const T &c, std::string_view comme
 template<typename T>
 void InterfacePackageContent::addBitConstant(const T &c, std::string_view comment)
 {
-	auto v = parseBVec(c.getValue());
+	auto v = parseBitVector(c.getValue());
 
 	std::stringstream v_str;
 	v_str << '\'' << v << '\'';	
@@ -111,7 +111,7 @@ void InterfacePackageContent::addBitConstant(const T &c, std::string_view commen
 template<typename T>
 void InterfacePackageContent::addBVecConstant(const T &c)
 {
-	auto v = parseBVec(c.getValue());
+	auto v = parseBitVector(c.getValue());
 
 	std::stringstream v_str;
 	v_str << '"' << v << '"';	
@@ -122,7 +122,7 @@ void InterfacePackageContent::addBVecConstant(const T &c)
 template<typename T>
 void InterfacePackageContent::addBitConstant(const T &c)
 {
-	auto v = parseBVec(c.getValue());
+	auto v = parseBitVector(c.getValue());
 
 	std::stringstream v_str;
 	v_str << '\'' << v << '\'';	

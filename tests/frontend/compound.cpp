@@ -28,7 +28,7 @@ using BoostUnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
 
 struct SimpleStruct
 {
-    gtry::BVec vec = gtry::BVec(3_b);
+    gtry::UInt vec = gtry::UInt(3_b);
     gtry::Bit bit;
 };
 
@@ -52,11 +52,11 @@ BOOST_FIXTURE_TEST_CASE(CompoundName, BoostUnitTestSimulationFixture)
     setName(bit, "bit");
     BOOST_CHECK(bit.getName() == "bit");
 
-    BVec vec{4_b };
+    UInt vec{4_b };
     setName(vec, "vec");
     BOOST_CHECK(vec.getName() == "vec");
 
-    std::vector<BVec> vecvec( 3, vec );
+    std::vector<UInt> vecvec( 3, vec );
     setName(vecvec, "vecvec");
     BOOST_CHECK(vecvec[0].getName() == "vecvec0");
     BOOST_CHECK(vecvec[1].getName() == "vecvec1");
@@ -75,10 +75,10 @@ BOOST_FIXTURE_TEST_CASE(CompoundWidth, BoostUnitTestSimulationFixture)
     Bit bit;
     BOOST_TEST(width(bit) == 1_b);
 
-    BVec vec{ 4_b };
+    UInt vec{ 4_b };
     BOOST_TEST(width(vec) == 4_b);
 
-    std::vector<BVec> vecvec( 3, vec );
+    std::vector<UInt> vecvec( 3, vec );
     BOOST_TEST(width(vecvec) == 3 * 4_b);
 
 }
@@ -91,20 +91,20 @@ BOOST_FIXTURE_TEST_CASE(CompoundPack, BoostUnitTestSimulationFixture)
 
     {
         Bit bit = '1';
-        BVec bitPack = pack(bit);
+        UInt bitPack = pack(bit);
         sim_assert(bitPack[0] == '1');
     }
 
     {
-        BVec vec = 5;
-        BVec vecPack = pack(vec);
+        UInt vec = 5;
+        UInt vecPack = pack(vec);
         sim_assert(vecPack == 5);
     }
 
     {
-        BVec vec = 5u;
-        std::vector<BVec> vecvec( 3, vec );
-        BVec vecPack = pack(vecvec);
+        UInt vec = 5u;
+        std::vector<UInt> vecvec( 3, vec );
+        UInt vecPack = pack(vecvec);
         sim_assert(vecPack(0,3) == 5u);
         sim_assert(vecPack(3,3) == 5u);
         sim_assert(vecPack(6,3) == 5u);
@@ -123,11 +123,11 @@ BOOST_FIXTURE_TEST_CASE(CompoundUnpack, BoostUnitTestSimulationFixture)
     for (size_t i = 0; i < 7; ++i)
     {
         in.list.emplace_back();
-        in.list.back().vec = ConstBVec(i, 3_b);
+        in.list.back().vec = ConstUInt(i, 3_b);
         in.list.back().bit = i < 4;
     }
 
-    BVec inPacked = pack(in);
+    UInt inPacked = pack(in);
 
     RichStruct out;
     out.list.resize(in.list.size());
@@ -137,7 +137,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundUnpack, BoostUnitTestSimulationFixture)
     sim_assert(out.bit == '0') << 'b';
     for (size_t i = 0; i < 7; ++i)
     {
-        sim_assert(out.list[i].vec == ConstBVec(i, 3_b)) << 'c';
+        sim_assert(out.list[i].vec == ConstUInt(i, 3_b)) << 'c';
         sim_assert(out.list[i].bit == (i < 4)) << 'd';
     }
 
@@ -154,8 +154,8 @@ BOOST_FIXTURE_TEST_CASE(ConstructFromSignal, BoostUnitTestSimulationFixture)
     Bit dbit = constructFrom(sbit);
     sim_assert(sbit == '1');
 
-    BVec svec = "0x101A";
-    BVec dvec = constructFrom(svec);
+    UInt svec = "0x101A";
+    UInt dvec = constructFrom(svec);
     sim_assert(svec == "0x101A");
 
     int sval = 5;
@@ -187,7 +187,7 @@ BOOST_FIXTURE_TEST_CASE(ConstructFromCompound, BoostUnitTestSimulationFixture)
     for (size_t i = 0; i < 7; ++i)
     {
         in.list.emplace_back();
-        in.list.back().vec = ConstBVec(i, 3_b);
+        in.list.back().vec = ConstUInt(i, 3_b);
         in.list.back().bit = i < 4;
     }
 

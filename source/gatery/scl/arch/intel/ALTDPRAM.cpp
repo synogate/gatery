@@ -188,35 +188,35 @@ void ALTDPRAM::connectInput(Inputs input, const Bit &bit)
 			NodeIO::connectInput(input, bit.getReadPort());
 		break;
 		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to bvec input of ALTDPRAM!");
+			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to UInt input of ALTDPRAM!");
 	}
 }
 
-void ALTDPRAM::connectInput(Inputs input, const BVec &bvec)
+void ALTDPRAM::connectInput(Inputs input, const UInt &UInt)
 {
 	switch (input) {
 		case IN_DATA:
-			HCL_DESIGNCHECK_HINT(bvec.size() == m_width, "Data input bvec to ALTDPRAM has different width than previously specified!");
-			NodeIO::connectInput(input, bvec.getReadPort());
+			HCL_DESIGNCHECK_HINT(UInt.size() == m_width, "Data input UInt to ALTDPRAM has different width than previously specified!");
+			NodeIO::connectInput(input, UInt.getReadPort());
 		break;
 		case IN_RDADDRESS:
-			NodeIO::connectInput(input, bvec.getReadPort());
-			HCL_DESIGNCHECK_HINT((1ull << bvec.size()) == m_depth, "RD-Address input bvec to ALTDPRAM has different width than previously specified!");
+			NodeIO::connectInput(input, UInt.getReadPort());
+			HCL_DESIGNCHECK_HINT((1ull << UInt.size()) == m_depth, "RD-Address input UInt to ALTDPRAM has different width than previously specified!");
 		break;
 		case IN_WRADDRESS:
-			NodeIO::connectInput(input, bvec.getReadPort());
-			HCL_DESIGNCHECK_HINT((1ull << bvec.size()) == m_depth, "WR-Address input bvec to ALTDPRAM has different width than previously specified!");
+			NodeIO::connectInput(input, UInt.getReadPort());
+			HCL_DESIGNCHECK_HINT((1ull << UInt.size()) == m_depth, "WR-Address input UInt to ALTDPRAM has different width than previously specified!");
 		break;
 		case IN_BYTEENA:
-			NodeIO::connectInput(input, bvec.getReadPort());
-			m_genericParameters["WIDTH_BYTEENA"] = std::to_string(bvec.size());
+			NodeIO::connectInput(input, UInt.getReadPort());
+			m_genericParameters["WIDTH_BYTEENA"] = std::to_string(UInt.size());
 		break;
 		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect bvec to bit input of ALTDPRAM!");
+			HCL_DESIGNCHECK_HINT(false, "Trying to connect UInt to bit input of ALTDPRAM!");
 	}
 }
 
-BVec ALTDPRAM::getOutputBVec(Outputs output)
+UInt ALTDPRAM::getOutputUInt(Outputs output)
 {
 	return SignalReadPort(hlim::NodePort{this, (size_t) output});
 }

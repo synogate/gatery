@@ -78,4 +78,109 @@ namespace gtry::utils {
 
     template<typename Type>
     struct isBitVectorSignalLike<Type, typename std::enable_if_t<isBitVectorSignal<Type>::value || isBitVectorSignalLikeOnly<Type>::value>> : std::true_type { };
+
+
+}
+
+namespace gtry {
+
+	template<typename T>
+	struct isCString : std::false_type { };
+
+	template<unsigned S>
+	struct isCString<char[S]> : std::true_type { };
+
+	template<typename T>
+	concept CString = isCString<T>::value;
+
+
+    class Bit;
+	template<typename T>
+	concept BitLiteral = std::same_as<T, char> || std::same_as<T, bool>;
+
+	template<typename T>
+	concept BitValue = std::same_as<Bit, T> || BitLiteral<T>;
+
+
+    class BaseBitVector;
+    template<typename T>
+    concept BitVectorDerived = std::is_base_of<BaseBitVector, T>::value;
+
+
+
+	class BVec;
+	template<typename T>
+	concept BVecIntegralLiteral = false;
+
+	template<typename T>
+	concept BVecLiteral = false;
+
+	template<typename T>
+	concept BVecValue = std::same_as<BVec, T> || BVecLiteral<T>;
+
+
+
+	class UInt;
+	template<typename T>
+	concept UIntIntegralLiteral = std::integral<T> && !std::same_as<T, char> && !std::same_as<T, bool>;
+
+	template<typename T>
+	concept UIntLiteral = UIntIntegralLiteral<T> || CString<T>;
+
+	template<typename T>
+	concept UIntValue = std::same_as<UInt, T> || UIntLiteral<T>;
+
+
+	class SInt;
+	template<typename T>
+	concept SIntIntegralLiteral = false;
+
+	template<typename T>
+	concept SIntLiteral = false;
+
+	template<typename T>
+	concept SIntValue = std::same_as<SInt, T> || SIntLiteral<T>;
+
+
+    template<typename T>
+    concept ArithmeticSignal = std::same_as<SInt, T> || std::same_as<UInt, T>;
+
+
+
+    template<typename T>
+    concept BitVectorLiteral = BVecLiteral<T> || UIntLiteral<T> || SIntLiteral<T>;
+
+    template<typename T>
+    concept BitVectorValue = BVecValue<T> || UIntValue<T> || SIntValue<T>;
+
+
+
+    template<typename Type>
+    struct is_signal : std::false_type { using sig_type = Type; };
+
+    template<BitValue Type>
+    struct is_signal<Type> : std::true_type { using sig_type = Bit; };
+
+    template<BVecValue Type>
+    struct is_signal<Type> : std::true_type { using sig_type = BVec; };
+
+    template<UIntValue Type>
+    struct is_signal<Type> : std::true_type { using sig_type = UInt; };
+
+    template<SIntValue Type>
+    struct is_signal<Type> : std::true_type { using sig_type = SInt; };
+
+
+    template<typename Type>
+    concept signal_convertible = is_signal<Type>::value;
+
+
+
+    template <typename T, typename = int>
+    struct resizable : std::false_type {};
+
+    template <typename T>
+    struct resizable <T, decltype((void)std::declval<T>().resize(1), 0)> : std::true_type {};
+
+
 }

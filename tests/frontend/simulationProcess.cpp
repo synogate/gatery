@@ -36,7 +36,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
     {
         ClockScope clkScp(clock);
 
-        BVec counter(8_b);
+        UInt counter(8_b);
         counter = reg(counter, 0);
 
         auto incrementPin = pinIn(8_b);
@@ -82,7 +82,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_BigInt_small, BoostUnitTestSimulationFixture)
     {
         ClockScope clkScp(clock);
 
-        BVec counter(40_b);
+        UInt counter(40_b);
         counter = reg(counter, 0);
 
         auto incrementPin = pinIn(40_b);
@@ -130,7 +130,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_BigInt, BoostUnitTestSimulationFixture)
     {
         ClockScope clkScp(clock);
 
-        BVec counter(128_b);
+        UInt counter(128_b);
         counter = reg(counter, 0);
 
         auto incrementPin = pinIn(128_b);
