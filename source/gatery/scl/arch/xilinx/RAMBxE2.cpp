@@ -279,7 +279,7 @@ void RAMBxE2::connectInput(Inputs input, const Bit &bit)
 	}
 }
 
-void RAMBxE2::connectInput(Inputs input, const UInt &input)
+void RAMBxE2::connectInput(Inputs input, const UInt &vec)
 {
 	size_t mult = 1;
 	if (m_type == RAMB36E2)
@@ -289,36 +289,36 @@ void RAMBxE2::connectInput(Inputs input, const UInt &input)
 		case IN_ADDR_A_RDADDR:
 		case IN_ADDR_B_WRADDR:
 			if (m_type == RAMB36E2) {
-				HCL_DESIGNCHECK_HINT(input.size() == 15, "Data input UInt has wrong width!");
+				HCL_DESIGNCHECK_HINT(vec.size() == 15, "Data input UInt has wrong width!");
 			} else
-				HCL_DESIGNCHECK_HINT(input.size() == 14, "Data input UInt has wrong width!");
+				HCL_DESIGNCHECK_HINT(vec.size() == 14, "Data input UInt has wrong width!");
 		break;
 		case IN_CAS_DIN_A:
 		case IN_CAS_DIN_B:
-			HCL_DESIGNCHECK_HINT(input.size() == 16*mult, "Data input UInt has wrong width!");
+			HCL_DESIGNCHECK_HINT(vec.size() == 16*mult, "Data input UInt has wrong width!");
 		break;
 		case IN_CAS_DINP_A:
 		case IN_CAS_DINP_B:
-			HCL_DESIGNCHECK_HINT(input.size() == 2*mult, "Data input UInt has wrong width!");
+			HCL_DESIGNCHECK_HINT(vec.size() == 2*mult, "Data input UInt has wrong width!");
 		break;
 		case IN_DIN_A_DIN:
 		case IN_DIN_B_DIN:
-			HCL_DESIGNCHECK_HINT(input.size() == 16*mult, "Data input UInt has wrong width!");
+			HCL_DESIGNCHECK_HINT(vec.size() == 16*mult, "Data input UInt has wrong width!");
 		break;
 		case IN_DINP_A_DINP:
 		case IN_DINP_B_DINP:
-			HCL_DESIGNCHECK_HINT(input.size() == 2*mult, "Data input UInt has wrong width!");
+			HCL_DESIGNCHECK_HINT(vec.size() == 2*mult, "Data input UInt has wrong width!");
 		break;
 		case IN_WE_A:
-			HCL_DESIGNCHECK_HINT(input.size() == 2*mult, "Data input UInt has wrong width!");
+			HCL_DESIGNCHECK_HINT(vec.size() == 2*mult, "Data input UInt has wrong width!");
 		break;
 		case IN_WE_B_WE:
-			HCL_DESIGNCHECK_HINT(input.size() == 4*mult, "Data input UInt has wrong width!");
+			HCL_DESIGNCHECK_HINT(vec.size() == 4*mult, "Data input UInt has wrong width!");
 		break;		
 		default:
 			HCL_DESIGNCHECK_HINT(false, "Trying to connect UInt to bit input!");
 	}
-	NodeIO::connectInput(input, input.getReadPort());
+	NodeIO::connectInput(input, vec.getReadPort());
 }
 
 UInt RAMBxE2::getOutputUInt(Outputs output)

@@ -126,17 +126,17 @@ namespace gtry {
 
     // allow implicit conversion from literals to signals when used in a logical operation with Bit
     template<BitVectorLiteral Type>
-    inline auto land(const Type& lhs, const Bit& rhs) { return land<typename is_signal<Type>::sig_type>(lhs, rhs); }
+    inline auto land(const Type& lhs, const Bit& rhs) { return land<ValueToBaseSignal<Type>>(lhs, rhs); }
     template<BitVectorLiteral Type>
-    inline auto lnand(const Type& lhs, const Bit& rhs) { return lnand<typename is_signal<Type>::sig_type>(lhs, rhs); }
+    inline auto lnand(const Type& lhs, const Bit& rhs) { return lnand<ValueToBaseSignal<Type>>(lhs, rhs); }
     template<BitVectorLiteral Type>
-    inline auto lor(const Type& lhs, const Bit& rhs) { return lor<typename is_signal<Type>::sig_type>(lhs, rhs); }
+    inline auto lor(const Type& lhs, const Bit& rhs) { return lor<ValueToBaseSignal<Type>>(lhs, rhs); }
     template<BitVectorLiteral Type>
-    inline auto lnor(const Type& lhs, const Bit& rhs) { return lnor<typename is_signal<Type>::sig_type>(lhs, rhs); }
+    inline auto lnor(const Type& lhs, const Bit& rhs) { return lnor<ValueToBaseSignal<Type>>(lhs, rhs); }
     template<BitVectorLiteral Type>
-    inline auto lxor(const Type& lhs, const Bit& rhs) { return lxor<typename is_signal<Type>::sig_type>(lhs, rhs); }
+    inline auto lxor(const Type& lhs, const Bit& rhs) { return lxor<ValueToBaseSignal<Type>>(lhs, rhs); }
     template<BitVectorLiteral Type>
-    inline auto lxnor(const Type& lhs, const Bit& rhs) { return lxnor<typename is_signal<Type>::sig_type>(lhs, rhs); }
+    inline auto lxnor(const Type& lhs, const Bit& rhs) { return lxnor<ValueToBaseSignal<Type>>(lhs, rhs); }
 
     template<BitVectorValue Type>
     inline auto operator & (const Type& lhs, const Bit& rhs) { return land(lhs, rhs); }
@@ -153,11 +153,11 @@ namespace gtry {
 
 
 
-    template<IsElementarySignal SignalType>
+    template<BaseSignal SignalType>
     inline SignalType& operator &= (SignalType& lhs, const Bit& rhs) { return lhs = land(lhs, rhs); }
-    template<IsElementarySignal SignalType>
+    template<BaseSignal SignalType>
     inline SignalType& operator |= (SignalType& lhs, const Bit& rhs) { return lhs = lor(lhs, rhs); }
-    template<IsElementarySignal SignalType>
+    template<BaseSignal SignalType>
     inline SignalType& operator ^= (SignalType& lhs, const Bit& rhs) { return lhs = lxor(lhs, rhs); }
 
 

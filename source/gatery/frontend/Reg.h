@@ -20,10 +20,13 @@
 
 #include "Bit.h"
 
+#include <boost/hana/ext/std/array.hpp>
 #include <boost/hana/ext/std/tuple.hpp>
+#include <boost/hana/ext/std/pair.hpp>
 #include <boost/hana/transform.hpp>
 #include <boost/hana/zip.hpp>
 #include <boost/pfr.hpp>
+
 
 namespace gtry
 {
@@ -41,10 +44,10 @@ namespace gtry
 	template<BaseSignal T, std::convertible_to<T> Tr>
 	T reg(const T& val, const Tr& resetVal, const RegisterSettings& settings = {});
 
-	template<CompoundSiganl T>
+	template<CompoundSignal T>
 	T reg(const T& val, const RegisterSettings& settings = {});
 
-	template<CompoundSiganl T, std::convertible_to<T> Tr>
+	template<CompoundSignal T, std::convertible_to<T> Tr>
 	T reg(const T& val, const Tr& resetVal, const RegisterSettings& settings = {});
 
 	template<ContainerSignal T>
@@ -108,7 +111,7 @@ namespace gtry
 		);
 	}
 
-	template<CompoundSiganl T>
+	template<CompoundSignal T>
 	T reg(const T& val, const RegisterSettings& settings)
 	{
 		return std::make_from_tuple<T>(
@@ -121,7 +124,7 @@ namespace gtry
 		);
 	}
 
-    template<CompoundSiganl T, std::convertible_to<T> Tr>
+    template<CompoundSignal T, std::convertible_to<T> Tr>
     T reg(const T& val, const Tr& resetVal, const RegisterSettings& settings)
     {
 		const T& resetValT = resetVal;

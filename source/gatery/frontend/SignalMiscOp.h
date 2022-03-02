@@ -117,7 +117,7 @@ class SignalTapHelper
         template<typename type, typename = std::enable_if_t<std::is_arithmetic<type>::value>>
         SignalTapHelper &operator<<(type number) { return (*this) << boost::lexical_cast<std::string>(number); }
 
-        template<typename SignalType, typename = std::enable_if_t<utils::isElementarySignal<SignalType>::value>>
+        template<BaseSignal SignalType>
         SignalTapHelper &operator<<(const SignalType &signal) {
             unsigned port = (unsigned)addInput(signal.getReadPort());
             m_node->addMessagePart(hlim::Node_SignalTap::FormattedSignal{.inputIdx = port, .format = 0});

@@ -57,7 +57,7 @@ namespace gtry {
         m_nodePort = {.node = constant, .port = 0ull };
     }
 
-    Bit gtry::reg(const Bit& val, const RegisterSettings& settings)
+    Bit reg(const Bit& val, const RegisterSettings& settings)
     {
         if(auto rval = val.getResetValue())
             return reg<Bit>(val, *rval, settings);
@@ -65,7 +65,7 @@ namespace gtry {
         return reg<Bit>(val, settings);
     }
 
-    Bit gtry::reg(const Bit& val)
+    Bit reg(const Bit& val)
     {
         return reg(val, RegisterSettings{});
     }

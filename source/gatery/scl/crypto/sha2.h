@@ -47,7 +47,7 @@ namespace gtry::scl
 
 		void init()
 		{
-			kTable = std::vector<BVec>{
+			kTable = std::vector<UInt>{
 				"x428a2f98", "x71374491", "xb5c0fbcf", "xe9b5dba5", "x3956c25b", "x59f111f1", "x923f82a4", "xab1c5ed5",
 				"xd807aa98", "x12835b01", "x243185be", "x550c7dc3", "x72be5d74", "x80deb1fe", "x9bdc06a7", "xc19bf174",
 				"xe49b69c1", "xefbe4786", "x0fc19dc6", "x240ca1cc", "x2de92c6f", "x4a7484aa", "x5cb0a9dc", "x76f988da",

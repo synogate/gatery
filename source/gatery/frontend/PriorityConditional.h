@@ -27,7 +27,7 @@
 
 namespace gtry {
     
-template<typename DataSignal, typename = std::enable_if_t<utils::isSignal<DataSignal>::value>>
+template<BaseSignal DataSignal>
 class PriorityConditional
 {
     public:

@@ -166,7 +166,7 @@ class RAMBxE2 : public gtry::hlim::Node_External
 		//RAMBxE2 &setupInitData(const sim::DefaultBitVectorState &init, bool useParity = false);
 
 		void connectInput(Inputs input, const Bit &bit);
-		void connectInput(Inputs input, const UInt &input);
+		void connectInput(Inputs input, const UInt &vec);
 		UInt getOutputUInt(Outputs output);
 		Bit getOutputBit(Outputs output);
 

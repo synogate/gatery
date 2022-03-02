@@ -51,6 +51,10 @@ namespace gtry
 		virtual void operator () (UInt& a) { }
 		virtual void operator () (UInt& a, const UInt& b) { }
 
+		virtual void operator () (const SInt& a, const SInt& b) { }
+		virtual void operator () (SInt& a) { }
+		virtual void operator () (SInt& a, const SInt& b) { }
+
 		virtual void operator () (const Bit& a, const Bit& b) { }
 		virtual void operator () (Bit& a) { }
 		virtual void operator () (Bit& vec, const Bit& b) { }
@@ -93,6 +97,14 @@ namespace gtry
 	};
 
 	template<>
+	struct VisitCompound<SInt>
+	{
+		void operator () (SInt& a, const SInt& b, CompoundVisitor& v, size_t flags) { v(a, b); }
+		void operator () (SInt& a, CompoundVisitor& v) { v(a); }
+		void operator () (const SInt& a, const SInt& b, CompoundVisitor& v) { v(a, b); }
+	};
+
+	template<>
 	struct VisitCompound<Bit>
 	{
 		void operator () (Bit& a, const Bit& b, CompoundVisitor& v, size_t flags) { v(a, b); }
@@ -103,23 +115,22 @@ namespace gtry
 	namespace internal
 	{
 		// Forward all meta data
-		template<typename T> requires (!signal_convertible<T>)
+		template<typename T> requires (!BaseSignalValue<T>)
 		const T& signalOTron(const T& ret) { return ret; }
 
 		// Forward all signals without copy or conversion
-		inline const BVec& signalOTron(const BVec& vec) { return vec; }
-		inline const UInt& signalOTron(const UInt& vec) { return vec; }
-		inline const Bit& signalOTron(const Bit& bit) { return bit; }
+		template<BaseSignal T>
+		inline const T& signalOTron(const T& vec) { return vec; }
 
 		// Convert everything that can be converted to a signal
-		template<signal_convertible T>
-		auto signalOTron(const T& ret) { return typename is_signal<T>::sig_type{ret}; }
+		template<BaseSignalValue T> requires (!BaseSignal<T>)
+		auto signalOTron(const T& ret) { return ValueToBaseSignal<T>{ret}; }
 	}
 
 	template<typename T>
 	void visitForcedSignalCompound(const T& sig, CompoundVisitor& v)
 	{
-		VisitCompound<typename is_signal<T>::sig_type>{}(
+		VisitCompound<ValueToBaseSignal<T>>{}(
 			internal::signalOTron(sig),
 			internal::signalOTron(sig),
 			v

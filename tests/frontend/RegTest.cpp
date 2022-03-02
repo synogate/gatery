@@ -23,7 +23,7 @@
 
 struct TestCompound
 {
-    gtry::BVec a;
+    gtry::UInt a;
     int b;
 };
 
@@ -78,14 +78,14 @@ BOOST_FIXTURE_TEST_CASE(ContainerRegister, gtry::BoostUnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
 
-    std::vector<BVec> inSignal{ BVec{pinIn(2_b)}, BVec{pinIn(2_b)} };
-    std::vector<BVec> inSignalReset{ BVec{"b00"}, BVec{"b11"} };
+    std::vector<UInt> inSignal{ UInt{pinIn(2_b)}, UInt{pinIn(2_b)} };
+    std::vector<UInt> inSignalReset{ UInt{"b00"}, UInt{"b11"} };
 
-    std::vector<BVec> outSignal = reg(inSignal);
+    std::vector<UInt> outSignal = reg(inSignal);
     pinOut(outSignal[0]);
     pinOut(outSignal[1]);
 
-    std::vector<BVec> outSignalReset = reg(inSignal, inSignalReset);
+    std::vector<UInt> outSignalReset = reg(inSignal, inSignalReset);
     pinOut(outSignalReset[0]);
     pinOut(outSignalReset[1]);
 
@@ -122,14 +122,14 @@ BOOST_FIXTURE_TEST_CASE(ArrayRegister, gtry::BoostUnitTestSimulationFixture)
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
 
-    std::array<BVec,2> inSignal{ BVec{pinIn(2_b)}, BVec{pinIn(2_b)} };
-    std::array<BVec,2> inSignalReset{ BVec{"b00"}, BVec{"b11"} };
+    std::array<UInt,2> inSignal{ UInt{pinIn(2_b)}, UInt{pinIn(2_b)} };
+    std::array<UInt,2> inSignalReset{ UInt{"b00"}, UInt{"b11"} };
 
-    std::array<BVec,2> outSignal = reg(inSignal);
+    std::array<UInt,2> outSignal = reg(inSignal);
     pinOut(outSignal[0]);
     pinOut(outSignal[1]);
 
-    std::array<BVec,2> outSignalReset = reg(inSignal, inSignalReset);
+    std::array<UInt,2> outSignalReset = reg(inSignal, inSignalReset);
     pinOut(outSignalReset[0]);
     pinOut(outSignalReset[1]);
 
@@ -160,19 +160,19 @@ BOOST_FIXTURE_TEST_CASE(TupleRegister, gtry::BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-    static_assert(Signal<std::tuple<int, BVec>>);
-    static_assert(Signal<std::pair<BVec, int>>);
+    static_assert(Signal<std::tuple<int, UInt>>);
+    static_assert(Signal<std::pair<UInt, int>>);
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
 
-    std::tuple<int, BVec> inSignal{ 0, BVec{pinIn(2_b)} };
+    std::tuple<int, UInt> inSignal{ 0, UInt{pinIn(2_b)} };
     std::tuple<int, unsigned> inSignalReset{ 1, 3 };
 
-    std::tuple<int, BVec> outSignal = reg(inSignal);
+    std::tuple<int, UInt> outSignal = reg(inSignal);
     pinOut(get<1>(outSignal));
 
-    std::tuple<int, BVec> outSignalReset = reg(inSignal, inSignalReset);
+    std::tuple<int, UInt> outSignalReset = reg(inSignal, inSignalReset);
     pinOut(get<1>(outSignalReset));
 
     addSimulationProcess([=, this]()->SimProcess {
@@ -198,18 +198,18 @@ BOOST_FIXTURE_TEST_CASE(MapRegister, gtry::BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-    static_assert(Signal<std::map<int, BVec>>);
+    static_assert(Signal<std::map<int, UInt>>);
 
     Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
     ClockScope clockScope(clock);
 
-    std::map<int, BVec> inSignal;
+    std::map<int, UInt> inSignal;
     inSignal[0] = pinIn(2_b);
 
     std::map<int, int> inSignalReset = { {0,3} };
     
-    std::map<int, BVec> outSignal = reg(inSignal);
-    std::map<int, BVec> outSignalReset = reg(inSignal, inSignalReset);
+    std::map<int, UInt> outSignal = reg(inSignal);
+    std::map<int, UInt> outSignalReset = reg(inSignal, inSignalReset);
     
     addSimulationProcess([&, this]()->SimProcess {
 

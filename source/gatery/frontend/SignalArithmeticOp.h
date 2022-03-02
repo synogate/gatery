@@ -41,8 +41,6 @@ namespace gtry {
     inline SInt add(const SInt& lhs, const SInt& rhs) { return makeNode(hlim::Node_Arithmetic::ADD, { lhs, rhs }); }
     inline SInt sub(const SInt& lhs, const SInt& rhs) { return makeNode(hlim::Node_Arithmetic::SUB, { lhs, rhs }); }
     inline SInt mul(const SInt& lhs, const SInt& rhs) { return makeNode(hlim::Node_Arithmetic::MUL, { lhs, rhs }); }
-    inline SInt div(const SInt& lhs, const SInt& rhs) { return makeNode(hlim::Node_Arithmetic::DIV, { lhs, rhs }); }
-    inline SInt rem(const SInt& lhs, const SInt& rhs) { return makeNode(hlim::Node_Arithmetic::REM, { lhs, rhs }); }
 
     inline UInt add(const UInt& lhs, const UInt& rhs) { return makeNode(hlim::Node_Arithmetic::ADD, { lhs, rhs }); }
     inline UInt sub(const UInt& lhs, const UInt& rhs) { return makeNode(hlim::Node_Arithmetic::SUB, { lhs, rhs }); }
@@ -53,21 +51,19 @@ namespace gtry {
 
     // Adding or subtracting bits always involves zero extension
     // No implicit conversion allowed (do we want this?)
-    template<ArithmeticSignal Type>
+    template<ArithmeticValue Type>
     inline Type add(const Type& lhs, const Bit& rhs) { return makeNode(hlim::Node_Arithmetic::ADD, { lhs, zext(rhs) }); }
-    template<ArithmeticSignal Type>
+    template<ArithmeticValue Type>
     inline Type sub(const Type& lhs, const Bit& rhs) { return makeNode(hlim::Node_Arithmetic::SUB, { lhs, zext(rhs) }); }
-    template<ArithmeticSignal Type>
+    template<ArithmeticValue Type>
     inline Type add(const Bit& lhs, const Type& rhs) { return makeNode(hlim::Node_Arithmetic::ADD, { zext(lhs), rhs }); }
-    template<std::same_as<SInt> Type>
+    template<SIntValue Type>
     inline Type sub(const Bit& lhs, const Type& rhs) { return makeNode(hlim::Node_Arithmetic::SUB, { zext(lhs), rhs }); }
 
 
     inline SInt operator + (const SInt& lhs, const SInt& rhs) { return add(lhs, rhs); }
     inline SInt operator - (const SInt& lhs, const SInt& rhs) { return sub(lhs, rhs); }
     inline SInt operator * (const SInt& lhs, const SInt& rhs) { return mul(lhs, rhs); }
-    inline SInt operator / (const SInt& lhs, const SInt& rhs) { return div(lhs, rhs); }
-    inline SInt operator % (const SInt& lhs, const SInt& rhs) { return rem(lhs, rhs); }
 
     inline UInt operator + (const UInt& lhs, const UInt& rhs) { return add(lhs, rhs); }
     inline UInt operator - (const UInt& lhs, const UInt& rhs) { return sub(lhs, rhs); }
