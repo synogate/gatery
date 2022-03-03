@@ -168,6 +168,10 @@ BOOST_FIXTURE_TEST_CASE(SimProc_BigInt, BoostUnitTestSimulationFixture)
     runTicks(clock.getClk(), 5*10 + 3); // do some extra rounds without generator changing the input
 }
 
+struct test_exception_t : std::runtime_error
+{
+    test_exception_t() : std::runtime_error("Test exception") {}
+};
 
 BOOST_FIXTURE_TEST_CASE(SimProc_ExceptionForwarding, BoostUnitTestSimulationFixture)
 {
@@ -179,7 +183,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_ExceptionForwarding, BoostUnitTestSimulationFixt
 
     addSimulationProcess([=]()->SimProcess{
         co_await WaitFor(Seconds(3));
-        throw std::runtime_error("Test exception");
+        throw test_exception_t{};
     });
 
 

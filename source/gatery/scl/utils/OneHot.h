@@ -65,9 +65,9 @@ namespace gtry::scl
 
 		size_t maxWidth = 0;
 		for (Iter it = begin; it != end; ++it)
-			if (maxWidth < it->size())
-				maxWidth = it->size();
-		ret.value() = gtry::ConstBVec(BitWidth{ maxWidth });
+			if (maxWidth < it->data.size())
+				maxWidth = it->data.size();
+		ret.data = gtry::ConstBVec(BitWidth{ maxWidth });
 
 		Bit anyValid = '0';
 		for(Iter it = begin; it != end; ++it)
@@ -77,7 +77,7 @@ namespace gtry::scl
 			IF(*it->valid & !anyValid)
 			{
 				anyValid = '1';
-				ret.value() = it->value();
+				ret.data = it->data;
 				ret.valid = it->valid;
 				it->ready = ret.ready;
 			}

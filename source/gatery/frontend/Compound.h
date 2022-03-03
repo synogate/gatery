@@ -346,27 +346,6 @@ namespace gtry
 		}
 	};
 
-	template<typename... Comp>
-	BitWidth width(const Comp& ... compound)
-	{
-		struct WidthVisitor : CompoundVisitor
-		{
-			void operator () (const BVec& vec, const BVec&) final {
-				m_totalWidth += vec.size();
-			}
-
-			void operator () (const Bit&, const Bit&) final {
-				m_totalWidth++;
-			}
-
-			size_t m_totalWidth = 0;
-		};
-
-		WidthVisitor v;
-		(VisitCompound<Comp>{}(compound, compound, v), ...);
-		return BitWidth{ v.m_totalWidth };
-	}
-
 	template<typename Comp>
 	void setName(Comp& compound, std::string_view prefix)
 	{
@@ -385,4 +364,42 @@ namespace gtry
 	void setName(const Bit&, std::string_view) = delete;
 	void setName(const BVec&, std::string_view) = delete;
 
+	namespace internal
+	{
+		void width(const BaseSignal auto& signal, BitWidth& sum);
+		void width(const ContainerSignal auto& signal, BitWidth& sum);
+		void width(const CompoundSiganl auto& signal, BitWidth& sum);
+		void width(const TupleSignal auto& signal, BitWidth& sum);
+
+		void width(const BaseSignal auto& signal, BitWidth& sum)
+		{
+			sum += signal.getWidth();
+		}
+
+		void width(const ContainerSignal auto& signal, BitWidth& sum)
+		{
+			for(auto& it : signal)
+				width(it, sum);
+		}
+
+		void width(const CompoundSiganl auto& signal, BitWidth& sum)
+		{
+			width(boost::pfr::structure_tie(signal), sum);
+		}
+
+		void width(const TupleSignal auto& signal, BitWidth& sum)
+		{
+			boost::hana::for_each(signal, [&](const auto& member) {
+				if constexpr(Signal<decltype(member)>)
+					width(member, sum);
+			});
+		}
+	}
+
+	BitWidth width(const Signal auto& ...args)
+	{
+		BitWidth sum;
+		(internal::width(args, sum), ...);
+		return sum;
+	}
 }

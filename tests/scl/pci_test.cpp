@@ -75,8 +75,8 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 
     BVec inHeader = pinIn(64_b).setName("in_header");
     BVec inAddress = pinIn(32_b).setName("in_address");
-    in.header = pack(inAddress, inHeader);
-    in.data = pinIn(32_b).setName("in_data");
+    in.data.header = pack(inAddress, inHeader);
+    in.data.data = pinIn(32_b).setName("in_data");
     in.ready = Bit{};
     pinOut(*in.ready).setName("in_ready");
 
@@ -98,8 +98,8 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
     scl::Stream<scl::pci::Tlp>& out = uut.tx();
     out.ready = pinIn().setName("out_ready");
     pinOut(*out.valid).setName("out_valid");
-    pinOut(out.header).setName("out_header");
-    pinOut(out.data).setName("out_data");
+    pinOut(out.data.header).setName("out_header");
+    pinOut(out.data.data).setName("out_data");
 
     Memory<BVec> testMem{ 1 << 16, avmm.writeData->getWidth() };
     IF(*avmm.write & *avmm.ready)
@@ -155,7 +155,7 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
                     const TbReq req = reqQueue.front();
                     reqQueue.pop();
                     simu(inAddress) = req.address;
-                    simu(in.data) = req.data;
+                    simu(in.data.data) = req.data;
 
                     auto tlp = TlpBuilder{}.length(1);
                     tlp.requester(rng(), rng(), rng());
@@ -197,10 +197,10 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
                     uint64_t reqTlp = cplQueue.front();
                     cplQueue.pop();
 
-                    auto resTlpState = simu(out.header).eval();
+                    auto resTlpState = simu(out.data.header).eval();
                     uint64_t hdr = resTlpState.extractNonStraddling(sim::DefaultConfig::VALUE, 0, 64);
                     uint64_t dst = resTlpState.extractNonStraddling(sim::DefaultConfig::VALUE, 64, 32);
-                    uint64_t data = simu(out.data);
+                    uint64_t data = simu(out.data.data);
 
                     BOOST_TEST(gtry::utils::bitfieldExtract(hdr, 24, 8) == 0x4A);
 

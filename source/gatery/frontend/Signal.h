@@ -52,10 +52,11 @@ namespace gtry {
         Expansion expansionPolicy = Expansion::none;
 
         SignalReadPort expand(size_t width, hlim::ConnectionType::Interpretation resultType) const;
+
+        BitWidth width() const { return node->getOutputConnectionType(port).width; }
     };
 
     inline const hlim::ConnectionType& connType(const SignalReadPort& port) { return port.node->getOutputConnectionType(port.port); }
-    inline size_t width(const SignalReadPort& port) { return connType(port).width; }
 
     class ElementarySignal {
     public:
@@ -117,12 +118,12 @@ namespace gtry {
     namespace internal
     {
         template<typename T>
-        concept DynamicContainer = not BaseSignal<T> and requires(T v, typename T::value_type e)
+        concept DynamicContainer = not BaseSignal<T> and requires(T v, std::remove_cvref_t<T> vv, typename std::remove_reference_t<T>::value_type e)
         {
             *v.begin();
             v.end();
             v.size();
-            v.insert(v.end(), e);
+            vv.insert(v.end(), e);
         };
     }
 
@@ -131,7 +132,7 @@ namespace gtry {
     {};
 
     template<typename T>
-    concept ContainerSignal = internal::DynamicContainer<T> and is_signal<T>::value;
+    concept ContainerSignal = internal::DynamicContainer<T> and is_signal<std::remove_reference_t<T>>::value;
 
     //// compound (simple aggregate for signales and metadata)
     // this is the most loose definition of signal as a struc may also contain no signal
@@ -149,10 +150,10 @@ namespace gtry {
 
     template<typename T>
     concept CompoundSiganl =
-        std::is_class_v<T> and
-        std::is_aggregate_v<T> and
+        std::is_class_v<std::remove_reference_t<T>> and
+        std::is_aggregate_v<std::remove_reference_t<T>> and
         !internal::DynamicContainer<T> and
-        !internal::is_std_array<T>::value;
+        !internal::is_std_array<std::remove_reference_t<T>>::value;
 
     template<CompoundSiganl T>
     struct is_signal<T> : std::true_type
@@ -163,9 +164,9 @@ namespace gtry {
     template<typename T>
     concept TupleSignal = 
         not CompoundSiganl<T> and (
-            (internal::is_std_array<T>::value and is_signal<typename T::value_type>::value) or
-            (!internal::is_std_array<T>::value and requires(T v) {
-                    std::tuple_size<T>::value;
+            (internal::is_std_array<std::remove_reference_t<T>>::value and is_signal<typename std::remove_reference_t<T>::value_type>::value) or
+            (!internal::is_std_array<std::remove_reference_t<T>>::value and requires(T v) {
+                    std::tuple_size<std::remove_reference_t<T>>::value;
                 }
             )
         );
@@ -190,7 +191,7 @@ namespace gtry {
         lhs = l.getReadPort();
         rhs = r.getReadPort();
 
-        const size_t maxWidth = std::max(width(lhs), width(rhs));
+        const size_t maxWidth = std::max(lhs.width(), rhs.width()).bits();
 
         hlim::ConnectionType::Interpretation type = hlim::ConnectionType::BITVEC;
         if(maxWidth == 1 &&

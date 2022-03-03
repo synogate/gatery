@@ -53,7 +53,7 @@ gtry::scl::pci::AvmmBridge::AvmmBridge(Stream<Tlp>& rx, AvalonMM& avmm, const Pc
 
 void gtry::scl::pci::AvmmBridge::setup(Stream<Tlp>& rx, AvalonMM& avmm, const PciId& cplId)
 {
-	HCL_DESIGNCHECK_HINT(rx.header.getWidth() == 96_b, "reduce tlp header address using discardHighAddressBits");
+	HCL_DESIGNCHECK_HINT(rx.data.header.getWidth() == 96_b, "reduce tlp header address using discardHighAddressBits");
 	m_cplId = cplId;
 	generateFifoBridge(rx, avmm);
 }
@@ -64,36 +64,36 @@ void gtry::scl::pci::AvmmBridge::generateFifoBridge(Stream<Tlp>& rx, AvalonMM& a
 
 	auto entity = Area{ "AvmmBridge" }.enter();
 
-	sim_assert(!*rx.valid | rx.header(TlpOffset::type) == 0) << "not a memory tlp";
+	sim_assert(!*rx.valid | rx.data.header(TlpOffset::type) == 0) << "not a memory tlp";
 
 	// decode command
-	avmm.address = rx.header(64, 32_b);
+	avmm.address = rx.data.header(64, 32_b);
 	avmm.address(0, 2_b) = 0;
 
-	avmm.write = rx.transfer() & isDataTlp(rx.header);
+	avmm.write = rx.transfer() & isDataTlp(rx.data.header);
 	avmm.read = rx.transfer() & !*avmm.write;
-	avmm.writeData = rx.data;
+	avmm.writeData = rx.data.data;
 
 	// store cpl data for command
 	size_t pipelineDepth = std::max<size_t>(avmm.maximumPendingReadTransactions, 1);
 	Fifo<MemTlpCplData> resQueue{ pipelineDepth , MemTlpCplData{} };
 	
 	MemTlpCplData req;
-	req.decode(rx.header);
+	req.decode(rx.data.header);
 	HCL_NAMED(req);
 	resQueue.push(req, *avmm.read);
 
 	// create tx tlp
 	avmm.createReadDataValid();
 	m_tx.valid = *avmm.readDataValid;
-	m_tx.header = "96x00000000000000044a000001";
-	m_tx.header(48, 16_b) = pack(m_cplId);
-	m_tx.data = *avmm.readData;
+	m_tx.data.header = "96x00000000000000044a000001";
+	m_tx.data.header(48, 16_b) = pack(m_cplId);
+	m_tx.data.data = *avmm.readData;
 
 	// join response and cpl data
 	MemTlpCplData res;
 	resQueue.pop(res, *m_tx.valid);
-	res.encode(m_tx.header);
+	res.encode(m_tx.data.header);
 
 	*rx.ready = !resQueue.full();
 	if (avmm.ready)
@@ -145,6 +145,14 @@ void gtry::scl::pci::IntelPTileCompleter::generate()
 {
 	auto entity = Area{ "IntelPTileCompleter" }.enter();
 
+	static_assert(Signal<BVec&>);
+	static_assert(Signal<Tlp&>);
+	static_assert(Signal<Stream<Tlp>&>);
+	static_assert(CompoundSiganl<Stream<Tlp>>);
+	static_assert(Signal<std::array<Stream<Tlp>, 2>&>);
+
+
+
 	Bit anyValid = '0';
 	std::array<Stream<Tlp>, 2> in_reduced;
 	for (size_t i = 0; i < in.size(); ++i)
@@ -153,16 +161,16 @@ void gtry::scl::pci::IntelPTileCompleter::generate()
 		in[i].valid.emplace();
 		in[i].sop.emplace();
 		in[i].eop.emplace();
-		in[i].header = 128_b;
-		in[i].data = 32_b;
+		in[i].data.header = 128_b;
+		in[i].data.data = 32_b;
 
-		BVec header = swapEndian(in[i].header, 8_b, 32_b);
+		BVec header = swapEndian(in[i].data.header, 8_b, 32_b);
 		IF(header[29]) // 4 DW tlp header
 			header(64, 32_b) = header(96, 32_b);
 
 		in_reduced[i].valid = *in[i].valid & *in[i].sop & *in[i].eop;
 		in_reduced[i].data = in[i].data;
-		in_reduced[i].header = header(0, 96_b);
+		in_reduced[i].data.header = header(0, 96_b);
 		anyValid |= *in_reduced[i].valid;
 	}
 

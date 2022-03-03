@@ -31,6 +31,11 @@ namespace gtry
 		bool operator == (const BitWidth&) const = default;
 		bool operator != (const BitWidth&) const = default;
 
+		BitWidth& operator += (const BitWidth& rhs) { value += rhs.value; return *this; }
+		BitWidth& operator -= (const BitWidth& rhs) { value -= rhs.value; return *this; }
+		BitWidth& operator *= (const uint64_t rhs) { value *= rhs; return *this; }
+		BitWidth& operator /= (const uint64_t rhs) { value /= rhs; return *this; }
+
 		explicit operator bool() const { return value != 0; }
 
 		uint64_t value = 0;
