@@ -25,6 +25,7 @@
 #include "frontend/BVec.h"
 #include "frontend/UInt.h"
 #include "frontend/SInt.h"
+#include "frontend/Enum.h"
 #include "frontend/BitWidth.h"
 #include "frontend/Bundle.h"
 #include "frontend/Clock.h"

@@ -38,6 +38,9 @@ namespace gtry {
 	concept CString = isCString<T>::value;
 
 
+	template<typename T>
+    concept EnumType = std::is_enum_v<T>;
+
 
     template <typename T, typename = int>
     struct resizable : std::false_type {};
@@ -138,6 +141,18 @@ namespace gtry {
 	concept BitValue = std::convertible_to<T, Bit>;
 
     template<BitValue T> struct is_base_signal_value<T> : std::true_type { using sig_type = Bit; };
+
+
+    //// Enum
+
+	template<EnumType T>
+    class Enum;
+
+    template<EnumType T>
+    struct is_base_signal_value<Enum<T>> : std::true_type { using sig_type = Enum<T>; };
+
+    template<EnumType T>
+    struct is_base_signal_value<T> : std::true_type { using sig_type = Enum<T>; };
 
 
     //// BaseBitVector derived
