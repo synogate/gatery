@@ -53,7 +53,7 @@ namespace gtry {
     /***************************************/
 
 
-    class SignalReadPort;
+    struct SignalReadPort;
 
 
     template<typename T, typename = void>
