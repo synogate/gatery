@@ -56,7 +56,7 @@ namespace gtry {
     /***************************************/
 
 
-    class SignalReadPort;
+    struct SignalReadPort;
 
 
     template<typename T, typename = void>
@@ -123,11 +123,13 @@ namespace gtry {
     struct is_base_signal_value : std::false_type { using sig_type = Type; };
     /// @brief Any signals (Bit, UInt, SInt, ...) or literals for them
     template<typename Type>
-    concept BaseSignalValue = is_base_signal_value<Type>::value;
+    concept BaseSignalValue = BaseSignal<Type> or is_base_signal_value<Type>::value;
     /// @brief Converts any signal value type (signal or literal) to the corresponding signal type
     template<typename Type>
     using ValueToBaseSignal = is_base_signal_value<Type>::sig_type;
 
+    template<typename T>
+    concept BaseSignalLiteral = BaseSignalValue<T> and not BaseSignal<T>;
 
     //// Bit
 
@@ -307,5 +309,9 @@ namespace gtry {
         ContainerSignal<T> or
         TupleSignal<T>;
 
+    template<typename T>
+    concept SignalValue =
+        Signal<T> or
+        BaseSignalValue<T>;
 
 }

@@ -148,6 +148,8 @@ namespace gtry {
         template<typename TL, typename TR> struct get_bitvector_type { };
         template<BitVectorValue TL, typename TR> struct get_bitvector_type<TL, TR> { using type = ValueToBaseSignal<TL>; };
         template<typename TL, BitVectorValue TR> struct get_bitvector_type<TL, TR> { using type = ValueToBaseSignal<TR>; };
+        template<BitVectorValue TL, BitVectorValue TR> requires (std::same_as<ValueToBaseSignal<TL>, ValueToBaseSignal<TR>>)
+        struct get_bitvector_type<TL, TR> { using type = ValueToBaseSignal<TR>; };
 
         /// Given two types returns whichever type of the two is BitVector derived
         template<typename TL, typename TR> 

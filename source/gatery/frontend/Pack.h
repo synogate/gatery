@@ -24,40 +24,56 @@ namespace gtry
 {
 	namespace internal
 	{
-		struct PackVisitor : CompoundVisitor
+		void ports(const TupleSignal auto& signal, std::vector<SignalReadPort>& list);
+		void ports(const CompoundSignal auto& signal, std::vector<SignalReadPort>& list);
+
+		void ports(const BaseSignal auto& signal, std::vector<SignalReadPort>& list)
 		{
-			virtual void operator () (const UInt& a, const UInt&) override
-			{
-				m_ports.emplace_back(a.getReadPort());
-			}
+			list.push_back(signal.getReadPort());
+		}
 
-			virtual void operator () (const Bit& a, const Bit&) override
-			{
-				m_ports.emplace_back(a.getReadPort());
-			}
-
-			std::vector<SignalReadPort> m_ports;
-		};
-
-		inline void pack(PackVisitor&) {}
-
-		template<typename... Comp, typename T>
-		void pack(PackVisitor& v, const T& compound, const Comp& ...compoundList)
+		void ports(const BaseSignalLiteral auto& value, std::vector<SignalReadPort>& list)
 		{
-			pack(v, compoundList...);
-			visitForcedSignalCompound(compound, v);
+			ports(ValueToBaseSignal<decltype(value)>{value}, list);
+		}
+
+		void ports(const ContainerSignal auto& signal, std::vector<SignalReadPort>& list)
+		{
+			for(auto&& it : signal)
+				ports(it, list);
+		}
+
+		void ports(const TupleSignal auto& signal, std::vector<SignalReadPort>& list)
+		{
+			boost::hana::for_each(signal, [&](auto&& member) {
+				if constexpr(Signal<decltype(member)>)
+					ports(member, list);
+			});
+		}
+
+		void ports(const CompoundSignal auto& signal, std::vector<SignalReadPort>& list)
+		{
+			ports(boost::pfr::structure_tie(signal), list);
+		}
+
+		inline void ports_reverse(std::vector<SignalReadPort>& list) {}
+
+		template<typename T, typename... Tl>
+		void ports_reverse(std::vector<SignalReadPort>& list, const T& signal, const Tl& ...other)
+		{
+			ports_reverse(list, other...);
+			ports(signal, list);
 		}
 	}
 
-	template<typename... Comp>
-	UInt pack(const Comp& ...compound)
+	UInt pack(const SignalValue auto& ...compound)
 	{
-		internal::PackVisitor v;
-		internal::pack(v, compound...);
+		std::vector<SignalReadPort> portList;
+		internal::ports_reverse(portList, compound...);
 
-		auto* m_node = DesignScope::createNode<hlim::Node_Rewire>(v.m_ports.size());
-		for (size_t i = 0; i < v.m_ports.size(); ++i)
-			m_node->connectInput(i, v.m_ports[i]);
+		auto* m_node = DesignScope::createNode<hlim::Node_Rewire>(portList.size());
+		for (size_t i = 0; i < portList.size(); ++i)
+			m_node->connectInput(i, portList[i]);
 		m_node->setConcat();
 		return SignalReadPort(m_node);
 	}
