@@ -223,7 +223,7 @@ BVec rot(const BVec& signal, int amount)
     if (amount > 0)
         return shift<BVec, hlim::Node_Shift::dir::left>(signal, amount, hlim::Node_Shift::fill::rotate);
     else
-        return shift<BVec, hlim::Node_Shift::dir::right>(signal, amount, hlim::Node_Shift::fill::rotate);
+        return shift<BVec, hlim::Node_Shift::dir::right>(signal, std::abs(amount), hlim::Node_Shift::fill::rotate);
 }
 
 
@@ -232,7 +232,7 @@ UInt rot(const UInt& signal, int amount)
     if (amount > 0)
         return shift<UInt, hlim::Node_Shift::dir::left>(signal, amount, hlim::Node_Shift::fill::rotate);
     else
-        return shift<UInt, hlim::Node_Shift::dir::right>(signal, amount, hlim::Node_Shift::fill::rotate);
+        return shift<UInt, hlim::Node_Shift::dir::right>(signal, std::abs(amount), hlim::Node_Shift::fill::rotate);
 }
 
 SInt rot(const SInt& signal, int amount)
@@ -240,7 +240,7 @@ SInt rot(const SInt& signal, int amount)
     if (amount > 0)
         return shift<SInt, hlim::Node_Shift::dir::left>(signal, amount, hlim::Node_Shift::fill::rotate);
     else
-        return shift<SInt, hlim::Node_Shift::dir::right>(signal, amount, hlim::Node_Shift::fill::rotate);
+        return shift<SInt, hlim::Node_Shift::dir::right>(signal, std::abs(amount), hlim::Node_Shift::fill::rotate);
 }
 
 

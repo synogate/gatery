@@ -110,6 +110,11 @@ namespace gtry {
     concept BitVectorValue = is_bitvector_value<T>::value;
 
 
+    /// @brief Any bitvector based signals (UInt, SInt, ...)
+    template<typename T>
+    concept BitVectorSignal = BitVectorValue<T> && (!BitVectorLiteral<T>);
+
+
     template<typename Type>
     struct is_base_signal_value : std::false_type { using sig_type = Type; };
     /// @brief Any signals (Bit, UInt, SInt, ...) or literals for them
@@ -129,7 +134,7 @@ namespace gtry {
 
     /// @brief Any type that is or can be converted into a Bit
 	template<typename T>
-	concept BitValue = (BaseSignal<T> && std::same_as<Bit, T>) || BitLiteral<T>;
+	concept BitValue = std::convertible_to<T, Bit>;
 
     template<BitValue T> struct is_base_signal_value<T> : std::true_type { using sig_type = Bit; };
 
@@ -141,22 +146,26 @@ namespace gtry {
     concept BitVectorDerived = BaseSignal<T> && std::is_base_of<BaseBitVector, T>::value;
 
 
+	template<typename T>
+	concept BitVectorIntegralLiteral = std::integral<T> && !std::same_as<T, char> && !std::same_as<T, bool>;
+
+
     //// BVec
 
 	class BVec;
-    /// @brief Any integral type that can be converted into a BVec
+    /// @brief Any type that is or can be converted into a BVec
 	template<typename T>
-	concept BVecIntegralLiteral = false;
+	concept BVecValue = std::convertible_to<T, BVec>;
 
     /// @brief Any type that can be converted into a BVec
 	template<typename T>
-	concept BVecLiteral = false;
+	concept BVecLiteral = BVecValue<T> && (!std::same_as<T, BVec>);
 
-    /// @brief Any type that is or can be converted into a BVec
+    /// @brief Any integral type that can be converted into a BVec
 	template<typename T>
-	concept BVecValue = (BitVectorDerived<T> && std::same_as<BVec, T>) || BVecLiteral<T>;
+	concept BVecIntegralLiteral = BVecLiteral<T> && std::integral<T>;
 
-
+    
     template<BVecLiteral T> struct is_bitvector_literal<T> : std::true_type { };
     template<BVecValue T>   struct is_bitvector_value<T> : std::true_type { };
     template<BVecValue T>   struct is_base_signal_value<T> : std::true_type { using sig_type = BVec; };
@@ -165,18 +174,18 @@ namespace gtry {
     //// UInt
 
 	class UInt;
-    /// @brief Any integral type that can be converted into a UInt
-	template<typename T>
-	concept UIntIntegralLiteral = std::integral<T> && !std::same_as<T, char> && !std::same_as<T, bool>;
-
-    /// @brief Any type that can be converted into a UInt
-	template<typename T>
-	concept UIntLiteral = UIntIntegralLiteral<T> || CString<T>;
 
     /// @brief Any type that is or can be converted into a UInt
 	template<typename T>
-	concept UIntValue = (BitVectorDerived<T> && std::same_as<UInt, T>) || UIntLiteral<T>;
+	concept UIntValue = std::convertible_to<T, UInt>;
 
+    /// @brief Any type that can be converted into a UInt
+	template<typename T>
+	concept UIntLiteral = UIntValue<T> && (!std::same_as<T, UInt>);
+
+    /// @brief Any integral type that can be converted into a UInt
+	template<typename T>
+	concept UIntIntegralLiteral = UIntLiteral<T> && std::integral<T>;
 
     template<UIntLiteral T> struct is_bitvector_literal<T> : std::true_type { };
     template<UIntValue T>   struct is_bitvector_value<T> : std::true_type { };
@@ -186,17 +195,17 @@ namespace gtry {
     //// SInt
 
 	class SInt;
-    /// @brief Any integral type that can be converted into a SInt
+    /// @brief Any type that is or can be converted into a SInt
 	template<typename T>
-	concept SIntIntegralLiteral = false;
+	concept SIntValue = std::convertible_to<T, SInt>;
 
     /// @brief Any type that can be converted into a SInt
 	template<typename T>
-	concept SIntLiteral = false;
+	concept SIntLiteral = SIntValue<T> && (!std::same_as<T, SInt>);
 
-    /// @brief Any type that is or can be converted into a SInt
+    /// @brief Any integral type that can be converted into a SInt
 	template<typename T>
-	concept SIntValue = (BitVectorDerived<T> && std::same_as<SInt, T>) || SIntLiteral<T>;
+	concept SIntIntegralLiteral = SIntLiteral<T> && std::integral<T>;
 
     template<SIntLiteral T> struct is_bitvector_literal<T> : std::true_type { };
     template<SIntValue T>   struct is_bitvector_value<T> : std::true_type { };

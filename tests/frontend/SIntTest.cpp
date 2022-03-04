@@ -177,3 +177,42 @@ BOOST_FIXTURE_TEST_CASE(SIntSelectorAccess, BoostUnitTestSimulationFixture)
 */
     eval();
 }
+
+
+
+BOOST_FIXTURE_TEST_CASE(SIntAbs, BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+
+    SInt negative = SInt(-5);
+    SInt positive = SInt(10);
+
+    sim_assert(abs(negative) == 5);
+    sim_assert(abs(positive) == 10);
+
+    eval();
+}
+
+
+BOOST_FIXTURE_TEST_CASE(SIntMul, BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+
+    SInt a = extTo(SInt(-5), 32_b);
+    SInt b = extTo(SInt(-10), 32_b);
+    SInt c = extTo(SInt(5), 32_b);
+    SInt d = extTo(SInt(10), 32_b);
+
+    sim_assert(a*a == ext(SInt(25)));
+    sim_assert(a*b == ext(SInt(50)));
+    sim_assert(a*c == ext(SInt(-25)));
+    sim_assert(a*d == ext(SInt(-50)));
+
+    sim_assert(b*a == ext(SInt(50)));
+    sim_assert(b*b == ext(SInt(100)));
+    sim_assert(b*c == ext(SInt(-50)));
+    sim_assert(b*d == ext(SInt(-100)));
+
+    eval();
+}
+

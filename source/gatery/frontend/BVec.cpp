@@ -20,17 +20,6 @@
 
 namespace gtry {
 
-    BVecDefault::BVecDefault(const BVec& rhs) : BaseBitVectorDefault(rhs) { }
-
-
-    BVec ext(const BVec& bvec, size_t increment)
-    {
-        SignalReadPort port = bvec.getReadPort();
-        if (increment)
-            port = port.expand(bvec.size() + increment, hlim::ConnectionType::BITVEC);
-        return BVec(port);
-    }
-
     BVec ext(const BVec& bvec, size_t increment, Expansion policy)
     {
         SignalReadPort port = bvec.getReadPort();

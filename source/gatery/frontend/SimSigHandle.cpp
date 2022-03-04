@@ -40,13 +40,14 @@ sim::SigHandle simu(const Bit &bit)
     return simu(driver);
 }
 
-sim::SigHandle simu(const BVec &signal)
+sim::SigHandle simu(const UInt &signal)
 {
     auto driver = signal.getReadPort();
     HCL_DESIGNCHECK(driver.node != nullptr);
 
     return simu(driver);
 }
+
 
 sim::SigHandle simu(const InputPin &pin)
 {

@@ -20,7 +20,7 @@
 #include "Pin.h"
 #include "Signal.h"
 #include "Bit.h"
-#include "BVec.h"
+#include "UInt.h"
 
 #include <gatery/simulation/SigHandle.h>
 #include <gatery/simulation/simProc/SimulationProcess.h>
@@ -35,7 +35,7 @@ class Clock;
 
 sim::SigHandle simu(hlim::NodePort output);
 sim::SigHandle simu(const Bit &bit);
-sim::SigHandle simu(const BVec &signal);
+sim::SigHandle simu(const UInt &signal);
 sim::SigHandle simu(const InputPin &pin);
 sim::SigHandle simu(const InputPins &pins);
 

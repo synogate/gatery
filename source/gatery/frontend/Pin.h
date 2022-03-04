@@ -74,9 +74,9 @@ namespace gtry {
     class InputPins {
         public:
             InputPins(BitWidth width);
-            operator BVec () const;
+            explicit operator BVec () const;
             operator UInt () const;
-            operator SInt () const;
+            explicit operator SInt () const;
 
             inline InputPins &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
             inline hlim::Node_Pin *getNode() { return m_pinNode.get(); }

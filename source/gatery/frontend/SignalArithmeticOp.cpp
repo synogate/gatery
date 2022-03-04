@@ -16,6 +16,8 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
+#include "SignalLogicOp.h"
+#include "ConditionalScope.h"
 #include "SignalArithmeticOp.h"
 
 namespace gtry {
@@ -30,5 +32,28 @@ namespace gtry {
 		
 		return SignalReadPort(node);
 	}
+
+    SInt mul(const SInt& lhs, const SInt& rhs) {
+        Bit lhSign = lhs.sign();
+        Bit rhSign = rhs.sign();
+        Bit resultSign = lhSign ^ rhSign;
+
+        UInt absLhs = abs(lhs);
+        UInt absRhs = abs(rhs);
+
+        UInt absRes = absLhs * absRhs;
+        SInt res = (SInt) absRes;
+        IF (resultSign)
+            res = (SInt)( ~absRes + 1 );
+        return res;
+    }
+
+    UInt abs(const std::same_as<SInt> auto &v) { 
+        UInt res = (UInt) v;
+        IF (v.sign())
+            res = ~ (UInt)v + 1;
+        return res;
+    }
+    template UInt abs<SInt>(const SInt &v);
 
 }

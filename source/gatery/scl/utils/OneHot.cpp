@@ -33,7 +33,7 @@ UInt gtry::scl::encoder(const OneHot& in)
 
     ret = 0;
     for (size_t i = 0; i < in.size(); ++i)
-        ret |= zext(i & in[i]);
+        ret |= ext(i & in[i]);
 
     return ret;
 }

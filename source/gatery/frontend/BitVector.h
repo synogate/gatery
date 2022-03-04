@@ -70,16 +70,14 @@ namespace gtry {
     class BaseBitVectorDefault {
         public:
             BaseBitVectorDefault(const BaseBitVector& rhs);
+			BaseBitVectorDefault(std::int64_t value);
+			BaseBitVectorDefault(std::uint64_t value);
+			BaseBitVectorDefault(std::string_view);
 
             hlim::NodePort getNodePort() const { return m_nodePort; }
         protected:
-			void assign(std::int64_t value);
-			void assign(std::uint64_t value);
-			void assign(std::string_view);
-
             hlim::RefCtdNodePort m_nodePort;
     };
-
 
 	class BaseBitVector : public ElementarySignal
 	{
@@ -111,7 +109,7 @@ namespace gtry {
 		template<BitVectorDerived T>
 		explicit operator T() const { if (m_node) return T(getReadPort()); else return T{}; }
 
-		virtual void resize(size_t width);
+		virtual void resize(size_t width) final;
 
 		Bit& lsb() { return aliasLsb(); }
 		const Bit& lsb() const { return aliasLsb(); }
@@ -249,5 +247,30 @@ namespace gtry {
 		}
 		mutable std::map<Range, FinalType> m_rangeAlias;
 	};
+
+	template<BitVectorSignal T>
+	T extTo(const T& vec, BitWidth width) { HCL_DESIGNCHECK_HINT(width >= vec.getWidth(), "extTo can not make a vector smaller"); return ext(vec, (width - vec.getWidth()).value); }
+	template<BitVectorSignal T>
+	T extTo(const T& vec, BitWidth width, Expansion policy) { HCL_DESIGNCHECK_HINT(width >= vec.getWidth(), "extTo can not make a vector smaller"); return ext(vec, (width - vec.getWidth()).value, policy); }
+
+	template<BitVectorLiteral T>
+	auto extTo(const T& vec, BitWidth width) { return extTo<ValueToBaseSignal<T>>(vec, width); }
+	template<BitVectorLiteral T>
+	auto extTo(const T& vec, BitWidth width, Expansion policy) { return extTo<ValueToBaseSignal<T>>(vec, width, policy); }
+
+	template<BitVectorValue T>
+	inline auto zextTo(const T& vec, BitWidth width) { return ext(vec, width, Expansion::zero); }
+	template<BitVectorValue T>
+	inline auto oextTo(const T& vec, BitWidth width) { return ext(vec, width, Expansion::one); }
+	template<BitVectorValue T>
+	inline auto sextTo(const T& vec, BitWidth width) { return ext(vec, width, Expansion::sign); }
+
+
+
+	template<BitVectorSignal T>
+	T resizeTo(const T& vec, BitWidth width) { if (width >= vec.getWidth()) return extTo(vec, width); else return vec(0, width); }
+
+	template<BitVectorLiteral T>
+	auto resizeTo(const T& vec, BitWidth width) { return extTo<ValueToBaseSignal<T>>(vec, width); }
 
 }

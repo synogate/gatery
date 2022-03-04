@@ -25,10 +25,11 @@ namespace gtry {
 
 	class UIntDefault : public BaseBitVectorDefault {
         public:
-            UIntDefault(const UInt& rhs);
+            explicit UIntDefault(const UInt& rhs);
 
-			template<UIntLiteral Type>
-			UIntDefault(Type value) { assign(value); }
+			template<BitVectorIntegralLiteral Type>
+			explicit UIntDefault(Type value);
+			explicit UIntDefault(const char rhs[]);
     };
 
 	class UInt : public SliceableBitVector<UInt, UIntDefault>
@@ -36,6 +37,7 @@ namespace gtry {
 	public:
 		using Range = BaseBitVector::Range;
 		using Base = SliceableBitVector<UInt, UIntDefault>;
+		using DefaultValue = UIntDefault;
 
 		UInt() = default;
 		UInt(UInt&& rhs) : Base(std::move(rhs)) { }
@@ -47,11 +49,11 @@ namespace gtry {
 
 		UInt(const UInt &rhs) : Base(rhs) { } // Necessary because otherwise deleted copy ctor takes precedence over templated ctor.
 
-		template<UIntIntegralLiteral Int>
+		template<BitVectorIntegralLiteral Int>
 		UInt(Int vec) { HCL_DESIGNCHECK_HINT(vec >= 0, "Can not assign negative values to UInt"); assign((std::uint64_t)vec, Expansion::zero); }
 		UInt(const char rhs[]) { assign(std::string_view(rhs), Expansion::zero); }
 
-		template<UIntIntegralLiteral Int>
+		template<BitVectorIntegralLiteral Int>
 		UInt& operator = (Int rhs) { HCL_DESIGNCHECK_HINT(rhs >= 0, "Can not assign negative values to UInt"); assign((std::uint64_t)rhs, Expansion::zero); return *this; }
 		UInt& operator = (const char rhs[]) { assign(std::string_view(rhs), Expansion::zero); return *this; }
 
@@ -60,17 +62,26 @@ namespace gtry {
 		UInt& operator = (UInt&& rhs) { BaseBitVector::operator=(std::move(rhs)); return *this; }
 	};
 
-	UInt ext(const Bit& bvec, size_t increment);
 	UInt ext(const Bit& bit, size_t increment, Expansion policy);
+	inline UInt ext(const Bit& bit, size_t increment = 0) { return ext(bit, increment, Expansion::zero); }
 	inline UInt zext(const Bit& bit, size_t increment = 0) { return ext(bit, increment, Expansion::zero); }
 	inline UInt oext(const Bit& bit, size_t increment = 0) { return ext(bit, increment, Expansion::one); }
 	inline UInt sext(const Bit& bit, size_t increment = 0) { return ext(bit, increment, Expansion::sign); }
 
 
-	UInt ext(const UInt& bvec, size_t increment);
 	UInt ext(const UInt& bvec, size_t increment, Expansion policy);
+	inline UInt ext(const UInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::zero); }
 	inline UInt zext(const UInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::zero); }
 	inline UInt oext(const UInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::one); }
 	inline UInt sext(const UInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::sign); }
+
+
+
+	inline UIntDefault::UIntDefault(const UInt& rhs) : BaseBitVectorDefault(rhs) { }
+
+	template<BitVectorIntegralLiteral Type>
+	UIntDefault::UIntDefault(Type value) : BaseBitVectorDefault((std::uint64_t)value) { }
+	inline UIntDefault::UIntDefault(const char rhs[]) : BaseBitVectorDefault(std::string_view(rhs)) { }
+
 
 }

@@ -25,10 +25,11 @@ namespace gtry {
 
 	class SIntDefault : public BaseBitVectorDefault {
         public:
-            SIntDefault(const SInt& rhs);
+            explicit SIntDefault(const SInt& rhs);
 
-			template<SIntLiteral Type>
-			SIntDefault(Type value) { assign(value); }
+			template<BitVectorIntegralLiteral Type>
+			explicit SIntDefault(Type value);
+			explicit SIntDefault(const char rhs[]);
     };
 
 	class SInt : public SliceableBitVector<SInt, SIntDefault>
@@ -48,23 +49,34 @@ namespace gtry {
 		SInt(const SInt &rhs) : Base(rhs) { } // Necessary because otherwise deleted copy ctor takes precedence over templated ctor.
 
 
-		template<SIntIntegralLiteral Int>
-		SInt(Int vec) { assign((std::int64_t) vec, Expansion::sign); }
+		template<BitVectorIntegralLiteral Int>
+		explicit SInt(Int vec) { assign((std::int64_t) vec, Expansion::sign); }
 		explicit SInt(const char rhs[]) { assign(std::string_view(rhs), Expansion::sign); }
 
-		template<SIntIntegralLiteral Int>
+		template<BitVectorIntegralLiteral Int>
 		SInt& operator = (Int rhs) { assign((std::int64_t) rhs, Expansion::sign); return *this; }
 		SInt& operator = (const char rhs[]) { assign(std::string_view(rhs), Expansion::sign); return *this; }
 
 		// These must be here since they are implicitly deleted due to the cop and move ctors
 		SInt& operator = (const SInt &rhs) { BaseBitVector::operator=(rhs); return *this; }
 		SInt& operator = (SInt&& rhs) { BaseBitVector::operator=(std::move(rhs)); return *this; }
+
+		Bit& sign() { return msb(); }
+		const Bit& sign() const { return msb(); }
 	};
 
-	SInt ext(const SInt& bvec, size_t increment);
 	SInt ext(const SInt& bvec, size_t increment, Expansion policy);
+	inline SInt ext(const SInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::sign); }
 	inline SInt zext(const SInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::zero); }
 	inline SInt oext(const SInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::one); }
 	inline SInt sext(const SInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::sign); }
+
+
+	inline SIntDefault::SIntDefault(const SInt& rhs) : BaseBitVectorDefault(rhs) { }
+
+	template<BitVectorIntegralLiteral Type>
+	SIntDefault::SIntDefault(Type value) : BaseBitVectorDefault((std::int64_t)value) { }
+	inline SIntDefault::SIntDefault(const char rhs[]) : BaseBitVectorDefault(std::string_view(rhs)) { }
+
 
 }

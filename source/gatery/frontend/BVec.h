@@ -25,10 +25,11 @@ namespace gtry {
 
 	class BVecDefault : public BaseBitVectorDefault {
         public:
-            BVecDefault(const BVec& rhs);
+            explicit BVecDefault(const BVec& rhs);
 
-			template<BVecLiteral Type>
-			BVecDefault(Type value) { assign(value); }
+			template<BitVectorIntegralLiteral Type>
+			explicit BVecDefault(Type value);
+			explicit BVecDefault(const char rhs[]);
     };
 
 	class BVec : public SliceableBitVector<BVec, BVecDefault>
@@ -36,6 +37,7 @@ namespace gtry {
 	public:
 		using Range = BVec::Range;
 		using Base = SliceableBitVector<BVec, BVecDefault>;
+		using DefaultValue = BVecDefault;
 
 		BVec() = default;
 		BVec(BVec&& rhs) : Base(std::move(rhs)) { }
@@ -47,12 +49,11 @@ namespace gtry {
 
 		BVec(const BVec &rhs) : Base(rhs) { } // Necessary because otherwise deleted copy ctor takes precedence over templated ctor.
 
-
-		template<BVecIntegralLiteral Int>
-		BVec(Int vec) { assign((std::uint64_t) vec, Expansion::none); }
+		template<BitVectorIntegralLiteral Int>
+		explicit BVec(Int vec) { assign((std::uint64_t) vec, Expansion::none); }
 		explicit BVec(const char rhs[]) { assign(std::string_view(rhs), Expansion::none); }
 
-		template<BVecIntegralLiteral Int>
+		template<BitVectorIntegralLiteral Int>
 		BVec& operator = (Int rhs) { assign((std::uint64_t) rhs, Expansion::none); return *this; }
 		BVec& operator = (const char rhs[]) { assign(std::string_view(rhs), Expansion::none); return *this; }
 
@@ -61,10 +62,18 @@ namespace gtry {
 		BVec& operator = (BVec&& rhs) { BaseBitVector::operator=(std::move(rhs)); return *this; }
 	};
 
-	BVec ext(const BVec& bvec, size_t increment);
 	BVec ext(const BVec& bvec, size_t increment, Expansion policy);
+	inline BVec ext(const BVec& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::zero); }
 	inline BVec zext(const BVec& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::zero); }
 	inline BVec oext(const BVec& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::one); }
 	inline BVec sext(const BVec& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::sign); }
+
+
+	inline BVecDefault::BVecDefault(const BVec& rhs) : BaseBitVectorDefault(rhs) { }
+
+	template<BitVectorIntegralLiteral Type>
+	BVecDefault::BVecDefault(Type value) : BaseBitVectorDefault((std::uint64_t)value) { }
+	inline BVecDefault::BVecDefault(const char rhs[]) : BaseBitVectorDefault(std::string_view(rhs)) { }
+
 
 }

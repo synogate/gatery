@@ -102,7 +102,7 @@ namespace gtry {
         m_nodePort = rhs.getReadPort();
     }
 
-    void BaseBitVectorDefault::assign(std::int64_t value) {
+    BaseBitVectorDefault::BaseBitVectorDefault(std::int64_t value) {
 		size_t width = utils::Log2C(std::abs(value) + 1) + 1;
 
 		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
@@ -112,7 +112,7 @@ namespace gtry {
 		m_nodePort = {.node = constant, .port = 0ull };
 	}
 
-    void BaseBitVectorDefault::assign(std::uint64_t value) {
+    BaseBitVectorDefault::BaseBitVectorDefault(std::uint64_t value) {
 		size_t width = utils::Log2C(value + 1);
 
 		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
@@ -122,7 +122,7 @@ namespace gtry {
 		m_nodePort = {.node = constant, .port = 0ull };
 	}
 
-    void BaseBitVectorDefault::assign(std::string_view value) {
+    BaseBitVectorDefault::BaseBitVectorDefault(std::string_view value) {
         auto* constant = DesignScope::createNode<hlim::Node_Constant>(
             parseBitVector(value),
             hlim::ConnectionType::BITVEC
