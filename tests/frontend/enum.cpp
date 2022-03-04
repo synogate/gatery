@@ -66,3 +66,38 @@ BOOST_FIXTURE_TEST_CASE(EnumComparison, BoostUnitTestSimulationFixture)
 }
 
 
+BOOST_FIXTURE_TEST_CASE(EnumRegCompileTest, BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+	enum MyClassicalEnum { A, B, C, D };
+
+	Enum<MyClassicalEnum> enumSignal = A;
+
+	enumSignal = reg(enumSignal);
+
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(EnumMemoryCompileTest, BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+	enum MyClassicalEnum { A, B, C, D };
+
+	Enum<MyClassicalEnum> enumSignal = A;
+
+	Memory<Enum<MyClassicalEnum>> mem(32, A);
+
+	Enum<MyClassicalEnum> sig2 = mem[0];
+	mem[1] = enumSignal;
+}
+
+

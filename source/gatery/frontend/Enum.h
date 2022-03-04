@@ -171,7 +171,7 @@ namespace gtry {
 	}
 
 	template<EnumType T>
-	Enum<T>::Enum(Enum<T>&& rhs) {
+	Enum<T>::Enum(Enum<T>&& rhs) : Enum() {
 		assign(rhs.getReadPort());
 		rhs.assign(SignalReadPort{ m_node });
 		m_resetValue = rhs.m_resetValue;
@@ -294,8 +294,6 @@ namespace gtry {
 
 	template<EnumType T>
 	void Enum<T>::assign(SignalReadPort in, bool ignoreConditions) {
-        hlim::ConnectionType type = m_node->getOutputConnectionType(0);
-
         if (auto* scope = ConditionalScope::get(); !ignoreConditions && scope && scope->getId() > m_initialScopeId)
         {
             auto* signal_in = DesignScope::createNode<hlim::Node_Signal>();
