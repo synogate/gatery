@@ -38,18 +38,18 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
     scl::Stream<UInt> in0;
     scl::Stream<UInt> in1;
 
-    in0.value() = pinIn(8_b).setName("in0_data");
+    in0.data = pinIn(8_b).setName("in0_data");
     in0.valid = pinIn().setName("in0_valid");
     in0.ready = Bit{};
     pinOut(*in0.ready).setName("in0_ready");
 
-    in1.value() = pinIn(8_b).setName("in1_data");
+    in1.data = pinIn(8_b).setName("in1_data");
     in1.valid = pinIn().setName("in1_valid");
     in1.ready = Bit{};
     pinOut(*in1.ready).setName("in1_ready");
 
     scl::arbitrateInOrder uut{ in0, in1 };
-    pinOut(uut.value()).setName("out_data");
+    pinOut(uut.data).setName("out_data");
     pinOut(*uut.valid).setName("out_valid");
     *uut.ready = pinIn().setName("out_ready");
 
@@ -57,37 +57,37 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
         simu(*uut.ready) = 1;
         simu(*in0.valid) = 0;
         simu(*in1.valid) = 0;
-        simu(in0.value()) = 0;
-        simu(in1.value()) = 0;
+        simu(in0.data) = 0;
+        simu(in1.data) = 0;
         co_await WaitClk(clock);
 
         simu(*in0.valid) = 0;
         simu(*in1.valid) = 1;
-        simu(in1.value()) = 1;
+        simu(in1.data) = 1;
         co_await WaitClk(clock);
 
         simu(*in1.valid) = 0;
         simu(*in0.valid) = 1;
-        simu(in0.value()) = 2;
+        simu(in0.data) = 2;
         co_await WaitClk(clock);
 
         simu(*in1.valid) = 1;
         simu(*in0.valid) = 1;
-        simu(in0.value()) = 3;
-        simu(in1.value()) = 4;
+        simu(in0.data) = 3;
+        simu(in1.data) = 4;
         co_await WaitClk(clock);
         co_await WaitClk(clock);
 
         simu(*in1.valid) = 1;
         simu(*in0.valid) = 1;
-        simu(in0.value()) = 5;
-        simu(in1.value()) = 6;
+        simu(in0.data) = 5;
+        simu(in1.data) = 6;
         co_await WaitClk(clock);
         co_await WaitClk(clock);
 
         simu(*in0.valid) = 0;
         simu(*in1.valid) = 1;
-        simu(in1.value()) = 7;
+        simu(in1.data) = 7;
         co_await WaitClk(clock);
 
         simu(*in1.valid) = 0;
@@ -97,7 +97,7 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
 
         simu(*in1.valid) = 0;
         simu(*in0.valid) = 1;
-        simu(in0.value()) = 8;
+        simu(in0.data) = 8;
         simu(*uut.ready) = 1;
         co_await WaitClk(clock);
 
@@ -113,7 +113,7 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
         {
             if (simu(*uut.ready) && simu(*uut.valid))
             {
-                BOOST_TEST(counter == simu(uut.value()));
+                BOOST_TEST(counter == simu(uut.data));
                 counter++;
             }
             co_await WaitClk(clock);
@@ -139,18 +139,18 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
     scl::Stream<UInt> in0;
     scl::Stream<UInt> in1;
 
-    in0.value() = pinIn(8_b).setName("in0_data");
+    in0.data = pinIn(8_b).setName("in0_data");
     in0.valid = pinIn().setName("in0_valid");
     in0.ready = Bit{};
     pinOut(*in0.ready).setName("in0_ready");
 
-    in1.value() = pinIn(8_b).setName("in1_data");
+    in1.data = pinIn(8_b).setName("in1_data");
     in1.valid = pinIn().setName("in1_valid");
     in1.ready = Bit{};
     pinOut(*in1.ready).setName("in1_ready");
 
     scl::arbitrateInOrder uut{ in0, in1 };
-    pinOut(uut.value()).setName("out_data");
+    pinOut(uut.data).setName("out_data");
     pinOut(*uut.valid).setName("out_valid");
     *uut.ready = pinIn().setName("out_ready");
 
@@ -162,24 +162,24 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
         std::mt19937 rng{ 10179 };
         size_t counter = 1;
         bool wasReady = false;
-        while (true)
+        while(true)
         {
-            if (wasReady)
+            if(wasReady)
             {
-                if (rng() % 2 == 0)
+                if(rng() % 2 == 0)
                 {
                     simu(*in0.valid) = 1;
-                    simu(in0.value()) = counter++;
+                    simu(in0.data) = counter++;
                 }
                 else
                 {
                     simu(*in0.valid) = 0;
                 }
 
-                if (rng() % 2 == 0)
+                if(rng() % 2 == 0)
                 {
                     simu(*in1.valid) = 1;
-                    simu(in1.value()) = counter++;
+                    simu(in1.data) = counter++;
                 }
                 else
                 {
@@ -200,11 +200,11 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
     addSimulationProcess([&]()->SimProcess {
 
         size_t counter = 1;
-        while (true)
+        while(true)
         {
-            if (simu(*uut.ready) && simu(*uut.valid))
+            if(simu(*uut.ready) && simu(*uut.valid))
             {
-                BOOST_TEST(counter % 256 == simu(uut.value()));
+                BOOST_TEST(counter % 256 == simu(uut.data));
                 counter++;
             }
             co_await WaitClk(clock);

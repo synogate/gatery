@@ -54,10 +54,11 @@ namespace gtry {
         Expansion expansionPolicy = Expansion::none;
 
         SignalReadPort expand(size_t width, hlim::ConnectionType::Interpretation resultType) const;
+
+        BitWidth width() const { return node->getOutputConnectionType(port).width; }
     };
 
     inline const hlim::ConnectionType& connType(const SignalReadPort& port) { return port.node->getOutputConnectionType(port.port); }
-    inline size_t width(const SignalReadPort& port) { return connType(port).width; }
 
     class ElementarySignal {
     public:
@@ -101,7 +102,7 @@ namespace gtry {
         lhs = l.getReadPort();
         rhs = r.getReadPort();
 
-        const size_t maxWidth = std::max(width(lhs), width(rhs));
+        const size_t maxWidth = std::max(lhs.width(), rhs.width()).bits();
 
         hlim::ConnectionType::Interpretation type = hlim::ConnectionType::BITVEC;
         if(maxWidth == 1 &&

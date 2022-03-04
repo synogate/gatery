@@ -346,9 +346,9 @@ namespace gtry {
     void BaseBitVector::assign(SignalReadPort in, bool ignoreConditions)
     {
         if (!m_node)
-            createNode(width(in), in.expansionPolicy);
+            createNode(in.width().bits(), in.expansionPolicy);
 
-        const bool incrementWidth = width(in) > m_range.width;
+        const bool incrementWidth = in.width() > m_range.width;
         if(!incrementWidth)
             in = in.expand(m_range.width, hlim::ConnectionType::BITVEC);
 
@@ -380,9 +380,9 @@ namespace gtry {
 
                 switch (m_expansionPolicy)
                 {
-                case Expansion::zero:   rewire->setPadTo(width(in), hlim::Node_Rewire::OutputRange::CONST_ZERO);    break;
-                case Expansion::one:    rewire->setPadTo(width(in), hlim::Node_Rewire::OutputRange::CONST_ONE);    break;
-                case Expansion::sign:   rewire->setPadTo(width(in)); break;
+                case Expansion::zero:   rewire->setPadTo(in.width().bits(), hlim::Node_Rewire::OutputRange::CONST_ZERO);    break;
+                case Expansion::one:    rewire->setPadTo(in.width().bits(), hlim::Node_Rewire::OutputRange::CONST_ONE);    break;
+                case Expansion::sign:   rewire->setPadTo(in.width().bits()); break;
                 default: break;
                 }
 
@@ -411,7 +411,7 @@ namespace gtry {
                 HCL_ASSERT(!m_range.subset);
             }
 
-            m_range.width = width(in);
+            m_range.width = in.width().bits();
         }
 
         m_node->connectInput(in);

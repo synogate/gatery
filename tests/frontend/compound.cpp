@@ -34,19 +34,32 @@ struct SimpleStruct
 
 BOOST_HANA_ADAPT_STRUCT(SimpleStruct, vec, bit);
 
-struct RichStruct : SimpleStruct
+struct RichStruct
 {
+    SimpleStruct base;
     std::vector<SimpleStruct> list;
     int parameter = 5;
 };
 
-BOOST_HANA_ADAPT_STRUCT(RichStruct, vec, bit, list, parameter);
+BOOST_HANA_ADAPT_STRUCT(RichStruct, base, list, parameter);
 
 BOOST_FIXTURE_TEST_CASE(CompoundName, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-
+    static_assert(Signal<BVec>);
+    static_assert(Signal<BVec&>);
+    static_assert(Signal<const BVec&>);
+    static_assert(Signal<std::vector<BVec>>);
+    static_assert(Signal<std::vector<BVec>&>);
+    static_assert(Signal<const std::vector<BVec>>);
+    static_assert(Signal<const std::vector<BVec>&>);
+    static_assert(Signal<RichStruct>);
+    static_assert(Signal<RichStruct&>);
+    static_assert(Signal<const RichStruct&>);
+    static_assert(Signal<std::array<RichStruct, 2>>);
+    static_assert(Signal<std::array<RichStruct, 2>&>);
+    static_assert(Signal<const std::array<RichStruct, 2>&>);
 
     Bit bit;
     setName(bit, "bit");
@@ -118,8 +131,8 @@ BOOST_FIXTURE_TEST_CASE(CompoundUnpack, BoostUnitTestSimulationFixture)
     using namespace gtry;
 
     RichStruct in;
-    in.vec = 5u;
-    in.bit = '0';
+    in.base.vec = 5u;
+    in.base.bit = '0';
     for (size_t i = 0; i < 7; ++i)
     {
         in.list.emplace_back();
@@ -133,8 +146,8 @@ BOOST_FIXTURE_TEST_CASE(CompoundUnpack, BoostUnitTestSimulationFixture)
     out.list.resize(in.list.size());
     unpack(inPacked, out);
 
-    sim_assert(out.vec == 5u) << 'a';
-    sim_assert(out.bit == '0') << 'b';
+    sim_assert(out.base.vec == 5u) << 'a';
+    sim_assert(out.base.bit == '0') << 'b';
     for (size_t i = 0; i < 7; ++i)
     {
         sim_assert(out.list[i].vec == ConstUInt(i, 3_b)) << 'c';
@@ -181,8 +194,8 @@ BOOST_FIXTURE_TEST_CASE(ConstructFromCompound, BoostUnitTestSimulationFixture)
     sim_assert(dynamicContainerSrc[0] == '1');
 
     RichStruct in;
-    in.vec = 5u;
-    in.bit = '0';
+    in.base.vec = 5u;
+    in.base.bit = '0';
     in.parameter = 13;
     for (size_t i = 0; i < 7; ++i)
     {

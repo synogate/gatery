@@ -22,12 +22,9 @@
 namespace gtry::scl
 {
     template<typename Payload>
-    struct Stream : Payload
+    struct Stream
     {
-        template<typename... PayloadArgs>
-        Stream(PayloadArgs... ctorArgs) :
-            Payload(ctorArgs...)
-        {}
+        Payload data;
 
         std::optional<Bit> valid;
         std::optional<Bit> ready;
@@ -36,8 +33,6 @@ namespace gtry::scl
         std::optional<Bit> error;
 
         Bit transfer() const;
-        Payload& value() { return *this; }
-        const Payload& value() const { return *this; }
     };
 
     template<typename Payload>

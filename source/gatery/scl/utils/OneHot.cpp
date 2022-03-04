@@ -43,7 +43,7 @@ std::vector<gtry::scl::Stream<gtry::UInt>> gtry::scl::makeIndexList(const UInt& 
     std::vector<Stream<UInt>> ret(valids.size());
     for (size_t i = 0; i < valids.size(); ++i)
     {
-        ret[i].value() = i;
+        ret[i].data = i;
         ret[i].valid = valids[i];
     }
     return ret;

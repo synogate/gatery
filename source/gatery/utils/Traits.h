@@ -55,11 +55,12 @@ namespace gtry {
 
     class SignalReadPort;
 
+
     template<typename T, typename = void>
     struct is_signal : std::false_type
     {};
     
-    //// Base signal (any of Bit, BVec, UInt, SInt, ...)
+    //// Base signal like Bit, BVec, UInt, SInt
 
     template<typename T>
     concept ReadableBaseSignal = requires(T v)
@@ -214,17 +215,23 @@ namespace gtry {
 
 
 
+
+
+
+
+
+
     //// dynamic container like std vector, map, list, deque .... of signals 
 
     namespace internal
     {
         template<typename T>
-        concept DynamicContainer = not BaseSignal<T> and requires(T v, typename T::value_type e)
+        concept DynamicContainer = not BaseSignal<T> and requires(T v, std::remove_cvref_t<T> vv, typename std::remove_reference_t<T>::value_type e)
         {
             *v.begin();
             v.end();
             v.size();
-            v.insert(v.end(), e);
+            vv.insert(v.end(), e);
         };
     }
 
@@ -233,7 +240,7 @@ namespace gtry {
     {};
 
     template<typename T>
-    concept ContainerSignal = internal::DynamicContainer<T> and is_signal<T>::value;
+    concept ContainerSignal = internal::DynamicContainer<T> and is_signal<std::remove_reference_t<T>>::value;
 
     //// compound (simple aggregate for signales and metadata)
     // this is the most loose definition of signal as a struc may also contain no signal
@@ -251,10 +258,10 @@ namespace gtry {
 
     template<typename T>
     concept CompoundSignal =
-        std::is_class_v<T> and
-        std::is_aggregate_v<T> and
+        std::is_class_v<std::remove_reference_t<T>> and
+        std::is_aggregate_v<std::remove_reference_t<T>> and
         !internal::DynamicContainer<T> and
-        !internal::is_std_array<T>::value;
+        !internal::is_std_array<std::remove_reference_t<T>>::value;
 
     template<CompoundSignal T>
     struct is_signal<T> : std::true_type
@@ -265,9 +272,9 @@ namespace gtry {
     template<typename T>
     concept TupleSignal = 
         not CompoundSignal<T> and (
-            (internal::is_std_array<T>::value and is_signal<typename T::value_type>::value) or
-            (!internal::is_std_array<T>::value and requires(T v) {
-                    std::tuple_size<T>::value;
+            (internal::is_std_array<std::remove_reference_t<T>>::value and is_signal<typename std::remove_reference_t<T>::value_type>::value) or
+            (!internal::is_std_array<std::remove_reference_t<T>>::value and requires(T v) {
+                    std::tuple_size<std::remove_reference_t<T>>::value;
                 }
             )
         );
