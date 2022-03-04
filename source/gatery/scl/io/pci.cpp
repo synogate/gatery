@@ -148,7 +148,7 @@ void gtry::scl::pci::IntelPTileCompleter::generate()
 	static_assert(Signal<BVec&>);
 	static_assert(Signal<Tlp&>);
 	static_assert(Signal<Stream<Tlp>&>);
-	static_assert(CompoundSiganl<Stream<Tlp>>);
+	static_assert(CompoundSignal<Stream<Tlp>>);
 	static_assert(Signal<std::array<Stream<Tlp>, 2>&>);
 
 
