@@ -66,7 +66,14 @@ namespace gtry {
         Enum(const SignalReadPort& port);
 
         Enum(T v);
-    
+
+		template<BitVectorDerived V>
+		explicit Enum(V rhs) : Enum(rhs.getReadPort()) {  }
+
+		template<BitVectorDerived V>
+		explicit operator V() const { if (m_node) return V(getReadPort()); else return V{}; }
+
+
         Enum<T>& operator=(const Enum<T>& rhs);
         Enum<T>& operator=(Enum<T>&& rhs);
 //        Enum<T>& operator=(const EnumDefault<T> &defaultValue);
@@ -75,7 +82,7 @@ namespace gtry {
 
         void setExportOverride(const Enum<T>& exportOverride);
 
-        BitWidth getWidth() const final;
+        constexpr BitWidth getWidth() const final;
         hlim::ConnectionType getConnType() const final;
         SignalReadPort getReadPort() const final;
         SignalReadPort getOutPort() const final;
@@ -221,8 +228,13 @@ namespace gtry {
 	}
 
 	template<EnumType T>
-	BitWidth Enum<T>::getWidth() const {
-		return utils::Log2C(magic_enum::enum_count<T>()+1);
+	constexpr BitWidth Enum<T>::getWidth() const {
+		//return utils::Log2C(magic_enum::enum_count<T>()+1);
+        size_t maxWidth = 0;
+        for (auto v : magic_enum::enum_values<T>())
+            maxWidth = std::max(maxWidth, utils::Log2C((size_t)v+1));
+
+        return maxWidth;
 	}
 
 	template<EnumType T>
@@ -285,6 +297,8 @@ namespace gtry {
 
 	template<EnumType T>
 	void Enum<T>::assign(T v) {
+        HCL_DESIGNCHECK_HINT((size_t)v < MAGIC_ENUM_RANGE_MAX, "The values of enums adapted to signals must be within a small range defined by the Magic Enum library!");
+
         auto* constant = DesignScope::createNode<hlim::Node_Constant>(
             parseBitVector((size_t)v, getWidth().value), hlim::ConnectionType::BITVEC
 		);
