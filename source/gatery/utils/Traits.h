@@ -278,7 +278,7 @@ namespace gtry {
         std::is_class_v<std::remove_reference_t<T>> and
         std::is_aggregate_v<std::remove_reference_t<T>> and
         !internal::DynamicContainer<T> and
-        !internal::is_std_array<std::remove_reference_t<T>>::value;
+        !internal::is_std_array<std::remove_cvref_t<T>>::value;
 
     template<CompoundSignal T>
     struct is_signal<T> : std::true_type
@@ -289,8 +289,8 @@ namespace gtry {
     template<typename T>
     concept TupleSignal = 
         not CompoundSignal<T> and (
-            (internal::is_std_array<std::remove_reference_t<T>>::value and is_signal<typename std::remove_reference_t<T>::value_type>::value) or
-            (!internal::is_std_array<std::remove_reference_t<T>>::value and requires(T v) {
+            (internal::is_std_array<std::remove_cvref_t<T>>::value and is_signal<typename std::remove_cvref_t<T>::value_type>::value) or
+            (!internal::is_std_array<std::remove_cvref_t<T>>::value and requires(T v) {
                     std::tuple_size<std::remove_reference_t<T>>::value;
                 }
             )

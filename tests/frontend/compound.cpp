@@ -60,6 +60,9 @@ BOOST_FIXTURE_TEST_CASE(CompoundName, BoostUnitTestSimulationFixture)
     static_assert(Signal<std::array<RichStruct, 2>>);
     static_assert(Signal<std::array<RichStruct, 2>&>);
     static_assert(Signal<const std::array<RichStruct, 2>&>);
+    static_assert(!CompoundSignal<std::array<gtry::Bit, 7>>);
+    static_assert(Signal<const std::array<gtry::Bit, 7>&>);
+    static_assert(TupleSignal<const std::array<gtry::Bit, 7>&>);
 
     Bit bit;
     setName(bit, "bit");
