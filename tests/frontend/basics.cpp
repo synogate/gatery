@@ -1193,7 +1193,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCat, BoostUnitTestSimulationFixture)
     using namespace gtry;
 
     UInt vec = 42u;
-    UInt vec_2 = pack('1', vec, '0');
+    UInt vec_2 = cat('1', vec, '0');
     BOOST_TEST(vec_2.size() == 8);
     sim_assert(vec_2 == 42u * 2 + 128) << "result is " << vec_2;
 

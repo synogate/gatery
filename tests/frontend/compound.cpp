@@ -124,6 +124,9 @@ BOOST_FIXTURE_TEST_CASE(CompoundPack, BoostUnitTestSimulationFixture)
         sim_assert(vecPack(0,3) == 5u);
         sim_assert(vecPack(3,3) == 5u);
         sim_assert(vecPack(6,3) == 5u);
+
+        UInt vecCat = pack(vecvec);
+        sim_assert(vecPack == vecCat);
     }
 
     eval();

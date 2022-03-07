@@ -74,12 +74,27 @@ namespace gtry
 	UInt pack(const SignalValue auto& ...compound)
 	{
 		std::vector<SignalReadPort> portList;
+		(internal::for_each_base_signal(compound, [&](const BaseSignal auto& signal) {
+			portList.push_back(signal.getReadPort());
+		}), ...);
+
+		auto* m_node = DesignScope::createNode<hlim::Node_Rewire>(portList.size());
+		for (size_t i = 0; i < portList.size(); ++i)
+			m_node->connectInput(i, portList[i]);
+		m_node->setConcat();
+		return SignalReadPort(m_node);
+	}
+
+	// same as pack but in reverse parameter order
+	UInt cat(const SignalValue auto& ...compound)
+	{
+		std::vector<SignalReadPort> portList;
 		internal::for_each_base_signal_reverse([&](const BaseSignal auto& signal) {
 			portList.push_back(signal.getReadPort());
 		}, compound...);
 
 		auto* m_node = DesignScope::createNode<hlim::Node_Rewire>(portList.size());
-		for (size_t i = 0; i < portList.size(); ++i)
+		for(size_t i = 0; i < portList.size(); ++i)
 			m_node->connectInput(i, portList[i]);
 		m_node->setConcat();
 		return SignalReadPort(m_node);
@@ -90,7 +105,7 @@ namespace gtry
 	{
 		auto&& readPort = vec.getReadPort();
 		size_t bitOffset = 0;
-		internal::for_each_base_signal_reverse([&](BaseSignal auto& signal) {
+		(internal::for_each_base_signal(compound, [&](BaseSignal auto& signal) {
 
 			hlim::ConnectionType sigType = connType(signal.getReadPort());
 			HCL_DESIGNCHECK_HINT(sigType.width + bitOffset <= vec.size(), "parameter width missmatch during unpack");
@@ -106,7 +121,7 @@ namespace gtry
 			using TOut = std::remove_cvref_t<decltype(signal)>;
 			signal = TOut{ SignalReadPort(node) };
 
-		}, compound...);
+		}), ...);
 
 		HCL_DESIGNCHECK_HINT(bitOffset == vec.size(), "parameter width missmatch during unpack");
 	}

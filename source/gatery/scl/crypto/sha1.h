@@ -49,7 +49,7 @@ namespace gtry::scl
 			d = "x10325476";
 			e = "xC3D2E1F0";
 
-			hash = pack(a, b, c, d, e);
+			hash = cat(a, b, c, d, e);
 		}
 
 		void beginBlock(const TVec& _block)
@@ -114,7 +114,7 @@ namespace gtry::scl
 			d += hash(Selection::Symbol(1, 32_b));
 			e += hash(Selection::Symbol(0, 32_b));
 
-			hash = pack(a, b, c, d, e);
+			hash = cat(a, b, c, d, e);
 			HCL_NAMED(hash);
 		}
 

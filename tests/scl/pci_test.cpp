@@ -75,7 +75,7 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 
     UInt inHeader = pinIn(64_b).setName("in_header");
     UInt inAddress = pinIn(32_b).setName("in_address");
-    in.data.header = pack(inAddress, inHeader);
+    in.data.header = cat(inAddress, inHeader);
     in.data.data = pinIn(32_b).setName("in_data");
     in.ready = Bit{};
     pinOut(*in.ready).setName("in_ready");

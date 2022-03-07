@@ -256,7 +256,7 @@ namespace gtry::scl
 				stage = readData;
 		}
 
-		cmdAddr = pack(
+		cmdAddr = cat(
 			ConstUInt(m_flags, 8_b),
 			ConstUInt(mems.size(), 8_b),
 			ConstUInt(memWidth.value, 8_b),

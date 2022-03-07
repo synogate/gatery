@@ -96,7 +96,7 @@ gtry::scl::EncoderResult gtry::scl::priorityEncoderTree(const UInt& in, bool reg
         }
 
     EncoderResult out{
-        pack(highSelect, lowSelect.index),
+        cat(highSelect, lowSelect.index),
         lowSelect.valid
     };
     HCL_NAMED(out);

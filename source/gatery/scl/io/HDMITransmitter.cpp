@@ -85,7 +85,7 @@ UInt tmdsEncode(Clock &pixelClock, Bit dataEnable, UInt data, UInt ctrl)
         
         IF (noPreviousImbalance | noImbalanceInQ_m) {
             result(0, 8) = mux(useXnor, {q_m, ~q_m});
-            result(8, 2) = pack(useXnor, ~useXnor);
+            result(8, 2) = cat(useXnor, ~useXnor);
             
             IF (useXnor) 
                 imbalance -= 8 + sumOfOnes_q_m + sumOfOnes_q_m;
@@ -101,14 +101,14 @@ UInt tmdsEncode(Clock &pixelClock, Bit dataEnable, UInt data, UInt ctrl)
                 ((!positivePreviousImbalance) & (!positiveImbalanceInQ_m))) {
                 
                 result(0, 8) = ~q_m;
-                result(8, 2) = pack(useXnor, '1');
+                result(8, 2) = cat(useXnor, '1');
                 
                 imbalance += 8 - sumOfOnes_q_m - sumOfOnes_q_m;
                 IF (useXnor)
                     imbalance += 2;
             } ELSE {
                 result(0, 8) = q_m;
-                result(8, 2) = pack(useXnor, '1');
+                result(8, 2) = cat(useXnor, '1');
                 
                 imbalance += 8 - sumOfOnes_q_m - sumOfOnes_q_m;
                 IF (useXnor)
@@ -163,7 +163,7 @@ UInt tmdsEncodeSymbol(const UInt& data)
     global_counter += (word_counter ^ invert) + invert;
     global_counter = reg(global_counter, 0);
 
-    UInt result = pack(invert, ~invertXor, transitionReduced ^ invert);
+    UInt result = cat(invert, ~invertXor, transitionReduced ^ invert);
     HCL_NAMED(result);
     return result;
 }
@@ -179,7 +179,7 @@ UInt tmdsEncodeReduceTransitions(const UInt& data)
     Bit invert = (sumOfOnes > 4u) | (sumOfOnes == 4u & !data.lsb());
 
     HCL_COMMENT << "Decode using 1=xor, 0=xnor";
-    UInt tmdsReduced = pack(~invert, data);
+    UInt tmdsReduced = cat(~invert, data);
     for (auto i : utils::Range<size_t>(1, data.size()))
         tmdsReduced[i] ^= tmdsReduced[i - 1] ^ invert;
 
@@ -213,7 +213,7 @@ UInt tmdsEncodeBitflip(const Clock& clk, const UInt& data)
         invert = ~data.msb();
     HCL_NAMED(invert);
 
-    UInt result = pack(invert, data.msb(), data(0, -1) ^ invert);
+    UInt result = cat(invert, data.msb(), data(0, -1) ^ invert);
     HCL_NAMED(result);
 
     // sub or add depending on invert
@@ -225,7 +225,7 @@ UInt tmdsEncodeBitflip(const Clock& clk, const UInt& data)
 
 UInt tmdsDecodeBitflip(const UInt& data)
 {
-    return pack(data[data.size() - 2], data(0, -2) ^ data.msb());
+    return cat(data[data.size() - 2], data(0, -2) ^ data.msb());
 }
 
 TmdsEncoder::TmdsEncoder(Clock& clk) :
