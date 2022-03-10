@@ -78,7 +78,42 @@ BOOST_FIXTURE_TEST_CASE(EnumRegCompileTest, BoostUnitTestSimulationFixture)
 	Enum<MyClassicalEnum> enumSignal = A;
 
 	enumSignal = reg(enumSignal);
+}
 
+
+
+BOOST_FIXTURE_TEST_CASE(EnumRegister, gtry::BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    ClockScope clockScope(clock);
+
+	enum MyClassicalEnum { A, B, C, D };
+    Enum<MyClassicalEnum> inSignal = (Enum<MyClassicalEnum>) pinIn(2_b);
+
+    Enum<MyClassicalEnum> resetSignal = C;
+
+    Enum<MyClassicalEnum> outSignal = reg(inSignal);
+    pinOut((BVec)outSignal);
+
+    Enum<MyClassicalEnum> outSignalReset = reg(inSignal, resetSignal);
+    pinOut((BVec)outSignalReset);
+
+    addSimulationProcess([=, this]()->SimProcess {
+
+        BOOST_TEST(simu(outSignalReset) == C);
+
+        simu(inSignal) = D;
+        co_await WaitClk(clock);
+        BOOST_TEST(simu(outSignal) == D);
+        BOOST_TEST(simu(outSignalReset) == D);
+
+        stopTest();
+    });
+
+    design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+    runTest({ 1,1 });
 }
 
 
@@ -98,6 +133,65 @@ BOOST_FIXTURE_TEST_CASE(EnumMemoryCompileTest, BoostUnitTestSimulationFixture)
 
 	Enum<MyClassicalEnum> sig2 = mem[0];
 	mem[1] = enumSignal;
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(EnumInStructCompileTest, BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+	enum MyClassicalEnum { A, B, C, D };
+
+	struct TestStruct {
+		Enum<MyClassicalEnum> enumSignal = A;
+		BVec b = 32_b;
+		Bit c;
+	};
+
+	TestStruct s;
+
+	s = reg(s);
+
+	HCL_NAMED(s);
+
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(EnumValueTest, BoostUnitTestSimulationFixture)
+{
+    using namespace gtry;
+
+    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+	enum MyClassicalEnum { 
+		A = 2, 
+		B = 8, 
+		C = 3,
+	};
+
+	Enum<MyClassicalEnum> enumSignal = A;
+
+	UInt asUint = (UInt) enumSignal;
+	sim_assert(asUint == 2);
+
+	asUint += 6;
+
+	enumSignal = (Enum<MyClassicalEnum>) asUint;
+	sim_assert(enumSignal == B);
+
+	asUint -= 5;
+
+	enumSignal = (Enum<MyClassicalEnum>) asUint;
+	sim_assert(enumSignal == C);
+
+
+	eval();
 }
 
 

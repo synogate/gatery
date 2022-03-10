@@ -67,8 +67,10 @@ namespace gtry {
 
         Enum(T v);
 
-		template<BitVectorDerived V>
-		explicit Enum(V rhs) : Enum(rhs.getReadPort()) {  }
+		explicit Enum(const UInt &rhs) : Enum(rhs.getReadPort()) { HCL_DESIGNCHECK_HINT(rhs.getWidth() == getWidth(), "Only bit vectors of correct size can be converted to enum signals"); }
+
+		template<UIntValue V>
+		explicit Enum(V rhs) : Enum((UInt)rhs) { }
 
 		template<BitVectorDerived V>
 		explicit operator V() const { if (m_node) return V(getReadPort()); else return V{}; }

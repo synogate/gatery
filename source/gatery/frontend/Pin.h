@@ -30,65 +30,66 @@ namespace gtry {
     class UInt;
     class SInt;
 
-    class OutputPin {
+    class BaseOutputPin {
+        public:
+            BaseOutputPin(hlim::NodePort nodePort, std::string name);
+
+            inline hlim::Node_Pin *getNode() { return m_pinNode.get(); }
+            inline hlim::Node_Pin *getNode() const { return m_pinNode.get(); }
+        protected:
+            hlim::NodePtr<hlim::Node_Pin> m_pinNode;
+    };    
+
+    class OutputPin : public BaseOutputPin {
         public:
             OutputPin(const Bit &bit);
 
             inline OutputPin &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
-            inline hlim::Node_Pin *getNode() { return m_pinNode.get(); }
-            inline hlim::Node_Pin *getNode() const { return m_pinNode.get(); }
-
             inline OutputPin &setDifferential(std::string_view posPrefix = "_p", std::string_view negPrefix = "_n") { m_pinNode->setDifferential(posPrefix, negPrefix); return *this; }
-        protected:
-            hlim::NodePtr<hlim::Node_Pin> m_pinNode;
+
     };
 
-    class OutputPins {
+    class OutputPins : public BaseOutputPin {
         public:
-            OutputPins(const BVec &bitVector);
-            OutputPins(const UInt &bitVector);
-            OutputPins(const SInt &bitVector);
+            template<BitVectorDerived T>
+            OutputPins(const T &bitVector) : BaseOutputPin(bitVector.getReadPort(), std::string(bitVector.getName())) { }
 
             inline OutputPins &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
-            inline hlim::Node_Pin *getNode() { return m_pinNode.get(); }
-            inline hlim::Node_Pin *getNode() const { return m_pinNode.get(); }
-
             inline OutputPins &setDifferential(std::string_view posPrefix = "_p", std::string_view negPrefix = "_n") { m_pinNode->setDifferential(posPrefix, negPrefix); return *this; }
-        protected:
-            hlim::NodePtr<hlim::Node_Pin> m_pinNode;
     };
 
-    class InputPin {
+
+    class BaseInputPin { 
+        public:
+            BaseInputPin();
+
+            inline hlim::Node_Pin *getNode() { return m_pinNode.get(); }
+            inline hlim::Node_Pin *getNode() const { return m_pinNode.get(); }
+        protected:
+            hlim::NodePtr<hlim::Node_Pin> m_pinNode;    
+    };
+
+    class InputPin : public BaseInputPin {
         public:
             InputPin();
-
             operator Bit () const;
-
             inline InputPin &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
-            inline hlim::Node_Pin *getNode() { return m_pinNode.get(); }
-            inline hlim::Node_Pin *getNode() const { return m_pinNode.get(); }
-        protected:
-            hlim::NodePtr<hlim::Node_Pin> m_pinNode;
     };
 
-    class InputPins {
+    class InputPins : public BaseInputPin {
         public:
             InputPins(BitWidth width);
-            explicit operator BVec () const;
             operator UInt () const;
-            explicit operator SInt () const;
+
+            template<BitVectorDerived T> requires (!std::same_as<UInt, T>)
+            explicit operator T () const { return T(SignalReadPort({.node=m_pinNode, .port=0ull})); }
 
             inline InputPins &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
-            inline hlim::Node_Pin *getNode() { return m_pinNode.get(); }
-            inline hlim::Node_Pin *getNode() const { return m_pinNode.get(); }
-        protected:
-            hlim::NodePtr<hlim::Node_Pin> m_pinNode;
     };
 
     inline OutputPin pinOut(const Bit &bit) { return OutputPin(bit); }
-    inline OutputPins pinOut(const BVec &bitVector) { return OutputPins(bitVector); }
-    inline OutputPins pinOut(const UInt &bitVector) { return OutputPins(bitVector); }
-    inline OutputPins pinOut(const SInt &bitVector) { return OutputPins(bitVector); }
+    template<BitVectorValue T>
+    inline OutputPins pinOut(const T &bitVector) { return OutputPins((ValueToBaseSignal<T>)bitVector); }
 
     OutputPins pinOut(const InputPins &input);
 

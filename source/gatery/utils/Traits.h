@@ -20,6 +20,7 @@
 #include <type_traits>
 #include <concepts>
 #include <string_view>
+#include <array>
 
 
 namespace gtry {

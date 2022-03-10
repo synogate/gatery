@@ -22,6 +22,8 @@
 #include "Bit.h"
 #include "UInt.h"
 
+#include <gatery/utils/Traits.h>
+
 #include <gatery/simulation/SigHandle.h>
 #include <gatery/simulation/simProc/SimulationProcess.h>
 #include <gatery/simulation/simProc/WaitFor.h>
@@ -34,8 +36,14 @@ namespace gtry {
 class Clock;
 
 sim::SigHandle simu(hlim::NodePort output);
-sim::SigHandle simu(const Bit &bit);
-sim::SigHandle simu(const UInt &signal);
+
+template<BaseSignal T>
+sim::SigHandle simu(const T &signal) {
+    auto driver = signal.getReadPort();
+    HCL_DESIGNCHECK(driver.node != nullptr);
+    return simu(driver);
+}
+
 sim::SigHandle simu(const InputPin &pin);
 sim::SigHandle simu(const InputPins &pins);
 

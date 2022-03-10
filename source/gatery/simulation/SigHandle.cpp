@@ -107,7 +107,7 @@ struct StateBlockOutputIterator {
     size_t offset = 0;
 };
 
-void SigHandle::operator=(const BigInt &v)
+void SigHandle::assign(const BigInt &v)
 {
     auto width = m_output.node->getOutputConnectionType(m_output.port).width;
     DefaultBitVectorState state;

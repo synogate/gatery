@@ -18,16 +18,12 @@
 #pragma once
 
 #include "../hlim/NodePort.h"
+#include "../utils/Traits.h"
 #include "BitVectorState.h"
 
 #include <boost/spirit/home/support/container.hpp>
 
 #include <boost/multiprecision/cpp_int.hpp>
-
-namespace gtry {
-    class Bit;
-    class BVec;
-}
 
 namespace gtry::sim {
 
@@ -44,6 +40,9 @@ class SigHandle {
         template<typename T, typename Ten = std::enable_if_t<boost::spirit::traits::is_container<T>::value>>
         void operator=(const T& collection);
 
+        template<EnumType T>
+        void operator=(T v) { operator=((std::uint64_t) v); }
+
         void operator=(std::uint64_t v);
         void operator=(const DefaultBitVectorState &state);
         void invalidate();
@@ -51,7 +50,9 @@ class SigHandle {
         operator std::uint64_t () const { return value(); }
         operator DefaultBitVectorState () const { return eval(); }
 
-        void operator=(const BigInt &v);
+        template<std::same_as<BigInt> BigInt_> // prevent conversion
+        void operator=(const BigInt_ &v) { assign(v); }
+
         operator BigInt () const;
 
         bool allDefined() const;
@@ -62,6 +63,9 @@ class SigHandle {
 
         hlim::NodePort getOutput() const { return m_output; }
     protected:
+        void assign(const BigInt &v);
+
+
         hlim::NodePort m_output;
 };
 
