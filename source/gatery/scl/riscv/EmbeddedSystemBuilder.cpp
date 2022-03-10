@@ -110,7 +110,7 @@ gtry::Bit gtry::scl::riscv::EmbeddedSystemBuilder::addUART(uint64_t offset, UART
 	txStream.data = (*bus.writeData)(0, 8_b);
 	txStream.valid = *bus.write;
 	
-	bus.readData = zext(pack(txStream.ready, rxStream.valid, rxStream.data));
+	bus.readData = zext(cat(txStream.ready, rxStream.valid, rxStream.data));
 	bus.readDataValid = reg(*bus.read, '0');
 	rxStream.ready = *bus.readDataValid;
 	return config.send(txStream);

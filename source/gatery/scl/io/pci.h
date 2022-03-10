@@ -30,7 +30,7 @@ namespace gtry::scl
 			UInt dev = 5_b;
 			UInt func = 3_b;
 
-			UInt ariFunc() const { return pack(dev, func); }
+			UInt ariFunc() const { return cat(dev, func); }
 		};
 
 		struct TlpHeaderAttr

@@ -159,7 +159,7 @@ Bit UART::send(Stream &stream)
     IF (idle) {
         stream.ready = true;
         IF (stream.valid) {
-            data = oext(pack(stream.data, ConstUInt(0, BitWidth{startBits})));
+            data = oext(cat(stream.data, ConstUInt(0, BitWidth{startBits})));
             counter = bitLength+1;
         }
     } ELSE {

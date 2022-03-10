@@ -138,7 +138,7 @@ namespace gtry::scl
 		HCL_NAMED(paddedLength);
 
 		size_t zeroPad = (64 - (msgByteSize * 8 + 8)) % 64;
-		UInt paddedBlock = pack(paddedLength, zext(block(0, msgByteSize*8), zeroPad));
+		UInt paddedBlock = cat(paddedLength, zext(block(0, msgByteSize*8), zeroPad));
 		HCL_NAMED(paddedBlock);
 		return paddedBlock;
 	}

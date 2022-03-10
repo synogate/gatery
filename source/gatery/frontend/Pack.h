@@ -17,6 +17,7 @@
 */
 #pragma once
 #include "Compound.h"
+#include <utility>
 
 #include <gatery/hlim/SignalGroup.h>
 
@@ -24,52 +25,58 @@ namespace gtry
 {
 	namespace internal
 	{
-		void ports(const TupleSignal auto& signal, std::vector<SignalReadPort>& list);
-		void ports(const CompoundSignal auto& signal, std::vector<SignalReadPort>& list);
+		void for_each_base_signal(TupleSignal auto&& signal, auto&& cb);
+		void for_each_base_signal(CompoundSignal auto&& signal, auto&& cb);
 
-		void ports(const BaseSignal auto& signal, std::vector<SignalReadPort>& list)
+		void for_each_base_signal(BaseSignal auto&& signal, auto&& cb)
 		{
-			list.push_back(signal.getReadPort());
+			cb(std::forward<decltype(signal)>(signal));
 		}
 
-		void ports(const BaseSignalLiteral auto& value, std::vector<SignalReadPort>& list)
+		void for_each_base_signal(BaseSignalLiteral auto&& value, auto&& cb)
 		{
-			ports(ValueToBaseSignal<decltype(value)>{value}, list);
+			for_each_base_signal(ValueToBaseSignal<decltype(value)>{value}, std::forward<decltype(cb)>(cb));
 		}
 
-		void ports(const ContainerSignal auto& signal, std::vector<SignalReadPort>& list)
+		void for_each_base_signal(ContainerSignal auto&& signal, auto&& cb)
 		{
 			for(auto&& it : signal)
-				ports(it, list);
+				for_each_base_signal(it, cb);
 		}
 
-		void ports(const TupleSignal auto& signal, std::vector<SignalReadPort>& list)
+		void for_each_base_signal(TupleSignal auto&& signal, auto&& cb)
 		{
-			boost::hana::for_each(signal, [&](auto&& member) {
-				if constexpr(Signal<decltype(member)>)
-					ports(member, list);
+			boost::hana::for_each(
+				std::forward<decltype(signal)>(signal), 
+				[&](auto&& member) {
+					if constexpr(Signal<decltype(member)>)
+						for_each_base_signal(std::forward<decltype(member)>(member), cb);
 			});
 		}
 
-		void ports(const CompoundSignal auto& signal, std::vector<SignalReadPort>& list)
+		void for_each_base_signal(CompoundSignal auto&& signal, auto&& cb)
 		{
-			ports(boost::pfr::structure_tie(signal), list);
+			for_each_base_signal(
+				boost::pfr::structure_tie(std::forward<decltype(signal)>(signal)), 
+				std::forward<decltype(cb)>(cb)
+			);
 		}
 
-		inline void ports_reverse(std::vector<SignalReadPort>& list) {}
+		void for_each_base_signal_reverse(auto&& cb) {}
 
-		template<typename T, typename... Tl>
-		void ports_reverse(std::vector<SignalReadPort>& list, const T& signal, const Tl& ...other)
+		void for_each_base_signal_reverse(auto&& cb, SignalValue auto&& signal, SignalValue auto&& ...other)
 		{
-			ports_reverse(list, other...);
-			ports(signal, list);
+			for_each_base_signal_reverse(cb, std::forward<decltype(other)>(other)...);
+			for_each_base_signal(std::forward<decltype(signal)>(signal), std::forward<decltype(cb)>(cb));
 		}
 	}
 
 	UInt pack(const SignalValue auto& ...compound)
 	{
 		std::vector<SignalReadPort> portList;
-		internal::ports_reverse(portList, compound...);
+		(internal::for_each_base_signal(compound, [&](const BaseSignal auto& signal) {
+			portList.push_back(signal.getReadPort());
+		}), ...);
 
 		auto* m_node = DesignScope::createNode<hlim::Node_Rewire>(portList.size());
 		for (size_t i = 0; i < portList.size(); ++i)
@@ -78,57 +85,44 @@ namespace gtry
 		return SignalReadPort(m_node);
 	}
 
-	namespace internal
+	// same as pack but in reverse parameter order
+	UInt cat(const SignalValue auto& ...compound)
 	{
-		struct UnpackVisitor : CompoundVisitor
-		{
-			UnpackVisitor(const UInt& out) : 
-				m_packed(out)
-			{}
+		std::vector<SignalReadPort> portList;
+		internal::for_each_base_signal_reverse([&](const BaseSignal auto& signal) {
+			portList.push_back(signal.getReadPort());
+		}, compound...);
 
-			virtual void operator () (UInt& vec, const UInt&) override
-			{
-				auto* node = DesignScope::createNode<hlim::Node_Rewire>(1);
-				node->recordStackTrace();
-				node->connectInput(0, m_packed.getReadPort());
-				node->setExtract(m_totalWidth, vec.size());
-				m_totalWidth += vec.size();
-
-				vec = UInt{ SignalReadPort(node) };
-			}
-
-			virtual void operator () (Bit& vec, const Bit&) override
-			{
-				auto* node = DesignScope::createNode<hlim::Node_Rewire>(1);
-				node->recordStackTrace();
-				node->connectInput(0, m_packed.getReadPort());
-				node->changeOutputType({ hlim::ConnectionType::BOOL });
-				node->setExtract(m_totalWidth, 1);
-				m_totalWidth++;
-
-				vec = Bit{ SignalReadPort(node) };
-			}
-
-			const UInt& m_packed;
-			size_t m_totalWidth = 0;
-		};
-
-		inline void unpack(UnpackVisitor&) {}
-
-		template<typename... Comp, typename T>
-		void unpack(UnpackVisitor& v, T& compound, Comp& ...compoundList)
-		{
-			unpack(v, compoundList...);
-			VisitCompound<T>{}(compound, compound, v, 0);
-		}
+		auto* m_node = DesignScope::createNode<hlim::Node_Rewire>(portList.size());
+		for(size_t i = 0; i < portList.size(); ++i)
+			m_node->connectInput(i, portList[i]);
+		m_node->setConcat();
+		return SignalReadPort(m_node);
 	}
-	
+
 	template<typename... Comp>
 	void unpack(const UInt& vec, Comp& ... compound)
 	{
-		HCL_DESIGNCHECK(vec.getWidth() == width(compound...));
+		auto&& readPort = vec.getReadPort();
+		size_t bitOffset = 0;
+		(internal::for_each_base_signal(compound, [&](BaseSignal auto& signal) {
 
-		internal::UnpackVisitor v{ vec };
-		internal::unpack(v, compound...);
+			hlim::ConnectionType sigType = connType(signal.getReadPort());
+			HCL_DESIGNCHECK_HINT(sigType.width + bitOffset <= vec.size(), "parameter width missmatch during unpack");
+
+			auto* node = DesignScope::createNode<hlim::Node_Rewire>(1);
+			node->recordStackTrace();
+			node->connectInput(0, readPort);
+
+			node->changeOutputType(sigType);
+			node->setExtract(bitOffset, sigType.width);
+			bitOffset += sigType.width;
+
+			using TOut = std::remove_cvref_t<decltype(signal)>;
+			signal = TOut{ SignalReadPort(node) };
+
+		}), ...);
+
+		HCL_DESIGNCHECK_HINT(bitOffset == vec.size(), "parameter width missmatch during unpack");
 	}
 }

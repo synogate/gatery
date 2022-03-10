@@ -67,7 +67,7 @@ namespace gtry::scl
 			g = "x1f83d9ab";
 			h = "x5be0cd19";
 
-			hash = pack(a, b, c, d, e, f, g, h);
+			hash = cat(a, b, c, d, e, f, g, h);
 		}
 
 		void beginBlock(const UInt& _block)
@@ -123,7 +123,7 @@ namespace gtry::scl
 			g += hash(Selection::Symbol(1, 32_b));
 			h += hash(Selection::Symbol(0, 32_b));
 
-			hash = pack(a, b, c, d, e, f, g, h);
+			hash = cat(a, b, c, d, e, f, g, h);
 		}
 
 		const UInt& finalize() { return hash; }

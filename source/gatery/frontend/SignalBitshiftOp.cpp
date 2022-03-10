@@ -183,7 +183,7 @@ UInt shr(const UInt& signal, size_t amount, const Bit& arithmetic)
 
     auto shiftedHigh = sext(inShift, amount - 1);
     auto shiftedLow = signal(amount, signal.getWidth() - amount);
-    return pack(shiftedHigh, shiftedLow);
+    return cat(shiftedHigh, shiftedLow);
 }
 
 UInt shr(const UInt& signal, const UInt& amount, const Bit& arithmetic)

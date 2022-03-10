@@ -30,10 +30,10 @@ void gtry::scl::riscv::Instruction::decode(const UInt& inst)
 	func7 = inst(25, 7);
 
 	immI = sext(inst(20, 12));
-	immS = sext(pack(inst(25, 7), inst(7, 5)));
-	immB = sext(pack(inst.msb(), inst[7], inst(25, 6), inst(8, 4), '0'));
-	immU = pack(inst(20, 12), inst(12, 8), "12b0");
-	immJ = sext(pack(inst.msb(), inst(12, 8), inst[20], inst(25, 6), inst(21, 4), '0'));
+	immS = sext(cat(inst(25, 7), inst(7, 5)));
+	immB = sext(cat(inst.msb(), inst[7], inst(25, 6), inst(8, 4), '0'));
+	immU = cat(inst(20, 12), inst(12, 8), "12b0");
+	immJ = sext(cat(inst.msb(), inst(12, 8), inst[20], inst(25, 6), inst(21, 4), '0'));
 
 	// for waveform debugging
 	name = 0;
@@ -331,7 +331,7 @@ void gtry::scl::riscv::RV32I::store(AvalonMM& mem, bool byte, bool halfword)
 		{
 			IF(m_instr.func3 == 0)
 			{
-				mem.writeData = pack(m_r2(0, 8_b), m_r2(0, 8_b), m_r2(0, 8_b), m_r2(0, 8_b));
+				mem.writeData = cat(m_r2(0, 8_b), m_r2(0, 8_b), m_r2(0, 8_b), m_r2(0, 8_b));
 				mem.byteEnable = decoder(m_aluResult.sum(0, 2_b));
 			}
 		}
@@ -339,10 +339,10 @@ void gtry::scl::riscv::RV32I::store(AvalonMM& mem, bool byte, bool halfword)
 		{
 			IF(m_instr.func3 == 1)
 			{
-				mem.writeData = pack(m_r2(0, 16_b), m_r2(0, 16_b));
+				mem.writeData = cat(m_r2(0, 16_b), m_r2(0, 16_b));
 
 				Bit highWord = m_aluResult.sum[1];
-				mem.byteEnable = pack(highWord, highWord, !highWord, !highWord);
+				mem.byteEnable = cat(highWord, highWord, !highWord, !highWord);
 			}
 		}
 	}
@@ -401,7 +401,7 @@ void gtry::scl::riscv::RV32I::load(AvalonMM& mem, bool byte, bool halfword)
 					value = sext(word);
 
 				Bit highWord = m_aluResult.sum[1];
-				mem.byteEnable = pack(highWord, highWord, !highWord, !highWord);
+				mem.byteEnable = cat(highWord, highWord, !highWord, !highWord);
 			}
 		}
 

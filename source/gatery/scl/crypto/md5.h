@@ -73,7 +73,7 @@ namespace gtry::scl
 			c = "x98BADCFE";
 			d = "x10325476";
 
-			hash = pack(d, c, b, a);
+			hash = cat(d, c, b, a);
 		}
 
 		void beginBlock(const TVec& _block)
@@ -126,7 +126,7 @@ namespace gtry::scl
 			c += hash(Selection::Symbol(2, 32_b));
 			d += hash(Selection::Symbol(3, 32_b));
 
-			hash = pack(d, c, b, a);
+			hash = cat(d, c, b, a);
 		}
 
 		TVec finalize() { return swapEndian(hash); }

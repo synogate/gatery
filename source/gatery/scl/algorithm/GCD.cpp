@@ -63,7 +63,7 @@ gtry::scl::StreamSource<gtry::scl::UIntPair> gtry::scl::binaryGCDStep1(StreamSin
 
             IF(a_odd & b_odd)
             {
-                UInt abs = pack('0', a) - pack('0', b);
+                UInt abs = zext(a, 1) - zext(b, 1);
                 a = mux(abs.msb(), { a, b });
 
                 HCL_COMMENT << "a - b is always even, it is sufficient to build the 1s complement";

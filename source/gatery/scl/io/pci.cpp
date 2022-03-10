@@ -123,7 +123,7 @@ void gtry::scl::pci::MemTlpCplData::decode(const UInt& tlpHdr)
 	attr.idBasedOrdering = tlpHdr[18];
 	attr.relaxedOrdering = tlpHdr[13];
 	attr.noSnoop = tlpHdr[12];
-	lowerAddress = pack(tlpHdr(66, 5_b), "b00");
+	lowerAddress = cat(tlpHdr(66, 5_b), "b00");
 
 	tag = tlpHdr(40, 8_b);
 	requester.func = tlpHdr(48, 3_b);
@@ -138,7 +138,7 @@ void gtry::scl::pci::MemTlpCplData::encode(UInt& tlpHdr) const
 	tlpHdr[13] = attr.relaxedOrdering;
 	tlpHdr[12] = attr.noSnoop;
 
-	tlpHdr(64, 32_b) = pack(requester.bus, requester.dev, requester.func, tag, '0', lowerAddress);
+	tlpHdr(64, 32_b) = cat(requester.bus, requester.dev, requester.func, tag, '0', lowerAddress);
 }
 
 void gtry::scl::pci::IntelPTileCompleter::generate()
