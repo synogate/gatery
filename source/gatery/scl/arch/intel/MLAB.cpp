@@ -119,6 +119,10 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
         altdpram->connectInput(ALTDPRAM::Inputs::IN_WREN, wrEn);
 
         altdpram->attachClock(wp.node->getClocks()[0], (size_t)ALTDPRAM::Clocks::INCLOCK);
+
+		auto wrWordEnableSignal = wp.node->getNonSignalDriver((size_t)hlim::Node_MemPort::Inputs::wrWordEnable);
+		if (wrWordEnableSignal.node != nullptr)
+			altdpram->connectInput(ALTDPRAM::Inputs::IN_BYTEENA, getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrWordEnable}));
     }
 
     {

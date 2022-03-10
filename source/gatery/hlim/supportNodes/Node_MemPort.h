@@ -31,6 +31,7 @@ class Node_MemPort : public Node<Node_MemPort>
             wrEnable,
             address,
             wrData,
+            wrWordEnable,
             orderAfter,
             memoryReadDependency,
             count
@@ -69,6 +70,7 @@ class Node_MemPort : public Node<Node_MemPort>
         void connectWrEnable(const NodePort &output);
         void connectAddress(const NodePort &output);
         void connectWrData(const NodePort &output);
+        void connectWrWordEnable(const NodePort &output);
         void orderAfter(Node_MemPort *port);
         bool isOrderedAfter(Node_MemPort *port) const;
         bool isOrderedBefore(Node_MemPort *port) const;

@@ -74,7 +74,7 @@ namespace gtry
 
 		operator Data() const { return read(); }
 
-		void write(const Data& value) {
+		auto *write(const Data& value) {
 			UInt packedValue = pack(value);
 
 			HCL_DESIGNCHECK_HINT(packedValue.size() == m_wordSize, "The width of data assigned to a memory write port must match the previously specified word width of the memory or memory view.");
@@ -89,9 +89,17 @@ namespace gtry
 			writePort->connectAddress(m_address.getReadPort());
 			writePort->connectWrData(packedValue.getReadPort());
 			writePort->setClock(ClockScope::getClk().getClk());
+			return writePort;
 		}
 
 		MemoryPortFactory<Data>& operator = (const Data& value) { write(value); return *this; }
+
+		void write(const Data& value, const UInt &wrWordEnable) {
+			auto* writePort = write(value);
+			writePort->connectWrWordEnable(wrWordEnable.getReadPort());
+		}
+
+		MemoryPortFactory<Data>& operator = (const std::pair<Data, UInt>& value) { write(value.first, value.second); return *this; }
 	protected:
 		hlim::NodePtr<hlim::Node_Memory> m_memoryNode;
 		Data m_defaultValue;

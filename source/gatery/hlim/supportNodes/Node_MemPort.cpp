@@ -91,6 +91,13 @@ void Node_MemPort::connectWrEnable(const NodePort &output)
     connectInput((size_t)Inputs::wrEnable, output);
 }
 
+void Node_MemPort::connectWrWordEnable(const NodePort &output)
+{
+    HCL_ASSERT_HINT(!isReadPort(), "For now I don't want to mix read and write ports");
+    connectInput((size_t)Inputs::wrWordEnable, output);
+}
+
+
 void Node_MemPort::connectAddress(const NodePort &output)
 {
     HCL_ASSERT_HINT(getExpectedAddressBits() == getOutputWidth(output), "Address bus has wrong number of bits!");
