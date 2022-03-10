@@ -100,6 +100,7 @@ class ALTDPRAM : public gtry::hlim::Node_External
 		size_t m_depth;
 
 		static std::string RDWBehavior2Str(RDWBehavior rdw);
+        void trySetByteSize();
 };
 
 }

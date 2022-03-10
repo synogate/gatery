@@ -23,6 +23,7 @@
 #include <gatery/utils/Preprocessor.h>
 
 #include <boost/format.hpp>
+#include <set>
 
 namespace gtry::scl::arch::intel {
 
@@ -198,6 +199,7 @@ void ALTDPRAM::connectInput(Inputs input, const UInt &UInt)
 		case IN_DATA:
 			HCL_DESIGNCHECK_HINT(UInt.size() == m_width, "Data input UInt to ALTDPRAM has different width than previously specified!");
 			NodeIO::connectInput(input, UInt.getReadPort());
+			trySetByteSize();
 		break;
 		case IN_RDADDRESS:
 			NodeIO::connectInput(input, UInt.getReadPort());
@@ -210,9 +212,29 @@ void ALTDPRAM::connectInput(Inputs input, const UInt &UInt)
 		case IN_BYTEENA:
 			NodeIO::connectInput(input, UInt.getReadPort());
 			m_genericParameters["WIDTH_BYTEENA"] = std::to_string(UInt.size());
+			trySetByteSize();
 		break;
 		default:
 			HCL_DESIGNCHECK_HINT(false, "Trying to connect UInt to bit input of ALTDPRAM!");
+	}
+}
+
+void ALTDPRAM::trySetByteSize()
+{
+	auto data = getNonSignalDriver(IN_DATA);
+	auto byteEn = getNonSignalDriver(IN_BYTEENA);
+	if (data.node != nullptr && byteEn.node != nullptr) {
+
+		size_t dataWidth = getOutputWidth(data);
+		size_t byteEnWidth = getOutputWidth(byteEn);
+		HCL_ASSERT(dataWidth % byteEnWidth == 0);
+
+		size_t wordSize = dataWidth / byteEnWidth;
+
+		std::set<size_t> validWordSizes = {5, 8, 9, 10};
+		HCL_ASSERT(validWordSizes.contains(wordSize));
+
+		m_genericParameters["BYTE_SIZE"] = std::to_string(wordSize);
 	}
 }
 
