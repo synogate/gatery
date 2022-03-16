@@ -23,9 +23,7 @@
 namespace gtry::hlim {
 
 /**
- * @brief Defines a default value for a signal
- * @details The default value is used in case of a resulting loop by splitting the loop at the default node and
- * wiring the default value to drive the default node's output.
+ * @brief Defines a location to which a register should be retimed later on.
  */
 class Node_RegHint : public Node<Node_RegHint>
 {

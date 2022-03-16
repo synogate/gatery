@@ -142,13 +142,13 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_simple, BoostUnitTestSimulationFixture)
 
     UInt input = pinIn(32_b);
 
-    Pipeline pipeline;
-	input = pipeline(input);
+    PipeBalanceGroup pipeBalanceGroup;
+	input = pipeBalanceGroup(input);
 
 
 	UInt output = input;
 	for (auto i : Range(3))
-		output = regHint(output);
+		output = pipeStage(output);
 
 	pinOut(output);
 
@@ -157,7 +157,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_simple, BoostUnitTestSimulationFixture)
 //design.visualize("after");
 
 
-	BOOST_TEST(pipeline.getNumPipelineStages() == 3);
+	BOOST_TEST(pipeBalanceGroup.getNumPipeBalanceGroupStages() == 3);
 }
 
 BOOST_FIXTURE_TEST_CASE(retiming_hint_simple_reset, BoostUnitTestSimulationFixture)
@@ -171,13 +171,13 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_simple_reset, BoostUnitTestSimulationFixtu
 
     UInt input = pinIn(32_b);
 
-    Pipeline pipeline;
-	input = pipeline(input, 0);
+    PipeBalanceGroup pipeBalanceGroup;
+	input = pipeBalanceGroup(input, 0);
 
 
 	UInt output = input;
 	for ([[maybe_unused]] auto i : Range(3))
-		output = regHint(output);
+		output = pipeStage(output);
 
 	pinOut(output);
 
@@ -186,7 +186,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_simple_reset, BoostUnitTestSimulationFixtu
 //design.visualize("after");
 
 
-	BOOST_TEST(pipeline.getNumPipelineStages() == 3);
+	BOOST_TEST(pipeBalanceGroup.getNumPipeBalanceGroupStages() == 3);
 }
 
 
@@ -211,12 +211,12 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct, BoostUnitTestSimulationFixture)
     s_in.a = pinIn();
     s_in.b = pinIn(32_b);
 
-    Pipeline pipeline;
-	TestStruct s_out = pipeline(s_in);
+    PipeBalanceGroup pipeBalanceGroup;
+	TestStruct s_out = pipeBalanceGroup(s_in);
 
 
 	for ([[maybe_unused]] auto i : Range(3))
-		s_out = regHint(s_out);
+		s_out = pipeStage(s_out);
 
 	pinOut(s_out.a);
 	pinOut(s_out.b);
@@ -246,7 +246,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct, BoostUnitTestSimulationFixture)
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 //design.visualize("after");
 
-	BOOST_TEST(pipeline.getNumPipelineStages() == 3);
+	BOOST_TEST(pipeBalanceGroup.getNumPipeBalanceGroupStages() == 3);
 
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());	
 }
@@ -269,12 +269,12 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct_reset, BoostUnitTestSimulationFixtu
 	r.a = '1';
 	r.b = "32b0";
 
-    Pipeline pipeline;
-	TestStruct s_out = pipeline(s_in, r);
+    PipeBalanceGroup pipeBalanceGroup;
+	TestStruct s_out = pipeBalanceGroup(s_in, r);
 
 
     for ([[maybe_unused]] auto i : Range(3))
-        s_out = regHint(s_out);
+        s_out = pipeStage(s_out);
 
 	pinOut(s_out.a);
 	pinOut(s_out.b);
@@ -306,7 +306,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct_reset, BoostUnitTestSimulationFixtu
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 //design.visualize("after");
 
-	BOOST_TEST(pipeline.getNumPipelineStages() == 3);
+	BOOST_TEST(pipeBalanceGroup.getNumPipeBalanceGroupStages() == 3);
 
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
 
@@ -326,14 +326,14 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching, BoostUnitTestSimulationFixture)
     UInt input1 = pinIn(32_b);
     UInt input2 = pinIn(32_b);
 
-    Pipeline pipeline;
-	auto a = pipeline(input1);
-	auto b = pipeline(input2);
+    PipeBalanceGroup pipeBalanceGroup;
+	auto a = pipeBalanceGroup(input1);
+	auto b = pipeBalanceGroup(input2);
 
-	b = regHint(b);
+	b = pipeStage(b);
 
 	UInt output = a + b;
-	output = regHint(output);
+	output = pipeStage(output);
 
 	pinOut(output);
 
@@ -358,7 +358,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching, BoostUnitTestSimulationFixture)
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 //design.visualize("after");
 
-	BOOST_TEST(pipeline.getNumPipelineStages() == 2);
+	BOOST_TEST(pipeBalanceGroup.getNumPipeBalanceGroupStages() == 2);
 
 
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());		
@@ -377,14 +377,14 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching_reset, BoostUnitTestSimulationFi
     UInt input1 = pinIn(32_b);
     UInt input2 = pinIn(32_b);
 
-    Pipeline pipeline;
-	auto a = pipeline(input1, 0);
-	auto b = pipeline(input2, 1);
+    PipeBalanceGroup pipeBalanceGroup;
+	auto a = pipeBalanceGroup(input1, 0);
+	auto b = pipeBalanceGroup(input2, 1);
 
-	b = regHint(b);
+	b = pipeStage(b);
 
 	UInt output = a + b;
-	output = regHint(output);
+	output = pipeStage(output);
 
 	pinOut(output);
 
@@ -410,7 +410,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching_reset, BoostUnitTestSimulationFi
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 //design.visualize("after");
 
-	BOOST_TEST(pipeline.getNumPipelineStages() == 2);
+	BOOST_TEST(pipeBalanceGroup.getNumPipeBalanceGroupStages() == 2);
 
 
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());		
@@ -430,25 +430,25 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_memory_rmw, BoostUnitTestSimulationFixture
     UInt data = pinIn(32_b);
 	Bit enable = pinIn();
 
-    Pipeline pipeline;
-	addr = pipeline(addr);
-	data = pipeline(data);
-	enable = pipeline(enable);
+    PipeBalanceGroup pipeBalanceGroup;
+	addr = pipeBalanceGroup(addr);
+	data = pipeBalanceGroup(data);
+	enable = pipeBalanceGroup(enable);
 
 	Memory<UInt> mem(16, 32_b);
 	mem.setType(MemType::MEDIUM, 1);
 
 	UInt rd = mem[addr];
-	rd = regHint(rd);
+	rd = pipeStage(rd);
 
 	IF (enable)
 		mem[addr] = rd+data;
 
-	pinOut(regHint(rd));
+	pinOut(pipeStage(rd));
 
 //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 //design.visualize("after");
 
-	BOOST_TEST(pipeline.getNumPipelineStages() == 2);
+	BOOST_TEST(pipeBalanceGroup.getNumPipeBalanceGroupStages() == 2);
 }

@@ -17,42 +17,42 @@
 */
 #include "gatery/pch.h"
 
-#include "Pipeline.h"
+#include "PipeBalanceGroup.h"
 #include <gatery/hlim/supportNodes/Node_RegHint.h>
 
 namespace gtry {
 
-Pipeline::Pipeline()
+PipeBalanceGroup::PipeBalanceGroup()
 {
 	m_regSpawner = DesignScope::createNode<hlim::Node_RegSpawner>();
 }
 
-size_t Pipeline::getNumPipelineStages() const
+size_t PipeBalanceGroup::getNumPipeBalanceGroupStages() const
 { 
     HCL_DESIGNCHECK_HINT(m_regSpawner->wasResolved(), "The number of pipeline stages can only be queries after the retiming, at least on the part of the graph that is affected, has been performed!");
     return m_regSpawner->getNumStagesSpawned(); 
 }
 
 
-Bit placeRegHint(const Bit &signal)
+Bit placePipeStage(const Bit &signal)
 {
-	auto* regHint = DesignScope::createNode<hlim::Node_RegHint>();
-	regHint->connectInput(signal.getReadPort());
+	auto* pipeStage = DesignScope::createNode<hlim::Node_RegHint>();
+	pipeStage->connectInput(signal.getReadPort());
 
-	Bit ret{ SignalReadPort{regHint} };
+	Bit ret{ SignalReadPort{pipeStage} };
 	if (signal.getResetValue())
 		ret.setResetValue(*signal.getResetValue());
 	return ret;
 }
 
-UInt placeRegHint(const UInt &signal)
+UInt placePipeStage(const UInt &signal)
 {
 	SignalReadPort data = signal.getReadPort();
 
-	auto* regHint = DesignScope::createNode<hlim::Node_RegHint>();
-	regHint->connectInput(data);
+	auto* pipeStage = DesignScope::createNode<hlim::Node_RegHint>();
+	pipeStage->connectInput(data);
 
-	return SignalReadPort(regHint, data.expansionPolicy);
+	return SignalReadPort(pipeStage, data.expansionPolicy);
 }
 
 }
