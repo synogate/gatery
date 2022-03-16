@@ -35,12 +35,12 @@
 
 
 namespace gtry {
-
     /**
-     * @defgroup gtry_arithmetic Gatery - Arithmetic Operations for Signals
+     * @addtogroup gtry_arithmetic Arithmetic Operations for Signals
+     * @ingroup gtry_frontend
+     * @details These are all the arithmetic operations that can be performed on signals (UInt, SInt, and sometimes Bit).
      * @{
      */
-
 
     SignalReadPort makeNode(hlim::Node_Arithmetic op, NormalizedWidthOperands ops);
 
@@ -93,40 +93,57 @@ namespace gtry {
 
     // Adding or subtracting bits always involves zero extension
     // No implicit conversion allowed (do we want this?)
-    template<ArithmeticValue Type>
+
+    /// Adds an arithmetic value and a bit which gets zero extended implicitely.
+    template<ArithmeticSignal Type>
     inline Type add(const Type& lhs, const Bit& rhs) { return makeNode(hlim::Node_Arithmetic::ADD, { lhs, zext(rhs) }); }
-    template<ArithmeticValue Type>
+    /// Subtracts an arithmetic value and a bit which gets zero extended implicitely.
+    template<ArithmeticSignal Type>
     inline Type sub(const Type& lhs, const Bit& rhs) { return makeNode(hlim::Node_Arithmetic::SUB, { lhs, zext(rhs) }); }
-    template<ArithmeticValue Type>
+    /// Adds an arithmetic value and a bit which gets zero extended implicitely.
+    template<ArithmeticSignal Type>
     inline Type add(const Bit& lhs, const Type& rhs) { return makeNode(hlim::Node_Arithmetic::ADD, { zext(lhs), rhs }); }
-    template<SIntValue Type>
+    /// Subtracts an SInt value and a bit which gets zero extended implicitely.
+    template<std::same_as<SInt> Type>
     inline Type sub(const Bit& lhs, const Type& rhs) { return makeNode(hlim::Node_Arithmetic::SUB, { zext(lhs), rhs }); }
 
 
-    // Adding or subtracting bits allows implicit conversion
-    template<typename Type> requires UIntValue<Type> || SIntValue<Type>
+    /// Adds an arithmetic value and a bit which gets zero extended implicitely.
+    template<ArithmeticSignal Type>
     inline auto operator + (const Type& lhs, const Bit& rhs) { return add(lhs, rhs); }
-    template<typename Type> requires UIntValue<Type> || SIntValue<Type>
+    /// Subtracts an arithmetic value and a bit which gets zero extended implicitely.
+    template<ArithmeticSignal Type>
     inline auto operator - (const Type& lhs, const Bit& rhs) { return sub(lhs, rhs); }
-    template<typename Type> requires UIntValue<Type> || SIntValue<Type>
+    /// Adds an arithmetic value and a bit which gets zero extended implicitely.
+    template<ArithmeticSignal Type>
     inline auto operator + (const Bit& lhs, const Type& rhs) { return add(lhs, rhs); }
-    template<typename Type> requires UIntValue<Type> || SIntValue<Type>
+    /// Subtracts an SInt value and a bit which gets zero extended implicitely.
+    template<std::same_as<SInt> Type>
     inline auto operator - (const Bit& lhs, const Type& rhs) { return sub(lhs, rhs); }
 
 
+    /// Adds to an ArithmeticSignal a compatible value
     template<ArithmeticSignal LType, std::convertible_to<LType> RType>
     LType& operator += (LType& lhs, const RType& rhs) { return lhs = add(lhs, rhs); }
+    /// Subtracts from an ArithmeticSignal a compatible value
     template<ArithmeticSignal LType, std::convertible_to<LType> RType>
     LType& operator -= (LType& lhs, const RType& rhs) { return lhs = sub(lhs, rhs); }
+    /// Multiplies to an ArithmeticSignal a compatible value
     template<ArithmeticSignal LType, std::convertible_to<LType> RType>
     LType& operator *= (LType& lhs, const RType& rhs) { return lhs = mul(lhs, rhs); }
-    template<ArithmeticSignal LType, std::convertible_to<LType> RType>
-    LType& operator /= (LType& lhs, const RType& rhs) { return lhs = div(lhs, rhs); }
-    template<ArithmeticSignal LType, std::convertible_to<LType> RType>
-    LType& operator %= (LType& lhs, const RType& rhs) { return lhs = rem(lhs, rhs); }
+    /// Divides an UInt by a compatible value
+    template<std::convertible_to<UInt> RType>
+    UInt& operator /= (UInt& lhs, const RType& rhs) { return lhs = div(lhs, rhs); }
+    /// Computes the modulo/remainder of an UInt and a compatible value
+    template<std::convertible_to<UInt> RType>
+    UInt& operator %= (UInt& lhs, const RType& rhs) { return lhs = rem(lhs, rhs); }
 
-    template<ArithmeticSignal SignalType> SignalType& operator += (SignalType& lhs, const Bit& rhs) { return lhs = add(lhs, rhs); }
-    template<ArithmeticSignal SignalType> SignalType& operator -= (SignalType& lhs, const Bit& rhs) { return lhs = sub(lhs, rhs); }
+    /// Adds a bit, which gets zero extended implicitely, to an arithmetic signal
+    template<ArithmeticSignal SignalType> 
+    SignalType& operator += (SignalType& lhs, const Bit& rhs) { return lhs = add(lhs, rhs); }
+    /// Subtracts a bit, which gets zero extended implicitely, from an arithmetic signal
+    template<ArithmeticSignal SignalType> 
+    SignalType& operator -= (SignalType& lhs, const Bit& rhs) { return lhs = sub(lhs, rhs); }
 
     /**@}*/
 }

@@ -21,6 +21,12 @@
 
 namespace gtry {
 
+/**
+ * @addtogroup gtry_signals Signals
+ * @ingroup gtry_frontend
+ * @{
+ */
+
 	class UInt;
 
 	class UIntDefault : public BaseBitVectorDefault {
@@ -83,5 +89,7 @@ namespace gtry {
 	UIntDefault::UIntDefault(Type value) : BaseBitVectorDefault((std::uint64_t)value) { }
 	inline UIntDefault::UIntDefault(const char rhs[]) : BaseBitVectorDefault(std::string_view(rhs)) { }
 
+
+/**@}*/
 
 }

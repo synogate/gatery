@@ -29,6 +29,15 @@
 
 namespace gtry {
 
+
+/**
+ * @addtogroup gtry_compare Compare Operations for Signals
+ * @ingroup gtry_frontend
+ * @brief All comparison operations
+ * @{
+ */
+
+
     SignalReadPort makeNode(hlim::Node_Compare::Op op, NormalizedWidthOperands ops);
 
     inline Bit eq(const BVec& lhs, const BVec& rhs) { return makeNode(hlim::Node_Compare::EQ, {lhs, rhs}); }
@@ -98,5 +107,7 @@ namespace gtry {
 
     inline Bit operator == (const Bit& lhs, const Bit& rhs) { return eq(lhs, rhs); }
     inline Bit operator != (const Bit& lhs, const Bit& rhs) { return neq(lhs, rhs); }
+
+/**@}*/
 }
 

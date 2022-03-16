@@ -26,7 +26,16 @@ class ElementarySignal;
 using hlim::SignalAttributes;
 using hlim::PathAttributes;
 
+
+/**
+ * @addtogroup gtry_frontend
+ * @{
+ */
+
 void setAttrib(ElementarySignal &signal, SignalAttributes attributes);
 void setPathAttrib(ElementarySignal &start, ElementarySignal &end, PathAttributes attributes);
 
+/**@}*/
+
 }
+

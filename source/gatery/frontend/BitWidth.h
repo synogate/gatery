@@ -21,6 +21,12 @@
 
 namespace gtry 
 {
+/**
+ * @addtogroup gtry_frontend
+ * @{
+ */
+
+
 	struct BitWidth
 	{
 		auto operator <=> (const BitWidth&) const = default;
@@ -124,4 +130,6 @@ namespace gtry
 
 		s << val << u2 << u1; return s; 
 	}
+
+/**@}*/
 }

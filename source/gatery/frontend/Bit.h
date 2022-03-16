@@ -28,8 +28,16 @@
 #include <vector>
 #include <optional>
 
+
 namespace gtry {
-    
+
+
+/**
+ * @addtogroup gtry_signals Signals
+ * @ingroup gtry_frontend
+ * @{
+ */
+ 
     class Bit;
 
 
@@ -114,4 +122,6 @@ namespace gtry {
     struct RegisterSettings;
     Bit reg(const Bit& val, const RegisterSettings& settings);
     Bit reg(const Bit& val);
+
+/**@}*/
 }

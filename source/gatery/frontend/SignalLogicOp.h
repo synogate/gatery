@@ -34,10 +34,13 @@
 
 namespace gtry {
 
-    /**
-     * @defgroup gtry_logic Gatery - Logical Operations for Signals
-     * @{
-     */
+/**
+ * @addtogroup gtry_logic Logical Operations for Signals
+ * @ingroup gtry_frontend
+ * @brief All bitwise logic operations
+ * @{
+ */
+
 
     SignalReadPort makeNode(hlim::Node_Logic::Op op, const ElementarySignal& in);
     SignalReadPort makeNode(hlim::Node_Logic::Op op, NormalizedWidthOperands ops);
@@ -218,6 +221,6 @@ namespace gtry {
     template<BaseSignal SignalType>
     inline SignalType& operator ^= (SignalType& lhs, const Bit& rhs) { return lhs = lxor(lhs, rhs); }
 
-    /**@}*/
+/**@}*/
 }
 

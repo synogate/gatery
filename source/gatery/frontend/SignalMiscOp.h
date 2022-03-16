@@ -42,6 +42,15 @@
 
 namespace gtry {
 
+/**
+ * @addtogroup gtry_compare Miscellaneous Operations for Signals
+ * @ingroup gtry_frontend
+ * @brief All signal operations that don't fit into other categories
+ * @{
+ */
+
+
+
 ///@todo overload for compound signals
 template<typename ContainerType>//, typename = std::enable_if_t<utils::isContainer<ContainerType>::value>>
 typename ContainerType::value_type mux(const ElementarySignal &selector, const ContainerType &table) {
@@ -170,6 +179,6 @@ void sim_tap(const Compound& compound)
 }
 
 
-
+/**@}*/
 
 }

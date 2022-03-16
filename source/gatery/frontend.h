@@ -63,3 +63,10 @@
 namespace gtry {
     using DefaultPostprocessing = hlim::DefaultPostprocessing;
 }
+
+/** @defgroup gtry_frontend Gatery - Frontend
+ * @brief Everything needed for composing circuits.
+ * 
+ * The Gatery frontend encompasses all classes and functions necessary for building 
+ * circuits.
+ */

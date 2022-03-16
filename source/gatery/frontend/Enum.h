@@ -36,7 +36,14 @@
 #include <optional>
 
 namespace gtry {
-    
+
+/**
+ * @addtogroup gtry_signals Signals
+ * @ingroup gtry_frontend
+ * @{
+ */
+
+
 	template<EnumType T>
     class Enum;
 /*
@@ -335,5 +342,7 @@ namespace gtry {
     }
 
 
+/**@}*/
 
 }
+

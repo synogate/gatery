@@ -28,14 +28,26 @@
 
 namespace gtry {
 
+/**
+ * @addtogroup gtry_frontend
+ * @{
+ */
+
+
+/**
+ * @brief The design scope holds the circuit and provides a context for all circuti building operations.
+ * 
+ */
 class DesignScope : public BaseScope<DesignScope>
 {
     public:
         DesignScope();
         DesignScope(std::unique_ptr<TargetTechnology> targetTech);
 
+        /// Specifies a target technology (such as a specific FPGA device) to target with this design.
         void setTargetTechnology(std::unique_ptr<TargetTechnology> targetTech);
 
+        /// Visualizes the circuit (or node group) by creating a .dot file for graphviz and attempting to run graphviz on it.
         static void visualize(const std::string &filename, hlim::NodeGroup *nodeGroup = nullptr);
 
         static DesignScope *get() { return m_currentScope; }
@@ -53,6 +65,7 @@ class DesignScope : public BaseScope<DesignScope>
         template<typename Type = TargetTechnology>
         inline Type *getTargetTechnology() { return dynamic_cast<Type*>(m_targetTech.get()); }
 
+        /// Runs postprocessing (including technology mapping) in the created design.
         void postprocess();
     protected:
         hlim::Circuit m_circuit;
@@ -80,5 +93,7 @@ ClockType *DesignScope::createClock(Args&&... args) {
     ClockType *node = m_currentScope->m_circuit.createClock<ClockType>(std::forward<Args>(args)...);
     return node;
 }
+
+/** @}*/
 
 }

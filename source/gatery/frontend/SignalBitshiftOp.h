@@ -40,28 +40,61 @@
 
 namespace gtry {
 
+/**
+    * @addtogroup gtry_bitshift Bitshift Operations for Signals
+    * @ingroup gtry_frontend
+    * @brief All the operations for shifting and rotating bit vectors.
+    * @{
+    */
 
-
+/// Shift left by specified amount (must be non-negative), retaining size and inserting zeros.
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 BVec shl(const BVec& signal, int amount); // TODO (remove)
+/// Shift right by specified amount (must be non-negative), retaining size and inserting zeros.
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 BVec shr(const BVec& signal, int amount); // TODO (remove)
 
+/// Shift left by specified amount (must be non-negative), retaining size and inserting zeros.
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 UInt shl(const UInt& signal, int amount); // TODO (remove)
+/// Shift right by specified amount (must be non-negative), retaining size and inserting zeros.
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 UInt shr(const UInt& signal, int amount); // TODO (remove)
 
+/// Shift left by specified amount (must be non-negative), retaining size and inserting zeros.
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 SInt shl(const SInt& signal, int amount); // TODO (remove)
+/// Shift right by specified amount (must be non-negative), retaining size and duplicating the sign bit.
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 SInt shr(const SInt& signal, int amount); // TODO (remove)
 
+/// Shift left by specified amount (must be non-negative), retaining size and inserting zeros.
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 inline BVec operator<<(const BVec &signal, int amount) { return shl(signal, amount); } // TODO (remove)
+/// Shift right by specified amount (must be non-negative), retaining size and inserting zeros.
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 inline BVec operator>>(const BVec &signal, int amount) { return shr(signal, amount); } // TODO (remove)
 
+/// Shift left by specified amount (must be non-negative), retaining size and inserting zeros.
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 inline UInt operator<<(const UInt &signal, int amount) { return shl(signal, amount); } // TODO (remove)
+/// Shift right by specified amount (must be non-negative), retaining size and inserting zeros.
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 inline UInt operator>>(const UInt &signal, int amount) { return shr(signal, amount); } // TODO (remove)
 
+/// Shift left by specified amount (must be non-negative), retaining size and inserting zeros.
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 inline SInt operator<<(const SInt &signal, int amount) { return shl(signal, amount); } // TODO (remove)
+/// Shift right by specified amount (must be non-negative), retaining size and duplicating the sign bit.
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 inline SInt operator>>(const SInt &signal, int amount) { return shr(signal, amount); } // TODO (remove)
 
+/// Shift left by specified amount (must be non-negative), retaining size and inserting zeros.
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 template<BitVectorDerived T> 
 inline T &operator<<=(T &signal, int amount) { return signal = shl(signal, amount); } // TODO (remove)
+/// Shift right by specified amount (must be non-negative), retaining size and inserting zeros or duplicating the sign bit for SInt.
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 template<BitVectorDerived T> 
 inline T &operator>>=(T &signal, int amount)  { return signal = shr(signal, amount); } // TODO (remove)
 
@@ -71,19 +104,43 @@ BVec rot(const BVec& signal, int amount); // TODO (remove)
 UInt rot(const UInt& signal, int amount); // TODO (remove)
 SInt rot(const SInt& signal, int amount); // TODO (remove)
 
+/// Rotate left (from LSB to MSB)
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 inline BVec rotl(const BVec& signal, int amount) { return rot(signal, amount); }  // TODO (remove)
+/// Rotate right (from MSB to LSB)
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 inline BVec rotr(const BVec& signal, int amount) { return rot(signal, -amount); }  // TODO (remove)
+/// Rotate left (from LSB to MSB)
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 inline BVec rotl(const BVec& signal, size_t amount) { return rot(signal, int(amount)); }  // TODO (remove)
+/// Rotate right (from MSB to LSB)
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 inline BVec rotr(const BVec& signal, size_t amount) { return rot(signal, -int(amount)); }  // TODO (remove)
 
+/// Rotate left (from LSB to MSB)
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 inline UInt rotl(const UInt& signal, int amount) { return rot(signal, amount); }  // TODO (remove)
+/// Rotate right (from MSB to LSB)
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 inline UInt rotr(const UInt& signal, int amount) { return rot(signal, -amount); }  // TODO (remove)
+/// Rotate left (from LSB to MSB)
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 inline UInt rotl(const UInt& signal, size_t amount) { return rot(signal, int(amount)); }  // TODO (remove)
+/// Rotate right (from MSB to LSB)
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 inline UInt rotr(const UInt& signal, size_t amount) { return rot(signal, -int(amount)); }  // TODO (remove)
 
+/// Rotate left (from LSB to MSB)
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 inline SInt rotl(const SInt& signal, int amount) { return rot(signal, amount); }  // TODO (remove)
+/// Rotate right (from MSB to LSB)
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 inline SInt rotr(const SInt& signal, int amount) { return rot(signal, -amount); }  // TODO (remove)
+/// Rotate left (from LSB to MSB)
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 inline SInt rotl(const SInt& signal, size_t amount) { return rot(signal, int(amount)); }  // TODO (remove)
+/// Rotate right (from MSB to LSB)
+/// @deprecated Will be removed when making all shifts dynamic (initially)
 inline SInt rotr(const SInt& signal, size_t amount) { return rot(signal, -int(amount)); }  // TODO (remove)
 
 SignalReadPort internal_shift(const SignalReadPort& signal, const SignalReadPort& amount, hlim::Node_Shift::dir direction, hlim::Node_Shift::fill fill);
@@ -148,4 +205,5 @@ inline T& operator<<=(T& signal, const UInt& amount) { return signal = shl(signa
 template<BitVectorDerived T>
 inline T& operator>>=(T& signal, const UInt& amount) { return signal = shr(signal, amount); }
 
+/**@}*/
 }
