@@ -95,10 +95,10 @@ BOOST_FIXTURE_TEST_CASE(EnumRegister, gtry::BoostUnitTestSimulationFixture)
     Enum<MyClassicalEnum> resetSignal = C;
 
     Enum<MyClassicalEnum> outSignal = reg(inSignal);
-    pinOut((BVec)outSignal);
+    pinOut(outSignal.numericalValue());
 
     Enum<MyClassicalEnum> outSignalReset = reg(inSignal, resetSignal);
-    pinOut((BVec)outSignalReset);
+    pinOut(outSignalReset.numericalValue());
 
     addSimulationProcess([=, this]()->SimProcess {
 
@@ -177,7 +177,7 @@ BOOST_FIXTURE_TEST_CASE(EnumValueTest, BoostUnitTestSimulationFixture)
 
 	Enum<MyClassicalEnum> enumSignal = A;
 
-	UInt asUint = (UInt) enumSignal;
+	UInt asUint = enumSignal.numericalValue();
 	sim_assert(asUint == 2);
 
 	asUint += 6;

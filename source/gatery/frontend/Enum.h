@@ -72,9 +72,7 @@ namespace gtry {
 		template<UIntValue V>
 		explicit Enum(V rhs) : Enum((UInt)rhs) { }
 
-		template<BitVectorDerived V>
-		explicit operator V() const { if (m_node) return V(getReadPort()); else return V{}; }
-
+		UInt numericalValue() const { return UInt(getReadPort()); }
 
         Enum<T>& operator=(const Enum<T>& rhs);
         Enum<T>& operator=(Enum<T>&& rhs);
@@ -123,10 +121,6 @@ namespace gtry {
         return reg<Enum<T>>(val, settings);
     }
 
-	template<EnumType T>
-    Enum<T> reg(const Enum<T>& val) {
-        return reg(val, RegisterSettings{});
-    }
 
 	/// Matches all enum signals
 	template<typename T>
