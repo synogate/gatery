@@ -19,6 +19,8 @@
 
 #include "DesignScope.h"
 
+#include "Signal.h"
+
 #include <gatery/hlim/coreNodes/Node_Pin.h>
 #include <gatery/hlim/coreNodes/Node_Signal.h>
 #include <gatery/hlim/NodePtr.h>
