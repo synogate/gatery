@@ -20,8 +20,7 @@ windows-build:
     - windows
   script:
     - premake5 vs2022
-    - 'echo $Env:APPDATA'
-    - '& "${Env:ProgramFiles}\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64\msbuild.exe"'
+    - '& "${Env:ProgramFiles}\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64\msbuild.exe" -maxCpuCount:2'
   artifacts:
     paths:
       - bin/
