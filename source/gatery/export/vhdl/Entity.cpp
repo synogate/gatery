@@ -300,11 +300,13 @@ void Entity::writeVHDL(std::ostream &stream)
 
 void Entity::writePortDeclaration(std::ostream &stream, size_t indentation)
 {
+    std::vector<std::string> portList = getPortsVHDL();
+    if (portList.empty()) 
+        return; // Empty "PORT( );" is not allowed in vhdl
+
     CodeFormatting &cf = m_ast.getCodeFormatting();
 
     cf.indent(stream, 1); stream << "PORT(" << std::endl;
-
-    std::vector<std::string> portList = getPortsVHDL();
 
     for (auto i : utils::Range(portList.size())) {
         cf.indent(stream, 2);
