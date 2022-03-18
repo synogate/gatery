@@ -20,11 +20,19 @@
 
 namespace gtry 
 {
+	struct construct_from_t {};
+
 	template<ContainerSignal T>
 	T constructFrom(const T& val);
 
 	template<TupleSignal T>
 	T constructFrom(const T& val);
+
+	template<BaseSignal T>
+	T constructFrom(const T& val)
+	{
+		return T{ val, construct_from_t{} };
+	}
 
 	template<CompoundSignal T>
 	T constructFrom(const T& val)
@@ -63,7 +71,7 @@ namespace gtry
 		});
 
 		return boost::hana::unpack(in2, [&](auto&&... args) {
-			return T{ constructFrom(args)... };
+			return T{ std::forward<std::remove_cvref_t<decltype(args)>>(constructFrom(args))...};
 		});
 	}
 }

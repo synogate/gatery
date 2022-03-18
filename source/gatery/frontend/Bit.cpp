@@ -80,6 +80,11 @@ namespace gtry {
         m_resetValue = rhs.m_resetValue;
     }
 
+    Bit::Bit(const Bit& rhs, construct_from_t&&) : Bit()
+    {
+        m_resetValue = rhs.m_resetValue;
+    }
+
     Bit::Bit(Bit&& rhs) : Bit()
     {
         assign(rhs.getReadPort());
@@ -92,8 +97,7 @@ namespace gtry {
         (*this) = defaultValue;
     } 
 
-
-    Bit::~Bit()
+    Bit::~Bit() noexcept
     {
         m_node->removeRef();
     }
@@ -307,15 +311,4 @@ namespace gtry {
     {
         return true;
     }
-
-    Bit constructFrom(const Bit& value)
-    {
-        Bit ret;
-
-        if(value.getResetValue())
-            ret.setResetValue(*value.getResetValue());
-
-        return ret;
-    }
-
 }

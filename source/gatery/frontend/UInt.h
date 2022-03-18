@@ -89,7 +89,7 @@ namespace gtry {
 	UIntDefault::UIntDefault(Type value) : BaseBitVectorDefault((std::uint64_t)value) { }
 	inline UIntDefault::UIntDefault(const char rhs[]) : BaseBitVectorDefault(std::string_view(rhs)) { }
 
-	inline UInt constructFrom(const UInt& value) { return value.getWidth(); }
+	inline UInt constructFrom(const UInt& value) { return UInt(value.getWidth()); }
 
 /**@}*/
 

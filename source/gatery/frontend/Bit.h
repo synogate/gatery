@@ -39,6 +39,7 @@ namespace gtry {
  */
  
     class Bit;
+    struct construct_from_t;
 
 
     class BitDefault {
@@ -63,9 +64,10 @@ namespace gtry {
         
         Bit();
         Bit(const Bit& rhs);
+        Bit(const Bit& rhs, construct_from_t&&);
         Bit(Bit&& rhs);
         Bit(const BitDefault &defaultValue);
-        ~Bit();
+        ~Bit() noexcept;
 
         Bit(const SignalReadPort& port);
         Bit(hlim::Node_Signal* node, size_t offset, size_t initialScopeId); // alias Bit
@@ -122,7 +124,5 @@ namespace gtry {
     struct RegisterSettings;
     Bit reg(const Bit& val, const RegisterSettings& settings);
     Bit reg(const Bit& val);
-
-    Bit constructFrom(const Bit&);
 /**@}*/
 }

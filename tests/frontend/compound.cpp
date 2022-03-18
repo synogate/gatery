@@ -167,15 +167,40 @@ BOOST_FIXTURE_TEST_CASE(ConstructFromSignal, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-
-
     Bit sbit = '1';
     Bit dbit = constructFrom(sbit);
     sim_assert(sbit == '1');
-
+    sim_assert(dbit == '0');
+    dbit = '0';
+    
     UInt svec = "0x101A";
     UInt dvec = constructFrom(svec);
     sim_assert(svec == "0x101A");
+    sim_assert(dvec == "0x0101");
+    dvec = "0x0101";
+    
+    SimpleStruct sss{
+        .vec = "0x1111",
+        .bit = '1'
+    };
+    SimpleStruct dss = constructFrom(sss);
+    sim_assert(dss.bit == '0');
+    sim_assert(dss.vec == "0x1010");
+    dss.bit = '0';
+    dss.vec = "0x1010";
+   
+    std::array<Bit, 1> sa{ '1' };
+    std::array<Bit, 1> da = constructFrom(sa);
+    sim_assert(da[0] == '0');
+    da[0] = '0';
+
+    enum class TestEnum { VAL1, VAL2 };
+    Enum<TestEnum> se = TestEnum::VAL1;
+    Enum<TestEnum> de = constructFrom(se);
+    sim_assert(de == TestEnum::VAL2);
+    de = TestEnum::VAL2;
+
+    design.visualize("test");
 
     eval();
 }
