@@ -84,6 +84,8 @@ namespace gtry {
 	SIntDefault::SIntDefault(Type value) : BaseBitVectorDefault((std::int64_t)value) { }
 	inline SIntDefault::SIntDefault(const char rhs[]) : BaseBitVectorDefault(std::string_view(rhs)) { }
 
+	inline SInt constructFrom(const SInt& value) { return value.getWidth(); }
+
 /**@}*/
 
 }

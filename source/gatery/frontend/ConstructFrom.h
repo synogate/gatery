@@ -20,34 +20,50 @@
 
 namespace gtry 
 {
-	template<typename T>
-	void constructFrom(const T& src, T& dst)
-	{
-		struct ConstructFromVisitor : CompoundVisitor
-		{
-			void operator () (BVec& a, const BVec& b) override {
-				if (a.size() != b.size() || !a.getNode())
-					a = b.getWidth();
-			}
-			void operator () (UInt& a, const UInt& b) override {
-				if (a.size() != b.size() || !a.getNode())
-					a = b.getWidth();
-			}
-			void operator () (SInt& a, const SInt& b) override {
-				if (a.size() != b.size() || !a.getNode())
-					a = b.getWidth();
-			}
-		};
+	template<ContainerSignal T>
+	T constructFrom(const T& val);
 
-		ConstructFromVisitor v;
-		VisitCompound<T>{}(dst, src, v, 0);
+	template<TupleSignal T>
+	T constructFrom(const T& val);
+
+	template<CompoundSignal T>
+	T constructFrom(const T& val)
+	{
+		return std::make_from_tuple<T>(
+			boost::hana::transform(boost::pfr::structure_tie(val), [&](auto&& member) {
+				if constexpr(Signal<decltype(member)>)
+					return constructFrom(member);
+				else
+					return member;
+			})
+		);
 	}
 
-	template<typename T>
-	T constructFrom(const T& src)
+	template<ContainerSignal T>
+	T constructFrom(const T& val)
 	{
 		T ret;
-		constructFrom(src, ret);
+
+		if constexpr(requires { ret.reserve(val.size()); })
+			ret.reserve(val.size());
+
+		for(auto&& it : val)
+			ret.insert(ret.end(), constructFrom(it));
+
 		return ret;
+	}
+
+	template<TupleSignal T>
+	T constructFrom(const T& val)
+	{
+		using namespace internal;
+
+		auto in2 = boost::hana::unpack(val, [](auto&&... args) {
+			return std::tie(args...);
+		});
+
+		return boost::hana::unpack(in2, [&](auto&&... args) {
+			return T{ constructFrom(args)... };
+		});
 	}
 }

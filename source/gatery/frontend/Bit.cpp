@@ -308,5 +308,14 @@ namespace gtry {
         return true;
     }
 
+    Bit constructFrom(const Bit& value)
+    {
+        Bit ret;
+
+        if(value.getResetValue())
+            ret.setResetValue(*value.getResetValue());
+
+        return ret;
+    }
 
 }

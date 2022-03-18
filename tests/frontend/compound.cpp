@@ -177,11 +177,6 @@ BOOST_FIXTURE_TEST_CASE(ConstructFromSignal, BoostUnitTestSimulationFixture)
     UInt dvec = constructFrom(svec);
     sim_assert(svec == "0x101A");
 
-    int sval = 5;
-    int dval = constructFrom(sval);
-    BOOST_TEST(sval == 5);
-    BOOST_TEST(dval == 5);
-
     eval();
 }
 

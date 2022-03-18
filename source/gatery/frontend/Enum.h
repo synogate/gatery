@@ -165,10 +165,16 @@ namespace gtry {
     inline Bit operator != (const TL& lhs, const TR& rhs) { return neq(lhs, rhs); }
 
 
+    template<EnumType T>
+    Enum<T> constructFrom(const Enum<T>& value)
+    {
+        Enum<T> ret;
 
+        if(value.getResetValue())
+            ret.setResetValue(*value.getResetValue());
 
-
-
+        return ret;
+    }
 
 	template<EnumType T>
 	Enum<T>::Enum() { 

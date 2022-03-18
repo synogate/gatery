@@ -123,5 +123,6 @@ namespace gtry {
     Bit reg(const Bit& val, const RegisterSettings& settings);
     Bit reg(const Bit& val);
 
+    Bit constructFrom(const Bit&);
 /**@}*/
 }

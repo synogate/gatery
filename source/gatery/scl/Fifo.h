@@ -186,7 +186,7 @@ namespace gtry::scl
 		HCL_NAMED(m_get);
 
 		setName(packedData, "out_data_packed");
-		constructFrom(*m_defaultValue, data);
+		*m_defaultValue = constructFrom(data);
 		unpack(packedData, data);
 		setName(data, "out_data");
 	}

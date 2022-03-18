@@ -83,6 +83,8 @@ namespace gtry {
 	BVecDefault::BVecDefault(Type value) : BaseBitVectorDefault((std::uint64_t)value) { }
 	inline BVecDefault::BVecDefault(const char rhs[]) : BaseBitVectorDefault(std::string_view(rhs)) { }
 
+	inline BVec constructFrom(const BVec& value) { return value.getWidth(); }
+
 /**@}*/
 
 }
