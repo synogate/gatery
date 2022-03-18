@@ -87,6 +87,7 @@ namespace gtry {
 
     Bit::Bit(Bit&& rhs) : Bit()
     {
+        // TODO optimize, make simple alias move if src is not in a conditional
         assign(rhs.getReadPort());
         rhs.assign(SignalReadPort{ m_node });
         m_resetValue = rhs.m_resetValue;
