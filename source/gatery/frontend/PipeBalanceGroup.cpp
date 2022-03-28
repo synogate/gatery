@@ -18,7 +18,6 @@
 #include "gatery/pch.h"
 
 #include "PipeBalanceGroup.h"
-#include <gatery/hlim/supportNodes/Node_RegHint.h>
 
 namespace gtry {
 
@@ -31,28 +30,6 @@ size_t PipeBalanceGroup::getNumPipeBalanceGroupStages() const
 { 
     HCL_DESIGNCHECK_HINT(m_regSpawner->wasResolved(), "The number of pipeline stages can only be queries after the retiming, at least on the part of the graph that is affected, has been performed!");
     return m_regSpawner->getNumStagesSpawned(); 
-}
-
-
-Bit placePipeStage(const Bit &signal)
-{
-	auto* pipeStage = DesignScope::createNode<hlim::Node_RegHint>();
-	pipeStage->connectInput(signal.getReadPort());
-
-	Bit ret{ SignalReadPort{pipeStage} };
-	if (signal.getResetValue())
-		ret.setResetValue(*signal.getResetValue());
-	return ret;
-}
-
-UInt placePipeStage(const UInt &signal)
-{
-	SignalReadPort data = signal.getReadPort();
-
-	auto* pipeStage = DesignScope::createNode<hlim::Node_RegHint>();
-	pipeStage->connectInput(data);
-
-	return SignalReadPort(pipeStage, data.expansionPolicy);
 }
 
 }

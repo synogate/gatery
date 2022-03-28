@@ -26,8 +26,6 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include <external/magic_enum.hpp>
-
 namespace gtry
 {
 	hlim::ClockRational clockFromString(std::string text)

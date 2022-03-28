@@ -19,7 +19,7 @@
 #include "Bit.h"
 #include "BitVector.h"
 #include "UInt.h"
-#include "Reg.h"
+//#include "Reg.h"
 #include "../utils/Traits.h"
 
 #include <string_view>
@@ -30,6 +30,13 @@
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/fwd/accessors.hpp>
 #include <boost/hana/tuple.hpp>
+
+#include <boost/hana/ext/std/array.hpp>
+#include <boost/hana/ext/std/tuple.hpp>
+#include <boost/hana/ext/std/pair.hpp>
+#include <boost/hana/transform.hpp>
+#include <boost/hana/zip.hpp>
+#include <boost/pfr.hpp>
 
 namespace gtry
 {
@@ -364,6 +371,165 @@ namespace gtry
 
 	void setName(const Bit&, std::string_view) = delete;
 	void setName(const UInt&, std::string_view) = delete;
+
+	namespace internal
+	{
+
+		template<BaseSignal T, typename TFunc>
+		T transformSignal(const T& val, TFunc&& func);
+
+		template<BaseSignal T, std::convertible_to<T> Tr, typename TFunc>
+		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func);
+
+		template<CompoundSignal T, typename TFunc>
+		T transformSignal(const T& val, TFunc&& func);
+
+		template<CompoundSignal T, std::convertible_to<T> Tr, typename TFunc>
+		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func);
+
+		template<ContainerSignal T, typename TFunc>
+		T transformSignal(const T& val, TFunc&& func);
+
+		template<ContainerSignal T, ContainerSignal Tr, typename TFunc>
+		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func);
+
+		template<TupleSignal T, typename TFunc>
+		T transformSignal(const T& val, TFunc&& func);
+
+		template<TupleSignal T, TupleSignal Tr, typename TFunc>
+		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func);
+
+		template<typename T, typename TFunc>
+		T transformIfSignal(const T& signal, TFunc&& func)
+		{
+			if constexpr(Signal<T>)
+				return transformSignal(signal, func);
+			else
+				return signal;
+		}
+
+		template<typename T, typename Tr, typename TFunc>
+		T transformIfSignal(const T& signal, Tr&& secondSignal, TFunc&& func)
+		{
+			if constexpr(Signal<T>)
+				return transformSignal(signal, secondSignal, func);
+			else
+				return T{ secondSignal };
+		}
+
+		template<BaseSignal T, typename TFunc>
+		T transformSignal(const T& val, TFunc&& func)
+		{
+			return func(val);
+		}
+
+		template<BaseSignal T, std::convertible_to<T> Tr, typename TFunc>
+		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func)
+		{
+			return func(val, resetVal);
+		}
+
+		template<CompoundSignal T, typename TFunc>
+		T transformSignal(const T& val, TFunc&& func)
+		{
+			return std::make_from_tuple<T>(
+				boost::hana::transform(boost::pfr::structure_tie(val), [&](auto&& member) {
+					if constexpr(Signal<decltype(member)>)
+						return transformSignal(member, func);
+					else
+						return member;
+				})
+			);
+		}
+
+		template<CompoundSignal T, std::convertible_to<T> Tr, typename TFunc>
+		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func)
+		{
+			const T& resetValT = resetVal;
+			return std::make_from_tuple<T>(
+				boost::hana::transform(
+				boost::hana::zip_with([](auto&& a, auto&& b) { return std::tie(a, b); },
+				boost::pfr::structure_tie(val),
+				boost::pfr::structure_tie(resetValT)
+				), [&](auto member) {
+
+					if constexpr(Signal<decltype(get<0>(member))>)
+						return transformSignal(get<0>(member), get<1>(member), func);
+					else
+						return get<1>(member); // use reset value for metadata
+
+				})
+			);
+		}
+
+		template<ContainerSignal T, typename TFunc>
+		T transformSignal(const T& val, TFunc&& func)
+		{
+			T ret;
+
+			if constexpr(requires { ret.reserve(val.size()); })
+				ret.reserve(val.size());
+
+			for(auto&& it : val)
+				ret.insert(ret.end(), transformSignal(it, func));
+
+			return ret;
+		}
+
+		template<ContainerSignal T, ContainerSignal Tr, typename TFunc>
+		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func)
+		{
+			HCL_DESIGNCHECK(val.size() == resetVal.size());
+
+			T ret;
+
+			if constexpr(requires { ret.reserve(val.size()); })
+				ret.reserve(val.size());
+
+			auto it_reset = resetVal.begin();
+			for(auto&& it : val)
+				ret.insert(ret.end(), transformSignal(it, *it_reset++, func));
+
+			return ret;
+		}
+
+		template<TupleSignal T, typename TFunc>
+		T transformSignal(const T& val, TFunc&& func)
+		{
+			using namespace internal;
+
+			auto in2 = boost::hana::unpack(val, [](auto&&... args) {
+				return std::tie(args...);
+			});
+
+			return boost::hana::unpack(in2, [&](auto&&... args) {
+				return T{ transformIfSignal(args, func)... };
+			});
+		}
+
+		template<TupleSignal T, TupleSignal Tr, typename TFunc>
+		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func)
+		{
+			using namespace internal;
+
+			auto in2 = boost::hana::unpack(val, [](auto&&... args) {
+				return std::tie(args...);
+			});
+			auto in2r = boost::hana::unpack(resetVal, [](auto&&... args) {
+				return std::tie(args...);
+			});
+
+			auto in3 = boost::hana::zip_with([](auto&& a, auto&& b) {
+				static_assert(std::is_constructible_v<decltype(a), decltype(b)>, "reset type is not convertable to signal type");
+				return std::tie(a, b);
+			}, in2, in2r);
+
+			return boost::hana::unpack(in3, [&](auto&&... args) {
+				return T{ transformIfSignal(get<0>(args), get<1>(args), func)...};
+			});
+		}
+	}
+
 
 	namespace internal
 	{

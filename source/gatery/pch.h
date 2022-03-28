@@ -34,6 +34,8 @@
 
 #include "utils/CoroutineWrapper.h"
 
+#include <external/magic_enum.hpp>
+
 #include <bit>
 #include <csignal>
 #include <cstdint>
@@ -76,7 +78,6 @@
 #pragma warning (pop)
 #endif
 
-# include <external/magic_enum.hpp>
 # define USE_YAMLCPP
 #else
 # pragma message ("yaml-cpp not found. compiling without config file support")

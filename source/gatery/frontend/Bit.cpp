@@ -23,6 +23,7 @@
 #include "ConditionalScope.h"
 #include "Constant.h"
 #include "DesignScope.h"
+#include "PipeBalanceGroup.h"
 #include "Reg.h"
 #include "Scope.h"
 
@@ -32,6 +33,7 @@
 #include <gatery/hlim/supportNodes/Node_Default.h>
 #include <gatery/hlim/supportNodes/Node_ExportOverride.h>
 #include <gatery/hlim/supportNodes/Node_Attributes.h>
+#include <gatery/hlim/supportNodes/Node_RegHint.h>
 
 
 namespace gtry {
@@ -103,7 +105,8 @@ namespace gtry {
         m_node->removeRef();
     }
 
-    Bit::Bit(const SignalReadPort& port)
+    gtry::Bit::Bit(const SignalReadPort& port, std::optional<bool> resetValue) :
+        m_resetValue(resetValue)
     {
         createNode();
         m_node->connectInput(port);
@@ -311,5 +314,24 @@ namespace gtry {
     bool Bit::valid() const
     {
         return true;
+    }
+
+    Bit pipestage(const Bit& signal)
+    {
+        auto* pipeStage = DesignScope::createNode<hlim::Node_RegHint>();
+        pipeStage->connectInput(signal.getReadPort());
+        return Bit{ SignalReadPort{pipeStage}, signal.getResetValue() };
+    }
+
+    Bit pipeinput(const Bit& signal, PipeBalanceGroup& group)
+    {
+        if(signal.getResetValue())
+        {
+            return pipeinput<Bit, bool>(signal, *signal.getResetValue(), group);
+        }
+        else
+        {
+            return pipeinput<Bit>(signal, group);
+        }
     }
 }

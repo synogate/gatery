@@ -148,7 +148,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_simple, BoostUnitTestSimulationFixture)
 
 	UInt output = input;
 	for (auto i : Range(3))
-		output = pipeStage(output);
+		output = pipestage(output);
 
 	pinOut(output);
 
@@ -177,7 +177,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_simple_reset, BoostUnitTestSimulationFixtu
 
 	UInt output = input;
 	for ([[maybe_unused]] auto i : Range(3))
-		output = pipeStage(output);
+		output = pipestage(output);
 
 	pinOut(output);
 
@@ -189,11 +189,18 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_simple_reset, BoostUnitTestSimulationFixtu
 	BOOST_TEST(pipeBalanceGroup.getNumPipeBalanceGroupStages() == 3);
 }
 
+enum class TestEnum
+{
+	VAL1, VAL2
+};
 
 struct TestStruct
 {
 	gtry::Bit a;
 	gtry::UInt b;
+//	gtry::SInt c;
+//	gtry::BVec d;
+//	gtry::Enum<TestEnum> e;
 };
 
 BOOST_HANA_ADAPT_STRUCT(TestStruct, a, b);
@@ -210,18 +217,19 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct, BoostUnitTestSimulationFixture)
 	TestStruct s_in;
     s_in.a = pinIn();
     s_in.b = pinIn(32_b);
+//	s_in.c = (SInt)(UInt)pinIn(32_b);
+//	s_in.d = (BVec)(UInt)pinIn(32_b);
+//	s_in.e = Enum<TestEnum>((UInt)pinIn(1_b));
 
     PipeBalanceGroup pipeBalanceGroup;
 	TestStruct s_out = pipeBalanceGroup(s_in);
 
 
 	for ([[maybe_unused]] auto i : Range(3))
-		s_out = pipeStage(s_out);
+		s_out = pipestage(s_out);
 
 	pinOut(s_out.a);
 	pinOut(s_out.b);
-
-
 
 	addSimulationProcess([=,this]()->SimProcess {
 		simu(s_in.a) = false;
@@ -274,7 +282,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct_reset, BoostUnitTestSimulationFixtu
 
 
     for ([[maybe_unused]] auto i : Range(3))
-        s_out = pipeStage(s_out);
+        s_out = pipestage(s_out);
 
 	pinOut(s_out.a);
 	pinOut(s_out.b);
@@ -330,10 +338,10 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching, BoostUnitTestSimulationFixture)
 	auto a = pipeBalanceGroup(input1);
 	auto b = pipeBalanceGroup(input2);
 
-	b = pipeStage(b);
+	b = pipestage(b);
 
 	UInt output = a + b;
-	output = pipeStage(output);
+	output = pipestage(output);
 
 	pinOut(output);
 
@@ -364,6 +372,53 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching, BoostUnitTestSimulationFixture)
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());		
 }
 
+BOOST_FIXTURE_TEST_CASE(retiming_pipeinputgroup, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+	using namespace gtry::sim;
+	using namespace gtry::utils;
+
+	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	ClockScope clkScp(clock);
+
+	UInt input1 = pinIn(32_b);
+	UInt input2 = pinIn(32_b);
+	UInt a = input1;
+	UInt b = input2;
+
+	pipeinputgroup(a, b);
+
+	b = pipestage(b);
+
+	UInt output = a + b;
+	output = pipestage(output);
+
+	pinOut(output);
+
+
+	addSimulationProcess([=, this]()->SimProcess {
+		simu(input1) = 1337;
+		simu(input2) = 42;
+
+		for([[maybe_unused]] auto i : Range(2)) {
+			BOOST_TEST(!simu(output).defined());
+
+			co_await WaitClk(clock);
+		}
+
+		BOOST_TEST(simu(output).defined());
+		BOOST_TEST(simu(output).value() == 1337 + 42);
+
+		stopTest();
+	});
+
+//design.visualize("before");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+//design.visualize("after");
+
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
+}
+
 
 BOOST_FIXTURE_TEST_CASE(retiming_hint_branching_reset, BoostUnitTestSimulationFixture)
 {
@@ -381,10 +436,10 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching_reset, BoostUnitTestSimulationFi
 	auto a = pipeBalanceGroup(input1, 0);
 	auto b = pipeBalanceGroup(input2, 1);
 
-	b = pipeStage(b);
+	b = pipestage(b);
 
 	UInt output = a + b;
-	output = pipeStage(output);
+	output = pipestage(output);
 
 	pinOut(output);
 
@@ -439,12 +494,12 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_memory_rmw, BoostUnitTestSimulationFixture
 	mem.setType(MemType::MEDIUM, 1);
 
 	UInt rd = mem[addr];
-	rd = pipeStage(rd);
+	rd = pipestage(rd);
 
 	IF (enable)
 		mem[addr] = rd+data;
 
-	pinOut(pipeStage(rd));
+	pinOut(pipestage(rd));
 
 //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});

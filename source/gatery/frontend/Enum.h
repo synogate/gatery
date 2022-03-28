@@ -72,7 +72,7 @@ namespace gtry {
 		Enum(Enum<T>&& rhs);
 //        Enum(const EnumDefault<T> &defaultValue);
 
-		Enum(const SignalReadPort& port);
+		Enum(const SignalReadPort& port, std::optional<T> resetValue = std::nullopt);
 
 		Enum(T v);
 
@@ -190,7 +190,9 @@ namespace gtry {
 	}
 
 	template<EnumType T>
-	Enum<T>::Enum(const SignalReadPort& port) {
+	Enum<T>::Enum(const SignalReadPort& port, std::optional<T> resetValue) :
+		m_resetValue(resetValue)
+	{
 		createNode();
 		m_node->connectInput(port);
 	}
@@ -233,11 +235,12 @@ namespace gtry {
 	}
 
 	template<EnumType T>
-	constexpr BitWidth Enum<T>::getWidth() const {
-		//return utils::Log2C(magic_enum::enum_count<T>()+1);
+	constexpr BitWidth Enum<T>::getWidth() const
+	{
+//return utils::Log2C(magic_enum::enum_count<T>()+1);
 		size_t maxWidth = 0;
-		for (auto v : magic_enum::enum_values<T>())
-			maxWidth = std::max(maxWidth, utils::Log2C((size_t)v+1));
+		for(auto v : magic_enum::enum_values<T>())
+			maxWidth = std::max(maxWidth, utils::Log2C((size_t)v + 1));
 
 		return maxWidth;
 	}
@@ -332,7 +335,7 @@ namespace gtry {
 
 	template<EnumType T>
 	bool Enum<T>::valid() const {
-		return true;	
+		return true;
 	}
 
 	template<EnumType T>

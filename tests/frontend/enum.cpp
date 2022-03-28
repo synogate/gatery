@@ -135,8 +135,6 @@ BOOST_FIXTURE_TEST_CASE(EnumMemoryCompileTest, BoostUnitTestSimulationFixture)
 	mem[1] = enumSignal;
 }
 
-
-
 BOOST_FIXTURE_TEST_CASE(EnumInStructCompileTest, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
@@ -148,19 +146,14 @@ BOOST_FIXTURE_TEST_CASE(EnumInStructCompileTest, BoostUnitTestSimulationFixture)
 
 	struct TestStruct {
 		Enum<MyClassicalEnum> enumSignal = A;
-		BVec b = 32_b;
+		// BVec b = 32_b; // causes massive compile time and memory usage on msvc
 		Bit c;
 	};
 
 	TestStruct s;
-
 	s = reg(s);
-
 	HCL_NAMED(s);
-
 }
-
-
 
 BOOST_FIXTURE_TEST_CASE(EnumValueTest, BoostUnitTestSimulationFixture)
 {
@@ -193,5 +186,3 @@ BOOST_FIXTURE_TEST_CASE(EnumValueTest, BoostUnitTestSimulationFixture)
 
 	eval();
 }
-
-

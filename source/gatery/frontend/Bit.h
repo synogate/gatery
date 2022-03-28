@@ -69,7 +69,7 @@ namespace gtry {
         Bit(const BitDefault &defaultValue);
         ~Bit() noexcept;
 
-        Bit(const SignalReadPort& port);
+        Bit(const SignalReadPort& port, std::optional<bool> resetValue = std::nullopt);
         Bit(hlim::Node_Signal* node, size_t offset, size_t initialScopeId); // alias Bit
 
         template<BitLiteral T>
@@ -124,5 +124,10 @@ namespace gtry {
     struct RegisterSettings;
     Bit reg(const Bit& val, const RegisterSettings& settings);
     Bit reg(const Bit& val);
+
+    class PipeBalanceGroup;
+    Bit pipestage(const Bit& signal);
+    Bit pipeinput(const Bit& signal, PipeBalanceGroup& group);
+
 /**@}*/
 }
