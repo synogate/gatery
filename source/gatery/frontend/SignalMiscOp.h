@@ -56,7 +56,7 @@ template<typename ContainerType>//, typename = std::enable_if_t<utils::isContain
 typename ContainerType::value_type mux(const ElementarySignal &selector, const ContainerType &table) {
 
     const SignalReadPort selPort = selector.getReadPort();
-    const size_t selPortWidth = selector.getWidth().value;
+    const size_t selPortWidth = selector.width().value;
     size_t tableSize = table.size();
 
     if (tableSize > (1ull << selPortWidth))

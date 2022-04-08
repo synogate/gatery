@@ -540,7 +540,7 @@ namespace gtry
 
 		void width(const BaseSignal auto& signal, BitWidth& sum)
 		{
-			sum += signal.getWidth();
+			sum += signal.width();
 		}
 
 		void width(const ContainerSignal auto& signal, BitWidth& sum)

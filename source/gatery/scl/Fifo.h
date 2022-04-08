@@ -147,7 +147,7 @@ namespace gtry::scl
 
 		sim_assert(!valid | !m_full) << "push into full fifo";
 
-		UInt put = m_put.getWidth();
+		UInt put = m_put.width();
 		put = reg(put, 0);
 		HCL_NAMED(put);
 
@@ -173,7 +173,7 @@ namespace gtry::scl
 
 		sim_assert(!ready | !m_empty) << "pop from empty fifo";
 
-		UInt get = m_get.getWidth();
+		UInt get = m_get.width();
 		get = reg(get, 0);
 		HCL_NAMED(get);
 

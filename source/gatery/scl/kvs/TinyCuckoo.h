@@ -87,8 +87,8 @@ namespace gtry::scl
 		size_t numTables = 2;
 		size_t latency = 2;
 
-		BitWidth valueWidth() const { return update.item.value.getWidth(); }
-		BitWidth tableWidth() const { return update.itemIdx.getWidth(); }
+		BitWidth valueWidth() const { return update.item.value.width(); }
+		BitWidth tableWidth() const { return update.itemIdx.width(); }
 	};
 
 

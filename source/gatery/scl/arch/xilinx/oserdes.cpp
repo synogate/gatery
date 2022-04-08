@@ -39,7 +39,7 @@ Bit serdes(UInt data) {
 
     // todo: This is not DDR!!
     
-    UInt fast_data = slow_data.getWidth();
+    UInt fast_data = slow_data.width();
     fast_data >>= 1;
 
     Bit fast_sync;

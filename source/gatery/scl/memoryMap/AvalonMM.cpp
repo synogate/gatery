@@ -137,9 +137,9 @@ namespace gtry::scl
 
 	void pinIn(AvalonMMSlave& avmm, std::string prefix)
 	{
-		avmm.address = gtry::pinIn(avmm.address.getWidth()).setName(prefix + "_address");
+		avmm.address = gtry::pinIn(avmm.address.width()).setName(prefix + "_address");
 		avmm.write = gtry::pinIn().setName(prefix + "_write");
-		avmm.writeData = gtry::pinIn(avmm.writeData.getWidth()).setName(prefix + "_write_data");
+		avmm.writeData = gtry::pinIn(avmm.writeData.width()).setName(prefix + "_write_data");
 		gtry::pinOut(avmm.readData).setName(prefix + "_read_data");
 	}
 

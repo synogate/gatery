@@ -56,8 +56,8 @@ namespace gtry::scl
 
 		HCL_NAMED(mode);
 
-		x = mode.w.total.getWidth();
-		y = mode.h.total.getWidth();
+		x = mode.w.total.width();
+		y = mode.h.total.width();
 
 		x += 1;
 		IF(x == mode.w.total)

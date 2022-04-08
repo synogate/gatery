@@ -162,7 +162,7 @@ namespace gtry {
         assign(SignalReadPort(expOverride));
     }
 
-    BitWidth Bit::getWidth() const
+    BitWidth Bit::width() const
     {
         return 1_b;
     }

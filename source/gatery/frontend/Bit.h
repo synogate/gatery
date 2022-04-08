@@ -87,7 +87,7 @@ namespace gtry {
 
         void setExportOverride(const Bit& exportOverride);
 
-        BitWidth getWidth() const final;
+        BitWidth width() const final;
         hlim::ConnectionType getConnType() const final;
         SignalReadPort getReadPort() const final;
         SignalReadPort getOutPort() const final;

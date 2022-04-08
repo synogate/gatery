@@ -72,7 +72,7 @@ namespace gtry {
         virtual bool valid() const = 0;
 
         // these methods are undefined for invalid signals (uninitialized)
-        virtual BitWidth getWidth() const = 0;
+        virtual BitWidth width() const = 0;
         virtual hlim::ConnectionType getConnType() const = 0;
         virtual SignalReadPort getReadPort() const = 0;
         virtual SignalReadPort getOutPort() const = 0;

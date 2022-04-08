@@ -101,7 +101,7 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
     pinOut(out.data.header).setName("out_header");
     pinOut(out.data.data).setName("out_data");
 
-    Memory<UInt> testMem{ 1 << 16, avmm.writeData->getWidth() };
+    Memory<UInt> testMem{ 1 << 16, avmm.writeData->width() };
     IF(*avmm.write & *avmm.ready)
         testMem[avmm.address(0, 16_b)] = *avmm.writeData;
     *avmm.readData = testMem[avmm.address(0, 16_b)];

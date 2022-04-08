@@ -40,7 +40,7 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, BitCountTest, data:
     
     BOOST_REQUIRE(count.size() >= (size_t)gtry::utils::Log2(bitsize)+1);
     //sim_debug() << "The bitcount of " << a << " should be " << actualBitCount << " and is " << count;
-    sim_assert(count == ConstUInt(actualBitCount, count.getWidth())) << "The bitcount of " << a << " should be " << actualBitCount << " but is " << count;
+    sim_assert(count == ConstUInt(actualBitCount, count.width())) << "The bitcount of " << a << " should be " << actualBitCount << " but is " << count;
     
     eval();
 }
@@ -127,20 +127,20 @@ BOOST_FIXTURE_TEST_CASE(addWithCarry, BoostUnitTestSimulationFixture)
         {
             simu(cin) = carryMode;
 
-            for (size_t i = 0; i < a.getWidth().count(); ++i)
+            for (size_t i = 0; i < a.width().count(); ++i)
             {
                 simu(a) = i;
             
-                for (size_t j = 0; j < b.getWidth().count(); ++j)
+                for (size_t j = 0; j < b.width().count(); ++j)
                 {
                     simu(b) = j;
                     co_await WaitClk(clock);
 
-                    size_t expectedSum = (i + j + carryMode) & sum.getWidth().mask();
+                    size_t expectedSum = (i + j + carryMode) & sum.width().mask();
                     BOOST_TEST(simu(sum) == expectedSum);
 
                     size_t expectedCarry = 0;
-                    for (size_t k = 0; k < carry.getWidth().value; ++k)
+                    for (size_t k = 0; k < carry.width().value; ++k)
                     {
                         size_t mask = gtry::utils::bitMaskRange(0, k + 1);
                         size_t subsum = (i & mask) + (j & mask) + carryMode;

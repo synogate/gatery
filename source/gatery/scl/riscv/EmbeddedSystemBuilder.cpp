@@ -139,7 +139,7 @@ gtry::scl::AvalonMM gtry::scl::riscv::EmbeddedSystemBuilder::addAvalonMemMapped(
 	ret.readLatency = 1;
 
 	ret.readDataValid = Bit{};
-	ret.readData = m_dataBus.readData->getWidth();
+	ret.readData = m_dataBus.readData->width();
 
 	IF(*ret.readDataValid)
 	{

@@ -49,7 +49,7 @@ namespace gtry::scl
 		GroupScope entity(GroupScope::GroupType::ENTITY);
 		entity.setName("TabulationHashing");
 
-		const size_t numTables = (data.getWidth().value + m_symbolWidth.value - 1) / m_symbolWidth.value;
+		const size_t numTables = (data.width().value + m_symbolWidth.value - 1) / m_symbolWidth.value;
 		m_tables.resize(numTables);
 
 		UInt hash = zext(0, m_hashWidth.value);

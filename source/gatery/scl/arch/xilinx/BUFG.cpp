@@ -136,7 +136,7 @@ bool BUFGPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 		HCL_ASSERT_HINT(io.outputBVecs.contains("globalBufferPlaceholder"), "Missing output for global buffer, probably because not yet implemented for bundles!");
 		BVec &output = io.outputBVecs["globalBufferPlaceholder"];
 
-		HCL_ASSERT(input.getWidth() == output.getWidth());
+		HCL_ASSERT(input.width() == output.width());
 
     	auto *bufg = DesignScope::createNode<BUFG>();
 		bufg->connectInput(input);

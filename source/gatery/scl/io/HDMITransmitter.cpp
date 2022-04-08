@@ -37,8 +37,8 @@ UInt tmdsEncode(Clock &pixelClock, Bit dataEnable, UInt data, UInt ctrl)
         .setComment("Encodes 8-bit data words to 10-bit TMDS words with control bits");
         
 
-    HCL_DESIGNCHECK_HINT(data.getWidth() == 8_b, "data must be 8 bit wide");
-    HCL_DESIGNCHECK_HINT(ctrl.getWidth() == 2_b, "data must be 8 bit wide");
+    HCL_DESIGNCHECK_HINT(data.width() == 8_b, "data must be 8 bit wide");
+    HCL_DESIGNCHECK_HINT(ctrl.width() == 2_b, "data must be 8 bit wide");
     
     HCL_COMMENT << "Count the number of high bits in the input word";
     UInt sumOfOnes_data = bitcount(data);
@@ -153,7 +153,7 @@ UInt tmdsEncodeSymbol(const UInt& data)
     // even out 0 and 1 bits
     UInt word_counter = zext(sumOfOnes, 1) - zext(data.size() / 2);
     HCL_NAMED(word_counter);
-    UInt global_counter = word_counter.getWidth();
+    UInt global_counter = word_counter.width();
     HCL_NAMED(global_counter);
 
     Bit invert = word_counter.msb() == global_counter.msb();
@@ -291,7 +291,7 @@ void gtry::scl::hdmi::TmdsEncoder::setTERC4(UInt ctrl)
         "b1011000011"
     };
 
-    HCL_ASSERT(ctrl.getWidth() == 12_b);
+    HCL_ASSERT(ctrl.width() == 12_b);
     m_Channel[0] = mux(ctrl(0, 4), trec4lookup); // TODO: improve mux to accept any container as second input
     m_Channel[1] = mux(ctrl(2, 4), trec4lookup); // TODO: subrange as argument for mux
     m_Channel[2] = mux(ctrl(4, 4), trec4lookup);

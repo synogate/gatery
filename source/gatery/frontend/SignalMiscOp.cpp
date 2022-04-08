@@ -131,7 +131,7 @@ namespace gtry
 	template<BitVectorDerived T>
 	T swapEndian(const T& word, BitWidth byteSize)
 	{
-		const size_t numSymbols = word.getWidth().numBeats(byteSize);
+		const size_t numSymbols = word.width().numBeats(byteSize);
 		const size_t srcWidth = numSymbols * byteSize.value;
 
 		hlim::Node_Rewire* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
@@ -152,8 +152,8 @@ namespace gtry
 	template<BitVectorDerived T>
 	T swapEndian(const T& word, BitWidth byteSize, BitWidth wordSize)
 	{
-		T ret = word.getWidth();
-		for (size_t i = 0; i < word.getWidth() / wordSize; ++i)
+		T ret = word.width();
+		for (size_t i = 0; i < word.width() / wordSize; ++i)
 		{
 			auto sym = Selection::Symbol(i, wordSize);
 			ret(sym) = swapEndian(word(sym), byteSize);
@@ -177,8 +177,8 @@ namespace gtry
 		HCL_NAMED(selector);
 		HCL_NAMED(flat_array);
 
-		const size_t num_entries = selector.getWidth().count();
-		SymbolSelect sym{ flat_array.getWidth() / num_entries };
+		const size_t num_entries = selector.width().count();
+		SymbolSelect sym{ flat_array.width() / num_entries };
 #if 0		
 		T selected = flat_array(sym[0]);
 		for (size_t i = 1; i < num_entries; ++i)
@@ -205,13 +205,13 @@ namespace gtry
 	template<BitVectorDerived T>
 	T muxWord(Bit selector, T flat_array)
 	{
-		HCL_DESIGNCHECK_HINT(flat_array.getWidth().divisibleBy(2), "flat array must be evenly divisible");
+		HCL_DESIGNCHECK_HINT(flat_array.width().divisibleBy(2), "flat array must be evenly divisible");
 
 		auto entity = Area{ "flat_mux" }.enter();
 		HCL_NAMED(selector);
 		HCL_NAMED(flat_array);
 
-		SymbolSelect sym{ flat_array.getWidth() / 2 };
+		SymbolSelect sym{ flat_array.width() / 2 };
 		T selected = flat_array(sym[0]);
 		IF(selector)
 			selected = flat_array(sym[1]);
@@ -229,7 +229,7 @@ namespace gtry
 
 	UInt demux(const UInt& selector, const Bit& input, const Bit& inactiveOutput)
 	{
-		std::vector<Bit> ret{ (size_t)selector.getWidth().count(), inactiveOutput };
+		std::vector<Bit> ret{ (size_t)selector.width().count(), inactiveOutput };
 		for (size_t i = 0; i < ret.size(); ++i)
 			IF(selector == i)
 				ret[i] = input;
@@ -239,8 +239,8 @@ namespace gtry
 	UInt demux(const UInt& selector)
 	{
 		std::vector<Bit> ret;
-		ret.reserve(selector.getWidth().count());
-		for (size_t i = 0; i < selector.getWidth().count(); ++i)
+		ret.reserve(selector.width().count());
+		for (size_t i = 0; i < selector.width().count(); ++i)
 			ret.emplace_back(selector == i);
 		return pack(ret);
 	}

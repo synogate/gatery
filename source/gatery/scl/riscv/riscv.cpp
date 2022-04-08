@@ -190,7 +190,7 @@ void gtry::scl::riscv::RV32I::branch()
 	IF(m_instr.opcode == "b11000")
 	{
 		auto ent = Area{ "branch" }.enter();
-		UInt target = m_IP + m_instr.immB(0, m_IP.getWidth());
+		UInt target = m_IP + m_instr.immB(0, m_IP.width());
 		
 		m_alu.sub = '1';
 
@@ -450,11 +450,11 @@ gtry::Memory<gtry::UInt>& gtry::scl::riscv::SingleCycleI::fetch(uint32_t firstIn
 {
 	auto entRV = m_area.enter("fetch");
 
-	BitWidth memWidth = m_IP.getWidth() - 2;
+	BitWidth memWidth = m_IP.width() - 2;
 	m_instructionMem.setup(memWidth.count(), 32_b);
 	m_instructionMem.setType(MemType::SMALL);
 
-	UInt addr = m_IP.getWidth();
+	UInt addr = m_IP.width();
 	UInt instruction = reg(m_instructionMem[addr(2, memWidth)].read());
 	//UInt instruction = m_instructionMem[reg(addr(2, memWidth))];
 
@@ -526,7 +526,7 @@ void gtry::scl::riscv::SingleCycleI::fetchOperands(BitWidth regAddrWidth)
 
 void gtry::scl::riscv::SingleCycleI::setIP(const UInt& ip)
 {
-	m_resultIP = ip(0, m_IP.getWidth());
+	m_resultIP = ip(0, m_IP.width());
 }
 
 void gtry::scl::riscv::SingleCycleI::setResult(const UInt& result)

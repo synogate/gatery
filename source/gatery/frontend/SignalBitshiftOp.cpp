@@ -182,16 +182,16 @@ UInt shr(const UInt& signal, size_t amount, const Bit& arithmetic)
     Bit inShift = arithmetic & signal.msb();
 
     auto shiftedHigh = sext(inShift, amount - 1);
-    auto shiftedLow = signal(amount, signal.getWidth() - amount);
+    auto shiftedLow = signal(amount, signal.width() - amount);
     return cat(shiftedHigh, shiftedLow);
 }
 
 UInt shr(const UInt& signal, const UInt& amount, const Bit& arithmetic)
 {
-    HCL_DESIGNCHECK_HINT(signal.size() == amount.getWidth().count(), "not implemented");
+    HCL_DESIGNCHECK_HINT(signal.size() == amount.width().count(), "not implemented");
 
     UInt acc(signal);
-    for (size_t i = 0; i < amount.getWidth().value; ++i)
+    for (size_t i = 0; i < amount.width().value; ++i)
     {
         IF(amount[i])
             acc = shr(acc, 1ull << i, arithmetic);

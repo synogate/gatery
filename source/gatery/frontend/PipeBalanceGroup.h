@@ -95,7 +95,7 @@ namespace gtry {
 		spawner->setClock(ClockScope::getClk().getClk());
 
 		const T& reset = resetVal;
-		if(signal.getWidth() != reset.getWidth())
+		if(signal.width() != reset.width())
 		{
 			NormalizedWidthOperands ops(signal, reset);
 			return SignalReadPort{

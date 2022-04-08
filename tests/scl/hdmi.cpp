@@ -31,7 +31,7 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, tmdsReduction, data
     auto a = ConstUInt(val, 8_b);
 
     UInt encoded = gtry::scl::hdmi::tmdsEncodeReduceTransitions(a);
-    BOOST_TEST(encoded.getWidth() == a.getWidth() + 1);
+    BOOST_TEST(encoded.width() == a.width() + 1);
 
     UInt decoded = gtry::scl::hdmi::tmdsDecodeReduceTransitions(encoded);
     sim_assert(a == decoded) << "decode(encoder()) mismatch: input:" << a << " decoded " << decoded;
@@ -51,7 +51,7 @@ BOOST_FIXTURE_TEST_CASE(tmdsBitflip, gtry::BoostUnitTestSimulationFixture)
     test_counter = reg(test_counter, "8b0");
 
     UInt encoded = gtry::scl::hdmi::tmdsEncodeBitflip(clock, test_counter);
-    BOOST_TEST(test_counter.getWidth() == encoded.getWidth() - 1);
+    BOOST_TEST(test_counter.width() == encoded.width() - 1);
 
     UInt decoded = gtry::scl::hdmi::tmdsDecodeBitflip(encoded);
     sim_assert(decoded == test_counter);

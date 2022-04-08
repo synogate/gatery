@@ -42,7 +42,7 @@ gtry::scl::StreamSource<gtry::scl::UIntPair> gtry::scl::binaryGCDStep1(StreamSin
     {
         a = in.first;
         b = in.second;
-        d = ConstUInt(0, d.getWidth());
+        d = ConstUInt(0, d.width());
         active = true;
     }
 
@@ -90,8 +90,8 @@ gtry::scl::StreamSource<gtry::scl::UIntPair> gtry::scl::binaryGCDStep1(StreamSin
 
 gtry::scl::StreamSource<gtry::UInt> gtry::scl::shiftLeft(StreamSink<UIntPair>& in, size_t iterationsPerClock)
 {
-    UInt a = BitWidth{in.first.getWidth()};
-    UInt b = BitWidth{in.second.getWidth()};
+    UInt a = BitWidth{in.first.width()};
+    UInt b = BitWidth{in.second.width()};
     Bit active;
     HCL_NAMED(a);
     HCL_NAMED(b);
@@ -115,7 +115,7 @@ gtry::scl::StreamSource<gtry::UInt> gtry::scl::shiftLeft(StreamSink<UIntPair>& i
         }
     }
 
-    StreamSource<UInt> out{ in.first.getWidth() };
+    StreamSource<UInt> out{ in.first.width() };
     out.valid = active & (b != 0);
     (UInt&)out = a;
 

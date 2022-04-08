@@ -193,7 +193,7 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
     UInt out_data_accu = constructFrom(out_data);
     out_data_accu = 0;
 
-    size_t width = in_data.getWidth().value;
+    size_t width = in_data.width().value;
     HCL_ASSERT(width == fifoChoice.readWidth);
 
 

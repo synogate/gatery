@@ -76,7 +76,7 @@ namespace gtry {
 
 		Enum(T v);
 
-		explicit Enum(const UInt &rhs) : Enum(rhs.getReadPort()) { HCL_DESIGNCHECK_HINT(rhs.getWidth() == getWidth(), "Only bit vectors of correct size can be converted to enum signals"); }
+		explicit Enum(const UInt &rhs) : Enum(rhs.getReadPort()) { HCL_DESIGNCHECK_HINT(rhs.width() == width(), "Only bit vectors of correct size can be converted to enum signals"); }
 
 		template<UIntValue V>
 		explicit Enum(V rhs) : Enum((UInt)rhs) { }
@@ -91,7 +91,7 @@ namespace gtry {
 
 		void setExportOverride(const Enum<T>& exportOverride);
 
-		constexpr BitWidth getWidth() const final;
+		constexpr BitWidth width() const final;
 		hlim::ConnectionType getConnType() const final;
 		SignalReadPort getReadPort() const final;
 		SignalReadPort getOutPort() const final;
@@ -235,7 +235,7 @@ namespace gtry {
 	}
 
 	template<EnumType T>
-	constexpr BitWidth Enum<T>::getWidth() const
+	constexpr BitWidth Enum<T>::width() const
 	{
 //return utils::Log2C(magic_enum::enum_count<T>()+1);
 		size_t maxWidth = 0;
@@ -249,7 +249,7 @@ namespace gtry {
 	hlim::ConnectionType Enum<T>::getConnType() const {
 		return hlim::ConnectionType{
 			.interpretation = hlim::ConnectionType::BITVEC,
-			.width = getWidth().value
+			.width = width().value
 		};
 	}
 
@@ -308,7 +308,7 @@ namespace gtry {
 		HCL_DESIGNCHECK_HINT((size_t)v < MAGIC_ENUM_RANGE_MAX, "The values of enums adapted to signals must be within a small range defined by the Magic Enum library!");
 
 		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
-			parseBitVector((size_t)v, getWidth().value), hlim::ConnectionType::BITVEC
+			parseBitVector((size_t)v, width().value), hlim::ConnectionType::BITVEC
 		);
 		constant->setName(std::string(magic_enum::enum_name(v)));
 		assign(SignalReadPort(constant));
