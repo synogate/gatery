@@ -30,7 +30,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestGCD, data::make({0, 1
 
 
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000).setResetType(ClockConfig::ResetType::NONE));
+    Clock clock({ .absoluteFrequency = 10'000, .resetType = ClockConfig::ResetType::NONE });
     ClockScope clkScp(clock);
 
     auto gcd_ref = [](unsigned a, unsigned b) -> unsigned {
@@ -184,7 +184,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, FSMlessTestGCD, data::mak
 
 
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000).setResetType(ClockConfig::ResetType::NONE));
+    Clock clock({ .absoluteFrequency = 10'000, .resetType = ClockConfig::ResetType::NONE });
     ClockScope clkScp(clock);
 
     auto gcd_ref = [](unsigned a, unsigned b) -> unsigned {

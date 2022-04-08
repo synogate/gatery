@@ -272,7 +272,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    Clock clock({ .absoluteFrequency = 10'000 });
     ClockScope clockScope(clock);
 
     {
@@ -474,7 +474,7 @@ BOOST_FIXTURE_TEST_CASE(ConditionalLoopAssignment, BoostUnitTestSimulationFixtur
 {
     using namespace gtry;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    Clock clock({ .absoluteFrequency = 10'000 });
     ClockScope clockScope(clock);
 
     gtry::Bit condition = '1';
@@ -493,7 +493,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, BoostUnitTestSimulationFixture
 {
     using namespace gtry;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    Clock clock({ .absoluteFrequency = 10'000 });
     ClockScope clockScope(clock);
 
     {
@@ -520,7 +520,7 @@ BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    Clock clock({ .absoluteFrequency = 10'000 });
     ClockScope clockScope(clock);
 
     {
@@ -547,7 +547,7 @@ BOOST_FIXTURE_TEST_CASE(ClockRegisterReset_explicit, BoostUnitTestSimulationFixt
 {
     using namespace gtry;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000).setInitializeRegs(false));
+    Clock clock({ .absoluteFrequency = 10'000, .initializeRegs = false });
     ClockScope clockScope(clock);
 
     {
@@ -575,7 +575,7 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    Clock clock({ .absoluteFrequency = 10'000 });
     ClockScope clockScope(clock);
 
     {
@@ -601,7 +601,7 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax_explicitreset, BoostUnitTestSimul
 {
     using namespace gtry;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000).setInitializeRegs(false));
+    Clock clock({ .absoluteFrequency = 10'000, .initializeRegs = false });
     ClockScope clockScope(clock);
 
     {
@@ -628,7 +628,7 @@ BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, BoostUnitTestSimulationFixture)
 
 
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    Clock clock({ .absoluteFrequency = 10'000 });
     ClockScope clockScope(clock);
 
     {
@@ -653,7 +653,7 @@ BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, BoostUnitTestSimulationFi
 
 
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    Clock clock({ .absoluteFrequency = 10'000 });
     ClockScope clockScope(clock);
     {
         Bit condition;

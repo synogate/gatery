@@ -74,7 +74,7 @@ BOOST_FIXTURE_TEST_CASE(sync_ROM, BoostUnitTestSimulationFixture)
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     std::vector<size_t> contents;
@@ -117,7 +117,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem, BoostUnitTestSimulationFixture)
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     std::vector<size_t> contents;
@@ -169,7 +169,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem, BoostUnitTestSimulationFixture)
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     std::vector<size_t> contents;
@@ -222,7 +222,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_before_write, BoostUnitTestSimulationFixt
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     std::vector<size_t> contents;
@@ -289,7 +289,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem_write_before_read, BoostUnitTestSimulationFixt
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     std::vector<size_t> contents;
@@ -358,7 +358,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_modify_write, BoostUnitTestSimulationFixt
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     std::vector<size_t> contents;
@@ -435,7 +435,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write, BoostUnitTestSimulationFixtu
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     std::vector<size_t> contents;
@@ -515,7 +515,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads, BoostUnitTest
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     std::vector<size_t> contents;
@@ -599,7 +599,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_on_wrEn, BoostUnitTestSimulat
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     std::vector<size_t> contents;
@@ -679,7 +679,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_multiple_writes, BoostUnitTestSimulationFixture
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     std::vector<size_t> contents;
@@ -761,7 +761,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrFirst, Boos
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     std::vector<size_t> contents;
@@ -846,7 +846,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrLast, Boost
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     std::vector<size_t> contents;
@@ -926,7 +926,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     std::vector<size_t> contents;
@@ -1015,7 +1015,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     std::vector<size_t> contents;
@@ -1107,7 +1107,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_dual_read_modify_write, BoostUnitTestSimulation
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     std::vector<size_t> contents;
@@ -1202,7 +1202,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, BoostUnitTestSimulat
     size_t memReadLatency = 5;
 
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     std::vector<size_t> contents;
@@ -1319,7 +1319,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, BoostUnitTestSim
     size_t memReadLatency = 8;
 
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     std::vector<size_t> contents;

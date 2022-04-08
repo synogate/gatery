@@ -31,7 +31,7 @@ BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_arith, BoostUnitTestSimulationFixture)
     using namespace gtry;
 
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    Clock clock({ .absoluteFrequency = 10'000 });
     ClockScope clkScp(clock);
 
     UInt a(8_b);
@@ -66,7 +66,7 @@ BOOST_FIXTURE_TEST_CASE(CTS_TestBasics_logic, BoostUnitTestSimulationFixture)
     using namespace gtry;
 
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    Clock clock({ .absoluteFrequency = 10'000 });
     ClockScope clkScp(clock);
 
     UInt a(8_b);
@@ -101,7 +101,7 @@ BOOST_FIXTURE_TEST_CASE(CTS_TestRegisterReset, BoostUnitTestSimulationFixture)
     using namespace gtry;
 
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    Clock clock({ .absoluteFrequency = 10'000 });
     ClockScope clkScp(clock);
 
     UInt a(8_b);

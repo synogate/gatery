@@ -301,7 +301,7 @@ protected:
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_arith, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
@@ -362,7 +362,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_arith, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_logic, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
@@ -416,7 +416,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_logic, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_shift, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
@@ -514,7 +514,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_shift, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_setcmp, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
@@ -591,7 +591,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_setcmp, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_lui, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
@@ -641,7 +641,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_lui, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_jal, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
@@ -696,7 +696,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_jal, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
@@ -833,7 +833,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_store, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
@@ -919,7 +919,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_store, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
@@ -1109,7 +1109,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, BoostUnitTestSimulationFixture)
 	};
 	unsigned int gcd_bin_len = 164;
 
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	scl::riscv::SingleCycleI rv(8_b, 32_b);
@@ -1194,7 +1194,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, BoostUnitTestSimulationFixture)
 	};
 	unsigned int gcd_bin_len = 164;
 
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	scl::riscv::DualCycleRV rv(8_b, 32_b);
@@ -1263,7 +1263,7 @@ extern gtry::hlim::NodeGroup* dbg_group;
 
 BOOST_FIXTURE_TEST_CASE(riscv_embedded_system_builder, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000'000).setName("clock").setResetHighActive(false));
+	Clock clock(ClockConfig{}.absoluteFrequency(10'000'000).setName("clock").setResetHighActive(false));
 	ClockScope clkScp(clock);
 
 	{
@@ -1327,7 +1327,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle_export, BoostUnitTestSimulationFixtur
 	};
 	unsigned int linked_text_len = 200;
 	{
-		Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000'000).setName("clock").setResetHighActive(false));
+		Clock clock(ClockConfig{}.absoluteFrequency(10'000'000).setName("clock").setResetHighActive(false));
 		ClockScope clkScp(clock);
 
 		//scl::riscv::SingleCycleI rv(8_b, 32_b);

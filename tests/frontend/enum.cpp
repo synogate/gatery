@@ -70,7 +70,7 @@ BOOST_FIXTURE_TEST_CASE(EnumRegCompileTest, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	enum MyClassicalEnum { A, B, C, D };
@@ -86,7 +86,7 @@ BOOST_FIXTURE_TEST_CASE(EnumRegister, gtry::BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    Clock clock({ .absoluteFrequency = 10'000 });
     ClockScope clockScope(clock);
 
 	enum MyClassicalEnum { A, B, C, D };
@@ -122,7 +122,7 @@ BOOST_FIXTURE_TEST_CASE(EnumMemoryCompileTest, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	enum MyClassicalEnum { A, B, C, D };
@@ -139,7 +139,7 @@ BOOST_FIXTURE_TEST_CASE(EnumInStructCompileTest, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	enum MyClassicalEnum { A, B, C, D };
@@ -159,7 +159,7 @@ BOOST_FIXTURE_TEST_CASE(EnumValueTest, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	enum MyClassicalEnum { 

@@ -32,7 +32,7 @@ using namespace gtry;
 
 BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
 {
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
     ClockScope clkScp(clock);
 
     scl::Stream<UInt> in0;
@@ -133,7 +133,7 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 {
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
     ClockScope clkScp(clock);
 
     scl::Stream<UInt> in0;

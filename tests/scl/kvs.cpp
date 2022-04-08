@@ -32,7 +32,7 @@ using namespace gtry;
 
 BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, TinyCookuTableLookup, data::xrange(2, 4), numTables)
 {
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
     ClockScope clockScope(clock);
 
     const BitWidth keySize{ size_t(numTables * 4) };
@@ -169,7 +169,7 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, TinyCookuTableLooku
 
 BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, TinyCuckooTableLookup, data::xrange(3, 4), numTables)
 {
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
     ClockScope clockScope(clock);
 
     const BitWidth keySize{ size_t(numTables * 10) };
@@ -202,7 +202,7 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, TinyCuckooTableLook
 
 BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, TinyCuckooTableLookupDemuxed, data::xrange(3, 4), numTables)
 {
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
     ClockScope clockScope(clock);
 
     const BitWidth keySize{ size_t(numTables * 10) };

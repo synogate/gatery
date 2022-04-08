@@ -106,7 +106,7 @@ struct FifoTest
 
 BOOST_FIXTURE_TEST_CASE(Fifo_basic, BoostUnitTestSimulationFixture)
 {
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
     ClockScope clkScp(clock);
  
     FifoTest fifo{ clock };
@@ -211,7 +211,7 @@ BOOST_FIXTURE_TEST_CASE(Fifo_basic, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(Fifo_fuzz, BoostUnitTestSimulationFixture)
 {
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
     ClockScope clkScp(clock);
 
     FifoTest fifo{ clock };

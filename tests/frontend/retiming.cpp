@@ -47,7 +47,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_new, BoostUnitTestSimulationFix
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 
@@ -92,7 +92,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_old, BoostUnitTestSimulationFix
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 
@@ -137,7 +137,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_simple, BoostUnitTestSimulationFixture)
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     UInt input = pinIn(32_b);
@@ -166,7 +166,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_simple_reset, BoostUnitTestSimulationFixtu
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     UInt input = pinIn(32_b);
@@ -211,7 +211,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct, BoostUnitTestSimulationFixture)
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	TestStruct s_in;
@@ -266,7 +266,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct_reset, BoostUnitTestSimulationFixtu
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	TestStruct s_in;
@@ -328,7 +328,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching, BoostUnitTestSimulationFixture)
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     UInt input1 = pinIn(32_b);
@@ -378,7 +378,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeinputgroup, BoostUnitTestSimulationFixture)
 	using namespace gtry::sim;
 	using namespace gtry::utils;
 
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	UInt input1 = pinIn(32_b);
@@ -426,7 +426,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching_reset, BoostUnitTestSimulationFi
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     UInt input1 = pinIn(32_b);
@@ -478,7 +478,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_memory_rmw, BoostUnitTestSimulationFixture
     using namespace gtry::sim;
     using namespace gtry::utils;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
     UInt addr = pinIn(4_b);

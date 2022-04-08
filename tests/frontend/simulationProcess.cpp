@@ -32,7 +32,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
 
 
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000).setResetType(ClockConfig::ResetType::NONE));
+    Clock clock({ .absoluteFrequency = 10'000, .resetType = ClockConfig::ResetType::NONE });
     {
         ClockScope clkScp(clock);
 
@@ -78,7 +78,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_BigInt_small, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000).setResetType(ClockConfig::ResetType::NONE));
+    Clock clock({ .absoluteFrequency = 10'000, .resetType = ClockConfig::ResetType::NONE });
     {
         ClockScope clkScp(clock);
 
@@ -126,7 +126,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_BigInt, BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000).setResetType(ClockConfig::ResetType::NONE));
+    Clock clock({ .absoluteFrequency = 10'000, .resetType = ClockConfig::ResetType::NONE });
     {
         ClockScope clkScp(clock);
 
@@ -178,7 +178,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_ExceptionForwarding, BoostUnitTestSimulationFixt
     using namespace gtry;
 
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(1));
+    Clock clock({ .absoluteFrequency = 1 });
 
 
     addSimulationProcess([=]()->SimProcess{
@@ -197,7 +197,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_PingPong, BoostUnitTestSimulationFixture)
 
 
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    Clock clock({ .absoluteFrequency = 10'000 });
     {
         auto A_in = pinIn(8_b);
         auto A_out = pinOut(A_in);

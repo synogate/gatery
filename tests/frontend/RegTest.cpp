@@ -31,7 +31,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundRegister, gtry::BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    Clock clock({ .absoluteFrequency = 10'000 });
     ClockScope clockScope(clock);
 
     TestCompound inSignal{
@@ -75,7 +75,7 @@ BOOST_FIXTURE_TEST_CASE(ContainerRegister, gtry::BoostUnitTestSimulationFixture)
     static_assert(!Signal<std::vector<int>>);
     static_assert(Signal<std::vector<TestCompound>>);
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    Clock clock({ .absoluteFrequency = 10'000 });
     ClockScope clockScope(clock);
 
     std::vector<UInt> inSignal{ UInt{pinIn(2_b)}, UInt{pinIn(2_b)} };
@@ -119,7 +119,7 @@ BOOST_FIXTURE_TEST_CASE(ArrayRegister, gtry::BoostUnitTestSimulationFixture)
     static_assert(!Signal<std::array<int, 2>>);
     static_assert(Signal<std::array<TestCompound, 2>>);
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    Clock clock({ .absoluteFrequency = 10'000 });
     ClockScope clockScope(clock);
 
     std::array<UInt,2> inSignal{ UInt{pinIn(2_b)}, UInt{pinIn(2_b)} };
@@ -163,7 +163,7 @@ BOOST_FIXTURE_TEST_CASE(TupleRegister, gtry::BoostUnitTestSimulationFixture)
     static_assert(Signal<std::tuple<int, UInt>>);
     static_assert(Signal<std::pair<UInt, int>>);
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    Clock clock({ .absoluteFrequency = 10'000 });
     ClockScope clockScope(clock);
 
     std::tuple<int, UInt> inSignal{ 0, UInt{pinIn(2_b)} };
@@ -200,7 +200,7 @@ BOOST_FIXTURE_TEST_CASE(MapRegister, gtry::BoostUnitTestSimulationFixture)
 
     static_assert(Signal<std::map<int, UInt>>);
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    Clock clock({ .absoluteFrequency = 10'000 });
     ClockScope clockScope(clock);
 
     std::map<int, UInt> inSignal;

@@ -301,7 +301,7 @@ SerialTMDS gtry::scl::hdmi::TmdsEncoder::serialOutput() const
 {
     // TODO: use shift register/serdes lib for automatic vendor specific serdes usage
 
-    Clock fastClk = m_Clk.deriveClock(ClockConfig{}.setFrequencyMultiplier(10).setName("TmdsEncoderFastClock"));
+    Clock fastClk = m_Clk.deriveClock({ .setFrequencyMultiplier = 10, .setName = "TmdsEncoderFastClock" });
 
     Register<UInt> chan[3];
     chan[0].setClock(fastClk);

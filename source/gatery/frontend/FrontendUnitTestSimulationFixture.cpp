@@ -130,7 +130,12 @@ void ClockedTest::setup()
 {
     BoostUnitTestSimulationFixture::setup();
 
-    m_clock.emplace(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock").setResetType(ClockConfig::ResetType::NONE));
+    m_clock = ClockConfig{
+        .absoluteFrequency = 100'000'000,
+        .name = "clock",
+        .resetType = ClockConfig::ResetType::NONE
+    };
+
     m_clockScope.emplace(*m_clock);
 }
 

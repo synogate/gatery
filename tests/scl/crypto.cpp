@@ -288,7 +288,7 @@ BOOST_AUTO_TEST_CASE(SipHash64TestVisual)
 	DesignScope design;
 
 
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+	Clock clock({ .absoluteFrequency = 10'000 });
 	ClockScope clockScope(clock);
 
 	scl::SipHash sip(2, 4);
@@ -366,7 +366,7 @@ BOOST_AUTO_TEST_CASE(SipHash64TestVisual)
 
 BOOST_FIXTURE_TEST_CASE(SipHash64Test, gtry::BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+	Clock clock({ .absoluteFrequency = 10'000 });
 	ClockScope clockScope(clock);
 
 	scl::SipHash sip(2, 4);
@@ -436,7 +436,7 @@ BOOST_FIXTURE_TEST_CASE(SipHash64Test, gtry::BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, gtry::BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+	Clock clock({ .absoluteFrequency = 10'000 });
 	ClockScope clockScope(clock);
 
 	scl::SipHash sip;
@@ -457,7 +457,7 @@ BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, gtry::BoostUnitTestSimulationFixture
 
 BOOST_FIXTURE_TEST_CASE(SipHash64HelperTest, gtry::BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+	Clock clock({ .absoluteFrequency = 10'000 });
 	ClockScope clockScope(clock);
 
 	auto [hash, latency] = scl::sipHash("x0100", "x0F0E0D0C0B0A09080706050403020100", false);
@@ -469,7 +469,7 @@ BOOST_FIXTURE_TEST_CASE(SipHash64HelperTest, gtry::BoostUnitTestSimulationFixtur
 
 BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, gtry::BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clockScope(clock);
 
 	scl::TabulationHashing gen{ 16_b };

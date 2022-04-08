@@ -34,7 +34,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
 
 
     unsigned baudRate = 19200;
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(baudRate*5).setName("clock"));
+    Clock clock({ .absoluteFrequency = baudRate*5 });
     std::vector<std::uint8_t> dataStream;
     {
         ClockScope clkScp(clock);

@@ -32,10 +32,10 @@ Bit serdes(UInt data) {
     slow_sync = reg(~slow_sync, '0');
     HCL_NAMED(slow_sync);
 
-    Clock fastClk = ClockScope::getClk().deriveClock(ClockConfig{}
-            .setFrequencyMultiplier(data.size())
-            .setName("fastClk")
-    );
+    Clock fastClk = ClockScope::getClk().deriveClock({
+            .frequencyMultiplier = data.size(),
+            .name = "fastClk"
+        });
 
     // todo: This is not DDR!!
     

@@ -44,7 +44,7 @@ BOOST_FIXTURE_TEST_CASE(tmdsBitflip, gtry::BoostUnitTestSimulationFixture)
 {
     using namespace gtry;
 
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+    Clock clock({ .absoluteFrequency = 10'000 });
     ClockScope scope(clock);
     
     UInt test_counter = 8_b;

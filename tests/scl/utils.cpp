@@ -110,7 +110,7 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, PriorityEncoderTree
 
 BOOST_FIXTURE_TEST_CASE(addWithCarry, BoostUnitTestSimulationFixture)
 {
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
     ClockScope clkScp(clock);
 
     UInt a = pinIn(4_b).setName("a");

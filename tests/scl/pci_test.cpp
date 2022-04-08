@@ -67,7 +67,7 @@ struct TlpBuilder
 
 BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 {
-    Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+    Clock clock({ .absoluteFrequency = 100'000'000 });
     ClockScope clkScp(clock);
 
     scl::Stream<scl::pci::Tlp> in;
