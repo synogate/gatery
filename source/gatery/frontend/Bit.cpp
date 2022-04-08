@@ -40,7 +40,7 @@ namespace gtry {
 
     BitDefault::BitDefault(const Bit& rhs)
     {
-        m_nodePort = rhs.getReadPort();
+        m_nodePort = rhs.readPort();
     }
 
     void BitDefault::assign(bool value)
@@ -61,7 +61,7 @@ namespace gtry {
 
     Bit reg(const Bit& val, const RegisterSettings& settings)
     {
-        if(auto rval = val.getResetValue())
+        if(auto rval = val.resetValue())
             return reg<Bit>(val, *rval, settings);
 
         return reg<Bit>(val, settings);
@@ -77,7 +77,7 @@ namespace gtry {
         createNode();
     }
 
-    Bit::Bit(const Bit& rhs) : Bit(rhs.getReadPort())
+    Bit::Bit(const Bit& rhs) : Bit(rhs.readPort())
     {
         m_resetValue = rhs.m_resetValue;
     }
@@ -90,7 +90,7 @@ namespace gtry {
     Bit::Bit(Bit&& rhs) : Bit()
     {
         // TODO optimize, make simple alias move if src is not in a conditional
-        assign(rhs.getReadPort());
+        assign(rhs.readPort());
         rhs.assign(SignalReadPort{ m_node });
         m_resetValue = rhs.m_resetValue;
     }
@@ -124,7 +124,7 @@ namespace gtry {
     {
         m_resetValue = rhs.m_resetValue;
 
-        assign(rhs.getReadPort());
+        assign(rhs.readPort());
 
         SignalReadPort outRange{ m_node };
         hlim::ConnectionType type = m_node->getOutputConnectionType(0);
@@ -132,7 +132,7 @@ namespace gtry {
         {
             auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
             rewire->connectInput(0, outRange);
-            rewire->changeOutputType(getConnType());
+            rewire->changeOutputType(connType());
 
             size_t offset = std::min(m_offset, type.width - 1); // used for msb alias, but can alias any future offset
             rewire->setExtract(offset, 1);
@@ -147,18 +147,18 @@ namespace gtry {
     {
         hlim::Node_Default* node = DesignScope::createNode<hlim::Node_Default>();
         node->recordStackTrace();
-        node->connectInput(getReadPort());
+        node->connectInput(readPort());
         node->connectDefault(defaultValue.getNodePort());
 
         assign(SignalReadPort(node));
         return *this;
     }
 
-    void Bit::setExportOverride(const Bit& exportOverride)
+    void Bit::exportOverride(const Bit& exportOverride)
     {
         auto* expOverride = DesignScope::createNode<hlim::Node_ExportOverride>();
-        expOverride->connectInput(getReadPort());
-        expOverride->connectOverride(exportOverride.getReadPort());
+        expOverride->connectInput(readPort());
+        expOverride->connectOverride(exportOverride.readPort());
         assign(SignalReadPort(expOverride));
     }
 
@@ -167,7 +167,7 @@ namespace gtry {
         return 1_b;
     }
 
-    hlim::ConnectionType Bit::getConnType() const
+    hlim::ConnectionType Bit::connType() const
     {
         return hlim::ConnectionType{
             .interpretation = hlim::ConnectionType::BOOL,
@@ -175,13 +175,13 @@ namespace gtry {
         };
     }
 
-    SignalReadPort Bit::getReadPort() const
+    SignalReadPort Bit::readPort() const
     {
-        SignalReadPort ret = getRawDriver();
+        SignalReadPort ret = rawDriver();
         return rewireAlias(ret);
     }
 
-    SignalReadPort Bit::getOutPort() const
+    SignalReadPort Bit::outPort() const
     {
         SignalReadPort ret{ m_node };
         return rewireAlias(ret);
@@ -200,7 +200,7 @@ namespace gtry {
             // TODO: cache rewire node if m_node's input is unchanged
             auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
             rewire->connectInput(0, port);
-            rewire->changeOutputType(getConnType());
+            rewire->changeOutputType(connType());
 
             size_t offset = std::min(m_offset, type.width - 1); // used for msb alias, but can alias any future offset
             rewire->setExtract(offset, 1);
@@ -220,7 +220,7 @@ namespace gtry {
     void Bit::setName(std::string name)
     {
         auto* signal = DesignScope::createNode<hlim::Node_Signal>();
-        signal->connectInput(getReadPort());
+        signal->connectInput(readPort());
         signal->setName(name);
         signal->recordStackTrace();
 
@@ -232,14 +232,14 @@ namespace gtry {
         m_node->moveToSignalGroup(signalGroup);
     }
 
-    void Bit::setResetValue(bool v)
+    void Bit::resetValue(bool v)
     {
         m_resetValue = v;
     }
 
-    void Bit::setResetValue(char v)
+    void Bit::resetValue(char v)
     {
-        HCL_ASSERT(v == '1' || v == '0'); setResetValue(v == '1');
+        HCL_ASSERT(v == '1' || v == '0'); resetValue(v == '1');
     }
 
     void Bit::createNode()
@@ -247,7 +247,7 @@ namespace gtry {
         HCL_ASSERT(!m_node);
         m_node = DesignScope::createNode<hlim::Node_Signal>();
         m_node->addRef();
-        m_node->setConnectionType(getConnType());
+        m_node->setConnectionType(connType());
         m_node->recordStackTrace();
     }
 
@@ -276,7 +276,7 @@ namespace gtry {
             std::string in_name = in.node->getName();
 
             auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(2);
-            rewire->connectInput(0, getRawDriver());
+            rewire->connectInput(0, rawDriver());
             rewire->connectInput(1, in);
             rewire->changeOutputType(type);
 
@@ -289,7 +289,7 @@ namespace gtry {
         if (auto* scope = ConditionalScope::get(); !ignoreConditions && scope && scope->getId() > m_initialScopeId)
         {
             auto* signal_in = DesignScope::createNode<hlim::Node_Signal>();
-            signal_in->connectInput(getRawDriver());
+            signal_in->connectInput(rawDriver());
 
             auto* mux = DesignScope::createNode<hlim::Node_Multiplexer>(2);
             mux->connectInput(0, {.node = signal_in, .port = 0});
@@ -303,7 +303,7 @@ namespace gtry {
         m_node->connectInput(in);
     }
 
-    SignalReadPort Bit::getRawDriver() const
+    SignalReadPort Bit::rawDriver() const
     {
         hlim::NodePort driver = m_node->getDriver(0);
         if (!driver.node)
@@ -319,15 +319,15 @@ namespace gtry {
     Bit pipestage(const Bit& signal)
     {
         auto* pipeStage = DesignScope::createNode<hlim::Node_RegHint>();
-        pipeStage->connectInput(signal.getReadPort());
-        return Bit{ SignalReadPort{pipeStage}, signal.getResetValue() };
+        pipeStage->connectInput(signal.readPort());
+        return Bit{ SignalReadPort{pipeStage}, signal.resetValue() };
     }
 
     Bit pipeinput(const Bit& signal, PipeBalanceGroup& group)
     {
-        if(signal.getResetValue())
+        if(signal.resetValue())
         {
-            return pipeinput<Bit, bool>(signal, *signal.getResetValue(), group);
+            return pipeinput<Bit, bool>(signal, *signal.resetValue(), group);
         }
         else
         {

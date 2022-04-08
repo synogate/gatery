@@ -39,12 +39,12 @@ BUFG::BUFG()
 
 void BUFG::connectInput(const Bit &bit)
 {
-	connectInput(bit.getReadPort());
+	connectInput(bit.readPort());
 }
 /*
 void BUFG::connectInput(const BVec &bvec)
 {
-	connectInput(bvec.getReadPort());
+	connectInput(bvec.readPort());
 }
 */
 
@@ -127,7 +127,7 @@ bool BUFGPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 
     	auto *bufg = DesignScope::createNode<BUFG>();
 		bufg->connectInput(input);
-	    output.setExportOverride(SignalReadPort(bufg));
+	    output.exportOverride(SignalReadPort(bufg));
 	}/* else {
 		
 		HCL_ASSERT_HINT(io.inputBVecs.contains("globalBufferPlaceholder"), "Missing output for global buffer, probably because not yet implemented for bundles!");
@@ -140,7 +140,7 @@ bool BUFGPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 
     	auto *bufg = DesignScope::createNode<BUFG>();
 		bufg->connectInput(input);
-	    output.setExportOverride(SignalReadPort(bufg));
+	    output.exportOverride(SignalReadPort(bufg));
 	}*/
 
 	return true;

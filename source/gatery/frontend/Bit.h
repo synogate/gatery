@@ -78,28 +78,28 @@ namespace gtry {
             assign(v);
         }
     
-        Bit& operator=(const Bit& rhs) { m_resetValue = rhs.m_resetValue; assign(rhs.getReadPort());  return *this; }
+        Bit& operator=(const Bit& rhs) { m_resetValue = rhs.m_resetValue; assign(rhs.readPort());  return *this; }
         Bit& operator=(Bit&& rhs);
         Bit& operator=(const BitDefault &defaultValue);
 
         template<BitLiteral T>
         Bit& operator=(T rhs) { assign(rhs); return *this; }
 
-        void setExportOverride(const Bit& exportOverride);
+        void exportOverride(const Bit& exportOverride);
 
         BitWidth width() const final;
-        hlim::ConnectionType getConnType() const final;
-        SignalReadPort getReadPort() const final;
-        SignalReadPort getOutPort() const final;
+        hlim::ConnectionType connType() const final;
+        SignalReadPort readPort() const final;
+        SignalReadPort outPort() const final;
         std::string_view getName() const final;
         void setName(std::string name) override;
         void addToSignalGroup(hlim::SignalGroup *signalGroup);
 
-        void setResetValue(bool v);
-        void setResetValue(char v);
-        std::optional<bool> getResetValue() const { return m_resetValue; }
+        void resetValue(bool v);
+        void resetValue(char v);
+        std::optional<bool> resetValue() const { return m_resetValue; }
 
-        hlim::Node_Signal* getNode() { return m_node; }
+        hlim::Node_Signal* node() { return m_node; }
 
         Bit final() const;
 
@@ -112,7 +112,7 @@ namespace gtry {
         virtual void assign(SignalReadPort in, bool ignoreConditions = false);
 
         bool valid() const final; // hide method since Bit is always valid
-        SignalReadPort getRawDriver() const;
+        SignalReadPort rawDriver() const;
 
     private:
         hlim::Node_Signal* m_node = nullptr;

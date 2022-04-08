@@ -75,7 +75,7 @@ namespace gtry
 	{
 		std::vector<SignalReadPort> portList;
 		(internal::for_each_base_signal(compound, [&](const BaseSignal auto& signal) {
-			portList.push_back(signal.getReadPort());
+			portList.push_back(signal.readPort());
 		}), ...);
 
 		auto* m_node = DesignScope::createNode<hlim::Node_Rewire>(portList.size());
@@ -90,7 +90,7 @@ namespace gtry
 	{
 		std::vector<SignalReadPort> portList;
 		internal::for_each_base_signal_reverse([&](const BaseSignal auto& signal) {
-			portList.push_back(signal.getReadPort());
+			portList.push_back(signal.readPort());
 		}, compound...);
 
 		auto* m_node = DesignScope::createNode<hlim::Node_Rewire>(portList.size());
@@ -103,11 +103,11 @@ namespace gtry
 	template<typename... Comp>
 	void unpack(const UInt& vec, Comp& ... compound)
 	{
-		auto&& readPort = vec.getReadPort();
+		auto&& readPort = vec.readPort();
 		size_t bitOffset = 0;
 		(internal::for_each_base_signal(compound, [&](BaseSignal auto& signal) {
 
-			hlim::ConnectionType sigType = connType(signal.getReadPort());
+			hlim::ConnectionType sigType = connType(signal.readPort());
 			HCL_DESIGNCHECK_HINT(sigType.width + bitOffset <= vec.size(), "parameter width missmatch during unpack");
 
 			auto* node = DesignScope::createNode<hlim::Node_Rewire>(1);

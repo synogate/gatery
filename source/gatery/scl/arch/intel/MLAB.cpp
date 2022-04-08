@@ -134,7 +134,7 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
         UInt data = hookUIntAfter(rp.dataOutput);
 
         altdpram->connectInput(ALTDPRAM::Inputs::IN_RDADDRESS, addr(0, addrBits));
-        data.setExportOverride(altdpram->getOutputUInt(ALTDPRAM::Outputs::OUT_Q));
+        data.exportOverride(altdpram->getOutputUInt(ALTDPRAM::Outputs::OUT_Q));
 
         altdpram->attachClock(rp.dedicatedReadLatencyRegisters.front()->getClocks()[0], (size_t)ALTDPRAM::Clocks::OUTCLOCK);
     }

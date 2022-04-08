@@ -22,7 +22,7 @@ namespace gtry {
 
     BVec ext(const BVec& bvec, size_t increment, Expansion policy)
     {
-        SignalReadPort port = bvec.getReadPort();
+        SignalReadPort port = bvec.readPort();
         port.expansionPolicy = policy;
         if (increment)
             port = port.expand(bvec.size() + increment, hlim::ConnectionType::BITVEC);

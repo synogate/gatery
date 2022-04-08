@@ -50,7 +50,7 @@ namespace internal
     struct SignalDesc
     {
         SignalDesc(const ElementarySignal& sig) :
-            connType(sig.getConnType()),
+            connType(sig.connType()),
             name(sig.getName())
         {}
 

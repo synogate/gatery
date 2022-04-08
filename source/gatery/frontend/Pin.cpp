@@ -32,7 +32,7 @@ namespace gtry {
         m_pinNode->setName(std::move(name));
     }
 
-    OutputPin::OutputPin(const Bit &bit) : BaseOutputPin(bit.getReadPort(), std::string(bit.getName())) { }
+    OutputPin::OutputPin(const Bit &bit) : BaseOutputPin(bit.readPort(), std::string(bit.getName())) { }
 
     BaseInputPin::BaseInputPin() {
         m_pinNode = DesignScope::createNode<hlim::Node_Pin>(true);

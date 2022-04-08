@@ -105,7 +105,7 @@ Bit serdes(UInt data) {
     }
 
 
-    tx.setExportOverride(SignalReadPort(oserdese2_master));
+    tx.exportOverride(SignalReadPort(oserdese2_master));
 */
     tx.setName("tx");
 

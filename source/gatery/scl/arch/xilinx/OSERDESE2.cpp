@@ -109,7 +109,7 @@ std::string OSERDESE2::getOutputName(size_t idx) const
 
 void OSERDESE2::setInput(Inputs input, const Bit &bit)
 {
-    rewireInput(input, bit.getReadPort());
+    rewireInput(input, bit.readPort());
 }
 
 Bit OSERDESE2::getOutput(Outputs output)

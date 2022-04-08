@@ -75,7 +75,7 @@ namespace gtry {
 		return SignalReadPort{ 
 			hlim::NodePort{
 				.node = spawner,
-				.port = spawner->addInput(signal.getReadPort(), {})
+				.port = spawner->addInput(signal.readPort(), {})
 		}};
 	}
 
@@ -109,7 +109,7 @@ namespace gtry {
 			return SignalReadPort{
 				hlim::NodePort{
 					.node = spawner,
-					.port = spawner->addInput(signal.getReadPort(), reset.getReadPort())
+					.port = spawner->addInput(signal.readPort(), reset.readPort())
 			} };
 		}
 	}
@@ -125,7 +125,7 @@ namespace gtry {
 	template<BaseSignal T>
 	T pipestage(const T& signal)
 	{
-		SignalReadPort data = signal.getReadPort();
+		SignalReadPort data = signal.readPort();
 
 		auto* pipeStage = DesignScope::createNode<hlim::Node_RegHint>();
 		pipeStage->connectInput(data);

@@ -47,14 +47,14 @@ RAM256X1D::RAM256X1D()
 Bit RAM256X1D::setupSDP(const UInt &wrAddr, const Bit &wrData, const Bit &wrEn, const UInt &rdAddr)
 {
 	HCL_ASSERT(wrAddr.size() == 8);
-	NodeIO::connectInput(IN_A, wrAddr.getReadPort());
+	NodeIO::connectInput(IN_A, wrAddr.readPort());
 
-	NodeIO::connectInput(IN_D, wrData.getReadPort());
+	NodeIO::connectInput(IN_D, wrData.readPort());
 
-	NodeIO::connectInput(IN_WE, wrEn.getReadPort());
+	NodeIO::connectInput(IN_WE, wrEn.readPort());
 
 	HCL_ASSERT(rdAddr.size() == 8);
-	NodeIO::connectInput(IN_DPRA, rdAddr.getReadPort());
+	NodeIO::connectInput(IN_DPRA, rdAddr.readPort());
 
 	return SignalReadPort(hlim::NodePort{this, static_cast<size_t>(OUT_DPO)});
 }

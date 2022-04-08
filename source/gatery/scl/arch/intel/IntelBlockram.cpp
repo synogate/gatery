@@ -153,7 +153,7 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
                     else
                         readData = reg(readData, 0); // reset first register to prevent MnK merge. reset others to prevent ALM split.
             }
-            data.setExportOverride(readData);
+            data.exportOverride(readData);
 
             altsyncram->attachClock(readClock, (size_t)ALTSYNCRAM::Clocks::CLK_0);
         }        
@@ -177,7 +177,7 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 				else
 					readData = reg(readData, 0); // reset first register to prevent MnK merge. reset others to prevent ALM split.
         }
-        data.setExportOverride(readData);
+        data.exportOverride(readData);
 
         altsyncram->attachClock(readClock, (size_t)ALTSYNCRAM::Clocks::CLK_0);    
     }

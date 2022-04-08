@@ -27,17 +27,17 @@
 
 namespace gtry {
 
-void setAttrib(ElementarySignal &signal, SignalAttributes attributes)
+void attribute(ElementarySignal &signal, SignalAttributes attributes)
 {
-	signal.setAttrib(std::move(attributes));
+	signal.attribute(std::move(attributes));
 }
 
-void setPathAttrib(ElementarySignal &start, ElementarySignal &end, PathAttributes attributes)
+void pathAttribute(ElementarySignal &start, ElementarySignal &end, PathAttributes attributes)
 {
     auto* node = DesignScope::createNode<hlim::Node_PathAttributes>();
     node->getAttribs() = std::move(attributes);
-    node->connectStart(start.getReadPort());
-    node->connectEnd(end.getReadPort());
+    node->connectStart(start.readPort());
+    node->connectEnd(end.readPort());
 }
 
 }

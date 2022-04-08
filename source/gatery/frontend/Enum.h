@@ -52,7 +52,7 @@ namespace gtry {
 	class EnumDefault {
 		public:
 			EnumDefault(const Enum<T>& rhs);
-			EnumDefault(const T& rhs) { m_nodePort = rhs.getReadPort(); }
+			EnumDefault(const T& rhs) { m_nodePort = rhs.readPort(); }
 
 			hlim::NodePort getNodePort() const { return m_nodePort; }
 		protected:
@@ -76,12 +76,12 @@ namespace gtry {
 
 		Enum(T v);
 
-		explicit Enum(const UInt &rhs) : Enum(rhs.getReadPort()) { HCL_DESIGNCHECK_HINT(rhs.width() == width(), "Only bit vectors of correct size can be converted to enum signals"); }
+		explicit Enum(const UInt &rhs) : Enum(rhs.readPort()) { HCL_DESIGNCHECK_HINT(rhs.width() == width(), "Only bit vectors of correct size can be converted to enum signals"); }
 
 		template<UIntValue V>
 		explicit Enum(V rhs) : Enum((UInt)rhs) { }
 
-		UInt numericalValue() const { return UInt(getReadPort()); }
+		UInt numericalValue() const { return UInt(readPort()); }
 
 		Enum<T>& operator=(const Enum<T>& rhs);
 		Enum<T>& operator=(Enum<T>&& rhs);
@@ -89,20 +89,20 @@ namespace gtry {
 
 		Enum<T>& operator=(T rhs);
 
-		void setExportOverride(const Enum<T>& exportOverride);
+		void exportOverride(const Enum<T>& exportOverride);
 
 		constexpr BitWidth width() const final;
-		hlim::ConnectionType getConnType() const final;
-		SignalReadPort getReadPort() const final;
-		SignalReadPort getOutPort() const final;
+		hlim::ConnectionType connType() const final;
+		SignalReadPort readPort() const final;
+		SignalReadPort outPort() const final;
 		std::string_view getName() const final;
 		void setName(std::string name) override;
 		void addToSignalGroup(hlim::SignalGroup *signalGroup);
 
-		void setResetValue(T v);
-		std::optional<T> getResetValue() const { return m_resetValue; }
+		void resetValue(T v);
+		std::optional<T> resetValue() const { return m_resetValue; }
 
-		hlim::Node_Signal* getNode() { return m_node.get(); }
+		hlim::Node_Signal* node() { return m_node.get(); }
 
 		Enum<T> final() const;
 
@@ -112,7 +112,7 @@ namespace gtry {
 		virtual void assign(SignalReadPort in, bool ignoreConditions = false);
 
 		bool valid() const final; // hide method since Bit is always valid
-		SignalReadPort getRawDriver() const;
+		SignalReadPort rawDriver() const;
 
 	private:
 		hlim::NodePtr<hlim::Node_Signal> m_node;
@@ -124,7 +124,7 @@ namespace gtry {
 
 	template<EnumType T>
 	Enum<T> reg(const Enum<T>& val, const RegisterSettings& settings) {
-		if(auto rval = val.getResetValue())
+		if(auto rval = val.resetValue())
 			return reg<Enum<T>>(val, *rval, settings);
 
 		return reg<Enum<T>>(val, settings);
@@ -172,7 +172,7 @@ namespace gtry {
 	}
 
 	template<EnumType T>
-	Enum<T>::Enum(const Enum<T>& rhs) : Enum(rhs.getReadPort()) { 
+	Enum<T>::Enum(const Enum<T>& rhs) : Enum(rhs.readPort()) { 
 		m_resetValue = rhs.m_resetValue; 
 	}
 
@@ -184,7 +184,7 @@ namespace gtry {
 
 	template<EnumType T>
 	Enum<T>::Enum(Enum<T>&& rhs) : Enum() {
-		assign(rhs.getReadPort());
+		assign(rhs.readPort());
 		rhs.assign(SignalReadPort{ m_node });
 		m_resetValue = rhs.m_resetValue;
 	}
@@ -206,14 +206,14 @@ namespace gtry {
 	template<EnumType T>
 	Enum<T>& Enum<T>::operator=(const Enum<T>& rhs) {
 		m_resetValue = rhs.m_resetValue;
-		assign(rhs.getReadPort());
+		assign(rhs.readPort());
 		return *this;
 	}
 
 	template<EnumType T>
 	Enum<T>& Enum<T>::operator=(Enum<T>&& rhs) {
 		m_resetValue = rhs.m_resetValue;
-		assign(rhs.getReadPort());
+		assign(rhs.readPort());
 		rhs.assign(SignalReadPort{ m_node });
 		return *this;
 	}
@@ -227,10 +227,10 @@ namespace gtry {
 	}
 
 	template<EnumType T>
-	void Enum<T>::setExportOverride(const Enum<T>& exportOverride) {
+	void Enum<T>::exportOverride(const Enum<T>& exportOverride) {
 		auto* expOverride = DesignScope::createNode<hlim::Node_ExportOverride>();
-		expOverride->connectInput(getReadPort());
-		expOverride->connectOverride(exportOverride.getReadPort());
+		expOverride->connectInput(readPort());
+		expOverride->connectOverride(exportOverride.readPort());
 		assign(SignalReadPort(expOverride));		
 	}
 
@@ -246,7 +246,7 @@ namespace gtry {
 	}
 
 	template<EnumType T>
-	hlim::ConnectionType Enum<T>::getConnType() const {
+	hlim::ConnectionType Enum<T>::connType() const {
 		return hlim::ConnectionType{
 			.interpretation = hlim::ConnectionType::BITVEC,
 			.width = width().value
@@ -254,12 +254,12 @@ namespace gtry {
 	}
 
 	template<EnumType T>
-	SignalReadPort Enum<T>::getReadPort() const {
-		return getRawDriver();
+	SignalReadPort Enum<T>::readPort() const {
+		return rawDriver();
 	}
 
 	template<EnumType T>
-	SignalReadPort Enum<T>::getOutPort() const {
+	SignalReadPort Enum<T>::outPort() const {
 		return SignalReadPort{ m_node };
 	}
 
@@ -273,7 +273,7 @@ namespace gtry {
 	template<EnumType T>
 	void Enum<T>::setName(std::string name) {
 		auto* signal = DesignScope::createNode<hlim::Node_Signal>();
-		signal->connectInput(getReadPort());
+		signal->connectInput(readPort());
 		signal->setName(name);
 		signal->recordStackTrace();
 
@@ -286,7 +286,7 @@ namespace gtry {
 	}
 
 	template<EnumType T>
-	void Enum<T>::setResetValue(T v) {
+	void Enum<T>::resetValue(T v) {
 		m_resetValue = v;	
 	}
 
@@ -299,7 +299,7 @@ namespace gtry {
 	void Enum<T>::createNode() {
 		HCL_ASSERT(!m_node);
 		m_node = DesignScope::createNode<hlim::Node_Signal>();
-		m_node->setConnectionType(getConnType());
+		m_node->setConnectionType(connType());
 		m_node->recordStackTrace();
 	}
 
@@ -319,7 +319,7 @@ namespace gtry {
 		if (auto* scope = ConditionalScope::get(); !ignoreConditions && scope && scope->getId() > m_initialScopeId)
 		{
 			auto* signal_in = DesignScope::createNode<hlim::Node_Signal>();
-			signal_in->connectInput(getRawDriver());
+			signal_in->connectInput(rawDriver());
 
 			auto* mux = DesignScope::createNode<hlim::Node_Multiplexer>(2);
 			mux->connectInput(0, {.node = signal_in, .port = 0});
@@ -339,7 +339,7 @@ namespace gtry {
 	}
 
 	template<EnumType T>
-	SignalReadPort Enum<T>::getRawDriver() const {
+	SignalReadPort Enum<T>::rawDriver() const {
 		hlim::NodePort driver = m_node->getDriver(0);
 		if (!driver.node)
 			driver = hlim::NodePort{ .node = m_node, .port = 0ull };

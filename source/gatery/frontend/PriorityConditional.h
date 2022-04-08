@@ -43,10 +43,10 @@ class PriorityConditional
         DataSignal operator()(const DataSignal &defaultCase) {
             hlim::Node_PriorityConditional *node = DesignScope::createNode<hlim::Node_PriorityConditional>();
             node->recordStackTrace();
-            node->connectDefault(defaultCase.getReadPort());
+            node->connectDefault(defaultCase.readPort());
             
             for (auto &c : m_choices)
-                node->addInput(c.first.getReadPort(), c.second.getReadPort());
+                node->addInput(c.first.readPort(), c.second.readPort());
 
             return SignalReadPort(node);
         }

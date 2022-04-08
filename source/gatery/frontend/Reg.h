@@ -58,7 +58,7 @@ namespace gtry
 	T reg(const T& val, const RegisterSettings& settings)
 	{
 		return internal::reg(
-			val.getReadPort(),
+			val.readPort(),
 			val.getName(),
 			std::nullopt,
 			settings

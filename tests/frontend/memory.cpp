@@ -1240,16 +1240,16 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, BoostUnitTestSimulat
         hlim::ReadModifyWriteHazardLogicBuilder rmwBuilder(DesignScope::get()->getCircuit(), clock.getClk());
         
         rmwBuilder.addReadPort(hlim::ReadModifyWriteHazardLogicBuilder::ReadPort{
-            .addrInputDriver = addr.getReadPort(),
+            .addrInputDriver = addr.readPort(),
             .enableInputDriver = {},
-            .dataOutOutputDriver = elem.getReadPort(),
+            .dataOutOutputDriver = elem.readPort(),
         });
 
         rmwBuilder.addWritePort(hlim::ReadModifyWriteHazardLogicBuilder::WritePort{
-            .addrInputDriver = delayedAddr.getReadPort(),
-            .enableInputDriver = delayedWrEn.getReadPort(),
+            .addrInputDriver = delayedAddr.readPort(),
+            .enableInputDriver = delayedWrEn.readPort(),
             .enableMaskInputDriver = {},
-            .dataInInputDriver = modifiedElem.getReadPort(),
+            .dataInInputDriver = modifiedElem.readPort(),
             .latencyCompensation = memReadLatency,
         });
 

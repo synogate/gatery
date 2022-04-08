@@ -66,9 +66,9 @@ gtry::ElementarySignal::~ElementarySignal()
 {
 }
 
-void gtry::ElementarySignal::setAttrib(hlim::SignalAttributes attributes)
+void gtry::ElementarySignal::attribute(hlim::SignalAttributes attributes)
 {
     auto* node = DesignScope::createNode<hlim::Node_Attributes>();
     node->getAttribs() = std::move(attributes);
-    node->connectInput(getReadPort());
+    node->connectInput(readPort());
 }

@@ -34,7 +34,7 @@ sim::SigHandle simu(hlim::NodePort output)
 
 sim::SigHandle simu(const Bit &bit)
 {
-    auto driver = bit.getReadPort();
+    auto driver = bit.readPort();
     HCL_DESIGNCHECK(driver.node != nullptr);
 
     return simu(driver);
@@ -42,7 +42,7 @@ sim::SigHandle simu(const Bit &bit)
 
 sim::SigHandle simu(const UInt &signal)
 {
-    auto driver = signal.getReadPort();
+    auto driver = signal.readPort();
     HCL_DESIGNCHECK(driver.node != nullptr);
 
     return simu(driver);
@@ -51,24 +51,24 @@ sim::SigHandle simu(const UInt &signal)
 
 sim::SigHandle simu(const InputPin &pin)
 {
-    return simu({.node=pin.getNode(), .port=0ull});
+    return simu({.node=pin.node(), .port=0ull});
 }
 
 sim::SigHandle simu(const InputPins &pins)
 {
-    return simu({.node=pins.getNode(), .port=0ull});
+    return simu({.node=pins.node(), .port=0ull});
 }
 
 sim::SigHandle simu(const OutputPin &pin)
 {
-    auto driver = pin.getNode()->getDriver(0);
+    auto driver = pin.node()->getDriver(0);
     HCL_DESIGNCHECK_HINT(driver.node != nullptr, "Can't read unbound output pin!");
     return simu(driver);
 }
 
 sim::SigHandle simu(const OutputPins &pins)
 {
-    auto driver = pins.getNode()->getDriver(0);
+    auto driver = pins.node()->getDriver(0);
     HCL_DESIGNCHECK_HINT(driver.node != nullptr, "Can't read unbound output pin!");
     return simu(driver);
 }

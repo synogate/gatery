@@ -23,7 +23,7 @@ namespace gtry {
 
     UInt ext(const Bit& bit, size_t increment, Expansion policy)
     {
-        SignalReadPort port = bit.getReadPort();
+        SignalReadPort port = bit.readPort();
         port.expansionPolicy = policy;
         if (increment)
             port = port.expand(1 + increment, hlim::ConnectionType::BITVEC);
@@ -32,7 +32,7 @@ namespace gtry {
 
     UInt ext(const UInt& bvec, size_t increment, Expansion policy)
     {
-        SignalReadPort port = bvec.getReadPort();
+        SignalReadPort port = bvec.readPort();
         port.expansionPolicy = policy;
         if (increment)
             port = port.expand(bvec.size() + increment, hlim::ConnectionType::BITVEC);

@@ -186,7 +186,7 @@ void ALTDPRAM::connectInput(Inputs input, const Bit &bit)
 		case IN_RDEN:
 		case IN_OUTCLOCKEN:
 		case IN_ACLR:
-			NodeIO::connectInput(input, bit.getReadPort());
+			NodeIO::connectInput(input, bit.readPort());
 		break;
 		default:
 			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to UInt input of ALTDPRAM!");
@@ -198,19 +198,19 @@ void ALTDPRAM::connectInput(Inputs input, const UInt &UInt)
 	switch (input) {
 		case IN_DATA:
 			HCL_DESIGNCHECK_HINT(UInt.size() == m_width, "Data input UInt to ALTDPRAM has different width than previously specified!");
-			NodeIO::connectInput(input, UInt.getReadPort());
+			NodeIO::connectInput(input, UInt.readPort());
 			trySetByteSize();
 		break;
 		case IN_RDADDRESS:
-			NodeIO::connectInput(input, UInt.getReadPort());
+			NodeIO::connectInput(input, UInt.readPort());
 			HCL_DESIGNCHECK_HINT((1ull << UInt.size()) == m_depth, "RD-Address input UInt to ALTDPRAM has different width than previously specified!");
 		break;
 		case IN_WRADDRESS:
-			NodeIO::connectInput(input, UInt.getReadPort());
+			NodeIO::connectInput(input, UInt.readPort());
 			HCL_DESIGNCHECK_HINT((1ull << UInt.size()) == m_depth, "WR-Address input UInt to ALTDPRAM has different width than previously specified!");
 		break;
 		case IN_BYTEENA:
-			NodeIO::connectInput(input, UInt.getReadPort());
+			NodeIO::connectInput(input, UInt.readPort());
 			m_genericParameters["WIDTH_BYTEENA"] = std::to_string(UInt.size());
 			trySetByteSize();
 		break;

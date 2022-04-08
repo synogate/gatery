@@ -222,11 +222,11 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
         auto &reg = rp.dedicatedReadLatencyRegisters[i];
         Clock clock(reg->getClocks()[0]);
         readData = clock(readData);
-        setAttrib(readData, {.allowFusing = false});
+        attribute(readData, {.allowFusing = false});
     }        
 
     UInt rdDataHook = hookUIntAfter(rp.dataOutput);
-    rdDataHook.setExportOverride(readData(0, rdDataHook.size()));
+    rdDataHook.exportOverride(readData(0, rdDataHook.size()));
 
     if (hasWritePort) {
         auto &wp = memGrp->getWritePorts().front();
@@ -336,17 +336,17 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
         ClockScope cscope(clock);
         for ([[maybe_unused]] auto i : utils::Range(numAdditionalInputRegisters)) {
             rdAddr = reg(rdAddr);
-            setAttrib(rdAddr, {.allowFusing = false});
+            attribute(rdAddr, {.allowFusing = false});
             rdEn = reg(rdEn);
-            setAttrib(rdEn, {.allowFusing = false});
+            attribute(rdEn, {.allowFusing = false});
 
             if (hasWritePort) {
                 wrAddr = reg(wrAddr);
-                setAttrib(wrAddr, {.allowFusing = false});
+                attribute(wrAddr, {.allowFusing = false});
                 wrData = reg(wrData);
-                setAttrib(wrData, {.allowFusing = false});
+                attribute(wrData, {.allowFusing = false});
                 wrEn = reg(wrEn);
-                setAttrib(wrEn, {.allowFusing = false});
+                attribute(wrEn, {.allowFusing = false});
             }
         }
     }
@@ -411,11 +411,11 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
         ClockScope cscope(clock);
         for ([[maybe_unused]] auto i : utils::Range(numOutputRegisters)) {
             readData = reg(readData);
-            setAttrib(readData, {.allowFusing = false});
+            attribute(readData, {.allowFusing = false});
         }
     }
 
-    rdDataHook.setExportOverride(readData);
+    rdDataHook.exportOverride(readData);
 
     nodeGroup->properties()["memory_type"] = m_desc.memoryName;
 	return true;

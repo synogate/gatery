@@ -25,7 +25,7 @@ namespace gtry::scl
 		writeData(dataWidth),
 		readData(dataWidth)
 	{
-		write.setResetValue('0');
+		write.resetValue('0');
 		readData = 0;
 	}
 

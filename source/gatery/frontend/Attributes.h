@@ -32,8 +32,8 @@ using hlim::PathAttributes;
  * @{
  */
 
-void setAttrib(ElementarySignal &signal, SignalAttributes attributes);
-void setPathAttrib(ElementarySignal &start, ElementarySignal &end, PathAttributes attributes);
+void attribute(ElementarySignal &signal, SignalAttributes attributes);
+void pathAttribute(ElementarySignal &start, ElementarySignal &end, PathAttributes attributes);
 
 /**@}*/
 

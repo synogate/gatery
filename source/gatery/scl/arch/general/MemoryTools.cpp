@@ -122,7 +122,7 @@ std::vector<SplitMemoryGroup> createDepthSplitMemories(hlim::NodeGroup *group, c
 			auto *newMemPort = dynamic_cast<hlim::Node_MemPort *>(mapSrc2Dst[wp.node]);
 
 			UInt wrData = ConstUInt(BitWidth(wp.node->getBitWidth()));
-			newMemPort->connectWrData(wrData.getReadPort());
+			newMemPort->connectWrData(wrData.readPort());
 		}		
 
 
@@ -199,8 +199,8 @@ void splitMemoryAlongDepthMux(hlim::NodeGroup *group, size_t log2SplitDepth, boo
 			HCL_ASSERT(addrLowBits.size() >= addrBits);
 			UInt newRdAddr = addrLowBits(0, addrBits); // happens if one chunk is significantly smaller than the other.
 
-			new_rp.node->connectEnable(newRdEn.getReadPort());
-			new_rp.node->connectAddress(newRdAddr.getReadPort());
+			new_rp.node->connectEnable(newRdEn.readPort());
+			new_rp.node->connectAddress(newRdAddr.readPort());
 			newReadData[i] = UInt(SignalReadPort(new_rp.dataOutput));
 		}
 
@@ -237,10 +237,10 @@ void splitMemoryAlongDepthMux(hlim::NodeGroup *group, size_t log2SplitDepth, boo
 			UInt newWrAddr = addrLowBits(0, addrBits); // happens if one chunk is significantly smaller than the other.
 
 
-			new_wp.node->connectEnable(newWrEn.getReadPort());
-			new_wp.node->connectWrEnable(newWrEn.getReadPort());
-			new_wp.node->connectAddress(newWrAddr.getReadPort());
-			new_wp.node->connectWrData(wrData.getReadPort());
+			new_wp.node->connectEnable(newWrEn.readPort());
+			new_wp.node->connectWrEnable(newWrEn.readPort());
+			new_wp.node->connectAddress(newWrAddr.readPort());
+			new_wp.node->connectWrData(wrData.readPort());
 		}
 	}
 
@@ -349,7 +349,7 @@ std::vector<SplitMemoryGroup> createWidthSplitMemories(hlim::NodeGroup *group, c
 					if (reg->hasResetValue()) {
 						UInt resetValue = getUIntBefore(hlim::NodePort{.node = newReg, .port = hlim::Node_Register::RESET_VALUE});
 						UInt croppedResetValue = resetValue(widthStart, widthEnd - widthStart);
-						newReg->connectInput(hlim::Node_Register::RESET_VALUE, croppedResetValue.getReadPort());
+						newReg->connectInput(hlim::Node_Register::RESET_VALUE, croppedResetValue.readPort());
 					}
 
 					// reconnect one after another to resize
@@ -365,7 +365,7 @@ std::vector<SplitMemoryGroup> createWidthSplitMemories(hlim::NodeGroup *group, c
 			newMemPort->changeBitWidth(widthEnd - widthStart);
 
 			UInt wrData = ConstUInt(BitWidth(widthEnd - widthStart));
-			newMemPort->connectWrData(wrData.getReadPort());
+			newMemPort->connectWrData(wrData.readPort());
 		}
 
 		// Reform the subMemInfo
@@ -431,7 +431,7 @@ void splitMemoryAlongWidth(hlim::NodeGroup *group, size_t maxWidth)
 			size_t widthEnd = i < splitPositions.size()?splitPositions[i]:width;
 			UInt wrDataCrop = wrData(widthStart, widthEnd-widthStart);
 
-			new_wp.node->connectWrData(wrDataCrop.getReadPort());
+			new_wp.node->connectWrData(wrDataCrop.readPort());
 		}
 	}
 

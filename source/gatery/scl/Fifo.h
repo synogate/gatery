@@ -39,7 +39,7 @@ namespace gtry::scl
 		Fifo(size_t minDepth, TData ref) : Fifo() { setup(minDepth, std::move(ref)); }
 		void setup(size_t minDepth, TData ref);
 
-		size_t getDepth();
+		size_t depth();
 
 		// NOTE: always push before pop for correct conflict resolution
 		// TODO: fix above note by adding explicit write before read conflict resulution to bram
@@ -70,7 +70,7 @@ namespace gtry::scl
 	};
 
 	template<typename TData>
-	inline size_t Fifo<TData>::getDepth() {
+	inline size_t Fifo<TData>::depth() {
 		auto *meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
 		FifoCapabilities::Choice &fifoChoice = meta->fifoChoice;
 		return fifoChoice.readDepth;

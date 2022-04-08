@@ -64,7 +64,7 @@ namespace gtry
 			if (auto* scope = gtry::ConditionalScope::get())
 				readPort->connectEnable(scope->getFullCondition());
 
-			readPort->connectAddress(m_address.getReadPort());
+			readPort->connectAddress(m_address.readPort());
 
 			UInt rawData(SignalReadPort({ .node = readPort, .port = (unsigned)hlim::Node_MemPort::Outputs::rdData }));
 			Data ret = constructFrom(m_defaultValue);
@@ -81,13 +81,13 @@ namespace gtry
 
 			auto* writePort = DesignScope::createNode<hlim::Node_MemPort>(m_wordSize);
 			writePort->connectMemory(m_memoryNode);
-			//writePort->connectEnable(constructEnableBit().getReadPort());
+			//writePort->connectEnable(constructEnableBit().readPort());
 			if (auto* scope = gtry::ConditionalScope::get()) {
 				writePort->connectEnable(scope->getFullCondition());
 				writePort->connectWrEnable(scope->getFullCondition());
 			}
-			writePort->connectAddress(m_address.getReadPort());
-			writePort->connectWrData(packedValue.getReadPort());
+			writePort->connectAddress(m_address.readPort());
+			writePort->connectWrData(packedValue.readPort());
 			writePort->setClock(ClockScope::getClk().getClk());
 			return writePort;
 		}
@@ -96,7 +96,7 @@ namespace gtry
 
 		void write(const Data& value, const UInt &wrWordEnable) {
 			auto* writePort = write(value);
-			writePort->connectWrWordEnable(wrWordEnable.getReadPort());
+			writePort->connectWrWordEnable(wrWordEnable.readPort());
 		}
 
 		MemoryPortFactory<Data>& operator = (const std::pair<Data, UInt>& value) { write(value.first, value.second); return *this; }
@@ -195,14 +195,14 @@ namespace gtry
 		void addResetLogic(std::function<Data(UInt)> address2data) {
 			m_memoryNode->setInitializationNetDataWidth(m_wordWidth);
 			UInt data = pack(address2data(hlim::NodePort{m_memoryNode, (size_t)hlim::Node_Memory::Outputs::INITIALIZATION_ADDR}));
-			m_memoryNode->rewireInput((size_t)hlim::Node_Memory::Inputs::INITIALIZATION_DATA, data.getReadPort());
+			m_memoryNode->rewireInput((size_t)hlim::Node_Memory::Inputs::INITIALIZATION_DATA, data.readPort());
 		}
 
 		void initZero() {
 			setPowerOnStateZero();
 			m_memoryNode->setInitializationNetDataWidth(m_wordWidth);
 			UInt data = ConstUInt(0, BitWidth(m_wordWidth));
-			m_memoryNode->rewireInput((size_t)hlim::Node_Memory::Inputs::INITIALIZATION_DATA, data.getReadPort());
+			m_memoryNode->rewireInput((size_t)hlim::Node_Memory::Inputs::INITIALIZATION_DATA, data.readPort());
 		}
 
 		std::size_t size() const { return m_memoryNode->getSize(); }

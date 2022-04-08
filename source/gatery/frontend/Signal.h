@@ -73,14 +73,14 @@ namespace gtry {
 
         // these methods are undefined for invalid signals (uninitialized)
         virtual BitWidth width() const = 0;
-        virtual hlim::ConnectionType getConnType() const = 0;
-        virtual SignalReadPort getReadPort() const = 0;
-        virtual SignalReadPort getOutPort() const = 0;
+        virtual hlim::ConnectionType connType() const = 0;
+        virtual SignalReadPort readPort() const = 0;
+        virtual SignalReadPort outPort() const = 0;
         virtual std::string_view getName() const = 0;
         virtual void setName(std::string name) = 0;
 
 
-        void setAttrib(hlim::SignalAttributes attributes);
+        void attribute(hlim::SignalAttributes attributes);
 
     protected:
         size_t m_initialScopeId = 0;
@@ -99,15 +99,15 @@ namespace gtry {
     template<typename SigA, typename SigB>
     inline NormalizedWidthOperands::NormalizedWidthOperands(const SigA& l, const SigB& r)
     {
-        lhs = l.getReadPort();
-        rhs = r.getReadPort();
+        lhs = l.readPort();
+        rhs = r.readPort();
 
         const size_t maxWidth = std::max(lhs.width(), rhs.width()).bits();
 
         hlim::ConnectionType::Interpretation type = hlim::ConnectionType::BITVEC;
         if(maxWidth == 1 &&
-            (l.getConnType().interpretation != r.getConnType().interpretation ||
-            l.getConnType().interpretation == hlim::ConnectionType::BOOL))
+            (l.connType().interpretation != r.connType().interpretation ||
+            l.connType().interpretation == hlim::ConnectionType::BOOL))
             type = hlim::ConnectionType::BOOL;
 
         lhs = lhs.expand(maxWidth, type);

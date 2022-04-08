@@ -250,7 +250,7 @@ namespace gtry
 	template<BitVectorDerived T>
 	T Clock::buildReg(const T& signal, const RegisterSettings& settings) const
 	{
-		SignalReadPort data = signal.getReadPort();
+		SignalReadPort data = signal.readPort();
 
 		auto* reg = prepRegister(signal.getName(), settings);
 		reg->connectInput(hlim::Node_Register::DATA, data);
@@ -304,22 +304,22 @@ namespace gtry
 	Bit Clock::operator()(const Bit& signal, const RegisterSettings& settings) const
 	{
 		auto* reg = prepRegister(signal.getName(), settings);
-		reg->connectInput(hlim::Node_Register::DATA, signal.getReadPort());
+		reg->connectInput(hlim::Node_Register::DATA, signal.readPort());
 
-		if (signal.getResetValue())
-			reg->connectInput(hlim::Node_Register::RESET_VALUE, Bit{ *signal.getResetValue() }.getReadPort());
+		if (signal.resetValue())
+			reg->connectInput(hlim::Node_Register::RESET_VALUE, Bit{ *signal.resetValue() }.readPort());
 
 		Bit ret{ SignalReadPort{reg} };
-		if (signal.getResetValue())
-			ret.setResetValue(*signal.getResetValue());
+		if (signal.resetValue())
+			ret.resetValue(*signal.resetValue());
 		return ret;
 	}
 
 	Bit Clock::operator()(const Bit& signal, const Bit& reset, const RegisterSettings& settings) const
 	{
 		auto* reg = prepRegister(signal.getName(), settings);
-		reg->connectInput(hlim::Node_Register::DATA, signal.getReadPort());
-		reg->connectInput(hlim::Node_Register::RESET_VALUE, reset.getReadPort());
+		reg->connectInput(hlim::Node_Register::DATA, signal.readPort());
+		reg->connectInput(hlim::Node_Register::RESET_VALUE, reset.readPort());
 
 		return SignalReadPort(reg);
 	}

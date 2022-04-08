@@ -262,7 +262,7 @@ void RAMBxE2::connectInput(Inputs input, const Bit &bit)
 		case IN_RST_REG_A_RST_REG:
 		case IN_RST_REG_B:
         case IN_SLEEP:
-			NodeIO::connectInput(input, bit.getReadPort());
+			NodeIO::connectInput(input, bit.readPort());
 		break;
 
 		case IN_CAS_IND_BITERR:
@@ -271,7 +271,7 @@ void RAMBxE2::connectInput(Inputs input, const Bit &bit)
 		case IN_INJECT_D_BITERR:
 		case IN_INJECT_S_BITERR:
 			HCL_DESIGNCHECK_HINT(m_type == RAMB36E2, "Input only available for RAMB32E2!");
-			NodeIO::connectInput(input, bit.getReadPort());
+			NodeIO::connectInput(input, bit.readPort());
 		break;
 
 		default:
@@ -318,7 +318,7 @@ void RAMBxE2::connectInput(Inputs input, const UInt &vec)
 		default:
 			HCL_DESIGNCHECK_HINT(false, "Trying to connect UInt to bit input!");
 	}
-	NodeIO::connectInput(input, vec.getReadPort());
+	NodeIO::connectInput(input, vec.readPort());
 }
 
 UInt RAMBxE2::getOutputUInt(Outputs output)

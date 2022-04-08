@@ -131,7 +131,7 @@ T shift(const T &operand, size_t amount, hlim::Node_Shift::fill fill) {
     hlim::Node_Rewire *node = DesignScope::createNode<hlim::Node_Rewire>(1);
     node->recordStackTrace();
     
-    node->changeOutputType(operand.getConnType());
+    node->changeOutputType(operand.connType());
     
     hlim::Node_Rewire::RewireOperation rewireOp;
     if (direction == hlim::Node_Shift::dir::right)
@@ -140,7 +140,7 @@ T shift(const T &operand, size_t amount, hlim::Node_Shift::fill fill) {
         rewireOp = leftShiftRewireOp(width, amount, fill);
 
     node->setOp(std::move(rewireOp));
-    node->connectInput(0, operand.getReadPort());
+    node->connectInput(0, operand.readPort());
     return SignalReadPort(node);
 }
 

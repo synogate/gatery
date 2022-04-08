@@ -106,7 +106,7 @@ void FIFO_SYNC_MACRO::connectInput(Inputs input, const Bit &bit)
 	switch (input) {
 		case IN_RDEN:
         case IN_WREN:
-			NodeIO::connectInput(input, bit.getReadPort());
+			NodeIO::connectInput(input, bit.readPort());
 		break;
 		default:
 			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to UInt input of FIFO_SYNC_MACRO!");
@@ -118,7 +118,7 @@ void FIFO_SYNC_MACRO::connectInput(Inputs input, const UInt &UInt)
 	switch (input) {
 		case IN_DI:
 			HCL_DESIGNCHECK_HINT(UInt.size() == m_width, "Data input UInt to FIFO_SYNC_MACRO has different width than previously specified!");
-			NodeIO::connectInput(input, UInt.getReadPort());
+			NodeIO::connectInput(input, UInt.readPort());
 		break;
 		default:
 			HCL_DESIGNCHECK_HINT(false, "Trying to connect UInt to bit input of FIFO_SYNC_MACRO!");

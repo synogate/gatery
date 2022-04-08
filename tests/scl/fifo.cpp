@@ -37,7 +37,7 @@ struct FifoTest
     scl::Fifo<UInt> create(size_t depth, BitWidth width)
     {
         scl::Fifo<UInt> fifo{ depth, UInt{ width } };
-        actualDepth = fifo.getDepth();
+        actualDepth = fifo.depth();
 
         pushData = width;
         popData = width;

@@ -27,7 +27,7 @@ UART::Stream UART::receive(Bit rx)
                                                                                             HCL_NAMED(rx);
     for ([[maybe_unused]] auto i : utils::Range(stabilize_rx)) {
         rx = reg(rx, true);
-        setAttrib(rx, {.allowFusing=false});
+        attribute(rx, {.allowFusing=false});
     }
     if (stabilize_rx > 0)
                                                                                             rx.setName("rx_stabilized");

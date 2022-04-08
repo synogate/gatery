@@ -191,11 +191,11 @@ void XilinxLutram::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
         Clock clock(reg->getClocks()[0]);
         readData = clock(readData);
 		if (i > 0)
-        	setAttrib(readData, {.allowFusing = false});
+        	attribute(readData, {.allowFusing = false});
     }        
 
     UInt rdDataHook = hookUIntAfter(rp.dataOutput);
-    rdDataHook.setExportOverride(readData(0, rdDataHook.size()));	
+    rdDataHook.exportOverride(readData(0, rdDataHook.size()));	
 }
 
 }

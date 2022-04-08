@@ -250,14 +250,14 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
     }    
 
     // override data output
-    out_data.setExportOverride(out_data_accu);
+    out_data.exportOverride(out_data_accu);
 
     HCL_ASSERT(lastFifo != nullptr);
 
     // Attach full, empty, almost full and almost emppty signals to last fifo (they should all be equal).
     if (groupHelper.containsSignal("full")) {
         Bit full = groupHelper.hookBitBefore("full");
-        full.setExportOverride(lastFifo->getOutputBit(FIFO_SYNC_MACRO::OUT_FULL));
+        full.exportOverride(lastFifo->getOutputBit(FIFO_SYNC_MACRO::OUT_FULL));
     }
 
 
@@ -265,7 +265,7 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
     HCL_NAMED(empty);
     if (groupHelper.containsSignal("empty")) {
         Bit e = groupHelper.hookBitBefore("empty");
-        e.setExportOverride(empty);
+        e.exportOverride(empty);
     }
 
     // As of now, only support one almost_full and one almost_empty signal and hook those to the last fifo
@@ -275,7 +275,7 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
         lastFifo->setAlmostEmpty(almostEmptyLevel);
         
         Bit almost_empty = groupHelper.hookBitBefore(meta->almostEmptySignalLevel.front().first);
-        almost_empty.setExportOverride(lastFifo->getOutputBit(FIFO_SYNC_MACRO::OUT_ALMOSTEMPTY));
+        almost_empty.exportOverride(lastFifo->getOutputBit(FIFO_SYNC_MACRO::OUT_ALMOSTEMPTY));
     }
 
     if (!meta->almostFullSignalLevel.empty()) {
@@ -284,7 +284,7 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
         lastFifo->setAlmostFull(almostFullLevel);
         
         Bit almost_full = groupHelper.hookBitBefore(meta->almostFullSignalLevel.front().first);
-        almost_full.setExportOverride(lastFifo->getOutputBit(FIFO_SYNC_MACRO::OUT_ALMOSTFULL));
+        almost_full.exportOverride(lastFifo->getOutputBit(FIFO_SYNC_MACRO::OUT_ALMOSTFULL));
     }
 
     return true;

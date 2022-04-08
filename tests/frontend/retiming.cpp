@@ -64,7 +64,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_new, BoostUnitTestSimulationFix
 	stripSignalNodes(design.getCircuit());
 	auto subnet = hlim::Subnet::all(design.getCircuit());
 	design.getCircuit().optimizeSubnet(subnet);
-	retimeForwardToOutput(design.getCircuit(), subnet, output.getReadPort(), {.ignoreRefs=true});
+	retimeForwardToOutput(design.getCircuit(), subnet, output.readPort(), {.ignoreRefs=true});
 
 	auto outPin = pinOut(output);
 
@@ -110,7 +110,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_old, BoostUnitTestSimulationFix
 	stripSignalNodes(design.getCircuit());
 	auto subnet = hlim::Subnet::all(design.getCircuit());
 	design.getCircuit().optimizeSubnet(subnet);
-	retimeForwardToOutput(design.getCircuit(), subnet, output.getReadPort(), {.ignoreRefs=true});
+	retimeForwardToOutput(design.getCircuit(), subnet, output.readPort(), {.ignoreRefs=true});
 	auto outPin = pinOut(output);
 
 	addSimulationProcess([=,this]()->SimProcess {

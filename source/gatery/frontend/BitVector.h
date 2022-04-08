@@ -107,7 +107,7 @@ namespace gtry {
 		~BaseBitVector();
 
 		template<BitVectorDerived T>
-		explicit operator T() const { if (m_node) return T(getReadPort()); else return T{}; }
+		explicit operator T() const { if (m_node) return T(readPort()); else return T{}; }
 
 		virtual void resize(size_t width) final;
 
@@ -146,20 +146,20 @@ namespace gtry {
 
 
         bool valid() const final { return m_node != nullptr; }
-        hlim::Node_Signal* getNode() { return m_node; }
+        hlim::Node_Signal* node() { return m_node; }
 
 		// these methods are undefined for invalid signals (uninitialized)
 		BitWidth width() const final { return BitWidth{ m_range.width }; }
-		hlim::ConnectionType getConnType() const final;
-		SignalReadPort getReadPort() const final;
-		SignalReadPort getOutPort() const final;
+		hlim::ConnectionType connType() const final;
+		SignalReadPort readPort() const final;
+		SignalReadPort outPort() const final;
 		std::string_view getName() const final;
 		void setName(std::string name) override;
 		void addToSignalGroup(hlim::SignalGroup *signalGroup);
 
 	protected:
 		BaseBitVector() = default;
-		BaseBitVector(const BaseBitVector& rhs) { if(rhs.m_node) assign(rhs.getReadPort()); }
+		BaseBitVector(const BaseBitVector& rhs) { if(rhs.m_node) assign(rhs.readPort()); }
 		BaseBitVector(BaseBitVector&& rhs);
 		BaseBitVector(const BaseBitVectorDefault &defaultValue);
 
@@ -168,12 +168,12 @@ namespace gtry {
 		BaseBitVector(BitWidth width, Expansion expansionPolicy = Expansion::none);
 
 
-		BaseBitVector& operator = (const BaseBitVector& rhs) { if (rhs.m_node) assign(rhs.getReadPort()); return *this; }
+		BaseBitVector& operator = (const BaseBitVector& rhs) { if (rhs.m_node) assign(rhs.readPort()); return *this; }
 		BaseBitVector& operator = (BaseBitVector&& rhs);
 		BaseBitVector& operator = (BitWidth width);
 		BaseBitVector& operator = (const BaseBitVectorDefault &defaultValue);
 	protected:
-		void setExportOverride(const BaseBitVector& exportOverride);
+		void exportOverride(const BaseBitVector& exportOverride);
 
 		void assign(std::uint64_t value, Expansion policy);
 		void assign(std::int64_t value, Expansion policy);
@@ -181,11 +181,11 @@ namespace gtry {
 		virtual void assign(SignalReadPort, bool ignoreConditions = false);
 
 		void createNode(size_t width, Expansion policy);
-		SignalReadPort getRawDriver() const;
+		SignalReadPort rawDriver() const;
 
-		inline hlim::Node_Signal* getNode() const { return m_node; }
-		inline const Range &getRange() const { return m_range; }
-		inline const Expansion &getExpansionPolicy() const { return m_expansionPolicy; }
+		inline hlim::Node_Signal* node() const { return m_node; }
+		inline const Range &range() const { return m_range; }
+		inline const Expansion &expansionPolicy() const { return m_expansionPolicy; }
 	private:
 		hlim::Node_Signal* m_node = nullptr;
 		Range m_range;
@@ -229,7 +229,7 @@ namespace gtry {
 		FinalType& operator = (BitWidth width) { BaseBitVector::operator=(width); return (FinalType&)*this; }
 		FinalType& operator = (const DefaultValueType &defaultValue) { BaseBitVector::operator=(defaultValue); return (FinalType&)*this; }
 
-		void setExportOverride(const FinalType& exportOverride) { BaseBitVector::setExportOverride(exportOverride); }
+		void exportOverride(const FinalType& exportOverride) { BaseBitVector::exportOverride(exportOverride); }
 
 		template<std::integral Int1, std::integral Int2>
 		FinalType& operator()(Int1 offset, Int2 size) { return (*this)(Selection::Slice(int(offset), int(size))); }
@@ -238,11 +238,11 @@ namespace gtry {
 		FinalType& operator() (size_t offset, BitWidth size) { return (*this)(Selection::Slice(int(offset), int(size.value))); }
 		const FinalType& operator() (size_t offset, BitWidth size) const { return (*this)(Selection::Slice(int(offset), int(size.value))); }
 
-		FinalType& operator()(const Selection& selection) { return aliasRange(Range(selection, getRange())); }
-		const FinalType& operator() (const Selection& selection) const { return aliasRange(Range(selection, getRange())); }
+		FinalType& operator()(const Selection& selection) { return aliasRange(Range(selection, range())); }
+		const FinalType& operator() (const Selection& selection) const { return aliasRange(Range(selection, range())); }
 	protected:
 		inline FinalType& aliasRange(const Range& range) const {
-        	auto [it, exists] = m_rangeAlias.try_emplace(range, getNode(), range, getExpansionPolicy(), m_initialScopeId);
+        	auto [it, exists] = m_rangeAlias.try_emplace(range, node(), range, expansionPolicy(), m_initialScopeId);
         	return it->second;
 		}
 		mutable std::map<Range, FinalType> m_rangeAlias;

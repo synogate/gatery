@@ -53,7 +53,7 @@ namespace gtry
 
 	void SignalTapHelper::triggerIf(const Bit &condition)
 	{
-		hlim::NodePort conditionNP = condition.getReadPort();
+		hlim::NodePort conditionNP = condition.readPort();
 
 		if (ClockScope::anyActive()) {
 			auto *clk = ClockScope::getClk().getClk();
@@ -88,7 +88,7 @@ namespace gtry
 
 	void SignalTapHelper::triggerIfNot(const Bit &condition)
 	{
-		hlim::NodePort conditionNP = condition.getReadPort();
+		hlim::NodePort conditionNP = condition.readPort();
 
 		if (ClockScope::anyActive()) {
 			auto *clk = ClockScope::getClk().getClk();
@@ -135,7 +135,7 @@ namespace gtry
 		const size_t srcWidth = numSymbols * byteSize.value;
 
 		hlim::Node_Rewire* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-		rewire->connectInput(0, word.getReadPort().expand(srcWidth, hlim::ConnectionType::BITVEC));
+		rewire->connectInput(0, word.readPort().expand(srcWidth, hlim::ConnectionType::BITVEC));
 
 		hlim::Node_Rewire::RewireOperation op;
 		op.ranges.reserve(numSymbols);
@@ -189,11 +189,11 @@ namespace gtry
 #else
 		hlim::Node_Multiplexer *node = DesignScope::createNode<hlim::Node_Multiplexer>(num_entries);
 		node->recordStackTrace();
-		node->connectSelector(selector.getReadPort());
+		node->connectSelector(selector.readPort());
 
 		for (size_t i = 0; i < num_entries; ++i) {
 			T input = flat_array(sym[i]);
-			node->connectInput(i, input.getReadPort());
+			node->connectInput(i, input.readPort());
 		}
 
 		T selected{SignalReadPort(node)};

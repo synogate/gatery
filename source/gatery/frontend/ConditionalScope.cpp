@@ -39,7 +39,7 @@ namespace gtry {
 ConditionalScope::ConditionalScope(const Bit &condition) :
     m_id(s_nextId++)
 {
-    setCondition(condition.getReadPort());
+    setCondition(condition.readPort());
     m_isElseScope = false;
 }
 
@@ -116,7 +116,7 @@ void ConditionalScope::setCondition(hlim::NodePort port)
 void ConditionalScope::buildConditionalMuxes()
 {
     for (auto signal : m_conditionalyAssignedSignals) {
-        hlim::NodePort conditionalOutput = signal->getReadPort();
+        hlim::NodePort conditionalOutput = signal->readPort();
         auto it = m_conditional2previousOutput.find(conditionalOutput);
         HCL_ASSERT(it != m_conditional2previousOutput.end());
         hlim::NodePort previousOutput = it->second;

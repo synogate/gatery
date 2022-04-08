@@ -53,20 +53,20 @@ RAM64M8::RAM64M8()
 UInt RAM64M8::setup64x7_SDP(const UInt &wrAddr, const UInt &wrData, const Bit &wrEn, const UInt &rdAddr)
 {
 	Bit zero = '0';
-	NodeIO::connectInput(IN_DI_H, zero.getReadPort());
+	NodeIO::connectInput(IN_DI_H, zero.readPort());
 
 	HCL_ASSERT(wrAddr.size() == 6);
-	NodeIO::connectInput(IN_ADDR_H, wrAddr.getReadPort());
+	NodeIO::connectInput(IN_ADDR_H, wrAddr.readPort());
 
 	HCL_ASSERT(wrData.size() == 7);
 	for (auto i : utils::Range(wrData.size()))
-		NodeIO::connectInput(IN_DI_A+i, (wrData[i]).getReadPort());
+		NodeIO::connectInput(IN_DI_A+i, (wrData[i]).readPort());
 
-	NodeIO::connectInput(IN_WE, wrEn.getReadPort());
+	NodeIO::connectInput(IN_WE, wrEn.readPort());
 
 	HCL_ASSERT(rdAddr.size() == 6);
 	for (auto i : utils::Range(7))
-		NodeIO::connectInput(IN_ADDR_A+i, rdAddr.getReadPort());
+		NodeIO::connectInput(IN_ADDR_A+i, rdAddr.readPort());
 
 	std::array<Bit, 7> readBits;
 	for (auto i : utils::Range(7))

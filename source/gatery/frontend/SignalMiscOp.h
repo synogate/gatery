@@ -55,7 +55,7 @@ namespace gtry {
 template<typename ContainerType>//, typename = std::enable_if_t<utils::isContainer<ContainerType>::value>>
 typename ContainerType::value_type mux(const ElementarySignal &selector, const ContainerType &table) {
 
-    const SignalReadPort selPort = selector.getReadPort();
+    const SignalReadPort selPort = selector.readPort();
     const size_t selPortWidth = selector.width().value;
     size_t tableSize = table.size();
 
@@ -74,14 +74,14 @@ typename ContainerType::value_type mux(const ElementarySignal &selector, const C
     hlim::ConnectionType elementType;
     for (auto it = begin(table); it != it_end; ++it)
     {
-        hlim::ConnectionType t = it->getConnType();
+        hlim::ConnectionType t = it->connType();
         if (t.width > elementType.width)
             elementType = t;
     }
 
     size_t idx = 0;
     for (auto it = begin(table); it != it_end; ++it, ++idx)
-        node->connectInput(idx, it->getReadPort().expand(elementType.width, elementType.interpretation));
+        node->connectInput(idx, it->readPort().expand(elementType.width, elementType.interpretation));
 
     return SignalReadPort(node);
 }
@@ -128,7 +128,7 @@ class SignalTapHelper
 
         template<BaseSignal SignalType>
         SignalTapHelper &operator<<(const SignalType &signal) {
-            unsigned port = (unsigned)addInput(signal.getReadPort());
+            unsigned port = (unsigned)addInput(signal.readPort());
             m_node->addMessagePart(hlim::Node_SignalTap::FormattedSignal{.inputIdx = port, .format = 0});
             return *this;
         }
@@ -157,7 +157,7 @@ void sim_tap(const Signal& signal)
     node->setLevel(hlim::Node_SignalTap::LVL_WATCH);
     node->setName(std::string(signal.getName()));
 
-    node->addInput(signal.getReadPort());
+    node->addInput(signal.readPort());
 }
 
 template<typename Compound, typename std::enable_if_t<!std::is_base_of_v<ElementarySignal, Compound>>* = nullptr  >

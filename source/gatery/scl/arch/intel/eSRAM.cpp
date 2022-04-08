@@ -159,7 +159,7 @@ bool eSRAM::apply(hlim::NodeGroup *nodeGroup) const
                 for ([[maybe_unused]] auto i : utils::Range(numExternalOutputRegisters)) 
                     readData = reg(readData);
             }
-            data.setExportOverride(readData);
+            data.exportOverride(readData);
 
             altsyncram->attachClock(readClock, (size_t)ALTSYNCRAM::Clocks::CLK_0);
         }        
@@ -180,7 +180,7 @@ bool eSRAM::apply(hlim::NodeGroup *nodeGroup) const
             for ([[maybe_unused]] auto i : utils::Range(numExternalOutputRegisters)) 
                 readData = reg(readData);
         }
-        data.setExportOverride(readData);
+        data.exportOverride(readData);
 
         altsyncram->attachClock(readClock, (size_t)ALTSYNCRAM::Clocks::CLK_0);    
     }

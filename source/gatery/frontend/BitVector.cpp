@@ -99,7 +99,7 @@ namespace gtry {
     }
 
     BaseBitVectorDefault::BaseBitVectorDefault(const BaseBitVector& rhs) {
-        m_nodePort = rhs.getReadPort();
+        m_nodePort = rhs.readPort();
     }
 
     BaseBitVectorDefault::BaseBitVectorDefault(std::int64_t value) {
@@ -137,7 +137,7 @@ namespace gtry {
     {
         if (rhs.m_node)
         {
-            assign(rhs.getReadPort());
+            assign(rhs.readPort());
             rhs.assign(SignalReadPort(m_node, rhs.m_expansionPolicy));
         }
     }
@@ -172,7 +172,7 @@ namespace gtry {
 
     BaseBitVector& BaseBitVector::operator=(BaseBitVector&& rhs)
     {
-        assign(rhs.getReadPort());
+        assign(rhs.readPort());
 
         SignalReadPort outRange{ m_node, m_expansionPolicy };
         if (m_range.subset)
@@ -198,18 +198,18 @@ namespace gtry {
     {
         hlim::Node_Default* node = DesignScope::createNode<hlim::Node_Default>();
         node->recordStackTrace();
-        node->connectInput(getReadPort());
+        node->connectInput(readPort());
         node->connectDefault(defaultValue.getNodePort());
 
         assign(SignalReadPort(node));
         return *this;
     }
 
-	void BaseBitVector::setExportOverride(const BaseBitVector& exportOverride)
+	void BaseBitVector::exportOverride(const BaseBitVector& exportOverride)
 	{
 		auto* expOverride = DesignScope::createNode<hlim::Node_ExportOverride>();
-		expOverride->connectInput(getReadPort());
-		expOverride->connectOverride(exportOverride.getReadPort());
+		expOverride->connectInput(readPort());
+		expOverride->connectOverride(exportOverride.readPort());
 		assign(SignalReadPort(expOverride));
 	}
 
@@ -225,7 +225,7 @@ namespace gtry {
             return;
 
         auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-        rewire->connectInput(0, getReadPort());
+        rewire->connectInput(0, readPort());
 
         switch (m_expansionPolicy)
         {
@@ -240,14 +240,14 @@ namespace gtry {
         m_bitAlias.clear();
     }
 
-    hlim::ConnectionType BaseBitVector::getConnType() const
+    hlim::ConnectionType BaseBitVector::connType() const
     {
         return hlim::ConnectionType{ .interpretation = hlim::ConnectionType::BITVEC, .width = m_range.width };
     }
 
-    SignalReadPort BaseBitVector::getReadPort() const
+    SignalReadPort BaseBitVector::readPort() const
     {
-        SignalReadPort driver = getRawDriver();
+        SignalReadPort driver = rawDriver();
         if (m_readPortDriver != driver.node)
         {
             m_readPort = driver;
@@ -264,7 +264,7 @@ namespace gtry {
         return m_readPort;
     }
 
-    SignalReadPort BaseBitVector::getOutPort() const
+    SignalReadPort BaseBitVector::outPort() const
     {
         SignalReadPort port{ m_node, m_expansionPolicy };
 
@@ -290,7 +290,7 @@ namespace gtry {
         HCL_DESIGNCHECK_HINT(m_node != nullptr, "Can only set names to initialized BaseBitVectors!");
 
         auto* signal = DesignScope::createNode<hlim::Node_Signal>();
-        signal->connectInput(getReadPort());
+        signal->connectInput(readPort());
         signal->setName(name);
         signal->recordStackTrace();
 
@@ -358,7 +358,7 @@ namespace gtry {
             std::string in_name = in.node->getName();
 
             auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(2);
-            rewire->connectInput(0, getRawDriver());
+            rewire->connectInput(0, rawDriver());
             rewire->connectInput(1, in);
             rewire->setOp(replaceSelection(m_range, m_node->getOutputConnectionType(0).width));
             in.node = rewire;
@@ -367,7 +367,7 @@ namespace gtry {
 
         if (auto* scope = ConditionalScope::get(); !ignoreConditions && scope && scope->getId() > m_initialScopeId)
         {
-            SignalReadPort oldSignal = getRawDriver();
+            SignalReadPort oldSignal = rawDriver();
 
 
             if (incrementWidth)
@@ -425,12 +425,12 @@ namespace gtry {
         m_expansionPolicy = policy;
 
         m_node = DesignScope::createNode<hlim::Node_Signal>();
-        m_node->setConnectionType(getConnType());
+        m_node->setConnectionType(connType());
         m_node->recordStackTrace();
         m_node->addRef();
     }
 
-    SignalReadPort BaseBitVector::getRawDriver() const
+    SignalReadPort BaseBitVector::rawDriver() const
     {
         hlim::NodePort driver = m_node->getDriver(0);
         if (!driver.node)

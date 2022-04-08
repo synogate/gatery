@@ -39,13 +39,13 @@ GLOBAL::GLOBAL()
 
 void GLOBAL::connectInput(const Bit &bit)
 {
-	connectInput(bit.getReadPort());
+	connectInput(bit.readPort());
 }
 
 /*
 void GLOBAL::connectInput(const BVec &bvec)
 {
-	connectInput(bvec.getReadPort());
+	connectInput(bvec.readPort());
 }
 */
 
@@ -121,7 +121,7 @@ bool GLOBALPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 
     	auto *global = DesignScope::createNode<GLOBAL>();
 		global->connectInput(input);
-	    output.setExportOverride(SignalReadPort(global));
+	    output.exportOverride(SignalReadPort(global));
 	}
 
 	return true;

@@ -38,7 +38,7 @@ namespace gtry {
 
         hlim::Node_Logic* node = DesignScope::createNode<hlim::Node_Logic>(op);
         node->recordStackTrace();
-        node->connectInput(0, in.getReadPort());
+        node->connectInput(0, in.readPort());
 
         return SignalReadPort(node);
     }

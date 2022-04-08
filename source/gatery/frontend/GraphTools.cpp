@@ -38,7 +38,7 @@ UInt hookUIntBefore(hlim::NodePort input)
 	HCL_DESIGNCHECK_HINT(getOutputConnectionType(driver).interpretation == hlim::ConnectionType::BITVEC, "Attempting to create UInt hook from a signal node that is not a UInt");
 
 	UInt res = SignalReadPort(driver);
-	input.node->rewireInput(input.port, res.getOutPort());
+	input.node->rewireInput(input.port, res.outPort());
 	return res;
 }
 
@@ -49,7 +49,7 @@ UInt hookUIntAfter(hlim::NodePort output)
 	UInt res = BitWidth(getOutputConnectionType(output).width);
 	while (!output.node->getDirectlyDriven(output.port).empty()) {
 		auto np = output.node->getDirectlyDriven(output.port).front();
-		np.node->rewireInput(np.port, res.getOutPort());
+		np.node->rewireInput(np.port, res.outPort());
 	}
 	res = SignalReadPort(output);
 	return res;
@@ -63,7 +63,7 @@ Bit hookBitBefore(hlim::NodePort input)
 		HCL_DESIGNCHECK_HINT(getOutputConnectionType(driver).interpretation == hlim::ConnectionType::BOOL, "Attempting to create Bit hook from a signal node that is not a Bit");
 		res = SignalReadPort(driver);
 	}
-	input.node->rewireInput(input.port, res.getOutPort());
+	input.node->rewireInput(input.port, res.outPort());
 	return res;
 }
 
@@ -74,7 +74,7 @@ Bit hookBitAfter(hlim::NodePort output)
 	Bit res;
 	while (!output.node->getDirectlyDriven(output.port).empty()) {
 		auto np = output.node->getDirectlyDriven(output.port).front();
-		np.node->rewireInput(np.port, res.getOutPort());
+		np.node->rewireInput(np.port, res.outPort());
 	}
 	res = SignalReadPort(output);
 	return res;
@@ -283,19 +283,19 @@ sim::DefaultBitVectorState evaluateStatically(hlim::NodePort output)
 
 sim::DefaultBitVectorState evaluateStatically(const ElementarySignal &signal)
 {
-	return evaluateStatically(signal.getReadPort());
+	return evaluateStatically(signal.readPort());
 }
 
 
 
 hlim::Node_Pin *findInputPin(ElementarySignal &sig)
 {
-	return hlim::findInputPin(sig.getReadPort());
+	return hlim::findInputPin(sig.readPort());
 }
 
 hlim::Node_Pin *findOutputPin(ElementarySignal &sig)
 {
-	return hlim::findOutputPin(sig.getReadPort());
+	return hlim::findOutputPin(sig.readPort());
 }
 
 }

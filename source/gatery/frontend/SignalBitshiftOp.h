@@ -147,33 +147,33 @@ SignalReadPort internal_shift(const SignalReadPort& signal, const SignalReadPort
 UInt shr(const UInt& signal, size_t amount, const Bit& arithmetic);
 UInt shr(const UInt& signal, const UInt& amount, const Bit& arithmetic);
 
-inline BVec zshl(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::zero)}; }
-inline BVec oshl(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::one)}; }
-inline BVec sshl(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::last)}; }
-inline BVec zshr(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::zero)}; }
-inline BVec oshr(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::one)}; }
-inline BVec sshr(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::last)}; }
-inline BVec rotl(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::rotate)}; }
-inline BVec rotr(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::rotate)}; }
+inline BVec zshl(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::zero)}; }
+inline BVec oshl(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::one)}; }
+inline BVec sshl(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::last)}; }
+inline BVec zshr(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::zero)}; }
+inline BVec oshr(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::one)}; }
+inline BVec sshr(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::last)}; }
+inline BVec rotl(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::rotate)}; }
+inline BVec rotr(const BVec& signal, const UInt& amount) { return BVec{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::rotate)}; }
 
-inline UInt zshl(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::zero)}; }
-inline UInt oshl(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::one)}; }
-inline UInt sshl(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::last)}; }
-inline UInt zshr(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::zero)}; }
-inline UInt oshr(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::one)}; }
-inline UInt sshr(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::last)}; }
-inline UInt rotl(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::rotate)}; }
-inline UInt rotr(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::rotate)}; }
+inline UInt zshl(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::zero)}; }
+inline UInt oshl(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::one)}; }
+inline UInt sshl(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::last)}; }
+inline UInt zshr(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::zero)}; }
+inline UInt oshr(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::one)}; }
+inline UInt sshr(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::last)}; }
+inline UInt rotl(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::rotate)}; }
+inline UInt rotr(const UInt& signal, const UInt& amount) { return UInt{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::rotate)}; }
 
 
-inline SInt zshl(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::zero)}; }
-inline SInt oshl(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::one)}; }
-inline SInt sshl(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::last)}; }
-inline SInt zshr(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::zero)}; }
-inline SInt oshr(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::one)}; }
-inline SInt sshr(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::last)}; }
-inline SInt rotl(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::rotate)}; }
-inline SInt rotr(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.getReadPort(), amount.getReadPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::rotate)}; }
+inline SInt zshl(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::zero)}; }
+inline SInt oshl(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::one)}; }
+inline SInt sshl(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::last)}; }
+inline SInt zshr(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::zero)}; }
+inline SInt oshr(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::one)}; }
+inline SInt sshr(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::last)}; }
+inline SInt rotl(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::left, hlim::Node_Shift::fill::rotate)}; }
+inline SInt rotr(const SInt& signal, const UInt& amount) { return SInt{internal_shift(signal.readPort(), amount.readPort(), hlim::Node_Shift::dir::right, hlim::Node_Shift::fill::rotate)}; }
 
 
 

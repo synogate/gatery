@@ -76,7 +76,7 @@ namespace gtry
 #define GTRY_CONST_BVEC_DESC(x, value, desc) \
     struct x { operator UInt () { \
         UInt res = value; \
-        res.getNode()->getNonSignalDriver(0).node->setName(#x); \
+        res.node()->getNonSignalDriver(0).node->setName(#x); \
         return res; \
     } const char *getName() const { return #x; } auto getValue() const { return value; } const char *getDescription() const { return desc; } };
 
@@ -86,7 +86,7 @@ namespace gtry
 #define GTRY_CONST_BIT_DESC(x, value, desc) \
     struct x { operator Bit () { \
         Bit res = value; \
-        res.getNode()->getNonSignalDriver(0).node->setName(#x); \
+        res.node()->getNonSignalDriver(0).node->setName(#x); \
         return res; \
     } const char *getName() const { return #x; } auto getValue() const { return value; } const char *getDescription() const { return desc; } };
 

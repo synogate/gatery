@@ -39,7 +39,7 @@ sim::SigHandle simu(hlim::NodePort output);
 
 template<BaseSignal T>
 sim::SigHandle simu(const T &signal) {
-    auto driver = signal.getReadPort();
+    auto driver = signal.readPort();
     HCL_DESIGNCHECK(driver.node != nullptr);
     return simu(driver);
 }

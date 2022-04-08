@@ -234,7 +234,7 @@ void ALTSYNCRAM::connectInput(Inputs input, const Bit &bit)
 		case IN_CLOCKEN_1:
 		case IN_ACLR_0:
 		case IN_ACLR_1:
-			NodeIO::connectInput(input, bit.getReadPort());
+			NodeIO::connectInput(input, bit.readPort());
 		break;
 		default:
 			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to UInt input of ALTSYNCRAM!");
@@ -249,26 +249,26 @@ void ALTSYNCRAM::connectInput(Inputs input, const UInt &UInt)
 	switch (input) {
 		case IN_DATA_A:
 			HCL_DESIGNCHECK_HINT(UInt.size() == sizeA, "Data input UInt to ALTSYNCRAM has different width than previously specified!");
-			NodeIO::connectInput(input, UInt.getReadPort());			
+			NodeIO::connectInput(input, UInt.readPort());			
 		break;
 		case IN_ADDRESS_A:
-			NodeIO::connectInput(input, UInt.getReadPort());
+			NodeIO::connectInput(input, UInt.readPort());
 			m_genericParameters["widthad_a"] = std::to_string(UInt.size());
 		break;
 		case IN_BYTEENA_A:
-			NodeIO::connectInput(input, UInt.getReadPort());
+			NodeIO::connectInput(input, UInt.readPort());
 			m_genericParameters["width_byteena_a"] = std::to_string(UInt.size());
 		break;
 		case IN_DATA_B:
 			HCL_DESIGNCHECK_HINT(UInt.size() == sizeB, "Data input UInt to ALTSYNCRAM has different width than previously specified!");
-			NodeIO::connectInput(input, UInt.getReadPort());			
+			NodeIO::connectInput(input, UInt.readPort());			
 		break;
 		case IN_ADDRESS_B:
-			NodeIO::connectInput(input, UInt.getReadPort());
+			NodeIO::connectInput(input, UInt.readPort());
 			m_genericParameters["widthad_b"] = std::to_string(UInt.size());
 		break;
 		case IN_BYTEENA_B:
-			NodeIO::connectInput(input, UInt.getReadPort());
+			NodeIO::connectInput(input, UInt.readPort());
 			m_genericParameters["width_byteena_b"] = std::to_string(UInt.size());
 		break;
 		default:

@@ -69,7 +69,7 @@ namespace gtry {
     template<typename T>
     concept ReadableBaseSignal = requires(T v)
     {
-        { v.getReadPort() } -> std::same_as<SignalReadPort>;
+        { v.readPort() } -> std::same_as<SignalReadPort>;
         { v.getName() } -> std::convertible_to<std::string_view>;
     };
 
