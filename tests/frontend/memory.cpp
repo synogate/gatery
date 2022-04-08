@@ -106,7 +106,7 @@ BOOST_FIXTURE_TEST_CASE(sync_ROM, BoostUnitTestSimulationFixture)
 	});
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
 }
 
 
@@ -159,7 +159,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem, BoostUnitTestSimulationFixture)
 	});
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
 }
 
 
@@ -211,7 +211,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem, BoostUnitTestSimulationFixture)
 	});
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
 }
 
 
@@ -278,7 +278,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_before_write, BoostUnitTestSimulationFixt
 	});
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
 }
 
 
@@ -349,7 +349,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem_write_before_read, BoostUnitTestSimulationFixt
 	});
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(async_mem_read_modify_write, BoostUnitTestSimulationFixture)
@@ -425,7 +425,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_modify_write, BoostUnitTestSimulationFixt
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 
-	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->absoluteFrequency());
 }
 
 
@@ -502,7 +502,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write, BoostUnitTestSimulationFixtu
     //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     //design.visualize("after");
-	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->absoluteFrequency());
 }
 
 
@@ -588,7 +588,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads, BoostUnitTest
     //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     //design.visualize("after");
-	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->absoluteFrequency());
 }
 
 
@@ -670,7 +670,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_on_wrEn, BoostUnitTestSimulat
     //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     //design.visualize("after");
-	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->absoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(sync_mem_multiple_writes, BoostUnitTestSimulationFixture)
@@ -752,7 +752,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_multiple_writes, BoostUnitTestSimulationFixture
     //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     //design.visualize("after");
-	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->absoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrFirst, BoostUnitTestSimulationFixture)
@@ -836,7 +836,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrFirst, Boos
     //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     //design.visualize("after");
-	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->absoluteFrequency());
 }
 
 
@@ -917,7 +917,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrLast, Boost
     //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     //design.visualize("after");
-	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->absoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_writes_wrFirst, BoostUnitTestSimulationFixture)
@@ -1006,7 +1006,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
     //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     //design.visualize("after");
-	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->absoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_writes_wrLast, BoostUnitTestSimulationFixture)
@@ -1096,7 +1096,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
     //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     //design.visualize("after");
-	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(200000, 1) / clock.getClk()->absoluteFrequency());
 }
 
 
@@ -1186,7 +1186,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_dual_read_modify_write, BoostUnitTestSimulation
     //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     //design.visualize("after");
-	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->absoluteFrequency());
 }
 
 
@@ -1303,7 +1303,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, BoostUnitTestSimulat
     //design.visualize("before");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     //design.visualize("after");
-	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->absoluteFrequency());
 }
 
 
@@ -1419,5 +1419,5 @@ BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, BoostUnitTestSim
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     //design.visualize("after");
     //recordVCD("test.vcd");
-	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->absoluteFrequency());
 }

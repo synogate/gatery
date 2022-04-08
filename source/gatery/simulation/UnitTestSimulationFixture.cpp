@@ -62,7 +62,7 @@ void UnitTestSimulationFixture::runTicks(hlim::Circuit &circuit, const hlim::Clo
 
     m_simulator->compileProgram(circuit);
     m_simulator->powerOn();
-    m_simulator->advance(hlim::ClockRational(numTicks) / clock->getAbsoluteFrequency());
+    m_simulator->advance(hlim::ClockRational(numTicks) / clock->absoluteFrequency());
     m_simulator->commitState();
 
     if (!m_errors.empty())

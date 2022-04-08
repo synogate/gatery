@@ -474,7 +474,7 @@ void ReferenceSimulator::powerOn()
         e.clockEvt.clock = clock;
         e.clockEvt.clockDomainIdx = i;
         e.clockEvt.risingEdge = !cs.high;
-        e.timeOfEvent = m_simulationTime + hlim::ClockRational(1,2) / clock->getAbsoluteFrequency();
+        e.timeOfEvent = m_simulationTime + hlim::ClockRational(1,2) / clock->absoluteFrequency();
 
         if (trigType == hlim::Clock::TriggerEvent::RISING_AND_FALLING ||
             (trigType == hlim::Clock::TriggerEvent::RISING && e.clockEvt.risingEdge) ||
@@ -482,7 +482,7 @@ void ReferenceSimulator::powerOn()
 
             cs.nextTrigger = e.timeOfEvent;
         } else
-            cs.nextTrigger = e.timeOfEvent + hlim::ClockRational(1,2) / clock->getAbsoluteFrequency();
+            cs.nextTrigger = e.timeOfEvent + hlim::ClockRational(1,2) / clock->absoluteFrequency();
 
         m_nextEvents.push(e);
     }
@@ -505,7 +505,7 @@ void ReferenceSimulator::powerOn()
         // Deactivate reset
         auto minTime = m_program.m_stateMapping.clockPinAllocation.resetPins[i].minResetTime;
         auto minCycles = m_program.m_stateMapping.clockPinAllocation.resetPins[i].minResetCycles;
-        auto minCyclesTime = hlim::ClockRational(minCycles, 1) / clock->getAbsoluteFrequency();
+        auto minCyclesTime = hlim::ClockRational(minCycles, 1) / clock->absoluteFrequency();
         
         minTime = std::max(minTime, minCyclesTime);
         if (minTime == hlim::ClockRational(0, 1)) {
@@ -636,12 +636,12 @@ void ReferenceSimulator::advanceEvent()
                         for (auto &cn : clkDom.clockedNodes)
                             cn.advance(m_callbackDispatcher, m_dataState);
 
-                        cs.nextTrigger = event.timeOfEvent + hlim::ClockRational(1) / clkEvent.clock->getAbsoluteFrequency();
+                        cs.nextTrigger = event.timeOfEvent + hlim::ClockRational(1) / clkEvent.clock->absoluteFrequency();
                     }
                     m_callbackDispatcher.onClock(clkEvent.clock, clkEvent.risingEdge);
 
                     clkEvent.risingEdge = !clkEvent.risingEdge;
-                    event.timeOfEvent += hlim::ClockRational(1,2) / clkEvent.clock->getAbsoluteFrequency();
+                    event.timeOfEvent += hlim::ClockRational(1,2) / clkEvent.clock->absoluteFrequency();
                     m_nextEvents.push(event);
                 } break;
                 case Event::Type::simProcResume: {
@@ -810,10 +810,10 @@ void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> han
     if (it == m_program.m_stateMapping.clockPinAllocation.clock2ClockPinIdx.end()) {
         // This clock is not part of the simulation, so just wait for as long as it would take for the next tick to arrive if it was there.
 
-        size_t ticksSoFar = hlim::floor(m_simulationTime * waitClock.getClock()->getAbsoluteFrequency());
+        size_t ticksSoFar = hlim::floor(m_simulationTime * waitClock.getClock()->absoluteFrequency());
         size_t nextTick = ticksSoFar + 1;
 
-        auto nextTickTime = hlim::ClockRational(nextTick, 1) / waitClock.getClock()->getAbsoluteFrequency();
+        auto nextTickTime = hlim::ClockRational(nextTick, 1) / waitClock.getClock()->absoluteFrequency();
 
         Event e;
         e.type = Event::Type::simProcResume;

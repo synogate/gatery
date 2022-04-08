@@ -90,7 +90,7 @@ void simAnnotationStartDelayed(const std::string &id, const std::string &desc, c
     auto *sim = sim::SimulationContext::current()->getSimulator();
     HCL_DESIGNCHECK_HINT(sim, "Can only annotate if running an actual simulation!");
 
-    auto shift = (unsigned) std::abs(cycles) / clk.getAbsoluteFrequency();
+    auto shift = (unsigned) std::abs(cycles) / clk.absoluteFrequency();
 
     if (cycles > 0)
         sim->annotationStart(sim->getCurrentSimulationTime() + shift, id, desc);
@@ -112,7 +112,7 @@ void simAnnotationEndDelayed(const std::string &id, const Clock &clk, int cycles
     auto *sim = sim::SimulationContext::current()->getSimulator();
     HCL_DESIGNCHECK_HINT(sim, "Can only annotate if running an actual simulation!");
 
-    auto shift = (unsigned) std::abs(cycles) / clk.getAbsoluteFrequency();
+    auto shift = (unsigned) std::abs(cycles) / clk.absoluteFrequency();
 
     if (cycles > 0)
         sim->annotationEnd(sim->getCurrentSimulationTime() + shift, id);

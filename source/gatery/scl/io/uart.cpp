@@ -36,7 +36,7 @@ UART::Stream UART::receive(Bit rx)
     HCL_DESIGNCHECK_HINT(startBits == 1, "Not implemented yet!");
     //HCL_DESIGNCHECK_HINT(stopBits == 1, "Not implemented yet!");
 
-    size_t bitLength = hlim::floor(ClockScope::getClk().getAbsoluteFrequency() / baudRate);
+    size_t bitLength = hlim::floor(ClockScope::getClk().absoluteFrequency() / baudRate);
     size_t oneHalfBitLength = bitLength * 3 / 2;
 
     UInt counter = BitWidth(1+utils::Log2C(oneHalfBitLength));
@@ -139,7 +139,7 @@ Bit UART::send(Stream &stream)
 
     HCL_DESIGNCHECK_HINT(deriveClock == false, "Not implemented yet!");
 
-    size_t bitLength = hlim::floor(ClockScope::getClk().getAbsoluteFrequency() / baudRate);
+    size_t bitLength = hlim::floor(ClockScope::getClk().absoluteFrequency() / baudRate);
 
     UInt counter = BitWidth(utils::Log2C(bitLength+2));
     counter = reg(counter, 0);

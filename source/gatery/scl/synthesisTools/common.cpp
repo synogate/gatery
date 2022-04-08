@@ -36,7 +36,7 @@ void writeClockXDC(const vhdl::AST &ast, std::ostream& out)
 	for (const hlim::Clock* clk : top->getClocks())
 	{
 		auto&& name = top->getNamespaceScope().getClock(clk).name;
-		hlim::ClockRational freq = clk->getAbsoluteFrequency();
+		hlim::ClockRational freq = clk->absoluteFrequency();
 		double ns = double(freq.denominator() * 1'000'000'000) / freq.numerator();
 
 		out << "create_clock -period " << std::fixed << std::setprecision(3) << ns << " [get_ports " << name << "]\n";

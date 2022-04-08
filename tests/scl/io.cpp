@@ -62,7 +62,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
             simu(rx) = '1';
             simu(sending) = '0';
 
-            co_await WaitFor(Seconds(2)/clock.getAbsoluteFrequency());
+            co_await WaitFor(Seconds(2)/clock.absoluteFrequency());
             while (true) {
                 std::uint8_t data = rand();
                 dataStream.push_back(data);
@@ -80,13 +80,13 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
                 co_await WaitFor(Seconds(1,baudRate));
                 simu(sending) = '0';
 
-                co_await WaitFor(Seconds(rand() % 100)/clock.getAbsoluteFrequency());
+                co_await WaitFor(Seconds(rand() % 100)/clock.absoluteFrequency());
             }
         });
 
         addSimulationProcess([=, &clock, &dataStream]()->SimProcess{
             simu(outReady) = false;
-            co_await WaitFor(Seconds(1,2)/clock.getAbsoluteFrequency());
+            co_await WaitFor(Seconds(1,2)/clock.absoluteFrequency());
 
             simu(outReady) = true;
 

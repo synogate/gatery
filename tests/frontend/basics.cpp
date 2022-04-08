@@ -288,7 +288,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, BoostUnitTestSimulationFixture)
         sim_assert(counter == refCount) << "The counter should be " << refCount << " but is " << counter;
     }
 
-    runFixedLengthTest(10u / clock.getClk()->getAbsoluteFrequency());
+    runFixedLengthTest(10u / clock.getClk()->absoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(SignalMoveAssignment, BoostUnitTestSimulationFixture)
@@ -486,7 +486,7 @@ BOOST_FIXTURE_TEST_CASE(ConditionalLoopAssignment, BoostUnitTestSimulationFixtur
         counter += 1u;
     counter = reg(counter);
 
-    runFixedLengthTest(100u / clock.getClk()->getAbsoluteFrequency());
+    runFixedLengthTest(100u / clock.getClk()->absoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, BoostUnitTestSimulationFixture)
@@ -513,7 +513,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, BoostUnitTestSimulationFixture
         counter += 1u;
     }
 
-    runTest(100u / clock.getClk()->getAbsoluteFrequency());
+    runTest(100u / clock.getClk()->absoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, BoostUnitTestSimulationFixture)
@@ -540,7 +540,7 @@ BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, BoostUnitTestSimulationFixture)
         sim_assert(bit2 == ref[0]) << "should be " << ref[0] << " but is " << bit2;
     }
 
-    runFixedLengthTest(3u / clock.getClk()->getAbsoluteFrequency());
+    runFixedLengthTest(3u / clock.getClk()->absoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(ClockRegisterReset_explicit, BoostUnitTestSimulationFixture)
@@ -567,7 +567,7 @@ BOOST_FIXTURE_TEST_CASE(ClockRegisterReset_explicit, BoostUnitTestSimulationFixt
         sim_assert(bit2 == ref[0]) << "should be " << ref[0] << " but is " << bit2;
     }
 
-    runFixedLengthTest(3u / clock.getClk()->getAbsoluteFrequency());
+    runFixedLengthTest(3u / clock.getClk()->absoluteFrequency());
 }
 
 
@@ -593,7 +593,7 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, BoostUnitTestSimulationFixture)
         sim_assert(counter == refCount) << "The counter should be " << refCount << " but is " << counter;
     }
 
-    runFixedLengthTest(10u / clock.getClk()->getAbsoluteFrequency());
+    runFixedLengthTest(10u / clock.getClk()->absoluteFrequency());
 }
 
 
@@ -618,7 +618,7 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax_explicitreset, BoostUnitTestSimul
         sim_assert(counter == refCount) << "The counter should be " << refCount << " but is " << counter;
     }
 
-    runFixedLengthTest(10u / clock.getClk()->getAbsoluteFrequency());
+    runFixedLengthTest(10u / clock.getClk()->absoluteFrequency());
 }
 
 
@@ -644,7 +644,7 @@ BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, BoostUnitTestSimulationFixture)
         sim_assert(counter == refCount) << "The counter should be " << refCount << " but is " << counter;
     }
 
-    runFixedLengthTest(6u / clock.getClk()->getAbsoluteFrequency());
+    runFixedLengthTest(6u / clock.getClk()->absoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, BoostUnitTestSimulationFixture)
@@ -676,7 +676,7 @@ BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, BoostUnitTestSimulationFi
         sim_assert(counter == refCount) << "The counter should be " << refCount << " but is " << counter;
     }
 
-    runFixedLengthTest(10u / clock.getClk()->getAbsoluteFrequency());
+    runFixedLengthTest(10u / clock.getClk()->absoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(StringLiteralParsing, BoostUnitTestSimulationFixture)

@@ -109,7 +109,7 @@ namespace gtry {
             Bit operator() (const Bit& signal, const Bit& reset, const RegisterSettings &settings = {}) const;
 
             hlim::Clock *getClk() const { return m_clock; }
-            hlim::ClockRational getAbsoluteFrequency() const { return m_clock->getAbsoluteFrequency(); }
+            hlim::ClockRational absoluteFrequency() const { return m_clock->absoluteFrequency(); }
 
             void setName(std::string name) { m_clock->setName(std::move(name)); }
         protected:

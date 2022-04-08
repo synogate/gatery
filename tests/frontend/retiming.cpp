@@ -83,7 +83,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_new, BoostUnitTestSimulationFix
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 
 	//design.visualize("retiming_forward_counter_new");
-	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_old, BoostUnitTestSimulationFixture)
@@ -128,7 +128,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_old, BoostUnitTestSimulationFix
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 
 	//design.visualize("retiming_forward_counter_old");
-	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(retiming_hint_simple, BoostUnitTestSimulationFixture)
@@ -256,7 +256,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct, BoostUnitTestSimulationFixture)
 
 	BOOST_TEST(pipeBalanceGroup.getNumPipeBalanceGroupStages() == 3);
 
-	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());	
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());	
 }
 
 
@@ -316,7 +316,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct_reset, BoostUnitTestSimulationFixtu
 
 	BOOST_TEST(pipeBalanceGroup.getNumPipeBalanceGroupStages() == 3);
 
-	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
 
 }
 
@@ -369,7 +369,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching, BoostUnitTestSimulationFixture)
 	BOOST_TEST(pipeBalanceGroup.getNumPipeBalanceGroupStages() == 2);
 
 
-	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());		
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());		
 }
 
 BOOST_FIXTURE_TEST_CASE(retiming_pipeinputgroup, BoostUnitTestSimulationFixture)
@@ -416,7 +416,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeinputgroup, BoostUnitTestSimulationFixture)
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 //design.visualize("after");
 
-	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
 }
 
 
@@ -468,7 +468,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching_reset, BoostUnitTestSimulationFi
 	BOOST_TEST(pipeBalanceGroup.getNumPipeBalanceGroupStages() == 2);
 
 
-	runTest(hlim::ClockRational(100, 1) / clock.getClk()->getAbsoluteFrequency());		
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());		
 }
 
 

@@ -206,7 +206,7 @@ BOOST_FIXTURE_TEST_CASE(Fifo_basic, BoostUnitTestSimulationFixture)
     design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
     //design.visualize("after");
 
-    runTest(hlim::ClockRational(20000, 1) / clock.getClk()->getAbsoluteFrequency());
+    runTest(hlim::ClockRational(20000, 1) / clock.getClk()->absoluteFrequency());
 }
 
 BOOST_FIXTURE_TEST_CASE(Fifo_fuzz, BoostUnitTestSimulationFixture)

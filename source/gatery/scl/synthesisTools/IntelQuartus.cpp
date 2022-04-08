@@ -184,7 +184,7 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 			continue;
 		}
 
-		float period = clock->getAbsoluteFrequency().denominator() / float(clock->getAbsoluteFrequency().numerator());
+		float period = clock->absoluteFrequency().denominator() / float(clock->absoluteFrequency().numerator());
 		period *= 1e9f;
 		file << "set_" << direction << "_delay " << period / 3;
 		file << " -clock " << vhdlClockName;
@@ -221,7 +221,7 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 		}
 		hlim::Clock* clock = regNode->getClocks().front();
 
-		float period = clock->getAbsoluteFrequency().denominator() / float(clock->getAbsoluteFrequency().numerator());
+		float period = clock->absoluteFrequency().denominator() / float(clock->absoluteFrequency().numerator());
 		period *= 1e9f;
 		file << "set_input_delay " << period / 2;
 		file << " -clock " << clock->getName();

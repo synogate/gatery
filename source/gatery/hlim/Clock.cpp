@@ -65,7 +65,7 @@ ClockRational Clock::getMinResetTime() const
     ClockRational res = m_minResetTime;
 
     if (m_registerAttributes.resetType == RegisterAttributes::ResetType::ASYNCHRONOUS && !m_clockedNodes.empty())
-        res = std::max(res, ClockRational{1,1}/getAbsoluteFrequency());
+        res = std::max(res, ClockRational{1,1}/absoluteFrequency());
 
     for (auto d : m_derivedClocks)
         res = std::max(res, d->getMinResetTime());
@@ -105,7 +105,7 @@ Clock *Clock::getClockPinSource()
         return this;
 
     if (m_parentClock->getName() != getName() ||
-        m_parentClock->getAbsoluteFrequency() != getAbsoluteFrequency() ||
+        m_parentClock->absoluteFrequency() != absoluteFrequency() ||
         !m_phaseSynchronousWithParent)
         return this;
 
@@ -176,9 +176,9 @@ DerivedClock::DerivedClock(Clock *parentClock)
 }
 
     
-ClockRational DerivedClock::getAbsoluteFrequency() const
+ClockRational DerivedClock::absoluteFrequency() const
 {
-    return m_parentClock->getAbsoluteFrequency() * m_parentRelativeMultiplicator;
+    return m_parentClock->absoluteFrequency() * m_parentRelativeMultiplicator;
 }
 
 ClockRational DerivedClock::getFrequencyRelativeTo(Clock &other) const

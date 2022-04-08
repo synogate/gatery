@@ -138,7 +138,7 @@ void BaseTestbenchRecorder::buildClockProcess(std::ostream &stream, hlim::Clock 
     cf.indent(stream, 1);
     stream << "BEGIN" << std::endl;    
 
-    auto halfPeriod = hlim::ClockRational(1,2) / clock->getAbsoluteFrequency();
+    auto halfPeriod = hlim::ClockRational(1,2) / clock->absoluteFrequency();
 
     cf.indent(stream, 2);
     stream << "WAIT FOR ";

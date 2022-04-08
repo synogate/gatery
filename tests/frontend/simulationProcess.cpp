@@ -44,10 +44,10 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
         counter += incrementPin;
 
         addSimulationProcess([=]()->SimProcess{
-            co_await WaitFor(Seconds(1, 2)/clock.getAbsoluteFrequency());
+            co_await WaitFor(Seconds(1, 2)/clock.absoluteFrequency());
             for (auto i : Range(10)) {
                 simu(incrementPin) = i;
-                co_await WaitFor(Seconds(5)/clock.getAbsoluteFrequency());
+                co_await WaitFor(Seconds(5)/clock.absoluteFrequency());
             }
         });
         addSimulationProcess([=]()->SimProcess{
@@ -62,7 +62,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
                 BOOST_TEST(expectedSum == simu(outputPin));
                 BOOST_TEST(simu(outputPin).defined() == 0xFF);
 
-                co_await WaitFor(Seconds(1)/clock.getAbsoluteFrequency());
+                co_await WaitFor(Seconds(1)/clock.absoluteFrequency());
             }
         });
     }
@@ -90,12 +90,12 @@ BOOST_FIXTURE_TEST_CASE(SimProc_BigInt_small, BoostUnitTestSimulationFixture)
         counter += incrementPin;
 
         addSimulationProcess([=]()->SimProcess{
-            co_await WaitFor(Seconds(1, 2)/clock.getAbsoluteFrequency());
+            co_await WaitFor(Seconds(1, 2)/clock.absoluteFrequency());
             for (auto i : Range(10)) {
                 BigInt v = i;
                 v |= BigInt(i*13) << 20;
                 simu(incrementPin) = v;
-                co_await WaitFor(Seconds(5)/clock.getAbsoluteFrequency());
+                co_await WaitFor(Seconds(5)/clock.absoluteFrequency());
             }
         });
         addSimulationProcess([=]()->SimProcess{
@@ -110,7 +110,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_BigInt_small, BoostUnitTestSimulationFixture)
                 BOOST_TEST((expectedSum == (BigInt) simu(outputPin)));
                 BOOST_TEST(simu(outputPin).allDefined());
 
-                co_await WaitFor(Seconds(1)/clock.getAbsoluteFrequency());
+                co_await WaitFor(Seconds(1)/clock.absoluteFrequency());
             }
         });
     }
@@ -138,12 +138,12 @@ BOOST_FIXTURE_TEST_CASE(SimProc_BigInt, BoostUnitTestSimulationFixture)
         counter ^= incrementPin;
 
         addSimulationProcess([=]()->SimProcess{
-            co_await WaitFor(Seconds(1, 2)/clock.getAbsoluteFrequency());
+            co_await WaitFor(Seconds(1, 2)/clock.absoluteFrequency());
             for (auto i : Range(10)) {
                 BigInt v = i;
                 v |= BigInt(i*13) << 90;
                 simu(incrementPin) = v;
-                co_await WaitFor(Seconds(5)/clock.getAbsoluteFrequency());
+                co_await WaitFor(Seconds(5)/clock.absoluteFrequency());
             }
         });
         addSimulationProcess([=]()->SimProcess{
@@ -158,7 +158,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_BigInt, BoostUnitTestSimulationFixture)
                 BOOST_TEST((expectedSum == (BigInt) simu(outputPin)));
                 BOOST_TEST(simu(outputPin).allDefined());
 
-                co_await WaitFor(Seconds(1)/clock.getAbsoluteFrequency());
+                co_await WaitFor(Seconds(1)/clock.absoluteFrequency());
             }
         });
     }
@@ -209,19 +209,19 @@ BOOST_FIXTURE_TEST_CASE(SimProc_PingPong, BoostUnitTestSimulationFixture)
             unsigned i = 0;
             while (true) {
                 simu(A_in) = i;
-                co_await WaitFor(Seconds(1)/clock.getAbsoluteFrequency());
+                co_await WaitFor(Seconds(1)/clock.absoluteFrequency());
                 BOOST_TEST(simu(B_out) == i);
                 i++;
             }
         });
         addSimulationProcess([=]()->SimProcess{
 
-            co_await WaitFor(Seconds(1,2)/clock.getAbsoluteFrequency());
+            co_await WaitFor(Seconds(1,2)/clock.absoluteFrequency());
 
             while (true) {
                 simu(B_in) = simu(A_out);
 
-                co_await WaitFor(Seconds(1)/clock.getAbsoluteFrequency());
+                co_await WaitFor(Seconds(1)/clock.absoluteFrequency());
             }
         });
     }
