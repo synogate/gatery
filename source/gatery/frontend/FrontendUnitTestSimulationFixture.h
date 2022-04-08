@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
 
@@ -32,72 +32,72 @@
 
 namespace gtry {
 
-    /**
-     * @brief Helper class to facilitate writing unit tests
-     */
-    class UnitTestSimulationFixture : protected sim::UnitTestSimulationFixture
-    {
-        public:
-            ~UnitTestSimulationFixture();
+	/**
+	 * @brief Helper class to facilitate writing unit tests
+	 */
+	class UnitTestSimulationFixture : protected sim::UnitTestSimulationFixture
+	{
+		public:
+			~UnitTestSimulationFixture();
 
-            /// Compiles the graph and does one combinatory evaluation
-            void eval();
-            /// Compiles and runs the simulation for a specified amount of ticks (rising edges) of the given clock.
-            void runTicks(const hlim::Clock* clock, unsigned numTicks);
+			/// Compiles the graph and does one combinatory evaluation
+			void eval();
+			/// Compiles and runs the simulation for a specified amount of ticks (rising edges) of the given clock.
+			void runTicks(const hlim::Clock* clock, unsigned numTicks);
 
-            /// Enables recording of a waveform for a subsequent simulation run
-            void recordVCD(const std::string& filename);
-            /// Exports as VHDL and (optionally) writes a vhdl tes6tbench of the subsequent simulation run
-            void outputVHDL(const std::string& filename, bool includeTest = true);
+			/// Enables recording of a waveform for a subsequent simulation run
+			void recordVCD(const std::string& filename);
+			/// Exports as VHDL and (optionally) writes a vhdl tes6tbench of the subsequent simulation run
+			void outputVHDL(const std::string& filename, bool includeTest = true);
 
-            /// Stops an ongoing simulation (to be used during runHitsTimeout)
-            void stopTest();
+			/// Stops an ongoing simulation (to be used during runHitsTimeout)
+			void stopTest();
 
-            /// Compiles and runs the simulation until the timeout (in simulation time) is reached or stopTest is called
-            /// @return returns true if the timeout was reached.
-            bool runHitsTimeout(const hlim::ClockRational &timeoutSeconds);
+			/// Compiles and runs the simulation until the timeout (in simulation time) is reached or stopTest is called
+			/// @return returns true if the timeout was reached.
+			bool runHitsTimeout(const hlim::ClockRational &timeoutSeconds);
 
-            DesignScope design;
+			DesignScope design;
 
-            virtual void setup();
-            virtual void teardown();
+			virtual void setup();
+			virtual void teardown();
 
-    protected:
-            virtual void prepRun();
+	protected:
+			virtual void prepRun();
 
 
-            bool m_stopTestCalled = false;
-            std::optional<sim::VCDSink> m_vcdSink;
-            std::optional<vhdl::VHDLExport> m_vhdlExport;
-    };
+			bool m_stopTestCalled = false;
+			std::optional<sim::VCDSink> m_vcdSink;
+			std::optional<vhdl::VHDLExport> m_vhdlExport;
+	};
 
-    /**
-     * @brief Helper class to facilitate writing unit tests
-     */
-    class BoostUnitTestSimulationFixture : protected UnitTestSimulationFixture {
-        public:
-            void runFixedLengthTest(const hlim::ClockRational &seconds);
-            void runEvalOnlyTest();
-            void runTest(const hlim::ClockRational &timeoutSeconds);
-        protected:
-            void prepRun() override;
-    };
+	/**
+	 * @brief Helper class to facilitate writing unit tests
+	 */
+	class BoostUnitTestSimulationFixture : protected UnitTestSimulationFixture {
+		public:
+			void runFixedLengthTest(const hlim::ClockRational &seconds);
+			void runEvalOnlyTest();
+			void runTest(const hlim::ClockRational &timeoutSeconds);
+		protected:
+			void prepRun() override;
+	};
 
-    class ClockedTest : protected BoostUnitTestSimulationFixture
-    {
-    public:
-        Clock& clock() { return *m_clock; }
-        void timeout(hlim::ClockRational value) { m_timeout = value; }
+	class ClockedTest : protected BoostUnitTestSimulationFixture
+	{
+	public:
+		Clock& clock() { return *m_clock; }
+		void timeout(hlim::ClockRational value) { m_timeout = value; }
 
-        void setup() override;
-        void teardown() override;
+		void setup() override;
+		void teardown() override;
 
-    private:
-        std::optional<Clock> m_clock;
-        std::optional<ClockScope> m_clockScope;
+	private:
+		std::optional<Clock> m_clock;
+		std::optional<ClockScope> m_clockScope;
 
-        hlim::ClockRational m_timeout = { 1, 1'000 };
+		hlim::ClockRational m_timeout = { 1, 1'000 };
 
-    };
+	};
 
 }

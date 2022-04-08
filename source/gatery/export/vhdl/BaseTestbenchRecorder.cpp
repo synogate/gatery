@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
 
@@ -37,122 +37,122 @@ BaseTestbenchRecorder::~BaseTestbenchRecorder()
 
 void BaseTestbenchRecorder::declareSignals(std::ostream &stream, const std::set<hlim::Clock*> &allClocks, const std::set<hlim::Clock*> &allResets, const std::set<hlim::Node_Pin*> &allIOPins)
 {
-    auto *rootEntity = m_ast->getRootEntity();
-    CodeFormatting &cf = m_ast->getCodeFormatting();
+	auto *rootEntity = m_ast->getRootEntity();
+	CodeFormatting &cf = m_ast->getCodeFormatting();
 
-    for (auto clock : allClocks) {
-        stream << "    SIGNAL " << rootEntity->getNamespaceScope().getClock(clock).name << " : STD_LOGIC := ";
-        auto val = m_simulator.getValueOfReset(clock);
-        if (!val[sim::DefaultConfig::DEFINED])
-            stream << "'X';" << std::endl;
-        else
-            if (val[sim::DefaultConfig::VALUE])
-                stream << "'1';" << std::endl;
-            else
-                stream << "'0';" << std::endl;        
-    }
-    for (auto clock : allResets) {
-        stream << "    SIGNAL " << rootEntity->getNamespaceScope().getReset(clock).name << " : STD_LOGIC := ";
-        auto val = m_simulator.getValueOfReset(clock);
-        if (!val[sim::DefaultConfig::DEFINED])
-            stream << "'X';" << std::endl;
-        else
-            if (val[sim::DefaultConfig::VALUE])
-                stream << "'1';" << std::endl;
-            else
-                stream << "'0';" << std::endl;
-    }
+	for (auto clock : allClocks) {
+		stream << "	SIGNAL " << rootEntity->getNamespaceScope().getClock(clock).name << " : STD_LOGIC := ";
+		auto val = m_simulator.getValueOfReset(clock);
+		if (!val[sim::DefaultConfig::DEFINED])
+			stream << "'X';" << std::endl;
+		else
+			if (val[sim::DefaultConfig::VALUE])
+				stream << "'1';" << std::endl;
+			else
+				stream << "'0';" << std::endl;		
+	}
+	for (auto clock : allResets) {
+		stream << "	SIGNAL " << rootEntity->getNamespaceScope().getReset(clock).name << " : STD_LOGIC := ";
+		auto val = m_simulator.getValueOfReset(clock);
+		if (!val[sim::DefaultConfig::DEFINED])
+			stream << "'X';" << std::endl;
+		else
+			if (val[sim::DefaultConfig::VALUE])
+				stream << "'1';" << std::endl;
+			else
+				stream << "'0';" << std::endl;
+	}
 
-    for (auto ioPin : allIOPins) {
-        const auto &decl = rootEntity->getNamespaceScope().get(ioPin);
+	for (auto ioPin : allIOPins) {
+		const auto &decl = rootEntity->getNamespaceScope().get(ioPin);
 
-        stream << "    SIGNAL " << decl.name << " : ";
-        cf.formatConnectionType(stream, decl);
-        stream << ';' << std::endl;
-    }
+		stream << "	SIGNAL " << decl.name << " : ";
+		cf.formatConnectionType(stream, decl);
+		stream << ';' << std::endl;
+	}
 
-    stream << "    SIGNAL TB_testbench_is_done : STD_LOGIC := '0';\n";
+	stream << "	SIGNAL TB_testbench_is_done : STD_LOGIC := '0';\n";
 
 }
 
 void BaseTestbenchRecorder::writePortmap(std::ostream &stream, const std::set<hlim::Clock*> &allClocks, const std::set<hlim::Clock*> &allResets, const std::set<hlim::Node_Pin*> &allIOPins)
 {
-    auto *rootEntity = m_ast->getRootEntity();
-    CodeFormatting &cf = m_ast->getCodeFormatting();
+	auto *rootEntity = m_ast->getRootEntity();
+	CodeFormatting &cf = m_ast->getCodeFormatting();
 
-    std::vector<std::string> portmapList;
+	std::vector<std::string> portmapList;
 
-    for (auto &s : allClocks) {
-        std::stringstream line;
-        line << rootEntity->getNamespaceScope().getClock(s).name << " => ";
-        line << rootEntity->getNamespaceScope().getClock(s).name;
-        portmapList.push_back(line.str());
-    }
-    for (auto &s : allResets) {
-        std::stringstream line;
-        line << rootEntity->getNamespaceScope().getReset(s).name << " => ";
-        line << rootEntity->getNamespaceScope().getReset(s).name;
-        portmapList.push_back(line.str());
-    }
-    for (auto &s : allIOPins) {
-        std::stringstream line;
-        line << rootEntity->getNamespaceScope().get(s).name << " => ";
-        line << rootEntity->getNamespaceScope().get(s).name;
-        portmapList.push_back(line.str());
-    }
+	for (auto &s : allClocks) {
+		std::stringstream line;
+		line << rootEntity->getNamespaceScope().getClock(s).name << " => ";
+		line << rootEntity->getNamespaceScope().getClock(s).name;
+		portmapList.push_back(line.str());
+	}
+	for (auto &s : allResets) {
+		std::stringstream line;
+		line << rootEntity->getNamespaceScope().getReset(s).name << " => ";
+		line << rootEntity->getNamespaceScope().getReset(s).name;
+		portmapList.push_back(line.str());
+	}
+	for (auto &s : allIOPins) {
+		std::stringstream line;
+		line << rootEntity->getNamespaceScope().get(s).name << " => ";
+		line << rootEntity->getNamespaceScope().get(s).name;
+		portmapList.push_back(line.str());
+	}
 
-    for (auto i : utils::Range(portmapList.size())) {
-        cf.indent(stream, 2);
-        stream << portmapList[i];
-        if (i+1 < portmapList.size())
-            stream << ",";
-        stream << std::endl;
-    }
+	for (auto i : utils::Range(portmapList.size())) {
+		cf.indent(stream, 2);
+		stream << portmapList[i];
+		if (i+1 < portmapList.size())
+			stream << ",";
+		stream << std::endl;
+	}
 
 }
 
 
 namespace {
-    void formatTime(std::ostream &stream, hlim::ClockRational time) {
-        std::string unit = "sec";
-        if (time.denominator() > 1) { unit = "ms"; time *= 1000; }
-        if (time.denominator() > 1) { unit = "us"; time *= 1000; }
-        if (time.denominator() > 1) { unit = "ns"; time *= 1000; }
-        if (time.denominator() > 1) { unit = "ps"; time *= 1000; }
-        if (time.denominator() > 1) { unit = "fs"; time *= 1000; }
+	void formatTime(std::ostream &stream, hlim::ClockRational time) {
+		std::string unit = "sec";
+		if (time.denominator() > 1) { unit = "ms"; time *= 1000; }
+		if (time.denominator() > 1) { unit = "us"; time *= 1000; }
+		if (time.denominator() > 1) { unit = "ns"; time *= 1000; }
+		if (time.denominator() > 1) { unit = "ps"; time *= 1000; }
+		if (time.denominator() > 1) { unit = "fs"; time *= 1000; }
 
-        stream << time.numerator() / time.denominator() << ' ' << unit;
-    }
+		stream << time.numerator() / time.denominator() << ' ' << unit;
+	}
 }
 
 
 
 void BaseTestbenchRecorder::buildClockProcess(std::ostream &stream, hlim::Clock *clock)
 {
-    CodeFormatting &cf = m_ast->getCodeFormatting();
-    auto *rootEntity = m_ast->getRootEntity();
-    const std::string &clockName = rootEntity->getNamespaceScope().getClock(clock).name;
+	CodeFormatting &cf = m_ast->getCodeFormatting();
+	auto *rootEntity = m_ast->getRootEntity();
+	const std::string &clockName = rootEntity->getNamespaceScope().getClock(clock).name;
 
-    cf.indent(stream, 1);
-    stream << "clock_process_" << clockName << " : PROCESS" << std::endl;
-    cf.indent(stream, 1);
-    stream << "BEGIN" << std::endl;    
+	cf.indent(stream, 1);
+	stream << "clock_process_" << clockName << " : PROCESS" << std::endl;
+	cf.indent(stream, 1);
+	stream << "BEGIN" << std::endl;	
 
-    auto halfPeriod = hlim::ClockRational(1,2) / clock->absoluteFrequency();
+	auto halfPeriod = hlim::ClockRational(1,2) / clock->absoluteFrequency();
 
-    cf.indent(stream, 2);
-    stream << "WAIT FOR ";
-    formatTime(stream, halfPeriod);
-    stream << ';' << std::endl;
+	cf.indent(stream, 2);
+	stream << "WAIT FOR ";
+	formatTime(stream, halfPeriod);
+	stream << ';' << std::endl;
 
-    cf.indent(stream, 2);
-    stream << clockName << " <= not " << clockName << ";\n";
+	cf.indent(stream, 2);
+	stream << clockName << " <= not " << clockName << ";\n";
 
-    cf.indent(stream, 2);
-    stream << "IF TB_testbench_is_done = '1' THEN WAIT; END IF;" << std::endl;  
+	cf.indent(stream, 2);
+	stream << "IF TB_testbench_is_done = '1' THEN WAIT; END IF;" << std::endl;  
 
-    cf.indent(stream, 1);
-    stream << "END PROCESS;" << std::endl;
+	cf.indent(stream, 1);
+	stream << "END PROCESS;" << std::endl;
 
 }
 

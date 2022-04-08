@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
 #include "Pin.h"
@@ -25,42 +25,42 @@
 
 namespace gtry {
 
-    BaseOutputPin::BaseOutputPin(hlim::NodePort nodePort, std::string name)
-    {
-        m_pinNode = DesignScope::createNode<hlim::Node_Pin>(false);
-        m_pinNode->connect(nodePort);
-        m_pinNode->setName(std::move(name));
-    }
+	BaseOutputPin::BaseOutputPin(hlim::NodePort nodePort, std::string name)
+	{
+		m_pinNode = DesignScope::createNode<hlim::Node_Pin>(false);
+		m_pinNode->connect(nodePort);
+		m_pinNode->setName(std::move(name));
+	}
 
-    OutputPin::OutputPin(const Bit &bit) : BaseOutputPin(bit.readPort(), std::string(bit.getName())) { }
+	OutputPin::OutputPin(const Bit &bit) : BaseOutputPin(bit.readPort(), std::string(bit.getName())) { }
 
-    BaseInputPin::BaseInputPin() {
-        m_pinNode = DesignScope::createNode<hlim::Node_Pin>(true);
-    }
+	BaseInputPin::BaseInputPin() {
+		m_pinNode = DesignScope::createNode<hlim::Node_Pin>(true);
+	}
 
-    InputPin::InputPin() {
-        m_pinNode->setBool();
-    }
+	InputPin::InputPin() {
+		m_pinNode->setBool();
+	}
 
 
-    InputPin::operator Bit () const
-    {
+	InputPin::operator Bit () const
+	{
 #if 0
-        return Bit(SignalReadPort({.node=m_pinNode, .port=0ull}));
+		return Bit(SignalReadPort({.node=m_pinNode, .port=0ull}));
 #else
-        auto* signal = DesignScope::createNode<hlim::Node_Signal>();
-        signal->connectInput({.node=m_pinNode, .port=0ull});
-        signal->recordStackTrace();
-        return Bit(SignalReadPort(signal));
+		auto* signal = DesignScope::createNode<hlim::Node_Signal>();
+		signal->connectInput({.node=m_pinNode, .port=0ull});
+		signal->recordStackTrace();
+		return Bit(SignalReadPort(signal));
 #endif
-    }
+	}
 
-    InputPins::InputPins(BitWidth width) {
-        m_pinNode->setWidth(width.value);
-    }
+	InputPins::InputPins(BitWidth width) {
+		m_pinNode->setWidth(width.value);
+	}
 
-    InputPins::operator UInt () const { return UInt(SignalReadPort({.node=m_pinNode, .port=0ull})); }
+	InputPins::operator UInt () const { return UInt(SignalReadPort({.node=m_pinNode, .port=0ull})); }
 
-    OutputPins pinOut(const InputPins &input) { return OutputPins((UInt)input); }
+	OutputPins pinOut(const InputPins &input) { return OutputPins((UInt)input); }
 
 }

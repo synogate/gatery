@@ -86,9 +86,9 @@ namespace gtry
 		});
 	}
 
-    template<Signal T, typename Tr>
-    T reg(const T& val, const Tr& resetVal, const RegisterSettings& settings)
-    {
+	template<Signal T, typename Tr>
+	T reg(const T& val, const Tr& resetVal, const RegisterSettings& settings)
+	{
 		return internal::transformSignal(val, resetVal, [&](const BaseSignal auto& sig, auto&& resetSig) {
 			return reg(sig, resetSig, settings); // forward so it can have overloads
 		});

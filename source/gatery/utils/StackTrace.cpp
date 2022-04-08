@@ -58,7 +58,7 @@ namespace gtry::utils
 	{
 		auto symbols = trace.formatEntries();
 		for (auto p : Enumerate(symbols))
-			stream << "    " << p.first << ": " << p.second << std::endl;
+			stream << "	" << p.first << ": " << p.second << std::endl;
 	
 		return stream;
 	}

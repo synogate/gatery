@@ -1,20 +1,20 @@
 #include "XilinxVivado.h"
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "gatery/pch.h"
@@ -46,8 +46,8 @@ XilinxVivado::XilinxVivado()
 
 void XilinxVivado::prepareCircuit(hlim::Circuit &circuit)
 {
-    for (auto &n : circuit.getNodes()) {
-        if (auto *pa = dynamic_cast<hlim::Node_PathAttributes*>(n.get())) {
+	for (auto &n : circuit.getNodes()) {
+		if (auto *pa = dynamic_cast<hlim::Node_PathAttributes*>(n.get())) {
 
 			// Keep start and end driver of all paths
 			for (unsigned i = 0; i < 2; i++) {
@@ -208,17 +208,17 @@ void XilinxVivado::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::str
 	auto testbenchRelativePath = std::filesystem::relative(vhdlExport.getTestbenchDestination(), vhdlExport.getDestination());
 
 	for (const auto &e : vhdlExport.getTestbenchRecorder()) {
-        for (const auto &name : e->getDependencySortedEntities()) {
+		for (const auto &name : e->getDependencySortedEntities()) {
 			file << "read_vhdl -vhdl2008 ";
 			if (!vhdlExport.getName().empty())
 				file << "-library " << vhdlExport.getName() << ' ';
-            file << (testbenchRelativePath / vhdlExport.getAST()->getFilename("", name)).string() << std::endl;
+			file << (testbenchRelativePath / vhdlExport.getAST()->getFilename("", name)).string() << std::endl;
 		}
 
-        for (const auto &name : e->getAuxiliaryDataFiles()) {
+		for (const auto &name : e->getAuxiliaryDataFiles()) {
 			file << "add_files \"" << (testbenchRelativePath / name).string() << '\"' << std::endl;
 		}
-    }
+	}
 
 
 	if (!vhdlExport.getConstraintsFilename().empty())

@@ -70,7 +70,7 @@ namespace gtry {
 		Enum(const Enum<T>& rhs);
 		Enum(const Enum<T>& rhs, construct_from_t&&);
 		Enum(Enum<T>&& rhs);
-//        Enum(const EnumDefault<T> &defaultValue);
+//		Enum(const EnumDefault<T> &defaultValue);
 
 		Enum(const SignalReadPort& port, std::optional<T> resetValue = std::nullopt);
 
@@ -85,7 +85,7 @@ namespace gtry {
 
 		Enum<T>& operator=(const Enum<T>& rhs);
 		Enum<T>& operator=(Enum<T>&& rhs);
-//        Enum<T>& operator=(const EnumDefault<T> &defaultValue);
+//		Enum<T>& operator=(const EnumDefault<T> &defaultValue);
 
 		Enum<T>& operator=(T rhs);
 
@@ -217,7 +217,7 @@ namespace gtry {
 		rhs.assign(SignalReadPort{ m_node });
 		return *this;
 	}
-//        Enum<T>& operator=(const EnumDefault<T> &defaultValue);
+//		Enum<T>& operator=(const EnumDefault<T> &defaultValue);
 
 
 	template<EnumType T>

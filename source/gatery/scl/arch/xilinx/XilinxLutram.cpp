@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
 
@@ -54,88 +54,88 @@ bool XilinxLutram::apply(hlim::NodeGroup *nodeGroup) const
 
 	if (memGrp->getReadPorts().size() != 1) return false;
 	if (memGrp->getWritePorts().size() > 1) return false;
-    if (memGrp->getMemory()->getRequiredReadLatency() == 0) return false;
-    if (memGrp->getMemory()->getMinPortWidth() != memGrp->getMemory()->getMaxPortWidth()) return false;
-    if (!memtools::memoryIsSingleClock(nodeGroup)) return false;
+	if (memGrp->getMemory()->getRequiredReadLatency() == 0) return false;
+	if (memGrp->getMemory()->getMinPortWidth() != memGrp->getMemory()->getMaxPortWidth()) return false;
+	if (!memtools::memoryIsSingleClock(nodeGroup)) return false;
 
-    // At this point we are sure we can handle it (as long as register retiming doesn't fail of course).
+	// At this point we are sure we can handle it (as long as register retiming doesn't fail of course).
 
-    // Everything else needs this, so do it first. Also we want rmw logic as far outside as possible
-    // The reset could potentially be delayed for shorter resets (but with more reset logic).
-    auto &circuit = DesignScope::get()->getCircuit();
-    memGrp->convertToReadBeforeWrite(circuit);
-    memGrp->attemptRegisterRetiming(circuit);
-    memGrp->resolveWriteOrder(circuit);
-    memGrp->updateNoConflictsAttrib();
-    memGrp->buildReset(circuit);
-    memGrp->bypassSignalNodes();
-    memGrp->verify(); // This one can actually go
+	// Everything else needs this, so do it first. Also we want rmw logic as far outside as possible
+	// The reset could potentially be delayed for shorter resets (but with more reset logic).
+	auto &circuit = DesignScope::get()->getCircuit();
+	memGrp->convertToReadBeforeWrite(circuit);
+	memGrp->attemptRegisterRetiming(circuit);
+	memGrp->resolveWriteOrder(circuit);
+	memGrp->updateNoConflictsAttrib();
+	memGrp->buildReset(circuit);
+	memGrp->bypassSignalNodes();
+	memGrp->verify(); // This one can actually go
 
 
-    reccursiveBuild(nodeGroup);
+	reccursiveBuild(nodeGroup);
 
-    return true;
+	return true;
 }
 
 void XilinxLutram::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
 {
-//    DesignScope::visualize("process");
+//	DesignScope::visualize("process");
 
 
 	auto *memGrp = dynamic_cast<hlim::MemoryGroup*>(nodeGroup->getMetaInfo());
 
-    size_t width = memGrp->getMemory()->getMinPortWidth();
+	size_t width = memGrp->getMemory()->getMinPortWidth();
 
-    size_t maxDepth = memGrp->getMemory()->getMaxDepth();
-    size_t maxDepthLutram = 1ull << m_desc.addressBits;
+	size_t maxDepth = memGrp->getMemory()->getMaxDepth();
+	size_t maxDepthLutram = 1ull << m_desc.addressBits;
 
 
-    size_t numCascadesNeeded = (maxDepth + maxDepthLutram-1) / maxDepthLutram;
-    size_t depthHandledBy = std::min(maxDepth, numCascadesNeeded * maxDepthLutram);
-    size_t addrWidthLutram = utils::Log2C(depthHandledBy / numCascadesNeeded);
+	size_t numCascadesNeeded = (maxDepth + maxDepthLutram-1) / maxDepthLutram;
+	size_t depthHandledBy = std::min(maxDepth, numCascadesNeeded * maxDepthLutram);
+	size_t addrWidthLutram = utils::Log2C(depthHandledBy / numCascadesNeeded);
 
-    size_t widthSingleLutram;
-    HCL_ASSERT(addrWidthLutram <= 8);
-    switch (addrWidthLutram) {
-        case 8: widthSingleLutram = 1; break; // RAM256X1D
-        case 4: widthSingleLutram = 1; break; // RAM128X1D or half of RAM256X1D
-        default: 
+	size_t widthSingleLutram;
+	HCL_ASSERT(addrWidthLutram <= 8);
+	switch (addrWidthLutram) {
+		case 8: widthSingleLutram = 1; break; // RAM256X1D
+		case 4: widthSingleLutram = 1; break; // RAM128X1D or half of RAM256X1D
+		default: 
 			widthSingleLutram = 7; break; // RAM64M8
-    }
+	}
 
-    if (widthSingleLutram < width) {
-        memtools::splitMemoryAlongWidth(nodeGroup, widthSingleLutram);
+	if (widthSingleLutram < width) {
+		memtools::splitMemoryAlongWidth(nodeGroup, widthSingleLutram);
 
-        // Rinse and repeat
-        for (auto &c : nodeGroup->getChildren()) reccursiveBuild(c.get());
-        return;
-    }
+		// Rinse and repeat
+		for (auto &c : nodeGroup->getChildren()) reccursiveBuild(c.get());
+		return;
+	}
 
-    if (numCascadesNeeded > 1) {
-        // Todo: use hardware cascading
-        memtools::splitMemoryAlongDepthMux(nodeGroup, utils::Log2(maxDepth-1), false, false);
+	if (numCascadesNeeded > 1) {
+		// Todo: use hardware cascading
+		memtools::splitMemoryAlongDepthMux(nodeGroup, utils::Log2(maxDepth-1), false, false);
 
-        // Rinse and repeat
-        for (auto &c : nodeGroup->getChildren()) reccursiveBuild(c.get());
-        return;
-    }
+		// Rinse and repeat
+		for (auto &c : nodeGroup->getChildren()) reccursiveBuild(c.get());
+		return;
+	}
 
-    auto &rp = memGrp->getReadPorts().front();
-    for (auto reg : rp.dedicatedReadLatencyRegisters) {
-        HCL_ASSERT(!reg->hasResetValue());
-        HCL_ASSERT(!reg->hasEnable());
-    }
+	auto &rp = memGrp->getReadPorts().front();
+	for (auto reg : rp.dedicatedReadLatencyRegisters) {
+		HCL_ASSERT(!reg->hasResetValue());
+		HCL_ASSERT(!reg->hasEnable());
+	}
 
-    bool hasWritePort = !memGrp->getWritePorts().empty();
+	bool hasWritePort = !memGrp->getWritePorts().empty();
 
-    GroupScope scope(nodeGroup->getParent());
+	GroupScope scope(nodeGroup->getParent());
 
 	UInt readData;
 
-    if (widthSingleLutram == 1) {
-        auto *ram = DesignScope::createNode<RAM256X1D>();
+	if (widthSingleLutram == 1) {
+		auto *ram = DesignScope::createNode<RAM256X1D>();
 
-    	UInt rdAddr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+		UInt rdAddr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 
 		HCL_ASSERT(hasWritePort);
 		if (hasWritePort) {
@@ -158,10 +158,10 @@ void XilinxLutram::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
 
 			ram->attachClock(writeClock, (size_t)RAM64M8::CLK_WR);
 		}
-    } else {
-        auto *ram = DesignScope::createNode<RAM64M8>();
+	} else {
+		auto *ram = DesignScope::createNode<RAM64M8>();
 
-    	UInt rdAddr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+		UInt rdAddr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 
 		HCL_ASSERT(hasWritePort);
 		if (hasWritePort) {
@@ -184,18 +184,18 @@ void XilinxLutram::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
 
 			ram->attachClock(writeClock, (size_t)RAM64M8::CLK_WR);
 		}
-    }
+	}
 
-    for (size_t i = 0; i < rp.dedicatedReadLatencyRegisters.size(); i++) {
-        auto &reg = rp.dedicatedReadLatencyRegisters[i];
-        Clock clock(reg->getClocks()[0]);
-        readData = clock(readData);
+	for (size_t i = 0; i < rp.dedicatedReadLatencyRegisters.size(); i++) {
+		auto &reg = rp.dedicatedReadLatencyRegisters[i];
+		Clock clock(reg->getClocks()[0]);
+		readData = clock(readData);
 		if (i > 0)
-        	attribute(readData, {.allowFusing = false});
-    }        
+			attribute(readData, {.allowFusing = false});
+	}		
 
-    UInt rdDataHook = hookUIntAfter(rp.dataOutput);
-    rdDataHook.exportOverride(readData(0, rdDataHook.size()));	
+	UInt rdDataHook = hookUIntAfter(rp.dataOutput);
+	rdDataHook.exportOverride(readData(0, rdDataHook.size()));	
 }
 
 }

@@ -32,13 +32,13 @@ namespace gtry {
 	class BVec;
 
 	class BVecDefault : public BaseBitVectorDefault {
-        public:
-            explicit BVecDefault(const BVec& rhs);
+		public:
+			explicit BVecDefault(const BVec& rhs);
 
 			template<BitVectorIntegralLiteral Type>
 			explicit BVecDefault(Type value);
 			explicit BVecDefault(const char rhs[]);
-    };
+	};
 
 	class BVec : public SliceableBitVector<BVec, BVecDefault>
 	{

@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
 
@@ -29,12 +29,12 @@ namespace gtry::scl::arch::intel {
 
 ALTDPRAM::ALTDPRAM(size_t width, size_t depth)
 {
-    m_libraryName = "altera_mf";
+	m_libraryName = "altera_mf";
 	m_packageName = "altera_mf_components";
-    m_name = "altdpram";
+	m_name = "altdpram";
 	m_isEntity = false;
-    m_clockNames = {"", ""};
-    m_resetNames = {"", ""};
+	m_clockNames = {"", ""};
+	m_resetNames = {"", ""};
 	m_clocks.resize(CLK_COUNT);
 
 	m_width = width;
@@ -45,8 +45,8 @@ ALTDPRAM::ALTDPRAM(size_t width, size_t depth)
 
 	m_genericParameters["WIDTHAD"] = std::to_string(utils::Log2C(depth));
 
-    resizeInputs(IN_COUNT);
-    resizeOutputs(OUT_COUNT);
+	resizeInputs(IN_COUNT);
+	resizeOutputs(OUT_COUNT);
 
 	setOutputConnectionType(OUT_Q, {.interpretation = hlim::ConnectionType::BITVEC, .width=width});
 }
@@ -246,7 +246,7 @@ UInt ALTDPRAM::getOutputUInt(Outputs output)
 
 std::string ALTDPRAM::getTypeName() const
 {
-    return "ALTDPRAM";
+	return "ALTDPRAM";
 }
 
 void ALTDPRAM::assertValidity() const
@@ -255,7 +255,7 @@ void ALTDPRAM::assertValidity() const
 
 std::string ALTDPRAM::getInputName(size_t idx) const
 {
-    switch (idx) {
+	switch (idx) {
 		case IN_RDADDRESSSTALL: return "rdaddress";
 		case IN_WRADDRESSSTALL: return "wraddress";
 		case IN_WREN: return "wren";
@@ -273,7 +273,7 @@ std::string ALTDPRAM::getInputName(size_t idx) const
 
 std::string ALTDPRAM::getOutputName(size_t idx) const
 {
-    switch (idx) {
+	switch (idx) {
 		case OUT_Q: return "q";
 		default: return "";
 	}
@@ -281,11 +281,11 @@ std::string ALTDPRAM::getOutputName(size_t idx) const
 
 std::unique_ptr<hlim::BaseNode> ALTDPRAM::cloneUnconnected() const
 {
-    ALTDPRAM *ptr;
-    std::unique_ptr<BaseNode> res(ptr = new ALTDPRAM(m_width, m_depth));
-    copyBaseToClone(res.get());
+	ALTDPRAM *ptr;
+	std::unique_ptr<BaseNode> res(ptr = new ALTDPRAM(m_width, m_depth));
+	copyBaseToClone(res.get());
 
-    return res;
+	return res;
 }
 
 std::string ALTDPRAM::attemptInferOutputName(size_t outputPort) const

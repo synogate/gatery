@@ -30,13 +30,13 @@ namespace gtry {
 	class UInt;
 
 	class UIntDefault : public BaseBitVectorDefault {
-        public:
-            explicit UIntDefault(const UInt& rhs);
+		public:
+			explicit UIntDefault(const UInt& rhs);
 
 			template<BitVectorIntegralLiteral Type>
 			explicit UIntDefault(Type value);
 			explicit UIntDefault(const char rhs[]);
-    };
+	};
 
 	class UInt : public SliceableBitVector<UInt, UIntDefault>
 	{

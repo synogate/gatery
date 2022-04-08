@@ -36,9 +36,9 @@ namespace gtry
 	 * Essentially, there are two ways of using areas: Either directly:
 	 * @code
 	 *	{ // scoping bracket
-	 *    Area newArea("ip_core", true);
+	 *	Area newArea("ip_core", true);
 	 *
-	 *    // Build logic that is to be placed in the "ip_core" area
+	 *	// Build logic that is to be placed in the "ip_core" area
 	 *
 	 *	} // closing scoping bracket
 	 * @endcode
@@ -46,18 +46,18 @@ namespace gtry
 	 * @code
 	 *  Area newArea("ip_core", false);
 	 *	{ // scoping bracket
-	 *      auto scp = newArea.enter();
+	 *	  auto scp = newArea.enter();
 	 *
-	 *      // Build logic that is to be placed in the "ip_core" area
+	 *	  // Build logic that is to be placed in the "ip_core" area
 	 *
 	 *	} // closing scoping bracket
 	 *
 	 *  // ...
 	 *
 	 *	{ // scoping bracket
-	 *      auto scp = newArea.enter();
+	 *	  auto scp = newArea.enter();
 	 *
-	 *      // Build more logic that is to be placed in the "ip_core" area
+	 *	  // Build more logic that is to be placed in the "ip_core" area
 	 *
 	 *	} // closing scoping bracket
 	 * @endcode

@@ -45,8 +45,8 @@ namespace gtry
 		MemoryPortFactory(hlim::Node_Memory* memoryNode, const UInt& address, Data defaultValue) : m_memoryNode(memoryNode), m_defaultValue(defaultValue) {
 			m_wordSize = width(m_defaultValue).value;
 
-    		size_t depth = (memoryNode->getSize() + m_wordSize-1) / m_wordSize;
-    		size_t expectedAddrBits = utils::Log2C(depth);
+			size_t depth = (memoryNode->getSize() + m_wordSize-1) / m_wordSize;
+			size_t expectedAddrBits = utils::Log2C(depth);
 
 			if (address.size() < expectedAddrBits)
 				m_address = zext(address, expectedAddrBits-address.size());

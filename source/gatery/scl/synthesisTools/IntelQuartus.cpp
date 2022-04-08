@@ -243,9 +243,9 @@ void IntelQuartus::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::str
 	file.exceptions(std::fstream::failbit | std::fstream::badbit);
 	file << R"(
 # This script is intended for adding the core to an existing project
-#     1. Open the quartus tcl console (View->Utility Windows->Tcl Console) 
-#     2. If necessary, change the current working directory to project directory ("cd [get_project_directory]")
-#     3. Source this script ("source path/to/this/script.tcl"). Use a relative path to this script if you want files to be added with relative paths (recommended).
+#	 1. Open the quartus tcl console (View->Utility Windows->Tcl Console) 
+#	 2. If necessary, change the current working directory to project directory ("cd [get_project_directory]")
+#	 3. Source this script ("source path/to/this/script.tcl"). Use a relative path to this script if you want files to be added with relative paths (recommended).
 
 
 package require ::quartus::project
@@ -272,11 +272,11 @@ if {$currentDirectory != $projectDirectory} {
 
 	auto&& sdcFile = vhdlExport.getConstraintsFilename();
 	if (!sdcFile.empty())
-		file << "    set_global_assignment -name SDC_FILE $directory/" << sdcFile << '\n';
+		file << "	set_global_assignment -name SDC_FILE $directory/" << sdcFile << '\n';
 
 	for (std::filesystem::path& vhdl_file : sourceFiles(vhdlExport, true, false))
 	{
-		file << "    set_global_assignment -name VHDL_FILE -hdl_version VHDL_2008 $directory/" << vhdl_file.string();
+		file << "	set_global_assignment -name VHDL_FILE -hdl_version VHDL_2008 $directory/" << vhdl_file.string();
 		if (!vhdlExport.getName().empty())
 			file << " -library " << vhdlExport.getName();
 		file << '\n';

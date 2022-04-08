@@ -352,9 +352,9 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_arith, BoostUnitTestSimulationFixture)
 		}
 	});
 
-//    sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "riscv_arith.vcd" };
-//    vcd.addAllPins();
-//    vcd.addAllNamedSignals();
+//	sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "riscv_arith.vcd" };
+//	vcd.addAllPins();
+//	vcd.addAllNamedSignals();
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(clock.getClk(), 128);

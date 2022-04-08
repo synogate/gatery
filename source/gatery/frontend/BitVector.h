@@ -67,17 +67,17 @@ namespace gtry {
 	};
 
 
-    class BaseBitVectorDefault {
-        public:
-            BaseBitVectorDefault(const BaseBitVector& rhs);
+	class BaseBitVectorDefault {
+		public:
+			BaseBitVectorDefault(const BaseBitVector& rhs);
 			BaseBitVectorDefault(std::int64_t value);
 			BaseBitVectorDefault(std::uint64_t value);
 			BaseBitVectorDefault(std::string_view);
 
-            hlim::NodePort getNodePort() const { return m_nodePort; }
-        protected:
-            hlim::RefCtdNodePort m_nodePort;
-    };
+			hlim::NodePort getNodePort() const { return m_nodePort; }
+		protected:
+			hlim::RefCtdNodePort m_nodePort;
+	};
 
 	class BaseBitVector : public ElementarySignal
 	{
@@ -145,8 +145,8 @@ namespace gtry {
 		const_reverse_iterator crend() const { return aliasVec().crend(); }
 
 
-        bool valid() const final { return m_node != nullptr; }
-        hlim::Node_Signal* node() { return m_node; }
+		bool valid() const final { return m_node != nullptr; }
+		hlim::Node_Signal* node() { return m_node; }
 
 		// these methods are undefined for invalid signals (uninitialized)
 		BitWidth width() const final { return BitWidth{ m_range.width }; }
@@ -242,8 +242,8 @@ namespace gtry {
 		const FinalType& operator() (const Selection& selection) const { return aliasRange(Range(selection, range())); }
 	protected:
 		inline FinalType& aliasRange(const Range& range) const {
-        	auto [it, exists] = m_rangeAlias.try_emplace(range, node(), range, expansionPolicy(), m_initialScopeId);
-        	return it->second;
+			auto [it, exists] = m_rangeAlias.try_emplace(range, node(), range, expansionPolicy(), m_initialScopeId);
+			return it->second;
 		}
 		mutable std::map<Range, FinalType> m_rangeAlias;
 	};

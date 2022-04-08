@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
 
@@ -23,41 +23,41 @@
 #include <functional>
 
 namespace gtry::hlim {
-    class Circuit;
+	class Circuit;
 }
 
 namespace gtry::sim {
 
-    class Simulator;
-    class SimulationProcess;
+	class Simulator;
+	class SimulationProcess;
 
 /**
  * @todo write docs
  */
-    class UnitTestSimulationFixture : public SimulatorCallbacks
-    {
-    public:
-        UnitTestSimulationFixture();
-        ~UnitTestSimulationFixture();
+	class UnitTestSimulationFixture : public SimulatorCallbacks
+	{
+	public:
+		UnitTestSimulationFixture();
+		~UnitTestSimulationFixture();
 
-        void addSimulationProcess(std::function<SimulationProcess()> simProc);
+		void addSimulationProcess(std::function<SimulationProcess()> simProc);
 
-        void eval(hlim::Circuit& circuit);
-        void runTicks(hlim::Circuit& circuit, const hlim::Clock* clock, unsigned numTicks);
+		void eval(hlim::Circuit& circuit);
+		void runTicks(hlim::Circuit& circuit, const hlim::Clock* clock, unsigned numTicks);
 
-        virtual void onDebugMessage(const hlim::BaseNode* src, std::string msg) override;
-        virtual void onWarning(const hlim::BaseNode* src, std::string msg) override;
-        virtual void onAssert(const hlim::BaseNode* src, std::string msg) override;
+		virtual void onDebugMessage(const hlim::BaseNode* src, std::string msg) override;
+		virtual void onWarning(const hlim::BaseNode* src, std::string msg) override;
+		virtual void onAssert(const hlim::BaseNode* src, std::string msg) override;
 
-        Simulator& getSimulator() { return *m_simulator; }
-    protected:
-        std::unique_ptr<Simulator> m_simulator;
+		Simulator& getSimulator() { return *m_simulator; }
+	protected:
+		std::unique_ptr<Simulator> m_simulator;
 
-        const hlim::Clock *m_runLimClock = nullptr;
-        unsigned m_runLimTicks = 0;
+		const hlim::Clock *m_runLimClock = nullptr;
+		unsigned m_runLimTicks = 0;
 
-        std::vector<std::string> m_warnings;
-        std::vector<std::string> m_errors;
+		std::vector<std::string> m_warnings;
+		std::vector<std::string> m_errors;
 };
 
 
