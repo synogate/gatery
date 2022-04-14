@@ -1,5 +1,6 @@
 ﻿bin
 obj
+doc/gen
 
 *.vcd
 *.dot
@@ -16,3 +17,4 @@ obj
 Makefile
 
 /tests/export
+/scripts/**
