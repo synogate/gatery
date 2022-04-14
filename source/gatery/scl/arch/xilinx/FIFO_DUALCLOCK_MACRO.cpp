@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
 
@@ -26,19 +26,19 @@ namespace gtry::scl::arch::xilinx {
 
 FIFO_DUALCLOCK_MACRO::FIFO_DUALCLOCK_MACRO(unsigned width, FIFOSize fifoSize)
 {
-    m_libraryName = "UNIMACRO";
+	m_libraryName = "UNIMACRO";
 	m_packageName = "VCOMPONENTS";
-    m_name = "FIFO_DUALCLOCK_MACRO";
+	m_name = "FIFO_DUALCLOCK_MACRO";
 	m_isEntity = false;
-    m_clockNames = {"RDCLK", "WRCLK"};
-    m_resetNames = {"RST", ""}; // TODO: Just one reset, async, for both
+	m_clockNames = {"RDCLK", "WRCLK"};
+	m_resetNames = {"RST", ""}; // TODO: Just one reset, async, for both
 
 	m_width = width;
 	m_fifoSize = fifoSize;
 	unsigned counterWidth;
 	switch (fifoSize) {
 		case SIZE_18Kb:
-    		m_genericParameters["FIFO_SIZE"] = "\"18Kb\"";
+			m_genericParameters["FIFO_SIZE"] = "\"18Kb\"";
 			if (width < 5)
 				counterWidth = 12; else
 			if (width < 10)
@@ -50,7 +50,7 @@ FIFO_DUALCLOCK_MACRO::FIFO_DUALCLOCK_MACRO(unsigned width, FIFOSize fifoSize)
 				HCL_ASSERT_HINT(false, "The maximal data width of FIFO_DUALCLOCK_MACRO for 18Kb is 36 bits!");
 		break;
 		case SIZE_36Kb:
-    		m_genericParameters["FIFO_SIZE"] = "\"36Kb\"";
+			m_genericParameters["FIFO_SIZE"] = "\"36Kb\"";
 			if (width < 5)
 				counterWidth = 13; else
 			if (width < 10)
@@ -66,8 +66,8 @@ FIFO_DUALCLOCK_MACRO::FIFO_DUALCLOCK_MACRO(unsigned width, FIFOSize fifoSize)
 	}
 	m_genericParameters["DATA_WIDTH"] = std::to_string(width);
 
-    resizeInputs(IN_COUNT);
-    resizeOutputs(OUT_COUNT);
+	resizeInputs(IN_COUNT);
+	resizeOutputs(OUT_COUNT);
 
 	// default to bool, then override UInts
 	for (auto i : utils::Range(OUT_COUNT))
@@ -109,8 +109,8 @@ void FIFO_DUALCLOCK_MACRO::connectInput(Inputs input, const Bit &bit)
 {
 	switch (input) {
 		case IN_RDEN:
-        case IN_WREN:
-			NodeIO::connectInput(input, bit.getReadPort());
+		case IN_WREN:
+			NodeIO::connectInput(input, bit.readPort());
 		break;
 		default:
 			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to UInt input of FIFO_DUALCLOCK_MACRO!");
@@ -122,7 +122,7 @@ void FIFO_DUALCLOCK_MACRO::connectInput(Inputs input, const UInt &UInt)
 	switch (input) {
 		case IN_DI:
 			HCL_DESIGNCHECK_HINT(UInt.size() == m_width, "Data input UInt to FIFO_DUALCLOCK_MACRO has different width than previously specified!");
-			NodeIO::connectInput(input, UInt.getReadPort());
+			NodeIO::connectInput(input, UInt.readPort());
 		break;
 		default:
 			HCL_DESIGNCHECK_HINT(false, "Trying to connect UInt to bit input of FIFO_DUALCLOCK_MACRO!");
@@ -131,7 +131,7 @@ void FIFO_DUALCLOCK_MACRO::connectInput(Inputs input, const UInt &UInt)
 
 std::string FIFO_DUALCLOCK_MACRO::getTypeName() const
 {
-    return "FIFO_DUALCLOCK_MACRO";
+	return "FIFO_DUALCLOCK_MACRO";
 }
 
 void FIFO_DUALCLOCK_MACRO::assertValidity() const
@@ -140,7 +140,7 @@ void FIFO_DUALCLOCK_MACRO::assertValidity() const
 
 std::string FIFO_DUALCLOCK_MACRO::getInputName(size_t idx) const
 {
-    switch (idx) {
+	switch (idx) {
 		case IN_RDEN: return "RDEN";
 		case IN_WREN: return "WREN";
 		case IN_DI: return "DI";
@@ -151,7 +151,7 @@ std::string FIFO_DUALCLOCK_MACRO::getInputName(size_t idx) const
 
 std::string FIFO_DUALCLOCK_MACRO::getOutputName(size_t idx) const
 {
-    switch (idx) {
+	switch (idx) {
 		case OUT_ALMOSTEMPTY: return "ALMOSTEMPTY";
 		case OUT_ALMOSTFULL: return "ALMOSTFULL";
 		case OUT_EMPTY: return "EMPTY";
@@ -168,23 +168,23 @@ std::string FIFO_DUALCLOCK_MACRO::getOutputName(size_t idx) const
 
 std::unique_ptr<hlim::BaseNode> FIFO_DUALCLOCK_MACRO::cloneUnconnected() const
 {
-    FIFO_DUALCLOCK_MACRO *ptr;
-    std::unique_ptr<BaseNode> res(ptr = new FIFO_DUALCLOCK_MACRO(m_width, m_fifoSize));
-    copyBaseToClone(res.get());
+	FIFO_DUALCLOCK_MACRO *ptr;
+	std::unique_ptr<BaseNode> res(ptr = new FIFO_DUALCLOCK_MACRO(m_width, m_fifoSize));
+	copyBaseToClone(res.get());
 
-    ptr->m_width = m_width;
-    ptr->m_fifoSize = m_fifoSize;
+	ptr->m_width = m_width;
+	ptr->m_fifoSize = m_fifoSize;
 
-    return res;
+	return res;
 }
 
 std::string FIFO_DUALCLOCK_MACRO::attemptInferOutputName(size_t outputPort) const
 {
-    auto driver = getDriver(IN_DI);
-    
+	auto driver = getDriver(IN_DI);
+	
 	if (driver.node == nullptr)
 		return "";
-    
+	
 	if (driver.node->getName().empty())
 		return "";
 

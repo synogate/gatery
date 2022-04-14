@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
 
@@ -33,86 +33,86 @@
 
 namespace gtry {
 
-    class ConditionalScope;
-    class SignalPort;
+	class ConditionalScope;
+	class SignalPort;
 
-    enum class Expansion
-    {
-        none,
-        zero,
-        one,
-        sign
-    };
+	enum class Expansion
+	{
+		none,
+		zero,
+		one,
+		sign
+	};
 
-    struct SignalReadPort : hlim::NodePort
-    {
-        SignalReadPort() = default;
-        SignalReadPort(const SignalReadPort&) = default;
-        explicit SignalReadPort(hlim::BaseNode* node, Expansion policy = Expansion::none) : hlim::NodePort{.node = node, .port = 0}, expansionPolicy(policy) {}
-        explicit SignalReadPort(hlim::NodePort np, Expansion policy = Expansion::none) : hlim::NodePort(np), expansionPolicy(policy) {}
+	struct SignalReadPort : hlim::NodePort
+	{
+		SignalReadPort() = default;
+		SignalReadPort(const SignalReadPort&) = default;
+		explicit SignalReadPort(hlim::BaseNode* node, Expansion policy = Expansion::none) : hlim::NodePort{.node = node, .port = 0}, expansionPolicy(policy) {}
+		explicit SignalReadPort(hlim::NodePort np, Expansion policy = Expansion::none) : hlim::NodePort(np), expansionPolicy(policy) {}
 
-        Expansion expansionPolicy = Expansion::none;
+		Expansion expansionPolicy = Expansion::none;
 
-        SignalReadPort expand(size_t width, hlim::ConnectionType::Interpretation resultType) const;
+		SignalReadPort expand(size_t width, hlim::ConnectionType::Interpretation resultType) const;
 
-        BitWidth width() const { return node->getOutputConnectionType(port).width; }
-    };
+		BitWidth width() const { return node->getOutputConnectionType(port).width; }
+	};
 
-    inline const hlim::ConnectionType& connType(const SignalReadPort& port) { return port.node->getOutputConnectionType(port.port); }
+	inline const hlim::ConnectionType& connType(const SignalReadPort& port) { return port.node->getOutputConnectionType(port.port); }
 
-    class ElementarySignal {
-    public:
-        using isSignal = void;
-        using isElementarySignal = void;
-        
-        ElementarySignal();
-        ElementarySignal(const ElementarySignal&) noexcept = delete;
-        virtual ~ElementarySignal();
+	class ElementarySignal {
+	public:
+		using isSignal = void;
+		using isElementarySignal = void;
+		
+		ElementarySignal();
+		ElementarySignal(const ElementarySignal&) noexcept = delete;
+		virtual ~ElementarySignal();
 
-        virtual bool valid() const = 0;
+		virtual bool valid() const = 0;
 
-        // these methods are undefined for invalid signals (uninitialized)
-        virtual BitWidth getWidth() const = 0;
-        virtual hlim::ConnectionType getConnType() const = 0;
-        virtual SignalReadPort getReadPort() const = 0;
-        virtual SignalReadPort getOutPort() const = 0;
-        virtual std::string_view getName() const = 0;
-        virtual void setName(std::string name) = 0;
-
-
-        void setAttrib(hlim::SignalAttributes attributes);
-
-    protected:
-        size_t m_initialScopeId = 0;
-
-    };
-
-    struct NormalizedWidthOperands
-    {
-        template<typename SigA, typename SigB>
-        NormalizedWidthOperands(const SigA&, const SigB&);
-
-        SignalReadPort lhs, rhs;
-    };
+		// these methods are undefined for invalid signals (uninitialized)
+		virtual BitWidth width() const = 0;
+		virtual hlim::ConnectionType connType() const = 0;
+		virtual SignalReadPort readPort() const = 0;
+		virtual SignalReadPort outPort() const = 0;
+		virtual std::string_view getName() const = 0;
+		virtual void setName(std::string name) = 0;
 
 
-    template<typename SigA, typename SigB>
-    inline NormalizedWidthOperands::NormalizedWidthOperands(const SigA& l, const SigB& r)
-    {
-        lhs = l.getReadPort();
-        rhs = r.getReadPort();
+		void attribute(hlim::SignalAttributes attributes);
 
-        const size_t maxWidth = std::max(lhs.width(), rhs.width()).bits();
+	protected:
+		size_t m_initialScopeId = 0;
 
-        hlim::ConnectionType::Interpretation type = hlim::ConnectionType::BITVEC;
-        if(maxWidth == 1 &&
-            (l.getConnType().interpretation != r.getConnType().interpretation ||
-            l.getConnType().interpretation == hlim::ConnectionType::BOOL))
-            type = hlim::ConnectionType::BOOL;
+	};
 
-        lhs = lhs.expand(maxWidth, type);
-        rhs = rhs.expand(maxWidth, type);
-    }
+	struct NormalizedWidthOperands
+	{
+		template<typename SigA, typename SigB>
+		NormalizedWidthOperands(const SigA&, const SigB&);
+
+		SignalReadPort lhs, rhs;
+	};
+
+
+	template<typename SigA, typename SigB>
+	inline NormalizedWidthOperands::NormalizedWidthOperands(const SigA& l, const SigB& r)
+	{
+		lhs = l.readPort();
+		rhs = r.readPort();
+
+		const size_t maxWidth = std::max(lhs.width(), rhs.width()).bits();
+
+		hlim::ConnectionType::Interpretation type = hlim::ConnectionType::BITVEC;
+		if(maxWidth == 1 &&
+			(l.connType().interpretation != r.connType().interpretation ||
+			l.connType().interpretation == hlim::ConnectionType::BOOL))
+			type = hlim::ConnectionType::BOOL;
+
+		lhs = lhs.expand(maxWidth, type);
+		rhs = rhs.expand(maxWidth, type);
+	}
 
 
 }

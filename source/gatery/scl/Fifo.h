@@ -39,7 +39,7 @@ namespace gtry::scl
 		Fifo(size_t minDepth, TData ref) : Fifo() { setup(minDepth, std::move(ref)); }
 		void setup(size_t minDepth, TData ref);
 
-		size_t getDepth();
+		size_t depth();
 
 		// NOTE: always push before pop for correct conflict resolution
 		// TODO: fix above note by adding explicit write before read conflict resulution to bram
@@ -70,7 +70,7 @@ namespace gtry::scl
 	};
 
 	template<typename TData>
-	inline size_t Fifo<TData>::getDepth() {
+	inline size_t Fifo<TData>::depth() {
 		auto *meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
 		FifoCapabilities::Choice &fifoChoice = meta->fifoChoice;
 		return fifoChoice.readDepth;
@@ -147,7 +147,7 @@ namespace gtry::scl
 
 		sim_assert(!valid | !m_full) << "push into full fifo";
 
-		UInt put = m_put.getWidth();
+		UInt put = m_put.width();
 		put = reg(put, 0);
 		HCL_NAMED(put);
 
@@ -173,7 +173,7 @@ namespace gtry::scl
 
 		sim_assert(!ready | !m_empty) << "pop from empty fifo";
 
-		UInt get = m_get.getWidth();
+		UInt get = m_get.width();
 		get = reg(get, 0);
 		HCL_NAMED(get);
 
@@ -186,7 +186,7 @@ namespace gtry::scl
 		HCL_NAMED(m_get);
 
 		setName(packedData, "out_data_packed");
-		constructFrom(*m_defaultValue, data);
+		*m_defaultValue = constructFrom(data);
 		unpack(packedData, data);
 		setName(data, "out_data");
 	}

@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "scl/pch.h"
 #include <boost/test/unit_test.hpp>
@@ -230,7 +230,7 @@ BOOST_FIXTURE_TEST_CASE(Md5, gtry::BoostUnitTestSimulationFixture)
 			switch (idx / 16) {
 			case 0: F = (b & c) | (~b & d); break;
 			case 1: F = (d & b) | (~d & c); break;
-			case 2: F = b ^ c ^ d;          break;
+			case 2: F = b ^ c ^ d;		  break;
 			default:F = c ^ (b | ~d);
 			}
 
@@ -288,7 +288,7 @@ BOOST_AUTO_TEST_CASE(SipHash64TestVisual)
 	DesignScope design;
 
 
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+	Clock clock({ .absoluteFrequency = 10'000 });
 	ClockScope clockScope(clock);
 
 	scl::SipHash sip(2, 4);
@@ -366,7 +366,7 @@ BOOST_AUTO_TEST_CASE(SipHash64TestVisual)
 
 BOOST_FIXTURE_TEST_CASE(SipHash64Test, gtry::BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+	Clock clock({ .absoluteFrequency = 10'000 });
 	ClockScope clockScope(clock);
 
 	scl::SipHash sip(2, 4);
@@ -436,7 +436,7 @@ BOOST_FIXTURE_TEST_CASE(SipHash64Test, gtry::BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, gtry::BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+	Clock clock({ .absoluteFrequency = 10'000 });
 	ClockScope clockScope(clock);
 
 	scl::SipHash sip;
@@ -457,7 +457,7 @@ BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, gtry::BoostUnitTestSimulationFixture
 
 BOOST_FIXTURE_TEST_CASE(SipHash64HelperTest, gtry::BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+	Clock clock({ .absoluteFrequency = 10'000 });
 	ClockScope clockScope(clock);
 
 	auto [hash, latency] = scl::sipHash("x0100", "x0F0E0D0C0B0A09080706050403020100", false);
@@ -469,7 +469,7 @@ BOOST_FIXTURE_TEST_CASE(SipHash64HelperTest, gtry::BoostUnitTestSimulationFixtur
 
 BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, gtry::BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clockScope(clock);
 
 	scl::TabulationHashing gen{ 16_b };

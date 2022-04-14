@@ -32,13 +32,13 @@ namespace gtry {
 	class BVec;
 
 	class BVecDefault : public BaseBitVectorDefault {
-        public:
-            explicit BVecDefault(const BVec& rhs);
+		public:
+			explicit BVecDefault(const BVec& rhs);
 
 			template<BitVectorIntegralLiteral Type>
 			explicit BVecDefault(Type value);
 			explicit BVecDefault(const char rhs[]);
-    };
+	};
 
 	class BVec : public SliceableBitVector<BVec, BVecDefault>
 	{
@@ -82,6 +82,8 @@ namespace gtry {
 	template<BitVectorIntegralLiteral Type>
 	BVecDefault::BVecDefault(Type value) : BaseBitVectorDefault((std::uint64_t)value) { }
 	inline BVecDefault::BVecDefault(const char rhs[]) : BaseBitVectorDefault(std::string_view(rhs)) { }
+
+	inline BVec constructFrom(const BVec& value) { return BVec(value.width()); }
 
 /**@}*/
 

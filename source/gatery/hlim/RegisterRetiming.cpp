@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
 
@@ -78,14 +78,14 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 
 
 #ifdef DEBUG_OUTPUT
-    auto writeSubnet = [&]{
+	auto writeSubnet = [&]{
 		Subnet subnet = areaToBeRetimed;
 		subnet.dilate(true, true);
 
-        DotExport exp("retiming_area.dot");
-        exp(circuit, subnet.asConst());
-        exp.runGraphViz("retiming_area.svg");
-    };
+		DotExport exp("retiming_area.dot");
+		exp(circuit, subnet.asConst());
+		exp.runGraphViz("retiming_area.svg");
+	};
 #endif
 
 	while (!openList.empty()) {
@@ -103,7 +103,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 			if (!failureIsError) return false;
 
 #ifdef DEBUG_OUTPUT
-    writeSubnet();
+	writeSubnet();
 #endif
 
 			std::stringstream error;
@@ -128,7 +128,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 			if (!failureIsError) return false;
 
 #ifdef DEBUG_OUTPUT
-    writeSubnet();
+	writeSubnet();
 #endif
 
 			std::stringstream error;
@@ -155,7 +155,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 						if (!failureIsError) return false;
 
 #ifdef DEBUG_OUTPUT
-    writeSubnet();
+	writeSubnet();
 #endif
 
 						std::stringstream error;
@@ -180,7 +180,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 			if (!failureIsError) return false;
 
 #ifdef DEBUG_OUTPUT
-    writeSubnet();
+	writeSubnet();
 #endif
 
 			std::stringstream error;
@@ -326,10 +326,10 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 
 	// Run a simulation to determine the reset values of the registers that will be placed there
 	/// @todo Clone and optimize to prevent issues with loops
-    sim::SimulatorCallbacks ignoreCallbacks;
-    sim::ReferenceSimulator simulator;
-    simulator.compileStaticEvaluation(circuit, {outputsLeavingRetimingArea});
-    simulator.powerOn();
+	sim::SimulatorCallbacks ignoreCallbacks;
+	sim::ReferenceSimulator simulator;
+	simulator.compileStaticEvaluation(circuit, {outputsLeavingRetimingArea});
+	simulator.powerOn();
 
 	auto arr = std::array{output};
 	auto combinatoricallyDrivenArea = Subnet::allDrivenCombinatoricallyByOutputs(arr);
@@ -425,9 +425,9 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
 			}
 /*
 		{
-            DotExport exp("signalDelays.dot");
-            exp(circuit, (hlim::ConstSubnet &)subnet, delays);
-            exp.runGraphViz("signalDelays.svg");
+			DotExport exp("signalDelays.dot");
+			exp(circuit, (hlim::ConstSubnet &)subnet, delays);
+			exp.runGraphViz("signalDelays.svg");
 
 
 			hlim::ConstSubnet criticalPathSubnet;
@@ -447,9 +447,9 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
 				}
 			}
 
-            DotExport exp2("criticalPath.dot");
-            exp2(circuit, criticalPathSubnet, delays);
-            exp2.runGraphViz("criticalPath.svg");
+			DotExport exp2("criticalPath.dot");
+			exp2(circuit, criticalPathSubnet, delays);
+			exp2.runGraphViz("criticalPath.svg");
 		}
 */
 		// Split in half
@@ -526,11 +526,11 @@ bool determineAreaToBeRetimedBackward(Circuit &circuit, const Subnet &area, Node
 
 
 #ifdef DEBUG_OUTPUT
-    auto writeSubnet = [&]{
+	auto writeSubnet = [&]{
 		{
-        	DotExport exp("areaToBeRetimed.dot");
-        	exp(circuit, areaToBeRetimed.asConst());
-        	exp.runGraphViz("areaToBeRetimed.svg");	
+			DotExport exp("areaToBeRetimed.dot");
+			exp(circuit, areaToBeRetimed.asConst());
+			exp.runGraphViz("areaToBeRetimed.svg");	
 		}
 
 		Subnet subnet = areaToBeRetimed;
@@ -539,10 +539,10 @@ bool determineAreaToBeRetimedBackward(Circuit &circuit, const Subnet &area, Node
 		subnet.dilate(false, true);
 		subnet.dilate(true, true);
 
-        DotExport exp("retiming_area.dot");
-        exp(circuit, subnet.asConst());
-        exp.runGraphViz("retiming_area.svg");
-    };
+		DotExport exp("retiming_area.dot");
+		exp(circuit, subnet.asConst());
+		exp.runGraphViz("retiming_area.svg");
+	};
 #endif
 
 	Node_Register *enableGivingRegister = nullptr;
@@ -563,7 +563,7 @@ bool determineAreaToBeRetimedBackward(Circuit &circuit, const Subnet &area, Node
 			if (!failureIsError) return false;
 
 #ifdef DEBUG_OUTPUT
-    writeSubnet();
+	writeSubnet();
 #endif
 
 			std::stringstream error;
@@ -585,7 +585,7 @@ bool determineAreaToBeRetimedBackward(Circuit &circuit, const Subnet &area, Node
 			if (!failureIsError) return false;
 
 #ifdef DEBUG_OUTPUT
-    writeSubnet();
+	writeSubnet();
 #endif
 
 			std::stringstream error;
@@ -612,7 +612,7 @@ bool determineAreaToBeRetimedBackward(Circuit &circuit, const Subnet &area, Node
 						if (!failureIsError) return false;
 
 #ifdef DEBUG_OUTPUT
-    writeSubnet();
+	writeSubnet();
 #endif
 
 						std::stringstream error;
@@ -637,7 +637,7 @@ bool determineAreaToBeRetimedBackward(Circuit &circuit, const Subnet &area, Node
 			if (!failureIsError) return false;
 
 #ifdef DEBUG_OUTPUT
-    writeSubnet();
+	writeSubnet();
 #endif
 
 			std::stringstream error;
@@ -669,8 +669,8 @@ writeSubnet();
 					<< "Node from:\n" << output.node->getStackTrace() << "\n";
 
 				error 
-					<< "The fanning-out signals are driving a non-data port of a register.\n    Register: " << node->getName() << " (" << node->getTypeName() << ", id " << node->getId() << ").\n"
-					<< "    From:\n" << node->getStackTrace() << "\n";
+					<< "The fanning-out signals are driving a non-data port of a register.\n	Register: " << node->getName() << " (" << node->getTypeName() << ", id " << node->getId() << ").\n"
+					<< "	From:\n" << node->getStackTrace() << "\n";
 
 				HCL_ASSERT_HINT(false, error.str());
 			}
@@ -682,7 +682,7 @@ writeSubnet();
 					if (!failureIsError) return false;
 
 #ifdef DEBUG_OUTPUT
-    writeSubnet();
+	writeSubnet();
 #endif
 					std::stringstream error;
 
@@ -691,10 +691,10 @@ writeSubnet();
 						<< "Node from:\n" << output.node->getStackTrace() << "\n";
 
 					error 
-						<< "The fanning-out signals are driving register with different enables.\n    Register 1: " << node->getName() << " (" << node->getTypeName() << ", id " << enableGivingRegister->getId() << ").\n"
-						<< "    From:\n" << node->getStackTrace() << "\n"
-						<< "    Register 2: " << enableGivingRegister->getName() << " (" << enableGivingRegister->getTypeName() << ", id " << enableGivingRegister->getId() << ").\n"
-						<< "    From:\n" << enableGivingRegister->getStackTrace() << "\n";
+						<< "The fanning-out signals are driving register with different enables.\n	Register 1: " << node->getName() << " (" << node->getTypeName() << ", id " << enableGivingRegister->getId() << ").\n"
+						<< "	From:\n" << node->getStackTrace() << "\n"
+						<< "	Register 2: " << enableGivingRegister->getName() << " (" << enableGivingRegister->getTypeName() << ", id " << enableGivingRegister->getId() << ").\n"
+						<< "	From:\n" << enableGivingRegister->getStackTrace() << "\n";
 
 					HCL_ASSERT_HINT(false, error.str());
 				}
@@ -771,8 +771,8 @@ writeSubnet();
 
 				error 
 					<< "The fanning-out signals are driving register with enable signals that are driven from within the area that is to be retimed.\n"
-					<< "    Register: " << enableGivingRegister->getName() << " (" << enableGivingRegister->getTypeName() << ", id " << enableGivingRegister->getId() << ").\n"
-					<< "    From:\n" << enableGivingRegister->getStackTrace() << "\n";
+					<< "	Register: " << enableGivingRegister->getName() << " (" << enableGivingRegister->getTypeName() << ", id " << enableGivingRegister->getId() << ").\n"
+					<< "	From:\n" << enableGivingRegister->getStackTrace() << "\n";
 
 				HCL_ASSERT_HINT(false, error.str());
 			}
@@ -783,7 +783,7 @@ writeSubnet();
 }
 
 bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_MemPort*> &retimeableWritePorts,
-                        Subnet &retimedArea, NodePort output, bool ignoreRefs, bool failureIsError, Subnet *newNodes)
+						Subnet &retimedArea, NodePort output, bool ignoreRefs, bool failureIsError, Subnet *newNodes)
 {
 
 	// In case of multiple nodes being driven, pop in a single signal node so that this signal node can be part of the retiming area and do the broadcast
@@ -848,10 +848,10 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 
 	// Run a simulation to determine the reset values of the registers that will be removed to check the validity of removing them
 	/// @todo Clone and optimize to prevent issues with loops
-    sim::SimulatorCallbacks ignoreCallbacks;
-    sim::ReferenceSimulator simulator;
-    simulator.compileProgram(circuit, {outputsLeavingRetimingArea}, true);
-    simulator.powerOn();
+	sim::SimulatorCallbacks ignoreCallbacks;
+	sim::ReferenceSimulator simulator;
+	simulator.compileProgram(circuit, {outputsLeavingRetimingArea}, true);
+	simulator.powerOn();
 
 	for (auto reg : registersToBeRemoved) {
 
@@ -1216,10 +1216,10 @@ void ReadModifyWriteHazardLogicBuilder::determineResetValues(std::map<NodePort, 
 
 	// Run a simulation to determine the reset values of the registers that will be placed there
 	/// @todo Clone and optimize to prevent issues with loops
-    sim::SimulatorCallbacks ignoreCallbacks;
-    sim::ReferenceSimulator simulator;
-    simulator.compileStaticEvaluation(m_circuit, requiredNodePorts);
-    simulator.powerOn();
+	sim::SimulatorCallbacks ignoreCallbacks;
+	sim::ReferenceSimulator simulator;
+	simulator.compileStaticEvaluation(m_circuit, requiredNodePorts);
+	simulator.powerOn();
 
 	for (auto &p : resetValues)
 		if (p.first.node != nullptr)

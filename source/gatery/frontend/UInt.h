@@ -30,13 +30,13 @@ namespace gtry {
 	class UInt;
 
 	class UIntDefault : public BaseBitVectorDefault {
-        public:
-            explicit UIntDefault(const UInt& rhs);
+		public:
+			explicit UIntDefault(const UInt& rhs);
 
 			template<BitVectorIntegralLiteral Type>
 			explicit UIntDefault(Type value);
 			explicit UIntDefault(const char rhs[]);
-    };
+	};
 
 	class UInt : public SliceableBitVector<UInt, UIntDefault>
 	{
@@ -89,6 +89,7 @@ namespace gtry {
 	UIntDefault::UIntDefault(Type value) : BaseBitVectorDefault((std::uint64_t)value) { }
 	inline UIntDefault::UIntDefault(const char rhs[]) : BaseBitVectorDefault(std::string_view(rhs)) { }
 
+	inline UInt constructFrom(const UInt& value) { return UInt(value.width()); }
 
 /**@}*/
 

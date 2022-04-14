@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
 
@@ -28,20 +28,20 @@ namespace gtry::scl::arch::xilinx {
 
 RAMBxE2::RAMBxE2(Type type) : m_type(type)
 {
-    m_libraryName = "UNISIM";
+	m_libraryName = "UNISIM";
 	m_packageName = "VCOMPONENTS";
 	switch (m_type) {
-    	case RAMB18E2: m_name = "RAMB18E2"; break;
-    	case RAMB36E2: m_name = "RAMB36E2"; break;
+		case RAMB18E2: m_name = "RAMB18E2"; break;
+		case RAMB36E2: m_name = "RAMB36E2"; break;
 	}
 	m_isEntity = false;
-    m_clockNames = {"CLKARDCLK", "CLKBWRCLK"};
-    m_resetNames = {"", ""};
+	m_clockNames = {"CLKARDCLK", "CLKBWRCLK"};
+	m_resetNames = {"", ""};
 	m_clocks.resize(CLK_COUNT);
 
 	
-    resizeInputs(IN_COUNT);
-    resizeOutputs(OUT_COUNT);
+	resizeInputs(IN_COUNT);
+	resizeOutputs(OUT_COUNT);
 
 	size_t mult = 1;
 	if (m_type == RAMB36E2) {
@@ -241,28 +241,28 @@ RAMBxE2 &RAMBxE2::setupClockDomains(ClockDomains clkDom)
 void RAMBxE2::connectInput(Inputs input, const Bit &bit)
 {
 	switch (input) {
-        case IN_ADDREN_A:
-        case IN_ADDREN_B:
-        case IN_CAS_DIMUX_A:
-        case IN_CAS_DIMUX_B:
-        case IN_CAS_DOMUX_A:
-        case IN_CAS_DOMUX_B:
-        case IN_CAS_DOMUXEN_A:
-        case IN_CAS_DOMUXEN_B:
+		case IN_ADDREN_A:
+		case IN_ADDREN_B:
+		case IN_CAS_DIMUX_A:
+		case IN_CAS_DIMUX_B:
+		case IN_CAS_DOMUX_A:
+		case IN_CAS_DOMUX_B:
+		case IN_CAS_DOMUXEN_A:
+		case IN_CAS_DOMUXEN_B:
 		case IN_CAS_OREG_IMUX_A:
 		case IN_CAS_OREG_IMUX_B:
 		case IN_CAS_OREG_IMUXEN_A:
 		case IN_CAS_OREG_IMUXEN_B:
-        case IN_EN_A_RD_EN:
-        case IN_EN_B_WR_EN:
-        case IN_REG_CE_A_REG_CE:
-        case IN_REG_CE_B:
+		case IN_EN_A_RD_EN:
+		case IN_EN_B_WR_EN:
+		case IN_REG_CE_A_REG_CE:
+		case IN_REG_CE_B:
 		case IN_RST_RAM_A_RST_RAM:
 		case IN_RST_RAM_B:
 		case IN_RST_REG_A_RST_REG:
 		case IN_RST_REG_B:
-        case IN_SLEEP:
-			NodeIO::connectInput(input, bit.getReadPort());
+		case IN_SLEEP:
+			NodeIO::connectInput(input, bit.readPort());
 		break;
 
 		case IN_CAS_IND_BITERR:
@@ -271,7 +271,7 @@ void RAMBxE2::connectInput(Inputs input, const Bit &bit)
 		case IN_INJECT_D_BITERR:
 		case IN_INJECT_S_BITERR:
 			HCL_DESIGNCHECK_HINT(m_type == RAMB36E2, "Input only available for RAMB32E2!");
-			NodeIO::connectInput(input, bit.getReadPort());
+			NodeIO::connectInput(input, bit.readPort());
 		break;
 
 		default:
@@ -318,7 +318,7 @@ void RAMBxE2::connectInput(Inputs input, const UInt &vec)
 		default:
 			HCL_DESIGNCHECK_HINT(false, "Trying to connect UInt to bit input!");
 	}
-	NodeIO::connectInput(input, vec.getReadPort());
+	NodeIO::connectInput(input, vec.readPort());
 }
 
 UInt RAMBxE2::getOutputUInt(Outputs output)
@@ -526,7 +526,7 @@ void RAMBxE2::connectAddress(const UInt &input, bool portA)
 
 std::string RAMBxE2::getTypeName() const
 {
-    return m_name;
+	return m_name;
 }
 
 void RAMBxE2::assertValidity() const
@@ -535,7 +535,7 @@ void RAMBxE2::assertValidity() const
 
 std::string RAMBxE2::getInputName(size_t idx) const
 {
-    switch (idx) {
+	switch (idx) {
 		// 18k
 		case IN_ADDREN_A: return "ADDRENA";
 		case IN_ADDREN_B: return "ADDRENB";
@@ -583,7 +583,7 @@ std::string RAMBxE2::getInputName(size_t idx) const
 
 std::string RAMBxE2::getOutputName(size_t idx) const
 {
-    switch (idx) {
+	switch (idx) {
 		// 18k
 		case OUT_CAS_DOUT_A: return "CASDOUTA";
 		case OUT_CAS_DOUT_B: return "CASDOUTB";
@@ -606,11 +606,11 @@ std::string RAMBxE2::getOutputName(size_t idx) const
 
 std::unique_ptr<hlim::BaseNode> RAMBxE2::cloneUnconnected() const
 {
-    RAMBxE2 *ptr;
-    std::unique_ptr<BaseNode> res(ptr = new RAMBxE2(m_type));
-    copyBaseToClone(res.get());
+	RAMBxE2 *ptr;
+	std::unique_ptr<BaseNode> res(ptr = new RAMBxE2(m_type));
+	copyBaseToClone(res.get());
 
-    return res;
+	return res;
 }
 
 std::string RAMBxE2::attemptInferOutputName(size_t outputPort) const

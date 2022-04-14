@@ -75,6 +75,6 @@ namespace gtry {
 
 	void DesignScope::postprocess() 
 	{
-	    m_circuit.postprocess(hlim::DefaultPostprocessing{m_targetTech->getTechnologyMapping()});
+		m_circuit.postprocess(hlim::DefaultPostprocessing{m_targetTech->getTechnologyMapping()});
 	}
 }

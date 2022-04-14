@@ -1,24 +1,23 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
 
 #include "PipeBalanceGroup.h"
-#include <gatery/hlim/supportNodes/Node_RegHint.h>
 
 namespace gtry {
 
@@ -29,30 +28,8 @@ PipeBalanceGroup::PipeBalanceGroup()
 
 size_t PipeBalanceGroup::getNumPipeBalanceGroupStages() const
 { 
-    HCL_DESIGNCHECK_HINT(m_regSpawner->wasResolved(), "The number of pipeline stages can only be queries after the retiming, at least on the part of the graph that is affected, has been performed!");
-    return m_regSpawner->getNumStagesSpawned(); 
-}
-
-
-Bit placePipeStage(const Bit &signal)
-{
-	auto* pipeStage = DesignScope::createNode<hlim::Node_RegHint>();
-	pipeStage->connectInput(signal.getReadPort());
-
-	Bit ret{ SignalReadPort{pipeStage} };
-	if (signal.getResetValue())
-		ret.setResetValue(*signal.getResetValue());
-	return ret;
-}
-
-UInt placePipeStage(const UInt &signal)
-{
-	SignalReadPort data = signal.getReadPort();
-
-	auto* pipeStage = DesignScope::createNode<hlim::Node_RegHint>();
-	pipeStage->connectInput(data);
-
-	return SignalReadPort(pipeStage, data.expansionPolicy);
+	HCL_DESIGNCHECK_HINT(m_regSpawner->wasResolved(), "The number of pipeline stages can only be queries after the retiming, at least on the part of the graph that is affected, has been performed!");
+	return m_regSpawner->getNumStagesSpawned(); 
 }
 
 }

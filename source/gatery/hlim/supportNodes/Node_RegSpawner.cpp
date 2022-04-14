@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "gatery/pch.h"
@@ -30,12 +30,12 @@ namespace gtry::hlim {
 
 Node_RegSpawner::Node_RegSpawner() : Node(0, 0)
 {
-    m_clocks.resize(1);
+	m_clocks.resize(1);
 }
 
 void Node_RegSpawner::setClock(Clock *clk)
 {
-    attachClock(clk, 0);
+	attachClock(clk, 0);
 }
 
 void Node_RegSpawner::markResolved()
@@ -59,7 +59,7 @@ std::vector<Node_Register*> Node_RegSpawner::spawnForward()
 		// create register
 		auto *reg = circuit.createNode<Node_Register>();
 		reg->moveToGroup(m_nodeGroup);
-	    reg->recordStackTrace();
+		reg->recordStackTrace();
 
 		// allow further retiming as this is their primary purpose
 		reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD);
@@ -95,7 +95,7 @@ size_t Node_RegSpawner::addInput(const NodePort &value, const NodePort &reset)
 	resizeOutputs(port+1);
 
 	auto type = hlim::getOutputConnectionType(value);
-    setOutputConnectionType(port, type);
+	setOutputConnectionType(port, type);
 
 	NodeIO::connectInput(port*2+0, value);
 	NodeIO::connectInput(port*2+1, reset);
@@ -104,11 +104,11 @@ size_t Node_RegSpawner::addInput(const NodePort &value, const NodePort &reset)
 }
 
 void Node_RegSpawner::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, 
-                    const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
+					const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
 	for (auto i : utils::Range(getNumOutputPorts())) {
 		if (inputOffsets[i*2+0] != ~0ull)
-    		state.copyRange(outputOffsets[i], state, inputOffsets[i*2+0], getOutputConnectionType(i).width);
+			state.copyRange(outputOffsets[i], state, inputOffsets[i*2+0], getOutputConnectionType(i).width);
 		else
 			state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[i], getOutputConnectionType(i).width);
 	}
@@ -116,7 +116,7 @@ void Node_RegSpawner::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, si
 
 std::string Node_RegSpawner::getTypeName() const
 {
-    return "reg_spawner";
+	return "reg_spawner";
 }
 
 void Node_RegSpawner::assertValidity() const
@@ -137,31 +137,31 @@ std::string Node_RegSpawner::getOutputName(size_t idx) const
 
 std::vector<size_t> Node_RegSpawner::getInternalStateSizes() const
 {
-    return {};
+	return {};
 }
 
 std::unique_ptr<BaseNode> Node_RegSpawner::cloneUnconnected() const
 {
-    std::unique_ptr<BaseNode> copy(new Node_RegSpawner());
-    copyBaseToClone(copy.get());
+	std::unique_ptr<BaseNode> copy(new Node_RegSpawner());
+	copyBaseToClone(copy.get());
 
-    return copy;
+	return copy;
 }
 
 
 void Node_RegSpawner::estimateSignalDelay(SignalDelay &sigDelay)
 {
-    HCL_ASSERT(sigDelay.contains({.node = this, .port = 0ull}));
-    auto outDelay = sigDelay.getDelay({.node = this, .port = 0ull});
+	HCL_ASSERT(sigDelay.contains({.node = this, .port = 0ull}));
+	auto outDelay = sigDelay.getDelay({.node = this, .port = 0ull});
 
-    for (auto &f : outDelay)
-        f = 0.0f;
+	for (auto &f : outDelay)
+		f = 0.0f;
 }
 
 void Node_RegSpawner::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit)
 {
-    inputPort = ~0u;
-    inputBit = ~0u;
+	inputPort = ~0u;
+	inputBit = ~0u;
 }
 
 

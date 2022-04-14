@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
 
@@ -22,30 +22,32 @@
 #include "Clock.h"
 
 #include <gatery/hlim/supportNodes/Node_RegSpawner.h>
+#include <gatery/hlim/supportNodes/Node_RegHint.h>
 #include <gatery/hlim/NodePtr.h>
 
 namespace gtry {
 
 	class PipeBalanceGroup;
 
-	template<typename T, class En = void>
-	struct PipeBalanceGroupInput {
-		T operator()(const T &val, PipeBalanceGroup &pipeBalanceGroup) { return val; }
-	};
+	template<BaseSignal T>				T pipestage(const T& signal);
+	template<Signal T>					T pipestage(const T& signal);
+
+	template<BaseSignal T>				T pipeinput(const T& signal, PipeBalanceGroup& group);
+	template<Signal T>					T pipeinput(const T& signal, PipeBalanceGroup& group);
+	template<BaseSignal T, typename Tr>	T pipeinput(const T& signal, const Tr& resetVal, PipeBalanceGroup& group);
+	template<Signal T, typename Tr>		T pipeinput(const T& signal, const Tr& resetVal, PipeBalanceGroup& group);
 
 
 	class PipeBalanceGroup {
 		public:
 			template<typename T>
 			T operator()(const T &input) {
-				HCL_DESIGNCHECK_HINT(!m_regSpawner->wasResolved(), "This pipeBalanceGroup has already been involved and resolved in retiming and can no longer be modified!");
-				return PipeBalanceGroupInput<T>{}(input, *this);
+				return pipeinput<T>(input, *this);
 			}
 
 			template<typename T, typename ResetT>
-			T operator()(const T &input, const ResetT &reset) {
-				HCL_DESIGNCHECK_HINT(!m_regSpawner->wasResolved(), "This pipeBalanceGroup has already been involved and resolved in retiming and can no longer be modified!");
-				return PipeBalanceGroupInput<T>{}(input, reset, *this);
+			T operator()(const T &input, const ResetT& reset) {
+				return pipeinput<T, ResetT>(input, reset, *this);
 			}
 
 			PipeBalanceGroup();
@@ -56,167 +58,86 @@ namespace gtry {
 			hlim::NodePtr<hlim::Node_RegSpawner> m_regSpawner;
 	};
 
-    template<>
-    struct PipeBalanceGroupInput<UInt>
-    {
-        UInt operator () (const UInt& signal, PipeBalanceGroup &pipeBalanceGroup) {
-			pipeBalanceGroup.getRegSpawner()->setClock(ClockScope::getClk().getClk());
-			auto port = pipeBalanceGroup.getRegSpawner()->addInput(signal.getReadPort(), {});
-			return SignalReadPort{hlim::NodePort{.node = pipeBalanceGroup.getRegSpawner(), .port = port}};
-		}
-        UInt operator () (const UInt& signal, const UInt& reset, PipeBalanceGroup &pipeBalanceGroup) {
+	template<Signal... Targs>
+	void pipeinputgroup(Targs&...args)
+	{
+		PipeBalanceGroup group;
+		((args = pipeinput(args, group)), ...);
+	}
+
+	template<BaseSignal T>
+	T pipeinput(const T& signal, PipeBalanceGroup& group)
+	{
+		hlim::Node_RegSpawner* spawner = group.getRegSpawner();
+		HCL_DESIGNCHECK_HINT(!spawner->wasResolved(), "This pipeBalanceGroup has already been involved and resolved in retiming and can no longer be modified!");
+		spawner->setClock(ClockScope::getClk().getClk());
+
+		return SignalReadPort{ 
+			hlim::NodePort{
+				.node = spawner,
+				.port = spawner->addInput(signal.readPort(), {})
+		}};
+	}
+
+	template<Signal T>
+	T pipeinput(const T& signal, PipeBalanceGroup& group)
+	{
+		return internal::transformSignal(signal, [&](const BaseSignal auto& sig) {
+			return pipeinput(sig, group); // forward so it can have overloads
+		});
+	}
+
+	template<BaseSignal T, typename Tr>
+	T pipeinput(const T& signal, const Tr& resetVal, PipeBalanceGroup& group)
+	{
+		hlim::Node_RegSpawner* spawner = group.getRegSpawner();
+		HCL_DESIGNCHECK_HINT(!spawner->wasResolved(), "This pipeBalanceGroup has already been involved and resolved in retiming and can no longer be modified!");
+		spawner->setClock(ClockScope::getClk().getClk());
+
+		const T& reset = resetVal;
+		if(signal.width() != reset.width())
+		{
 			NormalizedWidthOperands ops(signal, reset);
-
-			pipeBalanceGroup.getRegSpawner()->setClock(ClockScope::getClk().getClk());
-			auto port = pipeBalanceGroup.getRegSpawner()->addInput(ops.lhs, ops.rhs);
-			return SignalReadPort{hlim::NodePort{.node = pipeBalanceGroup.getRegSpawner(), .port = port}};
+			return SignalReadPort{
+				hlim::NodePort{
+					.node = spawner,
+					.port = spawner->addInput(ops.lhs, ops.rhs)
+			} };
 		}
-    };
-
-    template<>
-    struct PipeBalanceGroupInput<Bit>
-    {
-        Bit operator () (const Bit& signal, PipeBalanceGroup &pipeBalanceGroup) {
-			pipeBalanceGroup.getRegSpawner()->setClock(ClockScope::getClk().getClk());
-			auto port = pipeBalanceGroup.getRegSpawner()->addInput(signal.getReadPort(), {});
-			return SignalReadPort{hlim::NodePort{.node = pipeBalanceGroup.getRegSpawner(), .port = port}};
-		}
-        Bit operator () (const Bit& signal, const Bit& reset, PipeBalanceGroup &pipeBalanceGroup) {
-			pipeBalanceGroup.getRegSpawner()->setClock(ClockScope::getClk().getClk());
-			auto port = pipeBalanceGroup.getRegSpawner()->addInput(signal.getReadPort(), reset.getReadPort());
-			return SignalReadPort{hlim::NodePort{.node = pipeBalanceGroup.getRegSpawner(), .port = port}};
-		}
-    };
-
-
-    struct PipeBalanceGroupInputTransform
-    {
-        PipeBalanceGroupInputTransform() { }
-
-        template<typename T>
-        T operator() (const T& val) { return PipeBalanceGroupInput<T>{}(val); }
-    };
-
-    template<typename ...T>
-    struct PipeBalanceGroupInput<std::tuple<T...>>
-    {
-        std::tuple<T...> operator () (const std::tuple<T...>& val) { return boost::hana::transform(val, PipeBalanceGroupInputTransform{}); }
-    };
-
-	template<typename T>
-	struct PipeBalanceGroupInput<T, std::enable_if_t<boost::spirit::traits::is_container<T>::value>>
-	{
-		T operator () (const T& signal, PipeBalanceGroup &pipeBalanceGroup) {
-			T ret = signal;
-			for (auto& item : ret)
-				item = PipeBalanceGroupInput<decltype(item)>{}(item, pipeBalanceGroup);
-			return ret;
-		}
-
-		T operator () (const T& signal, const T& reset, PipeBalanceGroup &pipeBalanceGroup)
+		else
 		{
-			T ret = signal;
-
-			auto itS = begin(ret);
-			auto itR = begin(reset);
-			for (; itS != end(ret) && itR != end(reset); ++itR, ++itS)
-				*itS = PipeBalanceGroupInput<decltype(*itS)>{}(*itS, *itR, pipeBalanceGroup);
-			for (; itS != end(ret); ++itS)
-				*itS = PipeBalanceGroupInput<decltype(*itS)>{}(*itS, pipeBalanceGroup);
-			return ret;
+			return SignalReadPort{
+				hlim::NodePort{
+					.node = spawner,
+					.port = spawner->addInput(signal.readPort(), reset.readPort())
+			} };
 		}
-	};
+	}
 
-	template<typename T>
-	struct PipeBalanceGroupInput<T, std::enable_if_t<boost::hana::Struct<T>::value>>
+	template<Signal T, typename Tr>
+	T pipeinput(const T& signal, const Tr& resetVal, PipeBalanceGroup& group)
 	{
-		T operator () (const T& signal, PipeBalanceGroup &pipeBalanceGroup)
-		{
-			T ret = signal;
-			boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto&& member) {
-				auto& subSig = boost::hana::second(member)(ret);
-				subSig = PipeBalanceGroupInput<std::remove_cvref_t<decltype(subSig)>>{}(subSig, pipeBalanceGroup);
-			});
-			return ret;
-		}
+		return internal::transformSignal(signal, resetVal, [&](const BaseSignal auto& sig, auto&& resetSig) {
+			return pipeinput(sig, resetSig, group); // forward so it can have overloads
+		});
+	}
 
-		T operator () (const T& signal, const T& reset, PipeBalanceGroup &pipeBalanceGroup)
-		{
-			T ret = signal;
-			boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto member) {
-				auto& subSig = boost::hana::second(member)(ret);
-				const auto& subResetSig = boost::hana::second(member)(reset);
-				subSig = PipeBalanceGroupInput<std::remove_cvref_t<decltype(subSig)>>{}(subSig, subResetSig, pipeBalanceGroup);
-				});
-			return ret;
-		}
-	};
-
-
-
-	template<class T, class En = void>
-	struct PipeStage
+	template<BaseSignal T>
+	T pipestage(const T& signal)
 	{
-		T operator () (const T& val) { return val; }
-	};
+		SignalReadPort data = signal.readPort();
 
-    struct PipeStageTransform
-    {
-        PipeStageTransform() { }
+		auto* pipeStage = DesignScope::createNode<hlim::Node_RegHint>();
+		pipeStage->connectInput(data);
 
-        template<typename T>
-        T operator() (const T& val) { return PipeStage<T>{}(val); }
-    };
-    
-    template<typename ...T>
-    struct PipeStage<std::tuple<T...>>
-    {
-        std::tuple<T...> operator () (const std::tuple<T...>& val) { return boost::hana::transform(val, PipeStageTransform{}); }
-    };
+		return T{ SignalReadPort(pipeStage, data.expansionPolicy) };
+	}
 
-	template<typename T>
-	T pipeStage(const T& val) { return PipeStage<T>{}(val); }
-
-	Bit placePipeStage(const Bit &bit);
-	UInt placePipeStage(const UInt &UInt);
-
-    template<>
-    struct PipeStage<UInt>
-    {
-        UInt operator () (const UInt& signal) { return placePipeStage(signal); }
-    };
-
-    template<>
-    struct PipeStage<Bit>
-    {
-        Bit operator () (const Bit& signal) { return placePipeStage(signal); }
-    };	
-
-	template<typename T>
-	struct PipeStage<T, std::enable_if_t<boost::spirit::traits::is_container<T>::value>>
+	template<Signal T>
+	T pipestage(const T& signal)
 	{
-		T operator () (const T& signal)
-		{
-			T ret = signal;
-			for (auto& item : ret)
-				item = pipeStage(item);
-			return ret;
-		}
-	};
-
-	template<typename T>
-	struct PipeStage<T, std::enable_if_t<boost::hana::Struct<T>::value>>
-	{
-		T operator () (const T& signal)
-		{
-			T ret = signal;
-			boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto&& member) {
-				auto& subSig = boost::hana::second(member)(ret);
-				subSig = pipeStage(subSig);
-			});
-			return ret;
-		}
-	};
-
-
+		return internal::transformSignal(signal, [&](const BaseSignal auto& sig) {
+			return pipestage(sig); // forward so it can have overloads
+		});
+	}
 }

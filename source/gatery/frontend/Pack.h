@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
 #include "Compound.h"
@@ -75,7 +75,7 @@ namespace gtry
 	{
 		std::vector<SignalReadPort> portList;
 		(internal::for_each_base_signal(compound, [&](const BaseSignal auto& signal) {
-			portList.push_back(signal.getReadPort());
+			portList.push_back(signal.readPort());
 		}), ...);
 
 		auto* m_node = DesignScope::createNode<hlim::Node_Rewire>(portList.size());
@@ -90,7 +90,7 @@ namespace gtry
 	{
 		std::vector<SignalReadPort> portList;
 		internal::for_each_base_signal_reverse([&](const BaseSignal auto& signal) {
-			portList.push_back(signal.getReadPort());
+			portList.push_back(signal.readPort());
 		}, compound...);
 
 		auto* m_node = DesignScope::createNode<hlim::Node_Rewire>(portList.size());
@@ -103,11 +103,11 @@ namespace gtry
 	template<typename... Comp>
 	void unpack(const UInt& vec, Comp& ... compound)
 	{
-		auto&& readPort = vec.getReadPort();
+		auto&& readPort = vec.readPort();
 		size_t bitOffset = 0;
 		(internal::for_each_base_signal(compound, [&](BaseSignal auto& signal) {
 
-			hlim::ConnectionType sigType = connType(signal.getReadPort());
+			hlim::ConnectionType sigType = connType(signal.readPort());
 			HCL_DESIGNCHECK_HINT(sigType.width + bitOffset <= vec.size(), "parameter width missmatch during unpack");
 
 			auto* node = DesignScope::createNode<hlim::Node_Rewire>(1);

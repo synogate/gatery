@@ -26,8 +26,6 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include <external/magic_enum.hpp>
-
 namespace gtry
 {
 	hlim::ClockRational clockFromString(std::string text)
@@ -76,34 +74,34 @@ namespace gtry
 	{
 		std::optional<std::string> period;
 		if (config.isScalar())
-			setAbsoluteFrequency(clockFromString(config.as<std::string>()));
+			absoluteFrequency = clockFromString(config.as<std::string>());
 		else
 		{
 			if (config["period"])
-				setAbsoluteFrequency(clockFromString(config["period"].as<std::string>()));
+				absoluteFrequency = clockFromString(config["period"].as<std::string>());
 
 			if (config["clock_edge"])
-				m_triggerEvent = config["clock_edge"].as<TriggerEvent>();
+				triggerEvent = config["clock_edge"].as<TriggerEvent>();
 
 			if (config["reset_name"])
-				m_resetName = config["reset_name"].as<std::string>();
+				resetName = config["reset_name"].as<std::string>();
 
 			if (config["reset_type"])
-				m_resetType = config["reset_type"].as<ResetType>();
+				resetType = config["reset_type"].as<ResetType>();
 
 			if (config["memory_reset_type"])
-				m_memoryResetType = config["memory_reset_type"].as<ResetType>();
+				memoryResetType = config["memory_reset_type"].as<ResetType>();
 
 			if (config["reset_active"])
-				m_resetActive = config["reset_active"].as<ResetActive>();
+				resetActive = config["reset_active"].as<ResetActive>();
 
 			if (config["initialize_registers"])
-				m_initializeRegs = config["initialize_registers"].as<bool>();
+				initializeRegs = config["initialize_registers"].as<bool>();
 		
 			if (config["initialize_memories"])
-				m_initializeMemory = config["initialize_memories"].as<bool>();
+				initializeMemory = config["initialize_memories"].as<bool>();
 
-			m_attributes.loadConfig(config["attributes"]);
+			attributes.loadConfig(config["attributes"]);
 		}
 	}
 
@@ -120,42 +118,42 @@ namespace gtry
 			}
 		};
 
-		if (m_name)
-			s << *m_name;
+		if (name)
+			s << *name;
 		
-		if (m_absoluteFrequency)
+		if (absoluteFrequency)
 		{
-			double period_mhz = double(m_absoluteFrequency->numerator()) / m_absoluteFrequency->denominator();
+			double period_mhz = double(absoluteFrequency->numerator()) / absoluteFrequency->denominator();
 			period_mhz /= 1'000'000;
 			std::string text = std::to_string(size_t(std::round(period_mhz))) + " MHz";
 			print("period", std::make_optional(text));
 		}
 
-		print("clock edge", m_triggerEvent);
-		print("reset name", m_resetName);
-		print("reset type", m_resetType);
-		print("memory reset type", m_memoryResetType);
-		print("reset active", m_resetActive);
-		print("initialize registers", m_initializeRegs);
-		print("initialize memory", m_initializeMemory);
+		print("clock edge", triggerEvent);
+		print("reset name", resetName);
+		print("reset type", resetType);
+		print("memory reset type", memoryResetType);
+		print("reset active", resetActive);
+		print("initialize registers", initializeRegs);
+		print("initialize memory", initializeMemory);
 
-		auto it = m_attributes.userDefinedVendorAttributes.find("all");
-		if(it != m_attributes.userDefinedVendorAttributes.end())
+		auto it = attributes.userDefinedVendorAttributes.find("all");
+		if(it != attributes.userDefinedVendorAttributes.end())
 			for (const auto& attr : it->second)
 				s << ", " << attr.first << ": " << attr.second.value;
 
 	}
 
 
-	Clock::Clock(size_t freq) : Clock(ClockConfig{}.setAbsoluteFrequency({ freq, 1 }))
-	{
-	}
+	//Clock::Clock(size_t freq) : Clock(ClockConfig{ .absoluteFrequency = ClockConfig::ClockRational{freq, 1} })
+	//{
+	//}
 
 	Clock::Clock(const ClockConfig& config)
 	{
-		HCL_DESIGNCHECK_HINT(config.m_absoluteFrequency, "A root clock must have an absolute frequency defined through it's ClockConfig!");
-		HCL_DESIGNCHECK_HINT(!config.m_frequencyMultiplier, "A root clock mustmust not have a parent relative frequency multiplier defined through it's ClockConfig!");
-		m_clock = DesignScope::createClock<hlim::RootClock>(config.m_name ? *config.m_name : std::string("sysclk"), *config.m_absoluteFrequency);
+		HCL_DESIGNCHECK_HINT(config.absoluteFrequency, "A root clock must have an absolute frequency defined through it's ClockConfig!");
+		HCL_DESIGNCHECK_HINT(!config.frequencyMultiplier, "A root clock mustmust not have a parent relative frequency multiplier defined through it's ClockConfig!");
+		m_clock = DesignScope::createClock<hlim::RootClock>(config.name ? *config.name : std::string("sysclk"), *config.absoluteFrequency);
 		applyConfig(config);
 	}
 
@@ -174,37 +172,37 @@ namespace gtry
 
 	Clock::Clock(hlim::Clock* clock, const ClockConfig& config) : m_clock(clock)
 	{
-		if (config.m_absoluteFrequency) {
+		if (config.absoluteFrequency) {
 			HCL_ASSERT_HINT(false, "Absolute frequencies on derived clocks not implemented yet!");
 		}
-		if (config.m_frequencyMultiplier) dynamic_cast<hlim::DerivedClock*>(m_clock)->setFrequencyMuliplier(*config.m_frequencyMultiplier);
+		if (config.frequencyMultiplier) dynamic_cast<hlim::DerivedClock*>(m_clock)->setFrequencyMuliplier(*config.frequencyMultiplier);
 		applyConfig(config);
 
 	}
 
 	void Clock::applyConfig(const ClockConfig& config)
 	{
-		if (config.m_name) m_clock->setName(*config.m_name);
-		if (config.m_resetName) m_clock->setResetName(*config.m_resetName);
-		if (config.m_triggerEvent) m_clock->setTriggerEvent(*config.m_triggerEvent);
-		if (config.m_phaseSynchronousWithParent) m_clock->setPhaseSynchronousWithParent(*config.m_phaseSynchronousWithParent);
+		if (config.name) m_clock->setName(*config.name);
+		if (config.resetName) m_clock->setResetName(*config.resetName);
+		if (config.triggerEvent) m_clock->setTriggerEvent(*config.triggerEvent);
+		if (config.phaseSynchronousWithParent) m_clock->setPhaseSynchronousWithParent(*config.phaseSynchronousWithParent);
 
 		// By default, use the same behavior for memory and registers ...
-		if (config.m_resetType) m_clock->getRegAttribs().memoryResetType = m_clock->getRegAttribs().resetType = *config.m_resetType;
-		if (config.m_initializeRegs) m_clock->getRegAttribs().initializeMemory = m_clock->getRegAttribs().initializeRegs = *config.m_initializeRegs;
+		if (config.resetType) m_clock->getRegAttribs().memoryResetType = m_clock->getRegAttribs().resetType = *config.resetType;
+		if (config.initializeRegs) m_clock->getRegAttribs().initializeMemory = m_clock->getRegAttribs().initializeRegs = *config.initializeRegs;
 
 		// ... unless overruled explicitely
-		if (config.m_memoryResetType) m_clock->getRegAttribs().memoryResetType = *config.m_memoryResetType;
-		if (config.m_initializeMemory) m_clock->getRegAttribs().initializeMemory = *config.m_initializeMemory;
+		if (config.memoryResetType) m_clock->getRegAttribs().memoryResetType = *config.memoryResetType;
+		if (config.initializeMemory) m_clock->getRegAttribs().initializeMemory = *config.initializeMemory;
 
-		if (config.m_resetActive) m_clock->getRegAttribs().resetActive = *config.m_resetActive;
+		if (config.resetActive) m_clock->getRegAttribs().resetActive = *config.resetActive;
 
-		if (config.m_registerEnablePinUsage) m_clock->getRegAttribs().registerEnablePinUsage = *config.m_registerEnablePinUsage;
-		if (config.m_registerResetPinUsage) m_clock->getRegAttribs().registerResetPinUsage = *config.m_registerResetPinUsage;
+		if (config.registerEnablePinUsage) m_clock->getRegAttribs().registerEnablePinUsage = *config.registerEnablePinUsage;
+		if (config.registerResetPinUsage) m_clock->getRegAttribs().registerResetPinUsage = *config.registerResetPinUsage;
 
 		HCL_DESIGNCHECK_HINT(m_clock->getRegAttribs().resetType != ResetType::NONE || m_clock->getRegAttribs().initializeRegs, "Either a type of reset, or the initialization for registers should be enabled!");
 
-		for (const auto& vendor : config.m_attributes.userDefinedVendorAttributes)
+		for (const auto& vendor : config.attributes.userDefinedVendorAttributes)
 			for (const auto& attrib : vendor.second)
 				m_clock->getRegAttribs().userDefinedVendorAttributes[vendor.first][attrib.first] = attrib.second;
 	}
@@ -252,7 +250,7 @@ namespace gtry
 	template<BitVectorDerived T>
 	T Clock::buildReg(const T& signal, const RegisterSettings& settings) const
 	{
-		SignalReadPort data = signal.getReadPort();
+		SignalReadPort data = signal.readPort();
 
 		auto* reg = prepRegister(signal.getName(), settings);
 		reg->connectInput(hlim::Node_Register::DATA, data);
@@ -306,22 +304,22 @@ namespace gtry
 	Bit Clock::operator()(const Bit& signal, const RegisterSettings& settings) const
 	{
 		auto* reg = prepRegister(signal.getName(), settings);
-		reg->connectInput(hlim::Node_Register::DATA, signal.getReadPort());
+		reg->connectInput(hlim::Node_Register::DATA, signal.readPort());
 
-		if (signal.getResetValue())
-			reg->connectInput(hlim::Node_Register::RESET_VALUE, Bit{ *signal.getResetValue() }.getReadPort());
+		if (signal.resetValue())
+			reg->connectInput(hlim::Node_Register::RESET_VALUE, Bit{ *signal.resetValue() }.readPort());
 
 		Bit ret{ SignalReadPort{reg} };
-		if (signal.getResetValue())
-			ret.setResetValue(*signal.getResetValue());
+		if (signal.resetValue())
+			ret.resetValue(*signal.resetValue());
 		return ret;
 	}
 
 	Bit Clock::operator()(const Bit& signal, const Bit& reset, const RegisterSettings& settings) const
 	{
 		auto* reg = prepRegister(signal.getName(), settings);
-		reg->connectInput(hlim::Node_Register::DATA, signal.getReadPort());
-		reg->connectInput(hlim::Node_Register::RESET_VALUE, reset.getReadPort());
+		reg->connectInput(hlim::Node_Register::DATA, signal.readPort());
+		reg->connectInput(hlim::Node_Register::RESET_VALUE, reset.readPort());
 
 		return SignalReadPort(reg);
 	}

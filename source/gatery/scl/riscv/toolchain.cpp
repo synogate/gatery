@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "gatery/pch.h"
@@ -87,8 +87,8 @@ void RiscVToolchain::build()
 
 		linkerScript  << std::hex
 			<< "MEMORY {" << std::endl
-		    << "    rom (rx) : ORIGIN = 0x" << m_instructionRomAddr << ", LENGTH = 0x" << romSize << std::endl
-			<< "    ram (rwx) : ORIGIN = 0x" << m_dataRamAddr << ", LENGTH = 0x" << ramSize << std::endl
+			<< "	rom (rx) : ORIGIN = 0x" << m_instructionRomAddr << ", LENGTH = 0x" << romSize << std::endl
+			<< "	ram (rwx) : ORIGIN = 0x" << m_dataRamAddr << ", LENGTH = 0x" << ramSize << std::endl
 			<< "}" << std::endl
 			<< "STACK_SIZE = 0x" << m_stackSize << ';' << std::endl;
 
@@ -97,39 +97,39 @@ SECTIONS {
 	. = 0x00000000;
 	.text : {
 		KEEP(*(.vector*))
-    	*(.text*)
-        _end_text = .;
+		*(.text*)
+		_end_text = .;
 	} > rom
 
 	.data : {
 		_start_data = .;
 		*(.rodata*)
-    	*(.sdata*);
-    	*(.data*);
+		*(.sdata*);
+		*(.data*);
 		_end_data = .;
 	} > ram
 
 	.bss (NOLOAD) : {
 		_start_bss = . ;
-        *(.bss*)
-        *(COMMON)
+		*(.bss*)
+		*(COMMON)
 		_end_bss = . ;
-    } > ram
+	} > ram
 
 	.stack (NOLOAD) : {
-        . = ALIGN(8);
+		. = ALIGN(8);
 		_start_stack = .;
-        . = . + STACK_SIZE;
-        . = ALIGN(8);
+		. = . + STACK_SIZE;
+		. = ALIGN(8);
 		_end_stack = .;
-    } > ram
+	} > ram
 
 	/DISCARD/ : {
-        *(.note.gnu.build-id)
+		*(.note.gnu.build-id)
 		*(.comment)
-    }
+	}
 
-    _end = . ;
+	_end = . ;
 }
 		)";
 	}
@@ -190,14 +190,14 @@ void vectorTable() {
 	sp = _end_stack;
 /*
 	uint32_t *init_values_ptr = &_end_text;
-    uint32_t *data_ptr = &_start_data;
+	uint32_t *data_ptr = &_start_data;
 
-    if (init_values_ptr != data_ptr)
-        for (; data_ptr < &_end_data;)
-            *data_ptr++ = *init_values_ptr++;
+	if (init_values_ptr != data_ptr)
+		for (; data_ptr < &_end_data;)
+			*data_ptr++ = *init_values_ptr++;
 
-    for (uint32_t *bss_ptr = &_start_bss; bss_ptr < &_end_bss;)
-        *bss_ptr++ = 0;
+	for (uint32_t *bss_ptr = &_start_bss; bss_ptr < &_end_bss;)
+		*bss_ptr++ = 0;
 
 */
 

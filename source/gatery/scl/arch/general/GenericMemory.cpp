@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
 
@@ -30,18 +30,18 @@ namespace gtry::scl::arch {
 
 MemoryCapabilities::Choice EmbeddedMemory::select(hlim::NodeGroup *group, const MemoryCapabilities::Request &request) const
 {
-    MemoryCapabilities::Choice result;
+	MemoryCapabilities::Choice result;
 	result.inputRegs = m_desc.inputRegs;
 	result.outputRegs = m_desc.outputRegs;
 	result.totalReadLatency = m_desc.outputRegs + (m_desc.inputRegs?1:0);
 
-    if (result.outputRegs == 0 && m_desc.sizeCategory == MemoryCapabilities::SizeCategory::MEDIUM) {
-        size_t numBlocksEstimate = (request.size + m_desc.size-1) / m_desc.size;
-        if (numBlocksEstimate > 7) {
-            result.outputRegs++;
-            result.totalReadLatency++;
-        }
-    }	
+	if (result.outputRegs == 0 && m_desc.sizeCategory == MemoryCapabilities::SizeCategory::MEDIUM) {
+		size_t numBlocksEstimate = (request.size + m_desc.size-1) / m_desc.size;
+		if (numBlocksEstimate > 7) {
+			result.outputRegs++;
+			result.totalReadLatency++;
+		}
+	}	
 
 	return result;
 }

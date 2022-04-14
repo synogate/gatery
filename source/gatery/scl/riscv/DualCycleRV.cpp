@@ -13,12 +13,12 @@ gtry::scl::riscv::DualCycleRV::DualCycleRV(BitWidth instructionAddrWidth, BitWid
 
 gtry::Memory<gtry::UInt>& gtry::scl::riscv::DualCycleRV::fetch(uint64_t entryPoint)
 {
-	UInt addr = m_IP.getWidth();
+	UInt addr = m_IP.width();
 	UInt instruction = 32_b;
 	{
 		auto entRV = m_area.enter();
 
-		BitWidth memWidth = m_IP.getWidth() - 2;
+		BitWidth memWidth = m_IP.width() - 2;
 		m_instructionMem.setup(memWidth.count(), 32_b);
 		m_instructionMem.setType(MemType::MEDIUM);
 		m_instructionMem.setName("instruction_memory");
@@ -92,7 +92,7 @@ gtry::UInt gtry::scl::riscv::DualCycleRV::fetch(const UInt& instruction, uint64_
 	m_instr.decode(instruction_execute);
 	HCL_NAMED(m_instr);
 
-	UInt ip = m_IP.getWidth();
+	UInt ip = m_IP.width();
 	ip = reg(ip, entryPoint);
 	HCL_NAMED(ip);
 
@@ -103,7 +103,7 @@ gtry::UInt gtry::scl::riscv::DualCycleRV::fetch(const UInt& instruction, uint64_
 	}
 	m_IP = reg(m_IP, 0);
 
-	m_overrideIP = ip.getWidth();
+	m_overrideIP = ip.width();
 	IF(!m_stall & m_instructionValid & m_overrideIPValid)
 		ip = m_overrideIP;
 
@@ -130,7 +130,7 @@ void gtry::scl::riscv::DualCycleRV::setIP(const UInt& ip)
 	IF(m_instructionValid)
 	{
 		m_overrideIPValid = '1';
-		m_overrideIP = ip(0, m_IP.getWidth());
+		m_overrideIP = ip(0, m_IP.width());
 	}
 }
 

@@ -30,13 +30,13 @@ namespace gtry {
 	class SInt;
 
 	class SIntDefault : public BaseBitVectorDefault {
-        public:
-            explicit SIntDefault(const SInt& rhs);
+		public:
+			explicit SIntDefault(const SInt& rhs);
 
 			template<BitVectorIntegralLiteral Type>
 			explicit SIntDefault(Type value);
 			explicit SIntDefault(const char rhs[]);
-    };
+	};
 
 	class SInt : public SliceableBitVector<SInt, SIntDefault>
 	{
@@ -83,6 +83,8 @@ namespace gtry {
 	template<BitVectorIntegralLiteral Type>
 	SIntDefault::SIntDefault(Type value) : BaseBitVectorDefault((std::int64_t)value) { }
 	inline SIntDefault::SIntDefault(const char rhs[]) : BaseBitVectorDefault(std::string_view(rhs)) { }
+
+	inline SInt constructFrom(const SInt& value) { return SInt(value.width()); }
 
 /**@}*/
 

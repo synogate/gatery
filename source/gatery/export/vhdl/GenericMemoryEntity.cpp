@@ -219,26 +219,26 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 	*/
 
 
-    hlim::ResolvedAttributes resolvedAttribs;
-    m_ast.getSynthesisTool().resolveAttributes(m_memGrp->getMemory()->getAttribs(), resolvedAttribs);
+	hlim::ResolvedAttributes resolvedAttribs;
+	m_ast.getSynthesisTool().resolveAttributes(m_memGrp->getMemory()->getAttribs(), resolvedAttribs);
 
 
-    std::map<std::string, hlim::AttribValue> alreadyDeclaredAttribs;
-    // write out all memory attribs
-    for (const auto &attrib : resolvedAttribs) {
-        auto it = alreadyDeclaredAttribs.find(attrib.first);
-        if (it == alreadyDeclaredAttribs.end()) {
-            alreadyDeclaredAttribs[attrib.first] = attrib.second;
+	std::map<std::string, hlim::AttribValue> alreadyDeclaredAttribs;
+	// write out all memory attribs
+	for (const auto &attrib : resolvedAttribs) {
+		auto it = alreadyDeclaredAttribs.find(attrib.first);
+		if (it == alreadyDeclaredAttribs.end()) {
+			alreadyDeclaredAttribs[attrib.first] = attrib.second;
 
-            cf.indent(stream, 1);
-            stream << "ATTRIBUTE " << attrib.first << " : " << attrib.second.type << ';' << std::endl;
-        } else
-            HCL_DESIGNCHECK_HINT(it->second.type == attrib.second.type, "Same attribute can't have different types!");
+			cf.indent(stream, 1);
+			stream << "ATTRIBUTE " << attrib.first << " : " << attrib.second.type << ';' << std::endl;
+		} else
+			HCL_DESIGNCHECK_HINT(it->second.type == attrib.second.type, "Same attribute can't have different types!");
 
-        cf.indent(stream, 1);
-        stream << "ATTRIBUTE " << attrib.first << " of memory : ";
-        stream << "SIGNAL is " << attrib.second.value << ';' << std::endl;
-    }
+		cf.indent(stream, 1);
+		stream << "ATTRIBUTE " << attrib.first << " of memory : ";
+		stream << "SIGNAL is " << attrib.second.value << ';' << std::endl;
+	}
 
 
 	for (auto &rp : m_memGrp->getReadPorts()) {
@@ -421,7 +421,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
 								} else {
 									stream << m_namespaceScope.get(rp.dataOutput).name << "_outputReg_" << i;
 								}
-								stream << " <= " << m_namespaceScope.get(reset).name << ";\n";                                    
+								stream << " <= " << m_namespaceScope.get(reset).name << ";\n";									
 
 								indent--;
 								cf.indent(stream, indent);

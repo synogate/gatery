@@ -23,7 +23,7 @@
 
 gtry::Bit gtry::scl::pci::isCompletionTlp(const UInt& tlpHeader)
 {
-	HCL_DESIGNCHECK_HINT(tlpHeader.getWidth() >= 8_b, "first 8b of tlp header required for decoding");
+	HCL_DESIGNCHECK_HINT(tlpHeader.width() >= 8_b, "first 8b of tlp header required for decoding");
 	Bit completion_tlp = tlpHeader(0, 5) == "b01010";
 	HCL_NAMED(completion_tlp);
 	return completion_tlp;
@@ -31,7 +31,7 @@ gtry::Bit gtry::scl::pci::isCompletionTlp(const UInt& tlpHeader)
 
 gtry::Bit gtry::scl::pci::isMemTlp(const UInt& tlpHeader)
 {
-	HCL_DESIGNCHECK_HINT(tlpHeader.getWidth() >= 8_b, "first 8b of tlp header required for decoding");
+	HCL_DESIGNCHECK_HINT(tlpHeader.width() >= 8_b, "first 8b of tlp header required for decoding");
 	Bit mem_tlp = tlpHeader(0, 5) == 0;
 	HCL_NAMED(mem_tlp);
 	return mem_tlp;
@@ -39,7 +39,7 @@ gtry::Bit gtry::scl::pci::isMemTlp(const UInt& tlpHeader)
 
 gtry::Bit gtry::scl::pci::isDataTlp(const UInt& tlpHeader)
 {
-	HCL_DESIGNCHECK_HINT(tlpHeader.getWidth() >= 32_b, "first word of tlp header required for decoding");
+	HCL_DESIGNCHECK_HINT(tlpHeader.width() >= 32_b, "first word of tlp header required for decoding");
 	Bit data_tlp = tlpHeader[30];
 	HCL_NAMED(data_tlp);
 	return data_tlp;
@@ -53,14 +53,14 @@ gtry::scl::pci::AvmmBridge::AvmmBridge(Stream<Tlp>& rx, AvalonMM& avmm, const Pc
 
 void gtry::scl::pci::AvmmBridge::setup(Stream<Tlp>& rx, AvalonMM& avmm, const PciId& cplId)
 {
-	HCL_DESIGNCHECK_HINT(rx.data.header.getWidth() == 96_b, "reduce tlp header address using discardHighAddressBits");
+	HCL_DESIGNCHECK_HINT(rx.data.header.width() == 96_b, "reduce tlp header address using discardHighAddressBits");
 	m_cplId = cplId;
 	generateFifoBridge(rx, avmm);
 }
 
 void gtry::scl::pci::AvmmBridge::generateFifoBridge(Stream<Tlp>& rx, AvalonMM& avmm)
 {
-	HCL_DESIGNCHECK(avmm.readData->getWidth() == 32_b);
+	HCL_DESIGNCHECK(avmm.readData->width() == 32_b);
 
 	auto entity = Area{ "AvmmBridge" }.enter();
 
@@ -109,7 +109,7 @@ gtry::scl::pci::Tlp gtry::scl::pci::Tlp::discardHighAddressBits() const
 		.data = data
 	};
 
-	if(header.getWidth() > 96_b)
+	if(header.width() > 96_b)
 		IF(header[TlpOffset::has4DW])
 			tlpHdr.header(64, 32_b) = header(96, 32_b);
 

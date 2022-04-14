@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
 
@@ -52,92 +52,92 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 		return false;
 
 	if (memGrp->getReadPorts().size() != 1) return false;
-    const auto &rp = memGrp->getReadPorts().front();
+	const auto &rp = memGrp->getReadPorts().front();
 	if (memGrp->getWritePorts().size() > 1) return false;
-    if (memGrp->getMemory()->getRequiredReadLatency() > 1) return false;
+	if (memGrp->getMemory()->getRequiredReadLatency() > 1) return false;
 
 	if (memGrp->getWritePorts().size() > 1) return false;
 
-    size_t width = rp.node->getBitWidth();
-    size_t depth = memGrp->getMemory()->getSize()/width;
-    size_t addrBits = utils::Log2C(depth);
+	size_t width = rp.node->getBitWidth();
+	size_t depth = memGrp->getMemory()->getSize()/width;
+	size_t addrBits = utils::Log2C(depth);
 
 	bool supportsWriteFirst = memGrp->getMemory()->getRequiredReadLatency() == 1;
 
-    if (memGrp->getWritePorts().size() != 0 && !supportsWriteFirst) return false; // Todo: Needs extra handling
+	if (memGrp->getWritePorts().size() != 0 && !supportsWriteFirst) return false; // Todo: Needs extra handling
 
-    auto &circuit = DesignScope::get()->getCircuit();
+	auto &circuit = DesignScope::get()->getCircuit();
 
 	memGrp->convertToReadBeforeWrite(circuit);
-    memGrp->attemptRegisterRetiming(circuit);
+	memGrp->attemptRegisterRetiming(circuit);
 
 
-    for (auto reg : rp.dedicatedReadLatencyRegisters) {
-        if (reg->hasResetValue()) return false;
-        if (reg->hasEnable()) return false;
+	for (auto reg : rp.dedicatedReadLatencyRegisters) {
+		if (reg->hasResetValue()) return false;
+		if (reg->hasEnable()) return false;
 		if (memGrp->getWritePorts().size() > 0 && memGrp->getWritePorts().front().node->getClocks()[0] != reg->getClocks()[0]) return false;
 		if (rp.dedicatedReadLatencyRegisters.front()->getClocks()[0] != reg->getClocks()[0]) return false;
-    }
+	}
 
-    memGrp->resolveWriteOrder(circuit);
-    memGrp->updateNoConflictsAttrib();
-    memGrp->buildReset(circuit);
-    memGrp->bypassSignalNodes();
-    memGrp->verify();
+	memGrp->resolveWriteOrder(circuit);
+	memGrp->updateNoConflictsAttrib();
+	memGrp->buildReset(circuit);
+	memGrp->bypassSignalNodes();
+	memGrp->verify();
 
-    auto *altdpram = DesignScope::createNode<ALTDPRAM>(width, depth);
+	auto *altdpram = DesignScope::createNode<ALTDPRAM>(width, depth);
 
-    altdpram->setupRamType(m_desc.memoryName);
-    altdpram->setupSimulationDeviceFamily(m_intelDevice.getFamily());
+	altdpram->setupRamType(m_desc.memoryName);
+	altdpram->setupSimulationDeviceFamily(m_intelDevice.getFamily());
    
-    bool readFirst = false;
-    bool writeFirst = false;
-    if (memGrp->getWritePorts().size() > 0) {
-        auto &wp = memGrp->getWritePorts().front();
-        if (wp.node->isOrderedBefore(rp.node.get()))
-            writeFirst = true;
-        if (rp.node->isOrderedBefore(wp.node.get()))
-            readFirst = true;
-    }
+	bool readFirst = false;
+	bool writeFirst = false;
+	if (memGrp->getWritePorts().size() > 0) {
+		auto &wp = memGrp->getWritePorts().front();
+		if (wp.node->isOrderedBefore(rp.node.get()))
+			writeFirst = true;
+		if (rp.node->isOrderedBefore(wp.node.get()))
+			readFirst = true;
+	}
 
 	HCL_ASSERT(!writeFirst);
 	altdpram->setupMixedPortRdw(ALTDPRAM::RDWBehavior::NEW_DATA_MASKED_UNDEFINED);
 
 
-    if (memGrp->getWritePorts().size() > 0) {
-        auto &wp = memGrp->getWritePorts().front();
-        ALTDPRAM::PortSetup portSetup;
+	if (memGrp->getWritePorts().size() > 0) {
+		auto &wp = memGrp->getWritePorts().front();
+		ALTDPRAM::PortSetup portSetup;
 		portSetup.inputRegs = true;
-        altdpram->setupWritePort(portSetup);
+		altdpram->setupWritePort(portSetup);
 
-        UInt wrData = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
-        UInt addr = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-        Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrEnable}, '1');
+		UInt wrData = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
+		UInt addr = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+		Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrEnable}, '1');
 
-        altdpram->connectInput(ALTDPRAM::Inputs::IN_DATA, wrData);
-        altdpram->connectInput(ALTDPRAM::Inputs::IN_WRADDRESS, addr(0, addrBits));
-        altdpram->connectInput(ALTDPRAM::Inputs::IN_WREN, wrEn);
+		altdpram->connectInput(ALTDPRAM::Inputs::IN_DATA, wrData);
+		altdpram->connectInput(ALTDPRAM::Inputs::IN_WRADDRESS, addr(0, addrBits));
+		altdpram->connectInput(ALTDPRAM::Inputs::IN_WREN, wrEn);
 
-        altdpram->attachClock(wp.node->getClocks()[0], (size_t)ALTDPRAM::Clocks::INCLOCK);
+		altdpram->attachClock(wp.node->getClocks()[0], (size_t)ALTDPRAM::Clocks::INCLOCK);
 
 		auto wrWordEnableSignal = wp.node->getNonSignalDriver((size_t)hlim::Node_MemPort::Inputs::wrWordEnable);
 		if (wrWordEnableSignal.node != nullptr)
 			altdpram->connectInput(ALTDPRAM::Inputs::IN_BYTEENA, getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrWordEnable}));
-    }
+	}
 
-    {
-        ALTDPRAM::PortSetup portSetup;
-        portSetup.outputRegs = rp.dedicatedReadLatencyRegisters.size() > 0;
-        altdpram->setupReadPort(portSetup);
+	{
+		ALTDPRAM::PortSetup portSetup;
+		portSetup.outputRegs = rp.dedicatedReadLatencyRegisters.size() > 0;
+		altdpram->setupReadPort(portSetup);
 
-        UInt addr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-        UInt data = hookUIntAfter(rp.dataOutput);
+		UInt addr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+		UInt data = hookUIntAfter(rp.dataOutput);
 
-        altdpram->connectInput(ALTDPRAM::Inputs::IN_RDADDRESS, addr(0, addrBits));
-        data.setExportOverride(altdpram->getOutputUInt(ALTDPRAM::Outputs::OUT_Q));
+		altdpram->connectInput(ALTDPRAM::Inputs::IN_RDADDRESS, addr(0, addrBits));
+		data.exportOverride(altdpram->getOutputUInt(ALTDPRAM::Outputs::OUT_Q));
 
-        altdpram->attachClock(rp.dedicatedReadLatencyRegisters.front()->getClocks()[0], (size_t)ALTDPRAM::Clocks::OUTCLOCK);
-    }
+		altdpram->attachClock(rp.dedicatedReadLatencyRegisters.front()->getClocks()[0], (size_t)ALTDPRAM::Clocks::OUTCLOCK);
+	}
 	
 	return true;
 }

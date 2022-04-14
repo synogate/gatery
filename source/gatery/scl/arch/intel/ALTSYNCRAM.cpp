@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
 
@@ -28,18 +28,18 @@ namespace gtry::scl::arch::intel {
 
 ALTSYNCRAM::ALTSYNCRAM(size_t size)
 {
-    m_libraryName = "altera_mf";
+	m_libraryName = "altera_mf";
 	m_packageName = "altera_mf_components";
-    m_name = "altsyncram";
+	m_name = "altsyncram";
 	m_isEntity = false;
-    m_clockNames = {"clock0", ""};
-    m_resetNames = {"", ""};
+	m_clockNames = {"clock0", ""};
+	m_resetNames = {"", ""};
 	m_clocks.resize(CLK_COUNT);
 
 	m_size = size;
 
-    resizeInputs(IN_COUNT);
-    resizeOutputs(OUT_COUNT);
+	resizeInputs(IN_COUNT);
+	resizeOutputs(OUT_COUNT);
 
 	setOutputConnectionType(OUT_Q_A, {.interpretation = hlim::ConnectionType::BITVEC, .width=0}); // for now
 	setOutputConnectionType(OUT_Q_B, {.interpretation = hlim::ConnectionType::BITVEC, .width=0}); // for now
@@ -234,7 +234,7 @@ void ALTSYNCRAM::connectInput(Inputs input, const Bit &bit)
 		case IN_CLOCKEN_1:
 		case IN_ACLR_0:
 		case IN_ACLR_1:
-			NodeIO::connectInput(input, bit.getReadPort());
+			NodeIO::connectInput(input, bit.readPort());
 		break;
 		default:
 			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to UInt input of ALTSYNCRAM!");
@@ -249,26 +249,26 @@ void ALTSYNCRAM::connectInput(Inputs input, const UInt &UInt)
 	switch (input) {
 		case IN_DATA_A:
 			HCL_DESIGNCHECK_HINT(UInt.size() == sizeA, "Data input UInt to ALTSYNCRAM has different width than previously specified!");
-			NodeIO::connectInput(input, UInt.getReadPort());			
+			NodeIO::connectInput(input, UInt.readPort());			
 		break;
 		case IN_ADDRESS_A:
-			NodeIO::connectInput(input, UInt.getReadPort());
+			NodeIO::connectInput(input, UInt.readPort());
 			m_genericParameters["widthad_a"] = std::to_string(UInt.size());
 		break;
 		case IN_BYTEENA_A:
-			NodeIO::connectInput(input, UInt.getReadPort());
+			NodeIO::connectInput(input, UInt.readPort());
 			m_genericParameters["width_byteena_a"] = std::to_string(UInt.size());
 		break;
 		case IN_DATA_B:
 			HCL_DESIGNCHECK_HINT(UInt.size() == sizeB, "Data input UInt to ALTSYNCRAM has different width than previously specified!");
-			NodeIO::connectInput(input, UInt.getReadPort());			
+			NodeIO::connectInput(input, UInt.readPort());			
 		break;
 		case IN_ADDRESS_B:
-			NodeIO::connectInput(input, UInt.getReadPort());
+			NodeIO::connectInput(input, UInt.readPort());
 			m_genericParameters["widthad_b"] = std::to_string(UInt.size());
 		break;
 		case IN_BYTEENA_B:
-			NodeIO::connectInput(input, UInt.getReadPort());
+			NodeIO::connectInput(input, UInt.readPort());
 			m_genericParameters["width_byteena_b"] = std::to_string(UInt.size());
 		break;
 		default:
@@ -284,7 +284,7 @@ UInt ALTSYNCRAM::getOutputUInt(Outputs output)
 
 std::string ALTSYNCRAM::getTypeName() const
 {
-    return "ALTSYNCRAM";
+	return "ALTSYNCRAM";
 }
 
 void ALTSYNCRAM::assertValidity() const
@@ -293,7 +293,7 @@ void ALTSYNCRAM::assertValidity() const
 
 std::string ALTSYNCRAM::getInputName(size_t idx) const
 {
-    switch (idx) {
+	switch (idx) {
 		case IN_WREN_A: return "wren_a";
 		case IN_RDEN_A: return "rden_a";
 		case IN_WREN_B: return "wren_b";
@@ -314,7 +314,7 @@ std::string ALTSYNCRAM::getInputName(size_t idx) const
 
 std::string ALTSYNCRAM::getOutputName(size_t idx) const
 {
-    switch (idx) {
+	switch (idx) {
 		case OUT_Q_A: return "q_a";
 		case OUT_Q_B: return "q_b";
 		default: return "";
@@ -323,11 +323,11 @@ std::string ALTSYNCRAM::getOutputName(size_t idx) const
 
 std::unique_ptr<hlim::BaseNode> ALTSYNCRAM::cloneUnconnected() const
 {
-    ALTSYNCRAM *ptr;
-    std::unique_ptr<BaseNode> res(ptr = new ALTSYNCRAM(m_size));
-    copyBaseToClone(res.get());
+	ALTSYNCRAM *ptr;
+	std::unique_ptr<BaseNode> res(ptr = new ALTSYNCRAM(m_size));
+	copyBaseToClone(res.get());
 
-    return res;
+	return res;
 }
 
 std::string ALTSYNCRAM::attemptInferOutputName(size_t outputPort) const

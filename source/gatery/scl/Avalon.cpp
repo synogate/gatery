@@ -90,7 +90,7 @@ namespace gtry::scl
 		if (slave.writeData)
 		{
 			if (!mm.writeData)
-				mm.writeData = slave.writeData->getWidth();
+				mm.writeData = slave.writeData->width();
 			slave.writeData = mm.writeData;
 		}
 
@@ -165,10 +165,10 @@ namespace gtry::scl
 		std::string pinName = std::string{ prefix } + '_';
 
 		// input pins
-		address = gtry::pinIn(address.getWidth()).setName(pinName + "address");
+		address = gtry::pinIn(address.width()).setName(pinName + "address");
 		if (read) *read = gtry::pinIn().setName(pinName + "read");
 		if (write) *write = gtry::pinIn().setName(pinName + "write");
-		if (writeData) *writeData = gtry::pinIn(writeData->getWidth()).setName(pinName + "writedata");
+		if (writeData) *writeData = gtry::pinIn(writeData->width()).setName(pinName + "writedata");
 
 		// output pins
 		if (ready) gtry::pinOut(*ready).setName(pinName + "waitrequest_n");
@@ -189,7 +189,7 @@ namespace gtry::scl
 
 		// input pins
 		if (ready) *ready = gtry::pinIn().setName(pinName + "waitrequest_n");
-		if (readData) *readData = gtry::pinIn(readData->getWidth()).setName(pinName + "readdata");
+		if (readData) *readData = gtry::pinIn(readData->width()).setName(pinName + "readdata");
 		if (readDataValid) *readDataValid = gtry::pinIn().setName(pinName + "readdatavalid");
 	}
 
@@ -235,14 +235,14 @@ namespace gtry::scl
 	{
 		BitWidth dataWidth;
 		if (avmm.readData)
-			dataWidth = avmm.readData->getWidth();
+			dataWidth = avmm.readData->width();
 		else if (avmm.writeData)
-			dataWidth = avmm.writeData->getWidth();
+			dataWidth = avmm.writeData->width();
 
 		if (!addrWidth)
-			addrWidth = avmm.address.getWidth();
+			addrWidth = avmm.address.width();
 
-		Memory<UInt> mem{ (size_t) avmm.address.getWidth().count(), dataWidth };
+		Memory<UInt> mem{ (size_t) avmm.address.width().count(), dataWidth };
 
 		if (avmm.readData)
 		{
