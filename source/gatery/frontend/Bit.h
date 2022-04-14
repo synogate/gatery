@@ -57,6 +57,11 @@ namespace gtry {
 	};
 
 	
+	/**
+	 * @brief Single bit signal
+	 * @details An on-chip signal that represents a single bit. This bit can also be an alias of a single bit inside a bit vector type signal such that writing to this
+	 * bit affects the bit vector. This is needed for handling the case of writing to an indexed bit of a bitvector, e.g. "bit_vector[i] = ...;".
+	 */
 	class Bit : public ElementarySignal
 	{
 	public:
@@ -69,25 +74,32 @@ namespace gtry {
 		Bit(const BitDefault &defaultValue);
 		~Bit() noexcept;
 
+		/// For internal use by bit vector types only
 		Bit(const SignalReadPort& port, std::optional<bool> resetValue = std::nullopt);
 		Bit(hlim::Node_Signal* node, size_t offset, size_t initialScopeId); // alias Bit
 
+		/// Constructs a bit signal from a constant passed as a bit literal (char or bool).
 		template<BitLiteral T>
 		Bit(T v) {
 			createNode();
 			assign(v);
 		}
 	
+		/// Signal assignment, preserves potential reset values.
 		Bit& operator=(const Bit& rhs) { m_resetValue = rhs.m_resetValue; assign(rhs.readPort());  return *this; }
 		Bit& operator=(Bit&& rhs);
 		Bit& operator=(const BitDefault &defaultValue);
 
+		/// Assigns (potentially conditionally) a constant passed as a bit literal (char or bool).
 		template<BitLiteral T>
 		Bit& operator=(T rhs) { assign(rhs); return *this; }
 
+		/// Defines an alternative signal source that in the export should be used to drive all following logic.
 		void exportOverride(const Bit& exportOverride);
 
+		/// Always returns 1_b.
 		BitWidth width() const final;
+		/// Always returns a 1-wide bool-type.
 		hlim::ConnectionType connType() const final;
 		SignalReadPort readPort() const final;
 		SignalReadPort outPort() const final;
@@ -95,8 +107,12 @@ namespace gtry {
 		void setName(std::string name) override;
 		void addToSignalGroup(hlim::SignalGroup *signalGroup);
 
+		/// Defines a reset value for this signal. All register created on this signal without an explicit reset value will use this reset value.
 		void resetValue(bool v);
+		/// Defines a reset value for this signal. All register created on this signal without an explicit reset value will use this reset value.
 		void resetValue(char v);
+		/// Returns the optional reset value for this signal.
+		/// @see setResetValue(char v)
 		std::optional<bool> resetValue() const { return m_resetValue; }
 
 		hlim::Node_Signal* node() { return m_node; }
