@@ -301,10 +301,41 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
 
 	const hlim::Node_Arithmetic *arithmeticNode = dynamic_cast<const hlim::Node_Arithmetic*>(nodePort.node);
 	if (arithmeticNode != nullptr) {
+		BitWidth expectedResultWidth = arithmeticNode->getOutputConnectionType(0).width;
+
+		BitWidth leftOpWidth = hlim::getOutputWidth(arithmeticNode->getDriver(0));
+		BitWidth rightOpWidth = hlim::getOutputWidth(arithmeticNode->getDriver(0));
+
+		BitWidth vhdlExpectedWidth;
+		switch (arithmeticNode->getOp()) {
+			case hlim::Node_Arithmetic::ADD:
+				HCL_ASSERT_HINT(leftOpWidth == rightOpWidth, "Unequal operand widths in addition!");
+				vhdlExpectedWidth = leftOpWidth;
+			break;
+			case hlim::Node_Arithmetic::SUB:
+				HCL_ASSERT_HINT(leftOpWidth == rightOpWidth, "Unequal operand widths in subtraction!");
+				vhdlExpectedWidth = leftOpWidth;
+			break;
+			case hlim::Node_Arithmetic::MUL:
+				vhdlExpectedWidth = leftOpWidth + rightOpWidth;
+			break;
+//			case hlim::Node_Arithmetic::DIV: stream << " / "; break;
+//			case hlim::Node_Arithmetic::REM: stream << " MOD "; break;
+			default:
+				HCL_ASSERT_HINT(false, "Unhandled operation!");
+		};
+
+		HCL_ASSERT(expectedResultWidth <= vhdlExpectedWidth);
+		bool resultRequiresTruncation = expectedResultWidth < vhdlExpectedWidth;
+
 		if (context == VHDLDataType::STD_LOGIC_VECTOR)
 			stream << "STD_LOGIC_VECTOR(";
 		else
 			stream << '(';
+
+		if (resultRequiresTruncation)
+			stream << "resize(";
+
 		formatExpression(stream, indentation, comments, arithmeticNode->getDriver(0), dependentInputs, VHDLDataType::UNSIGNED);
 		switch (arithmeticNode->getOp()) {
 			case hlim::Node_Arithmetic::ADD: stream << " + "; break;
@@ -316,6 +347,10 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
 				HCL_ASSERT_HINT(false, "Unhandled operation!");
 		};
 		formatExpression(stream, indentation, comments, arithmeticNode->getDriver(1), dependentInputs, VHDLDataType::UNSIGNED);
+
+		if (resultRequiresTruncation)
+			stream << ", " << expectedResultWidth.bits() << ')';
+
 		stream << ')';
 		return;
 	}
