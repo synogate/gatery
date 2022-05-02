@@ -21,6 +21,10 @@
 
 namespace gtry::hlim {
 
+/**
+ * @brief Smart pointer for graph nodes that automatically increments and decrements the node's reference counter.
+ * @details The pointer default constructs to a nullpointer.
+ */
 template<class NodeType>
 class NodePtr
 {

@@ -41,6 +41,8 @@
 
 namespace gtry {
 
+	class UInt;
+
 	struct Selection {
 		int start = 0;
 		int width = 0;
@@ -118,6 +120,9 @@ namespace gtry {
 
 		Bit& operator[](size_t idx) { return aliasVec()[idx]; }
 		const Bit& operator[](size_t idx) const { return aliasVec()[idx]; }
+
+		Bit& operator[](const UInt &idx);
+		const Bit& operator[](const UInt &idx) const;
 
 		Bit& at(size_t idx) { return aliasVec().at(idx); }
 		const Bit& at(size_t idx) const { return aliasVec().at(idx); }
@@ -198,6 +203,9 @@ namespace gtry {
 		mutable std::vector<Bit> m_bitAlias;
 		mutable std::optional<Bit> m_lsbAlias;
 		mutable std::optional<Bit> m_msbAlias;
+		
+		Bit &getDynamicBitAlias(const UInt &idx) const;
+		mutable std::map<hlim::NodePort, Bit> m_dynamicBitAlias;
 
 		mutable SignalReadPort m_readPort;
 		mutable void* m_readPortDriver = nullptr;

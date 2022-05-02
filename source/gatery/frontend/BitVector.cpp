@@ -19,6 +19,7 @@
 #include "BitVector.h"
 #include "ConditionalScope.h"
 #include "Constant.h"
+#include "UInt.h"
 
 #include <gatery/hlim/coreNodes/Node_Constant.h>
 #include <gatery/hlim/coreNodes/Node_Rewire.h>
@@ -238,6 +239,27 @@ namespace gtry {
 		m_node->connectInput({ .node = rewire, .port = 0 }); // unconditional (largest of all paths wins)
 		m_range.width = width;
 		m_bitAlias.clear();
+	}
+
+	Bit &BaseBitVector::getDynamicBitAlias(const UInt &idx) const
+	{
+		HCL_DESIGNCHECK_HINT((1u << idx.size()) == size(), "Index has wrong bitwidth");
+		auto it = m_dynamicBitAlias.find(idx.readPort());
+		if (it != m_dynamicBitAlias.end())	
+			return it->second;
+	
+		auto it2 = m_dynamicBitAlias.try_emplace(idx.readPort(), m_node, (hlim::NodePort)idx.readPort(), m_range.offset, m_range.width, m_initialScopeId);
+		return it2.first->second;
+	}
+
+	Bit& BaseBitVector::operator[](const UInt &idx)
+	{
+		return getDynamicBitAlias(idx);
+	}
+
+	const Bit& BaseBitVector::operator[](const UInt &idx) const
+	{
+		return getDynamicBitAlias(idx);
 	}
 
 	hlim::ConnectionType BaseBitVector::connType() const

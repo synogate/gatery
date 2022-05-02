@@ -205,3 +205,161 @@ BOOST_FIXTURE_TEST_CASE(BVecSelectorAccess, BoostUnitTestSimulationFixture)
 */
 	eval();
 }
+
+
+BOOST_FIXTURE_TEST_CASE(BitAliasTest, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	UInt a = 1337;
+
+	a[1] ^= '1';
+	a += 1;
+
+	sim_assert(a == ((1337 ^ 0b10)+1));
+	eval();
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(DynamicBitSliceRead, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	size_t v = 0b11001010; 
+
+	UInt a = v;
+
+	UInt index = pinIn(3_b);
+
+	Bit b = a[index];
+
+	addSimulationProcess([=, this]()->SimProcess {
+	
+		for (auto i : gtry::utils::Range(8)) {
+			simu(index) = i;
+			co_await WaitFor({1,1000});
+			BOOST_TEST(simu(b) == (bool)(v & (1 << i)));
+		}
+
+		stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+
+	runTest({ 1,1 });
+}
+
+BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfSliceRead, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	size_t v = 0b11001010; 
+
+	UInt a = v;
+
+	UInt index = pinIn(2_b);
+
+	Bit b = a(2,4)[index];
+
+	addSimulationProcess([=, this]()->SimProcess {
+		size_t v_ = (v >> 2) & 0b1111;
+		for (auto i : gtry::utils::Range(4)) {
+			simu(index) = i;
+			co_await WaitFor({1,1000});
+			BOOST_TEST(simu(b) == (bool)(v_ & (1 << i)));
+		}
+
+		stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+
+	runTest({ 1,1 });
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(DynamicBitSliceWrite, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	size_t v = 0b11001010; 
+
+	UInt a = "8b0";
+	Bit b = pinIn();
+	UInt index = pinIn(3_b);
+
+	a[index] = b;
+
+	addSimulationProcess([=, this]()->SimProcess {
+		for (auto i : gtry::utils::Range(8)) {
+			simu(index) = i;
+			simu(b) = (bool)(v & (1 << i));
+			co_await WaitFor({1,1000});
+			BOOST_TEST(simu(a) == (v & (1 << i)));
+		}
+
+		stopTest();
+	});
+
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+
+	runTest({ 1,1 });
+}
+
+BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfSliceWrite, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	size_t v = 0b11001010; 
+
+	UInt a = "8b0";
+	Bit b = pinIn();
+	UInt index = pinIn(2_b);
+
+	a(2,4)[index] = b;
+
+	addSimulationProcess([=, this]()->SimProcess {
+		for (auto i : gtry::utils::Range(4)) {
+			simu(index) = i;
+			simu(b) = (bool)(v & (1 << (i+2)));
+			co_await WaitFor({1,1000});
+			BOOST_TEST(simu(a) == (v & (1 << (i+2))));
+		}
+
+		stopTest();
+	});
+
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+
+	runTest({ 1,1 });
+}
+
+BOOST_FIXTURE_TEST_CASE(DynamicBitSliceConstReduction, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Bit b;
+	{
+		UInt a = pinIn(8_b);
+		UInt index = "3b1";
+
+		b = a[index];
+	}
+
+	design.visualize("1");
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+
+	design.visualize("2");
+	
+	auto rewire = dynamic_cast<hlim::Node_Rewire*>(b.node()->getNonSignalDriver(0).node);
+	// Ensure that the dynamic multiplexer gets folded by the postprocessing into a rewire node ...
+	BOOST_REQUIRE(rewire != nullptr);
+	// ... that is directly fed from the pin node.
+	BOOST_REQUIRE(rewire->getNumInputPorts() == 1);
+	BOOST_REQUIRE(dynamic_cast<hlim::Node_Pin*>(rewire->getNonSignalDriver(0).node) != nullptr);
+}
