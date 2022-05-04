@@ -54,13 +54,15 @@ class NodePtr
 			if (m_ptr) m_ptr->addRef();
 		}
 
-
+		auto operator <=> (const NodePtr<NodeType>&) const = default;
+		/*
 		bool operator==(const NodePtr<NodeType> &rhs) const {
 			return m_ptr == rhs.m_ptr;
 		}
 		bool operator!=(const NodePtr<NodeType> &rhs) const {
 			return m_ptr != rhs.m_ptr;
 		}
+		*/
 /*
 		template<typename PointerType>
 		bool operator==(std::enable_if_t<std::is_pointer_v<PointerType>, PointerType> rhs) const {

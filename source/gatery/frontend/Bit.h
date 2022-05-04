@@ -135,10 +135,10 @@ namespace gtry {
 		/// Signal node in the graph whose input represents this signal. It can be an alias of a bitvector, in which case m_offset or m_offsetDynamic identify the bit within.
 		hlim::NodePtr<hlim::Node_Signal> m_node;
 		/// In the case that m_node's interpretation is not BOOL but BVEC, this UInt can identify the bit within.
-		hlim::NodePort m_offsetDynamic;
-		/// In the case that m_offsetDynamic is used, m_dynRangeOffset specifies the start of the range of bits (most importantly the offset) into which m_offsetDynamic indexes.
+		hlim::RefCtdNodePort m_offsetDynamic;
+		/// In the case that m_offsetDynamic is used, m_dynRangeOffset specifies the start of the range of bits into which m_offsetDynamic indexes.
 		size_t m_dynRangeOffset;
-		/// In the case that m_offsetDynamic is used, m_dynRangeWidth specifies the width of the range of bits (most importantly the offset) into which m_offsetDynamic indexes.
+		/// In the case that m_offsetDynamic is used, m_dynRangeWidth specifies the width of the range of bits into which m_offsetDynamic indexes.
 		size_t m_dynRangeWidth;
 		/// In the case that m_node's interpretation is not BOOL but BVEC and m_offsetDynamic contains a nullptr, this value can statically identify the bit within.
 		size_t m_offset = 0;

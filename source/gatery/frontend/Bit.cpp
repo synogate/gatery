@@ -196,7 +196,6 @@ namespace gtry {
 				hlim::ConnectionType idxType = hlim::getOutputConnectionType(m_offsetDynamic);
 
 				HCL_ASSERT_HINT(idxType.interpretation == hlim::ConnectionType::BITVEC, "Index has wrong type");
-				HCL_ASSERT_HINT((1u << idxType.width) == m_dynRangeWidth, "Index has wrong bitwidth");
 
 				auto *mux = DesignScope::createNode<hlim::Node_Multiplexer>(m_dynRangeWidth);
 				mux->connectSelector(m_offsetDynamic);

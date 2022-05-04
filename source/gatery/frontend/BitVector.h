@@ -87,15 +87,28 @@ namespace gtry {
 		struct Range {
 			Range() = default;
 			Range(const Range&) = default;
+			/// Creates a new Range based on an old Range and a Selection that was specified relative to that.
+			/// @details This is needed whenever a slice of a slice is created.
 			Range(const Selection& s, const Range& r);
+			/// Creates a new Range based on an old Range and a dynamic offset+size that was specified relative to that.
+			/// @details This is needed whenever a dynamic slice of a slice is created.
+			Range(const UInt &dynamicOffset, BitWidth w, const Range& r);
 
 			auto operator <=> (const Range&) const = default;
 
-			size_t bitOffset(size_t idx) const { HCL_ASSERT(idx < width); return offset + idx; }
+			size_t bitOffset(size_t idx) const { HCL_ASSERT(idx < width); HCL_ASSERT(offsetDynamic.node == nullptr); return offset + idx; }
 
+			/// In case of a sliced bit vector, this range represents the width of the slice.
 			size_t width = 0;
+			/// In case of a sliced bit vector, this range represents the static offset of the slice.
 			size_t offset = 0;
+			/// Whether or not this is actually a slice of a larger bitvector with which it aliases.
 			bool subset = false;
+
+			/// In case of dynamic slices, this dynamic offset is to be added to the static offset in m_range to compute the actual offset.
+			hlim::RefCtdNodePort offsetDynamic;
+			/// If offsetDynamic.node is not nullptr, defines the last value for offsetDynamic for which the result will not be undefined (out of bounds).
+			size_t maxDynamicIndex = 0ull;
 		};
 
 		using isBitVectorSignal = void;
@@ -105,8 +118,6 @@ namespace gtry {
 		using reverse_iterator = std::vector<Bit>::reverse_iterator;
 		using const_reverse_iterator = std::vector<Bit>::const_reverse_iterator;
 		using value_type = Bit;
-
-		~BaseBitVector();
 
 		template<BitVectorDerived T>
 		explicit operator T() const { if (m_node) return T(readPort()); else return T{}; }
@@ -192,8 +203,11 @@ namespace gtry {
 		inline const Range &range() const { return m_range; }
 		inline const Expansion &expansionPolicy() const { return m_expansionPolicy; }
 	private:
-		hlim::Node_Signal* m_node = nullptr;
+		/// Signal node (potentially aliased) whose input represents this signal.
+		hlim::NodePtr<hlim::Node_Signal> m_node;
+		/// In case of a sliced bit vector, this range represents the offset and the width of the slice.
 		Range m_range;
+
 		Expansion m_expansionPolicy = Expansion::none;
 
 		std::vector<Bit>& aliasVec() const;
@@ -230,6 +244,7 @@ namespace gtry {
 
 		SliceableBitVector(const SignalReadPort& port) : BaseBitVector(port) { }
 		SliceableBitVector(hlim::Node_Signal* node, Range range, Expansion expansionPolicy, size_t initialScopeId) : BaseBitVector(node, range, expansionPolicy, initialScopeId) { } // alias
+		SliceableBitVector(hlim::Node_Signal* node, const UInt &offset, size_t width, Expansion expansionPolicy, size_t initialScopeId) : BaseBitVector(node, offset, width, expansionPolicy, initialScopeId) { } // alias
 		SliceableBitVector(BitWidth width, Expansion expansionPolicy = Expansion::none) : BaseBitVector(width, expansionPolicy) { }
 
 		SliceableBitVector(const OwnType &rhs) : BaseBitVector(rhs) { } // Necessary because otherwise deleted copy ctor takes precedence over templated ctor.
@@ -245,6 +260,11 @@ namespace gtry {
 		const FinalType& operator() (Int1 offset, Int2 size) const { return (*this)(Selection::Slice(int(offset), int(size))); }
 		FinalType& operator() (size_t offset, BitWidth size) { return (*this)(Selection::Slice(int(offset), int(size.value))); }
 		const FinalType& operator() (size_t offset, BitWidth size) const { return (*this)(Selection::Slice(int(offset), int(size.value))); }
+
+		/// Slices a sub-vector out of the bit vector with a fixed width but a dynamic offset.
+		FinalType& operator() (const UInt &offset, BitWidth size) { return aliasRange(Range(offset, size, range())); }
+		/// Slices a sub-vector out of the bit vector with a fixed width but a dynamic offset.
+		const FinalType& operator() (const UInt &offset, BitWidth size) const { return aliasRange(Range(offset, size, range())); }
 
 		FinalType& operator()(const Selection& selection) { return aliasRange(Range(selection, range())); }
 		const FinalType& operator() (const Selection& selection) const { return aliasRange(Range(selection, range())); }
