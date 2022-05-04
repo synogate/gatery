@@ -89,15 +89,15 @@ namespace gtry {
 		return op;
 	}
 
-	static hlim::Node_Rewire::RewireOperation replaceSelection(const BaseBitVector::Range& range, size_t width)
+	static hlim::Node_Rewire::RewireOperation replaceSelection(size_t rangeOffset, size_t rangeWidth, size_t totalWidth)
 	{
-		HCL_ASSERT(range.bitOffset(range.width - 1) < width);
+		HCL_ASSERT(rangeOffset+rangeWidth <= totalWidth);
 
 		hlim::Node_Rewire::RewireOperation op;
 
-		op.addInput(0, 0, range.offset);
-		op.addInput(1, 0, range.width);
-		op.addInput(0, range.offset + range.width, width - (range.offset + range.width));
+		op.addInput(0, 0, rangeOffset);
+		op.addInput(1, 0, rangeWidth);
+		op.addInput(0, rangeOffset + rangeWidth, totalWidth - (rangeOffset + rangeWidth));
 
 		return op;
 	}
@@ -421,12 +421,33 @@ namespace gtry {
 			HCL_ASSERT(!incrementWidth);
 			std::string in_name = in.node->getName();
 
-			auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(2);
-			rewire->connectInput(0, rawDriver());
-			rewire->connectInput(1, in);
-			rewire->setOp(replaceSelection(m_range, m_node->getOutputConnectionType(0).width));
-			in.node = rewire;
-			in.port = 0;
+			if (m_range.offsetDynamic.node != nullptr) {
+				// Dynamic selection
+
+				hlim::ConnectionType idxType = hlim::getOutputConnectionType(m_range.offsetDynamic);
+
+				HCL_ASSERT_HINT(idxType.interpretation == hlim::ConnectionType::BITVEC, "Index has wrong type");
+
+				auto *mux = DesignScope::createNode<hlim::Node_Multiplexer>(m_range.maxDynamicIndex+1);
+				mux->connectSelector(m_range.offsetDynamic);
+
+				for (auto i : utils::Range(m_range.maxDynamicIndex+1)) {
+					auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(2);
+					rewire->connectInput(0, rawDriver());
+					rewire->connectInput(1, in);
+					rewire->setOp(replaceSelection(m_range.offset+i, m_range.width, m_node->getOutputConnectionType(0).width));
+					rewire->changeOutputType(connType());
+					mux->connectInput(i, {.node=rewire, .port=0ull});
+				}
+				in = SignalReadPort(mux);
+			} else {
+				// Static selection
+				auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(2);
+				rewire->connectInput(0, rawDriver());
+				rewire->connectInput(1, in);
+				rewire->setOp(replaceSelection(m_range.offset, m_range.width, m_node->getOutputConnectionType(0).width));
+				in = SignalReadPort(rewire);
+			}
 		}
 
 		if (auto* scope = ConditionalScope::get(); !ignoreConditions && scope && scope->getId() > m_initialScopeId)
