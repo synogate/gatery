@@ -586,6 +586,12 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 				assignmentPrefix += " <= ";
 
 			if (muxNode != nullptr) {
+				if (hlim::getOutputWidth(muxNode->getDriver(0)) == 0) { 
+					// if for whatever reason the selector is zero bits, always keep the first input.
+					code << assignmentPrefix;
+					formatExpression(code, indentation+2, comment, muxNode->getDriver(1), statement.inputs, targetContext, false);
+					code << ";" << std::endl;
+				} else
 				if (muxNode->getNumInputPorts() == 3) {
 					code << "IF ";
 					formatExpression(code, indentation+2, comment, muxNode->getDriver(0), statement.inputs, VHDLDataType::BOOL, false);
