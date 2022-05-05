@@ -89,6 +89,7 @@ class NamespaceScope
 		NamespaceScope *m_parent;
 
 		std::set<std::string> m_namesInUse;
+		std::map<std::string, size_t> m_nextNameAttempt;
 		std::map<hlim::NodePort, VHDLSignalDeclaration> m_nodeNames;
 		std::map<NodeInternalStorageSignal, std::string> m_nodeStorageNames;
 		std::map<hlim::Clock*, VHDLSignalDeclaration> m_clockNames;

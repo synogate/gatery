@@ -46,9 +46,8 @@ std::string NamespaceScope::allocateName(hlim::NodePort nodePort, const std::str
 
 	HCL_ASSERT(m_nodeNames.find(nodePort) == m_nodeNames.end());
 
-	unsigned attempt = 0;
-	std::string name;
-	std::string lowerCaseName;
+	auto &attempt = m_nextNameAttempt[desiredName];
+	std::string name, lowerCaseName;
 	do {
 		name = cf.getSignalName(desiredName, type, attempt++);
 		lowerCaseName = boost::to_lower_copy(name);
@@ -78,7 +77,7 @@ std::string NamespaceScope::allocateName(hlim::Clock *clock, const std::string &
 
 	HCL_ASSERT(m_clockNames.find(clock) == m_clockNames.end());
 
-	unsigned attempt = 0;
+	auto &attempt = m_nextNameAttempt[desiredName];
 	std::string name, lowerCaseName;
 	do {
 		name = cf.getClockName(desiredName, attempt++);
@@ -110,7 +109,7 @@ std::string NamespaceScope::allocateResetName(hlim::Clock *clock, const std::str
 
 	HCL_ASSERT(m_resetNames.find(clock) == m_resetNames.end());
 
-	unsigned attempt = 0;
+	auto &attempt = m_nextNameAttempt[desiredName];
 	std::string name, lowerCaseName;
 	do {
 		name = cf.getClockName(desiredName, attempt++);
@@ -143,7 +142,7 @@ std::string NamespaceScope::allocateName(hlim::Node_Pin *ioPin, const std::strin
 
 	HCL_ASSERT(m_ioPinNames.find(ioPin) == m_ioPinNames.end());
 
-	unsigned attempt = 0;
+	auto &attempt = m_nextNameAttempt[desiredName];
 	std::string name, lowerCaseName;
 	do {
 		name = cf.getIoPinName(desiredName, attempt++);
@@ -173,7 +172,7 @@ std::string NamespaceScope::allocatePackageName(const std::string &desiredName)
 	HCL_ASSERT(!desiredName.empty());
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
-	unsigned attempt = 0;
+	auto &attempt = m_nextNameAttempt[desiredName];
 	std::string name, lowerCaseName;
 	do {
 		name = cf.getPackageName(desiredName, attempt++);
@@ -190,7 +189,7 @@ std::string NamespaceScope::allocateEntityName(const std::string &desiredName)
 	HCL_ASSERT(!desiredName.empty());
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
-	unsigned attempt = 0;
+	auto &attempt = m_nextNameAttempt[desiredName];
 	std::string name, lowerCaseName;
 	do {
 		name = cf.getEntityName(desiredName, attempt++);
@@ -206,7 +205,7 @@ std::string NamespaceScope::allocateBlockName(const std::string &desiredName)
 	HCL_ASSERT(!desiredName.empty());
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
-	unsigned attempt = 0;
+	auto &attempt = m_nextNameAttempt[desiredName];
 	std::string name, lowerCaseName;
 	do {
 		name = cf.getBlockName(desiredName, attempt++);
@@ -222,7 +221,7 @@ std::string NamespaceScope::allocateProcessName(const std::string &desiredName, 
 	HCL_ASSERT(!desiredName.empty());
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
-	unsigned attempt = 0;
+	auto &attempt = m_nextNameAttempt[desiredName];
 	std::string name, lowerCaseName;
 	do {
 		name = cf.getProcessName(desiredName, clocked, attempt++);
@@ -238,7 +237,7 @@ std::string NamespaceScope::allocateInstanceName(const std::string &desiredName)
 	HCL_ASSERT(!desiredName.empty());
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
-	unsigned attempt = 0;
+	auto &attempt = m_nextNameAttempt[desiredName];
 	std::string name, lowerCaseName;
 	do {
 		name = cf.getInstanceName(desiredName, attempt++);
