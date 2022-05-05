@@ -624,4 +624,9 @@ namespace gtry {
 		}
 	}
 
+	size_t BaseBitVector::getUIntBitWidth(const UInt &uint)
+	{
+		return uint.size();
+	}
+
 }

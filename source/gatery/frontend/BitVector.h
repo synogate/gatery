@@ -202,6 +202,9 @@ namespace gtry {
 		inline hlim::Node_Signal* node() const { return m_node; }
 		inline const Range &range() const { return m_range; }
 		inline const Expansion &expansionPolicy() const { return m_expansionPolicy; }
+
+		/// Needed to derive width from forward declared uint in SliceableBitVector template
+		static size_t getUIntBitWidth(const UInt &uint);
 	private:
 		/// Signal node (potentially aliased) whose input represents this signal.
 		hlim::NodePtr<hlim::Node_Signal> m_node;
@@ -269,14 +272,14 @@ namespace gtry {
 		/// Slices a sub-vector out of the bit vector with a fixed width but a dynamic offset, the width being determined by the offset width.
 		FinalType& operator() (const UInt &offset) { 
 			// this->size() == (1 << offset.size())-1 + unknown_width
-			HCL_DESIGNCHECK_HINT((1 << offset.size())-1 < size(), "Offset width is too large");
-			return operator()(offset, size() - (1 << offset.size()) + 1);
+			HCL_DESIGNCHECK_HINT((1 << getUIntBitWidth(offset))-1 < size(), "Offset width is too large");
+			return operator()(offset, size() - (1 << getUIntBitWidth(offset)) + 1);
 		}
 		/// Slices a sub-vector out of the bit vector with a fixed width but a dynamic offset, the width being determined by the offset width.
 		const FinalType& operator() (const UInt &offset) const {
 			// this->size() == (1 << offset.size())-1 + unknown_width
-			HCL_DESIGNCHECK_HINT((1 << offset.size())-1 < size(), "Offset width is too large");
-			return operator()(offset, size() - (1 << offset.size()) + 1);
+			HCL_DESIGNCHECK_HINT((1 << getUIntBitWidth(offset))-1 < size(), "Offset width is too large");
+			return operator()(offset, size() - (1 << getUIntBitWidth(offset)) + 1);
 		}
 
 		FinalType& operator()(const Selection& selection) { return aliasRange(Range(selection, range())); }
