@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
 #include "AvalonMM.h"
@@ -25,7 +25,7 @@ namespace gtry::scl
 		writeData(dataWidth),
 		readData(dataWidth)
 	{
-		write.setResetValue('0');
+		write.resetValue('0');
 		readData = 0;
 	}
 
@@ -47,7 +47,7 @@ namespace gtry::scl
 		addressMap.push_back(d);
 	}
 
-	void AvalonMMSlave::ro(const BVec& value, RegDesc desc)
+	void AvalonMMSlave::ro(const UInt& value, RegDesc desc)
 	{
 		desc.flags = F_READ;
 		if (!scopeStack.empty()) desc.scope = scopeStack.back();
@@ -74,7 +74,7 @@ namespace gtry::scl
 		addressMap.push_back(desc);
 	}
 
-	Bit AvalonMMSlave::rw(BVec& value, RegDesc desc)
+	Bit AvalonMMSlave::rw(UInt& value, RegDesc desc)
 	{
 		desc.flags = F_READ | F_WRITE;
 		if (!scopeStack.empty()) desc.scope = scopeStack.back();
@@ -137,9 +137,9 @@ namespace gtry::scl
 
 	void pinIn(AvalonMMSlave& avmm, std::string prefix)
 	{
-		avmm.address = gtry::pinIn(avmm.address.getWidth()).setName(prefix + "_address");
+		avmm.address = gtry::pinIn(avmm.address.width()).setName(prefix + "_address");
 		avmm.write = gtry::pinIn().setName(prefix + "_write");
-		avmm.writeData = gtry::pinIn(avmm.writeData.getWidth()).setName(prefix + "_write_data");
+		avmm.writeData = gtry::pinIn(avmm.writeData.width()).setName(prefix + "_write_data");
 		gtry::pinOut(avmm.readData).setName(prefix + "_read_data");
 	}
 

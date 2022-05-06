@@ -185,7 +185,7 @@ void DefaultSynthesisTool::writeClocksFile(vhdl::VHDLExport &vhdlExport, const h
 	vhdl::Entity* top = vhdlExport.getAST()->getRootEntity();
 	for (hlim::Clock* clk : top->getClocks()) {
 		auto&& name = top->getNamespaceScope().getClock(clk).name;
-		hlim::ClockRational freq = clk->getAbsoluteFrequency();
+		hlim::ClockRational freq = clk->absoluteFrequency();
 		double ns = double(freq.denominator() * 1'000'000'000) / freq.numerator();
 
 		file << "clock: " << name << " period " << std::fixed << std::setprecision(3) << ns << " ns\n";

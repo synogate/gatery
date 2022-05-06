@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
 
@@ -22,7 +22,10 @@
 #include "frontend/Area.h"
 #include "frontend/Attributes.h"
 #include "frontend/Bit.h"
-#include "frontend/BitVector.h"
+#include "frontend/BVec.h"
+#include "frontend/UInt.h"
+#include "frontend/SInt.h"
+#include "frontend/Enum.h"
 #include "frontend/BitWidth.h"
 #include "frontend/Bundle.h"
 #include "frontend/Clock.h"
@@ -38,9 +41,9 @@
 #include "frontend/Memory.h"
 #include "frontend/Pack.h"
 #include "frontend/Pin.h"
+#include "frontend/PipeBalanceGroup.h"
 #include "frontend/PriorityConditional.h"
 #include "frontend/Reg.h"
-#include "frontend/Registers.h"
 #include "frontend/Scope.h"
 #include "frontend/Signal.h"
 #include "frontend/SignalArithmeticOp.h"
@@ -58,5 +61,12 @@
 #include "frontend/Vector.h"
 
 namespace gtry {
-    using DefaultPostprocessing = hlim::DefaultPostprocessing;
+	using DefaultPostprocessing = hlim::DefaultPostprocessing;
 }
+
+/** @defgroup gtry_frontend Gatery - Frontend
+ * @brief Everything needed for composing circuits.
+ * 
+ * The Gatery frontend encompasses all classes and functions necessary for building 
+ * circuits.
+ */

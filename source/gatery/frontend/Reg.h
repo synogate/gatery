@@ -1,59 +1,96 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
+#include "Signal.h"
+#include "Compound.h"
+
+#include <boost/hana/ext/std/array.hpp>
 #include <boost/hana/ext/std/tuple.hpp>
+#include <boost/hana/ext/std/pair.hpp>
 #include <boost/hana/transform.hpp>
 #include <boost/hana/zip.hpp>
+#include <boost/pfr.hpp>
+
 
 namespace gtry
 {
+	class Clock;
 
-    struct RegisterSettings {
-        bool allowRetimingBackward = false;
-        bool allowRetimingForward = false;
-    };
-
-
-	template<class T, class En = void>
-	struct Reg
-	{
-		T operator () (const T& val, const RegisterSettings &settings = {}) { return val; }
+	struct RegisterSettings {
+		boost::optional<Clock&> clock;
+		bool allowRetimingBackward = false;
+		bool allowRetimingForward = false;
 	};
 
-    struct RegTransform
-    {
-        RegTransform(const RegisterSettings &settings = {}) : settings(settings) { }
+	template<BaseSignal T>
+	T reg(const T& val, const RegisterSettings& settings = {});
 
-        template<typename T>
-        T operator() (const T& val) { return Reg<T>{}(val, settings); }
+	template<BaseSignal T, std::convertible_to<T> Tr>
+	T reg(const T& val, const Tr& resetVal, const RegisterSettings& settings = {});
 
-        const RegisterSettings &settings;
-    };
-    
-    template<typename ...T>
-    struct Reg<std::tuple<T...>>
-    {
-        std::tuple<T...> operator () (const std::tuple<T...>& val, const RegisterSettings &settings = {}) { return boost::hana::transform(val, RegTransform{settings}); }
-    };
+	template<Signal T>
+	T reg(const T& val, const RegisterSettings& settings = {});
 
-	template<typename T>
-	T reg(const T& val, const RegisterSettings &settings = {}) { return Reg<T>{}(val, settings); }
+	template<Signal T, typename Tr>
+	T reg(const T& val, const Tr& resetVal, const RegisterSettings& settings = {});
 
-	template<typename T, typename Tr>
-	T reg(const T& val, const Tr& resetVal, const RegisterSettings &settings = {}) { return Reg<T>{}(val, resetVal, settings); }
+	namespace internal
+	{
+		SignalReadPort reg(SignalReadPort val, std::string_view name, std::optional<SignalReadPort> reset, const RegisterSettings& settings);
+	}
+
+	template<BaseSignal T>
+	T reg(const T& val, const RegisterSettings& settings)
+	{
+		return internal::reg(
+			val.readPort(),
+			val.getName(),
+			std::nullopt,
+			settings
+		);
+	}
+
+	template<BaseSignal T, std::convertible_to<T> Tr>
+	T reg(const T& val, const Tr& resetVal, const RegisterSettings& settings)
+	{
+		NormalizedWidthOperands ops(val, T{ resetVal });
+
+		return internal::reg(
+			ops.lhs,
+			val.getName(),
+			ops.rhs,
+			settings
+		);
+	}
+
+	template<Signal T>
+	T reg(const T& val, const RegisterSettings& settings)
+	{
+		return internal::transformSignal(val, [&](const BaseSignal auto& sig) {
+			return reg(sig, settings); // forward so it can have overloads
+		});
+	}
+
+	template<Signal T, typename Tr>
+	T reg(const T& val, const Tr& resetVal, const RegisterSettings& settings)
+	{
+		return internal::transformSignal(val, resetVal, [&](const BaseSignal auto& sig, auto&& resetSig) {
+			return reg(sig, resetSig, settings); // forward so it can have overloads
+		});
+	}
 }

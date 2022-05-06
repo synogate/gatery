@@ -21,25 +21,25 @@
 #include "../Fifo.h"
 #include "../StreamArbiter.h"
 
-gtry::Bit gtry::scl::pci::isCompletionTlp(const BVec& tlpHeader)
+gtry::Bit gtry::scl::pci::isCompletionTlp(const UInt& tlpHeader)
 {
-	HCL_DESIGNCHECK_HINT(tlpHeader.getWidth() >= 8_b, "first 8b of tlp header required for decoding");
+	HCL_DESIGNCHECK_HINT(tlpHeader.width() >= 8_b, "first 8b of tlp header required for decoding");
 	Bit completion_tlp = tlpHeader(0, 5) == "b01010";
 	HCL_NAMED(completion_tlp);
 	return completion_tlp;
 }
 
-gtry::Bit gtry::scl::pci::isMemTlp(const BVec& tlpHeader)
+gtry::Bit gtry::scl::pci::isMemTlp(const UInt& tlpHeader)
 {
-	HCL_DESIGNCHECK_HINT(tlpHeader.getWidth() >= 8_b, "first 8b of tlp header required for decoding");
+	HCL_DESIGNCHECK_HINT(tlpHeader.width() >= 8_b, "first 8b of tlp header required for decoding");
 	Bit mem_tlp = tlpHeader(0, 5) == 0;
 	HCL_NAMED(mem_tlp);
 	return mem_tlp;
 }
 
-gtry::Bit gtry::scl::pci::isDataTlp(const BVec& tlpHeader)
+gtry::Bit gtry::scl::pci::isDataTlp(const UInt& tlpHeader)
 {
-	HCL_DESIGNCHECK_HINT(tlpHeader.getWidth() >= 32_b, "first word of tlp header required for decoding");
+	HCL_DESIGNCHECK_HINT(tlpHeader.width() >= 32_b, "first word of tlp header required for decoding");
 	Bit data_tlp = tlpHeader[30];
 	HCL_NAMED(data_tlp);
 	return data_tlp;
@@ -53,47 +53,47 @@ gtry::scl::pci::AvmmBridge::AvmmBridge(Stream<Tlp>& rx, AvalonMM& avmm, const Pc
 
 void gtry::scl::pci::AvmmBridge::setup(Stream<Tlp>& rx, AvalonMM& avmm, const PciId& cplId)
 {
-	HCL_DESIGNCHECK_HINT(rx.header.getWidth() == 96_b, "reduce tlp header address using discardHighAddressBits");
+	HCL_DESIGNCHECK_HINT(rx.data.header.width() == 96_b, "reduce tlp header address using discardHighAddressBits");
 	m_cplId = cplId;
 	generateFifoBridge(rx, avmm);
 }
 
 void gtry::scl::pci::AvmmBridge::generateFifoBridge(Stream<Tlp>& rx, AvalonMM& avmm)
 {
-	HCL_DESIGNCHECK(avmm.readData->getWidth() == 32_b);
+	HCL_DESIGNCHECK(avmm.readData->width() == 32_b);
 
 	auto entity = Area{ "AvmmBridge" }.enter();
 
-	sim_assert(!*rx.valid | rx.header(TlpOffset::type) == 0) << "not a memory tlp";
+	sim_assert(!*rx.valid | rx.data.header(TlpOffset::type) == 0) << "not a memory tlp";
 
 	// decode command
-	avmm.address = rx.header(64, 32_b);
+	avmm.address = rx.data.header(64, 32_b);
 	avmm.address(0, 2_b) = 0;
 
-	avmm.write = rx.transfer() & isDataTlp(rx.header);
+	avmm.write = rx.transfer() & isDataTlp(rx.data.header);
 	avmm.read = rx.transfer() & !*avmm.write;
-	avmm.writeData = rx.data;
+	avmm.writeData = rx.data.data;
 
 	// store cpl data for command
 	size_t pipelineDepth = std::max<size_t>(avmm.maximumPendingReadTransactions, 1);
 	Fifo<MemTlpCplData> resQueue{ pipelineDepth , MemTlpCplData{} };
 	
 	MemTlpCplData req;
-	req.decode(rx.header);
+	req.decode(rx.data.header);
 	HCL_NAMED(req);
 	resQueue.push(req, *avmm.read);
 
 	// create tx tlp
 	avmm.createReadDataValid();
 	m_tx.valid = *avmm.readDataValid;
-	m_tx.header = "96x00000000000000044a000001";
-	m_tx.header(48, 16_b) = pack(m_cplId);
-	m_tx.data = *avmm.readData;
+	m_tx.data.header = "96x00000000000000044a000001";
+	m_tx.data.header(48, 16_b) = pack(m_cplId);
+	m_tx.data.data = *avmm.readData;
 
 	// join response and cpl data
 	MemTlpCplData res;
 	resQueue.pop(res, *m_tx.valid);
-	res.encode(m_tx.header);
+	res.encode(m_tx.data.header);
 
 	*rx.ready = !resQueue.full();
 	if (avmm.ready)
@@ -109,7 +109,7 @@ gtry::scl::pci::Tlp gtry::scl::pci::Tlp::discardHighAddressBits() const
 		.data = data
 	};
 
-	if(header.getWidth() > 96_b)
+	if(header.width() > 96_b)
 		IF(header[TlpOffset::has4DW])
 			tlpHdr.header(64, 32_b) = header(96, 32_b);
 
@@ -117,13 +117,13 @@ gtry::scl::pci::Tlp gtry::scl::pci::Tlp::discardHighAddressBits() const
 	return tlpHdr;
 }
 
-void gtry::scl::pci::MemTlpCplData::decode(const BVec& tlpHdr)
+void gtry::scl::pci::MemTlpCplData::decode(const UInt& tlpHdr)
 {
 	attr.trafficClass = tlpHdr(20, 3_b);
 	attr.idBasedOrdering = tlpHdr[18];
 	attr.relaxedOrdering = tlpHdr[13];
 	attr.noSnoop = tlpHdr[12];
-	lowerAddress = pack(tlpHdr(66, 5_b), "b00");
+	lowerAddress = cat(tlpHdr(66, 5_b), "b00");
 
 	tag = tlpHdr(40, 8_b);
 	requester.func = tlpHdr(48, 3_b);
@@ -131,19 +131,27 @@ void gtry::scl::pci::MemTlpCplData::decode(const BVec& tlpHdr)
 	requester.bus = tlpHdr(56, 8_b);
 }
 
-void gtry::scl::pci::MemTlpCplData::encode(BVec& tlpHdr) const
+void gtry::scl::pci::MemTlpCplData::encode(UInt& tlpHdr) const
 {
 	tlpHdr(20, 3_b) = attr.trafficClass;
 	tlpHdr[18] = attr.idBasedOrdering;
 	tlpHdr[13] = attr.relaxedOrdering;
 	tlpHdr[12] = attr.noSnoop;
 
-	tlpHdr(64, 32_b) = pack(requester.bus, requester.dev, requester.func, tag, '0', lowerAddress);
+	tlpHdr(64, 32_b) = cat(requester.bus, requester.dev, requester.func, tag, '0', lowerAddress);
 }
 
 void gtry::scl::pci::IntelPTileCompleter::generate()
 {
 	auto entity = Area{ "IntelPTileCompleter" }.enter();
+
+	static_assert(Signal<BVec&>);
+	static_assert(Signal<Tlp&>);
+	static_assert(Signal<Stream<Tlp>&>);
+	static_assert(CompoundSignal<Stream<Tlp>>);
+	static_assert(Signal<std::array<Stream<Tlp>, 2>&>);
+
+
 
 	Bit anyValid = '0';
 	std::array<Stream<Tlp>, 2> in_reduced;
@@ -153,16 +161,16 @@ void gtry::scl::pci::IntelPTileCompleter::generate()
 		in[i].valid.emplace();
 		in[i].sop.emplace();
 		in[i].eop.emplace();
-		in[i].header = 128_b;
-		in[i].data = 32_b;
+		in[i].data.header = 128_b;
+		in[i].data.data = 32_b;
 
-		BVec header = swapEndian(in[i].header, 8_b, 32_b);
+		UInt header = swapEndian(in[i].data.header, 8_b, 32_b);
 		IF(header[29]) // 4 DW tlp header
 			header(64, 32_b) = header(96, 32_b);
 
 		in_reduced[i].valid = *in[i].valid & *in[i].sop & *in[i].eop;
 		in_reduced[i].data = in[i].data;
-		in_reduced[i].header = header(0, 96_b);
+		in_reduced[i].data.header = header(0, 96_b);
 		anyValid |= *in_reduced[i].valid;
 	}
 

@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
 #include <gatery/frontend.h>
@@ -48,7 +48,7 @@ namespace gtry::scl
 
 		BitWidth hashWidth() const;
 		size_t numTables() const { return m_tables.size(); }
-		Out operator () (const Tkey& key, const BVec& hash);
+		Out operator () (const Tkey& key, const UInt& hash);
 
 		void addCpuInterface(AvalonNetworkSection& net);
 		void addCpuInterface(MemoryMap& mmap);
@@ -58,47 +58,47 @@ namespace gtry::scl
 
 	};
 
-	extern template class TinyCuckoo<BVec, BVec>;
+	extern template class TinyCuckoo<UInt, UInt>;
 
 
 	struct TinyCuckooItem
 	{
 		Bit valid;
-		BVec key;
-		BVec value;
+		UInt key;
+		UInt value;
 	};
 
 	struct TinyCuckooUpdate
 	{
 		Bit valid;
-		BVec tableIdx;
-		BVec itemIdx;
+		UInt tableIdx;
+		UInt itemIdx;
 		TinyCuckooItem item;
 	};
 
 	struct TinyCuckooIn
 	{
-		BVec key;
-		BVec hash;
-		BVec userData;
+		UInt key;
+		UInt hash;
+		UInt userData;
 
 		TinyCuckooUpdate update;
 
 		size_t numTables = 2;
 		size_t latency = 2;
 
-		BitWidth valueWidth() const { return update.item.value.getWidth(); }
-		BitWidth tableWidth() const { return update.itemIdx.getWidth(); }
+		BitWidth valueWidth() const { return update.item.value.width(); }
+		BitWidth tableWidth() const { return update.itemIdx.width(); }
 	};
 
 
 	struct TinyCuckooOut
 	{
 		Bit found;
-		BVec key;
-		BVec hash;
-		BVec value;
-		BVec userData;
+		UInt key;
+		UInt hash;
+		UInt value;
+		UInt userData;
 	};
 
 	TinyCuckooOut tinyCuckoo(const TinyCuckooIn& in);
@@ -130,7 +130,7 @@ namespace gtry::scl
 	}
 
 	template<typename Tkey, typename Tval>
-	inline typename TinyCuckoo<Tkey, Tval>::Out TinyCuckoo<Tkey, Tval>::operator()(const Tkey& key, const BVec& hash)
+	inline typename TinyCuckoo<Tkey, Tval>::Out TinyCuckoo<Tkey, Tval>::operator()(const Tkey& key, const UInt& hash)
 	{
 		GroupScope entity(GroupScope::GroupType::ENTITY);
 		entity.setName("TinyCuckoo_lookup");

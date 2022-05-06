@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
 #include <span>
@@ -24,35 +24,35 @@
 
 namespace gtry::scl
 {
-	struct OneHot : BVec
+	struct OneHot : UInt
 	{
-		OneHot() : BVec() {}
+		OneHot() : UInt() {}
 		OneHot(const OneHot&) = default;
 
-		OneHot(BitWidth width) : BVec(width, Expansion::none) {}
-		explicit OneHot(const BVec& initValue) : BVec(initValue) {}
+		OneHot(BitWidth width) : UInt(width, Expansion::none) {}
+		explicit OneHot(const UInt& initValue) : UInt(initValue) {}
 
 		OneHot& operator = (const OneHot&) = default;
 
-		void setBit(const BVec& idx);
+		void setBit(const UInt& idx);
 	};
 
-	OneHot decoder(const BVec& in);
-	BVec encoder(const OneHot& in);
+	OneHot decoder(const UInt& in);
+	UInt encoder(const OneHot& in);
 
-	std::vector<Stream<BVec>> makeIndexList(const BVec& valids);
+	std::vector<Stream<UInt>> makeIndexList(const UInt& valids);
 
 	template<typename T, typename Iter>
 	Stream<T> priorityEncoder(Iter begin, Iter end);
 
 	struct EncoderResult
 	{
-		BVec index;
+		UInt index;
 		Bit valid;
 	};
 
-	EncoderResult priorityEncoder(const BVec& in);
-	EncoderResult priorityEncoderTree(const BVec& in, bool registerStep, size_t resultBitsPerStep = 2);
+	EncoderResult priorityEncoder(const UInt& in);
+	EncoderResult priorityEncoderTree(const UInt& in, bool registerStep, size_t resultBitsPerStep = 2);
 
 
 	// implementation 
@@ -65,9 +65,9 @@ namespace gtry::scl
 
 		size_t maxWidth = 0;
 		for (Iter it = begin; it != end; ++it)
-			if (maxWidth < it->size())
-				maxWidth = it->size();
-		ret.value() = gtry::ConstBVec(BitWidth{ maxWidth });
+			if (maxWidth < it->data.size())
+				maxWidth = it->data.size();
+		ret.data = gtry::ConstUInt(BitWidth{ maxWidth });
 
 		Bit anyValid = '0';
 		for(Iter it = begin; it != end; ++it)
@@ -77,7 +77,7 @@ namespace gtry::scl
 			IF(*it->valid & !anyValid)
 			{
 				anyValid = '1';
-				ret.value() = it->value();
+				ret.data = it->data;
 				ret.valid = it->valid;
 				it->ready = ret.ready;
 			}

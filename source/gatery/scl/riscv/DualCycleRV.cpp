@@ -11,14 +11,14 @@ gtry::scl::riscv::DualCycleRV::DualCycleRV(BitWidth instructionAddrWidth, BitWid
 
 }
 
-gtry::Memory<gtry::BVec>& gtry::scl::riscv::DualCycleRV::fetch(uint64_t entryPoint)
+gtry::Memory<gtry::UInt>& gtry::scl::riscv::DualCycleRV::fetch(uint64_t entryPoint)
 {
-	BVec addr = m_IP.getWidth();
-	BVec instruction = 32_b;
+	UInt addr = m_IP.width();
+	UInt instruction = 32_b;
 	{
 		auto entRV = m_area.enter();
 
-		BitWidth memWidth = m_IP.getWidth() - 2;
+		BitWidth memWidth = m_IP.width() - 2;
 		m_instructionMem.setup(memWidth.count(), 32_b);
 		m_instructionMem.setType(MemType::MEDIUM);
 		m_instructionMem.setName("instruction_memory");
@@ -34,7 +34,7 @@ gtry::Memory<gtry::BVec>& gtry::scl::riscv::DualCycleRV::fetch(uint64_t entryPoi
 	return m_instructionMem;
 }
 
-gtry::BVec gtry::scl::riscv::DualCycleRV::fetch(const BVec& instruction, uint64_t entryPoint)
+gtry::UInt gtry::scl::riscv::DualCycleRV::fetch(const UInt& instruction, uint64_t entryPoint)
 {
 	Instruction pre_inst;
 	pre_inst.decode(instruction);
@@ -85,14 +85,14 @@ gtry::BVec gtry::scl::riscv::DualCycleRV::fetch(const BVec& instruction, uint64_
 	HCL_NAMED(m_storeResult);
 
 	// decode instruction in execute cycle
-	BVec instruction_execute = 32_b;
+	UInt instruction_execute = 32_b;
 	IF(!m_stall)
 		instruction_execute = instruction;
 	instruction_execute = reg(instruction_execute);
 	m_instr.decode(instruction_execute);
 	HCL_NAMED(m_instr);
 
-	BVec ip = m_IP.getWidth();
+	UInt ip = m_IP.width();
 	ip = reg(ip, entryPoint);
 	HCL_NAMED(ip);
 
@@ -103,7 +103,7 @@ gtry::BVec gtry::scl::riscv::DualCycleRV::fetch(const BVec& instruction, uint64_
 	}
 	m_IP = reg(m_IP, 0);
 
-	m_overrideIP = ip.getWidth();
+	m_overrideIP = ip.width();
 	IF(!m_stall & m_instructionValid & m_overrideIPValid)
 		ip = m_overrideIP;
 
@@ -125,16 +125,16 @@ gtry::BVec gtry::scl::riscv::DualCycleRV::fetch(const BVec& instruction, uint64_
 	return ip;
 }
 
-void gtry::scl::riscv::DualCycleRV::setIP(const BVec& ip)
+void gtry::scl::riscv::DualCycleRV::setIP(const UInt& ip)
 {
 	IF(m_instructionValid)
 	{
 		m_overrideIPValid = '1';
-		m_overrideIP = ip(0, m_IP.getWidth());
+		m_overrideIP = ip(0, m_IP.width());
 	}
 }
 
-void gtry::scl::riscv::DualCycleRV::setResult(const BVec& result)
+void gtry::scl::riscv::DualCycleRV::setResult(const UInt& result)
 {
 	m_resultValid = '1';
 	m_resultData = zext(result);

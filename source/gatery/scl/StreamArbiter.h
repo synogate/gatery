@@ -42,11 +42,11 @@ namespace gtry::scl
 		Bit selectionState;
 		HCL_NAMED(selectionState);
 
-		Stream<T>::value() = in0.value();
+		Stream<T>::data = in0.data;
 		Stream<T>::valid = in0.valid;
 		IF(selectionState == '1' | !*in0.valid)
 		{
-			Stream<T>::value() = in1.value();
+			Stream<T>::data = in1.data;
 			Stream<T>::valid = in1.valid;
 		}
 

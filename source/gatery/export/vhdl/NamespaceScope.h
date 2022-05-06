@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
 
@@ -37,21 +37,21 @@ class AST;
 
 struct NodeInternalStorageSignal
 {
-    hlim::BaseNode *node;
-    size_t signalIdx;
+	hlim::BaseNode *node;
+	size_t signalIdx;
 
-    inline bool operator==(const NodeInternalStorageSignal &rhs) const { return node == rhs.node && signalIdx == rhs.signalIdx; }
-    inline bool operator<(const NodeInternalStorageSignal &rhs) const { if (node < rhs.node) return true; if (node > rhs.node) return false; return signalIdx < rhs.signalIdx; }
+	inline bool operator==(const NodeInternalStorageSignal &rhs) const { return node == rhs.node && signalIdx == rhs.signalIdx; }
+	inline bool operator<(const NodeInternalStorageSignal &rhs) const { if (node < rhs.node) return true; if (node > rhs.node) return false; return signalIdx < rhs.signalIdx; }
 };
 
 
 struct TypeDefinition
 {
-    std::vector<hlim::SignalGroup*> signalGroups;
-    std::string typeName;
-    std::string desiredTypeName;
+	std::vector<hlim::SignalGroup*> signalGroups;
+	std::string typeName;
+	std::string desiredTypeName;
 
-    bool compatibleWith(hlim::SignalGroup *signalGroup);
+	bool compatibleWith(hlim::SignalGroup *signalGroup);
 };
 
 /**
@@ -59,42 +59,43 @@ struct TypeDefinition
  */
 class NamespaceScope
 {
-    public:
-        NamespaceScope(AST &ast, NamespaceScope *parent);
-        virtual ~NamespaceScope() { }
+	public:
+		NamespaceScope(AST &ast, NamespaceScope *parent);
+		virtual ~NamespaceScope() { }
 
-        std::string allocateName(hlim::NodePort nodePort, const std::string &desiredName, VHDLDataType dataType, CodeFormatting::SignalType type);
-        const VHDLSignalDeclaration &get(const hlim::NodePort nodePort) const;
+		std::string allocateName(hlim::NodePort nodePort, const std::string &desiredName, VHDLDataType dataType, CodeFormatting::SignalType type);
+		const VHDLSignalDeclaration &get(const hlim::NodePort nodePort) const;
 
-        std::string allocateName(NodeInternalStorageSignal nodePort, const std::string &desiredName);
-        const std::string &getName(NodeInternalStorageSignal nodePort) const;
+		std::string allocateName(NodeInternalStorageSignal nodePort, const std::string &desiredName);
+		const std::string &getName(NodeInternalStorageSignal nodePort) const;
 
-        std::string allocateName(hlim::Clock *clock, const std::string &desiredName);
-        const VHDLSignalDeclaration &getClock(const hlim::Clock *clock) const;
+		std::string allocateName(hlim::Clock *clock, const std::string &desiredName);
+		const VHDLSignalDeclaration &getClock(const hlim::Clock *clock) const;
 
-        std::string allocateResetName(hlim::Clock *clock, const std::string &desiredName);
-        const VHDLSignalDeclaration &getReset(const hlim::Clock *clock) const;
+		std::string allocateResetName(hlim::Clock *clock, const std::string &desiredName);
+		const VHDLSignalDeclaration &getReset(const hlim::Clock *clock) const;
 
-        std::string allocateName(hlim::Node_Pin *ioPin, const std::string &desiredName, VHDLDataType dataType);
-        const VHDLSignalDeclaration &get(const hlim::Node_Pin *ioPin) const;
+		std::string allocateName(hlim::Node_Pin *ioPin, const std::string &desiredName, VHDLDataType dataType);
+		const VHDLSignalDeclaration &get(const hlim::Node_Pin *ioPin) const;
 
-        std::string allocatePackageName(const std::string &desiredName);
-        std::string allocateEntityName(const std::string &desiredName);
-        std::string allocateBlockName(const std::string &desiredName);
-        std::string allocateProcessName(const std::string &desiredName, bool clocked);
-        std::string allocateInstanceName(const std::string &desiredName);
-    protected:
-        bool isNameInUse(const std::string &lowerCaseName) const;
-        AST &m_ast;
-        NamespaceScope *m_parent;
+		std::string allocatePackageName(const std::string &desiredName);
+		std::string allocateEntityName(const std::string &desiredName);
+		std::string allocateBlockName(const std::string &desiredName);
+		std::string allocateProcessName(const std::string &desiredName, bool clocked);
+		std::string allocateInstanceName(const std::string &desiredName);
+	protected:
+		bool isNameInUse(const std::string &lowerCaseName) const;
+		AST &m_ast;
+		NamespaceScope *m_parent;
 
-        std::set<std::string> m_namesInUse;
-        std::map<hlim::NodePort, VHDLSignalDeclaration> m_nodeNames;
-        std::map<NodeInternalStorageSignal, std::string> m_nodeStorageNames;
-        std::map<hlim::Clock*, VHDLSignalDeclaration> m_clockNames;
-        std::map<hlim::Clock*, VHDLSignalDeclaration> m_resetNames;
-        std::map<hlim::Node_Pin*, VHDLSignalDeclaration> m_ioPinNames;
-        std::vector<TypeDefinition> m_typeDefinitions;
+		std::set<std::string> m_namesInUse;
+		std::map<std::string, size_t> m_nextNameAttempt;
+		std::map<hlim::NodePort, VHDLSignalDeclaration> m_nodeNames;
+		std::map<NodeInternalStorageSignal, std::string> m_nodeStorageNames;
+		std::map<hlim::Clock*, VHDLSignalDeclaration> m_clockNames;
+		std::map<hlim::Clock*, VHDLSignalDeclaration> m_resetNames;
+		std::map<hlim::Node_Pin*, VHDLSignalDeclaration> m_ioPinNames;
+		std::vector<TypeDefinition> m_typeDefinitions;
 };
 
 

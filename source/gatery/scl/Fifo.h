@@ -39,7 +39,7 @@ namespace gtry::scl
 		Fifo(size_t minDepth, TData ref) : Fifo() { setup(minDepth, std::move(ref)); }
 		void setup(size_t minDepth, TData ref);
 
-		size_t getDepth();
+		size_t depth();
 
 		// NOTE: always push before pop for correct conflict resolution
 		// TODO: fix above note by adding explicit write before read conflict resulution to bram
@@ -49,15 +49,15 @@ namespace gtry::scl
 		const Bit& empty() const { return m_empty; }
 		const Bit& full() const { return m_full; }
 
-		Bit almostEmpty(const BVec& level);
-		Bit almostFull(const BVec& level);
+		Bit almostEmpty(const UInt& level);
+		Bit almostFull(const UInt& level);
 	private:
 		Area m_area;
 
-		Memory<BVec>	m_mem;
-		BVec m_put;
-		BVec m_get;
-		BVec m_size;
+		Memory<UInt>	m_mem;
+		UInt m_put;
+		UInt m_get;
+		UInt m_size;
 
 		Bit m_full;
 		Bit m_empty;
@@ -70,7 +70,7 @@ namespace gtry::scl
 	};
 
 	template<typename TData>
-	inline size_t Fifo<TData>::getDepth() {
+	inline size_t Fifo<TData>::depth() {
 		auto *meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
 		FifoCapabilities::Choice &fifoChoice = meta->fifoChoice;
 		return fifoChoice.readDepth;
@@ -141,13 +141,13 @@ namespace gtry::scl
 		m_hasPush = true;
 
 		setName(data, "in_data");
-		BVec packedData = pack(data);
+		UInt packedData = pack(data);
 		setName(packedData, "in_data_packed");
 		setName(valid, "in_valid");
 
 		sim_assert(!valid | !m_full) << "push into full fifo";
 
-		BVec put = m_put.getWidth();
+		UInt put = m_put.width();
 		put = reg(put, 0);
 		HCL_NAMED(put);
 
@@ -173,26 +173,26 @@ namespace gtry::scl
 
 		sim_assert(!ready | !m_empty) << "pop from empty fifo";
 
-		BVec get = m_get.getWidth();
+		UInt get = m_get.width();
 		get = reg(get, 0);
 		HCL_NAMED(get);
 
 		IF(ready)
 			get += 1;
 
-		BVec packedData = reg(m_mem[get(0, -1)], {.allowRetimingBackward=true});
+		UInt packedData = reg(m_mem[get(0, -1)], {.allowRetimingBackward=true});
 
 		m_get = get;
 		HCL_NAMED(m_get);
 
 		setName(packedData, "out_data_packed");
-		constructFrom(*m_defaultValue, data);
+		*m_defaultValue = constructFrom(data);
 		unpack(packedData, data);
 		setName(data, "out_data");
 	}
 
 	template<typename TData>
-	inline Bit gtry::scl::Fifo<TData>::almostEmpty(const BVec& level) 
+	inline Bit gtry::scl::Fifo<TData>::almostEmpty(const UInt& level) 
 	{ 
 		auto *meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
 		auto scope = m_area.enter();
@@ -202,7 +202,7 @@ namespace gtry::scl
 		std::string signalName = (boost::format("almost_empty_%d") % meta->almostEmptySignalLevel.size()).str();
 		meta->almostEmptySignalLevel.push_back({signalName, levelName});
 
-		BVec namedLevel = level;
+		UInt namedLevel = level;
 		namedLevel.setName(levelName);
 
 		Bit ae = reg(m_size <= namedLevel, '1');
@@ -211,7 +211,7 @@ namespace gtry::scl
 	}
 
 	template<typename TData>
-	inline Bit gtry::scl::Fifo<TData>::almostFull(const BVec& level) 
+	inline Bit gtry::scl::Fifo<TData>::almostFull(const UInt& level) 
 	{ 
 		auto *meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
 		auto scope = m_area.enter();
@@ -222,7 +222,7 @@ namespace gtry::scl
 		meta->almostFullSignalLevel.push_back({signalName, levelName});
 
 		HCL_ASSERT_HINT(meta->fifoChoice.readWidth == meta->fifoChoice.writeWidth, "Almost full level computation assumes no mixed read/write widths");
-		BVec namedLevel = meta->fifoChoice.readDepth - level;
+		UInt namedLevel = meta->fifoChoice.readDepth - level;
 		namedLevel.setName(levelName);
 
 		Bit af = reg(m_size >= namedLevel, '0');

@@ -18,7 +18,9 @@
 #pragma once
 #include "Bit.h"
 #include "BitVector.h"
-#include "Reg.h"
+#include "UInt.h"
+//#include "Reg.h"
+#include "../utils/Traits.h"
 
 #include <string_view>
 #include <type_traits>
@@ -28,6 +30,13 @@
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/fwd/accessors.hpp>
 #include <boost/hana/tuple.hpp>
+
+#include <boost/hana/ext/std/array.hpp>
+#include <boost/hana/ext/std/tuple.hpp>
+#include <boost/hana/ext/std/pair.hpp>
+#include <boost/hana/transform.hpp>
+#include <boost/hana/zip.hpp>
+#include <boost/pfr.hpp>
 
 namespace gtry
 {
@@ -41,13 +50,21 @@ namespace gtry
 		virtual void enter(std::string_view name);
 		virtual void leave();
 
-		virtual void operator () (const BVec& a, const BVec& b);
-		virtual void operator () (BVec& a);
-		virtual void operator () (BVec& a, const BVec& b);
+		virtual void operator () (const BVec& a, const BVec& b) { }
+		virtual void operator () (BVec& a) { }
+		virtual void operator () (BVec& a, const BVec& b) { }
 
-		virtual void operator () (const Bit& a, const Bit& b);
-		virtual void operator () (Bit& a);
-		virtual void operator () (Bit& vec, const Bit& b);
+		virtual void operator () (const UInt& a, const UInt& b) { }
+		virtual void operator () (UInt& a) { }
+		virtual void operator () (UInt& a, const UInt& b) { }
+
+		virtual void operator () (const SInt& a, const SInt& b) { }
+		virtual void operator () (SInt& a) { }
+		virtual void operator () (SInt& a, const SInt& b) { }
+
+		virtual void operator () (const Bit& a, const Bit& b) { }
+		virtual void operator () (Bit& a) { }
+		virtual void operator () (Bit& vec, const Bit& b) { }
 	};
 
 	class CompoundNameVisitor : public CompoundVisitor
@@ -79,6 +96,22 @@ namespace gtry
 	};
 
 	template<>
+	struct VisitCompound<UInt>
+	{
+		void operator () (UInt& a, const UInt& b, CompoundVisitor& v, size_t flags) { v(a, b); }
+		void operator () (UInt& a, CompoundVisitor& v) { v(a); }
+		void operator () (const UInt& a, const UInt& b, CompoundVisitor& v) { v(a, b); }
+	};
+
+	template<>
+	struct VisitCompound<SInt>
+	{
+		void operator () (SInt& a, const SInt& b, CompoundVisitor& v, size_t flags) { v(a, b); }
+		void operator () (SInt& a, CompoundVisitor& v) { v(a); }
+		void operator () (const SInt& a, const SInt& b, CompoundVisitor& v) { v(a, b); }
+	};
+
+	template<>
 	struct VisitCompound<Bit>
 	{
 		void operator () (Bit& a, const Bit& b, CompoundVisitor& v, size_t flags) { v(a, b); }
@@ -88,48 +121,23 @@ namespace gtry
 
 	namespace internal
 	{
-		template <typename T, typename = int>
-		struct resizable : std::false_type {};
-
-		template <typename T>
-		struct resizable <T, decltype((void)std::declval<T>().resize(1), 0)> : std::true_type {};
-
-
-		template<typename T, typename = int>
-		struct is_signal : std::false_type {
-			using sig_type = T;
-		};
-#ifndef __clang__
-		template<typename T>
-		struct is_signal<T, decltype((void)BVec{ std::declval<T>() }, 0)> : std::true_type {
-			using sig_type = BVec;
-		};
-
-		template<typename T>
-		struct is_signal<T, decltype((void)Bit{ std::declval<T>() }, 0)> : std::true_type {
-			using sig_type = Bit;
-		};
-#else
-		template<typename T>
-		struct is_signal<T, decltype(BVec{ std::declval<T>() })> : std::true_type {
-			using sig_type = BVec;
-		};
-
-		template<typename T>
-		struct is_signal<T, decltype(Bit{ std::declval<T>() })> : std::true_type {
-			using sig_type = Bit;
-		};
-#endif
-		template<typename T, typename = std::enable_if_t<!is_signal<T>::value>>
+		// Forward all meta data
+		template<typename T> requires (!BaseSignalValue<T>)
 		const T& signalOTron(const T& ret) { return ret; }
-		inline const BVec& signalOTron(const BVec& vec) { return vec; }
-		inline const Bit& signalOTron(const Bit& bit) { return bit; }
+
+		// Forward all signals without copy or conversion
+		template<BaseSignal T>
+		inline const T& signalOTron(const T& vec) { return vec; }
+
+		// Convert everything that can be converted to a signal
+		template<BaseSignalValue T> requires (!BaseSignal<T>)
+		auto signalOTron(const T& ret) { return ValueToBaseSignal<T>{ret}; }
 	}
 
 	template<typename T>
 	void visitForcedSignalCompound(const T& sig, CompoundVisitor& v)
 	{
-		VisitCompound<typename internal::is_signal<T>::sig_type>{}(
+		VisitCompound<ValueToBaseSignal<T>>{}(
 			internal::signalOTron(sig),
 			internal::signalOTron(sig),
 			v
@@ -216,7 +224,7 @@ namespace gtry
 	{
 		void operator () (T& a, const T& b, CompoundVisitor& v, size_t flags)
 		{
-			if constexpr (internal::resizable<T>::value)
+			if constexpr (resizable<T>::value)
 				if (a.size() != b.size())
 					a.resize(b.size());
 
@@ -346,33 +354,12 @@ namespace gtry
 		}
 	};
 
-	template<typename... Comp>
-	BitWidth width(const Comp& ... compound)
-	{
-		struct WidthVisitor : CompoundVisitor
-		{
-			void operator () (const BVec& vec, const BVec&) final {
-				m_totalWidth += vec.size();
-			}
-
-			void operator () (const Bit&, const Bit&) final {
-				m_totalWidth++;
-			}
-
-			size_t m_totalWidth = 0;
-		};
-
-		WidthVisitor v;
-		(VisitCompound<Comp>{}(compound, compound, v), ...);
-		return BitWidth{ v.m_totalWidth };
-	}
-
 	template<typename Comp>
 	void setName(Comp& compound, std::string_view prefix)
 	{
 		struct NameVisitor : CompoundNameVisitor
 		{
-			void operator () (BVec& vec) override { vec.setName(makeName()); }
+			void operator () (UInt& vec) override { vec.setName(makeName()); }
 			void operator () (Bit& vec) override { vec.setName(makeName()); }
 		};
 
@@ -383,56 +370,203 @@ namespace gtry
 	}
 
 	void setName(const Bit&, std::string_view) = delete;
-	void setName(const BVec&, std::string_view) = delete;
+	void setName(const UInt&, std::string_view) = delete;
 
-	template<typename T>
-	struct Reg<T, std::enable_if_t<boost::spirit::traits::is_container<T>::value>>
+	namespace internal
 	{
-		T operator () (const T& signal, const RegisterSettings &settings = {})
+
+		template<BaseSignal T, typename TFunc>
+		T transformSignal(const T& val, TFunc&& func);
+
+		template<BaseSignal T, std::convertible_to<T> Tr, typename TFunc>
+		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func);
+
+		template<CompoundSignal T, typename TFunc>
+		T transformSignal(const T& val, TFunc&& func);
+
+		template<CompoundSignal T, std::convertible_to<T> Tr, typename TFunc>
+		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func);
+
+		template<ContainerSignal T, typename TFunc>
+		T transformSignal(const T& val, TFunc&& func);
+
+		template<ContainerSignal T, ContainerSignal Tr, typename TFunc>
+		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func);
+
+		template<TupleSignal T, typename TFunc>
+		T transformSignal(const T& val, TFunc&& func);
+
+		template<TupleSignal T, TupleSignal Tr, typename TFunc>
+		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func);
+
+		template<typename T, typename TFunc>
+		T transformIfSignal(const T& signal, TFunc&& func)
 		{
-			T ret = signal;
-			for (auto& item : ret)
-				item = reg(item, settings);
+			if constexpr(Signal<T>)
+				return transformSignal(signal, func);
+			else
+				return signal;
+		}
+
+		template<typename T, typename Tr, typename TFunc>
+		T transformIfSignal(const T& signal, Tr&& secondSignal, TFunc&& func)
+		{
+			if constexpr(Signal<T>)
+				return transformSignal(signal, secondSignal, func);
+			else
+				return T{ secondSignal };
+		}
+
+		template<BaseSignal T, typename TFunc>
+		T transformSignal(const T& val, TFunc&& func)
+		{
+			return func(val);
+		}
+
+		template<BaseSignal T, std::convertible_to<T> Tr, typename TFunc>
+		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func)
+		{
+			return func(val, resetVal);
+		}
+
+		template<CompoundSignal T, typename TFunc>
+		T transformSignal(const T& val, TFunc&& func)
+		{
+			return std::make_from_tuple<T>(
+				boost::hana::transform(boost::pfr::structure_tie(val), [&](auto&& member) {
+					if constexpr(Signal<decltype(member)>)
+						return transformSignal(member, func);
+					else
+						return member;
+				})
+			);
+		}
+
+		template<CompoundSignal T, std::convertible_to<T> Tr, typename TFunc>
+		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func)
+		{
+			const T& resetValT = resetVal;
+			return std::make_from_tuple<T>(
+				boost::hana::transform(
+				boost::hana::zip_with([](auto&& a, auto&& b) { return std::tie(a, b); },
+				boost::pfr::structure_tie(val),
+				boost::pfr::structure_tie(resetValT)
+				), [&](auto member) {
+
+					if constexpr(Signal<decltype(get<0>(member))>)
+						return transformSignal(get<0>(member), get<1>(member), func);
+					else
+						return get<1>(member); // use reset value for metadata
+
+				})
+			);
+		}
+
+		template<ContainerSignal T, typename TFunc>
+		T transformSignal(const T& val, TFunc&& func)
+		{
+			T ret;
+
+			if constexpr(requires { ret.reserve(val.size()); })
+				ret.reserve(val.size());
+
+			for(auto&& it : val)
+				ret.insert(ret.end(), transformSignal(it, func));
+
 			return ret;
 		}
 
-		T operator () (const T& signal, const T& reset, const RegisterSettings &settings = {})
+		template<ContainerSignal T, ContainerSignal Tr, typename TFunc>
+		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func)
 		{
-			T ret = signal;
+			HCL_DESIGNCHECK(val.size() == resetVal.size());
 
-			auto itS = begin(ret);
-			auto itR = begin(reset);
-			for (; itS != end(ret) && itR != end(reset); ++itR, ++itS)
-				*itS = reg(*itS, *itR, settings);
-			for (; itS != end(ret); ++itS)
-				*itS = reg(*itS, settings);
+			T ret;
+
+			if constexpr(requires { ret.reserve(val.size()); })
+				ret.reserve(val.size());
+
+			auto it_reset = resetVal.begin();
+			for(auto&& it : val)
+				ret.insert(ret.end(), transformSignal(it, *it_reset++, func));
+
 			return ret;
 		}
-	};
 
-	template<typename T>
-	struct Reg<T, std::enable_if_t<boost::hana::Struct<T>::value>>
-	{
-		T operator () (const T& signal, const RegisterSettings &settings = {})
+		template<TupleSignal T, typename TFunc>
+		T transformSignal(const T& val, TFunc&& func)
 		{
-			T ret = signal;
-			boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto&& member) {
-				auto& subSig = boost::hana::second(member)(ret);
-				subSig = reg(subSig, settings);
+			using namespace internal;
+
+			auto in2 = boost::hana::unpack(val, [](auto&&... args) {
+				return std::tie(args...);
 			});
-			return ret;
+
+			return boost::hana::unpack(in2, [&](auto&&... args) {
+				return T{ transformIfSignal(args, func)... };
+			});
 		}
 
-		T operator () (const T& signal, const T& reset, const RegisterSettings &settings = {})
+		template<TupleSignal T, TupleSignal Tr, typename TFunc>
+		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func)
 		{
-			T ret = signal;
-			boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto member) {
-				auto& subSig = boost::hana::second(member)(ret);
-				const auto& subResetSig = boost::hana::second(member)(reset);
-				subSig = reg(subSig, subResetSig, settings);
-				});
-			return ret;
-		}
-	};
+			using namespace internal;
 
+			auto in2 = boost::hana::unpack(val, [](auto&&... args) {
+				return std::tie(args...);
+			});
+			auto in2r = boost::hana::unpack(resetVal, [](auto&&... args) {
+				return std::tie(args...);
+			});
+
+			auto in3 = boost::hana::zip_with([](auto&& a, auto&& b) {
+				static_assert(std::is_constructible_v<decltype(a), decltype(b)>, "reset type is not convertable to signal type");
+				return std::tie(a, b);
+			}, in2, in2r);
+
+			return boost::hana::unpack(in3, [&](auto&&... args) {
+				return T{ transformIfSignal(get<0>(args), get<1>(args), func)...};
+			});
+		}
+	}
+
+
+	namespace internal
+	{
+		void width(const BaseSignal auto& signal, BitWidth& sum);
+		void width(const ContainerSignal auto& signal, BitWidth& sum);
+		void width(const CompoundSignal auto& signal, BitWidth& sum);
+		void width(const TupleSignal auto& signal, BitWidth& sum);
+
+		void width(const BaseSignal auto& signal, BitWidth& sum)
+		{
+			sum += signal.width();
+		}
+
+		void width(const ContainerSignal auto& signal, BitWidth& sum)
+		{
+			for(auto& it : signal)
+				width(it, sum);
+		}
+
+		void width(const CompoundSignal auto& signal, BitWidth& sum)
+		{
+			width(boost::pfr::structure_tie(signal), sum);
+		}
+
+		void width(const TupleSignal auto& signal, BitWidth& sum)
+		{
+			boost::hana::for_each(signal, [&](const auto& member) {
+				if constexpr(Signal<decltype(member)>)
+					width(member, sum);
+			});
+		}
+	}
+
+	BitWidth width(const Signal auto& ...args)
+	{
+		BitWidth sum;
+		(internal::width(args, sum), ...);
+		return sum;
+	}
 }

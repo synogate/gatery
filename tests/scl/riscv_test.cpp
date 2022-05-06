@@ -210,7 +210,7 @@ struct RVOP
 		return *this;
 	}
 
-	BVec m_instructionWord = 32_b;
+	UInt m_instructionWord = 32_b;
 };
 
 class RV32I_stub : public scl::riscv::RV32I
@@ -285,15 +285,15 @@ public:
 	RV32I_stub& ip(uint32_t val) { simu(m_IP) = val; return *this; }
 
 protected:
-	virtual void setIP(const BVec& ip) { m_setIP = ip; }
-	virtual void setResult(const BVec& result) { m_setResultValid = '1'; m_setResult = result; }
+	virtual void setIP(const UInt& ip) { m_setIP = ip; }
+	virtual void setResult(const UInt& result) { m_setResultValid = '1'; m_setResult = result; }
 	virtual void setStall(const Bit& wait) { m_setStall = wait; }
 
 	RVOP m_op;
 	Bit m_setStall;
 	Bit m_setResultValid;
-	BVec m_setResult = 32_b;
-	BVec m_setIP = 32_b;
+	UInt m_setResult = 32_b;
+	UInt m_setIP = 32_b;
 	scl::AvalonMM m_avmm;
 
 };
@@ -301,7 +301,7 @@ protected:
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_arith, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
@@ -352,9 +352,9 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_arith, BoostUnitTestSimulationFixture)
 		}
 	});
 
-//    sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "riscv_arith.vcd" };
-//    vcd.addAllPins();
-//    vcd.addAllNamedSignals();
+//	sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "riscv_arith.vcd" };
+//	vcd.addAllPins();
+//	vcd.addAllNamedSignals();
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(clock.getClk(), 128);
@@ -362,7 +362,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_arith, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_logic, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
@@ -416,7 +416,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_logic, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_shift, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
@@ -514,7 +514,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_shift, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_setcmp, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
@@ -591,7 +591,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_setcmp, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_lui, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
@@ -641,7 +641,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_lui, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_jal, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
@@ -696,7 +696,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_jal, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
@@ -833,7 +833,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_store, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
@@ -919,7 +919,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_store, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
@@ -1109,11 +1109,11 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, BoostUnitTestSimulationFixture)
 	};
 	unsigned int gcd_bin_len = 164;
 
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	scl::riscv::SingleCycleI rv(8_b, 32_b);
-	Memory<BVec>& imem = rv.fetch();
+	Memory<UInt>& imem = rv.fetch();
 	imem.fillPowerOnState(sim::createDefaultBitVectorState(gcd_bin_len, gcd_bin));
 	rv.fetchOperands();
 
@@ -1128,7 +1128,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, BoostUnitTestSimulationFixture)
 
 	std::random_device rng;
 	
-	Memory<BVec> dmem(1024, 32_b);
+	Memory<UInt> dmem(1024, 32_b);
 	std::vector<unsigned char> dmemData(4096, 0);
 	dmemData[0] = 15; // (rng() & 0x3F) + 1;
 	dmemData[4] = 5; // (rng() & 0x3F) + 1;
@@ -1194,11 +1194,11 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, BoostUnitTestSimulationFixture)
 	};
 	unsigned int gcd_bin_len = 164;
 
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000).setName("clock"));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
 	scl::riscv::DualCycleRV rv(8_b, 32_b);
-	Memory<BVec>& imem = rv.fetch();
+	Memory<UInt>& imem = rv.fetch();
 	imem.fillPowerOnState(sim::createDefaultBitVectorState(gcd_bin_len, gcd_bin));
 
 	scl::AvalonMM avmm;
@@ -1212,7 +1212,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, BoostUnitTestSimulationFixture)
 
 	std::random_device rng;
 
-	Memory<BVec> dmem(1024, 32_b);
+	Memory<UInt> dmem(1024, 32_b);
 	std::vector<unsigned char> dmemData(4096, 0);
 	dmemData[0] = 15; // (rng() & 0x3F) + 1;
 	dmemData[4] = 5; // (rng() & 0x3F) + 1;
@@ -1263,7 +1263,7 @@ extern gtry::hlim::NodeGroup* dbg_group;
 
 BOOST_FIXTURE_TEST_CASE(riscv_embedded_system_builder, BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000'000).setName("clock").setResetHighActive(false));
+	Clock clock(ClockConfig{}.absoluteFrequency(10'000'000).setName("clock").setResetHighActive(false));
 	ClockScope clkScp(clock);
 
 	{
@@ -1327,12 +1327,12 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle_export, BoostUnitTestSimulationFixtur
 	};
 	unsigned int linked_text_len = 200;
 	{
-		Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000'000).setName("clock").setResetHighActive(false));
+		Clock clock(ClockConfig{}.absoluteFrequency(10'000'000).setName("clock").setResetHighActive(false));
 		ClockScope clkScp(clock);
 
 		//scl::riscv::SingleCycleI rv(8_b, 32_b);
 		scl::riscv::DualCycleRV rv(8_b, 32_b);
-		Memory<BVec>& imem = rv.fetch();
+		Memory<UInt>& imem = rv.fetch();
 		imem.fillPowerOnState(sim::createDefaultBitVectorState(linked_text_len, linked_text));
 		//rv.fetchOperands();
 
@@ -1344,7 +1344,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle_export, BoostUnitTestSimulationFixtur
 		rv.execute();
 		rv.mem(avmm, true, true);
 
-		Memory<BVec> dmem(1024, 32_b);
+		Memory<UInt> dmem(1024, 32_b);
 		dmem.noConflicts();
 		std::vector<unsigned char> dmemData(4096, 0);
 		//dmemData[0] = (rng() & 0x3F) + 1;

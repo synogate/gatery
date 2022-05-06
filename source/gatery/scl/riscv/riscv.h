@@ -24,26 +24,26 @@ namespace gtry::scl::riscv
 {
 	struct Instruction
 	{
-		BVec opcode = 5_b; // without 11b lsb's
-		BVec rd = 5_b;
-		BVec rs1 = 5_b;
-		BVec rs2 = 5_b;
-		BVec func3 = 3_b;
-		BVec func7 = 7_b;
-		BVec immI = 32_b;
-		BVec immS = 32_b;
-		BVec immB = 32_b;
-		BVec immU = 32_b;
-		BVec immJ = 32_b;
+		UInt opcode = 5_b; // without 11b lsb's
+		UInt rd = 5_b;
+		UInt rs1 = 5_b;
+		UInt rs2 = 5_b;
+		UInt func3 = 3_b;
+		UInt func7 = 7_b;
+		UInt immI = 32_b;
+		UInt immS = 32_b;
+		UInt immB = 32_b;
+		UInt immU = 32_b;
+		UInt immJ = 32_b;
 
-		BVec name = 32_b;
+		UInt name = 32_b;
 
-		void decode(const BVec& inst);
+		void decode(const UInt& inst);
 	};
 
 	struct IntAluResult
 	{
-		BVec sum = 32_b;
+		UInt sum = 32_b;
 		Bit zero;
 		Bit overflow;
 		Bit sign;
@@ -52,8 +52,8 @@ namespace gtry::scl::riscv
 
 	struct IntAluCtrl
 	{
-		BVec op1 = 32_b;
-		BVec op2 = 32_b;
+		UInt op1 = 32_b;
+		UInt op2 = 32_b;
 		Bit sub;
 
 		void result(IntAluResult& result) const;
@@ -83,18 +83,18 @@ namespace gtry::scl::riscv
 
 	protected:
 		// helper for instructions
-		virtual void setIP(const BVec& ip) = 0;
-		virtual void setResult(const BVec& result) = 0;
+		virtual void setIP(const UInt& ip) = 0;
+		virtual void setResult(const UInt& result) = 0;
 		virtual void setStall(const Bit& wait) = 0;
 
-		BVec m_IP;
-		BVec m_IPnext;
+		UInt m_IP;
+		UInt m_IPnext;
 
 		Instruction m_instr;
 		Bit m_instructionValid;
 		
-		BVec m_r1 = 32_b;
-		BVec m_r2 = 32_b;
+		UInt m_r1 = 32_b;
+		UInt m_r2 = 32_b;
 
 		IntAluCtrl m_alu;
 		IntAluResult m_aluResult;
@@ -111,21 +111,21 @@ namespace gtry::scl::riscv
 
 		SingleCycleI(BitWidth instructionAddrWidth = 32_b, BitWidth dataAddrWidth = 32_b);
 
-		virtual Memory<BVec>& fetch(uint32_t firstInstructionAddr = 0);
-		virtual BVec fetch(const BVec& instruction, uint32_t firstInstructionAddr = 0);
+		virtual Memory<UInt>& fetch(uint32_t firstInstructionAddr = 0);
+		virtual UInt fetch(const UInt& instruction, uint32_t firstInstructionAddr = 0);
 		virtual void fetchOperands(BitWidth regAddrWidth = 5_b);
 
 	protected:
-		virtual void setIP(const BVec& ip);
-		virtual void setResult(const BVec& result);
+		virtual void setIP(const UInt& ip);
+		virtual void setResult(const UInt& result);
 		virtual void setStall(const Bit& wait);
 
 		Bit m_stall;
 		Bit m_resultValid;
-		BVec m_resultData = 32_b;
-		BVec m_resultIP;
-		Memory<BVec> m_rf;
-		Memory<BVec> m_instructionMem;
+		UInt m_resultData = 32_b;
+		UInt m_resultIP;
+		Memory<UInt> m_rf;
+		Memory<UInt> m_instructionMem;
 
 	};
 

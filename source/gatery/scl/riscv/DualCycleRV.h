@@ -26,25 +26,25 @@ namespace gtry::scl::riscv
 
 		DualCycleRV(BitWidth instructionAddrWidth = 32_b, BitWidth dataAddrWidth = 32_b);
 
-		virtual Memory<BVec>& fetch(uint64_t entryPoint = 0);
-		virtual BVec fetch(const BVec& instruction, uint64_t entryPoint);
+		virtual Memory<UInt>& fetch(uint64_t entryPoint = 0);
+		virtual UInt fetch(const UInt& instruction, uint64_t entryPoint);
 
 	protected:
-		virtual void setIP(const BVec& ip);
-		virtual void setResult(const BVec& result);
+		virtual void setIP(const UInt& ip);
+		virtual void setResult(const UInt& result);
 		virtual void setStall(const Bit& wait);
 
 		Bit m_storeResult;
 
 		Bit m_stall;
 		Bit m_resultValid;
-		BVec m_resultData = 32_b;
+		UInt m_resultData = 32_b;
 
 		Bit m_overrideIPValid;
-		BVec m_overrideIP;
+		UInt m_overrideIP;
 
-		Memory<BVec> m_rf;
-		Memory<BVec> m_instructionMem;
+		Memory<UInt> m_rf;
+		Memory<UInt> m_instructionMem;
 
 	};
 }

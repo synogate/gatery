@@ -19,7 +19,7 @@
 
 #include "Area.h"
 #include "Bit.h"
-#include "BitVector.h"
+#include "BVec.h"
 #include "BitWidth.h"
 #include "ConditionalScope.h"
 #include "Pack.h"
@@ -42,11 +42,11 @@ namespace gtry
 	template<typename Data>
 	class MemoryPortFactory {
 	public:
-		MemoryPortFactory(hlim::Node_Memory* memoryNode, const BVec& address, Data defaultValue) : m_memoryNode(memoryNode), m_defaultValue(defaultValue) {
+		MemoryPortFactory(hlim::Node_Memory* memoryNode, const UInt& address, Data defaultValue) : m_memoryNode(memoryNode), m_defaultValue(defaultValue) {
 			m_wordSize = width(m_defaultValue).value;
 
-    		size_t depth = (memoryNode->getSize() + m_wordSize-1) / m_wordSize;
-    		size_t expectedAddrBits = utils::Log2C(depth);
+			size_t depth = (memoryNode->getSize() + m_wordSize-1) / m_wordSize;
+			size_t expectedAddrBits = utils::Log2C(depth);
 
 			if (address.size() < expectedAddrBits)
 				m_address = zext(address, expectedAddrBits-address.size());
@@ -64,9 +64,9 @@ namespace gtry
 			if (auto* scope = gtry::ConditionalScope::get())
 				readPort->connectEnable(scope->getFullCondition());
 
-			readPort->connectAddress(m_address.getReadPort());
+			readPort->connectAddress(m_address.readPort());
 
-			BVec rawData(SignalReadPort({ .node = readPort, .port = (unsigned)hlim::Node_MemPort::Outputs::rdData }));
+			UInt rawData(SignalReadPort({ .node = readPort, .port = (unsigned)hlim::Node_MemPort::Outputs::rdData }));
 			Data ret = constructFrom(m_defaultValue);
 			gtry::unpack(rawData, ret);
 			return ret;
@@ -74,28 +74,36 @@ namespace gtry
 
 		operator Data() const { return read(); }
 
-		void write(const Data& value) {
-			BVec packedValue = pack(value);
+		auto *write(const Data& value) {
+			UInt packedValue = pack(value);
 
 			HCL_DESIGNCHECK_HINT(packedValue.size() == m_wordSize, "The width of data assigned to a memory write port must match the previously specified word width of the memory or memory view.");
 
 			auto* writePort = DesignScope::createNode<hlim::Node_MemPort>(m_wordSize);
 			writePort->connectMemory(m_memoryNode);
-			//writePort->connectEnable(constructEnableBit().getReadPort());
+			//writePort->connectEnable(constructEnableBit().readPort());
 			if (auto* scope = gtry::ConditionalScope::get()) {
 				writePort->connectEnable(scope->getFullCondition());
 				writePort->connectWrEnable(scope->getFullCondition());
 			}
-			writePort->connectAddress(m_address.getReadPort());
-			writePort->connectWrData(packedValue.getReadPort());
+			writePort->connectAddress(m_address.readPort());
+			writePort->connectWrData(packedValue.readPort());
 			writePort->setClock(ClockScope::getClk().getClk());
+			return writePort;
 		}
 
 		MemoryPortFactory<Data>& operator = (const Data& value) { write(value); return *this; }
+
+		void write(const Data& value, const UInt &wrWordEnable) {
+			auto* writePort = write(value);
+			writePort->connectWrWordEnable(wrWordEnable.readPort());
+		}
+
+		MemoryPortFactory<Data>& operator = (const std::pair<Data, UInt>& value) { write(value.first, value.second); return *this; }
 	protected:
 		hlim::NodePtr<hlim::Node_Memory> m_memoryNode;
 		Data m_defaultValue;
-		BVec m_address;
+		UInt m_address;
 		std::size_t m_wordSize;
 
 		Bit constructEnableBit() const {
@@ -184,17 +192,17 @@ namespace gtry
 			state.clearRange(sim::DefaultConfig::VALUE, 0, state.size());
 			state.setRange(sim::DefaultConfig::DEFINED, 0, state.size());
 		}
-		void addResetLogic(std::function<Data(BVec)> address2data) {
+		void addResetLogic(std::function<Data(UInt)> address2data) {
 			m_memoryNode->setInitializationNetDataWidth(m_wordWidth);
-			BVec data = pack(address2data(hlim::NodePort{m_memoryNode, (size_t)hlim::Node_Memory::Outputs::INITIALIZATION_ADDR}));
-			m_memoryNode->rewireInput((size_t)hlim::Node_Memory::Inputs::INITIALIZATION_DATA, data.getReadPort());
+			UInt data = pack(address2data(hlim::NodePort{m_memoryNode, (size_t)hlim::Node_Memory::Outputs::INITIALIZATION_ADDR}));
+			m_memoryNode->rewireInput((size_t)hlim::Node_Memory::Inputs::INITIALIZATION_DATA, data.readPort());
 		}
 
 		void initZero() {
 			setPowerOnStateZero();
 			m_memoryNode->setInitializationNetDataWidth(m_wordWidth);
-			BVec data = ConstBVec(0, BitWidth(m_wordWidth));
-			m_memoryNode->rewireInput((size_t)hlim::Node_Memory::Inputs::INITIALIZATION_DATA, data.getReadPort());
+			UInt data = ConstUInt(0, BitWidth(m_wordWidth));
+			m_memoryNode->rewireInput((size_t)hlim::Node_Memory::Inputs::INITIALIZATION_DATA, data.readPort());
 		}
 
 		std::size_t size() const { return m_memoryNode->getSize(); }
@@ -202,8 +210,8 @@ namespace gtry
 		BitWidth addressWidth() const { return BitWidth{ utils::Log2C(numWords()) }; }
 		std::size_t numWords() const { return size() / m_wordWidth; }
 
-		MemoryPortFactory<Data> operator [] (const BVec& address) { HCL_DESIGNCHECK(m_memoryNode != nullptr); return MemoryPortFactory<Data>(m_memoryNode, address, m_defaultValue); }
-		const MemoryPortFactory<Data> operator [] (const BVec& address) const { HCL_DESIGNCHECK(m_memoryNode != nullptr); return MemoryPortFactory<Data>(m_memoryNode, address, m_defaultValue); }
+		MemoryPortFactory<Data> operator [] (const UInt& address) { HCL_DESIGNCHECK(m_memoryNode != nullptr); return MemoryPortFactory<Data>(m_memoryNode, address, m_defaultValue); }
+		const MemoryPortFactory<Data> operator [] (const UInt& address) const { HCL_DESIGNCHECK(m_memoryNode != nullptr); return MemoryPortFactory<Data>(m_memoryNode, address, m_defaultValue); }
 
 		template<typename DataNew>
 		Memory<DataNew> view(DataNew def = DataNew{}) { return Memory<DataNew>(m_memoryNode, def); }

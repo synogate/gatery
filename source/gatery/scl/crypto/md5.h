@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
 #include <gatery/frontend.h>
@@ -22,7 +22,7 @@
 
 namespace gtry::scl
 {
-	template<typename TVec = BVec, typename TAdder = CarrySafeAdder>
+	template<typename TVec = UInt, typename TAdder = CarrySafeAdder>
 	struct Md5Generator
 	{
 		enum {
@@ -39,7 +39,7 @@ namespace gtry::scl
 			(TVec, d),
 			(std::array<TVec, 16>, w),
 			(std::array<TVec, NUM_ROUNDS>, constants),
-			(std::array<BVec, NUM_ROUNDS>, s)
+			(std::array<UInt, NUM_ROUNDS>, s)
 		);
 
 		Md5Generator() :
@@ -73,7 +73,7 @@ namespace gtry::scl
 			c = "x98BADCFE";
 			d = "x10325476";
 
-			hash = pack(d, c, b, a);
+			hash = cat(d, c, b, a);
 		}
 
 		void beginBlock(const TVec& _block)
@@ -83,13 +83,13 @@ namespace gtry::scl
 				w[i] = swappedBlock(i * 32, 32);
 		}
 
-		void round(const BVec& round)
+		void round(const UInt& round)
 		{
 			TVec k = mux(round, constants);
 			
 			// select round function
 			TVec f = c ^ (b | ~d);
-			BVec g = zext(round, 4)(0, 4); // TODO: allow without first extend if not needed
+			UInt g = zext(round, 4)(0, 4); // TODO: allow without first extend if not needed
 
 			IF(round < 16)
 			{
@@ -126,7 +126,7 @@ namespace gtry::scl
 			c += hash(Selection::Symbol(2, 32_b));
 			d += hash(Selection::Symbol(3, 32_b));
 
-			hash = pack(d, c, b, a);
+			hash = cat(d, c, b, a);
 		}
 
 		TVec finalize() { return swapEndian(hash); }

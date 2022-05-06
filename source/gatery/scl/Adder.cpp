@@ -18,9 +18,9 @@
 #include "gatery/pch.h"
 #include "Adder.h"
 
-template class gtry::scl::Adder<gtry::BVec>;
+template class gtry::scl::Adder<gtry::UInt>;
 
-gtry::scl::CarrySafeAdder& gtry::scl::CarrySafeAdder::add(const BVec& b)
+gtry::scl::CarrySafeAdder& gtry::scl::CarrySafeAdder::add(const UInt& b)
 {
 	if (m_count == 0)
 		m_sum = b;
@@ -28,7 +28,7 @@ gtry::scl::CarrySafeAdder& gtry::scl::CarrySafeAdder::add(const BVec& b)
 		m_carry = b;
 	else
 	{
-		BVec new_carry = (m_sum & m_carry) | (m_sum & b) | (m_carry & b);
+		UInt new_carry = (m_sum & m_carry) | (m_sum & b) | (m_carry & b);
 		m_sum ^= m_carry ^ b;
 		m_carry = new_carry << 1;
 	}
@@ -36,7 +36,7 @@ gtry::scl::CarrySafeAdder& gtry::scl::CarrySafeAdder::add(const BVec& b)
 	return *this;
 }
 
-gtry::BVec gtry::scl::CarrySafeAdder::sum() const
+gtry::UInt gtry::scl::CarrySafeAdder::sum() const
 {
 	if (m_count <= 1)
 		return m_sum;
@@ -44,14 +44,14 @@ gtry::BVec gtry::scl::CarrySafeAdder::sum() const
 	return m_sum + m_carry;
 }
 
-std::tuple<gtry::BVec, gtry::BVec> gtry::scl::add(const BVec& a, const BVec& b, const Bit& cin)
+std::tuple<gtry::UInt, gtry::UInt> gtry::scl::add(const UInt& a, const UInt& b, const Bit& cin)
 {
 	auto entity = Area{ "adder" }.enter();
 
-	BVec sum = a + b + cin;
+	UInt sum = a + b + cin;
 	HCL_NAMED(sum);
 
-	BVec cout = ((a | b) & ~sum) | (a & b);
+	UInt cout = ((a | b) & ~sum) | (a & b);
 	HCL_NAMED(cout);
 
 	return { sum, cout };

@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
 #include "SipHash.h"
@@ -28,7 +28,7 @@ namespace gtry::scl
 		HCL_DESIGNCHECK_HINT((m_hashWidth == 64) | (m_hashWidth == 128), "SipHash is implemented for 64 and 128 bit output only");
 	}
 
-	void SipHash::initialize(SipHashState& state, const BVec& key)
+	void SipHash::initialize(SipHashState& state, const UInt& key)
 	{
 		GroupScope entity(GroupScope::GroupType::ENTITY);
 		entity.setName("SipHashInit");
@@ -40,8 +40,8 @@ namespace gtry::scl
 		HCL_NAMED(state);
 
 		HCL_DESIGNCHECK_HINT(key.size() == 128, "SipHash key must be 128bit wide");
-		BVec k0 = key( 0, 64);
-		BVec k1 = key(64, 64);
+		UInt k0 = key( 0, 64);
+		UInt k1 = key(64, 64);
 		HCL_NAMED(k0);
 		HCL_NAMED(k1);
 
@@ -54,14 +54,14 @@ namespace gtry::scl
 			state[1] ^= 0xEE;
 	}
 
-	void SipHash::block(SipHashState& state, const BVec& block)
+	void SipHash::block(SipHashState& state, const UInt& block)
 	{
 		GroupScope entity(GroupScope::GroupType::ENTITY);
 		entity.setName("SipHashBlock");
 
 		HCL_DESIGNCHECK_HINT(block.size() % 64 == 0, "SipHash blocks need to be a multiple of 64 bit");
 
-		BVec blockReg = block;
+		UInt blockReg = block;
 		HCL_NAMED(blockReg);
 
 		for (size_t i = 0; i < blockReg.size() / 64; ++i)
@@ -81,14 +81,14 @@ namespace gtry::scl
 		}
 	}
 
-	BVec SipHash::finalize(SipHashState& state)
+	UInt SipHash::finalize(SipHashState& state)
 	{
 		GroupScope entity(GroupScope::GroupType::ENTITY);
 		entity.setName("SipHashFinalize");
 
 		state[2] ^= (m_hashWidth == 64 ? 0xFF : 0xEE);
 
-		BVec sipHashResult = ConstBVec(0, BitWidth{ m_hashWidth });
+		UInt sipHashResult = ConstUInt(0, BitWidth{ m_hashWidth });
 		HCL_NAMED(sipHashResult);
 
 		for (size_t w = 0; w < m_hashWidth; w += 64)
@@ -101,7 +101,7 @@ namespace gtry::scl
 		return sipHashResult;
 	}
 
-	void SipHash::sipOp(BVec& a, BVec& b, size_t aShift, size_t bShift)
+	void SipHash::sipOp(UInt& a, UInt& b, size_t aShift, size_t bShift)
 	{
 		a += b;
 		b = rotl(b, bShift) ^ a;
@@ -129,21 +129,21 @@ namespace gtry::scl
 		setName(state, "state");
 	}
 
-	BVec SipHash::pad(const BVec& block, size_t msgByteSize)
+	UInt SipHash::pad(const UInt& block, size_t msgByteSize)
 	{
 		GroupScope entity(GroupScope::GroupType::ENTITY);
 		entity.setName("SipHashPad");
 
-		BVec paddedLength = ConstBVec(msgByteSize, 8_b);
+		UInt paddedLength = ConstUInt(msgByteSize, 8_b);
 		HCL_NAMED(paddedLength);
 
 		size_t zeroPad = (64 - (msgByteSize * 8 + 8)) % 64;
-		BVec paddedBlock = pack(paddedLength, zext(block(0, msgByteSize*8), zeroPad));
+		UInt paddedBlock = cat(paddedLength, zext(block(0, msgByteSize*8), zeroPad));
 		HCL_NAMED(paddedBlock);
 		return paddedBlock;
 	}
 
-	std::tuple<BVec, size_t> sipHash(const BVec& block, const BVec& key, bool placeregister)
+	std::tuple<UInt, size_t> sipHash(const UInt& block, const UInt& key, bool placeregister)
 	{
 		GroupScope entity(GroupScope::GroupType::ENTITY);
 		entity.setName("SipHash");
@@ -153,7 +153,7 @@ namespace gtry::scl
 		SipHash hash;
 		hash.enableRegister(placeregister);
 
-		BVec paddedBlock = hash.pad(block, block.size() / 8);
+		UInt paddedBlock = hash.pad(block, block.size() / 8);
 		HCL_NAMED(paddedBlock);
 
 		SipHashState state;

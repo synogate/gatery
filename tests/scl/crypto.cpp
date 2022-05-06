@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "scl/pch.h"
 #include <boost/test/unit_test.hpp>
@@ -32,10 +32,13 @@ using namespace gtry;
 BOOST_FIXTURE_TEST_CASE(Sha1RoundA, gtry::BoostUnitTestSimulationFixture)
 {
 	// create padded empty input
-	BVec msgBlock = "512x0";
+	UInt msgBlock = "512x0";
 	msgBlock.msb() = '1';
 
 	scl::Sha1Generator<> sha1, sha1ref;
+	sha1.init();
+	sha1ref.init();
+
 	sha1.beginBlock(msgBlock);
 	sim_assert(sha1.w[0] == "x80000000") << "w0";
 
@@ -47,7 +50,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundA, gtry::BoostUnitTestSimulationFixture)
 	uint32_t f = (h1 & h2) | (~h1 & h3);
 	uint32_t k = 0x5A827999;
 
-	BVec checkA = rotl(sha1ref.a, 5) + sha1ref.e + 0x80000000u + k + f;
+	UInt checkA = rotl(sha1ref.a, 5) + sha1ref.e + 0x80000000u + k + f;
 	sim_assert(sha1.a == checkA) << "a wrong " << sha1.a << " != " << checkA;
 	sim_assert(sha1.b == sha1ref.a) << "b " << sha1.b << " != " << sha1ref.a;
 	sim_assert(sha1.c == rotl(sha1ref.b, 30));
@@ -60,10 +63,13 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundA, gtry::BoostUnitTestSimulationFixture)
 BOOST_FIXTURE_TEST_CASE(Sha1RoundB, gtry::BoostUnitTestSimulationFixture)
 {
 	// create padded empty input
-	BVec msgBlock = "512x0";
+	UInt msgBlock = "512x0";
 	msgBlock.msb() = '1';
 
 	scl::Sha1Generator<> sha1, sha1ref;
+	sha1.init();
+	sha1ref.init();
+
 	sha1.beginBlock(msgBlock);
 	sim_assert(sha1.w[0] == "x80000000") << "w0";
 
@@ -75,7 +81,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundB, gtry::BoostUnitTestSimulationFixture)
 	uint32_t f = h1 ^ h2 ^ h3;
 	uint32_t k = 0x6ED9EBA1;
 
-	BVec checkA = rotl(sha1ref.a, 5) + sha1ref.e + 0x80000000u + k + f;
+	UInt checkA = rotl(sha1ref.a, 5) + sha1ref.e + 0x80000000u + k + f;
 	sim_assert(sha1.a == checkA) << "a wrong " << sha1.a << " != " << checkA;
 	sim_assert(sha1.b == sha1ref.a) << "b " << sha1.b << " != " << sha1ref.a;
 	sim_assert(sha1.c == rotl(sha1ref.b, 30));
@@ -88,10 +94,13 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundB, gtry::BoostUnitTestSimulationFixture)
 BOOST_FIXTURE_TEST_CASE(Sha1RoundC, gtry::BoostUnitTestSimulationFixture)
 {
 	// create padded empty input
-	BVec msgBlock = "512x0";
+	UInt msgBlock = "512x0";
 	msgBlock.msb() = '1';
 
 	scl::Sha1Generator<> sha1, sha1ref;
+	sha1.init();
+	sha1ref.init();
+
 	sha1.beginBlock(msgBlock);
 	sim_assert(sha1.w[0] == "x80000000") << "w0";
 
@@ -103,7 +112,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundC, gtry::BoostUnitTestSimulationFixture)
 	uint32_t f = (b & c) | (b & d) | (c & d);
 	uint32_t k = 0x8F1BBCDC;
 
-	BVec checkA = rotl(sha1ref.a, 5) + sha1ref.e + 0x80000000u + k + f;
+	UInt checkA = rotl(sha1ref.a, 5) + sha1ref.e + 0x80000000u + k + f;
 	sim_assert(sha1.a == checkA) << "a wrong " << sha1.a << " != " << checkA;
 	sim_assert(sha1.b == sha1ref.a) << "b " << sha1.b << " != " << sha1ref.a;
 	sim_assert(sha1.c == rotl(sha1ref.b, 30));
@@ -116,10 +125,13 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundC, gtry::BoostUnitTestSimulationFixture)
 BOOST_FIXTURE_TEST_CASE(Sha1RoundD, gtry::BoostUnitTestSimulationFixture)
 {
 	// create padded empty input
-	BVec msgBlock = "512x0";
+	UInt msgBlock = "512x0";
 	msgBlock.msb() = '1';
 
 	scl::Sha1Generator<> sha1, sha1ref;
+	sha1.init();
+	sha1ref.init();
+
 	sha1.beginBlock(msgBlock);
 	sim_assert(sha1.w[0] == "x80000000") << "w0";
 
@@ -131,7 +143,7 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundD, gtry::BoostUnitTestSimulationFixture)
 	uint32_t f = h1 ^ h2 ^ h3;
 	uint32_t k = 0xCA62C1D6;
 
-	BVec checkA = rotl(sha1ref.a, 5) + sha1ref.e + 0x80000000u + k + f;
+	UInt checkA = rotl(sha1ref.a, 5) + sha1ref.e + 0x80000000u + k + f;
 	sim_assert(sha1.a == checkA) << "a wrong " << sha1.a << " != " << checkA;
 	sim_assert(sha1.b == sha1ref.a) << "b " << sha1.b << " != " << sha1ref.a;
 	sim_assert(sha1.c == rotl(sha1ref.b, 30));
@@ -144,18 +156,19 @@ BOOST_FIXTURE_TEST_CASE(Sha1RoundD, gtry::BoostUnitTestSimulationFixture)
 BOOST_FIXTURE_TEST_CASE(Sha1, gtry::BoostUnitTestSimulationFixture)
 {
 	// create padded empty input
-	BVec msgBlock = "512x0";
+	UInt msgBlock = "512x0";
 	msgBlock.msb() = '1';
 
 	scl::Sha1Generator<> sha1;
+	sha1.init();
 
 	sha1.beginBlock(msgBlock);
 	scl::HashEngine<scl::Sha1Generator<>> sha1Engine(0, 0);
 	sha1Engine.buildPipeline(sha1);
 	sha1.endBlock();
 
-	BVec hash = sha1.finalize();
-	BVec ref = "xDA39A3EE5E6B4B0D3255BFEF95601890AFD80709";
+	UInt hash = sha1.finalize();
+	UInt ref = "xDA39A3EE5E6B4B0D3255BFEF95601890AFD80709";
 
 	sim_assert(hash(0, 64) == ref(0, 64)); // TODO: implement large compare simulation
 	sim_assert(hash(64, 64) == ref(64, 64));
@@ -167,18 +180,19 @@ BOOST_FIXTURE_TEST_CASE(Sha1, gtry::BoostUnitTestSimulationFixture)
 BOOST_FIXTURE_TEST_CASE(Sha2_256, gtry::BoostUnitTestSimulationFixture)
 {
 	// create padded empty input
-	BVec msgBlock = "512x0";
+	UInt msgBlock = "512x0";
 	msgBlock.msb() = '1';
 
 	scl::Sha2_256<> sha2;
+	sha2.init();
 
 	sha2.beginBlock(msgBlock);
 	scl::HashEngine<scl::Sha2_256<>> sha2Engine(0, 0);
 	sha2Engine.buildPipeline(sha2);
 	sha2.endBlock();
 
-	BVec hash = sha2.finalize();
-	BVec ref = "xE3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855";
+	UInt hash = sha2.finalize();
+	UInt ref = "xE3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855";
 
 	sim_assert(hash(0, 64) == ref(0, 64)); // TODO: implement large compare simulation
 	sim_assert(hash(64, 64) == ref(64, 64));
@@ -216,7 +230,7 @@ BOOST_FIXTURE_TEST_CASE(Md5, gtry::BoostUnitTestSimulationFixture)
 			switch (idx / 16) {
 			case 0: F = (b & c) | (~b & d); break;
 			case 1: F = (d & b) | (~d & c); break;
-			case 2: F = b ^ c ^ d;          break;
+			case 2: F = b ^ c ^ d;		  break;
 			default:F = c ^ (b | ~d);
 			}
 
@@ -232,7 +246,7 @@ BOOST_FIXTURE_TEST_CASE(Md5, gtry::BoostUnitTestSimulationFixture)
 	};
 
 	// create padded empty input
-	BVec msgBlock = "512x0";
+	UInt msgBlock = "512x0";
 	msgBlock.msb() = '1';
 	scl::Md5Generator<> md5;
 	md5.beginBlock(msgBlock);
@@ -252,8 +266,8 @@ BOOST_FIXTURE_TEST_CASE(Md5, gtry::BoostUnitTestSimulationFixture)
 	BOOST_TEST(refImpl.a + 0x67452301 == 0xd98c1dd4);
 	md5.endBlock();
 
-	BVec hash = md5.finalize();
-	BVec ref = "xD41D8CD98F00B204E9800998ECF8427E";
+	UInt hash = md5.finalize();
+	UInt ref = "xD41D8CD98F00B204E9800998ECF8427E";
 
 	sim_assert(hash(0, 64) == ref(0, 64)) << hash << " != " << ref; // TODO: implement large compare simulation
 	sim_assert(hash(64, 64) == ref(64, 64)) << hash << " != " << ref;
@@ -274,7 +288,7 @@ BOOST_AUTO_TEST_CASE(SipHash64TestVisual)
 	DesignScope design;
 
 
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+	Clock clock({ .absoluteFrequency = 10'000 });
 	ClockScope clockScope(clock);
 
 	scl::SipHash sip(2, 4);
@@ -282,7 +296,7 @@ BOOST_AUTO_TEST_CASE(SipHash64TestVisual)
 
 	scl::SipHashState state;
 
-	BVec key = "x0F0E0D0C0B0A09080706050403020100";
+	UInt key = "x0F0E0D0C0B0A09080706050403020100";
 	sip.initialize(state, key);
 
 	InputPins msg = pinIn(64_b).setName("msg");
@@ -352,7 +366,7 @@ BOOST_AUTO_TEST_CASE(SipHash64TestVisual)
 
 BOOST_FIXTURE_TEST_CASE(SipHash64Test, gtry::BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+	Clock clock({ .absoluteFrequency = 10'000 });
 	ClockScope clockScope(clock);
 
 	scl::SipHash sip(2, 4);
@@ -360,7 +374,7 @@ BOOST_FIXTURE_TEST_CASE(SipHash64Test, gtry::BoostUnitTestSimulationFixture)
 
 	scl::SipHashState state;
 
-	BVec key = "x0F0E0D0C0B0A09080706050403020100";
+	UInt key = "x0F0E0D0C0B0A09080706050403020100";
 	sip.initialize(state, key);
 
 	InputPins msg = pinIn(64_b).setName("msg");
@@ -422,7 +436,7 @@ BOOST_FIXTURE_TEST_CASE(SipHash64Test, gtry::BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, gtry::BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+	Clock clock({ .absoluteFrequency = 10'000 });
 	ClockScope clockScope(clock);
 
 	scl::SipHash sip;
@@ -433,7 +447,7 @@ BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, gtry::BoostUnitTestSimulationFixture
 		blockVal |= i << (i * 8);
 		uint64_t ref = blockVal + (i + 1) * (1ull << 56); // add padding
 
-		BVec paddedBlock = sip.pad(ConstBVec(blockVal, (i + 1) * 8_b), i + 1);
+		UInt paddedBlock = sip.pad(ConstUInt(blockVal, (i + 1) * 8_b), i + 1);
 		HCL_NAMED(paddedBlock);
 		sim_assert(paddedBlock == ref);
 	}
@@ -443,7 +457,7 @@ BOOST_FIXTURE_TEST_CASE(SipHashPaddingTest, gtry::BoostUnitTestSimulationFixture
 
 BOOST_FIXTURE_TEST_CASE(SipHash64HelperTest, gtry::BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(10'000));
+	Clock clock({ .absoluteFrequency = 10'000 });
 	ClockScope clockScope(clock);
 
 	auto [hash, latency] = scl::sipHash("x0100", "x0F0E0D0C0B0A09080706050403020100", false);
@@ -455,13 +469,13 @@ BOOST_FIXTURE_TEST_CASE(SipHash64HelperTest, gtry::BoostUnitTestSimulationFixtur
 
 BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, gtry::BoostUnitTestSimulationFixture)
 {
-	Clock clock(ClockConfig{}.setAbsoluteFrequency(100'000'000));
+	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clockScope(clock);
 
 	scl::TabulationHashing gen{ 16_b };
-	BVec data = pinIn(16_b).setName("data");
+	UInt data = pinIn(16_b).setName("data");
 	HCL_NAMED(data);
-	BVec hash = reg(gen(data), {.allowRetimingBackward=true});
+	UInt hash = reg(gen(data), {.allowRetimingBackward=true});
 
 	scl::AvalonNetworkSection ports;
 	gen.updatePorts(ports);

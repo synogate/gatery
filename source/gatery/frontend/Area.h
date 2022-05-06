@@ -20,17 +20,76 @@
 
 namespace gtry
 {
+
+/**
+ * @addtogroup gtry_frontend
+ * @{
+ */
+
+
+	/**
+	 * @brief A chip area for grouping chip elements together (entity in vhdl)
+	 * @details The actual area is (usually) created by instantiating a GroupScope variable via Area::enter().
+	 * All logic created while that GroupScope variable exists will be placed inside the area.
+	 * Areas can be nested.
+	 *
+	 * Essentially, there are two ways of using areas: Either directly:
+	 * @code
+	 *	{ // scoping bracket
+	 *	Area newArea("ip_core", true);
+	 *
+	 *	// Build logic that is to be placed in the "ip_core" area
+	 *
+	 *	} // closing scoping bracket
+	 * @endcode
+	 * Or by entering the scope manually:
+	 * @code
+	 *  Area newArea("ip_core", false);
+	 *	{ // scoping bracket
+	 *	  auto scp = newArea.enter();
+	 *
+	 *	  // Build logic that is to be placed in the "ip_core" area
+	 *
+	 *	} // closing scoping bracket
+	 *
+	 *  // ...
+	 *
+	 *	{ // scoping bracket
+	 *	  auto scp = newArea.enter();
+	 *
+	 *	  // Build more logic that is to be placed in the "ip_core" area
+	 *
+	 *	} // closing scoping bracket
+	 * @endcode
+	 */
 	class Area
 	{
 	public:
+		/**
+		 * @brief Prepares the area but does not yet enter the area's scope unless specified explicitely.
+		 * 
+		 * @param name Name of the area
+		 * @param instantEnter If true, directly enters the Area's scope which must be left with Area::leave().
+		 */
 		Area(std::string_view name, bool instantEnter = false);
 		
+		/// Access to properties (e.g. from config files) that were places for this Area (in the total area hierarchy).
 		auto operator [] (std::string_view key) { return m_nodeGroup->properties()[key]; }
 
+		/// Creates a GroupScope which automatically handles entering/leaving this Area
 		GroupScope enter() const;
+
+		/**
+		 * @brief Creates a new sub-Area and returns GroupScopes which allow directly entering the new sub-Area.
+		 * @param subName Name of the new sub-area
+		 * @returns A pair of GroupScopes with the first one being the GroupScope of the calling Area and the second one being the GroupScope of the new sub-Area.
+		 */
 		std::pair<GroupScope, GroupScope> enter(std::string_view subName) const;
-	
+
+		/// If the Area was directly entered in the constructor, this function allows leaving the area.
 		void leave() { m_inScope.reset(); }
+
+
 		inline hlim::NodeGroup* getNodeGroup() { return m_nodeGroup; }
 
 	private:
@@ -38,4 +97,7 @@ namespace gtry
 
 		std::optional<GroupScope> m_inScope;
 	};
+
+/**@}*/
+	
 }

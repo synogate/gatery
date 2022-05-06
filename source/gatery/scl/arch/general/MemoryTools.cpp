@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
 
@@ -23,6 +23,7 @@
 #include <gatery/hlim/GraphTools.h>
 #include <gatery/hlim/NodeGroup.h>
 #include <gatery/hlim/postprocessing/MemoryDetector.h>
+#include <gatery/hlim/coreNodes/Node_Register.h>
 
 #include <boost/format.hpp>
 
@@ -120,8 +121,8 @@ std::vector<SplitMemoryGroup> createDepthSplitMemories(hlim::NodeGroup *group, c
 		for (const auto &wp : memGrp->getWritePorts()) {
 			auto *newMemPort = dynamic_cast<hlim::Node_MemPort *>(mapSrc2Dst[wp.node]);
 
-			BVec wrData = ConstBVec(BitWidth(wp.node->getBitWidth()));
-			newMemPort->connectWrData(wrData.getReadPort());
+			UInt wrData = ConstUInt(BitWidth(wp.node->getBitWidth()));
+			newMemPort->connectWrData(wrData.readPort());
 		}		
 
 
@@ -174,15 +175,15 @@ void splitMemoryAlongDepthMux(hlim::NodeGroup *group, size_t log2SplitDepth, boo
 	for (const auto &rp : memGrp->getReadPorts()) {
 		HCL_ASSERT(rp.dedicatedReadLatencyRegisters.size() == memGrp->getMemory()->getRequiredReadLatency()); // Ensure the regs have been found
 
-		BVec rdAddr = getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+		UInt rdAddr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 		Bit rdEn = getBitBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::enable}, '1');
 
 		Bit addrHighBit = rdAddr[log2SplitDepth];
 		HCL_NAMED(addrHighBit);
-		BVec addrLowBits = rdAddr(0, log2SplitDepth);
+		UInt addrLowBits = rdAddr(0, log2SplitDepth);
 		HCL_NAMED(addrLowBits);
 
-		std::array<BVec, 2> newReadData;
+		std::array<UInt, 2> newReadData;
 		for (size_t i : {0ull, 1ull}) {
 
 			const auto &new_rp = subMems[i].subGroup->findReadPort((hlim::Node_MemPort*)subMems[i].original2subGroup[rp.node.get()]);
@@ -196,11 +197,11 @@ void splitMemoryAlongDepthMux(hlim::NodeGroup *group, size_t log2SplitDepth, boo
 
 			size_t addrBits = new_rp.node->getExpectedAddressBits();
 			HCL_ASSERT(addrLowBits.size() >= addrBits);
-			BVec newRdAddr = addrLowBits(0, addrBits); // happens if one chunk is significantly smaller than the other.
+			UInt newRdAddr = addrLowBits(0, addrBits); // happens if one chunk is significantly smaller than the other.
 
-			new_rp.node->connectEnable(newRdEn.getReadPort());
-			new_rp.node->connectAddress(newRdAddr.getReadPort());
-			newReadData[i] = BVec(SignalReadPort(new_rp.dataOutput));
+			new_rp.node->connectEnable(newRdEn.readPort());
+			new_rp.node->connectAddress(newRdAddr.readPort());
+			newReadData[i] = UInt(SignalReadPort(new_rp.dataOutput));
 		}
 
 		Bit addrHighBitDelayed = addrHighBit;
@@ -210,18 +211,18 @@ void splitMemoryAlongDepthMux(hlim::NodeGroup *group, size_t log2SplitDepth, boo
 			addrHighBitDelayed = clock(addrHighBitDelayed);
 		}
 
-		BVec rdDataHook = hookBVecAfter(rp.dataOutput);
+		UInt rdDataHook = hookUIntAfter(rp.dataOutput);
 		rdDataHook = mux(addrHighBitDelayed, newReadData);
 		rdDataHook.setName("cascade_rdData");		
 	}
 	for (const auto &wp : memGrp->getWritePorts()) {
-        BVec wrAddr = getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-        BVec wrData = getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
-        Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::enable}, '1');
+		UInt wrAddr = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+		UInt wrData = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
+		Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::enable}, '1');
 
 		Bit addrHighBit = wrAddr[log2SplitDepth];
 		HCL_NAMED(addrHighBit);
-		BVec addrLowBits = wrAddr(0, log2SplitDepth);
+		UInt addrLowBits = wrAddr(0, log2SplitDepth);
 		HCL_NAMED(addrLowBits);
 
 		for (size_t i : {0ull, 1ull}) {
@@ -233,13 +234,13 @@ void splitMemoryAlongDepthMux(hlim::NodeGroup *group, size_t log2SplitDepth, boo
 
 			size_t addrBits = new_wp.node->getExpectedAddressBits();
 			HCL_ASSERT(addrLowBits.size() >= addrBits);
-			BVec newWrAddr = addrLowBits(0, addrBits); // happens if one chunk is significantly smaller than the other.
+			UInt newWrAddr = addrLowBits(0, addrBits); // happens if one chunk is significantly smaller than the other.
 
 
-			new_wp.node->connectEnable(newWrEn.getReadPort());
-			new_wp.node->connectWrEnable(newWrEn.getReadPort());
-			new_wp.node->connectAddress(newWrAddr.getReadPort());
-			new_wp.node->connectWrData(wrData.getReadPort());
+			new_wp.node->connectEnable(newWrEn.readPort());
+			new_wp.node->connectWrEnable(newWrEn.readPort());
+			new_wp.node->connectAddress(newWrAddr.readPort());
+			new_wp.node->connectWrData(wrData.readPort());
 		}
 	}
 
@@ -346,9 +347,9 @@ std::vector<SplitMemoryGroup> createWidthSplitMemories(hlim::NodeGroup *group, c
 					auto *newReg = (hlim::Node_Register*)mapSrc2Dst[reg.get()];
 					// Crop reset value
 					if (reg->hasResetValue()) {
-						BVec resetValue = getBVecBefore(hlim::NodePort{.node = newReg, .port = hlim::Node_Register::RESET_VALUE});
-						BVec croppedResetValue = resetValue(widthStart, widthEnd - widthStart);
-						newReg->connectInput(hlim::Node_Register::RESET_VALUE, croppedResetValue.getReadPort());
+						UInt resetValue = getUIntBefore(hlim::NodePort{.node = newReg, .port = hlim::Node_Register::RESET_VALUE});
+						UInt croppedResetValue = resetValue(widthStart, widthEnd - widthStart);
+						newReg->connectInput(hlim::Node_Register::RESET_VALUE, croppedResetValue.readPort());
 					}
 
 					// reconnect one after another to resize
@@ -363,8 +364,8 @@ std::vector<SplitMemoryGroup> createWidthSplitMemories(hlim::NodeGroup *group, c
 			auto *newMemPort = dynamic_cast<hlim::Node_MemPort *>(mapSrc2Dst[wp.node]);
 			newMemPort->changeBitWidth(widthEnd - widthStart);
 
-			BVec wrData = ConstBVec(BitWidth(widthEnd - widthStart));
-			newMemPort->connectWrData(wrData.getReadPort());
+			UInt wrData = ConstUInt(BitWidth(widthEnd - widthStart));
+			newMemPort->connectWrData(wrData.readPort());
 		}
 
 		// Reform the subMemInfo
@@ -400,7 +401,7 @@ void splitMemoryAlongWidth(hlim::NodeGroup *group, size_t maxWidth)
 
 	// Hook them up
 	for (const auto &rp : memGrp->getReadPorts()) {
-		std::vector<BVec> partialReads(subMems.size());
+		std::vector<UInt> partialReads(subMems.size());
 		for (size_t i : utils::Range(subMems.size())) {
 			const auto &new_rp = subMems[i].subGroup->findReadPort((hlim::Node_MemPort*)subMems[i].original2subGroup[rp.node.get()]);
 			HCL_ASSERT(new_rp.dedicatedReadLatencyRegisters.size() == memGrp->getMemory()->getRequiredReadLatency()); // Ensure the regs have been found
@@ -410,15 +411,15 @@ void splitMemoryAlongWidth(hlim::NodeGroup *group, size_t maxWidth)
 
 			new_rp.node->connectEnable(rp.node->getDriver((size_t)hlim::Node_MemPort::Inputs::enable));
 			new_rp.node->connectAddress(rp.node->getDriver((size_t)hlim::Node_MemPort::Inputs::address));
-			partialReads[i] = BVec(SignalReadPort(new_rp.dataOutput));
+			partialReads[i] = UInt(SignalReadPort(new_rp.dataOutput));
 		}
 
-		BVec rdDataHook = hookBVecAfter(rp.dataOutput);
+		UInt rdDataHook = hookUIntAfter(rp.dataOutput);
 		rdDataHook = pack(partialReads);
 		rdDataHook.setName("concatenated_rdData");			
 	}
 	for (const auto &wp : memGrp->getWritePorts()) {
-		BVec wrData = getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
+		UInt wrData = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
 		for (size_t i : utils::Range(subMems.size())) {
 			const auto &new_wp = subMems[i].subGroup->findWritePort((hlim::Node_MemPort*)subMems[i].original2subGroup[wp.node.get()]);
 
@@ -428,9 +429,9 @@ void splitMemoryAlongWidth(hlim::NodeGroup *group, size_t maxWidth)
 
 			size_t widthStart = i == 0?0:splitPositions[i-1];
 			size_t widthEnd = i < splitPositions.size()?splitPositions[i]:width;
-			BVec wrDataCrop = wrData(widthStart, widthEnd-widthStart);
+			UInt wrDataCrop = wrData(widthStart, widthEnd-widthStart);
 
-			new_wp.node->connectWrData(wrDataCrop.getReadPort());
+			new_wp.node->connectWrData(wrDataCrop.readPort());
 		}
 	}
 

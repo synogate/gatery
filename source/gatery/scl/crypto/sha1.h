@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
 #include <gatery/frontend.h>
@@ -22,7 +22,7 @@
 
 namespace gtry::scl
 {
-	template<typename TVec = BVec, typename TAdder = CarrySafeAdder>
+	template<typename TVec = UInt, typename TAdder = CarrySafeAdder>
 	struct Sha1Generator
 	{
 		enum {
@@ -41,7 +41,7 @@ namespace gtry::scl
 			(std::array<TVec,16>, w)
 		);
 
-		Sha1Generator()
+		void init()
 		{
 			a = "x67452301";
 			b = "xEFCDAB89";
@@ -49,7 +49,7 @@ namespace gtry::scl
 			d = "x10325476";
 			e = "xC3D2E1F0";
 
-			hash = pack(a, b, c, d, e);
+			hash = cat(a, b, c, d, e);
 		}
 
 		void beginBlock(const TVec& _block)
@@ -58,7 +58,7 @@ namespace gtry::scl
 				w[i] = _block(Selection::Symbol(w.size() - 1 - i, 32_b));
 		}
 
-		void round(const BVec& round, bool rotateW = true)
+		void round(const UInt& round, bool rotateW = true)
 		{
 			// select round constant
 			TVec k = 0xCA62C1D6;
@@ -90,7 +90,7 @@ namespace gtry::scl
 			a = tmp;
 
 			// extend message
-			BVec next_w = w[13] ^ w[8] ^ w[2] ^ w[0];
+			UInt next_w = w[13] ^ w[8] ^ w[2] ^ w[0];
 			if(rotateW) // do not rotate for sha0
 				next_w = rotl(next_w, 1);
 
@@ -114,7 +114,7 @@ namespace gtry::scl
 			d += hash(Selection::Symbol(1, 32_b));
 			e += hash(Selection::Symbol(0, 32_b));
 
-			hash = pack(a, b, c, d, e);
+			hash = cat(a, b, c, d, e);
 			HCL_NAMED(hash);
 		}
 
@@ -122,11 +122,11 @@ namespace gtry::scl
 	};
 
 
-	template<typename TVec = BVec, typename TAdder = CarrySafeAdder>
+	template<typename TVec = UInt, typename TAdder = CarrySafeAdder>
 	struct Sha0Generator : Sha1Generator<TVec, TAdder>
 	{
 		// same as sha1 but without rotation during message extension
-		void round(const BVec& round)
+		void round(const UInt& round)
 		{
 			Sha1Generator<TVec, TAdder>::round(round, false);
 		}

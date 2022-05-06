@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
 
@@ -23,17 +23,18 @@
 #include <gatery/utils/Preprocessor.h>
 
 #include <boost/format.hpp>
+#include <set>
 
 namespace gtry::scl::arch::intel {
 
 ALTDPRAM::ALTDPRAM(size_t width, size_t depth)
 {
-    m_libraryName = "altera_mf";
+	m_libraryName = "altera_mf";
 	m_packageName = "altera_mf_components";
-    m_name = "altdpram";
+	m_name = "altdpram";
 	m_isEntity = false;
-    m_clockNames = {"", ""};
-    m_resetNames = {"", ""};
+	m_clockNames = {"", ""};
+	m_resetNames = {"", ""};
 	m_clocks.resize(CLK_COUNT);
 
 	m_width = width;
@@ -44,8 +45,8 @@ ALTDPRAM::ALTDPRAM(size_t width, size_t depth)
 
 	m_genericParameters["WIDTHAD"] = std::to_string(utils::Log2C(depth));
 
-    resizeInputs(IN_COUNT);
-    resizeOutputs(OUT_COUNT);
+	resizeInputs(IN_COUNT);
+	resizeOutputs(OUT_COUNT);
 
 	setOutputConnectionType(OUT_Q, {.interpretation = hlim::ConnectionType::BITVEC, .width=width});
 }
@@ -185,38 +186,59 @@ void ALTDPRAM::connectInput(Inputs input, const Bit &bit)
 		case IN_RDEN:
 		case IN_OUTCLOCKEN:
 		case IN_ACLR:
-			NodeIO::connectInput(input, bit.getReadPort());
+			NodeIO::connectInput(input, bit.readPort());
 		break;
 		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to bvec input of ALTDPRAM!");
+			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to UInt input of ALTDPRAM!");
 	}
 }
 
-void ALTDPRAM::connectInput(Inputs input, const BVec &bvec)
+void ALTDPRAM::connectInput(Inputs input, const UInt &UInt)
 {
 	switch (input) {
 		case IN_DATA:
-			HCL_DESIGNCHECK_HINT(bvec.size() == m_width, "Data input bvec to ALTDPRAM has different width than previously specified!");
-			NodeIO::connectInput(input, bvec.getReadPort());
+			HCL_DESIGNCHECK_HINT(UInt.size() == m_width, "Data input UInt to ALTDPRAM has different width than previously specified!");
+			NodeIO::connectInput(input, UInt.readPort());
+			trySetByteSize();
 		break;
 		case IN_RDADDRESS:
-			NodeIO::connectInput(input, bvec.getReadPort());
-			HCL_DESIGNCHECK_HINT((1ull << bvec.size()) == m_depth, "RD-Address input bvec to ALTDPRAM has different width than previously specified!");
+			NodeIO::connectInput(input, UInt.readPort());
+			HCL_DESIGNCHECK_HINT((1ull << UInt.size()) == m_depth, "RD-Address input UInt to ALTDPRAM has different width than previously specified!");
 		break;
 		case IN_WRADDRESS:
-			NodeIO::connectInput(input, bvec.getReadPort());
-			HCL_DESIGNCHECK_HINT((1ull << bvec.size()) == m_depth, "WR-Address input bvec to ALTDPRAM has different width than previously specified!");
+			NodeIO::connectInput(input, UInt.readPort());
+			HCL_DESIGNCHECK_HINT((1ull << UInt.size()) == m_depth, "WR-Address input UInt to ALTDPRAM has different width than previously specified!");
 		break;
 		case IN_BYTEENA:
-			NodeIO::connectInput(input, bvec.getReadPort());
-			m_genericParameters["WIDTH_BYTEENA"] = std::to_string(bvec.size());
+			NodeIO::connectInput(input, UInt.readPort());
+			m_genericParameters["WIDTH_BYTEENA"] = std::to_string(UInt.size());
+			trySetByteSize();
 		break;
 		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect bvec to bit input of ALTDPRAM!");
+			HCL_DESIGNCHECK_HINT(false, "Trying to connect UInt to bit input of ALTDPRAM!");
 	}
 }
 
-BVec ALTDPRAM::getOutputBVec(Outputs output)
+void ALTDPRAM::trySetByteSize()
+{
+	auto data = getNonSignalDriver(IN_DATA);
+	auto byteEn = getNonSignalDriver(IN_BYTEENA);
+	if (data.node != nullptr && byteEn.node != nullptr) {
+
+		size_t dataWidth = getOutputWidth(data);
+		size_t byteEnWidth = getOutputWidth(byteEn);
+		HCL_ASSERT(dataWidth % byteEnWidth == 0);
+
+		size_t wordSize = dataWidth / byteEnWidth;
+
+		std::set<size_t> validWordSizes = {5, 8, 9, 10};
+		HCL_ASSERT(validWordSizes.contains(wordSize));
+
+		m_genericParameters["BYTE_SIZE"] = std::to_string(wordSize);
+	}
+}
+
+UInt ALTDPRAM::getOutputUInt(Outputs output)
 {
 	return SignalReadPort(hlim::NodePort{this, (size_t) output});
 }
@@ -224,7 +246,7 @@ BVec ALTDPRAM::getOutputBVec(Outputs output)
 
 std::string ALTDPRAM::getTypeName() const
 {
-    return "ALTDPRAM";
+	return "ALTDPRAM";
 }
 
 void ALTDPRAM::assertValidity() const
@@ -233,7 +255,7 @@ void ALTDPRAM::assertValidity() const
 
 std::string ALTDPRAM::getInputName(size_t idx) const
 {
-    switch (idx) {
+	switch (idx) {
 		case IN_RDADDRESSSTALL: return "rdaddress";
 		case IN_WRADDRESSSTALL: return "wraddress";
 		case IN_WREN: return "wren";
@@ -251,7 +273,7 @@ std::string ALTDPRAM::getInputName(size_t idx) const
 
 std::string ALTDPRAM::getOutputName(size_t idx) const
 {
-    switch (idx) {
+	switch (idx) {
 		case OUT_Q: return "q";
 		default: return "";
 	}
@@ -259,11 +281,11 @@ std::string ALTDPRAM::getOutputName(size_t idx) const
 
 std::unique_ptr<hlim::BaseNode> ALTDPRAM::cloneUnconnected() const
 {
-    ALTDPRAM *ptr;
-    std::unique_ptr<BaseNode> res(ptr = new ALTDPRAM(m_width, m_depth));
-    copyBaseToClone(res.get());
+	ALTDPRAM *ptr;
+	std::unique_ptr<BaseNode> res(ptr = new ALTDPRAM(m_width, m_depth));
+	copyBaseToClone(res.get());
 
-    return res;
+	return res;
 }
 
 std::string ALTDPRAM::attemptInferOutputName(size_t outputPort) const

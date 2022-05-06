@@ -1,19 +1,19 @@
 /*  This file is part of Gatery, a library for circuit design.
-    Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2021 Michael Offel, Andreas Ley
 
-    Gatery is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-    Gatery is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
 #include <gatery/frontend.h>
@@ -47,15 +47,15 @@ namespace gtry::scl
 		virtual void enterScope(std::string scope) { }
 		virtual void leaveScope() { }
 
-		virtual void ro(const BVec& value, RegDesc desc) {}
+		virtual void ro(const UInt& value, RegDesc desc) {}
 		virtual void ro(const Bit& value, RegDesc desc) {}
-		virtual Bit rw(BVec& value, RegDesc desc) { return Bit{}; }
+		virtual Bit rw(UInt& value, RegDesc desc) { return Bit{}; }
 		virtual Bit rw(Bit& value, RegDesc desc) { return Bit{}; }
-		virtual Bit wo(BVec& value, RegDesc desc) { return rw(value, std::move(desc)); }
+		virtual Bit wo(UInt& value, RegDesc desc) { return rw(value, std::move(desc)); }
 		virtual Bit wo(Bit& value, RegDesc desc) { return rw(value, std::move(desc)); }
 
 		Bit add(Bit& value, RegDesc desc);
-		Bit add(BVec& value, RegDesc desc);
+		Bit add(UInt& value, RegDesc desc);
 
 		template<typename T> void stage(Memory<T>& mem);
 		template<typename T> void stage(std::vector<Memory<T>>& mem);
@@ -82,7 +82,7 @@ namespace gtry::scl
 		return '0';
 	}
 
-	inline Bit scl::MemoryMap::add(BVec& value, RegDesc desc)
+	inline Bit scl::MemoryMap::add(UInt& value, RegDesc desc)
 	{
 		if (m_flags == (F_READ | F_WRITE))
 			return rw(value, desc);
@@ -101,7 +101,7 @@ namespace gtry::scl
 	{
 		struct SigVis : CompoundNameVisitor
 		{
-			virtual void operator () (BVec& a) final
+			virtual void operator () (UInt& a) final
 			{
 				mmap->add(a, { .name = makeName() });
 			}
@@ -115,7 +115,7 @@ namespace gtry::scl
 		};
 
 
-		BVec cmdAddr = "32xX";
+		UInt cmdAddr = "32xX";
 		Bit cmdTrigger = wo(cmdAddr, {
 			.name = "cmd"
 		});
@@ -128,7 +128,7 @@ namespace gtry::scl
 		T stage = constructFrom(memContent);
 
 		SigVis v{ this };
-        VisitCompound<T>{}(stage, v);
+		VisitCompound<T>{}(stage, v);
 		stage = reg(stage);
 
 		IF(writeEnabled() & cmdTrigger & cmdAddr.msb() == '0')
@@ -157,7 +157,7 @@ namespace gtry::scl
 
 		struct SigVis : CompoundNameVisitor
 		{
-			virtual void operator () (BVec& a) final
+			virtual void operator () (UInt& a) final
 			{
 				mmap->add(a, { .name = makeName() });
 				regCount++;
@@ -201,7 +201,7 @@ namespace gtry::scl
 			triggerDescShort = "Read from memory";
 			triggerDescLong = "Indicates the direction of the transfer. '0' transfers from the staging register(s) to the addressed memory, '1' transfers from addressed memory to the staging register(s).";
 		}
-		BVec cmdAddr = 32_b;
+		UInt cmdAddr = 32_b;
 		Bit cmdTrigger = rw(cmdAddr, RegDesc{
 			.name = "cmd",
 			.desc = desc,
@@ -237,7 +237,7 @@ namespace gtry::scl
 		stage = reg(stage);
 
 		Bit readTrigger = reg(readEnabled() & cmdTrigger & cmdAddr.msb() == '1', '0');
-		BVec readTabAddr = reg(cmdAddr(memTabSel));
+		UInt readTabAddr = reg(cmdAddr(memTabSel));
 		HCL_NAMED(readTrigger);
 		HCL_NAMED(readTabAddr);
 
@@ -256,11 +256,11 @@ namespace gtry::scl
 				stage = readData;
 		}
 
-		cmdAddr = pack(
-			ConstBVec(m_flags, 8_b),
-			ConstBVec(mems.size(), 8_b),
-			ConstBVec(memWidth.value, 8_b),
-			ConstBVec(v.regCount, 8_b)
+		cmdAddr = cat(
+			ConstUInt(m_flags, 8_b),
+			ConstUInt(mems.size(), 8_b),
+			ConstUInt(memWidth.value, 8_b),
+			ConstUInt(v.regCount, 8_b)
 		);
 	}
 
