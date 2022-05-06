@@ -15,7 +15,7 @@ On Fedora:
 
 ```bash
 	# install gcc, boost, git (for cloning)
-	sudo dnf install g++ boost-devel git make
+	sudo dnf install g++ boost-devel git make gmp-devel
 	# verify gcc10 or later
 	gcc --version
 
@@ -38,7 +38,7 @@ On Ubuntu:
 	# Ubuntu is slightly more involved as gcc10 is a separate package. Also boost needs to be build from scratch since the repository version is not compatible with c++20.
 
 	# install gcc, boost, git (for cloning)
-	sudo apt install build-essential g++-10 libboost-all-dev git
+	sudo apt install build-essential g++-10 libboost-all-dev git libgmp-dev
 	# Select gcc10 as default gcc
 	sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 10
 	sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 10
