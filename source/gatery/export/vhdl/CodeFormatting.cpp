@@ -26,7 +26,7 @@
 namespace gtry::vhdl {
 
 
-void CodeFormatting::indent(std::ostream &stream, unsigned depth) const
+void CodeFormatting::indent(std::ostream &stream, size_t depth) const
 {
 	for ([[maybe_unused]] auto i : utils::Range(depth))
 		stream << m_indentation;
@@ -47,7 +47,7 @@ R"Delim(
 	m_filenameExtension = ".vhd";
 }
 
-std::string DefaultCodeFormatting::getNodeName(const hlim::BaseNode *node, unsigned attempt) const
+std::string DefaultCodeFormatting::getNodeName(const hlim::BaseNode *node, size_t attempt) const
 {
 	std::string initialName = node->getName();
 	if (initialName.empty())
@@ -58,7 +58,7 @@ std::string DefaultCodeFormatting::getNodeName(const hlim::BaseNode *node, unsig
 	return (boost::format("%s_%d") % initialName % (attempt+1)).str();
 }
 
-std::string DefaultCodeFormatting::getSignalName(const std::string &desiredName, SignalType type, unsigned attempt) const
+std::string DefaultCodeFormatting::getSignalName(const std::string &desiredName, SignalType type, size_t attempt) const
 {
 	std::string initialName = desiredName;
 	if (initialName.empty())
@@ -82,7 +82,7 @@ std::string DefaultCodeFormatting::getSignalName(const std::string &desiredName,
 	return (boost::format("%s_%d") % initialName % (attempt+1)).str();
 }
 
-std::string DefaultCodeFormatting::getPackageName(const std::string &desiredName, unsigned attempt) const
+std::string DefaultCodeFormatting::getPackageName(const std::string &desiredName, size_t attempt) const
 {
 	std::string initialName = desiredName;
 	if (initialName.empty())
@@ -93,7 +93,7 @@ std::string DefaultCodeFormatting::getPackageName(const std::string &desiredName
 	return (boost::format("%s_%d") % initialName % (attempt+1)).str();
 }
 
-std::string DefaultCodeFormatting::getEntityName(const std::string &desiredName, unsigned attempt) const
+std::string DefaultCodeFormatting::getEntityName(const std::string &desiredName, size_t attempt) const
 {
 	std::string initialName = desiredName;
 	if (initialName.empty())
@@ -104,7 +104,7 @@ std::string DefaultCodeFormatting::getEntityName(const std::string &desiredName,
 	return (boost::format("%s_%d") % initialName % (attempt+1)).str();
 }
 
-std::string DefaultCodeFormatting::getBlockName(const std::string &desiredName, unsigned attempt) const
+std::string DefaultCodeFormatting::getBlockName(const std::string &desiredName, size_t attempt) const
 {
 	std::string initialName = desiredName;
 	if (initialName.empty())
@@ -115,7 +115,7 @@ std::string DefaultCodeFormatting::getBlockName(const std::string &desiredName, 
 	return (boost::format("%s_%d") % initialName % (attempt+1)).str();
 }
 
-std::string DefaultCodeFormatting::getProcessName(const std::string &desiredName, bool clocked, unsigned attempt) const
+std::string DefaultCodeFormatting::getProcessName(const std::string &desiredName, bool clocked, size_t attempt) const
 {
 	std::string initialName = desiredName;
 	if (initialName.empty())
@@ -126,7 +126,7 @@ std::string DefaultCodeFormatting::getProcessName(const std::string &desiredName
 	return (boost::format("%s_%d%s") % initialName % (attempt+1) % (clocked?"_reg":"_comb")).str();
 }
 
-std::string DefaultCodeFormatting::getClockName(const std::string &desiredName, unsigned attempt) const
+std::string DefaultCodeFormatting::getClockName(const std::string &desiredName, size_t attempt) const
 {
 	std::string initialName = desiredName;
 	if (initialName.empty())
@@ -137,7 +137,7 @@ std::string DefaultCodeFormatting::getClockName(const std::string &desiredName, 
 	return (boost::format("%s_%d") % initialName % (attempt+1)).str();
 }
 
-std::string DefaultCodeFormatting::getIoPinName(const std::string &desiredName, unsigned attempt) const
+std::string DefaultCodeFormatting::getIoPinName(const std::string &desiredName, size_t attempt) const
 {
 	std::string initialName = desiredName;
 	if (initialName.empty())
@@ -148,7 +148,7 @@ std::string DefaultCodeFormatting::getIoPinName(const std::string &desiredName, 
 	return (boost::format("%s_%d") % initialName % (attempt+1)).str();
 }
 
-std::string DefaultCodeFormatting::getInstanceName(const std::string &desiredName, unsigned attempt) const
+std::string DefaultCodeFormatting::getInstanceName(const std::string &desiredName, size_t attempt) const
 {
 	std::string initialName = desiredName;
 	if (initialName.empty())
@@ -212,7 +212,7 @@ void DefaultCodeFormatting::formatBlockComment(std::ostream &stream, const std::
 		<< "------------------------------------------------" << std::endl;
 }
 
-void DefaultCodeFormatting::formatProcessComment(std::ostream &stream, unsigned indentation, const std::string &processName, const std::string &comment)
+void DefaultCodeFormatting::formatProcessComment(std::ostream &stream, size_t indentation, const std::string &processName, const std::string &comment)
 {
 	if (comment.empty()) return;
 	indent(stream, indentation);
@@ -236,7 +236,7 @@ void DefaultCodeFormatting::formatProcessComment(std::ostream &stream, unsigned 
 	stream << std::endl;
 }
 
-void DefaultCodeFormatting::formatCodeComment(std::ostream &stream, unsigned indentation, const std::string &comment)
+void DefaultCodeFormatting::formatCodeComment(std::ostream &stream, size_t indentation, const std::string &comment)
 {
 	if (comment.empty()) return;
 
@@ -310,7 +310,7 @@ void DefaultCodeFormatting::addExternalNodeHandler(ExternalNodeHandler nodeHandl
 	m_externalNodeHandlers.push_back(std::move(nodeHandler));
 }
 
-void DefaultCodeFormatting::instantiateExternal(std::ostream &stream, const hlim::Node_External *node, unsigned indent, const std::vector<std::string> &inputSignalNames, const std::vector<std::string> &outputSignalNames, const std::vector<std::string> &clockNames) const
+void DefaultCodeFormatting::instantiateExternal(std::ostream &stream, const hlim::Node_External *node, size_t indent, const std::vector<std::string> &inputSignalNames, const std::vector<std::string> &outputSignalNames, const std::vector<std::string> &clockNames) const
 {
 	for (const auto &handler : m_externalNodeHandlers)
 		if (handler(this, stream, node, indent, inputSignalNames, outputSignalNames, clockNames))
