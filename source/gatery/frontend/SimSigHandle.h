@@ -55,7 +55,7 @@ using WaitFor = sim::WaitFor;
 using WaitUntil = sim::WaitUntil;
 using Seconds = hlim::ClockRational;
 
-using BigInt = sim::SigHandle::BigInt;
+using BigInt = sim::BigInt;
 
 sim::WaitClock WaitClk(const Clock &clk);
 

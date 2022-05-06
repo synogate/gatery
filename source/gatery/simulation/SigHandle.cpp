@@ -26,15 +26,12 @@ namespace gtry::sim {
 void SigHandle::operator=(std::uint64_t v)
 {
 	auto width = m_output.node->getOutputConnectionType(m_output.port).width;
-	HCL_ASSERT(width <= 64);
 	DefaultBitVectorState state;
 	state.resize(width);
+	state.setRange(DefaultConfig::DEFINED, 0, width);
+	state.setRange(DefaultConfig::VALUE, 0, width);
 	if (width)
-	{
-		state.data(DefaultConfig::DEFINED)[0] = 0;
-		state.setRange(DefaultConfig::DEFINED, 0, width);
 		state.data(DefaultConfig::VALUE)[0] = v;
-	}
 
 	SimulationContext::current()->overrideSignal(*this, state);
 }
@@ -107,42 +104,21 @@ struct StateBlockOutputIterator {
 	size_t offset = 0;
 };
 
-void SigHandle::assign(const BigInt &v)
+void SigHandle::assign(const sim::BigInt &v)
 {
 	auto width = m_output.node->getOutputConnectionType(m_output.port).width;
 	DefaultBitVectorState state;
 	state.resize(width);
-	if (width)
-	{
-		state.setRange(DefaultConfig::DEFINED, 0, width);
-		state.clearRange(DefaultConfig::VALUE, 0, width);
-
-		boost::multiprecision::export_bits(
-			v, 
-			StateBlockOutputIterator{state}, 
-			sim::DefaultConfig::NUM_BITS_PER_BLOCK,
-			false
-		);
-	}
+	state.setRange(DefaultConfig::DEFINED, 0, width);
+	sim::insertBigInt(state, 0, width, v);
 
 	SimulationContext::current()->overrideSignal(*this, state);
 }
 
-SigHandle::operator BigInt () const
+SigHandle::operator sim::BigInt () const
 {
 	auto state = eval();
-	auto range = state.range(DefaultConfig::VALUE, 0, state.size());
-
-	BigInt result;
-	boost::multiprecision::import_bits(
-		result, 
-		state.data(DefaultConfig::VALUE), 
-		state.data(DefaultConfig::VALUE) + state.getNumBlocks(),
-		DefaultConfig::NUM_BITS_PER_BLOCK,
-		false
-	);
-
-	return result;
+	return sim::extractBigInt(state, 0, state.size());
 }
 
 

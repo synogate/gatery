@@ -64,13 +64,12 @@ void Node_Arithmetic::disconnectInput(size_t operand)
 	NodeIO::disconnectInput(operand);
 }
 
-
 void Node_Arithmetic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
 	auto leftDriver = getDriver(0);
 	auto rightDriver = getDriver(1);
 	if (inputOffsets[0] == ~0ull || inputOffsets[1] == ~0ull ||
-		leftDriver.node== nullptr || rightDriver.node == nullptr) {
+		leftDriver.node == nullptr || rightDriver.node == nullptr) {
 		state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
 		return;
 	}
@@ -78,15 +77,12 @@ void Node_Arithmetic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, si
 	const auto &leftType = hlim::getOutputConnectionType(leftDriver);
 	const auto &rightType = hlim::getOutputConnectionType(rightDriver);
 
-	if (!allDefinedNonStraddling(state, inputOffsets[0], leftType.width)) {
+	if (!allDefined(state, inputOffsets[0], leftType.width) || !allDefined(state, inputOffsets[1], rightType.width)) {
 		state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
 		return;
 	}
-
-	if (!allDefinedNonStraddling(state, inputOffsets[1], rightType.width)) {
-		state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
-		return;
-	}
+	
+	state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, true);
 
 	if (getOutputConnectionType(0).width <= 64 && leftType.width <= 64 && rightType.width <= 64) {
 		std::uint64_t left = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0], leftType.width);
@@ -109,10 +105,16 @@ void Node_Arithmetic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, si
 						result = left * right;
 					break;
 					case DIV:
-						result = left / right;
+						if (right != 0)
+							result = left / right;
+						else
+							state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
 					break;
 					case REM:
-						result = left % right;
+						if (right != 0)
+							result = left % right;
+						else
+							state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
 					break;
 					default:
 						HCL_ASSERT_HINT(false, "Unhandled case!");
@@ -123,25 +125,11 @@ void Node_Arithmetic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, si
 		}
 
 		state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0], getOutputConnectionType(0).width, result);
-		state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, ~0ull);
 	} else {
-	/*
-		typedef boost::multiprecision::number<boost::multiprecision::cpp_int_backend<64, 0, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked, void>> BigInt;
+		sim::BigInt left, right, result;
 
-		BigInt left, right, result;
-
-
-		boost::multiprecision::import_bits(
-			left, 
-			state.data(DefaultConfig::VALUE), 
-			state.data(DefaultConfig::VALUE) + state.getNumBlocks(),
-			DefaultConfig::NUM_BITS_PER_BLOCK,
-			false
-		);
-		std::uint64_t left = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0], leftType.width);
-		std::uint64_t right = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[1], rightType.width);
-
-
+		left = sim::extractBigInt(state, inputOffsets[0], leftType.width);
+		right = sim::extractBigInt(state, inputOffsets[1], rightType.width);
 
 		switch (getOutputConnectionType(0).interpretation) {
 			case ConnectionType::BOOL:
@@ -159,10 +147,16 @@ void Node_Arithmetic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, si
 						result = left * right;
 					break;
 					case DIV:
-						result = left / right;
+						if (right != 0)
+							result = left / right;
+						else
+							state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
 					break;
 					case REM:
-						result = left % right;
+						if (right != 0)
+							result = left % right;
+						else
+							state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
 					break;
 					default:
 						HCL_ASSERT_HINT(false, "Unhandled case!");
@@ -172,7 +166,7 @@ void Node_Arithmetic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, si
 				HCL_ASSERT_HINT(false, "Unhandled case!");
 		}
 
-*/
+		sim::insertBigInt(state, outputOffsets[0], getOutputConnectionType(0).width, result);
 	}
 }
 

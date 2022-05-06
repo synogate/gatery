@@ -44,12 +44,10 @@ void Node_Compare::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
 
 	const auto &leftType = hlim::getOutputConnectionType(leftDriver);
 	const auto &rightType = hlim::getOutputConnectionType(rightDriver);
-	HCL_ASSERT_HINT(leftType.width <= 64, "Compare with more than 64 bits not yet implemented!");
-	HCL_ASSERT_HINT(rightType.width <= 64, "Compare with more than 64 bits not yet implemented!");
 	HCL_ASSERT_HINT(leftType.interpretation == rightType.interpretation, "Comparing signals with different interpretations not yet implemented!");
 
 	// Special handling for zero-width inputs
-	if (leftType.width == 0) {
+	if (leftType.width == 0 && rightType.width == 0) {
 		bool result;
 		switch (m_op) {
 			case EQ:
@@ -78,66 +76,88 @@ void Node_Compare::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
 		return;
 	}
 
-	if (inputOffsets[0] == ~0ull || inputOffsets[1] == ~0ull) {
+	if (inputOffsets[0] == ~0ull || inputOffsets[1] == ~0ull ||
+		!allDefined(state, inputOffsets[0], leftType.width) || !allDefined(state, inputOffsets[1], rightType.width)) {
+
 		state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
 		return;
 	}
 
-
-	if (!allDefinedNonStraddling(state, inputOffsets[0], leftType.width)) {
-		state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
-		return;
-	}
-	if (!allDefinedNonStraddling(state, inputOffsets[1], rightType.width)) {
-		state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
-		return;
-	}
-
-	std::uint64_t left = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0], leftType.width);
-	std::uint64_t right = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[1], rightType.width);
 	bool result;
+	if (leftType.width <= 64 && rightType.width <= 64) {
+		std::uint64_t left = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0], leftType.width);
+		std::uint64_t right = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[1], rightType.width);
 
-	switch (leftType.interpretation) {
-		case ConnectionType::BOOL:
-			switch (m_op) {
-				case EQ:
-					result = left == right;
-				break;
-				case NEQ:
-					result = left != right;
-				break;
-				default:
-					HCL_ASSERT_HINT(false, "Unhandled case!");
-			}
-		break;
-		case ConnectionType::BITVEC:
-			switch (m_op) {
-				case EQ:
-					result = left == right;
-				break;
-				case NEQ:
-					result = left != right;
-				break;
-				case LT:
-					result = left < right;
-				break;
-				case GT:
-					result = left > right;
-				break;
-				case LEQ:
-					result = left <= right;
-				break;
-				case GEQ:
-					result = left >= right;
-				break;
-				default:
-					HCL_ASSERT_HINT(false, "Unhandled case!");
-			}
-		break;
-		default:
-			HCL_ASSERT_HINT(false, "Unhandled case!");
+		switch (leftType.interpretation) {
+			case ConnectionType::BOOL:
+				switch (m_op) {
+					case EQ:
+						result = left == right;
+					break;
+					case NEQ:
+						result = left != right;
+					break;
+					default:
+						HCL_ASSERT_HINT(false, "Unhandled case!");
+				}
+			break;
+			case ConnectionType::BITVEC:
+				switch (m_op) {
+					case EQ:
+						result = left == right;
+					break;
+					case NEQ:
+						result = left != right;
+					break;
+					case LT:
+						result = left < right;
+					break;
+					case GT:
+						result = left > right;
+					break;
+					case LEQ:
+						result = left <= right;
+					break;
+					case GEQ:
+						result = left >= right;
+					break;
+					default:
+						HCL_ASSERT_HINT(false, "Unhandled case!");
+				}
+			break;
+			default:
+				HCL_ASSERT_HINT(false, "Unhandled case!");
+		}
+	} else {
+		sim::BigInt left, right;
+
+		left = sim::extractBigInt(state, inputOffsets[0], leftType.width);
+		right = sim::extractBigInt(state, inputOffsets[1], rightType.width);
+
+		HCL_ASSERT(leftType.interpretation == ConnectionType::BITVEC);
+		switch (m_op) {
+			case EQ:
+				result = left == right;
+			break;
+			case NEQ:
+				result = left != right;
+			break;
+			case LT:
+				result = left < right;
+			break;
+			case GT:
+				result = left > right;
+			break;
+			case LEQ:
+				result = left <= right;
+			break;
+			case GEQ:
+				result = left >= right;
+			break;
+			default:
+				HCL_ASSERT_HINT(false, "Unhandled case!");
+		}
 	}
-
 	state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0], 1, result?1:0);
 	state.insertNonStraddling(sim::DefaultConfig::DEFINED, outputOffsets[0], 1, 1);
 }

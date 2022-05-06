@@ -22,6 +22,8 @@
 #include "../utils/BitManipulation.h"
 #include "../utils/Range.h"
 
+#include <boost/multiprecision/cpp_int.hpp>
+
 #include <vector>
 #include <array>
 #include <cstdint>
@@ -118,11 +120,12 @@ class BitVectorState
 
 		bool operator == (const BitVectorState& o) const;
 		bool operator != (const BitVectorState& o) const { return !(*this == o); }
-
 protected:
 		size_t m_size = 0;
 		std::array<std::vector<typename Config::BaseType>, Config::NUM_PLANES> m_values;
 };
+
+typedef boost::multiprecision::number<boost::multiprecision::cpp_int_backend<64, 0, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked, void>> BigInt;
 
 
 template<typename Config>
@@ -229,6 +232,77 @@ bool canBeReplacedWith(const BitVectorState<Config> &vecA, const BitVectorState<
 	}
 
 	return true;
+}
+
+
+/**
+ * @brief Extracts a value range of bits from a BitVectorState and converts it as a boost::multiprecision::number to facilitate big int computations.
+ * @param vec BitVectorState to extract the bits from
+ * @param offset offset of the range to extract in bits
+ * @param size size of the range to extract in bits
+ * @return BigInt boost::multiprecision::number of the values in the range
+ */
+template<typename Config>
+BigInt extractBigInt(const BitVectorState<Config> &vec, size_t offset, size_t size)
+{
+	if (size <= Config::NUM_BITS_PER_BLOCK) {
+		return vec.extract(Config::VALUE, offset, size);
+	} else {
+		HCL_ASSERT(offset % Config::NUM_BITS_PER_BLOCK == 0);
+	/*
+			boost::multiprecision::import_bits(
+				left, 
+				vec.data(Config::VALUE) + offset / 64, 
+				vec.data(Config::VALUE) + (offset + width) / 64,
+				Config::NUM_BITS_PER_BLOCK,
+				false
+			);
+	*/
+		BigInt result = 0;
+
+		// Start with last chunk to force allocation
+		{
+			size_t lastChunkOffset = (offset + size) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
+			size_t lastChunkWidth = size - (lastChunkOffset - offset);
+			result = vec.extractNonStraddling(Config::VALUE, lastChunkOffset, lastChunkWidth);
+			result = lastChunkOffset;
+		}
+
+		for (size_t chunkIdx : utils::Range(size/Config::NUM_BITS_PER_BLOCK)) {
+			size_t revChunk = offset + (size / Config::NUM_BITS_PER_BLOCK - 1 - chunkIdx) * Config::NUM_BITS_PER_BLOCK;
+
+			result <<= (size_t)Config::NUM_BITS_PER_BLOCK;
+			result |= vec.extractNonStraddling(Config::VALUE, revChunk, Config::NUM_BITS_PER_BLOCK);
+		}
+
+		return result;
+	}
+}
+
+/**
+ * @brief Inserts values represented as a boost::multiprecision::number into a BitVectorState. This does not set or clear any DEFINED flags.
+ * 
+ * @param vec BitVectorState to insert the bits into
+ * @param offset offset of the range to insert bits into
+ * @param size size of the range to insert bits into
+ * @param v boost::multiprecision::number of the values to insert into the range
+ */
+template<typename Config>
+void insertBigInt(BitVectorState<Config> &vec, size_t offset, size_t size, BigInt v)
+{
+	if (size <= Config::NUM_BITS_PER_BLOCK) {
+		vec.insert(Config::VALUE, offset, size, (typename Config::BaseType)v);
+	} else {
+		HCL_ASSERT(offset % Config::NUM_BITS_PER_BLOCK == 0);
+
+		size_t chunk = 0;
+		while (chunk < size) {
+			size_t chunkSize = std::min<size_t>(Config::NUM_BITS_PER_BLOCK, size-chunk);
+			vec.insertNonStraddling(Config::VALUE, offset + chunk, chunkSize, (typename Config::BaseType) v);
+			chunk += chunkSize;
+			v >>= (size_t) Config::NUM_BITS_PER_BLOCK;
+		}
+	}
 }
 
 
