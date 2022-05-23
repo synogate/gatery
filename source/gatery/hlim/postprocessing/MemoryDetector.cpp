@@ -788,7 +788,7 @@ void MemoryGroup::buildResetLogic(Circuit &circuit)
 	auto *resetWritePort = findSuitableResetWritePort();
 	auto *clockDomain = resetWritePort->getClocks()[0];
 
-	if (clockDomain->getRegAttribs().resetType == RegisterAttributes::ResetType::NONE) return;
+	if (clockDomain->getRegAttribs().memoryResetType == RegisterAttributes::ResetType::NONE) return;
 
 	Clock *resetClock = buildResetClock(circuit, clockDomain);
 
@@ -834,7 +834,7 @@ void MemoryGroup::buildResetRom(Circuit &circuit)
 	auto *resetWritePort = findSuitableResetWritePort();
 	auto *clockDomain = resetWritePort->getClocks()[0];
 
-	if (clockDomain->getRegAttribs().resetType == RegisterAttributes::ResetType::NONE) return;
+	if (clockDomain->getRegAttribs().memoryResetType == RegisterAttributes::ResetType::NONE) return;
 
 	Clock *resetClock = buildResetClock(circuit, clockDomain);
 
@@ -890,6 +890,8 @@ void MemoryGroup::buildResetRom(Circuit &circuit)
 	giveName(circuit, writeData, "reset_write_data");
 
 	buildResetOverrides(circuit, writeAddr, writeData, resetWritePort);
+
+	formMemoryGroupIfNecessary(circuit, memory);
 }
 
 void MemoryGroup::buildResetOverrides(Circuit &circuit, NodePort writeAddr, NodePort writeData, Node_MemPort *resetWritePort)
