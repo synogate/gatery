@@ -314,6 +314,12 @@ void gtry::scl::riscv::RV32I::mem(AvalonMM& mem, bool byte, bool halfword)
 	mem.writeData = m_r2;
 	mem.byteEnable = "b1111";
 
+	// check for unaligned access
+	Bit is_access = (m_instr.opcode == "b00000" | m_instr.opcode == "b01000") & m_instructionValid;
+	UInt access_width = m_instr.func3(0, 2_b);
+	sim_assert(!(is_access & access_width == 2) | m_aluResult.sum(0, 2_b) == 0);
+	sim_assert(!(is_access & access_width == 1) | m_aluResult.sum(0, 1_b) == 0);
+
 	store(mem, byte, halfword);
 	load(mem, byte, halfword);
 }
@@ -345,6 +351,7 @@ void gtry::scl::riscv::RV32I::store(AvalonMM& mem, bool byte, bool halfword)
 				mem.byteEnable = cat(highWord, highWord, !highWord, !highWord);
 			}
 		}
+		mem.setName("store_");
 	}
 }
 
