@@ -90,6 +90,45 @@ void gtry::sim::VCDWriter::writeState(std::string_view code, const DefaultBitVec
 	m_File << ' ' << code << '\n';
 }
 
+void gtry::sim::VCDWriter::writeState(std::string_view code, size_t size, uint64_t defined, uint64_t valid)
+{
+	assert(m_EndDefinitions);
+
+	m_File << 'b';
+	for(auto i : utils::Range(size)) {
+		auto bitIdx = size - 1 - i;
+		bool def = (defined >> bitIdx) & 1;
+		bool val = (valid >> bitIdx) & 1;
+		if(!def)
+			m_File << 'X';
+		else if(val)
+			m_File << '1';
+		else
+			m_File << '0';
+	}
+	m_File << ' ' << code << '\n';
+}
+
+void gtry::sim::VCDWriter::writeString(std::string_view code, size_t size, std::string_view text)
+{
+	assert(m_EndDefinitions);
+	
+	m_File << 'b';
+	for(size_t i = 0; i < size / 8 && i < text.size(); ++i)
+	{
+		int c = text[i];
+		for(size_t i = 0; i < 8; ++i)
+		{
+			m_File << ((c & 0x80) ? '1' : '0');
+			c <<= 1;
+		}
+	}
+//	for(size_t i = text.size(); i < size; ++i)
+//		m_File << "00";
+
+	m_File << ' ' << code << '\n';
+}
+
 void gtry::sim::VCDWriter::writeBitState(std::string_view code, bool defined, bool value)
 {
 	assert(m_EndDefinitions);

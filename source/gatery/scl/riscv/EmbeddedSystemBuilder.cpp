@@ -47,7 +47,7 @@ gtry::scl::riscv::EmbeddedSystemBuilder::EmbeddedSystemBuilder() :
 	m_dataBus.readData = 32_b;
 }
 
-void gtry::scl::riscv::EmbeddedSystemBuilder::addCpu(const ElfLoader& orgelf, BitWidth scratchMemSize)
+void gtry::scl::riscv::EmbeddedSystemBuilder::addHarvardCpu(const ElfLoader& orgelf, BitWidth scratchMemSize)
 {
 	auto ent = m_area.enter();
 
@@ -98,6 +98,61 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addCpu(const ElfLoader& orgelf, Bi
 	m_dataBus.setName("databus");
 	m_dataBus.readData = 0;
 	m_dataBus.readDataValid = '0';
+}
+
+void gtry::scl::riscv::EmbeddedSystemBuilder::addCpu(const ElfLoader& elf, BitWidth scratchMemSize, bool debugTrace)
+{
+	auto ent = m_area.enter();
+	addDataMemory(elf, scratchMemSize);
+
+	ElfLoader::MegaSegment codeMeg = elf.segments(1, 0, 0);
+	if(codeMeg.subSections.empty())
+	{
+		m_dataBus.address = "32b0";
+		m_dataBus.read = '0';
+		m_dataBus.write = '0';
+		m_dataBus.writeData = "32b0";
+		m_dataBus.byteEnable = "0000";
+		return; // no code -> no cpu
+	}
+
+	uint64_t entryPoint = elf.entryPoint();
+	ElfLoader::Segment initCodeSeg;
+	if(!m_initCode.empty())
+	{
+		initCodeSeg.offset = codeMeg.offset + codeMeg.size.bytes();
+
+		uint64_t jumpOffset = initCodeSeg.offset + m_initCode.size() * 4;
+		m_initCode.push_back(assembler::jal(0, int32_t(entryPoint - jumpOffset)));
+
+		assembler::printCode(std::cout, m_initCode, initCodeSeg.offset);
+		initCodeSeg.alignment = codeMeg.subSections.front()->alignment;
+		initCodeSeg.flags = 1;
+		initCodeSeg.size = BitWidth{ m_initCode.size() * 4 * 8 };
+		initCodeSeg.data = std::span((const uint8_t*)m_initCode.data(), m_initCode.size() * 4);
+
+		codeMeg.subSections.push_back(&initCodeSeg);
+		codeMeg.size = codeMeg.size + m_initCode.size() * 8;
+
+		entryPoint = initCodeSeg.offset;
+	}
+
+	const Segment codeSeg = loadSegment(codeMeg, 0_b);
+	DualCycleRV rv(codeSeg.addrWidth);
+
+	Memory<UInt>& imem = rv.fetch(entryPoint & codeSeg.addrWidth.mask());
+	imem.fillPowerOnState(codeSeg.resetState);
+
+	rv.execute();
+	rv.mem(m_dataBus);
+	m_dataBus.setName("databus");
+	m_dataBus.readData = 0;
+	m_dataBus.readDataValid = '0';
+
+	if(debugTrace)
+	{
+		rv.trace().writeVcd();
+	}
 }
 
 gtry::Bit gtry::scl::riscv::EmbeddedSystemBuilder::addUART(uint64_t offset, UART& config, const Bit& rx)
@@ -190,7 +245,7 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const ElfLoader& elf
 	ElfLoader::MegaSegment rwMega = elf.segments(6, 0, 1);
 	ElfLoader::MegaSegment roMega = elf.segments(4, 0, 3);
 	
-//#ifdef SKIP_INIT_CODE_FOR_DOOM_TEST
+#if 0 // we added configurable bram reset. do we still want the cpu to init memory?
 	std::list<ElfLoader::Segment> newSegments;
 	for (const ElfLoader::Segment* seg : rwMega.subSections)
 	{
@@ -210,7 +265,7 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const ElfLoader& elf
 			m_initCode
 		);
 	}
-//#endif
+#endif
 
 	EmbeddedSystemBuilder::Segment rwSeg = loadSegment(rwMega, scratchMemSize);
 	

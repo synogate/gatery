@@ -18,6 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 
+#include "CpuTrace.h"
 #include "../Avalon.h"
 
 namespace gtry::scl::riscv
@@ -36,6 +37,8 @@ namespace gtry::scl::riscv
 		UInt immU = 32_b;
 		UInt immJ = 32_b;
 
+		// used for debugging
+		UInt instruction = 32_b;
 		UInt name = 32_b;
 
 		void decode(const UInt& inst);
@@ -81,14 +84,18 @@ namespace gtry::scl::riscv
 
 		void setupAlu();
 
+		const CpuTrace& trace() const { return m_trace; }
 	protected:
 		// helper for instructions
 		virtual void setIP(const UInt& ip) = 0;
-		virtual void setResult(const UInt& result) = 0;
-		virtual void setStall(const Bit& wait) = 0;
+		virtual void setResult(const UInt& result);
+		virtual void setStall(const Bit& wait);
 
 		UInt m_IP;
 		UInt m_IPnext;
+		Bit m_stall;
+		Bit m_resultValid;
+		UInt m_resultData = 32_b;
 
 		Instruction m_instr;
 		Bit m_instructionValid;
@@ -100,6 +107,7 @@ namespace gtry::scl::riscv
 		IntAluResult m_aluResult;
 
 		BitWidth m_dataAddrWidth;
+		CpuTrace m_trace;
 
 		Area m_area;
 
@@ -117,12 +125,7 @@ namespace gtry::scl::riscv
 
 	protected:
 		virtual void setIP(const UInt& ip);
-		virtual void setResult(const UInt& result);
-		virtual void setStall(const Bit& wait);
 
-		Bit m_stall;
-		Bit m_resultValid;
-		UInt m_resultData = 32_b;
 		UInt m_resultIP;
 		Memory<UInt> m_rf;
 		Memory<UInt> m_instructionMem;

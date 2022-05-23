@@ -16,29 +16,28 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-#include "riscv.h"
+#include <gatery/frontend.h>
 
 namespace gtry::scl::riscv
 {
-	class DualCycleRV : public RV32I
+	struct CpuTrace
 	{
-	public:
+		std::string name;
 
-		DualCycleRV(BitWidth instructionAddrWidth = 32_b, BitWidth dataAddrWidth = 32_b);
+		Bit instructionValid;
+		UInt instructionPointer;
+		UInt instruction;
 
-		virtual Memory<UInt>& fetch(uint64_t entryPoint = 0);
-		virtual UInt fetch(const UInt& instruction, uint64_t entryPoint);
+		Bit memWriteValid;
+		UInt memWriteAddress;
+		UInt memWriteData;
+		UInt memWriteByteEnable;
 
-	protected:
-		virtual void setIP(const UInt& ip);
+		Bit regWriteValid;
+		UInt regWriteAddress;
+		UInt regWriteData;
 
-		Bit m_storeResult;
-
-		Bit m_overrideIPValid;
-		UInt m_overrideIP;
-
-		Memory<UInt> m_rf;
-		Memory<UInt> m_instructionMem;
-
+		void writeVcd() const;
+		void pinOut() const;
 	};
 }
