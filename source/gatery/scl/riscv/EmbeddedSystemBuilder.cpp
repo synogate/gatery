@@ -106,7 +106,7 @@ gtry::Bit gtry::scl::riscv::EmbeddedSystemBuilder::addUART(uint64_t offset, UART
 
 	UART::Stream txStream, rxStream = config.receive(rx);
 
-	AvalonMM bus = addAvalonMemMapped(offset, 0_b);
+	AvalonMM bus = addAvalonMemMapped(offset, 0_b, "uart");
 	txStream.data = (*bus.writeData)(0, 8_b);
 	txStream.valid = *bus.write;
 	
@@ -123,9 +123,30 @@ gtry::Bit gtry::scl::riscv::EmbeddedSystemBuilder::addUART(uint64_t offset, size
 	return addUART(offset, uart, rx);
 }
 
-gtry::scl::AvalonMM gtry::scl::riscv::EmbeddedSystemBuilder::addAvalonMemMapped(uint64_t offset, BitWidth addrWidth)
+bool gtry::scl::riscv::EmbeddedSystemBuilder::BusWindow::overlap(const BusWindow& o) const
 {
-	auto ent = m_area.enter((boost::format("avmm_slave_%x") % offset).str());
+	bool safe = true;
+	if(offset + size > o.offset)
+		safe = offset >= o.offset + o.size;
+	else if(offset < o.offset)
+		safe = offset + size <= o.offset;
+	return !safe;
+}
+
+gtry::scl::AvalonMM gtry::scl::riscv::EmbeddedSystemBuilder::addAvalonMemMapped(uint64_t offset, BitWidth addrWidth, std::string name)
+{
+	// check for conflicts
+	BusWindow w{
+		.offset = offset,
+		.size = addrWidth.count(),
+		.name = name
+	};
+
+	for(const BusWindow& o : m_dataBusWindows)
+		HCL_DESIGNCHECK_HINT(!w.overlap(o), "data bus address conflict between " + w.name + " and " + o.name);
+	m_dataBusWindows.push_back(w);
+
+	auto ent = m_area.enter((boost::format("avmm_slave_%x_%x") % offset % (offset + addrWidth.count())).str());
 
 	Bit selected = m_dataBus.address(addrWidth.bits(), 32_b - addrWidth.bits()) == (offset >> addrWidth.bits());
 	HCL_NAMED(selected);
@@ -146,6 +167,7 @@ gtry::scl::AvalonMM gtry::scl::riscv::EmbeddedSystemBuilder::addAvalonMemMapped(
 		m_dataBus.readDataValid = '1';
 		m_dataBus.readData = *ret.readData;
 	}
+	ret.setName("avmm");
 	return ret;
 }
 
@@ -168,6 +190,7 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const ElfLoader& elf
 	ElfLoader::MegaSegment rwMega = elf.segments(6, 0, 1);
 	ElfLoader::MegaSegment roMega = elf.segments(4, 0, 3);
 	
+//#ifdef SKIP_INIT_CODE_FOR_DOOM_TEST
 	std::list<ElfLoader::Segment> newSegments;
 	for (const ElfLoader::Segment* seg : rwMega.subSections)
 	{
@@ -187,6 +210,7 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const ElfLoader& elf
 			m_initCode
 		);
 	}
+//#endif
 
 	EmbeddedSystemBuilder::Segment rwSeg = loadSegment(rwMega, scratchMemSize);
 	
@@ -211,15 +235,15 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const Segment& seg, 
 	mem.setName(std::string{ name });
 
 	// alias memory in consecutive address space for ring buffer trick
-	AvalonMM bus1 = addAvalonMemMapped(seg.offset, seg.addrWidth);
-	AvalonMM bus2 = addAvalonMemMapped(seg.offset + seg.size.bytes(), seg.addrWidth);
+	AvalonMM bus1 = addAvalonMemMapped(seg.offset, seg.addrWidth, std::string(name) + "_lower");
+	AvalonMM bus2 = addAvalonMemMapped(seg.offset + seg.size.bytes(), seg.addrWidth, std::string(name) + "_upper");
 	bus1.setName("bus1");
 	bus2.setName("bus2");
 
 	UInt addr = bus1.address(2, seg.addrWidth.bits() - 2);
 	UInt data = mem[addr];
 
-	bus1.readData = reg(data);
+	bus1.readData = reg(data, {.allowRetimingBackward = true});
 	bus2.readData = *bus1.readData;
 	bus1.readDataValid = reg(*bus1.read, '0');
 	bus2.readDataValid = reg(*bus2.read, '0');
@@ -229,7 +253,7 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const Segment& seg, 
 #if 1
 		UInt maskedData = data;
 
-		UInt dbgReadData = reg(maskedData);
+		UInt dbgReadData = reg(maskedData, { .allowRetimingBackward = true });
 		HCL_NAMED(dbgReadData);
 
 		// TODO: implement byte enable
@@ -238,7 +262,7 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const Segment& seg, 
 				maskedData(i * 8, 8_b) = (*bus1.writeData)(i * 8, 8_b);
 		//setName(data, "mem_writedata");
 
-		UInt dbgMaskedData = reg(maskedData);
+		UInt dbgMaskedData = reg(maskedData, { .allowRetimingBackward = true });
 		HCL_NAMED(dbgMaskedData);
 
 		IF(*bus1.write | *bus2.write)
