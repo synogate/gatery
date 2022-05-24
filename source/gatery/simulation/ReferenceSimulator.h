@@ -122,7 +122,7 @@ struct Program
 {
 	void compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &nodes);
 
-	size_t m_fullStateWidth;
+	size_t m_fullStateWidth = 0;
 
 	StateMapping m_stateMapping;
 
