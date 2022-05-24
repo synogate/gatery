@@ -177,8 +177,7 @@ void Node_Rewire::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::D
 	size_t outputOffset = 0;
 	for (const auto &range : m_rewireOperation.ranges) {
 		if (range.source == OutputRange::INPUT) {
-			auto driver = getNonSignalDriver(range.inputIdx);
-			if (driver.node == nullptr)
+			if (inputOffsets[range.inputIdx] == ~0ull)
 				state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth);
 			else
 				state.copyRange(outputOffsets[0] + outputOffset, state, inputOffsets[range.inputIdx]+range.inputOffset, range.subwidth);

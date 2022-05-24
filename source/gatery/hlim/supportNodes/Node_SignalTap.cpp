@@ -40,10 +40,10 @@ void Node_SignalTap::simulateCommit(sim::SimulatorCallbacks &simCallbacks, sim::
 		triggered = true;
 	} else {
 		HCL_ASSERT_HINT(getNumInputPorts() > 0, "Missing condition input signal!");
-		auto conditionDriver = getNonSignalDriver(0);
-		if (conditionDriver.node == nullptr) {
+		if (inputOffsets[0] == ~0ull) {
 			triggered = true; // unconnected is undefined and undefined always triggers.
 		} else {
+			auto conditionDriver = getDriver(0);
 			const auto &conditionType = hlim::getOutputConnectionType(conditionDriver);
 			HCL_ASSERT_HINT(conditionType.width == 1, "Condition must be 1 bit!");
 

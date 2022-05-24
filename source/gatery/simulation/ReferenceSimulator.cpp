@@ -698,9 +698,10 @@ void ReferenceSimulator::simProcSetInputPin(hlim::Node_Pin *pin, const DefaultBi
 {
 	auto it = m_program.m_stateMapping.nodeToInternalOffset.find(pin);
 	HCL_ASSERT(it != m_program.m_stateMapping.nodeToInternalOffset.end());
-	pin->setState(m_dataState.signalState, it->second.data(), state);
-	m_stateNeedsReevaluating = true;
-	m_callbackDispatcher.onSimProcOutputOverridden({.node=pin, .port=0}, state);
+	if (pin->setState(m_dataState.signalState, it->second.data(), state)) {
+		m_stateNeedsReevaluating = true; // Only mark state as dirty if the value of the pin was actually changed.
+		m_callbackDispatcher.onSimProcOutputOverridden({.node=pin, .port=0}, state);
+	}
 }
 
 

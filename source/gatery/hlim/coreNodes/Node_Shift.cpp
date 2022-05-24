@@ -44,12 +44,11 @@ namespace gtry::hlim
 	{
 		size_t width = getOutputConnectionType(0).width;
 
-		NodePort amountDriver = getNonSignalDriver(1);
-		if (!amountDriver.node)
-		{
+		if (inputOffsets[1] == ~0ull) {
 			state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], width, false);
 			return;
 		}
+		auto amountDriver = getDriver(1);
 		size_t amountWidth = amountDriver.node->getOutputConnectionType(amountDriver.port).width;
 		HCL_DESIGNCHECK_HINT(amountWidth <= 64, "no impl");
 
