@@ -34,15 +34,25 @@ namespace gtry::scl::riscv
 			sim::DefaultBitVectorState resetState;
 		};
 
+		struct BusWindow
+		{
+			uint64_t offset;
+			uint64_t size;
+			std::string name;
+
+			bool overlap(const BusWindow& o) const;
+		};
+
 	public:
 		EmbeddedSystemBuilder();
 
-		void addCpu(const ElfLoader& elf, BitWidth scratchMemSize);
+		void addHarvardCpu(const ElfLoader& elf, BitWidth scratchMemSize);
+		void addCpu(const ElfLoader& elf, BitWidth scratchMemSize, bool debugTrace);
 
 		Bit addUART(uint64_t offset, UART& config, const Bit& rx);
 		Bit addUART(uint64_t offset, size_t baudRate, const Bit& rx);
 
-		AvalonMM addAvalonMemMapped(uint64_t offset, BitWidth addrWidth);
+		AvalonMM addAvalonMemMapped(uint64_t offset, BitWidth addrWidth, std::string name = "");
 	private:
 		Segment loadSegment(ElfLoader::MegaSegment elf, BitWidth additionalMemSize) const;
 		void addDataMemory(const ElfLoader& elf, BitWidth scratchMemSize);
@@ -50,6 +60,7 @@ namespace gtry::scl::riscv
 
 		Area m_area;
 		AvalonMM m_dataBus;
+		std::vector<BusWindow> m_dataBusWindows;
 
 		std::vector<uint32_t> m_initCode;
 

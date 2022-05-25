@@ -59,11 +59,14 @@ std::vector<size_t> Node_Pin::getInternalStateSizes() const
 	return {getOutputConnectionType(0).width};
 }
 
-void Node_Pin::setState(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const sim::DefaultBitVectorState &newState)
+bool Node_Pin::setState(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const sim::DefaultBitVectorState &newState)
 {
 	HCL_ASSERT(m_isInputPin);
 	HCL_ASSERT(newState.size() == getOutputConnectionType(0).width);
-	state.copyRange(internalOffsets[0], newState, 0, newState.size());
+	bool equal = state.compareRange(internalOffsets[0], newState, 0, newState.size());
+	if (!equal)
+		state.copyRange(internalOffsets[0], newState, 0, newState.size());
+	return !equal;
 }
 
 void Node_Pin::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const

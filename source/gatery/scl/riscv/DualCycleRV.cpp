@@ -109,15 +109,6 @@ gtry::UInt gtry::scl::riscv::DualCycleRV::fetch(const UInt& instruction, uint64_
 
 	setupAlu();
 
-	HCL_NAMED(m_resultData);
-	HCL_NAMED(m_resultValid);
-	HCL_NAMED(m_stall);
-	m_resultData = 0;
-	m_resultValid = '0';
-
-	m_stall = '0';
-
-
 	HCL_NAMED(m_overrideIPValid);
 	HCL_NAMED(m_overrideIP);
 	m_overrideIPValid = '0';
@@ -132,15 +123,4 @@ void gtry::scl::riscv::DualCycleRV::setIP(const UInt& ip)
 		m_overrideIPValid = '1';
 		m_overrideIP = ip(0, m_IP.width());
 	}
-}
-
-void gtry::scl::riscv::DualCycleRV::setResult(const UInt& result)
-{
-	m_resultValid = '1';
-	m_resultData = zext(result);
-}
-
-void gtry::scl::riscv::DualCycleRV::setStall(const Bit& wait)
-{
-	m_stall |= wait;
 }

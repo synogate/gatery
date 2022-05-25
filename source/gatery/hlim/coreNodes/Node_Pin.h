@@ -40,7 +40,7 @@ namespace gtry::hlim {
 			virtual bool hasSideEffects() const override { return true; }
 			virtual std::vector<size_t> getInternalStateSizes() const override;
 
-			void setState(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const sim::DefaultBitVectorState &newState);
+			bool setState(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const sim::DefaultBitVectorState &newState);
 			virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;
 
 			virtual std::string getTypeName() const override;

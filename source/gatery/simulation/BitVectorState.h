@@ -103,6 +103,8 @@ class BitVectorState
 		void setRange(typename Config::Plane plane, size_t offset, size_t size);
 		void clearRange(typename Config::Plane plane, size_t offset, size_t size);
 		void copyRange(size_t dstOffset, const BitVectorState<Config> &src, size_t srcOffset, size_t size);
+		bool compareRange(size_t dstOffset, const BitVectorState<Config> &src, size_t srcOffset, size_t size);
+
 
 		typename Config::BaseType *data(typename Config::Plane plane);
 		const typename Config::BaseType *data(typename Config::Plane plane) const;
@@ -555,6 +557,36 @@ void BitVectorState<Config>::copyRange(size_t dstOffset, const BitVectorState<Co
 	}
 }
 
+template<class Config>
+bool BitVectorState<Config>::compareRange(size_t dstOffset, const BitVectorState<Config> &src, size_t srcOffset, size_t size)
+{
+	if (srcOffset % 8 == 0 && dstOffset % 8 == 0 && size >= 8) {
+		size_t bytes = size / 8;
+		for (auto i : utils::Range<size_t>(Config::NUM_PLANES))
+			if (memcmp((char*) data((typename Config::Plane) i) + dstOffset/8, (const char*) src.data((typename Config::Plane) i) + srcOffset/8, bytes))
+				return false;
+
+		dstOffset += bytes * 8;
+		srcOffset += bytes * 8;
+		size -= bytes*8;
+	}
+
+	///@todo: Optimize aligned cases (which happen quite frequently!)
+	size_t width = size;
+	size_t offset = 0;
+	while (offset < width) {
+		size_t chunkSize = std::min<size_t>(Config::NUM_BITS_PER_BLOCK, width-offset);
+
+		for (auto i : utils::Range<size_t>(Config::NUM_PLANES)) {
+			auto a = src.extract((typename Config::Plane) i, srcOffset + offset, chunkSize);
+			auto b = extract((typename Config::Plane) i, dstOffset + offset, chunkSize);
+			if (a != b) return false;
+		}
+
+		offset += chunkSize;
+	}
+	return true;
+}
 
 template<class Config>
 typename Config::BaseType *BitVectorState<Config>::data(typename Config::Plane plane)

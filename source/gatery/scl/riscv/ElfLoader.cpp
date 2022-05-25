@@ -96,7 +96,7 @@ void gtry::scl::riscv::ElfLoader::splitTextAndRoData()
 
 			std::sort(executable.begin(), executable.end(), [](auto& a, auto& b) { return a.offset < b.offset; });
 			for(auto& sec : executable)
-				if (sec.offset == rodata.offset)
+				if (sec.offset == rodata.offset) // MiO: will break sometimes when segment contains data that is not in any section
 				{
 					rodata.offset += sec.data.size();
 					rodata.size = rodata.size - sec.data.size() * 8;
@@ -115,7 +115,8 @@ void gtry::scl::riscv::ElfLoader::splitTextAndRoData()
 				}
 		}
 
-		m_ProgramSegments.push_back(rodata);
+		if(rodata.size)
+			m_ProgramSegments.push_back(rodata);
 	}
 }
 

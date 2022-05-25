@@ -18,6 +18,7 @@
 #pragma once
 
 #include "../WaveformRecorder.h"
+#include "VCDWriter.h"
 
 #include <fstream>
 #include <string>
@@ -36,7 +37,7 @@ class VCDSink : public WaveformRecorder
 		virtual void onClock(const hlim::Clock *clock, bool risingEdge) override;
 		virtual void onReset(const hlim::Clock *clock, bool inReset) override;
 	protected:
-		std::ofstream m_vcdFile;
+		VCDWriter m_VCD;
 		std::ofstream m_logFile;
 
 		std::vector<std::string> m_id2sigCode;

@@ -22,6 +22,8 @@
 
 void gtry::scl::riscv::Instruction::decode(const UInt& inst)
 {
+	instruction = inst;
+
 	opcode = inst(2, 5);
 	rd = inst(7, 5);
 	func3 = inst(12, 3);
@@ -138,6 +140,22 @@ gtry::scl::riscv::RV32I::RV32I(BitWidth instructionAddrWidth, BitWidth dataAddrW
 void gtry::scl::riscv::RV32I::execute()
 {
 	auto entRV = m_area.enter("execute");
+
+	m_trace.name = m_area.getNodeGroup()->instancePath();
+	m_trace.instructionValid = !m_stall & m_instructionValid;
+	m_trace.instruction = m_instr.instruction;
+	m_trace.instructionPointer = m_IP;
+	m_trace.regWriteValid = m_resultValid & !m_stall & m_instr.rd != 0;
+	m_trace.regWriteData = m_resultData;
+	m_trace.regWriteAddress = m_instr.rd;
+	m_trace.memWriteValid = '0';
+
+	HCL_NAMED(m_resultData);
+	HCL_NAMED(m_resultValid);
+	HCL_NAMED(m_stall);
+	m_resultData = 0;
+	m_resultValid = '0';
+	m_stall = '0';
 
 	lui();
 	auipc();
@@ -314,6 +332,12 @@ void gtry::scl::riscv::RV32I::mem(AvalonMM& mem, bool byte, bool halfword)
 	mem.writeData = m_r2;
 	mem.byteEnable = "b1111";
 
+	// check for unaligned access
+	Bit is_access = (m_instr.opcode == "b00000" | m_instr.opcode == "b01000") & m_instructionValid;
+	UInt access_width = m_instr.func3(0, 2_b);
+	sim_assert(!(is_access & access_width == 2) | m_aluResult.sum(0, 2_b) == 0);
+	sim_assert(!(is_access & access_width == 1) | m_aluResult.sum(0, 1_b) == 0);
+
 	store(mem, byte, halfword);
 	load(mem, byte, halfword);
 }
@@ -345,7 +369,14 @@ void gtry::scl::riscv::RV32I::store(AvalonMM& mem, bool byte, bool halfword)
 				mem.byteEnable = cat(highWord, highWord, !highWord, !highWord);
 			}
 		}
+		mem.setName("store_");
+
 	}
+
+	m_trace.memWriteValid = *mem.write;
+	m_trace.memWriteAddress = mem.address;
+	m_trace.memWriteData = *mem.writeData;
+	m_trace.memWriteByteEnable = *mem.byteEnable;
 }
 
 void gtry::scl::riscv::RV32I::load(AvalonMM& mem, bool byte, bool halfword)
@@ -529,13 +560,14 @@ void gtry::scl::riscv::SingleCycleI::setIP(const UInt& ip)
 	m_resultIP = ip(0, m_IP.width());
 }
 
-void gtry::scl::riscv::SingleCycleI::setResult(const UInt& result)
+void gtry::scl::riscv::RV32I::setResult(const UInt& result)
 {
-	m_resultValid = '1';
-	m_resultData = zext(result);
+	IF(m_instructionValid)
+		m_resultValid = '1';
+		m_resultData = zext(result);
 }
 
-void gtry::scl::riscv::SingleCycleI::setStall(const Bit& wait)
+void gtry::scl::riscv::RV32I::setStall(const Bit& wait)
 {
 	m_stall |= wait;
 }

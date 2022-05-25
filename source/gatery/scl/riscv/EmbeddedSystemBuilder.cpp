@@ -47,7 +47,7 @@ gtry::scl::riscv::EmbeddedSystemBuilder::EmbeddedSystemBuilder() :
 	m_dataBus.readData = 32_b;
 }
 
-void gtry::scl::riscv::EmbeddedSystemBuilder::addCpu(const ElfLoader& orgelf, BitWidth scratchMemSize)
+void gtry::scl::riscv::EmbeddedSystemBuilder::addHarvardCpu(const ElfLoader& orgelf, BitWidth scratchMemSize)
 {
 	auto ent = m_area.enter();
 
@@ -100,13 +100,68 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addCpu(const ElfLoader& orgelf, Bi
 	m_dataBus.readDataValid = '0';
 }
 
+void gtry::scl::riscv::EmbeddedSystemBuilder::addCpu(const ElfLoader& elf, BitWidth scratchMemSize, bool debugTrace)
+{
+	auto ent = m_area.enter();
+	addDataMemory(elf, scratchMemSize);
+
+	ElfLoader::MegaSegment codeMeg = elf.segments(1, 0, 0);
+	if(codeMeg.subSections.empty())
+	{
+		m_dataBus.address = "32b0";
+		m_dataBus.read = '0';
+		m_dataBus.write = '0';
+		m_dataBus.writeData = "32b0";
+		m_dataBus.byteEnable = "0000";
+		return; // no code -> no cpu
+	}
+
+	uint64_t entryPoint = elf.entryPoint();
+	ElfLoader::Segment initCodeSeg;
+	if(!m_initCode.empty())
+	{
+		initCodeSeg.offset = codeMeg.offset + codeMeg.size.bytes();
+
+		uint64_t jumpOffset = initCodeSeg.offset + m_initCode.size() * 4;
+		m_initCode.push_back(assembler::jal(0, int32_t(entryPoint - jumpOffset)));
+
+		assembler::printCode(std::cout, m_initCode, initCodeSeg.offset);
+		initCodeSeg.alignment = codeMeg.subSections.front()->alignment;
+		initCodeSeg.flags = 1;
+		initCodeSeg.size = BitWidth{ m_initCode.size() * 4 * 8 };
+		initCodeSeg.data = std::span((const uint8_t*)m_initCode.data(), m_initCode.size() * 4);
+
+		codeMeg.subSections.push_back(&initCodeSeg);
+		codeMeg.size = codeMeg.size + m_initCode.size() * 8;
+
+		entryPoint = initCodeSeg.offset;
+	}
+
+	const Segment codeSeg = loadSegment(codeMeg, 0_b);
+	DualCycleRV rv(codeSeg.addrWidth);
+
+	Memory<UInt>& imem = rv.fetch(entryPoint & codeSeg.addrWidth.mask());
+	imem.fillPowerOnState(codeSeg.resetState);
+
+	rv.execute();
+	rv.mem(m_dataBus);
+	m_dataBus.setName("databus");
+	m_dataBus.readData = 0;
+	m_dataBus.readDataValid = '0';
+
+	if(debugTrace)
+	{
+		rv.trace().writeVcd();
+	}
+}
+
 gtry::Bit gtry::scl::riscv::EmbeddedSystemBuilder::addUART(uint64_t offset, UART& config, const Bit& rx)
 {
 	auto ent = m_area.enter();
 
 	UART::Stream txStream, rxStream = config.receive(rx);
 
-	AvalonMM bus = addAvalonMemMapped(offset, 0_b);
+	AvalonMM bus = addAvalonMemMapped(offset, 0_b, "uart");
 	txStream.data = (*bus.writeData)(0, 8_b);
 	txStream.valid = *bus.write;
 	
@@ -123,9 +178,30 @@ gtry::Bit gtry::scl::riscv::EmbeddedSystemBuilder::addUART(uint64_t offset, size
 	return addUART(offset, uart, rx);
 }
 
-gtry::scl::AvalonMM gtry::scl::riscv::EmbeddedSystemBuilder::addAvalonMemMapped(uint64_t offset, BitWidth addrWidth)
+bool gtry::scl::riscv::EmbeddedSystemBuilder::BusWindow::overlap(const BusWindow& o) const
 {
-	auto ent = m_area.enter((boost::format("avmm_slave_%x") % offset).str());
+	bool safe = true;
+	if(offset + size > o.offset)
+		safe = offset >= o.offset + o.size;
+	else if(offset < o.offset)
+		safe = offset + size <= o.offset;
+	return !safe;
+}
+
+gtry::scl::AvalonMM gtry::scl::riscv::EmbeddedSystemBuilder::addAvalonMemMapped(uint64_t offset, BitWidth addrWidth, std::string name)
+{
+	// check for conflicts
+	BusWindow w{
+		.offset = offset,
+		.size = addrWidth.count(),
+		.name = name
+	};
+
+	for(const BusWindow& o : m_dataBusWindows)
+		HCL_DESIGNCHECK_HINT(!w.overlap(o), "data bus address conflict between " + w.name + " and " + o.name);
+	m_dataBusWindows.push_back(w);
+
+	auto ent = m_area.enter((boost::format("avmm_slave_%x_%x") % offset % (offset + addrWidth.count())).str());
 
 	Bit selected = m_dataBus.address(addrWidth.bits(), 32_b - addrWidth.bits()) == (offset >> addrWidth.bits());
 	HCL_NAMED(selected);
@@ -146,6 +222,7 @@ gtry::scl::AvalonMM gtry::scl::riscv::EmbeddedSystemBuilder::addAvalonMemMapped(
 		m_dataBus.readDataValid = '1';
 		m_dataBus.readData = *ret.readData;
 	}
+	ret.setName("avmm");
 	return ret;
 }
 
@@ -168,6 +245,7 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const ElfLoader& elf
 	ElfLoader::MegaSegment rwMega = elf.segments(6, 0, 1);
 	ElfLoader::MegaSegment roMega = elf.segments(4, 0, 3);
 	
+#if 0 // we added configurable bram reset. do we still want the cpu to init memory?
 	std::list<ElfLoader::Segment> newSegments;
 	for (const ElfLoader::Segment* seg : rwMega.subSections)
 	{
@@ -187,6 +265,7 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const ElfLoader& elf
 			m_initCode
 		);
 	}
+#endif
 
 	EmbeddedSystemBuilder::Segment rwSeg = loadSegment(rwMega, scratchMemSize);
 	
@@ -211,15 +290,15 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const Segment& seg, 
 	mem.setName(std::string{ name });
 
 	// alias memory in consecutive address space for ring buffer trick
-	AvalonMM bus1 = addAvalonMemMapped(seg.offset, seg.addrWidth);
-	AvalonMM bus2 = addAvalonMemMapped(seg.offset + seg.size.bytes(), seg.addrWidth);
+	AvalonMM bus1 = addAvalonMemMapped(seg.offset, seg.addrWidth, std::string(name) + "_lower");
+	AvalonMM bus2 = addAvalonMemMapped(seg.offset + seg.size.bytes(), seg.addrWidth, std::string(name) + "_upper");
 	bus1.setName("bus1");
 	bus2.setName("bus2");
 
 	UInt addr = bus1.address(2, seg.addrWidth.bits() - 2);
 	UInt data = mem[addr];
 
-	bus1.readData = reg(data);
+	bus1.readData = reg(data, {.allowRetimingBackward = true});
 	bus2.readData = *bus1.readData;
 	bus1.readDataValid = reg(*bus1.read, '0');
 	bus2.readDataValid = reg(*bus2.read, '0');
@@ -229,7 +308,7 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const Segment& seg, 
 #if 1
 		UInt maskedData = data;
 
-		UInt dbgReadData = reg(maskedData);
+		UInt dbgReadData = reg(maskedData, { .allowRetimingBackward = true });
 		HCL_NAMED(dbgReadData);
 
 		// TODO: implement byte enable
@@ -238,7 +317,7 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const Segment& seg, 
 				maskedData(i * 8, 8_b) = (*bus1.writeData)(i * 8, 8_b);
 		//setName(data, "mem_writedata");
 
-		UInt dbgMaskedData = reg(maskedData);
+		UInt dbgMaskedData = reg(maskedData, { .allowRetimingBackward = true });
 		HCL_NAMED(dbgMaskedData);
 
 		IF(*bus1.write | *bus2.write)
