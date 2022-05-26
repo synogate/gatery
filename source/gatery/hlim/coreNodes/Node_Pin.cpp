@@ -23,18 +23,30 @@
 namespace gtry::hlim {
 
 
-Node_Pin::Node_Pin(bool inputPin) : Node(inputPin?0:1, inputPin?1:0), m_isInputPin(inputPin)
+Node_Pin::Node_Pin(bool inputPin, bool outputPin, bool hasOutputEnable) : Node(2, 1), m_isInputPin(inputPin), m_isOutputPin(outputPin), m_hasOutputEnable(hasOutputEnable)
 {
-	if (m_isInputPin)
-		setOutputType(0, OUTPUT_IMMEDIATE);
+	setOutputType(0, OUTPUT_IMMEDIATE);
 }
 
 void Node_Pin::connect(const NodePort &port)
 { 
-	HCL_DESIGNCHECK(!m_isInputPin);
+	HCL_DESIGNCHECK(m_isOutputPin);
 	NodeIO::connectInput(0, port);
-	if (port.node != nullptr)
+	if (port.node != nullptr) {
 		m_connectionType = port.node->getOutputConnectionType(port.port);
+
+		auto myType = getOutputConnectionType(0);
+		if (!getDirectlyDriven(0).empty()) {
+			HCL_ASSERT_HINT( m_connectionType == myType, "The connection type of a node that is driving other nodes can not change");
+		} else
+			setOutputConnectionType(0, m_connectionType);
+	}
+}
+
+void Node_Pin::connectEnable(const NodePort &port)
+{ 
+	HCL_DESIGNCHECK(m_isOutputPin);
+	NodeIO::connectInput(1, port);
 }
 
 void Node_Pin::setBool()
@@ -71,8 +83,34 @@ bool Node_Pin::setState(sim::DefaultBitVectorState &state, const size_t *interna
 
 void Node_Pin::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
-	if (m_isInputPin)
-		state.copyRange(outputOffsets[0], state, internalOffsets[0], getOutputConnectionType(0).width);
+	if (m_isInputPin) {
+		if (m_isOutputPin) {
+			bool outputEnabled = true;
+			bool outputEnabledDefined = true;
+
+			if (m_hasOutputEnable && inputOffsets[1] != ~0ull) {
+				outputEnabled = state.get(sim::DefaultConfig::VALUE, inputOffsets[1]);
+				outputEnabledDefined = state.get(sim::DefaultConfig::DEFINED, inputOffsets[1]);
+			}
+
+			if (!outputEnabledDefined) {
+				state.clearRange(sim::DefaultConfig::DEFINED,  outputOffsets[0], getOutputConnectionType(0).width);
+			} else {
+				if (outputEnabled) {
+					// what is being driven overrides what the simulation process set
+
+					if (inputOffsets[0] == ~0ull)
+						state.clearRange(sim::DefaultConfig::DEFINED,  outputOffsets[0], getOutputConnectionType(0).width);
+					else
+						state.copyRange(outputOffsets[0], state, inputOffsets[0], getOutputConnectionType(0).width);
+				} else {
+					// copy whatever was set via simulation processes
+					state.copyRange(outputOffsets[0], state, internalOffsets[0], getOutputConnectionType(0).width);
+				}
+			}
+		} else // copy whatever was set via simulation processes
+			state.copyRange(outputOffsets[0], state, internalOffsets[0], getOutputConnectionType(0).width);
+	}
 }
 
 std::string Node_Pin::getTypeName() const
@@ -90,7 +128,11 @@ void Node_Pin::assertValidity() const
 
 std::string Node_Pin::getInputName(size_t idx) const
 {
-	return "in";
+	switch (idx) {
+		case 0: return "in";
+		case 1: return "outputEnable";
+		default: return "";
+	}
 }
 
 std::string Node_Pin::getOutputName(size_t idx) const
@@ -100,7 +142,7 @@ std::string Node_Pin::getOutputName(size_t idx) const
 
 std::unique_ptr<BaseNode> Node_Pin::cloneUnconnected() const {
 	Node_Pin *other;
-	std::unique_ptr<BaseNode> copy(other = new Node_Pin(m_isInputPin));
+	std::unique_ptr<BaseNode> copy(other = new Node_Pin(m_isInputPin, m_isOutputPin, m_hasOutputEnable));
 	copyBaseToClone(copy.get());
 	other->m_connectionType = m_connectionType;
 	other->m_differential = m_differential;
@@ -117,6 +159,7 @@ std::string Node_Pin::attemptInferOutputName(size_t outputPort) const
 
 void Node_Pin::setDifferential(std::string_view posPrefix, std::string_view negPrefix)
 {
+	HCL_DESIGNCHECK_HINT(!m_hasOutputEnable, "Not implemented!");
 	m_differential = true;
 	m_differentialPosName = m_name + std::string(posPrefix);
 	m_differentialNegName = m_name + std::string(negPrefix);

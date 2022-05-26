@@ -557,21 +557,26 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 			statement.weakOrderIdx = nodePort.node->getId(); // chronological order
 			statement.outputs.insert(nodePort);
 
-			hlim::Node_Multiplexer *muxNode = dynamic_cast<hlim::Node_Multiplexer *>(nodePort.node);
-			hlim::Node_PriorityConditional *prioCon = dynamic_cast<hlim::Node_PriorityConditional *>(nodePort.node);
+			auto *muxNode = dynamic_cast<hlim::Node_Multiplexer *>(nodePort.node);
+			auto *prioCon = dynamic_cast<hlim::Node_PriorityConditional *>(nodePort.node);
+			auto *ioPin = dynamic_cast<hlim::Node_Pin*>(nodePort.node);
 
 			VHDLDataType targetContext;
 
 			bool isLocalSignal = m_localSignals.contains(nodePort);
 			std::string assignmentPrefix;
 			bool forceUnfold;
-			if (auto *ioPin = dynamic_cast<hlim::Node_Pin*>(nodePort.node); ioPin && ioPin->isOutputPin()) { // todo: all in all this is bad
+			hlim::NodePort tristateOutputEnable;
+
+			if (ioPin && ioPin->isOutputPin()) { // todo: all in all this is bad
 				const auto &decl = m_namespaceScope.get(ioPin);
 				assignmentPrefix = decl.name;
 				forceUnfold = false; // assigning to pin, can directly do with a signal/variable;
 				nodePort = ioPin->getDriver(0);
 
 				targetContext = decl.dataType;
+
+				tristateOutputEnable = ioPin->getDriver(1);
 			} else {
 				const auto &decl = m_namespaceScope.get(nodePort);
 				assignmentPrefix = decl.name;
@@ -585,6 +590,38 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 			else
 				assignmentPrefix += " <= ";
 
+			if (tristateOutputEnable.node) { // only happens when assigning to tristate pins
+				code << "IF ";
+				formatExpression(code, indentation+2, comment, tristateOutputEnable, statement.inputs, VHDLDataType::BOOL, false);
+				code << " THEN"<< std::endl;
+
+					// write signal as in the default case
+					cf.indent(code, indentation+2);
+					code << assignmentPrefix;
+
+					formatExpression(code, indentation+2, comment, nodePort, statement.inputs, targetContext, forceUnfold);
+					code << ";" << std::endl;
+
+				cf.indent(code, indentation+1);
+				code << "ELSE" << std::endl;
+
+					// Write high impedance
+					cf.indent(code, indentation+2);
+					code << assignmentPrefix;
+
+					auto type = hlim::getOutputConnectionType(nodePort);
+					if (type.interpretation == hlim::ConnectionType::BOOL)
+						code << "'Z';" << std::endl;
+					else {
+						code << '"';
+						for ([[maybe_unused]] auto i : utils::Range(type.width))
+							code << 'Z';
+						code << "\";" << std::endl;
+					}
+
+				cf.indent(code, indentation+1);
+				code << "END IF;" << std::endl;
+			} else
 			if (muxNode != nullptr) {
 				if (hlim::getOutputWidth(muxNode->getDriver(0)) == 0) { 
 					// if for whatever reason the selector is zero bits, always keep the first input.

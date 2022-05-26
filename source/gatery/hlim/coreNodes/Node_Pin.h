@@ -24,16 +24,18 @@ namespace gtry::hlim {
 	class Node_Pin : public Node<Node_Pin>
 	{
 		public:
-			Node_Pin(bool inputPin);
+			Node_Pin(bool inputPin, bool outputPin, bool hasOutputEnable);
 
 			void connect(const NodePort &port);
+			void connectEnable(const NodePort &port);
 			inline void disconnect() { NodeIO::disconnectInput(0); }
+			inline void disconnectEnable() { NodeIO::disconnectInput(1); }
 
 			void setBool();
 			void setWidth(size_t width);
 
 			bool isInputPin() const { return m_isInputPin; }
-			bool isOutputPin() const { return !m_isInputPin; }
+			bool isOutputPin() const { return m_isOutputPin; }
 
 			inline ConnectionType &getConnectionType() { return m_connectionType; }
 
@@ -64,6 +66,8 @@ namespace gtry::hlim {
 			 virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
 		protected:
 			bool m_isInputPin;
+			bool m_isOutputPin;
+			bool m_hasOutputEnable;
 			ConnectionType m_connectionType;
 
 			bool m_differential = false;			

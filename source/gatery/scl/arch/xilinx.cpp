@@ -60,7 +60,7 @@ void handleDifferentialPin(hlim::Circuit &circuit, const XilinxSettings &setting
 	mergeRewirePos->changeOutputType(driver.node->getOutputConnectionType(driver.port));
 	mergeRewireNeg->changeOutputType(driver.node->getOutputConnectionType(driver.port));
 
-	auto *negPin = circuit.createNode<hlim::Node_Pin>(false);
+	auto *negPin = circuit.createNode<hlim::Node_Pin>(false, true, false);
 	negPin->moveToGroup(pin->getGroup());
 	negPin->setName(pin->getDifferentialNegName());
 	pin->setName(pin->getDifferentialPosName());
