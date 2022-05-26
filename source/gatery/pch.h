@@ -9,8 +9,10 @@
 
 #ifndef GTRY_NO_PCH
 
+#ifdef _WIN32
 #pragma warning(push, 0)
 #pragma warning(disable : 4146) // boost rational "unary minus operator applied to unsigned type, result still unsigned"
+#endif
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -85,6 +87,8 @@
 
 extern template class boost::rational<std::uint64_t>;
 
+#ifdef _WIN32
 #pragma warning(pop)
+#endif
 
 #endif
