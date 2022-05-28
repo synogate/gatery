@@ -170,7 +170,7 @@ struct MAX10DeviceString {
 	size_t fabricSpeedGrade;
 
 	bool parse(const std::string &device) {
-		static auto deviceRegex = std::regex("10M(\\d\\d)(SC|SA|DC|DF|DA)(V|E|M|U|F)(\\d\\d\\d?)(I|C|A)(\\d)(G|ES|P)?");
+		static auto deviceRegex = std::regex("10M(\\d\\d)(SC|SA|DC|DF|DA)(V|E|M|U|F)(\\d\\d\\d?)(I|C|A)(\\d)G?(ES)?P?");
 
 		std::smatch matchResult;
 
