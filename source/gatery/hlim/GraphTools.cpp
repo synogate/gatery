@@ -63,7 +63,7 @@ Node_Pin *findInputPin(hlim::NodePort output)
 
 	std::set<BaseNode*> encounteredNodes;
 
-	// Any preceeding node must be a signal node or the pin we look for
+	// Any preceding node must be a signal node or the pin we look for
 	for (auto nh : output.node->exploreInput(0)) {
 		if (encounteredNodes.contains(nh.node())) {
 			nh.backtrack();

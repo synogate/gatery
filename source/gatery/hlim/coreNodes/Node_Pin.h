@@ -24,23 +24,25 @@ namespace gtry::hlim {
 	class Node_Pin : public Node<Node_Pin>
 	{
 		public:
-			Node_Pin(bool inputPin);
+			Node_Pin(bool inputPin, bool outputPin, bool hasOutputEnable);
 
 			void connect(const NodePort &port);
+			void connectEnable(const NodePort &port);
 			inline void disconnect() { NodeIO::disconnectInput(0); }
+			inline void disconnectEnable() { NodeIO::disconnectInput(1); }
 
 			void setBool();
 			void setWidth(size_t width);
 
 			bool isInputPin() const { return m_isInputPin; }
-			bool isOutputPin() const { return !m_isInputPin; }
+			bool isOutputPin() const { return m_isOutputPin; }
 
 			inline ConnectionType &getConnectionType() { return m_connectionType; }
 
 			virtual bool hasSideEffects() const override { return true; }
 			virtual std::vector<size_t> getInternalStateSizes() const override;
 
-			void setState(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const sim::DefaultBitVectorState &newState);
+			bool setState(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const sim::DefaultBitVectorState &newState);
 			virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;
 
 			virtual std::string getTypeName() const override;
@@ -64,6 +66,8 @@ namespace gtry::hlim {
 			 virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
 		protected:
 			bool m_isInputPin;
+			bool m_isOutputPin;
+			bool m_hasOutputEnable;
 			ConnectionType m_connectionType;
 
 			bool m_differential = false;			

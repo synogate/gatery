@@ -174,8 +174,8 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
 			newOutput.node = mapSrc2Dst.find(handle.getOutput().node)->second;
 	}
 
-	// Force output's existance throughout optimization
-	auto *pin = simCircuit.createNode<hlim::Node_Pin>(false);
+	// Force output's existence throughout optimization
+	auto *pin = simCircuit.createNode<hlim::Node_Pin>(false, true, false);
 	pin->connect(newOutput);
 
 	//visualize(simCircuit, "/tmp/circuit_04");

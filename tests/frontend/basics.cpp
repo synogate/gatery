@@ -1250,3 +1250,72 @@ BOOST_FIXTURE_TEST_CASE(msbBroadcast, BoostUnitTestSimulationFixture)
 
 	runEvalOnlyTest();
 }
+
+
+
+BOOST_FIXTURE_TEST_CASE(tristateBit, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+	
+	UInt value = pinIn(10_b).setName("value");
+	Bit enable = pinIn().setName("enable");
+	UInt readback = tristatePin(value, enable).setName("tristatePin");
+	pinOut(readback).setName("readback");
+
+	addSimulationProcess([=, this]()->SimProcess {
+
+		simu(value) = 10;
+		simu(enable) = 1;
+		simu(readback) = 42;
+
+		co_await WaitClk(clock);
+
+		BOOST_TEST(simu(readback) == 10);
+		BOOST_TEST(simu(readback).allDefined());
+
+		co_await WaitClk(clock);
+
+		simu(enable) = 0;
+
+		co_await WaitClk(clock);
+
+		BOOST_TEST(simu(readback) == 42);
+		BOOST_TEST(simu(readback).allDefined());
+
+		co_await WaitClk(clock);
+
+		simu(enable).invalidate();
+
+		co_await WaitClk(clock);
+
+		BOOST_TEST(!simu(readback).allDefined());
+
+		co_await WaitClk(clock);
+
+		simu(enable) = 1;
+		simu(value).invalidate();
+
+		co_await WaitClk(clock);
+
+		BOOST_TEST(!simu(readback).allDefined());
+
+		co_await WaitClk(clock);
+
+		simu(enable) = 0;
+		simu(value) = 10;
+		simu(readback).invalidate();
+
+		co_await WaitClk(clock);
+
+		BOOST_TEST(!simu(readback).allDefined());		
+
+		stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTest({ 1,1 });
+}
+

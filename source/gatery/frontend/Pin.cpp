@@ -27,15 +27,18 @@ namespace gtry {
 
 	BaseOutputPin::BaseOutputPin(hlim::NodePort nodePort, std::string name)
 	{
-		m_pinNode = DesignScope::createNode<hlim::Node_Pin>(false);
+		m_pinNode = DesignScope::createNode<hlim::Node_Pin>(false, true, false);
 		m_pinNode->connect(nodePort);
 		m_pinNode->setName(std::move(name));
 	}
 
 	OutputPin::OutputPin(const Bit &bit) : BaseOutputPin(bit.readPort(), std::string(bit.getName())) { }
 
+
+
+
 	BaseInputPin::BaseInputPin() {
-		m_pinNode = DesignScope::createNode<hlim::Node_Pin>(true);
+		m_pinNode = DesignScope::createNode<hlim::Node_Pin>(true, false, false);
 	}
 
 	InputPin::InputPin() {
@@ -45,14 +48,7 @@ namespace gtry {
 
 	InputPin::operator Bit () const
 	{
-#if 0
 		return Bit(SignalReadPort({.node=m_pinNode, .port=0ull}));
-#else
-		auto* signal = DesignScope::createNode<hlim::Node_Signal>();
-		signal->connectInput({.node=m_pinNode, .port=0ull});
-		signal->recordStackTrace();
-		return Bit(SignalReadPort(signal));
-#endif
 	}
 
 	InputPins::InputPins(BitWidth width) {
@@ -60,6 +56,33 @@ namespace gtry {
 	}
 
 	InputPins::operator UInt () const { return UInt(SignalReadPort({.node=m_pinNode, .port=0ull})); }
+
+
+
+	BaseTristatePin::BaseTristatePin(hlim::NodePort nodePort, std::string name, const Bit &outputEnable) {
+		m_pinNode = DesignScope::createNode<hlim::Node_Pin>(true, true, true);
+		m_pinNode->connect(nodePort);
+		m_pinNode->connectEnable(outputEnable.readPort());
+		m_pinNode->setName(std::move(name));	
+	}
+
+	TristatePin::TristatePin(const Bit &bit, const Bit &outputEnable) : BaseTristatePin(bit.readPort(), std::string(bit.getName()), outputEnable) 
+	{
+	 
+	}
+
+
+	TristatePin::operator Bit () const
+	{
+		return Bit(SignalReadPort({.node=m_pinNode, .port=0ull}));
+	}
+
+
+	TristatePins::operator UInt () const 
+	{ 
+		return UInt(SignalReadPort({.node=m_pinNode, .port=0ull})); 
+	}
+
 
 	OutputPins pinOut(const InputPins &input) { return OutputPins((UInt)input); }
 

@@ -32,14 +32,18 @@ namespace gtry {
 	class UInt;
 	class SInt;
 
-	class BaseOutputPin {
-		public:
-			BaseOutputPin(hlim::NodePort nodePort, std::string name);
 
+	class BasePin {
+		public:
 			inline hlim::Node_Pin *node() { return m_pinNode.get(); }
 			inline hlim::Node_Pin *node() const { return m_pinNode.get(); }
 		protected:
 			hlim::NodePtr<hlim::Node_Pin> m_pinNode;
+	};		
+
+	class BaseOutputPin : public BasePin {
+		public:
+			BaseOutputPin(hlim::NodePort nodePort, std::string name);
 	};	
 
 	class OutputPin : public BaseOutputPin {
@@ -61,14 +65,9 @@ namespace gtry {
 	};
 
 
-	class BaseInputPin { 
+	class BaseInputPin : public BasePin { 
 		public:
 			BaseInputPin();
-
-			inline hlim::Node_Pin *node() { return m_pinNode.get(); }
-			inline hlim::Node_Pin *node() const { return m_pinNode.get(); }
-		protected:
-			hlim::NodePtr<hlim::Node_Pin> m_pinNode;	
 	};
 
 	class InputPin : public BaseInputPin {
@@ -89,6 +88,32 @@ namespace gtry {
 			inline InputPins &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
 	};
 
+	class BaseTristatePin : public BasePin { 
+		public:
+			BaseTristatePin(hlim::NodePort nodePort, std::string name, const Bit &outputEnable);
+	};
+
+	class TristatePin : public BaseTristatePin {
+		public:
+			TristatePin(const Bit &bit, const Bit &outputEnable);
+			operator Bit () const;
+			inline TristatePin &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
+	};
+
+	class TristatePins : public BaseTristatePin {
+		public:
+			template<BitVectorDerived T>
+			TristatePins(const T &bitVector, const Bit &outputEnable) : BaseTristatePin(bitVector.readPort(), std::string(bitVector.getName()), outputEnable) { }
+
+			operator UInt () const;
+
+			template<BitVectorDerived T> requires (!std::same_as<UInt, T>)
+			explicit operator T () const { return T(SignalReadPort({.node=m_pinNode, .port=0ull})); }
+
+			inline TristatePins &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
+	};	
+
+
 	inline OutputPin pinOut(const Bit &bit) { return OutputPin(bit); }
 	template<BitVectorValue T>
 	inline OutputPins pinOut(const T &bitVector) { return OutputPins((ValueToBaseSignal<T>)bitVector); }
@@ -97,4 +122,11 @@ namespace gtry {
 
 	inline InputPin pinIn() { return InputPin(); }
 	inline InputPins pinIn(BitWidth width) { return InputPins(width); }
+
+
+	inline TristatePin tristatePin(const Bit &bit, const Bit &outputEnable) { return TristatePin(bit, outputEnable); }
+
+	template<BitVectorValue T>
+	inline TristatePins tristatePin(const T &bitVector, const Bit &outputEnable) { return TristatePins((ValueToBaseSignal<T>)bitVector, outputEnable); }
+
 }
