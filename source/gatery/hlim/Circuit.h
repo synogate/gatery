@@ -149,6 +149,8 @@ class Circuit
 
 		void addSimulationProcess(std::function<sim::SimulationProcess()> simProc) { m_simulationProcesses.push_back(std::move(simProc)); }
 		inline const std::vector<std::function<sim::SimulationProcess()>> &getSimulationProcesses() const { return m_simulationProcesses; }
+
+		std::uint64_t allocateGroupId() { return m_nextGroupId++; }
 	protected:
 		std::vector<std::unique_ptr<BaseNode>> m_nodes;
 		std::unique_ptr<NodeGroup> m_root;
@@ -156,6 +158,7 @@ class Circuit
 		std::vector<std::unique_ptr<Clock>> m_clocks;
 
 		std::uint64_t m_nextNodeId = 0;
+		std::uint64_t m_nextGroupId = 0;
 
 		std::vector<std::function<sim::SimulationProcess()>> m_simulationProcesses;
 };

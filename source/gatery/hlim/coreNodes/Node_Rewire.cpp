@@ -192,10 +192,12 @@ void Node_Rewire::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::D
 
 std::string Node_Rewire::getTypeName() const
 {
+/*
 	size_t bitIndex;
 	if (m_rewireOperation.isBitExtract(bitIndex))
 		return std::string("bit ") + std::to_string(bitIndex);
 	else
+	*/
 		return "Rewire";
 }
 

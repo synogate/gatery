@@ -27,6 +27,7 @@
 #include <memory>
 #include <regex>
 #include <variant>
+#include <optional>
 
 #include <boost/container/flat_map.hpp>
 
@@ -125,8 +126,13 @@ namespace gtry::hlim {
 		static void configTree(utils::ConfigTree config);
 
 		inline Circuit &getCircuit() { return m_circuit; }
+
+		/// Returns an id that is unique to this group within the circuit.
+		inline std::uint64_t getId() const { return m_groupId; }
 	protected:
 		Circuit &m_circuit;
+		std::uint64_t m_groupId = ~0ull;
+
 		std::string m_name;
 		std::string m_instanceName;
 		std::string m_comment;

@@ -20,6 +20,7 @@
 #include "GenericMemory.h"
 #include "FPGADevice.h"
 
+#include <gatery/debug/DebugInterface.h>
 #include <gatery/frontend/GraphTools.h>
 
 #include <gatery/hlim/postprocessing/MemoryDetector.h>
@@ -82,6 +83,7 @@ const EmbeddedMemory *EmbeddedMemoryList::selectMemFor(hlim::NodeGroup *group, G
 			const auto &desc = mem->getDesc();
 			if (desc.memoryName == name) {
 				memChoice = mem.get();
+				dbg::log(dbg::LogMessage() << dbg::LogMessage::INFO << dbg::LogMessage::TECHNOLOGY_MAPPING << "Choosing memory primitive " << desc.memoryName << " for " << group << " because of configuration override.");
 				break;
 			}
 		}
@@ -92,6 +94,8 @@ const EmbeddedMemory *EmbeddedMemoryList::selectMemFor(hlim::NodeGroup *group, G
 			if (request.sizeCategory.contains(desc.sizeCategory) && 
 				(1ull << mem->getDesc().addressBits) >= request.maxDepth) {
 					memChoice = mem.get();
+					dbg::log(dbg::LogMessage() << dbg::LogMessage::INFO << dbg::LogMessage::TECHNOLOGY_MAPPING << "Choosing memory primitive " << memChoice->getDesc().memoryName 
+							<< " for " << group << " because it is the smallest (of the selected categories) that meets or exceeds the the required memory depth.");
 					break;
 				}
 		}
@@ -109,6 +113,7 @@ const EmbeddedMemory *EmbeddedMemoryList::selectMemFor(hlim::NodeGroup *group, G
 					}
 				}
 			}
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::INFO << dbg::LogMessage::TECHNOLOGY_MAPPING << "Choosing memory primitive " << memChoice->getDesc().memoryName << " for " << group << " because it is the largest available.");
 		}
 	}
 	return memChoice;
@@ -137,19 +142,23 @@ bool EmbeddedMemoryPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 			request.sizeCategory = MemoryCapabilities::SizeCategory::LARGE;
 		break;
 		case hlim::Node_Memory::MemType::EXTERNAL:
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::INFO << dbg::LogMessage::TECHNOLOGY_MAPPING << "Not mapping memory " << nodeGroup << " to any memory macros because it is EXTERNAL memory");
 			return false;
 		default:
 		break;
 	}
 
 	auto *memChoice = embeddedMems.selectMemFor(nodeGroup, request);
-	if (memChoice == nullptr)
+	if (memChoice == nullptr) {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::WARNING << dbg::LogMessage::TECHNOLOGY_MAPPING << "Not mapping memory " << nodeGroup << " because no suitable choice was found");
 		return false;
+	}
 	if (memChoice->apply(nodeGroup)) {
 		nodeGroup->getParent()->properties()["type"] = memChoice->getDesc().sizeCategory;
 		nodeGroup->getParent()->properties()["primitive"] = memChoice->getDesc().memoryName;
 		return true;
 	} else {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::WARNING << dbg::LogMessage::TECHNOLOGY_MAPPING << "Applying memory primitive " << memChoice->getDesc().memoryName << " to " << nodeGroup << " failed.");
 		return false;
 	}
 }

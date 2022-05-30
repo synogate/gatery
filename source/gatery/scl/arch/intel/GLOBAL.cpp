@@ -18,6 +18,7 @@
 #include "gatery/pch.h"
 #include "GLOBAL.h"
 
+#include <gatery/debug/DebugInterface.h>
 #include <gatery/frontend/GraphTools.h>
 
 #include <gatery/utils/Exceptions.h>
@@ -107,6 +108,8 @@ std::string GLOBAL::attemptInferOutputName(size_t outputPort) const
 bool GLOBALPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 {
 	if (nodeGroup->getName() != "scl_globalBuffer") return false;
+
+	dbg::log(dbg::LogMessage() << dbg::LogMessage::INFO << dbg::LogMessage::TECHNOLOGY_MAPPING << "Replacing " << nodeGroup << " with GLOBAL macro");
 
 //	HCL_ASSERT_HINT(nodeGroup->getNodes().size() == 1, "scl_globalBuffer should only contain a single signal node (not working for bundles yet)");
 //	HCL_ASSERT_HINT(dynamic_cast<hlim::Node_Signal*>(nodeGroup->getNodes().front()), "scl_globalBuffer should only contain a single signal node (not working for bundles yet)");

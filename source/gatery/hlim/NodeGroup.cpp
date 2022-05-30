@@ -17,6 +17,7 @@
 */
 #include "gatery/pch.h"
 #include "NodeGroup.h"
+#include "Circuit.h"
 
 #include "coreNodes/Node_Signal.h"
 
@@ -33,6 +34,7 @@ namespace gtry::hlim
 
 	NodeGroup::NodeGroup(Circuit &circuit, GroupType groupType) : m_circuit(circuit), m_groupType(groupType)
 	{
+		m_groupId = circuit.allocateGroupId();
 	}
 
 	NodeGroup::~NodeGroup()
