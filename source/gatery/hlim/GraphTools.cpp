@@ -250,7 +250,7 @@ size_t getMinRegsBetween(NodePort sourceOutput, NodePort destinationInput)
 		if (handle.input() == destinationInput)
 			return handle.getDistance();
 
-		if (auto *reg = dynamic_cast<Node_Register*>(handle.node()))
+		if (dynamic_cast<Node_Register*>(handle.node()))
 			// Proceed with a cost of 1 to increase "distance" for everything that is found through this node
 			handle.proceed(1);
 	}
@@ -270,7 +270,7 @@ size_t getMinRegHintsBetween(NodePort sourceOutput, NodePort destinationInput)
 		if (handle.input() == destinationInput)
 			return handle.getDistance();
 
-		if (auto *regHint = dynamic_cast<Node_RegHint*>(handle.node()))
+		if (dynamic_cast<Node_RegHint*>(handle.node()))
 			// Proceed with a cost of 1 to increase "distance" for everything that is found through this node
 			handle.proceed(1);
 	}

@@ -69,8 +69,8 @@ namespace gtry::hlim {
 
 	void Node_Memory::loadConfig()
 	{
-		size_t readLatency = ~0ull;
 /*		
+		size_t readLatency = ~0ull;
 		if(cfg["readLatency"])
 			readLatency = cfg["readLatency"].as<size_t>();
 

@@ -147,7 +147,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_simple, BoostUnitTestSimulationFixture)
 
 
 	UInt output = input;
-	for (auto i : Range(3))
+	for ([[maybe_unused]] auto i : Range(3))
 		output = pipestage(output);
 
 	pinOut(output);

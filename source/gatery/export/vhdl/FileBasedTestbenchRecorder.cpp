@@ -130,7 +130,7 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 	for (auto ioPin : allIOPins) {
 		const auto &decl = rootEntity->getNamespaceScope().get(ioPin);
 
-		hlim::ConnectionType conType = ioPin->getConnectionType();
+		//hlim::ConnectionType conType = ioPin->getConnectionType();
 
 		vhdlFile << "	VARIABLE v_" << decl.name << " : ";
 		cf.formatConnectionType(vhdlFile, decl);
@@ -374,7 +374,7 @@ void FileBasedTestbenchRecorder::onNewTick(const hlim::ClockRational &simulation
 	auto timeDiffInPS = timeDiff * 1'000'000'000'000ull;
 	auto roundedTimeDiffInPS = timeDiffInPS.numerator() / timeDiffInPS.denominator();
 
-	CodeFormatting &cf = m_ast->getCodeFormatting();
+	//CodeFormatting &cf = m_ast->getCodeFormatting();
 
 	// Split stuff up in between the time step to allow the vhdl simulators to correctly schedule their processes.
 	// Set signals in the first third, check asserts in the second third.
@@ -448,7 +448,7 @@ void FileBasedTestbenchRecorder::onSimProcOutputRead(hlim::NodePort output, cons
 {
 	// find output driving output pin
 	for (auto nh : output.node->exploreOutput(output.port)) {
-		if (auto* res = dynamic_cast<hlim::Node_Pin*>(nh.node())) {
+		if (dynamic_cast<hlim::Node_Pin*>(nh.node())) {
 			output = nh.node()->getDriver(0);
 			break;
 		} else

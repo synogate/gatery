@@ -164,7 +164,7 @@ void TestbenchRecorder::onNewTick(const hlim::ClockRational &simulationTime)
 		return;
 	}
 
-	CodeFormatting &cf = m_ast->getCodeFormatting();
+	//CodeFormatting &cf = m_ast->getCodeFormatting();
 
 	auto timeDiff = simulationTime - m_currentSimulationTime;
 
@@ -236,7 +236,7 @@ void TestbenchRecorder::onSimProcOutputOverridden(hlim::NodePort output, const s
 	HCL_ASSERT(name_it != m_outputToIoPinName.end());
 
 	CodeFormatting &cf = m_ast->getCodeFormatting();
-	auto *rootEntity = m_ast->getRootEntity();
+	//auto *rootEntity = m_ast->getRootEntity();
 
 	std::stringstream str_state;
 
@@ -261,7 +261,7 @@ void TestbenchRecorder::onSimProcOutputRead(hlim::NodePort output, const sim::De
 {
 	// find output driving output pin
 	for (auto nh : output.node->exploreOutput(output.port)) {
-		if (auto* res = dynamic_cast<hlim::Node_Pin*>(nh.node())) {
+		if (dynamic_cast<hlim::Node_Pin*>(nh.node())) {
 			output = nh.node()->getDriver(0);
 		} else
 			if (!nh.isSignal())

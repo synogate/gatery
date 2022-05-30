@@ -301,21 +301,24 @@ void IntelDevice::setupDevice(std::string device)
 
 		{
 			// Intel Agilex Device Data Sheet "Table 32. Memory Block Performance Specifications for Intel Agilex Devices"
-			const size_t MHz_dont_care[] = {1000, 782, 667, 600};
-			const size_t MHz_rdw[] = {630, 510, 460, 320};
+			[[maybe_unused]] const size_t MHz_dont_care[] = {1000, 782, 667, 600};
+			[[maybe_unused]] const size_t MHz_rdw[] = {630, 510, 460, 320};
 			m_embeddedMemoryList->add(std::make_unique<MLAB>(*this));
 		}
 		{
 			// Intel Agilex Device Data Sheet "Table 32. Memory Block Performance Specifications for Intel Agilex Devices"
-			const size_t MHz_max[] = {1000, 782, 667, 600};
-			const size_t MHz_min_noecc[] = {600, 500, 420, 360};
+			[[maybe_unused]] const size_t MHz_max[] = {1000, 782, 667, 600};
+			[[maybe_unused]] const size_t MHz_min_noecc[] = {600, 500, 420, 360};
 			m_embeddedMemoryList->add(std::make_unique<M20K>(*this));
 		}
 
 		if (add_eSRAM) {
 			// Intel Agilex Device Data Sheet "Table 32. Memory Block Performance Specifications for Intel Agilex Devices"
-			const size_t MHz_max[] = {750, 640, 500, 500};
+			[[maybe_unused]] const size_t MHz_max[] = {750, 640, 500, 500};
 			//m_embeddedMemoryList->add(std::make_unique<eSRAM>(*this));
+		}
+
+		if (add_crypto) {
 		}
 
 		m_technologyMapping.addPattern(std::make_unique<GLOBALPattern>());

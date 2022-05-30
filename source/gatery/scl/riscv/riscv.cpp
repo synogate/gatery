@@ -564,7 +564,7 @@ void gtry::scl::riscv::RV32I::setResult(const UInt& result)
 {
 	IF(m_instructionValid)
 		m_resultValid = '1';
-		m_resultData = zext(result);
+	m_resultData = zext(result);
 }
 
 void gtry::scl::riscv::RV32I::setStall(const Bit& wait)

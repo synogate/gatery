@@ -267,6 +267,9 @@ void DefaultCodeFormatting::formatConnectionType(std::ostream &stream, const VHD
 {
 	formatDataType(stream, declaration.dataType);
 	switch (declaration.dataType) {
+		case VHDLDataType::BOOL:
+		case VHDLDataType::STD_LOGIC:
+		break;
 		case VHDLDataType::STD_LOGIC_VECTOR:
 		case VHDLDataType::UNSIGNED:
 			if (declaration.width == 0)

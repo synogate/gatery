@@ -32,7 +32,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestGCD, data::make({0, 1
 
 	Clock clock({ .absoluteFrequency = 10'000, .resetType = ClockConfig::ResetType::NONE });
 	ClockScope clkScp(clock);
-
+/*
 	auto gcd_ref = [](unsigned a, unsigned b) -> unsigned {
 		while (a != b) {
 			if (a > b)
@@ -42,7 +42,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestGCD, data::make({0, 1
 		}
 		return a;
 	};
-
+*/
 	unsigned maxTicks = 200;
 
 	{

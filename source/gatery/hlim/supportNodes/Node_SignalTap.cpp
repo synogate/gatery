@@ -90,6 +90,8 @@ void Node_SignalTap::simulateCommit(sim::SimulatorCallbacks &simCallbacks, sim::
 			boost::apply_visitor(concatenator, part);
 
 		switch (m_level) {
+			case LVL_WATCH:
+			break;
 			case LVL_ASSERT:
 				simCallbacks.onAssert(this, concatenator.message.str());
 			break;
