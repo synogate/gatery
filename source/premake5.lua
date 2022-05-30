@@ -38,6 +38,7 @@ project "gatery"
         "gatery/scl/**.cpp", "gatery/scl/**.c", "gatery/scl/**.h",
         "gatery/simulation/**.cpp", "gatery/simulation/**.c", "gatery/simulation/**.h",
         "gatery/utils/**.cpp", "gatery/utils/**.c", "gatery/utils/**.h",
+        "gatery/debug/**.cpp", "gatery/debug/**.c", "gatery/debug/**.h",
         "gatery/*"
     }
 
