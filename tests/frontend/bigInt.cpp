@@ -22,7 +22,7 @@
 #include <boost/test/data/monomorphic.hpp>
 
 #include <boost/multiprecision/random.hpp>
-#include <boost/multiprecision/gmp.hpp>
+#include <boost/multiprecision/cpp_int.hpp>
 
 using namespace boost::unit_test;
 
