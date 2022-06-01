@@ -61,7 +61,7 @@ MemoryGroup *formMemoryGroupIfNecessary(Circuit &circuit, Node_Memory *memory)
 {
 	auto* memoryGroup = dynamic_cast<MemoryGroup*>(memory->getGroup()->getMetaInfo());
 	if (memoryGroup == nullptr) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::INFO << dbg::LogMessage::POSTPROCESSING << "Forming memory group around " << memory);
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Forming memory group around " << memory);
 
 		HCL_ASSERT(memory->getGroup()->getMetaInfo() == nullptr);		
 
@@ -640,7 +640,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 {
 	if (m_memory->getRequiredReadLatency() == 0) return;
 
-	dbg::log(dbg::LogMessage() << dbg::LogMessage::INFO << dbg::LogMessage::POSTPROCESSING << "Attempting register retiming for memory " << m_memory.get());
+	dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Attempting register retiming for memory " << m_memory.get());
 
 	//visualize(circuit, "beforeRetiming");
 
@@ -796,7 +796,7 @@ void MemoryGroup::buildResetLogic(Circuit &circuit)
 
 	if (clockDomain->getRegAttribs().memoryResetType == RegisterAttributes::ResetType::NONE) return;
 
-	dbg::log(dbg::LogMessage() << dbg::LogMessage::INFO << dbg::LogMessage::POSTPROCESSING << "Building reset logic for memory " << m_memory);
+	dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Building reset logic for memory " << m_memory);
 
 	Clock *resetClock = buildResetClock(circuit, clockDomain);
 
@@ -844,7 +844,7 @@ void MemoryGroup::buildResetRom(Circuit &circuit)
 
 	if (clockDomain->getRegAttribs().memoryResetType == RegisterAttributes::ResetType::NONE) return;
 
-	dbg::log(dbg::LogMessage() << dbg::LogMessage::INFO << dbg::LogMessage::POSTPROCESSING << "Building reset rom for memory " << m_memory);
+	dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Building reset rom for memory " << m_memory);
 
 	Clock *resetClock = buildResetClock(circuit, clockDomain);
 
@@ -1411,7 +1411,7 @@ bool Memory2VHDLPattern::attemptApply(Circuit &circuit, hlim::NodeGroup *nodeGro
 	if (!memoryGroup)
 		return false;
 
-	dbg::log(dbg::LogMessage() << dbg::LogMessage::INFO << dbg::LogMessage::TECHNOLOGY_MAPPING << "Preparing memory in " << nodeGroup << " for vhdl export");
+	dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Preparing memory in " << nodeGroup << " for vhdl export");
 
 	memoryGroup->convertToReadBeforeWrite(circuit);
 	memoryGroup->attemptRegisterRetiming(circuit);

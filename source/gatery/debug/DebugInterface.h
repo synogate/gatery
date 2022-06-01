@@ -31,15 +31,15 @@ class LogMessage
 {
 	public:
 		enum Severity {
-			INFO,
-			WARNING,
-			ERROR
+			LOG_INFO,
+			LOG_WARNING,
+			LOG_ERROR
 		};
 
 		enum Source {
-			DESIGN,
-			POSTPROCESSING,
-			TECHNOLOGY_MAPPING
+			LOG_DESIGN,
+			LOG_POSTPROCESSING,
+			LOG_TECHNOLOGY_MAPPING
 		};
 
 		LogMessage();
@@ -70,8 +70,8 @@ class LogMessage
 
 		const auto &parts() const { return m_messageParts; }
 	protected:
-		Severity m_severity = INFO;
-		Source m_source = DESIGN;
+		Severity m_severity = LOG_INFO;
+		Source m_source = LOG_DESIGN;
 
 		std::vector<std::variant<const char*, std::string, const hlim::BaseNode*, const hlim::NodeGroup*, hlim::Subnet>> m_messageParts;
 };

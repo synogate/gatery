@@ -245,7 +245,7 @@ void Circuit::disconnectZeroBitOutputPins()
 			continue;
 
 		if (pin->isOutputPin() && pin->getConnectionType().width == 0) {
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::INFO << dbg::LogMessage::POSTPROCESSING << "Removing output pin " << pin << " because it's output is of width zero");
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing output pin " << pin << " because it's output is of width zero");
 			pin->disconnect();
 		}
 	}
@@ -549,7 +549,7 @@ void Circuit::mergeMuxes(Subnet &subnet)
 
 						if (conditionsMatch) {
 							//std::cout << "Conditions match!" << std::endl;
-							dbg::log(dbg::LogMessage() << dbg::LogMessage::INFO << dbg::LogMessage::POSTPROCESSING << "Merging muxes " << prevMuxNode << " and " << muxNode << " because they form an if then else pair");
+							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Merging muxes " << prevMuxNode << " and " << muxNode << " because they form an if then else pair");
 
 							auto bypass = prevMuxNode->getDriver(prevConditionNegated?2:1);
 							// Connect second mux directly to bypass
@@ -625,7 +625,7 @@ void Circuit::removeIrrelevantMuxes(Subnet &subnet)
 						}
 
 						if (allSubnetOutputsMuxed) {
-							dbg::log(dbg::LogMessage() << dbg::LogMessage::INFO << dbg::LogMessage::POSTPROCESSING << "Removing mux " << muxNode << " because only input " << muxInputPort << " is relevant further on");
+							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing mux " << muxNode << " because only input " << muxInputPort << " is relevant further on");
 							//std::cout << "Rewiring past mux" << std::endl;
 							muxOutput.node->connectInput(muxOutput.port, muxNode->getDriver(muxInputPort));
 							done = false;
@@ -661,7 +661,7 @@ void Circuit::cullMuxConditionNegations(Subnet &subnet)
 						muxNode->connectInput(0, input1);
 						muxNode->connectInput(1, input0);
 
-						dbg::log(dbg::LogMessage() << dbg::LogMessage::INFO << dbg::LogMessage::POSTPROCESSING << "Removing/bypassing negation " << logicNode << " to mux " << muxNode << " selector by swapping mux inputs.");
+						dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing/bypassing negation " << logicNode << " to mux " << muxNode << " selector by swapping mux inputs.");
 
 						done = false; // check same mux again to unravel chain of NOTs
 					}
@@ -683,7 +683,7 @@ void Circuit::removeNoOps(Subnet &subnet)
 
 		if (auto *rewire = dynamic_cast<Node_Rewire*>(m_nodes[i].get())) {
 			if (rewire->isNoOp()) {
-				dbg::log(dbg::LogMessage() << dbg::LogMessage::INFO << dbg::LogMessage::POSTPROCESSING << "Removing rewire " << rewire << " because it is a no-op.");
+				dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing rewire " << rewire << " because it is a no-op.");
 				rewire->bypassOutputToInput(0, 0);
 				removeNode = true;
 			}
@@ -768,7 +768,7 @@ void Circuit::removeConstSelectMuxes(Subnet &subnet)
 			if (auto *constNode = dynamic_cast<Node_Constant*>(sel.node)) {
 				if (constNode->getValue().size() == 0)
 				{
-					dbg::log(dbg::LogMessage() << dbg::LogMessage::INFO << dbg::LogMessage::POSTPROCESSING << "Removing mux " << muxNode << " because its selector is constant, empty, and defaults to zero.");
+					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing mux " << muxNode << " because its selector is constant, empty, and defaults to zero.");
 					muxNode->bypassOutputToInput(0, 1);
 				}
 				else
@@ -777,7 +777,7 @@ void Circuit::removeConstSelectMuxes(Subnet &subnet)
 					std::uint64_t selDefined = constNode->getValue().extractNonStraddling(sim::DefaultConfig::DEFINED, 0, constNode->getValue().size());
 					std::uint64_t selValue = constNode->getValue().extractNonStraddling(sim::DefaultConfig::VALUE, 0, constNode->getValue().size());
 					if ((selDefined ^ (~0ull >> (64 - constNode->getValue().size()))) == 0) {
-						dbg::log(dbg::LogMessage() << dbg::LogMessage::INFO << dbg::LogMessage::POSTPROCESSING << "Removing mux " << muxNode << " because its selector is constant and defined.");
+						dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing mux " << muxNode << " because its selector is constant and defined.");
 						muxNode->bypassOutputToInput(0, 1+selValue);
 					}
 				}
@@ -1089,7 +1089,7 @@ void DefaultPostprocessing::exportPreparation(Circuit &circuit) const
 
 void DefaultPostprocessing::run(Circuit &circuit) const
 {
-	dbg::log(dbg::LogMessage() << dbg::LogMessage::INFO << dbg::LogMessage::POSTPROCESSING << "Running default postprocessing.");
+	dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Running default postprocessing.");
 
 	generalOptimization(circuit);
 	memoryDetection(circuit);
