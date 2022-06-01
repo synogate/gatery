@@ -266,7 +266,7 @@ void WebSocksInterface::acceptorLoop(unsigned port)
 	try {
 		auto const address = net::ip::make_address("0.0.0.0");
 
-		tcp::acceptor acceptor{m_ioc, {address, port}};
+		tcp::acceptor acceptor{m_ioc, {address, (unsigned short) port}};
 		while (!m_shutdown.load()) {
 			tcp::socket socket{m_ioc};
 
