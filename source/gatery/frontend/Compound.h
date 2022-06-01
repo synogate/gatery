@@ -16,10 +16,7 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-#include "Bit.h"
 #include "BitVector.h"
-#include "UInt.h"
-//#include "Reg.h"
 #include "../utils/Traits.h"
 
 #include <string_view>
@@ -50,21 +47,9 @@ namespace gtry
 		virtual void enter(std::string_view name);
 		virtual void leave();
 
-		virtual void operator () (const BVec& a, const BVec& b) { }
-		virtual void operator () (BVec& a) { }
-		virtual void operator () (BVec& a, const BVec& b) { }
-
-		virtual void operator () (const UInt& a, const UInt& b) { }
-		virtual void operator () (UInt& a) { }
-		virtual void operator () (UInt& a, const UInt& b) { }
-
-		virtual void operator () (const SInt& a, const SInt& b) { }
-		virtual void operator () (SInt& a) { }
-		virtual void operator () (SInt& a, const SInt& b) { }
-
-		virtual void operator () (const Bit& a, const Bit& b) { }
-		virtual void operator () (Bit& a) { }
-		virtual void operator () (Bit& vec, const Bit& b) { }
+		virtual void operator () (const ElementarySignal& a, const ElementarySignal& b) { }
+		virtual void operator () (ElementarySignal& a) { }
+		virtual void operator () (ElementarySignal& a, const ElementarySignal& b) { }
 	};
 
 	class CompoundNameVisitor : public CompoundVisitor
@@ -87,37 +72,7 @@ namespace gtry
 		void operator () (const T&, const T&, CompoundVisitor&) {}
 	};
 
-	template<>
-	struct VisitCompound<BVec>
-	{
-		void operator () (BVec& a, const BVec& b, CompoundVisitor& v, size_t flags) { v(a, b); }
-		void operator () (BVec& a, CompoundVisitor& v) { v(a); }
-		void operator () (const BVec& a, const BVec& b, CompoundVisitor& v) { v(a, b); }
-	};
 
-	template<>
-	struct VisitCompound<UInt>
-	{
-		void operator () (UInt& a, const UInt& b, CompoundVisitor& v, size_t flags) { v(a, b); }
-		void operator () (UInt& a, CompoundVisitor& v) { v(a); }
-		void operator () (const UInt& a, const UInt& b, CompoundVisitor& v) { v(a, b); }
-	};
-
-	template<>
-	struct VisitCompound<SInt>
-	{
-		void operator () (SInt& a, const SInt& b, CompoundVisitor& v, size_t flags) { v(a, b); }
-		void operator () (SInt& a, CompoundVisitor& v) { v(a); }
-		void operator () (const SInt& a, const SInt& b, CompoundVisitor& v) { v(a, b); }
-	};
-
-	template<>
-	struct VisitCompound<Bit>
-	{
-		void operator () (Bit& a, const Bit& b, CompoundVisitor& v, size_t flags) { v(a, b); }
-		void operator () (Bit& a, CompoundVisitor& v) { v(a); }
-		void operator () (const Bit& a, const Bit& b, CompoundVisitor& v) { v(a, b); }
-	};
 
 	namespace internal
 	{
@@ -359,8 +314,7 @@ namespace gtry
 	{
 		struct NameVisitor : CompoundNameVisitor
 		{
-			void operator () (UInt& vec) override { vec.setName(makeName()); }
-			void operator () (Bit& vec) override { vec.setName(makeName()); }
+			void operator () (ElementarySignal& vec) override { vec.setName(makeName()); }
 		};
 
 		NameVisitor v;
@@ -569,4 +523,56 @@ namespace gtry
 		(internal::width(args, sum), ...);
 		return sum;
 	}
+}
+
+
+#include "Bit.h"
+#include "UInt.h"
+#include "SInt.h"
+#include "BVec.h"
+#include "Enum.h"
+
+namespace gtry
+{
+
+	template<>
+	struct VisitCompound<BVec>
+	{
+		void operator () (BVec& a, const BVec& b, CompoundVisitor& v, size_t flags) { v(a, b); }
+		void operator () (BVec& a, CompoundVisitor& v) { v(a); }
+		void operator () (const BVec& a, const BVec& b, CompoundVisitor& v) { v(a, b); }
+	};
+
+	template<>
+	struct VisitCompound<UInt>
+	{
+		void operator () (UInt& a, const UInt& b, CompoundVisitor& v, size_t flags) { v(a, b); }
+		void operator () (UInt& a, CompoundVisitor& v) { v(a); }
+		void operator () (const UInt& a, const UInt& b, CompoundVisitor& v) { v(a, b); }
+	};
+
+	template<>
+	struct VisitCompound<SInt>
+	{
+		void operator () (SInt& a, const SInt& b, CompoundVisitor& v, size_t flags) { v(a, b); }
+		void operator () (SInt& a, CompoundVisitor& v) { v(a); }
+		void operator () (const SInt& a, const SInt& b, CompoundVisitor& v) { v(a, b); }
+	};
+
+	template<>
+	struct VisitCompound<Bit>
+	{
+		void operator () (Bit& a, const Bit& b, CompoundVisitor& v, size_t flags) { v(a, b); }
+		void operator () (Bit& a, CompoundVisitor& v) { v(a); }
+		void operator () (const Bit& a, const Bit& b, CompoundVisitor& v) { v(a, b); }
+	};
+
+	template<EnumType T>
+	struct VisitCompound<Enum<T>>
+	{
+		void operator () (Enum<T>& a, const Enum<T>& b, CompoundVisitor& v, size_t flags) { v(a, b); }
+		void operator () (Enum<T>& a, CompoundVisitor& v) { v(a); }
+		void operator () (const Enum<T>& a, const Enum<T>& b, CompoundVisitor& v) { v(a, b); }
+	};
+
 }
