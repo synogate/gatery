@@ -25,6 +25,10 @@
 #include "../../hlim/Node.h"
 #include "../../hlim/NodeGroup.h"
 #include "../../hlim/coreNodes/Node_Rewire.h"
+#include "../../hlim/coreNodes/Node_Signal.h"
+#include "../../hlim/coreNodes/Node_Pin.h"
+#include "../../hlim/coreNodes/Node_Constant.h"
+#include "../../hlim/coreNodes/Node_Compare.h"
 
 #include "../../utils/Range.h"
 
@@ -137,7 +141,8 @@ std::string JsonSerializer::serializeAllNodes(const hlim::Circuit &circuit)
 			json << ",\n";
 
 			if (auto *rewire = dynamic_cast<const hlim::Node_Rewire*>(node.get())) {
-				json << R"(    "rewireOp": [)";
+				json << "    \"meta\": {"
+					 << "        \"rewireOp\": [";
 				bool firstElement = true;
 				for (const auto &r : rewire->getOp().ranges) {
 					if (!firstElement) json << ",\n"; firstElement = false;
@@ -148,7 +153,20 @@ std::string JsonSerializer::serializeAllNodes(const hlim::Circuit &circuit)
 							<< "            \"inputOffset\": " << r.inputOffset << "\n"
 							<< "        }";
 				}
-				json << "],\n";
+				json << "]},\n";
+			}
+
+			if (auto *signal = dynamic_cast<const hlim::Node_Signal*>(node.get())) {
+				json << "    \"meta\": {"
+					 << "        \"name_inferred\": " << (signal->nameWasInferred()?"true":"false") << "\n"
+					 << "    },\n";
+			}
+
+			if (auto *ioPin = dynamic_cast<const hlim::Node_Pin*>(node.get())) {
+				json << "    \"meta\": {"
+					 << "        \"is_input_pin\": " << (ioPin->isInputPin()?"true":"false") << ",\n"
+					 << "        \"is_output_pin\": " << (ioPin->isOutputPin()?"true":"false") << "\n"
+					 << "    },\n";
 			}
 
 			json << "    \"inputPorts\": [\n";
