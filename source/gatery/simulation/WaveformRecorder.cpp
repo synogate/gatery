@@ -70,7 +70,7 @@ void WaveformRecorder::addAllPins()
 	for (auto &node : m_circuit.getNodes())
 		if (auto *pin = dynamic_cast<hlim::Node_Pin*>(node.get())) {
 			if (pin->getConnectionType().width == 0) continue;
-			if (pin->isOutputPin()) {
+			if (pin->isOutputPin() && !pin->isInputPin()) {
 				auto driver = pin->getDriver(0);
 				if (driver.node != nullptr)
 					addSignal(driver, false, pin->getGroup(), pin->getName());
