@@ -292,7 +292,10 @@ std::string JsonSerializer::serializeAllNodes(const hlim::Circuit &circuit)
 			json << "    \"clocks\": [\n";
 			for (auto i : utils::Range(node->getClocks().size())) {
 				if (i != 0) json << ",\n";
-				json << "            \"" << node->getClocks()[i]->getName() << '"';
+				if (node->getClocks()[i] != nullptr)
+					json << "            \"" << node->getClocks()[i]->getName() << '"';
+				else
+					json << "            \"\"";
 			}
 			json << "\n    ],\n";
 			json << "    \"inputPorts\": [\n";
