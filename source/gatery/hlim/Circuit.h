@@ -121,7 +121,7 @@ class Circuit
 
 		void disconnectZeroBitSignalNodes();
 		void disconnectZeroBitOutputPins();
-		void removeZeroBitsFromRewire();
+		void optimizeRewireNodes(Subnet &subnet);
 		void cullSequentiallyDuplicatedSignalNodes();
 		void cullUnnamedSignalNodes();
 		void cullOrphanedSignalNodes();
@@ -129,6 +129,8 @@ class Circuit
 		void mergeMuxes(Subnet &subnet);
 		void cullMuxConditionNegations(Subnet &subnet);
 		void removeIrrelevantMuxes(Subnet &subnet);
+		void removeIrrelevantComparisons(Subnet &subnet);
+		void mergeRewires(Subnet &subnet);
 		void removeNoOps(Subnet &subnet);
 		void foldRegisterMuxEnableLoops(Subnet &subnet);
 		void propagateConstants(Subnet &subnet);

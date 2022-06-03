@@ -25,6 +25,14 @@
 #include "../../hlim/Node.h"
 #include "../../hlim/NodeGroup.h"
 #include "../../hlim/coreNodes/Node_Rewire.h"
+#include "../../hlim/coreNodes/Node_Signal.h"
+#include "../../hlim/coreNodes/Node_Pin.h"
+#include "../../hlim/coreNodes/Node_Constant.h"
+#include "../../hlim/coreNodes/Node_Compare.h"
+#include "../../hlim/coreNodes/Node_Arithmetic.h"
+#include "../../hlim/coreNodes/Node_Logic.h"
+#include "../../hlim/coreNodes/Node_Multiplexer.h"
+#include "../../hlim/coreNodes/Node_Register.h"
 
 #include "../../utils/Range.h"
 
@@ -121,6 +129,122 @@ std::string JsonSerializer::serializeAllGroups(const hlim::Circuit &circuit)
 	return json.str();
 }
 
+namespace {
+
+std::ostream &operator<<(std::ostream &json, const hlim::Node_Rewire *rewire)
+{
+	json 
+		<< "    \"type\": \"rewire\",\n"
+		<< "    \"meta\": {"
+		<< "        \"rewireOp\": [";
+	bool firstElement = true;
+	for (const auto &r : rewire->getOp().ranges) {
+		if (!firstElement) json << ",\n"; firstElement = false;
+		json 
+			<< "        {\n"
+			<< "            \"subwidth\": " << r.subwidth << ",\n"
+			<< "            \"source\": \"" << magic_enum::enum_name(r.source) << "\",\n"
+			<< "            \"inputIdx\": " << r.inputIdx << ",\n"
+			<< "            \"inputOffset\": " << r.inputOffset << "\n"
+			<< "        }";
+	}
+	json << "]},\n";
+
+	return json;
+}
+
+std::ostream &operator<<(std::ostream &json, const hlim::Node_Signal *signal)
+{
+	json 
+		<< "    \"type\": \"signal\",\n"
+		<< "    \"meta\": {"
+		<< "        \"name_inferred\": " << (signal->nameWasInferred()?"true":"false") << "\n"
+		<< "    },\n";
+
+	return json;
+}
+
+std::ostream &operator<<(std::ostream &json, const hlim::Node_Pin *ioPin)
+{
+	json 
+		<< "    \"type\": \"io_pin\",\n"
+		<< "    \"meta\": {"
+		<< "        \"is_input_pin\": " << (ioPin->isInputPin()?"true":"false") << ",\n"
+		<< "        \"is_output_pin\": " << (ioPin->isOutputPin()?"true":"false") << "\n"
+		<< "    },\n";
+
+	return json;
+}
+
+std::ostream &operator<<(std::ostream &json, const hlim::Node_Multiplexer *node)
+{
+	json 
+		<< "    \"type\": \"mux\",\n"
+		<< "    \"meta\": {"
+		<< "    },\n";
+
+	return json;
+}
+
+std::ostream &operator<<(std::ostream &json, const hlim::Node_Register *node)
+{
+	json 
+		<< "    \"type\": \"register\",\n"
+		<< "    \"meta\": {"
+		<< "    },\n";
+
+	return json;
+}
+
+std::ostream &operator<<(std::ostream &json, const hlim::Node_Constant *node)
+{
+	json 
+		<< "    \"type\": \"constant\",\n"
+		<< "    \"meta\": {"
+		<< "    	\"value\": \"" << node->getValue() << "\",\n"
+		<< "    	\"width\": " << node->getValue().size() << "\n"
+		<< "    },\n";
+
+	return json;
+}
+
+
+std::ostream &operator<<(std::ostream &json, const hlim::Node_Arithmetic *node)
+{
+	json 
+		<< "    \"type\": \"arithmetic\",\n"
+		<< "    \"meta\": {"
+		<< "    	\"op\": \"" << magic_enum::enum_name(node->getOp()) << "\"\n"
+		<< "    },\n";
+
+	return json;
+}
+
+
+std::ostream &operator<<(std::ostream &json, const hlim::Node_Compare *node)
+{
+	json 
+		<< "    \"type\": \"compare\",\n"
+		<< "    \"meta\": {"
+		<< "    	\"op\": \"" << magic_enum::enum_name(node->getOp()) << "\"\n"
+		<< "    },\n";
+
+	return json;
+}
+
+std::ostream &operator<<(std::ostream &json, const hlim::Node_Logic *node)
+{
+	json 
+		<< "    \"type\": \"logic\",\n"
+		<< "    \"meta\": {"
+		<< "    	\"op\": \"" << magic_enum::enum_name(node->getOp()) << "\"\n"
+		<< "    },\n";
+
+	return json;
+}
+
+}
+
 std::string JsonSerializer::serializeAllNodes(const hlim::Circuit &circuit)
 {
 	std::stringstream json;
@@ -129,28 +253,51 @@ std::string JsonSerializer::serializeAllNodes(const hlim::Circuit &circuit)
 		json << "{ \"operation\":\"addNodes\", \"data\": [\n";
 		for (const auto &node : circuit.getNodes()) {
 			if (!firstElement) json << ",\n"; firstElement = false;
-			json << "{\n    \"id\": " << node->getId() << ",\n    \"name\": \"" << node->getName() << "\",\n    \"type\": \"" << node->getTypeName() << "\",\n"
+			json << "{\n    \"id\": " << node->getId() << ",\n    \"name\": \"" << node->getName() << "\",\n"
 					<< "    \"group\": " << node->getGroup()->getId() << ",\n"
 					<< "    \"stack_trace\": ";
 			
 			serializeStackTrace(json, node->getStackTrace());
 			json << ",\n";
 
-			if (auto *rewire = dynamic_cast<const hlim::Node_Rewire*>(node.get())) {
-				json << R"(    "rewireOp": [)";
-				bool firstElement = true;
-				for (const auto &r : rewire->getOp().ranges) {
-					if (!firstElement) json << ",\n"; firstElement = false;
-					json << "        {\n"
-							<< "            \"subwidth\": " << r.subwidth << ",\n"
-							<< "            \"source\": \"" << magic_enum::enum_name(r.source) << "\",\n"
-							<< "            \"inputIdx\": " << r.inputIdx << ",\n"
-							<< "            \"inputOffset\": " << r.inputOffset << "\n"
-							<< "        }";
-				}
-				json << "],\n";
-			}
+			if (auto *mux = dynamic_cast<const hlim::Node_Multiplexer*>(node.get()))
+				json << mux;
+			else
+			if (auto *rewire = dynamic_cast<const hlim::Node_Rewire*>(node.get()))
+				json << rewire;
+			else
+			if (auto *signal = dynamic_cast<const hlim::Node_Signal*>(node.get()))
+				json << signal;
+			else
+			if (auto *ioPin = dynamic_cast<const hlim::Node_Pin*>(node.get()))
+				json << ioPin;
+			else
+			if (auto *reg = dynamic_cast<const hlim::Node_Register*>(node.get()))
+				json << reg;
+			else
+			if (auto *arith = dynamic_cast<const hlim::Node_Arithmetic*>(node.get()))
+				json << arith;
+			else
+			if (auto *compare = dynamic_cast<const hlim::Node_Compare*>(node.get()))
+				json << compare;
+			else
+			if (auto *logic = dynamic_cast<const hlim::Node_Logic*>(node.get()))
+				json << logic;
+			else
+			if (auto *constant = dynamic_cast<const hlim::Node_Constant*>(node.get()))
+				json << constant;
+			else
+				json << " \"type\": \"" << node->getTypeName() << "\",\n";
 
+			json << "    \"clocks\": [\n";
+			for (auto i : utils::Range(node->getClocks().size())) {
+				if (i != 0) json << ",\n";
+				if (node->getClocks()[i] != nullptr)
+					json << "            \"" << node->getClocks()[i]->getName() << '"';
+				else
+					json << "            \"\"";
+			}
+			json << "\n    ],\n";
 			json << "    \"inputPorts\": [\n";
 			for (auto i : utils::Range(node->getNumInputPorts())) {
 				if (i != 0) json << ",\n";

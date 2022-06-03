@@ -29,6 +29,8 @@
 #include "coreNodes/Node_Pin.h"
 #include "coreNodes/Node_Rewire.h"
 #include "coreNodes/Node_Register.h"
+#include "coreNodes/Node_Constant.h"
+#include "coreNodes/Node_Compare.h"
 
 #include "supportNodes/Node_Attributes.h"
 
@@ -251,13 +253,11 @@ void Circuit::disconnectZeroBitOutputPins()
 	}
 }
 
-void Circuit::removeZeroBitsFromRewire()
+void Circuit::optimizeRewireNodes(Subnet &subnet)
 {
-	for (auto &n : m_nodes) {
-		if (Node_Rewire *rewireNode = dynamic_cast<Node_Rewire*>(n.get())) {
-			rewireNode->removeZeroWidthInputs();
-		}
-	}
+	for (auto &n : subnet)
+		if (Node_Rewire *rewireNode = dynamic_cast<Node_Rewire*>(n))
+			rewireNode->optimize();
 }
 
 /**
@@ -565,6 +565,55 @@ void Circuit::mergeMuxes(Subnet &subnet)
 }
 
 
+void Circuit::mergeRewires(Subnet &subnet)
+{
+	bool done;
+	do {
+		done = true;
+
+		for (size_t i = 0; i < m_nodes.size(); i++) {
+			if (Node_Rewire *rewireNode = dynamic_cast<Node_Rewire*>(m_nodes[i].get())) {
+
+				for (size_t inputIdx : utils::Range(rewireNode->getNumInputPorts())) {
+
+					auto input = rewireNode->getNonSignalDriver(inputIdx);
+
+					if (input.node == nullptr)
+						continue;
+
+					if (Node_Rewire *prevRewireNode = dynamic_cast<Node_Rewire*>(input.node)) {
+						if (prevRewireNode == rewireNode) continue; // sad thing
+						if (!subnet.contains(prevRewireNode)) continue; // todo: Optimize
+
+						if (prevRewireNode->getGroup() != rewireNode->getGroup()) continue;
+
+						if (prevRewireNode->getOp().ranges.size() == 1) { // keep it simple for now
+
+							if (prevRewireNode->getOp().ranges[0].source == Node_Rewire::OutputRange::INPUT) {
+								auto prevInputIdx = prevRewireNode->getOp().ranges[0].inputIdx;
+								auto prevInputOffset = prevRewireNode->getOp().ranges[0].inputOffset;
+
+								dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Merging rewires " << prevRewireNode << " and " << rewireNode << " by directly fetching from input " << prevInputIdx << " at bit offset " << prevInputOffset);
+
+								auto op = rewireNode->getOp();
+								for (auto &r : op.ranges) {
+									if (r.source == Node_Rewire::OutputRange::INPUT && r.inputIdx == inputIdx)
+										r.inputOffset += prevInputOffset;
+								}
+								rewireNode->setOp(std::move(op));
+
+								rewireNode->connectInput(inputIdx, prevRewireNode->getDriver(prevInputIdx));
+								done = false;
+							}
+						}
+					}
+				}
+				
+			}
+		}
+	} while (!done);
+}
+
 void Circuit::removeIrrelevantMuxes(Subnet &subnet)
 {
 	bool done;
@@ -637,6 +686,56 @@ void Circuit::removeIrrelevantMuxes(Subnet &subnet)
 			}
 		}
 	} while (!done);
+}
+
+void Circuit::removeIrrelevantComparisons(Subnet &subnet)
+{
+	for (auto n : subnet) {
+		if (auto *compNode = dynamic_cast<Node_Compare*>(n)) {
+			auto leftDriver = compNode->getNonSignalDriver(0);
+			auto rightDriver = compNode->getNonSignalDriver(1);
+
+			if (compNode->getOp() != Node_Compare::EQ && compNode->getOp() != Node_Compare::NEQ) continue;
+			if (leftDriver.node == nullptr || rightDriver.node == nullptr) continue;
+			if (getOutputWidth(leftDriver) != 1) continue;
+
+			Node_Constant *constInputs[2];
+			constInputs[0] = dynamic_cast<Node_Constant*>(leftDriver.node);
+			constInputs[1] = dynamic_cast<Node_Constant*>(rightDriver.node);
+
+			for (auto i : utils::Range(2)) {
+				if (constInputs[i] == nullptr) continue;
+				if (constInputs[i]->getValue().get(sim::DefaultConfig::DEFINED, 0) == false) {
+					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Compare node " << compNode << " is comparing to an undefined signal. Hardwireing output to undefined.");
+					// replace with undefined
+					compNode->bypassOutputToInput(0, i);
+					break;
+				}
+				bool invert = constInputs[i]->getValue().get(sim::DefaultConfig::VALUE, 0) ^ (compNode->getOp() == Node_Compare::EQ);
+				if (invert) {
+					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Compare node " << compNode << " is comparing to a constant and actually an inverter. Replacing logic node.");
+					// replace with inverter
+					auto *notNode = createNode<Node_Logic>(Node_Logic::NOT);
+					notNode->moveToGroup(compNode->getGroup());
+					notNode->setComment(notNode->getComment());
+					notNode->recordStackTrace();
+					notNode->connectInput(0, compNode->getDriver(i^1));
+					subnet.add(notNode);
+
+					auto driven = compNode->getDirectlyDriven(0);
+					for (auto &d : driven)
+						d.node->rewireInput(d.port, {.node=notNode, .port=0ull});
+
+					break;
+				} else {
+					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Compare node " << compNode << " is comparing to a constant and actually an identity function. Removing.");
+					// bypass
+					compNode->bypassOutputToInput(0, i^1);
+					break;
+				}
+			}
+		}
+	}
 }
 
 
@@ -1024,7 +1123,10 @@ void Circuit::optimizeSubnet(Subnet &subnet)
 	//cullUnusedNodes(subnet); // Dirty way of getting rid of default nodes
 	
 	propagateConstants(subnet);
+	mergeRewires(subnet);
+	optimizeRewireNodes(subnet);
 	mergeMuxes(subnet);
+	removeIrrelevantComparisons(subnet);
 	removeIrrelevantMuxes(subnet);
 	cullMuxConditionNegations(subnet);
 	removeNoOps(subnet);
@@ -1045,7 +1147,6 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 	Subnet subnet = Subnet::all(circuit);
 	circuit.disconnectZeroBitSignalNodes();
 	circuit.disconnectZeroBitOutputPins();
-	circuit.removeZeroBitsFromRewire();
 	defaultValueResolution(circuit, subnet);
 	circuit.cullUnusedNodes(subnet); // Dirty way of getting rid of default nodes
 	
@@ -1057,8 +1158,11 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 	circuit.cullUnnamedSignalNodes();
 	circuit.cullSequentiallyDuplicatedSignalNodes();
 	subnet = Subnet::all(circuit);
+	circuit.mergeRewires(subnet);
+	circuit.optimizeRewireNodes(subnet);
 	circuit.mergeMuxes(subnet);
-	circuit.removeIrrelevantMuxes(subnet);
+	circuit.removeIrrelevantComparisons(subnet);
+	circuit.removeIrrelevantMuxes(subnet);	
 	circuit.cullMuxConditionNegations(subnet);
 	circuit.removeNoOps(subnet);
 	circuit.foldRegisterMuxEnableLoops(subnet);
