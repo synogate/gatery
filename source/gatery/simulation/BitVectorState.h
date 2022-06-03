@@ -135,34 +135,98 @@ bool allDefinedNonStraddling(const BitVectorState<Config> &vec, size_t start, si
 	return !utils::andNot<typename Config::BaseType>(vec.extractNonStraddling(Config::DEFINED, start, size), utils::bitMaskRange<typename Config::BaseType>(0, size));
 }
 
+/**
+ * @brief Checks if all bits are true
+ * 
+ * @param vec Vector to check bits in
+ * @param plane Which plane to check (e.g. values, defined-ness)
+ * @param start The first index of the range to check, defaults to 0.
+ * @param size The number of bits to check, automatically clamped to the size of vec. Defaults to check all bits.
+ * @returns Wether all bits of the specified plane in the specified range are true. 
+ */
 template<typename Config>
-bool allDefined(const BitVectorState<Config> &vec, size_t start = 0ull, size_t size = ~0ull) {
+bool allOne(const BitVectorState<Config> &vec, typename Config::Plane plane, size_t start = 0ull, size_t size = ~0ull) {
 
-	size = std::min(size, vec.size());
+	size = std::min(size, vec.size()-start);
 
 	size_t startFullChunk = (start + Config::NUM_BITS_PER_BLOCK-1) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
 	size_t endFullChunk = (start+size) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
 
 	if (startFullChunk < endFullChunk) {
 		for (size_t c = startFullChunk / Config::NUM_BITS_PER_BLOCK; c < endFullChunk / Config::NUM_BITS_PER_BLOCK; c++)
-			if (~vec.data(Config::DEFINED)[c]) return false;
+			if (~vec.data(plane)[c]) return false;
 
 		for (size_t i = start; i < startFullChunk; i++)
-			if (!vec.get(Config::DEFINED, i)) return false;
+			if (!vec.get(plane, i)) return false;
 
 		for (size_t i = endFullChunk; i < start+size; i++)
-			if (!vec.get(Config::DEFINED, i)) return false;
+			if (!vec.get(plane, i)) return false;
 	} else {
 		for (size_t i = start; i < start+size; i++)
-			if (!vec.get(Config::DEFINED, i)) return false;
+			if (!vec.get(plane, i)) return false;
 	}
 
 	return true;
 }
 
+/**
+ * @brief Checks if all bits are false
+ * 
+ * @param vec Vector to check bits in
+ * @param plane Which plane to check (e.g. values, defined-ness)
+ * @param start The first index of the range to check, defaults to 0.
+ * @param size The number of bits to check, automatically clamped to the size of vec. Defaults to check all bits.
+ * @returns Wether all bits of the specified plane in the specified range are false. 
+ */
+template<typename Config>
+bool allZero(const BitVectorState<Config> &vec, typename Config::Plane plane, size_t start = 0ull, size_t size = ~0ull) {
+
+	size = std::min(size, vec.size()-start);
+
+	size_t startFullChunk = (start + Config::NUM_BITS_PER_BLOCK-1) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
+	size_t endFullChunk = (start+size) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
+
+	if (startFullChunk < endFullChunk) {
+		for (size_t c = startFullChunk / Config::NUM_BITS_PER_BLOCK; c < endFullChunk / Config::NUM_BITS_PER_BLOCK; c++)
+			if (vec.data(plane)[c]) return false;
+
+		for (size_t i = start; i < startFullChunk; i++)
+			if (vec.get(plane, i)) return false;
+
+		for (size_t i = endFullChunk; i < start+size; i++)
+			if (vec.get(plane, i)) return false;
+	} else {
+		for (size_t i = start; i < start+size; i++)
+			if (vec.get(plane, i)) return false;
+	}
+
+	return true;
+}
+
+/**
+ * @brief Checks if all bits are defined
+ * 
+ * @param vec Vector to check bits in
+ * @param start The first index of the range to check, defaults to 0.
+ * @param size The number of bits to check, automatically clamped to the size of vec. Defaults to check all bits.
+ * @returns Wether all bits of the Config::DEFINED plane in the specified range are true. 
+ */
+template<typename Config>
+bool allDefined(const BitVectorState<Config> &vec, size_t start = 0ull, size_t size = ~0ull) {
+	return allOne(vec, Config::DEFINED, start, size);
+}
+
+/**
+ * @brief Checks if any bits are defined
+ * 
+ * @param vec Vector to check bits in
+ * @param start The first index of the range to check, defaults to 0.
+ * @param size The number of bits to check, automatically clamped to the size of vec. Defaults to check all bits.
+ * @returns Wether any bits of the Config::DEFINED plane in the specified range are true. 
+ */
 template<typename Config>
 bool anyDefined(const BitVectorState<Config> &vec, size_t start = 0ull, size_t size = ~0ull) {
-	size = std::min(size, vec.size());
+	size = std::min(size, vec.size()-start);
 
 	size_t startFullChunk = (start + Config::NUM_BITS_PER_BLOCK-1) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
 	size_t endFullChunk = (start+size) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
@@ -680,6 +744,7 @@ void BitVectorState<Config>::insertNonStraddling(typename Config::Plane plane, s
 	HCL_ASSERT(start % Config::NUM_BITS_PER_BLOCK + size <= Config::NUM_BITS_PER_BLOCK);
 	if (size)
 	{
+		HCL_ASSERT(start / Config::NUM_BITS_PER_BLOCK < m_values[plane].size());
 		auto& op = m_values[plane][start / Config::NUM_BITS_PER_BLOCK];
 		op = utils::bitfieldInsert(op, start % Config::NUM_BITS_PER_BLOCK, size, value);
 	}

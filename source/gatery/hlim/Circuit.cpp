@@ -253,13 +253,11 @@ void Circuit::disconnectZeroBitOutputPins()
 	}
 }
 
-void Circuit::removeZeroBitsFromRewire()
+void Circuit::optimizeRewireNodes(Subnet &subnet)
 {
-	for (auto &n : m_nodes) {
-		if (Node_Rewire *rewireNode = dynamic_cast<Node_Rewire*>(n.get())) {
-			rewireNode->removeZeroWidthInputs();
-		}
-	}
+	for (auto &n : subnet)
+		if (Node_Rewire *rewireNode = dynamic_cast<Node_Rewire*>(n))
+			rewireNode->optimize();
 }
 
 /**
@@ -610,6 +608,7 @@ void Circuit::mergeRewires(Subnet &subnet)
 						}
 					}
 				}
+				
 			}
 		}
 	} while (!done);
@@ -1125,6 +1124,7 @@ void Circuit::optimizeSubnet(Subnet &subnet)
 	
 	propagateConstants(subnet);
 	mergeRewires(subnet);
+	optimizeRewireNodes(subnet);
 	mergeMuxes(subnet);
 	removeIrrelevantComparisons(subnet);
 	removeIrrelevantMuxes(subnet);
@@ -1147,7 +1147,6 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 	Subnet subnet = Subnet::all(circuit);
 	circuit.disconnectZeroBitSignalNodes();
 	circuit.disconnectZeroBitOutputPins();
-	circuit.removeZeroBitsFromRewire();
 	defaultValueResolution(circuit, subnet);
 	circuit.cullUnusedNodes(subnet); // Dirty way of getting rid of default nodes
 	
@@ -1160,6 +1159,7 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 	circuit.cullSequentiallyDuplicatedSignalNodes();
 	subnet = Subnet::all(circuit);
 	circuit.mergeRewires(subnet);
+	circuit.optimizeRewireNodes(subnet);
 	circuit.mergeMuxes(subnet);
 	circuit.removeIrrelevantComparisons(subnet);
 	circuit.removeIrrelevantMuxes(subnet);	

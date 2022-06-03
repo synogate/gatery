@@ -17,8 +17,11 @@
 */
 #include "gatery/pch.h"
 #include "Node_Rewire.h"
+#include "Node_Constant.h"
 
 #include "../SignalDelay.h"
+
+#include "../../debug/DebugInterface.h"
 
 namespace gtry::hlim {
 
@@ -315,33 +318,98 @@ void Node_Rewire::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t
 	HCL_ASSERT(false);
 }
 
-void Node_Rewire::removeZeroWidthInputs()
+void Node_Rewire::optimize()
 {
-	for (size_t i = 0; i < m_rewireOperation.ranges.size(); i++) {
-		if (m_rewireOperation.ranges[i].subwidth == 0) {
-			m_rewireOperation.ranges.erase(m_rewireOperation.ranges.begin()+i); 
+	bool zeroWidthSubrangesRemoved = false;
+	bool mergedSubranges = false;
+	bool constantsWereMerged = false;
+	bool inputsWereMerged = false;
+	bool inputsWereRemoved = false;
+	auto op = m_rewireOperation;
+
+	// remove zero subwidth ranges
+
+	for (size_t i = 0; i < op.ranges.size(); i++) {
+		if (op.ranges[i].subwidth == 0) {
+			zeroWidthSubrangesRemoved = true;
+			op.ranges.erase(op.ranges.begin()+i); 
 			i--;
 		}
 	}
 
+	// Merge const zero and const one inputs
 
-	for (size_t inp = 1; inp < getNumInputPorts(); inp++) {
-		auto np = getDriver(inp);
-		HCL_ASSERT(np.node != nullptr);
-		if (np.node->getOutputConnectionType(np.port).width == 0) {
+	for (size_t inputIdx : utils::Range(getNumInputPorts())) {
+		if (auto *constant = dynamic_cast<Node_Constant*>(getNonSignalDriver(inputIdx).node)) {
+			if (sim::allDefined(constant->getValue())) {
+				bool allZero = sim::allZero(constant->getValue(), sim::DefaultConfig::VALUE);
+				bool allOne = sim::allOne(constant->getValue(), sim::DefaultConfig::VALUE);
 
-			if (inp+1 < getNumInputPorts())
-				rewireInput(inp, getDriver(getNumInputPorts()-1));
-			resizeInputs(getNumInputPorts()-1);
-
-			for (size_t i = 0; i < m_rewireOperation.ranges.size(); i++)
-				if (m_rewireOperation.ranges[i].source == OutputRange::INPUT && m_rewireOperation.ranges[i].inputIdx == getNumInputPorts())
-					m_rewireOperation.ranges[i].inputIdx = inp;
-
-			inp--;
+				if (allZero || allOne)
+					for (auto &r : op.ranges)
+						if (r.source == Node_Rewire::OutputRange::INPUT && r.inputIdx == inputIdx) {
+							r.source = allZero?Node_Rewire::OutputRange::CONST_ZERO:Node_Rewire::OutputRange::CONST_ONE;
+							constantsWereMerged = true;
+						}
+			}
 		}
 	}
 
+	// merge ranges
+	for (size_t i = 0; i+1 < op.ranges.size(); i++) {
+		if ((op.ranges[i].source == Node_Rewire::OutputRange::CONST_ZERO && 
+		 	 op.ranges[i+1].source == Node_Rewire::OutputRange::CONST_ZERO) ||
+			(op.ranges[i].source == Node_Rewire::OutputRange::CONST_ONE && 
+		 	 op.ranges[i+1].source == Node_Rewire::OutputRange::CONST_ONE) ||
+			(op.ranges[i].source == Node_Rewire::OutputRange::INPUT && 
+			 op.ranges[i+1].source == Node_Rewire::OutputRange::INPUT && 
+			 op.ranges[i].inputIdx == op.ranges[i+1].inputIdx &&
+			 op.ranges[i+1].inputOffset == op.ranges[i].inputOffset + op.ranges[i].subwidth)) {
+
+			op.ranges[i].subwidth += op.ranges[i+1].subwidth;
+			op.ranges.erase(op.ranges.begin()+i+1);
+			mergedSubranges = true;
+		}
+	}
+
+	// Deduplicate inputs, remove unused inputs
+	std::map<NodePort, size_t> remappedInputs;
+	for (auto &r : op.ranges)
+		if (r.source == Node_Rewire::OutputRange::INPUT) {
+			auto driver = getDriver(r.inputIdx);
+			size_t idx;
+			auto it = remappedInputs.find(driver);
+			if (it == remappedInputs.end()) {
+				idx = remappedInputs.size();
+				remappedInputs[driver] = idx;
+			} else {
+				inputsWereMerged = true;
+				idx = it->second;
+			}
+			r.inputIdx = idx;
+		}
+	inputsWereRemoved = remappedInputs.size() != getNumInputPorts();
+
+	resizeInputs(remappedInputs.size());
+	for (const auto &inp : remappedInputs)
+		connectInput(inp.second, inp.first);
+
+	setOp(std::move(op));
+
+	if (zeroWidthSubrangesRemoved)
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "In rewire node " << this << " removed zero subwidth ranges." );
+
+	if (constantsWereMerged)
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "In rewire node " << this << " merged explicit constant inputs into rewire operation." );
+
+	if (mergedSubranges)
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "In rewire node " << this << " merged consecutive, compatible ranges." );
+
+	if (inputsWereMerged)
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "In rewire node " << this << " merged redundant inputs." );
+
+	if (inputsWereRemoved)
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "In rewire node " << this << " removed unused or redundant inputs." );
 }
 
 }

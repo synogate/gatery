@@ -121,7 +121,7 @@ class Circuit
 
 		void disconnectZeroBitSignalNodes();
 		void disconnectZeroBitOutputPins();
-		void removeZeroBitsFromRewire();
+		void optimizeRewireNodes(Subnet &subnet);
 		void cullSequentiallyDuplicatedSignalNodes();
 		void cullUnnamedSignalNodes();
 		void cullOrphanedSignalNodes();
