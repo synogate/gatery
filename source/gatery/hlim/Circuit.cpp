@@ -698,6 +698,9 @@ void Circuit::removeIrrelevantComparisons(Subnet &subnet)
 			if (compNode->getOp() != Node_Compare::EQ && compNode->getOp() != Node_Compare::NEQ) continue;
 			if (leftDriver.node == nullptr || rightDriver.node == nullptr) continue;
 			if (getOutputWidth(leftDriver) != 1) continue;
+			if (getOutputConnectionType(leftDriver).interpretation != ConnectionType::BOOL ||
+				getOutputConnectionType(rightDriver).interpretation != ConnectionType::BOOL)
+				continue;
 
 			Node_Constant *constInputs[2];
 			constInputs[0] = dynamic_cast<Node_Constant*>(leftDriver.node);
