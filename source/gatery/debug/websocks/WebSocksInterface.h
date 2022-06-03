@@ -41,7 +41,8 @@ namespace gtry::dbg {
 class JsonSerializer
 {
 	public:
-		std::string serializeAllLogMessages(const std::list<LogMessage> &logMessages);
+		std::string serializeAllLogMessages(const std::list<std::string> &logMessages);
+		std::string serializeLogMessage(const LogMessage &logMessage);
 		std::string serializeAllGroups(const hlim::Circuit &circuit);
 		std::string serializeAllNodes(const hlim::Circuit &circuit);
 	protected:
@@ -64,7 +65,7 @@ class WebSocksInterface : public DebugInterface
 
 		const hlim::Circuit *m_circuit = nullptr;
 
-		std::list<LogMessage> m_logMessages;
+		std::list<std::string> m_logMessages;
 
         std::atomic<bool> m_shutdown = false;
         std::atomic<bool> m_graphAccessible = false;

@@ -49,7 +49,7 @@ namespace net = boost::asio;            // from <boost/asio.hpp>
 
 namespace gtry::dbg {
 
-std::string JsonSerializer::serializeAllLogMessages(const std::list<LogMessage> &logMessages)
+std::string JsonSerializer::serializeAllLogMessages(const std::list<std::string> &logMessages)
 {
 	std::stringstream json;
 	json << "{ \"operation\":\"addLogMessages\", \"data\": [\n";
@@ -57,35 +57,41 @@ std::string JsonSerializer::serializeAllLogMessages(const std::list<LogMessage> 
 	bool first = true;
 	for (const auto &msg : logMessages) {
 		if (!first) json << ",\n"; first = false;
-		json 
-			<< "{ \"severity\": \"" << magic_enum::enum_name(msg.severity()) << "\",\n"
-			<< "\"source\": \"" << magic_enum::enum_name(msg.source()) << "\",\n"
-			<< "\"message_parts\": [\n";
-		
-		bool firstPart = true;
-		for (const auto &part : msg.parts()) {
-			if (!firstPart) json << ",\n"; firstPart = false;
-			
-			if (std::holds_alternative<const char*>(part))
-				json << "{\"type\": \"string\", \"data\": \"" << std::get<const char*>(part) << "\"}\n";
-			else if (std::holds_alternative<std::string>(part))
-				json << "{\"type\": \"string\", \"data\": \"" << std::get<std::string>(part) << "\"}\n";
-			else if (std::holds_alternative<const hlim::BaseNode*>(part))
-				json << "{\"type\": \"node\", \"id\": " << std::get<const hlim::BaseNode*>(part)->getId() << "}\n";
-			else if (std::holds_alternative<const hlim::NodeGroup*>(part))
-				json << "{\"type\": \"group\", \"id\": " << std::get<const hlim::NodeGroup*>(part)->getId() << "}\n";
-			else if (std::holds_alternative<hlim::Subnet>(part))
-				json << "{\"type\": \"subnet\", \"nodes\": []}\n";
-		}
-
-		json << "]}";
+		json << msg;
 	}
-
 	json << "]}\n";
-
+/*
 	std::fstream jsonFile("testLog.json", std::fstream::out);
 	jsonFile << json.str();
+*/
+	return json.str();
+}
 
+std::string JsonSerializer::serializeLogMessage(const LogMessage &msg)
+{
+	std::stringstream json;
+	json 
+		<< "{ \"severity\": \"" << magic_enum::enum_name(msg.severity()) << "\",\n"
+		<< "\"source\": \"" << magic_enum::enum_name(msg.source()) << "\",\n"
+		<< "\"message_parts\": [\n";
+	
+	bool firstPart = true;
+	for (const auto &part : msg.parts()) {
+		if (!firstPart) json << ",\n"; firstPart = false;
+		
+		if (std::holds_alternative<const char*>(part))
+			json << "{\"type\": \"string\", \"data\": \"" << std::get<const char*>(part) << "\"}\n";
+		else if (std::holds_alternative<std::string>(part))
+			json << "{\"type\": \"string\", \"data\": \"" << std::get<std::string>(part) << "\"}\n";
+		else if (std::holds_alternative<const hlim::BaseNode*>(part))
+			json << "{\"type\": \"node\", \"id\": " << std::get<const hlim::BaseNode*>(part)->getId() << "}\n";
+		else if (std::holds_alternative<const hlim::NodeGroup*>(part))
+			json << "{\"type\": \"group\", \"id\": " << std::get<const hlim::NodeGroup*>(part)->getId() << "}\n";
+		else if (std::holds_alternative<const hlim::Subnet*>(part))
+			json << "{\"type\": \"subnet\", \"nodes\": []}\n";
+	}
+
+	json << "]}";
 	return json.str();
 }
 
@@ -330,8 +336,10 @@ std::string JsonSerializer::serializeAllNodes(const hlim::Circuit &circuit)
 		}
 		json << "\n]}\n";
 	}
+	/*
 	std::fstream jsonFile("testNodes.json", std::fstream::out);
 	jsonFile << json.str();
+	*/
 	return json.str();
 }
 
@@ -388,7 +396,8 @@ void WebSocksInterface::stopInDebugger()
 
 void WebSocksInterface::log(LogMessage msg)
 {
-	m_logMessages.push_back(std::move(msg));
+	JsonSerializer s;
+	m_logMessages.push_back(s.serializeLogMessage(std::move(msg)));
 }
 
 
