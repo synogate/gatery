@@ -122,6 +122,9 @@ namespace gtry {
 		template<BitVectorDerived T>
 		explicit operator T() const { if (m_node) return T(readPort()); else return T{}; }
 
+		virtual BVec pack() const override;
+		virtual void unpack(const BVec &b) override;
+
 		virtual void resize(size_t width) final;
 
 		Bit& lsb() { return aliasLsb(); }
@@ -139,7 +142,6 @@ namespace gtry {
 		const Bit& at(size_t idx) const { return aliasVec().at(idx); }
 
 		bool empty() const { return size() == 0; }
-		size_t size() const { return width().value; }
 
 		Bit& front() { return aliasVec().front(); }
 		const Bit& front() const { return aliasVec().front(); }
@@ -165,11 +167,11 @@ namespace gtry {
 		hlim::Node_Signal* node() { return m_node; }
 
 		// these methods are undefined for invalid signals (uninitialized)
-		BitWidth width() const final { return BitWidth{ m_range.width }; }
-		hlim::ConnectionType connType() const final;
-		SignalReadPort readPort() const final;
-		SignalReadPort outPort() const final;
-		std::string_view getName() const final;
+		BitWidth width() const override final { return BitWidth{ m_range.width }; }
+		hlim::ConnectionType connType() const override final;
+		SignalReadPort readPort() const override final;
+		SignalReadPort outPort() const override final;
+		std::string_view getName() const override final;
 		void setName(std::string name) override;
 		void addToSignalGroup(hlim::SignalGroup *signalGroup);
 

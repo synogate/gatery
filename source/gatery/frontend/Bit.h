@@ -85,6 +85,9 @@ namespace gtry {
 			createNode();
 			assign(v);
 		}
+
+		virtual BVec pack() const override final;
+		virtual void unpack(const BVec &b) override final;
 	
 		/// Signal assignment, preserves potential reset values.
 		Bit& operator=(const Bit& rhs) { m_resetValue = rhs.m_resetValue; assign(rhs.readPort());  return *this; }

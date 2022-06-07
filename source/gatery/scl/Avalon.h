@@ -102,7 +102,7 @@ namespace gtry::scl
 		struct SigInfo
 		{
 			std::string name;
-			UInt* signalVec = nullptr;
+			ElementarySignal* signalVec;
 			Bit* signalBit = nullptr;
 		
 			Selection from;
@@ -110,18 +110,22 @@ namespace gtry::scl
 		
 		struct SigVis : CompoundNameVisitor
 		{
-			virtual void operator () (UInt& a) final
+			virtual void operator () (ElementarySignal& a) final override
 			{
-				for (size_t i = 0; i < a.size(); i += regWidthLimit)
-				{
-					SigInfo& sig = regMap.emplace_back().emplace_back();
-					sig.name = makeName();
-					sig.signalVec = &a;
-					sig.from = Selection::Slice(i, std::min<size_t>(regWidthLimit, a.size() - i));
+				if (auto *bit = dynamic_cast<Bit*>(&a)) {
+					handleBit(*bit);
+				} else {
+					for (size_t i = 0; i < a.size(); i += regWidthLimit)
+					{
+						SigInfo& sig = regMap.emplace_back().emplace_back();
+						sig.name = makeName();
+						sig.signalVec = &a;
+						sig.from = Selection::Slice(i, std::min<size_t>(regWidthLimit, a.size() - i));
+					}
 				}
 			}
 		
-			virtual void operator () (Bit& a) final
+			void handleBit(Bit& a)
 			{
 				if (regMap.empty() ||
 					regMap.back().front().signalVec ||
@@ -130,7 +134,7 @@ namespace gtry::scl
 					regMap.emplace_back();
 					currentRegWidth = 0;
 				}
-		
+		 
 				SigInfo& sig = regMap.back().emplace_back();
 				sig.name = makeName();
 				sig.signalBit = &a;
@@ -168,11 +172,13 @@ namespace gtry::scl
 				if (reg.size() == 1 && reg.front().signalVec)
 				{
 					SigInfo& sig = reg.front();
-					UInt& source = (*sig.signalVec)(sig.from);
+					UInt source = (UInt) sig.signalVec->pack()(sig.from);
 					readData = zext(source);
 		
-					IF(*write)
+					IF(*write) {
 						source = (*writeData)(0, sig.from.width);
+						sig.signalVec->unpack((BVec) source);
+					}
 				}
 				else
 				{
