@@ -83,6 +83,9 @@ namespace gtry {
 
 		UInt numericalValue() const { return UInt(readPort()); }
 
+		virtual BVec pack() const override { return BVec(readPort());  }
+		virtual void unpack(const BVec &b) override { assign(b.readPort()); }
+
 		Enum<T>& operator=(const Enum<T>& rhs);
 		Enum<T>& operator=(Enum<T>&& rhs);
 //		Enum<T>& operator=(const EnumDefault<T> &defaultValue);
@@ -91,11 +94,11 @@ namespace gtry {
 
 		void exportOverride(const Enum<T>& exportOverride);
 
-		constexpr BitWidth width() const final;
-		hlim::ConnectionType connType() const final;
-		SignalReadPort readPort() const final;
-		SignalReadPort outPort() const final;
-		std::string_view getName() const final;
+		constexpr BitWidth width() const override final;
+		hlim::ConnectionType connType() const override final;
+		SignalReadPort readPort() const override final;
+		SignalReadPort outPort() const override final;
+		std::string_view getName() const override final;
 		void setName(std::string name) override;
 		void addToSignalGroup(hlim::SignalGroup *signalGroup);
 

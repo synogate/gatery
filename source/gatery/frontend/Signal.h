@@ -60,6 +60,8 @@ namespace gtry {
 
 	inline const hlim::ConnectionType& connType(const SignalReadPort& port) { return port.node->getOutputConnectionType(port.port); }
 
+	class BVec;
+
 	class ElementarySignal {
 	public:
 		using isSignal = void;
@@ -73,12 +75,15 @@ namespace gtry {
 
 		// these methods are undefined for invalid signals (uninitialized)
 		virtual BitWidth width() const = 0;
+		size_t size() const { return width().value; }
 		virtual hlim::ConnectionType connType() const = 0;
 		virtual SignalReadPort readPort() const = 0;
 		virtual SignalReadPort outPort() const = 0;
 		virtual std::string_view getName() const = 0;
 		virtual void setName(std::string name) = 0;
 
+		virtual BVec pack() const = 0;
+		virtual void unpack(const BVec &b) = 0;
 
 		void attribute(hlim::SignalAttributes attributes);
 
