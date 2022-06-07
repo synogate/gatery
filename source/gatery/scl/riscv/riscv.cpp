@@ -335,8 +335,8 @@ void gtry::scl::riscv::RV32I::mem(AvalonMM& mem, bool byte, bool halfword)
 	// check for unaligned access
 	Bit is_access = (m_instr.opcode == "b00000" | m_instr.opcode == "b01000") & m_instructionValid;
 	UInt access_width = m_instr.func3(0, 2_b);
-	sim_assert(!(is_access & access_width == 2) | m_aluResult.sum(0, 2_b) == 0);
-	sim_assert(!(is_access & access_width == 1) | m_aluResult.sum(0, 1_b) == 0);
+	sim_assert(!(is_access & access_width == 2) | m_aluResult.sum(0, 2_b) == 0) << "Unaligned access when loading 32 bit word: is_access " << is_access << " access_width: " << access_width << " m_aluResult.sum: " << m_aluResult.sum;
+	sim_assert(!(is_access & access_width == 1) | m_aluResult.sum(0, 1_b) == 0) << "Unaligned access when loading 16 bit word: is_access " << is_access << " access_width: " << access_width << " m_aluResult.sum: " << m_aluResult.sum;
 
 	store(mem, byte, halfword);
 	load(mem, byte, halfword);
