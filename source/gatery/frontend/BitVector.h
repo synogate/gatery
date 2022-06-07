@@ -264,6 +264,11 @@ namespace gtry {
 		FinalType& operator() (size_t offset, BitWidth size) { return (*this)(Selection::Slice(int(offset), int(size.value))); }
 		const FinalType& operator() (size_t offset, BitWidth size) const { return (*this)(Selection::Slice(int(offset), int(size.value))); }
 
+		FinalType& upper(BitWidth bits) { return (*this)((width() - bits).bits(), bits); }
+		const FinalType& upper(BitWidth bits) const { return (*this)((width() - bits).bits(), bits); }
+		FinalType& lower(BitWidth bits) { return (*this)(0, bits); }
+		const FinalType& lower(BitWidth bits) const { return (*this)(0, bits); }
+
 		/// Slices a sub-vector out of the bit vector with a fixed width but a dynamic offset.
 		FinalType& operator() (const UInt &offset, BitWidth size) { return aliasRange(Range(offset, size, range())); }
 		/// Slices a sub-vector out of the bit vector with a fixed width but a dynamic offset.
