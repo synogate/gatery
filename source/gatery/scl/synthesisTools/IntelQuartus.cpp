@@ -309,6 +309,7 @@ set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
 set_global_assignment -name VHDL_INPUT_VERSION VHDL_2008
 set_instance_assignment -name VIRTUAL_PIN ON -to *
 set_global_assignment -name ALLOW_REGISTER_RETIMING OFF
+set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
 )";
 
 		if (auto *fpga = DesignScope::get()->getTargetTechnology<scl::arch::FPGADevice>()) {
