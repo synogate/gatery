@@ -22,29 +22,61 @@ gtry::scl::CrcParams gtry::scl::CrcParams::init(CrcWellKnownParams standard)
 {
 	switch(standard)
 	{
-	case CrcWellKnownParams::CRC_5_USB:
+	case CrcWellKnownParams::CRC_5_USB: // verified
 		return {
-			.order = 5,
-			.polynomial = 0x5u,
-			.initialRemainder = 0,
+			.polynomial = "5b101",
+			.initialRemainder = "5b11111",
+			.reverseData = '0',
+			.reverseCrc = '0',
+			.xorOut = "5b11111",
 		};
 	case CrcWellKnownParams::CRC_16_CCITT:
 		return {
-			.order = 16,
-			.polynomial = 0x1021u,
-			.initialRemainder = 0,
+			.polynomial = "16x1021",
+			.initialRemainder = "16x1D0F",
+			.reverseData = '0',
+			.reverseCrc = '0',
+			.xorOut = "16x",
 		};
-	case CrcWellKnownParams::CRC_16_IBM:
+	case CrcWellKnownParams::CRC_16_USB: // verified
 		return {
-			.order = 16,
-			.polynomial = 0x8005u,
-			.initialRemainder = 0,
+			.polynomial = "16x8005",
+			.initialRemainder = "16xFFFF",
+			.reverseData = '1',
+			.reverseCrc = '1',
+			.xorOut = "16xFFFF",
 		};
 	case CrcWellKnownParams::CRC_32:
 		return {
-			.order = 32,
-			.polynomial = 0x04C11DB7u,
-			.initialRemainder = 0,
+			.polynomial = "32x04C11DB7",
+			.initialRemainder = "32xFFFFFFFF",
+			.reverseData = '1',
+			.reverseCrc = '1',
+			.xorOut = "32xFFFFFFFF",
+		};
+	case CrcWellKnownParams::CRC_32C:
+		return {
+			.polynomial = "32x1EDC6F41",
+			.initialRemainder = "32xFFFFFFFF",
+			.reverseData = '1',
+			.reverseCrc = '1',
+			.xorOut = "32xFFFFFFFF",
+		};
+	case CrcWellKnownParams::CRC_32D:
+		return {
+			.polynomial = "32xA833982B",
+			.initialRemainder = "32xFFFFFFFF",
+			.reverseData = '1',
+			.reverseCrc = '1',
+			.xorOut = "32xFFFFFFFF",
+		};
+	case CrcWellKnownParams::CRC_32Q:
+		return {
+			.polynomial = "32x814141AB",
+			.initialRemainder = "32x0",
+			.reverseData = '0',
+			.reverseCrc = '0',
+			.xorOut = "32x0",
 		};
 	default:
 		HCL_DESIGNCHECK_HINT(false, "unkown crc standard");
@@ -75,4 +107,27 @@ gtry::UInt gtry::scl::crc(UInt remainder, UInt data, UInt polynomial)
 	if(rem.size() > remainder.size())
 		return rem.upper(remainder.width());
 	return rem;
+}
+
+void gtry::scl::CrcState::init()
+{
+	remainder = params.initialRemainder;
+}
+
+void gtry::scl::CrcState::update(UInt data)
+{
+	IF(params.reverseData)
+		data = swapEndian(data, 1_b);
+
+	remainder = crc(remainder, data, params.polynomial);
+}
+
+gtry::UInt gtry::scl::CrcState::checksum() const
+{
+	UInt res = remainder ^ params.xorOut;
+
+	IF(params.reverseCrc)
+		res = swapEndian(res, 1_b);
+
+	return res;
 }

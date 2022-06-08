@@ -45,6 +45,34 @@ T crc_ref(T remainder, uint8_t data, T polynomial)
 	return remainder;
 }
 
+static uint8_t crc5usb_ref(uint16_t remainder, uint8_t data)
+{
+	uint8_t dataRev = 0;
+	for(size_t i = 0; i < 8; ++i)
+		dataRev |= ((data >> i) & 1) << (7 - i);
+
+	remainder <<= 8;
+	remainder ^= dataRev;
+
+	for(size_t i = 0; i < 8; ++i)
+	{
+		if(remainder & (0x80 << 5))
+			remainder = (remainder << 1) ^ (5 << 8);
+		else
+			remainder <<= 1;
+	}
+	remainder >>= 8;
+	remainder &= 0x1F;
+	remainder ^= 0x1F;
+
+	uint8_t remainderRev = 0;
+	for(size_t i = 0; i < 8; ++i)
+		remainderRev |= ((remainder >> i) & 1) << (7 - i);
+
+	return remainderRev >> 3;
+}
+
+
 BOOST_FIXTURE_TEST_CASE(crc8, BoostUnitTestSimulationFixture)
 {
 	uint8_t ref = 0; 
@@ -54,7 +82,27 @@ BOOST_FIXTURE_TEST_CASE(crc8, BoostUnitTestSimulationFixture)
 	{
 		size_t data = '0' + i;
 		ref = crc_ref<uint8_t>(ref, (uint8_t)data, 7);
+
 		rem = scl::crc(rem, ConstUInt(data, 8_b), "8x07");
+		sim_assert(rem == ref) << rem << " == " << ref;
+	}
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	eval();
+}
+
+BOOST_FIXTURE_TEST_CASE(crc8split, BoostUnitTestSimulationFixture)
+{
+	uint8_t ref = 0;
+	UInt rem = "8b";
+
+	for(size_t i = 0; i < 9; ++i)
+	{
+		size_t data = '0' + i;
+		ref = crc_ref<uint8_t>(ref, (uint8_t)data, 7);
+
+		rem = scl::crc(rem, ConstUInt(data >> 4, 4_b), "8x07");
+		rem = scl::crc(rem, ConstUInt(data & 0xF, 4_b), "8x07");
 		sim_assert(rem == ref) << rem << " == " << ref;
 	}
 
@@ -103,3 +151,26 @@ BOOST_FIXTURE_TEST_CASE(crc16byte, BoostUnitTestSimulationFixture)
 	eval();
 }
 
+BOOST_FIXTURE_TEST_CASE(crc16state, BoostUnitTestSimulationFixture)
+{
+	for(auto testValue : {
+		std::pair{0x547, 0x17},
+		std::pair{0x2e5, 0x1C},
+		std::pair{0x072, 0x0E},
+		std::pair{0x400, 0x17},
+		})
+	{
+		scl::CrcState state{
+			.params = scl::CrcParams::init(scl::CrcWellKnownParams::CRC_5_USB)
+		};
+
+		state.init();
+		state.update(ConstUInt(testValue.first, 11_b));
+		UInt crcValue = state.checksum();
+
+		sim_assert(crcValue == testValue.second) << testValue.first << " should be " << testValue.second << " is " << crcValue;
+	}
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	eval();
+}

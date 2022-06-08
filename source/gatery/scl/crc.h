@@ -20,22 +20,38 @@
 
 namespace gtry::scl
 {
+	UInt crc(UInt remainder, UInt data, UInt polynomial);
+
+
 	enum class CrcWellKnownParams
 	{
 		CRC_5_USB,
 		CRC_16_CCITT,
-		CRC_16_IBM,
-		CRC_32
+		CRC_16_USB,
+		CRC_32,
+		CRC_32C,
+		CRC_32D,
+		CRC_32Q,
 	};
 
 	struct CrcParams
 	{
-		size_t order; // bits of CRC
 		UInt polynomial; // generator polynomial
 		UInt initialRemainder; // value of remainder before data added
+		Bit reverseData; // bit reverse in data
+		Bit reverseCrc; // bit reverse out checksum
+		UInt xorOut; // bit flip out checksum
 
 		static CrcParams init(CrcWellKnownParams standard);
 	};
 
-	UInt crc(UInt remainder, UInt data, UInt polynomial);
+	struct CrcState
+	{
+		CrcParams params;
+		UInt remainder;
+
+		void init();
+		void update(UInt data);
+		UInt checksum() const;
+	};
 }
