@@ -154,10 +154,11 @@ BOOST_FIXTURE_TEST_CASE(crc16byte, BoostUnitTestSimulationFixture)
 BOOST_FIXTURE_TEST_CASE(crc16state, BoostUnitTestSimulationFixture)
 {
 	for(auto testValue : {
+		std::pair{0x000, 0x02},
 		std::pair{0x547, 0x17},
 		std::pair{0x2e5, 0x1C},
-		std::pair{0x072, 0x0E},
-		std::pair{0x400, 0x17},
+		std::pair{0x072, 0x13},
+		std::pair{0x400, 0x16},
 		})
 	{
 		scl::CrcState state{

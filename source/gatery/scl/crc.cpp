@@ -26,8 +26,8 @@ gtry::scl::CrcParams gtry::scl::CrcParams::init(CrcWellKnownParams standard)
 		return {
 			.polynomial = "5b101",
 			.initialRemainder = "5b11111",
-			.reverseData = '0',
-			.reverseCrc = '0',
+			.reverseData = '1',
+			.reverseCrc = '1',
 			.xorOut = "5b11111",
 		};
 	case CrcWellKnownParams::CRC_16_CCITT:
