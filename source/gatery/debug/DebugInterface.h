@@ -80,21 +80,37 @@ class LogMessage
 		std::vector<std::variant<const char*, std::string, const hlim::BaseNode*, const hlim::NodeGroup*, const hlim::Subnet*>> m_messageParts;
 };
 
+enum class State {
+	DESIGN,
+	POSTPROCESS,
+	SIMULATION
+};
+
 class DebugInterface 
 {
 	public:
-		static std::unique_ptr<DebugInterface> instance;
+		inline State getState() const { return m_state; }
+
+		thread_local static std::unique_ptr<DebugInterface> instance;
 
 		virtual void awaitDebugger() { }
 		virtual void pushGraph() { }
 		virtual void stopInDebugger() { }
 		virtual void log(LogMessage msg) { }
+		virtual void operate() { }
+		virtual void changeState(State state) { m_state = state; }
+
+		virtual void createVisualization(const std::string &id, const std::string &title) { }
+		virtual void updateVisualization(const std::string &id, const std::string &imageData) { }
 	protected:
+		State m_state = State::DESIGN;
 };
 
 void awaitDebugger();
 void pushGraph();
 void stopInDebugger();
+void operate();
+void changeState(State state);
 void log(const LogMessage &msg);
 
 }

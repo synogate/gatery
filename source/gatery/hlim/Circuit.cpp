@@ -1147,6 +1147,7 @@ void Circuit::optimizeSubnet(Subnet &subnet)
 
 void Circuit::postprocess(const PostProcessor &postProcessor)
 {
+	dbg::changeState(dbg::State::POSTPROCESS);
 	postProcessor.run(*this);
 }
 
