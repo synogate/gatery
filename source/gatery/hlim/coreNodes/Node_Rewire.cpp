@@ -177,19 +177,63 @@ void Node_Rewire::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::D
 {
 	//HCL_ASSERT_HINT(getOutputConnectionType(0).width <= 64, "Rewiring with more than 64 bits not yet implemented!");
 
-	size_t outputOffset = 0;
-	for (const auto &range : m_rewireOperation.ranges) {
-		if (range.source == OutputRange::INPUT) {
-			if (inputOffsets[range.inputIdx] == ~0ull)
-				state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth);
-			else
-				state.copyRange(outputOffsets[0] + outputOffset, state, inputOffsets[range.inputIdx]+range.inputOffset, range.subwidth);
+	size_t totalWidth = getOutputConnectionType(0).width;
+	if (totalWidth <= 64) {
+		// fast path
 
-		} else {
-			state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth);
-			state.setRange(sim::DefaultConfig::VALUE, outputOffsets[0] + outputOffset, range.subwidth, range.source == OutputRange::CONST_ONE);
+		std::uint64_t resValue = 0;
+		std::uint64_t resDefined = 0;
+
+		std::uint64_t v;
+		std::uint64_t d;
+
+		size_t outputOffset = 0;
+		for (auto rangeIdx : utils::Range(m_rewireOperation.ranges.size())) {
+			const auto &range = m_rewireOperation.ranges[rangeIdx];
+
+			if (range.source == OutputRange::INPUT) {
+				if (inputOffsets[range.inputIdx] != ~0ull) {
+					if (range.subwidth == 1) {
+						if (rangeIdx > 0 && m_rewireOperation.ranges[rangeIdx-1] == range) {
+							// reuse last value, this can happen quite often for sign bit extension
+						} else {
+							v = state.get(sim::DefaultConfig::VALUE, inputOffsets[range.inputIdx]+range.inputOffset)?1:0;
+							d = state.get(sim::DefaultConfig::DEFINED, inputOffsets[range.inputIdx]+range.inputOffset)?1:0;
+						}
+					} else {
+						v = state.extract(sim::DefaultConfig::VALUE, inputOffsets[range.inputIdx]+range.inputOffset, range.subwidth);
+						d = state.extract(sim::DefaultConfig::DEFINED, inputOffsets[range.inputIdx]+range.inputOffset, range.subwidth);
+					}
+					resValue |= v << outputOffset;
+					resDefined |= d << outputOffset;
+				}
+			} else {
+				uint64_t dstMask = utils::bitMaskRange(outputOffset, range.subwidth);
+				resDefined |= dstMask;
+				if (range.source == OutputRange::CONST_ONE)
+					resValue |= dstMask;
+			}
+			outputOffset += range.subwidth;
 		}
-		outputOffset += range.subwidth;
+
+		state.insert(sim::DefaultConfig::VALUE, outputOffsets[0], totalWidth, resValue);
+		state.insert(sim::DefaultConfig::DEFINED, outputOffsets[0], totalWidth, resDefined);
+
+	} else {
+		size_t outputOffset = 0;
+		for (const auto &range : m_rewireOperation.ranges) {
+			if (range.source == OutputRange::INPUT) {
+				if (inputOffsets[range.inputIdx] == ~0ull)
+					state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth);
+				else
+					state.copyRange(outputOffsets[0] + outputOffset, state, inputOffsets[range.inputIdx]+range.inputOffset, range.subwidth);
+
+			} else {
+				state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth);
+				state.setRange(sim::DefaultConfig::VALUE, outputOffsets[0] + outputOffset, range.subwidth, range.source == OutputRange::CONST_ONE);
+			}
+			outputOffset += range.subwidth;
+		}
 	}
 }
 

@@ -37,6 +37,8 @@ class Node_Rewire : public Node<Node_Rewire>
 			Source source;
 			size_t inputIdx;
 			size_t inputOffset;
+
+			auto operator<=>(const OutputRange &) const = default;
 		};
 
 		struct RewireOperation {
