@@ -23,10 +23,8 @@
 #include <boost/beast/websocket.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
-#include <list>
-#include <thread>
-#include <mutex>
-#include <condition_variable>
+#include <vector>
+#include <span>
 
 namespace gtry::utils {
 	class StackTrace;
@@ -41,7 +39,8 @@ namespace gtry::dbg {
 class JsonSerializer
 {
 	public:
-		std::string serializeAllLogMessages(const std::list<LogMessage> &logMessages);
+		std::string serializeAllLogMessages(const std::span<std::string> &logMessages);
+		std::string serializeLogMessage(const LogMessage &logMessage);
 		std::string serializeAllGroups(const hlim::Circuit &circuit);
 		std::string serializeAllNodes(const hlim::Circuit &circuit);
 	protected:
@@ -59,33 +58,42 @@ class WebSocksInterface : public DebugInterface
 		virtual void pushGraph() override;
 		virtual void stopInDebugger() override;
 		virtual void log(LogMessage msg) override;
+		virtual void operate() override;
+		virtual void changeState(State state) override;
+
+		virtual void createVisualization(const std::string &id, const std::string &title) override;
+		virtual void updateVisualization(const std::string &id, const std::string &imageData) override;
 	protected:
         boost::asio::io_context m_ioc;
 
 		const hlim::Circuit *m_circuit = nullptr;
-
-		std::list<LogMessage> m_logMessages;
-
-        std::atomic<bool> m_shutdown = false;
-        std::atomic<bool> m_graphAccessible = false;
-        std::mutex m_conditionMutex;
-        std::condition_variable m_wakeSessions;
-        std::condition_variable m_interfaceSleeping;
-
-        std::mutex m_sessionListMutex;
-        std::condition_variable m_newSession;
-
-        std::thread m_acceptorThread;
-        std::thread m_sessionThread;
+		std::vector<std::string> m_logMessages;
 
 		using tcp = boost::asio::ip::tcp;
-		std::list<boost::beast::websocket::stream<tcp::socket>> m_sessions;
+		tcp::acceptor m_acceptor;
+
+		struct Session {
+			bool ready = false;
+			bool graphDirty = true;
+			bool stateDirty = true;
+			size_t messagesSend = 0;
+
+			boost::beast::flat_buffer buffer;
+			boost::beast::http::request_parser<boost::beast::http::empty_body> req;
+			boost::beast::websocket::stream<tcp::socket> websockStream;
+
+			Session(tcp::socket socket) : websockStream(std::move(socket)) { }
+		};
+
+		std::list<Session> m_sessions;
 
 		WebSocksInterface(unsigned port);
 
-		void acceptorLoop(unsigned port);
+		void waitAccept();
 		void acceptSession(tcp::socket socket);
-		void sessionLoop();
+		void closeSession(Session &session);
+
+		void awaitRequest(Session &session);
 };
 
 }

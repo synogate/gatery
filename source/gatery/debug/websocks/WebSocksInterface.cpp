@@ -36,9 +36,13 @@
 
 #include "../../utils/Range.h"
 
+#include "../../utils/StackTrace.h"
+
+#include <boost/json.hpp>
 
 #include <external/magic_enum.hpp>
 
+#include <thread>
 #include <chrono>
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
@@ -49,7 +53,7 @@ namespace net = boost::asio;            // from <boost/asio.hpp>
 
 namespace gtry::dbg {
 
-std::string JsonSerializer::serializeAllLogMessages(const std::list<LogMessage> &logMessages)
+std::string JsonSerializer::serializeAllLogMessages(const std::span<std::string> &logMessages)
 {
 	std::stringstream json;
 	json << "{ \"operation\":\"addLogMessages\", \"data\": [\n";
@@ -57,35 +61,41 @@ std::string JsonSerializer::serializeAllLogMessages(const std::list<LogMessage> 
 	bool first = true;
 	for (const auto &msg : logMessages) {
 		if (!first) json << ",\n"; first = false;
-		json 
-			<< "{ \"severity\": \"" << magic_enum::enum_name(msg.severity()) << "\",\n"
-			<< "\"source\": \"" << magic_enum::enum_name(msg.source()) << "\",\n"
-			<< "\"message_parts\": [\n";
-		
-		bool firstPart = true;
-		for (const auto &part : msg.parts()) {
-			if (!firstPart) json << ",\n"; firstPart = false;
-			
-			if (std::holds_alternative<const char*>(part))
-				json << "{\"type\": \"string\", \"data\": \"" << std::get<const char*>(part) << "\"}\n";
-			else if (std::holds_alternative<std::string>(part))
-				json << "{\"type\": \"string\", \"data\": \"" << std::get<std::string>(part) << "\"}\n";
-			else if (std::holds_alternative<const hlim::BaseNode*>(part))
-				json << "{\"type\": \"node\", \"id\": " << std::get<const hlim::BaseNode*>(part)->getId() << "}\n";
-			else if (std::holds_alternative<const hlim::NodeGroup*>(part))
-				json << "{\"type\": \"group\", \"id\": " << std::get<const hlim::NodeGroup*>(part)->getId() << "}\n";
-			else if (std::holds_alternative<hlim::Subnet>(part))
-				json << "{\"type\": \"subnet\", \"nodes\": []}\n";
-		}
-
-		json << "]}";
+		json << msg;
 	}
-
 	json << "]}\n";
-
+/*
 	std::fstream jsonFile("testLog.json", std::fstream::out);
 	jsonFile << json.str();
+*/
+	return json.str();
+}
 
+std::string JsonSerializer::serializeLogMessage(const LogMessage &msg)
+{
+	std::stringstream json;
+	json 
+		<< "{ \"severity\": \"" << magic_enum::enum_name(msg.severity()) << "\",\n"
+		<< "\"source\": \"" << magic_enum::enum_name(msg.source()) << "\",\n"
+		<< "\"message_parts\": [\n";
+	
+	bool firstPart = true;
+	for (const auto &part : msg.parts()) {
+		if (!firstPart) json << ",\n"; firstPart = false;
+		
+		if (std::holds_alternative<const char*>(part))
+			json << "{\"type\": \"string\", \"data\": \"" << std::get<const char*>(part) << "\"}\n";
+		else if (std::holds_alternative<std::string>(part))
+			json << "{\"type\": \"string\", \"data\": \"" << std::get<std::string>(part) << "\"}\n";
+		else if (std::holds_alternative<const hlim::BaseNode*>(part))
+			json << "{\"type\": \"node\", \"id\": " << std::get<const hlim::BaseNode*>(part)->getId() << "}\n";
+		else if (std::holds_alternative<const hlim::NodeGroup*>(part))
+			json << "{\"type\": \"group\", \"id\": " << std::get<const hlim::NodeGroup*>(part)->getId() << "}\n";
+		else if (std::holds_alternative<const hlim::Subnet*>(part))
+			json << "{\"type\": \"subnet\", \"nodes\": []}\n";
+	}
+
+	json << "]}";
 	return json.str();
 }
 
@@ -330,8 +340,10 @@ std::string JsonSerializer::serializeAllNodes(const hlim::Circuit &circuit)
 		}
 		json << "\n]}\n";
 	}
+	
 	std::fstream jsonFile("testNodes.json", std::fstream::out);
 	jsonFile << json.str();
+	
 	return json.str();
 }
 
@@ -342,7 +354,8 @@ void JsonSerializer::serializeStackTrace(std::ostream &json, const utils::StackT
 	for (const auto &frame : trace.getTrace()) {
 		if (!first) json << ",\n"; first = false;
 		//json << "{ \"addr\": " << (size_t)frame.address() << ", \"file\": \"" << frame.source_file() << "\", \"line\": " << frame.source_line() << "}";
-		json << "{ \"addr\": " << (size_t)frame.address() << "}";
+		//json << "{ \"addr\": " << (size_t)frame.address() << "}";
+		json << (size_t)frame.address();
 	}
 	json << "]";
 }
@@ -357,169 +370,307 @@ void WebSocksInterface::create(unsigned port)
 void WebSocksInterface::awaitDebugger()
 {
 	std::cout << "Waiting for websocks debugger session" << std::endl;
-	std::unique_lock<std::mutex> conditionLock(m_sessionListMutex);
 	while (m_sessions.empty())
-		m_newSession.wait(conditionLock);
+        m_ioc.run_one();
 	std::cout << "Debugger connected" << std::endl;
 }
 
 void WebSocksInterface::pushGraph()
 {
-	std::unique_lock<std::mutex> conditionLock(m_conditionMutex);
-	m_graphAccessible.store(true);
-	m_wakeSessions.notify_all();
-	m_interfaceSleeping.wait(conditionLock);
-	m_graphAccessible.store(false);
+	for (auto &session : m_sessions)
+		session.graphDirty = true;
+
+	operate();
 }
 
 void WebSocksInterface::stopInDebugger()
 {
-	{
-		std::unique_lock<std::mutex> conditionLock(m_conditionMutex);
-		m_graphAccessible.store(true);
-		m_wakeSessions.notify_all();
-	}
     while (true) {
+		operate();
         using namespace std::chrono_literals;
-        std::this_thread::sleep_for(1s);
+        std::this_thread::sleep_for(200ms);
     }
-
 }
 
 void WebSocksInterface::log(LogMessage msg)
 {
-	m_logMessages.push_back(std::move(msg));
+	JsonSerializer s;
+	m_logMessages.push_back(s.serializeLogMessage(std::move(msg)));
+}
+
+void WebSocksInterface::changeState(State state)
+{
+	DebugInterface::changeState(state);
+
+	for (auto &session : m_sessions)
+		session.stateDirty = true;
+
+	operate();
 }
 
 
-WebSocksInterface::WebSocksInterface(unsigned port)
+WebSocksInterface::WebSocksInterface(unsigned port) : m_acceptor(m_ioc, {net::ip::make_address("0.0.0.0"), (unsigned short) port})
 {
 	m_circuit = &DesignScope::get()->getCircuit();
 
-	m_acceptorThread = std::thread(std::bind(&WebSocksInterface::acceptorLoop, this, port));
-	m_sessionThread = std::thread(std::bind(&WebSocksInterface::sessionLoop, this));
+	waitAccept();
 }
 
 WebSocksInterface::~WebSocksInterface()
 {
-	m_shutdown.store(true);
-	m_acceptorThread.join();
-	m_interfaceSleeping.notify_all();
-	m_sessionThread.join();
+	while (!m_sessions.empty())
+		closeSession(m_sessions.front());
 }
 
-void WebSocksInterface::acceptorLoop(unsigned port)
+void WebSocksInterface::waitAccept()
 {
-	try {
-		auto const address = net::ip::make_address("0.0.0.0");
+	m_acceptor.async_accept([this](beast::error_code ec, tcp::socket socket){
+		if (ec)
+			throw std::runtime_error(std::string("Networking failure, cannot accept connections"));
 
-		tcp::acceptor acceptor{m_ioc, {address, (unsigned short) port}};
-		while (!m_shutdown.load()) {
-			tcp::socket socket{m_ioc};
+		acceptSession(std::move(socket));
+		waitAccept();
+	});
+}
 
-			acceptor.accept(socket);
-			acceptSession(std::move(socket));
+void WebSocksInterface::awaitRequest(Session &session)
+{
+	session.websockStream.async_read(session.buffer, [this, &session](beast::error_code ec, std::size_t bytes_written){
+		if (ec) {
+			std::cerr << "An error occured with one of the websocks debugger connections, dropping connection!" << std::endl;
+			closeSession(session);
+			return;
 		}
-	} catch (const std::exception& e) {
-		std::cerr << "Error: " << e.what() << std::endl;
-	}
+		// Handle request
+
+		std::string responseStr;
+		std::string requestStr = boost::beast::buffers_to_string(session.buffer.data());
+		session.buffer.consume(requestStr.length());
+		try {
+			boost::json::object request = boost::json::parse(requestStr).as_object();
+			boost::json::object response;
+
+			auto op = request["operation"].as_string();
+			if (op == "resolve_stacktrace") {
+				response["operation"] = "request_response";
+				response["handle"] = request["handle"];
+
+				boost::json::array resolvedFrames;
+				auto frames = request["stack_trace"].as_array();
+				for (auto &frameAddr : frames) {
+					boost::stacktrace::frame frame((boost::stacktrace::detail::native_frame_ptr_t) frameAddr.as_int64());
+					boost::json::object resolvedFrame;
+					resolvedFrame["addr"] = (std::uint64_t) frame.address();
+					resolvedFrame["name"] = frame.name();
+					resolvedFrame["file"] = frame.source_file();
+					resolvedFrame["line"] = frame.source_line();
+					resolvedFrames.push_back(resolvedFrame);
+				}
+
+				response["data"] = resolvedFrames;
+
+				responseStr = boost::json::serialize(response);
+
+			} else
+				throw std::runtime_error(std::string("Unknown op: ") + op.c_str());
+
+		} catch (const std::exception &e) {
+			std::cerr << "Error while parsing json message from websocks debugger: " << e.what() << " Dropping connection!" << std::endl
+						<< "Message: "<< std::endl << requestStr << std::endl;
+			closeSession(session);
+			return;
+		}
+
+		try {
+			std::cout << "Sending " << responseStr << std::endl;
+			session.websockStream.text(true);
+			session.websockStream.write(net::buffer(responseStr));
+		}
+		catch(beast::system_error const& se)
+		{
+			// This indicates that the session was closed
+			if(se.code() != websocket::error::closed)
+				std::cerr << "beast error: " << se.code().message() << std::endl;
+		}
+		catch(std::exception const& e)
+		{
+			std::cerr << "Error: " << e.what() << std::endl;
+		}
+
+		awaitRequest(session);
+	});
+}
+
+void WebSocksInterface::closeSession(Session &session)
+{
+	for (auto it = m_sessions.begin(); it != m_sessions.end(); ++it)
+		if (&*it == &session) {
+			m_sessions.erase(it);
+			return;
+		}
+	throw std::runtime_error("Invalid tcp session");
 }
 
 void WebSocksInterface::acceptSession(tcp::socket socket)
 {
-	try {
-		beast::flat_buffer buffer;
-		beast::http::request_parser<beast::http::empty_body> req;
-		read(socket, buffer, req);
-		websocket::stream<tcp::socket> ws{std::move(socket)};
-		ws.accept(req.get());
-		{
-			std::lock_guard<std::mutex> lock(m_sessionListMutex);
-			m_sessions.push_back(std::move(ws));
-			m_newSession.notify_all();
+	m_sessions.emplace_back(std::move(socket));
+	auto &session = m_sessions.back();
 
-			std::unique_lock<std::mutex> conditionLock(m_conditionMutex, std::defer_lock);
-			if (conditionLock.try_lock() && m_graphAccessible.load()) {
-				JsonSerializer serializer;
-
-				std::string json = R"({"operation": "clearAll"})";
-				std::cout << "Sending clear all" << std::endl;
-				m_sessions.back().text(true);
-				m_sessions.back().write(net::buffer(json));
-
-				json = serializer.serializeAllGroups(*m_circuit);
-				std::cout << "Sending groups" << std::endl;
-				m_sessions.back().text(true);
-				m_sessions.back().write(net::buffer(json));
-
-				json = serializer.serializeAllNodes(*m_circuit);
-				std::cout << "Sending graph" << std::endl;
-				m_sessions.back().text(true);
-				m_sessions.back().write(net::buffer(json));
-
-				json = serializer.serializeAllLogMessages(m_logMessages);
-				std::cout << "Sending messages" << std::endl;
-				m_sessions.back().text(true);
-				m_sessions.back().write(net::buffer(json));
+	async_read(session.websockStream.next_layer(), session.buffer, session.req, [&session, this](beast::error_code ec, std::size_t bytes_transferred){
+		if (ec) {
+			std::cout << "Websocket connection failed to connect: " << ec.message() << std::endl;
+			closeSession(session);
+			return;
+		} 
+		session.websockStream.async_accept(session.req.get(), [&session, this](beast::error_code ec){
+			if (ec) {
+				std::cout << "Websocket connection failed to connect: " << ec.message() << std::endl;
+				closeSession(session);
+				return;
 			}
-		}
-	}
-	catch(beast::system_error const& se)
-	{
-		// This indicates that the session was closed
-		if(se.code() != websocket::error::closed)
-			std::cerr << "beast error: " << se.code().message() << std::endl;
-	}
-	catch(std::exception const& e)
-	{
-		std::cerr << "Error: " << e.what() << std::endl;
-	}
+			awaitRequest(session);
+			session.ready = true;
+		});
+	});
 }
 
-void WebSocksInterface::sessionLoop()
+void WebSocksInterface::operate()
 {
-	std::unique_lock<std::mutex> conditionLock(m_conditionMutex);
-	while (!m_shutdown.load()) {
-		m_wakeSessions.wait(conditionLock);
-		if (m_graphAccessible.load()) {
-			JsonSerializer serializer;
+	m_ioc.poll();
+
+	JsonSerializer serializer;
+
+	for (auto &session : m_sessions) {
+		if (!session.ready) continue;
+		if (session.graphDirty) {
 			std::string jsonClear = R"({"operation": "clearAll"})";
 			std::string jsonGroup = serializer.serializeAllGroups(*m_circuit);
 			std::string jsonNodes = serializer.serializeAllNodes(*m_circuit);
-			std::string jsonMessages = serializer.serializeAllLogMessages(m_logMessages);
-			std::lock_guard<std::mutex> lock(m_sessionListMutex);
-			for (auto &session : m_sessions) {
-				try {
-					std::cout << "Resending clear all" << std::endl;
-					m_sessions.back().text(true);
-					m_sessions.back().write(net::buffer(jsonClear));
-					
-					std::cout << "Resending group" << std::endl;
-					m_sessions.back().text(true);
-					m_sessions.back().write(net::buffer(jsonGroup));
 
-					std::cout << "Resending graph" << std::endl;
-					m_sessions.back().text(true);
-					m_sessions.back().write(net::buffer(jsonNodes));
+			try {
+				std::cout << "Resending clear all" << std::endl;
+				session.websockStream.text(true);
+				session.websockStream.write(net::buffer(jsonClear));
+				
+				std::cout << "Resending group" << std::endl;
+				session.websockStream.text(true);
+				session.websockStream.write(net::buffer(jsonGroup));
 
-					std::cout << "Resending messages" << std::endl;
-					m_sessions.back().text(true);
-					m_sessions.back().write(net::buffer(jsonMessages));
-				}
-				catch(beast::system_error const& se)
-				{
-					// This indicates that the session was closed
-					if(se.code() != websocket::error::closed)
-						std::cerr << "beast error: " << se.code().message() << std::endl;
-				}
-				catch(std::exception const& e)
-				{
-					std::cerr << "Error: " << e.what() << std::endl;
-				}                        
+				std::cout << "Resending graph" << std::endl;
+				session.websockStream.text(true);
+				session.websockStream.write(net::buffer(jsonNodes));
 			}
+			catch(beast::system_error const& se)
+			{
+				// This indicates that the session was closed
+				if(se.code() != websocket::error::closed)
+					std::cerr << "beast error: " << se.code().message() << std::endl;
+			}
+			catch(std::exception const& e)
+			{
+				std::cerr << "Error: " << e.what() << std::endl;
+			}
+			session.messagesSend = 0; // caused by clear-all
+
+			session.graphDirty = false;
 		}
-		m_interfaceSleeping.notify_all();
+		if (session.messagesSend < m_logMessages.size()) {
+			std::string jsonMessages = serializer.serializeAllLogMessages(std::span<std::string>(m_logMessages.begin() + session.messagesSend, m_logMessages.size()-session.messagesSend));
+
+			try {
+				std::cout << "Resending messages" << std::endl;
+				session.websockStream.text(true);
+				session.websockStream.write(net::buffer(jsonMessages));
+			}
+			catch(beast::system_error const& se)
+			{
+				// This indicates that the session was closed
+				if(se.code() != websocket::error::closed)
+					std::cerr << "beast error: " << se.code().message() << std::endl;
+			}
+			catch(std::exception const& e)
+			{
+				std::cerr << "Error: " << e.what() << std::endl;
+			}
+
+			session.messagesSend = m_logMessages.size();
+		}
+		if (session.stateDirty) {
+			std::stringstream jsonState;
+			jsonState <<R"({"operation": "changeMode", "mode":")" << magic_enum::enum_name(m_state) << R"("})";
+
+			try {
+				std::cout << "Resending state" << std::endl;
+				session.websockStream.text(true);
+				session.websockStream.write(net::buffer(jsonState.str()));
+			}
+			catch(beast::system_error const& se)
+			{
+				// This indicates that the session was closed
+				if(se.code() != websocket::error::closed)
+					std::cerr << "beast error: " << se.code().message() << std::endl;
+			}
+			catch(std::exception const& e)
+			{
+				std::cerr << "Error: " << e.what() << std::endl;
+			}
+
+			session.stateDirty = false;
+		}		
+	}
+
+}
+
+void WebSocksInterface::createVisualization(const std::string &id, const std::string &title)
+{
+	std::stringstream json;
+	json << R"({"operation": "newVisualization", "data": {"id": ")" << id << R"(", "title": ")" << title << R"(" }})";
+
+	for (auto &session : m_sessions) {
+		if (!session.ready) continue;
+		try {
+			session.websockStream.text(true);
+			session.websockStream.write(net::buffer(json.str()));
+		}
+		catch(beast::system_error const& se)
+		{
+			// This indicates that the session was closed
+			if(se.code() != websocket::error::closed)
+				std::cerr << "beast error: " << se.code().message() << std::endl;
+		}
+		catch(std::exception const& e)
+		{
+			std::cerr << "Error: " << e.what() << std::endl;
+		}
 	}
 }
+
+void WebSocksInterface::updateVisualization(const std::string &id, const std::string &imageData)
+{
+	std::stringstream json;
+	json << R"({"operation": "visData", "data": {"id": ")" << id << R"(", "imageData": ")" << imageData << R"(" }})";
+
+	for (auto &session : m_sessions) {
+		if (!session.ready) continue;
+
+		try {
+			session.websockStream.text(true);
+			session.websockStream.write(net::buffer(json.str()));
+		}
+		catch(beast::system_error const& se)
+		{
+			// This indicates that the session was closed
+			if(se.code() != websocket::error::closed)
+				std::cerr << "beast error: " << se.code().message() << std::endl;
+		}
+		catch(std::exception const& e)
+		{
+			std::cerr << "Error: " << e.what() << std::endl;
+		}
+	}
+}
+
+
+
 
 }

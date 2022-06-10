@@ -34,6 +34,16 @@
 #endif
 
 
+#ifdef __GNUC__
+#define GTRY_PACKED( STRUCT ) struct __attribute__((__packed__)) STRUCT
+#endif
+
+#ifdef _MSC_VER
+#define GTRY_PACKED( STRUCT ) __pragma( pack(push, 1) ) struct STRUCT __pragma( pack(pop))
+#endif
+
+
+
 #define HCL_NAMED(x) gtry::setName(x, #x)
 
 

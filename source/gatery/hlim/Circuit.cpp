@@ -709,16 +709,20 @@ void Circuit::removeIrrelevantComparisons(Subnet &subnet)
 			for (auto i : utils::Range(2)) {
 				if (constInputs[i] == nullptr) continue;
 				if (constInputs[i]->getValue().get(sim::DefaultConfig::DEFINED, 0) == false) {
-					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Compare node " << compNode << " is comparing to an undefined signal. Hardwireing output to undefined.");
+					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Compare node " << compNode 
+									<< " is comparing to an undefined signal coming from " << constInputs[i] << ". Hardwireing output to undefined source " << compNode->getDriver(i).node);
 					// replace with undefined
 					compNode->bypassOutputToInput(0, i);
 					break;
 				}
 				bool invert = constInputs[i]->getValue().get(sim::DefaultConfig::VALUE, 0) ^ (compNode->getOp() == Node_Compare::EQ);
 				if (invert) {
-					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Compare node " << compNode << " is comparing to a constant and actually an inverter. Replacing logic node.");
 					// replace with inverter
 					auto *notNode = createNode<Node_Logic>(Node_Logic::NOT);
+
+					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Compare node " << compNode 
+									<< " is comparing to a constant and actually an inverter. Replacing with logic node for inversion " << notNode);
+
 					notNode->moveToGroup(compNode->getGroup());
 					notNode->setComment(notNode->getComment());
 					notNode->recordStackTrace();
@@ -731,7 +735,8 @@ void Circuit::removeIrrelevantComparisons(Subnet &subnet)
 
 					break;
 				} else {
-					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Compare node " << compNode << " is comparing to a constant and actually an identity function. Removing.");
+					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Compare node " << compNode 
+							<< " is comparing to a constant and actually an identity function. Removing by directly attaching outputs to " << compNode->getDriver(i^1).node);
 					// bypass
 					compNode->bypassOutputToInput(0, i^1);
 					break;
@@ -1142,6 +1147,7 @@ void Circuit::optimizeSubnet(Subnet &subnet)
 
 void Circuit::postprocess(const PostProcessor &postProcessor)
 {
+	dbg::changeState(dbg::State::POSTPROCESS);
 	postProcessor.run(*this);
 }
 
