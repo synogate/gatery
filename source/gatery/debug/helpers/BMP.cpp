@@ -103,13 +103,13 @@ void BMP::writeBinary(std::ostream &stream)
     size_t pixelSize = m_height * paddedRowSize;
     size_t paletteSize = m_paletteData.size() / m_paletteStride * 4;
 
-    header.bitmapDataOffset = sizeof(BMPFileHeader) + sizeof(BitmapInfoHeader) + paletteSize;
-    header.fileSize = header.bitmapDataOffset + pixelSize;
-    infoHeader.bitmapWidth = m_width;
-    infoHeader.bitmapHeight = -m_height;
-    infoHeader.bpp = m_bpp;
+    header.bitmapDataOffset = (uint32_t)( sizeof(BMPFileHeader) + sizeof(BitmapInfoHeader) + paletteSize );
+    header.fileSize = (uint32_t)( header.bitmapDataOffset + pixelSize );
+    infoHeader.bitmapWidth = (uint32_t) m_width;
+    infoHeader.bitmapHeight = (uint32_t) -m_height;
+    infoHeader.bpp = (uint16_t) m_bpp;
     if (m_bpp <= 8)
-        infoHeader.paletteColors = m_paletteData.size() / m_paletteStride;
+        infoHeader.paletteColors = (uint32_t) ( m_paletteData.size() / m_paletteStride );
 
 
     stream.write((const char *) &header, sizeof(header));
