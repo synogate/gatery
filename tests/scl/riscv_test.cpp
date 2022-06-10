@@ -851,6 +851,9 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_store, BoostUnitTestSimulationFixture)
 			uint32_t opB = rng();
 			int32_t offset = int32_t(rng()) >> (32 - 12);
 
+			size_t alignmentFailure = (opA + offset) & 3;
+			opA -= alignmentFailure;
+
 			rv.r1(opA).r2(opB).ip(rng());
 			rv.op().typeS(rv::op::STORE, rv::func::WORD, offset);
 			co_await WaitClk(clock);
@@ -869,6 +872,9 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_store, BoostUnitTestSimulationFixture)
 			uint32_t opA = rng();
 			uint32_t opB = rng();
 			int32_t offset = int32_t(rng()) >> (32 - 12);
+
+			size_t alignmentFailure = (opA + offset) & 1;
+			opA -= alignmentFailure;
 
 			rv.r1(opA).r2(opB).ip(rng());
 			rv.op().typeS(rv::op::STORE, rv::func::HALFWORD, offset);
@@ -938,6 +944,9 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 			uint32_t data = rng();
 			int32_t offset = int32_t(rng()) >> (32 - 12);
 
+			size_t alignmentFailure = (opA + offset) & 3;
+			opA -= alignmentFailure;			
+
 			simu(*avmm.readData) = data;
 			rv.r1(opA).r2(rng()).ip(rng());
 			rv.op().typeI(rv::op::LOAD, rv::func::WORD, 0, 0, offset);
@@ -958,6 +967,9 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 			uint32_t opA = rng();
 			uint32_t data = rng();
 			int32_t offset = int32_t(rng()) >> (32 - 12);
+
+			size_t alignmentFailure = (opA + offset) & 1;
+			opA -= alignmentFailure;
 
 			simu(*avmm.readData) = data;
 			rv.r1(opA).r2(rng()).ip(rng());
@@ -982,6 +994,9 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 			uint32_t opA = rng();
 			uint32_t data = rng();
 			int32_t offset = int32_t(rng()) >> (32 - 12);
+
+			size_t alignmentFailure = (opA + offset) & 1;
+			opA -= alignmentFailure;			
 
 			simu(*avmm.readData) = data;
 			rv.r1(opA).r2(rng()).ip(rng());
@@ -1055,6 +1070,9 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 			uint32_t opA = rng();
 			uint32_t data = rng();
 			int32_t offset = int32_t(rng()) >> (32 - 12);
+
+			size_t alignmentFailure = (opA + offset) & 3;
+			opA -= alignmentFailure;
 
 			simu(*avmm.readDataValid) = 0;
 			simu(*avmm.readData) = data;
