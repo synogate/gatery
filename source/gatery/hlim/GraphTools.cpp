@@ -158,7 +158,12 @@ Clock* findFirstInputClock(NodePort input)
 std::vector<Node_Register*> findAllOutputRegisters(NodePort output)
 {
 	std::vector<Node_Register*> result;
+	std::set<NodePort> alreadyHandled;
 	for (auto nh : output.node->exploreOutput(output.port).skipDependencies()) {
+		if(alreadyHandled.contains(nh.nodePort())) {
+			nh.backtrack();
+			continue;
+		}
 		if (auto* reg = dynamic_cast<Node_Register*>(nh.node())) {
 			result.push_back(reg);
 			nh.backtrack();
@@ -166,6 +171,7 @@ std::vector<Node_Register*> findAllOutputRegisters(NodePort output)
 		else if (nh.isNodeType<Node_External>()) {
 			nh.backtrack();
 		}
+		alreadyHandled.insert(nh.nodePort());
 	}
 	return result;
 }
@@ -173,7 +179,12 @@ std::vector<Node_Register*> findAllOutputRegisters(NodePort output)
 std::vector<Node_Register*> findAllInputRegisters(NodePort input)
 {
 	std::vector<Node_Register*> result;
+	std::set<NodePort> alreadyHandled;
 	for (auto nh : input.node->exploreInput(input.port).skipExportOnly().skipDependencies()) {
+		if(alreadyHandled.contains(nh.nodePort())) {
+			nh.backtrack();
+			continue;
+		}
 		if (auto* reg = dynamic_cast<Node_Register*>(nh.node())) {
 			result.push_back(reg);
 			nh.backtrack();
@@ -181,6 +192,7 @@ std::vector<Node_Register*> findAllInputRegisters(NodePort input)
 		else if (nh.isNodeType<Node_External>()) {
 			nh.backtrack();
 		}
+		alreadyHandled.insert(nh.nodePort());
 	}
 	return result;
 }

@@ -21,6 +21,7 @@
 #include "BasicBlock.h"
 #include "AST.h"
 
+#include "../../debug/DebugInterface.h"
 #include "../../utils/Range.h"
 #include "../../hlim/Clock.h"
 
@@ -539,6 +540,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 
 	{
 		struct Statement {
+			hlim::BaseNode* node = nullptr;
 			std::set<hlim::NodePort> inputs;
 			std::set<hlim::NodePort> outputs;
 			std::string code;
@@ -554,6 +556,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 
 			std::stringstream comment;
 			Statement statement;
+			statement.node = nodePort.node;
 			statement.weakOrderIdx = nodePort.node->getId(); // chronological order
 			statement.outputs.insert(nodePort);
 
@@ -777,6 +780,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 
 				std::stringstream comment;
 				Statement statement;
+				statement.node = n;
 				statement.weakOrderIdx = n->getId(); // chronological order
 
 				code << "ASSERT ";
@@ -827,6 +831,17 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 							bestStatement = i;
 					}
 				}
+			}
+
+			if (bestStatement == ~0ull) {
+				dbg::awaitDebugger();
+				dbg::pushGraph();
+				dbg::LogMessage message;
+				message << dbg::LogMessage::LOG_ERROR << "Cyclic dependency of signals. Statements remaining: ";
+				for(auto i : utils::Range(statements.size()))
+					message << statements[i].node << " ";
+				dbg::log(std::move(message));
+				dbg::stopInDebugger();
 			}
 
 			HCL_ASSERT_HINT(bestStatement != ~0ull, "Cyclic dependency of signals detected!");
