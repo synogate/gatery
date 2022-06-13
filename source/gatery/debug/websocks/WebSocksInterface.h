@@ -66,6 +66,14 @@ class WebSocksInterface : public DebugInterface
 	protected:
         boost::asio::io_context m_ioc;
 
+		struct Visualization {
+			std::string title;
+			std::string content;
+			size_t contentVersion = 0;
+		};
+
+		std::map<std::string, Visualization> m_visualizations;
+
 		const hlim::Circuit *m_circuit = nullptr;
 		std::vector<std::string> m_logMessages;
 
@@ -77,6 +85,7 @@ class WebSocksInterface : public DebugInterface
 			bool graphDirty = true;
 			bool stateDirty = true;
 			size_t messagesSend = 0;
+			std::map<std::string, size_t> visualizationStates;
 
 			boost::beast::flat_buffer buffer;
 			boost::beast::http::request_parser<boost::beast::http::empty_body> req;

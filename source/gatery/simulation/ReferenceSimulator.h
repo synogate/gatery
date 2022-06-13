@@ -214,6 +214,17 @@ class ReferenceSimulator : public Simulator
 
 		bool m_currentTimeStepFinished = true;
 		bool m_abortCalled = false;
+
+
+		struct PerformanceStats {
+			std::uint64_t totalRuntimeUs = 0;
+			std::uint64_t numReEvals = 0;
+			size_t totalRuntimeNumEvents = 0;
+
+			size_t thisEventNumReEvals = 0;
+		};
+
+		PerformanceStats m_performanceStats;
 };
 
 }
