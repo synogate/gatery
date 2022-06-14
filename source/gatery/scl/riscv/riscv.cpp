@@ -128,6 +128,136 @@ void gtry::scl::riscv::Instruction::decode(const UInt& inst)
 		name = 'ESYS';
 }
 
+void gtry::scl::riscv::Instruction::createDebugVisualization()
+{
+	sim_tap(opcode);
+	sim_tap(instruction);
+	sim_tap(func3);
+	sim_tap(rd);
+
+	auto visId = dbg::createAreaVisualization(300, 150);
+
+	std::stringstream content;
+	content << "<div style='margin: 10px;padding: 10px;'>";
+	content << "<h2>Instruction Decoder</h2>";
+	content << "</div>";
+	dbg::updateAreaVisualization(visId, content.str());
+
+#if 1
+	auto clock = ClockScope::getClk().getClk();
+	DesignScope::get()->getCircuit().addSimulationProcess([=, instruction = this->instruction, opcode = this->opcode, func3 = this->func3, func7 = this->func7, rd = this->rd]()->sim::SimulationProcess {
+		while (true) {
+			auto instructionVal = simu(instruction).eval();
+			auto opcodeVal = simu(opcode).value();
+			auto func3Val = simu(func3).value();
+			auto func7Val = simu(func7).value();
+			auto rdVal = simu(rd).value();
+
+			std::stringstream content;
+			content << "<div style='margin: 10px;padding: 10px;'>";
+			content << "<h2>Instruction Decoder</h2>";
+
+			if (!sim::allDefined(instructionVal))
+				content << "Instruction partially undefined! <br/>";
+	
+			content << "Instruction: 0x" << std::hex << instructionVal.extractNonStraddling(sim::DefaultConfig::VALUE, 0, instructionVal.size()) << "<br/>";
+
+			switch (opcodeVal) {
+				case 0b01101: content << "LUI"; break;
+				case 0b00101: content << "AUIP"; break;
+				case 0b11011: content << "JAL"; break;
+				case 0b11001:
+					switch (func3Val) {
+						case 0:	content << "JALR"; break;
+						default: content << "INVALID INSTRUCTION"; break;
+					} break;
+				case 0b11000:
+					switch (func3Val) {
+						case 0: content << "BEQ"; break;
+						case 1: content << "BNE"; break;
+						case 4: content << "BLT"; break;
+						case 5: content << "BGE"; break;
+						case 6: content << "BLTU"; break;
+						case 7: content << "BGEU"; break;
+						default: content << "INVALID INSTRUCTION"; break;
+					} break;
+				case 0b00000:
+					switch (func3Val) {
+						case 0: content << "LB"; break;
+						case 1: content << "LH"; break;
+						case 2: content << "LW"; break;
+						case 4: content << "LBU"; break;
+						case 5: content << "LHU"; break;
+						default: content << "INVALID INSTRUCTION"; break;
+					} break;
+				case 0b01000:
+					switch (func3Val) {
+						case 0: content << "SB"; break;
+						case 1: content << "SH"; break;
+						case 2: content << "SW"; break;
+						default: content << "INVALID INSTRUCTION"; break;
+					} break;
+				case 0b00100: {
+					if (rdVal == 0)
+						content << "NOP";
+					else
+						switch (func3Val) {
+							case 0: content << "ADDI"; break;
+							case 1: content << "SLLI"; break;
+							case 2: content << "SLTI"; break;
+							case 3: content << "SLTU"; break;
+							case 4: content << "XORI"; break;
+							case 5:
+								if (func7Val & (1 << 5))
+									content << "SRAI";
+								else
+									content << "SRLI";
+							break;
+							case 6: content << "ORI"; break;
+							case 7: content << "ANDI"; break;
+							default: content << "INVALID INSTRUCTION"; break;
+						} 
+				} break;
+				case 0b01100: {
+					if (rdVal == 0)
+						content << "NOP";
+					else
+						switch (func3Val) {
+							case 0:
+								if (func7Val & (1 << 5))
+									content << "SUB";
+								else
+									content << "ADD";
+							break;
+							case 1: content << "SLL"; break;
+							case 2: content << "SLT"; break;
+							case 3: content << "SLTU"; break;
+							case 4: content << "XOR"; break;
+							case 5:
+								if (func7Val & (1 << 5))
+									content << "SRA";
+								else
+									content << "SRL";
+							break;
+							case 6: content << "ORI"; break;
+							case 7: content << "AND"; break;
+							default: content << "INVALID INSTRUCTION"; break;
+						}
+				} break;
+				case 0b00011: content << "FENC"; break;
+				case 0b11100: content << "ESYS"; break;
+				default: content << "INVALID INSTRUCTION"; break;
+			}
+
+			content << "</div>";
+			dbg::updateAreaVisualization(visId, content.str());
+
+			co_await WaitClk(clock);
+		}
+	});
+#endif
+}
+
 gtry::scl::riscv::RV32I::RV32I(BitWidth instructionAddrWidth, BitWidth dataAddrWidth) :
 	m_IP(instructionAddrWidth),
 	m_dataAddrWidth(dataAddrWidth),
