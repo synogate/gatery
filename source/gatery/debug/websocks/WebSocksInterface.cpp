@@ -20,6 +20,7 @@
 #include "WebSocksInterface.h"
 
 #include "../../frontend/DesignScope.h"
+#include "../../frontend/Scope.h"
 
 #include "../../hlim/Circuit.h"
 #include "../../hlim/Node.h"
@@ -600,6 +601,24 @@ void WebSocksInterface::operate()
 					it->second = vis.second.contentVersion;
 				}
 			}
+			while (session.areaVisStates.size() < m_areaVisualizations.size()) {
+				const auto id = session.areaVisStates.size();
+				const auto &vis = m_areaVisualizations[id];
+				std::stringstream json;
+				json << R"({"operation": "newAreaVisualization", "data": {"id": )" << id << R"(, "areaId": )" << vis.nodeGroupId << R"(, "width": )" << vis.width << R"(, "height": )" << vis.height << R"( }})";
+
+				session.websockStream.text(true);
+				session.websockStream.write(net::buffer(json.str()));
+				
+				session.areaVisStates.push_back(0);
+			}
+			for (auto i : utils::Range(m_areaVisualizations.size())) {
+				if (session.areaVisStates[i] < m_areaVisualizations[i].contentVersion) {
+					session.websockStream.text(true);
+					session.websockStream.write(net::buffer(m_areaVisualizations[i].content));
+					session.areaVisStates[i] = m_areaVisualizations[i].contentVersion;
+				}
+			}
 		} catch(std::exception const& e) {
 			std::cerr << "Error: " << e.what() << std::endl;
 			closeSession(session);
@@ -618,13 +637,28 @@ void WebSocksInterface::createVisualization(const std::string &id, const std::st
 void WebSocksInterface::updateVisualization(const std::string &id, const std::string &imageData)
 {
 	std::stringstream json;
-	json << R"({"operation": "visData", "data": {"id": ")" << id << R"(", "imageData": ")" << imageData << R"(" }})";
+	json << R"({"operation": "visData", "data": {"id": )" << id << R"(, "imageData": ")" << imageData << R"(" }})";
 
 	auto &vis = m_visualizations[id];
 	vis.content = json.str();
 	vis.contentVersion++;
 }
 
+
+size_t WebSocksInterface::createAreaVisualization(unsigned width, unsigned height)
+{
+	m_areaVisualizations.push_back({.width = width, .height = height, .nodeGroupId = GroupScope::get()->nodeGroup()->getId() });
+	return m_areaVisualizations.size()-1;
+}
+
+void WebSocksInterface::updateAreaVisualization(size_t id, const std::string content)
+{
+	//m_areaVisualizations[id].content = std::move(content);
+	std::stringstream json;
+	json << R"({"operation": "visAreaData", "data": {"id": )" << id << R"(, "content": ")" << content << R"(" }})";
+	m_areaVisualizations[id].content = json.str();
+	m_areaVisualizations[id].contentVersion++;
+}
 
 
 

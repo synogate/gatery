@@ -63,6 +63,9 @@ class WebSocksInterface : public DebugInterface
 
 		virtual void createVisualization(const std::string &id, const std::string &title) override;
 		virtual void updateVisualization(const std::string &id, const std::string &imageData) override;
+
+		virtual size_t createAreaVisualization(unsigned width, unsigned height) override;
+		virtual void updateAreaVisualization(size_t id, const std::string content) override;
 	protected:
         boost::asio::io_context m_ioc;
 
@@ -73,6 +76,14 @@ class WebSocksInterface : public DebugInterface
 		};
 
 		std::map<std::string, Visualization> m_visualizations;
+
+		struct AreaVisualizations {
+			unsigned width, height;
+			size_t nodeGroupId = ~0ull;
+			std::string content;
+			size_t contentVersion = 0;
+		};
+		std::vector<AreaVisualizations> m_areaVisualizations;
 
 		const hlim::Circuit *m_circuit = nullptr;
 		std::vector<std::string> m_logMessages;
@@ -86,6 +97,7 @@ class WebSocksInterface : public DebugInterface
 			bool stateDirty = true;
 			size_t messagesSend = 0;
 			std::map<std::string, size_t> visualizationStates;
+			std::vector<size_t> areaVisStates;
 
 			boost::beast::flat_buffer buffer;
 			boost::beast::http::request_parser<boost::beast::http::empty_body> req;
