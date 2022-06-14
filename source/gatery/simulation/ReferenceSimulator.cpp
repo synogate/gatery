@@ -574,7 +574,7 @@ void ReferenceSimulator::commitState()
 
 void ReferenceSimulator::advanceEvent()
 {
-	//std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+//	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 	m_performanceStats.thisEventNumReEvals = 0;
 
 	m_abortCalled = false;
@@ -683,11 +683,11 @@ void ReferenceSimulator::advanceEvent()
 
 	m_currentTimeStepFinished = true;
 
-	if (m_performanceStats.totalRuntimeNumEvents % 100 == 0)
+	if (m_performanceStats.totalRuntimeNumEvents % 10000 == 0)
 		dbg::operate();
 
 	m_performanceStats.totalRuntimeNumEvents++;
-	m_performanceStats.totalRuntimeNumEvents += m_performanceStats.thisEventNumReEvals;
+	m_performanceStats.numReEvals += m_performanceStats.thisEventNumReEvals;
 /*
 	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
@@ -699,7 +699,7 @@ void ReferenceSimulator::advanceEvent()
 			<< "   simulation time: " << m_simulationTime.numerator() / (double) m_simulationTime.denominator()  << " s\n"
 			<< "   numEvents: " << m_performanceStats.totalRuntimeNumEvents << '\n'
 			<< "   avg runtime per event: " << m_performanceStats.totalRuntimeUs / m_performanceStats.totalRuntimeNumEvents << " us\n"
-			<< "   avg reevaluations per event: " << m_performanceStats.totalRuntimeNumEvents / (double)  m_performanceStats.totalRuntimeNumEvents << '\n'
+			<< "   avg reevaluations per event: " << m_performanceStats.numReEvals / (double)  m_performanceStats.totalRuntimeNumEvents << '\n'
 			<< std::flush;
 	}
 */
