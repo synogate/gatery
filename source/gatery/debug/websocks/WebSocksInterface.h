@@ -92,6 +92,7 @@ class WebSocksInterface : public DebugInterface
 		tcp::acceptor m_acceptor;
 
 		struct Session {
+			bool closing = false;
 			bool ready = false;
 			bool graphDirty = true;
 			bool stateDirty = true;

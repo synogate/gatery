@@ -506,6 +506,9 @@ void WebSocksInterface::awaitRequest(Session &session)
 
 void WebSocksInterface::closeSession(Session &session)
 {
+	if (session.closing) return;
+	session.closing = true;
+
 	for (auto it = m_sessions.begin(); it != m_sessions.end(); ++it)
 		if (&*it == &session) {
 			m_sessions.erase(it);
@@ -637,7 +640,7 @@ void WebSocksInterface::createVisualization(const std::string &id, const std::st
 void WebSocksInterface::updateVisualization(const std::string &id, const std::string &imageData)
 {
 	std::stringstream json;
-	json << R"({"operation": "visData", "data": {"id": )" << id << R"(, "imageData": ")" << imageData << R"(" }})";
+	json << R"({"operation": "visData", "data": {"id": ")" << id << R"(", "imageData": ")" << imageData << R"(" }})";
 
 	auto &vis = m_visualizations[id];
 	vis.content = json.str();
