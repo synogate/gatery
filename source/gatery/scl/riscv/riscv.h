@@ -42,8 +42,6 @@ namespace gtry::scl::riscv
 		UInt name = 32_b;
 
 		void decode(const UInt& inst);
-
-		void createDebugVisualization();
 	};
 
 	struct IntAluResult

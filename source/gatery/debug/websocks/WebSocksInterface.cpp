@@ -640,7 +640,17 @@ void WebSocksInterface::createVisualization(const std::string &id, const std::st
 void WebSocksInterface::updateVisualization(const std::string &id, const std::string &imageData)
 {
 	std::stringstream json;
-	json << R"({"operation": "visData", "data": {"id": ")" << id << R"(", "imageData": ")" << imageData << R"(" }})";
+	json << R"({"operation": "visData", "data": {"id": ")" << id << R"(", "imageData": ")";
+	for (auto c : imageData)
+		switch (c) {
+			case '"': json << '\\' << '"'; break;
+			case '\n': json << '\\' << 'n'; break;
+			case '\t': json << '\\' << 't'; break;
+			default: json << c;
+		}
+
+	json << R"(" }})";
+
 
 	auto &vis = m_visualizations[id];
 	vis.content = json.str();
@@ -656,9 +666,17 @@ size_t WebSocksInterface::createAreaVisualization(unsigned width, unsigned heigh
 
 void WebSocksInterface::updateAreaVisualization(size_t id, const std::string content)
 {
-	//m_areaVisualizations[id].content = std::move(content);
 	std::stringstream json;
-	json << R"({"operation": "visAreaData", "data": {"id": )" << id << R"(, "content": ")" << content << R"(" }})";
+	json << R"({"operation": "visAreaData", "data": {"id": )" << id << R"(, "content": ")";
+	for (auto c : content)
+		switch (c) {
+			case '"': json << '\\' << '"'; break;
+			case '\n': json << '\\' << 'n'; break;
+			case '\t': json << '\\' << 't'; break;
+			default: json << c;
+		}
+
+	json << R"(" }})";
 	m_areaVisualizations[id].content = json.str();
 	m_areaVisualizations[id].contentVersion++;
 }
