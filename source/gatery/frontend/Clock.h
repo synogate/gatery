@@ -91,7 +91,7 @@ namespace gtry {
 
 			//Clock(size_t freq);
 			Clock(const ClockConfig &config);
-			Clock deriveClock(const ClockConfig &config);
+			Clock deriveClock(const ClockConfig &config) const;
 
 			Clock(const Clock &other);
 			Clock &operator=(const Clock &other);
@@ -131,14 +131,14 @@ namespace gtry {
 	class ClockScope : public BaseScope<ClockScope>
 	{
 		public:
-			ClockScope(Clock &clock) : m_clock(clock) { }
-			static Clock &getClk() {
+			ClockScope(const Clock &clock) : m_clock(clock) { }
+			static const Clock &getClk() {
 				HCL_DESIGNCHECK_HINT(m_currentScope != nullptr, "No clock scope active!");
 				return m_currentScope->m_clock;
 			}
 			static bool anyActive() { return m_currentScope != nullptr; }
 		protected:
-			Clock &m_clock;
+			const Clock &m_clock;
 	};
 
 }

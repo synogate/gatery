@@ -209,7 +209,7 @@ namespace gtry
 
 
 
-	Clock Clock::deriveClock(const ClockConfig& config)
+	Clock Clock::deriveClock(const ClockConfig& config) const
 	{
 		return Clock(DesignScope::createClock<hlim::DerivedClock>(m_clock), config);
 	}
