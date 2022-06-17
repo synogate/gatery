@@ -102,6 +102,9 @@ class DebugInterface
 
 		virtual void createVisualization(const std::string &id, const std::string &title) { }
 		virtual void updateVisualization(const std::string &id, const std::string &imageData) { }
+
+		virtual size_t createAreaVisualization(unsigned width, unsigned height) { return 0; }
+		virtual void updateAreaVisualization(size_t id, const std::string content) { }
 	protected:
 		State m_state = State::DESIGN;
 };
@@ -111,6 +114,8 @@ void pushGraph();
 void stopInDebugger();
 void operate();
 void changeState(State state);
+size_t createAreaVisualization(unsigned width, unsigned height);
+void updateAreaVisualization(size_t id, const std::string content);
 void log(const LogMessage &msg);
 
 }

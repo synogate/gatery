@@ -54,6 +54,7 @@ struct StateMapping
 	std::map<hlim::NodePort, size_t> outputToOffset;
 	std::map<hlim::BaseNode*, std::vector<size_t>> nodeToInternalOffset;
 	hlim::ClockPinAllocation clockPinAllocation;
+
 	/*
 	std::map<hlim::Clock*, size_t> clockToSignalIdx;
 	std::map<hlim::Clock*, size_t> clockToClkIdx;
@@ -197,6 +198,7 @@ class ReferenceSimulator : public Simulator
 		virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfReset(const hlim::Clock *clk) override;
 
 		virtual void addSimulationProcess(std::function<SimulationProcess()> simProc) override;
+		virtual void addSimulationVisualization(sim::SimulationVisualization simVis) override;
 
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor, utils::RestrictTo<RunTimeSimulationContext>) override;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil, utils::RestrictTo<RunTimeSimulationContext>) override;
@@ -204,16 +206,30 @@ class ReferenceSimulator : public Simulator
 	protected:
 		Program m_program;
 		DataState m_dataState;
+		std::vector<std::uint64_t> m_simVizStates;
+		std::vector<size_t> m_simVizStateOffsets;
 
 		std::priority_queue<Event> m_nextEvents;
 
 		std::vector<std::function<SimulationProcess()>> m_simProcs;
+		std::vector<sim::SimulationVisualization> m_simViz;
 		std::list<SimulationProcess> m_runningSimProcs;
 		bool m_stateNeedsReevaluating = false;
 		std::uint64_t m_nextSimProcInsertionId = 0;
 
 		bool m_currentTimeStepFinished = true;
 		bool m_abortCalled = false;
+
+
+		struct PerformanceStats {
+			std::uint64_t totalRuntimeUs = 0;
+			std::uint64_t numReEvals = 0;
+			size_t totalRuntimeNumEvents = 0;
+
+			size_t thisEventNumReEvals = 0;
+		};
+
+		PerformanceStats m_performanceStats;
 };
 
 }

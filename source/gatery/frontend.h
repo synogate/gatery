@@ -59,6 +59,7 @@
 #include "frontend/tech/TargetTechnology.h"
 #include "frontend/trace.h"
 #include "frontend/Vector.h"
+#include "debug/DebugInterface.h"
 
 namespace gtry {
 	using DefaultPostprocessing = hlim::DefaultPostprocessing;

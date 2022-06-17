@@ -20,6 +20,7 @@
 #include "WebSocksInterface.h"
 
 #include "../../frontend/DesignScope.h"
+#include "../../frontend/Scope.h"
 
 #include "../../hlim/Circuit.h"
 #include "../../hlim/Node.h"
@@ -340,10 +341,10 @@ std::string JsonSerializer::serializeAllNodes(const hlim::Circuit &circuit)
 		}
 		json << "\n]}\n";
 	}
-	
+	/*
 	std::fstream jsonFile("testNodes.json", std::fstream::out);
 	jsonFile << json.str();
-	
+	*/
 	return json.str();
 }
 
@@ -412,6 +413,8 @@ void WebSocksInterface::changeState(State state)
 WebSocksInterface::WebSocksInterface(unsigned port) : m_acceptor(m_ioc, {net::ip::make_address("0.0.0.0"), (unsigned short) port})
 {
 	m_circuit = &DesignScope::get()->getCircuit();
+
+	m_acceptor.set_option(tcp::socket::reuse_address(true));
 
 	waitAccept();
 }
@@ -503,6 +506,9 @@ void WebSocksInterface::awaitRequest(Session &session)
 
 void WebSocksInterface::closeSession(Session &session)
 {
+	if (session.closing) return;
+	session.closing = true;
+
 	for (auto it = m_sessions.begin(); it != m_sessions.end(); ++it)
 		if (&*it == &session) {
 			m_sessions.erase(it);
@@ -542,12 +548,12 @@ void WebSocksInterface::operate()
 
 	for (auto &session : m_sessions) {
 		if (!session.ready) continue;
-		if (session.graphDirty) {
-			std::string jsonClear = R"({"operation": "clearAll"})";
-			std::string jsonGroup = serializer.serializeAllGroups(*m_circuit);
-			std::string jsonNodes = serializer.serializeAllNodes(*m_circuit);
+		try {
+			if (session.graphDirty) {
+				std::string jsonClear = R"({"operation": "clearAll"})";
+				std::string jsonGroup = serializer.serializeAllGroups(*m_circuit);
+				std::string jsonNodes = serializer.serializeAllNodes(*m_circuit);
 
-			try {
 				std::cout << "Resending clear all" << std::endl;
 				session.websockStream.text(true);
 				session.websockStream.write(net::buffer(jsonClear));
@@ -559,117 +565,121 @@ void WebSocksInterface::operate()
 				std::cout << "Resending graph" << std::endl;
 				session.websockStream.text(true);
 				session.websockStream.write(net::buffer(jsonNodes));
-			}
-			catch(beast::system_error const& se)
-			{
-				// This indicates that the session was closed
-				if(se.code() != websocket::error::closed)
-					std::cerr << "beast error: " << se.code().message() << std::endl;
-			}
-			catch(std::exception const& e)
-			{
-				std::cerr << "Error: " << e.what() << std::endl;
-			}
-			session.messagesSend = 0; // caused by clear-all
+				session.messagesSend = 0; // caused by clear-all
 
-			session.graphDirty = false;
-		}
-		if (session.messagesSend < m_logMessages.size()) {
-			std::string jsonMessages = serializer.serializeAllLogMessages(std::span<std::string>(m_logMessages.begin() + session.messagesSend, m_logMessages.size()-session.messagesSend));
+				session.graphDirty = false;
+			}
+			if (session.messagesSend < m_logMessages.size()) {
+				std::string jsonMessages = serializer.serializeAllLogMessages(std::span<std::string>(m_logMessages.begin() + session.messagesSend, m_logMessages.size()-session.messagesSend));
 
-			try {
 				std::cout << "Resending messages" << std::endl;
 				session.websockStream.text(true);
 				session.websockStream.write(net::buffer(jsonMessages));
-			}
-			catch(beast::system_error const& se)
-			{
-				// This indicates that the session was closed
-				if(se.code() != websocket::error::closed)
-					std::cerr << "beast error: " << se.code().message() << std::endl;
-			}
-			catch(std::exception const& e)
-			{
-				std::cerr << "Error: " << e.what() << std::endl;
-			}
 
-			session.messagesSend = m_logMessages.size();
-		}
-		if (session.stateDirty) {
-			std::stringstream jsonState;
-			jsonState <<R"({"operation": "changeMode", "mode":")" << magic_enum::enum_name(m_state) << R"("})";
+				session.messagesSend = m_logMessages.size();
+			}
+			if (session.stateDirty) {
+				std::stringstream jsonState;
+				jsonState <<R"({"operation": "changeMode", "mode":")" << magic_enum::enum_name(m_state) << R"("})";
 
-			try {
 				std::cout << "Resending state" << std::endl;
 				session.websockStream.text(true);
 				session.websockStream.write(net::buffer(jsonState.str()));
-			}
-			catch(beast::system_error const& se)
-			{
-				// This indicates that the session was closed
-				if(se.code() != websocket::error::closed)
-					std::cerr << "beast error: " << se.code().message() << std::endl;
-			}
-			catch(std::exception const& e)
-			{
-				std::cerr << "Error: " << e.what() << std::endl;
-			}
 
-			session.stateDirty = false;
-		}		
+				session.stateDirty = false;
+			}
+			for (const auto &vis : m_visualizations) {
+				auto it = session.visualizationStates.find(vis.first);
+				if (it == session.visualizationStates.end()) {
+					std::stringstream json;
+					json << R"({"operation": "newVisualization", "data": {"id": ")" << vis.first << R"(", "title": ")" << vis.second.title << R"(" }})";
+
+					session.websockStream.text(true);
+					session.websockStream.write(net::buffer(json.str()));
+					it = session.visualizationStates.insert({vis.first, 0ull}).first;
+				}
+				if (it->second < vis.second.contentVersion) {
+					session.websockStream.text(true);
+					session.websockStream.write(net::buffer(vis.second.content));
+					it->second = vis.second.contentVersion;
+				}
+			}
+			while (session.areaVisStates.size() < m_areaVisualizations.size()) {
+				const auto id = session.areaVisStates.size();
+				const auto &vis = m_areaVisualizations[id];
+				std::stringstream json;
+				json << R"({"operation": "newAreaVisualization", "data": {"id": )" << id << R"(, "areaId": )" << vis.nodeGroupId << R"(, "width": )" << vis.width << R"(, "height": )" << vis.height << R"( }})";
+
+				session.websockStream.text(true);
+				session.websockStream.write(net::buffer(json.str()));
+				
+				session.areaVisStates.push_back(0);
+			}
+			for (auto i : utils::Range(m_areaVisualizations.size())) {
+				if (session.areaVisStates[i] < m_areaVisualizations[i].contentVersion) {
+					session.websockStream.text(true);
+					session.websockStream.write(net::buffer(m_areaVisualizations[i].content));
+					session.areaVisStates[i] = m_areaVisualizations[i].contentVersion;
+				}
+			}
+		} catch(std::exception const& e) {
+			std::cerr << "Error: " << e.what() << std::endl;
+			closeSession(session);
+			return; // teh closeSession breaks the for loop
+		}
 	}
 
 }
 
 void WebSocksInterface::createVisualization(const std::string &id, const std::string &title)
 {
-	std::stringstream json;
-	json << R"({"operation": "newVisualization", "data": {"id": ")" << id << R"(", "title": ")" << title << R"(" }})";
-
-	for (auto &session : m_sessions) {
-		if (!session.ready) continue;
-		try {
-			session.websockStream.text(true);
-			session.websockStream.write(net::buffer(json.str()));
-		}
-		catch(beast::system_error const& se)
-		{
-			// This indicates that the session was closed
-			if(se.code() != websocket::error::closed)
-				std::cerr << "beast error: " << se.code().message() << std::endl;
-		}
-		catch(std::exception const& e)
-		{
-			std::cerr << "Error: " << e.what() << std::endl;
-		}
-	}
+	auto &vis = m_visualizations[id];
+	vis.title = title;
 }
 
 void WebSocksInterface::updateVisualization(const std::string &id, const std::string &imageData)
 {
 	std::stringstream json;
-	json << R"({"operation": "visData", "data": {"id": ")" << id << R"(", "imageData": ")" << imageData << R"(" }})";
+	json << R"({"operation": "visData", "data": {"id": ")" << id << R"(", "imageData": ")";
+	for (auto c : imageData)
+		switch (c) {
+			case '"': json << '\\' << '"'; break;
+			case '\n': json << '\\' << 'n'; break;
+			case '\t': json << '\\' << 't'; break;
+			default: json << c;
+		}
 
-	for (auto &session : m_sessions) {
-		if (!session.ready) continue;
+	json << R"(" }})";
 
-		try {
-			session.websockStream.text(true);
-			session.websockStream.write(net::buffer(json.str()));
-		}
-		catch(beast::system_error const& se)
-		{
-			// This indicates that the session was closed
-			if(se.code() != websocket::error::closed)
-				std::cerr << "beast error: " << se.code().message() << std::endl;
-		}
-		catch(std::exception const& e)
-		{
-			std::cerr << "Error: " << e.what() << std::endl;
-		}
-	}
+
+	auto &vis = m_visualizations[id];
+	vis.content = json.str();
+	vis.contentVersion++;
 }
 
+
+size_t WebSocksInterface::createAreaVisualization(unsigned width, unsigned height)
+{
+	m_areaVisualizations.push_back({.width = width, .height = height, .nodeGroupId = GroupScope::get()->nodeGroup()->getId() });
+	return m_areaVisualizations.size()-1;
+}
+
+void WebSocksInterface::updateAreaVisualization(size_t id, const std::string content)
+{
+	std::stringstream json;
+	json << R"({"operation": "visAreaData", "data": {"id": )" << id << R"(, "content": ")";
+	for (auto c : content)
+		switch (c) {
+			case '"': json << '\\' << '"'; break;
+			case '\n': json << '\\' << 'n'; break;
+			case '\t': json << '\\' << 't'; break;
+			default: json << c;
+		}
+
+	json << R"(" }})";
+	m_areaVisualizations[id].content = json.str();
+	m_areaVisualizations[id].contentVersion++;
+}
 
 
 

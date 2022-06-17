@@ -94,6 +94,15 @@ ClockType *DesignScope::createClock(Args&&... args) {
 	return node;
 }
 
+
+template<class SimVizClass>
+void addSimViz(const SimVizClass &simViz) 
+{
+	DesignScope::get()->getCircuit().addSimulationVisualization(simViz);
+}
+	
+
+
 /** @}*/
 
 }

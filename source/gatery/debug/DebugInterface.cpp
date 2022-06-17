@@ -57,6 +57,16 @@ void changeState(State state)
 	DebugInterface::instance->changeState(state);
 }
 
+size_t createAreaVisualization(unsigned width, unsigned height)
+{
+	return DebugInterface::instance->createAreaVisualization(width, height);
+}
+
+void updateAreaVisualization(size_t id, const std::string content)
+{
+	DebugInterface::instance->updateAreaVisualization(id, std::move(content));
+}
+
 void log(const LogMessage &msg)
 {
 	DebugInterface::instance->log(msg);

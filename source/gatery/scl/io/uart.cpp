@@ -24,6 +24,26 @@ UART::Stream UART::receive(Bit rx)
 {
 	GroupScope entity(GroupScope::GroupType::ENTITY);
 	entity.setName("uart_recv");
+
+	{
+		auto visId = dbg::createAreaVisualization(200, 150);
+
+		std::stringstream content;
+		content << "<div style='margin: 3px;padding: 3px;'>";
+		content << "<h2>UART receiver</h2>";
+		content << "<table>";
+		content << "<tr><td>Stabilizer length</td>  <td>" << stabilize_rx << "</td></tr>";
+		content << "<tr><td>Start bits</td>  <td>" << startBits << "</td></tr>";
+		content << "<tr><td>Data bits</td>   <td>" << dataBits << "</td></tr>";
+		content << "<tr><td>Baud rate</td>   <td>" << baudRate << "</td></tr>";
+		content << "</table>";
+		content << "</div>";
+		dbg::updateAreaVisualization(visId, content.str());		
+	}
+
+
+
+
 																							HCL_NAMED(rx);
 	for ([[maybe_unused]] auto i : utils::Range(stabilize_rx)) {
 		rx = reg(rx, true);
@@ -136,6 +156,23 @@ Bit UART::send(Stream &stream)
 {
 	GroupScope entity(GroupScope::GroupType::ENTITY);
 	entity.setName("uart_send");
+
+	{
+		auto visId = dbg::createAreaVisualization(200, 160);
+
+		std::stringstream content;
+		content << "<div style='margin: 3px;padding: 3px;'>";
+		content << "<h2>UART transmitter</h2>";
+		content << "<table>";
+		content << "<tr><td>Start bits</td>  <td>" << startBits << "</td></tr>";
+		content << "<tr><td>Data bits</td>   <td>" << dataBits << "</td></tr>";
+		content << "<tr><td>Stop bits</td>   <td>" << stopBits << "</td></tr>";
+		content << "<tr><td>Baud rate</td>   <td>" << baudRate << "</td></tr>";
+		content << "</table>";
+		content << "</div>";
+		dbg::updateAreaVisualization(visId, content.str());		
+	}
+
 
 	HCL_DESIGNCHECK_HINT(deriveClock == false, "Not implemented yet!");
 
