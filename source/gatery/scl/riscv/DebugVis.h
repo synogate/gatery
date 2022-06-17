@@ -22,7 +22,7 @@
 namespace gtry::scl::riscv
 {
 
-class Instruction;
+struct Instruction;
 
 void debugVisualizeRiscVRegisterFile(Bit writeRf, UInt wrAddr, UInt wrData, UInt rs1, UInt rs2);
 void debugVisualizeIP(UInt IP);
