@@ -20,8 +20,8 @@
 
 namespace gtry::scl
 {
-	BVec grayencode(UInt val);
-	UInt graydecode(BVec val);
+	BVec grayEncode(UInt val);
+	UInt grayDecode(BVec val);
 
 	template<Signal T>
 	T synchronize(T in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);

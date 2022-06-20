@@ -35,9 +35,9 @@ BOOST_FIXTURE_TEST_CASE(grayCode, BoostUnitTestSimulationFixture)
 	ClockScope clkScp(clock);
 
 	UInt a = pinIn(4_b).setName("a");
-	BVec b = scl::grayencode(a);
+	BVec b = scl::grayEncode(a);
 	pinOut(b).setName("gray");
-	UInt c = scl::graydecode(b);
+	UInt c = scl::grayDecode(b);
 	pinOut(c).setName("decoded");
 
 	addSimulationProcess([&]()->SimProcess {

@@ -18,12 +18,12 @@
 #include "gatery/pch.h"
 #include "cdc.h"
 
-gtry::BVec gtry::scl::grayencode(UInt val)
+gtry::BVec gtry::scl::grayEncode(UInt val)
 {
 	return (BVec)(val ^ (val >> 1));
 }
 
-gtry::UInt gtry::scl::graydecode(BVec val)
+gtry::UInt gtry::scl::grayDecode(BVec val)
 {
 	UInt ret = ConstUInt(0, val.width());
 
