@@ -76,7 +76,7 @@ void renderRegisterFileSvg(std::ostream &stream, const RFMirror &rf,
 	bool readingRegs[32] = {};
 	bool writingRegs[32] = {};
 
-	auto buildWriteLine = [&](const char *style, size_t regIdx) {
+	auto buildWriteLine = [&](const char *style, unsigned regIdx) {
 		auto x = regIdx % 8;
 		auto y = regIdx / 8;
 
@@ -107,7 +107,7 @@ void renderRegisterFileSvg(std::ostream &stream, const RFMirror &rf,
 		}
 	}
 
-	auto buildReadLine = [&](const char *style, size_t regIdx, size_t dst) {
+	auto buildReadLine = [&](const char *style, unsigned regIdx, unsigned dst) {
 		auto x = regIdx % 8;
 		auto y = regIdx / 8;
 
@@ -185,7 +185,7 @@ void renderRegisterFileSvg(std::ostream &stream, const RFMirror &rf,
 					value << std::hex << v;
 			}
 
-			buildField(riscV_regNames[regIdx], value.str().c_str(), 10 + x * 56, (y * 8 + x) * 8.5f, readingRegs[regIdx], writingRegs[regIdx]);
+			buildField(riscV_regNames[regIdx], value.str().c_str(), 10.0f + x * 56.0f, (y * 8.0f + x) * 8.5f, readingRegs[regIdx], writingRegs[regIdx]);
 		}
 	}
 
@@ -232,8 +232,8 @@ void debugVisualizeRiscVRegisterFile(Bit writeRf, UInt wrAddr, UInt wrData, UInt
 					if (!write.get(sim::DefaultConfig::DEFINED, 0))
 						rfMirror.defined[idx] = 0;
 					else {
-						rfMirror.value[idx] = value.head(sim::DefaultConfig::VALUE);
-						rfMirror.defined[idx] = value.head(sim::DefaultConfig::DEFINED);
+						rfMirror.value[idx] = (std::uint32_t) value.head(sim::DefaultConfig::VALUE);
+						rfMirror.defined[idx] = (std::uint32_t) value.head(sim::DefaultConfig::DEFINED);
 					}
 				}
 			}
