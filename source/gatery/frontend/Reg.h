@@ -32,7 +32,7 @@ namespace gtry
 	class Clock;
 
 	struct RegisterSettings {
-		boost::optional<Clock&> clock;
+		boost::optional<const Clock&> clock;
 		bool allowRetimingBackward = false;
 		bool allowRetimingForward = false;
 	};
