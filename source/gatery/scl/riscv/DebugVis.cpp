@@ -76,12 +76,12 @@ void renderRegisterFileSvg(std::ostream &stream, const RFMirror &rf,
 	bool readingRegs[32] = {};
 	bool writingRegs[32] = {};
 
-	auto buildWriteLine = [&](const char *style, unsigned regIdx) {
+	auto buildWriteLine = [&](const char *style, size_t regIdx) {
 		auto x = regIdx % 8;
 		auto y = regIdx / 8;
 
 		float fy = (y * 8 + x) * 8.5f + 8.0f;
-		float fx = 10 + x * 56;
+		float fx = 10.0f + x * 56.0f;
 
 		stream << boost::format(R"_(
 			<polyline style='fill:none;%s' points='0,140 5,140 5,%f %f,%f'/>
@@ -107,15 +107,15 @@ void renderRegisterFileSvg(std::ostream &stream, const RFMirror &rf,
 		}
 	}
 
-	auto buildReadLine = [&](const char *style, unsigned regIdx, unsigned dst) {
+	auto buildReadLine = [&](const char *style, size_t regIdx, size_t dst) {
 		auto x = regIdx % 8;
 		auto y = regIdx / 8;
 
 		float fy = (y * 8 + x) * 8.5f + 8.0f;
-		float fx = 10 + x * 56 + 48;
+		float fx = 10.0f + x * 56.0f + 48.0f;
 
-		float routingX = 460 + dst*5;
-		float exitY = 135 + dst * 10;
+		float routingX = 460.0f + dst*5.0f;
+		float exitY = 135.0f + dst * 10.0f;
 
 		stream << boost::format(R"_(
 			<polyline style='fill:none;%s' points='%f,%f %f,%f %f,%f 470,%f'/>
