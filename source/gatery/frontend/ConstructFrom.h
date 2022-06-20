@@ -74,4 +74,15 @@ namespace gtry
 			return T{ std::forward<std::remove_cvref_t<decltype(args)>>(constructFrom(args))...};
 		});
 	}
+
+	template<Signal T>
+	T dontCare(const T& blueprint)
+	{
+		// TODO: we should add some kine of read dont care to 
+		//		 ignore conditional scopes on first assignment.
+
+		T ret = constructFrom(blueprint);
+		unpack(ConstUInt(width(ret)), ret);
+		return ret;
+	}
 }
