@@ -245,17 +245,23 @@ namespace gtry
 		return pack(ret);
 	}
 
-	SignalTapHelper sim_assert(const Bit &condition)
+	SignalTapHelper sim_assert(Bit condition)
 	{
+		if(auto* scope = ConditionalScope::get())
+			condition |= !Bit(SignalReadPort{ scope->getFullCondition() });
+
 		SignalTapHelper helper(hlim::Node_SignalTap::LVL_ASSERT);
-		helper.triggerIfNot(/*(!ConditionalScope::getCurrentCondition()) | */condition);
+		helper.triggerIfNot(condition);
 		return helper;
 	}
 
-	SignalTapHelper sim_warnIf(const Bit &condition)
+	SignalTapHelper sim_warnIf(Bit condition)
 	{
+		if(auto* scope = ConditionalScope::get())
+			condition |= !Bit(SignalReadPort{ scope->getFullCondition() });
+
 		SignalTapHelper helper(hlim::Node_SignalTap::LVL_WARN);
-		helper.triggerIf(/*ConditionalScope::getCurrentCondition() & */condition);
+		helper.triggerIf(condition);
 		return helper;
 	}
 
@@ -274,10 +280,13 @@ namespace gtry
 		return helper;
 	}
 
-	SignalTapHelper sim_debugIf(const Bit &condition)
+	SignalTapHelper sim_debugIf(Bit condition)
 	{
+		if(auto* scope = ConditionalScope::get())
+			condition |= !Bit(SignalReadPort{ scope->getFullCondition() });
+
 		SignalTapHelper helper(hlim::Node_SignalTap::LVL_DEBUG);
-		helper.triggerIf(/*ConditionalScope::getCurrentCondition() & */condition);
+		helper.triggerIf(condition);
 		return helper;
 	}
 }

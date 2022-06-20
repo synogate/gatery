@@ -140,12 +140,12 @@ class SignalTapHelper
 
 
 
-SignalTapHelper sim_assert(const Bit &condition);
-SignalTapHelper sim_warnIf(const Bit &condition);
+SignalTapHelper sim_assert(Bit condition);
+SignalTapHelper sim_warnIf(Bit condition);
 
 SignalTapHelper sim_debug();
 SignalTapHelper sim_debugAlways();
-SignalTapHelper sim_debugIf(const Bit &condition);
+SignalTapHelper sim_debugIf(Bit condition);
 
 
 
