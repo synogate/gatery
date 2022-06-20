@@ -722,6 +722,7 @@ template<class Config>
 typename Config::BaseType BitVectorState<Config>::extractNonStraddling(typename Config::Plane plane, size_t start, size_t size) const
 {
 	HCL_ASSERT(start % Config::NUM_BITS_PER_BLOCK + size <= Config::NUM_BITS_PER_BLOCK);
+	HCL_ASSERT(start / Config::NUM_BITS_PER_BLOCK < m_values[plane].size());
 	return utils::bitfieldExtract(m_values[plane][start / Config::NUM_BITS_PER_BLOCK], start % Config::NUM_BITS_PER_BLOCK, size);
 }
 
