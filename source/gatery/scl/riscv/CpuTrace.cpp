@@ -40,7 +40,7 @@ void gtry::scl::riscv::CpuTrace::writeVcd() const
 {
 	pinOut();
 
-	Clock& clk = ClockScope::getClk();
+	const Clock& clk = ClockScope::getClk();
 
 	std::string orgname = name;
 	std::string filename = name;

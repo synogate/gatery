@@ -21,6 +21,7 @@
 #include "SimulatorCallbacks.h"
 
 #include "simProc/SimulationProcess.h"
+#include "SimulationVisualization.h"
 
 #include "../hlim/NodeIO.h"
 #include "../hlim/Clock.h"
@@ -104,6 +105,7 @@ class Simulator
 		inline const hlim::ClockRational &getCurrentSimulationTime() { return m_simulationTime; }
 
 		virtual void addSimulationProcess(std::function<SimulationProcess()> simProc) = 0;
+		virtual void addSimulationVisualization(sim::SimulationVisualization simVis) = 0;
 
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor, utils::RestrictTo<RunTimeSimulationContext>) = 0;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil, utils::RestrictTo<RunTimeSimulationContext>) = 0;

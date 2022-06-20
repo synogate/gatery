@@ -409,9 +409,13 @@ ReferenceSimulator::ReferenceSimulator()
 void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs, bool ignoreSimulationProcesses)
 {
 
-	if (!ignoreSimulationProcesses)
+	if (!ignoreSimulationProcesses) {
 		for (const auto &simProc : circuit.getSimulationProcesses())
 			addSimulationProcess(simProc);
+
+		for (const auto &simVis : circuit.getSimulationVisualizations())
+			addSimulationVisualization(simVis);
+	}
 
 	auto nodes = hlim::Subnet::allForSimulation(const_cast<hlim::Circuit&>(circuit), outputs);
 
@@ -552,6 +556,14 @@ void ReferenceSimulator::powerOn()
 		if (m_stateNeedsReevaluating)
 			reevaluate();
 	}
+
+	{
+		RunTimeSimulationContext context(this);
+		for (auto i : utils::Range(m_simViz.size())) {
+			if (m_simViz[i].reset)
+				m_simViz[i].reset(m_simVizStates.data() + m_simVizStateOffsets[i]);
+		}
+	}
 }
 
 void ReferenceSimulator::reevaluate()
@@ -574,7 +586,7 @@ void ReferenceSimulator::commitState()
 
 void ReferenceSimulator::advanceEvent()
 {
-	//std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+//	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 	m_performanceStats.thisEventNumReEvals = 0;
 
 	m_abortCalled = false;
@@ -683,11 +695,29 @@ void ReferenceSimulator::advanceEvent()
 
 	m_currentTimeStepFinished = true;
 
-	if (m_performanceStats.totalRuntimeNumEvents % 100 == 0)
+
+	{
+		RunTimeSimulationContext context(this);
+		for (auto i : utils::Range(m_simViz.size())) {
+			if (m_simViz[i].capture)
+				m_simViz[i].capture(m_simVizStates.data() + m_simVizStateOffsets[i]);
+		}
+	}
+
+
+	if (m_performanceStats.totalRuntimeNumEvents % 10000 == 0) {
+		{
+			RunTimeSimulationContext context(this);
+			for (auto i : utils::Range(m_simViz.size())) {
+				if (m_simViz[i].render)
+					m_simViz[i].render(m_simVizStates.data() + m_simVizStateOffsets[i]);
+			}
+		}
 		dbg::operate();
+	}
 
 	m_performanceStats.totalRuntimeNumEvents++;
-	m_performanceStats.totalRuntimeNumEvents += m_performanceStats.thisEventNumReEvals;
+	m_performanceStats.numReEvals += m_performanceStats.thisEventNumReEvals;
 /*
 	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
@@ -699,7 +729,7 @@ void ReferenceSimulator::advanceEvent()
 			<< "   simulation time: " << m_simulationTime.numerator() / (double) m_simulationTime.denominator()  << " s\n"
 			<< "   numEvents: " << m_performanceStats.totalRuntimeNumEvents << '\n'
 			<< "   avg runtime per event: " << m_performanceStats.totalRuntimeUs / m_performanceStats.totalRuntimeNumEvents << " us\n"
-			<< "   avg reevaluations per event: " << m_performanceStats.totalRuntimeNumEvents / (double)  m_performanceStats.totalRuntimeNumEvents << '\n'
+			<< "   avg reevaluations per event: " << m_performanceStats.numReEvals / (double)  m_performanceStats.totalRuntimeNumEvents << '\n'
 			<< std::flush;
 	}
 */
@@ -816,6 +846,14 @@ std::array<bool, DefaultConfig::NUM_PLANES> ReferenceSimulator::getValueOfReset(
 void ReferenceSimulator::addSimulationProcess(std::function<SimulationProcess()> simProc)
 {
 	m_simProcs.push_back(std::move(simProc));
+}
+
+void ReferenceSimulator::addSimulationVisualization(sim::SimulationVisualization simVis)
+{
+	HCL_ASSERT(simVis.stateAlignment <= 8);
+	m_simVizStateOffsets.push_back(m_simVizStates.size());
+	m_simVizStates.resize(m_simVizStates.size() + (simVis.stateSize + 7)/8);
+	m_simViz.push_back(std::move(simVis));
 }
 
 void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor, utils::RestrictTo<RunTimeSimulationContext>)

@@ -93,7 +93,7 @@ class BitVectorState
 		inline size_t getNumBlocks() const { return m_values[0].size(); }
 		void clear();
 
-		bool get(typename Config::Plane plane, size_t idx) const;
+		bool get(typename Config::Plane plane, size_t idx = 0) const;
 		void set(typename Config::Plane plane, size_t idx);
 		void set(typename Config::Plane plane, size_t idx, bool bit);
 		void clear(typename Config::Plane plane, size_t idx);
@@ -114,6 +114,8 @@ class BitVectorState
 
 		typename Config::BaseType extract(typename Config::Plane plane, size_t offset, size_t size) const;
 		typename Config::BaseType extractNonStraddling(typename Config::Plane plane, size_t start, size_t size) const;
+
+		typename Config::BaseType head(typename Config::Plane plane) const { return extractNonStraddling(plane, 0, size()); }
 
 		void insert(typename Config::Plane plane, size_t start, size_t size, typename Config::BaseType value);
 		void insertNonStraddling(typename Config::Plane plane, size_t start, size_t size, typename Config::BaseType value);

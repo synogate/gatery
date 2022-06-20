@@ -23,6 +23,7 @@
 #include "ConnectionType.h"
 #include "Clock.h"
 #include "../simulation/simProc/SimulationProcess.h"
+#include "../simulation/SimulationVisualization.h"
 
 #include <vector>
 #include <memory>
@@ -152,6 +153,10 @@ class Circuit
 		void addSimulationProcess(std::function<sim::SimulationProcess()> simProc) { m_simulationProcesses.push_back(std::move(simProc)); }
 		inline const std::vector<std::function<sim::SimulationProcess()>> &getSimulationProcesses() const { return m_simulationProcesses; }
 
+		template<class SimVizClass>
+		void addSimulationVisualization(const SimVizClass &simViz) { m_simulationVisualizations.push_back(simViz.stripType()); }
+		inline const std::vector<sim::SimulationVisualization> &getSimulationVisualizations() const { return m_simulationVisualizations; }
+
 		std::uint64_t allocateGroupId() { return m_nextGroupId++; }
 	protected:
 		std::vector<std::unique_ptr<BaseNode>> m_nodes;
@@ -163,6 +168,7 @@ class Circuit
 		std::uint64_t m_nextGroupId = 0;
 
 		std::vector<std::function<sim::SimulationProcess()>> m_simulationProcesses;
+		std::vector<sim::SimulationVisualization> m_simulationVisualizations;
 };
 
 
