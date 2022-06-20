@@ -41,36 +41,41 @@ namespace gtry::scl
 
 		size_t depth();
 
-		// NOTE: always push before pop for correct conflict resolution
-		// TODO: fix above note by adding explicit write before read conflict resulution to bram
+		// push clock domain
 		void push(TData data);
+		const Bit& full() const { return m_pushFull; }
+		Bit almostFull(const UInt& level);
 
+		// pop clock domain
 		TData peak() const;
 		void pop();
-
-		const Bit& empty() const { return m_empty; }
-		const Bit& full() const { return m_full; }
-
+		const Bit& empty() const { return m_popEmpty; }
 		Bit almostEmpty(const UInt& level);
-		Bit almostFull(const UInt& level);
-	private:
+
+	protected:
+		virtual void selectFifo(size_t minDepth, const TData& ref);
+
+		virtual void generate();
+		virtual void generateCdc(const UInt& pushPut, UInt& pushGet, UInt& popPut, const UInt& popGet);
+		virtual UInt generatePush(Memory<TData>& mem, const UInt& getAddr);
+		virtual UInt generatePop(const Memory<TData>& mem, const UInt& putAddr);
+
 		Area m_area;
 
-		Memory<UInt>	m_mem;
-		UInt m_put;
-		UInt m_get;
-		UInt m_size;
+		std::optional<Clock> m_pushClock;
+		Bit m_pushFull;
+		Bit m_pushValid;
+		TData m_pushData;
+		UInt m_pushSize;
 
-		UInt m_peakData;
+		std::optional<Clock> m_popClock;
+		Bit m_popEmpty;
+		Bit m_popValid;
+		TData m_peakData;
+		UInt m_popSize;
 
-		Bit m_full;
-		Bit m_empty;
-
-		std::optional<TData> m_defaultValue;
-
-		bool m_hasMem = false;
-		bool m_hasPush = false;
-		bool m_hasPop = false;
+	private:
+		bool m_hasSetup = false;
 	};
 
 	template<typename TData>
@@ -83,14 +88,108 @@ namespace gtry::scl
 	template<typename TData>
 	inline void Fifo<TData>::setup(size_t minDepth, TData ref)
 	{
-		auto scope = m_area.enter();
+		HCL_DESIGNCHECK_HINT(!m_hasSetup, "fifo already initialized");
+		m_hasSetup = true;
 
-		m_defaultValue = std::move(ref);
-		auto wordWidth = width(*m_defaultValue);
-		m_peakData = wordWidth;
+		auto scope = m_area.enter();
+		selectFifo(minDepth, ref);
+
+		m_peakData = constructFrom(ref);
+		HCL_NAMED(m_peakData);
+
+		const auto ctrWidth = BitWidth::count(depth()) + 1;
+		m_popSize = ctrWidth;
+		HCL_NAMED(m_popSize);
+		m_pushSize = ctrWidth;
+		HCL_NAMED(m_pushSize);
+
+		m_popValid = '0';
+		m_pushValid = '0';
+		m_pushData = dontCare(ref);
+	}
+
+	template<typename TData>
+	inline void Fifo<TData>::push(TData data)
+	{
+		auto scope = m_area.enter();
+		HCL_DESIGNCHECK_HINT(m_hasSetup, "fifo not initialized");
+
+		const bool hadPush = m_pushClock.has_value();
+		m_pushClock = ClockScope::getClk();
+		m_pushValid = !m_pushFull; // TODO: assert
+		m_pushData = data;
+
+		if(!hadPush && m_popClock.has_value())
+			generate();
+	}
+
+	template<typename TData>
+	inline TData gtry::scl::Fifo<TData>::peak() const
+	{
+		HCL_DESIGNCHECK_HINT(m_hasSetup, "fifo not initialized");
+		return m_peakData;
+	}
+
+	template<typename TData>
+	inline void Fifo<TData>::pop()
+	{
+		auto scope = m_area.enter();
+		HCL_DESIGNCHECK_HINT(m_hasSetup, "fifo not initialized");
+
+		const bool hadPop = m_popClock.has_value();
+		m_popClock = ClockScope::getClk();
+		m_popValid = !m_popEmpty; // TODO: assert
+
+		if(!hadPop && m_pushClock.has_value())
+			generate();
+	}
+
+	template<typename TData>
+	inline Bit gtry::scl::Fifo<TData>::almostEmpty(const UInt& level) 
+	{ 
+		auto *meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
+		auto scope = m_area.enter();
+		HCL_DESIGNCHECK_HINT(m_hasSetup, "fifo not initialized");
+
+		std::string levelName = (boost::format("almost_empty_level_%d") % meta->almostEmptySignalLevel.size()).str();
+		std::string signalName = (boost::format("almost_empty_%d") % meta->almostEmptySignalLevel.size()).str();
+		meta->almostEmptySignalLevel.push_back({signalName, levelName});
+
+		UInt namedLevel = level;
+		namedLevel.setName(levelName);
+
+		Bit ae = reg(m_popSize <= namedLevel, '1');
+		ae.setName(signalName);
+		return ae;
+	}
+
+	template<typename TData>
+	inline Bit gtry::scl::Fifo<TData>::almostFull(const UInt& level) 
+	{ 
+		auto *meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
+		auto scope = m_area.enter();
+		HCL_DESIGNCHECK_HINT(m_hasSetup, "fifo not initialized");
+
+		std::string levelName = (boost::format("almost_full_level_%d") % meta->almostFullSignalLevel.size()).str();
+		std::string signalName = (boost::format("almost_full_%d") % meta->almostFullSignalLevel.size()).str();
+		meta->almostFullSignalLevel.push_back({signalName, levelName});
+
+		HCL_ASSERT_HINT(meta->fifoChoice.readWidth == meta->fifoChoice.writeWidth, "Almost full level computation assumes no mixed read/write widths");
+		UInt namedLevel = meta->fifoChoice.readDepth - level;
+		namedLevel.setName(levelName);
+
+		Bit af = reg(m_pushSize >= namedLevel, '0');
+		af.setName(signalName);
+		return af; 
+	}
+
+	template<typename TData>
+	inline void Fifo<TData>::selectFifo(size_t minDepth, const TData& ref)
+	{
+		auto wordWidth = width(ref);
 
 		FifoCapabilities::Request fifoRequest;
-		fifoRequest.readDepth.atLeast((uint32_t)minDepth);
+		fifoRequest.readDepth.atLeast(minDepth);
 		fifoRequest.readWidth = wordWidth.value;
 		fifoRequest.writeWidth = wordWidth.value;
 		fifoRequest.outputIsFallthrough = true;
@@ -106,138 +205,90 @@ namespace gtry::scl
 		fifoRequest.latency_write_almostFull = 1;
 		fifoRequest.latency_read_almostFull = 1;
 
-		auto *meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
-		FifoCapabilities::Choice &fifoChoice = meta->fifoChoice;
+		FifoCapabilities::Choice choice = TechnologyScope::getCap<FifoCapabilities>().select(fifoRequest);
+		HCL_DESIGNCHECK_HINT(utils::isPow2(choice.readDepth), "The SCL fifo implementation only works for power of 2 depths!");
 
-		fifoChoice = TechnologyScope::getCap<FifoCapabilities>().select(fifoRequest);
-		HCL_DESIGNCHECK_HINT(utils::isPow2(fifoChoice.readDepth), "The SCL fifo implementation only works for power of 2 depths!");
-
-		HCL_DESIGNCHECK_HINT(!m_hasMem, "fifo already initialized");
-		m_hasMem = true;
-		m_mem.setup(fifoChoice.readDepth, wordWidth);
-		m_mem.setType(MemType::DONT_CARE, 1);
-		m_mem.setName("scl_fifo_memory");
-
-		const BitWidth ctrWidth = m_mem.addressWidth() + 1;
-		m_put = ctrWidth;
-		m_get = ctrWidth;
-		m_size = m_put - m_get;
-		HCL_NAMED(m_size);
-
-		Bit eq = m_put(0, -1) == m_get(0, -1);
-		HCL_NAMED(eq);
-
-		m_full = eq & (m_put.msb() != m_get.msb());
-		m_empty = eq & (m_put.msb() == m_get.msb());
-
-		m_full = reg(m_full, '0');
-		m_empty = reg(m_empty, '1');
-		setName(m_full, "full");
-		setName(m_empty, "empty");
-
+		auto* meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
+		meta->fifoChoice = choice;
 	}
 
 	template<typename TData>
-	inline void Fifo<TData>::push(TData data)
+	inline void Fifo<TData>::generate()
 	{
-		auto scope = m_area.enter();
-		HCL_DESIGNCHECK_HINT(m_hasMem, "fifo not initialized");
-		HCL_DESIGNCHECK_HINT(!m_hasPush, "fifo push port already constructed");
-		m_hasPush = true;
+		auto scopeLock = ConditionalScope::lock(); // exit conditionals
 
-		auto scopeLock = ConditionalScope::lock();
-		Bit valid{ SignalReadPort{scopeLock->getFullCondition()} };
+		Memory<TData> mem{ depth(), m_peakData };
+		mem.setType(MemType::DONT_CARE, 1);
+		mem.setName("scl_fifo_memory");
 
-		setName(data, "in_data");
-		UInt packedData = pack(data);
-		setName(packedData, "in_data_packed");
-		setName(valid, "in_valid");
+		const BitWidth ctrWidth = mem.addressWidth() + 1;
+		UInt pushGet = ctrWidth;
+		HCL_NAMED(pushGet);
+		UInt popPut = ctrWidth;
+		HCL_NAMED(popPut);
 
-		sim_assert(!valid | !m_full) << "push into full fifo";
+		UInt pushPut = generatePush(mem, pushGet);
+		HCL_NAMED(pushPut);
+		UInt popGet = generatePop(mem, popPut);
+		HCL_NAMED(popGet);
 
-		m_put = reg(m_put, 0);
-
-		IF(valid)
+		// TODO: check for clock domain crossing
+		if(true)
 		{
-			m_mem[m_put(0, -1)] = packedData;
-			m_put += 1;
+			pushGet = popGet;
+			popPut = pushPut;
 		}
-		HCL_NAMED(m_put);
+		else
+		{
+			generateCdc(pushPut, pushGet, popPut, popGet);
+		}
+
+		m_pushFull = reg(pushPut.msb() != pushGet.msb() & pushPut(0, -1) == pushGet(0, -1), '0');
+		HCL_NAMED(m_pushFull);
+
+		m_popEmpty = reg(popPut.msb() == popGet.msb() & popPut(0, -1) == popGet(0, -1), '1');
+		HCL_NAMED(m_popEmpty);
+
+		m_pushSize = pushPut - pushGet;
+		m_popSize = popPut - popGet;
 	}
 
 	template<typename TData>
-	inline TData gtry::scl::Fifo<TData>::peak() const
+	inline void Fifo<TData>::generateCdc(const UInt& pushPut, UInt& pushGet, UInt& popPut, const UInt& popGet)
 	{
-		auto scope = m_area.enter();
-		HCL_DESIGNCHECK_HINT(m_hasMem, "fifo not initialized");
-
-		TData ret = constructFrom(*m_defaultValue);
-		unpack(m_peakData, ret);
-		setName(ret, "out_data");
-		return ret;
+		HCL_ASSERT(!"no impl");
+		// TODO: implement gray counter synchronizer and constraints
 	}
 
 	template<typename TData>
-	inline void Fifo<TData>::pop()
+	inline UInt Fifo<TData>::generatePush(Memory<TData>& mem, const UInt& get)
 	{
-		auto scope = m_area.enter();
-		HCL_DESIGNCHECK_HINT(m_hasMem, "fifo not initialized");
-		HCL_DESIGNCHECK_HINT(!m_hasPop, "fifo pop port already constructed");
-		m_hasPop = true;
+		HCL_NAMED(m_pushValid);
+		HCL_NAMED(m_pushData);
 
-		auto scopeLock = ConditionalScope::lock();
-		Bit ready{ SignalReadPort{scopeLock->getFullCondition()} };
+		UInt put = get.width();
+		put = reg(put, 0, { .clock = *m_pushClock });
 
-		setName(ready, "out_ready");
-
-		sim_assert(!ready | !m_empty) << "pop from empty fifo";
-
-		m_get = reg(m_get, 0);
-		IF(ready)
-			m_get += 1;
-		HCL_NAMED(m_get);
-
-		m_peakData = reg(m_mem[m_get(0, -1)], {.allowRetimingBackward=true});
-		setName(m_peakData, "out_data_packed");
+		IF(m_pushValid)
+		{
+			mem[put(0, -1)] = m_pushData;
+			put += 1;
+		}
+		return put;
 	}
 
 	template<typename TData>
-	inline Bit gtry::scl::Fifo<TData>::almostEmpty(const UInt& level) 
-	{ 
-		auto *meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
-		auto scope = m_area.enter();
-		HCL_DESIGNCHECK_HINT(m_hasMem, "fifo not initialized");
+	inline UInt Fifo<TData>::generatePop(const Memory<TData>& mem, const UInt& put)
+	{
+		HCL_NAMED(m_popValid);
 
-		std::string levelName = (boost::format("almost_empty_level_%d") % meta->almostEmptySignalLevel.size()).str();
-		std::string signalName = (boost::format("almost_empty_%d") % meta->almostEmptySignalLevel.size()).str();
-		meta->almostEmptySignalLevel.push_back({signalName, levelName});
+		UInt get = put.width();
+		get = reg(get, 0, { .clock = *m_popClock });
 
-		UInt namedLevel = level;
-		namedLevel.setName(levelName);
-
-		Bit ae = reg(m_size <= namedLevel, '1');
-		ae.setName(signalName);
-		return ae;
-	}
-
-	template<typename TData>
-	inline Bit gtry::scl::Fifo<TData>::almostFull(const UInt& level) 
-	{ 
-		auto *meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
-		auto scope = m_area.enter();
-		HCL_DESIGNCHECK_HINT(m_hasMem, "fifo not initialized");
-
-		std::string levelName = (boost::format("almost_full_level_%d") % meta->almostFullSignalLevel.size()).str();
-		std::string signalName = (boost::format("almost_full_%d") % meta->almostFullSignalLevel.size()).str();
-		meta->almostFullSignalLevel.push_back({signalName, levelName});
-
-		HCL_ASSERT_HINT(meta->fifoChoice.readWidth == meta->fifoChoice.writeWidth, "Almost full level computation assumes no mixed read/write widths");
-		UInt namedLevel = meta->fifoChoice.readDepth - level;
-		namedLevel.setName(levelName);
-
-		Bit af = reg(m_size >= namedLevel, '0');
-		af.setName(signalName);
-		return af; 
+		IF(m_popValid)
+			get += 1;
+		
+		m_peakData = reg(mem[get(0, -1)], { .clock = *m_popClock, .allowRetimingBackward = true });
+		return get;
 	}
 }
-
