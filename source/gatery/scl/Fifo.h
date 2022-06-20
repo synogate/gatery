@@ -155,17 +155,13 @@ namespace gtry::scl
 
 		sim_assert(!valid | !m_full) << "push into full fifo";
 
-		UInt put = m_put.width();
-		put = reg(put, 0);
-		HCL_NAMED(put);
+		m_put = reg(m_put, 0);
 
 		IF(valid)
 		{
-			m_mem[put(0, -1)] = packedData;
-			put += 1;
+			m_mem[m_put(0, -1)] = packedData;
+			m_put += 1;
 		}
-
-		m_put = put;
 		HCL_NAMED(m_put);
 	}
 
@@ -196,18 +192,13 @@ namespace gtry::scl
 
 		sim_assert(!ready | !m_empty) << "pop from empty fifo";
 
-		UInt get = m_get.width();
-		get = reg(get, 0);
-		HCL_NAMED(get);
-
+		m_get = reg(m_get, 0);
 		IF(ready)
-			get += 1;
-
-		m_peakData = reg(m_mem[get(0, -1)], {.allowRetimingBackward=true});
-		setName(m_peakData, "out_data_packed");
-
-		m_get = get;
+			m_get += 1;
 		HCL_NAMED(m_get);
+
+		m_peakData = reg(m_mem[m_get(0, -1)], {.allowRetimingBackward=true});
+		setName(m_peakData, "out_data_packed");
 	}
 
 	template<typename TData>
