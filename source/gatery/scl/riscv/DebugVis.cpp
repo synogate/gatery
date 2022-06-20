@@ -81,7 +81,7 @@ void renderRegisterFileSvg(std::ostream &stream, const RFMirror &rf,
 		auto y = regIdx / 8;
 
 		float fy = (y * 8 + x) * 8.5f + 8.0f;
-		float fx = 10 + x * 56;
+		float fx = 10.f + x * 56;
 
 		stream << boost::format(R"_(
 			<polyline style='fill:none;%s' points='0,140 5,140 5,%f %f,%f'/>
@@ -112,10 +112,10 @@ void renderRegisterFileSvg(std::ostream &stream, const RFMirror &rf,
 		auto y = regIdx / 8;
 
 		float fy = (y * 8 + x) * 8.5f + 8.0f;
-		float fx = 10 + x * 56 + 48;
+		float fx = 10.f + x * 56 + 48;
 
-		float routingX = 460 + dst*5;
-		float exitY = 135 + dst * 10;
+		float routingX = 460.f + dst*5;
+		float exitY = 135.f + dst * 10;
 
 		stream << boost::format(R"_(
 			<polyline style='fill:none;%s' points='%f,%f %f,%f %f,%f 470,%f'/>
@@ -185,7 +185,7 @@ void renderRegisterFileSvg(std::ostream &stream, const RFMirror &rf,
 					value << std::hex << v;
 			}
 
-			buildField(riscV_regNames[regIdx], value.str().c_str(), 10 + x * 56, (y * 8 + x) * 8.5f, readingRegs[regIdx], writingRegs[regIdx]);
+			buildField(riscV_regNames[regIdx], value.str().c_str(), 10.f + x * 56, (y * 8 + x) * 8.5f, readingRegs[regIdx], writingRegs[regIdx]);
 		}
 	}
 
@@ -232,8 +232,8 @@ void debugVisualizeRiscVRegisterFile(Bit writeRf, UInt wrAddr, UInt wrData, UInt
 					if (!write.get(sim::DefaultConfig::DEFINED, 0))
 						rfMirror.defined[idx] = 0;
 					else {
-						rfMirror.value[idx] = value.head(sim::DefaultConfig::VALUE);
-						rfMirror.defined[idx] = value.head(sim::DefaultConfig::DEFINED);
+						rfMirror.value[idx] = (uint32_t)value.head(sim::DefaultConfig::VALUE);
+						rfMirror.defined[idx] = (uint32_t)value.head(sim::DefaultConfig::DEFINED);
 					}
 				}
 			}
