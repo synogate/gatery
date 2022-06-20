@@ -22,24 +22,43 @@
 
 namespace gtry::scl
 {
-
-	class FifoMeta : public hlim::NodeGroupMetaInfo
+	struct FifoMeta : hlim::NodeGroupMetaInfo
 	{
-		public:
-			FifoCapabilities::Choice fifoChoice;
-			std::vector<std::pair<std::string, std::string>> almostFullSignalLevel;
-			std::vector<std::pair<std::string, std::string>> almostEmptySignalLevel;
+		FifoCapabilities::Choice fifoChoice;
+		std::vector<std::pair<std::string, std::string>> almostFullSignalLevel;
+		std::vector<std::pair<std::string, std::string>> almostEmptySignalLevel;
 	};
 
-	template<typename TData>
+	struct TrueAfterMove
+	{
+		TrueAfterMove() = default;
+		TrueAfterMove(TrueAfterMove&& o) noexcept
+		{
+			val = o.val;
+			o.val = true;
+		}
+
+		operator bool() const { return val; }
+		TrueAfterMove& operator = (bool nval) { val = nval; return *this; }
+
+		bool val = false;
+	};
+
+	template<Signal TData>
 	class Fifo
 	{
 	public:
 		Fifo() : m_area("scl_fifo") { m_area.getNodeGroup()->createMetaInfo<FifoMeta>(); }
-		Fifo(size_t minDepth, TData ref) : Fifo() { setup(minDepth, std::move(ref)); }
-		void setup(size_t minDepth, TData ref);
+		Fifo(const Fifo&) = delete;
+		Fifo(Fifo&&) = default;
+		Fifo(size_t minDepth, const TData& ref) : Fifo() { setup(minDepth, std::move(ref)); }
+		~Fifo() noexcept(false);
+
+		void setup(size_t minDepth, const TData& ref);
+		virtual void generate();
 
 		size_t depth();
+		BitWidth wordWidth() const { return width(m_peakData); }
 
 		// push clock domain
 		void push(TData data);
@@ -55,7 +74,6 @@ namespace gtry::scl
 	protected:
 		virtual void selectFifo(size_t minDepth, const TData& ref);
 
-		virtual void generate();
 		virtual void generateCdc(const UInt& pushPut, UInt& pushGet, UInt& popPut, const UInt& popGet);
 		virtual UInt generatePush(Memory<TData>& mem, const UInt& getAddr);
 		virtual UInt generatePop(const Memory<TData>& mem, const UInt& putAddr);
@@ -76,17 +94,25 @@ namespace gtry::scl
 
 	private:
 		bool m_hasSetup = false;
+		TrueAfterMove m_hasGenerate;
 	};
 
-	template<typename TData>
-	inline size_t Fifo<TData>::depth() {
-		auto *meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
-		FifoCapabilities::Choice &fifoChoice = meta->fifoChoice;
+	template<Signal TData>
+	inline Fifo<TData>::~Fifo() noexcept(false)
+	{
+		HCL_ASSERT(m_hasGenerate);
+	}
+
+	template<Signal TData>
+	inline size_t Fifo<TData>::depth()
+	{
+		auto* meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
+		FifoCapabilities::Choice& fifoChoice = meta->fifoChoice;
 		return fifoChoice.readDepth;
 	}
 
-	template<typename TData>
-	inline void Fifo<TData>::setup(size_t minDepth, TData ref)
+	template<Signal TData>
+	inline void Fifo<TData>::setup(size_t minDepth, const TData& ref)
 	{
 		HCL_DESIGNCHECK_HINT(!m_hasSetup, "fifo already initialized");
 		m_hasSetup = true;
@@ -108,52 +134,44 @@ namespace gtry::scl
 		m_pushData = dontCare(ref);
 	}
 
-	template<typename TData>
+	template<Signal TData>
 	inline void Fifo<TData>::push(TData data)
 	{
 		auto scope = m_area.enter();
 		HCL_DESIGNCHECK_HINT(m_hasSetup, "fifo not initialized");
 
-		const bool hadPush = m_pushClock.has_value();
 		m_pushClock = ClockScope::getClk();
-		m_pushValid = !m_pushFull; // TODO: assert
+		m_pushValid = !m_pushFull;
 		m_pushData = data;
-
-		if(!hadPush && m_popClock.has_value())
-			generate();
 	}
 
-	template<typename TData>
+	template<Signal TData>
 	inline TData gtry::scl::Fifo<TData>::peak() const
 	{
 		HCL_DESIGNCHECK_HINT(m_hasSetup, "fifo not initialized");
 		return m_peakData;
 	}
 
-	template<typename TData>
+	template<Signal TData>
 	inline void Fifo<TData>::pop()
 	{
 		auto scope = m_area.enter();
 		HCL_DESIGNCHECK_HINT(m_hasSetup, "fifo not initialized");
 
-		const bool hadPop = m_popClock.has_value();
 		m_popClock = ClockScope::getClk();
-		m_popValid = !m_popEmpty; // TODO: assert
-
-		if(!hadPop && m_pushClock.has_value())
-			generate();
+		m_popValid = !m_popEmpty;
 	}
 
-	template<typename TData>
-	inline Bit gtry::scl::Fifo<TData>::almostEmpty(const UInt& level) 
-	{ 
-		auto *meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
+	template<Signal TData>
+	inline Bit gtry::scl::Fifo<TData>::almostEmpty(const UInt& level)
+	{
+		auto* meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
 		auto scope = m_area.enter();
 		HCL_DESIGNCHECK_HINT(m_hasSetup, "fifo not initialized");
 
 		std::string levelName = (boost::format("almost_empty_level_%d") % meta->almostEmptySignalLevel.size()).str();
 		std::string signalName = (boost::format("almost_empty_%d") % meta->almostEmptySignalLevel.size()).str();
-		meta->almostEmptySignalLevel.push_back({signalName, levelName});
+		meta->almostEmptySignalLevel.push_back({ signalName, levelName });
 
 		UInt namedLevel = level;
 		namedLevel.setName(levelName);
@@ -163,16 +181,16 @@ namespace gtry::scl
 		return ae;
 	}
 
-	template<typename TData>
-	inline Bit gtry::scl::Fifo<TData>::almostFull(const UInt& level) 
-	{ 
-		auto *meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
+	template<Signal TData>
+	inline Bit gtry::scl::Fifo<TData>::almostFull(const UInt& level)
+	{
+		auto* meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
 		auto scope = m_area.enter();
 		HCL_DESIGNCHECK_HINT(m_hasSetup, "fifo not initialized");
 
 		std::string levelName = (boost::format("almost_full_level_%d") % meta->almostFullSignalLevel.size()).str();
 		std::string signalName = (boost::format("almost_full_%d") % meta->almostFullSignalLevel.size()).str();
-		meta->almostFullSignalLevel.push_back({signalName, levelName});
+		meta->almostFullSignalLevel.push_back({ signalName, levelName });
 
 		HCL_ASSERT_HINT(meta->fifoChoice.readWidth == meta->fifoChoice.writeWidth, "Almost full level computation assumes no mixed read/write widths");
 		UInt namedLevel = meta->fifoChoice.readDepth - level;
@@ -180,10 +198,10 @@ namespace gtry::scl
 
 		Bit af = reg(m_pushSize >= namedLevel, '0');
 		af.setName(signalName);
-		return af; 
+		return af;
 	}
 
-	template<typename TData>
+	template<Signal TData>
 	inline void Fifo<TData>::selectFifo(size_t minDepth, const TData& ref)
 	{
 		auto wordWidth = width(ref);
@@ -212,9 +230,13 @@ namespace gtry::scl
 		meta->fifoChoice = choice;
 	}
 
-	template<typename TData>
+	template<Signal TData>
 	inline void Fifo<TData>::generate()
 	{
+		HCL_DESIGNCHECK_HINT(!m_hasGenerate, "generate called twice");
+		m_hasGenerate = true;
+
+		auto scope = m_area.enter();
 		auto scopeLock = ConditionalScope::lock(); // exit conditionals
 
 		Memory<TData> mem{ depth(), m_peakData };
@@ -242,25 +264,16 @@ namespace gtry::scl
 		{
 			generateCdc(pushPut, pushGet, popPut, popGet);
 		}
-
-		m_pushFull = reg(pushPut.msb() != pushGet.msb() & pushPut(0, -1) == pushGet(0, -1), '0');
-		HCL_NAMED(m_pushFull);
-
-		m_popEmpty = reg(popPut.msb() == popGet.msb() & popPut(0, -1) == popGet(0, -1), '1');
-		HCL_NAMED(m_popEmpty);
-
-		m_pushSize = pushPut - pushGet;
-		m_popSize = popPut - popGet;
 	}
 
-	template<typename TData>
+	template<Signal TData>
 	inline void Fifo<TData>::generateCdc(const UInt& pushPut, UInt& pushGet, UInt& popPut, const UInt& popGet)
 	{
 		HCL_ASSERT(!"no impl");
 		// TODO: implement gray counter synchronizer and constraints
 	}
 
-	template<typename TData>
+	template<Signal TData>
 	inline UInt Fifo<TData>::generatePush(Memory<TData>& mem, const UInt& get)
 	{
 		HCL_NAMED(m_pushValid);
@@ -274,10 +287,15 @@ namespace gtry::scl
 			mem[put(0, -1)] = m_pushData;
 			put += 1;
 		}
+
+		m_pushSize = put - get;
+		m_pushFull = reg(put.msb() != get.msb() & put(0, -1) == get(0, -1), '0');
+		HCL_NAMED(m_pushFull);
+
 		return put;
 	}
 
-	template<typename TData>
+	template<Signal TData>
 	inline UInt Fifo<TData>::generatePop(const Memory<TData>& mem, const UInt& put)
 	{
 		HCL_NAMED(m_popValid);
@@ -289,6 +307,11 @@ namespace gtry::scl
 			get += 1;
 		
 		m_peakData = reg(mem[get(0, -1)], { .clock = *m_popClock, .allowRetimingBackward = true });
+
+		m_popSize = put - get;
+		m_popEmpty = reg(put.msb() == get.msb() & put(0, -1) == get(0, -1), '1');
+		HCL_NAMED(m_popEmpty);
+
 		return get;
 	}
 }

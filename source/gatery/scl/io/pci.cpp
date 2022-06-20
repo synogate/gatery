@@ -101,6 +101,7 @@ void gtry::scl::pci::AvmmBridge::generateFifoBridge(Stream<Tlp>& rx, AvalonMM& a
 	if (avmm.ready)
 		*rx.ready &= *avmm.ready;
 
+	resQueue.generate();
 }
 
 gtry::scl::pci::Tlp gtry::scl::pci::Tlp::discardHighAddressBits() const

@@ -23,7 +23,7 @@
 
 #include <gatery/simulation/waveformFormats/VCDSink.h>
 
-#include <gatery/scl/Fifo.h>
+#include <gatery/scl/TransactionalFifo.h>
 
 #include <queue>
 
@@ -34,9 +34,10 @@ struct FifoTest
 {
 	FifoTest(Clock& clk) : clk(clk) {}
 
-	scl::Fifo<UInt> create(size_t depth, BitWidth width)
+	template<typename T = scl::Fifo<UInt>>
+	T create(size_t depth, BitWidth width, bool generate = true)
 	{
-		scl::Fifo<UInt> fifo{ depth, UInt{ width } };
+		T fifo{ depth, UInt{ width } };
 		actualDepth = fifo.depth();
 
 		pushData = width;
@@ -57,6 +58,8 @@ struct FifoTest
 		pinOut(empty).setName("empty");
 		pinOut(full).setName("full");
 
+		if(generate)
+			fifo.generate();
 		return fifo;
 	}
 
@@ -259,4 +262,224 @@ BOOST_FIXTURE_TEST_CASE(Fifo_fuzz, BoostUnitTestSimulationFixture)
 	//design.visualize("fifo_fuzz");
 
 	runTicks(clock.getClk(), 2048);
+}
+
+BOOST_FIXTURE_TEST_CASE(TransactionalFifo_basic, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	FifoTest fifo{ clock };
+	auto&& uut = fifo.create<scl::TransactionalFifo<UInt>>(16, 8_b, false);
+
+	size_t actualDepth = fifo.actualDepth;
+
+	OutputPin halfEmpty = pinOut(uut.almostEmpty(actualDepth / 2)).setName("half_empty");
+	OutputPin halfFull = pinOut(uut.almostFull(actualDepth / 2)).setName("half_full");
+	
+	InputPin pushCommit = pinIn().setName("pushCommit");
+	IF(pushCommit)
+		uut.commitPush();
+	InputPin pushRollback = pinIn().setName("pushRollback");
+	IF(pushRollback)
+		uut.rollbackPush();
+	InputPin popCommit = pinIn().setName("popCommit");
+	IF(popCommit)
+		uut.commitPop();
+	InputPin popRollback = pinIn().setName("popRollback");
+	IF(popRollback)
+		uut.rollbackPop();
+
+	uut.generate();
+
+	addSimulationProcess([=, this]()->SimProcess {
+		simu(fifo.pushData) = 0;
+		simu(fifo.push) = 0;
+		simu(fifo.pop) = 0;
+
+		simu(pushCommit) = 0;
+		simu(pushRollback) = 0;
+		simu(popCommit) = 0;
+		simu(popRollback) = 0;
+
+		for(size_t i = 0; i < 5; ++i)
+			co_await WaitClk(clock);
+
+		for(size_t c : {0, 1})
+		{
+			BOOST_TEST(simu(fifo.empty) == 1);
+			BOOST_TEST(simu(fifo.full) == 0);
+			BOOST_TEST(simu(halfEmpty) == 1);
+			BOOST_TEST(simu(halfFull) == 0);
+
+			for(size_t i = 0; i < actualDepth; ++i)
+			{
+				simu(fifo.push) = '1';
+				simu(fifo.pushData) = i * 3;
+				co_await WaitClk(clock);
+			}
+			simu(fifo.push) = '0';
+			co_await WaitClk(clock);
+
+			BOOST_TEST(simu(fifo.empty) == 1);
+			BOOST_TEST(simu(fifo.full) == 1);
+			BOOST_TEST(simu(halfEmpty) == 1);
+			BOOST_TEST(simu(halfFull) == 1);
+
+			if(c == 0)
+			{
+				simu(pushRollback) = '1';
+				co_await WaitClk(clock);
+				simu(pushRollback) = '0';
+			}
+		}
+
+		simu(pushCommit) = '1';
+		co_await WaitClk(clock);
+		simu(pushCommit) = '0';
+
+		for(size_t c : {0, 1})
+		{
+			BOOST_TEST(simu(fifo.empty) == 0);
+			BOOST_TEST(simu(fifo.full) == 1);
+			BOOST_TEST(simu(halfEmpty) == 0);
+			BOOST_TEST(simu(halfFull) == 1);
+
+			for(size_t i = 0; i < actualDepth; ++i)
+			{
+				simu(fifo.pop) = '1';
+				co_await WaitClk(clock);
+			}
+
+			simu(fifo.pop) = '0';
+			co_await WaitClk(clock);
+
+			BOOST_TEST(simu(fifo.empty) == 1);
+			BOOST_TEST(simu(fifo.full) == 1);
+			BOOST_TEST(simu(halfEmpty) == 1);
+			BOOST_TEST(simu(halfFull) == 1);
+
+			if(c == 0)
+			{
+				simu(popRollback) = '1';
+				co_await WaitClk(clock);
+				simu(popRollback) = '0';
+			}
+		}
+		simu(popCommit) = '1';
+		co_await WaitClk(clock);
+		simu(popCommit) = '0';
+
+		BOOST_TEST(simu(fifo.empty) == 1);
+		BOOST_TEST(simu(fifo.full) == 0);
+		BOOST_TEST(simu(halfEmpty) == 1);
+		BOOST_TEST(simu(halfFull) == 0);
+
+		stopTest();
+	});
+
+	//sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "fifo.vcd" };
+	//vcd.addAllPins();
+	//vcd.addAllNamedSignals();
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	//design.visualize("after");
+
+	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->absoluteFrequency());
+}
+
+BOOST_FIXTURE_TEST_CASE(TransactionalFifo_cutoff, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	FifoTest fifo{ clock };
+	auto&& uut = fifo.create<scl::TransactionalFifo<UInt>>(16, 8_b, false);
+
+	size_t actualDepth = fifo.actualDepth;
+
+	OutputPin halfEmpty = pinOut(uut.almostEmpty(actualDepth / 2)).setName("half_empty");
+	OutputPin halfFull = pinOut(uut.almostFull(actualDepth / 2)).setName("half_full");
+
+	InputPins pushCuttoff = pinIn(5_b).setName("pushCutoff");
+	InputPin pushCommit = pinIn().setName("pushCommit");
+	IF(pushCommit)
+		uut.commitPush(pushCuttoff);
+	InputPin pushRollback = pinIn().setName("pushRollback");
+	IF(pushRollback)
+		uut.rollbackPush();
+	InputPin popCommit = pinIn().setName("popCommit");
+	IF(popCommit)
+		uut.commitPop();
+	InputPin popRollback = pinIn().setName("popRollback");
+	IF(popRollback)
+		uut.rollbackPop();
+
+	uut.generate();
+
+	addSimulationProcess([=, this]()->SimProcess {
+		simu(fifo.pushData) = 0;
+		simu(fifo.push) = 0;
+		simu(fifo.pop) = 0;
+
+		simu(pushCuttoff) = 2;
+		simu(pushCommit) = 0;
+		simu(pushRollback) = 0;
+		simu(popCommit) = 0;
+		simu(popRollback) = 0;
+
+		for(size_t i = 0; i < 5; ++i)
+			co_await WaitClk(clock);
+
+		for(size_t i = 0; i < actualDepth; ++i)
+		{
+			simu(fifo.push) = '1';
+			simu(fifo.pushData) = i * 3;
+			co_await WaitClk(clock);
+		}
+		simu(fifo.push) = '0';
+		co_await WaitClk(clock);
+
+		BOOST_TEST(simu(fifo.empty) == 1);
+		BOOST_TEST(simu(fifo.full) == 1);
+		BOOST_TEST(simu(halfEmpty) == 1);
+		BOOST_TEST(simu(halfFull) == 1);
+
+		simu(pushCommit) = '1';
+		co_await WaitClk(clock);
+		simu(pushCommit) = '0';
+
+		BOOST_TEST(simu(fifo.empty) == 0);
+		BOOST_TEST(simu(fifo.full) == 0);
+		BOOST_TEST(simu(halfEmpty) == 0);
+		BOOST_TEST(simu(halfFull) == 1);
+
+		for(size_t i = 0; i < actualDepth - 2; ++i)
+		{
+			simu(fifo.pop) = '1';
+			BOOST_TEST(simu(fifo.empty) == 0);
+			co_await WaitClk(clock);
+		}
+
+		simu(fifo.pop) = '0';
+		co_await WaitClk(clock);
+
+		BOOST_TEST(simu(fifo.empty) == 1);
+		BOOST_TEST(simu(fifo.full) == 0);
+		BOOST_TEST(simu(halfEmpty) == 1);
+		BOOST_TEST(simu(halfFull) == 1);
+
+		stopTest();
+	});
+
+	addSimulationProcess(fifo);
+
+	//sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "fifo.vcd" };
+	//vcd.addAllPins();
+	//vcd.addAllNamedSignals();
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	//design.visualize("after");
+
+	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->absoluteFrequency());
 }
