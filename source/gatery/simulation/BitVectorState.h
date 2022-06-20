@@ -330,15 +330,17 @@ BigInt extractBigInt(const BitVectorState<Config> &vec, size_t offset, size_t si
 		{
 			size_t lastChunkOffset = (offset + size) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
 			size_t lastChunkWidth = size - (lastChunkOffset - offset);
-			result = vec.extractNonStraddling(Config::VALUE, lastChunkOffset, lastChunkWidth);
-			result = lastChunkOffset;
+			if (lastChunkWidth > 0)
+				result = vec.extractNonStraddling(Config::VALUE, lastChunkOffset, lastChunkWidth);
+			else
+				result = 0;
 		}
 
 		for (size_t chunkIdx : utils::Range(size/Config::NUM_BITS_PER_BLOCK)) {
-			size_t revChunk = offset + (size / Config::NUM_BITS_PER_BLOCK - 1 - chunkIdx) * Config::NUM_BITS_PER_BLOCK;
+			size_t revChunk = offset / Config::NUM_BITS_PER_BLOCK + (size / Config::NUM_BITS_PER_BLOCK - 1 - chunkIdx);
 
 			result <<= (size_t)Config::NUM_BITS_PER_BLOCK;
-			result |= vec.extractNonStraddling(Config::VALUE, revChunk, Config::NUM_BITS_PER_BLOCK);
+			result |= vec.data(Config::VALUE)[revChunk];
 		}
 
 		return result;
