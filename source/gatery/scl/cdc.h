@@ -26,6 +26,8 @@ namespace gtry::scl
 	template<Signal T>
 	T synchronize(T in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
 
+	UInt grayCodeSynchronize(UInt in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
+
 	template<Signal T>
 	T allowClockDomainCrossing(T in, const Clock& from, const Clock& to);
 }

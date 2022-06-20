@@ -17,6 +17,7 @@
 */
 #pragma once
 #include <gatery/frontend.h>
+#include <gatery/scl/cdc.h>
 
 #include <gatery/frontend/tech/TechnologyCapabilities.h>
 
@@ -269,8 +270,9 @@ namespace gtry::scl
 	template<Signal TData>
 	inline void Fifo<TData>::generateCdc(const UInt& pushPut, UInt& pushGet, UInt& popPut, const UInt& popGet)
 	{
-		HCL_ASSERT(!"no impl");
-		// TODO: implement gray counter synchronizer and constraints
+		auto scope = m_area.enter("scl_fifo_cdc");
+		pushGet = grayCodeSynchronize(popGet, *m_popClock, *m_pushClock);
+		popPut = grayCodeSynchronize(pushPut, *m_pushClock, *m_popClock);
 	}
 
 	template<Signal TData>

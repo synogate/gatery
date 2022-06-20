@@ -33,3 +33,8 @@ gtry::UInt gtry::scl::grayDecode(BVec val)
 
 	return ret;
 }
+
+gtry::UInt gtry::scl::grayCodeSynchronize(UInt in, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
+{
+	return grayDecode(synchronize(grayEncode(in), inClock, outClock, outStages, inStage));
+}
