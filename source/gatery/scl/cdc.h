@@ -22,4 +22,35 @@ namespace gtry::scl
 {
 	BVec grayencode(UInt val);
 	UInt graydecode(BVec val);
+
+	template<Signal T>
+	T synchronize(T in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
+
+	template<Signal T>
+	T allowClockDomainCrossing(T in, const Clock& from, const Clock& to);
+}
+
+template<gtry::Signal T>
+T gtry::scl::synchronize(T val, const gtry::Clock& inClock, const gtry::Clock& outClock, size_t outStages, bool inStage)
+{
+	if(inStage)
+		val = reg(val, { .clock = inClock });
+
+	val = allowClockDomainCrossing(val, inClock, outClock);
+
+	for(size_t i = 0; i < outStages; ++i)
+	{
+		val = reg(val, { .clock = outClock });
+		attribute(val, { .allowFusing = false });
+	}
+
+	return val;
+}
+
+template<gtry::Signal T>
+T gtry::scl::allowClockDomainCrossing(T in, const gtry::Clock& from, const gtry::Clock& to)
+{
+	// TODO: implement clocks
+	attribute(in, { .crossingClockDomain = true });
+	return in;
 }
