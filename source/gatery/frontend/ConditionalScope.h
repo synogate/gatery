@@ -39,6 +39,8 @@ namespace gtry {
 			hlim::NodePort getFullCondition() const { return m_fullCondition; }
 			size_t getId() const { return m_id; }
 
+			explicit operator bool() const { return true; }
+
 		private:
 			void setCondition(hlim::NodePort port);
 
@@ -53,13 +55,9 @@ namespace gtry {
 
 
 #define IF(x) \
-	if (gtry::ConditionalScope ___condScope(x); true) 
-
+	if (gtry::ConditionalScope ___condScope{x}) 
 
 #define ELSE \
 	else { HCL_ASSERT(false); } \
-	if (gtry::ConditionalScope ___condScope{}; true)
-
-
+	if (gtry::ConditionalScope ___condScope{})
 }
-	
