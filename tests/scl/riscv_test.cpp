@@ -851,7 +851,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_store, BoostUnitTestSimulationFixture)
 			uint32_t opB = rng();
 			int32_t offset = int32_t(rng()) >> (32 - 12);
 
-			size_t alignmentFailure = (opA + offset) & 3;
+			uint32_t alignmentFailure = (opA + offset) & 3;
 			opA -= alignmentFailure;
 
 			rv.r1(opA).r2(opB).ip(rng());
@@ -873,7 +873,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_store, BoostUnitTestSimulationFixture)
 			uint32_t opB = rng();
 			int32_t offset = int32_t(rng()) >> (32 - 12);
 
-			size_t alignmentFailure = (opA + offset) & 1;
+			uint32_t alignmentFailure = (opA + offset) & 1;
 			opA -= alignmentFailure;
 
 			rv.r1(opA).r2(opB).ip(rng());
@@ -944,7 +944,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 			uint32_t data = rng();
 			int32_t offset = int32_t(rng()) >> (32 - 12);
 
-			size_t alignmentFailure = (opA + offset) & 3;
+			uint32_t alignmentFailure = (opA + offset) & 3;
 			opA -= alignmentFailure;			
 
 			simu(*avmm.readData) = data;
@@ -968,7 +968,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 			uint32_t data = rng();
 			int32_t offset = int32_t(rng()) >> (32 - 12);
 
-			size_t alignmentFailure = (opA + offset) & 1;
+			uint32_t alignmentFailure = (opA + offset) & 1;
 			opA -= alignmentFailure;
 
 			simu(*avmm.readData) = data;
@@ -995,7 +995,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 			uint32_t data = rng();
 			int32_t offset = int32_t(rng()) >> (32 - 12);
 
-			size_t alignmentFailure = (opA + offset) & 1;
+			uint32_t alignmentFailure = (opA + offset) & 1;
 			opA -= alignmentFailure;			
 
 			simu(*avmm.readData) = data;
@@ -1071,7 +1071,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 			uint32_t data = rng();
 			int32_t offset = int32_t(rng()) >> (32 - 12);
 
-			size_t alignmentFailure = (opA + offset) & 3;
+			uint32_t alignmentFailure = (opA + offset) & 3;
 			opA -= alignmentFailure;
 
 			simu(*avmm.readDataValid) = 0;
