@@ -81,7 +81,8 @@ void gtry::scl::pci::AvmmBridge::generateFifoBridge(Stream<Tlp>& rx, AvalonMM& a
 	MemTlpCplData req;
 	req.decode(rx.data.header);
 	HCL_NAMED(req);
-	resQueue.push(req, *avmm.read);
+	IF(*avmm.read)
+		resQueue.push(req);
 
 	// create tx tlp
 	avmm.createReadDataValid();
@@ -91,8 +92,9 @@ void gtry::scl::pci::AvmmBridge::generateFifoBridge(Stream<Tlp>& rx, AvalonMM& a
 	m_tx.data.data = *avmm.readData;
 
 	// join response and cpl data
-	MemTlpCplData res;
-	resQueue.pop(res, *m_tx.valid);
+	MemTlpCplData res = resQueue.peak();
+	IF(*m_tx.valid)
+		resQueue.pop();
 	res.encode(m_tx.data.header);
 
 	*rx.ready = !resQueue.full();
@@ -175,19 +177,20 @@ void gtry::scl::pci::IntelPTileCompleter::generate()
 	}
 
 	Fifo in_buffer(32, in_reduced);
-	in_buffer.push(in_reduced, anyValid);
+
+	IF(anyValid)
+		in_buffer.push(in_reduced);
 
 	*in[0].ready = in_buffer.almostEmpty(32 - 27);
 	for (size_t i = 1; i < in.size(); ++i)
 		*in[i].ready = *in[0].ready;
 
 	
-	std::array<Stream<Tlp>, 2> in_buffered;
-	Bit in_buffer_pop;
-	in_buffer.pop(in_buffered, in_buffer_pop);
+	std::array<Stream<Tlp>, 2> in_buffered = in_buffer.peak();
 
 	arbitrateInOrder in_single{ in_buffered[0], in_buffered[1] };
-	in_buffer_pop = in_buffered[0].transfer() | in_buffered[1].transfer();
+	IF(in_buffered[0].transfer() | in_buffered[1].transfer())
+		in_buffer.pop();
 
 	AvalonMM avmm;
 	avmm.ready = Bit{};
@@ -200,10 +203,6 @@ void gtry::scl::pci::IntelPTileCompleter::generate()
 	AvmmBridge bridge{ in_single, avmm, completerId };
 
 	Fifo<Stream<Tlp>> out_buffer{ 16, bridge.tx() };
-	out_buffer.push(bridge.tx(), bridge.tx().transfer());
-
-
-	
-
-
+	IF(bridge.tx().transfer())
+		out_buffer.push(bridge.tx());
 }

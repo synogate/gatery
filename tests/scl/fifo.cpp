@@ -40,9 +40,12 @@ struct FifoTest
 		actualDepth = fifo.depth();
 
 		pushData = width;
-		popData = width;
-		fifo.push(pushData, push);
-		fifo.pop(popData, pop);
+
+		IF(push)
+			fifo.push(pushData);
+		popData = fifo.peak();
+		IF(pop)
+			fifo.pop();
 		
 		push = pinIn().setName("push_valid");
 		pushData = pinIn(width).setName("push_data");

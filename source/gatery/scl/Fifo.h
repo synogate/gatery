@@ -43,8 +43,10 @@ namespace gtry::scl
 
 		// NOTE: always push before pop for correct conflict resolution
 		// TODO: fix above note by adding explicit write before read conflict resulution to bram
-		void push(TData data, Bit valid);
-		void pop(TData& data, Bit ready);
+		void push(TData data);
+
+		TData peak() const;
+		void pop();
 
 		const Bit& empty() const { return m_empty; }
 		const Bit& full() const { return m_full; }
@@ -58,6 +60,8 @@ namespace gtry::scl
 		UInt m_put;
 		UInt m_get;
 		UInt m_size;
+
+		UInt m_peakData;
 
 		Bit m_full;
 		Bit m_empty;
@@ -83,6 +87,7 @@ namespace gtry::scl
 
 		m_defaultValue = std::move(ref);
 		auto wordWidth = width(*m_defaultValue);
+		m_peakData = wordWidth;
 
 		FifoCapabilities::Request fifoRequest;
 		fifoRequest.readDepth.atLeast((uint32_t)minDepth);
@@ -133,12 +138,15 @@ namespace gtry::scl
 	}
 
 	template<typename TData>
-	inline void Fifo<TData>::push(TData data, Bit valid)
+	inline void Fifo<TData>::push(TData data)
 	{
 		auto scope = m_area.enter();
 		HCL_DESIGNCHECK_HINT(m_hasMem, "fifo not initialized");
 		HCL_DESIGNCHECK_HINT(!m_hasPush, "fifo push port already constructed");
 		m_hasPush = true;
+
+		auto scopeLock = ConditionalScope::lock();
+		Bit valid{ SignalReadPort{scopeLock->getFullCondition()} };
 
 		setName(data, "in_data");
 		UInt packedData = pack(data);
@@ -162,12 +170,27 @@ namespace gtry::scl
 	}
 
 	template<typename TData>
-	inline void Fifo<TData>::pop(TData& data, Bit ready)
+	inline TData gtry::scl::Fifo<TData>::peak() const
+	{
+		auto scope = m_area.enter();
+		HCL_DESIGNCHECK_HINT(m_hasMem, "fifo not initialized");
+
+		TData ret = constructFrom(*m_defaultValue);
+		unpack(m_peakData, ret);
+		setName(ret, "out_data");
+		return ret;
+	}
+
+	template<typename TData>
+	inline void Fifo<TData>::pop()
 	{
 		auto scope = m_area.enter();
 		HCL_DESIGNCHECK_HINT(m_hasMem, "fifo not initialized");
 		HCL_DESIGNCHECK_HINT(!m_hasPop, "fifo pop port already constructed");
 		m_hasPop = true;
+
+		auto scopeLock = ConditionalScope::lock();
+		Bit ready{ SignalReadPort{scopeLock->getFullCondition()} };
 
 		setName(ready, "out_ready");
 
@@ -180,15 +203,11 @@ namespace gtry::scl
 		IF(ready)
 			get += 1;
 
-		UInt packedData = reg(m_mem[get(0, -1)], {.allowRetimingBackward=true});
+		m_peakData = reg(m_mem[get(0, -1)], {.allowRetimingBackward=true});
+		setName(m_peakData, "out_data_packed");
 
 		m_get = get;
 		HCL_NAMED(m_get);
-
-		setName(packedData, "out_data_packed");
-		*m_defaultValue = constructFrom(data);
-		unpack(packedData, data);
-		setName(data, "out_data");
 	}
 
 	template<typename TData>
