@@ -37,6 +37,11 @@ namespace gtry
 		bool allowRetimingForward = false;
 	};
 
+	static RegisterSettings retime{
+		.allowRetimingBackward = true,
+		.allowRetimingForward = true,
+	};
+
 	template<BaseSignal T>
 	T reg(const T& val, const RegisterSettings& settings = {});
 
