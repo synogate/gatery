@@ -52,10 +52,10 @@ namespace gtry::scl
 		Fifo() : m_area("scl_fifo") { m_area.getNodeGroup()->createMetaInfo<FifoMeta>(); }
 		Fifo(const Fifo&) = delete;
 		Fifo(Fifo&&) = default;
-		Fifo(size_t minDepth, const TData& ref) : Fifo() { setup(minDepth, std::move(ref)); }
+		explicit Fifo(size_t minDepth, const TData& ref = TData{}) : Fifo() { setup(minDepth, std::move(ref)); }
 		~Fifo() noexcept(false);
 
-		void setup(size_t minDepth, const TData& ref);
+		void setup(size_t minDepth, const TData& ref = TData{});
 		virtual void generate();
 
 		size_t depth();

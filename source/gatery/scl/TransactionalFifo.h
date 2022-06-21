@@ -25,9 +25,9 @@ namespace gtry::scl
 	{
 	public:
 		TransactionalFifo() = default;
-		TransactionalFifo(size_t minDepth, const TData& ref) : TransactionalFifo() { setup(minDepth, std::move(ref)); }
+		explicit TransactionalFifo(size_t minDepth, const TData& ref = TData{}) : TransactionalFifo() { setup(minDepth, std::move(ref)); }
 
-		void setup(size_t minDepth, const TData& ref);
+		void setup(size_t minDepth, const TData& ref = TData{});
 
 		void commitPush();
 		void commitPush(UInt cutoff);
