@@ -195,7 +195,7 @@ namespace gtry::scl
 
 	void AvalonMM::setName(std::string_view prefix)
 	{
-		std::string name = std::string{ prefix } + '_';
+		std::string name = std::string{ prefix };
 
 		address.setName(name + "address");
 		if (read) (*read).setName(name + "read");
