@@ -64,6 +64,8 @@ namespace gtry::scl::riscv
 
 		std::vector<uint32_t> m_initCode;
 
+		Bit m_anyDeviceSelected;
+
 	};
 
 

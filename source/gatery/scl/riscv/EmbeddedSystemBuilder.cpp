@@ -96,8 +96,14 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addHarvardCpu(const ElfLoader& org
 	rv.execute();
 	rv.mem(m_dataBus);
 	m_dataBus.setName("databus");
-	m_dataBus.readData = 0;
+	m_dataBus.readData = 0xFFFFFFFFu;
 	m_dataBus.readDataValid = '0';
+
+	HCL_NAMED(m_anyDeviceSelected);
+	IF(!m_anyDeviceSelected)
+		*m_dataBus.readDataValid = *m_dataBus.read;
+
+	m_anyDeviceSelected = '0';
 }
 
 void gtry::scl::riscv::EmbeddedSystemBuilder::addCpu(const ElfLoader& elf, BitWidth scratchMemSize, bool debugTrace)
@@ -205,6 +211,8 @@ gtry::scl::AvalonMM gtry::scl::riscv::EmbeddedSystemBuilder::addAvalonMemMapped(
 
 	Bit selected = m_dataBus.address(addrWidth.bits(), 32_b - addrWidth.bits()) == (offset >> addrWidth.bits());
 	HCL_NAMED(selected);
+
+	m_anyDeviceSelected |= selected;
 
 	AvalonMM ret;
 	ret.address = m_dataBus.address(0, addrWidth);
