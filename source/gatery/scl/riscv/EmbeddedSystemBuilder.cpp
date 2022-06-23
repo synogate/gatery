@@ -94,8 +94,11 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addHarvardCpu(const ElfLoader& org
 	imem.fillPowerOnState(codeSeg.resetState);
 	
 	rv.execute();
+
+	setName(*m_dataBus.readDataValid, "databus_readdatavalid");
+	setName(*m_dataBus.readData, "databus_readdata");
 	rv.mem(m_dataBus);
-	m_dataBus.setName("databus");
+	m_dataBus.setName("databus_");
 	m_dataBus.readData = 0xFFFFFFFFu;
 	m_dataBus.readDataValid = '0';
 

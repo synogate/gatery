@@ -110,9 +110,13 @@ namespace gtry::scl
 	{
 		setName(Fifo<TData>::m_pushValid, "m_pushValid");
 		setName(Fifo<TData>::m_pushData, "m_pushData");
+		HCL_NAMED(m_pushCutoff);
+		HCL_NAMED(m_pushRollack);
+		HCL_NAMED(m_pushCommit);
 
 		UInt put = get.width();
 		put = reg(put, 0, { .clock = *Fifo<TData>::m_pushClock });
+		HCL_NAMED(put);
 
 		IF(Fifo<TData>::m_pushValid)
 		{
@@ -143,9 +147,12 @@ namespace gtry::scl
 	UInt TransactionalFifo<TData>::generatePop(const Memory<TData>& mem, const UInt& put)
 	{
 		setName(Fifo<TData>::m_popValid, "m_popValid");
+		HCL_NAMED(m_popRollback);
+		HCL_NAMED(m_popCommit);
 
 		UInt get = put.width();
 		get = reg(get, 0, { .clock = *Fifo<TData>::m_popClock });
+		HCL_NAMED(get);
 
 		IF(Fifo<TData>::m_popValid)
 			get += 1;

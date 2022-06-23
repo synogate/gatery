@@ -129,12 +129,12 @@ void gtry::scl::riscv::Instruction::decode(const UInt& inst)
 }
 
 gtry::scl::riscv::RV32I::RV32I(BitWidth instructionAddrWidth, BitWidth dataAddrWidth) :
+	m_area{"rv32i", true},
 	m_IP(instructionAddrWidth),
-	m_dataAddrWidth(dataAddrWidth),
-	m_area{"rv32i"}
+	m_dataAddrWidth(dataAddrWidth)
 {
-	auto ent = m_area.enter();
 	m_IPnext = m_IP + 4;
+	m_area.leave();
 }
 
 void gtry::scl::riscv::RV32I::execute()
@@ -443,6 +443,8 @@ void gtry::scl::riscv::RV32I::load(AvalonMM& mem, bool byte, bool halfword)
 
 void gtry::scl::riscv::RV32I::setupAlu()
 {
+	auto ent = m_area.enter();
+
 	// int alu
 	HCL_NAMED(m_alu);
 	m_alu.result(m_aluResult);

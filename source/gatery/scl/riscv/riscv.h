@@ -91,6 +91,8 @@ namespace gtry::scl::riscv
 		virtual void setResult(const UInt& result);
 		virtual void setStall(const Bit& wait);
 
+		Area m_area;
+
 		UInt m_IP;
 		UInt m_IPnext;
 		Bit m_stall;
@@ -108,8 +110,6 @@ namespace gtry::scl::riscv
 
 		BitWidth m_dataAddrWidth;
 		CpuTrace m_trace;
-
-		Area m_area;
 
 	};
 

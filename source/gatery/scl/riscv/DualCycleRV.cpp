@@ -37,13 +37,18 @@ gtry::Memory<gtry::UInt>& gtry::scl::riscv::DualCycleRV::fetch(uint64_t entryPoi
 
 gtry::UInt gtry::scl::riscv::DualCycleRV::fetch(const UInt& instruction, uint64_t entryPoint)
 {
+	auto ent = m_area.enter();
+
 	Instruction pre_inst;
 	pre_inst.decode(instruction);
 	HCL_NAMED(pre_inst);
 
 	{
-		Area area("register_file", true);
-
+		auto scope = m_area.enter("register_file");
+		HCL_NAMED(m_resultData);
+		HCL_NAMED(m_resultValid);
+		HCL_NAMED(m_storeResult);
+		HCL_NAMED(m_stall);
 
 		// setup register file
 		m_rf.setup(32, 32_b);
@@ -52,6 +57,7 @@ gtry::UInt gtry::scl::riscv::DualCycleRV::fetch(const UInt& instruction, uint64_
 		m_rf.setName("register_file");
 
 		Bit writeRf = m_resultValid & m_storeResult & !m_stall;
+		HCL_NAMED(writeRf);
 		IF(writeRf)
 			m_rf[m_instr.rd] = m_resultData;
 
@@ -99,7 +105,7 @@ gtry::UInt gtry::scl::riscv::DualCycleRV::fetch(const UInt& instruction, uint64_
 		instruction_execute = instruction;
 
 	{
-		Area area("InstructionDecode", true);
+		auto ent = m_area.enter("InstructionDecode");
 		instruction_execute = reg(instruction_execute);
 		m_instr.decode(instruction_execute);
 		debugVisualizeInstruction(m_instr);
@@ -108,7 +114,7 @@ gtry::UInt gtry::scl::riscv::DualCycleRV::fetch(const UInt& instruction, uint64_
 
 	UInt ip = m_IP.width();
 	{
-		Area area("IP", true);
+		auto ent = m_area.enter("IP");
 		ip = reg(ip, entryPoint);
 		HCL_NAMED(ip);
 
