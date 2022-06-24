@@ -144,7 +144,7 @@ void gtry::scl::riscv::RV32I::execute()
 	m_trace.name = m_area.getNodeGroup()->instancePath();
 	m_trace.instructionValid = !m_stall & m_instructionValid;
 	m_trace.instruction = m_instr.instruction;
-	m_trace.instructionPointer = m_IP;
+	m_trace.instructionPointer = zext(m_IP) | m_IPoffset;
 	m_trace.regWriteValid = m_resultValid & !m_stall & m_instr.rd != 0;
 	m_trace.regWriteData = m_resultData;
 	m_trace.regWriteAddress = m_instr.rd;
@@ -178,7 +178,7 @@ void gtry::scl::riscv::RV32I::auipc()
 	IF(m_instr.opcode == "b00101")
 	{
 		auto entAuipc = Area{"auipc"}.enter();
-		setResult(m_instr.immU + zext(m_IP));
+		setResult(m_instr.immU + zext(m_IP) | m_IPoffset);
 	}
 }
 
@@ -188,7 +188,8 @@ void gtry::scl::riscv::RV32I::jal()
 	IF(m_instr.opcode == "b11011")
 	{
 		auto ent = Area{ "jal" }.enter();
-		setResult(m_IPnext);
+
+		setResult(zext(m_IPnext) | m_IPoffset);
 		setIP(zext(m_IP) + m_instr.immJ);
 	}
 
@@ -198,7 +199,7 @@ void gtry::scl::riscv::RV32I::jal()
 		auto ent = Area{ "jalr" }.enter();
 		m_alu.op2 = m_instr.immI;
 
-		setResult(m_IPnext);
+		setResult(zext(m_IPnext) | m_IPoffset);
 		setIP(m_aluResult.sum);
 	}
 }

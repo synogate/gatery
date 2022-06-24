@@ -66,6 +66,7 @@ namespace gtry::scl::riscv
 	{
 	public:
 		RV32I(BitWidth instructionAddrWidth = 32_b, BitWidth dataAddrWidth = 32_b);
+		void ipOffset(uint32_t offset) { m_IPoffset = offset; }
 
 		virtual void execute();
 
@@ -93,6 +94,7 @@ namespace gtry::scl::riscv
 
 		Area m_area;
 
+		uint32_t m_IPoffset = 0;
 		UInt m_IP;
 		UInt m_IPnext;
 		Bit m_stall;

@@ -47,12 +47,13 @@ gtry::scl::riscv::EmbeddedSystemBuilder::EmbeddedSystemBuilder() :
 	m_dataBus.readData = 32_b;
 }
 
-void gtry::scl::riscv::EmbeddedSystemBuilder::addHarvardCpu(const ElfLoader& orgelf, BitWidth scratchMemSize)
+void gtry::scl::riscv::EmbeddedSystemBuilder::addCpu(const ElfLoader& orgelf, BitWidth scratchMemSize, bool dedicatedInstructionMemory, bool debugTrace)
 {
 	auto ent = m_area.enter();
 
 	ElfLoader elf = orgelf;
-	elf.splitTextAndRoData();
+	if(dedicatedInstructionMemory)
+		elf.splitTextAndRoData();
 	addDataMemory(elf, scratchMemSize);
 
 	ElfLoader::MegaSegment codeMeg = elf.segments(1, 0, 0);
@@ -66,7 +67,7 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addHarvardCpu(const ElfLoader& org
 		return; // no code -> no cpu
 	}
 
-	uint64_t entryPoint = elf.entryPoint();
+	uint32_t entryPoint = (uint32_t)elf.entryPoint();
 	ElfLoader::Segment initCodeSeg;
 	if (!m_initCode.empty())
 	{
@@ -75,7 +76,10 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addHarvardCpu(const ElfLoader& org
 		uint64_t jumpOffset = initCodeSeg.offset + m_initCode.size() * 4;
 		m_initCode.push_back(assembler::jal(0, int32_t(entryPoint - jumpOffset)));
 
+#if 0
+		std::cout << "RV32 generated initialization code:\n";
 		assembler::printCode(std::cout, m_initCode, initCodeSeg.offset);
+#endif
 		initCodeSeg.alignment = codeMeg.subSections.front()->alignment;
 		initCodeSeg.flags = 1;
 		initCodeSeg.size = BitWidth{ m_initCode.size() * 4 * 8 };
@@ -84,11 +88,12 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addHarvardCpu(const ElfLoader& org
 		codeMeg.subSections.push_back(&initCodeSeg);
 		codeMeg.size = codeMeg.size + m_initCode.size() * 8;
 
-		entryPoint = initCodeSeg.offset;
+		entryPoint = (uint32_t)initCodeSeg.offset;
 	}
 
 	const Segment codeSeg = loadSegment(codeMeg, 0_b);
 	DualCycleRV rv(codeSeg.addrWidth);
+	rv.ipOffset(entryPoint & ~codeSeg.addrWidth.mask()); // set virtual high bits of IP for debugging
 
 	Memory<UInt>& imem = rv.fetch(entryPoint & codeSeg.addrWidth.mask());
 	imem.fillPowerOnState(codeSeg.resetState);
@@ -107,56 +112,6 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addHarvardCpu(const ElfLoader& org
 		*m_dataBus.readDataValid = *m_dataBus.read;
 
 	m_anyDeviceSelected = '0';
-}
-
-void gtry::scl::riscv::EmbeddedSystemBuilder::addCpu(const ElfLoader& elf, BitWidth scratchMemSize, bool debugTrace)
-{
-	auto ent = m_area.enter();
-	addDataMemory(elf, scratchMemSize);
-
-	ElfLoader::MegaSegment codeMeg = elf.segments(1, 0, 0);
-	if(codeMeg.subSections.empty())
-	{
-		m_dataBus.address = "32b0";
-		m_dataBus.read = '0';
-		m_dataBus.write = '0';
-		m_dataBus.writeData = "32b0";
-		m_dataBus.byteEnable = "0000";
-		return; // no code -> no cpu
-	}
-
-	uint64_t entryPoint = elf.entryPoint();
-	ElfLoader::Segment initCodeSeg;
-	if(!m_initCode.empty())
-	{
-		initCodeSeg.offset = codeMeg.offset + codeMeg.size.bytes();
-
-		uint64_t jumpOffset = initCodeSeg.offset + m_initCode.size() * 4;
-		m_initCode.push_back(assembler::jal(0, int32_t(entryPoint - jumpOffset)));
-
-		assembler::printCode(std::cout, m_initCode, initCodeSeg.offset);
-		initCodeSeg.alignment = codeMeg.subSections.front()->alignment;
-		initCodeSeg.flags = 1;
-		initCodeSeg.size = BitWidth{ m_initCode.size() * 4 * 8 };
-		initCodeSeg.data = std::span((const uint8_t*)m_initCode.data(), m_initCode.size() * 4);
-
-		codeMeg.subSections.push_back(&initCodeSeg);
-		codeMeg.size = codeMeg.size + m_initCode.size() * 8;
-
-		entryPoint = initCodeSeg.offset;
-	}
-
-	const Segment codeSeg = loadSegment(codeMeg, 0_b);
-	DualCycleRV rv(codeSeg.addrWidth);
-
-	Memory<UInt>& imem = rv.fetch(entryPoint & codeSeg.addrWidth.mask());
-	imem.fillPowerOnState(codeSeg.resetState);
-
-	rv.execute();
-	rv.mem(m_dataBus);
-	m_dataBus.setName("databus");
-	m_dataBus.readData = 0;
-	m_dataBus.readDataValid = '0';
 
 	if(debugTrace)
 	{

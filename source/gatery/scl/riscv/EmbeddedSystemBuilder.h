@@ -46,8 +46,7 @@ namespace gtry::scl::riscv
 	public:
 		EmbeddedSystemBuilder();
 
-		void addHarvardCpu(const ElfLoader& elf, BitWidth scratchMemSize);
-		void addCpu(const ElfLoader& elf, BitWidth scratchMemSize, bool debugTrace);
+		void addCpu(const ElfLoader& elf, BitWidth scratchMemSize, bool dedicatedInstructionMemory, bool debugTrace);
 
 		Bit addUART(uint64_t offset, UART& config, const Bit& rx);
 		Bit addUART(uint64_t offset, size_t baudRate, const Bit& rx);
