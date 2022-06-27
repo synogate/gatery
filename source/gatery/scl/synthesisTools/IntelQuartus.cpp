@@ -227,6 +227,9 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 		file << " -clock " << clock->getName();
 		file << " [get_ports " << vhdlResetName << "] -reference_pin " << path << "\n";
 	}
+
+	file << "derive_pll_clocks\n";
+	file << "derive_clock_uncertainty\n";
 }
 
 void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
