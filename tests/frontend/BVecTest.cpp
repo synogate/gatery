@@ -239,7 +239,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceRead, BoostUnitTestSimulationFixture)
 		for (auto i : gtry::utils::Range(8)) {
 			simu(index) = i;
 			co_await WaitFor({1,1000});
-			BOOST_TEST(simu(b) == (bool)(v & (1 << i)));
+			BOOST_TEST(simu(b) == ((v >> i) & 1));
 		}
 
 		stopTest();
@@ -267,7 +267,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfSliceRead, BoostUnitTestSimulationFixtu
 		for (auto i : gtry::utils::Range(4)) {
 			simu(index) = i;
 			co_await WaitFor({1,1000});
-			BOOST_TEST(simu(b) == (bool)(v_ & (1 << i)));
+			BOOST_TEST(simu(b) == ((v_ >> i) & 1));
 		}
 
 		stopTest();
@@ -296,9 +296,9 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceWrite, BoostUnitTestSimulationFixture)
 	addSimulationProcess([=, this]()->SimProcess {
 		for (auto i : gtry::utils::Range(8)) {
 			simu(index) = i;
-			simu(b) = (bool)(v & (1 << i));
+			simu(b) = (v >> i) & 1;
 			co_await WaitFor({1,1000});
-			size_t mask = 1 << i;
+			size_t mask = 1ull << i;
 			BOOST_TEST(simu(a) == (a_ & ~mask | v & mask));
 		}
 
@@ -327,10 +327,10 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfSliceWrite, BoostUnitTestSimulationFixt
 	addSimulationProcess([=, this]()->SimProcess {
 		for (auto i : gtry::utils::Range(4)) {
 			simu(index) = i;
-			simu(b) = (bool)(v & (1 << (i+2)));
+			simu(b) = (v >> (i+2)) & 1;
 			co_await WaitFor({1,1000});
 
-			size_t mask = (0b1 << (i+2));
+			size_t mask = (1ull << (i+2));
 			BOOST_TEST(simu(a) == (a_ & ~mask | v & mask));
 		}
 
@@ -624,10 +624,10 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfDynamicSliceWrite, BoostUnitTestSimulat
 			for (auto j : gtry::utils::Range(4)) {
 				simu(index1) = i;
 				simu(index2) = j;
-				simu(b) = (bool)(v & (1 << (i+j)));
+				simu(b) = (v >> (i + j)) & 1;
 				co_await WaitFor({1,1000});
 
-				size_t mask = (0b1 << (i+j));
+				size_t mask = (0b1ull << (i+j));
 				BOOST_TEST(simu(a) == (a_ & ~mask | v & mask));
 			}
 		}
@@ -666,7 +666,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWrite, BoostUnitTestSimulationFixture)
 			simu(b) = (v >> i) & 0b111;
 			co_await WaitFor({1,1000});
 
-			size_t mask = (0b111 << i);
+			size_t mask = (0b111ull << i);
 			BOOST_TEST(simu(a) == (a_ & ~mask | v & mask));
 		}
 
