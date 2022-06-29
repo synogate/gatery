@@ -21,39 +21,83 @@
 
 namespace gtry::scl
 {
-	template<typename Payload>
+	template<Signal Payload>
 	struct Stream
 	{
+		Reverse<Bit> ready;
+		Bit valid;
 		Payload data;
 
-		std::optional<Bit> valid;
-		std::optional<Bit> ready;
-		std::optional<Bit> sop;
-		std::optional<Bit> eop;
-		std::optional<Bit> error;
+		Payload& operator *() { return data; }
+		const Payload& operator *() const { return data; }
 
-		Bit transfer() const;
+		auto&& operator ->() { 
+			if constexpr(requires(Payload & p) { p.operator->(); })
+				return data;
+			else
+				return &data; 
+		}
+
+		auto&& operator ->() const
+		{
+			if constexpr(requires(Payload & p) { p.operator->(); })
+				return data;
+			else
+				return &data;
+		}
 	};
 
-	template<typename Payload>
-	struct Valid
+	template<Signal T> Bit transfer(const Stream<T>& stream) { return stream.valid & *stream.ready; }
+	template<Signal T> const Bit& ready(const Stream<T>& stream) { return *stream.ready; }
+	template<Signal T> const Bit& valid(const Stream<T>& stream) { return stream.valid; }
+
+
+	template<Signal Payload>
+	struct DownStream
 	{
-		Valid() = default;
+		Bit valid;
+		Payload data;
 
-		template<typename... PayloadArgs>
-		Valid(const Bit& validValue, PayloadArgs... ctorArgs) :
-			data(ctorArgs...),
-			valid(validValue) 
-		{}
+		Payload& operator *() { return data; }
+		const Payload& operator *() const { return data; }
 
-		BOOST_HANA_DEFINE_STRUCT(Valid,
-			(Bit, valid),
-			(Payload, data)
-		);
+		auto&& operator ->()
+		{
+			if constexpr(requires(Payload & p) { p.operator->(); })
+				return data;
+			else
+				return &data;
+		}
 
-		Payload& value() { return data; }
-		const Payload& value() const { return data; }
+		auto&& operator ->() const
+		{
+			if constexpr(requires(Payload & p) { p.operator->(); })
+				return data;
+			else
+				return &data;
+		}
 	};
+
+	template<Signal T> const Bit& transfer(const DownStream<T>& stream) { return stream.valid & *stream.ready; }
+	template<Signal T> Bit ready(const DownStream<T>& stream) { return '1'; }
+	template<Signal T> const Bit& valid(const DownStream<T>& stream) { return stream.valid; }
+
+
+	template<Signal Payload>
+	struct Packet
+	{
+		Bit last;
+		Payload data;
+
+		Payload& operator *() { return data; }
+		const Payload& operator *() const { return data; }
+
+		Payload* operator ->() { return &data; }
+		const Payload* operator ->() const { return &data; }
+	};
+
+	template<Signal T> Bit sop(const T& stream);
+	template<Signal T> const Bit& eop(const Stream<Packet<T>>& stream) { return (*stream).last; }
 
 	template<typename Payload>
 	struct StreamSource;
@@ -103,15 +147,16 @@ namespace gtry::scl
 		connect(source, *this);
 	}
 	
-	template<typename Payload>
-	inline Bit Stream<Payload>::transfer() const
+	template<Signal T>
+	Bit sop(const T& stream)
 	{
-		Bit transaction = '1';
-		if (valid)
-			transaction &= *valid;
-		if (ready)
-			transaction &= *ready;
-		HCL_NAMED(transaction);
-		return transaction;
+		Bit sop;
+		IF(transfer(stream))
+			sop = '0';
+		IF(eop(stream))
+			sop = '1';
+		sop = reg(sop, '1');
+		return sop;
 	}
+
 }

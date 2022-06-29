@@ -45,41 +45,41 @@ gtry::Bit gtry::scl::pci::isDataTlp(const UInt& tlpHeader)
 	return data_tlp;
 }
 
-gtry::scl::pci::AvmmBridge::AvmmBridge(Stream<Tlp>& rx, AvalonMM& avmm, const PciId& cplId) :
+gtry::scl::pci::AvmmBridge::AvmmBridge(Stream<Packet<Tlp>>& rx, AvalonMM& avmm, const PciId& cplId) :
 	AvmmBridge()
 {
 	setup(rx, avmm, cplId);
 }
 
-void gtry::scl::pci::AvmmBridge::setup(Stream<Tlp>& rx, AvalonMM& avmm, const PciId& cplId)
+void gtry::scl::pci::AvmmBridge::setup(Stream<Packet<Tlp>>& rx, AvalonMM& avmm, const PciId& cplId)
 {
-	HCL_DESIGNCHECK_HINT(rx.data.header.width() == 96_b, "reduce tlp header address using discardHighAddressBits");
+	HCL_DESIGNCHECK_HINT(rx->header.width() == 96_b, "reduce tlp header address using discardHighAddressBits");
 	m_cplId = cplId;
 	generateFifoBridge(rx, avmm);
 }
 
-void gtry::scl::pci::AvmmBridge::generateFifoBridge(Stream<Tlp>& rx, AvalonMM& avmm)
+void gtry::scl::pci::AvmmBridge::generateFifoBridge(Stream<Packet<Tlp>>& rx, AvalonMM& avmm)
 {
 	HCL_DESIGNCHECK(avmm.readData->width() == 32_b);
 
 	auto entity = Area{ "AvmmBridge" }.enter();
 
-	sim_assert(!*rx.valid | rx.data.header(TlpOffset::type) == 0) << "not a memory tlp";
+	sim_assert(!rx.valid | rx->header(TlpOffset::type) == 0) << "not a memory tlp";
 
 	// decode command
-	avmm.address = rx.data.header(64, 32_b);
+	avmm.address = rx->header(64, 32_b);
 	avmm.address(0, 2_b) = 0;
 
-	avmm.write = rx.transfer() & isDataTlp(rx.data.header);
-	avmm.read = rx.transfer() & !*avmm.write;
-	avmm.writeData = rx.data.data;
+	avmm.write = transfer(rx) & isDataTlp(rx->header);
+	avmm.read = transfer(rx) & !*avmm.write;
+	avmm.writeData = rx->data;
 
 	// store cpl data for command
 	size_t pipelineDepth = std::max<size_t>(avmm.maximumPendingReadTransactions, 1);
 	Fifo<MemTlpCplData> resQueue{ pipelineDepth , MemTlpCplData{} };
 	
 	MemTlpCplData req;
-	req.decode(rx.data.header);
+	req.decode(rx->header);
 	HCL_NAMED(req);
 	IF(*avmm.read)
 		resQueue.push(req);
@@ -87,15 +87,15 @@ void gtry::scl::pci::AvmmBridge::generateFifoBridge(Stream<Tlp>& rx, AvalonMM& a
 	// create tx tlp
 	avmm.createReadDataValid();
 	m_tx.valid = *avmm.readDataValid;
-	m_tx.data.header = "96x00000000000000044a000001";
-	m_tx.data.header(48, 16_b) = pack(m_cplId);
-	m_tx.data.data = *avmm.readData;
+	m_tx->header = "96x00000000000000044a000001";
+	m_tx->header(48, 16_b) = pack(m_cplId);
+	m_tx->data = *avmm.readData;
 
 	// join response and cpl data
 	MemTlpCplData res = resQueue.peak();
-	IF(*m_tx.valid)
+	IF(m_tx.valid)
 		resQueue.pop();
-	res.encode(m_tx.data.header);
+	res.encode(m_tx->header);
 
 	*rx.ready = !resQueue.full();
 	if (avmm.ready)
@@ -150,35 +150,28 @@ void gtry::scl::pci::IntelPTileCompleter::generate()
 
 	static_assert(Signal<BVec&>);
 	static_assert(Signal<Tlp&>);
-	static_assert(Signal<Stream<Tlp>&>);
-	static_assert(CompoundSignal<Stream<Tlp>>);
-	static_assert(Signal<std::array<Stream<Tlp>, 2>&>);
-
-
+	static_assert(Signal<Stream<Packet<Tlp>>&>);
+	static_assert(CompoundSignal<Stream<Packet<Tlp>>>);
+	static_assert(Signal<std::array<Stream<Packet<Tlp>>, 2>&>);
 
 	Bit anyValid = '0';
-	std::array<Stream<Tlp>, 2> in_reduced;
+	std::array<DownStream<Packet<Tlp>>, 2> in_reduced;
 	for (size_t i = 0; i < in.size(); ++i)
 	{
-		in[i].ready.emplace();
-		in[i].valid.emplace();
-		in[i].sop.emplace();
-		in[i].eop.emplace();
-		in[i].data.header = 128_b;
-		in[i].data.data = 32_b;
+		in[i]->header = 128_b;
+		in[i]->data = 32_b;
 
-		UInt header = swapEndian(in[i].data.header, 8_b, 32_b);
+		UInt header = swapEndian(in[i]->header, 8_b, 32_b);
 		IF(header[29]) // 4 DW tlp header
 			header(64, 32_b) = header(96, 32_b);
 
-		in_reduced[i].valid = *in[i].valid & *in[i].sop & *in[i].eop;
+		in_reduced[i].valid = in[i].valid & sop(in[i]) & eop(in[i]);
 		in_reduced[i].data = in[i].data;
-		in_reduced[i].data.header = header(0, 96_b);
-		anyValid |= *in_reduced[i].valid;
+		in_reduced[i]->header = header(0, 96_b);
+		anyValid |= in_reduced[i].valid;
 	}
 
 	Fifo in_buffer(32, in_reduced);
-
 	IF(anyValid)
 		in_buffer.push(in_reduced);
 
@@ -186,11 +179,19 @@ void gtry::scl::pci::IntelPTileCompleter::generate()
 	for (size_t i = 1; i < in.size(); ++i)
 		*in[i].ready = *in[0].ready;
 
-	
-	std::array<Stream<Tlp>, 2> in_buffered = in_buffer.peak();
+	std::array<Stream<Packet<Tlp>>, 2> in_buffered{
+		Stream<Packet<Tlp>>{
+			.valid = in_buffer.peak()[0].valid,
+			.data = in_buffer.peak()[0].data,
+		},
+		Stream<Packet<Tlp>>{
+			.valid = in_buffer.peak()[1].valid,
+			.data = in_buffer.peak()[1].data,
+		},
+	};
 
 	arbitrateInOrder in_single{ in_buffered[0], in_buffered[1] };
-	IF(in_buffered[0].transfer() | in_buffered[1].transfer())
+	IF(transfer(in_buffered[0]) | transfer(in_buffered[1]))
 		in_buffer.pop();
 
 	AvalonMM avmm;
@@ -203,7 +204,4 @@ void gtry::scl::pci::IntelPTileCompleter::generate()
 
 	AvmmBridge bridge{ in_single, avmm, completerId };
 
-	Fifo<Stream<Tlp>> out_buffer{ 16, bridge.tx() };
-	IF(bridge.tx().transfer())
-		out_buffer.push(bridge.tx());
 }

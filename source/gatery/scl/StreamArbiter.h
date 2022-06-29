@@ -34,9 +34,8 @@ namespace gtry::scl
 	{
 		auto entity = Area{ "arbitrateInOrder" }.enter();
 
-		Stream<T>::ready = Bit{};
-		in0.ready = *Stream<T>::ready;
-		in1.ready = *Stream<T>::ready;
+		*in0.ready = *Stream<T>::ready;
+		*in1.ready = *Stream<T>::ready;
 
 		// simple fsm state 0 is initial and state 1 is push upper input
 		Bit selectionState;
@@ -44,7 +43,7 @@ namespace gtry::scl
 
 		Stream<T>::data = in0.data;
 		Stream<T>::valid = in0.valid;
-		IF(selectionState == '1' | !*in0.valid)
+		IF(selectionState == '1' | !in0.valid)
 		{
 			Stream<T>::data = in1.data;
 			Stream<T>::valid = in1.valid;
@@ -53,7 +52,7 @@ namespace gtry::scl
 		IF(*Stream<T>::ready)
 		{
 			IF(	selectionState == '0' & 
-				*in0.valid & *in1.valid)
+				in0.valid & in1.valid)
 			{
 				selectionState = '1';
 			}
@@ -64,8 +63,8 @@ namespace gtry::scl
 
 			IF(selectionState == '1')
 			{
-				in0.ready = '0';
-				in1.ready = '0';
+				*in0.ready = '0';
+				*in1.ready = '0';
 			}
 		}
 		selectionState = reg(selectionState, '0');
