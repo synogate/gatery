@@ -65,6 +65,30 @@ BOOST_FIXTURE_TEST_CASE(ReverseSyntax, BoostUnitTestSimulationFixture)
 	runEvalOnlyTest();
 }
 
+BOOST_FIXTURE_TEST_CASE(ReverseCopySyntax, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	struct TestS
+	{
+		int a;
+		Reverse<UInt> b;
+		UInt c;
+	};
+
+	TestS s0{
+		.a = 1,
+		.b = 2_b,
+		.c = 7u,
+	};
+
+	DownstreamSignal<TestS> d{ downstream(s0) };
+	downstream(s0) = d;
+
+	UpstreamSignal<TestS> u{ upstream(s0) };
+	upstream(s0) = u;
+}
+
 BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestOperators, optimizationLevels * data::xrange(1, 8), optimization, bitsize)
 {
 	using namespace gtry;
