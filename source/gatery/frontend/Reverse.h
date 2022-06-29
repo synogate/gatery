@@ -134,13 +134,19 @@ namespace gtry
 
 	template<class T>
 	concept ReverseSignal = internal::is_reverse_signal<T>::value;
-}
 
-template<gtry::CompoundSignal T>
-T& operator <<= (T& lhs, T& rhs)
-{
-	using namespace gtry;
-	downstream(lhs) = downstream(rhs);
-	upstream(rhs) = upstream(lhs);
-	return lhs;
+	template<gtry::CompoundSignal T>
+	T& connect(T& lhs, T& rhs)
+	{
+		using namespace gtry;
+		downstream(lhs) = downstream(rhs);
+		upstream(rhs) = upstream(lhs);
+		return lhs;
+	}
+
+	inline namespace ops
+	{
+		template<CompoundSignal T>
+		T& operator <<= (T& lhs, T& rhs) { return gtry::connect(lhs, rhs); }
+	}
 }
