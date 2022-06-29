@@ -31,17 +31,17 @@ namespace gtry::scl
 		Payload& operator *() { return data; }
 		const Payload& operator *() const { return data; }
 
-		auto&& operator ->() { 
+		decltype(auto) operator ->() {
 			if constexpr(requires(Payload & p) { p.operator->(); })
-				return data;
+				return (Payload&)data;
 			else
-				return &data; 
+				return &data;
 		}
 
-		auto&& operator ->() const
+		decltype(auto) operator ->() const
 		{
 			if constexpr(requires(Payload & p) { p.operator->(); })
-				return data;
+				return (const Payload&)data;
 			else
 				return &data;
 		}
@@ -61,18 +61,18 @@ namespace gtry::scl
 		Payload& operator *() { return data; }
 		const Payload& operator *() const { return data; }
 
-		auto&& operator ->()
+		decltype(auto) operator ->()
 		{
 			if constexpr(requires(Payload & p) { p.operator->(); })
-				return data;
+				return (Payload&)data;
 			else
 				return &data;
 		}
 
-		auto&& operator ->() const
+		decltype(auto) operator ->() const
 		{
 			if constexpr(requires(Payload & p) { p.operator->(); })
-				return data;
+				return (const Payload&)data;
 			else
 				return &data;
 		}
@@ -98,54 +98,6 @@ namespace gtry::scl
 
 	template<Signal T> Bit sop(const T& stream);
 	template<Signal T> const Bit& eop(const Stream<Packet<T>>& stream) { return (*stream).last; }
-
-	template<typename Payload>
-	struct StreamSource;
-
-	template<typename Payload>
-	struct StreamSink : Payload
-	{
-		using Payload::Payload;
-		StreamSink(StreamSource<Payload>& source);
-		StreamSink(const StreamSink&) = delete;
-		StreamSink(StreamSink&&) = default;
-
-		Bit valid;// = true;
-		Bit ready;// = true;
-	};
-
-	template<typename Payload>
-	struct StreamSource : Payload
-	{
-		using Payload::Payload;
-		StreamSource(const StreamSource&) = delete;
-		StreamSource(StreamSource&&) = default;
-
-		Bit valid;// = true;
-		Bit ready;// = true;
-
-		void operator >> (StreamSink<Payload>& sink);
-	};
-
-	template<typename Payload>
-	void connect(StreamSource<Payload>& source, StreamSink<Payload>& sink)
-	{
-		(Payload&)sink = (Payload&)source; ///@todo wire in order independent fashion
-		source.ready = sink.ready;
-		sink.valid = source.valid;
-	}
-
-	template<typename Payload>
-	inline void StreamSource<Payload>::operator>>(StreamSink<Payload>& sink)
-	{
-		connect(*this, sink);
-	}
-	
-	template<typename Payload>
-	inline StreamSink<Payload>::StreamSink(StreamSource<Payload>& source)
-	{
-		connect(source, *this);
-	}
 	
 	template<Signal T>
 	Bit sop(const T& stream)

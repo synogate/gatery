@@ -40,69 +40,67 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
 
 	in0.data = pinIn(8_b).setName("in0_data");
 	in0.valid = pinIn().setName("in0_valid");
-	in0.ready = Bit{};
 	pinOut(*in0.ready).setName("in0_ready");
 
 	in1.data = pinIn(8_b).setName("in1_data");
 	in1.valid = pinIn().setName("in1_valid");
-	in1.ready = Bit{};
 	pinOut(*in1.ready).setName("in1_ready");
 
 	scl::arbitrateInOrder uut{ in0, in1 };
 	pinOut(uut.data).setName("out_data");
-	pinOut(*uut.valid).setName("out_valid");
+	pinOut(uut.valid).setName("out_valid");
 	*uut.ready = pinIn().setName("out_ready");
 
 	addSimulationProcess([&]()->SimProcess {
 		simu(*uut.ready) = 1;
-		simu(*in0.valid) = 0;
-		simu(*in1.valid) = 0;
+		simu(in0.valid) = 0;
+		simu(in1.valid) = 0;
 		simu(in0.data) = 0;
 		simu(in1.data) = 0;
 		co_await WaitClk(clock);
 
-		simu(*in0.valid) = 0;
-		simu(*in1.valid) = 1;
+		simu(in0.valid) = 0;
+		simu(in1.valid) = 1;
 		simu(in1.data) = 1;
 		co_await WaitClk(clock);
 
-		simu(*in1.valid) = 0;
-		simu(*in0.valid) = 1;
+		simu(in1.valid) = 0;
+		simu(in0.valid) = 1;
 		simu(in0.data) = 2;
 		co_await WaitClk(clock);
 
-		simu(*in1.valid) = 1;
-		simu(*in0.valid) = 1;
+		simu(in1.valid) = 1;
+		simu(in0.valid) = 1;
 		simu(in0.data) = 3;
 		simu(in1.data) = 4;
 		co_await WaitClk(clock);
 		co_await WaitClk(clock);
 
-		simu(*in1.valid) = 1;
-		simu(*in0.valid) = 1;
+		simu(in1.valid) = 1;
+		simu(in0.valid) = 1;
 		simu(in0.data) = 5;
 		simu(in1.data) = 6;
 		co_await WaitClk(clock);
 		co_await WaitClk(clock);
 
-		simu(*in0.valid) = 0;
-		simu(*in1.valid) = 1;
+		simu(in0.valid) = 0;
+		simu(in1.valid) = 1;
 		simu(in1.data) = 7;
 		co_await WaitClk(clock);
 
-		simu(*in1.valid) = 0;
-		simu(*in0.valid) = 0;
+		simu(in1.valid) = 0;
+		simu(in0.valid) = 0;
 		simu(*uut.ready) = 0;
 		co_await WaitClk(clock);
 
-		simu(*in1.valid) = 0;
-		simu(*in0.valid) = 1;
+		simu(in1.valid) = 0;
+		simu(in0.valid) = 1;
 		simu(in0.data) = 8;
 		simu(*uut.ready) = 1;
 		co_await WaitClk(clock);
 
-		simu(*in1.valid) = 0;
-		simu(*in0.valid) = 0;
+		simu(in1.valid) = 0;
+		simu(in0.valid) = 0;
 		co_await WaitClk(clock);
 	});
 
@@ -111,7 +109,7 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
 		size_t counter = 1;
 		while (true)
 		{
-			if (simu(*uut.ready) && simu(*uut.valid))
+			if (simu(*uut.ready) && simu(uut.valid))
 			{
 				BOOST_TEST(counter == simu(uut.data));
 				counter++;
@@ -141,23 +139,21 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 
 	in0.data = pinIn(8_b).setName("in0_data");
 	in0.valid = pinIn().setName("in0_valid");
-	in0.ready = Bit{};
 	pinOut(*in0.ready).setName("in0_ready");
 
 	in1.data = pinIn(8_b).setName("in1_data");
 	in1.valid = pinIn().setName("in1_valid");
-	in1.ready = Bit{};
 	pinOut(*in1.ready).setName("in1_ready");
 
 	scl::arbitrateInOrder uut{ in0, in1 };
 	pinOut(uut.data).setName("out_data");
-	pinOut(*uut.valid).setName("out_valid");
+	pinOut(uut.valid).setName("out_valid");
 	*uut.ready = pinIn().setName("out_ready");
 
 	addSimulationProcess([&]()->SimProcess {
 		simu(*uut.ready) = 1;
-		simu(*in0.valid) = 0;
-		simu(*in1.valid) = 0;
+		simu(in0.valid) = 0;
+		simu(in1.valid) = 0;
 
 		std::mt19937 rng{ 10179 };
 		size_t counter = 1;
@@ -168,22 +164,22 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 			{
 				if(rng() % 2 == 0)
 				{
-					simu(*in0.valid) = 1;
+					simu(in0.valid) = 1;
 					simu(in0.data) = counter++;
 				}
 				else
 				{
-					simu(*in0.valid) = 0;
+					simu(in0.valid) = 0;
 				}
 
 				if(rng() % 2 == 0)
 				{
-					simu(*in1.valid) = 1;
+					simu(in1.valid) = 1;
 					simu(in1.data) = counter++;
 				}
 				else
 				{
-					simu(*in1.valid) = 0;
+					simu(in1.valid) = 0;
 				}
 			}
 
@@ -202,7 +198,7 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 		size_t counter = 1;
 		while(true)
 		{
-			if(simu(*uut.ready) && simu(*uut.valid))
+			if(simu(*uut.ready) && simu(uut.valid))
 			{
 				BOOST_TEST(counter % 256 == simu(uut.data));
 				counter++;

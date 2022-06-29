@@ -22,6 +22,8 @@
 
 #include "../Stream.h"
 
+#include <gatery/frontend/Reverse.h>
+
 namespace gtry::scl
 {
 	struct OneHot : UInt
@@ -72,14 +74,20 @@ namespace gtry::scl
 		Bit anyValid = '0';
 		for(Iter it = begin; it != end; ++it)
 		{
-			it->ready = '0';
+			*it->ready = '0';
 
-			IF(*it->valid & !anyValid)
+			IF(it->valid & !anyValid)
 			{
 				anyValid = '1';
-				ret.data = it->data;
-				ret.valid = it->valid;
-				it->ready = ret.ready;
+				auto&& i = *it;
+				static_assert(CompoundSignal<decltype(i)>);
+				static_assert(CompoundSignal<decltype(ret)>);
+				static_assert(std::is_same_v<std::remove_reference_t<decltype(ret)>, std::remove_reference_t<decltype(i)>>);
+				ret <<= i;
+				//connect(ret, i);
+				//ret.data = it->data;
+				//ret.valid = it->valid;
+				//*it->ready = ret.ready;
 			}
 		}
 		return ret;

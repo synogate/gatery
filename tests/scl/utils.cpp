@@ -76,11 +76,11 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, ListEncoder, data::
 	for (size_t i = 0; i < indexList.size(); ++i)
 	{
 		sim_assert(indexList[i].data == i) << indexList[i].data << " != " << i;
-		sim_assert(*indexList[i].valid == ((size_t)val == i)) << *indexList[i].valid << " != " << ((size_t)val == i);
+		sim_assert(indexList[i].valid == ((size_t)val == i)) << indexList[i].valid << " != " << ((size_t)val == i);
 	}
 
 	auto encoded = priorityEncoder<UInt>(indexList.begin(), indexList.end());
-	sim_assert(*encoded.valid);
+	sim_assert(encoded.valid);
 	sim_assert(encoded.data == val);
 
 	eval();
