@@ -144,9 +144,6 @@ namespace gtry
 		return lhs;
 	}
 
-	inline namespace ops
-	{
-		template<CompoundSignal T>
-		T& operator <<= (T& lhs, T& rhs) { return gtry::connect(lhs, rhs); }
-	}
+	template<CompoundSignal T>
+	T& operator <<= (T& lhs, T& rhs) { return gtry::connect(lhs, rhs); }
 }
