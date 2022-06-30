@@ -19,7 +19,7 @@
 #include <gatery/frontend.h>
 #include <tuple>
 
-#include "../Stream.h"
+#include "../stream/Stream.h"
 
 namespace gtry::scl
 {

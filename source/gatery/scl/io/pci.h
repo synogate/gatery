@@ -18,7 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 #include "../Avalon.h"
-#include "../Stream.h"
+#include "../stream/Stream.h"
 
 namespace gtry::scl
 {

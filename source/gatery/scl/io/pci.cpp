@@ -19,7 +19,7 @@
 #include "pci.h"
 
 #include "../Fifo.h"
-#include "../StreamArbiter.h"
+#include "../stream/StreamArbiter.h"
 
 gtry::Bit gtry::scl::pci::isCompletionTlp(const UInt& tlpHeader)
 {

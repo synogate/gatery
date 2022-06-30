@@ -20,7 +20,7 @@
 
 #include <gatery/frontend.h>
 
-#include "../Stream.h"
+#include "../stream/Stream.h"
 
 #include <gatery/frontend/Reverse.h>
 

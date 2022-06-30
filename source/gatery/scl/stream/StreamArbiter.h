@@ -19,7 +19,6 @@
 #include <gatery/frontend.h>
 
 #include "Stream.h"
-#include "Fifo.h"
 
 namespace gtry::scl
 {
