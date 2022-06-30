@@ -21,9 +21,8 @@
 namespace gtry::scl
 {
 	template<Signal Payload>
-	struct Stream
+	struct DownStream
 	{
-		Reverse<Bit> ready;
 		Bit valid;
 		Payload data;
 
@@ -34,15 +33,15 @@ namespace gtry::scl
 		decltype(auto) operator ->() const;
 	};
 
-	template<Signal T> Bit transfer(const Stream<T>& stream) { return stream.valid & *stream.ready; }
-	template<Signal T> const Bit& ready(const Stream<T>& stream) { return *stream.ready; }
-	template<Signal T> const Bit& valid(const Stream<T>& stream) { return stream.valid; }
+	template<Signal T> const Bit& transfer(const DownStream<T>& stream) { return stream.valid & *stream.ready; }
+	template<Signal T> Bit ready(const DownStream<T>& stream) { return '1'; }
+	template<Signal T> const Bit& valid(const DownStream<T>& stream) { return stream.valid; }
 }
 
 namespace gtry::scl
 {
 	template<Signal Payload>
-	decltype(auto) Stream<Payload>::operator ->()
+	decltype(auto) DownStream<Payload>::operator ->()
 	{
 		if constexpr(requires(Payload & p) { p.operator->(); })
 			return (Payload&)data;
@@ -51,7 +50,7 @@ namespace gtry::scl
 	}
 
 	template<Signal Payload>
-	decltype(auto) Stream<Payload>::operator ->() const
+	decltype(auto) DownStream<Payload>::operator ->() const
 	{
 		if constexpr(requires(Payload & p) { p.operator->(); })
 			return (const Payload&)data;

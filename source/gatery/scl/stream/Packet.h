@@ -16,15 +16,14 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-#include <gatery/frontend.h>
+#include "Stream.h"
 
 namespace gtry::scl
 {
 	template<Signal Payload>
-	struct Stream
+	struct Packet
 	{
-		Reverse<Bit> ready;
-		Bit valid;
+		Bit eop;
 		Payload data;
 
 		Payload& operator *() { return data; }
@@ -34,26 +33,38 @@ namespace gtry::scl
 		decltype(auto) operator ->() const;
 	};
 
-	template<Signal T> Bit transfer(const Stream<T>& stream) { return stream.valid & *stream.ready; }
-	template<Signal T> const Bit& ready(const Stream<T>& stream) { return *stream.ready; }
-	template<Signal T> const Bit& valid(const Stream<T>& stream) { return stream.valid; }
+	template<Signal T> Bit sop(const T& stream);
+	template<Signal T> const Bit& eop(const Packet<T>& packet) { return packet.eop; }
+	template<Signal T> const Bit& eop(const Stream<Packet<T>>& stream) { return (*stream).eop; }
 }
 
 namespace gtry::scl
 {
-	template<Signal Payload>
-	decltype(auto) Stream<Payload>::operator ->()
+	template<Signal T>
+	Bit sop(const T& stream)
 	{
-		if constexpr(requires(Payload & p) { p.operator->(); })
+		Bit sop;
+		IF(transfer(stream))
+			sop = '0';
+		IF(eop(stream))
+			sop = '1';
+		sop = reg(sop, '1');
+		return sop;
+	}
+
+	template<Signal Payload>
+	decltype(auto) Packet<Payload>::operator ->()
+	{
+		if constexpr(requires(Payload& p) { p.operator->(); })
 			return (Payload&)data;
 		else
 			return &data;
 	}
 
 	template<Signal Payload>
-	decltype(auto) Stream<Payload>::operator ->() const
+	decltype(auto) Packet<Payload>::operator ->() const
 	{
-		if constexpr(requires(Payload & p) { p.operator->(); })
+		if constexpr(requires(Payload& p) { p.operator->(); })
 			return (const Payload&)data;
 		else
 			return &data;

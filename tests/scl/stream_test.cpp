@@ -24,7 +24,7 @@
 #include <gatery/simulation/waveformFormats/VCDSink.h>
 #include <gatery/simulation/Simulator.h>
 
-#include <gatery/scl/StreamArbiter.h>
+#include <gatery/scl/stream/StreamArbiter.h>
 
 
 using namespace boost::unit_test;
