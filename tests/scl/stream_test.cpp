@@ -372,7 +372,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reg, StreamTransferFixture)
 
 	simulateTransferTest(in, out);
 
-	recordVCD("stream_reg.vcd");
+	//recordVCD("stream_reg.vcd");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(m_clock.getClk(), 1024);
 }
@@ -389,7 +389,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reg_chaining, StreamTransferFixture)
 
 	simulateTransferTest(in, out);
 
-	recordVCD("stream_reg_chaining.vcd");
+	//recordVCD("stream_reg_chaining.vcd");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(m_clock.getClk(), 1024);
 }
@@ -406,7 +406,7 @@ BOOST_FIXTURE_TEST_CASE(stream_fifo, StreamTransferFixture)
 
 	simulateTransferTest(in, out, 500);
 
-	recordVCD("stream_fifo.vcd");
+	//recordVCD("stream_fifo.vcd");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(m_clock.getClk(), 1024);
 }
