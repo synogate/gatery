@@ -217,3 +217,179 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 
 	runTicks(clock.getClk(), 256);
 }
+
+class StreamTransferFixture : public BoostUnitTestSimulationFixture
+{
+protected:
+
+	Clock m_clock = Clock({ .absoluteFrequency = 100'000'000 });
+
+	void simulateTransferTest(scl::Stream<UInt>& source, scl::Stream<UInt>& sink)
+	{
+		simulateBackPreassure(sink);
+		simulateSendData(source, 16);
+		simulateRecvData(sink, 16);
+	}
+
+	void In(scl::Stream<UInt>& stream, std::string prefix = "in_")
+	{
+		stream.data = gtry::pinIn(8_b).setName(prefix + "data");
+		stream.valid = gtry::pinIn().setName(prefix + "valid");
+		gtry::pinOut(*stream.ready).setName(prefix + "ready");
+	}
+
+	void Out(scl::Stream<UInt>& stream, std::string prefix = "out_")
+	{
+		gtry::pinOut(stream.data).setName(prefix + "data");
+		gtry::pinOut(stream.valid).setName(prefix + "valid");
+		*stream.ready = gtry::pinIn().setName(prefix + "ready");
+	}
+
+private:
+	void simulateBackPreassure(scl::Stream<UInt>& stream)
+	{
+		addSimulationProcess([&]()->SimProcess {
+			std::mt19937 rng{ std::random_device{}() };
+
+			simu(*stream.ready) = 0;
+			while(simu(stream.valid) == 0)
+				co_await WaitClk(m_clock);
+
+			while(true)
+			{
+				simu(*stream.ready) = rng() % 2;
+				co_await WaitClk(m_clock);
+			}
+		});
+	}
+
+	void simulateSendData(scl::Stream<UInt>& stream, size_t transfers)
+	{
+		UInt counter = stream->width() + 1;
+
+		stream.valid = '0';
+		stream.data = ConstUInt(stream.data.width());
+
+		IF(counter.lsb() == '0')
+		{
+			stream.valid = counter < transfers * 2;
+			stream.data = counter.upper(stream->width());
+		}
+		
+		IF(*stream.ready)
+			counter += 1;
+		counter = reg(counter, 0);
+
+		/*
+		addSimulationProcess([&, transfers]()->SimProcess {
+			std::mt19937 rng{ std::random_device{}() };
+			for(size_t i = 0; i < transfers; ++i)
+			{
+				simu(stream.valid) = 0;
+				simu(stream.data).invalidate();
+
+				while((rng() & 1) == 0)
+					co_await WaitClk(m_clock);
+
+				simu(stream.valid) = 1;
+				simu(stream.data) = i;
+				co_await WaitClk(m_clock);
+
+				while(simu(*stream.ready) == 0)
+					co_await WaitClk(m_clock);
+			}
+		});
+		*/
+	}
+
+	void simulateRecvData(scl::Stream<UInt>& stream, size_t transfers)
+	{
+		addSimulationProcess([&, transfers]()->SimProcess {
+			size_t expectedValue = 0;
+			while(true)
+			{
+				if(simu(*stream.ready) == 1 &&
+					simu(stream.valid) == 1)
+				{
+					BOOST_TEST(simu(stream.data) == expectedValue);
+					expectedValue++;
+				}
+				co_await WaitClk(m_clock);
+
+				if(expectedValue == transfers)
+				{
+					stopTest();
+					co_await WaitClk(m_clock);
+				}
+			}
+		});
+	}
+};
+
+BOOST_FIXTURE_TEST_CASE(stream_downstreamReg, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::Stream<UInt> in{ .data = 5_b };
+	//In(in);
+
+	scl::Stream<UInt> out = in.regDownstream();
+	Out(out);
+
+	simulateTransferTest(in, out);
+
+	//recordVCD("stream_downstreamReg.vcd");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_uptreamReg, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::Stream<UInt> in{ .data = 5_b };
+	//In(in);
+
+	scl::Stream<UInt> out = in.regUpstream();
+	Out(out);
+
+	simulateTransferTest(in, out);
+
+	//recordVCD("stream_uptreamReg.vcd");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_reg, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::Stream<UInt> in { .data = 5_b };
+	//In(in);
+
+	scl::Stream<UInt> out = reg(in);
+	Out(out);
+
+	simulateTransferTest(in, out);
+
+	recordVCD("stream_reg.vcd");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_reg_chaining, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::Stream<UInt> in{ .data = 5_b };
+	//In(in);
+
+	scl::Stream<UInt> out = in.regDownstreamBlocking().regDownstreamBlocking().regDownstreamBlocking().regDownstream();
+	Out(out);
+
+	simulateTransferTest(in, out);
+
+	recordVCD("stream_reg_chaining.vcd");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
