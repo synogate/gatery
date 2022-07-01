@@ -224,11 +224,11 @@ protected:
 
 	Clock m_clock = Clock({ .absoluteFrequency = 100'000'000 });
 
-	void simulateTransferTest(scl::Stream<UInt>& source, scl::Stream<UInt>& sink)
+	void simulateTransferTest(scl::Stream<UInt>& source, scl::Stream<UInt>& sink, size_t transfers = 16)
 	{
 		simulateBackPreassure(sink);
-		simulateSendData(source, 16);
-		simulateRecvData(sink, 16);
+		simulateSendData(source, transfers);
+		simulateRecvData(sink, transfers);
 	}
 
 	void In(scl::Stream<UInt>& stream, std::string prefix = "in_")
@@ -390,6 +390,23 @@ BOOST_FIXTURE_TEST_CASE(stream_reg_chaining, StreamTransferFixture)
 	simulateTransferTest(in, out);
 
 	recordVCD("stream_reg_chaining.vcd");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_fifo, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::Stream<UInt> in{ .data = 10_b };
+	//In(in);
+
+	scl::Stream<UInt> out = in.fifo();
+	Out(out);
+
+	simulateTransferTest(in, out, 500);
+
+	recordVCD("stream_fifo.vcd");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(m_clock.getClk(), 1024);
 }

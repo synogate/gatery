@@ -17,6 +17,7 @@
 */
 #pragma once
 #include <gatery/frontend.h>
+#include "../Fifo.h"
 
 namespace gtry::scl
 {
@@ -69,6 +70,23 @@ namespace gtry::scl
 		 * @return	connected stream
 		*/
 		Stream regUpstream(const RegisterSettings& settings = {});
+
+		/**
+		 * @brief Create a FIFO for buffering.
+		 * @param minDepth The FIFO can hold at least that many data beats. 
+							The actual amount depends on the available target architecture. 
+		 * @return connected stream
+		*/
+		Stream fifo(size_t minDepth = 16);
+
+		/**
+		 * @brief Attach the stream as source and a new stream as sink to the FIFO.
+		 *			This is useful to make further settings or access advanced FIFO signals.
+		 *			For clock domain crossing you should use gtry::connect.
+		 * @param instance The FIFO to use.
+		 * @return connected stream
+		*/
+		Stream fifo(Fifo<Payload>& instance);
 	};
 
 	/**
@@ -99,6 +117,20 @@ namespace gtry::scl
 	 * @return connected stream
 	*/
 	template<Signal T> Stream<T> reg(Stream<T>& stream, const RegisterSettings& settings = {});
+
+	/**
+	 * @brief Connect a Stream as source to a FIFO as sink.
+	 * @param sink FIFO instance.
+	 * @param source Stream instance.
+	*/
+	template<Signal T> void connect(Fifo<T>& sink, Stream<T>& source);
+
+	/**
+	 * @brief Connect a FIFO as source to a Stream as sink.
+	 * @param sink Stream instance.
+	 * @param source FIFO instance.
+	*/
+	template<Signal T> void connect(Stream<T>& sink, Fifo<T>& source);
 }
 
 namespace gtry::scl
@@ -202,10 +234,47 @@ namespace gtry::scl
 		return ret;
 	}
 
+	template<Signal Payload>
+	inline Stream<Payload> Stream<Payload>::fifo(size_t minDepth)
+	{
+		Fifo<Payload> inst{ minDepth, data };
+		Stream ret = fifo(inst);
+		inst.generate();
+		return ret;
+	}
+
+	template<Signal Payload>
+	inline Stream<Payload> gtry::scl::Stream<Payload>::fifo(Fifo<Payload>& instance)
+	{
+		connect(instance, *this);
+
+		Stream<Payload> ret = constructFrom(*this);
+		connect(ret, instance);
+		return ret;
+	}
+
 	template<Signal T>
 	Stream<T> reg(Stream<T>& stream, const RegisterSettings& settings)
 	{
 		//return stream.regDownstreamBlocking(settings).regUpstream(settings);
 		return stream.regUpstream(settings).regDownstream(settings);
+	}
+
+	template<Signal T>
+	void connect(Fifo<T>& sink, Stream<T>& source)
+	{
+		IF(transfer(source))
+			sink.push(*source);
+		*source.ready = !sink.full();
+	}
+
+	template<Signal T>
+	void connect(Stream<T>& sink, Fifo<T>& source)
+	{
+		sink.valid = !source.empty();
+		sink.data = source.peak();
+
+		IF(transfer(sink))
+			source.pop();
 	}
 }
