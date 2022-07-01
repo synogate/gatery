@@ -136,14 +136,17 @@ namespace gtry
 	concept ReverseSignal = internal::is_reverse_signal<T>::value;
 
 	template<gtry::CompoundSignal T>
-	T& connect(T& lhs, T& rhs)
+	void connect(T& lhs, T& rhs)
 	{
 		using namespace gtry;
 		downstream(lhs) = downstream(rhs);
 		upstream(rhs) = upstream(lhs);
-		return lhs;
 	}
 
-	template<CompoundSignal T>
-	T& operator <<= (T& lhs, T& rhs) { return gtry::connect(lhs, rhs); }
+	template<class Ta, class Tb>
+	concept Connectable = requires(Ta & a, Tb & b) { connect(a, b); };
+
+	template<class Ta, class Tb>
+	requires Connectable<Ta, Tb>
+	Ta& operator <<= (Ta& lhs, Tb& rhs) { connect(lhs, rhs); return lhs; }
 }
