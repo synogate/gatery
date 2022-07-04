@@ -57,6 +57,27 @@ namespace gtry
 	template<class T> const T& upstream(const Reverse<T>& val) { return *val; }
 	template<CompoundSignal T> auto upstream(T& signal);
 	template<CompoundSignal T> auto upstream(const T& signal);
+
+
+	template<typename T>
+	struct VisitCompound<Reverse<T>>
+	{
+		void operator () (Reverse<T>& a, const Reverse<T>& b, CompoundVisitor& v, size_t flags)
+		{
+			VisitCompound<std::remove_cvref_t<T>>{}(*a, *b, v, flags);
+		}
+
+		void operator () (Reverse<T>& a, CompoundVisitor& v)
+		{
+			VisitCompound<std::remove_cvref_t<T>>{}(*a, v);
+		}
+
+		void operator () (const Reverse<T>& a, const Reverse<T>& b, CompoundVisitor& v)
+		{
+			VisitCompound<std::remove_cvref_t<T>>{}(*a, *b, v);
+		}
+	};
+
 }
 
 namespace gtry
