@@ -802,13 +802,15 @@ DefaultBitVectorState ReferenceSimulator::getValueOfOutput(const hlim::NodePort 
 	if (m_stateNeedsReevaluating)
 		reevaluate();
 
+	size_t width = nodePort.node->getOutputConnectionType(nodePort.port).width;
+
 	auto it = m_program.m_stateMapping.outputToOffset.find(nodePort);
 	if (it == m_program.m_stateMapping.outputToOffset.end()) {
 		DefaultBitVectorState value;
-		value.resize(0);
+		value.resize(width);
+		value.clearRange(DefaultConfig::DEFINED, 0, width);
 		return value;
 	} else {
-		size_t width = nodePort.node->getOutputConnectionType(nodePort.port).width;
 		return m_dataState.signalState.extract(it->second, width);
 	}
 }
