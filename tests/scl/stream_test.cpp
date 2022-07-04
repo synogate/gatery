@@ -227,7 +227,18 @@ protected:
 	void simulateTransferTest(scl::Stream<UInt>& source, scl::Stream<UInt>& sink, size_t transfers = 16)
 	{
 		simulateBackPreassure(sink);
-		simulateSendData(source, transfers);
+		simulateSendData(source, 0, transfers);
+		simulateRecvData(sink, transfers);
+	}
+
+	template<class... TSource>
+	void simulateArbiterTest(scl::Stream<UInt>& sink, size_t transfers, scl::Stream<TSource>& ...source)
+	{
+		simulateBackPreassure(sink);
+
+		size_t offset = 0;
+		(simulateSendData(source, offset += transfers, transfers), ...);
+
 		simulateRecvData(sink, transfers);
 	}
 
@@ -263,7 +274,7 @@ private:
 		});
 	}
 
-	void simulateSendData(scl::Stream<UInt>& stream, size_t transfers)
+	void simulateSendData(scl::Stream<UInt>& stream, size_t offset, size_t transfers)
 	{
 		UInt counter = stream->width() + 1;
 
@@ -273,11 +284,15 @@ private:
 		IF(counter.lsb() == '0')
 		{
 			stream.valid = counter < transfers * 2;
-			stream.data = counter.upper(stream->width());
+			stream.data = counter.upper(stream->width()) + offset;
+			IF(transfer(stream))
+				counter += 1;
+		}
+		ELSE
+		{
+			counter += 1;
 		}
 		
-		IF(*stream.ready)
-			counter += 1;
 		counter = reg(counter, 0);
 
 		/*
@@ -407,6 +422,52 @@ BOOST_FIXTURE_TEST_CASE(stream_fifo, StreamTransferFixture)
 	simulateTransferTest(in, out, 500);
 
 	//recordVCD("stream_fifo.vcd");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(streamArbiter_low, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::Stream<UInt> in{ .data = 10_b };
+	//In(in);
+
+	scl::StreamArbiter<UInt> arbiter;
+	arbiter.attach(in);
+	arbiter.generate();
+
+	Out(arbiter.out());
+
+	simulateArbiterTest(arbiter.out(), 32, in);
+
+	//recordVCD("streamArbiter_low.vcd");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(streamArbiter_low4, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::Stream<UInt> in0{ .data = 10_b };
+	scl::Stream<UInt> in1{ .data = 10_b };
+	scl::Stream<UInt> in2{ .data = 10_b };
+	scl::Stream<UInt> in3{ .data = 10_b };
+	//In(in);
+
+	scl::StreamArbiter<UInt> arbiter;
+	arbiter.attach(in0);
+	arbiter.attach(in1);
+	arbiter.attach(in2);
+	arbiter.attach(in3);
+	arbiter.generate();
+
+	Out(arbiter.out());
+
+	simulateArbiterTest(arbiter.out(), 16, in0, in1, in2, in3);
+
+	recordVCD("streamArbiter_low.vcd");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(m_clock.getClk(), 1024);
 }

@@ -27,9 +27,16 @@ namespace gtry::scl
 	template<Signal Payload>
 	struct Stream
 	{
-		Reverse<Bit> ready;
-		Bit valid;
-		Payload data;
+		// TODO: get rid of hana
+		//Reverse<Bit> ready;
+		//Bit valid;
+		//Payload data;
+
+		BOOST_HANA_DEFINE_STRUCT(Stream,
+			(Reverse<Bit>, ready),
+			(Bit, valid),
+			(Payload, data)
+		);
 
 		/**
 		 * @brief Accessor for data member to reduce syntax clutter.

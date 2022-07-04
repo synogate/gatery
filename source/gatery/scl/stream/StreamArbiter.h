@@ -19,9 +19,116 @@
 #include <gatery/frontend.h>
 
 #include "Stream.h"
+#include "../utils/OneHot.h"
 
 namespace gtry::scl
 {
+	template<typename T, typename TSelector = SelectorLowest>
+	class StreamArbiter
+	{
+	public:
+		StreamArbiter(TSelector&& selector = TSelector{}) : m_selector(selector) {}
+		~StreamArbiter() noexcept(false)
+		{
+			HCL_DESIGNCHECK_HINT(m_generated, "Generate not called.");
+		}
+
+		void out(const T& blueprint)
+		{
+			HCL_DESIGNCHECK_HINT(!m_generated, "Already generated.");
+			m_out.emplace(constructFrom(blueprint));
+		}
+
+		void attach(Stream<T>& stream, uint32_t sortKey = 1u << 31)
+		{
+			HCL_DESIGNCHECK_HINT(!m_generated, "Already generated.")
+
+			InStream& s = m_in.emplace_back(InStream{
+				.sortKey = sortKey
+			});
+			s.stream <<= stream;
+
+			if(!m_out)
+				m_out.emplace(constructFrom(stream));
+		}
+
+		Stream<T>& out() { return *m_out; }
+
+		virtual void generate()
+		{
+			auto area = Area{ "scl_StreamArbiter" }.enter();
+			HCL_DESIGNCHECK_HINT(m_out, "No input stream attached and out template not provided.");
+			HCL_DESIGNCHECK_HINT(!m_generated, "Generate called twice.")
+			m_generated = true;
+
+			m_in.sort([](InStream& a, InStream& b) { return a.sortKey < b.sortKey; });
+
+			UInt selected = m_selector(m_in);
+			HCL_NAMED(selected);
+			m_out->valid = '0';
+			m_out->data = dontCare(m_out->data);
+
+			HCL_NAMED(m_in);
+			size_t i = 0;
+			for(InStream& s : m_in)
+			{
+				*s.stream.ready = '0';
+				IF(selected == i++)
+					*m_out <<= s.stream;
+			}
+			HCL_NAMED(m_out);
+		}
+
+	protected:
+		struct InStream
+		{
+			BOOST_HANA_DEFINE_STRUCT(InStream,
+				(uint32_t, sortKey),
+				(Stream<T>, stream)
+			);
+		};
+		std::list<InStream> m_in;
+		std::optional<Stream<T>> m_out;
+		TSelector m_selector;
+		bool m_generated = false;
+	};
+
+	namespace internal
+	{
+		template<typename T>
+		UInt gatherValids(const T& container)
+		{
+			UInt mask = ConstUInt(BitWidth{ container.size() });
+			size_t i = 0;
+			for(const auto& it : container)
+				mask[i++] = it.stream.valid;
+			HCL_NAMED(mask);
+			return mask;
+		}
+	}
+
+	template<typename TSelector>
+	struct SelectorReg : TSelector
+	{
+		template<class TCont>
+		UInt operator () (const TCont& in)
+		{
+			return reg(TSelector::operator ()(in), 0);
+		}
+	};
+
+	struct SelectorLowest
+	{
+		template<class TCont>
+		UInt operator () (const TCont& in)
+		{
+			auto [value, valid] = scl::priorityEncoder(internal::gatherValids(in));
+			IF(!valid)
+				value = 0;
+			return value;
+		}
+	};
+
 	template<typename T>
 	struct arbitrateInOrder : Stream<T>
 	{
