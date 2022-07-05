@@ -20,6 +20,7 @@
 
 #include <gatery/frontend.h>
 
+#include "../stream/DownStream.h"
 #include "../stream/Stream.h"
 
 #include <gatery/frontend/Reverse.h>
@@ -44,55 +45,6 @@ namespace gtry::scl
 
 	std::vector<Stream<UInt>> makeIndexList(const UInt& valids);
 
-	template<typename T, typename Iter>
-	Stream<T> priorityEncoder(Iter begin, Iter end);
-
-	struct EncoderResult
-	{
-		UInt index;
-		Bit valid;
-	};
-
-	EncoderResult priorityEncoder(const UInt& in);
-	EncoderResult priorityEncoderTree(const UInt& in, bool registerStep, size_t resultBitsPerStep = 2);
-
-
-	// implementation 
-
-	template<typename T, typename Iter>
-	Stream<T> priorityEncoder(Iter begin, Iter end)
-	{
-		Stream<T> ret;
-		ret.valid = '0';
-
-		size_t maxWidth = 0;
-		for (Iter it = begin; it != end; ++it)
-			if (maxWidth < it->data.size())
-				maxWidth = it->data.size();
-		ret.data = gtry::ConstUInt(BitWidth{ maxWidth });
-
-		Bit anyValid = '0';
-		for(Iter it = begin; it != end; ++it)
-		{
-			*it->ready = '0';
-
-			IF(it->valid & !anyValid)
-			{
-				anyValid = '1';
-				auto&& i = *it;
-				static_assert(CompoundSignal<decltype(i)>);
-				static_assert(CompoundSignal<decltype(ret)>);
-				static_assert(std::is_same_v<std::remove_reference_t<decltype(ret)>, std::remove_reference_t<decltype(i)>>);
-				ret <<= i;
-				//connect(ret, i);
-				//ret.data = it->data;
-				//ret.valid = it->valid;
-				//*it->ready = ret.ready;
-			}
-		}
-		return ret;
-	}
-
+	DownStream<UInt> priorityEncoder(const UInt& in);
+	DownStream<UInt> priorityEncoderTree(const UInt& in, bool registerStep, size_t resultBitsPerStep = 2);
 }
-
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::EncoderResult, index, valid);

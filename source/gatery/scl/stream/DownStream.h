@@ -23,8 +23,10 @@ namespace gtry::scl
 	template<Signal Payload>
 	struct DownStream
 	{
-		Bit valid;
-		Payload data;
+		BOOST_HANA_DEFINE_STRUCT(DownStream,
+			(Bit, valid),
+			(Payload, data)
+		);
 
 		Payload& operator *() { return data; }
 		const Payload& operator *() const { return data; }

@@ -56,36 +56,13 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, Decoder, data::xran
 	BOOST_CHECK(back.size() == 2);
 	sim_assert(back == val) << "encoded to " << back;
 
-	EncoderResult prio = priorityEncoder(result);
-	BOOST_CHECK(prio.index.size() == 2);
+	scl::DownStream<UInt> prio = priorityEncoder(result);
+	BOOST_CHECK(prio->size() == 2);
 	sim_assert(prio.valid);
-	sim_assert(prio.index == val) << "encoded to " << prio.index;
+	sim_assert(*prio == val) << "encoded to " << *prio;
 
 	eval();
 }
-
-BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, ListEncoder, data::xrange(3), val)
-{
-	OneHot result = decoder(ConstUInt(val, 2_b));
-	BOOST_CHECK(result.size() == 4);
-	sim_assert(result == (1u << val)) << "decoded to " << result;
-
-	auto indexList = makeIndexList(result);
-	BOOST_CHECK(indexList.size() == result.size());
-
-	for (size_t i = 0; i < indexList.size(); ++i)
-	{
-		sim_assert(indexList[i].data == i) << indexList[i].data << " != " << i;
-		sim_assert(indexList[i].valid == ((size_t)val == i)) << indexList[i].valid << " != " << ((size_t)val == i);
-	}
-
-	auto encoded = priorityEncoder<UInt>(indexList.begin(), indexList.end());
-	sim_assert(encoded.valid);
-	sim_assert(encoded.data == val);
-
-	eval();
-}
-
 
 BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, PriorityEncoderTreeTest, data::xrange(65), val)
 {
@@ -98,7 +75,7 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, PriorityEncoderTree
 	if (testVector)
 	{
 		UInt ref = gtry::utils::Log2(gtry::utils::lowestSetBitMask(testVector));
-		sim_assert(res.valid & res.index == ref) << "wrong index: " << res.index << " should be " << ref;
+		sim_assert(res.valid & *res == ref) << "wrong index: " << *res << " should be " << ref;
 	}
 	else
 	{

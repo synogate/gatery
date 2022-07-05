@@ -49,20 +49,20 @@ std::vector<gtry::scl::Stream<gtry::UInt>> gtry::scl::makeIndexList(const UInt& 
 	return ret;
 }
 
-gtry::scl::EncoderResult gtry::scl::priorityEncoder(const UInt& in)
+gtry::scl::DownStream<UInt> gtry::scl::priorityEncoder(const UInt& in)
 {
 	if (in.empty())
-		return { UInt(0_b), '0' };
+		return { '0', UInt(0_b) };
 
 	UInt ret = ConstUInt(BitWidth::count(in.size()));
 	for (size_t i = in.size() - 1; i < in.size(); --i)
 		IF(in[i])
 			ret = i;
 
-	return { ret, in != 0 };
+	return { in != 0, ret };
 }
 
-gtry::scl::EncoderResult gtry::scl::priorityEncoderTree(const UInt& in, bool registerStep, size_t bps)
+gtry::scl::DownStream<UInt> gtry::scl::priorityEncoderTree(const UInt& in, bool registerStep, size_t bps)
 {
 	const size_t stepBits = 1ull << bps;
 	const size_t inBitsPerStep = utils::nextPow2((in.size() + stepBits - 1) / stepBits);
@@ -70,7 +70,7 @@ gtry::scl::EncoderResult gtry::scl::priorityEncoderTree(const UInt& in, bool reg
 	if (inBitsPerStep <= 1)
 		return gtry::scl::priorityEncoder(in);
 
-	std::vector<EncoderResult> lowerStep;
+	std::vector<DownStream<UInt>> lowerStep;
 	for (size_t i = 0; i < in.size(); i += inBitsPerStep)
 	{
 		const size_t clamp = std::min(inBitsPerStep, in.size() - i);
@@ -78,9 +78,9 @@ gtry::scl::EncoderResult gtry::scl::priorityEncoderTree(const UInt& in, bool reg
 	}
 	setName(lowerStep, "lowerStep");
 
-	EncoderResult lowSelect{
-		ConstUInt(BitWidth::count(inBitsPerStep)),
-		'0'
+	DownStream<UInt> lowSelect{
+		'0',
+		ConstUInt(BitWidth::count(inBitsPerStep))
 	};
 	setName(lowSelect, "lowSelect");
 
@@ -91,22 +91,18 @@ gtry::scl::EncoderResult gtry::scl::priorityEncoderTree(const UInt& in, bool reg
 		IF(lowerStep[i].valid)
 		{
 			highSelect = i;
-			lowSelect.index = zext(lowerStep[i].index);
+			*lowSelect = zext(*lowerStep[i]);
 			lowSelect.valid = '1';
 		}
 
-	EncoderResult out{
-		cat(highSelect, lowSelect.index),
-		lowSelect.valid
+	DownStream<UInt> out{
+		lowSelect.valid,
+		cat(highSelect, *lowSelect),
 	};
 	HCL_NAMED(out);
 
 	if (registerStep)
-	{
-		// TODO: reg(compound)
-		out.index = reg(out.index);
-		out.valid = reg(out.valid);
-	}
+		out = reg(out);
 	return out;
 }
 
