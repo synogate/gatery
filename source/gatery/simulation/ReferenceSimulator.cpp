@@ -97,13 +97,39 @@ void ClockedNode::changeReset(SimulatorCallbacks &simCallbacks, DataState &state
 }
 
 
+
+void Program::allocateClocks(const hlim::Circuit &circuit, const hlim::Subnet &nodes)
+{
+	m_stateMapping.clockPinAllocation = hlim::extractClockPins(const_cast<hlim::Circuit &>(circuit), nodes);
+	m_clockSources.resize(m_stateMapping.clockPinAllocation.clockPins.size());
+	m_resetSources.resize(m_stateMapping.clockPinAllocation.resetPins.size());
+
+	for (auto i : utils::Range(m_clockSources.size()))
+		m_clockSources[i].pin = m_stateMapping.clockPinAllocation.clockPins[i].source;
+
+	for (auto i : utils::Range(m_resetSources.size()))
+		m_resetSources[i].pin = m_stateMapping.clockPinAllocation.resetPins[i].source;
+
+	for (const auto &p : m_stateMapping.clockPinAllocation.clock2ClockPinIdx) {
+		auto clk = p.first;
+		auto clkSrcIdx = p.second;
+		auto &clkDom = m_clockDomains[clk];
+		clkDom.clock = clk;
+		clkDom.clockSourceIdx = clkSrcIdx;
+		m_clockSources[clkSrcIdx].domains.push_back(&clkDom);
+
+		auto it = m_stateMapping.clockPinAllocation.clock2ResetPinIdx.find(clk);
+		if (it != m_stateMapping.clockPinAllocation.clock2ResetPinIdx.end()) {
+			clkDom.resetSourceIdx = it->second;
+			m_resetSources[it->second].domains.push_back(&clkDom);
+		}
+	}
+}
+
 void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &nodes)
 {
 	allocateSignals(circuit, nodes);
-
-	m_stateMapping.clockPinAllocation = hlim::extractClockPins(const_cast<hlim::Circuit &>(circuit), nodes);
-	m_clockDomains.resize(m_stateMapping.clockPinAllocation.clockPins.size());
-	m_resetDomains.resize(m_stateMapping.clockPinAllocation.resetPins.size());
+	allocateClocks(circuit, nodes);
 
 	std::set<hlim::BaseNode*> subnetToConsider(nodes.begin(), nodes.end());
 
@@ -161,17 +187,12 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 
 		for (auto clockPort : utils::Range(node->getClocks().size())) {
 			if (node->getClocks()[clockPort] != nullptr) {
-				size_t clockDomainIdx = m_stateMapping.clockPinAllocation.clock2ClockPinIdx[node->getClocks()[clockPort]];
-				auto &clockDomain = m_clockDomains[clockDomainIdx];
+				auto it = m_clockDomains.find(node->getClocks()[clockPort]);
+				HCL_ASSERT(it != m_clockDomains.end());
+				auto &clockDomain = it->second;
 				clockDomain.clockedNodes.push_back(ClockedNode(mappedNode, clockPort));
 				if (clockDomain.dependentExecutionBlocks.empty()) /// @todo only attach those that actually need to be recomputed
 					clockDomain.dependentExecutionBlocks.push_back(0ull);
-
-				size_t resetDomainIdx = m_stateMapping.clockPinAllocation.clock2ResetPinIdx[node->getClocks()[clockPort]];
-				auto &resetDomain = m_resetDomains[resetDomainIdx];
-				resetDomain.clockedNodes.push_back(ClockedNode(mappedNode, clockPort));
-				if (resetDomain.dependentExecutionBlocks.empty()) /// @todo only attach those that actually need to be recomputed
-					resetDomain.dependentExecutionBlocks.push_back(0ull);
 			}
 		}
 	}
@@ -462,26 +483,28 @@ void ReferenceSimulator::powerOn()
 	m_dataState.signalState.clearRange(DefaultConfig::VALUE, 0, m_program.m_fullStateWidth);
 	m_dataState.signalState.clearRange(DefaultConfig::DEFINED, 0, m_program.m_fullStateWidth);
 
+
+	while (!m_nextEvents.empty())
+		m_nextEvents.pop();
+
 	for (const auto &mappedNode : m_program.m_powerOnNodes)
 		mappedNode.node->simulatePowerOn(m_callbackDispatcher, m_dataState.signalState, mappedNode.internal.data(), mappedNode.outputs.data());
 
-	m_dataState.clockState.resize(m_program.m_stateMapping.clockPinAllocation.clockPins.size());
-	m_dataState.resetState.resize(m_program.m_stateMapping.clockPinAllocation.resetPins.size());
-	for (auto i : utils::Range(m_program.m_stateMapping.clockPinAllocation.clockPins.size())) {
-		auto clock = m_program.m_stateMapping.clockPinAllocation.clockPins[i].source;
+	m_dataState.clockState.resize(m_program.m_clockSources.size());
+	for (auto i : utils::Range(m_dataState.clockState.size())) {
+		auto clock = m_program.m_clockSources[i].pin;
 		
 		auto &cs = m_dataState.clockState[i];
+		// The pin defines the starting state of the clock signal
 		auto trigType = clock->getTriggerEvent();
-
 		cs.high = trigType == hlim::Clock::TriggerEvent::RISING;
 
 		Event e;
 		e.type = Event::Type::clock;
-		e.clockEvt.clock = clock;
-		e.clockEvt.clockDomainIdx = i;
+		e.clockEvt.clockPinIdx = i;
 		e.clockEvt.risingEdge = !cs.high;
 		e.timeOfEvent = m_simulationTime + hlim::ClockRational(1,2) / clock->absoluteFrequency();
-
+/*
 		if (trigType == hlim::Clock::TriggerEvent::RISING_AND_FALLING ||
 			(trigType == hlim::Clock::TriggerEvent::RISING && e.clockEvt.risingEdge) ||
 			(trigType == hlim::Clock::TriggerEvent::FALLING && !e.clockEvt.risingEdge)) {
@@ -489,22 +512,22 @@ void ReferenceSimulator::powerOn()
 			cs.nextTrigger = e.timeOfEvent;
 		} else
 			cs.nextTrigger = e.timeOfEvent + hlim::ClockRational(1,2) / clock->absoluteFrequency();
-
+*/
 		m_nextEvents.push(e);
 	}
 
-
-	bool resetsInFlight = false;
-	for (auto i : utils::Range(m_program.m_stateMapping.clockPinAllocation.resetPins.size())) {
-		auto clock = m_program.m_stateMapping.clockPinAllocation.resetPins[i].source;
+	m_dataState.resetState.resize(m_program.m_resetSources.size());
+	for (auto i : utils::Range(m_dataState.resetState.size())) {
+		auto clock = m_program.m_resetSources[i].pin;
 
 		auto &rs = m_dataState.resetState[i];
-		auto &rstDom = m_program.m_resetDomains[i];
-
+		// The pin defines the starting state
+		auto &rstSource = m_program.m_resetSources[i];
 		rs.resetHigh = clock->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH;
 
-		for (auto &cn : rstDom.clockedNodes)
-			cn.changeReset(m_callbackDispatcher, m_dataState, rs.resetHigh);
+		for (auto &dom : rstSource.domains)
+			for (auto &cn : dom->clockedNodes)
+				cn.changeReset(m_callbackDispatcher, m_dataState, rs.resetHigh);
 		m_callbackDispatcher.onReset(clock, rs.resetHigh);
 
 
@@ -517,16 +540,15 @@ void ReferenceSimulator::powerOn()
 		if (minTime == hlim::ClockRational(0, 1)) {
 			// Immediately disable again
 			rs.resetHigh = !rs.resetHigh;
-			for (auto &cn : rstDom.clockedNodes)
-				cn.changeReset(m_callbackDispatcher, m_dataState, rs.resetHigh);
-			m_callbackDispatcher.onReset(clock, rs.resetHigh);
+			for (auto &dom : rstSource.domains)
+				for (auto &cn : dom->clockedNodes)
+					cn.changeReset(m_callbackDispatcher, m_dataState, !rs.resetHigh);
+			m_callbackDispatcher.onReset(clock, !rs.resetHigh);
 		} else {
 			// Schedule disabling
-			resetsInFlight = true;
 			Event e;
 			e.type = Event::Type::reset;
-			e.resetEvt.clock = clock;
-			e.resetEvt.resetDomainIdx = i;
+			e.resetEvt.resetPinIdx = i;
 			e.resetEvt.newResetHigh = !rs.resetHigh;
 			e.timeOfEvent = m_simulationTime + minTime;
 
@@ -539,23 +561,19 @@ void ReferenceSimulator::powerOn()
 
 	m_callbackDispatcher.onPowerOn();
 
-	HCL_ASSERT_HINT(m_program.m_stateMapping.clockPinAllocation.resetPins.size() < 2, "For now, only one reset is supported!");
-
-	if (!resetsInFlight) {
-		// For now, start fibers after reset
-		{
-			RunTimeSimulationContext context(this);
-			// start all fibers
-			m_runningSimProcs.clear();
-			for (auto &f : m_simProcs) {
-				m_runningSimProcs.push_back(f());
-				m_runningSimProcs.back().resume();
-			}
+	// Start fibers
+	{
+		RunTimeSimulationContext context(this);
+		// start all fibers
+		m_runningSimProcs.clear();
+		for (auto &f : m_simProcs) {
+			m_runningSimProcs.push_back(f());
+			m_runningSimProcs.back().resume();
 		}
-
-		if (m_stateNeedsReevaluating)
-			reevaluate();
 	}
+
+	if (m_stateNeedsReevaluating)
+		reevaluate();
 
 	{
 		RunTimeSimulationContext context(this);
@@ -601,7 +619,7 @@ void ReferenceSimulator::advanceEvent()
 
 	while (!m_nextEvents.empty() && m_nextEvents.top().timeOfEvent == m_simulationTime) { // outer loop because fibers can do a waitFor(0) in which we need to run again.
 		std::set<size_t> triggeredExecutionBlocks;
-		std::vector<std::coroutine_handle<>> simProcsResuming;
+		std::vector<std::pair<size_t, std::coroutine_handle<>>> simProcsResuming;
 		while (!m_nextEvents.empty() && m_nextEvents.top().timeOfEvent == m_simulationTime) {
 			auto event = m_nextEvents.top();
 			m_nextEvents.pop();
@@ -609,61 +627,69 @@ void ReferenceSimulator::advanceEvent()
 			switch (event.type) {
 				case Event::Type::reset: {
 					auto &rstEvent = event.resetEvt;
-					m_dataState.resetState[rstEvent.resetDomainIdx].resetHigh = rstEvent.newResetHigh;
+					m_dataState.resetState[rstEvent.resetPinIdx].resetHigh = rstEvent.newResetHigh;
 
-					auto &rstDom = m_program.m_resetDomains[rstEvent.resetDomainIdx];
+					auto &rstSrc = m_program.m_resetSources[rstEvent.resetPinIdx];
 
-					for (auto id : rstDom.dependentExecutionBlocks)
-						triggeredExecutionBlocks.insert(id);
 
-					for (auto &cn : rstDom.clockedNodes)
-						cn.changeReset(m_callbackDispatcher, m_dataState, rstEvent.newResetHigh);
+					for (auto dom : rstSrc.domains) {
+						for (auto id : dom->dependentExecutionBlocks)
+							triggeredExecutionBlocks.insert(id);
 
-					m_callbackDispatcher.onReset(rstEvent.clock, rstEvent.newResetHigh);
-
-					if (rstEvent.newResetHigh ^ (rstEvent.clock->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH)) {
-						// For now, start fibers after reset
-						{
-							RunTimeSimulationContext context(this);
-							// start all fibers
-							m_runningSimProcs.clear();
-							for (auto &f : m_simProcs) {
-								m_runningSimProcs.push_back(f());
-								m_runningSimProcs.back().resume();
-							}
-						}
-						if (m_stateNeedsReevaluating)
-							reevaluate();
+						for (auto &cn : dom->clockedNodes)
+							cn.changeReset(m_callbackDispatcher, m_dataState, rstEvent.newResetHigh);
 					}
+
+					m_callbackDispatcher.onReset(rstSrc.pin, rstEvent.newResetHigh);
 				} break;
 				case Event::Type::clock: {
 					auto &clkEvent = event.clockEvt;
-					auto &cs = m_dataState.clockState[clkEvent.clockDomainIdx];
+					auto &cs = m_dataState.clockState[clkEvent.clockPinIdx];
 					cs.high = clkEvent.risingEdge;
 
-					auto trigType = clkEvent.clock->getTriggerEvent();
-					if (trigType == hlim::Clock::TriggerEvent::RISING_AND_FALLING ||
-						(trigType == hlim::Clock::TriggerEvent::RISING && clkEvent.risingEdge) ||
-						(trigType == hlim::Clock::TriggerEvent::FALLING && !clkEvent.risingEdge)) {
 
-						auto &clkDom = m_program.m_clockDomains[clkEvent.clockDomainIdx];
+					auto &clkPin = m_program.m_clockSources[clkEvent.clockPinIdx];
+					for (auto domain : clkPin.domains) {
+						auto trigType = domain->clock->getTriggerEvent();
 
-						for (auto id : clkDom.dependentExecutionBlocks)
-							triggeredExecutionBlocks.insert(id);
+						if (trigType == hlim::Clock::TriggerEvent::RISING_AND_FALLING ||
+							(trigType == hlim::Clock::TriggerEvent::RISING && clkEvent.risingEdge) ||
+							(trigType == hlim::Clock::TriggerEvent::FALLING && !clkEvent.risingEdge)) {
 
-						for (auto &cn : clkDom.clockedNodes)
-							cn.advance(m_callbackDispatcher, m_dataState);
+							for (auto id : domain->dependentExecutionBlocks)
+								triggeredExecutionBlocks.insert(id);
 
-						cs.nextTrigger = event.timeOfEvent + hlim::ClockRational(1) / clkEvent.clock->absoluteFrequency();
+							for (auto &cn : domain->clockedNodes)
+								cn.advance(m_callbackDispatcher, m_dataState);
+
+							bool clockInReset = false;
+							if (domain->resetSourceIdx != ~0ull) {
+								auto resetType = domain->clock->getRegAttribs().resetActive;
+								clockInReset = m_dataState.resetState[domain->resetSourceIdx].resetHigh == (resetType == hlim::RegisterAttributes::Active::HIGH);
+
+								// only release simulation processes waiting on clock if the clock is not in reset.
+								if (!clockInReset) {
+									auto &waitingSimProcs = domain->awaitingSimProcs;
+
+									for (auto &v : waitingSimProcs)
+										simProcsResuming.push_back({v.sortId, std::move(v.handle)});
+
+									waitingSimProcs.clear();
+								}
+							}
+						}
 					}
-					m_callbackDispatcher.onClock(clkEvent.clock, clkEvent.risingEdge);
+					m_callbackDispatcher.onClock(clkPin.pin, clkEvent.risingEdge);
 
+					//cs.nextTrigger = event.timeOfEvent + hlim::ClockRational(1) / clkEvent.clock->absoluteFrequency();
+
+					// Re-issue next clock flank
 					clkEvent.risingEdge = !clkEvent.risingEdge;
-					event.timeOfEvent += hlim::ClockRational(1,2) / clkEvent.clock->absoluteFrequency();
+					event.timeOfEvent += hlim::ClockRational(1,2) / clkPin.pin->absoluteFrequency();
 					m_nextEvents.push(event);
 				} break;
 				case Event::Type::simProcResume: {
-					simProcsResuming.push_back(event.simProcResumeEvt.handle);
+					simProcsResuming.push_back({event.simProcResumeEvt.insertionId, event.simProcResumeEvt.handle});
 				} break;
 				default:
 					HCL_ASSERT_HINT(false, "Not implemented!");
@@ -680,9 +706,10 @@ void ReferenceSimulator::advanceEvent()
 
 		{
 			RunTimeSimulationContext context(this);
-			for (auto &handle : simProcsResuming) {
-				HCL_ASSERT(handle);
-				handle.resume();
+			std::sort(simProcsResuming.begin(), simProcsResuming.end());
+			for (auto &p : simProcsResuming) {
+				HCL_ASSERT(p.second);
+				p.second.resume();
 
 				if (m_abortCalled)
 					return;
@@ -875,10 +902,11 @@ void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> han
 
 void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock, utils::RestrictTo<RunTimeSimulationContext>)
 {
-	auto it = m_program.m_stateMapping.clockPinAllocation.clock2ClockPinIdx.find(const_cast<hlim::Clock*>(waitClock.getClock()));
+	auto it = m_program.m_clockDomains.find(const_cast<hlim::Clock*>(waitClock.getClock()));
 
-	if (it == m_program.m_stateMapping.clockPinAllocation.clock2ClockPinIdx.end()) {
+	if (it == m_program.m_clockDomains.end()) {
 		// This clock is not part of the simulation, so just wait for as long as it would take for the next tick to arrive if it was there.
+		// Note that this ignores any resets of that clock
 
 		size_t ticksSoFar = hlim::floor(m_simulationTime * waitClock.getClock()->absoluteFrequency());
 		size_t nextTick = ticksSoFar + 1;
@@ -892,12 +920,19 @@ void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> han
 		e.simProcResumeEvt.insertionId = m_nextSimProcInsertionId++;
 		m_nextEvents.push(e);
 	} else {
+		it->second.awaitingSimProcs.push_back({
+			.sortId = m_nextSimProcInsertionId++,
+			.handle = handle,
+		});
+
+		/*
 		Event e;
 		e.type = Event::Type::simProcResume;
 		e.timeOfEvent = m_dataState.clockState[it->second].nextTrigger;
 		e.simProcResumeEvt.handle = handle;
 		e.simProcResumeEvt.insertionId = m_nextSimProcInsertionId++;
 		m_nextEvents.push(e);
+		*/
 	}
 }
 
