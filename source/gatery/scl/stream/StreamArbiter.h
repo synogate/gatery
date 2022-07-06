@@ -17,13 +17,16 @@
 */
 #pragma once
 #include <gatery/frontend.h>
+#include <ranges>
 
 #include "Stream.h"
 #include "../utils/OneHot.h"
+#include "../views.h"
+#include "../Counter.h"
 
 namespace gtry::scl
 {
-	template<typename T, typename TSelector = SelectorLowest>
+	template<typename T, typename TSelector = ArbiterPolicyLowest>
 	class StreamArbiter
 	{
 	public:
@@ -63,8 +66,15 @@ namespace gtry::scl
 
 			m_in.sort([](InStream& a, InStream& b) { return a.sortKey < b.sortKey; });
 
-			UInt selected = m_selector(m_in);
+			Bit locked = flag(transfer(*m_out), eop(*m_out));
+			HCL_NAMED(locked);
+
+			UInt selected = BitWidth::count(m_in.size());
+			selected = reg(selected, 0);
+			IF(!locked & reg(ready(*m_out), '1'))
+				selected = m_selector(m_in | std::views::transform(&InStream::stream));
 			HCL_NAMED(selected);
+
 			m_out->valid = '0';
 			m_out->data = dontCare(m_out->data);
 
@@ -93,23 +103,11 @@ namespace gtry::scl
 		bool m_generated = false;
 	};
 
-	namespace internal
-	{
-		template<typename T>
-		UInt gatherValids(const T& container)
-		{
-			UInt mask = ConstUInt(BitWidth{ container.size() });
-			size_t i = 0;
-			for(const auto& it : container)
-				mask[i++] = it.stream.valid;
-			HCL_NAMED(mask);
-			return mask;
-		}
-	}
-
 	template<typename TSelector>
-	struct SelectorReg : TSelector
+	struct ArbiterPolicyReg : TSelector
 	{
+		using TSelector::TSelector;
+
 		template<class TCont>
 		UInt operator () (const TCont& in)
 		{
@@ -117,15 +115,44 @@ namespace gtry::scl
 		}
 	};
 
-	struct SelectorLowest
+	struct ArbiterPolicyLowest
 	{
 		template<class TCont>
 		UInt operator () (const TCont& in)
 		{
-			auto [value, valid] = scl::priorityEncoder(internal::gatherValids(in));
+			UInt mask = cat(in | views::valid);
+			auto [valid, value] = scl::priorityEncoder(mask);
 			IF(!valid)
 				value = 0;
 			return value;
+		}
+	};
+
+	struct ArbiterPolicyRoundRobin
+	{
+		template<class TCont>
+		UInt operator () (const TCont& in)
+		{
+			auto scope = Area{ "RoundRobin" }.enter();
+			UInt mask = cat(in | views::valid);
+
+			UInt counter = Counter{ mask.size() }.value();
+			HCL_NAMED(counter);
+
+			mask = rotr(mask, counter);
+			HCL_NAMED(mask);
+
+			auto [valid, firstValid] = scl::priorityEncoder(mask);
+			IF(!valid)
+				firstValid = 0;
+			HCL_NAMED(firstValid);
+
+			UInt selected = zext(firstValid, 1) + zext(counter, 1);
+			IF(selected >= mask.size())
+				selected -= mask.size();
+			HCL_NAMED(selected);
+
+			return selected(0, -1);
 		}
 	};
 

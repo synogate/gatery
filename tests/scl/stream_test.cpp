@@ -470,7 +470,6 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_low4, StreamTransferFixture)
 	ClockScope clkScp(m_clock);
 
 	scl::StreamArbiter<UInt> arbiter;
-
 	std::array<scl::Stream<UInt>, 4> in;
 	for(size_t i = 0; i < in.size(); ++i)
 	{
@@ -487,4 +486,29 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_low4, StreamTransferFixture)
 	//recordVCD("streamArbiter_low4.vcd");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(streamArbiter_rr5, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::StreamArbiter<UInt, scl::ArbiterPolicyRoundRobin> arbiter;
+	std::array<scl::Stream<UInt>, 5> in;
+	for(size_t i = 0; i < in.size(); ++i)
+	{
+		in[i].data = 10_b;
+		In(in[i], "in" + std::to_string(i) + "_");
+		simulateArbiterTestSource(in[i]);
+		arbiter.attach(in[i]);
+	}
+	arbiter.generate();
+
+	Out(arbiter.out());
+	simulateArbiterTestSink(arbiter.out());
+
+	//recordVCD("streamArbiter_rr5.vcd");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+
+	//dbg::vis();
 }
