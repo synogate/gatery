@@ -26,10 +26,18 @@ namespace gtry::scl
 		Counter(size_t end) :
 			m_value{BitWidth{utils::Log2C(end)}}
 		{
-			m_last = m_value == end - 1;
-			m_value = reg(m_value + 1, 0);
-			IF(m_last)
+			m_last = '0';
+
+			IF(m_value == end - 1)
+			{
 				m_value = 0;
+				m_last = '1';
+			}
+			ELSE
+			{
+				m_value = m_value + 1;
+			}
+			m_value = reg(m_value, 0);
 		}
 		
 		void reset() { m_value = 0; }
