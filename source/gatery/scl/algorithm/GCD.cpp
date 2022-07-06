@@ -21,14 +21,16 @@
 using namespace gtry;
 
 
-gtry::scl::StreamSource<gtry::scl::UIntPair> gtry::scl::binaryGCDStep1(StreamSink<UIntPair>& in, size_t iterationsPerClock)
+gtry::scl::Stream<gtry::scl::UIntPair> gtry::scl::binaryGCDStep1(Stream<UIntPair>& in, size_t iterationsPerClock)
 {
-	const size_t width = in.first.size();
-	StreamSource<UIntPair> out(UInt{ width }, UInt{ width });
+	const BitWidth width = in->first.width();
+	Stream<UIntPair> out{
+		.data = {width, width}
+	};
 
-	UInt a = BitWidth{ width };
-	UInt b = BitWidth{ width };
-	UInt d = BitWidth{ utils::Log2C(width) };
+	UInt a = width;
+	UInt b = width;
+	UInt d = BitWidth::count(width.bits());
 	Bit active;
 
 	HCL_NAMED(a);
@@ -36,22 +38,22 @@ gtry::scl::StreamSource<gtry::scl::UIntPair> gtry::scl::binaryGCDStep1(StreamSin
 	HCL_NAMED(d);
 	HCL_NAMED(active);
 
-	in.ready = !active;
+	*in.ready = !active;
 
-	IF(in.valid & in.ready)
+	IF(transfer(in))
 	{
-		a = in.first;
-		b = in.second;
-		d = ConstUInt(0, d.width());
-		active = true;
+		a = in->first;
+		b = in->second;
+		d = 0;
+		active = '1';
 	}
 
 	for (size_t i = 0; i < iterationsPerClock; ++i)
 	{
 		IF(a != b)
 		{
-			const Bit a_odd = a.lsb();
-			const Bit b_odd = b.lsb();
+			const Bit& a_odd = a.lsb();
+			const Bit& b_odd = b.lsb();
 
 			IF(!a_odd)
 				a >>= 1;
@@ -74,36 +76,36 @@ gtry::scl::StreamSource<gtry::scl::UIntPair> gtry::scl::binaryGCDStep1(StreamSin
 	}
 
 	out.valid = active & a == b;
-	out.first = a;
-	out.second = b;
+	out->first = a;
+	out->second = b;
 
-	IF(out.valid & out.ready)
-		active = false;
+	IF(transfer(out))
+		active = '0';
 
 	a = reg(a);
-	b = reg(a);
-	d = reg(a);
+	b = reg(b);
+	d = reg(d);
 	active = reg(active, '0');
 
 	return out;
 }
 
-gtry::scl::StreamSource<gtry::UInt> gtry::scl::shiftLeft(StreamSink<UIntPair>& in, size_t iterationsPerClock)
+gtry::scl::Stream<gtry::UInt> gtry::scl::shiftLeft(Stream<UIntPair>& in, size_t iterationsPerClock)
 {
-	UInt a = BitWidth{in.first.width()};
-	UInt b = BitWidth{in.second.width()};
+	UInt a = in->first.width();
+	UInt b = in->second.width();
 	Bit active;
 	HCL_NAMED(a);
 	HCL_NAMED(b);
 	HCL_NAMED(active);
 
-	in.ready = !active;
+	*in.ready = !active;
 
-	IF(in.valid & in.ready)
+	IF(transfer(in))
 	{
-		a = in.first;
-		b = in.second;
-		active = true;
+		a = in->first;
+		b = in->second;
+		active = '1';
 	}
 
 	for (size_t i = 0; i < iterationsPerClock; ++i)
@@ -115,31 +117,31 @@ gtry::scl::StreamSource<gtry::UInt> gtry::scl::shiftLeft(StreamSink<UIntPair>& i
 		}
 	}
 
-	StreamSource<UInt> out{ in.first.width() };
-	out.valid = active & (b != 0);
-	(UInt&)out = a;
+	Stream<UInt> out{ 
+		.valid = active & (b != 0),
+		.data = in->first.width(),
+	};
+	*out = a;
 
-	IF(out.valid & out.ready)
-		active = false;
+	IF(transfer(out))
+		active = '0';
 
 
 	a = reg(a);
-	b = reg(a);
+	b = reg(b);
 	active = reg(active, '0');
 
 	return out;
 }
 
-gtry::scl::StreamSource<gtry::UInt> gtry::scl::binaryGCD(StreamSink<UIntPair>& in, size_t iterationsPerClock)
+gtry::scl::Stream<gtry::UInt> gtry::scl::binaryGCD(Stream<UIntPair>& in, size_t iterationsPerClock)
 {
-	GroupScope entity(GroupScope::GroupType::ENTITY);
-	entity
-		.setName("gcd")
-		.setComment("Compute the greatest common divisor of two integers using binary GCD.");
+	auto area = Area{ "scl_gcd" }.enter();
 
-	StreamSource source = binaryGCDStep1(in, iterationsPerClock);
-	StreamSink<UIntPair> step1 = source;
+	Stream<UIntPair> step1 = binaryGCDStep1(in, iterationsPerClock);
+	HCL_NAMED(step1);
 	auto step2 = shiftLeft(step1, iterationsPerClock);
+	HCL_NAMED(step2);
 	return step2;
 }
 

@@ -17,6 +17,7 @@
 */
 #include "gatery/pch.h"
 #include "DebugInterface.h"
+#include "websocks/WebSocksInterface.h"
 
 namespace gtry::dbg {
 
@@ -72,5 +73,11 @@ void log(const LogMessage &msg)
 	DebugInterface::instance->log(msg);
 }
 
+void vis()
+{
+	WebSocksInterface::create(1337);
+	awaitDebugger();
+	stopInDebugger();
+}
 
 }

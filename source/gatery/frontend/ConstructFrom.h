@@ -34,6 +34,15 @@ namespace gtry
 		return T{ val, construct_from_t{} };
 	}
 
+	namespace internal
+	{
+		template<typename T>
+		concept SignalHolder = requires(T && holder)
+		{
+			{ *holder } -> Signal;
+		};
+	}
+
 	template<CompoundSignal T>
 	T constructFrom(const T& val)
 	{
@@ -41,6 +50,8 @@ namespace gtry
 			boost::hana::transform(boost::pfr::structure_tie(val), [&](auto&& member) {
 				if constexpr(Signal<decltype(member)>)
 					return constructFrom(member);
+				else if constexpr(internal::SignalHolder<decltype(member)>)
+					return constructFrom(*member);
 				else
 					return member;
 			})

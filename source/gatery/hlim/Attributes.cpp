@@ -50,7 +50,7 @@ void Attributes::loadConfig(const utils::ConfigTree& config)
 		attr[it.key()] = value;
 	}
 #else
-	#warning "Loading attributes from ConfigTree is disabled for non yaml-cpp builds!"
+	#pragma message ("Loading attributes from ConfigTree is disabled for non yaml-cpp builds!")
 #endif
 }
 	

@@ -16,38 +16,44 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-#include <gatery/frontend.h>
+#include "Stream.h"
 
 namespace gtry::scl
 {
-	class Counter
+	template<Signal Payload>
+	struct Packet
 	{
-	public:
-		Counter(size_t end) :
-			m_value{BitWidth{utils::Log2C(end)}}
-		{
-			m_last = '0';
+		Bit eop;
+		Payload data;
 
-			IF(m_value == end - 1)
-			{
-				m_value = 0;
-				m_last = '1';
-			}
-			ELSE
-			{
-				m_value = m_value + 1;
-			}
-			m_value = reg(m_value, 0);
-		}
-		
-		void reset() { m_value = 0; }
-		const UInt& value() const { return m_value; }
-		const Bit& isLast() const { return m_last; }
-		Bit isFirst() const { return m_value == 0; }
+		Payload& operator *() { return data; }
+		const Payload& operator *() const { return data; }
 
-	private:
-		UInt m_value;
-		Bit m_last;
+		decltype(auto) operator ->();
+		decltype(auto) operator ->() const;
 	};
 
+	template<Signal T> const Bit& eop(const Packet<T>& packet) { return packet.eop; }
+	template<Signal T> const Bit& eop(const Stream<Packet<T>>& stream) { return (*stream).eop; }
+}
+
+namespace gtry::scl
+{
+	template<Signal Payload>
+	decltype(auto) Packet<Payload>::operator ->()
+	{
+		if constexpr(requires(Payload& p) { p.operator->(); })
+			return (Payload&)data;
+		else
+			return &data;
+	}
+
+	template<Signal Payload>
+	decltype(auto) Packet<Payload>::operator ->() const
+	{
+		if constexpr(requires(Payload& p) { p.operator->(); })
+			return (const Payload&)data;
+		else
+			return &data;
+	}
 }

@@ -44,6 +44,7 @@
 #include "frontend/PipeBalanceGroup.h"
 #include "frontend/PriorityConditional.h"
 #include "frontend/Reg.h"
+#include "frontend/Reverse.h"
 #include "frontend/Scope.h"
 #include "frontend/Signal.h"
 #include "frontend/SignalArithmeticOp.h"

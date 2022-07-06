@@ -55,6 +55,7 @@
 #include <optional>
 #include <ostream>
 #include <queue>
+#include <ranges>
 #include <set>
 #include <stack>
 #include <stdexcept>

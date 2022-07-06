@@ -23,6 +23,11 @@
 
 namespace gtry
 {
+	template<class T>
+	concept PackableSignalValue =
+		SignalValue<T> or
+		(std::ranges::sized_range<T> and SignalValue<std::ranges::range_value_t<T>>);
+
 	namespace internal
 	{
 		void for_each_base_signal(TupleSignal auto&& signal, auto&& cb);
@@ -62,16 +67,24 @@ namespace gtry
 			);
 		}
 
+		template<std::ranges::sized_range BitSeq>
+		requires (!SignalValue<BitSeq>)
+		void for_each_base_signal(BitSeq&& signal, auto&& cb)
+		{
+			for(auto&& it : signal)
+				for_each_base_signal(it, cb);
+		}
+
 		void for_each_base_signal_reverse(auto&& cb) {}
 
-		void for_each_base_signal_reverse(auto&& cb, SignalValue auto&& signal, SignalValue auto&& ...other)
+		void for_each_base_signal_reverse(auto&& cb, PackableSignalValue auto&& signal, PackableSignalValue auto&& ...other)
 		{
 			for_each_base_signal_reverse(cb, std::forward<decltype(other)>(other)...);
 			for_each_base_signal(std::forward<decltype(signal)>(signal), std::forward<decltype(cb)>(cb));
 		}
 	}
 
-	UInt pack(const SignalValue auto& ...compound)
+	UInt pack(const PackableSignalValue auto& ...compound)
 	{
 		std::vector<SignalReadPort> portList;
 		(internal::for_each_base_signal(compound, [&](const BaseSignal auto& signal) {
@@ -86,7 +99,7 @@ namespace gtry
 	}
 
 	// same as pack but in reverse parameter order
-	UInt cat(const SignalValue auto& ...compound)
+	UInt cat(const PackableSignalValue auto& ...compound)
 	{
 		std::vector<SignalReadPort> portList;
 		internal::for_each_base_signal_reverse([&](const BaseSignal auto& signal) {

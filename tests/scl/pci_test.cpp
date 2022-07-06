@@ -70,14 +70,13 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
-	scl::Stream<scl::pci::Tlp> in;
+	scl::Stream<scl::Packet<scl::pci::Tlp>> in;
 	in.valid = pinIn().setName("in_valid");
 
 	UInt inHeader = pinIn(64_b).setName("in_header");
 	UInt inAddress = pinIn(32_b).setName("in_address");
-	in.data.header = cat(inAddress, inHeader);
-	in.data.data = pinIn(32_b).setName("in_data");
-	in.ready = Bit{};
+	in->header = cat(inAddress, inHeader);
+	in->data = pinIn(32_b).setName("in_data");
 	pinOut(*in.ready).setName("in_ready");
 
 	scl::pci::PciId completerId;
@@ -95,11 +94,11 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 	avmm.maximumPendingReadTransactions = 4;
 
 	scl::pci::AvmmBridge uut{ in, avmm, completerId };
-	scl::Stream<scl::pci::Tlp>& out = uut.tx();
-	out.ready = pinIn().setName("out_ready");
-	pinOut(*out.valid).setName("out_valid");
-	pinOut(out.data.header).setName("out_header");
-	pinOut(out.data.data).setName("out_data");
+	scl::Stream<scl::Packet<scl::pci::Tlp>>& out = uut.tx();
+	*out.ready = pinIn().setName("out_ready");
+	pinOut(out.valid).setName("out_valid");
+	pinOut(out->header).setName("out_header");
+	pinOut(out->data).setName("out_data");
 
 	Memory<UInt> testMem{ 1 << 16, avmm.writeData->width() };
 	IF(*avmm.write & *avmm.ready)
@@ -141,21 +140,21 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 		std::mt19937 rng{ 18057 };
 		uint8_t tag = 0xAA;
 
-		simu(*in.valid) = 0;
+		simu(in.valid) = 0;
 		while (true)
 		{
 			if (simu(*in.ready) != 0)
 			{
 				if (reqQueue.empty())
 				{
-					simu(*in.valid) = 0;
+					simu(in.valid) = 0;
 				}
 				else
 				{
 					const TbReq req = reqQueue.front();
 					reqQueue.pop();
 					simu(inAddress) = req.address;
-					simu(in.data.data) = req.data;
+					simu(in->data) = req.data;
 
 					auto tlp = TlpBuilder{}.length(1);
 					tlp.requester(rng(), rng(), rng());
@@ -163,18 +162,18 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 
 					if (req.read)
 					{
-						simu(*in.valid) = 1;
+						simu(in.valid) = 1;
 						simu(inHeader) = tlp;
 						cplQueue.push(tlp);
 					}
 					else if (req.write)
 					{
-						simu(*in.valid) = 1;
+						simu(in.valid) = 1;
 						simu(inHeader) = tlp.data();
 					}
 					else
 					{
-						simu(*in.valid) = 0;
+						simu(in.valid) = 0;
 					}
 				}
 			}
@@ -188,7 +187,7 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 
 		while (true)
 		{
-			if (simu(*out.ready) & simu(*out.valid))
+			if (simu(*out.ready) & simu(out.valid))
 			{
 				BOOST_TEST(!cplQueue.empty());
 
@@ -197,10 +196,10 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 					uint64_t reqTlp = cplQueue.front();
 					cplQueue.pop();
 
-					auto resTlpState = simu(out.data.header).eval();
+					auto resTlpState = simu(out->header).eval();
 					uint64_t hdr = resTlpState.extractNonStraddling(sim::DefaultConfig::VALUE, 0, 64);
 					uint64_t dst = resTlpState.extractNonStraddling(sim::DefaultConfig::VALUE, 64, 32);
-					uint64_t data = simu(out.data.data);
+					uint64_t data = simu(out->data);
 
 					BOOST_TEST(gtry::utils::bitfieldExtract(hdr, 24, 8) == 0x4A);
 

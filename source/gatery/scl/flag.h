@@ -20,34 +20,12 @@
 
 namespace gtry::scl
 {
-	class Counter
+	inline Bit flag(const Bit& set, const Bit& reset)
 	{
-	public:
-		Counter(size_t end) :
-			m_value{BitWidth{utils::Log2C(end)}}
-		{
-			m_last = '0';
-
-			IF(m_value == end - 1)
-			{
-				m_value = 0;
-				m_last = '1';
-			}
-			ELSE
-			{
-				m_value = m_value + 1;
-			}
-			m_value = reg(m_value, 0);
-		}
-		
-		void reset() { m_value = 0; }
-		const UInt& value() const { return m_value; }
-		const Bit& isLast() const { return m_last; }
-		Bit isFirst() const { return m_value == 0; }
-
-	private:
-		UInt m_value;
-		Bit m_last;
-	};
-
+		Bit ret;
+		ret |= set;
+		ret &= !reset;
+		ret = reg(ret, '0');
+		return ret;
+	}
 }

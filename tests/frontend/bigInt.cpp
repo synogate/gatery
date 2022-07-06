@@ -21,8 +21,8 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
-#include <boost/multiprecision/random.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
+#include <boost/random.hpp>
 
 using namespace boost::unit_test;
 
@@ -116,22 +116,22 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, BigIntCompare, data::make
 			co_await WaitFor({1,1000});
 			
 			BOOST_TEST(simu(le).allDefined());
-			BOOST_TEST(simu(le) == (in1<in2));
+			BOOST_TEST(simu(le) == (in1<in2 ? 1 : 0));
 			
 			BOOST_TEST(simu(leq).allDefined());
-			BOOST_TEST(simu(leq) == (in1<=in2));
+			BOOST_TEST(simu(leq) == (in1<=in2 ? 1 : 0));
 
 			BOOST_TEST(simu(eq).allDefined());
-			BOOST_TEST(simu(eq) == (in1==in2));
+			BOOST_TEST(simu(eq) == (in1 == in2 ? 1 : 0));
 
 			BOOST_TEST(simu(neq).allDefined());
-			BOOST_TEST(simu(neq) == (in1!=in2));
+			BOOST_TEST(simu(neq) == (in1 != in2 ? 1 : 0));
 
 			BOOST_TEST(simu(ge).allDefined());
-			BOOST_TEST(simu(ge) == (in1>in2));
+			BOOST_TEST(simu(ge) == (in1 > in2 ? 1 : 0));
 
 			BOOST_TEST(simu(geq).allDefined());
-			BOOST_TEST(simu(geq) == (in1>=in2));
+			BOOST_TEST(simu(geq) == (in1 >= in2 ? 1 : 0));
 		}
 
 		stopTest();
