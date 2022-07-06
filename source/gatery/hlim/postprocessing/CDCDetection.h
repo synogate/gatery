@@ -29,8 +29,7 @@ class Clock;
 class Subnet;
 class ConstSubnet;
 class BaseNode;
-class NodePort;
-class SignalClockDomain;
+struct NodePort;
 
 struct SignalClockDomain {
 	enum Type {
