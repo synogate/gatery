@@ -52,7 +52,7 @@ void inferClockDomains(Circuit &circuit, std::map<hlim::NodePort, SignalClockDom
 	attemptResolve = [&](const NodePort &np, bool insertIntoUndetermined){
 		auto ocr = np.node->getOutputClockRelation(np.port);
 		if (ocr.isConst()) 
-			assignToCD(np, {.type = SignalClockDomain::CONST });
+			assignToCD(np, {.type = SignalClockDomain::CONSTANT });
 		else {
 			if (!ocr.dependentClocks.empty()) {
 				if (np.node->getClocks()[ocr.dependentClocks[0]] == nullptr)
@@ -68,7 +68,7 @@ void inferClockDomains(Circuit &circuit, std::map<hlim::NodePort, SignalClockDom
 					auto it = domains.find(driver);
 					if (it != domains.end()) {
 						switch (it->second.type) {
-							case SignalClockDomain::CONST:
+							case SignalClockDomain::CONSTANT:
 							break;
 							case SignalClockDomain::UNKNOWN:
 							case SignalClockDomain::CLOCK:
@@ -84,7 +84,7 @@ void inferClockDomains(Circuit &circuit, std::map<hlim::NodePort, SignalClockDom
 				}
 
 				if (allConst)
-					assignToCD(np, {.type = SignalClockDomain::CONST });
+					assignToCD(np, {.type = SignalClockDomain::CONSTANT });
 			}
 		}	
 	};
@@ -108,7 +108,7 @@ void detectUnguardedCDCCrossings(Circuit &circuit, const ConstSubnet &subnet, st
 		for (auto i : utils::Range(n->getNumInputPorts())) {
 			auto driver = n->getDriver(i);
 			if (driver.node == nullptr) 
-				inputClocks[i] = {.type = SignalClockDomain::CONST};
+				inputClocks[i] = {.type = SignalClockDomain::CONSTANT};
 			else {
 				auto it = domains.find(driver);
 				if (it != domains.end())
@@ -135,7 +135,7 @@ void detectUnguardedCDCCrossings(Circuit &circuit, const ConstSubnet &subnet, st
 			}
 			for (auto j : ocr.dependentInputs) {
 				switch (inputClocks[j].type) {
-					case SignalClockDomain::CONST:
+					case SignalClockDomain::CONSTANT:
 					break;
 					case SignalClockDomain::UNKNOWN:
 						numUnknowns++;

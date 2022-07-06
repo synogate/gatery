@@ -34,7 +34,7 @@ struct NodePort;
 struct SignalClockDomain {
 	enum Type {
 		UNKNOWN,
-		CONST,
+		CONSTANT,
 		CLOCK
 	};
 	Type type = UNKNOWN;
