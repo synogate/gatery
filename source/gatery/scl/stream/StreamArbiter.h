@@ -26,6 +26,8 @@
 
 namespace gtry::scl
 {
+	struct ArbiterPolicyLowest;
+
 	template<typename T, typename TSelector = ArbiterPolicyLowest>
 	class StreamArbiter
 	{
