@@ -128,6 +128,8 @@ namespace gtry {
 
 	};
 
+	inline void setName(Clock& clock, std::string_view name) { clock.setName(std::string(name)); }
+
 	class ClockScope : public BaseScope<ClockScope>
 	{
 		public:
