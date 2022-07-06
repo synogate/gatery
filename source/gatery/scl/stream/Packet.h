@@ -33,25 +33,12 @@ namespace gtry::scl
 		decltype(auto) operator ->() const;
 	};
 
-	template<Signal T> Bit sop(const T& stream);
 	template<Signal T> const Bit& eop(const Packet<T>& packet) { return packet.eop; }
 	template<Signal T> const Bit& eop(const Stream<Packet<T>>& stream) { return (*stream).eop; }
 }
 
 namespace gtry::scl
 {
-	template<Signal T>
-	Bit sop(const T& stream)
-	{
-		Bit sop;
-		IF(transfer(stream))
-			sop = '0';
-		IF(eop(stream))
-			sop = '1';
-		sop = reg(sop, '1');
-		return sop;
-	}
-
 	template<Signal Payload>
 	decltype(auto) Packet<Payload>::operator ->()
 	{
