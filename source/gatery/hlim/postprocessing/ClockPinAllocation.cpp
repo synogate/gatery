@@ -27,7 +27,7 @@
 
 namespace gtry::hlim {
 
-std::vector<Clock*> determineRelevantClcoks(Circuit &circuit, const Subnet &subnet)
+std::vector<Clock*> determineRelevantClocks(Circuit &circuit, const Subnet &subnet)
 {
 	std::map<Clock*, bool> relevance;
 
@@ -96,7 +96,7 @@ std::vector<Clock*> determineRelevantClcoks(Circuit &circuit, const Subnet &subn
 
 ClockPinAllocation extractClockPins(Circuit &circuit, const Subnet &subnet)
 {
-	auto relevantClocks = determineRelevantClcoks(circuit, subnet);
+	auto relevantClocks = determineRelevantClocks(circuit, subnet);
 
 	ClockPinAllocation res;
 	for (auto clock : relevantClocks) {
