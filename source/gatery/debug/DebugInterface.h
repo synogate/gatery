@@ -118,6 +118,8 @@ size_t createAreaVisualization(unsigned width, unsigned height);
 void updateAreaVisualization(size_t id, const std::string content);
 void log(const LogMessage &msg);
 
+void vis();
+
 }
 
 }
