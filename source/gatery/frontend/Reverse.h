@@ -33,6 +33,7 @@ namespace gtry
 		Reverse(TArg&& arg) : m_obj(std::forward<TArg>(arg)) {}
 
 		Reverse& operator = (const Reverse&) = delete;
+		Reverse& operator = (Reverse&&);
 
 		T& operator * () { return m_obj; }
 		const T& operator * () const { return m_obj; }
@@ -100,6 +101,15 @@ namespace gtry
 	{
 		*rhs = m_obj;
 	}
+
+	template<Signal T>
+	inline Reverse<T>& Reverse<T>::operator=(Reverse&& rhs)
+	{
+		m_obj = internal::constructFromIfSignal(*rhs);
+		*rhs = m_obj;
+		return *this;
+	}
+
 
 	template<CompoundSignal T>
 	auto downstream(T& signal)
