@@ -19,6 +19,9 @@
 #include "gatery/pch.h"
 #include "DesignScope.h"
 
+#include "Clock.h"
+
+
 #include <gatery/export/DotExport.h>
 
 namespace gtry {
@@ -36,6 +39,12 @@ namespace gtry {
 		
 		HCL_DESIGNCHECK_HINT(m_parentScope == nullptr, "Only one design scope can be active at a time!");
 		m_defaultTechScope.emplace(m_targetTech->getTechCaps());
+
+		m_defaultClock = std::make_unique<Clock>(ClockConfig{
+				.absoluteFrequency = {{1,100'000'000}},
+				.name = "GateryDefaultClock",
+		});
+		m_defaultClockScope = std::make_unique<ClockScope>(*m_defaultClock);
 	}
 
 	void DesignScope::setTargetTechnology(std::unique_ptr<TargetTechnology> targetTech)

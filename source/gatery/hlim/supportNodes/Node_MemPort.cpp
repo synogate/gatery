@@ -476,4 +476,16 @@ void Node_MemPort::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_
 }
 
 
+OutputClockRelation Node_MemPort::getOutputClockRelation(size_t output) const
+{
+	OutputClockRelation res;
+	res.dependentInputs.reserve(getNumInputPorts());
+	for (auto i : utils::Range(getNumInputPorts()))
+		res.dependentInputs.push_back(i);
+
+	// Clock is only for writing, not for reading.
+
+	return res;
+}
+
 }

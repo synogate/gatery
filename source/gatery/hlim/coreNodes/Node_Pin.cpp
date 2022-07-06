@@ -25,6 +25,7 @@ namespace gtry::hlim {
 
 Node_Pin::Node_Pin(bool inputPin, bool outputPin, bool hasOutputEnable) : Node(2, 1), m_isInputPin(inputPin), m_isOutputPin(outputPin), m_hasOutputEnable(hasOutputEnable)
 {
+	m_clocks.resize(1);
 	setOutputType(0, OUTPUT_IMMEDIATE);
 }
 
@@ -42,6 +43,12 @@ void Node_Pin::connect(const NodePort &port)
 			setOutputConnectionType(0, m_connectionType);
 	}
 }
+
+void Node_Pin::setClockDomain(Clock *clk)
+{
+	attachClock(clk, 0);
+}
+
 
 void Node_Pin::connectEnable(const NodePort &port)
 { 
