@@ -71,7 +71,7 @@ namespace gtry::scl
 
 			UInt selected = BitWidth::count(m_in.size());
 			selected = reg(selected, 0);
-			IF(!locked & reg(ready(*m_out), '1'))
+			IF(!locked & reg(ready(*m_out) | !valid(*m_out), '1'))
 				selected = m_selector(m_in | std::views::transform(&InStream::stream));
 			HCL_NAMED(selected);
 
@@ -153,6 +153,15 @@ namespace gtry::scl
 			HCL_NAMED(selected);
 
 			return selected(0, -1);
+		}
+	};
+
+	struct ArbiterPolicyRoundRobinBubble
+	{
+		template<class TCont>
+		UInt operator () (const TCont& in)
+		{
+			return Counter{ in.size() }.value();
 		}
 	};
 

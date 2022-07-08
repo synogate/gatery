@@ -512,3 +512,26 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rr5, StreamTransferFixture)
 
 	//dbg::vis();
 }
+
+BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::StreamArbiter<UInt, scl::ArbiterPolicyRoundRobinBubble> arbiter;
+	std::array<scl::Stream<UInt>, 5> in;
+	for(size_t i = 0; i < in.size(); ++i)
+	{
+		in[i].data = 10_b;
+		In(in[i], "in" + std::to_string(i) + "_");
+		simulateArbiterTestSource(in[i]);
+		arbiter.attach(in[i]);
+	}
+	arbiter.generate();
+
+	Out(arbiter.out());
+	simulateArbiterTestSink(arbiter.out());
+
+	//recordVCD("streamArbiter_rrb5.vcd");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
