@@ -27,9 +27,6 @@ namespace gtry::scl
 	T synchronize(T in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
 
 	UInt grayCodeSynchronize(UInt in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
-
-	template<Signal T>
-	T allowClockDomainCrossing(T in, const Clock& from, const Clock& to);
 }
 
 template<gtry::Signal T>
@@ -40,19 +37,10 @@ T gtry::scl::synchronize(T val, const gtry::Clock& inClock, const gtry::Clock& o
 
 	val = allowClockDomainCrossing(val, inClock, outClock);
 
+	gtry::Clock syncRegClock = outClock.deriveClock({ .synchronizationRegister = true });
+
 	for(size_t i = 0; i < outStages; ++i)
-	{
-		val = reg(val, { .clock = outClock });
-		attribute(val, { .allowFusing = false });
-	}
+		val = reg(val, { .clock = syncRegClock });
 
 	return val;
-}
-
-template<gtry::Signal T>
-T gtry::scl::allowClockDomainCrossing(T in, const gtry::Clock& from, const gtry::Clock& to)
-{
-	// TODO: implement clocks
-	attribute(in, { .crossingClockDomain = true });
-	return in;
 }
