@@ -35,8 +35,6 @@ class Node_Attributes : public Node<Node_Attributes>
 		void connectInput(const NodePort &nodePort);
 		void disconnectInput();
 
-		virtual bool hasSideEffects() const override { return true; }
-
 		virtual std::string getTypeName() const override;
 		virtual void assertValidity() const override;
 		virtual std::string getInputName(size_t idx) const override;

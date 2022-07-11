@@ -24,6 +24,8 @@
 #include <gatery/hlim/coreNodes/Node_Clk2Signal.h>
 #include <gatery/hlim/coreNodes/Node_Register.h>
 
+#include <external/magic_enum.hpp>
+
 #include <boost/algorithm/string.hpp>
 
 namespace gtry
@@ -197,6 +199,7 @@ namespace gtry
 
 		if (config.resetActive) m_clock->getRegAttribs().resetActive = *config.resetActive;
 
+		if (config.synchronizationRegister) m_clock->getRegAttribs().synchronizationRegister = *config.synchronizationRegister;
 		if (config.registerEnablePinUsage) m_clock->getRegAttribs().registerEnablePinUsage = *config.registerEnablePinUsage;
 		if (config.registerResetPinUsage) m_clock->getRegAttribs().registerResetPinUsage = *config.registerResetPinUsage;
 

@@ -41,6 +41,34 @@ void writeClockXDC(const vhdl::AST &ast, std::ostream& out)
 
 		out << "create_clock -period " << std::fixed << std::setprecision(3) << ns << " [get_ports " << name << "]\n";
 	}
+
+	std::map<hlim::Clock*, std::vector<hlim::Clock*>> clock2srcPin;
+	for (auto clk : top->getClocks())
+		clock2srcPin[clk->getClockPinSource()].push_back(clk);
+
+	for (const auto &pairA : clock2srcPin)
+		for (const auto &pairB : clock2srcPin)
+			if (pairA.first < pairB.first) {
+				bool first;
+
+				out << "set_clock_groups -asynchronous -group [get_clocks {";
+				first = true;
+				for (auto c : pairA.second) {
+					if (!first) out << ", ";
+					first = false;
+
+					out << top->getNamespaceScope().getClock(c).name;
+				}
+				out << "}] -group [get_clocks {";
+				first = true;
+				for (auto c : pairB.second) {
+					if (!first) out << ", ";
+					first = false;
+
+					out << top->getNamespaceScope().getClock(c).name;
+				}
+				out << "}]\n";
+			}
 }
 
 void writeClockSDC(const vhdl::AST &ast, std::ostream& out)

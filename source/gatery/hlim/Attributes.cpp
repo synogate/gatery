@@ -60,8 +60,6 @@ void SignalAttributes::fuseWith(const SignalAttributes &rhs)
 
 	if (rhs.maxFanout)
 		maxFanout = rhs.maxFanout;
-	if (rhs.crossingClockDomain)
-		crossingClockDomain = rhs.crossingClockDomain;
 	if (rhs.allowFusing)
 		allowFusing = rhs.allowFusing;
 }
