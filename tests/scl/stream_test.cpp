@@ -336,10 +336,9 @@ private:
 	{
 		addSimulationProcess([=, &stream]()->SimProcess {
 			std::mt19937 rng{ std::random_device{}() };
-			const size_t packetLen = 4;
-			BOOST_ASSERT(m_transfers % packetLen == 0);
-			for(size_t i = 0; i < m_transfers; i += packetLen)
+			for(size_t i = 0; i < m_transfers;)
 			{
+				const size_t packetLen = std::min<size_t>(m_transfers - i, rng() % 5 + 1);
 				for(size_t j = 0; j < packetLen; ++j)
 				{
 					simu(stream.valid) = 0;
@@ -362,6 +361,7 @@ private:
 
 					co_await WaitClk(m_clock);
 				}
+				i += packetLen;
 			}
 			simu(stream.valid) = 0;
 			simu(*stream.data).invalidate();
@@ -638,7 +638,7 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5_packet, StreamTransferFixture)
 	Out(arbiter.out());
 	simulateArbiterTestSink(arbiter.out());
 
-	recordVCD("streamArbiter_rrb5_packet.vcd");
+	//recordVCD("streamArbiter_rrb5_packet.vcd");
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(m_clock.getClk(), 1024);
 }
