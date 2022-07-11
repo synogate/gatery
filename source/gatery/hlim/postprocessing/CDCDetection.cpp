@@ -100,7 +100,7 @@ void inferClockDomains(Circuit &circuit, std::map<hlim::NodePort, SignalClockDom
 }
 
 
-void detectUnguardedCDCCrossings(Circuit &circuit, const ConstSubnet &subnet, std::function<void(const BaseNode*, size_t)> detectionCallback)
+void detectUnguardedCDCCrossings(Circuit &circuit, const ConstSubnet &subnet, std::function<void(const BaseNode*)> detectionCallback)
 {
 	std::map<hlim::NodePort, SignalClockDomain> domains;
 	inferClockDomains(circuit, domains);
@@ -120,40 +120,8 @@ void detectUnguardedCDCCrossings(Circuit &circuit, const ConstSubnet &subnet, st
 			}
 		}
 
-		for (auto i : utils::Range(n->getNumOutputPorts())) {
-			auto ocr = n->getOutputClockRelation(i);
-
-			Clock *clock = nullptr;
-			size_t numUnknowns = 0;
-
-			for (auto c : ocr.dependentClocks) {
-				if (n->getClocks()[c] != nullptr) {
-					if (clock == nullptr)
-						clock = n->getClocks()[c]->getClockPinSource();
-					else
-						if (clock != n->getClocks()[c]->getClockPinSource()) 
-							detectionCallback(n, i);
-				}
-			}
-			for (auto j : ocr.dependentInputs) {
-				switch (inputClocks[j].type) {
-					case SignalClockDomain::CONSTANT:
-					break;
-					case SignalClockDomain::UNKNOWN:
-						numUnknowns++;
-					break;
-					case SignalClockDomain::CLOCK:
-						if (clock == nullptr)
-							clock = inputClocks[j].clk->getClockPinSource();
-						else
-							if (clock != inputClocks[j].clk->getClockPinSource()) 
-								detectionCallback(n, i);
-					break;
-				}
-			}
-			if (numUnknowns > 1 || (numUnknowns > 0 && clock != nullptr))
-				detectionCallback(n, i);
-		}
+		if (!n->checkValidInputClocks(inputClocks))
+			detectionCallback(n);
 	}
 }
 

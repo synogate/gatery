@@ -55,6 +55,20 @@ struct OutputClockRelation {
 	bool isConst() const { return dependentInputs.empty() && dependentClocks.empty(); }
 };
 
+/**
+ * @brief Specified the clock domain to which a signal belongs.
+ * 
+ */
+struct SignalClockDomain {
+	enum Type {
+		UNKNOWN,
+		CONSTANT,
+		CLOCK
+	};
+	Type type = UNKNOWN;
+	Clock *clk = nullptr;
+};
+
 
 class BaseNode : public NodeIO
 {
@@ -116,6 +130,12 @@ class BaseNode : public NodeIO
 		/// Returns to which clock the ouput signal is related.
 		/// @details This function is used to determine the propagation of clock domains through the graph.
 		virtual OutputClockRelation getOutputClockRelation(size_t output) const;
+
+		/// Verifies that no unintentional clock domain crossing is happening at this node.
+		/// @details Usually, this means that all input clocks must be equal (or constant) and,
+		/// if the node itself is clocked, that it is compatible with that clock.
+		/// @param inputClocks Clock domain for each input port
+		virtual bool checkValidInputClocks(std::span<SignalClockDomain> inputClocks) const;
 
 		/// Returns an id that is unique to this node within the circuit.
 		/// @details The id order is preserved when subnets are copied and always reflects creation order.

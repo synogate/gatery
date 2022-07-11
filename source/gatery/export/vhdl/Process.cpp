@@ -40,6 +40,7 @@
 #include "../../hlim/supportNodes/Node_Attributes.h"
 #include "../../hlim/supportNodes/Node_ExportOverride.h"
 #include "../../hlim/supportNodes/Node_SignalTap.h"
+#include "../../hlim/supportNodes/Node_CDC.h"
 
 #include <iostream>
 
@@ -258,6 +259,11 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
 
 	if (const auto *expOverrideNode = dynamic_cast<const hlim::Node_ExportOverride*>(nodePort.node)) {
 		formatExpression(stream, indentation, comments, expOverrideNode->getDriver(hlim::Node_ExportOverride::EXP_INPUT), dependentInputs, context);
+		return;
+	}
+
+	if (const auto *cdcNode = dynamic_cast<const hlim::Node_CDC*>(nodePort.node)) {
+		formatExpression(stream, indentation, comments, cdcNode->getDriver(0), dependentInputs, context);
 		return;
 	}
 

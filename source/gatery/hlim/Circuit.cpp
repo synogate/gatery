@@ -1151,7 +1151,7 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
 	dbg::changeState(dbg::State::POSTPROCESS);
 	postProcessor.run(*this);
 
-	detectUnguardedCDCCrossings(*this, ConstSubnet::all(*this), [](const BaseNode *affectedNode, size_t) {
+	detectUnguardedCDCCrossings(*this, ConstSubnet::all(*this), [](const BaseNode *affectedNode) {
 		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING 
 				<< "Unintentional clock domain crossing detected on inputs to node " << affectedNode
 		);

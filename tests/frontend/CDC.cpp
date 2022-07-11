@@ -56,7 +56,7 @@ BOOST_FIXTURE_TEST_CASE(unintentionalCDCDetection, gtry::BoostUnitTestSimulation
 	gtry::hlim::detectUnguardedCDCCrossings(
 		design.getCircuit(), 
 		gtry::hlim::ConstSubnet::all(design.getCircuit()), 
-		[&detections](const gtry::hlim::BaseNode* node, size_t){
+		[&detections](const gtry::hlim::BaseNode* node){
 
 		BOOST_TEST(dynamic_cast<const gtry::hlim::Node_Register*>(node) != nullptr);
 		detections++;
@@ -95,7 +95,7 @@ BOOST_FIXTURE_TEST_CASE(unintentionalCDCDetectionMemory, gtry::BoostUnitTestSimu
 	gtry::hlim::detectUnguardedCDCCrossings(
 		design.getCircuit(), 
 		gtry::hlim::ConstSubnet::all(design.getCircuit()), 
-		[&detections](const gtry::hlim::BaseNode* node, size_t){
+		[&detections](const gtry::hlim::BaseNode* node){
 
 		BOOST_TEST(dynamic_cast<const gtry::hlim::Node_MemPort*>(node) != nullptr);
 		detections++;
@@ -134,10 +134,49 @@ BOOST_FIXTURE_TEST_CASE(noUnintentionalCDCDetectionMemoryNoConflict, gtry::Boost
 	gtry::hlim::detectUnguardedCDCCrossings(
 		design.getCircuit(), 
 		gtry::hlim::ConstSubnet::all(design.getCircuit()), 
-		[&detections](const gtry::hlim::BaseNode* node, size_t){
+		[&detections](const gtry::hlim::BaseNode* node){
 
 		detections++;
 	});
 
 	BOOST_TEST(detections == 0);
 }
+
+
+BOOST_FIXTURE_TEST_CASE(intentionalCDCDetection, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock1({ .absoluteFrequency = 10'000 });
+	Clock clock2({ .absoluteFrequency = 10'000 });
+
+	UInt a = 8_b;
+	UInt b = 8_b;
+
+	{
+		ClockScope clockScope(clock1);
+		a = reg(b, 0);
+	}
+
+	a = allowClockDomainCrossing(a, clock1, clock2);
+	
+	{
+		ClockScope clockScope(clock2);
+		b = reg(a, 0);
+	}
+
+	b = allowClockDomainCrossing(b, clock2, clock1);
+
+	size_t detections = 0;
+
+	gtry::hlim::detectUnguardedCDCCrossings(
+		design.getCircuit(), 
+		gtry::hlim::ConstSubnet::all(design.getCircuit()), 
+		[&detections](const gtry::hlim::BaseNode* node){
+
+		detections++;
+	});
+
+	BOOST_TEST(detections == 0);
+}
+
