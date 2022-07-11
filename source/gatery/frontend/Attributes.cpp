@@ -21,9 +21,11 @@
 #include "Attributes.h"
 
 #include "Signal.h"
+#include "Clock.h"
 
 #include "DesignScope.h"
 #include "../hlim/supportNodes/Node_PathAttributes.h"
+#include "../hlim/supportNodes/Node_CDC.h"
 
 namespace gtry {
 
@@ -38,6 +40,15 @@ void pathAttribute(ElementarySignal &start, ElementarySignal &end, PathAttribute
 	node->getAttribs() = std::move(attributes);
 	node->connectStart(start.readPort());
 	node->connectEnd(end.readPort());
+}
+
+SignalReadPort internal::allowClockDomainCrossing(const ElementarySignal& in, const Clock &srcClock, const Clock &dstClock)
+{
+	auto* node = DesignScope::createNode<hlim::Node_CDC>();
+	node->attachClock(srcClock.getClk(), (size_t)hlim::Node_CDC::Clocks::INPUT_CLOCK);
+	node->attachClock(dstClock.getClk(), (size_t)hlim::Node_CDC::Clocks::OUTPUT_CLOCK);
+	node->connectInput(in.readPort());
+	return SignalReadPort( node );
 }
 
 }

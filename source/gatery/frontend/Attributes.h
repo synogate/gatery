@@ -17,7 +17,11 @@
 */
 #pragma once
 
+#include "Compound.h"
+
 #include "../hlim/Attributes.h"
+
+#include <gatery/utils/Traits.h>
 
 namespace gtry {
 
@@ -48,6 +52,32 @@ void attribute(ElementarySignal &signal, SignalAttributes attributes);
  * @param attributes The attributes to set for this path
  */
 void pathAttribute(ElementarySignal &start, ElementarySignal &end, PathAttributes attributes);
+
+
+class Clock;
+
+namespace internal {
+
+/// Inserts a node that allows clock domain crossing and verifies that the crossing happens from/to the specified clocks.
+SignalReadPort allowClockDomainCrossing(const ElementarySignal& in, const Clock &srcClock, const Clock &dstClock);
+
+}
+
+/// Inserts a node that allows clock domain crossing and verifies that the crossing happens from/to the specified clocks.
+template<BaseSignal SignalType>
+inline SignalType allowClockDomainCrossing(const SignalType& in, const Clock &srcClock, const Clock &dstClock) {
+	return internal::allowClockDomainCrossing(in, srcClock, dstClock);
+}
+	
+
+/// Inserts a node that allows clock domain crossing and verifies that the crossing happens from/to the specified clocks.
+template<Signal T>
+T allowClockDomainCrossing(const T& val, const Clock &srcClock, const Clock &dstClock)
+{
+	return internal::transformSignal(val, [&](const BaseSignal auto& sig) {
+		return allowClockDomainCrossing(sig, srcClock, dstClock);
+	});
+}
 
 /**@}*/
 
