@@ -25,6 +25,7 @@
 #include <gatery/simulation/Simulator.h>
 
 #include <gatery/scl/stream/StreamArbiter.h>
+#include <gatery/scl/stream/Packet.h>
 
 #include <gatery/debug/websocks/WebSocksInterface.h>
 
@@ -237,36 +238,55 @@ protected:
 		simulateRecvData(sink);
 	}
 
-	void simulateArbiterTestSink(scl::Stream<UInt>& sink)
+	template<Signal T>
+	void simulateArbiterTestSink(scl::Stream<T>& sink)
 	{
 		simulateBackPreassure(sink);
 		simulateRecvData(sink);
 	}
 
-	void simulateArbiterTestSource(scl::Stream<UInt>& source)
+	template<Signal T>
+	void simulateArbiterTestSource(scl::Stream<T>& source)
 	{
 		simulateSendData(source, m_groups++);
 	}
 
 	void In(scl::Stream<UInt>& stream, std::string prefix = "in_")
 	{
-		stream.data = gtry::pinIn(stream.data.width()).setName(prefix + "data");
-		stream.valid = gtry::pinIn().setName(prefix + "valid");
 		gtry::pinOut(*stream.ready).setName(prefix + "ready");
+		stream.valid = gtry::pinIn().setName(prefix + "valid");
+		stream.data = gtry::pinIn(stream.data.width()).setName(prefix + "data");
+	}
+
+	void In(scl::Stream<scl::Packet<UInt>>& stream, std::string prefix = "in_")
+	{
+		gtry::pinOut(*stream.ready).setName(prefix + "ready");
+		stream.valid = gtry::pinIn().setName(prefix + "valid");
+		stream.data.eop = gtry::pinIn().setName(prefix + "eop");
+		*stream.data = gtry::pinIn(stream->width()).setName(prefix + "data");
 	}
 
 	void Out(scl::Stream<UInt>& stream, std::string prefix = "out_")
 	{
-		gtry::pinOut(stream.data).setName(prefix + "data");
-		gtry::pinOut(stream.valid).setName(prefix + "valid");
 		*stream.ready = gtry::pinIn().setName(prefix + "ready");
+		gtry::pinOut(stream.valid).setName(prefix + "valid");
+		gtry::pinOut(stream.data).setName(prefix + "data");
+	}
+
+	void Out(scl::Stream<scl::Packet<UInt>>& stream, std::string prefix = "out_")
+	{
+		*stream.ready = gtry::pinIn().setName(prefix + "ready");
+		gtry::pinOut(stream.valid).setName(prefix + "valid");
+		gtry::pinOut(stream.data.eop).setName(prefix + "eop");
+		gtry::pinOut(*stream.data).setName(prefix + "data");
 	}
 
 private:
 	size_t m_groups = 0;
 	size_t m_transfers = 16;
 
-	void simulateBackPreassure(scl::Stream<UInt>& stream)
+	template<Signal T>
+	void simulateBackPreassure(scl::Stream<T>& stream)
 	{
 		addSimulationProcess([&]()->SimProcess {
 			std::mt19937 rng{ std::random_device{}() };
@@ -284,38 +304,19 @@ private:
 	}
 
 	void simulateSendData(scl::Stream<UInt>& stream, size_t group)
-	{/*
-		UInt counter = stream->width() + 1;
-
-		stream.valid = '0';
-		stream.data = ConstUInt(stream.data.width());
-
-		IF(counter.lsb() == '0')
-		{
-			stream.valid = counter < transfers * 2;
-			stream.data = counter.upper(stream->width()) + offset;
-			IF(transfer(stream))
-				counter += 1;
-		}
-		ELSE
-		{
-			counter += 1;
-		}
-		
-		counter = reg(counter, 0);
-*/
+	{
 		addSimulationProcess([=, &stream]()->SimProcess {
 			std::mt19937 rng{ std::random_device{}() };
 			for(size_t i = 0; i < m_transfers; ++i)
 			{
 				simu(stream.valid) = 0;
-				simu(stream.data).invalidate();
+				simu(*stream).invalidate();
 
 				while((rng() & 1) == 0)
 					co_await WaitClk(m_clock);
 
 				simu(stream.valid) = 1;
-				simu(stream.data) = i + group * m_transfers;
+				simu(*stream) = i + group * m_transfers;
 
 				co_await WaitFor(0);
 				while(simu(*stream.ready) == 0)  
@@ -327,11 +328,48 @@ private:
 				co_await WaitClk(m_clock);
 			}
 			simu(stream.valid) = 0;
-			simu(stream.data).invalidate();
+			simu(*stream).invalidate();
 		});
 	}
 
-	void simulateRecvData(scl::Stream<UInt>& stream)
+	void simulateSendData(scl::Stream<scl::Packet<UInt>>& stream, size_t group)
+	{
+		addSimulationProcess([=, &stream]()->SimProcess {
+			std::mt19937 rng{ std::random_device{}() };
+			for(size_t i = 0; i < m_transfers;)
+			{
+				const size_t packetLen = std::min<size_t>(m_transfers - i, rng() % 5 + 1);
+				for(size_t j = 0; j < packetLen; ++j)
+				{
+					simu(stream.valid) = 0;
+					simu(stream.data.eop).invalidate();
+					simu(*stream.data).invalidate();
+
+					while((rng() & 1) == 0)
+						co_await WaitClk(m_clock);
+
+					simu(stream.valid) = 1;
+					simu(stream.data.eop) = j == packetLen - 1 ? 1 : 0;
+					simu(*stream.data) = i + j + group * m_transfers;
+
+					co_await WaitFor(0);
+					while(simu(*stream.ready) == 0)
+					{
+						co_await WaitClk(m_clock);
+						co_await WaitFor(0);
+					}
+
+					co_await WaitClk(m_clock);
+				}
+				i += packetLen;
+			}
+			simu(stream.valid) = 0;
+			simu(*stream.data).invalidate();
+		});
+	}
+
+	template<Signal T>
+	void simulateRecvData(scl::Stream<T>& stream)
 	{
 		addSimulationProcess([=, &stream]()->SimProcess {
 			std::vector<size_t> expectedValue(m_groups);
@@ -342,7 +380,7 @@ private:
 				if(simu(*stream.ready) == 1 &&
 					simu(stream.valid) == 1)
 				{
-					size_t data = simu(stream.data);
+					size_t data = simu(*(stream.operator ->()));
 					BOOST_ASSERT(data / m_transfers < expectedValue.size());
 					BOOST_TEST(data % m_transfers == expectedValue[data / m_transfers]);
 					expectedValue[data / m_transfers]++;
@@ -488,6 +526,29 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_low4, StreamTransferFixture)
 	runTicks(m_clock.getClk(), 1024);
 }
 
+BOOST_FIXTURE_TEST_CASE(streamArbiter_low4_packet, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::StreamArbiter<scl::Packet<UInt>> arbiter;
+	std::array<scl::Stream<scl::Packet<UInt>>, 4> in;
+	for(size_t i = 0; i < in.size(); ++i)
+	{
+		*in[i].data = 10_b;
+		In(in[i], "in" + std::to_string(i) + "_");
+		simulateArbiterTestSource(in[i]);
+		arbiter.attach(in[i]);
+	}
+	arbiter.generate();
+
+	Out(arbiter.out());
+	simulateArbiterTestSink(arbiter.out());
+
+	//recordVCD("streamArbiter_low4_packet.vcd");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
+
 BOOST_FIXTURE_TEST_CASE(streamArbiter_rr5, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
@@ -511,4 +572,73 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rr5, StreamTransferFixture)
 	runTicks(m_clock.getClk(), 1024);
 
 	//dbg::vis();
+}
+
+BOOST_FIXTURE_TEST_CASE(streamArbiter_reg_rr5, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::StreamArbiter<UInt, scl::ArbiterPolicyReg<scl::ArbiterPolicyRoundRobin>> arbiter;
+	std::array<scl::Stream<UInt>, 5> in;
+	for(size_t i = 0; i < in.size(); ++i)
+	{
+		in[i].data = 10_b;
+		In(in[i], "in" + std::to_string(i) + "_");
+		simulateArbiterTestSource(in[i]);
+		arbiter.attach(in[i]);
+	}
+	arbiter.generate();
+
+	Out(arbiter.out());
+	simulateArbiterTestSink(arbiter.out());
+
+	//recordVCD("streamArbiter_reg_rr5.vcd");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::StreamArbiter<UInt, scl::ArbiterPolicyRoundRobinBubble> arbiter;
+	std::array<scl::Stream<UInt>, 5> in;
+	for(size_t i = 0; i < in.size(); ++i)
+	{
+		in[i].data = 10_b;
+		In(in[i], "in" + std::to_string(i) + "_");
+		simulateArbiterTestSource(in[i]);
+		arbiter.attach(in[i]);
+	}
+	arbiter.generate();
+
+	Out(arbiter.out());
+	simulateArbiterTestSink(arbiter.out());
+
+	//recordVCD("streamArbiter_rrb5.vcd");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5_packet, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::StreamArbiter<scl::Packet<UInt>, scl::ArbiterPolicyRoundRobinBubble> arbiter;
+	std::array<scl::Stream<scl::Packet<UInt>>, 5> in;
+	for(size_t i = 0; i < in.size(); ++i)
+	{
+		*in[i].data = 10_b;
+		In(in[i], "in" + std::to_string(i) + "_");
+		simulateArbiterTestSource(in[i]);
+		arbiter.attach(in[i]);
+	}
+	arbiter.generate();
+
+	Out(arbiter.out());
+	simulateArbiterTestSink(arbiter.out());
+
+	//recordVCD("streamArbiter_rrb5_packet.vcd");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
 }
