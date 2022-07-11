@@ -26,6 +26,7 @@
 
 #include <gatery/scl/stream/StreamArbiter.h>
 #include <gatery/scl/stream/Packet.h>
+#include <gatery/scl/stream/adaptWidth.h>
 
 #include <gatery/debug/websocks/WebSocksInterface.h>
 
@@ -228,6 +229,11 @@ protected:
 		HCL_ASSERT(m_groups == 0);
 		m_transfers = numTransfers;
 	}
+	void groups(size_t numGroups)
+	{
+		HCL_ASSERT(m_groups == 0);
+		m_groups = numGroups;
+	}
 
 	Clock m_clock = Clock({ .absoluteFrequency = 100'000'000 });
 
@@ -280,10 +286,6 @@ protected:
 		gtry::pinOut(stream.data.eop).setName(prefix + "eop");
 		gtry::pinOut(*stream.data).setName(prefix + "data");
 	}
-
-private:
-	size_t m_groups = 0;
-	size_t m_transfers = 16;
 
 	template<Signal T>
 	void simulateBackPreassure(scl::Stream<T>& stream)
@@ -395,6 +397,10 @@ private:
 			}
 		});
 	}
+
+private:
+	size_t m_groups = 0;
+	size_t m_transfers = 16;
 };
 
 BOOST_FIXTURE_TEST_CASE(stream_downstreamReg, StreamTransferFixture)
@@ -639,6 +645,87 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5_packet, StreamTransferFixture)
 	simulateArbiterTestSink(arbiter.out());
 
 	//recordVCD("streamArbiter_rrb5_packet.vcd");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_narrow, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::Stream<UInt> in{
+		.data = 24_b
+	};
+	In(in);
+
+	scl::Stream<UInt> out = scl::adaptWidth(in, 8_b);
+	Out(out);
+
+	// send data
+	addSimulationProcess([=, &in]()->SimProcess {
+		simu(in.valid) = 0;
+		simu(*in).invalidate();
+
+		for(size_t i = 0; i < 8; ++i)
+		{
+			simu(in.valid) = 1;
+			simu(*in) =
+				((i * 3 + 0) << 0) |
+				((i * 3 + 1) << 8) |
+				((i * 3 + 2) << 16);
+			co_await WaitFor(0);
+			while(simu(*in.ready) == 0)
+				co_await WaitClk(m_clock);
+			co_await WaitClk(m_clock);
+		}
+	});
+
+	transfers(8 * 3);
+	groups(1);
+	simulateBackPreassure(out);
+	simulateRecvData(out);
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_widen, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::Stream<UInt> in{
+		.data = 4_b
+	};
+	In(in);
+
+	scl::Stream<UInt> out = scl::adaptWidth(in, 8_b);
+	Out(out);
+
+	// send data
+	addSimulationProcess([=, &in]()->SimProcess {
+		simu(in.valid) = 0;
+		simu(*in).invalidate();
+
+		for(size_t i = 0; i < 32; ++i)
+		{
+			for(size_t j = 0; j < 2; ++j)
+			{
+				simu(in.valid) = 1;
+				simu(*in) = (i >> (j * 4)) & 0xF;
+
+				co_await WaitFor(0);
+				while(simu(*in.ready) == 0)
+					co_await WaitClk(m_clock);
+				co_await WaitClk(m_clock);
+			}
+		}
+	});
+
+	transfers(32);
+	groups(1);
+	simulateBackPreassure(out);
+	simulateRecvData(out);
+
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(m_clock.getClk(), 1024);
 }
