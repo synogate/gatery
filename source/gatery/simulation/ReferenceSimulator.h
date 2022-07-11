@@ -35,7 +35,7 @@ namespace gtry::sim {
 
 struct ClockState {
 	bool high;
-	hlim::ClockRational nextTrigger;
+	//hlim::ClockRational nextTrigger;
 };
 
 struct ResetState {
@@ -54,11 +54,6 @@ struct StateMapping
 	std::map<hlim::NodePort, size_t> outputToOffset;
 	std::map<hlim::BaseNode*, std::vector<size_t>> nodeToInternalOffset;
 	hlim::ClockPinAllocation clockPinAllocation;
-
-	/*
-	std::map<hlim::Clock*, size_t> clockToSignalIdx;
-	std::map<hlim::Clock*, size_t> clockToClkIdx;
-	*/
 
 	StateMapping() { clear(); }
 
@@ -87,12 +82,6 @@ class ExecutionBlock
 		std::vector<MappedNode> m_steps;
 };
 
-class HardwareAssert
-{
-	public:
-	protected:
-};
-
 class ClockedNode
 {
 	public:
@@ -105,20 +94,40 @@ class ClockedNode
 		size_t m_clockPort;
 };
 
+
+struct ClockAwaitingSimProc {
+	std::uint64_t sortId;
+	std::coroutine_handle<> handle;
+};
+
+/**
+ * @brief All nodes driven by a particular clock.
+ */
 struct ClockDomain
 {
+	hlim::Clock *clock = nullptr;
+	size_t clockSourceIdx = ~0ull;
+	size_t resetSourceIdx = ~0ull;
 	std::vector<ClockedNode> clockedNodes;
 	std::vector<size_t> dependentExecutionBlocks;
+
+	std::vector<ClockAwaitingSimProc> awaitingSimProcs;
 };
 
-
-/*
-struct ClockDriver
+/**
+ * @brief Definition of a combined source for either a clock or reset
+ * 
+ */
+struct ClockPin 
 {
-	size_t srcSignalIdx;
-	size_t dstClockIdx;
+	/// Clock in the hierarchy whose clock/reset signal is used for all connected ClockDomains
+	hlim::Clock *pin;
+	/// If this clock/reset is driven by a signal, the index into the state vector of that signal.
+	size_t srcSignalIdx = ~0ull; 
+	/// All the domains affected by this source.
+	std::vector<ClockDomain*> domains;
 };
-*/
+
 struct Program
 {
 	void compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &nodes);
@@ -128,13 +137,14 @@ struct Program
 	StateMapping m_stateMapping;
 
 	std::vector<MappedNode> m_powerOnNodes;
-	//std::vector<ClockDriver> m_clockDrivers;
-	std::vector<ClockDomain> m_clockDomains;
-	std::vector<ClockDomain> m_resetDomains;
+	std::vector<ClockPin> m_clockSources;
+	std::vector<ClockPin> m_resetSources;
+	std::map<hlim::Clock*, ClockDomain> m_clockDomains;
 	std::vector<ExecutionBlock> m_executionBlocks;
 
 	protected:
 		void allocateSignals(const hlim::Circuit &circuit, const hlim::Subnet &nodes);
+		void allocateClocks(const hlim::Circuit &circuit, const hlim::Subnet &nodes);
 };
 
 struct Event {
@@ -147,13 +157,11 @@ struct Event {
 	hlim::ClockRational timeOfEvent;
 
 	struct {
-		hlim::Clock *clock;
-		size_t clockDomainIdx;
+		size_t clockPinIdx;
 		bool risingEdge;
 	} clockEvt;
 	struct {
-		hlim::Clock *clock;
-		size_t resetDomainIdx;
+		size_t resetPinIdx;
 		bool newResetHigh;
 	} resetEvt;
 	struct {

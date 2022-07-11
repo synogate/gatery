@@ -26,7 +26,12 @@
 #include "Scope.h"
 #include "tech/TargetTechnology.h"
 
+#include <memory>
+
 namespace gtry {
+
+class Clock;
+class ClockScope;
 
 /**
  * @addtogroup gtry_frontend
@@ -70,6 +75,9 @@ class DesignScope : public BaseScope<DesignScope>
 	protected:
 		hlim::Circuit m_circuit;
 		GroupScope m_rootScope;
+
+		std::unique_ptr<Clock> m_defaultClock;
+		std::unique_ptr<ClockScope> m_defaultClockScope;
 
 		sim::ConstructionTimeSimulationContext m_simContext;
 		

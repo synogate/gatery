@@ -35,12 +35,26 @@
 #include <vector>
 #include <set>
 #include <string>
+#include <span>
 
 namespace gtry::hlim {
 
 class NodeGroup;
 class Clock;
 class SignalDelay;
+
+/**
+ * @brief Specifies which signal and clock ports affect a Node's output port's clock domain.
+ * @details For there to not be an invalid clock domain crossing with a node's output, all
+ * dependent clocks and all dependent inputs must be from the same clock domain.
+ */
+struct OutputClockRelation {
+	std::vector<size_t> dependentInputs;
+	std::vector<size_t> dependentClocks;
+
+	bool isConst() const { return dependentInputs.empty() && dependentClocks.empty(); }
+};
+
 
 class BaseNode : public NodeIO
 {
@@ -98,6 +112,10 @@ class BaseNode : public NodeIO
 
 		void attachClock(Clock *clk, size_t clockPort);
 		void detachClock(size_t clockPort);
+
+		/// Returns to which clock the ouput signal is related.
+		/// @details This function is used to determine the propagation of clock domains through the graph.
+		virtual OutputClockRelation getOutputClockRelation(size_t output) const;
 
 		/// Returns an id that is unique to this node within the circuit.
 		/// @details The id order is preserved when subnets are copied and always reflects creation order.

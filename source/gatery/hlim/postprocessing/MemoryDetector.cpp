@@ -1133,6 +1133,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 		}
 
 		auto *pinRdAddr = circuit.createNode<Node_Pin>(false, true, false);
+		pinRdAddr->setClockDomain(clock);
 		pinRdAddr->setName(prefix +"rd_address");
 		pinRdAddr->moveToGroup(m_nodeGroup->getParent());
 		pinRdAddr->recordStackTrace();
@@ -1144,6 +1145,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 		Node_Pin *pinRdEn = nullptr;
 		if (rp.node->getDriver((size_t)Node_MemPort::Inputs::enable).node != nullptr) {
 			pinRdEn = circuit.createNode<Node_Pin>(false, true, false);
+			pinRdEn->setClockDomain(clock);
 			pinRdEn->setName(prefix +"rd_read");
 			pinRdEn->moveToGroup(m_nodeGroup->getParent());
 			pinRdEn->recordStackTrace();
@@ -1155,6 +1157,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 			memGroupProps[(boost::format("port_%d_has_readEnable") % portIdx).str()] = false;
 
 		auto *pinRdData = circuit.createNode<Node_Pin>(true, false, false);
+		pinRdData->setClockDomain(clock);
 		pinRdData->setName(prefix +"rd_readdata");
 		pinRdData->moveToGroup(m_nodeGroup->getParent());
 		pinRdData->recordStackTrace();
@@ -1190,6 +1193,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 
 
 		auto *pinWrAddr = circuit.createNode<Node_Pin>(false, true, false);
+		pinWrAddr->setClockDomain(clock);
 		pinWrAddr->setName(prefix +"wr_address");
 		pinWrAddr->moveToGroup(m_nodeGroup->getParent());
 		pinWrAddr->recordStackTrace();
@@ -1199,6 +1203,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 		memGroupProps[(boost::format("port_%d_width_addr") % portIdx).str()] = getOutputWidth(pinWrAddr->getDriver(0));
 
 		auto *pinWrData = circuit.createNode<Node_Pin>(false, true, false);
+		pinWrData->setClockDomain(clock);
 		pinWrData->setName(prefix +"wr_writedata");
 		pinWrData->moveToGroup(m_nodeGroup->getParent());
 		pinWrData->recordStackTrace();
@@ -1210,6 +1215,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 		Node_Pin *pinWrEn = nullptr;
 		if (wp.node->getDriver((size_t)Node_MemPort::Inputs::wrEnable).node != nullptr) {
 			pinWrEn = circuit.createNode<Node_Pin>(false, true, false);
+			pinWrEn->setClockDomain(clock);
 			pinWrEn->setName(prefix +"wr_write");
 			pinWrEn->moveToGroup(m_nodeGroup->getParent());
 			pinWrEn->recordStackTrace();

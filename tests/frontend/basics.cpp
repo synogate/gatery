@@ -334,7 +334,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterNewSyntax, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
 
-	Clock clock({ .absoluteFrequency = 10'000 });
+	Clock clock({ .absoluteFrequency = 10'000, .resetType = ClockConfig::ResetType::NONE });
 	ClockScope clockScope(clock);
 
 	{
@@ -587,19 +587,24 @@ BOOST_FIXTURE_TEST_CASE(ClockRegisterReset, BoostUnitTestSimulationFixture)
 
 	{
 		UInt vec1 = reg(UInt{ "b01" });
-		UInt vec2 = reg(UInt{ "b01" }, "2b");
+		UInt vec2 = reg(UInt{ "b01" }, "2b0");
 		Bit bit1 = reg(Bit{ '1' });
 		Bit bit2 = reg(Bit{ '1' }, '0');
 
 		UInt ref(2_b);
 		simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
-			context.set(0, context.getTick() ? 1 : 0);
+			context.set(0, context.getTick()>1 ? 1 : 0);
 			}, ref);
 
-		sim_assert((ref == 0) | (vec1 == ref)) << "should be " << ref << " but is " << vec1;
-		sim_assert((ref == 0) | (bit1 == ref[0])) << "should be " << ref[0] << " but is " << bit1;
-		sim_assert(vec2 == ref) << "should be " << ref << " but is " << vec2;
-		sim_assert(bit2 == ref[0]) << "should be " << ref[0] << " but is " << bit2;
+		HCL_NAMED(vec1);
+		HCL_NAMED(vec2);
+		HCL_NAMED(bit1);
+		HCL_NAMED(bit2);
+
+		sim_assert((ref == 0) | (vec1 == ref)) << "vec1 should be " << ref << " but is " << vec1;
+		sim_assert((ref == 0) | (bit1 == ref[0])) << "bit1 should be " << ref[0] << " but is " << bit1;
+		sim_assert(vec2 == ref) << "vec2 should be " << ref << " but is " << vec2;
+		sim_assert(bit2 == ref[0]) << "bit2 should be " << ref[0] << " but is " << bit2;
 	}
 
 	runFixedLengthTest(3u / clock.getClk()->absoluteFrequency());
@@ -614,19 +619,19 @@ BOOST_FIXTURE_TEST_CASE(ClockRegisterReset_explicit, BoostUnitTestSimulationFixt
 
 	{
 		UInt vec1 = reg(UInt{ "b01" });
-		UInt vec2 = reg(UInt{ "b01" }, "2b");
+		UInt vec2 = reg(UInt{ "b01" }, "2b0");
 		Bit bit1 = reg(Bit{ '1' });
 		Bit bit2 = reg(Bit{ '1' }, '0');
 
 		UInt ref(2_b);
 		simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
-			context.set(0, context.getTick() ? 1 : 0);
+			context.set(0, context.getTick()>1 ? 1 : 0);
 			}, ref);
 
-		sim_assert((ref == 0) | (vec1 == ref)) << "should be " << ref << " but is " << vec1;
-		sim_assert((ref == 0) | (bit1 == ref[0])) << "should be " << ref[0] << " but is " << bit1;
-		sim_assert(vec2 == ref) << "should be " << ref << " but is " << vec2;
-		sim_assert(bit2 == ref[0]) << "should be " << ref[0] << " but is " << bit2;
+		sim_assert((ref == 0) | (vec1 == ref)) << "vec1 should be " << ref << " but is " << vec1;
+		sim_assert((ref == 0) | (bit1 == ref[0])) << "bit1 should be " << ref[0] << " but is " << bit1;
+		sim_assert(vec2 == ref) << "vec2 should be " << ref << " but is " << vec2;
+		sim_assert(bit2 == ref[0]) << "bit2 should be " << ref[0] << " but is " << bit2;
 	}
 
 	runFixedLengthTest(3u / clock.getClk()->absoluteFrequency());
@@ -637,7 +642,7 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
 
-	Clock clock({ .absoluteFrequency = 10'000 });
+	Clock clock({ .absoluteFrequency = 10'000, .resetType = ClockConfig::ResetType::NONE });
 	ClockScope clockScope(clock);
 
 	{
@@ -674,7 +679,7 @@ BOOST_FIXTURE_TEST_CASE(DoubleCounterNewSyntax_explicitreset, BoostUnitTestSimul
 
 		UInt refCount(8_b);
 		simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
-			context.set(0, context.getTick()*2);
+			context.set(0, (context.getTick()-1)*2);
 		}, refCount);
 
 		sim_assert(counter == refCount) << "The counter should be " << refCount << " but is " << counter;
@@ -690,7 +695,7 @@ BOOST_FIXTURE_TEST_CASE(ShifterNewSyntax, BoostUnitTestSimulationFixture)
 
 
 
-	Clock clock({ .absoluteFrequency = 10'000 });
+	Clock clock({ .absoluteFrequency = 10'000, .resetType = ClockConfig::ResetType::NONE });
 	ClockScope clockScope(clock);
 
 	{
@@ -715,7 +720,7 @@ BOOST_FIXTURE_TEST_CASE(RegisterConditionalAssignment, BoostUnitTestSimulationFi
 
 
 
-	Clock clock({ .absoluteFrequency = 10'000 });
+	Clock clock({ .absoluteFrequency = 10'000, .resetType = ClockConfig::ResetType::NONE });
 	ClockScope clockScope(clock);
 	{
 		Bit condition;

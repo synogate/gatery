@@ -39,6 +39,7 @@
 #include "postprocessing/AttributeFusion.h"
 #include "postprocessing/TechnologyMapping.h"
 #include "postprocessing/Retiming.h"
+#include "postprocessing/CDCDetection.h"
 
 
 #include "../simulation/BitVectorState.h"
@@ -1149,6 +1150,14 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
 {
 	dbg::changeState(dbg::State::POSTPROCESS);
 	postProcessor.run(*this);
+
+	detectUnguardedCDCCrossings(*this, ConstSubnet::all(*this), [](const BaseNode *affectedNode, size_t) {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING 
+				<< "Unintentional clock domain crossing detected on inputs to node " << affectedNode
+		);
+		HCL_DESIGNCHECK_HINT(false, "Unintentional clock domain crossing detected!");
+	});
+
 }
 
 void DefaultPostprocessing::generalOptimization(Circuit &circuit) const

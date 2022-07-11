@@ -114,6 +114,21 @@ void BaseNode::detachClock(size_t clockPort)
 	m_clocks[clockPort] = nullptr;
 }
 
+OutputClockRelation BaseNode::getOutputClockRelation(size_t output) const
+{
+	OutputClockRelation res;
+	res.dependentInputs.reserve(getNumInputPorts());
+	for (auto i : utils::Range(getNumInputPorts()))
+		res.dependentInputs.push_back(i);
+
+	if (!m_clocks.empty()) {
+		HCL_ASSERT_HINT(m_clocks.size() == 1, "Missing specialized implementation of getOutputClockRelation for node");
+		res.dependentClocks.push_back(0);
+	}
+
+	return res;
+}
+
 void BaseNode::copyBaseToClone(BaseNode *copy) const
 {
 	copy->m_name = m_name;

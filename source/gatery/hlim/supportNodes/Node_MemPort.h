@@ -98,6 +98,8 @@ class Node_MemPort : public Node<Node_MemPort>
 
 		virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
 		virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
+
+		virtual OutputClockRelation getOutputClockRelation(size_t output) const override;
 	protected:
 		friend class Node_Memory;
 		std::size_t m_bitWidth;

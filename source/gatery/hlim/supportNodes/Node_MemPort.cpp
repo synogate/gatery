@@ -315,6 +315,8 @@ std::string Node_MemPort::getInputName(size_t idx) const
 			return "wrEnable";
 		case (size_t)Inputs::wrData:
 			return "wrData";
+		case (size_t)Inputs::wrWordEnable:
+			return "wrWordEnable";
 		case (size_t)Inputs::orderAfter:
 			return "orderAfter";
 		default:
@@ -475,5 +477,22 @@ void Node_MemPort::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_
 	}
 }
 
+
+OutputClockRelation Node_MemPort::getOutputClockRelation(size_t output) const
+{
+	OutputClockRelation res;
+
+	if (output == (size_t) Outputs::memoryWriteDependency)
+		return res;
+
+	res.dependentInputs.reserve(getNumInputPorts()-1);
+	for (auto i : utils::Range(getNumInputPorts()))
+		if (i != (size_t) Inputs::memoryReadDependency)
+			res.dependentInputs.push_back(i);
+
+	// Clock is only for writing, not for reading.
+
+	return res;
+}
 
 }

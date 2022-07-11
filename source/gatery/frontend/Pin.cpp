@@ -22,6 +22,7 @@
 #include "UInt.h"
 
 #include "Scope.h"
+#include "Clock.h"
 
 namespace gtry {
 
@@ -30,6 +31,8 @@ namespace gtry {
 		m_pinNode = DesignScope::createNode<hlim::Node_Pin>(false, true, false);
 		m_pinNode->connect(nodePort);
 		m_pinNode->setName(std::move(name));
+		if (ClockScope::anyActive())
+			m_pinNode->setClockDomain(ClockScope::getClk().getClk());
 	}
 
 	OutputPin::OutputPin(const Bit &bit) : BaseOutputPin(bit.readPort(), std::string(bit.getName())) { }
@@ -39,6 +42,8 @@ namespace gtry {
 
 	BaseInputPin::BaseInputPin() {
 		m_pinNode = DesignScope::createNode<hlim::Node_Pin>(true, false, false);
+		if (ClockScope::anyActive())
+			m_pinNode->setClockDomain(ClockScope::getClk().getClk());
 	}
 
 	InputPin::InputPin() {
@@ -63,7 +68,9 @@ namespace gtry {
 		m_pinNode = DesignScope::createNode<hlim::Node_Pin>(true, true, true);
 		m_pinNode->connect(nodePort);
 		m_pinNode->connectEnable(outputEnable.readPort());
-		m_pinNode->setName(std::move(name));	
+		m_pinNode->setName(std::move(name));
+		if (ClockScope::anyActive())
+			m_pinNode->setClockDomain(ClockScope::getClk().getClk());
 	}
 
 	TristatePin::TristatePin(const Bit &bit, const Bit &outputEnable) : BaseTristatePin(bit.readPort(), std::string(bit.getName()), outputEnable) 
