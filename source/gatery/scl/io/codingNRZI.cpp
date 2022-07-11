@@ -15,52 +15,33 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#pragma once
-#include <gatery/frontend.h>
+#include "gatery/pch.h"
+#include "codingNRZI.h"
+#include "../Counter.h"
 
-namespace gtry::scl
+gtry::scl::DownStream<gtry::UInt> gtry::scl::decodeNRZI(const DownStream<UInt>& in, size_t stuffBitInterval)
 {
-	class Counter
+	auto scope = Area{ "scl_decodeNRZI" }.enter();
+
+	DownStream<UInt> out;
+	out.valid = in.valid;
+	out.data = in.data;
+
+	// decode differential signals only
+	IF(in.valid & in.data[0] != in.data[1])
 	{
-	public:
-		Counter(size_t end) :
-			m_value{ BitWidth::count(end) },
-			m_loadValue{ BitWidth::count(end) }
+		out.data[0] = in.data[0] == reg(in.data[0]);
+		out.data[1] = !out.data[0];
+
+		if(stuffBitInterval)
 		{
-			m_last = '0';
-
-			IF(m_value == end - 1)
-			{
-				m_value = 0;
-				m_last = '1';
-			}
-			ELSE
-			{
-				m_value = m_value + 1;
-			}
-			
-			IF(m_load)
-			{
-				m_value = m_loadValue;
-			}
-
-			m_value = reg(m_value, 0);
-			m_load = '0';
+			Counter stuffCounter{ stuffBitInterval + 1 };
+			IF(stuffCounter.isLast())
+				out.valid = '0';
+			IF(out.data[0] == '0')
+				stuffCounter.reset();
 		}
-		
-		void reset() { m_value = 0; }
-		const UInt& value() const { return m_value; }
-		const Bit& isLast() const { return m_last; }
-		Bit isFirst() const { return m_value == 0; }
-
-		void load(UInt value) { m_load = '1'; m_loadValue = value; }
-
-	private:
-		UInt m_value;
-		Bit m_last;
-
-		UInt m_loadValue;
-		Bit m_load;
-	};
-
+	}
+	HCL_NAMED(out);
+	return out;
 }

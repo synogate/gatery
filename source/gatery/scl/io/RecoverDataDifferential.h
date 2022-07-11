@@ -16,51 +16,9 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-#include <gatery/frontend.h>
+#include "../stream/DownStream.h"
 
 namespace gtry::scl
 {
-	class Counter
-	{
-	public:
-		Counter(size_t end) :
-			m_value{ BitWidth::count(end) },
-			m_loadValue{ BitWidth::count(end) }
-		{
-			m_last = '0';
-
-			IF(m_value == end - 1)
-			{
-				m_value = 0;
-				m_last = '1';
-			}
-			ELSE
-			{
-				m_value = m_value + 1;
-			}
-			
-			IF(m_load)
-			{
-				m_value = m_loadValue;
-			}
-
-			m_value = reg(m_value, 0);
-			m_load = '0';
-		}
-		
-		void reset() { m_value = 0; }
-		const UInt& value() const { return m_value; }
-		const Bit& isLast() const { return m_last; }
-		Bit isFirst() const { return m_value == 0; }
-
-		void load(UInt value) { m_load = '1'; m_loadValue = value; }
-
-	private:
-		UInt m_value;
-		Bit m_last;
-
-		UInt m_loadValue;
-		Bit m_load;
-	};
-
+	DownStream<UInt> recoverDataDifferential(hlim::ClockRational signalClock, Bit p, Bit n);
 }
