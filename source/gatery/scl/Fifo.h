@@ -114,6 +114,9 @@ namespace gtry::scl
 	template<Signal TData>
 	inline size_t Fifo<TData>::depth()
 	{
+		// TODO HOTFIX
+		return BitWidth::count(m_minDepth).count();
+		
 		auto* meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
 		HCL_DESIGNCHECK_HINT(meta != nullptr, "Fifo's depth can only be determined after ::generate() call.");
 		FifoCapabilities::Choice& fifoChoice = meta->fifoChoice;
