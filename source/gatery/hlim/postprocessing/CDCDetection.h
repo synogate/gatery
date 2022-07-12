@@ -31,19 +31,11 @@ class ConstSubnet;
 class BaseNode;
 struct NodePort;
 
-struct SignalClockDomain {
-	enum Type {
-		UNKNOWN,
-		CONSTANT,
-		CLOCK
-	};
-	Type type = UNKNOWN;
-	Clock *clk = nullptr;
-};
+struct SignalClockDomain;
 
 void inferClockDomains(Circuit &circuit, std::map<hlim::NodePort, SignalClockDomain> &domains);
 
-void detectUnguardedCDCCrossings(Circuit &circuit, const ConstSubnet &subnet, std::function<void(const BaseNode*, size_t)> detectionCallback);
+void detectUnguardedCDCCrossings(Circuit &circuit, const ConstSubnet &subnet, std::function<void(const BaseNode*)> detectionCallback);
 
 
 }

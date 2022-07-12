@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2022 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -24,13 +24,21 @@
 namespace gtry::hlim {
 
 /**
- * @brief Defines attributes for a signal
- * @details These attributes are translated and forwarded to the VHDL output, but could also be implemented by modification of the graph.
+ * @brief Allows a signal to cross from one clock domain into another.
+ * @details The node is placed on intentional CDCs, so that the intended crossing and the two clocks can be verified
+ * against the actual clock domains. This node does not set any further attributes such as falsePath.
  */
-class Node_Attributes : public Node<Node_Attributes>
+class Node_CDC : public Node<Node_CDC>
 {
 	public:
-		Node_Attributes();
+		enum class Clocks {
+			INPUT_CLOCK,
+			OUTPUT_CLOCK
+		};
+
+		Node_CDC();
+
+		virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;		
 
 		void connectInput(const NodePort &nodePort);
 		void disconnectInput();
@@ -44,10 +52,8 @@ class Node_Attributes : public Node<Node_Attributes>
 
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 
-		inline SignalAttributes &getAttribs() { return m_attributes; }
-		inline const SignalAttributes &getAttribs() const { return m_attributes; }
-	protected:
-		SignalAttributes m_attributes;
+		virtual OutputClockRelation getOutputClockRelation(size_t output) const override;
+		virtual bool checkValidInputClocks(std::span<SignalClockDomain> inputClocks) const override;
 };
 
 }

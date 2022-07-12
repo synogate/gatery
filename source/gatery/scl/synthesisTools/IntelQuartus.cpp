@@ -100,6 +100,14 @@ void IntelQuartus::resolveAttributes(const hlim::RegisterAttributes &attribs, hl
 		default:
 		break;
 	}
+	if (attribs.synchronizationRegister) {
+		resolvedAttribs.insert({"adv_netlist_opt_allowed", {"boolean", "false"}});
+		resolvedAttribs.insert({"direct_reset", {"boolean", "true"}});
+		resolvedAttribs.insert({"syn_direct_reset", {"boolean", "true"}});
+		resolvedAttribs.insert({"direct_enable", {"boolean", "true"}});
+		resolvedAttribs.insert({"syn_direct_enable", {"boolean", "true"}});
+	}
+
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }
 
@@ -108,11 +116,8 @@ void IntelQuartus::resolveAttributes(const hlim::SignalAttributes &attribs, hlim
 	if (attribs.maxFanout) 
 		resolvedAttribs.insert({"maxfan", {"integer", std::to_string(*attribs.maxFanout)}});
 
-	if (attribs.crossingClockDomain && *attribs.crossingClockDomain)
-		resolvedAttribs.insert({"keep", {"boolean", "true"}});
-
 	if (attribs.allowFusing && !*attribs.allowFusing)
-		resolvedAttribs.insert({"keep", {"boolean", "true"}});
+		resolvedAttribs.insert({"adv_netlist_opt_allowed", {"boolean", "false"}});
 
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }

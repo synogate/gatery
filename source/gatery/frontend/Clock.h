@@ -66,6 +66,7 @@ namespace gtry {
 		std::optional<bool> initializeMemory;
 		std::optional<ResetActive> resetActive;
 
+		std::optional<bool> synchronizationRegister;
 		std::optional<UsageType> registerResetPinUsage;
 		std::optional<UsageType> registerEnablePinUsage;
 

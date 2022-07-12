@@ -82,6 +82,14 @@ void XilinxVivado::resolveAttributes(const hlim::RegisterAttributes &attribs, hl
 		default:
 		break;
 	}
+	if (attribs.synchronizationRegister) {
+		resolvedAttribs.insert({"ASYNC_REG", {"string", "\"true\""}});
+		resolvedAttribs.insert({"SHREG_EXTRACT", {"string", "\"no\""}});
+		resolvedAttribs.insert({"DONT_TOUCH", {"string", "\"true\""}});
+
+		resolvedAttribs.insert({"extract_enable", {"string", "\"yes\""}});
+		resolvedAttribs.insert({"extract_reset", {"string", "\"yes\""}});
+	}
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }
 
@@ -89,11 +97,6 @@ void XilinxVivado::resolveAttributes(const hlim::SignalAttributes &attribs, hlim
 {
 	if (attribs.maxFanout) 
 		resolvedAttribs.insert({"max_fanout", {"integer", std::to_string(*attribs.maxFanout)}});
-
-	if (attribs.crossingClockDomain && *attribs.crossingClockDomain) {
-		resolvedAttribs.insert({"ASYNC_REG", {"string", "\"true\""}});
-		resolvedAttribs.insert({"DONT_TOUCH", {"string", "\"true\""}});
-	}
 
 	if (attribs.allowFusing && !*attribs.allowFusing) {
 		resolvedAttribs.insert({"SHREG_EXTRACT", {"string", "\"no\""}});

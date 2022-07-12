@@ -23,7 +23,7 @@
 namespace gtry::hlim {
 
 
-Node_Attributes::Node_Attributes() : Node(1, 0)
+Node_Attributes::Node_Attributes() : Node(1, 1)
 {
 
 }
@@ -76,7 +76,6 @@ std::unique_ptr<BaseNode> Node_Attributes::cloneUnconnected() const
 
 	return copy;
 }
-
 
 
 }

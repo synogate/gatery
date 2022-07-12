@@ -129,6 +129,46 @@ OutputClockRelation BaseNode::getOutputClockRelation(size_t output) const
 	return res;
 }
 
+bool BaseNode::checkValidInputClocks(std::span<SignalClockDomain> inputClocks) const
+{
+	Clock *clock = nullptr;
+	size_t numUnknowns = 0;
+
+	if (!m_clocks.empty()) {
+		HCL_ASSERT_HINT(m_clocks.size() == 1, "Missing specialized implementation of getOutputClockRelation for node");
+
+		if (m_clocks[0] != nullptr) {
+			if (clock == nullptr)
+				clock = m_clocks[0]->getClockPinSource();
+			else
+				if (clock != m_clocks[0]->getClockPinSource()) 
+					return false;
+		}
+	}
+
+	for (auto j : utils::Range(getNumInputPorts())) {
+		switch (inputClocks[j].type) {
+			case SignalClockDomain::CONSTANT:
+			break;
+			case SignalClockDomain::UNKNOWN:
+				numUnknowns++;
+			break;
+			case SignalClockDomain::CLOCK:
+				if (clock == nullptr)
+					clock = inputClocks[j].clk->getClockPinSource();
+				else
+					if (clock != inputClocks[j].clk->getClockPinSource()) 
+						return false;
+			break;
+		}
+	}
+
+	if (numUnknowns > 1 || (numUnknowns > 0 && clock != nullptr))
+		return false;
+
+	return true;
+}
+
 void BaseNode::copyBaseToClone(BaseNode *copy) const
 {
 	copy->m_name = m_name;

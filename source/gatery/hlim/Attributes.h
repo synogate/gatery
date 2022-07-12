@@ -44,8 +44,6 @@ struct Attributes {
 struct SignalAttributes : public Attributes {
 	/// Max fanout of this signal before it's driver is duplicated. 0 is don't care.
 	std::optional<size_t> maxFanout; 
-	/// Signal crosses a clock domain
-	std::optional<bool> crossingClockDomain;
 	/// Whether the signal may be fused away (e.g. signal between regs to shiftreg)
 	std::optional<bool> allowFusing;
 
@@ -74,6 +72,7 @@ struct RegisterAttributes : public Attributes {
 	ResetType memoryResetType = ResetType::SYNCHRONOUS;
 	bool initializeRegs = true;
 	bool initializeMemory = true;
+	bool synchronizationRegister = false;
 	Active resetActive = Active::HIGH;
 
 	UsageType registerResetPinUsage = UsageType::DONT_CARE;
@@ -87,7 +86,7 @@ inline RegisterAttributes::Active operator!(RegisterAttributes::Active v)
 	return RegisterAttributes::Active::HIGH;
 }
 
-// all used defined attributes ignore type and value and replace $src and $dst in the attrib name with source and destination cells
+// all user defined attributes ignore type and value and replace $src and $dst in the attrib name with source and destination cells
 struct PathAttributes : public Attributes {
 	size_t multiCycle = 0; 
 	bool falsePath = false;
