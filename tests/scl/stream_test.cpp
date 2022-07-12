@@ -689,6 +689,48 @@ BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_narrow, StreamTransferFixture)
 	runTicks(m_clock.getClk(), 1024);
 }
 
+BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_packet_narrow, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::Stream<scl::Packet<UInt>> in{
+		.data = { .data = 24_b }
+	};
+	In(in);
+
+	scl::Stream<scl::Packet<UInt>> out = scl::adaptWidth(in, 8_b);
+	Out(out);
+
+
+	// send data
+	addSimulationProcess([=, &in]()->SimProcess {
+		simu(in.valid) = 0;
+		simu(*in.data).invalidate();
+
+		for(size_t i = 0; i < 8; ++i)
+		{
+			simu(in.valid) = 1;
+			simu(in.data.eop) = i % 2 == 1;
+			simu(*in.data) =
+				((i * 3 + 0) << 0) |
+				((i * 3 + 1) << 8) |
+				((i * 3 + 2) << 16);
+			co_await WaitFor(0);
+			while(simu(*in.ready) == 0)
+				co_await WaitClk(m_clock);
+			co_await WaitClk(m_clock);
+		}
+	});
+
+	transfers(8 * 3);
+	groups(1);
+	simulateBackPreassure(out);
+	simulateRecvData(out);
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
+
 BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_widen, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
@@ -723,6 +765,179 @@ BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_widen, StreamTransferFixture)
 
 	transfers(32);
 	groups(1);
+	simulateBackPreassure(out);
+	simulateRecvData(out);
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::Stream<scl::Packet<UInt>> in;
+	in.data.data = 8_b;
+	In(in);
+
+	scl::Stream<scl::Packet<UInt>> out = scl::eraseBeat(in, 0, 1);
+	Out(out);
+
+	// send data
+	addSimulationProcess([=, &in]()->SimProcess {
+		simu(in.valid) = 0;
+		simu(*in.data).invalidate();
+		co_await WaitClk(m_clock);
+
+		for(size_t i = 0; i < 32; i += 4)
+		{
+			for(size_t j = 0; j < 5; ++j)
+			{
+				simu(in.valid) = 1;
+				simu(*in.data) = uint8_t(i + j - 1);
+				simu(in.data.eop) = j == 4 ? 1 : 0;
+
+				co_await WaitFor(0);
+				while(simu(*in.ready) == 0)
+					co_await WaitClk(m_clock);
+				co_await WaitClk(m_clock);
+			}
+		}
+	});
+
+	transfers(32);
+	groups(1);
+	simulateBackPreassure(out);
+	simulateRecvData(out);
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_eraseLastBeat, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::Stream<scl::Packet<UInt>> in;
+	in.data.data = 8_b;
+	In(in);
+
+	scl::Stream<scl::Packet<UInt>> out = scl::eraseLastBeat(in);
+	Out(out);
+
+	// send data
+	addSimulationProcess([=, &in]()->SimProcess {
+		simu(in.valid) = 0;
+		simu(*in.data).invalidate();
+		co_await WaitClk(m_clock);
+
+		for(size_t i = 0; i < 32; i += 4)
+		{
+			for(size_t j = 0; j < 5; ++j)
+			{
+				simu(in.valid) = 1;
+				simu(*in.data) = uint8_t(i + j);
+				simu(in.data.eop) = j == 4 ? 1 : 0;
+
+				co_await WaitFor(0);
+				while(simu(*in.ready) == 0)
+					co_await WaitClk(m_clock);
+				co_await WaitClk(m_clock);
+			}
+		}
+	});
+
+	transfers(32);
+	groups(1);
+	simulateBackPreassure(out);
+	simulateRecvData(out);
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::Stream<scl::Packet<UInt>> in;
+	in.data.data = 8_b;
+	In(in);
+
+	UInt insertData = pinIn(8_b).setName("insertData");
+	scl::Stream<scl::Packet<UInt>> out = scl::insertBeat(in, 0, insertData);
+	Out(out);
+
+	// send data
+	addSimulationProcess([=, &in]()->SimProcess {
+		simu(in.valid) = 0;
+		simu(*in.data).invalidate();
+		co_await WaitClk(m_clock);
+
+		for(size_t i = 0; i < 32; i += 4)
+		{
+			for(size_t j = 0; j < 3; ++j)
+			{
+				simu(in.valid) = 1;
+				simu(insertData) = i + j;
+				simu(*in.data) = uint8_t(i + j + 1);
+				simu(in.data.eop) = j == 2 ? 1 : 0;
+
+				co_await WaitFor(0);
+				while(simu(*in.ready) == 0)
+					co_await WaitClk(m_clock);
+				co_await WaitClk(m_clock);
+			}
+		}
+	});
+
+	transfers(32);
+	groups(1);
+	simulateBackPreassure(out);
+	simulateRecvData(out);
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_makePacketStreamDeffered, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::Stream<UInt> in;
+	in.data = 8_b;
+	In(in);
+
+	Bit eop = pinIn().setName("eop");
+	scl::Stream<scl::Packet<UInt>> out = scl::makePacketStream(in, eop, true);
+	Out(out);
+
+	// send data
+	addSimulationProcess([=, &in]()->SimProcess {
+		
+		simu(eop) = 0;
+		while(true)
+		{
+			while(simu(in.valid) == 0)
+			{
+				co_await WaitClk(m_clock);
+				co_await WaitFor(0);
+			}
+			while(simu(in.valid) == 1)
+			{
+				co_await WaitClk(m_clock);
+				co_await WaitFor(0);
+			}
+			simu(eop) = 1;
+			co_await WaitClk(m_clock);
+			simu(eop) = 0;
+		}
+
+	});
+
+	transfers(32);
+	groups(1);
+	simulateSendData(in, 0);
 	simulateBackPreassure(out);
 	simulateRecvData(out);
 

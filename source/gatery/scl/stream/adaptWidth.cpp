@@ -18,12 +18,12 @@
 #include "gatery/pch.h"
 #include "adaptWidth.h"
 
-gtry::scl::Stream<gtry::UInt> gtry::scl::adaptWidth(Stream<UInt>& source, BitWidth width)
+gtry::scl::Stream<gtry::UInt> gtry::scl::adaptWidth(Stream<UInt>& source, BitWidth width, Bit reset)
 {
 	auto scope = Area{ "scl_adaptWidth" }.enter();
 	Stream<UInt> ret;
 
-	if(width > source.data.width())
+	if(width > source->width())
 	{
 		const size_t ratio = width / source->width();
 
@@ -35,6 +35,8 @@ gtry::scl::Stream<gtry::UInt> gtry::scl::adaptWidth(Stream<UInt>& source, BitWid
 			ELSE
 				counter += 1;
 		}
+		IF(reset)
+			counter = 0;
 
 		Bit counter_last = reg(counter == ratio - 1, '0');
 		HCL_NAMED(counter_last);
@@ -69,7 +71,7 @@ gtry::scl::Stream<gtry::UInt> gtry::scl::adaptWidth(Stream<UInt>& source, BitWid
 			ELSE
 				counter += 1;
 		}
-		IF(!source.valid)
+		IF(!source.valid | reset)
 			counter = 0;
 
 		Bit counter_last = reg(counter == ratio - 1, '0');
@@ -83,6 +85,80 @@ gtry::scl::Stream<gtry::UInt> gtry::scl::adaptWidth(Stream<UInt>& source, BitWid
 
 		ret.valid = source.valid;
 		ret.data = source.data(zext(counter, width.bits()) * width.bits(), width);
+	}
+	HCL_NAMED(ret);
+	return ret;
+}
+
+gtry::scl::Stream<gtry::scl::Packet<gtry::UInt>> gtry::scl::adaptWidth(Stream<gtry::scl::Packet<gtry::UInt>>& source, BitWidth width)
+{
+	auto scope = Area{ "scl_adaptWidth" }.enter();
+	Stream<Packet<UInt>> ret;
+
+	if(width > source->width())
+	{
+		const size_t ratio = width / source->width();
+
+		UInt counter = BitWidth::count(ratio);
+		IF(transfer(source))
+		{
+			IF(counter == ratio - 1)
+				counter = 0;
+			ELSE
+				counter += 1;
+		}
+		IF(eop(source))
+			counter = 0;
+
+		Bit counter_last = reg(counter == ratio - 1, '0');
+		HCL_NAMED(counter_last);
+		counter = reg(counter, 0);
+		HCL_NAMED(counter);
+
+		ret.valid = counter_last & source.valid;
+		*ret.data = width;
+		ret.data.eop = source.data.eop;
+		ret.data = reg(ret.data);
+
+		IF(transfer(source))
+		{
+			*ret.data >>= (int)source->width().bits();
+			ret.data->upper(source->width()) = *source.data;
+		}
+
+		*source.ready = *ret.ready | !counter_last;
+	}
+	else if(width == source->width())
+	{
+		ret <<= source;
+	}
+	else
+	{
+		const size_t ratio = source->width() / width;
+
+		UInt counter = BitWidth::count(ratio);
+		IF(*ret.ready)
+		{
+			IF(counter == ratio - 1)
+				counter = 0;
+			ELSE
+				counter += 1;
+		}
+		IF(!source.valid | (source.data.eop & transfer(source)))
+			counter = 0;
+
+		Bit counter_last = reg(counter == ratio - 1, '0');
+		HCL_NAMED(counter_last);
+		counter = reg(counter, 0);
+		HCL_NAMED(counter);
+
+		*source.ready = '0';
+		IF(ready(ret) & counter_last)
+			* source.ready = '1';
+
+		ret.valid = source.valid;
+		*ret.data = source.data.data(zext(counter, width.bits()) * width.bits(), width);
+		ret.data.eop = source.data.eop & counter_last;
 	}
 	HCL_NAMED(ret);
 	return ret;
