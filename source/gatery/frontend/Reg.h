@@ -98,4 +98,42 @@ namespace gtry
 			return reg(sig, resetSig, settings); // forward so it can have overloads
 		});
 	}
+
+	template<Signal S>
+	class Reg
+	{
+	public:
+		Reg() = default;
+		Reg(const Reg&) = delete;
+
+		template<SignalValue Sv>
+		Reg(const Sv& resetValue, const RegisterSettings& settings = {})
+		{
+			init(resetValue, settings);
+		}
+
+		template<SignalValue Sv>
+		void init(const Sv& resetValue, const RegisterSettings& settings = {})
+		{
+			m_current = reg(m_next, resetValue, settings);
+			m_next = m_set;
+			m_set = m_current;
+		}
+
+		template<SignalValue Sv>
+		Reg& operator = (Sv&& val) { m_set = val; return *this; }
+		operator S() const { return m_current; }
+		const S& next() const { return m_next; }
+		const S& current() const { return m_current; }
+
+		void setName(std::string _name)
+		{
+			m_current.setName(_name);
+			m_next.setName(_name + "_next");
+		}
+	private:
+		S m_current;
+		S m_set;
+		S m_next;
+	};
 }
