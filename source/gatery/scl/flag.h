@@ -28,4 +28,8 @@ namespace gtry::scl
 		ret = reg(ret, '0');
 		return ret;
 	}
+
+	inline Bit edge(const Bit& in) { return in != reg(in, '0'); }
+	inline Bit edgeRising(const Bit& in) { return in & !reg(in, '0'); }
+	inline Bit edgeFalling(const Bit& in) { return !in & reg(in, '0'); }
 }
