@@ -46,6 +46,7 @@ namespace gtry::scl
 
 			m_value = reg(m_value, 0);
 			m_load = '0';
+			m_loadValue = ConstUInt(m_loadValue.width());
 		}
 		
 		void reset() { m_value = 0; }
