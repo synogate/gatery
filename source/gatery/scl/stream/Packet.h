@@ -23,8 +23,10 @@ namespace gtry::scl
 	template<Signal Payload>
 	struct Packet
 	{
-		Bit eop;
-		Payload data;
+		BOOST_HANA_DEFINE_STRUCT(Packet,
+			(Bit, eop),
+			(Payload, data)
+		);
 
 		Payload& operator *() { return data; }
 		const Payload& operator *() const { return data; }
