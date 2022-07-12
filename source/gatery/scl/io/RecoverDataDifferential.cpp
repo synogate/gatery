@@ -27,7 +27,7 @@ gtry::scl::DownStream<gtry::UInt> gtry::scl::recoverDataDifferential(hlim::Clock
 	const auto samplesRatio = ClockScope::getClk().absoluteFrequency() / signalClock;
 	HCL_DESIGNCHECK_HINT(samplesRatio.denominator() == 1, "clock must be devisible by signalClock");
 	const size_t samples = samplesRatio.numerator();
-	HCL_DESIGNCHECK_HINT(samples < 3, "we need at least 3 samples per cycle to recover data");
+	HCL_DESIGNCHECK_HINT(samples >= 3, "we need at least 3 samples per cycle to recover data");
 
 	// avoid meta stable inputs
 	Bit p = synchronize(ioP, ClockScope::getClk(), ClockScope::getClk(), 3, false);
@@ -35,7 +35,7 @@ gtry::scl::DownStream<gtry::UInt> gtry::scl::recoverDataDifferential(hlim::Clock
 	HCL_NAMED(p);
 	HCL_NAMED(n);
 
-	Counter phaseCounter{ samples - 1 };
+	Counter phaseCounter{ samples };
 	
 	// recover clock and shift sample point
 	Bit edgeDetected;
