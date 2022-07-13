@@ -18,6 +18,7 @@
 #include "gatery/pch.h"
 #include "adaptWidth.h"
 
+#if 0
 gtry::scl::Stream<gtry::UInt> gtry::scl::adaptWidth(Stream<UInt>& source, BitWidth width, Bit reset)
 {
 	auto scope = Area{ "scl_adaptWidth" }.enter();
@@ -163,3 +164,4 @@ gtry::scl::Stream<gtry::scl::Packet<gtry::UInt>> gtry::scl::adaptWidth(Stream<gt
 	HCL_NAMED(ret);
 	return ret;
 }
+#endif

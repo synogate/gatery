@@ -21,38 +21,30 @@
 
 namespace gtry::scl
 {
-	/**
-	 * @brief Adds ready/valid handshake semantics to a signal.
-	*/
-	template<Signal Payload>
+	template<Signal PayloadT, Signal... Meta>
 	struct Stream
 	{
-		// TODO: get rid of hana
-		//Reverse<Bit> ready;
-		//Bit valid;
-		//Payload data;
+		using Payload = PayloadT;
 
-		BOOST_HANA_DEFINE_STRUCT(Stream,
-			(Reverse<Bit>, ready),
-			(Bit, valid),
-			(Payload, data)
-		);
+		Payload data;
+		std::tuple<Meta...> _sig;
 
-		/**
-		 * @brief Accessor for data member to reduce syntax clutter.
-		 * @return data
-		*/
 		Payload& operator *() { return data; }
 		const Payload& operator *() const { return data; }
 
-		/**
-		 * @brief Accessor for recursive access to last data member.
-		 *			Can be useful when chaining multiple templates to have a nice way to accessing 
-		 *			the encapsulated Signal.
-		 * @return final payload data
-		*/
-		decltype(auto) operator ->();
-		decltype(auto) operator ->() const;
+		Payload* operator ->() { return &data; }
+		Payload* operator ->() const { return &data; }
+
+		template<Signal T>
+		static constexpr bool has() { 
+			return 
+				std::is_base_of_v<std::remove_reference_t<T>, std::remove_reference_t<PayloadT>> |
+				(std::is_same_v<std::remove_reference_t<Meta>, std::remove_reference_t<T>> | ...);
+		}
+
+		template<Signal T> constexpr T& get() { return std::get<T>(_sig); }
+		template<Signal T> constexpr const T& get() const { return std::get<T>(_sig); }
+		template<Signal T> constexpr void set(T&& signal) { get<T>() = std::forward<T>(signal); }
 
 		/**
 		 * @brief	Puts a register in the valid and data path.
@@ -93,29 +85,126 @@ namespace gtry::scl
 		 * @param instance The FIFO to use.
 		 * @return connected stream
 		*/
-		Stream fifo(Fifo<Payload>& instance);
+//		Stream fifo(Fifo<Payload>& instance);
 	};
+
+	namespace internal
+	{
+		template<class T>
+		struct is_stream_signal : std::false_type {};
+
+		template<Signal... T>
+		struct is_stream_signal<Stream<T...>> : std::true_type {};
+	}
+
+	template<class T>
+	concept StreamSignal = internal::is_stream_signal<T>::value;
 
 	/**
 	 * @brief High when all transfer conditions (ready and valid high) are met.
 	 * @param stream to test
 	 * @return transfer occurring
 	*/
-	template<Signal T> Bit transfer(const Stream<T>& stream) { return stream.valid & *stream.ready; }
+	template<StreamSignal T> Bit transfer(const T& stream) { return valid(stream) & ready(stream); }
 
 	/**
 	 * @brief High when sink can accept incoming data.
 	 * @param stream to test
 	 * @return sink ready
 	*/
-	template<Signal T> const Bit& ready(const Stream<T>& stream) { return *stream.ready; }
+	template<StreamSignal T> const Bit ready(const T& stream) { return '1'; }
 
 	/**
 	 * @brief High when source has data to send.
 	 * @param stream to test
 	 * @return source has data
 	*/
-	template<Signal T> const Bit& valid(const Stream<T>& stream) { return stream.valid; }
+	template<StreamSignal T> const Bit valid(const T& stream) { return '1'; }
+
+	template<StreamSignal T> const Bit eop(const T& stream) { return '1'; }
+	template<StreamSignal T> const Bit sop(const T& stream) { return '1'; }
+	template<StreamSignal T> const UInt byteEnable(const T& stream) { return ConstBVec(1, 1_b); }
+
+	struct Ready
+	{
+		Reverse<Bit> ready;
+	};
+
+	template<StreamSignal T> requires (T::template has<Ready>())
+	Bit& ready(T& stream) { return *stream.get<Ready>().ready; }
+	template<StreamSignal T> requires (T::template has<Ready>())
+	const Bit& ready(const T& stream) { return *stream.get<Ready>().ready; }
+
+
+	struct Valid
+	{
+		Bit valid;
+	};
+
+	template<StreamSignal T> requires (T::template has<Valid>())
+	Bit& valid(T& stream) { return stream.get<Valid>().valid; }
+	template<StreamSignal T> requires (T::template has<Valid>())
+	const Bit& valid(const T& stream) { return stream.get<Valid>().valid; }
+
+
+	struct Eop
+	{
+		Bit eop;
+	};
+
+	template<StreamSignal T> requires (T::template has<Eop>())
+	Bit& eop(T& stream) { return stream.get<Eop>().eop; }
+	template<StreamSignal T> requires (T::template has<Eop>())
+	const Bit& eop(const T& stream) { return stream.get<Eop>().eop; }
+	template<StreamSignal T> requires (T::template has<Valid>() and T::template has<Eop>())
+	const Bit sop(const T& signal) { return !flag(transfer(signal), eop(signal)); }
+
+
+	struct Sop
+	{
+		Bit sop;
+	};
+
+	template<StreamSignal T> requires (T::template has<Sop>())
+	Bit& sop(T& stream) { return stream.get<Sop>().sop; }
+	template<StreamSignal T> requires (T::template has<Sop>())
+	const Bit& sop(const T& stream) { return stream.get<Sop>().sop; }
+	template<StreamSignal T> requires (!T::template has<Valid>() and T::template has<Sop>() and T::template has<Eop>())
+	const Bit valid(const T& signal) { return flag(sop(signal), eop(signal)) | sop(signal); }
+
+
+	struct ByteEnable
+	{
+		BVec byteEnable;
+	};
+	template<StreamSignal T> requires (T::template has<ByteEnable>())
+	BVec& byteEnable(T& stream) { return stream.get<ByteEnable>().byteEnable; }
+	template<StreamSignal T> requires (T::template has<ByteEnable>())
+	const BVec& byteEnable(const T& stream) { return stream.get<ByteEnable>().byteEnable; }
+
+
+
+	template<Signal T, Signal... Meta>
+	using RvStream = Stream<T, scl::Ready, scl::Valid, Meta...>;
+
+	template<Signal T, Signal... Meta>
+	using VStream = Stream<T, scl::Valid, Meta...>;
+
+	template<Signal T, Signal... Meta>
+	using RvPacketStream = Stream<T, scl::Ready, scl::Valid, scl::Eop, Meta...>;
+
+	template<Signal T, Signal... Meta>
+	using VPacketStream = Stream<T, scl::Valid, scl::Eop, Meta...>;
+
+	template<Signal T, Signal... Meta>
+	using RsPacketStream = Stream<T, scl::Ready, scl::Valid, scl::Eop, Meta...>;
+
+	template<Signal T, Signal... Meta>
+	using SPacketStream = Stream<T, scl::Valid, scl::Eop, Meta...>;
+
+	template<StreamSignal T>
+	T makeStream(typename T::Payload&& data) { }
+
 
 	/**
 	 * @brief Puts a register in the ready, valid and data path.
@@ -142,6 +231,7 @@ namespace gtry::scl
 
 namespace gtry::scl
 {
+#if 0
 	template<Signal Payload>
 	decltype(auto) Stream<Payload>::operator ->()
 	{
@@ -284,4 +374,5 @@ namespace gtry::scl
 		IF(transfer(sink))
 			source.pop();
 	}
+#endif
 }

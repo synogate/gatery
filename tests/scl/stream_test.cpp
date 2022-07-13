@@ -25,8 +25,8 @@
 #include <gatery/simulation/Simulator.h>
 
 #include <gatery/scl/stream/StreamArbiter.h>
-#include <gatery/scl/stream/Packet.h>
-#include <gatery/scl/stream/adaptWidth.h>
+//#include <gatery/scl/stream/Packet.h>
+//#include <gatery/scl/stream/adaptWidth.h>
 
 #include <gatery/debug/websocks/WebSocksInterface.h>
 
@@ -38,72 +38,73 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
 	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
-	scl::Stream<UInt> in0;
-	scl::Stream<UInt> in1;
+	scl::RvStream<UInt> in0;
+	scl::RvStream<UInt> in1;
 
-	in0.data = pinIn(8_b).setName("in0_data");
-	in0.valid = pinIn().setName("in0_valid");
-	pinOut(*in0.ready).setName("in0_ready");
+	*in0 = pinIn(8_b).setName("in0_data");
+	valid(in0)= pinIn().setName("in0_valid");
+	pinOut(ready(in0)).setName("in0_ready");
 
-	in1.data = pinIn(8_b).setName("in1_data");
-	in1.valid = pinIn().setName("in1_valid");
-	pinOut(*in1.ready).setName("in1_ready");
+	*in1 = pinIn(8_b).setName("in1_data");
+	valid(in1)= pinIn().setName("in1_valid");
+	pinOut(ready(in1)).setName("in1_ready");
 
-	scl::arbitrateInOrder uut{ in0, in1 };
-	pinOut(uut.data).setName("out_data");
-	pinOut(uut.valid).setName("out_valid");
-	*uut.ready = pinIn().setName("out_ready");
+	scl::arbitrateInOrder uutObj{ in0, in1 };
+	scl::RvStream<UInt>& uut = uutObj;
+	pinOut(*uut).setName("out_data");
+	pinOut(valid(uut)).setName("out_valid");
+	ready(uut) = pinIn().setName("out_ready");
 
 	addSimulationProcess([&]()->SimProcess {
-		simu(*uut.ready) = 1;
-		simu(in0.valid) = 0;
-		simu(in1.valid) = 0;
-		simu(in0.data) = 0;
-		simu(in1.data) = 0;
+		simu(ready(uut)) = 1;
+		simu(valid(in0)) = 0;
+		simu(valid(in1)) = 0;
+		simu(*in0) = 0;
+		simu(*in1) = 0;
 		co_await WaitClk(clock);
 
-		simu(in0.valid) = 0;
-		simu(in1.valid) = 1;
-		simu(in1.data) = 1;
+		simu(valid(in0)) = 0;
+		simu(valid(in1)) = 1;
+		simu(*in1) = 1;
 		co_await WaitClk(clock);
 
-		simu(in1.valid) = 0;
-		simu(in0.valid) = 1;
-		simu(in0.data) = 2;
+		simu(valid(in1)) = 0;
+		simu(valid(in0)) = 1;
+		simu(*in0) = 2;
 		co_await WaitClk(clock);
 
-		simu(in1.valid) = 1;
-		simu(in0.valid) = 1;
-		simu(in0.data) = 3;
-		simu(in1.data) = 4;
-		co_await WaitClk(clock);
-		co_await WaitClk(clock);
-
-		simu(in1.valid) = 1;
-		simu(in0.valid) = 1;
-		simu(in0.data) = 5;
-		simu(in1.data) = 6;
+		simu(valid(in1)) = 1;
+		simu(valid(in0)) = 1;
+		simu(*in0) = 3;
+		simu(*in1) = 4;
 		co_await WaitClk(clock);
 		co_await WaitClk(clock);
 
-		simu(in0.valid) = 0;
-		simu(in1.valid) = 1;
-		simu(in1.data) = 7;
+		simu(valid(in1)) = 1;
+		simu(valid(in0)) = 1;
+		simu(*in0) = 5;
+		simu(*in1) = 6;
+		co_await WaitClk(clock);
 		co_await WaitClk(clock);
 
-		simu(in1.valid) = 0;
-		simu(in0.valid) = 0;
-		simu(*uut.ready) = 0;
+		simu(valid(in0)) = 0;
+		simu(valid(in1)) = 1;
+		simu(*in1) = 7;
 		co_await WaitClk(clock);
 
-		simu(in1.valid) = 0;
-		simu(in0.valid) = 1;
-		simu(in0.data) = 8;
-		simu(*uut.ready) = 1;
+		simu(valid(in1)) = 0;
+		simu(valid(in0)) = 0;
+		simu(ready(uut)) = 0;
 		co_await WaitClk(clock);
 
-		simu(in1.valid) = 0;
-		simu(in0.valid) = 0;
+		simu(valid(in1)) = 0;
+		simu(valid(in0)) = 1;
+		simu(*in0) = 8;
+		simu(ready(uut)) = 1;
+		co_await WaitClk(clock);
+
+		simu(valid(in1)) = 0;
+		simu(valid(in0)) = 0;
 		co_await WaitClk(clock);
 	});
 
@@ -112,9 +113,9 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
 		size_t counter = 1;
 		while (true)
 		{
-			if (simu(*uut.ready) && simu(uut.valid))
+			if (simu(ready(uut)) && simu(valid(uut)))
 			{
-				BOOST_TEST(counter == simu(uut.data));
+				BOOST_TEST(counter == simu(*uut));
 				counter++;
 			}
 			co_await WaitClk(clock);
@@ -131,6 +132,8 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
 
 	runTicks(clock.getClk(), 16);
 }
+
+#if 0
 
 BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 {
@@ -220,6 +223,7 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 
 	runTicks(clock.getClk(), 256);
 }
+
 
 class StreamTransferFixture : public BoostUnitTestSimulationFixture
 {
@@ -944,3 +948,5 @@ BOOST_FIXTURE_TEST_CASE(stream_makePacketStreamDeffered, StreamTransferFixture)
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(m_clock.getClk(), 1024);
 }
+
+#endif
