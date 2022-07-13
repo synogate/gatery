@@ -168,35 +168,36 @@ namespace gtry::scl
 	};
 
 	template<typename T>
-	struct arbitrateInOrder : Stream<T>
+	struct arbitrateInOrder : RvStream<T>
 	{
-		arbitrateInOrder(Stream<T>& in0, Stream<T>& in1);
+		arbitrateInOrder(RvStream<T>& in0, RvStream<T>& in1);
 	};
 
 	template<typename T>
-	inline arbitrateInOrder<T>::arbitrateInOrder(Stream<T>& in0, Stream<T>& in1)
+	inline arbitrateInOrder<T>::arbitrateInOrder(RvStream<T>& in0, RvStream<T>& in1)
 	{
 		auto entity = Area{ "arbitrateInOrder" }.enter();
 
-		*in0.ready = *Stream<T>::ready;
-		*in1.ready = *Stream<T>::ready;
+		RvStream<T>& me = *this;
+		ready(in0) = ready(me);
+		ready(in1) = ready(me);
 
 		// simple fsm state 0 is initial and state 1 is push upper input
 		Bit selectionState;
 		HCL_NAMED(selectionState);
 
-		Stream<T>::data = in0.data;
-		Stream<T>::valid = in0.valid;
-		IF(selectionState == '1' | !in0.valid)
+		*me = *in0;
+		valid(me) = valid(in0);
+		IF(selectionState == '1' | !valid(in0))
 		{
-			Stream<T>::data = in1.data;
-			Stream<T>::valid = in1.valid;
+			*me = *in1;
+			valid(me) = valid(in1);
 		}
 
-		IF(*Stream<T>::ready)
+		IF(ready(me))
 		{
 			IF(	selectionState == '0' & 
-				in0.valid & in1.valid)
+				valid(in0) & valid(in1))
 			{
 				selectionState = '1';
 			}
@@ -207,8 +208,8 @@ namespace gtry::scl
 
 			IF(selectionState == '1')
 			{
-				*in0.ready = '0';
-				*in1.ready = '0';
+				ready(in0) = '0';
+				ready(in1) = '0';
 			}
 		}
 		selectionState = reg(selectionState, '0');
