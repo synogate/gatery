@@ -17,23 +17,19 @@
 */
 #pragma once
 #include "Stream.h"
-#include "Packet.h"
 #include "../Counter.h"
-#include "../flag.h"
 
 namespace gtry::scl
 {
-	Stream<UInt> adaptWidth(Stream<UInt>& source, BitWidth width, Bit reset = '0');
-	Stream<Packet<UInt>> adaptWidth(Stream<Packet<UInt>>& source, BitWidth width);
+	//Stream<UInt> adaptWidth(Stream<UInt>& source, BitWidth width, Bit reset = '0');
+	//Stream<Packet<UInt>> adaptWidth(Stream<Packet<UInt>>& source, BitWidth width);
 
 	template<Signal Targ, class Tproc>
 	auto transform(Stream<Targ>& source, Tproc&& func);
 
-	template<Signal T> Stream<Packet<T>> eraseBeat(Stream<Packet<T>>& source, UInt beatOffset, UInt beatCount);
-	template<Signal T> Stream<Packet<T>> eraseLastBeat(Stream<Packet<T>>& source);
-	template<Signal T, SignalValue Tval> Stream<Packet<T>> insertBeat(Stream<Packet<T>>& source, UInt beatOffset, const Tval& value);
-
-	template<Signal T> Stream<Packet<T>> makePacketStream(Stream<T>& source, Bit eop, bool eopAfterLastBeat = false);
+	template<StreamSignal T> T eraseBeat(T&& source, UInt beatOffset, UInt beatCount);
+	template<StreamSignal T> T eraseLastBeat(T&& source);
+	template<StreamSignal T, SignalValue Tval> T insertBeat(T&& source, UInt beatOffset, const Tval& value);
 }
 
 
@@ -53,19 +49,19 @@ namespace gtry::scl
 		return ret;
 	}
 
-	template<Signal T>
-	Stream<Packet<T>> eraseBeat(Stream<Packet<T>>& source, UInt beatOffset, UInt beatCount)
+	template<StreamSignal T> 
+	T eraseBeat(T&& source, UInt beatOffset, UInt beatCount)
 	{
 		BitWidth beatLimit = std::max(beatOffset.width(), beatCount.width()) + 1;
 		UInt beatCounter = beatLimit;
 
-		Stream<Packet<T>> ret;
+		T ret;
 		ret <<= source;
 
 		IF(beatCounter >= zext(beatOffset) & beatCounter < zext(beatOffset + beatCount))
 		{
-			ret.valid = '0';
-			*source.ready = '1';
+			valid(ret) = '0';
+			ready(source) = '1';
 		}
 
 		IF(transfer(source))
@@ -79,35 +75,35 @@ namespace gtry::scl
 		return ret;
 	}
 
-	template<Signal T>
-	Stream<Packet<T>> eraseLastBeat(Stream<Packet<T>>& source)
+	template<StreamSignal T> 
+	T eraseLastBeat(T&& source)
 	{
-		Stream<Packet<T>> in;
+		T in;
 		in <<= source;
 
-		Stream<Packet<T>> ret = constructFrom(in);
+		T ret = constructFrom(in);
 		IF(eop(source))
 			in.valid = '0';
 		ret = in.regDownstream();
 
 		Bit eopReg = flag(eop(source) & valid(source), transfer(ret));
 		IF(eop(source) | eopReg)
-			ret.data.eop = '1';
+			eop(ret) = '1';
 		return ret;
 	}
 
-	template<Signal T, SignalValue Tval>
-	Stream<Packet<T>> insertBeat(Stream<Packet<T>>& source, UInt beatOffset, const Tval& value)
+	template<StreamSignal T, SignalValue Tval> 
+	T insertBeat(T&& source, UInt beatOffset, const Tval& value)
 	{
 		UInt beatCounter = beatOffset.width() + 1;
 
-		Stream<Packet<T>> ret;
+		T ret;
 		ret <<= source;
 
 		IF(beatCounter == zext(beatOffset))
 		{
-			*ret.data = value;
-			*source.ready = '0';
+			*ret = value;
+			ready(source) = '0';
 		}
 
 		IF(transfer(ret))
@@ -118,33 +114,6 @@ namespace gtry::scl
 				beatCounter = 0;
 		}
 		beatCounter = reg(beatCounter, 0);
-		return ret;
-	}
-
-	template<Signal T>
-	Stream<Packet<T>> makePacketStream(Stream<T>& source, Bit eop, bool eopAfterLastBeat)
-	{
-		Stream<Packet<T>> ret;
-
-		if(!eopAfterLastBeat)
-		{
-			ret.valid = source.valid;
-			ret.data.data = source.data;
-			ret.data.eop = eop;
-			*source.ready = *ret.ready;
-		}
-		else
-		{
-			Stream<Packet<T>> in{
-				.valid = source.valid | eop,
-				.data = {
-					.eop = eop,
-					.data = *source
-				}
-			};
-			*source.ready = *in.ready;
-			ret = scl::eraseLastBeat(in);
-		}
 		return ret;
 	}
 }

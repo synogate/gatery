@@ -56,9 +56,9 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, Decoder, data::xran
 	BOOST_CHECK(back.size() == 2);
 	sim_assert(back == val) << "encoded to " << back;
 
-	scl::DownStream<UInt> prio = priorityEncoder(result);
+	scl::VStream<UInt> prio = priorityEncoder(result);
 	BOOST_CHECK(prio->size() == 2);
-	sim_assert(prio.valid);
+	sim_assert(valid(prio));
 	sim_assert(*prio == val) << "encoded to " << *prio;
 
 	eval();
@@ -75,11 +75,11 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, PriorityEncoderTree
 	if (testVector)
 	{
 		UInt ref = gtry::utils::Log2(gtry::utils::lowestSetBitMask(testVector));
-		sim_assert(res.valid & *res == ref) << "wrong index: " << *res << " should be " << ref;
+		sim_assert(valid(res) & *res == ref) << "wrong index: " << *res << " should be " << ref;
 	}
 	else
 	{
-		sim_assert(!res.valid) << "wrong valid: " << res.valid;
+		sim_assert(!valid(res)) << "wrong valid: " << valid(res);
 	}
 
 	eval();

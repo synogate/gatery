@@ -19,26 +19,27 @@
 #include "codingNRZI.h"
 #include "../Counter.h"
 
-gtry::scl::DownStream<gtry::UInt> gtry::scl::decodeNRZI(const DownStream<UInt>& in, size_t stuffBitInterval)
+gtry::scl::VStream<gtry::UInt> gtry::scl::decodeNRZI(const VStream<UInt>& in, size_t stuffBitInterval)
 {
 	auto scope = Area{ "scl_decodeNRZI" }.enter();
 
-	DownStream<UInt> out;
-	out.valid = in.valid;
-	out.data = in.data;
+	VStream<UInt> out{
+		*in,
+		Valid{valid(in)}
+	};
 
 	// decode differential signals only
-	IF(in.valid & in.data[0] != in.data[1])
+	IF(valid(in) & (*in)[0] != (*in)[1])
 	{
-		out.data[0] = in.data[0] == reg(in.data[0]);
-		out.data[1] = !out.data[0];
+		(*out)[0] = (*in)[0] == reg((*in)[0]);
+		(*out)[1] = !(*out)[0];
 
 		if(stuffBitInterval)
 		{
 			Counter stuffCounter{ stuffBitInterval + 1 };
 			IF(stuffCounter.isLast())
-				out.valid = '0';
-			IF(out.data[0] == '0')
+				valid(out) = '0';
+			IF((*out)[0] == '0')
 				stuffCounter.reset();
 		}
 	}

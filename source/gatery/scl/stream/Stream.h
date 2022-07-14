@@ -18,6 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 #include "../Fifo.h"
+#include "../flag.h"
 
 namespace gtry::scl
 {

@@ -19,7 +19,6 @@
 #include "pci.h"
 
 #include "../Fifo.h"
-#include "../stream/DownStream.h"
 #include "../stream/StreamArbiter.h"
 
 gtry::Bit gtry::scl::pci::isCompletionTlp(const UInt& tlpHeader)
@@ -46,26 +45,26 @@ gtry::Bit gtry::scl::pci::isDataTlp(const UInt& tlpHeader)
 	return data_tlp;
 }
 
-gtry::scl::pci::AvmmBridge::AvmmBridge(Stream<Packet<Tlp>>& rx, AvalonMM& avmm, const PciId& cplId) :
+gtry::scl::pci::AvmmBridge::AvmmBridge(RvStream<Tlp>& rx, AvalonMM& avmm, const PciId& cplId) :
 	AvmmBridge()
 {
 	setup(rx, avmm, cplId);
 }
 
-void gtry::scl::pci::AvmmBridge::setup(Stream<Packet<Tlp>>& rx, AvalonMM& avmm, const PciId& cplId)
+void gtry::scl::pci::AvmmBridge::setup(RvStream<Tlp>& rx, AvalonMM& avmm, const PciId& cplId)
 {
 	HCL_DESIGNCHECK_HINT(rx->header.width() == 96_b, "reduce tlp header address using discardHighAddressBits");
 	m_cplId = cplId;
 	generateFifoBridge(rx, avmm);
 }
 
-void gtry::scl::pci::AvmmBridge::generateFifoBridge(Stream<Packet<Tlp>>& rx, AvalonMM& avmm)
+void gtry::scl::pci::AvmmBridge::generateFifoBridge(RvStream<Tlp>& rx, AvalonMM& avmm)
 {
 	HCL_DESIGNCHECK(avmm.readData->width() == 32_b);
 
 	auto entity = Area{ "AvmmBridge" }.enter();
 
-	sim_assert(!rx.valid | rx->header(TlpOffset::type) == 0) << "not a memory tlp";
+	sim_assert(!valid(rx) | rx->header(TlpOffset::type) == 0) << "not a memory tlp";
 
 	// decode command
 	avmm.address = rx->header(64, 32_b);
@@ -78,7 +77,7 @@ void gtry::scl::pci::AvmmBridge::generateFifoBridge(Stream<Packet<Tlp>>& rx, Ava
 	// store cpl data for command
 	size_t pipelineDepth = std::max<size_t>(avmm.maximumPendingReadTransactions, 1);
 	Fifo<MemTlpCplData> resQueue{ pipelineDepth , MemTlpCplData{} };
-	
+
 	MemTlpCplData req;
 	req.decode(rx->header);
 	HCL_NAMED(req);
@@ -87,20 +86,20 @@ void gtry::scl::pci::AvmmBridge::generateFifoBridge(Stream<Packet<Tlp>>& rx, Ava
 
 	// create tx tlp
 	avmm.createReadDataValid();
-	m_tx.valid = *avmm.readDataValid;
+	valid(m_tx) = *avmm.readDataValid;
 	m_tx->header = "96x00000000000000044a000001";
 	m_tx->header(48, 16_b) = pack(m_cplId);
 	m_tx->data = *avmm.readData;
 
 	// join response and cpl data
 	MemTlpCplData res = resQueue.peek();
-	IF(m_tx.valid)
+	IF(valid(m_tx))
 		resQueue.pop();
 	res.encode(m_tx->header);
 
-	*rx.ready = !resQueue.full();
+	ready(rx) = !resQueue.full();
 	if (avmm.ready)
-		*rx.ready &= *avmm.ready;
+		ready(rx) &= *avmm.ready;
 
 	resQueue.generate();
 }
@@ -113,9 +112,9 @@ gtry::scl::pci::Tlp gtry::scl::pci::Tlp::discardHighAddressBits() const
 		.data = data
 	};
 
-	if(header.width() > 96_b)
+	if (header.width() > 96_b)
 		IF(header[TlpOffset::has4DW])
-			tlpHdr.header(64, 32_b) = header(96, 32_b);
+		tlpHdr.header(64, 32_b) = header(96, 32_b);
 
 	HCL_NAMED(tlpHdr);
 	return tlpHdr;
@@ -151,12 +150,12 @@ void gtry::scl::pci::IntelPTileCompleter::generate()
 
 	static_assert(Signal<BVec&>);
 	static_assert(Signal<Tlp&>);
-	static_assert(Signal<Stream<Packet<Tlp>>&>);
-	static_assert(CompoundSignal<Stream<Packet<Tlp>>>);
-	static_assert(Signal<std::array<Stream<Packet<Tlp>>, 2>&>);
+	static_assert(Signal<RvPacketStream<Tlp>&>);
+	static_assert(CompoundSignal<RvPacketStream<Tlp>>);
+	static_assert(Signal<std::array<RvPacketStream<Tlp>, 2>&>);
 
 	Bit anyValid = '0';
-	std::array<DownStream<Packet<Tlp>>, 2> in_reduced;
+	std::array<VPacketStream<Tlp>, 2> in_reduced;
 	for (size_t i = 0; i < in.size(); ++i)
 	{
 		in[i]->header = 128_b;
@@ -166,28 +165,34 @@ void gtry::scl::pci::IntelPTileCompleter::generate()
 		IF(header[29]) // 4 DW tlp header
 			header(64, 32_b) = header(96, 32_b);
 
-		in_reduced[i].valid = in[i].valid & sop(in[i]) & eop(in[i]);
-		in_reduced[i].data = in[i].data;
+		valid(in_reduced[i]) = valid(in[i]) & sop(in[i]) & eop(in[i]);
+		*in_reduced[i] = *in[i];
 		in_reduced[i]->header = header(0, 96_b);
-		anyValid |= in_reduced[i].valid;
+		anyValid |= valid(in_reduced[i]);
 	}
 
 	Fifo in_buffer(32, in_reduced);
 	IF(anyValid)
 		in_buffer.push(in_reduced);
 
-	*in[0].ready = in_buffer.almostEmpty(32 - 27);
+	ready(in[0])= in_buffer.almostEmpty(32 - 27);
 	for (size_t i = 1; i < in.size(); ++i)
-		*in[i].ready = *in[0].ready;
+		ready(in[i]) = ready(in[0]);
 
-	std::array<Stream<Packet<Tlp>>, 2> in_buffered{
-		Stream<Packet<Tlp>>{
-			.valid = in_buffer.peek()[0].valid,
-			.data = in_buffer.peek()[0].data,
+	std::array<RvStream<Tlp>, 2> in_buffered{
+		RvStream<Tlp>{
+			*in_buffer.peek()[0],
+			{
+				Ready{},
+				Valid{valid(in_buffer.peek()[0])},
+			}
 		},
-		Stream<Packet<Tlp>>{
-			.valid = in_buffer.peek()[1].valid,
-			.data = in_buffer.peek()[1].data,
+		RvStream<Tlp>{
+			*in_buffer.peek()[1],
+			{
+				Ready{},
+				Valid{valid(in_buffer.peek()[1])},
+			}
 		},
 	};
 
