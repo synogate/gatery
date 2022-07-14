@@ -22,6 +22,12 @@
 
 namespace gtry::scl
 {
+	struct Ready;
+	struct Valid;
+	struct Eop;
+	struct Sop;
+	struct ByteEnable;
+
 	template<Signal PayloadT, Signal... Meta>
 	struct Stream
 	{
@@ -34,7 +40,7 @@ namespace gtry::scl
 		const Payload& operator *() const { return data; }
 
 		Payload* operator ->() { return &data; }
-		Payload* operator ->() const { return &data; }
+		const Payload* operator ->() const { return &data; }
 
 		template<Signal T>
 		static constexpr bool has() { 
@@ -69,7 +75,7 @@ namespace gtry::scl
 		 * @param	Settings forwarded to all instantiated registers.
 		 * @return	connected stream
 		*/
-		Stream regUpstream(const RegisterSettings& settings = {});
+		Stream regReady(const RegisterSettings& settings = {});
 
 		/**
 		 * @brief Create a FIFO for buffering.
@@ -86,7 +92,8 @@ namespace gtry::scl
 		 * @param instance The FIFO to use.
 		 * @return connected stream
 		*/
-//		Stream fifo(Fifo<Payload>& instance);
+		template<Signal T>
+		Stream fifo(Fifo<T>& instance);
 	};
 
 	namespace internal
@@ -99,7 +106,7 @@ namespace gtry::scl
 	}
 
 	template<class T>
-	concept StreamSignal = internal::is_stream_signal<T>::value;
+	concept StreamSignal = Signal<T> and internal::is_stream_signal<T>::value;
 
 	/**
 	 * @brief High when all transfer conditions (ready and valid high) are met.
@@ -139,7 +146,8 @@ namespace gtry::scl
 
 	struct Valid
 	{
-		Bit valid;
+		// reset to zero
+		Bit valid = Bit{ SignalReadPort{}, false };
 	};
 
 	template<StreamSignal T> requires (T::template has<Valid>())
@@ -163,7 +171,8 @@ namespace gtry::scl
 
 	struct Sop
 	{
-		Bit sop;
+		// reset to zero, sop is used for packet streams without valid.
+		Bit sop = Bit{ SignalReadPort{}, false };
 	};
 
 	template<StreamSignal T> requires (T::template has<Sop>())
@@ -213,167 +222,162 @@ namespace gtry::scl
 	 * @param Settings forwarded to all instantiated registers.
 	 * @return connected stream
 	*/
-	template<Signal T> Stream<T> reg(Stream<T>& stream, const RegisterSettings& settings = {});
+	template<StreamSignal T> 
+	T reg(T& stream, const RegisterSettings& settings = {});
+	template<StreamSignal T>
+	T reg(const T& stream, const RegisterSettings& settings = {});
 
 	/**
 	 * @brief Connect a Stream as source to a FIFO as sink.
 	 * @param sink FIFO instance.
 	 * @param source Stream instance.
 	*/
-	template<Signal T> void connect(Fifo<T>& sink, Stream<T>& source);
+	template<Signal Tf, StreamSignal Ts>
+	void connect(Fifo<Tf>& sink, Ts& source);
 
 	/**
 	 * @brief Connect a FIFO as source to a Stream as sink.
 	 * @param sink Stream instance.
 	 * @param source FIFO instance.
 	*/
-	template<Signal T> void connect(Stream<T>& sink, Fifo<T>& source);
+	template<StreamSignal Ts, Signal Tf>
+	void connect(Ts& sink, Fifo<Tf>& source);
 }
 
 namespace gtry::scl
 {
-#if 0
-	template<Signal Payload>
-	decltype(auto) Stream<Payload>::operator ->()
+	template<Signal PayloadT, Signal... Meta>
+	inline Stream<PayloadT, Meta...> gtry::scl::Stream<PayloadT, Meta...>::regDownstreamBlocking(const RegisterSettings& settings)
 	{
-		if constexpr(requires(Payload & p) { p.operator->(); })
-			return (Payload&)data;
+		auto dsSig = constructFrom(copy(downstream(*this)));
+
+		IF(ready(*this))
+			dsSig = downstream(*this);
+
+		dsSig = reg(dsSig, settings);
+
+		Stream<PayloadT, Meta...> ret;
+		downstream(ret) = dsSig;
+		upstream(*this) = upstream(ret);
+		return ret;
+	}
+
+	template<Signal PayloadT, Signal... Meta>
+	inline Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::regDownstream(const RegisterSettings& settings)
+	{
+		Stream<PayloadT, Meta...> ret;
+
+		if constexpr (has<Ready>())
+		{
+			Bit valid_reg;
+			auto dsSig = constructFrom(copy(downstream(*this)));
+
+			IF(!valid_reg | ready(*this))
+			{
+				valid_reg = valid(*this);
+				dsSig = downstream(*this);
+			}
+
+			valid_reg = reg(valid_reg, '0', settings);
+			dsSig = reg(dsSig, settings);
+
+			downstream(ret) = dsSig;
+			upstream(*this) = upstream(ret);
+			ready(*this) |= !valid_reg;
+		}
 		else
-			return &data;
-	}
-
-	template<Signal Payload>
-	decltype(auto) Stream<Payload>::operator ->() const
-	{
-		if constexpr(requires(Payload & p) { p.operator->(); })
-			return (const Payload&)data;
-		else
-			return &data;
-	}
-
-	template<Signal Payload>
-	inline Stream<Payload> gtry::scl::Stream<Payload>::regDownstreamBlocking(const RegisterSettings& settings)
-	{
-		Bit valid_reg;
-		Payload data_reg = constructFrom(data);
-
-		IF(*ready)
 		{
-			valid_reg = valid;
-			data_reg = data;
-		}
-
-		valid_reg = reg(valid_reg, '0', settings);
-		data_reg = reg(data_reg, settings);
-
-		Stream<Payload> ret{
-			.valid = valid_reg,
-			.data = data_reg
-		};
-		*ready = *ret.ready;
-		return ret;
-	}
-
-	template<Signal Payload>
-	inline Stream<Payload> Stream<Payload>::regDownstream(const RegisterSettings& settings)
-	{
-		Bit valid_reg;
-		Payload data_reg = constructFrom(data);
-
-		IF(!valid_reg | *ready)
-		{
-			valid_reg = valid;
-			data_reg = data;
-		}
-
-		valid_reg = reg(valid_reg, '0', settings);
-		data_reg = reg(data_reg, settings);
-
-		Stream<Payload> ret{
-			.valid = valid_reg,
-			.data = data_reg
-		};
-		*ready = *ret.ready | !valid_reg;
-		return ret;
-	}
-
-	template<Signal Payload>
-	inline Stream<Payload> Stream<Payload>::regUpstream(const RegisterSettings& settings)
-	{
-		Bit valid_reg;
-		Payload data_reg = constructFrom(data);
-
-		// we are ready as long as our buffer is unused
-		*ready = !valid_reg;
-
-		Stream<Payload> ret = {
-			.valid = valid,
-			.data = data
-		};
-
-		IF(*ret.ready)
-			valid_reg = '0';
-
-		IF(!valid_reg)
-		{
-			IF(!*ret.ready)
-				valid_reg = valid;
-			data_reg = data;
-		}
-
-		valid_reg = reg(valid_reg, '0', settings);
-		data_reg = reg(data_reg, settings);
-
-		IF(valid_reg)
-		{
-			ret.valid = '1';
-			ret.data = data_reg;
+			downstream(ret) = reg(copy(downstream(*this)));
+			upstream(*this) = upstream(ret);
 		}
 		return ret;
 	}
 
-	template<Signal Payload>
-	inline Stream<Payload> Stream<Payload>::fifo(size_t minDepth)
+	template<Signal PayloadT, Signal... Meta>
+	inline Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::regReady(const RegisterSettings& settings)
 	{
-		Fifo<Payload> inst{ minDepth, data };
+		Stream<PayloadT, Meta...> ret;
+		ret <<= *this;
+
+		if constexpr (has<Ready>())
+		{
+			Bit valid_reg;
+			auto data_reg = constructFrom(copy(downstream(*this)));
+
+			// we are ready as long as our buffer is unused
+			ready(*this) = !valid_reg;
+
+			IF(ready(ret))
+				valid_reg = '0';
+
+			IF(!valid_reg)
+			{
+				IF(!ready(ret))
+					valid_reg = valid(*this);
+				data_reg = downstream(*this);
+			}
+
+			valid_reg = reg(valid_reg, '0', settings);
+			data_reg = reg(data_reg, settings);
+
+			IF(valid_reg)
+			{
+				valid(ret) = '1';
+				downstream(ret) = data_reg;
+			}
+		}
+		return ret;
+	}
+
+	template<Signal PayloadT, Signal... Meta>
+	inline Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::fifo(size_t minDepth)
+	{
+		Fifo inst{ minDepth, copy(downstream(*this)) };
 		Stream ret = fifo(inst);
 		inst.generate();
 		return ret;
 	}
 
-	template<Signal Payload>
-	inline Stream<Payload> gtry::scl::Stream<Payload>::fifo(Fifo<Payload>& instance)
+	template<Signal PayloadT, Signal... Meta>
+	template<Signal T>
+	inline Stream<PayloadT, Meta...> gtry::scl::Stream<PayloadT, Meta...>::fifo(Fifo<T>& instance)
 	{
 		connect(instance, *this);
 
-		Stream<Payload> ret = constructFrom(*this);
+		Stream<PayloadT, Meta...> ret;
 		connect(ret, instance);
 		return ret;
 	}
 
-	template<Signal T>
-	Stream<T> reg(Stream<T>& stream, const RegisterSettings& settings)
-	{
-		//return stream.regDownstreamBlocking(settings).regUpstream(settings);
-		return stream.regUpstream(settings).regDownstream(settings);
-	}
-
-	template<Signal T>
-	void connect(Fifo<T>& sink, Stream<T>& source)
+	template<Signal Tf, StreamSignal Ts>
+	void connect(Fifo<Tf>& sink, Ts& source)
 	{
 		IF(transfer(source))
-			sink.push(*source);
-		*source.ready = !sink.full();
+			sink.push(downstream(source));
+		ready(source) = !sink.full();
 	}
 
-	template<Signal T>
-	void connect(Stream<T>& sink, Fifo<T>& source)
+	template<StreamSignal Ts, Signal Tf>
+	void connect(Ts& sink, Fifo<Tf>& source)
 	{
-		sink.valid = !source.empty();
-		sink.data = source.peek();
-
+		downstream(sink) = source.peek();
+		valid(sink) = !source.empty();
+	
 		IF(transfer(sink))
 			source.pop();
 	}
-#endif
+
+	template<StreamSignal T>
+	T reg(T& stream, const RegisterSettings& settings)
+	{
+		// we can use blocking reg here since regReady guarantees high ready signal
+		return stream.regDownstreamBlocking(settings).regReady(settings);
+	}
+
+	template<StreamSignal T>
+	T reg(const T& stream, const RegisterSettings& settings)
+	{
+		static_assert(!stream.has<Ready>(), "cannot create upstream register from const stream");
+		return stream.regDownstream(settings);
+	}
 }

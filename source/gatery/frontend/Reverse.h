@@ -52,12 +52,16 @@ namespace gtry
 	template<class T> ReversePlaceholder downstream(const Reverse<T>& val) { return {}; }
 	template<CompoundSignal T> auto downstream(T& signal);
 	template<CompoundSignal T> auto downstream(const T& signal);
+	template<TupleSignal T> auto downstream(T& signal);
+	template<TupleSignal T> auto downstream(const T& signal);
 
 	template<class T> ReversePlaceholder upstream(const T& val) { return {}; }
 	template<class T> T& upstream(Reverse<T>& val) { return *val; }
 	template<class T> const T& upstream(const Reverse<T>& val) { return *val; }
 	template<CompoundSignal T> auto upstream(T& signal);
 	template<CompoundSignal T> auto upstream(const T& signal);
+	template<TupleSignal T> auto upstream(T& signal);
+	template<TupleSignal T> auto upstream(const T& signal);
 
 
 	template<typename T>
@@ -127,6 +131,22 @@ namespace gtry
 		}, boost::pfr::structure_tie(signal));
 	}
 
+	template<TupleSignal T>
+	auto downstream(T& signal)
+	{
+		return std::apply([](auto&&... args) {
+			return std::tuple<decltype(downstream(args))...>{downstream(args)...};
+			}, signal);
+	}
+
+	template<TupleSignal T>
+	auto downstream(const T& signal)
+	{
+		return std::apply([](auto&&... args) {
+			return std::tuple<decltype(downstream(args))...>{downstream(args)...};
+			}, signal);
+	}
+
 	template<CompoundSignal T>
 	auto upstream(T& signal)
 	{
@@ -141,6 +161,22 @@ namespace gtry
 		return std::apply([](auto&&... args) {
 			return std::tuple<decltype(upstream(args))...>{upstream(args)...};
 		}, boost::pfr::structure_tie(signal));
+	}
+
+	template<TupleSignal T>
+	auto upstream(T& signal)
+	{
+		return std::apply([](auto&&... args) {
+			return std::tuple<decltype(upstream(args))...>{upstream(args)...};
+			}, signal);
+	}
+
+	template<TupleSignal T>
+	auto upstream(const T& signal)
+	{
+		return std::apply([](auto&&... args) {
+			return std::tuple<decltype(upstream(args))...>{upstream(args)...};
+			}, signal);
 	}
 
 	template<class T> auto copy(const T& val) { return val; }

@@ -105,7 +105,8 @@ namespace gtry {
 		m_resetValue(resetValue)
 	{
 		createNode();
-		m_node->connectInput(port);
+		if(port.node)
+			m_node->connectInput(port);
 	}
 
 	Bit::Bit(hlim::Node_Signal* node, size_t offset, size_t initialScopeId) :
@@ -140,7 +141,8 @@ namespace gtry {
 
 	Bit& Bit::operator=(Bit&& rhs)
 	{
-		m_resetValue = rhs.m_resetValue;
+		if(rhs.m_resetValue)
+			m_resetValue = rhs.m_resetValue;
 
 		assign(rhs.readPort());
 
