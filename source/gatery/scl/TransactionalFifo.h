@@ -166,7 +166,7 @@ namespace gtry::scl
 		IF(m_popCommit)
 			getCheckpoint = get;
 
-		Fifo<TData>::m_peakData = reg(mem[get(0, -1)], { .clock = *Fifo<TData>::m_popClock, .allowRetimingBackward = true });
+		Fifo<TData>::m_peekData = reg(mem[get(0, -1)], { .clock = *Fifo<TData>::m_popClock, .allowRetimingBackward = true });
 
 		Fifo<TData>::m_popSize = put - get;
 		Fifo<TData>::m_popEmpty = reg(put.msb() == get.msb() & put(0, -1) == get(0, -1), '1');

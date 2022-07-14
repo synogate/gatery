@@ -1153,9 +1153,12 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
 
 	detectUnguardedCDCCrossings(*this, ConstSubnet::all(*this), [](const BaseNode *affectedNode) {
 		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING 
-				<< "Unintentional clock domain crossing detected on inputs to node " << affectedNode
+				<< "Unintentional clock domain crossing detected at node " << affectedNode
 		);
-		HCL_DESIGNCHECK_HINT(false, "Unintentional clock domain crossing detected!");
+		std::stringstream msg;
+		msg << "Unintentional clock domain crossing detected at node: " << affectedNode->getName() << " " << affectedNode->getTypeName() << " (" << affectedNode->getId() << " ) from:"
+			<< affectedNode->getStackTrace();
+		HCL_DESIGNCHECK_HINT(false, msg.str());
 	});
 
 }

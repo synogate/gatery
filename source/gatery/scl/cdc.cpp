@@ -38,3 +38,8 @@ gtry::UInt gtry::scl::grayCodeSynchronize(UInt in, const Clock& inClock, const C
 {
 	return grayDecode(synchronize(grayEncode(in), inClock, outClock, outStages, inStage));
 }
+
+gtry::UInt gtry::scl::grayCodeSynchronize(UInt in, UInt reset, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
+{
+	return grayDecode(synchronize(grayEncode(in), grayEncode(reset), inClock, outClock, outStages, inStage));
+}

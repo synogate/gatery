@@ -22,6 +22,10 @@
 #include <boost/test/data/monomorphic.hpp>
 
 #include <gatery/simulation/waveformFormats/VCDSink.h>
+#include <gatery/simulation/Simulator.h>
+#include <gatery/export/vhdl/VHDLExport.h>
+#include <gatery/scl/synthesisTools/IntelQuartus.h>
+
 
 #include <gatery/scl/TransactionalFifo.h>
 
@@ -32,7 +36,8 @@ using namespace gtry;
 
 struct FifoTest
 {
-	FifoTest(Clock& clk) : clk(clk) {}
+	FifoTest(Clock& clk) : rdClk(clk), wrClk(clk) {}
+	FifoTest(Clock& rdClk, Clock& wrClk) : rdClk(rdClk), wrClk(wrClk) {}
 
 	template<typename T = scl::Fifo<UInt>>
 	T create(size_t depth, BitWidth width, bool generate = true)
@@ -40,24 +45,32 @@ struct FifoTest
 		T fifo{ depth, UInt{ width } };
 		actualDepth = fifo.depth();
 
-		pushData = width;
+		{
+			ClockScope clkScp(wrClk);
+	 		pushData = width;
 
-		IF(push)
-			fifo.push(pushData);
-		popData = fifo.peak();
-		IF(pop)
-			fifo.pop();
+			IF(push)
+				fifo.push(pushData);
+
+			push = pinIn().setName("push_valid");
+			pushData = pinIn(width).setName("push_data");
+
+			full = fifo.full();
+			pinOut(full).setName("full");
+		}
+		{
+			ClockScope clkScp(rdClk);
+			popData = fifo.peek();
+			IF(pop)
+				fifo.pop();
+
+			pop = pinIn().setName("pop_ready");
+			pinOut(popData).setName("pop_data");
+
+			empty = fifo.empty();
+			pinOut(empty).setName("empty");
+		}
 		
-		push = pinIn().setName("push_valid");
-		pushData = pinIn(width).setName("push_data");
-		pop = pinIn().setName("pop_ready");
-		pinOut(popData).setName("pop_data");
-
-		empty = fifo.empty();
-		full = fifo.full();
-		pinOut(empty).setName("empty");
-		pinOut(full).setName("full");
-
 		if(generate)
 			fifo.generate();
 		return fifo;
@@ -65,12 +78,12 @@ struct FifoTest
 
 	SimProcess operator() ()
 	{
-		std::queue<uint8_t> model;
-
+		while (!model.empty())
+			model.pop();
 		while (true)
 		{
-			if (simu(empty) == 0)
-				BOOST_TEST(!model.empty());
+			if (simu(empty) == 1)
+				BOOST_TEST(model.empty());
 			if (simu(full) == 1)
 				BOOST_TEST(!model.empty());
 
@@ -91,11 +104,64 @@ struct FifoTest
 					model.pop();
 			}
 
-			co_await WaitClk(clk);
+			co_await WaitClk(wrClk);
 		}
 	}
 
-	Clock clk;
+	std::function<SimProcess()> writeProcess()
+	{
+		return [this]()->SimProcess{
+			while (!model.empty())
+				model.pop();
+
+			while (true)
+			{
+				if (simu(full) == 1)
+					BOOST_TEST(!model.empty());
+
+				if (simu(push) && !simu(full))
+					model.push(uint8_t(simu(pushData)));
+
+				co_await WaitClk(wrClk);
+			}
+		};
+	}
+
+	std::function<SimProcess()> readProcess()
+	{
+		return [this]()->SimProcess{
+
+			auto *sim = sim::SimulationContext::current()->getSimulator();
+
+			while (!model.empty())
+				model.pop();
+
+			while (true)
+			{
+				if (!simu(empty))
+				{
+					uint8_t peekValue = (uint8_t)simu(popData);
+					BOOST_TEST(!model.empty());
+					if(!model.empty())
+						BOOST_TEST(peekValue == model.front(), (size_t)peekValue << " == " << (size_t)model.front() << " does not hold at simulation time " << sim->getCurrentSimulationTime().numerator()/(double)sim->getCurrentSimulationTime().denominator() * 1e9 << "ns");
+				}
+
+				// Allow control process to set pop flag
+				co_await WaitFor(0);
+
+				if (simu(pop) && !simu(empty))
+				{
+					if(!model.empty())
+						model.pop();
+				}
+
+				co_await WaitClk(rdClk);
+			}
+		};
+	}
+
+	Clock rdClk;
+	Clock wrClk;
 
 	UInt pushData;
 	Bit push;
@@ -108,6 +174,7 @@ struct FifoTest
 
 	size_t actualDepth;
 
+	std::queue<uint8_t> model;
 };
 
 BOOST_FIXTURE_TEST_CASE(Fifo_basic, BoostUnitTestSimulationFixture)
@@ -483,3 +550,108 @@ BOOST_FIXTURE_TEST_CASE(TransactionalFifo_cutoff, BoostUnitTestSimulationFixture
 
 	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->absoluteFrequency());
 }
+
+
+
+BOOST_FIXTURE_TEST_CASE(DualClockFifo, BoostUnitTestSimulationFixture)
+{
+	Clock rdClock({ .absoluteFrequency = 100'000'000 });
+	HCL_NAMED(rdClock);
+	Clock wrClock({ .absoluteFrequency = 133'000'000 });
+	HCL_NAMED(wrClock);
+ 
+	FifoTest fifo{ rdClock, wrClock };
+	auto&& uut = fifo.create(16, 8_b);
+
+	size_t actualDepth = fifo.actualDepth;
+
+	Bit halfEmpty;
+	Bit halfFull;
+	{
+		ClockScope scope(rdClock);
+		halfEmpty = uut.almostEmpty(actualDepth/2);
+		pinOut(halfEmpty).setName("half_empty");
+	}
+	{
+		ClockScope scope(wrClock);
+		halfFull = uut.almostFull(actualDepth/2);
+		pinOut(halfFull).setName("half_full");
+	}
+	
+	addSimulationProcess([=,this]()->SimProcess {
+		simu(fifo.pushData) = 0;
+		simu(fifo.push) = 0;
+		simu(fifo.pop) = 0;
+
+		for(size_t i = 0; i < 5; ++i)
+			co_await WaitClk(wrClock);
+
+		BOOST_TEST(simu(fifo.empty) == 1);
+		BOOST_TEST(simu(fifo.full) == 0);
+		BOOST_TEST(simu(halfEmpty) == 1);
+		BOOST_TEST(simu(halfFull) == 0);
+
+		for (size_t i = 0; i < actualDepth; ++i)
+		{
+			simu(fifo.push) = '1';
+			simu(fifo.pushData) = i * 3;
+			co_await WaitClk(wrClock);
+		}
+		simu(fifo.push) = '0';
+		co_await WaitClk(wrClock);
+
+		BOOST_TEST(simu(fifo.full) == 1);
+		BOOST_TEST(simu(halfFull) == 1);
+
+		co_await WaitClk(wrClock);
+		co_await WaitClk(wrClock);
+		co_await WaitClk(wrClock);
+
+		BOOST_TEST(simu(fifo.empty) == 0);
+		BOOST_TEST(simu(halfEmpty) == 0);
+
+		co_await WaitClk(rdClock);
+
+		for (size_t i = 0; i < actualDepth; ++i)
+		{
+			simu(fifo.pop) = '1';
+			co_await WaitClk(rdClock);
+		}
+
+		simu(fifo.pop) = '0';
+		co_await WaitClk(rdClock);
+
+		BOOST_TEST(simu(fifo.empty) == 1);
+		BOOST_TEST(simu(halfEmpty) == 1);
+
+		co_await WaitClk(rdClock);
+		co_await WaitClk(rdClock);
+		co_await WaitClk(rdClock);
+
+		BOOST_TEST(simu(fifo.full) == 0);
+		BOOST_TEST(simu(halfFull) == 0);
+
+		stopTest();
+	});
+
+	addSimulationProcess(fifo.readProcess());
+	addSimulationProcess(fifo.writeProcess());
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+
+	#if 0
+		vhdl::VHDLExport vhdl("vhdl_DCFIFO_quartus/");
+		vhdl.addTestbenchRecorder(getSimulator(), "testbench", false);
+		vhdl.targetSynthesisTool(new IntelQuartus());
+		vhdl.writeProjectFile("import_IPCore.tcl");
+		vhdl.writeStandAloneProjectFile("IPCore.qsf");
+		vhdl.writeConstraintsFile("constraints.sdc");
+		vhdl.writeClocksFile("clocks.sdc");
+		vhdl(design.getCircuit());	
+	#endif
+
+	runTest(hlim::ClockRational(20000, 1) / rdClock.getClk()->absoluteFrequency());
+
+}
+
+

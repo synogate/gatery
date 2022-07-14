@@ -85,8 +85,7 @@ void XilinxVivado::resolveAttributes(const hlim::RegisterAttributes &attribs, hl
 	if (attribs.synchronizationRegister) {
 		resolvedAttribs.insert({"ASYNC_REG", {"string", "\"true\""}});
 		resolvedAttribs.insert({"SHREG_EXTRACT", {"string", "\"no\""}});
-		resolvedAttribs.insert({"DONT_TOUCH", {"string", "\"true\""}});
-
+		// DONT_TOUCH is omitted here since it introduces LUT1-identity primitives between the registers
 		resolvedAttribs.insert({"extract_enable", {"string", "\"yes\""}});
 		resolvedAttribs.insert({"extract_reset", {"string", "\"yes\""}});
 	}
