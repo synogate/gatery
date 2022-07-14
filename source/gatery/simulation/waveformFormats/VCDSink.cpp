@@ -22,6 +22,7 @@
 #include "../../hlim/Circuit.h"
 #include "../Simulator.h"
 #include "../../hlim/postprocessing/ClockPinAllocation.h"
+#include "../../hlim/postprocessing/CDCDetection.h"
 #include "../../hlim/Subnet.h"
 
 
@@ -47,6 +48,8 @@ namespace gtry::sim
 				throw std::runtime_error(std::string("Could not open log file for writing: ") + logFilename);
 		}
 
+		m_gtkWaveProjectFile.setWaveformFile(filename);
+
 		auto clockPins = hlim::extractClockPins(circuit, hlim::Subnet::allForSimulation(circuit));
 
 		for(auto& clk : clockPins.clockPins)
@@ -63,7 +66,12 @@ namespace gtry::sim
 	{}
 
 	void VCDSink::onAssert(const hlim::BaseNode* src, std::string msg)
-	{}
+	{
+		try {
+			m_gtkWaveProjectFile.addMarker(m_simulator.getCurrentSimulationTime());
+		} catch (...) {
+		}
+	}
 
 	class VCDIdentifierGenerator {
 	public:
@@ -187,6 +195,9 @@ namespace gtry::sim
 			if(value[DefaultConfig::DEFINED])
 				m_VCD.writeBitState(c.second, true, value[DefaultConfig::VALUE]);
 		}
+
+		setupGtkWaveProjFileSignals();
+		m_gtkWaveProjectFile.write((m_gtkWaveProjectFile.getWaveformFile()+".gtkw").c_str());
 	}
 
 	void VCDSink::signalChanged(size_t id)
@@ -206,6 +217,10 @@ namespace gtry::sim
 		auto ratTickIdx = simulationTime / hlim::ClockRational(1, 1'000'000'000'000ull);
 		size_t tickIdx = ratTickIdx.numerator() / ratTickIdx.denominator();
 		m_VCD.writeTime(tickIdx);
+
+
+		m_gtkWaveProjectFile.setZoom(0, simulationTime);
+		m_gtkWaveProjectFile.write((m_gtkWaveProjectFile.getWaveformFile()+".gtkw").c_str());
 	}
 
 	void VCDSink::onClock(const hlim::Clock* clock, bool risingEdge)
@@ -220,6 +235,64 @@ namespace gtry::sim
 		auto it = m_rst2code.find((hlim::Clock*)clock);
 		if(it != m_rst2code.end())
 			m_VCD.writeBitState(it->second, true, inReset);
+	}
+
+	void VCDSink::setupGtkWaveProjFileSignals()
+	{
+		// For easier extension in the future (beyond IO pins) determine clock domains for all signals so
+		// that they can be sorted by clocks without relying on the clock ports of the io pins.
+		std::map<hlim::NodePort, hlim::SignalClockDomain> clockDomains;
+		hlim::inferClockDomains(m_circuit, clockDomains);
+
+		std::map<hlim::Clock*, std::vector<Signal*>> signalsByClocks;
+
+		for (auto &s : m_id2Signal) {
+			if (!s.isPin) continue;
+
+			auto it = clockDomains.find(s.driver);
+			if (it == clockDomains.end() || it->second.type != hlim::SignalClockDomain::CLOCK)
+				signalsByClocks[nullptr].push_back(&s);
+			else
+				signalsByClocks[it->second.clk].push_back(&s);
+		}
+
+
+		auto constructFullSignalName = [](const Signal &signal) {
+			std::string name = signal.name;
+			auto *grp = signal.nodeGroup;
+			while (grp != nullptr) {
+				name = grp->getInstanceName() + '.' + name;
+				grp = grp->getParent();
+			}
+			return name;
+		};
+
+		for (auto &clockDomain : signalsByClocks) {
+			if (clockDomain.first != nullptr) {
+				auto *clockPin = clockDomain.first->getClockPinSource();
+				m_gtkWaveProjectFile.appendSignal(std::string("clocks.")+clockPin->getName()).color = GTKWaveProjectFile::Signal::BLUE;
+				auto *rstPin = clockDomain.first->getResetPinSource();
+				m_gtkWaveProjectFile.appendSignal(std::string("clocks.")+rstPin->getResetName()).color = GTKWaveProjectFile::Signal::INDIGO;
+			}
+
+			m_gtkWaveProjectFile.appendBlank();
+
+			std::sort(clockDomain.second.begin(), clockDomain.second.end(), [](Signal* lhs, Signal* rhs)->bool{
+				return lhs->driver.node->getId() < rhs->driver.node->getId();
+			});
+
+			for (auto *signal : clockDomain.second) {
+				std::string vcdName = constructFullSignalName(*signal);
+
+				auto connectionType = hlim::getOutputConnectionType(signal->driver);
+				if (connectionType.interpretation != hlim::ConnectionType::BOOL)
+					vcdName = (boost::format("%s[%d:0]") % vcdName % (connectionType.width-1)).str();
+
+				m_gtkWaveProjectFile.appendSignal(vcdName);
+			}
+
+			m_gtkWaveProjectFile.appendBlank();
+		}
 	}
 
 }

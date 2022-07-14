@@ -19,6 +19,7 @@
 
 #include "../WaveformRecorder.h"
 #include "VCDWriter.h"
+#include "GTKWaveProjectFile.h"
 
 #include <fstream>
 #include <string>
@@ -38,6 +39,8 @@ class VCDSink : public WaveformRecorder
 		virtual void onReset(const hlim::Clock *clock, bool inReset) override;
 	protected:
 		VCDWriter m_VCD;
+		GTKWaveProjectFile m_gtkWaveProjectFile;
+
 		std::ofstream m_logFile;
 
 		std::vector<std::string> m_id2sigCode;
@@ -51,6 +54,8 @@ class VCDSink : public WaveformRecorder
 		virtual void advanceTick(const hlim::ClockRational &simulationTime) override;
 
 		void stateToFile(size_t offset, size_t size);
+
+		void setupGtkWaveProjFileSignals();
 };
 
 }
