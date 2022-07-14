@@ -38,31 +38,31 @@ UInt gtry::scl::encoder(const OneHot& in)
 	return ret;
 }
 
-std::vector<gtry::scl::Stream<gtry::UInt>> gtry::scl::makeIndexList(const UInt& valids)
+std::vector<gtry::scl::VStream<gtry::UInt>> gtry::scl::makeIndexList(const UInt& valids)
 {
-	std::vector<Stream<UInt>> ret(valids.size());
+	std::vector<VStream<UInt>> ret(valids.size());
 	for (size_t i = 0; i < valids.size(); ++i)
 	{
-		ret[i].data = i;
-		ret[i].valid = valids[i];
+		*ret[i] = i;
+		valid(ret[i]) = valids[i];
 	}
 	return ret;
 }
 
-gtry::scl::DownStream<UInt> gtry::scl::priorityEncoder(const UInt& in)
+gtry::scl::VStream<UInt> gtry::scl::priorityEncoder(const UInt& in)
 {
 	if (in.empty())
-		return { '0', UInt(0_b) };
+		return { ConstUInt(0_b), Valid{'0'} };
 
 	UInt ret = ConstUInt(BitWidth::count(in.size()));
 	for (size_t i = in.size() - 1; i < in.size(); --i)
 		IF(in[i])
 			ret = i;
 
-	return { in != 0, ret };
+	return { ret, Valid{ in != 0 } };
 }
 
-gtry::scl::DownStream<UInt> gtry::scl::priorityEncoderTree(const UInt& in, bool registerStep, size_t bps)
+gtry::scl::VStream<UInt> gtry::scl::priorityEncoderTree(const UInt& in, bool registerStep, size_t bps)
 {
 	const size_t stepBits = 1ull << bps;
 	const size_t inBitsPerStep = utils::nextPow2((in.size() + stepBits - 1) / stepBits);
@@ -70,7 +70,7 @@ gtry::scl::DownStream<UInt> gtry::scl::priorityEncoderTree(const UInt& in, bool 
 	if (inBitsPerStep <= 1)
 		return gtry::scl::priorityEncoder(in);
 
-	std::vector<DownStream<UInt>> lowerStep;
+	std::vector<VStream<UInt>> lowerStep;
 	for (size_t i = 0; i < in.size(); i += inBitsPerStep)
 	{
 		const size_t clamp = std::min(inBitsPerStep, in.size() - i);
@@ -78,9 +78,9 @@ gtry::scl::DownStream<UInt> gtry::scl::priorityEncoderTree(const UInt& in, bool 
 	}
 	setName(lowerStep, "lowerStep");
 
-	DownStream<UInt> lowSelect{
-		'0',
-		ConstUInt(BitWidth::count(inBitsPerStep))
+	VStream<UInt> lowSelect{
+		ConstUInt(BitWidth::count(inBitsPerStep)),
+		Valid{'0'}
 	};
 	setName(lowSelect, "lowSelect");
 
@@ -88,16 +88,16 @@ gtry::scl::DownStream<UInt> gtry::scl::priorityEncoderTree(const UInt& in, bool 
 	HCL_NAMED(highSelect);
 
 	for (size_t i = lowerStep.size() - 1; i < lowerStep.size(); --i)
-		IF(lowerStep[i].valid)
+		IF(valid(lowerStep[i]))
 		{
 			highSelect = i;
 			*lowSelect = zext(*lowerStep[i]);
-			lowSelect.valid = '1';
+			valid(lowSelect) = '1';
 		}
 
-	DownStream<UInt> out{
-		lowSelect.valid,
+	VStream<UInt> out{
 		cat(highSelect, *lowSelect),
+		Valid{valid(lowSelect)}
 	};
 	HCL_NAMED(out);
 

@@ -16,11 +16,11 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-#include "../stream/DownStream.h"
+#include "../stream/Stream.h"
 
 namespace gtry::scl
 {
-	DownStream<UInt> decodeNRZI(const DownStream<UInt>& in, size_t stuffBitInterval = 0);
-	DownStream<UInt> encodeNRZI(const DownStream<UInt>& in, size_t stuffBitInterval = 0);
+	VStream<UInt> decodeNRZI(const VStream<UInt>& in, size_t stuffBitInterval = 0);
+	VStream<UInt> encodeNRZI(const VStream<UInt>& in, size_t stuffBitInterval = 0);
 }
 

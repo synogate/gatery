@@ -18,7 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 #include "../Avalon.h"
-#include "../stream/Packet.h"
+#include "../stream/Stream.h"
 
 namespace gtry::scl
 {
@@ -81,17 +81,17 @@ namespace gtry::scl
 		{
 		public:
 			AvmmBridge() = default;
-			AvmmBridge(Stream<Packet<Tlp>>& rx, AvalonMM& avmm, const PciId& cplId);
+			AvmmBridge(RvStream<Tlp>& rx, AvalonMM& avmm, const PciId& cplId);
 
-			void setup(Stream<Packet<Tlp>>& rx, AvalonMM& avmm, const PciId& cplId);
+			void setup(RvStream<Tlp>& rx, AvalonMM& avmm, const PciId& cplId);
 
-			Stream<Packet<Tlp>>& tx() { return m_tx; }
+			RvStream<Tlp>& tx() { return m_tx; }
 
 		protected:
-			void generateFifoBridge(Stream<Packet<Tlp>>& rx, AvalonMM& avmm);
+			void generateFifoBridge(RvStream<Tlp>& rx, AvalonMM& avmm);
 
 		private:
-			Stream<Packet<Tlp>> m_tx;
+			RvStream<Tlp> m_tx;
 			PciId m_cplId;
 		};
 
@@ -99,8 +99,8 @@ namespace gtry::scl
 		{
 			void generate();
 
-			std::array<Stream<Packet<Tlp>>, 2> in;
-			Stream<Packet<Tlp>> out;
+			std::array<RvPacketStream<Tlp>, 2> in;
+			RvPacketStream<Tlp> out;
 			AvalonMM avmm;
 			PciId completerId;
 		};

@@ -70,14 +70,14 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
-	scl::Stream<scl::Packet<scl::pci::Tlp>> in;
-	in.valid = pinIn().setName("in_valid");
+	scl::RvStream<scl::pci::Tlp> in;
+	valid(in) = pinIn().setName("in_valid");
 
 	UInt inHeader = pinIn(64_b).setName("in_header");
 	UInt inAddress = pinIn(32_b).setName("in_address");
 	in->header = cat(inAddress, inHeader);
 	in->data = pinIn(32_b).setName("in_data");
-	pinOut(*in.ready).setName("in_ready");
+	pinOut(ready(in)).setName("in_ready");
 
 	scl::pci::PciId completerId;
 	completerId.bus = 1;
@@ -94,9 +94,9 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 	avmm.maximumPendingReadTransactions = 4;
 
 	scl::pci::AvmmBridge uut{ in, avmm, completerId };
-	scl::Stream<scl::Packet<scl::pci::Tlp>>& out = uut.tx();
-	*out.ready = pinIn().setName("out_ready");
-	pinOut(out.valid).setName("out_valid");
+	auto& out = uut.tx();
+	ready(out) = pinIn().setName("out_ready");
+	pinOut(valid(out)).setName("out_valid");
 	pinOut(out->header).setName("out_header");
 	pinOut(out->data).setName("out_data");
 
@@ -140,14 +140,14 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 		std::mt19937 rng{ 18057 };
 		uint8_t tag = 0xAA;
 
-		simu(in.valid) = 0;
+		simu(valid(in)) = 0;
 		while (true)
 		{
-			if (simu(*in.ready) != 0)
+			if (simu(ready(in)) != 0)
 			{
 				if (reqQueue.empty())
 				{
-					simu(in.valid) = 0;
+					simu(valid(in)) = 0;
 				}
 				else
 				{
@@ -162,18 +162,18 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 
 					if (req.read)
 					{
-						simu(in.valid) = 1;
+						simu(valid(in)) = 1;
 						simu(inHeader) = tlp;
 						cplQueue.push(tlp);
 					}
 					else if (req.write)
 					{
-						simu(in.valid) = 1;
+						simu(valid(in)) = 1;
 						simu(inHeader) = tlp.data();
 					}
 					else
 					{
-						simu(in.valid) = 0;
+						simu(valid(in)) = 0;
 					}
 				}
 			}
@@ -183,11 +183,11 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 
 	// stream out bfm
 	addSimulationProcess([&]()->SimProcess {
-		simu(*out.ready) = 1;
+		simu(ready(out)) = 1;
 
 		while (true)
 		{
-			if (simu(*out.ready) & simu(out.valid))
+			if (simu(ready(out)) & simu(valid(out)))
 			{
 				BOOST_TEST(!cplQueue.empty());
 
