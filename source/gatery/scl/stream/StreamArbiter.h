@@ -28,7 +28,7 @@ namespace gtry::scl
 {
 	struct ArbiterPolicyLowest;
 
-	template<typename T, typename TSelector = ArbiterPolicyLowest>
+	template<StreamSignal T, typename TSelector = ArbiterPolicyLowest>
 	class StreamArbiter
 	{
 	public:
@@ -38,13 +38,13 @@ namespace gtry::scl
 			HCL_DESIGNCHECK_HINT(m_generated, "Generate not called.");
 		}
 
-		void out(const T& blueprint)
-		{
-			HCL_DESIGNCHECK_HINT(!m_generated, "Already generated.");
-			m_out.emplace(constructFrom(blueprint));
-		}
+		//void out(const T& blueprint)
+		//{
+		//	HCL_DESIGNCHECK_HINT(!m_generated, "Already generated.");
+		//	m_out.emplace(constructFrom(blueprint));
+		//}
 
-		void attach(Stream<T>& stream, uint32_t sortKey = 1u << 31)
+		void attach(T& stream, uint32_t sortKey = 1u << 31)
 		{
 			HCL_DESIGNCHECK_HINT(!m_generated, "Already generated.")
 
@@ -53,11 +53,14 @@ namespace gtry::scl
 			});
 			s.stream <<= stream;
 
-			if(!m_out)
-				m_out.emplace(constructFrom(stream));
+			if (!m_out)
+			{
+				m_out.emplace();
+				downstream(*m_out) = constructFrom(copy(downstream(stream)));
+			}
 		}
 
-		Stream<T>& out() { return *m_out; }
+		T& out() { return *m_out; }
 
 		virtual void generate()
 		{
@@ -77,14 +80,14 @@ namespace gtry::scl
 				selected = m_selector(m_in | std::views::transform(&InStream::stream));
 			HCL_NAMED(selected);
 
-			m_out->valid = '0';
-			m_out->data = dontCare(m_out->data);
+			downstream(*m_out) = dontCare(copy(downstream(*m_out)));
+			valid(*m_out) = '0';
 
 			HCL_NAMED(m_in);
 			size_t i = 0;
 			for(InStream& s : m_in)
 			{
-				*s.stream.ready = '0';
+				ready(s.stream) = '0';
 				IF(selected == i++)
 					*m_out <<= s.stream;
 			}
@@ -96,11 +99,11 @@ namespace gtry::scl
 		{
 			BOOST_HANA_DEFINE_STRUCT(InStream,
 				(uint32_t, sortKey),
-				(Stream<T>, stream)
+				(T, stream)
 			);
 		};
 		std::list<InStream> m_in;
-		std::optional<Stream<T>> m_out;
+		std::optional<T> m_out;
 		TSelector m_selector;
 		bool m_generated = false;
 	};
@@ -123,10 +126,10 @@ namespace gtry::scl
 		UInt operator () (const TCont& in)
 		{
 			UInt mask = cat(in | views::valid);
-			auto [valid, value] = scl::priorityEncoder(mask);
-			IF(!valid)
-				value = 0;
-			return value;
+			VStream idx = scl::priorityEncoder(mask);
+			IF(!valid(idx))
+				*idx = 0;
+			return *idx;
 		}
 	};
 
@@ -144,12 +147,12 @@ namespace gtry::scl
 			mask = rotr(mask, counter);
 			HCL_NAMED(mask);
 
-			auto [valid, firstValid] = scl::priorityEncoder(mask);
-			IF(!valid)
-				firstValid = 0;
-			HCL_NAMED(firstValid);
+			auto idx = scl::priorityEncoder(mask);
+			IF(!valid(idx))
+				*idx = 0;
+			HCL_NAMED(idx);
 
-			UInt selected = zext(firstValid, 1) + zext(counter, 1);
+			UInt selected = zext(*idx, 1) + zext(counter, 1);
 			IF(selected >= mask.size())
 				selected -= mask.size();
 			HCL_NAMED(selected);

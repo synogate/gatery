@@ -16,9 +16,9 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-#include "../stream/DownStream.h"
+#include "../stream/Stream.h"
 
 namespace gtry::scl
 {
-	DownStream<UInt> recoverDataDifferential(hlim::ClockRational signalClock, Bit p, Bit n);
+	VStream<UInt> recoverDataDifferential(hlim::ClockRational signalClock, Bit p, Bit n);
 }
