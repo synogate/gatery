@@ -67,6 +67,20 @@ namespace gtry::scl
 		T m_value;
 	};
 
+	template<BaseSignal T>
+	T makeShiftReg(BitWidth size, const T& in, const Bit& en)
+	{
+		T value = size;
+
+		T newValue = value >> (int)in.width().bits();
+		newValue.upper(in.width()) = in;
+
+		IF(en)
+			value = newValue;
+		value = reg(value);
+		return newValue;
+	}
+
 	template<StreamSignal T>
 	requires (std::is_base_of_v<BaseBitVector, typename T::Payload>)
 	auto extendWidth(T& source, BitWidth width, Bit reset)
@@ -85,24 +99,19 @@ namespace gtry::scl
 		auto ret = source.add(
 			Valid{ counter.isLast() & valid(source) }
 		);
+		if constexpr (T::template has<Ready>())
+			ready(source) = ready(ret) | !counter.isLast();
 
 		ret->resetNode();
-		*ret = UndefinedVec(width);
-		IF(transfer(source))
-			*ret = ShiftReg(width, *source).value();
+		*ret = makeShiftReg(width, *source, transfer(source));
 
 		if constexpr (T::template has<ByteEnable>())
 		{
 			auto& be = byteEnable(ret);
 			BitWidth srcBeWidth = be.width();
 			be.resetNode();
-			be = UndefinedVec(srcBeWidth * ratio);
-			IF(transfer(source))
-				be = ShiftReg(srcBeWidth * ratio, byteEnable(source)).value();
+			be = makeShiftReg(srcBeWidth * ratio, byteEnable(source), transfer(source));
 		}
-
-		if constexpr (T::template has<Ready>())
-			ready(source) = ready(ret) | !counter.isLast();
 
 		HCL_NAMED(ret);
 		return ret;

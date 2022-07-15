@@ -24,30 +24,37 @@ namespace gtry::scl
 	{
 	public:
 		Counter(size_t end) :
+			m_area{ "scl_Counter", true },
 			m_value{ BitWidth::count(end) },
 			m_loadValue{ BitWidth::count(end) }
 		{
-			m_last = '0';
+			HCL_NAMED(m_inc);
 
-			IF(m_value == end - 1)
+			m_last = m_value == end - 1;
+			IF(m_inc)
 			{
-				m_value = 0;
-				m_last = '1';
-			}
-			ELSE IF(m_inc)
-			{
-				m_value = m_value + 1;
+				IF(m_last)
+					m_value = 0;
+				ELSE
+					m_value += 1;
 			}
 			
+			HCL_NAMED(m_load);
+			HCL_NAMED(m_loadValue);
 			IF(m_load)
 			{
 				m_value = m_loadValue;
 			}
 
 			m_value = reg(m_value, 0);
+			HCL_NAMED(m_value);
+			HCL_NAMED(m_last);
+
 			m_load = '0';
 			m_inc = '0';
 			m_loadValue = ConstUInt(m_loadValue.width());
+
+			m_area.leave();
 		}
 		
 		Counter& inc() { m_inc = '1'; return *this; }
@@ -60,6 +67,8 @@ namespace gtry::scl
 		void load(UInt value) { m_load = '1'; m_loadValue = value; }
 
 	private:
+		Area m_area;
+
 		UInt m_value;
 		Bit m_last;
 

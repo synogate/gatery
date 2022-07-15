@@ -666,6 +666,8 @@ BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 	addSimulationProcess([=, &in]()->SimProcess {
 		simu(valid(in)) = 0;
 		simu(*in).invalidate();
+		for (size_t i = 0; i < 4; ++i)
+			co_await WaitClk(m_clock);
 
 		for (size_t i = 0; i < 32; ++i)
 		{
@@ -688,6 +690,8 @@ BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 	simulateRecvData(out);
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	//dbg::vis();
+	
 	runTicks(m_clock.getClk(), 1024);
 }
 
