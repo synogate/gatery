@@ -202,7 +202,7 @@ namespace gtry
 	template<class T>
 	concept ReverseSignal = internal::is_reverse_signal<T>::value;
 
-	template<gtry::CompoundSignal T>
+	template<gtry::Signal T>
 	void connect(T& lhs, T& rhs)
 	{
 		using namespace gtry;

@@ -23,7 +23,7 @@ namespace gtry::scl
 {
 	template<StreamSignal T>
 	requires (std::is_base_of_v<BaseBitVector, typename T::Payload>)
-	auto extendWidth(T&& source, BitWidth width, Bit reset = '0');
+	auto extendWidth(T& source, BitWidth width, Bit reset = '0');
 
 	//Stream<Packet<UInt>> adaptWidth(Stream<Packet<UInt>>& source, BitWidth width);
 
@@ -69,12 +69,12 @@ namespace gtry::scl
 
 	template<StreamSignal T>
 	requires (std::is_base_of_v<BaseBitVector, typename T::Payload>)
-	auto extendWidth(T&& source, BitWidth width, Bit reset)
+	auto extendWidth(T& source, BitWidth width, Bit reset)
 	{
 		HCL_DESIGNCHECK(source->width() <= width);
 		const size_t ratio = width / source->width();
 
-		auto scope = Area{ "scl_adaptWidth" }.enter();
+		auto scope = Area{ "scl_extendWidth" }.enter();
 
 		Counter counter{ ratio };
 		IF(transfer(source))
@@ -82,7 +82,7 @@ namespace gtry::scl
 		IF(reset)
 			counter.reset();
 
-		auto ret = std::forward<T>(source).add(
+		auto ret = source.add(
 			Valid{ counter.isLast() & valid(source) }
 		);
 

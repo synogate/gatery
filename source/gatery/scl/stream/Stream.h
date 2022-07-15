@@ -63,7 +63,7 @@ namespace gtry::scl
 		template<Signal T>
 		static constexpr bool has();
 
-		template<Signal T> auto add(T&& signal) &&;
+		template<Signal T> auto add(T&& signal);
 		template<Signal T> auto add(T&& signal) const requires (!BidirStreamSignal<Stream<PayloadT, Meta...>>);
 
 		template<Signal T> constexpr T& get() { return std::get<T>(_sig); }
@@ -263,21 +263,37 @@ namespace gtry::scl
 
 	template<Signal PayloadT, Signal ...Meta>
 	template<Signal T>
-	inline auto Stream<PayloadT, Meta...>::add(T&& signals) &&
+	inline auto Stream<PayloadT, Meta...>::add(T&& signal)
 	{
 		if constexpr (has<T>())
 		{
-			set(std::forward<T>(signals));
-			return std::move(*this);
+			Stream ret;
+			connect(ret.data, data);
+
+			auto newMeta = std::apply([&](auto& ...meta) {
+				auto fun = [&](auto& member) -> decltype(auto) {
+					if constexpr (std::is_same_v<std::remove_cvref_t<decltype(member)>, T>)
+						return std::forward<decltype(member)>(signal);
+					else
+						return std::forward<decltype(member)>(member);
+				};
+				return std::tie(fun(meta)...);
+			}, _sig);
+
+			downstream(_sig) = downstream(newMeta);
+			upstream(newMeta) = upstream(_sig);
+			return ret;
 		}
 		else
 		{
-			return Stream<PayloadT, Meta..., T>{
-				data,
-				std::apply([&](auto&... element) {
-					return std::tuple(std::move(element)..., std::forward<T>(signals));
-				}, _sig)
-			};
+			Stream<PayloadT, Meta..., T> ret;
+			connect(ret.data, data);
+			connect(ret.get<T>(), std::forward<T>(signal));
+
+			std::apply([&](auto& ...meta) {
+				(connect(ret.get<decltype(meta)>(), std::forward<decltype(meta)>(meta)), ...);
+			}, _sig);
+			return ret;
 		}
 	}
 
