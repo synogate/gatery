@@ -280,8 +280,8 @@ namespace gtry::scl
 				return std::tie(fun(meta)...);
 			}, _sig);
 
-			downstream(_sig) = downstream(newMeta);
-			upstream(newMeta) = upstream(_sig);
+			downstream(ret._sig) = downstream(newMeta);
+			upstream(newMeta) = upstream(ret._sig);
 			return ret;
 		}
 		else

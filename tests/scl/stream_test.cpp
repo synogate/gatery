@@ -650,8 +650,7 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5_packet, StreamTransferFixture)
 	runTicks(m_clock.getClk(), 1024);
 }
 
-
-BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_widen, StreamTransferFixture)
+BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
