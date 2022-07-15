@@ -658,8 +658,9 @@ BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_widen, StreamTransferFixture)
 	scl::RvStream<UInt> in{
 		.data = 4_b
 	};
-	scl::RvStream<UInt> out = scl::extendWidth(std::move(in), 8_b);
 	In(in);
+
+	scl::RvStream<UInt> out = scl::extendWidth(in, 8_b);
 	Out(out);
 
 	// send data
