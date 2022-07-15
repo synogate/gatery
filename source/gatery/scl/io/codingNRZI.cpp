@@ -37,6 +37,7 @@ gtry::scl::VStream<gtry::UInt> gtry::scl::decodeNRZI(const VStream<UInt>& in, si
 		if(stuffBitInterval)
 		{
 			Counter stuffCounter{ stuffBitInterval + 1 };
+			stuffCounter.inc();
 			IF(stuffCounter.isLast())
 				valid(out) = '0';
 			IF((*out)[0] == '0')

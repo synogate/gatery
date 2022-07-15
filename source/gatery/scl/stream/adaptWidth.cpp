@@ -18,6 +18,12 @@
 #include "gatery/pch.h"
 #include "adaptWidth.h"
 
+using StreamA = gtry::scl::RvStream<gtry::UInt>;
+using StreamB = gtry::scl::RvStream<gtry::UInt, gtry::scl::ByteEnable>;
+
+template auto gtry::scl::extendWidth<StreamA>(StreamA&&, gtry::BitWidth, gtry::Bit);
+template auto gtry::scl::extendWidth<StreamB>(StreamB&&, gtry::BitWidth, gtry::Bit);
+
 #if 0
 gtry::scl::Stream<gtry::UInt> gtry::scl::adaptWidth(Stream<UInt>& source, BitWidth width, Bit reset)
 {

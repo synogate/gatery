@@ -251,6 +251,18 @@ namespace gtry {
 		m_bitAlias.clear();
 	}
 
+	void gtry::BaseBitVector::resetNode()
+	{
+		HCL_DESIGNCHECK_HINT(!m_range.subset, "BaseBitVector::resetNode is not allowed for alias BaseBitVector's.");
+		m_node = nullptr;
+		m_range = Range{};
+		m_bitAlias.clear();
+		m_lsbAlias = std::nullopt;
+		m_msbAlias = std::nullopt;
+		m_dynamicBitAlias.clear();
+		m_readPortDriver = nullptr;
+	}
+
 	Bit &BaseBitVector::getDynamicBitAlias(const UInt &idx) const
 	{
 		auto it = m_dynamicBitAlias.find(idx.readPort());

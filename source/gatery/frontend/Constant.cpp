@@ -21,8 +21,6 @@
 #include "BVec.h"
 #include "UInt.h"
 
-#include <gatery/hlim/coreNodes/Node_Constant.h>
-
 #include <optional>
 #include <boost/spirit/home/x3.hpp>
 

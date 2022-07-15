@@ -34,7 +34,7 @@ namespace gtry::scl
 				m_value = 0;
 				m_last = '1';
 			}
-			ELSE
+			ELSE IF(m_inc)
 			{
 				m_value = m_value + 1;
 			}
@@ -46,9 +46,12 @@ namespace gtry::scl
 
 			m_value = reg(m_value, 0);
 			m_load = '0';
+			m_inc = '0';
 			m_loadValue = ConstUInt(m_loadValue.width());
 		}
 		
+		Counter& inc() { m_inc = '1'; return *this; }
+
 		void reset() { m_value = 0; }
 		const UInt& value() const { return m_value; }
 		const Bit& isLast() const { return m_last; }
@@ -62,6 +65,8 @@ namespace gtry::scl
 
 		UInt m_loadValue;
 		Bit m_load;
+
+		Bit m_inc;
 	};
 
 }

@@ -141,7 +141,7 @@ namespace gtry::scl
 			auto scope = Area{ "RoundRobin" }.enter();
 			UInt mask = cat(in | views::valid);
 
-			UInt counter = Counter{ mask.size() }.value();
+			UInt counter = Counter{ mask.size() }.inc().value();
 			HCL_NAMED(counter);
 
 			mask = rotr(mask, counter);
@@ -166,7 +166,7 @@ namespace gtry::scl
 		template<class TCont>
 		UInt operator () (const TCont& in)
 		{
-			return Counter{ in.size() }.value();
+			return Counter{ in.size() }.inc().value();
 		}
 	};
 

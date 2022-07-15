@@ -39,6 +39,7 @@ namespace gtry::scl
 			for (size_t s = 0; s < numSections; ++s)
 			{
 				Counter roundCounter{ m_throughput };
+				roundCounter.inc();
 
 				THash state = constructFrom(hash);
 
