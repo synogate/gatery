@@ -39,7 +39,7 @@ void GTKWaveProjectFile::setZoom(const hlim::ClockRational &start, const hlim::C
 	else {	
 		// 2^-17 ~~ 1us
 		double range_us = range.numerator() * 1e6 / range.denominator();
-		m_zoom = -17.0 - std::log2(range_us);
+		m_zoom = float(-17.0 - std::log2(range_us));
 	}
 }
 
