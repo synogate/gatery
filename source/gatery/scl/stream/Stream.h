@@ -136,7 +136,7 @@ namespace gtry::scl
 
 	template<StreamSignal T> const Bit eop(const T& stream) { return '1'; }
 	template<StreamSignal T> const Bit sop(const T& stream) { return '1'; }
-	template<StreamSignal T> const UInt byteEnable(const T& stream) { return ConstBVec(1, 1_b); }
+	template<StreamSignal T> const UInt byteEnable(const T& stream) { return ConstUInt(1, 1_b); }
 
 	struct Ready
 	{
@@ -144,9 +144,9 @@ namespace gtry::scl
 	};
 
 	template<StreamSignal T> requires (T::template has<Ready>())
-	Bit& ready(T& stream) { return *stream.get<Ready>().ready; }
+	Bit& ready(T& stream) { return *stream.template get<Ready>().ready; }
 	template<StreamSignal T> requires (T::template has<Ready>())
-	const Bit& ready(const T& stream) { return *stream.get<Ready>().ready; }
+	const Bit& ready(const T& stream) { return *stream.template get<Ready>().ready; }
 
 
 	struct Valid
@@ -156,9 +156,9 @@ namespace gtry::scl
 	};
 
 	template<StreamSignal T> requires (T::template has<Valid>())
-	Bit& valid(T& stream) { return stream.get<Valid>().valid; }
+	Bit& valid(T& stream) { return stream.template get<Valid>().valid; }
 	template<StreamSignal T> requires (T::template has<Valid>())
-	const Bit& valid(const T& stream) { return stream.get<Valid>().valid; }
+	const Bit& valid(const T& stream) { return stream.template get<Valid>().valid; }
 
 
 	struct Eop
@@ -167,9 +167,9 @@ namespace gtry::scl
 	};
 
 	template<StreamSignal T> requires (T::template has<Eop>())
-	Bit& eop(T& stream) { return stream.get<Eop>().eop; }
+	Bit& eop(T& stream) { return stream.template get<Eop>().eop; }
 	template<StreamSignal T> requires (T::template has<Eop>())
-	const Bit& eop(const T& stream) { return stream.get<Eop>().eop; }
+	const Bit& eop(const T& stream) { return stream.template get<Eop>().eop; }
 	template<StreamSignal T> requires (T::template has<Valid>() and T::template has<Eop>())
 	const Bit sop(const T& signal) { return !flag(transfer(signal), eop(signal)); }
 
@@ -181,9 +181,9 @@ namespace gtry::scl
 	};
 
 	template<StreamSignal T> requires (T::template has<Sop>())
-	Bit& sop(T& stream) { return stream.get<Sop>().sop; }
+	Bit& sop(T& stream) { return stream.template get<Sop>().sop; }
 	template<StreamSignal T> requires (T::template has<Sop>())
-	const Bit& sop(const T& stream) { return stream.get<Sop>().sop; }
+	const Bit& sop(const T& stream) { return stream.template get<Sop>().sop; }
 	template<StreamSignal T> requires (!T::template has<Valid>() and T::template has<Sop>() and T::template has<Eop>())
 	const Bit valid(const T& signal) { return flag(sop(signal), eop(signal)) | sop(signal); }
 
@@ -193,9 +193,9 @@ namespace gtry::scl
 		BVec byteEnable;
 	};
 	template<StreamSignal T> requires (T::template has<ByteEnable>())
-	BVec& byteEnable(T& stream) { return stream.get<ByteEnable>().byteEnable; }
+	BVec& byteEnable(T& stream) { return stream.template get<ByteEnable>().byteEnable; }
 	template<StreamSignal T> requires (T::template has<ByteEnable>())
-	const BVec& byteEnable(const T& stream) { return stream.get<ByteEnable>().byteEnable; }
+	const BVec& byteEnable(const T& stream) { return stream.template get<ByteEnable>().byteEnable; }
 
 
 
@@ -288,10 +288,10 @@ namespace gtry::scl
 		{
 			Stream<PayloadT, Meta..., T> ret;
 			connect(ret.data, data);
-			connect(ret.get<T>(), std::forward<T>(signal));
+			connect(ret.template get<T>(), std::forward<T>(signal));
 
 			std::apply([&](auto& ...meta) {
-				(connect(ret.get<decltype(meta)>(), std::forward<decltype(meta)>(meta)), ...);
+				(connect(ret.template get<decltype(meta)>(), std::forward<decltype(meta)>(meta)), ...);
 			}, _sig);
 			return ret;
 		}
@@ -449,7 +449,7 @@ namespace gtry::scl
 	template<StreamSignal T>
 	T reg(const T& stream, const RegisterSettings& settings)
 	{
-		static_assert(!stream.has<Ready>(), "cannot create upstream register from const stream");
+		static_assert(!stream.template has<Ready>(), "cannot create upstream register from const stream");
 		return stream.regDownstream(settings);
 	}
 }
