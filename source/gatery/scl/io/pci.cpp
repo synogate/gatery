@@ -93,7 +93,7 @@ void gtry::scl::pci::AvmmBridge::generateFifoBridge(Stream<Packet<Tlp>>& rx, Ava
 	m_tx->data = *avmm.readData;
 
 	// join response and cpl data
-	MemTlpCplData res = resQueue.peak();
+	MemTlpCplData res = resQueue.peek();
 	IF(m_tx.valid)
 		resQueue.pop();
 	res.encode(m_tx->header);
@@ -182,12 +182,12 @@ void gtry::scl::pci::IntelPTileCompleter::generate()
 
 	std::array<Stream<Packet<Tlp>>, 2> in_buffered{
 		Stream<Packet<Tlp>>{
-			.valid = in_buffer.peak()[0].valid,
-			.data = in_buffer.peak()[0].data,
+			.valid = in_buffer.peek()[0].valid,
+			.data = in_buffer.peek()[0].data,
 		},
 		Stream<Packet<Tlp>>{
-			.valid = in_buffer.peak()[1].valid,
-			.data = in_buffer.peak()[1].data,
+			.valid = in_buffer.peek()[1].valid,
+			.data = in_buffer.peek()[1].data,
 		},
 	};
 

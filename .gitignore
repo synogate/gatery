@@ -3,6 +3,7 @@ obj
 doc/gen
 
 *.vcd
+*.gtkw
 *.dot
 *.svg
 

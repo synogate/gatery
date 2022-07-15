@@ -279,7 +279,7 @@ namespace gtry::scl
 	void connect(Stream<T>& sink, Fifo<T>& source)
 	{
 		sink.valid = !source.empty();
-		sink.data = source.peak();
+		sink.data = source.peek();
 
 		IF(transfer(sink))
 			source.pop();
