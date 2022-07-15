@@ -22,11 +22,29 @@
 
 namespace gtry::scl
 {
+	template<Signal PayloadT, Signal... Meta>
+	struct Stream;
+
 	struct Ready;
 	struct Valid;
 	struct Eop;
 	struct Sop;
 	struct ByteEnable;
+
+	namespace internal
+	{
+		template<class T>
+		struct is_stream_signal : std::false_type {};
+
+		template<Signal... T>
+		struct is_stream_signal<Stream<T...>> : std::true_type {};
+	}
+
+	template<class T>
+	concept StreamSignal = Signal<T> and internal::is_stream_signal<T>::value;
+
+	template<class T>
+	concept BidirStreamSignal = StreamSignal<T> and !requires(T& a, const T& b) { a = b; };
 
 	template<Signal PayloadT, Signal... Meta>
 	struct Stream
@@ -43,11 +61,10 @@ namespace gtry::scl
 		const Payload* operator ->() const { return &data; }
 
 		template<Signal T>
-		static constexpr bool has() { 
-			return 
-				std::is_base_of_v<std::remove_reference_t<T>, std::remove_reference_t<PayloadT>> |
-				(std::is_same_v<std::remove_reference_t<Meta>, std::remove_reference_t<T>> | ...);
-		}
+		static constexpr bool has();
+
+		template<Signal T> auto add(T&& signal) &&;
+		template<Signal T> auto add(T&& signal) const requires (!BidirStreamSignal<Stream<PayloadT, Meta...>>);
 
 		template<Signal T> constexpr T& get() { return std::get<T>(_sig); }
 		template<Signal T> constexpr const T& get() const { return std::get<T>(_sig); }
@@ -95,18 +112,6 @@ namespace gtry::scl
 		template<Signal T>
 		Stream fifo(Fifo<T>& instance);
 	};
-
-	namespace internal
-	{
-		template<class T>
-		struct is_stream_signal : std::false_type {};
-
-		template<Signal... T>
-		struct is_stream_signal<Stream<T...>> : std::true_type {};
-	}
-
-	template<class T>
-	concept StreamSignal = Signal<T> and internal::is_stream_signal<T>::value;
 
 	/**
 	 * @brief High when all transfer conditions (ready and valid high) are met.
@@ -246,6 +251,57 @@ namespace gtry::scl
 
 namespace gtry::scl
 {
+	template<Signal PayloadT, Signal ...Meta>
+	template<Signal T>
+	inline constexpr bool Stream<PayloadT, Meta...>::has()
+	{
+		bool ret = std::is_base_of_v<std::remove_reference_t<T>, std::remove_reference_t<PayloadT>>;
+		if constexpr (sizeof...(Meta) != 0)
+			ret |= (std::is_same_v<std::remove_reference_t<Meta>, std::remove_reference_t<T>> | ...);
+		return ret;
+	}
+
+	template<Signal PayloadT, Signal ...Meta>
+	template<Signal T>
+	inline auto Stream<PayloadT, Meta...>::add(T&& signals) &&
+	{
+		if constexpr (has<T>())
+		{
+			set(std::forward<T>(signals));
+			return std::move(*this);
+		}
+		else
+		{
+			return Stream<PayloadT, Meta..., T>{
+				data,
+				std::apply([&](auto&... element) {
+					return std::tuple(std::move(element)..., std::forward<T>(signals));
+				}, _sig)
+			};
+		}
+	}
+
+	template<Signal PayloadT, Signal ...Meta>
+	template<Signal T>
+	inline auto Stream<PayloadT, Meta...>::add(T&& signal) const requires (!BidirStreamSignal<Stream<PayloadT, Meta...>>)
+	{
+		if constexpr (has<T>())
+		{
+			Stream<PayloadT, Meta...> ret = *this;
+			ret.set(std::forward<T>(signal));
+			return ret;
+		}
+		else
+		{
+			return Stream<PayloadT, Meta..., T>{
+				data,
+				std::apply([&](auto&... element) {
+					return std::tuple(element..., std::forward<T>(signal));
+				}, _sig)
+			};
+		}
+	}
+
 	template<Signal PayloadT, Signal... Meta>
 	inline Stream<PayloadT, Meta...> gtry::scl::Stream<PayloadT, Meta...>::regDownstreamBlocking(const RegisterSettings& settings)
 	{

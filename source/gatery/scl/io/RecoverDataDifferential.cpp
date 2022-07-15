@@ -36,6 +36,7 @@ gtry::scl::VStream<gtry::UInt> gtry::scl::recoverDataDifferential(hlim::ClockRat
 	HCL_NAMED(n);
 
 	Counter phaseCounter{ samples };
+	phaseCounter.inc();
 	
 	// recover clock and shift sample point
 	Bit edgeDetected;

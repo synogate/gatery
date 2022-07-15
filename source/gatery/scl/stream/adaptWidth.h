@@ -21,7 +21,10 @@
 
 namespace gtry::scl
 {
-	//Stream<UInt> adaptWidth(Stream<UInt>& source, BitWidth width, Bit reset = '0');
+	template<StreamSignal T>
+	requires (std::is_base_of_v<BaseBitVector, typename T::Payload>)
+	auto extendWidth(T&& source, BitWidth width, Bit reset = '0');
+
 	//Stream<Packet<UInt>> adaptWidth(Stream<Packet<UInt>>& source, BitWidth width);
 
 	template<Signal Targ, class Tproc>
@@ -35,6 +38,76 @@ namespace gtry::scl
 
 namespace gtry::scl
 {
+	template<BaseSignal T>
+	class ShiftReg
+	{
+	public:
+		ShiftReg(BitWidth totalWidth) :
+			m_value(totalWidth)
+		{
+			m_value = reg(m_value);
+		}
+
+		ShiftReg(BitWidth totalWidth, const T& newRightShiftValue) :
+			m_value(totalWidth)
+		{
+			m_value = reg(m_value);
+			shiftRight(newRightShiftValue);
+		}
+
+		T& value() { return m_value; }
+
+		ShiftReg& shiftRight(const T& newValue)
+		{
+			m_value >>= (int)newValue.width().bits();
+			m_value.upper(newValue.width()) = newValue;
+			return *this;
+		}
+	private:
+		T m_value;
+	};
+
+	template<StreamSignal T>
+	requires (std::is_base_of_v<BaseBitVector, typename T::Payload>)
+	auto extendWidth(T&& source, BitWidth width, Bit reset)
+	{
+		HCL_DESIGNCHECK(source->width() <= width);
+		const size_t ratio = width / source->width();
+
+		auto scope = Area{ "scl_adaptWidth" }.enter();
+
+		Counter counter{ ratio };
+		IF(transfer(source))
+			counter.inc();
+		IF(reset)
+			counter.reset();
+
+		auto ret = std::forward<T>(source).add(
+			Valid{ counter.isLast() & valid(source) }
+		);
+
+		ret->resetNode();
+		*ret = UndefinedVec(width);
+		IF(transfer(source))
+			*ret = ShiftReg(width, *source).value();
+
+		if constexpr (T::template has<ByteEnable>())
+		{
+			auto& be = byteEnable(ret);
+			BitWidth srcBeWidth = be.width();
+			be.resetNode();
+			be = UndefinedVec(srcBeWidth * ratio);
+			IF(transfer(source))
+				be = ShiftReg(srcBeWidth * ratio, byteEnable(source)).value();
+		}
+
+		if constexpr (T::template has<Ready>())
+			ready(source) = ready(ret) | !counter.isLast();
+
+		HCL_NAMED(ret);
+		return ret;
+	}
+
 	template<Signal Targ, class Tproc>
 	auto transform(Stream<Targ>& source, Tproc&& func)
 	{

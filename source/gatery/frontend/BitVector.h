@@ -125,7 +125,8 @@ namespace gtry {
 		virtual BVec pack() const override;
 		virtual void unpack(const BVec &b) override;
 
-		virtual void resize(size_t width) final;
+		void resize(size_t width);
+		void resetNode();
 
 		Bit& lsb() { return aliasLsb(); }
 		const Bit& lsb() const { return aliasLsb(); }

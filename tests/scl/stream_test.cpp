@@ -384,9 +384,12 @@ protected:
 					simu(valid(stream)) == 1)
 				{
 					size_t data = simu(*(stream.operator ->()));
-					BOOST_ASSERT(data / m_transfers < expectedValue.size());
-					BOOST_TEST(data % m_transfers == expectedValue[data / m_transfers]);
-					expectedValue[data / m_transfers]++;
+					BOOST_TEST(data / m_transfers < expectedValue.size());
+					if (data / m_transfers < expectedValue.size())
+					{
+						BOOST_TEST(data % m_transfers == expectedValue[data / m_transfers]);
+						expectedValue[data / m_transfers]++;
+					}
 				}
 				co_await WaitClk(m_clock);
 
@@ -646,6 +649,48 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5_packet, StreamTransferFixture)
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(m_clock.getClk(), 1024);
 }
+
+
+BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_widen, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::RvStream<UInt> in{
+		.data = 4_b
+	};
+	scl::RvStream<UInt> out = scl::extendWidth(std::move(in), 8_b);
+	In(in);
+	Out(out);
+
+	// send data
+	addSimulationProcess([=, &in]()->SimProcess {
+		simu(valid(in)) = 0;
+		simu(*in).invalidate();
+
+		for (size_t i = 0; i < 32; ++i)
+		{
+			for (size_t j = 0; j < 2; ++j)
+			{
+				simu(valid(in)) = 1;
+				simu(*in) = (i >> (j * 4)) & 0xF;
+
+				co_await WaitFor(0);
+				while (simu(ready(in)) == 0)
+					co_await WaitClk(m_clock);
+				co_await WaitClk(m_clock);
+			}
+		}
+		});
+
+	transfers(32);
+	groups(1);
+	simulateBackPreassure(out);
+	simulateRecvData(out);
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
+
 #if 0
 
 BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_narrow, StreamTransferFixture)
@@ -722,47 +767,6 @@ BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_packet_narrow, StreamTransferFixture)
 	});
 
 	transfers(8 * 3);
-	groups(1);
-	simulateBackPreassure(out);
-	simulateRecvData(out);
-
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-	runTicks(m_clock.getClk(), 1024);
-}
-
-BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_widen, StreamTransferFixture)
-{
-	ClockScope clkScp(m_clock);
-
-	scl::Stream<UInt> in{
-		.data = 4_b
-	};
-	In(in);
-
-	scl::Stream<UInt> out = scl::adaptWidth(in, 8_b);
-	Out(out);
-
-	// send data
-	addSimulationProcess([=, &in]()->SimProcess {
-		simu(valid(in)) = 0;
-		simu(*in).invalidate();
-
-		for(size_t i = 0; i < 32; ++i)
-		{
-			for(size_t j = 0; j < 2; ++j)
-			{
-				simu(valid(in)) = 1;
-				simu(*in) = (i >> (j * 4)) & 0xF;
-
-				co_await WaitFor(0);
-				while(simu(ready(i)n) == 0)
-					co_await WaitClk(m_clock);
-				co_await WaitClk(m_clock);
-			}
-		}
-	});
-
-	transfers(32);
 	groups(1);
 	simulateBackPreassure(out);
 	simulateRecvData(out);
