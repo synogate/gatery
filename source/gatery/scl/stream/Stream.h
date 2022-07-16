@@ -73,6 +73,12 @@ namespace gtry::scl
 		auto transform(std::invocable<Payload> auto&& fun);
 		auto transform(std::invocable<Payload> auto&& fun) const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>);
 
+		template<StreamSignal T> T reduceTo();
+		template<StreamSignal T> T reduceTo() const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>);
+
+		template<Signal T> auto remove();
+		template<Signal T> auto remove() const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>);
+
 		/**
 		 * @brief	Puts a register in the valid and data path.
 					The register enable is connected to ready and ready is just forwarded.
@@ -339,6 +345,114 @@ namespace gtry::scl
 		ret.data = result;
 		ret._sig = _sig;
 		return ret;
+	}
+
+	template<Signal PayloadT, Signal ...Meta>
+	template<StreamSignal T>
+	inline T Stream<PayloadT, Meta...>::reduceTo()
+	{
+		T ret;
+		ret.data <<= data;
+
+		std::apply([&](auto&... meta) {
+			((ret.get<std::remove_cvref_t<decltype(meta)>>() <<= meta), ...);
+		}, ret._sig);
+		return ret;
+	}
+
+	template<Signal PayloadT, Signal ...Meta>
+	template<StreamSignal T>
+	inline T Stream<PayloadT, Meta...>::reduceTo() const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>)
+	{
+		T ret{ data };
+		std::apply([&](auto&... meta) {
+			((ret.get<std::remove_cvref_t<decltype(meta)>>() = meta), ...);
+		}, ret._sig);
+		return ret;
+	}
+
+	namespace internal
+	{
+		template<class Tr>
+		std::tuple<> remove_from_tuple(const std::tuple<>& t) { return {}; }
+
+		template<class Tr, class T, class... To>
+		auto remove_from_tuple(std::tuple<T, To...>& t)
+		{
+			auto head = std::tie(std::get<0>(t));
+			auto tail = std::apply([](auto& tr, auto&... to) {
+				return std::tie(to...);
+			}, t);
+
+			if constexpr (std::is_same_v<std::remove_cvref_t<T>, Tr>)
+			{
+				return tail;
+			}
+			else if constexpr (sizeof...(To) > 0)
+			{
+				return std::tuple_cat(
+					head,
+					remove_from_tuple<Tr>(tail)
+				);
+			}
+			else
+			{
+				return head;
+			}
+		}
+
+		template<class Tr, class T, class... To>
+		auto remove_from_tuple(const std::tuple<T, To...>& t)
+		{
+			auto head = std::tie(std::get<0>(t));
+			auto tail = std::apply([](auto& tr, auto&... to) {
+				return std::tie(to...);
+				}, t);
+
+			if constexpr (std::is_same_v<std::remove_cvref_t<T>, Tr>)
+			{
+				return tail;
+			}
+			else if constexpr (sizeof...(To) > 0)
+			{
+				return std::tuple_cat(
+					head,
+					remove_from_tuple<Tr>(tail)
+				);
+			}
+			else
+			{
+				return head;
+			}
+		}
+	}
+
+	template<Signal PayloadT, Signal ...Meta>
+	template<Signal T>
+	inline auto Stream<PayloadT, Meta...>::remove()
+	{
+		auto metaRefs = internal::remove_from_tuple<T>(_sig);
+
+		return std::apply([&](auto&... meta) {
+			Stream<PayloadT, std::remove_cvref_t<decltype(meta)>...> ret;
+			ret.data <<= this->data;
+			downstream(ret._sig) = downstream(metaRefs);
+			upstream(metaRefs) = upstream(ret._sig);
+			return ret;
+		}, metaRefs);
+	}
+
+	template<Signal PayloadT, Signal ...Meta>
+	template<Signal T>
+	inline auto Stream<PayloadT, Meta...>::remove() const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>)
+	{
+		auto metaRefs = internal::remove_from_tuple<T>(_sig);
+
+		return std::apply([&](auto&... meta) {
+			return Stream<PayloadT, std::remove_cvref_t<decltype(meta)>...>{
+				this->data, metaRefs
+			};
+		}, metaRefs);
 	}
 
 	template<Signal PayloadT, Signal... Meta>

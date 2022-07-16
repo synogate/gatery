@@ -413,11 +413,16 @@ BOOST_FIXTURE_TEST_CASE(stream_transform, StreamTransferFixture)
 
 	{
 		// const compile test
-		const scl::VStream<UInt> vs{ 5_b };
+		const scl::VStream<UInt, scl::Eop> vs{ 5_b };
+		auto res = vs.remove<scl::Eop>();
+		auto rsr = vs.reduceTo<scl::Stream<UInt>>();
 		auto vso = vs.transform(std::identity{});
 	}
 
-	scl::RvStream<UInt> in{ 5_b };
+	scl::RvStream<UInt> in = scl::RvPacketStream<UInt, scl::Sop>{ 5_b }
+								.remove<scl::Sop>()
+								.reduceTo<scl::RvStream<UInt>>()
+								.remove<scl::Eop>();
 	In(in);
 
 	struct Intermediate
@@ -426,9 +431,11 @@ BOOST_FIXTURE_TEST_CASE(stream_transform, StreamTransferFixture)
 		Bit test;
 	};
 
-	scl::RvStream<Intermediate> im = in.transform([](const UInt& data) {
-		return Intermediate{ data, '1' };
-	});
+	scl::RvStream<Intermediate> im = in
+		.reduceTo<scl::RvStream<UInt>>()
+		.transform([](const UInt& data) {
+			return Intermediate{ data, '1' };
+		});
 
 	scl::RvStream<UInt> out = im.transform(&Intermediate::data);
 	Out(out);
