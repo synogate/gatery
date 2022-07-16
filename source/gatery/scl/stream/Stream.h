@@ -30,6 +30,7 @@ namespace gtry::scl
 	struct Eop;
 	struct Sop;
 	struct ByteEnable;
+	struct Error;
 
 	namespace internal
 	{
@@ -146,6 +147,7 @@ namespace gtry::scl
 	template<StreamSignal T> const Bit eop(const T& stream) { return '1'; }
 	template<StreamSignal T> const Bit sop(const T& stream) { return '1'; }
 	template<StreamSignal T> const UInt byteEnable(const T& stream) { return ConstBVec(1, 1_b); }
+	template<StreamSignal T> const Bit error(const T& stream) { return '0'; }
 
 	struct Ready
 	{
@@ -207,6 +209,16 @@ namespace gtry::scl
 	const BVec& byteEnable(const T& stream) { return stream.get<ByteEnable>().byteEnable; }
 
 
+	struct Error
+	{
+		Bit error;
+	};
+
+	template<StreamSignal T> requires (T::template has<Error>())
+	Bit& error(T& stream) { return stream.get<Error>().error; }
+	template<StreamSignal T> requires (T::template has<Error>())
+	const Bit& error(const T& stream) { return stream.get<Error>().error; }
+
 
 	template<Signal T, Signal... Meta>
 	using RvStream = Stream<T, scl::Ready, scl::Valid, Meta...>;
@@ -225,9 +237,6 @@ namespace gtry::scl
 
 	template<Signal T, Signal... Meta>
 	using SPacketStream = Stream<T, scl::Valid, scl::Eop, Meta...>;
-
-	template<StreamSignal T>
-	T makeStream(typename T::Payload&& data) { }
 
 
 	/**
