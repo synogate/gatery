@@ -30,9 +30,6 @@ namespace gtry::scl
 				and T::template has<Ready>())
 	T reduceWidth(T& source, BitWidth width, Bit reset = '0');
 
-	template<Signal Targ, class Tproc>
-	auto transform(Stream<Targ>& source, Tproc&& func);
-
 	template<StreamSignal T> 
 	requires (T::template has<Ready>() and T::template has<Valid>())
 	T eraseBeat(T& source, UInt beatOffset, UInt beatCount);
@@ -166,20 +163,6 @@ namespace gtry::scl
 
 		HCL_NAMED(out);
 		return out;
-	}
-
-	template<Signal Targ, class Tproc>
-	auto transform(Stream<Targ>& source, Tproc&& func)
-	{
-		auto scope = Area{ "scl_transform_stream" }.enter();
-		auto&& newVal = std::invoke(func, source.data);
-
-		Stream<std::remove_reference_t<decltype(newVal)>> ret{
-			.valid = source.valid,
-			.data = std::forward<decltype(newVal)>(newVal)
-		};
-		*source.ready = *ret.ready;
-		return ret;
 	}
 
 	template<StreamSignal T> 
