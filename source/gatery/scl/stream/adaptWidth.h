@@ -245,4 +245,23 @@ namespace gtry::scl
 		HCL_NAMED(out);
 		return out;
 	}
+
+	template<StreamSignal T>
+	auto addEopDeferred(T& source, Bit insert)
+	{
+		auto scope = Area{ "scl_addEopDeferred" }.enter();
+
+		auto in = source.add(scl::Eop{'0'});
+		HCL_NAMED(in);
+
+		IF(insert)
+		{
+			valid(in) = '1';
+			eop(in) = '1';
+		}
+
+		auto out = scl::eraseLastBeat(in);
+		HCL_NAMED(out);
+		return out;
+	}
 }

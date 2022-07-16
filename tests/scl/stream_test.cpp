@@ -904,21 +904,19 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(m_clock.getClk(), 1024);
 }
-#if 0
 
-BOOST_FIXTURE_TEST_CASE(stream_makePacketStreamDeffered, StreamTransferFixture)
+BOOST_FIXTURE_TEST_CASE(stream_addEopDeferred, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::Stream<UInt> in;
-	in.data = 8_b;
+	scl::RvStream<UInt> in{ 8_b };
 	In(in);
 
 	Bit eop = pinIn().setName("eop");
-	scl::Stream<scl::Packet<UInt>> out = scl::makePacketStream(in, eop, true);
+	scl::RvPacketStream<UInt> out = scl::addEopDeferred(in, eop);
 	Out(out);
 
-	// send data
+	// generate eop insert signal
 	addSimulationProcess([=, &in]()->SimProcess {
 		
 		simu(eop) = 0;
@@ -950,5 +948,3 @@ BOOST_FIXTURE_TEST_CASE(stream_makePacketStreamDeffered, StreamTransferFixture)
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(m_clock.getClk(), 1024);
 }
-
-#endif
