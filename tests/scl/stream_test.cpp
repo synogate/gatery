@@ -654,12 +654,21 @@ BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::RvStream<UInt> in{
-		.data = 4_b
-	};
+	{
+		// add valid no ready compile test
+		scl::Stream<UInt> inT{ 4_b };
+		auto outT = scl::extendWidth(inT, 8_b);
+	}
+	{
+		// add valid compile test
+		scl::Stream<UInt, scl::Ready> inT{ 4_b };
+		auto outT = scl::extendWidth(inT, 8_b);
+	}
+
+	scl::RvStream<UInt> in{ 4_b };
 	In(in);
 
-	scl::RvStream<UInt> out = scl::extendWidth(in, 8_b);
+	auto out = scl::extendWidth(in, 8_b);
 	Out(out);
 
 	// send data
@@ -695,18 +704,15 @@ BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 	runTicks(m_clock.getClk(), 1024);
 }
 
-#if 0
 
-BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_narrow, StreamTransferFixture)
+BOOST_FIXTURE_TEST_CASE(stream_reduceWidth, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::Stream<UInt> in{
-		.data = 24_b
-	};
+	scl::RvStream<UInt> in{ 24_b };
 	In(in);
 
-	scl::Stream<UInt> out = scl::adaptWidth(in, 8_b);
+	scl::RvStream<UInt> out = scl::reduceWidth(in, 8_b);
 	Out(out);
 
 	// send data
@@ -722,7 +728,7 @@ BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_narrow, StreamTransferFixture)
 				((i * 3 + 1) << 8) |
 				((i * 3 + 2) << 16);
 			co_await WaitFor(0);
-			while(simu(ready(i)n) == 0)
+			while(simu(ready(in)) == 0)
 				co_await WaitClk(m_clock);
 			co_await WaitClk(m_clock);
 		}
@@ -737,34 +743,29 @@ BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_narrow, StreamTransferFixture)
 	runTicks(m_clock.getClk(), 1024);
 }
 
-BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_packet_narrow, StreamTransferFixture)
+BOOST_FIXTURE_TEST_CASE(stream_reduceWidth_RvPacketStream, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::Stream<scl::Packet<UInt>> in{
-		.data = { .data = 24_b }
-	};
+	scl::RvPacketStream<UInt> in{ 24_b };
 	In(in);
 
-	scl::Stream<scl::Packet<UInt>> out = scl::adaptWidth(in, 8_b);
+	auto out = scl::reduceWidth(in, 8_b);
 	Out(out);
-
 
 	// send data
 	addSimulationProcess([=, &in]()->SimProcess {
-		simu(valid(in)) = 0;
-		simu(*in.data).invalidate();
-
 		for(size_t i = 0; i < 8; ++i)
 		{
 			simu(valid(in)) = 1;
-			simu(in.data.eop) = i % 2 == 1;
-			simu(*in.data) =
+			simu(eop(in)) = i % 2 == 1;
+			simu(*in) =
 				((i * 3 + 0) << 0) |
 				((i * 3 + 1) << 8) |
 				((i * 3 + 2) << 16);
+
 			co_await WaitFor(0);
-			while(simu(ready(i)n) == 0)
+			while(simu(ready(in)) == 0)
 				co_await WaitClk(m_clock);
 			co_await WaitClk(m_clock);
 		}
@@ -783,17 +784,16 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::Stream<scl::Packet<UInt>> in;
-	in.data.data = 8_b;
+	scl::RvPacketStream<UInt> in{ 8_b };
 	In(in);
 
-	scl::Stream<scl::Packet<UInt>> out = scl::eraseBeat(in, 0, 1);
+	scl::RvPacketStream<UInt> out = scl::eraseBeat(in, 0, 1);
 	Out(out);
 
 	// send data
 	addSimulationProcess([=, &in]()->SimProcess {
 		simu(valid(in)) = 0;
-		simu(*in.data).invalidate();
+		simu(*in).invalidate();
 		co_await WaitClk(m_clock);
 
 		for(size_t i = 0; i < 32; i += 4)
@@ -801,11 +801,11 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
 			for(size_t j = 0; j < 5; ++j)
 			{
 				simu(valid(in)) = 1;
-				simu(*in.data) = uint8_t(i + j - 1);
-				simu(in.data.eop) = j == 4 ? 1 : 0;
+				simu(*in) = uint8_t(i + j - 1);
+				simu(eop(in)) = j == 4 ? 1 : 0;
 
 				co_await WaitFor(0);
-				while(simu(ready(i)n) == 0)
+				while(simu(ready(in)) == 0)
 					co_await WaitClk(m_clock);
 				co_await WaitClk(m_clock);
 			}
@@ -825,17 +825,16 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseLastBeat, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::Stream<scl::Packet<UInt>> in;
-	in.data.data = 8_b;
+	scl::RvPacketStream<UInt> in{ 8_b };
 	In(in);
 
-	scl::Stream<scl::Packet<UInt>> out = scl::eraseLastBeat(in);
+	scl::RvPacketStream<UInt> out = scl::eraseLastBeat(in);
 	Out(out);
 
 	// send data
 	addSimulationProcess([=, &in]()->SimProcess {
 		simu(valid(in)) = 0;
-		simu(*in.data).invalidate();
+		simu(*in).invalidate();
 		co_await WaitClk(m_clock);
 
 		for(size_t i = 0; i < 32; i += 4)
@@ -843,11 +842,11 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseLastBeat, StreamTransferFixture)
 			for(size_t j = 0; j < 5; ++j)
 			{
 				simu(valid(in)) = 1;
-				simu(*in.data) = uint8_t(i + j);
-				simu(in.data.eop) = j == 4 ? 1 : 0;
+				simu(*in) = uint8_t(i + j);
+				simu(eop(in)) = j == 4 ? 1 : 0;
 
 				co_await WaitFor(0);
-				while(simu(ready(i)n) == 0)
+				while(simu(ready(in)) == 0)
 					co_await WaitClk(m_clock);
 				co_await WaitClk(m_clock);
 			}
@@ -867,18 +866,17 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::Stream<scl::Packet<UInt>> in;
-	in.data.data = 8_b;
+	scl::RvPacketStream<UInt> in{ 8_b };
 	In(in);
 
 	UInt insertData = pinIn(8_b).setName("insertData");
-	scl::Stream<scl::Packet<UInt>> out = scl::insertBeat(in, 0, insertData);
+	scl::RvPacketStream<UInt> out = scl::insertBeat(in, 0, insertData);
 	Out(out);
 
 	// send data
 	addSimulationProcess([=, &in]()->SimProcess {
 		simu(valid(in)) = 0;
-		simu(*in.data).invalidate();
+		simu(*in).invalidate();
 		co_await WaitClk(m_clock);
 
 		for(size_t i = 0; i < 32; i += 4)
@@ -887,11 +885,11 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 			{
 				simu(valid(in)) = 1;
 				simu(insertData) = i + j;
-				simu(*in.data) = uint8_t(i + j + 1);
-				simu(in.data.eop) = j == 2 ? 1 : 0;
+				simu(*in) = uint8_t(i + j + 1);
+				simu(eop(in)) = j == 2 ? 1 : 0;
 
 				co_await WaitFor(0);
-				while(simu(ready(i)n) == 0)
+				while(simu(ready(in)) == 0)
 					co_await WaitClk(m_clock);
 				co_await WaitClk(m_clock);
 			}
@@ -906,6 +904,7 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(m_clock.getClk(), 1024);
 }
+#if 0
 
 BOOST_FIXTURE_TEST_CASE(stream_makePacketStreamDeffered, StreamTransferFixture)
 {

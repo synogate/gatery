@@ -287,11 +287,11 @@ namespace gtry::scl
 		else
 		{
 			Stream<PayloadT, Meta..., T> ret;
-			connect(ret.data, data);
-			connect(ret.get<T>(), std::forward<T>(signal));
+			*ret <<= data;
+			ret.get<T>() <<= signal;
 
 			std::apply([&](auto& ...meta) {
-				(connect(ret.get<decltype(meta)>(), std::forward<decltype(meta)>(meta)), ...);
+				((ret.get<std::remove_reference_t<decltype(meta)>>() <<= meta), ...);
 			}, _sig);
 			return ret;
 		}

@@ -59,7 +59,7 @@ namespace gtry::scl
 		
 		Counter& inc() { m_inc = '1'; return *this; }
 
-		void reset() { m_value = 0; }
+		void reset() { load(0); }
 		const UInt& value() const { return m_value; }
 		const Bit& isLast() const { return m_last; }
 		Bit isFirst() const { return m_value == 0; }
