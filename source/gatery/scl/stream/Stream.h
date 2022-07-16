@@ -452,4 +452,51 @@ namespace gtry::scl
 		static_assert(!stream.has<Ready>(), "cannot create upstream register from const stream");
 		return stream.regDownstream(settings);
 	}
+
+	template<StreamSignal T>
+	struct VisitCompound<T>
+	{
+		void operator () (T& a, const T& b, CompoundVisitor& v, size_t flags)
+		{
+			std::apply([&](auto&... meta) {
+				(VisitCompound<std::remove_reference_t<decltype(meta)>>{}(
+					meta, b.get<std::remove_reference_t<decltype(meta)>>(), v)
+					, ...);
+			}, a._sig);
+
+			v.enter("data");
+			VisitCompound<typename T::Payload>{}(a.data, b.data, v, flags);
+			v.leave();
+		}
+
+		void operator () (T& a, CompoundVisitor& v)
+		{
+			std::apply([&](auto&... meta) {
+				(VisitCompound<std::remove_reference_t<decltype(meta)>>{}(meta, v), ...);
+			}, a._sig);
+
+			v.enter("data");
+			VisitCompound<typename T::Payload>{}(a.data, v);
+			v.leave();
+		}
+
+		void operator () (const T& a, const T& b, CompoundVisitor& v)
+		{
+			std::apply([&](auto&... meta) {
+				(VisitCompound<std::remove_reference_t<decltype(meta)>>{}(
+					meta, b.get<std::remove_reference_t<decltype(meta)>>(), v)
+					, ...);
+			}, a._sig);
+
+			v.enter("data");
+			VisitCompound<typename T::Payload>{}(a.data, b.data, v);
+			v.leave();
+		}
+	};
 }
+
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::Ready, ready);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::Valid, valid);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::Eop, eop);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::Sop, sop);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::ByteEnable, byteEnable);
