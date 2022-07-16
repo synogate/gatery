@@ -407,6 +407,39 @@ private:
 	size_t m_transfers = 16;
 };
 
+BOOST_FIXTURE_TEST_CASE(stream_transform, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	{
+		// const compile test
+		const scl::VStream<UInt> vs{ 5_b };
+		auto vso = vs.transform(std::identity{});
+	}
+
+	scl::RvStream<UInt> in{ 5_b };
+	In(in);
+
+	struct Intermediate
+	{
+		UInt data;
+		Bit test;
+	};
+
+	scl::RvStream<Intermediate> im = in.transform([](const UInt& data) {
+		return Intermediate{ data, '1' };
+	});
+
+	scl::RvStream<UInt> out = im.transform(&Intermediate::data);
+	Out(out);
+
+	simulateTransferTest(in, out);
+
+	//recordVCD("stream_downstreamReg.vcd");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
+
 BOOST_FIXTURE_TEST_CASE(stream_downstreamReg, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);

@@ -70,6 +70,9 @@ namespace gtry::scl
 		template<Signal T> constexpr const T& get() const { return std::get<T>(_sig); }
 		template<Signal T> constexpr void set(T&& signal) { get<T>() = std::forward<T>(signal); }
 
+		auto transform(std::invocable<Payload> auto&& fun);
+		auto transform(std::invocable<Payload> auto&& fun) const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>);
+
 		/**
 		 * @brief	Puts a register in the valid and data path.
 					The register enable is connected to ready and ready is just forwarded.
@@ -316,6 +319,26 @@ namespace gtry::scl
 				}, _sig)
 			};
 		}
+	}
+
+	template<Signal PayloadT, Signal ...Meta>
+	inline auto Stream<PayloadT, Meta...>::transform(std::invocable<Payload> auto&& fun)
+	{
+		auto&& result = std::invoke(fun, data);
+		Stream<std::remove_cvref_t<decltype(result)>, Meta...> ret;
+		ret.data <<= result;
+		ret._sig <<= _sig;
+		return ret;
+	}
+
+	template<Signal PayloadT, Signal ...Meta>
+	inline auto Stream<PayloadT, Meta...>::transform(std::invocable<Payload> auto&& fun) const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>)
+	{
+		auto&& result = std::invoke(fun, data);
+		Stream<std::remove_cvref_t<decltype(result)>, Meta...> ret;
+		ret.data = result;
+		ret._sig = _sig;
+		return ret;
 	}
 
 	template<Signal PayloadT, Signal... Meta>
