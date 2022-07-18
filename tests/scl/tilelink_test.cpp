@@ -24,6 +24,7 @@
 #include <gatery/debug/websocks/WebSocksInterface.h>
 
 #include <gatery/scl/tilelink/tilelink.h>
+#include <gatery/scl/tilelink/TileLinkDemux.h>
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -36,6 +37,24 @@ BOOST_FIXTURE_TEST_CASE(tilelink_dummy_test, BoostUnitTestSimulationFixture)
 
 	TileLinkUH uh;
 	TileLinkUL ul;
+
+	addSimulationProcess([&]()->SimProcess {
+		co_await WaitClk(clock);
+
+		stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(clock.getClk(), 16);
+}
+
+BOOST_FIXTURE_TEST_CASE(tilelink_demux_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	TileLinkDemux<TileLinkUL> demux;
+	demux.generate();
 
 	addSimulationProcess([&]()->SimProcess {
 		co_await WaitClk(clock);

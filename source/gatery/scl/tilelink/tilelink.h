@@ -55,12 +55,10 @@ namespace gtry::scl
 		BVec opcode = 3_b;
 		BVec param = 3_b;
 		UInt size;
-		BVec source;
-		BVec address;
-		// use ByteEnable for mask
-		BVec data;
+		UInt source;
+		UInt address;
 	};
-	using TileLinkChannelA = RvStream<TileLinkA, ByteEnable>;
+	using TileLinkChannelA = RvStream<BVec, TileLinkA, ByteEnable>;
 
 	struct TileLinkD
 	{
@@ -74,14 +72,12 @@ namespace gtry::scl
 		};
 
 		BVec opcode = 3_b;
-		//BVec param = 3_b;
+		BVec param = 3_b;
 		UInt size;
-		BVec source;
-		//BVec sink;
-		BVec data;
-		// use Error for error
+		UInt source;
+		UInt sink;
 	};
-	using TileLinkChannelD = RvStream<TileLinkD, Error>;
+	using TileLinkChannelD = RvStream<BVec, TileLinkD, Error>;
 
 	template<class... Capability>
 	struct TileLinkU
@@ -91,9 +87,23 @@ namespace gtry::scl
 			(TileLinkChannelD, d)
 		);
 
+		TileLinkA& chanA() { return a.get<TileLinkA>(); }
+		const TileLinkA& chanA() const { return a.get<TileLinkA>(); }
+		TileLinkD& chanD() { return a.get<TileLinkD>(); }
+		const TileLinkD& chanD() const { return a.get<TileLinkD>(); }
+
 		template<class T>
 		static constexpr bool capability();
 	};
+
+	namespace internal
+	{
+		template<class T>		struct is_tilelink_signal : std::false_type {};
+		template<class... T>	struct is_tilelink_signal<TileLinkU<T...>> : std::true_type {};
+	}
+
+	template<class T>
+	concept TileLinkSignal = Signal<T> and internal::is_tilelink_signal<T>::value;
 
 	struct TileLinkCapBurst;
 	struct TileLinkCapHint;
@@ -102,6 +112,9 @@ namespace gtry::scl
 
 	using TileLinkUL = TileLinkU<>;
 	using TileLinkUH = TileLinkU<TileLinkCapBurst, TileLinkCapHint, TileLinkCapAtomicArith, TileLinkCapAtomicLogic>;
+
+	template<class... Cap>
+	void connect(TileLinkU<Cap...>& lhs, TileLinkU<Cap...>& rhs);
 }
 
 // impl
@@ -115,7 +128,19 @@ namespace gtry::scl
 			return (std::is_same_v<T, Capability> | ...);
 		return false;
 	}
+
+	template<class ...Cap>
+	void connect(TileLinkU<Cap...>& lhs, TileLinkU<Cap...>& rhs)
+	{
+		HCL_DESIGNCHECK(lhs.a->width() == rhs.a->width());
+		HCL_DESIGNCHECK(lhs.d->width() == rhs.d->width());
+		HCL_DESIGNCHECK(lhs.chanA().address.width() == rhs.chanA().address.width());
+		HCL_DESIGNCHECK(byteEnable(lhs.a).width() == byteEnable(rhs.a).width());
+
+		lhs.a <<= rhs.a;
+		rhs.d <<= lhs.d;
+	}
 }
 
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkA, opcode, param, size, source, address, data);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkD, opcode, size, source, data);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkA, opcode, param, size, source, address);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkD, opcode, size, source);
