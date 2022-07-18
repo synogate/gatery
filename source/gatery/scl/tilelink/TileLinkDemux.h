@@ -37,7 +37,8 @@ namespace gtry::scl
 
 		const TLink& source() const;
 
-		virtual void generate();
+		template<typename TArbiterPolicy = ArbiterPolicyLowest>
+		void generate();
 	private:
 		Area m_area = "scl_TileLinkDemux";
 		bool m_generated = false;
@@ -87,6 +88,7 @@ namespace gtry::scl
 	}
 
 	template<TileLinkSignal TLink>
+	template<typename TArbiterPolicy>
 	inline void TileLinkDemux<TLink>::generate()
 	{
 		auto scope = m_area.enter();
@@ -115,12 +117,11 @@ namespace gtry::scl
 		}
 
 		// connect channel D
-		StreamArbiter<TileLinkChannelD> arbiter;
+		StreamArbiter<TileLinkChannelD, TArbiterPolicy> arbiter;
 		for (Sink& s : m_sink)
 			arbiter.attach(s.bus.d);
 		m_source.d <<= arbiter.out();
 		arbiter.generate();
 	}
-
 }
 
