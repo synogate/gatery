@@ -13,7 +13,7 @@ project "gatery-frontend-test"
 
     defines "BOOST_TEST_DYN_LINK"
     filter "system:linux"
-        links { "boost_unit_test_framework", "pthread", "dl", "yaml-cpp" }
+        links { "boost_unit_test_framework", "boost_json", "pthread", "dl", "yaml-cpp" }
 
 project "gatery-scl-test"
     kind "ConsoleApp"
@@ -28,4 +28,4 @@ project "gatery-scl-test"
 
     defines "BOOST_TEST_DYN_LINK"
     filter "system:linux"
-        links { "boost_unit_test_framework", "pthread", "dl", "yaml-cpp" }
+        links { "boost_unit_test_framework", "boost_json", "pthread", "dl", "yaml-cpp" }
