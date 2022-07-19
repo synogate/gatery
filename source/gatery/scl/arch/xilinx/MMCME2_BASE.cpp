@@ -29,14 +29,14 @@ MMCME2_BASE::MMCME2_BASE()
 	m_name = "MMCME2_BASE";
 	m_genericParameters["BANDWIDTH"] = "\"OPTIMIZED\"";
 
-	m_genericParameters["CLKFBOUT_MULT_F"] = "1.0";
-	m_genericParameters["CLKOUT0_DIVIDE_F"] = "1.0";
-	m_genericParameters["CLKOUT1_DIVIDE"] = "1";
-	m_genericParameters["CLKOUT2_DIVIDE"] = "1";
-	m_genericParameters["CLKOUT3_DIVIDE"] = "1";
-	m_genericParameters["CLKOUT4_DIVIDE"] = "1";
-	m_genericParameters["CLKOUT5_DIVIDE"] = "1";
-	m_genericParameters["CLKOUT6_DIVIDE"] = "1";
+	m_genericParameters["CLKFBOUT_MULT_F"] = "2.0";
+	m_genericParameters["CLKOUT0_DIVIDE_F"] = "2.0";
+	m_genericParameters["CLKOUT1_DIVIDE"] = "2";
+	m_genericParameters["CLKOUT2_DIVIDE"] = "2";
+	m_genericParameters["CLKOUT3_DIVIDE"] = "2";
+	m_genericParameters["CLKOUT4_DIVIDE"] = "2";
+	m_genericParameters["CLKOUT5_DIVIDE"] = "2";
+	m_genericParameters["CLKOUT6_DIVIDE"] = "2";
 	m_genericParameters["DIVCLK_DIVIDE"] = "1";
 	m_genericParameters["CLKFBOUT_PHASE"] = "0.0";
 
