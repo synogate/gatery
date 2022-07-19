@@ -240,7 +240,7 @@ protected:
 
 	void simulateTransferTest(scl::RvStream<UInt>& source, scl::RvStream<UInt>& sink)
 	{
-		simulateBackPreassure(sink);
+		simulateBackPressure(sink);
 		simulateSendData(source, m_groups++);
 		simulateRecvData(sink);
 	}
@@ -248,7 +248,7 @@ protected:
 	template<scl::StreamSignal T>
 	void simulateArbiterTestSink(T& sink)
 	{
-		simulateBackPreassure(sink);
+		simulateBackPressure(sink);
 		simulateRecvData(sink);
 	}
 
@@ -289,7 +289,7 @@ protected:
 	}
 
 	template<scl::StreamSignal T>
-	void simulateBackPreassure(T& stream)
+	void simulateBackPressure(T& stream)
 	{
 		addSimulationProcess([&]()->SimProcess {
 			std::mt19937 rng{ std::random_device{}() };
@@ -735,7 +735,7 @@ BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 
 	transfers(32);
 	groups(1);
-	simulateBackPreassure(out);
+	simulateBackPressure(out);
 	simulateRecvData(out);
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
@@ -776,7 +776,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth, StreamTransferFixture)
 
 	transfers(8 * 3);
 	groups(1);
-	simulateBackPreassure(out);
+	simulateBackPressure(out);
 	simulateRecvData(out);
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
@@ -813,7 +813,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth_RvPacketStream, StreamTransferFixture
 
 	transfers(8 * 3);
 	groups(1);
-	simulateBackPreassure(out);
+	simulateBackPressure(out);
 	simulateRecvData(out);
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
@@ -854,7 +854,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
 
 	transfers(32);
 	groups(1);
-	simulateBackPreassure(out);
+	simulateBackPressure(out);
 	simulateRecvData(out);
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
@@ -895,7 +895,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseLastBeat, StreamTransferFixture)
 
 	transfers(32);
 	groups(1);
-	simulateBackPreassure(out);
+	simulateBackPressure(out);
 	simulateRecvData(out);
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
@@ -938,7 +938,7 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 
 	transfers(32);
 	groups(1);
-	simulateBackPreassure(out);
+	simulateBackPressure(out);
 	simulateRecvData(out);
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
@@ -982,7 +982,7 @@ BOOST_FIXTURE_TEST_CASE(stream_addEopDeferred, StreamTransferFixture)
 	transfers(32);
 	groups(1);
 	simulateSendData(in, 0);
-	simulateBackPreassure(out);
+	simulateBackPressure(out);
 	simulateRecvData(out);
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
