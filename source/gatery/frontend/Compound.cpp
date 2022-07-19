@@ -41,6 +41,10 @@ namespace gtry
 	{
 	}
 
+	void CompoundVisitor::reverse()
+	{
+	}
+
 	void CompoundNameVisitor::enter(std::string_view name)
 	{
 		m_names.push_back(name);

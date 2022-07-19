@@ -47,6 +47,8 @@ namespace gtry
 		virtual void enter(std::string_view name);
 		virtual void leave();
 
+		virtual void reverse();
+
 		virtual void operator () (const ElementarySignal& a, const ElementarySignal& b) { }
 		virtual void operator () (ElementarySignal& a) { }
 		virtual void operator () (ElementarySignal& a, const ElementarySignal& b) { }
