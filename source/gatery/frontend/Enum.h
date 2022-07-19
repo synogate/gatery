@@ -83,9 +83,6 @@ namespace gtry {
 
 		UInt numericalValue() const { return UInt(readPort()); }
 
-		virtual BVec pack() const override { return BVec(readPort());  }
-		virtual void unpack(const BVec &b) override { assign(b.readPort()); }
-
 		Enum<T>& operator=(const Enum<T>& rhs);
 		Enum<T>& operator=(Enum<T>&& rhs);
 //		Enum<T>& operator=(const EnumDefault<T> &defaultValue);
