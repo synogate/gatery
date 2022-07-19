@@ -35,6 +35,47 @@ gtry::Memory<gtry::UInt>& gtry::scl::riscv::DualCycleRV::fetch(uint64_t entryPoi
 	return m_instructionMem;
 }
 
+void gtry::scl::riscv::DualCycleRV::writeCallReturnTrace(std::string filename)
+{
+	auto clk = ClockScope::getClk();
+	auto opcode = pinOut(m_instr.opcode).setName("profile_opcode");
+	auto rd = pinOut(m_instr.rd).setName("profile_rd");
+	auto rs1 = pinOut(m_instr.rs1).setName("profile_rs1");
+	auto target = pinOut(m_overrideIP).setName("profile_target");
+	auto ip = pinOut(m_IP).setName("profile_ip");
+	auto valid = pinOut(reg(m_instructionValid)).setName("profile_valid");
+
+	DesignScope::get()->getCircuit().addSimulationProcess([=]()->sim::SimulationProcess {
+
+		size_t cycle = 0;
+		std::ofstream f{ filename.c_str(), std::ofstream::binary};
+		f << std::hex;
+
+		while (1)
+		{
+			co_await WaitClk(clk);
+			cycle++;
+
+			//f << cycle << ' ' << (size_t)simu(ip) << '\n';
+			if ((simu(opcode) & 29) == 25 && simu(valid) != 0)
+			{
+				size_t rdV = simu(rd);
+				size_t rs1V = simu(rs1);
+
+				bool rs1Hit = rs1V == 5 || rs1V == 1;
+				bool rdHit = rdV == 5 || rdV == 1;
+				// pop
+				if (simu(opcode) == 25)
+					if (rs1Hit && (rs1V != rdV || !rdHit))
+						f << cycle << ' ' << (size_t)simu(ip) << " R " << (size_t)simu(target) << '\n';
+
+				// push
+				if (rdHit)
+					f << cycle << ' ' << (size_t)simu(ip) << " C " << (size_t)simu(target) << '\n';
+			}
+		}
+	});
+}
 gtry::UInt gtry::scl::riscv::DualCycleRV::fetch(const UInt& instruction, uint64_t entryPoint)
 {
 	auto ent = m_area.enter();
@@ -125,7 +166,7 @@ gtry::UInt gtry::scl::riscv::DualCycleRV::fetch(const UInt& instruction, uint64_
 		}
 		m_IP = reg(m_IP, 0);
 
-		m_overrideIP = ip.width();
+		m_overrideIP = m_IP.width();
 		IF(!m_stall & m_instructionValid & m_overrideIPValid)
 			ip = m_overrideIP;
 
@@ -133,6 +174,7 @@ gtry::UInt gtry::scl::riscv::DualCycleRV::fetch(const UInt& instruction, uint64_
 	}
 
 	setupAlu();
+	//writeCallReturnTrace("call_return.trace");
 
 	HCL_NAMED(m_overrideIPValid);
 	HCL_NAMED(m_overrideIP);

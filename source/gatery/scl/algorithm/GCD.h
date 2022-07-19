@@ -25,10 +25,10 @@ namespace gtry::scl
 {
 	using UIntPair = std::pair<UInt, UInt>;
 
-	Stream<UIntPair> binaryGCDStep1(Stream<UIntPair>& in, size_t iterationsPerClock = 1);
-	Stream<UInt> shiftLeft(Stream<UIntPair>& in, size_t iterationsPerClock = 1);
+	RvStream<UIntPair> binaryGCDStep1(RvStream<UIntPair>& in, size_t iterationsPerClock = 1);
+	RvStream<UInt> shiftLeft(RvStream<UIntPair>& in, size_t iterationsPerClock = 1);
 
-	Stream<UInt> binaryGCD(Stream<UIntPair>& in, size_t iterationsPerClock = 1);
+	RvStream<UInt> binaryGCD(RvStream<UIntPair>& in, size_t iterationsPerClock = 1);
 
 
 	uint64_t gcd(uint64_t a, uint64_t b);

@@ -31,6 +31,7 @@ namespace gtry::scl::riscv
 
 	protected:
 		virtual void setIP(const UInt& ip);
+		void writeCallReturnTrace(std::string filename);
 
 		Bit m_storeResult;
 

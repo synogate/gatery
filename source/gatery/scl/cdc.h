@@ -23,6 +23,9 @@ namespace gtry::scl
 	BVec grayEncode(UInt val);
 	UInt grayDecode(BVec val);
 
+	template<Signal T, SignalValue Treset>
+	T synchronize(T in, const Treset& reset, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
+
 	template<Signal T>
 	T synchronize(T in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
 
@@ -46,8 +49,8 @@ T gtry::scl::synchronize(T val, const gtry::Clock& inClock, const gtry::Clock& o
 	return val;
 }
 
-template<gtry::Signal T>
-T gtry::scl::synchronize(T val, T reset, const gtry::Clock& inClock, const gtry::Clock& outClock, size_t outStages, bool inStage)
+template<gtry::Signal T, gtry::SignalValue Treset>
+T gtry::scl::synchronize(T val, const Treset& reset, const gtry::Clock& inClock, const gtry::Clock& outClock, size_t outStages, bool inStage)
 {
 	if(inStage)
 		val = reg(val, reset, { .clock = inClock });

@@ -17,134 +17,251 @@
 */
 #pragma once
 #include "Stream.h"
-#include "Packet.h"
 #include "../Counter.h"
-#include "../flag.h"
 
 namespace gtry::scl
 {
-	Stream<UInt> adaptWidth(Stream<UInt>& source, BitWidth width, Bit reset = '0');
-	Stream<Packet<UInt>> adaptWidth(Stream<Packet<UInt>>& source, BitWidth width);
+	template<StreamSignal T>
+	requires (std::is_base_of_v<BaseBitVector, typename T::Payload>)
+	auto extendWidth(T& source, BitWidth width, Bit reset = '0');
 
-	template<Signal Targ, class Tproc>
-	auto transform(Stream<Targ>& source, Tproc&& func);
+	template<StreamSignal T>
+	requires (std::is_base_of_v<BaseBitVector, typename T::Payload>
+				and T::template has<Ready>())
+	T reduceWidth(T& source, BitWidth width, Bit reset = '0');
 
-	template<Signal T> Stream<Packet<T>> eraseBeat(Stream<Packet<T>>& source, UInt beatOffset, UInt beatCount);
-	template<Signal T> Stream<Packet<T>> eraseLastBeat(Stream<Packet<T>>& source);
-	template<Signal T, SignalValue Tval> Stream<Packet<T>> insertBeat(Stream<Packet<T>>& source, UInt beatOffset, const Tval& value);
+	template<StreamSignal T> 
+	requires (T::template has<Ready>() and T::template has<Valid>())
+	T eraseBeat(T& source, UInt beatOffset, UInt beatCount);
 
-	template<Signal T> Stream<Packet<T>> makePacketStream(Stream<T>& source, Bit eop, bool eopAfterLastBeat = false);
+	template<StreamSignal T> 
+	requires (T::template has<Valid>() or T::template has<Eop>())
+	T eraseLastBeat(T& source);
+
+	template<StreamSignal T, SignalValue Tval> 
+	requires (T::template has<Ready>())
+	T insertBeat(T& source, UInt beatOffset, const Tval& value);
 }
 
 
 namespace gtry::scl
 {
-	template<Signal Targ, class Tproc>
-	auto transform(Stream<Targ>& source, Tproc&& func)
+	template<BaseSignal T>
+	class ShiftReg
 	{
-		auto scope = Area{ "scl_transform_stream" }.enter();
-		auto&& newVal = std::invoke(func, source.data);
+	public:
+		ShiftReg(BitWidth totalWidth) :
+			m_value(totalWidth)
+		{
+			m_value = reg(m_value);
+		}
 
-		Stream<std::remove_reference_t<decltype(newVal)>> ret{
-			.valid = source.valid,
-			.data = std::forward<decltype(newVal)>(newVal)
-		};
-		*source.ready = *ret.ready;
+		ShiftReg(BitWidth totalWidth, const T& newRightShiftValue) :
+			m_value(totalWidth)
+		{
+			m_value = reg(m_value);
+			shiftRight(newRightShiftValue);
+		}
+
+		T& value() { return m_value; }
+
+		ShiftReg& shiftRight(const T& newValue)
+		{
+			m_value >>= (int)newValue.width().bits();
+			m_value.upper(newValue.width()) = newValue;
+			return *this;
+		}
+	private:
+		T m_value;
+	};
+
+	template<BaseSignal T>
+	T makeShiftReg(BitWidth size, const T& in, const Bit& en)
+	{
+		T value = size;
+
+		T newValue = value >> (int)in.width().bits();
+		newValue.upper(in.width()) = in;
+
+		IF(en)
+			value = newValue;
+		value = reg(value);
+		return newValue;
+	}
+
+	template<StreamSignal T>
+	requires (std::is_base_of_v<BaseBitVector, typename T::Payload>)
+	auto extendWidth(T& source, BitWidth width, Bit reset)
+	{
+		HCL_DESIGNCHECK(source->width() <= width);
+		const size_t ratio = width / source->width();
+
+		auto scope = Area{ "scl_extendWidth" }.enter();
+
+		Counter counter{ ratio };
+		IF(transfer(source))
+			counter.inc();
+		IF(reset)
+			counter.reset();
+
+		auto ret = source.add(
+			Valid{ counter.isLast() & valid(source) }
+		);
+		if constexpr (T::template has<Ready>())
+			ready(source) = ready(ret) | !counter.isLast();
+
+		ret->resetNode();
+		*ret = makeShiftReg(width, *source, transfer(source));
+
+		if constexpr (T::template has<ByteEnable>())
+		{
+			auto& be = byteEnable(ret);
+			BitWidth srcBeWidth = be.width();
+			be.resetNode();
+			be = makeShiftReg(srcBeWidth * ratio, byteEnable(source), transfer(source));
+		}
+
+		HCL_NAMED(ret);
 		return ret;
 	}
 
-	template<Signal T>
-	Stream<Packet<T>> eraseBeat(Stream<Packet<T>>& source, UInt beatOffset, UInt beatCount)
+	template<StreamSignal T>
+	requires (std::is_base_of_v<BaseBitVector, typename T::Payload>
+				and T::template has<Ready>())
+	T reduceWidth(T& source, BitWidth width, Bit reset)
 	{
-		BitWidth beatLimit = std::max(beatOffset.width(), beatCount.width()) + 1;
-		UInt beatCounter = beatLimit;
+		auto scope = Area{ "scl_reduceWidth" }.enter();
+		T out;
 
-		Stream<Packet<T>> ret;
-		ret <<= source;
+		HCL_DESIGNCHECK(source->width() >= width);
+		const size_t ratio = source->width() / width;
 
-		IF(beatCounter >= zext(beatOffset) & beatCounter < zext(beatOffset + beatCount))
+		Counter counter{ ratio };
+		IF(transfer(out))
+			counter.inc();
+		IF(!valid(source) | reset)
+			counter.reset();
+
+		out <<= source;
+		ready(source) &= counter.isLast();
+
+		out->resetNode();
+		*out = (*source)(zext(counter.value(), width.bits()) * width.bits(), width);
+
+		if constexpr (out.has<ByteEnable>())
 		{
-			ret.valid = '0';
-			*source.ready = '1';
+			BVec& be = byteEnable(out);
+			BitWidth w = be.width() / ratio;
+			be.resetNode();
+			be = byteEnable(source)(zext(counter.value(), w.bits()) * w.bits(), w);
 		}
 
+		if constexpr (out.has<Eop>())
+			eop(out) &= counter.isLast();
+		if constexpr (out.has<Sop>())
+			sop(out) &= counter.isFirst();
+
+		HCL_NAMED(out);
+		return out;
+	}
+
+	template<StreamSignal T> 
+	requires (T::template has<Ready>() and T::template has<Valid>())
+	T eraseBeat(T& source, UInt beatOffset, UInt beatCount)
+	{
+		auto scope = Area{ "scl_eraseBeat" }.enter();
+
+		BitWidth beatLimit = std::max(beatOffset.width(), beatCount.width()) + 1;
+		Counter beatCounter{ beatLimit.count() };
 		IF(transfer(source))
 		{
-			IF(beatCounter < zext(beatOffset + beatCount))
-				beatCounter += 1;
+			IF(beatCounter.value() < zext(beatOffset + beatCount))
+				beatCounter.inc();
 			IF(eop(source))
-				beatCounter = 0;
+				beatCounter.reset();
 		}
-		beatCounter = reg(beatCounter, 0);
-		return ret;
+
+		T out;
+		out <<= source;
+
+		IF(beatCounter.value() >= zext(beatOffset) & 
+			beatCounter.value() < zext(beatOffset + beatCount))
+		{
+			valid(out) = '0';
+			ready(source) = '1';
+		}
+		HCL_NAMED(out);
+		return out;
 	}
 
-	template<Signal T>
-	Stream<Packet<T>> eraseLastBeat(Stream<Packet<T>>& source)
+	template<StreamSignal T>
+	requires (T::template has<Valid>() or T::template has<Eop>())
+	T eraseLastBeat(T& source)
 	{
-		Stream<Packet<T>> in;
+		auto scope = Area{ "scl_eraseLastBeat" }.enter();
+		T in;
 		in <<= source;
+		HCL_NAMED(in);
 
-		Stream<Packet<T>> ret = constructFrom(in);
-		IF(eop(source))
-			in.valid = '0';
-		ret = in.regDownstream();
-
-		Bit eopReg = flag(eop(source) & valid(source), transfer(ret));
-		IF(eop(source) | eopReg)
-			ret.data.eop = '1';
-		return ret;
-	}
-
-	template<Signal T, SignalValue Tval>
-	Stream<Packet<T>> insertBeat(Stream<Packet<T>>& source, UInt beatOffset, const Tval& value)
-	{
-		UInt beatCounter = beatOffset.width() + 1;
-
-		Stream<Packet<T>> ret;
-		ret <<= source;
-
-		IF(beatCounter == zext(beatOffset))
-		{
-			*ret.data = value;
-			*source.ready = '0';
-		}
-
-		IF(transfer(ret))
-		{
-			IF(beatCounter < zext(beatOffset + 1))
-				beatCounter += 1;
+		if constexpr (source.has<Valid>())
 			IF(eop(source))
-				beatCounter = 0;
+				valid(in) = '0';
+
+		T out = constructFrom(in);
+		out = in.regDownstream();
+
+		if constexpr (source.has<Eop>())
+		{
+			Bit eopReg = flag(eop(source) & valid(source), transfer(out));
+			IF(eop(source) | eopReg)
+				eop(out) = '1';
 		}
-		beatCounter = reg(beatCounter, 0);
-		return ret;
+		HCL_NAMED(out);
+		return out;
 	}
 
-	template<Signal T>
-	Stream<Packet<T>> makePacketStream(Stream<T>& source, Bit eop, bool eopAfterLastBeat)
+	template<StreamSignal T, SignalValue Tval> 
+	requires (T::template has<Ready>())
+	T insertBeat(T& source, UInt beatOffset, const Tval& value)
 	{
-		Stream<Packet<T>> ret;
+		auto scope = Area{ "scl_insertBeat" }.enter();
+		T out;
+		out <<= source;
 
-		if(!eopAfterLastBeat)
+		Counter beatCounter{ (beatOffset.width() + 1).count() };
+		IF(transfer(out))
 		{
-			ret.valid = source.valid;
-			ret.data.data = source.data;
-			ret.data.eop = eop;
-			*source.ready = *ret.ready;
+			IF(beatCounter.value() < zext(beatOffset + 1))
+				beatCounter.inc();
+			IF(eop(source))
+				beatCounter.reset();
 		}
-		else
+
+		IF(beatCounter.value() == zext(beatOffset))
 		{
-			Stream<Packet<T>> in{
-				.valid = source.valid | eop,
-				.data = {
-					.eop = eop,
-					.data = *source
-				}
-			};
-			*source.ready = *in.ready;
-			ret = scl::eraseLastBeat(in);
+			*out = value;
+			ready(source) = '0';
 		}
-		return ret;
+		HCL_NAMED(out);
+		return out;
+	}
+
+	template<StreamSignal T>
+	auto addEopDeferred(T& source, Bit insert)
+	{
+		auto scope = Area{ "scl_addEopDeferred" }.enter();
+
+		auto in = source.add(scl::Eop{'0'});
+		HCL_NAMED(in);
+
+		IF(insert)
+		{
+			valid(in) = '1';
+			eop(in) = '1';
+		}
+
+		auto out = scl::eraseLastBeat(in);
+		HCL_NAMED(out);
+		return out;
 	}
 }

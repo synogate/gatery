@@ -28,7 +28,7 @@ namespace gtry::scl
 {
 	struct ArbiterPolicyLowest;
 
-	template<typename T, typename TSelector = ArbiterPolicyLowest>
+	template<StreamSignal T, typename TSelector = ArbiterPolicyLowest>
 	class StreamArbiter
 	{
 	public:
@@ -38,13 +38,13 @@ namespace gtry::scl
 			HCL_DESIGNCHECK_HINT(m_generated, "Generate not called.");
 		}
 
-		void out(const T& blueprint)
-		{
-			HCL_DESIGNCHECK_HINT(!m_generated, "Already generated.");
-			m_out.emplace(constructFrom(blueprint));
-		}
+		//void out(const T& blueprint)
+		//{
+		//	HCL_DESIGNCHECK_HINT(!m_generated, "Already generated.");
+		//	m_out.emplace(constructFrom(blueprint));
+		//}
 
-		void attach(Stream<T>& stream, uint32_t sortKey = 1u << 31)
+		void attach(T& stream, uint32_t sortKey = 1u << 31)
 		{
 			HCL_DESIGNCHECK_HINT(!m_generated, "Already generated.")
 
@@ -53,11 +53,14 @@ namespace gtry::scl
 			});
 			s.stream <<= stream;
 
-			if(!m_out)
-				m_out.emplace(constructFrom(stream));
+			if (!m_out)
+			{
+				m_out.emplace();
+				downstream(*m_out) = constructFrom(copy(downstream(stream)));
+			}
 		}
 
-		Stream<T>& out() { return *m_out; }
+		T& out() { return *m_out; }
 
 		virtual void generate()
 		{
@@ -77,14 +80,14 @@ namespace gtry::scl
 				selected = m_selector(m_in | std::views::transform(&InStream::stream));
 			HCL_NAMED(selected);
 
-			m_out->valid = '0';
-			m_out->data = dontCare(m_out->data);
+			downstream(*m_out) = dontCare(copy(downstream(*m_out)));
+			valid(*m_out) = '0';
 
 			HCL_NAMED(m_in);
 			size_t i = 0;
 			for(InStream& s : m_in)
 			{
-				*s.stream.ready = '0';
+				ready(s.stream) = '0';
 				IF(selected == i++)
 					*m_out <<= s.stream;
 			}
@@ -96,11 +99,11 @@ namespace gtry::scl
 		{
 			BOOST_HANA_DEFINE_STRUCT(InStream,
 				(uint32_t, sortKey),
-				(Stream<T>, stream)
+				(T, stream)
 			);
 		};
 		std::list<InStream> m_in;
-		std::optional<Stream<T>> m_out;
+		std::optional<T> m_out;
 		TSelector m_selector;
 		bool m_generated = false;
 	};
@@ -123,10 +126,10 @@ namespace gtry::scl
 		UInt operator () (const TCont& in)
 		{
 			UInt mask = cat(in | views::valid);
-			auto [valid, value] = scl::priorityEncoder(mask);
-			IF(!valid)
-				value = 0;
-			return value;
+			VStream idx = scl::priorityEncoder(mask);
+			IF(!valid(idx))
+				*idx = 0;
+			return *idx;
 		}
 	};
 
@@ -138,18 +141,18 @@ namespace gtry::scl
 			auto scope = Area{ "RoundRobin" }.enter();
 			UInt mask = cat(in | views::valid);
 
-			UInt counter = Counter{ mask.size() }.value();
+			UInt counter = Counter{ mask.size() }.inc().value();
 			HCL_NAMED(counter);
 
 			mask = rotr(mask, counter);
 			HCL_NAMED(mask);
 
-			auto [valid, firstValid] = scl::priorityEncoder(mask);
-			IF(!valid)
-				firstValid = 0;
-			HCL_NAMED(firstValid);
+			auto idx = scl::priorityEncoder(mask);
+			IF(!valid(idx))
+				*idx = 0;
+			HCL_NAMED(idx);
 
-			UInt selected = zext(firstValid, 1) + zext(counter, 1);
+			UInt selected = zext(*idx, 1) + zext(counter, 1);
 			IF(selected >= mask.size())
 				selected -= mask.size();
 			HCL_NAMED(selected);
@@ -163,40 +166,41 @@ namespace gtry::scl
 		template<class TCont>
 		UInt operator () (const TCont& in)
 		{
-			return Counter{ in.size() }.value();
+			return Counter{ in.size() }.inc().value();
 		}
 	};
 
 	template<typename T>
-	struct arbitrateInOrder : Stream<T>
+	struct arbitrateInOrder : RvStream<T>
 	{
-		arbitrateInOrder(Stream<T>& in0, Stream<T>& in1);
+		arbitrateInOrder(RvStream<T>& in0, RvStream<T>& in1);
 	};
 
 	template<typename T>
-	inline arbitrateInOrder<T>::arbitrateInOrder(Stream<T>& in0, Stream<T>& in1)
+	inline arbitrateInOrder<T>::arbitrateInOrder(RvStream<T>& in0, RvStream<T>& in1)
 	{
 		auto entity = Area{ "arbitrateInOrder" }.enter();
 
-		*in0.ready = *Stream<T>::ready;
-		*in1.ready = *Stream<T>::ready;
+		RvStream<T>& me = *this;
+		ready(in0) = ready(me);
+		ready(in1) = ready(me);
 
 		// simple fsm state 0 is initial and state 1 is push upper input
 		Bit selectionState;
 		HCL_NAMED(selectionState);
 
-		Stream<T>::data = in0.data;
-		Stream<T>::valid = in0.valid;
-		IF(selectionState == '1' | !in0.valid)
+		*me = *in0;
+		valid(me) = valid(in0);
+		IF(selectionState == '1' | !valid(in0))
 		{
-			Stream<T>::data = in1.data;
-			Stream<T>::valid = in1.valid;
+			*me = *in1;
+			valid(me) = valid(in1);
 		}
 
-		IF(*Stream<T>::ready)
+		IF(ready(me))
 		{
 			IF(	selectionState == '0' & 
-				in0.valid & in1.valid)
+				valid(in0) & valid(in1))
 			{
 				selectionState = '1';
 			}
@@ -207,8 +211,8 @@ namespace gtry::scl
 
 			IF(selectionState == '1')
 			{
-				*in0.ready = '0';
-				*in1.ready = '0';
+				ready(in0) = '0';
+				ready(in1) = '0';
 			}
 		}
 		selectionState = reg(selectionState, '0');

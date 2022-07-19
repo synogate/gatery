@@ -20,7 +20,6 @@
 
 #include <gatery/frontend.h>
 
-#include "../stream/DownStream.h"
 #include "../stream/Stream.h"
 
 #include <gatery/frontend/Reverse.h>
@@ -43,8 +42,8 @@ namespace gtry::scl
 	OneHot decoder(const UInt& in);
 	UInt encoder(const OneHot& in);
 
-	std::vector<Stream<UInt>> makeIndexList(const UInt& valids);
+	std::vector<VStream<UInt>> makeIndexList(const UInt& valids);
 
-	DownStream<UInt> priorityEncoder(const UInt& in);
-	DownStream<UInt> priorityEncoderTree(const UInt& in, bool registerStep, size_t resultBitsPerStep = 2);
+	VStream<UInt> priorityEncoder(const UInt& in);
+	VStream<UInt> priorityEncoderTree(const UInt& in, bool registerStep, size_t resultBitsPerStep = 2);
 }

@@ -18,41 +18,67 @@
 #pragma once
 #include <gatery/frontend.h>
 #include "../Fifo.h"
+#include "../flag.h"
 
 namespace gtry::scl
 {
-	/**
-	 * @brief Adds ready/valid handshake semantics to a signal.
-	*/
-	template<Signal Payload>
+	template<Signal PayloadT, Signal... Meta>
+	struct Stream;
+
+	struct Ready;
+	struct Valid;
+	struct Eop;
+	struct Sop;
+	struct ByteEnable;
+	struct Error;
+
+	namespace internal
+	{
+		template<class T>
+		struct is_stream_signal : std::false_type {};
+
+		template<Signal... T>
+		struct is_stream_signal<Stream<T...>> : std::true_type {};
+	}
+
+	template<class T>
+	concept StreamSignal = Signal<T> and internal::is_stream_signal<T>::value;
+
+	template<class T>
+	concept BidirStreamSignal = StreamSignal<T> and !requires(T& a, const T& b) { a = b; };
+
+	template<Signal PayloadT, Signal... Meta>
 	struct Stream
 	{
-		// TODO: get rid of hana
-		//Reverse<Bit> ready;
-		//Bit valid;
-		//Payload data;
+		using Payload = PayloadT;
 
-		BOOST_HANA_DEFINE_STRUCT(Stream,
-			(Reverse<Bit>, ready),
-			(Bit, valid),
-			(Payload, data)
-		);
+		Payload data;
+		std::tuple<Meta...> _sig;
 
-		/**
-		 * @brief Accessor for data member to reduce syntax clutter.
-		 * @return data
-		*/
 		Payload& operator *() { return data; }
 		const Payload& operator *() const { return data; }
 
-		/**
-		 * @brief Accessor for recursive access to last data member.
-		 *			Can be useful when chaining multiple templates to have a nice way to accessing 
-		 *			the encapsulated Signal.
-		 * @return final payload data
-		*/
-		decltype(auto) operator ->();
-		decltype(auto) operator ->() const;
+		Payload* operator ->() { return &data; }
+		const Payload* operator ->() const { return &data; }
+
+		template<Signal T>
+		static constexpr bool has();
+
+		template<Signal T> auto add(T&& signal);
+		template<Signal T> auto add(T&& signal) const requires (!BidirStreamSignal<Stream<PayloadT, Meta...>>);
+
+		template<Signal T> constexpr T& get() { return std::get<T>(_sig); }
+		template<Signal T> constexpr const T& get() const { return std::get<T>(_sig); }
+		template<Signal T> constexpr void set(T&& signal) { get<T>() = std::forward<T>(signal); }
+
+		auto transform(std::invocable<Payload> auto&& fun);
+		auto transform(std::invocable<Payload> auto&& fun) const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>);
+
+		template<StreamSignal T> T reduceTo();
+		template<StreamSignal T> T reduceTo() const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>);
+
+		template<Signal T> auto remove();
+		template<Signal T> auto remove() const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>);
 
 		/**
 		 * @brief	Puts a register in the valid and data path.
@@ -76,7 +102,7 @@ namespace gtry::scl
 		 * @param	Settings forwarded to all instantiated registers.
 		 * @return	connected stream
 		*/
-		Stream regUpstream(const RegisterSettings& settings = {});
+		Stream regReady(const RegisterSettings& settings = {});
 
 		/**
 		 * @brief Create a FIFO for buffering.
@@ -93,7 +119,8 @@ namespace gtry::scl
 		 * @param instance The FIFO to use.
 		 * @return connected stream
 		*/
-		Stream fifo(Fifo<Payload>& instance);
+		template<Signal T>
+		Stream fifo(Fifo<T>& instance);
 	};
 
 	/**
@@ -101,21 +128,116 @@ namespace gtry::scl
 	 * @param stream to test
 	 * @return transfer occurring
 	*/
-	template<Signal T> Bit transfer(const Stream<T>& stream) { return stream.valid & *stream.ready; }
+	template<StreamSignal T> Bit transfer(const T& stream) { return valid(stream) & ready(stream); }
 
 	/**
 	 * @brief High when sink can accept incoming data.
 	 * @param stream to test
 	 * @return sink ready
 	*/
-	template<Signal T> const Bit& ready(const Stream<T>& stream) { return *stream.ready; }
+	template<StreamSignal T> const Bit ready(const T& stream) { return '1'; }
 
 	/**
 	 * @brief High when source has data to send.
 	 * @param stream to test
 	 * @return source has data
 	*/
-	template<Signal T> const Bit& valid(const Stream<T>& stream) { return stream.valid; }
+	template<StreamSignal T> const Bit valid(const T& stream) { return '1'; }
+
+	template<StreamSignal T> const Bit eop(const T& stream) { return '1'; }
+	template<StreamSignal T> const Bit sop(const T& stream) { return '1'; }
+	template<StreamSignal T> const UInt byteEnable(const T& stream) { return ConstBVec(1, 1_b); }
+	template<StreamSignal T> const Bit error(const T& stream) { return '0'; }
+
+	struct Ready
+	{
+		Reverse<Bit> ready;
+	};
+
+	template<StreamSignal T> requires (T::template has<Ready>())
+	Bit& ready(T& stream) { return *stream.get<Ready>().ready; }
+	template<StreamSignal T> requires (T::template has<Ready>())
+	const Bit& ready(const T& stream) { return *stream.get<Ready>().ready; }
+
+
+	struct Valid
+	{
+		// reset to zero
+		Bit valid = Bit{ SignalReadPort{}, false };
+	};
+
+	template<StreamSignal T> requires (T::template has<Valid>())
+	Bit& valid(T& stream) { return stream.get<Valid>().valid; }
+	template<StreamSignal T> requires (T::template has<Valid>())
+	const Bit& valid(const T& stream) { return stream.get<Valid>().valid; }
+
+
+	struct Eop
+	{
+		Bit eop;
+	};
+
+	template<StreamSignal T> requires (T::template has<Eop>())
+	Bit& eop(T& stream) { return stream.get<Eop>().eop; }
+	template<StreamSignal T> requires (T::template has<Eop>())
+	const Bit& eop(const T& stream) { return stream.get<Eop>().eop; }
+	template<StreamSignal T> requires (T::template has<Valid>() and T::template has<Eop>())
+	const Bit sop(const T& signal) { return !flag(transfer(signal), eop(signal)); }
+
+
+	struct Sop
+	{
+		// reset to zero, sop is used for packet streams without valid.
+		Bit sop = Bit{ SignalReadPort{}, false };
+	};
+
+	template<StreamSignal T> requires (T::template has<Sop>())
+	Bit& sop(T& stream) { return stream.get<Sop>().sop; }
+	template<StreamSignal T> requires (T::template has<Sop>())
+	const Bit& sop(const T& stream) { return stream.get<Sop>().sop; }
+	template<StreamSignal T> requires (!T::template has<Valid>() and T::template has<Sop>() and T::template has<Eop>())
+	const Bit valid(const T& signal) { return flag(sop(signal), eop(signal)) | sop(signal); }
+
+
+	struct ByteEnable
+	{
+		BVec byteEnable;
+	};
+	template<StreamSignal T> requires (T::template has<ByteEnable>())
+	BVec& byteEnable(T& stream) { return stream.get<ByteEnable>().byteEnable; }
+	template<StreamSignal T> requires (T::template has<ByteEnable>())
+	const BVec& byteEnable(const T& stream) { return stream.get<ByteEnable>().byteEnable; }
+
+
+	struct Error
+	{
+		Bit error;
+	};
+
+	template<StreamSignal T> requires (T::template has<Error>())
+	Bit& error(T& stream) { return stream.get<Error>().error; }
+	template<StreamSignal T> requires (T::template has<Error>())
+	const Bit& error(const T& stream) { return stream.get<Error>().error; }
+
+
+	template<Signal T, Signal... Meta>
+	using RvStream = Stream<T, scl::Ready, scl::Valid, Meta...>;
+
+	template<Signal T, Signal... Meta>
+	using VStream = Stream<T, scl::Valid, Meta...>;
+
+	template<Signal T, Signal... Meta>
+	using RvPacketStream = Stream<T, scl::Ready, scl::Valid, scl::Eop, Meta...>;
+
+	template<Signal T, Signal... Meta>
+	using VPacketStream = Stream<T, scl::Valid, scl::Eop, Meta...>;
+
+	template<Signal T, Signal... Meta>
+	using RsPacketStream = Stream<T, scl::Ready, scl::Valid, scl::Eop, Meta...>;
+
+	template<Signal T, Signal... Meta>
+	using SPacketStream = Stream<T, scl::Valid, scl::Eop, Meta...>;
+
 
 	/**
 	 * @brief Puts a register in the ready, valid and data path.
@@ -123,165 +245,404 @@ namespace gtry::scl
 	 * @param Settings forwarded to all instantiated registers.
 	 * @return connected stream
 	*/
-	template<Signal T> Stream<T> reg(Stream<T>& stream, const RegisterSettings& settings = {});
+	template<StreamSignal T> 
+	T reg(T& stream, const RegisterSettings& settings = {});
+	template<StreamSignal T>
+	T reg(const T& stream, const RegisterSettings& settings = {});
 
 	/**
 	 * @brief Connect a Stream as source to a FIFO as sink.
 	 * @param sink FIFO instance.
 	 * @param source Stream instance.
 	*/
-	template<Signal T> void connect(Fifo<T>& sink, Stream<T>& source);
+	template<Signal Tf, StreamSignal Ts>
+	void connect(Fifo<Tf>& sink, Ts& source);
 
 	/**
 	 * @brief Connect a FIFO as source to a Stream as sink.
 	 * @param sink Stream instance.
 	 * @param source FIFO instance.
 	*/
-	template<Signal T> void connect(Stream<T>& sink, Fifo<T>& source);
+	template<StreamSignal Ts, Signal Tf>
+	void connect(Ts& sink, Fifo<Tf>& source);
 }
 
 namespace gtry::scl
 {
-	template<Signal Payload>
-	decltype(auto) Stream<Payload>::operator ->()
+	template<Signal PayloadT, Signal ...Meta>
+	template<Signal T>
+	inline constexpr bool Stream<PayloadT, Meta...>::has()
 	{
-		if constexpr(requires(Payload & p) { p.operator->(); })
-			return (Payload&)data;
+		bool ret = std::is_base_of_v<std::remove_reference_t<T>, std::remove_reference_t<PayloadT>>;
+		if constexpr (sizeof...(Meta) != 0)
+			ret |= (std::is_same_v<std::remove_reference_t<Meta>, std::remove_reference_t<T>> | ...);
+		return ret;
+	}
+
+	template<Signal PayloadT, Signal ...Meta>
+	template<Signal T>
+	inline auto Stream<PayloadT, Meta...>::add(T&& signal)
+	{
+		if constexpr (has<T>())
+		{
+			Stream ret;
+			connect(ret.data, data);
+
+			auto newMeta = std::apply([&](auto& ...meta) {
+				auto fun = [&](auto& member) -> decltype(auto) {
+					if constexpr (std::is_same_v<std::remove_cvref_t<decltype(member)>, T>)
+						return std::forward<decltype(member)>(signal);
+					else
+						return std::forward<decltype(member)>(member);
+				};
+				return std::tie(fun(meta)...);
+			}, _sig);
+
+			downstream(ret._sig) = downstream(newMeta);
+			upstream(newMeta) = upstream(ret._sig);
+			return ret;
+		}
 		else
-			return &data;
+		{
+			Stream<PayloadT, Meta..., T> ret;
+			*ret <<= data;
+			ret.get<T>() <<= signal;
+
+			std::apply([&](auto& ...meta) {
+				((ret.get<std::remove_reference_t<decltype(meta)>>() <<= meta), ...);
+			}, _sig);
+			return ret;
+		}
 	}
 
-	template<Signal Payload>
-	decltype(auto) Stream<Payload>::operator ->() const
+	template<Signal PayloadT, Signal ...Meta>
+	template<Signal T>
+	inline auto Stream<PayloadT, Meta...>::add(T&& signal) const requires (!BidirStreamSignal<Stream<PayloadT, Meta...>>)
 	{
-		if constexpr(requires(Payload & p) { p.operator->(); })
-			return (const Payload&)data;
+		if constexpr (has<T>())
+		{
+			Stream<PayloadT, Meta...> ret = *this;
+			ret.set(std::forward<T>(signal));
+			return ret;
+		}
 		else
-			return &data;
+		{
+			return Stream<PayloadT, Meta..., T>{
+				data,
+				std::apply([&](auto&... element) {
+					return std::tuple(element..., std::forward<T>(signal));
+				}, _sig)
+			};
+		}
 	}
 
-	template<Signal Payload>
-	inline Stream<Payload> gtry::scl::Stream<Payload>::regDownstreamBlocking(const RegisterSettings& settings)
+	template<Signal PayloadT, Signal ...Meta>
+	inline auto Stream<PayloadT, Meta...>::transform(std::invocable<Payload> auto&& fun)
 	{
-		Bit valid_reg;
-		Payload data_reg = constructFrom(data);
-
-		IF(*ready)
-		{
-			valid_reg = valid;
-			data_reg = data;
-		}
-
-		valid_reg = reg(valid_reg, '0', settings);
-		data_reg = reg(data_reg, settings);
-
-		Stream<Payload> ret{
-			.valid = valid_reg,
-			.data = data_reg
-		};
-		*ready = *ret.ready;
+		auto&& result = std::invoke(fun, data);
+		Stream<std::remove_cvref_t<decltype(result)>, Meta...> ret;
+		ret.data <<= result;
+		ret._sig <<= _sig;
 		return ret;
 	}
 
-	template<Signal Payload>
-	inline Stream<Payload> Stream<Payload>::regDownstream(const RegisterSettings& settings)
+	template<Signal PayloadT, Signal ...Meta>
+	inline auto Stream<PayloadT, Meta...>::transform(std::invocable<Payload> auto&& fun) const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>)
 	{
-		Bit valid_reg;
-		Payload data_reg = constructFrom(data);
-
-		IF(!valid_reg | *ready)
-		{
-			valid_reg = valid;
-			data_reg = data;
-		}
-
-		valid_reg = reg(valid_reg, '0', settings);
-		data_reg = reg(data_reg, settings);
-
-		Stream<Payload> ret{
-			.valid = valid_reg,
-			.data = data_reg
-		};
-		*ready = *ret.ready | !valid_reg;
+		auto&& result = std::invoke(fun, data);
+		Stream<std::remove_cvref_t<decltype(result)>, Meta...> ret;
+		ret.data = result;
+		ret._sig = _sig;
 		return ret;
 	}
 
-	template<Signal Payload>
-	inline Stream<Payload> Stream<Payload>::regUpstream(const RegisterSettings& settings)
+	template<Signal PayloadT, Signal ...Meta>
+	template<StreamSignal T>
+	inline T Stream<PayloadT, Meta...>::reduceTo()
 	{
-		Bit valid_reg;
-		Payload data_reg = constructFrom(data);
+		T ret;
+		ret.data <<= data;
 
-		// we are ready as long as our buffer is unused
-		*ready = !valid_reg;
+		std::apply([&](auto&... meta) {
+			((ret.get<std::remove_cvref_t<decltype(meta)>>() <<= meta), ...);
+		}, ret._sig);
+		return ret;
+	}
 
-		Stream<Payload> ret = {
-			.valid = valid,
-			.data = data
-		};
+	template<Signal PayloadT, Signal ...Meta>
+	template<StreamSignal T>
+	inline T Stream<PayloadT, Meta...>::reduceTo() const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>)
+	{
+		T ret{ data };
+		std::apply([&](auto&... meta) {
+			((ret.get<std::remove_cvref_t<decltype(meta)>>() = meta), ...);
+		}, ret._sig);
+		return ret;
+	}
 
-		IF(*ret.ready)
-			valid_reg = '0';
+	namespace internal
+	{
+		template<class Tr>
+		std::tuple<> remove_from_tuple(const std::tuple<>& t) { return {}; }
 
-		IF(!valid_reg)
+		template<class Tr, class T, class... To>
+		auto remove_from_tuple(std::tuple<T, To...>& t)
 		{
-			IF(!*ret.ready)
-				valid_reg = valid;
-			data_reg = data;
+			auto head = std::tie(std::get<0>(t));
+			auto tail = std::apply([](auto& tr, auto&... to) {
+				return std::tie(to...);
+			}, t);
+
+			if constexpr (std::is_same_v<std::remove_cvref_t<T>, Tr>)
+			{
+				return tail;
+			}
+			else if constexpr (sizeof...(To) > 0)
+			{
+				return std::tuple_cat(
+					head,
+					remove_from_tuple<Tr>(tail)
+				);
+			}
+			else
+			{
+				return head;
+			}
 		}
 
-		valid_reg = reg(valid_reg, '0', settings);
-		data_reg = reg(data_reg, settings);
-
-		IF(valid_reg)
+		template<class Tr, class T, class... To>
+		auto remove_from_tuple(const std::tuple<T, To...>& t)
 		{
-			ret.valid = '1';
-			ret.data = data_reg;
+			auto head = std::tie(std::get<0>(t));
+			auto tail = std::apply([](auto& tr, auto&... to) {
+				return std::tie(to...);
+				}, t);
+
+			if constexpr (std::is_same_v<std::remove_cvref_t<T>, Tr>)
+			{
+				return tail;
+			}
+			else if constexpr (sizeof...(To) > 0)
+			{
+				return std::tuple_cat(
+					head,
+					remove_from_tuple<Tr>(tail)
+				);
+			}
+			else
+			{
+				return head;
+			}
+		}
+	}
+
+	template<Signal PayloadT, Signal ...Meta>
+	template<Signal T>
+	inline auto Stream<PayloadT, Meta...>::remove()
+	{
+		auto metaRefs = internal::remove_from_tuple<T>(_sig);
+
+		return std::apply([&](auto&... meta) {
+			Stream<PayloadT, std::remove_cvref_t<decltype(meta)>...> ret;
+			ret.data <<= this->data;
+			downstream(ret._sig) = downstream(metaRefs);
+			upstream(metaRefs) = upstream(ret._sig);
+			return ret;
+		}, metaRefs);
+	}
+
+	template<Signal PayloadT, Signal ...Meta>
+	template<Signal T>
+	inline auto Stream<PayloadT, Meta...>::remove() const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>)
+	{
+		auto metaRefs = internal::remove_from_tuple<T>(_sig);
+
+		return std::apply([&](auto&... meta) {
+			return Stream<PayloadT, std::remove_cvref_t<decltype(meta)>...>{
+				this->data, metaRefs
+			};
+		}, metaRefs);
+	}
+
+	template<Signal PayloadT, Signal... Meta>
+	inline Stream<PayloadT, Meta...> gtry::scl::Stream<PayloadT, Meta...>::regDownstreamBlocking(const RegisterSettings& settings)
+	{
+		auto dsSig = constructFrom(copy(downstream(*this)));
+
+		IF(ready(*this))
+			dsSig = downstream(*this);
+
+		dsSig = reg(dsSig, settings);
+
+		Stream<PayloadT, Meta...> ret;
+		downstream(ret) = dsSig;
+		upstream(*this) = upstream(ret);
+		return ret;
+	}
+
+	template<Signal PayloadT, Signal... Meta>
+	inline Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::regDownstream(const RegisterSettings& settings)
+	{
+		Stream<PayloadT, Meta...> ret;
+
+		if constexpr (has<Ready>())
+		{
+			Bit valid_reg;
+			auto dsSig = constructFrom(copy(downstream(*this)));
+
+			IF(!valid_reg | ready(*this))
+			{
+				valid_reg = valid(*this);
+				dsSig = downstream(*this);
+			}
+
+			valid_reg = reg(valid_reg, '0', settings);
+			dsSig = reg(dsSig, settings);
+
+			downstream(ret) = dsSig;
+			upstream(*this) = upstream(ret);
+			ready(*this) |= !valid_reg;
+		}
+		else
+		{
+			downstream(ret) = reg(copy(downstream(*this)));
+			upstream(*this) = upstream(ret);
 		}
 		return ret;
 	}
 
-	template<Signal Payload>
-	inline Stream<Payload> Stream<Payload>::fifo(size_t minDepth)
+	template<Signal PayloadT, Signal... Meta>
+	inline Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::regReady(const RegisterSettings& settings)
 	{
-		Fifo<Payload> inst{ minDepth, data };
+		Stream<PayloadT, Meta...> ret;
+		ret <<= *this;
+
+		if constexpr (has<Ready>())
+		{
+			Bit valid_reg;
+			auto data_reg = constructFrom(copy(downstream(*this)));
+
+			// we are ready as long as our buffer is unused
+			ready(*this) = !valid_reg;
+
+			IF(ready(ret))
+				valid_reg = '0';
+
+			IF(!valid_reg)
+			{
+				IF(!ready(ret))
+					valid_reg = valid(*this);
+				data_reg = downstream(*this);
+			}
+
+			valid_reg = reg(valid_reg, '0', settings);
+			data_reg = reg(data_reg, settings);
+
+			IF(valid_reg)
+			{
+				valid(ret) = '1';
+				downstream(ret) = data_reg;
+			}
+		}
+		return ret;
+	}
+
+	template<Signal PayloadT, Signal... Meta>
+	inline Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::fifo(size_t minDepth)
+	{
+		Fifo inst{ minDepth, copy(downstream(*this)) };
 		Stream ret = fifo(inst);
 		inst.generate();
 		return ret;
 	}
 
-	template<Signal Payload>
-	inline Stream<Payload> gtry::scl::Stream<Payload>::fifo(Fifo<Payload>& instance)
+	template<Signal PayloadT, Signal... Meta>
+	template<Signal T>
+	inline Stream<PayloadT, Meta...> gtry::scl::Stream<PayloadT, Meta...>::fifo(Fifo<T>& instance)
 	{
 		connect(instance, *this);
 
-		Stream<Payload> ret = constructFrom(*this);
+		Stream<PayloadT, Meta...> ret;
 		connect(ret, instance);
 		return ret;
 	}
 
-	template<Signal T>
-	Stream<T> reg(Stream<T>& stream, const RegisterSettings& settings)
-	{
-		//return stream.regDownstreamBlocking(settings).regUpstream(settings);
-		return stream.regUpstream(settings).regDownstream(settings);
-	}
-
-	template<Signal T>
-	void connect(Fifo<T>& sink, Stream<T>& source)
+	template<Signal Tf, StreamSignal Ts>
+	void connect(Fifo<Tf>& sink, Ts& source)
 	{
 		IF(transfer(source))
-			sink.push(*source);
-		*source.ready = !sink.full();
+			sink.push(downstream(source));
+		ready(source) = !sink.full();
 	}
 
-	template<Signal T>
-	void connect(Stream<T>& sink, Fifo<T>& source)
+	template<StreamSignal Ts, Signal Tf>
+	void connect(Ts& sink, Fifo<Tf>& source)
 	{
-		sink.valid = !source.empty();
-		sink.data = source.peak();
-
+		downstream(sink) = source.peek();
+		valid(sink) = !source.empty();
+	
 		IF(transfer(sink))
 			source.pop();
 	}
+
+	template<StreamSignal T>
+	T reg(T& stream, const RegisterSettings& settings)
+	{
+		// we can use blocking reg here since regReady guarantees high ready signal
+		return stream.regDownstreamBlocking(settings).regReady(settings);
+	}
+
+	template<StreamSignal T>
+	T reg(const T& stream, const RegisterSettings& settings)
+	{
+		static_assert(!stream.has<Ready>(), "cannot create upstream register from const stream");
+		return stream.regDownstream(settings);
+	}
+
+	template<StreamSignal T>
+	struct VisitCompound<T>
+	{
+		void operator () (T& a, const T& b, CompoundVisitor& v, size_t flags)
+		{
+			std::apply([&](auto&... meta) {
+				(VisitCompound<std::remove_reference_t<decltype(meta)>>{}(
+					meta, b.get<std::remove_reference_t<decltype(meta)>>(), v)
+					, ...);
+			}, a._sig);
+
+			v.enter("data");
+			VisitCompound<typename T::Payload>{}(a.data, b.data, v, flags);
+			v.leave();
+		}
+
+		void operator () (T& a, CompoundVisitor& v)
+		{
+			std::apply([&](auto&... meta) {
+				(VisitCompound<std::remove_reference_t<decltype(meta)>>{}(meta, v), ...);
+			}, a._sig);
+
+			v.enter("data");
+			VisitCompound<typename T::Payload>{}(a.data, v);
+			v.leave();
+		}
+
+		void operator () (const T& a, const T& b, CompoundVisitor& v)
+		{
+			std::apply([&](auto&... meta) {
+				(VisitCompound<std::remove_reference_t<decltype(meta)>>{}(
+					meta, b.get<std::remove_reference_t<decltype(meta)>>(), v)
+					, ...);
+			}, a._sig);
+
+			v.enter("data");
+			VisitCompound<typename T::Payload>{}(a.data, b.data, v);
+			v.leave();
+		}
+	};
 }
+
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::Ready, ready);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::Valid, valid);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::Eop, eop);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::Sop, sop);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::ByteEnable, byteEnable);

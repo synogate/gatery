@@ -21,12 +21,10 @@
 using namespace gtry;
 
 
-gtry::scl::Stream<gtry::scl::UIntPair> gtry::scl::binaryGCDStep1(Stream<UIntPair>& in, size_t iterationsPerClock)
+gtry::scl::RvStream<gtry::scl::UIntPair> gtry::scl::binaryGCDStep1(RvStream<UIntPair>& in, size_t iterationsPerClock)
 {
 	const BitWidth width = in->first.width();
-	Stream<UIntPair> out{
-		.data = {width, width}
-	};
+	RvStream<UIntPair> out{ UIntPair{width, width} };
 
 	UInt a = width;
 	UInt b = width;
@@ -38,7 +36,7 @@ gtry::scl::Stream<gtry::scl::UIntPair> gtry::scl::binaryGCDStep1(Stream<UIntPair
 	HCL_NAMED(d);
 	HCL_NAMED(active);
 
-	*in.ready = !active;
+	ready(in) = !active;
 
 	IF(transfer(in))
 	{
@@ -75,7 +73,7 @@ gtry::scl::Stream<gtry::scl::UIntPair> gtry::scl::binaryGCDStep1(Stream<UIntPair
 		
 	}
 
-	out.valid = active & a == b;
+	valid(out) = active & a == b;
 	out->first = a;
 	out->second = b;
 
@@ -90,7 +88,7 @@ gtry::scl::Stream<gtry::scl::UIntPair> gtry::scl::binaryGCDStep1(Stream<UIntPair
 	return out;
 }
 
-gtry::scl::Stream<gtry::UInt> gtry::scl::shiftLeft(Stream<UIntPair>& in, size_t iterationsPerClock)
+gtry::scl::RvStream<gtry::UInt> gtry::scl::shiftLeft(RvStream<UIntPair>& in, size_t iterationsPerClock)
 {
 	UInt a = in->first.width();
 	UInt b = in->second.width();
@@ -99,7 +97,7 @@ gtry::scl::Stream<gtry::UInt> gtry::scl::shiftLeft(Stream<UIntPair>& in, size_t 
 	HCL_NAMED(b);
 	HCL_NAMED(active);
 
-	*in.ready = !active;
+	ready(in) = !active;
 
 	IF(transfer(in))
 	{
@@ -117,9 +115,9 @@ gtry::scl::Stream<gtry::UInt> gtry::scl::shiftLeft(Stream<UIntPair>& in, size_t 
 		}
 	}
 
-	Stream<UInt> out{ 
-		.valid = active & (b != 0),
-		.data = in->first.width(),
+	RvStream<UInt> out{
+		in->first.width(),
+		{Ready{}, Valid{active & (b != 0)}}
 	};
 	*out = a;
 
@@ -134,11 +132,11 @@ gtry::scl::Stream<gtry::UInt> gtry::scl::shiftLeft(Stream<UIntPair>& in, size_t 
 	return out;
 }
 
-gtry::scl::Stream<gtry::UInt> gtry::scl::binaryGCD(Stream<UIntPair>& in, size_t iterationsPerClock)
+gtry::scl::RvStream<gtry::UInt> gtry::scl::binaryGCD(RvStream<UIntPair>& in, size_t iterationsPerClock)
 {
 	auto area = Area{ "scl_gcd" }.enter();
 
-	Stream<UIntPair> step1 = binaryGCDStep1(in, iterationsPerClock);
+	RvStream<UIntPair> step1 = binaryGCDStep1(in, iterationsPerClock);
 	HCL_NAMED(step1);
 	auto step2 = shiftLeft(step1, iterationsPerClock);
 	HCL_NAMED(step2);

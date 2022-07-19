@@ -23,20 +23,20 @@
 
 namespace gtry::scl
 {
-	template<class T> concept HasValid = requires(T & t) { valid(t); };
-	template<class T> concept HasReady = requires(T & t) { ready(t); };
-	template<class T> concept HasTransfer = requires(T & t) { transfer(t); };
-	template<class T> concept HasEop = requires(T & t) { eop(t); };
-	template<class T> concept HasSop = requires(T & t) { sop(t); };
-
-	// default implementations for signals
-	template<Signal T> Bit ready(const T& signal) { return '1'; }
-	template<Signal T> Bit valid(const T& signal) { return '1'; }
-	template<Signal T> Bit transfer(const T& signal) { return valid(signal) & ready(signal); }
-	template<Signal T> Bit eop(const T& signal) { return '1'; }
-
-	template<class T> requires (HasEop<T> and HasTransfer<T>)
-	Bit sop(const T& signal) { return !flag(transfer(signal), eop(signal)); }
+	//template<class T> concept HasValid = requires(T & t) { valid(t); };
+	//template<class T> concept HasReady = requires(T & t) { ready(t); };
+	//template<class T> concept HasTransfer = requires(T & t) { transfer(t); };
+	//template<class T> concept HasEop = requires(T & t) { eop(t); };
+	//template<class T> concept HasSop = requires(T & t) { sop(t); };
+	//
+	//// default implementations for signals
+	//template<Signal T> Bit ready(const T& signal) { return '1'; }
+	//template<Signal T> Bit valid(const T& signal) { return '1'; }
+	//template<Signal T> Bit transfer(const T& signal) { return valid(signal) & ready(signal); }
+	//template<Signal T> Bit eop(const T& signal) { return '1'; }
+	//
+	//template<class T> requires (HasEop<T> and HasTransfer<T>)
+	//Bit sop(const T& signal) { return !flag(transfer(signal), eop(signal)); }
 }
 
 namespace gtry::scl::internal

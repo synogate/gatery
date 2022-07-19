@@ -19,6 +19,8 @@
 #include "BitWidth.h"
 
 #include <gatery/simulation/BitVectorState.h>
+#include <gatery/hlim/coreNodes/Node_Constant.h>
+#include <gatery/frontend/DesignScope.h>
 
 #include <gatery/utils/Preprocessor.h>
 #include <gatery/utils/Traits.h>
@@ -58,6 +60,29 @@ namespace gtry
 
 	std::ostream& operator << (std::ostream&, const ConstUInt&);
 #else
+
+	class UndefinedVec
+	{
+	public:
+		UndefinedVec(BitWidth width) : m_width(width) {}
+
+		template<BitVectorSignal T>
+		operator T () const
+		{
+			sim::DefaultBitVectorState value;
+			value.resize(m_width.bits());
+			value.setRange(sim::DefaultConfig::DEFINED, 0, m_width.bits(), false);
+
+			return SignalReadPort{ 
+				DesignScope::createNode<hlim::Node_Constant>(
+					value, hlim::ConnectionType::BITVEC
+				)
+			};
+		}
+
+	private:
+		BitWidth m_width;
+	};
 
 	BVec ConstBVec(uint64_t value, BitWidth width, std::string_view name = "");
 	BVec ConstBVec(BitWidth width, std::string_view name = ""); // undefined constant

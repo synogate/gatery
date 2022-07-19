@@ -25,7 +25,6 @@
 #include <gatery/simulation/Simulator.h>
 
 #include <gatery/scl/stream/StreamArbiter.h>
-#include <gatery/scl/stream/Packet.h>
 #include <gatery/scl/stream/adaptWidth.h>
 
 #include <gatery/debug/websocks/WebSocksInterface.h>
@@ -38,72 +37,73 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
 	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
-	scl::Stream<UInt> in0;
-	scl::Stream<UInt> in1;
+	scl::RvStream<UInt> in0;
+	scl::RvStream<UInt> in1;
 
-	in0.data = pinIn(8_b).setName("in0_data");
-	in0.valid = pinIn().setName("in0_valid");
-	pinOut(*in0.ready).setName("in0_ready");
+	*in0 = pinIn(8_b).setName("in0_data");
+	valid(in0)= pinIn().setName("in0_valid");
+	pinOut(ready(in0)).setName("in0_ready");
 
-	in1.data = pinIn(8_b).setName("in1_data");
-	in1.valid = pinIn().setName("in1_valid");
-	pinOut(*in1.ready).setName("in1_ready");
+	*in1 = pinIn(8_b).setName("in1_data");
+	valid(in1)= pinIn().setName("in1_valid");
+	pinOut(ready(in1)).setName("in1_ready");
 
-	scl::arbitrateInOrder uut{ in0, in1 };
-	pinOut(uut.data).setName("out_data");
-	pinOut(uut.valid).setName("out_valid");
-	*uut.ready = pinIn().setName("out_ready");
+	scl::arbitrateInOrder uutObj{ in0, in1 };
+	scl::RvStream<UInt>& uut = uutObj;
+	pinOut(*uut).setName("out_data");
+	pinOut(valid(uut)).setName("out_valid");
+	ready(uut) = pinIn().setName("out_ready");
 
 	addSimulationProcess([&]()->SimProcess {
-		simu(*uut.ready) = 1;
-		simu(in0.valid) = 0;
-		simu(in1.valid) = 0;
-		simu(in0.data) = 0;
-		simu(in1.data) = 0;
+		simu(ready(uut)) = 1;
+		simu(valid(in0)) = 0;
+		simu(valid(in1)) = 0;
+		simu(*in0) = 0;
+		simu(*in1) = 0;
 		co_await WaitClk(clock);
 
-		simu(in0.valid) = 0;
-		simu(in1.valid) = 1;
-		simu(in1.data) = 1;
+		simu(valid(in0)) = 0;
+		simu(valid(in1)) = 1;
+		simu(*in1) = 1;
 		co_await WaitClk(clock);
 
-		simu(in1.valid) = 0;
-		simu(in0.valid) = 1;
-		simu(in0.data) = 2;
+		simu(valid(in1)) = 0;
+		simu(valid(in0)) = 1;
+		simu(*in0) = 2;
 		co_await WaitClk(clock);
 
-		simu(in1.valid) = 1;
-		simu(in0.valid) = 1;
-		simu(in0.data) = 3;
-		simu(in1.data) = 4;
-		co_await WaitClk(clock);
-		co_await WaitClk(clock);
-
-		simu(in1.valid) = 1;
-		simu(in0.valid) = 1;
-		simu(in0.data) = 5;
-		simu(in1.data) = 6;
+		simu(valid(in1)) = 1;
+		simu(valid(in0)) = 1;
+		simu(*in0) = 3;
+		simu(*in1) = 4;
 		co_await WaitClk(clock);
 		co_await WaitClk(clock);
 
-		simu(in0.valid) = 0;
-		simu(in1.valid) = 1;
-		simu(in1.data) = 7;
+		simu(valid(in1)) = 1;
+		simu(valid(in0)) = 1;
+		simu(*in0) = 5;
+		simu(*in1) = 6;
+		co_await WaitClk(clock);
 		co_await WaitClk(clock);
 
-		simu(in1.valid) = 0;
-		simu(in0.valid) = 0;
-		simu(*uut.ready) = 0;
+		simu(valid(in0)) = 0;
+		simu(valid(in1)) = 1;
+		simu(*in1) = 7;
 		co_await WaitClk(clock);
 
-		simu(in1.valid) = 0;
-		simu(in0.valid) = 1;
-		simu(in0.data) = 8;
-		simu(*uut.ready) = 1;
+		simu(valid(in1)) = 0;
+		simu(valid(in0)) = 0;
+		simu(ready(uut)) = 0;
 		co_await WaitClk(clock);
 
-		simu(in1.valid) = 0;
-		simu(in0.valid) = 0;
+		simu(valid(in1)) = 0;
+		simu(valid(in0)) = 1;
+		simu(*in0) = 8;
+		simu(ready(uut)) = 1;
+		co_await WaitClk(clock);
+
+		simu(valid(in1)) = 0;
+		simu(valid(in0)) = 0;
 		co_await WaitClk(clock);
 	});
 
@@ -112,9 +112,9 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
 		size_t counter = 1;
 		while (true)
 		{
-			if (simu(*uut.ready) && simu(uut.valid))
+			if (simu(ready(uut)) && simu(valid(uut)))
 			{
-				BOOST_TEST(counter == simu(uut.data));
+				BOOST_TEST(counter == simu(*uut));
 				counter++;
 			}
 			co_await WaitClk(clock);
@@ -137,26 +137,27 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
-	scl::Stream<UInt> in0;
-	scl::Stream<UInt> in1;
+	scl::RvStream<UInt> in0;
+	scl::RvStream<UInt> in1;
 
-	in0.data = pinIn(8_b).setName("in0_data");
-	in0.valid = pinIn().setName("in0_valid");
-	pinOut(*in0.ready).setName("in0_ready");
+	*in0 = pinIn(8_b).setName("in0_data");
+	valid(in0) = pinIn().setName("in0_valid");
+	pinOut(ready(in0)).setName("in0_ready");
 
-	in1.data = pinIn(8_b).setName("in1_data");
-	in1.valid = pinIn().setName("in1_valid");
-	pinOut(*in1.ready).setName("in1_ready");
+	*in1 = pinIn(8_b).setName("in1_data");
+	valid(in1) = pinIn().setName("in1_valid");
+	pinOut(ready(in1)).setName("in1_ready");
 
-	scl::arbitrateInOrder uut{ in0, in1 };
-	pinOut(uut.data).setName("out_data");
-	pinOut(uut.valid).setName("out_valid");
-	*uut.ready = pinIn().setName("out_ready");
+	scl::arbitrateInOrder uutObj{ in0, in1 };
+	scl::RvStream<UInt>& uut = uutObj;
+	pinOut(*uut).setName("out_data");
+	pinOut(valid(uut)).setName("out_valid");
+	ready(uut) = pinIn().setName("out_ready");
 
 	addSimulationProcess([&]()->SimProcess {
-		simu(*uut.ready) = 1;
-		simu(in0.valid) = 0;
-		simu(in1.valid) = 0;
+		simu(ready(uut)) = 1;
+		simu(valid(in0)) = 0;
+		simu(valid(in1)) = 0;
 
 		std::mt19937 rng{ 10179 };
 		size_t counter = 1;
@@ -167,29 +168,29 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 			{
 				if(rng() % 2 == 0)
 				{
-					simu(in0.valid) = 1;
-					simu(in0.data) = counter++;
+					simu(valid(in0)) = 1;
+					simu(*in0) = counter++;
 				}
 				else
 				{
-					simu(in0.valid) = 0;
+					simu(valid(in0)) = 0;
 				}
 
 				if(rng() % 2 == 0)
 				{
-					simu(in1.valid) = 1;
-					simu(in1.data) = counter++;
+					simu(valid(in1)) = 1;
+					simu(*in1) = counter++;
 				}
 				else
 				{
-					simu(in1.valid) = 0;
+					simu(valid(in1)) = 0;
 				}
 			}
 
 			// chaos monkey
-			simu(*uut.ready) = rng() % 8 != 0 ? 1 : 0;
+			simu(ready(uut)) = rng() % 8 != 0 ? 1 : 0;
 
-			wasReady = simu(*in0.ready) != 0;
+			wasReady = simu(ready(in0)) != 0;
 
 			co_await WaitClk(clock);
 		}
@@ -201,9 +202,9 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 		size_t counter = 1;
 		while(true)
 		{
-			if(simu(*uut.ready) && simu(uut.valid))
+			if(simu(ready(uut)) && simu(valid(uut)))
 			{
-				BOOST_TEST(counter % 256 == simu(uut.data));
+				BOOST_TEST(counter % 256 == simu(*uut));
 				counter++;
 			}
 			co_await WaitClk(clock);
@@ -237,91 +238,91 @@ protected:
 
 	Clock m_clock = Clock({ .absoluteFrequency = 100'000'000 });
 
-	void simulateTransferTest(scl::Stream<UInt>& source, scl::Stream<UInt>& sink)
+	void simulateTransferTest(scl::RvStream<UInt>& source, scl::RvStream<UInt>& sink)
 	{
 		simulateBackPreassure(sink);
 		simulateSendData(source, m_groups++);
 		simulateRecvData(sink);
 	}
 
-	template<Signal T>
-	void simulateArbiterTestSink(scl::Stream<T>& sink)
+	template<scl::StreamSignal T>
+	void simulateArbiterTestSink(T& sink)
 	{
 		simulateBackPreassure(sink);
 		simulateRecvData(sink);
 	}
 
-	template<Signal T>
-	void simulateArbiterTestSource(scl::Stream<T>& source)
+	template<scl::StreamSignal T>
+	void simulateArbiterTestSource(T& source)
 	{
 		simulateSendData(source, m_groups++);
 	}
 
-	void In(scl::Stream<UInt>& stream, std::string prefix = "in_")
+	void In(scl::RvStream<UInt>& stream, std::string prefix = "in_")
 	{
-		gtry::pinOut(*stream.ready).setName(prefix + "ready");
-		stream.valid = gtry::pinIn().setName(prefix + "valid");
-		stream.data = gtry::pinIn(stream.data.width()).setName(prefix + "data");
+		gtry::pinOut(ready(stream)).setName(prefix + "ready");
+		valid(stream) = gtry::pinIn().setName(prefix + "valid");
+		*stream = gtry::pinIn(stream->width()).setName(prefix + "data");
 	}
 
-	void In(scl::Stream<scl::Packet<UInt>>& stream, std::string prefix = "in_")
+	void In(scl::RvPacketStream<UInt>& stream, std::string prefix = "in_")
 	{
-		gtry::pinOut(*stream.ready).setName(prefix + "ready");
-		stream.valid = gtry::pinIn().setName(prefix + "valid");
-		stream.data.eop = gtry::pinIn().setName(prefix + "eop");
-		*stream.data = gtry::pinIn(stream->width()).setName(prefix + "data");
+		gtry::pinOut(ready(stream)).setName(prefix + "ready");
+		valid(stream) = gtry::pinIn().setName(prefix + "valid");
+		eop(stream) = gtry::pinIn().setName(prefix + "eop");
+		*stream = gtry::pinIn(stream->width()).setName(prefix + "data");
 	}
 
-	void Out(scl::Stream<UInt>& stream, std::string prefix = "out_")
+	void Out(scl::RvStream<UInt>& stream, std::string prefix = "out_")
 	{
-		*stream.ready = gtry::pinIn().setName(prefix + "ready");
-		gtry::pinOut(stream.valid).setName(prefix + "valid");
-		gtry::pinOut(stream.data).setName(prefix + "data");
+		ready(stream) = gtry::pinIn().setName(prefix + "ready");
+		gtry::pinOut(valid(stream)).setName(prefix + "valid");
+		gtry::pinOut(*stream).setName(prefix + "data");
 	}
 
-	void Out(scl::Stream<scl::Packet<UInt>>& stream, std::string prefix = "out_")
+	void Out(scl::RvPacketStream<UInt>& stream, std::string prefix = "out_")
 	{
-		*stream.ready = gtry::pinIn().setName(prefix + "ready");
-		gtry::pinOut(stream.valid).setName(prefix + "valid");
-		gtry::pinOut(stream.data.eop).setName(prefix + "eop");
-		gtry::pinOut(*stream.data).setName(prefix + "data");
+		ready(stream) = gtry::pinIn().setName(prefix + "ready");
+		gtry::pinOut(valid(stream)).setName(prefix + "valid");
+		gtry::pinOut(eop(stream)).setName(prefix + "eop");
+		gtry::pinOut(*stream).setName(prefix + "data");
 	}
 
-	template<Signal T>
-	void simulateBackPreassure(scl::Stream<T>& stream)
+	template<scl::StreamSignal T>
+	void simulateBackPreassure(T& stream)
 	{
 		addSimulationProcess([&]()->SimProcess {
 			std::mt19937 rng{ std::random_device{}() };
 
-			simu(*stream.ready) = 0;
-			while(simu(stream.valid) == 0)
+			simu(ready(stream)) = 0;
+			while(simu(valid(stream)) == 0)
 				co_await WaitClk(m_clock);
 
 			while(true)
 			{
-				simu(*stream.ready) = rng() % 2;
+				simu(ready(stream)) = rng() % 2;
 				co_await WaitClk(m_clock);
 			}
 		});
 	}
 
-	void simulateSendData(scl::Stream<UInt>& stream, size_t group)
+	void simulateSendData(scl::RvStream<UInt>& stream, size_t group)
 	{
 		addSimulationProcess([=, &stream]()->SimProcess {
 			std::mt19937 rng{ std::random_device{}() };
 			for(size_t i = 0; i < m_transfers; ++i)
 			{
-				simu(stream.valid) = 0;
+				simu(valid(stream)) = 0;
 				simu(*stream).invalidate();
 
 				while((rng() & 1) == 0)
 					co_await WaitClk(m_clock);
 
-				simu(stream.valid) = 1;
+				simu(valid(stream)) = 1;
 				simu(*stream) = i + group * m_transfers;
 
 				co_await WaitFor(0);
-				while(simu(*stream.ready) == 0)  
+				while(simu(ready(stream)) == 0)  
 				{
 					co_await WaitClk(m_clock);
 					co_await WaitFor(0);
@@ -329,12 +330,12 @@ protected:
 
 				co_await WaitClk(m_clock);
 			}
-			simu(stream.valid) = 0;
+			simu(valid(stream)) = 0;
 			simu(*stream).invalidate();
 		});
 	}
 
-	void simulateSendData(scl::Stream<scl::Packet<UInt>>& stream, size_t group)
+	void simulateSendData(scl::RvPacketStream<UInt>& stream, size_t group)
 	{
 		addSimulationProcess([=, &stream]()->SimProcess {
 			std::mt19937 rng{ std::random_device{}() };
@@ -343,19 +344,19 @@ protected:
 				const size_t packetLen = std::min<size_t>(m_transfers - i, rng() % 5 + 1);
 				for(size_t j = 0; j < packetLen; ++j)
 				{
-					simu(stream.valid) = 0;
-					simu(stream.data.eop).invalidate();
-					simu(*stream.data).invalidate();
+					simu(valid(stream)) = 0;
+					simu(eop(stream)).invalidate();
+					simu(*stream).invalidate();
 
 					while((rng() & 1) == 0)
 						co_await WaitClk(m_clock);
 
-					simu(stream.valid) = 1;
-					simu(stream.data.eop) = j == packetLen - 1 ? 1 : 0;
-					simu(*stream.data) = i + j + group * m_transfers;
+					simu(valid(stream)) = 1;
+					simu(eop(stream)) = j == packetLen - 1 ? 1 : 0;
+					simu(*stream) = i + j + group * m_transfers;
 
 					co_await WaitFor(0);
-					while(simu(*stream.ready) == 0)
+					while(simu(ready(stream)) == 0)
 					{
 						co_await WaitClk(m_clock);
 						co_await WaitFor(0);
@@ -365,13 +366,13 @@ protected:
 				}
 				i += packetLen;
 			}
-			simu(stream.valid) = 0;
-			simu(*stream.data).invalidate();
+			simu(valid(stream)) = 0;
+			simu(*stream).invalidate();
 		});
 	}
 
-	template<Signal T>
-	void simulateRecvData(scl::Stream<T>& stream)
+	template<scl::StreamSignal T>
+	void simulateRecvData(const T& stream)
 	{
 		addSimulationProcess([=, &stream]()->SimProcess {
 			std::vector<size_t> expectedValue(m_groups);
@@ -379,13 +380,16 @@ protected:
 			{
 				co_await WaitFor(0);
 				co_await WaitFor(0);
-				if(simu(*stream.ready) == 1 &&
-					simu(stream.valid) == 1)
+				if(simu(ready(stream)) == 1 &&
+					simu(valid(stream)) == 1)
 				{
 					size_t data = simu(*(stream.operator ->()));
-					BOOST_ASSERT(data / m_transfers < expectedValue.size());
-					BOOST_TEST(data % m_transfers == expectedValue[data / m_transfers]);
-					expectedValue[data / m_transfers]++;
+					BOOST_TEST(data / m_transfers < expectedValue.size());
+					if (data / m_transfers < expectedValue.size())
+					{
+						BOOST_TEST(data % m_transfers == expectedValue[data / m_transfers]);
+						expectedValue[data / m_transfers]++;
+					}
 				}
 				co_await WaitClk(m_clock);
 
@@ -403,14 +407,37 @@ private:
 	size_t m_transfers = 16;
 };
 
-BOOST_FIXTURE_TEST_CASE(stream_downstreamReg, StreamTransferFixture)
+BOOST_FIXTURE_TEST_CASE(stream_transform, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::Stream<UInt> in{ .data = 5_b };
+	{
+		// const compile test
+		const scl::VStream<UInt, scl::Eop> vs{ 5_b };
+		auto res = vs.remove<scl::Eop>();
+		auto rsr = vs.reduceTo<scl::Stream<UInt>>();
+		auto vso = vs.transform(std::identity{});
+	}
+
+	scl::RvStream<UInt> in = scl::RvPacketStream<UInt, scl::Sop>{ 5_b }
+								.remove<scl::Sop>()
+								.reduceTo<scl::RvStream<UInt>>()
+								.remove<scl::Eop>();
 	In(in);
 
-	scl::Stream<UInt> out = in.regDownstream();
+	struct Intermediate
+	{
+		UInt data;
+		Bit test;
+	};
+
+	scl::RvStream<Intermediate> im = in
+		.reduceTo<scl::RvStream<UInt>>()
+		.transform([](const UInt& data) {
+			return Intermediate{ data, '1' };
+		});
+
+	scl::RvStream<UInt> out = im.transform(&Intermediate::data);
 	Out(out);
 
 	simulateTransferTest(in, out);
@@ -420,14 +447,30 @@ BOOST_FIXTURE_TEST_CASE(stream_downstreamReg, StreamTransferFixture)
 	runTicks(m_clock.getClk(), 1024);
 }
 
+BOOST_FIXTURE_TEST_CASE(stream_downstreamReg, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::RvStream<UInt> in{ .data = 5_b };
+	In(in);
+
+	scl::RvStream<UInt> out = in.regDownstream();
+	Out(out);
+
+	simulateTransferTest(in, out);
+
+	//recordVCD("stream_downstreamReg.vcd");
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
 BOOST_FIXTURE_TEST_CASE(stream_uptreamReg, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::Stream<UInt> in{ .data = 5_b };
+	scl::RvStream<UInt> in{ .data = 5_b };
 	In(in);
 
-	scl::Stream<UInt> out = in.regUpstream();
+	scl::RvStream<UInt> out = in.regReady();
 	Out(out);
 
 	simulateTransferTest(in, out);
@@ -436,15 +479,14 @@ BOOST_FIXTURE_TEST_CASE(stream_uptreamReg, StreamTransferFixture)
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(m_clock.getClk(), 1024);
 }
-
 BOOST_FIXTURE_TEST_CASE(stream_reg, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::Stream<UInt> in { .data = 10_b };
+	scl::RvStream<UInt> in { .data = 10_b };
 	In(in);
 
-	scl::Stream<UInt> out = reg(in);
+	scl::RvStream<UInt> out = reg(in);
 	Out(out);
 
 	simulateTransferTest(in, out);
@@ -453,15 +495,14 @@ BOOST_FIXTURE_TEST_CASE(stream_reg, StreamTransferFixture)
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(m_clock.getClk(), 1024);
 }
-
 BOOST_FIXTURE_TEST_CASE(stream_reg_chaining, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::Stream<UInt> in{ .data = 5_b };
+	scl::RvStream<UInt> in{ .data = 5_b };
 	In(in);
 
-	scl::Stream<UInt> out = in.regDownstreamBlocking().regDownstreamBlocking().regDownstreamBlocking().regDownstream();
+	scl::RvStream<UInt> out = in.regDownstreamBlocking().regDownstreamBlocking().regDownstreamBlocking().regDownstream();
 	Out(out);
 
 	simulateTransferTest(in, out);
@@ -475,10 +516,10 @@ BOOST_FIXTURE_TEST_CASE(stream_fifo, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::Stream<UInt> in{ .data = 10_b };
+	scl::RvStream<UInt> in{ .data = 10_b };
 	In(in);
 
-	scl::Stream<UInt> out = in.fifo();
+	scl::RvStream<UInt> out = in.fifo();
 	Out(out);
 
 	transfers(500);
@@ -488,15 +529,14 @@ BOOST_FIXTURE_TEST_CASE(stream_fifo, StreamTransferFixture)
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(m_clock.getClk(), 1024);
 }
-
 BOOST_FIXTURE_TEST_CASE(streamArbiter_low1, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::Stream<UInt> in{ .data = 10_b };
+	scl::RvStream<UInt> in{ .data = 10_b };
 	In(in);
 
-	scl::StreamArbiter<UInt> arbiter;
+	scl::StreamArbiter<scl::RvStream<UInt>> arbiter;
 	arbiter.attach(in);
 	arbiter.generate();
 
@@ -509,15 +549,16 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_low1, StreamTransferFixture)
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(m_clock.getClk(), 1024);
 }
+
 BOOST_FIXTURE_TEST_CASE(streamArbiter_low4, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::StreamArbiter<UInt> arbiter;
-	std::array<scl::Stream<UInt>, 4> in;
+	scl::StreamArbiter<scl::RvStream<UInt>> arbiter;
+	std::array<scl::RvStream<UInt>, 4> in;
 	for(size_t i = 0; i < in.size(); ++i)
 	{
-		in[i].data = 10_b;
+		*in[i] = 10_b;
 		In(in[i], "in" + std::to_string(i) + "_");
 		simulateArbiterTestSource(in[i]);
 		arbiter.attach(in[i]);
@@ -536,11 +577,11 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_low4_packet, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::StreamArbiter<scl::Packet<UInt>> arbiter;
-	std::array<scl::Stream<scl::Packet<UInt>>, 4> in;
+	scl::StreamArbiter<scl::RvPacketStream<UInt>> arbiter;
+	std::array<scl::RvPacketStream<UInt>, 4> in;
 	for(size_t i = 0; i < in.size(); ++i)
 	{
-		*in[i].data = 10_b;
+		*in[i] = 10_b;
 		In(in[i], "in" + std::to_string(i) + "_");
 		simulateArbiterTestSource(in[i]);
 		arbiter.attach(in[i]);
@@ -559,11 +600,11 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rr5, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::StreamArbiter<UInt, scl::ArbiterPolicyRoundRobin> arbiter;
-	std::array<scl::Stream<UInt>, 5> in;
-	for(size_t i = 0; i < in.size(); ++i)
+	scl::StreamArbiter<scl::RvStream<UInt>, scl::ArbiterPolicyRoundRobin> arbiter;
+	std::array<scl::RvStream<UInt>, 5> in;
+	for (size_t i = 0; i < in.size(); ++i)
 	{
-		in[i].data = 10_b;
+		*in[i] = 10_b;
 		In(in[i], "in" + std::to_string(i) + "_");
 		simulateArbiterTestSource(in[i]);
 		arbiter.attach(in[i]);
@@ -584,11 +625,11 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_reg_rr5, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::StreamArbiter<UInt, scl::ArbiterPolicyReg<scl::ArbiterPolicyRoundRobin>> arbiter;
-	std::array<scl::Stream<UInt>, 5> in;
-	for(size_t i = 0; i < in.size(); ++i)
+	scl::StreamArbiter<scl::RvStream<UInt>, scl::ArbiterPolicyReg<scl::ArbiterPolicyRoundRobin>> arbiter;
+	std::array<scl::RvStream<UInt>, 5> in;
+	for (size_t i = 0; i < in.size(); ++i)
 	{
-		in[i].data = 10_b;
+		*in[i] = 10_b;
 		In(in[i], "in" + std::to_string(i) + "_");
 		simulateArbiterTestSource(in[i]);
 		arbiter.attach(in[i]);
@@ -607,11 +648,11 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::StreamArbiter<UInt, scl::ArbiterPolicyRoundRobinBubble> arbiter;
-	std::array<scl::Stream<UInt>, 5> in;
+	scl::StreamArbiter<scl::RvStream<UInt>, scl::ArbiterPolicyRoundRobinBubble> arbiter;
+	std::array<scl::RvStream<UInt>, 5> in;
 	for(size_t i = 0; i < in.size(); ++i)
 	{
-		in[i].data = 10_b;
+		*in[i] = 10_b;
 		In(in[i], "in" + std::to_string(i) + "_");
 		simulateArbiterTestSource(in[i]);
 		arbiter.attach(in[i]);
@@ -630,11 +671,11 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5_packet, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::StreamArbiter<scl::Packet<UInt>, scl::ArbiterPolicyRoundRobinBubble> arbiter;
-	std::array<scl::Stream<scl::Packet<UInt>>, 5> in;
+	scl::StreamArbiter<scl::RvPacketStream<UInt>, scl::ArbiterPolicyRoundRobinBubble> arbiter;
+	std::array<scl::RvPacketStream<UInt>, 5> in;
 	for(size_t i = 0; i < in.size(); ++i)
 	{
-		*in[i].data = 10_b;
+		*in[i] = 10_b;
 		In(in[i], "in" + std::to_string(i) + "_");
 		simulateArbiterTestSource(in[i]);
 		arbiter.attach(in[i]);
@@ -649,32 +690,85 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5_packet, StreamTransferFixture)
 	runTicks(m_clock.getClk(), 1024);
 }
 
-BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_narrow, StreamTransferFixture)
+BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::Stream<UInt> in{
-		.data = 24_b
-	};
+	{
+		// add valid no ready compile test
+		scl::Stream<UInt> inT{ 4_b };
+		auto outT = scl::extendWidth(inT, 8_b);
+	}
+	{
+		// add valid compile test
+		scl::Stream<UInt, scl::Ready> inT{ 4_b };
+		auto outT = scl::extendWidth(inT, 8_b);
+	}
+
+	scl::RvStream<UInt> in{ 4_b };
 	In(in);
 
-	scl::Stream<UInt> out = scl::adaptWidth(in, 8_b);
+	auto out = scl::extendWidth(in, 8_b);
 	Out(out);
 
 	// send data
 	addSimulationProcess([=, &in]()->SimProcess {
-		simu(in.valid) = 0;
+		simu(valid(in)) = 0;
+		simu(*in).invalidate();
+		for (size_t i = 0; i < 4; ++i)
+			co_await WaitClk(m_clock);
+
+		for (size_t i = 0; i < 32; ++i)
+		{
+			for (size_t j = 0; j < 2; ++j)
+			{
+				simu(valid(in)) = 1;
+				simu(*in) = (i >> (j * 4)) & 0xF;
+
+				co_await WaitFor(0);
+				while (simu(ready(in)) == 0)
+					co_await WaitClk(m_clock);
+				co_await WaitClk(m_clock);
+			}
+		}
+		});
+
+	transfers(32);
+	groups(1);
+	simulateBackPreassure(out);
+	simulateRecvData(out);
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	//dbg::vis();
+	
+	runTicks(m_clock.getClk(), 1024);
+}
+
+
+BOOST_FIXTURE_TEST_CASE(stream_reduceWidth, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::RvStream<UInt> in{ 24_b };
+	In(in);
+
+	scl::RvStream<UInt> out = scl::reduceWidth(in, 8_b);
+	Out(out);
+
+	// send data
+	addSimulationProcess([=, &in]()->SimProcess {
+		simu(valid(in)) = 0;
 		simu(*in).invalidate();
 
 		for(size_t i = 0; i < 8; ++i)
 		{
-			simu(in.valid) = 1;
+			simu(valid(in)) = 1;
 			simu(*in) =
 				((i * 3 + 0) << 0) |
 				((i * 3 + 1) << 8) |
 				((i * 3 + 2) << 16);
 			co_await WaitFor(0);
-			while(simu(*in.ready) == 0)
+			while(simu(ready(in)) == 0)
 				co_await WaitClk(m_clock);
 			co_await WaitClk(m_clock);
 		}
@@ -689,81 +783,35 @@ BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_narrow, StreamTransferFixture)
 	runTicks(m_clock.getClk(), 1024);
 }
 
-BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_packet_narrow, StreamTransferFixture)
+BOOST_FIXTURE_TEST_CASE(stream_reduceWidth_RvPacketStream, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::Stream<scl::Packet<UInt>> in{
-		.data = { .data = 24_b }
-	};
+	scl::RvPacketStream<UInt> in{ 24_b };
 	In(in);
 
-	scl::Stream<scl::Packet<UInt>> out = scl::adaptWidth(in, 8_b);
+	auto out = scl::reduceWidth(in, 8_b);
 	Out(out);
-
 
 	// send data
 	addSimulationProcess([=, &in]()->SimProcess {
-		simu(in.valid) = 0;
-		simu(*in.data).invalidate();
-
 		for(size_t i = 0; i < 8; ++i)
 		{
-			simu(in.valid) = 1;
-			simu(in.data.eop) = i % 2 == 1;
-			simu(*in.data) =
+			simu(valid(in)) = 1;
+			simu(eop(in)) = i % 2 == 1;
+			simu(*in) =
 				((i * 3 + 0) << 0) |
 				((i * 3 + 1) << 8) |
 				((i * 3 + 2) << 16);
+
 			co_await WaitFor(0);
-			while(simu(*in.ready) == 0)
+			while(simu(ready(in)) == 0)
 				co_await WaitClk(m_clock);
 			co_await WaitClk(m_clock);
 		}
 	});
 
 	transfers(8 * 3);
-	groups(1);
-	simulateBackPreassure(out);
-	simulateRecvData(out);
-
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-	runTicks(m_clock.getClk(), 1024);
-}
-
-BOOST_FIXTURE_TEST_CASE(stream_adaptWidth_widen, StreamTransferFixture)
-{
-	ClockScope clkScp(m_clock);
-
-	scl::Stream<UInt> in{
-		.data = 4_b
-	};
-	In(in);
-
-	scl::Stream<UInt> out = scl::adaptWidth(in, 8_b);
-	Out(out);
-
-	// send data
-	addSimulationProcess([=, &in]()->SimProcess {
-		simu(in.valid) = 0;
-		simu(*in).invalidate();
-
-		for(size_t i = 0; i < 32; ++i)
-		{
-			for(size_t j = 0; j < 2; ++j)
-			{
-				simu(in.valid) = 1;
-				simu(*in) = (i >> (j * 4)) & 0xF;
-
-				co_await WaitFor(0);
-				while(simu(*in.ready) == 0)
-					co_await WaitClk(m_clock);
-				co_await WaitClk(m_clock);
-			}
-		}
-	});
-
-	transfers(32);
 	groups(1);
 	simulateBackPreassure(out);
 	simulateRecvData(out);
@@ -776,29 +824,28 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::Stream<scl::Packet<UInt>> in;
-	in.data.data = 8_b;
+	scl::RvPacketStream<UInt> in{ 8_b };
 	In(in);
 
-	scl::Stream<scl::Packet<UInt>> out = scl::eraseBeat(in, 0, 1);
+	scl::RvPacketStream<UInt> out = scl::eraseBeat(in, 0, 1);
 	Out(out);
 
 	// send data
 	addSimulationProcess([=, &in]()->SimProcess {
-		simu(in.valid) = 0;
-		simu(*in.data).invalidate();
+		simu(valid(in)) = 0;
+		simu(*in).invalidate();
 		co_await WaitClk(m_clock);
 
 		for(size_t i = 0; i < 32; i += 4)
 		{
 			for(size_t j = 0; j < 5; ++j)
 			{
-				simu(in.valid) = 1;
-				simu(*in.data) = uint8_t(i + j - 1);
-				simu(in.data.eop) = j == 4 ? 1 : 0;
+				simu(valid(in)) = 1;
+				simu(*in) = uint8_t(i + j - 1);
+				simu(eop(in)) = j == 4 ? 1 : 0;
 
 				co_await WaitFor(0);
-				while(simu(*in.ready) == 0)
+				while(simu(ready(in)) == 0)
 					co_await WaitClk(m_clock);
 				co_await WaitClk(m_clock);
 			}
@@ -818,29 +865,28 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseLastBeat, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::Stream<scl::Packet<UInt>> in;
-	in.data.data = 8_b;
+	scl::RvPacketStream<UInt> in{ 8_b };
 	In(in);
 
-	scl::Stream<scl::Packet<UInt>> out = scl::eraseLastBeat(in);
+	scl::RvPacketStream<UInt> out = scl::eraseLastBeat(in);
 	Out(out);
 
 	// send data
 	addSimulationProcess([=, &in]()->SimProcess {
-		simu(in.valid) = 0;
-		simu(*in.data).invalidate();
+		simu(valid(in)) = 0;
+		simu(*in).invalidate();
 		co_await WaitClk(m_clock);
 
 		for(size_t i = 0; i < 32; i += 4)
 		{
 			for(size_t j = 0; j < 5; ++j)
 			{
-				simu(in.valid) = 1;
-				simu(*in.data) = uint8_t(i + j);
-				simu(in.data.eop) = j == 4 ? 1 : 0;
+				simu(valid(in)) = 1;
+				simu(*in) = uint8_t(i + j);
+				simu(eop(in)) = j == 4 ? 1 : 0;
 
 				co_await WaitFor(0);
-				while(simu(*in.ready) == 0)
+				while(simu(ready(in)) == 0)
 					co_await WaitClk(m_clock);
 				co_await WaitClk(m_clock);
 			}
@@ -860,31 +906,30 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::Stream<scl::Packet<UInt>> in;
-	in.data.data = 8_b;
+	scl::RvPacketStream<UInt> in{ 8_b };
 	In(in);
 
 	UInt insertData = pinIn(8_b).setName("insertData");
-	scl::Stream<scl::Packet<UInt>> out = scl::insertBeat(in, 0, insertData);
+	scl::RvPacketStream<UInt> out = scl::insertBeat(in, 0, insertData);
 	Out(out);
 
 	// send data
 	addSimulationProcess([=, &in]()->SimProcess {
-		simu(in.valid) = 0;
-		simu(*in.data).invalidate();
+		simu(valid(in)) = 0;
+		simu(*in).invalidate();
 		co_await WaitClk(m_clock);
 
 		for(size_t i = 0; i < 32; i += 4)
 		{
 			for(size_t j = 0; j < 3; ++j)
 			{
-				simu(in.valid) = 1;
+				simu(valid(in)) = 1;
 				simu(insertData) = i + j;
-				simu(*in.data) = uint8_t(i + j + 1);
-				simu(in.data.eop) = j == 2 ? 1 : 0;
+				simu(*in) = uint8_t(i + j + 1);
+				simu(eop(in)) = j == 2 ? 1 : 0;
 
 				co_await WaitFor(0);
-				while(simu(*in.ready) == 0)
+				while(simu(ready(in)) == 0)
 					co_await WaitClk(m_clock);
 				co_await WaitClk(m_clock);
 			}
@@ -900,30 +945,29 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 	runTicks(m_clock.getClk(), 1024);
 }
 
-BOOST_FIXTURE_TEST_CASE(stream_makePacketStreamDeffered, StreamTransferFixture)
+BOOST_FIXTURE_TEST_CASE(stream_addEopDeferred, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::Stream<UInt> in;
-	in.data = 8_b;
+	scl::RvStream<UInt> in{ 8_b };
 	In(in);
 
 	Bit eop = pinIn().setName("eop");
-	scl::Stream<scl::Packet<UInt>> out = scl::makePacketStream(in, eop, true);
+	scl::RvPacketStream<UInt> out = scl::addEopDeferred(in, eop);
 	Out(out);
 
-	// send data
+	// generate eop insert signal
 	addSimulationProcess([=, &in]()->SimProcess {
 		
 		simu(eop) = 0;
 		while(true)
 		{
-			while(simu(in.valid) == 0)
+			while(simu(valid(in)) == 0)
 			{
 				co_await WaitClk(m_clock);
 				co_await WaitFor(0);
 			}
-			while(simu(in.valid) == 1)
+			while(simu(valid(in)) == 1)
 			{
 				co_await WaitClk(m_clock);
 				co_await WaitFor(0);

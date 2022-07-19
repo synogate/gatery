@@ -217,10 +217,6 @@ namespace gtry::sim
 		auto ratTickIdx = simulationTime / hlim::ClockRational(1, 1'000'000'000'000ull);
 		size_t tickIdx = ratTickIdx.numerator() / ratTickIdx.denominator();
 		m_VCD.writeTime(tickIdx);
-
-
-		m_gtkWaveProjectFile.setZoom(0, simulationTime);
-		m_gtkWaveProjectFile.write((m_gtkWaveProjectFile.getWaveformFile()+".gtkw").c_str());
 	}
 
 	void VCDSink::onClock(const hlim::Clock* clock, bool risingEdge)

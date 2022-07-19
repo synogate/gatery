@@ -20,7 +20,7 @@
 #include "../cdc.h"
 #include "../Counter.h"
 
-gtry::scl::DownStream<gtry::UInt> gtry::scl::recoverDataDifferential(hlim::ClockRational signalClock, Bit ioP, Bit ioN)
+gtry::scl::VStream<gtry::UInt> gtry::scl::recoverDataDifferential(hlim::ClockRational signalClock, Bit ioP, Bit ioN)
 {
 	auto scope = Area{ "scl_recoverDataDifferential" }.enter();
 
@@ -36,6 +36,7 @@ gtry::scl::DownStream<gtry::UInt> gtry::scl::recoverDataDifferential(hlim::Clock
 	HCL_NAMED(n);
 
 	Counter phaseCounter{ samples };
+	phaseCounter.inc();
 	
 	// recover clock and shift sample point
 	Bit edgeDetected;
@@ -49,9 +50,10 @@ gtry::scl::DownStream<gtry::UInt> gtry::scl::recoverDataDifferential(hlim::Clock
 	edgeDetected = reg(edgeDetected, '0');
 	
 	// sample data based on clock estimate
-	DownStream<UInt> out;
-	out.valid = phaseCounter.isLast();
-	out.data = cat(n, p);
+	VStream<UInt> out{
+		cat(n, p),
+		Valid{ phaseCounter.isLast() }
+	};
 	HCL_NAMED(out);
 	return out;
 }
