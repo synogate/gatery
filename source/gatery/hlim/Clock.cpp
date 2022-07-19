@@ -21,7 +21,10 @@
 #include "../utils/Exceptions.h"
 #include "../utils/Preprocessor.h"
 
-#include "../hlim/Node.h"
+#include "Node.h"
+#include "coreNodes/Node_Signal2Clk.h"
+#include "coreNodes/Node_Signal2Rst.h"
+#include "supportNodes/Node_ExportOverride.h"
 
 namespace gtry::hlim {
 	
@@ -98,23 +101,36 @@ const std::vector<NodePort>& Clock::getClockedNodes() const
 	return m_clockedNodesCache;
 }
 
-
-Clock *Clock::getClockPinSource()
+bool Clock::inheritsClockPinSource() const
 {
 	if (m_parentClock == nullptr)
-		return this;
+		return false;
+
+	if (!isSelfDriven(true, true) || !isSelfDriven(false, true))
+		return false;
 
 	if (m_parentClock->getName() != getName() ||
 		m_parentClock->absoluteFrequency() != absoluteFrequency() ||
 		!m_phaseSynchronousWithParent)
-		return this;
+		return false;
 
-	return m_parentClock->getClockPinSource();
+	return true;
+}
+
+Clock *Clock::getClockPinSource()
+{
+	if (inheritsClockPinSource())
+		return m_parentClock->getClockPinSource();
+	else
+		return this;
 }
 
 bool Clock::inheritsResetPinSource() const
 {
 	if (m_parentClock == nullptr)
+		return false;
+
+	if (!isSelfDriven(true, false) || !isSelfDriven(false, false))
 		return false;
 
 	if (m_parentClock->getResetName() != getResetName())
@@ -131,7 +147,54 @@ Clock *Clock::getResetPinSource()
 		return this;
 }
 
+void Clock::setLogicClockDriver(Node_Signal2Clk *driver)
+{
+	if (m_clockDriver != nullptr)
+		m_clockDriver->setClock(nullptr);
+	m_clockDriver = driver;
+	m_clockDriver->setClock(this);
+}
 
+void Clock::setLogicResetDriver(Node_Signal2Rst *driver)
+{
+	if (m_resetDriver != nullptr)
+		m_resetDriver->setClock(nullptr);
+	m_resetDriver = driver;
+	m_resetDriver->setClock(this);
+}
+
+bool Clock::isSelfDriven(bool simulation, bool clk) const
+{
+	return getLogicDriver(simulation, clk).node == nullptr;
+}
+
+NodePort Clock::getLogicDriver(bool simulation, bool clk) const
+{
+	NodePort driver;
+	if (m_clockDriver != nullptr)
+		if (clk)
+			driver = m_clockDriver->getNonSignalDriver(0);
+		else
+			driver = m_resetDriver->getNonSignalDriver(0);
+
+	std::set<NodePort> alreadyVisited;
+
+	while (driver.node != nullptr) {
+		if (alreadyVisited.contains(driver)) return {};
+		alreadyVisited.insert(driver);
+
+		auto *expOverride = dynamic_cast<Node_ExportOverride*>(driver.node);
+		if (expOverride) {
+			if (simulation)
+				driver = expOverride->getNonSignalDriver(Node_ExportOverride::Inputs::SIM_INPUT);
+			else
+				driver = expOverride->getNonSignalDriver(Node_ExportOverride::Inputs::EXP_INPUT);
+		} else
+			return driver;
+	}
+
+	return {};
+}
 
 
 RootClock::RootClock(std::string name, ClockRational frequency) : m_frequency(frequency)
@@ -198,5 +261,7 @@ std::unique_ptr<Clock> DerivedClock::allocateClone(Clock *newParent)
 {
 	return std::unique_ptr<Clock>(new DerivedClock(newParent));
 }
-		
+
+
+
 }

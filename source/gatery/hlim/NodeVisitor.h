@@ -20,6 +20,8 @@
 namespace gtry::hlim {
 
 class Node_Arithmetic;
+class Node_Signal2Clk;
+class Node_Signal2Rst;
 class Node_Clk2Signal;
 class Node_ClkRst2Signal;
 class Node_Compare;
@@ -53,6 +55,8 @@ class NodeVisitor
 {
 	public:
 		virtual void operator()(Node_Arithmetic &node) = 0;
+		virtual void operator()(Node_Signal2Clk &node) = 0;
+		virtual void operator()(Node_Signal2Rst &node) = 0;
 		virtual void operator()(Node_Clk2Signal &node) = 0;
 		virtual void operator()(Node_ClkRst2Signal &node) = 0;
 		virtual void operator()(Node_Compare &node) = 0;
@@ -83,6 +87,8 @@ class ConstNodeVisitor
 {
 	public:
 		virtual void operator()(const Node_Arithmetic &node) = 0;
+		virtual void operator()(const Node_Signal2Clk &node) = 0;
+		virtual void operator()(const Node_Signal2Rst &node) = 0;
 		virtual void operator()(const Node_Clk2Signal &node) = 0;
 		virtual void operator()(const Node_ClkRst2Signal &node) = 0;
 		virtual void operator()(const Node_Compare &node) = 0;

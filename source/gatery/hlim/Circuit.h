@@ -136,6 +136,7 @@ class Circuit
 		void foldRegisterMuxEnableLoops(Subnet &subnet);
 		void propagateConstants(Subnet &subnet);
 		void removeConstSelectMuxes(Subnet &subnet);
+		void moveClockDriversToTop();
 
 		void removeFalseLoops();
 

@@ -19,20 +19,32 @@
 #include "../Node.h"
 
 namespace gtry::hlim {
-	
-class Node_Clk2Signal : public Node<Node_Clk2Signal>
+
+
+/**
+ * @brief A sink for boolean signals that drive a clock
+ * @details Acts as the interfacing node to clocks, keeping the signal alive if bound to a clock.
+ */
+class Node_Signal2Clk : public Node<Node_Signal2Clk>
 {
 	public:
-		Node_Clk2Signal();
+		Node_Signal2Clk();
+
+		void connect(const NodePort &np);
 		
 		virtual std::string getTypeName() const override;
 		virtual void assertValidity() const override;
 		virtual std::string getInputName(size_t idx) const override;
 		virtual std::string getOutputName(size_t idx) const override;
 
+		virtual bool hasSideEffects() const { return m_clocks[0] != nullptr; }
+		virtual bool isCombinatorial() const { return true; }
+
 		void setClock(Clock *clk);
 
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
+		virtual bool checkValidInputClocks(std::span<SignalClockDomain> inputClocks) const override { return true; }
+
 	protected:
 };
 

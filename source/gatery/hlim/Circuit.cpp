@@ -31,6 +31,8 @@
 #include "coreNodes/Node_Register.h"
 #include "coreNodes/Node_Constant.h"
 #include "coreNodes/Node_Compare.h"
+#include "coreNodes/Node_Signal2Clk.h"
+#include "coreNodes/Node_Signal2Rst.h"
 
 #include "supportNodes/Node_Attributes.h"
 
@@ -1126,6 +1128,16 @@ void Circuit::duplicateSignalsFeedingLowerAndHigherAreas()
 }
 
 
+void Circuit::moveClockDriversToTop()
+{
+	for (auto &n : m_nodes) {
+		if (auto *sig2clk = dynamic_cast<Node_Signal2Clk*>(n.get()))
+			sig2clk->moveToGroup(m_root.get());
+		if (auto *sig2rst = dynamic_cast<Node_Signal2Rst*>(n.get()))
+			sig2rst->moveToGroup(m_root.get());
+	}
+}
+
 void Circuit::optimizeSubnet(Subnet &subnet)
 {
 	//defaultValueResolution(*this, subnet);
@@ -1205,6 +1217,7 @@ void DefaultPostprocessing::memoryDetection(Circuit &circuit) const
 
 void DefaultPostprocessing::exportPreparation(Circuit &circuit) const
 {
+	circuit.moveClockDriversToTop();
 	circuit.ensureSignalNodePlacement();
 	circuit.duplicateSignalsFeedingLowerAndHigherAreas();
 	circuit.inferSignalNames();

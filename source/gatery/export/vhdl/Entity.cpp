@@ -210,16 +210,22 @@ std::vector<std::string> Entity::getPortsVHDL()
 
 	size_t clockOffset = 0;
 
+	bool isRoot = m_parent == nullptr;
+
 	for (const auto &clk : m_inputClocks) {
-		std::stringstream line;
-		line << m_namespaceScope.getClock(clk).name << " : IN STD_LOGIC";
-		unsortedPortList.push_back({clockOffset++, line.str()});
+		if (clk->isSelfDriven(false, true) || !isRoot) {
+			std::stringstream line;
+			line << m_namespaceScope.getClock(clk).name << " : IN STD_LOGIC";
+			unsortedPortList.push_back({clockOffset++, line.str()});
+		}
 	}
 
 	for (const auto &clk : m_inputResets) {
-		std::stringstream line;
-		line << m_namespaceScope.getReset(clk).name << " : IN STD_LOGIC";
-		unsortedPortList.push_back({clockOffset++, line.str()});
+		if (clk->isSelfDriven(false, false) || !isRoot) {
+			std::stringstream line;
+			line << m_namespaceScope.getReset(clk).name << " : IN STD_LOGIC";
+			unsortedPortList.push_back({clockOffset++, line.str()});
+		}
 	}
 
 	for (auto &ioPin : m_ioPins) {
@@ -328,18 +334,23 @@ void Entity::writeInstantiationVHDL(std::ostream &stream, unsigned indent, const
 
 	std::vector<std::string> portmapList;
 
+	bool isRoot = m_parent == nullptr;
 
 	for (auto &s : m_inputClocks) {
-		std::stringstream line;
-		line << m_namespaceScope.getClock(s).name << " => ";
-		line << m_parent->getNamespaceScope().getClock(s).name;
-		portmapList.push_back(line.str());
+		if (s->isSelfDriven(false, true) || !isRoot) {
+			std::stringstream line;
+			line << m_namespaceScope.getClock(s).name << " => ";
+			line << m_parent->getNamespaceScope().getClock(s).name;
+			portmapList.push_back(line.str());
+		}
 	}
 	for (auto &s : m_inputResets) {
-		std::stringstream line;
-		line << m_namespaceScope.getReset(s).name << " => ";
-		line << m_parent->getNamespaceScope().getReset(s).name;
-		portmapList.push_back(line.str());
+		if (s->isSelfDriven(false, false) || !isRoot) {
+			std::stringstream line;
+			line << m_namespaceScope.getReset(s).name << " => ";
+			line << m_parent->getNamespaceScope().getReset(s).name;
+			portmapList.push_back(line.str());
+		}
 	}	
 	for (auto &s : m_ioPins) {
 		const auto &decl = m_namespaceScope.get(s);

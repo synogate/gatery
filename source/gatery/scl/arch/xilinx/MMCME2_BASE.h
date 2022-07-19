@@ -16,24 +16,64 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-#include "../Node.h"
 
-namespace gtry::hlim {
-	
-class Node_Clk2Signal : public Node<Node_Clk2Signal>
+#include <gatery/hlim/supportNodes/Node_External.h>
+
+#include <gatery/frontend.h>
+
+
+namespace gtry::scl::arch::xilinx {
+
+class MMCME2_BASE : public gtry::hlim::Node_External
 {
 	public:
-		Node_Clk2Signal();
-		
+		enum Clocks {
+			CLK_IN,
+			CLK_COUNT
+		};
+
+		enum Inputs {
+			IN_PWRDWN,
+			IN_CLKFBIN,
+
+			IN_COUNT
+		};
+		enum Outputs {
+        	OUT_CLKOUT0,
+        	OUT_CLKOUT0B,
+        	OUT_CLKOUT1,
+        	OUT_CLKOUT1B,
+        	OUT_CLKOUT2,
+        	OUT_CLKOUT2B,
+        	OUT_CLKOUT3,
+        	OUT_CLKOUT3B,
+        	OUT_CLKOUT4,
+        	OUT_CLKOUT5,
+        	OUT_CLKOUT6,
+        	OUT_CLKFBOUT,
+        	OUT_CLKFBOUTB,
+        	OUT_LOCKED,
+
+			OUT_COUNT
+		};
+
+		MMCME2_BASE();
+
+		void setInput(Inputs input, const Bit &bit);
+		Bit getOutput(Outputs output);
+
+		void setClock(hlim::Clock *clock);
+
 		virtual std::string getTypeName() const override;
 		virtual void assertValidity() const override;
 		virtual std::string getInputName(size_t idx) const override;
 		virtual std::string getOutputName(size_t idx) const override;
 
-		void setClock(Clock *clk);
-
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
+
+		virtual std::string attemptInferOutputName(size_t outputPort) const override;
 	protected:
 };
+
 
 }

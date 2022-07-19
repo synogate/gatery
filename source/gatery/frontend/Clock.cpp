@@ -22,6 +22,9 @@
 #include "trace.h"
 
 #include <gatery/hlim/coreNodes/Node_Clk2Signal.h>
+#include <gatery/hlim/coreNodes/Node_ClkRst2Signal.h>
+#include <gatery/hlim/coreNodes/Node_Signal2Rst.h>
+#include <gatery/hlim/coreNodes/Node_Signal2Clk.h>
 #include <gatery/hlim/coreNodes/Node_Register.h>
 
 #include <external/magic_enum.hpp>
@@ -217,17 +220,33 @@ namespace gtry
 		return Clock(DesignScope::createClock<hlim::DerivedClock>(m_clock), config);
 	}
 
-	/*
-	Bit Clock::driveSignal()
+	Bit Clock::clkSignal()
 	{
-		hlim::Node_Clk2Signal *node = DesignScope::createNode<hlim::Node_Clk2Signal>();
-		node->recordStackTrace();
-
+		auto *node = DesignScope::createNode<hlim::Node_Clk2Signal>();
 		node->setClock(m_clock);
-
 		return SignalReadPort(node);
 	}
-	*/
+
+	Bit Clock::rstSignal()
+	{
+		auto *node = DesignScope::createNode<hlim::Node_ClkRst2Signal>();
+		node->setClock(m_clock);
+		return SignalReadPort(node);
+	}
+
+	void Clock::overrideClkWith(const Bit &clkOverride)
+	{
+		auto *node = DesignScope::createNode<hlim::Node_Signal2Clk>();
+		node->connect(clkOverride.readPort());
+		m_clock->setLogicClockDriver(node);
+	}
+
+	void Clock::overrideRstWith(const Bit &rstOverride)
+	{
+		auto *node = DesignScope::createNode<hlim::Node_Signal2Rst>();
+		node->connect(rstOverride.readPort());
+		m_clock->setLogicResetDriver(node);
+	}
 
 	hlim::Node_Register *Clock::prepRegister(std::string_view name, const RegisterSettings& settings) const
 	{
