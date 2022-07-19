@@ -137,9 +137,6 @@ namespace gtry::scl::riscv
 
 	void CallReturnTraceProfiler::onCall(uint64_t cycle, uint64_t target, std::string_view function)
 	{
-		if (function == "put_int")
-			__debugbreak();
-
 		std::string f{ function };
 		if (!m_stack.empty())
 		{
