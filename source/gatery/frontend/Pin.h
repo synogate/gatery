@@ -20,6 +20,7 @@
 #include "DesignScope.h"
 
 #include "Signal.h"
+#include "Compound.h"
 
 #include <gatery/hlim/coreNodes/Node_Pin.h>
 #include <gatery/hlim/coreNodes/Node_Signal.h>
@@ -57,8 +58,7 @@ namespace gtry {
 
 	class OutputPins : public BaseOutputPin {
 		public:
-			template<BitVectorDerived T>
-			OutputPins(const T &bitVector) : BaseOutputPin(bitVector.readPort(), std::string(bitVector.getName())) { }
+			OutputPins(const ElementarySignal& bitVector) : BaseOutputPin(bitVector.readPort(), std::string(bitVector.getName())) { }
 
 			inline OutputPins &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
 			inline OutputPins &setDifferential(std::string_view posPrefix = "_p", std::string_view negPrefix = "_n") { m_pinNode->setDifferential(posPrefix, negPrefix); return *this; }
@@ -123,10 +123,60 @@ namespace gtry {
 	inline InputPin pinIn() { return InputPin(); }
 	inline InputPins pinIn(BitWidth width) { return InputPins(width); }
 
+	void pinIn(Signal auto& signal, std::string prefix);
+	void pinOut(Signal auto& signal, std::string prefix);
 
 	inline TristatePin tristatePin(const Bit &bit, const Bit &outputEnable) { return TristatePin(bit, outputEnable); }
 
 	template<BitVectorValue T>
 	inline TristatePins tristatePin(const T &bitVector, const Bit &outputEnable) { return TristatePins((ValueToBaseSignal<T>)bitVector, outputEnable); }
 
+}
+
+namespace gtry
+{
+	namespace internal
+	{
+		struct PinVisitor : CompoundNameVisitor
+		{
+			void reverse() final { isReverse = !isReverse; }
+
+			void operator () (ElementarySignal& vec) final
+			{
+				if (isReverse)
+				{
+					OutputPins(vec).setName(makeName());
+				}
+				else
+				{
+					BaseInputPin pin;
+					if (vec.connType().interpretation == hlim::ConnectionType::BOOL)
+						pin.node()->setBool();
+					else
+						pin.node()->setWidth(vec.width().bits());
+					pin.node()->setName(makeName());
+					vec.assign(SignalReadPort{ pin.node() });
+				}
+			}
+
+			bool isReverse = false;
+		};
+	}
+
+	void pinIn(Signal auto& signal, std::string prefix)
+	{
+		internal::PinVisitor v;
+		v.enter(prefix);
+		VisitCompound<std::remove_reference_t<decltype(signal)>>{}(signal, v);
+		v.leave();
+	}
+
+	void pinOut(Signal auto& signal, std::string prefix)
+	{
+		internal::PinVisitor v;
+		v.reverse();
+		v.enter(prefix);
+		VisitCompound<std::remove_reference_t<decltype(signal)>>{}(signal, v);
+		v.leave();
+	}
 }
