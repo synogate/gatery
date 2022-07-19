@@ -104,11 +104,15 @@ void Program::allocateClocks(const hlim::Circuit &circuit, const hlim::Subnet &n
 	m_clockSources.resize(m_stateMapping.clockPinAllocation.clockPins.size());
 	m_resetSources.resize(m_stateMapping.clockPinAllocation.resetPins.size());
 
-	for (auto i : utils::Range(m_clockSources.size()))
+	for (auto i : utils::Range(m_clockSources.size())) {
 		m_clockSources[i].pin = m_stateMapping.clockPinAllocation.clockPins[i].source;
+		HCL_ASSERT_HINT(m_clockSources[i].pin->isSelfDriven(true, true), "Simulating logic driven clocks is not yet implemented!");
+	}
 
-	for (auto i : utils::Range(m_resetSources.size()))
+	for (auto i : utils::Range(m_resetSources.size())) {
 		m_resetSources[i].pin = m_stateMapping.clockPinAllocation.resetPins[i].source;
+		HCL_ASSERT_HINT(m_resetSources[i].pin->isSelfDriven(true, false), "Simulating logic driven clock resets is not yet implemented!");
+	}
 
 	for (const auto &p : m_stateMapping.clockPinAllocation.clock2ClockPinIdx) {
 		auto clk = p.first;

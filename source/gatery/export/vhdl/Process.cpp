@@ -26,7 +26,6 @@
 #include "../../hlim/Clock.h"
 
 #include "../../hlim/coreNodes/Node_Arithmetic.h"
-#include "../../hlim/coreNodes/Node_Clk2Signal.h"
 #include "../../hlim/coreNodes/Node_Compare.h"
 #include "../../hlim/coreNodes/Node_Constant.h"
 #include "../../hlim/coreNodes/Node_Logic.h"
@@ -36,7 +35,12 @@
 #include "../../hlim/coreNodes/Node_Register.h"
 #include "../../hlim/coreNodes/Node_Rewire.h"
 #include "../../hlim/coreNodes/Node_Pin.h"
+
+#include "../../hlim/coreNodes/Node_Clk2Signal.h"
 #include "../../hlim/coreNodes/Node_ClkRst2Signal.h"
+#include "../../hlim/coreNodes/Node_Signal2Clk.h"
+#include "../../hlim/coreNodes/Node_Signal2Rst.h"
+
 #include "../../hlim/supportNodes/Node_Attributes.h"
 #include "../../hlim/supportNodes/Node_ExportOverride.h"
 #include "../../hlim/supportNodes/Node_SignalTap.h"
@@ -811,6 +815,44 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 				statement.code = code.str();
 				statement.comment = comment.str();
 				statements.push_back(std::move(statement));
+			}
+			if (auto *sig2clk = dynamic_cast<hlim::Node_Signal2Clk*>(n)) {
+				if (sig2clk->getClocks()[0] != nullptr) {
+					std::stringstream code;
+					cf.indent(code, indentation+1);
+
+					std::stringstream comment;
+					Statement statement;
+					statement.node = n;
+					statement.weakOrderIdx = n->getId(); // chronological order
+
+					code << m_namespaceScope.getClock(sig2clk->getClocks()[0]).name << " <= ";
+					formatExpression(code, indentation+2, comment, sig2clk->getDriver(0), statement.inputs, VHDLDataType::STD_LOGIC, false);
+					code << ";" << std::endl;
+
+					statement.code = code.str();
+					statement.comment = comment.str();
+					statements.push_back(std::move(statement));
+				}
+			}
+			if (auto *sig2rst = dynamic_cast<hlim::Node_Signal2Rst*>(n)) {
+				if (sig2rst->getClocks()[0] != nullptr) {
+					std::stringstream code;
+					cf.indent(code, indentation+1);
+
+					std::stringstream comment;
+					Statement statement;
+					statement.node = n;
+					statement.weakOrderIdx = n->getId(); // chronological order
+
+					code << m_namespaceScope.getReset(sig2rst->getClocks()[0]).name << " <= ";
+					formatExpression(code, indentation+2, comment, sig2rst->getDriver(0), statement.inputs, VHDLDataType::STD_LOGIC, false);
+					code << ";" << std::endl;
+
+					statement.code = code.str();
+					statement.comment = comment.str();
+					statements.push_back(std::move(statement));
+				}
 			}
 		}
 

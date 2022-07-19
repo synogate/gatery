@@ -21,6 +21,7 @@
 #include <gatery/simulation/BitVectorState.h>
 #include <gatery/hlim/coreNodes/Node_Constant.h>
 #include <gatery/frontend/DesignScope.h>
+#include <gatery/frontend/Signal.h>
 
 #include <gatery/utils/Preprocessor.h>
 #include <gatery/utils/Traits.h>

@@ -27,6 +27,9 @@
 
 namespace gtry::hlim {
 
+class Node_Signal2Clk;
+class Node_Signal2Rst;
+
 class DerivedClock;
 
 class Clock
@@ -79,15 +82,37 @@ class Clock
 		inline const std::vector<DerivedClock*> &getDerivedClocks() const { return m_derivedClocks; }
 		inline void addDerivedClock(DerivedClock *clock) { m_derivedClocks.push_back(clock); }
 
+		/// Returns true if this clock's signal is identical to this clock's parent's signal.
+		bool inheritsClockPinSource() const;
+
 		/// Which clock provides the actual clock signal for this clock
 		/// @details For derived clocks, this may be the parent clock if the frequency, name, etc. is the same
 		Clock *getClockPinSource();
 
+		/// Returns true if this clock's reset signal is identical to this clock's parent's reset signal.
 		bool inheritsResetPinSource() const;
 
 		/// Which clock provides the actual reset signal for this clock
 		/// @details For derived clocks, this may be the parent clock if the name is the same
 		Clock *getResetPinSource();
+
+		/// @brief Returns false, if this clock is not "self driven" but driven by logic.
+		/// @details This also returns true, if the driver is an export-only signal that is unconnected.
+		/// @param simulation Whether to consider the export case or the simulation case
+		/// @param clk Whether to consider the clock signal or the reset signal
+		bool isSelfDriven(bool simulation, bool clk) const;
+
+		/// Returns the clock's driver, if this clock is not "self driven" but driven by logic in the simulation.
+		/// @param simulation Whether to consider the export case or the simulation case
+		/// @param clk Whether to consider the clock signal or the reset signal
+		NodePort getLogicDriver(bool simulation, bool clk) const;
+
+		/// @brief Binds a logic signal (through a Node_Signal2Clk) to this clock to drive the clock.
+		/// @details If nothing is bound, or if the bound Node_Signal2Clk is not driven (evaluated independently for simulation and export), the clock is driven by the simulator / routed to the top module on export.
+		void setLogicClockDriver(Node_Signal2Clk *driver);
+		/// @brief Binds a logic signal (through a Node_Signal2Clk) to this clock to drive the reset.
+		/// @details If nothing is bound, or if the bound Node_Signal2Rst is not driven (evaluated independently for simulation and export), the reset is driven by the simulator / routed to the top module on export.
+		void setLogicResetDriver(Node_Signal2Rst *driver);
 	protected:
 		Clock *m_parentClock = nullptr;
 
@@ -109,6 +134,11 @@ class Clock
 			* clock disable high/low
 			* clock2signal
 			*/
+
+		/// If connected, overrides the clock signal
+		Node_Signal2Clk *m_clockDriver = nullptr;
+		/// If connected, overrides the reset signal
+		Node_Signal2Rst *m_resetDriver = nullptr;
 		
 		std::set<NodePort> m_clockedNodes;
 		mutable std::vector<NodePort> m_clockedNodesCache;

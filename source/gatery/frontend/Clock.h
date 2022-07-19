@@ -99,7 +99,8 @@ namespace gtry {
 
 			Clock(hlim::Clock *clock) : m_clock(clock) { }
 
-			//Bit driveSignal();
+			Bit clkSignal();
+			Bit rstSignal();
 			BVec operator() (const BVec& signal, const RegisterSettings &settings = {}) const;
 			BVec operator() (const BVec& signal, const BVec& reset, const RegisterSettings &settings = {}) const;
 			UInt operator() (const UInt& signal, const RegisterSettings &settings = {}) const;
@@ -111,6 +112,9 @@ namespace gtry {
 
 			hlim::Clock *getClk() const { return m_clock; }
 			hlim::ClockRational absoluteFrequency() const { return m_clock->absoluteFrequency(); }
+
+			void overrideClkWith(const Bit &clkOverride);
+			void overrideRstWith(const Bit &rstOverride);
 
 			void setName(std::string name) { m_clock->setName(std::move(name)); }
 		protected:

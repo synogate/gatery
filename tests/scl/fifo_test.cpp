@@ -82,8 +82,6 @@ struct FifoTest
 			model.pop();
 		while (true)
 		{
-			if (simu(empty) == 1)
-				BOOST_TEST(model.empty());
 			if (simu(full) == 1)
 				BOOST_TEST(!model.empty());
 
@@ -656,7 +654,6 @@ BOOST_FIXTURE_TEST_CASE(DualClockFifo, BoostUnitTestSimulationFixture)
 
 
 /*
-
 
 BOOST_FIXTURE_TEST_CASE(DC_TransactionalFifo_basic, BoostUnitTestSimulationFixture)
 {

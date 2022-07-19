@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2022 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -16,50 +16,51 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
-#include "Node_Clk2Signal.h"
+#include "Node_Signal2Rst.h"
 
 namespace gtry::hlim {
 
-Node_Clk2Signal::Node_Clk2Signal() : Node(0, 1)
+Node_Signal2Rst::Node_Signal2Rst() : Node(1, 0)
 {
-	ConnectionType conType;
-	conType.width = 1;
-	conType.interpretation = ConnectionType::BOOL;
-	setOutputConnectionType(0, conType);
-
 	m_clocks.resize(1);
-	setOutputType(0, OUTPUT_LATCHED);	
 }
 
-std::string Node_Clk2Signal::getTypeName() const
+void Node_Signal2Rst::connect(const NodePort &np)
 {
-	return "clk2signal";
+	HCL_ASSERT(hlim::getOutputConnectionType(np).interpretation == ConnectionType::BOOL);
+	connectInput(0, np);
 }
 
-void Node_Clk2Signal::assertValidity() const
+std::string Node_Signal2Rst::getTypeName() const
+{
+	return "signal2rst";
+}
+
+void Node_Signal2Rst::assertValidity() const
 {
 }
 
-std::string Node_Clk2Signal::getInputName(size_t idx) const
+std::string Node_Signal2Rst::getInputName(size_t idx) const
+{
+	return "rst";
+}
+
+std::string Node_Signal2Rst::getOutputName(size_t idx) const
 {
 	return "";
 }
 
-std::string Node_Clk2Signal::getOutputName(size_t idx) const
-{
-	return "clk";
-}
-
-void Node_Clk2Signal::setClock(Clock *clk)
+void Node_Signal2Rst::setClock(Clock *clk)
 {
 	attachClock(clk, 0);
 }
 
-std::unique_ptr<BaseNode> Node_Clk2Signal::cloneUnconnected() const
+std::unique_ptr<BaseNode> Node_Signal2Rst::cloneUnconnected() const
 {
-	std::unique_ptr<BaseNode> res(new Node_Clk2Signal());
+	std::unique_ptr<BaseNode> res(new Node_Signal2Rst());
 	copyBaseToClone(res.get());
 	return res;
 }
+
 
 }

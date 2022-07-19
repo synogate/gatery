@@ -184,6 +184,24 @@ void BaseGrouping::declareLocalSignals(std::ostream &stream, bool asVariables, u
 		stream << "; "<< std::endl;
 	}
 
+	// build clock signals as local variables is they are not part of the port map
+	bool isRoot = m_parent == nullptr;
+	if (isRoot) {
+		for (const auto &clk : m_inputClocks) {
+			if (!clk->isSelfDriven(false, true)) {
+				cf.indent(stream, indentation+1);
+				stream << "SIGNAL " << m_namespaceScope.getClock(clk).name << " : STD_LOGIC;\n";
+			}
+		}
+
+		for (const auto &clk : m_inputResets) {
+			if (!clk->isSelfDriven(false, false)) {
+				cf.indent(stream, indentation+1);
+				stream << "SIGNAL " << m_namespaceScope.getReset(clk).name << " : STD_LOGIC;\n";
+			}
+		}	
+	}
+
 	for (const auto &signal : m_localSignals) {
 		const auto &decl = m_namespaceScope.get(signal);
 

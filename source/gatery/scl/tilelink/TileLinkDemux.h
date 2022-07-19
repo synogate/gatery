@@ -40,7 +40,7 @@ namespace gtry::scl
 		template<typename TArbiterPolicy = ArbiterPolicyLowest>
 		void generate();
 	private:
-		Area m_area = "scl_TileLinkDemux";
+		Area m_area = Area("scl_TileLinkDemux");
 		bool m_sourceAttached = false;
 		bool m_generated = false;
 		TLink m_source;

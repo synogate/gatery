@@ -21,6 +21,7 @@
 
 #include <boost/process.hpp>
 #include <boost/asio.hpp>
+#include <boost/format.hpp>
 
 namespace bp = boost::process;
 
@@ -38,7 +39,7 @@ namespace gtry::scl::riscv
 				return cache_it->second;
 
 
-			m_writeBuf = (std::ostringstream{} << std::hex << address << '\n').str();
+			m_writeBuf = (boost::format("%x\n") % address).str();
 
 			auto nop = [](const boost::system::error_code& ec, std::size_t size) {};
 			m_ios.restart();
@@ -137,9 +138,6 @@ namespace gtry::scl::riscv
 
 	void CallReturnTraceProfiler::onCall(uint64_t cycle, uint64_t target, std::string_view function)
 	{
-		if (function == "put_int")
-			__debugbreak();
-
 		std::string f{ function };
 		if (!m_stack.empty())
 		{
