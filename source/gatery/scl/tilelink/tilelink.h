@@ -89,8 +89,8 @@ namespace gtry::scl
 
 		TileLinkA& chanA() { return a.get<TileLinkA>(); }
 		const TileLinkA& chanA() const { return a.get<TileLinkA>(); }
-		TileLinkD& chanD() { return a.get<TileLinkD>(); }
-		const TileLinkD& chanD() const { return a.get<TileLinkD>(); }
+		TileLinkD& chanD() { return d.get<TileLinkD>(); }
+		const TileLinkD& chanD() const { return d.get<TileLinkD>(); }
 
 		template<class T>
 		static constexpr bool capability();

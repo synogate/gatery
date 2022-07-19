@@ -32,7 +32,7 @@ namespace gtry::scl
 			size_t addressBits = 0;
 		};
 	public:
-		virtual void attachSource(TLink& source, size_t maxNumSinks);
+		virtual void attachSource(TLink& source);
 		virtual void attachSink(TLink& sink, uint64_t addressBase, size_t addressBits);
 
 		const TLink& source() const;
@@ -41,8 +41,8 @@ namespace gtry::scl
 		void generate();
 	private:
 		Area m_area = "scl_TileLinkDemux";
+		bool m_sourceAttached = false;
 		bool m_generated = false;
-		size_t m_maxNumSinks = 0;
 		TLink m_source;
 		std::list<Sink> m_sink;
 	};
@@ -51,14 +51,12 @@ namespace gtry::scl
 namespace gtry::scl
 {
 	template<TileLinkSignal TLink>
-	inline void gtry::scl::TileLinkDemux<TLink>::attachSource(TLink& source, size_t maxNumSinks)
+	inline void gtry::scl::TileLinkDemux<TLink>::attachSource(TLink& source)
 	{
 		auto scope = m_area.enter();
-		HCL_DESIGNCHECK_HINT(m_maxNumSinks == 0, "this module can support one source only");
-		m_maxNumSinks = maxNumSinks;
-
 		m_source = constructFrom(source);
 		m_source <<= source;
+		m_sourceAttached = true;
 	}
 
 	template<TileLinkSignal TLink>
@@ -66,8 +64,7 @@ namespace gtry::scl
 	{
 		auto scope = m_area.enter();
 		HCL_DESIGNCHECK(!m_generated);
-		HCL_DESIGNCHECK_HINT(m_maxNumSinks != 0, "attach source first");
-		HCL_DESIGNCHECK_HINT(m_sink.size() < m_maxNumSinks, "sink limit reached");
+		HCL_DESIGNCHECK_HINT(m_sourceAttached, "attach source first");
 		HCL_DESIGNCHECK_HINT(sink.chanA().source.width() >= m_source.chanA().source.width(), "source width too small");
 
 		for (const Sink& s : m_sink)
@@ -83,7 +80,7 @@ namespace gtry::scl
 	template<TileLinkSignal TLink>
 	inline const TLink& gtry::scl::TileLinkDemux<TLink>::source() const
 	{
-		HCL_DESIGNCHECK_HINT(m_maxNumSinks != 0, "attach source first");
+		HCL_DESIGNCHECK_HINT(m_sourceAttached, "attach source first");
 		return m_source;
 	}
 
@@ -92,6 +89,7 @@ namespace gtry::scl
 	inline void TileLinkDemux<TLink>::generate()
 	{
 		auto scope = m_area.enter();
+		HCL_DESIGNCHECK_HINT(m_sourceAttached, "attach source first");
 		HCL_DESIGNCHECK(!m_generated);
 		m_generated = true;
 
