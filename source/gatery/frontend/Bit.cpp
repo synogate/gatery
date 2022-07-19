@@ -125,20 +125,6 @@ namespace gtry {
 		m_initialScopeId = initialScopeId;
 	}
 
-	BVec Bit::pack() const
-	{
-		BVec b(1_b);
-		b[0] = *this;
-		return b;
-	}
-
-	void Bit::unpack(const BVec &b)
-	{
-		HCL_DESIGNCHECK(b.size() == 1);
-		(*this) = b[0];
-	}
-
-
 	Bit& Bit::operator=(Bit&& rhs)
 	{
 		if(rhs.m_resetValue)

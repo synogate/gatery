@@ -82,8 +82,7 @@ namespace gtry {
 		virtual std::string_view getName() const = 0;
 		virtual void setName(std::string name) = 0;
 
-		virtual BVec pack() const = 0;
-		virtual void unpack(const BVec &b) = 0;
+		virtual void assign(SignalReadPort, bool ignoreConditions = false) = 0;
 
 		void attribute(hlim::SignalAttributes attributes);
 

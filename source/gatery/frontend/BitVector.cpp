@@ -211,20 +211,6 @@ namespace gtry {
 		assign(SignalReadPort(expOverride));
 	}
 
-	BVec BaseBitVector::pack() const
-	{
-		if (m_node) 
-			return BVec(readPort()); 
-		else 
-			return BVec{0_b};
-	}
-
-	void BaseBitVector::unpack(const BVec &b)
-	{
-		(*this) = b;
-	}
-
-
 	void BaseBitVector::resize(size_t width)
 	{
 		HCL_DESIGNCHECK_HINT(!m_range.subset, "BaseBitVector::resize is not allowed for alias BaseBitVector's. use zext instead.");

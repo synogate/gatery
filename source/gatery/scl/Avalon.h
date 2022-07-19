@@ -172,12 +172,12 @@ namespace gtry::scl
 				if (reg.size() == 1 && reg.front().signalVec)
 				{
 					SigInfo& sig = reg.front();
-					UInt source = (UInt) sig.signalVec->pack()(sig.from);
+					UInt source = UInt(sig.signalVec->readPort())(sig.from);
 					readData = zext(source);
 		
 					IF(*write) {
 						source = (*writeData)(0, sig.from.width);
-						sig.signalVec->unpack((BVec) source);
+						sig.signalVec->assign(source.readPort());
 					}
 				}
 				else

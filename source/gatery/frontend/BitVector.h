@@ -122,9 +122,6 @@ namespace gtry {
 		template<BitVectorDerived T>
 		explicit operator T() const { if (m_node) return T(readPort()); else return T{}; }
 
-		virtual BVec pack() const override;
-		virtual void unpack(const BVec &b) override;
-
 		void resize(size_t width);
 		void resetNode();
 
