@@ -274,7 +274,7 @@ namespace gtry::sim
 			m_gtkWaveProjectFile.appendBlank();
 
 			std::sort(clockDomain.second.begin(), clockDomain.second.end(), [](Signal* lhs, Signal* rhs)->bool{
-				return lhs->driver.node->getId() < rhs->driver.node->getId();
+				return lhs->sortOrder < rhs->sortOrder;
 			});
 
 			for (auto *signal : clockDomain.second) {

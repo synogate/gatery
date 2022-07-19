@@ -44,7 +44,7 @@ class WaveformRecorder : public SimulatorCallbacks
 	public:
 		WaveformRecorder(hlim::Circuit &circuit, Simulator &simulator);
 
-		void addSignal(hlim::NodePort np, bool isPin, bool hidden, hlim::NodeGroup *group, const std::string &nameOverride = {});
+		void addSignal(hlim::NodePort np, bool isPin, bool hidden, hlim::NodeGroup *group, const std::string &nameOverride = {}, size_t sortOrder = 0);
 		void addAllWatchSignalTaps();
 		void addAllPins();
 		void addAllOutPins();
@@ -62,6 +62,7 @@ class WaveformRecorder : public SimulatorCallbacks
 			size_t offset, size;
 		};
 		struct Signal {
+			size_t sortOrder = 0;
 			std::string name;
 			hlim::RefCtdNodePort driver;
 			hlim::NodeGroup *nodeGroup = nullptr;

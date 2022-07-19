@@ -35,13 +35,14 @@ WaveformRecorder::WaveformRecorder(hlim::Circuit &circuit, Simulator &simulator)
 	m_simulator.addCallbacks(this);
 }
 
-void WaveformRecorder::addSignal(hlim::NodePort np, bool isPin, bool hidden, hlim::NodeGroup *group, const std::string &nameOverride)
+void WaveformRecorder::addSignal(hlim::NodePort np, bool isPin, bool hidden, hlim::NodeGroup *group, const std::string &nameOverride, size_t sortOrder)
 {
 	HCL_ASSERT(!hlim::outputIsDependency(np));
 	if (m_alreadyAddedNodePorts.contains(np)) return;
 	m_alreadyAddedNodePorts.insert(np);
 
 	Signal signal;
+	signal.sortOrder = sortOrder;
 	signal.driver = np;
 	if (!nameOverride.empty()) {
 		signal.name = nameOverride;
@@ -63,7 +64,7 @@ void WaveformRecorder::addAllWatchSignalTaps()
 	for (auto &node : m_circuit.getNodes())
 		if (auto *tap = dynamic_cast<hlim::Node_SignalTap*>(node.get()))
 			if (tap->getLevel() == hlim::Node_SignalTap::LVL_WATCH)
-				addSignal(tap->getDriver(0), false, false, tap->getGroup(), tap->getName());
+				addSignal(tap->getDriver(0), false, false, tap->getGroup(), tap->getName(), tap->getId());
 }
 
 void WaveformRecorder::addAllPins()
@@ -74,10 +75,10 @@ void WaveformRecorder::addAllPins()
 			if (pin->isOutputPin() && !pin->isInputPin()) {
 				auto driver = pin->getDriver(0);
 				if (driver.node != nullptr)
-					addSignal(driver, true, false, pin->getGroup(), pin->getName());
+					addSignal(driver, true, false, pin->getGroup(), pin->getName(), pin->getId());
 			}
 			if (pin->isInputPin())
-				addSignal({.node = pin, .port = 0}, true, false, pin->getGroup(), pin->getName());
+				addSignal({.node = pin, .port = 0}, true, false, pin->getGroup(), pin->getName(), pin->getId());
 		}
 }
 
@@ -88,7 +89,7 @@ void WaveformRecorder::addAllOutPins()
 			if (!pin->isOutputPin()) continue;
 			auto driver = pin->getDriver(0);
 			if (driver.node != nullptr)
-				addSignal(driver, true, false, pin->getGroup(), pin->getName());
+				addSignal(driver, true, false, pin->getGroup(), pin->getName(), pin->getId());
 		}
 }
 
@@ -98,9 +99,9 @@ void WaveformRecorder::addAllNamedSignals(bool appendNodeId)
 		if (auto *sig = dynamic_cast<hlim::Node_Signal*>(node.get())) {
 			if (sig->hasGivenName())
 				if (!appendNodeId)
-					addSignal({.node=sig, .port=0ull}, false, false, sig->getGroup(), sig->getName());
+					addSignal({.node=sig, .port=0ull}, false, false, sig->getGroup(), sig->getName(), sig->getId());
 				else
-					addSignal({.node=sig, .port=0ull}, false, false, sig->getGroup());
+					addSignal({.node=sig, .port=0ull}, false, false, sig->getGroup(), {}, sig->getId());
 		}
 }
 
@@ -109,9 +110,9 @@ void WaveformRecorder::addAllSignals(bool appendNodeId)
 	for (auto &node : m_circuit.getNodes())
 		if (auto *sig = dynamic_cast<hlim::Node_Signal*>(node.get())) {
 			if (!appendNodeId)
-				addSignal({.node=sig, .port=0ull}, false, !sig->hasGivenName(), sig->getGroup(), sig->getName());
+				addSignal({.node=sig, .port=0ull}, false, !sig->hasGivenName(), sig->getGroup(), sig->getName(), sig->getId());
 			else
-				addSignal({.node=sig, .port=0ull}, false, !sig->hasGivenName(), sig->getGroup());
+				addSignal({.node=sig, .port=0ull}, false, !sig->hasGivenName(), sig->getGroup(), {}, sig->getId());
 		}
 }
 
