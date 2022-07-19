@@ -148,7 +148,7 @@ namespace gtry::scl
 		out->resetNode();
 		*out = (*source)(zext(counter.value(), width.bits()) * width.bits(), width);
 
-		if constexpr (out.has<ByteEnable>())
+		if constexpr (out.template has<ByteEnable>())
 		{
 			BVec& be = byteEnable(out);
 			BitWidth w = be.width() / ratio;
@@ -156,9 +156,9 @@ namespace gtry::scl
 			be = byteEnable(source)(zext(counter.value(), w.bits()) * w.bits(), w);
 		}
 
-		if constexpr (out.has<Eop>())
+		if constexpr (out.template has<Eop>())
 			eop(out) &= counter.isLast();
-		if constexpr (out.has<Sop>())
+		if constexpr (out.template has<Sop>())
 			sop(out) &= counter.isFirst();
 
 		HCL_NAMED(out);
@@ -203,14 +203,14 @@ namespace gtry::scl
 		in <<= source;
 		HCL_NAMED(in);
 
-		if constexpr (source.has<Valid>())
+		if constexpr (source.template has<Valid>())
 			IF(eop(source))
 				valid(in) = '0';
 
 		T out = constructFrom(in);
 		out = in.regDownstream();
 
-		if constexpr (source.has<Eop>())
+		if constexpr (source.template has<Eop>())
 		{
 			Bit eopReg = flag(eop(source) & valid(source), transfer(out));
 			IF(eop(source) | eopReg)
