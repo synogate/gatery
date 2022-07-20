@@ -38,14 +38,33 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 {
 	auto *memGrp = dynamic_cast<hlim::MemoryGroup*>(nodeGroup->getMetaInfo());
 	if (memGrp == nullptr) return false;
-	if (memGrp->getMemory()->type() == hlim::Node_Memory::MemType::EXTERNAL)
+	if (memGrp->getMemory()->type() == hlim::Node_Memory::MemType::EXTERNAL) {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() << " because it is external memory.");
 		return false;
+	}
 
-	if (memGrp->getReadPorts().size() != 1) return false;
+	if (memGrp->getReadPorts().size() != 1) {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because it has more than one read port and so far only one read port is supported.");
+		return false;
+	}
 	const auto &rp = memGrp->getReadPorts().front();
 
-	if (memGrp->getWritePorts().size() > 1) return false;
-	if (memGrp->getMemory()->getRequiredReadLatency() == 0) return false;
+	if (memGrp->getWritePorts().size() > 1) {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because it has more than one write port and so far only one write port is supported.");
+
+		return false;
+	}
+	if (memGrp->getMemory()->getRequiredReadLatency() == 0) {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because it is asynchronous (zero latency reads) and the targeted block ram needs at least one cycle latency.");
+
+		return false;
+	}
 
 
 	auto &circuit = DesignScope::get()->getCircuit();
@@ -56,19 +75,47 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 	hlim::Clock* writeClock = nullptr;
 	if (memGrp->getWritePorts().size() > 0) {
 		writeClock = memGrp->getWritePorts().front().node->getClocks()[0];
-		if (writeClock->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING) return false;
+		if (writeClock->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING) {
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+					<< " because its write clock is not triggering on rising clock edges.");
+			return false;
+		}
 	}
 
 	auto *readClock = rp.dedicatedReadLatencyRegisters.front()->getClocks()[0];
-	if (readClock->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING) return false;
+	if (readClock->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING) {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because its read clock is not triggering on rising clock edges.");
+		return false;
+	}
+
+	hlim::NodePort readEnable;
+	if (rp.dedicatedReadLatencyRegisters.front()->hasEnable())
+		readEnable = rp.dedicatedReadLatencyRegisters.front()->getDriver((size_t)hlim::Node_Register::Input::ENABLE);
 
 	for (auto reg : rp.dedicatedReadLatencyRegisters) {
-		if (reg->hasResetValue()) return false;
-		if (reg->hasEnable()) return false;
+		if (reg->hasResetValue()) {
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+					<< " because one of its output registers has a reset value.");
+			return false;
+		}
 
 		// For now, no true dual port, so only single clock
-		if (memGrp->getWritePorts().size() > 0 && writeClock != reg->getClocks()[0]) return false;
-		if (readClock != reg->getClocks()[0]) return false;		
+		if (memGrp->getWritePorts().size() > 0 && writeClock != reg->getClocks()[0]) {
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+					<< " because no true dual port is supported yet.");
+			return false;
+		}
+		if (readClock != reg->getClocks()[0]) {
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+					<< " because its output registers have differing clocks.");
+			return false;
+		}
 	}
 
 
@@ -79,6 +126,7 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 	memGrp->verify();
 
 	auto *altsyncram = DesignScope::createNode<ALTSYNCRAM>(memGrp->getMemory()->getSize());
+	altsyncram->setInitialization(memGrp->getMemory()->getPowerOnState());
 
 	if (memGrp->getWritePorts().size() == 0)
 		altsyncram->setupROM();
@@ -87,7 +135,7 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 
 	altsyncram->setupRamType(m_desc.memoryName);
 	altsyncram->setupSimulationDeviceFamily(m_intelDevice.getFamily());
-   
+
 	bool readFirst = false;
 	bool writeFirst = false;
 	if (memGrp->getWritePorts().size() > 0) {
@@ -110,6 +158,9 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 
 	if (readClock->getRegAttribs().resetActive != hlim::RegisterAttributes::Active::HIGH)
 		useInternalOutputRegister = false; // Anyways aborting if they have a reset, but just so this case is not forgotten once we build in support for resets.
+
+	// TODO: Also don't enable this if the InternalOutputRegister needs an enable
+	useInternalOutputRegister = false;
 
 	size_t numExternalOutputRegisters = rp.dedicatedReadLatencyRegisters.size()-1;
 	if (useInternalOutputRegister) 
@@ -141,6 +192,8 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 			UInt data = hookUIntAfter(rp.dataOutput);
 
 			altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_ADDRESS_B, addr);
+			if (readEnable.node != nullptr)
+				altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_RDEN_B, Bit(SignalReadPort{readEnable}));
 
 			UInt readData = altsyncram->getOutputUInt(ALTSYNCRAM::Outputs::OUT_Q_B);
 
@@ -167,6 +220,8 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 		UInt data = hookUIntAfter(rp.dataOutput);
 
 		altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_ADDRESS_A, addr);
+		if (readEnable.node != nullptr)
+			altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_RDEN_A, Bit(SignalReadPort{readEnable}));
 		UInt readData = altsyncram->getOutputUInt(ALTSYNCRAM::Outputs::OUT_Q_A);
 		{
 			Clock clock(readClock);

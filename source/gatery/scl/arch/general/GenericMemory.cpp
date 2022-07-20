@@ -142,7 +142,7 @@ bool EmbeddedMemoryPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 			request.sizeCategory = MemoryCapabilities::SizeCategory::LARGE;
 		break;
 		case hlim::Node_Memory::MemType::EXTERNAL:
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Not mapping memory " << nodeGroup << " to any memory macros because it is EXTERNAL memory");
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Not mapping memory " << memGrp->getMemory() << " to any memory macros because it is EXTERNAL memory");
 			return false;
 		default:
 		break;
@@ -150,7 +150,7 @@ bool EmbeddedMemoryPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 
 	auto *memChoice = embeddedMems.selectMemFor(nodeGroup, request);
 	if (memChoice == nullptr) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Not mapping memory " << nodeGroup << " because no suitable choice was found");
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Not mapping memory " << memGrp->getMemory() << " because no suitable choice was found");
 		return false;
 	}
 	if (memChoice->apply(nodeGroup)) {
@@ -158,7 +158,7 @@ bool EmbeddedMemoryPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 		nodeGroup->getParent()->properties()["primitive"] = memChoice->getDesc().memoryName;
 		return true;
 	} else {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Applying memory primitive " << memChoice->getDesc().memoryName << " to " << nodeGroup << " failed.");
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Applying memory primitive " << memChoice->getDesc().memoryName << " to " << memGrp->getMemory() << " failed.");
 		return false;
 	}
 }

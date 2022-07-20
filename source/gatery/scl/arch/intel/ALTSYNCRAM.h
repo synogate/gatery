@@ -80,6 +80,7 @@ class ALTSYNCRAM : public gtry::hlim::Node_External
 		};
 
 		ALTSYNCRAM(size_t size);
+		void setInitialization(sim::DefaultBitVectorState memoryInitialization) { m_memoryInitialization = std::move(memoryInitialization); }
 
 		ALTSYNCRAM &setupSinglePort(); // In single port mode, only port A can be used
 		ALTSYNCRAM &setupSimpleDualPort(); // port A must be the write port and port B the read port
@@ -106,8 +107,16 @@ class ALTSYNCRAM : public gtry::hlim::Node_External
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 
 		virtual std::string attemptInferOutputName(size_t outputPort) const override;
+
+		virtual std::vector<std::string> getSupportFiles() const override;
+		virtual void setupSupportFile(size_t idx, const std::string &filename, std::ostream &stream) override;
+
+		virtual hlim::OutputClockRelation getOutputClockRelation(size_t output) const override;
+		virtual bool checkValidInputClocks(std::span<hlim::SignalClockDomain> inputClocks) const override;
 	protected:
-		size_t m_size;
+		size_t m_size = 0;
+		size_t m_widthPortA = 0;
+		sim::DefaultBitVectorState m_memoryInitialization;
 
 		static std::string RDWBehavior2Str(RDWBehavior rdw);
 };
