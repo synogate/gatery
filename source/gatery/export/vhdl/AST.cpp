@@ -90,6 +90,9 @@ void AST::writeVHDL(std::filesystem::path destination)
 {
 	if (destination.has_extension())
 	{
+		for (auto& entity : m_entities)
+			entity->writeSupportFiles(destination.parent_path());
+
 		std::ofstream file{ destination.c_str(), std::ofstream::binary };
 		file.exceptions(std::fstream::failbit | std::fstream::badbit);
 
@@ -101,6 +104,9 @@ void AST::writeVHDL(std::filesystem::path destination)
 	}
 	else
 	{
+		for (auto& entity : m_entities)
+			entity->writeSupportFiles(destination);
+
 		for (auto& package : m_packages) {
 			std::filesystem::path filePath = getFilename(destination, package->getName());
 

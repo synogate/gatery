@@ -78,6 +78,7 @@ class NamespaceScope
 		std::string allocateName(hlim::Node_Pin *ioPin, const std::string &desiredName, VHDLDataType dataType);
 		const VHDLSignalDeclaration &get(const hlim::Node_Pin *ioPin) const;
 
+		std::string allocateSupportFileName(const std::string &desiredName);
 		std::string allocatePackageName(const std::string &desiredName);
 		std::string allocateEntityName(const std::string &desiredName);
 		std::string allocateBlockName(const std::string &desiredName);
@@ -86,7 +87,7 @@ class NamespaceScope
 	protected:
 		bool isNameInUse(const std::string &lowerCaseName) const;
 		AST &m_ast;
-		NamespaceScope *m_parent;
+		NamespaceScope *m_parent = nullptr;
 
 		std::set<std::string> m_namesInUse;
 		std::map<std::string, size_t> m_nextNameAttempt;

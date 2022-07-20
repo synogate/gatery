@@ -60,7 +60,8 @@ void BasicBlock::extractSignals()
 		routeChildIOUpwards(ent);
 	}
 
-	for (auto node : m_externalNodes) {
+	for (auto extNode : m_externalNodes) {
+		auto node = extNode.node;
 		for (auto i : utils::Range(node->getNumInputPorts())) {
 			auto driver = node->getDriver(i);
 			if (driver.node != nullptr) {
@@ -160,8 +161,8 @@ void BasicBlock::routeChildIOUpwards(BaseGrouping *child)
 void BasicBlock::addNeededLibraries(std::set<std::string> &libs) const
 {
 	for (auto n : m_externalNodes)
-		if (!n->getLibraryName().empty())
-			libs.insert(n->getLibraryName());
+		if (!n.node->getLibraryName().empty())
+			libs.insert(n.node->getLibraryName());
 }
 
 
@@ -217,9 +218,27 @@ void BasicBlock::handleEntityInstantiation(hlim::NodeGroup *nodeGroup)
 
 void BasicBlock::handleExternalNodeInstantiaton(hlim::Node_External *externalNode)
 {
-	m_externalNodes.push_back(externalNode);
-	m_externalNodeInstanceNames.push_back(m_namespaceScope.allocateInstanceName(externalNode->getName()));
+	m_externalNodes.push_back({
+		.node = externalNode,
+		.instanceName = m_namespaceScope.allocateInstanceName(externalNode->getName()),
+	});
 	m_ast.getMapping().assignNodeToScope(externalNode, this);
+
+	auto desiredFilenames = externalNode->getSupportFiles();
+	if (!desiredFilenames.empty()) {
+		std::string prefix = getInstanceName() + '_';
+		auto *p = m_parent;
+		while (p != nullptr) {
+			prefix = p->getInstanceName() + '_' + prefix;
+			p = p->getParent();
+		}
+
+		for (auto i : utils::Range(desiredFilenames.size())) {
+			desiredFilenames[i] = m_namespaceScope.allocateSupportFileName(prefix + desiredFilenames[i]);
+		}
+
+		m_externalNodes.back().supportFilenames = std::move(desiredFilenames);
+	}
 
 	ConcurrentStatement statement;
 	statement.type = ConcurrentStatement::TYPE_EXT_NODE_INSTANTIATION;
@@ -227,6 +246,17 @@ void BasicBlock::handleExternalNodeInstantiaton(hlim::Node_External *externalNod
 	statement.sortIdx = 0; /// @todo
 
 	m_statements.push_back(statement);
+}
+
+void BasicBlock::writeSupportFiles(const std::filesystem::path &destination) const
+{
+	for (const auto &extNode : m_externalNodes) {
+		for (auto i : utils::Range(extNode.supportFilenames.size())) {
+			auto path = destination / extNode.supportFilenames[i];
+			std::fstream stream(path.string().c_str(), std::fstream::out | std::fstream::binary);
+			extNode.node->setupSupportFile(i, extNode.supportFilenames[i], stream);
+		}
+	}
 }
 
 void BasicBlock::handleSFUInstantiaton(hlim::NodeGroup *sfu)
@@ -371,9 +401,9 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
 				subEntity->writeInstantiationVHDL(stream, indent, m_entityInstanceNames[statement.ref.entityIdx]);
 			} break;
 			case ConcurrentStatement::TYPE_EXT_NODE_INSTANTIATION: {
-				auto *node = m_externalNodes[statement.ref.externalNodeIdx];
+				auto *node = m_externalNodes[statement.ref.externalNodeIdx].node;
 				cf.indent(stream, indent);
-				stream << m_externalNodeInstanceNames[statement.ref.externalNodeIdx] << " : ";
+				stream << m_externalNodes[statement.ref.externalNodeIdx].instanceName << " : ";
 				if (node->isEntity())
 					stream << " entity ";
 				stream << node->getLibraryName();

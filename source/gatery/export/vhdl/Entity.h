@@ -59,6 +59,8 @@ class Entity : public BasicBlock
 		virtual std::string getInstanceName() override;
 
 		std::set<std::string> collectNeededLibraries();
+
+		virtual void writeSupportFiles(const std::filesystem::path &destination) const override;
 	protected:
 		std::vector<std::unique_ptr<Block>> m_blocks;
 

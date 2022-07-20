@@ -125,6 +125,14 @@ Clock *Clock::getClockPinSource()
 		return this;
 }
 
+const Clock *Clock::getClockPinSource() const
+{
+	if (inheritsClockPinSource())
+		return m_parentClock->getClockPinSource();
+	else
+		return this;
+}
+
 bool Clock::inheritsResetPinSource() const
 {
 	if (m_parentClock == nullptr)

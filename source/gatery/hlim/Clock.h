@@ -88,6 +88,9 @@ class Clock
 		/// Which clock provides the actual clock signal for this clock
 		/// @details For derived clocks, this may be the parent clock if the frequency, name, etc. is the same
 		Clock *getClockPinSource();
+		/// Which clock provides the actual clock signal for this clock
+		/// @details For derived clocks, this may be the parent clock if the frequency, name, etc. is the same
+		const Clock *getClockPinSource() const;
 
 		/// Returns true if this clock's reset signal is identical to this clock's parent's reset signal.
 		bool inheritsResetPinSource() const;

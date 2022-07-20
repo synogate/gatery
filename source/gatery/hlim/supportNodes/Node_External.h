@@ -34,6 +34,9 @@ class Node_External : public Node<Node_External>
 		inline const std::map<std::string, std::string> &getGenericParameters() const { return m_genericParameters; }
 		inline const std::vector<std::string> &getClockNames() const { return m_clockNames; }
 		inline const std::vector<std::string> &getResetNames() const { return m_resetNames; }
+
+		virtual std::vector<std::string> getSupportFiles() const { return {}; }
+		virtual void setupSupportFile(size_t idx, const std::string &filename, std::ostream &stream) { }
 	protected:
 		bool m_isEntity = false;
 		std::string m_libraryName;
