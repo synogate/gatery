@@ -74,6 +74,7 @@ class ALTDPRAM : public gtry::hlim::Node_External
 		};
 
 		ALTDPRAM(size_t width, size_t depth);
+		void setInitialization(sim::DefaultBitVectorState memoryInitialization) { m_memoryInitialization = std::move(memoryInitialization); }
 
 		ALTDPRAM &setupReadPort(PortSetup portSetup);
 		ALTDPRAM &setupWritePort(PortSetup portSetup);
@@ -95,9 +96,13 @@ class ALTDPRAM : public gtry::hlim::Node_External
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 
 		virtual std::string attemptInferOutputName(size_t outputPort) const override;
+
+		virtual std::vector<std::string> getSupportFiles() const override;
+		virtual void setupSupportFile(size_t idx, const std::string &filename, std::ostream &stream) override;		
 	protected:
 		size_t m_width;
 		size_t m_depth;
+		sim::DefaultBitVectorState m_memoryInitialization;
 
 		static std::string RDWBehavior2Str(RDWBehavior rdw);
 		void trySetByteSize();

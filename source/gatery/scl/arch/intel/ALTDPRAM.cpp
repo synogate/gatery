@@ -19,6 +19,8 @@
 
 #include "ALTDPRAM.h"
 
+#include "MemoryInitializationFile.h"
+
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Preprocessor.h>
 
@@ -291,6 +293,24 @@ std::unique_ptr<hlim::BaseNode> ALTDPRAM::cloneUnconnected() const
 std::string ALTDPRAM::attemptInferOutputName(size_t outputPort) const
 {
 	return "altdpram_" + getOutputName(outputPort);
+}
+
+
+std::vector<std::string> ALTDPRAM::getSupportFiles() const
+{
+	if (m_memoryInitialization.size() != 0)
+		if (sim::anyDefined(m_memoryInitialization))
+			return { "memoryInitialization.mif" };
+
+	return {};
+}
+
+void ALTDPRAM::setupSupportFile(size_t idx, const std::string &filename, std::ostream &stream)
+{
+	HCL_ASSERT(idx == 0);
+	m_genericParameters["LPM_FILE"] = filename;
+
+	writeMemoryInitializationFile(stream, m_width, m_memoryInitialization);
 }
 
 
