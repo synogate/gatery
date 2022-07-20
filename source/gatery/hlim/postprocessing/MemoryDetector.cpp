@@ -849,8 +849,9 @@ void MemoryGroup::buildResetRom(Circuit &circuit)
 	Clock *resetClock = buildResetClock(circuit, clockDomain);
 
 	auto *memory = circuit.createNode<Node_Memory>();
-	memory->moveToGroup(m_fixupNodeGroup);
 	memory->recordStackTrace();
+	memory->moveToGroup(m_fixupNodeGroup);
+	memory->setType(Node_Memory::MemType::DONT_CARE, 1); 
 	memory->setNoConflicts();
 	memory->setPowerOnState(m_memory->getPowerOnState());
 	if (m_memory->getName().empty())
