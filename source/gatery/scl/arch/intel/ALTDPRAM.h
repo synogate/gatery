@@ -99,6 +99,9 @@ class ALTDPRAM : public gtry::hlim::Node_External
 
 		virtual std::vector<std::string> getSupportFiles() const override;
 		virtual void setupSupportFile(size_t idx, const std::string &filename, std::ostream &stream) override;		
+
+		virtual hlim::OutputClockRelation getOutputClockRelation(size_t output) const override;
+		virtual bool checkValidInputClocks(std::span<hlim::SignalClockDomain> inputClocks) const override;
 	protected:
 		size_t m_width;
 		size_t m_depth;
