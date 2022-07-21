@@ -251,6 +251,7 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const Segment& seg, 
 		dbg_group = GroupScope::getCurrentNodeGroup();
 
 	Memory<UInt> mem{ seg.addrWidth.count(), 32_b };
+	mem.setType(MemType::DONT_CARE, 1);
 	//mem.noConflicts();
 	mem.fillPowerOnState(seg.resetState);
 	mem.setName(std::string{ name });
