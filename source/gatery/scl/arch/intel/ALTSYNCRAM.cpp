@@ -415,6 +415,7 @@ bool ALTSYNCRAM::checkValidInputClocks(std::span<hlim::SignalClockDomain> inputC
 				HCL_ASSERT_HINT(false, "Invalid configuration of ALTSYNCRAM!");
 			}
 		}
+		return false;
 	};
 
 	if (!check(IN_WREN_A, "\"CLOCK0\"")) return false;
