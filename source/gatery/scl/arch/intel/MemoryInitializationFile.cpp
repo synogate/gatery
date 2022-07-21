@@ -27,11 +27,12 @@ void writeMemoryInitializationFile(std::ostream &dst, size_t width, const sim::D
 	size_t depth = values.size() / width;
 
 	dst << "-- Memory initialization file produced from gatery\n";
-	dst << "DEPTH = " << depth << "\nWIDTH = " << width << "\nADDRESS_RADIX = HEX\n";
+	dst << "DEPTH = " << depth << ";\nWIDTH = " << width << ";\nADDRESS_RADIX = HEX;\n";
 
 	std::uint32_t undefinedPattern = 0xCDCDCDCD;
 
-	dst << "DATA_RADIX = BIN\n";
+	dst << "DATA_RADIX = BIN;\n";
+	dst << "CONTENT BEGIN\n";
 	for (auto addr : utils::Range(depth)) {
 		dst << std::hex << addr << " : ";
 
@@ -47,6 +48,7 @@ void writeMemoryInitializationFile(std::ostream &dst, size_t width, const sim::D
 
 		dst << ";\n";
 	}
+	dst << "END;\n";
 }
 
 }
