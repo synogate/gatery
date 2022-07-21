@@ -47,10 +47,12 @@ ALTDPRAM::ALTDPRAM(size_t width, size_t depth)
 
 	m_genericParameters["RDADDRESS_REG"] = "\"OUTCLOCK\"";
 	m_genericParameters["RDCONTROL_REG"] = "\"OUTCLOCK\"";
-	m_genericParameters["WRADDRESS_REG"] = "\"INCLOCK\"";
-	m_genericParameters["WRCONTROL_REG"] = "\"INCLOCK\"";
-	m_genericParameters["INDATA_REG"] = "\"INCLOCK\"";
 	m_genericParameters["OUTDATA_REG"] = "\"UNREGISTERED\"";
+
+	// These must be UNREGISTERED if no inclock is bound, otherwise the macro asserts even if nothing is bound to the write inputs.
+	m_genericParameters["WRADDRESS_REG"] = "\"UNREGISTERED\"";
+	m_genericParameters["WRCONTROL_REG"] = "\"UNREGISTERED\"";
+	m_genericParameters["INDATA_REG"] = "\"UNREGISTERED\"";
 
 	m_genericParameters["WIDTHAD"] = std::to_string(utils::Log2C(depth));
 
@@ -315,7 +317,7 @@ std::vector<std::string> ALTDPRAM::getSupportFiles() const
 void ALTDPRAM::setupSupportFile(size_t idx, const std::string &filename, std::ostream &stream)
 {
 	HCL_ASSERT(idx == 0);
-	m_genericParameters["LPM_FILE"] = filename;
+	m_genericParameters["LPM_FILE"] = (boost::format("\"%s\"") % filename).str();
 
 	writeMemoryInitializationFile(stream, m_width, m_memoryInitialization);
 }
@@ -349,7 +351,7 @@ bool ALTDPRAM::checkValidInputClocks(std::span<hlim::SignalClockDomain> inputClo
 	};
 
 	auto checkRegisteredWithOrConst = [&](size_t input, const std::string &clk) {
-		if (getDriver(input).node == nullptr) return true;
+		if (getNonSignalDriver(input).node == nullptr) return true;
 
 		switch (inputClocks[input].type) {
 			case hlim::SignalClockDomain::UNKNOWN: return false;
@@ -361,6 +363,7 @@ bool ALTDPRAM::checkValidInputClocks(std::span<hlim::SignalClockDomain> inputClo
 				HCL_ASSERT_HINT(false, "Invalid configuration of ALTDPRAM!");
 			}
 		}
+		return false;
 	};
 
 	auto compareInputs = [&](size_t input1, size_t input2) {
@@ -394,26 +397,28 @@ bool ALTDPRAM::checkValidInputClocks(std::span<hlim::SignalClockDomain> inputClo
 			return false;
 	}
 
-	// According to the intel documentation, the write signals (addr, data, ...) can also be unregistered. 
-	// I think this is a mistake, writes should always be synchronous.
-	HCL_ASSERT(m_genericParameters.find("WRADDRESS_REG")->second == "\"INCLOCK\"");
-	HCL_ASSERT(m_genericParameters.find("WRCONTROL_REG")->second == "\"INCLOCK\"");
-	HCL_ASSERT(m_genericParameters.find("INDATA_REG")->second == "\"INCLOCK\"");
+	if (getNonSignalDriver(IN_DATA).node != nullptr) {
+		// According to the intel documentation, the write signals (addr, data, ...) can also be unregistered. 
+		// I think this is a mistake, writes should always be synchronous.
+		HCL_ASSERT(m_genericParameters.find("WRADDRESS_REG")->second == "\"INCLOCK\"");
+		HCL_ASSERT(m_genericParameters.find("WRCONTROL_REG")->second == "\"INCLOCK\"");
+		HCL_ASSERT(m_genericParameters.find("INDATA_REG")->second == "\"INCLOCK\"");
 
-	if (!checkRegisteredWithOrConst(IN_WRADDRESSSTALL, "\"INCLOCK\""))
-		return false;
+		if (!checkRegisteredWithOrConst(IN_WRADDRESSSTALL, "\"INCLOCK\""))
+			return false;
 
-	if (!checkRegisteredWithOrConst(IN_WREN, "\"INCLOCK\""))
-		return false;
+		if (!checkRegisteredWithOrConst(IN_WREN, "\"INCLOCK\""))
+			return false;
 
-	if (!checkRegisteredWithOrConst(IN_DATA, "\"INCLOCK\""))
-		return false;
+		if (!checkRegisteredWithOrConst(IN_DATA, "\"INCLOCK\""))
+			return false;
 
-	if (!checkRegisteredWithOrConst(IN_WRADDRESS, "\"INCLOCK\""))
-		return false;
+		if (!checkRegisteredWithOrConst(IN_WRADDRESS, "\"INCLOCK\""))
+			return false;
 
-	if (!checkRegisteredWithOrConst(IN_BYTEENA, "\"INCLOCK\""))
-		return false;
+		if (!checkRegisteredWithOrConst(IN_BYTEENA, "\"INCLOCK\""))
+			return false;
+	}
 
 	return true;
 }
