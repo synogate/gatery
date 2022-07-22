@@ -41,6 +41,9 @@ namespace gtry::scl
 	template<StreamSignal T, SignalValue Tval> 
 	requires (T::template has<Ready>())
 	T insertBeat(T& source, UInt beatOffset, const Tval& value);
+
+	template<StreamSignal T>
+	auto addEopDeferred(T& source, Bit insert);
 }
 
 
@@ -233,7 +236,7 @@ namespace gtry::scl
 		{
 			IF(beatCounter.value() < zext(beatOffset + 1))
 				beatCounter.inc();
-			IF(eop(source))
+			IF(eop(source) & beatCounter.value() != zext(beatOffset))
 				beatCounter.reset();
 		}
 
@@ -241,6 +244,7 @@ namespace gtry::scl
 		{
 			*out = value;
 			ready(source) = '0';
+			eop(out) = '0';
 		}
 		HCL_NAMED(out);
 		return out;
@@ -254,13 +258,17 @@ namespace gtry::scl
 		auto in = source.add(scl::Eop{'0'});
 		HCL_NAMED(in);
 
-		IF(insert)
+		Bit insertState;
+		HCL_NAMED(insertState);
+		IF(insertState)
 		{
+			ready(source) = '0';
 			valid(in) = '1';
 			eop(in) = '1';
 		}
 
 		auto out = scl::eraseLastBeat(in);
+		insertState = flag(insert, transfer(out)) | insert;
 		HCL_NAMED(out);
 		return out;
 	}
