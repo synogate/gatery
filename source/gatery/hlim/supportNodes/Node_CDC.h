@@ -40,6 +40,8 @@ class Node_CDC : public Node<Node_CDC>
 
 		virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;		
 
+		virtual bool isCombinatorial(size_t port) const { return true; }
+
 		void connectInput(const NodePort &nodePort);
 		void disconnectInput();
 

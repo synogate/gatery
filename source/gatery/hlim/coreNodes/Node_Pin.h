@@ -57,7 +57,7 @@ namespace gtry::hlim {
 			/// In case of an input pin, sets the clock to determine the clock domain to which the input signals are belonging.
 			void setClockDomain(Clock *clk);
 			/// Despite having a clock for the clock domain, this node is considered combinatorial.
-			virtual bool isCombinatorial() const override { return true; }
+			virtual bool isCombinatorial(size_t port) const override { return true; }
 
 			void setDifferential(std::string_view posPrefix = "_p", std::string_view negPrefix = "_n");
 			void setNormal() { m_differential = false; }

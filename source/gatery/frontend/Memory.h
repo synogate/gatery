@@ -65,6 +65,7 @@ namespace gtry
 				readPort->connectEnable(scope->getFullCondition());
 
 			readPort->connectAddress(m_address.readPort());
+			readPort->setClock(ClockScope::getClk().getClk());
 
 			UInt rawData(SignalReadPort({ .node = readPort, .port = (unsigned)hlim::Node_MemPort::Outputs::rdData }));
 			Data ret = constructFrom(m_defaultValue);

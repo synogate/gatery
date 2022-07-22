@@ -37,7 +37,7 @@ void defaultValueResolution(Circuit &circuit, Subnet &subnet)
 			bool isLoopy = false;
 
 			for (auto handle : defaultNode->exploreInput(0)) {
-				if (nodesAlreadyVisited.contains(handle.node()) || !handle.node()->isCombinatorial()) 
+				if (nodesAlreadyVisited.contains(handle.node()) || !handle.node()->isCombinatorial(handle.port())) 
 					handle.backtrack();
 				else {
 					if (handle.node() == defaultNode) {

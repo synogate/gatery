@@ -646,7 +646,7 @@ void Circuit::removeIrrelevantMuxes(Subnet &subnet)
 							if (closedList.contains(input)) continue;
 							closedList.insert(input);
 
-							if (input.node->hasSideEffects() || input.node->hasRef() || !input.node->isCombinatorial()) {
+							if (input.node->hasSideEffects() || input.node->hasRef() || !input.node->isCombinatorial(input.port)) {
 								allSubnetOutputsMuxed = false;
 								//std::cout << "Internal node with sideeffects, skipping" << std::endl;
 								break;
@@ -963,8 +963,6 @@ void Circuit::propagateConstants(Subnet &subnet)
 				} 
 			}
 
-			// Only work on combinatory nodes
-			if (!successor.node->isCombinatorial()) continue;
 			// Nodes with side-effects can't be removed/bypassed
 			if (successor.node->hasSideEffects()) continue;
 			// Nodes with references can't be removed/bypassed
@@ -1007,6 +1005,10 @@ void Circuit::propagateConstants(Subnet &subnet)
 			// Check all outputs. If any are fully defined, all nodes connected to that output can instead be connected to a const-node with the result.
 			// If this nodes ends up without any other nodes connected to it, it will be culled by other optimization steps.
 			for (size_t port : utils::Range(successor.node->getNumOutputPorts())) {
+
+				// Only consider on combinatory outputs
+				if (!successor.node->isCombinatorial(port)) continue;
+
 				auto conType = successor.node->getOutputConnectionType(port);
 
 				bool allDefined = true;

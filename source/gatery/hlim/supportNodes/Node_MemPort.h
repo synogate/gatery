@@ -77,6 +77,8 @@ class Node_MemPort : public Node<Node_MemPort>
 
 		void setClock(Clock* clk);
 
+		virtual bool isCombinatorial(size_t port) const { return port == (size_t) Outputs::rdData; }
+
 		bool isReadPort() const;
 		bool isWritePort() const;
 
