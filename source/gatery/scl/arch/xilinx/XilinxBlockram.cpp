@@ -30,6 +30,9 @@ XilinxBlockram::XilinxBlockram(const XilinxDevice &xilinxDevice) : m_xilinxDevic
 	m_desc.sizeCategory = MemoryCapabilities::SizeCategory::MEDIUM;
 	m_desc.inputRegs = true;
 	m_desc.outputRegs = 0;
+
+	m_desc.supportsDualClock = false; // not yet implemented
+	m_desc.supportsPowerOnInitialization = false; // not yet implemented
 }
 
 }

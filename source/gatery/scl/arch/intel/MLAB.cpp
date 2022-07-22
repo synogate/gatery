@@ -42,6 +42,8 @@ MLAB::MLAB(const IntelDevice &intelDevice) : m_intelDevice(intelDevice)
 //	if (m_intelDevice.getFamily() == "Arria 5" || m_intelDevice.getFamily() == "Cyclone 5" || m_intelDevice.getFamily() == "Stratix 10")
 //		m_desc.addressBits = 4; // 32
 
+	m_desc.supportsDualClock = false; // not yet implemented
+	m_desc.supportsPowerOnInitialization = true;
 }
 
 bool MLAB::apply(hlim::NodeGroup *nodeGroup) const

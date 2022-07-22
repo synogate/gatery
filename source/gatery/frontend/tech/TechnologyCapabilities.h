@@ -100,10 +100,21 @@ class MemoryCapabilities : public Capabilities {
 			LARGE   // UltraRAMS, eSRAM, ...
 		};
 
+
+		enum class Mode {
+			ROM,
+			SIMPLE_DUAL_PORT,
+			TRUE_DUAL_PORT
+		};
+
+
 		struct Request {
-			uint64_t size;
-			uint64_t maxDepth;
+			uint64_t size = 0;
+			uint64_t maxDepth = 0;
 			utils::BitFlags<SizeCategory> sizeCategory = utils::BitFlags<SizeCategory>::ALL;
+			Mode mode = Mode::SIMPLE_DUAL_PORT;
+			bool dualClock = false;
+			bool powerOnInitialized = false;
 		};
 
 		struct Choice {
