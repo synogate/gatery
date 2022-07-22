@@ -195,8 +195,9 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllDrivenCombinatoricallyByO
 	std::vector<NodeType*> openList;
 
 	for (auto &o : outputs)
-		for (auto &c : o.node->getDirectlyDriven(o.port))
-			openList.push_back(c.node);
+		if (o.node->isCombinatorial(o.port))
+			for (auto &c : o.node->getDirectlyDriven(o.port))
+				openList.push_back(c.node);
 
 	std::set<NodeType*> foundNodes;
 
@@ -208,12 +209,12 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllDrivenCombinatoricallyByO
 		if (foundNodes.contains(n)) continue; // already handled
 		foundNodes.insert(n);
 
-		if (!n->isCombinatorial()) continue;
 		m_nodes.insert(n);
 		
 		for (auto i : utils::Range(n->getNumOutputPorts())) 
-			for (auto &c : n->getDirectlyDriven(i))
-				openList.push_back(c.node);
+			if (n->isCombinatorial(i))
+				for (auto &c : n->getDirectlyDriven(i))
+					openList.push_back(c.node);
 	}
 
 	return (FinalType&)*this;
