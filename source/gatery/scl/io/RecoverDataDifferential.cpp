@@ -38,6 +38,12 @@ gtry::scl::VStream<gtry::UInt> gtry::scl::recoverDataDifferential(hlim::ClockRat
 	Counter phaseCounter{ samples };
 	phaseCounter.inc();
 	
+	// sample data based on clock estimate
+	VStream<UInt> out{
+		cat(n, p),
+		Valid{ phaseCounter.isLast() }
+	};
+	
 	// recover clock and shift sample point
 	Bit edgeDetected;
 	IF(p != reg(p) | n != reg(n))
@@ -46,14 +52,9 @@ gtry::scl::VStream<gtry::UInt> gtry::scl::recoverDataDifferential(hlim::ClockRat
 	{
 		phaseCounter.load((samples + 1) / 2);
 		edgeDetected = '0';
+		valid(out) = '0'; // prevent double sampling
 	}
 	edgeDetected = reg(edgeDetected, '0');
-	
-	// sample data based on clock estimate
-	VStream<UInt> out{
-		cat(n, p),
-		Valid{ phaseCounter.isLast() }
-	};
 	HCL_NAMED(out);
 	return out;
 }
