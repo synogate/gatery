@@ -143,7 +143,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_demux_test, BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	dbg::vis();
+	//dbg::vis();
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(clock.getClk(), 16);
 }
