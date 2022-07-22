@@ -24,6 +24,8 @@
 
 #include <boost/format.hpp>
 
+#include "MemoryInitializationFile.h"
+
 namespace gtry::scl::arch::intel {
 
 ALTSYNCRAM::ALTSYNCRAM(size_t size)
@@ -35,6 +37,16 @@ ALTSYNCRAM::ALTSYNCRAM(size_t size)
 	m_clockNames = {"clock0", ""};
 	m_resetNames = {"", ""};
 	m_clocks.resize(CLK_COUNT);
+
+
+	m_genericParameters["outdata_reg_a"] = "\"UNREGISTERED\"";
+	m_genericParameters["outdata_reg_b"] = "\"UNREGISTERED\"";
+	
+	m_genericParameters["rdcontrol_reg_b"] 				= "\"CLOCK1\"";
+	m_genericParameters["address_reg_b"] 				= "\"CLOCK1\"";
+	m_genericParameters["indata_reg_b"] 				= "\"CLOCK1\"";
+	m_genericParameters["wrcontrol_wraddress_reg_b"]	= "\"CLOCK1\"";
+	m_genericParameters["byteena_reg_b"] 				= "\"CLOCK1\"";
 
 	m_size = size;
 
@@ -63,6 +75,7 @@ std::string ALTSYNCRAM::RDWBehavior2Str(RDWBehavior rdw)
 ALTSYNCRAM &ALTSYNCRAM::setupPortA(size_t width, PortSetup portSetup)
 {
 	setOutputConnectionType(OUT_Q_A, {.interpretation = hlim::ConnectionType::BITVEC, .width=width});
+	m_widthPortA = width;
 	m_genericParameters["width_a"] = std::to_string(width);
 	m_genericParameters["numwords_a"] = std::to_string(m_size / width);
 	m_genericParameters["read_during_write_mode_port_a"] = RDWBehavior2Str(portSetup.rdw);
@@ -123,11 +136,12 @@ ALTSYNCRAM &ALTSYNCRAM::setupPortB(size_t width, PortSetup portSetup)
 			m_genericParameters["byteena_reg_b"]				= "\"CLOCK0\"";
 		}
 	} else {
-			m_genericParameters["rdcontrol_reg_b"] 				= "\"UNREGISTERED\"";
-			m_genericParameters["address_reg_b"] 				= "\"UNREGISTERED\"";
-			m_genericParameters["indata_reg_b"] 				= "\"UNREGISTERED\"";
-			m_genericParameters["wrcontrol_wraddress_reg_b"] 	= "\"UNREGISTERED\"";
-			m_genericParameters["byteena_reg_b"]				= "\"UNREGISTERED\"";
+		/// @todo: I think this may not be legal for altsyncram
+		m_genericParameters["rdcontrol_reg_b"] 				= "\"UNREGISTERED\"";
+		m_genericParameters["address_reg_b"] 				= "\"UNREGISTERED\"";
+		m_genericParameters["indata_reg_b"] 				= "\"UNREGISTERED\"";
+		m_genericParameters["wrcontrol_wraddress_reg_b"] 	= "\"UNREGISTERED\"";
+		m_genericParameters["byteena_reg_b"]				= "\"UNREGISTERED\"";
 	}
 
 	if (portSetup.outputRegs)
@@ -334,6 +348,96 @@ std::string ALTSYNCRAM::attemptInferOutputName(size_t outputPort) const
 {
 	return "altsyncram_" + getOutputName(outputPort);
 }
+
+std::vector<std::string> ALTSYNCRAM::getSupportFiles() const
+{
+	if (m_memoryInitialization.size() != 0)
+		if (sim::anyDefined(m_memoryInitialization))
+			return { "memoryInitialization.mif" };
+
+	return {};
+}
+
+void ALTSYNCRAM::setupSupportFile(size_t idx, const std::string &filename, std::ostream &stream)
+{
+	HCL_ASSERT(idx == 0);
+	m_genericParameters["init_file"] = (boost::format("\"%s\"") % filename).str();
+	m_genericParameters["init_file_layout"] = "\"PORT_A\"";
+
+	writeMemoryInitializationFile(stream, m_widthPortA, m_memoryInitialization);
+}
+
+
+hlim::OutputClockRelation ALTSYNCRAM::getOutputClockRelation(size_t output) const
+{
+	std::string outdata_reg;
+	if (output == OUT_Q_A)
+		outdata_reg = m_genericParameters.find("outdata_reg_a")->second;
+	else
+		outdata_reg = m_genericParameters.find("outdata_reg_b")->second;
+
+	if (outdata_reg == "\"CLOCK0\"") 
+		return { .dependentClocks={ 0 } };
+
+	if (outdata_reg == "\"CLOCK1\"") 
+		return { .dependentClocks={ 1 } };
+
+
+	std::string addr_reg;
+	if (output == OUT_Q_A)
+		addr_reg =  "\"CLOCK0\"";
+	else
+		addr_reg = m_genericParameters.find("address_reg_b")->second;
+
+	if (addr_reg == "\"CLOCK0\"") 
+		return { .dependentClocks={ 0 } };
+
+	if (addr_reg == "\"CLOCK1\"") 
+		return { .dependentClocks={ 1 } };
+
+	HCL_ASSERT_HINT(false, "Inconsistent configuration of ALTSYNCRAM!");
+}
+
+bool ALTSYNCRAM::checkValidInputClocks(std::span<hlim::SignalClockDomain> inputClocks) const
+{
+	auto clocksCompatible = [&](const hlim::Clock *clkA, const hlim::Clock *clkB) {
+		if (clkA == nullptr || clkB == nullptr) return false;
+		return clkA->getClockPinSource() == clkB->getClockPinSource();
+	};
+
+	auto check = [&](size_t input, const std::string &clk) {
+		switch (inputClocks[input].type) {
+			case hlim::SignalClockDomain::UNKNOWN: return false;
+			case hlim::SignalClockDomain::CONSTANT: return true;
+			case hlim::SignalClockDomain::CLOCK: {
+				if (clk == "\"CLOCK0\"") return clocksCompatible(inputClocks[input].clk, m_clocks[0]);
+				if (clk == "\"CLOCK1\"") return clocksCompatible(inputClocks[input].clk, m_clocks[1]);
+				HCL_ASSERT_HINT(false, "Invalid configuration of ALTSYNCRAM!");
+			}
+		}
+		return false;
+	};
+
+	if (!check(IN_WREN_A, "\"CLOCK0\"")) return false;
+	if (!check(IN_RDEN_A, "\"CLOCK0\"")) return false;
+
+	if (!check(IN_WREN_B, m_genericParameters.find("wrcontrol_wraddress_reg_b")->second)) return false;
+	if (!check(IN_RDEN_B, m_genericParameters.find("rdcontrol_reg_b")->second)) return false;
+
+
+	if (!check(IN_DATA_A, "\"CLOCK0\"")) return false;
+	if (!check(IN_ADDRESS_A, "\"CLOCK0\"")) return false;
+	if (!check(IN_BYTEENA_A, "\"CLOCK0\"")) return false;
+
+
+	if (!check(IN_DATA_B, m_genericParameters.find("indata_reg_b")->second)) return false;
+	if (!check(IN_ADDRESS_B, m_genericParameters.find("address_reg_b")->second)) return false;
+	if (!check(IN_ADDRESS_B, m_genericParameters.find("wrcontrol_wraddress_reg_b")->second)) return false;
+	if (!check(IN_BYTEENA_B, m_genericParameters.find("byteena_reg_b")->second)) return false;
+
+	return true;
+}
+
 
 
 

@@ -21,7 +21,7 @@ gtry::Memory<gtry::UInt>& gtry::scl::riscv::DualCycleRV::fetch(uint64_t entryPoi
 
 		BitWidth memWidth = m_IP.width() - 2;
 		m_instructionMem.setup(memWidth.count(), 32_b);
-		m_instructionMem.setType(MemType::MEDIUM);
+		m_instructionMem.setType(MemType::MEDIUM, 1);
 		m_instructionMem.setName("instruction_memory");
 
 		IF(!m_stall)

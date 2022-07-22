@@ -169,6 +169,7 @@ const VHDLSignalDeclaration &NamespaceScope::get(const hlim::Node_Pin *ioPin) co
 
 std::string NamespaceScope::allocatePackageName(const std::string &desiredName)
 {
+	HCL_ASSERT(m_parent == nullptr);
 	HCL_ASSERT(!desiredName.empty());
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
@@ -183,9 +184,17 @@ std::string NamespaceScope::allocatePackageName(const std::string &desiredName)
 	return name;
 }
 
+std::string NamespaceScope::allocateSupportFileName(const std::string &desiredName)
+{
+	if (m_parent != nullptr)
+		return m_parent->allocateSupportFileName(desiredName);
+
+	return desiredName; // todo: Actually do some checking
+}
 
 std::string NamespaceScope::allocateEntityName(const std::string &desiredName)
 {
+	HCL_ASSERT(m_parent == nullptr);
 	HCL_ASSERT(!desiredName.empty());
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 

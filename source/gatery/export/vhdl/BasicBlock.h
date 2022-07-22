@@ -65,6 +65,12 @@ struct ShiftRegStorage
 class BasicBlock : public BaseGrouping
 {
 	public:
+		struct ExternalNodeInstance {
+			hlim::Node_External *node;
+			std::string instanceName;
+			std::vector<std::string> supportFilenames;
+		};
+
 		BasicBlock(AST &ast, BasicBlock *parent, NamespaceScope *parentNamespace);
 		virtual ~BasicBlock();
 
@@ -75,8 +81,10 @@ class BasicBlock : public BaseGrouping
 
 		inline const std::vector<Entity*> &getSubEntities() const { return m_entities; }
 		inline const std::vector<std::string> &getSubEntityInstanceNames() const { return m_entityInstanceNames; }
-		inline const std::vector<hlim::Node_External*> getExternalNodes() const { return m_externalNodes; }
+		inline const std::vector<ExternalNodeInstance> getExternalNodes() const { return m_externalNodes; }
 		void addNeededLibraries(std::set<std::string> &libs) const;
+
+		virtual void writeSupportFiles(const std::filesystem::path &destination) const;
 	protected:
 		void collectInstantiations(hlim::NodeGroup *nodeGroup, bool reccursive);
 		void processifyNodes(const std::string &desiredProcessName, hlim::NodeGroup *nodeGroup, bool reccursive);
@@ -88,8 +96,7 @@ class BasicBlock : public BaseGrouping
 		std::vector<std::unique_ptr<Process>> m_processes;
 		std::vector<Entity*> m_entities;
 		std::vector<std::string> m_entityInstanceNames;
-		std::vector<hlim::Node_External*> m_externalNodes;
-		std::vector<std::string> m_externalNodeInstanceNames;
+		std::vector<ExternalNodeInstance> m_externalNodes;
 
 		std::vector<ConcurrentStatement> m_statements;
 

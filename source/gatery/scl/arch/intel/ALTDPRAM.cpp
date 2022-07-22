@@ -19,6 +19,8 @@
 
 #include "ALTDPRAM.h"
 
+#include "MemoryInitializationFile.h"
+
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Preprocessor.h>
 
@@ -42,6 +44,15 @@ ALTDPRAM::ALTDPRAM(size_t width, size_t depth)
 
 	m_genericParameters["width"] = std::to_string(width);
 	m_genericParameters["numwords"] = std::to_string(depth);
+
+	m_genericParameters["RDADDRESS_REG"] = "\"OUTCLOCK\"";
+	m_genericParameters["RDCONTROL_REG"] = "\"OUTCLOCK\"";
+	m_genericParameters["OUTDATA_REG"] = "\"UNREGISTERED\"";
+
+	// These must be UNREGISTERED if no inclock is bound, otherwise the macro asserts even if nothing is bound to the write inputs.
+	m_genericParameters["WRADDRESS_REG"] = "\"UNREGISTERED\"";
+	m_genericParameters["WRCONTROL_REG"] = "\"UNREGISTERED\"";
+	m_genericParameters["INDATA_REG"] = "\"UNREGISTERED\"";
 
 	m_genericParameters["WIDTHAD"] = std::to_string(utils::Log2C(depth));
 
@@ -291,6 +302,125 @@ std::unique_ptr<hlim::BaseNode> ALTDPRAM::cloneUnconnected() const
 std::string ALTDPRAM::attemptInferOutputName(size_t outputPort) const
 {
 	return "altdpram_" + getOutputName(outputPort);
+}
+
+
+std::vector<std::string> ALTDPRAM::getSupportFiles() const
+{
+	if (m_memoryInitialization.size() != 0)
+		if (sim::anyDefined(m_memoryInitialization))
+			return { "memoryInitialization.mif" };
+
+	return {};
+}
+
+void ALTDPRAM::setupSupportFile(size_t idx, const std::string &filename, std::ostream &stream)
+{
+	HCL_ASSERT(idx == 0);
+	m_genericParameters["LPM_FILE"] = (boost::format("\"%s\"") % filename).str();
+
+	writeMemoryInitializationFile(stream, m_width, m_memoryInitialization);
+}
+
+
+
+hlim::OutputClockRelation ALTDPRAM::getOutputClockRelation(size_t output) const
+{
+	std::string outdata_reg = m_genericParameters.find("OUTDATA_REG")->second;
+	if (outdata_reg == "\"OUTCLOCK\"") 
+		return { .dependentClocks={ OUTCLOCK } };
+
+
+	std::string addr_reg = m_genericParameters.find("RDADDRESS_REG")->second;
+
+	if (addr_reg == "\"INCLOCK\"") 
+		return { .dependentClocks={ INCLOCK } };
+
+	if (addr_reg == "\"OUTCLOCK\"") 
+		return { .dependentClocks={ OUTCLOCK } };
+
+	// Async read
+	return { .dependentInputs={ IN_RDADDRESSSTALL, IN_RDEN, IN_RDADDRESS } };
+}
+
+bool ALTDPRAM::checkValidInputClocks(std::span<hlim::SignalClockDomain> inputClocks) const
+{
+	auto clocksCompatible = [&](const hlim::Clock *clkA, const hlim::Clock *clkB) {
+		if (clkA == nullptr || clkB == nullptr) return false;
+		return clkA->getClockPinSource() == clkB->getClockPinSource();
+	};
+
+	auto checkRegisteredWithOrConst = [&](size_t input, const std::string &clk) {
+		if (getNonSignalDriver(input).node == nullptr) return true;
+
+		switch (inputClocks[input].type) {
+			case hlim::SignalClockDomain::UNKNOWN: return false;
+			case hlim::SignalClockDomain::CONSTANT: return true;
+			case hlim::SignalClockDomain::CLOCK: {
+				if (clk == "\"UNREGISTERED\"") return false;
+				if (clk == "\"INCLOCK\"") return clocksCompatible(inputClocks[input].clk, m_clocks[0]);
+				if (clk == "\"OUTCLOCK\"") return clocksCompatible(inputClocks[input].clk, m_clocks[1]);
+				HCL_ASSERT_HINT(false, "Invalid configuration of ALTDPRAM!");
+			}
+		}
+		return false;
+	};
+
+	auto compareInputs = [&](size_t input1, size_t input2) {
+		if (inputClocks[input1].type == hlim::SignalClockDomain::UNKNOWN || inputClocks[input2].type == hlim::SignalClockDomain::UNKNOWN)
+			return false;
+		if (inputClocks[input1].type == hlim::SignalClockDomain::CONSTANT || inputClocks[input2].type == hlim::SignalClockDomain::CONSTANT)
+			return true;
+
+		return clocksCompatible(inputClocks[input1].clk, inputClocks[input2].clk);
+	};	
+
+	std::string rdAddrReg = m_genericParameters.find("RDADDRESS_REG")->second;
+	std::string rdCtrlReg = m_genericParameters.find("RDCONTROL_REG")->second;
+
+	// Everything else seems wrong
+	HCL_ASSERT(rdAddrReg == rdCtrlReg);
+
+	if (rdAddrReg == "\"UNREGISTERED\"" && rdCtrlReg == "\"UNREGISTERED\"") {
+		if (!compareInputs(IN_RDADDRESSSTALL, IN_RDADDRESS))
+			return false;
+		if (!compareInputs(IN_RDADDRESSSTALL, IN_RDEN))
+			return false;
+		if (!compareInputs(IN_RDADDRESS, IN_RDEN))
+			return false;
+	} else {
+		if (!checkRegisteredWithOrConst(IN_RDADDRESSSTALL, rdAddrReg))
+			return false;
+		if (!checkRegisteredWithOrConst(IN_RDEN, rdAddrReg))
+			return false;
+		if (!checkRegisteredWithOrConst(IN_RDADDRESS, rdAddrReg))
+			return false;
+	}
+
+	if (getNonSignalDriver(IN_DATA).node != nullptr) {
+		// According to the intel documentation, the write signals (addr, data, ...) can also be unregistered. 
+		// I think this is a mistake, writes should always be synchronous.
+		HCL_ASSERT(m_genericParameters.find("WRADDRESS_REG")->second == "\"INCLOCK\"");
+		HCL_ASSERT(m_genericParameters.find("WRCONTROL_REG")->second == "\"INCLOCK\"");
+		HCL_ASSERT(m_genericParameters.find("INDATA_REG")->second == "\"INCLOCK\"");
+
+		if (!checkRegisteredWithOrConst(IN_WRADDRESSSTALL, "\"INCLOCK\""))
+			return false;
+
+		if (!checkRegisteredWithOrConst(IN_WREN, "\"INCLOCK\""))
+			return false;
+
+		if (!checkRegisteredWithOrConst(IN_DATA, "\"INCLOCK\""))
+			return false;
+
+		if (!checkRegisteredWithOrConst(IN_WRADDRESS, "\"INCLOCK\""))
+			return false;
+
+		if (!checkRegisteredWithOrConst(IN_BYTEENA, "\"INCLOCK\""))
+			return false;
+	}
+
+	return true;
 }
 
 

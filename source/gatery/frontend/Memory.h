@@ -172,11 +172,11 @@ namespace gtry
 			}
 		}
 		void setType(MemType type, size_t readLatency) { 
-			if (type != MemType::EXTERNAL) {
-				auto c = getTargetRequirementsForType(type);
-				// TODO: This prevents things like: Set to DONT_CARE, choose a large size, and fore it into lutrams with a read latency of 0. Do we want that?
-				HCL_DESIGNCHECK_HINT(readLatency >= c.totalReadLatency, "The specified read latency is less than what the target device reports is necessary for this kind of memory!");
-			}
+			// if (type != MemType::EXTERNAL) {
+			// 	auto c = getTargetRequirementsForType(type);
+			// 	// TODO: This prevents things like: Set to DONT_CARE, choose a large size, and fore it into lutrams with a read latency of 0. Do we want that?
+			// 	HCL_DESIGNCHECK_HINT(readLatency >= c.totalReadLatency, "The specified read latency is less than what the target device reports is necessary for this kind of memory!");
+			// }
 			m_memoryNode->setType(type, readLatency); 
 		}
 
