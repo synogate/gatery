@@ -249,7 +249,7 @@ NodeGroup *MemoryGroup::lazyCreateFixupNodeGroup()
 void MemoryGroup::convertToReadBeforeWrite(Circuit &circuit)
 {
 	// If an async read happens after a write, it must
-	// check if an address collision occured and if so directly forward the new value.
+	// check if an address collision ocurred and if so directly forward the new value.
 	for (auto &rp : m_readPorts) {
 
 		// Iteratively push the read port up the dependency chain until the top is reached.
