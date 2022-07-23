@@ -112,7 +112,7 @@ class BaseNode : public NodeIO
 
 		bool isOrphaned() const;
 		virtual bool hasSideEffects() const;
-		virtual bool isCombinatorial() const;
+		virtual bool isCombinatorial(size_t port) const;
 
 		const NodeGroup *getGroup() const { return m_nodeGroup; }
 		NodeGroup *getGroup() { return m_nodeGroup; }

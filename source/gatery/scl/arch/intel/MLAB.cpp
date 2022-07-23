@@ -42,41 +42,129 @@ MLAB::MLAB(const IntelDevice &intelDevice) : m_intelDevice(intelDevice)
 //	if (m_intelDevice.getFamily() == "Arria 5" || m_intelDevice.getFamily() == "Cyclone 5" || m_intelDevice.getFamily() == "Stratix 10")
 //		m_desc.addressBits = 4; // 32
 
+	m_desc.supportsDualClock = false; // not yet implemented
+	m_desc.supportsPowerOnInitialization = true;
 }
 
 bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 {
 	auto *memGrp = dynamic_cast<hlim::MemoryGroup*>(nodeGroup->getMetaInfo());
 	if (memGrp == nullptr) return false;
-	if (memGrp->getMemory()->type() == hlim::Node_Memory::MemType::EXTERNAL)
+	if (memGrp->getMemory()->type() == hlim::Node_Memory::MemType::EXTERNAL) {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because it is external memory.");
 		return false;
-
-	if (memGrp->getReadPorts().size() != 1) return false;
+	}
+	if (memGrp->getReadPorts().size() == 0) {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because it has no read ports.");
+		return false;
+	}
+	if (memGrp->getReadPorts().size() > 1) {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because it has more than one read port and so far only one read port is supported.");
+		return false;
+	}
 	const auto &rp = memGrp->getReadPorts().front();
-	if (memGrp->getWritePorts().size() > 1) return false;
-	if (memGrp->getMemory()->getRequiredReadLatency() > 1) return false;
+	if (memGrp->getWritePorts().size() > 1) {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because it has more than one write port and so far only one write port is supported.");
 
-	if (memGrp->getWritePorts().size() > 1) return false;
+		return false;
+	}
 
 	size_t width = rp.node->getBitWidth();
 	size_t depth = memGrp->getMemory()->getSize()/width;
 	size_t addrBits = utils::Log2C(depth);
 
-	bool supportsWriteFirst = memGrp->getMemory()->getRequiredReadLatency() == 1;
 
-	if (memGrp->getWritePorts().size() != 0 && !supportsWriteFirst) return false; // Todo: Needs extra handling
+	/*
+
+		We need the new-data rdw mode because an async read is expected to return data
+		written on the last cycle which, due to the write inputs being registered is
+		actually the current cycle. (We could build a bypass for this)
+
+		This new-data mode is only possible if the output register is used, presumably because 
+		this is precisely what allows quartus to time the read correctly in relation to the write.
+
+		This only applies for single-clock configurations, multi-clock is more complicated.
+
+		Fow now, only allow writes if we have that read register to work with.
+	*/
+
+	bool supportsWriteFirst = memGrp->getMemory()->getRequiredReadLatency() >= 1;
+
+	if (memGrp->getWritePorts().size() != 0 && !supportsWriteFirst)  {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because automatic building of read during write bypasses for MLABs is not yet implemented.");
+
+		return false; // Todo: Needs extra handling
+	}
 
 	auto &circuit = DesignScope::get()->getCircuit();
 
 	memGrp->convertToReadBeforeWrite(circuit);
 	memGrp->attemptRegisterRetiming(circuit);
 
+	hlim::Clock *readClock = nullptr;
+	if (!rp.dedicatedReadLatencyRegisters.empty())
+		readClock = rp.dedicatedReadLatencyRegisters.front()->getClocks()[0];
+
+	hlim::Clock *writeClock = nullptr;
+	if (!memGrp->getWritePorts().empty())
+		writeClock = memGrp->getWritePorts().front().node->getClocks()[0];
+
 
 	for (auto reg : rp.dedicatedReadLatencyRegisters) {
-		if (reg->hasResetValue()) return false;
-		if (reg->hasEnable()) return false;
-		if (memGrp->getWritePorts().size() > 0 && memGrp->getWritePorts().front().node->getClocks()[0] != reg->getClocks()[0]) return false;
-		if (rp.dedicatedReadLatencyRegisters.front()->getClocks()[0] != reg->getClocks()[0]) return false;
+		if (reg->hasResetValue()) {
+			// actually for mlabs, the output register is cleared to zero. If we check for zero reset values, we can relax this.
+
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+					<< " because one of its output registers has a reset value.");
+			return false;
+		}
+		if (reg->hasEnable()) {
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+					<< " because one of its output registers has an enable.");
+			return false;
+		}
+		if (readClock != reg->getClocks()[0]) {
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+					<< " because its output registers have differing clocks.");
+			return false;
+		}
+	}
+
+	if (readClock != nullptr) {
+		if (readClock->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING) {
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+					<< " because its read clock is not triggering on rising clock edges.");
+			return false;
+		}
+	}
+
+	if (writeClock != nullptr) {
+		if (writeClock->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING) {
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+					<< " because its write clock is not triggering on rising clock edges.");
+			return false;
+		}
+	}
+
+	if (writeClock != readClock) {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because differing read and write clocks are not yet supported.");
+		return false;
 	}
 
 	memGrp->resolveWriteOrder(circuit);
@@ -119,7 +207,7 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 		altdpram->connectInput(ALTDPRAM::Inputs::IN_WRADDRESS, addr(0, addrBits));
 		altdpram->connectInput(ALTDPRAM::Inputs::IN_WREN, wrEn);
 
-		altdpram->attachClock(wp.node->getClocks()[0], (size_t)ALTDPRAM::Clocks::INCLOCK);
+		altdpram->attachClock(writeClock, (size_t)ALTDPRAM::Clocks::INCLOCK);
 
 		auto wrWordEnableSignal = wp.node->getNonSignalDriver((size_t)hlim::Node_MemPort::Inputs::wrWordEnable);
 		if (wrWordEnableSignal.node != nullptr)
@@ -129,15 +217,25 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 	{
 		ALTDPRAM::PortSetup portSetup;
 		portSetup.outputRegs = rp.dedicatedReadLatencyRegisters.size() > 0;
+		size_t numExternalOutputRegisters = rp.dedicatedReadLatencyRegisters.size()-1;
 		altdpram->setupReadPort(portSetup);
 
 		UInt addr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 		UInt data = hookUIntAfter(rp.dataOutput);
 
 		altdpram->connectInput(ALTDPRAM::Inputs::IN_RDADDRESS, addr(0, addrBits));
-		data.exportOverride(altdpram->getOutputUInt(ALTDPRAM::Outputs::OUT_Q));
 
-		altdpram->attachClock(rp.dedicatedReadLatencyRegisters.front()->getClocks()[0], (size_t)ALTDPRAM::Clocks::OUTCLOCK);
+		UInt readData = altdpram->getOutputUInt(ALTDPRAM::Outputs::OUT_Q);
+		{
+			Clock clock(readClock);
+			ClockScope cscope(clock);
+			for ([[maybe_unused]] auto i : utils::Range(numExternalOutputRegisters)) 
+				readData = reg(readData);
+		}
+		data.exportOverride(readData);
+
+		if (portSetup.outputRegs)
+			altdpram->attachClock(readClock, (size_t)ALTDPRAM::Clocks::OUTCLOCK);
 	}
 	
 	return true;

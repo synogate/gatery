@@ -45,7 +45,7 @@ bool memoryIsSingleClock(hlim::NodeGroup *group)
 	}
 
 	for (const auto &rp : memGrp->getReadPorts()) {
-		auto *readClkDom = hlim::findFirstOutputClock({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Outputs::rdData});
+		auto *readClkDom = rp.node->getClocks()[0];
 		if (clock == nullptr)
 			clock = readClkDom;
 		else
@@ -443,9 +443,6 @@ void splitMemoryAlongWidth(hlim::NodeGroup *group, size_t maxWidth)
 
 //void splitMemoryAlongDepthMux(hlim::NodeGroup *group, size_t maxDepthAddrBits);
 
-void applyToAllSubMemories(hlim::NodeGroup *group, std::function<void(hlim::NodeGroup*)> functor)
-{
-}
 
 
 }

@@ -103,7 +103,7 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
 		}
 
 		// use undefined for everything non-combinatorial
-		if (!nodePort.node->isCombinatorial()) {
+		if (!nodePort.node->isCombinatorial(nodePort.port)) {
 			auto type = hlim::getOutputConnectionType(nodePort);
 
 			DefaultBitVectorState undefinedState;

@@ -65,7 +65,7 @@ bool BaseNode::hasSideEffects() const
 	return false;
 }
 
-bool BaseNode::isCombinatorial() const
+bool BaseNode::isCombinatorial(size_t port) const
 {
 	for (auto clk : m_clocks)
 		if (clk != nullptr)

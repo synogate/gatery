@@ -42,6 +42,9 @@ XilinxLutram::XilinxLutram(const XilinxDevice &xilinxDevice) : m_xilinxDevice(xi
 
 	m_desc.size = 448;
 	m_desc.addressBits = 8;	
+
+	m_desc.supportsDualClock = false; // not yet implemented
+	m_desc.supportsPowerOnInitialization = false; // not yet implemented
 }
 
 

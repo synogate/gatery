@@ -38,7 +38,7 @@ class Node_Signal2Clk : public Node<Node_Signal2Clk>
 		virtual std::string getOutputName(size_t idx) const override;
 
 		virtual bool hasSideEffects() const { return m_clocks[0] != nullptr; }
-		virtual bool isCombinatorial() const { return true; }
+		virtual bool isCombinatorial(size_t port) const { return true; }
 
 		void setClock(Clock *clk);
 

@@ -406,6 +406,8 @@ bool ALTSYNCRAM::checkValidInputClocks(std::span<hlim::SignalClockDomain> inputC
 	};
 
 	auto check = [&](size_t input, const std::string &clk) {
+		if (getNonSignalDriver(input).node == nullptr) return true;
+
 		switch (inputClocks[input].type) {
 			case hlim::SignalClockDomain::UNKNOWN: return false;
 			case hlim::SignalClockDomain::CONSTANT: return true;

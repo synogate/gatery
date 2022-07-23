@@ -55,6 +55,5 @@ void splitMemoryAlongDepthMux(hlim::NodeGroup *group, size_t log2SplitDepth, boo
 std::vector<SplitMemoryGroup> createWidthSplitMemories(hlim::NodeGroup *group, const std::span<size_t> &splits);
 void splitMemoryAlongWidth(hlim::NodeGroup *group, size_t maxWidth);
 
-void applyToAllSubMemories(hlim::NodeGroup *group, std::function<void(hlim::NodeGroup*)> functor);
 
 }

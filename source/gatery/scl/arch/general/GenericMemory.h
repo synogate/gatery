@@ -47,6 +47,9 @@ class EmbeddedMemory {
 
 			size_t addressBits;
 
+			bool supportsDualClock;
+			bool supportsPowerOnInitialization;
+
 			// More in git history!
 		};
 
