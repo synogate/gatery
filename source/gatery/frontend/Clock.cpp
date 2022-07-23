@@ -220,14 +220,14 @@ namespace gtry
 		return Clock(DesignScope::createClock<hlim::DerivedClock>(m_clock), config);
 	}
 
-	Bit Clock::clkSignal()
+	Bit Clock::clkSignal() const
 	{
 		auto *node = DesignScope::createNode<hlim::Node_Clk2Signal>();
 		node->setClock(m_clock);
 		return SignalReadPort(node);
 	}
 
-	Bit Clock::rstSignal()
+	Bit Clock::rstSignal() const
 	{
 		auto *node = DesignScope::createNode<hlim::Node_ClkRst2Signal>();
 		node->setClock(m_clock);
