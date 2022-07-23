@@ -94,6 +94,10 @@ void Process::extractSignals()
 				m_outputs.insert(driver);
 		}
 
+		if (dynamic_cast<hlim::Node_Clk2Signal *>(node)) {
+			m_inputClocks.insert(node->getClocks()[0]->getClockPinSource());
+		}
+
 		if (auto *rstSig = dynamic_cast<hlim::Node_ClkRst2Signal*>(node)) {
 			m_inputResets.insert(rstSig->getClocks()[0]->getResetPinSource());
 		}
@@ -170,6 +174,7 @@ void Process::extractSignals()
 		if (pinNode != nullptr) {
 			m_ioPins.insert(pinNode);
 		}
+
 
 	}
 
