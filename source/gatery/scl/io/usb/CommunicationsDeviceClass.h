@@ -20,5 +20,5 @@
 
 namespace gtry::scl::usb
 {
-	void virtualCOMsetup(Function& func, uint8_t interfaceNumber, uint8_t endPoint);
+	void virtualCOMsetup(Function& func, uint8_t interfaceNumber, uint8_t endPoint, boost::optional<Bit&> dtr = {}, boost::optional<Bit&> rts = {});
 }

@@ -18,7 +18,7 @@
 #include "gatery/pch.h"
 #include "CommunicationsDeviceClass.h"
 
-void gtry::scl::usb::virtualCOMsetup(Function& func, uint8_t interfaceNumber, uint8_t endPoint)
+void gtry::scl::usb::virtualCOMsetup(Function& func, uint8_t interfaceNumber, uint8_t endPoint, boost::optional<Bit&> dtr, boost::optional<Bit&> rts)
 {
 	// CDC Interface
 	func.descriptor().add(InterfaceDescriptor{
@@ -53,8 +53,28 @@ void gtry::scl::usb::virtualCOMsetup(Function& func, uint8_t interfaceNumber, ui
 		.Address = EndpointAddress::create(endPoint, EndpointDirection::out),
 	});
 
-	func.addClassSetupHandler([](const SetupPacket& setup) {
-		// accept SET_LINE_CODING commands and ignore setting
-		return setup.request == 0x20;
+	func.addClassSetupHandler([=](const SetupPacket& setup) {
+
+		Bit handled = '0';
+		IF(setup.request == 0x20)
+		{
+			// accept SET_LINE_CODING commands and ignore setting
+			handled = '1';
+		}
+
+		if (dtr || rts)
+		{
+			IF(setup.request == 0x22 & setup.requestType == 0x21 & setup.wIndex == interfaceNumber)
+			{
+				// accept SET_LINE_CONTROL_STATE
+				if (dtr)
+					*dtr = setup.wValue[0];
+				if (rts)
+					*rts = setup.wValue[1];
+				handled = '1';
+			}
+		}
+
+		return handled;
 	});
 }
