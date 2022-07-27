@@ -26,18 +26,18 @@ OSERDESE2::OSERDESE2(size_t width)
 	m_packageName = "VCOMPONENTS";
 	m_name = "OSERDESE2";
 	m_isEntity = false;
-	m_genericParameters["DATA_RATE_OQ"] = "\"DDR\"";	// DDR, SDR
-	m_genericParameters["DATA_RATE_TQ"] = "\"DDR\"";	// DDR, BUF, SDR
+	m_genericParameters["DATA_RATE_OQ"] = "DDR";	// DDR, SDR
+	m_genericParameters["DATA_RATE_TQ"] = "DDR";	// DDR, BUF, SDR
 	HCL_DESIGNCHECK_HINT((width >= 2 && width <= 8) || (width == 10 || width == 14), "Invalid bit width of OSERDESE2: Valid widths are: 2-8,10,14");
-	m_genericParameters["DATA_WIDTH"] = boost::lexical_cast<std::string>(width);		   // Parallel data width (2-8,10,14)
-	m_genericParameters["INIT_OQ"] = "'0'";			 // Initial value of OQ output (1'b0,1'b1)
-	m_genericParameters["INIT_TQ"] = "'0'";			 // Initial value of TQ output (1'b0,1'b1)
-	m_genericParameters["SERDES_MODE"] = "\"MASTER\"";  // MASTER, SLAVE
-	m_genericParameters["SRVAL_OQ"] = "'0'",			// OQ output value when SR is used (1'b0,1'b1)
-	m_genericParameters["SRVAL_TQ"] = "'0'",			// TQ output value when SR is used (1'b0,1'b1)
-	m_genericParameters["TBYTE_CTL"] = "\"FALSE\"";	 // Enable tristate byte operation (FALSE, TRUE)
-	m_genericParameters["TBYTE_SRC"] = "\"FALSE\"";	 // Tristate byte source (FALSE, TRUE)
-	m_genericParameters["TRISTATE_WIDTH"] = "1";		// 3-state converter width (1,4)
+	m_genericParameters["DATA_WIDTH"] = width;		   // Parallel data width (2-8,10,14)
+	m_genericParameters["INIT_OQ"] = '0';			 // Initial value of OQ output (1'b0,1'b1)
+	m_genericParameters["INIT_TQ"] = '0';			 // Initial value of TQ output (1'b0,1'b1)
+	m_genericParameters["SERDES_MODE"] = "MASTER";  // MASTER, SLAVE
+	m_genericParameters["SRVAL_OQ"] = '0',			// OQ output value when SR is used (1'b0,1'b1)
+	m_genericParameters["SRVAL_TQ"] = '0',			// TQ output value when SR is used (1'b0,1'b1)
+	m_genericParameters["TBYTE_CTL"] = "FALSE";	 // Enable tristate byte operation (FALSE, TRUE)
+	m_genericParameters["TBYTE_SRC"] = "FALSE";	 // Tristate byte source (FALSE, TRUE)
+	m_genericParameters["TRISTATE_WIDTH"] = 1;		// 3-state converter width (1,4)
 
 
 	m_clockNames = {"CLK", "CLKDIV"};
@@ -52,7 +52,7 @@ OSERDESE2::OSERDESE2(size_t width)
 
 void OSERDESE2::setSlave()
 {
-	m_genericParameters["SERDES_MODE"] = "\"SLAVE\"";  // MASTER, SLAVE
+	m_genericParameters["SERDES_MODE"] = "SLAVE";  // MASTER, SLAVE
 }
 
 std::string OSERDESE2::getTypeName() const
@@ -129,7 +129,7 @@ std::unique_ptr<hlim::BaseNode> OSERDESE2::cloneUnconnected() const
 
 std::string OSERDESE2::attemptInferOutputName(size_t outputPort) const
 {
-	return "TODO_infer_name";
+	return "OSERDESE2_" + getOutputName(outputPort);
 }
 
 

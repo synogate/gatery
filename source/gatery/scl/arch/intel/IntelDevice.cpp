@@ -240,7 +240,8 @@ void IntelDevice::setupCyclone10()
 
 void IntelDevice::setupMAX10()
 {
-	setupDevice("10M50DAF672I6");
+	//setupDevice("10M50DAF672I6");
+	setupDevice("10M08DAF484C8G");
 }
 
 

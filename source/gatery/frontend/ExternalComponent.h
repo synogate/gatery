@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2022 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -17,31 +17,24 @@
 */
 #pragma once
 
+
 #include <gatery/frontend/Bit.h>
+#include <gatery/frontend/BVec.h>
+#include <gatery/hlim/supportNodes/Node_External.h>
 
-#include <gatery/frontend/tech/TechnologyMappingPattern.h>
-#include <gatery/frontend/ExternalComponent.h>
+namespace gtry {
 
-namespace gtry::scl::arch::xilinx {
-
-class BUFG : public gtry::ExternalComponent
+class ExternalComponent : public hlim::Node_External
 {
 	public:
-		BUFG();
+		using GenericParameter = hlim::GenericParameter;
 
-		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
+		virtual void setInput(size_t input, const Bit &bit);
+		virtual void setInput(size_t input, const BVec &bvec);
 
-		virtual std::string attemptInferOutputName(size_t outputPort) const override;
-};
-
-
-class BUFGPattern : public TechnologyMappingPattern
-{
-	public:
-		virtual ~BUFGPattern() = default;
-
-		virtual bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const override;
-	protected:
+		virtual Bit getOutputBit(size_t output);
+		virtual BVec getOutputBVec(size_t output);
 };
 
 }
+

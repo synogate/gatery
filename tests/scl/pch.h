@@ -1,6 +1,7 @@
 #pragma once
 
 #include <gatery/frontend.h>
+#include <gatery/frontend/GHDLTestFixture.h>
 #include <gatery/simulation/UnitTestSimulationFixture.h>
 #include <gatery/simulation/waveformFormats/VCDSink.h>
 

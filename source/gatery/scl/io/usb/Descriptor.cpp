@@ -95,7 +95,7 @@ void gtry::scl::usb::Descriptor::finalize()
 	{
 		using T = decltype(t);
 		if(desc[T::TYPE])
-			return desc[T::TYPE]->decode<T>();
+			return desc[T::TYPE]->template decode<T>();
 
 		static T dummy;
 		return dummy;

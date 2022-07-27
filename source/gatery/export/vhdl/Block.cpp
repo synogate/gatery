@@ -61,6 +61,8 @@ void Block::writeVHDL(std::ostream &stream)
 	cf.indent(stream, 1);
 	stream << m_name << " : BLOCK" << std::endl;
 
+	declareLocalComponents(stream, 1);
+
 	declareLocalSignals(stream, false, 1);
 
 	cf.indent(stream, 1);

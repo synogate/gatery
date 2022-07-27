@@ -33,83 +33,18 @@ TRI::TRI()
 	m_clockNames = {};
 	m_resetNames = {};
 
-	resizeInputs(2);
-	resizeOutputs(1);
-}
-
-void TRI::connectInput(const Bit &bit)
-{
-	connectInput(bit.readPort());
-}
-
-void TRI::connectInput(const UInt &bvec)
-{
-	connectInput(bvec.readPort());
-}
-
-void TRI::connectEnable(const Bit &bit)
-{
-	NodeIO::connectInput(1, bit.readPort());
-}
-
-
-void TRI::connectInput(hlim::NodePort nodePort)
-{
-	if (nodePort.node != nullptr) {
-		auto paramType = nodePort.node->getOutputConnectionType(nodePort.port);
-		auto myType = getOutputConnectionType(0);
-		if (!getDirectlyDriven(0).empty()) {
-			HCL_ASSERT_HINT( paramType == myType, "The connection type of a node that is driving other nodes can not change");
-		} else
-			setOutputConnectionType(0, paramType);
-	}
-	NodeIO::connectInput(0, nodePort);
-}
-
-std::string TRI::getTypeName() const
-{
-	return "TRI";
-}
-
-void TRI::assertValidity() const
-{
-}
-
-std::string TRI::getInputName(size_t idx) const
-{
-	if (idx == 0)
-		return "a_in";
-	else
-		return "oe";
-}
-
-std::string TRI::getOutputName(size_t idx) const
-{
-	return "a_out";
+	resizeIOPorts(IN_COUNT, OUT_COUNT);
+	declInputBit(IN_A_IN, "A_IN");
+	declInputBit(IN_OE, "OE");
+	declOutputBit(OUT_A_OUT, "A_OUT");
 }
 
 std::unique_ptr<hlim::BaseNode> TRI::cloneUnconnected() const
 {
-	TRI *ptr;
-	std::unique_ptr<BaseNode> res(ptr = new TRI());
+	std::unique_ptr<BaseNode> res(new TRI());
 	copyBaseToClone(res.get());
-
 	return res;
 }
-
-std::string TRI::attemptInferOutputName(size_t outputPort) const
-{
-	auto driver = getDriver(0);
-	
-	if (driver.node == nullptr)
-		return "";
-	
-	if (driver.node->getName().empty())
-		return "";
-
-	return driver.node->getName() + "_tristate";
-}
-
 
 bool TRIPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 {
@@ -127,8 +62,8 @@ bool TRIPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 		Bit &output = io.outputBits["result"];
 
 		auto *tri = DesignScope::createNode<TRI>();
-		tri->connectInput(input);
-		tri->connectEnable(outputEnable);
+		tri->setInput(TRI::IN_A_IN, input);
+		tri->setInput(TRI::IN_OE, outputEnable);
 		output.exportOverride(SignalReadPort(tri));
 	} else
 	if (io.inputUInts.contains("signal")) {
@@ -137,10 +72,16 @@ bool TRIPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 		HCL_ASSERT_HINT(io.outputUInts.contains("result"), "Missing output for Tristate Output!");
 		UInt &output = io.outputUInts["result"];
 
-		auto *tri = DesignScope::createNode<TRI>();
-		tri->connectInput(input);
-		tri->connectEnable(outputEnable);
-		output.exportOverride(SignalReadPort(tri));
+		HCL_ASSERT(input.width() == output.width());
+		UInt overrideBits = ConstUInt(input.width(), 0);
+		for (auto i : utils::Range(input.size())) {
+			auto *tri = DesignScope::createNode<TRI>();
+			tri->setInput(TRI::IN_A_IN, input[i]);
+			tri->setInput(TRI::IN_OE, outputEnable);
+			Bit outBit = SignalReadPort(tri);
+			overrideBits[i] = outBit;
+		}
+		output.exportOverride(overrideBits);
 	} else
 		HCL_ASSERT_HINT(false, "Missing signal for Tristate Output!");
 

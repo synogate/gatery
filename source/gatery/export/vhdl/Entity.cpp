@@ -295,6 +295,8 @@ void Entity::writeVHDL(std::ostream &stream)
 
 	stream << "ARCHITECTURE impl OF " << m_name << " IS " << std::endl;
 
+	declareLocalComponents(stream, 1);
+
 	writeLocalSignalsVHDL(stream);
 
 	stream << "BEGIN" << std::endl;

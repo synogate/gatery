@@ -88,6 +88,8 @@ class BitVectorState
 			const size_t m_end;
 		};
 
+		BitVectorState() = default;
+
 		void resize(size_t size);
 		inline size_t size() const { return m_size; }
 		inline size_t getNumBlocks() const { return m_values[0].size(); }
@@ -124,6 +126,8 @@ class BitVectorState
 
 		bool operator == (const BitVectorState& o) const;
 		bool operator != (const BitVectorState& o) const { return !(*this == o); }
+
+
 protected:
 		size_t m_size = 0;
 		std::array<std::vector<typename Config::BaseType>, Config::NUM_PLANES> m_values;
@@ -509,6 +513,7 @@ DefaultBitVectorState createDefaultBitVectorState(std::size_t numWords, std::siz
 }
 
 DefaultBitVectorState createDefaultBitVectorState(std::size_t size, const void *data);
+DefaultBitVectorState createDefaultBitVectorState(std::size_t size, size_t value);
 
 template<class Config>
 void BitVectorState<Config>::resize(size_t size)
