@@ -103,6 +103,8 @@ class BasicBlock : public BaseGrouping
 		void handleEntityInstantiation(hlim::NodeGroup *nodeGroup);
 		void handleExternalNodeInstantiaton(hlim::Node_External *externalNode);
 		void handleSFUInstantiaton(hlim::NodeGroup *sfu);
+
+		virtual void declareLocalComponents(std::ostream &stream, size_t indentation);
 };
 
 

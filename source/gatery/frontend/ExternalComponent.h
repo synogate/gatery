@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2022 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -15,28 +15,26 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
-#include "BitVectorState.h"
+#pragma once
 
-namespace gtry::sim {
 
-DefaultBitVectorState createDefaultBitVectorState(std::size_t size, const void *data) {
-	BitVectorState<DefaultConfig> state;
-	state.resize(size*8);
-	state.setRange(DefaultConfig::DEFINED, 0, size*8);
-	memcpy(state.data(DefaultConfig::VALUE), data, size);
-	return state;
-}
+#include <gatery/frontend/Bit.h>
+#include <gatery/frontend/BVec.h>
+#include <gatery/hlim/supportNodes/Node_External.h>
 
-DefaultBitVectorState createDefaultBitVectorState(std::size_t size, size_t value)
+namespace gtry {
+
+class ExternalComponent : public hlim::Node_External
 {
-	BitVectorState<DefaultConfig> state;
-	state.resize(size*8);
-	state.setRange(DefaultConfig::DEFINED, 0, size*8);
-	state.clearRange(DefaultConfig::VALUE, 0, size*8);
-	state.insertNonStraddling(DefaultConfig::VALUE, 0, sizeof(value), value);
-	return state;
+	public:
+		using GenericParameter = hlim::GenericParameter;
+
+		virtual void setInput(size_t input, const Bit &bit);
+		virtual void setInput(size_t input, const BVec &bvec);
+
+		virtual Bit getOutputBit(size_t output);
+		virtual BVec getOutputBVec(size_t output);
+};
+
 }
 
-
-}

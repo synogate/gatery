@@ -43,15 +43,21 @@ class CodeFormatting
 		inline const std::string &getFileHeader() const { return m_fileHeader; }
 		inline const std::string &getFilenameExtension() const { return m_filenameExtension; }
 		void indent(std::ostream &stream, size_t depth) const;
-		virtual void formatEntityComment(std::ostream &stream, const std::string &entityName, const std::string &comment) = 0;
-		virtual void formatBlockComment(std::ostream &stream, const std::string &blockName, const std::string &comment) = 0;
-		virtual void formatProcessComment(std::ostream &stream, size_t indentation, const std::string &processName, const std::string &comment) = 0;
-		virtual void formatCodeComment(std::ostream &stream, size_t indentation, const std::string &comment) = 0;
+		virtual void formatEntityComment(std::ostream &stream, const std::string &entityName, const std::string &comment) const = 0;
+		virtual void formatBlockComment(std::ostream &stream, const std::string &blockName, const std::string &comment) const = 0;
+		virtual void formatProcessComment(std::ostream &stream, size_t indentation, const std::string &processName, const std::string &comment) const = 0;
+		virtual void formatCodeComment(std::ostream &stream, size_t indentation, const std::string &comment) const = 0;
 
-		virtual void formatConnectionType(std::ostream &stream, const VHDLSignalDeclaration &declaration) = 0;
-		virtual void formatDeclaration(std::ostream &stream, const VHDLSignalDeclaration &declaration) = 0;
+		virtual void formatConnectionType(std::ostream &stream, const VHDLSignalDeclaration &declaration) const = 0;
+		virtual void formatDeclaration(std::ostream &stream, const VHDLSignalDeclaration &declaration) const = 0;
 		
-		virtual void formatDataType(std::ostream &stream, VHDLDataType dataType) = 0;
+		virtual void formatDataType(std::ostream &stream, VHDLDataType dataType) const = 0;
+
+		virtual void formatDecimalFlavor(std::ostream &stream, hlim::GenericParameter::DecimalFlavor flavor) const = 0;
+		virtual void formatBitFlavor(std::ostream &stream, hlim::GenericParameter::BitFlavor flavor) const = 0;
+		virtual void formatBitVectorFlavor(std::ostream &stream, hlim::GenericParameter::BitVectorFlavor flavor) const = 0;
+
+		virtual void formatGenericParameterType(std::ostream &stream, const hlim::GenericParameter &param) const = 0;
 
 		enum SignalType {
 			SIG_ENTITY_INPUT,
@@ -74,10 +80,6 @@ class CodeFormatting
 		virtual std::string getClockName(const std::string &desiredName, size_t attempt) const = 0;
 		virtual std::string getIoPinName(const std::string &desiredName, size_t attempt) const = 0;
 		virtual std::string getInstanceName(const std::string &desiredName, size_t attempt) const = 0;
-/*
-		virtual void instantiateExternal(std::ostream &stream, const hlim::Node_External *node, size_t indent,
-										 const std::vector<std::string> &inputSignalNames, const std::vector<std::string> &outputSignalNames, const std::vector<std::string> &clockNames) const = 0;
-*/
 	protected:
 		std::string m_indentation;
 		std::string m_fileHeader;
@@ -89,8 +91,6 @@ class CodeFormatting
 class DefaultCodeFormatting : public CodeFormatting
 {
 	public:
-		//using ExternalNodeHandler = std::function<bool(const CodeFormatting*, std::ostream &, const hlim::Node_External *, size_t, const std::vector<std::string> &, const std::vector<std::string> &, const std::vector<std::string> &)>;
-
 		DefaultCodeFormatting();
 
 		virtual std::string getNodeName(const hlim::BaseNode *node, size_t attempt) const override;
@@ -103,21 +103,20 @@ class DefaultCodeFormatting : public CodeFormatting
 		virtual std::string getIoPinName(const std::string &desiredName, size_t attempt) const override;
 		virtual std::string getInstanceName(const std::string &desiredName, size_t attempt) const override;
 
-		virtual void formatEntityComment(std::ostream &stream, const std::string &entityName, const std::string &comment) override;
-		virtual void formatBlockComment(std::ostream &stream, const std::string &blockName, const std::string &comment) override;
-		virtual void formatProcessComment(std::ostream &stream, size_t indentation, const std::string &processName, const std::string &comment) override;
-		virtual void formatCodeComment(std::ostream &stream, size_t indentation, const std::string &comment) override;
+		virtual void formatEntityComment(std::ostream &stream, const std::string &entityName, const std::string &comment) const override;
+		virtual void formatBlockComment(std::ostream &stream, const std::string &blockName, const std::string &comment) const override;
+		virtual void formatProcessComment(std::ostream &stream, size_t indentation, const std::string &processName, const std::string &comment) const override;
+		virtual void formatCodeComment(std::ostream &stream, size_t indentation, const std::string &comment) const override;
 
-		virtual void formatConnectionType(std::ostream &stream, const VHDLSignalDeclaration &declaration) override;
-		virtual void formatDeclaration(std::ostream &stream, const VHDLSignalDeclaration &declaration) override;
-		virtual void formatDataType(std::ostream &stream, VHDLDataType dataType) override;
-/*
-		void addExternalNodeHandler(ExternalNodeHandler nodeHandler);
-		virtual void instantiateExternal(std::ostream &stream, const hlim::Node_External *node, size_t indent,
-										 const std::vector<std::string> &inputSignalNames, const std::vector<std::string> &outputSignalNames, const std::vector<std::string> &clockNames) const override;
-*/
-	protected:
-		//std::vector<ExternalNodeHandler> m_externalNodeHandlers;
+		virtual void formatConnectionType(std::ostream &stream, const VHDLSignalDeclaration &declaration) const override;
+		virtual void formatDeclaration(std::ostream &stream, const VHDLSignalDeclaration &declaration) const override;
+		virtual void formatDataType(std::ostream &stream, VHDLDataType dataType) const override;
+
+		virtual void formatDecimalFlavor(std::ostream &stream, hlim::GenericParameter::DecimalFlavor flavor) const override;
+		virtual void formatBitFlavor(std::ostream &stream, hlim::GenericParameter::BitFlavor flavor) const override;
+		virtual void formatBitVectorFlavor(std::ostream &stream, hlim::GenericParameter::BitVectorFlavor flavor) const override;
+		
+		virtual void formatGenericParameterType(std::ostream &stream, const hlim::GenericParameter &param) const override;
 };
 
 

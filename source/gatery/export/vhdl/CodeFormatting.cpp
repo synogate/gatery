@@ -160,7 +160,7 @@ std::string DefaultCodeFormatting::getInstanceName(const std::string &desiredNam
 }
 
 
-void DefaultCodeFormatting::formatEntityComment(std::ostream &stream, const std::string &entityName, const std::string &comment)
+void DefaultCodeFormatting::formatEntityComment(std::ostream &stream, const std::string &entityName, const std::string &comment) const
 {
 	stream
 		<< "------------------------------------------------" << std::endl
@@ -182,7 +182,7 @@ void DefaultCodeFormatting::formatEntityComment(std::ostream &stream, const std:
 		   << "------------------------------------------------" << std::endl << std::endl;
 }
 
-void DefaultCodeFormatting::formatBlockComment(std::ostream &stream, const std::string &blockName, const std::string &comment)
+void DefaultCodeFormatting::formatBlockComment(std::ostream &stream, const std::string &blockName, const std::string &comment) const
 {
 	if (comment.empty()) return;
 	indent(stream, 1);
@@ -212,7 +212,7 @@ void DefaultCodeFormatting::formatBlockComment(std::ostream &stream, const std::
 		<< "------------------------------------------------" << std::endl;
 }
 
-void DefaultCodeFormatting::formatProcessComment(std::ostream &stream, size_t indentation, const std::string &processName, const std::string &comment)
+void DefaultCodeFormatting::formatProcessComment(std::ostream &stream, size_t indentation, const std::string &processName, const std::string &comment) const
 {
 	if (comment.empty()) return;
 	indent(stream, indentation);
@@ -236,7 +236,7 @@ void DefaultCodeFormatting::formatProcessComment(std::ostream &stream, size_t in
 	stream << std::endl;
 }
 
-void DefaultCodeFormatting::formatCodeComment(std::ostream &stream, size_t indentation, const std::string &comment)
+void DefaultCodeFormatting::formatCodeComment(std::ostream &stream, size_t indentation, const std::string &comment) const
 {
 	if (comment.empty()) return;
 
@@ -263,7 +263,7 @@ void DefaultCodeFormatting::formatCodeComment(std::ostream &stream, size_t inden
 }
 
 
-void DefaultCodeFormatting::formatConnectionType(std::ostream &stream, const VHDLSignalDeclaration &declaration)
+void DefaultCodeFormatting::formatConnectionType(std::ostream &stream, const VHDLSignalDeclaration &declaration) const
 {
 	formatDataType(stream, declaration.dataType);
 	switch (declaration.dataType) {
@@ -280,13 +280,13 @@ void DefaultCodeFormatting::formatConnectionType(std::ostream &stream, const VHD
 	}
 }
 
-void DefaultCodeFormatting::formatDeclaration(std::ostream &stream, const VHDLSignalDeclaration &declaration)
+void DefaultCodeFormatting::formatDeclaration(std::ostream &stream, const VHDLSignalDeclaration &declaration) const
 {
 	stream << declaration.name << " : ";
 	formatConnectionType(stream, declaration);
 }
 
-void DefaultCodeFormatting::formatDataType(std::ostream &stream, VHDLDataType dataType)
+void DefaultCodeFormatting::formatDataType(std::ostream &stream, VHDLDataType dataType) const
 {
 	switch (dataType) {
 		case VHDLDataType::BOOL:
@@ -304,6 +304,46 @@ void DefaultCodeFormatting::formatDataType(std::ostream &stream, VHDLDataType da
 		default:
 			stream << "UNHANDLED_DATA_TYPE";
 	}
+}
+
+void DefaultCodeFormatting::formatDecimalFlavor(std::ostream &stream, hlim::GenericParameter::DecimalFlavor flavor) const
+{
+	switch (flavor) {
+		case hlim::GenericParameter::DecimalFlavor::INTEGER: stream << "INTEGER"; break;
+		case hlim::GenericParameter::DecimalFlavor::NATURAL: stream << "NATURAL"; break;
+		case hlim::GenericParameter::DecimalFlavor::POSITIVE: stream << "POSITIVE"; break;
+		default: HCL_ASSERT_HINT(false, "Unhandled case!");
+	}
+}
+
+void DefaultCodeFormatting::formatBitFlavor(std::ostream &stream, hlim::GenericParameter::BitFlavor flavor) const
+{
+	switch (flavor) {
+		case hlim::GenericParameter::BitFlavor::BIT: stream << "BIT"; break;
+		case hlim::GenericParameter::BitFlavor::STD_LOGIC: stream << "STD_LOGIC"; break;
+		case hlim::GenericParameter::BitFlavor::STD_ULOGIC: stream << "STD_ULOGIC"; break;
+		default: HCL_ASSERT_HINT(false, "Unhandled case!");
+	}
+}
+
+void DefaultCodeFormatting::formatBitVectorFlavor(std::ostream &stream, hlim::GenericParameter::BitVectorFlavor flavor) const
+{
+	switch (flavor) {
+		case hlim::GenericParameter::BitVectorFlavor::BIT_VECTOR: stream << "BIT_VECTOR"; break;
+		case hlim::GenericParameter::BitVectorFlavor::STD_LOGIC_VECTOR: stream << "STD_LOGIC_VECTOR"; break;
+		default: HCL_ASSERT_HINT(false, "Unhandled case!");
+	}
+}
+
+void DefaultCodeFormatting::formatGenericParameterType(std::ostream &stream, const hlim::GenericParameter &param) const
+{
+	if (param.isDecimal()) formatDecimalFlavor(stream, param.decimalFlavor());
+	else if (param.isReal()) stream << "REAL";
+	else if (param.isString()) stream << "STRING";
+	else if (param.isBoolean()) stream << "BOOLEAN";
+	else if (param.isBit()) formatBitFlavor(stream, param.bitFlavor());
+	else if (param.isBitVector()) formatBitVectorFlavor(stream, param.bitVectorFlavor());
+	else HCL_ASSERT_HINT(false, "Unhandled case!");
 }
 
 

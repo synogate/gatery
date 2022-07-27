@@ -22,6 +22,7 @@ namespace gtry::hlim {
 
 void Node_External::copyBaseToClone(BaseNode *copy) const
 {
+	BaseNode::copyBaseToClone(copy);
 	Node_External *other = (Node_External*)copy;
 
 	other->m_isEntity = m_isEntity;
@@ -30,6 +31,104 @@ void Node_External::copyBaseToClone(BaseNode *copy) const
 	other->m_genericParameters = m_genericParameters;
 	other->m_clockNames = m_clockNames;
 	other->m_resetNames = m_resetNames;
+
+	other->m_inputPorts = m_inputPorts;
+	other->m_outputPorts = m_outputPorts;
 }
+
+void Node_External::resizeIOPorts(size_t numInputs, size_t numOutputs)
+{
+	resizeInputs(numInputs);
+	m_inputPorts.resize(numInputs);
+	resizeOutputs(numOutputs);
+	m_outputPorts.resize(numOutputs);
+}
+
+void Node_External::declOutputBitVector(size_t idx, std::string name, size_t width, std::string componentWidth, BitVectorFlavor flavor)
+{
+	HCL_DESIGNCHECK_HINT(idx < getNumOutputPorts(), "Invalid output idx");
+	m_outputPorts[idx].name = std::move(name);
+	m_outputPorts[idx].componentWidth = std::move(componentWidth);
+	m_outputPorts[idx].instanceWidth = width;
+	m_outputPorts[idx].isVector = true;
+	m_outputPorts[idx].flavor = flavor;
+
+	setOutputConnectionType(idx, {
+		.interpretation = hlim::ConnectionType::BITVEC,
+		.width = width,
+	});
+}
+
+void Node_External::declOutputBit(size_t idx, std::string name, BitFlavor flavor)
+{
+	HCL_DESIGNCHECK_HINT(idx < getNumOutputPorts(), "Invalid output idx");
+	m_outputPorts[idx].name = std::move(name);
+	m_outputPorts[idx].isVector = false;
+	m_outputPorts[idx].flavor = flavor;
+
+	setOutputConnectionType(idx, {
+		.interpretation = hlim::ConnectionType::BOOL,
+		.width = 1,
+	});
+}
+
+void Node_External::declInputBitVector(size_t idx, std::string name, size_t width, std::string componentWidth, BitVectorFlavor flavor)
+{
+	HCL_DESIGNCHECK_HINT(idx < getNumInputPorts(), "Invalid input idx");
+	m_inputPorts[idx].name = std::move(name);
+	if (!componentWidth.empty())
+		m_inputPorts[idx].componentWidth = std::move(componentWidth);
+	else
+		m_inputPorts[idx].componentWidth = std::to_string(width);
+	m_inputPorts[idx].instanceWidth = width;
+	m_inputPorts[idx].isVector = true;
+	m_inputPorts[idx].flavor = flavor;
+}
+
+void Node_External::declInputBit(size_t idx, std::string name, BitFlavor flavor)
+{
+	HCL_DESIGNCHECK_HINT(idx < getNumInputPorts(), "Invalid input idx");
+	m_inputPorts[idx].name = std::move(name);
+	m_inputPorts[idx].isVector = false;
+	m_inputPorts[idx].flavor = flavor;
+}
+
+void Node_External::changeInputWidth(size_t idx, size_t width)
+{
+	HCL_DESIGNCHECK_HINT(m_inputPorts[idx].isVector, "Input not declared as vector!");
+	HCL_DESIGNCHECK_HINT(getDriver(idx).node == nullptr, "Input is already bound!");
+	m_inputPorts[idx].instanceWidth = width;
+}
+
+void Node_External::changeOutputWidth(size_t idx, size_t width)
+{
+	HCL_DESIGNCHECK_HINT(m_outputPorts[idx].isVector, "Output not declared as vector!");
+	HCL_DESIGNCHECK_HINT(getDirectlyDriven(idx).empty(), "Output is already bound!");
+	m_outputPorts[idx].instanceWidth = width;
+	setOutputConnectionType(idx, {
+		.interpretation = hlim::ConnectionType::BITVEC,
+		.width = width,
+	});	
+}
+
+
+
+std::string Node_External::getInputName(size_t idx) const
+{
+	HCL_DESIGNCHECK_HINT(idx < getNumInputPorts(), "Invalid input idx");
+	return m_inputPorts[idx].name;
+}
+
+std::string Node_External::getOutputName(size_t idx) const
+{
+	HCL_DESIGNCHECK_HINT(idx < getNumOutputPorts(), "Invalid output idx");
+	return m_outputPorts[idx].name;
+}
+
+std::string Node_External::attemptInferOutputName(size_t outputPort) const
+{
+	return m_name + '_' + getOutputName(outputPort);
+}
+
 
 }
