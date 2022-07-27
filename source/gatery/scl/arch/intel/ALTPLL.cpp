@@ -91,19 +91,19 @@ namespace gtry::scl::arch::intel
 		declInputBit(IN_FBIN, "FBIN");
 		declInputBit(IN_PHASEUPDOWN, "PHASEUPDOWN");
 		declInputBit(IN_PHASESTEP, "PHASESTEP");
-		declInputBit(IN_PHASECOUNTERSELECT, "PHASECOUNTERSELECT");
-		declInputBit(IN_PLLENA, "PLLENA");
+		//declInputBitVector(IN_PHASECOUNTERSELECT, "PHASECOUNTERSELECT", 2);
+		//declInputBit(IN_PLLENA, "PLLENA");
 		declInputBit(IN_CLKSWITCH, "CLKSWITCH");
 		declInputBit(IN_PFDENA, "PFDENA");
-		declInputBitVector(IN_C_ENA, "C_ENA", 2);
-		declInputBitVector(IN_E_ENA, "E_ENA", 2);
+		// declInputBitVector(IN_C_ENA, "C_ENA", 2);
+		// declInputBitVector(IN_E_ENA, "E_ENA", 2);
 		declInputBit(IN_CONFIGUPDATE, "CONFIGUPDATE");
 		declInputBit(IN_SCANCLK, "SCANCLK");
 		declInputBit(IN_SCANCLKENA, "SCANCLKENA");
-		declInputBit(IN_SCANACLR, "SCANACLR");
+		// declInputBit(IN_SCANACLR, "SCANACLR");
 		declInputBit(IN_SCANDATA, "SCANDATA");
-		declInputBit(IN_SCANREAD, "SCANREAD");
-		declInputBit(IN_SCANWRITE, "SCANWRITE");
+		// declInputBit(IN_SCANREAD, "SCANREAD");
+		// declInputBit(IN_SCANWRITE, "SCANWRITE");
 
 
 		declOutputBitVector(OUT_CLK, "CLK", 5, "width_clock");
@@ -119,6 +119,18 @@ namespace gtry::scl::arch::intel
 		declOutputBit(OUT_PHASEDONE, "PHASEDONE");
 		declOutputBit(OUT_SCANDONE, "SCANDONE");
 
+		setInput(IN_CLKSWITCH, '0');
+		setInput(IN_CONFIGUPDATE, '0');
+		setInput(IN_PFDENA, '1');
+		//IN_PHASECOUNTERSELECT : {3{1'b0}}
+		setInput(IN_PHASESTEP, '0');
+		setInput(IN_PHASEUPDOWN, '0');
+		setInput(IN_SCANCLK, '0');
+		setInput(IN_SCANCLKENA, '1');
+		setInput(IN_SCANDATA, '0');
+
+		Bit fb = getOutputBit(OUT_FBOUT);
+		setInput(IN_FBIN, fb);
 	}
 
 	ALTPLL& ALTPLL::configureDeviceFamily(std::string familyName)
