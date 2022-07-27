@@ -19,3 +19,8 @@
 #define BOOST_TEST_MODULE "Unit tests for STL components"
 #include <boost/test/unit_test.hpp>
 
+#include <gatery/frontend/GHDLTestFixture.h>
+
+using GHDLGlobalFixture = gtry::GHDLGlobalFixture;
+
+BOOST_TEST_GLOBAL_FIXTURE( GHDLGlobalFixture );
