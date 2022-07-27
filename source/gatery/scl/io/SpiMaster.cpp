@@ -86,11 +86,11 @@ gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>& i
 	return out;
 }
 
-gtry::scl::SpiMaster& gtry::scl::SpiMaster::pin(std::string prefix)
+gtry::scl::SpiMaster& gtry::scl::SpiMaster::pin(std::string clock, std::string miso, std::string mosi)
 {
-	pinOut(m_clk).setName(prefix + "scl");
-	pinOut(m_out).setName(prefix + "mosi");
-	m_in = pinIn().setName(prefix + "miso");
+	pinOut(m_clk).setName(clock);
+	pinOut(m_out).setName(mosi);
+	m_in = pinIn().setName(miso);
 	return *this;
 }
 
