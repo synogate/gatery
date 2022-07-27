@@ -78,8 +78,6 @@ void Node_External::declInputBitVector(size_t idx, std::string name, size_t widt
 	m_inputPorts[idx].name = std::move(name);
 	if (!componentWidth.empty())
 		m_inputPorts[idx].componentWidth = std::move(componentWidth);
-	else
-		m_inputPorts[idx].componentWidth = std::to_string(width);
 	m_inputPorts[idx].instanceWidth = width;
 	m_inputPorts[idx].isVector = true;
 	m_inputPorts[idx].flavor = flavor;
