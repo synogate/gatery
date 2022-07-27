@@ -24,8 +24,8 @@ OBUFDS::OBUFDS()
 {
 	m_libraryName = "UNISIM";
 	m_name = "OBUFDS";
-	m_genericParameters["IOSTANDARD"] = "\"DEFAULT\"";
-	m_genericParameters["SLEW"] = "\"SLOW\"";
+	m_genericParameters["IOSTANDARD"] = "DEFAULT";
+	m_genericParameters["SLEW"] = "SLOW";
 	m_clockNames = {};
 	m_resetNames = {};
 

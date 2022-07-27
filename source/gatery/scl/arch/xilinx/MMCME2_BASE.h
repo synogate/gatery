@@ -17,14 +17,13 @@
 */
 #pragma once
 
-#include <gatery/hlim/supportNodes/Node_External.h>
-
 #include <gatery/frontend.h>
+#include <gatery/frontend/ExternalComponent.h>
 
 
 namespace gtry::scl::arch::xilinx {
 
-class MMCME2_BASE : public gtry::hlim::Node_External
+class MMCME2_BASE : public gtry::ExternalComponent
 {
 	public:
 		enum Clocks {

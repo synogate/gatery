@@ -24,7 +24,7 @@
 
 namespace gtry::scl::arch::xilinx {
 
-FIFO_DUALCLOCK_MACRO::FIFO_DUALCLOCK_MACRO(unsigned width, FIFOSize fifoSize)
+FIFO_DUALCLOCK_MACRO::FIFO_DUALCLOCK_MACRO(size_t width, FIFOSize fifoSize)
 {
 	m_libraryName = "UNIMACRO";
 	m_packageName = "VCOMPONENTS";
@@ -38,7 +38,7 @@ FIFO_DUALCLOCK_MACRO::FIFO_DUALCLOCK_MACRO(unsigned width, FIFOSize fifoSize)
 	unsigned counterWidth;
 	switch (fifoSize) {
 		case SIZE_18Kb:
-			m_genericParameters["FIFO_SIZE"] = "\"18Kb\"";
+			m_genericParameters["FIFO_SIZE"] = "18Kb";
 			if (width < 5)
 				counterWidth = 12; else
 			if (width < 10)
@@ -50,7 +50,7 @@ FIFO_DUALCLOCK_MACRO::FIFO_DUALCLOCK_MACRO(unsigned width, FIFOSize fifoSize)
 				HCL_ASSERT_HINT(false, "The maximal data width of FIFO_DUALCLOCK_MACRO for 18Kb is 36 bits!");
 		break;
 		case SIZE_36Kb:
-			m_genericParameters["FIFO_SIZE"] = "\"36Kb\"";
+			m_genericParameters["FIFO_SIZE"] = "36Kb";
 			if (width < 5)
 				counterWidth = 13; else
 			if (width < 10)
@@ -64,30 +64,38 @@ FIFO_DUALCLOCK_MACRO::FIFO_DUALCLOCK_MACRO(unsigned width, FIFOSize fifoSize)
 				HCL_ASSERT_HINT(false, "The maximal data width of FIFO_DUALCLOCK_MACRO is 72 bits!");
 		break;
 	}
-	m_genericParameters["DATA_WIDTH"] = std::to_string(width);
+	m_genericParameters["DATA_WIDTH"] = width;
 
-	resizeInputs(IN_COUNT);
-	resizeOutputs(OUT_COUNT);
+	resizeIOPorts(IN_COUNT, OUT_COUNT);
 
-	// default to bool, then override UInts
-	for (auto i : utils::Range(OUT_COUNT))
-		setOutputConnectionType(i, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
+	declInputBit(IN_RDEN, "RDEN");
+	declInputBit(IN_WREN, "WREN");
+	declInputBitVector(IN_DI, "DI", width, "DATA_WIDTH");
 
-	setOutputConnectionType(OUT_DO, {.interpretation = hlim::ConnectionType::BITVEC, .width=width});
-	setOutputConnectionType(OUT_RDCOUNT, {.interpretation = hlim::ConnectionType::BITVEC, .width=counterWidth});
-	setOutputConnectionType(OUT_WRCOUNT, {.interpretation = hlim::ConnectionType::BITVEC, .width=counterWidth});
+
+	declOutputBit(OUT_ALMOSTEMPTY, "ALMOSTEMPTY");
+	declOutputBit(OUT_ALMOSTFULL, "ALMOSTFULL");
+	declOutputBit(OUT_EMPTY, "EMPTY");
+	declOutputBit(OUT_FULL, "FULL");
+	declOutputBit(OUT_RDERR, "RDERR");
+	declOutputBit(OUT_WRERR, "WRERR");
+	// UInts
+	declOutputBitVector(OUT_DO, "DO", width, "DATA_WIDTH");
+	declOutputBitVector(OUT_RDCOUNT, "RDCOUNT", counterWidth, "xil_UNM_GCW(DATA_WIDTH, FIFO_SIZE, DEVICE)");
+	declOutputBitVector(OUT_WRCOUNT, "WRCOUNT", counterWidth, "xil_UNM_GCW(DATA_WIDTH, FIFO_SIZE, DEVICE)");
+
 }
 
 
 FIFO_DUALCLOCK_MACRO &FIFO_DUALCLOCK_MACRO::setAlmostEmpty(size_t numOccupied)
 {
-	m_genericParameters["ALMOST_EMPTY_OFFSET"] = std::to_string(numOccupied);
+	m_genericParameters["ALMOST_EMPTY_OFFSET"].setBitVector(16, numOccupied, GenericParameter::BitVectorFlavor::BIT_VECTOR);
 	return *this;
 }
 
 FIFO_DUALCLOCK_MACRO &FIFO_DUALCLOCK_MACRO::setAlmostFull(size_t numVacant)
 {
-	m_genericParameters["ALMOST_FULL_OFFSET"] = std::to_string(numVacant);
+	m_genericParameters["ALMOST_EMPTY_OFFSET"].setBitVector(16, numVacant, GenericParameter::BitVectorFlavor::BIT_VECTOR);
 	return *this;
 }
 
@@ -99,96 +107,25 @@ FIFO_DUALCLOCK_MACRO &FIFO_DUALCLOCK_MACRO::setDevice(std::string device)
 
 FIFO_DUALCLOCK_MACRO &FIFO_DUALCLOCK_MACRO::setFirstWordFallThrough(bool enable)
 {
-	m_genericParameters["FIRST_WORD_FALL_THROUGH"] = enable?"TRUE":"FALSE";
+	m_genericParameters["FIRST_WORD_FALL_THROUGH"].setBoolean(enable);
 	return *this;
 }
 
 
-
-void FIFO_DUALCLOCK_MACRO::connectInput(Inputs input, const Bit &bit)
-{
-	switch (input) {
-		case IN_RDEN:
-		case IN_WREN:
-			NodeIO::connectInput(input, bit.readPort());
-		break;
-		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to UInt input of FIFO_DUALCLOCK_MACRO!");
-	}
-}
-
-void FIFO_DUALCLOCK_MACRO::connectInput(Inputs input, const UInt &UInt)
-{
-	switch (input) {
-		case IN_DI:
-			HCL_DESIGNCHECK_HINT(UInt.size() == m_width, "Data input UInt to FIFO_DUALCLOCK_MACRO has different width than previously specified!");
-			NodeIO::connectInput(input, UInt.readPort());
-		break;
-		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect UInt to bit input of FIFO_DUALCLOCK_MACRO!");
-	}
-}
-
-std::string FIFO_DUALCLOCK_MACRO::getTypeName() const
-{
-	return "FIFO_DUALCLOCK_MACRO";
-}
-
-void FIFO_DUALCLOCK_MACRO::assertValidity() const
-{
-}
-
-std::string FIFO_DUALCLOCK_MACRO::getInputName(size_t idx) const
-{
-	switch (idx) {
-		case IN_RDEN: return "RDEN";
-		case IN_WREN: return "WREN";
-		case IN_DI: return "DI";
-
-		default: return "";
-	}
-}
-
-std::string FIFO_DUALCLOCK_MACRO::getOutputName(size_t idx) const
-{
-	switch (idx) {
-		case OUT_ALMOSTEMPTY: return "ALMOSTEMPTY";
-		case OUT_ALMOSTFULL: return "ALMOSTFULL";
-		case OUT_EMPTY: return "EMPTY";
-		case OUT_FULL: return "FULL";
-		case OUT_RDERR: return "RDERR";
-		case OUT_WRERR: return "WRERR";
-		case OUT_DO: return "DO";
-		case OUT_RDCOUNT: return "RDCOUNT";
-		case OUT_WRCOUNT: return "WRCOUNT";
-
-		default: return "";
-	}
-}
-
 std::unique_ptr<hlim::BaseNode> FIFO_DUALCLOCK_MACRO::cloneUnconnected() const
 {
-	FIFO_DUALCLOCK_MACRO *ptr;
-	std::unique_ptr<BaseNode> res(ptr = new FIFO_DUALCLOCK_MACRO(m_width, m_fifoSize));
+	std::unique_ptr<BaseNode> res(new FIFO_DUALCLOCK_MACRO(m_width, m_fifoSize));
 	copyBaseToClone(res.get());
-
-	ptr->m_width = m_width;
-	ptr->m_fifoSize = m_fifoSize;
-
 	return res;
 }
 
-std::string FIFO_DUALCLOCK_MACRO::attemptInferOutputName(size_t outputPort) const
+void FIFO_DUALCLOCK_MACRO::copyBaseToClone(BaseNode *copy) const
 {
-	auto driver = getDriver(IN_DI);
-	
-	if (driver.node == nullptr)
-		return "";
-	
-	if (driver.node->getName().empty())
-		return "";
+	ExternalComponent::copyBaseToClone(copy);
+	auto *other = (FIFO_DUALCLOCK_MACRO*)copy;
 
-	return driver.node->getName() + "_" + getOutputName(outputPort);
+	other->m_width = m_width;
+	other->m_fifoSize = m_fifoSize;
 }
 
 
