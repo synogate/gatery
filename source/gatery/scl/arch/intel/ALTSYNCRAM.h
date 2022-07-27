@@ -17,12 +17,11 @@
 */
 #pragma once
 
-#include <gatery/frontend.h>
-#include <gatery/hlim/supportNodes/Node_External.h>
+#include <gatery/frontend/ExternalComponent.h>
 
 namespace gtry::scl::arch::intel {
 
-class ALTSYNCRAM : public gtry::hlim::Node_External
+class ALTSYNCRAM : public gtry::ExternalComponent
 {
 	public:
 		enum Clocks {
@@ -95,18 +94,10 @@ class ALTSYNCRAM : public gtry::hlim::Node_External
 		ALTSYNCRAM &setupRamType(const std::string &type);
 		ALTSYNCRAM &setupSimulationDeviceFamily(const std::string &devFamily);
 
-		void connectInput(Inputs input, const Bit &bit);
-		void connectInput(Inputs input, const UInt &UInt);
-		UInt getOutputUInt(Outputs output);
-
-		virtual std::string getTypeName() const override;
-		virtual void assertValidity() const override;
-		virtual std::string getInputName(size_t idx) const override;
-		virtual std::string getOutputName(size_t idx) const override;
+		virtual void setInput(size_t input, const Bit &bit) override { ExternalComponent::setInput(input, bit); }
+		virtual void setInput(size_t input, const BVec &bvec) override;
 
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
-
-		virtual std::string attemptInferOutputName(size_t outputPort) const override;
 
 		virtual std::vector<std::string> getSupportFiles() const override;
 		virtual void setupSupportFile(size_t idx, const std::string &filename, std::ostream &stream) override;
@@ -119,6 +110,8 @@ class ALTSYNCRAM : public gtry::hlim::Node_External
 		sim::DefaultBitVectorState m_memoryInitialization;
 
 		static std::string RDWBehavior2Str(RDWBehavior rdw);
+
+		virtual void copyBaseToClone(BaseNode *copy) const override;
 };
 
 }

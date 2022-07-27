@@ -203,15 +203,15 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 		UInt addr = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 		Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrEnable}, '1');
 
-		altdpram->connectInput(ALTDPRAM::Inputs::IN_DATA, wrData);
-		altdpram->connectInput(ALTDPRAM::Inputs::IN_WRADDRESS, addr(0, addrBits));
-		altdpram->connectInput(ALTDPRAM::Inputs::IN_WREN, wrEn);
+		altdpram->setInput(ALTDPRAM::Inputs::IN_DATA, (BVec) wrData);
+		altdpram->setInput(ALTDPRAM::Inputs::IN_WRADDRESS, (BVec) addr(0, addrBits));
+		altdpram->setInput(ALTDPRAM::Inputs::IN_WREN, wrEn);
 
 		altdpram->attachClock(writeClock, (size_t)ALTDPRAM::Clocks::INCLOCK);
 
 		auto wrWordEnableSignal = wp.node->getNonSignalDriver((size_t)hlim::Node_MemPort::Inputs::wrWordEnable);
 		if (wrWordEnableSignal.node != nullptr)
-			altdpram->connectInput(ALTDPRAM::Inputs::IN_BYTEENA, getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrWordEnable}));
+			altdpram->setInput(ALTDPRAM::Inputs::IN_BYTEENA, (BVec) getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrWordEnable}));
 	}
 
 	{
@@ -223,9 +223,9 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 		UInt addr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 		UInt data = hookUIntAfter(rp.dataOutput);
 
-		altdpram->connectInput(ALTDPRAM::Inputs::IN_RDADDRESS, addr(0, addrBits));
+		altdpram->setInput(ALTDPRAM::Inputs::IN_RDADDRESS, (BVec) addr(0, addrBits));
 
-		UInt readData = altdpram->getOutputUInt(ALTDPRAM::Outputs::OUT_Q);
+		UInt readData = (UInt) altdpram->getOutputBVec(ALTDPRAM::Outputs::OUT_Q);
 		{
 			Clock clock(readClock);
 			ClockScope cscope(clock);

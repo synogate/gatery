@@ -23,7 +23,11 @@
 #include "ALTSYNCRAM.h"
 #include <gatery/hlim/postprocessing/MemoryDetector.h>
 #include <gatery/hlim/supportNodes/Node_MemPort.h>
+#include <gatery/hlim/supportNodes/Node_Memory.h>
 #include <gatery/hlim/coreNodes/Node_Register.h>
+
+#include <gatery/frontend.h>
+#include <gatery/debug/DebugInterface.h>
 
 namespace gtry::scl::arch::intel {
 
@@ -189,9 +193,9 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 		UInt addr = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 		Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrEnable}, '1');
 
-		altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_DATA_A, wrData);
-		altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_ADDRESS_A, addr);
-		altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_WREN_A, wrEn);
+		altsyncram->setInput(ALTSYNCRAM::Inputs::IN_DATA_A, (BVec) wrData);
+		altsyncram->setInput(ALTSYNCRAM::Inputs::IN_ADDRESS_A, (BVec) addr);
+		altsyncram->setInput(ALTSYNCRAM::Inputs::IN_WREN_A, wrEn);
 
 		altsyncram->attachClock(writeClock, (size_t)ALTSYNCRAM::Clocks::CLK_0);
 
@@ -205,11 +209,11 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 			UInt addr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 			UInt data = hookUIntAfter(rp.dataOutput);
 
-			altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_ADDRESS_B, addr);
+			altsyncram->setInput(ALTSYNCRAM::Inputs::IN_ADDRESS_B, (BVec) addr);
 			if (readEnable.node != nullptr)
-				altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_RDEN_B, Bit(SignalReadPort{readEnable}));
+				altsyncram->setInput(ALTSYNCRAM::Inputs::IN_RDEN_B, Bit(SignalReadPort{readEnable}));
 
-			UInt readData = altsyncram->getOutputUInt(ALTSYNCRAM::Outputs::OUT_Q_B);
+			UInt readData = (UInt) altsyncram->getOutputBVec(ALTSYNCRAM::Outputs::OUT_Q_B);
 
 			{
 				Clock clock(readClock);
@@ -234,10 +238,10 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 		UInt addr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 		UInt data = hookUIntAfter(rp.dataOutput);
 
-		altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_ADDRESS_A, addr);
+		altsyncram->setInput(ALTSYNCRAM::Inputs::IN_ADDRESS_A, (BVec) addr);
 		if (readEnable.node != nullptr)
-			altsyncram->connectInput(ALTSYNCRAM::Inputs::IN_RDEN_A, Bit(SignalReadPort{readEnable}));
-		UInt readData = altsyncram->getOutputUInt(ALTSYNCRAM::Outputs::OUT_Q_A);
+			altsyncram->setInput(ALTSYNCRAM::Inputs::IN_RDEN_A, Bit(SignalReadPort{readEnable}));
+		UInt readData = (UInt) altsyncram->getOutputBVec(ALTSYNCRAM::Outputs::OUT_Q_A);
 		{
 			Clock clock(readClock);
 			ClockScope cscope(clock);
