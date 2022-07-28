@@ -101,7 +101,7 @@ gtry::scl::SpiMaster& gtry::scl::SpiMaster::pinTestLoop()
 	return *this;
 }
 
-gtry::scl::SpiMaster& gtry::scl::SpiMaster::clockDiv(size_t value)
+gtry::scl::SpiMaster& gtry::scl::SpiMaster::clockDiv(UInt value)
 {
 	m_clockDiv = value;
 	return *this;
