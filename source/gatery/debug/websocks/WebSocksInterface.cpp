@@ -365,6 +365,7 @@ void JsonSerializer::serializeStackTrace(std::ostream &json, const utils::StackT
 
 void WebSocksInterface::create(unsigned port)
 {
+	instance.reset(nullptr); // Close previous first
 	instance.reset(new WebSocksInterface(port));
 }
 
@@ -421,18 +422,49 @@ WebSocksInterface::WebSocksInterface(unsigned port) : m_acceptor(m_ioc, {net::ip
 
 WebSocksInterface::~WebSocksInterface()
 {
+	m_acceptor.close();
+
 	while (!m_sessions.empty())
 		closeSession(m_sessions.front());
+
+	m_ioc.run();
 }
 
 void WebSocksInterface::waitAccept()
 {
 	m_acceptor.async_accept([this](beast::error_code ec, tcp::socket socket){
-		if (ec)
-			throw std::runtime_error(std::string("Networking failure, cannot accept connections"));
+		if (ec) {
+			if (ec == boost::system::errc::operation_canceled)
+				return;
+			else
+				throw std::runtime_error(std::string("Networking failure, cannot accept connections"));
+		}
 
 		acceptSession(std::move(socket));
 		waitAccept();
+	});
+}
+
+void WebSocksInterface::acceptSession(tcp::socket socket)
+{
+	m_sessions.emplace_back(std::move(socket));
+	auto &session = m_sessions.back();
+
+	async_read(session.websockStream.next_layer(), session.buffer, session.req, [&session, this](beast::error_code ec, std::size_t bytes_transferred){
+		if (ec) {
+			std::cout << "Websocket connection failed to connect, could not read handshake: " << ec.message() << std::endl;
+			closeSession(session);
+			return;
+		} 
+		session.websockStream.async_accept(session.req.get(), [&session, this](beast::error_code ec){
+			if (ec) {
+				std::cout << "Websocket connection failed to connect: " << ec.message() << std::endl;
+				closeSession(session);
+				return;
+			}
+			awaitRequest(session);
+			session.ready = true;
+		});
 	});
 }
 
@@ -440,7 +472,8 @@ void WebSocksInterface::awaitRequest(Session &session)
 {
 	session.websockStream.async_read(session.buffer, [this, &session](beast::error_code ec, std::size_t bytes_written){
 		if (ec) {
-			std::cerr << "An error occured with one of the websocks debugger connections, dropping connection!" << std::endl;
+			if (ec != boost::system::errc::operation_canceled)
+				std::cerr << "An error occured with one of the websocks debugger connections, dropping connection!" << std::endl;
 			closeSession(session);
 			return;
 		}
@@ -515,29 +548,6 @@ void WebSocksInterface::closeSession(Session &session)
 			return;
 		}
 	throw std::runtime_error("Invalid tcp session");
-}
-
-void WebSocksInterface::acceptSession(tcp::socket socket)
-{
-	m_sessions.emplace_back(std::move(socket));
-	auto &session = m_sessions.back();
-
-	async_read(session.websockStream.next_layer(), session.buffer, session.req, [&session, this](beast::error_code ec, std::size_t bytes_transferred){
-		if (ec) {
-			std::cout << "Websocket connection failed to connect: " << ec.message() << std::endl;
-			closeSession(session);
-			return;
-		} 
-		session.websockStream.async_accept(session.req.get(), [&session, this](beast::error_code ec){
-			if (ec) {
-				std::cout << "Websocket connection failed to connect: " << ec.message() << std::endl;
-				closeSession(session);
-				return;
-			}
-			awaitRequest(session);
-			session.ready = true;
-		});
-	});
 }
 
 void WebSocksInterface::operate()

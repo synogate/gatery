@@ -50,7 +50,7 @@ class JsonSerializer
 class WebSocksInterface : public DebugInterface
 {
 	public:
-		~WebSocksInterface();
+		virtual ~WebSocksInterface();
 
 		static void create(unsigned port = 1337);
 
