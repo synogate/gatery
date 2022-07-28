@@ -25,9 +25,14 @@ namespace gtry::scl
 	class SpiMaster
 	{
 	public:
-		SpiMaster& pin(std::string prefix);
+		SpiMaster& pin(std::string prefix) { return pin(prefix + "scl", prefix + "miso", prefix + "mosi"); }
+		SpiMaster& pin(std::string clock, std::string miso, std::string mosi);
 		SpiMaster& pinTestLoop();
-		SpiMaster& clockDiv(size_t value);
+		SpiMaster& clockDiv(UInt value);
+
+		const Bit& scl() const { return m_clk; }
+		const Bit& miso() const { return m_in; }
+		const Bit& mosi() const { return m_out; }
 
 		virtual RvStream<BVec> generate(RvStream<BVec>& in);
 
@@ -35,6 +40,6 @@ namespace gtry::scl
 		Bit m_clk;
 		Bit m_out;
 		Bit m_in;
-		size_t m_clockDiv = 1;
+		UInt m_clockDiv;
 	};
 }

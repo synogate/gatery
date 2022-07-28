@@ -73,7 +73,7 @@ bool TRIPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 		UInt &output = io.outputUInts["result"];
 
 		HCL_ASSERT(input.width() == output.width());
-		UInt overrideBits = ConstUInt(input.width(), 0);
+		UInt overrideBits = ConstUInt(0, input.width());
 		for (auto i : utils::Range(input.size())) {
 			auto *tri = DesignScope::createNode<TRI>();
 			tri->setInput(TRI::IN_A_IN, input[i]);

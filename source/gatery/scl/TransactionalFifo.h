@@ -48,6 +48,9 @@ namespace gtry::scl
 
 		Bit m_popCommit;
 		Bit m_popRollback;
+
+		bool m_hasPopCommit = false;
+		bool m_hasPushCommit = false;
 	};
 
 	template<Signal TData>
@@ -68,6 +71,7 @@ namespace gtry::scl
 	{
 		m_pushCommit = '1';
 		m_pushRollack = '0';
+		m_hasPushCommit = true;
 	}
 
 	template<Signal TData>
@@ -89,6 +93,7 @@ namespace gtry::scl
 	{
 		m_popCommit = '1';
 		m_popRollback = '0';
+		m_hasPopCommit = true;
 	}
 
 	template<Signal T>
@@ -108,6 +113,9 @@ namespace gtry::scl
 	template<Signal TData>
 	UInt TransactionalFifo<TData>::generatePush(Memory<TData>&mem, const UInt & get)
 	{
+		if (!m_hasPushCommit)
+			commitPush();
+
 		setName(Fifo<TData>::m_pushValid, "m_pushValid");
 		setName(Fifo<TData>::m_pushData, "m_pushData");
 		HCL_NAMED(m_pushCutoff);
@@ -146,6 +154,9 @@ namespace gtry::scl
 	template<Signal TData>
 	UInt TransactionalFifo<TData>::generatePop(const Memory<TData>& mem, const UInt& put)
 	{
+		if (!m_hasPopCommit)
+			commitPop();
+
 		setName(Fifo<TData>::m_popValid, "m_popValid");
 		HCL_NAMED(m_popRollback);
 		HCL_NAMED(m_popCommit);

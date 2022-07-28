@@ -23,10 +23,10 @@ namespace gtry::scl
 	class Counter
 	{
 	public:
-		Counter(size_t end) :
+		Counter(UInt end) :
 			m_area{ "scl_Counter", true },
-			m_value{ BitWidth::count(end) },
-			m_loadValue{ BitWidth::count(end) }
+			m_value{ end.width() },
+			m_loadValue{ end.width() }
 		{
 			HCL_NAMED(m_inc);
 
