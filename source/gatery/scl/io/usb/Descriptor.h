@@ -344,7 +344,9 @@ namespace gtry::scl::usb
 	public:
 		void add(StringId index, std::wstring_view string, LangID language = LangID::English_United_States);
 		void add(std::vector<uint8_t>&& data, uint8_t index = 0);
-		void add(DescriptorType auto descriptor, uint8_t index = 0);
+
+		template<DescriptorType T>
+		void add(T descriptor, uint8_t index = 0);
 
 		StringId allocateStringIndex() { return StringId{ m_nextStringIndex++ }; }
 		StringId allocateStringIndex(std::wstring_view string, LangID language = LangID::English_United_States);
@@ -363,7 +365,8 @@ namespace gtry::scl::usb
 
 
 
-	inline void Descriptor::add(DescriptorType auto descriptor, uint8_t index)
+	template<DescriptorType T>
+	inline void Descriptor::add(T descriptor, uint8_t index)
 	{
 		std::vector<uint8_t> data(sizeof(descriptor) + 2, 0);
 		data[0] = (uint8_t)data.size();
