@@ -16,9 +16,30 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-#include "Function.h"
+#include <gatery/frontend.h>
 
-namespace gtry::scl::usb
+#include "../stream/Stream.h"
+
+namespace gtry::scl 
 {
-	void virtualCOMsetup(Function& func, uint8_t interfaceNumber, uint8_t endPoint, boost::optional<Bit&> dtr = {}, boost::optional<Bit&> rts = {});
+	class SpiMaster
+	{
+	public:
+		SpiMaster& pin(std::string prefix) { return pin(prefix + "scl", prefix + "miso", prefix + "mosi"); }
+		SpiMaster& pin(std::string clock, std::string miso, std::string mosi);
+		SpiMaster& pinTestLoop();
+		SpiMaster& clockDiv(UInt value);
+
+		const Bit& scl() const { return m_clk; }
+		const Bit& miso() const { return m_in; }
+		const Bit& mosi() const { return m_out; }
+
+		virtual RvStream<BVec> generate(RvStream<BVec>& in);
+
+	private:
+		Bit m_clk;
+		Bit m_out;
+		Bit m_in;
+		UInt m_clockDiv;
+	};
 }

@@ -16,6 +16,16 @@ function GateryWorkspaceDefaults()
 
     filter { "system:linux" }
         buildoptions { "-std=c++2a", "-fcoroutines" }
+        defines { "BOOST_STACKTRACE_USE_ADDR2LINE" }
+        links { 
+            "boost_unit_test_framework", 
+            "boost_program_options", 
+            "boost_filesystem", 
+            "pthread",
+            "yaml-cpp",
+            "boost_json",
+            "dl"
+        }
 
     filter {}
 

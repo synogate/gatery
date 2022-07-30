@@ -99,8 +99,8 @@ namespace gtry {
 
 			Clock(hlim::Clock *clock) : m_clock(clock) { }
 
-			Bit clkSignal();
-			Bit rstSignal();
+			Bit clkSignal() const;
+			Bit rstSignal() const;
 			BVec operator() (const BVec& signal, const RegisterSettings &settings = {}) const;
 			BVec operator() (const BVec& signal, const BVec& reset, const RegisterSettings &settings = {}) const;
 			UInt operator() (const UInt& signal, const RegisterSettings &settings = {}) const;

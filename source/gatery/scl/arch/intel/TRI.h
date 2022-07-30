@@ -20,29 +20,27 @@
 #include <gatery/frontend/Bit.h>
 
 #include <gatery/frontend/tech/TechnologyMappingPattern.h>
-#include <gatery/hlim/supportNodes/Node_External.h>
+#include <gatery/frontend/ExternalComponent.h>
 
 namespace gtry::scl::arch::intel {
 
-class TRI : public gtry::hlim::Node_External
+class TRI : public gtry::ExternalComponent
 {
 	public:
+		enum Inputs {
+			IN_A_IN,
+			IN_OE,
+			IN_COUNT
+		};
+
+		enum Outputs {
+			OUT_A_OUT,
+			OUT_COUNT
+		};
+
 		TRI();
 
-		void connectInput(const Bit &bit);
-		void connectInput(const UInt &bvec);
-		void connectEnable(const Bit &bit);
-
-		virtual std::string getTypeName() const override;
-		virtual void assertValidity() const override;
-		virtual std::string getInputName(size_t idx) const override;
-		virtual std::string getOutputName(size_t idx) const override;
-
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
-
-		virtual std::string attemptInferOutputName(size_t outputPort) const override;
-	protected:
-		void connectInput(hlim::NodePort nodePort);
 };
 
 

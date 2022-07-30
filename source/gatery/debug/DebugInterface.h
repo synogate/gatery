@@ -89,6 +89,8 @@ enum class State {
 class DebugInterface 
 {
 	public:
+		virtual ~DebugInterface() = default;
+
 		inline State getState() const { return m_state; }
 
 		thread_local static std::unique_ptr<DebugInterface> instance;

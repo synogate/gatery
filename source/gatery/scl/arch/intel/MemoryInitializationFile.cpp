@@ -37,8 +37,9 @@ void writeMemoryInitializationFile(std::ostream &dst, size_t width, const sim::D
 		dst << std::hex << addr << " : ";
 
 		for (auto j : utils::Range(width)) {
-			bool defined = values.get(sim::DefaultConfig::DEFINED, addr*width+j);
-			bool value = values.get(sim::DefaultConfig::VALUE, addr*width+j);
+			size_t bitIdx = addr * width + width - 1 - j;
+			bool defined = values.get(sim::DefaultConfig::DEFINED, bitIdx);
+			bool value = values.get(sim::DefaultConfig::VALUE, bitIdx);
 
 			if (!defined)
 				value = undefinedPattern & (1 << (j % (sizeof(undefinedPattern)*8)));

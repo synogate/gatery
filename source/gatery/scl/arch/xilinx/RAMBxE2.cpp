@@ -63,7 +63,7 @@ RAMBxE2::RAMBxE2(Type type) : m_type(type)
 	setOutputConnectionType(OUT_DOUTP_A_DOUTP, {.interpretation = hlim::ConnectionType::BITVEC, .width=2*mult});
 	setOutputConnectionType(OUT_DOUTP_B_DOUTP, {.interpretation = hlim::ConnectionType::BITVEC, .width=2*mult});
 
-	m_genericParameters["SIM_COLLISION_CHECK"] = "\"GENERATE_X_ONLY\"";
+	m_genericParameters["SIM_COLLISION_CHECK"] = "GENERATE_X_ONLY";
 }
 
 void RAMBxE2::defaultInputs(bool writePortA, bool writePortB)
@@ -166,11 +166,11 @@ std::string RAMBxE2::WriteMode2Str(WriteMode wm)
 {
 	switch (wm) {
 		case WriteMode::NO_CHANGE:
-			return "\"NO_CHANGE\"";
+			return "NO_CHANGE";
 		case WriteMode::READ_FIRST:
-			return "\"READ_FIRST\"";
+			return "READ_FIRST";
 		case WriteMode::WRITE_FIRST:
-			return "\"WRITE_FIRST\"";
+			return "WRITE_FIRST";
 	}
 	HCL_ASSERT_HINT(false, "Unhandled case!");
 }
@@ -179,13 +179,13 @@ std::string RAMBxE2::CascadeOrder2Str(CascadeOrder cco)
 {
 	switch (cco) {
 		case CascadeOrder::NONE:
-			return "\"NONE\"";
+			return "NONE";
 		case CascadeOrder::FIRST:
-			return "\"FIRST\"";
+			return "FIRST";
 		case CascadeOrder::MIDDLE:
-			return "\"MIDDLE\"";
+			return "MIDDLE";
 		case CascadeOrder::LAST:
-			return "\"LAST\"";
+			return "LAST";
 	}
 	HCL_ASSERT_HINT(false, "Unhandled case!");
 }
@@ -194,9 +194,9 @@ std::string RAMBxE2::ClockDomains2Str(ClockDomains cd)
 {
 	switch (cd) {
 		case ClockDomains::COMMON:
-			return "\"COMMON\"";
+			return "COMMON";
 		case ClockDomains::INDEPENDENT:
-			return "\"INDEPENDENT\"";
+			return "INDEPENDENT";
 	}
 	HCL_ASSERT_HINT(false, "Unhandled case!");
 }
@@ -205,11 +205,11 @@ std::string RAMBxE2::ClockDomains2Str(ClockDomains cd)
 RAMBxE2 &RAMBxE2::setupPortA(PortSetup portSetup)
 {
 	m_genericParameters["CASCADE_ORDER_A"] = CascadeOrder2Str(portSetup.cascadeOrder);
-	m_genericParameters["READ_WIDTH_A"] = std::to_string(portSetup.readWidth);
-	m_genericParameters["WRITE_WIDTH_A"] = std::to_string(portSetup.writeWidth);
+	m_genericParameters["READ_WIDTH_A"] = portSetup.readWidth;
+	m_genericParameters["WRITE_WIDTH_A"] = portSetup.writeWidth;
 	m_genericParameters["WRITE_MODE_A"] = WriteMode2Str(portSetup.writeMode);
 
-	m_genericParameters["DOA_REG"] = portSetup.outputRegs?"1":"0";
+	m_genericParameters["DOA_REG"] = portSetup.outputRegs?1:0;
 
 	m_portSetups[0] = portSetup;
 
@@ -219,11 +219,11 @@ RAMBxE2 &RAMBxE2::setupPortA(PortSetup portSetup)
 RAMBxE2 &RAMBxE2::setupPortB(PortSetup portSetup)
 {
 	m_genericParameters["CASCADE_ORDER_B"] = CascadeOrder2Str(portSetup.cascadeOrder);
-	m_genericParameters["READ_WIDTH_B"] = std::to_string(portSetup.readWidth);
-	m_genericParameters["WRITE_WIDTH_B"] = std::to_string(portSetup.writeWidth);
+	m_genericParameters["READ_WIDTH_B"] = portSetup.readWidth;
+	m_genericParameters["WRITE_WIDTH_B"] = portSetup.writeWidth;
 	m_genericParameters["WRITE_MODE_B"] = WriteMode2Str(portSetup.writeMode);
 
-	m_genericParameters["DOB_REG"] = portSetup.outputRegs?"1":"0";
+	m_genericParameters["DOB_REG"] = portSetup.outputRegs?1:0;
 
 	m_portSetups[1] = portSetup;
 

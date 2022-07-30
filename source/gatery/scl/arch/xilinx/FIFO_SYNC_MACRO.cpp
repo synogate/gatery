@@ -41,7 +41,7 @@ FIFO_SYNC_MACRO::FIFO_SYNC_MACRO(size_t width, FIFOSize fifoSize)
 	unsigned counterWidth;
 	switch (fifoSize) {
 		case SIZE_18Kb:
-			m_genericParameters["FIFO_SIZE"] = "\"18Kb\"";
+			m_genericParameters["FIFO_SIZE"] = "18Kb";
 			if (width < 5)
 				counterWidth = 12; else
 			if (width < 10)
@@ -53,7 +53,7 @@ FIFO_SYNC_MACRO::FIFO_SYNC_MACRO(size_t width, FIFOSize fifoSize)
 				HCL_ASSERT_HINT(false, "The maximal data width of FIFO_SYNC_MACRO for 18Kb is 36 bits!");
 		break;
 		case SIZE_36Kb:
-			m_genericParameters["FIFO_SIZE"] = "\"36Kb\"";
+			m_genericParameters["FIFO_SIZE"] = "36Kb";
 			if (width < 5)
 				counterWidth = 13; else
 			if (width < 10)
@@ -67,7 +67,7 @@ FIFO_SYNC_MACRO::FIFO_SYNC_MACRO(size_t width, FIFOSize fifoSize)
 				HCL_ASSERT_HINT(false, "The maximal data width of FIFO_SYNC_MACRO is 72 bits!");
 		break;
 	}
-	m_genericParameters["DATA_WIDTH"] = std::to_string(width);
+	m_genericParameters["DATA_WIDTH"] = width;
 
 	resizeInputs(IN_COUNT);
 	resizeOutputs(OUT_COUNT);
@@ -84,13 +84,13 @@ FIFO_SYNC_MACRO::FIFO_SYNC_MACRO(size_t width, FIFOSize fifoSize)
 
 FIFO_SYNC_MACRO &FIFO_SYNC_MACRO::setAlmostEmpty(size_t numOccupied)
 {
-	m_genericParameters["ALMOST_EMPTY_OFFSET"] = (boost::format("X\"%00000X\"") % numOccupied).str();
+	m_genericParameters["ALMOST_EMPTY_OFFSET"] = numOccupied; //(boost::format("X%00000X") % numOccupied).str();
 	return *this;
 }
 
 FIFO_SYNC_MACRO &FIFO_SYNC_MACRO::setAlmostFull(size_t numVacant)
 {
-	m_genericParameters["ALMOST_FULL_OFFSET"] = (boost::format("X\"%00000X\"") % numVacant).str();
+	m_genericParameters["ALMOST_FULL_OFFSET"] = numVacant; //(boost::format("X%00000X") % numVacant).str();
 	return *this;
 }
 

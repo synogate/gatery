@@ -34,53 +34,12 @@ GLOBAL::GLOBAL()
 	m_clockNames = {};
 	m_resetNames = {};
 
-	resizeInputs(1);
-	resizeOutputs(1);
+	resizeIOPorts(1, 1);
+
+	declInputBit(0, "A_IN");
+	declOutputBit(0, "A_OUT");
 }
 
-void GLOBAL::connectInput(const Bit &bit)
-{
-	connectInput(bit.readPort());
-}
-
-/*
-void GLOBAL::connectInput(const BVec &bvec)
-{
-	connectInput(bvec.readPort());
-}
-*/
-
-void GLOBAL::connectInput(hlim::NodePort nodePort)
-{
-	if (nodePort.node != nullptr) {
-		auto paramType = nodePort.node->getOutputConnectionType(nodePort.port);
-		auto myType = getOutputConnectionType(0);
-		if (!getDirectlyDriven(0).empty()) {
-			HCL_ASSERT_HINT( paramType == myType, "The connection type of a node that is driving other nodes can not change");
-		} else
-			setOutputConnectionType(0, paramType);
-	}
-	NodeIO::connectInput(0, nodePort);
-}
-
-std::string GLOBAL::getTypeName() const
-{
-	return "GLOBAL";
-}
-
-void GLOBAL::assertValidity() const
-{
-}
-
-std::string GLOBAL::getInputName(size_t idx) const
-{
-	return "a_in";
-}
-
-std::string GLOBAL::getOutputName(size_t idx) const
-{
-	return "a_out";
-}
 
 std::unique_ptr<hlim::BaseNode> GLOBAL::cloneUnconnected() const
 {
@@ -96,10 +55,10 @@ std::string GLOBAL::attemptInferOutputName(size_t outputPort) const
 	auto driver = getDriver(0);
 	
 	if (driver.node == nullptr)
-		return "";
+		return ExternalComponent::attemptInferOutputName(outputPort);
 	
 	if (driver.node->getName().empty())
-		return "";
+		return ExternalComponent::attemptInferOutputName(outputPort);
 
 	return driver.node->getName() + "_global";
 }
@@ -123,9 +82,11 @@ bool GLOBALPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 		Bit &output = io.outputBits["globalBufferPlaceholder"];
 
 		auto *global = DesignScope::createNode<GLOBAL>();
-		global->connectInput(input);
-		output.exportOverride(SignalReadPort(global));
-	}
+		global->setInput(0, input);
+		output.exportOverride(global->getOutputBit(0));
+	} else
+		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+				<< "Not replacing " << nodeGroup << " with GLOBAL because the 'globalBufferPlaceholder' signal could not be found or is not a bit!");
 
 	return true;
 }

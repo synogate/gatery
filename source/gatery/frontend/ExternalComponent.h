@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2022 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -16,9 +16,25 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-#include "Function.h"
 
-namespace gtry::scl::usb
+
+#include <gatery/frontend/Bit.h>
+#include <gatery/frontend/BVec.h>
+#include <gatery/hlim/supportNodes/Node_External.h>
+
+namespace gtry {
+
+class ExternalComponent : public hlim::Node_External
 {
-	void virtualCOMsetup(Function& func, uint8_t interfaceNumber, uint8_t endPoint, boost::optional<Bit&> dtr = {}, boost::optional<Bit&> rts = {});
+	public:
+		using GenericParameter = hlim::GenericParameter;
+
+		virtual void setInput(size_t input, const Bit &bit);
+		virtual void setInput(size_t input, const BVec &bvec);
+
+		virtual Bit getOutputBit(size_t output);
+		virtual BVec getOutputBVec(size_t output);
+};
+
 }
+

@@ -28,4 +28,15 @@ DefaultBitVectorState createDefaultBitVectorState(std::size_t size, const void *
 	return state;
 }
 
+DefaultBitVectorState createDefaultBitVectorState(std::size_t size, size_t value)
+{
+	BitVectorState<DefaultConfig> state;
+	state.resize(size*8);
+	state.setRange(DefaultConfig::DEFINED, 0, size*8);
+	state.clearRange(DefaultConfig::VALUE, 0, size*8);
+	state.insertNonStraddling(DefaultConfig::VALUE, 0, sizeof(value), value);
+	return state;
+}
+
+
 }

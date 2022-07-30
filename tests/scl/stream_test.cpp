@@ -26,6 +26,7 @@
 
 #include <gatery/scl/stream/StreamArbiter.h>
 #include <gatery/scl/stream/adaptWidth.h>
+#include <gatery/scl/io/SpiMaster.h>
 
 #include <gatery/debug/websocks/WebSocksInterface.h>
 
@@ -987,4 +988,23 @@ BOOST_FIXTURE_TEST_CASE(stream_addEopDeferred, StreamTransferFixture)
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(spi_stream_test, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::RvStream<UInt> in{ .data = 8_b };
+	In(in);
+
+	scl::RvStream<BVec> inBVec = in.transform([](const UInt& v) { return (BVec)v; });
+	scl::RvStream<BVec> outBVec = scl::SpiMaster{}.pinTestLoop().clockDiv(3).generate(inBVec);
+
+	scl::RvStream<UInt> out = outBVec.transform([](const BVec& v) { return (UInt)v; });
+	Out(out);
+
+	simulateTransferTest(in, out);
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 4096);
 }

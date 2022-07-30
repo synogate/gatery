@@ -16,63 +16,69 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-
 #include <gatery/frontend.h>
 #include <gatery/frontend/ExternalComponent.h>
 
-
-namespace gtry::scl::arch::xilinx {
-
-class MMCME2_BASE : public gtry::ExternalComponent
+namespace gtry::scl::arch::intel 
 {
+	class ALTPLL : public gtry::ExternalComponent
+	{
 	public:
 		enum Clocks {
-			CLK_IN,
+			CLK_IN0,
+			CLK_IN1,
+			CLK_IN2,
+			CLK_IN3,
+
 			CLK_COUNT
 		};
 
 		enum Inputs {
-			IN_PWRDWN,
-			IN_CLKFBIN,
+			IN_INCLK,
+			IN_FBIN,
+			IN_PHASEUPDOWN,
+			IN_PHASESTEP,
+			// IN_PHASECOUNTERSELECT,
+			// IN_PLLENA,
+			IN_CLKSWITCH,
+			IN_PFDENA,
+			// IN_C_ENA,
+			// IN_E_ENA,
+			IN_CONFIGUPDATE,
+			IN_SCANCLK,
+			IN_SCANCLKENA,
+			// IN_SCANACLR,
+			IN_SCANDATA,
+			// IN_SCANREAD,
+			// IN_SCANWRITE,
 
 			IN_COUNT
 		};
+
 		enum Outputs {
-        	OUT_CLKOUT0,
-        	OUT_CLKOUT0B,
-        	OUT_CLKOUT1,
-        	OUT_CLKOUT1B,
-        	OUT_CLKOUT2,
-        	OUT_CLKOUT2B,
-        	OUT_CLKOUT3,
-        	OUT_CLKOUT3B,
-        	OUT_CLKOUT4,
-        	OUT_CLKOUT5,
-        	OUT_CLKOUT6,
-        	OUT_CLKFBOUT,
-        	OUT_CLKFBOUTB,
-        	OUT_LOCKED,
+			OUT_CLK,
+			OUT_E,
+			OUT_CLKBAD,
+			OUT_ACTIVECLOCK,
+			OUT_CLKLOSS,
+			OUT_LOCKED,
+			OUT_SCANDATAOUT,
+			OUT_FBOUT,
+			OUT_ENABLE,
+			OUT_SCLKOUT,
+			OUT_PHASEDONE,
+			OUT_SCANDONE,
 
 			OUT_COUNT
 		};
 
-		MMCME2_BASE();
+		ALTPLL();
 
-		void setInput(Inputs input, const Bit &bit);
-		Bit getOutput(Outputs output);
+		void setClock(size_t idx, const Clock& clock);
 
-		void setClock(hlim::Clock *clock);
-
-		virtual std::string getTypeName() const override;
-		virtual void assertValidity() const override;
-		virtual std::string getInputName(size_t idx) const override;
-		virtual std::string getOutputName(size_t idx) const override;
+		ALTPLL& configureDeviceFamily(std::string familyName);
+		ALTPLL& configureClock(size_t idx, size_t mul, size_t div, size_t dutyCyclePercent, size_t phaseShift);
 
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
-
-		virtual std::string attemptInferOutputName(size_t outputPort) const override;
-	protected:
-};
-
-
+	};
 }

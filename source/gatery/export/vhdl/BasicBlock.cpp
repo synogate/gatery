@@ -220,13 +220,13 @@ void BasicBlock::handleExternalNodeInstantiaton(hlim::Node_External *externalNod
 {
 	m_externalNodes.push_back({
 		.node = externalNode,
-		.instanceName = m_namespaceScope.allocateInstanceName(externalNode->getName()),
+		.instanceName = m_namespaceScope.allocateInstanceName(externalNode->getName()+"_inst"),
 	});
 	m_ast.getMapping().assignNodeToScope(externalNode, this);
 
 	auto desiredFilenames = externalNode->getSupportFiles();
 	if (!desiredFilenames.empty()) {
-		std::string prefix = getInstanceName() + '_';
+		std::string prefix = getInstanceName() + '_' + m_externalNodes.back().instanceName + '_';
 		auto *p = m_parent;
 		while (p != nullptr) {
 			prefix = p->getInstanceName() + '_' + prefix;
@@ -406,10 +406,11 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
 				stream << m_externalNodes[statement.ref.externalNodeIdx].instanceName << " : ";
 				if (node->isEntity())
 					stream << " entity ";
-				stream << node->getLibraryName();
+				if (!node->getLibraryName().empty())
+					stream << node->getLibraryName() << '.';
 				if (!node->getPackageName().empty())
-					stream << '.' << node->getPackageName();
-				stream << '.' << node->getName() << std::endl;
+					stream << node->getPackageName() << '.';
+				stream << node->getName() << std::endl;
 				
 				if (!node->getGenericParameters().empty()) {
 					cf.indent(stream, indent);
@@ -418,7 +419,24 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
 					unsigned i = 0;
 					for (const auto &p : node->getGenericParameters()) {
 						cf.indent(stream, indent+1);
-						stream << p.first << " => " << p.second;
+						stream << p.first << " => ";
+						
+						const auto &param = p.second;
+						if (param.isDecimal())
+						 	stream << param.decimal();
+						else if (param.isReal())
+						 	stream << param.real(); 
+						else if (param.isBoolean())
+						 	stream << (param.boolean()?"true":"false");
+						else if (param.isString())
+						 	stream << '"' << param.string() << '"';
+						else if (param.isBit())
+						 	stream << '\'' << param.bit() << '\'';
+						else if (param.isBitVector())
+						 	stream << '"' << param.bitVector() << '"';
+						else	
+							HCL_ASSERT_HINT(false, "Unhandled generic parameter type!");
+
 						if (i+1 < node->getGenericParameters().size())
 							stream << ',';
 						stream << std::endl;
@@ -434,49 +452,69 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
 
 				std::vector<std::string> portmapList;
 
-				for (auto i : utils::Range(node->getClocks().size()))
-					if (node->getClocks()[i] != nullptr) {
-						if (!node->getClockNames()[i].empty()) {
-							std::stringstream line;
-							line << node->getClockNames()[i] << " => ";
+				for (auto i : utils::Range(node->getClocks().size())) {
+					if (!node->getClockNames()[i].empty()) {
+						std::stringstream line;
+						line << node->getClockNames()[i] << " => ";
+						if (node->getClocks()[i] != nullptr)
 							line << m_namespaceScope.getClock(node->getClocks()[i]->getClockPinSource()).name;
-							portmapList.push_back(line.str());
-						}
-						if (node->getClocks()[i]->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE && !node->getResetNames()[i].empty()) {
-							std::stringstream line;
-							line << node->getResetNames()[i] << " => ";
-							line << m_namespaceScope.getReset(node->getClocks()[i]->getResetPinSource()).name;
-							portmapList.push_back(line.str());
-						}
+						else
+							line << "'X'";
+						portmapList.push_back(line.str());
 					}
+					if (!node->getResetNames()[i].empty()) {
+						std::stringstream line;
+						line << node->getResetNames()[i] << " => ";
+						if (node->getClocks()[i]->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE)
+							line << m_namespaceScope.getReset(node->getClocks()[i]->getResetPinSource()).name;
+						else
+							line << "'X'";
+						portmapList.push_back(line.str());
+					}
+				}
 
+				bool nodeHasExplicitComponentDeclaration = node->requiresComponentDeclaration();
 
-				for (auto i : utils::Range(node->getNumInputPorts()))
-					if (node->getDriver(i).node != nullptr) {
+				for (auto i : utils::Range(node->getNumInputPorts())) {
+					bool connected = node->getDriver(i).node != nullptr;
+					if (nodeHasExplicitComponentDeclaration || connected) {
 						std::stringstream line;
 						line << node->getInputName(i) << " => ";
 
-						const auto &decl = m_namespaceScope.get(node->getDriver(i));
+						if (node->getDriver(i).node != nullptr) {
 
-						if (decl.dataType == VHDLDataType::UNSIGNED)
-							line << "STD_LOGIC_VECTOR(";
-						line << decl.name;
-						if (decl.dataType == VHDLDataType::UNSIGNED)
-							line << ')';
+							const auto &decl = m_namespaceScope.get(node->getDriver(i));
+							if (decl.dataType == VHDLDataType::UNSIGNED)
+								line << "STD_LOGIC_VECTOR(";
+							line << decl.name;
+							if (decl.dataType == VHDLDataType::UNSIGNED)
+								line << ')';
+						} else {
+							if (node->getInputPorts()[i].isVector)
+								line << "(others => 'X')";
+							else
+								line << "'X'";
+						}
 						portmapList.push_back(line.str());
 					}
+				}
 
 				for (auto i : utils::Range(node->getNumOutputPorts())) {
-					if (node->getDirectlyDriven(i).empty()) continue;
+					bool connected = !node->getDirectlyDriven(i).empty();
+					if (nodeHasExplicitComponentDeclaration || connected) {
 
-					const auto &decl = m_namespaceScope.get({.node = node, .port = i});
-
-					std::stringstream line;
-						if (decl.dataType == VHDLDataType::UNSIGNED)
-						line << "UNSIGNED(" << node->getOutputName(i) << ") => " << decl.name;
-					else
-						line << node->getOutputName(i) << " => " << decl.name;
-					portmapList.push_back(line.str());
+						std::stringstream line;
+						if (connected) {
+							const auto &decl = m_namespaceScope.get({.node = node, .port = i});
+							if (decl.dataType == VHDLDataType::UNSIGNED)
+								line << "UNSIGNED(" << node->getOutputName(i) << ") => " << decl.name;
+							else
+								line << node->getOutputName(i) << " => " << decl.name;
+						} else {
+							line << node->getOutputName(i) << " => open";
+						}
+						portmapList.push_back(line.str());
+					}
 				}
 
 				for (auto i : utils::Range(portmapList.size())) {
@@ -501,5 +539,133 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
 		}
 	}
 }
+
+
+void BasicBlock::declareLocalComponents(std::ostream &stream, size_t indentation)
+{
+	CodeFormatting &cf = m_ast.getCodeFormatting();
+	
+	std::set<std::string> alreadyDeclaredComponents;
+
+	for (auto &n : m_externalNodes) {
+		auto node = n.node;
+		if (!node->requiresComponentDeclaration()) continue;
+
+		if (alreadyDeclaredComponents.contains(node->getName())) continue;
+		alreadyDeclaredComponents.insert(node->getName());
+
+
+		cf.indent(stream, indentation);
+		stream << "COMPONENT " << node->getName() << '\n';
+		if (!node->getGenericParameters().empty()) {
+			cf.indent(stream, indentation+1);
+			stream << "GENERIC (\n";
+
+			std::vector<std::string> lines;
+
+			for (const auto &p : node->getGenericParameters()) {
+				std::stringstream line;
+				line << p.first << " : ";
+
+				cf.formatGenericParameterType(line, p.second);
+
+				lines.push_back(line.str());
+			}
+
+			for (auto i : utils::Range(lines.size())) {
+				cf.indent(stream, indentation+2);
+				stream << lines[i];
+				if (i+1 < lines.size())
+					stream << ";";
+				stream << std::endl;
+			}
+
+			cf.indent(stream, indentation+1);
+			stream << ");\n";
+		}
+
+		if (node->getNumInputPorts() != 0 || node->getNumOutputPorts() != 0 || !node->getClocks().empty()) {
+			cf.indent(stream, indentation+1);
+			stream << "PORT (\n";
+
+			std::vector<std::string> portmapList;
+
+			for (auto i : utils::Range(node->getClocks().size())) {
+				if (!node->getClockNames()[i].empty()) {
+					std::stringstream line;
+					line << node->getClockNames()[i] << " : STD_LOGIC";
+					portmapList.push_back(line.str());
+				}
+				if (!node->getResetNames()[i].empty()) {
+					std::stringstream line;
+					line << node->getResetNames()[i] << " : STD_LOGIC";
+					portmapList.push_back(line.str());
+				}
+			}
+
+			HCL_DESIGNCHECK_HINT(node->getNumInputPorts() == node->getInputPorts().size(), 
+				"External nodes that require component declarations must have their ports declared via declInputBit[Vector]!");
+
+			for (auto i : utils::Range(node->getNumInputPorts())) {
+				std::stringstream line;
+
+				const auto &type = node->getInputPorts()[i];
+
+				line << node->getInputName(i) << " : IN ";
+				if (type.isVector) {
+					cf.formatBitVectorFlavor(line, std::get<hlim::Node_External::BitVectorFlavor>(type.flavor));
+					line << '(';
+					if (type.componentWidth.empty())
+						line << ((int)type.instanceWidth-1)<< " downto 0)";
+					else
+						line << type.componentWidth << "-1 downto 0)";
+				} else {
+					cf.formatBitFlavor(line, std::get<hlim::Node_External::BitFlavor>(type.flavor));
+				}
+
+				portmapList.push_back(line.str());
+			}
+
+			HCL_DESIGNCHECK_HINT(node->getNumOutputPorts() == node->getOutputPorts().size(), 
+				"External nodes that require component declarations must have their ports declared via declOutputBit[Vector]!");
+
+			for (auto i : utils::Range(node->getNumOutputPorts())) {
+				std::stringstream line;
+
+				const auto &type = node->getOutputPorts()[i];
+
+				line << node->getOutputName(i) << " : OUT ";
+				if (type.isVector) {
+					cf.formatBitVectorFlavor(line, std::get<hlim::Node_External::BitVectorFlavor>(type.flavor));
+					line << '(';
+					if (type.componentWidth.empty())
+						line << ((int)type.instanceWidth-1)<< " downto 0)";
+					else
+						line << type.componentWidth << "-1 downto 0)";
+				} else {
+					cf.formatBitFlavor(line, std::get<hlim::Node_External::BitFlavor>(type.flavor));
+				}
+
+				portmapList.push_back(line.str());
+			}
+
+			for (auto i : utils::Range(portmapList.size())) {
+				cf.indent(stream, indentation+2);
+				stream << portmapList[i];
+				if (i+1 < portmapList.size())
+					stream << ";";
+				stream << std::endl;
+			}
+
+			cf.indent(stream, indentation+1);
+			stream << ");\n";
+		}
+
+
+		cf.indent(stream, indentation);
+		stream << "END COMPONENT;\n";
+	}
+}
+
 
 }
