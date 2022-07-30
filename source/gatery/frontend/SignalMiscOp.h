@@ -40,51 +40,64 @@
 
 #include <type_traits>
 
-namespace gtry {
+namespace gtry 
+{
+	/**
+	 * @addtogroup gtry_compare Miscellaneous Operations for Signals
+	 * @ingroup gtry_frontend
+	 * @brief All signal operations that don't fit into other categories
+	 * @{
+	 */
 
-/**
- * @addtogroup gtry_compare Miscellaneous Operations for Signals
- * @ingroup gtry_frontend
- * @brief All signal operations that don't fit into other categories
- * @{
- */
-
-
-
-///@todo overload for compound signals
-template<typename ContainerType>//, typename = std::enable_if_t<utils::isContainer<ContainerType>::value>>
-typename ContainerType::value_type mux(const ElementarySignal &selector, const ContainerType &table) {
-
-	const SignalReadPort selPort = selector.readPort();
-	const size_t selPortWidth = selector.width().value;
-	size_t tableSize = table.size();
-
-	if (tableSize > (1ull << selPortWidth))
+	template<typename ContainerType>
+	typename ContainerType::value_type mux(const ElementarySignal& selector, const ContainerType& table) 
 	{
-		HCL_DESIGNCHECK_HINT(selPort.expansionPolicy == Expansion::zero, "The number of mux inputs is larger than can be addressed with it's selector input's width!");
-		tableSize = 1ull << selPortWidth;
+		HCL_DESIGNCHECK(begin(table) != end(table));
+
+		const SignalReadPort selPort = selector.readPort();
+		const size_t selPortWidth = selector.width().value;
+		size_t tableSize = table.size();
+
+		if (tableSize > (1ull << selPortWidth))
+		{
+			HCL_DESIGNCHECK_HINT(selPort.expansionPolicy == Expansion::zero, "The number of mux inputs is larger than can be addressed with it's selector input's width!");
+			tableSize = 1ull << selPortWidth;
+		}
+
+		hlim::Node_Multiplexer* node = DesignScope::createNode<hlim::Node_Multiplexer>(tableSize);
+		node->recordStackTrace();
+		node->connectSelector(selPort);
+
+		if constexpr (BaseSignal<typename ContainerType::value_type>)
+		{
+			size_t idx = 0;
+			for (auto it = begin(table); it != end(table); ++it, ++idx)
+				node->connectInput(idx, it->readPort());
+			return SignalReadPort(node);
+		}
+		else
+		{
+			size_t idx = 0;
+			for (auto it = begin(table); it != end(table); ++it, ++idx)
+				node->connectInput(idx, pack(*it).readPort());
+
+			auto out = constructFrom(*begin(table));
+			unpack(SignalReadPort(node), out);
+			return out;
+		}
 	}
 
-	hlim::Node_Multiplexer *node = DesignScope::createNode<hlim::Node_Multiplexer>(tableSize);
-	node->recordStackTrace();
-	node->connectSelector(selPort);
-
-	const auto it_end = begin(table) + tableSize;
-
-	hlim::ConnectionType elementType;
-	for (auto it = begin(table); it != it_end; ++it)
+	template<typename ContainerType>
+	void demux(const BaseSignal auto& selector, ContainerType& table, const typename ContainerType::value_type& element)
 	{
-		hlim::ConnectionType t = it->connType();
-		if (t.width > elementType.width)
-			elementType = t;
+		size_t idx = 0;
+		for (auto it = begin(table); it != end(table); ++it, ++idx)
+		{
+			IF(selector == idx)
+				*it = element;
+		}
 	}
 
-	size_t idx = 0;
-	for (auto it = begin(table); it != it_end; ++it, ++idx)
-		node->connectInput(idx, it->readPort().expand(elementType.width, elementType.interpretation));
-
-	return SignalReadPort(node);
-}
 
 template<typename ElemType>
 ElemType mux(const ElementarySignal &selector, const std::initializer_list<ElemType> &table) {
