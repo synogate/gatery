@@ -364,7 +364,7 @@ namespace gtry::scl
 		ret.data <<= data;
 
 		std::apply([&](auto&... meta) {
-			((ret.template get<std::remove_cvref_t<decltype(meta)>>() <<= meta), ...);
+			((meta <<= std::get<std::remove_cvref_t<decltype(meta)>>(_sig)), ...);
 		}, ret._sig);
 		return ret;
 	}
