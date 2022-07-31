@@ -29,6 +29,7 @@ namespace gtry::scl::sdram
 		uint16_t rp;  // ns Precharge -> RAS
 		uint16_t rc;  // ns RAS -> RAS
 		uint16_t rrd; // ns RAS -> RAS (different bank)
+		uint16_t refi; // ns average refresh interval
 
 		Timings toCycles(hlim::ClockRational memClock) const;
 	};
@@ -56,6 +57,7 @@ namespace gtry::scl::sdram
 	enum class CommandCode
 	{
 		// RAS = 1, CAS = 2, WE = 4
+		Nop = 0,
 		Activate = 1,
 		Read = 2, // use a[10] for auto precharge
 		Refresh = 3, // use CKE to enter self refresh
@@ -63,6 +65,12 @@ namespace gtry::scl::sdram
 		Precharge = 5, // use a[10] to precharge all banks
 		Write = 6, // use a[10] for auto precharge
 		ModeRegisterSet = 7, // use bank address 1 for extended mode register
+	};
+
+	enum class DriveStrength
+	{
+		Weak,
+		Full,
 	};
 
 	class Controller
@@ -93,14 +101,22 @@ namespace gtry::scl::sdram
 		Controller& burstLimit(size_t limit);
 		Controller& dataBusWidth(BitWidth width);
 		Controller& pinPrefix(std::string prefix);
+		Controller& driveStrength(DriveStrength value);
 
 		virtual void generate(TileLinkUL& link);
 
 	protected:
 		virtual void makeBusPins(const CommandBus& bus, std::string prefix);
+		virtual void makeBankState();
+
+		CommandStream<> makeCommandStream() const;
+
+		virtual CommandStream<Bank> initSequence() const;
+		virtual CommandStream<Bank> refreshSequence(const Bit& mayRefresh);
 
 		virtual void driveCommand(CommandStream<Bank>& command);
 		virtual CommandStream<> translateCommand(const BankState& state, TileLinkChannelA& request) const;
+		virtual BankState updateState(const Command& cmd, const BankState& state) const;
 		virtual CommandStream<> enforceTiming(CommandStream<>& command) const;
 
 		Area m_area = Area{ "scl_sdramController" };
@@ -112,8 +128,10 @@ namespace gtry::scl::sdram
 		BitWidth m_addrBusWidth;
 		BitWidth m_dataBusWidth;
 		std::string m_pinPrefix = "SDRAM_";
+		DriveStrength m_driveStrength = DriveStrength::Weak;
 		const bool m_useOutputRegister = true;
 
+		Vector<BankState> m_bankState;
 		UInt m_rasTimer;
 		CommandBus m_cmdBus;
 		Bit m_dataOutEnable;
@@ -126,3 +144,4 @@ namespace gtry::scl::sdram
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::CommandBus, cke, csn, rasn, casn, wen, a, ba, dq, dqm);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::Controller::BankState, rowActive, activeRow);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::Controller::Command, code, address);

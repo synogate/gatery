@@ -177,7 +177,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 	});
 }
 
-class SdramControllerTest : protected ClockedTest, protected scl::sdram::Controller
+class SdramControllerTest : public ClockedTest, protected scl::sdram::Controller
 {
 public:
 	SdramControllerTest()
@@ -189,33 +189,82 @@ public:
 			.rp = 18,
 			.rc = 42 + 18 + 20,
 			.rrd = 12,
+			.refi = 1560,
 		});
-
+		
 		dataBusWidth(16_b);
 		addressMap({
 			.column = Selection::Slice(1, 8),
 			.row = Selection::Slice(9, 12),
 			.bank = Selection::Slice(21, 2)
 		});
-
+		
 		burstLimit(8);
 	}
 
+	void setupLink(BitWidth addrWidth = 23_b, BitWidth sizeWidth = 4_b, BitWidth sourceWidth = 4_b, BitWidth dataWidth = 16_b)
+	{
+		link.chanA().address = addrWidth;
+		link.chanA().size = sizeWidth;
+		link.chanA().source = sourceWidth;
+		*link.a = dataWidth;
+		byteEnable(link.a) = dataWidth / 8;
+	
+		pinIn(link, "link");
+		setFullByteEnableMask(link.a);
+
+		DesignScope::get()->getCircuit().addSimulationProcess([&]() -> SimProcess {
+			simu(valid(link.a)) = 0;
+			//simu(ready(link.d)) = 0;
+			co_return;
+		});
+	}
+
+	void issueRead(size_t address, size_t size, size_t tag = 0)
+	{
+		scl::TileLinkA& a = link.chanA();
+
+		simu(a.opcode) = scl::TileLinkA::Get;
+		simu(a.param) = 0;
+		simu(a.address) = address;
+		simu(a.size) = gtry::utils::Log2C(size);
+		simu(a.source) = tag;
+
+		simu(*link.a).invalidate();
+		//simu(byteEnable(link.a)) = 1;
+
+		simu(valid(link.a)) = 1;
+	}
+
+	static bool transfer(const scl::StreamSignal auto& stream)
+	{
+		return simu(valid(stream)) != 0 && simu(ready(stream)) != 0;
+	}
+	
+	scl::TileLinkUL link;
 };
 
 BOOST_FIXTURE_TEST_CASE(sdram_constroller_init_test, SdramControllerTest)
 {
-	scl::TileLinkUL link;
-	link.chanA().address = 23_b;
-	link.chanA().size = 4_b;
-	link.chanA().source = 4_b;
-	*link.a = 16_b;
-	byteEnable(link.a) = 2_b;
-
+	setupLink();
 	generate(link);
 
 	addSimulationProcess([=]()->SimProcess {
 		co_await WaitClk(clock());
+		issueRead(0, 2);
+
+		while(!transfer(link.a))
+			co_await WaitClk(clock());
+		co_await WaitClk(clock());
+
+		issueRead(512, 1);
+		while (!transfer(link.a))
+			co_await WaitClk(clock());
+		co_await WaitClk(clock());
+		simu(valid(link.a)) = 0;
+
+		for(size_t i = 0; i < 300; ++i)
+			co_await WaitClk(clock());
 		stopTest();
 	});
 }
