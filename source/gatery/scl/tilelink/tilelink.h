@@ -115,6 +115,7 @@ namespace gtry::scl
 
 	template<class... Cap>
 	void connect(TileLinkU<Cap...>& lhs, TileLinkU<Cap...>& rhs);
+
 }
 
 // impl
@@ -139,6 +140,23 @@ namespace gtry::scl
 
 		lhs.a <<= rhs.a;
 		rhs.d <<= lhs.d;
+	}
+
+	inline void setFullByteEnableMask(TileLinkChannelA& a)
+	{
+		BVec& be = byteEnable(a);
+		be = (BVec)sext(1);
+
+		const UInt& size = a.get<TileLinkA>().size;
+		const UInt& offset = a.get<TileLinkA>().address(0, BitWidth::count(be.width().bits()));
+		for (size_t i = 0; (1ull << i) < be.width().bits(); i++)
+		{
+			IF(size == i)
+			{
+				be = (BVec)zext(0);
+				be(offset, BitWidth{ 1ull << i }) = (BVec)sext(1);
+			}
+		}
 	}
 }
 
