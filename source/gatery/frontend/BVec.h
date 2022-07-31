@@ -62,7 +62,7 @@ namespace gtry {
 		explicit BVec(const char rhs[]) { assign(std::string_view(rhs), Expansion::none); }
 
 		template<BitVectorIntegralLiteral Int>
-		BVec& operator = (Int rhs) { assign((std::uint64_t) rhs, Expansion::none); return *this; }
+		BVec& operator = (Int rhs) { assign((std::uint64_t) rhs, rhs < 0 ? Expansion::one : Expansion::zero); return *this; }
 		BVec& operator = (const char rhs[]) { assign(std::string_view(rhs), Expansion::none); return *this; }
 
 		// These must be here since they are implicitly deleted due to the cop and move ctors
