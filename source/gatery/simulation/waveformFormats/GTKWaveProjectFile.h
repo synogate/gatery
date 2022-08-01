@@ -70,7 +70,7 @@ class GTKWaveProjectFile
 		void appendBlank();
 		void appendComment(std::string comment);
 		Signal &appendSignal(std::string signalName);
-		Marker &addMarker(const hlim::ClockRational &time);
+		Marker *addMarker(const hlim::ClockRational &time);
 		void setCursor(const hlim::ClockRational &time);
 
 		void write(const char *filename) const;

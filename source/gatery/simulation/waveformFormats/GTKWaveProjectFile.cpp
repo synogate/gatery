@@ -66,15 +66,15 @@ GTKWaveProjectFile::Signal &GTKWaveProjectFile::appendSignal(std::string signalN
 	return m_signals.back();
 }
 
-GTKWaveProjectFile::Marker &GTKWaveProjectFile::addMarker(const hlim::ClockRational &time)
+GTKWaveProjectFile::Marker* GTKWaveProjectFile::addMarker(const hlim::ClockRational &time)
 {
 	for (auto &m : m_markers) {
 		if (m.time_ps == -1) {
 			m.time_ps = (std::int64_t)( time.numerator() * 1e12 / time.denominator() );
-			return m;
+			return &m;
 		}
 	}
-	throw std::runtime_error("Out of markers");
+	return nullptr;
 }
 
 void GTKWaveProjectFile::setCursor(const hlim::ClockRational &time)
