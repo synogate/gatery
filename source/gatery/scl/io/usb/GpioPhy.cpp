@@ -21,6 +21,7 @@
 #include <gatery/scl/io/codingNRZI.h>
 #include <gatery/scl/io/RecoverDataDifferential.h>
 #include <gatery/scl/stream/adaptWidth.h>
+#include <gatery/scl/stream/Packet.h>
 #include <gatery/scl/flag.h>
 #include <gatery/scl/Counter.h>
 

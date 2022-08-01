@@ -16,7 +16,7 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-#include "Stream.h"
+#include "Packet.h"
 #include "../Counter.h"
 
 namespace gtry::scl
@@ -34,18 +34,10 @@ namespace gtry::scl
 	requires (T::template has<Ready>() and T::template has<Valid>())
 	T eraseBeat(T& source, UInt beatOffset, UInt beatCount);
 
-	template<StreamSignal T> 
-	requires (T::template has<Valid>() or T::template has<Eop>())
-	T eraseLastBeat(T& source);
-
 	template<StreamSignal T, SignalValue Tval> 
 	requires (T::template has<Ready>())
 	T insertBeat(T& source, UInt beatOffset, const Tval& value);
-
-	template<StreamSignal T>
-	auto addEopDeferred(T& source, Bit insert);
 }
-
 
 namespace gtry::scl
 {
@@ -197,32 +189,6 @@ namespace gtry::scl
 		return out;
 	}
 
-	template<StreamSignal T>
-	requires (T::template has<Valid>() or T::template has<Eop>())
-	T eraseLastBeat(T& source)
-	{
-		auto scope = Area{ "scl_eraseLastBeat" }.enter();
-		T in;
-		in <<= source;
-		HCL_NAMED(in);
-
-		if constexpr (source.template has<Valid>())
-			IF(eop(source))
-				valid(in) = '0';
-
-		T out = constructFrom(in);
-		out = in.regDownstream();
-
-		if constexpr (source.template has<Eop>())
-		{
-			Bit eopReg = flag(eop(source) & valid(source), transfer(out));
-			IF(eop(source) | eopReg)
-				eop(out) = '1';
-		}
-		HCL_NAMED(out);
-		return out;
-	}
-
 	template<StreamSignal T, SignalValue Tval> 
 	requires (T::template has<Ready>())
 	T insertBeat(T& source, UInt beatOffset, const Tval& value)
@@ -246,29 +212,6 @@ namespace gtry::scl
 			ready(source) = '0';
 			eop(out) = '0';
 		}
-		HCL_NAMED(out);
-		return out;
-	}
-
-	template<StreamSignal T>
-	auto addEopDeferred(T& source, Bit insert)
-	{
-		auto scope = Area{ "scl_addEopDeferred" }.enter();
-
-		auto in = source.add(scl::Eop{'0'});
-		HCL_NAMED(in);
-
-		Bit insertState;
-		HCL_NAMED(insertState);
-		IF(insertState)
-		{
-			ready(source) = '0';
-			valid(in) = '1';
-			eop(in) = '1';
-		}
-
-		auto out = scl::eraseLastBeat(in);
-		insertState = flag(insert, transfer(out)) | insert;
 		HCL_NAMED(out);
 		return out;
 	}

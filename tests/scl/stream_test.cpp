@@ -26,6 +26,7 @@
 
 #include <gatery/scl/stream/StreamArbiter.h>
 #include <gatery/scl/stream/adaptWidth.h>
+#include <gatery/scl/stream/Packet.h>
 #include <gatery/scl/io/SpiMaster.h>
 
 #include <gatery/debug/websocks/WebSocksInterface.h>
@@ -274,19 +275,9 @@ protected:
 		*stream = gtry::pinIn(stream->width()).setName(prefix + "data");
 	}
 
-	void Out(scl::RvStream<UInt>& stream, std::string prefix = "out_")
+	void Out(scl::StreamSignal auto& stream, std::string prefix = "out")
 	{
-		ready(stream) = gtry::pinIn().setName(prefix + "ready");
-		gtry::pinOut(valid(stream)).setName(prefix + "valid");
-		gtry::pinOut(*stream).setName(prefix + "data");
-	}
-
-	void Out(scl::RvPacketStream<UInt>& stream, std::string prefix = "out_")
-	{
-		ready(stream) = gtry::pinIn().setName(prefix + "ready");
-		gtry::pinOut(valid(stream)).setName(prefix + "valid");
-		gtry::pinOut(eop(stream)).setName(prefix + "eop");
-		gtry::pinOut(*stream).setName(prefix + "data");
+		pinOut(stream, prefix);
 	}
 
 	template<scl::StreamSignal T>
@@ -979,6 +970,32 @@ BOOST_FIXTURE_TEST_CASE(stream_addEopDeferred, StreamTransferFixture)
 		}
 
 	});
+
+	transfers(32);
+	groups(1);
+	simulateSendData(in, 0);
+	simulateBackPressure(out);
+	simulateRecvData(out);
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_addPacketSignalsFromSize, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::RvStream<UInt> in{ 8_b };
+	In(in);
+
+	UInt size = 4_b;
+	size = reg(size, 1);
+	scl::RvPacketStream<UInt, scl::Sop> out = scl::addPacketSignalsFromSize(in, size);
+
+	IF(transfer(out) & eop(out))
+		size += 1;
+
+	Out(out);
 
 	transfers(32);
 	groups(1);

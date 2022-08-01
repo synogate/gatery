@@ -27,8 +27,6 @@ namespace gtry::scl
 
 	struct Ready;
 	struct Valid;
-	struct Eop;
-	struct Sop;
 	struct ByteEnable;
 	struct Error;
 
@@ -172,33 +170,6 @@ namespace gtry::scl
 	const Bit& valid(const T& stream) { return stream.template get<Valid>().valid; }
 
 
-	struct Eop
-	{
-		Bit eop;
-	};
-
-	template<StreamSignal T> requires (T::template has<Eop>())
-	Bit& eop(T& stream) { return stream.template get<Eop>().eop; }
-	template<StreamSignal T> requires (T::template has<Eop>())
-	const Bit& eop(const T& stream) { return stream.template get<Eop>().eop; }
-	template<StreamSignal T> requires (T::template has<Valid>() and T::template has<Eop>())
-	const Bit sop(const T& signal) { return !flag(transfer(signal), eop(signal)); }
-
-
-	struct Sop
-	{
-		// reset to zero, sop is used for packet streams without valid.
-		Bit sop = Bit{ SignalReadPort{}, false };
-	};
-
-	template<StreamSignal T> requires (T::template has<Sop>())
-	Bit& sop(T& stream) { return stream.template get<Sop>().sop; }
-	template<StreamSignal T> requires (T::template has<Sop>())
-	const Bit& sop(const T& stream) { return stream.template get<Sop>().sop; }
-	template<StreamSignal T> requires (!T::template has<Valid>() and T::template has<Sop>() and T::template has<Eop>())
-	const Bit valid(const T& signal) { return flag(sop(signal), eop(signal)) | sop(signal); }
-
-
 	struct ByteEnable
 	{
 		BVec byteEnable;
@@ -225,19 +196,6 @@ namespace gtry::scl
 
 	template<Signal T, Signal... Meta>
 	using VStream = Stream<T, scl::Valid, Meta...>;
-
-	template<Signal T, Signal... Meta>
-	using RvPacketStream = Stream<T, scl::Ready, scl::Valid, scl::Eop, Meta...>;
-
-	template<Signal T, Signal... Meta>
-	using VPacketStream = Stream<T, scl::Valid, scl::Eop, Meta...>;
-
-	template<Signal T, Signal... Meta>
-	using RsPacketStream = Stream<T, scl::Ready, scl::Valid, scl::Eop, Meta...>;
-
-	template<Signal T, Signal... Meta>
-	using SPacketStream = Stream<T, scl::Valid, scl::Eop, Meta...>;
-
 
 	/**
 	 * @brief Puts a register in the ready, valid and data path.
@@ -646,6 +604,4 @@ namespace gtry {
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Ready, ready);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Valid, valid);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::Eop, eop);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::Sop, sop);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::ByteEnable, byteEnable);
