@@ -68,7 +68,7 @@ namespace gtry::scl
 	template<StreamSignal T> 
 	auto addEopDeferred(T& source, Bit insert);
 
-	auto addPacketSignalsFromSize(StreamSignal auto& source, UInt size);
+	auto addPacketSignalsFromCount(StreamSignal auto& source, UInt size);
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Eop, eop);
@@ -125,7 +125,7 @@ namespace gtry::scl
 		return out;
 	}
 
-	auto addPacketSignalsFromSize(StreamSignal auto& source, UInt size)
+	auto addPacketSignalsFromCount(StreamSignal auto& source, UInt size)
 	{
 		auto scope = Area{ "scl_addPacketSignalsFromSize" }.enter();
 

@@ -990,7 +990,7 @@ BOOST_FIXTURE_TEST_CASE(stream_addPacketSignalsFromSize, StreamTransferFixture)
 
 	UInt size = 4_b;
 	size = reg(size, 1);
-	scl::RvPacketStream<UInt, scl::Sop> out = scl::addPacketSignalsFromSize(in, size);
+	scl::RvPacketStream<UInt, scl::Sop> out = scl::addPacketSignalsFromCount(in, size);
 
 	IF(transfer(out) & eop(out))
 		size += 1;
