@@ -17,6 +17,7 @@
 */
 #pragma once
 #include <gatery/frontend.h>
+#include "../stream/Packet.h"
 #include "../tilelink/tilelink.h"
 
 namespace gtry::scl::sdram
@@ -30,6 +31,8 @@ namespace gtry::scl::sdram
 		uint16_t rc;  // ns RAS -> RAS
 		uint16_t rrd; // ns RAS -> RAS (different bank)
 		uint16_t refi; // ns average refresh interval
+
+		uint16_t wr = 2; // cycles write recovery time
 
 		Timings toCycles(hlim::ClockRational memClock) const;
 	};
@@ -94,7 +97,7 @@ namespace gtry::scl::sdram
 		};
 
 		template<typename... T>
-		using CommandStream = RvStream<BVec, ByteEnable, Command, T...>;
+		using CommandStream = RvPacketStream<BVec, ByteEnable, Command, T...>;
 	public:
 		Controller& timings(const Timings& timingsInNs);
 		Controller& addressMap(const AddressMap& map);
@@ -119,9 +122,10 @@ namespace gtry::scl::sdram
 		virtual BankState updateState(const Command& cmd, const BankState& state) const;
 		virtual CommandStream<> enforceTiming(CommandStream<>& command) const;
 
+		size_t writeToReadTiming() const;
+	protected:
 		Area m_area = Area{ "scl_sdramController" };
 
-	private:
 		Timings m_timing;
 		AddressMap m_mapping;
 		size_t m_burstLimit = 1;

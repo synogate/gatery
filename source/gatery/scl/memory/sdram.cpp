@@ -92,6 +92,13 @@ void Controller::generate(TileLinkUL& link)
 	driveCommand(nextCommand);
 }
 
+size_t gtry::scl::sdram::Controller::writeToReadTiming() const
+{
+	if (m_timing.wr > m_timing.cl)
+		return m_timing.wr - m_timing.cl;
+	return 0;
+}
+
 void gtry::scl::sdram::Controller::makeBankState()
 {
 	m_bankState.resize(m_mapping.bank.width);
@@ -107,7 +114,14 @@ Controller::CommandStream<> Controller::translateCommand(const BankState& state,
 	auto scope = m_area.enter("scl_translateCommand");
 	HCL_NAMED(request);
 
-	CommandStream<> out = request.reduceTo<RvStream<BVec, ByteEnable>>().add<Command>({
+	UInt packetSize = scl::decoder(request.get<TileLinkA>().size);
+
+	size_t n = utils::Log2C(m_dataBusWidth.bits() / 8);
+	UInt beatCount = cat(packetSize.upper(packetSize.width() - n - 1), packetSize.lower(BitWidth{ n + 1 }) != 0);
+	HCL_NAMED(beatCount);
+	auto packetRequest = addPacketSignalsFromCount(request, beatCount);
+
+	CommandStream<> out = packetRequest.reduceTo<RvPacketStream<BVec, ByteEnable>>().add<Command>({
 		.code = CommandCode::Precharge,
 		.address = ConstBVec(m_addrBusWidth)
 	});
@@ -207,8 +221,10 @@ void Controller::makeBusPins(const CommandBus& in, std::string prefix)
 	CommandBus bus = in;
 	if (m_useOutputRegister)
 	{
-		bus = gtry::reg(bus);
-		outEnable = gtry::reg(outEnable);
+		bus = gtry::reg(in);
+		bus.cke = gtry::reg(in.cke, '0');
+		bus.dqm = gtry::reg(in.dqm, ConstBVec(0, in.dqm.width()));
+		outEnable = gtry::reg(outEnable, '0');
 	}
 
 	HCL_NAMED(bus);
@@ -318,7 +334,7 @@ Controller::CommandStream<Controller::Bank> Controller::initSequence() const
 	IF(state.current() == InitState::mrs)
 	{
 		cmd.code = CommandCode::ModeRegisterSet;
-		cmd.address = m_burstLimit | (m_timing.cl << 4);
+		cmd.address = m_burstLimit | (m_timing.cl << 4) | (1ul << 9);
 		afterWaitState = InitState::emrs;
 	}
 
@@ -348,6 +364,7 @@ Controller::CommandStream<Controller::Bank> Controller::initSequence() const
 	IF(state.current() != InitState::wait & transfer(out))
 		state = InitState::wait;
 
+	eop(out) = '1';
 	HCL_NAMED(out);
 	return out;
 }
@@ -470,6 +487,7 @@ Controller::CommandStream<Controller::Bank> gtry::scl::sdram::Controller::refres
 			state = RefreshState::wait;
 	}
 
+	eop(out) = '1';
 	HCL_NAMED(out);
 	return out;
 }
@@ -642,6 +660,7 @@ Controller& gtry::scl::sdram::Controller::addressMap(const AddressMap& map)
 
 Controller& gtry::scl::sdram::Controller::burstLimit(size_t limit)
 {
+	HCL_DESIGNCHECK_HINT(limit <= 3, "max burst for sdram is 2^3 = 8");
 	m_burstLimit = limit;
 	return *this;
 }
@@ -672,7 +691,9 @@ gtry::scl::sdram::Timings gtry::scl::sdram::Timings::toCycles(hlim::ClockRationa
 		.rp = conv(rp),
 		.rc = conv(rc),
 		.rrd = conv(rrd),
-		.refi = conv(refi)
+		.refi = conv(refi),
+
+		.wr = wr,
 	};
 }
 

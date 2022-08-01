@@ -199,7 +199,39 @@ public:
 			.bank = Selection::Slice(21, 2)
 		});
 		
-		burstLimit(8);
+		burstLimit(3);
+	}
+
+	void makeBusPins(const scl::sdram::CommandBus& in, std::string prefix) override
+	{
+		Bit outEnable = m_dataOutEnable;
+		scl::sdram::CommandBus bus = in;
+		if (m_useOutputRegister)
+		{
+			bus = gtry::reg(in);
+			bus.cke = gtry::reg(in.cke, '0');
+			bus.dqm = gtry::reg(in.dqm, ConstBVec(0, in.dqm.width()));
+			outEnable = gtry::reg(outEnable, '0');
+		}
+
+		pinOut(bus.cke).setName(prefix + "CKE");
+		pinOut(bus.csn).setName(prefix + "CSn");
+		pinOut(bus.rasn).setName(prefix + "RASn");
+		pinOut(bus.casn).setName(prefix + "CASn");
+		pinOut(bus.wen).setName(prefix + "WEn");
+		pinOut(bus.a).setName(prefix + "A");
+		pinOut(bus.ba).setName(prefix + "BA");
+		pinOut(bus.dqm).setName(prefix + "DQM");
+		pinOut(bus.dq).setName(prefix + "DQ_OUT");
+		pinOut(outEnable).setName(prefix + "DQ_OUT_EN");
+
+		BVec moduleData = scl::sdram::moduleSimulation(bus);
+		HCL_NAMED(moduleData);
+
+		m_dataIn = ConstBVec(moduleData.width());
+		IF(!outEnable)
+			m_dataIn = moduleData;
+		pinOut(m_dataIn).setName(prefix + "DQ_IN");
 	}
 
 	void setupLink(BitWidth addrWidth = 23_b, BitWidth sizeWidth = 4_b, BitWidth sourceWidth = 4_b, BitWidth dataWidth = 16_b)
@@ -236,6 +268,21 @@ public:
 		simu(valid(link.a)) = 1;
 	}
 
+	void issueWrite(size_t address, size_t size, size_t tag = 0)
+	{
+		scl::TileLinkA& a = link.chanA();
+
+		simu(a.opcode) = scl::TileLinkA::PutFullData;
+		simu(a.param) = 0;
+		simu(a.address) = address;
+		simu(a.size) = gtry::utils::Log2C(size);
+		simu(a.source) = tag;
+
+		//simu(byteEnable(link.a)) = 1;
+
+		simu(valid(link.a)) = 1;
+	}
+
 	static bool transfer(const scl::StreamSignal auto& stream)
 	{
 		return simu(valid(stream)) != 0 && simu(ready(stream)) != 0;
@@ -251,6 +298,13 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_init_test, SdramControllerTest)
 
 	addSimulationProcess([=]()->SimProcess {
 		co_await WaitClk(clock());
+		issueWrite(0, 2, 1);
+		simu(*link.a) = 0xCDCD;
+
+		while (!transfer(link.a))
+			co_await WaitClk(clock());
+		co_await WaitClk(clock());
+
 		issueRead(0, 2);
 
 		while(!transfer(link.a))
