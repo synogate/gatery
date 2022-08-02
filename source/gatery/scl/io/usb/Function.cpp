@@ -513,7 +513,8 @@ void gtry::scl::usb::Function::generateInitialFsm()
 
 void gtry::scl::usb::Function::generateHandshakeFsm()
 {
-	size_t clockRatio = (ClockScope::getClk().absoluteFrequency().numerator() + 12'000'000 - 1) / 12'000'000;
+	const auto clkFrq = ClockScope::getClk().absoluteFrequency();
+	size_t clockRatio = (clkFrq.numerator() / clkFrq.denominator() + 12'000'000 - 1) / 12'000'000;
 	Counter rxIdleCounter{ clockRatio };
 	IF(!rxIdleCounter.isLast())
 		rxIdleCounter.inc();
