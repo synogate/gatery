@@ -119,6 +119,10 @@ namespace gtry::scl
 		HCL_DESIGNCHECK_HINT(!m_hasSetup, "fifo already initialized");
 		m_hasSetup = true;
 
+		m_popValid = '0';
+		m_pushValid = '0';
+		m_pushData = dontCare(ref);
+
 		auto scope = m_area.enter();
 		initialFifoSelection(minDepth, ref);
 
@@ -130,16 +134,12 @@ namespace gtry::scl
 		HCL_NAMED(m_popSize);
 		m_pushSize = ctrWidth;
 		HCL_NAMED(m_pushSize);
-
-		m_popValid = '0';
-		m_pushValid = '0';
-		m_pushData = dontCare(ref);
 	}
 
 	template<Signal TData>
 	inline void Fifo<TData>::push(TData data)
 	{
-		auto scope = m_area.enter();
+		//auto scope = m_area.enter();
 		HCL_DESIGNCHECK_HINT(m_hasSetup, "fifo not initialized");
 
 		m_pushClock = ClockScope::getClk();
@@ -157,7 +157,7 @@ namespace gtry::scl
 	template<Signal TData>
 	inline void Fifo<TData>::pop()
 	{
-		auto scope = m_area.enter();
+		//auto scope = m_area.enter();
 		HCL_DESIGNCHECK_HINT(m_hasSetup, "fifo not initialized");
 
 		m_popClock = ClockScope::getClk();
