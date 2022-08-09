@@ -234,7 +234,7 @@ public:
 		pinOut(m_dataIn).setName(prefix + "DQ_IN");
 	}
 
-	void setupLink(BitWidth addrWidth = 23_b, BitWidth sizeWidth = 4_b, BitWidth sourceWidth = 4_b, BitWidth dataWidth = 16_b)
+	void setupLink(BitWidth addrWidth = 23_b, BitWidth sizeWidth = 2_b, BitWidth sourceWidth = 4_b, BitWidth dataWidth = 16_b)
 	{
 		link.chanA().address = addrWidth;
 		link.chanA().size = sizeWidth;
@@ -268,14 +268,14 @@ public:
 		simu(valid(link.a)) = 1;
 	}
 
-	void issueWrite(size_t address, size_t size, size_t tag = 0)
+	void issueWrite(size_t address, size_t byteSize, size_t tag = 0)
 	{
 		scl::TileLinkA& a = link.chanA();
 
 		simu(a.opcode) = scl::TileLinkA::PutFullData;
 		simu(a.param) = 0;
 		simu(a.address) = address;
-		simu(a.size) = gtry::utils::Log2C(size);
+		simu(a.size) = gtry::utils::Log2C(byteSize);
 		simu(a.source) = tag;
 
 		//simu(byteEnable(link.a)) = 1;
@@ -298,12 +298,18 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_init_test, SdramControllerTest)
 
 	addSimulationProcess([=]()->SimProcess {
 		co_await WaitClk(clock());
-		issueWrite(0, 2, 1);
+		issueWrite(0, 4, 1);
 		simu(*link.a) = 0xCDCD;
 
 		while (!transfer(link.a))
 			co_await WaitClk(clock());
 		co_await WaitClk(clock());
+		simu(*link.a) = 0xCECE;
+		while (!transfer(link.a))
+			co_await WaitClk(clock());
+		co_await WaitClk(clock());
+
+
 
 		issueRead(0, 2);
 

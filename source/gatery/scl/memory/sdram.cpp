@@ -89,6 +89,8 @@ void Controller::generate(TileLinkUL& link)
 	ELSE IF(m_rasTimer != m_rasTimer.width().last())
 		m_rasTimer += 1;
 
+	makeWriteBurstAddress(nextCommand);
+	HCL_NAMED(nextCommand);
 	driveCommand(nextCommand);
 }
 
@@ -107,6 +109,23 @@ void gtry::scl::sdram::Controller::makeBankState()
 		state.activeRow = BitWidth{ (uint64_t)m_mapping.row.width };
 		state.rowActive.resetValue(false);
 	}
+}
+
+void gtry::scl::sdram::Controller::makeWriteBurstAddress(CommandStream<Bank>& stream)
+{
+	if (m_burstLimit == 0)
+		return;
+
+	UInt address = BitWidth{ m_burstLimit };
+
+	IF(transfer(stream) & stream.get<Command>().code == CommandCode::Write)
+		address += 1;
+	IF(transfer(stream) & eop(stream))
+		address = 0;
+	address = reg(address, 0);
+	setName(address, "writeBurstAddress");
+
+	stream.get<Command>().address |= zext((BVec)address);
 }
 
 Controller::CommandStream<> Controller::translateCommand(const BankState& state, TileLinkChannelA& request) const

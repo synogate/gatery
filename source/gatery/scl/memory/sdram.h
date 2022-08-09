@@ -111,6 +111,7 @@ namespace gtry::scl::sdram
 	protected:
 		virtual void makeBusPins(const CommandBus& bus, std::string prefix);
 		virtual void makeBankState();
+		virtual void makeWriteBurstAddress(CommandStream<Bank>& stream);
 
 		CommandStream<> makeCommandStream() const;
 
