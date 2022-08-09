@@ -42,7 +42,7 @@ void Controller::generate(TileLinkUL& link)
 	m_rasTimer = reg(m_rasTimer, 0);
 	HCL_NAMED(m_rasTimer);
 
-	StreamArbiter<CommandStream<Bank>> maintenanceArbiter;
+	StreamArbiter<CommandStream> maintenanceArbiter;
 	{
 		auto initStream = initSequence();
 		maintenanceArbiter.attach(initStream);
@@ -53,7 +53,7 @@ void Controller::generate(TileLinkUL& link)
 		maintenanceArbiter.generate();
 	}
 
-	StreamArbiter<CommandStream<Bank>> cmdArbiter;
+	StreamArbiter<CommandStream> cmdArbiter;
 	auto maintenanceStream = maintenanceArbiter.out().regDownstreamBlocking();
 	cmdArbiter.attach(maintenanceStream);
 
@@ -70,26 +70,25 @@ void Controller::generate(TileLinkUL& link)
 		ELSE
 			valid(aIn) = '0';
 
-		CommandStream<> cmd = translateCommand(m_bankState[i], aIn);
+		CommandStream cmd = translateCommand(m_bankState[i], aIn);
+		cmd->bank = ConstUInt(i, m_cmdBus.ba.width());
 		setName(cmd, "bankCommand");
 
 		IF(transfer(cmd))
-			m_bankState[i] = updateState(cmd.get<Command>(), m_bankState[i]);
+			m_bankState[i] = updateState(*cmd, m_bankState[i]);
 
-		BVec bankAddr = ConstBVec(i, m_cmdBus.ba.width());
-		CommandStream<Bank> stalledCommand = enforceTiming(cmd).add<Bank>({ bankAddr });
+		CommandStream stalledCommand = enforceTiming(cmd);
 
 		cmdArbiter.attach(stalledCommand);
 	}
-	CommandStream<Bank>& nextCommand = cmdArbiter.out();
+	CommandStream& nextCommand = cmdArbiter.out();
 	cmdArbiter.generate();
 
-	IF(transfer(nextCommand) & nextCommand.get<Command>().code == CommandCode::Activate)
+	IF(transfer(nextCommand) & nextCommand->code == CommandCode::Activate)
 		m_rasTimer = 0;
 	ELSE IF(m_rasTimer != m_rasTimer.width().last())
 		m_rasTimer += 1;
 
-	makeWriteBurstAddress(nextCommand);
 	HCL_NAMED(nextCommand);
 	driveCommand(nextCommand);
 }
@@ -111,24 +110,24 @@ void gtry::scl::sdram::Controller::makeBankState()
 	}
 }
 
-void gtry::scl::sdram::Controller::makeWriteBurstAddress(CommandStream<Bank>& stream)
+void gtry::scl::sdram::Controller::makeWriteBurstAddress(CommandStream& stream)
 {
 	if (m_burstLimit == 0)
 		return;
 
 	UInt address = BitWidth{ m_burstLimit };
 
-	IF(transfer(stream) & stream.get<Command>().code == CommandCode::Write)
+	IF(transfer(stream) & stream->code == CommandCode::Write)
 		address += 1;
 	IF(transfer(stream) & eop(stream))
 		address = 0;
 	address = reg(address, 0);
 	setName(address, "writeBurstAddress");
 
-	stream.get<Command>().address |= zext((BVec)address);
+	stream->address |= zext((BVec)address);
 }
 
-Controller::CommandStream<> Controller::translateCommand(const BankState& state, TileLinkChannelA& request) const
+Controller::CommandStream Controller::translateCommand(const BankState& state, TileLinkChannelA& request) const
 {
 	auto scope = m_area.enter("scl_translateCommand");
 	HCL_NAMED(request);
@@ -138,43 +137,45 @@ Controller::CommandStream<> Controller::translateCommand(const BankState& state,
 	size_t n = utils::Log2C(m_dataBusWidth.bits() / 8);
 	UInt beatCount = cat(packetSize.upper(packetSize.width() - n - 1), packetSize.lower(BitWidth{ n + 1 }) != 0);
 	HCL_NAMED(beatCount);
-	auto packetRequest = addPacketSignalsFromCount(request, beatCount);
+	//auto packetRequest = addPacketSignalsFromCount(request, beatCount);
+	const TileLinkA& req = request.get<TileLinkA>();
 
-	CommandStream<> out = packetRequest.reduceTo<RvPacketStream<BVec, ByteEnable>>().add<Command>({
+	CommandStream cmd{ {
 		.code = CommandCode::Precharge,
-		.address = ConstBVec(m_addrBusWidth)
-	});
+		.address = ConstBVec(m_addrBusWidth),
+		.bank = req.address(m_mapping.bank)
+	} };
+	valid(cmd) = valid(request);
+	ready(request) = ready(cmd);
+
 	ready(request) = '0';
 
-	Command& cmd = out.get<Command>();
-	const TileLinkA& req = request.get<TileLinkA>();
 	IF(state.rowActive & state.activeRow != req.address(m_mapping.row))
 	{
-		cmd.code = CommandCode::Precharge;
+		cmd->code = CommandCode::Precharge;
 	}
 	ELSE IF(!state.rowActive)
 	{
-		cmd.code = CommandCode::Activate;
-		cmd.address = zext((BVec)req.address(m_mapping.row));
+		cmd->code = CommandCode::Activate;
+		cmd->address = zext((BVec)req.address(m_mapping.row));
 	}
 	ELSE
 	{
 		IF(req.opcode == (size_t)req.Get)
-			cmd.code = CommandCode::Read;
+			cmd->code = CommandCode::Read;
 		ELSE
-			cmd.code = CommandCode::Write;
-		cmd.address = zext((BVec)req.address(m_mapping.column));
-		ready(request) = ready(out);
+			cmd->code = CommandCode::Write;
+		cmd->address = zext((BVec)req.address(m_mapping.column));
+		ready(request) = ready(cmd);
 	}
-	HCL_NAMED(out);
-	return out;
+	HCL_NAMED(cmd);
+	return cmd;
 }
 
-Controller::CommandStream<> Controller::enforceTiming(CommandStream<>& command) const
+Controller::CommandStream Controller::enforceTiming(CommandStream& cmd) const
 {
 	auto scope = m_area.enter("scl_enforceTiming");
-	HCL_NAMED(command);
-	Command& cmd = command.get<Command>();
+	HCL_NAMED(cmd);
 
 	Counter timer{
 		std::max({
@@ -189,15 +190,15 @@ Controller::CommandStream<> Controller::enforceTiming(CommandStream<>& command) 
 		rcTimer.inc();
 
 	Bit stall = '0';
-	IF(cmd.code == CommandCode::Precharge)
+	IF(cmd->code == CommandCode::Precharge)
 	{
 		IF(timer.value() < m_timing.ras - 1)
 			stall = '1';
 
-		IF(transfer(command))
+		IF(transfer(cmd))
 			timer.reset();
 	}
-	ELSE IF(cmd.code == CommandCode::Activate)
+	ELSE IF(cmd->code == CommandCode::Activate)
 	{
 		IF(m_rasTimer < m_timing.rrd - 1)
 			stall = '1';
@@ -209,7 +210,7 @@ Controller::CommandStream<> Controller::enforceTiming(CommandStream<>& command) 
 			IF(!rcTimer.isLast())
 				stall = '1';
 
-		IF(transfer(command))
+		IF(transfer(cmd))
 		{
 			timer.reset();
 			rcTimer.reset();
@@ -222,13 +223,13 @@ Controller::CommandStream<> Controller::enforceTiming(CommandStream<>& command) 
 	}
 	HCL_NAMED(stall);
 
-	CommandStream<> out;
-	out <<= command;
+	CommandStream out;
+	out <<= cmd;
 
 	IF(stall)
 	{
 		valid(out) = '0';
-		ready(command) = '0';
+		ready(cmd) = '0';
 	}
 	HCL_NAMED(out);
 	return out;
@@ -261,25 +262,24 @@ void Controller::makeBusPins(const CommandBus& in, std::string prefix)
 	HCL_NAMED(m_dataIn);
 }
 
-void Controller::driveCommand(CommandStream<Bank>& command)
+void Controller::driveCommand(CommandStream& cmd)
 {
 	m_cmdBus.cke = '1';
-	m_cmdBus.csn = !transfer(command);
+	m_cmdBus.csn = !transfer(cmd);
 
-	const Command& cmd = command.get<Command>();
-	UInt cmdCode = cmd.code.numericalValue();
+	UInt cmdCode = cmd->code.numericalValue();
 	m_cmdBus.rasn = !cmdCode[0];
 	m_cmdBus.casn = !cmdCode[1];
 	m_cmdBus.wen = !cmdCode[2];
 
-	m_dataOutEnable = cmd.code == CommandCode::Write;
-	m_cmdBus.dqm = byteEnable(command);
-	m_cmdBus.dq = *command;
+	m_dataOutEnable = cmd->code == CommandCode::Write;
+	m_cmdBus.dqm = 3;
+	m_cmdBus.dq = 0;
 
-	m_cmdBus.ba = command.get<Bank>().bank;
-	m_cmdBus.a = cmd.address;
+	m_cmdBus.ba = (BVec)cmd->bank;
+	m_cmdBus.a = cmd->address;
 
-	ready(command) = '1';
+	ready(cmd) = '1';
 }
 
 Controller::BankState Controller::updateState(const Command& cmd, const BankState& state) const
@@ -301,25 +301,24 @@ Controller::BankState Controller::updateState(const Command& cmd, const BankStat
 	return newState;
 }
 
-Controller::CommandStream<> gtry::scl::sdram::Controller::makeCommandStream() const
+Controller::CommandStream gtry::scl::sdram::Controller::makeCommandStream() const
 {
-	CommandStream<> out;
+	CommandStream out{ {
+			.address = ConstBVec(m_addrBusWidth),
+			.bank = ConstUInt(BitWidth{(unsigned)m_mapping.bank.width}),
+	}};
 	valid(out) = '0';
-	*out = ConstBVec(m_dataBusWidth);
-	byteEnable(out) = ConstBVec(m_dataBusWidth / 8);
-	out.get<Command>().address = ConstBVec(m_addrBusWidth);
 	return out;
 }
 
-Controller::CommandStream<Controller::Bank> Controller::initSequence() const
+Controller::CommandStream Controller::initSequence() const
 {
 	auto scope = m_area.enter("scl_initSequence");
 
-	CommandStream<Bank> out = makeCommandStream().add<Bank>({ ConstBVec(0, 2_b) });
-
-	Command& cmd = out.get<Command>();
-	cmd.code = CommandCode::Nop;
-	valid(out) = '1'; // block other requests until init done
+	CommandStream cmd = makeCommandStream();
+	cmd->code = CommandCode::Nop;
+	cmd->bank = 0;
+	valid(cmd) = '1'; // block other requests until init done
 
 	enum class InitState {
 		reset,
@@ -345,59 +344,56 @@ Controller::CommandStream<Controller::Bank> Controller::initSequence() const
 
 	IF(state.current() == InitState::precharge)
 	{
-		cmd.code = CommandCode::Precharge;
-		cmd.address = 1 << 10;
+		cmd->code = CommandCode::Precharge;
+		cmd->address = 1 << 10;
 		afterWaitState = InitState::mrs;
 	}
 
 	IF(state.current() == InitState::mrs)
 	{
-		cmd.code = CommandCode::ModeRegisterSet;
-		cmd.address = m_burstLimit | (m_timing.cl << 4) | (1ul << 9);
+		cmd->code = CommandCode::ModeRegisterSet;
+		cmd->address = m_burstLimit | (m_timing.cl << 4) | (1ul << 9);
 		afterWaitState = InitState::emrs;
 	}
 
 	IF(state.current() == InitState::emrs)
 	{
-		out.get<Bank>().bank = 1;
-		cmd.code = CommandCode::ModeRegisterSet;
-		cmd.address = 0;
+		cmd->bank = 1;
+		cmd->code = CommandCode::ModeRegisterSet;
+		cmd->address = 0;
 
 		if(m_driveStrength == DriveStrength::Weak)
-			cmd.address = 1 << 1;
+			cmd->address = 1 << 1;
 
 		afterWaitState = InitState::refresh1;
 	}
 
 	IF(state.current() == InitState::refresh1)
 	{
-		cmd.code = CommandCode::Refresh;
+		cmd->code = CommandCode::Refresh;
 		afterWaitState = InitState::done;
 	}
 
 	IF(state.current() == InitState::done)
 	{
-		valid(out) = '0';
+		valid(cmd) = '0';
 	}
 
-	IF(state.current() != InitState::wait & transfer(out))
+	IF(state.current() != InitState::wait & transfer(cmd))
 		state = InitState::wait;
 
-	eop(out) = '1';
-	HCL_NAMED(out);
-	return out;
+	HCL_NAMED(cmd);
+	return cmd;
 }
 
-Controller::CommandStream<Controller::Bank> gtry::scl::sdram::Controller::refreshSequence(const Bit& mayRefresh)
+Controller::CommandStream gtry::scl::sdram::Controller::refreshSequence(const Bit& mayRefresh)
 {
 	auto scope = m_area.enter("scl_refreshSequence");
 
-	CommandStream<Bank> out = makeCommandStream().add<Bank>({ ConstBVec(2_b) });
-	
-	Command& cmd = out.get<Command>();
-	cmd.code = CommandCode::Nop;
-	cmd.address = ConstBVec(m_addrBusWidth);
-	cmd.address = 1 << 10; // All Banks
+	CommandStream cmd = makeCommandStream();
+	cmd->code = CommandCode::Nop;
+	cmd->address = ConstBVec(m_addrBusWidth);
+	cmd->address = 1 << 10; // All Banks
 
 	enum class RefreshState
 	{
@@ -423,7 +419,7 @@ Controller::CommandStream<Controller::Bank> gtry::scl::sdram::Controller::refres
 		state.current() != RefreshState::idle)
 	{
 		// block command bus for entire refresh
-		valid(out) = '1';
+		valid(cmd) = '1';
 	}
 
 	Bit canRefresh = timer.value() >= m_timing.refi / 4;
@@ -459,13 +455,13 @@ Controller::CommandStream<Controller::Bank> gtry::scl::sdram::Controller::refres
 
 	IF(state.current() == RefreshState::precharge)
 	{
-		cmd.code = CommandCode::Precharge;
+		cmd->code = CommandCode::Precharge;
 		delayTimer.reset();
 
 		for (BankState& s : m_bankState)
 			s.rowActive = '0';
 
-		IF(transfer(out))
+		IF(transfer(cmd))
 			state = RefreshState::precharging;
 	}
 
@@ -477,10 +473,10 @@ Controller::CommandStream<Controller::Bank> gtry::scl::sdram::Controller::refres
 
 	IF(state.current() == RefreshState::refresh)
 	{
-		cmd.code = CommandCode::Refresh;
+		cmd->code = CommandCode::Refresh;
 		delayTimer.reset();
 
-		IF(transfer(out))
+		IF(transfer(cmd))
 			state = RefreshState::refreshing;
 	}
 
@@ -506,9 +502,8 @@ Controller::CommandStream<Controller::Bank> gtry::scl::sdram::Controller::refres
 			state = RefreshState::wait;
 	}
 
-	eop(out) = '1';
-	HCL_NAMED(out);
-	return out;
+	HCL_NAMED(cmd);
+	return cmd;
 }
 
 gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)

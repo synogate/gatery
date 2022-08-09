@@ -89,15 +89,10 @@ namespace gtry::scl::sdram
 		{
 			Enum<CommandCode> code;
 			BVec address;
+			UInt bank;
 		};
 
-		struct Bank
-		{
-			BVec bank;
-		};
-
-		template<typename... T>
-		using CommandStream = RvPacketStream<BVec, ByteEnable, Command, T...>;
+		using CommandStream = RvStream<Command>;
 	public:
 		Controller& timings(const Timings& timingsInNs);
 		Controller& addressMap(const AddressMap& map);
@@ -111,17 +106,17 @@ namespace gtry::scl::sdram
 	protected:
 		virtual void makeBusPins(const CommandBus& bus, std::string prefix);
 		virtual void makeBankState();
-		virtual void makeWriteBurstAddress(CommandStream<Bank>& stream);
+		virtual void makeWriteBurstAddress(CommandStream& stream);
 
-		CommandStream<> makeCommandStream() const;
+		CommandStream makeCommandStream() const;
 
-		virtual CommandStream<Bank> initSequence() const;
-		virtual CommandStream<Bank> refreshSequence(const Bit& mayRefresh);
+		virtual CommandStream initSequence() const;
+		virtual CommandStream refreshSequence(const Bit& mayRefresh);
 
-		virtual void driveCommand(CommandStream<Bank>& command);
-		virtual CommandStream<> translateCommand(const BankState& state, TileLinkChannelA& request) const;
+		virtual void driveCommand(CommandStream& command);
+		virtual CommandStream translateCommand(const BankState& state, TileLinkChannelA& request) const;
 		virtual BankState updateState(const Command& cmd, const BankState& state) const;
-		virtual CommandStream<> enforceTiming(CommandStream<>& command) const;
+		virtual CommandStream enforceTiming(CommandStream& command) const;
 
 		size_t writeToReadTiming() const;
 	protected:
