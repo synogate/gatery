@@ -1025,3 +1025,48 @@ BOOST_FIXTURE_TEST_CASE(spi_stream_test, StreamTransferFixture)
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(m_clock.getClk(), 4096);
 }
+
+BOOST_FIXTURE_TEST_CASE(stream_stall, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::RvStream<UInt> in{ .data = 5_b };
+	In(in);
+
+	Bit stallCondition = pinIn().setName("stall");
+	scl::RvStream<UInt> out = stall(in, stallCondition);
+	Out(out);
+
+	addSimulationProcess([=, &out, &in]()->SimProcess {
+
+		simu(stallCondition) = 0;
+
+		while(simu(valid(out)) == 0)
+			co_await WaitClk(m_clock);
+		co_await WaitClk(m_clock);
+		co_await WaitClk(m_clock);
+
+		std::mt19937 rng{ std::random_device{}() };
+		while (true)
+		{
+			if (rng() % 4 != 0)
+			{
+				simu(stallCondition) = 1;
+				co_await WaitFor(0);
+				BOOST_TEST(simu(valid(out)) == 0);
+				BOOST_TEST(simu(ready(in)) == 0);
+			}
+			else
+			{
+				simu(stallCondition) = 0;
+			}
+			co_await WaitClk(m_clock);
+		}
+
+	});
+
+	simulateTransferTest(in, out);
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(m_clock.getClk(), 1024);
+}
