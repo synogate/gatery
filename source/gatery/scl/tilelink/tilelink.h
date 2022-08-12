@@ -18,6 +18,8 @@
 #pragma once
 #include <gatery/frontend.h>
 #include "../stream/Stream.h"
+#include "../stream/Packet.h"
+#include "../utils/OneHot.h"
 
 namespace gtry::scl
 {
@@ -116,6 +118,26 @@ namespace gtry::scl
 	template<class... Cap>
 	void connect(TileLinkU<Cap...>& lhs, TileLinkU<Cap...>& rhs);
 
+
+	template<StreamSignal T>
+	requires(T::template has<TileLinkA>())
+	UInt transferLength(const T& source);
+
+	template<StreamSignal T>
+	requires(T::template has<TileLinkD>())
+	UInt transferLength(const T& source);
+
+	template<StreamSignal T>
+	requires requires (T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
+	std::tuple<Sop, Eop> seop(T& source);
+
+	template<StreamSignal T>
+	requires requires (T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
+	Bit sop(T& source);
+
+	template<StreamSignal T>
+	requires requires (T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
+	Bit eop(T& source);
 }
 
 // impl
@@ -158,6 +180,91 @@ namespace gtry::scl
 			}
 		}
 	}
+
+	inline UInt transferLengthFromLogSize(const UInt& logSize, size_t numSymbolsPerBeat)
+	{
+		BitWidth beatWidth = BitWidth::count(numSymbolsPerBeat);
+		UInt size = decoder(logSize);
+		UInt beats = size.upper(size.width() - beatWidth);
+		beats.lsb() |= size.lower(beatWidth) != 0;
+		return beats;
+	}
+
+	template<StreamSignal T>
+	requires(T::template has<TileLinkA>())
+	UInt transferLength(const T& source)
+	{
+		UInt len = transferLengthFromLogSize(source.get<TileLinkA>().size, byteEnable(source).width().bits());
+		IF(source.get<TileLinkA>().opcode.upper(2_b) != 0)
+			len = 1; // only puts are multi beat
+		return len;
+	}
+
+	template<StreamSignal T>
+	requires(T::template has<TileLinkD>())
+	UInt transferLength(const T& source)
+	{
+		UInt len = transferLengthFromLogSize(source.get<TileLinkD>().size, byteEnable(source).width().bits());
+		IF(!source.get<TileLinkD>().opcode.lsb())
+			len = 1; // only data responses are multi beat
+		return len;
+	}
+
+	template<StreamSignal T>
+	requires requires (T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
+	std::tuple<Sop, Eop> seop(T& source)
+	{
+		auto scope = Area{ "scl_seop" }.enter();
+
+		UInt size = transferLength(source);
+		HCL_NAMED(size);
+
+		UInt beatCounter = size.width();
+		UInt beatCounterNext = beatCounter + 1;
+
+		Bit start;
+		IF(transfer(source))
+		{
+			sim_assert(size != 0) << "what is a zero length packet?";
+			start = '0';
+			beatCounter = beatCounterNext;
+		}
+
+		Bit end = '0';
+		IF(beatCounterNext == size)
+		{
+			end = '1';
+			IF(transfer(source))
+			{
+				start = '1';
+				beatCounter = 0;
+			}
+		}
+		start = reg(start, '1');
+		beatCounter = reg(beatCounter, 0);
+
+		HCL_NAMED(beatCounter);
+		HCL_NAMED(start);
+		HCL_NAMED(end);
+		return { Sop(start), Eop(end) };
+	}
+
+	template<StreamSignal T>
+	requires requires (T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
+	Bit sop(T& source)
+	{
+		auto [s, e] = seop(source);
+		return s.sop;
+	}
+
+	template<StreamSignal T>
+	requires requires (T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
+	Bit eop(T& source)
+	{
+		auto [s, e] = seop(source);
+		return e.eop;
+	}
+
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkA, opcode, param, size, source, address);
