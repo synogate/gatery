@@ -92,7 +92,13 @@ namespace gtry::scl::sdram
 			UInt bank;
 		};
 
+		struct Bank
+		{
+			UInt bank;
+		};
+
 		using CommandStream = RvStream<Command>;
+		using DataOutStream = RvPacketStream<BVec, ByteEnable>;
 	public:
 		Controller& timings(const Timings& timingsInNs);
 		Controller& addressMap(const AddressMap& map);
@@ -104,6 +110,7 @@ namespace gtry::scl::sdram
 		virtual void generate(TileLinkUL& link);
 
 	protected:
+		virtual void initMember();
 		virtual void makeBusPins(const CommandBus& bus, std::string prefix);
 		virtual void makeBankState();
 		virtual void makeWriteBurstAddress(CommandStream& stream);
@@ -113,8 +120,12 @@ namespace gtry::scl::sdram
 		virtual CommandStream initSequence() const;
 		virtual CommandStream refreshSequence(const Bit& mayRefresh);
 
-		virtual void driveCommand(CommandStream& command);
-		virtual CommandStream translateCommand(const BankState& state, TileLinkChannelA& request) const;
+		virtual void driveCommand(CommandStream& command, DataOutStream& data);
+		virtual CommandStream translateCommand(const BankState& state, const TileLinkChannelA& request) const;
+		virtual DataOutStream translateCommandData(TileLinkChannelA& request, Bit& bankStall) const;
+
+		virtual std::tuple<CommandStream, DataOutStream> bankController(TileLinkChannelA& link, BankState& state) const;
+
 		virtual BankState updateState(const Command& cmd, const BankState& state) const;
 		virtual CommandStream enforceTiming(CommandStream& command) const;
 
