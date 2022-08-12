@@ -303,12 +303,22 @@ namespace gtry {
 
 	////
 
+	namespace internal
+	{
+		template<class T>
+		struct is_reverse_signal;
+	}
+
+	template<class T>
+	concept ReverseSignal = internal::is_reverse_signal<T>::value;
+
 	template<typename T>
 	concept Signal =
 		BaseSignal<T> or
 		CompoundSignal<T> or
 		ContainerSignal<T> or
-		TupleSignal<T>;
+		TupleSignal<T> or
+		ReverseSignal<T>;
 
 	template<typename T>
 	concept SignalValue =
