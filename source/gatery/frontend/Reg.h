@@ -125,6 +125,7 @@ namespace gtry
 		operator S() const { return m_current; }
 		const S& next() const { return m_next; }
 		const S& current() const { return m_current; }
+		const S& combinatorial() const { return m_set; }
 
 		void setName(std::string _name)
 		{
