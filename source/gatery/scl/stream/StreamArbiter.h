@@ -79,6 +79,7 @@ namespace gtry::scl
 			IF(!locked & reg(ready(*m_out) | !valid(*m_out), '1'))
 				selected = m_selector(m_in | std::views::transform(&InStream::stream));
 			HCL_NAMED(selected);
+			m_selectedInput = selected;
 
 			downstream(*m_out) = dontCare(copy(downstream(*m_out)));
 			valid(*m_out) = '0';
@@ -94,6 +95,11 @@ namespace gtry::scl
 			HCL_NAMED(m_out);
 		}
 
+		const UInt& selectedInput() const { 
+			HCL_DESIGNCHECK(m_generated);
+			return m_selectedInput; 
+		}
+
 	protected:
 		struct InStream
 		{
@@ -106,6 +112,9 @@ namespace gtry::scl
 		std::optional<T> m_out;
 		TSelector m_selector;
 		bool m_generated = false;
+
+	private:
+		UInt m_selectedInput;
 	};
 
 	template<typename TSelector>
@@ -167,6 +176,17 @@ namespace gtry::scl
 		UInt operator () (const TCont& in)
 		{
 			return Counter{ in.size() }.inc().value();
+		}
+	};
+
+	struct ArbiterPolicyExtern
+	{
+		UInt selection;
+
+		template<class TCont>
+		UInt operator () (const TCont& in)
+		{
+			return selection;
 		}
 	};
 
