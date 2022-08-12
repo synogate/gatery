@@ -116,7 +116,7 @@ void detectUnguardedCDCCrossings(Circuit &circuit, const ConstSubnet &subnet, st
 				if (it != domains.end())
 					inputClocks[i] = it->second;
 				else
-					inputClocks[i] = {.type = SignalClockDomain::UNKNOWN};
+					inputClocks[i] = {.type = SignalClockDomain::CONSTANT};
 			}
 		}
 
