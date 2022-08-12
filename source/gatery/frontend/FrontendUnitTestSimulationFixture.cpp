@@ -23,6 +23,8 @@
 #include <gatery/export/vhdl/VHDLExport.h>
 #include <gatery/hlim/Circuit.h>
 #include <boost/test/unit_test.hpp>
+#include <gatery/debug/websocks/WebSocksInterface.h>
+
 
 namespace gtry {
 
@@ -149,8 +151,15 @@ void ClockedTest::teardown()
 {
 	m_clockScope.reset();
 
-	design.getCircuit().postprocess(gtry::hlim::DefaultPostprocessing{});
-	runTest(m_timeout);
+	gtry::dbg::WebSocksInterface::create(1337);
+	try {
+		design.getCircuit().postprocess(gtry::hlim::DefaultPostprocessing{});
+		runTest(m_timeout);
+	} catch (const std::exception& e) {
+		std::cerr << e.what() << std::endl;
+		dbg::awaitDebugger();
+		dbg::stopInDebugger();
+	}
 
 	m_clock.reset();
 
