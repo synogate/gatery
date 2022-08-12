@@ -433,12 +433,8 @@ WebSocksInterface::~WebSocksInterface()
 void WebSocksInterface::waitAccept()
 {
 	m_acceptor.async_accept([this](beast::error_code ec, tcp::socket socket){
-		if (ec) {
-			if (ec == boost::system::errc::operation_canceled)
-				return;
-			else
-				throw std::runtime_error(std::string("Networking failure, cannot accept connections"));
-		}
+		if (ec)
+			return;
 
 		acceptSession(std::move(socket));
 		waitAccept();
