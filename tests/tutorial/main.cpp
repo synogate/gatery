@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "scl/pch.h"
+#include "tutorial/pch.h"
 #define BOOST_TEST_MODULE "Unit tests for code snippets shown in documentation/websites/tutorials"
 #include <boost/test/unit_test.hpp>
 
