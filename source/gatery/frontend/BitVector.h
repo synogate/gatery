@@ -130,6 +130,7 @@ namespace gtry {
 		Bit& msb() { return aliasMsb(); }
 		const Bit& msb() const { return aliasMsb(); }
 
+		Bit& operator[](int idx) { return aliasVec()[(size()+idx)%size()]; }
 		Bit& operator[](size_t idx) { return aliasVec()[idx]; }
 		const Bit& operator[](size_t idx) const { return aliasVec()[idx]; }
 
