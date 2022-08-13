@@ -17,7 +17,7 @@
 */
 
 
-#include "pch.h"
+#include "tutorial/pch.h"
 
 #include <boost/test/unit_test.hpp>
 
