@@ -89,12 +89,17 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 
 	m_clock = ClockScope::getClk();
 
-	Bit dEn, dpOut, dnOut;
-	Bit dpIn = tristatePin(dpOut, dEn).setName("USB_DP");
-	Bit dnIn = tristatePin(dnOut, dEn).setName("USB_DN");
+	Bit dEn, dpOut, dnOut, dpIn, dnIn;
+
+	Clock usbPinClock(hlim::ClockRational{ 12'000'000 });
+	{
+		ClockScope scope(usbPinClock);
+		dpIn = tristatePin(dpOut, dEn).setName("USB_DP");
+		dnIn = tristatePin(dnOut, dEn).setName("USB_DN");
+	}
 
 	VStream<UInt> lineIn = recoverDataDifferential(
-		hlim::ClockRational{ 12'000'000 },
+		usbPinClock,
 		dpIn, dnIn
 	);
 	HCL_NAMED(lineIn);
@@ -176,7 +181,7 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 	nrzi(txStuffedStream);
 	HCL_NAMED(txStuffedStream);
 
-	Counter txTimer{ (m_clock.absoluteFrequency() / hlim::ClockRational{ 12'000'000 }).numerator() };
+	Counter txTimer{ hlim::floor(m_clock.absoluteFrequency() / hlim::ClockRational{ 12'000'000 }) };
 	IF(valid(txStuffedStream))
 		txTimer.inc();
 	ELSE
@@ -187,7 +192,7 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 	p = *txStuffedStream;
 	n = !p;
 
-	Counter se0Timer{ (m_clock.absoluteFrequency() / hlim::ClockRational{ 12'000'000 }).numerator() * 2 };
+	Counter se0Timer{ hlim::floor(m_clock.absoluteFrequency() / hlim::ClockRational{ 12'000'000 }) * 2 };
 	Bit se0;
 	IF(se0)
 		se0Timer.inc();

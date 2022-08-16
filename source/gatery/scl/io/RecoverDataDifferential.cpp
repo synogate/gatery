@@ -25,13 +25,13 @@ gtry::scl::VStream<gtry::UInt> gtry::scl::recoverDataDifferential(hlim::ClockRat
 	auto scope = Area{ "scl_recoverDataDifferential" }.enter();
 
 	const auto samplesRatio = ClockScope::getClk().absoluteFrequency() / signalClock;
-	HCL_DESIGNCHECK_HINT(samplesRatio.denominator() == 1, "clock must be devisible by signalClock");
+	HCL_DESIGNCHECK_HINT(samplesRatio.denominator() == 1, "clock must be divisible by signalClock");
 	const size_t samples = samplesRatio.numerator();
 	HCL_DESIGNCHECK_HINT(samples >= 3, "we need at least 3 samples per cycle to recover data");
 
 	// avoid meta stable inputs
-	Bit p = synchronize(ioP, ClockScope::getClk(), ClockScope::getClk(), 3, false);
-	Bit n = synchronize(ioN, ClockScope::getClk(), ClockScope::getClk(), 3, false);
+	Bit p = synchronize(ioP, signalClock, ClockScope::getClk(), 3, false);
+	Bit n = synchronize(ioN, signalClock, ClockScope::getClk(), 3, false);
 	HCL_NAMED(p);
 	HCL_NAMED(n);
 
