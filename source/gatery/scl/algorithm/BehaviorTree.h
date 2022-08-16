@@ -35,7 +35,7 @@ namespace gtry::scl::bt
 		Node(std::string_view name);
 		Node(const Node&) = delete;
 
-		BehaviorStream operator () ();
+		virtual BehaviorStream operator () ();
 
 	protected:
 		Area m_area;
