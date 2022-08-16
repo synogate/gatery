@@ -84,8 +84,8 @@ namespace gtry::scl::bt
 	class Check : public Node
 	{
 	public:
-		Check(std::string name = {});
-		Check(const Bit& condition, std::string name = {});
+		Check(std::string_view name = "check");
+		Check(const Bit& condition, std::string_view name = "check");
 
 	protected:
 		void condition(const Bit& value);
@@ -94,8 +94,8 @@ namespace gtry::scl::bt
 	class Wait : public Node
 	{
 	public:
-		Wait(std::string name = {});
-		Wait(const Bit& condition, std::string name = {});
+		Wait(std::string_view name = "wait");
+		Wait(const Bit& condition, std::string_view name = "wait");
 
 	protected:
 		void condition(const Bit& value);

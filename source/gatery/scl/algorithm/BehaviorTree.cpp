@@ -102,13 +102,13 @@ namespace gtry::scl::bt
 		return ret;
 	}
 
-	Check::Check(std::string name) :
+	Check::Check(std::string_view name) :
 		Node(name)
 	{
 		m_area.leave();
 	}
 
-	Check::Check(const Bit& value, std::string name) :
+	Check::Check(const Bit& value, std::string_view name) :
 		Node(name)
 	{
 		condition(value);
@@ -120,13 +120,13 @@ namespace gtry::scl::bt
 		*m_parent->success = value;
 	}
 
-	Wait::Wait(std::string name) :
+	Wait::Wait(std::string_view name) :
 		Node(name)
 	{
 		m_area.leave();
 	}
 
-	Wait::Wait(const Bit& value, std::string name) :
+	Wait::Wait(const Bit& value, std::string_view name) :
 		Node(name)
 	{
 		condition(value);
@@ -135,7 +135,7 @@ namespace gtry::scl::bt
 
 	void Wait::condition(const Bit& value)
 	{
-		*m_parent->success = value;
+		ready(m_parent) = value;
 	}
 }
 

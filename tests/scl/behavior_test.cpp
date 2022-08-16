@@ -182,3 +182,58 @@ BOOST_FIXTURE_TEST_CASE(bt_sequence_test, BoostUnitTestSimulationFixture)
 
 	runTicks(clock.getClk(), 128);
 }
+
+BOOST_FIXTURE_TEST_CASE(bt_check_test, BoostUnitTestSimulationFixture)
+{
+	Bit condition = pinIn().setName("condition");
+
+	scl::bt::BehaviorStream up = scl::bt::Check{ condition }();
+	pinIn(up, "up");
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	addSimulationProcess([&]()->SimProcess {
+
+		simu(condition) = 0;
+		co_await WaitClk(clock);
+		BOOST_TEST(simu(ready(up)) == 1);
+		BOOST_TEST(simu(*up->success) == 0);
+
+		simu(condition) = 1;
+		co_await WaitClk(clock);
+		BOOST_TEST(simu(ready(up)) == 1);
+		BOOST_TEST(simu(*up->success) == 1);
+		stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	//dbg::vis();
+
+	runTicks(clock.getClk(), 128);
+}
+
+BOOST_FIXTURE_TEST_CASE(bt_wait_test, BoostUnitTestSimulationFixture)
+{
+	Bit condition = pinIn().setName("condition");
+
+	scl::bt::BehaviorStream up = scl::bt::Wait{condition}();
+	pinIn(up, "up");
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	addSimulationProcess([&]()->SimProcess {
+
+		simu(condition) = 0;
+		co_await WaitClk(clock);
+		BOOST_TEST(simu(ready(up)) == 0);
+
+		simu(condition) = 1;
+		co_await WaitClk(clock);
+		BOOST_TEST(simu(ready(up)) == 1);
+		BOOST_TEST(simu(*up->success) == 1);
+		stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	//dbg::vis();
+
+	runTicks(clock.getClk(), 128);
+}
