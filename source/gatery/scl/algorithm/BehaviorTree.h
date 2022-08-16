@@ -54,7 +54,7 @@ namespace gtry::scl::bt
 		Selector(std::string_view name, TParam&&... childs);
 
 		template<std::invocable Func>
-		Selector& add(Func&& child) { return add(child()); }
+		Selector& add(Func&& child) { return add(std::invoke(child)); }
 
 		Selector& add(BehaviorStream& child);
 		Selector& add(BehaviorStream&& child) { return add(child); }
@@ -63,19 +63,22 @@ namespace gtry::scl::bt
 		Bit m_done;
 	};
 
-	class Sequence
+	class Sequence : public Node
 	{
 	public:
+		Sequence(std::string_view name);
+
 		template<class... TParam>
-		Sequence(TParam... childs) { (add(std::forward<TParam>(childs)), ...); }
+		Sequence(std::string_view name, TParam&&... childs);
 
 		template<std::invocable Func>
-		Selector& add(Func&& child) { return add(std::invoke(child)); }
+		Sequence& add(Func&& child) { return add(std::invoke(child)); }
 
-		Selector& add(BehaviorStream& child);
-		Selector& add(BehaviorStream&& child) { return add(child); }
+		Sequence& add(BehaviorStream& child);
+		Sequence& add(BehaviorStream&& child) { return add(child); }
 
-		BehaviorStream operator () ();
+	private:
+		Bit m_done;
 	};
 
 	class Check : public Node
@@ -107,6 +110,13 @@ namespace gtry::scl::bt
 	template<class... TParam>
 	Selector::Selector(std::string_view name, TParam&&... childs) :
 		Selector(name)
+	{
+		(add(std::forward<TParam>(childs)), ...);
+	}
+
+	template<class... TParam>
+	Sequence::Sequence(std::string_view name, TParam&&... childs) :
+		Sequence(name)
 	{
 		(add(std::forward<TParam>(childs)), ...);
 	}

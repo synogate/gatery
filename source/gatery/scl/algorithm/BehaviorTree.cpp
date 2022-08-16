@@ -48,6 +48,34 @@ namespace gtry::scl::bt
 		return *this;
 	}
 
+	Sequence::Sequence(std::string_view name) :
+		Node(name)
+	{
+		ready(m_parent) = '0';
+
+		HCL_NAMED(m_done);
+		m_done = '0';
+
+		m_area.leave();
+	}
+
+	Sequence& Sequence::add(BehaviorStream& child)
+	{
+		auto scope = m_area.enter();
+		valid(child) = '0';
+
+		IF(!m_done)
+		{
+			child <<= m_parent;
+
+			IF(!ready(child))
+				m_done = '1';
+			IF(*child->success == '0')
+				m_done = '1';
+		}
+		return *this;
+	}
+
 	Node::Node(std::string_view name) :
 		m_area(name, true)
 	{
