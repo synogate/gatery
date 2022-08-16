@@ -54,7 +54,7 @@ namespace gtry::scl::bt
 		Selector(std::string_view name, TParam&&... childs);
 
 		template<std::invocable Func>
-		Selector& add(Func&& child) { return add(std::invoke(child)); }
+		Selector& add(Func&& child) { return add(std::invoke(std::forward<Func>(child))); }
 
 		Selector& add(BehaviorStream& child);
 		Selector& add(BehaviorStream&& child) { return add(child); }
@@ -72,7 +72,7 @@ namespace gtry::scl::bt
 		Sequence(std::string_view name, TParam&&... childs);
 
 		template<std::invocable Func>
-		Sequence& add(Func&& child) { return add(std::invoke(child)); }
+		Sequence& add(Func&& child) { return add(std::invoke(std::forward<Func>(child))); }
 
 		Sequence& add(BehaviorStream& child);
 		Sequence& add(BehaviorStream&& child) { return add(child); }
@@ -101,6 +101,20 @@ namespace gtry::scl::bt
 		void condition(const Bit& value);
 	};
 
+	class Do : public Node
+	{
+	public:
+		Do(std::string_view name = "do");
+		
+		template<std::invocable T>
+		Do(T&& handler, std::string_view name = "do");
+
+	protected:
+		template<std::invocable T>
+		void handler(T&& proc);
+	};
+
+
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::bt::BehaviorCtrl, success);
@@ -119,5 +133,21 @@ namespace gtry::scl::bt
 		Sequence(name)
 	{
 		(add(std::forward<TParam>(childs)), ...);
+	}
+
+	template<std::invocable T>
+	Do::Do(T&& proc, std::string_view name) :
+		Do(name)
+	{
+		handler(std::forward<T>(proc));
+	}
+
+	template<std::invocable T>
+	void Do::handler(T&& proc)
+	{
+		//TODO: stall scope
+		*m_parent->success = dontCare(Bit{});
+		IF(valid(m_parent))
+			*m_parent->success = std::invoke(std::forward<T>(proc));
 	}
 }

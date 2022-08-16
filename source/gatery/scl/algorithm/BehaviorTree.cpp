@@ -137,5 +137,12 @@ namespace gtry::scl::bt
 	{
 		ready(m_parent) = value;
 	}
+
+	Do::Do(std::string_view name) :
+		Node(name)
+	{
+		m_area.leave();
+	}
+
 }
 

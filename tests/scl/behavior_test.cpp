@@ -237,3 +237,32 @@ BOOST_FIXTURE_TEST_CASE(bt_wait_test, BoostUnitTestSimulationFixture)
 
 	runTicks(clock.getClk(), 128);
 }
+
+BOOST_FIXTURE_TEST_CASE(bt_do_test, BoostUnitTestSimulationFixture)
+{
+	Bit status = pinIn().setName("status");
+
+	scl::bt::BehaviorStream up = scl::bt::Do{ [&]() {
+		return status;
+	} }();
+	pinIn(up, "up");
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	addSimulationProcess([&]()->SimProcess {
+
+		simu(valid(up)) = 1;
+		simu(status) = 0;
+		co_await WaitClk(clock);
+		BOOST_TEST(simu(ready(up)) == 1);
+		BOOST_TEST(simu(*up->success) == 0);
+
+		simu(status) = 1;
+		co_await WaitClk(clock);
+		BOOST_TEST(simu(ready(up)) == 1);
+		BOOST_TEST(simu(*up->success) == 1);
+		stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(clock.getClk(), 128);
+}
