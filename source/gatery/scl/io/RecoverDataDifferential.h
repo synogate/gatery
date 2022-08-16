@@ -20,5 +20,5 @@
 
 namespace gtry::scl
 {
-	VStream<UInt> recoverDataDifferential(hlim::ClockRational signalClock, Bit p, Bit n);
+	VStream<UInt> recoverDataDifferential(const gtry::Clock &signalClock, Bit p, Bit n);
 }

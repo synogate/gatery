@@ -91,7 +91,7 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 
 	Bit dEn, dpOut, dnOut, dpIn, dnIn;
 
-	Clock usbPinClock(hlim::ClockRational{ 12'000'000 });
+	Clock usbPinClock({.absoluteFrequency = hlim::ClockRational{ 12'000'000 } });
 	{
 		ClockScope scope(usbPinClock);
 		dpIn = tristatePin(dpOut, dEn).setName("USB_DP");
@@ -139,6 +139,11 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 
 	generateRx(lineInDecoded);
 	generateTx(dEn, dpOut, dnOut);
+
+	dpOut = allowClockDomainCrossing(dpOut, m_clock, usbPinClock);
+	dnOut = allowClockDomainCrossing(dnOut, m_clock, usbPinClock);
+	dEn = allowClockDomainCrossing(dEn, m_clock, usbPinClock);
+
 	return '1';
 }
 

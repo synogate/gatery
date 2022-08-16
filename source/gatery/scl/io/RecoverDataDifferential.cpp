@@ -20,11 +20,11 @@
 #include "../cdc.h"
 #include "../Counter.h"
 
-gtry::scl::VStream<gtry::UInt> gtry::scl::recoverDataDifferential(hlim::ClockRational signalClock, Bit ioP, Bit ioN)
+gtry::scl::VStream<gtry::UInt> gtry::scl::recoverDataDifferential(const gtry::Clock &signalClock, Bit ioP, Bit ioN)
 {
 	auto scope = Area{ "scl_recoverDataDifferential" }.enter();
 
-	const auto samplesRatio = ClockScope::getClk().absoluteFrequency() / signalClock;
+	const auto samplesRatio = ClockScope::getClk().absoluteFrequency() / signalClock.absoluteFrequency();
 	HCL_DESIGNCHECK_HINT(samplesRatio.denominator() == 1, "clock must be divisible by signalClock");
 	const size_t samples = samplesRatio.numerator();
 	HCL_DESIGNCHECK_HINT(samples >= 3, "we need at least 3 samples per cycle to recover data");
