@@ -25,16 +25,33 @@ namespace gtry::scl::bt
 	struct BehaviorCtrl
 	{
 		Reverse<Bit> success;
-		Reverse<Bit> stick;
 	};
 
 	using BehaviorStream = RvStream<BehaviorCtrl>;
 
-	class Selector
+	class Node
 	{
 	public:
+		Node(std::string_view name);
+		Node(const Node&) = delete;
+
+		BehaviorStream operator () ();
+
+	protected:
+		Area m_area;
+		BehaviorStream m_parent;
+
+	private:
+		BehaviorStream m_parentIn;
+	};
+
+	class Selector : public Node
+	{
+	public:
+		Selector(std::string_view name);
+
 		template<class... TParam>
-		Selector(TParam... childs) { (add(std::forward<TParam>(childs)), ...); }
+		Selector(std::string_view name, TParam&&... childs);
 
 		template<std::invocable Func>
 		Selector& add(Func&& child) { return add(child()); }
@@ -42,7 +59,8 @@ namespace gtry::scl::bt
 		Selector& add(BehaviorStream& child);
 		Selector& add(BehaviorStream&& child) { return add(child); }
 
-		BehaviorStream operator () ();
+	private:
+		Bit m_done;
 	};
 
 	class Sequence
@@ -52,7 +70,7 @@ namespace gtry::scl::bt
 		Sequence(TParam... childs) { (add(std::forward<TParam>(childs)), ...); }
 
 		template<std::invocable Func>
-		Selector& add(Func&& child) { return add(child()); }
+		Selector& add(Func&& child) { return add(std::invoke(child)); }
 
 		Selector& add(BehaviorStream& child);
 		Selector& add(BehaviorStream&& child) { return add(child); }
@@ -60,15 +78,36 @@ namespace gtry::scl::bt
 		BehaviorStream operator () ();
 	};
 
-	class CheckCondition
+	class Check : public Node
 	{
 	public:
-		CheckCondition(const Bit& condition, std::string name = {});
-		BehaviorStream operator () () const;
-	private:
-		Bit m_condition;
+		Check(std::string name = {});
+		Check(const Bit& condition, std::string name = {});
+
+	protected:
+		void condition(const Bit& value);
 	};
 
+	class Wait : public Node
+	{
+	public:
+		Wait(std::string name = {});
+		Wait(const Bit& condition, std::string name = {});
 
+	protected:
+		void condition(const Bit& value);
+	};
 
+}
+
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::bt::BehaviorCtrl, success);
+
+namespace gtry::scl::bt
+{
+	template<class... TParam>
+	Selector::Selector(std::string_view name, TParam&&... childs) :
+		Selector(name)
+	{
+		(add(std::forward<TParam>(childs)), ...);
+	}
 }

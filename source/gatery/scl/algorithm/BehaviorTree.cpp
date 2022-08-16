@@ -20,40 +20,94 @@
 
 namespace gtry::scl::bt
 {
+	Selector::Selector(std::string_view name) :
+		Node(name)
+	{
+		ready(m_parent) = '0';
+
+		HCL_NAMED(m_done);
+		m_done = '0';
+
+		m_area.leave();
+	}
+
 	Selector& Selector::add(BehaviorStream& child)
 	{
-	
+		auto scope = m_area.enter();
+		valid(child) = '0';
 
-		Selector a{};
+		IF(!m_done)
+		{
+			child <<= m_parent;
 
-		a.add(a);
-		a.add(Selector{});
-
-		Selector b{
-			a,
-			Selector{},
-			a
-		};
-
+			IF(!ready(child))
+				m_done = '1';
+			IF(*child->success)
+				m_done = '1';
+		}
 		return *this;
 	}
 
-	CheckCondition::CheckCondition(const Bit& condition, std::string name)
+	Node::Node(std::string_view name) :
+		m_area(name, true)
 	{
-		auto scope = Area{ name }.enter();
-		m_condition = condition;
-		setName(m_condition, "condition");
+		HCL_NAMED(m_parentIn);
+
+		m_parent <<= m_parentIn;
+		HCL_NAMED(m_parent);
+
+		// default downstream
+		valid(m_parentIn) = '0';
+
+		// default upstream
+		ready(m_parent) = '1';
+		*m_parent->success = '1';
 	}
 
-	BehaviorStream CheckCondition::operator() () const
+	BehaviorStream Node::operator() ()
 	{
-		BehaviorStream out{ {
-			.success = m_condition,
-			.stick = '0'
-		} };
+		auto scope = m_area.enter();
+		BehaviorStream ret;
+		upstream(ret) = upstream(m_parentIn);
+		valid(m_parentIn) |= valid(ret);
+		HCL_NAMED(ret);
+		return ret;
+	}
 
-		ready(out) = '1';
-		return out;
+	Check::Check(std::string name) :
+		Node(name)
+	{
+		m_area.leave();
+	}
+
+	Check::Check(const Bit& value, std::string name) :
+		Node(name)
+	{
+		condition(value);
+		m_area.leave();
+	}
+
+	void Check::condition(const Bit& value)
+	{
+		*m_parent->success = value;
+	}
+
+	Wait::Wait(std::string name) :
+		Node(name)
+	{
+		m_area.leave();
+	}
+
+	Wait::Wait(const Bit& value, std::string name) :
+		Node(name)
+	{
+		condition(value);
+		m_area.leave();
+	}
+
+	void Wait::condition(const Bit& value)
+	{
+		*m_parent->success = value;
 	}
 }
 
