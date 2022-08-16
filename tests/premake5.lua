@@ -29,3 +29,18 @@ project "gatery-scl-test"
     defines "BOOST_TEST_DYN_LINK"
     filter "system:linux"
         links { "boost_unit_test_framework", "boost_filesystem", "boost_json", "pthread", "dl", "yaml-cpp" }
+
+project "gatery-tutorial-test"
+    kind "ConsoleApp"
+    files { "tutorial/**.cpp", "tutorial/**.h" }
+    links "gatery"
+    includedirs { "%{prj.location}/../source", "%{prj.location}/" }
+
+    pchheader "tutorial/pch.h"
+    pchsource "tutorial/pch.cpp"
+
+    GateryProjectDefaults()
+
+    defines "BOOST_TEST_DYN_LINK"
+    filter "system:linux"
+        links { "boost_unit_test_framework", "boost_filesystem", "boost_json", "pthread", "dl", "yaml-cpp" }

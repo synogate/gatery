@@ -71,15 +71,21 @@ namespace gtry
 		if constexpr (BaseSignal<typename ContainerType::value_type>)
 		{
 			size_t idx = 0;
-			for (auto it = begin(table); it != end(table); ++it, ++idx)
+			for (auto it = begin(table); it != end(table); ++it, ++idx) {
+				if (idx >= tableSize) 
+					break;
 				node->connectInput(idx, it->readPort());
+			}
 			return SignalReadPort(node);
 		}
 		else
 		{
 			size_t idx = 0;
-			for (auto it = begin(table); it != end(table); ++it, ++idx)
+			for (auto it = begin(table); it != end(table); ++it, ++idx) {
+				if (idx >= tableSize) 
+					break;
 				node->connectInput(idx, pack(*it).readPort());
+			}
 
 			auto out = constructFrom(*begin(table));
 			unpack(SignalReadPort(node), out);

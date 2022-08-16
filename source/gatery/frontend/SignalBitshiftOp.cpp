@@ -172,7 +172,7 @@ SInt shl(const SInt &signal, int amount)  {
 
 SInt shr(const SInt &signal, int amount)  {
 	HCL_DESIGNCHECK_HINT(amount >= 0, "Shifting by negative amount not allowed!");
-	return shift<SInt, hlim::Node_Shift::dir::right>(signal, (size_t) amount, hlim::Node_Shift::fill::zero);
+	return shift<SInt, hlim::Node_Shift::dir::right>(signal, (size_t) amount, hlim::Node_Shift::fill::last);
 }
 
 

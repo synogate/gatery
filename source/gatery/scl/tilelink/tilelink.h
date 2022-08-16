@@ -89,10 +89,10 @@ namespace gtry::scl
 			(TileLinkChannelD, d)
 		);
 
-		TileLinkA& chanA() { return a.get<TileLinkA>(); }
-		const TileLinkA& chanA() const { return a.get<TileLinkA>(); }
-		TileLinkD& chanD() { return d.get<TileLinkD>(); }
-		const TileLinkD& chanD() const { return d.get<TileLinkD>(); }
+		TileLinkA& chanA() { return a.template get<TileLinkA>(); }
+		const TileLinkA& chanA() const { return a.template get<TileLinkA>(); }
+		TileLinkD& chanD() { return d.template get<TileLinkD>(); }
+		const TileLinkD& chanD() const { return d.template get<TileLinkD>(); }
 
 		template<class T>
 		static constexpr bool capability();
@@ -169,8 +169,8 @@ namespace gtry::scl
 		BVec& be = byteEnable(a);
 		be = (BVec)sext(1);
 
-		const UInt& size = a.get<TileLinkA>().size;
-		const UInt& offset = a.get<TileLinkA>().address(0, BitWidth::count(be.width().bits()));
+		const UInt& size = a.template get<TileLinkA>().size;
+		const UInt& offset = a.template get<TileLinkA>().address(0, BitWidth::count(be.width().bits()));
 		for (size_t i = 0; (1ull << i) < be.width().bits(); i++)
 		{
 			IF(size == i)
@@ -194,8 +194,8 @@ namespace gtry::scl
 	requires(T::template has<TileLinkA>())
 	UInt transferLength(const T& source)
 	{
-		UInt len = transferLengthFromLogSize(source.get<TileLinkA>().size, byteEnable(source).width().bits());
-		IF(source.get<TileLinkA>().opcode.upper(2_b) != 0)
+		UInt len = transferLengthFromLogSize(source.template get<TileLinkA>().size, byteEnable(source).width().bits());
+		IF(source.template get<TileLinkA>().opcode.upper(2_b) != 0)
 			len = 1; // only puts are multi beat
 		return len;
 	}
@@ -204,8 +204,8 @@ namespace gtry::scl
 	requires(T::template has<TileLinkD>())
 	UInt transferLength(const T& source)
 	{
-		UInt len = transferLengthFromLogSize(source.get<TileLinkD>().size, byteEnable(source).width().bits());
-		IF(!source.get<TileLinkD>().opcode.lsb())
+		UInt len = transferLengthFromLogSize(source.template get<TileLinkD>().size, byteEnable(source).width().bits());
+		IF(!source.template get<TileLinkD>().opcode.lsb())
 			len = 1; // only data responses are multi beat
 		return len;
 	}
