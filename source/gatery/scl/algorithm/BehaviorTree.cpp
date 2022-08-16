@@ -20,40 +20,129 @@
 
 namespace gtry::scl::bt
 {
+	Selector::Selector(std::string_view name) :
+		Node(name)
+	{
+		ready(m_parent) = '0';
+
+		HCL_NAMED(m_done);
+		m_done = '0';
+
+		m_area.leave();
+	}
+
 	Selector& Selector::add(BehaviorStream& child)
 	{
-	
+		auto scope = m_area.enter();
+		valid(child) = '0';
 
-		Selector a{};
+		IF(!m_done)
+		{
+			child <<= m_parent;
 
-		a.add(a);
-		a.add(Selector{});
-
-		Selector b{
-			a,
-			Selector{},
-			a
-		};
-
+			IF(!ready(child))
+				m_done = '1';
+			IF(*child->success)
+				m_done = '1';
+		}
 		return *this;
 	}
 
-	CheckCondition::CheckCondition(const Bit& condition, std::string name)
+	Sequence::Sequence(std::string_view name) :
+		Node(name)
 	{
-		auto scope = Area{ name }.enter();
-		m_condition = condition;
-		setName(m_condition, "condition");
+		ready(m_parent) = '0';
+
+		HCL_NAMED(m_done);
+		m_done = '0';
+
+		m_area.leave();
 	}
 
-	BehaviorStream CheckCondition::operator() () const
+	Sequence& Sequence::add(BehaviorStream& child)
 	{
-		BehaviorStream out{ {
-			.success = m_condition,
-			.stick = '0'
-		} };
+		auto scope = m_area.enter();
+		valid(child) = '0';
 
-		ready(out) = '1';
-		return out;
+		IF(!m_done)
+		{
+			child <<= m_parent;
+
+			IF(!ready(child))
+				m_done = '1';
+			IF(*child->success == '0')
+				m_done = '1';
+		}
+		return *this;
 	}
+
+	Node::Node(std::string_view name) :
+		m_area(name, true)
+	{
+		HCL_NAMED(m_parentIn);
+
+		m_parent <<= m_parentIn;
+		HCL_NAMED(m_parent);
+
+		// default downstream
+		valid(m_parentIn) = '0';
+
+		// default upstream
+		ready(m_parent) = '1';
+		*m_parent->success = '1';
+	}
+
+	BehaviorStream Node::operator() ()
+	{
+		auto scope = m_area.enter();
+		BehaviorStream ret;
+		upstream(ret) = upstream(m_parentIn);
+		valid(m_parentIn) |= valid(ret);
+		HCL_NAMED(ret);
+		return ret;
+	}
+
+	Check::Check(std::string_view name) :
+		Node(name)
+	{
+		m_area.leave();
+	}
+
+	Check::Check(const Bit& value, std::string_view name) :
+		Node(name)
+	{
+		condition(value);
+		m_area.leave();
+	}
+
+	void Check::condition(const Bit& value)
+	{
+		*m_parent->success = value;
+	}
+
+	Wait::Wait(std::string_view name) :
+		Node(name)
+	{
+		m_area.leave();
+	}
+
+	Wait::Wait(const Bit& value, std::string_view name) :
+		Node(name)
+	{
+		condition(value);
+		m_area.leave();
+	}
+
+	void Wait::condition(const Bit& value)
+	{
+		ready(m_parent) = value;
+	}
+
+	Do::Do(std::string_view name) :
+		Node(name)
+	{
+		m_area.leave();
+	}
+
 }
 

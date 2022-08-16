@@ -79,7 +79,7 @@ namespace gtry
 			v.reverse();
 			VisitCompound<std::remove_cvref_t<T>>{}(*a, v);
 			v.reverse();
-		}
+			}
 
 		void operator () (const Reverse<T>& a, const Reverse<T>& b, CompoundVisitor& v)
 		{
@@ -109,14 +109,14 @@ namespace gtry
 	inline Reverse<T>::Reverse(Reverse&& rhs) :
 		m_obj(internal::constructFromIfSignal(*rhs))
 	{
-		*rhs = m_obj;
+		m_obj = std::move(rhs.m_obj);
 	}
 
 	template<Signal T>
 	inline Reverse<T>& Reverse<T>::operator=(Reverse&& rhs)
 	{
 		m_obj = internal::constructFromIfSignal(*rhs);
-		*rhs = m_obj;
+		m_obj = std::move(rhs.m_obj);
 		return *this;
 	}
 

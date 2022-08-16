@@ -25,50 +25,129 @@ namespace gtry::scl::bt
 	struct BehaviorCtrl
 	{
 		Reverse<Bit> success;
-		Reverse<Bit> stick;
 	};
 
 	using BehaviorStream = RvStream<BehaviorCtrl>;
 
-	class Selector
+	class Node
 	{
 	public:
-		template<class... TParam>
-		Selector(TParam... childs) { (add(std::forward<TParam>(childs)), ...); }
+		Node(std::string_view name);
+		Node(const Node&) = delete;
 
-		template<std::invocable Func>
-		Selector& add(Func&& child) { return add(child()); }
+		virtual BehaviorStream operator () ();
 
-		Selector& add(BehaviorStream& child);
-		Selector& add(BehaviorStream&& child) { return add(child); }
+	protected:
+		Area m_area;
+		BehaviorStream m_parent;
 
-		BehaviorStream operator () ();
-	};
-
-	class Sequence
-	{
-	public:
-		template<class... TParam>
-		Sequence(TParam... childs) { (add(std::forward<TParam>(childs)), ...); }
-
-		template<std::invocable Func>
-		Selector& add(Func&& child) { return add(child()); }
-
-		Selector& add(BehaviorStream& child);
-		Selector& add(BehaviorStream&& child) { return add(child); }
-
-		BehaviorStream operator () ();
-	};
-
-	class CheckCondition
-	{
-	public:
-		CheckCondition(const Bit& condition, std::string name = {});
-		BehaviorStream operator () () const;
 	private:
-		Bit m_condition;
+		BehaviorStream m_parentIn;
+	};
+
+	class Selector : public Node
+	{
+	public:
+		Selector(std::string_view name);
+
+		template<class... TParam>
+		Selector(std::string_view name, TParam&&... childs);
+
+		template<std::invocable Func>
+		Selector& add(Func&& child) { return add(std::invoke(std::forward<Func>(child))); }
+
+		Selector& add(BehaviorStream& child);
+		Selector& add(BehaviorStream&& child) { return add(child); }
+
+	private:
+		Bit m_done;
+	};
+
+	class Sequence : public Node
+	{
+	public:
+		Sequence(std::string_view name);
+
+		template<class... TParam>
+		Sequence(std::string_view name, TParam&&... childs);
+
+		template<std::invocable Func>
+		Sequence& add(Func&& child) { return add(std::invoke(std::forward<Func>(child))); }
+
+		Sequence& add(BehaviorStream& child);
+		Sequence& add(BehaviorStream&& child) { return add(child); }
+
+	private:
+		Bit m_done;
+	};
+
+	class Check : public Node
+	{
+	public:
+		Check(std::string_view name = "check");
+		Check(const Bit& condition, std::string_view name = "check");
+
+	protected:
+		void condition(const Bit& value);
+	};
+
+	class Wait : public Node
+	{
+	public:
+		Wait(std::string_view name = "wait");
+		Wait(const Bit& condition, std::string_view name = "wait");
+
+	protected:
+		void condition(const Bit& value);
+	};
+
+	class Do : public Node
+	{
+	public:
+		Do(std::string_view name = "do");
+		
+		template<std::invocable T>
+		Do(T&& handler, std::string_view name = "do");
+
+	protected:
+		template<std::invocable T>
+		void handler(T&& proc);
 	};
 
 
+}
 
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::bt::BehaviorCtrl, success);
+
+namespace gtry::scl::bt
+{
+	template<class... TParam>
+	Selector::Selector(std::string_view name, TParam&&... childs) :
+		Selector(name)
+	{
+		(add(std::forward<TParam>(childs)), ...);
+	}
+
+	template<class... TParam>
+	Sequence::Sequence(std::string_view name, TParam&&... childs) :
+		Sequence(name)
+	{
+		(add(std::forward<TParam>(childs)), ...);
+	}
+
+	template<std::invocable T>
+	Do::Do(T&& proc, std::string_view name) :
+		Do(name)
+	{
+		handler(std::forward<T>(proc));
+	}
+
+	template<std::invocable T>
+	void Do::handler(T&& proc)
+	{
+		//TODO: stall scope
+		*m_parent->success = dontCare(Bit{});
+		IF(valid(m_parent))
+			*m_parent->success = std::invoke(std::forward<T>(proc));
+	}
 }
