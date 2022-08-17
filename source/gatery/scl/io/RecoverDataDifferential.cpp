@@ -45,16 +45,11 @@ gtry::scl::VStream<gtry::UInt> gtry::scl::recoverDataDifferential(const gtry::Cl
 	};
 	
 	// recover clock and shift sample point
-	Bit edgeDetected;
 	IF(p != reg(p) | n != reg(n))
-		edgeDetected = '1';
-	IF(edgeDetected & p != n)
 	{
 		phaseCounter.load((samples + 1) / 2);
-		edgeDetected = '0';
 		valid(out) = '0'; // prevent double sampling
 	}
-	edgeDetected = reg(edgeDetected, '0');
 	HCL_NAMED(out);
 	return out;
 }
