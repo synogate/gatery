@@ -93,9 +93,13 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 
 	Clock usbPinClock({.absoluteFrequency = hlim::ClockRational{ 12'000'000 } });
 	{
+		Bit dpOut_cdc = allowClockDomainCrossing(dpOut, m_clock, usbPinClock);
+		Bit dnOut_cdc = allowClockDomainCrossing(dnOut, m_clock, usbPinClock);
+		Bit dEn_cdc = allowClockDomainCrossing(dEn, m_clock, usbPinClock);
+
 		ClockScope scope(usbPinClock);
-		dpIn = tristatePin(dpOut, dEn).setName("USB_DP");
-		dnIn = tristatePin(dnOut, dEn).setName("USB_DN");
+		dpIn = tristatePin(dpOut_cdc, dEn_cdc).setName("USB_DP");
+		dnIn = tristatePin(dnOut_cdc, dEn_cdc).setName("USB_DN");
 	}
 
 	VStream<UInt> lineIn = recoverDataDifferential(
@@ -139,10 +143,6 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 
 	generateRx(lineInDecoded);
 	generateTx(dEn, dpOut, dnOut);
-
-	dpOut = allowClockDomainCrossing(dpOut, m_clock, usbPinClock);
-	dnOut = allowClockDomainCrossing(dnOut, m_clock, usbPinClock);
-	dEn = allowClockDomainCrossing(dEn, m_clock, usbPinClock);
 
 	return '1';
 }
