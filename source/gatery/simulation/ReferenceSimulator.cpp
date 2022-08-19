@@ -259,11 +259,11 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 
 
 			auto& nonConstCircuit = const_cast<hlim::Circuit&>(circuit);
-
+			/*
 			auto* loopGroup = nonConstCircuit.getRootNodeGroup()->addChildNodeGroup(hlim::NodeGroup::GroupType::ENTITY);
 			loopGroup->setInstanceName("loopGroup");
 			loopGroup->setName("loopGroup");
-
+			*/
 			hlim::Subnet loopSubnet;
 
 			for (auto node : loopNodes) {
@@ -279,19 +279,26 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 				}
 				std::cout << "  stack trace:" << std::endl << node->getStackTrace() << std::endl;
 
-				node->moveToGroup(loopGroup);
+				//node->moveToGroup(loopGroup);
 				loopSubnet.add(node);
 
 				for (auto i : utils::Range(node->getNumOutputPorts()))
 					for (auto nh : node->exploreOutput(i)) {
 						if (nh.isSignal()) {
-							nh.node()->moveToGroup(loopGroup);
+							//nh.node()->moveToGroup(loopGroup);
 							loopSubnet.add(nh.node());
 						} 
 						else
 							nh.backtrack();
 					}
 			}
+
+			//dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING << "Simulator detected a signal loop: " << loopSubnet);
+			dbg::LogMessage msg{};
+			msg << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING << "Simulator detected a signal loop: ";
+			for (auto n : loopSubnet)
+				msg << n;
+			dbg::log(msg);
 
 			{
 				DotExport exp("loop.dot");
