@@ -125,9 +125,9 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 	VStream<UInt> lineInDecoded = decodeNRZI(lineIn, 6);
 	HCL_NAMED(lineInDecoded);
 
-	m_status.rxAvtive = reg(m_status.rxAvtive, '0');
+	m_status.rxActive = reg(m_status.rxActive, '0');
 	IF(valid(lineInDecoded) & lineInDecoded->at(0) == '0' & lineInDecoded->at(1) == '1')
-		m_status.rxAvtive = '1';
+		m_status.rxActive = '1';
 
 	Bit seenSE0;
 	seenSE0 = reg(seenSE0, '0');
@@ -136,7 +136,7 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 	IF(valid(lineInDecoded) & lineInDecoded->at(0) == '1' & lineInDecoded->at(1) == '0' & seenSE0)
 	{
 		seenSE0 = '0';
-		m_status.rxAvtive = '0';
+		m_status.rxActive = '0';
 	}
 	HCL_NAMED(seenSE0);
 	HCL_NAMED(m_status);
@@ -256,16 +256,16 @@ void gtry::scl::usb::GpioPhy::generateRx(const VStream<UInt>& in)
 			valid(inBit) = '0';
 	}
 
-	VStream<UInt> lineInWord = extendWidth(inBit, 8_b, !m_status.rxAvtive);
+	VStream<UInt> lineInWord = extendWidth(inBit, 8_b, !m_status.rxActive);
 
-	Bit rxDataActive = flag(valid(lineInWord), !m_status.rxAvtive);
+	Bit rxDataActive = flag(valid(lineInWord), !m_status.rxActive);
 	HCL_NAMED(rxDataActive);
 	m_rx.valid = valid(lineInWord);
 
 	m_rx.sop = !rxDataActive;
 	m_rx.data = *lineInWord;
 
-	m_rx.eop = edgeFalling(m_status.rxAvtive) & rxDataActive;
+	m_rx.eop = edgeFalling(m_status.rxActive) & rxDataActive;
 	m_rx.error = '0';
 	HCL_NAMED(m_rx);
 }

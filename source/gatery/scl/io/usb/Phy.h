@@ -26,7 +26,7 @@ namespace gtry::scl::usb
 		Bit sessEnd;
 		Bit sessValid;
 		Bit vbusValid;
-		Bit rxAvtive;
+		Bit rxActive;
 		Bit rxError;
 		Bit hostDisconnect;
 		Bit id;
@@ -71,6 +71,6 @@ namespace gtry::scl::usb
 	};
 }
 
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::usb::PhyRxStatus, lineState, sessEnd, sessValid, vbusValid, rxAvtive, rxError, hostDisconnect, id, altInt);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::usb::PhyRxStatus, lineState, sessEnd, sessValid, vbusValid, rxActive, rxError, hostDisconnect, id, altInt);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::usb::PhyRxStream, valid, sop, eop, error, data);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::usb::PhyTxStream, ready, valid, error, data);

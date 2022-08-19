@@ -176,7 +176,7 @@ void gtry::scl::usb::Ulpi::generateRxStatus()
 		m_status.vbusValid = m_io.dataIn(2, 2_b) == 3;
 
 		// RxEvent
-		m_status.rxAvtive = m_io.dataIn[4];
+		m_status.rxActive = m_io.dataIn[4];
 		m_status.rxError = m_io.dataIn[5];
 		m_status.hostDisconnect = m_io.dataIn(4, 2_b) == 2;
 

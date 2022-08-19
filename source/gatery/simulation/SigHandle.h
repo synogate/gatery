@@ -29,7 +29,7 @@ namespace gtry::sim {
 
 class SigHandle {
 	public:
-		SigHandle(hlim::NodePort output) : m_output(output) { }
+		SigHandle(hlim::NodePort output, bool overrideRegister = false) : m_output(output), m_overrideRegister(overrideRegister) { }
 		void operator=(const SigHandle &rhs) { this->operator=(rhs.eval()); }
 
 
@@ -58,11 +58,13 @@ class SigHandle {
 		DefaultBitVectorState eval() const;
 
 		hlim::NodePort getOutput() const { return m_output; }
+
+		SigHandle drivingReg() const;
 	protected:
 		void assign(const sim::BigInt &v);
 
-
 		hlim::NodePort m_output;
+		bool m_overrideRegister;
 };
 
 
