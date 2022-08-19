@@ -76,6 +76,8 @@ namespace gtry {
 	 */
 	class BoostUnitTestSimulationFixture : protected UnitTestSimulationFixture {
 		public:
+			sim::Simulator &getSimulator() { return sim::UnitTestSimulationFixture::getSimulator(); }
+			DesignScope &getDesign() { return design; }
 			void runFixedLengthTest(const hlim::ClockRational &seconds);
 			void runEvalOnlyTest();
 			void runTest(const hlim::ClockRational &timeoutSeconds);
