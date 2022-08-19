@@ -796,6 +796,16 @@ void ReferenceSimulator::simProcSetInputPin(hlim::Node_Pin *pin, const DefaultBi
 	}
 }
 
+void ReferenceSimulator::simProcOverrideRegisterOutput(hlim::Node_Register *reg, const DefaultBitVectorState &state)
+{
+	auto it = m_program.m_stateMapping.outputToOffset.find({.node = reg, .port = 0ull});
+	HCL_ASSERT(it != m_program.m_stateMapping.outputToOffset.end());
+	if (reg->overrideOutput(m_dataState.signalState, it->second, state)) {
+		m_stateNeedsReevaluating = true; // Only mark state as dirty if the value of the pin was actually changed.
+		m_callbackDispatcher.onSimProcOutputOverridden({.node=reg, .port=0}, state);
+	}
+}
+
 
 DefaultBitVectorState ReferenceSimulator::simProcGetValueOfOutput(const hlim::NodePort &nodePort)
 {

@@ -21,6 +21,7 @@
 
 #include "../hlim/coreNodes/Node_Pin.h"
 #include "../hlim/coreNodes/Node_Signal.h"
+#include "../hlim/coreNodes/Node_Register.h"
 #include "../hlim/supportNodes/Node_SignalTap.h"
 #include "../hlim/GraphTools.h"
 
@@ -49,6 +50,20 @@ void RunTimeSimulationContext::overrideSignal(const SigHandle &handle, const Def
 		pin = it->second;
 	HCL_DESIGNCHECK_HINT(pin != nullptr, "Only io pin outputs allow run time overrides, but none was found!");
 	m_simulator->simProcSetInputPin(pin, state);
+}
+
+void RunTimeSimulationContext::overrideRegister(const SigHandle &handle, const DefaultBitVectorState &state)
+{
+	if (state.size() == 0)
+		return;
+
+	auto *node = handle.getOutput().node;
+	if (dynamic_cast<hlim::Node_Signal*>(node))
+		node = node->getNonSignalDriver(0).node;
+
+	auto *reg = dynamic_cast<hlim::Node_Register*>(node);
+	HCL_DESIGNCHECK_HINT(reg != nullptr, "Trying to override register output, but the signal is not driven by a register.");
+	m_simulator->simProcOverrideRegisterOutput(reg, state);
 }
 
 void RunTimeSimulationContext::getSignal(const SigHandle &handle, DefaultBitVectorState &state)

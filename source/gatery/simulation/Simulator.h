@@ -39,6 +39,7 @@
 
 namespace gtry::hlim {
 	class Node_Pin;
+	class Node_Register;
 }
 
 namespace gtry::sim {
@@ -94,6 +95,7 @@ class Simulator
 		virtual void abort() = 0;
 
 		virtual void simProcSetInputPin(hlim::Node_Pin *pin, const DefaultBitVectorState &state) = 0;
+		virtual void simProcOverrideRegisterOutput(hlim::Node_Register *reg, const DefaultBitVectorState &state) = 0;
 		virtual DefaultBitVectorState simProcGetValueOfOutput(const hlim::NodePort &nodePort) = 0;
 
 		virtual bool outputOptimizedAway(const hlim::NodePort &nodePort) = 0;

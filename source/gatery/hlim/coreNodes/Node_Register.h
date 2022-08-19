@@ -60,6 +60,8 @@ namespace gtry::hlim {
 		virtual void simulateEvaluate(sim::SimulatorCallbacks& simCallbacks, sim::DefaultBitVectorState& state, const size_t* internalOffsets, const size_t* inputOffsets, const size_t* outputOffsets) const override;
 		virtual void simulateAdvance(sim::SimulatorCallbacks& simCallbacks, sim::DefaultBitVectorState& state, const size_t* internalOffsets, const size_t* outputOffsets, size_t clockPort) const override;
 
+		bool overrideOutput(sim::DefaultBitVectorState &state, size_t outputOffset, const sim::DefaultBitVectorState &newState);
+
 		void setClock(Clock* clk);
 
 		virtual std::string getTypeName() const override;
