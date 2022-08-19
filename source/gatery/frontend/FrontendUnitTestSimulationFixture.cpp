@@ -153,6 +153,7 @@ void ClockedTest::teardown()
 
 	try {
 		design.postprocess();
+		//design.getCircuit().postprocess(hlim::MinimalPostprocessing{});
 		runTest(m_timeout);
 	} catch (const std::exception& e) {
 		std::cerr << e.what() << std::endl;
