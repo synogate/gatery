@@ -20,6 +20,7 @@
 
 #include "SimulationContext.h"
 #include "../hlim/Node.h"
+#include "../hlim/coreNodes/Node_Register.h"
 
 namespace gtry::sim {
 
@@ -33,12 +34,18 @@ void SigHandle::operator=(std::uint64_t v)
 	if (width)
 		state.data(DefaultConfig::VALUE)[0] = v;
 
-	SimulationContext::current()->overrideSignal(*this, state);
+	if (m_overrideRegister)
+		SimulationContext::current()->overrideRegister(*this, state);
+	else
+		SimulationContext::current()->overrideSignal(*this, state);
 }
 
 void SigHandle::operator=(const DefaultBitVectorState &state)
 {
-	SimulationContext::current()->overrideSignal(*this, state);
+	if (m_overrideRegister)
+		SimulationContext::current()->overrideRegister(*this, state);
+	else
+		SimulationContext::current()->overrideSignal(*this, state);
 }
 
 void SigHandle::invalidate()
@@ -46,7 +53,10 @@ void SigHandle::invalidate()
 	auto width = m_output.node->getOutputConnectionType(m_output.port).width;
 	DefaultBitVectorState state;
 	state.resize(width);
-	SimulationContext::current()->overrideSignal(*this, state);
+	if (m_overrideRegister)
+		SimulationContext::current()->overrideRegister(*this, state);
+	else
+		SimulationContext::current()->overrideSignal(*this, state);
 }
 
 
@@ -112,7 +122,10 @@ void SigHandle::assign(const sim::BigInt &v)
 	state.setRange(DefaultConfig::DEFINED, 0, width);
 	sim::insertBigInt(state, 0, width, v);
 
-	SimulationContext::current()->overrideSignal(*this, state);
+	if (m_overrideRegister)
+		SimulationContext::current()->overrideRegister(*this, state);
+	else
+		SimulationContext::current()->overrideSignal(*this, state);
 }
 
 SigHandle::operator sim::BigInt () const
@@ -122,5 +135,13 @@ SigHandle::operator sim::BigInt () const
 }
 
 
+SigHandle SigHandle::drivingReg() const
+{
+	if (auto *reg = dynamic_cast<hlim::Node_Register*>(m_output.node)) {
+		return { reg->getNonSignalDriver(hlim::Node_Register::DATA), true };
+	} else {
+		return { m_output, true };
+	}
+}
 
 }

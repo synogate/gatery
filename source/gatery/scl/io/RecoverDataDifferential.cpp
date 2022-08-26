@@ -29,6 +29,8 @@ gtry::scl::VStream<gtry::UInt> gtry::scl::recoverDataDifferential(const gtry::Cl
 	const size_t samples = samplesRatio.numerator();
 	HCL_DESIGNCHECK_HINT(samples >= 3, "we need at least 3 samples per cycle to recover data");
 
+	ioP.resetValue('0');
+	ioN.resetValue('1');
 	// avoid meta stable inputs
 	Bit p = synchronize(ioP, signalClock, ClockScope::getClk(), 3, false);
 	Bit n = synchronize(ioN, signalClock, ClockScope::getClk(), 3, false);
@@ -43,9 +45,9 @@ gtry::scl::VStream<gtry::UInt> gtry::scl::recoverDataDifferential(const gtry::Cl
 		cat(n, p),
 		Valid{ phaseCounter.isLast() }
 	};
-	
+
 	// recover clock and shift sample point
-	IF(p != reg(p) | n != reg(n))
+	IF(p != reg(p, '1') | n != reg(n, '0'))
 	{
 		phaseCounter.load((samples + 1) / 2);
 		valid(out) = '0'; // prevent double sampling

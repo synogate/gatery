@@ -7,6 +7,8 @@ function GateryWorkspaceDefaults()
     flags { "MultiProcessorCompile" }
     cppdialect "c++latest"
 
+    defines { "_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING" }
+
     filter "configurations:Debug"
         runtime "Debug"
 
@@ -35,6 +37,7 @@ function GateryProjectDefaults()
 
     targetdir "%{wks.location}/bin/%{cfg.system}-%{cfg.architecture}-%{cfg.longname}"
     objdir "%{wks.location}/obj/%{cfg.system}-%{cfg.architecture}-%{cfg.longname}"
+    defines { "_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING" }
 
 end
 

@@ -21,7 +21,9 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
+#include <gatery/simulation/Simulator.h>
 #include <gatery/scl/io/codingNRZI.h>
+#include <gatery/scl/io/RecoverDataDifferential.h>
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -112,4 +114,158 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(clock.getClk(), 500);
+}
+
+
+
+void setup_recoverDataDifferential(hlim::ClockRational actualBusClockFrequency, size_t chipMultiplier, BoostUnitTestSimulationFixture &fixture)
+{
+	Clock clock({ 
+		.absoluteFrequency = 12'000'000*chipMultiplier,
+		.name = "clock",
+	});
+	ClockScope scp(clock);
+
+	Clock busClock({ 
+		.absoluteFrequency = 12'000'000,
+		.name = "busClock",
+	});
+	Clock actualBusClock({ 
+		.absoluteFrequency = actualBusClockFrequency,
+		.name = "actualBusClock",
+	});
+	{
+		ClockScope scp(actualBusClock);
+		Bit dummy;
+		dummy = reg(dummy);
+		pinOut(dummy);
+	}
+
+
+	Bit ioP, ioN;
+	{
+		ClockScope scp(busClock);
+		ioP = pinIn().setName("D_plus");
+		ioN = pinIn().setName("D_minus");
+	}
+
+	scl::VStream<gtry::UInt> stream = scl::recoverDataDifferential(busClock, ioP, ioN);
+
+	auto streamValid = scl::valid(stream);
+	pinOut(streamValid, "out_valid");
+	auto streamData = *stream;
+	pinOut(streamData, "out_data");
+
+	std::vector<std::pair<bool, bool>> dataStream;
+	std::mt19937 rng(1337);
+
+	// Generation
+	fixture.getSimulator().addSimulationProcess([actualBusClock, &dataStream, &rng, ioP, ioN]()->SimProcess{
+		std::uniform_real_distribution<float> randomBitDistribution(0.1f, 0.9f);
+		std::uniform_real_distribution<float> randomUniform(0.0f, 1.0f);
+		std::uniform_int_distribution<size_t> randomBurstLength(2, 7);
+
+		dataStream.clear();
+
+		// pseudo start bit sequence
+		simu(ioP) = '1';
+		simu(ioN) = '0';
+		co_await WaitClk(actualBusClock);
+		co_await WaitClk(actualBusClock);
+		co_await WaitClk(actualBusClock);
+
+		simu(ioP) = '0';
+		simu(ioN) = '1';
+		co_await WaitClk(actualBusClock);
+
+		while (true) {
+			float bitDist = randomBitDistribution(rng);
+			size_t burstLength = randomBurstLength(rng);
+			for ([[maybe_unused]] auto i : gtry::utils::Range(burstLength)) {
+
+				std::pair<bool, bool> beat = {
+					randomUniform(rng) > bitDist,
+					randomUniform(rng) < bitDist,
+				};
+
+				simu(ioP) = beat.first;
+				simu(ioN) = beat.second;
+				dataStream.push_back(beat);
+
+				co_await WaitClk(actualBusClock);
+			}
+			// Ensure a clock edge after every at most 6 bits
+			auto beat = dataStream.back();
+			beat.first = !beat.first;
+			beat.second = !beat.second;
+			simu(ioP) = beat.first;
+			simu(ioN) = beat.second;
+			dataStream.push_back(beat);
+
+			co_await WaitClk(actualBusClock);
+		}
+	});
+
+	// Verification
+	size_t numBeatsVerified = 0;
+	fixture.getSimulator().addSimulationProcess([&fixture, clock, &dataStream, streamValid, streamData, &numBeatsVerified]()->SimProcess{
+		numBeatsVerified = 0;
+
+		auto waitForStreamEqual = [&](size_t value)->SimProcess{
+			while (true) {
+				BOOST_TEST(simu(streamValid).defined());
+				if (simu(streamValid)) {
+					BOOST_TEST(simu(streamData).defined());
+					if (simu(streamData) == value)
+						break;
+				}
+				co_await WaitClk(clock);
+			}
+		};
+		// wait for pseudo start bit sequence
+		co_await waitForStreamEqual(1);
+		co_await waitForStreamEqual(2);
+		co_await WaitClk(clock);
+
+		while (true) {
+			BOOST_TEST(simu(streamValid).defined());
+			if (simu(streamValid)) {
+				BOOST_TEST(simu(streamData).defined());
+				BOOST_REQUIRE(numBeatsVerified < dataStream.size());
+
+				const auto &beat = dataStream[numBeatsVerified];
+				size_t beatUInt = (beat.first?1:0) | (beat.second?2:0);
+				BOOST_TEST(simu(streamData) == beatUInt);
+
+				numBeatsVerified++;
+			}
+			co_await WaitClk(clock);
+		}
+	});
+
+	fixture.getDesign().postprocess();
+
+	fixture.runFixedLengthTest(hlim::ClockRational{1'000, 12'000'000});
+
+	BOOST_TEST(numBeatsVerified > 900);
+}
+
+BOOST_FIXTURE_TEST_CASE(recoverDataDifferential_faster_3, BoostUnitTestSimulationFixture)
+{
+	setup_recoverDataDifferential({12'500'000,1}, 3, *this); // 12.5 MHz bus clock, 3x oversampling
+}
+
+BOOST_FIXTURE_TEST_CASE(recoverDataDifferential_slower_3, BoostUnitTestSimulationFixture)
+{
+	setup_recoverDataDifferential({11'500'000,1}, 3, *this); // 11.5 MHz bus clock, 3x oversampling
+}
+
+BOOST_FIXTURE_TEST_CASE(recoverDataDifferential_faster_10, BoostUnitTestSimulationFixture)
+{
+	setup_recoverDataDifferential({12'500'000,1}, 10, *this); // 12.5 MHz bus clock, 10x oversampling
+}
+
+BOOST_FIXTURE_TEST_CASE(recoverDataDifferential_slower_10, BoostUnitTestSimulationFixture)
+{
+	setup_recoverDataDifferential({11'500'000,1}, 10, *this); // 11.5 MHz bus clock, 10x oversampling
 }

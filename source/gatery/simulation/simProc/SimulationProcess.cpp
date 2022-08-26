@@ -36,4 +36,9 @@ void SimulationProcess::resume()
 		m_handle.resume();
 }
 
+SimulationProcess::Awaiter SimulationProcess::operator co_await() && noexcept
+{
+	return SimulationProcess::Awaiter{m_handle};
+}
+
 }

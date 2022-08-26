@@ -101,6 +101,15 @@ void Node_Register::simulateAdvance(sim::SimulatorCallbacks &simCallbacks, sim::
 			state.copyRange(outputOffsets[0], state, internalOffsets[INT_DATA], getOutputConnectionType(0).width);
 }
 
+bool Node_Register::overrideOutput(sim::DefaultBitVectorState &state, size_t outputOffset, const sim::DefaultBitVectorState &newState)
+{
+	HCL_ASSERT(newState.size() == getOutputConnectionType(0).width);
+	bool equal = state.compareRange(outputOffset, newState, 0, newState.size());
+	if (!equal)
+		state.copyRange(outputOffset, newState, 0, newState.size());
+	return !equal;
+}
+
 
 std::string Node_Register::getTypeName() const
 {

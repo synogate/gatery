@@ -1246,6 +1246,63 @@ void DefaultPostprocessing::run(Circuit &circuit) const
 }
 
 
+
+
+void MinimalPostprocessing::generalOptimization(Circuit& circuit) const
+{
+	Subnet subnet = Subnet::all(circuit);
+	circuit.disconnectZeroBitSignalNodes();
+	circuit.disconnectZeroBitOutputPins();
+	defaultValueResolution(circuit, subnet);
+	circuit.cullUnusedNodes(subnet); // Dirty way of getting rid of default nodes
+
+	subnet = Subnet::all(circuit);
+	resolveRetimingHints(circuit, subnet);
+
+	circuit.cullOrphanedSignalNodes();
+	circuit.cullUnnamedSignalNodes();
+	subnet = Subnet::all(circuit);
+	circuit.cullUnusedNodes(subnet);
+
+	attributeFusion(circuit);
+}
+
+void MinimalPostprocessing::memoryDetection(Circuit& circuit) const
+{
+	findMemoryGroups(circuit);
+	circuit.cullUnnamedSignalNodes();
+
+	Subnet subnet = Subnet::all(circuit);
+	circuit.cullUnusedNodes(subnet); // do again after memory group extraction with potential register retiming
+}
+
+void MinimalPostprocessing::exportPreparation(Circuit& circuit) const
+{
+	circuit.moveClockDriversToTop();
+	circuit.ensureSignalNodePlacement();
+	circuit.duplicateSignalsFeedingLowerAndHigherAreas();
+	circuit.inferSignalNames();
+}
+
+
+
+void MinimalPostprocessing::run(Circuit& circuit) const
+{
+	dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Running default postprocessing.");
+
+	generalOptimization(circuit);
+	memoryDetection(circuit);
+
+	TechnologyMapping mapping;
+	mapping.apply(circuit, circuit.getRootNodeGroup());
+
+	generalOptimization(circuit); // Because we ran frontend code for tech mapping
+
+	exportPreparation(circuit);
+}
+
+
+
 Node_Signal *Circuit::appendSignal(NodePort &nodePort)
 {
 	Node_Signal *sig = createNode<Node_Signal>();

@@ -151,12 +151,14 @@ void ClockedTest::teardown()
 {
 	m_clockScope.reset();
 
-	gtry::dbg::WebSocksInterface::create(1337);
 	try {
-		design.getCircuit().postprocess(gtry::hlim::DefaultPostprocessing{});
+		design.postprocess();
+		//design.getCircuit().postprocess(hlim::MinimalPostprocessing{});
 		runTest(m_timeout);
 	} catch (const std::exception& e) {
 		std::cerr << e.what() << std::endl;
+
+		gtry::dbg::WebSocksInterface::create(1337);
 		dbg::awaitDebugger();
 		dbg::stopInDebugger();
 	}

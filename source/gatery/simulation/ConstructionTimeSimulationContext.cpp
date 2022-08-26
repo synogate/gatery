@@ -38,6 +38,11 @@ void ConstructionTimeSimulationContext::overrideSignal(const SigHandle &handle, 
 	m_overrides[handle.getOutput()] = state;
 }
 
+void ConstructionTimeSimulationContext::overrideRegister(const SigHandle &handle, const DefaultBitVectorState &state)
+{
+	m_overrides[handle.getOutput()] = state;
+}
+
 void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, DefaultBitVectorState &state)
 {
 	// Basic idea: Find and copy the combinatorial subnet. Then optimize and execute the subnet to find the value.

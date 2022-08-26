@@ -31,6 +31,10 @@
 #include <queue>
 #include <list>
 
+namespace gtry::hlim {
+	class Node_Register;
+}
+
 namespace gtry::sim {
 
 struct ClockState {
@@ -196,6 +200,7 @@ class ReferenceSimulator : public Simulator
 		virtual void abort() override { m_abortCalled = true; }
 
 		virtual void simProcSetInputPin(hlim::Node_Pin *pin, const DefaultBitVectorState &state) override;
+		virtual void simProcOverrideRegisterOutput(hlim::Node_Register *reg, const DefaultBitVectorState &state) override;
 		virtual DefaultBitVectorState simProcGetValueOfOutput(const hlim::NodePort &nodePort) override;
 
 
