@@ -56,8 +56,8 @@ BOOST_FIXTURE_TEST_CASE(ReverseSyntax, BoostUnitTestSimulationFixture)
 
 	s1 <<= s0;
 	BOOST_TEST(s1.a == 1);
-	sim_assert(*s0.b == 3);
-	sim_assert(s1.c == 7);
+	sim_assert(*s0.b == 3) << "1";
+	sim_assert(s1.c == 7) << "2";
 
 	TestS s2 = std::move(s0);
 	TestS s3 = constructFrom(s2);
@@ -87,6 +87,72 @@ BOOST_FIXTURE_TEST_CASE(ReverseCopySyntax, BoostUnitTestSimulationFixture)
 
 	UpstreamSignal<TestS> u{ upstream(s0) };
 	upstream(s0) = u;
+}
+
+BOOST_FIXTURE_TEST_CASE(ReverseOfReverse, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	struct TestU
+	{
+		int d;
+		Reverse<UInt> e;
+		UInt f;
+	};
+
+	struct TestS
+	{
+		int a;
+		Reverse<TestU> b;
+		UInt c;
+	};
+
+	TestS s0{
+		.a = 1,
+		.b = TestU{
+			.d = 2,
+			.e = 3u, // downstream
+			.f = 5u, // upstream
+		},
+		.c = 7u, // downstream
+	};
+
+	UInt flat = pack(downstream(s0));
+	BOOST_TEST(flat.width() == 5_b);
+
+	TestS s1;
+	downstream(s1) = downstream(s0);
+	sim_assert(s1.c == 7) << "1";
+	sim_assert(*s1.b->e == 3) << "2";
+
+	upstream(s1) = upstream(s0);
+	sim_assert(s1.b->f == 5) << "3";
+
+	runEvalOnlyTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(ReverseChainUpstream, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+	Reverse<Reverse<Reverse<UInt>>> sig = 2_b;
+
+	UInt& sigRef = upstream(sig);
+	sigRef = 2u;
+	sim_assert(***sig == 2) << "1";
+
+	runEvalOnlyTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(ReverseChainDownstream, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+	Reverse<Reverse<Reverse<Reverse<UInt>>>> sig = 2_b;
+
+	UInt& sigRef = downstream(sig);
+	sigRef = 1u;
+	sim_assert(****sig == 1) << "1";
+
+	runEvalOnlyTest();
 }
 
 BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestOperators, optimizationLevels * data::xrange(1, 8), optimization, bitsize)
