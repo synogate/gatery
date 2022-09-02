@@ -136,6 +136,8 @@ namespace gtry::scl
 
 	void setFullByteEnableMask(TileLinkChannelA& a);
 	UInt transferLengthFromLogSize(const UInt& logSize, size_t numSymbolsPerBeat);
+
+	BVec responseOpCode(const TileLinkSignal auto& link);
 }
 
 // impl
@@ -223,6 +225,21 @@ namespace gtry::scl
 	{
 		auto [s, e] = seop(source);
 		return e.eop;
+	}
+
+	BVec responseOpCode(const TileLinkSignal auto& link)
+	{
+		BVec op = 3_b;
+		op = (size_t)TileLinkD::AccessAckData;
+
+		IF(link.a->opcode(1, 2_b) == 0) // PutFull & PuPartial
+			op = (size_t)TileLinkD::AccessAck;
+
+		if(link.capability<TileLinkCapHint>())
+			IF(link.a->opcode == (size_t)TileLinkA::Intent)
+				op = (size_t)TileLinkD::HintAck;
+
+		return op;
 	}
 
 	extern template struct Stream<TileLinkA, Ready, Valid>;
