@@ -59,8 +59,10 @@ namespace gtry::scl
 		UInt size;
 		UInt source;
 		UInt address;
+		BVec mask;
+		BVec data;
 	};
-	using TileLinkChannelA = RvStream<BVec, TileLinkA, ByteEnable>;
+	using TileLinkChannelA = RvStream<TileLinkA>;
 
 	struct TileLinkD
 	{
@@ -78,21 +80,18 @@ namespace gtry::scl
 		UInt size;
 		UInt source;
 		UInt sink;
+		BVec data;
+		Bit error;
 	};
-	using TileLinkChannelD = RvStream<BVec, TileLinkD, Error>;
+	using TileLinkChannelD = RvStream<TileLinkD>;
 
 	template<class... Capability>
 	struct TileLinkU
 	{
 		BOOST_HANA_DEFINE_STRUCT(TileLinkU,
 			(TileLinkChannelA, a),
-			(TileLinkChannelD, d)
+			(Reverse<TileLinkChannelD>, d)
 		);
-
-		TileLinkA& chanA() { return a.template get<TileLinkA>(); }
-		const TileLinkA& chanA() const { return a.template get<TileLinkA>(); }
-		TileLinkD& chanD() { return d.template get<TileLinkD>(); }
-		const TileLinkD& chanD() const { return d.template get<TileLinkD>(); }
 
 		template<class T>
 		static constexpr bool capability();
@@ -115,10 +114,6 @@ namespace gtry::scl
 	using TileLinkUL = TileLinkU<>;
 	using TileLinkUH = TileLinkU<TileLinkCapBurst, TileLinkCapHint, TileLinkCapAtomicArith, TileLinkCapAtomicLogic>;
 
-	template<class... Cap>
-	void connect(TileLinkU<Cap...>& lhs, TileLinkU<Cap...>& rhs);
-
-
 	template<StreamSignal T>
 	requires(T::template has<TileLinkA>())
 	UInt transferLength(const T& source);
@@ -129,15 +124,18 @@ namespace gtry::scl
 
 	template<StreamSignal T>
 	requires requires (T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
-	std::tuple<Sop, Eop> seop(T& source);
+	std::tuple<Sop, Eop> seop(const T& source);
 
 	template<StreamSignal T>
 	requires requires (T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
-	Bit sop(T& source);
+	Bit sop(const T& source);
 
 	template<StreamSignal T>
 	requires requires (T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
-	Bit eop(T& source);
+	Bit eop(const T& source);
+
+	void setFullByteEnableMask(TileLinkChannelA& a);
+	UInt transferLengthFromLogSize(const UInt& logSize, size_t numSymbolsPerBeat);
 }
 
 // impl
@@ -152,50 +150,12 @@ namespace gtry::scl
 		return false;
 	}
 
-	template<class ...Cap>
-	void connect(TileLinkU<Cap...>& lhs, TileLinkU<Cap...>& rhs)
-	{
-		HCL_DESIGNCHECK(lhs.a->width() == rhs.a->width());
-		HCL_DESIGNCHECK(lhs.d->width() == rhs.d->width());
-		HCL_DESIGNCHECK(lhs.chanA().address.width() == rhs.chanA().address.width());
-		HCL_DESIGNCHECK(byteEnable(lhs.a).width() == byteEnable(rhs.a).width());
-
-		lhs.a <<= rhs.a;
-		rhs.d <<= lhs.d;
-	}
-
-	inline void setFullByteEnableMask(TileLinkChannelA& a)
-	{
-		BVec& be = byteEnable(a);
-		be = (BVec)sext(1);
-
-		const UInt& size = a.template get<TileLinkA>().size;
-		const UInt& offset = a.template get<TileLinkA>().address(0, BitWidth::count(be.width().bits()));
-		for (size_t i = 0; (1ull << i) < be.width().bits(); i++)
-		{
-			IF(size == i)
-			{
-				be = (BVec)zext(0);
-				be(offset, BitWidth{ 1ull << i }) = (BVec)sext(1);
-			}
-		}
-	}
-
-	inline UInt transferLengthFromLogSize(const UInt& logSize, size_t numSymbolsPerBeat)
-	{
-		BitWidth beatWidth = BitWidth::count(numSymbolsPerBeat);
-		UInt size = decoder(logSize);
-		UInt beats = size.upper(size.width() - beatWidth);
-		beats.lsb() |= size.lower(beatWidth) != 0;
-		return beats;
-	}
-
 	template<StreamSignal T>
 	requires(T::template has<TileLinkA>())
 	UInt transferLength(const T& source)
 	{
-		UInt len = transferLengthFromLogSize(source.template get<TileLinkA>().size, byteEnable(source).width().bits());
-		IF(source.template get<TileLinkA>().opcode.upper(2_b) != 0)
+		UInt len = transferLengthFromLogSize(source->size, source->mask.width().bits());
+		IF(source->opcode.upper(2_b) != 0)
 			len = 1; // only puts are multi beat
 		return len;
 	}
@@ -204,15 +164,15 @@ namespace gtry::scl
 	requires(T::template has<TileLinkD>())
 	UInt transferLength(const T& source)
 	{
-		UInt len = transferLengthFromLogSize(source.template get<TileLinkD>().size, byteEnable(source).width().bits());
-		IF(!source.template get<TileLinkD>().opcode.lsb())
+		UInt len = transferLengthFromLogSize(source->size, (source->data.width() / 8).bits());
+		IF(!source->opcode.lsb())
 			len = 1; // only data responses are multi beat
 		return len;
 	}
 
 	template<StreamSignal T>
 	requires requires (T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
-	std::tuple<Sop, Eop> seop(T& source)
+	std::tuple<Sop, Eop> seop(const T& source)
 	{
 		auto scope = Area{ "scl_seop" }.enter();
 
@@ -250,8 +210,8 @@ namespace gtry::scl
 	}
 
 	template<StreamSignal T>
-	requires requires (T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
-	Bit sop(T& source)
+	requires requires (const T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
+	Bit sop(const T& source)
 	{
 		auto [s, e] = seop(source);
 		return s.sop;
@@ -259,13 +219,51 @@ namespace gtry::scl
 
 	template<StreamSignal T>
 	requires requires (T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
-	Bit eop(T& source)
+	Bit eop(const T& source)
 	{
 		auto [s, e] = seop(source);
 		return e.eop;
 	}
 
+	extern template struct Stream<TileLinkA, Ready, Valid>;
+	extern template struct Stream<TileLinkD, Ready, Valid>;
+	extern template class Reverse<TileLinkChannelD>;
+
+	extern template UInt transferLength(const TileLinkChannelA&);
+	extern template UInt transferLength(const TileLinkChannelD&);
+	extern template std::tuple<Sop, Eop> seop(const TileLinkChannelA&);
+	extern template std::tuple<Sop, Eop> seop(const TileLinkChannelD&);
+	extern template Bit sop(const TileLinkChannelA&);
+	extern template Bit sop(const TileLinkChannelD&);
+	extern template Bit eop(const TileLinkChannelA&);
+	extern template Bit eop(const TileLinkChannelD&);
 }
 
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkA, opcode, param, size, source, address);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkD, opcode, size, source);
+namespace gtry 
+{
+	extern template void connect(scl::TileLinkUL&, scl::TileLinkUL&);
+	extern template void connect(scl::TileLinkUH&, scl::TileLinkUH&);
+	extern template void connect(scl::TileLinkChannelA&, scl::TileLinkChannelA&);
+	extern template void connect(scl::TileLinkChannelD&, scl::TileLinkChannelD&);
+
+	extern template auto upstream(scl::TileLinkUL&);
+	extern template auto upstream(scl::TileLinkUH&);
+	extern template auto upstream(scl::TileLinkChannelA&);
+	extern template auto upstream(scl::TileLinkChannelD&);
+	extern template auto upstream(const scl::TileLinkUL&);
+	extern template auto upstream(const scl::TileLinkUH&);
+	extern template auto upstream(const scl::TileLinkChannelA&);
+	extern template auto upstream(const scl::TileLinkChannelD&);
+
+	extern template auto downstream(scl::TileLinkUL&);
+	extern template auto downstream(scl::TileLinkUH&);
+	extern template auto downstream(scl::TileLinkChannelA&);
+	extern template auto downstream(scl::TileLinkChannelD&);
+	extern template auto downstream(const scl::TileLinkUL&);
+	extern template auto downstream(const scl::TileLinkUH&);
+	extern template auto downstream(const scl::TileLinkChannelA&);
+	extern template auto downstream(const scl::TileLinkChannelD&);
+}
+
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkA, opcode, param, size, source, address, mask, data);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkD, opcode, size, source, data, error);

@@ -33,48 +33,46 @@ using namespace gtry::scl;
 template<TileLinkSignal TLink>
 void initTileLink(TLink& link, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth)
 {
-	*link.a = dataWidth;
-	link.chanA().size = sizeWidth;
-	link.chanA().source = sourceWidth;
-	link.chanA().address = addrWidth;
-	byteEnable(link.a) = dataWidth / 8;
+	link.a->size = sizeWidth;
+	link.a->source = sourceWidth;
+	link.a->address = addrWidth;
+	link.a->mask = dataWidth / 8;
+	link.a->data = dataWidth;
 
-	*link.d = dataWidth;
-	link.chanD().size = sizeWidth;
-	link.chanD().source = sourceWidth;
-	link.chanD().sink = sourceWidth;
+	(*link.d)->data = dataWidth;
+	(*link.d)->size = sizeWidth;
+	(*link.d)->source = sourceWidth;
+	(*link.d)->sink = sourceWidth;
 }
 
 template<TileLinkSignal TLink = TileLinkUL>
 class TileLinkSimuInitiator : public std::enable_shared_from_this<TileLinkSimuInitiator<TLink>>
 {
 public:
-	TileLinkSimuInitiator(BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth, std::string prefix = "initiator_")
+	TileLinkSimuInitiator(BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth, std::string prefix = "initiator")
 	{
 		initTileLink(m_link, addrWidth, dataWidth, sizeWidth, sourceWidth);
-
-		pinIn(m_link.a, prefix + "A");
-		pinOut(m_link.d, prefix + "D");
+		pinIn(m_link, prefix);
 	}
 
 	void issueCommand(TileLinkA::OpCode code, uint64_t address, uint64_t data, uint64_t size, uint64_t source = 0)
 	{
-		simu(m_link.chanA().opcode) = (uint64_t)code;
-		simu(m_link.chanA().param) = 0;
-		simu(m_link.chanA().size) = size;
-		simu(m_link.chanA().source) = source;
-		simu(m_link.chanA().address) = address;
-		simu(*m_link.a) = data;
+		simu(m_link.a->opcode) = (uint64_t)code;
+		simu(m_link.a->param) = 0;
+		simu(m_link.a->size) = size;
+		simu(m_link.a->source) = source;
+		simu(m_link.a->address) = address;
+		simu(m_link.a->data) = data;
 
 		const uint64_t numBytes = 1ull << size;
-		const uint64_t bytesPerBeat = byteEnable(m_link.a).width().bits();
+		const uint64_t bytesPerBeat = m_link.a->mask.width().bits();
 
 		uint64_t mask;
 		if (numBytes >= bytesPerBeat)
 			mask = gtry::utils::bitMaskRange(0, bytesPerBeat);
 		else
 			mask = gtry::utils::bitMaskRange(address & (numBytes - 1), numBytes);
-		simu(byteEnable(m_link.a)) = mask;
+		simu(m_link.a->mask) = mask;
 	}
 
 	TLink& link() { return m_link; }
@@ -87,15 +85,11 @@ template<TileLinkSignal TLink = TileLinkUL>
 class TileLinkSimuTarget : public std::enable_shared_from_this<TileLinkSimuTarget<TLink>>
 {
 public:
-	TileLinkSimuTarget(BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth, std::string prefix = "target_")
+	TileLinkSimuTarget(BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth, std::string prefix = "target")
 	{
 		initTileLink(m_link, addrWidth, dataWidth, sizeWidth, sourceWidth);
-
-		pinOut(m_link.a, prefix + "A");
-		pinIn(m_link.d, prefix + "D");
+		pinOut(m_link, prefix);
 	}
-
-	
 
 	TLink& link() { return m_link; }
 private:
@@ -110,6 +104,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_dummy_test, BoostUnitTestSimulationFixture)
 
 	TileLinkUH uh;
 	TileLinkUL ul;
+	downstream(uh);
 
 	addSimulationProcess([&]()->SimProcess {
 		co_await WaitClk(clock);
@@ -135,7 +130,9 @@ BOOST_FIXTURE_TEST_CASE(tilelink_demux_test, BoostUnitTestSimulationFixture)
 	demux.generate();
 
 	addSimulationProcess([=]()->SimProcess {
-		simu(ready(initiator->link().d)) = 0;
+		//simu(ready(target->link().a)) = 0;
+
+		simu(ready(*initiator->link().d)) = 0;
 		initiator->issueCommand(TileLinkA::PutFullData, 0, 0, 1);
 
 		co_await WaitClk(clock);
@@ -143,7 +140,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_demux_test, BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	//dbg::vis();
+	dbg::vis();
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(clock.getClk(), 16);
 }

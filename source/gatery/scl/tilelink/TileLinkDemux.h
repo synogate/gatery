@@ -65,7 +65,7 @@ namespace gtry::scl
 		auto scope = m_area.enter();
 		HCL_DESIGNCHECK(!m_generated);
 		HCL_DESIGNCHECK_HINT(m_sourceAttached, "attach source first");
-		HCL_DESIGNCHECK_HINT(sink.chanA().source.width() >= m_source.chanA().source.width(), "source width too small");
+		HCL_DESIGNCHECK_HINT(sink.a->source.width() >= m_source.a->source.width(), "source width too small");
 
 		for (const Sink& s : m_sink)
 			HCL_DESIGNCHECK_HINT(s.address != addressBase || s.addressBits != addressBits, "address conflict");
@@ -99,7 +99,7 @@ namespace gtry::scl
 		HCL_NAMED(m_source);
 		HCL_NAMED(m_sink);
 
-		const UInt& addr = m_source.chanA().address;
+		const UInt& addr = m_source.a->address;
 
 		// connect channel A
 		ready(m_source.a) = '0';
@@ -117,8 +117,8 @@ namespace gtry::scl
 		// connect channel D
 		StreamArbiter<TileLinkChannelD, TArbiterPolicy> arbiter;
 		for (Sink& s : m_sink)
-			arbiter.attach(s.bus.d);
-		m_source.d <<= arbiter.out();
+			arbiter.attach(*s.bus.d);
+		*m_source.d <<= arbiter.out();
 		arbiter.generate();
 	}
 }

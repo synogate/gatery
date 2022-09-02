@@ -238,11 +238,11 @@ public:
 
 	void setupLink(BitWidth addrWidth = 23_b, BitWidth sizeWidth = 2_b, BitWidth sourceWidth = 4_b, BitWidth dataWidth = 16_b)
 	{
-		link.chanA().address = addrWidth;
-		link.chanA().size = sizeWidth;
-		link.chanA().source = sourceWidth;
-		*link.a = dataWidth;
-		byteEnable(link.a) = dataWidth / 8;
+		link.a->address = addrWidth;
+		link.a->size = sizeWidth;
+		link.a->source = sourceWidth;
+		link.a->mask = dataWidth / 8;
+		link.a->data = dataWidth;
 	
 		pinIn(link, "link");
 		setFullByteEnableMask(link.a);
@@ -256,31 +256,24 @@ public:
 
 	void issueRead(size_t address, size_t size, size_t tag = 0)
 	{
-		scl::TileLinkA& a = link.chanA();
-
-		simu(a.opcode) = scl::TileLinkA::Get;
-		simu(a.param) = 0;
-		simu(a.address) = address;
-		simu(a.size) = gtry::utils::Log2C(size);
-		simu(a.source) = tag;
-
-		simu(*link.a).invalidate();
-		//simu(byteEnable(link.a)) = 1;
+		simu(link.a->opcode) = scl::TileLinkA::Get;
+		simu(link.a->param) = 0;
+		simu(link.a->address) = address;
+		simu(link.a->size) = gtry::utils::Log2C(size);
+		simu(link.a->source) = tag;
+		simu(link.a->mask) = link.a->mask.width().mask();
+		simu(link.a->data).invalidate();
 
 		simu(valid(link.a)) = 1;
 	}
 
 	void issueWrite(size_t address, size_t byteSize, size_t tag = 0)
 	{
-		scl::TileLinkA& a = link.chanA();
-
-		simu(a.opcode) = scl::TileLinkA::PutFullData;
-		simu(a.param) = 0;
-		simu(a.address) = address;
-		simu(a.size) = gtry::utils::Log2C(byteSize);
-		simu(a.source) = tag;
-
-		//simu(byteEnable(link.a)) = 1;
+		simu(link.a->opcode) = scl::TileLinkA::PutFullData;
+		simu(link.a->param) = 0;
+		simu(link.a->address) = address;
+		simu(link.a->size) = gtry::utils::Log2C(byteSize);
+		simu(link.a->source) = tag;
 
 		simu(valid(link.a)) = 1;
 	}
@@ -315,7 +308,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_bank_controller_burst_test, SdramControllerTest)
 
 		for (size_t i = 0; i < 4; ++i)
 		{
-			simu(*link.a) = i * 2 | (i * 2 + 1 << 8);
+			simu(link.a->data) = i * 2 | ((i * 2 + 1) << 8);
 			while (!transfer(link.a))
 				co_await WaitClk(clock());
 			co_await WaitClk(clock());
@@ -342,12 +335,12 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_init_test, SdramControllerTest)
 	addSimulationProcess([=]()->SimProcess {
 		co_await WaitClk(clock());
 		issueWrite(0, 4, 1);
-		simu(*link.a) = 0xCDCD;
+		simu(link.a->data) = 0xCDCD;
 
 		while (!transfer(link.a))
 			co_await WaitClk(clock());
 		co_await WaitClk(clock());
-		simu(*link.a) = 0xCECE;
+		simu(link.a->data) = 0xCECE;
 		while (!transfer(link.a))
 			co_await WaitClk(clock());
 		co_await WaitClk(clock());
