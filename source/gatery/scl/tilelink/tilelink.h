@@ -185,7 +185,7 @@ namespace gtry::scl
 		Bit start;
 		IF(transfer(source))
 		{
-			sim_assert(size != 0) << "what is a zero length packet?";
+			//sim_assert(size != 0) << "what is a zero length packet?";
 			start = '0';
 			beatCounter = beatCounterNext;
 		}
@@ -266,4 +266,4 @@ namespace gtry
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkA, opcode, param, size, source, address, mask, data);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkD, opcode, size, source, data, error);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkD, opcode, param, size, source, sink, data, error);

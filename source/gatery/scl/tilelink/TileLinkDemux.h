@@ -72,7 +72,7 @@ namespace gtry::scl
 
 		Sink& s = m_sink.emplace_back();
 		s.bus = constructFrom(sink);
-		s.bus <<= sink;
+		sink <<= s.bus;
 		s.address = addressBase;
 		s.addressBits = addressBits;
 	}
@@ -107,7 +107,7 @@ namespace gtry::scl
 		{
 			downstream(s.bus.a) = downstream(m_source.a);
 			valid(s.bus.a) = '0';
-			IF(addr.upper(addr.width() - s.addressBits) == s.address >> s.addressBits)
+			IF(valid(m_source.a) & addr.upper(addr.width() - s.addressBits) == s.address >> s.addressBits)
 			{
 				valid(s.bus.a) = '1';
 				upstream(m_source.a) = upstream(s.bus.a);
@@ -122,4 +122,3 @@ namespace gtry::scl
 		arbiter.generate();
 	}
 }
-
