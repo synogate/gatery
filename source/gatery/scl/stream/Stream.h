@@ -297,9 +297,11 @@ namespace gtry::scl
 	template<Signal PayloadT, Signal ...Meta>
 	inline auto Stream<PayloadT, Meta...>::transform(std::invocable<Payload> auto&& fun)
 	{
+		using gtry::connect;
+
 		auto&& result = std::invoke(fun, data);
 		Stream<std::remove_cvref_t<decltype(result)>, Meta...> ret;
-		ret.data <<= result;
+		connect(ret.data, result);
 		ret._sig <<= _sig;
 		return ret;
 	}
@@ -319,7 +321,7 @@ namespace gtry::scl
 	inline T Stream<PayloadT, Meta...>::reduceTo()
 	{
 		T ret;
-		ret.data <<= data;
+		connect(ret.data, data);
 
 		std::apply([&](auto&... meta) {
 			((meta <<= std::get<std::remove_cvref_t<decltype(meta)>>(_sig)), ...);
@@ -571,9 +573,7 @@ namespace gtry {
 					, ...);
 			}, a._sig);
 
-			v.enter("data");
 			VisitCompound<typename T::Payload>{}(a.data, b.data, v, flags);
-			v.leave();
 		}
 
 		void operator () (T& a, CompoundVisitor& v)
@@ -582,9 +582,7 @@ namespace gtry {
 				(VisitCompound<std::remove_reference_t<decltype(meta)>>{}(meta, v), ...);
 			}, a._sig);
 
-			v.enter("data");
 			VisitCompound<typename T::Payload>{}(a.data, v);
-			v.leave();
 		}
 
 		void operator () (const T& a, const T& b, CompoundVisitor& v)
@@ -595,9 +593,7 @@ namespace gtry {
 					, ...);
 			}, a._sig);
 
-			v.enter("data");
 			VisitCompound<typename T::Payload>{}(a.data, b.data, v);
-			v.leave();
 		}
 	};
 }

@@ -227,6 +227,6 @@ namespace gtry
 	concept Connectable = requires(Ta & a, Tb & b) { connect(a, b); };
 
 	template<class Ta, class Tb>
-	requires Connectable<Ta, Tb>
+	requires (Connectable<Ta, Tb> and not BaseSignal<Ta>)
 	Ta& operator <<= (Ta& lhs, Tb& rhs) { connect(lhs, rhs); return lhs; }
 }
