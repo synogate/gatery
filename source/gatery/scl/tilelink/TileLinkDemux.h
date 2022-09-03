@@ -33,7 +33,7 @@ namespace gtry::scl
 		};
 	public:
 		virtual void attachSource(TLink& source);
-		virtual void attachSink(TLink& sink, uint64_t addressBase, size_t addressBits);
+		virtual void attachSink(TLink& sink, uint64_t addressBase);
 
 		const TLink& source() const;
 
@@ -60,7 +60,7 @@ namespace gtry::scl
 	}
 
 	template<TileLinkSignal TLink>
-	inline void gtry::scl::TileLinkDemux<TLink>::attachSink(TLink& sink, uint64_t addressBase, size_t addressBits)
+	inline void gtry::scl::TileLinkDemux<TLink>::attachSink(TLink& sink, uint64_t addressBase)
 	{
 		auto scope = m_area.enter();
 		HCL_DESIGNCHECK(!m_generated);
@@ -68,13 +68,13 @@ namespace gtry::scl
 		HCL_DESIGNCHECK_HINT(sink.a->source.width() >= m_source.a->source.width(), "source width too small");
 
 		for (const Sink& s : m_sink)
-			HCL_DESIGNCHECK_HINT(s.address != addressBase || s.addressBits != addressBits, "address conflict");
+			HCL_DESIGNCHECK_HINT(s.address != addressBase || s.addressBits != sink.a->address.width().bits(), "address conflict");
 
 		Sink& s = m_sink.emplace_back();
 		s.bus = constructFrom(sink);
 		sink <<= s.bus;
 		s.address = addressBase;
-		s.addressBits = addressBits;
+		s.addressBits = sink.a->address.width().bits();
 	}
 
 	template<TileLinkSignal TLink>
@@ -103,16 +103,31 @@ namespace gtry::scl
 
 		// connect channel A
 		ready(m_source.a) = '0';
+		Bit handled = '0';
 		for (Sink& s : m_sink)
 		{
-			downstream(s.bus.a) = downstream(m_source.a);
+			const TileLinkA& master = *m_source.a;
+			TileLinkA& slave = *s.bus.a;
+			slave.opcode = master.opcode;
+			slave.param = master.param;
+			slave.size = master.size;
+			slave.source = master.source;
+			slave.address = master.address.lower(slave.address.width());
+			slave.mask = master.mask;
+			slave.data = master.data;
+
 			valid(s.bus.a) = '0';
-			IF(valid(m_source.a) & addr.upper(addr.width() - s.addressBits) == s.address >> s.addressBits)
+
+			Bit match = addr.upper(addr.width() - s.addressBits) == s.address >> s.addressBits;
+			IF(match & !handled)
 			{
-				valid(s.bus.a) = '1';
+				// TODO: change handled to check possible conflicts only and not all slaves
+				handled = '1';
+				valid(s.bus.a) = valid(m_source.a);
 				upstream(m_source.a) = upstream(s.bus.a);
 			}
 		}
+		HCL_NAMED(handled);
 
 		// connect channel D
 		StreamArbiter<TileLinkChannelD, TArbiterPolicy> arbiter;

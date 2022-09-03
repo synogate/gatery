@@ -134,11 +134,11 @@ BOOST_FIXTURE_TEST_CASE(tilelink_demux_chanA_test, BoostUnitTestSimulationFixtur
 	ClockScope clkScp(clock);
 
 	auto initiator = std::make_shared<TileLinkSimuInitiator<>>(8_b, 16_b, 4_b, 4_b);
-	auto target = std::make_shared<TileLinkSimuTarget<>>(8_b, 16_b, 4_b, 4_b);
+	auto target = std::make_shared<TileLinkSimuTarget<>>(4_b, 16_b, 4_b, 4_b);
 
 	TileLinkDemux<TileLinkUL> demux;
 	demux.attachSource(initiator->link());
-	demux.attachSink(target->link(), 0, 4);
+	demux.attachSink(target->link(), 0);
 	demux.generate();
 
 	addSimulationProcess([=]()->SimProcess {
@@ -183,11 +183,11 @@ BOOST_FIXTURE_TEST_CASE(tilelink_demux_chanD_test, BoostUnitTestSimulationFixtur
 	ClockScope clkScp(clock);
 
 	auto initiator = std::make_shared<TileLinkSimuInitiator<>>(8_b, 16_b, 4_b, 4_b);
-	auto target = std::make_shared<TileLinkSimuTarget<>>(8_b, 16_b, 4_b, 4_b);
+	auto target = std::make_shared<TileLinkSimuTarget<>>(4_b, 16_b, 4_b, 4_b);
 
 	TileLinkDemux<TileLinkUL> demux;
 	demux.attachSource(initiator->link());
-	demux.attachSink(target->link(), 0, 4);
+	demux.attachSink(target->link(), 0);
 	demux.generate();
 
 	addSimulationProcess([=]()->SimProcess {
@@ -234,43 +234,48 @@ BOOST_FIXTURE_TEST_CASE(tilelink_demux_chanA_routing_test, BoostUnitTestSimulati
 	ClockScope clkScp(clock);
 
 	auto initiator = std::make_shared<TileLinkSimuInitiator<>>(12_b, 16_b, 4_b, 4_b);
-	auto target0 = std::make_shared<TileLinkSimuTarget<>>(12_b, 16_b, 4_b, 4_b, "target0");
-	auto target1 = std::make_shared<TileLinkSimuTarget<>>(12_b, 16_b, 4_b, 4_b, "target1");
+	auto target0 = std::make_shared<TileLinkSimuTarget<>>(4_b, 16_b, 4_b, 4_b, "target0");
+	auto target1 = std::make_shared<TileLinkSimuTarget<>>(8_b, 16_b, 4_b, 4_b, "target1");
+	auto target2 = std::make_shared<TileLinkSimuTarget<>>(2_b, 16_b, 4_b, 4_b, "target2");
 
 	TileLinkDemux<TileLinkUL> demux;
 	demux.attachSource(initiator->link());
-	demux.attachSink(target0->link(), 0x000, 4);
-	demux.attachSink(target1->link(), 0x100, 8);
+	demux.attachSink(target0->link(), 0x000);
+	demux.attachSink(target2->link(), 0x000);
+	demux.attachSink(target1->link(), 0x100);
 	demux.generate();
 
 	addSimulationProcess([=]()->SimProcess {
 
-		auto& iniA = initiator->link().a;
-		auto& iniD = *initiator->link().d;
-		auto& tgt0A = target0->link().a;
-		auto& tgt0D = *target0->link().d;
-		auto& tgt1A = target1->link().a;
-		auto& tgt1D = *target1->link().d;
-
-		simu(valid(iniA)) = 1;
-		simu(ready(tgt0A)) = 1;
-		simu(ready(tgt1A)) = 1;
+		simu(valid(initiator->link().a)) = 1;
+		simu(ready(target0->link().a)) = 1;
+		simu(ready(target1->link().a)) = 1;
+		simu(ready(target2->link().a)) = 1;
 		co_await WaitClk(clock);
 
 		initiator->issueCommand(TileLinkA::PutFullData, 0, 0, 1);
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(tgt0A)) == 1);
-		BOOST_TEST(simu(valid(tgt1A)) == 0);
+		BOOST_TEST(simu(valid(target0->link().a)) == 0);
+		BOOST_TEST(simu(valid(target1->link().a)) == 0);
+		BOOST_TEST(simu(valid(target2->link().a)) == 1);
+
+		initiator->issueCommand(TileLinkA::PutFullData, 4, 0, 1);
+		co_await WaitClk(clock);
+		BOOST_TEST(simu(valid(target0->link().a)) == 1);
+		BOOST_TEST(simu(valid(target1->link().a)) == 0);
+		BOOST_TEST(simu(valid(target2->link().a)) == 0);
 
 		initiator->issueCommand(TileLinkA::PutFullData, 16, 0, 1);
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(tgt0A)) == 0);
-		BOOST_TEST(simu(valid(tgt1A)) == 0);
+		BOOST_TEST(simu(valid(target0->link().a)) == 0);
+		BOOST_TEST(simu(valid(target1->link().a)) == 0);
+		BOOST_TEST(simu(valid(target2->link().a)) == 0);
 
 		initiator->issueCommand(TileLinkA::PutFullData, 256, 0, 1);
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(tgt0A)) == 0);
-		BOOST_TEST(simu(valid(tgt1A)) == 1);
+		BOOST_TEST(simu(valid(target0->link().a)) == 0);
+		BOOST_TEST(simu(valid(target1->link().a)) == 1);
+		BOOST_TEST(simu(valid(target2->link().a)) == 0);
 
 		stopTest();
 	});
