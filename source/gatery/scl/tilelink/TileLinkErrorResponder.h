@@ -18,13 +18,46 @@
 #pragma once
 #include <gatery/frontend.h>
 #include "tilelink.h"
+#include "../Counter.h"
 
 namespace gtry::scl
 {
 	template<TileLinkSignal TLink>
-	TLink tileLinkErrorResponder();
+	void tileLinkErrorResponder(TLink& link)
+	{
+		Area ent{ "scl_tileLinkErrorResponder", true };
 
-	extern template TileLinkUL tileLinkErrorResponder();
-	extern template TileLinkUH tileLinkErrorResponder();
+		auto& d = *link.d;
+		valid(d) = valid(link.a);
+		d->opcode = responseOpCode(link);
+		d->param = 0;
+		d->size = link.a->size;
+		d->source = link.a->source;
+		d->sink = 0;
+		d->data = ConstBVec(link.a->data.width());
 
+		if (!link.capability<TileLinkCapBurst>())
+		{
+			d->error = '1';
+			ready(link.a) = ready(d);
+		}
+		else
+		{
+			UInt len = transferLength(d);
+			HCL_NAMED(len);
+
+			scl::Counter beatCounter{ len };
+
+			d->error = '0';
+			IF(transfer(d))
+				beatCounter.inc();
+			
+			ready(link.a) = '0';
+			IF(beatCounter.isLast())
+			{
+				d->error = '1';
+				ready(link.a) = ready(d);
+			}
+		}
+	}
 }

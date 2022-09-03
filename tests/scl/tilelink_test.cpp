@@ -25,6 +25,7 @@
 
 #include <gatery/scl/tilelink/tilelink.h>
 #include <gatery/scl/tilelink/TileLinkDemux.h>
+#include <gatery/scl/tilelink/TileLinkErrorResponder.h>
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -277,3 +278,59 @@ BOOST_FIXTURE_TEST_CASE(tilelink_demux_chanA_routing_test, BoostUnitTestSimulati
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(clock.getClk(), 16);
 }
+
+BOOST_FIXTURE_TEST_CASE(tilelink_errorResponder_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	auto initiator = std::make_shared<TileLinkSimuInitiator<>>(12_b, 16_b, 4_b, 4_b);
+
+	scl::tileLinkErrorResponder(initiator->link());
+
+	addSimulationProcess([=]()->SimProcess {
+
+		auto& iniA = initiator->link().a;
+		auto& iniD = *initiator->link().d;
+
+		simu(valid(iniA)) = 0;
+		simu(ready(iniD)) = 0;
+		co_await WaitClk(clock);
+
+		initiator->issueCommand(TileLinkA::PutFullData, 0, 0, 1);
+		co_await WaitClk(clock);
+		BOOST_TEST(simu(valid(iniD)) == 0);
+		BOOST_TEST(simu(ready(iniA)) == 0);
+		
+		simu(valid(iniA)) = 1;
+		co_await WaitClk(clock);
+		BOOST_TEST(simu(valid(iniD)) == 1);
+		BOOST_TEST(simu(ready(iniA)) == 0);
+		BOOST_TEST(simu(iniD->opcode) == (size_t)TileLinkD::AccessAck);
+		BOOST_TEST(simu(iniD->param) == 0);
+		BOOST_TEST(simu(iniD->size) == 1);
+		BOOST_TEST(simu(iniD->source) == 0);
+		BOOST_TEST(simu(iniD->sink) == 0);
+
+		simu(ready(iniD)) = 1;
+		co_await WaitClk(clock);
+		BOOST_TEST(simu(valid(iniD)) == 1);
+		BOOST_TEST(simu(ready(iniA)) == 1);
+
+		initiator->issueCommand(TileLinkA::Get, 0, 0, 1);
+		co_await WaitClk(clock);
+		BOOST_TEST(simu(valid(iniD)) == 1);
+		BOOST_TEST(simu(ready(iniA)) == 1);
+		BOOST_TEST(simu(iniD->opcode) == (size_t)TileLinkD::AccessAckData);
+		BOOST_TEST(simu(iniD->param) == 0);
+		BOOST_TEST(simu(iniD->size) == 1);
+		BOOST_TEST(simu(iniD->source) == 0);
+		BOOST_TEST(simu(iniD->sink) == 0);
+
+		stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(clock.getClk(), 16);
+}
+
