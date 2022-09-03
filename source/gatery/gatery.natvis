@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 		
+	<!-- frontend -->
 	<Type Name="gtry::SliceableBitVector&lt;*&gt;">
 		<Intrinsic Name="node" Expression="m_node.m_ptr"/>
 		<Intrinsic Name="in" Expression="m_node.m_ptr->m_inputPorts[0].node"/>
@@ -23,8 +24,7 @@
 		<DisplayString>{*in()}</DisplayString>
 
 		<Expand>
-			<Item Name="name" Condition="in()->m_name.size()">name()</Item>
-			<Item Name="node">m_node.m_ptr</Item>
+			<Item Name="in">*in()</Item>
 		</Expand>
 	</Type>
 
@@ -32,9 +32,41 @@
 		<DisplayString>{value}b</DisplayString>
 	</Type>
 
+	<Type Name="gtry::Reverse&lt;*&gt;">
+		<DisplayString>reverse {m_obj}</DisplayString>
+		<Expand>
+			<ExpandedItem>m_obj</ExpandedItem>
+		</Expand>
+	</Type>
+
 	<Type Name="gtry::BaseBitVector::Range">
 		<DisplayString>({offset}, {width}b)</DisplayString>
 	</Type>
+
+	<!-- scl -->
+
+	<Type Name="gtry::scl::Stream&lt;*&gt;">
+		<Expand>
+			<ExpandedItem>data</ExpandedItem>
+			<ExpandedItem>_sig</ExpandedItem>
+		</Expand>
+	</Type>
+
+	<Type Name="gtry::scl::Valid">
+		<DisplayString>{valid}</DisplayString>
+		<Expand>
+			<ExpandedItem>valid</ExpandedItem>
+		</Expand>
+	</Type>
+
+	<Type Name="gtry::scl::Ready">
+		<DisplayString>{ready}</DisplayString>
+		<Expand>
+			<ExpandedItem>ready</ExpandedItem>
+		</Expand>
+	</Type>
+
+	<!-- sim -->
 
 	<Type Name="gtry::sim::BitVectorState&lt;*&gt;">
 		<Intrinsic Name="fully_defined" Expression="m_values[1][0] + 1 == (1ull &lt;&lt; m_size)" />
@@ -49,6 +81,8 @@
 			<Item Name="defined">m_values[1]</Item>
 		</Expand>
 	</Type>
+	
+	<!-- hlim -->
 
 	<Type Name="gtry::hlim::NodePort">
 		<DisplayString Condition="port == 0">{*node}</DisplayString>
@@ -172,7 +206,7 @@
 	</Type>
 
 	<Type Name="gtry::hlim::Node_Multiplexer">
-		<DisplayString Condition="m_inputPorts.size() == 3" >({m_inputPorts[0]} ? {m_inputPorts[1]} : {m_inputPorts[2]})</DisplayString>
+		<DisplayString Condition="m_inputPorts.size() == 3" >({m_inputPorts[0]} ? {m_inputPorts[2]} : {m_inputPorts[1]})</DisplayString>
 		<DisplayString>MUX({m_inputPorts[0]}, ...)</DisplayString>
 
 		<Expand>
