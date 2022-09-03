@@ -129,8 +129,21 @@ namespace gtry::scl
 		}
 		HCL_NAMED(handled);
 
+		// handle access to unmapped areas
+		// TODO: check if there are any unmapped areas first
+		TLink unmapped = constructFrom(m_source);
+		downstream(unmapped.a) = downstream(m_source.a);
+		IF(!handled)
+			upstream(m_source.a) = upstream(unmapped.a);
+		ELSE
+			valid(unmapped.a) = '0';
+
+		tileLinkErrorResponder(unmapped);
+		HCL_NAMED(unmapped);
+
 		// connect channel D
 		StreamArbiter<TileLinkChannelD, TArbiterPolicy> arbiter;
+		arbiter.attach(*unmapped.d);
 		for (Sink& s : m_sink)
 			arbiter.attach(*s.bus.d);
 		*m_source.d <<= arbiter.out();

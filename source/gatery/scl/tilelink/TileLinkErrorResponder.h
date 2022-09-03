@@ -26,6 +26,7 @@ namespace gtry::scl
 	void tileLinkErrorResponder(TLink& link)
 	{
 		Area ent{ "scl_tileLinkErrorResponder", true };
+		HCL_NAMED(link);
 
 		auto& d = *link.d;
 		valid(d) = valid(link.a);
@@ -59,5 +60,7 @@ namespace gtry::scl
 				ready(link.a) = ready(d);
 			}
 		}
+
+		HCL_NAMED(link);
 	}
 }

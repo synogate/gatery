@@ -247,12 +247,17 @@ BOOST_FIXTURE_TEST_CASE(tilelink_demux_chanA_routing_test, BoostUnitTestSimulati
 
 	addSimulationProcess([=]()->SimProcess {
 
-		simu(valid(initiator->link().a)) = 1;
+		simu(valid(initiator->link().a)) = 0;
+		simu(ready(*initiator->link().d)) = 1;
 		simu(ready(target0->link().a)) = 1;
 		simu(ready(target1->link().a)) = 1;
 		simu(ready(target2->link().a)) = 1;
+		simu(valid(*target0->link().d)) = 0;
+		simu(valid(*target1->link().d)) = 0;
+		simu(valid(*target2->link().d)) = 0;
 		co_await WaitClk(clock);
 
+		simu(valid(initiator->link().a)) = 1;
 		initiator->issueCommand(TileLinkA::PutFullData, 0, 0, 1);
 		co_await WaitClk(clock);
 		BOOST_TEST(simu(valid(target0->link().a)) == 0);
@@ -270,6 +275,8 @@ BOOST_FIXTURE_TEST_CASE(tilelink_demux_chanA_routing_test, BoostUnitTestSimulati
 		BOOST_TEST(simu(valid(target0->link().a)) == 0);
 		BOOST_TEST(simu(valid(target1->link().a)) == 0);
 		BOOST_TEST(simu(valid(target2->link().a)) == 0);
+		BOOST_TEST(simu(valid(*initiator->link().d)) == 1);
+		BOOST_TEST(simu((*initiator->link().d)->error) == 1);
 
 		initiator->issueCommand(TileLinkA::PutFullData, 256, 0, 1);
 		co_await WaitClk(clock);
