@@ -125,7 +125,7 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_6, BoostUnitTestSimulationFixtu
 
 	// Prints "The width of bv is 6" to the console
 	//std::cout << "The width of bv is " << bv.getWidth() << std::endl;
-	BOOST_TEST(bv.width() == 6);
+	BOOST_TEST(bv.width() == 6_b);
 
 	runEvalOnlyTest();
 }
@@ -192,19 +192,14 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_10, BoostUnitTestSimulationFixt
 {
 	UInt unsigned_8_wide = "8b0";
 	// Zero extends by 2 bits
-	UInt unsigned_10_wide = ext(unsigned_8_wide, 2);
+	UInt unsigned_10_wide = ext(unsigned_8_wide, 2_b);
 
 	SInt signed_8_wide = (SInt) "8b0";
 	// Sign extends by 2 bits
-	SInt signed_10_wide = ext(signed_8_wide, 2);
+	SInt signed_10_wide = ext(signed_8_wide, 2_b);
 
-	BVec bvec_8_wide = (BVec) "8b0";
-	// Zero extends by 2 bits
-	BVec bvec_10_wide = ext(bvec_8_wide, 2);
-
-	BOOST_TEST(unsigned_10_wide.size() == 10);
-	BOOST_TEST(signed_10_wide.size() == 10);
-	BOOST_TEST(bvec_10_wide.size() == 10);
+	BOOST_TEST(unsigned_10_wide.width() == 10_b);
+	BOOST_TEST(signed_10_wide.width() == 10_b);
 
 	runEvalOnlyTest();
 }
@@ -213,19 +208,19 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_11, BoostUnitTestSimulationFixt
 {
 	UInt unsigned_8_wide = "8b0";
 	// Zero extend unsigned integer
-	UInt unsigned_10_wide = zext(unsigned_8_wide, 2);
+	UInt unsigned_10_wide = zext(unsigned_8_wide, +2_b);
 
 	UInt signed_8_wide = "8b0";
 	// Sign extend integer
-	UInt signed_10_wide = sext(signed_8_wide, 2);
+	UInt signed_10_wide = sext(signed_8_wide, +2_b);
 
 	UInt mask_8_wide = "8b0";
 	// Extend with ones
-	UInt mask_10_wide_one_extended = oext(mask_8_wide, 2);
+	UInt mask_10_wide_one_extended = oext(mask_8_wide, +2_b);
 
-	BOOST_TEST(unsigned_10_wide.size() == 10);
-	BOOST_TEST(signed_10_wide.size() == 10);
-	BOOST_TEST(mask_10_wide_one_extended.size() == 10);
+	BOOST_TEST(unsigned_10_wide.width() == 10_b);
+	BOOST_TEST(signed_10_wide.width() == 10_b);
+	BOOST_TEST(mask_10_wide_one_extended.width() == 10_b);
 
 	runEvalOnlyTest();
 }
@@ -234,8 +229,8 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_12, BoostUnitTestSimulationFixt
 {
 	Bit bit = '1';
 	// Sign extends by 9 bits
-	UInt ten_1 = sext(bit, 9);
-	BOOST_TEST(ten_1.size() == 10);
+	UInt ten_1 = sext(bit, +9_b);
+	BOOST_TEST(ten_1.width() == 10_b);
 
 	sim_assert(ten_1 == "b1111111111");
 
@@ -317,7 +312,7 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_17, BoostUnitTestSimulationFixt
     UInt index = "4b0";
     
     Bit bit = bvec[index];
-    UInt subrange = bvec(index, 2);
+    UInt subrange = bvec(index, 2_b);
 
 	runEvalOnlyTest();
 }
