@@ -275,19 +275,6 @@ namespace gtry {
 		/// Slices a sub-vector out of the bit vector with a fixed width but a dynamic offset.
 		const FinalType& operator() (const UInt &offset, BitWidth size) const { return aliasRange(Range(offset, size, range())); }
 
-		/// Slices a sub-vector out of the bit vector with a fixed width but a dynamic offset, the width being determined by the offset width.
-		FinalType& operator() (const UInt &offset) { 
-			// this->size() == (1 << offset.size())-1 + unknown_width
-			HCL_DESIGNCHECK_HINT((1ull << getUIntBitWidth(offset))-1 < size(), "Offset width is too large");
-			return operator()(offset, BitWidth{ size() - (1ull << getUIntBitWidth(offset)) + 1 });
-		}
-		/// Slices a sub-vector out of the bit vector with a fixed width but a dynamic offset, the width being determined by the offset width.
-		const FinalType& operator() (const UInt &offset) const {
-			// this->size() == (1 << offset.size())-1 + unknown_width
-			HCL_DESIGNCHECK_HINT((1 << getUIntBitWidth(offset))-1 < size(), "Offset width is too large");
-			return operator()(offset, BitWidth{ size() - (1 << getUIntBitWidth(offset)) + 1 });
-		}
-
 		FinalType& operator()(const Selection& selection) { return aliasRange(Range(selection, range())); }
 		const FinalType& operator() (const Selection& selection) const { return aliasRange(Range(selection, range())); }
 	protected:

@@ -716,21 +716,3 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfSliceWrite, BoostUnitTestSimulationFix
 
 	runTest({ 1,1 });
 }
-
-
-BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceAutoWidth, BoostUnitTestSimulationFixture)
-{
-	using namespace gtry;
-
-	size_t v = 0b11001010; 
-
-	UInt a = v;
-
-	UInt index = pinIn(1_b);
-
-	UInt b = a(index);
-
-	BOOST_TEST(b.size() == 7);
-}
-
-
