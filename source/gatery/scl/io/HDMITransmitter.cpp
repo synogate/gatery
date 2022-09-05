@@ -151,7 +151,7 @@ UInt tmdsEncodeSymbol(const UInt& data)
 	HCL_NAMED(transitionReduced);
 
 	// even out 0 and 1 bits
-	UInt word_counter = zext(sumOfOnes, 1) - zext(data.size() / 2);
+	UInt word_counter = zext(sumOfOnes, +1_b) - zext(data.size() / 2);
 	HCL_NAMED(word_counter);
 	UInt global_counter = word_counter.width();
 	HCL_NAMED(global_counter);

@@ -243,6 +243,11 @@ public:
 		link.a->source = sourceWidth;
 		link.a->mask = dataWidth / 8;
 		link.a->data = dataWidth;
+
+		(*link.d)->size = sizeWidth;
+		(*link.d)->source = sourceWidth;
+		(*link.d)->sink = 0_b;
+		(*link.d)->data = dataWidth;
 	
 		pinIn(link, "link");
 		setFullByteEnableMask(link.a);
@@ -286,81 +291,3 @@ public:
 	scl::TileLinkUL link;
 };
 
-BOOST_FIXTURE_TEST_CASE(sdram_bank_controller_burst_test, SdramControllerTest)
-{
-	setupLink();
-	initMember();
-
-	BankState state{
-		.activeRow = m_addrBusWidth
-	};
-	state.rowActive.resetValue('0');
-	state = reg(state);
-	HCL_NAMED(state);
-
-	auto [cmd, data] = bankController(link.a, state);
-	driveCommand(cmd, data);
-
-	addSimulationProcess([=]()->SimProcess {
-
-		co_await WaitClk(clock());
-		issueWrite(0, 8, 1);
-
-		for (size_t i = 0; i < 4; ++i)
-		{
-			simu(link.a->data) = i * 2 | ((i * 2 + 1) << 8);
-			while (!transfer(link.a))
-				co_await WaitClk(clock());
-			co_await WaitClk(clock());
-		}
-
-		issueRead(0, 8);
-		
-		while (!transfer(link.a))
-			co_await WaitClk(clock());
-		co_await WaitClk(clock());
-		
-		simu(valid(link.a)) = 0;
-		for (size_t i = 0; i < 16; ++i)
-			co_await WaitClk(clock());
-		stopTest();
-	});
-}
-
-BOOST_FIXTURE_TEST_CASE(sdram_constroller_init_test, SdramControllerTest)
-{
-	setupLink();
-	generate(link);
-
-	addSimulationProcess([=]()->SimProcess {
-		co_await WaitClk(clock());
-		issueWrite(0, 4, 1);
-		simu(link.a->data) = 0xCDCD;
-
-		while (!transfer(link.a))
-			co_await WaitClk(clock());
-		co_await WaitClk(clock());
-		simu(link.a->data) = 0xCECE;
-		while (!transfer(link.a))
-			co_await WaitClk(clock());
-		co_await WaitClk(clock());
-
-
-
-		issueRead(0, 8);
-
-		while(!transfer(link.a))
-			co_await WaitClk(clock());
-		co_await WaitClk(clock());
-
-		issueRead(512, 1);
-		while (!transfer(link.a))
-			co_await WaitClk(clock());
-		co_await WaitClk(clock());
-		simu(valid(link.a)) = 0;
-
-		for(size_t i = 0; i < 300; ++i)
-			co_await WaitClk(clock());
-		stopTest();
-	});
-}

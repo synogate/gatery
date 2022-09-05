@@ -74,14 +74,29 @@ namespace gtry {
 	inline UInt oext(const Bit& bit, size_t increment = 0) { return ext(bit, increment, Expansion::one); }
 	inline UInt sext(const Bit& bit, size_t increment = 0) { return ext(bit, increment, Expansion::sign); }
 
+	//UInt ext(const UInt& bvec, size_t increment, Expansion policy);
+	//inline UInt ext(const UInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::zero); }
+	//inline UInt zext(const UInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::zero); }
+	//inline UInt oext(const UInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::one); }
+	//inline UInt sext(const UInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::sign); }
 
-	UInt ext(const UInt& bvec, size_t increment, Expansion policy);
-	inline UInt ext(const UInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::zero); }
-	inline UInt zext(const UInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::zero); }
-	inline UInt oext(const UInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::one); }
-	inline UInt sext(const UInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::sign); }
+	UInt ext(const UInt& bvec, BitWidth extendedWidth, Expansion policy);
+	inline UInt ext(const UInt& bvec, BitWidth extendedWidth) { return ext(bvec, extendedWidth, Expansion::zero); }
+	inline UInt zext(const UInt& bvec, BitWidth extendedWidth) { return ext(bvec, extendedWidth, Expansion::zero); }
+	inline UInt oext(const UInt& bvec, BitWidth extendedWidth) { return ext(bvec, extendedWidth, Expansion::one); }
+	inline UInt sext(const UInt& bvec, BitWidth extendedWidth) { return ext(bvec, extendedWidth, Expansion::sign); }
 
+	UInt ext(const UInt& bvec, BitExtend increment, Expansion policy);
+	inline UInt ext(const UInt& bvec, BitExtend increment = {0}) { return ext(bvec, increment, Expansion::zero); }
+	inline UInt zext(const UInt& bvec, BitExtend increment = {0}) { return ext(bvec, increment, Expansion::zero); }
+	inline UInt oext(const UInt& bvec, BitExtend increment = {0}) { return ext(bvec, increment, Expansion::one); }
+	inline UInt sext(const UInt& bvec, BitExtend increment = {0}) { return ext(bvec, increment, Expansion::sign); }
 
+	UInt ext(const UInt& bvec, BitReduce decrement, Expansion policy);
+	inline UInt ext(const UInt& bvec, BitReduce decrement) { return ext(bvec, decrement, Expansion::zero); }
+	inline UInt zext(const UInt& bvec, BitReduce decrement) { return ext(bvec, decrement, Expansion::zero); }
+	inline UInt oext(const UInt& bvec, BitReduce decrement) { return ext(bvec, decrement, Expansion::one); }
+	inline UInt sext(const UInt& bvec, BitReduce decrement) { return ext(bvec, decrement, Expansion::sign); }
 
 	inline UIntDefault::UIntDefault(const UInt& rhs) : BaseBitVectorDefault(rhs) { }
 

@@ -35,7 +35,7 @@ namespace gtry::scl
 		out.hash = in.hash;
 		out.key = in.key;
 		out.userData = in.userData;
-		out.value = zext(0, in.valueWidth().value);
+		out.value = zext(0, in.valueWidth());
 
 		for(size_t l = 0; l < in.latency; l++)
 			out = reg(out);
@@ -52,7 +52,7 @@ namespace gtry::scl
 			IF(in.update.valid & in.update.tableIdx == i)
 				mem[in.update.itemIdx] = in.update.item;
 
-			SymbolSelect hashPart{ in.tableWidth().value };
+			SymbolSelect hashPart{ BitWidth{ in.tableWidth().value } };
 			UInt lookupAddress = in.hash(hashPart[i]);
 			HCL_NAMED(lookupAddress);
 

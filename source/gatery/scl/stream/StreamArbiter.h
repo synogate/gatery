@@ -161,7 +161,7 @@ namespace gtry::scl
 				*idx = 0;
 			HCL_NAMED(idx);
 
-			UInt selected = zext(*idx, 1) + zext(counter, 1);
+			UInt selected = zext(*idx, +1_b) + zext(counter, +1_b);
 			IF(selected >= mask.size())
 				selected -= mask.size();
 			HCL_NAMED(selected);

@@ -149,14 +149,14 @@ namespace gtry::scl
 		ready(source) &= counter.isLast();
 
 		out->resetNode();
-		*out = (*source)(zext(counter.value(), width.bits()) * width.bits(), width);
+		*out = (*source)(zext(counter.value(), +width) * width.bits(), width);
 
 		if constexpr (out.template has<ByteEnable>())
 		{
 			BVec& be = byteEnable(out);
 			BitWidth w = be.width() / ratio;
 			be.resetNode();
-			be = byteEnable(source)(zext(counter.value(), w.bits()) * w.bits(), w);
+			be = byteEnable(source)(zext(counter.value(), +w) * w.bits(), w);
 		}
 
 		if constexpr (out.template has<Eop>())

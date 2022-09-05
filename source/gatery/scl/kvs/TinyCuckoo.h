@@ -135,7 +135,7 @@ namespace gtry::scl
 		GroupScope entity(GroupScope::GroupType::ENTITY);
 		entity.setName("TinyCuckoo_lookup");
 
-		SymbolSelect hashSel{ hash.size() / m_tables.size() };
+		SymbolSelect hashSel{ BitWidth{hash.size() / m_tables.size()} };
 
 		Item item0 = m_tables[0][hash(hashSel[0])];
 		HCL_NAMED(item0);

@@ -424,11 +424,11 @@ UInt RAMBxE2::getReadData(size_t width, bool portA)
 
 void RAMBxE2::connectWriteData(const UInt &input, bool portA)
 {
-	size_t dPortWidth = 32;
-	size_t pPortWidth = 4;
+	BitWidth dPortWidth = 32_b;
+	BitWidth pPortWidth = 4_b;
 	if (m_type == RAMB18E2) {
-		dPortWidth = 16;
-		pPortWidth = 2;
+		dPortWidth = 16_b;
+		pPortWidth = 2_b;
 	}
 
 	switch (input.size()) {
@@ -456,17 +456,17 @@ void RAMBxE2::connectWriteData(const UInt &input, bool portA)
 			}
 		break;
 		case 18:
-			connectInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, zext(input(0, 16), dPortWidth-16));
-			connectInput(portA?IN_DINP_A_DINP:IN_DINP_B_DINP, zext(input(16, 2), pPortWidth-2));
+			connectInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, zext(input(0, 16), dPortWidth));
+			connectInput(portA?IN_DINP_A_DINP:IN_DINP_B_DINP, zext(input(16, 2), pPortWidth));
 		break;
 		case 9:
-			connectInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, zext(input(0, 8), dPortWidth-8));
-			connectInput(portA?IN_DINP_A_DINP:IN_DINP_B_DINP, zext(input(8, 1), pPortWidth-1));
+			connectInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, zext(input(0, 8), dPortWidth));
+			connectInput(portA?IN_DINP_A_DINP:IN_DINP_B_DINP, zext(input(8, 1), pPortWidth));
 		break;
 		case 4:
 		case 2:
 		case 1:
-			connectInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, zext(input, dPortWidth-input.size()));
+			connectInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, zext(input, dPortWidth));
 		break;
 		default:
 			HCL_ASSERT_HINT(false, "Invalid width for bram type!");

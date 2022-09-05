@@ -55,7 +55,7 @@ namespace gtry {
 
 		SignalReadPort expand(size_t width, hlim::ConnectionType::Interpretation resultType) const;
 
-		BitWidth width() const { return node->getOutputConnectionType(port).width; }
+		BitWidth width() const { return BitWidth{ node->getOutputConnectionType(port).width }; }
 	};
 
 	inline const hlim::ConnectionType& connType(const SignalReadPort& port) { return port.node->getOutputConnectionType(port.port); }

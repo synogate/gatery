@@ -52,7 +52,7 @@ namespace gtry::scl
 		const size_t numTables = (data.width().value + m_symbolWidth.value - 1) / m_symbolWidth.value;
 		m_tables.resize(numTables);
 
-		UInt hash = zext(0, m_hashWidth.value);
+		UInt hash = zext(0, m_hashWidth);
 		for (size_t t = 0; t < numTables; ++t)
 		{
 			const size_t addrWidth = std::min(m_symbolWidth.value, data.size() - t * m_symbolWidth.value);

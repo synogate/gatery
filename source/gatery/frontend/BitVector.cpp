@@ -259,7 +259,7 @@ namespace gtry {
 		UInt OoB_idx = idx;
 		if ((1ull << OoB_idx.size())-1 >= m_range.width) // if we can represent more than allowed
 			IF (OoB_idx >= m_range.width)
-				OoB_idx = ConstUInt(OoB_idx.size());
+				OoB_idx = ConstUInt(BitWidth{ OoB_idx.size() });
 		
 
 		if (m_range.offsetDynamic.node != nullptr) {
@@ -267,9 +267,9 @@ namespace gtry {
 			UInt currentOffset(SignalReadPort(m_range.offsetDynamic));
 			UInt newOffset;
 			if (currentOffset.size() > OoB_idx.size())
-				newOffset = ext(currentOffset, 1) + ext(OoB_idx);
+				newOffset = ext(currentOffset, +1_b) + ext(OoB_idx);
 			else
-				newOffset = ext(currentOffset) + ext(OoB_idx, 1);
+				newOffset = ext(currentOffset) + ext(OoB_idx, +1_b);
 
 			auto it2 = m_dynamicBitAlias.try_emplace(idx.readPort(), m_node, (hlim::NodePort)newOffset.readPort(), m_range.offset, m_range.maxDynamicIndex+m_range.width, m_initialScopeId);
 			return it2.first->second;
@@ -423,7 +423,7 @@ namespace gtry {
 		if (!m_node)
 			createNode(in.width().bits(), in.expansionPolicy);
 
-		const bool incrementWidth = in.width() > m_range.width;
+		const bool incrementWidth = in.width().bits() > m_range.width;
 		if(!incrementWidth)
 			in = in.expand(m_range.width, hlim::ConnectionType::BITVEC);
 
@@ -613,15 +613,15 @@ namespace gtry {
 		// For dynamic slices of dynamic slices, this needs to be done for each index in the chain individually
 		if ((1ull << idx.size())-1 > maxThisDynamicIndex) // if we can represent more than allowed
 			IF (idx > maxThisDynamicIndex)
-				idx = ConstUInt(idx.size());
+				idx = ConstUInt(BitWidth{ idx.size() });
 		
 		if (r.offsetDynamic.node != nullptr) {
 			UInt prevIdx(SignalReadPort(r.offsetDynamic));
 			UInt finalIdx;
 			if (prevIdx.size() > idx.size())
-				finalIdx = ext(prevIdx, 1) + ext(idx);
+				finalIdx = ext(prevIdx, +1_b) + ext(idx);
 			else
-				finalIdx = ext(prevIdx) + ext(idx, 1);
+				finalIdx = ext(prevIdx) + ext(idx, +1_b);
 
 			offsetDynamic.node = finalIdx.readPort().node;
 			offsetDynamic.port = finalIdx.readPort().port;

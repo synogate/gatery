@@ -263,7 +263,7 @@ namespace gtry::scl
 		else
 		{
 			Stream<PayloadT, Meta..., T> ret;
-			*ret <<= data;
+			connect(*ret, data);
 			ret.template get<T>() <<= signal;
 
 			std::apply([&](auto& ...meta) {
@@ -404,7 +404,7 @@ namespace gtry::scl
 
 		return std::apply([&](auto&... meta) {
 			Stream<PayloadT, std::remove_cvref_t<decltype(meta)>...> ret;
-			ret.data <<= this->data;
+			connect(ret.data, this->data);
 			downstream(ret._sig) = downstream(metaRefs);
 			upstream(metaRefs) = upstream(ret._sig);
 			return ret;
