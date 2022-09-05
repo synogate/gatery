@@ -181,7 +181,7 @@ UInt shr(const UInt& signal, size_t amount, const Bit& arithmetic)
 {
 	Bit inShift = arithmetic & signal.msb();
 
-	auto shiftedHigh = sext(inShift, amount - 1);
+	auto shiftedHigh = sext(inShift, BitWidth{ amount });
 	auto shiftedLow = signal(amount, signal.width() - amount);
 	return cat(shiftedHigh, shiftedLow);
 }

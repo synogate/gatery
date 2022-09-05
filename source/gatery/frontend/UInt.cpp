@@ -20,21 +20,23 @@
 
 namespace gtry 
 {
-	UInt ext(const Bit& bit, size_t increment, Expansion policy)
+	UInt ext(const Bit& bit, BitWidth extendedWidth, Expansion policy)
 	{
+		HCL_DESIGNCHECK_HINT(extendedWidth.bits() != 0, "ext is not allowed to reduce width");
+
 		SignalReadPort port = bit.readPort();
 		port.expansionPolicy = policy;
-		if (increment)
-			port = port.expand(1 + increment, hlim::ConnectionType::BITVEC);
+		if (extendedWidth > 1_b)
+			port = port.expand(extendedWidth.bits(), hlim::ConnectionType::BITVEC);
 		return UInt(port);
 	}
 
-	UInt ext(const UInt& bvec, size_t increment, Expansion policy)
+	UInt ext(const Bit& bit, BitExtend increment, Expansion policy)
 	{
-		SignalReadPort port = bvec.readPort();
+		SignalReadPort port = bit.readPort();
 		port.expansionPolicy = policy;
-		if (increment)
-			port = port.expand(bvec.size() + increment, hlim::ConnectionType::BITVEC);
+		if (increment.value)
+			port = port.expand(1 + increment.value, hlim::ConnectionType::BITVEC);
 		return UInt(port);
 	}
 
