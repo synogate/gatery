@@ -277,8 +277,8 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_15, BoostUnitTestSimulationFixt
 {
     UInt ieee_float_32 = "32b0";
 
-    UInt mantissa = ieee_float_32(0, 23); // Extract 23 bits from bit 0 onwards
-    UInt exponent = ieee_float_32(23, 8); // Extract 8 bits from bit 23 onwards
+    UInt mantissa = ieee_float_32(0, 23_b); // Extract 23 bits from bit 0 onwards
+    UInt exponent = ieee_float_32(23, 8_b); // Extract 8 bits from bit 23 onwards
     Bit sign = ieee_float_32[31];         // Extract bit 31
 
 	runEvalOnlyTest();
@@ -528,8 +528,8 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_mutable_write_slice, BoostUnitTestSimulat
 
     // Lets build a 1.0f float
     ieee_float_32[31] = '0';  // The sign is positive
-    ieee_float_32(0, 23) = 0; // The mantissa is all 0 (the "1." is implicit with floats)
-    ieee_float_32(23, 8) = 127; // The exponent is exactly the bias to end up with 2^0.
+    ieee_float_32(0, 23_b) = 0; // The mantissa is all 0 (the "1." is implicit with floats)
+    ieee_float_32(23, 8_b) = 127; // The exponent is exactly the bias to end up with 2^0.
 
 	sim_assert(ieee_float_32 == "32b00111111100000000000000000000000") << "got " << ieee_float_32;
 

@@ -166,7 +166,7 @@ namespace gtry::scl
 				selected -= mask.size();
 			HCL_NAMED(selected);
 
-			return selected(0, -1);
+			return selected(0, -1_b);
 		}
 	};
 

@@ -46,7 +46,7 @@ UInt tmdsEncode(Clock &pixelClock, Bit dataEnable, UInt data, UInt ctrl)
 
 	HCL_COMMENT << "Prepare XORed and XNORed data words to select from based on number of high bits";
 
-	const size_t subWidth = data.size() - 1;
+	const BitWidth subWidth = data.width() - 1;
 	UInt dataXNOR = data;
 	dataXNOR(1, subWidth) = lxnor(dataXNOR(1, subWidth), dataXNOR(0, subWidth));
 	UInt dataXOR = data;
@@ -84,8 +84,8 @@ UInt tmdsEncode(Clock &pixelClock, Bit dataEnable, UInt data, UInt ctrl)
 		HCL_NAMED(noImbalanceInQ_m);
 		
 		IF (noPreviousImbalance | noImbalanceInQ_m) {
-			result(0, 8) = mux(useXnor, {q_m, ~q_m});
-			result(8, 2) = cat(useXnor, ~useXnor);
+			result(0, 8_b) = mux(useXnor, {q_m, ~q_m});
+			result(8, 2_b) = cat(useXnor, ~useXnor);
 			
 			IF (useXnor) 
 				imbalance -= 8 + sumOfOnes_q_m + sumOfOnes_q_m;
@@ -100,15 +100,15 @@ UInt tmdsEncode(Clock &pixelClock, Bit dataEnable, UInt data, UInt ctrl)
 			IF ((positivePreviousImbalance & positiveImbalanceInQ_m) |
 				((!positivePreviousImbalance) & (!positiveImbalanceInQ_m))) {
 				
-				result(0, 8) = ~q_m;
-				result(8, 2) = cat(useXnor, '1');
+				result(0, 8_b) = ~q_m;
+				result(8, 2_b) = cat(useXnor, '1');
 				
 				imbalance += 8 - sumOfOnes_q_m - sumOfOnes_q_m;
 				IF (useXnor)
 					imbalance += 2;
 			} ELSE {
-				result(0, 8) = q_m;
-				result(8, 2) = cat(useXnor, '1');
+				result(0, 8_b) = q_m;
+				result(8, 2_b) = cat(useXnor, '1');
 				
 				imbalance += 8 - sumOfOnes_q_m - sumOfOnes_q_m;
 				IF (useXnor)
@@ -189,9 +189,9 @@ UInt tmdsEncodeReduceTransitions(const UInt& data)
 
 UInt tmdsDecodeReduceTransitions(const UInt& data)
 {
-	UInt decoded = data(0, data.size() - 1);
+	UInt decoded = data(0, -1_b);
 	decoded ^= decoded << 1;
-	decoded(1, decoded.size() - 1) ^= ~data.msb();
+	decoded(1, -1_b) ^= ~data.msb();
 
 	HCL_NAMED(decoded);
 	return decoded;
@@ -213,7 +213,7 @@ UInt tmdsEncodeBitflip(const Clock& clk, const UInt& data)
 		invert = ~data.msb();
 	HCL_NAMED(invert);
 
-	UInt result = cat(invert, data.msb(), data(0, -1) ^ invert);
+	UInt result = cat(invert, data.msb(), data(0, -1_b) ^ invert);
 	HCL_NAMED(result);
 
 	// sub or add depending on invert
@@ -225,7 +225,7 @@ UInt tmdsEncodeBitflip(const Clock& clk, const UInt& data)
 
 UInt tmdsDecodeBitflip(const UInt& data)
 {
-	return cat(data[data.size() - 2], data(0, -2) ^ data.msb());
+	return cat(data[data.size() - 2], data(0, -2_b) ^ data.msb());
 }
 
 TmdsEncoder::TmdsEncoder(Clock& clk) :
@@ -292,9 +292,9 @@ void gtry::scl::hdmi::TmdsEncoder::setTERC4(UInt ctrl)
 	};
 
 	HCL_ASSERT(ctrl.width() == 12_b);
-	m_Channel[0] = mux(ctrl(0, 4), trec4lookup); // TODO: improve mux to accept any container as second input
-	m_Channel[1] = mux(ctrl(2, 4), trec4lookup); // TODO: subrange as argument for mux
-	m_Channel[2] = mux(ctrl(4, 4), trec4lookup);
+	m_Channel[0] = mux(ctrl(0, 4_b), trec4lookup); // TODO: improve mux to accept any container as second input
+	m_Channel[1] = mux(ctrl(2, 4_b), trec4lookup); // TODO: subrange as argument for mux
+	m_Channel[2] = mux(ctrl(4, 4_b), trec4lookup);
 }
 /*
 SerialTMDS gtry::scl::hdmi::TmdsEncoder::serialOutput() const

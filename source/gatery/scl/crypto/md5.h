@@ -80,7 +80,7 @@ namespace gtry::scl
 		{
 			TVec swappedBlock = swapEndian(_block);
 			for (size_t i = 0; i < w.size(); ++i)
-				w[i] = swappedBlock(i * 32, 32);
+				w[i] = swappedBlock(i * 32, 32_b);
 		}
 
 		void round(const UInt& round)

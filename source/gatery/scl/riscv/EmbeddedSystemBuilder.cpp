@@ -262,7 +262,7 @@ void gtry::scl::riscv::EmbeddedSystemBuilder::addDataMemory(const Segment& seg, 
 	bus1.setName("bus1");
 	bus2.setName("bus2");
 
-	UInt addr = bus1.address(2, seg.addrWidth.bits() - 2);
+	UInt addr = bus1.address(2, seg.addrWidth - 2);
 	UInt data = mem[addr];
 
 	bus1.readData = reg(data, {.allowRetimingBackward = true});

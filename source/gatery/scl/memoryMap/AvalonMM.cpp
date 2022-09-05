@@ -53,13 +53,13 @@ namespace gtry::scl
 		if (!scopeStack.empty()) desc.scope = scopeStack.back();
 		for (size_t offset = 0; offset < value.size(); offset += readData.size())
 		{
-			const size_t width = std::min(readData.size(), value.size() - offset);
+			const BitWidth width = std::min(readData.width(), value.width() - offset);
 
 			IF(address == addressMap.size())
 				readData = zext(value(offset, width));
 
 			if (readData.size() < value.size())
-				addRegDescChunk(desc, offset, width);
+				addRegDescChunk(desc, offset, width.bits());
 			else
 				addressMap.push_back(std::move(desc));
 		}
@@ -81,7 +81,7 @@ namespace gtry::scl
 		Bit selected = '0';
 		for (size_t offset = 0; offset < value.size(); offset += readData.size())
 		{
-			const size_t width = std::min(readData.size(), value.size() - offset);
+			const BitWidth width = std::min(readData.width(), value.width() - offset);
 
 			IF(address == addressMap.size())
 			{
@@ -94,7 +94,7 @@ namespace gtry::scl
 			}
 
 			if (readData.size() < value.size())
-				addRegDescChunk(desc, offset, width);
+				addRegDescChunk(desc, offset, width.bits());
 			else
 				addressMap.push_back(std::move(desc));
 		}

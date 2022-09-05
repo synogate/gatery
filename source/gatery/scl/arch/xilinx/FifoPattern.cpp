@@ -209,7 +209,7 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 		size_t end = start + perFifoWidth_36k;
 		end = std::min(end, width);
 
-		size_t sectionWidth = end - start;
+		BitWidth sectionWidth{ end - start };
 
 
 		UInt inSection = BitWidth(perFifoWidth_36k);
@@ -235,7 +235,7 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 		size_t end = start + perFifoWidth_18k;
 		end = std::min(end, width);
 
-		size_t sectionWidth = end - start;
+		BitWidth sectionWidth{ end - start };
 
 		UInt inSection = BitWidth(perFifoWidth_18k);
 		inSection = zext(in_data(start, sectionWidth));

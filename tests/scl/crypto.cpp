@@ -170,9 +170,9 @@ BOOST_FIXTURE_TEST_CASE(Sha1, gtry::BoostUnitTestSimulationFixture)
 	UInt hash = sha1.finalize();
 	UInt ref = "xDA39A3EE5E6B4B0D3255BFEF95601890AFD80709";
 
-	sim_assert(hash(0, 64) == ref(0, 64)); // TODO: implement large compare simulation
-	sim_assert(hash(64, 64) == ref(64, 64));
-	sim_assert(hash(128, 32) == ref(128, 32));
+	sim_assert(hash(0, 64_b) == ref(0, 64_b)); // TODO: implement large compare simulation
+	sim_assert(hash(64, 64_b) == ref(64, 64_b));
+	sim_assert(hash(128, 32_b) == ref(128, 32_b));
 
 	eval();
 }
@@ -194,10 +194,10 @@ BOOST_FIXTURE_TEST_CASE(Sha2_256, gtry::BoostUnitTestSimulationFixture)
 	UInt hash = sha2.finalize();
 	UInt ref = "xE3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855";
 
-	sim_assert(hash(0, 64) == ref(0, 64)); // TODO: implement large compare simulation
-	sim_assert(hash(64, 64) == ref(64, 64));
-	sim_assert(hash(128, 32) == ref(128, 32));
-	sim_assert(hash(160, 32) == ref(160, 32));
+	sim_assert(hash(0, 64_b) == ref(0, 64_b)); // TODO: implement large compare simulation
+	sim_assert(hash(64, 64_b) == ref(64, 64_b));
+	sim_assert(hash(128, 32_b) == ref(128, 32_b));
+	sim_assert(hash(160, 32_b) == ref(160, 32_b));
 
 	eval();
 }
@@ -269,8 +269,8 @@ BOOST_FIXTURE_TEST_CASE(Md5, gtry::BoostUnitTestSimulationFixture)
 	UInt hash = md5.finalize();
 	UInt ref = "xD41D8CD98F00B204E9800998ECF8427E";
 
-	sim_assert(hash(0, 64) == ref(0, 64)) << hash << " != " << ref; // TODO: implement large compare simulation
-	sim_assert(hash(64, 64) == ref(64, 64)) << hash << " != " << ref;
+	sim_assert(hash(0, 64_b) == ref(0, 64_b)) << hash << " != " << ref; // TODO: implement large compare simulation
+	sim_assert(hash(64, 64_b) == ref(64, 64_b)) << hash << " != " << ref;
 
 	eval();
 }

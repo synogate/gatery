@@ -271,17 +271,17 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestSlicing, optimization
 			UInt a = ConstUInt(x, BitWidth{ uint64_t(bitsize) });
 
 			{
-				UInt res = a(0, 1);
+				UInt res = a(0, 1_b);
 				sim_assert(res == ConstUInt(x & 1, 1_b)) << "Slicing first bit of " << a << " failed: " << res;
 			}
 
 			{
-				UInt res = a(1, 2);
+				UInt res = a(1, 2_b);
 				sim_assert(res == ConstUInt((x >> 1) & 3, 2_b)) << "Slicing second and third bit of " << a << " failed: " << res;
 			}
 
 			{
-				UInt res = a(1, 2);
+				UInt res = a(1, 2_b);
 				res = 0;
 				sim_assert(a == ConstUInt(x, BitWidth{ uint64_t(bitsize) })) << "Modifying copy of slice of a changes a to " << a << ", should be: " << x;
 			}
@@ -308,7 +308,7 @@ BOOST_FIXTURE_TEST_CASE(TestSlicingModifications, BoostUnitTestSimulationFixture
 
 			{
 				UInt b = a;
-				b(1, 2) = 0;
+				b(1, 2_b) = 0;
 
 				auto groundTruth = ConstUInt(unsigned(x) & ~0b110, BitWidth{ uint64_t(bitsize) });
 				sim_assert(b == groundTruth) << "Clearing two bits out of " << a << " should be " << groundTruth << " but is " << b;
@@ -329,7 +329,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestSlicingAddition, opti
 
 			{
 				UInt b = a;
-				b(1, 2) = b(1, 2) + 1u;
+				b(1, 2_b) = b(1, 2_b) + 1u;
 
 				auto groundTruth = ConstUInt((unsigned(x) & ~0b110) | (unsigned(x+2) & 0b110), BitWidth{ uint64_t(bitsize) });
 				sim_assert(b == groundTruth) << "Incrementing two bits out of " << a << " should be " << groundTruth << " but is " << b;

@@ -180,7 +180,7 @@ void XilinxLutram::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
 			HCL_ASSERT(rp.node->getBitWidth() <= 7);
 
 			UInt rdData_7wide = ram->setup64x7_SDP(zext(wrAddr, 6_b), zext(wrData, 7_b), wrEn, zext(rdAddr, 6_b));
-			readData = rdData_7wide(0, rp.node->getBitWidth());
+			readData = rdData_7wide(0, BitWidth{ rp.node->getBitWidth() });
 
 			hlim::Clock* writeClock = memGrp->getWritePorts().front().node->getClocks()[0];
 			HCL_ASSERT(writeClock->getTriggerEvent() == hlim::Clock::TriggerEvent::RISING);
@@ -198,7 +198,7 @@ void XilinxLutram::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
 	}		
 
 	UInt rdDataHook = hookUIntAfter(rp.dataOutput);
-	rdDataHook.exportOverride(readData(0, rdDataHook.size()));	
+	rdDataHook.exportOverride(readData(0, rdDataHook.width()));	
 }
 
 }

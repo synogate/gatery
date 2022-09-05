@@ -226,7 +226,7 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 	}		
 
 	UInt rdDataHook = hookUIntAfter(rp.dataOutput);
-	rdDataHook.exportOverride(readData(0, rdDataHook.size()));
+	rdDataHook.exportOverride(readData(0, rdDataHook.width()));
 
 	if (hasWritePort) {
 		auto &wp = memGrp->getWritePorts().front();

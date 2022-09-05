@@ -55,9 +55,9 @@ namespace gtry::scl
 		UInt hash = zext(0, m_hashWidth);
 		for (size_t t = 0; t < numTables; ++t)
 		{
-			const size_t addrWidth = std::min(m_symbolWidth.value, data.size() - t * m_symbolWidth.value);
+			const BitWidth addrWidth = std::min(m_symbolWidth, data.width() - t * m_symbolWidth);
 			Memory<UInt>& table = m_tables[t];
-			table.setup(1ull << addrWidth, m_hashWidth);
+			table.setup(addrWidth.count(), m_hashWidth);
 
 			const UInt& addr = data(t * m_symbolWidth.value, addrWidth);
 			hash ^= table[addr];

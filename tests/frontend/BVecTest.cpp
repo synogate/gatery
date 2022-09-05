@@ -192,11 +192,11 @@ BOOST_FIXTURE_TEST_CASE(BVecSelectorAccess, BoostUnitTestSimulationFixture)
 
 	BVec a = BVec("b11001110");
 
-	sim_assert(a(2, 4) == "b0011");
+	sim_assert(a(2, 4_b) == "b0011");
 
-	sim_assert(a(1, -1) == "b1100111");
-	sim_assert(a(-2, 2) == "b11");
+	sim_assert(a(1, -1_b) == "b1100111");
 /*
+	sim_assert(a(-2, 2) == "b11");
 	sim_assert(a(0, 4, 2) == "b1010");
 	sim_assert(a(1, 4, 2) == "b1011");
 
@@ -260,7 +260,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfSliceRead, BoostUnitTestSimulationFixtu
 
 	UInt index = pinIn(2_b);
 
-	Bit b = a(2,4)[index];
+	Bit b = a(2, 4_b)[index];
 
 	addSimulationProcess([=, this]()->SimProcess {
 		size_t v_ = (v >> 2) & 0b1111;
@@ -322,7 +322,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfSliceWrite, BoostUnitTestSimulationFixt
 	Bit b = pinIn();
 	UInt index = pinIn(2_b);
 
-	a(2,4)[index] = b;
+	a(2, 4_b)[index] = b;
 
 	addSimulationProcess([=, this]()->SimProcess {
 		for (auto i : gtry::utils::Range(4)) {

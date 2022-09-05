@@ -78,7 +78,7 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 
 	size_t width = rp.node->getBitWidth();
 	size_t depth = memGrp->getMemory()->getSize()/width;
-	size_t addrBits = utils::Log2C(depth);
+	BitWidth addrBits = BitWidth::count(depth);
 
 
 	/*

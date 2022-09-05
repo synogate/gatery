@@ -258,12 +258,10 @@ namespace gtry {
 
 		void exportOverride(const FinalType& exportOverride) { BaseBitVector::exportOverride(exportOverride); }
 
-		template<std::integral Int1, std::integral Int2>
-		FinalType& operator()(Int1 offset, Int2 size) { return (*this)(Selection::Slice(int(offset), int(size))); }
-		template<std::integral Int1, std::integral Int2>
-		const FinalType& operator() (Int1 offset, Int2 size) const { return (*this)(Selection::Slice(int(offset), int(size))); }
 		FinalType& operator() (size_t offset, BitWidth size) { return (*this)(Selection::Slice(int(offset), int(size.value))); }
 		const FinalType& operator() (size_t offset, BitWidth size) const { return (*this)(Selection::Slice(int(offset), int(size.value))); }
+		FinalType& operator() (size_t offset, BitReduce reduction) { return (*this)(Selection::Slice(int(offset), int(BaseBitVector::size() - reduction.value))); }
+		const FinalType& operator() (size_t offset, BitReduce reduction) const { return (*this)(Selection::Slice(int(offset), int(BaseBitVector::size() - reduction.value))); }
 
 		FinalType& upper(BitWidth bits) { return (*this)((width() - bits).bits(), bits); }
 		const FinalType& upper(BitWidth bits) const { return (*this)((width() - bits).bits(), bits); }

@@ -393,15 +393,15 @@ UInt RAMBxE2::getReadData(size_t width, bool portA)
 			}
 		break;
 		case 18:
-			result = pack(std::array<UInt, 2>{getOutputUInt(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, 16), getOutputUInt(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)(0, 2)});
+			result = pack(std::array<UInt, 2>{getOutputUInt(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, 16_b), getOutputUInt(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)(0, 2_b)});
 		break;
 		case 9:
-			result = pack(std::array<UInt, 2>{getOutputUInt(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, 8), getOutputUInt(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)(0, 1)});
+			result = pack(std::array<UInt, 2>{getOutputUInt(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, 8_b), getOutputUInt(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)(0, 1_b)});
 		break;
 		case 4:
 		case 2:
 		case 1:
-			result = getOutputUInt(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, width);
+			result = getOutputUInt(portA ? OUT_DOUT_A_DOUT : OUT_DOUT_B_DOUT)(0, BitWidth{ width });
 		break;
 		default:
 			HCL_ASSERT_HINT(false, "Invalid width for bram type!");
@@ -437,31 +437,31 @@ void RAMBxE2::connectWriteData(const UInt &input, bool portA)
 			HCL_ASSERT_HINT(isSimpleDualPort() || isRom(), "Width only available in simple dual port mode!");
 			HCL_ASSERT_HINT(!portA, "In SDP mode, only port B can write!");
 
-			connectInput(IN_DIN_A_DIN, input(0, 32));
-			connectInput(IN_DIN_B_DIN, input(32, 32));
-			connectInput(IN_DINP_A_DINP, input(64, 4));
-			connectInput(IN_DINP_B_DINP, input(68, 4));
+			connectInput(IN_DIN_A_DIN, input(0, 32_b));
+			connectInput(IN_DIN_B_DIN, input(32, 32_b));
+			connectInput(IN_DINP_A_DINP, input(64, 4_b));
+			connectInput(IN_DINP_B_DINP, input(68, 4_b));
 		break;
 		case 36:
 			if (m_type == RAMB36E2) {
-				connectInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, input(0, 32));
-				connectInput(portA?IN_DINP_A_DINP:IN_DINP_B_DINP, input(32, 4));
+				connectInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, input(0, 32_b));
+				connectInput(portA?IN_DINP_A_DINP:IN_DINP_B_DINP, input(32, 4_b));
 			} else {
 				HCL_ASSERT_HINT(isSimpleDualPort() || isRom(), "Width only available for RAMB36E2 or in simple dual port mode RAMB18E2!");
 				HCL_ASSERT_HINT(!portA, "In SDP mode, only port B can write!");
-				connectInput(IN_DIN_A_DIN, input(0, 16));
-				connectInput(IN_DIN_B_DIN, input(16, 16));
-				connectInput(IN_DINP_A_DINP, input(32, 2));
-				connectInput(IN_DINP_B_DINP, input(34, 2));
+				connectInput(IN_DIN_A_DIN, input(0, 16_b));
+				connectInput(IN_DIN_B_DIN, input(16, 16_b));
+				connectInput(IN_DINP_A_DINP, input(32, 2_b));
+				connectInput(IN_DINP_B_DINP, input(34, 2_b));
 			}
 		break;
 		case 18:
-			connectInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, zext(input(0, 16), dPortWidth));
-			connectInput(portA?IN_DINP_A_DINP:IN_DINP_B_DINP, zext(input(16, 2), pPortWidth));
+			connectInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, zext(input(0, 16_b), dPortWidth));
+			connectInput(portA?IN_DINP_A_DINP:IN_DINP_B_DINP, zext(input(16, 2_b), pPortWidth));
 		break;
 		case 9:
-			connectInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, zext(input(0, 8), dPortWidth));
-			connectInput(portA?IN_DINP_A_DINP:IN_DINP_B_DINP, zext(input(8, 1), pPortWidth));
+			connectInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, zext(input(0, 8_b), dPortWidth));
+			connectInput(portA?IN_DINP_A_DINP:IN_DINP_B_DINP, zext(input(8, 1_b), pPortWidth));
 		break;
 		case 4:
 		case 2:
@@ -514,10 +514,10 @@ void RAMBxE2::connectAddress(const UInt &input, bool portA)
 		break;
 	}
 
-	size_t totalAddrBits = m_type == RAMB36E2?15:14;
+	BitWidth totalAddrBits = m_type == RAMB36E2 ? 15_b : 14_b;
 
-	UInt properAddr = ConstUInt(0, BitWidth(totalAddrBits));
-	properAddr(lowerZeros, input.size()) = input;
+	UInt properAddr = ConstUInt(0, totalAddrBits);
+	properAddr(lowerZeros, input.width()) = input;
 
 	connectInput(portA?IN_ADDR_A_RDADDR:IN_ADDR_B_WRADDR, properAddr);
 }

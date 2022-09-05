@@ -243,7 +243,7 @@ namespace gtry::scl
 
 		for (size_t t = 0; t < mems.size(); ++t)
 		{
-			auto&& port = mems[t][cmdAddr(0, mems[t].addressWidth().value)];
+			auto&& port = mems[t][cmdAddr(0, mems[t].addressWidth())];
 
 			IF(cmdAddr(memTabSel) == t)
 			{

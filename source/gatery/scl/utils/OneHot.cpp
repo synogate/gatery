@@ -73,7 +73,7 @@ gtry::scl::VStream<UInt> gtry::scl::priorityEncoderTree(const UInt& in, bool reg
 	std::vector<VStream<UInt>> lowerStep;
 	for (size_t i = 0; i < in.size(); i += inBitsPerStep)
 	{
-		const size_t clamp = std::min(inBitsPerStep, in.size() - i);
+		const BitWidth clamp{ std::min(inBitsPerStep, in.size() - i) };
 		lowerStep.push_back(priorityEncoderTree(in(i, clamp), registerStep, bps));
 	}
 	setName(lowerStep, "lowerStep");

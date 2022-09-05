@@ -128,7 +128,7 @@ namespace gtry::scl
 
 		IF(Fifo<TData>::m_pushValid)
 		{
-			mem[put(0, -1)] = Fifo<TData>::m_pushData;
+			mem[put(0, -1_b)] = Fifo<TData>::m_pushData;
 			put += 1;
 		}
 
@@ -145,7 +145,7 @@ namespace gtry::scl
 		}
 
 		Fifo<TData>::m_pushSize = put - get;
-		Fifo<TData>::m_pushFull = reg(put.msb() != get.msb() & put(0, -1) == get(0, -1), '0');
+		Fifo<TData>::m_pushFull = reg(put.msb() != get.msb() & put(0, -1_b) == get(0, -1_b), '0');
 		setName(Fifo<TData>::m_pushFull, "m_pushFull");
 
 		return putCheckpoint;
@@ -177,10 +177,10 @@ namespace gtry::scl
 		IF(m_popCommit)
 			getCheckpoint = get;
 
-		Fifo<TData>::m_peekData = reg(mem[get(0, -1)], { .clock = *Fifo<TData>::m_popClock, .allowRetimingBackward = true });
+		Fifo<TData>::m_peekData = reg(mem[get(0, -1_b)], { .clock = *Fifo<TData>::m_popClock, .allowRetimingBackward = true });
 
 		Fifo<TData>::m_popSize = put - get;
-		Fifo<TData>::m_popEmpty = reg(put.msb() == get.msb() & put(0, -1) == get(0, -1), '1');
+		Fifo<TData>::m_popEmpty = reg(put.msb() == get.msb() & put(0, -1_b) == get(0, -1_b), '1');
 		setName(Fifo<TData>::m_popEmpty, "m_popEmpty");
 
 		return getCheckpoint;
