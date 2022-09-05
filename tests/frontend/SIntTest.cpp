@@ -198,10 +198,10 @@ BOOST_FIXTURE_TEST_CASE(SIntMul, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
 
-	SInt a = extTo(SInt(-5), 32_b);
-	SInt b = extTo(SInt(-10), 32_b);
-	SInt c = extTo(SInt(5), 32_b);
-	SInt d = extTo(SInt(10), 32_b);
+	SInt a = ext(SInt(-5), 32_b);
+	SInt b = ext(SInt(-10), 32_b);
+	SInt c = ext(SInt(5), 32_b);
+	SInt d = ext(SInt(10), 32_b);
 
 	sim_assert(a*a == ext(SInt(25)));
 	sim_assert(a*b == ext(SInt(50)));

@@ -286,28 +286,5 @@ namespace gtry {
 	};
 
 	template<BitVectorSignal T>
-	T extTo(const T& vec, BitWidth width) { HCL_DESIGNCHECK_HINT(width >= vec.width(), "extTo can not make a vector smaller"); return ext(vec, (width - vec.width()).value); }
-	template<BitVectorSignal T>
-	T extTo(const T& vec, BitWidth width, Expansion policy) { HCL_DESIGNCHECK_HINT(width >= vec.width(), "extTo can not make a vector smaller"); return ext(vec, (width - vec.width()).value, policy); }
-
-	template<BitVectorLiteral T>
-	auto extTo(const T& vec, BitWidth width) { return extTo<ValueToBaseSignal<T>>(vec, width); }
-	template<BitVectorLiteral T>
-	auto extTo(const T& vec, BitWidth width, Expansion policy) { return extTo<ValueToBaseSignal<T>>(vec, width, policy); }
-
-	template<BitVectorValue T>
-	inline auto zextTo(const T& vec, BitWidth width) { return ext(vec, width, Expansion::zero); }
-	template<BitVectorValue T>
-	inline auto oextTo(const T& vec, BitWidth width) { return ext(vec, width, Expansion::one); }
-	template<BitVectorValue T>
-	inline auto sextTo(const T& vec, BitWidth width) { return ext(vec, width, Expansion::sign); }
-
-
-
-	template<BitVectorSignal T>
-	T resizeTo(const T& vec, BitWidth width) { if (width >= vec.width()) return extTo(vec, width); else return vec(0, width); }
-
-	template<BitVectorLiteral T>
-	auto resizeTo(const T& vec, BitWidth width) { return extTo<ValueToBaseSignal<T>>(vec, width); }
-
+	T resizeTo(const T& vec, BitWidth width) { if(width > vec.width()) return ext(vec, width); else return vec(0, width); }
 }
