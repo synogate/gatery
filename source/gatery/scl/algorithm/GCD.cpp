@@ -63,11 +63,11 @@ gtry::scl::RvStream<gtry::scl::UIntPair> gtry::scl::binaryGCDStep1(RvStream<UInt
 
 			IF(a_odd & b_odd)
 			{
-				UInt abs = zext(a, 1) - zext(b, 1);
+				UInt abs = zext(a, +1_b) - zext(b, +1_b);
 				a = mux(abs.msb(), { a, b });
 
 				HCL_COMMENT << "a - b is always even, it is sufficient to build the 1s complement";
-				b = (abs(0, b.size()) ^ abs.msb()) >> 1;
+				b = (abs(0, b.width()) ^ abs.msb()) >> 1;
 			}
 		}
 		

@@ -135,7 +135,7 @@ namespace gtry::scl
 		Bit start;
 		IF(transfer(source))
 		{
-			sim_assert(size != 0) << "what is a zero length packet?";
+			//sim_assert(size != 0) << "what is a zero length packet?";
 			start = '0';
 			beatCounter = beatCounterNext;
 		}

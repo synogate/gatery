@@ -71,12 +71,23 @@ namespace gtry {
 		const Bit& sign() const { return msb(); }
 	};
 
-	SInt ext(const SInt& bvec, size_t increment, Expansion policy);
-	inline SInt ext(const SInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::sign); }
-	inline SInt zext(const SInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::zero); }
-	inline SInt oext(const SInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::one); }
-	inline SInt sext(const SInt& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::sign); }
+	SInt ext(const SInt& bvec, BitWidth extendedWidth, Expansion policy);
+	inline SInt ext(const SInt& bvec, BitWidth extendedWidth) { return ext(bvec, extendedWidth, Expansion::sign); }
+	inline SInt zext(const SInt& bvec, BitWidth extendedWidth) { return ext(bvec, extendedWidth, Expansion::zero); }
+	inline SInt oext(const SInt& bvec, BitWidth extendedWidth) { return ext(bvec, extendedWidth, Expansion::one); }
+	inline SInt sext(const SInt& bvec, BitWidth extendedWidth) { return ext(bvec, extendedWidth, Expansion::sign); }
 
+	SInt ext(const SInt& bvec, BitExtend increment, Expansion policy);
+	inline SInt ext(const SInt& bvec, BitExtend increment = { 0 }) { return ext(bvec, increment, Expansion::sign); }
+	inline SInt zext(const SInt& bvec, BitExtend increment = { 0 }) { return ext(bvec, increment, Expansion::zero); }
+	inline SInt oext(const SInt& bvec, BitExtend increment = { 0 }) { return ext(bvec, increment, Expansion::one); }
+	inline SInt sext(const SInt& bvec, BitExtend increment = { 0 }) { return ext(bvec, increment, Expansion::sign); }
+
+	SInt ext(const SInt& bvec, BitReduce decrement, Expansion policy);
+	inline SInt ext(const SInt& bvec, BitReduce decrement) { return ext(bvec, decrement, Expansion::sign); }
+	inline SInt zext(const SInt& bvec, BitReduce decrement) { return ext(bvec, decrement, Expansion::zero); }
+	inline SInt oext(const SInt& bvec, BitReduce decrement) { return ext(bvec, decrement, Expansion::one); }
+	inline SInt sext(const SInt& bvec, BitReduce decrement) { return ext(bvec, decrement, Expansion::sign); }
 
 	inline SIntDefault::SIntDefault(const SInt& rhs) : BaseBitVectorDefault(rhs) { }
 

@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+		
+	<!-- frontend -->
+	<Type Name="gtry::SliceableBitVector&lt;*&gt;">
+		<Intrinsic Name="node" Expression="m_node.m_ptr"/>
+		<Intrinsic Name="in" Expression="m_node.m_ptr->m_inputPorts[0].node"/>
+		<Intrinsic Name="name" Expression="in()->m_name"/>
+		
+		<DisplayString Condition="!node()">uninitialized</DisplayString>
+		<DisplayString>{m_range.width}b {*in()}</DisplayString>
+		
+		<Expand>
+			<Item Name="range">m_range</Item>
+			<Item Name="expand">m_expansionPolicy</Item>
+			<Item Name="in">*in()</Item>
+		</Expand>
+	</Type>
+	
+	<Type Name="gtry::Bit">
+		<Intrinsic Name="in" Expression="m_node.m_ptr->m_inputPorts[0].node"/>
+		<Intrinsic Name="name" Expression="in()->m_name"/>
+
+		<DisplayString>{*in()}</DisplayString>
+
+		<Expand>
+			<Item Name="in">*in()</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="gtry::BitWidth">
+		<DisplayString>{value}b</DisplayString>
+	</Type>
+
+	<Type Name="gtry::Reverse&lt;*&gt;">
+		<DisplayString>reverse {m_obj}</DisplayString>
+		<Expand>
+			<ExpandedItem>m_obj</ExpandedItem>
+		</Expand>
+	</Type>
+
+	<Type Name="gtry::BaseBitVector::Range">
+		<DisplayString>({offset}, {width}b)</DisplayString>
+	</Type>
+
+	<!-- scl -->
+
+	<Type Name="gtry::scl::Stream&lt;*&gt;">
+		<Expand>
+			<ExpandedItem>data</ExpandedItem>
+			<ExpandedItem>_sig</ExpandedItem>
+		</Expand>
+	</Type>
+
+	<Type Name="gtry::scl::Valid">
+		<DisplayString>{valid}</DisplayString>
+		<Expand>
+			<ExpandedItem>valid</ExpandedItem>
+		</Expand>
+	</Type>
+
+	<Type Name="gtry::scl::Ready">
+		<DisplayString>{ready}</DisplayString>
+		<Expand>
+			<ExpandedItem>ready</ExpandedItem>
+		</Expand>
+	</Type>
+
+	<!-- sim -->
+
+	<Type Name="gtry::sim::BitVectorState&lt;*&gt;">
+		<Intrinsic Name="fully_defined" Expression="m_values[1][0] + 1 == (1ull &lt;&lt; m_size)" />
+		<Intrinsic Name="small" Expression="m_values[0].size() == 1" />
+		<DisplayString Condition="small() &amp; fully_defined()">"{m_size}d{m_values[0][0]}"</DisplayString>
+		<DisplayString Condition="small() &amp; !fully_defined()">{m_size}b value={m_values[0][0],x} defined={m_values[1][0],x}</DisplayString>
+		<DisplayString Condition="small() &amp; m_values[1][0] == 0">{m_size}b undefined</DisplayString>
+		<DisplayString Condition="!small()">{m_size}b</DisplayString>
+
+		<Expand>
+			<Item Name="value">m_values[0]</Item>
+			<Item Name="defined">m_values[1]</Item>
+		</Expand>
+	</Type>
+	
+	<!-- hlim -->
+
+	<Type Name="gtry::hlim::NodePort">
+		<DisplayString Condition="port == 0">{*node}</DisplayString>
+		<DisplayString Condition="!node">disconnected</DisplayString>
+		<DisplayString>node={node} port={port}</DisplayString>
+
+		<Expand HideRawView="true">
+			<ExpandedItem Condition="port == 0">*node</ExpandedItem>
+			<Item Name="node" Condition="port != 0">node</Item>
+			<Item Name="port" Condition="port != 0">port</Item>
+		</Expand>
+	</Type>
+	
+	<Type Name="gtry::hlim::Node_Signal">
+		<DisplayString Condition="m_name.size() != 0">{m_name}</DisplayString>
+
+		<DisplayString Condition="!dynamic_cast&lt;gtry::hlim::Node_Signal*&gt;(m_inputPorts[0].node)">{*m_inputPorts[0].node}</DisplayString>
+
+		<DisplayString>sig{m_nodeId}</DisplayString>
+		
+		<Expand>
+			<Item Name="id">m_nodeId</Item>
+			<Item Name="name" Condition="m_name.size()">m_name</Item>
+			<Item Name="in" Condition="!dynamic_cast&lt;gtry::hlim::Node_Signal*&gt;(m_inputPorts[0].node)">m_inputPorts[0]</Item>
+			<Item Name="out">m_outputPorts[0].connections</Item>
+
+			<CustomListItems Condition="dynamic_cast&lt;gtry::hlim::Node_Signal*&gt;(m_inputPorts[0].node)">
+				<Variable Name="me" InitialValue="this"/>
+				<Variable Name="iter" InitialValue="m_inputPorts[0].node"/>
+
+				<Loop>
+					<Break Condition="iter == 0 || iter == me" />
+					<If Condition="!dynamic_cast&lt;gtry::hlim::Node_Signal*&gt;(iter)">
+						<Item>*iter</Item>
+						<Break/>
+					</If>
+					<Exec>iter = iter-&gt;m_inputPorts[0].node</Exec>
+				</Loop>
+			</CustomListItems>
+		</Expand>
+	</Type>
+
+	<Type Name="gtry::hlim::Node_Constant">
+		<DisplayString>{m_Value}</DisplayString>
+
+		<Expand>
+			<Item Name="id">m_nodeId</Item>
+			<Item Name="name" Condition="m_name.size()">m_name</Item>
+			<Item Name="value">m_Value</Item>
+			<Item Name="out">m_outputPorts[0].connections</Item>
+		</Expand>
+	</Type>
+	
+	<Type Name="gtry::hlim::Node_Arithmetic">
+		<DisplayString Condition="m_op == ADD">({m_inputPorts[0]} + {m_inputPorts[1]})</DisplayString>
+		<DisplayString Condition="m_op == SUB">({m_inputPorts[0]} - {m_inputPorts[1]})</DisplayString>
+		<DisplayString Condition="m_op == MUL">({m_inputPorts[0]} * {m_inputPorts[1]})</DisplayString>
+		<DisplayString Condition="m_op == DIV">({m_inputPorts[0]} / {m_inputPorts[1]})</DisplayString>
+		<DisplayString Condition="m_op == REM">({m_inputPorts[0]} % {m_inputPorts[1]})</DisplayString>
+
+		<Expand>
+			<Item Name="id">m_nodeId</Item>
+			<Item Name="name" Condition="m_name.size()">m_name</Item>
+			<Item Name="lho">m_inputPorts[0]</Item>
+			<Item Name="rho">m_inputPorts[1]</Item>
+			<Item Name="out">m_outputPorts[0].connections</Item>
+		</Expand>
+	</Type>
+	
+	<Type Name="gtry::hlim::Node_Compare">
+		<DisplayString Condition="m_op == EQ">({m_inputPorts[0]} == {m_inputPorts[1]})</DisplayString>
+		<DisplayString Condition="m_op == NEQ">({m_inputPorts[0]} != {m_inputPorts[1]})</DisplayString>
+		<DisplayString Condition="m_op == LT">({m_inputPorts[0]} &lt; {m_inputPorts[1]})</DisplayString>
+		<DisplayString Condition="m_op == GT">({m_inputPorts[0]} &gt; {m_inputPorts[1]})</DisplayString>
+		<DisplayString Condition="m_op == LEQ">({m_inputPorts[0]} &lt;= {m_inputPorts[1]})</DisplayString>
+		<DisplayString Condition="m_op == GEQ">({m_inputPorts[0]} &gt;= {m_inputPorts[1]})</DisplayString>
+
+		<Expand>
+			<Item Name="id">m_nodeId</Item>
+			<Item Name="name" Condition="m_name.size()">m_name</Item>
+			<Item Name="lho">m_inputPorts[0]</Item>
+			<Item Name="rho">m_inputPorts[1]</Item>
+			<Item Name="out">m_outputPorts[0].connections</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="gtry::hlim::Node_Logic">
+		<DisplayString Condition="m_op == AND">({m_inputPorts[0]} &amp; {m_inputPorts[1]})</DisplayString>
+		<DisplayString Condition="m_op == NAND">~({m_inputPorts[0]} &amp; {m_inputPorts[1]})</DisplayString>
+		<DisplayString Condition="m_op == OR">({m_inputPorts[0]} | {m_inputPorts[1]})</DisplayString>
+		<DisplayString Condition="m_op == NOR">~({m_inputPorts[0]} | {m_inputPorts[1]})</DisplayString>
+		<DisplayString Condition="m_op == XOR">({m_inputPorts[0]} ^ {m_inputPorts[1]})</DisplayString>
+		<DisplayString Condition="m_op == EQ">~({m_inputPorts[0]} ^ {m_inputPorts[1]})</DisplayString>
+		<DisplayString Condition="m_op == NOT">~{m_inputPorts[0]}</DisplayString>
+
+		<Expand>
+			<Item Name="id">m_nodeId</Item>
+			<Item Name="name" Condition="m_name.size()">m_name</Item>
+			<Item Name="lho">m_inputPorts[0]</Item>
+			<Item Name="rho" Condition="m_op != NOT">m_inputPorts[1]</Item>
+			<Item Name="out">m_outputPorts[0].connections</Item>
+		</Expand>
+	</Type>
+	
+	<Type Name="gtry::hlim::Node_Shift">
+		<DisplayString Condition="m_fill == rotate &amp; m_direction == left">({m_inputPorts[0]} &lt;&lt;&lt; {m_inputPorts[1]})</DisplayString>
+		<DisplayString Condition="m_fill == rotate &amp; m_direction == right">({m_inputPorts[0]} &gt;&gt;&gt; {m_inputPorts[1]})</DisplayString>
+		<DisplayString Condition="m_direction == left">({m_inputPorts[0]} &lt;&lt; {m_inputPorts[1]})</DisplayString>
+		<DisplayString Condition="m_direction == right">({m_inputPorts[0]} &gt;&gt; {m_inputPorts[1]})</DisplayString>
+		<DisplayString>shift({m_inputPorts[0]}, {m_inputPorts[1]})</DisplayString>
+
+		<Expand>
+			<Item Name="id">m_nodeId</Item>
+			<Item Name="name" Condition="m_name.size()">m_name</Item>
+			<Item Name="operand">m_inputPorts[0]</Item>
+			<Item Name="amount">m_inputPorts[1]</Item>
+			<Item Name="out">m_outputPorts[0].connections</Item>
+			<Item Name="direction">m_direction</Item>
+			<Item Name="fill">m_fill</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="gtry::hlim::Node_Multiplexer">
+		<DisplayString Condition="m_inputPorts.size() == 3" >({m_inputPorts[0]} ? {m_inputPorts[2]} : {m_inputPorts[1]})</DisplayString>
+		<DisplayString>MUX({m_inputPorts[0]}, ...)</DisplayString>
+
+		<Expand>
+			<Item Name="id">m_nodeId</Item>
+			<Item Name="name" Condition="m_name.size()">m_name</Item>
+			<Item Name="selector">m_inputPorts[0]</Item>
+			<Item Name="in0" Condition="m_inputPorts.size() == 3">m_inputPorts[1]</Item>
+			<Item Name="in1" Condition="m_inputPorts.size() == 3">m_inputPorts[2]</Item>
+			<Item Name="in" Condition="m_inputPorts.size() != 3">m_inputPorts</Item>
+			<Item Name="out">m_outputPorts[0].connections</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="gtry::hlim::Node_Pin">
+		<DisplayString Condition="m_isInputPin &amp; !m_isOutputPin">IN({m_name})</DisplayString>
+		<DisplayString Condition="!m_isInputPin &amp; m_isOutputPin">OUT({m_name})</DisplayString>
+		<DisplayString>INOUT({m_name})</DisplayString>
+
+		<Expand>
+			<Item Name="id">m_nodeId</Item>
+			<Item Name="name">m_name</Item>
+			<Item Name="out" Condition="m_isInputPin">m_outputPorts[0].connections</Item>
+			<Item Name="in" Condition="m_isOutputPin">m_inputPorts[0]</Item>
+			<Item Name="enable" Condition="m_hasOutputEnable">m_inputPorts[1]</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="gtry::hlim::Node_Register">
+		<DisplayString>reg({m_inputPorts[0]})</DisplayString>
+
+		<Expand>
+			<Item Name="id">m_nodeId</Item>
+			<Item Name="name" Condition="m_name.size()">m_name</Item>
+			<Item Name="value">m_inputPorts[0]</Item>
+			<Item Name="resetValue">m_inputPorts[1]</Item>
+			<Item Name="enable">m_inputPorts[2]</Item>
+			<Item Name="out">m_outputPorts[0].connections</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="gtry::hlim::Node_Rewire::OutputRange">
+		<DisplayString Condition="source == CONST_ZERO">{subwidth}b ZERO</DisplayString>
+		<DisplayString Condition="source == CONST_ONE">{subwidth}b ONE</DisplayString>
+		<DisplayString>in[{inputIdx}]({inputOffset}, {subwidth}b)</DisplayString>
+	</Type>
+
+	<Type Name="gtry::hlim::Node_Rewire::RewireOperation">
+
+		<Intrinsic Name="zero" Expression="ranges.size() == 1 &amp;&amp; ranges[0].source == gtry::hlim::Node_Rewire::OutputRange::CONST_ZERO" />
+		<Intrinsic Name="ones" Expression="ranges.size() == 1 &amp;&amp; ranges[0].source == gtry::hlim::Node_Rewire::OutputRange::CONST_ONE" />
+		<Intrinsic Name="zext" Expression="ranges.size() == 2 &amp;&amp; ranges[1].source == gtry::hlim::Node_Rewire::OutputRange::CONST_ZERO &amp;&amp; ranges[0].source == gtry::hlim::Node_Rewire::OutputRange::INPUT" />
+		<Intrinsic Name="oext" Expression="ranges.size() == 2 &amp;&amp; ranges[1].source == gtry::hlim::Node_Rewire::OutputRange::CONST_ONE &amp;&amp; ranges[0].source == gtry::hlim::Node_Rewire::OutputRange::INPUT" />
+		
+	</Type>
+
+	<Type Name="gtry::hlim::Node_Rewire">
+		<DisplayString Condition="m_rewireOperation.zero()">{m_rewireOperation.ranges[0].subwidth}b0...</DisplayString>
+		<DisplayString Condition="m_rewireOperation.ones()">{m_rewireOperation.ranges[0].subwidth}b1...</DisplayString>
+		<DisplayString Condition="m_rewireOperation.zext()">zext({m_inputPorts[0]}, {m_rewireOperation.ranges[0].subwidth}b)</DisplayString>
+		<DisplayString Condition="m_rewireOperation.oext()">oext({m_inputPorts[0]}, {m_rewireOperation.ranges[0].subwidth}b)</DisplayString>
+		<DisplayString Condition="m_inputPorts.size() == 1">rewire({m_inputPorts[0]})</DisplayString>
+		<DisplayString Condition="m_inputPorts.size() == 0">rewire(const)</DisplayString>
+		<DisplayString>rewire(...)</DisplayString>
+
+		<Expand>
+			<Item Name="id">m_nodeId</Item>
+			<Item Name="name" Condition="m_name.size()">m_name</Item>
+			<Item Name="in">m_inputPorts</Item>
+			<Item Name="out">m_outputPorts[0].connections</Item>
+			<Item Name="op">m_rewireOperation.ranges</Item>
+<!--
+			<IndexListItems>
+				<Size>m_rewireOperation.ranges.size()</Size>
+				<ValueNode Condition="m_rewireOperation.ranges[$i].source != gtry::hlim::Node_Rewire::OutputRange::INPUT">
+					m_rewireOperation.ranges[$i]
+				</ValueNode>
+				<ValueNode>
+					m_inputPorts[m_rewireOperation.ranges[$i].inputIdx]
+				</ValueNode>
+			</IndexListItems>
+-->
+		</Expand>
+	</Type>
+
+</AutoVisualizer>

@@ -25,7 +25,8 @@ namespace gtry
  * @addtogroup gtry_frontend
  * @{
  */
-
+	struct BitExtend { uint64_t value; };
+	struct BitReduce { uint64_t value; };
 
 	struct BitWidth
 	{
@@ -42,12 +43,15 @@ namespace gtry
 		BitWidth& operator *= (const uint64_t rhs) { value *= rhs; return *this; }
 		BitWidth& operator /= (const uint64_t rhs) { value /= rhs; return *this; }
 
+		BitExtend operator +() const { return { value }; }
+		BitReduce operator -() const { return { value }; }
+
 		explicit operator bool() const { return value != 0; }
 
 		uint64_t value = 0;
 
 		BitWidth() = default;
-		constexpr BitWidth(uint64_t v) : value(v) { }
+		constexpr explicit BitWidth(uint64_t v) : value(v) { }
 
 		constexpr uint64_t count() const { return 1ull << value; }
 		constexpr uint64_t last() const { return count() - 1; }

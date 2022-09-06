@@ -24,7 +24,7 @@
 gtry::Bit gtry::scl::pci::isCompletionTlp(const UInt& tlpHeader)
 {
 	HCL_DESIGNCHECK_HINT(tlpHeader.width() >= 8_b, "first 8b of tlp header required for decoding");
-	Bit completion_tlp = tlpHeader(0, 5) == "b01010";
+	Bit completion_tlp = tlpHeader(0, 5_b) == "b01010";
 	HCL_NAMED(completion_tlp);
 	return completion_tlp;
 }
@@ -32,7 +32,7 @@ gtry::Bit gtry::scl::pci::isCompletionTlp(const UInt& tlpHeader)
 gtry::Bit gtry::scl::pci::isMemTlp(const UInt& tlpHeader)
 {
 	HCL_DESIGNCHECK_HINT(tlpHeader.width() >= 8_b, "first 8b of tlp header required for decoding");
-	Bit mem_tlp = tlpHeader(0, 5) == 0;
+	Bit mem_tlp = tlpHeader(0, 5_b) == 0;
 	HCL_NAMED(mem_tlp);
 	return mem_tlp;
 }

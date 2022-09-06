@@ -164,11 +164,12 @@ BOOST_FIXTURE_TEST_CASE(UIntSelectorAccess, BoostUnitTestSimulationFixture)
 
 	UInt a = "b11001110";
 
-	sim_assert(a(2, 4) == "b0011");
+	sim_assert(a(2, 4_b) == "b0011");
 
-	sim_assert(a(1, -1) == "b1100111");
-	sim_assert(a(-2, 2) == "b11");
+	sim_assert(a(1, -1_b) == "b1100111");
 /*
+	sim_assert(a(-2, 2) == "b11");
+
 	sim_assert(a(0, 4, 2) == "b1010");
 	sim_assert(a(1, 4, 2) == "b1011");
 

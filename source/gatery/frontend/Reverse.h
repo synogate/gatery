@@ -45,19 +45,19 @@ namespace gtry
 		T m_obj;
 	};
 
-	struct ReversePlaceholder {};
-
 	template<class T> T& downstream(T& val) { return val; }
-	template<class T> ReversePlaceholder downstream(Reverse<T>& val) { return {}; }
-	template<class T> ReversePlaceholder downstream(const Reverse<T>& val) { return {}; }
+	template<class T> decltype(auto) downstream(Reverse<T>& val);
+	template<class T> decltype(auto) downstream(const Reverse<T>& val);
 	template<CompoundSignal T> auto downstream(T& signal);
 	template<CompoundSignal T> auto downstream(const T& signal);
 	template<TupleSignal T> auto downstream(T& signal);
 	template<TupleSignal T> auto downstream(const T& signal);
 
+	struct ReversePlaceholder {};
+
 	template<class T> ReversePlaceholder upstream(const T& val) { return {}; }
-	template<class T> T& upstream(Reverse<T>& val) { return *val; }
-	template<class T> const T& upstream(const Reverse<T>& val) { return *val; }
+	template<class T> decltype(auto) upstream(Reverse<T>& val) { return downstream(*val); }
+	template<class T> decltype(auto) upstream(const Reverse<T>& val) { return downstream(*val); }
 	template<CompoundSignal T> auto upstream(T& signal);
 	template<CompoundSignal T> auto upstream(const T& signal);
 	template<TupleSignal T> auto upstream(T& signal);
@@ -93,6 +93,16 @@ namespace gtry
 
 namespace gtry
 {
+	template<class T> decltype(auto) downstream(Reverse<T>& val)
+	{
+		return upstream(*val);
+	}
+
+	template<class T> decltype(auto) downstream(const Reverse<T>& val)
+	{
+		return upstream(*val);
+	}
+
 	namespace internal
 	{
 		template<typename T>
@@ -214,9 +224,9 @@ namespace gtry
 	}
 
 	template<class Ta, class Tb>
-	concept Connectable = requires(Ta & a, Tb & b) { connect(a, b); };
+	concept Connectable = requires(Ta& a, Tb& b) { connect(a, b); };
 
 	template<class Ta, class Tb>
-	requires Connectable<Ta, Tb>
-	Ta& operator <<= (Ta& lhs, Tb& rhs) { connect(lhs, rhs); return lhs; }
+	requires (Connectable<Ta, Tb> and not BaseSignal<Ta>)
+	Ta& operator <<= (Ta&& lhs, Tb&& rhs) { connect(lhs, rhs); return lhs; }
 }

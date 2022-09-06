@@ -352,12 +352,12 @@ namespace gtry::scl
 
 		IF(m_pushValid)
 		{
-			mem[put(0, -1)] = m_pushData;
+			mem[put(0, -1_b)] = m_pushData;
 			put += 1;
 		}
 
 		m_pushSize = put - get;
-		m_pushFull = reg(put.msb() != get.msb() & put(0, -1) == get(0, -1), '0');
+		m_pushFull = reg(put.msb() != get.msb() & put(0, -1_b) == get(0, -1_b), '0');
 		HCL_NAMED(m_pushFull);
 
 		return put;
@@ -375,10 +375,10 @@ namespace gtry::scl
 		IF(m_popValid)
 			get += 1;
 		
-		m_peekData = reg(mem[get(0, -1)], { .allowRetimingBackward = true });
+		m_peekData = reg(mem[get(0, -1_b)], { .allowRetimingBackward = true });
 
 		m_popSize = put - get;
-		m_popEmpty = reg(put.msb() == get.msb() & put(0, -1) == get(0, -1), '1');
+		m_popEmpty = reg(put.msb() == get.msb() & put(0, -1_b) == get(0, -1_b), '1');
 		HCL_NAMED(m_popEmpty);
 
 		return get;

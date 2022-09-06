@@ -217,8 +217,6 @@ namespace gtry {
 		rhs.assign(SignalReadPort{ m_node });
 		return *this;
 	}
-//		Enum<T>& operator=(const EnumDefault<T> &defaultValue);
-
 
 	template<EnumType T>
 	Enum<T>& Enum<T>::operator=(T rhs) { 
@@ -237,10 +235,9 @@ namespace gtry {
 	template<EnumType T>
 	constexpr BitWidth Enum<T>::width() const
 	{
-//return utils::Log2C(magic_enum::enum_count<T>()+1);
-		size_t maxWidth = 0;
+		BitWidth maxWidth = 0_b;
 		for(auto v : magic_enum::enum_values<T>())
-			maxWidth = std::max(maxWidth, utils::Log2C((size_t)v + 1));
+			maxWidth = std::max(maxWidth, BitWidth::last((size_t)v));
 
 		return maxWidth;
 	}

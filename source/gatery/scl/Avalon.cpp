@@ -77,7 +77,7 @@ namespace gtry::scl
 
 	static void attachSlave(AvalonMM& mm, AvalonMM& slave, Bit slaveSelect)
 	{
-		slave.address = mm.address(0, slave.address.size());
+		slave.address = mm.address.lower(slave.address.width());
 		
 		// write path
 		if (slave.write)
@@ -143,13 +143,13 @@ namespace gtry::scl
 		for (AvalonNetworkSection& sub : m_subSections)
 			m_port.emplace_back(std::make_pair(sub.m_name, sub.demux()));
 
-		size_t subAddressWidth = 0;
+		BitWidth subAddressWidth = 0_b;
 		for (const auto& port : m_port)
-			subAddressWidth = std::max(subAddressWidth, port.second.address.size());
+			subAddressWidth = std::max(subAddressWidth, port.second.address.width());
 
-		const size_t portAddrWidth = utils::Log2C(m_port.size());
+		const BitWidth portAddrWidth = BitWidth::count(m_port.size());
 		AvalonMM ret;
-		ret.address = BitWidth{ portAddrWidth + subAddressWidth };
+		ret.address = portAddrWidth + subAddressWidth;
 
 		for (size_t p = 0; p < m_port.size(); ++p)
 		{

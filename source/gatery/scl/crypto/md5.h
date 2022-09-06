@@ -80,7 +80,7 @@ namespace gtry::scl
 		{
 			TVec swappedBlock = swapEndian(_block);
 			for (size_t i = 0; i < w.size(); ++i)
-				w[i] = swappedBlock(i * 32, 32);
+				w[i] = swappedBlock(i * 32, 32_b);
 		}
 
 		void round(const UInt& round)
@@ -89,7 +89,7 @@ namespace gtry::scl
 			
 			// select round function
 			TVec f = c ^ (b | ~d);
-			UInt g = zext(round, 4)(0, 4); // TODO: allow without first extend if not needed
+			UInt g = zext(round, +4_b).lower(4_b); // TODO: allow without first extend if not needed
 
 			IF(round < 16)
 			{

@@ -226,7 +226,7 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 	}		
 
 	UInt rdDataHook = hookUIntAfter(rp.dataOutput);
-	rdDataHook.exportOverride(readData(0, rdDataHook.size()));
+	rdDataHook.exportOverride(readData(0, rdDataHook.width()));
 
 	if (hasWritePort) {
 		auto &wp = memGrp->getWritePorts().front();
@@ -244,7 +244,7 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 		bram->setupPortB(wrPortSetup);
 		bram->connectAddressPortB(wrAddr);
 		bram->connectInput(RAMBxE2::Inputs::IN_EN_B_WR_EN, wrEn);
-		bram->connectWriteDataPortB(zext(wrData, width - wrData.size()));
+		bram->connectWriteDataPortB(zext(wrData, BitWidth{ width }));
 
 		hlim::Clock* writeClock = memGrp->getWritePorts().front().node->getClocks()[0];
 		HCL_ASSERT(writeClock->getTriggerEvent() == hlim::Clock::TriggerEvent::RISING);

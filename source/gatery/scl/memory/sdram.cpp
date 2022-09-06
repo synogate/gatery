@@ -54,7 +54,7 @@ void Controller::generate(TileLinkUL& link)
 	{
 		TileLinkChannelA aIn;
 		downstream(aIn) = downstream(link.a);
-		IF(link.chanA().address(m_mapping.bank) == i)
+		IF(link.a->address(m_mapping.bank) == i)
 			ready(link.a) = ready(aIn);
 		ELSE
 			valid(aIn) = '0';
@@ -186,31 +186,29 @@ Controller::CommandStream Controller::translateCommand(const BankState& state, c
 	auto scope = Area("translateCommand").enter();
 	HCL_NAMED(request);
 
-	const TileLinkA& req = request.get<TileLinkA>();
-
 	CommandStream cmd{ {
 		.code = CommandCode::Precharge,
 		.address = ConstBVec(m_addrBusWidth),
-		.bank = req.address(m_mapping.bank)
+		.bank = request->address(m_mapping.bank)
 	} };
 	valid(cmd) = valid(request) & sop(request);
 
-	IF(state.rowActive & state.activeRow != req.address(m_mapping.row))
+	IF(state.rowActive & state.activeRow != request->address(m_mapping.row))
 	{
 		cmd->code = CommandCode::Precharge;
 	}
 	ELSE IF(!state.rowActive)
 	{
 		cmd->code = CommandCode::Activate;
-		cmd->address = zext((BVec)req.address(m_mapping.row));
+		cmd->address = zext((BVec)request->address(m_mapping.row));
 	}
 	ELSE
 	{
-		IF(req.opcode == (size_t)req.Get)
+		IF(request->opcode == (size_t)request->Get)
 			cmd->code = CommandCode::Read;
 		ELSE
 			cmd->code = CommandCode::Write;
-		cmd->address = zext((BVec)req.address(m_mapping.column));
+		cmd->address = zext((BVec)request->address(m_mapping.column));
 	}
 	
 	HCL_NAMED(cmd);
@@ -222,13 +220,12 @@ Controller::DataOutStream gtry::scl::sdram::Controller::translateCommandData(Til
 	auto scope = Area("translateCommandData").enter();
 	HCL_NAMED(request);
 
-	DataOutStream out = request
-		.add(Eop{ eop(request) })
-		.reduceTo<RvPacketStream<BVec, ByteEnable>>();
+	DataOutStream out{ request->data };
+	byteEnable(out) = request->mask;
+	eop(out) = eop(request);
 
 	// insert read byte mask stream
-	TileLinkA& req = request.get<TileLinkA>();
-	UInt len = transferLengthFromLogSize(req.size, byteEnable(request).width().bits());
+	UInt len = transferLengthFromLogSize(request->size, request->mask.width().bits());
 	HCL_NAMED(len);
 
 	UInt readBeatsLeft = len.width();
@@ -244,7 +241,7 @@ Controller::DataOutStream gtry::scl::sdram::Controller::translateCommandData(Til
 
 	IF(state.current() == State::wait)
 	{
-		IF(valid(request) & req.opcode == (size_t)TileLinkA::Get)
+		IF(valid(request) & request->opcode == (size_t)TileLinkA::Get)
 		{
 			readBeatsLeft = len;
 			state = State::readMask;

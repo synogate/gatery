@@ -40,8 +40,8 @@ namespace gtry::scl
 		HCL_NAMED(state);
 
 		HCL_DESIGNCHECK_HINT(key.size() == 128, "SipHash key must be 128bit wide");
-		UInt k0 = key( 0, 64);
-		UInt k1 = key(64, 64);
+		UInt k0 = key( 0, 64_b);
+		UInt k1 = key(64, 64_b);
 		HCL_NAMED(k0);
 		HCL_NAMED(k1);
 
@@ -66,7 +66,7 @@ namespace gtry::scl
 
 		for (size_t i = 0; i < blockReg.size() / 64; ++i)
 		{
-			state[3] ^= blockReg(i * 64, 64);
+			state[3] ^= blockReg(i * 64, 64_b);
 			for (size_t j = 0; j < m_messageWordRounds; ++j)
 			{
 				round(state);
@@ -77,7 +77,7 @@ namespace gtry::scl
 					blockReg = reg(blockReg);
 				}
 			}
-			state[0] ^= blockReg(i * 64, 64);
+			state[0] ^= blockReg(i * 64, 64_b);
 		}
 	}
 
@@ -96,7 +96,7 @@ namespace gtry::scl
 			for (size_t i = 0; i < m_finalizeRounds; ++i)
 				round(state);
 
-			sipHashResult(w, 64) = state[0] ^ state[1] ^ state[2] ^ state[3];
+			sipHashResult(w, 64_b) = state[0] ^ state[1] ^ state[2] ^ state[3];
 		}
 		return sipHashResult;
 	}
@@ -137,8 +137,8 @@ namespace gtry::scl
 		UInt paddedLength = ConstUInt(msgByteSize, 8_b);
 		HCL_NAMED(paddedLength);
 
-		size_t zeroPad = (64 - (msgByteSize * 8 + 8)) % 64;
-		UInt paddedBlock = cat(paddedLength, zext(block(0, msgByteSize*8), zeroPad));
+		BitWidth zeroPad{ (64 - (msgByteSize * 8 + 8)) % 64 };
+		UInt paddedBlock = cat(paddedLength, zext(block(0, BitWidth{ msgByteSize * 8 }), +zeroPad));
 		HCL_NAMED(paddedBlock);
 		return paddedBlock;
 	}

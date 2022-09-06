@@ -180,7 +180,7 @@ void splitMemoryAlongDepthMux(hlim::NodeGroup *group, size_t log2SplitDepth, boo
 
 		Bit addrHighBit = rdAddr[log2SplitDepth];
 		HCL_NAMED(addrHighBit);
-		UInt addrLowBits = rdAddr(0, log2SplitDepth);
+		UInt addrLowBits = rdAddr(0, BitWidth{ log2SplitDepth });
 		HCL_NAMED(addrLowBits);
 
 		std::array<UInt, 2> newReadData;
@@ -195,8 +195,8 @@ void splitMemoryAlongDepthMux(hlim::NodeGroup *group, size_t log2SplitDepth, boo
 			Bit newRdEn = rdEn & (addrHighBit == bool(i));
 			newRdEn.setName((boost::format("cascade_%d_rdEn") % i).str());
 
-			size_t addrBits = new_rp.node->getExpectedAddressBits();
-			HCL_ASSERT(addrLowBits.size() >= addrBits);
+			BitWidth addrBits{ new_rp.node->getExpectedAddressBits() };
+			HCL_ASSERT(addrLowBits.width() >= addrBits);
 			UInt newRdAddr = addrLowBits(0, addrBits); // happens if one chunk is significantly smaller than the other.
 
 			new_rp.node->connectEnable(newRdEn.readPort());
@@ -222,7 +222,7 @@ void splitMemoryAlongDepthMux(hlim::NodeGroup *group, size_t log2SplitDepth, boo
 
 		Bit addrHighBit = wrAddr[log2SplitDepth];
 		HCL_NAMED(addrHighBit);
-		UInt addrLowBits = wrAddr(0, log2SplitDepth);
+		UInt addrLowBits = wrAddr(0, BitWidth{ log2SplitDepth });
 		HCL_NAMED(addrLowBits);
 
 		for (size_t i : {0ull, 1ull}) {
@@ -232,8 +232,8 @@ void splitMemoryAlongDepthMux(hlim::NodeGroup *group, size_t log2SplitDepth, boo
 			Bit newWrEn = wrEn & (addrHighBit == bool(i));
 			newWrEn.setName((boost::format("cascade_%d_wrEn") % i).str());
 
-			size_t addrBits = new_wp.node->getExpectedAddressBits();
-			HCL_ASSERT(addrLowBits.size() >= addrBits);
+			BitWidth addrBits{ new_wp.node->getExpectedAddressBits() };
+			HCL_ASSERT(addrLowBits.width() >= addrBits);
 			UInt newWrAddr = addrLowBits(0, addrBits); // happens if one chunk is significantly smaller than the other.
 
 
@@ -348,7 +348,7 @@ std::vector<SplitMemoryGroup> createWidthSplitMemories(hlim::NodeGroup *group, c
 					// Crop reset value
 					if (reg->hasResetValue()) {
 						UInt resetValue = getUIntBefore(hlim::NodePort{.node = newReg, .port = hlim::Node_Register::RESET_VALUE});
-						UInt croppedResetValue = resetValue(widthStart, widthEnd - widthStart);
+						UInt croppedResetValue = resetValue(widthStart, BitWidth{ widthEnd - widthStart });
 						newReg->connectInput(hlim::Node_Register::RESET_VALUE, croppedResetValue.readPort());
 					}
 
@@ -429,7 +429,7 @@ void splitMemoryAlongWidth(hlim::NodeGroup *group, size_t maxWidth)
 
 			size_t widthStart = i == 0?0:splitPositions[i-1];
 			size_t widthEnd = i < splitPositions.size()?splitPositions[i]:width;
-			UInt wrDataCrop = wrData(widthStart, widthEnd-widthStart);
+			UInt wrDataCrop = wrData(widthStart, BitWidth{ widthEnd - widthStart });
 
 			new_wp.node->connectWrData(wrDataCrop.readPort());
 		}

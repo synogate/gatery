@@ -192,11 +192,11 @@ BOOST_FIXTURE_TEST_CASE(BVecSelectorAccess, BoostUnitTestSimulationFixture)
 
 	BVec a = BVec("b11001110");
 
-	sim_assert(a(2, 4) == "b0011");
+	sim_assert(a(2, 4_b) == "b0011");
 
-	sim_assert(a(1, -1) == "b1100111");
-	sim_assert(a(-2, 2) == "b11");
+	sim_assert(a(1, -1_b) == "b1100111");
 /*
+	sim_assert(a(-2, 2) == "b11");
 	sim_assert(a(0, 4, 2) == "b1010");
 	sim_assert(a(1, 4, 2) == "b1011");
 
@@ -260,7 +260,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfSliceRead, BoostUnitTestSimulationFixtu
 
 	UInt index = pinIn(2_b);
 
-	Bit b = a(2,4)[index];
+	Bit b = a(2, 4_b)[index];
 
 	addSimulationProcess([=, this]()->SimProcess {
 		size_t v_ = (v >> 2) & 0b1111;
@@ -322,7 +322,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfSliceWrite, BoostUnitTestSimulationFixt
 	Bit b = pinIn();
 	UInt index = pinIn(2_b);
 
-	a(2,4)[index] = b;
+	a(2, 4_b)[index] = b;
 
 	addSimulationProcess([=, this]()->SimProcess {
 		for (auto i : gtry::utils::Range(4)) {
@@ -377,7 +377,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceRead, BoostUnitTestSimulationFixture)
 
 	UInt index = pinIn(3_b);
 
-	UInt b = a(index, 2);
+	UInt b = a(index, 2_b);
 
 	addSimulationProcess([=, this]()->SimProcess {
 	
@@ -412,7 +412,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfStaticSliceRead, BoostUnitTestSimulati
 
 	UInt index = pinIn(3_b);
 
-	UInt b = a(2, 8)(index, 2);
+	UInt b = a(2, 8_b)(index, 2_b);
 
 	addSimulationProcess([=, this]()->SimProcess {
 	
@@ -446,7 +446,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfStaticSliceReverseRead, BoostUnitTestS
 
 	UInt index = pinIn(3_b);
 
-	UInt b = a(index, 8)(2, 2);
+	UInt b = a(index, 8_b)(2, 2_b);
 
 	addSimulationProcess([=, this]()->SimProcess {
 	
@@ -484,7 +484,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfDynamicSliceRead, BoostUnitTestSimulat
 	HCL_NAMED(index1);
 	HCL_NAMED(index2);
 
-	UInt b = a(index1, 8)(index2, 2);
+	UInt b = a(index1, 8_b)(index2, 2_b);
 	HCL_NAMED(b);
 
 	addSimulationProcess([=, this]()->SimProcess {
@@ -530,7 +530,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWithStaticBitSliceRead, BoostUnitTestSim
 	UInt index = pinIn(3_b);
 	HCL_NAMED(index);
 
-	Bit b = a(index, 2)[1];
+	Bit b = a(index, 2_b)[1];
 	HCL_NAMED(b);
 
 	addSimulationProcess([=, this]()->SimProcess {
@@ -568,7 +568,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWithDynamicBitSliceRead, BoostUnitTestSi
 	HCL_NAMED(index1);
 	HCL_NAMED(index2);
 
-	Bit b = a(index1, 8)[index2];
+	Bit b = a(index1, 8_b)[index2];
 	HCL_NAMED(b);
 
 	addSimulationProcess([=, this]()->SimProcess {
@@ -617,7 +617,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfDynamicSliceWrite, BoostUnitTestSimulat
 	HCL_NAMED(index1);
 	HCL_NAMED(index2);
 
-	a(index1,4)[index2] = b;
+	a(index1, 4_b)[index2] = b;
 
 	addSimulationProcess([=, this]()->SimProcess {
 		for (auto i : gtry::utils::Range(4)) {
@@ -656,7 +656,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWrite, BoostUnitTestSimulationFixture)
 	UInt index = pinIn(3_b);
 	HCL_NAMED(index);
 
-	a(index,3) = b;
+	a(index, 3_b) = b;
 	HCL_NAMED(a);
 
 
@@ -694,7 +694,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfSliceWrite, BoostUnitTestSimulationFix
 	UInt index = pinIn(3_b);
 	HCL_NAMED(index);
 
-	a(index,3)(1,2) = b;
+	a(index, 3_b)(1, 2_b) = b;
 	HCL_NAMED(a);
 
 
@@ -716,21 +716,3 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfSliceWrite, BoostUnitTestSimulationFix
 
 	runTest({ 1,1 });
 }
-
-
-BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceAutoWidth, BoostUnitTestSimulationFixture)
-{
-	using namespace gtry;
-
-	size_t v = 0b11001010; 
-
-	UInt a = v;
-
-	UInt index = pinIn(1_b);
-
-	UInt b = a(index);
-
-	BOOST_TEST(b.size() == 7);
-}
-
-

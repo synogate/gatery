@@ -20,13 +20,34 @@
 
 namespace gtry {
 
-	SInt ext(const SInt& bvec, size_t increment, Expansion policy)
+	SInt ext(const SInt& bvec, BitWidth extendedWidth, Expansion policy)
+	{
+		HCL_DESIGNCHECK_HINT(extendedWidth.bits() >= bvec.size(), "ext is not allowed to reduce width");
+
+		SignalReadPort port = bvec.readPort();
+		port.expansionPolicy = policy;
+		if (extendedWidth > bvec.width())
+			port = port.expand(extendedWidth.bits(), hlim::ConnectionType::BITVEC);
+		return SInt(port);
+	}
+
+	SInt ext(const SInt& bvec, BitExtend increment, Expansion policy)
 	{
 		SignalReadPort port = bvec.readPort();
 		port.expansionPolicy = policy;
-		if (increment)
-			port = port.expand(bvec.size() + increment, hlim::ConnectionType::BITVEC);
+		if (increment.value)
+			port = port.expand(bvec.size() + increment.value, hlim::ConnectionType::BITVEC);
 		return SInt(port);
 	}
-	
+
+	SInt ext(const SInt& bvec, BitReduce decrement, Expansion policy)
+	{
+		HCL_DESIGNCHECK(decrement.value >= bvec.size());
+
+		SignalReadPort port = bvec.readPort();
+		port.expansionPolicy = policy;
+		if (decrement.value)
+			port = port.expand(bvec.size() - decrement.value, hlim::ConnectionType::BITVEC);
+		return SInt(port);
+	}
 }

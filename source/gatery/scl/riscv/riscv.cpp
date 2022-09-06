@@ -24,18 +24,18 @@ void gtry::scl::riscv::Instruction::decode(const UInt& inst)
 {
 	instruction = inst;
 
-	opcode = inst(2, 5);
-	rd = inst(7, 5);
-	func3 = inst(12, 3);
-	rs1 = inst(15, 5);
-	rs2 = inst(20, 5);
-	func7 = inst(25, 7);
+	opcode = inst(2, 5_b);
+	rd = inst(7, 5_b);
+	func3 = inst(12, 3_b);
+	rs1 = inst(15, 5_b);
+	rs2 = inst(20, 5_b);
+	func7 = inst(25, 7_b);
 
-	immI = sext(inst(20, 12));
-	immS = sext(cat(inst(25, 7), inst(7, 5)));
-	immB = sext(cat(inst.msb(), inst[7], inst(25, 6), inst(8, 4), '0'));
-	immU = cat(inst(20, 12), inst(12, 8), "12b0");
-	immJ = sext(cat(inst.msb(), inst(12, 8), inst[20], inst(25, 6), inst(21, 4), '0'));
+	immI = sext(inst(20, 12_b));
+	immS = sext(cat(inst(25, 7_b), inst(7, 5_b)));
+	immB = sext(cat(inst.msb(), inst[7], inst(25, 6_b), inst(8, 4_b), '0'));
+	immU = cat(inst(20, 12_b), inst(12, 8_b), "12b0");
+	immJ = sext(cat(inst.msb(), inst(12, 8_b), inst[20], inst(25, 6_b), inst(21, 4_b), '0'));
 
 	// for waveform debugging
 	name = 0;
@@ -261,7 +261,7 @@ void gtry::scl::riscv::RV32I::arith()
 
 void gtry::scl::riscv::RV32I::logic()
 {
-	IF(m_instr.opcode[4] == '0' & m_instr.opcode(0, 3) == "b100")
+	IF(m_instr.opcode[4] == '0' & m_instr.opcode(0, 3_b) == "b100")
 	{
 		auto ent = Area{ "logic" }.enter();
 
@@ -280,7 +280,7 @@ void gtry::scl::riscv::RV32I::logic()
 
 void gtry::scl::riscv::RV32I::setcmp()
 {
-	IF(m_instr.opcode[4] == '0' & m_instr.opcode(0,3_b) == "b100" & m_instr.func3(1, 2) == "b01")
+	IF(m_instr.opcode[4] == '0' & m_instr.opcode(0, 3_b) == "b100" & m_instr.func3(1, 2_b) == "b01")
 	{
 		auto ent = Area{ "setcmp" }.enter();
 
@@ -298,7 +298,7 @@ void gtry::scl::riscv::RV32I::setcmp()
 
 void gtry::scl::riscv::RV32I::shift()
 {
-	IF(m_instr.opcode[4] == '0' & m_instr.opcode(0, 3_b) == "b100" & m_instr.func3(0, 2) == "b01")
+	IF(m_instr.opcode[4] == '0' & m_instr.opcode(0, 3_b) == "b100" & m_instr.func3(0, 2_b) == "b01")
 	{
 		auto ent = Area{ "shift" }.enter();
 

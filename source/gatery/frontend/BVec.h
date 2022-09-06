@@ -70,12 +70,20 @@ namespace gtry {
 		BVec& operator = (BVec&& rhs) { BaseBitVector::operator=(std::move(rhs)); return *this; }
 	};
 
-	BVec ext(const BVec& bvec, size_t increment, Expansion policy);
-	inline BVec ext(const BVec& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::zero); }
-	inline BVec zext(const BVec& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::zero); }
-	inline BVec oext(const BVec& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::one); }
-	inline BVec sext(const BVec& bvec, size_t increment = 0) { return ext(bvec, increment, Expansion::sign); }
+	BVec ext(const BVec& bvec, BitWidth extendedWidth, Expansion policy);
+	inline BVec zext(const BVec& bvec, BitWidth extendedWidth) { return ext(bvec, extendedWidth, Expansion::zero); }
+	inline BVec oext(const BVec& bvec, BitWidth extendedWidth) { return ext(bvec, extendedWidth, Expansion::one); }
+	inline BVec sext(const BVec& bvec, BitWidth extendedWidth) { return ext(bvec, extendedWidth, Expansion::sign); }
 
+	BVec ext(const BVec& bvec, BitExtend increment, Expansion policy);
+	inline BVec zext(const BVec& bvec, BitExtend increment = { 0 }) { return ext(bvec, increment, Expansion::zero); }
+	inline BVec oext(const BVec& bvec, BitExtend increment = { 0 }) { return ext(bvec, increment, Expansion::one); }
+	inline BVec sext(const BVec& bvec, BitExtend increment = { 0 }) { return ext(bvec, increment, Expansion::sign); }
+
+	BVec ext(const BVec& bvec, BitReduce decrement, Expansion policy);
+	inline BVec zext(const BVec& bvec, BitReduce decrement) { return ext(bvec, decrement, Expansion::zero); }
+	inline BVec oext(const BVec& bvec, BitReduce decrement) { return ext(bvec, decrement, Expansion::one); }
+	inline BVec sext(const BVec& bvec, BitReduce decrement) { return ext(bvec, decrement, Expansion::sign); }
 
 	inline BVecDefault::BVecDefault(const BVec& rhs) : BaseBitVectorDefault(rhs) { }
 

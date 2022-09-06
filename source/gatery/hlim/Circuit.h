@@ -88,6 +88,18 @@ class DefaultPostprocessing : public PostProcessor
 		void exportPreparation(Circuit &circuit) const;
 };
 
+class MinimalPostprocessing : public PostProcessor
+{
+	public:
+		MinimalPostprocessing() { }
+		virtual void run(Circuit& circuit) const override;
+	protected:
+		void generalOptimization(Circuit& circuit) const;
+		void memoryDetection(Circuit& circuit) const;
+		void exportPreparation(Circuit& circuit) const;
+};
+
+
 class Circuit
 {
 	public:

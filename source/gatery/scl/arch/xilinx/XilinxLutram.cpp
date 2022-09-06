@@ -153,7 +153,7 @@ void XilinxLutram::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
 			HCL_ASSERT(rdAddr.size() <= 8);
 			HCL_ASSERT(rp.node->getBitWidth() == 1);
 
-			Bit rdDataBit = ram->setupSDP(zext(wrAddr, 8-wrAddr.size()), wrData[0], wrEn, zext(rdAddr, 8-rdAddr.size()));
+			Bit rdDataBit = ram->setupSDP(zext(wrAddr, 8_b), wrData[0], wrEn, zext(rdAddr, 8_b));
 			readData = pack(rdDataBit);
 
 			hlim::Clock* writeClock = memGrp->getWritePorts().front().node->getClocks()[0];
@@ -179,8 +179,8 @@ void XilinxLutram::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
 			HCL_ASSERT(rdAddr.size() <= 6);
 			HCL_ASSERT(rp.node->getBitWidth() <= 7);
 
-			UInt rdData_7wide = ram->setup64x7_SDP(zext(wrAddr, 6-wrAddr.size()), zext(wrData, 7-wrData.size()), wrEn, zext(rdAddr, 6-rdAddr.size()));
-			readData = rdData_7wide(0, rp.node->getBitWidth());
+			UInt rdData_7wide = ram->setup64x7_SDP(zext(wrAddr, 6_b), zext(wrData, 7_b), wrEn, zext(rdAddr, 6_b));
+			readData = rdData_7wide(0, BitWidth{ rp.node->getBitWidth() });
 
 			hlim::Clock* writeClock = memGrp->getWritePorts().front().node->getClocks()[0];
 			HCL_ASSERT(writeClock->getTriggerEvent() == hlim::Clock::TriggerEvent::RISING);
@@ -198,7 +198,7 @@ void XilinxLutram::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
 	}		
 
 	UInt rdDataHook = hookUIntAfter(rp.dataOutput);
-	rdDataHook.exportOverride(readData(0, rdDataHook.size()));	
+	rdDataHook.exportOverride(readData(0, rdDataHook.width()));	
 }
 
 }

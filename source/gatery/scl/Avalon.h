@@ -155,14 +155,14 @@ namespace gtry::scl
 		v.regWidthLimit = dataWidth.value;
 		VisitCompound<T>{}(memContent, v);
 		
-		BitWidth regAddrWidth{ utils::Log2C(v.regMap.size()) };
+		BitWidth regAddrWidth = BitWidth::count(v.regMap.size());
 		address = regAddrWidth + mem.addressWidth();
-		memAddress = address(regAddrWidth.value, mem.addressWidth().value);
+		memAddress = address(regAddrWidth.value, mem.addressWidth());
 		
 		write = Bit{};
 		writeData = dataWidth;
 		readData = ConstUInt(0, dataWidth);
-		UInt regAddress = address(0, regAddrWidth.value);
+		UInt regAddress = address(0, regAddrWidth);
 		HCL_NAMED(regAddress);
 		for (size_t r = 0; r < v.regMap.size(); ++r)
 		{
@@ -176,7 +176,7 @@ namespace gtry::scl
 					readData = zext(source);
 		
 					IF(*write) {
-						source = (*writeData)(0, sig.from.width);
+						source = (*writeData)(0, BitWidth{ (size_t)sig.from.width });
 						sig.signalVec->assign(source.readPort());
 					}
 				}

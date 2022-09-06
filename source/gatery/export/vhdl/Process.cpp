@@ -317,10 +317,10 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
 
 	const hlim::Node_Arithmetic *arithmeticNode = dynamic_cast<const hlim::Node_Arithmetic*>(nodePort.node);
 	if (arithmeticNode != nullptr) {
-		BitWidth expectedResultWidth = arithmeticNode->getOutputConnectionType(0).width;
+		BitWidth expectedResultWidth{ arithmeticNode->getOutputConnectionType(0).width };
 
-		BitWidth leftOpWidth = hlim::getOutputWidth(arithmeticNode->getDriver(0));
-		BitWidth rightOpWidth = hlim::getOutputWidth(arithmeticNode->getDriver(0));
+		BitWidth leftOpWidth{ hlim::getOutputWidth(arithmeticNode->getDriver(0)) };
+		BitWidth rightOpWidth{ hlim::getOutputWidth(arithmeticNode->getDriver(0)) };
 
 		BitWidth vhdlExpectedWidth;
 		switch (arithmeticNode->getOp()) {
