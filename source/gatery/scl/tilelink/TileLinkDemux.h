@@ -111,7 +111,7 @@ namespace gtry::scl
 			slave.opcode = master.opcode;
 			slave.param = master.param;
 			slave.size = master.size;
-			slave.source = master.source;
+			slave.source = zext(master.source);
 			slave.address = master.address.lower(slave.address.width());
 			slave.mask = master.mask;
 			slave.data = master.data;

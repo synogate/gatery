@@ -22,10 +22,10 @@
 #include <boost/test/data/monomorphic.hpp>
 
 #include <gatery/debug/websocks/WebSocksInterface.h>
+#include <gatery/scl/synthesisTools/IntelQuartus.h>
 
 #include <gatery/scl/tilelink/tilelink.h>
-#include <gatery/scl/tilelink/TileLinkDemux.h>
-#include <gatery/scl/tilelink/TileLinkMux.h>
+#include <gatery/scl/tilelink/TileLinkHub.h>
 #include <gatery/scl/tilelink/TileLinkErrorResponder.h>
 
 using namespace boost::unit_test;
@@ -549,4 +549,87 @@ BOOST_FIXTURE_TEST_CASE(tilelink_mux_test, BoostUnitTestSimulationFixture)
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(clock.getClk(), 16);
+}
+
+BOOST_FIXTURE_TEST_CASE(tilelink_hub_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	auto initiator0 = std::make_shared<TileLinkSimuInitiator<TileLinkUH>>(32_b, 32_b, 2_b, 2_b, "initiator0");
+	auto initiator1 = std::make_shared<TileLinkSimuInitiator<TileLinkUH>>(32_b, 32_b, 2_b, 0_b, "initiator1");
+
+	TileLinkHub<TileLinkUH> hub;
+	hub.attachSource(initiator0->link());
+	hub.attachSource(initiator1->link());
+
+	auto target0 = std::make_shared<TileLinkSimuTarget<TileLinkUH>>(31_b, 32_b, 2_b, hub.sourceWidth(), "target0");
+	auto target1 = std::make_shared<TileLinkSimuTarget<TileLinkUH>>(31_b, 32_b, 2_b, hub.sourceWidth(), "target1");
+	hub.attachSink(target0->link(), 0x0000'0000);
+	hub.attachSink(target1->link(), 0x8000'0000);
+
+	hub.generate();
+
+	addSimulationProcess([=]()->SimProcess {
+
+		initiator0->issueIdle();
+		initiator1->issueIdle();
+		target0->issueIdle();
+		target1->issueIdle();
+
+		co_await WaitClk(clock);
+
+		initiator0->issueCommand(TileLinkA::Get, 0, 0, 1, 0);
+		simu(valid(initiator0->link().a)) = 1;
+		initiator1->issueCommand(TileLinkA::Get, 0, 0, 3, 1);
+		simu(valid(initiator1->link().a)) = 1;
+		co_await WaitClk(clock);
+		BOOST_TEST(simu(valid(target0->link().a)) == 1);
+		BOOST_TEST(simu(valid(target1->link().a)) == 0);
+
+		initiator0->issueCommand(TileLinkA::PutFullData, 0, 0, 3, 0);
+		simu(ready(target0->link().a)) = 1;
+		co_await WaitClk(clock);
+		target0->issueResponse(TileLinkD::AccessAck, 0);
+		co_await WaitClk(clock);
+		simu(valid(initiator0->link().a)) = 0;
+		simu(ready(target0->link().a)) = 0;
+
+		co_await WaitClk(clock);
+		simu(valid(*target0->link().d)) = 1;
+		simu(ready(*initiator0->link().d)) = 1;
+
+		BOOST_TEST(simu(valid(target0->link().a)) == 1);
+		simu(ready(target0->link().a)) = 1;
+
+		co_await WaitClk(clock);
+		BOOST_TEST(simu(valid(*initiator0->link().d)) == 1);
+		target0->issueResponse(TileLinkD::AccessAckData, 0xC0FFEE00u);
+
+		simu(valid(*target0->link().d)) = 0;
+		simu(valid(initiator1->link().a)) = 0;
+		simu(ready(target0->link().a)) = 0;
+		co_await WaitClk(clock);
+
+		simu(valid(*target0->link().d)) = 1;
+		simu(ready(*initiator1->link().d)) = 1;
+		co_await WaitClk(clock);
+		co_await WaitClk(clock);
+		simu(valid(*target0->link().d)) = 0;
+
+
+		co_await WaitClk(clock);
+		stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(clock.getClk(), 16);
+
+#if 0
+	vhdl::VHDLExport vhdl("test_export/tilelink_hub_test/tilelink_hub_test.vhd");
+	vhdl.targetSynthesisTool(new IntelQuartus());
+	vhdl.writeStandAloneProjectFile("tilelink_hub_test.qsf");
+	vhdl.writeClocksFile("tilelink_hub_test.sdc");
+	vhdl(design.getCircuit());
+#endif
 }
