@@ -22,7 +22,6 @@ namespace gtry::scl
 {
 	template struct Stream<TileLinkA, Ready, Valid>;
 	template struct Stream<TileLinkD, Ready, Valid>;
-	template class Reverse<TileLinkChannelD>;
 
 	template UInt transferLength(const TileLinkChannelA&);
 	template UInt transferLength(const TileLinkChannelD&);
@@ -61,6 +60,8 @@ namespace gtry::scl
 
 namespace gtry 
 {
+	template class Reverse<scl::TileLinkChannelD>;
+
 	template void connect(scl::TileLinkUL&, scl::TileLinkUL&);
 	template void connect(scl::TileLinkUH&, scl::TileLinkUH&);
 	template void connect(scl::TileLinkChannelA&, scl::TileLinkChannelA&);

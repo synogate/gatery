@@ -127,7 +127,7 @@ namespace gtry::scl
 	std::tuple<Sop, Eop> seop(const T& source);
 
 	template<StreamSignal T>
-	requires requires (T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
+	requires requires (const T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
 	Bit sop(const T& source);
 
 	template<StreamSignal T>
@@ -235,7 +235,7 @@ namespace gtry::scl
 		IF(link.a->opcode(1, 2_b) == 0) // PutFull & PuPartial
 			op = (size_t)TileLinkD::AccessAck;
 
-		if(link.capability<TileLinkCapHint>())
+		if(link.template capability<TileLinkCapHint>())
 			IF(link.a->opcode == (size_t)TileLinkA::Intent)
 				op = (size_t)TileLinkD::HintAck;
 
@@ -244,7 +244,6 @@ namespace gtry::scl
 
 	extern template struct Stream<TileLinkA, Ready, Valid>;
 	extern template struct Stream<TileLinkD, Ready, Valid>;
-	extern template class Reverse<TileLinkChannelD>;
 
 	extern template UInt transferLength(const TileLinkChannelA&);
 	extern template UInt transferLength(const TileLinkChannelD&);
@@ -258,6 +257,8 @@ namespace gtry::scl
 
 namespace gtry 
 {
+	extern template class Reverse<scl::TileLinkChannelD>;
+
 	extern template void connect(scl::TileLinkUL&, scl::TileLinkUL&);
 	extern template void connect(scl::TileLinkUH&, scl::TileLinkUH&);
 	extern template void connect(scl::TileLinkChannelA&, scl::TileLinkChannelA&);
