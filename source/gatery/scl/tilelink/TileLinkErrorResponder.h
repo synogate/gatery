@@ -37,7 +37,7 @@ namespace gtry::scl
 		d->sink = 0;
 		d->data = ConstBVec(link.a->data.width());
 
-		if (!link.capability<TileLinkCapBurst>())
+		if (!link.template capability<TileLinkCapBurst>())
 		{
 			d->error = '1';
 			ready(link.a) = ready(d);

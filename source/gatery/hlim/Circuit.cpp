@@ -898,6 +898,26 @@ void Circuit::removeConstSelectMuxes(Subnet &subnet)
 
 void Circuit::propagateConstants(Subnet &subnet)
 {
+
+	// Find all nodes that may still be overriden because handles exist to them
+	// Since registers can be overriden from signal nodes, this property needs to be "backpropagated" to driving registers.
+
+	Subnet overridableNodes;
+	for (const auto &n : m_nodes) {
+		if (n->hasRef()) {
+			// This one must not be folded
+			overridableNodes.add(n.get());
+
+			// All registers driving thsi node also must not be folded.
+			for (auto i : utils::Range(n->getNumInputPorts())) {
+				auto driver = n->getNonSignalDriver(i);
+				if (dynamic_cast<Node_Register*>(driver.node))
+					overridableNodes.add(driver.node);
+			}
+		}
+	}
+
+
 	//std::cout << "propagateConstants()" << std::endl;
 	sim::SimulatorCallbacks ignoreCallbacks;
 
@@ -914,6 +934,10 @@ void Circuit::propagateConstants(Subnet &subnet)
 	while (!openList.empty()) {
 		NodePort constPort = openList.back();
 		openList.pop_back();
+
+		// If this node is overridable, skip it.
+		if (overridableNodes.contains(constPort.node))
+			continue;
 		/*
 		if (closedList.contains(constPort)) continue;
 		closedList.insert(constPort);
@@ -1184,7 +1208,7 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 	circuit.disconnectZeroBitOutputPins();
 	defaultValueResolution(circuit, subnet);
 	circuit.cullUnusedNodes(subnet); // Dirty way of getting rid of default nodes
-	
+
 	subnet = Subnet::all(circuit);
 	resolveRetimingHints(circuit, subnet);
 
