@@ -1018,6 +1018,253 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_store, BoostUnitTestSimulationFixtur
 	runTicks(clock.getClk(), 4096);
 }
 
+BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_byte_store, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	RV32I_stub rv;
+	scl::TileLinkUL& link = rv.setupMemTileLink();
+
+	addSimulationProcess([&]()->SimProcess {
+		rv.setupSimu();
+
+		std::mt19937 rng{ std::random_device{}() };
+		for (size_t i = 0; i < 8; ++i)
+		{
+			uint32_t opA = rng();
+			uint32_t opB = rng();
+			int32_t offset = int32_t(rng()) >> (32 - 12);
+
+			rv.r1(opA).r2(opB).ip(rng());
+			rv.op().typeS(rv::op::STORE, rv::func::BYTE, offset);
+			co_await WaitClk(clock);
+			
+			BOOST_TEST(simu(valid(link.a)) == 1);
+			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::PutFullData);
+			BOOST_TEST(simu(link.a->address) == opA + offset);
+			BOOST_TEST(simu(link.a->size) == 0);
+
+			size_t expectedByteEn = 1ull << (opA + offset) % 4;
+			size_t expectedOffset = ((opA + offset) % 4) * 8ull;
+			BOOST_TEST(simu(link.a->mask) == expectedByteEn);
+			BOOST_TEST(((simu(link.a->data) >> expectedOffset) & 0xFF) == (opB & 0xFF));
+		}
+
+		co_await WaitClk(clock);
+		stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(clock.getClk(), 4096);
+}
+
+BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_half_store, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	RV32I_stub rv;
+	scl::TileLinkUL& link = rv.setupMemTileLink();
+
+	addSimulationProcess([&]()->SimProcess {
+		rv.setupSimu();
+
+		std::mt19937 rng{ std::random_device{}() };
+		for (size_t i = 0; i < 8; ++i)
+		{
+			uint32_t opA = rng();
+			uint32_t opB = rng();
+			int32_t offset = int32_t(rng()) >> (32 - 12);
+
+			uint32_t alignmentFailure = (opA + offset) & 1;
+			opA -= alignmentFailure;
+
+			rv.r1(opA).r2(opB).ip(rng());
+			rv.op().typeS(rv::op::STORE, rv::func::HALFWORD, offset);
+			co_await WaitClk(clock);
+
+			BOOST_TEST(simu(valid(link.a)) == 1);
+			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::PutFullData);
+			BOOST_TEST(simu(link.a->address) == opA + offset);
+			BOOST_TEST(simu(link.a->size) == 1);
+
+			size_t expectedByteEn = (opA + offset) % 4 < 2 ? 0x3 : 0xC;
+			size_t expectedOffset = (opA + offset) % 4 < 2 ? 0 : 16;
+			BOOST_TEST(simu(link.a->mask) == expectedByteEn);
+			BOOST_TEST(((simu(link.a->data) >> expectedOffset) & 0xFF) == (opB & 0xFF));
+		}
+
+		co_await WaitClk(clock);
+		stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(clock.getClk(), 4096);
+}
+
+BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_byte_load, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	RV32I_stub rv;
+	scl::TileLinkUL& link = rv.setupMemTileLink();
+
+	addSimulationProcess([&]()->SimProcess {
+		rv.setupSimu();
+
+		co_await WaitFor(0);
+		simu(ready(link.a)) = 1;
+		simu(valid(*link.d)) = 1;
+		simu((*link.d)->size) = 0;
+
+		std::mt19937 rng{ std::random_device{}() };
+		for (size_t i = 0; i < 8; ++i)
+		{
+			uint32_t opA = rng();
+			uint32_t data = rng();
+			int32_t offset = int32_t(rng()) >> (32 - 12);
+
+			rv.r1(opA).r2(rng()).ip(rng());
+			rv.op().typeI(rv::op::LOAD, rv::func::BYTEU, 0, 0, offset);
+
+			uint32_t readData = rng();
+			simu((*link.d)->data) = readData;
+			co_await WaitClk(clock);
+
+			BOOST_TEST(simu(valid(link.a)) == 1);
+			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::Get);
+			BOOST_TEST(simu(link.a->address) == opA + offset);
+			BOOST_TEST(simu(link.a->size) == 0);
+
+			size_t expectedByteEn = 1ull << (opA + offset) % 4;
+			size_t expectedOffset = ((opA + offset) % 4) * 8ull;
+			BOOST_TEST(simu(link.a->mask) == expectedByteEn);
+
+			BOOST_TEST(rv.hasResult());
+			BOOST_TEST(rv.result() == ((readData >> expectedOffset) & 0xFF));
+			BOOST_TEST(!rv.isStall());
+		}
+
+		for (size_t i = 0; i < 8; ++i)
+		{
+			uint32_t opA = rng();
+			uint32_t data = rng();
+			int32_t offset = int32_t(rng()) >> (32 - 12);
+
+			rv.r1(opA).r2(rng()).ip(rng());
+			rv.op().typeI(rv::op::LOAD, rv::func::BYTE, 0, 0, offset);
+
+			int32_t readData = rng();
+			simu((*link.d)->data) = readData;
+			co_await WaitClk(clock);
+
+			BOOST_TEST(simu(valid(link.a)) == 1);
+			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::Get);
+			BOOST_TEST(simu(link.a->address) == opA + offset);
+			BOOST_TEST(simu(link.a->size) == 0);
+
+			size_t expectedByteEn = 1ull << (opA + offset) % 4;
+			size_t expectedOffset = ((opA + offset) % 4) * 8ull;
+			BOOST_TEST(simu(link.a->mask) == expectedByteEn);
+
+			BOOST_TEST(rv.hasResult());
+			BOOST_TEST(rv.result() == ((readData >> expectedOffset) << 24 >> 24));
+			BOOST_TEST(!rv.isStall());
+		}
+
+		stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(clock.getClk(), 4096);
+}
+
+BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_half_load, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	RV32I_stub rv;
+	scl::TileLinkUL& link = rv.setupMemTileLink();
+
+	addSimulationProcess([&]()->SimProcess {
+		rv.setupSimu();
+
+		co_await WaitFor(0);
+		simu(ready(link.a)) = 1;
+		simu(valid(*link.d)) = 1;
+		simu((*link.d)->size) = 0;
+
+		std::mt19937 rng{ std::random_device{}() };
+		for (size_t i = 0; i < 8; ++i)
+		{
+			uint32_t opA = rng();
+			uint32_t data = rng();
+			int32_t offset = int32_t(rng()) >> (32 - 12);
+
+			uint32_t alignmentFailure = (opA + offset) & 1;
+			opA -= alignmentFailure;
+
+			rv.r1(opA).r2(rng()).ip(rng());
+			rv.op().typeI(rv::op::LOAD, rv::func::HALFWORDU, 0, 0, offset);
+
+			uint32_t readData = rng();
+			simu((*link.d)->data) = readData;
+			co_await WaitClk(clock);
+
+			BOOST_TEST(simu(valid(link.a)) == 1);
+			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::Get);
+			BOOST_TEST(simu(link.a->address) == opA + offset);
+			BOOST_TEST(simu(link.a->size) == 1);
+
+			size_t expectedByteEn = (opA + offset) % 4 < 2 ? 0x3 : 0xC;
+			size_t expectedOffset = (opA + offset) % 4 < 2 ? 0 : 16;
+			BOOST_TEST(simu(link.a->mask) == expectedByteEn);
+
+			BOOST_TEST(rv.hasResult());
+			BOOST_TEST(rv.result() == ((readData >> expectedOffset) & 0xFFFF));
+			BOOST_TEST(!rv.isStall());
+		}
+
+		for (size_t i = 0; i < 8; ++i)
+		{
+			uint32_t opA = rng();
+			uint32_t data = rng();
+			int32_t offset = int32_t(rng()) >> (32 - 12);
+
+			uint32_t alignmentFailure = (opA + offset) & 1;
+			opA -= alignmentFailure;
+
+			rv.r1(opA).r2(rng()).ip(rng());
+			rv.op().typeI(rv::op::LOAD, rv::func::HALFWORD, 0, 0, offset);
+
+			int32_t readData = rng();
+			simu((*link.d)->data) = readData;
+			co_await WaitClk(clock);
+
+			BOOST_TEST(simu(valid(link.a)) == 1);
+			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::Get);
+			BOOST_TEST(simu(link.a->address) == opA + offset);
+			BOOST_TEST(simu(link.a->size) == 1);
+
+			size_t expectedByteEn = (opA + offset) % 4 < 2 ? 0x3 : 0xC;
+			size_t expectedOffset = (opA + offset) % 4 < 2 ? 0 : 16;
+			BOOST_TEST(simu(link.a->mask) == expectedByteEn);
+
+			BOOST_TEST(rv.hasResult());
+			BOOST_TEST(rv.result() == ((readData >> expectedOffset) << 16 >> 16));
+			BOOST_TEST(!rv.isStall());
+		}
+
+		stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(clock.getClk(), 4096);
+}
+
 BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_load, BoostUnitTestSimulationFixture)
 {
 	Clock clock({ .absoluteFrequency = 100'000'000 });
@@ -1061,7 +1308,6 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_load, BoostUnitTestSimulationFixture
 				co_await WaitClk(clock);
 				BOOST_TEST(rv.isStall());
 				BOOST_TEST(simu(valid(link.a)) == 1);
-				BOOST_TEST(!rv.hasResult());
 			}
 			simu(ready(link.a)) = 1;
 			co_await WaitFor(0);
@@ -1071,7 +1317,6 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_load, BoostUnitTestSimulationFixture
 				co_await WaitClk(clock);
 				BOOST_TEST(simu(valid(link.a)) == 0);
 				BOOST_TEST(rv.isStall());
-				BOOST_TEST(!rv.hasResult());
 			}
 
 

@@ -355,10 +355,24 @@ gtry::scl::TileLinkUL gtry::scl::riscv::RV32I::memTLink(bool byte, bool halfword
 	valid(mem.a) = '0';
 	mem.a->opcode = (size_t)TileLinkA::Get;
 	mem.a->param = 0;
-	mem.a->size = 2;
 	mem.a->source = 0;
 	mem.a->address = m_aluResult.sum;
+
 	mem.a->data = (BVec)m_r2;
+	mem.a->size = 2;
+	if (byte || halfword)
+	{
+		mem.a->size = m_instr.func3.lower(2_b);
+
+		UInt byteVal = m_r2.lower(8_b);
+		UInt wordVal = m_r2.lower(16_b);
+		if (byte)
+			IF(mem.a->size == 0)
+				mem.a->data = (BVec)cat(byteVal, byteVal, byteVal, byteVal);
+		if (halfword)
+			IF(mem.a->size == 1)
+				mem.a->data = (BVec)cat(wordVal, wordVal);
+	}
 
 	ready(*mem.d) = '1';
 
@@ -378,8 +392,30 @@ gtry::scl::TileLinkUL gtry::scl::riscv::RV32I::memTLink(bool byte, bool halfword
 		value |= (*mem.d)->error;
 		HCL_NAMED(value);
 
-		IF(transfer(*mem.d))
-			setResult(value);
+		if (byte)
+		{
+			IF(mem.a->size == 0)
+			{
+				UInt byte = muxWord(mem.a->address.lower(2_b), value);
+				IF(m_instr.func3.msb())
+					value = zext(byte);
+				ELSE
+					value = sext(byte);
+			}
+		}
+		if (halfword)
+		{
+			IF(mem.a->size == 1)
+			{
+				UInt word = muxWord(mem.a->address[1], value);
+				IF(m_instr.func3.msb())
+					value = zext(word);
+				ELSE
+					value = sext(word);
+			}
+		}
+
+		setResult(value);
 	}
 
 	// store
@@ -401,6 +437,13 @@ gtry::scl::TileLinkUL gtry::scl::riscv::RV32I::memTLink(bool byte, bool halfword
 		IF(done)
 			state = ReqState::req;
 		setStall(!done);
+	}
+
+	IF(issueRequest & m_instructionValid)
+	{
+		// we do not support unaligned access (out of spec)
+		sim_assert(mem.a->address.lower(2_b) == 0 | mem.a->size != 2);
+		sim_assert(mem.a->address.lower(1_b) == 0 | mem.a->size != 1);
 	}
 
 	return mem;
