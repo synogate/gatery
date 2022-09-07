@@ -79,7 +79,16 @@ namespace rv
 		HALFWORD = 1,
 		WORD = 2,
 		BYTEU = 4,
-		HALFWORDU = 5
+		HALFWORDU = 5,
+
+		// csr
+		ECALL = 0,
+		CSRRW = 1,
+		CSRRS = 2,
+		CSRRC = 3,
+		CSRRWI = 5,
+		CSRRSI = 6,
+		CSRRCI = 7,
 	};
 
 	template<typename T, T mask>
@@ -715,6 +724,48 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_jal, BoostUnitTestSimulationFixture)
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(clock.getClk(), 32 * 2);
+}
+
+BOOST_FIXTURE_TEST_CASE(riscv_exec_csr_timer, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	RV32I_stub rv;
+	rv.csr();
+
+	addSimulationProcess([&]()->SimProcess {
+		rv.setupSimu();
+
+		std::mt19937 rng{ std::random_device{}() };
+		rv.ip(rng()).r1(rng()).r2(rng());
+		rv.op().typeI(rv::op::SYSTEM, rv::func::CSRRW, 1, 0, 0xC00);
+
+		co_await WaitClk(clock);
+		BOOST_TEST(rv.hasResult());
+		size_t start = rv.result();
+
+		for (size_t i = 0; i < 14; ++i)
+		{
+			BOOST_TEST(rv.hasResult());
+			BOOST_TEST(rv.result() - start == i);
+
+			rv.ip(rng()).r1(rng()).r2(rng());
+			rv.op().typeI(rv::op::SYSTEM, (rv::func)(i % 7 + 1), 1, 0, 0xC00 | (i % 2));
+			co_await WaitClk(clock);
+		}
+
+		rv.ip(rng()).r1(rng()).r2(rng());
+		rv.op().typeI(rv::op::SYSTEM, rv::func::CSRRW, 1, 0, 0xC80);
+		co_await WaitClk(clock);
+		BOOST_TEST(rv.hasResult());
+		BOOST_TEST(rv.result() == 0);
+
+		stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(clock.getClk(), 128);
 }
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)

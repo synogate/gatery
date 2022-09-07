@@ -323,6 +323,28 @@ void gtry::scl::riscv::RV32I::shift()
 	}
 }
 
+void gtry::scl::riscv::RV32I::csr(BitWidth timerWidth, BitWidth instRetWidth)
+{
+	auto ent = m_area.enter("csr");
+
+	UInt cycles = timerWidth;
+	cycles = reg(cycles + 1, 0);
+	HCL_NAMED(cycles);
+
+	UInt instructions = instRetWidth;
+	IF(reg(m_instructionValid, '0'))
+		instructions += 1;
+	instructions = reg(instructions, 0);
+	HCL_NAMED(instructions);
+
+	IF(m_instr.opcode.upper(5_b) == "b11100" & m_instr.func3 != 0)
+	{
+		UInt value = mux(m_instr.immI[1], { cycles, instructions });
+		UInt word = muxWord(m_instr.immI[7], value);
+		setResult(word);
+	}
+}
+
 void gtry::scl::riscv::RV32I::mem(AvalonMM& mem, bool byte, bool halfword)
 {
 	auto entRV = m_area.enter();
