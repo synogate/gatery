@@ -119,21 +119,15 @@ gtry::UInt gtry::scl::riscv::DualCycleRV::fetch(const UInt& instruction, uint64_
 	IF(!m_stall)
 	{
 		m_instructionValid = '1';
-		m_storeResult = instruction(7, 5_b) != 0;
+		m_storeResult = instruction(7, 5_b) != 0; // do not write x0
 
 		IF(m_overrideIPValid)
-		{
 			m_instructionValid = '0';
-			m_storeResult = '0';
-		}
 	}
 
 	Bit initialStall = reg(Bit{ '0' }, '1');
 	IF(initialStall)
-	{
 		m_instructionValid = '0';
-		m_storeResult = '0';
-	}
 
 	m_storeResult = reg(m_storeResult, '0');
 	m_instructionValid = reg(m_instructionValid, '0');
