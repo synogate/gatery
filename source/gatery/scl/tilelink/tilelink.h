@@ -138,6 +138,9 @@ namespace gtry::scl
 	UInt transferLengthFromLogSize(const UInt& logSize, size_t numSymbolsPerBeat);
 
 	BVec responseOpCode(const TileLinkSignal auto& link);
+
+	template<TileLinkSignal TLink>
+	void tileLinkInit(TLink& link, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth);
 }
 
 // impl
@@ -240,6 +243,21 @@ namespace gtry::scl
 				op = (size_t)TileLinkD::HintAck;
 
 		return op;
+	}
+
+	template<TileLinkSignal TLink>
+	void tileLinkInit(TLink& link, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth)
+	{
+		link.a->size = sizeWidth;
+		link.a->source = sourceWidth;
+		link.a->address = addrWidth;
+		link.a->mask = dataWidth / 8;
+		link.a->data = dataWidth;
+
+		(*link.d)->data = dataWidth;
+		(*link.d)->size = sizeWidth;
+		(*link.d)->source = sourceWidth;
+		(*link.d)->sink = 0_b;
 	}
 
 	extern template struct Stream<TileLinkA, Ready, Valid>;

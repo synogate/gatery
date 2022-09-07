@@ -19,6 +19,7 @@
 #include "riscv.h"
 #include "../Adder.h"
 #include "../utils/OneHot.h"
+#include "../tilelink/tilelink.h"
 
 void gtry::scl::riscv::Instruction::decode(const UInt& inst)
 {
@@ -341,6 +342,68 @@ void gtry::scl::riscv::RV32I::mem(AvalonMM& mem, bool byte, bool halfword)
 
 	store(mem, byte, halfword);
 	load(mem, byte, halfword);
+}
+
+gtry::scl::TileLinkUL gtry::scl::riscv::RV32I::memTLink(bool byte, bool halfword)
+{
+	auto entRV = m_area.enter("mem");
+	TileLinkUL mem;
+	tileLinkInit(mem, 32_b, 32_b, 2_b, 0_b);
+	setName(mem, "dmem");
+
+	setFullByteEnableMask(mem.a); // set mask according to size and address
+	valid(mem.a) = '0';
+	mem.a->opcode = (size_t)TileLinkA::Get;
+	mem.a->param = 0;
+	mem.a->size = 2;
+	mem.a->source = 0;
+	mem.a->address = m_aluResult.sum;
+	mem.a->data = (BVec)m_r2;
+
+	ready(*mem.d) = '1';
+
+	enum class ReqState { req, wait };
+	Reg<Enum<ReqState>> state{ ReqState::req };
+	state.setName("state");
+
+	Bit issueRequest = '0';
+
+	// load
+	IF(m_instr.opcode == "b00000")
+	{
+		m_alu.op2 = m_instr.immI;
+		issueRequest = '1';
+
+		UInt value = (UInt)(*mem.d)->data;
+		value |= (*mem.d)->error;
+		HCL_NAMED(value);
+
+		IF(transfer(*mem.d))
+			setResult(value);
+	}
+
+	// store
+	IF(m_instr.opcode == "b01000")
+	{
+		issueRequest = '1';
+		m_alu.op2 = m_instr.immS;
+		mem.a->opcode = (size_t)TileLinkA::PutFullData;
+	}
+
+	IF(issueRequest & m_instructionValid)
+	{
+		IF(state.current() == ReqState::req)
+			valid(mem.a) = '1';
+		IF(transfer(mem.a))
+			state = ReqState::wait;
+
+		Bit done = transfer(*mem.d);
+		IF(done)
+			state = ReqState::req;
+		setStall(!done);
+	}
+
+	return mem;
 }
 
 void gtry::scl::riscv::RV32I::store(AvalonMM& mem, bool byte, bool halfword)

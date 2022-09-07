@@ -30,6 +30,7 @@
 #include <gatery/scl/riscv/ElfLoader.h>
 #include <gatery/scl/riscv/EmbeddedSystemBuilder.h>
 #include <gatery/scl/io/uart.h>
+#include <gatery/scl/tilelink/tilelink.h>
 
 #include <queue>
 
@@ -274,6 +275,27 @@ public:
 		return m_avmm;
 	}
 
+	scl::TileLinkUL& setupMemTileLink()
+	{
+		tileLinkInit(m_tlink, 32_b, 32_b, 2_b, 0_b);
+		m_tlink <<= memTLink();
+		pinOut(m_tlink, "dmem");
+
+		DesignScope::get()->getCircuit().addSimulationProcess([=]()->SimProcess {
+			simu(valid(*m_tlink.d)) = 0;
+			simu(ready(m_tlink.a)) = 0;
+
+			simu((*m_tlink.d)->opcode) = (size_t)scl::TileLinkD::AccessAck;
+			simu((*m_tlink.d)->param) = 0;
+			simu((*m_tlink.d)->size) = 2;
+			simu((*m_tlink.d)->data) = 0;
+			simu((*m_tlink.d)->error) = 0;
+			co_return;
+		});
+
+		return m_tlink;
+	}
+
 	bool isStall() const { return simu(m_setStall) != 0; }
 	bool hasResult() const { return simu(m_setResultValid) != 0; }
 	uint32_t result() const { return (uint32_t)simu(m_setResult); }
@@ -295,6 +317,7 @@ protected:
 	UInt m_setResult = 32_b;
 	UInt m_setIP = 32_b;
 	scl::AvalonMM m_avmm;
+	scl::TileLinkUL m_tlink;
 
 };
 
@@ -922,7 +945,165 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_store, BoostUnitTestSimulationFixture)
 	runTicks(clock.getClk(), 32 * 4);
 }
 
+BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_store, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
 
+	RV32I_stub rv;
+	scl::TileLinkUL& link = rv.setupMemTileLink();
+
+	addSimulationProcess([&]()->SimProcess {
+		while (true)
+		{
+			co_await WaitClk(clock);
+			BOOST_TEST(!rv.hasResult());
+		}
+	});
+
+	addSimulationProcess([&]()->SimProcess {
+		rv.setupSimu();
+
+		std::mt19937 rng{ std::random_device{}() };
+
+		// SW
+		for (size_t i = 0; i < 32; ++i)
+		{
+			uint32_t opA = rng();
+			uint32_t opB = rng();
+			int32_t offset = int32_t(rng()) >> (32 - 12);
+
+			uint32_t alignmentFailure = (opA + offset) & 3;
+			opA -= alignmentFailure;
+
+			rv.r1(opA).r2(opB).ip(rng());
+			rv.op().typeS(rv::op::STORE, rv::func::WORD, offset);
+
+			simu(valid(*link.d)) = 0;
+			simu(ready(link.a)) = 0;
+			co_await WaitFor(0);
+
+			BOOST_TEST(simu(link.a->address) == ((opA + offset) & ~3));
+			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::PutFullData);
+			BOOST_TEST(simu(link.a->data) == opB);
+			BOOST_TEST(simu(link.a->mask) == 0xF);
+			while(rng() % 2 == 0)
+			{
+				co_await WaitClk(clock);
+				BOOST_TEST(rv.isStall());
+				BOOST_TEST(simu(valid(link.a)) == 1);
+			}
+			simu(ready(link.a)) = 1;
+			co_await WaitFor(0);
+
+			while (rng() % 2 == 0)
+			{
+				co_await WaitClk(clock);
+				BOOST_TEST(simu(valid(link.a)) == 0);
+				BOOST_TEST(rv.isStall());
+			}
+			simu(valid(*link.d)) = 1;
+			co_await WaitClk(clock);
+			BOOST_TEST(!rv.isStall());
+
+		}
+
+		simu(valid(*link.d)) = 0;
+		simu(ready(link.a)) = 0;
+		co_await WaitClk(clock);
+		stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(clock.getClk(), 4096);
+}
+
+BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_load, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	RV32I_stub rv;
+	scl::TileLinkUL& link = rv.setupMemTileLink();
+
+	addSimulationProcess([&]()->SimProcess {
+		co_await WaitFor(0);
+		rv.setupSimu();
+
+		std::mt19937 rng{ std::random_device{}() };
+
+		simu((*link.d)->opcode) = (size_t)scl::TileLinkD::AccessAckData;
+
+		// LW
+		for (size_t i = 0; i < 32; ++i)
+		{
+			uint32_t opA = rng();
+			uint32_t opB = rng();
+			int32_t offset = int32_t(rng()) >> (32 - 12);
+
+			uint32_t alignmentFailure = (opA + offset) & 3;
+			opA -= alignmentFailure;
+
+			rv.r1(opA).r2(rng()).ip(rng());
+			rv.op().typeI(rv::op::LOAD, rv::func::WORD, 0, 0, offset);
+
+			simu(valid(*link.d)) = 0;
+			simu(ready(link.a)) = 0;
+			simu((*link.d)->data).invalidate();
+			simu((*link.d)->error).invalidate();
+			co_await WaitFor(0);
+
+			BOOST_TEST(simu(link.a->address) == ((opA + offset) & ~3));
+			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::Get);
+			BOOST_TEST(simu(link.a->mask) == 0xF);
+			while (rng() % 2 == 0)
+			{
+				co_await WaitClk(clock);
+				BOOST_TEST(rv.isStall());
+				BOOST_TEST(simu(valid(link.a)) == 1);
+				BOOST_TEST(!rv.hasResult());
+			}
+			simu(ready(link.a)) = 1;
+			co_await WaitFor(0);
+
+			while (rng() % 2 == 0)
+			{
+				co_await WaitClk(clock);
+				BOOST_TEST(simu(valid(link.a)) == 0);
+				BOOST_TEST(rv.isStall());
+				BOOST_TEST(!rv.hasResult());
+			}
+
+
+			uint32_t readData = rng();
+			bool error = rng() % 16 == 0;
+			if (error)
+			{
+				simu((*link.d)->error) = 1;
+			}
+			else
+			{
+				simu((*link.d)->error) = 0;
+				simu((*link.d)->data) = readData;
+			}
+
+			simu(valid(*link.d)) = 1;
+			co_await WaitClk(clock);
+			BOOST_TEST(!rv.isStall());
+			BOOST_TEST(rv.hasResult());
+
+			BOOST_TEST(rv.result() == (error ? 0xFFFF'FFFFu : readData));
+		}
+
+		simu(valid(*link.d)) = 0;
+		simu(ready(link.a)) = 0;
+		co_await WaitClk(clock);
+		stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(clock.getClk(), 4096);
+}
 BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 {
 	Clock clock({ .absoluteFrequency = 100'000'000 });

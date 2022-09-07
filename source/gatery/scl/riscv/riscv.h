@@ -21,6 +21,12 @@
 #include "CpuTrace.h"
 #include "../Avalon.h"
 
+namespace gtry::scl
+{
+	template<class... Capability> struct TileLinkU;
+	using TileLinkUL = TileLinkU<>;
+}
+
 namespace gtry::scl::riscv
 {
 	struct Instruction
@@ -80,12 +86,15 @@ namespace gtry::scl::riscv
 		virtual void setcmp();
 		virtual void shift();
 		virtual void mem(AvalonMM& mem, bool byte = true, bool halfword = true);
-		virtual void store(AvalonMM& mem, bool byte, bool halfword);
-		virtual void load(AvalonMM& mem, bool byte, bool halfword);
+		virtual TileLinkUL memTLink(bool byte = true, bool halfword = true);
 
 		void setupAlu();
 
 		const CpuTrace& trace() const { return m_trace; }
+	protected:
+		virtual void store(AvalonMM& mem, bool byte, bool halfword);
+		virtual void load(AvalonMM& mem, bool byte, bool halfword);
+
 	protected:
 		// helper for instructions
 		virtual void setIP(const UInt& ip) = 0;

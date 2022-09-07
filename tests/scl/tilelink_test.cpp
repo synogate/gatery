@@ -32,28 +32,13 @@ using namespace boost::unit_test;
 using namespace gtry;
 using namespace gtry::scl;
 
-template<TileLinkSignal TLink>
-void initTileLink(TLink& link, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth)
-{
-	link.a->size = sizeWidth;
-	link.a->source = sourceWidth;
-	link.a->address = addrWidth;
-	link.a->mask = dataWidth / 8;
-	link.a->data = dataWidth;
-
-	(*link.d)->data = dataWidth;
-	(*link.d)->size = sizeWidth;
-	(*link.d)->source = sourceWidth;
-	(*link.d)->sink = 0_b;
-}
-
 template<TileLinkSignal TLink = TileLinkUL>
 class TileLinkSimuInitiator : public std::enable_shared_from_this<TileLinkSimuInitiator<TLink>>
 {
 public:
 	TileLinkSimuInitiator(BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth, std::string prefix = "initiator")
 	{
-		initTileLink(m_link, addrWidth, dataWidth, sizeWidth, sourceWidth);
+		tileLinkInit(m_link, addrWidth, dataWidth, sizeWidth, sourceWidth);
 		pinIn(m_link, prefix);
 	}
 
@@ -95,7 +80,7 @@ class TileLinkSimuTarget : public std::enable_shared_from_this<TileLinkSimuTarge
 public:
 	TileLinkSimuTarget(BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth, std::string prefix = "target")
 	{
-		initTileLink(m_link, addrWidth, dataWidth, sizeWidth, sourceWidth);
+		tileLinkInit(m_link, addrWidth, dataWidth, sizeWidth, sourceWidth);
 		pinOut(m_link, prefix);
 	}
 
