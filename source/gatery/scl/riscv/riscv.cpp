@@ -158,6 +158,11 @@ void gtry::scl::riscv::RV32I::execute()
 	m_resultValid = '0';
 	m_stall = '0';
 
+	selectInstructions();
+}
+
+void gtry::scl::riscv::RV32I::selectInstructions()
+{
 	lui();
 	auipc();
 	jal();

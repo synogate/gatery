@@ -75,6 +75,7 @@ namespace gtry::scl::riscv
 		void ipOffset(uint32_t offset) { m_IPoffset = offset; }
 
 		virtual void execute();
+		virtual void selectInstructions();
 
 		// instruction implementations
 		virtual void lui();
