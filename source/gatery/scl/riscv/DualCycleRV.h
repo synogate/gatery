@@ -27,13 +27,17 @@ namespace gtry::scl::riscv
 		DualCycleRV(BitWidth instructionAddrWidth = 32_b, BitWidth dataAddrWidth = 32_b);
 
 		virtual Memory<UInt>& fetch(uint64_t entryPoint = 0);
-		virtual UInt fetch(const UInt& instruction, uint64_t entryPoint);
+
+		virtual UInt generate(const UInt& instruction, uint64_t entryPoint);
 
 	protected:
 		virtual void setIP(const UInt& ip);
-		void writeCallReturnTrace(std::string filename);
+		virtual void genRegisterFile(UInt rs1, UInt rs2, UInt rd);
+		virtual UInt genInstructionPointer(uint64_t entryPoint);
+		virtual void genInstructionDecode(UInt instruction);
+		virtual void genInstructionValid(Bit instructionValid);
 
-		Bit m_storeResult;
+		void writeCallReturnTrace(std::string filename);
 
 		Bit m_overrideIPValid;
 		UInt m_overrideIP;

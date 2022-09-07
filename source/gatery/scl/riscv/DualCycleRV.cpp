@@ -30,7 +30,7 @@ gtry::Memory<gtry::UInt>& gtry::scl::riscv::DualCycleRV::fetch(uint64_t entryPoi
 
 		HCL_NAMED(instruction);
 	}
-	addr = fetch(instruction, entryPoint);
+	addr = generate(instruction, entryPoint);
 
 	return m_instructionMem;
 }
@@ -76,7 +76,7 @@ void gtry::scl::riscv::DualCycleRV::writeCallReturnTrace(std::string filename)
 		}
 	});
 }
-gtry::UInt gtry::scl::riscv::DualCycleRV::fetch(const UInt& instruction, uint64_t entryPoint)
+gtry::UInt gtry::scl::riscv::DualCycleRV::generate(const UInt& instruction, uint64_t entryPoint)
 {
 	auto ent = m_area.enter();
 
@@ -84,89 +84,10 @@ gtry::UInt gtry::scl::riscv::DualCycleRV::fetch(const UInt& instruction, uint64_
 	pre_inst.decode(instruction);
 	HCL_NAMED(pre_inst);
 
-	{
-		auto scope = m_area.enter("register_file");
-		HCL_NAMED(m_resultData);
-		HCL_NAMED(m_resultValid);
-		HCL_NAMED(m_storeResult);
-		HCL_NAMED(m_stall);
-
-		// setup register file
-		m_rf.setup(32, 32_b);
-		m_rf.setType(MemType::MEDIUM);
-		m_rf.initZero();
-		m_rf.setName("register_file");
-
-		Bit writeRf = m_resultValid & m_storeResult & !m_stall;
-		HCL_NAMED(writeRf);
-		IF(writeRf)
-			m_rf[m_instr.rd] = m_resultData;
-
-		IF(!m_stall)
-		{
-			m_r1 = m_rf[pre_inst.rs1];
-			m_r2 = m_rf[pre_inst.rs2];
-		}
-		m_r1 = reg(m_r1, {.allowRetimingBackward=true});
-		m_r2 = reg(m_r2, {.allowRetimingBackward=true});
-		HCL_NAMED(m_r1);
-		HCL_NAMED(m_r2);
-
-		debugVisualizeRiscVRegisterFile(writeRf, m_instr.rd, m_resultData, pre_inst.rs1, pre_inst.rs2);
-	}
-
-	// setup state for execute cycle
-	IF(!m_stall)
-	{
-		m_instructionValid = '1';
-		m_storeResult = instruction(7, 5_b) != 0; // do not write x0
-
-		IF(m_overrideIPValid)
-			m_instructionValid = '0';
-	}
-
-	Bit initialStall = reg(Bit{ '0' }, '1');
-	IF(initialStall)
-		m_instructionValid = '0';
-
-	m_storeResult = reg(m_storeResult, '0');
-	m_instructionValid = reg(m_instructionValid, '0');
-	HCL_NAMED(m_instructionValid);
-	HCL_NAMED(m_storeResult);
-
-	// decode instruction in execute cycle
-	UInt instruction_execute = 32_b;
-	IF(!m_stall)
-		instruction_execute = instruction;
-
-	{
-		auto ent = m_area.enter("InstructionDecode");
-		instruction_execute = reg(instruction_execute);
-		m_instr.decode(instruction_execute);
-		debugVisualizeInstruction(m_instr);
-		HCL_NAMED(m_instr);
-	}
-
-	UInt ip = m_IP.width();
-	{
-		auto ent = m_area.enter("IP");
-		ip = reg(ip, entryPoint);
-		HCL_NAMED(ip);
-
-		IF(!m_stall & !initialStall)
-		{
-			m_IP = ip;
-			ip += 4;
-		}
-		m_IP = reg(m_IP, 0);
-
-		m_overrideIP = m_IP.width();
-		IF(!m_stall & m_instructionValid & m_overrideIPValid)
-			ip = m_overrideIP;
-
-		debugVisualizeIP(ip);
-	}
-
+	genRegisterFile(pre_inst.rs1, pre_inst.rs2, pre_inst.rd);
+	genInstructionValid('1');
+	genInstructionDecode(instruction);
+	UInt ip = genInstructionPointer(entryPoint);
 	setupAlu();
 	//writeCallReturnTrace("call_return.trace");
 
@@ -184,4 +105,95 @@ void gtry::scl::riscv::DualCycleRV::setIP(const UInt& ip)
 		m_overrideIPValid = '1';
 		m_overrideIP = ip(0, m_IP.width());
 	}
+}
+
+void gtry::scl::riscv::DualCycleRV::genRegisterFile(UInt rs1, UInt rs2, UInt rd)
+{
+	auto scope = m_area.enter("register_file");
+	HCL_NAMED(m_resultData);
+	HCL_NAMED(m_resultValid);
+	HCL_NAMED(m_stall);
+	HCL_NAMED(rs1);
+	HCL_NAMED(rs2);
+	HCL_NAMED(rd);
+
+	// setup register file
+	m_rf.setup(32, 32_b);
+	m_rf.setType(MemType::MEDIUM);
+	m_rf.initZero();
+	m_rf.setName("register_file");
+
+	Bit writeRf = m_resultValid & !m_stall & reg(rd != 0, '0');
+	HCL_NAMED(writeRf);
+	IF(writeRf)
+		m_rf[m_instr.rd] = m_resultData;
+
+	IF(!m_stall)
+	{
+		m_r1 = m_rf[rs1];
+		m_r2 = m_rf[rs2];
+	}
+	m_r1 = reg(m_r1, { .allowRetimingBackward = true });
+	m_r2 = reg(m_r2, { .allowRetimingBackward = true });
+	HCL_NAMED(m_r1);
+	HCL_NAMED(m_r2);
+
+	debugVisualizeRiscVRegisterFile(writeRf, m_instr.rd, m_resultData, rs1, rs2);
+}
+
+UInt gtry::scl::riscv::DualCycleRV::genInstructionPointer(uint64_t entryPoint)
+{
+	auto ent = m_area.enter("IP");
+
+	UInt ip = m_IP.width();
+	ip = reg(ip, entryPoint);
+	setName(ip, "ip_reg");
+
+	IF(!m_stall & m_instructionValid)
+	{
+		m_IP = ip;
+		ip += 4;
+	}
+	m_IP = reg(m_IP, 0);
+
+	m_overrideIP = m_IP.width();
+	IF(!m_stall & m_instructionValid & m_overrideIPValid)
+		ip = m_overrideIP;
+
+	setName(ip, "ip_next");
+	debugVisualizeIP(ip);
+	return ip;
+}
+
+void gtry::scl::riscv::DualCycleRV::genInstructionDecode(UInt instruction)
+{
+	auto ent = m_area.enter("InstructionDecode");
+	HCL_NAMED(instruction);
+
+	UInt instruction_execute = 32_b;
+	IF(!m_stall)
+		instruction_execute = instruction;
+	instruction_execute = reg(instruction_execute);
+	HCL_NAMED(instruction_execute);
+
+	m_instr.decode(instruction_execute);
+	debugVisualizeInstruction(m_instr);
+	HCL_NAMED(m_instr);
+}
+
+void gtry::scl::riscv::DualCycleRV::genInstructionValid(Bit instructionValid)
+{
+	IF(!m_stall)
+	{
+		m_instructionValid = instructionValid;
+		IF(m_overrideIPValid)
+			m_instructionValid = '0';
+	}
+
+	Bit initialStall = reg(Bit{ '0' }, '1');
+	IF(initialStall)
+		m_instructionValid = '0';
+
+	m_instructionValid = reg(m_instructionValid, '0');
+	HCL_NAMED(m_instructionValid);
 }
