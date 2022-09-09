@@ -114,7 +114,7 @@ namespace gtry::scl::riscv
 		UInt m_resultData = 32_b;
 
 		Instruction m_instr;
-		Bit m_instructionValid;
+		Bit m_discardResult;
 		
 		UInt m_r1 = 32_b;
 		UInt m_r2 = 32_b;

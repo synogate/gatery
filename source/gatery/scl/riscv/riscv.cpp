@@ -143,7 +143,7 @@ void gtry::scl::riscv::RV32I::execute()
 	auto entRV = m_area.enter("execute");
 
 	m_trace.name = m_area.getNodeGroup()->instancePath();
-	m_trace.instructionValid = !m_stall & m_instructionValid;
+	m_trace.instructionValid = !m_stall & !m_discardResult;
 	m_trace.instruction = m_instr.instruction;
 	m_trace.instructionPointer = zext(m_IP) | m_IPoffset;
 	m_trace.regWriteValid = m_resultValid & !m_stall & m_instr.rd != 0;
@@ -215,7 +215,9 @@ void gtry::scl::riscv::RV32I::branch()
 	IF(m_instr.opcode == "b11000")
 	{
 		auto ent = Area{ "branch" }.enter();
+		HCL_NAMED(m_IP);
 		UInt target = m_IP + m_instr.immB(0, m_IP.width());
+		HCL_NAMED(target);
 		
 		m_alu.sub = '1';
 
@@ -337,7 +339,7 @@ void gtry::scl::riscv::RV32I::csr(BitWidth timerWidth, BitWidth instRetWidth)
 	HCL_NAMED(cycles);
 
 	UInt instructions = instRetWidth;
-	IF(reg(m_instructionValid, '0'))
+	IF(reg(!m_discardResult & !m_stall, '0'))
 		instructions += 1;
 	instructions = reg(instructions, 0);
 	HCL_NAMED(instructions);
@@ -362,7 +364,7 @@ void gtry::scl::riscv::RV32I::mem(AvalonMM& mem, bool byte, bool halfword)
 	mem.byteEnable = "b1111";
 
 	// check for unaligned access
-	Bit is_access = (m_instr.opcode == "b00000" | m_instr.opcode == "b01000") & m_instructionValid;
+	Bit is_access = (m_instr.opcode == "b00000" | m_instr.opcode == "b01000") & !m_discardResult;
 	UInt access_width = m_instr.func3(0, 2_b);
 	sim_assert(!(is_access & access_width == 2) | m_aluResult.sum(0, 2_b) == 0) << "Unaligned access when loading 32 bit word: is_access " << is_access << " access_width: " << access_width << " m_aluResult.sum: " << m_aluResult.sum;
 	sim_assert(!(is_access & access_width == 1) | m_aluResult.sum(0, 1_b) == 0) << "Unaligned access when loading 16 bit word: is_access " << is_access << " access_width: " << access_width << " m_aluResult.sum: " << m_aluResult.sum;
@@ -453,7 +455,7 @@ gtry::scl::TileLinkUL gtry::scl::riscv::RV32I::memTLink(bool byte, bool halfword
 		mem.a->opcode = (size_t)TileLinkA::PutFullData;
 	}
 
-	IF(issueRequest & m_instructionValid)
+	IF(issueRequest & !m_discardResult)
 	{
 		IF(state.current() == ReqState::req)
 			valid(mem.a) = '1';
@@ -466,7 +468,7 @@ gtry::scl::TileLinkUL gtry::scl::riscv::RV32I::memTLink(bool byte, bool halfword
 		setStall(!done);
 	}
 
-	IF(issueRequest & m_instructionValid)
+	IF(issueRequest & !m_discardResult)
 	{
 		// we do not support unaligned access (out of spec)
 		sim_assert(mem.a->address.lower(2_b) == 0 | mem.a->size != 2);
@@ -478,7 +480,7 @@ gtry::scl::TileLinkUL gtry::scl::riscv::RV32I::memTLink(bool byte, bool halfword
 
 void gtry::scl::riscv::RV32I::store(AvalonMM& mem, bool byte, bool halfword)
 {
-	IF(m_instr.opcode == "b01000" & m_instructionValid)
+	IF(m_instr.opcode == "b01000" & !m_discardResult)
 	{
 		auto ent = Area{ "store" }.enter();
 
@@ -515,7 +517,7 @@ void gtry::scl::riscv::RV32I::store(AvalonMM& mem, bool byte, bool halfword)
 
 void gtry::scl::riscv::RV32I::load(AvalonMM& mem, bool byte, bool halfword)
 {
-	IF(m_instr.opcode == "b00000" & m_instructionValid)
+	IF(m_instr.opcode == "b00000" & !m_discardResult)
 	{
 		auto ent = Area{ "load" }.enter();
 
@@ -610,7 +612,7 @@ gtry::scl::riscv::SingleCycleI::SingleCycleI(BitWidth instructionAddrWidth, BitW
 	RV32I(instructionAddrWidth, dataAddrWidth),
 	m_resultIP(instructionAddrWidth)
 {
-	m_instructionValid = '1';
+	m_discardResult = '0';
 }
 
 gtry::Memory<gtry::UInt>& gtry::scl::riscv::SingleCycleI::fetch(uint32_t firstInstructionAddr)
@@ -698,7 +700,7 @@ void gtry::scl::riscv::SingleCycleI::setIP(const UInt& ip)
 
 void gtry::scl::riscv::RV32I::setResult(const UInt& result)
 {
-	IF(m_instructionValid)
+	IF(!m_discardResult)
 		m_resultValid = '1';
 	m_resultData = zext(result);
 }
