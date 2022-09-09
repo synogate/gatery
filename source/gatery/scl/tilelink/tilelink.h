@@ -141,6 +141,10 @@ namespace gtry::scl
 
 	template<TileLinkSignal TLink>
 	void tileLinkInit(TLink& link, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth);
+
+	void tileLinkDefaultResponse(TileLinkUL& link);
+
+	void connect(Memory<BVec>& mem, TileLinkUL& link);
 }
 
 // impl

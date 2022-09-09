@@ -56,6 +56,61 @@ namespace gtry::scl
 		beats.lsb() |= size.lower(beatWidth) != 0;
 		return beats;
 	}
+
+	void tileLinkDefaultResponse(TileLinkUL& link)
+	{
+		(*link.d)->opcode = responseOpCode(link);
+		(*link.d)->param = 0;
+		(*link.d)->size = link.a->size;
+		(*link.d)->source = link.a->source;
+		(*link.d)->sink = 0;
+		(*link.d)->data = ConstBVec((*link.d)->data.width());
+		(*link.d)->error = '0';
+	}
+
+	void connect(Memory<BVec>& mem, TileLinkUL& link)
+	{
+		BitWidth byteOffsetW = BitWidth::count(link.a->mask.width().bits());
+		HCL_DESIGNCHECK(mem.wordSize() == link.a->data.width());
+		HCL_DESIGNCHECK(mem.addressWidth() >= link.a->address.width() - byteOffsetW);
+
+		tileLinkDefaultResponse(link);
+		ready(link.a) = ready(*link.d);
+		valid(*link.d) = valid(link.a);
+
+		auto port = mem[link.a->address.upper(-byteOffsetW)];
+		(*link.d)->data = port.read();
+
+		IF(link.a->opcode == (size_t)TileLinkA::PutFullData |
+			link.a->opcode == (size_t)TileLinkA::PutPartialData)
+		{
+			(*link.d)->data = ConstBVec(mem.wordSize());
+
+			BVec writeData = (*link.d)->data;
+			for (size_t i = 0; i < link.a->mask.size(); ++i)
+				IF(link.a->mask[i])
+				writeData(i * 8, 8_b) = link.a->data(i * 8, 8_b);
+
+			IF(transfer(link.a))
+				port = writeData;
+		}
+
+		// create downstream registers
+		valid(*link.d).resetValue('0');
+		auto&& response = downstream(*link.d);
+		for (size_t i = 0; i < mem.readLatencyHint(); ++i)
+		{
+			// TODO: replace by enable scope
+			//EN(ready(*link.d))
+			//	response = reg(copy(response, { .allowRetimingBackward = true });
+
+			auto r = constructFrom(copy(response));
+			IF(ready(*link.d))
+				r = response;
+			r = reg(r, { .allowRetimingBackward = true });
+			response = r;
+		}
+	}
 }
 
 namespace gtry 

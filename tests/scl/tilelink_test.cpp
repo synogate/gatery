@@ -618,3 +618,77 @@ BOOST_FIXTURE_TEST_CASE(tilelink_hub_test, BoostUnitTestSimulationFixture)
 	vhdl(design.getCircuit());
 #endif
 }
+
+BOOST_FIXTURE_TEST_CASE(tilelink_memory_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	auto initiator = std::make_shared<TileLinkSimuInitiator<>>(12_b, 16_b, 2_b, 1_b);
+	Memory<BVec> mem(1ull << 12, 16_b);
+	mem <<= initiator->link();
+
+	addSimulationProcess([=]()->SimProcess {
+		initiator->issueIdle();
+		simu(ready(*initiator->link().d)) = 1;
+		co_await WaitClk(clock);
+		BOOST_TEST(simu(ready(initiator->link().a)) == 1);
+
+		simu(valid(initiator->link().a)) = 1;
+		for (size_t i = 0; i < 16; ++i)
+		{
+			size_t tag = i % 2;
+			size_t size = i % 3 == 0 ? 0 : 1;
+			size_t data = ((0xCD ^ i) << 8) | i;
+
+			initiator->issueCommand(TileLinkA::PutFullData, i * 2, data, size, tag);
+			co_await WaitClk(clock);
+
+			auto& d = *initiator->link().d;
+			BOOST_TEST(simu(valid(d)) == 1);
+			BOOST_TEST(simu(d->opcode) == (size_t)TileLinkD::AccessAck);
+			BOOST_TEST(simu(d->source) == tag);
+			BOOST_TEST(simu(d->size) == size);
+			BOOST_TEST(simu(d->error) == 0);
+		}
+		simu(valid(initiator->link().a)) = 0;
+		co_await WaitClk(clock);
+		BOOST_TEST(simu(valid(*initiator->link().d)) == 0);
+
+		simu(valid(initiator->link().a)) = 1;
+		for (size_t i = 0; i < 16; ++i)
+		{
+			initiator->issueCommand(TileLinkA::Get, i * 2, 0, 1, i % 2);
+			co_await WaitClk(clock);
+
+			size_t tag = i % 2;
+			size_t size = i % 3 == 0 ? 0 : 1;
+			size_t data = ((0xCD ^ i) << 8) | i;
+
+			auto& d = *initiator->link().d;
+			BOOST_TEST(simu(valid(d)) == 1);
+			BOOST_TEST(simu(d->opcode) == (size_t)TileLinkD::AccessAckData);
+			BOOST_TEST(simu(d->source) == tag);
+			BOOST_TEST(simu(d->error) == 0);
+
+			auto&& dataSig = simu(d->data);
+			if (size == 0)
+			{
+				BOOST_TEST(dataSig.defined() == 0xFF);
+				BOOST_TEST(dataSig.value() == i);
+			}
+			else
+			{
+				BOOST_TEST(dataSig.allDefined());
+				BOOST_TEST(dataSig == data);
+			}
+		}
+		simu(valid(initiator->link().a)) = 0;
+
+		co_await WaitClk(clock);
+		stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(clock.getClk(), 128);
+}
