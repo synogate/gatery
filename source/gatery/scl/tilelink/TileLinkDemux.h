@@ -18,6 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 #include "tilelink.h"
+#include "TileLinkErrorResponder.h"
 #include "../stream/StreamArbiter.h"
 
 namespace gtry::scl

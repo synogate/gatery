@@ -32,7 +32,9 @@ namespace gtry::scl
 
 		BitWidth sourceWidth();
 
+		virtual void attachSource(TLink&& source) { attachSource(source); }
 		virtual void attachSource(TLink& source);
+		virtual void attachSink(TLink&& sink, uint64_t addressBase) { attachSink(sink, addressBase); }
 		virtual void attachSink(TLink& sink, uint64_t addressBase);
 		virtual void generate();
 	protected:
