@@ -267,6 +267,10 @@ namespace gtry {
 		const FinalType& upper(BitWidth bits) const { return (*this)((width() - bits).bits(), bits); }
 		FinalType& lower(BitWidth bits) { return (*this)(0, bits); }
 		const FinalType& lower(BitWidth bits) const { return (*this)(0, bits); }
+		FinalType& upper(BitReduce bits) { return (*this)(bits.value, bits); }
+		const FinalType& upper(BitReduce bits) const { return (*this)(bits.value, bits);}
+		FinalType& lower(BitReduce bits) { return (*this)(0, bits); }
+		const FinalType& lower(BitReduce bits) const { return (*this)(0, bits); }
 
 		/// Slices a sub-vector out of the bit vector with a fixed width but a dynamic offset.
 		FinalType& operator() (const UInt &offset, BitWidth size) { return aliasRange(Range(offset, size, range())); }
