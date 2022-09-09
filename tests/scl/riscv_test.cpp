@@ -31,6 +31,7 @@
 #include <gatery/scl/riscv/EmbeddedSystemBuilder.h>
 #include <gatery/scl/io/uart.h>
 #include <gatery/scl/tilelink/tilelink.h>
+#include <gatery/scl/tilelink/TileLinkHub.h>
 
 #include <queue>
 
@@ -1839,6 +1840,80 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink, BoostUnitTestSimulationFixture)
 				found = true;
 				break;
 			}
+		}
+		co_await WaitClk(clock);
+		stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	runTicks(clock.getClk(), 1024 * 16);
+	BOOST_TEST(found);
+}
+
+
+BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulationFixture)
+{
+	std::random_device rng;
+
+	Clock clock({
+		.absoluteFrequency = 100'000'000,
+		.resetType = ClockConfig::ResetType::NONE
+		});
+	ClockScope clkScp(clock);
+
+	scl::TileLinkHub<scl::TileLinkUL> hub;
+
+	size_t instructionMemOffset = 0x1'0000;
+
+	scl::riscv::DualCycleRV rv;
+	hub.attachSource(rv.fetchTileLink(instructionMemOffset));
+	rv.execute();
+	hub.attachSource(rv.memTLink());
+
+	size_t opA = (rng() & 0x3F) + 1;
+	size_t opB = (rng() & 0x3F) + 1;
+	//std::cout << "in=" << opA << ',' << opB << '\n';
+
+	scl::TileLinkUL dmemBus;
+	{
+		Memory<BVec> dmem(1024, 32_b);
+		std::vector<unsigned char> dmemData(4096, 0);
+		dmemData[0] = (uint8_t)opA;
+		dmemData[4] = (uint8_t)opB;
+		dmem.fillPowerOnState(sim::createDefaultBitVectorState(dmemData.size(), dmemData.data()));
+
+		scl::tileLinkInit(dmemBus, 12_b, 32_b, 2_b, hub.sourceWidth());
+		dmem <<= dmemBus;
+		hub.attachSink(dmemBus, 0);
+	}
+	pinOut(valid(dmemBus.a), "dmem_valid");
+	pinOut(ready(dmemBus.a), "dmem_ready");
+	pinOut(*dmemBus.a, "dmem_");
+
+	{
+		Memory<BVec> imem(64, 32_b);
+		imem.fillPowerOnState(sim::createDefaultBitVectorState(sizeof(gcd_bin), gcd_bin));
+
+		scl::TileLinkUL imemBus;
+		scl::tileLinkInit(imemBus, 8_b, 32_b, 2_b, hub.sourceWidth());
+		imem <<= imemBus;
+		hub.attachSink(imemBus, instructionMemOffset);
+	}
+	hub.generate();
+
+	uint64_t expectedResult = scl::gcd(opA, opB);
+	bool found = false;
+	addSimulationProcess([&]()->SimProcess {
+		while (true)
+		{
+			co_await WaitClk(clock);
+			//if (simu(*avmm.write))
+			//{
+			//	BOOST_TEST(simu(avmm.address) == 8);
+			//	BOOST_TEST(simu(*avmm.writeData) == expectedResult);
+			//	found = true;
+			//	break;
+			//}
 		}
 		co_await WaitClk(clock);
 		stopTest();
