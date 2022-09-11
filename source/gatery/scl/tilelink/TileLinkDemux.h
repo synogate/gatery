@@ -28,9 +28,11 @@ namespace gtry::scl
 	{
 		struct Sink
 		{
-			TLink bus;
-			uint64_t address = 0;
-			size_t addressBits = 0;
+			BOOST_HANA_DEFINE_STRUCT(Sink,
+				(TLink, bus),
+				(uint64_t, address),
+				(size_t, addressBits)
+			);
 		};
 	public:
 		virtual void attachSource(TLink& source);
