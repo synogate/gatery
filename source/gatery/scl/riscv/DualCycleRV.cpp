@@ -133,6 +133,7 @@ TileLinkUL gtry::scl::riscv::DualCycleRV::fetchTileLink(uint64_t entryPoint)
 		instructionValid = '1';
 	}
 
+	setName(link, "imem");
 	return link;
 }
 
