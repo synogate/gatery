@@ -106,7 +106,7 @@
 		<Expand>
 			<Item Name="id">m_nodeId</Item>
 			<Item Name="name" Condition="m_name.size()">m_name</Item>
-			<Item Name="in" Condition="!dynamic_cast&lt;gtry::hlim::Node_Signal*&gt;(m_inputPorts[0].node)">m_inputPorts[0]</Item>
+			<Item Name="in">m_inputPorts[0]</Item>
 			<Item Name="out">m_outputPorts[0].connections</Item>
 
 			<CustomListItems Condition="dynamic_cast&lt;gtry::hlim::Node_Signal*&gt;(m_inputPorts[0].node)">
