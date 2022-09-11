@@ -1866,9 +1866,9 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulati
 	size_t instructionMemOffset = 0x1'0000;
 
 	scl::riscv::DualCycleRV rv;
-	hub.attachSource(rv.fetchTileLink(instructionMemOffset));
+	hub.attachSource(reg(rv.fetchTileLink(instructionMemOffset)));
 	rv.execute();
-	hub.attachSource(rv.memTLink());
+	hub.attachSource(reg(rv.memTLink()));
 
 	size_t opA = (rng() & 0x3F) + 1;
 	size_t opB = (rng() & 0x3F) + 1;
@@ -1883,12 +1883,13 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulati
 		dmem.fillPowerOnState(sim::createDefaultBitVectorState(dmemData.size(), dmemData.data()));
 
 		scl::tileLinkInit(dmemBus, 12_b, 32_b, 2_b, hub.sourceWidth());
+		HCL_NAMED(dmemBus);
 		dmem <<= dmemBus;
 		hub.attachSink(dmemBus, 0);
 	}
 	pinOut(valid(dmemBus.a), "dmem_valid");
 	pinOut(ready(dmemBus.a), "dmem_ready");
-	pinOut(*dmemBus.a, "dmem_");
+	pinOut(*dmemBus.a, "dmem");
 
 	{
 		Memory<BVec> imem(64, 32_b);
@@ -1896,7 +1897,9 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulati
 
 		scl::TileLinkUL imemBus;
 		scl::tileLinkInit(imemBus, 8_b, 32_b, 2_b, hub.sourceWidth());
+		HCL_NAMED(imemBus);
 		imem <<= imemBus;
+		HCL_NAMED(imemBus);
 		hub.attachSink(imemBus, instructionMemOffset);
 	}
 	hub.generate();
@@ -1920,7 +1923,8 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulati
 	});
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-	runTicks(clock.getClk(), 1024 * 16);
+	//dbg::vis();
+	runTicks(clock.getClk(), 128);
 	BOOST_TEST(found);
 }
 
