@@ -626,7 +626,9 @@ BOOST_FIXTURE_TEST_CASE(tilelink_memory_test, BoostUnitTestSimulationFixture)
 
 	auto initiator = std::make_shared<TileLinkSimuInitiator<>>(12_b, 16_b, 2_b, 1_b);
 	Memory<BVec> mem(1ull << 12, 16_b);
+	setName(ready(*initiator->link().d), "DD");
 	mem <<= initiator->link();
+	setName(ready(*initiator->link().d), "DE");
 
 	addSimulationProcess([=]()->SimProcess {
 		initiator->issueIdle();
@@ -684,6 +686,43 @@ BOOST_FIXTURE_TEST_CASE(tilelink_memory_test, BoostUnitTestSimulationFixture)
 			}
 		}
 		simu(valid(initiator->link().a)) = 0;
+		co_await WaitClk(clock);
+
+		simu(ready(*initiator->link().d)) = 0;
+		co_await WaitClk(clock);
+		BOOST_TEST(simu(ready(initiator->link().a)) == 1);
+
+		initiator->issueCommand(TileLinkA::Get, 0, 0, 1, 1);
+		simu(valid(initiator->link().a)) = 1;
+		co_await WaitClk(clock);
+		BOOST_TEST(simu(ready(initiator->link().a)) == 1);
+		BOOST_TEST(simu(valid(*initiator->link().d)) == 1);
+
+		initiator->issueCommand(TileLinkA::Get, 2, 0, 0, 0);
+		for (size_t i = 0; i < 5; ++i)
+		{
+			co_await WaitClk(clock);
+			simu(valid(initiator->link().a)) = 0;
+			BOOST_TEST(simu(ready(initiator->link().a)) == 0);
+			BOOST_TEST(simu(valid(*initiator->link().d)) == 1);
+			BOOST_TEST(simu((*initiator->link().d)->source) == 1);
+		}
+
+		simu(ready(*initiator->link().d)) = 1;
+		co_await WaitClk(clock);
+		simu(ready(*initiator->link().d)) = 0;
+
+		for (size_t i = 0; i < 5; ++i)
+		{
+			co_await WaitClk(clock);
+			BOOST_TEST(simu(ready(initiator->link().a)) == 0);
+			BOOST_TEST(simu(valid(*initiator->link().d)) == 1);
+			BOOST_TEST(simu((*initiator->link().d)->source) == 0);
+		}
+
+		simu(ready(*initiator->link().d)) = 1;
+		co_await WaitClk(clock);
+		BOOST_TEST(simu(valid(*initiator->link().d)) == 0);
 
 		co_await WaitClk(clock);
 		stopTest();

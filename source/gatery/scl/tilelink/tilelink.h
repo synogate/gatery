@@ -142,9 +142,12 @@ namespace gtry::scl
 	template<TileLinkSignal TLink>
 	void tileLinkInit(TLink& link, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth);
 
-	void tileLinkDefaultResponse(TileLinkUL& link);
+	TileLinkD tileLinkDefaultResponse(const TileLinkA& request);
 
 	void connect(Memory<BVec>& mem, TileLinkUL& link);
+
+	template<TileLinkSignal TLink> TLink reg(TLink& link);
+	template<TileLinkSignal TLink> TLink reg(TLink&& link);
 }
 
 // impl
@@ -263,6 +266,20 @@ namespace gtry::scl
 		(*link.d)->source = sourceWidth;
 		(*link.d)->sink = 0_b;
 	}
+
+	template<TileLinkSignal TLink>
+	TLink reg(TLink& link)
+	{
+		TLink out{
+			.a = reg(link.a),
+			.d = constructFrom(*link.d)
+		};
+		*link.d <<= reg(*out.d);
+		return out;
+	}
+	
+	template<TileLinkSignal TLink>
+	TLink reg(TLink&& link) { return reg(link); }
 
 	extern template struct Stream<TileLinkA, Ready, Valid>;
 	extern template struct Stream<TileLinkD, Ready, Valid>;

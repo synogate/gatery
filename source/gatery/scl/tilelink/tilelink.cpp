@@ -57,15 +57,21 @@ namespace gtry::scl
 		return beats;
 	}
 
-	void tileLinkDefaultResponse(TileLinkUL& link)
+	TileLinkD gtry::scl::tileLinkDefaultResponse(const TileLinkA& request)
 	{
-		(*link.d)->opcode = responseOpCode(link);
-		(*link.d)->param = 0;
-		(*link.d)->size = link.a->size;
-		(*link.d)->source = link.a->source;
-		(*link.d)->sink = 0;
-		(*link.d)->data = ConstBVec((*link.d)->data.width());
-		(*link.d)->error = '0';
+		TileLinkD res;
+		res.opcode = (size_t)TileLinkD::AccessAck;
+		IF(request.opcode == (size_t)TileLinkA::Get)
+			res.opcode = (size_t)TileLinkD::AccessAckData;
+
+		res.param = 0;
+		res.size = request.size;
+		res.source = request.source;
+		res.sink = 0u;
+		res.data = ConstBVec(request.data.width());
+		res.error = '0';
+
+		return res;
 	}
 
 	void connect(Memory<BVec>& mem, TileLinkUL& link)
@@ -74,19 +80,19 @@ namespace gtry::scl
 		HCL_DESIGNCHECK(mem.wordSize() == link.a->data.width());
 		HCL_DESIGNCHECK(mem.addressWidth() >= link.a->address.width() - byteOffsetW);
 
-		tileLinkDefaultResponse(link);
-		ready(link.a) = ready(*link.d);
-		valid(*link.d) = valid(link.a);
+		TileLinkChannelD d;
+		*d = tileLinkDefaultResponse(*link.a);
+		valid(d) = valid(link.a);
 
 		auto port = mem[link.a->address.upper(-byteOffsetW)];
-		(*link.d)->data = port.read();
+		d->data = port.read();
 
 		IF(link.a->opcode == (size_t)TileLinkA::PutFullData |
 			link.a->opcode == (size_t)TileLinkA::PutPartialData)
 		{
-			(*link.d)->data = ConstBVec(mem.wordSize());
+			(d)->data = ConstBVec(mem.wordSize());
 
-			BVec writeData = (*link.d)->data;
+			BVec writeData = (d)->data;
 			for (size_t i = 0; i < link.a->mask.size(); ++i)
 				IF(link.a->mask[i])
 				writeData(i * 8, 8_b) = link.a->data(i * 8, 8_b);
@@ -96,20 +102,12 @@ namespace gtry::scl
 		}
 
 		// create downstream registers
-		valid(*link.d).resetValue('0');
-		auto&& response = downstream(*link.d);
+		valid(d).resetValue('0');
 		for (size_t i = 0; i < mem.readLatencyHint(); ++i)
-		{
-			// TODO: replace by enable scope
-			//EN(ready(*link.d))
-			//	response = reg(copy(response, { .allowRetimingBackward = true });
+			d = d.regDownstreamBlocking({ .allowRetimingBackward = true });
 
-			auto r = constructFrom(copy(response));
-			IF(ready(*link.d))
-				r = response;
-			r = reg(r, { .allowRetimingBackward = true });
-			response = r;
-		}
+		ready(link.a) = ready(d);
+		*link.d <<= d.regReady();
 	}
 }
 
