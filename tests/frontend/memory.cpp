@@ -551,7 +551,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads, BoostUnitTest
 
 		bool lastWasWrite = false;
 		uint64_t lastAddr = 0;
-		for ([[maybe_unused]] auto i : Range(100000)) {
+		for ([[maybe_unused]] auto i : Range(5000)) {
 
 			uint64_t read_addr = randomAddr(rng);
 			simu(rd_addr) = read_addr;
@@ -634,7 +634,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_on_wrEn, BoostUnitTestSimulat
 
 		bool lastWasWrite = false;
 		size_t lastAddr = 0;
-		for ([[maybe_unused]] auto i : Range(100000)) {
+		for ([[maybe_unused]] auto i : Range(10000)) {
 
 			size_t read_addr = randomAddr(rng);
 			simu(rd_addr) = read_addr;
@@ -714,7 +714,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_multiple_writes, BoostUnitTestSimulationFixture
 
 		size_t collisions = 0;
 
-		for ([[maybe_unused]] auto i : Range(100000)) {
+		for ([[maybe_unused]] auto i : Range(5000)) {
 
 			size_t read_addr = randomAddr(rng);
 			simu(rd_addr) = read_addr;
@@ -797,7 +797,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrFirst, Boos
 
 		bool lastWasWrite = false;
 		size_t lastAddr = 0;
-		for ([[maybe_unused]] auto i : Range(100000)) {
+		for ([[maybe_unused]] auto i : Range(5000)) {
 			size_t read_addr = randomAddr(rng);
 			simu(rd_addr) = read_addr;
 			size_t expectedReadContentBefore = contents[read_addr];
@@ -879,7 +879,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrLast, Boost
 
 		bool lastWasWrite = false;
 		size_t lastAddr = 0;
-		for ([[maybe_unused]] auto i : Range(100000)) {
+		for ([[maybe_unused]] auto i : Range(5000)) {
 
 			bool doInc = zeroOne(rng) > 0.1f;
 			size_t incAddr = randomAddr(rng);
@@ -964,7 +964,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
 
 		bool lastWasWrite = false;
 		size_t lastAddr = 0;
-		for ([[maybe_unused]] auto i : Range(100000)) {
+		for ([[maybe_unused]] auto i : Range(5000)) {
 			size_t read_addr = randomAddr(rng);
 			simu(rd_addr) = read_addr;
 			size_t expectedReadContentBefore = contents[read_addr];
@@ -1054,7 +1054,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
 
 		bool lastWasWrite = false;
 		size_t lastAddr = 0;
-		for ([[maybe_unused]] auto i : Range(100000)) {
+		for ([[maybe_unused]] auto i : Range(5000)) {
 			size_t read_addr = randomAddr(rng);
 			simu(rd_addr) = read_addr;
 			size_t expectedReadContentBefore = contents[read_addr];
@@ -1152,7 +1152,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_dual_read_modify_write, BoostUnitTestSimulation
 		std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
 		std::uniform_int_distribution<size_t> randomAddr(0, 3);		
 
-		for ([[maybe_unused]] auto i : Range(10000)) {
+		for ([[maybe_unused]] auto i : Range(1000)) {
 			bool doInc1 = zeroOne(rng) > 0.1f;
 			size_t incAddr1 = randomAddr(rng);
 			simu(wrEn1) = doInc1;
@@ -1380,7 +1380,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, BoostUnitTestSim
 
 		bool lastWasWrite = false;
 		size_t lastAddr = 0;
-		for ([[maybe_unused]] auto i : Range(10000)) {
+		for ([[maybe_unused]] auto i : Range(5000)) {
 			bool doInc = zeroOne(rng) > 0.1f;
 			size_t incAddr = randomAddr(rng);
 			simu(wrEn) = doInc;
