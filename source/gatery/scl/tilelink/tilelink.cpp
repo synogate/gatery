@@ -57,7 +57,7 @@ namespace gtry::scl
 		return beats;
 	}
 
-	TileLinkD gtry::scl::tileLinkDefaultResponse(const TileLinkA& request)
+	TileLinkD tileLinkDefaultResponse(const TileLinkA& request)
 	{
 		TileLinkD res;
 		res.opcode = (size_t)TileLinkD::AccessAck;
