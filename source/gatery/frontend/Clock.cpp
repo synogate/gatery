@@ -347,7 +347,7 @@ namespace gtry
 		return SignalReadPort(reg);
 	}
 
-	Bit gtry::reset()
+	Bit reset()
 	{
 		const Clock& clk = ClockScope::getClk();
 		const auto& attr = clk.getClk()->getRegAttribs();
