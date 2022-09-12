@@ -229,7 +229,7 @@ class RV32I_stub : public scl::riscv::RV32I
 public:
 	RV32I_stub()
 	{
-		m_discardResult = '1';
+		m_discardResult = '0';
 
 		m_IP = pinIn(32_b).setName("IP");
 		m_IPnext = m_IP + 4;
