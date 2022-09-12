@@ -1866,9 +1866,10 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulati
 	size_t instructionMemOffset = 0x1'0000;
 
 	scl::riscv::DualCycleRV rv;
+	//TODO remove register and find cyclic dependency
 	hub.attachSource(reg(rv.fetchTileLink(instructionMemOffset)));
 	rv.execute();
-	hub.attachSource(reg(rv.memTLink()));
+	hub.attachSource(rv.memTLink());
 
 	size_t opA = (rng() & 0x3F) + 1;
 	size_t opB = (rng() & 0x3F) + 1;
@@ -1885,11 +1886,13 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulati
 		scl::tileLinkInit(dmemBus, 12_b, 32_b, 2_b, hub.sourceWidth());
 		HCL_NAMED(dmemBus);
 		dmem <<= dmemBus;
+		HCL_NAMED(dmemBus);
 		hub.attachSink(dmemBus, 0);
+
+		pinOut(valid(dmemBus.a), "dmem_valid");
+		pinOut(ready(dmemBus.a), "dmem_ready");
+		pinOut(*dmemBus.a, "dmem");
 	}
-	pinOut(valid(dmemBus.a), "dmem_valid");
-	pinOut(ready(dmemBus.a), "dmem_ready");
-	pinOut(*dmemBus.a, "dmem");
 
 	{
 		Memory<BVec> imem(64, 32_b);
@@ -1907,24 +1910,27 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulati
 	uint64_t expectedResult = scl::gcd(opA, opB);
 	bool found = false;
 	addSimulationProcess([&]()->SimProcess {
-		while (true)
+		while (!found)
 		{
 			co_await WaitClk(clock);
-			//if (simu(*avmm.write))
-			//{
-			//	BOOST_TEST(simu(avmm.address) == 8);
-			//	BOOST_TEST(simu(*avmm.writeData) == expectedResult);
-			//	found = true;
-			//	break;
-			//}
+			if (simu(valid(dmemBus.a)) == 1 && 
+				simu(ready(dmemBus.a)) == 1 &&
+				simu(dmemBus.a->opcode) == (size_t)scl::TileLinkA::PutFullData)
+			{
+				BOOST_TEST(simu(dmemBus.a->address) == 8);
+				BOOST_TEST(simu(dmemBus.a->mask) == 0xF);
+				BOOST_TEST(simu(dmemBus.a->data) == expectedResult);
+				found = true;
+			}
 		}
+
 		co_await WaitClk(clock);
 		stopTest();
 	});
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	//dbg::vis();
-	runTicks(clock.getClk(), 128);
+	runTicks(clock.getClk(), 1024);
 	BOOST_TEST(found);
 }
 

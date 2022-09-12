@@ -37,18 +37,9 @@
 #include <intrin.h>
 #endif
 
-
-namespace gtry::utils {
-
-#ifdef _MSC_VER
-	template<typename T>
-	int popcount(T val) noexcept
-	{
-		return (int)__popcnt64((int64_t)val);
-	}
-#else
+namespace gtry::utils 
+{
 	using ::std::popcount;
-#endif
 
 template<typename T>
 bool isPow2(T v) { return popcount(v) == 1; }
