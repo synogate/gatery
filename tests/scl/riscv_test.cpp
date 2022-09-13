@@ -29,6 +29,7 @@
 #include <gatery/scl/algorithm/GCD.h>
 #include <gatery/scl/riscv/ElfLoader.h>
 #include <gatery/scl/riscv/EmbeddedSystemBuilder.h>
+#include <gatery/scl/riscv/rvcc.h>
 #include <gatery/scl/io/uart.h>
 #include <gatery/scl/tilelink/tilelink.h>
 #include <gatery/scl/tilelink/TileLinkHub.h>
@@ -1933,6 +1934,27 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulati
 	runTicks(clock.getClk(), 1024);
 	BOOST_TEST(found);
 }
+
+#if __has_include(<external/rvcc/src/defs.c>)
+BOOST_AUTO_TEST_CASE(rvcc_test)
+{
+	std::string code = 
+ R"(int main(int a, int b)
+	{
+		while (a != b) {
+			if (a > b)
+				a -= b;
+			else
+				b -= a;
+		}
+		return a;
+	})";
+
+	std::vector<uint32_t> bin = scl::riscv::rvcc(code);
+	BOOST_TEST(!bin.empty());
+}
+
+#endif
 
 #if 0
 extern gtry::hlim::NodeGroup* dbg_group;
