@@ -28,6 +28,8 @@
 #include "Node.h"
 #include "NodePort.h"
 #include "NodeGroup.h"
+#include "coreNodes/Node_Register.h"
+#include "supportNodes/Node_Memory.h"
 
 
 namespace gtry::hlim {
@@ -381,7 +383,43 @@ void SubnetTemplate<makeConst, FinalType>::dilate(bool forward, bool backward)
 	m_nodes.insert(newNodes.begin(), newNodes.end());
 }
 
+template<bool makeConst, typename FinalType>
+FinalType gtry::hlim::SubnetTemplate<makeConst, FinalType>::filterLoopNodesOnly() const
+{
+	FinalType ret;
 
+	auto isPartOfLoop = [](NodeType* node)
+	{
+		for (auto i : utils::Range(node->getNumOutputPorts()))
+		{
+			// MiO: did not exclude registers and memories
+			//if (!node->isCombinatorial(i))
+			//	continue;
+
+			std::set<NodeType*> seen;
+			for (auto&& nh : ((BaseNode*)node)->exploreOutput(i))
+			{
+				if (nh.isNodeType<hlim::Node_Register>())
+					nh.backtrack();
+				else if (nh.isNodeType<hlim::Node_Memory>())
+					nh.backtrack();
+				else if (seen.contains(nh.node()))
+					nh.backtrack();
+				else if (nh.node() == node)
+					return true;
+				else
+					seen.insert(nh.node());
+			}
+		}
+		return false;
+	};
+
+	for (auto start : m_nodes)
+		if (isPartOfLoop(start))
+			ret.add(start);
+	
+	return ret;
+}
 
 template class SubnetTemplate<false, Subnet>;
 template class SubnetTemplate<true, ConstSubnet>;
