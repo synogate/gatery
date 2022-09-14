@@ -300,28 +300,30 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 				msg << n;
 			dbg::log(msg);
 
+			//{
+			//	DotExport exp("loop.dot");
+			//	exp(circuit);
+			//	exp.runGraphViz("loop.svg");
+			//}
 			{
-				DotExport exp("loop.dot");
-				exp(circuit);
-				exp.runGraphViz("loop.svg");
-			}
-			{
+				hlim::ConstSubnet looping = hlim::ConstSubnet::all(circuit).filterLoopNodesOnly();
+
 				//loopSubnet.dilate(true, true);
 
 				DotExport exp("loop_only.dot");
-				exp(circuit, loopSubnet.asConst());
+				exp(circuit, looping);
 				exp.runGraphViz("loop_only.svg");
 			}
-			{
-				hlim::Subnet all;
-				for (auto n : nodes)
-					all.add(n);
-
-
-				DotExport exp("all.dot");
-				exp(circuit, all.asConst());
-				exp.runGraphViz("all.svg");
-			}
+			//{
+			//	hlim::Subnet all;
+			//	for (auto n : nodes)
+			//		all.add(n);
+			//
+			//
+			//	DotExport exp("all.dot");
+			//	exp(circuit, all.asConst());
+			//	exp.runGraphViz("all.svg");
+			//}
 		}
 
 		HCL_DESIGNCHECK_HINT(readyNode != nullptr, "Cyclic dependency!");
