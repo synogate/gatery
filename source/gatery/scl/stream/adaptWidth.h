@@ -50,35 +50,6 @@ namespace gtry::scl
 namespace gtry::scl
 {
 	template<BaseSignal T>
-	class ShiftReg
-	{
-	public:
-		ShiftReg(BitWidth totalWidth) :
-			m_value(totalWidth)
-		{
-			m_value = reg(m_value);
-		}
-
-		ShiftReg(BitWidth totalWidth, const T& newRightShiftValue) :
-			m_value(totalWidth)
-		{
-			m_value = reg(m_value);
-			shiftRight(newRightShiftValue);
-		}
-
-		T& value() { return m_value; }
-
-		ShiftReg& shiftRight(const T& newValue)
-		{
-			m_value >>= (int)newValue.width().bits();
-			m_value.upper(newValue.width()) = newValue;
-			return *this;
-		}
-	private:
-		T m_value;
-	};
-
-	template<BaseSignal T>
 	T makeShiftReg(BitWidth size, const T& in, const Bit& en)
 	{
 		T value = size;
