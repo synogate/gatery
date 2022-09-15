@@ -20,7 +20,7 @@
 
 namespace gtry::scl::sdram
 {
-	TileLinkUL gtry::scl::sdram::dramPico(CommandBus& dram, const BVec& readData, size_t readLatency, BitWidth linkSourceW)
+	TileLinkUL dramPico(CommandBus& dram, const BVec& readData, size_t readLatency, BitWidth linkSourceW)
 	{
 		Area ent{ "scl_dramPico", true };
 		HCL_DESIGNCHECK(dram.dq.width() == readData.width());
