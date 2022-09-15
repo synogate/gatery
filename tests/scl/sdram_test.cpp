@@ -24,6 +24,7 @@
 #include <gatery/simulation/Simulator.h>
 
 #include <gatery/scl/memory/sdram.h>
+#include <gatery/scl/memory/SdramTimer.h>
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -177,6 +178,174 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 	});
 }
 
+BOOST_FIXTURE_TEST_CASE(sdram_timer_test, ClockedTest)
+{
+	scl::sdram::Timings timings{
+		.cl = 2,
+		.rcd = 2,
+		.ras = 4,
+		.rp = 2,
+		.rc = 8,
+		.rrd = 2,
+		.refi = 1560,
+	};
+
+	scl::sdram::CommandBus bus{
+		.a = 11_b,
+		.ba = 1_b,
+		.dq = 32_b,
+		.dqm = 4_b,
+	};
+	pinIn(bus, "bus");
+
+	UInt casLength = pinIn(4_b).setName("cas_length");
+
+	scl::sdram::SdramTimer timer;
+	timer.generate(timings, bus, casLength, 8);
+
+	Bit b0Activate = timer.can(scl::sdram::CommandCode::Activate, "1b0");
+	gtry::pinOut(b0Activate).setName("b0Activate");
+	Bit b0Precharge = timer.can(scl::sdram::CommandCode::Precharge, "1b0");
+	gtry::pinOut(b0Precharge).setName("b0Precharge");
+	Bit b0Read = timer.can(scl::sdram::CommandCode::Read, "1b0");
+	gtry::pinOut(b0Read).setName("b0Read");
+	Bit b0Write = timer.can(scl::sdram::CommandCode::Write, "1b0");
+	gtry::pinOut(b0Write).setName("b0Write");
+	Bit b0BurstStop = timer.can(scl::sdram::CommandCode::BurstStop, "1b0");
+	gtry::pinOut(b0BurstStop).setName("b0BurstStop");
+
+	Bit b1Activate = timer.can(scl::sdram::CommandCode::Activate, 1);
+	gtry::pinOut(b1Activate).setName("b1Activate");
+	Bit b1Precharge = timer.can(scl::sdram::CommandCode::Precharge, 1);
+	gtry::pinOut(b1Precharge).setName("b1Precharge");
+	Bit b1Read = timer.can(scl::sdram::CommandCode::Read, 1);
+	gtry::pinOut(b1Read).setName("b1Read");
+	Bit b1Write = timer.can(scl::sdram::CommandCode::Write, 1);
+	gtry::pinOut(b1Write).setName("b1Write");
+	Bit b1BurstStop = timer.can(scl::sdram::CommandCode::BurstStop, 1);
+	gtry::pinOut(b1BurstStop).setName("b1BurstStop");
+
+	addSimulationProcess([=]()->SimProcess {
+
+		simu(bus.cke) = 1;
+		simu(bus.csn) = 1;
+		simu(bus.rasn) = 1;
+		simu(bus.casn) = 1;
+		simu(bus.wen) = 1;
+		simu(bus.ba) = 0;
+		co_await WaitClk(clock());
+
+		BOOST_TEST(simu(b0Activate) == 1);
+		BOOST_TEST(simu(b0Precharge) == 1);
+		BOOST_TEST(simu(b0Read) == 1);
+		BOOST_TEST(simu(b0Write) == 1);
+		BOOST_TEST(simu(b0BurstStop) == 1);
+		BOOST_TEST(simu(b1Activate) == 1);
+		BOOST_TEST(simu(b1Precharge) == 1);
+		BOOST_TEST(simu(b1Read) == 1);
+		BOOST_TEST(simu(b1Write) == 1);
+		BOOST_TEST(simu(b1BurstStop) == 1);
+		co_await WaitClk(clock());
+
+		// RAS
+		simu(bus.csn) = 0;
+		simu(bus.rasn) = 0;
+		co_await WaitClk(clock());
+		simu(bus.csn) = 1;
+
+		for (size_t i = 0; i < 9; ++i)
+		{
+			BOOST_TEST(simu(b0Activate) == (i < timings.rc - 1 ? 0 : 1));
+			BOOST_TEST(simu(b0Precharge) == (i < timings.ras - 1 ? 0 : 1));
+			BOOST_TEST(simu(b0Read) == (i < timings.rcd - 1 ? 0 : 1));
+			BOOST_TEST(simu(b0Write) == (i < timings.rcd - 1 ? 0 : 1));
+			BOOST_TEST(simu(b0BurstStop) == 1);
+			BOOST_TEST(simu(b1Activate) == (i < timings.rrd - 1 ? 0 : 1));
+			BOOST_TEST(simu(b1Precharge) == 1);
+			BOOST_TEST(simu(b1Read) == 1);
+			BOOST_TEST(simu(b1Write) == 1);
+			BOOST_TEST(simu(b1BurstStop) == 1);
+			co_await WaitClk(clock());
+		}
+
+		// Precharge
+		simu(bus.csn) = 0;
+		simu(bus.rasn) = 0;
+		simu(bus.wen) = 0;
+		co_await WaitClk(clock());
+		simu(bus.csn) = 1;
+
+		for (size_t i = 0; i < 3; ++i)
+		{
+			BOOST_TEST(simu(b0Activate) == (i < timings.rp - 1 ? 0 : 1));
+			BOOST_TEST(simu(b0Precharge) == 1);
+			BOOST_TEST(simu(b0Read) == 1);
+			BOOST_TEST(simu(b0Write) == 1);
+			BOOST_TEST(simu(b0BurstStop) == 1);
+			BOOST_TEST(simu(b1Activate) == 1);
+			BOOST_TEST(simu(b1Precharge) == 1);
+			BOOST_TEST(simu(b1Read) == 1);
+			BOOST_TEST(simu(b1Write) == 1);
+			BOOST_TEST(simu(b1BurstStop) == 1);
+			co_await WaitClk(clock());
+		}
+
+		// long write cas
+		simu(bus.csn) = 0;
+		simu(bus.rasn) = 1;
+		simu(bus.casn) = 0;
+		simu(bus.wen) = 0;
+		simu(casLength) = 4;
+		co_await WaitClk(clock());
+		simu(bus.csn) = 1;
+
+		for (size_t i = 0; i < 7; ++i)
+		{
+			BOOST_TEST(simu(b0Activate) == 1);
+			BOOST_TEST(simu(b0Precharge) == (i < 3 ? 0 : 1));
+			BOOST_TEST(simu(b0Read) == (i < 3 ? 0 : 1));
+			BOOST_TEST(simu(b0Write) == (i < 3 ? 0 : 1));
+			BOOST_TEST(simu(b0BurstStop) == 1);
+			BOOST_TEST(simu(b1Activate) == 1);
+			BOOST_TEST(simu(b1Precharge) == 1);
+			BOOST_TEST(simu(b1Read) == (i < 3 ? 0 : 1));
+			BOOST_TEST(simu(b1Write) == (i < 3 ? 0 : 1));
+			BOOST_TEST(simu(b1BurstStop) == 1);
+			co_await WaitClk(clock());
+		}
+
+		// long read cas
+		simu(bus.csn) = 0;
+		simu(bus.rasn) = 1;
+		simu(bus.casn) = 0;
+		simu(bus.wen) = 1;
+		simu(casLength) = 4;
+		co_await WaitClk(clock());
+		simu(bus.csn) = 1;
+
+		size_t writeDelay = (4 - 1) + timings.cl + (timings.wr - 1);
+		for (size_t i = 0; i < 7; ++i)
+		{
+			BOOST_TEST(simu(b0Activate) == 1);
+			BOOST_TEST(simu(b0Precharge) == (i < 3 ? 0 : 1));
+			BOOST_TEST(simu(b0Read) == (i < 3 ? 0 : 1));
+			BOOST_TEST(simu(b0Write) == (i < writeDelay ? 0 : 1));
+			BOOST_TEST(simu(b0BurstStop) == 1);
+			BOOST_TEST(simu(b1Activate) == 1);
+			BOOST_TEST(simu(b1Precharge) == 1);
+			BOOST_TEST(simu(b1Read) == (i < 3 ? 0 : 1));
+			BOOST_TEST(simu(b1Write) == (i < writeDelay ? 0 : 1));
+			BOOST_TEST(simu(b1BurstStop) == 1);
+			co_await WaitClk(clock());
+		}
+
+		stopTest();
+	});
+
+	//design.postprocess();
+	//dbg::vis();
+}
+
 class SdramControllerTest : public ClockedTest, protected scl::sdram::Controller
 {
 public:
@@ -201,7 +370,7 @@ public:
 		
 		burstLimit(3);
 
-		timeout(hlim::ClockRational{ 1, 1'000'000 });
+		timeout(hlim::ClockRational{ 2, 1'000'000 });
 	}
 
 	void makeBusPins(const scl::sdram::CommandBus& in, std::string prefix) override
@@ -250,7 +419,7 @@ public:
 		(*link.d)->data = dataWidth;
 	
 		pinIn(link, "link");
-		setFullByteEnableMask(link.a);
+		//setFullByteEnableMask(link.a);
 
 		DesignScope::get()->getCircuit().addSimulationProcess([&]() -> SimProcess {
 			simu(valid(link.a)) = 0;
@@ -279,6 +448,7 @@ public:
 		simu(link.a->address) = address;
 		simu(link.a->size) = gtry::utils::Log2C(byteSize);
 		simu(link.a->source) = tag;
+		simu(link.a->mask) = link.a->mask.width().mask();
 
 		simu(valid(link.a)) = 1;
 	}
@@ -291,3 +461,49 @@ public:
 	scl::TileLinkUL link;
 };
 
+
+BOOST_FIXTURE_TEST_CASE(sdram_constroller_init_test, SdramControllerTest)
+{
+	setupLink();
+	generate(link);
+
+	addSimulationProcess([=]()->SimProcess {
+		co_await WaitClk(clock());
+		issueWrite(0, 4, 1);
+		simu(link.a->data) = 0xCDCD;
+
+		while (!transfer(link.a))
+			co_await WaitClk(clock());
+		co_await WaitClk(clock());
+		simu(link.a->data) = 0xCECE;
+		while (!transfer(link.a))
+			co_await WaitClk(clock());
+		co_await WaitClk(clock());
+
+
+
+		issueRead(0, 2);
+		while (!transfer(link.a))
+			co_await WaitClk(clock());
+		co_await WaitClk(clock());
+
+		issueRead(0, 4);
+		while (!transfer(link.a))
+			co_await WaitClk(clock());
+		co_await WaitClk(clock());
+
+
+		issueRead(512, 1);
+		while (!transfer(link.a))
+			co_await WaitClk(clock());
+		co_await WaitClk(clock());
+		simu(valid(link.a)) = 0;
+
+		for (size_t i = 0; i < 16; ++i)
+			co_await WaitClk(clock());
+
+		stopTest();
+	});
+
+	//dbg::vis();
+}
