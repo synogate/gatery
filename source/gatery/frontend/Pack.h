@@ -114,7 +114,7 @@ namespace gtry
 	}
 
 	template<typename... Comp>
-	void unpack(const UInt& vec, Comp& ... compound)
+	void unpack(const UInt& vec, Comp&& ... compound)
 	{
 		auto&& readPort = vec.readPort();
 		size_t bitOffset = 0;
