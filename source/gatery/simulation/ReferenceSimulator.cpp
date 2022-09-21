@@ -229,6 +229,8 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 			std::cout << "nodesRemaining : " << nodesRemaining.size() << std::endl;
 
 			
+
+			
 			std::set<hlim::BaseNode*, CompareById> loopNodes = nodesRemaining;
 			while (true) {
 				std::set<hlim::BaseNode*, CompareById> tmp = std::move(loopNodes);
@@ -814,12 +816,6 @@ void ReferenceSimulator::simProcOverrideRegisterOutput(hlim::Node_Register *reg,
 }
 
 
-DefaultBitVectorState ReferenceSimulator::simProcGetValueOfOutput(const hlim::NodePort &nodePort)
-{
-	auto value = getValueOfOutput(nodePort);
-	m_callbackDispatcher.onSimProcOutputRead(nodePort, value);
-	return value;
-}
 
 
 bool ReferenceSimulator::outputOptimizedAway(const hlim::NodePort &nodePort)

@@ -8,17 +8,17 @@
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xml:space="preserve"
-   width="132.29167mm"
-   height="30.683769mm"
+   width="52.916664mm"
+   height="12.273508mm"
    version="1.0"
    style="clip-rule:evenodd;fill-rule:evenodd;image-rendering:optimizeQuality;shape-rendering:geometricPrecision;text-rendering:geometricPrecision"
-   viewBox="0 0 13229.167 3068.3769"
+   viewBox="0 0 5291.6663 1227.3508"
    id="svg10"
-   sodipodi:docname="gatery_logo_500.svg"
+   sodipodi:docname="gatery_logo_200_padded.svg"
    inkscape:version="1.0.2-2 (e86c870879, 2021-01-15)"><metadata
    id="metadata14"><rdf:RDF><cc:Work
        rdf:about=""><dc:format>image/svg+xml</dc:format><dc:type
-         rdf:resource="http://purl.org/dc/dcmitype/StillImage" /><dc:title /></cc:Work></rdf:RDF></metadata><sodipodi:namedview
+         rdf:resource="http://purl.org/dc/dcmitype/StillImage" /><dc:title></dc:title></cc:Work></rdf:RDF></metadata><sodipodi:namedview
    pagecolor="#ffffff"
    bordercolor="#666666"
    borderopacity="1"
@@ -35,9 +35,9 @@
    fit-margin-left="0"
    fit-margin-right="0"
    fit-margin-bottom="0"
-   inkscape:zoom="1.094172"
-   inkscape:cx="299.14752"
-   inkscape:cy="-31.998966"
+   inkscape:zoom="2.1311486"
+   inkscape:cx="28.401506"
+   inkscape:cy="-3.3759039"
    inkscape:window-x="-8"
    inkscape:window-y="-8"
    inkscape:window-maximized="1"
@@ -57,7 +57,7 @@
 
 <g
    id="g2413"
-   transform="matrix(0.25150631,0,0,0.25150631,-0.03269582,0)"><path
+   transform="matrix(0.08048202,0,0,0.08048202,529.1561,122.73509)"><path
      class="fil0"
      d="M 47936.79,12200 52599.87,2200 h -772.37 l -4336.66,9300 H 43844.55 L 39765.46,7931.46 V 12200 h 700 V 9473.9 L 43581.59,12200 Z M 1910.05,5556.81 4632.26,7156.72 2140.19,7679.03 C 2380.37,9820.74 4209.99,11500 6413.06,11500 h 5889.52 l 4336.66,-9300 4663.07,10000 h -772.36 L 18991.14,8900 h -3048.72 l 326.41,-700 h 2395.89 L 16639.24,3856.34 12748.52,12200 H 6413.03 c -2450.68,0 -4503.68,-1787.13 -4921.56,-4122.4 -57.72,-322.64 -78.43,-629.2 -78.43,-960 L 2722.68,6843.29 0.13,5243.18 2523.6,4715.05 C 2670.79,2701.76 4363.91,1100 6413.07,1100 h 4557.63 l -546.91,700 H 6413.05 c -1550.74,0 -2852.88,1118.06 -3140.59,2587.84 -62.79,321.03 -59.4,570.26 -59.4,896.28 z M 25117.36,12200 V 3300 h 3299.99 l -509.1,700 h -2090.89 v 8200 z m -4500,-10000 h 10600.01 v 9300 h 5400 v 700 h -5400 -700 V 2900 h -9390.91 z m 20666.32,0 c 1629.24,0 2950,1375.63 2950,2950 0,1574.37 -1148.9,2770.48 -2625.37,2932.13 L 45057.95,11100 H 43994.84 L 39765.48,7400 h 1518.2 c 1242.64,0 2250,-1007.36 2250,-2250 0,-1242.64 -1007.36,-2250 -2250,-2250 H 31617.37 V 2200 Z M 24717.36,12200 V 3300 h -3299.99 l 509.1,700 h 2090.89 v 7500 H 22189.62 L 17852.96,2200 h -772.37 l 4663.08,10000 z M 1435.08,4534.2 C 1672,2000.5 3820.12,0 6413.03,0 h 5417.08 l -546.9,700 H 6413.06 C 4257.54,700 2459.45,2307.56 2157.83,4382.94 Z M 6595.5,6700 h 3280.66 v 4400 H 6413.07 C 4539.22,11100 2963.06,9760.45 2594.52,7991.85 l 685.1,-143.38 C 3581.53,9300.34 4875.24,10400 6413.05,10400 H 9176.16 V 7400 H 6048.59 Z m 859.41,-1100 h 3521.25 v 5500 h -700 V 6300 H 6908.01 Z m 7859.62,3700 h 3421.79 l 326.42,700 h -4074.62 l -1025.88,2200 h -772.36 L 16639.23,4802.83 17025.42,5631 Z M 41283.68,7000 h -1518.2 v -700 h 1518.2 c 635.13,0 1150,-514.88 1150,-1150 0,-635.12 -514.87,-1150 -1150,-1150 h -1918.22 v 8200 h -700 V 3300 h 2618.22 c 1021.73,0 1850,828.28 1850,1850 0,1021.72 -828.27,1850 -1850,1850 z M 46852.71,2200 49076.45,5496.82 50613.79,2200 h 772.37 L 49187.99,6913.98 46008.36,2200 Z m -389.06,8900 1725.34,-3700 -3510.26,-5204.14 h 844.36 L 48990.78,7336.9 47236.01,11100 Z M 31617.37,3300 h 5000 v 700 h -4300 v 2299.99 h 4300 v 700 h -5000 z m 700,7100 h 4300 v 700 h -5000 V 7399.99 h 5000 v 700 h -4300 z"
      id="path6" /><path

@@ -201,8 +201,6 @@ class ReferenceSimulator : public Simulator
 
 		virtual void simProcSetInputPin(hlim::Node_Pin *pin, const DefaultBitVectorState &state) override;
 		virtual void simProcOverrideRegisterOutput(hlim::Node_Register *reg, const DefaultBitVectorState &state) override;
-		virtual DefaultBitVectorState simProcGetValueOfOutput(const hlim::NodePort &nodePort) override;
-
 
 		virtual bool outputOptimizedAway(const hlim::NodePort &nodePort) override;
 		virtual DefaultBitVectorState getValueOfInternalState(const hlim::BaseNode *node, size_t idx) override;

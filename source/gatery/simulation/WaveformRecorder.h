@@ -37,7 +37,7 @@ namespace gtry::sim {
 class Simulator;
 
 /**
- * @todo write docs
+ * @brief Base class for waveform recorders (e.g. to write VCD files of a simulation run).
  */
 class WaveformRecorder : public SimulatorCallbacks
 {

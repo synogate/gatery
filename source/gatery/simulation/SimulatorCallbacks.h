@@ -31,7 +31,7 @@ namespace gtry::hlim {
 namespace gtry::sim {
 
 /**
- * @todo write docs
+ * @brief Interface for classes that want to be informed of simulator events.
  */
 class SimulatorCallbacks
 {
@@ -40,23 +40,70 @@ class SimulatorCallbacks
 		virtual void onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, const std::string &desc) { }
 		virtual void onAnnotationEnd(const hlim::ClockRational &simulationTime, const std::string &id) { }
 
+		/**
+		 * @brief Called after the simulation has powered on but before simulation processes have started.
+		 * @details Registers and memories have potentially attained their initialization values, but the reset is potentially still in progress.
+		 */
 		virtual void onPowerOn() { }
+
+		/**
+		 * @brief Called whenever combinatorial signals have stabilized.
+		 * @details This is where checks can be performed or states can be written to waveform files.
+		 */
 		virtual void onCommitState() { }
+
+		/**
+		 * @brief Called whenever the simulation time advances, but before the new state for this time step has been evaluated.
+		 * @param simulationTime The new simulator time.
+		 */
 		virtual void onNewTick(const hlim::ClockRational &simulationTime) { }
+
+		/**
+		 * @brief Called when a clock changes its value (twice per clock cycle).
+		 * @param clock The clock whose value is changing. Does not trigger for inherited clocks that only change attributes.
+		 * @param risingEdge Wether the new clock value is asserted.
+		 * @note A rising edge is not necessarily a clock activation. Registers can also be configured to trigger on falling (or on both) edges.
+		 */
 		virtual void onClock(const hlim::Clock *clock, bool risingEdge) { }
+
+		/**
+		 * @brief Called when a reset changes its value (gets asserted or de-asserted).
+		 * @details On powerOn, the initial assertion of resets also triggers this event before the onPowerOn event.
+		 * @param clock The clock whose reset is changing. Does not trigger for inherited clocks that only change attributes.
+		 * @param resetAsserted Wether the new reset value is asserted.
+		 * @note An asserted reset is not necessarily an active reset. Registers can also be configured to reset on a de-asserted reset signal.
+		 */
 		virtual void onReset(const hlim::Clock *clock, bool resetAsserted) { }
+
 		virtual void onDebugMessage(const hlim::BaseNode *src, std::string msg) { }
 		virtual void onWarning(const hlim::BaseNode *src, std::string msg) { }
 		virtual void onAssert(const hlim::BaseNode *src, std::string msg) { }
 
+		/**
+		 * @brief Called when a signal (e.g. an input pin) gets a value assigned by a simulation process.
+		 * @details Test bench exporters can use this events to note the new assigned value.
+		 * @param output The signal that is overridden.
+		 * @param state The new value.
+		 */
 		virtual void onSimProcOutputOverridden(hlim::NodePort output, const DefaultBitVectorState &state) { }
+
+		/**
+		 * @brief Called when a signal is read by a simulation process.
+		 * @details Test bench exporters can use this events to export asserts. Whenever a value is being read during gatery simulation,
+		 * we assume that it is checked or used by a unit test. If the unit test passes, then all read values are deemed "correct" and
+		 * should have the same value in an external simulator.
+		 * @note Since gatery is more strict about undefined values than e.g. vhdl simulators,
+		 * undefined values that are defined in an external simulator should still be deemed correct.
+		 * @param output The signal that was read.
+		 * @param state The value that was retrieved.
+		 */
 		virtual void onSimProcOutputRead(hlim::NodePort output, const DefaultBitVectorState &state) { }
 	protected:
 };
 
 
 /**
- * @todo write docs
+ * @brief Simple SimulatorCallbacks implementation that writes the most important events to the console.
  */
 class SimulatorConsoleOutput : public SimulatorCallbacks
 {
