@@ -32,6 +32,8 @@
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Traits.h>
 
+#include <external/magic_enum.hpp>
+
 #include <vector>
 #include <optional>
 
@@ -305,7 +307,7 @@ namespace gtry {
 		HCL_DESIGNCHECK_HINT((size_t)v < MAGIC_ENUM_RANGE_MAX, "The values of enums adapted to signals must be within a small range defined by the Magic Enum library!");
 
 		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
-			parseBitVector((size_t)v, width().value), hlim::ConnectionType::BITVEC
+			sim::parseBitVector((size_t)v, width().value), hlim::ConnectionType::BITVEC
 		);
 		constant->setName(std::string(magic_enum::enum_name(v)));
 		assign(SignalReadPort(constant));

@@ -22,6 +22,8 @@
 #include "Bit.h"
 #include "UInt.h"
 
+#include "ReadSignalList.h"
+
 #include <gatery/utils/Traits.h>
 
 #include <gatery/simulation/SigHandle.h>
@@ -35,20 +37,209 @@ namespace gtry {
 
 class Clock;
 
-sim::SigHandle simu(hlim::NodePort output);
+template<gtry::BaseSignal SignalType>
+class BaseSigHandle
+{
+	public:
+		operator sim::DefaultBitVectorState () const { return eval(); }
+		void operator=(const sim::DefaultBitVectorState &state) { this->m_handle = state; }
+		bool operator==(const sim::DefaultBitVectorState &state) const { ReadSignalList::addToAllScopes(m_handle.getOutput()); return this->m_handle == state; }
+		bool operator!=(const sim::DefaultBitVectorState &state) const { return !this->operator==(state); }
 
-template<BaseSignal T>
-sim::SigHandle simu(const T &signal) {
-	auto driver = signal.readPort();
-	HCL_DESIGNCHECK(driver.node != nullptr);
-	return simu(driver);
+		void invalidate() { m_handle.invalidate(); }
+		bool allDefined() const { return m_handle.allDefined(); }
+
+		sim::DefaultBitVectorState eval() const { ReadSignalList::addToAllScopes(m_handle.getOutput()); return m_handle.eval(); }
+	protected:
+		BaseSigHandle(const hlim::NodePort &np) : m_handle(np) { HCL_DESIGNCHECK(np.node != nullptr); }
+
+		sim::SigHandle m_handle;
+};
+
+template<gtry::BaseSignal SignalType>
+class BaseIntSigHandle : public BaseSigHandle<SignalType> 
+{
+	public:
+		using BaseSigHandle<SignalType>::operator=;
+
+		template<std::same_as<sim::BigInt> BigInt_> // prevent conversion
+		void operator=(const BigInt_ &v) { this->m_handle = v; }
+
+		operator sim::BigInt () const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return (sim::BigInt) this->m_handle; }
+		std::uint64_t defined() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle.defined(); }
+	protected:
+		BaseIntSigHandle(const hlim::NodePort &np) : BaseSigHandle<SignalType>(np) { }
+};
+
+template<gtry::BaseSignal SignalType>
+class BaseUIntSigHandle : public BaseIntSigHandle<SignalType> 
+{
+	public:
+		using BaseIntSigHandle<SignalType>::operator=;
+
+		void operator=(std::uint64_t v) { this->m_handle = v; }
+		void operator=(std::string_view v) { this->m_handle = v; }
+		bool operator==(std::uint64_t v) const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle == v; }
+		bool operator==(std::string_view v) const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle == v; }
+		bool operator!=(std::uint64_t v) const { return !this->operator==(v); }
+		bool operator!=(std::string_view v) const { return !this->operator==(v); }
+
+		std::uint64_t value() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle.value(); }
+		operator std::uint64_t () const { return value(); }
+
+		void operator=(unsigned v) { this->operator=((std::uint64_t)v); }
+		void operator=(unsigned long long v) { this->operator=((std::uint64_t)v); }
+
+		void operator=(int v) { HCL_DESIGNCHECK_HINT(v >= 0, "UInt and BVec signals can not be negative!"); this->operator=((std::uint64_t)v); }
+		bool operator==(int v) const { HCL_DESIGNCHECK_HINT(v >= 0, "UInt and BVec signals can not be negative, comparing with negative numbers is most likely a mistake!"); return this->operator==((std::uint64_t)v); }
+		bool operator!=(int v) const { HCL_DESIGNCHECK_HINT(v >= 0, "UInt and BVec signals can not be negative, comparing with negative numbers is most likely a mistake!"); return this->operator!=((std::uint64_t)v); }
+	protected:
+		BaseUIntSigHandle(const hlim::NodePort &np) : BaseIntSigHandle<SignalType>(np) { }
+};
+
+
+class SigHandleBVec : public BaseUIntSigHandle<BVec>
+{
+	public:
+		using BaseUIntSigHandle<BVec>::operator=;
+
+		void operator=(const SigHandleBVec &rhs) { this->operator=(rhs.eval()); }
+		bool operator==(const SigHandleBVec &rhs) const { return BaseSigHandle<BVec>::operator==(rhs.eval()); }
+		bool operator!=(const SigHandleBVec &rhs) const { return !BaseSigHandle<BVec>::operator==(rhs.eval()); }
+
+		SigHandleBVec drivingReg() const { SigHandleBVec res(m_handle.getOutput()); res.m_handle = res.m_handle.drivingReg(); return res; }
+	protected:
+		SigHandleBVec(const hlim::NodePort &np) : BaseUIntSigHandle<BVec>(np) { }
+
+		friend SigHandleBVec simu(const BVec &signal);
+
+		friend SigHandleBVec simu(const InputPins &pin);
+		friend SigHandleBVec simu(const OutputPins &pin);		
+};
+
+class SigHandleUInt : public BaseUIntSigHandle<UInt>
+{
+	public:
+		using BaseUIntSigHandle<UInt>::operator=;
+
+		void operator=(const SigHandleUInt &rhs) { this->operator=(rhs.eval()); }
+		bool operator==(const SigHandleUInt &rhs) const { return BaseSigHandle<UInt>::operator==(rhs.eval()); }
+		bool operator!=(const SigHandleUInt &rhs) const { return !BaseSigHandle<UInt>::operator==(rhs.eval()); }
+
+		SigHandleUInt drivingReg() const { SigHandleUInt res(m_handle.getOutput()); res.m_handle = res.m_handle.drivingReg(); return res; }
+	protected:
+		SigHandleUInt(const hlim::NodePort &np) : BaseUIntSigHandle<UInt>(np) { }
+
+		friend SigHandleUInt simu(const UInt &signal);
+};
+
+class SigHandleSInt : public BaseIntSigHandle<SInt>
+{
+	public:
+		using BaseIntSigHandle<SInt>::operator=;
+
+		void operator=(const SigHandleSInt &rhs) { this->operator=(rhs.eval()); }
+		bool operator==(const SigHandleSInt &rhs) const { return BaseSigHandle<SInt>::operator==(rhs.eval()); }
+		bool operator!=(const SigHandleSInt &rhs) const { return !BaseSigHandle<SInt>::operator==(rhs.eval()); }
+
+		void operator=(std::int64_t v) { this->m_handle = v; }
+		bool operator==(std::int64_t v) const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle == v; }
+		bool operator!=(std::int64_t v) const { return !this->operator==(v); }
+
+		std::int64_t value() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return (std::int64_t) this->m_handle; }
+		operator std::int64_t () const { return value(); }
+
+		SigHandleSInt drivingReg() const { SigHandleSInt res(m_handle.getOutput()); res.m_handle = res.m_handle.drivingReg(); return res; }
+	protected:
+		SigHandleSInt(const hlim::NodePort &np) : BaseIntSigHandle<SInt>(np) { }
+
+		friend SigHandleSInt simu(const SInt &signal);
+};
+
+
+class SigHandleBit : public BaseSigHandle<Bit>
+{
+	public:
+		using BaseSigHandle<Bit>::operator=;
+
+		void operator=(const SigHandleBit &rhs) { this->operator=(rhs.eval()); }
+		bool operator==(const SigHandleBit &rhs) const { return BaseSigHandle<Bit>::operator==(rhs.eval()); }
+		bool operator!=(const SigHandleBit &rhs) const { return !BaseSigHandle<Bit>::operator==(rhs.eval()); }
+
+		void operator=(bool b) { this->m_handle = (b?'1':'0'); }
+		void operator=(char c) { this->m_handle = c; }
+		bool operator==(bool b) const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle == (b?'1':'0'); }
+		bool operator==(char c) const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle == c; }
+
+		bool operator!=(bool b) const { return !this->operator==(b); }
+		bool operator!=(char c) const { return !this->operator==(c); }
+
+		bool defined() const { return allDefined(); }
+		bool value() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return (bool) this->m_handle; }
+		operator bool () const { return value(); }
+
+		SigHandleBit drivingReg() const { SigHandleBit res(m_handle.getOutput()); res.m_handle = res.m_handle.drivingReg(); return res; }
+	protected:
+		SigHandleBit(const hlim::NodePort &np) : BaseSigHandle<Bit>(np) { }
+
+		friend SigHandleBit simu(const Bit &signal);
+
+		friend SigHandleBit simu(const InputPin &pin);
+		friend SigHandleBit simu(const OutputPin &pin);
+};
+
+
+template<EnumSignal SignalType>
+class SigHandleEnum : public BaseSigHandle<SignalType>
+{
+	public:
+		using BaseSigHandle<SignalType>::operator=;
+
+		void operator=(const SigHandleEnum<SignalType> &rhs) { this->operator=(rhs.eval()); }
+		bool operator==(const SigHandleEnum<SignalType> &rhs) const { return BaseSigHandle<SignalType>::operator==(rhs.eval()); }
+		bool operator!=(const SigHandleEnum<SignalType> &rhs) const { return !BaseSigHandle<SignalType>::operator==(rhs.eval()); }
+
+		void operator=(typename SignalType::enum_type v) { this->m_handle = v; }
+		bool operator==(typename SignalType::enum_type v) const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle == v; }
+		bool operator!=(typename SignalType::enum_type v) const { return !this->operator==(v); }
+
+		bool defined() const { return this->allDefined(); }
+		typename SignalType::enum_type value() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return (typename SignalType::enum_type) this->m_handle; }
+
+		SigHandleEnum<SignalType> drivingReg() const { SigHandleEnum<SignalType> res(this->m_handle.getOutput()); res.m_handle = res.m_handle.drivingReg(); return res; }
+	protected:
+		SigHandleEnum(const hlim::NodePort &np) : BaseSigHandle<SignalType>(np) { }
+
+		friend SigHandleEnum<SignalType> simu<>(const SignalType &signal);
+};
+
+
+inline SigHandleBVec simu(const BVec &signal) { return SigHandleBVec(signal.readPort()); }
+inline SigHandleUInt simu(const UInt &signal) { return SigHandleUInt(signal.readPort()); }
+inline SigHandleSInt simu(const SInt &signal) { return SigHandleSInt(signal.readPort()); }
+inline SigHandleBit simu(const Bit &signal) { return SigHandleBit(signal.readPort()); }
+template<EnumSignal SignalType>
+SigHandleEnum<SignalType> simu(const SignalType &signal) {
+	return SigHandleEnum<SignalType>(signal.readPort());
 }
 
-sim::SigHandle simu(const InputPin &pin);
-sim::SigHandle simu(const InputPins &pins);
 
-sim::SigHandle simu(const OutputPin &pin);
-sim::SigHandle simu(const OutputPins &pins);
+inline std::ostream &operator<<(std::ostream &stream, const SigHandleBVec &handle) { return stream << (sim::DefaultBitVectorState) handle; }
+inline std::ostream &operator<<(std::ostream &stream, const SigHandleUInt &handle) { return stream << (sim::DefaultBitVectorState) handle; }
+inline std::ostream &operator<<(std::ostream &stream, const SigHandleSInt &handle) { return stream << (sim::DefaultBitVectorState) handle; }
+inline std::ostream &operator<<(std::ostream &stream, const SigHandleBit &handle) { return stream << (sim::DefaultBitVectorState) handle; }
+template<EnumSignal SignalType>
+inline std::ostream &operator<<(std::ostream &stream, const SigHandleEnum<SignalType> &handle) { return stream << (sim::DefaultBitVectorState) handle; }
+
+
+SigHandleBit simu(const InputPin &pin);
+SigHandleBVec simu(const InputPins &pins);
+
+SigHandleBit simu(const OutputPin &pin);
+SigHandleBVec simu(const OutputPins &pins);
+
+
+
 
 using SimProcess = sim::SimulationProcess;
 using WaitFor = sim::WaitFor;

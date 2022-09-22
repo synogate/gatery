@@ -44,8 +44,8 @@ public:
 
 	void issueIdle()
 	{
-		simu(valid(m_link.a)) = 0;
-		simu(ready(*m_link.d)) = 0;
+		simu(valid(m_link.a)) = '0';
+		simu(ready(*m_link.d)) = '0';
 	}
 
 	void issueCommand(TileLinkA::OpCode code, uint64_t address, uint64_t data, uint64_t size, uint64_t source = 0)
@@ -86,8 +86,8 @@ public:
 
 	void issueIdle()
 	{
-		simu(ready(m_link.a)) = 0;
-		simu(valid(*m_link.d)) = 0;
+		simu(ready(m_link.a)) = '0';
+		simu(valid(*m_link.d)) = '0';
 	}
 
 	void issueResponse(TileLinkD::OpCode code, uint64_t data, bool error = false)
@@ -97,7 +97,7 @@ public:
 		simu((*m_link.d)->size) = simu(m_link.a->size);
 		simu((*m_link.d)->source) = simu(m_link.a->source);
 		simu((*m_link.d)->sink) = 0;
-		simu((*m_link.d)->error) = error ? 1 : 0;
+		simu((*m_link.d)->error) = error;
 		simu((*m_link.d)->data) = data;
 	}
 
@@ -146,27 +146,27 @@ BOOST_FIXTURE_TEST_CASE(tilelink_demux_chanA_test, BoostUnitTestSimulationFixtur
 		auto& tgtA = target->link().a;
 		auto& tgtD = *target->link().d;
 
-		simu(valid(iniA)) = 0;
-		simu(ready(iniD)) = 0;
-		simu(ready(tgtA)) = 0;
-		simu(valid(tgtD)) = 0;
+		simu(valid(iniA)) = '0';
+		simu(ready(iniD)) = '0';
+		simu(ready(tgtA)) = '0';
+		simu(valid(tgtD)) = '0';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(tgtA)) == 0);
+		BOOST_TEST(simu(valid(tgtA)) == '0');
 
 		initiator->issueCommand(TileLinkA::PutFullData, 0, 0, 1);
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(tgtA)) == 0);
-		BOOST_TEST(simu(ready(iniA)) == 0);
+		BOOST_TEST(simu(valid(tgtA)) == '0');
+		BOOST_TEST(simu(ready(iniA)) == '0');
 
-		simu(valid(initiator->link().a)) = 1;
+		simu(valid(initiator->link().a)) = '1';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(tgtA)) == 1);
-		BOOST_TEST(simu(ready(iniA)) == 0);
+		BOOST_TEST(simu(valid(tgtA)) == '1');
+		BOOST_TEST(simu(ready(iniA)) == '0');
 
-		simu(ready(tgtA)) = 1;
+		simu(ready(tgtA)) = '1';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(tgtA)) == 1);
-		BOOST_TEST(simu(ready(iniA)) == 1);
+		BOOST_TEST(simu(valid(tgtA)) == '1');
+		BOOST_TEST(simu(ready(iniA)) == '1');
 
 		stopTest();
 	});
@@ -195,29 +195,29 @@ BOOST_FIXTURE_TEST_CASE(tilelink_demux_chanD_test, BoostUnitTestSimulationFixtur
 		auto& tgtA = target->link().a;
 		auto& tgtD = *target->link().d;
 
-		simu(valid(iniA)) = 0;
-		simu(ready(iniD)) = 0;
-		simu(ready(tgtA)) = 0;
-		simu(valid(tgtD)) = 0;
+		simu(valid(iniA)) = '0';
+		simu(ready(iniD)) = '0';
+		simu(ready(tgtA)) = '0';
+		simu(valid(tgtD)) = '0';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(iniD)) == 0);
-		BOOST_TEST(simu(ready(tgtD)) == 0);
+		BOOST_TEST(simu(valid(iniD)) == '0');
+		BOOST_TEST(simu(ready(tgtD)) == '0');
 
 		initiator->issueCommand(TileLinkA::PutFullData, 0, 0, 1);
 		target->issueResponse(TileLinkD::AccessAck, 1337);
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(iniD)) == 0);
-		BOOST_TEST(simu(ready(tgtD)) == 0);
+		BOOST_TEST(simu(valid(iniD)) == '0');
+		BOOST_TEST(simu(ready(tgtD)) == '0');
 
-		simu(valid(tgtD)) = 1;
+		simu(valid(tgtD)) = '1';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(iniD)) == 1);
-		BOOST_TEST(simu(ready(tgtD)) == 0);
+		BOOST_TEST(simu(valid(iniD)) == '1');
+		BOOST_TEST(simu(ready(tgtD)) == '0');
 
-		simu(ready(iniD)) = 1;
+		simu(ready(iniD)) = '1';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(iniD)) == 1);
-		BOOST_TEST(simu(ready(tgtD)) == 1);
+		BOOST_TEST(simu(valid(iniD)) == '1');
+		BOOST_TEST(simu(ready(tgtD)) == '1');
 
 		stopTest();
 	});
@@ -245,42 +245,42 @@ BOOST_FIXTURE_TEST_CASE(tilelink_demux_chanA_routing_test, BoostUnitTestSimulati
 
 	addSimulationProcess([=]()->SimProcess {
 
-		simu(valid(initiator->link().a)) = 0;
-		simu(ready(*initiator->link().d)) = 1;
-		simu(ready(target0->link().a)) = 1;
-		simu(ready(target1->link().a)) = 1;
-		simu(ready(target2->link().a)) = 1;
-		simu(valid(*target0->link().d)) = 0;
-		simu(valid(*target1->link().d)) = 0;
-		simu(valid(*target2->link().d)) = 0;
+		simu(valid(initiator->link().a)) = '0';
+		simu(ready(*initiator->link().d)) = '1';
+		simu(ready(target0->link().a)) = '1';
+		simu(ready(target1->link().a)) = '1';
+		simu(ready(target2->link().a)) = '1';
+		simu(valid(*target0->link().d)) = '0';
+		simu(valid(*target1->link().d)) = '0';
+		simu(valid(*target2->link().d)) = '0';
 		co_await WaitClk(clock);
 
-		simu(valid(initiator->link().a)) = 1;
+		simu(valid(initiator->link().a)) = '1';
 		initiator->issueCommand(TileLinkA::PutFullData, 0, 0, 1);
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(target0->link().a)) == 0);
-		BOOST_TEST(simu(valid(target1->link().a)) == 0);
-		BOOST_TEST(simu(valid(target2->link().a)) == 1);
+		BOOST_TEST(simu(valid(target0->link().a)) == '0');
+		BOOST_TEST(simu(valid(target1->link().a)) == '0');
+		BOOST_TEST(simu(valid(target2->link().a)) == '1');
 
 		initiator->issueCommand(TileLinkA::PutFullData, 4, 0, 1);
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(target0->link().a)) == 1);
-		BOOST_TEST(simu(valid(target1->link().a)) == 0);
-		BOOST_TEST(simu(valid(target2->link().a)) == 0);
+		BOOST_TEST(simu(valid(target0->link().a)) == '1');
+		BOOST_TEST(simu(valid(target1->link().a)) == '0');
+		BOOST_TEST(simu(valid(target2->link().a)) == '0');
 
 		initiator->issueCommand(TileLinkA::PutFullData, 16, 0, 1);
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(target0->link().a)) == 0);
-		BOOST_TEST(simu(valid(target1->link().a)) == 0);
-		BOOST_TEST(simu(valid(target2->link().a)) == 0);
-		BOOST_TEST(simu(valid(*initiator->link().d)) == 1);
-		BOOST_TEST(simu((*initiator->link().d)->error) == 1);
+		BOOST_TEST(simu(valid(target0->link().a)) == '0');
+		BOOST_TEST(simu(valid(target1->link().a)) == '0');
+		BOOST_TEST(simu(valid(target2->link().a)) == '0');
+		BOOST_TEST(simu(valid(*initiator->link().d)) == '1');
+		BOOST_TEST(simu((*initiator->link().d)->error) == '1');
 
 		initiator->issueCommand(TileLinkA::PutFullData, 256, 0, 1);
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(target0->link().a)) == 0);
-		BOOST_TEST(simu(valid(target1->link().a)) == 1);
-		BOOST_TEST(simu(valid(target2->link().a)) == 0);
+		BOOST_TEST(simu(valid(target0->link().a)) == '0');
+		BOOST_TEST(simu(valid(target1->link().a)) == '1');
+		BOOST_TEST(simu(valid(target2->link().a)) == '0');
 
 		stopTest();
 	});
@@ -303,34 +303,34 @@ BOOST_FIXTURE_TEST_CASE(tilelink_errorResponder_test, BoostUnitTestSimulationFix
 		auto& iniA = initiator->link().a;
 		auto& iniD = *initiator->link().d;
 
-		simu(valid(iniA)) = 0;
-		simu(ready(iniD)) = 0;
+		simu(valid(iniA)) = '0';
+		simu(ready(iniD)) = '0';
 		co_await WaitClk(clock);
 
 		initiator->issueCommand(TileLinkA::PutFullData, 0, 0, 1);
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(iniD)) == 0);
-		BOOST_TEST(simu(ready(iniA)) == 0);
+		BOOST_TEST(simu(valid(iniD)) == '0');
+		BOOST_TEST(simu(ready(iniA)) == '0');
 		
-		simu(valid(iniA)) = 1;
+		simu(valid(iniA)) = '1';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(iniD)) == 1);
-		BOOST_TEST(simu(ready(iniA)) == 0);
+		BOOST_TEST(simu(valid(iniD)) == '1');
+		BOOST_TEST(simu(ready(iniA)) == '0');
 		BOOST_TEST(simu(iniD->opcode) == (size_t)TileLinkD::AccessAck);
 		BOOST_TEST(simu(iniD->param) == 0);
 		BOOST_TEST(simu(iniD->size) == 1);
 		BOOST_TEST(simu(iniD->source) == 0);
 		BOOST_TEST(simu(iniD->sink) == 0);
 
-		simu(ready(iniD)) = 1;
+		simu(ready(iniD)) = '1';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(iniD)) == 1);
-		BOOST_TEST(simu(ready(iniA)) == 1);
+		BOOST_TEST(simu(valid(iniD)) == '1');
+		BOOST_TEST(simu(ready(iniA)) == '1');
 
 		initiator->issueCommand(TileLinkA::Get, 0, 0, 1);
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(iniD)) == 1);
-		BOOST_TEST(simu(ready(iniA)) == 1);
+		BOOST_TEST(simu(valid(iniD)) == '1');
+		BOOST_TEST(simu(ready(iniA)) == '1');
 		BOOST_TEST(simu(iniD->opcode) == (size_t)TileLinkD::AccessAckData);
 		BOOST_TEST(simu(iniD->param) == 0);
 		BOOST_TEST(simu(iniD->size) == 1);
@@ -357,71 +357,71 @@ BOOST_FIXTURE_TEST_CASE(tilelink_errorResponder_burst_test, BoostUnitTestSimulat
 		auto& iniA = initiator->link().a;
 		auto& iniD = *initiator->link().d;
 
-		simu(valid(iniA)) = 0;
-		simu(ready(iniD)) = 0;
+		simu(valid(iniA)) = '0';
+		simu(ready(iniD)) = '0';
 		co_await WaitClk(clock);
 
 		initiator->issueCommand(TileLinkA::PutFullData, 0, 0, 1);
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(iniD)) == 0);
-		BOOST_TEST(simu(ready(iniA)) == 0);
+		BOOST_TEST(simu(valid(iniD)) == '0');
+		BOOST_TEST(simu(ready(iniA)) == '0');
 
-		simu(valid(iniA)) = 1;
+		simu(valid(iniA)) = '1';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(iniD)) == 1);
-		BOOST_TEST(simu(ready(iniA)) == 0);
+		BOOST_TEST(simu(valid(iniD)) == '1');
+		BOOST_TEST(simu(ready(iniA)) == '0');
 		BOOST_TEST(simu(iniD->opcode) == (size_t)TileLinkD::AccessAck);
 		BOOST_TEST(simu(iniD->param) == 0);
 		BOOST_TEST(simu(iniD->size) == 1);
 		BOOST_TEST(simu(iniD->source) == 0);
 		BOOST_TEST(simu(iniD->sink) == 0);
-		BOOST_TEST(simu(iniD->error) == 1);
+		BOOST_TEST(simu(iniD->error) == '1');
 
-		simu(ready(iniD)) = 1;
+		simu(ready(iniD)) = '1';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(iniD)) == 1);
-		BOOST_TEST(simu(ready(iniA)) == 1);
+		BOOST_TEST(simu(valid(iniD)) == '1');
+		BOOST_TEST(simu(ready(iniA)) == '1');
 
 		initiator->issueCommand(TileLinkA::Get, 0, 0, 1);
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(iniD)) == 1);
-		BOOST_TEST(simu(ready(iniA)) == 1);
+		BOOST_TEST(simu(valid(iniD)) == '1');
+		BOOST_TEST(simu(ready(iniA)) == '1');
 		BOOST_TEST(simu(iniD->opcode) == (size_t)TileLinkD::AccessAckData);
 		BOOST_TEST(simu(iniD->param) == 0);
 		BOOST_TEST(simu(iniD->size) == 1);
 		BOOST_TEST(simu(iniD->source) == 0);
 		BOOST_TEST(simu(iniD->sink) == 0);
-		BOOST_TEST(simu(iniD->error) == 1);
+		BOOST_TEST(simu(iniD->error) == '1');
 
-		simu(ready(iniD)) = 0;
+		simu(ready(iniD)) = '0';
 		initiator->issueCommand(TileLinkA::Get, 0, 0, 3);
 
 		for (size_t i = 0; i < 5; ++i)
 		{
 			// no progress because ready low
 			co_await WaitClk(clock);
-			BOOST_TEST(simu(valid(iniD)) == 1);
-			BOOST_TEST(simu(ready(iniA)) == 0);
+			BOOST_TEST(simu(valid(iniD)) == '1');
+			BOOST_TEST(simu(ready(iniA)) == '0');
 			BOOST_TEST(simu(iniD->opcode) == (size_t)TileLinkD::AccessAckData);
 			BOOST_TEST(simu(iniD->param) == 0);
 			BOOST_TEST(simu(iniD->size) == 3);
 			BOOST_TEST(simu(iniD->source) == 0);
 			BOOST_TEST(simu(iniD->sink) == 0);
-			BOOST_TEST(simu(iniD->error) == 0);
+			BOOST_TEST(simu(iniD->error) == '0');
 		}
 
-		simu(ready(iniD)) = 1;
+		simu(ready(iniD)) = '1';
 		co_await WaitFor(0);
 		for (size_t i = 0; i < 4; ++i)
 		{
-			BOOST_TEST(simu(valid(iniD)) == 1);
-			BOOST_TEST(simu(ready(iniA)) == (i == 3 ? 1 : 0));
+			BOOST_TEST(simu(valid(iniD)) == '1');
+			BOOST_TEST(simu(ready(iniA)) == (i == 3));
 			BOOST_TEST(simu(iniD->opcode) == (size_t)TileLinkD::AccessAckData);
 			BOOST_TEST(simu(iniD->param) == 0);
 			BOOST_TEST(simu(iniD->size) == 3);
 			BOOST_TEST(simu(iniD->source) == 0);
 			BOOST_TEST(simu(iniD->sink) == 0);
-			BOOST_TEST(simu(iniD->error) == (i == 3 ? 1 : 0));
+			BOOST_TEST(simu(iniD->error) == (i == 3));
 			co_await WaitClk(clock);
 		}
 
@@ -429,14 +429,14 @@ BOOST_FIXTURE_TEST_CASE(tilelink_errorResponder_burst_test, BoostUnitTestSimulat
 		co_await WaitFor(0);
 		for (size_t i = 0; i < 2; ++i)
 		{
-			BOOST_TEST(simu(valid(iniD)) == 1);
-			BOOST_TEST(simu(ready(iniA)) == i);
+			BOOST_TEST(simu(valid(iniD)) == '1');
+			BOOST_TEST(simu(ready(iniA)) == (i != 0));
 			BOOST_TEST(simu(iniD->opcode) == (size_t)TileLinkD::AccessAckData);
 			BOOST_TEST(simu(iniD->param) == 0);
 			BOOST_TEST(simu(iniD->size) == 2);
 			BOOST_TEST(simu(iniD->source) == 0);
 			BOOST_TEST(simu(iniD->sink) == 0);
-			BOOST_TEST(simu(iniD->error) == i);
+			BOOST_TEST(simu(iniD->error) == (i != 0));
 			co_await WaitClk(clock);
 		}
 
@@ -476,63 +476,68 @@ BOOST_FIXTURE_TEST_CASE(tilelink_mux_test, BoostUnitTestSimulationFixture)
 		initiator1->issueCommand(TileLinkA::Get, 0, 0, 1, 1);
 		initiator2->issueCommand(TileLinkA::Get, 0, 0, 1, 2);
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(ready(initiator0->link().a)) == 0);
-		BOOST_TEST(simu(ready(initiator1->link().a)) == 0);
-		BOOST_TEST(simu(ready(initiator2->link().a)) == 0);
-		BOOST_TEST(simu(valid(target->link().a)) == 0);
+		BOOST_TEST(simu(ready(initiator0->link().a)) == '0');
+		BOOST_TEST(simu(ready(initiator1->link().a)) == '0');
+		BOOST_TEST(simu(ready(initiator2->link().a)) == '0');
+		BOOST_TEST(simu(valid(target->link().a)) == '0');
 
-		simu(valid(initiator2->link().a)) = 1;
+		simu(valid(initiator2->link().a)) = '1';
 		target->issueResponse(TileLinkD::AccessAckData, 0);
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(ready(initiator0->link().a)) == 0);
-		BOOST_TEST(simu(ready(initiator1->link().a)) == 0);
-		BOOST_TEST(simu(ready(initiator2->link().a)) == 0);
-		BOOST_TEST(simu(valid(target->link().a)) == 1);
+		BOOST_TEST(simu(ready(initiator0->link().a)) == '0');
+		BOOST_TEST(simu(ready(initiator1->link().a)) == '0');
+		BOOST_TEST(simu(ready(initiator2->link().a)) == '0');
+		BOOST_TEST(simu(valid(target->link().a)) == '1');
 		BOOST_TEST(simu(target->link().a->source) == 8 + 2);
 
-		simu(ready(target->link().a)) = 1;
+		simu(ready(target->link().a)) = '1';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(ready(initiator0->link().a)) == 0);
-		BOOST_TEST(simu(ready(initiator1->link().a)) == 0);
-		BOOST_TEST(simu(ready(initiator2->link().a)) == 1);
-		BOOST_TEST(simu(valid(target->link().a)) == 1);
+		BOOST_TEST(simu(ready(initiator0->link().a)) == '0');
+		BOOST_TEST(simu(ready(initiator1->link().a)) == '0');
+		BOOST_TEST(simu(ready(initiator2->link().a)) == '1');
+		BOOST_TEST(simu(valid(target->link().a)) == '1');
 		BOOST_TEST(simu(target->link().a->source) == 8 + 2);
 
-		simu(valid(initiator2->link().a)) = 0;
-		simu(valid(*target->link().d)) = 1;
+		simu(valid(initiator2->link().a)) = '0';
+		simu(valid(*target->link().d)) = '1';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(ready(*target->link().d)) == 0);
-		BOOST_TEST(simu(valid(*initiator0->link().d)) == 0);
-		BOOST_TEST(simu(valid(*initiator1->link().d)) == 0);
-		BOOST_TEST(simu(valid(*initiator2->link().d)) == 1);
+		BOOST_TEST(simu(ready(*target->link().d)) == '0');
+		BOOST_TEST(simu(valid(*initiator0->link().d)) == '0');
+		BOOST_TEST(simu(valid(*initiator1->link().d)) == '0');
+		BOOST_TEST(simu(valid(*initiator2->link().d)) == '1');
 
-		simu(ready(*initiator2->link().d)) = 1;
+		simu(ready(*initiator2->link().d)) = '1';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(ready(*target->link().d)) == 1);
-		BOOST_TEST(simu(valid(*initiator0->link().d)) == 0);
-		BOOST_TEST(simu(valid(*initiator1->link().d)) == 0);
-		BOOST_TEST(simu(valid(*initiator2->link().d)) == 1);
+		BOOST_TEST(simu(ready(*target->link().d)) == '1');
+		BOOST_TEST(simu(valid(*initiator0->link().d)) == '0');
+		BOOST_TEST(simu(valid(*initiator1->link().d)) == '0');
+		BOOST_TEST(simu(valid(*initiator2->link().d)) == '1');
 
-		simu(valid(*target->link().d)) = 0;
+		simu(valid(*target->link().d)) = '0';
 		co_await WaitClk(clock);
 
-		simu(valid(initiator0->link().a)) = 1;
-		simu(valid(initiator2->link().a)) = 1;
+		simu(valid(initiator0->link().a)) = '1';
+		simu(valid(initiator2->link().a)) = '1';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(ready(initiator0->link().a)) == 1);
-		BOOST_TEST(simu(ready(initiator1->link().a)) == 0);
-		BOOST_TEST(simu(ready(initiator2->link().a)) == 0);
-		BOOST_TEST(simu(valid(target->link().a)) == 1);
+		BOOST_TEST(simu(ready(initiator0->link().a)) == '1');
+		BOOST_TEST(simu(ready(initiator1->link().a)) == '0');
+		BOOST_TEST(simu(ready(initiator2->link().a)) == '0');
+		BOOST_TEST(simu(valid(target->link().a)) == '1');
 		BOOST_TEST(simu(target->link().a->source) == 0);
 
-		simu(valid(initiator0->link().a)) = 0;
-		simu(valid(initiator2->link().a)) = 0;
+		simu(valid(initiator0->link().a)) = '0';
+		simu(valid(initiator2->link().a)) = '0';
 		co_await WaitClk(clock);
 
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	
+	try {
+		design.postprocess();
+	} catch (...) {
+		dbg::vis();
+	}
 	runTicks(clock.getClk(), 16);
 }
 
@@ -565,42 +570,42 @@ BOOST_FIXTURE_TEST_CASE(tilelink_hub_test, BoostUnitTestSimulationFixture)
 		co_await WaitClk(clock);
 
 		initiator0->issueCommand(TileLinkA::Get, 0, 0, 1, 0);
-		simu(valid(initiator0->link().a)) = 1;
+		simu(valid(initiator0->link().a)) = '1';
 		initiator1->issueCommand(TileLinkA::Get, 0, 0, 3, 1);
-		simu(valid(initiator1->link().a)) = 1;
+		simu(valid(initiator1->link().a)) = '1';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(target0->link().a)) == 1);
-		BOOST_TEST(simu(valid(target1->link().a)) == 0);
+		BOOST_TEST(simu(valid(target0->link().a)) == '1');
+		BOOST_TEST(simu(valid(target1->link().a)) == '0');
 
 		initiator0->issueCommand(TileLinkA::PutFullData, 0, 0, 3, 0);
-		simu(ready(target0->link().a)) = 1;
+		simu(ready(target0->link().a)) = '1';
 		co_await WaitClk(clock);
 		target0->issueResponse(TileLinkD::AccessAck, 0);
 		co_await WaitClk(clock);
-		simu(valid(initiator0->link().a)) = 0;
-		simu(ready(target0->link().a)) = 0;
+		simu(valid(initiator0->link().a)) = '0';
+		simu(ready(target0->link().a)) = '0';
 
 		co_await WaitClk(clock);
-		simu(valid(*target0->link().d)) = 1;
-		simu(ready(*initiator0->link().d)) = 1;
+		simu(valid(*target0->link().d)) = '1';
+		simu(ready(*initiator0->link().d)) = '1';
 
-		BOOST_TEST(simu(valid(target0->link().a)) == 1);
-		simu(ready(target0->link().a)) = 1;
+		BOOST_TEST(simu(valid(target0->link().a)) == '1');
+		simu(ready(target0->link().a)) = '1';
 
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(*initiator0->link().d)) == 1);
+		BOOST_TEST(simu(valid(*initiator0->link().d)) == '1');
 		target0->issueResponse(TileLinkD::AccessAckData, 0xC0FFEE00u);
 
-		simu(valid(*target0->link().d)) = 0;
-		simu(valid(initiator1->link().a)) = 0;
-		simu(ready(target0->link().a)) = 0;
+		simu(valid(*target0->link().d)) = '0';
+		simu(valid(initiator1->link().a)) = '0';
+		simu(ready(target0->link().a)) = '0';
 		co_await WaitClk(clock);
 
-		simu(valid(*target0->link().d)) = 1;
-		simu(ready(*initiator1->link().d)) = 1;
+		simu(valid(*target0->link().d)) = '1';
+		simu(ready(*initiator1->link().d)) = '1';
 		co_await WaitClk(clock);
 		co_await WaitClk(clock);
-		simu(valid(*target0->link().d)) = 0;
+		simu(valid(*target0->link().d)) = '0';
 
 
 		co_await WaitClk(clock);
@@ -632,11 +637,11 @@ BOOST_FIXTURE_TEST_CASE(tilelink_memory_test, BoostUnitTestSimulationFixture)
 
 	addSimulationProcess([=]()->SimProcess {
 		initiator->issueIdle();
-		simu(ready(*initiator->link().d)) = 1;
+		simu(ready(*initiator->link().d)) = '1';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(ready(initiator->link().a)) == 1);
+		BOOST_TEST(simu(ready(initiator->link().a)) == '1');
 
-		simu(valid(initiator->link().a)) = 1;
+		simu(valid(initiator->link().a)) = '1';
 		for (size_t i = 0; i < 16; ++i)
 		{
 			size_t tag = i % 2;
@@ -647,17 +652,17 @@ BOOST_FIXTURE_TEST_CASE(tilelink_memory_test, BoostUnitTestSimulationFixture)
 			co_await WaitClk(clock);
 
 			auto& d = *initiator->link().d;
-			BOOST_TEST(simu(valid(d)) == 1);
+			BOOST_TEST(simu(valid(d)) == '1');
 			BOOST_TEST(simu(d->opcode) == (size_t)TileLinkD::AccessAck);
 			BOOST_TEST(simu(d->source) == tag);
 			BOOST_TEST(simu(d->size) == size);
-			BOOST_TEST(simu(d->error) == 0);
+			BOOST_TEST(simu(d->error) == '0');
 		}
-		simu(valid(initiator->link().a)) = 0;
+		simu(valid(initiator->link().a)) = '0';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(*initiator->link().d)) == 0);
+		BOOST_TEST(simu(valid(*initiator->link().d)) == '0');
 
-		simu(valid(initiator->link().a)) = 1;
+		simu(valid(initiator->link().a)) = '1';
 		for (size_t i = 0; i < 16; ++i)
 		{
 			initiator->issueCommand(TileLinkA::Get, i * 2, 0, 1, i % 2);
@@ -668,10 +673,10 @@ BOOST_FIXTURE_TEST_CASE(tilelink_memory_test, BoostUnitTestSimulationFixture)
 			size_t data = ((0xCD ^ i) << 8) | i;
 
 			auto& d = *initiator->link().d;
-			BOOST_TEST(simu(valid(d)) == 1);
+			BOOST_TEST(simu(valid(d)) == '1');
 			BOOST_TEST(simu(d->opcode) == (size_t)TileLinkD::AccessAckData);
 			BOOST_TEST(simu(d->source) == tag);
-			BOOST_TEST(simu(d->error) == 0);
+			BOOST_TEST(simu(d->error) == '0');
 
 			auto&& dataSig = simu(d->data);
 			if (size == 0)
@@ -685,44 +690,44 @@ BOOST_FIXTURE_TEST_CASE(tilelink_memory_test, BoostUnitTestSimulationFixture)
 				BOOST_TEST(dataSig == data);
 			}
 		}
-		simu(valid(initiator->link().a)) = 0;
+		simu(valid(initiator->link().a)) = '0';
 		co_await WaitClk(clock);
 
-		simu(ready(*initiator->link().d)) = 0;
+		simu(ready(*initiator->link().d)) = '0';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(ready(initiator->link().a)) == 1);
+		BOOST_TEST(simu(ready(initiator->link().a)) == '1');
 
 		initiator->issueCommand(TileLinkA::Get, 0, 0, 1, 1);
-		simu(valid(initiator->link().a)) = 1;
+		simu(valid(initiator->link().a)) = '1';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(ready(initiator->link().a)) == 1);
-		BOOST_TEST(simu(valid(*initiator->link().d)) == 1);
+		BOOST_TEST(simu(ready(initiator->link().a)) == '1');
+		BOOST_TEST(simu(valid(*initiator->link().d)) == '1');
 
 		initiator->issueCommand(TileLinkA::Get, 2, 0, 0, 0);
 		for (size_t i = 0; i < 5; ++i)
 		{
 			co_await WaitClk(clock);
-			simu(valid(initiator->link().a)) = 0;
-			BOOST_TEST(simu(ready(initiator->link().a)) == 0);
-			BOOST_TEST(simu(valid(*initiator->link().d)) == 1);
+			simu(valid(initiator->link().a)) = '0';
+			BOOST_TEST(simu(ready(initiator->link().a)) == '0');
+			BOOST_TEST(simu(valid(*initiator->link().d)) == '1');
 			BOOST_TEST(simu((*initiator->link().d)->source) == 1);
 		}
 
-		simu(ready(*initiator->link().d)) = 1;
+		simu(ready(*initiator->link().d)) = '1';
 		co_await WaitClk(clock);
-		simu(ready(*initiator->link().d)) = 0;
+		simu(ready(*initiator->link().d)) = '0';
 
 		for (size_t i = 0; i < 5; ++i)
 		{
 			co_await WaitClk(clock);
-			BOOST_TEST(simu(ready(initiator->link().a)) == 0);
-			BOOST_TEST(simu(valid(*initiator->link().d)) == 1);
+			BOOST_TEST(simu(ready(initiator->link().a)) == '0');
+			BOOST_TEST(simu(valid(*initiator->link().d)) == '1');
 			BOOST_TEST(simu((*initiator->link().d)->source) == 0);
 		}
 
-		simu(ready(*initiator->link().d)) = 1;
+		simu(ready(*initiator->link().d)) = '1';
 		co_await WaitClk(clock);
-		BOOST_TEST(simu(valid(*initiator->link().d)) == 0);
+		BOOST_TEST(simu(valid(*initiator->link().d)) == '0');
 
 		co_await WaitClk(clock);
 		stopTest();

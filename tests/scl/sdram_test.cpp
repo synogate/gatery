@@ -46,80 +46,80 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 
 	addSimulationProcess([=]()->SimProcess {
 
-		simu(bus.cke) = 0;
-		simu(bus.csn) = 1;
-		simu(bus.rasn) = 1;
-		simu(bus.casn) = 1;
-		simu(bus.wen) = 1;
+		simu(bus.cke) = '0';
+		simu(bus.csn) = '1';
+		simu(bus.rasn) = '1';
+		simu(bus.casn) = '1';
+		simu(bus.wen) = '1';
 		co_await WaitClk(clock());
 
 		// set Mode Register
-		simu(bus.cke) = 1;
-		simu(bus.csn) = 0;
-		simu(bus.rasn) = 0;
-		simu(bus.casn) = 0;
-		simu(bus.wen) = 0;
+		simu(bus.cke) = '1';
+		simu(bus.csn) = '0';
+		simu(bus.rasn) = '0';
+		simu(bus.casn) = '0';
+		simu(bus.wen) = '0';
 
 		simu(bus.ba) = 0;
 		simu(bus.a) = 0;
 		co_await WaitClk(clock());
-		simu(bus.csn) = 1;
+		simu(bus.csn) = '1';
 		co_await WaitClk(clock());
 
 		// set Extended Mode Register
-		simu(bus.csn) = 0;
+		simu(bus.csn) = '0';
 		simu(bus.ba) = 1;
 		simu(bus.a) = 0;
 		co_await WaitClk(clock());
-		simu(bus.csn) = 1;
+		simu(bus.csn) = '1';
 		co_await WaitClk(clock());
 
 		// precharge bank 1
-		simu(bus.csn) = 0;
-		simu(bus.rasn) = 0;
-		simu(bus.casn) = 1;
-		simu(bus.wen) = 0;
+		simu(bus.csn) = '0';
+		simu(bus.rasn) = '0';
+		simu(bus.casn) = '1';
+		simu(bus.wen) = '0';
 		simu(bus.a) = 0;
 		co_await WaitClk(clock());
-		simu(bus.csn) = 1;
+		simu(bus.csn) = '1';
 		for (size_t i = 0; i < 4; ++i)
 			co_await WaitClk(clock());
 
 		// precharge all
-		simu(bus.csn) = 0;
-		simu(bus.rasn) = 0;
-		simu(bus.casn) = 1;
-		simu(bus.wen) = 0;
+		simu(bus.csn) = '0';
+		simu(bus.rasn) = '0';
+		simu(bus.casn) = '1';
+		simu(bus.wen) = '0';
 		simu(bus.a) = 1 << 10;
 		co_await WaitClk(clock());
-		simu(bus.csn) = 1;
+		simu(bus.csn) = '1';
 		for(size_t i = 0; i < 4; ++i)
 			co_await WaitClk(clock());
 
 
 		// RAS
-		simu(bus.csn) = 0;
-		simu(bus.rasn) = 0;
-		simu(bus.casn) = 1;
-		simu(bus.wen) = 1;
+		simu(bus.csn) = '0';
+		simu(bus.rasn) = '0';
+		simu(bus.casn) = '1';
+		simu(bus.wen) = '1';
 		simu(bus.a) = 1;
 		co_await WaitClk(clock());
-		simu(bus.csn) = 1;
+		simu(bus.csn) = '1';
 		for (size_t i = 0; i < 2; ++i)
 			co_await WaitClk(clock());
 
 		// Write CAS
-		simu(bus.csn) = 0;
-		simu(bus.rasn) = 1;
-		simu(bus.casn) = 0;
-		simu(bus.wen) = 0;
+		simu(bus.csn) = '0';
+		simu(bus.rasn) = '1';
+		simu(bus.casn) = '0';
+		simu(bus.wen) = '0';
 		simu(bus.a) = 2;
 		simu(bus.dqm) = 1;
 		simu(bus.dq) = 0xCD13;
 		co_await WaitClk(clock());
 
 		// Read CAS
-		simu(bus.wen) = 1;
+		simu(bus.wen) = '1';
 		simu(bus.dq).invalidate();
 		BOOST_TEST(simu(dq) == 0x13);
 		co_await WaitClk(clock());
@@ -128,23 +128,23 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 		size_t burst = 4;
 		size_t cl = 2;
 
-		simu(bus.cke) = 1;
-		simu(bus.csn) = 0;
-		simu(bus.rasn) = 0;
-		simu(bus.casn) = 0;
-		simu(bus.wen) = 0;
+		simu(bus.cke) = '1';
+		simu(bus.csn) = '0';
+		simu(bus.rasn) = '0';
+		simu(bus.casn) = '0';
+		simu(bus.wen) = '0';
 
 		simu(bus.ba) = 0;
 		simu(bus.a) = (cl << 4) | gtry::utils::Log2C(burst);
 		co_await WaitClk(clock());
-		simu(bus.csn) = 1;
+		simu(bus.csn) = '1';
 		co_await WaitClk(clock());
 
 		// Write Burst CAS 
-		simu(bus.csn) = 0;
-		simu(bus.rasn) = 1;
-		simu(bus.casn) = 0;
-		simu(bus.wen) = 0;
+		simu(bus.csn) = '0';
+		simu(bus.rasn) = '1';
+		simu(bus.casn) = '0';
+		simu(bus.wen) = '0';
 		simu(bus.a) = 2;
 		simu(bus.ba) = 1;
 		simu(bus.dqm) = 3;
@@ -153,15 +153,15 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 		{
 			simu(bus.dq) = 0xB00 + i;
 			co_await WaitClk(clock());
-			simu(bus.csn) = 1;
+			simu(bus.csn) = '1';
 		}
 		simu(bus.dq).invalidate();
 
 		// Read Burst CAS
-		simu(bus.csn) = 0;
-		simu(bus.wen) = 1;
+		simu(bus.csn) = '0';
+		simu(bus.wen) = '1';
 		co_await WaitClk(clock());
-		simu(bus.csn) = 1;
+		simu(bus.csn) = '1';
 
 		// check read data
 		for (size_t i = 0; i < burst; ++i)
@@ -170,7 +170,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 			BOOST_TEST(simu(dq) == 0xB00 + i);
 		}
 
-		simu(bus.csn) = 1;
+		simu(bus.csn) = '1';
 		for (size_t i = 0; i < 4; ++i)
 			co_await WaitClk(clock());
 		stopTest();
@@ -227,115 +227,115 @@ BOOST_FIXTURE_TEST_CASE(sdram_timer_test, ClockedTest)
 
 	addSimulationProcess([=]()->SimProcess {
 
-		simu(bus.cke) = 1;
-		simu(bus.csn) = 1;
-		simu(bus.rasn) = 1;
-		simu(bus.casn) = 1;
-		simu(bus.wen) = 1;
+		simu(bus.cke) = '1';
+		simu(bus.csn) = '1';
+		simu(bus.rasn) = '1';
+		simu(bus.casn) = '1';
+		simu(bus.wen) = '1';
 		simu(bus.ba) = 0;
 		co_await WaitClk(clock());
 
-		BOOST_TEST(simu(b0Activate) == 1);
-		BOOST_TEST(simu(b0Precharge) == 1);
-		BOOST_TEST(simu(b0Read) == 1);
-		BOOST_TEST(simu(b0Write) == 1);
-		BOOST_TEST(simu(b0BurstStop) == 1);
-		BOOST_TEST(simu(b1Activate) == 1);
-		BOOST_TEST(simu(b1Precharge) == 1);
-		BOOST_TEST(simu(b1Read) == 1);
-		BOOST_TEST(simu(b1Write) == 1);
-		BOOST_TEST(simu(b1BurstStop) == 1);
+		BOOST_TEST(simu(b0Activate) == '1');
+		BOOST_TEST(simu(b0Precharge) == '1');
+		BOOST_TEST(simu(b0Read) == '1');
+		BOOST_TEST(simu(b0Write) == '1');
+		BOOST_TEST(simu(b0BurstStop) == '1');
+		BOOST_TEST(simu(b1Activate) == '1');
+		BOOST_TEST(simu(b1Precharge) == '1');
+		BOOST_TEST(simu(b1Read) == '1');
+		BOOST_TEST(simu(b1Write) == '1');
+		BOOST_TEST(simu(b1BurstStop) == '1');
 		co_await WaitClk(clock());
 
 		// RAS
-		simu(bus.csn) = 0;
-		simu(bus.rasn) = 0;
+		simu(bus.csn) = '0';
+		simu(bus.rasn) = '0';
 		co_await WaitClk(clock());
-		simu(bus.csn) = 1;
+		simu(bus.csn) = '1';
 
 		for (size_t i = 0; i < 9; ++i)
 		{
-			BOOST_TEST(simu(b0Activate) == (i < timings.rc - 1 ? 0 : 1));
-			BOOST_TEST(simu(b0Precharge) == (i < timings.ras - 1 ? 0 : 1));
-			BOOST_TEST(simu(b0Read) == (i < timings.rcd - 1 ? 0 : 1));
-			BOOST_TEST(simu(b0Write) == (i < timings.rcd - 1 ? 0 : 1));
-			BOOST_TEST(simu(b0BurstStop) == 1);
-			BOOST_TEST(simu(b1Activate) == (i < timings.rrd - 1 ? 0 : 1));
-			BOOST_TEST(simu(b1Precharge) == 1);
-			BOOST_TEST(simu(b1Read) == 1);
-			BOOST_TEST(simu(b1Write) == 1);
-			BOOST_TEST(simu(b1BurstStop) == 1);
+			BOOST_TEST(simu(b0Activate) == !(i < timings.rc - 1));
+			BOOST_TEST(simu(b0Precharge) == !(i < timings.ras - 1));
+			BOOST_TEST(simu(b0Read) == !(i < timings.rcd - 1));
+			BOOST_TEST(simu(b0Write) == !(i < timings.rcd - 1));
+			BOOST_TEST(simu(b0BurstStop) == '1');
+			BOOST_TEST(simu(b1Activate) == !(i < timings.rrd - 1));
+			BOOST_TEST(simu(b1Precharge) == '1');
+			BOOST_TEST(simu(b1Read) == '1');
+			BOOST_TEST(simu(b1Write) == '1');
+			BOOST_TEST(simu(b1BurstStop) == '1');
 			co_await WaitClk(clock());
 		}
 
 		// Precharge
-		simu(bus.csn) = 0;
-		simu(bus.rasn) = 0;
-		simu(bus.wen) = 0;
+		simu(bus.csn) = '0';
+		simu(bus.rasn) = '0';
+		simu(bus.wen) = '0';
 		co_await WaitClk(clock());
-		simu(bus.csn) = 1;
+		simu(bus.csn) = '1';
 
 		for (size_t i = 0; i < 3; ++i)
 		{
-			BOOST_TEST(simu(b0Activate) == (i < timings.rp - 1 ? 0 : 1));
-			BOOST_TEST(simu(b0Precharge) == 1);
-			BOOST_TEST(simu(b0Read) == 1);
-			BOOST_TEST(simu(b0Write) == 1);
-			BOOST_TEST(simu(b0BurstStop) == 1);
-			BOOST_TEST(simu(b1Activate) == 1);
-			BOOST_TEST(simu(b1Precharge) == 1);
-			BOOST_TEST(simu(b1Read) == 1);
-			BOOST_TEST(simu(b1Write) == 1);
-			BOOST_TEST(simu(b1BurstStop) == 1);
+			BOOST_TEST(simu(b0Activate) == !(i < timings.rp - 1));
+			BOOST_TEST(simu(b0Precharge) == '1');
+			BOOST_TEST(simu(b0Read) == '1');
+			BOOST_TEST(simu(b0Write) == '1');
+			BOOST_TEST(simu(b0BurstStop) == '1');
+			BOOST_TEST(simu(b1Activate) == '1');
+			BOOST_TEST(simu(b1Precharge) == '1');
+			BOOST_TEST(simu(b1Read) == '1');
+			BOOST_TEST(simu(b1Write) == '1');
+			BOOST_TEST(simu(b1BurstStop) == '1');
 			co_await WaitClk(clock());
 		}
 
 		// long write cas
-		simu(bus.csn) = 0;
-		simu(bus.rasn) = 1;
-		simu(bus.casn) = 0;
-		simu(bus.wen) = 0;
+		simu(bus.csn) = '0';
+		simu(bus.rasn) = '1';
+		simu(bus.casn) = '0';
+		simu(bus.wen) = '0';
 		simu(casLength) = 4;
 		co_await WaitClk(clock());
-		simu(bus.csn) = 1;
+		simu(bus.csn) = '1';
 
 		for (size_t i = 0; i < 7; ++i)
 		{
-			BOOST_TEST(simu(b0Activate) == 1);
-			BOOST_TEST(simu(b0Precharge) == (i < 3 ? 0 : 1));
-			BOOST_TEST(simu(b0Read) == (i < 3 ? 0 : 1));
-			BOOST_TEST(simu(b0Write) == (i < 3 ? 0 : 1));
-			BOOST_TEST(simu(b0BurstStop) == 1);
-			BOOST_TEST(simu(b1Activate) == 1);
-			BOOST_TEST(simu(b1Precharge) == 1);
-			BOOST_TEST(simu(b1Read) == (i < 3 ? 0 : 1));
-			BOOST_TEST(simu(b1Write) == (i < 3 ? 0 : 1));
-			BOOST_TEST(simu(b1BurstStop) == 1);
+			BOOST_TEST(simu(b0Activate) == '1');
+			BOOST_TEST(simu(b0Precharge) == !(i < 3));
+			BOOST_TEST(simu(b0Read) == !(i < 3));
+			BOOST_TEST(simu(b0Write) == !(i < 3));
+			BOOST_TEST(simu(b0BurstStop) == '1');
+			BOOST_TEST(simu(b1Activate) == '1');
+			BOOST_TEST(simu(b1Precharge) == '1');
+			BOOST_TEST(simu(b1Read) == !(i < 3));
+			BOOST_TEST(simu(b1Write) == !(i < 3));
+			BOOST_TEST(simu(b1BurstStop) == '1');
 			co_await WaitClk(clock());
 		}
 
 		// long read cas
-		simu(bus.csn) = 0;
-		simu(bus.rasn) = 1;
-		simu(bus.casn) = 0;
-		simu(bus.wen) = 1;
+		simu(bus.csn) = '0';
+		simu(bus.rasn) = '1';
+		simu(bus.casn) = '0';
+		simu(bus.wen) = '1';
 		simu(casLength) = 4;
 		co_await WaitClk(clock());
-		simu(bus.csn) = 1;
+		simu(bus.csn) = '1';
 
 		size_t writeDelay = (4 - 1) + timings.cl + (timings.wr - 1);
 		for (size_t i = 0; i < 7; ++i)
 		{
-			BOOST_TEST(simu(b0Activate) == 1);
-			BOOST_TEST(simu(b0Precharge) == (i < 3 ? 0 : 1));
-			BOOST_TEST(simu(b0Read) == (i < 3 ? 0 : 1));
-			BOOST_TEST(simu(b0Write) == (i < writeDelay ? 0 : 1));
-			BOOST_TEST(simu(b0BurstStop) == 1);
-			BOOST_TEST(simu(b1Activate) == 1);
-			BOOST_TEST(simu(b1Precharge) == 1);
-			BOOST_TEST(simu(b1Read) == (i < 3 ? 0 : 1));
-			BOOST_TEST(simu(b1Write) == (i < writeDelay ? 0 : 1));
-			BOOST_TEST(simu(b1BurstStop) == 1);
+			BOOST_TEST(simu(b0Activate) == '1');
+			BOOST_TEST(simu(b0Precharge) == !(i < 3));
+			BOOST_TEST(simu(b0Read) == !(i < 3));
+			BOOST_TEST(simu(b0Write) == !(i < writeDelay));
+			BOOST_TEST(simu(b0BurstStop) == '1');
+			BOOST_TEST(simu(b1Activate) == '1');
+			BOOST_TEST(simu(b1Precharge) == '1');
+			BOOST_TEST(simu(b1Read) == !(i < 3));
+			BOOST_TEST(simu(b1Write) == !(i < writeDelay));
+			BOOST_TEST(simu(b1BurstStop) == '1');
 			co_await WaitClk(clock());
 		}
 
@@ -422,7 +422,7 @@ public:
 		//setFullByteEnableMask(link.a);
 
 		DesignScope::get()->getCircuit().addSimulationProcess([&]() -> SimProcess {
-			simu(valid(link.a)) = 0;
+			simu(valid(link.a)) = '0';
 			//simu(ready(link.d)) = 0;
 			co_return;
 		});
@@ -438,7 +438,7 @@ public:
 		simu(link.a->mask) = link.a->mask.width().mask();
 		simu(link.a->data).invalidate();
 
-		simu(valid(link.a)) = 1;
+		simu(valid(link.a)) = '1';
 	}
 
 	void issueWrite(size_t address, size_t byteSize, size_t tag = 0)
@@ -450,12 +450,12 @@ public:
 		simu(link.a->source) = tag;
 		simu(link.a->mask) = link.a->mask.width().mask();
 
-		simu(valid(link.a)) = 1;
+		simu(valid(link.a)) = '1';
 	}
 
 	static bool transfer(const scl::StreamSignal auto& stream)
 	{
-		return simu(valid(stream)) != 0 && simu(ready(stream)) != 0;
+		return simu(valid(stream)) != '0' && simu(ready(stream)) != '0';
 	}
 	
 	scl::TileLinkUL link;
@@ -497,7 +497,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_init_test, SdramControllerTest)
 		while (!transfer(link.a))
 			co_await WaitClk(clock());
 		co_await WaitClk(clock());
-		simu(valid(link.a)) = 0;
+		simu(valid(link.a)) = '0';
 
 		for (size_t i = 0; i < 16; ++i)
 			co_await WaitClk(clock());

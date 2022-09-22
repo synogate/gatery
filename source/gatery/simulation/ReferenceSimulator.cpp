@@ -958,5 +958,10 @@ void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> han
 }
 
 
+void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> handle, WaitChange &waitChange, utils::RestrictTo<RunTimeSimulationContext>)
+{
+	HCL_ASSERT_HINT(false, "Not implemented yet!");
+}
+
 
 }

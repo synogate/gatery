@@ -38,19 +38,31 @@ class SigHandle {
 
 		template<EnumType T>
 		void operator=(T v) { operator=((std::uint64_t) v); }
-
 		void operator=(std::uint64_t v);
+		void operator=(std::int64_t v);
+		void operator=(std::string_view v);
+		void operator=(char v);
 		void operator=(const DefaultBitVectorState &state);
-		void invalidate();
-
-		operator std::uint64_t () const { return value(); }
-		operator DefaultBitVectorState () const { return eval(); }
-
 		template<std::same_as<sim::BigInt> BigInt_> // prevent conversion
 		void operator=(const BigInt_ &v) { assign(v); }
 
+
+		template<EnumType T>
+		bool operator==(T v) const { if (!allDefined()) return false; return value() == (std::uint64_t) v; }
+		bool operator==(std::uint64_t v) const;
+		bool operator==(std::int64_t v) const;
+		bool operator==(std::string_view v) const;
+		bool operator==(char v) const;
+
+		operator std::uint64_t () const { return value(); }
+		operator std::int64_t () const;
+		operator bool () const;
+		operator char () const;
+		//operator std::string () const;
+		operator DefaultBitVectorState () const { return eval(); }
 		operator sim::BigInt () const;
 
+		void invalidate();
 		bool allDefined() const;
 		std::uint64_t defined() const;
 		std::uint64_t value() const;

@@ -178,10 +178,10 @@ BOOST_FIXTURE_TEST_CASE(ConstantDataStringParser, BoostUnitTestSimulationFixture
 {
 	using namespace gtry;
 
-	BOOST_CHECK(parseBitVector("32x1bBXx").size() == 32);
-	BOOST_CHECK(parseBitVector("x1bBX").size() == 16);
-	BOOST_CHECK(parseBitVector("o170X").size() == 12);
-	BOOST_CHECK(parseBitVector("b10xX").size() == 4);
+	BOOST_CHECK(sim::parseBitVector("32x1bBXx").size() == 32);
+	BOOST_CHECK(sim::parseBitVector("x1bBX").size() == 16);
+	BOOST_CHECK(sim::parseBitVector("o170X").size() == 12);
+	BOOST_CHECK(sim::parseBitVector("b10xX").size() == 4);
 }
 
 BOOST_FIXTURE_TEST_CASE(BVecSelectorAccess, BoostUnitTestSimulationFixture)
@@ -239,7 +239,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceRead, BoostUnitTestSimulationFixture)
 		for (auto i : gtry::utils::Range(8)) {
 			simu(index) = i;
 			co_await WaitFor({1,1000});
-			BOOST_TEST(simu(b) == ((v >> i) & 1));
+			BOOST_TEST(simu(b) == (bool)((v >> i) & 1));
 		}
 
 		stopTest();
@@ -267,7 +267,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfSliceRead, BoostUnitTestSimulationFixtu
 		for (auto i : gtry::utils::Range(4)) {
 			simu(index) = i;
 			co_await WaitFor({1,1000});
-			BOOST_TEST(simu(b) == ((v_ >> i) & 1));
+			BOOST_TEST(simu(b) == (bool)((v_ >> i) & 1));
 		}
 
 		stopTest();
@@ -296,7 +296,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceWrite, BoostUnitTestSimulationFixture)
 	addSimulationProcess([=, this]()->SimProcess {
 		for (auto i : gtry::utils::Range(8)) {
 			simu(index) = i;
-			simu(b) = (v >> i) & 1;
+			simu(b) = ((v >> i) & 1) == 1;
 			co_await WaitFor({1,1000});
 			size_t mask = 1ull << i;
 			BOOST_TEST(simu(a) == (a_ & ~mask | v & mask));
@@ -327,7 +327,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfSliceWrite, BoostUnitTestSimulationFixt
 	addSimulationProcess([=, this]()->SimProcess {
 		for (auto i : gtry::utils::Range(4)) {
 			simu(index) = i;
-			simu(b) = (v >> (i+2)) & 1;
+			simu(b) = ((v >> (i+2)) & 1) == 1;
 			co_await WaitFor({1,1000});
 
 			size_t mask = (1ull << (i+2));
@@ -538,7 +538,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWithStaticBitSliceRead, BoostUnitTestSim
 		for (auto i : gtry::utils::Range(7)) {
 			simu(index) = i;
 			co_await WaitFor({1,1000});
-			BOOST_TEST(simu(b) == ((v >> (i+1)) & 0b1));
+			BOOST_TEST(simu(b) == (bool)((v >> (i+1)) & 0b1));
 		}
 
 		simu(index) = 7;
@@ -578,7 +578,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWithDynamicBitSliceRead, BoostUnitTestSi
 				simu(index1) = i;
 				simu(index2) = j;
 				co_await WaitFor({1,1000});
-				BOOST_TEST(simu(b) == ((v >> (i+j)) & 0b1));
+				BOOST_TEST(simu(b) == (bool)((v >> (i+j)) & 0b1));
 			}
 		}
 
@@ -624,7 +624,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfDynamicSliceWrite, BoostUnitTestSimulat
 			for (auto j : gtry::utils::Range(4)) {
 				simu(index1) = i;
 				simu(index2) = j;
-				simu(b) = (v >> (i + j)) & 1;
+				simu(b) = ((v >> (i + j)) & 1) == 1;
 				co_await WaitFor({1,1000});
 
 				size_t mask = (0b1ull << (i+j));

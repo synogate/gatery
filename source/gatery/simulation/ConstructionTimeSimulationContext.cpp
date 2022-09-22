@@ -205,17 +205,22 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
 
 void ConstructionTimeSimulationContext::simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor)
 {
-	HCL_ASSERT_HINT(false, "Simulation coroutine attemped to run (and suspend) outside of simulation!");
+	HCL_ASSERT_HINT(false, "Simulation coroutine attempted to run (and suspend) outside of simulation!");
 }
 
 void ConstructionTimeSimulationContext::simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil)
 {
-	HCL_ASSERT_HINT(false, "Simulation coroutine attemped to run (and suspend) outside of simulation!");
+	HCL_ASSERT_HINT(false, "Simulation coroutine attempted to run (and suspend) outside of simulation!");
 }
 
 void ConstructionTimeSimulationContext::simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock)
 {
-	HCL_ASSERT_HINT(false, "Simulation coroutine attemped to run (and suspend) outside of simulation!");
+	HCL_ASSERT_HINT(false, "Simulation coroutine attempted to run (and suspend) outside of simulation!");
+}
+
+void ConstructionTimeSimulationContext::simulationProcessSuspending(std::coroutine_handle<> handle, WaitChange &waitChange)
+{
+	HCL_ASSERT_HINT(false, "Simulation coroutine attempted to run (and suspend) outside of simulation!");
 }
 
 }

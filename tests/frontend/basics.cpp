@@ -493,18 +493,18 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, BoostUnitTestSimulationFixture)
 
 		addSimulationProcess([=, this]()->SimProcess {
 
-			simu(pinConditionIn) = 0;
+			simu(pinConditionIn) = '0';
 			BOOST_TEST(simu(pinC) == 0xC);
 			BOOST_TEST(simu(pinD) == 0xD);
-			BOOST_TEST(simu(pinX) == 0);
-			BOOST_TEST(simu(pinY) == 1);
+			BOOST_TEST(simu(pinX) == '0');
+			BOOST_TEST(simu(pinY) == '1');
 			co_await WaitFor({1, 1000});
 
-			simu(pinConditionIn) = 1;
+			simu(pinConditionIn) = '1';
 			BOOST_TEST(simu(pinC) == 0xD);
 			BOOST_TEST(simu(pinD) == 0xC);
-			BOOST_TEST(simu(pinX) == 1);
-			BOOST_TEST(simu(pinY) == 0);
+			BOOST_TEST(simu(pinX) == '1');
+			BOOST_TEST(simu(pinY) == '0');
 			co_await WaitFor({1, 1000});
 
 			stopTest();
@@ -559,13 +559,13 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, BoostUnitTestSimulationFixture)
 
 			for (size_t i = 0; i < in.size(); ++i)
 				simu(in[i]) = i;
-			simu(pinConditionIn) = 0;
+			simu(pinConditionIn) = '0';
 
 			for (size_t i = 0; i < in.size(); ++i)
 				BOOST_TEST(simu(out[i]) == i);
 			co_await WaitFor({1, 1000});
 
-			simu(pinConditionIn) = 1;
+			simu(pinConditionIn) = '1';
 			for (size_t i = 0; i < in.size(); ++i)
 				BOOST_TEST(simu(out[i]) == (i + 1) % 4);
 			co_await WaitFor({1, 1000});
@@ -1376,7 +1376,7 @@ BOOST_FIXTURE_TEST_CASE(tristateBit, gtry::BoostUnitTestSimulationFixture)
 	addSimulationProcess([=, this]()->SimProcess {
 
 		simu(value) = 10;
-		simu(enable) = 1;
+		simu(enable) = '1';
 		simu(readback) = 42;
 
 		co_await WaitClk(clock);
@@ -1386,7 +1386,7 @@ BOOST_FIXTURE_TEST_CASE(tristateBit, gtry::BoostUnitTestSimulationFixture)
 
 		co_await WaitClk(clock);
 
-		simu(enable) = 0;
+		simu(enable) = '0';
 
 		co_await WaitClk(clock);
 
@@ -1403,7 +1403,7 @@ BOOST_FIXTURE_TEST_CASE(tristateBit, gtry::BoostUnitTestSimulationFixture)
 
 		co_await WaitClk(clock);
 
-		simu(enable) = 1;
+		simu(enable) = '1';
 		simu(value).invalidate();
 
 		co_await WaitClk(clock);
@@ -1412,7 +1412,7 @@ BOOST_FIXTURE_TEST_CASE(tristateBit, gtry::BoostUnitTestSimulationFixture)
 
 		co_await WaitClk(clock);
 
-		simu(enable) = 0;
+		simu(enable) = '0';
 		simu(value) = 10;
 		simu(readback).invalidate();
 

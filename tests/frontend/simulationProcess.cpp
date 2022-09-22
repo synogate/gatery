@@ -230,3 +230,97 @@ BOOST_FIXTURE_TEST_CASE(SimProc_PingPong, BoostUnitTestSimulationFixture)
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(clock.getClk(), 10);
 }
+
+
+/*
+
+BOOST_FIXTURE_TEST_CASE(SimProc_spawnSubTask, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+
+	auto generatePattern = [](const Clock &clock, Bit &bit, char data)->SimProcess{
+		// Start bit
+		simu(bit) = '0';
+		co_await WaitClk(clock);
+		// Data bits
+		for (auto i : utils::Range(8)) {
+			simu(bit) = (bool)(data & (1 << i));
+			co_await WaitClk(clock);
+		}
+		// End bit
+		simu(bit) = '1';
+		co_await WaitClk(clock);
+	}
+
+	Bit line = pinIn();
+
+	addSimulationProcess([=]()->SimProcess{
+		simu(line) = '1';
+		co_await WaitClk(clock);
+		co_await WaitClk(clock);
+		auto subTask = runInParallel(generatePattern());
+
+		// Do some other stuff
+
+		subTask.waitFor();
+
+		stopTest();
+	});
+
+	design.postprocess();
+
+	runTicks(clock.getClk(), 100);
+}
+*/
+
+
+
+BOOST_FIXTURE_TEST_CASE(SimProc_registerOverride, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+
+
+	Clock clock({ .absoluteFrequency = 10'000, .resetType = ClockConfig::ResetType::NONE });
+	{
+		ClockScope clkScp(clock);
+
+		UInt loop(8_b);
+		loop = reg(loop, 0);
+		auto outputPin = pinOut(loop);
+
+		addSimulationProcess([=]()->SimProcess{
+
+			co_await WaitClk(clock);
+			co_await WaitClk(clock);
+			co_await WaitClk(clock);
+			BOOST_TEST(0 == simu(outputPin));
+			co_await WaitClk(clock);
+			BOOST_TEST(0 == simu(outputPin));
+			co_await WaitClk(clock);
+			BOOST_TEST(0 == simu(outputPin));
+
+			simu(loop).drivingReg() = 10;
+
+			BOOST_TEST(10 == simu(outputPin));
+			co_await WaitClk(clock);
+			BOOST_TEST(10 == simu(outputPin));
+
+			simu(loop).drivingReg() = 20;
+
+			BOOST_TEST(20 == simu(outputPin));
+			co_await WaitClk(clock);
+			BOOST_TEST(20 == simu(outputPin));
+
+			co_await WaitClk(clock);
+			co_await WaitClk(clock);
+
+			stopTest();
+		});
+	}
+
+
+	design.postprocess();
+	runTest(hlim::ClockRational(1000, 1) / clock.absoluteFrequency());
+}

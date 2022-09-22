@@ -44,6 +44,20 @@ struct DefaultConfig
 	};
 };
 
+struct ExtendedConfig
+{
+	using BaseType = std::uint64_t;
+	enum {
+		NUM_BITS_PER_BLOCK = sizeof(BaseType)*8
+	};
+	enum Plane {
+		VALUE,
+		DEFINED,
+		DONT_CARE,
+		NUM_PLANES
+	};
+};
+
 template<class Config>
 class BitVectorState
 {
@@ -383,6 +397,14 @@ void insertBigInt(BitVectorState<Config> &vec, size_t offset, size_t size, BigIn
 
 
 using DefaultBitVectorState = BitVectorState<DefaultConfig>;
+using ExtendedBitVectorState = BitVectorState<ExtendedConfig>;
+
+DefaultBitVectorState parseBit(char value);
+DefaultBitVectorState parseBit(bool value);
+DefaultBitVectorState parseBitVector(std::string_view);
+ExtendedBitVectorState parseExtendedBitVector(std::string_view);
+DefaultBitVectorState parseBitVector(uint64_t value, size_t width);
+
 
 template<typename Config>
 std::ostream& operator << (std::ostream& s, const BitVectorState<Config>& state)

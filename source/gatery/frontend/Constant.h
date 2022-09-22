@@ -30,11 +30,6 @@
 
 namespace gtry 
 {
-	sim::DefaultBitVectorState parseBit(char value);
-	sim::DefaultBitVectorState parseBit(bool value);
-	sim::DefaultBitVectorState parseBitVector(std::string_view);
-	sim::DefaultBitVectorState parseBitVector(uint64_t value, size_t width);
-	
 	class UInt;
 	class UInt;
 
