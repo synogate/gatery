@@ -34,10 +34,9 @@ class Clock;
 class ClockScope;
 
 /**
- * @addtogroup gtry_frontend
+ * @addtogroup gtry_scopes
  * @{
  */
-
 
 /**
  * @brief The design scope holds the circuit and provides a context for all circuti building operations.

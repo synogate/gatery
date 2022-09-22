@@ -22,7 +22,7 @@ namespace gtry
 {
 
 /**
- * @addtogroup gtry_frontend
+ * @addtogroup gtry_scopes
  * @{
  */
 
