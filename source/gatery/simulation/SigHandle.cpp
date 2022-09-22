@@ -260,13 +260,12 @@ bool SigHandle::operator==(char v) const
 }
 
 
-SigHandle SigHandle::drivingReg() const
+void SigHandle::overrideDrivingRegister()
 {
-	if (auto *reg = dynamic_cast<hlim::Node_Register*>(m_output.node)) {
-		return { reg->getNonSignalDriver(hlim::Node_Register::DATA), true };
-	} else {
-		return { m_output, true };
-	}
+	if (auto *reg = dynamic_cast<hlim::Node_Register*>(m_output.node))
+		m_output = reg->getNonSignalDriver(hlim::Node_Register::DATA);
+	
+	m_overrideRegister = true;
 }
 
 }

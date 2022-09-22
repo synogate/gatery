@@ -107,7 +107,7 @@ class SigHandleBVec : public BaseUIntSigHandle<BVec>
 		bool operator==(const SigHandleBVec &rhs) const { return BaseSigHandle<BVec>::operator==(rhs.eval()); }
 		bool operator!=(const SigHandleBVec &rhs) const { return !BaseSigHandle<BVec>::operator==(rhs.eval()); }
 
-		SigHandleBVec drivingReg() const { SigHandleBVec res(m_handle.getOutput()); res.m_handle = res.m_handle.drivingReg(); return res; }
+		SigHandleBVec drivingReg() const { SigHandleBVec res(m_handle.getOutput()); res.m_handle.overrideDrivingRegister(); return res; }
 	protected:
 		SigHandleBVec(const hlim::NodePort &np) : BaseUIntSigHandle<BVec>(np) { }
 
@@ -126,7 +126,7 @@ class SigHandleUInt : public BaseUIntSigHandle<UInt>
 		bool operator==(const SigHandleUInt &rhs) const { return BaseSigHandle<UInt>::operator==(rhs.eval()); }
 		bool operator!=(const SigHandleUInt &rhs) const { return !BaseSigHandle<UInt>::operator==(rhs.eval()); }
 
-		SigHandleUInt drivingReg() const { SigHandleUInt res(m_handle.getOutput()); res.m_handle = res.m_handle.drivingReg(); return res; }
+		SigHandleUInt drivingReg() const { SigHandleUInt res(m_handle.getOutput()); res.m_handle.overrideDrivingRegister(); return res; }
 	protected:
 		SigHandleUInt(const hlim::NodePort &np) : BaseUIntSigHandle<UInt>(np) { }
 
@@ -149,7 +149,7 @@ class SigHandleSInt : public BaseIntSigHandle<SInt>
 		std::int64_t value() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return (std::int64_t) this->m_handle; }
 		operator std::int64_t () const { return value(); }
 
-		SigHandleSInt drivingReg() const { SigHandleSInt res(m_handle.getOutput()); res.m_handle = res.m_handle.drivingReg(); return res; }
+		SigHandleSInt drivingReg() const { SigHandleSInt res(m_handle.getOutput()); res.m_handle.overrideDrivingRegister(); return res; }
 	protected:
 		SigHandleSInt(const hlim::NodePort &np) : BaseIntSigHandle<SInt>(np) { }
 
@@ -178,7 +178,7 @@ class SigHandleBit : public BaseSigHandle<Bit>
 		bool value() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return (bool) this->m_handle; }
 		operator bool () const { return value(); }
 
-		SigHandleBit drivingReg() const { SigHandleBit res(m_handle.getOutput()); res.m_handle = res.m_handle.drivingReg(); return res; }
+		SigHandleBit drivingReg() const { SigHandleBit res(m_handle.getOutput()); res.m_handle.overrideDrivingRegister(); return res; }
 	protected:
 		SigHandleBit(const hlim::NodePort &np) : BaseSigHandle<Bit>(np) { }
 
@@ -206,7 +206,7 @@ class SigHandleEnum : public BaseSigHandle<SignalType>
 		bool defined() const { return this->allDefined(); }
 		typename SignalType::enum_type value() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return (typename SignalType::enum_type) this->m_handle; }
 
-		SigHandleEnum<SignalType> drivingReg() const { SigHandleEnum<SignalType> res(this->m_handle.getOutput()); res.m_handle = res.m_handle.drivingReg(); return res; }
+		SigHandleEnum<SignalType> drivingReg() const { SigHandleEnum<SignalType> res(this->m_handle.getOutput()); res.m_handle.overrideDrivingRegister(); return res; }
 	protected:
 		SigHandleEnum(const hlim::NodePort &np) : BaseSigHandle<SignalType>(np) { }
 
