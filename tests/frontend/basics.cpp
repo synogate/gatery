@@ -23,8 +23,6 @@
 
 using namespace boost::unit_test;
 
-const auto optimizationLevels = data::make({0, 1, 2, 3});
-
 using BoostUnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
 BOOST_FIXTURE_TEST_CASE(ReverseSyntax, BoostUnitTestSimulationFixture)
 {
@@ -155,7 +153,7 @@ BOOST_FIXTURE_TEST_CASE(ReverseChainDownstream, BoostUnitTestSimulationFixture)
 	runEvalOnlyTest();
 }
 
-BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestOperators, optimizationLevels * data::xrange(1, 8), optimization, bitsize)
+BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestOperators, data::xrange(1, 4), bitsize)
 {
 	using namespace gtry;
 	using namespace gtry::sim;
@@ -251,8 +249,6 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestOperators, optimizati
 #undef op2str
 #undef buildOperatorTest
 
-	// @TODO: Choose optimization postprocessor accordingly
-	//design.getCircuit().postprocess(optimization);
 	design.getCircuit().postprocess(DefaultPostprocessing{});
 
 	runTest(gtry::hlim::ClockRational(100'000, 10'000));
@@ -262,7 +258,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestOperators, optimizati
 
 
 
-BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestSlicing, optimizationLevels, optimization)
+BOOST_FIXTURE_TEST_CASE(TestSlicing, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
 
@@ -287,11 +283,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestSlicing, optimization
 			}
 		}
 
-	// @TODO: Choose optimization postprocessor accordingly
-	//design.getCircuit().postprocess(optimization);
 	design.getCircuit().postprocess(DefaultPostprocessing{});
-
-
 	runEvalOnlyTest();
 }
 
@@ -319,7 +311,7 @@ BOOST_FIXTURE_TEST_CASE(TestSlicingModifications, BoostUnitTestSimulationFixture
 }
 
 
-BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestSlicingAddition, optimizationLevels, optimization)
+BOOST_FIXTURE_TEST_CASE(TestSlicingAddition, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
 
@@ -336,18 +328,11 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestSlicingAddition, opti
 			}
 		}
 
-	// @TODO: Choose optimization postprocessor accordingly
-	//design.getCircuit().postprocess(optimization);
 	design.getCircuit().postprocess(DefaultPostprocessing{});
-
-
 	runEvalOnlyTest();
 }
 
-
-
-
-BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, SimpleAdditionNetwork, optimizationLevels, optimization)
+BOOST_FIXTURE_TEST_CASE(SimpleAdditionNetwork, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
 
@@ -365,11 +350,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, SimpleAdditionNetwork, op
 
 				sim_assert(c == ConstUInt(x+y, BitWidth{ uint64_t(bitsize) })) << "The signal c should be " << x+y << " (with overflow in " << bitsize << "bits) but is " << c;
 			}
-	// @TODO: Choose optimization postprocessor accordingly
-	//design.getCircuit().postprocess(optimization);
 	design.getCircuit().postprocess(DefaultPostprocessing{});
-
-
 	runEvalOnlyTest();
 }
 
@@ -1126,7 +1107,7 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentWithPreviousAssignmentNoE
 
 
 
-BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignmentNoIf, optimizationLevels, optimization)
+BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentWithPreviousAssignmentNoIf, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
 
@@ -1152,15 +1133,12 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, MultiLevelConditionalAssi
 			sim_assert(c == ConstUInt(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
 		}
 
-	// @TODO: Choose optimization postprocessor accordingly
-	//design.getCircuit().postprocess(optimization);
 	design.getCircuit().postprocess(DefaultPostprocessing{});
-
 	runEvalOnlyTest();
 }
 
 
-BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, MultiLevelConditionalAssignmentWithPreviousAssignment, optimizationLevels, optimization)
+BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentWithPreviousAssignment, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
 
@@ -1194,10 +1172,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, MultiLevelConditionalAssi
 			sim_assert(c == ConstUInt(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
 		}
 
-	// @TODO: Choose optimization postprocessor accordingly
-	//design.getCircuit().postprocess(optimization);
 	design.getCircuit().postprocess(DefaultPostprocessing{});
-
 	runEvalOnlyTest();
 }
 

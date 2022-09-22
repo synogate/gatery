@@ -19,6 +19,7 @@
 #include "sdram.h"
 
 #include "../Counter.h"
+#include "../ShiftReg.h"
 #include "../stream/StreamArbiter.h"
 #include "../stream/adaptWidth.h"
 
@@ -26,8 +27,15 @@ using namespace gtry::scl::sdram;
 
 void Controller::generate(TileLinkUL& link)
 {
+	HCL_DESIGNCHECK_HINT(link.a->size.width() == BitWidth::last(m_burstLimit), "size width must match burst limit");
+
 	auto scope = m_area.enter();
+	m_sourceW = link.a->source.width();
 	initMember();
+
+	UInt transferLogSize = link.a->size.width();
+	UInt transferSize = transferLengthFromLogSize(transferLogSize, m_dataBusWidth.bits() / 8);
+	m_timer->generate(m_timing, m_cmdBus, transferSize, 1ull << m_burstLimit);
 
 	StreamArbiter<CommandStream> maintenanceArbiter;
 	{
@@ -59,7 +67,7 @@ void Controller::generate(TileLinkUL& link)
 		ELSE
 			valid(aIn) = '0';
 
-		auto [cmd, data] = bankController(aIn, m_bankState[i]);
+		auto [cmd, data] = bankController(aIn, m_bankState[i], ConstUInt(i, m_cmdBus.ba.width()));
 		cmd->bank = ConstUInt(i, m_cmdBus.ba.width()); // optional optimization
 
 		cmdArbiter.attach(cmd);
@@ -76,8 +84,12 @@ void Controller::generate(TileLinkUL& link)
 	//	m_rasTimer += 1;
 
 	HCL_NAMED(nextCommand);
+	makeReadQueue(nextCommand);
+	setResponse(*link.d);
+	setMaskForRead(nextData);
 	HCL_NAMED(nextData);
 	driveCommand(nextCommand, nextData);
+	transferLogSize = nextCommand->size;
 }
 
 void Controller::initMember()
@@ -103,11 +115,15 @@ void Controller::initMember()
 
 	m_rasTimer = reg(m_rasTimer, 0);
 	HCL_NAMED(m_rasTimer);
+
+	IF(!m_timer)
+		m_timer = std::make_shared<SdramTimer>();
 }
 
-std::tuple<Controller::CommandStream, Controller::DataOutStream> Controller::bankController(TileLinkChannelA& link, BankState& state) const
+std::tuple<Controller::CommandStream, Controller::DataOutStream> Controller::bankController(TileLinkChannelA& link, BankState& state, UInt bank) const
 {
 	auto scope = Area("bankController").enter();
+	HCL_NAMED(bank);
 
 	Bit dataOutBusy;
 	HCL_NAMED(dataOutBusy);
@@ -115,13 +131,11 @@ std::tuple<Controller::CommandStream, Controller::DataOutStream> Controller::ban
 	// command stream
 	CommandStream cmd = translateCommand(state, link);
 	setName(cmd, "bankCommand");
-
 	IF(transfer(cmd))
 		state = updateState(*cmd, state);
 
-	CommandStream timedCmd = enforceTiming(cmd);
+	CommandStream timedCmd = enforceTiming(cmd, bank);
 	CommandStream stalledCmd = stall(timedCmd, dataOutBusy);
-
 
 	// write data / read mask stream
 	DataOutStream data = translateCommandData(link, dataOutBusy);
@@ -154,6 +168,14 @@ size_t gtry::scl::sdram::Controller::writeToReadTiming() const
 	return 0;
 }
 
+size_t gtry::scl::sdram::Controller::readDelay() const
+{
+	size_t delay = m_timing.cl;
+	if (m_useOutputRegister)
+		delay += 1;
+	return delay;
+}
+
 void gtry::scl::sdram::Controller::makeBankState()
 {
 	m_bankState.resize(1ull << m_mapping.bank.width);
@@ -181,6 +203,38 @@ void gtry::scl::sdram::Controller::makeWriteBurstAddress(CommandStream& stream)
 	stream->address |= zext((BVec)address);
 }
 
+void gtry::scl::sdram::Controller::makeReadQueue(const CommandStream& cmd)
+{
+	auto ent = m_area.enter("readQueue");
+
+	UInt numBeats = transferLengthFromLogSize(cmd->size, m_dataBusWidth.bits() / 8);
+	HCL_NAMED(numBeats);
+
+	ReadTask in{
+		.size = cmd->size.width(),
+		.source = cmd->source.width(),
+		.beats = numBeats.width(),
+	};
+	HCL_NAMED(in);
+	in.active.resetValue('0');
+	m_readQueue.in(in);
+	m_readQueue[1]; // prevent conditional scope enable bug
+
+	in.active = valid(cmd) & (cmd->code == CommandCode::Read | cmd->code == CommandCode::Write);
+	in.read = cmd->code == CommandCode::Read;
+	in.size = cmd->size;
+	in.source = cmd->source;
+	in.beats = numBeats;
+
+	// resubmit for burst reads
+	auto&& prev = m_readQueue[1];
+	IF(prev.active & prev.read & prev.beats != 1)
+	{
+		in = prev;
+		in.beats -= 1;
+	}
+}
+
 Controller::CommandStream Controller::translateCommand(const BankState& state, const TileLinkChannelA& request) const
 {
 	auto scope = Area("translateCommand").enter();
@@ -189,7 +243,9 @@ Controller::CommandStream Controller::translateCommand(const BankState& state, c
 	CommandStream cmd{ {
 		.code = CommandCode::Precharge,
 		.address = ConstBVec(m_addrBusWidth),
-		.bank = request->address(m_mapping.bank)
+		.bank = request->address(m_mapping.bank),
+		.size = request->size,
+		.source = request->source,
 	} };
 	valid(cmd) = valid(request) & sop(request);
 
@@ -221,113 +277,27 @@ Controller::DataOutStream gtry::scl::sdram::Controller::translateCommandData(Til
 	HCL_NAMED(request);
 
 	DataOutStream out{ request->data };
+
+	Bit isWrite = request->opcode.upper(2_b) == 0;
+	valid(out) = valid(request) & isWrite;
 	byteEnable(out) = request->mask;
 	eop(out) = eop(request);
-
-	// insert read byte mask stream
-	UInt len = transferLengthFromLogSize(request->size, request->mask.width().bits());
-	HCL_NAMED(len);
-
-	UInt readBeatsLeft = len.width();
-	readBeatsLeft = reg(readBeatsLeft, 0);
-	setName(readBeatsLeft, "readBeatsLeft_pre");
-
-	enum class State {
-		wait,
-		readMask
-	};
-	Reg<Enum<State>> state{ State::wait };
-	state.setName("state");
-
-	IF(state.current() == State::wait)
-	{
-		IF(valid(request) & request->opcode == (size_t)TileLinkA::Get)
-		{
-			readBeatsLeft = len;
-			state = State::readMask;
-		}
-	}
-	HCL_NAMED(readBeatsLeft);
-
-	IF(state.combinatorial() == State::readMask)
-	{
-		readBeatsLeft -= 1;
-
-		valid(out) = '1';
-		byteEnable(out) = (BVec)oext(1);
-		*out = ConstBVec(out->width());
-		eop(out) = '0';
-
-		IF(readBeatsLeft == 0)
-		{
-			eop(out) = '1';
-			state = State::wait;
-		}
-	}
+	ready(request) = ready(out);
 
 	bankStall = '0';
-	IF(state.current() == State::readMask)
-	{
-		ready(request) = '0';
-		bankStall = '1';
-	}
 
 	HCL_NAMED(out);
 	return out;
 }
 
-Controller::CommandStream Controller::enforceTiming(CommandStream& cmd) const
+Controller::CommandStream Controller::enforceTiming(CommandStream& cmd, UInt bank) const
 {
 	auto scope = Area("scl_enforceTiming").enter();
 	HCL_NAMED(cmd);
 
-	Counter timer{
-		std::max({
-			m_timing.rcd, m_timing.ras, m_timing.rp
-		})
-	};
-	IF(!timer.isLast())
-		timer.inc();
-
-	Counter rcTimer{ m_timing.rc };
-	IF(!rcTimer.isLast())
-		rcTimer.inc();
-
-	Bit stall = '0';
-	IF(cmd->code == CommandCode::Precharge)
-	{
-		IF(timer.value() < m_timing.ras - 1)
-			stall = '1';
-
-		IF(transfer(cmd))
-			timer.reset();
-	}
-	ELSE IF(cmd->code == CommandCode::Activate)
-	{
-		IF(m_rasTimer < m_timing.rrd - 1)
-			stall = '1';
-
-		IF(timer.value() < m_timing.rp - 1)
-			stall = '1';
-
-		if (m_timing.ras + m_timing.rp < m_timing.rc)
-			IF(!rcTimer.isLast())
-				stall = '1';
-
-		IF(transfer(cmd))
-		{
-			timer.reset();
-			rcTimer.reset();
-		}
-	}
-	ELSE
-	{
-		IF(timer.value() < m_timing.rcd - 1)
-			stall = '1';
-	}
-	HCL_NAMED(stall);
-
-	return scl::stall(cmd, stall);
+	Bit active = m_timer->can(cmd->code, bank);
+	HCL_NAMED(active);
+	return scl::stall(cmd, !active);
 }
 
 void Controller::makeBusPins(const CommandBus& in, std::string prefix)
@@ -373,11 +343,11 @@ void Controller::driveCommand(CommandStream& cmd, DataOutStream& data)
 	IF(transfer(cmd) & cmd->code == CommandCode::Write)
 		m_dataOutEnable = '1';
 
-	m_cmdBus.dqm = ConstBVec(0, m_cmdBus.dqm.width());
+	m_cmdBus.dqm = m_cmdBus.dqm.width().mask();
 	m_cmdBus.dq = ConstBVec(m_cmdBus.dq.width());
 	IF(valid(data))
 	{
-		m_cmdBus.dqm = byteEnable(data);
+		m_cmdBus.dqm = ~byteEnable(data);
 		m_cmdBus.dq = *data;
 	}
 
@@ -386,6 +356,34 @@ void Controller::driveCommand(CommandStream& cmd, DataOutStream& data)
 
 	ready(cmd) = '1';
 	ready(data) = '1';
+}
+
+void gtry::scl::sdram::Controller::setMaskForRead(DataOutStream& data)
+{
+	HCL_DESIGNCHECK(m_timing.cl >= 2);
+	auto&& task = m_readQueue[m_timing.cl - 2];
+	IF(task.active & task.read)
+	{
+		sim_assert(valid(data) == '0') << "read write data bus conflict";
+
+		valid(data) = '1';
+		*data = ConstBVec(data->width());
+		byteEnable(data) = byteEnable(data).width().mask();
+		eop(data) = '1';
+	}
+}
+
+void gtry::scl::sdram::Controller::setResponse(TileLinkChannelD& response)
+{
+	auto&& task = m_readQueue[readDelay()];
+	valid(response) = task.active;
+	response->opcode = (BVec)cat("2b00", task.read);
+	response->param = 0;
+	response->data = m_dataIn;
+	response->size = zext(task.size);
+	response->source = zext(task.source);
+	response->sink = 0;
+	response->error = '0';
 }
 
 Controller::BankState Controller::updateState(const Command& cmd, const BankState& state) const
@@ -402,7 +400,7 @@ Controller::BankState Controller::updateState(const Command& cmd, const BankStat
 	{
 		newState.rowActive = '0';
 	}
-	
+
 	HCL_NAMED(newState);
 	return newState;
 }
@@ -412,6 +410,8 @@ Controller::CommandStream gtry::scl::sdram::Controller::makeCommandStream() cons
 	CommandStream out{ {
 			.address = ConstBVec(m_addrBusWidth),
 			.bank = ConstUInt(BitWidth{(unsigned)m_mapping.bank.width}),
+			.size = ConstUInt(BitWidth::last(m_burstLimit)),
+			.source = ConstUInt(m_sourceW),
 	}};
 	valid(out) = '0';
 	return out;
@@ -632,7 +632,13 @@ gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
 	modeWriteBurstLength = reg(modeWriteBurstLength, '0');
 	HCL_NAMED(modeWriteBurstLength);
 
-	Vector<Controller::BankState> state(cmd.ba.width().count());
+	struct BankState
+	{
+		Bit rowActive;
+		BVec activeRow;
+	};
+
+	Vector<BankState> state(cmd.ba.width().count());
 	for (auto& s : state)
 	{
 		s.activeRow = cmd.a.width();
@@ -671,12 +677,10 @@ gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
 
 			address = cat(cmd.ba, mux(cmd.ba, state).activeRow, cmd.a(0, 8_b));
 
+			writeBursts = 0;
 			readBursts = ConstUInt(1, readBursts.width()) << modeBurstLength;
 			IF(modeBurstLength == 7)
 				readBursts = 256;
-
-			IF(writeBursts > zext(modeCL - 1))
-				writeBursts = zext(modeCL - 1);
 		}
 		IF(code == (size_t)CommandCode::BurstStop)
 		{
@@ -684,7 +688,7 @@ gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
 		}
 		IF(code == (size_t)CommandCode::Precharge)
 		{
-			const Controller::BankState blank{
+			const BankState blank{
 				.rowActive = '0',
 				.activeRow = ConstBVec(cmd.a.width()),
 			};
@@ -694,6 +698,9 @@ gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
 			IF(cmd.a[10])
 				for (auto& s : state)
 					s.rowActive = '0';
+
+			readBursts = 0;
+			writeBursts = 0;
 		}
 		IF(code == (size_t)CommandCode::Write)
 		{
@@ -701,6 +708,7 @@ gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
 
 			address = cat(cmd.ba, mux(cmd.ba, state).activeRow, cmd.a(0, 8_b));
 
+			readBursts = 0;
 			writeBursts = ConstUInt(1, writeBursts.width()) << modeBurstLength;
 			IF(modeBurstLength == 7)
 				writeBursts = 256;
@@ -732,7 +740,7 @@ gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
 		BVec data = storage[address];
 		for (size_t i = 0; i < cmd.dqm.size(); ++i)
 		{
-			IF(cmd.dqm[i])
+			IF(!cmd.dqm[i])
 				data(i * 8, 8_b) = cmd.dq(i * 8, 8_b);
 		}
 		setName(data, "writeData");
@@ -740,32 +748,25 @@ gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
 	}
 
 	// delay read data to simulate data bus
-	std::vector<BVec> readDataDelay(8);
-	std::vector<BVec> readDataMaskDelay(8);
-	std::vector<Bit> readActiveDelay(8);
-	readDataDelay[0] = storage[address];
-	readDataMaskDelay[0] = cmd.dqm;
-	readActiveDelay[0] = readBursts != 0;
-	for (size_t i = 1; i < readDataDelay.size(); ++i)
-	{
-		readDataDelay[i] = reg(readDataDelay[i - 1]);
-		readDataMaskDelay[i] = reg(readDataMaskDelay[i - 1]);
-		readActiveDelay[i] = reg(readActiveDelay[i - 1], '0');
-	}
+	ShiftReg readDelay{ std::tuple(storage[address].read(), readBursts != 0)};
+	ShiftReg readMaskDelay{ cmd.dqm };
+
 	address(0, 8_b) += 1;
 
 	// drive output
 	BVec out = ConstBVec(cmd.dq.width());
-	IF(mux(modeCL, readActiveDelay))
+	auto [readData, readActive] = readDelay[modeCL];
+	HCL_NAMED(readActive);
+	HCL_NAMED(readData);
+	BVec readMask = readMaskDelay[2];
+	HCL_NAMED(readMask);
+
+	IF(readActive)
 	{
 		sim_assert(writeBursts == 0) << "data bus conflict";
-		BVec readData = mux(modeCL, readDataDelay);
-		BVec readDataMask = mux(modeCL, readDataMaskDelay);
-		HCL_NAMED(readData);
-		HCL_NAMED(readDataMask);
 
-		for (size_t i = 0; i < cmd.dqm.size(); ++i)
-			IF(readDataMask[i])
+		for (size_t i = 0; i < readMask.size(); ++i)
+			IF(!readMask[i])
 				out(i * 8, 8_b) = readData(i * 8, 8_b);
 	}
 	HCL_NAMED(out);
@@ -784,10 +785,10 @@ Controller& gtry::scl::sdram::Controller::addressMap(const AddressMap& map)
 	return *this;
 }
 
-Controller& gtry::scl::sdram::Controller::burstLimit(size_t limit)
+Controller& gtry::scl::sdram::Controller::burstLimit(size_t logLimit)
 {
-	HCL_DESIGNCHECK_HINT(limit <= 3, "max burst for sdram is 2^3 = 8");
-	m_burstLimit = limit;
+	HCL_DESIGNCHECK_HINT(logLimit <= 3, "max burst for sdram is 2^3 = 8");
+	m_burstLimit = logLimit;
 	return *this;
 }
 

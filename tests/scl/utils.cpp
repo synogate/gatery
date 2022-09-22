@@ -31,17 +31,15 @@ using namespace gtry;
 using namespace gtry::scl;
 using namespace boost::unit_test;
 
-BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, BitCountTest, data::xrange(255) * data::xrange(1, 8), val, bitsize)
+BOOST_FIXTURE_TEST_CASE(BitCountTest, gtry::BoostUnitTestSimulationFixture)
 {
-	UInt a = ConstUInt(val, BitWidth{ uint64_t(bitsize) });
+	uint32_t random = std::random_device{}();
+	UInt a = random;
 	UInt count = gtry::scl::bitcount(a);
 	
-	unsigned actualBitCount = gtry::utils::popcount(unsigned(val) & (0xFF >> (8-bitsize)));
+	int actualBitCount = gtry::utils::popcount(random);
 	
-	BOOST_REQUIRE(count.size() >= (size_t)gtry::utils::Log2(bitsize)+1);
-	//sim_debug() << "The bitcount of " << a << " should be " << actualBitCount << " and is " << count;
-	sim_assert(count == ConstUInt(actualBitCount, count.width())) << "The bitcount of " << a << " should be " << actualBitCount << " but is " << count;
-	
+	sim_assert(count == actualBitCount) << "The bitcount of " << a << " should be " << actualBitCount << " but is " << count;
 	eval();
 }
 
@@ -64,13 +62,11 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, Decoder, data::xran
 	eval();
 }
 
-BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, PriorityEncoderTreeTest, data::xrange(65), val)
+BOOST_FIXTURE_TEST_CASE(PriorityEncoderTreeTest, gtry::BoostUnitTestSimulationFixture)
 {
-	uint64_t testVector = 1ull << val;
-	if (val == 54) testVector |= 7;
-	if (val == 64) testVector = 0;
+	uint32_t testVector = std::random_device{}();
 
-	auto res = priorityEncoderTree(ConstUInt(testVector, 64_b), false);
+	auto res = priorityEncoderTree(ConstUInt(testVector, 32_b), false);
 	
 	if (testVector)
 	{

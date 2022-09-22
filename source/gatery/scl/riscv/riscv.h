@@ -21,6 +21,12 @@
 #include "CpuTrace.h"
 #include "../Avalon.h"
 
+namespace gtry::scl
+{
+	template<class... Capability> struct TileLinkU;
+	using TileLinkUL = TileLinkU<>;
+}
+
 namespace gtry::scl::riscv
 {
 	struct Instruction
@@ -69,6 +75,7 @@ namespace gtry::scl::riscv
 		void ipOffset(uint32_t offset) { m_IPoffset = offset; }
 
 		virtual void execute();
+		virtual void selectInstructions();
 
 		// instruction implementations
 		virtual void lui();
@@ -79,13 +86,18 @@ namespace gtry::scl::riscv
 		virtual void logic();
 		virtual void setcmp();
 		virtual void shift();
+		virtual void csr(BitWidth timerWidth = 64_b, BitWidth instRetWidth = 64_b);
+
 		virtual void mem(AvalonMM& mem, bool byte = true, bool halfword = true);
-		virtual void store(AvalonMM& mem, bool byte, bool halfword);
-		virtual void load(AvalonMM& mem, bool byte, bool halfword);
+		virtual TileLinkUL memTLink(bool byte = true, bool halfword = true);
 
 		void setupAlu();
 
 		const CpuTrace& trace() const { return m_trace; }
+	protected:
+		virtual void store(AvalonMM& mem, bool byte, bool halfword);
+		virtual void load(AvalonMM& mem, bool byte, bool halfword);
+
 	protected:
 		// helper for instructions
 		virtual void setIP(const UInt& ip) = 0;
@@ -102,7 +114,7 @@ namespace gtry::scl::riscv
 		UInt m_resultData = 32_b;
 
 		Instruction m_instr;
-		Bit m_instructionValid;
+		Bit m_discardResult;
 		
 		UInt m_r1 = 32_b;
 		UInt m_r2 = 32_b;

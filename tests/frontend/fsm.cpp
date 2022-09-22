@@ -24,16 +24,14 @@
 using namespace boost::unit_test;
 using BoostUnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
 
-BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestGCD, data::make({0, 1, 2, 3}) * data::make({1, 2, 3, 4, 5, 10, 42}) * data::make({1, 2, 3, 4, 5, 23, 56, 126}), optimize, x, y)
+BOOST_FIXTURE_TEST_CASE(TestGCD, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
 
-
-
 	Clock clock({ .absoluteFrequency = 10'000, .resetType = ClockConfig::ResetType::NONE });
 	ClockScope clkScp(clock);
-/*
-	auto gcd_ref = [](unsigned a, unsigned b) -> unsigned {
+
+	auto gcd_ref = [](size_t a, size_t b) {
 		while (a != b) {
 			if (a > b)
 				a -= b;
@@ -42,12 +40,15 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestGCD, data::make({0, 1
 		}
 		return a;
 	};
-*/
+
+	size_t x = std::random_device{}() % 255;
+	size_t y = std::random_device{}() % 255;
+
 	unsigned maxTicks = 200;
 
 	{
 		UInt x_vec = ConstUInt(x, 8_b);
-		UInt y_vec = ConstUInt(x, 8_b);
+		UInt y_vec = ConstUInt(y, 8_b);
 
 		Bit start;
 		simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext &context){
@@ -166,102 +167,10 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestGCD, data::make({0, 1
 		}, ticks);
 
 		sim_assert((ticks < ConstUInt(maxTicks-1, 8_b)) | done) << "The state machine should be idle after " << maxTicks << " cycles";
-		UInt gtruth = ConstUInt(x, 8_b);
+		UInt gtruth = ConstUInt(gcd_ref(x, y), 8_b);
 		sim_assert((ticks < ConstUInt(maxTicks-1, 8_b)) | (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
 	}
 
-	// @TODO: Choose optimization postprocessor accordingly
-	//design.getCircuit().postprocess(optimize);
-
 	design.getCircuit().postprocess(DefaultPostprocessing{});
-
-	runTicks(clock.getClk(), maxTicks);
-}
-
-BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, FSMlessTestGCD, data::make({0, 1, 2, 3}) * data::make({ 1, 2, 3, 4, 5, 10, 42 })* data::make({ 1, 2, 3, 4, 5, 23, 56, 126 }), optimize, x, y)
-{
-	using namespace gtry;
-
-
-
-	Clock clock({ .absoluteFrequency = 10'000, .resetType = ClockConfig::ResetType::NONE });
-	ClockScope clkScp(clock);
-
-	auto gcd_ref = [](unsigned a, unsigned b) -> unsigned {
-		while (a != b) {
-			if (a > b)
-				a -= b;
-			else
-				b -= a;
-		}
-		return a;
-	};
-
-
-	unsigned maxTicks = 200;
-
-	{
-		UInt x_vec = ConstUInt(x, 8_b);
-		UInt y_vec = ConstUInt(x, 8_b);
-
-		Bit start;
-		simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
-			context.set(0, context.getTick() == 0);
-			}, start);
-
-		UInt result;
-		Bit done = false;
-
-		{
-			HCL_NAMED(x_vec);
-			HCL_NAMED(y_vec);
-
-			GroupScope entity(GroupScope::GroupType::ENTITY);
-			entity
-				.setName("gcd")
-				.setComment("Statemachine to compute the GCD of two 8-bit integers.");
-
-
-			UInt a = 8_b;
-			a = reg(a, "b00000000");
-			UInt b = 8_b;
-			b = reg(b, "b00000000");
-
-			IF(start) {
-				a = x_vec;
-				b = y_vec;
-			}
-
-			IF(a == b) {
-				done = true;
-			} ELSE {
-				IF(a > b) {
-					a = a - b;
-				} ELSE {
-					b = b - a;
-				}
-			}
-
-			result = a;
-			HCL_NAMED(result);
-			HCL_NAMED(done);
-
-			sim_debug() << "a is " << a << " and b is " << b;
-		}
-
-		UInt ticks(8_b);
-		simpleSignalGenerator(clock, [](SimpleSignalGeneratorContext& context) {
-			context.set(0, context.getTick());
-			}, ticks);
-
-		sim_assert((ticks < ConstUInt(maxTicks - 1, 8_b)) | done) << "The state machine should be idle after " << maxTicks << " cycles";
-		UInt gtruth = ConstUInt(x, 8_b);
-		sim_assert((ticks < ConstUInt(maxTicks - 1, 8_b)) | (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
-	}
-
-	// @TODO: Choose optimization postprocessor accordingly
-	//design.getCircuit().postprocess(optimize);
-	design.getCircuit().postprocess(DefaultPostprocessing{});
-
 	runTicks(clock.getClk(), maxTicks);
 }

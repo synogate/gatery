@@ -24,11 +24,12 @@
 
 using namespace boost::unit_test;
 
-BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, tmdsReduction, data::xrange(255), val)
+BOOST_FIXTURE_TEST_CASE(tmdsReduction, gtry::BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
 
-	auto a = ConstUInt(val, 8_b);
+	uint32_t random = std::random_device{}();
+	auto a = ConstUInt(random & 0xFF, 8_b);
 
 	UInt encoded = gtry::scl::hdmi::tmdsEncodeReduceTransitions(a);
 	BOOST_TEST(encoded.width() == a.width() + 1);

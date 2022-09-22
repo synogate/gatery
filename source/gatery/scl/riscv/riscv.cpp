@@ -19,6 +19,7 @@
 #include "riscv.h"
 #include "../Adder.h"
 #include "../utils/OneHot.h"
+#include "../tilelink/tilelink.h"
 
 void gtry::scl::riscv::Instruction::decode(const UInt& inst)
 {
@@ -142,7 +143,7 @@ void gtry::scl::riscv::RV32I::execute()
 	auto entRV = m_area.enter("execute");
 
 	m_trace.name = m_area.getNodeGroup()->instancePath();
-	m_trace.instructionValid = !m_stall & m_instructionValid;
+	m_trace.instructionValid = !m_stall & !m_discardResult;
 	m_trace.instruction = m_instr.instruction;
 	m_trace.instructionPointer = zext(m_IP) | m_IPoffset;
 	m_trace.regWriteValid = m_resultValid & !m_stall & m_instr.rd != 0;
@@ -157,6 +158,11 @@ void gtry::scl::riscv::RV32I::execute()
 	m_resultValid = '0';
 	m_stall = '0';
 
+	selectInstructions();
+}
+
+void gtry::scl::riscv::RV32I::selectInstructions()
+{
 	lui();
 	auipc();
 	jal();
@@ -209,7 +215,9 @@ void gtry::scl::riscv::RV32I::branch()
 	IF(m_instr.opcode == "b11000")
 	{
 		auto ent = Area{ "branch" }.enter();
+		HCL_NAMED(m_IP);
 		UInt target = m_IP + m_instr.immB(0, m_IP.width());
+		HCL_NAMED(target);
 		
 		m_alu.sub = '1';
 
@@ -322,6 +330,28 @@ void gtry::scl::riscv::RV32I::shift()
 	}
 }
 
+void gtry::scl::riscv::RV32I::csr(BitWidth timerWidth, BitWidth instRetWidth)
+{
+	auto ent = m_area.enter("csr");
+
+	UInt cycles = timerWidth;
+	cycles = reg(cycles + 1, 0);
+	HCL_NAMED(cycles);
+
+	UInt instructions = instRetWidth;
+	IF(reg(!m_discardResult & !m_stall, '0'))
+		instructions += 1;
+	instructions = reg(instructions, 0);
+	HCL_NAMED(instructions);
+
+	IF(m_instr.opcode.upper(5_b) == "b11100" & m_instr.func3 != 0)
+	{
+		UInt value = mux(m_instr.immI[1], { cycles, instructions });
+		UInt word = muxWord(m_instr.immI[7], value);
+		setResult(word);
+	}
+}
+
 void gtry::scl::riscv::RV32I::mem(AvalonMM& mem, bool byte, bool halfword)
 {
 	auto entRV = m_area.enter();
@@ -334,7 +364,7 @@ void gtry::scl::riscv::RV32I::mem(AvalonMM& mem, bool byte, bool halfword)
 	mem.byteEnable = "b1111";
 
 	// check for unaligned access
-	Bit is_access = (m_instr.opcode == "b00000" | m_instr.opcode == "b01000") & m_instructionValid;
+	Bit is_access = (m_instr.opcode == "b00000" | m_instr.opcode == "b01000") & !m_discardResult;
 	UInt access_width = m_instr.func3(0, 2_b);
 	sim_assert(!(is_access & access_width == 2) | m_aluResult.sum(0, 2_b) == 0) << "Unaligned access when loading 32 bit word: is_access " << is_access << " access_width: " << access_width << " m_aluResult.sum: " << m_aluResult.sum;
 	sim_assert(!(is_access & access_width == 1) | m_aluResult.sum(0, 1_b) == 0) << "Unaligned access when loading 16 bit word: is_access " << is_access << " access_width: " << access_width << " m_aluResult.sum: " << m_aluResult.sum;
@@ -343,9 +373,114 @@ void gtry::scl::riscv::RV32I::mem(AvalonMM& mem, bool byte, bool halfword)
 	load(mem, byte, halfword);
 }
 
+gtry::scl::TileLinkUL gtry::scl::riscv::RV32I::memTLink(bool byte, bool halfword)
+{
+	auto entRV = m_area.enter("mem");
+	TileLinkUL mem;
+	tileLinkInit(mem, 32_b, 32_b, 2_b, 0_b);
+	setName(mem, "dmem");
+
+	setFullByteEnableMask(mem.a); // set mask according to size and address
+	valid(mem.a) = '0';
+	mem.a->opcode = (size_t)TileLinkA::Get;
+	mem.a->param = 0;
+	mem.a->source = 0;
+	mem.a->address = m_aluResult.sum;
+
+	mem.a->data = (BVec)m_r2;
+	mem.a->size = 2;
+	if (byte || halfword)
+	{
+		mem.a->size = m_instr.func3.lower(2_b);
+
+		UInt byteVal = m_r2.lower(8_b);
+		UInt wordVal = m_r2.lower(16_b);
+		if (byte)
+			IF(mem.a->size == 0)
+				mem.a->data = (BVec)cat(byteVal, byteVal, byteVal, byteVal);
+		if (halfword)
+			IF(mem.a->size == 1)
+				mem.a->data = (BVec)cat(wordVal, wordVal);
+	}
+
+	ready(*mem.d) = '1';
+
+	enum class ReqState { req, wait };
+	Reg<Enum<ReqState>> state{ ReqState::req };
+	state.setName("state");
+
+	Bit issueRequest = '0';
+
+	// load
+	IF(m_instr.opcode == "b00000")
+	{
+		m_alu.op2 = m_instr.immI;
+		issueRequest = '1';
+
+		UInt value = (UInt)(*mem.d)->data;
+		value |= (*mem.d)->error;
+		HCL_NAMED(value);
+
+		if (byte)
+		{
+			IF(mem.a->size == 0)
+			{
+				UInt byte = muxWord(mem.a->address.lower(2_b), value);
+				IF(m_instr.func3.msb())
+					value = zext(byte);
+				ELSE
+					value = sext(byte);
+			}
+		}
+		if (halfword)
+		{
+			IF(mem.a->size == 1)
+			{
+				UInt word = muxWord(mem.a->address[1], value);
+				IF(m_instr.func3.msb())
+					value = zext(word);
+				ELSE
+					value = sext(word);
+			}
+		}
+
+		setResult(value);
+	}
+
+	// store
+	IF(m_instr.opcode == "b01000")
+	{
+		issueRequest = '1';
+		m_alu.op2 = m_instr.immS;
+		mem.a->opcode = (size_t)TileLinkA::PutFullData;
+	}
+
+	IF(issueRequest & !m_discardResult)
+	{
+		IF(state.current() == ReqState::req)
+			valid(mem.a) = '1';
+		IF(transfer(mem.a))
+			state = ReqState::wait;
+
+		Bit done = transfer(*mem.d);
+		IF(done)
+			state = ReqState::req;
+		setStall(!done);
+	}
+
+	IF(issueRequest & !m_discardResult)
+	{
+		// we do not support unaligned access (out of spec)
+		sim_assert(mem.a->address.lower(2_b) == 0 | mem.a->size != 2);
+		sim_assert(mem.a->address.lower(1_b) == 0 | mem.a->size != 1);
+	}
+
+	return mem;
+}
+
 void gtry::scl::riscv::RV32I::store(AvalonMM& mem, bool byte, bool halfword)
 {
-	IF(m_instr.opcode == "b01000" & m_instructionValid)
+	IF(m_instr.opcode == "b01000" & !m_discardResult)
 	{
 		auto ent = Area{ "store" }.enter();
 
@@ -382,7 +517,7 @@ void gtry::scl::riscv::RV32I::store(AvalonMM& mem, bool byte, bool halfword)
 
 void gtry::scl::riscv::RV32I::load(AvalonMM& mem, bool byte, bool halfword)
 {
-	IF(m_instr.opcode == "b00000" & m_instructionValid)
+	IF(m_instr.opcode == "b00000" & !m_discardResult)
 	{
 		auto ent = Area{ "load" }.enter();
 
@@ -477,7 +612,7 @@ gtry::scl::riscv::SingleCycleI::SingleCycleI(BitWidth instructionAddrWidth, BitW
 	RV32I(instructionAddrWidth, dataAddrWidth),
 	m_resultIP(instructionAddrWidth)
 {
-	m_instructionValid = '1';
+	m_discardResult = '0';
 }
 
 gtry::Memory<gtry::UInt>& gtry::scl::riscv::SingleCycleI::fetch(uint32_t firstInstructionAddr)
@@ -565,7 +700,7 @@ void gtry::scl::riscv::SingleCycleI::setIP(const UInt& ip)
 
 void gtry::scl::riscv::RV32I::setResult(const UInt& result)
 {
-	IF(m_instructionValid)
+	IF(!m_discardResult)
 		m_resultValid = '1';
 	m_resultData = zext(result);
 }

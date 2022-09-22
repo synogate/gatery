@@ -56,6 +56,59 @@ namespace gtry::scl
 		beats.lsb() |= size.lower(beatWidth) != 0;
 		return beats;
 	}
+
+	TileLinkD tileLinkDefaultResponse(const TileLinkA& request)
+	{
+		TileLinkD res;
+		res.opcode = (size_t)TileLinkD::AccessAck;
+		IF(request.opcode == (size_t)TileLinkA::Get)
+			res.opcode = (size_t)TileLinkD::AccessAckData;
+
+		res.param = 0;
+		res.size = request.size;
+		res.source = request.source;
+		res.sink = 0u;
+		res.data = ConstBVec(request.data.width());
+		res.error = '0';
+
+		return res;
+	}
+
+	void connect(Memory<BVec>& mem, TileLinkUL& link)
+	{
+		BitWidth byteOffsetW = BitWidth::count(link.a->mask.width().bits());
+		HCL_DESIGNCHECK(mem.wordSize() == link.a->data.width());
+		HCL_DESIGNCHECK(mem.addressWidth() >= link.a->address.width() - byteOffsetW);
+
+		TileLinkChannelD d;
+		*d = tileLinkDefaultResponse(*link.a);
+		valid(d) = valid(link.a);
+
+		auto port = mem[link.a->address.upper(-byteOffsetW)];
+		d->data = port.read();
+
+		IF(link.a->opcode == (size_t)TileLinkA::PutFullData |
+			link.a->opcode == (size_t)TileLinkA::PutPartialData)
+		{
+			(d)->data = ConstBVec(mem.wordSize());
+
+			BVec writeData = (d)->data;
+			for (size_t i = 0; i < link.a->mask.size(); ++i)
+				IF(link.a->mask[i])
+				writeData(i * 8, 8_b) = link.a->data(i * 8, 8_b);
+
+			IF(transfer(link.a))
+				port = writeData;
+		}
+
+		// create downstream registers
+		valid(d).resetValue('0');
+		for (size_t i = 0; i < mem.readLatencyHint(); ++i)
+			d = d.regDownstreamBlocking({ .allowRetimingBackward = true });
+
+		ready(link.a) = ready(d);
+		*link.d <<= d.regReady();
+	}
 }
 
 namespace gtry 

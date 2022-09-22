@@ -21,7 +21,8 @@
 		<Intrinsic Name="in" Expression="m_node.m_ptr->m_inputPorts[0].node"/>
 		<Intrinsic Name="name" Expression="in()->m_name"/>
 
-		<DisplayString>{*in()}</DisplayString>
+		<DisplayString Condition="m_node.m_ptr->m_inputPorts[0].node">{*in()}</DisplayString>
+		<DisplayString>unset</DisplayString>
 
 		<Expand>
 			<Item Name="in">*in()</Item>
@@ -99,14 +100,14 @@
 	<Type Name="gtry::hlim::Node_Signal">
 		<DisplayString Condition="m_name.size() != 0">{m_name}</DisplayString>
 
-		<DisplayString Condition="!dynamic_cast&lt;gtry::hlim::Node_Signal*&gt;(m_inputPorts[0].node)">{*m_inputPorts[0].node}</DisplayString>
+		<DisplayString Condition="m_inputPorts[0].node &amp;&amp; !dynamic_cast&lt;gtry::hlim::Node_Signal*&gt;(m_inputPorts[0].node)">{*m_inputPorts[0].node}</DisplayString>
 
 		<DisplayString>sig{m_nodeId}</DisplayString>
 		
 		<Expand>
 			<Item Name="id">m_nodeId</Item>
 			<Item Name="name" Condition="m_name.size()">m_name</Item>
-			<Item Name="in" Condition="!dynamic_cast&lt;gtry::hlim::Node_Signal*&gt;(m_inputPorts[0].node)">m_inputPorts[0]</Item>
+			<Item Name="in">m_inputPorts[0]</Item>
 			<Item Name="out">m_outputPorts[0].connections</Item>
 
 			<CustomListItems Condition="dynamic_cast&lt;gtry::hlim::Node_Signal*&gt;(m_inputPorts[0].node)">

@@ -16,35 +16,15 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-#include "riscv.h"
 
 namespace gtry::scl::riscv
 {
-	class DualCycleRV : public RV32I
-	{
-	public:
+	// this has been a test if we can include a small c compiler into gatery
+	// git clone https://github.com/mausimus/rvcc into source/external/ to activate this
+	// rvcc does no optimization and thus generates too many instruction for an embedded system
+	// it also tends to crash easiely. make sure your first character is not a whitespace or newline and define main.
+	// make sure to have 10GiB of memory or modify rvcc's MAX_BLOCKS :/
+	// see rvcc_test for an example
 
-		DualCycleRV(BitWidth instructionAddrWidth = 32_b, BitWidth dataAddrWidth = 32_b);
-
-		virtual Memory<UInt>& fetch(uint64_t entryPoint = 0);
-		virtual TileLinkUL fetchTileLink(uint64_t entryPoint = 0);
-
-
-	protected:
-		virtual void generate(const UInt& instruction, const Bit& instructionValid);
-
-		virtual void setIP(const UInt& ip);
-		virtual void genRegisterFile(UInt rs1, UInt rs2, UInt rd);
-		virtual UInt genInstructionPointer(uint64_t entryPoint, const Bit& instructionValid);
-		virtual void genInstructionDecode(UInt instruction);
-
-		void writeCallReturnTrace(std::string filename);
-
-		Bit m_overrideIPValid;
-		UInt m_overrideIP;
-
-		Memory<UInt> m_rf;
-		Memory<UInt> m_instructionMem;
-
-	};
+	std::vector<uint32_t> rvcc(std::string code, uint32_t codeOffset = 0);
 }

@@ -138,6 +138,16 @@ namespace gtry::scl
 	UInt transferLengthFromLogSize(const UInt& logSize, size_t numSymbolsPerBeat);
 
 	BVec responseOpCode(const TileLinkSignal auto& link);
+
+	template<TileLinkSignal TLink>
+	void tileLinkInit(TLink& link, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth);
+
+	TileLinkD tileLinkDefaultResponse(const TileLinkA& request);
+
+	void connect(Memory<BVec>& mem, TileLinkUL& link);
+
+	template<TileLinkSignal TLink> TLink reg(TLink& link);
+	template<TileLinkSignal TLink> TLink reg(TLink&& link);
 }
 
 // impl
@@ -241,6 +251,35 @@ namespace gtry::scl
 
 		return op;
 	}
+
+	template<TileLinkSignal TLink>
+	void tileLinkInit(TLink& link, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth)
+	{
+		link.a->size = sizeWidth;
+		link.a->source = sourceWidth;
+		link.a->address = addrWidth;
+		link.a->mask = dataWidth / 8;
+		link.a->data = dataWidth;
+
+		(*link.d)->data = dataWidth;
+		(*link.d)->size = sizeWidth;
+		(*link.d)->source = sourceWidth;
+		(*link.d)->sink = 0_b;
+	}
+
+	template<TileLinkSignal TLink>
+	TLink reg(TLink& link)
+	{
+		TLink out{
+			.a = reg(link.a),
+			.d = constructFrom(*link.d)
+		};
+		*link.d <<= reg(*out.d);
+		return out;
+	}
+	
+	template<TileLinkSignal TLink>
+	TLink reg(TLink&& link) { return reg(link); }
 
 	extern template struct Stream<TileLinkA, Ready, Valid>;
 	extern template struct Stream<TileLinkD, Ready, Valid>;

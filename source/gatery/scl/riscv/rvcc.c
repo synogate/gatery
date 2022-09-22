@@ -15,36 +15,29 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#pragma once
-#include "riscv.h"
 
-namespace gtry::scl::riscv
-{
-	class DualCycleRV : public RV32I
-	{
-	public:
+#define _CRT_SECURE_NO_WARNINGS
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 
-		DualCycleRV(BitWidth instructionAddrWidth = 32_b, BitWidth dataAddrWidth = 32_b);
+void c_emit(int instruction);
+void e_write_data_string(char* vals, int len);
+void e_add_symbol(char* symbol, int len, int pc);
+void* rvcc_malloc(size_t size);
 
-		virtual Memory<UInt>& fetch(uint64_t entryPoint = 0);
-		virtual TileLinkUL fetchTileLink(uint64_t entryPoint = 0);
+#if __has_include(<external/rvcc/src/defs.c>)
 
+#define malloc rvcc_malloc
 
-	protected:
-		virtual void generate(const UInt& instruction, const Bit& instructionValid);
+#pragma warning (disable : 4267)
+#include <external/rvcc/src/defs.c>
+#include <external/rvcc/src/globals.c>
+#include <external/rvcc/src/helpers.c>
+#include <external/rvcc/src/lexer.c>
+#include <external/rvcc/src/source.c>
+#include <external/rvcc/src/arch/riscv.c>
+#include <external/rvcc/src/parser.c>
+#include <external/rvcc/src/codegen.c>
 
-		virtual void setIP(const UInt& ip);
-		virtual void genRegisterFile(UInt rs1, UInt rs2, UInt rd);
-		virtual UInt genInstructionPointer(uint64_t entryPoint, const Bit& instructionValid);
-		virtual void genInstructionDecode(UInt instruction);
-
-		void writeCallReturnTrace(std::string filename);
-
-		Bit m_overrideIPValid;
-		UInt m_overrideIP;
-
-		Memory<UInt> m_rf;
-		Memory<UInt> m_instructionMem;
-
-	};
-}
+#endif

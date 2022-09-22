@@ -20,6 +20,7 @@
 
 #include "ConditionalScope.h"
 #include "trace.h"
+#include "SignalLogicOp.h"
 
 #include <gatery/hlim/coreNodes/Node_Clk2Signal.h>
 #include <gatery/hlim/coreNodes/Node_ClkRst2Signal.h>
@@ -346,5 +347,19 @@ namespace gtry
 		return SignalReadPort(reg);
 	}
 
+	Bit reset()
+	{
+		const Clock& clk = ClockScope::getClk();
+		const auto& attr = clk.getClk()->getRegAttribs();
 
+		Bit ret;
+		if (attr.resetType == hlim::RegisterAttributes::ResetType::NONE)
+			ret = '0';
+		else if(attr.resetActive == hlim::RegisterAttributes::Active::HIGH)
+			ret = clk.rstSignal();
+		else
+			ret = !clk.rstSignal();
+
+		return ret;
+	}
 }

@@ -427,6 +427,9 @@ namespace gtry::scl
 	template<Signal PayloadT, Signal... Meta>
 	inline Stream<PayloadT, Meta...> gtry::scl::Stream<PayloadT, Meta...>::regDownstreamBlocking(const RegisterSettings& settings)
 	{
+		if constexpr (has<Valid>())
+			valid(*this).resetValue('0');
+
 		auto dsSig = constructFrom(copy(downstream(*this)));
 
 		IF(ready(*this))
@@ -443,6 +446,9 @@ namespace gtry::scl
 	template<Signal PayloadT, Signal... Meta>
 	inline Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::regDownstream(const RegisterSettings& settings)
 	{
+		if constexpr (has<Valid>())
+			valid(*this).resetValue('0');
+
 		Stream<PayloadT, Meta...> ret;
 
 		if constexpr (has<Ready>())
@@ -474,6 +480,11 @@ namespace gtry::scl
 	template<Signal PayloadT, Signal... Meta>
 	inline Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::regReady(const RegisterSettings& settings)
 	{
+		if constexpr (has<Valid>())
+			valid(*this).resetValue('0');
+		if constexpr (has<Ready>())
+			ready(*this).resetValue('0');
+
 		Stream<PayloadT, Meta...> ret;
 		ret <<= *this;
 

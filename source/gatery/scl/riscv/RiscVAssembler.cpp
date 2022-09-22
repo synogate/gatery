@@ -28,7 +28,7 @@ void gtry::scl::riscv::assembler::printCode(std::ostream& s, std::span<const uin
 	{
 		std::string buf;
 		disasm_inst(buf, rv32, offset + i * 4, code[i]);
-		s << buf << '\n';
+		s << "0x" << std::hex << i*4 << '\t' << buf << '\n';
 	}
 }
 

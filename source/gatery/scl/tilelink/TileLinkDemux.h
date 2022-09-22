@@ -18,6 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 #include "tilelink.h"
+#include "TileLinkErrorResponder.h"
 #include "../stream/StreamArbiter.h"
 
 namespace gtry::scl
@@ -27,9 +28,11 @@ namespace gtry::scl
 	{
 		struct Sink
 		{
-			TLink bus;
-			uint64_t address = 0;
-			size_t addressBits = 0;
+			BOOST_HANA_DEFINE_STRUCT(Sink,
+				(TLink, bus),
+				(uint64_t, address),
+				(size_t, addressBits)
+			);
 		};
 	public:
 		virtual void attachSource(TLink& source);
@@ -111,7 +114,7 @@ namespace gtry::scl
 			slave.opcode = master.opcode;
 			slave.param = master.param;
 			slave.size = master.size;
-			slave.source = master.source;
+			slave.source = zext(master.source);
 			slave.address = master.address.lower(slave.address.width());
 			slave.mask = master.mask;
 			slave.data = master.data;

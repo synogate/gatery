@@ -19,3 +19,4 @@ Makefile
 
 /tests/export
 /scripts/**
+test_export

@@ -17,92 +17,53 @@
 */
 #pragma once
 #include <gatery/frontend.h>
+#include "../ShiftReg.h"
 #include "../stream/Packet.h"
 #include "../tilelink/tilelink.h"
 
+#include "SdramTimer.h"
+
 namespace gtry::scl::sdram
 {
-	struct Timings
-	{
-		uint16_t cl;  // cycles read latency
-		uint16_t rcd; // ns RAS -> CAS
-		uint16_t ras; // ns RAS -> Precharge
-		uint16_t rp;  // ns Precharge -> RAS
-		uint16_t rc;  // ns RAS -> RAS
-		uint16_t rrd; // ns RAS -> RAS (different bank)
-		uint16_t refi; // ns average refresh interval
-
-		uint16_t wr = 2; // cycles write recovery time
-
-		Timings toCycles(hlim::ClockRational memClock) const;
-	};
-
-	struct AddressMap
-	{
-		Selection column;
-		Selection row;
-		Selection bank;
-	};
-
-	struct CommandBus
-	{
-		Bit cke;	// Clock Enable
-		Bit csn;	// Chip Select N
-		Bit rasn;	// Row Access Strobe N
-		Bit casn;	// Column Access Strobe N
-		Bit wen;	// Write Enable N
-		BVec a;		// Address
-		BVec ba;	// Bank Address
-		BVec dq;	// Write Data
-		BVec dqm;	// Read/Write Data Mask
-	};
-
-	enum class CommandCode
-	{
-		// RAS = 1, CAS = 2, WE = 4
-		Nop = 0,
-		Activate = 1,
-		Read = 2, // use a[10] for auto precharge
-		Refresh = 3, // use CKE to enter self refresh
-		BurstStop = 4,
-		Precharge = 5, // use a[10] to precharge all banks
-		Write = 6, // use a[10] for auto precharge
-		ModeRegisterSet = 7, // use bank address 1 for extended mode register
-	};
-
-	enum class DriveStrength
-	{
-		Weak,
-		Full,
-	};
-
 	class Controller
 	{
 	public:
-		struct BankState
-		{
-			Bit rowActive;
-			BVec activeRow;
-		};
 
 		struct Command
 		{
 			Enum<CommandCode> code;
 			BVec address;
 			UInt bank;
+			UInt size;
+			UInt source;
 		};
+
+		using CommandStream = RvStream<Command>;
+		using DataOutStream = RvPacketStream<BVec, ByteEnable>;
 
 		struct Bank
 		{
 			UInt bank;
 		};
 
-		using CommandStream = RvStream<Command>;
-		using DataOutStream = RvPacketStream<BVec, ByteEnable>;
+		struct ReadTask
+		{
+			Bit active;
+			Bit read;
+			UInt size;
+			UInt source;
+			UInt beats;
+		};
+
+		struct BankState
+		{
+			Bit rowActive;
+			BVec activeRow;
+		};
 	public:
 		Controller& timings(const Timings& timingsInNs);
 		Controller& addressMap(const AddressMap& map);
-		Controller& burstLimit(size_t limit);
+		Controller& burstLimit(size_t logLimit);
 		Controller& dataBusWidth(BitWidth width);
 		Controller& pinPrefix(std::string prefix);
 		Controller& driveStrength(DriveStrength value);
@@ -114,6 +75,9 @@ namespace gtry::scl::sdram
 		virtual void makeBusPins(const CommandBus& bus, std::string prefix);
 		virtual void makeBankState();
 		virtual void makeWriteBurstAddress(CommandStream& stream);
+		virtual void makeReadQueue(const CommandStream& cmd);
+		virtual void setMaskForRead(DataOutStream& data);
+		virtual void setResponse(TileLinkChannelD& response);
 
 		CommandStream makeCommandStream() const;
 
@@ -124,12 +88,13 @@ namespace gtry::scl::sdram
 		virtual CommandStream translateCommand(const BankState& state, const TileLinkChannelA& request) const;
 		virtual DataOutStream translateCommandData(TileLinkChannelA& request, Bit& bankStall) const;
 
-		virtual std::tuple<CommandStream, DataOutStream> bankController(TileLinkChannelA& link, BankState& state) const;
+		virtual std::tuple<CommandStream, DataOutStream> bankController(TileLinkChannelA& link, BankState& state, UInt bank) const;
 
 		virtual BankState updateState(const Command& cmd, const BankState& state) const;
-		virtual CommandStream enforceTiming(CommandStream& command) const;
+		virtual CommandStream enforceTiming(CommandStream& command, UInt bank) const;
 
 		size_t writeToReadTiming() const;
+		size_t readDelay() const;
 	protected:
 		Area m_area = Area{ "scl_sdramController" };
 
@@ -138,6 +103,7 @@ namespace gtry::scl::sdram
 		size_t m_burstLimit = 1;
 		BitWidth m_addrBusWidth;
 		BitWidth m_dataBusWidth;
+		BitWidth m_sourceW;
 		std::string m_pinPrefix = "SDRAM_";
 		DriveStrength m_driveStrength = DriveStrength::Weak;
 		const bool m_useOutputRegister = true;
@@ -147,6 +113,9 @@ namespace gtry::scl::sdram
 		CommandBus m_cmdBus;
 		Bit m_dataOutEnable;
 		BVec m_dataIn;
+
+		ShiftReg<ReadTask> m_readQueue;
+		std::shared_ptr<SdramTimer> m_timer;
 	};
 
 	void checkModuleTiming(const CommandBus& cmd, const Timings& timing);
@@ -155,4 +124,5 @@ namespace gtry::scl::sdram
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::CommandBus, cke, csn, rasn, casn, wen, a, ba, dq, dqm);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::Controller::BankState, rowActive, activeRow);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::Controller::Command, code, address);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::Controller::Command, code, address, size, source);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::Controller::ReadTask, active, read, size, source, beats);
