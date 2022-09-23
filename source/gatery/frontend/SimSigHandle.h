@@ -90,11 +90,16 @@ class BaseUIntSigHandle : public BaseIntSigHandle<SignalType>
 		bool operator!=(std::uint64_t v) const { return !this->operator==(v); }
 		bool operator!=(std::string_view v) const { return !this->operator==(v); }
 
+		// use templates to provide a perfect fit and prevent ambiguous overloads (cast operands for provided operator== vs use provided cast operator and buildin ==)
+		template<std::unsigned_integral T>
+		void operator=(T v) { this->operator=((std::uint64_t)v); }
+		template<std::unsigned_integral T>
+		bool operator==(T v) const { return this->operator==((std::uint64_t)v); }
+		template<std::unsigned_integral T>
+		bool operator!=(T v) const { return this->operator!=((std::uint64_t)v); }
+
 		std::uint64_t value() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle.value(); }
 		operator std::uint64_t () const { return value(); }
-
-//		template<std::unsigned_integral T>
-//		void operator=(T v) { this->operator=((std::uint64_t)v); }
 
 		template<std::same_as<int> T> // prevent char to int conversion
 		void operator=(T v) { HCL_DESIGNCHECK_HINT(v >= 0, "UInt and BVec signals can not be negative!"); this->operator=((std::uint64_t)v); }
@@ -111,6 +116,7 @@ class SigHandleBVec : public BaseUIntSigHandle<BVec>
 {
 	public:
 		using BaseUIntSigHandle<BVec>::operator=;
+		using BaseUIntSigHandle<BVec>::operator==;
 
 		void operator=(const SigHandleBVec &rhs) { this->operator=(rhs.eval()); }
 		bool operator==(const SigHandleBVec &rhs) const { return BaseSigHandle<BVec>::operator==(rhs.eval()); }
@@ -130,6 +136,7 @@ class SigHandleUInt : public BaseUIntSigHandle<UInt>
 {
 	public:
 		using BaseUIntSigHandle<UInt>::operator=;
+		using BaseUIntSigHandle<UInt>::operator==;
 
 		void operator=(const SigHandleUInt &rhs) { this->operator=(rhs.eval()); }
 		bool operator==(const SigHandleUInt &rhs) const { return BaseSigHandle<UInt>::operator==(rhs.eval()); }
@@ -146,6 +153,7 @@ class SigHandleSInt : public BaseIntSigHandle<SInt>
 {
 	public:
 		using BaseIntSigHandle<SInt>::operator=;
+		using BaseIntSigHandle<SInt>::operator==;
 
 		void operator=(const SigHandleSInt &rhs) { this->operator=(rhs.eval()); }
 		bool operator==(const SigHandleSInt &rhs) const { return BaseSigHandle<SInt>::operator==(rhs.eval()); }
@@ -154,6 +162,15 @@ class SigHandleSInt : public BaseIntSigHandle<SInt>
 		void operator=(std::int64_t v) { this->m_handle = v; }
 		bool operator==(std::int64_t v) const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle == v; }
 		bool operator!=(std::int64_t v) const { return !this->operator==(v); }
+
+		// use templates to provide a perfect fit and prevent ambiguous overloads (cast operands for provided operator== vs use provided cast operator and buildin ==)
+		template<std::signed_integral T>
+		void operator=(T v) { this->operator=((std::uint64_t)v); }
+		template<std::signed_integral T>
+		bool operator==(T v) const { return this->operator==((std::uint64_t)v); }
+		template<std::signed_integral T>
+		bool operator!=(T v) const { return this->operator!=((std::uint64_t)v); }
+
 
 		std::int64_t value() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return (std::int64_t) this->m_handle; }
 		operator std::int64_t () const { return value(); }
@@ -170,6 +187,7 @@ class SigHandleBit : public BaseSigHandle<Bit>
 {
 	public:
 		using BaseSigHandle<Bit>::operator=;
+		using BaseSigHandle<Bit>::operator==;
 
 		void operator=(const SigHandleBit &rhs) { this->operator=(rhs.eval()); }
 		bool operator==(const SigHandleBit &rhs) const { return BaseSigHandle<Bit>::operator==(rhs.eval()); }
@@ -203,6 +221,7 @@ class SigHandleEnum : public BaseSigHandle<SignalType>
 {
 	public:
 		using BaseSigHandle<SignalType>::operator=;
+		using BaseSigHandle<SignalType>::operator==;
 
 		void operator=(const SigHandleEnum<SignalType> &rhs) { this->operator=(rhs.eval()); }
 		bool operator==(const SigHandleEnum<SignalType> &rhs) const { return BaseSigHandle<SignalType>::operator==(rhs.eval()); }
