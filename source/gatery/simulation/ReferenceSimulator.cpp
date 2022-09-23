@@ -42,6 +42,7 @@
 #include "simProc/WaitFor.h"
 #include "simProc/WaitUntil.h"
 #include "simProc/WaitClock.h"
+#include "simProc/WaitChange.h"
 #include "RunTimeSimulationContext.h"
 
 #include <chrono>
@@ -437,6 +438,42 @@ void Program::allocateSignals(const hlim::Circuit &circuit, const hlim::Subnet &
 }
 
 
+SignalWatch::SignalWatch(std::coroutine_handle<> handle, const SensitivityList &list, const StateMapping &stateMapping, const sim::DefaultBitVectorState &state, std::uint64_t insertionId)
+	: handle(handle), insertionId(insertionId)
+{
+	signals.reserve(list.getSignals().size());
+	size_t offset = 0;
+	for (auto i : utils::Range(list.getSignals().size())) {
+		size_t size = hlim::getOutputWidth(list.getSignals()[i]);
+		size_t paddedSize = (size+63)/64*64; ///@todo do something less wasteful
+
+		auto it = stateMapping.outputToOffset.find(list.getSignals()[i]);
+		// if it isn't mapped, it never changes, so we never need to check for a change of it.
+		if (it == stateMapping.outputToOffset.end()) continue;
+
+		signals.push_back({
+			.refStateIdx = offset,
+			.stateIdx = it->second,
+			.size = size
+		});
+		offset += paddedSize;
+	}
+
+	refState.resize(offset);
+	for (const auto &s : signals)
+		refState.copyRange(s.refStateIdx, state, s.stateIdx, s.size);
+}
+
+bool SignalWatch::anySignalChanged(const sim::DefaultBitVectorState &state) const
+{
+	for (const auto &s : signals)
+		if (!refState.compareRange(s.refStateIdx, state, s.stateIdx, s.size))
+			return true;
+	return false;
+}
+
+
+
 
 ReferenceSimulator::ReferenceSimulator()
 {
@@ -711,13 +748,7 @@ void ReferenceSimulator::advanceEvent()
 			}
 		}
 
-#if 0
-		/// @todo respect dependencies between blocks (once they are being expressed and made use of)
-		for (auto idx : triggeredExecutionBlocks)
-			m_program.m_executionBlocks[idx].evaluate(m_callbackDispatcher, m_dataState);
-#else
 		m_stateNeedsReevaluating = true;
-#endif
 
 		{
 			RunTimeSimulationContext context(this);
@@ -733,6 +764,24 @@ void ReferenceSimulator::advanceEvent()
 
 		if (m_stateNeedsReevaluating)
 			reevaluate();
+
+		// check if any signal watches triggered and if so schedule resumption of the corresponding fibers in insertion order
+		{
+			for (auto it = m_signalWatches.begin(); it != m_signalWatches.end(); ) {
+				if (it->anySignalChanged(m_dataState.signalState)) {
+					auto it2 = it; it++;
+
+					Event e;
+					e.type = Event::Type::simProcResume;
+					e.timeOfEvent = m_simulationTime;
+					e.simProcResumeEvt.handle = it2->handle;
+					e.simProcResumeEvt.insertionId = it2->insertionId;
+					m_nextEvents.push(e);
+
+					m_signalWatches.erase(it2);
+				} else ++it;
+			}
+		}
 	}
 
 	m_currentTimeStepFinished = true;
@@ -960,7 +1009,13 @@ void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> han
 
 void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> handle, WaitChange &waitChange, utils::RestrictTo<RunTimeSimulationContext>)
 {
-	HCL_ASSERT_HINT(false, "Not implemented yet!");
+	m_signalWatches.push_back(SignalWatch(
+		handle,
+		waitChange.getSensitivityList(),
+		m_program.m_stateMapping,
+		m_dataState.signalState,
+		m_nextSimProcInsertionId++
+	));
 }
 
 

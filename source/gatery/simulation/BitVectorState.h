@@ -119,7 +119,7 @@ class BitVectorState
 		void setRange(typename Config::Plane plane, size_t offset, size_t size);
 		void clearRange(typename Config::Plane plane, size_t offset, size_t size);
 		void copyRange(size_t dstOffset, const BitVectorState<Config> &src, size_t srcOffset, size_t size);
-		bool compareRange(size_t dstOffset, const BitVectorState<Config> &src, size_t srcOffset, size_t size);
+		bool compareRange(size_t dstOffset, const BitVectorState<Config> &src, size_t srcOffset, size_t size) const;
 
 
 		typename Config::BaseType *data(typename Config::Plane plane);
@@ -653,7 +653,7 @@ void BitVectorState<Config>::copyRange(size_t dstOffset, const BitVectorState<Co
 }
 
 template<class Config>
-bool BitVectorState<Config>::compareRange(size_t dstOffset, const BitVectorState<Config> &src, size_t srcOffset, size_t size)
+bool BitVectorState<Config>::compareRange(size_t dstOffset, const BitVectorState<Config> &src, size_t srcOffset, size_t size) const
 {
 	if (srcOffset % 8 == 0 && dstOffset % 8 == 0 && size >= 8) {
 		size_t bytes = size / 8;
@@ -678,6 +678,66 @@ bool BitVectorState<Config>::compareRange(size_t dstOffset, const BitVectorState
 			if (a != b) return false;
 		}
 
+		offset += chunkSize;
+	}
+	return true;
+}
+
+template<>
+inline bool BitVectorState<DefaultConfig>::compareRange(size_t dstOffset, const BitVectorState<DefaultConfig> &src, size_t srcOffset, size_t size) const
+{
+	size_t width = size;
+	size_t offset = 0;
+	while (offset < width) {
+		size_t chunkSize = std::min<size_t>(DefaultConfig::NUM_BITS_PER_BLOCK, width-offset);
+
+		auto a_value = src.extract(DefaultConfig::VALUE, srcOffset + offset, chunkSize);
+		auto b_value = extract(DefaultConfig::VALUE, dstOffset + offset, chunkSize);
+
+		auto a_defined = src.extract(DefaultConfig::DEFINED, srcOffset + offset, chunkSize);
+		auto b_defined = extract(DefaultConfig::DEFINED, dstOffset + offset, chunkSize);
+
+
+		if (a_defined != b_defined) 
+			return false;
+
+		auto differences = a_value ^ b_value;
+
+		if ((differences & a_defined) != 0ull)
+			return false;
+		
+		offset += chunkSize;
+	}
+	return true;
+}
+
+template<>
+inline bool BitVectorState<ExtendedConfig>::compareRange(size_t dstOffset, const BitVectorState<ExtendedConfig> &src, size_t srcOffset, size_t size) const
+{
+	size_t width = size;
+	size_t offset = 0;
+	while (offset < width) {
+		size_t chunkSize = std::min<size_t>(ExtendedConfig::NUM_BITS_PER_BLOCK, width-offset);
+
+		auto a_value = src.extract(ExtendedConfig::VALUE, srcOffset + offset, chunkSize);
+		auto b_value = extract(ExtendedConfig::VALUE, dstOffset + offset, chunkSize);
+
+		auto a_defined = src.extract(ExtendedConfig::DEFINED, srcOffset + offset, chunkSize);
+		auto b_defined = extract(ExtendedConfig::DEFINED, dstOffset + offset, chunkSize);
+
+		auto a_dont_care = src.extract(ExtendedConfig::DONT_CARE, srcOffset + offset, chunkSize);
+		auto b_dont_care = extract(ExtendedConfig::DONT_CARE, dstOffset + offset, chunkSize);
+
+		auto dont_care = a_dont_care | b_dont_care;
+
+		if ((a_defined ^ b_defined) & ~dont_care)
+			return false;
+
+		auto differences = a_value ^ b_value;
+
+		if ((differences & a_defined & ~dont_care) != 0ull)
+			return false;
+		
 		offset += chunkSize;
 	}
 	return true;

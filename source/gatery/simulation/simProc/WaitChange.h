@@ -36,6 +36,8 @@ class WaitChange {
 		bool await_ready() noexcept { return false; } // always force reevaluation
 		void await_suspend(std::coroutine_handle<> handle);
 		void await_resume() noexcept { }
+
+		inline const SensitivityList &getSensitivityList() const { return m_sensitivityList; }
 	protected:
 		SensitivityList m_sensitivityList;
 };

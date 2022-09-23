@@ -20,6 +20,7 @@
 #include <boost/test/data/dataset.hpp>
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
+#include <random>
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -230,6 +231,76 @@ BOOST_FIXTURE_TEST_CASE(SimProc_PingPong, BoostUnitTestSimulationFixture)
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(clock.getClk(), 10);
 }
+
+
+
+BOOST_FIXTURE_TEST_CASE(SimProc_AsyncProcs, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	{
+		UInt a = 8_b;
+		UInt b = 8_b;
+		UInt sum = pinIn(8_b);
+		HCL_NAMED(sum);
+		HCL_NAMED(a);
+		HCL_NAMED(b);
+		pinOut(a);
+		pinOut(b);
+
+		a = pinIn(8_b);
+		b = pinIn(8_b);
+		pinOut(sum);
+
+		addSimulationProcess([=]()->SimProcess{
+			while (true) {
+				ReadSignalList allInputs;
+
+				simu(sum) = simu(a) + simu(b);
+
+				co_await allInputs.anyInputChange();
+			}
+		});
+		addSimulationProcess([=]()->SimProcess{
+
+			co_await WaitFor(Seconds(1,2)/clock.absoluteFrequency());
+
+			std::mt19937 rng(1337);
+			std::uniform_int_distribution<unsigned> dist(0, 100);
+
+			size_t x = dist(rng);
+			size_t y = dist(rng);
+			size_t z = x+y;
+			simu(a) = x;
+			simu(b) = y;
+			co_await WaitFor(0);
+			BOOST_TEST(simu(sum) == z);
+
+			while (true) {
+
+				simu(a) = x = dist(rng);
+				BOOST_TEST(simu(sum) == z); // still previous value;
+				co_await WaitFor(0);
+				z = x+y;
+				BOOST_TEST(simu(sum) == z); // updated value;
+
+				simu(b) = y = dist(rng);
+				BOOST_TEST(simu(sum) == z); // still previous value;
+				co_await WaitFor(0);
+				z = x+y;
+				BOOST_TEST(simu(sum) == z); // updated value;
+
+				co_await WaitFor(Seconds(1)/clock.absoluteFrequency());
+			}
+		});
+	}
+
+
+	design.postprocess();
+	runTicks(clock.getClk(), 100);
+}
+
 
 
 /*

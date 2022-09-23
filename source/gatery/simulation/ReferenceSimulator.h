@@ -24,6 +24,7 @@
 #include "../utils/BitManipulation.h"
 #include "../hlim/postprocessing/ClockPinAllocation.h"
 #include "../hlim/Subnet.h"
+#include "simProc/SensitivityList.h"
 
 #include <vector>
 #include <functional>
@@ -184,6 +185,26 @@ struct Event {
 	}
 };
 
+struct SignalWatch {
+	struct Signal {
+		size_t refStateIdx = ~0ull;
+		size_t stateIdx = ~0ull;
+		size_t size = ~0ull;
+	};
+	std::vector<Signal> signals;
+	sim::DefaultBitVectorState refState;
+	std::coroutine_handle<> handle;
+	std::uint64_t insertionId;
+
+	SignalWatch(std::coroutine_handle<> handle, const SensitivityList &list, const StateMapping &stateMapping, const sim::DefaultBitVectorState &state, std::uint64_t insertionId);
+
+	bool anySignalChanged(const sim::DefaultBitVectorState &state) const;
+
+	bool operator<(const SignalWatch &rhs) const {
+		return insertionId > rhs.insertionId;
+	}
+};
+
 class ReferenceSimulator : public Simulator
 {
 	public:
@@ -226,6 +247,7 @@ class ReferenceSimulator : public Simulator
 		std::vector<std::function<SimulationProcess()>> m_simProcs;
 		std::vector<sim::SimulationVisualization> m_simViz;
 		std::list<SimulationProcess> m_runningSimProcs;
+		std::list<SignalWatch> m_signalWatches;
 		bool m_stateNeedsReevaluating = false;
 		std::uint64_t m_nextSimProcInsertionId = 0;
 
