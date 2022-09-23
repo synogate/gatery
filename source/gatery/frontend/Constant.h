@@ -30,7 +30,13 @@
 
 namespace gtry 
 {
-	class UInt;
+
+/**
+ * @addtogroup gtry_frontend
+ * @{
+ */
+
+
 	class UInt;
 
 #if 0 // ConstUInt as class study
@@ -92,7 +98,6 @@ namespace gtry
 */
 #endif
 
-}
 
 #define GTRY_CONST_BVEC_DESC(x, value, desc) \
 	struct x { operator UInt () { \
@@ -114,3 +119,6 @@ namespace gtry
 #define GTRY_CONST_BIT(x, value) \
 	GTRY_CONST_BIT_DESC(x, value, "")
 
+/// @}
+
+}

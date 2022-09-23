@@ -25,6 +25,7 @@ namespace gtry {
 
 /**
  * @addtogroup gtry_scopes
+ * @addtogroup gtry_simProcs
  * @{
  */
 
@@ -56,6 +57,7 @@ class ReadSignalList : public BaseScope<ReadSignalList>
 		sim::SensitivityList m_list;
 };
 
+/**@}*/
 /**@}*/
 
 }

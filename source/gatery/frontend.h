@@ -72,3 +72,28 @@ namespace gtry {
  * The Gatery frontend encompasses all classes and functions necessary for building 
  * circuits.
  */
+
+
+/** @defgroup gtry_signals Signals
+ * @ingroup gtry_frontend
+ * @brief All base signals
+ * 
+ */
+
+/**
+ * @defgroup gtry_scopes Scopes
+ * @ingroup gtry_frontend
+ * @brief All scopes
+ *
+ *
+ */
+
+
+/**
+ * @defgroup gtry_simProcs Simulation Processes
+ * @ingroup gtry_frontend
+ * @brief All frontend constructs for use in simulation processes
+ *
+ *
+ */
+

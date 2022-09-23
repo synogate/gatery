@@ -24,6 +24,12 @@
 
 namespace gtry {
 
+/**
+ * @addtogroup gtry_frontend
+ * @{
+ */
+
+
 class ExternalComponent : public hlim::Node_External
 {
 	public:
@@ -35,6 +41,8 @@ class ExternalComponent : public hlim::Node_External
 		virtual Bit getOutputBit(size_t output);
 		virtual BVec getOutputBVec(size_t output);
 };
+
+/// @}
 
 }
 

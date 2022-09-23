@@ -26,9 +26,7 @@
 namespace gtry {
 	
 /**
- * @addtogroup gtry_scopes Scopes
- * @ingroup gtry_frontend
- * @brief All scopes
+ * @addtogroup gtry_scopes
  * @{
  */
 	

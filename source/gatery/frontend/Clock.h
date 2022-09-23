@@ -37,6 +37,12 @@
 
 namespace gtry {
 
+
+/**
+ * @addtogroup gtry_frontend
+ * @{
+ */
+
 	class Clock;
 
 	hlim::ClockRational clockFromString(std::string text);
@@ -150,4 +156,7 @@ namespace gtry {
 
 	// current clock scope reset signal. normalized to always active high reset.
 	Bit reset();
+
+/// @}
+
 }

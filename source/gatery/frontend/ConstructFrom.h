@@ -22,6 +22,11 @@ namespace gtry
 {
 	struct construct_from_t {};
 
+/**
+ * @addtogroup gtry_frontend
+ * @{
+ */
+
 	template<ContainerSignal T>
 	T constructFrom(const T& val);
 
@@ -92,4 +97,6 @@ namespace gtry
 		unpack(ConstUInt(width(ret)), ret);
 		return ret;
 	}
+
+/// @}	
 }

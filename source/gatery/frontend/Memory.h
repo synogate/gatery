@@ -39,6 +39,11 @@
 namespace gtry 
 {
 
+/**
+ * @addtogroup gtry_frontend
+ * @{
+ */
+
 	template<typename Data>
 	class MemoryPortFactory {
 	public:
@@ -253,5 +258,7 @@ namespace gtry
 
 	template<typename DataOld, typename DataNew>
 	Memory<DataNew> view(Memory<DataOld> old, DataNew def = DataNew{}) { return old.view(def); }
+
+/// @}
 
 }

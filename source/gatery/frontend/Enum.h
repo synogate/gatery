@@ -40,8 +40,7 @@
 namespace gtry {
 
 /**
- * @addtogroup gtry_signals Signals
- * @ingroup gtry_frontend
+ * @addtogroup gtry_signals
  * @{
  */
 
