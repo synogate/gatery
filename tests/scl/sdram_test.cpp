@@ -114,14 +114,14 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 		simu(bus.casn) = '0';
 		simu(bus.wen) = '0';
 		simu(bus.a) = 2;
-		simu(bus.dqm) = 1;
-		simu(bus.dq) = 0xCD13;
+		simu(bus.dqm) = 2; ////////////////////////////////
+		simu(bus.dq) = "xCD13";
 		co_await WaitClk(clock());
 
 		// Read CAS
 		simu(bus.wen) = '1';
 		simu(bus.dq).invalidate();
-		BOOST_TEST(simu(dq) == 0x13);
+		BOOST_TEST(simu(dq) == "xXX13");
 		co_await WaitClk(clock());
 
 		// set Mode Register (CL = 2) (Burst = 4)
@@ -147,7 +147,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 		simu(bus.wen) = '0';
 		simu(bus.a) = 2;
 		simu(bus.ba) = 1;
-		simu(bus.dqm) = 3;
+		simu(bus.dqm) = 0;
 
 		for (size_t i = 0; i < burst; ++i)
 		{

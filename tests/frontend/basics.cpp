@@ -611,7 +611,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, BoostUnitTestSimulationFixture
 
 		addSimulationProcess([=, this, &clock]()->SimProcess{
 			for (unsigned refCount = 0; refCount < 10; refCount++) {
-				BOOST_TEST(refCount == simu(counter));
+				BOOST_TEST(simu(counter) == refCount);
 				BOOST_TEST(simu(counter).defined() == 0xFF);
 
 				co_await WaitClk(clock);
