@@ -37,6 +37,12 @@ namespace gtry {
 
 class Clock;
 
+/**
+ * @addtogroup gtry_simProcs
+ * @{
+ */
+
+
 template<gtry::BaseSignal SignalType>
 class BaseSigHandle
 {
@@ -87,12 +93,15 @@ class BaseUIntSigHandle : public BaseIntSigHandle<SignalType>
 		std::uint64_t value() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle.value(); }
 		operator std::uint64_t () const { return value(); }
 
-		void operator=(unsigned v) { this->operator=((std::uint64_t)v); }
-		void operator=(unsigned long long v) { this->operator=((std::uint64_t)v); }
+//		template<std::unsigned_integral T>
+//		void operator=(T v) { this->operator=((std::uint64_t)v); }
 
-		void operator=(int v) { HCL_DESIGNCHECK_HINT(v >= 0, "UInt and BVec signals can not be negative!"); this->operator=((std::uint64_t)v); }
-		bool operator==(int v) const { HCL_DESIGNCHECK_HINT(v >= 0, "UInt and BVec signals can not be negative, comparing with negative numbers is most likely a mistake!"); return this->operator==((std::uint64_t)v); }
-		bool operator!=(int v) const { HCL_DESIGNCHECK_HINT(v >= 0, "UInt and BVec signals can not be negative, comparing with negative numbers is most likely a mistake!"); return this->operator!=((std::uint64_t)v); }
+		template<std::same_as<int> T> // prevent char to int conversion
+		void operator=(T v) { HCL_DESIGNCHECK_HINT(v >= 0, "UInt and BVec signals can not be negative!"); this->operator=((std::uint64_t)v); }
+		template<std::same_as<int> T> // prevent char to int conversion
+		bool operator==(T v) const { HCL_DESIGNCHECK_HINT(v >= 0, "UInt and BVec signals can not be negative, comparing with negative numbers is most likely a mistake!"); return this->operator==((std::uint64_t)v); }
+		template<std::same_as<int> T> // prevent char to int conversion
+		bool operator!=(T v) const { HCL_DESIGNCHECK_HINT(v >= 0, "UInt and BVec signals can not be negative, comparing with negative numbers is most likely a mistake!"); return this->operator!=((std::uint64_t)v); }
 	protected:
 		BaseUIntSigHandle(const hlim::NodePort &np) : BaseIntSigHandle<SignalType>(np) { }
 };
@@ -256,6 +265,6 @@ void simAnnotationStartDelayed(const std::string &id, const std::string &desc, c
 void simAnnotationEnd(const std::string &id);
 void simAnnotationEndDelayed(const std::string &id, const Clock &clk, int cycles);
 
-
+/**@}*/
 
 }
