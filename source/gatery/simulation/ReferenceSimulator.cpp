@@ -212,8 +212,15 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 			bool allInputsReady = true;
 			for (auto i : utils::Range(node->getNumInputPorts())) {
 				auto driver = node->getNonSignalDriver(i);
-				while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) // Skip all export override nodes
-					driver = driver.node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
+				{
+					std::set<hlim::NodePort> alreadyVisited;
+					while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) { // Skip all export override nodes
+						alreadyVisited.insert(driver);
+						driver = driver.node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
+						if (alreadyVisited.contains(driver))
+							driver = {};
+					}
+				}
 				if (driver.node != nullptr && !outputsReady.contains(driver) && subnetToConsider.contains(driver.node)) {
 					allInputsReady = false;
 					break;
@@ -379,10 +386,18 @@ void Program::allocateSignals(const hlim::Circuit &circuit, const hlim::Subnet &
 			hlim::NodePort driver;
 			if (dynamic_cast<hlim::Node_Signal*>(node))
 				driver = node->getNonSignalDriver(0);
-			else
+			else {
 				driver = node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
-			while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node))
-				driver = driver.node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
+
+				std::set<hlim::NodePort> alreadyVisited;
+				while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) { // Skip all export override nodes
+					alreadyVisited.insert(driver);
+					driver = driver.node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
+					if (alreadyVisited.contains(driver))
+						driver = {};
+				}
+			}
+
 
 			size_t width = node->getOutputConnectionType(0).width;
 
