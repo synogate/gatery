@@ -150,6 +150,7 @@ class Circuit
 		void propagateConstants(Subnet &subnet);
 		void removeConstSelectMuxes(Subnet &subnet);
 		void moveClockDriversToTop();
+		void ensureNoLiteralComparison();
 
 		void removeFalseLoops();
 

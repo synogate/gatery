@@ -275,6 +275,7 @@ void Circuit::insertConstUndefinedNodes()
 		undef.resize(signal->getOutputConnectionType(0).width);
 		auto* constant = createNode<Node_Constant>(std::move(undef), signal->getOutputConnectionType(0).interpretation);
 		constant->moveToGroup(signal->getGroup());
+
 		return constant;
 	};
 
@@ -1209,6 +1210,38 @@ void Circuit::duplicateSignalsFeedingLowerAndHigherAreas()
 	}
 }
 
+void Circuit::ensureNoLiteralComparison()
+{
+	// At this point, there should no longer be any pure signal loops.
+	std::function<bool(hlim::NodePort)> isLiteral;
+	isLiteral = [&isLiteral](hlim::NodePort np)->bool {
+		HCL_ASSERT(np.node != nullptr);
+
+		if (!np.node->getName().empty()) return false;
+		if (dynamic_cast<Node_Constant*>(np.node)) return true;
+		if (dynamic_cast<Node_Signal*>(np.node)) return isLiteral(np.node->getDriver(0));
+		return false;
+	};
+
+	for (auto idx : utils::Range(m_nodes.size())) {
+		auto node = m_nodes[idx].get();
+		if (dynamic_cast<Node_Compare*>(node) == nullptr) continue;
+
+		if (isLiteral(node->getDriver(0)) && isLiteral(node->getDriver(1))) {
+			auto *sigNode = createNode<Node_Signal>();
+			sigNode->moveToGroup(node->getGroup());
+			sigNode->connectInput(node->getDriver(0));
+			sigNode->setName("compare_op_left");
+			node->rewireInput(0, {.node = sigNode, .port = 0ull});
+
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING 
+					<< "Inserting named signal " << sigNode << " for compare node " << node << " to prevent literal on literal comparison"
+			);
+
+		}
+	}
+}
+
 
 void Circuit::moveClockDriversToTop()
 {
@@ -1303,6 +1336,7 @@ void DefaultPostprocessing::exportPreparation(Circuit &circuit) const
 	circuit.moveClockDriversToTop();
 	circuit.ensureSignalNodePlacement();
 	circuit.duplicateSignalsFeedingLowerAndHigherAreas();
+	circuit.ensureNoLiteralComparison();
 	circuit.inferSignalNames();
 }
 
@@ -1362,6 +1396,7 @@ void MinimalPostprocessing::exportPreparation(Circuit& circuit) const
 	circuit.moveClockDriversToTop();
 	circuit.ensureSignalNodePlacement();
 	circuit.duplicateSignalsFeedingLowerAndHigherAreas();
+	circuit.ensureNoLiteralComparison();
 	circuit.inferSignalNames();
 }
 

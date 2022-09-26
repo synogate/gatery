@@ -22,4 +22,8 @@
 
 #include <gatery/frontend/FrontendUnitTestSimulationFixture.h>
 
+#include <gatery/frontend/GHDLTestFixture.h>
 
+using GHDLGlobalFixture = gtry::GHDLGlobalFixture;
+
+BOOST_TEST_GLOBAL_FIXTURE( GHDLGlobalFixture );
