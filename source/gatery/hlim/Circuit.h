@@ -132,6 +132,7 @@ class Circuit
 
 		void inferSignalNames();
 
+		void insertConstUndefinedNodes();
 		void disconnectZeroBitSignalNodes();
 		void disconnectZeroBitOutputPins();
 		void optimizeRewireNodes(Subnet &subnet);
