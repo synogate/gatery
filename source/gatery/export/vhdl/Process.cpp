@@ -1057,32 +1057,37 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 		hlim::NodePort dataInput = regNode->getDriver(hlim::Node_Register::DATA);
 		hlim::NodePort enableInput = regNode->getDriver(hlim::Node_Register::ENABLE);
 
+		const auto& outputDecl = m_namespaceScope.get(output);
+		if (dataInput.node != nullptr) {
+			const auto &inputDecl = m_namespaceScope.get(dataInput);
 
-		const auto &inputDecl = m_namespaceScope.get(dataInput);
-		const auto &outputDecl = m_namespaceScope.get(output);
+			if (enableInput.node != nullptr) {
+				cf.indent(stream, indentation+2+indentationOffset);
+				stream << "IF (" << m_namespaceScope.get(enableInput).name << " = '1') THEN" << std::endl;
 
-		if (enableInput.node != nullptr) {
-			cf.indent(stream, indentation+2+indentationOffset);
-			stream << "IF (" << m_namespaceScope.get(enableInput).name << " = '1') THEN" << std::endl;
+				cf.indent(stream, indentation+3+indentationOffset);
+				stream << outputDecl.name << " <= ";
+				if (outputDecl.dataType != inputDecl.dataType) {
+					cf.formatDataType(stream, outputDecl.dataType);
+					stream << '(' << inputDecl.name << ");" << std::endl;
+				} else
+					stream << inputDecl.name << ";" << std::endl;
 
-			cf.indent(stream, indentation+3+indentationOffset);
-			stream << outputDecl.name << " <= ";
-			if (outputDecl.dataType != inputDecl.dataType) {
-				cf.formatDataType(stream, outputDecl.dataType);
-				stream << '(' << inputDecl.name << ");" << std::endl;
-			} else
-				stream << inputDecl.name << ";" << std::endl;
-
-			cf.indent(stream, indentation+2+indentationOffset);
-			stream << "END IF;" << std::endl;
+				cf.indent(stream, indentation+2+indentationOffset);
+				stream << "END IF;" << std::endl;
+			} else {
+				cf.indent(stream, indentation+2+indentationOffset);
+				stream << outputDecl.name << " <= ";
+				if (outputDecl.dataType != inputDecl.dataType) {
+					cf.formatDataType(stream, outputDecl.dataType);
+					stream << '(' << inputDecl.name << ");" << std::endl;
+				} else
+					stream << inputDecl.name << ";" << std::endl;
+			}
 		} else {
-			cf.indent(stream, indentation+2+indentationOffset);
-			stream << outputDecl.name << " <= ";
-			if (outputDecl.dataType != inputDecl.dataType) {
-				cf.formatDataType(stream, outputDecl.dataType);
-				stream << '(' << inputDecl.name << ");" << std::endl;
-			} else
-				stream << inputDecl.name << ";" << std::endl;
+			// input to register is disconnected, set output to undefined
+			cf.indent(stream, indentation + 2 + indentationOffset);
+			stream << outputDecl.name << " <= (others => 'X');";
 		}
 	}
 
