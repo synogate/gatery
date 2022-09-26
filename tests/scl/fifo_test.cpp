@@ -274,7 +274,7 @@ BOOST_FIXTURE_TEST_CASE(Fifo_basic, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//design.visualize("after");
 
 	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->absoluteFrequency());
@@ -323,7 +323,7 @@ BOOST_FIXTURE_TEST_CASE(Fifo_fuzz, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//design.visualize("fifo_fuzz");
 
 	runTicks(clock.getClk(), 2048);
@@ -447,7 +447,7 @@ BOOST_FIXTURE_TEST_CASE(TransactionalFifo_basic, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//design.visualize("after");
 
 	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->absoluteFrequency());
@@ -543,7 +543,7 @@ BOOST_FIXTURE_TEST_CASE(TransactionalFifo_cutoff, BoostUnitTestSimulationFixture
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//design.visualize("after");
 
 	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->absoluteFrequency());
@@ -635,7 +635,7 @@ BOOST_FIXTURE_TEST_CASE(DualClockFifo, BoostUnitTestSimulationFixture)
 	addSimulationProcess(fifo.readProcess());
 	addSimulationProcess(fifo.writeProcess());
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	#if 0
 		vhdl::VHDLExport vhdl("vhdl_DCFIFO_quartus/");
@@ -818,7 +818,7 @@ BOOST_FIXTURE_TEST_CASE(DC_TransactionalFifo_basic, BoostUnitTestSimulationFixtu
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	runTest(hlim::ClockRational(20000, 1) / rdClock.getClk()->absoluteFrequency());
 }

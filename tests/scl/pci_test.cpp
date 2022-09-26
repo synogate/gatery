@@ -216,7 +216,7 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//design.visualize("pci_AvmmBridge_basic");
 
 	runTicks(clock.getClk(), 190);

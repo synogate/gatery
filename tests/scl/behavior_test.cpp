@@ -102,7 +102,7 @@ BOOST_FIXTURE_TEST_CASE(bt_selector_test, BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//dbg::vis();
 
 	runTicks(clock.getClk(), 128);
@@ -177,7 +177,7 @@ BOOST_FIXTURE_TEST_CASE(bt_sequence_test, BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//dbg::vis();
 
 	runTicks(clock.getClk(), 128);
@@ -205,7 +205,7 @@ BOOST_FIXTURE_TEST_CASE(bt_check_test, BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//dbg::vis();
 
 	runTicks(clock.getClk(), 128);
@@ -232,7 +232,7 @@ BOOST_FIXTURE_TEST_CASE(bt_wait_test, BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//dbg::vis();
 
 	runTicks(clock.getClk(), 128);
@@ -263,6 +263,6 @@ BOOST_FIXTURE_TEST_CASE(bt_do_test, BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 128);
 }

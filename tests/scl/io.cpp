@@ -112,7 +112,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
 
 	}
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 500);
 }
 

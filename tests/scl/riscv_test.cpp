@@ -390,7 +390,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_arith, BoostUnitTestSimulationFixture)
 //	vcd.addAllPins();
 //	vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 128);
 }
 
@@ -444,7 +444,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_logic, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 256);
 }
 
@@ -542,7 +542,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_shift, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 32 * 6);
 }
 
@@ -619,7 +619,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_setcmp, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 32 * 4);
 }
 
@@ -669,7 +669,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_lui, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 32 * 2);
 }
 
@@ -724,7 +724,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_jal, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 32 * 2);
 }
 
@@ -766,7 +766,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_csr_timer, BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 128);
 }
 
@@ -903,7 +903,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 32 * 6);
 }
 
@@ -994,7 +994,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_store, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 32 * 4);
 }
 
@@ -1067,7 +1067,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_store, BoostUnitTestSimulationFixtur
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 4096);
 }
 
@@ -1108,7 +1108,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_byte_store, BoostUnitTestSimulationF
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 4096);
 }
 
@@ -1152,7 +1152,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_half_store, BoostUnitTestSimulationF
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 4096);
 }
 
@@ -1230,7 +1230,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_byte_load, BoostUnitTestSimulationFi
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 4096);
 }
 
@@ -1314,7 +1314,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_half_load, BoostUnitTestSimulationFi
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 4096);
 }
 
@@ -1399,7 +1399,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_load, BoostUnitTestSimulationFixture
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 4096);
 }
 BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
@@ -1582,7 +1582,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 512);
 }
 
@@ -1660,7 +1660,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, BoostUnitTestSimulationFixture)
 
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), (uint32_t)timeout + 2);
 }
 
@@ -1728,7 +1728,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 4096);
 	BOOST_TEST(found);
 }
@@ -1846,7 +1846,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink, BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 1024 * 16);
 	BOOST_TEST(found);
 }
@@ -1929,7 +1929,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulati
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//dbg::vis();
 	runTicks(clock.getClk(), 1024);
 	BOOST_TEST(found);
@@ -1987,7 +1987,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_embedded_system_builder, BoostUnitTestSimulationFi
 	vcd.addAllPins();
 	vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//design.visualize("export/rv32i_esb/rv32i_esb", dbg_group);
 	vhdl::VHDLExport vhdl("export/rv32i_esb/rv32i_esb.vhd");
 	vhdl(design.getCircuit());
@@ -2075,7 +2075,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle_export, BoostUnitTestSimulationFixtur
 		pinOut(uart_tx_pin).setName("uart_tx");
 	}
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//design.visualize("scrv32i");
 
 	vhdl::VHDLExport vhdl("rv32i_gcd/rv32i_gcd.vhd");

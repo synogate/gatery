@@ -59,7 +59,7 @@ BOOST_FIXTURE_TEST_CASE(tmdsBitflip, gtry::BoostUnitTestSimulationFixture)
 
 	test_counter += 1;
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 260);
 }
 

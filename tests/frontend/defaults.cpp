@@ -36,7 +36,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleDefault, BoostUnitTestSimulationFixture)
 	Bit defaultZero = BitDefault('0');
 	sim_assert(defaultZero == false) << "defaultZero is " << defaultZero << " but should be false!";
 
-	design.getCircuit().postprocess(DefaultPostprocessing{});
+	design.postprocess();
 
 	eval();
 }
@@ -58,7 +58,7 @@ BOOST_FIXTURE_TEST_CASE(LogicWithDefault, BoostUnitTestSimulationFixture)
 
 	sim_assert(defaultValue == false) << "defaultValue is " << defaultValue << " but should be false!";
 
-	design.getCircuit().postprocess(DefaultPostprocessing{});
+	design.postprocess();
 
 	eval();
 }
@@ -77,7 +77,7 @@ BOOST_FIXTURE_TEST_CASE(ConditionalsWithDefault, BoostUnitTestSimulationFixture)
 
 	sim_assert(defaultValue == false) << "defaultValue is " << defaultValue << " but should be false!";
 
-	design.getCircuit().postprocess(DefaultPostprocessing{});
+	design.postprocess();
 
 	eval();
 }
@@ -96,7 +96,7 @@ BOOST_FIXTURE_TEST_CASE(NonLoopWithDefault, BoostUnitTestSimulationFixture)
 
 	sim_assert(defaultValue == false) << "defaultValue is " << defaultValue << " but should be false!";
 
-	design.getCircuit().postprocess(DefaultPostprocessing{});
+	design.postprocess();
 
 	eval();
 }
@@ -121,7 +121,7 @@ BOOST_FIXTURE_TEST_CASE(StructsWithDefault, BoostUnitTestSimulationFixture)
 
 	sim_assert(s.value == false) << "s.value is " << s.value << " but should be false!";
 
-	design.getCircuit().postprocess(DefaultPostprocessing{});
+	design.postprocess();
 
 	eval();
 }

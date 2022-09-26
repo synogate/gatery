@@ -128,7 +128,7 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
    //vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//design.visualize("arbitrateInOrder_basic");
 
 	runTicks(clock.getClk(), 16);
@@ -218,7 +218,7 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
    // design.visualize("arbitrateInOrder_fuzz");
 
 	runTicks(clock.getClk(), 256);
@@ -435,7 +435,7 @@ BOOST_FIXTURE_TEST_CASE(stream_transform, StreamTransferFixture)
 	simulateTransferTest(in, out);
 
 	//recordVCD("stream_downstreamReg.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -452,7 +452,7 @@ BOOST_FIXTURE_TEST_CASE(stream_downstreamReg, StreamTransferFixture)
 	simulateTransferTest(in, out);
 
 	//recordVCD("stream_downstreamReg.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 BOOST_FIXTURE_TEST_CASE(stream_uptreamReg, StreamTransferFixture)
@@ -468,7 +468,7 @@ BOOST_FIXTURE_TEST_CASE(stream_uptreamReg, StreamTransferFixture)
 	simulateTransferTest(in, out);
 
 	//recordVCD("stream_uptreamReg.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 BOOST_FIXTURE_TEST_CASE(stream_reg, StreamTransferFixture)
@@ -484,7 +484,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reg, StreamTransferFixture)
 	simulateTransferTest(in, out);
 
 	//recordVCD("stream_reg.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 BOOST_FIXTURE_TEST_CASE(stream_reg_chaining, StreamTransferFixture)
@@ -500,7 +500,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reg_chaining, StreamTransferFixture)
 	simulateTransferTest(in, out);
 
 	//recordVCD("stream_reg_chaining.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -518,7 +518,7 @@ BOOST_FIXTURE_TEST_CASE(stream_fifo, StreamTransferFixture)
 	simulateTransferTest(in, out);
 
 	//recordVCD("stream_fifo.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 BOOST_FIXTURE_TEST_CASE(streamArbiter_low1, StreamTransferFixture)
@@ -538,7 +538,7 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_low1, StreamTransferFixture)
 	simulateArbiterTestSink(arbiter.out());
 
 	//recordVCD("streamArbiter_low1.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -561,7 +561,7 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_low4, StreamTransferFixture)
 	simulateArbiterTestSink(arbiter.out());
 
 	//recordVCD("streamArbiter_low4.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -584,7 +584,7 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_low4_packet, StreamTransferFixture)
 	simulateArbiterTestSink(arbiter.out());
 
 	//recordVCD("streamArbiter_low4_packet.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -607,7 +607,7 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rr5, StreamTransferFixture)
 	simulateArbiterTestSink(arbiter.out());
 
 	//recordVCD("streamArbiter_rr5.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 
 	//dbg::vis();
@@ -632,7 +632,7 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_reg_rr5, StreamTransferFixture)
 	simulateArbiterTestSink(arbiter.out());
 
 	//recordVCD("streamArbiter_reg_rr5.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -655,7 +655,7 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5, StreamTransferFixture)
 	simulateArbiterTestSink(arbiter.out());
 
 	//recordVCD("streamArbiter_rrb5.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -678,7 +678,7 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5_packet, StreamTransferFixture)
 	simulateArbiterTestSink(arbiter.out());
 
 	//recordVCD("streamArbiter_rrb5_packet.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -730,7 +730,7 @@ BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 	simulateBackPressure(out);
 	simulateRecvData(out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//dbg::vis();
 	
 	runTicks(m_clock.getClk(), 1024);
@@ -771,7 +771,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth, StreamTransferFixture)
 	simulateBackPressure(out);
 	simulateRecvData(out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -808,7 +808,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth_RvPacketStream, StreamTransferFixture
 	simulateBackPressure(out);
 	simulateRecvData(out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -849,7 +849,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
 	simulateBackPressure(out);
 	simulateRecvData(out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -890,7 +890,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseLastBeat, StreamTransferFixture)
 	simulateBackPressure(out);
 	simulateRecvData(out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -933,7 +933,7 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 	simulateBackPressure(out);
 	simulateRecvData(out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -977,7 +977,7 @@ BOOST_FIXTURE_TEST_CASE(stream_addEopDeferred, StreamTransferFixture)
 	simulateBackPressure(out);
 	simulateRecvData(out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -1003,7 +1003,7 @@ BOOST_FIXTURE_TEST_CASE(stream_addPacketSignalsFromSize, StreamTransferFixture)
 	simulateBackPressure(out);
 	simulateRecvData(out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -1022,7 +1022,7 @@ BOOST_FIXTURE_TEST_CASE(spi_stream_test, StreamTransferFixture)
 
 	simulateTransferTest(in, out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 4096);
 }
 
@@ -1067,6 +1067,6 @@ BOOST_FIXTURE_TEST_CASE(stream_stall, StreamTransferFixture)
 
 	simulateTransferTest(in, out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }

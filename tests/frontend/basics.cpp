@@ -249,7 +249,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestOperators, data::xran
 #undef op2str
 #undef buildOperatorTest
 
-	design.getCircuit().postprocess(DefaultPostprocessing{});
+	design.postprocess();
 
 	runTest(gtry::hlim::ClockRational(100'000, 10'000));
 }
@@ -283,7 +283,7 @@ BOOST_FIXTURE_TEST_CASE(TestSlicing, BoostUnitTestSimulationFixture)
 			}
 		}
 
-	design.getCircuit().postprocess(DefaultPostprocessing{});
+	design.postprocess();
 	runEvalOnlyTest();
 }
 
@@ -328,7 +328,7 @@ BOOST_FIXTURE_TEST_CASE(TestSlicingAddition, BoostUnitTestSimulationFixture)
 			}
 		}
 
-	design.getCircuit().postprocess(DefaultPostprocessing{});
+	design.postprocess();
 	runEvalOnlyTest();
 }
 
@@ -350,7 +350,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleAdditionNetwork, BoostUnitTestSimulationFixture)
 
 				sim_assert(c == ConstUInt(x+y, BitWidth{ uint64_t(bitsize) })) << "The signal c should be " << x+y << " (with overflow in " << bitsize << "bits) but is " << c;
 			}
-	design.getCircuit().postprocess(DefaultPostprocessing{});
+	design.postprocess();
 	runEvalOnlyTest();
 }
 
@@ -512,7 +512,7 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, BoostUnitTestSimulationFixture)
 
 	}
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	runTest({1,1});
 }
@@ -575,7 +575,7 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, BoostUnitTestSimulationFixture)
 
 	}
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTest({1, 1});
 }
 
@@ -1133,7 +1133,7 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentWithPreviousAssignmentNoI
 			sim_assert(c == ConstUInt(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
 		}
 
-	design.getCircuit().postprocess(DefaultPostprocessing{});
+	design.postprocess();
 	runEvalOnlyTest();
 }
 
@@ -1172,7 +1172,7 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentWithPreviousAssignment, B
 			sim_assert(c == ConstUInt(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
 		}
 
-	design.getCircuit().postprocess(DefaultPostprocessing{});
+	design.postprocess();
 	runEvalOnlyTest();
 }
 
@@ -1423,7 +1423,7 @@ BOOST_FIXTURE_TEST_CASE(tristateBit, gtry::BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTest({ 1,1 });
 }
 

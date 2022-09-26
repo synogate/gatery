@@ -245,7 +245,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceRead, BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	runTest({ 1,1 });
 }
@@ -273,7 +273,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfSliceRead, BoostUnitTestSimulationFixtu
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	runTest({ 1,1 });
 }
@@ -306,7 +306,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceWrite, BoostUnitTestSimulationFixture)
 	});
 
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	runTest({ 1,1 });
 }
@@ -338,7 +338,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfSliceWrite, BoostUnitTestSimulationFixt
 	});
 
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	runTest({ 1,1 });
 }
@@ -355,7 +355,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceConstReduction, BoostUnitTestSimulationFi
 		b = a[index];
 	}
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	
 	auto rewire = dynamic_cast<hlim::Node_Rewire*>(b.node()->getNonSignalDriver(0).node);
 	// Ensure that the dynamic multiplexer gets folded by the postprocessing into a rewire node ...
@@ -394,7 +394,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceRead, BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	runTest({ 1,1 });
 }
@@ -429,7 +429,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfStaticSliceRead, BoostUnitTestSimulati
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	runTest({ 1,1 });
 }
@@ -463,7 +463,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfStaticSliceReverseRead, BoostUnitTestS
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	runTest({ 1,1 });
 }
@@ -511,7 +511,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfDynamicSliceRead, BoostUnitTestSimulat
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	runTest({ 1,1 });
 }
@@ -548,7 +548,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWithStaticBitSliceRead, BoostUnitTestSim
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	runTest({ 1,1 });
 }
@@ -596,7 +596,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWithDynamicBitSliceRead, BoostUnitTestSi
 	});
 
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	runTest({ 1,1 });
 }
@@ -636,7 +636,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfDynamicSliceWrite, BoostUnitTestSimulat
 	});
 
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	runTest({ 1,1 });
 }
@@ -674,7 +674,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWrite, BoostUnitTestSimulationFixture)
 	});
 
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	runTest({ 1,1 });
 }
@@ -712,7 +712,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfSliceWrite, BoostUnitTestSimulationFix
 	});
 
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	runTest({ 1,1 });
 }

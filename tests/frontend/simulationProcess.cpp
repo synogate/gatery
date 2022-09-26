@@ -69,7 +69,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
 	}
 
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 5*10 + 3); // do some extra rounds without generator changing the input
 }
 
@@ -117,7 +117,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_BigInt_small, BoostUnitTestSimulationFixture)
 	}
 
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 5*10 + 3); // do some extra rounds without generator changing the input
 }
 
@@ -165,7 +165,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_BigInt, BoostUnitTestSimulationFixture)
 	}
 
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 5*10 + 3); // do some extra rounds without generator changing the input
 }
 
@@ -228,7 +228,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_PingPong, BoostUnitTestSimulationFixture)
 	}
 
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 10);
 }
 

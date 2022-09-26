@@ -87,7 +87,7 @@ BOOST_FIXTURE_TEST_CASE(crc8, BoostUnitTestSimulationFixture)
 		sim_assert(rem == ref) << rem << " == " << ref;
 	}
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	eval();
 }
 
@@ -106,7 +106,7 @@ BOOST_FIXTURE_TEST_CASE(crc8split, BoostUnitTestSimulationFixture)
 		sim_assert(rem == ref) << rem << " == " << ref;
 	}
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	eval();
 }
 
@@ -125,7 +125,7 @@ BOOST_FIXTURE_TEST_CASE(crc8multibyte, BoostUnitTestSimulationFixture)
 		sim_assert(rem == ref) << i << ": " << rem << " == " << (size_t)ref;
 	}
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	eval();
 }
 
@@ -147,7 +147,7 @@ BOOST_FIXTURE_TEST_CASE(crc16byte, BoostUnitTestSimulationFixture)
 	//dbg::awaitDebugger();
 	//dbg::stopInDebugger();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	eval();
 }
 
@@ -172,6 +172,6 @@ BOOST_FIXTURE_TEST_CASE(crc16state, BoostUnitTestSimulationFixture)
 		sim_assert(crcValue == testValue.second) << testValue.first << " should be " << testValue.second << " is " << crcValue;
 	}
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	eval();
 }
