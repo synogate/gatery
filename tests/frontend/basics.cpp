@@ -1427,3 +1427,71 @@ BOOST_FIXTURE_TEST_CASE(tristateBit, gtry::BoostUnitTestSimulationFixture)
 	runTest({ 1,1 });
 }
 
+
+
+BOOST_FIXTURE_TEST_CASE(testUndefinedDontCareComparison, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+	
+	UInt a = pinIn(10_b).setName("value");
+	Bit b = pinIn().setName("enable");
+	UInt output = a & b;
+	pinOut(output).setName("output");
+
+	addSimulationProcess([=, this]()->SimProcess {
+
+		simu(a) = "10xXX";
+		simu(b) = '1';
+
+		co_await WaitClk(clock);
+
+		BOOST_TEST(simu(output) != 0);
+		BOOST_TEST(simu(output) == "10xXX");
+		BOOST_TEST(simu(output) == "10xX-");
+		BOOST_TEST(!simu(output).allDefined());
+
+		co_await WaitClk(clock);
+
+		simu(b) = '0';
+
+		BOOST_TEST(simu(output) == 0);
+		BOOST_TEST(simu(output) != "10xXX");
+		BOOST_TEST(simu(output) == "10x00");
+		BOOST_TEST(simu(output) == "10x--");
+		BOOST_TEST(simu(output).allDefined());
+
+
+		co_await WaitClk(clock);
+
+		simu(a) = "10xab";
+		simu(b) = '1';
+
+		co_await WaitClk(clock);
+
+		BOOST_TEST(simu(output) == "10xab");
+		BOOST_TEST(simu(output) == "10xa-");
+		BOOST_TEST(simu(output) == "10x-b");
+		BOOST_TEST(simu(output) != "10x-c");
+		BOOST_TEST(simu(output).allDefined());
+
+		co_await WaitClk(clock);
+
+		simu(a) = "10xF0";
+		simu(b) = 'x';
+
+		co_await WaitClk(clock);
+
+		BOOST_TEST(simu(output) != 0);
+		BOOST_TEST(simu(output) != "10xXX");
+		BOOST_TEST(simu(output) == "10xX-");
+		BOOST_TEST(!simu(output).allDefined());
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest({ 1,1 });
+}

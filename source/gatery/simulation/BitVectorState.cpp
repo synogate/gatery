@@ -169,7 +169,7 @@ ExtendedBitVectorState parseExtendedBitVector(std::string_view value)
 				value = num[i] - 'a' + 10;
 			else if (num[i] >= 'A' && num[i] <= 'F')
 				value = num[i] - 'A' + 10;
-			else if (num[i] >= '-')
+			else if (num[i] == '-')
 				dont_care = 0xFF;
 			else
 				defined = 0;
