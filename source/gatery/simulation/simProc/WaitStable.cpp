@@ -16,7 +16,7 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
-#include "WaitClock.h"
+#include "WaitStable.h"
 
 #include "../SimulationContext.h"
 
@@ -24,12 +24,12 @@
 
 namespace gtry::sim {
 
-WaitClock::WaitClock(const hlim::Clock *clock, TimingPhase timing) : m_clock(clock), m_timing(timing)
+WaitStable::WaitStable()
 {
 
 }
 
-void WaitClock::await_suspend(std::coroutine_handle<> handle)
+void WaitStable::await_suspend(std::coroutine_handle<> handle)
 {
 	SimulationContext::current()->simulationProcessSuspending(handle, *this);
 }

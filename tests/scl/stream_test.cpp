@@ -62,51 +62,51 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
 		simu(valid(in1)) = '0';
 		simu(*in0) = 0;
 		simu(*in1) = 0;
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		simu(valid(in0)) = '0';
 		simu(valid(in1)) = '1';
 		simu(*in1) = 1;
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		simu(valid(in1)) = '0';
 		simu(valid(in0)) = '1';
 		simu(*in0) = 2;
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		simu(valid(in1)) = '1';
 		simu(valid(in0)) = '1';
 		simu(*in0) = 3;
 		simu(*in1) = 4;
-		co_await WaitClk(clock);
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
 
 		simu(valid(in1)) = '1';
 		simu(valid(in0)) = '1';
 		simu(*in0) = 5;
 		simu(*in1) = 6;
-		co_await WaitClk(clock);
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
 
 		simu(valid(in0)) = '0';
 		simu(valid(in1)) = '1';
 		simu(*in1) = 7;
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		simu(valid(in1)) = '0';
 		simu(valid(in0)) = '0';
 		simu(ready(uut)) = '0';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		simu(valid(in1)) = '0';
 		simu(valid(in0)) = '1';
 		simu(*in0) = 8;
 		simu(ready(uut)) = '1';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		simu(valid(in1)) = '0';
 		simu(valid(in0)) = '0';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 	});
 
 	addSimulationProcess([&]()->SimProcess {
@@ -114,12 +114,12 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
 		size_t counter = 1;
 		while (true)
 		{
+			co_await OnClk(clock);
 			if (simu(ready(uut)) && simu(valid(uut)))
 			{
 				BOOST_TEST(counter == simu(*uut));
 				counter++;
 			}
-			co_await WaitClk(clock);
 		}
 
 	});
@@ -163,10 +163,10 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 
 		std::mt19937 rng{ 10179 };
 		size_t counter = 1;
-		bool wasReady = false;
 		while(true)
 		{
-			if(wasReady)
+			co_await OnClk(clock);
+			if (simu(ready(in0)))
 			{
 				if(rng() % 2 == 0)
 				{
@@ -191,10 +191,6 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 
 			// chaos monkey
 			simu(ready(uut)) = rng() % 8 != 0;
-
-			wasReady = simu(ready(in0));
-
-			co_await WaitClk(clock);
 		}
 	});
 
@@ -204,12 +200,12 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 		size_t counter = 1;
 		while(true)
 		{
+			co_await OnClk(clock);
 			if(simu(ready(uut)) && simu(valid(uut)))
 			{
 				BOOST_TEST(counter % 256 == simu(*uut));
 				counter++;
 			}
-			co_await WaitClk(clock);
 		}
 
 	});
@@ -287,13 +283,17 @@ protected:
 			std::mt19937 rng{ std::random_device{}() };
 
 			simu(ready(stream)) = '0';
-			while(simu(valid(stream)) == '0')
-				co_await WaitClk(m_clock);
+			do
+				co_await WaitStable();
+			while (simu(valid(stream)) == '0');
+
+			// todo: not good
+			co_await WaitFor(Seconds{1,10} / m_clock.absoluteFrequency());
 
 			while(true)
 			{
 				simu(ready(stream)) = rng() % 2 != 0;
-				co_await WaitClk(m_clock);
+				co_await AfterClk(m_clock);
 			}
 		});
 	}
@@ -308,19 +308,14 @@ protected:
 				simu(*stream).invalidate();
 
 				while((rng() & 1) == 0)
-					co_await WaitClk(m_clock);
+					co_await AfterClk(m_clock);
 
 				simu(valid(stream)) = '1';
 				simu(*stream) = i + group * m_transfers;
 
-				co_await WaitFor(0);
-				while(simu(ready(stream)) == '0')
-				{
-					co_await WaitClk(m_clock);
-					co_await WaitFor(0);
-				}
-
-				co_await WaitClk(m_clock);
+				do
+					co_await OnClk(m_clock);
+				while (simu(ready(stream)) == '0');
 			}
 			simu(valid(stream)) = '0';
 			simu(*stream).invalidate();
@@ -341,20 +336,15 @@ protected:
 					simu(*stream).invalidate();
 
 					while((rng() & 1) == 0)
-						co_await WaitClk(m_clock);
+						co_await AfterClk(m_clock);
 
 					simu(valid(stream)) = '1';
 					simu(eop(stream)) = j == packetLen - 1;
 					simu(*stream) = i + j + group * m_transfers;
 
-					co_await WaitFor(0);
-					while(simu(ready(stream)) == '0')
-					{
-						co_await WaitClk(m_clock);
-						co_await WaitFor(0);
-					}
-
-					co_await WaitClk(m_clock);
+					do
+						co_await OnClk(m_clock);
+					while (simu(ready(stream)) == '0');
 				}
 				i += packetLen;
 			}
@@ -370,8 +360,8 @@ protected:
 			std::vector<size_t> expectedValue(m_groups);
 			while(true)
 			{
-				co_await WaitFor(0);
-				co_await WaitFor(0);
+				co_await OnClk(m_clock);
+
 				if(simu(ready(stream)) == '1' &&
 					simu(valid(stream)) == '1')
 				{
@@ -383,12 +373,11 @@ protected:
 						expectedValue[data / m_transfers]++;
 					}
 				}
-				co_await WaitClk(m_clock);
 
 				if(std::ranges::all_of(expectedValue, [=](size_t val) { return val == m_transfers; }))
 				{
 					stopTest();
-					co_await WaitClk(m_clock);
+					co_await AfterClk(m_clock);
 				}
 			}
 		});
@@ -708,7 +697,7 @@ BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 		simu(valid(in)) = '0';
 		simu(*in).invalidate();
 		for (size_t i = 0; i < 4; ++i)
-			co_await WaitClk(m_clock);
+			co_await AfterClk(m_clock);
 
 		for (size_t i = 0; i < 32; ++i)
 		{
@@ -717,10 +706,9 @@ BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 				simu(valid(in)) = '1';
 				simu(*in) = (i >> (j * 4)) & 0xF;
 
-				co_await WaitFor(0);
-				while (simu(ready(in)) == '0')
-					co_await WaitClk(m_clock);
-				co_await WaitClk(m_clock);
+				do 
+					co_await OnClk(m_clock);
+				while (simu(ready(in)) == '0');
 			}
 		}
 		});
@@ -759,10 +747,10 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth, StreamTransferFixture)
 				((i * 3 + 0) << 0) |
 				((i * 3 + 1) << 8) |
 				((i * 3 + 2) << 16);
-			co_await WaitFor(0);
-			while(simu(ready(in)) == '0')
-				co_await WaitClk(m_clock);
-			co_await WaitClk(m_clock);
+
+			do
+				co_await OnClk(m_clock);
+			while (simu(ready(in)) == '0');
 		}
 	});
 
@@ -796,10 +784,9 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth_RvPacketStream, StreamTransferFixture
 				((i * 3 + 1) << 8) |
 				((i * 3 + 2) << 16);
 
-			co_await WaitFor(0);
-			while(simu(ready(in)) == '0')
-				co_await WaitClk(m_clock);
-			co_await WaitClk(m_clock);
+			do
+				co_await OnClk(m_clock);
+			while (simu(ready(in)) == '0');
 		}
 	});
 
@@ -826,7 +813,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
 	addSimulationProcess([=, &in]()->SimProcess {
 		simu(valid(in)) = '0';
 		simu(*in).invalidate();
-		co_await WaitClk(m_clock);
+		co_await AfterClk(m_clock);
 
 		for(size_t i = 0; i < 32; i += 4)
 		{
@@ -836,10 +823,9 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
 				simu(*in) = uint8_t(i + j - 1);
 				simu(eop(in)) = j == 4;
 
-				co_await WaitFor(0);
-				while(simu(ready(in)) == '0')
-					co_await WaitClk(m_clock);
-				co_await WaitClk(m_clock);
+				do
+					co_await OnClk(m_clock);
+				while (simu(ready(in)) == '0');
 			}
 		}
 	});
@@ -867,7 +853,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseLastBeat, StreamTransferFixture)
 	addSimulationProcess([=, &in]()->SimProcess {
 		simu(valid(in)) = '0';
 		simu(*in).invalidate();
-		co_await WaitClk(m_clock);
+		co_await AfterClk(m_clock);
 
 		for(size_t i = 0; i < 32; i += 4)
 		{
@@ -877,10 +863,9 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseLastBeat, StreamTransferFixture)
 				simu(*in) = uint8_t(i + j);
 				simu(eop(in)) = j == 4;
 
-				co_await WaitFor(0);
-				while(simu(ready(in)) == '0')
-					co_await WaitClk(m_clock);
-				co_await WaitClk(m_clock);
+				do
+					co_await OnClk(m_clock);
+				while (simu(ready(in)) == '0');
 			}
 		}
 	});
@@ -909,7 +894,7 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 	addSimulationProcess([=, &in]()->SimProcess {
 		simu(valid(in)) = '0';
 		simu(*in).invalidate();
-		co_await WaitClk(m_clock);
+		co_await AfterClk(m_clock);
 
 		for(size_t i = 0; i < 32; i += 4)
 		{
@@ -920,10 +905,9 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 				simu(*in) = uint8_t(i + j + 1);
 				simu(eop(in)) = j == 2;
 
-				co_await WaitFor(0);
-				while(simu(ready(in)) == '0')
-					co_await WaitClk(m_clock);
-				co_await WaitClk(m_clock);
+				do
+					co_await OnClk(m_clock);
+				while (simu(ready(in)) == '0');
 			}
 		}
 	});
@@ -954,18 +938,20 @@ BOOST_FIXTURE_TEST_CASE(stream_addEopDeferred, StreamTransferFixture)
 		simu(eop) = '0';
 		while(true)
 		{
-			while(simu(valid(in)) == '0')
+			co_await WaitStable();
+			while (simu(valid(in)) == '0')
 			{
-				co_await WaitClk(m_clock);
-				co_await WaitFor(0);
+				co_await AfterClk(m_clock);
+				co_await WaitStable();
 			}
 			while(simu(valid(in)) == '1')
 			{
-				co_await WaitClk(m_clock);
-				co_await WaitFor(0);
+				co_await AfterClk(m_clock);
+				co_await WaitStable();
 			}
+			co_await WaitFor(Seconds{1,10}/m_clock.absoluteFrequency());
 			simu(eop) = '1';
-			co_await WaitClk(m_clock);
+			co_await AfterClk(m_clock);
 			simu(eop) = '0';
 		}
 
@@ -1041,10 +1027,11 @@ BOOST_FIXTURE_TEST_CASE(stream_stall, StreamTransferFixture)
 
 		simu(stallCondition) = '0';
 
-		while(simu(valid(out)) == '0')
-			co_await WaitClk(m_clock);
-		co_await WaitClk(m_clock);
-		co_await WaitClk(m_clock);
+		do
+			co_await OnClk(m_clock);
+		while (simu(valid(out)) == '0');
+		co_await AfterClk(m_clock);
+		co_await AfterClk(m_clock);
 
 		std::mt19937 rng{ std::random_device{}() };
 		while (true)
@@ -1052,7 +1039,7 @@ BOOST_FIXTURE_TEST_CASE(stream_stall, StreamTransferFixture)
 			if (rng() % 4 != 0)
 			{
 				simu(stallCondition) = '1';
-				co_await WaitFor(0);
+				co_await WaitStable();
 				BOOST_TEST(simu(valid(out)) == '0');
 				BOOST_TEST(simu(ready(in)) == '0');
 			}
@@ -1060,7 +1047,7 @@ BOOST_FIXTURE_TEST_CASE(stream_stall, StreamTransferFixture)
 			{
 				simu(stallCondition) = '0';
 			}
-			co_await WaitClk(m_clock);
+			co_await AfterClk(m_clock);
 		}
 
 	});

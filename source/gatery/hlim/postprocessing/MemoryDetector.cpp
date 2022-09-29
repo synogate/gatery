@@ -38,6 +38,7 @@
 
 #include "../../simulation/SigHandle.h"
 #include "../../simulation/simProc/WaitClock.h"
+#include "../../simulation/simProc/WaitFor.h"
 
 
 #define DEBUG_OUTPUT
@@ -1340,6 +1341,8 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 
 				readPortRegs[i].push();
 			}
+
+			co_await sim::WaitFor(0);
 
 			// Actually performs write after outputing read information in case there is a combinatorical loop from a read port to a write port
 

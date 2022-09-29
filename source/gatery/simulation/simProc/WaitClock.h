@@ -35,15 +35,30 @@ namespace gtry::sim {
  */
 class WaitClock {
 	public:
-		WaitClock(const hlim::Clock *clock);
+		/**
+		 * @brief How this event relates to the activities of clocked nodes in the simulation.
+		 * @details If a simulation process wants to set stimuli and check outputs, it usually wants to do this "between" clock activations.
+		 * This is done by running immediately before or after the clock edge.
+		 * If however the simulation process is to emulate the behavior of a register (read values from before clock edge, but only affect values after clock edge)
+		 * then the TimingPhase::DURING mode should be used.
+		 */
+		enum TimingPhase {
+			BEFORE, /// Trigger before registers. Registers capture new values set by process.
+			DURING, /// Trigger with registers. Process sees old values, registers do not capture the new values set by process.
+			AFTER,  /// Trigger after registers. Process sees new values of registers.
+		};
+
+		WaitClock(const hlim::Clock *clock, TimingPhase timing = AFTER);
 
 		bool await_ready() noexcept { return false; } // always force reevaluation
 		void await_suspend(std::coroutine_handle<> handle);
 		void await_resume() noexcept { }
 
 		const hlim::Clock *getClock() { return m_clock; }
+		TimingPhase getTimingPhase() const { return m_timing; }
 	protected:
 		const hlim::Clock *m_clock;
+		TimingPhase m_timing;
 };
 
 }

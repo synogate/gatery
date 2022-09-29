@@ -123,7 +123,7 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 	addSimulationProcess([&]()->SimProcess {
 		simu(*avmm.ready) = '1';
 
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		for (uint32_t i = 0; i < 16; ++i)
 			reqQueue.push(TbReq{ .write = true, .address = i * 4, .data = i });
@@ -177,7 +177,7 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 					}
 				}
 			}
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 	});
 
@@ -205,7 +205,7 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 
 				}
 			}
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 
 

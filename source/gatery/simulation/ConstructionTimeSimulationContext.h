@@ -34,6 +34,7 @@ class ConstructionTimeSimulationContext : public SimulationContext {
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil) override;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock) override;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitChange &waitChange) override;
+		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitStable &waitStable) override;
 
 		virtual Simulator *getSimulator() override { return nullptr; }
 	protected:

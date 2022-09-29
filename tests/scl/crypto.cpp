@@ -338,18 +338,18 @@ BOOST_AUTO_TEST_CASE(SipHash64TestVisual)
 		{
 			blockVal |= i << (i * 8);
 			simu(msg) = blockVal + (i + 1) * (1ull << 56); // add padding
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 			//BOOST_TEST(simu(hash) == test_vector_sip64[i + 1]);
 		}
 		simu(msg) = 0;
 
 		for (size_t i = 7; i < sip.latency(1, 64); ++i)
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 		for (size_t i = 0; i < 7; ++i)
 		{
 			BOOST_TEST(simu(hash) == test_vector_sip64[i + 1]);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 
 
@@ -407,18 +407,18 @@ BOOST_FIXTURE_TEST_CASE(SipHash64Test, gtry::BoostUnitTestSimulationFixture)
 		{
 			blockVal |= i << (i * 8);
 			simu(msg) = blockVal + (i + 1) * (1ull << 56); // add padding
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 			//BOOST_TEST(simu(hash) == test_vector_sip64[i + 1]);
 		}
 		simu(msg) = 0;
 
 		for (size_t i = 7; i < sip.latency(1, 64); ++i)
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 		for (size_t i = 0; i < 7; ++i)
 		{
 			BOOST_TEST(simu(hash) == test_vector_sip64[i + 1]);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 
 
@@ -501,18 +501,18 @@ BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, gtry::BoostUnitTestSimulationFixt
 				simu(*mm[t]->write) = '1';
 				simu(*mm[t]->writeData) = reference[t][i];
 			}
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 		for (scl::AvalonMM* p : mm)
 			simu(*p->write) = '0';
 
 		for (size_t i = 0; i < 16; ++i)
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 		for (size_t i = 0; i < (1 << 16); i += 97)
 		{
 			simu(data) = i;
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			const uint16_t refHash1 = reference[0][i & 0xFF];
 			const uint16_t refHash2 = reference[1][i >> 8];

@@ -21,6 +21,7 @@
 #include "SimulatorCallbacks.h"
 
 #include "simProc/SimulationProcess.h"
+#include "simProc/WaitClock.h"
 #include "SimulationVisualization.h"
 
 #include "../hlim/NodeIO.h"
@@ -49,6 +50,7 @@ class WaitFor;
 class WaitUntil;
 class WaitClock;
 class WaitChange;
+class WaitStable;
 
 /**
  * @brief Interface for all logic simulators
@@ -135,7 +137,10 @@ class Simulator
 		/// @}
 
 		/// Returns the elapsed simulation time (in seconds) since @ref powerOn.
-		inline const hlim::ClockRational &getCurrentSimulationTime() { return m_simulationTime; }
+		inline const hlim::ClockRational &getCurrentSimulationTime() const { return m_simulationTime; }
+
+		/// Returns the elapsed micro ticks (reevaluations) within the current time step.
+		inline size_t getCurrentMicroTick() const { return m_microTick; }
 
 		/// Adds a simulation process to this simulator.
 		virtual void addSimulationProcess(std::function<SimulationProcess()> simProc) = 0;
@@ -145,6 +150,7 @@ class Simulator
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil, utils::RestrictTo<RunTimeSimulationContext>) = 0;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock, utils::RestrictTo<RunTimeSimulationContext>) = 0;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitChange &waitChange, utils::RestrictTo<RunTimeSimulationContext>) = 0;
+		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitStable &waitStable, utils::RestrictTo<RunTimeSimulationContext>) = 0;
 
 		virtual void annotationStart(const hlim::ClockRational &simulationTime, const std::string &id, const std::string &desc) { m_callbackDispatcher.onAnnotationStart(simulationTime, id, desc); }
 		virtual void annotationEnd(const hlim::ClockRational &simulationTime, const std::string &id) { m_callbackDispatcher.onAnnotationEnd(simulationTime, id); }
@@ -170,6 +176,8 @@ class Simulator
 		};
 
 		hlim::ClockRational m_simulationTime;
+		size_t m_microTick = 0;
+		WaitClock::TimingPhase m_timingPhase;
 		CallbackDispatcher m_callbackDispatcher;
 };
 

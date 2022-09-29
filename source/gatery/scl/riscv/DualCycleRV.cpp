@@ -155,7 +155,7 @@ void gtry::scl::riscv::DualCycleRV::writeCallReturnTrace(std::string filename)
 
 		while (1)
 		{
-			co_await WaitClk(clk);
+			co_await AfterClk(clk);
 			cycle++;
 
 			//f << cycle << ' ' << (size_t)simu(ip) << '\n';

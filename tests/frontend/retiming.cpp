@@ -73,7 +73,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_new, BoostUnitTestSimulationFix
 		
 		for (auto i : Range(32)) {
 			BOOST_TEST(simu(outPin).value() == i);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 
 		stopTest();
@@ -118,7 +118,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_old, BoostUnitTestSimulationFix
 		
 		for (auto i : Range(32)) {
 			BOOST_TEST(simu(outPin).value() == i+1);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 
 		stopTest();
@@ -239,7 +239,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct, BoostUnitTestSimulationFixture)
 			BOOST_TEST(!simu(s_out.a).defined());
 			BOOST_TEST(!simu(s_out.b).defined());
 
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 
 		BOOST_TEST(simu(s_out.a).defined());
@@ -299,7 +299,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct_reset, BoostUnitTestSimulationFixtu
 			BOOST_TEST(simu(s_out.b).defined());
 			BOOST_TEST(simu(s_out.b).value() == 0);
 
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 
 		BOOST_TEST(simu(s_out.a).defined());
@@ -353,7 +353,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching, BoostUnitTestSimulationFixture)
 		for ([[maybe_unused]] auto i : Range(2)) {
 			BOOST_TEST(!simu(output).defined());
 
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 
 		BOOST_TEST(simu(output).defined());
@@ -403,7 +403,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeinputgroup, BoostUnitTestSimulationFixture)
 		for([[maybe_unused]] auto i : Range(2)) {
 			BOOST_TEST(!simu(output).defined());
 
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 
 		BOOST_TEST(simu(output).defined());
@@ -452,7 +452,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching_reset, BoostUnitTestSimulationFi
 			BOOST_TEST(simu(output).defined());
 			BOOST_TEST(simu(output).value() == 0+1);
 
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 
 		BOOST_TEST(simu(output).defined());

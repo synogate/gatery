@@ -53,17 +53,15 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
 		});
 		addSimulationProcess([=]()->SimProcess{
 
-			co_await WaitClk(clock);
-
 			size_t expectedSum = 0;
 
 			while (true) {
+				co_await AfterClk(clock);
+
 				expectedSum += simu(incrementPin);
 
 				BOOST_TEST(expectedSum == simu(outputPin));
 				BOOST_TEST(simu(outputPin).defined() == 0xFF);
-
-				co_await WaitFor(Seconds(1)/clock.absoluteFrequency());
 			}
 		});
 	}
@@ -101,17 +99,14 @@ BOOST_FIXTURE_TEST_CASE(SimProc_BigInt_small, BoostUnitTestSimulationFixture)
 		});
 		addSimulationProcess([=]()->SimProcess{
 
-			co_await WaitClk(clock);
-
 			BigInt expectedSum = 0;
 
 			while (true) {
+				co_await AfterClk(clock);
 				expectedSum += (BigInt) simu(incrementPin);
 
 				BOOST_TEST((expectedSum == (BigInt) simu(outputPin)));
 				BOOST_TEST(simu(outputPin).allDefined());
-
-				co_await WaitFor(Seconds(1)/clock.absoluteFrequency());
 			}
 		});
 	}
@@ -149,17 +144,14 @@ BOOST_FIXTURE_TEST_CASE(SimProc_BigInt, BoostUnitTestSimulationFixture)
 		});
 		addSimulationProcess([=]()->SimProcess{
 
-			co_await WaitClk(clock);
-
 			BigInt expectedSum = 0;
 
 			while (true) {
+				co_await AfterClk(clock);
 				expectedSum ^= (BigInt) simu(incrementPin);
 
 				BOOST_TEST((expectedSum == (BigInt) simu(outputPin)));
 				BOOST_TEST(simu(outputPin).allDefined());
-
-				co_await WaitFor(Seconds(1)/clock.absoluteFrequency());
 			}
 		});
 	}
@@ -274,20 +266,23 @@ BOOST_FIXTURE_TEST_CASE(SimProc_AsyncProcs, BoostUnitTestSimulationFixture)
 			size_t z = x+y;
 			simu(a) = x;
 			simu(b) = y;
-			co_await WaitFor(0);
+			co_await WaitStable();
 			BOOST_TEST(simu(sum) == z);
+			co_await WaitFor(Seconds(1)/clock.absoluteFrequency());
 
 			while (true) {
 
 				simu(a) = x = dist(rng);
 				BOOST_TEST(simu(sum) == z); // still previous value;
-				co_await WaitFor(0);
+				co_await WaitStable();
 				z = x+y;
 				BOOST_TEST(simu(sum) == z); // updated value;
 
+				co_await WaitFor(Seconds(1)/clock.absoluteFrequency());
+
 				simu(b) = y = dist(rng);
 				BOOST_TEST(simu(sum) == z); // still previous value;
-				co_await WaitFor(0);
+				co_await WaitStable();
 				z = x+y;
 				BOOST_TEST(simu(sum) == z); // updated value;
 
@@ -313,23 +308,23 @@ BOOST_FIXTURE_TEST_CASE(SimProc_spawnSubTask, BoostUnitTestSimulationFixture)
 	auto generatePattern = [](const Clock &clock, Bit &bit, char data)->SimProcess{
 		// Start bit
 		simu(bit) = '0';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 		// Data bits
 		for (auto i : utils::Range(8)) {
 			simu(bit) = (bool)(data & (1 << i));
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 		// End bit
 		simu(bit) = '1';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 	}
 
 	Bit line = pinIn();
 
 	addSimulationProcess([=]()->SimProcess{
 		simu(line) = '1';
-		co_await WaitClk(clock);
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
 		auto subTask = runInParallel(generatePattern());
 
 		// Do some other stuff
@@ -363,29 +358,29 @@ BOOST_FIXTURE_TEST_CASE(SimProc_registerOverride, BoostUnitTestSimulationFixture
 
 		addSimulationProcess([=]()->SimProcess{
 
-			co_await WaitClk(clock);
-			co_await WaitClk(clock);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
+			co_await AfterClk(clock);
+			co_await AfterClk(clock);
 			BOOST_TEST(0 == simu(outputPin));
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 			BOOST_TEST(0 == simu(outputPin));
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 			BOOST_TEST(0 == simu(outputPin));
 
 			simu(loop).drivingReg() = 10;
 
 			BOOST_TEST(10 == simu(outputPin));
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 			BOOST_TEST(10 == simu(outputPin));
 
 			simu(loop).drivingReg() = 20;
 
 			BOOST_TEST(20 == simu(outputPin));
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 			BOOST_TEST(20 == simu(outputPin));
 
-			co_await WaitClk(clock);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
+			co_await AfterClk(clock);
 
 			stopTest();
 		});

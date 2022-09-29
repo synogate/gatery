@@ -19,6 +19,7 @@
 
 #include "Simulator.h"
 
+#include "simProc/WaitClock.h"
 #include "BitVectorState.h"
 #include "../hlim/NodeIO.h"
 #include "../utils/BitManipulation.h"
@@ -102,6 +103,7 @@ class ClockedNode
 
 struct ClockAwaitingSimProc {
 	std::uint64_t sortId;
+	WaitClock::TimingPhase timingPhase;
 	std::coroutine_handle<> handle;
 };
 
@@ -154,33 +156,47 @@ struct Program
 
 struct Event {
 	enum class Type {
-		clock,
-		reset,
-		simProcResume
+		clockPinTrigger,
+		simProcResume,
+		clockValueChange,
+		resetValueChange,
 	};
-	Type type;
-	hlim::ClockRational timeOfEvent;
+	Type type = Type::clockPinTrigger;
+	hlim::ClockRational timeOfEvent = {0};
+	size_t microTick = 0;
+	WaitClock::TimingPhase timingPhase = WaitClock::DURING;
 
-	struct {
-		size_t clockPinIdx;
-		bool risingEdge;
-	} clockEvt;
-	struct {
-		size_t resetPinIdx;
-		bool newResetHigh;
-	} resetEvt;
-	struct {
+	struct ClockValueChangeEvt {
+		size_t clockPinIdx = ~0ull;
+		bool risingEdge = false;
+	};
+	struct ResetValueChangeEvt {
+		size_t resetPinIdx = ~0ull;
+		bool newResetHigh = false;
+	};
+	struct SimProcResumeEvt {
 		std::coroutine_handle<> handle;
-		std::uint64_t insertionId;
-	} simProcResumeEvt;
+		std::uint64_t insertionId = ~0ull;
+	};
+
+	std::variant<ClockValueChangeEvt, ResetValueChangeEvt, SimProcResumeEvt> data = ClockValueChangeEvt{};
+
+	template<typename T>
+	T &evt() { return std::get<T>(data); }
+	template<typename T>
+	const T &evt() const { return std::get<T>(data); }
 
 	bool operator<(const Event &rhs) const {
 		if (hlim::clockMore(timeOfEvent, rhs.timeOfEvent)) return true;
 		if (hlim::clockLess(timeOfEvent, rhs.timeOfEvent)) return false;
-		if ((unsigned)type > (unsigned) rhs.type) return true; // clocks before fibers
-		if ((unsigned)type < (unsigned)rhs.type) return false; // clocks before fibers
+		if (timingPhase > rhs.timingPhase) return true;
+		if (timingPhase < rhs.timingPhase) return false;
+		if (microTick > rhs.microTick) return true;
+		if (microTick < rhs.microTick) return false;
+		if ((unsigned)type > (unsigned) rhs.type) return true; // fibers before clocks
+		if ((unsigned)type < (unsigned)rhs.type) return false; // fibers before clocks
 		if (type == Type::simProcResume)
-			return simProcResumeEvt.insertionId > rhs.simProcResumeEvt.insertionId;
+			return evt<SimProcResumeEvt>().insertionId > rhs.evt<SimProcResumeEvt>().insertionId;
 		return false;
 	}
 };
@@ -236,6 +252,7 @@ class ReferenceSimulator : public Simulator
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil, utils::RestrictTo<RunTimeSimulationContext>) override;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock, utils::RestrictTo<RunTimeSimulationContext>) override;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitChange &waitChange, utils::RestrictTo<RunTimeSimulationContext>) override;
+		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitStable &waitStable, utils::RestrictTo<RunTimeSimulationContext>) override;
 	protected:
 		Program m_program;
 		DataState m_dataState;
@@ -244,6 +261,7 @@ class ReferenceSimulator : public Simulator
 
 		std::priority_queue<Event> m_nextEvents;
 
+		std::vector<std::coroutine_handle<>> m_processesAwaitingCommit;
 		std::vector<std::function<SimulationProcess()>> m_simProcs;
 		std::vector<sim::SimulationVisualization> m_simViz;
 		std::list<SimulationProcess> m_runningSimProcs;
@@ -251,8 +269,8 @@ class ReferenceSimulator : public Simulator
 		bool m_stateNeedsReevaluating = false;
 		std::uint64_t m_nextSimProcInsertionId = 0;
 
-		bool m_currentTimeStepFinished = true;
 		bool m_abortCalled = false;
+		bool m_readOnlyMode = false;
 
 
 		struct PerformanceStats {
@@ -264,6 +282,10 @@ class ReferenceSimulator : public Simulator
 		};
 
 		PerformanceStats m_performanceStats;
+
+		void advanceMicroTick();
+		void checkSignalWatches();
+		void handleCurrentTimeStep();
 };
 
 }

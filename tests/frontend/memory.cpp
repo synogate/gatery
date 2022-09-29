@@ -47,15 +47,17 @@ BOOST_FIXTURE_TEST_CASE(async_ROM, BoostUnitTestSimulationFixture)
 	}));
 
 
-	UInt addr = pinIn(4_b);
-	auto output = pinOut(rom[addr]);
+	UInt addr = pinIn(4_b).setName("addr");
+	auto output = pinOut(rom[addr]).setName("output");
 
 
 	addSimulationProcess([=,this,&contents]()->SimProcess {
 		
 		for (auto i : Range(16)) {
 			simu(addr) = i;
-			BOOST_TEST(simu(output).value() == contents[i]);
+			co_await WaitStable();
+
+			BOOST_TEST(simu(output) == contents[i]);
 			co_await WaitFor({1, 1000});
 		}
 
@@ -98,8 +100,8 @@ BOOST_FIXTURE_TEST_CASE(sync_ROM, BoostUnitTestSimulationFixture)
 		
 		for (auto i : Range(16)) {
 			simu(addr) = i;
-			co_await WaitClk(clock);
-			BOOST_TEST(simu(output).value() == contents[i]);
+			co_await AfterClk(clock);
+			BOOST_TEST(simu(output) == contents[i]);
 		}
 
 		stopTest();
@@ -139,20 +141,21 @@ BOOST_FIXTURE_TEST_CASE(async_mem, BoostUnitTestSimulationFixture)
 	addSimulationProcess([=,this,&contents]()->SimProcess {
 
 		simu(wrEn) = '0';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		simu(wrEn) = '1';
 		for (auto i : Range(16)) {
 			simu(addr) = i;
 			simu(input) = contents[i];
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 		simu(wrEn) = '0';
 
 		for (auto i : Range(16)) {
 			simu(addr) = i;
-			BOOST_TEST(simu(output).value() == contents[i]);
-			co_await WaitClk(clock);
+			co_await WaitStable();
+			BOOST_TEST(simu(output) == contents[i]);
+			co_await AfterClk(clock);
 		}		
 
 		stopTest();
@@ -191,20 +194,20 @@ BOOST_FIXTURE_TEST_CASE(sync_mem, BoostUnitTestSimulationFixture)
 	addSimulationProcess([=,this,&contents]()->SimProcess {
 
 		simu(wrEn) = '0';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		simu(wrEn) = '1';
 		for (auto i : Range(16)) {
 			simu(addr) = i;
 			simu(input) = contents[i];
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 		simu(wrEn) = '0';
 
 		for (auto i : Range(16)) {
 			simu(addr) = i;
-			co_await WaitClk(clock);
-			BOOST_TEST(simu(output).value() == contents[i]);
+			co_await AfterClk(clock);
+			BOOST_TEST(simu(output) == contents[i]);
 		}		
 
 		stopTest();
@@ -245,13 +248,13 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_before_write, BoostUnitTestSimulationFixt
 	addSimulationProcess([=,this,&contents]()->SimProcess {
 
 		simu(wrEn) = '0';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		simu(wrEn) = '1';
 		for (auto i : Range(16)) {
 			simu(wrAddr) = i;
 			simu(input) = contents[i];
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 		simu(wrEn) = '0';
 
@@ -270,8 +273,10 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_before_write, BoostUnitTestSimulationFixt
 
 			simu(rdAddr) = i;
 
-			BOOST_TEST(simu(output).value() == contents[i]);
-			co_await WaitClk(clock);
+			co_await WaitStable();
+
+			BOOST_TEST(simu(output) == contents[i]);
+			co_await AfterClk(clock);
 		}		
 
 		stopTest();
@@ -313,13 +318,13 @@ BOOST_FIXTURE_TEST_CASE(async_mem_write_before_read, BoostUnitTestSimulationFixt
 	addSimulationProcess([=,this,&contents]()->SimProcess {
 
 		simu(wrEn) = '0';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		simu(wrEn) = '1';
 		for (auto i : Range(16)) {
 			simu(wrAddr) = i;
 			simu(input) = contents[i];
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 		simu(wrEn) = '0';
 
@@ -338,11 +343,13 @@ BOOST_FIXTURE_TEST_CASE(async_mem_write_before_read, BoostUnitTestSimulationFixt
 
 			simu(rdAddr) = i;
 
+			co_await WaitStable();
+
 			if (doWrite && writeSameAddr)
-				BOOST_TEST(simu(output).value() == 0);
+				BOOST_TEST(simu(output) == 0);
 			else
-				BOOST_TEST(simu(output).value() == contents[i]);
-			co_await WaitClk(clock);
+				BOOST_TEST(simu(output) == contents[i]);
+			co_await AfterClk(clock);
 		}		
 
 		stopTest();
@@ -384,7 +391,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_modify_write, BoostUnitTestSimulationFixt
 	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
 
 		simu(wrEn) = '0';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
 		std::uniform_int_distribution<size_t> randomAddr(0, 3);		
@@ -406,7 +413,7 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_modify_write, BoostUnitTestSimulationFixt
 
 			lastWasWrite = doInc;
 			lastAddr = incAddr;
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 
 		BOOST_TEST(collisions > 1000u);
@@ -415,8 +422,8 @@ BOOST_FIXTURE_TEST_CASE(async_mem_read_modify_write, BoostUnitTestSimulationFixt
 
 		for (auto i : Range(4)) {
 			simu(addr) = i;
-			co_await WaitClk(clock);
-			BOOST_TEST(simu(output).value() == contents[i]);
+			co_await AfterClk(clock);
+			BOOST_TEST(simu(output) == contents[i]);
 		}		
 
 		stopTest();
@@ -461,7 +468,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write, BoostUnitTestSimulationFixtu
 	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
 
 		simu(wrEn) = '0';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
 		std::uniform_int_distribution<size_t> randomAddr(0, 3);		
@@ -483,7 +490,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write, BoostUnitTestSimulationFixtu
 
 			lastWasWrite = doInc;
 			lastAddr = incAddr;
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 
 		BOOST_TEST(collisions > 1000u, "Too few collisions to verify correct RMW behavior");
@@ -492,8 +499,8 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write, BoostUnitTestSimulationFixtu
 
 		for (auto i : Range(4)) {
 			simu(addr) = i;
-			co_await WaitClk(clock);
-			BOOST_TEST(simu(output).value() == contents[i]);
+			co_await AfterClk(clock);
+			BOOST_TEST(simu(output) == contents[i]);
 		}		
 
 		stopTest();
@@ -542,7 +549,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads, BoostUnitTest
 	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
 
 		simu(wrEn) = '0';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
 		std::uniform_int_distribution<uint64_t> randomAddr(0, 3);
@@ -569,12 +576,12 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads, BoostUnitTest
 
 			uint64_t expectedReadContentAfter = contents[read_addr];
 
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			uint64_t actualReadContentBefore = simu(readOutputBefore).value();
 			BOOST_TEST(actualReadContentBefore == expectedReadContentBefore, 
 				"Read-port (before RMW) yields " << actualReadContentBefore << " but expected " << expectedReadContentBefore << ". Read-port address: " << read_addr << " RMW address: " << incAddr << " last clock cycle RMW addr: " << lastAddr);
-			BOOST_TEST(simu(readOutputAfter).value() == expectedReadContentAfter);
+			BOOST_TEST(simu(readOutputAfter) == expectedReadContentAfter);
 
 			lastWasWrite = doInc;
 			lastAddr = incAddr;
@@ -652,7 +659,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_on_wrEn, BoostUnitTestSimulat
 			if (lastWasWrite && lastAddr == incAddr)
 				collisions++;
 
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			uint64_t actualReadContentBefore = simu(readOutputBefore).value();
 			BOOST_TEST(actualReadContentBefore == expectedReadContentBefore, 
@@ -738,10 +745,10 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_multiple_writes, BoostUnitTestSimulationFixture
 
 			size_t expectedReadContentAfter = contents[read_addr];
 
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
-			BOOST_TEST(simu(readOutputBefore).value() == expectedReadContentBefore);
-			BOOST_TEST(simu(readOutputAfter).value() == expectedReadContentAfter);
+			BOOST_TEST(simu(readOutputBefore) == expectedReadContentBefore);
+			BOOST_TEST(simu(readOutputAfter) == expectedReadContentAfter);
 		}
 
 		BOOST_TEST(collisions > 1000, "Too few collisions to verify correct behavior");
@@ -818,7 +825,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrFirst, Boos
 			if (lastWasWrite && lastAddr == incAddr)
 				collisions++;
 
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			size_t actualReadContentBefore = simu(readOutputBefore).value();
 			BOOST_TEST(actualReadContentBefore == expectedReadContentBefore, 
@@ -899,7 +906,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_writes_wrLast, Boost
 			if (lastWasWrite && lastAddr == incAddr)
 				collisions++;
 
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			size_t actualReadContent = simu(elem).value();
 			BOOST_TEST(actualReadContent == expectedReadContent, 
@@ -987,12 +994,12 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
 
 			size_t expectedReadContentAfter = contents[read_addr];
 
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			size_t actualReadContentBefore = simu(readOutputBefore).value();
 			BOOST_TEST(actualReadContentBefore == expectedReadContentBefore, 
 				"Read-port (before RMW) yields " << actualReadContentBefore << " but expected " << expectedReadContentBefore << ". Read-port address: " << read_addr << " RMW address: " << incAddr << " last clock cycle RMW addr: " << lastAddr);
-			BOOST_TEST(simu(readOutputAfter).value() == expectedReadContentAfter);
+			BOOST_TEST(simu(readOutputAfter) == expectedReadContentAfter);
 
 			lastWasWrite = doInc;
 			lastAddr = incAddr;
@@ -1077,12 +1084,12 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_read_modify_write_multiple_reads_multiple_write
 			simu(wrData) = write_data;
 			contents[write_addr] = write_data;
 
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			size_t actualReadContentBefore = simu(readOutputBefore).value();
 			BOOST_TEST(actualReadContentBefore == expectedReadContentBefore, 
 				"Read-port (before RMW) yields " << actualReadContentBefore << " but expected " << expectedReadContentBefore << ". Read-port address: " << read_addr << " RMW address: " << incAddr << " last clock cycle RMW addr: " << lastAddr);
-			BOOST_TEST(simu(readOutputAfter).value() == expectedReadContentAfter);
+			BOOST_TEST(simu(readOutputAfter) == expectedReadContentAfter);
 
 			lastWasWrite = doInc;
 			lastAddr = incAddr;
@@ -1147,7 +1154,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_dual_read_modify_write, BoostUnitTestSimulation
 
 		simu(wrEn1) = '0';
 		simu(wrEn2) = '0';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
 		std::uniform_int_distribution<size_t> randomAddr(0, 3);		
@@ -1167,7 +1174,7 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_dual_read_modify_write, BoostUnitTestSimulation
 			if (doInc2)
 				contents[incAddr2]++;
 
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 
 
@@ -1176,8 +1183,8 @@ BOOST_FIXTURE_TEST_CASE(sync_mem_dual_read_modify_write, BoostUnitTestSimulation
 
 		for (auto i : Range(4)) {
 			simu(addr1) = i;
-			co_await WaitClk(clock);
-			BOOST_TEST(simu(output1).value() == contents[i]);
+			co_await AfterClk(clock);
+			BOOST_TEST(simu(output1) == contents[i]);
 		}		
 
 		stopTest();
@@ -1261,7 +1268,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, BoostUnitTestSimulat
 	addSimulationProcess([=,this,&contents,&rng]()->SimProcess {
 
 		simu(wrEn) = '0';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		std::uniform_real_distribution<float> zeroOne(0.0f, 1.0f);
 		std::uniform_int_distribution<size_t> randomAddr(0, 3);		
@@ -1283,7 +1290,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, BoostUnitTestSimulat
 
 			lastWasWrite = doInc;
 			lastAddr = incAddr;
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 
 		BOOST_TEST(collisions > 1000u, "Too few collisions to verify correct RMW behavior");
@@ -1293,8 +1300,8 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, BoostUnitTestSimulat
 		for (auto i : Range(4)) {
 			simu(addr) = i;
 			for ([[maybe_unused]] auto i : Range(memReadLatency))
-				co_await WaitClk(clock);
-			BOOST_TEST(simu(output).value() == contents[i]);
+				co_await AfterClk(clock);
+			BOOST_TEST(simu(output) == contents[i]);
 		}		
 
 		stopTest();
@@ -1368,7 +1375,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, BoostUnitTestSim
 		simu(initOverride) = '1';
 		for (auto i : Range(4)) {
 			simu(addr) = i;
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 		simu(wrEn) = '0';
 		simu(initOverride) = '0';
@@ -1394,7 +1401,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, BoostUnitTestSim
 
 			lastWasWrite = doInc;
 			lastAddr = incAddr;
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 
 		BOOST_TEST(collisions > 1000u, "Too few collisions to verify correct RMW behavior");
@@ -1404,13 +1411,14 @@ BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, BoostUnitTestSim
 		for (auto i : Range(4)) {
 			simu(addr) = i;
 			for ([[maybe_unused]] auto i : Range(memReadLatency+2))
-				co_await WaitClk(clock);
-			BOOST_TEST(simu(output).value() == contents[i]);
+				co_await AfterClk(clock);
+//			co_await WaitStable();
+			BOOST_TEST(simu(output) == contents[i]);
 		}		
 
-		co_await WaitClk(clock);
-		co_await WaitClk(clock);
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
 
 		stopTest();
 	});

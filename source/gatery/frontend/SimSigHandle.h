@@ -31,6 +31,7 @@
 #include <gatery/simulation/simProc/WaitFor.h>
 #include <gatery/simulation/simProc/WaitUntil.h>
 #include <gatery/simulation/simProc/WaitClock.h>
+#include <gatery/simulation/simProc/WaitStable.h>
 
 
 namespace gtry {
@@ -272,11 +273,13 @@ SigHandleBVec simu(const OutputPins &pins);
 using SimProcess = sim::SimulationProcess;
 using WaitFor = sim::WaitFor;
 using WaitUntil = sim::WaitUntil;
+using WaitStable = sim::WaitStable;
 using Seconds = hlim::ClockRational;
 
 using BigInt = sim::BigInt;
 
-sim::WaitClock WaitClk(const Clock &clk);
+sim::WaitClock AfterClk(const Clock &clk);
+sim::WaitClock OnClk(const Clock &clk);
 
 void simAnnotationStart(const std::string &id, const std::string &desc);
 void simAnnotationStartDelayed(const std::string &id, const std::string &desc, const Clock &clk, int cycles);

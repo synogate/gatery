@@ -545,6 +545,8 @@ void ReferenceSimulator::compileStaticEvaluation(const hlim::Circuit& circuit, c
 void ReferenceSimulator::powerOn()
 {
 	m_simulationTime = 0;
+	m_microTick = 0;
+	m_timingPhase = WaitClock::AFTER;
 	m_dataState.signalState.resize(m_program.m_fullStateWidth);
 
 	m_dataState.signalState.clearRange(DefaultConfig::VALUE, 0, m_program.m_fullStateWidth);
@@ -567,19 +569,13 @@ void ReferenceSimulator::powerOn()
 		cs.high = trigType == hlim::Clock::TriggerEvent::RISING;
 
 		Event e;
-		e.type = Event::Type::clock;
-		e.clockEvt.clockPinIdx = i;
-		e.clockEvt.risingEdge = !cs.high;
+		e.type = Event::Type::clockPinTrigger;
+		e.data = Event::ClockValueChangeEvt{
+			.clockPinIdx = i,
+			.risingEdge = !cs.high,
+		};
 		e.timeOfEvent = m_simulationTime + hlim::ClockRational(1,2) / clock->absoluteFrequency();
-/*
-		if (trigType == hlim::Clock::TriggerEvent::RISING_AND_FALLING ||
-			(trigType == hlim::Clock::TriggerEvent::RISING && e.clockEvt.risingEdge) ||
-			(trigType == hlim::Clock::TriggerEvent::FALLING && !e.clockEvt.risingEdge)) {
 
-			cs.nextTrigger = e.timeOfEvent;
-		} else
-			cs.nextTrigger = e.timeOfEvent + hlim::ClockRational(1,2) / clock->absoluteFrequency();
-*/
 		m_nextEvents.push(e);
 	}
 
@@ -614,9 +610,11 @@ void ReferenceSimulator::powerOn()
 		} else {
 			// Schedule disabling
 			Event e;
-			e.type = Event::Type::reset;
-			e.resetEvt.resetPinIdx = i;
-			e.resetEvt.newResetHigh = !rs.resetHigh;
+			e.type = Event::Type::resetValueChange;
+			e.data = Event::ResetValueChangeEvt {
+				.resetPinIdx = i,
+				.newResetHigh = !rs.resetHigh,
+			};
 			e.timeOfEvent = m_simulationTime + minTime;
 
 			m_nextEvents.push(e);
@@ -642,6 +640,8 @@ void ReferenceSimulator::powerOn()
 	if (m_stateNeedsReevaluating)
 		reevaluate();
 
+	handleCurrentTimeStep();
+
 	{
 		RunTimeSimulationContext context(this);
 		for (auto i : utils::Range(m_simViz.size())) {
@@ -663,10 +663,189 @@ void ReferenceSimulator::reevaluate()
 
 void ReferenceSimulator::commitState()
 {
+	m_readOnlyMode = true;
+
 	for (auto &block : m_program.m_executionBlocks)
 		block.commitState(m_callbackDispatcher, m_dataState);
 
+	{
+		RunTimeSimulationContext context(this);
+
+		std::vector<std::coroutine_handle<>> processesAwaitingCommit;
+		// Allow processes to immediately re-suspend with WaitStable but then be only resumed in the next commit.
+		std::swap(processesAwaitingCommit, m_processesAwaitingCommit); 
+
+		for (auto &h : processesAwaitingCommit)
+			h.resume();
+	}
+
 	m_callbackDispatcher.onCommitState();
+
+	m_readOnlyMode = false;
+}
+
+void ReferenceSimulator::advanceMicroTick()
+{
+	while (!m_abortCalled &&
+		!m_nextEvents.empty() && 
+		m_nextEvents.top().timeOfEvent == m_simulationTime && 
+		m_nextEvents.top().microTick == m_microTick &&
+		m_nextEvents.top().timingPhase == m_timingPhase) {
+
+		auto event = m_nextEvents.top();
+		m_nextEvents.pop();
+
+		switch (event.type) {
+			case Event::Type::clockPinTrigger: {
+				auto &clkEvent = event.evt<Event::ClockValueChangeEvt>();
+				auto &clkPin = m_program.m_clockSources[clkEvent.clockPinIdx];
+				// Check if any clock domain driven by this clk pin has an activation
+				for (auto domain : clkPin.domains) {
+					auto trigType = domain->clock->getTriggerEvent();
+
+					bool clockInReset = false;
+					if (domain->resetSourceIdx != ~0ull) {
+						auto resetType = domain->clock->getRegAttribs().resetActive;
+						clockInReset = m_dataState.resetState[domain->resetSourceIdx].resetHigh == (resetType == hlim::RegisterAttributes::Active::HIGH);
+					}
+
+					// only release simulation processes waiting on clock if the clock is not in reset.
+					if (!clockInReset) {
+						// only release simulation processes waiting on clock if the clock actually activates on the current edge
+						if (trigType == hlim::Clock::TriggerEvent::RISING_AND_FALLING ||
+							(trigType == hlim::Clock::TriggerEvent::RISING && clkEvent.risingEdge) ||
+							(trigType == hlim::Clock::TriggerEvent::FALLING && !clkEvent.risingEdge)) {
+
+							// Schedule resuming simulation processes
+							Event e = event;
+							e.type = Event::Type::simProcResume;
+							e.data = Event::SimProcResumeEvt{};
+							for (auto &simProc : domain->awaitingSimProcs) {
+								e.evt<Event::SimProcResumeEvt>().handle = simProc.handle;
+								e.evt<Event::SimProcResumeEvt>().insertionId = simProc.sortId;
+								e.timingPhase = simProc.timingPhase;
+								m_nextEvents.push(e);
+							}
+							domain->awaitingSimProcs.clear();
+						}
+					}
+				}
+				
+				// schedule the actual value change and clocked node activation.
+				// This potentially needs to happen after some simulation processes have resumed that were just scheduled.
+				Event e = event;
+				e.type = Event::Type::clockValueChange;
+				m_nextEvents.push(e);
+
+				// Re-issue next clock flank
+				clkEvent.risingEdge = !clkEvent.risingEdge;
+				event.timeOfEvent += hlim::ClockRational(1,2) / clkPin.pin->absoluteFrequency();
+				event.microTick = 0;
+				m_nextEvents.push(event);
+			} break;
+			case Event::Type::clockValueChange: {
+				auto &clkEvent = event.evt<Event::ClockValueChangeEvt>();
+				
+				// Change clock state
+				auto &cs = m_dataState.clockState[clkEvent.clockPinIdx];
+				cs.high = clkEvent.risingEdge;
+
+				// Trigger all clocked nodes of all driven clock domains
+				auto &clkPin = m_program.m_clockSources[clkEvent.clockPinIdx];
+				for (auto domain : clkPin.domains) {
+					auto trigType = domain->clock->getTriggerEvent();
+
+					if (trigType == hlim::Clock::TriggerEvent::RISING_AND_FALLING ||
+						(trigType == hlim::Clock::TriggerEvent::RISING && clkEvent.risingEdge) ||
+						(trigType == hlim::Clock::TriggerEvent::FALLING && !clkEvent.risingEdge)) {
+
+						//for (auto id : domain->dependentExecutionBlocks)
+							//triggeredExecutionBlocks.insert(id);
+
+						for (auto &cn : domain->clockedNodes)
+							cn.advance(m_callbackDispatcher, m_dataState);
+					}
+				}
+
+				// Trigger callback
+				m_callbackDispatcher.onClock(clkPin.pin, clkEvent.risingEdge);
+			} break;
+			case Event::Type::resetValueChange:{
+				const auto &rstEvent = event.evt<Event::ResetValueChangeEvt>();
+				m_dataState.resetState[rstEvent.resetPinIdx].resetHigh = rstEvent.newResetHigh;
+
+				auto &rstSrc = m_program.m_resetSources[rstEvent.resetPinIdx];
+
+				for (auto dom : rstSrc.domains) {
+					//for (auto id : dom->dependentExecutionBlocks)
+					//	triggeredExecutionBlocks.insert(id);
+
+					for (auto &cn : dom->clockedNodes)
+						cn.changeReset(m_callbackDispatcher, m_dataState, rstEvent.newResetHigh);
+				}
+
+				m_callbackDispatcher.onReset(rstSrc.pin, rstEvent.newResetHigh);
+			} break;
+			case Event::Type::simProcResume: {
+				RunTimeSimulationContext context(this);
+
+				event.evt<Event::SimProcResumeEvt>().handle.resume();
+			} break;
+		}
+	}
+}
+
+void ReferenceSimulator::checkSignalWatches()
+{
+	// check if any signal watches triggered and if so schedule resumption of the corresponding fibers in insertion order
+	for (auto it = m_signalWatches.begin(); it != m_signalWatches.end(); ) {
+		if (it->anySignalChanged(m_dataState.signalState)) {
+			auto it2 = it; it++;
+
+			Event e;
+			e.type = Event::Type::simProcResume;
+			e.timeOfEvent = m_simulationTime;
+			e.microTick = m_microTick+1;
+			e.timingPhase = m_timingPhase;
+			e.data = Event::SimProcResumeEvt {
+				.handle = it2->handle,
+				.insertionId = it2->insertionId,
+			};
+			m_nextEvents.push(e);
+
+			m_signalWatches.erase(it2);
+		} else ++it;
+	}
+}
+
+void ReferenceSimulator::handleCurrentTimeStep()
+{
+	// Do everything belonging to the current time step
+	while (!m_nextEvents.empty() && m_nextEvents.top().timeOfEvent == m_simulationTime) {
+
+		// Handle all timing phases. Clock nodes (e.g. registers) advance in the WaitClock::DURING phase.
+		for (auto phase : {WaitClock::BEFORE, WaitClock::DURING, WaitClock::AFTER}) {
+			m_timingPhase = phase;
+			m_microTick = 0;
+
+			// Handle everything belonging to the timing phase, i.e. all micro ticks
+			while (!m_nextEvents.empty() && 
+					m_nextEvents.top().timeOfEvent == m_simulationTime && 
+				   	m_nextEvents.top().timingPhase == m_timingPhase) {
+
+				advanceMicroTick();
+
+				if (m_abortCalled) return;
+
+				reevaluate();
+
+				checkSignalWatches();
+				m_microTick++;
+			}
+		}
+	}
+
+	commitState();
 }
 
 void ReferenceSimulator::advanceEvent()
@@ -678,129 +857,11 @@ void ReferenceSimulator::advanceEvent()
 
 	if (m_nextEvents.empty()) return;
 
-	if (m_currentTimeStepFinished) {
-		commitState();
-		m_simulationTime = m_nextEvents.top().timeOfEvent;
-		m_callbackDispatcher.onNewTick(m_simulationTime);
-	}
+	m_simulationTime = m_nextEvents.top().timeOfEvent;
+	m_microTick = 0;
+	m_callbackDispatcher.onNewTick(m_simulationTime);
 
-	while (!m_nextEvents.empty() && m_nextEvents.top().timeOfEvent == m_simulationTime) { // outer loop because fibers can do a waitFor(0) in which we need to run again.
-		std::set<size_t> triggeredExecutionBlocks;
-		std::vector<std::pair<size_t, std::coroutine_handle<>>> simProcsResuming;
-		while (!m_nextEvents.empty() && m_nextEvents.top().timeOfEvent == m_simulationTime) {
-			auto event = m_nextEvents.top();
-			m_nextEvents.pop();
-
-			switch (event.type) {
-				case Event::Type::reset: {
-					auto &rstEvent = event.resetEvt;
-					m_dataState.resetState[rstEvent.resetPinIdx].resetHigh = rstEvent.newResetHigh;
-
-					auto &rstSrc = m_program.m_resetSources[rstEvent.resetPinIdx];
-
-
-					for (auto dom : rstSrc.domains) {
-						for (auto id : dom->dependentExecutionBlocks)
-							triggeredExecutionBlocks.insert(id);
-
-						for (auto &cn : dom->clockedNodes)
-							cn.changeReset(m_callbackDispatcher, m_dataState, rstEvent.newResetHigh);
-					}
-
-					m_callbackDispatcher.onReset(rstSrc.pin, rstEvent.newResetHigh);
-				} break;
-				case Event::Type::clock: {
-					auto &clkEvent = event.clockEvt;
-					auto &cs = m_dataState.clockState[clkEvent.clockPinIdx];
-					cs.high = clkEvent.risingEdge;
-
-
-					auto &clkPin = m_program.m_clockSources[clkEvent.clockPinIdx];
-					for (auto domain : clkPin.domains) {
-						auto trigType = domain->clock->getTriggerEvent();
-
-						if (trigType == hlim::Clock::TriggerEvent::RISING_AND_FALLING ||
-							(trigType == hlim::Clock::TriggerEvent::RISING && clkEvent.risingEdge) ||
-							(trigType == hlim::Clock::TriggerEvent::FALLING && !clkEvent.risingEdge)) {
-
-							for (auto id : domain->dependentExecutionBlocks)
-								triggeredExecutionBlocks.insert(id);
-
-							for (auto &cn : domain->clockedNodes)
-								cn.advance(m_callbackDispatcher, m_dataState);
-
-							bool clockInReset = false;
-							if (domain->resetSourceIdx != ~0ull) {
-								auto resetType = domain->clock->getRegAttribs().resetActive;
-								clockInReset = m_dataState.resetState[domain->resetSourceIdx].resetHigh == (resetType == hlim::RegisterAttributes::Active::HIGH);
-
-								// only release simulation processes waiting on clock if the clock is not in reset.
-								if (!clockInReset) {
-									auto &waitingSimProcs = domain->awaitingSimProcs;
-
-									for (auto &v : waitingSimProcs)
-										simProcsResuming.push_back({v.sortId, std::move(v.handle)});
-
-									waitingSimProcs.clear();
-								}
-							}
-						}
-					}
-					m_callbackDispatcher.onClock(clkPin.pin, clkEvent.risingEdge);
-
-					//cs.nextTrigger = event.timeOfEvent + hlim::ClockRational(1) / clkEvent.clock->absoluteFrequency();
-
-					// Re-issue next clock flank
-					clkEvent.risingEdge = !clkEvent.risingEdge;
-					event.timeOfEvent += hlim::ClockRational(1,2) / clkPin.pin->absoluteFrequency();
-					m_nextEvents.push(event);
-				} break;
-				case Event::Type::simProcResume: {
-					simProcsResuming.push_back({event.simProcResumeEvt.insertionId, event.simProcResumeEvt.handle});
-				} break;
-				default:
-					HCL_ASSERT_HINT(false, "Not implemented!");
-			}
-		}
-
-		m_stateNeedsReevaluating = true;
-
-		{
-			RunTimeSimulationContext context(this);
-			std::sort(simProcsResuming.begin(), simProcsResuming.end());
-			for (auto &p : simProcsResuming) {
-				HCL_ASSERT(p.second);
-				p.second.resume();
-
-				if (m_abortCalled)
-					return;
-			}
-		}
-
-		if (m_stateNeedsReevaluating)
-			reevaluate();
-
-		// check if any signal watches triggered and if so schedule resumption of the corresponding fibers in insertion order
-		{
-			for (auto it = m_signalWatches.begin(); it != m_signalWatches.end(); ) {
-				if (it->anySignalChanged(m_dataState.signalState)) {
-					auto it2 = it; it++;
-
-					Event e;
-					e.type = Event::Type::simProcResume;
-					e.timeOfEvent = m_simulationTime;
-					e.simProcResumeEvt.handle = it2->handle;
-					e.simProcResumeEvt.insertionId = it2->insertionId;
-					m_nextEvents.push(e);
-
-					m_signalWatches.erase(it2);
-				} else ++it;
-			}
-		}
-	}
-
-	m_currentTimeStepFinished = true;
-
+	handleCurrentTimeStep();
 
 	{
 		RunTimeSimulationContext context(this);
@@ -863,6 +924,8 @@ void ReferenceSimulator::advance(hlim::ClockRational seconds)
 
 void ReferenceSimulator::simProcSetInputPin(hlim::Node_Pin *pin, const DefaultBitVectorState &state)
 {
+	HCL_DESIGNCHECK_HINT(!m_readOnlyMode, "Can not change simulation states after waiting for WaitStable");
+
 	auto it = m_program.m_stateMapping.nodeToInternalOffset.find(pin);
 	HCL_ASSERT(it != m_program.m_stateMapping.nodeToInternalOffset.end());
 	if (pin->setState(m_dataState.signalState, it->second.data(), state)) {
@@ -873,6 +936,8 @@ void ReferenceSimulator::simProcSetInputPin(hlim::Node_Pin *pin, const DefaultBi
 
 void ReferenceSimulator::simProcOverrideRegisterOutput(hlim::Node_Register *reg, const DefaultBitVectorState &state)
 {
+	HCL_DESIGNCHECK_HINT(!m_readOnlyMode, "Can not change simulation states after waiting for WaitStable");
+
 	auto it = m_program.m_stateMapping.outputToOffset.find({.node = reg, .port = 0ull});
 	HCL_ASSERT(it != m_program.m_stateMapping.outputToOffset.end());
 	if (reg->overrideOutput(m_dataState.signalState, it->second, state)) {
@@ -892,10 +957,6 @@ bool ReferenceSimulator::outputOptimizedAway(const hlim::NodePort &nodePort)
 
 DefaultBitVectorState ReferenceSimulator::getValueOfInternalState(const hlim::BaseNode *node, size_t idx)
 {
-	if (m_stateNeedsReevaluating)
-		reevaluate();
-
-
 	DefaultBitVectorState value;
 	auto it = m_program.m_stateMapping.nodeToInternalOffset.find((hlim::BaseNode *) node);
 	if (it == m_program.m_stateMapping.nodeToInternalOffset.end()) {
@@ -909,9 +970,6 @@ DefaultBitVectorState ReferenceSimulator::getValueOfInternalState(const hlim::Ba
 
 DefaultBitVectorState ReferenceSimulator::getValueOfOutput(const hlim::NodePort &nodePort)
 {
-	if (m_stateNeedsReevaluating)
-		reevaluate();
-
 	size_t width = nodePort.node->getOutputConnectionType(nodePort.port).width;
 
 	auto it = m_program.m_stateMapping.outputToOffset.find(nodePort);
@@ -974,8 +1032,17 @@ void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> han
 	Event e;
 	e.type = Event::Type::simProcResume;
 	e.timeOfEvent = m_simulationTime + waitFor.getDuration();
-	e.simProcResumeEvt.handle = handle;
-	e.simProcResumeEvt.insertionId = m_nextSimProcInsertionId++;
+	if (e.timeOfEvent == m_simulationTime) {
+		e.microTick = m_microTick+1;
+		e.timingPhase = m_timingPhase;
+	} else {
+		e.microTick = 0;
+		e.timingPhase = WaitClock::BEFORE;
+	}
+	e.data = Event::SimProcResumeEvt{
+		.handle = handle,
+		.insertionId = m_nextSimProcInsertionId++,
+	};
 	m_nextEvents.push(e);
 }
 
@@ -1001,23 +1068,19 @@ void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> han
 		Event e;
 		e.type = Event::Type::simProcResume;
 		e.timeOfEvent = nextTickTime;
-		e.simProcResumeEvt.handle = handle;
-		e.simProcResumeEvt.insertionId = m_nextSimProcInsertionId++;
+		e.timingPhase = waitClock.getTimingPhase();
+		e.data = Event::SimProcResumeEvt {
+			.handle = handle,
+			.insertionId = m_nextSimProcInsertionId++,
+		};
+
 		m_nextEvents.push(e);
 	} else {
 		it->second.awaitingSimProcs.push_back({
 			.sortId = m_nextSimProcInsertionId++,
+			.timingPhase = waitClock.getTimingPhase(),
 			.handle = handle,
 		});
-
-		/*
-		Event e;
-		e.type = Event::Type::simProcResume;
-		e.timeOfEvent = m_dataState.clockState[it->second].nextTrigger;
-		e.simProcResumeEvt.handle = handle;
-		e.simProcResumeEvt.insertionId = m_nextSimProcInsertionId++;
-		m_nextEvents.push(e);
-		*/
 	}
 }
 
@@ -1032,6 +1095,12 @@ void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> han
 		m_nextSimProcInsertionId++
 	));
 }
+
+void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> handle, WaitStable &waitStable, utils::RestrictTo<RunTimeSimulationContext>)
+{
+	m_processesAwaitingCommit.push_back(handle);
+}
+
 
 
 }

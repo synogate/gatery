@@ -97,7 +97,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
 			size_t readIdx = 0;
 			while (true) {
 				while (!simu(outValid))
-					co_await WaitClk(clock);
+					co_await AfterClk(clock);
 
 				size_t data = simu(outData);
 				BOOST_TEST(readIdx < dataStream.size());
@@ -106,7 +106,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
 
 				readIdx++;
 
-				co_await WaitClk(clock);
+				co_await AfterClk(clock);
 			}
 		});
 
@@ -170,13 +170,13 @@ void setup_recoverDataDifferential(hlim::ClockRational actualBusClockFrequency, 
 		// pseudo start bit sequence
 		simu(ioP) = '1';
 		simu(ioN) = '0';
-		co_await WaitClk(actualBusClock);
-		co_await WaitClk(actualBusClock);
-		co_await WaitClk(actualBusClock);
+		co_await AfterClk(actualBusClock);
+		co_await AfterClk(actualBusClock);
+		co_await AfterClk(actualBusClock);
 
 		simu(ioP) = '0';
 		simu(ioN) = '1';
-		co_await WaitClk(actualBusClock);
+		co_await AfterClk(actualBusClock);
 
 		while (true) {
 			float bitDist = randomBitDistribution(rng);
@@ -192,7 +192,7 @@ void setup_recoverDataDifferential(hlim::ClockRational actualBusClockFrequency, 
 				simu(ioN) = beat.second;
 				dataStream.push_back(beat);
 
-				co_await WaitClk(actualBusClock);
+				co_await AfterClk(actualBusClock);
 			}
 			// Ensure a clock edge after every at most 6 bits
 			auto beat = dataStream.back();
@@ -202,7 +202,7 @@ void setup_recoverDataDifferential(hlim::ClockRational actualBusClockFrequency, 
 			simu(ioN) = beat.second;
 			dataStream.push_back(beat);
 
-			co_await WaitClk(actualBusClock);
+			co_await AfterClk(actualBusClock);
 		}
 	});
 
@@ -219,13 +219,13 @@ void setup_recoverDataDifferential(hlim::ClockRational actualBusClockFrequency, 
 					if (simu(streamData) == value)
 						break;
 				}
-				co_await WaitClk(clock);
+				co_await AfterClk(clock);
 			}
 		};
 		// wait for pseudo start bit sequence
 		co_await waitForStreamEqual(1);
 		co_await waitForStreamEqual(2);
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		while (true) {
 			BOOST_TEST(simu(streamValid).defined());
@@ -239,7 +239,7 @@ void setup_recoverDataDifferential(hlim::ClockRational actualBusClockFrequency, 
 
 				numBeatsVerified++;
 			}
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 	});
 

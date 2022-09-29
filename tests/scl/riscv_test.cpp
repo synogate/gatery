@@ -353,7 +353,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_arith, BoostUnitTestSimulationFixture)
 			uint32_t opA = rng();
 			uint32_t opB = rng();
 			rv.r1(opA).r2(opB);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			BOOST_TEST(rv.result() == opA + opB);
@@ -366,7 +366,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_arith, BoostUnitTestSimulationFixture)
 			uint32_t opA = rng();
 			uint32_t opB = rng();
 			rv.r1(opA).r2(opB);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			BOOST_TEST(rv.result() == opA - opB);
@@ -379,7 +379,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_arith, BoostUnitTestSimulationFixture)
 			int32_t opB = int32_t(rng()) >> (32 - 12);
 			rv.op().addi(0, 0, opB);
 			rv.r1(opA);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			BOOST_TEST(rv.result() == opA + opB);
@@ -426,7 +426,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_logic, BoostUnitTestSimulationFixture)
 			{
 				rv.r1(opA).r2(opB).op().typeR(rv::op::ARITH, f);
 			}
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 
@@ -468,7 +468,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_shift, BoostUnitTestSimulationFixture)
 			uint32_t opA = rng();
 			uint32_t opB = rng() & 0x1F;
 			rv.r1(opA).r2(opB);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			BOOST_TEST(rv.result() == (opA << opB));
@@ -481,7 +481,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_shift, BoostUnitTestSimulationFixture)
 			uint32_t opA = rng();
 			uint32_t opB = rng() & 0x1F;
 			rv.r1(opA).r2(opB);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			BOOST_TEST(rv.result() == (opA >> opB));
@@ -494,7 +494,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_shift, BoostUnitTestSimulationFixture)
 			uint32_t opA = rng();
 			uint32_t opB = rng() & 0x1F;
 			rv.r1(opA).r2(opB);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			BOOST_TEST(rv.result() == ((int32_t)opA >> opB));
@@ -506,7 +506,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_shift, BoostUnitTestSimulationFixture)
 			uint32_t opA = rng();
 			uint32_t opB = rng() & 0x1F;
 			rv.r1(opA).op().slli(0, 0, opB);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			BOOST_TEST(rv.result() == (opA << opB));
@@ -518,7 +518,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_shift, BoostUnitTestSimulationFixture)
 			uint32_t opA = rng();
 			uint32_t opB = rng() & 0x1F;
 			rv.r1(opA).op().srli(0, 0, opB);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			BOOST_TEST(rv.result() == (opA >> opB));
@@ -530,7 +530,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_shift, BoostUnitTestSimulationFixture)
 			uint32_t opA = rng();
 			uint32_t opB = rng() & 0x1F;
 			rv.r1(opA).op().srai(0, 0, opB);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			BOOST_TEST(rv.result() == ((int32_t)opA >> opB));
@@ -566,7 +566,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_setcmp, BoostUnitTestSimulationFixture)
 			int32_t opA = int32_t(rng());
 			int32_t opB = int32_t(rng());
 			rv.r1((uint32_t)opA).r2((uint32_t)opB);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			uint32_t isTrue = opA < opB ? 1 : 0;
@@ -580,7 +580,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_setcmp, BoostUnitTestSimulationFixture)
 			uint32_t opA = rng();
 			uint32_t opB = rng();
 			rv.r1(opA).r2(opB);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			uint32_t isTrue = opA < opB ? 1 : 0;
@@ -593,7 +593,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_setcmp, BoostUnitTestSimulationFixture)
 			int32_t opA = int32_t(rng());
 			int32_t opB = int32_t(rng()) >> (32 - 12);
 			rv.r1((uint32_t)opA).op().slti(0, 0, opB);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			uint32_t isTrue = opA < opB ? 1 : 0;
@@ -606,7 +606,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_setcmp, BoostUnitTestSimulationFixture)
 			uint32_t opA = rng();
 			int32_t opB = int32_t(rng()) >> (32 - 12);
 			rv.r1(opA).op().sltui(0, 0, opB);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			uint32_t isTrue = opA < uint32_t(opB) ? 1 : 0;
@@ -643,7 +643,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_lui, BoostUnitTestSimulationFixture)
 			uint32_t opA = rng() & 0xFFFFF000u;
 			rv.r1(rng()).r2(rng()).ip(rng());
 			rv.op().lui(0, opA);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			BOOST_TEST(rv.result() == opA);
@@ -657,7 +657,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_lui, BoostUnitTestSimulationFixture)
 			rv.r1(rng()).r2(rng());
 			rv.ip(ip);
 			rv.op().auipc(0, opA);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			BOOST_TEST(rv.result() == opA + ip);
@@ -695,7 +695,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_jal, BoostUnitTestSimulationFixture)
 			rv.r1(rng()).r2(rng());
 			rv.ip(ip);
 			rv.op().jal(0, offset);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			BOOST_TEST(rv.result() == ip + 4);
@@ -712,7 +712,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_jal, BoostUnitTestSimulationFixture)
 			rv.r2(rng());
 			rv.ip(ip).r1(opA);
 			rv.op().jalr(0, 0, offset);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			BOOST_TEST(rv.result() == ip + 4);
@@ -743,7 +743,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_csr_timer, BoostUnitTestSimulationFixture)
 		rv.ip(rng()).r1(rng()).r2(rng());
 		rv.op().typeI(rv::op::SYSTEM, rv::func::CSRRW, 1, 0, 0xC00);
 
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 		BOOST_TEST(rv.hasResult());
 		size_t start = rv.result();
 
@@ -754,12 +754,12 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_csr_timer, BoostUnitTestSimulationFixture)
 
 			rv.ip(rng()).r1(rng()).r2(rng());
 			rv.op().typeI(rv::op::SYSTEM, (rv::func)(i % 7 + 1), 1, 0, 0xC00 | (i % 2));
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 
 		rv.ip(rng()).r1(rng()).r2(rng());
 		rv.op().typeI(rv::op::SYSTEM, rv::func::CSRRW, 1, 0, 0xC80);
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 		BOOST_TEST(rv.hasResult());
 		BOOST_TEST(rv.result() == 0);
 
@@ -793,7 +793,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 
 			rv.r1(opA).r2(opB).ip(ip);
 			rv.op().typeB(rv::op::BRANCH, rv::func::BEQ, offset);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(!rv.hasResult());
 			if (opA == opB)
@@ -812,7 +812,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 
 			rv.r1(opA).r2(opB).ip(ip);
 			rv.op().typeB(rv::op::BRANCH, rv::func::BNE, offset);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(!rv.hasResult());
 			if (opA != opB)
@@ -831,7 +831,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 
 			rv.r1(opA).r2(opB).ip(ip);
 			rv.op().typeB(rv::op::BRANCH, rv::func::BLT, offset);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(!rv.hasResult());
 			if (int32_t(opA) < int32_t(opB))
@@ -850,7 +850,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 
 			rv.r1(opA).r2(opB).ip(ip);
 			rv.op().typeB(rv::op::BRANCH, rv::func::BGE, offset);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(!rv.hasResult());
 			if (int32_t(opA) >= int32_t(opB))
@@ -869,7 +869,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 
 			rv.r1(opA).r2(opB).ip(ip);
 			rv.op().typeB(rv::op::BRANCH, rv::func::BLTU, offset);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(!rv.hasResult());
 			if (opA < opB)
@@ -888,7 +888,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 
 			rv.r1(opA).r2(opB).ip(ip);
 			rv.op().typeB(rv::op::BRANCH, rv::func::BGEU, offset);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(!rv.hasResult());
 			if (opA >= opB)
@@ -932,7 +932,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_store, BoostUnitTestSimulationFixture)
 
 			rv.r1(opA).r2(opB).ip(rng());
 			rv.op().typeS(rv::op::STORE, rv::func::WORD, offset);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(!rv.hasResult());
 			BOOST_TEST(!rv.isStall());
@@ -954,7 +954,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_store, BoostUnitTestSimulationFixture)
 
 			rv.r1(opA).r2(opB).ip(rng());
 			rv.op().typeS(rv::op::STORE, rv::func::HALFWORD, offset);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(!rv.hasResult());
 			BOOST_TEST(!rv.isStall());
@@ -976,7 +976,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_store, BoostUnitTestSimulationFixture)
 
 			rv.r1(opA).r2(opB).ip(rng());
 			rv.op().typeS(rv::op::STORE, rv::func::BYTE, offset);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(!rv.hasResult());
 			BOOST_TEST(!rv.isStall());
@@ -1009,7 +1009,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_store, BoostUnitTestSimulationFixtur
 	addSimulationProcess([&]()->SimProcess {
 		while (true)
 		{
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 			BOOST_TEST(!rv.hasResult());
 		}
 	});
@@ -1042,28 +1042,29 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_store, BoostUnitTestSimulationFixtur
 			BOOST_TEST(simu(link.a->mask) == 0xF);
 			while(rng() % 2 == 0)
 			{
-				co_await WaitClk(clock);
+				co_await AfterClk(clock);
 				BOOST_TEST(rv.isStall());
 				BOOST_TEST(simu(valid(link.a)) == '1');
 			}
+
 			simu(ready(link.a)) = '1';
 			co_await WaitFor(0);
 
 			while (rng() % 2 == 0)
 			{
-				co_await WaitClk(clock);
+				co_await AfterClk(clock);
 				BOOST_TEST(simu(valid(link.a)) == '0');
 				BOOST_TEST(rv.isStall());
 			}
 			simu(valid(*link.d)) = '1';
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 			BOOST_TEST(!rv.isStall());
 
 		}
 
 		simu(valid(*link.d)) = '0';
 		simu(ready(link.a)) = '0';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 		stopTest();
 	});
 
@@ -1091,7 +1092,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_byte_store, BoostUnitTestSimulationF
 
 			rv.r1(opA).r2(opB).ip(rng());
 			rv.op().typeS(rv::op::STORE, rv::func::BYTE, offset);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 			
 			BOOST_TEST(simu(valid(link.a)) == '1');
 			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::PutFullData);
@@ -1104,7 +1105,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_byte_store, BoostUnitTestSimulationF
 			BOOST_TEST(((simu(link.a->data) >> expectedOffset) & 0xFF) == (opB & 0xFF));
 		}
 
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 		stopTest();
 	});
 
@@ -1135,7 +1136,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_half_store, BoostUnitTestSimulationF
 
 			rv.r1(opA).r2(opB).ip(rng());
 			rv.op().typeS(rv::op::STORE, rv::func::HALFWORD, offset);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(simu(valid(link.a)) == '1');
 			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::PutFullData);
@@ -1148,7 +1149,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_half_store, BoostUnitTestSimulationF
 			BOOST_TEST(((simu(link.a->data) >> expectedOffset) & 0xFF) == (opB & 0xFF));
 		}
 
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 		stopTest();
 	});
 
@@ -1184,7 +1185,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_byte_load, BoostUnitTestSimulationFi
 
 			uint32_t readData = rng();
 			simu((*link.d)->data) = readData;
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(simu(valid(link.a)) == '1');
 			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::Get);
@@ -1211,7 +1212,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_byte_load, BoostUnitTestSimulationFi
 
 			int32_t readData = rng();
 			simu((*link.d)->data) = (uint32_t) readData;
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(simu(valid(link.a)) == '1');
 			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::Get);
@@ -1265,7 +1266,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_half_load, BoostUnitTestSimulationFi
 
 			uint32_t readData = rng();
 			simu((*link.d)->data) = readData;
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(simu(valid(link.a)) == '1');
 			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::Get);
@@ -1295,7 +1296,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_half_load, BoostUnitTestSimulationFi
 
 			int32_t readData = rng();
 			simu((*link.d)->data) = (uint32_t) readData;
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(simu(valid(link.a)) == '1');
 			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::Get);
@@ -1358,7 +1359,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_load, BoostUnitTestSimulationFixture
 			BOOST_TEST(simu(link.a->mask) == 0xF);
 			while (rng() % 2 == 0)
 			{
-				co_await WaitClk(clock);
+				co_await AfterClk(clock);
 				BOOST_TEST(rv.isStall());
 				BOOST_TEST(simu(valid(link.a)) == '1');
 			}
@@ -1367,7 +1368,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_load, BoostUnitTestSimulationFixture
 
 			while (rng() % 2 == 0)
 			{
-				co_await WaitClk(clock);
+				co_await AfterClk(clock);
 				BOOST_TEST(simu(valid(link.a)) == '0');
 				BOOST_TEST(rv.isStall());
 			}
@@ -1386,7 +1387,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_load, BoostUnitTestSimulationFixture
 			}
 
 			simu(valid(*link.d)) = '1';
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 			BOOST_TEST(!rv.isStall());
 			BOOST_TEST(rv.hasResult());
 
@@ -1395,7 +1396,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_load, BoostUnitTestSimulationFixture
 
 		simu(valid(*link.d)) = '0';
 		simu(ready(link.a)) = '0';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 		stopTest();
 	});
 
@@ -1429,7 +1430,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 			simu(*avmm.readData) = data;
 			rv.r1(opA).r2(rng()).ip(rng());
 			rv.op().typeI(rv::op::LOAD, rv::func::WORD, 0, 0, offset);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			BOOST_TEST(rv.result() == data);
@@ -1453,7 +1454,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 			simu(*avmm.readData) = data;
 			rv.r1(opA).r2(rng()).ip(rng());
 			rv.op().typeI(rv::op::LOAD, rv::func::HALFWORD, 0, 0, offset);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			size_t expectedOffset = (opA + offset) % 4 < 2 ? 0 : 16;
 
@@ -1480,7 +1481,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 			simu(*avmm.readData) = data;
 			rv.r1(opA).r2(rng()).ip(rng());
 			rv.op().typeI(rv::op::LOAD, rv::func::HALFWORDU, 0, 0, offset);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			size_t expectedOffset = (opA + offset) % 4 < 2 ? 0 : 16;
 
@@ -1504,7 +1505,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 			simu(*avmm.readData) = data;
 			rv.r1(opA).r2(rng()).ip(rng());
 			rv.op().typeI(rv::op::LOAD, rv::func::BYTE, 0, 0, offset);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			size_t expectedOffset = ((opA + offset) % 4) * 8ull;
 
@@ -1528,7 +1529,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 			simu(*avmm.readData) = data;
 			rv.r1(opA).r2(rng()).ip(rng());
 			rv.op().typeI(rv::op::LOAD, rv::func::BYTEU, 0, 0, offset);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			size_t expectedOffset = ((opA + offset) % 4) * 8ull;
 
@@ -1557,17 +1558,20 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 			simu(*avmm.readData) = data;
 			rv.r1(opA).r2(rng()).ip(rng());
 			rv.op().typeI(rv::op::LOAD, rv::func::WORD, 0, 0, offset);
+			co_await WaitFor(0);
 			BOOST_TEST(simu(*avmm.read) == '1');
 
 			for (size_t j = 0; j < delay; ++j)
 			{
+				co_await WaitFor(0);
 				BOOST_TEST(rv.isStall());
-				co_await WaitClk(clock);
+				co_await AfterClk(clock);
+				co_await WaitFor(0);
 				BOOST_TEST(simu(*avmm.read) == '0');
 			}
 
 			simu(*avmm.readDataValid) = '1';
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			BOOST_TEST(rv.hasResult());
 			BOOST_TEST(rv.result() == data);
@@ -1648,7 +1652,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, BoostUnitTestSimulationFixture)
 		bool found = false;
 		for (size_t i = 0; i < timeout; ++i)
 		{
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 			if (simu(*avmm.write))
 			{
 				BOOST_TEST(simu(avmm.address) == 8);
@@ -1715,7 +1719,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, BoostUnitTestSimulationFixture)
 	addSimulationProcess([&]()->SimProcess {
 		while (true)
 		{
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 			if (simu(*avmm.write))
 			{
 				BOOST_TEST(simu(avmm.address) == 8);
@@ -1724,7 +1728,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, BoostUnitTestSimulationFixture)
 				break;
 			}
 		}
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 		stopTest();
 	});
 
@@ -1793,7 +1797,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink, BoostUnitTestSimulationFixture)
 					requestAddress = simu(imem.a->address);
 				}
 			}
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 	});
 
@@ -1833,7 +1837,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink, BoostUnitTestSimulationFixture)
 	addSimulationProcess([&]()->SimProcess {
 		while (true)
 		{
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 			if (simu(*avmm.write))
 			{
 				BOOST_TEST(simu(avmm.address) == 8);
@@ -1842,7 +1846,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink, BoostUnitTestSimulationFixture)
 				break;
 			}
 		}
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 		stopTest();
 	});
 
@@ -1913,7 +1917,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulati
 	addSimulationProcess([&]()->SimProcess {
 		while (!found)
 		{
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 			if (simu(valid(dmemBus.a)) == '1' && 
 				simu(ready(dmemBus.a)) == '1' &&
 				simu(dmemBus.a->opcode) == (size_t)scl::TileLinkA::PutFullData)
@@ -1925,7 +1929,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulati
 			}
 		}
 
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 		stopTest();
 	});
 

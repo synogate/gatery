@@ -49,12 +49,12 @@ BOOST_FIXTURE_TEST_CASE(bt_selector_test, BoostUnitTestSimulationFixture)
 		}
 		simu(valid(up)) = '0';
 
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		for (auto& s : down)
 			BOOST_TEST(simu(valid(s)) == '0');
 		BOOST_TEST(simu(ready(up)) == '0');
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		
 		for (size_t input = 0; input < 1 << 6; ++input)
@@ -66,7 +66,7 @@ BOOST_FIXTURE_TEST_CASE(bt_selector_test, BoostUnitTestSimulationFixture)
 				simu(*s->success) = (state & 1) == 1; state >>= 1;
 			}
 			simu(valid(up)) = '1';
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			size_t i;
 			// check all childs up to the first success or running
@@ -95,7 +95,7 @@ BOOST_FIXTURE_TEST_CASE(bt_selector_test, BoostUnitTestSimulationFixture)
 			}
 
 			simu(valid(up)) = '0';
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 			for (auto& s : down)
 				BOOST_TEST(simu(valid(s)) == '0');
 		}
@@ -130,12 +130,12 @@ BOOST_FIXTURE_TEST_CASE(bt_sequence_test, BoostUnitTestSimulationFixture)
 		}
 		simu(valid(up)) = '0';
 
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		for (auto& s : down)
 			BOOST_TEST(simu(valid(s)) == '0');
 		BOOST_TEST(simu(ready(up)) == '0');
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		simu(valid(up)) = '1';
 		for (size_t input = 0; input < 1 << 6; ++input)
@@ -146,7 +146,7 @@ BOOST_FIXTURE_TEST_CASE(bt_sequence_test, BoostUnitTestSimulationFixture)
 				simu(ready(s)) = (state & 1) == 1; state >>= 1;
 				simu(*s->success) = (state & 1) == 1; state >>= 1;
 			}
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 			size_t i;
 			// check all childs up to the first fail or running
@@ -194,12 +194,12 @@ BOOST_FIXTURE_TEST_CASE(bt_check_test, BoostUnitTestSimulationFixture)
 	addSimulationProcess([&]()->SimProcess {
 
 		simu(condition) = '0';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 		BOOST_TEST(simu(ready(up)) == '1');
 		BOOST_TEST(simu(*up->success) == '0');
 
 		simu(condition) = '1';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 		BOOST_TEST(simu(ready(up)) == '1');
 		BOOST_TEST(simu(*up->success) == '1');
 		stopTest();
@@ -222,11 +222,11 @@ BOOST_FIXTURE_TEST_CASE(bt_wait_test, BoostUnitTestSimulationFixture)
 	addSimulationProcess([&]()->SimProcess {
 
 		simu(condition) = '0';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 		BOOST_TEST(simu(ready(up)) == '0');
 
 		simu(condition) = '1';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 		BOOST_TEST(simu(ready(up)) == '1');
 		BOOST_TEST(simu(*up->success) == '1');
 		stopTest();
@@ -252,12 +252,12 @@ BOOST_FIXTURE_TEST_CASE(bt_do_test, BoostUnitTestSimulationFixture)
 
 		simu(valid(up)) = '1';
 		simu(status) = '0';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 		BOOST_TEST(simu(ready(up)) == '1');
 		BOOST_TEST(simu(*up->success) == '0');
 
 		simu(status) = '1';
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 		BOOST_TEST(simu(ready(up)) == '1');
 		BOOST_TEST(simu(*up->success) == '1');
 		stopTest();

@@ -105,7 +105,7 @@ BOOST_FIXTURE_TEST_CASE(EnumRegister, gtry::BoostUnitTestSimulationFixture)
 		BOOST_TEST(simu(outSignalReset) == C);
 
 		simu(inSignal) = D;
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 		BOOST_TEST(simu(outSignal) == D);
 		BOOST_TEST(simu(outSignalReset) == D);
 

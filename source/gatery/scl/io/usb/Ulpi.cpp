@@ -313,16 +313,16 @@ void gtry::scl::usb::UlpiSimulator::addSimulationProcess(UlpiIo& io)
 
 				simu(io.dir) = '1';
 				simu(io.nxt) = '1';
-				co_await WaitClk(io.clock);
+				co_await AfterClk(io.clock);
 				for(uint8_t byte : packet)
 				{
 					simu(io.dataIn) = byte;
-					co_await WaitClk(io.clock);
+					co_await AfterClk(io.clock);
 				}
 				simu(io.dataIn) = 0;
 				simu(io.dir) = '0';
 				simu(io.nxt) = '0';
-				co_await WaitClk(io.clock);
+				co_await AfterClk(io.clock);
 			}
 
 			const uint64_t data = simu(io.dataIn);
@@ -401,7 +401,7 @@ void gtry::scl::usb::UlpiSimulator::addSimulationProcess(UlpiIo& io)
 		m_sendQueue.push({ 0xC3, 0x80, 0x06, 0x00, 0x01, 0x00, 0x00, 0x40, 0x00, 0xDD, 0x94 }); // SETUP DATA0
 
 		while(m_recvQueue.empty())
-			co_await WaitClk(io.clock);
+			co_await AfterClk(io.clock);
 		HCL_ASSERT_HINT(popToken(TokenPid::ack), "ACK expected for get device descriptor setup packet");
 
 		TokenPid dataPid = TokenPid::data1;
@@ -410,7 +410,7 @@ void gtry::scl::usb::UlpiSimulator::addSimulationProcess(UlpiIo& io)
 			m_sendQueue.push({ 0x69, 0x00, 0x10 }); // IN
 
 			while(m_recvQueue.empty())
-				co_await WaitClk(io.clock);
+				co_await AfterClk(io.clock);
 			HCL_ASSERT(m_recvQueue.front().size() == len);
 			HCL_ASSERT(popToken(dataPid));
 			dataPid = dataPid == TokenPid::data0 ? TokenPid::data1 : TokenPid::data0;
@@ -422,7 +422,7 @@ void gtry::scl::usb::UlpiSimulator::addSimulationProcess(UlpiIo& io)
 		m_sendQueue.push({ 0xE1, 0x00, 0x10 }); // OUT
 		m_sendQueue.push({ 0x4B, 0x00, 0x00 }); // empty DATA1
 		while(m_recvQueue.empty())
-			co_await WaitClk(io.clock);
+			co_await AfterClk(io.clock);
 		HCL_ASSERT(popToken(TokenPid::ack));
 
 
@@ -430,13 +430,13 @@ void gtry::scl::usb::UlpiSimulator::addSimulationProcess(UlpiIo& io)
 		m_sendQueue.push({ 0x2D, 0x00, 0x10 }); // SETUP
 		m_sendQueue.push({ 0xC3, 0x00, 0x09, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x27, 0x25 }); // SETUP DATA0
 		while(m_recvQueue.empty())
-			co_await WaitClk(io.clock);
+			co_await AfterClk(io.clock);
 		HCL_ASSERT(popToken(TokenPid::ack));
 
 		//	status stage
 		m_sendQueue.push({ 0x69, 0x00, 0x10 }); // IN
 		while(m_recvQueue.empty())
-			co_await WaitClk(io.clock);
+			co_await AfterClk(io.clock);
 		HCL_ASSERT(m_recvQueue.front().size() == 1);
 		m_recvQueue.pop();
 		m_sendQueue.push({ 0xD2 }); // ACK
@@ -457,27 +457,27 @@ void gtry::scl::usb::UlpiSimulator::addSimulationProcess(UlpiIo& io)
 		m_sendQueue.push({ 0xE1, 0x80, 0xa0 }); // OUT
 		m_sendQueue.push({ 0xC3, 0x31, 0x81, 0x6B }); // DATA0
 		while(m_recvQueue.empty())
-			co_await WaitClk(io.clock);
+			co_await AfterClk(io.clock);
 		HCL_ASSERT(popToken(TokenPid::ack));
 
 		// resend data to endpoint 1
 		m_sendQueue.push({ 0xE1, 0x80, 0xa0 }); // OUT
 		m_sendQueue.push({ 0xC3, 0x31, 0x81, 0x6B }); // DATA0
 		while(m_recvQueue.empty())
-			co_await WaitClk(io.clock);
+			co_await AfterClk(io.clock);
 		HCL_ASSERT(popToken(TokenPid::ack));
 
 		// send data to endpoint 1
 		m_sendQueue.push({ 0xE1, 0x80, 0xa0 }); // OUT
 		m_sendQueue.push({ 0x4B, 0x32, 0xC1, 0x6A }); // DATA1
 		while(m_recvQueue.empty())
-			co_await WaitClk(io.clock);
+			co_await AfterClk(io.clock);
 		HCL_ASSERT(popToken(TokenPid::ack));
 
 		// recv data from endpoint 1
 		m_sendQueue.push({ 0x69, 0x80, 0xa0 }); // IN
 		while(m_recvQueue.empty())
-			co_await WaitClk(io.clock);
+			co_await AfterClk(io.clock);
 		HCL_ASSERT(popToken(TokenPid::data0));
 		m_sendQueue.push({ 0xD2 }); // ACK
 
@@ -485,12 +485,12 @@ void gtry::scl::usb::UlpiSimulator::addSimulationProcess(UlpiIo& io)
 		m_sendQueue.push({ 0x2D, 0x00, 0x10 }); // SETUP
 		m_sendQueue.push({ 0xC3, 0x00, 0x05, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEA, 0xA1 }); // SETUP DATA0
 		while(m_recvQueue.empty())
-			co_await WaitClk(io.clock);
+			co_await AfterClk(io.clock);
 		HCL_ASSERT(popToken(TokenPid::ack));
 
 		//	status stage
 		while(m_recvQueue.empty())
-			co_await WaitClk(io.clock);
+			co_await AfterClk(io.clock);
 		HCL_ASSERT(m_recvQueue.front().size() == 1);
 		m_recvQueue.pop();
 		m_sendQueue.push({ 0xD2 }); // ACK

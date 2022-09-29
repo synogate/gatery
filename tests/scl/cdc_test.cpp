@@ -44,9 +44,10 @@ BOOST_FIXTURE_TEST_CASE(grayCode, BoostUnitTestSimulationFixture)
 		for(size_t i = 0; i < 16; ++i)
 		{
 			simu(a) = i;
+			co_await WaitStable();
 			BOOST_TEST(simu(b) == (i ^ (i >> 1)));
 			BOOST_TEST(simu(c) == i);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 
 		stopTest();

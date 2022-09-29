@@ -91,6 +91,11 @@ void RunTimeSimulationContext::simulationProcessSuspending(std::coroutine_handle
 	m_simulator->simulationProcessSuspending(handle, waitChange, {});
 }
 
+void RunTimeSimulationContext::simulationProcessSuspending(std::coroutine_handle<> handle, WaitStable &waitStable)
+{
+	m_simulator->simulationProcessSuspending(handle, waitStable, {});
+}
+
 
 
 

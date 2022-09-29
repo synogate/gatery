@@ -142,7 +142,7 @@ void gtry::scl::riscv::CpuTrace::writeVcd() const
 			co_await WaitFor(hlim::ClockRational{ 2, 1 } / clk.absoluteFrequency());
 			vcd.writeTime(subCylce++);
 			vcd.writeBitState("!", true, false);
-			co_await WaitClk(clk);
+			co_await AfterClk(clk);
 
 		}
 	});

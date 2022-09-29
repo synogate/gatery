@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2022 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -15,23 +15,28 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
-#include "WaitClock.h"
+#pragma once
 
-#include "../SimulationContext.h"
 
-#include <iostream>
+#include "../../utils/CoroutineWrapper.h"
+
+namespace gtry::hlim {
+	class Clock;
+}
 
 namespace gtry::sim {
 
-WaitClock::WaitClock(const hlim::Clock *clock, TimingPhase timing) : m_clock(clock), m_timing(timing)
-{
+/**
+ * @brief co_awaiting on a WaitStable continues the simulation until the signal states for a simulation time step and phase have stabilized (the last micro tick).
+ */
+class WaitStable {
+	public:
+		WaitStable();
 
-}
-
-void WaitClock::await_suspend(std::coroutine_handle<> handle)
-{
-	SimulationContext::current()->simulationProcessSuspending(handle, *this);
-}
+		bool await_ready() noexcept { return false; } // always force reevaluation
+		void await_suspend(std::coroutine_handle<> handle);
+		void await_resume() noexcept { }
+	protected:
+};
 
 }

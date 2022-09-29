@@ -57,7 +57,7 @@ BOOST_FIXTURE_TEST_CASE(CompoundRegister, gtry::BoostUnitTestSimulationFixture)
 		BOOST_TEST(simu(outSignalReset.a) == 1);
 
 		simu(inSignal.a) = 2;
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 		BOOST_TEST(simu(outSignal.a) == 2);
 		BOOST_TEST(simu(outSignalReset.a) == 2);
 
@@ -97,7 +97,7 @@ BOOST_FIXTURE_TEST_CASE(ContainerRegister, gtry::BoostUnitTestSimulationFixture)
 		simu(inSignal[0]) = 1;
 		simu(inSignal[1]) = 2;
 
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		BOOST_TEST(simu(outSignal[0]) == 1);
 		BOOST_TEST(simu(outSignal[1]) == 2);
@@ -141,7 +141,7 @@ BOOST_FIXTURE_TEST_CASE(ArrayRegister, gtry::BoostUnitTestSimulationFixture)
 		simu(inSignal[0]) = 1;
 		simu(inSignal[1]) = 2;
 
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		BOOST_TEST(simu(outSignal[0]) == 1);
 		BOOST_TEST(simu(outSignal[1]) == 2);
@@ -182,7 +182,7 @@ BOOST_FIXTURE_TEST_CASE(TupleRegister, gtry::BoostUnitTestSimulationFixture)
 
 		simu(get<1>(inSignal)) = 2;
 
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		BOOST_TEST(simu(get<1>(outSignal)) == 2);
 		BOOST_TEST(simu(get<1>(outSignalReset)) == 2);
@@ -216,7 +216,7 @@ BOOST_FIXTURE_TEST_CASE(MapRegister, gtry::BoostUnitTestSimulationFixture)
 		simu(inSignal[0]) = 2;
 		BOOST_TEST(simu(outSignalReset[0]) == 3);
 
-		co_await WaitClk(clock);
+		co_await AfterClk(clock);
 
 		BOOST_TEST(simu(outSignal[0]) == 2);
 		BOOST_TEST(simu(outSignalReset[0]) == 2);

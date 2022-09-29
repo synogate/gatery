@@ -51,11 +51,14 @@ SigHandleBVec simu(const OutputPins &pins)
 }
 
 
-
-
-sim::WaitClock WaitClk(const Clock &clk)
+sim::WaitClock AfterClk(const Clock &clk)
 {
-	return sim::WaitClock(clk.getClk());
+	return sim::WaitClock(clk.getClk(), sim::WaitClock::AFTER);
+}
+
+sim::WaitClock OnClk(const Clock &clk)
+{
+	return sim::WaitClock(clk.getClk(), sim::WaitClock::DURING);
 }
 
 void simAnnotationStart(const std::string &id, const std::string &desc)

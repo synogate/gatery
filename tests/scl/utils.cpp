@@ -107,7 +107,7 @@ BOOST_FIXTURE_TEST_CASE(addWithCarry, BoostUnitTestSimulationFixture)
 				for (size_t j = 0; j < b.width().count(); ++j)
 				{
 					simu(b) = j;
-					co_await WaitClk(clock);
+					co_await AfterClk(clock);
 
 					size_t expectedSum = (i + j + carryMode) & sum.width().mask();
 					BOOST_TEST(simu(sum) == expectedSum);

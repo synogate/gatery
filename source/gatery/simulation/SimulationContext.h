@@ -29,6 +29,7 @@ class WaitFor;
 class WaitUntil;
 class WaitClock;
 class WaitChange;
+class WaitStable;
 class SigHandle;
 
 class SimulationContext {
@@ -44,6 +45,7 @@ class SimulationContext {
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil) = 0;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock) = 0;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitChange &waitChange) = 0;
+		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitStable &waitChange) = 0;
 
 		static SimulationContext *current() { return m_current; }
 

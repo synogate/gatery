@@ -109,7 +109,7 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, TinyCookuTableLooku
 				}
 			}
 
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 			simu(update) = '0';
 		}
 	});
@@ -119,7 +119,7 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, TinyCookuTableLooku
 		while (true)
 		{
 			simu(lookupKey) = gtry::utils::bitfieldExtract(rng(), 0, keySize.value);
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 		}
 	});
 
@@ -129,6 +129,7 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, TinyCookuTableLooku
 
 		while (true)
 		{
+			co_await OnClk(clock);
 			if (lookupQueue.size() == params.latency)
 			{
 				if (simu(outFound))
@@ -153,7 +154,6 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, TinyCookuTableLooku
 					value = item.second;
 			}
 			lookupQueue.push_front(value);
-			co_await WaitClk(clock);
 		}
 	});
 
