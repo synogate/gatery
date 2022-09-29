@@ -98,7 +98,7 @@ BOOST_FIXTURE_TEST_CASE(addWithCarry, BoostUnitTestSimulationFixture)
 
 		for (size_t carryMode = 0; carryMode < 2; ++carryMode)
 		{
-			simu(cin) = carryMode;
+			simu(cin) = (bool) carryMode;
 
 			for (size_t i = 0; i < a.width().count(); ++i)
 			{
@@ -125,6 +125,6 @@ BOOST_FIXTURE_TEST_CASE(addWithCarry, BoostUnitTestSimulationFixture)
 		}
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 2048);
 }

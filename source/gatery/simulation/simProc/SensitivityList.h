@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2022 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -15,15 +15,26 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "frontend/pch.h"
+#pragma once
 
-#define BOOST_TEST_MODULE "Unit tests for core library (including frontend)"
-#include <boost/test/unit_test.hpp>
+#include "../../hlim/NodePort.h"
 
-#include <gatery/frontend/FrontendUnitTestSimulationFixture.h>
+#include <vector>
 
-#include <gatery/frontend/GHDLTestFixture.h>
+namespace gtry::sim {
 
-using GHDLGlobalFixture = gtry::GHDLGlobalFixture;
+class Simulator;
 
-BOOST_TEST_GLOBAL_FIXTURE( GHDLGlobalFixture );
+/**
+ * @brief A set of signals that a simulation process can await changes on.
+ */
+class SensitivityList {
+	public:
+		inline const std::vector<hlim::NodePort> &getSignals() const { return m_signals; }
+		inline void add(const hlim::NodePort &np) { m_signals.push_back(np); }
+	protected:
+		std::vector<hlim::NodePort> m_signals;
+};
+
+
+}

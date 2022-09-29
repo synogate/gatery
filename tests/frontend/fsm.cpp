@@ -171,6 +171,6 @@ BOOST_FIXTURE_TEST_CASE(TestGCD, BoostUnitTestSimulationFixture)
 		sim_assert((ticks < ConstUInt(maxTicks-1, 8_b)) | (result == gtruth)) << "The state machine computed " << result << " but the correct answer is " << gtruth;
 	}
 
-	design.getCircuit().postprocess(DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), maxTicks);
 }

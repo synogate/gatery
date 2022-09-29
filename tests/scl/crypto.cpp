@@ -303,7 +303,7 @@ BOOST_AUTO_TEST_CASE(SipHash64TestVisual)
 	sip.block(state, msg);
 	OutputPins hash = pinOut(sip.finalize(state)).setName("hash");
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	char str[] = "datProgramm";
 	char* bla[] = { str };
@@ -425,12 +425,12 @@ BOOST_FIXTURE_TEST_CASE(SipHash64Test, gtry::BoostUnitTestSimulationFixture)
 
 		});
 
-	//design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	//design.postprocess();
 	//design.visualize("siphash");
 	//sim::VCDSink vcd(design.getCircuit(), getSimulator(), "siphash.vcd");
 	//vcd.addAllSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 24);
 }
 
@@ -522,12 +522,12 @@ BOOST_FIXTURE_TEST_CASE(TabulationHashingTest, gtry::BoostUnitTestSimulationFixt
 		});
 
 	//design.visualize("TabulationHashingTest_before");
-	//design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	//design.postprocess();
 	//design.visualize("TabulationHashingTest");
 	//sim::VCDSink vcd(design.getCircuit(), getSimulator(), "TabulationHashingTest.vcd");
 	//vcd.addAllSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 1024);
 }
 

@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2022 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -15,15 +15,31 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "frontend/pch.h"
+#pragma once
 
-#define BOOST_TEST_MODULE "Unit tests for core library (including frontend)"
-#include <boost/test/unit_test.hpp>
+#include "../../hlim/NodePort.h"
 
-#include <gatery/frontend/FrontendUnitTestSimulationFixture.h>
+#include "../../utils/CoroutineWrapper.h"
 
-#include <gatery/frontend/GHDLTestFixture.h>
+#include "SensitivityList.h"
 
-using GHDLGlobalFixture = gtry::GHDLGlobalFixture;
+namespace gtry::sim {
 
-BOOST_TEST_GLOBAL_FIXTURE( GHDLGlobalFixture );
+/**
+ * @brief Suspends a simulation process until any of the signals in the sensitivity list changes state.
+ * 
+ */
+class WaitChange {
+	public:
+		WaitChange(SensitivityList sensitivityList);
+
+		bool await_ready() noexcept { return false; } // always force reevaluation
+		void await_suspend(std::coroutine_handle<> handle);
+		void await_resume() noexcept { }
+
+		inline const SensitivityList &getSensitivityList() const { return m_sensitivityList; }
+	protected:
+		SensitivityList m_sensitivityList;
+};
+
+}

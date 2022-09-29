@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2022 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -15,15 +15,21 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "frontend/pch.h"
+#include "gatery/pch.h"
+#include "WaitChange.h"
 
-#define BOOST_TEST_MODULE "Unit tests for core library (including frontend)"
-#include <boost/test/unit_test.hpp>
+#include "../SimulationContext.h"
 
-#include <gatery/frontend/FrontendUnitTestSimulationFixture.h>
+namespace gtry::sim {
 
-#include <gatery/frontend/GHDLTestFixture.h>
+WaitChange::WaitChange(SensitivityList sensitivityList) : m_sensitivityList(std::move(sensitivityList))
+{
 
-using GHDLGlobalFixture = gtry::GHDLGlobalFixture;
+}
 
-BOOST_TEST_GLOBAL_FIXTURE( GHDLGlobalFixture );
+void WaitChange::await_suspend(std::coroutine_handle<> handle)
+{
+	SimulationContext::current()->simulationProcessSuspending(handle, *this);
+}
+
+}

@@ -57,55 +57,55 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
 	ready(uut) = pinIn().setName("out_ready");
 
 	addSimulationProcess([&]()->SimProcess {
-		simu(ready(uut)) = 1;
-		simu(valid(in0)) = 0;
-		simu(valid(in1)) = 0;
+		simu(ready(uut)) = '1';
+		simu(valid(in0)) = '0';
+		simu(valid(in1)) = '0';
 		simu(*in0) = 0;
 		simu(*in1) = 0;
 		co_await WaitClk(clock);
 
-		simu(valid(in0)) = 0;
-		simu(valid(in1)) = 1;
+		simu(valid(in0)) = '0';
+		simu(valid(in1)) = '1';
 		simu(*in1) = 1;
 		co_await WaitClk(clock);
 
-		simu(valid(in1)) = 0;
-		simu(valid(in0)) = 1;
+		simu(valid(in1)) = '0';
+		simu(valid(in0)) = '1';
 		simu(*in0) = 2;
 		co_await WaitClk(clock);
 
-		simu(valid(in1)) = 1;
-		simu(valid(in0)) = 1;
+		simu(valid(in1)) = '1';
+		simu(valid(in0)) = '1';
 		simu(*in0) = 3;
 		simu(*in1) = 4;
 		co_await WaitClk(clock);
 		co_await WaitClk(clock);
 
-		simu(valid(in1)) = 1;
-		simu(valid(in0)) = 1;
+		simu(valid(in1)) = '1';
+		simu(valid(in0)) = '1';
 		simu(*in0) = 5;
 		simu(*in1) = 6;
 		co_await WaitClk(clock);
 		co_await WaitClk(clock);
 
-		simu(valid(in0)) = 0;
-		simu(valid(in1)) = 1;
+		simu(valid(in0)) = '0';
+		simu(valid(in1)) = '1';
 		simu(*in1) = 7;
 		co_await WaitClk(clock);
 
-		simu(valid(in1)) = 0;
-		simu(valid(in0)) = 0;
-		simu(ready(uut)) = 0;
+		simu(valid(in1)) = '0';
+		simu(valid(in0)) = '0';
+		simu(ready(uut)) = '0';
 		co_await WaitClk(clock);
 
-		simu(valid(in1)) = 0;
-		simu(valid(in0)) = 1;
+		simu(valid(in1)) = '0';
+		simu(valid(in0)) = '1';
 		simu(*in0) = 8;
-		simu(ready(uut)) = 1;
+		simu(ready(uut)) = '1';
 		co_await WaitClk(clock);
 
-		simu(valid(in1)) = 0;
-		simu(valid(in0)) = 0;
+		simu(valid(in1)) = '0';
+		simu(valid(in0)) = '0';
 		co_await WaitClk(clock);
 	});
 
@@ -128,7 +128,7 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
    //vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//design.visualize("arbitrateInOrder_basic");
 
 	runTicks(clock.getClk(), 16);
@@ -157,9 +157,9 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 	ready(uut) = pinIn().setName("out_ready");
 
 	addSimulationProcess([&]()->SimProcess {
-		simu(ready(uut)) = 1;
-		simu(valid(in0)) = 0;
-		simu(valid(in1)) = 0;
+		simu(ready(uut)) = '1';
+		simu(valid(in0)) = '0';
+		simu(valid(in1)) = '0';
 
 		std::mt19937 rng{ 10179 };
 		size_t counter = 1;
@@ -170,29 +170,29 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 			{
 				if(rng() % 2 == 0)
 				{
-					simu(valid(in0)) = 1;
+					simu(valid(in0)) = '1';
 					simu(*in0) = counter++;
 				}
 				else
 				{
-					simu(valid(in0)) = 0;
+					simu(valid(in0)) = '0';
 				}
 
 				if(rng() % 2 == 0)
 				{
-					simu(valid(in1)) = 1;
+					simu(valid(in1)) = '1';
 					simu(*in1) = counter++;
 				}
 				else
 				{
-					simu(valid(in1)) = 0;
+					simu(valid(in1)) = '0';
 				}
 			}
 
 			// chaos monkey
-			simu(ready(uut)) = rng() % 8 != 0 ? 1 : 0;
+			simu(ready(uut)) = rng() % 8 != 0;
 
-			wasReady = simu(ready(in0)) != 0;
+			wasReady = simu(ready(in0));
 
 			co_await WaitClk(clock);
 		}
@@ -218,7 +218,7 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
    // design.visualize("arbitrateInOrder_fuzz");
 
 	runTicks(clock.getClk(), 256);
@@ -286,13 +286,13 @@ protected:
 		addSimulationProcess([&]()->SimProcess {
 			std::mt19937 rng{ std::random_device{}() };
 
-			simu(ready(stream)) = 0;
-			while(simu(valid(stream)) == 0)
+			simu(ready(stream)) = '0';
+			while(simu(valid(stream)) == '0')
 				co_await WaitClk(m_clock);
 
 			while(true)
 			{
-				simu(ready(stream)) = rng() % 2;
+				simu(ready(stream)) = rng() % 2 != 0;
 				co_await WaitClk(m_clock);
 			}
 		});
@@ -304,17 +304,17 @@ protected:
 			std::mt19937 rng{ std::random_device{}() };
 			for(size_t i = 0; i < m_transfers; ++i)
 			{
-				simu(valid(stream)) = 0;
+				simu(valid(stream)) = '0';
 				simu(*stream).invalidate();
 
 				while((rng() & 1) == 0)
 					co_await WaitClk(m_clock);
 
-				simu(valid(stream)) = 1;
+				simu(valid(stream)) = '1';
 				simu(*stream) = i + group * m_transfers;
 
 				co_await WaitFor(0);
-				while(simu(ready(stream)) == 0)  
+				while(simu(ready(stream)) == '0')
 				{
 					co_await WaitClk(m_clock);
 					co_await WaitFor(0);
@@ -322,7 +322,7 @@ protected:
 
 				co_await WaitClk(m_clock);
 			}
-			simu(valid(stream)) = 0;
+			simu(valid(stream)) = '0';
 			simu(*stream).invalidate();
 		});
 	}
@@ -336,19 +336,19 @@ protected:
 				const size_t packetLen = std::min<size_t>(m_transfers - i, rng() % 5 + 1);
 				for(size_t j = 0; j < packetLen; ++j)
 				{
-					simu(valid(stream)) = 0;
+					simu(valid(stream)) = '0';
 					simu(eop(stream)).invalidate();
 					simu(*stream).invalidate();
 
 					while((rng() & 1) == 0)
 						co_await WaitClk(m_clock);
 
-					simu(valid(stream)) = 1;
-					simu(eop(stream)) = j == packetLen - 1 ? 1 : 0;
+					simu(valid(stream)) = '1';
+					simu(eop(stream)) = j == packetLen - 1;
 					simu(*stream) = i + j + group * m_transfers;
 
 					co_await WaitFor(0);
-					while(simu(ready(stream)) == 0)
+					while(simu(ready(stream)) == '0')
 					{
 						co_await WaitClk(m_clock);
 						co_await WaitFor(0);
@@ -358,7 +358,7 @@ protected:
 				}
 				i += packetLen;
 			}
-			simu(valid(stream)) = 0;
+			simu(valid(stream)) = '0';
 			simu(*stream).invalidate();
 		});
 	}
@@ -372,8 +372,8 @@ protected:
 			{
 				co_await WaitFor(0);
 				co_await WaitFor(0);
-				if(simu(ready(stream)) == 1 &&
-					simu(valid(stream)) == 1)
+				if(simu(ready(stream)) == '1' &&
+					simu(valid(stream)) == '1')
 				{
 					size_t data = simu(*(stream.operator ->()));
 					BOOST_TEST(data / m_transfers < expectedValue.size());
@@ -435,7 +435,7 @@ BOOST_FIXTURE_TEST_CASE(stream_transform, StreamTransferFixture)
 	simulateTransferTest(in, out);
 
 	//recordVCD("stream_downstreamReg.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -452,7 +452,7 @@ BOOST_FIXTURE_TEST_CASE(stream_downstreamReg, StreamTransferFixture)
 	simulateTransferTest(in, out);
 
 	//recordVCD("stream_downstreamReg.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 BOOST_FIXTURE_TEST_CASE(stream_uptreamReg, StreamTransferFixture)
@@ -468,7 +468,7 @@ BOOST_FIXTURE_TEST_CASE(stream_uptreamReg, StreamTransferFixture)
 	simulateTransferTest(in, out);
 
 	//recordVCD("stream_uptreamReg.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 BOOST_FIXTURE_TEST_CASE(stream_reg, StreamTransferFixture)
@@ -484,7 +484,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reg, StreamTransferFixture)
 	simulateTransferTest(in, out);
 
 	//recordVCD("stream_reg.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 BOOST_FIXTURE_TEST_CASE(stream_reg_chaining, StreamTransferFixture)
@@ -500,7 +500,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reg_chaining, StreamTransferFixture)
 	simulateTransferTest(in, out);
 
 	//recordVCD("stream_reg_chaining.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -518,7 +518,7 @@ BOOST_FIXTURE_TEST_CASE(stream_fifo, StreamTransferFixture)
 	simulateTransferTest(in, out);
 
 	//recordVCD("stream_fifo.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 BOOST_FIXTURE_TEST_CASE(streamArbiter_low1, StreamTransferFixture)
@@ -538,7 +538,7 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_low1, StreamTransferFixture)
 	simulateArbiterTestSink(arbiter.out());
 
 	//recordVCD("streamArbiter_low1.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -561,7 +561,7 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_low4, StreamTransferFixture)
 	simulateArbiterTestSink(arbiter.out());
 
 	//recordVCD("streamArbiter_low4.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -584,7 +584,7 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_low4_packet, StreamTransferFixture)
 	simulateArbiterTestSink(arbiter.out());
 
 	//recordVCD("streamArbiter_low4_packet.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -607,7 +607,7 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rr5, StreamTransferFixture)
 	simulateArbiterTestSink(arbiter.out());
 
 	//recordVCD("streamArbiter_rr5.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 
 	//dbg::vis();
@@ -632,7 +632,7 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_reg_rr5, StreamTransferFixture)
 	simulateArbiterTestSink(arbiter.out());
 
 	//recordVCD("streamArbiter_reg_rr5.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -655,7 +655,7 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5, StreamTransferFixture)
 	simulateArbiterTestSink(arbiter.out());
 
 	//recordVCD("streamArbiter_rrb5.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -678,7 +678,7 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5_packet, StreamTransferFixture)
 	simulateArbiterTestSink(arbiter.out());
 
 	//recordVCD("streamArbiter_rrb5_packet.vcd");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -705,7 +705,7 @@ BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 
 	// send data
 	addSimulationProcess([=, &in]()->SimProcess {
-		simu(valid(in)) = 0;
+		simu(valid(in)) = '0';
 		simu(*in).invalidate();
 		for (size_t i = 0; i < 4; ++i)
 			co_await WaitClk(m_clock);
@@ -714,11 +714,11 @@ BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 		{
 			for (size_t j = 0; j < 2; ++j)
 			{
-				simu(valid(in)) = 1;
+				simu(valid(in)) = '1';
 				simu(*in) = (i >> (j * 4)) & 0xF;
 
 				co_await WaitFor(0);
-				while (simu(ready(in)) == 0)
+				while (simu(ready(in)) == '0')
 					co_await WaitClk(m_clock);
 				co_await WaitClk(m_clock);
 			}
@@ -730,7 +730,7 @@ BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 	simulateBackPressure(out);
 	simulateRecvData(out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//dbg::vis();
 	
 	runTicks(m_clock.getClk(), 1024);
@@ -749,18 +749,18 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth, StreamTransferFixture)
 
 	// send data
 	addSimulationProcess([=, &in]()->SimProcess {
-		simu(valid(in)) = 0;
+		simu(valid(in)) = '0';
 		simu(*in).invalidate();
 
 		for(size_t i = 0; i < 8; ++i)
 		{
-			simu(valid(in)) = 1;
+			simu(valid(in)) = '1';
 			simu(*in) =
 				((i * 3 + 0) << 0) |
 				((i * 3 + 1) << 8) |
 				((i * 3 + 2) << 16);
 			co_await WaitFor(0);
-			while(simu(ready(in)) == 0)
+			while(simu(ready(in)) == '0')
 				co_await WaitClk(m_clock);
 			co_await WaitClk(m_clock);
 		}
@@ -771,7 +771,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth, StreamTransferFixture)
 	simulateBackPressure(out);
 	simulateRecvData(out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -789,7 +789,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth_RvPacketStream, StreamTransferFixture
 	addSimulationProcess([=, &in]()->SimProcess {
 		for(size_t i = 0; i < 8; ++i)
 		{
-			simu(valid(in)) = 1;
+			simu(valid(in)) = '1';
 			simu(eop(in)) = i % 2 == 1;
 			simu(*in) =
 				((i * 3 + 0) << 0) |
@@ -797,7 +797,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth_RvPacketStream, StreamTransferFixture
 				((i * 3 + 2) << 16);
 
 			co_await WaitFor(0);
-			while(simu(ready(in)) == 0)
+			while(simu(ready(in)) == '0')
 				co_await WaitClk(m_clock);
 			co_await WaitClk(m_clock);
 		}
@@ -808,7 +808,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth_RvPacketStream, StreamTransferFixture
 	simulateBackPressure(out);
 	simulateRecvData(out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -824,7 +824,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
 
 	// send data
 	addSimulationProcess([=, &in]()->SimProcess {
-		simu(valid(in)) = 0;
+		simu(valid(in)) = '0';
 		simu(*in).invalidate();
 		co_await WaitClk(m_clock);
 
@@ -832,12 +832,12 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
 		{
 			for(size_t j = 0; j < 5; ++j)
 			{
-				simu(valid(in)) = 1;
+				simu(valid(in)) = '1';
 				simu(*in) = uint8_t(i + j - 1);
-				simu(eop(in)) = j == 4 ? 1 : 0;
+				simu(eop(in)) = j == 4;
 
 				co_await WaitFor(0);
-				while(simu(ready(in)) == 0)
+				while(simu(ready(in)) == '0')
 					co_await WaitClk(m_clock);
 				co_await WaitClk(m_clock);
 			}
@@ -849,7 +849,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
 	simulateBackPressure(out);
 	simulateRecvData(out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -865,7 +865,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseLastBeat, StreamTransferFixture)
 
 	// send data
 	addSimulationProcess([=, &in]()->SimProcess {
-		simu(valid(in)) = 0;
+		simu(valid(in)) = '0';
 		simu(*in).invalidate();
 		co_await WaitClk(m_clock);
 
@@ -873,12 +873,12 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseLastBeat, StreamTransferFixture)
 		{
 			for(size_t j = 0; j < 5; ++j)
 			{
-				simu(valid(in)) = 1;
+				simu(valid(in)) = '1';
 				simu(*in) = uint8_t(i + j);
-				simu(eop(in)) = j == 4 ? 1 : 0;
+				simu(eop(in)) = j == 4;
 
 				co_await WaitFor(0);
-				while(simu(ready(in)) == 0)
+				while(simu(ready(in)) == '0')
 					co_await WaitClk(m_clock);
 				co_await WaitClk(m_clock);
 			}
@@ -890,7 +890,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseLastBeat, StreamTransferFixture)
 	simulateBackPressure(out);
 	simulateRecvData(out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -907,7 +907,7 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 
 	// send data
 	addSimulationProcess([=, &in]()->SimProcess {
-		simu(valid(in)) = 0;
+		simu(valid(in)) = '0';
 		simu(*in).invalidate();
 		co_await WaitClk(m_clock);
 
@@ -915,13 +915,13 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 		{
 			for(size_t j = 0; j < 3; ++j)
 			{
-				simu(valid(in)) = 1;
+				simu(valid(in)) = '1';
 				simu(insertData) = i + j;
 				simu(*in) = uint8_t(i + j + 1);
-				simu(eop(in)) = j == 2 ? 1 : 0;
+				simu(eop(in)) = j == 2;
 
 				co_await WaitFor(0);
-				while(simu(ready(in)) == 0)
+				while(simu(ready(in)) == '0')
 					co_await WaitClk(m_clock);
 				co_await WaitClk(m_clock);
 			}
@@ -933,7 +933,7 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 	simulateBackPressure(out);
 	simulateRecvData(out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -951,22 +951,22 @@ BOOST_FIXTURE_TEST_CASE(stream_addEopDeferred, StreamTransferFixture)
 	// generate eop insert signal
 	addSimulationProcess([=, &in]()->SimProcess {
 		
-		simu(eop) = 0;
+		simu(eop) = '0';
 		while(true)
 		{
-			while(simu(valid(in)) == 0)
+			while(simu(valid(in)) == '0')
 			{
 				co_await WaitClk(m_clock);
 				co_await WaitFor(0);
 			}
-			while(simu(valid(in)) == 1)
+			while(simu(valid(in)) == '1')
 			{
 				co_await WaitClk(m_clock);
 				co_await WaitFor(0);
 			}
-			simu(eop) = 1;
+			simu(eop) = '1';
 			co_await WaitClk(m_clock);
-			simu(eop) = 0;
+			simu(eop) = '0';
 		}
 
 	});
@@ -977,7 +977,7 @@ BOOST_FIXTURE_TEST_CASE(stream_addEopDeferred, StreamTransferFixture)
 	simulateBackPressure(out);
 	simulateRecvData(out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -1003,7 +1003,7 @@ BOOST_FIXTURE_TEST_CASE(stream_addPacketSignalsFromSize, StreamTransferFixture)
 	simulateBackPressure(out);
 	simulateRecvData(out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -1022,7 +1022,7 @@ BOOST_FIXTURE_TEST_CASE(spi_stream_test, StreamTransferFixture)
 
 	simulateTransferTest(in, out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 4096);
 }
 
@@ -1039,9 +1039,9 @@ BOOST_FIXTURE_TEST_CASE(stream_stall, StreamTransferFixture)
 
 	addSimulationProcess([=, &out, &in]()->SimProcess {
 
-		simu(stallCondition) = 0;
+		simu(stallCondition) = '0';
 
-		while(simu(valid(out)) == 0)
+		while(simu(valid(out)) == '0')
 			co_await WaitClk(m_clock);
 		co_await WaitClk(m_clock);
 		co_await WaitClk(m_clock);
@@ -1051,14 +1051,14 @@ BOOST_FIXTURE_TEST_CASE(stream_stall, StreamTransferFixture)
 		{
 			if (rng() % 4 != 0)
 			{
-				simu(stallCondition) = 1;
+				simu(stallCondition) = '1';
 				co_await WaitFor(0);
-				BOOST_TEST(simu(valid(out)) == 0);
-				BOOST_TEST(simu(ready(in)) == 0);
+				BOOST_TEST(simu(valid(out)) == '0');
+				BOOST_TEST(simu(ready(in)) == '0');
 			}
 			else
 			{
-				simu(stallCondition) = 0;
+				simu(stallCondition) = '0';
 			}
 			co_await WaitClk(m_clock);
 		}
@@ -1067,6 +1067,6 @@ BOOST_FIXTURE_TEST_CASE(stream_stall, StreamTransferFixture)
 
 	simulateTransferTest(in, out);
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }

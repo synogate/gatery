@@ -121,7 +121,7 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 
 
 	addSimulationProcess([&]()->SimProcess {
-		simu(*avmm.ready) = 1;
+		simu(*avmm.ready) = '1';
 
 		co_await WaitClk(clock);
 
@@ -140,14 +140,14 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 		std::mt19937 rng{ 18057 };
 		uint8_t tag = 0xAA;
 
-		simu(valid(in)) = 0;
+		simu(valid(in)) = '0';
 		while (true)
 		{
-			if (simu(ready(in)) != 0)
+			if (simu(ready(in)) != '0')
 			{
 				if (reqQueue.empty())
 				{
-					simu(valid(in)) = 0;
+					simu(valid(in)) = '0';
 				}
 				else
 				{
@@ -162,18 +162,18 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 
 					if (req.read)
 					{
-						simu(valid(in)) = 1;
+						simu(valid(in)) = '1';
 						simu(inHeader) = tlp;
 						cplQueue.push(tlp);
 					}
 					else if (req.write)
 					{
-						simu(valid(in)) = 1;
+						simu(valid(in)) = '1';
 						simu(inHeader) = tlp.data();
 					}
 					else
 					{
-						simu(valid(in)) = 0;
+						simu(valid(in)) = '0';
 					}
 				}
 			}
@@ -183,7 +183,7 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 
 	// stream out bfm
 	addSimulationProcess([&]()->SimProcess {
-		simu(ready(out)) = 1;
+		simu(ready(out)) = '1';
 
 		while (true)
 		{
@@ -216,7 +216,7 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//design.visualize("pci_AvmmBridge_basic");
 
 	runTicks(clock.getClk(), 190);

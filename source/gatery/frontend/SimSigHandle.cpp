@@ -26,52 +26,32 @@
 
 namespace gtry {
 
-
-sim::SigHandle simu(hlim::NodePort output)
+SigHandleBit simu(const InputPin &pin)
 {
-	return sim::SigHandle(output);
+	return SigHandleBit({.node=pin.node(), .port=0ull});
 }
 
-sim::SigHandle simu(const Bit &bit)
+SigHandleBVec simu(const InputPins &pins)
 {
-	auto driver = bit.readPort();
-	HCL_DESIGNCHECK(driver.node != nullptr);
-
-	return simu(driver);
+	return SigHandleBVec({.node=pins.node(), .port=0ull});
 }
 
-sim::SigHandle simu(const UInt &signal)
-{
-	auto driver = signal.readPort();
-	HCL_DESIGNCHECK(driver.node != nullptr);
-
-	return simu(driver);
-}
-
-
-sim::SigHandle simu(const InputPin &pin)
-{
-	return simu({.node=pin.node(), .port=0ull});
-}
-
-sim::SigHandle simu(const InputPins &pins)
-{
-	return simu({.node=pins.node(), .port=0ull});
-}
-
-sim::SigHandle simu(const OutputPin &pin)
+SigHandleBit simu(const OutputPin &pin)
 {
 	auto driver = pin.node()->getDriver(0);
 	HCL_DESIGNCHECK_HINT(driver.node != nullptr, "Can't read unbound output pin!");
-	return simu(driver);
+	return SigHandleBit(driver);
 }
 
-sim::SigHandle simu(const OutputPins &pins)
+SigHandleBVec simu(const OutputPins &pins)
 {
 	auto driver = pins.node()->getDriver(0);
 	HCL_DESIGNCHECK_HINT(driver.node != nullptr, "Can't read unbound output pin!");
-	return simu(driver);
+	return SigHandleBVec(driver);
 }
+
+
+
 
 sim::WaitClock WaitClk(const Clock &clk)
 {

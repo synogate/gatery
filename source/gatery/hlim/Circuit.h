@@ -132,6 +132,7 @@ class Circuit
 
 		void inferSignalNames();
 
+		void insertConstUndefinedNodes();
 		void disconnectZeroBitSignalNodes();
 		void disconnectZeroBitOutputPins();
 		void optimizeRewireNodes(Subnet &subnet);
@@ -149,6 +150,7 @@ class Circuit
 		void propagateConstants(Subnet &subnet);
 		void removeConstSelectMuxes(Subnet &subnet);
 		void moveClockDriversToTop();
+		void ensureNoLiteralComparison();
 
 		void removeFalseLoops();
 

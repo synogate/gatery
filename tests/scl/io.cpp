@@ -76,7 +76,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
 				simu(rx) = '0'; // start bit
 				co_await WaitFor(Seconds(1,baudRate));
 				for ([[maybe_unused]]  auto i : gtry::utils::Range(8)) {
-					simu(rx) = data & 1; // data bit
+					simu(rx) = (data & 1) == 1; // data bit
 					data >>= 1;
 					co_await WaitFor(Seconds(1,baudRate));
 				}
@@ -112,7 +112,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
 
 	}
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 500);
 }
 

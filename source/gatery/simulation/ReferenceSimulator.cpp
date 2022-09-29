@@ -42,6 +42,7 @@
 #include "simProc/WaitFor.h"
 #include "simProc/WaitUntil.h"
 #include "simProc/WaitClock.h"
+#include "simProc/WaitChange.h"
 #include "RunTimeSimulationContext.h"
 
 #include <chrono>
@@ -211,8 +212,15 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 			bool allInputsReady = true;
 			for (auto i : utils::Range(node->getNumInputPorts())) {
 				auto driver = node->getNonSignalDriver(i);
-				while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) // Skip all export override nodes
-					driver = driver.node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
+				{
+					std::set<hlim::NodePort> alreadyVisited;
+					while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) { // Skip all export override nodes
+						alreadyVisited.insert(driver);
+						driver = driver.node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
+						if (alreadyVisited.contains(driver))
+							driver = {};
+					}
+				}
 				if (driver.node != nullptr && !outputsReady.contains(driver) && subnetToConsider.contains(driver.node)) {
 					allInputsReady = false;
 					break;
@@ -227,6 +235,8 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 
 		if (readyNode == nullptr) {
 			std::cout << "nodesRemaining : " << nodesRemaining.size() << std::endl;
+
+			
 
 			
 			std::set<hlim::BaseNode*, CompareById> loopNodes = nodesRemaining;
@@ -376,10 +386,18 @@ void Program::allocateSignals(const hlim::Circuit &circuit, const hlim::Subnet &
 			hlim::NodePort driver;
 			if (dynamic_cast<hlim::Node_Signal*>(node))
 				driver = node->getNonSignalDriver(0);
-			else
+			else {
 				driver = node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
-			while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node))
-				driver = driver.node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
+
+				std::set<hlim::NodePort> alreadyVisited;
+				while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) { // Skip all export override nodes
+					alreadyVisited.insert(driver);
+					driver = driver.node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
+					if (alreadyVisited.contains(driver))
+						driver = {};
+				}
+			}
+
 
 			size_t width = node->getOutputConnectionType(0).width;
 
@@ -433,6 +451,42 @@ void Program::allocateSignals(const hlim::Circuit &circuit, const hlim::Subnet &
 
 	m_fullStateWidth = allocator.getTotalSize();
 }
+
+
+SignalWatch::SignalWatch(std::coroutine_handle<> handle, const SensitivityList &list, const StateMapping &stateMapping, const sim::DefaultBitVectorState &state, std::uint64_t insertionId)
+	: handle(handle), insertionId(insertionId)
+{
+	signals.reserve(list.getSignals().size());
+	size_t offset = 0;
+	for (auto i : utils::Range(list.getSignals().size())) {
+		size_t size = hlim::getOutputWidth(list.getSignals()[i]);
+		size_t paddedSize = (size+63)/64*64; ///@todo do something less wasteful
+
+		auto it = stateMapping.outputToOffset.find(list.getSignals()[i]);
+		// if it isn't mapped, it never changes, so we never need to check for a change of it.
+		if (it == stateMapping.outputToOffset.end()) continue;
+
+		signals.push_back({
+			.refStateIdx = offset,
+			.stateIdx = it->second,
+			.size = size
+		});
+		offset += paddedSize;
+	}
+
+	refState.resize(offset);
+	for (const auto &s : signals)
+		refState.copyRange(s.refStateIdx, state, s.stateIdx, s.size);
+}
+
+bool SignalWatch::anySignalChanged(const sim::DefaultBitVectorState &state) const
+{
+	for (const auto &s : signals)
+		if (!refState.compareRange(s.refStateIdx, state, s.stateIdx, s.size))
+			return true;
+	return false;
+}
+
 
 
 
@@ -709,13 +763,7 @@ void ReferenceSimulator::advanceEvent()
 			}
 		}
 
-#if 0
-		/// @todo respect dependencies between blocks (once they are being expressed and made use of)
-		for (auto idx : triggeredExecutionBlocks)
-			m_program.m_executionBlocks[idx].evaluate(m_callbackDispatcher, m_dataState);
-#else
 		m_stateNeedsReevaluating = true;
-#endif
 
 		{
 			RunTimeSimulationContext context(this);
@@ -731,6 +779,24 @@ void ReferenceSimulator::advanceEvent()
 
 		if (m_stateNeedsReevaluating)
 			reevaluate();
+
+		// check if any signal watches triggered and if so schedule resumption of the corresponding fibers in insertion order
+		{
+			for (auto it = m_signalWatches.begin(); it != m_signalWatches.end(); ) {
+				if (it->anySignalChanged(m_dataState.signalState)) {
+					auto it2 = it; it++;
+
+					Event e;
+					e.type = Event::Type::simProcResume;
+					e.timeOfEvent = m_simulationTime;
+					e.simProcResumeEvt.handle = it2->handle;
+					e.simProcResumeEvt.insertionId = it2->insertionId;
+					m_nextEvents.push(e);
+
+					m_signalWatches.erase(it2);
+				} else ++it;
+			}
+		}
 	}
 
 	m_currentTimeStepFinished = true;
@@ -816,12 +882,6 @@ void ReferenceSimulator::simProcOverrideRegisterOutput(hlim::Node_Register *reg,
 }
 
 
-DefaultBitVectorState ReferenceSimulator::simProcGetValueOfOutput(const hlim::NodePort &nodePort)
-{
-	auto value = getValueOfOutput(nodePort);
-	m_callbackDispatcher.onSimProcOutputRead(nodePort, value);
-	return value;
-}
 
 
 bool ReferenceSimulator::outputOptimizedAway(const hlim::NodePort &nodePort)
@@ -961,6 +1021,17 @@ void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> han
 	}
 }
 
+
+void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> handle, WaitChange &waitChange, utils::RestrictTo<RunTimeSimulationContext>)
+{
+	m_signalWatches.push_back(SignalWatch(
+		handle,
+		waitChange.getSensitivityList(),
+		m_program.m_stateMapping,
+		m_dataState.signalState,
+		m_nextSimProcInsertionId++
+	));
+}
 
 
 }

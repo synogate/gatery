@@ -263,6 +263,47 @@ void Circuit::optimizeRewireNodes(Subnet &subnet)
 			rewireNode->optimize();
 }
 
+
+/**
+ * @brief Searches for any signal nodes that are unconnected or form signal loops and insert const undefined nodes.
+ * 
+ */
+void Circuit::insertConstUndefinedNodes()
+{
+	auto buildConstUndefFor = [this](Node_Signal *signal) {
+		sim::DefaultBitVectorState undef;
+		undef.resize(signal->getOutputConnectionType(0).width);
+		auto* constant = createNode<Node_Constant>(std::move(undef), signal->getOutputConnectionType(0).interpretation);
+		constant->moveToGroup(signal->getGroup());
+
+		return constant;
+	};
+
+	for (size_t i = 0; i < m_nodes.size(); i++) {
+		Node_Signal *signal = dynamic_cast<Node_Signal*>(m_nodes[i].get());
+		if (signal == nullptr)
+			continue;
+		if (signal->getDriver(0).node == nullptr) {
+			auto *constant = buildConstUndefFor(signal);
+			signal->rewireInput(0, {.node = constant, .port = 0ull});
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Prepended undriven signal node " << signal << " with const undefined node " << constant);
+		} else {
+			auto driver = signal->getDriver(0);
+			while (dynamic_cast<Node_Signal*>(driver.node)) {
+				if (driver.node == signal) {
+					// loop
+					auto *constant = buildConstUndefFor(signal);
+					signal->rewireInput(0, {.node = constant, .port = 0ull});
+
+					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Splitting signal loop on node " << signal << " with const undefined node " << constant);
+					break;
+				}
+				driver = driver.node->getDriver(0);
+			}
+		}
+	}
+}
+
 /**
  * @brief Removes unnecessary and unnamed signal nodes
  *
@@ -287,6 +328,9 @@ void Circuit::cullUnnamedSignalNodes()
 		// Don't cull signals that are still referenced by frontend objects
 		if (signal->hasRef()) continue;
 
+		// Don't cull loopy signals
+		if (signal->getDriver(0).node == signal) continue;
+
 		// We want to keep one signal node between non-signal nodes, so only cull if the input or all outputs are signals.
 		bool inputIsSignalOrUnconnected = (signal->getDriver(0).node == nullptr) || (dynamic_cast<Node_Signal*>(signal->getDriver(0).node) != nullptr);
 
@@ -299,6 +343,8 @@ void Circuit::cullUnnamedSignalNodes()
 			if (signal->getDriver(0).node != signal)
 				signal->bypassOutputToInput(0, 0);
 			signal->disconnectInput();
+
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Culling unnamed signal node " << signal);
 
 			if (i+1 != m_nodes.size())
 				m_nodes[i] = std::move(m_nodes.back());
@@ -336,6 +382,7 @@ void Circuit::cullSequentiallyDuplicatedSignalNodes()
 				
 				signal->bypassOutputToInput(0, 0);
 				signal->disconnectInput();
+				dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Culling sequentially duplicated signal node " << signal);
 
 				if (i+1 != m_nodes.size())
 					m_nodes[i] = std::move(m_nodes.back());
@@ -382,7 +429,7 @@ void Circuit::cullUnusedNodes(Subnet &subnet)
 
 		// Remove everything that isn't used
 		for (size_t i = 0; i < m_nodes.size(); i++) {
-			if (!usedNodes.getNodes().contains(m_nodes[i].get()) && subnet.contains(m_nodes[i].get())) {
+			if (!usedNodes.getNodes().contains(m_nodes[i].get()) && subnet.contains(m_nodes[i].get())) {			
 				subnet.remove(m_nodes[i].get());
 				if (i+1 != m_nodes.size())
 					m_nodes[i] = std::move(m_nodes.back());
@@ -836,8 +883,12 @@ void Circuit::foldRegisterMuxEnableLoops(Subnet &subnet)
 							andNode->connectInput(1, muxCondition);
 
 							regNode->connectInput(Node_Register::Input::ENABLE, {.node=andNode, .port=0ull});
+
+							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Replacing mux loop through " << muxNode << " on register " << regNode << " by and-ing the condition to register enable through " << andNode);
 						} else {
 							regNode->connectInput(Node_Register::Input::ENABLE, muxCondition);
+
+							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Replacing mux loop through " << muxNode << " on register " << regNode << " by binding the condition to register enable");
 						}
 						regNode->connectInput(Node_Register::Input::DATA, muxNode->getDriver(2));
 					} else if (muxInput2.node == regNode) {
@@ -856,8 +907,12 @@ void Circuit::foldRegisterMuxEnableLoops(Subnet &subnet)
 							andNode->connectInput(1, {.node=notNode,.port=0ull});
 
 							regNode->connectInput(Node_Register::Input::ENABLE, {.node=andNode, .port=0ull});
+
+							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Replacing mux loop through " << muxNode << " on register " << regNode << " by and-ing the condition to register enable through " << andNode);
 						} else {
 							regNode->connectInput(Node_Register::Input::ENABLE, {.node=notNode, .port=0ull});
+
+							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Replacing mux loop through " << muxNode << " on register " << regNode << " by binding the condition to register enable");
 						}
 						regNode->connectInput(Node_Register::Input::DATA, muxNode->getDriver(1));
 					}
@@ -1050,6 +1105,8 @@ void Circuit::propagateConstants(Subnet &subnet)
 					subnet.add(constant);
 					NodePort newConstOutputPort{.node = constant, .port = 0};
 
+					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Replacing " << successor.node << " port " << port << " with folded constant " << constant);
+
 					while (!successor.node->getDirectlyDriven(port).empty()) {
 						NodePort input = successor.node->getDirectlyDriven(port).back();
 						input.node->connectInput(input.port, newConstOutputPort);
@@ -1153,6 +1210,38 @@ void Circuit::duplicateSignalsFeedingLowerAndHigherAreas()
 	}
 }
 
+void Circuit::ensureNoLiteralComparison()
+{
+	// At this point, there should no longer be any pure signal loops.
+	std::function<bool(hlim::NodePort)> isLiteral;
+	isLiteral = [&isLiteral](hlim::NodePort np)->bool {
+		HCL_ASSERT(np.node != nullptr);
+
+		if (!np.node->getName().empty()) return false;
+		if (dynamic_cast<Node_Constant*>(np.node)) return true;
+		if (dynamic_cast<Node_Signal*>(np.node)) return isLiteral(np.node->getDriver(0));
+		return false;
+	};
+
+	for (auto idx : utils::Range(m_nodes.size())) {
+		auto node = m_nodes[idx].get();
+		if (dynamic_cast<Node_Compare*>(node) == nullptr) continue;
+
+		if (isLiteral(node->getDriver(0)) && isLiteral(node->getDriver(1))) {
+			auto *sigNode = createNode<Node_Signal>();
+			sigNode->moveToGroup(node->getGroup());
+			sigNode->connectInput(node->getDriver(0));
+			sigNode->setName("compare_op_left");
+			node->rewireInput(0, {.node = sigNode, .port = 0ull});
+
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING 
+					<< "Inserting named signal " << sigNode << " for compare node " << node << " to prevent literal on literal comparison"
+			);
+
+		}
+	}
+}
+
 
 void Circuit::moveClockDriversToTop()
 {
@@ -1203,6 +1292,7 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
 
 void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 {
+	circuit.insertConstUndefinedNodes();
 	Subnet subnet = Subnet::all(circuit);
 	circuit.disconnectZeroBitSignalNodes();
 	circuit.disconnectZeroBitOutputPins();
@@ -1246,6 +1336,7 @@ void DefaultPostprocessing::exportPreparation(Circuit &circuit) const
 	circuit.moveClockDriversToTop();
 	circuit.ensureSignalNodePlacement();
 	circuit.duplicateSignalsFeedingLowerAndHigherAreas();
+	circuit.ensureNoLiteralComparison();
 	circuit.inferSignalNames();
 }
 
@@ -1305,6 +1396,7 @@ void MinimalPostprocessing::exportPreparation(Circuit& circuit) const
 	circuit.moveClockDriversToTop();
 	circuit.ensureSignalNodePlacement();
 	circuit.duplicateSignalsFeedingLowerAndHigherAreas();
+	circuit.ensureNoLiteralComparison();
 	circuit.inferSignalNames();
 }
 

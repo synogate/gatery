@@ -47,7 +47,7 @@ namespace gtry {
 	void BitDefault::assign(bool value)
 	{
 		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
-			parseBit(value), hlim::ConnectionType::BOOL
+			sim::parseBit(value), hlim::ConnectionType::BOOL
 			);
 		m_nodePort = {.node = constant, .port = 0ull };
 	}
@@ -55,7 +55,7 @@ namespace gtry {
 	void BitDefault::assign(char value)
 	{
 		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
-			parseBit(value), hlim::ConnectionType::BOOL
+			sim::parseBit(value), hlim::ConnectionType::BOOL
 			);
 		m_nodePort = {.node = constant, .port = 0ull };
 	}
@@ -268,7 +268,7 @@ namespace gtry {
 	void Bit::assign(bool value)
 	{
 		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
-			parseBit(value), hlim::ConnectionType::BOOL
+			sim::parseBit(value), hlim::ConnectionType::BOOL
 			);
 		assign(SignalReadPort(constant));
 	}
@@ -276,7 +276,7 @@ namespace gtry {
 	void Bit::assign(char value)
 	{
 		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
-			parseBit(value), hlim::ConnectionType::BOOL
+			sim::parseBit(value), hlim::ConnectionType::BOOL
 			);
 		assign(SignalReadPort(constant));
 	}

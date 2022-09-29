@@ -30,12 +30,13 @@
 
 namespace gtry 
 {
-	sim::DefaultBitVectorState parseBit(char value);
-	sim::DefaultBitVectorState parseBit(bool value);
-	sim::DefaultBitVectorState parseBitVector(std::string_view);
-	sim::DefaultBitVectorState parseBitVector(uint64_t value, size_t width);
-	
-	class UInt;
+
+/**
+ * @addtogroup gtry_frontend
+ * @{
+ */
+
+
 	class UInt;
 
 #if 0 // ConstUInt as class study
@@ -97,7 +98,6 @@ namespace gtry
 */
 #endif
 
-}
 
 #define GTRY_CONST_BVEC_DESC(x, value, desc) \
 	struct x { operator UInt () { \
@@ -119,3 +119,6 @@ namespace gtry
 #define GTRY_CONST_BIT(x, value) \
 	GTRY_CONST_BIT_DESC(x, value, "")
 
+/// @}
+
+}

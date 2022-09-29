@@ -249,7 +249,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestOperators, data::xran
 #undef op2str
 #undef buildOperatorTest
 
-	design.getCircuit().postprocess(DefaultPostprocessing{});
+	design.postprocess();
 
 	runTest(gtry::hlim::ClockRational(100'000, 10'000));
 }
@@ -283,7 +283,7 @@ BOOST_FIXTURE_TEST_CASE(TestSlicing, BoostUnitTestSimulationFixture)
 			}
 		}
 
-	design.getCircuit().postprocess(DefaultPostprocessing{});
+	design.postprocess();
 	runEvalOnlyTest();
 }
 
@@ -328,7 +328,7 @@ BOOST_FIXTURE_TEST_CASE(TestSlicingAddition, BoostUnitTestSimulationFixture)
 			}
 		}
 
-	design.getCircuit().postprocess(DefaultPostprocessing{});
+	design.postprocess();
 	runEvalOnlyTest();
 }
 
@@ -350,7 +350,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleAdditionNetwork, BoostUnitTestSimulationFixture)
 
 				sim_assert(c == ConstUInt(x+y, BitWidth{ uint64_t(bitsize) })) << "The signal c should be " << x+y << " (with overflow in " << bitsize << "bits) but is " << c;
 			}
-	design.getCircuit().postprocess(DefaultPostprocessing{});
+	design.postprocess();
 	runEvalOnlyTest();
 }
 
@@ -493,18 +493,18 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, BoostUnitTestSimulationFixture)
 
 		addSimulationProcess([=, this]()->SimProcess {
 
-			simu(pinConditionIn) = 0;
+			simu(pinConditionIn) = '0';
 			BOOST_TEST(simu(pinC) == 0xC);
 			BOOST_TEST(simu(pinD) == 0xD);
-			BOOST_TEST(simu(pinX) == 0);
-			BOOST_TEST(simu(pinY) == 1);
+			BOOST_TEST(simu(pinX) == '0');
+			BOOST_TEST(simu(pinY) == '1');
 			co_await WaitFor({1, 1000});
 
-			simu(pinConditionIn) = 1;
+			simu(pinConditionIn) = '1';
 			BOOST_TEST(simu(pinC) == 0xD);
 			BOOST_TEST(simu(pinD) == 0xC);
-			BOOST_TEST(simu(pinX) == 1);
-			BOOST_TEST(simu(pinY) == 0);
+			BOOST_TEST(simu(pinX) == '1');
+			BOOST_TEST(simu(pinY) == '0');
 			co_await WaitFor({1, 1000});
 
 			stopTest();
@@ -512,7 +512,7 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, BoostUnitTestSimulationFixture)
 
 	}
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	runTest({1,1});
 }
@@ -559,13 +559,13 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, BoostUnitTestSimulationFixture)
 
 			for (size_t i = 0; i < in.size(); ++i)
 				simu(in[i]) = i;
-			simu(pinConditionIn) = 0;
+			simu(pinConditionIn) = '0';
 
 			for (size_t i = 0; i < in.size(); ++i)
 				BOOST_TEST(simu(out[i]) == i);
 			co_await WaitFor({1, 1000});
 
-			simu(pinConditionIn) = 1;
+			simu(pinConditionIn) = '1';
 			for (size_t i = 0; i < in.size(); ++i)
 				BOOST_TEST(simu(out[i]) == (i + 1) % 4);
 			co_await WaitFor({1, 1000});
@@ -575,7 +575,7 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, BoostUnitTestSimulationFixture)
 
 	}
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTest({1, 1});
 }
 
@@ -611,7 +611,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleCounterClockSyntax, BoostUnitTestSimulationFixture
 
 		addSimulationProcess([=, this, &clock]()->SimProcess{
 			for (unsigned refCount = 0; refCount < 10; refCount++) {
-				BOOST_TEST(refCount == simu(counter));
+				BOOST_TEST(simu(counter) == refCount);
 				BOOST_TEST(simu(counter).defined() == 0xFF);
 
 				co_await WaitClk(clock);
@@ -1133,7 +1133,7 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentWithPreviousAssignmentNoI
 			sim_assert(c == ConstUInt(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
 		}
 
-	design.getCircuit().postprocess(DefaultPostprocessing{});
+	design.postprocess();
 	runEvalOnlyTest();
 }
 
@@ -1172,7 +1172,7 @@ BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentWithPreviousAssignment, B
 			sim_assert(c == ConstUInt(groundTruth, 8_b)) << "The signal should be " << groundTruth << " but is " << c;
 		}
 
-	design.getCircuit().postprocess(DefaultPostprocessing{});
+	design.postprocess();
 	runEvalOnlyTest();
 }
 
@@ -1376,7 +1376,7 @@ BOOST_FIXTURE_TEST_CASE(tristateBit, gtry::BoostUnitTestSimulationFixture)
 	addSimulationProcess([=, this]()->SimProcess {
 
 		simu(value) = 10;
-		simu(enable) = 1;
+		simu(enable) = '1';
 		simu(readback) = 42;
 
 		co_await WaitClk(clock);
@@ -1386,7 +1386,7 @@ BOOST_FIXTURE_TEST_CASE(tristateBit, gtry::BoostUnitTestSimulationFixture)
 
 		co_await WaitClk(clock);
 
-		simu(enable) = 0;
+		simu(enable) = '0';
 
 		co_await WaitClk(clock);
 
@@ -1403,7 +1403,7 @@ BOOST_FIXTURE_TEST_CASE(tristateBit, gtry::BoostUnitTestSimulationFixture)
 
 		co_await WaitClk(clock);
 
-		simu(enable) = 1;
+		simu(enable) = '1';
 		simu(value).invalidate();
 
 		co_await WaitClk(clock);
@@ -1412,7 +1412,7 @@ BOOST_FIXTURE_TEST_CASE(tristateBit, gtry::BoostUnitTestSimulationFixture)
 
 		co_await WaitClk(clock);
 
-		simu(enable) = 0;
+		simu(enable) = '0';
 		simu(value) = 10;
 		simu(readback).invalidate();
 
@@ -1423,7 +1423,75 @@ BOOST_FIXTURE_TEST_CASE(tristateBit, gtry::BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTest({ 1,1 });
 }
 
+
+
+BOOST_FIXTURE_TEST_CASE(testUndefinedDontCareComparison, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+	
+	UInt a = pinIn(10_b).setName("value");
+	Bit b = pinIn().setName("enable");
+	UInt output = a & b;
+	pinOut(output).setName("output");
+
+	addSimulationProcess([=, this]()->SimProcess {
+
+		simu(a) = "10xXX";
+		simu(b) = '1';
+
+		co_await WaitClk(clock);
+
+		BOOST_TEST(simu(output) != 0);
+		BOOST_TEST(simu(output) == "10xXX");
+		BOOST_TEST(simu(output) == "10xX-");
+		BOOST_TEST(!simu(output).allDefined());
+
+		co_await WaitClk(clock);
+
+		simu(b) = '0';
+
+		BOOST_TEST(simu(output) == 0);
+		BOOST_TEST(simu(output) != "10xXX");
+		BOOST_TEST(simu(output) == "10x00");
+		BOOST_TEST(simu(output) == "10x--");
+		BOOST_TEST(simu(output).allDefined());
+
+
+		co_await WaitClk(clock);
+
+		simu(a) = "10xab";
+		simu(b) = '1';
+
+		co_await WaitClk(clock);
+
+		BOOST_TEST(simu(output) == "10xab");
+		BOOST_TEST(simu(output) == "10xa-");
+		BOOST_TEST(simu(output) == "10x-b");
+		BOOST_TEST(simu(output) != "10x-c");
+		BOOST_TEST(simu(output).allDefined());
+
+		co_await WaitClk(clock);
+
+		simu(a) = "10xF0";
+		simu(b) = 'x';
+
+		co_await WaitClk(clock);
+
+		BOOST_TEST(simu(output) != 0);
+		BOOST_TEST(simu(output) != "10xXX");
+		BOOST_TEST(simu(output) == "10xX-");
+		BOOST_TEST(!simu(output).allDefined());
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest({ 1,1 });
+}

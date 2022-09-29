@@ -22,9 +22,7 @@
 namespace gtry {
 
 /**
- * @addtogroup gtry_signals Signals
- * @ingroup gtry_frontend
- * @brief All base signals
+ * @addtogroup gtry_signals
  * @{
  */
 

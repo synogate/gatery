@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2022 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -15,15 +15,28 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "frontend/pch.h"
 
-#define BOOST_TEST_MODULE "Unit tests for core library (including frontend)"
-#include <boost/test/unit_test.hpp>
+#include "gatery/pch.h"
+#include "ReadSignalList.h"
 
-#include <gatery/frontend/FrontendUnitTestSimulationFixture.h>
+namespace gtry {
+		
+void ReadSignalList::addToAllScopes(const hlim::NodePort &np)
+{ 
+	if (m_currentScope != nullptr) 
+		m_currentScope->addSignalRecursive(np); 
+}
 
-#include <gatery/frontend/GHDLTestFixture.h>
+sim::WaitChange ReadSignalList::anyInputChange()
+{
+	return sim::WaitChange(m_list);
+}
 
-using GHDLGlobalFixture = gtry::GHDLGlobalFixture;
+void ReadSignalList::addSignalRecursive(const hlim::NodePort &np)
+{
+	m_list.add(np);
+	if (m_parentScope != nullptr)
+		m_parentScope->addSignalRecursive(np);
+}
 
-BOOST_TEST_GLOBAL_FIXTURE( GHDLGlobalFixture );
+}

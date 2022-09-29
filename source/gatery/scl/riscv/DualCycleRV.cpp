@@ -159,7 +159,7 @@ void gtry::scl::riscv::DualCycleRV::writeCallReturnTrace(std::string filename)
 			cycle++;
 
 			//f << cycle << ' ' << (size_t)simu(ip) << '\n';
-			if ((simu(opcode) & 29) == 25 && simu(valid) != 0)
+			if ((simu(opcode) & 29) == 25 && simu(valid) != '0')
 			{
 				size_t rdV = simu(rd);
 				size_t rs1V = simu(rs1);

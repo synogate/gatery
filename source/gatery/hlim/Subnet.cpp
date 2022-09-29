@@ -399,9 +399,9 @@ FinalType gtry::hlim::SubnetTemplate<makeConst, FinalType>::filterLoopNodesOnly(
 			std::set<NodeType*> seen;
 			for (auto&& nh : ((BaseNode*)node)->exploreOutput(i))
 			{
-				if (nh.isNodeType<Node_Register>())
+				if (nh.template isNodeType<Node_Register>())
 					nh.backtrack();
-				else if (nh.isNodeType<Node_Memory>())
+				else if (nh.template isNodeType<Node_Memory>())
 					nh.backtrack();
 				else if (seen.contains(nh.node()))
 					nh.backtrack();

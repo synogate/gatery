@@ -25,6 +25,12 @@
 
 namespace gtry {
 	
+
+/**
+ * @addtogroup gtry_frontend
+ * @{
+ */
+
 	class Bit;
 
 	class ConditionalScope : public BaseScope<ConditionalScope>
@@ -60,4 +66,7 @@ namespace gtry {
 #define ELSE \
 	else { HCL_ASSERT(false); } \
 	if (gtry::ConditionalScope ___condScope{})
+
+/// @}
+
 }

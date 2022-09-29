@@ -25,6 +25,10 @@
 
 namespace gtry {
 	
+/**
+ * @addtogroup gtry_scopes
+ * @{
+ */
 	
 template<class FinalType>
 class BaseScope
@@ -89,5 +93,7 @@ inline BaseScope<FinalType>::Lock::~Lock()
 	if(m_ptr)
 		BaseScope<FinalType>::unlock(m_ptr);
 }
+
+/**@}*/
 
 }

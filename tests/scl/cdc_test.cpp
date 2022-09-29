@@ -56,6 +56,6 @@ BOOST_FIXTURE_TEST_CASE(grayCode, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 2048);
 }

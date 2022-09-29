@@ -80,7 +80,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_new, BoostUnitTestSimulationFix
 	});
 
 	//design.visualize("retiming_forward_counter_new_before");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	//design.visualize("retiming_forward_counter_new");
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
@@ -125,7 +125,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_forward_counter_old, BoostUnitTestSimulationFix
 	});
 	//design.visualize("retiming_counter_new_before");
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 
 	//design.visualize("retiming_forward_counter_old");
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
@@ -153,7 +153,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_simple, BoostUnitTestSimulationFixture)
 	pinOut(output);
 
 //design.visualize("before");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 //design.visualize("after");
 
 
@@ -182,7 +182,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_simple_reset, BoostUnitTestSimulationFixtu
 	pinOut(output);
 
 //design.visualize("before");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 //design.visualize("after");
 
 
@@ -251,7 +251,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct, BoostUnitTestSimulationFixture)
 	});	
 
 //design.visualize("before");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 //design.visualize("after");
 
 	BOOST_TEST(pipeBalanceGroup.getNumPipeBalanceGroupStages() == 3);
@@ -311,7 +311,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct_reset, BoostUnitTestSimulationFixtu
 	});
 
 //design.visualize("before");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 //design.visualize("after");
 
 	BOOST_TEST(pipeBalanceGroup.getNumPipeBalanceGroupStages() == 3);
@@ -363,7 +363,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching, BoostUnitTestSimulationFixture)
 	});
 
 //design.visualize("before");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 //design.visualize("after");
 
 	BOOST_TEST(pipeBalanceGroup.getNumPipeBalanceGroupStages() == 2);
@@ -413,7 +413,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeinputgroup, BoostUnitTestSimulationFixture)
 	});
 
 //design.visualize("before");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 //design.visualize("after");
 
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
@@ -462,7 +462,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching_reset, BoostUnitTestSimulationFi
 	});	
 
 //design.visualize("before");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 //design.visualize("after");
 
 	BOOST_TEST(pipeBalanceGroup.getNumPipeBalanceGroupStages() == 2);
@@ -502,7 +502,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_memory_rmw, BoostUnitTestSimulationFixture
 	pinOut(pipestage(rd));
 
 //design.visualize("before");
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 //design.visualize("after");
 
 	BOOST_TEST(pipeBalanceGroup.getNumPipeBalanceGroupStages() == 2);

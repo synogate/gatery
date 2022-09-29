@@ -270,7 +270,7 @@ public:
 
 		if (m_avmm.readDataValid)
 		{
-			simu(*m_avmm.readDataValid) = 0;
+			simu(*m_avmm.readDataValid) = '0';
 			simu(*m_avmm.readData) = 0;
 		}
 	}
@@ -293,22 +293,22 @@ public:
 		pinOut(m_tlink, "dmem");
 
 		DesignScope::get()->getCircuit().addSimulationProcess([=]()->SimProcess {
-			simu(valid(*m_tlink.d)) = 0;
-			simu(ready(m_tlink.a)) = 0;
+			simu(valid(*m_tlink.d)) = '0';
+			simu(ready(m_tlink.a)) = '0';
 
 			simu((*m_tlink.d)->opcode) = (size_t)scl::TileLinkD::AccessAck;
 			simu((*m_tlink.d)->param) = 0;
 			simu((*m_tlink.d)->size) = 2;
 			simu((*m_tlink.d)->data) = 0;
-			simu((*m_tlink.d)->error) = 0;
+			simu((*m_tlink.d)->error) = '0';
 			co_return;
 		});
 
 		return m_tlink;
 	}
 
-	bool isStall() const { return simu(m_setStall) != 0; }
-	bool hasResult() const { return simu(m_setResultValid) != 0; }
+	bool isStall() const { return simu(m_setStall) != '0'; }
+	bool hasResult() const { return simu(m_setResultValid) != '0'; }
 	uint32_t result() const { return (uint32_t)simu(m_setResult); }
 	uint32_t ipNext() const { return (uint32_t)simu(m_setIP); }
 
@@ -390,7 +390,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_arith, BoostUnitTestSimulationFixture)
 //	vcd.addAllPins();
 //	vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 128);
 }
 
@@ -444,7 +444,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_logic, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 256);
 }
 
@@ -542,7 +542,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_shift, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 32 * 6);
 }
 
@@ -619,7 +619,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_setcmp, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 32 * 4);
 }
 
@@ -669,7 +669,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_lui, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 32 * 2);
 }
 
@@ -724,7 +724,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_jal, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 32 * 2);
 }
 
@@ -766,7 +766,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_csr_timer, BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 128);
 }
 
@@ -903,7 +903,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 32 * 6);
 }
 
@@ -937,7 +937,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_store, BoostUnitTestSimulationFixture)
 			BOOST_TEST(!rv.hasResult());
 			BOOST_TEST(!rv.isStall());
 			BOOST_TEST(simu(avmm.address) == ((opA + offset) & ~3));
-			BOOST_TEST(simu(*avmm.write) == 1);
+			BOOST_TEST(simu(*avmm.write) == '1');
 			BOOST_TEST(simu(*avmm.byteEnable) == 0xF);
 			BOOST_TEST(simu(*avmm.writeData) == opB);
 		}
@@ -959,7 +959,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_store, BoostUnitTestSimulationFixture)
 			BOOST_TEST(!rv.hasResult());
 			BOOST_TEST(!rv.isStall());
 			BOOST_TEST(simu(avmm.address) == ((opA + offset) & ~3));
-			BOOST_TEST(simu(*avmm.write) == 1);
+			BOOST_TEST(simu(*avmm.write) == '1');
 
 			size_t expectedByteEn = (opA + offset) % 4 < 2 ? 0x3 : 0xC;
 			size_t expectedOffset = (opA + offset) % 4 < 2 ? 0 : 16;
@@ -981,7 +981,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_store, BoostUnitTestSimulationFixture)
 			BOOST_TEST(!rv.hasResult());
 			BOOST_TEST(!rv.isStall());
 			BOOST_TEST(simu(avmm.address) == ((opA + offset) & ~3));
-			BOOST_TEST(simu(*avmm.write) == 1);
+			BOOST_TEST(simu(*avmm.write) == '1');
 
 			size_t expectedByteEn = 1ull << (opA + offset) % 4;
 			size_t expectedOffset = ((opA + offset) % 4) * 8ull;
@@ -994,7 +994,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_store, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 32 * 4);
 }
 
@@ -1032,8 +1032,8 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_store, BoostUnitTestSimulationFixtur
 			rv.r1(opA).r2(opB).ip(rng());
 			rv.op().typeS(rv::op::STORE, rv::func::WORD, offset);
 
-			simu(valid(*link.d)) = 0;
-			simu(ready(link.a)) = 0;
+			simu(valid(*link.d)) = '0';
+			simu(ready(link.a)) = '0';
 			co_await WaitFor(0);
 
 			BOOST_TEST(simu(link.a->address) == ((opA + offset) & ~3));
@@ -1044,30 +1044,30 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_store, BoostUnitTestSimulationFixtur
 			{
 				co_await WaitClk(clock);
 				BOOST_TEST(rv.isStall());
-				BOOST_TEST(simu(valid(link.a)) == 1);
+				BOOST_TEST(simu(valid(link.a)) == '1');
 			}
-			simu(ready(link.a)) = 1;
+			simu(ready(link.a)) = '1';
 			co_await WaitFor(0);
 
 			while (rng() % 2 == 0)
 			{
 				co_await WaitClk(clock);
-				BOOST_TEST(simu(valid(link.a)) == 0);
+				BOOST_TEST(simu(valid(link.a)) == '0');
 				BOOST_TEST(rv.isStall());
 			}
-			simu(valid(*link.d)) = 1;
+			simu(valid(*link.d)) = '1';
 			co_await WaitClk(clock);
 			BOOST_TEST(!rv.isStall());
 
 		}
 
-		simu(valid(*link.d)) = 0;
-		simu(ready(link.a)) = 0;
+		simu(valid(*link.d)) = '0';
+		simu(ready(link.a)) = '0';
 		co_await WaitClk(clock);
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 4096);
 }
 
@@ -1093,7 +1093,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_byte_store, BoostUnitTestSimulationF
 			rv.op().typeS(rv::op::STORE, rv::func::BYTE, offset);
 			co_await WaitClk(clock);
 			
-			BOOST_TEST(simu(valid(link.a)) == 1);
+			BOOST_TEST(simu(valid(link.a)) == '1');
 			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::PutFullData);
 			BOOST_TEST(simu(link.a->address) == opA + offset);
 			BOOST_TEST(simu(link.a->size) == 0);
@@ -1108,7 +1108,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_byte_store, BoostUnitTestSimulationF
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 4096);
 }
 
@@ -1137,7 +1137,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_half_store, BoostUnitTestSimulationF
 			rv.op().typeS(rv::op::STORE, rv::func::HALFWORD, offset);
 			co_await WaitClk(clock);
 
-			BOOST_TEST(simu(valid(link.a)) == 1);
+			BOOST_TEST(simu(valid(link.a)) == '1');
 			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::PutFullData);
 			BOOST_TEST(simu(link.a->address) == opA + offset);
 			BOOST_TEST(simu(link.a->size) == 1);
@@ -1152,7 +1152,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_half_store, BoostUnitTestSimulationF
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 4096);
 }
 
@@ -1168,8 +1168,8 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_byte_load, BoostUnitTestSimulationFi
 		rv.setupSimu();
 
 		co_await WaitFor(0);
-		simu(ready(link.a)) = 1;
-		simu(valid(*link.d)) = 1;
+		simu(ready(link.a)) = '1';
+		simu(valid(*link.d)) = '1';
 		simu((*link.d)->size) = 0;
 
 		std::mt19937 rng{ std::random_device{}() };
@@ -1186,7 +1186,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_byte_load, BoostUnitTestSimulationFi
 			simu((*link.d)->data) = readData;
 			co_await WaitClk(clock);
 
-			BOOST_TEST(simu(valid(link.a)) == 1);
+			BOOST_TEST(simu(valid(link.a)) == '1');
 			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::Get);
 			BOOST_TEST(simu(link.a->address) == opA + offset);
 			BOOST_TEST(simu(link.a->size) == 0);
@@ -1210,10 +1210,10 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_byte_load, BoostUnitTestSimulationFi
 			rv.op().typeI(rv::op::LOAD, rv::func::BYTE, 0, 0, offset);
 
 			int32_t readData = rng();
-			simu((*link.d)->data) = readData;
+			simu((*link.d)->data) = (uint32_t) readData;
 			co_await WaitClk(clock);
 
-			BOOST_TEST(simu(valid(link.a)) == 1);
+			BOOST_TEST(simu(valid(link.a)) == '1');
 			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::Get);
 			BOOST_TEST(simu(link.a->address) == opA + offset);
 			BOOST_TEST(simu(link.a->size) == 0);
@@ -1230,7 +1230,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_byte_load, BoostUnitTestSimulationFi
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 4096);
 }
 
@@ -1246,8 +1246,8 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_half_load, BoostUnitTestSimulationFi
 		rv.setupSimu();
 
 		co_await WaitFor(0);
-		simu(ready(link.a)) = 1;
-		simu(valid(*link.d)) = 1;
+		simu(ready(link.a)) = '1';
+		simu(valid(*link.d)) = '1';
 		simu((*link.d)->size) = 0;
 
 		std::mt19937 rng{ std::random_device{}() };
@@ -1267,7 +1267,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_half_load, BoostUnitTestSimulationFi
 			simu((*link.d)->data) = readData;
 			co_await WaitClk(clock);
 
-			BOOST_TEST(simu(valid(link.a)) == 1);
+			BOOST_TEST(simu(valid(link.a)) == '1');
 			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::Get);
 			BOOST_TEST(simu(link.a->address) == opA + offset);
 			BOOST_TEST(simu(link.a->size) == 1);
@@ -1294,10 +1294,10 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_half_load, BoostUnitTestSimulationFi
 			rv.op().typeI(rv::op::LOAD, rv::func::HALFWORD, 0, 0, offset);
 
 			int32_t readData = rng();
-			simu((*link.d)->data) = readData;
+			simu((*link.d)->data) = (uint32_t) readData;
 			co_await WaitClk(clock);
 
-			BOOST_TEST(simu(valid(link.a)) == 1);
+			BOOST_TEST(simu(valid(link.a)) == '1');
 			BOOST_TEST(simu(link.a->opcode) == (size_t)scl::TileLinkA::Get);
 			BOOST_TEST(simu(link.a->address) == opA + offset);
 			BOOST_TEST(simu(link.a->size) == 1);
@@ -1314,7 +1314,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_half_load, BoostUnitTestSimulationFi
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 4096);
 }
 
@@ -1347,8 +1347,8 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_load, BoostUnitTestSimulationFixture
 			rv.r1(opA).r2(rng()).ip(rng());
 			rv.op().typeI(rv::op::LOAD, rv::func::WORD, 0, 0, offset);
 
-			simu(valid(*link.d)) = 0;
-			simu(ready(link.a)) = 0;
+			simu(valid(*link.d)) = '0';
+			simu(ready(link.a)) = '0';
 			simu((*link.d)->data).invalidate();
 			simu((*link.d)->error).invalidate();
 			co_await WaitFor(0);
@@ -1360,15 +1360,15 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_load, BoostUnitTestSimulationFixture
 			{
 				co_await WaitClk(clock);
 				BOOST_TEST(rv.isStall());
-				BOOST_TEST(simu(valid(link.a)) == 1);
+				BOOST_TEST(simu(valid(link.a)) == '1');
 			}
-			simu(ready(link.a)) = 1;
+			simu(ready(link.a)) = '1';
 			co_await WaitFor(0);
 
 			while (rng() % 2 == 0)
 			{
 				co_await WaitClk(clock);
-				BOOST_TEST(simu(valid(link.a)) == 0);
+				BOOST_TEST(simu(valid(link.a)) == '0');
 				BOOST_TEST(rv.isStall());
 			}
 
@@ -1377,15 +1377,15 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_load, BoostUnitTestSimulationFixture
 			bool error = rng() % 16 == 0;
 			if (error)
 			{
-				simu((*link.d)->error) = 1;
+				simu((*link.d)->error) = '1';
 			}
 			else
 			{
-				simu((*link.d)->error) = 0;
+				simu((*link.d)->error) = '0';
 				simu((*link.d)->data) = readData;
 			}
 
-			simu(valid(*link.d)) = 1;
+			simu(valid(*link.d)) = '1';
 			co_await WaitClk(clock);
 			BOOST_TEST(!rv.isStall());
 			BOOST_TEST(rv.hasResult());
@@ -1393,13 +1393,13 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_load, BoostUnitTestSimulationFixture
 			BOOST_TEST(rv.result() == (error ? 0xFFFF'FFFFu : readData));
 		}
 
-		simu(valid(*link.d)) = 0;
-		simu(ready(link.a)) = 0;
+		simu(valid(*link.d)) = '0';
+		simu(ready(link.a)) = '0';
 		co_await WaitClk(clock);
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 4096);
 }
 BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
@@ -1416,7 +1416,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 		std::mt19937 rng{ std::random_device{}() };
 
 		// LW
-		simu(*avmm.readDataValid) = 1;
+		simu(*avmm.readDataValid) = '1';
 		for (size_t i = 0; i < 32; ++i)
 		{
 			uint32_t opA = rng();
@@ -1436,7 +1436,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 			
 			BOOST_TEST(!rv.isStall());
 			BOOST_TEST(simu(avmm.address) == ((opA + offset) & ~3));
-			BOOST_TEST(simu(*avmm.read) == 1);
+			BOOST_TEST(simu(*avmm.read) == '1');
 			BOOST_TEST(simu(*avmm.byteEnable) == 0xF);
 		}
 
@@ -1462,7 +1462,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 
 			BOOST_TEST(!rv.isStall());
 			BOOST_TEST(simu(avmm.address) == ((opA + offset) & ~3));
-			BOOST_TEST(simu(*avmm.read) == 1);
+			BOOST_TEST(simu(*avmm.read) == '1');
 			size_t expectedByteEn = (opA + offset) % 4 < 2 ? 0x3 : 0xC;
 			BOOST_TEST(simu(*avmm.byteEnable) == expectedByteEn);
 		}
@@ -1489,7 +1489,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 
 			BOOST_TEST(!rv.isStall());
 			BOOST_TEST(simu(avmm.address) == ((opA + offset) & ~3));
-			BOOST_TEST(simu(*avmm.read) == 1);
+			BOOST_TEST(simu(*avmm.read) == '1');
 			size_t expectedByteEn = (opA + offset) % 4 < 2 ? 0x3 : 0xC;
 			BOOST_TEST(simu(*avmm.byteEnable) == expectedByteEn);
 		}
@@ -1513,7 +1513,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 
 			BOOST_TEST(!rv.isStall());
 			BOOST_TEST(simu(avmm.address) == ((opA + offset) & ~3));
-			BOOST_TEST(simu(*avmm.read) == 1);
+			BOOST_TEST(simu(*avmm.read) == '1');
 			size_t expectedByteEn = 1ull << (opA + offset) % 4;
 			BOOST_TEST(simu(*avmm.byteEnable) == expectedByteEn);
 		}
@@ -1537,7 +1537,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 
 			BOOST_TEST(!rv.isStall());
 			BOOST_TEST(simu(avmm.address) == ((opA + offset) & ~3));
-			BOOST_TEST(simu(*avmm.read) == 1);
+			BOOST_TEST(simu(*avmm.read) == '1');
 			size_t expectedByteEn = 1ull << (opA + offset) % 4;
 			BOOST_TEST(simu(*avmm.byteEnable) == expectedByteEn);
 		}
@@ -1553,20 +1553,20 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 			uint32_t alignmentFailure = (opA + offset) & 3;
 			opA -= alignmentFailure;
 
-			simu(*avmm.readDataValid) = 0;
+			simu(*avmm.readDataValid) = '0';
 			simu(*avmm.readData) = data;
 			rv.r1(opA).r2(rng()).ip(rng());
 			rv.op().typeI(rv::op::LOAD, rv::func::WORD, 0, 0, offset);
-			BOOST_TEST(simu(*avmm.read) == 1);
+			BOOST_TEST(simu(*avmm.read) == '1');
 
 			for (size_t j = 0; j < delay; ++j)
 			{
 				BOOST_TEST(rv.isStall());
 				co_await WaitClk(clock);
-				BOOST_TEST(simu(*avmm.read) == 0);
+				BOOST_TEST(simu(*avmm.read) == '0');
 			}
 
-			simu(*avmm.readDataValid) = 1;
+			simu(*avmm.readDataValid) = '1';
 			co_await WaitClk(clock);
 
 			BOOST_TEST(rv.hasResult());
@@ -1582,7 +1582,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_load, BoostUnitTestSimulationFixture)
 	//vcd.addAllPins();
 	//vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 512);
 }
 
@@ -1660,7 +1660,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, BoostUnitTestSimulationFixture)
 
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), (uint32_t)timeout + 2);
 }
 
@@ -1728,7 +1728,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 4096);
 	BOOST_TEST(found);
 }
@@ -1751,7 +1751,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink, BoostUnitTestSimulationFixture)
 		std::mt19937 rng{ seed };
 		//std::cout << "seed " << seed << '\n';
 
-		simu(ready(imem.a)) = 0;
+		simu(ready(imem.a)) = '0';
 		simu((*imem.d)->opcode) = (size_t)scl::TileLinkD::AccessAckData;
 		simu((*imem.d)->param) = 0;
 		simu((*imem.d)->size) = 2;
@@ -1762,22 +1762,22 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink, BoostUnitTestSimulationFixture)
 
 		while (true)
 		{
-			simu(ready(imem.a)) = 0;
-			simu(valid(*imem.d)) = 0;
+			simu(ready(imem.a)) = '0';
+			simu(valid(*imem.d)) = '0';
 			if ((hasRequest & 1))
 			{
-				simu(valid(*imem.d)) = 1;
+				simu(valid(*imem.d)) = '1';
 				BOOST_TEST(requestAddress < sizeof(gcd_bin));
 				if (requestAddress < sizeof(gcd_bin))
 				{
 					const uint32_t* code = (const uint32_t*)gcd_bin;
 					const uint32_t instruction = code[requestAddress / 4];
 					simu((*imem.d)->data) = instruction;
-					simu((*imem.d)->error) = 0;
+					simu((*imem.d)->error) = '0';
 				}
 				else
 				{
-					simu((*imem.d)->error) = 1;
+					simu((*imem.d)->error) = '1';
 					simu((*imem.d)->data).invalidate();
 				}
 				simu((*imem.d)->source) = simu(imem.a->source);
@@ -1788,7 +1788,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink, BoostUnitTestSimulationFixture)
 			{
 				if (rng() % 2)
 				{
-					simu(ready(imem.a)) = 1;
+					simu(ready(imem.a)) = '1';
 					hasRequest = 1ull << (rng() % 6);
 					requestAddress = simu(imem.a->address);
 				}
@@ -1846,7 +1846,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink, BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 1024 * 16);
 	BOOST_TEST(found);
 }
@@ -1914,8 +1914,8 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulati
 		while (!found)
 		{
 			co_await WaitClk(clock);
-			if (simu(valid(dmemBus.a)) == 1 && 
-				simu(ready(dmemBus.a)) == 1 &&
+			if (simu(valid(dmemBus.a)) == '1' && 
+				simu(ready(dmemBus.a)) == '1' &&
 				simu(dmemBus.a->opcode) == (size_t)scl::TileLinkA::PutFullData)
 			{
 				BOOST_TEST(simu(dmemBus.a->address) == 8);
@@ -1929,7 +1929,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulati
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//dbg::vis();
 	runTicks(clock.getClk(), 1024);
 	BOOST_TEST(found);
@@ -1987,7 +1987,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_embedded_system_builder, BoostUnitTestSimulationFi
 	vcd.addAllPins();
 	vcd.addAllNamedSignals();
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//design.visualize("export/rv32i_esb/rv32i_esb", dbg_group);
 	vhdl::VHDLExport vhdl("export/rv32i_esb/rv32i_esb.vhd");
 	vhdl(design.getCircuit());
@@ -2075,7 +2075,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle_export, BoostUnitTestSimulationFixtur
 		pinOut(uart_tx_pin).setName("uart_tx");
 	}
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	//design.visualize("scrv32i");
 
 	vhdl::VHDLExport vhdl("rv32i_gcd/rv32i_gcd.vhd");

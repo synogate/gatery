@@ -29,6 +29,11 @@
 
 namespace gtry
 {
+/**
+ * @addtogroup gtry_frontend
+ * @{
+ */
+
 	class Clock;
 
 	struct RegisterSettings {
@@ -137,4 +142,7 @@ namespace gtry
 		S m_set;
 		S m_next;
 	};
+
+/// @}
+
 }

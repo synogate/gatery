@@ -81,5 +81,12 @@ void Simulator::CallbackDispatcher::onSimProcOutputRead(hlim::NodePort output, c
 	for (auto *c : m_callbacks) c->onSimProcOutputRead(output, state);
 }
 
+DefaultBitVectorState Simulator::simProcGetValueOfOutput(const hlim::NodePort &nodePort)
+{
+	auto value = getValueOfOutput(nodePort);
+	m_callbackDispatcher.onSimProcOutputRead(nodePort, value);
+	return value;
+}
+
 
 }

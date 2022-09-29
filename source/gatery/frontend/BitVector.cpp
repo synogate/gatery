@@ -110,7 +110,7 @@ namespace gtry {
 		size_t width = utils::Log2C(std::abs(value) + 1) + 1;
 
 		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
-			parseBitVector(uint64_t(value), width),
+			sim::parseBitVector(uint64_t(value), width),
 			hlim::ConnectionType::BITVEC
 		);
 		m_nodePort = {.node = constant, .port = 0ull };
@@ -120,7 +120,7 @@ namespace gtry {
 		size_t width = utils::Log2C(value + 1);
 
 		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
-			parseBitVector(uint64_t(value), width),
+			sim::parseBitVector(uint64_t(value), width),
 			hlim::ConnectionType::BITVEC
 		);
 		m_nodePort = {.node = constant, .port = 0ull };
@@ -128,7 +128,7 @@ namespace gtry {
 
 	BaseBitVectorDefault::BaseBitVectorDefault(std::string_view value) {
 		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
-			parseBitVector(value),
+			sim::parseBitVector(value),
 			hlim::ConnectionType::BITVEC
 		);
 
@@ -387,7 +387,7 @@ namespace gtry {
 			width = utils::Log2C(value + 1);
 
 		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
-			parseBitVector(uint64_t(value), width),
+			sim::parseBitVector(uint64_t(value), width),
 			hlim::ConnectionType::BITVEC
 		);
 		assign(SignalReadPort(constant, policy));
@@ -402,7 +402,7 @@ namespace gtry {
 			width = utils::Log2C(~value + 1)+1;
 
 		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
-			parseBitVector(uint64_t(value), width),
+			sim::parseBitVector(uint64_t(value), width),
 			hlim::ConnectionType::BITVEC
 		);
 		assign(SignalReadPort(constant, policy));
@@ -411,7 +411,7 @@ namespace gtry {
 	void BaseBitVector::assign(std::string_view value, Expansion policy)
 	{
 		auto* constant = DesignScope::createNode<hlim::Node_Constant>(
-			parseBitVector(value),
+			sim::parseBitVector(value),
 			hlim::ConnectionType::BITVEC
 		);
 

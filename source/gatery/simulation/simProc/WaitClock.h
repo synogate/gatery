@@ -28,7 +28,7 @@ namespace gtry::sim {
 
 /**
  * @brief co_awaiting on a WaitClock continues the simulation until the clock "activates".
- * @details A clock activation is whatever makes the registeres attached to that clock advance.
+ * @details A clock activation is whatever makes the registers attached to that clock advance.
  * E.g. depending on the clock configuration a falling edge, a raising edge, or both.
  * If the clock is already in the "activated" state, the simulation continues until it activates again.
  * This means repeatedly co_awaiting a clock can be used to advance in clock ticks.

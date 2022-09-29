@@ -48,15 +48,33 @@ class RunTimeSimulationContext;
 class WaitFor;
 class WaitUntil;
 class WaitClock;
+class WaitChange;
 
+/**
+ * @brief Interface for all logic simulators
+ * 
+ */
 class Simulator
 {
 	public:
 		virtual ~Simulator() = default;
 
+		/// Adds a simulator callback hook to inform waveform recorders and test bench exporters about simulation events.
 		void addCallbacks(SimulatorCallbacks *simCallbacks) { m_callbackDispatcher.m_callbacks.push_back(simCallbacks); }
 
+		/**
+		 * @brief Prepares the simulator for the simulation of the given circuit.
+		 * 
+		 * @param circuit The circuit which is to be simulated.
+		 * @param outputs Unless left empty, confines simulation to that part of the circuit that has an influence on the given outputs.
+		 * @param ignoreSimulationProcesses Wether or not to bring in simulation processes that were stored in the circuit itself.
+		 */
 		virtual void compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs = {}, bool ignoreSimulationProcesses = false) = 0;
+
+		/** 
+			@name Simulator control
+		 	@{
+		*/
 
 		/// Reset circuit and simulation processes into the power-on state
 		virtual void powerOn() = 0;
@@ -94,9 +112,19 @@ class Simulator
 		 */
 		virtual void abort() = 0;
 
+		/// @}
+
+		/** 
+			@name Simulator IO
+		 	@{
+		*/
+
+		/// Sets the value of an input pin
 		virtual void simProcSetInputPin(hlim::Node_Pin *pin, const DefaultBitVectorState &state) = 0;
+		/// Overrides the output of a register until its next activation
 		virtual void simProcOverrideRegisterOutput(hlim::Node_Register *reg, const DefaultBitVectorState &state) = 0;
-		virtual DefaultBitVectorState simProcGetValueOfOutput(const hlim::NodePort &nodePort) = 0;
+		/// Returns @ref getValueOfOutput but also notifies potential testbench exporters via @ref SimulatorCallbacks of the "sampling" of this output.
+		virtual DefaultBitVectorState simProcGetValueOfOutput(const hlim::NodePort &nodePort);
 
 		virtual bool outputOptimizedAway(const hlim::NodePort &nodePort) = 0;
 		virtual DefaultBitVectorState getValueOfInternalState(const hlim::BaseNode *node, size_t idx) = 0;
@@ -104,18 +132,22 @@ class Simulator
 		virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfClock(const hlim::Clock *clk) = 0;
 		virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfReset(const hlim::Clock *clk) = 0;
 
+		/// @}
+
+		/// Returns the elapsed simulation time (in seconds) since @ref powerOn.
 		inline const hlim::ClockRational &getCurrentSimulationTime() { return m_simulationTime; }
 
+		/// Adds a simulation process to this simulator.
 		virtual void addSimulationProcess(std::function<SimulationProcess()> simProc) = 0;
 		virtual void addSimulationVisualization(sim::SimulationVisualization simVis) = 0;
 
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor, utils::RestrictTo<RunTimeSimulationContext>) = 0;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil, utils::RestrictTo<RunTimeSimulationContext>) = 0;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock, utils::RestrictTo<RunTimeSimulationContext>) = 0;
+		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitChange &waitChange, utils::RestrictTo<RunTimeSimulationContext>) = 0;
 
 		virtual void annotationStart(const hlim::ClockRational &simulationTime, const std::string &id, const std::string &desc) { m_callbackDispatcher.onAnnotationStart(simulationTime, id, desc); }
 		virtual void annotationEnd(const hlim::ClockRational &simulationTime, const std::string &id) { m_callbackDispatcher.onAnnotationEnd(simulationTime, id); }
-
 	protected:
 		class CallbackDispatcher : public SimulatorCallbacks {
 			public:

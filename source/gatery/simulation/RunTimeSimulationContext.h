@@ -40,6 +40,7 @@ class RunTimeSimulationContext : public SimulationContext {
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor) override;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil) override;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock) override;
+		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitChange &waitChange) override;
 
 		virtual Simulator *getSimulator() override { return m_simulator; }
 	protected:

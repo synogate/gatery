@@ -21,6 +21,11 @@
 #include <string>
 
 namespace gtry {
+
+/**
+ * @addtogroup gtry_frontend
+ * @{
+ */
 	
 class Comments
 {
@@ -31,7 +36,9 @@ class Comments
 		static thread_local std::stringstream m_comments;
 };
 
-}
-
 #define HCL_COMMENT gtry::Comments::get()
+
+/// @}
+
+}
 

@@ -351,7 +351,7 @@ namespace gtry::scl::usb
 		StringId allocateStringIndex() { return StringId{ m_nextStringIndex++ }; }
 		StringId allocateStringIndex(std::wstring_view string, LangID language = LangID::English_United_States);
 
-		// fix numbers, counts, size. do not call in case you added final descripts 
+		// fix numbers, counts, size. do not call in case you added final descriptors 
 		void finalize();
 		void changeMaxPacketSize(size_t value);
 

@@ -112,7 +112,7 @@ BOOST_FIXTURE_TEST_CASE(EnumRegister, gtry::BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTest({ 1,1 });
 }
 

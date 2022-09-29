@@ -311,8 +311,8 @@ void gtry::scl::usb::UlpiSimulator::addSimulationProcess(UlpiIo& io)
 				std::vector<uint8_t> packet = m_sendQueue.front();
 				m_sendQueue.pop();
 
-				simu(io.dir) = 1;
-				simu(io.nxt) = 1;
+				simu(io.dir) = '1';
+				simu(io.nxt) = '1';
 				co_await WaitClk(io.clock);
 				for(uint8_t byte : packet)
 				{
@@ -320,8 +320,8 @@ void gtry::scl::usb::UlpiSimulator::addSimulationProcess(UlpiIo& io)
 					co_await WaitClk(io.clock);
 				}
 				simu(io.dataIn) = 0;
-				simu(io.dir) = 0;
-				simu(io.nxt) = 0;
+				simu(io.dir) = '0';
+				simu(io.nxt) = '0';
 				co_await WaitClk(io.clock);
 			}
 
@@ -339,10 +339,10 @@ void gtry::scl::usb::UlpiSimulator::addSimulationProcess(UlpiIo& io)
 					co_await WaitFor(clockPeriod);
 					std::vector<uint8_t> packet;
 
-					while(simu(io.stp) == 0)
+					while(simu(io.stp) == '0')
 					{
-						simu(io.nxt) = rng() % 2;
-						if(simu(io.nxt) == 1)
+						simu(io.nxt) = (rng() % 2) == 1;
+						if(simu(io.nxt))
 							packet.push_back((uint8_t)simu(io.dataIn));
 						HCL_ASSERT_HINT(packet.size() <= 1024, "max usb packet length exceeded. stp beat missing?");
 						co_await WaitFor(clockPeriod);
@@ -356,7 +356,7 @@ void gtry::scl::usb::UlpiSimulator::addSimulationProcess(UlpiIo& io)
 					}
 
 					m_recvQueue.push(move(packet));
-					simu(io.nxt) = 0;
+					simu(io.nxt) = false;
 				}
 				break;
 

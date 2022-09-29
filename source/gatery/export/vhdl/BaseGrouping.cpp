@@ -20,6 +20,7 @@
 
 #include "AST.h"
 
+#include "../../debug/DebugInterface.h"
 #include "../../utils/Exceptions.h"
 #include "../../utils/Preprocessor.h"
 
@@ -245,15 +246,19 @@ void BaseGrouping::declareLocalSignals(std::ostream &stream, bool asVariables, u
 				nh.backtrack();
 			else
 				if (nh.node() == signal.node) {
+					dbg::awaitDebugger();
+					dbg::pushGraph();
+					dbg::LogMessage message;
+					message << dbg::LogMessage::LOG_ERROR << "Cyclic dependency of signals:";
 
-					std::cout << "Loop: " << std::endl;
 					hlim::BaseNode* n = nh.node();
 					do {
-						std::cout << n->getName() << " - " << n->getId() << " - " << n->getTypeName() << std::endl;
-						std::cout << n->getStackTrace() << std::endl << std::endl;
+						message << n;
 						n = n->getDriver(0).node;
 					} while (n != signal.node);
 
+					dbg::log(std::move(message));
+					dbg::stopInDebugger();
 
 					HCL_DESIGNCHECK_HINT(false, "Loop detected!");
 				}
