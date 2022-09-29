@@ -67,7 +67,8 @@ void Controller::generate(TileLinkUL& link)
 		ELSE
 			valid(aIn) = '0';
 
-		auto [cmd, data] = bankController(aIn, m_bankState[i], ConstUInt(i, m_cmdBus.ba.width()));
+		TileLinkChannelA aInReg = aIn.regReady();
+		auto [cmd, data] = bankController(aInReg, m_bankState[i], ConstUInt(i, m_cmdBus.ba.width()));
 		cmd->bank = ConstUInt(i, m_cmdBus.ba.width()); // optional optimization
 
 		cmdArbiter.attach(cmd);
@@ -152,6 +153,8 @@ size_t gtry::scl::sdram::Controller::readDelay() const
 {
 	size_t delay = m_timing.cl;
 	if (m_useOutputRegister)
+		delay += 1;
+	if (m_useInputRegister)
 		delay += 1;
 	return delay;
 }
@@ -299,6 +302,10 @@ void Controller::makeBusPins(const CommandBus& in, std::string prefix)
 
 	HCL_NAMED(outEnable);
 	m_dataIn = (BVec)tristatePin(bus.dq, outEnable).setName(prefix + "DQ");
+
+	if (m_useInputRegister)
+		m_dataIn = reg(m_dataIn);
+
 	HCL_NAMED(m_dataIn);
 }
 

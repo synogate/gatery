@@ -107,6 +107,7 @@ namespace gtry::scl::sdram
 		std::string m_pinPrefix = "SDRAM_";
 		DriveStrength m_driveStrength = DriveStrength::Weak;
 		const bool m_useOutputRegister = true;
+		const bool m_useInputRegister = true;
 
 		Vector<BankState> m_bankState;
 		CommandBus m_cmdBus;
