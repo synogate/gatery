@@ -767,26 +767,26 @@ BOOST_FIXTURE_TEST_CASE(tilelink_stream_fetch_test, BoostUnitTestSimulationFixtu
 	mem <<= link;
 
 	addSimulationProcess([&]()->SimProcess {
-		simu(valid(cmd)) = 0;
-		simu(ready(data)) = 0;
+		simu(valid(cmd)) = '0';
+		simu(ready(data)) = '0';
 		co_await WaitClk(clock);
 
 		simu(cmd->address) = 16;
 		simu(cmd->beats) = 4;
-		simu(valid(cmd)) = 1;
+		simu(valid(cmd)) = '1';
 		co_await WaitClk(clock);
 
-		while(simu(valid(data)) == 0)
+		while(simu(valid(data)) == '0')
 			co_await WaitClk(clock);
 
 		co_await WaitClk(clock);
-		simu(ready(data)) = 1;
+		simu(ready(data)) = '1';
 
-		while (simu(ready(cmd)) == 0)
+		while (simu(ready(cmd)) == '0')
 			co_await WaitClk(clock);
 		co_await WaitClk(clock);
 
-		simu(valid(cmd)) = 0;
+		simu(valid(cmd)) = '0';
 
 	});
 
@@ -795,7 +795,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_stream_fetch_test, BoostUnitTestSimulationFixtu
 		{
 			do
 				co_await WaitClk(clock);
-			while (simu(valid(data)) == 0 || simu(ready(data)) == 0);
+			while (simu(valid(data)) == '0' || simu(ready(data)) == '0');
 
 			const size_t expectedByte = 16 + i * 2;
 			const size_t expectedWord = ((expectedByte + 1) << 8) | expectedByte;

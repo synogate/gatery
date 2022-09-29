@@ -63,7 +63,7 @@ namespace gtry::scl
 		DesignScope::get()->getCircuit().addSimulationProcess([this, clk]() -> SimProcess {
 			while (true)
 			{
-				simu(valid(m_link.a)) = 0;
+				simu(valid(m_link.a)) = '0';
 
 				auto it = m_tx.end();
 				while (true)
@@ -91,10 +91,10 @@ namespace gtry::scl
 				while (m_rng() % 100 < it->propValid)
 					co_await WaitClk(clk);
 
-				simu(valid(m_link.a)) = 1;
+				simu(valid(m_link.a)) = '1';
 				do 
 					co_await WaitClk(clk);
-				while (simu(ready(m_link.a)) == 0);
+				while (simu(ready(m_link.a)) == '0');
 
 				it->state = RequestState::pending;
 			}
@@ -103,10 +103,10 @@ namespace gtry::scl
 		// receive process
 		DesignScope::get()->getCircuit().addSimulationProcess([this, clk]() -> SimProcess {
 
-			simu(ready(*m_link.d)) = 1;
+			simu(ready(*m_link.d)) = '1';
 			while (true)
 			{
-				if (simu(valid(*m_link.d)) == 0)
+				if (simu(valid(*m_link.d)) == '0')
 				{
 					co_await WaitClk(clk);
 					continue;
@@ -120,7 +120,7 @@ namespace gtry::scl
 
 				m_sourceInUse[source] = false;
 
-				if (simu((*m_link.d)->error) != 0)
+				if (simu((*m_link.d)->error) != '0')
 					it->state = RequestState::fail;
 				else
 					it->state = RequestState::success;
