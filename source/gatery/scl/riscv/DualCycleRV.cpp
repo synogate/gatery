@@ -147,7 +147,7 @@ void gtry::scl::riscv::DualCycleRV::writeCallReturnTrace(std::string filename)
 	auto ip = pinOut(m_IP).setName("profile_ip");
 	auto valid = pinOut(!m_discardResult & !m_stall).setName("profile_valid");
 
-	DesignScope::get()->getCircuit().addSimulationProcess([=]()->sim::SimulationProcess {
+	DesignScope::get()->getCircuit().addSimulationProcess([=]()->SimProcess {
 
 		size_t cycle = 0;
 		std::ofstream f{ filename.c_str(), std::ofstream::binary};

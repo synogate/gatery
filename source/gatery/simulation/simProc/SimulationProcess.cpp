@@ -44,11 +44,19 @@ void SimulationCoroutineHandler::start(const SimulationFunction<> &handle)
 
 void SimulationCoroutineHandler::run()
 {
-	while (!m_coroutinesReadyToResume.empty()) {
-		m_coroutinesReadyToResume.front().resume();
-		m_coroutinesReadyToResume.pop();
+	auto lastHandler = activeHandler;
+	activeHandler = this;
+	try {
+		while (!m_coroutinesReadyToResume.empty()) {
+			m_coroutinesReadyToResume.front().resume();
+			m_coroutinesReadyToResume.pop();
+		}
+		collectGarbage();
+	} catch (...) {
+		activeHandler = lastHandler;
+		throw;
 	}
-	collectGarbage();
+	activeHandler = lastHandler;
 }
 
 void SimulationCoroutineHandler::collectGarbage()

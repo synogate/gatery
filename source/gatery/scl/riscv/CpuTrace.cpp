@@ -46,7 +46,7 @@ void gtry::scl::riscv::CpuTrace::writeVcd() const
 	std::string filename = name;
 	std::replace(filename.begin(), filename.end(), '/', '_');
 
-	DesignScope::get()->getCircuit().addSimulationProcess([=, trace = *this]()->sim::SimulationProcess {
+	DesignScope::get()->getCircuit().addSimulationProcess([=, trace = *this]()->SimProcess {
 
 		sim::VCDWriter vcd(filename + "_trace.vcd");
 		size_t subCylce = 0;

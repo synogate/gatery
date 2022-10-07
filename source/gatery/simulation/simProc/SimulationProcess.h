@@ -65,7 +65,7 @@ class SmartCoroutineHandle
 			return (bool) m_handle;
 		}
 
-		auto promise() { return m_handle.promise(); }
+		auto &promise() { return m_handle.promise(); }
 
 		void resume() {
 			if (m_handle)
@@ -235,6 +235,11 @@ template<typename ReturnValue = void>
 class SimulationFunction {
 	public:
 		struct promise_type : public base_promise_type<ReturnValue> {
+
+			promise_type() = default;
+			promise_type(const promise_type &) = delete;
+			void operator=(const promise_type &) = delete;
+
 			auto get_return_object() { return std::coroutine_handle<promise_type>::from_promise(*this); }
 			auto initial_suspend() { return std::suspend_always(); }
 			void unhandled_exception() { throw; }
@@ -267,9 +272,7 @@ class SimulationFunction {
 		 */
 		struct Call {
 			bool await_ready() noexcept { return false; }
-			void await_suspend(std::coroutine_handle<> callingSimulationCoroutine) noexcept { 
-				calledSimulationCoroutine.promise().awaitingFinalSuspend.push_back(callingSimulationCoroutine); 
-			}
+			void await_suspend(std::coroutine_handle<> callingSimulationCoroutine) noexcept;
 			void await_resume() noexcept { }
 
 			Handle calledSimulationCoroutine;
@@ -279,7 +282,7 @@ class SimulationFunction {
 
 
   		/// Produces an awaiter if this SimulationCoroutine is co_awaited as a called sub-process of another SimulationCoroutine.
-  		Call operator co_await() && noexcept { return {*this}; }
+  		Call operator co_await() && noexcept { return Call(*this); }
 
 		//Fork fork() && noexcept;
 	protected:
@@ -311,6 +314,13 @@ void SimulationFunction<ReturnValue>::promise_type::FinalSuspendAwaiter::await_s
 	auto *handler = SimulationCoroutineHandler::activeHandler;
 	for (const auto &coro : handle.promise().awaitingFinalSuspend)
 		handler->readyToResume(coro);
+}
+
+template<typename ReturnValue>
+void SimulationFunction<ReturnValue>::Call::await_suspend(std::coroutine_handle<> callingSimulationCoroutine) noexcept { 
+	calledSimulationCoroutine.promise().awaitingFinalSuspend.push_back(callingSimulationCoroutine); 
+	auto *handler = SimulationCoroutineHandler::activeHandler;
+	handler->readyToResume(calledSimulationCoroutine.rawHandle());
 }
 
 
