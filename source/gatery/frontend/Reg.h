@@ -61,7 +61,7 @@ namespace gtry
 
 	namespace internal
 	{
-		SignalReadPort reg(SignalReadPort val, std::string_view name, std::optional<SignalReadPort> reset, const RegisterSettings& settings);
+		SignalReadPort reg(SignalReadPort val, std::optional<SignalReadPort> reset, const RegisterSettings& settings);
 	}
 
 	template<BaseSignal T>
@@ -69,7 +69,6 @@ namespace gtry
 	{
 		return internal::reg(
 			val.readPort(),
-			val.getName(),
 			std::nullopt,
 			settings
 		);
@@ -82,7 +81,6 @@ namespace gtry
 
 		return internal::reg(
 			ops.lhs,
-			val.getName(),
 			ops.rhs,
 			settings
 		);

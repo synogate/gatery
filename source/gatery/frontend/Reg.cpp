@@ -28,10 +28,9 @@
 
 namespace gtry
 {
-	SignalReadPort internal::reg(SignalReadPort val, std::string_view name, std::optional<SignalReadPort> reset, const RegisterSettings& settings)
+	SignalReadPort internal::reg(SignalReadPort val, std::optional<SignalReadPort> reset, const RegisterSettings& settings)
 	{
 		auto* reg = DesignScope::createNode<hlim::Node_Register>();
-		reg->setName(std::string{ name });
 
 		reg->connectInput(hlim::Node_Register::DATA, val);
 
