@@ -18,6 +18,7 @@
 #pragma once
 
 #include "SimulatorCallbacks.h"
+#include "simProc/SimulationProcess.h"
 
 #include <memory>
 #include <functional>
@@ -29,7 +30,6 @@ namespace gtry::hlim {
 namespace gtry::sim {
 
 	class Simulator;
-	class SimulationProcess;
 
 /**
  * @todo write docs
@@ -40,7 +40,7 @@ namespace gtry::sim {
 		UnitTestSimulationFixture();
 		~UnitTestSimulationFixture();
 
-		void addSimulationProcess(std::function<SimulationProcess()> simProc);
+		void addSimulationProcess(std::function<SimulationFunction<>()> simProc);
 
 		void eval(hlim::Circuit& circuit);
 		void runTicks(hlim::Circuit& circuit, const hlim::Clock* clock, unsigned numTicks);

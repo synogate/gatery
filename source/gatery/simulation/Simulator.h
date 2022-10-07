@@ -142,15 +142,22 @@ class Simulator
 		/// Returns the elapsed micro ticks (reevaluations) within the current time step.
 		inline size_t getCurrentMicroTick() const { return m_microTick; }
 
-		/// Adds a simulation process to this simulator.
-		virtual void addSimulationProcess(std::function<SimulationProcess()> simProc) = 0;
+		/// Adds a simulation process to this simulator that gets started on power on.
+		virtual void addSimulationProcess(std::function<SimulationFunction<void>()> simProc) = 0;
 		virtual void addSimulationVisualization(sim::SimulationVisualization simVis) = 0;
+
+		/// Spawns a simulation process immediately (to be called during simulation to "fork").
+		//virtual SimulationProcessHandle fork(std::function<SimulationFunction<void>> simProc, utils::RestrictTo<RunTimeSimulationContext>) = 0;
 
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor, utils::RestrictTo<RunTimeSimulationContext>) = 0;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil, utils::RestrictTo<RunTimeSimulationContext>) = 0;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock, utils::RestrictTo<RunTimeSimulationContext>) = 0;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitChange &waitChange, utils::RestrictTo<RunTimeSimulationContext>) = 0;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitStable &waitStable, utils::RestrictTo<RunTimeSimulationContext>) = 0;
+
+		// virtual void stopSimulationProcess(const SimulationProcessHandle &handle, utils::RestrictTo<SimulationProcessHandle>) = 0;
+		// virtual bool simulationProcessHasFinished(const SimulationProcessHandle &handle, utils::RestrictTo<SimulationProcessHandle>) = 0;
+//		virtual void suspendUntilProcessCompletion(std::coroutine_handle<> handle, const SimulationProcessHandle &procHandle, utils::RestrictTo<SimulationProcessHandle>) = 0;
 
 		virtual void annotationStart(const hlim::ClockRational &simulationTime, const std::string &id, const std::string &desc) { m_callbackDispatcher.onAnnotationStart(simulationTime, id, desc); }
 		virtual void annotationEnd(const hlim::ClockRational &simulationTime, const std::string &id) { m_callbackDispatcher.onAnnotationEnd(simulationTime, id); }

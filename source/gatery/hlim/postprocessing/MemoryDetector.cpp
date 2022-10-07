@@ -39,6 +39,7 @@
 #include "../../simulation/SigHandle.h"
 #include "../../simulation/simProc/WaitClock.h"
 #include "../../simulation/simProc/WaitFor.h"
+#include "../../simulation/simProc/WaitStable.h"
 
 
 #define DEBUG_OUTPUT
@@ -1241,7 +1242,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 	HCL_ASSERT_HINT(isDontCare, "The simulation model for external memory only supports DONT_CARE as the cross port read during write policy. However, the memory ended up in a different configuration!");
 
 	size_t size = m_memory->getSize();
-	circuit.addSimulationProcess([convertedReadPorts, convertedWritePorts, size, clock]()mutable->sim::SimulationProcess{
+	circuit.addSimulationProcess([convertedReadPorts, convertedWritePorts, size, clock]()mutable->sim::SimulationFunction<>{
 		sim::DefaultBitVectorState mem;
 		mem.resize(size);
 
@@ -1342,7 +1343,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 				readPortRegs[i].push();
 			}
 
-			co_await sim::WaitFor(0);
+			co_await sim::WaitStable();
 
 			// Actually performs write after outputing read information in case there is a combinatorical loop from a read port to a write port
 

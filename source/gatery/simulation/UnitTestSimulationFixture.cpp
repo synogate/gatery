@@ -36,7 +36,7 @@ UnitTestSimulationFixture::~UnitTestSimulationFixture()
 {
 }
 
-void UnitTestSimulationFixture::addSimulationProcess(std::function<SimulationProcess()> simProc)
+void UnitTestSimulationFixture::addSimulationProcess(std::function<SimulationFunction<>()> simProc)
 {
 	m_simulator->addSimulationProcess(std::move(simProc));
 }

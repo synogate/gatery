@@ -17,28 +17,51 @@
 */
 #include "gatery/pch.h"
 #include "SimulationProcess.h"
+#include "../Simulator.h"
 
 namespace gtry::sim {
 
-SimulationProcess::SimulationProcess(Handle handle) : m_handle(handle)
-{
+thread_local SimulationCoroutineHandler *SimulationCoroutineHandler::activeHandler = nullptr;
+
+SimulationCoroutineHandler::~SimulationCoroutineHandler()
+{	
+	stopAll();
 }
 
-SimulationProcess::~SimulationProcess()
+void SimulationCoroutineHandler::stopAll()
 {
-	if (m_handle)
-		m_handle.destroy();
+	m_simulationCoroutines.clear();
+	while (!m_coroutinesReadyToResume.empty())
+		m_coroutinesReadyToResume.pop();
 }
 
-void SimulationProcess::resume()
+
+void SimulationCoroutineHandler::start(const SimulationFunction<> &handle)
 {
-	if (!m_handle.done())
-		m_handle.resume();
+	m_simulationCoroutines.push_back(handle.getHandle());
+	readyToResume(handle.getHandle().rawHandle());
 }
 
-SimulationProcess::Awaiter SimulationProcess::operator co_await() && noexcept
+void SimulationCoroutineHandler::run()
 {
-	return SimulationProcess::Awaiter{m_handle};
+	while (!m_coroutinesReadyToResume.empty()) {
+		m_coroutinesReadyToResume.front().resume();
+		m_coroutinesReadyToResume.pop();
+	}
+	collectGarbage();
+}
+
+void SimulationCoroutineHandler::collectGarbage()
+{
+	// We hold references to keep fire&forget coroutines alive.
+	// Once they are done, we drop the reference and if it was the last one, the promise gets deleted.
+	for (size_t i = 0; i < m_simulationCoroutines.size(); ) {
+		if (m_simulationCoroutines[i].done()) {
+			m_simulationCoroutines[i] = m_simulationCoroutines.back();
+			m_simulationCoroutines.pop_back();
+		} else
+			i++;
+	}
 }
 
 }

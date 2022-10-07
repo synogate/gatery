@@ -245,7 +245,7 @@ class ReferenceSimulator : public Simulator
 		virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfClock(const hlim::Clock *clk) override;
 		virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfReset(const hlim::Clock *clk) override;
 
-		virtual void addSimulationProcess(std::function<SimulationProcess()> simProc) override;
+		virtual void addSimulationProcess(std::function<SimulationFunction<void>()> simProc) override;
 		virtual void addSimulationVisualization(sim::SimulationVisualization simVis) override;
 
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor, utils::RestrictTo<RunTimeSimulationContext>) override;
@@ -253,6 +253,12 @@ class ReferenceSimulator : public Simulator
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock, utils::RestrictTo<RunTimeSimulationContext>) override;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitChange &waitChange, utils::RestrictTo<RunTimeSimulationContext>) override;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitStable &waitStable, utils::RestrictTo<RunTimeSimulationContext>) override;
+
+		// virtual SimulationProcessHandle fork(std::function<SimulationFunction<void>()> simProc, utils::RestrictTo<RunTimeSimulationContext>) override;
+		// virtual void stopSimulationProcess(const SimulationProcessHandle &handle, utils::RestrictTo<SimulationProcessHandle>) override;
+		// virtual bool simulationProcessHasFinished(const SimulationProcessHandle &handle, utils::RestrictTo<SimulationProcessHandle>) override;
+		//virtual void suspendUntilProcessCompletion(std::coroutine_handle<> handle, const SimulationProcessHandle &handle, utils::RestrictTo<SimulationProcessHandle>) override;
+
 	protected:
 		Program m_program;
 		DataState m_dataState;
@@ -261,10 +267,12 @@ class ReferenceSimulator : public Simulator
 
 		std::priority_queue<Event> m_nextEvents;
 
+
+		SimulationCoroutineHandler m_coroutineHandler;
+
 		std::vector<std::coroutine_handle<>> m_processesAwaitingCommit;
-		std::vector<std::function<SimulationProcess()>> m_simProcs;
+		std::vector<std::function<SimulationFunction<>()>> m_simProcs;
 		std::vector<sim::SimulationVisualization> m_simViz;
-		std::list<SimulationProcess> m_runningSimProcs;
 		std::list<SignalWatch> m_signalWatches;
 		bool m_stateNeedsReevaluating = false;
 		std::uint64_t m_nextSimProcInsertionId = 0;

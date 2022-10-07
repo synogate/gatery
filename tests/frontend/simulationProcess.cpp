@@ -297,10 +297,76 @@ BOOST_FIXTURE_TEST_CASE(SimProc_AsyncProcs, BoostUnitTestSimulationFixture)
 }
 
 
+unsigned depth = 0;
+
+class StackDepthCounter {
+	public:
+		StackDepthCounter() { depth++; }
+		~StackDepthCounter() { depth--; }
+};
+
+BOOST_FIXTURE_TEST_CASE(SimProc_callSubTaskStackOverflowTest, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+
+
+	auto subProcess = []()->SimProcess{
+		volatile char stackFiller[1024];
+		StackDepthCounter counter;
+		co_return;
+	};
+
+	addSimulationProcess([=]()->SimProcess{
+		for (auto i : gtry::utils::Range(10'000'000)) {
+			co_await subProcess();
+		}
+
+		stopTest();
+	});
+
+	design.postprocess();
+
+	runTicks(clock.getClk(), 100000);
+}
+
+BOOST_FIXTURE_TEST_CASE(SimProc_callSuspendingSubTask, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+
+	bool busy = false;
+	auto subProcess = [&busy](const Clock &clock)->SimProcess{
+		busy = true;
+		for (auto i : gtry::utils::Range(8)) {
+			co_await AfterClk(clock);
+		}
+		busy = false;
+	};
+
+	addSimulationProcess([=]()->SimProcess{
+		co_await AfterClk(clock);
+		for (auto i : gtry::utils::Range(1000)) {
+			co_await AfterClk(clock);
+			BOOST_TEST(!busy);
+			co_await subProcess(clock);
+			BOOST_TEST(!busy);
+		}
+
+		stopTest();
+	});
+
+	design.postprocess();
+
+	runTicks(clock.getClk(), 100000);
+}
+
 
 /*
 
-BOOST_FIXTURE_TEST_CASE(SimProc_spawnSubTask, BoostUnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(SimProc_forkSubTask, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
 

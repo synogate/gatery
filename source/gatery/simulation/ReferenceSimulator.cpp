@@ -629,12 +629,14 @@ void ReferenceSimulator::powerOn()
 	// Start fibers
 	{
 		RunTimeSimulationContext context(this);
+
+		m_coroutineHandler.stopAll();
+
 		// start all fibers
-		m_runningSimProcs.clear();
-		for (auto &f : m_simProcs) {
-			m_runningSimProcs.push_back(f());
-			m_runningSimProcs.back().resume();
-		}
+		for (auto &f : m_simProcs)
+			m_coroutineHandler.start(f());
+
+		m_coroutineHandler.run();
 	}
 
 	if (m_stateNeedsReevaluating)
@@ -671,12 +673,10 @@ void ReferenceSimulator::commitState()
 	{
 		RunTimeSimulationContext context(this);
 
-		std::vector<std::coroutine_handle<>> processesAwaitingCommit;
-		// Allow processes to immediately re-suspend with WaitStable but then be only resumed in the next commit.
-		std::swap(processesAwaitingCommit, m_processesAwaitingCommit); 
-
-		for (auto &h : processesAwaitingCommit)
-			h.resume();
+		for (auto &h : m_processesAwaitingCommit)
+			m_coroutineHandler.readyToResume(h);
+		
+		m_coroutineHandler.run();
 	}
 
 	m_callbackDispatcher.onCommitState();
@@ -789,7 +789,8 @@ void ReferenceSimulator::advanceMicroTick()
 			case Event::Type::simProcResume: {
 				RunTimeSimulationContext context(this);
 
-				event.evt<Event::SimProcResumeEvt>().handle.resume();
+				m_coroutineHandler.readyToResume(event.evt<Event::SimProcResumeEvt>().handle);
+				m_coroutineHandler.run();
 			} break;
 		}
 	}
@@ -1013,7 +1014,7 @@ std::array<bool, DefaultConfig::NUM_PLANES> ReferenceSimulator::getValueOfReset(
 	return res;
 }
 
-void ReferenceSimulator::addSimulationProcess(std::function<SimulationProcess()> simProc)
+void ReferenceSimulator::addSimulationProcess(std::function<SimulationFunction<void>()> simProc)
 {
 	m_simProcs.push_back(std::move(simProc));
 }
@@ -1100,6 +1101,25 @@ void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> han
 {
 	m_processesAwaitingCommit.push_back(handle);
 }
+
+/*
+SimulationProcessHandle ReferenceSimulator::fork(std::function<SimulationProcess()> simProc, utils::RestrictTo<RunTimeSimulationContext>)
+{
+	
+}
+
+void ReferenceSimulator::stopSimulationProcess(const SimulationProcessHandle &handle, utils::RestrictTo<SimulationProcessHandle>)
+{
+}
+
+bool ReferenceSimulator::simulationProcessHasFinished(const SimulationProcessHandle &handle, utils::RestrictTo<SimulationProcessHandle>)
+{
+}
+
+void ReferenceSimulator::suspendUntilProcessCompletion(std::coroutine_handle<> handle, const SimulationProcessHandle &handle, utils::RestrictTo<SimulationProcessHandle>)
+{
+}
+*/
 
 
 

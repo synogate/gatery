@@ -270,7 +270,7 @@ SigHandleBVec simu(const OutputPins &pins);
 
 
 
-using SimProcess = sim::SimulationProcess;
+using SimProcess = sim::SimulationFunction<void>;
 using WaitFor = sim::WaitFor;
 using WaitUntil = sim::WaitUntil;
 using WaitStable = sim::WaitStable;
