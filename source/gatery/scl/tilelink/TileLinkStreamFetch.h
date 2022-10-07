@@ -15,15 +15,32 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "frontend/pch.h"
+#pragma once
+#include <gatery/frontend.h>
+#include "tilelink.h"
 
-#define BOOST_TEST_MODULE "Unit tests for core library (including frontend)"
-#include <boost/test/unit_test.hpp>
+namespace gtry::scl
+{
+	class TileLinkStreamFetch
+	{
+	public:
+		struct Command
+		{
+			UInt address;
+			UInt beats;
+		};
 
-#include <gatery/frontend/FrontendUnitTestSimulationFixture.h>
+	public:
+		TileLinkStreamFetch();
 
-#include <gatery/frontend/GHDLTestFixture.h>
+		virtual TileLinkUL generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut);
+	private:
+		Area m_area = {"scl_TileLinkStreamFetch", true};
 
-using GHDLGlobalFixture = gtry::GHDLGlobalFixture;
 
-BOOST_TEST_GLOBAL_FIXTURE( GHDLGlobalFixture );
+	};
+
+
+}
+
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkStreamFetch::Command, address, beats);

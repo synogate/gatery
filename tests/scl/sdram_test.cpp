@@ -402,6 +402,8 @@ public:
 		m_dataIn = ConstBVec(moduleData.width());
 		IF(!outEnable)
 			m_dataIn = moduleData;
+		if (m_useInputRegister)
+			m_dataIn = reg(m_dataIn);
 		pinOut(m_dataIn).setName(prefix + "DQ_IN");
 	}
 

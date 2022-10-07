@@ -67,7 +67,8 @@ void Controller::generate(TileLinkUL& link)
 		ELSE
 			valid(aIn) = '0';
 
-		auto [cmd, data] = bankController(aIn, m_bankState[i], ConstUInt(i, m_cmdBus.ba.width()));
+		TileLinkChannelA aInReg = aIn.regReady();
+		auto [cmd, data] = bankController(aInReg, m_bankState[i], ConstUInt(i, m_cmdBus.ba.width()));
 		cmd->bank = ConstUInt(i, m_cmdBus.ba.width()); // optional optimization
 
 		cmdArbiter.attach(cmd);
@@ -77,11 +78,6 @@ void Controller::generate(TileLinkUL& link)
 	DataOutStream& nextData = outArbiter.out();
 	cmdArbiter.generate();
 	outArbiter.generate();
-
-	//IF(transfer(nextCommand) & nextCommand->code == CommandCode::Activate)
-	//	m_rasTimer = 0;
-	//ELSE IF(m_rasTimer != m_rasTimer.width().last())
-	//	m_rasTimer += 1;
 
 	HCL_NAMED(nextCommand);
 	makeReadQueue(nextCommand);
@@ -105,17 +101,6 @@ void Controller::initMember()
 	makeBusPins(m_cmdBus, m_pinPrefix);
 	makeBankState();
 
-	m_rasTimer = BitWidth::count(m_timing.rc);
-
-	Bit rasCommand = m_cmdBus.cke & !m_cmdBus.csn & !m_cmdBus.rasn & m_cmdBus.casn & m_cmdBus.wen;
-	IF(rasCommand)
-		m_rasTimer = 0;
-	ELSE IF(m_rasTimer != m_rasTimer.width().last())
-		m_rasTimer += 1;
-
-	m_rasTimer = reg(m_rasTimer, 0);
-	HCL_NAMED(m_rasTimer);
-
 	IF(!m_timer)
 		m_timer = std::make_shared<SdramTimer>();
 }
@@ -125,9 +110,6 @@ std::tuple<Controller::CommandStream, Controller::DataOutStream> Controller::ban
 	auto scope = Area("bankController").enter();
 	HCL_NAMED(bank);
 
-	Bit dataOutBusy;
-	HCL_NAMED(dataOutBusy);
-
 	// command stream
 	CommandStream cmd = translateCommand(state, link);
 	setName(cmd, "bankCommand");
@@ -135,30 +117,29 @@ std::tuple<Controller::CommandStream, Controller::DataOutStream> Controller::ban
 		state = updateState(*cmd, state);
 
 	CommandStream timedCmd = enforceTiming(cmd, bank);
-	CommandStream stalledCmd = stall(timedCmd, dataOutBusy);
 
 	// write data / read mask stream
-	DataOutStream data = translateCommandData(link, dataOutBusy);
+	DataOutStream data = translateCommandData(link);
 
 	Bit delayDataStream = '0';
 	IF(sop(data))
 	{
-		IF(!valid(stalledCmd))
+		IF(!valid(timedCmd))
 			delayDataStream = '1'; // bank not ready yet
-		IF(stalledCmd->code != CommandCode::Write & stalledCmd->code != CommandCode::Read)
+		IF(timedCmd->code != CommandCode::Write & timedCmd->code != CommandCode::Read)
 			delayDataStream = '1'; // not ready for CAS yet
 	}
 	ELSE
 	{
 		// we left command phase but link holds valid until write data has been transfered
-		valid(stalledCmd) = '0';
+		valid(timedCmd) = '0';
 	}
 	HCL_NAMED(delayDataStream);
 	DataOutStream dataStalled = stall(data, delayDataStream);
 
-	setName(stalledCmd, "outCmd");
+	setName(timedCmd, "outCmd");
 	setName(dataStalled, "outData");
-	return { std::move(stalledCmd), std::move(dataStalled) };
+	return { std::move(timedCmd), std::move(dataStalled) };
 }
 
 size_t gtry::scl::sdram::Controller::writeToReadTiming() const
@@ -172,6 +153,8 @@ size_t gtry::scl::sdram::Controller::readDelay() const
 {
 	size_t delay = m_timing.cl;
 	if (m_useOutputRegister)
+		delay += 1;
+	if (m_useInputRegister)
 		delay += 1;
 	return delay;
 }
@@ -271,7 +254,7 @@ Controller::CommandStream Controller::translateCommand(const BankState& state, c
 	return cmd;
 }
 
-Controller::DataOutStream gtry::scl::sdram::Controller::translateCommandData(TileLinkChannelA& request, Bit& bankStall) const
+Controller::DataOutStream gtry::scl::sdram::Controller::translateCommandData(TileLinkChannelA& request) const
 {
 	auto scope = Area("translateCommandData").enter();
 	HCL_NAMED(request);
@@ -284,20 +267,15 @@ Controller::DataOutStream gtry::scl::sdram::Controller::translateCommandData(Til
 	eop(out) = eop(request);
 	ready(request) = ready(out);
 
-	bankStall = '0';
-
 	HCL_NAMED(out);
 	return out;
 }
 
 Controller::CommandStream Controller::enforceTiming(CommandStream& cmd, UInt bank) const
 {
-	auto scope = Area("scl_enforceTiming").enter();
-	HCL_NAMED(cmd);
-
-	Bit active = m_timer->can(cmd->code, bank);
-	HCL_NAMED(active);
-	return scl::stall(cmd, !active);
+	Bit cmdTimingValid = m_timer->can(cmd->code, bank);
+	HCL_NAMED(cmdTimingValid);
+	return scl::stall(cmd, !cmdTimingValid);
 }
 
 void Controller::makeBusPins(const CommandBus& in, std::string prefix)
@@ -324,6 +302,10 @@ void Controller::makeBusPins(const CommandBus& in, std::string prefix)
 
 	HCL_NAMED(outEnable);
 	m_dataIn = (BVec)tristatePin(bus.dq, outEnable).setName(prefix + "DQ");
+
+	if (m_useInputRegister)
+		m_dataIn = reg(m_dataIn);
+
 	HCL_NAMED(m_dataIn);
 }
 

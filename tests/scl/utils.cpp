@@ -125,6 +125,6 @@ BOOST_FIXTURE_TEST_CASE(addWithCarry, BoostUnitTestSimulationFixture)
 		}
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
+	design.postprocess();
 	runTicks(clock.getClk(), 2048);
 }

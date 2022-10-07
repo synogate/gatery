@@ -27,6 +27,7 @@
 #include <gatery/scl/tilelink/tilelink.h>
 #include <gatery/scl/tilelink/TileLinkHub.h>
 #include <gatery/scl/tilelink/TileLinkErrorResponder.h>
+#include <gatery/scl/tilelink/TileLinkStreamFetch.h>
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -734,5 +735,78 @@ BOOST_FIXTURE_TEST_CASE(tilelink_memory_test, BoostUnitTestSimulationFixture)
 	});
 
 	design.postprocess();
+	runTicks(clock.getClk(), 128);
+}
+
+BOOST_FIXTURE_TEST_CASE(tilelink_stream_fetch_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ 
+		.absoluteFrequency = 100'000'000,
+		.memoryResetType = ClockConfig::ResetType::NONE
+	});
+	ClockScope clkScp(clock);
+
+	std::vector<uint8_t> memData;
+	for (uint16_t i = 0; i < 512; ++i)
+		memData.push_back((uint8_t)i);
+
+	Memory<BVec> mem(256, 16_b);
+	mem.fillPowerOnState(sim::createDefaultBitVectorState(memData.size(), memData.data()));
+
+	RvStream<TileLinkStreamFetch::Command> cmd;
+	cmd->address = mem.addressWidth();
+	cmd->beats = 4_b;
+	pinIn(cmd, "cmd");
+
+	RvStream<BVec> data;
+	*data = 16_b;
+	pinOut(data, "data");
+
+	TileLinkStreamFetch fetcher;
+	TileLinkUL link = fetcher.generate(cmd, data);
+	mem <<= link;
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(valid(cmd)) = '0';
+		simu(ready(data)) = '0';
+		co_await WaitClk(clock);
+
+		simu(cmd->address) = 16;
+		simu(cmd->beats) = 4;
+		simu(valid(cmd)) = '1';
+		co_await WaitClk(clock);
+
+		while(simu(valid(data)) == '0')
+			co_await WaitClk(clock);
+
+		co_await WaitClk(clock);
+		simu(ready(data)) = '1';
+
+		while (simu(ready(cmd)) == '0')
+			co_await WaitClk(clock);
+		co_await WaitClk(clock);
+
+		simu(valid(cmd)) = '0';
+
+	});
+
+	addSimulationProcess([&]()->SimProcess {
+		for (size_t i = 0; i < 4; ++i)
+		{
+			do
+				co_await WaitClk(clock);
+			while (simu(valid(data)) == '0' || simu(ready(data)) == '0');
+
+			const size_t expectedByte = 16 + i * 2;
+			const size_t expectedWord = ((expectedByte + 1) << 8) | expectedByte;
+			BOOST_TEST(simu(*data) == expectedWord);
+		}
+
+		co_await WaitClk(clock);
+		co_await WaitClk(clock);
+		stopTest();
+	});
+
+	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(clock.getClk(), 128);
 }
