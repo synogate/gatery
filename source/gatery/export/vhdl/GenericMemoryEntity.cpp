@@ -22,6 +22,7 @@
 
 #include "../../hlim/Clock.h"
 #include "../../hlim/coreNodes/Node_Register.h"
+#include "../../hlim/coreNodes/Node_Constant.h"
 #include "../../hlim/supportNodes/Node_Memory.h"
 #include "../../hlim/supportNodes/Node_MemPort.h"
 #include "../../hlim/postprocessing/MemoryDetector.h"
@@ -93,6 +94,7 @@ void GenericMemoryEntity::buildFrom(hlim::NodeGroup *memNodeGrp)
 		}
 	}
 }
+
 
 void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 {
@@ -242,10 +244,6 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 
 
 	for (auto &rp : m_memGrp->getReadPorts()) {
-		for (auto &reg : rp.dedicatedReadLatencyRegisters)
-			HCL_ASSERT_HINT(reg->getDriver(hlim::Node_Register::RESET_VALUE).node == nullptr || !reg->getClocks()[0]->getRegAttribs().initializeRegs,
-						"Power on reset values not implemented yet for memory registers!");
-
 		if (!rp.dedicatedReadLatencyRegisters.empty())
 			for (auto i : utils::Range<size_t>(rp.dedicatedReadLatencyRegisters.size()-1)) {
 				const auto &decl = m_namespaceScope.get(rp.dataOutput);
@@ -253,6 +251,25 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 				cf.indent(stream, 1);
 				stream << "SIGNAL " << decl.name << "_outputReg_" << i << " : ";
 				cf.formatConnectionType(stream, decl);
+
+				auto& reg = rp.dedicatedReadLatencyRegisters[i];
+				if (reg->getDriver(hlim::Node_Register::RESET_VALUE).node != nullptr && reg->getClocks()[0]->getRegAttribs().initializeRegs) {
+
+					auto* constant = dynamic_cast<hlim::Node_Constant*>(reg->getNonSignalDriver(hlim::Node_Register::RESET_VALUE).node);
+					HCL_ASSERT_HINT(constant != nullptr, "Register reset value must resolve to constant!");
+
+					stream << " := ";
+
+					const auto& conType = constant->getOutputConnectionType(0);
+					char sep = '"';
+					if (conType.interpretation == hlim::ConnectionType::BOOL)
+						sep = '\'';
+
+					stream << sep;
+					stream << constant->getValue();
+					stream << sep;
+				}
+
 				stream << "; "<< std::endl;
 			}
 	}
