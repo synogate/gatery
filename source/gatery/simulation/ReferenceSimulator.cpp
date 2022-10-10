@@ -675,6 +675,7 @@ void ReferenceSimulator::commitState()
 
 		for (auto &h : m_processesAwaitingCommit)
 			m_coroutineHandler.readyToResume(h);
+		m_processesAwaitingCommit.clear();
 		
 		m_coroutineHandler.run();
 	}
