@@ -36,12 +36,6 @@ void SimulationCoroutineHandler::stopAll()
 }
 
 
-void SimulationCoroutineHandler::start(const SimulationFunction<> &handle)
-{
-	m_simulationCoroutines.push_back(handle.getHandle());
-	readyToResume(handle.getHandle().rawHandle());
-}
-
 void SimulationCoroutineHandler::run()
 {
 	auto lastHandler = activeHandler;
@@ -71,5 +65,12 @@ void SimulationCoroutineHandler::collectGarbage()
 			i++;
 	}
 }
+
+
+
+template class SimulationFunction<void>;
+template class SimulationFunction<int>;
+template class SimulationFunction<size_t>;
+template class SimulationFunction<bool>;
 
 }

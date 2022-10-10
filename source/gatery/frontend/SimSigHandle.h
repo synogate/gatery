@@ -269,6 +269,8 @@ SigHandleBVec simu(const OutputPins &pins);
 
 
 
+template<typename T>
+using SimFunction = sim::SimulationFunction<T>;
 
 using SimProcess = sim::SimulationFunction<void>;
 using WaitFor = sim::WaitFor;
@@ -280,6 +282,31 @@ using BigInt = sim::BigInt;
 
 sim::WaitClock AfterClk(const Clock &clk);
 sim::WaitClock OnClk(const Clock &clk);
+
+/**
+ * @brief Forks a new simulation process that will run in (quasi-)parallel.
+ * @details Execution resumes in the new simulation process an returns to the calling simulation process
+ * once the forked one suspends or finishes. Forked simulation processes can be used in a fire&forget manner or
+ * can be joined again, in which case they can return a return value.
+ * @param simProc An instance of gtry::SimFunction.
+ * @return A handle that other simulation processes (not necessarily the one that called fork()) can @ref gtry::join on to await the completion forked process.
+ * @see gtry::sim::SimulationFunction::Fork
+ */
+template<typename SimProc>
+auto fork(const SimProc &simProc) {
+	return typename SimProc::Fork(simProc);
+}
+
+/**
+ * @brief Suspends execution until another simulation function has finished, potentially returning a return value from the other simulation function.
+ * @param handle A handle to another simulation function as returned from @ref gtry::fork.
+ * @return The return value of the awaited simulation function if it isn't void.
+ * @see gtry::sim::SimulationFunction::Join
+ */
+template<typename Handle>
+auto join(const Handle &handle) {
+	return typename SimFunction<typename Handle::promiseType::returnType>::Join(handle);
+}
 
 void simAnnotationStart(const std::string &id, const std::string &desc);
 void simAnnotationStartDelayed(const std::string &id, const std::string &desc, const Clock &clk, int cycles);

@@ -34,6 +34,8 @@ template<typename PromiseType = void>
 class SmartCoroutineHandle
 {
 	public:
+		using promiseType = PromiseType;
+
 		~SmartCoroutineHandle() {
 			reset();
 		}
@@ -97,6 +99,8 @@ template<>
 class SmartCoroutineHandle<void>
 {
 	public:
+		using returnType = void;
+
 		~SmartCoroutineHandle() {
 			reset();
 		}
@@ -192,29 +196,6 @@ class SmartPromiseType
 		size_t m_numHandles = 0;
 };
 
-
-/*
-struct Join {
-	bool await_ready() noexcept { return false; }
-	auto await_suspend(std::coroutine_handle<> callingSimulationCoroutine) noexcept;
-	void await_resume() noexcept { }
-
-	Handle calledSimulationCoroutine;
-
-	explicit Join(const SimulationCoroutine &simProc) noexcept;
-};
-
-struct Fork {
-	bool await_ready() noexcept { return false; }
-	auto await_suspend(std::coroutine_handle<> callingSimulationCoroutine) noexcept;
-	void await_resume() noexcept { }
-
-	Handle calledSimulationCoroutine;
-
-	explicit Fork(const SimulationCoroutine &&simProc, SimulationCoroutineHandler *simProcHandler) noexcept;
-};
-*/
-
 }
 
 
@@ -230,11 +211,29 @@ struct base_promise_type<void> : public internal::SmartPromiseType {
 	void return_void() { }
 };
 
+template<typename ReturnValue, typename promise_type>
+struct BaseCall {
+	ReturnValue await_resume() noexcept { return calledSimulationCoroutine.promise().returnValue; }
+	internal::SmartCoroutineHandle<promise_type> calledSimulationCoroutine;
+
+	BaseCall(const internal::SmartCoroutineHandle<promise_type> &calledSimulationCoroutine) : calledSimulationCoroutine(calledSimulationCoroutine) { }
+};
+
+template<typename promise_type>
+struct BaseCall<void, promise_type> {
+	void await_resume() noexcept { }
+	internal::SmartCoroutineHandle<promise_type> calledSimulationCoroutine;
+
+	BaseCall(const internal::SmartCoroutineHandle<promise_type> &calledSimulationCoroutine) : calledSimulationCoroutine(calledSimulationCoroutine) { }
+};
+
 
 template<typename ReturnValue = void>
 class SimulationFunction {
 	public:
 		struct promise_type : public base_promise_type<ReturnValue> {
+
+			using returnType = ReturnValue;
 
 			promise_type() = default;
 			promise_type(const promise_type &) = delete;
@@ -265,26 +264,44 @@ class SimulationFunction {
 
 		inline const Handle &getHandle() const { return m_handle; }
 
-
 		/**
 		 * @brief Awaiter if this SimulationCoroutine is co_awaited as a sub-process of another SimulationCoroutine.
-		 * @details Adds the calling coroutine to the list of coroutines awaiting final suspend of the called one.
+		 * @details Schedules the called coroutine for resumption and adds the calling coroutine to the list of coroutines awaiting final suspend of the called one.
 		 */
-		struct Call {
+		struct Call : public BaseCall<ReturnValue, promise_type> {
 			bool await_ready() noexcept { return false; }
 			void await_suspend(std::coroutine_handle<> callingSimulationCoroutine) noexcept;
-			void await_resume() noexcept { }
+
+			explicit Call(const SimulationFunction<ReturnValue> &simProc) noexcept : BaseCall<ReturnValue, promise_type>(simProc.getHandle()) { }
+		};
+
+		/**
+		 * @brief Awaiter for forking a sub-process that will run in (quasi-)parallel.
+		 * @details Schedules the called coroutine for resumption but also schedules the calling coroutine immediately after that.
+		 */
+		struct Fork {
+			bool await_ready() noexcept { return false; }
+			void await_suspend(std::coroutine_handle<> callingSimulationCoroutine) noexcept;
+			const Handle &await_resume() noexcept { return calledSimulationCoroutine; }
 
 			Handle calledSimulationCoroutine;
 
-			explicit Call(const SimulationFunction<ReturnValue> &simProc) noexcept : calledSimulationCoroutine(simProc.getHandle()) { }
+			explicit Fork(const SimulationFunction<ReturnValue> &simProc) noexcept : calledSimulationCoroutine(simProc.getHandle()) { }
 		};
 
+		/**
+		 * @brief Awaiter for suspending a coroutine until another finishes.
+		 * @details Unless the coroutine is to be joined has already finished, adds the calling coroutine to the list of coroutines awaiting final suspend of the one to be joined.
+		 */
+		struct Join : public BaseCall<ReturnValue, promise_type> {
+			bool await_ready() noexcept { return BaseCall<ReturnValue, promise_type>::calledSimulationCoroutine.done(); }
+			void await_suspend(std::coroutine_handle<> callingSimulationCoroutine) noexcept;
 
-  		/// Produces an awaiter if this SimulationCoroutine is co_awaited as a called sub-process of another SimulationCoroutine.
+			explicit Join(const Handle &handle) noexcept : BaseCall<ReturnValue, promise_type>(handle) { }
+		};
+
+  		/// Produces an awaiter if this SimulationFunction is co_awaited as a called sub-process of another SimulationFunction.
   		Call operator co_await() && noexcept { return Call(*this); }
-
-		//Fork fork() && noexcept;
 	protected:
 		Handle m_handle;
 };
@@ -297,7 +314,11 @@ class SimulationCoroutineHandler {
 
 		~SimulationCoroutineHandler();
 
-		void start(const SimulationFunction<> &handle);
+		template<typename ReturnValue>
+		void start(const SimulationFunction<ReturnValue> &handle) {
+			m_simulationCoroutines.push_back(handle.getHandle());
+			readyToResume(handle.getHandle().rawHandle());		
+		}
 		void stopAll();
 
 		void readyToResume(std::coroutine_handle<> handle) { m_coroutinesReadyToResume.push(handle); }
@@ -318,10 +339,26 @@ void SimulationFunction<ReturnValue>::promise_type::FinalSuspendAwaiter::await_s
 
 template<typename ReturnValue>
 void SimulationFunction<ReturnValue>::Call::await_suspend(std::coroutine_handle<> callingSimulationCoroutine) noexcept { 
-	calledSimulationCoroutine.promise().awaitingFinalSuspend.push_back(callingSimulationCoroutine); 
+	BaseCall<ReturnValue, SimulationFunction<ReturnValue>::promise_type>::calledSimulationCoroutine.promise().awaitingFinalSuspend.push_back(callingSimulationCoroutine); 
 	auto *handler = SimulationCoroutineHandler::activeHandler;
-	handler->readyToResume(calledSimulationCoroutine.rawHandle());
+	handler->readyToResume(BaseCall<ReturnValue, SimulationFunction<ReturnValue>::promise_type>::calledSimulationCoroutine.rawHandle());
 }
 
+template<typename ReturnValue>
+void SimulationFunction<ReturnValue>::Join::await_suspend(std::coroutine_handle<> callingSimulationCoroutine) noexcept { 
+	BaseCall<ReturnValue, SimulationFunction<ReturnValue>::promise_type>::calledSimulationCoroutine.promise().awaitingFinalSuspend.push_back(callingSimulationCoroutine);
+}
+
+template<typename ReturnValue>
+void SimulationFunction<ReturnValue>::Fork::await_suspend(std::coroutine_handle<> callingSimulationCoroutine) noexcept { 
+	auto *handler = SimulationCoroutineHandler::activeHandler;
+	handler->start(SimulationFunction<ReturnValue>(calledSimulationCoroutine));
+	handler->readyToResume(callingSimulationCoroutine); // Immediately resume caller after called function has suspended
+}
+
+extern template class SimulationFunction<void>;
+extern template class SimulationFunction<int>;
+extern template class SimulationFunction<size_t>;
+extern template class SimulationFunction<bool>;
 
 }

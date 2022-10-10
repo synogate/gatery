@@ -165,8 +165,8 @@ class Circuit
 
 		Node_Attributes *getCreateAttribNode(NodePort &nodePort);
 
-		void addSimulationProcess(std::function<sim::SimulationProcess()> simProc) { m_simulationProcesses.push_back(std::move(simProc)); }
-		inline const std::vector<std::function<sim::SimulationProcess()>> &getSimulationProcesses() const { return m_simulationProcesses; }
+		void addSimulationProcess(std::function<sim::SimulationFunction<void>()> simProc) { m_simulationProcesses.push_back(std::move(simProc)); }
+		inline const std::vector<std::function<sim::SimulationFunction<void>()>> &getSimulationProcesses() const { return m_simulationProcesses; }
 
 		template<class SimVizClass>
 		void addSimulationVisualization(const SimVizClass &simViz) { m_simulationVisualizations.push_back(simViz.stripType()); }
@@ -182,7 +182,7 @@ class Circuit
 		std::uint64_t m_nextNodeId = 0;
 		std::uint64_t m_nextGroupId = 0;
 
-		std::vector<std::function<sim::SimulationProcess()>> m_simulationProcesses;
+		std::vector<std::function<sim::SimulationFunction<void>()>> m_simulationProcesses;
 		std::vector<sim::SimulationVisualization> m_simulationVisualizations;
 };
 
