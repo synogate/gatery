@@ -461,46 +461,32 @@ public:
 	scl::TileLinkUL link;
 };
 
-
 BOOST_FIXTURE_TEST_CASE(sdram_constroller_init_test, SdramControllerTest)
 {
 	setupLink();
 	generate(link);
 
 	addSimulationProcess([=]()->SimProcess {
-		co_await AfterClk(clock());
+		co_await OnClk(clock());
 		issueWrite(0, 4, 1);
 		simu(link.a->data) = 0xCDCD;
-
-		while (!transfer(link.a))
-			co_await AfterClk(clock());
-		co_await AfterClk(clock());
+		co_await scl::performTransfer(link.a, clock());
 		simu(link.a->data) = 0xCECE;
-		while (!transfer(link.a))
-			co_await AfterClk(clock());
-		co_await AfterClk(clock());
-
+		co_await scl::performTransfer(link.a, clock());
 
 
 		issueRead(0, 2);
-		while (!transfer(link.a))
-			co_await AfterClk(clock());
-		co_await AfterClk(clock());
+		co_await scl::performTransfer(link.a, clock());
 
 		issueRead(0, 4);
-		while (!transfer(link.a))
-			co_await AfterClk(clock());
-		co_await AfterClk(clock());
-
+		co_await scl::performTransfer(link.a, clock());
 
 		issueRead(512, 1);
-		while (!transfer(link.a))
-			co_await AfterClk(clock());
-		co_await AfterClk(clock());
+		co_await scl::performTransfer(link.a, clock());
 		simu(valid(link.a)) = '0';
 
 		for (size_t i = 0; i < 16; ++i)
-			co_await AfterClk(clock());
+			co_await OnClk(clock());
 
 		stopTest();
 	});

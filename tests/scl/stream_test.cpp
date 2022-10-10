@@ -313,9 +313,7 @@ protected:
 				simu(valid(stream)) = '1';
 				simu(*stream) = i + group * m_transfers;
 
-				do
-					co_await OnClk(m_clock);
-				while (simu(ready(stream)) == '0');
+				co_await scl::performTransfer(stream, m_clock);
 			}
 			simu(valid(stream)) = '0';
 			simu(*stream).invalidate();
@@ -342,9 +340,7 @@ protected:
 					simu(eop(stream)) = j == packetLen - 1;
 					simu(*stream) = i + j + group * m_transfers;
 
-					do
-						co_await OnClk(m_clock);
-					while (simu(ready(stream)) == '0');
+					co_await scl::performTransfer(stream, m_clock);
 				}
 				i += packetLen;
 			}
@@ -706,9 +702,7 @@ BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 				simu(valid(in)) = '1';
 				simu(*in) = (i >> (j * 4)) & 0xF;
 
-				do 
-					co_await OnClk(m_clock);
-				while (simu(ready(in)) == '0');
+				co_await scl::performTransfer(in, m_clock);
 			}
 		}
 		});
@@ -748,9 +742,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth, StreamTransferFixture)
 				((i * 3 + 1) << 8) |
 				((i * 3 + 2) << 16);
 
-			do
-				co_await OnClk(m_clock);
-			while (simu(ready(in)) == '0');
+			co_await scl::performTransfer(in, m_clock);
 		}
 	});
 
@@ -784,9 +776,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth_RvPacketStream, StreamTransferFixture
 				((i * 3 + 1) << 8) |
 				((i * 3 + 2) << 16);
 
-			do
-				co_await OnClk(m_clock);
-			while (simu(ready(in)) == '0');
+			co_await scl::performTransfer(in, m_clock);
 		}
 	});
 
@@ -823,9 +813,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
 				simu(*in) = uint8_t(i + j - 1);
 				simu(eop(in)) = j == 4;
 
-				do
-					co_await OnClk(m_clock);
-				while (simu(ready(in)) == '0');
+				co_await scl::performTransfer(in, m_clock);
 			}
 		}
 	});
@@ -863,9 +851,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseLastBeat, StreamTransferFixture)
 				simu(*in) = uint8_t(i + j);
 				simu(eop(in)) = j == 4;
 
-				do
-					co_await OnClk(m_clock);
-				while (simu(ready(in)) == '0');
+				co_await scl::performTransfer(in, m_clock);
 			}
 		}
 	});
@@ -905,9 +891,7 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 				simu(*in) = uint8_t(i + j + 1);
 				simu(eop(in)) = j == 2;
 
-				do
-					co_await OnClk(m_clock);
-				while (simu(ready(in)) == '0');
+				co_await scl::performTransfer(in, m_clock);
 			}
 		}
 	});
