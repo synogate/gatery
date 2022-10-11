@@ -96,6 +96,22 @@ void RunTimeSimulationContext::simulationProcessSuspending(std::coroutine_handle
 	m_simulator->simulationProcessSuspending(handle, waitStable, {});
 }
 
+void RunTimeSimulationContext::onDebugMessage(const hlim::BaseNode *src, std::string msg)
+{
+	m_simulator->onDebugMessage(src, std::move(msg));
+}
+
+void RunTimeSimulationContext::onWarning(const hlim::BaseNode *src, std::string msg)
+{
+	m_simulator->onWarning(src, std::move(msg));
+}
+
+void RunTimeSimulationContext::onAssert(const hlim::BaseNode *src, std::string msg)
+{
+	m_simulator->onAssert(src, std::move(msg));
+}
+
+
 
 
 

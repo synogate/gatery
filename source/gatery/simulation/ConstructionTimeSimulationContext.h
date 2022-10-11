@@ -30,6 +30,10 @@ class ConstructionTimeSimulationContext : public SimulationContext {
 		virtual void overrideRegister(const SigHandle &handle, const DefaultBitVectorState &state) override;
 		virtual void getSignal(const SigHandle &handle, DefaultBitVectorState &state) override;
 
+		virtual void onDebugMessage(const hlim::BaseNode *src, std::string msg) override;
+		virtual void onWarning(const hlim::BaseNode *src, std::string msg) override;
+		virtual void onAssert(const hlim::BaseNode *src, std::string msg) override;
+
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor) override;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil) override;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock) override;

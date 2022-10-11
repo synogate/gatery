@@ -155,6 +155,10 @@ class Simulator
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitChange &waitChange, utils::RestrictTo<RunTimeSimulationContext>) = 0;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitStable &waitStable, utils::RestrictTo<RunTimeSimulationContext>) = 0;
 
+		void onDebugMessage(const hlim::BaseNode *src, std::string msg) { m_callbackDispatcher.onDebugMessage(src, std::move(msg)); }
+		void onWarning(const hlim::BaseNode *src, std::string msg) { m_callbackDispatcher.onWarning(src, std::move(msg)); }
+		void onAssert(const hlim::BaseNode *src, std::string msg) { m_callbackDispatcher.onAssert(src, std::move(msg)); }
+
 		// virtual void stopSimulationProcess(const SimulationProcessHandle &handle, utils::RestrictTo<SimulationProcessHandle>) = 0;
 		// virtual bool simulationProcessHasFinished(const SimulationProcessHandle &handle, utils::RestrictTo<SimulationProcessHandle>) = 0;
 //		virtual void suspendUntilProcessCompletion(std::coroutine_handle<> handle, const SimulationProcessHandle &procHandle, utils::RestrictTo<SimulationProcessHandle>) = 0;

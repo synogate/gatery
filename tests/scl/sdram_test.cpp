@@ -25,6 +25,8 @@
 
 #include <gatery/scl/memory/sdram.h>
 #include <gatery/scl/memory/SdramTimer.h>
+#include <gatery/scl/tilelink/TileLinkMasterModel.h>
+#include <gatery/scl/tilelink/TileLinkValidator.h>
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -349,7 +351,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_timer_test, ClockedTest)
 class SdramControllerTest : public ClockedTest, protected scl::sdram::Controller
 {
 public:
-	SdramControllerTest()
+	SdramControllerTest() : link(linkModel.getLink())
 	{
 		timings({
 			.cl = 2,
@@ -409,25 +411,7 @@ public:
 
 	void setupLink(BitWidth addrWidth = 23_b, BitWidth sizeWidth = 2_b, BitWidth sourceWidth = 4_b, BitWidth dataWidth = 16_b)
 	{
-		link.a->address = addrWidth;
-		link.a->size = sizeWidth;
-		link.a->source = sourceWidth;
-		link.a->mask = dataWidth / 8;
-		link.a->data = dataWidth;
-
-		(*link.d)->size = sizeWidth;
-		(*link.d)->source = sourceWidth;
-		(*link.d)->sink = 0_b;
-		(*link.d)->data = dataWidth;
-	
-		pinIn(link, "link");
-		//setFullByteEnableMask(link.a);
-
-		DesignScope::get()->getCircuit().addSimulationProcess([&]() -> SimProcess {
-			simu(valid(link.a)) = '0';
-			//simu(ready(link.d)) = 0;
-			co_return;
-		});
+		linkModel.init("link", addrWidth, dataWidth, sizeWidth, sourceWidth);
 	}
 
 	void issueRead(size_t address, size_t size, size_t tag = 0)
@@ -460,7 +444,8 @@ public:
 		return simu(valid(stream)) != '0' && simu(ready(stream)) != '0';
 	}
 	
-	scl::TileLinkUL link;
+	scl::TileLinkMasterModel linkModel;
+	scl::TileLinkUL &link;
 };
 
 BOOST_FIXTURE_TEST_CASE(sdram_constroller_init_test, SdramControllerTest)
@@ -472,21 +457,50 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_init_test, SdramControllerTest)
 		co_await OnClk(clock());
 		issueWrite(0, 4, 1);
 		simu(link.a->data) = 0xCDCD;
-		co_await scl::performTransfer(link.a, clock());
+		co_await scl::awaitTransferPerformed(link.a, clock());
 		simu(link.a->data) = 0xCECE;
-		co_await scl::performTransfer(link.a, clock());
+		co_await scl::awaitTransferPerformed(link.a, clock());
 
 
 		issueRead(0, 2);
-		co_await scl::performTransfer(link.a, clock());
+		co_await scl::awaitTransferPerformed(link.a, clock());
 
 		issueRead(0, 4);
-		co_await scl::performTransfer(link.a, clock());
+		co_await scl::awaitTransferPerformed(link.a, clock());
 
 		issueRead(512, 1);
-		co_await scl::performTransfer(link.a, clock());
+		co_await scl::awaitTransferPerformed(link.a, clock());
 		simu(valid(link.a)) = '0';
 
+		for (size_t i = 0; i < 16; ++i)
+			co_await OnClk(clock());
+
+		stopTest();
+	});
+
+	//dbg::vis();
+}
+
+BOOST_FIXTURE_TEST_CASE(sdram_constroller_put_get_test, SdramControllerTest)
+{
+	setupLink();
+	generate(link);
+
+	addSimulationProcess([=]()->SimProcess {
+		co_await OnClk(clock());
+
+		co_await fork(scl::validate(linkModel.getLink(), clock()));
+
+		co_await fork(linkModel.put(0x0000, 1, 0xC, clock()));
+		co_await fork(linkModel.put(0x0002, 1, 0xA, clock()));
+		co_await fork(linkModel.put(0x0004, 1, 0xF, clock()));
+		co_await fork(linkModel.put(0x0006, 1, 0xE, clock()));
+
+		BOOST_TEST(std::get<0>(co_await linkModel.get(0x0000, 1, clock())) == 0xC);
+		BOOST_TEST(std::get<0>(co_await linkModel.get(0x0002, 1, clock())) == 0xA);
+		BOOST_TEST(std::get<0>(co_await linkModel.get(0x0004, 1, clock())) == 0xF);
+		BOOST_TEST(std::get<0>(co_await linkModel.get(0x0006, 1, clock())) == 0xE);
+		
 		for (size_t i = 0; i < 16; ++i)
 			co_await OnClk(clock());
 

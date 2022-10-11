@@ -41,6 +41,10 @@ class SimulationContext {
 		virtual void overrideSignal(const SigHandle &handle, const DefaultBitVectorState &state) = 0;
 		virtual void getSignal(const SigHandle &handle, DefaultBitVectorState &state) = 0;
 
+		virtual void onDebugMessage(const hlim::BaseNode *src, std::string msg) = 0;
+		virtual void onWarning(const hlim::BaseNode *src, std::string msg) = 0;
+		virtual void onAssert(const hlim::BaseNode *src, std::string msg) = 0;
+
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor) = 0;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitUntil &waitUntil) = 0;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock) = 0;

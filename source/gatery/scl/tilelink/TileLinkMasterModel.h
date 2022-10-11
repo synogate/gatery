@@ -49,36 +49,49 @@ namespace gtry::scl
 			Handle(TileLinkMasterModel* model, size_t txid);
 			Handle(const Handle&) = delete;
 			Handle(Handle&&) = default;
+			/*
 			~Handle();
 
 			RequestState state() const;
 			bool busy() const;
 			uint64_t data() const;
+			*/
 		};
 
 	public:
 
 		void init(std::string_view prefix, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth = 0_b, BitWidth sourceWidth = 0_b);
 
-		void propability(size_t valid, size_t ready);
+		void probability(size_t valid, size_t ready);
+
+		SimFunction<std::tuple<uint64_t,uint64_t,bool>> get(uint64_t address, uint64_t logByteSize, const Clock &clk);
+		SimFunction<bool> put(uint64_t address, uint64_t logByteSize, uint64_t data, const Clock &clk);
 
 		Handle get(uint64_t address, uint64_t logByteSize);
 		Handle put(uint64_t address, uint64_t logByteSize, uint64_t data);
 
+		/*
 		RequestState state(size_t txid) const;
 		uint64_t getData(size_t txid) const;
 		void closeHandle(size_t txid);
+		*/
+
+		auto &getLink() { return m_link; }
 
 	protected:
+		SimFunction<size_t> allocSourceId(const Clock &clk);
 		size_t allocSourceId();
 		Request& req(size_t txid);
 		const Request& req(size_t txid) const;
 
 	private:
-		TileLinkUH m_link;
+		size_t m_requestCurrent = 0;
+		size_t m_requestNext = 0;
+
+		TileLinkUL m_link;
 		size_t m_txIdOffset = 0;
-		size_t m_validPropability = 100;
-		size_t m_readyPropability = 100;
+		size_t m_validProbability = 100;
+		size_t m_readyProbability = 100;
 		std::deque<Request> m_tx;
 		std::vector<bool> m_sourceInUse;
 		std::mt19937 m_rng;

@@ -25,12 +25,11 @@ namespace gtry::scl
 		model(model),
 		txid(txid)
 	{}
-
+/*
 	TileLinkMasterModel::Handle::~Handle()
 	{
 		model->closeHandle(txid);
 	}
-
 	TileLinkMasterModel::RequestState TileLinkMasterModel::Handle::state() const
 	{
 		return model->state(txid);
@@ -47,6 +46,7 @@ namespace gtry::scl
 	{
 		return model->getData(txid);
 	}
+*/
 
 
 	void TileLinkMasterModel::init(std::string_view prefix, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth)
@@ -58,7 +58,7 @@ namespace gtry::scl
 		m_rng.seed(std::random_device{}());
 
 		Clock clk = ClockScope::getClk();
-
+#if 0
 		// transmit process
 		DesignScope::get()->getCircuit().addSimulationProcess([this, clk]() -> SimProcess {
 			while (true)
@@ -71,7 +71,7 @@ namespace gtry::scl
 					it = std::ranges::find(m_tx, RequestState::wait, &Request::state);
 					if (it != m_tx.end())
 						break;
-					co_await WaitClk(clk);
+					co_await AfterClk(clk);
 				}
 
 				it->source = allocSourceId();
@@ -89,11 +89,11 @@ namespace gtry::scl
 				simu(m_link.a->data) = it->data << (shift * 8);
 
 				while (m_rng() % 100 < it->propValid)
-					co_await WaitClk(clk);
+					co_await AfterClk(clk);
 
 				simu(valid(m_link.a)) = '1';
 				do 
-					co_await WaitClk(clk);
+					co_await AfterClk(clk);
 				while (simu(ready(m_link.a)) == '0');
 
 				it->state = RequestState::pending;
@@ -108,7 +108,7 @@ namespace gtry::scl
 			{
 				if (simu(valid(*m_link.d)) == '0')
 				{
-					co_await WaitClk(clk);
+					co_await AfterClk(clk);
 					continue;
 				}
 
@@ -131,12 +131,125 @@ namespace gtry::scl
 
 			}
 		});
+#endif
+		// ready chaos monkey
+		DesignScope::get()->getCircuit().addSimulationProcess([this, clk]() -> SimProcess {
+			simu(valid(m_link.a)) = '0';
+
+			simu(ready(*m_link.d)) = '0';
+			while (true)
+			{
+				co_await OnClk(clk);
+				simu(ready(*m_link.d)) = m_rng() % 100 < m_readyProbability;
+			}
+		});
 	}
 
-	void TileLinkMasterModel::propability(size_t valid, size_t ready)
+	void TileLinkMasterModel::probability(size_t valid, size_t ready)
 	{
-		m_validPropability = valid;
-		m_readyPropability = ready;
+		m_validProbability = valid;
+		m_readyProbability = ready;
+	}
+
+	SimFunction<std::tuple<uint64_t,uint64_t,bool>> TileLinkMasterModel::get(uint64_t address, uint64_t logByteSize, const Clock &clk) {
+
+		size_t myRequestId = m_requestNext++;
+
+		while (myRequestId != m_requestCurrent) {
+			co_await OnClk(clk);
+		}
+
+		const size_t sourceId = co_await allocSourceId(clk);
+
+		simu(valid(m_link.a)) = '0';
+
+		simu(m_link.a->opcode) = (size_t) TileLinkA::Get;
+		simu(m_link.a->param) = 0;
+		simu(m_link.a->address) = address;
+		simu(m_link.a->size) = logByteSize;
+		simu(m_link.a->source) = sourceId;
+
+		//uint64_t dataLength = m_link.a->mask.width().bits();
+		//uint64_t length = 1ull << logByteSize;
+		//uint64_t shift = length * (address & (length - 1));
+		//simu(m_link.a->mask) = (length - 1) << shift;
+		simu(m_link.a->mask) = ~0ull;
+		simu(m_link.a->data).invalidate();
+
+		while (m_rng() % 100 > m_validProbability)
+			co_await OnClk(clk);
+
+
+		co_await fork([&]()->SimProcess{
+			simu(valid(m_link.a)) = '1';
+			co_await scl::awaitTransferPerformed(m_link.a, clk);
+			simu(valid(m_link.a)) = '0';
+
+			m_requestCurrent++;
+		}());
+
+		// ready set by chaos monkey
+		do
+			co_await scl::awaitTransferPerformed(*m_link.d, clk);
+		while (simu((*m_link.d)->source) != sourceId);
+
+		std::uint64_t value = simu((*m_link.d)->data).value();
+		std::uint64_t defined = simu((*m_link.d)->data).defined();
+		bool error = simu((*m_link.d)->error);
+
+		m_sourceInUse[sourceId] = false;
+
+		co_return std::tuple<uint64_t,uint64_t,bool>{value, defined, error};
+	}
+
+
+	SimFunction<bool> TileLinkMasterModel::put(uint64_t address, uint64_t logByteSize, uint64_t data, const Clock &clk) {
+
+		size_t myRequestId = m_requestNext++;
+
+		while (myRequestId != m_requestCurrent) {
+			co_await OnClk(clk);
+		}
+
+		const size_t sourceId = co_await allocSourceId(clk);
+
+		simu(valid(m_link.a)) = '0';
+
+		simu(m_link.a->opcode) = (size_t) TileLinkA::PutFullData;
+		simu(m_link.a->param) = 0;
+		simu(m_link.a->address) = address;
+		simu(m_link.a->size) = logByteSize;
+		simu(m_link.a->source) = sourceId;
+
+		//uint64_t dataLength = m_link.a->mask.width().bits();
+		//uint64_t length = 1ull << logByteSize;
+		//uint64_t shift = length * (address & (length - 1));
+		//simu(m_link.a->mask) = (length - 1) << shift;
+		simu(m_link.a->mask) = ~0ull;
+		simu(m_link.a->data) = data;
+
+		while (m_rng() % 100 > m_validProbability)
+			co_await OnClk(clk);
+
+
+		co_await fork([&]()->SimProcess{
+			simu(valid(m_link.a)) = '1';
+			co_await scl::awaitTransferPerformed(m_link.a, clk);
+			simu(valid(m_link.a)) = '0';
+
+			m_requestCurrent++;
+		}());
+
+		// ready set by chaos monkey
+		do
+			co_await scl::awaitTransferPerformed(*m_link.d, clk);
+		while (simu((*m_link.d)->source) != sourceId);
+
+		bool error = simu((*m_link.d)->error);
+
+		m_sourceInUse[sourceId] = false;
+
+		co_return error;
 	}
 
 	TileLinkMasterModel::Handle TileLinkMasterModel::get(uint64_t address, uint64_t logByteSize)
@@ -145,8 +258,8 @@ namespace gtry::scl
 			.type = TileLinkA::Get,
 			.address = address,
 			.size = logByteSize,
-			.propValid = m_validPropability,
-			.propReady = m_readyPropability,
+			.propValid = m_validProbability,
+			.propReady = m_readyProbability,
 		});
 
 		return Handle(this, m_txIdOffset + m_tx.size() - 1);
@@ -159,11 +272,23 @@ namespace gtry::scl
 			.address = address,
 			.data = data,
 			.size = logByteSize,
-			.propValid = m_validPropability,
-			.propReady = m_readyPropability,
+			.propValid = m_validProbability,
+			.propReady = m_readyProbability,
 		});
 
 		return Handle(this, m_txIdOffset + m_tx.size() - 1);
+	}
+
+	SimFunction<size_t> TileLinkMasterModel::allocSourceId(const Clock &clk)
+	{
+		auto it = std::find(m_sourceInUse.begin(), m_sourceInUse.end(), false);
+		while (it == m_sourceInUse.end()) {
+			co_await OnClk(clk);
+			it = std::find(m_sourceInUse.begin(), m_sourceInUse.end(), false);
+		}
+
+		*it = true;
+		co_return size_t(it - m_sourceInUse.begin());
 	}
 
 	size_t TileLinkMasterModel::allocSourceId()

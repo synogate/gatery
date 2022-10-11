@@ -228,4 +228,18 @@ void ConstructionTimeSimulationContext::simulationProcessSuspending(std::corouti
 	HCL_ASSERT_HINT(false, "Simulation coroutine attempted to run (and suspend) outside of simulation!");
 }
 
+void ConstructionTimeSimulationContext::onDebugMessage(const hlim::BaseNode *src, std::string msg)
+{
+}
+
+void ConstructionTimeSimulationContext::onWarning(const hlim::BaseNode *src, std::string msg)
+{
+}
+
+void ConstructionTimeSimulationContext::onAssert(const hlim::BaseNode *src, std::string msg)
+{
+}
+
+
+
 }
