@@ -40,6 +40,8 @@ namespace gtry::hlim {
 	inline size_t floor(const ClockRational &v) { return v.numerator() / v.denominator(); }
 	inline size_t ceil(const ClockRational &v) { return (v.numerator() + v.denominator()-1) / v.denominator(); }
 
+	inline double toNanoseconds(const ClockRational &v) { return v.numerator() * 1e9 / v.denominator(); }
+
 	inline ClockRational operator*(const ClockRational &lhs, int rhs) {
 		return lhs * ClockRational(rhs, 1);
 	}
