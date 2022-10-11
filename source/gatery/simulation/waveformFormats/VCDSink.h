@@ -31,6 +31,7 @@ class VCDSink : public WaveformRecorder
 {
 	public:
 		VCDSink(hlim::Circuit &circuit, Simulator &simulator, const char *filename, const char *logFilename = nullptr);
+		~VCDSink();
 
 		virtual void onDebugMessage(const hlim::BaseNode *src, std::string msg) override;
 		virtual void onWarning(const hlim::BaseNode *src, std::string msg) override;
@@ -56,6 +57,8 @@ class VCDSink : public WaveformRecorder
 		void stateToFile(size_t offset, size_t size);
 
 		void setupGtkWaveProjFileSignals();
+
+		void writeGtkWaveProjFile();
 };
 
 }

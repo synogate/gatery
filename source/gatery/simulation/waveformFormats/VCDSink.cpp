@@ -58,6 +58,15 @@ namespace gtry::sim
 		for(auto& rst : clockPins.resetPins)
 			m_resets.push_back(rst.source);
 	}
+	VCDSink::~VCDSink() 
+	{
+		writeGtkWaveProjFile();
+	}
+
+	void VCDSink::writeGtkWaveProjFile()
+	{
+		m_gtkWaveProjectFile.write((m_gtkWaveProjectFile.getWaveformFile()+".gtkw").c_str());
+	}
 
 	void VCDSink::onDebugMessage(const hlim::BaseNode* src, std::string msg)
 	{}
@@ -197,7 +206,7 @@ namespace gtry::sim
 		}
 
 		setupGtkWaveProjFileSignals();
-		m_gtkWaveProjectFile.write((m_gtkWaveProjectFile.getWaveformFile()+".gtkw").c_str());
+		writeGtkWaveProjFile();
 	}
 
 	void VCDSink::signalChanged(size_t id)
