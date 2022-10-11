@@ -86,7 +86,7 @@ namespace gtry::scl::sdram
 
 		virtual void driveCommand(CommandStream& command, DataOutStream& data);
 		virtual CommandStream translateCommand(const BankState& state, const TileLinkChannelA& request) const;
-		virtual DataOutStream translateCommandData(TileLinkChannelA& request, Bit& bankStall) const;
+		virtual DataOutStream translateCommandData(TileLinkChannelA& request) const;
 
 		virtual std::tuple<CommandStream, DataOutStream> bankController(TileLinkChannelA& link, BankState& state, UInt bank) const;
 
@@ -107,9 +107,9 @@ namespace gtry::scl::sdram
 		std::string m_pinPrefix = "SDRAM_";
 		DriveStrength m_driveStrength = DriveStrength::Weak;
 		const bool m_useOutputRegister = true;
+		const bool m_useInputRegister = true;
 
 		Vector<BankState> m_bankState;
-		UInt m_rasTimer;
 		CommandBus m_cmdBus;
 		Bit m_dataOutEnable;
 		BVec m_dataIn;

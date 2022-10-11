@@ -179,11 +179,13 @@ bool Clock::isSelfDriven(bool simulation, bool clk) const
 NodePort Clock::getLogicDriver(bool simulation, bool clk) const
 {
 	NodePort driver;
-	if (m_clockDriver != nullptr)
-		if (clk)
+	if (clk) {
+		if (m_clockDriver != nullptr)
 			driver = m_clockDriver->getNonSignalDriver(0);
-		else
+	} else {
+		if (m_resetDriver != nullptr)
 			driver = m_resetDriver->getNonSignalDriver(0);
+	}
 
 	std::set<NodePort> alreadyVisited;
 
