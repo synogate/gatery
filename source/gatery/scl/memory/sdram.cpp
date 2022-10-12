@@ -118,7 +118,7 @@ std::tuple<Controller::CommandStream, Controller::DataOutStream> Controller::ban
 
 	CommandStream timedCmd = enforceTiming(cmd, bank);
 
-	// write data / read mask stream
+	// write data stream
 	DataOutStream data = translateCommandData(link);
 
 	Bit delayDataStream = '0';
@@ -201,7 +201,6 @@ void gtry::scl::sdram::Controller::makeReadQueue(const CommandStream& cmd)
 	HCL_NAMED(in);
 	in.active.resetValue('0');
 	m_readQueue.in(in);
-	m_readQueue[1]; // prevent conditional scope enable bug
 
 	in.active = valid(cmd) & (cmd->code == CommandCode::Read | cmd->code == CommandCode::Write);
 	in.read = cmd->code == CommandCode::Read;

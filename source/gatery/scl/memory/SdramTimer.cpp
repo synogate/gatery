@@ -131,7 +131,7 @@ namespace gtry::scl::sdram
 			busLimit.write = zext(casMinusOne);
 
 			IF(code == (size_t)CommandCode::Read)
-				busLimit.write += timing.wr - 1 + timing.cl;
+				busLimit.write += timing.wr + timing.cl;
 		}
 
 		HCL_NAMED(busLimit);
@@ -144,7 +144,7 @@ namespace gtry::scl::sdram
 		activate = BitWidth::last(timings.rc - 1);
 		precharge = BitWidth::last(std::max({ (uint16_t)casLimit - 1, timings.rcd - 1, timings.ras - 1, timings.rp - 1 }));
 		read = BitWidth::last(casLimit - 1);
-		write = BitWidth::last(casLimit - 1 + timings.wr - 1 + timings.cl - 1);
+		write = BitWidth::last(casLimit - 1 + timings.wr + timings.cl);
 	}
 	
 	void SdramTimer::CheckCounter::updateIfLess(const CheckCounter& min)
