@@ -185,7 +185,7 @@ class SmartCoroutineHandle<void>
 class SmartPromiseType
 {
 	public:
-		~SmartPromiseType() {
+		~SmartPromiseType() noexcept(false) {
 			HCL_ASSERT(m_numHandles == 0);
 		}
 		void registerHandle() { m_numHandles++; }
@@ -203,7 +203,7 @@ template<typename ReturnValue = void>
 struct base_promise_type : public internal::SmartPromiseType {
 	ReturnValue returnValue;
 	template<std::convertible_to<ReturnValue> From>
-	std::suspend_always return_value(From &&from) { returnValue = std::forward<From>(from); return {}; }
+	void return_value(From &&from) { returnValue = std::forward<From>(from); }
 };
 
 template<>
