@@ -62,8 +62,14 @@ namespace gtry {
 
 	Bit reg(const Bit& val, const RegisterSettings& settings)
 	{
-		if(auto rval = val.resetValue())
-			return reg<Bit>(val, *rval, settings);
+		if (auto rval = val.resetValue())
+		{
+			Bit resetVal{ *rval };
+			return Bit{
+				internal::reg(val.readPort(), resetVal.readPort(), settings),
+				rval
+			};
+		}
 
 		return reg<Bit>(val, settings);
 	}
