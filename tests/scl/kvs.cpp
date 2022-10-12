@@ -140,7 +140,7 @@ BOOST_DATA_TEST_CASE_F(gtry::BoostUnitTestSimulationFixture, TinyCookuTableLooku
 			}
 			else
 			{
-				BOOST_TEST(simu(outFound).defined() == 0);
+				BOOST_TEST(!simu(outFound).defined());
 			}
 
 			const size_t key = simu(lookupKey);
