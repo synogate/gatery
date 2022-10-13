@@ -435,6 +435,40 @@ BOOST_FIXTURE_TEST_CASE(SimProc_forkTask, BoostUnitTestSimulationFixture)
 }
 
 
+BOOST_FIXTURE_TEST_CASE(SimProc_forkUnendingTask, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+
+	bool flag = false;
+	auto subProcess = [&flag](const Clock &clock)->SimProcess{
+		flag = true;
+		while (true) {
+			co_await AfterClk(clock);
+			flag = !flag;
+		}
+	};
+
+	addSimulationProcess([&flag,clock,subProcess,this]()->SimProcess{
+		BOOST_TEST(!flag);
+		co_await AfterClk(clock);
+		co_await fork(subProcess(clock)); // fire & forget
+		for (auto i : gtry::utils::Range(50)) {
+			BOOST_TEST(flag);
+			co_await AfterClk(clock);
+			BOOST_TEST(!flag);
+			co_await AfterClk(clock);
+		}
+
+		stopTest();
+	});
+
+	design.postprocess();
+
+	runTicks(clock.getClk(), 100000);
+}
+
 BOOST_FIXTURE_TEST_CASE(SimProc_joinTask, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
