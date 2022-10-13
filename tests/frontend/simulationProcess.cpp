@@ -16,6 +16,9 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "frontend/pch.h"
+
+#include <gatery/simulation/Simulator.h>
+
 #include <boost/test/unit_test.hpp>
 #include <boost/test/data/dataset.hpp>
 #include <boost/test/data/test_case.hpp>
@@ -503,6 +506,66 @@ BOOST_FIXTURE_TEST_CASE(SimProc_joinTask, BoostUnitTestSimulationFixture)
 		for (auto i : gtry::utils::Range(50)) {
 			BOOST_TEST(flag);
 			co_await AfterClk(clock);
+		}
+
+		stopTest();
+	});
+
+	design.postprocess();
+
+	runTicks(clock.getClk(), 100000);
+}
+
+
+
+
+BOOST_FIXTURE_TEST_CASE(SimProc_condition, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+
+	bool resourceInUse = false;
+	Seconds timeResourceReleased = 0;
+	size_t microTickResourceReleased = 0;
+	Condition condition;
+
+	auto subProcess = [&resourceInUse,&timeResourceReleased,&microTickResourceReleased,&condition,this](const Clock &clock)->SimProcess{
+		while (true) {
+			// Suspend until the resource is available
+			while (resourceInUse)
+				co_await condition.wait();
+
+			// Resource is available
+
+			// Check that we got here as soon as it got available (e.g. without loosing simulation time)
+			HCL_ASSERT(m_simulator->getCurrentSimulationTime() == timeResourceReleased);
+			HCL_ASSERT(m_simulator->getCurrentMicroTick() == microTickResourceReleased);
+
+			// Use resource (for one clock cycle)
+			resourceInUse = true;
+			co_await OnClk(clock);
+			// Release resource and notify suspended coroutines
+			resourceInUse = false;
+			timeResourceReleased = m_simulator->getCurrentSimulationTime();
+			microTickResourceReleased = m_simulator->getCurrentMicroTick();
+			condition.notify_one();
+
+			// Spend a clock cycle not using the resource
+			co_await OnClk(clock);
+		}
+	};
+
+	addSimulationProcess([&resourceInUse,clock,subProcess,this]()->SimProcess{
+		BOOST_TEST(!resourceInUse);
+
+		co_await fork(subProcess(clock)); // fire & forget
+		co_await fork(subProcess(clock)); // fire & forget
+
+
+		for (auto i : gtry::utils::Range(50)) {
+			co_await OnClk(clock);
+			BOOST_TEST(resourceInUse);
 		}
 
 		stopTest();
