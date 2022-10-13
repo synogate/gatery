@@ -633,10 +633,10 @@ void ReferenceSimulator::powerOn()
 		m_coroutineHandler.stopAll();
 
 		// start all fibers
-		for (auto &f : m_simProcs)
+		for (auto &f : m_simProcs) {
 			m_coroutineHandler.start(f());
-
-		m_coroutineHandler.run();
+			m_coroutineHandler.run();
+		}
 	}
 
 	if (m_stateNeedsReevaluating)
@@ -673,11 +673,12 @@ void ReferenceSimulator::commitState()
 	{
 		RunTimeSimulationContext context(this);
 
-		for (auto &h : m_processesAwaitingCommit)
+		std::vector<std::coroutine_handle<>> processesAwaitingCommit;
+		std::swap(m_processesAwaitingCommit, processesAwaitingCommit);
+		for (auto &h : processesAwaitingCommit) {
 			m_coroutineHandler.readyToResume(h);
-		m_processesAwaitingCommit.clear();
-		
-		m_coroutineHandler.run();
+			m_coroutineHandler.run();
+		}
 	}
 
 	m_callbackDispatcher.onCommitState();
