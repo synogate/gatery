@@ -87,6 +87,7 @@ namespace gtry::scl
 	private:
 		size_t m_requestCurrent = 0;
 		size_t m_requestNext = 0;
+		Condition m_requestCurrentChanged;
 
 		TileLinkUL m_link;
 		size_t m_txIdOffset = 0;

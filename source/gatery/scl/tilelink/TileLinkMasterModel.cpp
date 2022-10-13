@@ -155,9 +155,8 @@ namespace gtry::scl
 
 		size_t myRequestId = m_requestNext++;
 
-		while (myRequestId != m_requestCurrent) {
-			co_await OnClk(clk);
-		}
+		while (myRequestId != m_requestCurrent)
+			co_await m_requestCurrentChanged.wait();
 
 		const size_t sourceId = co_await allocSourceId(clk);
 
@@ -186,6 +185,7 @@ namespace gtry::scl
 			simu(valid(m_link.a)) = '0';
 
 			m_requestCurrent++;
+			m_requestCurrentChanged.notify_oldest();
 		}());
 
 		// ready set by chaos monkey
@@ -207,9 +207,8 @@ namespace gtry::scl
 
 		size_t myRequestId = m_requestNext++;
 
-		while (myRequestId != m_requestCurrent) {
-			co_await OnClk(clk);
-		}
+		while (myRequestId != m_requestCurrent)
+			co_await m_requestCurrentChanged.wait();
 
 		const size_t sourceId = co_await allocSourceId(clk);
 
@@ -238,6 +237,7 @@ namespace gtry::scl
 			simu(valid(m_link.a)) = '0';
 
 			m_requestCurrent++;
+			m_requestCurrentChanged.notify_oldest();
 		}());
 
 		// ready set by chaos monkey
