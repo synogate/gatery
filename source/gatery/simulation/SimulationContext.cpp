@@ -17,25 +17,30 @@
 */
 #include "gatery/pch.h"
 #include "SimulationContext.h"
+#include "Simulator.h"
 
+#include "../hlim/ClockRational.h"
 #include "../utils/Exceptions.h"
 #include "../utils/Preprocessor.h"
 
 namespace gtry::sim {
 
-thread_local SimulationContext *SimulationContext::m_current = nullptr;
+	thread_local SimulationContext *SimulationContext::m_current = nullptr;
 
 
-SimulationContext::SimulationContext()
-{
-	m_overshadowed = m_current;
-	m_current = this;
-}
+	SimulationContext::SimulationContext()
+	{
+		m_overshadowed = m_current;
+		m_current = this;
+	}
 
-SimulationContext::~SimulationContext()
-{
-	m_current = m_overshadowed;
-}
+	SimulationContext::~SimulationContext()
+	{
+		m_current = m_overshadowed;
+	}
 
-
+	double SimulationContext::nowNs()
+	{
+		return hlim::toNanoseconds(m_current->getSimulator()->getCurrentSimulationTime());
+	}
 }

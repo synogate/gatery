@@ -52,6 +52,7 @@ class SimulationContext {
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitStable &waitChange) = 0;
 
 		static SimulationContext *current() { return m_current; }
+		static double nowNs();
 
 		virtual Simulator *getSimulator() = 0;
 	protected:
