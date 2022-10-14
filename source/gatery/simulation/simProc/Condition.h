@@ -54,7 +54,7 @@ class Condition
 		std::queue<std::coroutine_handle<>> m_awaitingCoroutines;
 
 
-		friend class ConditionAwaitable;
+		friend struct ConditionAwaitable;
 };
 
 }
