@@ -742,7 +742,7 @@ gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
 	BVec readMask = readMaskDelay[2];
 	HCL_NAMED(readMask);
 
-	IF(readActive)
+	IF(readActive & readMask != readMask.width().mask())
 	{
 		sim_assert(writeBursts == 0) << "data bus conflict";
 
