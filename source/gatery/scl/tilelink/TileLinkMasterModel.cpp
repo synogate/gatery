@@ -21,34 +21,6 @@
 
 namespace gtry::scl
 {
-	TileLinkMasterModel::Handle::Handle(TileLinkMasterModel* model, size_t txid) :
-		model(model),
-		txid(txid)
-	{}
-/*
-	TileLinkMasterModel::Handle::~Handle()
-	{
-		model->closeHandle(txid);
-	}
-	TileLinkMasterModel::RequestState TileLinkMasterModel::Handle::state() const
-	{
-		return model->state(txid);
-	}
-
-	bool TileLinkMasterModel::Handle::busy() const
-	{
-		if (RequestState s = state(); s == RequestState::wait || s == RequestState::pending)
-			return true;
-		return false;
-	}
-
-	uint64_t TileLinkMasterModel::Handle::data() const
-	{
-		return model->getData(txid);
-	}
-*/
-
-
 	void TileLinkMasterModel::init(std::string_view prefix, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth)
 	{
 		tileLinkInit(m_link, addrWidth, dataWidth, sizeWidth, sourceWidth);
@@ -58,80 +30,7 @@ namespace gtry::scl
 		m_rng.seed(std::random_device{}());
 
 		Clock clk = ClockScope::getClk();
-#if 0
-		// transmit process
-		DesignScope::get()->getCircuit().addSimulationProcess([this, clk]() -> SimProcess {
-			while (true)
-			{
-				simu(valid(m_link.a)) = '0';
 
-				auto it = m_tx.end();
-				while (true)
-				{
-					it = std::ranges::find(m_tx, RequestState::wait, &Request::state);
-					if (it != m_tx.end())
-						break;
-					co_await AfterClk(clk);
-				}
-
-				it->source = allocSourceId();
-
-				simu(m_link.a->opcode) = it->type;
-				simu(m_link.a->param) = 0;
-				simu(m_link.a->address) = it->address;
-				simu(m_link.a->size) = it->size;
-				simu(m_link.a->source) = it->source;
-
-				uint64_t dataLength = m_link.a->mask.width().bits();
-				uint64_t length = 1ull << it->size;
-				uint64_t shift = length * (it->address & (length - 1));
-				simu(m_link.a->mask) = (length - 1) << shift;
-				simu(m_link.a->data) = it->data << (shift * 8);
-
-				while (m_rng() % 100 < it->propValid)
-					co_await AfterClk(clk);
-
-				simu(valid(m_link.a)) = '1';
-				do 
-					co_await AfterClk(clk);
-				while (simu(ready(m_link.a)) == '0');
-
-				it->state = RequestState::pending;
-			}
-		});
-
-		// receive process
-		DesignScope::get()->getCircuit().addSimulationProcess([this, clk]() -> SimProcess {
-
-			simu(ready(*m_link.d)) = '1';
-			while (true)
-			{
-				if (simu(valid(*m_link.d)) == '0')
-				{
-					co_await AfterClk(clk);
-					continue;
-				}
-
-				size_t source = simu((*m_link.d)->source);
-				HCL_ASSERT(!m_sourceInUse[source]);
-
-				auto it = std::ranges::find(m_tx, source, &Request::source);
-				HCL_ASSERT(it != m_tx.end());
-
-				m_sourceInUse[source] = false;
-
-				if (simu((*m_link.d)->error) != '0')
-					it->state = RequestState::fail;
-				else
-					it->state = RequestState::success;
-
-				uint64_t length = 1ull << it->size;
-				uint64_t shift = length * (it->address & (length - 1));
-				it->data = (simu((*m_link.d)->data) >> shift) & (length - 1);
-
-			}
-		});
-#endif
 		// ready chaos monkey
 		DesignScope::get()->getCircuit().addSimulationProcess([this, clk]() -> SimProcess {
 			simu(valid(m_link.a)) = '0';
@@ -140,143 +39,115 @@ namespace gtry::scl
 			while (true)
 			{
 				co_await OnClk(clk);
-				simu(ready(*m_link.d)) = m_rng() % 100 < m_readyProbability;
+				simu(ready(*m_link.d)) = m_dis(m_rng) <= m_readyProbability;
 			}
 		});
 	}
 
-	void TileLinkMasterModel::probability(size_t valid, size_t ready)
+	void TileLinkMasterModel::probability(float valid, float ready)
 	{
 		m_validProbability = valid;
 		m_readyProbability = ready;
 	}
 
-	SimFunction<std::tuple<uint64_t,uint64_t,bool>> TileLinkMasterModel::get(uint64_t address, uint64_t logByteSize, const Clock &clk) {
-
-		size_t myRequestId = m_requestNext++;
-
-		while (myRequestId != m_requestCurrent) {
+	SimFunction<TileLinkMasterModel::TransactionIn> TileLinkMasterModel::request(TransactionOut tx, const Clock& clk)
+	{
+		const float validProp = m_validProbability;
+		const size_t myRequestId = m_requestNext++;
+		while (myRequestId != m_requestCurrent)
 			co_await OnClk(clk);
-		}
-
-		const size_t sourceId = co_await allocSourceId(clk);
 
 		simu(valid(m_link.a)) = '0';
-
-		simu(m_link.a->opcode) = (size_t) TileLinkA::Get;
+		simu(m_link.a->opcode) = (size_t)tx.op;
 		simu(m_link.a->param) = 0;
-		simu(m_link.a->address) = address;
-		simu(m_link.a->size) = logByteSize;
+		simu(m_link.a->address) = tx.address;
+		simu(m_link.a->size) = tx.logByteSize;
+
+		const size_t sourceId = co_await allocSourceId(clk);
 		simu(m_link.a->source) = sourceId;
 
-		//uint64_t dataLength = m_link.a->mask.width().bits();
-		//uint64_t length = 1ull << logByteSize;
-		//uint64_t shift = length * (address & (length - 1));
-		//simu(m_link.a->mask) = (length - 1) << shift;
-		simu(m_link.a->mask) = ~0ull;
-		simu(m_link.a->data).invalidate();
+		co_await fork([&]()->SimProcess 
+		{
+			sim::DefaultBitVectorState state;
+			state.resize(m_link.a->data.width().bits());
 
-		while (m_rng() % 100 > m_validProbability)
-			co_await OnClk(clk);
+			for (Data& d : tx.data)
+			{
+				state.insertNonStraddling(sim::DefaultConfig::VALUE, 0, state.size(), d.value);
+				state.insertNonStraddling(sim::DefaultConfig::DEFINED, 0, state.size(), d.defined);
+				simu(m_link.a->data) = state;
+				simu(m_link.a->mask) = d.mask;
 
+				while (m_dis(m_rng) > validProp)
+					co_await OnClk(clk);
 
-		co_await fork([&]()->SimProcess{
-			simu(valid(m_link.a)) = '1';
-			co_await scl::awaitTransferPerformed(m_link.a, clk);
-			simu(valid(m_link.a)) = '0';
+				co_await scl::performTransfer(m_link.a, clk);
+			}
+			
+			simu(m_link.a->opcode).invalidate();
+			simu(m_link.a->param).invalidate();
+			simu(m_link.a->address).invalidate();
+			simu(m_link.a->size).invalidate();
+			simu(m_link.a->source).invalidate();
+			simu(m_link.a->mask).invalidate();
+			simu(m_link.a->data).invalidate();
 
 			m_requestCurrent++;
 		}());
 
-		// ready set by chaos monkey
-		do
-			co_await scl::awaitTransferPerformed(*m_link.d, clk);
-		while (simu((*m_link.d)->source) != sourceId);
-
-		std::uint64_t value = simu((*m_link.d)->data).value();
-		std::uint64_t defined = simu((*m_link.d)->data).defined();
-		bool error = simu((*m_link.d)->error);
-
-		m_sourceInUse[sourceId] = false;
-
-		co_return std::tuple<uint64_t,uint64_t,bool>{value, defined, error};
-	}
-
-
-	SimFunction<bool> TileLinkMasterModel::put(uint64_t address, uint64_t logByteSize, uint64_t data, const Clock &clk) {
-
-		size_t myRequestId = m_requestNext++;
-
-		while (myRequestId != m_requestCurrent) {
-			co_await OnClk(clk);
-		}
-
-		const size_t sourceId = co_await allocSourceId(clk);
-
-		simu(valid(m_link.a)) = '0';
-
-		simu(m_link.a->opcode) = (size_t) TileLinkA::PutFullData;
-		simu(m_link.a->param) = 0;
-		simu(m_link.a->address) = address;
-		simu(m_link.a->size) = logByteSize;
-		simu(m_link.a->source) = sourceId;
-
-		//uint64_t dataLength = m_link.a->mask.width().bits();
-		//uint64_t length = 1ull << logByteSize;
-		//uint64_t shift = length * (address & (length - 1));
-		//simu(m_link.a->mask) = (length - 1) << shift;
-		simu(m_link.a->mask) = ~0ull;
-		simu(m_link.a->data) = data;
-
-		while (m_rng() % 100 > m_validProbability)
-			co_await OnClk(clk);
-
-
-		co_await fork([&]()->SimProcess{
-			simu(valid(m_link.a)) = '1';
-			co_await scl::awaitTransferPerformed(m_link.a, clk);
-			simu(valid(m_link.a)) = '0';
-
-			m_requestCurrent++;
-		}());
+		TransactionIn ret;
 
 		// ready set by chaos monkey
 		do
-			co_await scl::awaitTransferPerformed(*m_link.d, clk);
+			co_await scl::performTransferWait(*m_link.d, clk);
 		while (simu((*m_link.d)->source) != sourceId);
 
-		bool error = simu((*m_link.d)->error);
+		ret.error = simu((*m_link.d)->error);
+		ret.data.push_back({
+			.mask = 0,
+			.value = simu((*m_link.d)->data).value(),
+			.defined = simu((*m_link.d)->data).defined(),
+		});
 
 		m_sourceInUse[sourceId] = false;
-
-		co_return error;
+		co_return ret;
 	}
 
-	TileLinkMasterModel::Handle TileLinkMasterModel::get(uint64_t address, uint64_t logByteSize)
+	SimFunction<std::tuple<uint64_t,uint64_t,bool>> TileLinkMasterModel::get(uint64_t address, uint64_t logByteSize, const Clock &clk) 
 	{
-		Request& r = m_tx.emplace_back(Request{
-			.type = TileLinkA::Get,
+		TransactionOut req{
+			.op = TileLinkA::Get,
 			.address = address,
-			.size = logByteSize,
-			.propValid = m_validProbability,
-			.propReady = m_readyProbability,
+			.logByteSize = logByteSize,
+		};
+		
+		req.data.push_back({
+			.mask = ~0u,
+			.value = 0,
+			.defined = 0,
 		});
 
-		return Handle(this, m_txIdOffset + m_tx.size() - 1);
+		TransactionIn res = co_await request(req, clk);
+		co_return std::tuple<uint64_t, uint64_t, bool>{res.data[0].value, res.data[0].defined, res.error};
 	}
 
-	TileLinkMasterModel::Handle TileLinkMasterModel::put(uint64_t address, uint64_t logByteSize, uint64_t data)
+
+	SimFunction<bool> TileLinkMasterModel::put(uint64_t address, uint64_t logByteSize, uint64_t data, const Clock &clk) 
 	{
-		Request& r = m_tx.emplace_back(Request{
-			.type = TileLinkA::PutFullData,
+		TransactionOut req{
+			.op = TileLinkA::PutFullData,
 			.address = address,
-			.data = data,
-			.size = logByteSize,
-			.propValid = m_validProbability,
-			.propReady = m_readyProbability,
+			.logByteSize = logByteSize,
+		};
+
+		req.data.push_back({
+			.mask = ~0u,
+			.value = data,
+			.defined = ~0u,
 		});
 
-		return Handle(this, m_txIdOffset + m_tx.size() - 1);
+		TransactionIn res = co_await request(req, clk);
+		co_return res.error;
 	}
 
 	SimFunction<size_t> TileLinkMasterModel::allocSourceId(const Clock &clk)
@@ -290,15 +161,4 @@ namespace gtry::scl
 		*it = true;
 		co_return size_t(it - m_sourceInUse.begin());
 	}
-
-	size_t TileLinkMasterModel::allocSourceId()
-	{
-		auto it = std::find(m_sourceInUse.begin(), m_sourceInUse.end(), false);
-		if (it == m_sourceInUse.end())
-			throw std::runtime_error{ "no free source id, too many tile link requests in flight." };
-
-		*it = true;
-		return size_t(it - m_sourceInUse.begin());
-	}
-
 }

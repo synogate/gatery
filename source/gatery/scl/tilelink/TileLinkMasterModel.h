@@ -23,77 +23,53 @@ namespace gtry::scl
 {
 	class TileLinkMasterModel
 	{
-	public:
-		enum class RequestState
+		struct Data
 		{
-			wait, pending, success, fail
+			uint64_t mask;
+			uint64_t value;
+			uint64_t defined;
 		};
 
-		struct Request
+		struct TransactionOut
 		{
-			TileLinkA::OpCode type;
-			RequestState state = RequestState::pending;
+			TileLinkA::OpCode op;
 			uint64_t address;
-			uint64_t data = 0;
-			size_t size;
-			size_t source = ~0u;
-			size_t propValid;
-			size_t propReady;
+			uint64_t logByteSize;
+			std::vector<Data> data;
 		};
 
-		class Handle
+		struct TransactionIn
 		{
-			TileLinkMasterModel* model;
-			size_t txid;
-		public:
-			Handle(TileLinkMasterModel* model, size_t txid);
-			Handle(const Handle&) = delete;
-			Handle(Handle&&) = default;
-			/*
-			~Handle();
-
-			RequestState state() const;
-			bool busy() const;
-			uint64_t data() const;
-			*/
+			TileLinkD::OpCode op;
+			std::vector<Data> data;
+			bool error;
 		};
 
 	public:
 
 		void init(std::string_view prefix, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth = 0_b, BitWidth sourceWidth = 0_b);
 
-		void probability(size_t valid, size_t ready);
+		void probability(float valid, float ready);
+
+		SimFunction<TransactionIn> request(TransactionOut tx, const Clock& clk);
 
 		SimFunction<std::tuple<uint64_t,uint64_t,bool>> get(uint64_t address, uint64_t logByteSize, const Clock &clk);
 		SimFunction<bool> put(uint64_t address, uint64_t logByteSize, uint64_t data, const Clock &clk);
-
-		Handle get(uint64_t address, uint64_t logByteSize);
-		Handle put(uint64_t address, uint64_t logByteSize, uint64_t data);
-
-		/*
-		RequestState state(size_t txid) const;
-		uint64_t getData(size_t txid) const;
-		void closeHandle(size_t txid);
-		*/
 
 		auto &getLink() { return m_link; }
 
 	protected:
 		SimFunction<size_t> allocSourceId(const Clock &clk);
-		size_t allocSourceId();
-		Request& req(size_t txid);
-		const Request& req(size_t txid) const;
 
 	private:
 		size_t m_requestCurrent = 0;
 		size_t m_requestNext = 0;
 
 		TileLinkUL m_link;
-		size_t m_txIdOffset = 0;
-		size_t m_validProbability = 100;
-		size_t m_readyProbability = 100;
-		std::deque<Request> m_tx;
+		float m_validProbability = 1;
+		float m_readyProbability = 1;
 		std::vector<bool> m_sourceInUse;
 		std::mt19937 m_rng;
+		std::uniform_real_distribution<float> m_dis;
 	};
 }
