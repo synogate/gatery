@@ -313,7 +313,7 @@ protected:
 				simu(valid(stream)) = '1';
 				simu(*stream) = i + group * m_transfers;
 
-				co_await scl::awaitTransferPerformed(stream, m_clock);
+				co_await scl::performTransferWait(stream, m_clock);
 			}
 			simu(valid(stream)) = '0';
 			simu(*stream).invalidate();
@@ -340,7 +340,7 @@ protected:
 					simu(eop(stream)) = j == packetLen - 1;
 					simu(*stream) = i + j + group * m_transfers;
 
-					co_await scl::awaitTransferPerformed(stream, m_clock);
+					co_await scl::performTransferWait(stream, m_clock);
 				}
 				i += packetLen;
 			}
@@ -702,7 +702,7 @@ BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 				simu(valid(in)) = '1';
 				simu(*in) = (i >> (j * 4)) & 0xF;
 
-				co_await scl::awaitTransferPerformed(in, m_clock);
+				co_await scl::performTransferWait(in, m_clock);
 			}
 		}
 		});
@@ -742,7 +742,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth, StreamTransferFixture)
 				((i * 3 + 1) << 8) |
 				((i * 3 + 2) << 16);
 
-			co_await scl::awaitTransferPerformed(in, m_clock);
+			co_await scl::performTransferWait(in, m_clock);
 		}
 	});
 
@@ -776,7 +776,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth_RvPacketStream, StreamTransferFixture
 				((i * 3 + 1) << 8) |
 				((i * 3 + 2) << 16);
 
-			co_await scl::awaitTransferPerformed(in, m_clock);
+			co_await scl::performTransferWait(in, m_clock);
 		}
 	});
 
@@ -813,7 +813,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
 				simu(*in) = uint8_t(i + j - 1);
 				simu(eop(in)) = j == 4;
 
-				co_await scl::awaitTransferPerformed(in, m_clock);
+				co_await scl::performTransferWait(in, m_clock);
 			}
 		}
 	});
@@ -851,7 +851,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseLastBeat, StreamTransferFixture)
 				simu(*in) = uint8_t(i + j);
 				simu(eop(in)) = j == 4;
 
-				co_await scl::awaitTransferPerformed(in, m_clock);
+				co_await scl::performTransferWait(in, m_clock);
 			}
 		}
 	});
@@ -891,7 +891,7 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 				simu(*in) = uint8_t(i + j + 1);
 				simu(eop(in)) = j == 2;
 
-				co_await scl::awaitTransferPerformed(in, m_clock);
+				co_await scl::performTransferWait(in, m_clock);
 			}
 		}
 	});

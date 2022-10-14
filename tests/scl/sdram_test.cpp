@@ -457,19 +457,19 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_init_test, SdramControllerTest)
 		co_await OnClk(clock());
 		issueWrite(0, 4, 1);
 		simu(link.a->data) = 0xCDCD;
-		co_await scl::awaitTransferPerformed(link.a, clock());
+		co_await scl::performTransferWait(link.a, clock());
 		simu(link.a->data) = 0xCECE;
-		co_await scl::awaitTransferPerformed(link.a, clock());
+		co_await scl::performTransferWait(link.a, clock());
 
 
 		issueRead(0, 2);
-		co_await scl::awaitTransferPerformed(link.a, clock());
+		co_await scl::performTransferWait(link.a, clock());
 
 		issueRead(0, 4);
-		co_await scl::awaitTransferPerformed(link.a, clock());
+		co_await scl::performTransferWait(link.a, clock());
 
 		issueRead(512, 1);
-		co_await scl::awaitTransferPerformed(link.a, clock());
+		co_await scl::performTransferWait(link.a, clock());
 		simu(valid(link.a)) = '0';
 
 		for (size_t i = 0; i < 16; ++i)
@@ -493,13 +493,17 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_put_get_test, SdramControllerTest)
 
 		co_await fork(linkModel.put(0x0000, 1, 0xC, clock()));
 		co_await fork(linkModel.put(0x0002, 1, 0xA, clock()));
+		auto read1 = co_await fork(linkModel.get(0x0000, 1, clock()));
+		auto read2 = co_await fork(linkModel.get(0x0002, 1, clock()));
 		co_await fork(linkModel.put(0x0004, 1, 0xF, clock()));
 		co_await fork(linkModel.put(0x0006, 1, 0xE, clock()));
+		auto read3 = co_await fork(linkModel.get(0x0004, 1, clock()));
+		auto read4 = co_await fork(linkModel.get(0x0006, 1, clock()));
 
-		BOOST_TEST(std::get<0>(co_await linkModel.get(0x0000, 1, clock())) == 0xC);
-		BOOST_TEST(std::get<0>(co_await linkModel.get(0x0002, 1, clock())) == 0xA);
-		BOOST_TEST(std::get<0>(co_await linkModel.get(0x0004, 1, clock())) == 0xF);
-		BOOST_TEST(std::get<0>(co_await linkModel.get(0x0006, 1, clock())) == 0xE);
+		BOOST_TEST(std::get<0>(co_await join(read1)) == 0xC);
+		BOOST_TEST(std::get<0>(co_await join(read2)) == 0xA);
+		BOOST_TEST(std::get<0>(co_await join(read3)) == 0xF);
+		BOOST_TEST(std::get<0>(co_await join(read4)) == 0xE);
 		
 		for (size_t i = 0; i < 16; ++i)
 			co_await OnClk(clock());
