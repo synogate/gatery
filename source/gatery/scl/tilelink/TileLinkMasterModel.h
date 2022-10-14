@@ -35,6 +35,7 @@ namespace gtry::scl
 			TileLinkA::OpCode op;
 			uint64_t address;
 			uint64_t logByteSize;
+			uint64_t inBurstBeats;
 			std::vector<Data> data;
 		};
 
@@ -61,11 +62,14 @@ namespace gtry::scl
 	protected:
 		SimFunction<size_t> allocSourceId(const Clock &clk);
 
+		std::tuple<size_t, size_t> prepareTransaction(TransactionOut& tx) const;
+
 	private:
 		size_t m_requestCurrent = 0;
 		size_t m_requestNext = 0;
+		Condition m_requestCurrentChanged;
 
-		TileLinkUL m_link;
+		TileLinkUB m_link;
 		float m_validProbability = 1;
 		float m_readyProbability = 1;
 		std::vector<bool> m_sourceInUse;

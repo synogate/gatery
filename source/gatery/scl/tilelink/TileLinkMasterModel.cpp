@@ -55,7 +55,7 @@ namespace gtry::scl
 		const float validProp = m_validProbability;
 		const size_t myRequestId = m_requestNext++;
 		while (myRequestId != m_requestCurrent)
-			co_await OnClk(clk);
+			co_await m_requestCurrentChanged.wait();
 
 		simu(valid(m_link.a)) = '0';
 		simu(m_link.a->opcode) = (size_t)tx.op;
@@ -93,21 +93,25 @@ namespace gtry::scl
 			simu(m_link.a->data).invalidate();
 
 			m_requestCurrent++;
+			m_requestCurrentChanged.notify_all();
 		}());
 
 		TransactionIn ret;
 
-		// ready set by chaos monkey
-		do
-			co_await scl::performTransferWait(*m_link.d, clk);
-		while (simu((*m_link.d)->source) != sourceId);
+		for (size_t i = 0; i < tx.inBurstBeats; ++i)
+		{
+			// ready set by chaos monkey
+			do
+				co_await scl::performTransferWait(*m_link.d, clk);
+			while (simu((*m_link.d)->source) != sourceId);
 
+			ret.data.push_back({
+				.mask = 0,
+				.value = simu((*m_link.d)->data).value(),
+				.defined = simu((*m_link.d)->data).defined(),
+			});
+		}
 		ret.error = simu((*m_link.d)->error);
-		ret.data.push_back({
-			.mask = 0,
-			.value = simu((*m_link.d)->data).value(),
-			.defined = simu((*m_link.d)->data).defined(),
-		});
 
 		m_sourceInUse[sourceId] = false;
 		co_return ret;
@@ -120,17 +124,28 @@ namespace gtry::scl
 			.address = address,
 			.logByteSize = logByteSize,
 		};
-		
-		req.data.push_back({
-			.mask = ~0u,
-			.value = 0,
-			.defined = 0,
-		});
+
+		const size_t bytePerBeat = m_link.a->mask.width().bits();
+		const size_t byteSize = 1ull << logByteSize;
+		req.inBurstBeats = (byteSize + bytePerBeat - 1) / bytePerBeat;
+
+		auto [offset, mask] = prepareTransaction(req);
+		req.data.resize(1);
 
 		TransactionIn res = co_await request(req, clk);
-		co_return std::tuple<uint64_t, uint64_t, bool>{res.data[0].value, res.data[0].defined, res.error};
-	}
 
+		uint64_t value = 0;
+		uint64_t defined = 0;
+		for (size_t i = 0; i < res.data.size(); ++i)
+		{
+			const size_t w = m_link.a->data.width().bits();
+			
+			Data& d = res.data[i];
+			value |= d.value >> offset << (i * w);
+			defined |= d.defined >> offset << (i * w);
+		}
+		co_return std::tuple<uint64_t, uint64_t, bool>{value, defined, res.error};
+	}
 
 	SimFunction<bool> TileLinkMasterModel::put(uint64_t address, uint64_t logByteSize, uint64_t data, const Clock &clk) 
 	{
@@ -138,13 +153,17 @@ namespace gtry::scl
 			.op = TileLinkA::PutFullData,
 			.address = address,
 			.logByteSize = logByteSize,
+			.inBurstBeats = 1,
 		};
 
-		req.data.push_back({
-			.mask = ~0u,
-			.value = data,
-			.defined = ~0u,
-		});
+		auto [offset, mask] = prepareTransaction(req);
+
+		for (Data& d : req.data)
+		{
+			d.defined = mask;
+			d.value = (data << offset) & mask;
+			data >>= m_link.a->data.width().bits();
+		}
 
 		TransactionIn res = co_await request(req, clk);
 		co_return res.error;
@@ -161,4 +180,25 @@ namespace gtry::scl
 		*it = true;
 		co_return size_t(it - m_sourceInUse.begin());
 	}
+
+	std::tuple<size_t, size_t> TileLinkMasterModel::prepareTransaction(TransactionOut& tx) const
+	{
+		const size_t bytePerBeat = m_link.a->mask.width().bits();
+		const size_t byteSize = 1ull << tx.logByteSize;
+		const size_t numBeats = (byteSize + bytePerBeat - 1) / bytePerBeat;
+		const size_t byteOffset = tx.address & (bytePerBeat - 1);
+		const size_t byteMask = utils::bitMaskRange(byteOffset, byteSize);
+		const size_t bitOffset = byteOffset * 8;
+		const size_t bitMask = utils::bitMaskRange(bitOffset, byteSize * 8);
+
+		tx.data.resize(numBeats, {
+			.mask = byteMask,
+			.value = 0,
+			.defined = bitMask
+		});
+
+		return { bitOffset, bitMask };
+	}
+
+
 }
