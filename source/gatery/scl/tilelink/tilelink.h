@@ -112,6 +112,7 @@ namespace gtry::scl
 	struct TileLinkCapAtomicLogic;
 
 	using TileLinkUL = TileLinkU<>;
+	using TileLinkUB = TileLinkU<TileLinkCapBurst>;
 	using TileLinkUH = TileLinkU<TileLinkCapBurst, TileLinkCapHint, TileLinkCapAtomicArith, TileLinkCapAtomicLogic>;
 
 	template<StreamSignal T>
