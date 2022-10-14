@@ -445,7 +445,7 @@ public:
 	}
 	
 	scl::TileLinkMasterModel linkModel;
-	scl::TileLinkUL &link;
+	scl::TileLinkUB& link;
 };
 
 BOOST_FIXTURE_TEST_CASE(sdram_constroller_init_test, SdramControllerTest)
@@ -505,11 +505,65 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_put_get_test, SdramControllerTest)
 		BOOST_TEST(std::get<0>(co_await join(read3)) == 0xF);
 		BOOST_TEST(std::get<0>(co_await join(read4)) == 0xE);
 		
-		for (size_t i = 0; i < 16; ++i)
+		for (size_t i = 0; i < 8; ++i)
 			co_await OnClk(clock());
 
 		stopTest();
 	});
+}
 
-	//dbg::vis();
+BOOST_FIXTURE_TEST_CASE(sdram_constroller_small_test, SdramControllerTest)
+{
+	setupLink();
+	generate(link);
+
+	addSimulationProcess([=]()->SimProcess {
+		co_await OnClk(clock());
+
+		co_await fork(scl::validate(linkModel.getLink(), clock()));
+
+		co_await fork(linkModel.put(0x0000, 1, 0xC, clock()));
+		co_await fork(linkModel.put(0x0001, 0, 0xA, clock()));
+		auto read1 = co_await fork(linkModel.get(0x0000, 1, clock()));
+		auto read2 = co_await fork(linkModel.get(0x0001, 0, clock()));
+		co_await fork(linkModel.put(0x0004, 1, 0xF, clock()));
+		co_await fork(linkModel.put(0x0004, 0, 0xE, clock()));
+		auto read3 = co_await fork(linkModel.get(0x0004, 1, clock()));
+		auto read4 = co_await fork(linkModel.get(0x0004, 0, clock()));
+
+		BOOST_TEST(std::get<0>(co_await join(read1)) == 0x0A0C);
+		BOOST_TEST(std::get<0>(co_await join(read2)) == 0xA);
+		BOOST_TEST(std::get<0>(co_await join(read3)) == 0xE);
+		BOOST_TEST(std::get<0>(co_await join(read4)) == 0xE);
+
+		for (size_t i = 0; i < 8; ++i)
+			co_await OnClk(clock());
+
+		stopTest();
+	});
+}
+
+BOOST_FIXTURE_TEST_CASE(sdram_constroller_burst_test, SdramControllerTest)
+{
+	setupLink();
+	generate(link);
+
+	addSimulationProcess([=]()->SimProcess {
+		co_await OnClk(clock());
+
+		co_await fork(scl::validate(linkModel.getLink(), clock()));
+
+		co_await fork(linkModel.put(0x0000, 2, 0xAABBCCDD, clock()));
+		co_await fork(linkModel.put(0x0100, 3, 0x0102030405060708, clock()));
+		auto read1 = co_await fork(linkModel.get(0x0000, 2, clock()));
+		auto read2 = co_await fork(linkModel.get(0x0100, 3, clock()));
+
+		BOOST_TEST(std::get<0>(co_await join(read1)) == 0xAABBCCDD);
+		BOOST_TEST(std::get<0>(co_await join(read2)) == 0x0102030405060708);
+
+		for (size_t i = 0; i < 8; ++i)
+			co_await OnClk(clock());
+
+		stopTest();
+	});
 }

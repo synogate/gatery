@@ -25,7 +25,7 @@
 
 using namespace gtry::scl::sdram;
 
-void Controller::generate(TileLinkUL& link)
+void Controller::generate(TileLinkUB& link)
 {
 	HCL_DESIGNCHECK_HINT(link.a->size.width() == BitWidth::last(m_burstLimit), "size width must match burst limit");
 
@@ -43,7 +43,7 @@ void Controller::generate(TileLinkUL& link)
 		maintenanceArbiter.attach(initStream);
 
 		auto refreshStream = refreshSequence(!valid(link.a));
-		maintenanceArbiter.attach(refreshStream);
+		//maintenanceArbiter.attach(refreshStream);
 
 		maintenanceArbiter.generate();
 	}

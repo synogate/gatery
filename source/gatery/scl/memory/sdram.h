@@ -68,7 +68,7 @@ namespace gtry::scl::sdram
 		Controller& pinPrefix(std::string prefix);
 		Controller& driveStrength(DriveStrength value);
 
-		virtual void generate(TileLinkUL& link);
+		virtual void generate(TileLinkUB& link);
 
 	protected:
 		virtual void initMember();
