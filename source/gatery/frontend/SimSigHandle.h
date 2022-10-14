@@ -27,6 +27,7 @@
 #include <gatery/utils/Traits.h>
 
 #include <gatery/simulation/SigHandle.h>
+#include <gatery/simulation/simProc/Condition.h>
 #include <gatery/simulation/simProc/SimulationProcess.h>
 #include <gatery/simulation/simProc/WaitFor.h>
 #include <gatery/simulation/simProc/WaitUntil.h>
@@ -268,6 +269,8 @@ SigHandleBit simu(const OutputPin &pin);
 SigHandleBVec simu(const OutputPins &pins);
 
 
+
+using Condition = sim::Condition;
 
 template<typename T>
 using SimFunction = sim::SimulationFunction<T>;
