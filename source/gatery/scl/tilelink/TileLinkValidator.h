@@ -22,10 +22,56 @@
 namespace gtry::scl
 {
 	SimProcess validateTileLink(TileLinkChannelA &channelA, TileLinkChannelD &channelD, const Clock &clk);
+	SimProcess validateTileLinkControlSignalsDefined(TileLinkChannelA& a, const Clock& clk);
+	SimProcess validateTileLinkControlSignalsDefined(TileLinkChannelD& a, const Clock& clk);
+	SimProcess validateTileLinkSourceReuse(TileLinkChannelA& channelA, TileLinkChannelD& channelD, const Clock& clk);
+	SimProcess validateTileLinkResponseMatchesRequest(TileLinkChannelA& channelA, TileLinkChannelD& channelD, const Clock& clk);
+	SimProcess validateTileLinkNoBurst(TileLinkChannelA& a, const Clock& clk);
+	SimProcess validateTileLinkBurst(TileLinkChannelA& a, const Clock& clk);
+	SimProcess validateTileLinkBurst(TileLinkChannelD& d, const Clock& clk);
+	SimProcess validateTileLinkAlignment(TileLinkChannelA& a, const Clock& clk);
+	SimProcess validateTileLinkOperations(TileLinkChannelA& a, std::vector<TileLinkA::OpCode> whitelist, const Clock& clk);
+	SimProcess validateTileLinkMask(TileLinkChannelA& a, const Clock& clk);
+
+	namespace internal
+	{
+		template<TileLinkSignal TLink> std::vector<TileLinkA::OpCode> tileLinkValidOps(const TLink& link);
+	}
 
 	template<TileLinkSignal TileLinkType>
-	SimProcess validate(TileLinkType &tileLink, const Clock &clk) {
-		return validateTileLink(tileLink.a, *tileLink.d, clk);
+	SimProcess validate(TileLinkType &tileLink, const Clock &clk) 
+	{
+		co_await fork(validateTileLink(tileLink.a, *tileLink.d, clk));
+		
+		if constexpr (!tileLink.capability<TileLinkCapBurst>())
+			co_await fork(validateTileLinkNoBurst(tileLink.a, clk));
+
+		auto ops = internal::tileLinkValidOps(tileLink);
+		co_await fork(validateTileLinkOperations(tileLink.a, ops, clk));
 	}
+
 }
 
+namespace gtry::scl::internal
+{
+	template<TileLinkSignal TLink> 
+	std::vector<TileLinkA::OpCode> tileLinkValidOps(const TLink& link)
+	{
+		std::vector<TileLinkA::OpCode> ret = {
+			TileLinkA::Get,
+			TileLinkA::PutFullData,
+			TileLinkA::PutPartialData
+		};
+		
+		if constexpr (link.capability<TileLinkCapHint>())
+			ret.push_back(TileLinkA::Intent);
+
+		if constexpr (link.capability<TileLinkCapAtomicArith>())
+			ret.push_back(TileLinkA::ArithmeticData);
+
+		if constexpr (link.capability<TileLinkCapAtomicLogic>())
+			ret.push_back(TileLinkA::LogicalData);
+
+		return ret;
+	}
+}
