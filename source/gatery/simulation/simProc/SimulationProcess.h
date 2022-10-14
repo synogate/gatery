@@ -56,6 +56,8 @@ class SmartCoroutineHandle
 		}
 
 		SmartCoroutineHandle<PromiseType> &operator=(const SmartCoroutineHandle<PromiseType> &other) {
+			if (&other == this) return *this;
+
 			reset();
 			m_handle = other.m_handle;
 			m_handle.promise().registerHandle();
@@ -142,7 +144,11 @@ class SmartCoroutineHandle<void>
 		}
 
 		SmartCoroutineHandle<> &operator=(const SmartCoroutineHandle<> &other) {
+			if (&other == this) return *this;
+
 			reset();
+
+			m_handle = other.m_handle;
 
 			m_registerCallback = other.m_registerCallback;
 			m_deregisterCallback = other.m_deregisterCallback;
@@ -185,8 +191,8 @@ class SmartCoroutineHandle<void>
 class SmartPromiseType
 {
 	public:
-		~SmartPromiseType() noexcept(false) {
-			HCL_ASSERT(m_numHandles == 0);
+		~SmartPromiseType() {
+			//HCL_ASSERT(m_numHandles == 0);
 		}
 		void registerHandle() { m_numHandles++; }
 		void deregisterHandle() { HCL_ASSERT(m_numHandles > 0); m_numHandles--; }
@@ -316,7 +322,7 @@ class SimulationCoroutineHandler {
 
 		template<typename ReturnValue>
 		void start(const SimulationFunction<ReturnValue> &handle) {
-			m_simulationCoroutines.push_back(handle.getHandle());
+			m_simulationCoroutines.emplace_back(handle.getHandle());
 			readyToResume(handle.getHandle().rawHandle());		
 		}
 		void stopAll();
