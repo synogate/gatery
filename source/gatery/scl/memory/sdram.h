@@ -86,7 +86,7 @@ namespace gtry::scl::sdram
 
 		virtual void driveCommand(CommandStream& command, DataOutStream& data);
 		virtual CommandStream translateCommand(const BankState& state, const TileLinkChannelA& request) const;
-		virtual DataOutStream translateCommandData(TileLinkChannelA& request) const;
+		virtual DataOutStream translateCommandData(const TileLinkChannelA& request) const;
 
 		virtual std::tuple<CommandStream, DataOutStream> bankController(TileLinkChannelA& link, BankState& state, UInt bank) const;
 

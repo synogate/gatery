@@ -43,14 +43,14 @@ void Controller::generate(TileLinkUB& link)
 		maintenanceArbiter.attach(initStream);
 
 		auto refreshStream = refreshSequence(!valid(link.a));
-		//maintenanceArbiter.attach(refreshStream);
+		maintenanceArbiter.attach(refreshStream);
 
 		maintenanceArbiter.generate();
 	}
 
 	StreamArbiter<DataOutStream> outArbiter;
 	StreamArbiter<CommandStream> cmdArbiter;
-	auto maintenanceStream = maintenanceArbiter.out().regDownstreamBlocking();
+	auto maintenanceStream = maintenanceArbiter.out().regDownstream();
 	cmdArbiter.attach(maintenanceStream);
 
 
@@ -109,6 +109,7 @@ std::tuple<Controller::CommandStream, Controller::DataOutStream> Controller::ban
 {
 	auto scope = Area("bankController").enter();
 	HCL_NAMED(bank);
+	HCL_NAMED(link);
 
 	// command stream
 	CommandStream cmd = translateCommand(state, link);
@@ -121,10 +122,16 @@ std::tuple<Controller::CommandStream, Controller::DataOutStream> Controller::ban
 	// write data stream
 	DataOutStream data = translateCommandData(link);
 
+	ready(link) = '0';
+	IF(timedCmd->code == CommandCode::Write)
+		ready(link) = ready(data);
+	IF(timedCmd->code == CommandCode::Read)
+		ready(link) = ready(timedCmd);
+
 	Bit delayDataStream = '0';
 	IF(sop(data))
 	{
-		IF(!valid(timedCmd))
+		IF(!transfer(timedCmd))
 			delayDataStream = '1'; // bank not ready yet
 		IF(timedCmd->code != CommandCode::Write & timedCmd->code != CommandCode::Read)
 			delayDataStream = '1'; // not ready for CAS yet
@@ -234,6 +241,7 @@ Controller::CommandStream Controller::translateCommand(const BankState& state, c
 	IF(state.rowActive & state.activeRow != request->address(m_mapping.row))
 	{
 		cmd->code = CommandCode::Precharge;
+		cmd->address[10] = '0';
 	}
 	ELSE IF(!state.rowActive)
 	{
@@ -253,7 +261,7 @@ Controller::CommandStream Controller::translateCommand(const BankState& state, c
 	return cmd;
 }
 
-Controller::DataOutStream gtry::scl::sdram::Controller::translateCommandData(TileLinkChannelA& request) const
+Controller::DataOutStream gtry::scl::sdram::Controller::translateCommandData(const TileLinkChannelA& request) const
 {
 	auto scope = Area("translateCommandData").enter();
 	HCL_NAMED(request);
@@ -264,7 +272,6 @@ Controller::DataOutStream gtry::scl::sdram::Controller::translateCommandData(Til
 	valid(out) = valid(request) & isWrite;
 	byteEnable(out) = request->mask;
 	eop(out) = eop(request);
-	ready(request) = ready(out);
 
 	HCL_NAMED(out);
 	return out;
@@ -481,6 +488,7 @@ Controller::CommandStream gtry::scl::sdram::Controller::refreshSequence(const Bi
 	cmd->code = CommandCode::Nop;
 	cmd->address = ConstBVec(m_addrBusWidth);
 	cmd->address = 1 << 10; // All Banks
+	cmd->bank = 0; // is dont care but makes bank state multiplexing easier for timing module
 
 	enum class RefreshState
 	{
@@ -630,6 +638,8 @@ gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
 
 	UInt address = addrWidth;
 	address = reg(address);
+	BVec bank = cmd.ba.width();
+	bank = reg(bank);
 	UInt readBursts = 9_b;
 	IF(readBursts != 0)
 		readBursts -= 1;
@@ -657,6 +667,7 @@ gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
 			sim_assert(mux(cmd.ba, state).rowActive) << "read in idle state";
 
 			address = cat(cmd.ba, mux(cmd.ba, state).activeRow, cmd.a(0, 8_b));
+			bank = cmd.ba;
 
 			writeBursts = 0;
 			readBursts = ConstUInt(1, readBursts.width()) << modeBurstLength;
@@ -680,14 +691,18 @@ gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
 				for (auto& s : state)
 					s.rowActive = '0';
 
-			readBursts = 0;
-			writeBursts = 0;
+			IF(cmd.a[10] | bank == cmd.ba)
+			{
+				readBursts = 0;
+				writeBursts = 0;
+			}
 		}
 		IF(code == (size_t)CommandCode::Write)
 		{
 			sim_assert(mux(cmd.ba, state).rowActive) << "write in idle state";
 
 			address = cat(cmd.ba, mux(cmd.ba, state).activeRow, cmd.a(0, 8_b));
+			bank = cmd.ba;
 
 			readBursts = 0;
 			writeBursts = ConstUInt(1, writeBursts.width()) << modeBurstLength;
