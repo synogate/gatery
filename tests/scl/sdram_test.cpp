@@ -55,7 +55,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 		simu(bus.wen) = '1';
 		co_await AfterClk(clock());
 
-		// set Mode Register
+		// set Mode Register (CL = 2)
 		simu(bus.cke) = '1';
 		simu(bus.csn) = '0';
 		simu(bus.rasn) = '0';
@@ -63,7 +63,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 		simu(bus.wen) = '0';
 
 		simu(bus.ba) = 0;
-		simu(bus.a) = 0;
+		simu(bus.a) = 2 << 4;
 		co_await AfterClk(clock());
 		simu(bus.csn) = '1';
 		co_await AfterClk(clock());
@@ -123,7 +123,11 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 		// Read CAS
 		simu(bus.wen) = '1';
 		simu(bus.dq).invalidate();
+		co_await AfterClk(clock());
+		simu(bus.casn) = '1';
+		co_await AfterClk(clock());
 		BOOST_TEST(simu(dq) == "xXX13");
+
 		co_await AfterClk(clock());
 
 		// set Mode Register (CL = 2) (Burst = 4)
