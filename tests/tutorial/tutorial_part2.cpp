@@ -192,11 +192,11 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_10, BoostUnitTestSimulationFixt
 {
 	UInt unsigned_8_wide = "8b0";
 	// Zero extends by 2 bits
-	UInt unsigned_10_wide = ext(unsigned_8_wide, 2_b);
+	UInt unsigned_10_wide = ext(unsigned_8_wide, +2_b);
 
 	SInt signed_8_wide = (SInt) "8b0";
 	// Sign extends by 2 bits
-	SInt signed_10_wide = ext(signed_8_wide, 2_b);
+	SInt signed_10_wide = ext(signed_8_wide, +2_b);
 
 	BOOST_TEST(unsigned_10_wide.width() == 10_b);
 	BOOST_TEST(signed_10_wide.width() == 10_b);
