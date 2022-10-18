@@ -770,22 +770,22 @@ BOOST_FIXTURE_TEST_CASE(tilelink_stream_fetch_test, BoostUnitTestSimulationFixtu
 	addSimulationProcess([&]()->SimProcess {
 		simu(valid(cmd)) = '0';
 		simu(ready(data)) = '0';
-		co_await AfterClk(clock);
+		co_await OnClk(clock);
 
 		simu(cmd->address) = 16;
 		simu(cmd->beats) = 4;
 		simu(valid(cmd)) = '1';
-		co_await AfterClk(clock);
+		co_await OnClk(clock);
 
 		while(simu(valid(data)) == '0')
-			co_await AfterClk(clock);
+			co_await OnClk(clock);
 
-		co_await AfterClk(clock);
+		co_await OnClk(clock);
 		simu(ready(data)) = '1';
 
 		while (simu(ready(cmd)) == '0')
-			co_await AfterClk(clock);
-		co_await AfterClk(clock);
+			co_await OnClk(clock);
+		co_await OnClk(clock);
 
 		simu(valid(cmd)) = '0';
 
@@ -795,7 +795,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_stream_fetch_test, BoostUnitTestSimulationFixtu
 		for (size_t i = 0; i < 4; ++i)
 		{
 			do
-				co_await AfterClk(clock);
+				co_await OnClk(clock);
 			while (simu(valid(data)) == '0' || simu(ready(data)) == '0');
 
 			const size_t expectedByte = 16 + i * 2;
@@ -803,8 +803,8 @@ BOOST_FIXTURE_TEST_CASE(tilelink_stream_fetch_test, BoostUnitTestSimulationFixtu
 			BOOST_TEST(simu(*data) == expectedWord);
 		}
 
-		co_await AfterClk(clock);
-		co_await AfterClk(clock);
+		co_await OnClk(clock);
+		co_await OnClk(clock);
 		stopTest();
 	});
 
