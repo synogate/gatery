@@ -93,7 +93,7 @@ namespace gtry::scl
 			simu(m_link.a->data).invalidate();
 
 			m_requestCurrent++;
-			m_requestCurrentChanged.notify_all();
+			m_requestCurrentChanged.notify_oldest();
 		}());
 
 		TransactionIn ret;
@@ -131,6 +131,7 @@ namespace gtry::scl
 
 		auto [offset, mask] = prepareTransaction(req);
 		req.data.resize(1);
+		req.data[0].defined = 0;
 
 		TransactionIn res = co_await request(req, clk);
 
@@ -200,5 +201,12 @@ namespace gtry::scl
 		return { bitOffset, bitMask };
 	}
 
-
+	SimProcess TileLinkMasterModel::idle(size_t requestsPending)
+	{
+		while (m_requestNext - m_requestCurrent > requestsPending)
+		{
+			co_await m_requestCurrentChanged.wait();
+			m_requestCurrentChanged.notify_oldest();
+		}
+	}
 }
