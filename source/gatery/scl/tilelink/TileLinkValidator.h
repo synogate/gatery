@@ -48,13 +48,13 @@ namespace gtry::scl::internal
 			TileLinkA::PutPartialData
 		};
 		
-		if constexpr (link.capability<TileLinkCapHint>())
+		if constexpr (link.template capability<TileLinkCapHint>())
 			ret.push_back(TileLinkA::Intent);
 
-		if constexpr (link.capability<TileLinkCapAtomicArith>())
+		if constexpr (link.template capability<TileLinkCapAtomicArith>())
 			ret.push_back(TileLinkA::ArithmeticData);
 
-		if constexpr (link.capability<TileLinkCapAtomicLogic>())
+		if constexpr (link.template capability<TileLinkCapAtomicLogic>())
 			ret.push_back(TileLinkA::LogicalData);
 
 		return ret;
@@ -68,7 +68,7 @@ namespace gtry::scl
 	{
 		co_await fork(validateTileLink(tileLink.a, *tileLink.d, clk));
 
-		if constexpr (!tileLink.capability<TileLinkCapBurst>())
+		if constexpr (!tileLink.template capability<TileLinkCapBurst>())
 			co_await fork(validateTileLinkNoBurst(tileLink.a, clk));
 
 		auto ops = internal::tileLinkValidOps(tileLink);
