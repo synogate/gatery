@@ -25,6 +25,7 @@
 
 #include <gatery/scl/memory/sdram.h>
 #include <gatery/scl/memory/SdramTimer.h>
+#include <gatery/scl/memory/MemoryTester.h>
 #include <gatery/scl/tilelink/TileLinkMasterModel.h>
 #include <gatery/scl/tilelink/TileLinkValidator.h>
 
@@ -181,6 +182,31 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 			co_await AfterClk(clock());
 		stopTest();
 		co_return;
+	});
+}
+
+BOOST_FIXTURE_TEST_CASE(memory_tester_pass_test, ClockedTest)
+{
+	scl::TileLinkUL link;
+	scl::tileLinkInit(link, 6_b, 16_b, 1_b, 2_b);
+
+	Memory<BVec> memory(link.a->address.width().count(), link.a->data.width());
+	memory <<= link;
+	
+	valid(*link.d) = reg(valid(*link.d), '0');
+	**link.d = reg(**link.d);
+	pinOut(*link.a, "a");
+	pinOut(**link.d, "d");
+
+	gtry::scl::MemoryTester tester;
+	tester.generate(link);
+
+	sim_assert(tester.numErrors() == 0) << "detected false memory errors";
+
+	addSimulationProcess([=]()->SimProcess {
+		for(size_t i = 0; i < 70; ++i)
+			co_await OnClk(clock());
+		stopTest();
 	});
 }
 
@@ -659,6 +685,33 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_fuzz_test, SdramControllerTest)
 		co_await join(read);
 		
 		for (size_t i = 0; i < 8; ++i)
+			co_await OnClk(clock());
+
+		stopTest();
+	});
+}
+
+BOOST_FIXTURE_TEST_CASE(sdram_constroller_memory_tester_test, SdramControllerTest)
+{
+	addressMap({
+		.column = Selection::Slice(1, 2),
+		.row = Selection::Slice(3, 4),
+		.bank = Selection::Slice(7, 1)
+	});
+
+	scl::tileLinkInit(link, 8_b, 16_b, 2_b, 2_b);
+	generate(link);
+
+	scl::MemoryTester tester;
+	tester.generate(link);
+	sim_assert(tester.numErrors() == 0) << "found memory errors";
+	pinOut(tester.numErrors()).setName("numErrors");
+
+	timeout(hlim::ClockRational{ 10, 1'000'000 });
+
+	addSimulationProcess([=]()->SimProcess
+	{
+		for (size_t i = 0; i < 730; ++i)
 			co_await OnClk(clock());
 
 		stopTest();

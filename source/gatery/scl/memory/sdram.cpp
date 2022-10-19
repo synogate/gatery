@@ -381,7 +381,7 @@ Controller::BankState Controller::updateState(const Command& cmd, const BankStat
 	IF(cmd.code == CommandCode::Activate)
 	{
 		newState.rowActive = '1';
-		newState.activeRow = cmd.address;
+		newState.activeRow = cmd.address.lower(newState.activeRow.width());
 	}
 	
 	IF(cmd.code == CommandCode::Precharge)
@@ -721,7 +721,9 @@ gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
 				sim_assert(cmd.a(7, 2_b) == 0) << "test mode is not allowed";
 				modeWriteBurstLength = cmd.a[9];
 			}
-			sim_assert(cmd.ba.msb() == '0') << "invalid MRS command";
+
+			if(cmd.ba.width().bits() > 0)
+				sim_assert(cmd.ba.upper(-1_b) == 0) << "unsupported MRS command";
 			sim_assert(cmd.a.upper(cmd.a.width() - 10) == 0) << "reserved bits must be zero";
 			//sim_assert(modeRegister(4, 3_b) != 0) << "zero CAS Latency not implemented";
 		}
