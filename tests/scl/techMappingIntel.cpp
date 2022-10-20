@@ -268,4 +268,29 @@ BOOST_FIXTURE_TEST_CASE(instantiate_scl_ddr, gtry::GHDLTestFixture)
 }
 
 
+
+BOOST_FIXTURE_TEST_CASE(instantiate_scl_ddr_for_clock, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	auto device = std::make_unique<scl::IntelDevice>();
+	device->setupMAX10();
+	design.setTargetTechnology(std::move(device));
+
+	Clock clock1({
+			.absoluteFrequency = {{125'000'000,1}},
+			.initializeRegs = false,
+	});
+	HCL_NAMED(clock1);
+	ClockScope scp(clock1);
+
+	Bit o = scl::ddr('1', '0');
+	
+	pinOut(o).setName("ddr_output");
+
+	testCompilation();
+}
+
+
+
 BOOST_AUTO_TEST_SUITE_END()
