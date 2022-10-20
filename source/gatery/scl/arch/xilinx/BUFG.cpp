@@ -39,6 +39,15 @@ BUFG::BUFG()
 	declOutputBit(0, "O", BitFlavor::STD_ULOGIC);
 }
 
+std::unique_ptr<hlim::BaseNode> BUFG::cloneUnconnected() const
+{
+	std::unique_ptr<BaseNode> res(new BUFG());
+	copyBaseToClone(res.get());
+
+	return res;
+}
+
+
 std::string BUFG::attemptInferOutputName(size_t outputPort) const
 {
 	auto driver = getDriver(0);

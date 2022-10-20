@@ -175,7 +175,7 @@ void splitMemoryAlongDepthMux(hlim::NodeGroup *group, size_t log2SplitDepth, boo
 	for (const auto &rp : memGrp->getReadPorts()) {
 		HCL_ASSERT(rp.dedicatedReadLatencyRegisters.size() == memGrp->getMemory()->getRequiredReadLatency()); // Ensure the regs have been found
 
-		UInt rdAddr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+		UInt rdAddr = (UInt) getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 		Bit rdEn = getBitBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::enable}, '1');
 
 		Bit addrHighBit = rdAddr[log2SplitDepth];
@@ -211,13 +211,13 @@ void splitMemoryAlongDepthMux(hlim::NodeGroup *group, size_t log2SplitDepth, boo
 			addrHighBitDelayed = clock(addrHighBitDelayed);
 		}
 
-		UInt rdDataHook = hookUIntAfter(rp.dataOutput);
-		rdDataHook = mux(addrHighBitDelayed, newReadData);
+		BVec rdDataHook = hookBVecAfter(rp.dataOutput);
+		rdDataHook = (BVec)mux(addrHighBitDelayed, newReadData);
 		rdDataHook.setName("cascade_rdData");		
 	}
 	for (const auto &wp : memGrp->getWritePorts()) {
-		UInt wrAddr = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-		UInt wrData = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
+		UInt wrAddr = (UInt) getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+		UInt wrData = (UInt) getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
 		Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::enable}, '1');
 
 		Bit addrHighBit = wrAddr[log2SplitDepth];
@@ -347,7 +347,7 @@ std::vector<SplitMemoryGroup> createWidthSplitMemories(hlim::NodeGroup *group, c
 					auto *newReg = (hlim::Node_Register*)mapSrc2Dst[reg.get()];
 					// Crop reset value
 					if (reg->hasResetValue()) {
-						UInt resetValue = getUIntBefore(hlim::NodePort{.node = newReg, .port = hlim::Node_Register::RESET_VALUE});
+						UInt resetValue = (UInt) getBVecBefore(hlim::NodePort{.node = newReg, .port = hlim::Node_Register::RESET_VALUE});
 						UInt croppedResetValue = resetValue(widthStart, BitWidth{ widthEnd - widthStart });
 						newReg->connectInput(hlim::Node_Register::RESET_VALUE, croppedResetValue.readPort());
 					}
@@ -414,12 +414,12 @@ void splitMemoryAlongWidth(hlim::NodeGroup *group, size_t maxWidth)
 			partialReads[i] = UInt(SignalReadPort(new_rp.dataOutput));
 		}
 
-		UInt rdDataHook = hookUIntAfter(rp.dataOutput);
-		rdDataHook = pack(partialReads);
+		BVec rdDataHook = hookBVecAfter(rp.dataOutput);
+		rdDataHook = (BVec) pack(partialReads);
 		rdDataHook.setName("concatenated_rdData");			
 	}
 	for (const auto &wp : memGrp->getWritePorts()) {
-		UInt wrData = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
+		UInt wrData = (UInt) getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
 		for (size_t i : utils::Range(subMems.size())) {
 			const auto &new_wp = subMems[i].subGroup->findWritePort((hlim::Node_MemPort*)subMems[i].original2subGroup[wp.node.get()]);
 

@@ -18,51 +18,9 @@
 #pragma once
 
 #include <gatery/frontend.h>
-#include <gatery/frontend/ExternalComponent.h>
 
+namespace gtry::scl {
 
-namespace gtry::scl::arch::xilinx {
-
-class MMCME2_BASE : public gtry::ExternalComponent
-{
-	public:
-		enum Clocks {
-			CLK_IN,
-			CLK_COUNT
-		};
-
-		enum Inputs {
-			IN_PWRDWN,
-			IN_CLKFBIN,
-
-			IN_COUNT
-		};
-		enum Outputs {
-        	OUT_CLKOUT0,
-        	OUT_CLKOUT0B,
-        	OUT_CLKOUT1,
-        	OUT_CLKOUT1B,
-        	OUT_CLKOUT2,
-        	OUT_CLKOUT2B,
-        	OUT_CLKOUT3,
-        	OUT_CLKOUT3B,
-        	OUT_CLKOUT4,
-        	OUT_CLKOUT5,
-        	OUT_CLKOUT6,
-        	OUT_CLKFBOUT,
-        	OUT_CLKFBOUTB,
-        	OUT_LOCKED,
-
-			OUT_COUNT
-		};
-
-		MMCME2_BASE();
-
-		void setClock(hlim::Clock *clock);
-
-		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
-	protected:
-};
-
+Bit ddr(Bit D0, Bit D1);
 
 }

@@ -199,8 +199,8 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 		portSetup.inputRegs = true;
 		altdpram->setupWritePort(portSetup);
 
-		UInt wrData = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
-		UInt addr = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+		UInt wrData = (UInt) getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
+		UInt addr = (UInt) getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 		Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrEnable}, '1');
 
 		altdpram->setInput(ALTDPRAM::Inputs::IN_DATA, (BVec) wrData);
@@ -211,7 +211,7 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 
 		auto wrWordEnableSignal = wp.node->getNonSignalDriver((size_t)hlim::Node_MemPort::Inputs::wrWordEnable);
 		if (wrWordEnableSignal.node != nullptr)
-			altdpram->setInput(ALTDPRAM::Inputs::IN_BYTEENA, (BVec) getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrWordEnable}));
+			altdpram->setInput(ALTDPRAM::Inputs::IN_BYTEENA, getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrWordEnable}));
 	}
 
 	{
@@ -220,12 +220,12 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 		size_t numExternalOutputRegisters = rp.dedicatedReadLatencyRegisters.size()-1;
 		altdpram->setupReadPort(portSetup);
 
-		UInt addr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-		UInt data = hookUIntAfter(rp.dataOutput);
+		UInt addr = (UInt) getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+		BVec data = hookBVecAfter(rp.dataOutput);
 
 		altdpram->setInput(ALTDPRAM::Inputs::IN_RDADDRESS, (BVec) addr(0, addrBits));
 
-		UInt readData = (UInt) altdpram->getOutputBVec(ALTDPRAM::Outputs::OUT_Q);
+		BVec readData = altdpram->getOutputBVec(ALTDPRAM::Outputs::OUT_Q);
 		{
 			Clock clock(readClock);
 			ClockScope cscope(clock);

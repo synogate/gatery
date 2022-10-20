@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2022 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -19,48 +19,65 @@
 
 #include <gatery/frontend.h>
 #include <gatery/frontend/ExternalComponent.h>
-
+#include <gatery/frontend/tech/TechnologyMappingPattern.h>
 
 namespace gtry::scl::arch::xilinx {
 
-class MMCME2_BASE : public gtry::ExternalComponent
+class ODDR : public gtry::ExternalComponent
 {
 	public:
+
 		enum Clocks {
 			CLK_IN,
 			CLK_COUNT
 		};
 
 		enum Inputs {
-			IN_PWRDWN,
-			IN_CLKFBIN,
+			IN_D1,
+			IN_D2,
+			IN_SET,
+			IN_RESET,
+			IN_CE,
 
 			IN_COUNT
 		};
 		enum Outputs {
-        	OUT_CLKOUT0,
-        	OUT_CLKOUT0B,
-        	OUT_CLKOUT1,
-        	OUT_CLKOUT1B,
-        	OUT_CLKOUT2,
-        	OUT_CLKOUT2B,
-        	OUT_CLKOUT3,
-        	OUT_CLKOUT3B,
-        	OUT_CLKOUT4,
-        	OUT_CLKOUT5,
-        	OUT_CLKOUT6,
-        	OUT_CLKFBOUT,
-        	OUT_CLKFBOUTB,
-        	OUT_LOCKED,
+        	OUT_Q,
 
 			OUT_COUNT
 		};
 
-		MMCME2_BASE();
 
-		void setClock(hlim::Clock *clock);
+		enum DDR_CLK_EDGE {
+			OPPOSITE_EDGE,
+			SAME_EDGE
+		};
+
+		enum SRTYPE {
+			ASYNC,
+			SYNC
+		};
+
+		ODDR();
+
+		virtual void setInput(size_t input, const Bit &bit) override;
+
+		void setResetType(SRTYPE srtype);
+		void setEdgeMode(DDR_CLK_EDGE edgeMode);
+		void setInitialOutputValue(bool value);
 
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
+};
+
+
+
+
+class ODDRPattern : public TechnologyMappingPattern
+{
+	public:
+		virtual ~ODDRPattern() = default;
+
+		virtual bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const override;
 	protected:
 };
 

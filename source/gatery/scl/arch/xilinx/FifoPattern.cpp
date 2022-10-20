@@ -188,9 +188,9 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 	}
 	
 
-	UInt in_data = groupHelper.getUInt("in_data_packed");
-	UInt out_data = groupHelper.hookUIntBefore("out_data_packed");
-	UInt out_data_accu = constructFrom(out_data);
+	BVec in_data = groupHelper.getBVec("in_data_packed");
+	BVec out_data = groupHelper.hookBVecBefore("out_data_packed");
+	BVec out_data_accu = constructFrom(out_data);
 	out_data_accu = 0;
 
 	size_t width = in_data.width().value;
@@ -212,12 +212,12 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 		BitWidth sectionWidth{ end - start };
 
 
-		UInt inSection = BitWidth(perFifoWidth_36k);
+		BVec inSection = BitWidth(perFifoWidth_36k);
 		inSection = zext(in_data(start, sectionWidth));
 		inSection.setName((boost::format("inSection_%d_%d") % start % end).str());
-		fifoMacro->connectInput(FIFO_SYNC_MACRO::IN_DI, inSection);
+		fifoMacro->connectInput(FIFO_SYNC_MACRO::IN_DI, (UInt) inSection);
 
-		UInt outSection = fifoMacro->getOutputUInt(FIFO_SYNC_MACRO::OUT_DO);
+		BVec outSection = (BVec) fifoMacro->getOutputUInt(FIFO_SYNC_MACRO::OUT_DO);
 		out_data_accu(start, sectionWidth) = outSection(0, sectionWidth);
 
 		out_data_accu.setName((boost::format("out_data_accu_0_%d") % end).str());
@@ -237,12 +237,12 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 
 		BitWidth sectionWidth{ end - start };
 
-		UInt inSection = BitWidth(perFifoWidth_18k);
+		BVec inSection = BitWidth(perFifoWidth_18k);
 		inSection = zext(in_data(start, sectionWidth));
 		inSection.setName((boost::format("inSection_%d_%d") % start % end).str());
-		fifoMacro->connectInput(FIFO_SYNC_MACRO::IN_DI, inSection);
+		fifoMacro->connectInput(FIFO_SYNC_MACRO::IN_DI, (UInt) inSection);
 
-		UInt outSection = fifoMacro->getOutputUInt(FIFO_SYNC_MACRO::OUT_DO);
+		BVec outSection = (BVec) fifoMacro->getOutputUInt(FIFO_SYNC_MACRO::OUT_DO);
 		out_data_accu(start, sectionWidth) = outSection(0, sectionWidth);
 		out_data_accu.setName((boost::format("out_data_accu_0_%d") % end).str());
 

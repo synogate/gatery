@@ -31,22 +31,22 @@
 namespace gtry {
 
 
-UInt hookUIntBefore(hlim::NodePort input)
+BVec hookBVecBefore(hlim::NodePort input)
 {
 	HCL_DESIGNCHECK_HINT(input.node != nullptr, "Can't bvec-hook unconnected input, can't figure out width!");
 	auto driver = input.node->getDriver(input.port);
 	HCL_DESIGNCHECK_HINT(getOutputConnectionType(driver).interpretation == hlim::ConnectionType::BITVEC, "Attempting to create UInt hook from a signal node that is not a UInt");
 
-	UInt res = SignalReadPort(driver);
+	BVec res = SignalReadPort(driver);
 	input.node->rewireInput(input.port, res.outPort());
 	return res;
 }
 
-UInt hookUIntAfter(hlim::NodePort output)
+BVec hookBVecAfter(hlim::NodePort output)
 {
 	HCL_DESIGNCHECK_HINT(getOutputConnectionType(output).interpretation == hlim::ConnectionType::BITVEC, "Attempting to create UInt hook from a signal node that is not a UInt");
 
-	UInt res = BitWidth(getOutputConnectionType(output).width);
+	BVec res = BitWidth(getOutputConnectionType(output).width);
 	while (!output.node->getDirectlyDriven(output.port).empty()) {
 		auto np = output.node->getDirectlyDriven(output.port).front();
 		np.node->rewireInput(np.port, res.outPort());
@@ -81,19 +81,19 @@ Bit hookBitAfter(hlim::NodePort output)
 }
 
 
-UInt getUIntBefore(hlim::NodePort input)
+BVec getBVecBefore(hlim::NodePort input)
 {
 	auto driver = input.node->getDriver(input.port);
 	HCL_DESIGNCHECK(driver.node != nullptr);
-	return UInt(SignalReadPort(driver));
+	return BVec(SignalReadPort(driver));
 }
 
-UInt getUIntBefore(hlim::NodePort input, UInt defaultValue)
+BVec getBVecBefore(hlim::NodePort input, BVec defaultValue)
 {
 	auto driver = input.node->getDriver(input.port);
 	if (driver.node == nullptr)
 		return defaultValue;
-	return UInt(SignalReadPort(driver));
+	return BVec(SignalReadPort(driver));
 }
 
 Bit getBitBefore(hlim::NodePort input)
@@ -114,14 +114,14 @@ Bit getBitBefore(hlim::NodePort input, Bit defaultValue)
 
 
 
-UInt hookUIntBefore(hlim::Node_Signal *signal)
+BVec hookBVecBefore(hlim::Node_Signal *signal)
 {
-	return hookUIntBefore({.node = signal, .port = 0ull});
+	return hookBVecBefore({.node = signal, .port = 0ull});
 }
 
-UInt hookUIntAfter(hlim::Node_Signal *signal)
+BVec hookBVecAfter(hlim::Node_Signal *signal)
 {
-	return hookUIntAfter({.node = signal, .port = 0ull});
+	return hookBVecAfter({.node = signal, .port = 0ull});
 }
 
 Bit hookBitBefore(hlim::Node_Signal *signal)
@@ -163,7 +163,7 @@ NodeGroupIO::NodeGroupIO(hlim::NodeGroup *nodeGroup)
 
 		switch (signal->getOutputConnectionType(0).interpretation) {
 			case hlim::ConnectionType::BITVEC:
-				inputUInts[signal->getName()] = hookUIntBefore(signal);
+				inputBVecs[signal->getName()] = hookBVecBefore(signal);
 			break;
 			case hlim::ConnectionType::BOOL:
 				inputBits[signal->getName()] = hookBitBefore(signal);
@@ -181,7 +181,7 @@ NodeGroupIO::NodeGroupIO(hlim::NodeGroup *nodeGroup)
 
 		switch (signal->getOutputConnectionType(0).interpretation) {
 			case hlim::ConnectionType::BITVEC:
-				outputUInts[signal->getName()] = hookUIntAfter(signal);
+				outputBVecs[signal->getName()] = hookBVecAfter(signal);
 			break;
 			case hlim::ConnectionType::BOOL:
 				outputBits[signal->getName()] = hookBitAfter(signal);
@@ -210,20 +210,20 @@ bool NodeGroupSurgeryHelper::containsSignal(std::string_view name)
 #endif
 }
 
-UInt NodeGroupSurgeryHelper::hookUIntBefore(std::string_view name)
+BVec NodeGroupSurgeryHelper::hookBVecBefore(std::string_view name)
 {
 	auto it = m_namedSignalNodes.find(name);
 	HCL_DESIGNCHECK_HINT(it != m_namedSignalNodes.end(), "Named signal was not found in node group!");
 	HCL_DESIGNCHECK_HINT(it->second.size() == 1, "Named signal is ambiguous (exists multiple times) in node group!");
-	return gtry::hookUIntBefore(it->second.front());
+	return gtry::hookBVecBefore(it->second.front());
 }
 
-UInt NodeGroupSurgeryHelper::hookUIntAfter(std::string_view name)
+BVec NodeGroupSurgeryHelper::hookBVecAfter(std::string_view name)
 {
 	auto it = m_namedSignalNodes.find(name);
 	HCL_DESIGNCHECK_HINT(it != m_namedSignalNodes.end(), "Named signal was not found in node group!");
 	HCL_DESIGNCHECK_HINT(it->second.size() == 1, "Named signal is ambiguous (exists multiple times) in node group!");
-	return gtry::hookUIntAfter(it->second.front());
+	return gtry::hookBVecAfter(it->second.front());
 }
 
 Bit NodeGroupSurgeryHelper::hookBitBefore(std::string_view name)
@@ -254,7 +254,7 @@ Bit NodeGroupSurgeryHelper::getBit(std::string_view name)
 	return SignalReadPort(signal);
 }
 
-UInt NodeGroupSurgeryHelper::getUInt(std::string_view name)
+BVec NodeGroupSurgeryHelper::getBVec(std::string_view name)
 {
 	auto it = m_namedSignalNodes.find(name);
 	HCL_DESIGNCHECK_HINT(it != m_namedSignalNodes.end(), "Named signal was not found in node group!");

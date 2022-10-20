@@ -66,14 +66,14 @@ bool TRIPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 		tri->setInput(TRI::IN_OE, outputEnable);
 		output.exportOverride(SignalReadPort(tri));
 	} else
-	if (io.inputUInts.contains("signal")) {
-		UInt &input = io.inputUInts["signal"];
+	if (io.inputBVecs.contains("signal")) {
+		BVec &input = io.inputBVecs["signal"];
 
-		HCL_ASSERT_HINT(io.outputUInts.contains("result"), "Missing output for Tristate Output!");
-		UInt &output = io.outputUInts["result"];
+		HCL_ASSERT_HINT(io.outputBVecs.contains("result"), "Missing output for Tristate Output!");
+		BVec &output = io.outputBVecs["result"];
 
 		HCL_ASSERT(input.width() == output.width());
-		UInt overrideBits = ConstUInt(0, input.width());
+		BVec overrideBits = ConstBVec(0, input.width());
 		for (auto i : utils::Range(input.size())) {
 			auto *tri = DesignScope::createNode<TRI>();
 			tri->setInput(TRI::IN_A_IN, input[i]);

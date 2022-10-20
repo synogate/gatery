@@ -17,12 +17,10 @@
 */
 #pragma once
 
-#include <gatery/hlim/supportNodes/Node_External.h>
-
 #include <gatery/frontend.h>
 
-namespace gtry::scl::arch::xilinx {
+namespace gtry::scl {
 
-Bit serdes(UInt data);
+Bit oserdes(UInt data);
 
 }

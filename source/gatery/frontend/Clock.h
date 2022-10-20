@@ -154,7 +154,7 @@ namespace gtry {
 			const Clock &m_clock;
 	};
 
-	// current clock scope reset signal. normalized to always active high reset.
+	/// current clock scope reset signal. normalized to always active high reset.
 	Bit reset();
 
 /// @}

@@ -45,27 +45,14 @@ void SimulationCoroutineHandler::run()
 			m_coroutinesReadyToResume.front().resume();
 			m_coroutinesReadyToResume.pop();
 		}
-		collectGarbage();
+		for (auto &h : m_simulationCoroutines)
+			HCL_ASSERT(!h.done());
 	} catch (...) {
 		activeHandler = lastHandler;
 		throw;
 	}
 	activeHandler = lastHandler;
 }
-
-void SimulationCoroutineHandler::collectGarbage()
-{
-	// We hold references to keep fire&forget coroutines alive.
-	// Once they are done, we drop the reference and if it was the last one, the promise gets deleted.
-	for (size_t i = 0; i < m_simulationCoroutines.size(); ) {
-		if (m_simulationCoroutines[i].done()) {
-			m_simulationCoroutines[i] = m_simulationCoroutines.back();
-			m_simulationCoroutines.pop_back();
-		} else
-			i++;
-	}
-}
-
 
 
 template class SimulationFunction<void>;

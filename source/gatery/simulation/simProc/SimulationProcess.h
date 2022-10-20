@@ -181,6 +181,13 @@ class SmartCoroutineHandle<void>
 		}
 
 		const std::coroutine_handle<> &rawHandle() const { return m_handle; }
+
+
+		bool operator<(const SmartCoroutineHandle<void> &rhs) const { 
+			if (!m_handle) return (bool) rhs.m_handle;
+			if (!rhs.m_handle) return true;
+			return m_handle.address() < rhs.m_handle.address();
+		}
 	protected:
 		std::function<void()> m_registerCallback;
 		std::function<void()> m_deregisterCallback;
@@ -322,16 +329,22 @@ class SimulationCoroutineHandler {
 
 		template<typename ReturnValue>
 		void start(const SimulationFunction<ReturnValue> &handle) {
-			m_simulationCoroutines.emplace_back(handle.getHandle());
+			m_simulationCoroutines.insert(handle.getHandle());
 			readyToResume(handle.getHandle().rawHandle());		
 		}
 		void stopAll();
 
 		void readyToResume(std::coroutine_handle<> handle) { m_coroutinesReadyToResume.push(handle); }
 		void run();
+
+		template<typename promise_type>
+		void coroutineFinalSuspending(const std::coroutine_handle<promise_type> &handle) {
+			auto key = internal::SmartCoroutineHandle<>(handle);
+			m_simulationCoroutines.erase(key);
+		}
+
 	protected:
-		void collectGarbage();
-		std::vector<internal::SmartCoroutineHandle<>> m_simulationCoroutines;
+		std::set<internal::SmartCoroutineHandle<>> m_simulationCoroutines;
 		std::queue<std::coroutine_handle<>> m_coroutinesReadyToResume;
 };
 
@@ -341,6 +354,7 @@ void SimulationFunction<ReturnValue>::promise_type::FinalSuspendAwaiter::await_s
 	auto *handler = SimulationCoroutineHandler::activeHandler;
 	for (const auto &coro : handle.promise().awaitingFinalSuspend)
 		handler->readyToResume(coro);
+	handler->coroutineFinalSuspending(handle);
 }
 
 template<typename ReturnValue>
