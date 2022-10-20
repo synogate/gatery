@@ -206,7 +206,7 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 	};
 	bram->setupPortA(rdPortSetup);
 
-	UInt rdAddr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+	UInt rdAddr = (UInt) getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 	Bit rdEn = getBitBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::enable}, '1');
 
 	bram->connectAddressPortA(rdAddr);
@@ -216,7 +216,7 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 	HCL_ASSERT(readClock->getTriggerEvent() == hlim::Clock::TriggerEvent::RISING);		
 	bram->attachClock(readClock, (size_t)RAMBxE2::Clocks::CLK_A_RD);   
 
-	UInt readData = bram->getReadDataPortA(width);
+	BVec readData = (BVec) bram->getReadDataPortA(width);
 	
 	for (size_t i = 1; i < rp.dedicatedReadLatencyRegisters.size(); i++) {
 		auto &reg = rp.dedicatedReadLatencyRegisters[i];
@@ -225,14 +225,14 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 		attribute(readData, {.allowFusing = false});
 	}		
 
-	UInt rdDataHook = hookUIntAfter(rp.dataOutput);
+	BVec rdDataHook = hookBVecAfter(rp.dataOutput);
 	rdDataHook.exportOverride(readData(0, rdDataHook.width()));
 
 	if (hasWritePort) {
 		auto &wp = memGrp->getWritePorts().front();
 
-		UInt wrAddr = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-		UInt wrData = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
+		UInt wrAddr = (UInt) getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+		UInt wrData = (UInt) getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
 		Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::enable}, '1');
 
 		HCL_ASSERT(rdAddr.size() == wrAddr.size());

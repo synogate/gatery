@@ -133,8 +133,8 @@ bool eSRAM::apply(hlim::NodeGroup *nodeGroup) const
 		portSetup.inputRegs = true;
 		altsyncram->setupPortA(wp.node->getBitWidth(), portSetup);
 
-		UInt wrData = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
-		UInt addr = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+		UInt wrData = (UInt) getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
+		UInt addr = (UInt) getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 		Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrEnable}, '1');
 
 		altsyncram->setInput(ALTSYNCRAM::Inputs::IN_DATA_A, (BVec) wrData);
@@ -149,8 +149,8 @@ bool eSRAM::apply(hlim::NodeGroup *nodeGroup) const
 			portSetup.outputRegs = (rp.dedicatedReadLatencyRegisters.size() > 1) && useInternalOutputRegister;
 			altsyncram->setupPortB(rp.node->getBitWidth(), portSetup);
 
-			UInt addr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-			UInt data = hookUIntAfter(rp.dataOutput);
+			UInt addr = (UInt) getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+			BVec data = hookBVecAfter(rp.dataOutput);
 
 			altsyncram->setInput(ALTSYNCRAM::Inputs::IN_ADDRESS_B, (BVec) addr);
 
@@ -162,7 +162,7 @@ bool eSRAM::apply(hlim::NodeGroup *nodeGroup) const
 				for ([[maybe_unused]] auto i : utils::Range(numExternalOutputRegisters)) 
 					readData = reg(readData);
 			}
-			data.exportOverride(readData);
+			data.exportOverride((BVec)readData);
 
 			altsyncram->attachClock(readClock, (size_t)ALTSYNCRAM::Clocks::CLK_0);
 		}		
@@ -172,11 +172,11 @@ bool eSRAM::apply(hlim::NodeGroup *nodeGroup) const
 		portSetup.outputRegs = (rp.dedicatedReadLatencyRegisters.size() > 1) && useInternalOutputRegister;
 		altsyncram->setupPortA(rp.node->getBitWidth(), portSetup);
 
-		UInt addr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-		UInt data = hookUIntAfter(rp.dataOutput);
+		UInt addr = (UInt) getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+		BVec data = hookBVecAfter(rp.dataOutput);
 
 		altsyncram->setInput(ALTSYNCRAM::Inputs::IN_ADDRESS_A, (BVec) addr);
-		UInt readData = (UInt) altsyncram->getOutputBVec(ALTSYNCRAM::Outputs::OUT_Q_A);
+		BVec readData = altsyncram->getOutputBVec(ALTSYNCRAM::Outputs::OUT_Q_A);
 		{
 			Clock clock(readClock);
 			ClockScope cscope(clock);

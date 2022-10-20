@@ -189,8 +189,8 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 		portSetup.dualClock = readClock != writeClock;
 		altsyncram->setupPortA(wp.node->getBitWidth(), portSetup);
 
-		UInt wrData = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
-		UInt addr = getUIntBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+		UInt wrData = (UInt) getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
+		UInt addr = (UInt) getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 		Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrEnable}, '1');
 
 		altsyncram->setInput(ALTSYNCRAM::Inputs::IN_DATA_A, (BVec) wrData);
@@ -206,14 +206,14 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 			portSetup.dualClock = readClock != writeClock;
 			altsyncram->setupPortB(rp.node->getBitWidth(), portSetup);
 
-			UInt addr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-			UInt data = hookUIntAfter(rp.dataOutput);
+			UInt addr = (UInt) getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+			BVec data = hookBVecAfter(rp.dataOutput);
 
 			altsyncram->setInput(ALTSYNCRAM::Inputs::IN_ADDRESS_B, (BVec) addr);
 			if (readEnable.node != nullptr)
 				altsyncram->setInput(ALTSYNCRAM::Inputs::IN_RDEN_B, Bit(SignalReadPort{readEnable}));
 
-			UInt readData = (UInt) altsyncram->getOutputBVec(ALTSYNCRAM::Outputs::OUT_Q_B);
+			BVec readData = altsyncram->getOutputBVec(ALTSYNCRAM::Outputs::OUT_Q_B);
 
 			{
 				Clock clock(readClock);
@@ -222,7 +222,7 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 					if (useInternalOutputRegister)
 						readData = reg(readData);
 					else
-						readData = reg(readData, 0); // reset first register to prevent MnK merge. reset others to prevent ALM split.
+						readData = reg(readData, BVec(0)); // reset first register to prevent MnK merge. reset others to prevent ALM split.
 			}
 			data.exportOverride(readData);
 
@@ -235,13 +235,13 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 		portSetup.outputRegs = (rp.dedicatedReadLatencyRegisters.size() > 1) && useInternalOutputRegister;
 		altsyncram->setupPortA(rp.node->getBitWidth(), portSetup);
 
-		UInt addr = getUIntBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-		UInt data = hookUIntAfter(rp.dataOutput);
+		UInt addr = (UInt) getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+		BVec data = hookBVecAfter(rp.dataOutput);
 
 		altsyncram->setInput(ALTSYNCRAM::Inputs::IN_ADDRESS_A, (BVec) addr);
 		if (readEnable.node != nullptr)
 			altsyncram->setInput(ALTSYNCRAM::Inputs::IN_RDEN_A, Bit(SignalReadPort{readEnable}));
-		UInt readData = (UInt) altsyncram->getOutputBVec(ALTSYNCRAM::Outputs::OUT_Q_A);
+		BVec readData = altsyncram->getOutputBVec(ALTSYNCRAM::Outputs::OUT_Q_A);
 		{
 			Clock clock(readClock);
 			ClockScope cscope(clock);
@@ -249,7 +249,7 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 				if (useInternalOutputRegister)
 					readData = reg(readData);
 				else
-					readData = reg(readData, 0); // reset first register to prevent MnK merge. reset others to prevent ALM split.
+					readData = reg(readData, BVec(0)); // reset first register to prevent MnK merge. reset others to prevent ALM split.
 		}
 		data.exportOverride(readData);
 
