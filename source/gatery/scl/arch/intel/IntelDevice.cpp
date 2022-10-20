@@ -342,12 +342,13 @@ void IntelDevice::setupDevice(std::string device)
 		m_technologyMapping.addPattern(std::make_unique<TRIPattern>());
 
 	} else if (cyclone10DevStr.parse(m_device)) {
-		m_family = "Cyclone 10";
 
 		if (cyclone10DevStr.variant == Cyclone10DeviceString::GX) {
+			m_family = "Cyclone 10 GX";
 			m_embeddedMemoryList->add(std::make_unique<MLAB>(*this));
 			m_embeddedMemoryList->add(std::make_unique<M20K>(*this));
 		} else {
+			m_family = "Cyclone 10 LP";
 			m_embeddedMemoryList->add(std::make_unique<M9K>(*this));
 		}
 		m_technologyMapping.addPattern(std::make_unique<GLOBALPattern>());
