@@ -58,19 +58,9 @@ class MMCME2_BASE : public gtry::ExternalComponent
 
 		MMCME2_BASE();
 
-		void setInput(Inputs input, const Bit &bit);
-		Bit getOutput(Outputs output);
-
 		void setClock(hlim::Clock *clock);
 
-		virtual std::string getTypeName() const override;
-		virtual void assertValidity() const override;
-		virtual std::string getInputName(size_t idx) const override;
-		virtual std::string getOutputName(size_t idx) const override;
-
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
-
-		virtual std::string attemptInferOutputName(size_t outputPort) const override;
 	protected:
 };
 

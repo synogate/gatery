@@ -17,13 +17,13 @@
 */
 #include "gatery/pch.h"
 
-#include "oserdes.h"
+#include "serdes.h"
 
-#include "OSERDESE2.h"
+//#include "OSERDESE2.h"
 
-namespace gtry::scl::arch::xilinx {
+namespace gtry::scl {
 
-Bit serdes(UInt data) {
+Bit oserdes(UInt data) {
 	Area serdesArea{"scl_oserdes"};
 	auto scope = serdesArea.enter();
 
