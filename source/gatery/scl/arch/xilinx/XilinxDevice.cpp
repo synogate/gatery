@@ -23,6 +23,7 @@
 
 #include "OBUFDS.h"
 #include "BUFG.h"
+#include "ODDR.h"
 #include "FifoPattern.h"
 #include "BlockramUltrascale.h"
 #include "Lutram7Series.h"
@@ -175,6 +176,9 @@ void XilinxDevice::setupCustomComposition(const gtry::utils::ConfigTree &customC
 
 	if (customComposition["BUFG"].as(false))
 		m_technologyMapping.addPattern(std::make_unique<BUFGPattern>());
+
+	if (customComposition["ODDR"].as(false))
+		m_technologyMapping.addPattern(std::make_unique<ODDRPattern>());
 }
 
 
@@ -195,6 +199,7 @@ void XilinxDevice::setupDevice(std::string device)
 		m_embeddedMemoryList->add(std::make_unique<Lutram7Series>(*this));
 
 		m_technologyMapping.addPattern(std::make_unique<BUFGPattern>());
+		m_technologyMapping.addPattern(std::make_unique<ODDRPattern>());
 
 	} else if (kintexVirtexUltraDevStr.parse(m_device)) {
 		if (kintexVirtexUltraDevStr.KintexVirtex == 'K')
@@ -206,6 +211,7 @@ void XilinxDevice::setupDevice(std::string device)
 		m_embeddedMemoryList->add(std::make_unique<BlockramUltrascale>(*this));
 
 		m_technologyMapping.addPattern(std::make_unique<BUFGPattern>());
+		m_technologyMapping.addPattern(std::make_unique<ODDRPattern>());
 
 	} else
 		HCL_DESIGNCHECK_HINT(false, "The device string " + m_device + " does not match the pattern of any of the known device families. Specify a familiy or use custom_composition to specify the device's hardware features.");

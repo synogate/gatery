@@ -19,8 +19,8 @@
 
 
 #include <gatery/frontend/GHDLTestFixture.h>
-#include <gatery/scl/arch/intel/IntelDevice.h>
-#include <gatery/scl/arch/intel/ALTPLL.h>
+#include <gatery/scl/arch/xilinx/XilinxDevice.h>
+#include <gatery/scl/arch/xilinx/ODDR.h>
 #include <gatery/scl/utils/GlobalBuffer.h>
 #include <gatery/scl/io/ddr.h>
 
@@ -32,20 +32,20 @@
 
 using namespace boost::unit_test;
 
-boost::test_tools::assertion_result canCompileIntel(boost::unit_test::test_unit_id)
+boost::test_tools::assertion_result canCompileXilinx(boost::unit_test::test_unit_id)
 {
-	return gtry::GHDLGlobalFixture::hasGHDL() && gtry::GHDLGlobalFixture::hasIntelLibrary();
+	return gtry::GHDLGlobalFixture::hasGHDL() && gtry::GHDLGlobalFixture::hasXilinxLibrary();
 }
 
 
-BOOST_AUTO_TEST_SUITE(IntelTechMapping, * precondition(canCompileIntel))
+BOOST_AUTO_TEST_SUITE(XilinxTechMapping, * precondition(canCompileXilinx))
 
 BOOST_FIXTURE_TEST_CASE(testGlobalBuffer, gtry::GHDLTestFixture)
 {
 	using namespace gtry;
 
-	auto device = std::make_unique<scl::IntelDevice>();
-	device->setupMAX10();
+	auto device = std::make_unique<scl::XilinxDevice>();
+	device->setupZynq7();
 	design.setTargetTechnology(std::move(device));
 
 
@@ -62,8 +62,8 @@ BOOST_FIXTURE_TEST_CASE(SCFifo, gtry::GHDLTestFixture)
 {
 	using namespace gtry;
 
-	auto device = std::make_unique<scl::IntelDevice>();
-	device->setupMAX10();
+	auto device = std::make_unique<scl::XilinxDevice>();
+	device->setupZynq7();
 	design.setTargetTechnology(std::move(device));
 
 	scl::Fifo<UInt> fifo(128, 8_b);
@@ -91,8 +91,8 @@ BOOST_FIXTURE_TEST_CASE(DCFifo, gtry::GHDLTestFixture)
 {
 	using namespace gtry;
 
-	auto device = std::make_unique<scl::IntelDevice>();
-	device->setupMAX10();
+	auto device = std::make_unique<scl::XilinxDevice>();
+	device->setupZynq7();
 	design.setTargetTechnology(std::move(device));
 
 	Clock clock1({
@@ -134,12 +134,12 @@ BOOST_FIXTURE_TEST_CASE(DCFifo, gtry::GHDLTestFixture)
 }
 
 
-BOOST_FIXTURE_TEST_CASE(instantiateAltPll, gtry::GHDLTestFixture)
+BOOST_FIXTURE_TEST_CASE(instantiateODDR, gtry::GHDLTestFixture)
 {
 	using namespace gtry;
 
-	auto device = std::make_unique<scl::IntelDevice>();
-	device->setupMAX10();
+	auto device = std::make_unique<scl::XilinxDevice>();
+	device->setupZynq7();
 	design.setTargetTechnology(std::move(device));
 
 	Clock clock1({
@@ -149,105 +149,29 @@ BOOST_FIXTURE_TEST_CASE(instantiateAltPll, gtry::GHDLTestFixture)
 	HCL_NAMED(clock1);
 	ClockScope scp(clock1);
 
-	auto *pll = design.createNode<scl::arch::intel::ALTPLL>();
-	pll->setClock(0, clock1.getClk());
+	auto *ddr = design.createNode<scl::arch::xilinx::ODDR>();
+	ddr->attachClock(clock1.getClk(), scl::arch::xilinx::ODDR::CLK_IN);
 
-	pll->configureDeviceFamily("MAX 10");
-	pll->configureClock(0, 2, 3, 50, 0);
+	ddr->setEdgeMode(scl::arch::xilinx::ODDR::SAME_EDGE);
+	ddr->setInitialOutputValue(false);
 
-
-	Bit clkSignal; // Leave unconnected to let the simulator drive the clock signal during simulation
-	clkSignal.exportOverride(pll->getOutputBVec(scl::arch::intel::ALTPLL::OUT_CLK)[0]);
-	pinOut(clkSignal).setName("clkOut");
+	ddr->setInput(scl::arch::xilinx::ODDR::IN_D1, pinIn().setName("d1"));
+	ddr->setInput(scl::arch::xilinx::ODDR::IN_D2, pinIn().setName("d2"));
+	ddr->setInput(scl::arch::xilinx::ODDR::IN_SET, clock1.rstSignal());
+	ddr->setInput(scl::arch::xilinx::ODDR::IN_CE, Bit('1'));
 	
-
-	Bit rstSignal; // Leave unconnected to let the simulator drive the clock's reset signal during simulation
-	rstSignal.exportOverride(!pll->getOutputBit(scl::arch::intel::ALTPLL::OUT_LOCKED) | clock1.rstSignal());
-	pinOut(rstSignal).setName("rstOut");
-	
+	pinOut(ddr->getOutputBit(scl::arch::xilinx::ODDR::OUT_Q)).setName("ddr_output");
 
 
 	testCompilation();
 }
-
-
-
-
-BOOST_FIXTURE_TEST_CASE(testAltPll, gtry::GHDLTestFixture)
-{
-	using namespace gtry;
-
-	auto device = std::make_unique<scl::IntelDevice>();
-	device->setupMAX10();
-	design.setTargetTechnology(std::move(device));
-
-	Clock clock1({
-			.absoluteFrequency = {{125'000'000,1}},
-			.initializeRegs = false,
-	});
-	HCL_NAMED(clock1);
-	Clock clock2({
-			.absoluteFrequency = {{75'000'000,1}},
-			//.resetType = Clock::ResetType::ASYNCHRONOUS,
-			.initializeRegs = false,
-	});
-	HCL_NAMED(clock2);
-
-	{
-		Area area("clockArea", true);
-
-		auto *pll = design.createNode<scl::arch::intel::ALTPLL>();
-		pll->setClock(0, clock1.getClk());
-
-		pll->configureDeviceFamily("MAX 10");
-		pll->configureClock(0, 2, 3, 50, 0);
-
-
-		Bit clkSignal; // Leave unconnected to let the simulator drive the clock signal during simulation
-		clkSignal.exportOverride(pll->getOutputBVec(scl::arch::intel::ALTPLL::OUT_CLK)[0]);
-		HCL_NAMED(clkSignal);
-		clock2.overrideClkWith(clkSignal);
-
-
-		Bit rstSignal; // Leave unconnected to let the simulator drive the clock's reset signal during simulation
-		rstSignal.exportOverride(!pll->getOutputBit(scl::arch::intel::ALTPLL::OUT_LOCKED) | clock1.rstSignal());
-		HCL_NAMED(rstSignal);
-		clock2.overrideRstWith(rstSignal);
-	}
-
-	scl::Fifo<UInt> fifo(128, 8_b);
-
-	{
-		ClockScope clkScp(clock1);
-		Bit inValid = pinIn().setName("inValid");
-		UInt inData = pinIn(8_b).setName("inData");
-		IF (inValid)
-			fifo.push(inData);
-	}
-
-	{
-		ClockScope clkScp(clock2);
-		UInt outData = fifo.peek();
-		Bit outValid = !fifo.empty();
-		IF (outValid)
-			fifo.pop();
-		pinOut(outData).setName("outData");
-		pinOut(outValid).setName("outValid");
-	}
-
-	fifo.generate();
-
-
-	testCompilation();
-}
-
 
 BOOST_FIXTURE_TEST_CASE(instantiate_scl_ddr, gtry::GHDLTestFixture)
 {
 	using namespace gtry;
 
-	auto device = std::make_unique<scl::IntelDevice>();
-	device->setupMAX10();
+	auto device = std::make_unique<scl::XilinxDevice>();
+	device->setupZynq7();
 	design.setTargetTechnology(std::move(device));
 
 	Clock clock1({

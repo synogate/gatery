@@ -27,6 +27,7 @@
 #include "MLAB.h"
 #include "GLOBAL.h"
 #include "TRI.h"
+#include "ALTDDIO_OUT.h"
 
 
 #include <regex>
@@ -263,6 +264,9 @@ void IntelDevice::setupCustomComposition(const gtry::utils::ConfigTree &customCo
 
 	if (customComposition["GLOBAL"].as(false))
 		m_technologyMapping.addPattern(std::make_unique<GLOBALPattern>());
+	
+	if (customComposition["ALTDDIO_OUT"].as(false))
+		m_technologyMapping.addPattern(std::make_unique<ALTDDIO_OUTPattern>(*this));
 }
 
 
@@ -324,6 +328,7 @@ void IntelDevice::setupDevice(std::string device)
 
 		m_technologyMapping.addPattern(std::make_unique<GLOBALPattern>());
 		m_technologyMapping.addPattern(std::make_unique<TRIPattern>());
+		m_technologyMapping.addPattern(std::make_unique<ALTDDIO_OUTPattern>(*this));
 
 	} else if (arria10DevStr.parse(m_device)) {
 		m_family = "Arria 10";
@@ -332,6 +337,7 @@ void IntelDevice::setupDevice(std::string device)
 		m_embeddedMemoryList->add(std::make_unique<M20K>(*this));
 		m_technologyMapping.addPattern(std::make_unique<GLOBALPattern>());
 		m_technologyMapping.addPattern(std::make_unique<TRIPattern>());
+		m_technologyMapping.addPattern(std::make_unique<ALTDDIO_OUTPattern>(*this));
 
 	} else if (stratix10DevStr.parse(m_device)) {
 		m_family = "Stratix 10";
@@ -340,6 +346,7 @@ void IntelDevice::setupDevice(std::string device)
 		m_embeddedMemoryList->add(std::make_unique<M20K>(*this));
 		m_technologyMapping.addPattern(std::make_unique<GLOBALPattern>());
 		m_technologyMapping.addPattern(std::make_unique<TRIPattern>());
+		m_technologyMapping.addPattern(std::make_unique<ALTDDIO_OUTPattern>(*this));
 
 	} else if (cyclone10DevStr.parse(m_device)) {
 		m_family = "Cyclone 10";
@@ -352,6 +359,7 @@ void IntelDevice::setupDevice(std::string device)
 		}
 		m_technologyMapping.addPattern(std::make_unique<GLOBALPattern>());
 		m_technologyMapping.addPattern(std::make_unique<TRIPattern>());
+		m_technologyMapping.addPattern(std::make_unique<ALTDDIO_OUTPattern>(*this));
 
 	} else if (max10DevStr.parse(m_device)) {
 		m_family = "MAX 10";
@@ -359,6 +367,7 @@ void IntelDevice::setupDevice(std::string device)
 		m_embeddedMemoryList->add(std::make_unique<M9K>(*this));
 		m_technologyMapping.addPattern(std::make_unique<GLOBALPattern>());
 		m_technologyMapping.addPattern(std::make_unique<TRIPattern>());
+		m_technologyMapping.addPattern(std::make_unique<ALTDDIO_OUTPattern>(*this));
 	   
 	} else
 		HCL_DESIGNCHECK_HINT(false, "The device string " + m_device + " does not match the pattern of any of the known device families. Specify a familiy or use custom_composition to specify the device's hardware features.");
