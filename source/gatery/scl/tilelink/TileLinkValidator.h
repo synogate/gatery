@@ -33,23 +33,8 @@ namespace gtry::scl
 	SimProcess validateTileLinkOperations(TileLinkChannelA& a, std::vector<TileLinkA::OpCode> whitelist, const Clock& clk);
 	SimProcess validateTileLinkMask(TileLinkChannelA& a, const Clock& clk);
 
-	namespace internal
-	{
-		template<TileLinkSignal TLink> std::vector<TileLinkA::OpCode> tileLinkValidOps(const TLink& link);
-	}
-
 	template<TileLinkSignal TileLinkType>
-	SimProcess validate(TileLinkType &tileLink, const Clock &clk) 
-	{
-		co_await fork(validateTileLink(tileLink.a, *tileLink.d, clk));
-		
-		if constexpr (!tileLink.template capability<TileLinkCapBurst>())
-			co_await fork(validateTileLinkNoBurst(tileLink.a, clk));
-
-		auto ops = internal::tileLinkValidOps(tileLink);
-		co_await fork(validateTileLinkOperations(tileLink.a, ops, clk));
-	}
-
+	SimProcess validate(TileLinkType& tileLink, const Clock& clk);
 }
 
 namespace gtry::scl::internal
@@ -73,5 +58,26 @@ namespace gtry::scl::internal
 			ret.push_back(TileLinkA::LogicalData);
 
 		return ret;
+	}
+}
+
+namespace gtry::scl
+{
+	template<TileLinkSignal TileLinkType>
+	SimProcess validate(TileLinkType& tileLink, const Clock& clk)
+	{
+		co_await fork(validateTileLink(tileLink.a, *tileLink.d, clk));
+
+		if constexpr (!tileLink.template capability<TileLinkCapBurst>())
+			co_await fork(validateTileLinkNoBurst(tileLink.a, clk));
+
+		auto ops = internal::tileLinkValidOps(tileLink);
+		co_await fork(validateTileLinkOperations(tileLink.a, ops, clk));
+	}
+
+	template<TileLinkSignal TileLinkType>
+	SimProcess validateTileLinkMemory(TileLinkType& link, const Clock& clk)
+	{
+		return validateTileLinkMemory(link.a, *link.d, clk);
 	}
 }

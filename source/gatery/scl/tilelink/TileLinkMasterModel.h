@@ -53,6 +53,7 @@ namespace gtry::scl
 		void probability(float valid, float ready);
 
 		SimFunction<TransactionIn> request(TransactionOut tx, const Clock& clk);
+		SimProcess idle(size_t requestsPending = 0);
 
 		SimFunction<std::tuple<uint64_t,uint64_t,bool>> get(uint64_t address, uint64_t logByteSize, const Clock &clk);
 		SimFunction<bool> put(uint64_t address, uint64_t logByteSize, uint64_t data, const Clock &clk);

@@ -90,15 +90,15 @@ namespace gtry::scl
 		IF(link.a->opcode == (size_t)TileLinkA::PutFullData |
 			link.a->opcode == (size_t)TileLinkA::PutPartialData)
 		{
-			(d)->data = ConstBVec(mem.wordSize());
-
-			BVec writeData = (d)->data;
+			BVec writeData = d->data;
 			for (size_t i = 0; i < link.a->mask.size(); ++i)
 				IF(link.a->mask[i])
-				writeData(i * 8, 8_b) = link.a->data(i * 8, 8_b);
+					writeData(i * 8, 8_b) = link.a->data(i * 8, 8_b);
 
 			IF(transfer(link.a))
 				port = writeData;
+
+			d->data = ConstBVec(mem.wordSize());
 		}
 
 		// create downstream registers

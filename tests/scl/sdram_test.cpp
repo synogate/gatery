@@ -25,6 +25,7 @@
 
 #include <gatery/scl/memory/sdram.h>
 #include <gatery/scl/memory/SdramTimer.h>
+#include <gatery/scl/memory/MemoryTester.h>
 #include <gatery/scl/tilelink/TileLinkMasterModel.h>
 #include <gatery/scl/tilelink/TileLinkValidator.h>
 
@@ -55,7 +56,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 		simu(bus.wen) = '1';
 		co_await AfterClk(clock());
 
-		// set Mode Register
+		// set Mode Register (CL = 2)
 		simu(bus.cke) = '1';
 		simu(bus.csn) = '0';
 		simu(bus.rasn) = '0';
@@ -63,7 +64,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 		simu(bus.wen) = '0';
 
 		simu(bus.ba) = 0;
-		simu(bus.a) = 0;
+		simu(bus.a) = 2 << 4;
 		co_await AfterClk(clock());
 		simu(bus.csn) = '1';
 		co_await AfterClk(clock());
@@ -123,7 +124,11 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 		// Read CAS
 		simu(bus.wen) = '1';
 		simu(bus.dq).invalidate();
+		co_await AfterClk(clock());
+		simu(bus.casn) = '1';
+		co_await AfterClk(clock());
 		BOOST_TEST(simu(dq) == "xXX13");
+
 		co_await AfterClk(clock());
 
 		// set Mode Register (CL = 2) (Burst = 4)
@@ -177,6 +182,31 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 			co_await AfterClk(clock());
 		stopTest();
 		co_return;
+	});
+}
+
+BOOST_FIXTURE_TEST_CASE(memory_tester_pass_test, ClockedTest)
+{
+	scl::TileLinkUL link;
+	scl::tileLinkInit(link, 6_b, 16_b, 1_b, 2_b);
+
+	Memory<BVec> memory(link.a->address.width().count(), link.a->data.width());
+	memory <<= link;
+	
+	valid(*link.d) = reg(valid(*link.d), '0');
+	**link.d = reg(**link.d);
+	pinOut(*link.a, "a");
+	pinOut(**link.d, "d");
+
+	gtry::scl::MemoryTester tester;
+	tester.generate(link);
+
+	sim_assert(tester.numErrors() == 0) << "detected false memory errors";
+
+	addSimulationProcess([=]()->SimProcess {
+		for(size_t i = 0; i < 70; ++i)
+			co_await OnClk(clock());
+		stopTest();
 	});
 }
 
@@ -325,7 +355,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_timer_test, ClockedTest)
 		co_await AfterClk(clock());
 		simu(bus.csn) = '1';
 
-		size_t writeDelay = (4 - 1) + timings.cl + (timings.wr - 1);
+		size_t writeDelay = (4 - 1) + timings.cl + timings.wr;
 		for (size_t i = 0; i < 7; ++i)
 		{
 			BOOST_TEST(simu(b0Activate) == '1');
@@ -562,6 +592,126 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_burst_test, SdramControllerTest)
 		BOOST_TEST(std::get<0>(co_await join(read2)) == 0x0102030405060708);
 
 		for (size_t i = 0; i < 8; ++i)
+			co_await OnClk(clock());
+
+		stopTest();
+	});
+}
+
+BOOST_FIXTURE_TEST_CASE(sdram_constroller_fuzz_test, SdramControllerTest)
+{
+	setupLink();
+	generate(link);
+	timeout(hlim::ClockRational{ 22000, 1'000'000 });
+
+	addSimulationProcess([=]()->SimProcess 
+	{
+		const uint64_t seed = std::random_device{}();
+		std::mt19937_64 rng{ seed };
+
+		co_await OnClk(clock());
+		co_await fork(scl::validate(linkModel.getLink(), clock()));
+
+		// TODO: refactor fuzzing module out of unit test
+		std::map<uint64_t, uint8_t> content;
+		auto insert_write = [&](uint64_t address, uint64_t size, uint64_t value)
+		{
+			for (size_t i = 0; i < 1ull << size; ++i)
+				content[address + i] = uint8_t(value >> (i * 8));
+		};
+
+		auto check_read = [&](uint64_t address, uint64_t size, uint64_t value, uint64_t defined)
+		{
+			for (size_t i = 0; i < 1ull << size; ++i)
+			{
+				auto it = content.find(address + i);
+				if (it != content.end())
+				{
+					uint8_t readValue = uint8_t(value >> (i * 8));
+					if (it->second != readValue)
+					{
+						hlim::BaseNode* node = link.a->opcode.node();
+						std::stringstream msg;
+						msg << "Unexpected memory read result at address " << std::hex << address + i << 
+							", data is " << (size_t)readValue << " should be " << (size_t)it->second << 
+							" at " << sim::SimulationContext::nowNs() << " ns. seed " << seed;
+
+						sim::SimulationContext::current()->onAssert(node, msg.str());
+					}
+				}
+			}
+		};
+
+		std::set<uint64_t> usedAddress;
+		for(size_t i = 0; i < 2'000; ++i)
+		{
+			co_await linkModel.idle(8);
+
+			uint64_t size = rng() & 3;
+			uint64_t address = rng() & link.a->address.width().mask();
+			address &= ~((1ull << size) - 1);
+
+			if (!usedAddress.empty() && rng() % 2 == 0)
+			{
+				// read
+				auto it = usedAddress.lower_bound(address);
+				if (it == usedAddress.end())
+					it = usedAddress.begin();
+
+				address = *it;
+				address &= ~((1ull << size) - 1);
+
+				co_await fork([=](uint64_t address, uint64_t size) -> SimProcess {
+					auto [value, defined, error] = co_await linkModel.get(address, size, clock());
+					BOOST_TEST(!error);
+					check_read(address, size, value, defined);
+				}(address, size));
+			}
+			else
+			{
+				// write
+				usedAddress.insert(address);
+				uint64_t data = rng();
+
+				co_await fork([=](uint64_t address, uint64_t size, uint64_t data) -> SimProcess {
+					bool error = co_await linkModel.put(address, size, data, clock());
+					BOOST_TEST(!error);
+					insert_write(address, size, data);
+				}(address, size, data));
+			}
+		}
+
+		auto read = co_await fork(linkModel.get(0, 0, clock()));
+		co_await join(read);
+		
+		for (size_t i = 0; i < 8; ++i)
+			co_await OnClk(clock());
+
+		stopTest();
+	});
+}
+
+BOOST_FIXTURE_TEST_CASE(sdram_constroller_memory_tester_test, SdramControllerTest)
+{
+	addressMap({
+		.column = Selection::Slice(1, 2),
+		.row = Selection::Slice(3, 4),
+		.bank = Selection::Slice(7, 1)
+	});
+
+	scl::tileLinkInit(link, 8_b, 16_b, 2_b, 2_b);
+	generate(link);
+
+	scl::MemoryTester tester;
+	tester.generate(link);
+	sim_assert(tester.numErrors() == 0) << "found memory errors";
+	pinOut(tester.numErrors()).setName("numErrors");
+
+	timeout(hlim::ClockRational{ 10, 1'000'000 });
+
+	addSimulationProcess([=]()->SimProcess
+	{
+		for (size_t i = 0; i < 730; ++i)
 			co_await OnClk(clock());
 
 		stopTest();
