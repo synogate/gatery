@@ -210,6 +210,19 @@ bool NodeGroupSurgeryHelper::containsSignal(std::string_view name)
 #endif
 }
 
+hlim::Node_Signal* NodeGroupSurgeryHelper::getSignal(std::string_view name)
+{
+#ifdef __clang__
+	auto it = m_namedSignalNodes.find(std::string(name));
+#else
+	auto it = m_namedSignalNodes.find(name);
+#endif
+	if (it == m_namedSignalNodes.end()) return nullptr;
+	
+	if (it->second.empty()) return nullptr;
+	return it->second.front();
+}
+
 BVec NodeGroupSurgeryHelper::hookBVecBefore(std::string_view name)
 {
 	auto it = m_namedSignalNodes.find(name);

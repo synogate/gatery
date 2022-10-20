@@ -50,6 +50,7 @@ class NodeGroupSurgeryHelper {
 		NodeGroupSurgeryHelper(hlim::NodeGroup *nodeGroup);
 
 		bool containsSignal(std::string_view name);
+		hlim::Node_Signal* getSignal(std::string_view name);
 
 		BVec hookBVecBefore(std::string_view name);
 		BVec hookBVecAfter(std::string_view name);

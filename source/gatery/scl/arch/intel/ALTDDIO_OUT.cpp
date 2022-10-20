@@ -20,6 +20,7 @@
 #include "IntelDevice.h"
 
 #include <gatery/hlim/coreNodes/Node_Register.h>
+#include <gatery/hlim/coreNodes/Node_Clk2Signal.h>
 #include <gatery/hlim/NodeGroup.h>
 
 
@@ -119,45 +120,8 @@ namespace gtry::scl::arch::intel
 		}
 
 
-		auto locateRegister = [&](hlim::Node_Signal *node, const char *name)->hlim::Node_Register*{
-			hlim::Node_Register *outputReg = nullptr;
-			std::set<hlim::NodePort> alreadyHandled;
-			for (auto nh : node->exploreOutput(0).skipDependencies()) {
-				if(alreadyHandled.contains(nh.nodePort())) {
-					nh.backtrack();
-					continue;
-				}
-				if (auto* reg = dynamic_cast<hlim::Node_Register*>(nh.node())) {
-					if (outputReg != nullptr) {
-						if (reg->getClocks()[0] != outputReg->getClocks()[0]) {
-							dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-									<< "Not replacing " << nodeGroup << " with ALTDDIO_OUT because the " << name << " input drives multiple registers with different clocks!");
-							return nullptr;
-						}
-					} else
-						outputReg = reg;
-					nh.backtrack();
-				}
-				else if (!nh.isNodeType<hlim::Node_Signal>()) {
-					dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-							<< "Not replacing " << nodeGroup << " with ALTDDIO_OUT because the " << name << " input drives things other than registers!");
-					return nullptr;
-				}
-				alreadyHandled.insert(nh.nodePort());
-			}
-			return outputReg;
-		};
-
 		BVec D0, D1;
-		hlim::Node_Register *reg0 = nullptr;
-		hlim::Node_Register *reg1 = nullptr;
 		if (vectorBased) {
-
-			reg0 = locateRegister(io.inputBVecs["D0"].node(), "'D0'");
-			if (reg0 == nullptr) return false;
-			reg1 = locateRegister(io.inputBVecs["D1"].node(), "'D1'");
-			if (reg1 == nullptr) return false;
-
 			D0 = io.inputBVecs["D0"];
 			D1 = io.inputBVecs["D1"];
 
@@ -168,11 +132,6 @@ namespace gtry::scl::arch::intel
 			}
 
 		} else {
-			reg0 = locateRegister(io.inputBits["D0"].node(), "'D0'");
-			if (reg0 == nullptr) return false;
-			reg1 = locateRegister(io.inputBits["D1"].node(), "'D1'");
-			if (reg1 == nullptr) return false;
-
 			D0 = (BVec) cat(io.inputBits["D0"]);
 			D1 = (BVec) cat(io.inputBits["D1"]);
 		}
@@ -184,12 +143,22 @@ namespace gtry::scl::arch::intel
 		}
 
 
-		hlim::Clock *clock = reg0->getClocks()[0];
-		if (reg1->getClocks()[0] != clock) {
+		NodeGroupSurgeryHelper area(nodeGroup);
+		auto *clkSignal = area.getSignal("CLK");
+		if (clkSignal == nullptr) {
 			dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-					<< "Not replacing " << nodeGroup << " with ALTDDIO_OUT because the 'D0' and 'D1' have registers driven by different clocks!");
+					<< "Not replacing " << nodeGroup << " with ALTDDIO_OUT because no 'CLK' signal was found!");
 			return false;
 		}
+		
+		auto *clk2signal = dynamic_cast<hlim::Node_Clk2Signal*>(clkSignal->getNonSignalDriver(0).node);
+		if (clk2signal == nullptr) {
+			dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+					<< "Not replacing " << nodeGroup << " with ALTDDIO_OUT because no 'CLK' signal not driven by clock!");
+			return false;
+		}
+
+		hlim::Clock *clock = clk2signal->getClocks()[0];
 
 		auto *ddr = DesignScope::createNode<ALTDDIO_OUT>(D0.width());
 
