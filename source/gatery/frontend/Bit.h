@@ -116,6 +116,7 @@ namespace gtry {
 		std::optional<bool> resetValue() const { return m_resetValue; }
 
 		hlim::Node_Signal* node() { return m_node; }
+		const hlim::Node_Signal* node() const { return m_node; }
 
 		Bit final() const;
 
