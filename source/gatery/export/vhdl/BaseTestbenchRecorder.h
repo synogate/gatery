@@ -55,10 +55,20 @@ class BaseTestbenchRecorder : public sim::SimulatorCallbacks
 		std::vector<std::string> m_dependencySortedEntities;
 		std::vector<std::string> m_auxiliaryDataFiles;
 
-		void declareSignals(std::ostream &stream, const std::set<hlim::Clock*> &allClocks, const std::set<hlim::Clock*> &allResets, const std::set<hlim::Node_Pin*> &allIOPins);
-		void writePortmap(std::ostream &stream, const std::set<hlim::Clock*> &allClocks, const std::set<hlim::Clock*> &allResets, const std::set<hlim::Node_Pin*> &allIOPins);
+		std::set<const hlim::Clock*> m_clocksOfInterest;
+		std::set<const hlim::Clock*> m_resetsOfInterest;
+		std::set<const hlim::Node_Pin*> m_allIOPins;
 
-		void buildClockProcess(std::ostream &stream, hlim::Clock *clock);
+		std::map<hlim::NodePort, std::string> m_outputToIoPinName;
+		std::map<std::string, std::string> m_signalOverrides;
+		std::map<std::string, std::string> m_resetOverrides;
+
+		void findClocksAndPorts();
+
+		void declareSignals(std::ostream &stream);
+		void writePortmap(std::ostream &stream);
+
+		void buildClockProcess(std::ostream &stream, const hlim::Clock *clock);
 };
 
 

@@ -58,27 +58,24 @@ ARCHITECTURE tb OF )" << m_name << R"( IS
 
 )";
 
+	findClocksAndPorts();
+
 	auto *rootEntity = m_ast->getRootEntity();
-
-	const auto &allClocks = rootEntity->getClocks();
-	const auto &allResets = rootEntity->getResets();
-	const auto &allIOPins = rootEntity->getIoPins();
-
-	m_clocksOfInterest.insert(allClocks.begin(), allClocks.end());
-	m_resetsOfInterest.insert(allResets.begin(), allResets.end());
 
 	CodeFormatting &cf = m_ast->getCodeFormatting();
 
-	declareSignals(m_testbenchFile, allClocks, allResets, allIOPins);
+	declareSignals(m_testbenchFile);
 
-	for (auto ioPin : allIOPins) {
+	for (auto ioPin : m_allIOPins) {
 		const std::string &name = rootEntity->getNamespaceScope().get(ioPin).name;
 
 		if (ioPin->isOutputPin())
 			m_outputToIoPinName[ioPin->getDriver(0)] = name;
 
-		if (ioPin->isInputPin())
-			m_outputToIoPinName[{.node=ioPin, .port=0}] = name;
+		if (ioPin->isInputPin()) {
+			hlim::NodePort pinOutput(const_cast<hlim::Node_Pin*>(ioPin), 0);
+			m_outputToIoPinName[pinOutput] = name;
+		}
 	}
 
 	m_testbenchFile << "BEGIN" << std::endl;
@@ -86,12 +83,12 @@ ARCHITECTURE tb OF )" << m_name << R"( IS
 	cf.indent(m_testbenchFile, 1);
 	m_testbenchFile << "inst_root : entity work." << rootEntity->getName() << "(impl) port map (" << std::endl;
 
-	writePortmap(m_testbenchFile, allClocks, allResets, allIOPins);
+	writePortmap(m_testbenchFile);
    
 	cf.indent(m_testbenchFile, 1);
 	m_testbenchFile << ");" << std::endl;
 
-	for (auto &clock : allClocks)
+	for (auto &clock : m_clocksOfInterest)
 		buildClockProcess(m_testbenchFile, clock);
 
 	cf.indent(m_testbenchFile, 1);
