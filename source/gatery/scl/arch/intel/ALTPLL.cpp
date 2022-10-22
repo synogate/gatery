@@ -25,8 +25,8 @@ namespace gtry::scl::arch::intel
 	ALTPLL::ALTPLL()
 	{
 		// The altpll in altera_mf_components is subtly different and broken so this one needs an explicit component declaration to override that.
-		m_libraryName = "";
-		m_packageName = "";
+		m_libraryName = "altera_mf";
+		m_packageName = "altera_mf_components";
 		m_requiresComponentDeclaration = true;
 		m_name = "ALTPLL";
 
@@ -107,15 +107,19 @@ namespace gtry::scl::arch::intel
 
 
 		declOutputBitVector(OUT_CLK, "CLK", 5, "width_clock");
-		declOutputBitVector(OUT_E, "E", 10);
-		declOutputBitVector(OUT_CLKBAD, "CLKBAD", 10);
+		//declOutputBitVector(OUT_E, "E", 10);
+		declOutputBitVector(OUT_CLKBAD, "CLKBAD", 2);
 		declOutputBit(OUT_ACTIVECLOCK, "ACTIVECLOCK");
 		declOutputBit(OUT_CLKLOSS, "CLKLOSS");
 		declOutputBit(OUT_LOCKED, "LOCKED");
 		declOutputBit(OUT_SCANDATAOUT, "SCANDATAOUT");
 		declOutputBit(OUT_FBOUT, "FBOUT");
-		declOutputBitVector(OUT_ENABLE, "ENABLE", 2);
-		declOutputBitVector(OUT_SCLKOUT, "SCLKOUT", 2);
+		//declOutputBitVector(OUT_ENABLE, "ENABLE", 2);
+		declOutputBit(OUT_ENABLE0, "ENABLE0");
+		declOutputBit(OUT_ENABLE1, "ENABLE1");
+		//declOutputBitVector(OUT_SCLKOUT, "SCLKOUT", 2);
+		declOutputBit(OUT_SCLKOUT0, "SCLKOUT0");
+		declOutputBit(OUT_SCLKOUT1, "SCLKOUT1");
 		declOutputBit(OUT_PHASEDONE, "PHASEDONE");
 		declOutputBit(OUT_SCANDONE, "SCANDONE");
 
@@ -148,7 +152,7 @@ namespace gtry::scl::arch::intel
 		m_genericParameters[name + "_divide_by"] = div;
 		m_genericParameters[name + "_duty_cycle"] = dutyCyclePercent;
 		m_genericParameters[name + "_multiply_by"] = mul;
-		m_genericParameters[name + "_phase_shift"] = phaseShift;
+		m_genericParameters[name + "_phase_shift"] = std::to_string(phaseShift);
 		return *this;
 	}
 
