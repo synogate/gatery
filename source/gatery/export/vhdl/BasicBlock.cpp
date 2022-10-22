@@ -413,10 +413,12 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
 				stream << m_externalNodes[statement.ref.externalNodeIdx].instanceName << " : ";
 				if (node->isEntity())
 					stream << " entity ";
-				if (!node->getLibraryName().empty())
-					stream << node->getLibraryName() << '.';
-				if (!node->getPackageName().empty())
-					stream << node->getPackageName() << '.';
+				if (!node->requiresComponentDeclaration()) {
+					if (!node->getLibraryName().empty())
+						stream << node->getLibraryName() << '.';
+					if (!node->getPackageName().empty())
+						stream << node->getPackageName() << '.';
+				}
 				stream << node->getName() << std::endl;
 				
 				if (!node->getGenericParameters().empty()) {
