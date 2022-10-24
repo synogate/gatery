@@ -41,7 +41,7 @@ namespace gtry {
 		m_defaultTechScope.emplace(m_targetTech->getTechCaps());
 
 		m_defaultClock = std::make_unique<Clock>(ClockConfig{
-				.absoluteFrequency = {{1,100'000'000}},
+				.absoluteFrequency = 100'000'000,
 				.name = "GateryDefaultClock",
 				.resetType = ClockConfig::ResetType::NONE, // this is also necessary to ensure sim_asserts werk in eval-only contexts
 				.memoryResetType = ClockConfig::ResetType::NONE,
