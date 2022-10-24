@@ -19,6 +19,7 @@
 #include "ODDR.h"
 
 #include <gatery/hlim/coreNodes/Node_Register.h>
+#include <gatery/hlim/coreNodes/Node_Clk2Signal.h>
 #include <gatery/hlim/NodeGroup.h>
 
 namespace gtry::scl::arch::xilinx {
@@ -115,50 +116,27 @@ bool ODDRPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 	}
 
 
-	auto locateRegister = [&](Bit &input, const char *name)->hlim::Node_Register*{
-		hlim::Node_Register *outputReg = nullptr;
-		std::set<hlim::NodePort> alreadyHandled;
-		for (auto nh : input.node()->exploreOutput(0).skipDependencies()) {
-			if(alreadyHandled.contains(nh.nodePort())) {
-				nh.backtrack();
-				continue;
-			}
-			if (auto* reg = dynamic_cast<hlim::Node_Register*>(nh.node())) {
-				if (outputReg != nullptr) {
-					if (reg->getClocks()[0] != outputReg->getClocks()[0]) {
-						dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-								<< "Not replacing " << nodeGroup << " with ODDR because the " << name << " input drives multiple registers with different clocks!");
-						return nullptr;
-					}
-				} else
-					outputReg = reg;
-				nh.backtrack();
-			}
-			else if (!nh.isNodeType<hlim::Node_Signal>()) {
-				dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-						<< "Not replacing " << nodeGroup << " with ODDR because the " << name << " input drives things other than registers!");
-				return nullptr;
-			}
-			alreadyHandled.insert(nh.nodePort());
-		}
-		return outputReg;
-	};
-
-
 	Bit &D0 = io.inputBits["D0"];
 	Bit &D1 = io.inputBits["D1"];
 
-	auto *reg0 = locateRegister(D0, "'D0'");
-	if (reg0 == nullptr) return false;
-	auto *reg1 = locateRegister(D1, "'D1'");
-	if (reg1 == nullptr) return false;
 
-	hlim::Clock *clock = reg0->getClocks()[0];
-	if (reg1->getClocks()[0] != clock) {
+
+	NodeGroupSurgeryHelper area(nodeGroup);
+	auto *clkSignal = area.getSignal("CLK");
+	if (clkSignal == nullptr) {
 		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-				<< "Not replacing " << nodeGroup << " with ODDR because the 'D0' and 'D1' have registers driven by different clocks!");
+				<< "Not replacing " << nodeGroup << " with ODDR because no 'CLK' signal was found!");
 		return false;
 	}
+	
+	auto *clk2signal = dynamic_cast<hlim::Node_Clk2Signal*>(clkSignal->getNonSignalDriver(0).node);
+	if (clk2signal == nullptr) {
+		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+				<< "Not replacing " << nodeGroup << " with ODDR because no 'CLK' signal not driven by clock!");
+		return false;
+	}
+
+	hlim::Clock *clock = clk2signal->getClocks()[0];
 
 	Bit &output = io.outputBits["O"];
 

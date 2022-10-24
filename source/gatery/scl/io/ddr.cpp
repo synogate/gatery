@@ -29,9 +29,6 @@ Bit ddr(Bit D0, Bit D1)
 	setName(D0, "D0");
 	setName(D1, "D1");
 
-	D0 = reg(D0);
-	D1 = reg(D1);
-
 	auto &clock = ClockScope::getClk();
 
 	Bit sel = clock.clkSignal();
