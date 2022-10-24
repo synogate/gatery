@@ -134,24 +134,8 @@ void BoostUnitTestSimulationFixture::prepRun()
 	}
 }
 
-
-void ClockedTest::setup()
-{
-	BoostUnitTestSimulationFixture::setup();
-
-	m_clock = ClockConfig{
-		.absoluteFrequency = 100'000'000,
-		.name = "clock",
-		.resetType = ClockConfig::ResetType::NONE
-	};
-
-	m_clockScope.emplace(*m_clock);
-}
-
 void ClockedTest::teardown()
 {
-	m_clockScope.reset();
-
 	try {
 		design.postprocess();
 		//design.getCircuit().postprocess(hlim::MinimalPostprocessing{});
@@ -163,8 +147,6 @@ void ClockedTest::teardown()
 		dbg::awaitDebugger();
 		dbg::stopInDebugger();
 	}
-
-	m_clock.reset();
 
 	BoostUnitTestSimulationFixture::teardown();
 }
