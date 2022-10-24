@@ -20,6 +20,7 @@
 
 #include "../Counter.h"
 #include "../ShiftReg.h"
+#include "../io/ddr.h"
 #include "../stream/StreamArbiter.h"
 #include "../stream/adaptWidth.h"
 
@@ -158,7 +159,7 @@ size_t gtry::scl::sdram::Controller::writeToReadTiming() const
 
 size_t gtry::scl::sdram::Controller::readDelay() const
 {
-	size_t delay = m_timing.cl;
+	size_t delay = m_timing.cl - 1;
 	if (m_useOutputRegister)
 		delay += 1;
 	if (m_useInputRegister)
@@ -296,6 +297,8 @@ void Controller::makeBusPins(const CommandBus& in, std::string prefix)
 		outEnable = gtry::reg(outEnable, '0');
 	}
 
+	pinOut(ddr('0', '1')).setName(prefix + "CLK");
+
 	HCL_NAMED(bus);
 	pinOut(bus.cke).setName(prefix + "CKE");
 	pinOut(bus.csn).setName(prefix + "CSn");
@@ -418,8 +421,8 @@ Controller::CommandStream Controller::initSequence() const
 		reset,
 		wait,
 		precharge,
-		mrs,
 		emrs,
+		mrs,
 		refresh1,
 		done,
 	};
@@ -440,13 +443,6 @@ Controller::CommandStream Controller::initSequence() const
 	{
 		cmd->code = CommandCode::Precharge;
 		cmd->address = 1 << 10;
-		afterWaitState = InitState::mrs;
-	}
-
-	IF(state.current() == InitState::mrs)
-	{
-		cmd->code = CommandCode::ModeRegisterSet;
-		cmd->address = m_burstLimit | (m_timing.cl << 4);
 		afterWaitState = InitState::emrs;
 	}
 
@@ -459,22 +455,40 @@ Controller::CommandStream Controller::initSequence() const
 		if(m_driveStrength == DriveStrength::Weak)
 			cmd->address = 1 << 1;
 
+		afterWaitState = InitState::mrs;
+	}
+
+	IF(state.current() == InitState::mrs)
+	{
+		cmd->code = CommandCode::ModeRegisterSet;
+		cmd->address = m_burstLimit | (m_timing.cl << 4);
+
 		afterWaitState = InitState::refresh1;
 	}
 
+	IF(state.current() != InitState::wait & transfer(cmd))
+		state = InitState::wait;
+
+	BitWidth rcCounterW = BitWidth::count(m_timing.rc);
+	UInt refreshCounter = 3_b + rcCounterW;
+	refreshCounter = reg(refreshCounter, 0);
+
 	IF(state.current() == InitState::refresh1)
 	{
-		cmd->code = CommandCode::Refresh;
+		IF(refreshCounter.lower(rcCounterW) == 0)
+			cmd->code = CommandCode::Refresh;
+		refreshCounter += 1;
+		IF(refreshCounter != 0)
+			state = InitState::refresh1; // disable auto wait state
+
 		afterWaitState = InitState::done;
 	}
 
 	IF(state.current() == InitState::done)
 	{
 		valid(cmd) = '0';
+		state = InitState::done; // stay here forever
 	}
-
-	IF(state.current() != InitState::wait & transfer(cmd))
-		state = InitState::wait;
 
 	HCL_NAMED(cmd);
 	return cmd;
@@ -753,10 +767,10 @@ gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
 
 	// drive output
 	BVec out = ConstBVec(cmd.dq.width());
-	auto [readData, readActive] = readDelay[modeCL];
+	auto [readData, readActive] = readDelay[modeCL - 1];
 	HCL_NAMED(readActive);
 	HCL_NAMED(readData);
-	BVec readMask = readMaskDelay[2];
+	BVec readMask = readMaskDelay[1];
 	HCL_NAMED(readMask);
 
 	IF(readActive & readMask != readMask.width().mask())
@@ -804,7 +818,8 @@ Controller& gtry::scl::sdram::Controller::pinPrefix(std::string prefix)
 
 gtry::scl::sdram::Timings gtry::scl::sdram::Timings::toCycles(hlim::ClockRational memClock) const
 {
-	const size_t clkNs = (memClock * hlim::ClockRational{ 1'000'000'000 }).numerator();
+	const auto clkRatioNs = memClock * hlim::ClockRational{ 1, 1'000'000'000 };
+	const size_t clkNs = clkRatioNs.denominator() / clkRatioNs.numerator();
 	auto conv = [=](size_t val) { 
 		return uint16_t((val + clkNs - 1) / clkNs); 
 	};
