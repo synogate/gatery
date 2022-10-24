@@ -47,7 +47,7 @@ namespace gtry {
 
 			/// Enables recording of a waveform for a subsequent simulation run
 			void recordVCD(const std::string& filename);
-			/// Exports as VHDL and (optionally) writes a vhdl tes6tbench of the subsequent simulation run
+			/// Exports as VHDL and (optionally) writes a vhdl testbench of the subsequent simulation run
 			void outputVHDL(const std::string& filename, bool includeTest = true);
 
 			/// Stops an ongoing simulation (to be used during runHitsTimeout)
@@ -64,7 +64,6 @@ namespace gtry {
 
 	protected:
 			virtual void prepRun();
-
 
 			bool m_stopTestCalled = false;
 			std::optional<sim::VCDSink> m_vcdSink;

@@ -19,6 +19,8 @@
 
 #include "DesignScope.h"
 
+#include "FrontendUNitTestSimulationFixture.h"
+
 #include <gatery/export/vhdl/VHDLExport.h>
 #include <gatery/frontend/Clock.h>
 
@@ -27,6 +29,7 @@
 #include <memory>
 #include <functional>
 #include <filesystem>
+#include <regex>
 
 
 namespace gtry {
@@ -52,17 +55,23 @@ namespace gtry {
 	/**
 	 * @brief Helper class to facilitate writing unit tests
 	 */
-	class GHDLTestFixture
+	class GHDLTestFixture : protected BoostUnitTestSimulationFixture
 	{
 		public:
-			DesignScope design;
+			sim::Simulator &getSimulator() { return BoostUnitTestSimulationFixture::getSimulator(); }
+			DesignScope &getDesign() { return design; }
+			void stopTest() { UnitTestSimulationFixture::stopTest(); }
 
 			GHDLTestFixture();
 			~GHDLTestFixture();
 
 			void testCompilation();
+			void runTest(const hlim::ClockRational &timeoutSeconds);
+			bool exportContains(const std::regex &regex);
 		protected:
 			std::filesystem::path m_cwd;
+
+			void prepRun() override;
 
 			void softlinkAll(const std::filesystem::path &src);
 	};

@@ -44,7 +44,7 @@ class Node_ExportOverride : public Node<Node_ExportOverride>
 		void connectOverride(const NodePort &nodePort);
 		void disconnectInput();
 
-		// todo: Simulation handling
+		virtual void simulateEvaluate(sim::SimulatorCallbacks& simCallbacks, sim::DefaultBitVectorState& state, const size_t* internalOffsets, const size_t* inputOffsets, const size_t* outputOffsets) const override;
 
 		virtual bool hasSideEffects() const override { return false; }
 

@@ -19,8 +19,14 @@
 
 #include <gatery/frontend.h>
 
+#include <optional>
+
 namespace gtry::scl {
 
-Bit ddr(Bit D0, Bit D1);
+struct DDROutParams {
+	std::optional<bool> resetValue;
+};
+
+Bit ddr(Bit D0, Bit D1, const DDROutParams &params = {});
 
 }
