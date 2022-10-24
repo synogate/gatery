@@ -64,23 +64,18 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 
 )";
 
+	findClocksAndPorts();
+
 	auto *rootEntity = m_ast->getRootEntity();
-
-	const auto &allClocks = rootEntity->getClocks();
-	const auto &allResets = rootEntity->getResets();
-	const auto &allIOPins = rootEntity->getIoPins();
-
-	m_clocksOfInterest.insert(allClocks.begin(), allClocks.end());
-	m_resetsOfInterest.insert(allResets.begin(), allResets.end());
 
 	CodeFormatting &cf = m_ast->getCodeFormatting();
 
-	declareSignals(vhdlFile, allClocks, allResets, allIOPins);
+	declareSignals(vhdlFile);
 
 	std::map<hlim::NodePort, bool> outputIsBool;	
 	std::set<hlim::NodePort> outputIsDrivenByNetwork;
 
-	for (auto ioPin : allIOPins) {
+	for (auto ioPin : m_allIOPins) {
 		const std::string &name = rootEntity->getNamespaceScope().get(ioPin).name;
 		auto conType = ioPin->getConnectionType();
 
@@ -91,8 +86,9 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 		}
 
 		if (ioPin->isInputPin()) {
-			m_outputToIoPinName[{.node=ioPin, .port=0}] = name;
-			outputIsBool[{.node=ioPin, .port=0}] = conType.interpretation == hlim::ConnectionType::BOOL;
+			hlim::NodePort pinOutput(const_cast<hlim::Node_Pin*>(ioPin), 0);
+			m_outputToIoPinName[pinOutput] = name;
+			outputIsBool[pinOutput] = conType.interpretation == hlim::ConnectionType::BOOL;
 		}
 
 	}
@@ -119,7 +115,7 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 	cf.indent(vhdlFile, 1);
 	vhdlFile << "inst_root : entity work." << rootEntity->getName() << "(impl) port map (" << std::endl;
 
-	writePortmap(vhdlFile, allClocks, allResets, allIOPins);
+	writePortmap(vhdlFile);
 
 	cf.indent(vhdlFile, 1);
 	vhdlFile << ");" << std::endl;
@@ -127,7 +123,7 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 	cf.indent(vhdlFile, 1);
 	vhdlFile << "sim_process : PROCESS" << std::endl;
 
-	for (auto ioPin : allIOPins) {
+	for (auto ioPin : m_allIOPins) {
 		const auto &decl = rootEntity->getNamespaceScope().get(ioPin);
 
 		//hlim::ConnectionType conType = ioPin->getConnectionType();

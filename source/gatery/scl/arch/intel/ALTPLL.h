@@ -57,15 +57,17 @@ namespace gtry::scl::arch::intel
 
 		enum Outputs {
 			OUT_CLK,
-			OUT_E,
+			//OUT_E,
 			OUT_CLKBAD,
 			OUT_ACTIVECLOCK,
 			OUT_CLKLOSS,
 			OUT_LOCKED,
 			OUT_SCANDATAOUT,
 			OUT_FBOUT,
-			OUT_ENABLE,
-			OUT_SCLKOUT,
+			OUT_ENABLE0,
+			OUT_ENABLE1,
+			OUT_SCLKOUT0,
+			OUT_SCLKOUT1,
 			OUT_PHASEDONE,
 			OUT_SCANDONE,
 

@@ -37,7 +37,7 @@ namespace gtry::hlim {
 			bool isInputPin() const { return m_isInputPin; }
 			bool isOutputPin() const { return m_isOutputPin; }
 
-			inline ConnectionType &getConnectionType() { return m_connectionType; }
+			inline const ConnectionType &getConnectionType() const { return m_connectionType; }
 
 			virtual bool hasSideEffects() const override { return true; }
 			virtual std::vector<size_t> getInternalStateSizes() const override;

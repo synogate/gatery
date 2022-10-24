@@ -35,12 +35,12 @@ BaseTestbenchRecorder::~BaseTestbenchRecorder()
 {
 }
 
-void BaseTestbenchRecorder::declareSignals(std::ostream &stream, const std::set<hlim::Clock*> &allClocks, const std::set<hlim::Clock*> &allResets, const std::set<hlim::Node_Pin*> &allIOPins)
+void BaseTestbenchRecorder::declareSignals(std::ostream &stream)
 {
 	auto *rootEntity = m_ast->getRootEntity();
 	CodeFormatting &cf = m_ast->getCodeFormatting();
 
-	for (auto clock : allClocks) {
+	for (auto clock : m_clocksOfInterest) {
 		stream << "	SIGNAL " << rootEntity->getNamespaceScope().getClock(clock).name << " : STD_LOGIC := ";
 		auto val = m_simulator.getValueOfReset(clock);
 		if (!val[sim::DefaultConfig::DEFINED])
@@ -51,7 +51,7 @@ void BaseTestbenchRecorder::declareSignals(std::ostream &stream, const std::set<
 			else
 				stream << "'0';" << std::endl;		
 	}
-	for (auto clock : allResets) {
+	for (auto clock : m_resetsOfInterest) {
 		stream << "	SIGNAL " << rootEntity->getNamespaceScope().getReset(clock).name << " : STD_LOGIC := ";
 		auto val = m_simulator.getValueOfReset(clock);
 		if (!val[sim::DefaultConfig::DEFINED])
@@ -63,7 +63,7 @@ void BaseTestbenchRecorder::declareSignals(std::ostream &stream, const std::set<
 				stream << "'0';" << std::endl;
 	}
 
-	for (auto ioPin : allIOPins) {
+	for (auto ioPin : m_allIOPins) {
 		const auto &decl = rootEntity->getNamespaceScope().get(ioPin);
 
 		stream << "	SIGNAL " << decl.name << " : ";
@@ -75,26 +75,26 @@ void BaseTestbenchRecorder::declareSignals(std::ostream &stream, const std::set<
 
 }
 
-void BaseTestbenchRecorder::writePortmap(std::ostream &stream, const std::set<hlim::Clock*> &allClocks, const std::set<hlim::Clock*> &allResets, const std::set<hlim::Node_Pin*> &allIOPins)
+void BaseTestbenchRecorder::writePortmap(std::ostream &stream)
 {
 	auto *rootEntity = m_ast->getRootEntity();
 	CodeFormatting &cf = m_ast->getCodeFormatting();
 
 	std::vector<std::string> portmapList;
 
-	for (auto &s : allClocks) {
+	for (auto &s : m_clocksOfInterest) {
 		std::stringstream line;
 		line << rootEntity->getNamespaceScope().getClock(s).name << " => ";
 		line << rootEntity->getNamespaceScope().getClock(s).name;
 		portmapList.push_back(line.str());
 	}
-	for (auto &s : allResets) {
+	for (auto &s : m_resetsOfInterest) {
 		std::stringstream line;
 		line << rootEntity->getNamespaceScope().getReset(s).name << " => ";
 		line << rootEntity->getNamespaceScope().getReset(s).name;
 		portmapList.push_back(line.str());
 	}
-	for (auto &s : allIOPins) {
+	for (auto &s : m_allIOPins) {
 		std::stringstream line;
 		line << rootEntity->getNamespaceScope().get(s).name << " => ";
 		line << rootEntity->getNamespaceScope().get(s).name;
@@ -127,7 +127,7 @@ namespace {
 
 
 
-void BaseTestbenchRecorder::buildClockProcess(std::ostream &stream, hlim::Clock *clock)
+void BaseTestbenchRecorder::buildClockProcess(std::ostream &stream, const hlim::Clock *clock)
 {
 	CodeFormatting &cf = m_ast->getCodeFormatting();
 	auto *rootEntity = m_ast->getRootEntity();
@@ -153,6 +153,27 @@ void BaseTestbenchRecorder::buildClockProcess(std::ostream &stream, hlim::Clock 
 
 	cf.indent(stream, 1);
 	stream << "END PROCESS;" << std::endl;
+
+}
+
+void BaseTestbenchRecorder::findClocksAndPorts()
+{
+	auto *rootEntity = m_ast->getRootEntity();
+
+	const auto &allClocks = rootEntity->getClocks();
+	const auto &allResets = rootEntity->getResets();
+	const auto &allIOPins = rootEntity->getIoPins();
+
+	for (auto &c : allClocks)
+		if (c->isSelfDriven(false, true))
+			m_clocksOfInterest.insert(c);
+
+	for (auto &c : allResets)
+		if (c->isSelfDriven(false, false))
+			m_resetsOfInterest.insert(c);
+
+	for (auto &p : allIOPins)
+		m_allIOPins.insert(p);
 
 }
 
