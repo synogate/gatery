@@ -55,6 +55,7 @@ BOOST_FIXTURE_TEST_CASE(testGlobalBuffer, gtry::GHDLTestFixture)
 
 
 	testCompilation();
+	BOOST_TEST(exportContains(std::regex{"GLOBAL"}));
 }
 
 
@@ -265,7 +266,78 @@ BOOST_FIXTURE_TEST_CASE(instantiate_scl_ddr, gtry::GHDLTestFixture)
 	pinOut(o).setName("ddr_output");
 
 	testCompilation();
+	BOOST_TEST(exportContains(std::regex{"ALTDDIO_OUT"}));
 }
+
+
+BOOST_FIXTURE_TEST_CASE(instantiate_simulate_scl_ddr, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	auto device = std::make_unique<scl::IntelDevice>();
+	device->setupMAX10();
+	design.setTargetTechnology(std::move(device));
+
+	Clock clock1({
+			.absoluteFrequency = {{125'000'000,1}},
+			.initializeRegs = false,
+	});
+	HCL_NAMED(clock1);
+	ClockScope scp(clock1);
+
+	Bit d1 = pinIn().setName("d1");
+	Bit d2 = pinIn().setName("d2");
+	HCL_NAMED(d1);
+	HCL_NAMED(d2);
+
+	Bit o = scl::ddr(d1, d2);
+
+	HCL_NAMED(o);
+	
+	pinOut(o).setName("ddr_output");
+
+	pinOut(reg(d1)).setName("clockUser");
+
+	addSimulationProcess([=,this]()->SimProcess {
+		co_await OnClk(clock1);
+
+		BOOST_TEST(!simu(o).allDefined());
+
+		co_await OnClk(clock1);
+
+		for ([[maybe_unused]] auto i : gtry::utils::Range(20)) {
+			bool a = (i & 1);
+			bool b = (i & 2);
+
+			simu(d1) = a?'1':'0';
+			simu(d2) = b?'1':'0';
+
+			co_await fork([](Seconds cyclePeriod, const Bit &out, bool a, bool b)->SimProcess {
+				// Wait for one full clock cycle (because of ddr registers) and then a quarter cycle in case the simulation model has some modeled delay.
+				co_await WaitFor(Seconds{5,4} * cyclePeriod);
+
+				BOOST_TEST(simu(out) == (a?'1':'0'));
+
+				// Check the other after half a cycle.
+				co_await WaitFor(cyclePeriod/Seconds{2});
+
+				BOOST_TEST(simu(out) == (b?'1':'0'));
+
+			}(Seconds{1} / clock1.absoluteFrequency(), o, a, b));
+
+			co_await OnClk(clock1);
+		}
+
+		stopTest();
+	});
+
+
+
+	runTest(Seconds{100} / clock1.absoluteFrequency());
+	BOOST_TEST(exportContains(std::regex{"ALTDDIO_OUT"}));
+}
+
+
 
 
 

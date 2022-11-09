@@ -70,6 +70,15 @@ void Node_ExportOverride::connectOverride(const NodePort &nodePort)
 	NodeIO::connectInput(EXP_INPUT, nodePort);
 }
 
+void Node_ExportOverride::simulateEvaluate(sim::SimulatorCallbacks& simCallbacks, sim::DefaultBitVectorState& state, const size_t* internalOffsets, const size_t* inputOffsets, const size_t* outputOffsets) const
+{
+	std::cout << "Warning: Node_ExportOverride::simulateEvaluate called!" << std::endl;
+	if (inputOffsets[SIM_INPUT] != ~0ull)
+		state.copyRange(outputOffsets[0], state, inputOffsets[SIM_INPUT], getOutputConnectionType(0).width);
+	else
+		state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width);
+}
+
 
 void Node_ExportOverride::disconnectInput()
 {

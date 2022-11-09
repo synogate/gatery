@@ -24,6 +24,8 @@ class Node_Clk2Signal : public Node<Node_Clk2Signal>
 {
 	public:
 		Node_Clk2Signal();
+
+		virtual void simulateClockChange(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort, bool clockValue, bool clockDefined) const override;
 		
 		virtual std::string getTypeName() const override;
 		virtual void assertValidity() const override;

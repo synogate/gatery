@@ -83,11 +83,13 @@ void GHDLTestFixture::testCompilation()
 	design.postprocess();
 
 
-	vhdl::VHDLExport vhdlExport("design.vhd");
-	vhdlExport.targetSynthesisTool(new GHDL());
-	vhdlExport.writeStandAloneProjectFile("compile.sh");
-	vhdlExport(design.getCircuit());
+	m_vhdlExport.emplace("design.vhd");
+	m_vhdlExport->targetSynthesisTool(new GHDL());
+	m_vhdlExport->writeStandAloneProjectFile("compile.sh");
+	(*m_vhdlExport)(design.getCircuit());
 
+	m_vhdlExport.reset();
+	
 	boost::filesystem::path ghdlExecutable = bp::search_path("ghdl");
 
 
@@ -107,6 +109,50 @@ void GHDLTestFixture::softlinkAll(const std::filesystem::path &src)
 		if (entry.is_directory() && entry.path().filename() != "." && entry.path().filename() != "..") 
 			std::filesystem::create_directory_symlink(entry.path(), entry.path().filename());
 	}
+}
+
+void GHDLTestFixture::prepRun()
+{
+	design.postprocess();
+
+	m_vhdlExport.emplace("design.vhd");
+	m_vhdlExport->addTestbenchRecorder(getSimulator(), "testbench", true);
+	m_vhdlExport->targetSynthesisTool(new GHDL());
+	m_vhdlExport->writeStandAloneProjectFile("compile.sh");
+	(*m_vhdlExport)(design.getCircuit());
+
+	recordVCD("internal.vcd");
+}
+
+void GHDLTestFixture::runTest(const hlim::ClockRational &timeoutSeconds)
+{
+	m_stopTestCalled = false;
+	BoostUnitTestSimulationFixture::runTest(timeoutSeconds);
+	BOOST_CHECK_MESSAGE(m_stopTestCalled, "Simulation timed out without being called to a stop by any simulation process!");
+
+	m_vhdlExport.reset();
+
+	boost::filesystem::path ghdlExecutable = bp::search_path("ghdl");
+
+	if (GHDLGlobalFixture::hasIntelLibrary())
+		softlinkAll(GHDLGlobalFixture::getIntelLibrary());
+
+	if (GHDLGlobalFixture::hasXilinxLibrary())
+		softlinkAll(GHDLGlobalFixture::getXilinxLibrary());
+
+	BOOST_REQUIRE(bp::system(ghdlExecutable, "-a", "--std=08", "--ieee=synopsys", "-frelaxed", "design.vhd") == 0);
+	BOOST_REQUIRE(bp::system(ghdlExecutable, "-a", "--std=08", "--ieee=synopsys", "-frelaxed", "testbench.vhd") == 0);
+	BOOST_REQUIRE(bp::system(ghdlExecutable, "-e", "--std=08", "--ieee=synopsys", "-frelaxed", "testbench") == 0);
+	BOOST_REQUIRE(bp::system(ghdlExecutable, "-r", "--std=08", "testbench", "--ieee-asserts=disable", "--vcd=ghdl.vcd", "--assert-level=error") == 0);
+}
+
+bool GHDLTestFixture::exportContains(const std::regex &regex)
+{
+	std::fstream file("design.vhd", std::fstream::in);
+	std::stringstream buffer;
+	buffer << file.rdbuf();
+
+	return std::regex_search(buffer.str(), regex);
 }
 
 }

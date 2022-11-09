@@ -93,6 +93,7 @@ class ClockedNode
 	public:
 		ClockedNode(MappedNode mappedNode, size_t clockPort);
 
+		void clockValueChanged(SimulatorCallbacks &simCallbacks, DataState &state, bool clockValue, bool clockDefined) const;
 		void advance(SimulatorCallbacks &simCallbacks, DataState &state) const;
 		void changeReset(SimulatorCallbacks &simCallbacks, DataState &state, bool resetHigh) const;
 	protected:
@@ -253,12 +254,6 @@ class ReferenceSimulator : public Simulator
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock, utils::RestrictTo<RunTimeSimulationContext>) override;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitChange &waitChange, utils::RestrictTo<RunTimeSimulationContext>) override;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitStable &waitStable, utils::RestrictTo<RunTimeSimulationContext>) override;
-
-		// virtual SimulationProcessHandle fork(std::function<SimulationFunction<void>()> simProc, utils::RestrictTo<RunTimeSimulationContext>) override;
-		// virtual void stopSimulationProcess(const SimulationProcessHandle &handle, utils::RestrictTo<SimulationProcessHandle>) override;
-		// virtual bool simulationProcessHasFinished(const SimulationProcessHandle &handle, utils::RestrictTo<SimulationProcessHandle>) override;
-		//virtual void suspendUntilProcessCompletion(std::coroutine_handle<> handle, const SimulationProcessHandle &handle, utils::RestrictTo<SimulationProcessHandle>) override;
-
 	protected:
 		Program m_program;
 		DataState m_dataState;

@@ -87,6 +87,11 @@ ClockedNode::ClockedNode(MappedNode mappedNode, size_t clockPort) : m_mappedNode
 {
 }
 
+void ClockedNode::clockValueChanged(SimulatorCallbacks &simCallbacks, DataState &state, bool clockValue, bool clockDefined) const
+{
+	m_mappedNode.node->simulateClockChange(simCallbacks, state.signalState, m_mappedNode.internal.data(), m_mappedNode.outputs.data(), m_clockPort, clockValue, clockDefined);
+}
+
 void ClockedNode::advance(SimulatorCallbacks &simCallbacks, DataState &state) const
 {
 	m_mappedNode.node->simulateAdvance(simCallbacks, state.signalState, m_mappedNode.internal.data(), m_mappedNode.outputs.data(), m_clockPort);
@@ -206,10 +211,13 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 	m_executionBlocks.push_back({});
 	ExecutionBlock &execBlock = m_executionBlocks.back();
 
+	std::vector<hlim::NodePort> readyNodeInputs;
 	while (!nodesRemaining.empty()) {
 		hlim::BaseNode *readyNode = nullptr;
 		for (auto node : nodesRemaining) {
 			bool allInputsReady = true;
+			readyNodeInputs.clear();
+			readyNodeInputs.resize(node->getNumInputPorts());
 			for (auto i : utils::Range(node->getNumInputPorts())) {
 				auto driver = node->getNonSignalDriver(i);
 				{
@@ -221,6 +229,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 							driver = {};
 					}
 				}
+				readyNodeInputs[i] = driver;
 				if (driver.node != nullptr && !outputsReady.contains(driver) && subnetToConsider.contains(driver.node)) {
 					allInputsReady = false;
 					break;
@@ -344,7 +353,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 		mappedNode.node = readyNode;
 		mappedNode.internal = m_stateMapping.nodeToInternalOffset[readyNode];
 		for (auto i : utils::Range(readyNode->getNumInputPorts())) {
-			auto driver = readyNode->getNonSignalDriver(i);
+			auto driver = readyNodeInputs[i];
 			mappedNode.inputs.push_back(m_stateMapping.outputToOffset[driver]);
 		}
 
@@ -386,9 +395,8 @@ void Program::allocateSignals(const hlim::Circuit &circuit, const hlim::Subnet &
 			hlim::NodePort driver;
 			if (dynamic_cast<hlim::Node_Signal*>(node))
 				driver = node->getNonSignalDriver(0);
-			else {
-				driver = node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
 
+			{
 				std::set<hlim::NodePort> alreadyVisited;
 				while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) { // Skip all export override nodes
 					alreadyVisited.insert(driver);
@@ -397,7 +405,6 @@ void Program::allocateSignals(const hlim::Circuit &circuit, const hlim::Subnet &
 						driver = {};
 				}
 			}
-
 
 			size_t width = node->getOutputConnectionType(0).width;
 
@@ -561,12 +568,16 @@ void ReferenceSimulator::powerOn()
 
 	m_dataState.clockState.resize(m_program.m_clockSources.size());
 	for (auto i : utils::Range(m_dataState.clockState.size())) {
+		auto &clkSource = m_program.m_clockSources[i];
 		auto clock = m_program.m_clockSources[i].pin;
-		
 		auto &cs = m_dataState.clockState[i];
 		// The pin defines the starting state of the clock signal
 		auto trigType = clock->getTriggerEvent();
 		cs.high = trigType == hlim::Clock::TriggerEvent::RISING;
+
+		for (auto &dom : clkSource.domains)
+			for (auto &cn : dom->clockedNodes)
+				cn.clockValueChanged(m_callbackDispatcher, m_dataState, cs.high, true);
 
 		Event e;
 		e.type = Event::Type::clockPinTrigger;
@@ -755,6 +766,10 @@ void ReferenceSimulator::advanceMicroTick()
 				// Trigger all clocked nodes of all driven clock domains
 				auto &clkPin = m_program.m_clockSources[clkEvent.clockPinIdx];
 				for (auto domain : clkPin.domains) {
+
+					for (auto &cn : domain->clockedNodes)
+						cn.clockValueChanged(m_callbackDispatcher, m_dataState, clkEvent.risingEdge, true);
+
 					auto trigType = domain->clock->getTriggerEvent();
 
 					if (trigType == hlim::Clock::TriggerEvent::RISING_AND_FALLING ||

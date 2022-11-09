@@ -31,6 +31,13 @@ Node_Clk2Signal::Node_Clk2Signal() : Node(0, 1)
 	setOutputType(0, OUTPUT_LATCHED);	
 }
 
+
+void Node_Clk2Signal::simulateClockChange(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort, bool clockValue, bool clockDefined) const
+{
+	state.set(sim::DefaultConfig::VALUE, outputOffsets[0], clockValue);
+	state.set(sim::DefaultConfig::DEFINED, outputOffsets[0], clockDefined);
+}
+
 std::string Node_Clk2Signal::getTypeName() const
 {
 	return "clk2signal";

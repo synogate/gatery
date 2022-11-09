@@ -22,15 +22,20 @@
 namespace gtry::scl {
 
 
-Bit ddr(Bit D0, Bit D1)
+Bit ddr(Bit D0, Bit D1, const DDROutParams &params)
 {
 	Area area{"scl_oddr", true};
 	
 	setName(D0, "D0");
 	setName(D1, "D1");
 
-	D0 = reg(D0);
-	D1 = reg(D1);
+	if (params.resetValue) {
+		D0 = reg(D0, *params.resetValue);
+		D1 = reg(D1, *params.resetValue);
+	} else {
+		D0 = reg(D0);
+		D1 = reg(D1);
+	}
 
 	auto &clock = ClockScope::getClk();
 

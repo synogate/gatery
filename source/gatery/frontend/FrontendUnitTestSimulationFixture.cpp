@@ -78,6 +78,7 @@ bool UnitTestSimulationFixture::runHitsTimeout(const hlim::ClockRational &timeou
 	m_simulator->compileProgram(design.getCircuit());
 	m_simulator->powerOn();
 	m_simulator->advance(timeoutSeconds);
+	m_simulator->commitState();
 
 	if (!m_errors.empty())
 		BOOST_FAIL(m_errors.front());
