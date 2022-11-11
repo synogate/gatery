@@ -61,6 +61,11 @@ namespace gtry::scl
 		UInt address;
 		BVec mask;
 		BVec data;
+
+		Bit hasData() const;
+		Bit isGet() const;
+		Bit isPut() const;
+		Bit isBurst() const;
 	};
 	using TileLinkChannelA = RvStream<TileLinkA>;
 
@@ -82,6 +87,9 @@ namespace gtry::scl
 		UInt sink;
 		BVec data;
 		Bit error;
+
+		Bit hasData() const;
+		Bit isBurst() const;
 	};
 	using TileLinkChannelD = RvStream<TileLinkD>;
 
