@@ -66,12 +66,12 @@ namespace gtry::scl
 		const size_t sourceId = co_await allocSourceId(clk);
 		simu(m_link.a->source) = sourceId;
 
-		co_await fork([&]()->SimProcess 
+		co_await fork([=, this]()->SimProcess 
 		{
 			sim::DefaultBitVectorState state;
 			state.resize(m_link.a->data.width().bits());
 
-			for (Data& d : tx.data)
+			for (const Data& d : tx.data)
 			{
 				state.insertNonStraddling(sim::DefaultConfig::VALUE, 0, state.size(), d.value);
 				state.insertNonStraddling(sim::DefaultConfig::DEFINED, 0, state.size(), d.defined);
@@ -94,7 +94,7 @@ namespace gtry::scl
 
 			m_requestCurrent++;
 			m_requestCurrentChanged.notify_oldest();
-		}());
+		});
 
 		TransactionIn ret;
 
