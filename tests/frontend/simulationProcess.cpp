@@ -488,7 +488,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_forkFromSimProc, BoostUnitTestSimulationFixture)
 				co_await AfterClk(clock);
 				flag = !flag;
 			}
-		}());
+		});
 	};
 
 	addSimulationProcess([&flag,clock,subProcess2,this]()->SimProcess {

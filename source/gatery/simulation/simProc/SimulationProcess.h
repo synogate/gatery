@@ -36,15 +36,19 @@ class SmartCoroutineHandle
 	public:
 		using promiseType = PromiseType;
 
+		SmartCoroutineHandle() = default;
+
 		~SmartCoroutineHandle() {
 			reset();
 		}
 
 		void reset() {
-			m_handle.promise().deregisterHandle();
-			if (numReferences() == 0) // we are the last reference, destroy promise
-				m_handle.destroy();
-			m_handle = {};
+			if (m_handle) {
+				m_handle.promise().deregisterHandle();
+				if (numReferences() == 0) // we are the last reference, destroy promise
+					m_handle.destroy();
+				m_handle = {};
+			}
 		}
 
 		SmartCoroutineHandle(std::coroutine_handle<PromiseType> handle) : m_handle(handle) {
@@ -53,6 +57,16 @@ class SmartCoroutineHandle
 
 		SmartCoroutineHandle(const SmartCoroutineHandle<PromiseType> &other) : m_handle(other.m_handle) {
 			m_handle.promise().registerHandle();
+		}
+
+		SmartCoroutineHandle<PromiseType> &operator=(std::coroutine_handle<PromiseType> handle) {
+			if (m_handle == handle) return *this;
+
+			reset();
+			m_handle = handle;
+			m_handle.promise().registerHandle();
+
+			return *this;
 		}
 
 		SmartCoroutineHandle<PromiseType> &operator=(const SmartCoroutineHandle<PromiseType> &other) {
@@ -102,6 +116,8 @@ class SmartCoroutineHandle<void>
 {
 	public:
 		using returnType = void;
+
+		SmartCoroutineHandle() = default;
 
 		~SmartCoroutineHandle() {
 			reset();
@@ -269,6 +285,8 @@ class SimulationFunction {
 			auto final_suspend() noexcept { return FinalSuspendAwaiter{}; }
 
 			std::vector<std::coroutine_handle<>> awaitingFinalSuspend;
+
+			std::unique_ptr<std::function<SimulationFunction<ReturnValue>()>> functorInstance;
 		};
 		using Handle = internal::SmartCoroutineHandle<promise_type>;
 
@@ -300,6 +318,15 @@ class SimulationFunction {
 			Handle calledSimulationCoroutine;
 
 			explicit Fork(const SimulationFunction<ReturnValue> &simProc) noexcept : calledSimulationCoroutine(simProc.getHandle()) { }
+			explicit Fork(std::function<SimulationFunction<ReturnValue>()> &&functor) noexcept {
+				// Create a "portable" copy of the functor before we invoke.
+				auto functorInstance = std::make_unique<std::function<SimulationFunction<ReturnValue>()>>(std::move(functor));
+				// Invoke the copy so that all internal references are wrt. to said copy.
+				auto simFunc = (*functorInstance)();
+				calledSimulationCoroutine = simFunc.getHandle();
+				// Store the copy in the promise object to be kept alive as long as the promise/coroutine exists.
+				calledSimulationCoroutine.promise().functorInstance = std::move(functorInstance);
+			}
 		};
 
 		/**
@@ -375,6 +402,7 @@ void SimulationFunction<ReturnValue>::Fork::await_suspend(std::coroutine_handle<
 	handler->start(SimulationFunction<ReturnValue>(calledSimulationCoroutine));
 	handler->readyToResume(callingSimulationCoroutine); // Immediately resume caller after called function has suspended
 }
+
 
 extern template class SimulationFunction<void>;
 extern template class SimulationFunction<int>;

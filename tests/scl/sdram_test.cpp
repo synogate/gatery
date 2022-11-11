@@ -661,11 +661,11 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_fuzz_test, SdramControllerTest)
 				address = *it;
 				address &= ~((1ull << size) - 1);
 
-				co_await fork([=](uint64_t address, uint64_t size) -> SimProcess {
+				co_await fork([=] -> SimProcess {
 					auto [value, defined, error] = co_await linkModel.get(address, size, clock());
 					BOOST_TEST(!error);
 					check_read(address, size, value, defined);
-				}(address, size));
+				});
 			}
 			else
 			{
@@ -673,11 +673,11 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_fuzz_test, SdramControllerTest)
 				usedAddress.insert(address);
 				uint64_t data = rng();
 
-				co_await fork([=](uint64_t address, uint64_t size, uint64_t data) -> SimProcess {
+				co_await fork([=] -> SimProcess {
 					bool error = co_await linkModel.put(address, size, data, clock());
 					BOOST_TEST(!error);
 					insert_write(address, size, data);
-				}(address, size, data));
+				});
 			}
 		}
 
