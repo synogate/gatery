@@ -316,13 +316,13 @@ BOOST_FIXTURE_TEST_CASE(SimProc_callSubTaskStackOverflowTest, BoostUnitTestSimul
 
 
 	auto subProcess = []()->SimProcess{
-		volatile char stackFiller[1024];
+		volatile char stackFiller[1024]; stackFiller;
 		StackDepthCounter counter;
 		co_return;
 	};
 
 	addSimulationProcess([=]()->SimProcess{
-		for (auto i : gtry::utils::Range(10'000'000)) {
+		for (auto i : gtry::utils::Range(1'000'000)) {
 			co_await subProcess();
 		}
 
