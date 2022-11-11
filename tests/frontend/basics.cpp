@@ -169,7 +169,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestOperators, data::xran
 				simu(a) = x;
 				simu(b) = y;
 
-				co_await WaitFor({1,1000});
+				co_await WaitFor({1,1000000});
 			}
 
 		stopTest();
@@ -253,7 +253,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, TestOperators, data::xran
 
 	design.postprocess();
 
-	runTest(gtry::hlim::ClockRational(100'000, 10'000));
+	runTest(gtry::hlim::ClockRational(100'000, 10'000'000));
 }
 
 
@@ -501,7 +501,7 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, BoostUnitTestSimulationFixture)
 			BOOST_TEST(simu(pinD) == 0xD);
 			BOOST_TEST(simu(pinX) == '0');
 			BOOST_TEST(simu(pinY) == '1');
-			co_await WaitFor({1, 1000});
+			co_await WaitFor({1, 1000000});
 
 			simu(pinConditionIn) = '1';
 			co_await WaitStable();
@@ -509,7 +509,7 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, BoostUnitTestSimulationFixture)
 			BOOST_TEST(simu(pinD) == 0xC);
 			BOOST_TEST(simu(pinX) == '1');
 			BOOST_TEST(simu(pinY) == '0');
-			co_await WaitFor({1, 1000});
+			co_await WaitFor({1, 1000000});
 
 			stopTest();
 		});
@@ -518,7 +518,7 @@ BOOST_FIXTURE_TEST_CASE(SwapMoveAssignment, BoostUnitTestSimulationFixture)
 
 	design.postprocess();
 
-	runTest({1,1});
+	runTest({1,1000});
 }
 
 BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, BoostUnitTestSimulationFixture)
@@ -569,7 +569,7 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, BoostUnitTestSimulationFixture)
 
 			for (size_t i = 0; i < in.size(); ++i)
 				BOOST_TEST(simu(out[i]) == i);
-			co_await WaitFor({1, 1000});
+			co_await WaitFor({1, 1000000});
 
 			simu(pinConditionIn) = '1';
 
@@ -577,7 +577,7 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, BoostUnitTestSimulationFixture)
 
 			for (size_t i = 0; i < in.size(); ++i)
 				BOOST_TEST(simu(out[i]) == (i + 1) % 4);
-			co_await WaitFor({1, 1000});
+			co_await WaitFor({1, 1000000});
 
 			stopTest();
 		});
@@ -585,7 +585,7 @@ BOOST_FIXTURE_TEST_CASE(RotateMoveAssignment, BoostUnitTestSimulationFixture)
 	}
 
 	design.postprocess();
-	runTest({1, 1});
+	runTest({1, 1000});
 }
 
 BOOST_FIXTURE_TEST_CASE(ConditionalLoopAssignment, BoostUnitTestSimulationFixture)
