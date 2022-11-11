@@ -313,7 +313,7 @@ auto fork(const sim::SimulationFunction<ReturnValue> &simProc) {
  */
 template<std::invocable Functor>
 auto fork(Functor simProcLambda) {
-	using SimFunc = std::result_of<Functor()>::type;
+	using SimFunc = std::invoke_result_t<Functor>;
 	return typename SimFunc::Fork(std::function<SimFunc()>(simProcLambda));
 }
 
