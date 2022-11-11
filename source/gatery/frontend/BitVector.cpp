@@ -635,6 +635,16 @@ namespace gtry {
 		}
 	}
 
+	BaseBitVector::Range::Range(const UInt& index, const Range& r) :
+		Range(
+			index * (r.width / index.width().count()), 
+			BitWidth{ r.width / index.width().count() }, 
+			r
+		)
+	{
+		HCL_DESIGNCHECK_HINT(r.width % index.width().count() == 0, "indexed range width must be divisible by 2^index width");
+	}
+
 	size_t BaseBitVector::getUIntBitWidth(const UInt &uint)
 	{
 		return uint.size();

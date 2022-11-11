@@ -94,6 +94,8 @@ namespace gtry {
 			/// @details This is needed whenever a dynamic slice of a slice is created.
 			Range(const UInt &dynamicOffset, BitWidth w, const Range& r);
 
+			Range(const UInt& index, const Range& r);
+
 			auto operator <=> (const Range&) const = default;
 
 			size_t bitOffset(size_t idx) const { HCL_ASSERT(idx < width); HCL_ASSERT(offsetDynamic.node == nullptr); return offset + idx; }
@@ -263,14 +265,17 @@ namespace gtry {
 		FinalType& operator() (size_t offset, BitReduce reduction) { return (*this)(Selection::Slice(int(offset), int(BaseBitVector::size() - reduction.value))); }
 		const FinalType& operator() (size_t offset, BitReduce reduction) const { return (*this)(Selection::Slice(int(offset), int(BaseBitVector::size() - reduction.value))); }
 
-		FinalType& upper(BitWidth bits) { return (*this)((width() - bits).bits(), bits); }
-		const FinalType& upper(BitWidth bits) const { return (*this)((width() - bits).bits(), bits); }
-		FinalType& lower(BitWidth bits) { return (*this)(0, bits); }
-		const FinalType& lower(BitWidth bits) const { return (*this)(0, bits); }
-		FinalType& upper(BitReduce bits) { return (*this)(bits.value, bits); }
-		const FinalType& upper(BitReduce bits) const { return (*this)(bits.value, bits);}
-		FinalType& lower(BitReduce bits) { return (*this)(0, bits); }
-		const FinalType& lower(BitReduce bits) const { return (*this)(0, bits); }
+		FinalType& word(const UInt& index)				{ return aliasRange(Range(index, range())); }
+		const FinalType& word(const UInt& index) const	{ return aliasRange(Range(index, range())); }
+
+		FinalType& upper(BitWidth bits)					{ return (*this)((width() - bits).bits(), bits); }
+		FinalType& upper(BitReduce bits)				{ return (*this)(bits.value, bits); }
+		FinalType& lower(BitWidth bits)					{ return (*this)(0, bits); }
+		FinalType& lower(BitReduce bits)				{ return (*this)(0, bits); }
+		const FinalType& upper(BitWidth bits) const		{ return (*this)((width() - bits).bits(), bits); }
+		const FinalType& upper(BitReduce bits) const	{ return (*this)(bits.value, bits);}
+		const FinalType& lower(BitWidth bits) const		{ return (*this)(0, bits); }
+		const FinalType& lower(BitReduce bits) const	{ return (*this)(0, bits); }
 
 		/// Slices a sub-vector out of the bit vector with a fixed width but a dynamic offset.
 		FinalType& operator() (const UInt &offset, BitWidth size) { return aliasRange(Range(offset, size, range())); }
