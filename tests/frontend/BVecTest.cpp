@@ -297,7 +297,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceWrite, BoostUnitTestSimulationFixture)
 		for (auto i : gtry::utils::Range(8)) {
 			simu(index) = i;
 			simu(b) = ((v >> i) & 1) == 1;
-			co_await WaitFor({1,1000});
+			co_await WaitFor({1,1000000});
 			size_t mask = 1ull << i;
 			BOOST_TEST(simu(a) == (a_ & ~mask | v & mask));
 		}
@@ -308,7 +308,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceWrite, BoostUnitTestSimulationFixture)
 
 	design.postprocess();
 
-	runTest({ 1,1 });
+	runTest({ 1,1000 });
 }
 
 BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfSliceWrite, BoostUnitTestSimulationFixture)
@@ -328,7 +328,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfSliceWrite, BoostUnitTestSimulationFixt
 		for (auto i : gtry::utils::Range(4)) {
 			simu(index) = i;
 			simu(b) = ((v >> (i+2)) & 1) == 1;
-			co_await WaitFor({1,1000});
+			co_await WaitFor({1,1000000});
 
 			size_t mask = (1ull << (i+2));
 			BOOST_TEST(simu(a) == (a_ & ~mask | v & mask));
@@ -340,7 +340,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfSliceWrite, BoostUnitTestSimulationFixt
 
 	design.postprocess();
 
-	runTest({ 1,1 });
+	runTest({ 1,1000 });
 }
 
 BOOST_FIXTURE_TEST_CASE(DynamicBitSliceConstReduction, BoostUnitTestSimulationFixture)
@@ -383,12 +383,12 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceRead, BoostUnitTestSimulationFixture)
 	
 		for (auto i : gtry::utils::Range(7)) {
 			simu(index) = i;
-			co_await WaitFor({1,1000});
+			co_await WaitFor({1,1000000});
 			BOOST_TEST(simu(b) == ((v >> i) & 0b11));
 		}
 
 		simu(index) = 7;
-		co_await WaitFor({1,1000});
+		co_await WaitFor({1,1000000});
 		BOOST_TEST(!simu(b).allDefined());
 
 		stopTest();
@@ -396,7 +396,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceRead, BoostUnitTestSimulationFixture)
 
 	design.postprocess();
 
-	runTest({ 1,1 });
+	runTest({ 1,1000 });
 }
 
 
@@ -418,12 +418,12 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfStaticSliceRead, BoostUnitTestSimulati
 	
 		for (auto i : gtry::utils::Range(7)) {
 			simu(index) = i;
-			co_await WaitFor({1,1000});
+			co_await WaitFor({1,1000000});
 			BOOST_TEST(simu(b) == ((v_ >> i) & 0b11));
 		}
 
 		simu(index) = 7;
-		co_await WaitFor({1,1000});
+		co_await WaitFor({1,1000000});
 		BOOST_TEST(!simu(b).allDefined());
 
 		stopTest();
@@ -431,7 +431,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfStaticSliceRead, BoostUnitTestSimulati
 
 	design.postprocess();
 
-	runTest({ 1,1 });
+	runTest({ 1,1000 });
 }
 
 
@@ -452,12 +452,12 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfStaticSliceReverseRead, BoostUnitTestS
 	
 		for (auto i : gtry::utils::Range(5)) {
 			simu(index) = i;
-			co_await WaitFor({1,1000});
+			co_await WaitFor({1,1000000});
 			BOOST_TEST(simu(b) == ((v >> (i+2)) & 0b11));
 		}
 
 		simu(index) = 5;
-		co_await WaitFor({1,1000});
+		co_await WaitFor({1,1000000});
 		BOOST_TEST(!simu(b).allDefined());
 
 		stopTest();
@@ -465,7 +465,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfStaticSliceReverseRead, BoostUnitTestS
 
 	design.postprocess();
 
-	runTest({ 1,1 });
+	runTest({ 1,1000 });
 }
 
 
@@ -493,19 +493,19 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfDynamicSliceRead, BoostUnitTestSimulat
 			for (auto j : gtry::utils::Range(7)) {
 				simu(index1) = i;
 				simu(index2) = j;
-				co_await WaitFor({1,1000});
+				co_await WaitFor({1,1000000});
 				BOOST_TEST(simu(b) == ((v >> (i+j)) & 0b11));
 			}
 		}
 
 		simu(index1) = 5;
 		simu(index2) = 3;
-		co_await WaitFor({1,1000});
+		co_await WaitFor({1,1000000});
 		BOOST_TEST(!simu(b).allDefined());
 
 		simu(index1) = 0;
 		simu(index2) = 7;
-		co_await WaitFor({1,1000});
+		co_await WaitFor({1,1000000});
 		BOOST_TEST(!simu(b).allDefined());
 
 		stopTest();
@@ -513,7 +513,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfDynamicSliceRead, BoostUnitTestSimulat
 
 	design.postprocess();
 
-	runTest({ 1,1 });
+	runTest({ 1,1000 });
 }
 
 
@@ -537,12 +537,12 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWithStaticBitSliceRead, BoostUnitTestSim
 	
 		for (auto i : gtry::utils::Range(7)) {
 			simu(index) = i;
-			co_await WaitFor({1,1000});
+			co_await WaitFor({1,1000000});
 			BOOST_TEST(simu(b) == (bool)((v >> (i+1)) & 0b1));
 		}
 
 		simu(index) = 7;
-		co_await WaitFor({1,1000});
+		co_await WaitFor({1,1000000});
 		BOOST_TEST(!simu(b).allDefined());
 
 		stopTest();
@@ -550,7 +550,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWithStaticBitSliceRead, BoostUnitTestSim
 
 	design.postprocess();
 
-	runTest({ 1,1 });
+	runTest({ 1,1000 });
 }
 
 
@@ -577,19 +577,19 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWithDynamicBitSliceRead, BoostUnitTestSi
 			for (auto j : gtry::utils::Range(8)) {
 				simu(index1) = i;
 				simu(index2) = j;
-				co_await WaitFor({1,1000});
+				co_await WaitFor({1,1000000});
 				BOOST_TEST(simu(b) == (bool)((v >> (i+j)) & 0b1));
 			}
 		}
 
 		simu(index1) = 5;
 		simu(index2) = 3;
-		co_await WaitFor({1,1000});
+		co_await WaitFor({1,1000000});
 		BOOST_TEST(!simu(b).allDefined());
 
 		simu(index1) = 0;
 		simu(index2) = 8;
-		co_await WaitFor({1,1000});
+		co_await WaitFor({1,1000000});
 		BOOST_TEST(!simu(b).allDefined());
 
 		stopTest();
@@ -598,7 +598,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWithDynamicBitSliceRead, BoostUnitTestSi
 
 	design.postprocess();
 
-	runTest({ 1,1 });
+	runTest({ 1,1000 });
 }
 
 BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfDynamicSliceWrite, BoostUnitTestSimulationFixture)
@@ -625,7 +625,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfDynamicSliceWrite, BoostUnitTestSimulat
 				simu(index1) = i;
 				simu(index2) = j;
 				simu(b) = ((v >> (i + j)) & 1) == 1;
-				co_await WaitFor({1,1000});
+				co_await WaitFor({1,1000000});
 
 				size_t mask = (0b1ull << (i+j));
 				BOOST_TEST(simu(a) == (a_ & ~mask | v & mask));
@@ -638,7 +638,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfDynamicSliceWrite, BoostUnitTestSimulat
 
 	design.postprocess();
 
-	runTest({ 1,1 });
+	runTest({ 1,1000 });
 }
 
 
@@ -664,7 +664,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWrite, BoostUnitTestSimulationFixture)
 		for (auto i : gtry::utils::Range(6)) {
 			simu(index) = i;
 			simu(b) = (v >> i) & 0b111;
-			co_await WaitFor({1,1000});
+			co_await WaitFor({1,1000000});
 
 			size_t mask = (0b111ull << i);
 			BOOST_TEST(simu(a) == (a_ & ~mask | v & mask));
@@ -676,7 +676,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWrite, BoostUnitTestSimulationFixture)
 
 	design.postprocess();
 
-	runTest({ 1,1 });
+	runTest({ 1,1000 });
 }
 
 BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfSliceWrite, BoostUnitTestSimulationFixture)
@@ -702,7 +702,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfSliceWrite, BoostUnitTestSimulationFix
 		for (auto i : gtry::utils::Range(6)) {
 			simu(index) = i;
 			simu(b) = (v >> (i+1)) & 0b11;
-			co_await WaitFor({1,1000});
+			co_await WaitFor({1,1000000});
 
 			size_t mask = (0b110 << i);
 			BOOST_TEST(simu(a) == (a_ & ~mask | v & mask));
@@ -714,5 +714,5 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfSliceWrite, BoostUnitTestSimulationFix
 
 	design.postprocess();
 
-	runTest({ 1,1 });
+	runTest({ 1,1000 });
 }

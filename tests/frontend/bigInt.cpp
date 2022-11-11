@@ -55,7 +55,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, BigIntArithmetic, data::m
 			simu(a) = in1;
 			simu(b) = in2;
 
-			co_await WaitFor({1,1000});
+			co_await WaitFor({1,1000000});
 			
 			BOOST_TEST(simu(add).allDefined());
 			BOOST_CHECK_MESSAGE((sim::BigInt)simu(add) == ((in1+in2) & mask), "in1: 0x" << std::hex << in1 << " in2: 0x" << std::hex << in2 << " result: 0x" << std::hex << (sim::BigInt)simu(add) << " should be 0x" << ((in1+in2) & mask));
@@ -84,7 +84,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, BigIntArithmetic, data::m
 
 	design.postprocess();
 
-	runTest({ 1,1 });
+	runTest({ 1,1000 });
 }
 
 
@@ -113,7 +113,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, BigIntCompare, data::make
 			simu(a) = in1;
 			simu(b) = in2;
 
-			co_await WaitFor({1,1000});
+			co_await WaitFor({1,1000000});
 			
 			BOOST_TEST(simu(le).allDefined());
 			BOOST_TEST(simu(le) == (in1<in2));
@@ -140,5 +140,5 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, BigIntCompare, data::make
 
 	design.postprocess();
 
-	runTest({ 1,1 });
+	runTest({ 1,1000 });
 }

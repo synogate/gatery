@@ -288,16 +288,33 @@ sim::WaitClock OnClk(const Clock &clk);
 
 /**
  * @brief Forks a new simulation process that will run in (quasi-)parallel.
- * @details Execution resumes in the new simulation process an returns to the calling simulation process
+ * @details Execution resumes in the new simulation process and returns to the calling simulation process
  * once the forked one suspends or finishes. Forked simulation processes can be used in a fire&forget manner or
  * can be joined again, in which case they can return a return value.
  * @param simProc An instance of gtry::SimFunction.
  * @return A handle that other simulation processes (not necessarily the one that called fork()) can @ref gtry::join on to await the completion forked process.
  * @see gtry::sim::SimulationFunction::Fork
  */
-template<typename SimProc>
-auto fork(const SimProc &simProc) {
-	return typename SimProc::Fork(simProc);
+template<typename ReturnValue>
+auto fork(const sim::SimulationFunction<ReturnValue> &simProc) {
+	return typename sim::SimulationFunction<ReturnValue>::Fork(simProc);
+}
+
+/**
+ * @brief Forks a new simulation process from a lambda expression that will run in (quasi-)parallel.
+ * @details Execution resumes in the new simulation process and returns to the calling simulation process
+ * once the forked one suspends or finishes. Forked simulation processes can be used in a fire&forget manner or
+ * can be joined again, in which case they can return a return value.
+ * For lambdas with captures (and functors in general), the simulator must store the lambda instance to prevent it from being destructed before the simulation process terminates.
+ * This overload of fork thus takes the uninvoked functor, stores a copy internally, and invokes the copy.
+ * @param simProcLambda A lambda expression that gets moved (and stored) until execution is done.
+ * @return A handle that other simulation processes (not necessarily the one that called fork()) can @ref gtry::join on to await the completion forked process.
+ * @see gtry::sim::SimulationFunction::Fork
+ */
+template<std::invocable Functor>
+auto fork(Functor simProcLambda) {
+	using SimFunc = std::result_of<Functor()>::type;
+	return typename SimFunc::Fork(std::function<SimFunc()>(simProcLambda));
 }
 
 /**
