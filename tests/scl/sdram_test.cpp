@@ -126,7 +126,6 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 		simu(bus.dq).invalidate();
 		co_await AfterClk(clock());
 		simu(bus.casn) = '1';
-		co_await AfterClk(clock());
 		BOOST_TEST(simu(dq) == "xXX13");
 
 		co_await AfterClk(clock());
@@ -173,8 +172,8 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 		// check read data
 		for (size_t i = 0; i < burst; ++i)
 		{
-			co_await AfterClk(clock());
 			BOOST_TEST(simu(dq) == 0xB00 + i);
+			co_await AfterClk(clock());
 		}
 
 		simu(bus.csn) = '1';
