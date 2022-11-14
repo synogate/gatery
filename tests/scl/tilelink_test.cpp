@@ -28,6 +28,8 @@
 #include <gatery/scl/tilelink/TileLinkHub.h>
 #include <gatery/scl/tilelink/TileLinkErrorResponder.h>
 #include <gatery/scl/tilelink/TileLinkStreamFetch.h>
+#include <gatery/scl/tilelink/TileLinkMasterModel.h>
+#include <gatery/scl/tilelink/TileLinkAdapter.h>
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -810,4 +812,96 @@ BOOST_FIXTURE_TEST_CASE(tilelink_stream_fetch_test, BoostUnitTestSimulationFixtu
 
 	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
 	runTicks(clock.getClk(), 128);
+}
+
+class LinkTest : public ClockedTest
+{
+public:
+	LinkTest() : link(linkModel.getLink())
+	{
+	}
+
+	scl::TileLinkMasterModel linkModel;
+	scl::TileLinkUB& link;
+};
+
+BOOST_FIXTURE_TEST_CASE(tilelink_addburst_test, LinkTest)
+{
+	Memory<BVec> mem(256, 8_b);
+	
+	scl::TileLinkUL memLink;
+	scl::tileLinkInit(memLink, 8_b, 8_b, 0_b, 6_b);
+	mem <<= memLink;
+
+	scl::TileLinkUB memBurst = scl::tileLinkAddBurst(memLink, 2_b);
+
+	linkModel.init("m", 8_b, 8_b, 2_b);
+	memBurst <<= link;
+	timeout({ 1, 1'000'000 });
+
+	addSimulationProcess([&]()->SimProcess {
+		
+		co_await OnClk(clock());
+
+		co_await fork(linkModel.put(0, 2, 0xDDCCBBAA, clock()));
+		
+		auto [val, def, err] = co_await linkModel.get(0, 2, clock());
+		BOOST_TEST(!err);
+		BOOST_TEST((val & def) == 0xDDCCBBAA);
+
+		co_await OnClk(clock());
+		stopTest();
+	});
+}
+
+BOOST_FIXTURE_TEST_CASE(tilelink_addburst2_test, LinkTest)
+{
+	Memory<BVec> mem(256, 16_b);
+
+	scl::TileLinkUL memLink;
+	scl::tileLinkInit(memLink, 8_b, 16_b, 1_b, 12_b);
+	mem <<= memLink;
+
+	scl::TileLinkUB memBurst = scl::tileLinkAddBurst(memLink, 3_b);
+
+	linkModel.init("m", 8_b, 16_b, 3_b, 5_b);
+	memBurst <<= link;
+	timeout({ 1, 1'000'000 });
+
+	addSimulationProcess([&]()->SimProcess {
+
+		co_await OnClk(clock());
+
+		co_await fork(linkModel.put(0, 2, 0xDDCCBBAA, clock()));
+		co_await fork(linkModel.put(4, 1, 0xFFEE, clock()));
+		co_await fork(linkModel.put(6, 0, 0x11, clock()));
+		co_await fork(linkModel.put(7, 0, 0x22, clock()));
+
+		{
+			auto [val, def, err] = co_await linkModel.get(0, 3, clock());
+			BOOST_TEST(!err);
+			BOOST_TEST((val & def) == 0x2211FFEEDDCCBBAA);
+		}
+
+		{
+			auto [val, def, err] = co_await linkModel.get(0, 2, clock());
+			BOOST_TEST(!err);
+			BOOST_TEST((val & def) == 0xDDCCBBAA);
+		}
+
+		{
+			auto [val, def, err] = co_await linkModel.get(2, 1, clock());
+			BOOST_TEST(!err);
+			BOOST_TEST((val & def) == 0xDDCC);
+		}
+
+		{
+			auto [val, def, err] = co_await linkModel.get(1, 0, clock());
+			BOOST_TEST(!err);
+			BOOST_TEST((val & def) == 0xBB);
+		}
+
+		co_await OnClk(clock());
+		stopTest();
+	});
 }
