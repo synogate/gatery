@@ -126,7 +126,6 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 		simu(bus.dq).invalidate();
 		co_await AfterClk(clock());
 		simu(bus.casn) = '1';
-		co_await AfterClk(clock());
 		BOOST_TEST(simu(dq) == "xXX13");
 
 		co_await AfterClk(clock());
@@ -173,8 +172,8 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 		// check read data
 		for (size_t i = 0; i < burst; ++i)
 		{
-			co_await AfterClk(clock());
 			BOOST_TEST(simu(dq) == 0xB00 + i);
+			co_await AfterClk(clock());
 		}
 
 		simu(bus.csn) = '1';
@@ -661,7 +660,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_fuzz_test, SdramControllerTest)
 				address = *it;
 				address &= ~((1ull << size) - 1);
 
-				co_await fork([=] -> SimProcess {
+				co_await fork([=]() -> SimProcess {
 					auto [value, defined, error] = co_await linkModel.get(address, size, clock());
 					BOOST_TEST(!error);
 					check_read(address, size, value, defined);
@@ -673,7 +672,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_fuzz_test, SdramControllerTest)
 				usedAddress.insert(address);
 				uint64_t data = rng();
 
-				co_await fork([=] -> SimProcess {
+				co_await fork([=]() -> SimProcess {
 					bool error = co_await linkModel.put(address, size, data, clock());
 					BOOST_TEST(!error);
 					insert_write(address, size, data);

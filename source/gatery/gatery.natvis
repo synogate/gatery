@@ -266,8 +266,8 @@
 	<Type Name="gtry::hlim::Node_Rewire">
 		<DisplayString Condition="m_rewireOperation.zero()">{m_rewireOperation.ranges[0].subwidth}b0...</DisplayString>
 		<DisplayString Condition="m_rewireOperation.ones()">{m_rewireOperation.ranges[0].subwidth}b1...</DisplayString>
-		<DisplayString Condition="m_rewireOperation.zext()">zext({m_inputPorts[0]}, {m_rewireOperation.ranges[0].subwidth}b)</DisplayString>
-		<DisplayString Condition="m_rewireOperation.oext()">oext({m_inputPorts[0]}, {m_rewireOperation.ranges[0].subwidth}b)</DisplayString>
+		<DisplayString Condition="m_rewireOperation.zext()">zext({m_inputPorts[0]}, +{m_rewireOperation.ranges[1].subwidth}b)</DisplayString>
+		<DisplayString Condition="m_rewireOperation.oext()">oext({m_inputPorts[0]}, +{m_rewireOperation.ranges[1].subwidth}b)</DisplayString>
 		<DisplayString Condition="m_inputPorts.size() == 1">rewire({m_inputPorts[0]})</DisplayString>
 		<DisplayString Condition="m_inputPorts.size() == 0">rewire(const)</DisplayString>
 		<DisplayString>rewire(...)</DisplayString>

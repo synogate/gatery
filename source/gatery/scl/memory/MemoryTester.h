@@ -52,11 +52,6 @@ namespace gtry::scl
 					IF(mem.a->address == 0)
 						state = State::read;
 				}
-				IF(state.current() == State::read)
-				{
-					IF(mem.a->address == 0)
-						state = State::write;
-				}
 			}
 
 			VStream<UInt> nextSourceId = priorityEncoder((UInt)availableSourceId);

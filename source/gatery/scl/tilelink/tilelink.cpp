@@ -20,6 +20,38 @@
 
 namespace gtry::scl
 {
+	Bit TileLinkA::hasData() const 
+	{ 
+		return !opcode.msb(); 
+	}
+
+	Bit TileLinkA::isGet() const 
+	{ 
+		return opcode == (size_t)TileLinkA::Get; 
+	}
+
+	Bit TileLinkA::isPut() const 
+	{ 
+		return opcode.lower(2_b) == 0; 
+	}
+
+	Bit TileLinkA::isBurst() const
+	{
+		size_t bytePerBeat = utils::Log2(data.width().bytes());
+		return size > bytePerBeat & hasData();
+	}
+
+	Bit TileLinkD::hasData() const
+	{ 
+		return opcode.lsb(); 
+	}
+
+	Bit TileLinkD::isBurst() const
+	{
+		size_t bytePerBeat = utils::Log2(data.width().bytes());
+		return size > bytePerBeat & hasData();
+	}
+
 	template struct Stream<TileLinkA, Ready, Valid>;
 	template struct Stream<TileLinkD, Ready, Valid>;
 
