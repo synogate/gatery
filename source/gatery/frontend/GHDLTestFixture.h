@@ -19,7 +19,7 @@
 
 #include "DesignScope.h"
 
-#include "FrontendUNitTestSimulationFixture.h"
+#include "FrontendUnitTestSimulationFixture.h"
 
 #include <gatery/export/vhdl/VHDLExport.h>
 #include <gatery/frontend/Clock.h>
