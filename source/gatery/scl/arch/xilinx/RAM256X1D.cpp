@@ -36,12 +36,16 @@ RAM256X1D::RAM256X1D()
 	m_resetNames = {""};
 	m_clocks.resize(CLK_COUNT);
 
-	
-	resizeInputs(IN_COUNT);
-	resizeOutputs(OUT_COUNT);
+	resizeIOPorts(IN_COUNT, OUT_COUNT);
 
-	setOutputConnectionType(OUT_SPO, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
-	setOutputConnectionType(OUT_DPO, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
+	declInputBit(IN_D, "D");
+	declInputBitVector(IN_A, "A", 8);
+	declInputBitVector(IN_DPRA, "DPRA", 8);
+	declInputBit(IN_WE, "WE");
+
+
+	declOutputBit(OUT_SPO, "SPO");
+	declOutputBit(OUT_DPO, "DPO");
 }
 
 Bit RAM256X1D::setupSDP(const UInt &wrAddr, const Bit &wrData, const Bit &wrEn, const UInt &rdAddr)
@@ -67,26 +71,6 @@ std::string RAM256X1D::getTypeName() const
 
 void RAM256X1D::assertValidity() const
 {
-}
-
-std::string RAM256X1D::getInputName(size_t idx) const
-{
-	switch (idx) {
-		case IN_D: return "D";
-		case IN_A: return "A";
-		case IN_DPRA: return "DPRA";
-		case IN_WE: return "WE";
-		default: return "";
-	}
-}
-
-std::string RAM256X1D::getOutputName(size_t idx) const
-{
-	switch (idx) {
-		case OUT_SPO: return "SPO";
-		case OUT_DPO: return "DPO";
-		default: return "";
-	}
 }
 
 std::unique_ptr<hlim::BaseNode> RAM256X1D::cloneUnconnected() const

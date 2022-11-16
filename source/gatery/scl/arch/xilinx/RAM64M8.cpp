@@ -37,17 +37,36 @@ RAM64M8::RAM64M8()
 	m_clocks.resize(CLK_COUNT);
 
 	
-	resizeInputs(IN_COUNT);
-	resizeOutputs(OUT_COUNT);
+	resizeIOPorts(IN_COUNT, OUT_COUNT);
 
-	setOutputConnectionType(OUT_DO_A, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
-	setOutputConnectionType(OUT_DO_B, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
-	setOutputConnectionType(OUT_DO_C, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
-	setOutputConnectionType(OUT_DO_D, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
-	setOutputConnectionType(OUT_DO_E, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
-	setOutputConnectionType(OUT_DO_F, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
-	setOutputConnectionType(OUT_DO_G, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
-	setOutputConnectionType(OUT_DO_H, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
+	declInputBit(IN_DI_A, "DIA");
+	declInputBit(IN_DI_B, "DIB");
+	declInputBit(IN_DI_C, "DIC");
+	declInputBit(IN_DI_D, "DID");
+	declInputBit(IN_DI_E, "DIE");
+	declInputBit(IN_DI_F, "DIF");
+	declInputBit(IN_DI_G, "DIG");
+	declInputBit(IN_DI_H, "DIH");
+
+	declInputBitVector(IN_ADDR_A, "ADDRA", 6);
+	declInputBitVector(IN_ADDR_B, "ADDRB", 6);
+	declInputBitVector(IN_ADDR_C, "ADDRC", 6);
+	declInputBitVector(IN_ADDR_D, "ADDRD", 6);
+	declInputBitVector(IN_ADDR_E, "ADDRE", 6);
+	declInputBitVector(IN_ADDR_F, "ADDRF", 6);
+	declInputBitVector(IN_ADDR_G, "ADDRG", 6);
+	declInputBitVector(IN_ADDR_H, "ADDRH", 6);
+
+	declInputBit(IN_WE, "WE");
+
+	declOutputBit(OUT_DO_A, "DOA");
+	declOutputBit(OUT_DO_B, "DOB");
+	declOutputBit(OUT_DO_C, "DOC");
+	declOutputBit(OUT_DO_D, "DOD");
+	declOutputBit(OUT_DO_E, "DOE");
+	declOutputBit(OUT_DO_F, "DOF");
+	declOutputBit(OUT_DO_G, "DOG");
+	declOutputBit(OUT_DO_H,	"DOH");
 }
 
 UInt RAM64M8::setup64x7_SDP(const UInt &wrAddr, const UInt &wrData, const Bit &wrEn, const UInt &rdAddr)
@@ -83,45 +102,6 @@ std::string RAM64M8::getTypeName() const
 
 void RAM64M8::assertValidity() const
 {
-}
-
-std::string RAM64M8::getInputName(size_t idx) const
-{
-	switch (idx) {
-		case IN_DI_A: return "DIA";
-		case IN_DI_B: return "DIB";
-		case IN_DI_C: return "DIC";
-		case IN_DI_D: return "DID";
-		case IN_DI_E: return "DIE";
-		case IN_DI_F: return "DIF";
-		case IN_DI_G: return "DIG";
-		case IN_DI_H: return "DIH";
-		case IN_ADDR_A: return "ADDRA";
-		case IN_ADDR_B: return "ADDRB";
-		case IN_ADDR_C: return "ADDRC";
-		case IN_ADDR_D: return "ADDRD";
-		case IN_ADDR_E: return "ADDRE";
-		case IN_ADDR_F: return "ADDRF";
-		case IN_ADDR_G: return "ADDRG";
-		case IN_ADDR_H: return "ADDRH";
-		case IN_WE: return "WE";
-		default: return "";
-	}
-}
-
-std::string RAM64M8::getOutputName(size_t idx) const
-{
-	switch (idx) {
-		case OUT_DO_A: return "DOA";
-		case OUT_DO_B: return "DOB";
-		case OUT_DO_C: return "DOC";
-		case OUT_DO_D: return "DOD";
-		case OUT_DO_E: return "DOE";
-		case OUT_DO_F: return "DOF";
-		case OUT_DO_G: return "DOG";
-		case OUT_DO_H: return "DOH";
-		default: return "";
-	}
 }
 
 std::unique_ptr<hlim::BaseNode> RAM64M8::cloneUnconnected() const

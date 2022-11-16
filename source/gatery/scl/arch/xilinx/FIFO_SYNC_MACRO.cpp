@@ -69,16 +69,23 @@ FIFO_SYNC_MACRO::FIFO_SYNC_MACRO(size_t width, FIFOSize fifoSize)
 	}
 	m_genericParameters["DATA_WIDTH"] = width;
 
-	resizeInputs(IN_COUNT);
-	resizeOutputs(OUT_COUNT);
+	resizeIOPorts(IN_COUNT, OUT_COUNT);
 
-	// default to bool, then override UInts
-	for (auto i : utils::Range(OUT_COUNT))
-		setOutputConnectionType(i, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
+	declInputBit(IN_RDEN, "RDEN");
+	declInputBit(IN_WREN, "WREN");
+	declInputBitVector(IN_DI, "DI", m_width, "DATA_WIDTH");
 
-	setOutputConnectionType(OUT_DO, {.interpretation = hlim::ConnectionType::BITVEC, .width=width});
-	setOutputConnectionType(OUT_RDCOUNT, {.interpretation = hlim::ConnectionType::BITVEC, .width=counterWidth});
-	setOutputConnectionType(OUT_WRCOUNT, {.interpretation = hlim::ConnectionType::BITVEC, .width=counterWidth});
+
+	declOutputBit(OUT_ALMOSTEMPTY, "ALMOSTEMPTY");
+	declOutputBit(OUT_ALMOSTFULL, "ALMOSTFULL");
+	declOutputBit(OUT_EMPTY, "EMPTY");
+	declOutputBit(OUT_FULL, "FULL");
+	declOutputBit(OUT_RDERR, "RDERR");
+	declOutputBit(OUT_WRERR, "WRERR");
+	// UInts
+	declOutputBitVector(OUT_DO, "DO", width, "DATA_WIDTH");
+	declOutputBitVector(OUT_RDCOUNT, "RDCOUNT", counterWidth);
+	declOutputBitVector(OUT_WRCOUNT, "WRCOUNT", counterWidth);
 }
 
 
@@ -100,61 +107,6 @@ FIFO_SYNC_MACRO &FIFO_SYNC_MACRO::setDevice(std::string device)
 	return *this;
 }
 
-
-void FIFO_SYNC_MACRO::connectInput(Inputs input, const Bit &bit)
-{
-	switch (input) {
-		case IN_RDEN:
-		case IN_WREN:
-			NodeIO::connectInput(input, bit.readPort());
-		break;
-		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to UInt input of FIFO_SYNC_MACRO!");
-	}
-}
-
-void FIFO_SYNC_MACRO::connectInput(Inputs input, const UInt &UInt)
-{
-	switch (input) {
-		case IN_DI:
-			HCL_DESIGNCHECK_HINT(UInt.size() == m_width, "Data input UInt to FIFO_SYNC_MACRO has different width than previously specified!");
-			NodeIO::connectInput(input, UInt.readPort());
-		break;
-		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect UInt to bit input of FIFO_SYNC_MACRO!");
-	}
-}
-
-Bit FIFO_SYNC_MACRO::getOutputBit(Outputs output)
-{
-	switch (output) {
-		case OUT_ALMOSTEMPTY:
-		case OUT_ALMOSTFULL:
-		case OUT_EMPTY:
-		case OUT_FULL:
-		case OUT_RDERR:
-		case OUT_WRERR:
-			return SignalReadPort(hlim::NodePort{this, (size_t)output});
-		break;
-		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to UInt output of FIFO_SYNC_MACRO!");
-	}
-}
-
-UInt FIFO_SYNC_MACRO::getOutputUInt(Outputs output)
-{
-	switch (output) {
-		case OUT_DO:
-		case OUT_RDCOUNT:
-		case OUT_WRCOUNT:
-			return SignalReadPort(hlim::NodePort{this, (size_t)output});
-		break;
-		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect UInt to bit output of FIFO_SYNC_MACRO!");
-	}
-}
-
-
 std::string FIFO_SYNC_MACRO::getTypeName() const
 {
 	return "FIFO_SYNC_MACRO";
@@ -164,33 +116,6 @@ void FIFO_SYNC_MACRO::assertValidity() const
 {
 }
 
-std::string FIFO_SYNC_MACRO::getInputName(size_t idx) const
-{
-	switch (idx) {
-		case IN_RDEN: return "RDEN";
-		case IN_WREN: return "WREN";
-		case IN_DI: return "DI";
-
-		default: return "";
-	}
-}
-
-std::string FIFO_SYNC_MACRO::getOutputName(size_t idx) const
-{
-	switch (idx) {
-		case OUT_ALMOSTEMPTY: return "ALMOSTEMPTY";
-		case OUT_ALMOSTFULL: return "ALMOSTFULL";
-		case OUT_EMPTY: return "EMPTY";
-		case OUT_FULL: return "FULL";
-		case OUT_RDERR: return "RDERR";
-		case OUT_WRERR: return "WRERR";
-		case OUT_DO: return "DO";
-		case OUT_RDCOUNT: return "RDCOUNT";
-		case OUT_WRCOUNT: return "WRCOUNT";
-
-		default: return "";
-	}
-}
 
 std::unique_ptr<hlim::BaseNode> FIFO_SYNC_MACRO::cloneUnconnected() const
 {

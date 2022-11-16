@@ -44,10 +44,33 @@ OSERDESE2::OSERDESE2(size_t width)
 	m_resetNames = {"", "RST"};
 	m_clocks.resize(CLK_COUNT);
 
-	resizeInputs(IN_COUNT);
-	resizeOutputs(OUT_COUNT);
-	for (auto i : utils::Range(OUT_COUNT))
-		setOutputConnectionType(i, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
+	resizeIOPorts(IN_COUNT, OUT_COUNT);
+
+	declInputBit(IN_D1,  "D1");
+	declInputBit(IN_D2,  "D2");
+	declInputBit(IN_D3,  "D3");
+	declInputBit(IN_D4,  "D4");
+	declInputBit(IN_D5,  "D5");
+	declInputBit(IN_D6,  "D6");
+	declInputBit(IN_D7,  "D7");
+	declInputBit(IN_D8,  "D8");
+	declInputBit(IN_OCE, "OCE");
+	declInputBit(IN_SHIFTIN1, "SHIFTIN1");
+	declInputBit(IN_SHIFTIN2, "SHIFTIN2");
+	declInputBit(IN_T1, "T1");
+	declInputBit(IN_T2, "T2");
+	declInputBit(IN_T3, "T3");
+	declInputBit(IN_T4, "T4");
+	declInputBit(IN_TBYTEIN, "TBYTEIN");
+	declInputBit(IN_TCE, "TCE");
+
+	declOutputBit(OUT_OFB, "OFB");
+	declOutputBit(OUT_OQ, "OQ");
+	declOutputBit(OUT_SHIFTOUT1, "SHIFTOUT1");
+	declOutputBit(OUT_SHIFTOUT2, "SHIFTOUT2");
+	declOutputBit(OUT_TBYTEOUT, "TBYTEOUT");
+	declOutputBit(OUT_TFB, "TFB");
+	declOutputBit(OUT_TQ, "TQ");
 }
 
 void OSERDESE2::setSlave()
@@ -63,60 +86,6 @@ std::string OSERDESE2::getTypeName() const
 void OSERDESE2::assertValidity() const
 {
 }
-
-std::string OSERDESE2::getInputName(size_t idx) const
-{
-	switch (idx) {
-		// D1 - D8: 1-bit (each) input: Parallel data inputs (1-bit each)
-		case IN_D1: return "D1";
-		case IN_D2: return "D2";
-		case IN_D3: return "D3";
-		case IN_D4: return "D4";
-		case IN_D5: return "D5";
-		case IN_D6: return "D6";
-		case IN_D7: return "D7";
-		case IN_D8: return "D8";
-		case IN_OCE: return "OCE"; // 1-bit input: Output data clock enable
-		// SHIFTIN1 / SHIFTIN2: 1-bit (each) input: Data input expansion (1-bit each)
-		case IN_SHIFTIN1: return "SHIFTIN1";
-		case IN_SHIFTIN2: return "SHIFTIN2";
-		// T1 - T4: 1-bit (each) input: Parallel 3-state inputs
-		case IN_T1: return "T1";
-		case IN_T2: return "T2";
-		case IN_T3: return "T3";
-		case IN_T4: return "T4";
-		case IN_TBYTEIN: return "TBYTEIN"; // 1-bit input: Byte group tristate
-		case IN_TCE: return "TCE";	 // 1-bit input: 3-state clock enable
-		default: return "";
-	}
-}
-
-std::string OSERDESE2::getOutputName(size_t idx) const
-{
-	switch (idx) {
-		case OUT_OFB: return "OFB"; // 1-bit output: Feedback path for data
-		case OUT_OQ: return "OQ";  // 1-bit output: Data path output
-		// SHIFTOUT1 / SHIFTOUT2: 1-bit (each) output: Data output expansion (1-bit each)
-		case OUT_SHIFTOUT1: return "SHIFTOUT1";
-		case OUT_SHIFTOUT2: return "SHIFTOUT2";
-		case OUT_TBYTEOUT: return "TBYTEOUT"; // 1-bit output: Byte group tristate
-		case OUT_TFB: return "TFB"; // 1-bit output: 3-state control
-		case OUT_TQ: return "TQ"; // 1-bit output: 3-state control
-		default:
-			return "invalid";
-	}
-}
-
-void OSERDESE2::setInput(Inputs input, const Bit &bit)
-{
-	rewireInput(input, bit.readPort());
-}
-
-Bit OSERDESE2::getOutput(Outputs output)
-{
-	return Bit(SignalReadPort(hlim::NodePort{.node = this, .port = (size_t)output}));
-}
-
 
 std::unique_ptr<hlim::BaseNode> OSERDESE2::cloneUnconnected() const
 {

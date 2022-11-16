@@ -18,11 +18,11 @@
 #pragma once
 
 #include <gatery/frontend.h>
-#include <gatery/hlim/supportNodes/Node_External.h>
+#include <gatery/frontend/ExternalComponent.h>
 
 namespace gtry::scl::arch::xilinx {
 
-class FIFO_SYNC_MACRO : public gtry::hlim::Node_External
+class FIFO_SYNC_MACRO : public gtry::ExternalComponent
 {
 	public:
 		// Asynchronous reset of all FIFO functions, flags, and pointers. RST must be asserted for five read and write clock cycles.
@@ -69,15 +69,8 @@ class FIFO_SYNC_MACRO : public gtry::hlim::Node_External
 		FIFO_SYNC_MACRO &setAlmostFull(size_t numVacant);
 		FIFO_SYNC_MACRO &setDevice(std::string device);
 
-		void connectInput(Inputs input, const Bit &bit);
-		void connectInput(Inputs input, const UInt &UInt);
-		Bit getOutputBit(Outputs output);
-		UInt getOutputUInt(Outputs output);
-
 		virtual std::string getTypeName() const override;
 		virtual void assertValidity() const override;
-		virtual std::string getInputName(size_t idx) const override;
-		virtual std::string getOutputName(size_t idx) const override;
 
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 

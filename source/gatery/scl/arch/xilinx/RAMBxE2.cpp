@@ -39,124 +39,175 @@ RAMBxE2::RAMBxE2(Type type) : m_type(type)
 	m_resetNames = {"", ""};
 	m_clocks.resize(CLK_COUNT);
 
-	
-	resizeInputs(IN_COUNT);
-	resizeOutputs(OUT_COUNT);
 
 	size_t mult = 1;
+	size_t add = 0;
 	if (m_type == RAMB36E2) {
 		mult = 2;
-
-		setOutputConnectionType(OUT_ECC_PARITY, {.interpretation = hlim::ConnectionType::BITVEC, .width=8});
-		setOutputConnectionType(OUT_RD_ADDR_ECC, {.interpretation = hlim::ConnectionType::BITVEC, .width=9});
+		add = 1;
+		resizeIOPorts(IN_COUNT_36, OUT_COUNT_36);
 	} else {
-
-		setOutputConnectionType(OUT_ECC_PARITY, {.interpretation = hlim::ConnectionType::BITVEC, .width=0});
-		setOutputConnectionType(OUT_RD_ADDR_ECC, {.interpretation = hlim::ConnectionType::BITVEC, .width=0});
+		resizeIOPorts(IN_COUNT_18, OUT_COUNT_18);
 	}
-	setOutputConnectionType(OUT_CAS_DOUT_A, {.interpretation = hlim::ConnectionType::BITVEC, .width=16*mult});
-	setOutputConnectionType(OUT_CAS_DOUT_B, {.interpretation = hlim::ConnectionType::BITVEC, .width=16*mult});
-	setOutputConnectionType(OUT_CAS_DOUTP_A, {.interpretation = hlim::ConnectionType::BITVEC, .width=2*mult});
-	setOutputConnectionType(OUT_CAS_DOUTP_B, {.interpretation = hlim::ConnectionType::BITVEC, .width=2*mult});
-	setOutputConnectionType(OUT_DOUT_A_DOUT, {.interpretation = hlim::ConnectionType::BITVEC, .width=16*mult});
-	setOutputConnectionType(OUT_DOUT_B_DOUT, {.interpretation = hlim::ConnectionType::BITVEC, .width=16*mult});
-	setOutputConnectionType(OUT_DOUTP_A_DOUTP, {.interpretation = hlim::ConnectionType::BITVEC, .width=2*mult});
-	setOutputConnectionType(OUT_DOUTP_B_DOUTP, {.interpretation = hlim::ConnectionType::BITVEC, .width=2*mult});
+	declInputBitVector(IN_ADDR_A_RDADDR, "ADDRARDADDR", 14+add);
+	declInputBitVector(IN_ADDR_B_WRADDR, "ADDRBWRADDR", 14+add);
+	declInputBit(IN_ADDREN_A, "ADDRENA");
+	declInputBit(IN_ADDREN_B, "ADDRENB");
+	declInputBit(IN_CAS_DIMUX_A, "CASDIMUXA");
+	declInputBit(IN_CAS_DIMUX_B, "CASDIMUXB");
+	declInputBitVector(IN_CAS_DIN_A, "CASDINA", 16*mult);
+	declInputBitVector(IN_CAS_DIN_B, "CASDINB", 16*mult);
+	declInputBitVector(IN_CAS_DINP_A, "CASDINPA", 2*mult);
+	declInputBitVector(IN_CAS_DINP_B, "CASDINPB", 2*mult);
+	declInputBit(IN_CAS_DOMUX_A, "CASDOMUXA");
+	declInputBit(IN_CAS_DOMUX_B, "CASDOMUXB");
+	declInputBit(IN_CAS_DOMUXEN_A, "CASDOMUXEN_A");
+	declInputBit(IN_CAS_DOMUXEN_B, "CASDOMUXEN_B");
+	declInputBit(IN_CAS_OREG_IMUX_A, "CASOREGIMUXA");
+	declInputBit(IN_CAS_OREG_IMUX_B, "CASOREGIMUXB");
+	declInputBit(IN_CAS_OREG_IMUXEN_A, "CASOREGIMUXEN_A");
+	declInputBit(IN_CAS_OREG_IMUXEN_B, "CASOREGIMUXEN_B");
+	declInputBitVector(IN_DIN_A_DIN, "DINADIN", 16*mult);
+	declInputBitVector(IN_DIN_B_DIN, "DINBDIN", 16*mult);
+	declInputBitVector(IN_DINP_A_DINP, "DINPADINP", 2*mult);
+	declInputBitVector(IN_DINP_B_DINP, "DINPBDINP", 2*mult);
+	declInputBit(IN_EN_A_RD_EN, "ENARDEN");
+	declInputBit(IN_EN_B_WR_EN, "ENBWREN");
+	declInputBit(IN_REG_CE_A_REG_CE, "REGCEAREGCE");
+	declInputBit(IN_REG_CE_B, "REGCEB");
+	declInputBit(IN_RST_RAM_A_RST_RAM, "RSTRAMARSTRAM");
+	declInputBit(IN_RST_RAM_B, "RSTRAMB");
+	declInputBit(IN_RST_REG_A_RST_REG, "RSTREGARSTREG");
+	declInputBit(IN_RST_REG_B, "RSTREGB");
+	declInputBit(IN_SLEEP, "SLEEP");
+	declInputBitVector(IN_WE_A, "WEA", 2*mult);
+	declInputBitVector(IN_WE_B_WE, "WEBWE", 4*mult);
+			
+			
+	// 36k
+	if (m_type == RAMB36E2) {
+		declInputBit(IN_CAS_IND_BITERR, "CASINDBITERR");
+		declInputBit(IN_CAS_INS_BITERR, "CASINSBITERR");
+		declInputBit(IN_ECC_PIPE_CE, "ECCPIPECE");
+		declInputBit(IN_INJECT_D_BITERR, "INJECTDBITERR");
+		declInputBit(IN_INJECT_S_BITERR, "INJECTSBITERR");
+	}
+
+
+	declOutputBitVector(OUT_CAS_DOUT_A, "CASDOUTA", 16*mult);
+	declOutputBitVector(OUT_CAS_DOUT_B, "CASDOUTB", 16*mult);
+	declOutputBitVector(OUT_CAS_DOUTP_A, "CASDOUTPA", 2*mult);
+	declOutputBitVector(OUT_CAS_DOUTP_B, "CASDOUTPB", 2*mult);
+	declOutputBitVector(OUT_DOUT_A_DOUT, "DOUTADOUT", 16*mult);
+	declOutputBitVector(OUT_DOUT_B_DOUT, "DOUTBDOUT", 16*mult);
+	declOutputBitVector(OUT_DOUTP_A_DOUTP, "DOUTPADOUTP", 2*mult);
+	declOutputBitVector(OUT_DOUTP_B_DOUTP, "DOUTPBDOUTP", 2*mult);
+
+	// 36k
+	if (m_type == RAMB36E2) {
+		declOutputBit(OUT_CAS_OUTD_BITERR, "CASOUTDBITERR");
+		declOutputBit(OUT_CAS_OUTS_BITERR, "CASOUTSBITERR");
+		declOutputBit(OUT_RD_ADDR_ECC, "RDADDRECC");
+		declOutputBit(OUT_S_BITERR, "SBITERR");
+		declOutputBitVector(OUT_ECC_PARITY, "ECCPARITY", 8);
+		declOutputBitVector(OUT_RD_ADDR_ECC, "RDADDRECC", 9);
+	}
+
 
 	m_genericParameters["SIM_COLLISION_CHECK"] = "GENERATE_X_ONLY";
 }
 
 void RAMBxE2::defaultInputs(bool writePortA, bool writePortB)
 {
-	UInt undefinedData;
-	UInt undefinedParity;
-	UInt undefinedAddr;
+	BVec undefinedData;
+	BVec undefinedParity;
+	BVec undefinedAddr;
 
 	if (m_type == RAMB18E2) {
-		undefinedData = ConstUInt(BitWidth(16));
-		undefinedParity = ConstUInt(BitWidth(2));
-		undefinedAddr = ConstUInt(BitWidth(14));
+		undefinedData = ConstBVec(BitWidth(16));
+		undefinedParity = ConstBVec(BitWidth(2));
+		undefinedAddr = ConstBVec(BitWidth(14));
 	} else {
-		undefinedData = ConstUInt(BitWidth(32));
-		undefinedParity = ConstUInt(BitWidth(4));
-		undefinedAddr = ConstUInt(BitWidth(15));
+		undefinedData = ConstBVec(BitWidth(32));
+		undefinedParity = ConstBVec(BitWidth(4));
+		undefinedAddr = ConstBVec(BitWidth(15));
 	}
 
 	Bit oneB = '1';
 	Bit zeroB = '0';
 	Bit undefB = 'x';
 
-	connectInput(IN_ADDREN_A, oneB);
-	connectInput(IN_ADDREN_B, oneB);
+	setInput(IN_ADDREN_A, oneB);
+	setInput(IN_ADDREN_B, oneB);
 
-	connectInput(IN_CAS_DIMUX_A, zeroB);
-	connectInput(IN_CAS_DIMUX_B, zeroB);
+	setInput(IN_CAS_DIMUX_A, zeroB);
+	setInput(IN_CAS_DIMUX_B, zeroB);
 
-	connectInput(IN_CAS_DIN_A, undefinedData);
-	connectInput(IN_CAS_DIN_B, undefinedData);
-	connectInput(IN_CAS_DINP_A, undefinedParity);
-	connectInput(IN_CAS_DINP_B, undefinedParity);
+	setInput(IN_CAS_DIN_A, undefinedData);
+	setInput(IN_CAS_DIN_B, undefinedData);
+	setInput(IN_CAS_DINP_A, undefinedParity);
+	setInput(IN_CAS_DINP_B, undefinedParity);
 
-	connectInput(IN_CAS_DOMUX_A, zeroB);
-	connectInput(IN_CAS_DOMUX_B, zeroB);
+	setInput(IN_CAS_DOMUX_A, zeroB);
+	setInput(IN_CAS_DOMUX_B, zeroB);
 
-	connectInput(IN_CAS_DOMUXEN_A, oneB);
-	connectInput(IN_CAS_DOMUXEN_B, oneB);
+	setInput(IN_CAS_DOMUXEN_A, oneB);
+	setInput(IN_CAS_DOMUXEN_B, oneB);
 
-	connectInput(IN_CAS_OREG_IMUX_A, zeroB);
-	connectInput(IN_CAS_OREG_IMUX_B, zeroB);
+	setInput(IN_CAS_OREG_IMUX_A, zeroB);
+	setInput(IN_CAS_OREG_IMUX_B, zeroB);
 
-	connectInput(IN_CAS_OREG_IMUXEN_A, oneB);
-	connectInput(IN_CAS_OREG_IMUXEN_B, oneB);
+	setInput(IN_CAS_OREG_IMUXEN_A, oneB);
+	setInput(IN_CAS_OREG_IMUXEN_B, oneB);
 
 
-	connectInput(IN_DIN_A_DIN, undefinedData);
-	connectInput(IN_DIN_B_DIN, undefinedData);
-	connectInput(IN_DINP_A_DINP, undefinedParity);
-	connectInput(IN_DINP_B_DINP, undefinedParity);
+	setInput(IN_DIN_A_DIN, undefinedData);
+	setInput(IN_DIN_B_DIN, undefinedData);
+	setInput(IN_DINP_A_DINP, undefinedParity);
+	setInput(IN_DINP_B_DINP, undefinedParity);
 
-	connectInput(IN_EN_A_RD_EN, zeroB);
-	connectInput(IN_EN_B_WR_EN, zeroB);
+	setInput(IN_EN_A_RD_EN, zeroB);
+	setInput(IN_EN_B_WR_EN, zeroB);
 
-	connectInput(IN_REG_CE_A_REG_CE, oneB);
-	connectInput(IN_REG_CE_B, oneB);
+	setInput(IN_REG_CE_A_REG_CE, oneB);
+	setInput(IN_REG_CE_B, oneB);
 
-	connectInput(IN_RST_RAM_A_RST_RAM, zeroB);
-	connectInput(IN_RST_RAM_B, zeroB);
-	connectInput(IN_RST_REG_A_RST_REG, zeroB);
-	connectInput(IN_RST_REG_B, zeroB);
+	setInput(IN_RST_RAM_A_RST_RAM, zeroB);
+	setInput(IN_RST_RAM_B, zeroB);
+	setInput(IN_RST_REG_A_RST_REG, zeroB);
+	setInput(IN_RST_REG_B, zeroB);
 
-	connectInput(IN_SLEEP, zeroB);
+	setInput(IN_SLEEP, zeroB);
 
 	if (m_type == RAMB36E2) {
 		if (writePortA)
-			connectInput(IN_WE_A, "b1111");
+			setInput(IN_WE_A, BVec("b1111"));
 		else
-			connectInput(IN_WE_A, "b0000");
+			setInput(IN_WE_A, BVec("b0000"));
 
 		if (writePortB)
-			connectInput(IN_WE_B_WE, "b11111111");
+			setInput(IN_WE_B_WE, BVec("b11111111"));
 		else
-			connectInput(IN_WE_B_WE, "b00000000");
+			setInput(IN_WE_B_WE, BVec("b00000000"));
 	} else {
 		if (writePortA)
-			connectInput(IN_WE_A, "b11");
+			setInput(IN_WE_A, BVec("b11"));
 		else
-			connectInput(IN_WE_A, "b00");
+			setInput(IN_WE_A, BVec("b00"));
 
 		if (writePortB)
-			connectInput(IN_WE_B_WE, "b1111");
+			setInput(IN_WE_B_WE, BVec("b1111"));
 		else
-			connectInput(IN_WE_B_WE, "b0000");	
+			setInput(IN_WE_B_WE, BVec("b0000"));	
 	}
 
 	if (m_type == RAMB36E2) {
-		connectInput(IN_CAS_IND_BITERR, undefB);
-		connectInput(IN_CAS_INS_BITERR, undefB);
+		setInput(IN_CAS_IND_BITERR, undefB);
+		setInput(IN_CAS_INS_BITERR, undefB);
 
-		connectInput(IN_ECC_PIPE_CE, zeroB);
-		connectInput(IN_INJECT_D_BITERR, zeroB);
-		connectInput(IN_INJECT_S_BITERR, zeroB);
+		setInput(IN_ECC_PIPE_CE, zeroB);
+		setInput(IN_INJECT_D_BITERR, zeroB);
+		setInput(IN_INJECT_S_BITERR, zeroB);
 	}	
 }
 
@@ -238,131 +289,34 @@ RAMBxE2 &RAMBxE2::setupClockDomains(ClockDomains clkDom)
 }
 
 
-void RAMBxE2::connectInput(Inputs input, const Bit &bit)
+void RAMBxE2::setInput(size_t input, const Bit &bit)
 {
-	switch (input) {
-		case IN_ADDREN_A:
-		case IN_ADDREN_B:
-		case IN_CAS_DIMUX_A:
-		case IN_CAS_DIMUX_B:
-		case IN_CAS_DOMUX_A:
-		case IN_CAS_DOMUX_B:
-		case IN_CAS_DOMUXEN_A:
-		case IN_CAS_DOMUXEN_B:
-		case IN_CAS_OREG_IMUX_A:
-		case IN_CAS_OREG_IMUX_B:
-		case IN_CAS_OREG_IMUXEN_A:
-		case IN_CAS_OREG_IMUXEN_B:
-		case IN_EN_A_RD_EN:
-		case IN_EN_B_WR_EN:
-		case IN_REG_CE_A_REG_CE:
-		case IN_REG_CE_B:
-		case IN_RST_RAM_A_RST_RAM:
-		case IN_RST_RAM_B:
-		case IN_RST_REG_A_RST_REG:
-		case IN_RST_REG_B:
-		case IN_SLEEP:
-			NodeIO::connectInput(input, bit.readPort());
-		break;
-
-		case IN_CAS_IND_BITERR:
-		case IN_CAS_INS_BITERR:
-		case IN_ECC_PIPE_CE:
-		case IN_INJECT_D_BITERR:
-		case IN_INJECT_S_BITERR:
-			HCL_DESIGNCHECK_HINT(m_type == RAMB36E2, "Input only available for RAMB32E2!");
-			NodeIO::connectInput(input, bit.readPort());
-		break;
-
-		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit to UInt input of RAMBxE2!");
-	}
+	HCL_DESIGNCHECK_HINT(m_type == RAMB36E2 || input < IN_COUNT_18, "Input only available for RAMB32E2!");
+	ExternalComponent::setInput(input, bit);
 }
 
-void RAMBxE2::connectInput(Inputs input, const UInt &vec)
+void RAMBxE2::setInput(size_t input, const BVec &bvec)
 {
-	size_t mult = 1;
-	if (m_type == RAMB36E2)
-		mult = 2;
-
-	switch (input) {
-		case IN_ADDR_A_RDADDR:
-		case IN_ADDR_B_WRADDR:
-			if (m_type == RAMB36E2) {
-				HCL_DESIGNCHECK_HINT(vec.size() == 15, "Data input UInt has wrong width!");
-			} else
-				HCL_DESIGNCHECK_HINT(vec.size() == 14, "Data input UInt has wrong width!");
-		break;
-		case IN_CAS_DIN_A:
-		case IN_CAS_DIN_B:
-			HCL_DESIGNCHECK_HINT(vec.size() == 16*mult, "Data input UInt has wrong width!");
-		break;
-		case IN_CAS_DINP_A:
-		case IN_CAS_DINP_B:
-			HCL_DESIGNCHECK_HINT(vec.size() == 2*mult, "Data input UInt has wrong width!");
-		break;
-		case IN_DIN_A_DIN:
-		case IN_DIN_B_DIN:
-			HCL_DESIGNCHECK_HINT(vec.size() == 16*mult, "Data input UInt has wrong width!");
-		break;
-		case IN_DINP_A_DINP:
-		case IN_DINP_B_DINP:
-			HCL_DESIGNCHECK_HINT(vec.size() == 2*mult, "Data input UInt has wrong width!");
-		break;
-		case IN_WE_A:
-			HCL_DESIGNCHECK_HINT(vec.size() == 2*mult, "Data input UInt has wrong width!");
-		break;
-		case IN_WE_B_WE:
-			HCL_DESIGNCHECK_HINT(vec.size() == 4*mult, "Data input UInt has wrong width!");
-		break;		
-		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect UInt to bit input!");
-	}
-	NodeIO::connectInput(input, vec.readPort());
+	HCL_DESIGNCHECK_HINT(m_type == RAMB36E2 || input < IN_COUNT_18, "Input only available for RAMB32E2!");
+	ExternalComponent::setInput(input, bvec);
 }
 
-UInt RAMBxE2::getOutputUInt(Outputs output)
+Bit RAMBxE2::getOutputBit(size_t output)
 {
-	switch (output) {
-		case OUT_CAS_OUTD_BITERR:
-		case OUT_CAS_OUTS_BITERR:
-		case OUT_D_BITERR:
-		case OUT_S_BITERR:
-			HCL_DESIGNCHECK_HINT(m_type == RAMB36E2, "Trying to get output that is not available in RAMB18E2!");
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect UInt from bit output of RAMBxE2!");
-		break;
-
-		case OUT_ECC_PARITY:
-		case OUT_RD_ADDR_ECC:
-			HCL_DESIGNCHECK_HINT(m_type == RAMB36E2, "Trying to get output that is not available in RAMB18E2!");
-		break;
-		default:
-		break;
-	}
-
-	return SignalReadPort(hlim::NodePort{this, (size_t)output});
+	HCL_DESIGNCHECK_HINT(m_type == RAMB36E2 || output < OUT_COUNT_18, "Input only available for RAMB32E2!");
+	return ExternalComponent::getOutputBit(output);
 }
 
-Bit RAMBxE2::getOutputBit(Outputs output)
+BVec RAMBxE2::getOutputBVec(size_t output)
 {
-	switch (output) {
-		case OUT_CAS_OUTD_BITERR:
-		case OUT_CAS_OUTS_BITERR:
-		case OUT_D_BITERR:
-		case OUT_S_BITERR:
-			HCL_DESIGNCHECK_HINT(m_type == RAMB36E2, "Trying to get output that is not available in RAMB18E2!");
-		break;
-		default:
-			HCL_DESIGNCHECK_HINT(false, "Trying to connect bit from UInt output of RAMBxE2!");
-	}
-
-	return SignalReadPort(hlim::NodePort{this, (size_t)output});
+	HCL_DESIGNCHECK_HINT(m_type == RAMB36E2 || output < OUT_COUNT_18, "Input only available for RAMB32E2!");
+	return ExternalComponent::getOutputBVec(output);
 }
 
 
-UInt RAMBxE2::getReadData(size_t width, bool portA)
+BVec RAMBxE2::getReadData(size_t width, bool portA)
 {
-	UInt result;
+	BVec result;
 
 	// std::array<UInt, xx> is needed to ensure pack order doesn't reverse (we need to change that)
 
@@ -371,37 +325,37 @@ UInt RAMBxE2::getReadData(size_t width, bool portA)
 			HCL_ASSERT_HINT(m_type == RAMB36E2, "Invalid width for bram type!");
 			HCL_ASSERT_HINT(isSimpleDualPort() || isRom(), "Width only available in simple dual port mode!");
 			HCL_ASSERT_HINT(portA, "In SDP mode, only port A can read!");
-			result = pack(std::array<UInt, 4>{
-				getOutputUInt(OUT_DOUT_A_DOUT), 
-				getOutputUInt(OUT_DOUT_B_DOUT), 
-				getOutputUInt(OUT_DOUTP_A_DOUTP),
-				getOutputUInt(OUT_DOUTP_B_DOUTP),
+			result = (BVec) pack(std::array<BVec, 4>{
+				getOutputBVec(OUT_DOUT_A_DOUT), 
+				getOutputBVec(OUT_DOUT_B_DOUT), 
+				getOutputBVec(OUT_DOUTP_A_DOUTP),
+				getOutputBVec(OUT_DOUTP_B_DOUTP),
 			});
 		break;
 		case 36:
 			if (m_type == RAMB36E2) {
-				result = pack(std::array<UInt, 2>{getOutputUInt(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT), getOutputUInt(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)});
+				result = (BVec) pack(std::array<BVec, 2>{getOutputBVec(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT), getOutputBVec(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)});
 			} else {
 				HCL_ASSERT_HINT(isSimpleDualPort() || isRom(), "Width only available for RAMB36E2 or in simple dual port mode RAMB18E2!");
 				HCL_ASSERT_HINT(portA, "In SDP mode, only port A can read!");
-				result = pack(std::array<UInt, 4>{
-					getOutputUInt(OUT_DOUT_A_DOUT), 
-					getOutputUInt(OUT_DOUT_B_DOUT), 
-					getOutputUInt(OUT_DOUTP_A_DOUTP),
-					getOutputUInt(OUT_DOUTP_B_DOUTP),
+				result = (BVec) pack(std::array<BVec, 4>{
+					getOutputBVec(OUT_DOUT_A_DOUT), 
+					getOutputBVec(OUT_DOUT_B_DOUT), 
+					getOutputBVec(OUT_DOUTP_A_DOUTP),
+					getOutputBVec(OUT_DOUTP_B_DOUTP),
 				});
 			}
 		break;
 		case 18:
-			result = pack(std::array<UInt, 2>{getOutputUInt(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, 16_b), getOutputUInt(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)(0, 2_b)});
+			result = (BVec) pack(std::array<BVec, 2>{getOutputBVec(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, 16_b), getOutputBVec(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)(0, 2_b)});
 		break;
 		case 9:
-			result = pack(std::array<UInt, 2>{getOutputUInt(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, 8_b), getOutputUInt(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)(0, 1_b)});
+			result = (BVec) pack(std::array<BVec, 2>{getOutputBVec(portA?OUT_DOUT_A_DOUT:OUT_DOUT_B_DOUT)(0, 8_b), getOutputBVec(portA?OUT_DOUTP_A_DOUTP:OUT_DOUTP_B_DOUTP)(0, 1_b)});
 		break;
 		case 4:
 		case 2:
 		case 1:
-			result = getOutputUInt(portA ? OUT_DOUT_A_DOUT : OUT_DOUT_B_DOUT)(0, BitWidth{ width });
+			result = getOutputBVec(portA ? OUT_DOUT_A_DOUT : OUT_DOUT_B_DOUT)(0, BitWidth{ width });
 		break;
 		default:
 			HCL_ASSERT_HINT(false, "Invalid width for bram type!");
@@ -422,7 +376,7 @@ UInt RAMBxE2::getReadData(size_t width, bool portA)
 	return result;
 }
 
-void RAMBxE2::connectWriteData(const UInt &input, bool portA)
+void RAMBxE2::connectWriteData(const BVec &input, bool portA)
 {
 	BitWidth dPortWidth = 32_b;
 	BitWidth pPortWidth = 4_b;
@@ -437,36 +391,36 @@ void RAMBxE2::connectWriteData(const UInt &input, bool portA)
 			HCL_ASSERT_HINT(isSimpleDualPort() || isRom(), "Width only available in simple dual port mode!");
 			HCL_ASSERT_HINT(!portA, "In SDP mode, only port B can write!");
 
-			connectInput(IN_DIN_A_DIN, input(0, 32_b));
-			connectInput(IN_DIN_B_DIN, input(32, 32_b));
-			connectInput(IN_DINP_A_DINP, input(64, 4_b));
-			connectInput(IN_DINP_B_DINP, input(68, 4_b));
+			setInput(IN_DIN_A_DIN, input(0, 32_b));
+			setInput(IN_DIN_B_DIN, input(32, 32_b));
+			setInput(IN_DINP_A_DINP, input(64, 4_b));
+			setInput(IN_DINP_B_DINP, input(68, 4_b));
 		break;
 		case 36:
 			if (m_type == RAMB36E2) {
-				connectInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, input(0, 32_b));
-				connectInput(portA?IN_DINP_A_DINP:IN_DINP_B_DINP, input(32, 4_b));
+				setInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, input(0, 32_b));
+				setInput(portA?IN_DINP_A_DINP:IN_DINP_B_DINP, input(32, 4_b));
 			} else {
 				HCL_ASSERT_HINT(isSimpleDualPort() || isRom(), "Width only available for RAMB36E2 or in simple dual port mode RAMB18E2!");
 				HCL_ASSERT_HINT(!portA, "In SDP mode, only port B can write!");
-				connectInput(IN_DIN_A_DIN, input(0, 16_b));
-				connectInput(IN_DIN_B_DIN, input(16, 16_b));
-				connectInput(IN_DINP_A_DINP, input(32, 2_b));
-				connectInput(IN_DINP_B_DINP, input(34, 2_b));
+				setInput(IN_DIN_A_DIN, input(0, 16_b));
+				setInput(IN_DIN_B_DIN, input(16, 16_b));
+				setInput(IN_DINP_A_DINP, input(32, 2_b));
+				setInput(IN_DINP_B_DINP, input(34, 2_b));
 			}
 		break;
 		case 18:
-			connectInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, zext(input(0, 16_b), dPortWidth));
-			connectInput(portA?IN_DINP_A_DINP:IN_DINP_B_DINP, zext(input(16, 2_b), pPortWidth));
+			setInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, zext(input(0, 16_b), dPortWidth));
+			setInput(portA?IN_DINP_A_DINP:IN_DINP_B_DINP, zext(input(16, 2_b), pPortWidth));
 		break;
 		case 9:
-			connectInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, zext(input(0, 8_b), dPortWidth));
-			connectInput(portA?IN_DINP_A_DINP:IN_DINP_B_DINP, zext(input(8, 1_b), pPortWidth));
+			setInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, zext(input(0, 8_b), dPortWidth));
+			setInput(portA?IN_DINP_A_DINP:IN_DINP_B_DINP, zext(input(8, 1_b), pPortWidth));
 		break;
 		case 4:
 		case 2:
 		case 1:
-			connectInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, zext(input, dPortWidth));
+			setInput(portA?IN_DIN_A_DIN:IN_DIN_B_DIN, zext(input, dPortWidth));
 		break;
 		default:
 			HCL_ASSERT_HINT(false, "Invalid width for bram type!");
@@ -519,7 +473,7 @@ void RAMBxE2::connectAddress(const UInt &input, bool portA)
 	UInt properAddr = ConstUInt(0, totalAddrBits);
 	properAddr(lowerZeros, input.width()) = input;
 
-	connectInput(portA?IN_ADDR_A_RDADDR:IN_ADDR_B_WRADDR, properAddr);
+	setInput(portA?IN_ADDR_A_RDADDR:IN_ADDR_B_WRADDR, (BVec) properAddr);
 }
 
 
@@ -531,77 +485,6 @@ std::string RAMBxE2::getTypeName() const
 
 void RAMBxE2::assertValidity() const
 {
-}
-
-std::string RAMBxE2::getInputName(size_t idx) const
-{
-	switch (idx) {
-		// 18k
-		case IN_ADDREN_A: return "ADDRENA";
-		case IN_ADDREN_B: return "ADDRENB";
-		case IN_CAS_DIMUX_A: return "CASDIMUXA";
-		case IN_CAS_DIMUX_B: return "CASDIMUXB";
-		case IN_CAS_DOMUX_A: return "CASDOMUXA";
-		case IN_CAS_DOMUX_B: return "CASDOMUXB";
-		case IN_CAS_DOMUXEN_A: return "CASDOMUXEN_A";
-		case IN_CAS_DOMUXEN_B: return "CASDOMUXEN_B";
-		case IN_EN_A_RD_EN: return "ENARDEN";
-		case IN_EN_B_WR_EN: return "ENBWREN";
-		case IN_REG_CE_A_REG_CE: return "REGCEAREGCE";
-		case IN_REG_CE_B: return "REGCEB";
-		case IN_SLEEP: return "SLEEP";
-		case IN_ADDR_A_RDADDR: return "ADDRARDADDR";
-		case IN_ADDR_B_WRADDR: return "ADDRBWRADDR";
-		case IN_CAS_DIN_A: return "CASDINA";
-		case IN_CAS_DIN_B: return "CASDINB";
-		case IN_CAS_DINP_A: return "CASDINPA";
-		case IN_CAS_DINP_B: return "CASDINPB";
-		case IN_CAS_OREG_IMUX_A: return "CASOREGIMUXA";
-		case IN_CAS_OREG_IMUX_B: return "CASOREGIMUXB";
-		case IN_CAS_OREG_IMUXEN_A: return "CASOREGIMUXEN_A";
-		case IN_CAS_OREG_IMUXEN_B: return "CASOREGIMUXEN_B";
-		case IN_DIN_A_DIN: return "DINADIN";
-		case IN_DIN_B_DIN: return "DINBDIN";
-		case IN_DINP_A_DINP: return "DINPADINP";
-		case IN_DINP_B_DINP: return "DINPBDINP";
-		case IN_WE_A: return "WEA";
-		case IN_WE_B_WE: return "WEBWE";
-		case IN_RST_RAM_A_RST_RAM: return "RSTRAMARSTRAM";
-		case IN_RST_RAM_B: return "RSTRAMB";
-		case IN_RST_REG_A_RST_REG: return "RSTREGARSTREG";
-		case IN_RST_REG_B: return "RSTREGB";
-
-		// 36k
-		case IN_CAS_IND_BITERR: return "CASINDBITERR";
-		case IN_CAS_INS_BITERR: return "CASINSBITERR";
-		case IN_ECC_PIPE_CE: return "ECCPIPECE";
-		case IN_INJECT_D_BITERR: return "INJECTDBITERR";
-		case IN_INJECT_S_BITERR : return "INJECTSBITERR";
-		default: return "";
-	}
-}
-
-std::string RAMBxE2::getOutputName(size_t idx) const
-{
-	switch (idx) {
-		// 18k
-		case OUT_CAS_DOUT_A: return "CASDOUTA";
-		case OUT_CAS_DOUT_B: return "CASDOUTB";
-		case OUT_CAS_DOUTP_A: return "CASDOUTPA";
-		case OUT_CAS_DOUTP_B: return "CASDOUTPB";
-		case OUT_DOUT_A_DOUT: return "DOUTADOUT";
-		case OUT_DOUT_B_DOUT: return "DOUTBDOUT";
-		case OUT_DOUTP_A_DOUTP: return "DOUTPADOUTP";
-		case OUT_DOUTP_B_DOUTP: return "DOUTPBDOUTP";
-		// 36k
-		case OUT_CAS_OUTD_BITERR: return "CASOUTDBITERR";
-		case OUT_CAS_OUTS_BITERR: return "CASOUTSBITERR";
-		case OUT_D_BITERR: return "DBITERR";
-		case OUT_ECC_PARITY: return "ECCPARITY";
-		case OUT_RD_ADDR_ECC: return "RDADDRECC";
-		case OUT_S_BITERR: return "SBITERR";
-		default: return "";
-	}
 }
 
 std::unique_ptr<hlim::BaseNode> RAMBxE2::cloneUnconnected() const

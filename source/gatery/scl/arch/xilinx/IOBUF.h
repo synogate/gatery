@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2022 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -17,23 +17,45 @@
 */
 #pragma once
 
+#include <gatery/frontend.h>
 #include <gatery/frontend/ExternalComponent.h>
+#include <gatery/frontend/tech/TechnologyMappingPattern.h>
+
 
 namespace gtry::scl::arch::xilinx {
 
-class OBUFDS : public gtry::ExternalComponent
+class IOBUF : public gtry::ExternalComponent
 {
 	public:
-		OBUFDS();
 
-		virtual std::string getTypeName() const override;
-		virtual void assertValidity() const override;
+		enum Inputs {
+			IN_I,
+			IN_T,
+        	IN_IO_I,
+			IN_COUNT
+		};
+		enum Outputs {
+        	OUT_O,
+        	OUT_IO_O,
+
+			OUT_COUNT
+		};
+
+		enum DriveStrength {
+			DS_2mA,
+			DS_4mA,
+			DS_6mA,
+			DS_8mA,
+			DS_12mA,
+			DS_16mA,
+			DS_24mA,
+		};
+
+		IOBUF();
+
+		void setDriveStrength(DriveStrength driveStrength);
 
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
-
-		virtual std::string attemptInferOutputName(size_t outputPort) const override;
-	protected:
 };
-
 
 }
