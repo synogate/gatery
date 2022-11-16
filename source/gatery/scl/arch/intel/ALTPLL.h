@@ -79,8 +79,13 @@ namespace gtry::scl::arch::intel
 		void setClock(size_t idx, const Clock& clock);
 
 		ALTPLL& configureDeviceFamily(std::string familyName);
-		ALTPLL& configureClock(size_t idx, size_t mul, size_t div, size_t dutyCyclePercent, size_t phaseShift);
+		ALTPLL& configureClock(size_t idx, size_t mul, size_t div, size_t dutyCyclePercent, size_t phaseShiftPs);
+
+		Clock generateOutClock(size_t idx, size_t mul, size_t div, size_t dutyCyclePercent, size_t phaseShiftPs, ClockConfig::ResetType resetType = ClockConfig::ResetType::ASYNCHRONOUS);
 
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
+
+	private:
+		std::optional<Clock> m_inClk;
 	};
 }
