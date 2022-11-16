@@ -55,6 +55,14 @@ namespace gtry {
 		};
 	}
 
+	Selection Selection::Range(size_t start, size_t end)
+	{
+		return {
+			.start = (int)start,
+			.width = (int)(end - start),
+			.untilEndOfSource = false,
+		};
+	}
 	Selection Selection::RangeIncl(int start, int endIncl)
 	{
 		return {

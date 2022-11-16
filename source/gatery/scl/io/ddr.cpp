@@ -21,8 +21,8 @@
 
 namespace gtry::scl {
 
-template Bit ddr(Bit D0, Bit D1, std::optional<Bit> reset = {}, const DDROutParams &params = {});
-template BVec ddr(BVec D0, BVec D1, std::optional<BVec> reset = {}, const DDROutParams &params = {});
-template UInt ddr(UInt D0, UInt D1, std::optional<UInt> reset = {}, const DDROutParams &params = {});
+template Bit ddrImpl(Bit D0, Bit D1, std::optional<Bit> reset = {}, const DDROutParams &params = {});
+template BVec ddrImpl(BVec D0, BVec D1, std::optional<BVec> reset = {}, const DDROutParams &params = {});
+template UInt ddrImpl(UInt D0, UInt D1, std::optional<UInt> reset = {}, const DDROutParams &params = {});
 
 }

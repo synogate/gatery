@@ -51,6 +51,7 @@ namespace gtry {
 		static Selection All();
 		static Selection From(int start);
 		static Selection Range(int start, int end);
+		static Selection Range(size_t start, size_t end);
 		static Selection RangeIncl(int start, int endIncl);
 
 		static Selection Slice(size_t offset, size_t size);
