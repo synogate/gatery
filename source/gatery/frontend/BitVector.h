@@ -132,9 +132,9 @@ namespace gtry {
 		Bit& msb() { return aliasMsb(); }
 		const Bit& msb() const { return aliasMsb(); }
 
-		Bit& operator[](int idx) { return aliasVec()[(size()+idx)%size()]; }
-		Bit& operator[](size_t idx) { return aliasVec()[idx]; }
-		const Bit& operator[](size_t idx) const { return aliasVec()[idx]; }
+		Bit& operator[](int idx) { HCL_DESIGNCHECK(size() > 0); return aliasVec()[(size()+idx)%size()]; }
+		Bit& operator[](size_t idx) { HCL_DESIGNCHECK(idx < size()); return aliasVec()[idx]; }
+		const Bit& operator[](size_t idx) const { HCL_DESIGNCHECK(idx < size()); return aliasVec()[idx]; }
 
 		Bit& operator[](const UInt &idx);
 		const Bit& operator[](const UInt &idx) const;
