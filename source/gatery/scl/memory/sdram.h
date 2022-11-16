@@ -67,6 +67,7 @@ namespace gtry::scl::sdram
 		Controller& dataBusWidth(BitWidth width);
 		Controller& pinPrefix(std::string prefix);
 		Controller& driveStrength(DriveStrength value);
+		Controller& exportClockPin(bool enable = true);
 
 		virtual void generate(TileLinkUB& link);
 
@@ -108,6 +109,7 @@ namespace gtry::scl::sdram
 		DriveStrength m_driveStrength = DriveStrength::Weak;
 		const bool m_useOutputRegister = true;
 		const bool m_useInputRegister = true;
+		bool m_exportClockPin = true;
 
 		Vector<BankState> m_bankState;
 		CommandBus m_cmdBus;

@@ -101,9 +101,11 @@ void IntelQuartus::resolveAttributes(const hlim::RegisterAttributes &attribs, hl
 		break;
 	}
 	if (attribs.synchronizationRegister) {
-		resolvedAttribs.insert({"adv_netlist_opt_allowed", {"boolean", "false"}});
-		resolvedAttribs.insert({"direct_reset", {"boolean", "true"}});
-		resolvedAttribs.insert({"syn_direct_reset", {"boolean", "true"}});
+		// Quartus 20 Lite complains: Warning (10335): Unrecognized synthesis attribute "adv_netlist_opt_allowed" at dramTesterCyc1000.vhd(6857)
+		//resolvedAttribs.insert({"adv_netlist_opt_allowed", {"boolean", "false"}});
+		//resolvedAttribs.insert({"direct_reset", {"boolean", "true"}});
+		//resolvedAttribs.insert({"syn_direct_reset", {"boolean", "true"}});
+
 		resolvedAttribs.insert({"direct_enable", {"boolean", "true"}});
 		resolvedAttribs.insert({"syn_direct_enable", {"boolean", "true"}});
 	}

@@ -297,7 +297,8 @@ void Controller::makeBusPins(const CommandBus& in, std::string prefix)
 		outEnable = gtry::reg(outEnable, '0');
 	}
 
-	pinOut(ddr('0', '1')).setName(prefix + "CLK");
+	if(m_exportClockPin)
+		pinOut(ddr('0', '1')).setName(prefix + "CLK");
 
 	HCL_NAMED(bus);
 	pinOut(bus.cke).setName(prefix + "CKE");
@@ -840,5 +841,11 @@ gtry::scl::sdram::Timings gtry::scl::sdram::Timings::toCycles(hlim::ClockRationa
 Controller& gtry::scl::sdram::Controller::driveStrength(DriveStrength value)
 {
 	m_driveStrength = value;
+	return *this;
+}
+
+gtry::scl::sdram::Controller& gtry::scl::sdram::Controller::exportClockPin(bool enable)
+{
+	m_exportClockPin = enable;
 	return *this;
 }

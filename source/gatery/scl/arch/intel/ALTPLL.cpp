@@ -18,7 +18,8 @@
 #include "gatery/pch.h"
 #include "ALTPLL.h"
 
-//#include <gatery/hlim/Clock.h>
+#include <gatery/hlim/Clock.h>
+#include <gatery/scl/cdc.h>
 
 namespace gtry::scl::arch::intel 
 {
@@ -62,12 +63,6 @@ namespace gtry::scl::arch::intel
 		m_genericParameters["port_scandone"] = "PORT_UNUSED";
 		m_genericParameters["port_scanread"] = "PORT_UNUSED";
 		m_genericParameters["port_scanwrite"] = "PORT_UNUSED";
-		m_genericParameters["port_clk0"] = "PORT_UNUSED";
-		m_genericParameters["port_clk1"] = "PORT_UNUSED";
-		m_genericParameters["port_clk2"] = "PORT_UNUSED";
-		m_genericParameters["port_clk3"] = "PORT_UNUSED";
-		m_genericParameters["port_clk4"] = "PORT_UNUSED";
-		m_genericParameters["port_clk5"] = "PORT_UNUSED";
 		m_genericParameters["port_clkena0"] = "PORT_UNUSED";
 		m_genericParameters["port_clkena1"] = "PORT_UNUSED";
 		m_genericParameters["port_clkena2"] = "PORT_UNUSED";
@@ -80,6 +75,16 @@ namespace gtry::scl::arch::intel
 		m_genericParameters["port_extclk3"] = "PORT_UNUSED";
 		m_genericParameters["self_reset_on_loss_lock"] = "OFF";
 		m_genericParameters["width_clock"] = 5;
+
+		for(size_t idx = 0; idx < 5; ++idx)
+		{
+			std::string name = "clk" + std::to_string(idx);
+			m_genericParameters["port_" + name] = "PORT_UNUSED";
+			m_genericParameters[name + "_divide_by"] = 0;
+			m_genericParameters[name + "_duty_cycle"] = 50;
+			m_genericParameters[name + "_multiply_by"] = 0;
+			m_genericParameters[name + "_phase_shift"] = "0";
+		}
 
 		//m_clockNames = { "inclk" };
 		//m_resetNames = { "" };
@@ -143,7 +148,7 @@ namespace gtry::scl::arch::intel
 		return *this;
 	}
 
-	ALTPLL& ALTPLL::configureClock(size_t idx, size_t mul, size_t div, size_t dutyCyclePercent, size_t phaseShift)
+	ALTPLL& ALTPLL::configureClock(size_t idx, size_t mul, size_t div, size_t dutyCyclePercent, size_t phaseShiftPs)
 	{
 		std::string name = "clk" + std::to_string(idx);
 		HCL_DESIGNCHECK(dutyCyclePercent > 0 && dutyCyclePercent < 100);
@@ -152,8 +157,40 @@ namespace gtry::scl::arch::intel
 		m_genericParameters[name + "_divide_by"] = div;
 		m_genericParameters[name + "_duty_cycle"] = dutyCyclePercent;
 		m_genericParameters[name + "_multiply_by"] = mul;
-		m_genericParameters[name + "_phase_shift"] = std::to_string(phaseShift);
+		m_genericParameters[name + "_phase_shift"] = std::to_string(phaseShiftPs);
 		return *this;
+	}
+
+	Clock ALTPLL::generateOutClock(size_t idx, size_t mul, size_t div, size_t dutyCyclePercent, size_t phaseShiftPs, ClockConfig::ResetType resetType)
+	{
+		HCL_DESIGNCHECK_HINT(m_inClk, "assign in clock first");
+
+		// TODO: set phase shift
+		Clock out = m_inClk->deriveClock(ClockConfig{
+			.frequencyMultiplier = hlim::ClockRational{ mul, div },
+			//.phaseSynchronousWithParent = phaseShiftPs == 0,
+			.resetType = resetType,
+		});
+
+		configureClock(idx, mul, div, dutyCyclePercent, phaseShiftPs);
+
+		Bit clkSignal;
+		clkSignal.exportOverride(getOutputBVec(OUT_CLK)[idx]);
+		HCL_NAMED(clkSignal);
+		out.overrideClkWith(clkSignal);
+
+		if (resetType != ClockConfig::ResetType::NONE)
+		{
+			Bit pllReset = !getOutputBit(OUT_LOCKED);
+			pllReset = scl::synchronize(pllReset, *m_inClk, out, 2, false);
+
+			Bit rstSignal; // Leave unconnected to let the simulator drive the clock's reset signal during simulation
+			rstSignal.exportOverride(pllReset);
+			HCL_NAMED(rstSignal);
+			out.overrideRstWith(rstSignal);
+		}
+
+		return out;
 	}
 
 	void ALTPLL::setClock(size_t idx, const Clock& clock)
@@ -169,6 +206,8 @@ namespace gtry::scl::arch::intel
 		std::string name = "inclk" + std::to_string(idx);
 		m_genericParameters[name + "_input_frequency"] = periodPs;
 		m_genericParameters["port_" + name] = "PORT_USED";
+
+		m_inClk = clock;
 	}
 
 	std::unique_ptr<hlim::BaseNode> ALTPLL::cloneUnconnected() const
