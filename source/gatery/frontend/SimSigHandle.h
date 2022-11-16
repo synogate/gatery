@@ -293,11 +293,11 @@ sim::WaitClock OnClk(const Clock &clk);
  * can be joined again, in which case they can return a return value.
  * @param simProc An instance of gtry::SimFunction.
  * @return A handle that other simulation processes (not necessarily the one that called fork()) can @ref gtry::join on to await the completion forked process.
- * @see gtry::sim::SimulationFunction::Fork
+ * @see gtry::sim::ork
  */
 template<typename ReturnValue>
 auto fork(const sim::SimulationFunction<ReturnValue> &simProc) {
-	return typename sim::SimulationFunction<ReturnValue>::Fork(simProc);
+	return sim::forkFunc(simProc);
 }
 
 /**
@@ -309,12 +309,12 @@ auto fork(const sim::SimulationFunction<ReturnValue> &simProc) {
  * This overload of fork thus takes the uninvoked functor, stores a copy internally, and invokes the copy.
  * @param simProcLambda A lambda expression that gets moved (and stored) until execution is done.
  * @return A handle that other simulation processes (not necessarily the one that called fork()) can @ref gtry::join on to await the completion forked process.
- * @see gtry::sim::SimulationFunction::Fork
+ * @see gtry::sim::fork
  */
 template<std::invocable Functor>
 auto fork(Functor simProcLambda) {
 	using SimFunc = std::invoke_result_t<Functor>;
-	return typename SimFunc::Fork(std::function<SimFunc()>(simProcLambda));
+	return sim::forkFunc(std::function<SimFunc()>(simProcLambda));
 }
 
 /**
