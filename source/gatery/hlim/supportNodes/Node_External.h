@@ -114,7 +114,7 @@ class Node_External : public Node<Node_External>
 			std::variant<BitFlavor, BitVectorFlavor> flavor;
 			std::optional<size_t> bidirPartner;
 
-			bool operator<=>(const Port &rhs) const = default;
+			auto operator<=>(const Port &rhs) const = default;
 		};
 
 		inline const std::string &getLibraryName() const { return m_libraryName; }
