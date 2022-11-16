@@ -32,7 +32,7 @@ struct DDROutParams : public hlim::NodeGroupMetaInfo {
 };
 
 template<Signal T>
-T ddrImpl(T D0, T D1, std::optional<T> reset = {}, const DDROutParams &params = {})
+T ddr(T D0, T D1, std::optional<T> reset = {}, const DDROutParams &params = {})
 {
 	Area area{"scl_oddr", true};
 	area.createMetaInfo<DDROutParams>(params);
@@ -76,12 +76,10 @@ T ddrImpl(T D0, T D1, std::optional<T> reset = {}, const DDROutParams &params = 
 	return O;
 }
 
-extern template Bit ddrImpl(Bit D0, Bit D1, std::optional<Bit> reset = {}, const DDROutParams &params = {});
-extern template BVec ddrImpl(BVec D0, BVec D1, std::optional<BVec> reset = {}, const DDROutParams &params = {});
-extern template UInt ddrImpl(UInt D0, UInt D1, std::optional<UInt> reset = {}, const DDROutParams &params = {});
+extern template Bit ddr(Bit D0, Bit D1, std::optional<Bit> reset, const DDROutParams &params);
+extern template BVec ddr(BVec D0, BVec D1, std::optional<BVec> reset, const DDROutParams &params);
+extern template UInt ddr(UInt D0, UInt D1, std::optional<UInt> reset, const DDROutParams &params);
 
-inline Bit ddr(Bit D0, Bit D1, std::optional<Bit> reset = {}, const DDROutParams &params = {}) { return ddrImpl<Bit>(D0, D1, reset, params); }
-inline BVec ddr(BVec D0, BVec D1, std::optional<BVec> reset = {}, const DDROutParams &params = {}) { return ddrImpl<BVec>(D0, D1, reset, params); }
-inline UInt ddr(UInt D0, UInt D1, std::optional<UInt> reset = {}, const DDROutParams &params = {}) { return ddrImpl<UInt>(D0, D1, reset, params); }
+inline Bit ddr(Bit D0, Bit D1, std::optional<Bit> reset = {}, const DDROutParams &params = {}) { return ddr<Bit>(D0, D1, reset, params); }
 
 }
