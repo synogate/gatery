@@ -19,6 +19,8 @@
 #include <gatery/frontend.h>
 #include <gatery/frontend/ExternalComponent.h>
 
+#include "../general/BaseDDROutPattern.h"
+
 namespace gtry::scl::arch::intel 
 {
 	class IntelDevice;
@@ -55,6 +57,9 @@ namespace gtry::scl::arch::intel
 
 			ALTDDIO_OUT& setupSimulationDeviceFamily(std::string familyName);
 
+			ALTDDIO_OUT& enableOutputRegister();
+			ALTDDIO_OUT& powerUpHigh();
+
 			virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 		protected:
 			BitWidth m_width;
@@ -62,14 +67,15 @@ namespace gtry::scl::arch::intel
 
 
 
-	class ALTDDIO_OUTPattern : public TechnologyMappingPattern
+	class ALTDDIO_OUTPattern : public BaseDDROutPattern
 	{
 		public:
-			ALTDDIO_OUTPattern(const IntelDevice &intelDevice) : m_intelDevice(intelDevice) { }
+			ALTDDIO_OUTPattern(const IntelDevice &intelDevice) : m_intelDevice(intelDevice) { m_patternName = "ALTDDIO_OUT"; }
 			virtual ~ALTDDIO_OUTPattern() = default;
-
-			virtual bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const override;
 		protected:
 			const IntelDevice &m_intelDevice;
+
+			virtual bool performReplacement(hlim::NodeGroup *nodeGroup, ReplaceInfo &replacement) const override;
+			virtual void performConstResetReplacement(hlim::NodeGroup *nodeGroup, ConstResetReplaceInfo &replacement) const override;
 	};	
 }

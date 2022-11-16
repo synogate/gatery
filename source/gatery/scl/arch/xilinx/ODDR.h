@@ -21,6 +21,8 @@
 #include <gatery/frontend/ExternalComponent.h>
 #include <gatery/frontend/tech/TechnologyMappingPattern.h>
 
+#include "../general/BaseDDROutPattern.h"
+
 namespace gtry::scl::arch::xilinx {
 
 class ODDR : public gtry::ExternalComponent
@@ -72,13 +74,15 @@ class ODDR : public gtry::ExternalComponent
 
 
 
-class ODDRPattern : public TechnologyMappingPattern
+class ODDRPattern : public BaseDDROutPattern
 {
 	public:
+		ODDRPattern() { m_patternName = "ODDR"; }
 		virtual ~ODDRPattern() = default;
 
-		virtual bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const override;
 	protected:
+		virtual bool performReplacement(hlim::NodeGroup *nodeGroup, ReplaceInfo &replacement) const override;
+		virtual void performConstResetReplacement(hlim::NodeGroup *nodeGroup, ConstResetReplaceInfo &replacement) const override;
 };
 
 

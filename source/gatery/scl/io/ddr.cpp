@@ -21,37 +21,8 @@
 
 namespace gtry::scl {
 
-
-Bit ddr(Bit D0, Bit D1, const DDROutParams &params)
-{
-	Area area{"scl_oddr", true};
-	
-	setName(D0, "D0");
-	setName(D1, "D1");
-
-	if (params.resetValue) {
-		D0 = reg(D0, *params.resetValue);
-		D1 = reg(D1, *params.resetValue);
-	} else {
-		D0 = reg(D0);
-		D1 = reg(D1);
-	}
-
-	auto &clock = ClockScope::getClk();
-
-	Bit sel = clock.clkSignal();
-	setName(sel, "CLK");
-
-	Bit O;
-
-	IF (sel)
-		O = D0;
-	ELSE
-		O = D1;
-
-	setName(O, "O");
-
-	return O;
-}
+template Bit ddr(Bit D0, Bit D1, std::optional<Bit> reset = {}, const DDROutParams &params = {});
+template BVec ddr(BVec D0, BVec D1, std::optional<BVec> reset = {}, const DDROutParams &params = {});
+template UInt ddr(UInt D0, UInt D1, std::optional<UInt> reset = {}, const DDROutParams &params = {});
 
 }
