@@ -73,16 +73,18 @@ namespace gtry::scl
 
 	SimProcess validateTileLink(TileLinkChannelA &channelA, TileLinkChannelD &channelD, const Clock &clk)
 	{
-		co_await fork(validateStreamValid(channelA, clk));
-		co_await fork(validateStreamValid(channelD, clk));
-		co_await fork(validateTileLinkControlSignalsDefined(channelA, clk));
-		co_await fork(validateTileLinkControlSignalsDefined(channelD, clk));
-		//co_await fork(validateTileLinkSourceReuse(channelA, channelD, clk)); TODO fix burst
-		co_await fork(validateTileLinkResponseMatchesRequest(channelA, channelD, clk));
-		co_await fork(validateTileLinkAlignment(channelA, clk));
-		co_await fork(validateTileLinkMask(channelA, clk));
-		co_await fork(validateTileLinkBurst(channelA, clk));
-		co_await fork(validateTileLinkBurst(channelD, clk));
+		fork(validateStreamValid(channelA, clk));
+		fork(validateStreamValid(channelD, clk));
+		fork(validateTileLinkControlSignalsDefined(channelA, clk));
+		fork(validateTileLinkControlSignalsDefined(channelD, clk));
+		//fork(validateTileLinkSourceReuse(channelA, channelD, clk)); TODO fix burst
+		fork(validateTileLinkResponseMatchesRequest(channelA, channelD, clk));
+		fork(validateTileLinkAlignment(channelA, clk));
+		fork(validateTileLinkMask(channelA, clk));
+		fork(validateTileLinkBurst(channelA, clk));
+		fork(validateTileLinkBurst(channelD, clk));
+		
+		co_return;
 	}
 
 	SimProcess validateTileLinkSourceReuse(TileLinkChannelA& channelA, TileLinkChannelD& channelD, const Clock& clk)

@@ -52,11 +52,13 @@ class SmartCoroutineHandle
 		}
 
 		SmartCoroutineHandle(std::coroutine_handle<PromiseType> handle) : m_handle(handle) {
-			m_handle.promise().registerHandle();
+			if (m_handle)
+				m_handle.promise().registerHandle();
 		}
 
 		SmartCoroutineHandle(const SmartCoroutineHandle<PromiseType> &other) : m_handle(other.m_handle) {
-			m_handle.promise().registerHandle();
+			if (m_handle)
+				m_handle.promise().registerHandle();
 		}
 
 		SmartCoroutineHandle<PromiseType> &operator=(std::coroutine_handle<PromiseType> handle) {
@@ -64,7 +66,8 @@ class SmartCoroutineHandle
 
 			reset();
 			m_handle = handle;
-			m_handle.promise().registerHandle();
+			if (m_handle)
+				m_handle.promise().registerHandle();
 
 			return *this;
 		}
@@ -74,18 +77,19 @@ class SmartCoroutineHandle
 
 			reset();
 			m_handle = other.m_handle;
-			m_handle.promise().registerHandle();
+			if (m_handle)
+				m_handle.promise().registerHandle();
 
 			return *this;
 		}
 
-		operator bool() { 
+		operator bool() const { 
 			return (bool) m_handle;
 		}
 
 		auto &promise() { return m_handle.promise(); }
 
-		void resume() {
+		void resume() const {
 			if (m_handle)
 				m_handle.resume();
 		}
@@ -104,7 +108,7 @@ class SmartCoroutineHandle
 
 		const std::coroutine_handle<PromiseType> &rawHandle() const { return m_handle; }
 	protected:
-		std::coroutine_handle<PromiseType> m_handle;
+		std::coroutine_handle<PromiseType> m_handle = {};
 };
 
 
@@ -138,13 +142,15 @@ class SmartCoroutineHandle<void>
 
 		template<typename PromiseType> requires (!std::same_as<PromiseType, void>)
 		SmartCoroutineHandle(std::coroutine_handle<PromiseType> handle) : m_handle(handle) {
-			auto &promise = handle.promise();
+			if (handle) {
+				auto &promise = handle.promise();
 
-			m_registerCallback = [&promise]() { promise.registerHandle(); };
-			m_deregisterCallback = [&promise]() { promise.deregisterHandle(); };
-			m_numReferencesCallback = [&promise]() { return promise.numReferences(); };
+				m_registerCallback = [&promise]() { promise.registerHandle(); };
+				m_deregisterCallback = [&promise]() { promise.deregisterHandle(); };
+				m_numReferencesCallback = [&promise]() { return promise.numReferences(); };
 
-			m_registerCallback();
+				m_registerCallback();
+			}
 		}
 
 
@@ -165,21 +171,22 @@ class SmartCoroutineHandle<void>
 			reset();
 
 			m_handle = other.m_handle;
-
-			m_registerCallback = other.m_registerCallback;
-			m_deregisterCallback = other.m_deregisterCallback;
-			m_numReferencesCallback = other.m_numReferencesCallback;
-			if (m_registerCallback)
-				m_registerCallback();
+			if (m_handle) {
+				m_registerCallback = other.m_registerCallback;
+				m_deregisterCallback = other.m_deregisterCallback;
+				m_numReferencesCallback = other.m_numReferencesCallback;
+				if (m_registerCallback)
+					m_registerCallback();
+			}
 
 			return *this;
 		}
 
-		operator bool() { 
+		operator bool() const { 
 			return (bool) m_handle;
 		}
 
-		void resume() {
+		void resume() const {
 			if (m_handle)
 				m_handle.resume();
 		}
@@ -208,7 +215,7 @@ class SmartCoroutineHandle<void>
 		std::function<void()> m_registerCallback;
 		std::function<void()> m_deregisterCallback;
 		std::function<size_t()> m_numReferencesCallback;
-		std::coroutine_handle<> m_handle;
+		std::coroutine_handle<> m_handle = {};
 };
 
 class SmartPromiseType
@@ -272,6 +279,9 @@ class SimulationFunction {
 			auto initial_suspend() { return std::suspend_always(); }
 			void unhandled_exception() { throw; }
 
+			void* operator new(size_t size) { return std::malloc(size); }
+			void operator delete(void *ptr) { std::free(ptr); }
+
 			/**
 			 * @brief Special awaiter for the final suspend that potentially resumes the calling simulation processes.
 			 * @details Resume doesn't happen directly, but by adding the awaiting handlers to the queue of ready coroutines of the SimulationCoroutineHandler.
@@ -290,44 +300,12 @@ class SimulationFunction {
 		};
 		using Handle = internal::SmartCoroutineHandle<promise_type>;
 
+		SimulationFunction() = default;
 		SimulationFunction(const Handle &handle) : m_handle(handle) { }
 		SimulationFunction(const std::coroutine_handle<promise_type> &handle) : m_handle(handle) { }
 
 		inline const Handle &getHandle() const { return m_handle; }
-
-		/**
-		 * @brief Awaiter if this SimulationCoroutine is co_awaited as a sub-process of another SimulationCoroutine.
-		 * @details Schedules the called coroutine for resumption and adds the calling coroutine to the list of coroutines awaiting final suspend of the called one.
-		 */
-		struct Call : public BaseCall<ReturnValue, promise_type> {
-			bool await_ready() noexcept { return false; }
-			void await_suspend(std::coroutine_handle<> callingSimulationCoroutine) noexcept;
-
-			explicit Call(const SimulationFunction<ReturnValue> &simProc) noexcept : BaseCall<ReturnValue, promise_type>(simProc.getHandle()) { }
-		};
-
-		/**
-		 * @brief Awaiter for forking a sub-process that will run in (quasi-)parallel.
-		 * @details Schedules the called coroutine for resumption but also schedules the calling coroutine immediately after that.
-		 */
-		struct Fork {
-			bool await_ready() noexcept { return false; }
-			void await_suspend(std::coroutine_handle<> callingSimulationCoroutine) noexcept;
-			const Handle &await_resume() noexcept { return calledSimulationCoroutine; }
-
-			Handle calledSimulationCoroutine;
-
-			explicit Fork(const SimulationFunction<ReturnValue> &simProc) noexcept : calledSimulationCoroutine(simProc.getHandle()) { }
-			explicit Fork(std::function<SimulationFunction<ReturnValue>()> &&functor) noexcept {
-				// Create a "portable" copy of the functor before we invoke.
-				auto functorInstance = std::make_unique<std::function<SimulationFunction<ReturnValue>()>>(std::move(functor));
-				// Invoke the copy so that all internal references are wrt. to said copy.
-				auto simFunc = (*functorInstance)();
-				calledSimulationCoroutine = simFunc.getHandle();
-				// Store the copy in the promise object to be kept alive as long as the promise/coroutine exists.
-				calledSimulationCoroutine.promise().functorInstance = std::move(functorInstance);
-			}
-		};
+		inline Handle &getHandle() { return m_handle; }
 
 		/**
 		 * @brief Awaiter for suspending a coroutine until another finishes.
@@ -335,18 +313,21 @@ class SimulationFunction {
 		 */
 		struct Join : public BaseCall<ReturnValue, promise_type> {
 			bool await_ready() noexcept { return BaseCall<ReturnValue, promise_type>::calledSimulationCoroutine.done(); }
-			void await_suspend(std::coroutine_handle<> callingSimulationCoroutine) noexcept;
+			void await_suspend(std::coroutine_handle<> callingSimulationCoroutine) noexcept {
+				BaseCall<ReturnValue, promise_type>::calledSimulationCoroutine.promise().awaitingFinalSuspend.push_back(callingSimulationCoroutine);
+			}
 
 			explicit Join(const Handle &handle) noexcept : BaseCall<ReturnValue, promise_type>(handle) { }
 		};
 
   		/// Produces an awaiter if this SimulationFunction is co_awaited as a called sub-process of another SimulationFunction.
-  		Call operator co_await() && noexcept { return Call(*this); }
+  		Join operator co_await() && noexcept { 
+			m_handle.resume();
+			return Join(m_handle);
+		}
 	protected:
 		Handle m_handle;
 };
-
-
 
 class SimulationCoroutineHandler {
 	public:
@@ -355,9 +336,13 @@ class SimulationCoroutineHandler {
 		~SimulationCoroutineHandler();
 
 		template<typename ReturnValue>
-		void start(const SimulationFunction<ReturnValue> &handle) {
+		void start(const SimulationFunction<ReturnValue> &handle, bool runImmediate = false) {
+			HCL_ASSERT(!handle.getHandle().done());
 			m_simulationCoroutines.insert(handle.getHandle());
-			readyToResume(handle.getHandle().rawHandle());		
+			if (runImmediate)
+				handle.getHandle().resume();
+			else
+				readyToResume(handle.getHandle().rawHandle());		
 		}
 		void stopAll();
 
@@ -384,23 +369,27 @@ void SimulationFunction<ReturnValue>::promise_type::FinalSuspendAwaiter::await_s
 	handler->coroutineFinalSuspending(handle);
 }
 
-template<typename ReturnValue>
-void SimulationFunction<ReturnValue>::Call::await_suspend(std::coroutine_handle<> callingSimulationCoroutine) noexcept { 
-	BaseCall<ReturnValue, SimulationFunction<ReturnValue>::promise_type>::calledSimulationCoroutine.promise().awaitingFinalSuspend.push_back(callingSimulationCoroutine); 
-	auto *handler = SimulationCoroutineHandler::activeHandler;
-	handler->readyToResume(BaseCall<ReturnValue, SimulationFunction<ReturnValue>::promise_type>::calledSimulationCoroutine.rawHandle());
-}
 
 template<typename ReturnValue>
-void SimulationFunction<ReturnValue>::Join::await_suspend(std::coroutine_handle<> callingSimulationCoroutine) noexcept { 
-	BaseCall<ReturnValue, SimulationFunction<ReturnValue>::promise_type>::calledSimulationCoroutine.promise().awaitingFinalSuspend.push_back(callingSimulationCoroutine);
+auto forkFunc(const SimulationFunction<ReturnValue> &simFunc)
+{
+	auto *handler = SimulationCoroutineHandler::activeHandler;
+	handler->start(simFunc, true);
+	return simFunc.getHandle();
 }
 
+
 template<typename ReturnValue>
-void SimulationFunction<ReturnValue>::Fork::await_suspend(std::coroutine_handle<> callingSimulationCoroutine) noexcept { 
-	auto *handler = SimulationCoroutineHandler::activeHandler;
-	handler->start(SimulationFunction<ReturnValue>(calledSimulationCoroutine));
-	handler->readyToResume(callingSimulationCoroutine); // Immediately resume caller after called function has suspended
+auto forkFunc(std::function<SimulationFunction<ReturnValue>()> &&functor)
+{
+	// Create a "portable" copy of the functor before we invoke.
+	auto functorInstance = std::make_unique<std::function<SimulationFunction<ReturnValue>()>>(std::move(functor));
+	// Invoke the copy so that all internal references are wrt. to said copy.
+	auto simFunc = (*functorInstance)();
+	// Store the copy in the promise object to be kept alive as long as the promise/coroutine exists.
+	simFunc.getHandle().promise().functorInstance = std::move(functorInstance);
+
+	return forkFunc(simFunc);
 }
 
 

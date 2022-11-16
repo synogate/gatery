@@ -518,16 +518,16 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_put_get_test, SdramControllerTest)
 	addSimulationProcess([=]()->SimProcess {
 		co_await OnClk(clock());
 
-		co_await fork(scl::validate(linkModel.getLink(), clock()));
+		fork(scl::validate(linkModel.getLink(), clock()));
 
-		co_await fork(linkModel.put(0x0000, 1, 0xC, clock()));
-		co_await fork(linkModel.put(0x0002, 1, 0xA, clock()));
-		auto read1 = co_await fork(linkModel.get(0x0000, 1, clock()));
-		auto read2 = co_await fork(linkModel.get(0x0002, 1, clock()));
-		co_await fork(linkModel.put(0x0004, 1, 0xF, clock()));
-		co_await fork(linkModel.put(0x0006, 1, 0xE, clock()));
-		auto read3 = co_await fork(linkModel.get(0x0004, 1, clock()));
-		auto read4 = co_await fork(linkModel.get(0x0006, 1, clock()));
+		fork(linkModel.put(0x0000, 1, 0xC, clock()));
+		fork(linkModel.put(0x0002, 1, 0xA, clock()));
+		auto read1 = fork(linkModel.get(0x0000, 1, clock()));
+		auto read2 = fork(linkModel.get(0x0002, 1, clock()));
+		fork(linkModel.put(0x0004, 1, 0xF, clock()));
+		fork(linkModel.put(0x0006, 1, 0xE, clock()));
+		auto read3 = fork(linkModel.get(0x0004, 1, clock()));
+		auto read4 = fork(linkModel.get(0x0006, 1, clock()));
 
 		BOOST_TEST(std::get<0>(co_await join(read1)) == 0xC);
 		BOOST_TEST(std::get<0>(co_await join(read2)) == 0xA);
@@ -549,16 +549,16 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_small_test, SdramControllerTest)
 	addSimulationProcess([=]()->SimProcess {
 		co_await OnClk(clock());
 
-		co_await fork(scl::validate(linkModel.getLink(), clock()));
+		fork(scl::validate(linkModel.getLink(), clock()));
 
-		co_await fork(linkModel.put(0x0000, 1, 0xC, clock()));
-		co_await fork(linkModel.put(0x0001, 0, 0xA, clock()));
-		auto read1 = co_await fork(linkModel.get(0x0000, 1, clock()));
-		auto read2 = co_await fork(linkModel.get(0x0001, 0, clock()));
-		co_await fork(linkModel.put(0x0004, 1, 0xF, clock()));
-		co_await fork(linkModel.put(0x0004, 0, 0xE, clock()));
-		auto read3 = co_await fork(linkModel.get(0x0004, 1, clock()));
-		auto read4 = co_await fork(linkModel.get(0x0004, 0, clock()));
+		fork(linkModel.put(0x0000, 1, 0xC, clock()));
+		fork(linkModel.put(0x0001, 0, 0xA, clock()));
+		auto read1 = fork(linkModel.get(0x0000, 1, clock()));
+		auto read2 = fork(linkModel.get(0x0001, 0, clock()));
+		fork(linkModel.put(0x0004, 1, 0xF, clock()));
+		fork(linkModel.put(0x0004, 0, 0xE, clock()));
+		auto read3 = fork(linkModel.get(0x0004, 1, clock()));
+		auto read4 = fork(linkModel.get(0x0004, 0, clock()));
 
 		BOOST_TEST(std::get<0>(co_await join(read1)) == 0x0A0C);
 		BOOST_TEST(std::get<0>(co_await join(read2)) == 0xA);
@@ -580,12 +580,12 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_burst_test, SdramControllerTest)
 	addSimulationProcess([=]()->SimProcess {
 		co_await OnClk(clock());
 
-		co_await fork(scl::validate(linkModel.getLink(), clock()));
+		fork(scl::validate(linkModel.getLink(), clock()));
 
-		co_await fork(linkModel.put(0x0000, 2, 0xAABBCCDD, clock()));
-		co_await fork(linkModel.put(0x0100, 3, 0x0102030405060708, clock()));
-		auto read1 = co_await fork(linkModel.get(0x0000, 2, clock()));
-		auto read2 = co_await fork(linkModel.get(0x0100, 3, clock()));
+		fork(linkModel.put(0x0000, 2, 0xAABBCCDD, clock()));
+		fork(linkModel.put(0x0100, 3, 0x0102030405060708, clock()));
+		auto read1 = fork(linkModel.get(0x0000, 2, clock()));
+		auto read2 = fork(linkModel.get(0x0100, 3, clock()));
 
 		BOOST_TEST(std::get<0>(co_await join(read1)) == 0xAABBCCDD);
 		BOOST_TEST(std::get<0>(co_await join(read2)) == 0x0102030405060708);
@@ -609,7 +609,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_fuzz_test, SdramControllerTest)
 		std::mt19937_64 rng{ seed };
 
 		co_await OnClk(clock());
-		co_await fork(scl::validate(linkModel.getLink(), clock()));
+		fork(scl::validate(linkModel.getLink(), clock()));
 
 		// TODO: refactor fuzzing module out of unit test
 		std::map<uint64_t, uint8_t> content;
@@ -660,7 +660,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_fuzz_test, SdramControllerTest)
 				address = *it;
 				address &= ~((1ull << size) - 1);
 
-				co_await fork([=]() -> SimProcess {
+				fork([=]() -> SimProcess {
 					auto [value, defined, error] = co_await linkModel.get(address, size, clock());
 					BOOST_TEST(!error);
 					check_read(address, size, value, defined);
@@ -672,7 +672,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_fuzz_test, SdramControllerTest)
 				usedAddress.insert(address);
 				uint64_t data = rng();
 
-				co_await fork([=]() -> SimProcess {
+				fork([=]() -> SimProcess {
 					bool error = co_await linkModel.put(address, size, data, clock());
 					BOOST_TEST(!error);
 					insert_write(address, size, data);
@@ -680,7 +680,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_fuzz_test, SdramControllerTest)
 			}
 		}
 
-		auto read = co_await fork(linkModel.get(0, 0, clock()));
+		auto read = fork(linkModel.get(0, 0, clock()));
 		co_await join(read);
 		
 		for (size_t i = 0; i < 8; ++i)

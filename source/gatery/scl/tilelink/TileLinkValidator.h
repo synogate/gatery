@@ -66,13 +66,14 @@ namespace gtry::scl
 	template<TileLinkSignal TileLinkType>
 	SimProcess validate(TileLinkType& tileLink, const Clock& clk)
 	{
-		co_await fork(validateTileLink(tileLink.a, *tileLink.d, clk));
+		fork(validateTileLink(tileLink.a, *tileLink.d, clk));
 
 		if constexpr (!tileLink.template capability<TileLinkCapBurst>())
-			co_await fork(validateTileLinkNoBurst(tileLink.a, clk));
+			fork(validateTileLinkNoBurst(tileLink.a, clk));
 
 		auto ops = internal::tileLinkValidOps(tileLink);
-		co_await fork(validateTileLinkOperations(tileLink.a, ops, clk));
+		fork(validateTileLinkOperations(tileLink.a, ops, clk));
+		co_return;
 	}
 
 	template<TileLinkSignal TileLinkType>

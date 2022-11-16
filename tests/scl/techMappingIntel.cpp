@@ -312,7 +312,7 @@ BOOST_FIXTURE_TEST_CASE(instantiate_simulate_scl_ddr, gtry::GHDLTestFixture)
 			simu(d1) = a?'1':'0';
 			simu(d2) = b?'1':'0';
 
-			co_await fork([](Seconds cyclePeriod, const Bit &out, bool a, bool b)->SimProcess {
+			fork([](Seconds cyclePeriod, const Bit &out, bool a, bool b)->SimProcess {
 				// Wait for one full clock cycle (because of ddr registers) and then a quarter cycle in case the simulation model has some modeled delay.
 				co_await WaitFor(Seconds{5,4} * cyclePeriod);
 
