@@ -80,4 +80,13 @@ namespace gtry::hlim {
 
 
 
+	struct FindDriverOpts {
+		size_t inputPortIdx = 0ull;
+		bool skipSignalNodes = true;
+		bool skipNamedSignalNodes = true;
+		std::optional<size_t> skipExportOverrideNodes = {};
+	};
+	hlim::NodePort findDriver(hlim::BaseNode *node, const FindDriverOpts &opts = {});
+
+
 }

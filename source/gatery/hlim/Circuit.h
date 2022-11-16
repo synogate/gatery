@@ -155,6 +155,7 @@ class Circuit
 		void removeFalseLoops();
 
 		void ensureSignalNodePlacement();
+		void ensureMultiDriverNodePlacement();
 		void duplicateSignalsFeedingLowerAndHigherAreas();
 
 		void optimizeSubnet(Subnet &subnet);

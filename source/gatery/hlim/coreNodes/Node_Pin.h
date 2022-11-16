@@ -36,6 +36,7 @@ namespace gtry::hlim {
 
 			bool isInputPin() const { return m_isInputPin; }
 			bool isOutputPin() const { return m_isOutputPin; }
+			bool isBiDirectional() const { return m_isInputPin && m_isOutputPin; }
 
 			inline const ConnectionType &getConnectionType() const { return m_connectionType; }
 

@@ -45,6 +45,9 @@
 #include "../../hlim/supportNodes/Node_ExportOverride.h"
 #include "../../hlim/supportNodes/Node_SignalTap.h"
 #include "../../hlim/supportNodes/Node_CDC.h"
+#include "../../hlim/coreNodes/Node_MultiDriver.h"
+
+#include "../../hlim/GraphTools.h"
 
 #include <iostream>
 
@@ -143,8 +146,7 @@ void Process::extractSignals()
 		}
 
 		// check for multiplexer
-		hlim::Node_Multiplexer *muxNode = dynamic_cast<hlim::Node_Multiplexer *>(node);
-		if (muxNode != nullptr) {
+		if (auto *muxNode = dynamic_cast<hlim::Node_Multiplexer *>(node)) {
 			hlim::NodePort driver{.node = muxNode, .port = 0};
 			potentialLocalSignals.insert(driver);
 		}
@@ -255,6 +257,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
 
 	HCL_ASSERT(dynamic_cast<const hlim::Node_Register*>(nodePort.node) == nullptr);
 	HCL_ASSERT(dynamic_cast<const hlim::Node_Multiplexer*>(nodePort.node) == nullptr);
+	HCL_ASSERT(dynamic_cast<const hlim::Node_MultiDriver*>(nodePort.node) == nullptr);
 
 	if (const auto *signalNode = dynamic_cast<const hlim::Node_Signal *>(nodePort.node)) {
 		formatExpression(stream, indentation, comments, signalNode->getDriver(0), dependentInputs, context);
@@ -585,6 +588,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 			std::string assignmentPrefix;
 			bool forceUnfold;
 			hlim::NodePort tristateOutputEnable;
+			bool inoutIoPin = false;
 
 			if (ioPin && ioPin->isOutputPin()) { // todo: all in all this is bad
 				const auto &decl = m_namespaceScope.get(ioPin);
@@ -594,7 +598,8 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 
 				targetContext = decl.dataType;
 
-				tristateOutputEnable = ioPin->getDriver(1);
+				inoutIoPin = ioPin->isBiDirectional();
+
 			} else {
 				const auto &decl = m_namespaceScope.get(nodePort);
 				assignmentPrefix = decl.name;
@@ -608,37 +613,58 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 			else
 				assignmentPrefix += " <= ";
 
-			if (tristateOutputEnable.node) { // only happens when assigning to tristate pins
-				code << "IF ";
-				formatExpression(code, indentation+2, comment, tristateOutputEnable, statement.inputs, VHDLDataType::BOOL, false);
-				code << " THEN"<< std::endl;
+			if (inoutIoPin) {
+				bool directlyConnectedToBiDirDriver = false;
+				auto driver = hlim::findDriver(ioPin, {.inputPortIdx = 0, .skipExportOverrideNodes = hlim::Node_ExportOverride::EXP_INPUT});
+				if (auto *multiDriver = dynamic_cast<hlim::Node_MultiDriver*>(driver.node)) {
+					for (auto i : utils::Range(multiDriver->getNumInputPorts())) {
+						if (multiDriver->getDriver(i).node == ioPin) {
+							directlyConnectedToBiDirDriver = true;
+							break;
+						}
+					}
+				}
+				if (auto *extNode = dynamic_cast<hlim::Node_External*>(driver.node)) {
+					if (extNode->getOutputPorts()[driver.port].bidirPartner) {
+						auto port = *extNode->getOutputPorts()[driver.port].bidirPartner;
+						if (extNode->getDriver(port).node == ioPin) {
+							directlyConnectedToBiDirDriver = true;
+						}
+					}
+				}
 
-					// write signal as in the default case
-					cf.indent(code, indentation+2);
+				tristateOutputEnable = ioPin->getDriver(1);
+				if (tristateOutputEnable.node && !directlyConnectedToBiDirDriver) { // only happens when assigning to tristate pins
+					code << "IF ";
+					formatExpression(code, indentation+2, comment, tristateOutputEnable, statement.inputs, VHDLDataType::BOOL, false);
+					code << " THEN"<< std::endl;
+
+						// write signal as in the default case
+						cf.indent(code, indentation+2);
+						code << assignmentPrefix;
+
+						formatExpression(code, indentation+2, comment, nodePort, statement.inputs, targetContext, forceUnfold);
+						code << ";" << std::endl;
+
+					cf.indent(code, indentation+1);
+					code << "ELSE" << std::endl;
+
+						// Write high impedance
+						cf.indent(code, indentation+2);
+						code << assignmentPrefix;
+
+						if (hlim::getOutputConnectionType(nodePort).interpretation == hlim::ConnectionType::BOOL)
+							code << "'Z';" << std::endl;
+						else
+							code << "(others => 'Z');" << std::endl;
+
+					cf.indent(code, indentation+1);
+					code << "END IF;" << std::endl;
+				} else {
 					code << assignmentPrefix;
-
 					formatExpression(code, indentation+2, comment, nodePort, statement.inputs, targetContext, forceUnfold);
 					code << ";" << std::endl;
-
-				cf.indent(code, indentation+1);
-				code << "ELSE" << std::endl;
-
-					// Write high impedance
-					cf.indent(code, indentation+2);
-					code << assignmentPrefix;
-
-					auto type = hlim::getOutputConnectionType(nodePort);
-					if (type.interpretation == hlim::ConnectionType::BOOL)
-						code << "'Z';" << std::endl;
-					else {
-						code << '"';
-						for ([[maybe_unused]] auto i : utils::Range(type.width))
-							code << 'Z';
-						code << "\";" << std::endl;
-					}
-
-				cf.indent(code, indentation+1);
-				code << "END IF;" << std::endl;
+				}
 			} else
 			if (muxNode != nullptr) {
 				if (hlim::getOutputWidth(muxNode->getDriver(0)) == 0) { 
@@ -780,7 +806,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 			if (s->isInputPin())
 				signalsReady.insert({.node=s, .port=0});
 
-			if (s->isOutputPin() && s->getNonSignalDriver(0).node != nullptr)
+			if (s->isOutputPin() && s->getNonSignalDriver(0).node != nullptr && !m_outputs.contains({.node=s, .port=0}))
 				constructStatementsFor({.node=s, .port=0});
 		}
 

@@ -112,6 +112,9 @@ class Node_External : public Node<Node_External>
 			size_t instanceWidth;
 			bool isVector;
 			std::variant<BitFlavor, BitVectorFlavor> flavor;
+			std::optional<size_t> bidirPartner;
+
+			bool operator<=>(const Port &rhs) const = default;
 		};
 
 		inline const std::string &getLibraryName() const { return m_libraryName; }
@@ -134,6 +137,8 @@ class Node_External : public Node<Node_External>
 
 		void declInputBitVector(size_t idx, std::string name, size_t width, std::string componentWidth = {}, BitVectorFlavor flavor = BitVectorFlavor::STD_LOGIC_VECTOR);
 		void declInputBit(size_t idx, std::string name, BitFlavor flavor = BitFlavor::STD_LOGIC);
+
+		void declBidirPort(size_t inputIdx, size_t outputIdx);
 		
 		void changeInputWidth(size_t idx, size_t width);
 		void changeOutputWidth(size_t idx, size_t width);

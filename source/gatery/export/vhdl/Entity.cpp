@@ -168,7 +168,10 @@ void Entity::allocateNames()
 			dataType = VHDLDataType::STD_LOGIC;
 		else
 			dataType = VHDLDataType::STD_LOGIC_VECTOR;
-		m_namespaceScope.allocateName(ioPin, ioPin->getName(), dataType);
+
+		std::string desiredName = ioPin->getName();
+		if (desiredName.empty()) desiredName = "io";
+		m_namespaceScope.allocateName(ioPin, desiredName, dataType);
 	}
 
 	BasicBlock::allocateNames();
