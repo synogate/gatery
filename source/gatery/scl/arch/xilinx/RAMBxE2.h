@@ -18,11 +18,11 @@
 #pragma once
 
 #include <gatery/frontend.h>
-#include <gatery/hlim/supportNodes/Node_External.h>
+#include <gatery/frontend/ExternalComponent.h>
 
 namespace gtry::scl::arch::xilinx {
 
-class RAMBxE2 : public gtry::hlim::Node_External
+class RAMBxE2 : public gtry::ExternalComponent
 {
 	public:
 		enum Type {
@@ -80,21 +80,20 @@ class RAMBxE2 : public gtry::hlim::Node_External
 			IN_WE_A,
 			IN_WE_B_WE,
 			
+			IN_COUNT_18,
 			
 			// 36k
 
-			IN_CAS_IND_BITERR,
+			IN_CAS_IND_BITERR = IN_COUNT_18,
 			IN_CAS_INS_BITERR,
 
 			IN_ECC_PIPE_CE,
 			IN_INJECT_D_BITERR,
 			IN_INJECT_S_BITERR,
-			/*
-			IN_COUNT_18 = IN_WE_B_WE + 1,
-			IN_COUNT_36 = IN_INJECT_S_BITERR + 1,
-			*/
-			IN_COUNT
+
+			IN_COUNT_36
 		};
+		
 		enum Outputs {
 			// 18k
 			OUT_CAS_DOUT_A,
@@ -106,19 +105,17 @@ class RAMBxE2 : public gtry::hlim::Node_External
 			OUT_DOUTP_A_DOUTP,
 			OUT_DOUTP_B_DOUTP,
 
+			OUT_COUNT_18,
+
 			// 36k
-			OUT_CAS_OUTD_BITERR,
+			OUT_CAS_OUTD_BITERR = OUT_COUNT_18,
 			OUT_CAS_OUTS_BITERR,
 			OUT_D_BITERR,
 			OUT_ECC_PARITY,
 			OUT_RD_ADDR_ECC,
 			OUT_S_BITERR,
 
-			/*
-			OUT_COUNT_18 = OUT_DOUTP_B_DOUTP+1,
-			OUT_COUNT_36 = OUT_S_BITERR+1,
-			*/
-			OUT_COUNT
+			OUT_COUNT_36
 		};
 
 		enum class CascadeOrder {
@@ -165,18 +162,18 @@ class RAMBxE2 : public gtry::hlim::Node_External
 
 		//RAMBxE2 &setupInitData(const sim::DefaultBitVectorState &init, bool useParity = false);
 
-		void connectInput(Inputs input, const Bit &bit);
-		void connectInput(Inputs input, const UInt &vec);
-		UInt getOutputUInt(Outputs output);
-		Bit getOutputBit(Outputs output);
+		virtual void setInput(size_t input, const Bit &bit);
+		virtual void setInput(size_t input, const BVec &bvec);
+		virtual Bit getOutputBit(size_t output);
+		virtual BVec getOutputBVec(size_t output);
 
-		UInt getReadData(size_t width, bool portA);
-		UInt getReadDataPortA(size_t width) { return getReadData(width, true); }
-		UInt getReadDataPortB(size_t width) { return getReadData(width, false); }
+		BVec getReadData(size_t width, bool portA);
+		BVec getReadDataPortA(size_t width) { return getReadData(width, true); }
+		BVec getReadDataPortB(size_t width) { return getReadData(width, false); }
 
-		void connectWriteData(const UInt &input, bool portA);
-		void connectWriteDataPortA(const UInt &input) { connectWriteData(input, true); }
-		void connectWriteDataPortB(const UInt &input) { connectWriteData(input, false); }
+		void connectWriteData(const BVec &input, bool portA);
+		void connectWriteDataPortA(const BVec &input) { connectWriteData(input, true); }
+		void connectWriteDataPortB(const BVec &input) { connectWriteData(input, false); }
 
 		void connectAddress(const UInt &input, bool portA);
 		void connectAddressPortA(const UInt &input) { connectAddress(input, true); }
@@ -184,8 +181,6 @@ class RAMBxE2 : public gtry::hlim::Node_External
 
 		virtual std::string getTypeName() const override;
 		virtual void assertValidity() const override;
-		virtual std::string getInputName(size_t idx) const override;
-		virtual std::string getOutputName(size_t idx) const override;
 
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 

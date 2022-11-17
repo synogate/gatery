@@ -24,6 +24,7 @@
 #include "coreNodes/Node_Pin.h"
 #include "coreNodes/Node_Signal.h"
 #include "coreNodes/Node_Register.h"
+#include "supportNodes/Node_ExportOverride.h"
 #include "supportNodes/Node_External.h"
 #include "supportNodes/Node_RegSpawner.h"
 #include "supportNodes/Node_RegHint.h"
@@ -291,5 +292,24 @@ size_t getMinRegHintsBetween(NodePort sourceOutput, NodePort destinationInput)
 	return ~0ull;
 }
 
+
+hlim::NodePort findDriver(hlim::BaseNode *node, const FindDriverOpts &opts)
+{
+	std::set<hlim::NodePort> visited;
+
+	auto driver = node->getDriver(opts.inputPortIdx);
+	while (driver.node != nullptr) {
+		if (visited.contains(driver)) return {};
+		visited.insert(driver);
+
+		if (opts.skipSignalNodes && dynamic_cast<Node_Signal*>(driver.node) && (opts.skipNamedSignalNodes || !node->hasGivenName()))
+			driver = driver.node->getDriver(0);
+		else if (opts.skipExportOverrideNodes && dynamic_cast<Node_ExportOverride*>(driver.node))
+			driver = driver.node->getDriver(*opts.skipExportOverrideNodes);
+		else 
+			break;
+	}
+	return driver;
+}
 
 }

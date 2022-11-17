@@ -99,8 +99,8 @@ void GHDLTestFixture::testCompilation()
 	if (GHDLGlobalFixture::hasXilinxLibrary())
 		softlinkAll(GHDLGlobalFixture::getXilinxLibrary());
 
-	BOOST_REQUIRE(bp::system(ghdlExecutable, "-a", "--std=08", "--ieee=synopsys", "-frelaxed", "design.vhd") == 0);
-	BOOST_REQUIRE(bp::system(ghdlExecutable, "-e", "--std=08", "--ieee=synopsys", "-frelaxed", "top") == 0);
+	BOOST_CHECK(bp::system(ghdlExecutable, "-a", "--std=08", "--ieee=synopsys", "-frelaxed", "--warn-error", "design.vhd") == 0);
+	BOOST_CHECK(bp::system(ghdlExecutable, "-e", "--std=08", "--ieee=synopsys", "-frelaxed", "--warn-error", "top") == 0);
 }
 
 void GHDLTestFixture::softlinkAll(const std::filesystem::path &src)

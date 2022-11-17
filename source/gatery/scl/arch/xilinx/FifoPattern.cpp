@@ -201,8 +201,8 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 	FIFO_SYNC_MACRO *lastFifo = nullptr;
 	for (auto i : utils::Range(num_36k)) {
 		auto *fifoMacro = DesignScope::createNode<FIFO_SYNC_MACRO>(perFifoWidth_36k, FIFO_SYNC_MACRO::FIFOSize::SIZE_36Kb);
-		fifoMacro->connectInput(FIFO_SYNC_MACRO::IN_WREN, in_valid);
-		fifoMacro->connectInput(FIFO_SYNC_MACRO::IN_RDEN, out_ready);
+		fifoMacro->setInput(FIFO_SYNC_MACRO::IN_WREN, in_valid);
+		fifoMacro->setInput(FIFO_SYNC_MACRO::IN_RDEN, out_ready);
 		fifoMacro->attachClock(clock, FIFO_SYNC_MACRO::CLK);
 
 		size_t start = i * perFifoWidth_36k;
@@ -215,9 +215,9 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 		BVec inSection = BitWidth(perFifoWidth_36k);
 		inSection = zext(in_data(start, sectionWidth));
 		inSection.setName((boost::format("inSection_%d_%d") % start % end).str());
-		fifoMacro->connectInput(FIFO_SYNC_MACRO::IN_DI, (UInt) inSection);
+		fifoMacro->setInput(FIFO_SYNC_MACRO::IN_DI, inSection);
 
-		BVec outSection = (BVec) fifoMacro->getOutputUInt(FIFO_SYNC_MACRO::OUT_DO);
+		BVec outSection = fifoMacro->getOutputBVec(FIFO_SYNC_MACRO::OUT_DO);
 		out_data_accu(start, sectionWidth) = outSection(0, sectionWidth);
 
 		out_data_accu.setName((boost::format("out_data_accu_0_%d") % end).str());
@@ -227,8 +227,8 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 
 	for (auto i : utils::Range(num_18k)) {
 		auto *fifoMacro = DesignScope::createNode<FIFO_SYNC_MACRO>(perFifoWidth_18k, FIFO_SYNC_MACRO::FIFOSize::SIZE_18Kb);
-		fifoMacro->connectInput(FIFO_SYNC_MACRO::IN_WREN, in_valid);
-		fifoMacro->connectInput(FIFO_SYNC_MACRO::IN_RDEN, out_ready);
+		fifoMacro->setInput(FIFO_SYNC_MACRO::IN_WREN, in_valid);
+		fifoMacro->setInput(FIFO_SYNC_MACRO::IN_RDEN, out_ready);
 		fifoMacro->attachClock(clock, FIFO_SYNC_MACRO::CLK);
 
 		size_t start = num_36k*perFifoWidth_36k + i * perFifoWidth_18k;
@@ -240,9 +240,9 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 		BVec inSection = BitWidth(perFifoWidth_18k);
 		inSection = zext(in_data(start, sectionWidth));
 		inSection.setName((boost::format("inSection_%d_%d") % start % end).str());
-		fifoMacro->connectInput(FIFO_SYNC_MACRO::IN_DI, (UInt) inSection);
+		fifoMacro->setInput(FIFO_SYNC_MACRO::IN_DI, inSection);
 
-		BVec outSection = (BVec) fifoMacro->getOutputUInt(FIFO_SYNC_MACRO::OUT_DO);
+		BVec outSection = fifoMacro->getOutputBVec(FIFO_SYNC_MACRO::OUT_DO);
 		out_data_accu(start, sectionWidth) = outSection(0, sectionWidth);
 		out_data_accu.setName((boost::format("out_data_accu_0_%d") % end).str());
 

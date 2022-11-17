@@ -54,6 +54,7 @@ class LogMessage
 
 		LogMessage &operator<<(const char *c) { m_messageParts.push_back(c); return *this; }
 		LogMessage &operator<<(std::string s) { m_messageParts.push_back(std::move(s)); return *this; }
+		LogMessage &operator<<(std::string_view s) { m_messageParts.push_back(std::string(s)); return *this; }
 		LogMessage &operator<<(const hlim::BaseNode *node) { m_messageParts.push_back(node); return *this; }
 		LogMessage &operator<<(const hlim::NodeGroup *group) { m_messageParts.push_back(group); return *this; }
 		LogMessage &operator<<(const hlim::Subnet &subnet) { m_messageParts.push_back(&subnet); return *this; }

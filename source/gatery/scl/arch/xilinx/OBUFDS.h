@@ -17,19 +17,17 @@
 */
 #pragma once
 
-#include <gatery/hlim/supportNodes/Node_External.h>
+#include <gatery/frontend/ExternalComponent.h>
 
 namespace gtry::scl::arch::xilinx {
 
-class OBUFDS : public gtry::hlim::Node_External
+class OBUFDS : public gtry::ExternalComponent
 {
 	public:
 		OBUFDS();
 
 		virtual std::string getTypeName() const override;
 		virtual void assertValidity() const override;
-		virtual std::string getInputName(size_t idx) const override;
-		virtual std::string getOutputName(size_t idx) const override;
 
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 

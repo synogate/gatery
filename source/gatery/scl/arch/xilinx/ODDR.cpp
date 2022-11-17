@@ -20,7 +20,10 @@
 
 #include <gatery/hlim/coreNodes/Node_Register.h>
 #include <gatery/hlim/coreNodes/Node_Clk2Signal.h>
+#include <gatery/hlim/coreNodes/Node_ClkRst2Signal.h>
 #include <gatery/hlim/NodeGroup.h>
+
+#include <gatery/scl/io/ddr.h>
 
 namespace gtry::scl::arch::xilinx {
 
@@ -85,71 +88,82 @@ std::unique_ptr<hlim::BaseNode> ODDR::cloneUnconnected() const
 }
 
 
-
-
-
-
-
-bool ODDRPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
+bool ODDRPattern::performReplacement(hlim::NodeGroup *nodeGroup, ReplaceInfo &replacement) const
 {
-	if (nodeGroup->getName() != "scl_oddr") return false;
-
-
-	NodeGroupIO io(nodeGroup);
-
-	if (!io.inputBits.contains("D0")) {
+	auto *params = dynamic_cast<gtry::scl::DDROutParams*>(nodeGroup->getMetaInfo());
+	if (params == nullptr) {
 		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-				<< "Not replacing " << nodeGroup << " with ODDR because the 'D0' signal could not be found or is not a bit!");
+				<< "Not replacing " << nodeGroup << " with " << m_patternName << " because it doesn't have the DDROutParams meta parameters attached!");
 		return false;
 	}
 
-	if (!io.inputBits.contains("D1")) {
+	if (!params->inputRegs) {
 		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-				<< "Not replacing " << nodeGroup << " with ODDR because the 'D1' signal could not be found or is not a bit!");
+				<< "Not replacing " << nodeGroup << " with " << m_patternName << " because the area doesn't have input registers (which "<<m_patternName<<" requires).");
 		return false;
 	}
 
-	if (!io.outputBits.contains("O")) {
+	if (params->outputRegs) {
 		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-				<< "Not replacing " << nodeGroup << " with ODDR because the 'O' signal could not be found or is not a bit!");
+				<< "Not replacing " << nodeGroup << " with " << m_patternName << " because the area has output registers (which "<<m_patternName<<" doesn't support).");
+		return false;
+	}
+
+	const auto& attr = replacement.clock->getRegAttribs();
+
+	if (attr.resetType != hlim::RegisterAttributes::ResetType::NONE && 
+		attr.resetType != hlim::RegisterAttributes::ResetType::SYNCHRONOUS) {
+		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+				<< "Not replacing " << nodeGroup << " with " << m_patternName << " because only synchronous and no resets are supported and the used clock is neither.");
 		return false;
 	}
 
 
-	Bit &D0 = io.inputBits["D0"];
-	Bit &D1 = io.inputBits["D1"];
 
-
-
-	NodeGroupSurgeryHelper area(nodeGroup);
-	auto *clkSignal = area.getSignal("CLK");
-	if (clkSignal == nullptr) {
-		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-				<< "Not replacing " << nodeGroup << " with ODDR because no 'CLK' signal was found!");
-		return false;
-	}
-	
-	auto *clk2signal = dynamic_cast<hlim::Node_Clk2Signal*>(clkSignal->getNonSignalDriver(0).node);
-	if (clk2signal == nullptr) {
-		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-				<< "Not replacing " << nodeGroup << " with ODDR because no 'CLK' signal not driven by clock!");
-		return false;
-	}
-
-	hlim::Clock *clock = clk2signal->getClocks()[0];
-
-	Bit &output = io.outputBits["O"];
-
-	auto *ddr = DesignScope::createNode<ODDR>();
-
-	ddr->attachClock(clock, ODDR::CLK_IN);
-	ddr->setInput(ODDR::IN_D1, D0);
-	ddr->setInput(ODDR::IN_D2, D1);
-	ddr->setInput(ODDR::IN_CE, Bit('1'));
-
-	output.exportOverride(ddr->getOutputBit(ODDR::OUT_Q));
-
-	return true;
+	return splitByReset(nodeGroup, replacement);
 }
+
+void ODDRPattern::performConstResetReplacement(hlim::NodeGroup *nodeGroup, ConstResetReplaceInfo &replacement) const
+{
+	replacement.O = ConstBVec(replacement.D[0].width());
+	for (auto bitIdx : utils::Range(replacement.D[0].size())) {
+
+		auto *ddr = DesignScope::createNode<ODDR>();
+
+		ddr->attachClock(replacement.clock, ODDR::CLK_IN);
+		ddr->setInput(ODDR::IN_D1, replacement.D[0][bitIdx]);
+		ddr->setInput(ODDR::IN_D2, replacement.D[1][bitIdx]);
+		ddr->setInput(ODDR::IN_CE, Bit('1'));
+
+		replacement.O[bitIdx] = ddr->getOutputBit(ODDR::OUT_Q);
+
+		if (replacement.reset) {
+			const auto& attr = replacement.clock->getRegAttribs();
+
+			if (attr.resetType != hlim::RegisterAttributes::ResetType::NONE) {
+
+				auto *clk2rst = DesignScope::createNode<hlim::Node_ClkRst2Signal>();
+				clk2rst->setClock(replacement.clock);
+
+				Bit rstSignal = SignalReadPort(clk2rst);
+
+				if(attr.resetActive != hlim::RegisterAttributes::Active::HIGH)
+					rstSignal = !rstSignal;
+
+				ddr->setResetType(ODDR::SRTYPE::SYNC);
+				if (*replacement.reset)
+					ddr->setInput(ODDR::IN_SET, rstSignal);
+				else
+					ddr->setInput(ODDR::IN_RESET, rstSignal);
+			}
+
+			if (attr.initializeRegs)
+				ddr->setInitialOutputValue(*replacement.reset);
+		}
+	}
+}
+
+
+
 
 }

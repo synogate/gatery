@@ -30,6 +30,10 @@
 
 #include "../../hlim/coreNodes/Node_Register.h"
 #include "../../hlim/coreNodes/Node_Constant.h"
+#include "../../hlim/coreNodes/Node_MultiDriver.h"
+#include "../../hlim/coreNodes/Node_Pin.h"
+#include "../../hlim/supportNodes/Node_ExportOverride.h"
+#include "../../hlim/GraphTools.h"
 #include "../../hlim/Clock.h"
 
 
@@ -60,7 +64,7 @@ void BasicBlock::extractSignals()
 		routeChildIOUpwards(ent);
 	}
 
-	for (auto extNode : m_externalNodes) {
+	for (auto &extNode : m_externalNodes) {
 		auto node = extNode.node;
 		for (auto i : utils::Range(node->getNumInputPorts())) {
 			auto driver = node->getDriver(i);
@@ -91,6 +95,35 @@ void BasicBlock::extractSignals()
 			}
 		}
 	}
+
+	for (auto &assignment : m_assignments) {
+		if (isProducedExternally(assignment.source))
+			m_inputs.insert(assignment.source);
+		else
+			m_localSignals.insert(assignment.source);
+
+		if (assignment.enable.node != nullptr) {
+			if (isProducedExternally(assignment.enable))
+				m_inputs.insert(assignment.enable);
+			else
+				m_localSignals.insert(assignment.enable);
+		}
+		if (isConsumedExternally(assignment.destination))
+			m_outputs.insert(assignment.destination);
+		else
+			m_localSignals.insert(assignment.destination);
+	}
+
+	// In case no assignments outside of port maps happen with this
+	for (auto m : m_multiDriverNodes) {
+		hlim::NodePort np{.node = m, .port = 0ull};
+		if (isConsumedExternally(np))
+			m_outputs.insert(np);
+		else
+			m_localSignals.insert(np);
+	}
+
+
 	verifySignalsDisjoint();
 }
 
@@ -177,9 +210,16 @@ void BasicBlock::collectInstantiations(hlim::NodeGroup *nodeGroup, bool reccursi
 		for (auto node : group->getNodes()) {
 			if (!m_ast.isPartOfExport(node)) continue;
 
-			hlim::Node_External *extNode = dynamic_cast<hlim::Node_External *>(node);
-			if (extNode != nullptr)
-				handleExternalNodeInstantiaton(extNode);
+			if (auto *extNode = dynamic_cast<hlim::Node_External *>(node))
+				handleExternalNodeInstantiation(extNode);
+			else
+			if (auto *multiNode = dynamic_cast<hlim::Node_MultiDriver *>(node))
+				handleMultiDriverNodeInstantiation(multiNode);
+				/*
+			else
+			if (auto *pin = dynamic_cast<hlim::Node_Pin *>(node))
+				handlePinInstantiation(pin);
+				*/
 		}
 
 		for (const auto &childGroup : group->getChildren()) {
@@ -194,7 +234,7 @@ void BasicBlock::collectInstantiations(hlim::NodeGroup *nodeGroup, bool reccursi
 						nodeGroupStack.push_back(childGroup.get());
 				break;
 				case hlim::NodeGroup::GroupType::SFU:
-					handleSFUInstantiaton(childGroup.get());
+					handleSFUInstantiation(childGroup.get());
 				break;
 			}
 		}
@@ -216,7 +256,7 @@ void BasicBlock::handleEntityInstantiation(hlim::NodeGroup *nodeGroup)
 	m_statements.push_back(statement);
 }
 
-void BasicBlock::handleExternalNodeInstantiaton(hlim::Node_External *externalNode)
+void BasicBlock::handleExternalNodeInstantiation(hlim::Node_External *externalNode)
 {
 	m_externalNodes.push_back({
 		.node = externalNode,
@@ -248,6 +288,65 @@ void BasicBlock::handleExternalNodeInstantiaton(hlim::Node_External *externalNod
 	m_statements.push_back(statement);
 }
 
+
+void BasicBlock::handleMultiDriverNodeInstantiation(hlim::Node_MultiDriver *multi)
+{
+	m_multiDriverNodes.push_back(multi);
+	for (auto i : utils::Range(multi->getNumInputPorts())) {
+		const auto driver = hlim::findDriver(multi, {.inputPortIdx = i, .skipExportOverrideNodes = hlim::Node_ExportOverride::EXP_INPUT});
+		if (driver.node == nullptr) continue;
+
+		// Check if this is a direct inout link to an external node.
+		// In this case, only the "output" (which poses as the inout) needs to be bound to the multi driver
+		// which happens in the port map of the instantiation of the external node.
+		// No Assignment of the input is necessary.
+		if (auto *extNode = dynamic_cast<hlim::Node_External*>(driver.node))
+			if (extNode->getOutputPorts()[driver.port].bidirPartner)
+				if (extNode->getNonSignalDriver(*extNode->getOutputPorts()[driver.port].bidirPartner).node == multi)
+					continue;
+
+		m_assignments.push_back(AssignmentInstance{
+			.enable = {},
+			.source = multi->getDriver(i),
+			.destination = {.node = multi, .port = 0ull},
+		});
+
+		ConcurrentStatement statement;
+		statement.type = ConcurrentStatement::TYPE_ASSIGNMENT;
+		statement.ref.assignmentIdx = m_assignments.size()-1;
+		statement.sortIdx = 0; /// @todo
+
+		m_statements.push_back(statement);
+	}
+
+	m_ast.getMapping().assignNodeToScope(multi, this);
+}
+
+void BasicBlock::handlePinInstantiation(hlim::Node_Pin *pin)
+{
+	if (pin->isOutputPin()) {
+		const auto &driver = pin->getDriver(0);
+		if (driver.node != nullptr) {
+			hlim::NodePort cond = pin->getDriver(1);
+
+			m_assignments.push_back(AssignmentInstance{
+				.enable = cond,
+				.source = driver,
+				.destination = {.node = pin, .port = 0ull},
+			});
+
+			ConcurrentStatement statement;
+			statement.type = ConcurrentStatement::TYPE_ASSIGNMENT;
+			statement.ref.assignmentIdx = m_assignments.size()-1;
+			statement.sortIdx = 0; /// @todo
+
+			m_statements.push_back(statement);
+		}
+	}
+
+	m_ast.getMapping().assignNodeToScope(pin, this);
+}
+
 void BasicBlock::writeSupportFiles(const std::filesystem::path &destination) const
 {
 	for (const auto &extNode : m_externalNodes) {
@@ -259,7 +358,7 @@ void BasicBlock::writeSupportFiles(const std::filesystem::path &destination) con
 	}
 }
 
-void BasicBlock::handleSFUInstantiaton(hlim::NodeGroup *sfu)
+void BasicBlock::handleSFUInstantiation(hlim::NodeGroup *sfu)
 {
 	//Entity *entity;
 	if (dynamic_cast<hlim::MemoryGroup*>(sfu->getMetaInfo())) {
@@ -297,9 +396,14 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
 		for (auto node : group->getNodes()) {
 			if (!m_ast.isPartOfExport(node)) continue;
 
-			hlim::Node_External *extNode = dynamic_cast<hlim::Node_External *>(node);
-			if (extNode != nullptr)
+			if (auto *extNode = dynamic_cast<hlim::Node_External *>(node))
 				continue;
+
+			if (auto *multiDriverNode = dynamic_cast<hlim::Node_MultiDriver *>(node))
+				continue;
+
+		//	if (auto *pin = dynamic_cast<hlim::Node_Pin *>(node))
+			//	continue;
 
 			hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
 			if (regNode != nullptr) {
@@ -509,9 +613,11 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
 				}
 
 				for (auto i : utils::Range(node->getNumOutputPorts())) {
+					const auto &type = node->getOutputPorts()[i];
+					if (type.bidirPartner) continue;
+
 					bool connected = !node->getDirectlyDriven(i).empty();
 					if (nodeHasExplicitComponentDeclaration || connected) {
-
 						std::stringstream line;
 						if (connected) {
 							const auto &decl = m_namespaceScope.get({.node = node, .port = i});
@@ -545,6 +651,37 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
 			case ConcurrentStatement::TYPE_PROCESS:
 				statement.ref.process->writeVHDL(stream, indent);
 			break;
+			case ConcurrentStatement::TYPE_ASSIGNMENT: {
+				const auto &assignment = m_assignments[statement.ref.assignmentIdx];
+
+				cf.indent(stream, indent);
+
+				// No signal nodes between multi driver and io pins, so need explicit handling of those
+
+				const auto &dstDecl = m_namespaceScope.get(assignment.destination);
+				stream << dstDecl.name << " <= ";
+
+				if (auto *ioPinNode = dynamic_cast<hlim::Node_Pin *>(assignment.source.node)) {
+					const auto &srcDecl = m_namespaceScope.get(ioPinNode);
+					stream << srcDecl.name;
+				} else {
+					const auto &srcDecl = m_namespaceScope.get(assignment.source);
+					stream << srcDecl.name;
+				}
+
+				if (assignment.enable.node == nullptr)
+					stream << ';' << std::endl;
+				else {
+					const auto &condDecl = m_namespaceScope.get(assignment.enable);
+					stream << " when (" << condDecl.name << " = '1') else ";
+
+					if (hlim::getOutputConnectionType(assignment.enable).interpretation == hlim::ConnectionType::BOOL)
+						stream << "'Z';" << std::endl;
+					else
+						stream << "(others => 'Z');" << std::endl;
+				}
+				/// @todo: potentially lost comments
+			} break;
 		}
 	}
 }
@@ -620,7 +757,11 @@ void BasicBlock::declareLocalComponents(std::ostream &stream, size_t indentation
 
 				const auto &type = node->getInputPorts()[i];
 
-				line << node->getInputName(i) << " : IN ";
+				if (type.bidirPartner)
+					line << node->getInputName(i) << " : INOUT ";
+				else
+					line << node->getInputName(i) << " : IN ";
+
 				if (type.isVector) {
 					cf.formatBitVectorFlavor(line, std::get<hlim::Node_External::BitVectorFlavor>(type.flavor));
 					line << '(';
@@ -639,11 +780,14 @@ void BasicBlock::declareLocalComponents(std::ostream &stream, size_t indentation
 				"External nodes that require component declarations must have their ports declared via declOutputBit[Vector]!");
 
 			for (auto i : utils::Range(node->getNumOutputPorts())) {
-				std::stringstream line;
 
 				const auto &type = node->getOutputPorts()[i];
+				if (type.bidirPartner) continue;
+
+				std::stringstream line;
 
 				line << node->getOutputName(i) << " : OUT ";
+
 				if (type.isVector) {
 					cf.formatBitVectorFlavor(line, std::get<hlim::Node_External::BitVectorFlavor>(type.flavor));
 					line << '(';

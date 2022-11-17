@@ -29,10 +29,11 @@ OBUFDS::OBUFDS()
 	m_clockNames = {};
 	m_resetNames = {};
 
-	resizeInputs(1);
-	resizeOutputs(2);
-	setOutputConnectionType(0, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
-	setOutputConnectionType(1, {.interpretation = hlim::ConnectionType::BOOL, .width=1});
+	resizeIOPorts(1, 2);
+	declInputBit(0, "I");
+
+	declOutputBit(0, "O");
+	declOutputBit(1, "OB");
 }
 
 std::string OBUFDS::getTypeName() const
@@ -42,19 +43,6 @@ std::string OBUFDS::getTypeName() const
 
 void OBUFDS::assertValidity() const
 {
-}
-
-std::string OBUFDS::getInputName(size_t idx) const
-{
-	return "I";
-}
-
-std::string OBUFDS::getOutputName(size_t idx) const
-{
-	if (idx == 0)
-		return "O";
-	else
-		return "OB";
 }
 
 std::unique_ptr<hlim::BaseNode> OBUFDS::cloneUnconnected() const

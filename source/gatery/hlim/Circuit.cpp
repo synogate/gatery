@@ -33,8 +33,10 @@
 #include "coreNodes/Node_Compare.h"
 #include "coreNodes/Node_Signal2Clk.h"
 #include "coreNodes/Node_Signal2Rst.h"
+#include "coreNodes/Node_MultiDriver.h"
 
 #include "supportNodes/Node_Attributes.h"
+#include "supportNodes/Node_External.h"
 
 #include "postprocessing/MemoryDetector.h"
 #include "postprocessing/DefaultValueResolution.h"
@@ -1144,12 +1146,14 @@ void Circuit::ensureSignalNodePlacement()
 	for (auto idx : utils::Range(m_nodes.size())) {
 		auto node = m_nodes[idx].get();
 		if (dynamic_cast<Node_Signal*>(node) != nullptr) continue;
+		if (dynamic_cast<Node_MultiDriver*>(node) != nullptr) continue;
 		for (auto i : utils::Range(node->getNumInputPorts())) {
 			auto driver = node->getDriver(i);
 			if (driver.node == nullptr) continue;
 			if (node->getDriverConnType(i).interpretation == ConnectionType::DEPENDENCY) continue;
 			if (dynamic_cast<Node_Signal*>(driver.node) != nullptr) continue;
 			if (driver.node->getGroup() != nullptr && driver.node->getGroup()->getGroupType() == NodeGroup::GroupType::SFU) continue;
+			if (dynamic_cast<Node_MultiDriver*>(driver.node) != nullptr) continue;
 
 			auto it = addedSignalsNodes.find(driver);
 			if (it != addedSignalsNodes.end()) {
@@ -1166,6 +1170,50 @@ void Circuit::ensureSignalNodePlacement()
 	}
 }
 
+/// @details For the vhdl export to properly infer inout ports, external nodes and io nodes must be directly connected to a multi driver node (in the same area).
+/// This can be ensured by potentially duplicating multi driver nodes.
+void Circuit::ensureMultiDriverNodePlacement()
+{
+	auto insertMultiDriver = [&](BaseNode *node, size_t inputPortIdx, size_t outputPortIdx, Node_MultiDriver *multi, size_t multiInputPort){
+
+		// only duplicate if different groups
+		if (node->getGroup() == multi->getGroup()) return;
+
+		auto *newMulti = createNode<Node_MultiDriver>(2, multi->getOutputConnectionType(0));
+		newMulti->moveToGroup(node->getGroup());
+
+		newMulti->connectInput(0, {.node = node, .port = outputPortIdx});
+		newMulti->connectInput(1, {.node = multi, .port = 0ull});
+
+		node->connectInput(inputPortIdx, {.node=newMulti, .port=0ull});
+		multi->connectInput(multiInputPort, {.node=newMulti, .port=0ull});
+	};
+
+	for (auto idx : utils::Range(m_nodes.size())) {
+		auto node = m_nodes[idx].get();
+		// For all external nodes
+		if (auto *extNode = dynamic_cast<Node_External*>(node)) {
+			// For all bidirectional (inout) ports
+			for (auto i : utils::Range(node->getNumInputPorts())) {
+				if (extNode->getInputPorts()[i].bidirPartner) {
+					// Check if connected to multiDriver
+					auto driver = node->getDriver(i);
+					if (auto *multiDriver = dynamic_cast<Node_MultiDriver*>(driver.node)) {
+						// Check if multiDriver is also driven by corresponding output
+						for (const auto &np : node->getDirectlyDriven(*extNode->getInputPorts()[i].bidirPartner)) {
+							if (np.node == multiDriver) {
+
+								insertMultiDriver(node, i, *extNode->getInputPorts()[i].bidirPartner, multiDriver, np.port);
+
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
 /**
  * @brief Split/duplicate signal nodes feeding into lower and higher areas of the hierarchy.
  *
@@ -1335,6 +1383,7 @@ void DefaultPostprocessing::exportPreparation(Circuit &circuit) const
 {
 	circuit.moveClockDriversToTop();
 	circuit.ensureSignalNodePlacement();
+	circuit.ensureMultiDriverNodePlacement();
 	circuit.duplicateSignalsFeedingLowerAndHigherAreas();
 	circuit.ensureNoLiteralComparison();
 	circuit.inferSignalNames();
@@ -1395,6 +1444,7 @@ void MinimalPostprocessing::exportPreparation(Circuit& circuit) const
 {
 	circuit.moveClockDriversToTop();
 	circuit.ensureSignalNodePlacement();
+	circuit.ensureMultiDriverNodePlacement();
 	circuit.duplicateSignalsFeedingLowerAndHigherAreas();
 	circuit.ensureNoLiteralComparison();
 	circuit.inferSignalNames();

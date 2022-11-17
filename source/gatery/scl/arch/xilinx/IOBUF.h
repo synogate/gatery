@@ -21,69 +21,41 @@
 #include <gatery/frontend/ExternalComponent.h>
 #include <gatery/frontend/tech/TechnologyMappingPattern.h>
 
-#include "../general/BaseDDROutPattern.h"
 
 namespace gtry::scl::arch::xilinx {
 
-class ODDR : public gtry::ExternalComponent
+class IOBUF : public gtry::ExternalComponent
 {
 	public:
 
-		enum Clocks {
-			CLK_IN,
-			CLK_COUNT
-		};
-
 		enum Inputs {
-			IN_D1,
-			IN_D2,
-			IN_SET,
-			IN_RESET,
-			IN_CE,
-
+			IN_I,
+			IN_T,
+        	IN_IO_I,
 			IN_COUNT
 		};
 		enum Outputs {
-        	OUT_Q,
+        	OUT_O,
+        	OUT_IO_O,
 
 			OUT_COUNT
 		};
 
-
-		enum DDR_CLK_EDGE {
-			OPPOSITE_EDGE,
-			SAME_EDGE
+		enum DriveStrength {
+			DS_2mA,
+			DS_4mA,
+			DS_6mA,
+			DS_8mA,
+			DS_12mA,
+			DS_16mA,
+			DS_24mA,
 		};
 
-		enum SRTYPE {
-			ASYNC,
-			SYNC
-		};
+		IOBUF();
 
-		ODDR();
-
-		virtual void setInput(size_t input, const Bit &bit) override;
-
-		void setResetType(SRTYPE srtype);
-		void setEdgeMode(DDR_CLK_EDGE edgeMode);
-		void setInitialOutputValue(bool value);
+		void setDriveStrength(DriveStrength driveStrength);
 
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 };
-
-
-
-
-class ODDRPattern : public BaseDDROutPattern
-{
-	public:
-		ODDRPattern() { m_patternName = "ODDR"; }
-		virtual ~ODDRPattern() = default;
-
-	protected:
-		virtual bool performReplacement(hlim::NodeGroup *nodeGroup, ReplaceInfo &replacement) const override;
-		virtual void performConstResetReplacement(hlim::NodeGroup *nodeGroup, ConstResetReplaceInfo &replacement) const override;
-};
-
 
 }

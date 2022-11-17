@@ -17,13 +17,13 @@
 */
 #pragma once
 
-#include <gatery/hlim/supportNodes/Node_External.h>
+#include <gatery/frontend/ExternalComponent.h>
 
 #include <gatery/frontend.h>
 
 namespace gtry::scl::arch::xilinx {
 
-class OSERDESE2 : public gtry::hlim::Node_External
+class OSERDESE2 : public gtry::ExternalComponent
 {
 	public:
 		enum Clocks {
@@ -71,13 +71,8 @@ class OSERDESE2 : public gtry::hlim::Node_External
 
 		void setSlave();
 
-		void setInput(Inputs input, const Bit &bit);
-		Bit getOutput(Outputs output);
-
 		virtual std::string getTypeName() const override;
 		virtual void assertValidity() const override;
-		virtual std::string getInputName(size_t idx) const override;
-		virtual std::string getOutputName(size_t idx) const override;
 
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 

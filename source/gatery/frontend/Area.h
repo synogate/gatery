@@ -92,6 +92,16 @@ namespace gtry
 
 		inline hlim::NodeGroup* getNodeGroup() { return m_nodeGroup; }
 
+		/**
+		 * @brief Store meta information in an area for later pick up by technology replacement routines.
+		 * @return The created meta information object, owned by the underlying node group.
+		 */
+		template<typename MetaType, typename... Args>
+		MetaType *createMetaInfo(Args&&... args) {
+			m_nodeGroup->createMetaInfo<MetaType>(std::forward<Args>(args)...);
+			return (MetaType*)m_nodeGroup->getMetaInfo();
+		}
+
 	private:
 		hlim::NodeGroup* m_nodeGroup;
 

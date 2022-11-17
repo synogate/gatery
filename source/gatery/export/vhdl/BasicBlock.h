@@ -23,6 +23,10 @@
 #include <memory>
 #include <compare>
 
+namespace gtry::hlim {
+	class Node_MultiDriver;
+}
+
 namespace gtry::vhdl {
 
 class Entity;
@@ -37,6 +41,7 @@ struct ConcurrentStatement
 		TYPE_EXT_NODE_INSTANTIATION,
 		TYPE_BLOCK,
 		TYPE_PROCESS,
+		TYPE_ASSIGNMENT,
 	};
 	Type type;
 	union {
@@ -44,6 +49,7 @@ struct ConcurrentStatement
 		size_t externalNodeIdx;
 		Block *block;
 		Process *process;
+		size_t assignmentIdx;
 	} ref;
 	size_t sortIdx = 0;
 
@@ -51,14 +57,14 @@ struct ConcurrentStatement
 };
 
 
-
+/*
 struct ShiftRegStorage
 {
 	NodeInternalStorageSignal ref;
 	size_t delay;
 	hlim::ConnectionType type;
 };
-
+*/
 /**
  * @todo write docs
  */
@@ -69,6 +75,12 @@ class BasicBlock : public BaseGrouping
 			hlim::Node_External *node;
 			std::string instanceName;
 			std::vector<std::string> supportFilenames;
+		};
+
+		struct AssignmentInstance {
+			hlim::NodePort enable;
+			hlim::NodePort source;
+			hlim::NodePort destination;
 		};
 
 		BasicBlock(AST &ast, BasicBlock *parent, NamespaceScope *parentNamespace);
@@ -92,17 +104,21 @@ class BasicBlock : public BaseGrouping
 		virtual void writeStatementsVHDL(std::ostream &stream, unsigned indent);
 
 
-		std::vector<ShiftRegStorage> m_shiftRegStorage;
+		//std::vector<ShiftRegStorage> m_shiftRegStorage;
 		std::vector<std::unique_ptr<Process>> m_processes;
 		std::vector<Entity*> m_entities;
 		std::vector<std::string> m_entityInstanceNames;
 		std::vector<ExternalNodeInstance> m_externalNodes;
+		std::vector<AssignmentInstance> m_assignments;
+		std::vector<hlim::Node_MultiDriver *> m_multiDriverNodes;
 
 		std::vector<ConcurrentStatement> m_statements;
 
 		void handleEntityInstantiation(hlim::NodeGroup *nodeGroup);
-		void handleExternalNodeInstantiaton(hlim::Node_External *externalNode);
-		void handleSFUInstantiaton(hlim::NodeGroup *sfu);
+		void handleExternalNodeInstantiation(hlim::Node_External *externalNode);
+		void handleSFUInstantiation(hlim::NodeGroup *sfu);
+		void handleMultiDriverNodeInstantiation(hlim::Node_MultiDriver *multi);
+		void handlePinInstantiation(hlim::Node_Pin *pin);
 
 		virtual void declareLocalComponents(std::ostream &stream, size_t indentation);
 };

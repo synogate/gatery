@@ -843,7 +843,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_addburst_test, LinkTest)
 		
 		co_await OnClk(clock());
 
-		co_await fork(linkModel.put(0, 2, 0xDDCCBBAA, clock()));
+		fork(linkModel.put(0, 2, 0xDDCCBBAA, clock()));
 		
 		auto [val, def, err] = co_await linkModel.get(0, 2, clock());
 		BOOST_TEST(!err);
@@ -872,10 +872,10 @@ BOOST_FIXTURE_TEST_CASE(tilelink_addburst2_test, LinkTest)
 
 		co_await OnClk(clock());
 
-		co_await fork(linkModel.put(0, 2, 0xDDCCBBAA, clock()));
-		co_await fork(linkModel.put(4, 1, 0xFFEE, clock()));
-		co_await fork(linkModel.put(6, 0, 0x11, clock()));
-		co_await fork(linkModel.put(7, 0, 0x22, clock()));
+		fork(linkModel.put(0, 2, 0xDDCCBBAA, clock()));
+		fork(linkModel.put(4, 1, 0xFFEE, clock()));
+		fork(linkModel.put(6, 0, 0x11, clock()));
+		fork(linkModel.put(7, 0, 0x22, clock()));
 
 		{
 			auto [val, def, err] = co_await linkModel.get(0, 3, clock());

@@ -21,7 +21,11 @@
 
 #include <gatery/hlim/coreNodes/Node_Register.h>
 #include <gatery/hlim/coreNodes/Node_Clk2Signal.h>
+#include <gatery/hlim/coreNodes/Node_ClkRst2Signal.h>
 #include <gatery/hlim/NodeGroup.h>
+
+
+#include <gatery/scl/io/ddr.h>
 
 
 //#include <gatery/hlim/Clock.h>
@@ -67,6 +71,18 @@ namespace gtry::scl::arch::intel
 		return *this;
 	}
 
+	ALTDDIO_OUT& ALTDDIO_OUT::enableOutputRegister()
+	{
+		m_genericParameters["oe_reg"] = "REGISTERED";
+		return *this;
+	}
+
+	ALTDDIO_OUT& ALTDDIO_OUT::powerUpHigh()
+	{
+		m_genericParameters["power_up_high"] = "ON";
+		return *this;
+	}
+
 	std::unique_ptr<hlim::BaseNode> ALTDDIO_OUT::cloneUnconnected() const
 	{
 		std::unique_ptr<BaseNode> res(new ALTDDIO_OUT(m_width));
@@ -77,104 +93,75 @@ namespace gtry::scl::arch::intel
 
 
 
-	/// @todo: Refactor with xilinx counterpart into BaseDDROutPattern
-
-	bool ALTDDIO_OUTPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
+	bool ALTDDIO_OUTPattern::performReplacement(hlim::NodeGroup *nodeGroup, ReplaceInfo &replacement) const
 	{
-		if (nodeGroup->getName() != "scl_oddr") return false;
-
-		NodeGroupIO io(nodeGroup);
-
-		if (!io.inputBits.contains("D0") && !io.inputBVecs.contains("D0")) {
+		auto *params = dynamic_cast<gtry::scl::DDROutParams*>(nodeGroup->getMetaInfo());
+		if (params == nullptr) {
 			dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-					<< "Not replacing " << nodeGroup << " with ALTDDIO_OUT because the 'D0' signal could not be found!");
+					<< "Not replacing " << nodeGroup << " with " << m_patternName << " because it doesn't have the DDROutParams meta parameters attached!");
 			return false;
 		}
 
-		bool vectorBased = io.inputBVecs.contains("D0");
-
-		if (vectorBased) {
-			if (!io.inputBVecs.contains("D1")) {
-				dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-						<< "Not replacing " << nodeGroup << " with ALTDDIO_OUT because the 'D1' signal could not be found or is not a bit vector (as D0 is)!");
-				return false;
-			}
-
-			if (!io.outputBVecs.contains("O")) {
-				dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-						<< "Not replacing " << nodeGroup << " with ALTDDIO_OUT because the 'O' signal could not be found or is not a bit vector (as D0 is)!");
-				return false;
-			}
-		} else {
-			if (!io.inputBits.contains("D1")) {
-				dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-						<< "Not replacing " << nodeGroup << " with ALTDDIO_OUT because the 'D1' signal could not be found or is not a bit!");
-				return false;
-			}
-
-			if (!io.outputBits.contains("O")) {
-				dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-						<< "Not replacing " << nodeGroup << " with ALTDDIO_OUT because the 'O' signal could not be found or is not a bit!");
-				return false;
-			}
-		}
-
-
-		BVec D0, D1;
-		if (vectorBased) {
-			D0 = io.inputBVecs["D0"];
-			D1 = io.inputBVecs["D1"];
-
-			if (D0.size() != io.outputBVecs["O"].size()) {
-				dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-						<< "Not replacing " << nodeGroup << " with ALTDDIO_OUT because the 'D0' and 'O' have different sizes!");
-				return false;
-			}
-
-		} else {
-			D0 = (BVec) cat(io.inputBits["D0"]);
-			D1 = (BVec) cat(io.inputBits["D1"]);
-		}
-
-		if (D0.size() != D1.size()) {
+		if (!params->inputRegs) {
 			dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-					<< "Not replacing " << nodeGroup << " with ALTDDIO_OUT because the 'D0' and 'D1' have different sizes!");
+					<< "Not replacing " << nodeGroup << " with " << m_patternName << " because the area doesn't have input registers (which "<<m_patternName<<" requires).");
+			return false;
+		}
+
+		const auto& attr = replacement.clock->getRegAttribs();
+
+		if (attr.resetType != hlim::RegisterAttributes::ResetType::NONE && 
+			attr.resetType != hlim::RegisterAttributes::ResetType::SYNCHRONOUS) {
+			dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+					<< "Not replacing " << nodeGroup << " with " << m_patternName << " because only synchronous and no resets are supported and the used clock is neither.");
 			return false;
 		}
 
 
-		NodeGroupSurgeryHelper area(nodeGroup);
-		auto *clkSignal = area.getSignal("CLK");
-		if (clkSignal == nullptr) {
-			dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-					<< "Not replacing " << nodeGroup << " with ALTDDIO_OUT because no 'CLK' signal was found!");
-			return false;
-		}
-		
-		auto *clk2signal = dynamic_cast<hlim::Node_Clk2Signal*>(clkSignal->getNonSignalDriver(0).node);
-		if (clk2signal == nullptr) {
-			dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
-					<< "Not replacing " << nodeGroup << " with ALTDDIO_OUT because no 'CLK' signal not driven by clock!");
-			return false;
-		}
+		return splitByReset(nodeGroup, replacement);
+	}
 
-		hlim::Clock *clock = clk2signal->getClocks()[0];
+	void ALTDDIO_OUTPattern::performConstResetReplacement(hlim::NodeGroup *nodeGroup, ConstResetReplaceInfo &replacement) const
+	{
+		auto *params = dynamic_cast<gtry::scl::DDROutParams*>(nodeGroup->getMetaInfo());
 
-		auto *ddr = DesignScope::createNode<ALTDDIO_OUT>(D0.width());
+		auto *ddr = DesignScope::createNode<ALTDDIO_OUT>(replacement.D[0].width());
 
-		ddr->attachClock(clock, ALTDDIO_OUT::CLK_OUTCLOCK);
-		ddr->setInput(ALTDDIO_OUT::IN_DATAIN_H, D0);
-		ddr->setInput(ALTDDIO_OUT::IN_DATAIN_L, D1);
+		if (params->outputRegs)
+			ddr->enableOutputRegister();
+
+		ddr->attachClock(replacement.clock, ALTDDIO_OUT::CLK_OUTCLOCK);
+		ddr->setInput(ALTDDIO_OUT::IN_DATAIN_H, replacement.D[0]);
+		ddr->setInput(ALTDDIO_OUT::IN_DATAIN_L, replacement.D[1]);
 		ddr->setInput(ALTDDIO_OUT::IN_OE, Bit('1'));
+		if (replacement.reset) {
+			const auto& attr = replacement.clock->getRegAttribs();
+	
+			if (attr.resetType != hlim::RegisterAttributes::ResetType::NONE) {
+
+				auto *clk2rst = DesignScope::createNode<hlim::Node_ClkRst2Signal>();
+				clk2rst->setClock(replacement.clock);
+
+				Bit rstSignal = SignalReadPort(clk2rst);
+
+				if(attr.resetActive != hlim::RegisterAttributes::Active::HIGH)
+					rstSignal = !rstSignal;
+
+				if (*replacement.reset)
+					ddr->setInput(ALTDDIO_OUT::IN_SSET, rstSignal);
+				else
+					ddr->setInput(ALTDDIO_OUT::IN_SCLR, rstSignal);
+			}
+
+			if (attr.initializeRegs) {
+				if (*replacement.reset)
+					ddr->powerUpHigh();
+			}
+		}
 		ddr->setupSimulationDeviceFamily(m_intelDevice.getFamily());
 
-		if (vectorBased) {
-			io.outputBVecs["O"].exportOverride(ddr->getOutputBVec(ALTDDIO_OUT::OUT_DATAOUT));
-		} else {
-			io.outputBits["O"].exportOverride(ddr->getOutputBVec(ALTDDIO_OUT::OUT_DATAOUT).lsb());
-		}
+		replacement.O = ddr->getOutputBVec(ALTDDIO_OUT::OUT_DATAOUT);
 
-		return true;
 	}
 
 

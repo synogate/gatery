@@ -210,7 +210,7 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 	Bit rdEn = getBitBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::enable}, '1');
 
 	bram->connectAddressPortA(rdAddr);
-	bram->connectInput(RAMBxE2::Inputs::IN_EN_A_RD_EN, rdEn);
+	bram->setInput(RAMBxE2::Inputs::IN_EN_A_RD_EN, rdEn);
 
 	auto *readClock = rp.dedicatedReadLatencyRegisters.front()->getClocks()[0];
 	HCL_ASSERT(readClock->getTriggerEvent() == hlim::Clock::TriggerEvent::RISING);		
@@ -232,7 +232,7 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 		auto &wp = memGrp->getWritePorts().front();
 
 		UInt wrAddr = (UInt) getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-		UInt wrData = (UInt) getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
+		BVec wrData = getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
 		Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::enable}, '1');
 
 		HCL_ASSERT(rdAddr.size() == wrAddr.size());
@@ -243,7 +243,7 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 		};
 		bram->setupPortB(wrPortSetup);
 		bram->connectAddressPortB(wrAddr);
-		bram->connectInput(RAMBxE2::Inputs::IN_EN_B_WR_EN, wrEn);
+		bram->setInput(RAMBxE2::Inputs::IN_EN_B_WR_EN, wrEn);
 		bram->connectWriteDataPortB(zext(wrData, BitWidth{ width }));
 
 		hlim::Clock* writeClock = memGrp->getWritePorts().front().node->getClocks()[0];

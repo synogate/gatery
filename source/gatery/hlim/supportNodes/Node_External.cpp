@@ -110,6 +110,13 @@ void Node_External::changeOutputWidth(size_t idx, size_t width)
 }
 
 
+void Node_External::declBidirPort(size_t inputIdx, size_t outputIdx)
+{
+	HCL_DESIGNCHECK_HINT(m_inputPorts[inputIdx] == m_outputPorts[outputIdx], "For two ports of an external node to be declared partners of a bidirectional signal, they must have identical attributes!");
+	m_inputPorts[inputIdx].bidirPartner = outputIdx;
+	m_outputPorts[outputIdx].bidirPartner = inputIdx;
+}
+
 
 std::string Node_External::getInputName(size_t idx) const
 {

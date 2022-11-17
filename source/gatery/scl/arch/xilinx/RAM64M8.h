@@ -18,11 +18,11 @@
 #pragma once
 
 #include <gatery/frontend.h>
-#include <gatery/hlim/supportNodes/Node_External.h>
+#include <gatery/frontend/ExternalComponent.h>
 
 namespace gtry::scl::arch::xilinx {
 
-class RAM64M8 : public gtry::hlim::Node_External
+class RAM64M8 : public gtry::ExternalComponent
 {
 	public:
 		enum Clocks {
@@ -72,8 +72,6 @@ class RAM64M8 : public gtry::hlim::Node_External
 
 		virtual std::string getTypeName() const override;
 		virtual void assertValidity() const override;
-		virtual std::string getInputName(size_t idx) const override;
-		virtual std::string getOutputName(size_t idx) const override;
 
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 

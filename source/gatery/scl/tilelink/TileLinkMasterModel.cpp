@@ -66,7 +66,7 @@ namespace gtry::scl
 		const size_t sourceId = co_await allocSourceId(clk);
 		simu(m_link.a->source) = sourceId;
 
-		co_await fork([=, this]()->SimProcess 
+		fork([=, this]()->SimProcess
 		{
 			sim::DefaultBitVectorState state;
 			state.resize(m_link.a->data.width().bits());

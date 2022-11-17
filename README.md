@@ -153,7 +153,7 @@ int main()
 	simulator.addSimulationProcess([=, &clock]()->SimProcess{
 		simu(enable) = '0';
 		for ([[maybe_unused]]auto i : Range(300))
-			co_await WaitClk(clock);
+			co_await AfterClk(clock);
 
 		simu(enable) = '1';
 	});

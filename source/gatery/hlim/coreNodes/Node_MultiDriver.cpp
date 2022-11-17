@@ -16,13 +16,22 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
+#include "Node_MultiDriver.h"
 
-#include "ddr.h"
 
-namespace gtry::scl {
+namespace gtry::hlim {
 
-template Bit ddr(Bit D0, Bit D1, std::optional<Bit> reset, const DDROutParams &params);
-template BVec ddr(BVec D0, BVec D1, std::optional<BVec> reset, const DDROutParams &params);
-template UInt ddr(UInt D0, UInt D1, std::optional<UInt> reset, const DDROutParams &params);
+Node_MultiDriver::Node_MultiDriver(size_t numInputs, ConnectionType connectionType) : Node(numInputs, 1) 
+{
+	setOutputConnectionType(0, connectionType);
+}
+
+std::unique_ptr<BaseNode> Node_MultiDriver::cloneUnconnected() const
+{
+	std::unique_ptr<BaseNode> res(new Node_MultiDriver(getNumInputPorts(), getOutputConnectionType(0)));
+	copyBaseToClone(res.get());
+	return res;
+}
+
 
 }

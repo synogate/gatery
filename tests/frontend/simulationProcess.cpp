@@ -415,7 +415,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_forkTask, BoostUnitTestSimulationFixture)
 	addSimulationProcess([&flag,clock,subProcess,this]()->SimProcess{
 		BOOST_TEST(!flag);
 		co_await AfterClk(clock);
-		co_await fork(subProcess(clock)); // fire & forget
+		fork(subProcess(clock)); // fire & forget
 		for (auto i : gtry::utils::Range(50)) {
 			BOOST_TEST(flag);
 			co_await AfterClk(clock);
@@ -456,7 +456,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_forkUnendingTask, BoostUnitTestSimulationFixture
 	addSimulationProcess([&flag,clock,subProcess,this]()->SimProcess{
 		BOOST_TEST(!flag);
 		co_await AfterClk(clock);
-		co_await fork(subProcess(clock)); // fire & forget
+		fork(subProcess(clock)); // fire & forget
 		for (auto i : gtry::utils::Range(50)) {
 			BOOST_TEST(flag);
 			co_await AfterClk(clock);
@@ -482,13 +482,14 @@ BOOST_FIXTURE_TEST_CASE(SimProc_forkFromSimProc, BoostUnitTestSimulationFixture)
 	bool flag = false;
 
 	auto subProcess2 = [&flag](const Clock &clock)->SimProcess {
-		co_await fork([&flag, &clock]()->SimProcess {
+		fork([&flag, &clock]()->SimProcess {
 			flag = true;
 			while (true) {
 				co_await AfterClk(clock);
 				flag = !flag;
 			}
 		});
+		co_return;
 	};
 
 	addSimulationProcess([&flag,clock,subProcess2,this]()->SimProcess {
@@ -510,6 +511,34 @@ BOOST_FIXTURE_TEST_CASE(SimProc_forkFromSimProc, BoostUnitTestSimulationFixture)
 	runTicks(clock.getClk(), 100000);
 }
 
+namespace {
+
+SimProcess unsuspending() {
+	co_return;
+}
+
+}
+
+BOOST_FIXTURE_TEST_CASE(SimProc_forkUnsuspendingCoro, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+
+
+
+	addSimulationProcess([clock,this]()->SimProcess {
+		co_await AfterClk(clock);
+
+		co_await unsuspending();
+
+		stopTest();
+	});
+
+	design.postprocess();
+
+	runTicks(clock.getClk(), 100000);
+}
 
 
 BOOST_FIXTURE_TEST_CASE(SimProc_joinTask, BoostUnitTestSimulationFixture)
@@ -531,7 +560,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_joinTask, BoostUnitTestSimulationFixture)
 		BOOST_TEST(!flag);
 		co_await AfterClk(clock);
 		
-		auto task = co_await fork(subProcess(clock));
+		auto task = fork(subProcess(clock));
 
 		for (auto i : gtry::utils::Range(5)) {
 			BOOST_TEST(flag);
@@ -599,8 +628,8 @@ BOOST_FIXTURE_TEST_CASE(SimProc_condition, BoostUnitTestSimulationFixture)
 	addSimulationProcess([&resourceInUse,clock,subProcess,this]()->SimProcess{
 		BOOST_TEST(!resourceInUse);
 
-		co_await fork(subProcess(clock)); // fire & forget
-		co_await fork(subProcess(clock)); // fire & forget
+		fork(subProcess(clock)); // fire & forget
+		fork(subProcess(clock)); // fire & forget
 
 
 		for (auto i : gtry::utils::Range(50)) {
@@ -666,3 +695,113 @@ BOOST_FIXTURE_TEST_CASE(SimProc_registerOverride, BoostUnitTestSimulationFixture
 	design.postprocess();
 	runTest(hlim::ClockRational(1000, 1) / clock.absoluteFrequency());
 }
+
+namespace {
+
+struct TestStruct {
+	std::vector<char> data;
+	TestStruct() {
+		//std::cout << "CTOR of " << (size_t) this << std::endl;
+	}
+	TestStruct(const TestStruct &rhs) {
+		//std::cout << "C-CTOR " << (size_t) this << " <-- " << (size_t) &rhs << std::endl;
+		data = rhs.data;
+		//std::cout << "  data:" << (size_t) data.data() << " <-- " << (size_t) rhs.data.data() << std::endl;
+	}
+
+	TestStruct(const TestStruct &&rhs) = delete;
+	void operator=(const TestStruct &rhs) = delete;
+	void operator=(const TestStruct &&rhs) = delete;
+
+	~TestStruct() {
+		//std::cout << "DTOR of " << (size_t) this << std::endl;
+		//std::cout << "  data:" << (size_t) data.data() << std::endl;
+	}
+};
+
+
+struct TestStruct2 {
+	TestStruct2() {
+		//std::cout << "2__CTOR of " << (size_t) this << std::endl;
+	}
+	TestStruct2(const TestStruct2 &rhs) {
+		//std::cout << "2__C-CTOR " << (size_t) this << " <-- " << (size_t) &rhs << std::endl;
+	}
+
+	TestStruct2(const TestStruct2 &&rhs) = delete;
+	void operator=(const TestStruct2 &rhs) = delete;
+	void operator=(const TestStruct2 &&rhs) = delete;
+
+	~TestStruct2() {
+		//std::cout << "2__DTOR of " << (size_t) this << std::endl;
+	}
+};
+
+
+size_t dummy = 0;
+
+}
+
+BOOST_FIXTURE_TEST_CASE(SimProc_copyCaptureLambda, BoostUnitTestSimulationFixture, * boost::unit_test::disabled())
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+
+	addSimulationProcess([clock,this]()->SimProcess {
+
+		TestStruct test;
+		test.data.resize(10);
+
+		/*
+			This triggers a bug in gcc 10 and 11 which results in a double free
+		*/
+
+		co_await [=,teststruct2 = TestStruct2{}]() -> SimProcess {
+			for ([[maybe_unused]] auto &v : test.data) { }
+			co_return;
+		}();
+
+		for ([[maybe_unused]] auto i : gtry::utils::Range(50)) {
+			co_await AfterClk(clock);
+		}
+
+		stopTest();
+	});
+
+	design.postprocess();
+
+	runTicks(clock.getClk(), 100000);
+}
+
+BOOST_FIXTURE_TEST_CASE(SimProc_copyCaptureLambdaFork, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+
+	addSimulationProcess([clock,this]()->SimProcess {
+
+		TestStruct test;
+		test.data.resize(10);
+		
+		auto handle = fork([=,teststruct2 = TestStruct2{}]() -> SimProcess {
+			for ([[maybe_unused]] auto &v : test.data) { }
+			co_return;
+		});
+
+		co_await join(handle);
+
+		for ([[maybe_unused]] auto i : gtry::utils::Range(50)) {
+			co_await AfterClk(clock);
+		}
+
+		stopTest();
+	});
+
+	design.postprocess();
+
+	runTicks(clock.getClk(), 100000);
+}
+
+

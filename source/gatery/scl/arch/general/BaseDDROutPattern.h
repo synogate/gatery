@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2022 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -18,45 +18,36 @@
 #pragma once
 
 #include <gatery/frontend.h>
-#include <gatery/frontend/ExternalComponent.h>
+#include <gatery/frontend/tech/TechnologyMappingPattern.h>
 
-namespace gtry::scl::arch::xilinx {
+namespace gtry::scl::arch {
 
-class RAM256X1D : public gtry::ExternalComponent
+class BaseDDROutPattern : public TechnologyMappingPattern
 {
 	public:
-		enum Clocks {
-			CLK_WR,
-			CLK_COUNT
-		};
+		virtual ~BaseDDROutPattern() = default;
 
-		enum Inputs {
-			IN_D,
-			IN_A,
-			IN_DPRA,
-			IN_WE,
-
-			IN_COUNT
-		};
-		enum Outputs {
-			OUT_SPO,
-			OUT_DPO,
-			
-			OUT_COUNT
-		};
-
-		RAM256X1D();
-
-		Bit setupSDP(const UInt &wrAddr, const Bit &wrData, const Bit &wrEn, const UInt &rdAddr);
-
-		virtual std::string getTypeName() const override;
-		virtual void assertValidity() const override;
-
-		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
-
-		virtual std::string attemptInferOutputName(size_t outputPort) const override;
+		bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const;
 	protected:
+		std::string_view m_patternName;
+
+		struct ReplaceInfo {
+			hlim::Clock *clock;
+			BVec reset;
+			BVec D[2];
+			BVec O;
+		};
+
+		virtual bool performReplacement(hlim::NodeGroup *nodeGroup, ReplaceInfo &replacement) const = 0;
+
+		struct ConstResetReplaceInfo : ReplaceInfo {
+			std::optional<bool> reset;
+		};
+
+		bool splitByReset(hlim::NodeGroup *nodeGroup, ReplaceInfo &replacement) const;
+
+		virtual void performConstResetReplacement(hlim::NodeGroup *nodeGroup, ConstResetReplaceInfo &replacement) const { }
 };
 
-}
 
+}
