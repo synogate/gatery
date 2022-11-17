@@ -25,6 +25,7 @@ class IntelDevice : public FPGADevice {
 	public:
 		void fromConfig(const gtry::utils::ConfigTree &configTree) override;
 
+		std::string nextLpmInstanceName(std::string_view macroType);
 
 		void setupAgilex();
 		void setupArria10();
@@ -35,6 +36,8 @@ class IntelDevice : public FPGADevice {
 		void setupDevice(std::string device);
 	protected:
 		void setupCustomComposition(const gtry::utils::ConfigTree &customComposition);
+
+		std::map<std::string_view, size_t> m_lpmInstanceCounter;
 };
 
 }
