@@ -78,13 +78,13 @@ namespace gtry::scl
 		md.error = sd.error;
 
 		{
-			BVec highWord = sd.data.width();
+			BVec lowWord = sd.data.width();
 			IF(transfer(*slave.d))
-				highWord = sd.data;
-			highWord = reg(highWord);
+				lowWord = sd.data;
+			lowWord = reg(lowWord);
 
 			IF(sd.isBurst())
-				md.data = (BVec)cat(highWord, sd.data);
+				md.data = (BVec)cat(sd.data, lowWord);
 
 			Bit phase;
 			phase = reg(phase, '0');
