@@ -34,6 +34,7 @@ namespace gtry::hlim {
 
 class Subnet;
 class Circuit;
+class RevisitCheck;
 
 /*
 class Circuit;
@@ -98,7 +99,6 @@ class MinimalPostprocessing : public PostProcessor
 		void memoryDetection(Circuit& circuit) const;
 		void exportPreparation(Circuit& circuit) const;
 };
-
 
 class Circuit
 {
@@ -174,6 +174,9 @@ class Circuit
 		inline const std::vector<sim::SimulationVisualization> &getSimulationVisualizations() const { return m_simulationVisualizations; }
 
 		std::uint64_t allocateGroupId() { return m_nextGroupId++; }
+
+		std::uint64_t allocateRevisitColor(utils::RestrictTo<RevisitCheck>);
+		void freeRevisitColor(std::uint64_t color, utils::RestrictTo<RevisitCheck>);
 	protected:
 		std::vector<std::unique_ptr<BaseNode>> m_nodes;
 		std::unique_ptr<NodeGroup> m_root;
@@ -182,6 +185,9 @@ class Circuit
 
 		std::uint64_t m_nextNodeId = 0;
 		std::uint64_t m_nextGroupId = 0;
+
+		std::uint64_t m_nextRevisitColor = 1;
+		bool m_revisitColorInUse = false;
 
 		std::vector<std::function<sim::SimulationFunction<void>()>> m_simulationProcesses;
 		std::vector<sim::SimulationVisualization> m_simulationVisualizations;

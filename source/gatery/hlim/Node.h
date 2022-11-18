@@ -42,6 +42,7 @@ namespace gtry::hlim {
 class NodeGroup;
 class Clock;
 class SignalDelay;
+class RevisitCheck;
 
 /**
  * @brief Specifies which signal and clock ports affect a Node's output port's clock domain.
@@ -118,6 +119,9 @@ class BaseNode : public NodeIO
 		const NodeGroup *getGroup() const { return m_nodeGroup; }
 		NodeGroup *getGroup() { return m_nodeGroup; }
 
+		Circuit &getCircuit();
+		const Circuit &getCircuit() const;
+
 		inline const std::vector<Clock*> &getClocks() const { return m_clocks; }
 
 		void moveToGroup(NodeGroup *group);
@@ -149,6 +153,9 @@ class BaseNode : public NodeIO
 
 		virtual void estimateSignalDelay(SignalDelay &sigDelay);
 		virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t& inputPort, size_t& inputBit);
+
+		inline std::uint64_t getRevisitColor(utils::RestrictTo<RevisitCheck>) const { return m_revisitCheckColor; }
+		inline void setRevisitColor(std::uint64_t revisitCheckColor, utils::RestrictTo<RevisitCheck>) const { m_revisitCheckColor = revisitCheckColor; }
 	protected:
 		std::uint64_t m_nodeId = ~0ull;
 
@@ -160,6 +167,7 @@ class BaseNode : public NodeIO
 		std::vector<Clock*> m_clocks;
 
 		size_t m_refCounter = 0;
+		mutable std::uint64_t m_revisitCheckColor = 0;
 
 
 		virtual void copyBaseToClone(BaseNode *copy) const;

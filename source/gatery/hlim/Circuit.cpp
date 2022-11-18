@@ -17,6 +17,7 @@
 */
 #include "gatery/pch.h"
 #include "Circuit.h"
+#include "RevisitCheck.h"
 
 #include "../debug/DebugInterface.h"
 
@@ -81,7 +82,7 @@ void Circuit::copySubnet(const std::set<NodePort> &subnetInputs,
 {
 	mapSrc2Dst.clear();
 
-	std::set<BaseNode*> closedList;
+	RevisitCheck closedList(*this);
 	std::vector<NodePort> openList = std::vector<NodePort>(subnetOutputs.begin(), subnetOutputs.end());
 
 	std::vector<std::pair<std::uint64_t, BaseNode*>> sortedNodes;
@@ -290,9 +291,11 @@ void Circuit::insertConstUndefinedNodes()
 			signal->rewireInput(0, {.node = constant, .port = 0ull});
 			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Prepended undriven signal node " << signal << " with const undefined node " << constant);
 		} else {
+			RevisitCheck alreadyVisited(*this);
+
 			auto driver = signal->getDriver(0);
 			while (dynamic_cast<Node_Signal*>(driver.node)) {
-				if (driver.node == signal) {
+				if (alreadyVisited.contains(driver.node)) {
 					// loop
 					auto *constant = buildConstUndefFor(signal);
 					signal->rewireInput(0, {.node = constant, .port = 0ull});
@@ -300,6 +303,7 @@ void Circuit::insertConstUndefinedNodes()
 					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Splitting signal loop on node " << signal << " with const undefined node " << constant);
 					break;
 				}
+				alreadyVisited.insert(driver.node);
 				driver = driver.node->getDriver(0);
 			}
 		}
@@ -1507,5 +1511,19 @@ Node_Attributes *Circuit::getCreateAttribNode(NodePort &nodePort)
 	attribNode->moveToGroup(nodePort.node->getGroup());
 	return attribNode;
 }
+
+std::uint64_t Circuit::allocateRevisitColor(utils::RestrictTo<RevisitCheck>)
+{
+	HCL_ASSERT(!m_revisitColorInUse);
+	m_revisitColorInUse = true;
+	return m_nextRevisitColor++;
+}
+
+void Circuit::freeRevisitColor(std::uint64_t color, utils::RestrictTo<RevisitCheck>)
+{
+	HCL_ASSERT(m_revisitColorInUse);
+	m_revisitColorInUse = false;
+}
+
 
 }

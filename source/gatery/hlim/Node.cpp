@@ -91,6 +91,23 @@ void BaseNode::moveToGroup(NodeGroup *group)
 		m_nodeGroup->m_nodes.push_back(this);
 }
 
+Circuit *BaseNode::getCircuit()
+{
+	if (m_nodeGroup != nullptr)
+		return &m_nodeGroup->getCircuit();
+	else
+		return nullptr;
+}
+
+const Circuit *BaseNode::getCircuit() const
+{
+	if (m_nodeGroup != nullptr)
+		return &m_nodeGroup->getCircuit();
+	else
+		return nullptr;
+}
+
+
 void BaseNode::attachClock(Clock *clk, size_t clockPort)
 {
 	if (m_clocks[clockPort] == clk) return;
