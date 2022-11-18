@@ -18,8 +18,11 @@
 #include "gatery/pch.h"
 #include "ALTPLL.h"
 
+#include "IntelDevice.h"
+
 #include <gatery/hlim/Clock.h>
 #include <gatery/scl/cdc.h>
+
 
 namespace gtry::scl::arch::intel 
 {
@@ -31,11 +34,15 @@ namespace gtry::scl::arch::intel
 		m_requiresComponentDeclaration = true;
 		m_name = "ALTPLL";
 
+		if (IntelDevice* dev = DesignScope::get()->getTargetTechnology<IntelDevice>())
+		{
+			m_genericParameters["intended_device_family"] = dev->getFamily();
+
+			m_genericParameters["lpm_hint"] = "CBX_MODULE_PREFIX=" + dev->nextLpmInstanceName("altpll");
+			m_genericParameters["lpm_type"] = "altpll";
+		}
 
 		m_genericParameters["bandwidth_type"] = "AUTO";
-		m_genericParameters["intended_device_family"] = "MAX 10";
-		m_genericParameters["lpm_hint"] = "CBX_MODULE_PREFIX=pll_assis";
-		m_genericParameters["lpm_type"] = "altpll";
 		m_genericParameters["operation_mode"] = "NO_COMPENSATION";
 		m_genericParameters["pll_type"] = "AUTO";
 		m_genericParameters["port_activeclock"] = "PORT_UNUSED";
@@ -76,7 +83,7 @@ namespace gtry::scl::arch::intel
 		m_genericParameters["self_reset_on_loss_lock"] = "OFF";
 		m_genericParameters["width_clock"] = 5;
 
-		for(size_t idx = 0; idx < 5; ++idx)
+		for(size_t idx = 0; idx < 6; ++idx)
 		{
 			std::string name = "clk" + std::to_string(idx);
 			m_genericParameters["port_" + name] = "PORT_UNUSED";
@@ -93,53 +100,53 @@ namespace gtry::scl::arch::intel
 		resizeIOPorts(IN_COUNT, OUT_COUNT);
 
 		declInputBitVector(IN_INCLK, "INCLK", 2);
-		declInputBit(IN_FBIN, "FBIN");
-		declInputBit(IN_PHASEUPDOWN, "PHASEUPDOWN");
-		declInputBit(IN_PHASESTEP, "PHASESTEP");
-		//declInputBitVector(IN_PHASECOUNTERSELECT, "PHASECOUNTERSELECT", 2);
-		//declInputBit(IN_PLLENA, "PLLENA");
-		declInputBit(IN_CLKSWITCH, "CLKSWITCH");
-		declInputBit(IN_PFDENA, "PFDENA");
+		// declInputBit(IN_FBIN, "FBIN");
+		// declInputBit(IN_PHASEUPDOWN, "PHASEUPDOWN");
+		// declInputBit(IN_PHASESTEP, "PHASESTEP");
+		// declInputBitVector(IN_PHASECOUNTERSELECT, "PHASECOUNTERSELECT", 2);
+		// declInputBit(IN_PLLENA, "PLLENA");
+		// declInputBit(IN_CLKSWITCH, "CLKSWITCH");
+		// declInputBit(IN_PFDENA, "PFDENA");
 		// declInputBitVector(IN_C_ENA, "C_ENA", 2);
 		// declInputBitVector(IN_E_ENA, "E_ENA", 2);
-		declInputBit(IN_CONFIGUPDATE, "CONFIGUPDATE");
-		declInputBit(IN_SCANCLK, "SCANCLK");
-		declInputBit(IN_SCANCLKENA, "SCANCLKENA");
+		// declInputBit(IN_CONFIGUPDATE, "CONFIGUPDATE");
+		// declInputBit(IN_SCANCLK, "SCANCLK");
+		// declInputBit(IN_SCANCLKENA, "SCANCLKENA");
 		// declInputBit(IN_SCANACLR, "SCANACLR");
-		declInputBit(IN_SCANDATA, "SCANDATA");
+		// declInputBit(IN_SCANDATA, "SCANDATA");
 		// declInputBit(IN_SCANREAD, "SCANREAD");
 		// declInputBit(IN_SCANWRITE, "SCANWRITE");
 
 
 		declOutputBitVector(OUT_CLK, "CLK", 5, "width_clock");
 		//declOutputBitVector(OUT_E, "E", 10);
-		declOutputBitVector(OUT_CLKBAD, "CLKBAD", 2);
-		declOutputBit(OUT_ACTIVECLOCK, "ACTIVECLOCK");
-		declOutputBit(OUT_CLKLOSS, "CLKLOSS");
+		// declOutputBitVector(OUT_CLKBAD, "CLKBAD", 2);
+		// declOutputBit(OUT_ACTIVECLOCK, "ACTIVECLOCK");
+		// declOutputBit(OUT_CLKLOSS, "CLKLOSS");
 		declOutputBit(OUT_LOCKED, "LOCKED");
-		declOutputBit(OUT_SCANDATAOUT, "SCANDATAOUT");
-		declOutputBit(OUT_FBOUT, "FBOUT");
-		//declOutputBitVector(OUT_ENABLE, "ENABLE", 2);
-		declOutputBit(OUT_ENABLE0, "ENABLE0");
-		declOutputBit(OUT_ENABLE1, "ENABLE1");
-		//declOutputBitVector(OUT_SCLKOUT, "SCLKOUT", 2);
-		declOutputBit(OUT_SCLKOUT0, "SCLKOUT0");
-		declOutputBit(OUT_SCLKOUT1, "SCLKOUT1");
-		declOutputBit(OUT_PHASEDONE, "PHASEDONE");
-		declOutputBit(OUT_SCANDONE, "SCANDONE");
+		// declOutputBit(OUT_SCANDATAOUT, "SCANDATAOUT");
+		// declOutputBit(OUT_FBOUT, "FBOUT");
+		// declOutputBitVector(OUT_ENABLE, "ENABLE", 2);
+		// declOutputBit(OUT_ENABLE0, "ENABLE0");
+		// declOutputBit(OUT_ENABLE1, "ENABLE1");
+		// declOutputBitVector(OUT_SCLKOUT, "SCLKOUT", 2);
+		// declOutputBit(OUT_SCLKOUT0, "SCLKOUT0");
+		// declOutputBit(OUT_SCLKOUT1, "SCLKOUT1");
+		// declOutputBit(OUT_PHASEDONE, "PHASEDONE");
+		// declOutputBit(OUT_SCANDONE, "SCANDONE");
 
-		setInput(IN_CLKSWITCH, '0');
-		setInput(IN_CONFIGUPDATE, '0');
-		setInput(IN_PFDENA, '1');
+		// setInput(IN_CLKSWITCH, '0');
+		// setInput(IN_CONFIGUPDATE, '0');
+		// setInput(IN_PFDENA, '1');
 		//IN_PHASECOUNTERSELECT : {3{1'b0}}
-		setInput(IN_PHASESTEP, '0');
-		setInput(IN_PHASEUPDOWN, '0');
-		setInput(IN_SCANCLK, '0');
-		setInput(IN_SCANCLKENA, '1');
-		setInput(IN_SCANDATA, '0');
+		// setInput(IN_PHASESTEP, '0');
+		// setInput(IN_PHASEUPDOWN, '0');
+		// setInput(IN_SCANCLK, '0');
+		// setInput(IN_SCANCLKENA, '1');
+		// setInput(IN_SCANDATA, '0');
 
-		Bit fb = getOutputBit(OUT_FBOUT);
-		setInput(IN_FBIN, fb);
+		// Bit fb = getOutputBit(OUT_FBOUT);
+		// setInput(IN_FBIN, fb);
 	}
 
 	ALTPLL& ALTPLL::configureDeviceFamily(std::string familyName)

@@ -219,6 +219,11 @@ void IntelDevice::fromConfig(const gtry::utils::ConfigTree &configTree)
 	}
 }
 
+std::string IntelDevice::nextLpmInstanceName(std::string_view macroType)
+{
+	return std::string{ "gatery_" } + std::string{ macroType } + '_' + std::to_string(m_lpmInstanceCounter[macroType]++);
+}
+
 void IntelDevice::setupAgilex()
 {
 	setupDevice("AGFA012R24B1E1V");
