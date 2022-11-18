@@ -82,7 +82,7 @@ void Circuit::copySubnet(const std::set<NodePort> &subnetInputs,
 {
 	mapSrc2Dst.clear();
 
-	RevisitCheck closedList(*this);
+	std::set<BaseNode*> closedList;
 	std::vector<NodePort> openList = std::vector<NodePort>(subnetOutputs.begin(), subnetOutputs.end());
 
 	std::vector<std::pair<std::uint64_t, BaseNode*>> sortedNodes;
