@@ -119,8 +119,8 @@ class BaseNode : public NodeIO
 		const NodeGroup *getGroup() const { return m_nodeGroup; }
 		NodeGroup *getGroup() { return m_nodeGroup; }
 
-		Circuit &getCircuit();
-		const Circuit &getCircuit() const;
+		Circuit *getCircuit();
+		const Circuit *getCircuit() const;
 
 		inline const std::vector<Clock*> &getClocks() const { return m_clocks; }
 
