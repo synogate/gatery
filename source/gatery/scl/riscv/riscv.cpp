@@ -391,7 +391,9 @@ gtry::scl::TileLinkUL gtry::scl::riscv::RV32I::memTLink(bool byte, bool halfword
 	mem.a->size = 2;
 	if (byte || halfword)
 	{
-		mem.a->size = m_instr.func3.lower(2_b);
+		auto tmp = m_instr.func3.lower(2_b);
+		setName(tmp, "FIXME");
+		mem.a->size = tmp;
 
 		UInt byteVal = m_r2.lower(8_b);
 		UInt wordVal = m_r2.lower(16_b);
