@@ -30,7 +30,7 @@ RevisitCheck::RevisitCheck(Circuit &circuit) : m_circuit(circuit)
 
 RevisitCheck::~RevisitCheck()
 {
-	circuit.freeRevisitColor(m_color, {});
+	m_circuit.freeRevisitColor(m_color, {});
 }
 
 void RevisitCheck::insert(const BaseNode *node)
