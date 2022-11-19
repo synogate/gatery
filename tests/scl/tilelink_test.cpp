@@ -905,3 +905,55 @@ BOOST_FIXTURE_TEST_CASE(tilelink_addburst2_test, LinkTest)
 		stopTest();
 	});
 }
+
+BOOST_FIXTURE_TEST_CASE(tilelink_doublewidth_test, LinkTest)
+{
+	Memory<BVec> mem(256, 8_b);
+
+	scl::TileLinkUL memLink;
+	scl::tileLinkInit(memLink, 8_b, 8_b, 0_b, 6_b);
+	mem <<= memLink;
+
+	scl::TileLinkUB memBurst = scl::tileLinkAddBurst(memLink, 2_b);
+	scl::TileLinkUB memDouble = scl::tileLinkDoubleWidth(memBurst);
+
+	linkModel.init("m", 8_b, 16_b, 2_b);
+	memDouble <<= link;
+	timeout({ 1, 1'000'000 });
+
+	addSimulationProcess([&]()->SimProcess {
+		co_await OnClk(clock());
+
+		fork(linkModel.put(0, 2, 0xDDCCBBAA, clock()));
+		fork(linkModel.put(4, 1, 0xFFEE, clock()));
+		fork(linkModel.put(6, 0, 0x11, clock()));
+		fork(linkModel.put(7, 0, 0x22, clock()));
+
+		{
+			auto [val, def, err] = co_await linkModel.get(0, 3, clock());
+			BOOST_TEST(!err);
+			BOOST_TEST((val & def) == 0x2211FFEEDDCCBBAA);
+		}
+
+		{
+			auto [val, def, err] = co_await linkModel.get(0, 2, clock());
+			BOOST_TEST(!err);
+			BOOST_TEST((val & def) == 0xDDCCBBAA);
+		}
+
+		{
+			auto [val, def, err] = co_await linkModel.get(2, 1, clock());
+			BOOST_TEST(!err);
+			BOOST_TEST((val & def) == 0xDDCC);
+		}
+
+		{
+			auto [val, def, err] = co_await linkModel.get(1, 0, clock());
+			BOOST_TEST(!err);
+			BOOST_TEST((val & def) == 0xBB);
+		}
+
+		co_await OnClk(clock());
+		stopTest();
+	});
+}

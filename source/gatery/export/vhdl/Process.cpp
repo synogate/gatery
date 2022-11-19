@@ -105,6 +105,16 @@ void Process::extractSignals()
 			m_inputResets.insert(rstSig->getClocks()[0]->getResetPinSource());
 		}
 
+		if (auto* s2rst = dynamic_cast<hlim::Node_Signal2Rst*>(node)) {
+			m_inputResets.insert(s2rst->getClocks()[0]->getResetPinSource());
+		}
+
+		if (auto* s2clk = dynamic_cast<hlim::Node_Signal2Clk*>(node)) {
+			m_inputClocks.insert(s2clk->getClocks()[0]->getClockPinSource());
+		}
+
+		
+
 #if 1
 		// Named signals are explicit
 		if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr && node->hasGivenName() && node->getOutputConnectionType(0).width > 0) {

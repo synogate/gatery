@@ -175,6 +175,7 @@ namespace gtry::scl::arch::intel
 		// TODO: set phase shift
 		Clock out = m_inClk->deriveClock(ClockConfig{
 			.frequencyMultiplier = hlim::ClockRational{ mul, div },
+			.name = "pllclk" + std::to_string(idx),
 			//.phaseSynchronousWithParent = phaseShiftPs == 0,
 			.resetType = resetType,
 		});
