@@ -36,7 +36,7 @@ boost::test_tools::assertion_result canExport(boost::unit_test::test_unit_id)
 
 BOOST_AUTO_TEST_SUITE(Export, * precondition(canExport))
 
-BOOST_FIXTURE_TEST_CASE(testExportUnconnectedInputs, gtry::GHDLTestFixture)
+BOOST_FIXTURE_TEST_CASE(unconnectedInputs, gtry::GHDLTestFixture)
 {
 	using namespace gtry;
 
@@ -51,7 +51,7 @@ BOOST_FIXTURE_TEST_CASE(testExportUnconnectedInputs, gtry::GHDLTestFixture)
 }
 
 
-BOOST_FIXTURE_TEST_CASE(testExportLoopyInputs, gtry::GHDLTestFixture)
+BOOST_FIXTURE_TEST_CASE(loopyInputs, gtry::GHDLTestFixture)
 {
 	using namespace gtry;
 
@@ -67,7 +67,7 @@ BOOST_FIXTURE_TEST_CASE(testExportLoopyInputs, gtry::GHDLTestFixture)
 }
 
 
-BOOST_FIXTURE_TEST_CASE(testExportLiteralComparison, gtry::GHDLTestFixture)
+BOOST_FIXTURE_TEST_CASE(literalComparison, gtry::GHDLTestFixture)
 {
 	using namespace gtry;
 
@@ -79,6 +79,89 @@ BOOST_FIXTURE_TEST_CASE(testExportLiteralComparison, gtry::GHDLTestFixture)
 
 	testCompilation();
 }
+
+
+
+BOOST_FIXTURE_TEST_CASE(readOutput, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+    {
+		Bit input = pinIn().setName("input");
+		Bit output;
+		Bit output2;
+		{
+			Area area("mainArea", true);
+
+			{
+				Area area("producingSubArea", true);
+				output = input ^ '1';
+			}
+			{
+				Area area("consumingSubArea", true);
+				output2 = output ^ '1';
+			}
+		}
+
+        pinOut(output).setName("out");
+        pinOut(output2).setName("out2");
+    }
+
+	testCompilation();
+}
+
+
+
+
+BOOST_FIXTURE_TEST_CASE(readOutputLocal, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+    {
+		Bit input = pinIn().setName("input");
+		Bit output;
+		Bit output2;
+		{
+			Area area("mainArea", true);
+
+			output = input ^ '1';
+			output2 = output ^ '1';
+		}
+
+        pinOut(output).setName("out");
+        pinOut(output2).setName("out2");
+    }
+
+	testCompilation();
+	DesignScope::visualize("test_outputLocal");
+}
+
+
+BOOST_FIXTURE_TEST_CASE(muxUndefined, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+    {
+		Bit input1 = pinIn().setName("input1");
+		Bit input2 = pinIn().setName("input2");
+		Bit output;
+
+		Bit undefined = 'x';
+		HCL_NAMED(undefined);
+
+		IF (undefined)
+			output = input1;
+		ELSE
+			output = input2;
+
+        pinOut(output).setName("out");
+    }
+
+	testCompilation();
+	DesignScope::visualize("test_muxUndefined");
+}
+
+
 
 
 BOOST_AUTO_TEST_SUITE_END()

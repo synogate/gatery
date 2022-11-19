@@ -153,8 +153,8 @@ void BaseGrouping::formatConstant(std::ostream &stream, const hlim::Node_Constan
 	if (targetType == VHDLDataType::BOOL) {
 		HCL_ASSERT(conType.interpretation == hlim::ConnectionType::BOOL);
 		const auto &v = constant->getValue();
-		HCL_ASSERT(v.get(sim::DefaultConfig::DEFINED, 0));
-		if (v.get(sim::DefaultConfig::VALUE, 0))
+		//HCL_ASSERT(v.get(sim::DefaultConfig::DEFINED, 0));
+		if (v.get(sim::DefaultConfig::VALUE, 0) && v.get(sim::DefaultConfig::DEFINED, 0))
 			stream << "true";
 		else
 			stream << "false";
