@@ -102,6 +102,12 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 		dnIn = tristatePin(dnOut_cdc, dEn_cdc).setName("USB_DN");
 	}
 
+	DesignScope::get()->getCircuit().addSimulationProcess([=]() -> SimProcess {
+		simu(dpIn) = '0';
+		simu(dnIn) = '0';
+		co_return;
+	});
+
 	VStream<UInt> lineIn = recoverDataDifferential(
 		usbPinClock,
 		dpIn, dnIn
