@@ -227,3 +227,64 @@ BOOST_FIXTURE_TEST_CASE(MapRegister, gtry::BoostUnitTestSimulationFixture)
 	design.postprocess();
 	runTest({ 1,1 });
 }
+
+
+BOOST_FIXTURE_TEST_CASE(LongSynchronousReset, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000, .resetType = ClockConfig::ResetType::SYNCHRONOUS });
+	clock.getClk()->setMinResetCycles(5);
+	ClockScope clockScope(clock);
+
+
+	Bit a = reg(Bit('1'), Bit('0'));
+	pinOut(a).setName("out");
+
+
+	addSimulationProcess([=, this]()->SimProcess {
+		// Sample in the middle of the clock cycle
+		co_await WaitFor(Seconds{1,2} / clock.absoluteFrequency());
+		for ([[maybe_unused]] auto i : utils::Range(6)) {
+			BOOST_TEST(simu(a) == '0');
+			co_await WaitFor(Seconds{1} / clock.absoluteFrequency());// Can't use any of the wait clock stuff as that waits for the reset
+		}
+		BOOST_TEST(simu(a) == '1');
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest({ 1,1 });
+}
+
+
+BOOST_FIXTURE_TEST_CASE(LongAsynchronousReset, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000, .resetType = ClockConfig::ResetType::ASYNCHRONOUS });
+	clock.getClk()->setMinResetCycles(5);
+	ClockScope clockScope(clock);
+
+
+	Bit a = reg(Bit('1'), Bit('0'));
+	pinOut(a).setName("out");
+
+
+	addSimulationProcess([=, this]()->SimProcess {
+		// Sample in the middle of the clock cycle
+		co_await WaitFor(Seconds{1,2} / clock.absoluteFrequency());
+		for ([[maybe_unused]] auto i : utils::Range(6)) {
+			BOOST_TEST(simu(a) == '0');
+			co_await WaitFor(Seconds{1} / clock.absoluteFrequency());// Can't use any of the wait clock stuff as that waits for the reset
+		}
+		BOOST_TEST(simu(a) == '1');
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest({ 1,1 });
+}
+

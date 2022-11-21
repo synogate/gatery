@@ -85,20 +85,19 @@ void Node_Register::simulateAdvance(sim::SimulatorCallbacks &simCallbacks, sim::
 	if (state.get(sim::DefaultConfig::VALUE, internalOffsets[INT_IN_RESET])) {
 		if (m_clocks[0]->getRegAttribs().resetType == RegisterAttributes::ResetType::SYNCHRONOUS) {
 			writeResetValueTo(state, { internalOffsets[INT_DATA],  outputOffsets[0] }, getOutputConnectionType(0).width, false);
-			return;
 		} else {
 			// Is being handled in Node_Register::simulateResetChange
 		}
+	} else {
+		bool enableDefined = state.get(sim::DefaultConfig::DEFINED, internalOffsets[INT_ENABLE]);
+		bool enable = state.get(sim::DefaultConfig::VALUE, internalOffsets[INT_ENABLE]);
+
+		if (!enableDefined) {
+			state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width);
+		} else
+			if (enable)
+				state.copyRange(outputOffsets[0], state, internalOffsets[INT_DATA], getOutputConnectionType(0).width);
 	}
-
-	bool enableDefined = state.get(sim::DefaultConfig::DEFINED, internalOffsets[INT_ENABLE]);
-	bool enable = state.get(sim::DefaultConfig::VALUE, internalOffsets[INT_ENABLE]);
-
-	if (!enableDefined) {
-		state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width);
-	} else
-		if (enable)
-			state.copyRange(outputOffsets[0], state, internalOffsets[INT_DATA], getOutputConnectionType(0).width);
 }
 
 bool Node_Register::overrideOutput(sim::DefaultBitVectorState &state, size_t outputOffset, const sim::DefaultBitVectorState &newState)
