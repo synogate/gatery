@@ -395,7 +395,7 @@ BOOST_FIXTURE_TEST_CASE(readOutputBugfix, gtry::GHDLTestFixture)
 	testCompilation(TARGET_QUARTUS);
 	BOOST_TEST(exportContains(std::regex{"workaroundEntityInOut08Bug"}));
 	BOOST_TEST(exportContains(std::regex{"workaroundReadOut08Bug"}));
-	DesignScope::visualize("test_inout08");
+	//DesignScope::visualize("test_inout08");
 }
 
 
@@ -421,7 +421,7 @@ BOOST_FIXTURE_TEST_CASE(readOutputLocalBugfix, gtry::GHDLTestFixture)
 
 	testCompilation(TARGET_QUARTUS);
 	BOOST_TEST(exportContains(std::regex{"workaroundReadOut08Bug"}));
-	DesignScope::visualize("test_outputLocal");
+	//DesignScope::visualize("test_outputLocal");
 }
 
 

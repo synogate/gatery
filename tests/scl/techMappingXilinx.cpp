@@ -235,7 +235,7 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_intra_connection, gtry::GHDLTestFixture)
 
 	testCompilation();
 
-	DesignScope::visualize("test_bidir_intra_connection");
+	//DesignScope::visualize("test_bidir_intra_connection");
 }
 
 
@@ -273,7 +273,7 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_intra_connection_different_entities, gtry::GH
 
 	testCompilation();
 
-	DesignScope::visualize("test_bidir_intra_connection_different_entities");
+	//DesignScope::visualize("test_bidir_intra_connection_different_entities");
 }
 
 BOOST_FIXTURE_TEST_CASE(test_bidir_intra_connection_different_entities2, gtry::GHDLTestFixture)
@@ -312,7 +312,7 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_intra_connection_different_entities2, gtry::G
 
 	testCompilation();
 
-	DesignScope::visualize("test_bidir_intra_connection_different_entities2");
+	//DesignScope::visualize("test_bidir_intra_connection_different_entities2");
 }
 
 
@@ -390,7 +390,7 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_pin_extnode, gtry::GHDLTestFixture)
 
 	testCompilation();
 
-	DesignScope::visualize("test_bidir_pin_extnode");
+	//DesignScope::visualize("test_bidir_pin_extnode");
 }
 
 
