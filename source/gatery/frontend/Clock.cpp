@@ -198,7 +198,10 @@ namespace gtry
 		if (config.initializeRegs) m_clock->getRegAttribs().initializeMemory = m_clock->getRegAttribs().initializeRegs = *config.initializeRegs;
 
 		// ... unless overruled explicitely
-		if (config.memoryResetType) m_clock->getRegAttribs().memoryResetType = *config.memoryResetType;
+		if (config.memoryResetType) {
+			m_clock->getRegAttribs().memoryResetType = *config.memoryResetType;
+			HCL_DESIGNCHECK_HINT(m_clock->getRegAttribs().memoryResetType == ResetType::NONE || m_clock->getRegAttribs().resetType != ResetType::NONE, "If a memory reset type != none is chosen, a regular reset type != none must also be chosen!");
+		}
 		if (config.initializeMemory) m_clock->getRegAttribs().initializeMemory = *config.initializeMemory;
 
 		if (config.resetActive) m_clock->getRegAttribs().resetActive = *config.resetActive;

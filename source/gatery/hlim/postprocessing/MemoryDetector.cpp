@@ -797,6 +797,7 @@ void MemoryGroup::buildResetLogic(Circuit &circuit)
 	auto *clockDomain = resetWritePort->getClocks()[0];
 
 	if (clockDomain->getRegAttribs().memoryResetType == RegisterAttributes::ResetType::NONE) return;
+	HCL_ASSERT(clockDomain->getRegAttribs().resetType != RegisterAttributes::ResetType::NONE);
 
 	dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Building reset logic for memory " << m_memory);
 
@@ -845,6 +846,7 @@ void MemoryGroup::buildResetRom(Circuit &circuit)
 	auto *clockDomain = resetWritePort->getClocks()[0];
 
 	if (clockDomain->getRegAttribs().memoryResetType == RegisterAttributes::ResetType::NONE) return;
+	HCL_ASSERT(clockDomain->getRegAttribs().resetType != RegisterAttributes::ResetType::NONE);
 
 	dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Building reset rom for memory " << m_memory);
 
