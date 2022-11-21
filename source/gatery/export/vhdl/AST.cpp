@@ -63,7 +63,7 @@ void AST::generateInterfacePackage(InterfacePackageContent &content)
 
 void AST::convert(hlim::Circuit &circuit)
 {
-	m_exportArea.addAllForExport(circuit);
+	m_exportArea.addAllForExport(circuit).addDrivenNamedSignals(circuit);
 
 	auto rootNode = circuit.getRootNodeGroup();
 	auto &entity = createEntity(rootNode->getName(), nullptr);

@@ -22,6 +22,7 @@
 
 #include "supportNodes/Node_ExportOverride.h"
 #include "supportNodes/Node_SignalTap.h"
+#include "coreNodes/Node_Signal.h"
 
 
 #include "Circuit.h"
@@ -346,6 +347,31 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllUsedNodes(CircuitType &ci
 
 	return (FinalType&)*this;
 }
+
+template<bool makeConst, typename FinalType>
+FinalType &SubnetTemplate<makeConst, FinalType>::addDrivenNamedSignals(CircuitType &circuit)
+{
+	// Loop over all nodes and if they are named signal nodes, check if their driver is part of the subnet.
+	// If so, add the named signal node and its path to the subnet.
+	for (auto &n : circuit.getNodes()) {
+		if (auto *sigNode = dynamic_cast<typename ConstAdaptor<makeConst, hlim::Node_Signal>::type*>(n.get())) {
+			if (sigNode->hasGivenName()) {
+				auto finalDriver = sigNode->getNonSignalDriver(0);
+				if (contains(finalDriver.node)) {
+					// add entire path
+					NodeType *node = sigNode;
+					while (node != finalDriver.node) {
+						m_nodes.insert(node);
+						node = node->getDriver(0).node;
+					}
+				}
+			}
+		}
+	}
+
+	return (FinalType&)*this;
+}
+
 
 
 template<bool makeConst, typename FinalType>

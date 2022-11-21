@@ -430,6 +430,7 @@ void Circuit::cullUnusedNodes(Subnet &subnet)
 		done = true;
 
 		auto usedNodes = Subnet::allUsedNodes(*this);
+		usedNodes.addDrivenNamedSignals(*this);
 
 		// intersect usedNudes with subnet
 

@@ -133,7 +133,7 @@ BOOST_FIXTURE_TEST_CASE(readOutputLocal, gtry::GHDLTestFixture)
     }
 
 	testCompilation();
-	DesignScope::visualize("test_outputLocal");
+	//DesignScope::visualize("test_outputLocal");
 }
 
 
@@ -158,9 +158,37 @@ BOOST_FIXTURE_TEST_CASE(muxUndefined, gtry::GHDLTestFixture)
     }
 
 	testCompilation();
-	DesignScope::visualize("test_muxUndefined");
+	//DesignScope::visualize("test_muxUndefined");
 }
 
+
+BOOST_FIXTURE_TEST_CASE(keepNamedSignalOrphans, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+    {
+		Bit input1 = pinIn().setName("input1");
+		Bit input2 = pinIn().setName("input2");
+		Bit output;
+
+		input2 ^= '1';
+
+		output = input1 ^ input2;
+
+		Bit input1_ = input1;
+		setName(input1_, "orphaned_1");
+		Bit output_ = output;
+		setName(output_, "orphaned_2");
+
+        pinOut(output).setName("out");
+    }
+
+	//DesignScope::visualize("test_keepNamedSignalOrphans_before");
+	testCompilation();
+	//DesignScope::visualize("test_keepNamedSignalOrphans");
+	BOOST_TEST(exportContains(std::regex{"orphaned_1"}));
+	BOOST_TEST(exportContains(std::regex{"orphaned_2"}));
+}
 
 
 

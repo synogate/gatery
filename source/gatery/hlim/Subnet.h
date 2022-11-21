@@ -80,6 +80,9 @@ class SubnetTemplate {
 		/// Adds all nodes that are used or have side effects
 		FinalType &addAllUsedNodes(CircuitType &circuit);
 
+		/// Adds all named signal nodes that are driven (directly or indirectly) by nodes already in the subset
+		FinalType &addDrivenNamedSignals(CircuitType &circuit);
+
 		/// Adds all nodes from a node group (potentially reccursive)
 		FinalType &addAllFromNodeGroup(NodeGroup* nodeGroup, bool reccursive = true);
 
