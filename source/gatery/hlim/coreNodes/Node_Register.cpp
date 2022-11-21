@@ -51,6 +51,7 @@ void Node_Register::simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::
 {
 	//if (m_clocks[0]->getRegAttribs().initializeRegs) {
 		writeResetValueTo(state, { internalOffsets[INT_DATA],  outputOffsets[0] }, getOutputConnectionType(0).width, true);
+		state.set(sim::DefaultConfig::VALUE, internalOffsets[INT_IN_RESET], false);
 	//}
 }
 

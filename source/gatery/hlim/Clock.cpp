@@ -135,6 +135,9 @@ const Clock *Clock::getClockPinSource() const
 
 bool Clock::inheritsResetPinSource() const
 {
+	if (getRegAttribs().resetType == RegisterAttributes::ResetType::NONE)
+		return false;
+
 	if (m_parentClock == nullptr)
 		return false;
 
@@ -149,6 +152,9 @@ bool Clock::inheritsResetPinSource() const
 
 Clock *Clock::getResetPinSource()
 {
+	if (getRegAttribs().resetType == RegisterAttributes::ResetType::NONE)
+		return nullptr;
+
 	if (inheritsResetPinSource())
 		return m_parentClock->getResetPinSource();
 	else

@@ -120,23 +120,25 @@ ClockPinAllocation extractClockPins(Circuit &circuit, const Subnet &subnet)
 
 		{
 			Clock *resetPin = clock->getResetPinSource();
-			size_t idx;
-			auto it = res.clock2ResetPinIdx.find(resetPin);
-			if (it != res.clock2ResetPinIdx.end()) {
-				idx = it->second;
-			} else {
-				idx = res.resetPins.size();
-				res.resetPins.push_back({});
-				res.clock2ResetPinIdx[resetPin] = idx;
-			}
+			if (resetPin != nullptr) {
+				size_t idx;
+				auto it = res.clock2ResetPinIdx.find(resetPin);
+				if (it != res.clock2ResetPinIdx.end()) {
+					idx = it->second;
+				} else {
+					idx = res.resetPins.size();
+					res.resetPins.push_back({});
+					res.clock2ResetPinIdx[resetPin] = idx;
+				}
 
-			res.resetPins[idx].clocks.push_back(clock);
-			res.clock2ResetPinIdx[clock] = idx;
+				res.resetPins[idx].clocks.push_back(clock);
+				res.clock2ResetPinIdx[clock] = idx;
 
-			if (resetPin == clock) {
-				res.resetPins[idx].source = clock;
-				res.resetPins[idx].minResetCycles = clock->getMinResetCycles();
-				res.resetPins[idx].minResetTime = clock->getMinResetTime();
+				if (resetPin == clock) {
+					res.resetPins[idx].source = clock;
+					res.resetPins[idx].minResetCycles = clock->getMinResetCycles();
+					res.resetPins[idx].minResetTime = clock->getMinResetTime();
+				}
 			}
 		}
 	}
