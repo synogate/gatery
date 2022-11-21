@@ -103,7 +103,7 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 	}
 
 	DesignScope::get()->getCircuit().addSimulationProcess([=]() -> SimProcess {
-		simu(dpIn) = '0';
+		simu(dpIn) = '1';
 		simu(dnIn) = '0';
 		co_return;
 	});
