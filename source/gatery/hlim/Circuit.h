@@ -156,7 +156,6 @@ class Circuit
 
 		void ensureSignalNodePlacement();
 		void ensureMultiDriverNodePlacement();
-		void duplicateSignalsFeedingLowerAndHigherAreas();
 
 		void optimizeSubnet(Subnet &subnet);
 		void postprocess(const PostProcessor &postProcessor);

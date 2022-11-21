@@ -38,8 +38,14 @@ namespace gtry {
 		virtual void writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename) override;
 		virtual void writeStandAloneProject(vhdl::VHDLExport& vhdlExport, std::string_view filename) override;
 
+		virtual void prepareCircuit(hlim::Circuit &circuit) override;
 	protected:
 		void writeModelsimScripts(vhdl::VHDLExport& vhdlExport);
+
+		/// Implements a workaround for a missing vhdl2008 feature in quartus regarding output port signals being used as inputs to sub entities.
+		void workaroundEntityInOut08Bug(hlim::Circuit &circuit) const;
+		/// Implements a workaround for a missing vhdl2008 feature in quartus regarding output port signals being read in processes.
+		void workaroundReadOut08Bug(hlim::Circuit &circuit) const;
 
 	};
 

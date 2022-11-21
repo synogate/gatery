@@ -26,6 +26,7 @@
 
 #include <gatery/hlim/coreNodes/Node_Pin.h>
 #include <gatery/hlim/coreNodes/Node_Register.h>
+#include <gatery/hlim/coreNodes/Node_Signal.h>
 
 #include <gatery/hlim/Attributes.h>
 #include <gatery/hlim/GraphTools.h>
@@ -33,6 +34,7 @@
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Preprocessor.h>
 
+#include <gatery/debug/DebugInterface.h>
 #include <gatery/export/vhdl/VHDLExport.h>
 #include <gatery/export/vhdl/Entity.h>
 #include <gatery/export/vhdl/Package.h>
@@ -377,4 +379,134 @@ set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
 			file << "run -all\n";
 		}
 	}
+
+
+
+	void IntelQuartus::prepareCircuit(hlim::Circuit &circuit)
+	{
+		// Implement workarounds for quartus bugs
+
+		workaroundEntityInOut08Bug(circuit);
+		workaroundReadOut08Bug(circuit);
+	}
+
+	/**
+	 * @details Considering an entity A, a signal sometimes originates in a sub-entity of A and is consumed simultaneously in the parent of A as well as in another sub-entity of A.
+	 * Entity A never touches this signal except to wire it around. With regards to production and consumption in the parent, entity A can declare an output port signal and bind
+	 * it to the out-port of the producing sub-entity . However, Intel Quartus does not allow this output port signal to be bound to the input of the consuming sub-entity.
+	 * As a work around, we insert a named signal node which forces a local signal in the vhdl output to bridge things.
+	 * This is meant to work together with workaroundReadOut08Bug and must run before.
+	 */
+	void IntelQuartus::workaroundEntityInOut08Bug(hlim::Circuit &circuit) const
+	{
+		for (const auto &node : circuit.getNodes()) {
+			for (auto outIdx : utils::Range(node->getNumOutputPorts())) {
+				hlim::NodePort driver(node.get(), outIdx);
+
+				// Do two consumers exist which are both in different entities (which are also different from the producer).
+				std::set<hlim::NodeGroup*> nodeGroups;
+				nodeGroups.insert(node->getGroup());
+
+				for (const auto &np : node->getDirectlyDriven(outIdx))
+					nodeGroups.insert(np.node->getGroup());
+
+				if (nodeGroups.size() >= 3) {
+
+					// Find the central entity to which one is a sub entity but another is reached through the parent.
+					// This can be at any level of the hierarchy, so we have to walk all the way to the top.
+					// It might also happen multiple times, so we can't just stop at the first occurrence.
+					hlim::NodeGroup *prevEntity = node->getGroup();
+					auto *centralEntity = prevEntity->getParent();
+					while (centralEntity != nullptr) {
+						bool anyIsChild = false;
+						bool anyIsNotChild = false;
+						for (auto ng : nodeGroups)
+							if (ng != prevEntity && !ng->isChildOf(prevEntity)) {
+								if (ng->isChildOf(centralEntity))
+									anyIsChild = true;
+								else
+									anyIsNotChild = true;
+							}
+						
+						// One consumer must be a child, one must be through the parent
+						if (anyIsChild && anyIsNotChild) {
+							auto directlyDriven = driver.node->getDirectlyDriven(driver.port);
+
+							auto *signalNode = circuit.createNode<hlim::Node_Signal>();
+							auto name = driver.node->attemptInferOutputName(driver.port);
+							if (!name.empty() && name.size() < 300)
+								signalNode->setName(name+"_workaroundEntityInOut08Bug");
+							else
+								signalNode->setName("workaroundEntityInOut08Bug");
+							signalNode->recordStackTrace();
+							signalNode->moveToGroup(centralEntity);
+							signalNode->connectInput(driver);
+
+							driver = {.node = signalNode, .port = 0ull};
+
+							for (const auto &d : directlyDriven) {
+								//if (d.node->getGroup()->isChildOf(centralEntity))
+								if (d.node->getGroup() != prevEntity && !d.node->getGroup()->isChildOf(prevEntity))
+									d.node->rewireInput(d.port, driver);
+							}
+
+							dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+									<< "Applying workaround for intel quartus entity in out port signal incompatibilities to " << node.get() << " port " << outIdx << " by inserting " << signalNode << " in " << centralEntity);
+						}
+						
+						prevEntity = centralEntity;
+						centralEntity = centralEntity->getParent();
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * @details Split/duplicate signal nodes feeding into lower and higher areas of the hierarchy.
+	 * 
+	 * When generating a signal in any given area, it is possible to feed that signal to the parent (an output of said area)
+	 * and simultaneously to a child area (an input to the child area).
+	 * By default, the VHDL exporter declares this signal as an output signal (part of the port map) and feeds that signal to the 
+	 * child area as well. While this is ok with ghdl, intel quartus does not accept this, so we have to duplicate the signal for quartus in
+	 * order to ensure that a local, non-port-map signal gets bound to the child area.
+	 */
+	void IntelQuartus::workaroundReadOut08Bug(hlim::Circuit &circuit) const
+	{
+		std::vector<hlim::NodePort> higherDriven;
+		for (auto idx : utils::Range(circuit.getNodes().size())) {
+			auto node = circuit.getNodes()[idx].get();
+
+			for (auto outIdx : utils::Range(node->getNumOutputPorts())) {
+				higherDriven.clear();
+				bool consumedHigher = false;
+				bool consumedLocal = false;
+
+				for (auto driven : node->getDirectlyDriven(outIdx)) {
+					if (driven.node->getGroup() == node->getGroup() || (driven.node->getGroup() != nullptr && driven.node->getGroup()->isChildOf(node->getGroup()))) {
+						consumedLocal = true;
+					} else {
+						consumedHigher = true;
+						higherDriven.push_back(driven);
+					}
+				}
+
+				if (consumedHigher && consumedLocal) {
+					auto *sigNode = circuit.createNode<hlim::Node_Signal>();
+					auto name = node->attemptInferOutputName(outIdx);
+					if (!name.empty() && name.size() < 300)
+						sigNode->setName(name+"_workaroundReadOut08Bug");
+					else
+						sigNode->setName("workaroundReadOut08Bug");
+					sigNode->moveToGroup(node->getGroup());
+					sigNode->connectInput({.node = node, .port = outIdx});
+					sigNode->recordStackTrace();
+
+					for (auto driven : higherDriven)
+						driven.node->rewireInput(driven.port, {.node = sigNode, .port = 0});
+				}
+			}
+		}
+	}
+
 }

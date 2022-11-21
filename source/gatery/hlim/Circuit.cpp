@@ -1218,49 +1218,6 @@ void Circuit::ensureMultiDriverNodePlacement()
 		}
 	}
 }
-/**
- * @brief Split/duplicate signal nodes feeding into lower and higher areas of the hierarchy.
- *
- * When generating a signal in any given area, it is possible to feed that signal to the parent (an output of said area)
- * and simultaneously to a child area (an input to the child area).
- * By default, the VHDL exporter declares this signal as an output signal (part of the port map) and feeds that signal to the 
- * child area as well. While this is ok with ghdl, intel quartus does not accept this, so we have to duplicate the signal for quartus in
- * order to ensure that a local, non-port-map signal gets bound to the child area.
- */
-void Circuit::duplicateSignalsFeedingLowerAndHigherAreas()
-{
-	std::vector<NodePort> higherDriven;
-	for (auto idx : utils::Range(m_nodes.size())) {
-		auto node = m_nodes[idx].get();
-
-		for (auto i : utils::Range(node->getNumOutputPorts())) {
-			higherDriven.clear();
-			//bool consumedInternally = false;
-			bool consumedHigher = false;
-			bool consumedLower = false;
-
-			for (auto driven : node->getDirectlyDriven(0)) {
-				if (driven.node->getGroup() == node->getGroup()) {
-					//consumedInternally = true;
-				} else if (driven.node->getGroup() != nullptr && driven.node->getGroup()->isChildOf(node->getGroup())) {
-					consumedLower = true;
-				} else {
-					consumedHigher = true;
-					higherDriven.push_back(driven);
-				}
-			}
-
-			if (consumedHigher && consumedLower) {
-				auto *sigNode = createNode<Node_Signal>();
-				sigNode->moveToGroup(node->getGroup());
-				sigNode->connectInput({.node = node, .port = i});
-
-				for (auto driven : higherDriven)
-					driven.node->rewireInput(driven.port, {.node = sigNode, .port = 0});
-			}
-		}
-	}
-}
 
 void Circuit::ensureNoLiteralComparison()
 {
@@ -1388,7 +1345,6 @@ void DefaultPostprocessing::exportPreparation(Circuit &circuit) const
 	circuit.moveClockDriversToTop();
 	circuit.ensureSignalNodePlacement();
 	circuit.ensureMultiDriverNodePlacement();
-	circuit.duplicateSignalsFeedingLowerAndHigherAreas();
 	circuit.ensureNoLiteralComparison();
 	circuit.inferSignalNames();
 }
@@ -1449,7 +1405,6 @@ void MinimalPostprocessing::exportPreparation(Circuit& circuit) const
 	circuit.moveClockDriversToTop();
 	circuit.ensureSignalNodePlacement();
 	circuit.ensureMultiDriverNodePlacement();
-	circuit.duplicateSignalsFeedingLowerAndHigherAreas();
 	circuit.ensureNoLiteralComparison();
 	circuit.inferSignalNames();
 }

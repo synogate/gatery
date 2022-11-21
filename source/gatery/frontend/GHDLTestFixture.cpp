@@ -21,6 +21,7 @@
 
 #include <gatery/export/vhdl/VHDLExport.h>
 #include <gatery/scl/synthesisTools/GHDL.h>
+#include <gatery/scl/synthesisTools/IntelQuartus.h>
 #include <gatery/hlim/Circuit.h>
 #include <boost/test/unit_test.hpp>
 
@@ -78,13 +79,16 @@ GHDLTestFixture::~GHDLTestFixture()
 	//std::filesystem::remove_all("tmp/");
 }
 
-void GHDLTestFixture::testCompilation()
+void GHDLTestFixture::testCompilation(Flavor flavor)
 {
 	design.postprocess();
 
 
 	m_vhdlExport.emplace("design.vhd");
-	m_vhdlExport->targetSynthesisTool(new GHDL());
+	switch (flavor) {
+		case TARGET_GHDL : m_vhdlExport->targetSynthesisTool(new GHDL()); break;
+		case TARGET_QUARTUS : m_vhdlExport->targetSynthesisTool(new IntelQuartus()); break;
+	}
 	m_vhdlExport->writeStandAloneProjectFile("compile.sh");
 	(*m_vhdlExport)(design.getCircuit());
 

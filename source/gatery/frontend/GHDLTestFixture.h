@@ -65,7 +65,12 @@ namespace gtry {
 			GHDLTestFixture();
 			~GHDLTestFixture();
 
-			void testCompilation();
+			enum Flavor {
+				TARGET_GHDL,
+				TARGET_QUARTUS,
+			};
+
+			void testCompilation(Flavor flavor = TARGET_GHDL);
 			void runTest(const hlim::ClockRational &timeoutSeconds);
 			bool exportContains(const std::regex &regex);
 		protected:

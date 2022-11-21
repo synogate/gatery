@@ -361,7 +361,69 @@ BOOST_FIXTURE_TEST_CASE(instantiate_scl_ddr_for_clock, gtry::GHDLTestFixture)
 	pinOut(o).setName("ddr_output");
 
 	testCompilation();
+	BOOST_TEST(exportContains(std::regex{"ALTDDIO_OUT"}));
 }
+
+
+
+
+BOOST_FIXTURE_TEST_CASE(readOutputBugfix, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+    {
+		Bit input = pinIn().setName("input");
+		Bit output;
+		Bit output2;
+		{
+			Area area("mainArea", true);
+
+			{
+				Area area("producingSubArea", true);
+				output = input ^ '1';
+			}
+			{
+				Area area("consumingSubArea", true);
+				output2 = output ^ '1';
+			}
+		}
+
+        pinOut(output).setName("out");
+        pinOut(output2).setName("out2");
+    }
+
+	testCompilation(TARGET_QUARTUS);
+	BOOST_TEST(exportContains(std::regex{"workaroundEntityInOut08Bug"}));
+	BOOST_TEST(exportContains(std::regex{"workaroundReadOut08Bug"}));
+	DesignScope::visualize("test_inout08");
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(readOutputLocalBugfix, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+    {
+		Bit input = pinIn().setName("input");
+		Bit output;
+		Bit output2;
+		{
+			Area area("mainArea", true);
+
+			output = input ^ '1';
+			output2 = output ^ '1';
+		}
+
+        pinOut(output).setName("out");
+        pinOut(output2).setName("out2");
+    }
+
+	testCompilation(TARGET_QUARTUS);
+	BOOST_TEST(exportContains(std::regex{"workaroundReadOut08Bug"}));
+	DesignScope::visualize("test_outputLocal");
+}
+
 
 
 
