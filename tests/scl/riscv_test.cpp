@@ -825,7 +825,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 		for (size_t i = 0; i < 32; ++i)
 		{
 			uint32_t opA = rng();
-			uint32_t opB = rng();
+			uint32_t opB = rng() % 2 ? opA : rng();
 			uint32_t ip = rng();
 			int32_t offset = (int32_t(rng()) >> (32 - 13)) & ~1;
 
@@ -844,7 +844,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 		for (size_t i = 0; i < 32; ++i)
 		{
 			uint32_t opA = rng();
-			uint32_t opB = rng();
+			uint32_t opB = rng() % 2 ? opA : rng();
 			uint32_t ip = rng();
 			int32_t offset = (int32_t(rng()) >> (32 - 13)) & ~1;
 
@@ -863,7 +863,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 		for (size_t i = 0; i < 32; ++i)
 		{
 			uint32_t opA = rng();
-			uint32_t opB = rng();
+			uint32_t opB = rng() % 2 ? opA : rng();
 			uint32_t ip = rng();
 			int32_t offset = (int32_t(rng()) >> (32 - 13)) & ~1;
 
@@ -882,7 +882,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 		for (size_t i = 0; i < 32; ++i)
 		{
 			uint32_t opA = rng();
-			uint32_t opB = rng();
+			uint32_t opB = rng() % 2 ? opA : rng();
 			uint32_t ip = rng();
 			int32_t offset = (int32_t(rng()) >> (32 - 13)) & ~1;
 
