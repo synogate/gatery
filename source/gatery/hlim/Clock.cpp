@@ -84,7 +84,7 @@ size_t Clock::getMinResetCycles() const
 
 	for (auto d : m_derivedClocks) {
 		HCL_ASSERT(d->m_phaseSynchronousWithParent);
-		auto cycles = d->getFrequencyMuliplier() * d->getMinResetCycles();
+		auto cycles = d->getMinResetCycles() / d->getFrequencyMuliplier();
 
 		res = std::max(res, ceil(cycles));
 	}

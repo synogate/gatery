@@ -34,6 +34,7 @@ void gtry::scl::usb::Function::setup(Phy& phy)
 	phy.setup(Phy::OpMode::FullSpeedFunction);
 	ClockScope clk{ phy.clock() };
 
+	phy.rx().eop.resetValue('0');
 	m_phy.checkRxAppendTx(phy.tx(), gtry::reg(phy.rx()));
 	m_rxStatus = gtry::reg(phy.status());
 	m_clock = phy.clock();

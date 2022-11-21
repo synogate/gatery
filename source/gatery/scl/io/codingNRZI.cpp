@@ -31,7 +31,7 @@ gtry::scl::VStream<gtry::UInt> gtry::scl::decodeNRZI(const VStream<UInt>& in, si
 	// decode differential signals only
 	IF(valid(in) & (*in)[0] != (*in)[1])
 	{
-		(*out)[0] = (*in)[0] == reg((*in)[0]);
+		(*out)[0] = (*in)[0] == reg((*in)[0], '0');
 		(*out)[1] = !(*out)[0];
 
 		if(stuffBitInterval)

@@ -32,7 +32,7 @@ namespace gtry::scl
 
 	Bit TileLinkA::isPut() const 
 	{ 
-		return opcode.lower(2_b) == 0; 
+		return opcode.upper(2_b) == 0; 
 	}
 
 	Bit TileLinkA::isBurst() const
