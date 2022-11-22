@@ -502,6 +502,91 @@ std::string RAMBxE2::attemptInferOutputName(size_t outputPort) const
 }
 
 
+hlim::OutputClockRelation RAMBxE2::getOutputClockRelation(size_t output) const
+{
+	switch (output) {
+		case OUT_CAS_DOUT_A: 
+		case OUT_CAS_DOUTP_A: 
+		case OUT_DOUT_A_DOUT: 
+		case OUT_DOUTP_A_DOUTP: 
+			return { .dependentClocks={ CLK_A_RD } };
+
+		case OUT_CAS_DOUT_B: 
+		case OUT_CAS_DOUTP_B: 
+		case OUT_DOUT_B_DOUT: 
+		case OUT_DOUTP_B_DOUTP: 
+			return { .dependentClocks={ CLK_B_WR } };
+
+
+		// I'm not too certain about these
+		case OUT_CAS_OUTD_BITERR:
+			return { .dependentInputs={ IN_CAS_IND_BITERR } };
+		case OUT_CAS_OUTS_BITERR:
+			return { .dependentInputs={ IN_CAS_INS_BITERR } };
+		case OUT_D_BITERR: 
+		case OUT_ECC_PARITY: 
+		case OUT_RD_ADDR_ECC: 
+		case OUT_S_BITERR: 
+			return { };
+	}	
+	return { };
+}
+
+bool RAMBxE2::checkValidInputClocks(std::span<hlim::SignalClockDomain> inputClocks) const
+{
+	auto clocksCompatible = [&](const hlim::Clock *clkA, const hlim::Clock *clkB) {
+		if (clkA == nullptr || clkB == nullptr) return false;
+		return clkA->getClockPinSource() == clkB->getClockPinSource();
+	};
+
+	auto checkCompatibleWith = [&](size_t input, const hlim::Clock *clk) {
+		if (getNonSignalDriver(input).node == nullptr) return true;
+
+		switch (inputClocks[input].type) {
+			case hlim::SignalClockDomain::UNKNOWN: return false;
+			case hlim::SignalClockDomain::CONSTANT: return true;
+			case hlim::SignalClockDomain::CLOCK: return clocksCompatible(inputClocks[input].clk, clk);
+		}
+		return false;
+	};
+
+
+	if (!checkCompatibleWith(IN_ADDR_A_RDADDR, m_clocks[CLK_A_RD])) return false;
+	if (!checkCompatibleWith(IN_ADDREN_A, m_clocks[CLK_A_RD])) return false;
+	if (!checkCompatibleWith(IN_CAS_DIMUX_A, m_clocks[CLK_A_RD])) return false;
+	if (!checkCompatibleWith(IN_CAS_DIN_A, m_clocks[CLK_A_RD])) return false;
+	if (!checkCompatibleWith(IN_CAS_DINP_A, m_clocks[CLK_A_RD])) return false;
+	if (!checkCompatibleWith(IN_CAS_DOMUX_A, m_clocks[CLK_A_RD])) return false;
+	if (!checkCompatibleWith(IN_CAS_DOMUXEN_A, m_clocks[CLK_A_RD])) return false;
+	if (!checkCompatibleWith(IN_CAS_OREG_IMUX_A, m_clocks[CLK_A_RD])) return false;
+	if (!checkCompatibleWith(IN_CAS_OREG_IMUXEN_A, m_clocks[CLK_A_RD])) return false;
+	if (!checkCompatibleWith(IN_DIN_A_DIN, m_clocks[CLK_A_RD])) return false;
+	if (!checkCompatibleWith(IN_DINP_A_DINP, m_clocks[CLK_A_RD])) return false;
+	if (!checkCompatibleWith(IN_EN_A_RD_EN, m_clocks[CLK_A_RD])) return false;
+	if (!checkCompatibleWith(IN_REG_CE_A_REG_CE, m_clocks[CLK_A_RD])) return false;
+	if (!checkCompatibleWith(IN_RST_RAM_A_RST_RAM, m_clocks[CLK_A_RD])) return false;
+	if (!checkCompatibleWith(IN_RST_REG_A_RST_REG, m_clocks[CLK_A_RD])) return false;
+	if (!checkCompatibleWith(IN_WE_A, m_clocks[CLK_A_RD])) return false;
+
+	if (!checkCompatibleWith(IN_ADDR_B_WRADDR, m_clocks[CLK_B_WR])) return false;
+	if (!checkCompatibleWith(IN_ADDREN_B, m_clocks[CLK_B_WR])) return false;
+	if (!checkCompatibleWith(IN_CAS_DIMUX_B, m_clocks[CLK_B_WR])) return false;
+	if (!checkCompatibleWith(IN_CAS_DIN_B, m_clocks[CLK_B_WR])) return false;
+	if (!checkCompatibleWith(IN_CAS_DINP_B, m_clocks[CLK_B_WR])) return false;
+	if (!checkCompatibleWith(IN_CAS_DOMUX_B, m_clocks[CLK_B_WR])) return false;
+	if (!checkCompatibleWith(IN_CAS_DOMUXEN_B, m_clocks[CLK_B_WR])) return false;
+	if (!checkCompatibleWith(IN_CAS_OREG_IMUX_B, m_clocks[CLK_B_WR])) return false;
+	if (!checkCompatibleWith(IN_CAS_OREG_IMUXEN_B, m_clocks[CLK_B_WR])) return false;
+	if (!checkCompatibleWith(IN_DIN_B_DIN, m_clocks[CLK_B_WR])) return false;
+	if (!checkCompatibleWith(IN_DINP_B_DINP, m_clocks[CLK_B_WR])) return false;
+	if (!checkCompatibleWith(IN_EN_B_WR_EN, m_clocks[CLK_B_WR])) return false;
+	if (!checkCompatibleWith(IN_REG_CE_B, m_clocks[CLK_B_WR])) return false;
+	if (!checkCompatibleWith(IN_RST_RAM_B, m_clocks[CLK_B_WR])) return false;
+	if (!checkCompatibleWith(IN_RST_REG_B, m_clocks[CLK_B_WR])) return false;
+	if (!checkCompatibleWith(IN_WE_B_WE, m_clocks[CLK_B_WR])) return false;
+
+	return true;
+}
 
 
 }
