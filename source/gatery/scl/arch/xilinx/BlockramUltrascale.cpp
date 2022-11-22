@@ -174,6 +174,8 @@ void BlockramUltrascale::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
 		auto *bram = DesignScope::createNode<RAMB36E2>();
 		hookUpSingleBRamSDP(bram, m_desc.addressBits, widthSingle36k, memGrp);
 	}
+
+	HCL_ASSERT(!memGrp->getMemory()->requiresPowerOnInitialization()); // todo: implement
 }
 
 void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, size_t width, hlim::MemoryGroup *memGrp) const

@@ -23,6 +23,7 @@
 
 #include "../NodeGroup.h"
 #include "../SignalDelay.h"
+#include "../Clock.h"
 
 namespace gtry::hlim {
 
@@ -169,6 +170,27 @@ namespace gtry::hlim {
 				if (port->isWritePort()) return false;
 
 		return true;
+	}
+	
+	bool Node_Memory::requiresPowerOnInitialization() const
+	{
+		if (!sim::anyDefined(m_powerOnState)) return false;
+
+		std::optional<bool> initializeMemory;
+		for (auto np : getPorts())
+			if (auto *port = dynamic_cast<Node_MemPort*>(np.node))
+				if (port->isWritePort()) {
+					if (!initializeMemory)
+						initializeMemory = port->getClocks()[0]->getRegAttribs().initializeMemory;
+					else
+						HCL_ASSERT_HINT(*initializeMemory == port->getClocks()[0]->getRegAttribs().initializeMemory, "Memory has conflicting memory initialization directives from register attributes from different clocks!");
+				}
+
+		// This can only happen if there is no write port, which means the memory is a rom. ROMs must always be initalized.
+		if (!initializeMemory)
+			initializeMemory = true; 
+
+		return *initializeMemory;
 	}
 
 	Node_MemPort *Node_Memory::getLastPort()

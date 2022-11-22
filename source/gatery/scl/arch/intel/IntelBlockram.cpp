@@ -152,7 +152,7 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 	memGrp->verify();
 
 	auto *altsyncram = DesignScope::createNode<ALTSYNCRAM>(memGrp->getMemory()->getSize());
-	if (writeClock == nullptr || writeClock->getRegAttribs().initializeMemory)
+	if (memGrp->getMemory()->requiresPowerOnInitialization())
 		altsyncram->setInitialization(memGrp->getMemory()->getPowerOnState());
 
 	if (memGrp->getWritePorts().size() == 0)

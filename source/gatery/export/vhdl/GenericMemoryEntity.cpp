@@ -106,21 +106,6 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 
 	std::set<size_t> portSizes;
 
-	std::optional<bool> initializeMemory;
-
-	for (auto &wp : m_memGrp->getWritePorts()) {
-		portSizes.insert(wp.node->getBitWidth());
-
-		if (!initializeMemory)
-			initializeMemory = wp.node->getClocks()[0]->getRegAttribs().initializeMemory;
-		else
-			HCL_ASSERT_HINT(*initializeMemory == wp.node->getClocks()[0]->getRegAttribs().initializeMemory, "Memory has conflicting memory initialization directives from register attributes from different clocks!");
-	}
-
-	// This can only happen if there is no write port, which means the memory is a rom. ROMs must always be initalized.
-	if (!initializeMemory)
-		initializeMemory = true; 
-
 	for (auto &rp : m_memGrp->getReadPorts())
 		portSizes.insert(rp.node->getBitWidth());
 
@@ -145,15 +130,11 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 	cf.indent(stream, 1);
 	stream << "SIGNAL memory : mem_type";
 
-	const auto &powerOnState = m_memGrp->getMemory()->getPowerOnState();
-	const auto* defined_begin = powerOnState.data(sim::DefaultConfig::DEFINED);
-	const auto* defined_end = defined_begin + powerOnState.getNumBlocks();
-	bool isDefined = std::any_of(defined_begin, defined_end, [](auto val) { 
-		return val != 0; 
-	});
 
-	if(isDefined && *initializeMemory)
+	if (m_memGrp->getMemory()->requiresPowerOnInitialization())
 	{
+		const auto &powerOnState = m_memGrp->getMemory()->getPowerOnState();
+
 		stream << " := (\n";
 
 		auto memorySize = m_memGrp->getMemory()->getSize();

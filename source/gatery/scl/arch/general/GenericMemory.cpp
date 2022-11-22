@@ -154,8 +154,7 @@ bool EmbeddedMemoryPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 		request.mode = GenericMemoryCapabilities::Mode::SIMPLE_DUAL_PORT;
 
 	request.dualClock = !memtools::memoryIsSingleClock(nodeGroup);
-	request.powerOnInitialized = sim::anyDefined(memGrp->getMemory()->getPowerOnState());
-	// not yet implemented
+	request.powerOnInitialized = memGrp->getMemory()->requiresPowerOnInitialization();
 
 	switch (memGrp->getMemory()->type()) {
 		case hlim::Node_Memory::MemType::SMALL:
