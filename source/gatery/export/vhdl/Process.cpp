@@ -1013,7 +1013,7 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 
 	if (m_config.reset != nullptr && m_config.resetType == hlim::RegisterAttributes::ResetType::ASYNCHRONOUS) {
 		cf.indent(stream, indentation+1);
-		const char resetValue = m_config.clock->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH ? '1' : '0';
+		const char resetValue = m_config.resetHighActive ? '1' : '0';
 		stream << "IF (" << resetName << " = '" << resetValue << "') THEN" << std::endl;
 
 		for (auto node : m_nodes) {
@@ -1057,7 +1057,7 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 	unsigned indentationOffset = 0;
 	if (m_config.reset != nullptr && m_config.resetType == hlim::RegisterAttributes::ResetType::SYNCHRONOUS) {
 		cf.indent(stream, indentation+2);
-		const char resetValue = m_config.clock->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH ? '1' : '0';
+		const char resetValue = m_config.resetHighActive ? '1' : '0';
 		stream << "IF (" << resetName << " = '" << resetValue << "') THEN" << std::endl;
 
 		for (auto node : m_nodes) {
