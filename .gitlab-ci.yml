@@ -10,7 +10,9 @@ linux-build:
   script:
     - premake5 gmake2
     - make -j4
+    - make -j4 config=coverage
   artifacts:
+    expire_in: 2 days
     paths:
       - bin/
 
@@ -22,6 +24,7 @@ windows-build:
     - premake5 vs2022
     - '& "${Env:ProgramFiles}\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64\msbuild.exe"'
   artifacts:
+    expire_in: 2 days
     paths:
       - bin/
 
@@ -63,3 +66,21 @@ test-windows-scl:
   script:
     - .\bin\windows-x86_64-Debug\gatery-scl-test.exe
 
+test-linux-coverage:
+  stage: test
+  tags:
+    - linux
+  script:
+    - lcov --directory . --zerocounters
+    - bin/linux-x86_64-Coverage/gatery-frontend-test
+    - bin/linux-x86_64-Coverage/gatery-scl-test
+    - lcov --directory . --capture --output-file unittest_coverage.info
+    - lcov --remove unittest_coverage.info '/usr/*' --output-file unittest_coverage.info
+    - lcov --remove unittest_coverage.info '*/source/external/*' --output-file unittest_coverage.info
+    - mkdir cov
+    - anybadge --value=$(lcov --summary unittest_coverage.info | grep lines | cut -d' ' -f 4 | cut -d'%' -f 1) --file cov/coverage.svg coverage
+    - genhtml unittest_coverage.info -o cov/
+  artifacts:
+    expire_in: 4 weeks
+    paths:
+      - cov/    
