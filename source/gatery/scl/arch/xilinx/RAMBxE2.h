@@ -185,6 +185,9 @@ class RAMBxE2 : public gtry::ExternalComponent
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 
 		virtual std::string attemptInferOutputName(size_t outputPort) const override;
+
+		virtual hlim::OutputClockRelation getOutputClockRelation(size_t output) const override;
+		virtual bool checkValidInputClocks(std::span<hlim::SignalClockDomain> inputClocks) const override;
 	protected:
 		Type m_type;
 

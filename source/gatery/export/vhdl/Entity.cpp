@@ -179,9 +179,9 @@ void Entity::allocateNames()
 		block->allocateNames();
 }
 
-std::set<std::string> Entity::collectNeededLibraries()
+std::map<std::string, std::set<std::string>> Entity::collectNeededLibraries()
 {
-	std::set<std::string> libs;
+	std::map<std::string, std::set<std::string>> libs;
 	addNeededLibraries(libs);
 	for (auto &block : m_blocks)
 		block->addNeededLibraries(libs);
@@ -194,11 +194,15 @@ void Entity::writeLibrariesVHDL(std::ostream &stream)
 {
 	stream << "LIBRARY ieee;\n"
 		   << "USE ieee.std_logic_1164.ALL;\n"
-		   << "USE ieee.numeric_std.all;\n\n";
+		   << "USE ieee.numeric_std.ALL;\n\n";
 
 	auto additionalLibs = collectNeededLibraries();
-	for (auto &lib : additionalLibs)
-		stream << "LIBRARY " << lib << ";\n\n";
+	for (auto &lib : additionalLibs) {
+		stream << "LIBRARY " << lib.first << ";\n";
+		for (const auto &useDecl : lib.second)
+			stream << "USE " << useDecl << ";\n";
+		stream << '\n';
+	}
 
 	// Import everything for now
 	for (const auto &package : m_ast.getPackages())

@@ -93,14 +93,14 @@ const EmbeddedMemory *EmbeddedMemoryList::selectMemFor(hlim::NodeGroup *group, G
 		for (auto &mem : m_embeddedMemories) {
 			const auto &desc = mem->getDesc();
 			if (request.sizeCategory.contains(desc.sizeCategory) && 
-				(1ull << mem->getDesc().addressBits) >= request.maxDepth) {
+				(1ull << desc.addressBits) >= request.maxDepth) {
 					if (request.dualClock && !desc.supportsDualClock) {
 						dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Not choosing memory primitive " << desc.memoryName 
 								<< " for " << group << " because it does not support dual clock.");
 						continue;
 					} 
 
-					if (request.powerOnInitialized && !desc.supportsDualClock) {
+					if (request.powerOnInitialized && !desc.supportsPowerOnInitialization) {
 						dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Not choosing memory primitive " << desc.memoryName 
 								<< " for " << group << " because it does not support power-on initialization of it's content.");
 						continue;
@@ -118,6 +118,10 @@ const EmbeddedMemory *EmbeddedMemoryList::selectMemFor(hlim::NodeGroup *group, G
 			size_t choiceSize = 0;
 			for (auto &mem : m_embeddedMemories) {
 				const auto &desc = mem->getDesc();
+
+				if (request.dualClock && !desc.supportsDualClock) continue;
+				if (request.powerOnInitialized && !desc.supportsPowerOnInitialization) continue;
+
 				size_t size = (1ull << mem->getDesc().addressBits);
 				if (request.sizeCategory.contains(desc.sizeCategory)) {
 					if (memChoice == nullptr || size > choiceSize) {
@@ -126,7 +130,8 @@ const EmbeddedMemory *EmbeddedMemoryList::selectMemFor(hlim::NodeGroup *group, G
 					}
 				}
 			}
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Choosing memory primitive " << memChoice->getDesc().memoryName << " for " << group << " because it is the largest available.");
+			if (memChoice != nullptr)
+				dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Choosing memory primitive " << memChoice->getDesc().memoryName << " for " << group << " because it is the largest available.");
 		}
 	}
 	return memChoice;
@@ -149,8 +154,7 @@ bool EmbeddedMemoryPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 		request.mode = GenericMemoryCapabilities::Mode::SIMPLE_DUAL_PORT;
 
 	request.dualClock = !memtools::memoryIsSingleClock(nodeGroup);
-	request.powerOnInitialized = sim::anyDefined(memGrp->getMemory()->getPowerOnState());
-	// not yet implemented
+	request.powerOnInitialized = memGrp->getMemory()->requiresPowerOnInitialization();
 
 	switch (memGrp->getMemory()->type()) {
 		case hlim::Node_Memory::MemType::SMALL:

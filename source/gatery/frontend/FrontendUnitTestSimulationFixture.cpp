@@ -134,6 +134,16 @@ void BoostUnitTestSimulationFixture::prepRun()
 	}
 }
 
+ClockedTest::ClockedTest()
+{
+	m_clock.emplace(ClockConfig{
+			.absoluteFrequency = {{100'000'000,1}},
+			.initializeRegs = false,
+	});
+	m_clock->setName("clock");
+	m_clockScope.emplace(*m_clock);
+}
+
 void ClockedTest::teardown()
 {
 	try {

@@ -98,6 +98,7 @@ class Node_Memory : public Node<Node_Memory>
 		//virtual bool hasSideEffects() const override { return hasRef(); } // for now
 
 		bool isROM() const;
+		bool requiresPowerOnInitialization() const;
 
 		Node_MemPort *getLastPort();
 

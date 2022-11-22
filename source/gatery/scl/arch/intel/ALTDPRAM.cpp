@@ -55,7 +55,7 @@ ALTDPRAM::ALTDPRAM(size_t width, size_t depth)
 	m_genericParameters["INDATA_REG"] = "UNREGISTERED";
 
 	m_genericParameters["WIDTHAD"] = utils::Log2C(depth);
-	m_genericParameters["WIDTHBYTEENA"] = (size_t) 1;
+	m_genericParameters["WIDTH_BYTEENA"] = (size_t) 1;
 
 	resizeIOPorts(IN_COUNT, OUT_COUNT);
 
@@ -169,14 +169,14 @@ ALTDPRAM &ALTDPRAM::setupWritePort(PortSetup portSetup)
 ALTDPRAM &ALTDPRAM::setupRamType(const std::string &type)
 {
 	//m_genericParameters["ram_block_type"] = std::move(type);
-	m_genericParameters["ram_block_type"] = std::string("") + type + '"';
+	m_genericParameters["ram_block_type"] = type;
 	return *this;
 }
 
 ALTDPRAM &ALTDPRAM::setupSimulationDeviceFamily(const std::string &devFamily)
 {
 	//m_genericParameters["ram_block_type"] = std::move(type);
-	m_genericParameters["intended_device_family"] = std::string("") + devFamily + '"';
+	m_genericParameters["intended_device_family"] = devFamily;
 	return *this;
 }
 
