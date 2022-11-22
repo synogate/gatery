@@ -78,7 +78,11 @@ TileLinkUL gtry::scl::riscv::DualCycleRV::fetchTileLink(uint64_t entryPoint)
 	{
 		auto ent = m_area.enter("IP");
 
-		IF(transfer(link.a))
+		// 1. ip = istruction pointer to fetch next
+		// 2. ipDecode = instruction pointer for current decode stage instruction
+		// 3. m_IP = instruction pointer of execute stage instruction
+
+		IF(transfer(link.a) & !m_overrideIPValid)
 			ip += 4;
 		ip = reg(ip, entryPoint);
 
@@ -99,6 +103,7 @@ TileLinkUL gtry::scl::riscv::DualCycleRV::fetchTileLink(uint64_t entryPoint)
 		IF(transfer(link.a))
 			ipDecode = ip;
 		ipDecode = reg(ipDecode, 0);
+		HCL_NAMED(ipDecode);
 
 		IF(!m_stall & running & instructionValid)
 			m_IP = ipDecode;
@@ -111,13 +116,13 @@ TileLinkUL gtry::scl::riscv::DualCycleRV::fetchTileLink(uint64_t entryPoint)
 	link.a->size = 2;
 	link.a->source = 0;
 	link.a->address = ip;
-	link.a->mask = 3;
+	link.a->mask = 0xF;
 	link.a->data = ConstBVec(32_b);
 
 	valid(link.a) = '0';
 	IF(transfer(*link.d) & !m_stall)
 		valid(link.a) = '1';
-	IF(!requestPending & !reset())
+	IF(!requestPending & !reset() & !m_stall)
 		valid(link.a) = '1';
 
 	// instruction is valid for exactly one non stall cycle
