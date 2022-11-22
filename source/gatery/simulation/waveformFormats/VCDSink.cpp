@@ -276,8 +276,8 @@ namespace gtry::sim
 			if (clockDomain.first != nullptr) {
 				auto *clockPin = clockDomain.first->getClockPinSource();
 				m_gtkWaveProjectFile.appendSignal(std::string("clocks.")+clockPin->getName()).color = GTKWaveProjectFile::Signal::BLUE;
-				auto *rstPin = clockDomain.first->getResetPinSource();
-				m_gtkWaveProjectFile.appendSignal(std::string("clocks.")+rstPin->getResetName()).color = GTKWaveProjectFile::Signal::INDIGO;
+				if(auto* rstPin = clockDomain.first->getResetPinSource())
+					m_gtkWaveProjectFile.appendSignal(std::string("clocks.")+rstPin->getResetName()).color = GTKWaveProjectFile::Signal::INDIGO;
 			}
 
 			m_gtkWaveProjectFile.appendBlank();
