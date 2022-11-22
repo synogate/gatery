@@ -42,7 +42,7 @@ function GateryProjectDefaults()
 
     filter {"system:linux", "configurations:Coverage"}
 		buildoptions { "--coverage", "-fprofile-arcs", "-ftest-coverage" }
-        linkoptions { "-coverage" }
+        linkoptions { "--coverage" }
 	
 	filter {}
 end
