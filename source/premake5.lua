@@ -31,6 +31,8 @@ function GateryWorkspaceDefaults()
             "boost_json",
             "dl"
         }
+		
+	filter {}
 end
 
 function GateryProjectDefaults()
@@ -39,9 +41,10 @@ function GateryProjectDefaults()
     defines { "_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING" }
 
     filter {"system:linux", "configurations:Coverage"}
-        buildoptions { "--coverage", "-fprofile-arcs", "-ftest-coverage" }
+		buildoptions { "--coverage", "-fprofile-arcs", "-ftest-coverage" }
         linkoptions { "-coverage" }
-        -- links { "cov" }
+	
+	filter {}
 end
 
 project "gatery"
