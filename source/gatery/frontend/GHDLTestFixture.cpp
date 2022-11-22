@@ -144,10 +144,10 @@ void GHDLTestFixture::runTest(const hlim::ClockRational &timeoutSeconds)
 	if (GHDLGlobalFixture::hasXilinxLibrary())
 		softlinkAll(GHDLGlobalFixture::getXilinxLibrary());
 
-	BOOST_REQUIRE(bp::system(ghdlExecutable, "-a", "--std=08", "--ieee=synopsys", "-frelaxed", "design.vhd") == 0);
-	BOOST_REQUIRE(bp::system(ghdlExecutable, "-a", "--std=08", "--ieee=synopsys", "-frelaxed", "testbench.vhd") == 0);
-	BOOST_REQUIRE(bp::system(ghdlExecutable, "-e", "--std=08", "--ieee=synopsys", "-frelaxed", "testbench") == 0);
-	BOOST_REQUIRE(bp::system(ghdlExecutable, "-r", "--std=08", "testbench", "--ieee-asserts=disable", "--vcd=ghdl.vcd", "--assert-level=error") == 0);
+	BOOST_CHECK(bp::system(ghdlExecutable, "-a", "--std=08", "--ieee=synopsys", "-frelaxed", "--warn-error", "design.vhd") == 0);
+	BOOST_CHECK(bp::system(ghdlExecutable, "-a", "--std=08", "--ieee=synopsys", "-frelaxed", "--warn-error", "testbench.vhd") == 0);
+	BOOST_CHECK(bp::system(ghdlExecutable, "-e", "--std=08", "--ieee=synopsys", "-frelaxed", "--warn-error", "testbench") == 0);
+	BOOST_CHECK(bp::system(ghdlExecutable, "-r", "--std=08", "testbench", "--ieee-asserts=disable", "--vcd=ghdl.vcd", "--assert-level=error") == 0);
 }
 
 bool GHDLTestFixture::exportContains(const std::regex &regex)
