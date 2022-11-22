@@ -17,12 +17,13 @@
 */
 #include "scl/pch.h"
 
+#include "MappingTests_IO.h"
+#include "MappingTests_Memory.h"
 
 #include <gatery/frontend/GHDLTestFixture.h>
 #include <gatery/scl/arch/intel/IntelDevice.h>
 #include <gatery/scl/arch/intel/ALTPLL.h>
 #include <gatery/scl/utils/GlobalBuffer.h>
-#include <gatery/scl/io/ddr.h>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/data/dataset.hpp>
@@ -36,6 +37,23 @@ boost::test_tools::assertion_result canCompileIntel(boost::unit_test::test_unit_
 {
 	return gtry::GHDLGlobalFixture::hasGHDL() && gtry::GHDLGlobalFixture::hasIntelLibrary();
 }
+
+
+namespace {
+
+template<class Fixture>
+struct TestWithDefaultDevice : public Fixture
+{
+	TestWithDefaultDevice() {
+		auto device = std::make_unique<gtry::scl::IntelDevice>();
+		//device->setupMAX10();
+		device->setupArria10();
+		Fixture::design.setTargetTechnology(std::move(device));
+	}
+};
+
+}
+
 
 
 BOOST_AUTO_TEST_SUITE(IntelTechMapping, * precondition(canCompileIntel))
@@ -242,98 +260,17 @@ BOOST_FIXTURE_TEST_CASE(testAltPll, gtry::GHDLTestFixture)
 	testCompilation();
 }
 
-
-BOOST_FIXTURE_TEST_CASE(instantiate_scl_ddr, gtry::GHDLTestFixture)
+BOOST_FIXTURE_TEST_CASE(scl_ddr, TestWithDefaultDevice<Test_ODDR>)
 {
-	using namespace gtry;
-
-	auto device = std::make_unique<scl::IntelDevice>();
-	device->setupMAX10();
-	design.setTargetTechnology(std::move(device));
-
-	Clock clock1({
-			.absoluteFrequency = {{125'000'000,1}},
-			.initializeRegs = false,
-	});
-	HCL_NAMED(clock1);
-	ClockScope scp(clock1);
-
-	Bit d1 = pinIn().setName("d1");
-	Bit d2 = pinIn().setName("d2");
-
-	Bit o = scl::ddr(d1, d2);
-	
-	pinOut(o).setName("ddr_output");
-
-	testCompilation();
+	execute();
 	BOOST_TEST(exportContains(std::regex{"ALTDDIO_OUT"}));
 }
 
 
-BOOST_FIXTURE_TEST_CASE(instantiate_simulate_scl_ddr, gtry::GHDLTestFixture)
+
+BOOST_FIXTURE_TEST_CASE(scl_ddr_for_clock, TestWithDefaultDevice<Test_ODDR_ForClock>)
 {
-	using namespace gtry;
-
-	auto device = std::make_unique<scl::IntelDevice>();
-	device->setupMAX10();
-	design.setTargetTechnology(std::move(device));
-
-	Clock clock1({
-			.absoluteFrequency = {{125'000'000,1}},
-			.initializeRegs = false,
-	});
-	HCL_NAMED(clock1);
-	ClockScope scp(clock1);
-
-	Bit d1 = pinIn().setName("d1");
-	Bit d2 = pinIn().setName("d2");
-	HCL_NAMED(d1);
-	HCL_NAMED(d2);
-
-	Bit o = scl::ddr(d1, d2);
-
-	HCL_NAMED(o);
-	
-	pinOut(o).setName("ddr_output");
-
-	pinOut(reg(d1)).setName("clockUser");
-
-	addSimulationProcess([=,this]()->SimProcess {
-		co_await OnClk(clock1);
-
-		BOOST_TEST(!simu(o).allDefined());
-
-		co_await OnClk(clock1);
-
-		for ([[maybe_unused]] auto i : gtry::utils::Range(20)) {
-			bool a = (i & 1);
-			bool b = (i & 2);
-
-			simu(d1) = a?'1':'0';
-			simu(d2) = b?'1':'0';
-
-			fork([](Seconds cyclePeriod, const Bit &out, bool a, bool b)->SimProcess {
-				// Wait for one full clock cycle (because of ddr registers) and then a quarter cycle in case the simulation model has some modeled delay.
-				co_await WaitFor(Seconds{5,4} * cyclePeriod);
-
-				BOOST_TEST(simu(out) == (a?'1':'0'));
-
-				// Check the other after half a cycle.
-				co_await WaitFor(cyclePeriod/Seconds{2});
-
-				BOOST_TEST(simu(out) == (b?'1':'0'));
-
-			}(Seconds{1} / clock1.absoluteFrequency(), o, a, b));
-
-			co_await OnClk(clock1);
-		}
-
-		stopTest();
-	});
-
-
-
-	runTest(Seconds{100} / clock1.absoluteFrequency());
+	execute();
 	BOOST_TEST(exportContains(std::regex{"ALTDDIO_OUT"}));
 }
 
@@ -341,28 +278,46 @@ BOOST_FIXTURE_TEST_CASE(instantiate_simulate_scl_ddr, gtry::GHDLTestFixture)
 
 
 
-BOOST_FIXTURE_TEST_CASE(instantiate_scl_ddr_for_clock, gtry::GHDLTestFixture)
+BOOST_FIXTURE_TEST_CASE(lutram_1, TestWithDefaultDevice<Test_Histogram>)
 {
 	using namespace gtry;
-
-	auto device = std::make_unique<scl::IntelDevice>();
-	device->setupMAX10();
-	design.setTargetTechnology(std::move(device));
-
-	Clock clock1({
-			.absoluteFrequency = {{125'000'000,1}},
-			.initializeRegs = false,
-	});
-	HCL_NAMED(clock1);
-	ClockScope scp(clock1);
-
-	Bit o = scl::ddr('1', '0');
-	
-	pinOut(o).setName("ddr_output");
-
-	testCompilation();
-	BOOST_TEST(exportContains(std::regex{"ALTDDIO_OUT"}));
+	numBuckets = 4;
+	bucketWidth = 8_b;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"altdpram"}));
+	BOOST_TEST(exportContains(std::regex{"ram_block_type => \"MLAB\""}));
 }
+
+BOOST_FIXTURE_TEST_CASE(lutram_2, TestWithDefaultDevice<Test_Histogram>)
+{
+	using namespace gtry;
+	numBuckets = 32;
+	bucketWidth = 8_b;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"altdpram"}));
+	BOOST_TEST(exportContains(std::regex{"ram_block_type => \"MLAB\""}));
+}
+
+BOOST_FIXTURE_TEST_CASE(blockram_1, TestWithDefaultDevice<Test_Histogram>)
+{
+	using namespace gtry;
+	numBuckets = 512;
+	bucketWidth = 8_b;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"altsyncram"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(blockram_2, TestWithDefaultDevice<Test_Histogram>)
+{
+	using namespace gtry;
+	numBuckets = 512;
+	iterationFactor = 4;
+	bucketWidth = 32_b;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"altsyncram"}));
+}
+
+
 
 
 

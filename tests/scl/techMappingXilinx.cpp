@@ -17,12 +17,12 @@
 */
 #include "scl/pch.h"
 
+#include "MappingTests_IO.h"
+#include "MappingTests_Memory.h"
 
 #include <gatery/frontend/GHDLTestFixture.h>
 #include <gatery/scl/arch/xilinx/XilinxDevice.h>
-#include <gatery/scl/arch/xilinx/ODDR.h>
 #include <gatery/scl/utils/GlobalBuffer.h>
-#include <gatery/scl/io/ddr.h>
 
 
 #include <gatery/scl/arch/xilinx/IOBUF.h>
@@ -41,6 +41,22 @@ boost::test_tools::assertion_result canCompileXilinx(boost::unit_test::test_unit
 {
 	return gtry::GHDLGlobalFixture::hasGHDL() && gtry::GHDLGlobalFixture::hasXilinxLibrary();
 }
+
+namespace {
+
+template<class Fixture>
+struct TestWithDefaultDevice : public Fixture
+{
+	TestWithDefaultDevice() {
+		auto device = std::make_unique<gtry::scl::XilinxDevice>();
+		//device->setupZynq7();
+		device->setupVirtexUltrascale();
+		Fixture::design.setTargetTechnology(std::move(device));
+	}
+};
+
+}
+
 
 
 BOOST_AUTO_TEST_SUITE(XilinxTechMapping, * precondition(canCompileXilinx))
@@ -139,66 +155,54 @@ BOOST_FIXTURE_TEST_CASE(DCFifo, gtry::GHDLTestFixture)
 }
 
 
-BOOST_FIXTURE_TEST_CASE(instantiateODDR, gtry::GHDLTestFixture)
+BOOST_FIXTURE_TEST_CASE(scl_ddr, TestWithDefaultDevice<Test_ODDR>)
 {
-	using namespace gtry;
-
-	auto device = std::make_unique<scl::XilinxDevice>();
-	device->setupZynq7();
-	design.setTargetTechnology(std::move(device));
-
-	Clock clock1({
-			.absoluteFrequency = {{125'000'000,1}},
-			.initializeRegs = false,
-	});
-	HCL_NAMED(clock1);
-	ClockScope scp(clock1);
-
-	auto *ddr = design.createNode<scl::arch::xilinx::ODDR>();
-	ddr->attachClock(clock1.getClk(), scl::arch::xilinx::ODDR::CLK_IN);
-
-	ddr->setEdgeMode(scl::arch::xilinx::ODDR::SAME_EDGE);
-	ddr->setInitialOutputValue(false);
-
-	ddr->setInput(scl::arch::xilinx::ODDR::IN_D1, pinIn().setName("d1"));
-	ddr->setInput(scl::arch::xilinx::ODDR::IN_D2, pinIn().setName("d2"));
-	ddr->setInput(scl::arch::xilinx::ODDR::IN_SET, clock1.rstSignal());
-	ddr->setInput(scl::arch::xilinx::ODDR::IN_CE, Bit('1'));
-	
-	pinOut(ddr->getOutputBit(scl::arch::xilinx::ODDR::OUT_Q)).setName("ddr_output");
-
-
-	testCompilation();
+	execute();
 	BOOST_TEST(exportContains(std::regex{"ODDR"}));
 }
 
-BOOST_FIXTURE_TEST_CASE(instantiate_scl_ddr, gtry::GHDLTestFixture)
+BOOST_FIXTURE_TEST_CASE(scl_ddr_for_clock, TestWithDefaultDevice<Test_ODDR_ForClock>)
 {
-	using namespace gtry;
-
-	auto device = std::make_unique<scl::XilinxDevice>();
-	device->setupZynq7();
-	design.setTargetTechnology(std::move(device));
-
-	Clock clock1({
-			.absoluteFrequency = {{125'000'000,1}},
-			.initializeRegs = false,
-	});
-	HCL_NAMED(clock1);
-	ClockScope scp(clock1);
-
-	Bit d1 = pinIn().setName("d1");
-	Bit d2 = pinIn().setName("d2");
-
-	Bit o = scl::ddr(d1, d2);
-	
-	pinOut(o).setName("ddr_output");
-
-	testCompilation();
+	execute();
 	BOOST_TEST(exportContains(std::regex{"ODDR"}));
 }
 
+BOOST_FIXTURE_TEST_CASE(lutram_1, TestWithDefaultDevice<Test_Histogram>)
+{
+	using namespace gtry;
+	numBuckets = 4;
+	bucketWidth = 8_b;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"RAM64M8"}));
+}
 
+BOOST_FIXTURE_TEST_CASE(lutram_2, TestWithDefaultDevice<Test_Histogram>)
+{
+	using namespace gtry;
+	numBuckets = 32;
+	bucketWidth = 8_b;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"RAM256X1D"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(blockram_1, TestWithDefaultDevice<Test_Histogram>)
+{
+	using namespace gtry;
+	numBuckets = 128;
+	bucketWidth = 32_b;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"RAMB18E2"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(blockram_2, TestWithDefaultDevice<Test_Histogram>)
+{
+	using namespace gtry;
+	numBuckets = 512;
+	iterationFactor = 4;
+	bucketWidth = 64_b;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"RAMB36E2"}));
+}
 
 
 BOOST_FIXTURE_TEST_CASE(test_bidir_intra_connection, gtry::GHDLTestFixture)
