@@ -553,8 +553,8 @@ namespace gtry::scl
 
 			IF(valid_reg)
 			{
-				valid(ret) = '1';
 				downstream(ret) = data_reg;
+				valid(ret) = '1';
 			}
 		}
 		return ret;
