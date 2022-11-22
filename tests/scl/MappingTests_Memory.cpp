@@ -78,10 +78,13 @@ void Test_Histogram::execute()
 				co_await AfterClk(clock);
 
 			BOOST_TEST(simu(bucketValue) == (int) histCopy[i]);
+
+			if (latency == 0)
+				co_await AfterClk(clock);
 		}
 
 		stopTest();
 	});
 
-	runTest(Seconds{numBuckets + numBuckets*iterationFactor + numBuckets * latency + 100,1} / clock.absoluteFrequency());
+	runTest(Seconds{numBuckets + numBuckets*iterationFactor + numBuckets * (latency+1) + 100,1} / clock.absoluteFrequency());
 }
