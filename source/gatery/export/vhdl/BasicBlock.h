@@ -94,7 +94,7 @@ class BasicBlock : public BaseGrouping
 		inline const std::vector<Entity*> &getSubEntities() const { return m_entities; }
 		inline const std::vector<std::string> &getSubEntityInstanceNames() const { return m_entityInstanceNames; }
 		inline const std::vector<ExternalNodeInstance> getExternalNodes() const { return m_externalNodes; }
-		void addNeededLibraries(std::set<std::string> &libs) const;
+		void addNeededLibraries(std::map<std::string, std::set<std::string>> &libs) const;
 
 		virtual void writeSupportFiles(const std::filesystem::path &destination) const;
 	protected:

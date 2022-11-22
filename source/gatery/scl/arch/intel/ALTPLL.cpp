@@ -28,10 +28,10 @@ namespace gtry::scl::arch::intel
 {
 	ALTPLL::ALTPLL()
 	{
-		// The altpll in altera_mf_components is subtly different and broken so this one needs an explicit component declaration to override that.
 		m_libraryName = "altera_mf";
-		m_packageName = "altera_mf_components";
+		m_packageName = "";
 		m_requiresComponentDeclaration = true;
+		m_requiresNoFullInstantiationPath = true; // Intel Quartus doesn't properly replace the altpll macro if it uses the full component path ("altera_mf.altpll").
 		m_name = "ALTPLL";
 
 		if (IntelDevice* dev = DesignScope::get()->getTargetTechnology<IntelDevice>())

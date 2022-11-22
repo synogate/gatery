@@ -121,6 +121,7 @@ class Node_External : public Node<Node_External>
 		inline const std::string &getPackageName() const { return m_packageName; }
 		inline bool isEntity() const { return m_isEntity; }
 		inline bool requiresComponentDeclaration() const { return m_requiresComponentDeclaration; }
+		inline bool requiresNoFullInstantiationPath() const { return m_requiresNoFullInstantiationPath; }
 		inline const std::map<std::string, GenericParameter> &getGenericParameters() const { return m_genericParameters; }
 		inline const std::vector<std::string> &getClockNames() const { return m_clockNames; }
 		inline const std::vector<std::string> &getResetNames() const { return m_resetNames; }
@@ -152,6 +153,7 @@ class Node_External : public Node<Node_External>
 	protected:
 		bool m_isEntity = false;
 		bool m_requiresComponentDeclaration = false;
+		bool m_requiresNoFullInstantiationPath = false;
 		std::string m_libraryName;
 		std::string m_packageName;
 		std::map<std::string, GenericParameter> m_genericParameters;

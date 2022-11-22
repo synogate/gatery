@@ -191,11 +191,18 @@ void BasicBlock::routeChildIOUpwards(BaseGrouping *child)
 	verifySignalsDisjoint();
 }
 
-void BasicBlock::addNeededLibraries(std::set<std::string> &libs) const
+void BasicBlock::addNeededLibraries(std::map<std::string, std::set<std::string>> &libs) const
 {
 	for (auto n : m_externalNodes)
-		if (!n.node->getLibraryName().empty())
-			libs.insert(n.node->getLibraryName());
+		if (!n.node->getLibraryName().empty()) {
+			auto &useDeclarations = libs[n.node->getLibraryName()];
+			if (n.node->requiresNoFullInstantiationPath()) {
+				if (n.node->getPackageName().empty())
+					useDeclarations.insert(n.node->getLibraryName()+".ALL");
+				else
+					useDeclarations.insert(n.node->getLibraryName()+'.'+n.node->getPackageName()+".ALL");
+			}
+		}
 }
 
 
@@ -517,7 +524,7 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
 				stream << m_externalNodes[statement.ref.externalNodeIdx].instanceName << " : ";
 				if (node->isEntity())
 					stream << " entity ";
-				if (!node->requiresComponentDeclaration()) {
+				if (!node->requiresNoFullInstantiationPath()) {
 					if (!node->getLibraryName().empty())
 						stream << node->getLibraryName() << '.';
 					if (!node->getPackageName().empty())
