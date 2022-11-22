@@ -93,14 +93,14 @@ const EmbeddedMemory *EmbeddedMemoryList::selectMemFor(hlim::NodeGroup *group, G
 		for (auto &mem : m_embeddedMemories) {
 			const auto &desc = mem->getDesc();
 			if (request.sizeCategory.contains(desc.sizeCategory) && 
-				(1ull << mem->getDesc().addressBits) >= request.maxDepth) {
+				(1ull << desc.addressBits) >= request.maxDepth) {
 					if (request.dualClock && !desc.supportsDualClock) {
 						dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Not choosing memory primitive " << desc.memoryName 
 								<< " for " << group << " because it does not support dual clock.");
 						continue;
 					} 
 
-					if (request.powerOnInitialized && !desc.supportsDualClock) {
+					if (request.powerOnInitialized && !desc.supportsPowerOnInitialization) {
 						dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Not choosing memory primitive " << desc.memoryName 
 								<< " for " << group << " because it does not support power-on initialization of it's content.");
 						continue;
