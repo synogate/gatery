@@ -87,12 +87,15 @@ namespace gtry {
 	class ClockedTest : protected BoostUnitTestSimulationFixture
 	{
 	public:
+		ClockedTest();
 		const Clock& clock() { return ClockScope::getClk(); }
 		void timeout(hlim::ClockRational value) { m_timeout = value; }
 
 		void teardown() override;
 
 	private:
+		std::optional<Clock> m_clock;
+		std::optional<ClockScope> m_clockScope;
 		hlim::ClockRational m_timeout = { 1, 1'000 };
 	};
 
