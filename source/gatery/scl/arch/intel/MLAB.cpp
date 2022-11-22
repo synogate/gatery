@@ -174,7 +174,8 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 	memGrp->verify();
 
 	auto *altdpram = DesignScope::createNode<ALTDPRAM>(width, depth);
-	altdpram->setInitialization(memGrp->getMemory()->getPowerOnState());
+	if (writeClock == nullptr || writeClock->getRegAttribs().initializeMemory)
+		altdpram->setInitialization(memGrp->getMemory()->getPowerOnState());
 
 	altdpram->setupRamType(m_desc.memoryName);
 	altdpram->setupSimulationDeviceFamily(m_intelDevice.getFamily());
