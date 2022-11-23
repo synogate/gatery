@@ -1,7 +1,7 @@
 
 function GateryWorkspaceDefaults()
 
-    configurations { "Debug", "Release" }
+    configurations { "Debug", "Release", "Coverage" }
     architecture "x64"
     symbols "On"
     flags { "MultiProcessorCompile" }
@@ -10,6 +10,9 @@ function GateryWorkspaceDefaults()
     defines { "_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING" }
 
     filter "configurations:Debug"
+        runtime "Debug"
+
+    filter "configurations:Coverage"
         runtime "Debug"
 
     filter "configurations:Release"
@@ -28,17 +31,20 @@ function GateryWorkspaceDefaults()
             "boost_json",
             "dl"
         }
-
-    filter {}
-
+		
+	filter {}
 end
 
 function GateryProjectDefaults()
-
     targetdir "%{wks.location}/bin/%{cfg.system}-%{cfg.architecture}-%{cfg.longname}"
     objdir "%{wks.location}/obj/%{cfg.system}-%{cfg.architecture}-%{cfg.longname}"
     defines { "_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING" }
 
+    filter {"system:linux", "configurations:Coverage"}
+		buildoptions { "--coverage", "-fprofile-arcs", "-ftest-coverage" }
+        linkoptions { "--coverage" }
+	
+	filter {}
 end
 
 project "gatery"
