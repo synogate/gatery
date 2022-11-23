@@ -2,6 +2,7 @@
 stages:
   - build
   - test
+  - coverage
 
 linux-build:
   stage: build
@@ -10,7 +11,6 @@ linux-build:
   script:
     - premake5 gmake2
     - make -j4
-    - make -j4 config=coverage
   artifacts:
     expire_in: 2 days
     paths:
@@ -67,10 +67,12 @@ test-windows-scl:
     - .\bin\windows-x86_64-Debug\gatery-scl-test.exe
 
 test-linux-coverage:
-  stage: test
+  stage: coverage
   tags:
     - linux
   script:
+    - premake5 gmake2
+    - make -j4 config=coverage
     - lcov --directory . --zerocounters
     - bin/linux-x86_64-Coverage/gatery-frontend-test
     - bin/linux-x86_64-Coverage/gatery-scl-test
@@ -83,4 +85,4 @@ test-linux-coverage:
   artifacts:
     expire_in: 4 weeks
     paths:
-      - cov/    
+        - cov/
