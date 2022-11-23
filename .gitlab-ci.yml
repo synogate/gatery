@@ -82,6 +82,8 @@ test-linux-coverage:
     - mkdir cov
     - anybadge --value=$(lcov --summary unittest_coverage.info | grep lines | cut -d' ' -f 4 | cut -d'%' -f 1) --file cov/coverage.svg coverage
     - genhtml unittest_coverage.info -o cov/
+    - rm -rf /mnt/doxygenDocu/gateryCov/*
+    - mv doc/gen/html/ /mnt/doxygenDocu/gateryCov    
   artifacts:
     expire_in: 4 weeks
     paths:
