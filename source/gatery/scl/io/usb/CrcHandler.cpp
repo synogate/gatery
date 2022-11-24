@@ -115,7 +115,8 @@ void gtry::scl::usb::CrcHandler::appendTx(PhyTxStream& _tx)
 	{
 		waitSop,
 		data,
-		checksum,
+		checksum_low,
+		checksum_high,
 	};
 	Reg<Enum<TxState>> state{ TxState::waitSop };
 	state.setName("state");
@@ -140,12 +141,22 @@ void gtry::scl::usb::CrcHandler::appendTx(PhyTxStream& _tx)
 			tx.valid = '1';
 			tx.data = checksum.lower(8_b);
 
+			state = TxState::checksum_low;
 			IF(tx.ready)
-				state = TxState::checksum;
+				state = TxState::checksum_high;
 		}
 	}
 
-	IF(state.current() == TxState::checksum)
+	IF(state.current() == TxState::checksum_low)
+	{
+		tx.valid = '1';
+		tx.data = checksum.lower(8_b);
+
+		IF(tx.ready)
+			state = TxState::checksum_high;
+	}
+
+	IF(state.current() == TxState::checksum_high)
 	{
 		tx.valid = '1';
 		tx.data = checksum.upper(8_b);
