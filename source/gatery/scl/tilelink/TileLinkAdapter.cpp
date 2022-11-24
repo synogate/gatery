@@ -25,6 +25,7 @@ namespace gtry::scl
 	scl::TileLinkUB tileLinkDoubleWidth(scl::TileLinkUB& slave)
 	{
 		Area ent{ "scl_tileLinkDoubleWidth", true };
+		HCL_NAMED(slave);
 
 		scl::TileLinkUB master;
 		scl::tileLinkInit(master,
@@ -34,34 +35,39 @@ namespace gtry::scl
 			slave.a->source.width()
 		);
 
+		scl::TileLinkChannelA masterA = master.a.regReady();
+		HCL_NAMED(masterA);
+
 		// request
-		valid(slave.a) = valid(master.a);
-		slave.a->opcode = master.a->opcode;
-		slave.a->param = master.a->param;
-		slave.a->size = master.a->size;
-		slave.a->source = master.a->source;
-		slave.a->address = master.a->address;
+		valid(slave.a) = valid(masterA);
+		slave.a->opcode = masterA->opcode;
+		slave.a->param = masterA->param;
+		slave.a->size = masterA->size;
+		slave.a->source = masterA->source;
+		slave.a->address = masterA->address;
 
 		{
 			Bit sendUpperHalfReg;
 			sendUpperHalfReg = reg(sendUpperHalfReg, '0');
+			HCL_NAMED(sendUpperHalfReg);
 
 			// select word based on address for single beat requests
 			Bit sendUpperHalf = sendUpperHalfReg;
-			IF(valid(master.a) & !slave.a->isBurst())
+			IF(valid(masterA) & !slave.a->isBurst())
 			{
 				size_t logBurstSize = utils::Log2(slave.a->mask.width().bits());
-				sendUpperHalf = master.a->address[logBurstSize];
+				sendUpperHalf = masterA->address[logBurstSize];
 			}
 
-			slave.a->mask = muxWord(sendUpperHalf, master.a->mask);
-			slave.a->data = muxWord(sendUpperHalf, master.a->data);
+			HCL_NAMED(sendUpperHalf);
+			slave.a->mask = muxWord(sendUpperHalf, masterA->mask);
+			slave.a->data = muxWord(sendUpperHalf, masterA->data);
 
 			// toggle between words for burst requests
-			IF(valid(master.a) & slave.a->isBurst())
+			IF(transfer(slave.a) & slave.a->isBurst())
 				sendUpperHalfReg = !sendUpperHalfReg;
 
-			ready(master.a) = ready(slave.a) & (!slave.a->isBurst() | sendUpperHalfReg == '0');
+			ready(masterA) = ready(slave.a) & (!slave.a->isBurst() | sendUpperHalfReg == '0');
 		}
 
 
@@ -94,6 +100,7 @@ namespace gtry::scl
 			ready(*slave.d) = ready(*master.d) | (!phase & sd.isBurst());
 			valid(*master.d) = valid(*slave.d) & !phase;
 		}
+		HCL_NAMED(master);
 		return master;
 	}
 
