@@ -214,7 +214,7 @@ void gtry::scl::riscv::DualCycleRV::setIP(const UInt& ip)
 	}
 }
 
-void gtry::scl::riscv::DualCycleRV::genRegisterFile(UInt rs1, UInt rs2, UInt rd)
+void gtry::scl::riscv::DualCycleRV::genRegisterFile(UInt rs1, UInt rs2, UInt)
 {
 	auto scope = m_area.enter("register_file");
 	HCL_NAMED(m_resultData);
@@ -222,7 +222,6 @@ void gtry::scl::riscv::DualCycleRV::genRegisterFile(UInt rs1, UInt rs2, UInt rd)
 	HCL_NAMED(m_stall);
 	HCL_NAMED(rs1);
 	HCL_NAMED(rs2);
-	HCL_NAMED(rd);
 
 	// setup register file
 	m_rf.setup(32, 32_b);
@@ -230,7 +229,7 @@ void gtry::scl::riscv::DualCycleRV::genRegisterFile(UInt rs1, UInt rs2, UInt rd)
 	m_rf.initZero();
 	m_rf.setName("register_file");
 
-	Bit writeRf = m_resultValid & !m_stall & reg(rd != 0, '0');
+	Bit writeRf = m_resultValid & !m_stall & m_instr.rd != 0;
 	HCL_NAMED(writeRf);
 	IF(writeRf)
 		m_rf[m_instr.rd] = m_resultData;
