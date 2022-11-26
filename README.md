@@ -128,11 +128,11 @@ int main()
 	}
 
 	// Build circuit
-	Clock clock{1'000}; // 1KHz
+	Clock clock{{.absoluteFrequency = 1'000}}; // 1KHz
 	ClockScope clockScope{ clock };
 
 	hlim::ClockRational blinkFrequency{1, 1}; // 1Hz
-	size_t counterMax = hlim::floor(clock.getAbsoluteFrequency() / blinkFrequency);
+	size_t counterMax = hlim::floor(clock.absoluteFrequency() / blinkFrequency);
 	UInt counter = BitWidth(utils::Log2C(counterMax+1));
 	auto enable = pinIn().setName("button");
 	
