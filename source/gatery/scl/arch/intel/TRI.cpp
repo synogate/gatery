@@ -18,7 +18,9 @@
 #include "gatery/pch.h"
 #include "TRI.h"
 
+#include <gatery/frontend/DesignScope.h>
 #include <gatery/frontend/GraphTools.h>
+#include <gatery/frontend/Constant.h>
 
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Preprocessor.h>

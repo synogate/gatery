@@ -35,4 +35,28 @@ RefCtdNodePort& RefCtdNodePort::operator=(const NodePort &np)
 	return *this;
 }
 
+
+
+bool outputIsBVec(const NodePort &output) {
+	return output.node->getOutputConnectionType(output.port).interpretation == ConnectionType::BITVEC;
+}
+
+bool outputIsBool(const NodePort &output) {
+	return output.node->getOutputConnectionType(output.port).interpretation == ConnectionType::BOOL;
+}
+
+bool outputIsDependency(const NodePort &output) {
+	return output.node->getOutputConnectionType(output.port).interpretation == ConnectionType::DEPENDENCY;
+}
+
+
+size_t getOutputWidth(const NodePort &output) {
+	return output.node->getOutputConnectionType(output.port).width;
+}
+
+const ConnectionType &getOutputConnectionType(const NodePort &output) {
+	return output.node->getOutputConnectionType(output.port);
+}
+
+
 }

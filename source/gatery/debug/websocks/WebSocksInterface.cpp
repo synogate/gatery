@@ -24,6 +24,7 @@
 
 #include "../../hlim/Circuit.h"
 #include "../../hlim/Node.h"
+#include "../../hlim/Clock.h"
 #include "../../hlim/NodeGroup.h"
 #include "../../hlim/coreNodes/Node_Rewire.h"
 #include "../../hlim/coreNodes/Node_Signal.h"

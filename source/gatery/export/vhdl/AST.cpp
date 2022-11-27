@@ -25,6 +25,7 @@
 #include "InterfacePackage.h"
 
 #include "../../hlim/Circuit.h"
+#include "../../hlim/Clock.h"
 #include "../../hlim/NodeGroup.h"
 
 #include <fstream>

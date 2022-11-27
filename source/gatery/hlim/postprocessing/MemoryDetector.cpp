@@ -19,6 +19,7 @@
 #include "MemoryDetector.h"
 
 #include "../Circuit.h"
+#include "../Clock.h"
 
 #include "../coreNodes/Node_Signal.h"
 #include "../coreNodes/Node_Register.h"

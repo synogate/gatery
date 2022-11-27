@@ -20,6 +20,7 @@
 
 #include <gatery/debug/DebugInterface.h>
 #include <gatery/frontend/GraphTools.h>
+#include <gatery/frontend/DesignScope.h>
 
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Preprocessor.h>

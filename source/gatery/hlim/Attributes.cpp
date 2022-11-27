@@ -19,6 +19,8 @@
 
 #include "Attributes.h"
 
+#include "../utils/ConfigTree.h"
+
 namespace gtry::hlim {
 
 void Attributes::fuseWith(const Attributes &rhs)

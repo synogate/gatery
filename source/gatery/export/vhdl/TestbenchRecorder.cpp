@@ -227,7 +227,7 @@ void TestbenchRecorder::onReset(const hlim::Clock *clock, bool resetAsserted)
 	m_resetOverrides[rst] = assignment.str();
 }
 
-void TestbenchRecorder::onSimProcOutputOverridden(hlim::NodePort output, const sim::DefaultBitVectorState &state)
+void TestbenchRecorder::onSimProcOutputOverridden(const hlim::NodePort &output, const sim::DefaultBitVectorState &state)
 {
 	auto name_it = m_outputToIoPinName.find(output);
 	HCL_ASSERT(name_it != m_outputToIoPinName.end());
@@ -254,23 +254,25 @@ void TestbenchRecorder::onSimProcOutputOverridden(hlim::NodePort output, const s
 	m_signalOverrides[name_it->second] = str_state.str();
 }
 
-void TestbenchRecorder::onSimProcOutputRead(hlim::NodePort output, const sim::DefaultBitVectorState &state)
+void TestbenchRecorder::onSimProcOutputRead(const hlim::NodePort &output, const sim::DefaultBitVectorState &state)
 {
+	hlim::NodePort drivingOutput = output;
 	// find output driving output pin
 	for (auto nh : output.node->exploreOutput(output.port)) {
 		if (dynamic_cast<hlim::Node_Pin*>(nh.node())) {
-			output = nh.node()->getDriver(0);
+			drivingOutput = nh.node()->getDriver(0);
+			break;
 		} else
 			if (!nh.isSignal())
 				nh.backtrack();
 	}	
 
-	auto name_it = m_outputToIoPinName.find(output);
+	auto name_it = m_outputToIoPinName.find(drivingOutput);
 	HCL_ASSERT_HINT(name_it != m_outputToIoPinName.end(), "Can only record asserts for signals that are output pins!");
 
 	CodeFormatting &cf = m_ast->getCodeFormatting();
 
-	const auto& conType = hlim::getOutputConnectionType(output);
+	const auto& conType = hlim::getOutputConnectionType(drivingOutput);
 	if (conType.interpretation == hlim::ConnectionType::BOOL) {
 		if (state.get(sim::DefaultConfig::DEFINED, 0)) {
 			cf.indent(m_assertStatements, 2);

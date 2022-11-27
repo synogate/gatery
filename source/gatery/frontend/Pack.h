@@ -20,6 +20,7 @@
 #include <utility>
 
 #include <gatery/hlim/SignalGroup.h>
+#include <gatery/hlim/coreNodes/Node_Rewire.h>
 
 namespace gtry
 {

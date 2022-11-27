@@ -24,6 +24,7 @@
 #include <gatery/frontend/DesignScope.h>
 #include "../arch/general/FPGADevice.h"
 
+#include <gatery/hlim/Clock.h>
 #include <gatery/hlim/coreNodes/Node_Pin.h>
 #include <gatery/hlim/coreNodes/Node_Register.h>
 #include <gatery/hlim/coreNodes/Node_Signal.h>

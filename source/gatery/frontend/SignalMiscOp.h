@@ -22,6 +22,7 @@
 #include "BVec.h"
 #include "Scope.h"
 #include "ConditionalScope.h"
+#include "DesignScope.h"
 
 #include <gatery/hlim/coreNodes/Node_Multiplexer.h>
 #include <gatery/hlim/supportNodes/Node_SignalTap.h>

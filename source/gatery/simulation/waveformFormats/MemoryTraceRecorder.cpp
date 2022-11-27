@@ -19,6 +19,7 @@
 #include "MemoryTraceRecorder.h"
 
 #include "../../hlim/Circuit.h"
+#include "../../hlim/Clock.h"
 
 namespace gtry::sim {
 

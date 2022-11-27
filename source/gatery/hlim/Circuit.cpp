@@ -21,8 +21,10 @@
 
 #include "../debug/DebugInterface.h"
 
+#include "NodeGroup.h"
+#include "SignalGroup.h"
 #include "Node.h"
-#include "NodeIO.h"
+#include "Clock.h"
 #include "coreNodes/Node_Signal.h"
 #include "coreNodes/Node_Multiplexer.h"
 #include "coreNodes/Node_Logic.h"
@@ -65,6 +67,10 @@ namespace gtry::hlim {
 Circuit::Circuit()
 {
 	m_root.reset(new NodeGroup(*this, NodeGroup::GroupType::ENTITY));
+}
+
+Circuit::~Circuit()
+{
 }
 
 /**
@@ -1481,5 +1487,9 @@ void Circuit::freeRevisitColor(std::uint64_t color, utils::RestrictTo<RevisitChe
 	m_revisitColorInUse = false;
 }
 
+void Circuit::setNodeId(BaseNode *node)
+{
+	node->setId(m_nextNodeId++, {});
+}
 
 }

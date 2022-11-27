@@ -17,7 +17,6 @@
 */
 #pragma once
 
-#include "NodeIO.h"
 #include "ClockRational.h"
 #include "Attributes.h"
 
@@ -27,6 +26,8 @@
 
 namespace gtry::hlim {
 
+struct NodePort;
+class BaseNode;
 class Node_Signal2Clk;
 class Node_Signal2Rst;
 

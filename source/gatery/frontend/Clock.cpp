@@ -18,6 +18,7 @@
 #include "gatery/pch.h"
 #include "Clock.h"
 
+#include "DesignScope.h"
 #include "ConditionalScope.h"
 #include "trace.h"
 #include "SignalLogicOp.h"

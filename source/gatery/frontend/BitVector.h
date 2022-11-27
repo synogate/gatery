@@ -20,16 +20,8 @@
 #include "Bit.h"
 #include "BitWidth.h"
 #include "Signal.h"
-#include "Scope.h"
-#include "DesignScope.h"
-
-#include "Constant.h"
 
 #include <gatery/utils/Traits.h>
-
-#include <gatery/hlim/coreNodes/Node_Constant.h>
-#include <gatery/hlim/coreNodes/Node_Signal.h>
-#include <gatery/hlim/coreNodes/Node_Rewire.h>
 
 #include <gatery/utils/Exceptions.h>
 

@@ -19,6 +19,7 @@
 
 #include "Signal.h"
 #include "Scope.h"
+#include "DesignScope.h"
 
 #include "Reg.h"
 #include "ConditionalScope.h"

@@ -17,12 +17,12 @@
 */
 #pragma once
 
-#include "../hlim/Circuit.h"
-
 #include <filesystem>
 
 namespace gtry::hlim {
 
+class Circuit;
+class NodeGroup;
 class Subnet;
 class ConstSubnet;
 class SignalDelay;

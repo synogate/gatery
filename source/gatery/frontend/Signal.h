@@ -17,11 +17,8 @@
 */
 #pragma once
 
-#include <gatery/hlim/coreNodes/Node_Signal.h>
-#include <gatery/hlim/NodeIO.h>
-#include <gatery/hlim/Node.h>
-#include <gatery/hlim/Attributes.h>
-
+#include <gatery/hlim/NodePort.h>
+#include <gatery/hlim/ConnectionType.h>
 
 #include <gatery/utils/Enumerate.h>
 #include <gatery/utils/Preprocessor.h>
@@ -32,6 +29,10 @@
 #include "BitWidth.h"
 
 namespace gtry {
+	namespace hlim {
+		class BaseNode;
+		class SignalAttributes;
+	}
 
 	class ConditionalScope;
 	class SignalPort;
@@ -55,10 +56,10 @@ namespace gtry {
 
 		SignalReadPort expand(size_t width, hlim::ConnectionType::Interpretation resultType) const;
 
-		BitWidth width() const { return BitWidth{ node->getOutputConnectionType(port).width }; }
+		BitWidth width() const { return BitWidth{ hlim::getOutputWidth(*this) }; }
 	};
 
-	inline const hlim::ConnectionType& connType(const SignalReadPort& port) { return port.node->getOutputConnectionType(port.port); }
+	inline const hlim::ConnectionType& connType(const SignalReadPort& port) { return hlim::getOutputConnectionType(port); }
 
 	class BVec;
 
@@ -84,7 +85,7 @@ namespace gtry {
 
 		virtual void assign(SignalReadPort, bool ignoreConditions = false) = 0;
 
-		void attribute(hlim::SignalAttributes attributes);
+		void attribute(const hlim::SignalAttributes &attributes);
 
 	protected:
 		size_t m_initialScopeId = 0;

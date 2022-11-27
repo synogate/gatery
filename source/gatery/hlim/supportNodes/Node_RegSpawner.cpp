@@ -20,6 +20,8 @@
 
 #include "Node_RegSpawner.h"
 
+#include "../NodeGroup.h"
+
 #include "../SignalDelay.h"
 
 #include "../coreNodes/Node_Register.h"

@@ -17,6 +17,7 @@
 */
 #include "gatery/pch.h"
 #include "SignalCompareOp.h"
+#include "DesignScope.h"
 #include "SignalLogicOp.h"
 #include "ConditionalScope.h"
 #include "SignalArithmeticOp.h"

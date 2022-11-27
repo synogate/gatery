@@ -20,6 +20,7 @@
 #include "ClockPinAllocation.h"
 
 #include "../Circuit.h"
+#include "../NodePort.h"
 #include "../Clock.h"
 #include "../Subnet.h"
 

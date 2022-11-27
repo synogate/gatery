@@ -17,6 +17,7 @@
 */
 #include "gatery/pch.h"
 #include "ConditionalScope.h"
+#include "DesignScope.h"
 
 #include "Signal.h"
 #include "Bit.h"

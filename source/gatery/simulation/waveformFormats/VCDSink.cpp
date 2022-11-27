@@ -20,6 +20,7 @@
 
 #include "../../hlim/NodeGroup.h"
 #include "../../hlim/Circuit.h"
+#include "../../hlim/Node.h"
 #include "../Simulator.h"
 #include "../../hlim/postprocessing/ClockPinAllocation.h"
 #include "../../hlim/postprocessing/CDCDetection.h"

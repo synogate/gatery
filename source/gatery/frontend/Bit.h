@@ -20,8 +20,6 @@
 #include "Signal.h"
 #include "Scope.h"
 
-#include <gatery/hlim/coreNodes/Node_Signal.h>
-#include <gatery/hlim/Attributes.h>
 #include <gatery/hlim/NodePtr.h>
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Traits.h>
@@ -32,6 +30,10 @@
 
 namespace gtry {
 
+namespace hlim {
+	class Node_Signal;
+	class SignalGroup;
+}
 
 /**
  * @addtogroup gtry_signals

@@ -21,6 +21,7 @@
 
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Preprocessor.h>
+#include <gatery/hlim/Clock.h>
 
 #include <boost/format.hpp>
 

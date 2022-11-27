@@ -15,25 +15,25 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
+
 #include "gatery/pch.h"
-#include "DesignScope.h"
-#include "SignalCompareOp.h"
-#include "SignalLogicOp.h"
-#include "ConditionalScope.h"
-#include "SignalArithmeticOp.h"
 
-#include <gatery/hlim/coreNodes/Node_Compare.h>
+#include "NodePtr.h"
+#include "Node.h"
 
+namespace gtry::hlim {
 
-namespace gtry::internal_enum {
-	SignalReadPort makeNode(hlim::Node_Compare::Op op, NormalizedWidthOperands ops)
-	{
-		auto* node = DesignScope::createNode<hlim::Node_Compare>(op);
-		node->recordStackTrace();
-		node->connectInput(0, ops.lhs);
-		node->connectInput(1, ops.rhs);
-
-		return SignalReadPort(node);
-	}
-	
+void BaseNodePtr::addRef()
+{
+	if (m_ptr)
+		m_ptr->addRef();
 }
+
+void BaseNodePtr::removeRef()
+{
+	if (m_ptr)
+		m_ptr->removeRef();
+}
+
+}
+

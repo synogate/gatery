@@ -21,67 +21,59 @@
 
 namespace gtry::hlim {
 
+class BaseNode;
+
+class BaseNodePtr
+{
+	public:
+		auto operator <=> (const BaseNodePtr&) const = default;
+	protected:
+		void addRef();
+		void removeRef();
+		BaseNode *m_ptr = nullptr;
+};
+
 /**
  * @brief Smart pointer for graph nodes that automatically increments and decrements the node's reference counter.
  * @details The pointer default constructs to a nullpointer.
  */
 template<class NodeType>
-class NodePtr
+class NodePtr : public BaseNodePtr
 {
 	public:
 		NodePtr() = default;
 
 		NodePtr(const NodePtr<NodeType> &rhs) {
 			m_ptr = rhs.m_ptr;
-			if (m_ptr) m_ptr->addRef();
+			addRef();
 		}
 		explicit NodePtr(NodeType *ptr) {
 			m_ptr = ptr;
-			if (m_ptr) m_ptr->addRef();
+			addRef();
 		}
 		~NodePtr() {
-			if (m_ptr) m_ptr->removeRef();
+			removeRef();
 		}
 
 		void operator=(const NodePtr<NodeType> &rhs) {
-			if (m_ptr) m_ptr->removeRef();
+			removeRef();
 			m_ptr = rhs.m_ptr;
-			if (m_ptr) m_ptr->addRef();
+			addRef();
 		}
 		void operator=(NodeType *ptr) {
-			if (m_ptr) m_ptr->removeRef();
+			removeRef();
 			m_ptr = ptr;
-			if (m_ptr) m_ptr->addRef();
+			addRef();
 		}
 
 		auto operator <=> (const NodePtr<NodeType>&) const = default;
-		/*
-		bool operator==(const NodePtr<NodeType> &rhs) const {
-			return m_ptr == rhs.m_ptr;
-		}
-		bool operator!=(const NodePtr<NodeType> &rhs) const {
-			return m_ptr != rhs.m_ptr;
-		}
-		*/
-/*
-		template<typename PointerType>
-		bool operator==(std::enable_if_t<std::is_pointer_v<PointerType>, PointerType> rhs) const {
-			return m_ptr == rhs;
-		}
-		template<typename PointerType>
-		bool operator!=(std::enable_if_t<std::is_pointer_v<PointerType>, PointerType> rhs) const {
-			return m_ptr != rhs;
-		}
-*/
-		operator NodeType*() const { return m_ptr; }
+
+		operator NodeType*() const { return (NodeType*) m_ptr; }
 
 
-		NodeType &operator*() const { return *m_ptr; }
-		NodeType *operator->() const { return m_ptr; }
-		NodeType *get() const { return m_ptr; }
-
-	protected:
-		NodeType *m_ptr = nullptr;
+		NodeType &operator*() const { return *(NodeType*) m_ptr; }
+		NodeType *operator->() const { return (NodeType*) m_ptr; }
+		NodeType *get() const { return (NodeType*) m_ptr; }
 };
 
 }

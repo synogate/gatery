@@ -17,13 +17,10 @@
 */
 #pragma once
 
-#include "NodeGroup.h"
-#include "SignalGroup.h"
-#include "Node.h"
-#include "ConnectionType.h"
-#include "Clock.h"
 #include "../simulation/simProc/SimulationProcess.h"
 #include "../simulation/SimulationVisualization.h"
+
+#include "../utils/CppTools.h"
 
 #include <vector>
 #include <memory>
@@ -32,9 +29,18 @@
 
 namespace gtry::hlim {
 
+struct NodePort;
+struct RefCtdNodePort;
+class BaseNode;
+class NodeGroup;
+class Clock;
 class Subnet;
 class Circuit;
 class RevisitCheck;
+class SignalGroup;
+
+class Node_Signal;
+class Node_Attributes;
 
 /*
 class Circuit;
@@ -104,13 +110,14 @@ class Circuit
 {
 	public:
 		Circuit();
+		~Circuit();
 
 		void copySubnet(const std::set<NodePort> &subnetInputs,
 						const std::set<NodePort> &subnetOutputs,
 						std::map<BaseNode*, BaseNode*> &mapSrc2Dst,
 						bool copyClocks = true);
 
-		template<typename NodeType, typename... Args>
+		template<std::derived_from<BaseNode> NodeType, typename... Args>
 		NodeType *createNode(Args&&... args);
 
 		BaseNode *createUnconnectedClone(BaseNode *srcNode, bool noId = false);
@@ -190,13 +197,15 @@ class Circuit
 
 		std::vector<std::function<sim::SimulationFunction<void>()>> m_simulationProcesses;
 		std::vector<sim::SimulationVisualization> m_simulationVisualizations;
+
+		void setNodeId(BaseNode *node);
 };
 
 
-template<typename NodeType, typename... Args>
+template<std::derived_from<BaseNode> NodeType, typename... Args>
 NodeType *Circuit::createNode(Args&&... args) {
 	m_nodes.push_back(std::make_unique<NodeType>(std::forward<Args>(args)...));
-	m_nodes.back()->setId(m_nextNodeId++, {});
+	setNodeId(m_nodes.back().get());
 	return (NodeType *) m_nodes.back().get();
 }
 

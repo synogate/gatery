@@ -27,6 +27,7 @@
 #include "../export/vhdl/AST.h"
 
 #include "../hlim/supportNodes/Node_PathAttributes.h"
+#include "../hlim/Clock.h"
 
 #include <fstream>
 

@@ -17,7 +17,8 @@
 */
 #include "gatery/pch.h"
 #include "DotExport.h"
-
+#include "../hlim/Circuit.h"
+#include "../hlim/NodeGroup.h"
 #include "../hlim/coreNodes/Node_Register.h"
 #include "../hlim/coreNodes/Node_Multiplexer.h"
 #include "../hlim/coreNodes/Node_Constant.h"

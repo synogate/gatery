@@ -22,6 +22,7 @@
 #include "../debug/DebugInterface.h"
 #include "../utils/Range.h"
 #include "../hlim/Circuit.h"
+#include "../hlim/NodeGroup.h"
 #include "../hlim/coreNodes/Node_Constant.h"
 #include "../hlim/coreNodes/Node_Compare.h"
 #include "../hlim/coreNodes/Node_Signal.h"

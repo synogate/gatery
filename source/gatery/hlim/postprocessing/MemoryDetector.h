@@ -18,7 +18,7 @@
 #pragma once
 
 #include "../NodePtr.h"
-
+#include "../NodePort.h"
 #include "../NodeGroup.h"
 
 #include "TechnologyMapping.h"
@@ -26,6 +26,7 @@
 namespace gtry::hlim {
 
 class Circuit;
+class Clock;
 class Node_Memory;
 class Node_MemPort;
 class Node_Register;

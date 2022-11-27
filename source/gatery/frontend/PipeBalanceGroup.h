@@ -20,6 +20,7 @@
 #include "Bit.h"
 #include "BVec.h"
 #include "Clock.h"
+#include "DesignScope.h"
 
 #include <gatery/hlim/supportNodes/Node_RegSpawner.h>
 #include <gatery/hlim/supportNodes/Node_RegHint.h>

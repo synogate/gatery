@@ -27,6 +27,7 @@
 
 #include "../hlim/coreNodes/Node_ClkRst2Signal.h"
 #include "../hlim/coreNodes/Node_Logic.h"
+#include "../hlim/coreNodes/Node_Rewire.h"
 
 #include <gatery/utils/Range.h>
 #include <gatery/utils/Preprocessor.h>

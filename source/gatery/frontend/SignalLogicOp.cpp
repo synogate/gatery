@@ -17,6 +17,7 @@
 */
 #include "gatery/pch.h"
 #include "SignalLogicOp.h"
+#include "DesignScope.h"
 
 namespace gtry {
 

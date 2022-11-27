@@ -21,6 +21,7 @@
 #include "DesignScope.h"
 
 #include <gatery/hlim/coreNodes/Node_Rewire.h>
+#include <gatery/hlim/coreNodes/Node_Signal.h>
 #include <gatery/hlim/supportNodes/Node_Attributes.h>
 
 gtry::SignalReadPort gtry::SignalReadPort::expand(size_t width, hlim::ConnectionType::Interpretation resultType) const
@@ -66,7 +67,7 @@ gtry::ElementarySignal::~ElementarySignal()
 {
 }
 
-void gtry::ElementarySignal::attribute(hlim::SignalAttributes attributes)
+void gtry::ElementarySignal::attribute(const hlim::SignalAttributes &attributes)
 {
 	auto* node = DesignScope::createNode<hlim::Node_Attributes>();
 	node->getAttribs() = std::move(attributes);

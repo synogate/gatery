@@ -18,6 +18,7 @@
 #include "gatery/pch.h"
 
 #include "PipeBalanceGroup.h"
+#include "DesignScope.h"
 
 namespace gtry {
 

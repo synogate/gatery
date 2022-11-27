@@ -182,8 +182,8 @@ class Simulator
 				virtual void onWarning(const hlim::BaseNode *src, std::string msg) override;
 				virtual void onAssert(const hlim::BaseNode *src, std::string msg) override;
 
-				virtual void onSimProcOutputOverridden(hlim::NodePort output, const DefaultBitVectorState &state) override;
-				virtual void onSimProcOutputRead(hlim::NodePort output, const DefaultBitVectorState &state) override;
+				virtual void onSimProcOutputOverridden(const hlim::NodePort &output, const DefaultBitVectorState &state) override;
+				virtual void onSimProcOutputRead(const hlim::NodePort &output, const DefaultBitVectorState &state) override;
 		};
 
 		hlim::ClockRational m_simulationTime;

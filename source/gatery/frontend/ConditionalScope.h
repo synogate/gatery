@@ -19,9 +19,8 @@
 
 #include "Scope.h"
 
+#include <gatery/hlim/NodePort.h>
 #include <gatery/utils/Traits.h>
-#include <gatery/hlim/coreNodes/Node_PriorityConditional.h>
-
 
 namespace gtry {
 	

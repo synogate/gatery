@@ -27,6 +27,7 @@ namespace gtry::hlim {
 class BaseNode;
 class NodeIO;
 class Circuit;
+struct ConnectionType;
 
 constexpr size_t INV_PORT = std::numeric_limits<std::size_t>::max();
 
@@ -59,6 +60,11 @@ struct RefCtdNodePort {
 	auto operator <=> (const RefCtdNodePort&) const = default;
 };
 
+bool outputIsBVec(const NodePort &output);
+bool outputIsBool(const NodePort &output);
+bool outputIsDependency(const NodePort &output);
 
+size_t getOutputWidth(const NodePort &output);
+const ConnectionType &getOutputConnectionType(const NodePort &output);
 
 }

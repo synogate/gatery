@@ -17,8 +17,6 @@
 */
 #pragma once
 
-#include "Node.h"
-
 #include "../utils/StackTrace.h"
 #include "../utils/ConfigTree.h"
 
@@ -34,6 +32,7 @@
 namespace gtry::hlim {
 
 	class Circuit;
+	class BaseNode;
 	class Node_Signal;
 	class Node_Register;
 
@@ -122,10 +121,12 @@ namespace gtry::hlim {
 		void dropMetaInfo() { m_metaInfo.reset(); }
 
 		NodeGroupMetaInfo* getMetaInfo() { return m_metaInfo.get(); }
+		const NodeGroupMetaInfo* getMetaInfo() const { return m_metaInfo.get(); }
 
 		static void configTree(utils::ConfigTree config);
 
 		inline Circuit &getCircuit() { return m_circuit; }
+		inline const Circuit &getCircuit() const { return m_circuit; }
 
 		/// Returns an id that is unique to this group within the circuit.
 		inline std::uint64_t getId() const { return m_groupId; }

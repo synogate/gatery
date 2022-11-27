@@ -429,7 +429,7 @@ void FileBasedTestbenchRecorder::onReset(const hlim::Clock *clock, bool resetAss
 	m_resetOverrides[rootEntity->getNamespaceScope().getReset((hlim::Clock *) clock).name] = resetAsserted?"1":"0";
 }
 
-void FileBasedTestbenchRecorder::onSimProcOutputOverridden(hlim::NodePort output, const sim::DefaultBitVectorState &state)
+void FileBasedTestbenchRecorder::onSimProcOutputOverridden(const hlim::NodePort &output, const sim::DefaultBitVectorState &state)
 {
 	auto name_it = m_outputToIoPinName.find(output);
 	HCL_ASSERT(name_it != m_outputToIoPinName.end());
@@ -440,30 +440,31 @@ void FileBasedTestbenchRecorder::onSimProcOutputOverridden(hlim::NodePort output
 	m_signalOverrides[name_it->second] = str_state.str();
 }
 
-void FileBasedTestbenchRecorder::onSimProcOutputRead(hlim::NodePort output, const sim::DefaultBitVectorState &state)
+void FileBasedTestbenchRecorder::onSimProcOutputRead(const hlim::NodePort &output, const sim::DefaultBitVectorState &state)
 {
+	hlim::NodePort drivingOutput = output;
 	// find output driving output pin
 	for (auto nh : output.node->exploreOutput(output.port)) {
 		if (dynamic_cast<hlim::Node_Pin*>(nh.node())) {
-			output = nh.node()->getDriver(0);
+			drivingOutput = nh.node()->getDriver(0);
 			break;
 		} else
 			if (!nh.isSignal())
 				nh.backtrack();
 	}	
 
-	auto name_it = m_outputToIoPinName.find(output);
+	auto name_it = m_outputToIoPinName.find(drivingOutput);
 	if (name_it == m_outputToIoPinName.end()) {
-		if (dynamic_cast<hlim::Node_Pin*>(output.node)) return;
+		if (dynamic_cast<hlim::Node_Pin*>(drivingOutput.node)) return;
 
-		if (auto *signal = dynamic_cast<hlim::Node_Signal*>(output.node))
+		if (auto *signal = dynamic_cast<hlim::Node_Signal*>(drivingOutput.node))
 			if (dynamic_cast<hlim::Node_Pin*>(signal->getNonSignalDriver(0).node))
 				return;
 
 		HCL_ASSERT_HINT(false, "Can only record asserts for signals that are output pins!");
 	}
 
-	const auto& conType = hlim::getOutputConnectionType(output);
+	const auto& conType = hlim::getOutputConnectionType(drivingOutput);
 	if (conType.interpretation == hlim::ConnectionType::BOOL) {
 		if (state.get(sim::DefaultConfig::DEFINED, 0)) {
 			m_assertStatements << "CHECK" << std::endl << name_it->second << std::endl << state << std::endl;
