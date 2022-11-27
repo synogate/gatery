@@ -1,9 +1,14 @@
 # Gatery
 
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=github_codespace_test&repo=368247767)
+[![License: LGPL v3](https://img.shields.io/badge/License-LGPL_v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+![Activity](https://img.shields.io/github/commit-activity/y/synogate/gatery)
+
 ![Gatery logo](doc/gatery_logo_500.svg)
 
 This is the repository of Gatery, a library for circuit design.
 Visit [the Gatery website](https://synogate.com/gatery.html) for details, where a [tutorial](https://synogate.com/gatery/gatery/tutorial/part1.html) is also available.
+For a quick glance, explore the [project template in a github codespace](https://github.com/codespaces/new?hide_repo_select=true&ref=github_codespace_test&repo=368247767).
 
 [TOC]
 
@@ -128,11 +133,11 @@ int main()
 	}
 
 	// Build circuit
-	Clock clock{1'000}; // 1KHz
+	Clock clock{{.absoluteFrequency = 1'000}}; // 1KHz
 	ClockScope clockScope{ clock };
 
 	hlim::ClockRational blinkFrequency{1, 1}; // 1Hz
-	size_t counterMax = hlim::floor(clock.getAbsoluteFrequency() / blinkFrequency);
+	size_t counterMax = hlim::floor(clock.absoluteFrequency() / blinkFrequency);
 	UInt counter = BitWidth(utils::Log2C(counterMax+1));
 	auto enable = pinIn().setName("button");
 	
