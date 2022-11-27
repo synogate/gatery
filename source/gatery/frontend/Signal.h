@@ -31,7 +31,7 @@
 namespace gtry {
 	namespace hlim {
 		class BaseNode;
-		class SignalAttributes;
+		struct SignalAttributes;
 	}
 
 	class ConditionalScope;
