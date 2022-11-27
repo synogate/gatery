@@ -72,7 +72,9 @@ test-linux-coverage:
     - linux
   script:
     - premake5 gmake2
-    - make -j4 config=coverage
+    - /usr/bin/time -o buildLog.txt -v make -j4 config=coverage
+    - anybadge -l "Build time (seconds)" -v $(cat buildLog.txt | grep "User time (seconds):" | cut -d' ' -f 4) --file cov/buildTime.svg
+    - anybadge -l "Build max RSS (kB)" -v $(cat buildLog.txt | grep "Maximum resident set size (kbytes)" | cut -d' ' -f 6) --file cov/buildMaxRSS.svg
     - lcov --directory . --zerocounters
     - bin/linux-x86_64-Coverage/gatery-frontend-test
     - bin/linux-x86_64-Coverage/gatery-scl-test
