@@ -73,6 +73,7 @@ test-linux-coverage:
   script:
     - premake5 gmake2
     - /usr/bin/time -o buildLog.txt -v make -j4 config=coverage
+    - mkdir cov
     - anybadge -l "Build time (seconds)" -v $(cat buildLog.txt | grep "User time (seconds):" | cut -d' ' -f 4) --file cov/buildTime.svg
     - anybadge -l "Build max RSS (kB)" -v $(cat buildLog.txt | grep "Maximum resident set size (kbytes)" | cut -d' ' -f 6) --file cov/buildMaxRSS.svg
     - lcov --directory . --zerocounters
@@ -81,7 +82,6 @@ test-linux-coverage:
     - lcov --directory . --capture --output-file unittest_coverage.info
     - lcov --remove unittest_coverage.info '/usr/*' --output-file unittest_coverage.info
     - lcov --remove unittest_coverage.info '*/source/external/*' --output-file unittest_coverage.info
-    - mkdir cov
     - anybadge --value=$(lcov --summary unittest_coverage.info | grep lines | cut -d' ' -f 4 | cut -d'%' -f 1) --file cov/coverage.svg coverage
     - genhtml unittest_coverage.info -o cov/
     - rm -rf /mnt/doxygenDocu/gateryCov/*
