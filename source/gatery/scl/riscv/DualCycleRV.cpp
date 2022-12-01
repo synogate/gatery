@@ -82,7 +82,7 @@ TileLinkUL gtry::scl::riscv::DualCycleRV::fetchTileLink(uint64_t entryPoint)
 		// 2. ipDecode = instruction pointer for current decode stage instruction
 		// 3. m_IP = instruction pointer of execute stage instruction
 
-		IF(transfer(link.a) & !m_overrideIPValid)
+		IF(transfer(link.a))
 			ip += 4;
 		ip = reg(ip, entryPoint);
 
