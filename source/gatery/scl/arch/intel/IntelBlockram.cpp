@@ -250,7 +250,7 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 				if (useInternalOutputRegister)
 					readData = reg(readData);
 				else
-					readData = reg(readData, BVec(0)); // reset first register to prevent MnK merge. reset others to prevent ALM split.
+					readData = reg(readData, zext(BVec(0))); // reset first register to prevent MnK merge. reset others to prevent ALM split.
 		}
 		data.exportOverride(readData);
 

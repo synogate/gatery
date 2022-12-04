@@ -37,6 +37,7 @@ namespace gtry::scl
 	public:
 		virtual void attachSource(TLink& source);
 		virtual void attachSink(TLink& sink, uint64_t addressBase);
+		void attachSink(TLink&& sink, uint64_t addressBase) { attachSink(sink, addressBase); }
 
 		const TLink& source() const;
 
@@ -146,7 +147,7 @@ namespace gtry::scl
 
 		// connect channel D
 		StreamArbiter<TileLinkChannelD, TArbiterPolicy> arbiter;
-		arbiter.attach(*unmapped.d);
+		arbiter.attach((*unmapped.d).regDownstream());
 		for (Sink& s : m_sink)
 			arbiter.attach(*s.bus.d);
 		*m_source.d <<= arbiter.out();

@@ -60,6 +60,9 @@ namespace gtry::scl
 			}
 		}
 
+		void attach(T&& stream, uint32_t sortKey = 1u << 31) { attach(stream, sortKey); }
+
+
 		T& out() { return *m_out; }
 
 		virtual void generate()
