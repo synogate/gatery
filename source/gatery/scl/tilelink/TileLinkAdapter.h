@@ -24,5 +24,7 @@
 namespace gtry::scl
 {
 	scl::TileLinkUB tileLinkDoubleWidth(scl::TileLinkUB& slave);
+	inline scl::TileLinkUB tileLinkDoubleWidth(scl::TileLinkUB&& slave) { return tileLinkDoubleWidth(slave); }
+
 	scl::TileLinkUB tileLinkAddBurst(scl::TileLinkUL& slave, BitWidth sizeW);
 }
