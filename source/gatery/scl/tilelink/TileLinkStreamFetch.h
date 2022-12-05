@@ -33,11 +33,11 @@ namespace gtry::scl
 	public:
 		TileLinkStreamFetch();
 
+		TileLinkStreamFetch& pause(Bit condition) { m_pauseFetch = condition; return *this; }
 		virtual TileLinkUL generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut);
 	private:
 		Area m_area = {"scl_TileLinkStreamFetch", true};
-
-
+		std::optional<Bit> m_pauseFetch;
 	};
 
 

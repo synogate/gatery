@@ -50,9 +50,23 @@ namespace gtry::scl
 		addressOffset = reg(addressOffset, 0);
 		link.a->address = cmdIn->address + zext(cat(addressOffset, ConstUInt(0, BitWidth::count(dataOut->width().bytes()))));
 
-		Bit busy = flag(transfer(link.a), transfer(*link.d)) & !transfer(*link.d);
+		Bit busy;
+		IF(transfer(*link.d))
+			busy = '0';
+		IF(transfer(link.a))
+			busy = '1';
+		busy = reg(busy, '0');
 		HCL_NAMED(busy);
+
 		valid(link.a) = valid(cmdIn) & !busy;
+
+		if (m_pauseFetch)
+		{
+			IF(*m_pauseFetch)
+				valid(link.a) = '0';
+			setName(*m_pauseFetch, "pauseFetch");
+		}
+
 		ready(cmdIn) = '0';
 		IF(transfer(link.a))
 		{
