@@ -178,6 +178,7 @@ namespace gtry::scl::arch::intel
 			.name = "pllclk" + std::to_string(idx),
 			//.phaseSynchronousWithParent = phaseShiftPs == 0,
 			.resetType = resetType,
+			.memoryResetType = ClockConfig::ResetType::NONE,
 		});
 
 		configureClock(idx, mul, div, dutyCyclePercent, phaseShiftPs);
