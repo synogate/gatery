@@ -83,6 +83,8 @@ struct RegisterConfig
 	bool resetHighActive = true;
 
 	auto operator<=>(const RegisterConfig&) const = default;
+
+	static RegisterConfig fromClock(hlim::Clock *c, bool hasResetValue);
 };
 
 class RegisterProcess : public Process

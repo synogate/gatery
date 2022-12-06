@@ -19,12 +19,14 @@
 
 #include "Entity.h"
 
-
 namespace gtry::hlim {
 	class MemoryGroup;
 }
 
 namespace gtry::vhdl {
+
+struct RegisterConfig;
+struct GenericMemoryPorts;
 
 /**
  * @todo write docs
@@ -37,10 +39,14 @@ class GenericMemoryEntity : public Entity
 		void buildFrom(hlim::NodeGroup *memNodeGrp);
 	protected:		
 		hlim::NodeGroup *m_memNodeGrp;
-		hlim::MemoryGroup *m_memGrp;
+		hlim::MemoryGroup *m_memGrp;		
 
 		virtual void writeLocalSignalsVHDL(std::ostream &stream) override;
 		virtual void writeStatementsVHDL(std::ostream &stream, unsigned indent);
+
+		void writeResets(std::ostream &stream, unsigned indent, const std::string_view resetName, const std::pair<RegisterConfig, GenericMemoryPorts> &clockReset);
+		void writeWritePorts(std::ostream &stream, unsigned indent, const std::pair<RegisterConfig, GenericMemoryPorts> &clockReset);
+		void writeReadPorts(std::ostream &stream, unsigned indent, const std::pair<RegisterConfig, GenericMemoryPorts> &clockReset, bool asyncMode);
 };
 
 }
