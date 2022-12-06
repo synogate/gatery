@@ -124,7 +124,7 @@ namespace gtry {
 
 			void setName(std::string name) { m_clock->setName(std::move(name)); }
 		protected:
-			hlim::Clock *m_clock;
+			hlim::Clock *m_clock = nullptr;
 			Clock(hlim::Clock *clock, const ClockConfig &config);
 
 			void applyConfig(const ClockConfig &config);
@@ -144,14 +144,14 @@ namespace gtry {
 	class ClockScope : public BaseScope<ClockScope>
 	{
 		public:
-			ClockScope(const Clock &clock) : m_clock(clock) { }
+			ClockScope(const Clock clock) : m_clock(clock) { }
 			static const Clock &getClk() {
 				HCL_DESIGNCHECK_HINT(m_currentScope != nullptr, "No clock scope active!");
 				return m_currentScope->m_clock;
 			}
 			static bool anyActive() { return m_currentScope != nullptr; }
 		protected:
-			const Clock &m_clock;
+			const Clock m_clock;
 	};
 
 	/// current clock scope reset signal. normalized to always active high reset.
