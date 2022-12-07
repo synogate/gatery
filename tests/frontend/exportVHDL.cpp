@@ -192,4 +192,177 @@ BOOST_FIXTURE_TEST_CASE(keepNamedSignalOrphans, gtry::GHDLTestFixture)
 
 
 
+struct Test_GenericMemoryExport : public gtry::GHDLTestFixture
+{
+	size_t latency = 16;
+	gtry::BitWidth width = gtry::BitWidth(8);
+	size_t depth = 32;
+
+	gtry::Clock::ResetType registerResetType = gtry::Clock::ResetType::SYNCHRONOUS;
+	gtry::Clock::ResetType memoryResetType = gtry::Clock::ResetType::SYNCHRONOUS;
+	std::optional<size_t> latencyRegResetValue;
+	
+	void execute() {
+		using namespace gtry;
+		using namespace gtry::sim;
+		using namespace gtry::utils;
+
+		Clock clock({ .absoluteFrequency = 100'000'000, .resetType = registerResetType, .memoryResetType = memoryResetType });
+		ClockScope clkScp(clock);
+
+		Memory<UInt> mem(depth, width);
+		mem.setType(MemType::DONT_CARE, latency);
+		mem.noConflicts();
+
+		UInt addr = pinIn(8_b).setName("addr");
+		UInt output = mem[addr];
+		for (auto i : Range(latency)) {
+			if (latencyRegResetValue)
+				output = reg(output, *latencyRegResetValue, {.allowRetimingBackward=true});
+			else
+				output = reg(output, {.allowRetimingBackward=true});
+		}
+		pinOut(output).setName("output");
+		UInt input = pinIn(width).setName("input");
+		Bit wrEn = pinIn().setName("wrEn");
+		IF (wrEn)
+			mem[addr] = input;
+
+		addSimulationProcess([=,this]()->SimProcess {
+
+			std::vector<std::optional<size_t>> contents;
+			contents.resize(depth);
+			std::mt19937 rng{ 18055 };
+
+			simu(wrEn) = '0';
+			co_await OnClk(clock);
+
+			size_t testsInFlight = 0;
+
+			for (auto i : Range(100)) {
+				if (rng() & 1) {
+					size_t idx = rng() % depth;
+					size_t newValue = rng() % (1 << width.value);
+					auto oldValue = contents[idx];
+
+					simu(wrEn) = '1';
+					simu(addr) = idx;
+					simu(input) = newValue;
+					contents[idx] = newValue;
+
+					fork([=, &testsInFlight]()->SimProcess {
+						testsInFlight++;
+						for (auto i : Range(latency+1))
+							co_await OnClk(clock);
+						auto v = simu(output);
+						if (!oldValue)
+							BOOST_TEST(!v.allDefined());
+						else
+							BOOST_TEST(v == *oldValue);
+						testsInFlight--;
+					});
+				} else {
+					simu(wrEn) = '0';
+				}
+				co_await OnClk(clock);
+			}
+
+			while (testsInFlight)
+				co_await OnClk(clock);
+
+			stopTest();
+		});
+
+		design.postprocess();
+		runTest(hlim::ClockRational(200, 1) / clock.getClk()->absoluteFrequency());	
+	}
+};
+
+
+BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Sync_1_no_reset, Test_GenericMemoryExport)
+{
+	using namespace gtry;
+
+	registerResetType = memoryResetType = gtry::Clock::ResetType::SYNCHRONOUS;	
+	latency = 1;
+
+	execute();
+
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Sync_1_w_reset, Test_GenericMemoryExport)
+{
+	using namespace gtry;
+
+	registerResetType = memoryResetType = gtry::Clock::ResetType::SYNCHRONOUS;	
+	latency = 1;
+	latencyRegResetValue = 0;
+
+	execute();
+
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"PROCESS\\(sysclk\\)"}));
+	BOOST_TEST(exportContains(std::regex{"IF \\(reset = '1'\\) THEN"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Async_1_w_reset, Test_GenericMemoryExport)
+{
+	using namespace gtry;
+
+	registerResetType = memoryResetType = gtry::Clock::ResetType::ASYNCHRONOUS;	
+	latency = 1;
+	latencyRegResetValue = 0;
+
+	execute();
+
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"PROCESS\\(sysclk\\)"}));
+	BOOST_TEST(exportContains(std::regex{"PROCESS\\(sysclk, reset\\)"}));
+	BOOST_TEST(exportContains(std::regex{"IF \\(reset = '1'\\) THEN"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Sync_16_no_reset, Test_GenericMemoryExport)
+{
+	using namespace gtry;
+
+	registerResetType = memoryResetType = gtry::Clock::ResetType::SYNCHRONOUS;	
+	latency = 16;
+
+	execute();
+
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Sync_16_w_reset, Test_GenericMemoryExport)
+{
+	using namespace gtry;
+
+	registerResetType = memoryResetType = gtry::Clock::ResetType::SYNCHRONOUS;	
+	latency = 16;
+	latencyRegResetValue = 0;
+
+	execute();
+
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"PROCESS\\(sysclk\\)"}));
+	BOOST_TEST(exportContains(std::regex{"IF \\(reset = '1'\\) THEN"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Async_16_w_reset, Test_GenericMemoryExport)
+{
+	using namespace gtry;
+
+	registerResetType = memoryResetType = gtry::Clock::ResetType::ASYNCHRONOUS;	
+	latency = 16;
+	latencyRegResetValue = 0;
+
+	execute();
+
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"PROCESS\\(sysclk\\)"}));
+	BOOST_TEST(exportContains(std::regex{"PROCESS\\(sysclk, reset\\)"}));
+	BOOST_TEST(exportContains(std::regex{"IF \\(reset = '1'\\) THEN"}));
+}
+
 BOOST_AUTO_TEST_SUITE_END()

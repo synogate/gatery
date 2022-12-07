@@ -53,6 +53,19 @@
 
 namespace gtry::vhdl {
 
+RegisterConfig RegisterConfig::fromClock(hlim::Clock *c, bool hasResetValue) {
+	bool hasReset = hasResetValue && (c->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE);
+	return {
+		.clock = c->getClockPinSource(), 
+		.reset = hasReset?c->getResetPinSource():nullptr,
+		.triggerEvent = c->getTriggerEvent(),
+		.resetType = hasReset?c->getRegAttribs().resetType:hlim::RegisterAttributes::ResetType::NONE,
+		.resetHighActive = hasReset?(c->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH):true,
+	};
+}
+
+
+
 Process::Process(BasicBlock *parent) : BaseGrouping(parent->getAST(), parent, &parent->getNamespaceScope())
 {
 }

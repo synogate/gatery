@@ -19,6 +19,7 @@
 #include "GenericMemoryEntity.h"
 
 #include "AST.h"
+#include "Process.h"
 
 #include "../../hlim/Clock.h"
 #include "../../hlim/coreNodes/Node_Register.h"
@@ -32,6 +33,13 @@
 #include <vector>
 
 namespace gtry::vhdl {
+
+struct GenericMemoryPorts {
+	std::vector<std::pair<hlim::MemoryGroup::ReadPort, size_t>> readPortRegs;
+	std::vector<hlim::MemoryGroup::WritePort> writePorts;
+};
+
+
 
 GenericMemoryEntity::GenericMemoryEntity(AST &ast, const std::string &desiredName, BasicBlock *parent) : Entity(ast, desiredName, parent)
 {
@@ -84,9 +92,9 @@ void GenericMemoryEntity::buildFrom(hlim::NodeGroup *memNodeGrp)
 			if (enInput.node != nullptr) 
 				m_inputs.insert(enInput);
 
-			auto resetValue = reg->getDriver((unsigned)hlim::Node_Register::Input::RESET_VALUE);
-			if (enInput.node != nullptr && resetValue.node != nullptr) {
-				m_inputs.insert(resetValue);
+			auto resetValue = reg->getNonSignalDriver((unsigned)hlim::Node_Register::Input::RESET_VALUE);
+			if (resetValue.node != nullptr) {
+				//m_inputs.insert(resetValue);
 
 				if (reg->getClocks()[0]->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE)
 					m_inputResets.insert(reg->getClocks()[0]->getResetPinSource());
@@ -256,178 +264,230 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 	}
 }
 
+
+void GenericMemoryEntity::writeResets(std::ostream &stream, unsigned indent, const std::string_view resetName, const std::pair<RegisterConfig, GenericMemoryPorts> &clockReset)
+{
+	CodeFormatting &cf = m_ast.getCodeFormatting();
+
+	cf.indent(stream, indent);
+	const char resetValue = clockReset.first.resetHighActive ? '1' : '0';
+	stream << "IF ("<< resetName << " = '" << resetValue << "') THEN\n";
+	indent++;
+
+	for (const auto &rp_idx : clockReset.second.readPortRegs) {
+		auto& [rp, idx] = rp_idx;
+		auto &regNode = rp.dedicatedReadLatencyRegisters[idx];
+		auto reset = regNode->getNonSignalDriver((unsigned)hlim::Node_Register::Input::RESET_VALUE);
+
+		if (reset.node != nullptr) {
+			auto *constReset = dynamic_cast<hlim::Node_Constant*>(reset.node);
+			HCL_DESIGNCHECK_HINT(constReset, "Resets of registers must be constants upon export!");
+
+			const auto &outputDecl = m_namespaceScope.get(rp.dataOutput);
+
+			cf.indent(stream, indent);
+			if (idx+1 == rp.dedicatedReadLatencyRegisters.size()) {
+				stream << outputDecl.name;
+			} else {
+				stream << outputDecl.name << "_outputReg_" << idx;
+			}
+			stream << " <= ";
+			formatConstant(stream, constReset, outputDecl.dataType);
+			stream << ";" << std::endl;
+		}
+	}
+}
+
+
+void GenericMemoryEntity::writeWritePorts(std::ostream &stream, unsigned indent, const std::pair<RegisterConfig, GenericMemoryPorts> &clockReset)
+{
+	CodeFormatting &cf = m_ast.getCodeFormatting();
+
+	for (auto &wp : clockReset.second.writePorts) {
+		auto enablePort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
+		if (enablePort.node != nullptr) {
+			cf.indent(stream, indent);
+			stream << "IF ("<< m_namespaceScope.get(enablePort).name << " = '1') THEN\n";
+			indent++;
+		}
+
+		auto addrPort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
+		auto dataPort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrData);
+
+		const auto &dataDecl = m_namespaceScope.get(dataPort);
+
+		cf.indent(stream, indent);
+		stream << "memory(to_integer(" << m_namespaceScope.get(addrPort).name << ")) <= ";
+		if (dataDecl.dataType != VHDLDataType::UNSIGNED) {
+			cf.formatDataType(stream, VHDLDataType::UNSIGNED);
+			stream << '(' << dataDecl.name << ";\n";
+		} else
+			stream << dataDecl.name << ";\n";
+
+		if (enablePort.node != nullptr) {
+			indent--;
+			cf.indent(stream, indent);
+			stream << "END IF;\n";
+		}
+	}
+}
+
+void GenericMemoryEntity::writeReadPorts(std::ostream &stream, unsigned indent, const std::pair<RegisterConfig, GenericMemoryPorts> &clockReset, bool asyncMode)
+{
+	CodeFormatting &cf = m_ast.getCodeFormatting();
+
+	for (auto &rp_idx : clockReset.second.readPortRegs) {
+		auto& [rp, idx] = rp_idx;
+
+		HCL_ASSERT(idx == 0 || !asyncMode);
+
+		auto addrPort = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
+		auto dataPort = rp.dataOutput;
+
+		auto enablePort = rp.dedicatedReadLatencyRegisters[idx]->getDriver((unsigned)hlim::Node_Register::Input::ENABLE);
+		if (enablePort.node != nullptr) {
+			if (asyncMode) {
+				cf.indent(stream, indent);
+				stream << "-- Ignoring read enable signal "<< m_namespaceScope.get(enablePort).name << " for asynchronous internal memory.\n";
+			} else {
+				cf.indent(stream, indent);
+				stream << "IF ("<< m_namespaceScope.get(enablePort).name << " = '1') THEN\n";
+				indent++;
+			}
+		}
+
+		const auto &outputDecl = m_namespaceScope.get(dataPort);
+
+		cf.indent(stream, indent);
+		if (idx+1 == rp.dedicatedReadLatencyRegisters.size()) {
+			stream << outputDecl.name;
+		} else {
+			stream << outputDecl.name << "_outputReg_" << idx;
+		}
+
+		stream << " <= ";
+
+		if (outputDecl.dataType != VHDLDataType::UNSIGNED) {
+			cf.formatDataType(stream, outputDecl.dataType);
+			stream << '(';
+		}
+
+		if (idx == 0) {
+			stream << "memory(to_integer(" << m_namespaceScope.get(addrPort).name << "));\n";
+		} else {
+			stream  << outputDecl.name << "_outputReg_" << idx-1 << ";\n";
+		}
+
+		if (outputDecl.dataType != VHDLDataType::UNSIGNED) {
+			stream << ')';
+		}
+
+
+		if (enablePort.node != nullptr && !asyncMode) {
+			indent--;
+			cf.indent(stream, indent);
+			stream << "END IF;\n";
+		}	
+	}
+}
+
+
+
+
 void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned indent)
 {
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
-	struct RWPorts {
-		std::vector<hlim::MemoryGroup::ReadPort> readPorts;
-		std::vector<hlim::MemoryGroup::WritePort> writePorts;
-	};
-	std::map<hlim::Clock*, RWPorts> clocks;
+	std::map<RegisterConfig, GenericMemoryPorts> clockResetPairs;
 
-	for (auto &wp : m_memGrp->getWritePorts())
-		clocks[wp.node->getClocks()[0]->getClockPinSource()].writePorts.push_back(wp);
+	for (auto &wp : m_memGrp->getWritePorts()) {
+		auto &c = wp.node->getClocks()[0];
+		clockResetPairs[RegisterConfig::fromClock(c, false)].writePorts.push_back(wp);
+	}
 
 	for (auto &rp : m_memGrp->getReadPorts())
-		if (!rp.dedicatedReadLatencyRegisters.empty())
-			clocks[rp.dedicatedReadLatencyRegisters.front()->getClocks()[0]->getClockPinSource()].readPorts.push_back(rp);
-		else
-			clocks[nullptr].readPorts.push_back(rp);
+		if (!rp.dedicatedReadLatencyRegisters.empty()) {
+			for (auto i : utils::Range(rp.dedicatedReadLatencyRegisters.size())) {
+				auto &regNode = rp.dedicatedReadLatencyRegisters[i];
+				auto &c = regNode->getClocks()[0];
+				bool hasReset = regNode->getNonSignalDriver(hlim::Node_Register::RESET_VALUE).node != nullptr;
+				clockResetPairs[RegisterConfig::fromClock(c, hasReset)].readPortRegs.push_back({rp, i});
+			}
+		} else
+			clockResetPairs[{.clock = nullptr, .reset = nullptr}].readPortRegs.push_back({rp, 0});
 
-	for (auto clock : clocks) {
-		if (clock.first != nullptr) {
+	for (auto clockReset : clockResetPairs) {
+		if (clockReset.first.clock != nullptr) {
+
+			std::string clockName = m_namespaceScope.getClock(clockReset.first.clock).name;
+			std::string resetName;
+			if (clockReset.first.reset != nullptr)
+				resetName = m_namespaceScope.getReset(clockReset.first.reset).name;
+
 			unsigned indent = 1;
 			cf.indent(stream, indent);
-			stream << "PROCESS("<< m_namespaceScope.getClock(clock.first).name <<")\n";
+			if (clockReset.first.resetType == hlim::RegisterAttributes::ResetType::ASYNCHRONOUS)
+				stream << "PROCESS(" << clockName << ", " << resetName << ")" << std::endl;
+			else
+				stream << "PROCESS(" << clockName << ")" << std::endl;
+
 			cf.indent(stream, indent);
 			stream << "BEGIN\n";
 
 			indent++;
 
+			if (clockReset.first.resetType == hlim::RegisterAttributes::ResetType::ASYNCHRONOUS) {
+
+				writeResets(stream, indent, resetName, clockReset);
+				
 				cf.indent(stream, indent);
-				switch (clock.first->getTriggerEvent()) {
-					case hlim::Clock::TriggerEvent::RISING:
-						stream << "IF (rising_edge(" << m_namespaceScope.getClock(clock.first).name << ")) THEN\n";
-					break;
-					case hlim::Clock::TriggerEvent::FALLING:
-						stream << "IF (falling_edge(" << m_namespaceScope.getClock(clock.first).name << ")) THEN\n";
-					break;
-					case hlim::Clock::TriggerEvent::RISING_AND_FALLING:
-						stream << "IF (" << m_namespaceScope.getClock(clock.first).name << "'event) THEN\n";
-					break;
-					default:
-						HCL_ASSERT_HINT(false, "Unhandled case");
-				}
+				stream << "ELSIF";
+			} else {
+				cf.indent(stream, indent);
+				stream << "IF";
+			}
+
+			switch (clockReset.first.triggerEvent) {
+				case hlim::Clock::TriggerEvent::RISING:
+					stream << " (rising_edge(" << clockName << ")) THEN\n";
+				break;
+				case hlim::Clock::TriggerEvent::FALLING:
+					stream << " (falling_edge(" << clockName << ")) THEN\n";
+				break;
+				case hlim::Clock::TriggerEvent::RISING_AND_FALLING:
+					stream << " (" << clockName << "'event) THEN\n";
+				break;
+				default:
+					HCL_ASSERT_HINT(false, "Unhandled case");
+			}
+			indent++;
+
+			writeWritePorts(stream, indent, clockReset);
+
+
+			if (clockReset.first.resetType == hlim::RegisterAttributes::ResetType::SYNCHRONOUS) {
+
+				writeResets(stream, indent, resetName, clockReset);
+				
+				cf.indent(stream, indent);
+				stream << "ELSE" << std::endl;
+
 				indent++;
-
-				for (auto &wp : clock.second.writePorts) {
-					auto enablePort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
-					if (enablePort.node != nullptr) {
-						cf.indent(stream, indent);
-						stream << "IF ("<< m_namespaceScope.get(enablePort).name << " = '1') THEN\n";
-						indent++;
-					}
+			}
 
 
-					auto addrPort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
-					auto dataPort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrData);
-
-					const auto &dataDecl = m_namespaceScope.get(dataPort);
-
-					cf.indent(stream, indent);
-					stream << "memory(to_integer(" << m_namespaceScope.get(addrPort).name << ")) <= ";
-					if (dataDecl.dataType != VHDLDataType::UNSIGNED) {
-						cf.formatDataType(stream, VHDLDataType::UNSIGNED);
-						stream << '(' << dataDecl.name << ";\n";
-					} else
-						stream << dataDecl.name << ";\n";
-
-					if (enablePort.node != nullptr) {
-						indent--;
-						cf.indent(stream, indent);
-						stream << "END IF;\n";
-					}
-				}
-				for (auto &rp : clock.second.readPorts) {
-					auto addrPort = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
-					auto dataPort = rp.dataOutput;
-
-					for (auto i : utils::Range(rp.dedicatedReadLatencyRegisters.size())) {
-						auto enablePort = rp.dedicatedReadLatencyRegisters[i]->getDriver((unsigned)hlim::Node_Register::Input::ENABLE); //rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
-						if (enablePort.node != nullptr) {
-							cf.indent(stream, indent);
-							stream << "IF ("<< m_namespaceScope.get(enablePort).name << " = '1') THEN\n";
-							indent++;
-						}
-
-						const auto &outputDecl = m_namespaceScope.get(dataPort);
-
-						cf.indent(stream, indent);
-						if (i+1 == rp.dedicatedReadLatencyRegisters.size()) {
-							stream << outputDecl.name;
-						} else {
-							stream << outputDecl.name << "_outputReg_" << i;
-						}
-
-						stream << " <= ";
-
-						if (outputDecl.dataType != VHDLDataType::UNSIGNED) {
-							cf.formatDataType(stream, outputDecl.dataType);
-							stream << '(';
-						}
-
-						if (i == 0) {
-							stream << "memory(to_integer(" << m_namespaceScope.get(addrPort).name << "));\n";
-						} else {
-							stream  << outputDecl.name << "_outputReg_" << i-1 << ";\n";
-						}
-
-						if (outputDecl.dataType != VHDLDataType::UNSIGNED) {
-							stream << ')';
-						}
+			writeReadPorts(stream, indent, clockReset, false);
 
 
-						if (enablePort.node != nullptr) {
-							indent--;
-							cf.indent(stream, indent);
-							stream << "END IF;\n";
-						}
-
-						if (clock.first->getRegAttribs().resetType == hlim::RegisterAttributes::ResetType::SYNCHRONOUS) {
-							auto reset = rp.dedicatedReadLatencyRegisters[i]->getDriver((unsigned)hlim::Node_Register::Input::RESET_VALUE);
-							if (reset.node != nullptr) {
-								cf.indent(stream, indent);
-								const char resetValue = clock.first->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH ? '1' : '0';
-								stream << "IF ("<< m_namespaceScope.getReset(clock.first).name << " = '" << resetValue << "') THEN\n";
-								indent++;
-
-								cf.indent(stream, indent);
-								if (i+1 == rp.dedicatedReadLatencyRegisters.size()) {
-									stream << m_namespaceScope.get(dataPort).name;
-								} else {
-									stream << m_namespaceScope.get(dataPort).name << "_outputReg_" << i;
-								}
-								stream << " <= " << m_namespaceScope.get(reset).name << ";\n";
-
-								indent--;
-								cf.indent(stream, indent);
-								stream << "END IF;\n";
-							}
-						}
-					}
-				}
-
+			if (clockReset.first.resetType == hlim::RegisterAttributes::ResetType::SYNCHRONOUS) {
 				indent--;
-
 				cf.indent(stream, indent);
 				stream << "END IF;\n";
+			}
 
-				if (clock.first->getRegAttribs().resetType == hlim::RegisterAttributes::ResetType::ASYNCHRONOUS) {
-					for (auto &rp : clock.second.readPorts) {
-						for (auto i : utils::Range(rp.dedicatedReadLatencyRegisters.size())) {
-							auto reset = rp.dedicatedReadLatencyRegisters[i]->getDriver((unsigned)hlim::Node_Register::Input::RESET_VALUE);
-							if (reset.node != nullptr) {
-								cf.indent(stream, indent);
-								const char resetValue = clock.first->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH ? '1' : '0';
-								stream << "IF ("<< m_namespaceScope.getReset(clock.first).name << " = '" << resetValue << "') THEN\n";
-								indent++;
-
-								cf.indent(stream, indent);
-								if (i+1 == rp.dedicatedReadLatencyRegisters.size()) {
-									stream << m_namespaceScope.get(rp.dataOutput).name;
-								} else {
-									stream << m_namespaceScope.get(rp.dataOutput).name << "_outputReg_" << i;
-								}
-								stream << " <= " << m_namespaceScope.get(reset).name << ";\n";									
-
-								indent--;
-								cf.indent(stream, indent);
-								stream << "END IF;\n";
-							}
-						}
-					}
-				}
+			indent--;
+			cf.indent(stream, indent);
+			stream << "END IF;\n";
 
 			indent--;
 			cf.indent(stream, indent);
@@ -441,34 +501,9 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
 
 			indent++;
 
-				for (auto &rp : clock.second.readPorts) {
-					auto enablePort = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
-					if (enablePort.node != nullptr) {
-						cf.indent(stream, indent);
-						stream << "-- Ignoring read enable signal "<< m_namespaceScope.get(enablePort).name << " for asynchronous internal memory.\n";
-					}
-
-
-					auto addrPort = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
-					auto dataPort = rp.dataOutput;
-					const auto &outputDecl = m_namespaceScope.get(dataPort);
-
-					cf.indent(stream, indent);
-					stream << outputDecl.name << " <= ";
-					
-					if (outputDecl.dataType != VHDLDataType::UNSIGNED) {
-						cf.formatDataType(stream, outputDecl.dataType);
-						stream << '(';
-					}
-
-					stream << "memory(to_integer(" << m_namespaceScope.get(addrPort).name << "));\n";
-
-					if (outputDecl.dataType != VHDLDataType::UNSIGNED)
-						stream << ')';
-				}
+			writeReadPorts(stream, indent, clockReset, true);
 
 			indent--;
-
 			cf.indent(stream, indent);
 			stream << "END PROCESS;\n\n";
 		}
