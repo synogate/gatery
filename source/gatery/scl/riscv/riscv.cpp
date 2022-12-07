@@ -20,6 +20,7 @@
 #include "../Adder.h"
 #include "../utils/OneHot.h"
 #include "../tilelink/tilelink.h"
+#include "../Counter.h"
 
 void gtry::scl::riscv::Instruction::decode(const UInt& inst)
 {
@@ -330,12 +331,20 @@ void gtry::scl::riscv::RV32I::shift()
 	}
 }
 
-void gtry::scl::riscv::RV32I::csr(BitWidth timerWidth, BitWidth instRetWidth)
+void gtry::scl::riscv::RV32I::csr(BitWidth timerWidth, BitWidth instRetWidth, hlim::ClockRational timerResolution)
 {
 	auto ent = m_area.enter("csr");
 
+	auto timerCycles = timerResolution * ClockScope::getClk().absoluteFrequency();
+	scl::Counter timer{ timerCycles.numerator() / timerCycles.denominator() };
+	timer.inc();
+	Bit tickTimer = reg(timer.isLast(), '0');
+	HCL_NAMED(tickTimer);
+
 	UInt cycles = timerWidth;
-	cycles = reg(cycles + 1, 0);
+	IF(tickTimer)
+		cycles += 1;
+	cycles = reg(cycles, 0);
 	HCL_NAMED(cycles);
 
 	UInt instructions = instRetWidth;
