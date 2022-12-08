@@ -105,6 +105,13 @@ void simAnnotationEndDelayed(const std::string &id, const Clock &clk, int cycles
 	}
 }
 
+Seconds getCurrentSimulationTime()
+{
+	auto *sim = sim::SimulationContext::current()->getSimulator();
+	HCL_DESIGNCHECK_HINT(sim, "Can only get current simulation time if running in a simulation!");
+
+	return sim->getCurrentSimulationTime();
+}
 
 
 }

@@ -18,6 +18,8 @@
 #pragma once
 
 
+// Apparently no longer needed, but keeping around in case it is needed for webassembly clang
+/*
 #ifdef __clang__
 #include <experimental/coroutine>
 
@@ -26,5 +28,10 @@ namespace std {
 }
 
 #else
+*/
+
 #include <coroutine>
+
+/*
 #endif
+*/
