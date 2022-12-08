@@ -26,6 +26,8 @@
 
 #include <gatery/utils/Traits.h>
 
+#include <gatery/hlim/ClockRational.h>
+
 #include <gatery/simulation/SigHandle.h>
 #include <gatery/simulation/simProc/Condition.h>
 #include <gatery/simulation/simProc/SimulationProcess.h>
@@ -280,6 +282,9 @@ using WaitFor = sim::WaitFor;
 using WaitUntil = sim::WaitUntil;
 using WaitStable = sim::WaitStable;
 using Seconds = hlim::ClockRational;
+constexpr auto toNanoseconds = hlim::toNanoseconds;
+
+Seconds getCurrentSimulationTime();
 
 using BigInt = sim::BigInt;
 
