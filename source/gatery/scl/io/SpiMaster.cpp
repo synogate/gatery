@@ -36,7 +36,7 @@ gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>& i
 		stepCounter.reset();
 
 	ready(inBit) = '0';
-	m_clk = '1';
+	m_clk = '0';
 	m_out = *inBit;
 
 	RvStream<Bit> outBit{ m_in };
@@ -49,20 +49,17 @@ gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>& i
 	Reg<Enum<State>> state{ State::setup };
 	IF(state.current() == State::setup)
 	{
-		IF(valid(in))
-			m_clk = '0';
-		IF(stepCounter.isLast())
+		IF(valid(inBit) & stepCounter.isLast())
 		{
-			valid(outBit) = '1';
-			IF(transfer(outBit))
-			{
-				state = State::latch;
-				stepCounter.reset();
-			}
+			state = State::latch;
+			stepCounter.reset();
 		}
 	}
 	IF(state.current() == State::latch)
 	{
+		m_clk = '1';
+		IF(stepCounter.isFirst())
+			valid(outBit) = '1';
 		IF(stepCounter.isLast())
 		{
 			ready(inBit) = '1';
