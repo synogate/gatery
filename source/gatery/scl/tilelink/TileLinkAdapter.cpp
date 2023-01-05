@@ -92,13 +92,13 @@ namespace gtry::scl
 			IF(sd.isBurst())
 				md.data = (BVec)cat(sd.data, lowWord);
 
-			Bit phase;
-			phase = reg(phase, '0');
-			IF(valid(*slave.d) & sd.isBurst())
-				phase = !phase;
+			Bit secondBeatOfBurst;
+			IF(transfer(*slave.d) & sd.isBurst())
+				secondBeatOfBurst = !secondBeatOfBurst;
+			secondBeatOfBurst = reg(secondBeatOfBurst, '0');
 
-			ready(*slave.d) = ready(*master.d) | (!phase & sd.isBurst());
-			valid(*master.d) = valid(*slave.d) & !phase;
+			ready(*slave.d) = ready(*master.d) | (!secondBeatOfBurst & sd.isBurst());
+			valid(*master.d) = valid(*slave.d) & (secondBeatOfBurst | !sd.isBurst());
 		}
 		HCL_NAMED(master);
 		return master;
