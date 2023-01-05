@@ -86,7 +86,7 @@ namespace gtry::scl::riscv
 		virtual void logic();
 		virtual void setcmp();
 		virtual void shift();
-		virtual void csr(BitWidth timerWidth = 64_b, BitWidth instRetWidth = 64_b, hlim::ClockRational timerResolution = {1, 1});
+		virtual void csr(BitWidth timerWidth = 64_b, BitWidth instRetWidth = 64_b, hlim::ClockRational timerResolution = {1, 1'000'000}); // default time resolution of 1us
 
 		virtual void mem(AvalonMM& mem, bool byte = true, bool halfword = true);
 		virtual TileLinkUL memTLink(bool byte = true, bool halfword = true);

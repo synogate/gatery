@@ -732,7 +732,8 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_jal, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_csr_timer, BoostUnitTestSimulationFixture)
 {
-	Clock clock({ .absoluteFrequency = 100'000'000 });
+	// default time resolution is 1us. set clock to 1MHz for 1:1 relationsship
+	Clock clock({ .absoluteFrequency = 1'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
