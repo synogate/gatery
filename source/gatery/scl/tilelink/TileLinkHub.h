@@ -47,12 +47,25 @@ namespace gtry::scl
 		TileLinkMux<TLink> m_mux;
 		TileLinkDemux<TLink> m_demux;
 
+		UInt m_OpenRequests = ConstUInt(0, 8_b);
+		size_t m_SourceId = 0;
+
 		BitWidth m_sourceW = 0_b;
 	};
 }
 
 namespace gtry::scl
 {
+	UInt countOpenRequests(BitWidth w, TileLinkSignal auto& link, std::string name)
+	{
+		UInt counter = w;
+		counter += transfer(link.a);
+		counter -= transfer(*link.d);
+		counter = reg(counter, 0);
+		setName(counter, name);
+		return counter;
+	}
+
 	template<TileLinkSignal TLink>
 	inline TileLinkHub<TLink>::TileLinkHub()
 	{
@@ -70,6 +83,9 @@ namespace gtry::scl
 	{
 		HCL_DESIGNCHECK_HINT(m_genState == State::source, "attach all sources first");
 		auto ent = m_area.enter();
+
+		m_OpenRequests |= countOpenRequests(m_OpenRequests.width(), source, 
+			(std::ostringstream{} << "openRequestsSource" << m_SourceId++).str());
 		m_mux.attachSource(source);
 	}
 
@@ -79,6 +95,8 @@ namespace gtry::scl
 		auto ent = m_area.enter();
 		enterSinkState();
 		HCL_DESIGNCHECK_HINT(m_genState == State::sink, "already generated");
+		m_OpenRequests |= countOpenRequests(m_OpenRequests.width(), sink,
+			(std::ostringstream{} << "openRequestsSink" << std::hex << addressBase).str());
 		m_demux.attachSink(sink, addressBase);
 	}
 
@@ -89,6 +107,9 @@ namespace gtry::scl
 		m_genState = State::generated;
 		auto ent = m_area.enter();
 		m_demux.generate();
+
+		// TODO gatery frontend function to preserve signal and maybe make it visible to chip scope
+		//pinOut(reg(m_OpenRequests, 0)).setName("LED");
 	}
 
 	template<TileLinkSignal TLink>

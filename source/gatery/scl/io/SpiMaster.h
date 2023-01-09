@@ -33,6 +33,7 @@ namespace gtry::scl
 		const Bit& scl() const { return m_clk; }
 		const Bit& miso() const { return m_in; }
 		const Bit& mosi() const { return m_out; }
+		Bit& miso() { return m_in; }
 
 		virtual RvStream<BVec> generate(RvStream<BVec>& in);
 
