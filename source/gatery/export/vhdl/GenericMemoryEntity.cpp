@@ -339,27 +339,28 @@ void GenericMemoryEntity::writeReadPorts(std::ostream &stream, unsigned indent, 
 	for (auto &rp_idx : clockReset.second.readPortRegs) {
 		auto& [rp, idx] = rp_idx;
 
-		HCL_ASSERT(idx == 0 || !asyncMode);
+		HCL_ASSERT(idx == ~0ull || !asyncMode);
 
 		auto addrPort = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
 		auto dataPort = rp.dataOutput;
 
-		auto enablePort = rp.dedicatedReadLatencyRegisters[idx]->getDriver((unsigned)hlim::Node_Register::Input::ENABLE);
-		if (enablePort.node != nullptr) {
-			if (asyncMode) {
-				cf.indent(stream, indent);
-				stream << "-- Ignoring read enable signal "<< m_namespaceScope.get(enablePort).name << " for asynchronous internal memory.\n";
-			} else {
+		bool openedEnableScope = false;
+		if (!asyncMode) {
+			HCL_ASSERT(rp.dedicatedReadLatencyRegisters.size() > idx);
+
+			auto enablePort = rp.dedicatedReadLatencyRegisters[idx]->getDriver((unsigned)hlim::Node_Register::Input::ENABLE);
+			if (enablePort.node != nullptr) {
 				cf.indent(stream, indent);
 				stream << "IF ("<< m_namespaceScope.get(enablePort).name << " = '1') THEN\n";
 				indent++;
+				openedEnableScope = true;
 			}
 		}
 
 		const auto &outputDecl = m_namespaceScope.get(dataPort);
 
 		cf.indent(stream, indent);
-		if (idx+1 == rp.dedicatedReadLatencyRegisters.size()) {
+		if (asyncMode || idx+1 == rp.dedicatedReadLatencyRegisters.size()) {
 			stream << outputDecl.name;
 		} else {
 			stream << outputDecl.name << "_outputReg_" << idx;
@@ -372,7 +373,7 @@ void GenericMemoryEntity::writeReadPorts(std::ostream &stream, unsigned indent, 
 			stream << '(';
 		}
 
-		if (idx == 0) {
+		if (asyncMode || idx == 0) {
 			stream << "memory(to_integer(" << m_namespaceScope.get(addrPort).name << "));\n";
 		} else {
 			stream  << outputDecl.name << "_outputReg_" << idx-1 << ";\n";
@@ -382,8 +383,7 @@ void GenericMemoryEntity::writeReadPorts(std::ostream &stream, unsigned indent, 
 			stream << ')';
 		}
 
-
-		if (enablePort.node != nullptr && !asyncMode) {
+		if (openedEnableScope) {
 			indent--;
 			cf.indent(stream, indent);
 			stream << "END IF;\n";
@@ -414,7 +414,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
 				clockResetPairs[RegisterConfig::fromClock(c, hasReset)].readPortRegs.push_back({rp, i});
 			}
 		} else
-			clockResetPairs[{.clock = nullptr, .reset = nullptr}].readPortRegs.push_back({rp, 0});
+			clockResetPairs[{.clock = nullptr, .reset = nullptr}].readPortRegs.push_back({rp, ~0ull});
 
 	for (auto clockReset : clockResetPairs) {
 		if (clockReset.first.clock != nullptr) {

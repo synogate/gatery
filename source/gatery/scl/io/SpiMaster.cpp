@@ -23,6 +23,7 @@ gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>& i
 {
 	Area area{ "scl_SpiMaster", true };
 	HCL_NAMED(m_in);
+	RvStream<Bit> outBit{ m_in };
 
 	// generate msb first bit stream
 	*in = swapEndian(*in, 1_b);
@@ -30,7 +31,8 @@ gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>& i
 	HCL_NAMED(inBit);
 
 	Counter stepCounter{ m_clockDiv };
-	IF(!stepCounter.isLast())
+	// hold clock while rx side is stalled
+	IF(!stepCounter.isLast() & (!valid(outBit) | ready(outBit)))
 		stepCounter.inc();
 	IF(!valid(inBit))
 		stepCounter.reset();
@@ -39,7 +41,6 @@ gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>& i
 	m_clk = '0';
 	m_out = *inBit;
 
-	RvStream<Bit> outBit{ m_in };
 	valid(outBit) = '0';
 
 	enum class State {

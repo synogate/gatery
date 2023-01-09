@@ -732,7 +732,8 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_jal, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_csr_timer, BoostUnitTestSimulationFixture)
 {
-	Clock clock({ .absoluteFrequency = 100'000'000 });
+	// default time resolution is 1us. set clock to 1MHz for 1:1 relationsship
+	Clock clock({ .absoluteFrequency = 1'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
@@ -785,128 +786,129 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 
 		std::mt19937 rng{ std::random_device{}() };
 
-		// BEQ
+		using std::numeric_limits;
+		std::vector<std::pair<uint32_t, uint32_t>> cases = {
+			{ 0, 0 },	// equal
+			{ 1u << 31, 1u << 31 }, // equal high bit set
+			{ 0, 1u << 31 }, // high bit unequal
+			{ 1u << 31, 0 }, // high bit unequal
+			{ 1, 2 }, // small difference
+			{ 2, 1 }, // small difference
+			{ numeric_limits<uint32_t>::min(), numeric_limits<uint32_t>::max() }, // big difference unsigned
+			{ numeric_limits<uint32_t>::max(), numeric_limits<uint32_t>::min() }, // big difference unsigned
+			{ numeric_limits<int32_t>::min(), numeric_limits<int32_t>::max() }, // big difference signed
+			{ numeric_limits<int32_t>::max(), numeric_limits<int32_t>::min() }, // big difference signed
+		};
 		for (size_t i = 0; i < 32; ++i)
+			cases.push_back({ rng(), rng() });
+
+		// BEQ
+		for (auto c : cases)
 		{
-			uint32_t opA = rng();
-			uint32_t opB = rng() % 2 ? opA : rng();
 			uint32_t ip = rng();
 			int32_t offset = (int32_t(rng()) >> (32 - 13)) & ~1;
 
-			rv.r1(opA).r2(opB).ip(ip);
+			rv.r1(c.first).r2(c.second).ip(ip);
 			rv.op().typeB(rv::op::BRANCH, rv::func::BEQ, offset);
 			co_await AfterClk(clock);
 
 			BOOST_TEST(!rv.hasResult());
-			if (opA == opB)
+			if (c.first == c.second)
 				BOOST_TEST(rv.ipNext() == ip + offset);
 			else
 				BOOST_TEST(rv.ipNext() == ip + 4);
 		}
 
 		// BNE
-		for (size_t i = 0; i < 32; ++i)
+		for (auto c : cases)
 		{
-			uint32_t opA = rng();
-			uint32_t opB = rng() % 2 ? opA : rng();
 			uint32_t ip = rng();
 			int32_t offset = (int32_t(rng()) >> (32 - 13)) & ~1;
 
-			rv.r1(opA).r2(opB).ip(ip);
+			rv.r1(c.first).r2(c.second).ip(ip);
 			rv.op().typeB(rv::op::BRANCH, rv::func::BNE, offset);
 			co_await AfterClk(clock);
 
 			BOOST_TEST(!rv.hasResult());
-			if (opA != opB)
+			if (c.first != c.second)
 				BOOST_TEST(rv.ipNext() == ip + offset);
 			else
 				BOOST_TEST(rv.ipNext() == ip + 4);
 		}
 
 		// BLT
-		for (size_t i = 0; i < 32; ++i)
+		for (auto c : cases)
 		{
-			uint32_t opA = rng();
-			uint32_t opB = rng() % 2 ? opA : rng();
 			uint32_t ip = rng();
 			int32_t offset = (int32_t(rng()) >> (32 - 13)) & ~1;
 
-			rv.r1(opA).r2(opB).ip(ip);
+			rv.r1(c.first).r2(c.second).ip(ip);
 			rv.op().typeB(rv::op::BRANCH, rv::func::BLT, offset);
 			co_await AfterClk(clock);
 
 			BOOST_TEST(!rv.hasResult());
-			if (int32_t(opA) < int32_t(opB))
+			if (int32_t(c.first) < int32_t(c.second))
 				BOOST_TEST(rv.ipNext() == ip + offset);
 			else
 				BOOST_TEST(rv.ipNext() == ip + 4);
 		}
 
 		// BGE
-		for (size_t i = 0; i < 32; ++i)
+		for (auto c : cases)
 		{
-			uint32_t opA = rng();
-			uint32_t opB = rng() % 2 ? opA : rng();
 			uint32_t ip = rng();
 			int32_t offset = (int32_t(rng()) >> (32 - 13)) & ~1;
 
-			rv.r1(opA).r2(opB).ip(ip);
+			rv.r1(c.first).r2(c.second).ip(ip);
 			rv.op().typeB(rv::op::BRANCH, rv::func::BGE, offset);
 			co_await AfterClk(clock);
 
 			BOOST_TEST(!rv.hasResult());
-			if (int32_t(opA) >= int32_t(opB))
+			if (int32_t(c.first) >= int32_t(c.second))
 				BOOST_TEST(rv.ipNext() == ip + offset);
 			else
 				BOOST_TEST(rv.ipNext() == ip + 4);
 		}
 
 		// BLTU
-		for (size_t i = 0; i < 32; ++i)
+		for (auto c : cases)
 		{
-			uint32_t opA = rng();
-			uint32_t opB = rng() % 2 ? opA : rng();
 			uint32_t ip = rng();
 			int32_t offset = (int32_t(rng()) >> (32 - 13)) & ~1;
 
-			rv.r1(opA).r2(opB).ip(ip);
+			rv.r1(c.first).r2(c.second).ip(ip);
 			rv.op().typeB(rv::op::BRANCH, rv::func::BLTU, offset);
 			co_await AfterClk(clock);
 
 			BOOST_TEST(!rv.hasResult());
-			if (opA < opB)
+			if (c.first < c.second)
 				BOOST_TEST(rv.ipNext() == ip + offset);
 			else
 				BOOST_TEST(rv.ipNext() == ip + 4);
 		}
 
 		// BGEU
-		for (size_t i = 0; i < 32; ++i)
+		for (auto c : cases)
 		{
-			uint32_t opA = rng();
-			uint32_t opB = rng() % 2 ? opA : rng();
 			uint32_t ip = rng();
 			int32_t offset = (int32_t(rng()) >> (32 - 13)) & ~1;
 
-			rv.r1(opA).r2(opB).ip(ip);
+			rv.r1(c.first).r2(c.second).ip(ip);
 			rv.op().typeB(rv::op::BRANCH, rv::func::BGEU, offset);
 			co_await AfterClk(clock);
 
 			BOOST_TEST(!rv.hasResult());
-			if (opA >= opB)
+			if (c.first >= c.second)
 				BOOST_TEST(rv.ipNext() == ip + offset);
 			else
 				BOOST_TEST(rv.ipNext() == ip + 4);
 		}
 
+		stopTest();
 	});
 
-	//sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "riscv_branch.vcd" };
-	//vcd.addAllPins();
-	//vcd.addAllNamedSignals();
-
 	design.postprocess();
-	runTicks(clock.getClk(), 32 * 6);
+	runTicks(clock.getClk(), 4096);
 }
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_store, BoostUnitTestSimulationFixture)
