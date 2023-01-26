@@ -355,9 +355,31 @@ void gtry::scl::riscv::RV32I::csr(BitWidth timerWidth, BitWidth instRetWidth, hl
 
 	IF(m_instr.opcode.upper(5_b) == "b11100" & m_instr.func3 != 0)
 	{
-		UInt value = mux(m_instr.immI[1], { cycles, instructions });
-		UInt word = muxWord(m_instr.immI[7], value);
-		setResult(word);
+		setResult(ConstUInt(0, 32_b));
+
+		IF(m_instr.immI.lower(12_b) == 0xC00)
+			setResult(cycles.width() >= 32_b ? cycles.lower(32_b) : zext(cycles));
+		if(cycles.width() > 32_b)
+			IF(m_instr.immI.lower(12_b) == 0xC80)
+				setResult(zext(cycles(32, cycles.width() - 32_b)));
+
+		IF(m_instr.immI.lower(12_b) == 0xC02)
+			setResult(instructions.width() >= 32_b ? instructions.lower(32_b) : zext(instructions));
+		if (instructions.width() > 32_b)
+			IF(m_instr.immI.lower(12_b) == 0xC82)
+				setResult(zext(instructions(32, instructions.width() - 32_b)));
+	}
+}
+
+void gtry::scl::riscv::RV32I::csrMachineInformation(uint32_t vendorId, uint32_t architectureId, uint32_t implementationId, uint32_t hartId, uint32_t configPtr)
+{
+	IF(m_instr.opcode.upper(5_b) == "b11100" & m_instr.func3 != 0)
+	{
+		if (vendorId) IF(m_instr.immI.lower(12_b) == 0xF11) setResult(vendorId);
+		if (architectureId) IF(m_instr.immI.lower(12_b) == 0xF12) setResult(architectureId);
+		if (implementationId) IF(m_instr.immI.lower(12_b) == 0xF13) setResult(implementationId);
+		if (hartId) IF(m_instr.immI.lower(12_b) == 0xF14) setResult(hartId);
+		if (configPtr) IF(m_instr.immI.lower(12_b) == 0xF15) setResult(configPtr);
 	}
 }
 
