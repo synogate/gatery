@@ -34,6 +34,8 @@ namespace gtry::scl
 
 		virtual void attachSource(TLink&& source) { attachSource(source); }
 		virtual void attachSource(TLink& source);
+		virtual TLink attachSource(BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth);
+
 		virtual void attachSink(TLink&& sink, uint64_t addressBase) { attachSink(sink, addressBase); }
 		virtual void attachSink(TLink& sink, uint64_t addressBase);
 		virtual void generate();
@@ -87,6 +89,15 @@ namespace gtry::scl
 		m_OpenRequests |= countOpenRequests(m_OpenRequests.width(), source, 
 			(std::ostringstream{} << "openRequestsSource" << m_SourceId++).str());
 		m_mux.attachSource(source);
+	}
+
+	template<TileLinkSignal TLink>
+	inline TLink TileLinkHub<TLink>::attachSource(BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth)
+	{
+		TLink ret;
+		tileLinkInit(ret, addrWidth, dataWidth, sizeWidth, sourceWidth);
+		attachSource(ret);
+		return ret;
 	}
 
 	template<TileLinkSignal TLink>
