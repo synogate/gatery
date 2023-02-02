@@ -20,6 +20,8 @@
 #include "TileLinkMux.h"
 #include "TileLinkDemux.h"
 
+#include <boost/format.hpp>
+
 namespace gtry::scl
 {
 	template<TileLinkSignal TLink>
@@ -87,7 +89,7 @@ namespace gtry::scl
 		auto ent = m_area.enter();
 
 		m_OpenRequests |= countOpenRequests(m_OpenRequests.width(), source, 
-			(std::ostringstream{} << "openRequestsSource" << m_SourceId++).str());
+			(boost::format("openRequestsSource%d") % m_SourceId++).str());
 		m_mux.attachSource(source);
 	}
 
@@ -107,7 +109,7 @@ namespace gtry::scl
 		enterSinkState();
 		HCL_DESIGNCHECK_HINT(m_genState == State::sink, "already generated");
 		m_OpenRequests |= countOpenRequests(m_OpenRequests.width(), sink,
-			(std::ostringstream{} << "openRequestsSink" << std::hex << addressBase).str());
+			(boost::format("openRequestsSink%x") % addressBase).str());
 		m_demux.attachSink(sink, addressBase);
 	}
 
