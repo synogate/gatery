@@ -35,7 +35,11 @@ void gtry::scl::usb::Descriptor::add(StringId index, std::wstring_view string, L
 	HCL_ASSERT(e.data.size() < 256);
 	e.data[0] = (uint8_t)e.data.size();
 	e.data[1] = 3;
-	memcpy(&e.data[2], string.data(), string.size() * 2);
+	for(size_t i = 0; i < string.size(); ++i)
+	{
+		e.data[2 + i * 2 + 0] = string[i] & 0xFF;
+		e.data[2 + i * 2 + 1] = (string[i] >> 8) & 0xFF; 
+	}
 
 	auto it = std::find_if(m_entries.begin(), m_entries.end(), [](DescriptorEntry& e) {
 		return e.type() == 3 && e.index == 0;
