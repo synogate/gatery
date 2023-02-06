@@ -19,6 +19,9 @@ function GateryWorkspaceDefaults()
         runtime "Release"
         optimize "On"
 
+    filter { "system:windows" }
+        buildoptions { "/Zc:preprocessor" }
+
     filter { "system:linux" }
         buildoptions { "-std=c++2a", "-fcoroutines" }
         defines { "BOOST_STACKTRACE_USE_ADDR2LINE" }
