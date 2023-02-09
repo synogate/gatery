@@ -66,6 +66,7 @@ namespace gtry::sim
 
 	void VCDSink::writeGtkWaveProjFile()
 	{
+		m_gtkWaveProjectFile.writeEnumFilterFiles();
 		m_gtkWaveProjectFile.write((m_gtkWaveProjectFile.getWaveformFile()+".gtkw").c_str());
 	}
 

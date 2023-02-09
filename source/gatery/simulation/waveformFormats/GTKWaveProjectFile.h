@@ -74,6 +74,7 @@ class GTKWaveProjectFile
 		void setCursor(const hlim::ClockRational &time);
 
 		void write(const char *filename) const;
+		void writeEnumFilterFiles();
 	protected:
 		std::string m_waveformFile;
 		std::int64_t m_cursor_ps = -1;
@@ -83,6 +84,7 @@ class GTKWaveProjectFile
 		std::array<Marker, 26> m_markers;
 
 		std::vector<Signal> m_signals;
+		std::vector<std::string> m_translationFilterFiles;
 };
 
 

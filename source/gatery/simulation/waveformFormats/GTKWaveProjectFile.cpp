@@ -17,6 +17,7 @@
 */
 #include "gatery/pch.h"
 
+#include <gatery/frontend/Enum.h>
 #include "GTKWaveProjectFile.h"
 
 #include <fstream>
@@ -114,6 +115,21 @@ void GTKWaveProjectFile::write(const char *filename) const
 				file << s.signalName << '\n';
 			break;
 		}
+	}
+
+	for (const auto& e : m_translationFilterFiles)
+		file << "^1 " << e << '\n';
+}
+
+void GTKWaveProjectFile::writeEnumFilterFiles()
+{
+	for (const auto& e : KnownEnum::knwonEnums())
+	{
+		std::string filename = getWaveformFile() + "." + e.first + ".filter";
+		std::ofstream f{ filename };
+		for (auto&& val : e.second)
+			f << val.first << ' ' << val.second << '\n';
+		m_translationFilterFiles.emplace_back(move(filename));
 	}
 }
 

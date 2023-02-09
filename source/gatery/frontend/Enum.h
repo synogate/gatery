@@ -61,8 +61,22 @@ namespace gtry {
 			hlim::RefCtdNodePort m_nodePort;
 	};
 */
+	class KnownEnum
+	{
+	public:
+		// gives a list of c++ enum types and ther values used during hw construction.
+		// used for gtkwave enum translation.
+		static const auto& knwonEnums() { return s_knwonEnums; }
+
+	protected:
+		template<typename T>
+		void registerKnownEnum();
+	private:
+		inline static std::map<std::string, std::map<int, std::string>> s_knwonEnums;
+	};
+
 	template<EnumType T>
-	class Enum : public ElementarySignal
+	class Enum : public ElementarySignal, public KnownEnum
 	{
 	public:
 		using isEnumSignal = void;
@@ -167,6 +181,27 @@ namespace gtry {
 	/// Compares for inequality two compatible enum values (signal or literal of equal base enum type).
 	template<typename TL, typename TR> requires (ValidEnumValuePair<TL, TR>)
 	inline Bit operator != (const TL& lhs, const TR& rhs) { return neq(lhs, rhs); }
+
+	template<typename T>
+	inline void gtry::KnownEnum::registerKnownEnum()
+	{
+		std::string name = typeid(T).name();
+		for (auto it = name.crbegin(); it != name.crend(); ++it)
+			if (!std::isalnum(*it) && *it != '_')
+			{
+				name = name.substr(it.base() - name.cbegin());
+				break;
+			}
+
+		if (name.empty())
+			throw std::runtime_error{ "failed to parse name from enum type" };
+
+		auto& info = s_knwonEnums[name];
+		if (info.empty())
+			for(T val : magic_enum::enum_values<T>())
+				info[(int)val] = magic_enum::enum_name(val);
+
+	}
 
 	template<EnumType T>
 	Enum<T>::Enum() { 
@@ -300,6 +335,8 @@ namespace gtry {
 		m_node = DesignScope::createNode<hlim::Node_Signal>();
 		m_node->setConnectionType(connType());
 		m_node->recordStackTrace();
+
+		registerKnownEnum<T>();
 	}
 
 	template<EnumType T>
