@@ -188,7 +188,7 @@ BOOST_FIXTURE_TEST_CASE(lutram_2, TestWithDefaultDevice<Test_Histogram>)
 BOOST_FIXTURE_TEST_CASE(blockram_1, TestWithDefaultDevice<Test_Histogram>)
 {
 	using namespace gtry;
-	numBuckets = 128;
+	numBuckets = 512;
 	bucketWidth = 32_b;
 	execute();
 	BOOST_TEST(exportContains(std::regex{"RAMB18E2"}));
@@ -202,6 +202,27 @@ BOOST_FIXTURE_TEST_CASE(blockram_2, TestWithDefaultDevice<Test_Histogram>)
 	bucketWidth = 64_b;
 	execute();
 	BOOST_TEST(exportContains(std::regex{"RAMB36E2"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(blockram_cascade, TestWithDefaultDevice<Test_MemoryCascade>)
+{
+	using namespace gtry;
+	depth = 1 << 16;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"RAMB36E2"}));
+	BOOST_TEST(exportContains(std::regex{"ARCHITECTURE impl OF memory_split_at_addrbit_15"}));
+}
+
+
+BOOST_FIXTURE_TEST_CASE(external_high_latency, TestWithDefaultDevice<Test_Histogram>)
+{
+	using namespace gtry;
+	numBuckets = 128;
+	iterationFactor = 10;
+	bucketWidth = 16_b;
+	highLatencyExternal = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"rd_address : OUT STD_LOGIC_VECTOR[\\S\\s]*rd_readdata : IN STD_LOGIC_VECTOR[\\S\\s]*wr_address : OUT STD_LOGIC_VECTOR[\\S\\s]*wr_writedata : OUT STD_LOGIC_VECTOR[\\S\\s]*wr_write"}));
 }
 
 

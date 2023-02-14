@@ -38,6 +38,9 @@ void Test_Histogram::execute()
 	Memory<UInt> histogram(numBuckets, bucketWidth);
 	histogram.initZero();
 
+	if (highLatencyExternal)
+		histogram.setType(MemType::EXTERNAL, 10);
+
 	UInt bucketValue = histogram[bucketIdx];
 	IF (increment) {
 		bucketValue += 1;
@@ -83,8 +86,91 @@ void Test_Histogram::execute()
 				co_await AfterClk(clock);
 		}
 
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+
 		stopTest();
 	});
 
 	runTest(Seconds{numBuckets + numBuckets*iterationFactor + numBuckets * (latency+1) + 100,1} / clock.absoluteFrequency());
+}
+
+void Test_MemoryCascade::execute()
+{
+	Clock clock({
+			.absoluteFrequency = {{125'000'000,1}},
+			.initializeRegs = false,
+	});
+	HCL_NAMED(clock);
+	ClockScope scp(clock);
+
+	Bit wrEn = pinIn().setName("wrEn");
+	UInt addr = pinIn(BitWidth::count(depth)).setName("addr");
+	UInt wrValue = pinIn(elemSize).setName("wrValue");
+
+	Memory<UInt> memory(depth, elemSize);
+
+	IF (wrEn)
+		memory[addr] = wrValue;
+
+	UInt readValue = memory[addr];
+
+	size_t latency = memory.readLatencyHint();
+	for ([[maybe_unused]] auto i : utils::Range(latency)) {
+		readValue = reg(readValue, {.allowRetimingBackward=true});
+	}
+
+	pinOut(readValue).setName("readValue");
+
+
+	addSimulationProcess([&]()->SimProcess {
+
+		std::mt19937 rng;
+
+		std::vector<size_t> addresses;
+		addresses.resize(numWrites/4);
+		for (auto &v : addresses)
+			v = rng() % depth;
+
+
+		std::vector<size_t> refMemory;
+		refMemory.resize(depth, 0);
+		std::vector<bool> refMemoryWritten;
+		refMemoryWritten.resize(depth, false);
+		for ([[maybe_unused]] auto i : gtry::utils::Range(numWrites)) {
+
+			bool doWrite = rng() & 1;
+			size_t value = rng() % elemSize.value;
+			size_t address = addresses[i % addresses.size()];
+			simu(wrEn) = doWrite;
+			simu(wrValue) = value;
+			simu(addr) = address;
+			co_await OnClk(clock);
+
+			if (doWrite) {
+				refMemory[address] = value;
+				refMemoryWritten[address] = true;
+			}
+		}
+		simu(wrEn) = '0';
+		
+		for (auto i : addresses) {
+			simu(addr) = i;
+
+			co_await WaitStable();
+
+			for ([[maybe_unused]] auto i : gtry::utils::Range(latency))
+				co_await AfterClk(clock);
+
+			if (refMemoryWritten[i])
+				BOOST_TEST(simu(readValue) == (int) refMemory[i]);
+
+			if (latency == 0)
+				co_await AfterClk(clock);
+		}
+
+		stopTest();
+	});
+
+	runTest(Seconds{numWrites + numWrites/4 * (latency+1) + 100,1} / clock.absoluteFrequency());
 }
