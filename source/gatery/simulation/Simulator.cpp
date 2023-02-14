@@ -36,6 +36,11 @@ void Simulator::CallbackDispatcher::onPowerOn()
 	for (auto *c : m_callbacks) c->onPowerOn();
 }
 
+void Simulator::CallbackDispatcher::onAfterPowerOn()
+{
+	for (auto *c : m_callbacks) c->onAfterPowerOn();
+}
+
 void Simulator::CallbackDispatcher::onCommitState()
 {
 	for (auto *c : m_callbacks) c->onCommitState();
@@ -44,6 +49,16 @@ void Simulator::CallbackDispatcher::onCommitState()
 void Simulator::CallbackDispatcher::onNewTick(const hlim::ClockRational &simulationTime)
 {
 	for (auto *c : m_callbacks) c->onNewTick(simulationTime);
+}
+
+void Simulator::CallbackDispatcher::onNewPhase(size_t phase)
+{
+	for (auto *c : m_callbacks) c->onNewPhase(phase);
+}
+
+void Simulator::CallbackDispatcher::onAfterMicroTick(size_t microTick)
+{
+	for (auto *c : m_callbacks) c->onAfterMicroTick(microTick);
 }
 
 void Simulator::CallbackDispatcher::onClock(const hlim::Clock *clock, bool risingEdge)

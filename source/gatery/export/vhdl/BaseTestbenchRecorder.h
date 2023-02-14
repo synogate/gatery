@@ -60,8 +60,15 @@ class BaseTestbenchRecorder : public sim::SimulatorCallbacks
 		std::set<const hlim::Node_Pin*> m_allIOPins;
 
 		std::map<hlim::NodePort, std::string> m_outputToIoPinName;
-		std::map<std::string, std::string> m_signalOverrides;
-		std::map<std::string, std::string> m_resetOverrides;
+
+		struct Phase {
+			std::stringstream assertStatements;
+			std::map<std::string, std::string> signalOverrides;
+			std::map<std::string, std::string> resetOverrides;
+		};
+
+		std::vector<Phase> m_phases;
+		Phase m_postDuringPhase;
 
 		void findClocksAndPorts();
 

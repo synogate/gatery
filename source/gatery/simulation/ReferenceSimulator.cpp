@@ -564,6 +564,10 @@ void ReferenceSimulator::powerOn()
 	while (!m_nextEvents.empty())
 		m_nextEvents.pop();
 
+	m_callbackDispatcher.onPowerOn();
+
+	m_callbackDispatcher.onNewTick(m_simulationTime);
+
 	for (const auto &mappedNode : m_program.m_powerOnNodes)
 		mappedNode.node->simulatePowerOn(m_callbackDispatcher, m_dataState.signalState, mappedNode.internal.data(), mappedNode.outputs.data());
 
@@ -636,7 +640,7 @@ void ReferenceSimulator::powerOn()
 	// reevaluate, to provide fibers with power-on state
 	reevaluate();
 
-	m_callbackDispatcher.onPowerOn();
+	m_callbackDispatcher.onAfterPowerOn();
 
 	// Start fibers
 	{
@@ -824,8 +828,11 @@ void ReferenceSimulator::checkSignalWatches()
 			Event e;
 			e.type = Event::Type::simProcResume;
 			e.timeOfEvent = m_simulationTime;
-			e.microTick = m_microTick+1;
-			e.timingPhase = m_timingPhase;
+			if (m_timingPhase == WaitClock::AFTER)
+				e.microTick = m_microTick+1;
+			else
+				e.microTick = 0;
+			e.timingPhase = WaitClock::AFTER;
 			e.data = Event::SimProcResumeEvt {
 				.handle = it2->handle,
 				.insertionId = it2->insertionId,
@@ -847,10 +854,14 @@ void ReferenceSimulator::handleCurrentTimeStep()
 			m_timingPhase = phase;
 			m_microTick = 0;
 
+			m_callbackDispatcher.onNewPhase(phase);
+
 			// Handle everything belonging to the timing phase, i.e. all micro ticks
 			while (!m_nextEvents.empty() && 
 					m_nextEvents.top().timeOfEvent == m_simulationTime && 
 				   	m_nextEvents.top().timingPhase == m_timingPhase) {
+
+				HCL_ASSERT(m_microTick == 0 || m_timingPhase != WaitClock::DURING);
 
 				advanceMicroTick();
 
@@ -859,6 +870,8 @@ void ReferenceSimulator::handleCurrentTimeStep()
 				reevaluate();
 
 				checkSignalWatches();
+
+				m_callbackDispatcher.onAfterMicroTick(m_microTick);
 				m_microTick++;
 			}
 		}
@@ -1051,13 +1064,11 @@ void ReferenceSimulator::simulationProcessSuspending(std::coroutine_handle<> han
 	Event e;
 	e.type = Event::Type::simProcResume;
 	e.timeOfEvent = m_simulationTime + waitFor.getDuration();
-	if (e.timeOfEvent == m_simulationTime) {
+	if (e.timeOfEvent == m_simulationTime && m_timingPhase == WaitClock::AFTER)
 		e.microTick = m_microTick+1;
-		e.timingPhase = m_timingPhase;
-	} else {
+	else
 		e.microTick = 0;
-		e.timingPhase = WaitClock::BEFORE;
-	}
+	e.timingPhase = WaitClock::AFTER;
 	e.data = Event::SimProcResumeEvt{
 		.handle = handle,
 		.insertionId = m_nextSimProcInsertionId++,

@@ -51,6 +51,7 @@ class WaveformRecorder : public SimulatorCallbacks
 		void addAllNamedSignals(bool appendNodeId = false);
 		void addAllSignals(bool appendNodeId = false);
 
+		virtual void onAfterPowerOn() override;
 		virtual void onCommitState() override;
 		virtual void onNewTick(const hlim::ClockRational &simulationTime) override;
 	protected:
