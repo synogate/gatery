@@ -37,11 +37,9 @@
 #include "../RegisterRetiming.h"
 #include "../GraphTools.h"
 
-#include "../../simulation/SigHandle.h"
-#include "../../simulation/simProc/WaitClock.h"
-#include "../../simulation/simProc/WaitFor.h"
-#include "../../simulation/simProc/WaitStable.h"
+#include "../../simulation/SimulationContext.h"
 
+#include "ExternalMemorySimulation.h"
 
 #define DEBUG_OUTPUT
 
@@ -1070,7 +1068,7 @@ void MemoryGroup::verify()
 
 void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 {
-	HCL_ASSERT_HINT(!sim::anyDefined(m_memory->getPowerOnState()), "No power on state for external memory possible!");
+	HCL_ASSERT_HINT(!m_memory->requiresPowerOnInitialization(), "No power on state for external memory possible!");
 
 	auto &memGroupProps = m_memory->getGroup()->properties();
 
@@ -1079,63 +1077,24 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 	if(!m_memory->getName().empty())
 		prefix = m_memory->getName() + '_';
 
-	struct RdPrtNodePorts {
-		sim::SigHandle addr;
-		std::optional<sim::SigHandle> en;
-		sim::SigHandle data;
-		size_t width;
-		size_t latency;
-	};
-
-	struct WrPrtNodePorts {
-		sim::SigHandle addr;
-		std::optional<sim::SigHandle> en;
-		sim::SigHandle data;
-		size_t width;
-	};
-
-	std::vector<RdPrtNodePorts> convertedReadPorts;
-	convertedReadPorts.reserve(m_readPorts.size());
-	std::vector<WrPrtNodePorts> convertedWritePorts;
-	convertedWritePorts.reserve(m_writePorts.size());
-
-	Clock *clock = nullptr;
+	MemorySimConfig memSimConfig; 
+	memSimConfig.size = m_memory->getSize();
+	memSimConfig.readPorts.reserve(m_readPorts.size());
+	memSimConfig.writePorts.reserve(m_writePorts.size());
 
 	size_t portIdx = 0;
 
 	memGroupProps["numPorts"] = m_readPorts.size() + m_writePorts.size();
 
-	//bool isReadFirst = false;
-	//bool isWriteFirst = false;
-	bool isDontCare = false;
-
-	if (m_writePorts.size() == 0) {
-		memGroupProps["crossPortReadDuringWrite"] = "DONT_CARE";
-		isDontCare = true;
-	} else if (m_readPorts.size() == 1 && m_writePorts.size() == 1) {
-		auto *readNode = m_readPorts.front().node.get();
-		auto *writeNode = m_writePorts.front().node.get();
-
-		if (readNode->isOrderedBefore(writeNode)) {
-			memGroupProps["crossPortReadDuringWrite"] = "READ_FIRST";
-			//isReadFirst = true;
-		} else if (writeNode->isOrderedBefore(readNode)) {
-			memGroupProps["crossPortReadDuringWrite"] = "WRITE_FIRST";
-			//isWriteFirst = true;
-		} else {
-			memGroupProps["crossPortReadDuringWrite"] = "DONT_CARE";
-			isDontCare = true;
-		}
-	}
-
 	for (auto &rp : m_readPorts) {
+		Clock *clock = nullptr;
 		for (auto &r : rp.dedicatedReadLatencyRegisters) {
 			HCL_ASSERT(r->getNonSignalDriver(Node_Register::ENABLE).node == nullptr);
 			HCL_ASSERT(r->getNonSignalDriver(Node_Register::RESET_VALUE).node == nullptr);
 			if (clock == nullptr)
 				clock = r->getClocks()[0];
 			else
-				HCL_ASSERT_HINT(clock == r->getClocks()[0], "For external memory, only single clock support implemented yet!");
+				HCL_ASSERT_HINT(clock == r->getClocks()[0], "All read latency registers must have the same clock!");
 		}
 
 		auto *pinRdAddr = circuit.createNode<Node_Pin>(false, true, false);
@@ -1180,23 +1139,28 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 			input.node->rewireInput(input.port, {.node = pinRdData, .port = 0ull});
 		}
 
-		convertedReadPorts.push_back({
+		memSimConfig.readPorts.push_back({
+			.clk = clock,
 			.addr = sim::SigHandle(pinRdAddr->getDriver(0)),
 			.data = sim::SigHandle({.node=pinRdData, .port = 0ull}),
 			.width = getOutputWidth({.node=pinRdData, .port = 0ull}),
-			.latency = rp.dedicatedReadLatencyRegisters.size(),
 		});
-		if (pinRdEn) convertedReadPorts.back().en = sim::SigHandle(pinRdEn->getDriver(0));
+
+		if (rp.dedicatedReadLatencyRegisters.size() > 0) {
+			memSimConfig.readPorts.back().inputLatency = 1;
+			memSimConfig.readPorts.back().outputLatency = rp.dedicatedReadLatencyRegisters.size()-1;
+		} else {
+			memSimConfig.readPorts.back().inputLatency = 0;
+			memSimConfig.readPorts.back().outputLatency = 0;
+		}
+
+		if (pinRdEn) memSimConfig.readPorts.back().en = sim::SigHandle(pinRdEn->getDriver(0));
 
 		portIdx++;
 	}
 
 	for (auto &wp : m_writePorts) {
-		if (clock == nullptr)
-			clock = wp.node->getClocks()[0];
-		else
-			HCL_ASSERT_HINT(clock == wp.node->getClocks()[0], "For external memory, only single clock support implemented yet!");
-
+		auto clock = wp.node->getClocks()[0];
 
 		auto *pinWrAddr = circuit.createNode<Node_Pin>(false, true, false);
 		pinWrAddr->setClockDomain(clock);
@@ -1232,165 +1196,44 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 		} else 
 			memGroupProps[(boost::format("port_%d_has_writeEnable") % portIdx).str()] = false;
 
-		convertedWritePorts.push_back({
+		memSimConfig.writePorts.push_back({
+			.clk = clock,			
 			.addr = sim::SigHandle(pinWrAddr->getDriver(0)),
 			.data = sim::SigHandle(pinWrData->getDriver(0)),
 			.width = getOutputWidth(pinWrData->getDriver(0)),
+			.inputLatency = 1,
 		});
-		if (pinWrEn) convertedWritePorts.back().en = sim::SigHandle(pinWrEn->getDriver(0));
+		if (pinWrEn) memSimConfig.writePorts.back().en = sim::SigHandle(pinWrEn->getDriver(0));
 
 		portIdx++;
 	}
 
-	HCL_ASSERT_HINT(isDontCare, "The simulation model for external memory only supports DONT_CARE as the cross port read during write policy. However, the memory ended up in a different configuration!");
-
-	size_t size = m_memory->getSize();
-	circuit.addSimulationProcess([convertedReadPorts, convertedWritePorts, size, clock]()mutable->sim::SimulationFunction<>{
-		sim::DefaultBitVectorState mem;
-		mem.resize(size);
-
-		struct ReadPortShiftReg {
-			sim::DefaultBitVectorState shiftReg;
-
-			size_t pointer = 0;
-			size_t width;
-			size_t latency;
-
-			ReadPortShiftReg()  = default;
-			void resize(size_t w, size_t l) { width = w; latency = l; shiftReg.resize(width*(latency+1)); }
-			void push() { pointer = (pointer + 1) % (latency+1); }
-			size_t writeOffset() { return ((pointer + latency) % (latency+1)) * width; }
-			size_t readOffset() { return ((pointer + 0) % (latency+1)) * width; }
-
-			void writeUndefined() { shiftReg.clearRange(sim::DefaultConfig::DEFINED, writeOffset(), width); }
-			void writeData(sim::DefaultBitVectorState &mem, size_t addr) { shiftReg.copyRange(writeOffset(), mem, addr*width, width); }
-			sim::DefaultBitVectorState read() { sim::DefaultBitVectorState res; res.resize(width); res.copyRange(0, shiftReg, readOffset(), width); return res; }
-		};
-
-		std::vector<ReadPortShiftReg> readPortRegs;
-		readPortRegs.resize(convertedReadPorts.size());
-		for (auto i : utils::Range(convertedReadPorts.size())) {
-			readPortRegs[i].resize(
-				convertedReadPorts[i].width,
-				convertedReadPorts[i].latency
-			);
+	for (auto rdPortIdx : utils::Range(m_readPorts.size())) {
+		bool anyReadFirst = false;
+		bool anyWriteFirst = false;
+		for (auto wrPortIdx : utils::Range(m_writePorts.size())) {
+			if (m_readPorts[rdPortIdx].node->isOrderedBefore(m_writePorts[wrPortIdx].node))
+				anyReadFirst = true;
+			else if (m_writePorts[wrPortIdx].node->isOrderedBefore(m_readPorts[rdPortIdx].node))
+				anyWriteFirst = true;
 		}
 
-		struct WritePortStatus {
-			bool writeEnabled;
-			bool writeEnabledUndefined;
-			size_t writeAddr;
-			bool writeAddrUndefined;
-		};
+		HCL_ASSERT_HINT(!(anyReadFirst && anyWriteFirst), "The external memory simulator can not handle read ports being read-first wrt. some write ports and write-first wrt. others!");
+		auto rdwName = (boost::format("port_%d_crossPortReadDuringWrite") % rdPortIdx).str();
 
-		std::vector<WritePortStatus> writePortStatus;
-		writePortStatus.resize(convertedWritePorts.size());
-
-		while (true) {
-			// Check the write port status first so that the read ports can check for and return undefined on address collisions.
-
-			for (auto i : utils::Range(convertedWritePorts.size())) {
-				auto addr = convertedWritePorts[i].addr.eval();
-				HCL_ASSERT(addr.size() > 0);
-				writePortStatus[i].writeAddr = addr.extractNonStraddling(sim::DefaultConfig::VALUE, 0, addr.size());
-				writePortStatus[i].writeAddrUndefined = !sim::allDefinedNonStraddling(addr, 0, addr.size());
-
-				if (writePortStatus[i].writeAddr >= mem.size() / convertedWritePorts[i].width)
-					writePortStatus[i].writeAddrUndefined = true;
-
-				writePortStatus[i].writeEnabledUndefined = false;
-				writePortStatus[i].writeEnabled = true;
-				if (convertedWritePorts[i].en) {
-					auto enabled = convertedWritePorts[i].en->eval();
-					HCL_ASSERT(enabled.size() == 1);
-					writePortStatus[i].writeEnabledUndefined = !enabled.get(sim::DefaultConfig::DEFINED, 0);
-					writePortStatus[i].writeEnabled = enabled.get(sim::DefaultConfig::VALUE, 0);
-				}		   
-			}
-
-
-			for (auto i : utils::Range(convertedReadPorts.size())) {
-				auto addr = convertedReadPorts[i].addr.eval();
-				HCL_ASSERT(addr.size() > 0);
-				size_t rdAddr = addr.extractNonStraddling(sim::DefaultConfig::VALUE, 0, addr.size());
-				bool readUndefined = !sim::allDefinedNonStraddling(addr, 0, addr.size());
-
-				if (rdAddr >= mem.size() / convertedReadPorts[i].width)
-					readUndefined = true;
-
-				if (convertedReadPorts[i].en) {
-					auto enabled = convertedReadPorts[i].en->eval();
-					HCL_ASSERT(enabled.size() == 1);
-					readUndefined |= !enabled.get(sim::DefaultConfig::DEFINED, 0);
-					readUndefined |= !enabled.get(sim::DefaultConfig::VALUE, 0);
-				}
-
-				bool writePortAddrCollision = false;
-				for (auto &wp : writePortStatus)
-					if (wp.writeEnabled || wp.writeEnabledUndefined)
-						if (wp.writeAddr == rdAddr) {
-							writePortAddrCollision = true;
-							break;
-						}
-/*
-				if (writePortAddrCollision)
-					std::cout << "Read write addr collision!" << std::endl;
-*/
-				if (readUndefined || writePortAddrCollision)
-					readPortRegs[i].writeUndefined();
-				else
-					readPortRegs[i].writeData(mem, rdAddr);
-
-				convertedReadPorts[i].data = readPortRegs[i].read();
-
-				readPortRegs[i].push();
-			}
-
-			co_await sim::WaitStable();
-
-			// Actually performs write after outputing read information in case there is a combinatorical loop from a read port to a write port
-
-			for (auto i : utils::Range(convertedWritePorts.size())) {
-				if (writePortStatus[i].writeEnabled || writePortStatus[i].writeEnabledUndefined) {
-					if (writePortStatus[i].writeAddrUndefined) {
-						std::cout << "Warning: Nuking external memory with write enabled (or undefined) and undefined address." << std::endl;
-						mem.clearRange(sim::DefaultConfig::DEFINED, 0, mem.size());
-					} else {
-
-						bool writeAddrCollision = false;
-						for (auto j : utils::Range(i)) {
-							if (writePortStatus[j].writeEnabled || writePortStatus[j].writeEnabledUndefined)
-								if (writePortStatus[j].writeAddr == writePortStatus[i].writeAddr) {
-									writeAddrCollision = true;
-									break;
-								}
-						}
-
-						if (writeAddrCollision)
-							std::cout << "Warning: Two write ports are trying to write to the same memory location." << std::endl;
-
-						if (writePortStatus[i].writeEnabledUndefined || writeAddrCollision) {
-							std::cout << "Writing undefined data" << std::endl;
-							mem.clearRange(sim::DefaultConfig::DEFINED, writePortStatus[i].writeAddr*convertedWritePorts[i].width, convertedWritePorts[i].width);
-						} else {
-							auto wrData = convertedWritePorts[i].data.eval();			 
-
-// For corrupting the memory
-//	wrData.set(sim::DefaultConfig::VALUE, rand() % wrData.size(), rand() & 1);
-//if (rand() % 10 == 0)
-//wrData.clearRange(sim::DefaultConfig::VALUE, 0, wrData.size());
-
-							HCL_ASSERT(wrData.size() == convertedWritePorts[i].width);
-							mem.copyRange(writePortStatus[i].writeAddr*convertedWritePorts[i].width, wrData, 0, convertedWritePorts[i].width);
-						}
-					}
-				}			  
-			}
-
-			co_await sim::WaitClock(clock);
+		if (anyReadFirst) {
+			memSimConfig.readPorts[rdPortIdx].rdw = MemorySimConfig::RdPrtNodePorts::READ_BEFORE_WRITE;
+			memGroupProps[rdwName] = "READ_FIRST";
+		} else if (anyWriteFirst) {
+			memSimConfig.readPorts[rdPortIdx].rdw = MemorySimConfig::RdPrtNodePorts::READ_AFTER_WRITE;
+			memGroupProps[rdwName] = "WRITE_FIRST";
+		} else {
+			memSimConfig.readPorts[rdPortIdx].rdw = MemorySimConfig::RdPrtNodePorts::READ_UNDEFINED;
+			memGroupProps[rdwName] = "DONT_CARE";
 		}
-	});
+	}
 
+	addExternalMemorySimulator(circuit, std::move(memSimConfig));
 
 	m_readPorts.clear();
 	m_writePorts.clear();
