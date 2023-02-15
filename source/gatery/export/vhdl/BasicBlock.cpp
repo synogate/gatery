@@ -58,6 +58,8 @@ void BasicBlock::extractSignals()
 	for (auto &proc : m_processes) {
 		proc->extractSignals();
 		routeChildIOUpwards(proc.get());
+		for (auto s : proc->getNonVariableSignals())
+			m_localSignals.insert(s);
 	}
 	for (auto &ent : m_entities) {
 		ent->extractSignals();

@@ -80,6 +80,7 @@ void Process::buildFromNodes(std::vector<hlim::BaseNode*> nodes)
 void Process::extractSignals()
 {
 	std::set<hlim::NodePort> potentialLocalSignals;
+	std::set<hlim::NodePort> potentialNonVariableSignals;
 	std::set<hlim::NodePort> potentialConstants;
 
 	// In the first pass, insert everything as local signals, then remove from that list everything that also ended up as input, output, or is a pin
@@ -135,6 +136,11 @@ void Process::extractSignals()
 			potentialLocalSignals.insert(driver);
 		}
 #endif
+
+		if (auto *tap = dynamic_cast<hlim::Node_SignalTap*>(node)) {
+			if (tap->getLevel() == hlim::Node_SignalTap::LVL_WATCH)
+				potentialNonVariableSignals.insert(tap->getDriver(0));
+		}
 
 		// Need an explicit signal between input-pins and rewire to handle cast
 		if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr && dynamic_cast<hlim::Node_Pin*>(node->getNonSignalDriver(0).node)) {
@@ -204,8 +210,12 @@ void Process::extractSignals()
 	}
 
 	for (auto driver : potentialLocalSignals)
-		if (!m_outputs.contains(driver) && !m_inputs.contains(driver) && !dynamic_cast<hlim::Node_Pin*>(driver.node))
+		if (!m_outputs.contains(driver) && !m_inputs.contains(driver) && !dynamic_cast<hlim::Node_Pin*>(driver.node) && !potentialNonVariableSignals.contains(driver))
 			m_localSignals.insert(driver);
+
+	for (auto driver : potentialNonVariableSignals)
+		if (!m_outputs.contains(driver) && !m_inputs.contains(driver) && !dynamic_cast<hlim::Node_Pin*>(driver.node))
+			m_nonVariableSignals.insert(driver);
 
 	for (auto driver : potentialConstants)
 		if (!m_outputs.contains(driver))
@@ -248,7 +258,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
 		comments << nodePort.node->getComment() << std::endl;
 
 	if (!forceUnfold) {
-		if (m_inputs.contains(nodePort) || m_outputs.contains(nodePort) || m_localSignals.contains(nodePort) || m_constants.contains(nodePort)) {
+		if (m_inputs.contains(nodePort) || m_outputs.contains(nodePort) || m_localSignals.contains(nodePort) || m_constants.contains(nodePort) || m_nonVariableSignals.contains(nodePort)) {
 			const auto &decl = m_namespaceScope.get(nodePort);
 			HCL_ASSERT(!decl.name.empty());
 			switch (context) {
@@ -817,6 +827,8 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 		for (auto s : m_localSignals)
 			constructStatementsFor(s);
 
+		for (auto s : m_nonVariableSignals)
+			constructStatementsFor(s);
 
 		std::set<hlim::NodePort> signalsReady;
 		for (auto s : m_inputs)
@@ -835,40 +847,40 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 
 		for (auto &n : m_nodes) {
 			if (auto *sig_tap = dynamic_cast<hlim::Node_SignalTap*>(n)) {
+				if (sig_tap->getLevel() == hlim::Node_SignalTap::LVL_ASSERT || sig_tap->getLevel() == hlim::Node_SignalTap::LVL_WARN) {
+					HCL_ASSERT(sig_tap->getTrigger() == hlim::Node_SignalTap::TRIG_FIRST_INPUT_HIGH || sig_tap->getTrigger() == hlim::Node_SignalTap::TRIG_FIRST_INPUT_LOW);
 
-				HCL_ASSERT(sig_tap->getLevel() == hlim::Node_SignalTap::LVL_ASSERT || sig_tap->getLevel() == hlim::Node_SignalTap::LVL_WARN);
-				HCL_ASSERT(sig_tap->getTrigger() == hlim::Node_SignalTap::TRIG_FIRST_INPUT_HIGH || sig_tap->getTrigger() == hlim::Node_SignalTap::TRIG_FIRST_INPUT_LOW);
+					std::stringstream code;
+					cf.indent(code, indentation+1);
 
-				std::stringstream code;
-				cf.indent(code, indentation+1);
+					std::stringstream comment;
+					Statement statement;
+					statement.node = n;
+					statement.weakOrderIdx = n->getId(); // chronological order
 
-				std::stringstream comment;
-				Statement statement;
-				statement.node = n;
-				statement.weakOrderIdx = n->getId(); // chronological order
+					code << "ASSERT ";
+					if (sig_tap->getTrigger() == hlim::Node_SignalTap::TRIG_FIRST_INPUT_HIGH)
+						code << "not (";
 
-				code << "ASSERT ";
-				if (sig_tap->getTrigger() == hlim::Node_SignalTap::TRIG_FIRST_INPUT_HIGH)
-					code << "not (";
+					formatExpression(code, indentation+2, comment, sig_tap->getDriver(0), statement.inputs, VHDLDataType::BOOL, false);
+					
+					if (sig_tap->getTrigger() == hlim::Node_SignalTap::TRIG_FIRST_INPUT_HIGH)				
+						code << ")";
 
-				formatExpression(code, indentation+2, comment, sig_tap->getDriver(0), statement.inputs, VHDLDataType::BOOL, false);
-				
-				if (sig_tap->getTrigger() == hlim::Node_SignalTap::TRIG_FIRST_INPUT_HIGH)				
-					code << ")";
+					switch (sig_tap->getLevel()) {
+						case hlim::Node_SignalTap::LVL_ASSERT:
+							code << " severity error"; break;
+						case hlim::Node_SignalTap::LVL_WARN:
+							code << " severity warning"; break;
+						default: break;
+					}
 
-				switch (sig_tap->getLevel()) {
-					case hlim::Node_SignalTap::LVL_ASSERT:
-						code << " severity error"; break;
-					case hlim::Node_SignalTap::LVL_WARN:
-						code << " severity warning"; break;
-					default: break;
+					code << ";" << std::endl;
+
+					statement.code = code.str();
+					statement.comment = comment.str();
+					statements.push_back(std::move(statement));
 				}
-
-				code << ";" << std::endl;
-
-				statement.code = code.str();
-				statement.comment = comment.str();
-				statements.push_back(std::move(statement));
 			}
 			if (auto *sig2clk = dynamic_cast<hlim::Node_Signal2Clk*>(n)) {
 				if (sig2clk->getClocks()[0] != nullptr) {
