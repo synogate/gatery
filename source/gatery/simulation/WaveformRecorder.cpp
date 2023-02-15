@@ -116,6 +116,13 @@ void WaveformRecorder::addAllSignals(bool appendNodeId)
 		}
 }
 
+void WaveformRecorder::onAfterPowerOn()
+{
+	initializeStates();
+	initialize();
+	m_initialized = true;
+}
+
 void WaveformRecorder::initializeStates()
 {
 	BitAllocator allocator;
@@ -135,12 +142,6 @@ void WaveformRecorder::initializeStates()
 
 void WaveformRecorder::onCommitState()
 {
-	if (!m_initialized) {
-		initializeStates();
-		initialize();
-		m_initialized = true;
-	}
-
 	for (auto id : utils::Range(m_id2Signal.size())) {
 		auto &signal = m_id2Signal[id];
 		auto offset = m_id2StateOffsetSize[id].offset;
@@ -166,10 +167,10 @@ void WaveformRecorder::onCommitState()
 	}
 }
 
-
 void WaveformRecorder::onNewTick(const hlim::ClockRational &simulationTime)
 {
-	advanceTick(simulationTime);
+	if (m_initialized)
+		advanceTick(simulationTime);
 }
 
 

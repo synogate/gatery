@@ -43,6 +43,8 @@ class FileBasedTestbenchRecorder : public BaseTestbenchRecorder
 
 		virtual void onPowerOn() override;
 		virtual void onNewTick(const hlim::ClockRational &simulationTime) override;
+		virtual void onAfterMicroTick(size_t microTick) override;
+		virtual void onCommitState() override;
 		virtual void onClock(const hlim::Clock *clock, bool risingEdge) override;
 		virtual void onReset(const hlim::Clock *clock, bool resetAsserted) override;
 		/*
@@ -56,14 +58,18 @@ class FileBasedTestbenchRecorder : public BaseTestbenchRecorder
 	protected:
 		VHDLExport &m_exporter;
 		std::fstream m_testbenchFile;
-		hlim::ClockRational m_lastSimulationTime;
-
-		std::stringstream m_assertStatements;
+		hlim::ClockRational m_writtenSimulationTime;
+		hlim::ClockRational m_flushIntervalStart;
 
 		std::string m_testVectorFilename;
 		std::string m_vhdlFilename;
 
 		void writeVHDL(std::filesystem::path path, const std::string &testVectorFilename);
+
+		void advanceTimeTo(const hlim::ClockRational &simulationTime);
+
+		// Flushes all actions and tests to file by spreading the accumulated phases out between flushIntervalEnd the last flushIntervalEnd to allow simulator progression (and result inspection) between phases.
+		void flush(const hlim::ClockRational &flushIntervalEnd);
 };
 
 

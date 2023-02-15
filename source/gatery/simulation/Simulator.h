@@ -141,6 +141,8 @@ class Simulator
 
 		/// Returns the elapsed micro ticks (reevaluations) within the current time step.
 		inline size_t getCurrentMicroTick() const { return m_microTick; }
+		/// Returns the current timing phase (eg. before registers at that time point trigger, while they trigger, or after they have triggered).
+		inline WaitClock::TimingPhase getCurrentPhase() const { return m_timingPhase; }
 
 		/// Adds a simulation process to this simulator that gets started on power on.
 		virtual void addSimulationProcess(std::function<SimulationFunction<void>()> simProc) = 0;
@@ -174,8 +176,11 @@ class Simulator
 				virtual void onAnnotationEnd(const hlim::ClockRational &simulationTime, const std::string &id) override;
 
 				virtual void onPowerOn() override;
+				virtual void onAfterPowerOn() override;
 				virtual void onCommitState() override;
 				virtual void onNewTick(const hlim::ClockRational &simulationTime) override;
+				virtual void onNewPhase(size_t phase) override;
+				virtual void onAfterMicroTick(size_t microTick) override;
 				virtual void onClock(const hlim::Clock *clock, bool risingEdge) override;
 				virtual void onReset(const hlim::Clock *clock, bool resetAsserted) override;
 				virtual void onDebugMessage(const hlim::BaseNode *src, std::string msg) override;
