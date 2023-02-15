@@ -737,7 +737,9 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_csr_timer, BoostUnitTestSimulationFixture)
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
-	rv.csr();
+	rv.csr(64_b, 64_b, 
+		{ clock.absoluteFrequency().denominator(), clock.absoluteFrequency().numerator() }
+	);
 
 	addSimulationProcess([&]()->SimProcess {
 		rv.setupSimu();
@@ -756,7 +758,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_csr_timer, BoostUnitTestSimulationFixture)
 			BOOST_TEST(rv.result() - start == i);
 
 			rv.ip(rng()).r1(rng()).r2(rng());
-			rv.op().typeI(rv::op::SYSTEM, (rv::func)(i % 7 + 1), 1, 0, 0xC00 | (i % 2));
+			rv.op().typeI(rv::op::SYSTEM, (rv::func)(i % 7 + 1), 1, 0, 0xC00);
 			co_await AfterClk(clock);
 		}
 
