@@ -170,7 +170,7 @@ SignalTapHelper sim_debugIf(Bit condition);
 
 
 template<typename Signal, typename std::enable_if_t<std::is_base_of_v<ElementarySignal, Signal>>* = nullptr  >
-void sim_tap(const Signal& signal)
+void tap(const Signal& signal)
 {
 	auto *node = DesignScope::createNode<hlim::Node_SignalTap>();
 	node->recordStackTrace();
@@ -181,19 +181,19 @@ void sim_tap(const Signal& signal)
 }
 
 template<typename Compound, typename std::enable_if_t<!std::is_base_of_v<ElementarySignal, Compound>>* = nullptr  >
-void sim_tap(const Compound& compound)
+void tap(const Compound& compound)
 {
 	if constexpr (boost::spirit::traits::is_container<Compound>::value)
 	{
 
 		for (auto it = begin(compound); it != end(compound); ++it)
-			sim_tap(*it);
+			tap(*it);
 	}
 	else if constexpr (boost::hana::Struct<Compound>::value)
 	{
 		boost::hana::for_each(boost::hana::accessors<std::remove_cv_t<Compound>>(), [&](auto member) {
 			auto& src_item = boost::hana::second(member)(compound);
-			sim_tap(src_item);
+			tap(src_item);
 		});
 	}
 }

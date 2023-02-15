@@ -365,4 +365,59 @@ BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Async_16_w_reset, Test_GenericMemory
 	BOOST_TEST(exportContains(std::regex{"IF \\(reset = '1'\\) THEN"}));
 }
 
+
+
+
+
+
+BOOST_FIXTURE_TEST_CASE(unusedNamedSignalVanishes, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+    {
+		Bit input1 = pinIn().setName("input1");
+		Bit input2 = pinIn().setName("input2");
+		Bit input3 = pinIn().setName("input3");
+		Bit output;
+
+		input2 ^= '1';
+
+		output = input1 ^ input2;
+        pinOut(output).setName("out");
+
+
+
+		Bit unused = input1 ^ input3;
+		HCL_NAMED(unused);
+    }
+
+	testCompilation();
+	BOOST_TEST(!exportContains(std::regex{"unused"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(unusedTappedSignalRemains, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+    {
+		Bit input1 = pinIn().setName("input1");
+		Bit input2 = pinIn().setName("input2");
+		Bit input3 = pinIn().setName("input3");
+		Bit output;
+
+		input2 ^= '1';
+
+		output = input1 ^ input2;
+        pinOut(output).setName("out");
+
+		Bit unused = input1 ^ input3;
+		HCL_NAMED(unused);
+		tap(unused);
+    }
+
+	testCompilation();
+	BOOST_TEST(exportContains(std::regex{"unused"}));
+}
+
+
 BOOST_AUTO_TEST_SUITE_END()
