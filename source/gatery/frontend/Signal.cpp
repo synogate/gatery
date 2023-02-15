@@ -20,6 +20,10 @@
 #include "ConditionalScope.h"
 #include "DesignScope.h"
 
+#include <gatery/utils/Enumerate.h>
+#include <gatery/utils/Preprocessor.h>
+#include <gatery/utils/Traits.h>
+
 #include <gatery/hlim/coreNodes/Node_Rewire.h>
 #include <gatery/hlim/coreNodes/Node_Signal.h>
 #include <gatery/hlim/supportNodes/Node_Attributes.h>

@@ -17,8 +17,12 @@
 */
 #pragma once
 
-#include <gatery/frontend.h>
+#include <gatery/frontend/BVec.h>
 #include <gatery/frontend/tech/TechnologyMappingPattern.h>
+
+namespace gtry::hlim {
+	class Clock;
+}
 
 namespace gtry::scl::arch {
 

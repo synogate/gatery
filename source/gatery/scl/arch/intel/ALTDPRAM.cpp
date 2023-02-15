@@ -21,6 +21,7 @@
 
 #include "MemoryInitializationFile.h"
 
+#include <gatery/hlim/Clock.h>
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Preprocessor.h>
 

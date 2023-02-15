@@ -19,6 +19,9 @@
 
 #include "RAM64M8.h"
 
+#include <gatery/frontend/UInt.h>
+#include <gatery/frontend/Pack.h>
+
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Preprocessor.h>
 

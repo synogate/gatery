@@ -19,6 +19,8 @@
 #include "Compound.h"
 #include <utility>
 
+#include "DesignScope.h"
+
 #include <gatery/hlim/SignalGroup.h>
 #include <gatery/hlim/coreNodes/Node_Rewire.h>
 

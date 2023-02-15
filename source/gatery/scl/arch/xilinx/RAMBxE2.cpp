@@ -19,6 +19,9 @@
 
 #include "RAMBxE2.h"
 
+#include <gatery/frontend/Constant.h>
+#include <gatery/frontend/Pack.h>
+#include <gatery/frontend/Clock.h>
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Preprocessor.h>
 

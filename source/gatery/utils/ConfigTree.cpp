@@ -19,8 +19,10 @@
 
 #include "ConfigTree.h"
 
+#include <boost/spirit/home/x3.hpp>
 #include <regex>
 #include <fstream>
+
 
 namespace gtry::utils 
 {

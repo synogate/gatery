@@ -18,6 +18,9 @@
 
 #include "gatery/pch.h"
 
+
+#include "../utils/ConfigTree.h"
+
 #include "Subnet.h"
 
 #include "supportNodes/Node_ExportOverride.h"

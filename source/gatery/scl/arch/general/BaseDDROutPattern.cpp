@@ -21,7 +21,11 @@
 #include <gatery/hlim/coreNodes/Node_Register.h>
 #include <gatery/hlim/coreNodes/Node_Constant.h>
 #include <gatery/hlim/coreNodes/Node_Clk2Signal.h>
+#include <gatery/hlim/coreNodes/Node_Signal.h>
 #include <gatery/hlim/NodeGroup.h>
+#include <gatery/frontend/GraphTools.h>
+#include <gatery/frontend/Pack.h>
+#include <gatery/debug/DebugInterface.h>
 
 namespace gtry::scl::arch {
 
