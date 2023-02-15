@@ -277,6 +277,17 @@ namespace gtry::scl
 	}
 
 	template<TileLinkSignal TLink>
+	TLink tileLinkInit(BitWidth addrW, BitWidth dataW, BitWidth sourceW = 0_b, std::optional<BitWidth> sizeW = std::nullopt)
+	{
+		if (!sizeW)
+			sizeW = BitWidth::last(utils::Log2C(dataW.bytes()));
+
+		TLink link;
+		tileLinkInit(link, addrW, dataW, *sizeW, sourceW);
+		return link;
+	}
+
+	template<TileLinkSignal TLink>
 	TLink reg(TLink& link)
 	{
 		TLink out{

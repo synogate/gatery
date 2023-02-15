@@ -30,14 +30,7 @@ namespace gtry::scl
 		auto ent = m_area.enter();
 		HCL_NAMED(cmdIn);
 
-		TileLinkUL link;
-		tileLinkInit(link, 
-			cmdIn->address.width(), 
-			dataOut->width(), 
-			BitWidth::last(utils::Log2C(cmdIn->address.width().bytes())), 
-			0_b
-		);
-		
+		auto link = tileLinkInit<TileLinkUL>(cmdIn->address.width(), dataOut->width());
 		link.a->opcode = (size_t)TileLinkA::Get;
 		link.a->param = 0;
 		link.a->size = utils::Log2C(link.a->mask.width().bits());
