@@ -166,7 +166,7 @@ sim::SimulationFunction<void> handleReadPortOnce(MemorySimConfig &config, size_t
 							size_t wordOverlapEnd = overlapEnd - rdStart;
 							size_t wordOverlapSize = overlapEnd - overlapStart;
 
-							ptrdiff_t read2writeShift = -wordOverlapStart + overlapStart - wrStart;
+							ptrdiff_t read2writeShift = overlapStart - wrStart - wordOverlapStart;
 
 							if (port.rdw == MemorySimConfig::RdPrtNodePorts::READ_UNDEFINED) {
 								response.data.clearRange(sim::DefaultConfig::DEFINED, wordOverlapStart, wordOverlapSize);
