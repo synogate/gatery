@@ -77,8 +77,8 @@ test-linux-coverage:
     - anybadge -l "Build time (seconds)" -v $(cat buildLog.txt | grep "User time (seconds):" | cut -d' ' -f 4) --file cov/buildTime.svg
     - anybadge -l "Build max RSS (kB)" -v $(cat buildLog.txt | grep "Maximum resident set size (kbytes)" | cut -d' ' -f 6) --file cov/buildMaxRSS.svg
     - lcov --directory . --zerocounters
-    - bin/linux-x86_64-Coverage/gatery-frontend-test -- --intel /opt/simModels/intel/
-    - bin/linux-x86_64-Coverage/gatery-scl-test -- --intel /opt/simModels/intel/
+    - bin/linux-x86_64-Coverage/gatery-frontend-test -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/
+    - bin/linux-x86_64-Coverage/gatery-scl-test -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/
     - lcov --directory . --capture --output-file unittest_coverage.info
     - lcov --remove unittest_coverage.info '/usr/*' --output-file unittest_coverage.info
     - lcov --remove unittest_coverage.info '*/source/external/*' --output-file unittest_coverage.info
