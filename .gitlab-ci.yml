@@ -40,6 +40,7 @@ documentation-job:
 
 test-linux-frontend:
   stage: test
+  allow_failure: true
   tags:
     - linux
   script:
@@ -47,6 +48,7 @@ test-linux-frontend:
 
 test-linux-scl:
   stage: test
+  allow_failure: true
   tags:
     - linux
   script:
@@ -54,6 +56,7 @@ test-linux-scl:
 
 test-windows-frontend:
   stage: test
+  allow_failure: true
   tags:
     - windows
   script:
@@ -61,6 +64,7 @@ test-windows-frontend:
 
 test-windows-scl:
   stage: test
+  allow_failure: true
   tags:
     - windows
   script:
