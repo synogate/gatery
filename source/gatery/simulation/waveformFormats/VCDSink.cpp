@@ -207,6 +207,7 @@ namespace gtry::sim
 		}
 
 		setupGtkWaveProjFileSignals();
+		m_gtkWaveProjectFile.writeEnumFilterFiles();
 		writeGtkWaveProjFile();
 	}
 

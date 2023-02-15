@@ -4,6 +4,7 @@ doc/gen
 
 *.vcd
 *.gtkw
+*.filter
 *.dot
 *.svg
 
