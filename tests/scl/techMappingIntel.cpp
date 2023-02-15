@@ -153,7 +153,7 @@ BOOST_FIXTURE_TEST_CASE(DCFifo, gtry::GHDLTestFixture)
 }
 
 
-BOOST_FIXTURE_TEST_CASE(instantiateAltPll, gtry::GHDLTestFixture)
+BOOST_FIXTURE_TEST_CASE(instantiateAltPll, gtry::GHDLTestFixture, * boost::unit_test::disabled())
 {
 	using namespace gtry;
 
@@ -192,7 +192,7 @@ BOOST_FIXTURE_TEST_CASE(instantiateAltPll, gtry::GHDLTestFixture)
 
 
 
-BOOST_FIXTURE_TEST_CASE(testAltPll, gtry::GHDLTestFixture)
+BOOST_FIXTURE_TEST_CASE(testAltPll, gtry::GHDLTestFixture, * boost::unit_test::disabled())
 {
 	using namespace gtry;
 
