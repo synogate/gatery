@@ -23,6 +23,7 @@
 #include "Scope.h"
 #include "ConditionalScope.h"
 #include "DesignScope.h"
+#include "Compound.h"
 
 #include <gatery/hlim/coreNodes/Node_Multiplexer.h>
 #include <gatery/hlim/supportNodes/Node_SignalTap.h>
@@ -180,24 +181,60 @@ void tap(const Signal& signal)
 	node->addInput(signal.readPort());
 }
 
-template<typename Compound, typename std::enable_if_t<!std::is_base_of_v<ElementarySignal, Compound>>* = nullptr  >
-void tap(const Compound& compound)
-{
-	if constexpr (boost::spirit::traits::is_container<Compound>::value)
-	{
 
-		for (auto it = begin(compound); it != end(compound); ++it)
-			tap(*it);
-	}
-	else if constexpr (boost::hana::Struct<Compound>::value)
+#if 0
+
+// This version requires (HANA) adaptation of structs
+namespace internal
+{
+	struct TapVisitor : CompoundVisitor
 	{
-		boost::hana::for_each(boost::hana::accessors<std::remove_cv_t<Compound>>(), [&](auto member) {
-			auto& src_item = boost::hana::second(member)(compound);
-			tap(src_item);
+		void operator () (ElementarySignal& vec) final { tap(vec); }
+	};
+}
+
+void tap(Signal auto& signal)
+{
+	internal::TapVisitor v;
+	v.enter("");
+	VisitCompound<std::remove_reference_t<decltype(signal)>>{}(signal, v);
+	v.leave();
+}
+
+#else
+
+namespace internal
+{
+	void tap(const ContainerSignal auto& signal);
+	void tap(const CompoundSignal auto& signal);
+	void tap(const TupleSignal auto& signal);
+
+	void tap(const ContainerSignal auto& signal)
+	{
+		for(auto& it : signal)
+			tap(it);
+	}
+
+	void tap(const CompoundSignal auto& signal)
+	{
+		tap(boost::pfr::structure_tie(signal));
+	}
+
+	void tap(const TupleSignal auto& signal)
+	{
+		boost::hana::for_each(signal, [](const auto& member) {
+			if constexpr(Signal<decltype(member)>)
+				tap(member);
 		});
 	}
 }
 
+void tap(const Signal auto& ...args)
+{
+	(internal::tap(args), ...);
+}
+
+#endif
 
 /**@}*/
 

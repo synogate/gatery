@@ -236,3 +236,51 @@ BOOST_FIXTURE_TEST_CASE(ConstructFromCompound, BoostUnitTestSimulationFixture)
 	eval();
 }
 
+
+BOOST_FIXTURE_TEST_CASE(tapOnCompound, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	{
+		RichStruct obj;
+		obj.list.emplace_back();
+		pinIn(obj, "obj");
+		
+		tap(obj);
+	}
+	design.visualize("tapOnCompound");
+	design.postprocess();
+
+	BOOST_TEST(countNodes([](const auto *node) { return dynamic_cast<const hlim::Node_SignalTap*>(node) != nullptr; }) == 4);	
+}
+
+struct SubStruct {
+	Bit a;
+	BVec b;
+};
+
+struct MainStruct {
+	SubStruct sub1, sub2;
+	Bit c;
+	BVec d;
+};
+
+
+BOOST_FIXTURE_TEST_CASE(tapOnUnreflectedCompound, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	{
+		MainStruct obj;
+		obj.sub1.b = 8_b;
+		obj.sub2.b = 8_b;
+		obj.d = 10_b;
+		pinIn(obj, "obj");
+		
+		tap(obj);
+	}
+	design.visualize("tapOnUnreflectedCompound");
+	design.postprocess();
+
+	BOOST_TEST(countNodes([](const auto *node) { return dynamic_cast<const hlim::Node_SignalTap*>(node) != nullptr; }) == 6);
+}
