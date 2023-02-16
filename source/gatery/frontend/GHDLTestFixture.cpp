@@ -153,6 +153,7 @@ void GHDLTestFixture::runTest(const hlim::ClockRational &timeoutSeconds)
 bool GHDLTestFixture::exportContains(const std::regex &regex)
 {
 	std::fstream file("design.vhd", std::fstream::in);
+	BOOST_TEST((bool) file);
 	std::stringstream buffer;
 	buffer << file.rdbuf();
 

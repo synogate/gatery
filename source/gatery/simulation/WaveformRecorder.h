@@ -44,8 +44,8 @@ class WaveformRecorder : public SimulatorCallbacks
 	public:
 		WaveformRecorder(hlim::Circuit &circuit, Simulator &simulator);
 
-		void addSignal(hlim::NodePort np, bool isPin, bool hidden, hlim::NodeGroup *group, const std::string &nameOverride = {}, size_t sortOrder = 0);
-		void addAllWatchSignalTaps();
+		void addSignal(hlim::NodePort np, bool isTap, bool isPin, bool hidden, hlim::NodeGroup *group, const std::string &nameOverride = {}, size_t sortOrder = 0);
+		void addAllTaps();
 		void addAllPins();
 		void addAllOutPins();
 		void addAllNamedSignals(bool appendNodeId = false);
@@ -70,11 +70,12 @@ class WaveformRecorder : public SimulatorCallbacks
 			bool isBVec;
 			bool isHidden;
 			bool isPin;
+			bool isTap;
 		};
 		std::vector<StateOffsetSize> m_id2StateOffsetSize;
 		std::vector<Signal> m_id2Signal;
 		sim::DefaultBitVectorState m_trackedState;
-		std::set<hlim::NodePort> m_alreadyAddedNodePorts;
+		std::map<hlim::NodePort, size_t> m_alreadyAddedNodePorts;
 
 		void initializeStates();
 		virtual void initialize() = 0;
