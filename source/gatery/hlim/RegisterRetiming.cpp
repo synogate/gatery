@@ -235,7 +235,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 			for (size_t i : utils::Range(nodePort.node->getNumInputPorts())) {
 				auto driver = nodePort.node->getDriver(i);
 				if (driver.node != nullptr)
-					if (driver.node->getOutputConnectionType(driver.port).interpretation != ConnectionType::DEPENDENCY)
+					if (driver.node->getOutputConnectionType(driver.port).type != ConnectionType::DEPENDENCY)
 						openList.push_back(driver);
 			}
 
@@ -364,7 +364,7 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 		// If any input bit is defined uppon reset, add that as a reset value
 		auto resetValue = simulator.getValueOfOutput(np);
 		if (sim::anyDefined(resetValue, 0, resetValue.size())) {
-			auto *resetConst = circuit.createNode<Node_Constant>(resetValue, getOutputConnectionType(np).interpretation);
+			auto *resetConst = circuit.createNode<Node_Constant>(resetValue, getOutputConnectionType(np).type);
 			resetConst->recordStackTrace();
 			resetConst->moveToGroup(reg->getGroup());
 			area.add(resetConst);
@@ -723,7 +723,7 @@ writeSubnet();
 			// Regular nodes just get added to the retiming area and their outputs are further explored
 			areaToBeRetimed.add(node);
 			for (size_t i : utils::Range(node->getNumOutputPorts()))
-				if (node->getOutputConnectionType(i).interpretation != ConnectionType::DEPENDENCY)
+				if (node->getOutputConnectionType(i).type != ConnectionType::DEPENDENCY)
 					for (auto np : node->getDirectlyDriven(i))
 						openList.push_back(np);
 
@@ -915,7 +915,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 		// If any input bit is defined uppon reset, add that as a reset value
 		auto resetValue = simulator.getValueOfOutput(np);
 		if (sim::anyDefined(resetValue, 0, resetValue.size())) {
-			auto *resetConst = circuit.createNode<Node_Constant>(resetValue, getOutputConnectionType(np).interpretation);
+			auto *resetConst = circuit.createNode<Node_Constant>(resetValue, getOutputConnectionType(np).type);
 			resetConst->recordStackTrace();
 			resetConst->moveToGroup(reg->getGroup());
 			area.add(resetConst);
@@ -1241,7 +1241,7 @@ NodePort ReadModifyWriteHazardLogicBuilder::createRegister(NodePort nodePort, co
 
 	// If any input bit is defined uppon reset, add that as a reset value
 	if (sim::anyDefined(resetValue, 0, resetValue.size())) {
-		auto *resetConst = m_circuit.createNode<Node_Constant>(resetValue, getOutputConnectionType(nodePort).interpretation);
+		auto *resetConst = m_circuit.createNode<Node_Constant>(resetValue, getOutputConnectionType(nodePort).type);
 		resetConst->moveToGroup(m_newNodesNodeGroup);
 		resetConst->recordStackTrace();
 		resetConst->moveToGroup(reg->getGroup());
@@ -1292,7 +1292,7 @@ NodePort ReadModifyWriteHazardLogicBuilder::andWithMaskBit(NodePort input, NodeP
 		rewireNode->moveToGroup(m_newNodesNodeGroup);
 		rewireNode->recordStackTrace();
 		rewireNode->connectInput(0, mask);
-		rewireNode->changeOutputType({.interpretation = ConnectionType::BOOL, .width=1});
+		rewireNode->changeOutputType({.type = ConnectionType::BOOL, .width=1});
 		rewireNode->setExtract(maskBit, 1);
 
 		auto *logicAnd = m_circuit.createNode<Node_Logic>(Node_Logic::AND);

@@ -132,7 +132,7 @@ void XilinxVivado::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 		const auto &endConType = hlim::getOutputConnectionType(pa->getDriver(1));
 
 
-		if (startConType.interpretation == hlim::ConnectionType::BITVEC)
+		if (startConType.isBitVec())
 			file 
 				<< "# get net of start signal, must be KEEP\n"
 				<< "set net_start [get_nets " << start << "[*]]\n";
@@ -151,7 +151,7 @@ set cell_start_clk_pin [get_pin -of_object $cell_start -filter {IS_CLOCK}]
 )";
 
 
-		if (endConType.interpretation == hlim::ConnectionType::BITVEC)
+		if (endConType.isBitVec())
 			file 
 				<< "# get net of end signal, must be KEEP\n"
 				<< "set net_end [get_nets " << end << "[*]]\n";

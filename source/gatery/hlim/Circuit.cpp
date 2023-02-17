@@ -282,7 +282,7 @@ void Circuit::insertConstUndefinedNodes()
 	auto buildConstUndefFor = [this](Node_Signal *signal) {
 		sim::DefaultBitVectorState undef;
 		undef.resize(signal->getOutputConnectionType(0).width);
-		auto* constant = createNode<Node_Constant>(std::move(undef), signal->getOutputConnectionType(0).interpretation);
+		auto* constant = createNode<Node_Constant>(std::move(undef), signal->getOutputConnectionType(0).type);
 		constant->moveToGroup(signal->getGroup());
 
 		return constant;
@@ -761,8 +761,8 @@ void Circuit::removeIrrelevantComparisons(Subnet &subnet)
 			if (compNode->getOp() != Node_Compare::EQ && compNode->getOp() != Node_Compare::NEQ) continue;
 			if (leftDriver.node == nullptr || rightDriver.node == nullptr) continue;
 			if (getOutputWidth(leftDriver) != 1) continue;
-			if (getOutputConnectionType(leftDriver).interpretation != ConnectionType::BOOL ||
-				getOutputConnectionType(rightDriver).interpretation != ConnectionType::BOOL)
+			if (getOutputConnectionType(leftDriver).type != ConnectionType::BOOL ||
+				getOutputConnectionType(rightDriver).type != ConnectionType::BOOL)
 				continue;
 
 			Node_Constant *constInputs[2];
@@ -1113,7 +1113,7 @@ void Circuit::propagateConstants(Subnet &subnet)
 				if (allDefined) {
 					//std::cout << "	Found all const output" << std::endl;
 
-					auto* constant = createNode<Node_Constant>(state.extract(outputOffsets[port], conType.width), conType.interpretation);
+					auto* constant = createNode<Node_Constant>(state.extract(outputOffsets[port], conType.width), conType.type);
 					constant->moveToGroup(successor.node->getGroup());
 					subnet.add(constant);
 					NodePort newConstOutputPort{.node = constant, .port = 0};
@@ -1161,7 +1161,7 @@ void Circuit::ensureSignalNodePlacement()
 		for (auto i : utils::Range(node->getNumInputPorts())) {
 			auto driver = node->getDriver(i);
 			if (driver.node == nullptr) continue;
-			if (node->getDriverConnType(i).interpretation == ConnectionType::DEPENDENCY) continue;
+			if (node->getDriverConnType(i).isDependency()) continue;
 			if (dynamic_cast<Node_Signal*>(driver.node) != nullptr) continue;
 			if (driver.node->getGroup() != nullptr && driver.node->getGroup()->getGroupType() == NodeGroup::GroupType::SFU) continue;
 			if (dynamic_cast<Node_MultiDriver*>(driver.node) != nullptr) continue;

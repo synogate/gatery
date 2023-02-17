@@ -71,7 +71,7 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
 			if (it != m_overrides.end()) {
 				auto type = hlim::getOutputConnectionType(nodePort);
 				HCL_ASSERT(type.width == it->second.size());
-				auto *c_node = simCircuit.createNode<hlim::Node_Constant>(it->second, type.interpretation);
+				auto *c_node = simCircuit.createNode<hlim::Node_Constant>(it->second, type.type);
 				outputsTranslated[nodePort] = {.node = c_node, .port = 0ull};
 
 				for (auto c : nodePort.node->getDirectlyDriven(nodePort.port))
@@ -97,7 +97,7 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
 				undefinedState.resize(type.width);
 				undefinedState.clearRange(DefaultConfig::DEFINED, 0, type.width);
 
-				auto *c_node = simCircuit.createNode<hlim::Node_Constant>(std::move(undefinedState), type.interpretation);
+				auto *c_node = simCircuit.createNode<hlim::Node_Constant>(std::move(undefinedState), type.type);
 				outputsTranslated[nodePort] = {.node = c_node, .port = 0ull};
 			}
 
@@ -115,7 +115,7 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
 			undefinedState.resize(type.width);
 			undefinedState.clearRange(DefaultConfig::DEFINED, 0, type.width);
 
-			auto *c_node = simCircuit.createNode<hlim::Node_Constant>(std::move(undefinedState), type.interpretation);
+			auto *c_node = simCircuit.createNode<hlim::Node_Constant>(std::move(undefinedState), type.type);
 			outputsTranslated[nodePort] = {.node = c_node, .port = 0ull};
 
 			for (auto c : nodePort.node->getDirectlyDriven(nodePort.port))

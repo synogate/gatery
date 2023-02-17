@@ -672,7 +672,7 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
 					const auto &condDecl = m_namespaceScope.get(assignment.enable);
 					stream << " when (" << condDecl.name << " = '1') else ";
 
-					if (hlim::getOutputConnectionType(assignment.enable).interpretation == hlim::ConnectionType::BOOL)
+					if (hlim::getOutputConnectionType(assignment.enable).isBool())
 						stream << "'Z';" << std::endl;
 					else
 						stream << "(others => 'Z');" << std::endl;

@@ -164,7 +164,7 @@ void Entity::allocateNames()
 
 	for (auto &ioPin : m_ioPins) {
 		VHDLDataType dataType;
-		if (ioPin->getConnectionType().interpretation == hlim::ConnectionType::BOOL)
+		if (ioPin->getConnectionType().isBool())
 			dataType = VHDLDataType::STD_LOGIC;
 		else
 			dataType = VHDLDataType::STD_LOGIC_VECTOR;

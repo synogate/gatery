@@ -35,7 +35,7 @@ BVec hookBVecBefore(hlim::NodePort input)
 {
 	HCL_DESIGNCHECK_HINT(input.node != nullptr, "Can't bvec-hook unconnected input, can't figure out width!");
 	auto driver = input.node->getDriver(input.port);
-	HCL_DESIGNCHECK_HINT(getOutputConnectionType(driver).interpretation == hlim::ConnectionType::BITVEC, "Attempting to create UInt hook from a signal node that is not a UInt");
+	HCL_DESIGNCHECK_HINT(getOutputConnectionType(driver).isBitVec(), "Attempting to create UInt hook from a signal node that is not a UInt");
 
 	BVec res = SignalReadPort(driver);
 	input.node->rewireInput(input.port, res.outPort());
@@ -44,7 +44,7 @@ BVec hookBVecBefore(hlim::NodePort input)
 
 BVec hookBVecAfter(hlim::NodePort output)
 {
-	HCL_DESIGNCHECK_HINT(getOutputConnectionType(output).interpretation == hlim::ConnectionType::BITVEC, "Attempting to create UInt hook from a signal node that is not a UInt");
+	HCL_DESIGNCHECK_HINT(getOutputConnectionType(output).isBitVec(), "Attempting to create UInt hook from a signal node that is not a UInt");
 
 	BVec res = BitWidth(getOutputConnectionType(output).width);
 	while (!output.node->getDirectlyDriven(output.port).empty()) {
@@ -60,7 +60,7 @@ Bit hookBitBefore(hlim::NodePort input)
 	Bit res;
 	auto driver = input.node->getDriver(input.port);
 	if (driver.node != nullptr) {
-		HCL_DESIGNCHECK_HINT(getOutputConnectionType(driver).interpretation == hlim::ConnectionType::BOOL, "Attempting to create Bit hook from a signal node that is not a Bit");
+		HCL_DESIGNCHECK_HINT(getOutputConnectionType(driver).isBool(), "Attempting to create Bit hook from a signal node that is not a Bit");
 		res = SignalReadPort(driver);
 	}
 	input.node->rewireInput(input.port, res.outPort());
@@ -69,7 +69,7 @@ Bit hookBitBefore(hlim::NodePort input)
 
 Bit hookBitAfter(hlim::NodePort output)
 {
-	HCL_DESIGNCHECK_HINT(getOutputConnectionType(output).interpretation == hlim::ConnectionType::BOOL, "Attempting to create Bit hook from a signal node that is not a Bit");
+	HCL_DESIGNCHECK_HINT(getOutputConnectionType(output).isBool(), "Attempting to create Bit hook from a signal node that is not a Bit");
 
 	Bit res;
 	while (!output.node->getDirectlyDriven(output.port).empty()) {
@@ -161,7 +161,7 @@ NodeGroupIO::NodeGroupIO(hlim::NodeGroup *nodeGroup)
 		HCL_ASSERT_HINT(!usedNames.contains(signal->getName()), "input-output signal name duplicates!");
 		usedNames.insert(signal->getName());
 
-		switch (signal->getOutputConnectionType(0).interpretation) {
+		switch (signal->getOutputConnectionType(0).type) {
 			case hlim::ConnectionType::BITVEC:
 				inputBVecs[signal->getName()] = hookBVecBefore(signal);
 			break;
@@ -179,7 +179,7 @@ NodeGroupIO::NodeGroupIO(hlim::NodeGroup *nodeGroup)
 		HCL_ASSERT_HINT(!usedNames.contains(signal->getName()), "input-output signal name duplicates!");
 		usedNames.insert(signal->getName());
 
-		switch (signal->getOutputConnectionType(0).interpretation) {
+		switch (signal->getOutputConnectionType(0).type) {
 			case hlim::ConnectionType::BITVEC:
 				outputBVecs[signal->getName()] = hookBVecAfter(signal);
 			break;
@@ -262,7 +262,7 @@ Bit NodeGroupSurgeryHelper::getBit(std::string_view name)
 	HCL_DESIGNCHECK_HINT(it->second.size() == 1, "Named signal is ambiguous (exists multiple times) in node group!");
 
 	auto *signal = it->second.front();
-	HCL_DESIGNCHECK_HINT(signal->getOutputConnectionType(0).interpretation == hlim::ConnectionType::BOOL, "Attempting to create Bit hook from a signal node that is not a Bit");
+	HCL_DESIGNCHECK_HINT(signal->getOutputConnectionType(0).isBool(), "Attempting to create Bit hook from a signal node that is not a Bit");
 
 	return SignalReadPort(signal);
 }
@@ -274,7 +274,7 @@ BVec NodeGroupSurgeryHelper::getBVec(std::string_view name)
 	HCL_DESIGNCHECK_HINT(it->second.size() == 1, "Named signal is ambiguous (exists multiple times) in node group!");
 
 	auto *signal = it->second.front();
-	HCL_DESIGNCHECK_HINT(signal->getOutputConnectionType(0).interpretation == hlim::ConnectionType::BITVEC, "Attempting to create Bit hook from a signal node that is not a Bit");
+	HCL_DESIGNCHECK_HINT(signal->getOutputConnectionType(0).isBitVec(), "Attempting to create Bit hook from a signal node that is not a Bit");
 
 	return SignalReadPort(signal);
 }

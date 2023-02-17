@@ -168,7 +168,7 @@ void Process::extractSignals()
 
 		// Check for multiple use
 		for (auto i : utils::Range(node->getNumOutputPorts())) {
-			if (node->getDirectlyDriven(i).size() > 1 && node->getOutputConnectionType(i).interpretation != hlim::ConnectionType::BOOL) {
+			if (node->getDirectlyDriven(i).size() > 1 && !node->getOutputConnectionType(i).isBool()) {
 				hlim::NodePort driver{.node = node, .port = i};
 				potentialLocalSignals.insert(driver);
 			}
@@ -440,7 +440,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
 			stream << "(";
 
 		VHDLDataType subContext = VHDLDataType::UNSIGNED;
-		if (compareNode->getDriverConnType(0).interpretation == hlim::ConnectionType::BOOL)
+		if (compareNode->getDriverConnType(0).isBool())
 			subContext = VHDLDataType::STD_LOGIC;
 
 		formatExpression(stream, indentation, comments, compareNode->getDriver(0), dependentInputs, subContext);
@@ -686,7 +686,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 						cf.indent(code, indentation+2);
 						code << assignmentPrefix;
 
-						if (hlim::getOutputConnectionType(nodePort).interpretation == hlim::ConnectionType::BOOL)
+						if (hlim::getOutputConnectionType(nodePort).isBool())
 							code << "'Z';" << std::endl;
 						else
 							code << "(others => 'Z');" << std::endl;

@@ -251,7 +251,7 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 
 					const auto& conType = constant->getOutputConnectionType(0);
 					char sep = '"';
-					if (conType.interpretation == hlim::ConnectionType::BOOL)
+					if (conType.isBool())
 						sep = '\'';
 
 					stream << sep;

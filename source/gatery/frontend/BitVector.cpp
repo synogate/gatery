@@ -160,7 +160,7 @@ namespace gtry {
 		m_expansionPolicy(expansionPolicy)
 	{
 		auto connType = node->getOutputConnectionType(0);
-		HCL_DESIGNCHECK(connType.interpretation == hlim::ConnectionType::BITVEC);
+		HCL_DESIGNCHECK(connType.isBitVec());
 		HCL_DESIGNCHECK(m_range.offset+m_range.width <= connType.width);
 
 		m_initialScopeId = initialScopeId;
@@ -299,7 +299,7 @@ namespace gtry {
 
 	hlim::ConnectionType BaseBitVector::connType() const
 	{
-		return hlim::ConnectionType{ .interpretation = hlim::ConnectionType::BITVEC, .width = m_range.width };
+		return hlim::ConnectionType{ .type = hlim::ConnectionType::BITVEC, .width = m_range.width };
 	}
 
 	SignalReadPort BaseBitVector::readPort() const
@@ -318,7 +318,7 @@ namespace gtry {
 
 					hlim::ConnectionType idxType = hlim::getOutputConnectionType(m_range.offsetDynamic);
 
-					HCL_ASSERT_HINT(idxType.interpretation == hlim::ConnectionType::BITVEC, "Index has wrong type");
+					HCL_ASSERT_HINT(idxType.isBitVec(), "Index has wrong type");
 
 					HCL_ASSERT(m_range.width > 0); /// @todo should we allow this?
 					size_t fullOptions = m_range.maxDynamicIndex + 1;
@@ -445,7 +445,7 @@ namespace gtry {
 
 				hlim::ConnectionType idxType = hlim::getOutputConnectionType(m_range.offsetDynamic);
 
-				HCL_ASSERT_HINT(idxType.interpretation == hlim::ConnectionType::BITVEC, "Index has wrong type");
+				HCL_ASSERT_HINT(idxType.isBitVec(), "Index has wrong type");
 
 				auto *mux = DesignScope::createNode<hlim::Node_Multiplexer>(m_range.maxDynamicIndex+1);
 				mux->connectSelector(m_range.offsetDynamic);

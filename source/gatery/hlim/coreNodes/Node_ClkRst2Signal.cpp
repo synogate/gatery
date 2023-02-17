@@ -25,7 +25,7 @@ Node_ClkRst2Signal::Node_ClkRst2Signal() : Node(0, 1)
 {
 	ConnectionType conType;
 	conType.width = 1;
-	conType.interpretation = ConnectionType::BOOL;
+	conType.type = ConnectionType::BOOL;
 	setOutputConnectionType(0, conType);
 
 	m_clocks.resize(1);

@@ -292,7 +292,7 @@ namespace gtry::sim
 				std::string vcdName = constructFullSignalName(*signal);
 
 				auto connectionType = hlim::getOutputConnectionType(signal->driver);
-				if (connectionType.interpretation != hlim::ConnectionType::BOOL)
+				if (!connectionType.isBool())
 					vcdName = (boost::format("%s[%d:0]") % vcdName % (connectionType.width-1)).str();
 
 				m_gtkWaveProjectFile.appendSignal(vcdName);

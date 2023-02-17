@@ -79,7 +79,6 @@ class NodeIO
 		struct OutputPort {
 			ConnectionType connectionType;
 			OutputType outputType = OUTPUT_IMMEDIATE;
-			sim::DefaultBitVectorState outputValue;
 			std::vector<NodePort> connections;
 		};
 

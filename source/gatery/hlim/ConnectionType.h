@@ -22,71 +22,50 @@
 #include <string>
 #include <memory>
 
+/*
+namespace gtry::sim {
+	class DefaultBitVectorState;
+}
+*/
+
 namespace gtry::hlim {
 
-#if 1
+class Interpretation {
+	public:
+		virtual ~Interpretation() = default;
+
+/*		
+		virtual void translate(std::ostream &stream, const sim::DefaultBitVectorState &state) = 0;
+		std::string translate(const sim::DefaultBitVectorState &state) {
+			std::stringstream str;
+			translate(str, state);
+			return str.str();
+		}
+*/		
+	protected:
+};
+
 struct ConnectionType
 {
-	enum Interpretation {
+	enum Type {
 		BOOL,
 		BITVEC,
 		DEPENDENCY,
 	};
 	
-	Interpretation interpretation = BITVEC;
+	Type type = BITVEC;
+
+	Interpretation *interpretation = nullptr;
 	
 	size_t width = 0;
 	
 	bool operator==(const ConnectionType &rhs) const;
 	bool operator!=(const ConnectionType &rhs) const { return !(*this == rhs); }
+
+	bool isBool() const { return type == BOOL; }
+	bool isBitVec() const { return type == BITVEC; }
+	bool isDependency() const { return type == DEPENDENCY; }
 };
-
-#else
-	
-class ConnectionType
-{
-	public:
-		virtual ~ConnectionType() = default;
-
-		virtual size_t getTotalWidth() const = 0;
-	protected:
-};
-
-class BusConnectionType : public ConnectionType
-{
-	public:
-		enum Interpretation {
-			RAW,
-			UNSIGNED,
-			SIGNED_2COMPLEMENT,
-			ONE_HOT,
-			FLOAT
-		};
-		
-		virtual size_t getTotalWidth() const override { return m_width; }
-	protected:
-		Interpretation m_interpretation = RAW;
-		
-		size_t m_width = 1;
-		size_t m_fixedPoint_denominator = 1;
-		bool m_float_signBit = false;
-		size_t m_float_mantissaBits = 0;
-		int m_float_exponentBias = 0;
-};
-
-class CompoundConnectionType : public ConnectionType
-{
-	public:
-		struct SubConnection {
-			std::string name;
-			ConnectionType *type;
-		};
-
-		virtual size_t getTotalWidth() const override;
-	protected:
-		std::vector<SubConnection> m_subConnections;
-};
-#endif
 
 }
 

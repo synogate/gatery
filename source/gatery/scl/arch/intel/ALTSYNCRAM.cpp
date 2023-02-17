@@ -92,7 +92,7 @@ std::string ALTSYNCRAM::RDWBehavior2Str(RDWBehavior rdw)
 
 ALTSYNCRAM &ALTSYNCRAM::setupPortA(size_t width, PortSetup portSetup)
 {
-	setOutputConnectionType(OUT_Q_A, {.interpretation = hlim::ConnectionType::BITVEC, .width=width});
+	setOutputConnectionType(OUT_Q_A, {.type = hlim::ConnectionType::BITVEC, .width=width});
 	m_widthPortA = width;
 	m_genericParameters["width_a"] = width;
 	declInputBitVector(IN_DATA_A, "DATA_A", width, "width_a");
@@ -131,7 +131,7 @@ ALTSYNCRAM &ALTSYNCRAM::setupPortA(size_t width, PortSetup portSetup)
 
 ALTSYNCRAM &ALTSYNCRAM::setupPortB(size_t width, PortSetup portSetup)
 {
-	setOutputConnectionType(OUT_Q_B, {.interpretation = hlim::ConnectionType::BITVEC, .width=width});
+	setOutputConnectionType(OUT_Q_B, {.type = hlim::ConnectionType::BITVEC, .width=width});
 	m_genericParameters["width_b"] = width;
 	changeInputWidth(IN_DATA_B, width);
 	changeOutputWidth(OUT_Q_B, width);

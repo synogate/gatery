@@ -54,7 +54,7 @@ void Node_External::declOutputBitVector(size_t idx, std::string name, size_t wid
 	m_outputPorts[idx].flavor = flavor;
 
 	setOutputConnectionType(idx, {
-		.interpretation = hlim::ConnectionType::BITVEC,
+		.type = hlim::ConnectionType::BITVEC,
 		.width = width,
 	});
 }
@@ -67,7 +67,7 @@ void Node_External::declOutputBit(size_t idx, std::string name, BitFlavor flavor
 	m_outputPorts[idx].flavor = flavor;
 
 	setOutputConnectionType(idx, {
-		.interpretation = hlim::ConnectionType::BOOL,
+		.type = hlim::ConnectionType::BOOL,
 		.width = 1,
 	});
 }
@@ -104,7 +104,7 @@ void Node_External::changeOutputWidth(size_t idx, size_t width)
 	HCL_DESIGNCHECK_HINT(getDirectlyDriven(idx).empty(), "Output is already bound!");
 	m_outputPorts[idx].instanceWidth = width;
 	setOutputConnectionType(idx, {
-		.interpretation = hlim::ConnectionType::BITVEC,
+		.type = hlim::ConnectionType::BITVEC,
 		.width = width,
 	});	
 }

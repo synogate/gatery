@@ -50,7 +50,7 @@ void Node_Arithmetic::updateConnectionType()
 		desiredConnectionType = hlim::getOutputConnectionType(lhs);
 		if (rhs.node != nullptr) {
 			desiredConnectionType.width = std::max(desiredConnectionType.width, getOutputWidth(rhs));
-			HCL_ASSERT_HINT(lhs.node->getOutputConnectionType(lhs.port).interpretation == rhs.node->getOutputConnectionType(rhs.port).interpretation, "Mixing different interpretations not yet implemented!");
+			HCL_ASSERT_HINT(lhs.node->getOutputConnectionType(lhs.port).type == rhs.node->getOutputConnectionType(rhs.port).type, "Mixing different interpretations not yet implemented!");
 		}
 	} else if (rhs.node != nullptr)
 		desiredConnectionType = hlim::getOutputConnectionType(rhs);
@@ -89,7 +89,7 @@ void Node_Arithmetic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, si
 		std::uint64_t right = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[1], rightType.width);
 		std::uint64_t result;
 
-		switch (getOutputConnectionType(0).interpretation) {
+		switch (getOutputConnectionType(0).type) {
 			case ConnectionType::BOOL:
 				HCL_ASSERT_HINT(false, "Can't do arithmetic on booleans!");
 			break;
@@ -131,7 +131,7 @@ void Node_Arithmetic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, si
 		left = sim::extractBigInt(state, inputOffsets[0], leftType.width);
 		right = sim::extractBigInt(state, inputOffsets[1], rightType.width);
 
-		switch (getOutputConnectionType(0).interpretation) {
+		switch (getOutputConnectionType(0).type) {
 			case ConnectionType::BOOL:
 				HCL_ASSERT_HINT(false, "Can't do arithmetic on booleans!");
 			break;

@@ -50,7 +50,7 @@ namespace gtry {
 
 		Expansion expansionPolicy = Expansion::none;
 
-		SignalReadPort expand(size_t width, hlim::ConnectionType::Interpretation resultType) const;
+		SignalReadPort expand(size_t width, hlim::ConnectionType::Type resultType) const;
 
 		BitWidth width() const { return BitWidth{ hlim::getOutputWidth(*this) }; }
 	};
@@ -105,10 +105,10 @@ namespace gtry {
 
 		const size_t maxWidth = std::max(lhs.width(), rhs.width()).bits();
 
-		hlim::ConnectionType::Interpretation type = hlim::ConnectionType::BITVEC;
+		hlim::ConnectionType::Type type = hlim::ConnectionType::BITVEC;
 		if(maxWidth == 1 &&
-			(l.connType().interpretation != r.connType().interpretation ||
-			l.connType().interpretation == hlim::ConnectionType::BOOL))
+			(l.connType().type != r.connType().type ||
+			l.connType().isBool()))
 			type = hlim::ConnectionType::BOOL;
 
 		lhs = lhs.expand(maxWidth, type);

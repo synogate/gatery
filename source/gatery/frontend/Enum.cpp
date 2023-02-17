@@ -71,7 +71,7 @@ namespace gtry
 
 	hlim::ConnectionType BaseEnum::connType() const {
 		return hlim::ConnectionType{
-			.interpretation = hlim::ConnectionType::BITVEC,
+			.type = hlim::ConnectionType::BITVEC,
 			.width = width().value
 		};
 	}

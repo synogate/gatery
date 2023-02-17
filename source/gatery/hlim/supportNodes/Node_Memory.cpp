@@ -31,8 +31,8 @@ namespace gtry::hlim {
 	{
 		resizeInputs(1); // at least one initialization data port
 		resizeOutputs((size_t)Outputs::COUNT);
-		setOutputConnectionType((size_t)Outputs::INITIALIZATION_ADDR, {.interpretation = ConnectionType::BITVEC, .width=0});
-		setOutputConnectionType((size_t)Outputs::READ_DEPENDENCIES, {.interpretation = ConnectionType::DEPENDENCY, .width=1});
+		setOutputConnectionType((size_t)Outputs::INITIALIZATION_ADDR, {.type = ConnectionType::BITVEC, .width=0});
+		setOutputConnectionType((size_t)Outputs::READ_DEPENDENCIES, {.type = ConnectionType::DEPENDENCY, .width=1});
 
 		setType(MemType::DONT_CARE);
 	}
@@ -44,10 +44,10 @@ namespace gtry::hlim {
 
 		m_initializationDataWidth = width;
 		if (width == 0ull) {
-			setOutputConnectionType((size_t)Outputs::INITIALIZATION_ADDR, {.interpretation = ConnectionType::BITVEC, .width=0});
+			setOutputConnectionType((size_t)Outputs::INITIALIZATION_ADDR, {.type = ConnectionType::BITVEC, .width=0});
 		} else {
 			auto numAddresses = getSize() / width;
-			setOutputConnectionType((size_t)Outputs::INITIALIZATION_ADDR, {.interpretation = ConnectionType::BITVEC, .width=utils::Log2C(numAddresses)});
+			setOutputConnectionType((size_t)Outputs::INITIALIZATION_ADDR, {.type = ConnectionType::BITVEC, .width=utils::Log2C(numAddresses)});
 		}
 	}
 

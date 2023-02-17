@@ -235,7 +235,7 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_intra_connection, gtry::GHDLTestFixture)
 	design.setTargetTechnology(std::move(device));
 
 
-	auto *multiDriver = DesignScope::createNode<hlim::Node_MultiDriver>(2, hlim::ConnectionType{ .interpretation = hlim::ConnectionType::BOOL, .width = 1 });
+	auto *multiDriver = DesignScope::createNode<hlim::Node_MultiDriver>(2, hlim::ConnectionType{ .type = hlim::ConnectionType::BOOL, .width = 1 });
 
 	auto *iobuf1 = DesignScope::createNode<scl::arch::xilinx::IOBUF>();
 	iobuf1->setInput(scl::arch::xilinx::IOBUF::IN_I, pinIn().setName("I1"));
@@ -274,7 +274,7 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_intra_connection_different_entities, gtry::GH
 	design.setTargetTechnology(std::move(device));
 
 
-	auto *multiDriver = DesignScope::createNode<hlim::Node_MultiDriver>(2, hlim::ConnectionType{ .interpretation = hlim::ConnectionType::BOOL, .width = 1 });
+	auto *multiDriver = DesignScope::createNode<hlim::Node_MultiDriver>(2, hlim::ConnectionType{ .type = hlim::ConnectionType::BOOL, .width = 1 });
 
 	auto *iobuf1 = DesignScope::createNode<scl::arch::xilinx::IOBUF>();
 	iobuf1->setInput(scl::arch::xilinx::IOBUF::IN_I, pinIn().setName("I1"));
@@ -310,7 +310,7 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_intra_connection_different_entities2, gtry::G
 	design.setTargetTechnology(std::move(device));
 
 
-	auto *multiDriver = DesignScope::createNode<hlim::Node_MultiDriver>(2, hlim::ConnectionType{ .interpretation = hlim::ConnectionType::BOOL, .width = 1 });
+	auto *multiDriver = DesignScope::createNode<hlim::Node_MultiDriver>(2, hlim::ConnectionType{ .type = hlim::ConnectionType::BOOL, .width = 1 });
 
 	{
 		Area area("test1", true);
@@ -354,7 +354,7 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_pin_extnode, gtry::GHDLTestFixture)
 	{
 		Area area("test1", true);
 
-		auto *multiDriver = DesignScope::createNode<hlim::Node_MultiDriver>(2, hlim::ConnectionType{ .interpretation = hlim::ConnectionType::BOOL, .width = 1 });
+		auto *multiDriver = DesignScope::createNode<hlim::Node_MultiDriver>(2, hlim::ConnectionType{ .type = hlim::ConnectionType::BOOL, .width = 1 });
 
 		Bit t = pinIn().setName("T1");
 
@@ -387,7 +387,7 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_pin_extnode, gtry::GHDLTestFixture)
 	{
 		Area area("test3", true);
 
-		auto *multiDriver = DesignScope::createNode<hlim::Node_MultiDriver>(2, hlim::ConnectionType{ .interpretation = hlim::ConnectionType::BOOL, .width = 1 });
+		auto *multiDriver = DesignScope::createNode<hlim::Node_MultiDriver>(2, hlim::ConnectionType{ .type = hlim::ConnectionType::BOOL, .width = 1 });
 
 		Bit t = pinIn().setName("T3");
 		Bit i = pinIn().setName("I3");

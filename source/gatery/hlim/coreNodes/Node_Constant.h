@@ -25,7 +25,8 @@ namespace gtry::hlim {
 	class Node_Constant : public Node<Node_Constant>
 	{
 	public:
-		Node_Constant(sim::DefaultBitVectorState value, hlim::ConnectionType::Interpretation connectionType);
+		Node_Constant(sim::DefaultBitVectorState value, hlim::ConnectionType connectionType);
+		Node_Constant(sim::DefaultBitVectorState value, hlim::ConnectionType::Type connectionType);
 
 		virtual void simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
 

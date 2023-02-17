@@ -151,7 +151,7 @@ void BaseGrouping::formatConstant(std::ostream &stream, const hlim::Node_Constan
 	const auto& conType = constant->getOutputConnectionType(0);
 
 	if (targetType == VHDLDataType::BOOL) {
-		HCL_ASSERT(conType.interpretation == hlim::ConnectionType::BOOL);
+		HCL_ASSERT(conType.isBool());
 		const auto &v = constant->getValue();
 		//HCL_ASSERT(v.get(sim::DefaultConfig::DEFINED, 0));
 		if (v.get(sim::DefaultConfig::VALUE, 0) && v.get(sim::DefaultConfig::DEFINED, 0))
@@ -160,7 +160,7 @@ void BaseGrouping::formatConstant(std::ostream &stream, const hlim::Node_Constan
 			stream << "false";
 	} else {
 		char sep = '"';
-		if (conType.interpretation == hlim::ConnectionType::BOOL)
+		if (conType.isBool())
 			sep = '\'';
 
 		stream << sep;

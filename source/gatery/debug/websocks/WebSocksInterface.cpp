@@ -326,7 +326,7 @@ std::string JsonSerializer::serializeAllNodes(const hlim::Circuit &circuit)
 				json << "        {\n";
 				json << "            \"name\": \"" << node->getOutputName(i) << "\",\n"
 						<< "            \"width\": " << node->getOutputConnectionType(i).width << ",\n"
-						<< "            \"interpretation\": \"" << magic_enum::enum_name(node->getOutputConnectionType(i).interpretation) << "\",\n"
+						<< "            \"interpretation\": \"" << magic_enum::enum_name(node->getOutputConnectionType(i).type) << "\",\n"
 						<< "            \"type\": \"" << magic_enum::enum_name(node->getOutputType(i)) << "\",\n"
 						<< "            \"consumers\": [\n";
 				bool firstElement = true;
