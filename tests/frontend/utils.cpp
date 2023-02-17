@@ -90,7 +90,7 @@ BOOST_AUTO_TEST_CASE(EnvVarReplacement)
 #ifdef WIN32
 	_putenv("var=str str");
 #else
-	putenv("var=str str");
+	putenv((char*)"var=str str");
 #endif	
 	BOOST_TEST(replaceEnvVars("test $(var) tust") == "test str str tust");
 }

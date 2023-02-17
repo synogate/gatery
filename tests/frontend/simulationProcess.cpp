@@ -322,7 +322,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_callSubTaskStackOverflowTest, BoostUnitTestSimul
 	};
 
 	addSimulationProcess([=]()->SimProcess{
-		for (auto i : gtry::utils::Range(1'000'000)) {
+		for ([[maybe_unused]] auto i : gtry::utils::Range(1'000'000)) {
 			co_await subProcess();
 		}
 
@@ -343,7 +343,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_callSuspendingSubTask, BoostUnitTestSimulationFi
 	bool busy = false;
 	auto subProcess = [&busy](const Clock &clock)->SimProcess{
 		busy = true;
-		for (auto i : gtry::utils::Range(8)) {
+		for ([[maybe_unused]] auto i : gtry::utils::Range(8)) {
 			co_await AfterClk(clock);
 		}
 		busy = false;
@@ -351,7 +351,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_callSuspendingSubTask, BoostUnitTestSimulationFi
 
 	addSimulationProcess([=]()->SimProcess{
 		co_await AfterClk(clock);
-		for (auto i : gtry::utils::Range(1000)) {
+		for ([[maybe_unused]] auto i : gtry::utils::Range(1000)) {
 			co_await AfterClk(clock);
 			BOOST_TEST(!busy);
 			co_await subProcess(clock);
@@ -406,7 +406,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_forkTask, BoostUnitTestSimulationFixture)
 	bool flag = false;
 	auto subProcess = [&flag](const Clock &clock)->SimProcess{
 		flag = true;
-		for (auto i : gtry::utils::Range(100)) {
+		for ([[maybe_unused]] auto i : gtry::utils::Range(100)) {
 			co_await AfterClk(clock);
 			flag = !flag;
 		}
@@ -416,7 +416,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_forkTask, BoostUnitTestSimulationFixture)
 		BOOST_TEST(!flag);
 		co_await AfterClk(clock);
 		fork(subProcess(clock)); // fire & forget
-		for (auto i : gtry::utils::Range(50)) {
+		for ([[maybe_unused]] auto i : gtry::utils::Range(50)) {
 			BOOST_TEST(flag);
 			co_await AfterClk(clock);
 			BOOST_TEST(!flag);
@@ -424,7 +424,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_forkTask, BoostUnitTestSimulationFixture)
 		}
 
 		// Tasks should have finished by now
-		for (auto i : gtry::utils::Range(50)) {
+		for ([[maybe_unused]] auto i : gtry::utils::Range(50)) {
 			BOOST_TEST(flag);
 			co_await AfterClk(clock);
 		}
@@ -457,7 +457,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_forkUnendingTask, BoostUnitTestSimulationFixture
 		BOOST_TEST(!flag);
 		co_await AfterClk(clock);
 		fork(subProcess(clock)); // fire & forget
-		for (auto i : gtry::utils::Range(50)) {
+		for ([[maybe_unused]] auto i : gtry::utils::Range(50)) {
 			BOOST_TEST(flag);
 			co_await AfterClk(clock);
 			BOOST_TEST(!flag);
@@ -496,7 +496,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_forkFromSimProc, BoostUnitTestSimulationFixture)
 		BOOST_TEST(!flag);
 		co_await AfterClk(clock);
 		co_await subProcess2(clock);
-		for (auto i : gtry::utils::Range(50)) {
+		for ([[maybe_unused]] auto i : gtry::utils::Range(50)) {
 			BOOST_TEST(flag);
 			co_await AfterClk(clock);
 			BOOST_TEST(!flag);
@@ -550,7 +550,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_joinTask, BoostUnitTestSimulationFixture)
 	bool flag = false;
 	auto subProcess = [&flag](const Clock &clock)->SimProcess{
 		flag = true;
-		for (auto i : gtry::utils::Range(100)) {
+		for ([[maybe_unused]] auto i : gtry::utils::Range(100)) {
 			co_await AfterClk(clock);
 			flag = !flag;
 		}
@@ -562,7 +562,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_joinTask, BoostUnitTestSimulationFixture)
 		
 		auto task = fork(subProcess(clock));
 
-		for (auto i : gtry::utils::Range(5)) {
+		for ([[maybe_unused]] auto i : gtry::utils::Range(5)) {
 			BOOST_TEST(flag);
 			co_await AfterClk(clock);
 			BOOST_TEST(!flag);
@@ -572,7 +572,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_joinTask, BoostUnitTestSimulationFixture)
 		co_await join(task);
 
 		// Tasks should have finished by now
-		for (auto i : gtry::utils::Range(50)) {
+		for ([[maybe_unused]] auto i : gtry::utils::Range(50)) {
 			BOOST_TEST(flag);
 			co_await AfterClk(clock);
 		}
@@ -632,7 +632,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_condition, BoostUnitTestSimulationFixture)
 		fork(subProcess(clock)); // fire & forget
 
 
-		for (auto i : gtry::utils::Range(50)) {
+		for ([[maybe_unused]] auto i : gtry::utils::Range(50)) {
 			co_await OnClk(clock);
 			BOOST_TEST(resourceInUse);
 		}
@@ -736,9 +736,6 @@ struct TestStruct2 {
 		//std::cout << "2__DTOR of " << (size_t) this << std::endl;
 	}
 };
-
-
-size_t dummy = 0;
 
 }
 

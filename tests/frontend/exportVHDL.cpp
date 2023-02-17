@@ -216,7 +216,7 @@ struct Test_GenericMemoryExport : public gtry::GHDLTestFixture
 
 		UInt addr = pinIn(8_b).setName("addr");
 		UInt output = mem[addr];
-		for (auto i : Range(latency)) {
+		for ([[maybe_unused]] auto i : Range(latency)) {
 			if (latencyRegResetValue)
 				output = reg(output, *latencyRegResetValue, {.allowRetimingBackward=true});
 			else
@@ -239,7 +239,7 @@ struct Test_GenericMemoryExport : public gtry::GHDLTestFixture
 
 			size_t testsInFlight = 0;
 
-			for (auto i : Range(100)) {
+			for ([[maybe_unused]] auto i : Range(100)) {
 				if (rng() & 1) {
 					size_t idx = rng() % depth;
 					size_t newValue = rng() % (1 << width.value);
@@ -252,7 +252,7 @@ struct Test_GenericMemoryExport : public gtry::GHDLTestFixture
 
 					fork([=, &testsInFlight]()->SimProcess {
 						testsInFlight++;
-						for (auto i : Range(latency+1))
+						for ([[maybe_unused]] auto i : Range(latency+1))
 							co_await OnClk(clock);
 						auto v = simu(output);
 						if (!oldValue)
