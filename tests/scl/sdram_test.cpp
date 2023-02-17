@@ -47,7 +47,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 	BVec dq = moduleSimulation(bus);
 	pinOut(dq).setName("SDRAM_DQ_OUT");
 
-	addSimulationProcess([=]()->SimProcess {
+	addSimulationProcess([=, this]()->SimProcess {
 
 		simu(bus.cke) = '0';
 		simu(bus.csn) = '1';
@@ -202,7 +202,7 @@ BOOST_FIXTURE_TEST_CASE(memory_tester_pass_test, ClockedTest)
 
 	sim_assert(tester.numErrors() == 0) << "detected false memory errors";
 
-	addSimulationProcess([=]()->SimProcess {
+	addSimulationProcess([=, this]()->SimProcess {
 		for(size_t i = 0; i < 70; ++i)
 			co_await OnClk(clock());
 		stopTest();
@@ -256,7 +256,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_timer_test, ClockedTest)
 	Bit b1BurstStop = timer.can(scl::sdram::CommandCode::BurstStop, 1);
 	gtry::pinOut(b1BurstStop).setName("b1BurstStop");
 
-	addSimulationProcess([=]()->SimProcess {
+	addSimulationProcess([=, this]()->SimProcess {
 
 		simu(bus.cke) = '1';
 		simu(bus.csn) = '1';
@@ -482,7 +482,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_init_test, SdramControllerTest)
 	setupLink();
 	generate(link);
 
-	addSimulationProcess([=]()->SimProcess {
+	addSimulationProcess([=, this]()->SimProcess {
 		co_await OnClk(clock());
 		issueWrite(0, 4, 1);
 		simu(link.a->data) = 0xCDCD;
@@ -515,7 +515,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_put_get_test, SdramControllerTest)
 	setupLink();
 	generate(link);
 
-	addSimulationProcess([=]()->SimProcess {
+	addSimulationProcess([=, this]()->SimProcess {
 		co_await OnClk(clock());
 
 		fork(scl::validate(linkModel.getLink(), clock()));
@@ -546,7 +546,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_small_test, SdramControllerTest)
 	setupLink();
 	generate(link);
 
-	addSimulationProcess([=]()->SimProcess {
+	addSimulationProcess([=, this]()->SimProcess {
 		co_await OnClk(clock());
 
 		fork(scl::validate(linkModel.getLink(), clock()));
@@ -577,7 +577,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_burst_test, SdramControllerTest)
 	setupLink();
 	generate(link);
 
-	addSimulationProcess([=]()->SimProcess {
+	addSimulationProcess([=, this]()->SimProcess {
 		co_await OnClk(clock());
 
 		fork(scl::validate(linkModel.getLink(), clock()));
@@ -603,7 +603,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_fuzz_test, SdramControllerTest)
 	generate(link);
 	timeout(hlim::ClockRational{ 22000, 1'000'000 });
 
-	addSimulationProcess([=]()->SimProcess 
+	addSimulationProcess([=, this]()->SimProcess 
 	{
 		const uint64_t seed = std::random_device{}();
 		std::mt19937_64 rng{ seed };
@@ -660,7 +660,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_fuzz_test, SdramControllerTest)
 				address = *it;
 				address &= ~((1ull << size) - 1);
 
-				fork([=]() -> SimProcess {
+				fork([=, this]() -> SimProcess {
 					auto [value, defined, error] = co_await linkModel.get(address, size, clock());
 					BOOST_TEST(!error);
 					check_read(address, size, value, defined);
@@ -672,7 +672,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_fuzz_test, SdramControllerTest)
 				usedAddress.insert(address);
 				uint64_t data = rng();
 
-				fork([=]() -> SimProcess {
+				fork([=, this]() -> SimProcess {
 					bool error = co_await linkModel.put(address, size, data, clock());
 					BOOST_TEST(!error);
 					insert_write(address, size, data);
@@ -708,7 +708,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_memory_tester_test, SdramControllerTes
 
 	timeout(hlim::ClockRational{ 10, 1'000'000 });
 
-	addSimulationProcess([=]()->SimProcess
+	addSimulationProcess([=, this]()->SimProcess
 	{
 		for (size_t i = 0; i < 730; ++i)
 			co_await OnClk(clock());
@@ -716,3 +716,4 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_memory_tester_test, SdramControllerTes
 		stopTest();
 	});
 }
+

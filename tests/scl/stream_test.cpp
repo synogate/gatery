@@ -300,7 +300,7 @@ protected:
 
 	void simulateSendData(scl::RvStream<UInt>& stream, size_t group)
 	{
-		addSimulationProcess([=, &stream]()->SimProcess {
+		addSimulationProcess([=, this, &stream]()->SimProcess {
 			std::mt19937 rng{ std::random_device{}() };
 			for(size_t i = 0; i < m_transfers; ++i)
 			{
@@ -322,7 +322,7 @@ protected:
 
 	void simulateSendData(scl::RvPacketStream<UInt>& stream, size_t group)
 	{
-		addSimulationProcess([=, &stream]()->SimProcess {
+		addSimulationProcess([=, this, &stream]()->SimProcess {
 			std::mt19937 rng{ std::random_device{}() };
 			for(size_t i = 0; i < m_transfers;)
 			{
@@ -352,7 +352,7 @@ protected:
 	template<scl::StreamSignal T>
 	void simulateRecvData(const T& stream)
 	{
-		addSimulationProcess([=, &stream]()->SimProcess {
+		addSimulationProcess([=, this, &stream]()->SimProcess {
 			std::vector<size_t> expectedValue(m_groups);
 			while(true)
 			{
@@ -370,7 +370,7 @@ protected:
 					}
 				}
 
-				if(std::ranges::all_of(expectedValue, [=](size_t val) { return val == m_transfers; }))
+				if(std::ranges::all_of(expectedValue, [=, this](size_t val) { return val == m_transfers; }))
 				{
 					stopTest();
 					co_await AfterClk(m_clock);
@@ -689,7 +689,7 @@ BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 	Out(out);
 
 	// send data
-	addSimulationProcess([=, &in]()->SimProcess {
+	addSimulationProcess([=, this, &in]()->SimProcess {
 		simu(valid(in)) = '0';
 		simu(*in).invalidate();
 		for (size_t i = 0; i < 4; ++i)
@@ -730,7 +730,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth, StreamTransferFixture)
 	Out(out);
 
 	// send data
-	addSimulationProcess([=, &in]()->SimProcess {
+	addSimulationProcess([=, this, &in]()->SimProcess {
 		simu(valid(in)) = '0';
 		simu(*in).invalidate();
 
@@ -766,7 +766,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth_RvPacketStream, StreamTransferFixture
 	Out(out);
 
 	// send data
-	addSimulationProcess([=, &in]()->SimProcess {
+	addSimulationProcess([=, this, &in]()->SimProcess {
 		for(size_t i = 0; i < 8; ++i)
 		{
 			simu(valid(in)) = '1';
@@ -800,7 +800,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
 	Out(out);
 
 	// send data
-	addSimulationProcess([=, &in]()->SimProcess {
+	addSimulationProcess([=, this, &in]()->SimProcess {
 		simu(valid(in)) = '0';
 		simu(*in).invalidate();
 		co_await AfterClk(m_clock);
@@ -838,7 +838,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseLastBeat, StreamTransferFixture)
 	Out(out);
 
 	// send data
-	addSimulationProcess([=, &in]()->SimProcess {
+	addSimulationProcess([=, this, &in]()->SimProcess {
 		simu(valid(in)) = '0';
 		simu(*in).invalidate();
 		co_await AfterClk(m_clock);
@@ -877,7 +877,7 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 	Out(out);
 
 	// send data
-	addSimulationProcess([=, &in]()->SimProcess {
+	addSimulationProcess([=, this, &in]()->SimProcess {
 		simu(valid(in)) = '0';
 		simu(*in).invalidate();
 		co_await AfterClk(m_clock);
@@ -917,7 +917,7 @@ BOOST_FIXTURE_TEST_CASE(stream_addEopDeferred, StreamTransferFixture)
 	Out(out);
 
 	// generate eop insert signal
-	addSimulationProcess([=, &in]()->SimProcess {
+	addSimulationProcess([=, this, &in]()->SimProcess {
 		
 		simu(eop) = '0';
 		while(true)
@@ -1007,7 +1007,7 @@ BOOST_FIXTURE_TEST_CASE(stream_stall, StreamTransferFixture)
 	scl::RvStream<UInt> out = stall(in, stallCondition);
 	Out(out);
 
-	addSimulationProcess([=, &out, &in]()->SimProcess {
+	addSimulationProcess([=, this, &out, &in]()->SimProcess {
 
 		simu(stallCondition) = '0';
 
@@ -1041,3 +1041,5 @@ BOOST_FIXTURE_TEST_CASE(stream_stall, StreamTransferFixture)
 	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
+
+
