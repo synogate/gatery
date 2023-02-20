@@ -86,8 +86,12 @@ namespace gtry::scl::riscv
 		virtual void logic();
 		virtual void setcmp();
 		virtual void shift();
-		virtual void csr(BitWidth timerWidth = 64_b, BitWidth instRetWidth = 64_b, hlim::ClockRational timerResolution = {1, 1'000'000}); // default time resolution of 1us
+
+		virtual void csr(); // base implementation returns zero for all registers
 		virtual void csrMachineInformation(uint32_t vendorId = 0, uint32_t architectureId = 0, uint32_t implementationId = 0, uint32_t hartId = 0, uint32_t configPtr = 0);
+		virtual void csrCycle(BitWidth regW = 64_b);
+		virtual void csrTime(BitWidth regW = 64_b, hlim::ClockRational resolution = { 1, 1'000'000 }); // default time resolution is 1us
+		virtual void csrInstructionsRetired(BitWidth regW = 64_b);
 
 		virtual void mem(AvalonMM& mem, bool byte = true, bool halfword = true);
 		virtual TileLinkUL memTLink(bool byte = true, bool halfword = true);
@@ -98,6 +102,7 @@ namespace gtry::scl::riscv
 	protected:
 		virtual void store(AvalonMM& mem, bool byte, bool halfword);
 		virtual void load(AvalonMM& mem, bool byte, bool halfword);
+		virtual void csrRegister(size_t address, const UInt& data);
 
 	protected:
 		// helper for instructions

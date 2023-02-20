@@ -164,6 +164,7 @@ void gtry::scl::riscv::RV32I::execute()
 
 void gtry::scl::riscv::RV32I::selectInstructions()
 {
+	csr();
 	lui();
 	auipc();
 	jal();
@@ -331,56 +332,75 @@ void gtry::scl::riscv::RV32I::shift()
 	}
 }
 
-void gtry::scl::riscv::RV32I::csr(BitWidth timerWidth, BitWidth instRetWidth, hlim::ClockRational timerResolution)
+void gtry::scl::riscv::RV32I::csr()
 {
 	auto ent = m_area.enter("csr");
-
-	auto timerCycles = timerResolution * ClockScope::getClk().absoluteFrequency();
-	scl::Counter timer{ timerCycles.numerator() / timerCycles.denominator() };
-	timer.inc();
-	Bit tickTimer = reg(timer.isLast(), '0');
-	HCL_NAMED(tickTimer);
-
-	UInt cycles = timerWidth;
-	IF(tickTimer)
-		cycles += 1;
-	cycles = reg(cycles, 0);
-	HCL_NAMED(cycles);
-
-	UInt instructions = instRetWidth;
-	IF(reg(!m_discardResult & !m_stall, '0'))
-		instructions += 1;
-	instructions = reg(instructions, 0);
-	HCL_NAMED(instructions);
 
 	IF(m_instr.opcode.upper(5_b) == "b11100" & m_instr.func3 != 0)
 	{
 		setResult(ConstUInt(0, 32_b));
-
-		IF(m_instr.immI.lower(12_b) == 0xC00)
-			setResult(cycles.width() >= 32_b ? cycles.lower(32_b) : zext(cycles));
-		if(cycles.width() > 32_b)
-			IF(m_instr.immI.lower(12_b) == 0xC80)
-				setResult(zext(cycles(32, cycles.width() - 32_b)));
-
-		IF(m_instr.immI.lower(12_b) == 0xC02)
-			setResult(instructions.width() >= 32_b ? instructions.lower(32_b) : zext(instructions));
-		if (instructions.width() > 32_b)
-			IF(m_instr.immI.lower(12_b) == 0xC82)
-				setResult(zext(instructions(32, instructions.width() - 32_b)));
 	}
 }
 
 void gtry::scl::riscv::RV32I::csrMachineInformation(uint32_t vendorId, uint32_t architectureId, uint32_t implementationId, uint32_t hartId, uint32_t configPtr)
 {
-	IF(m_instr.opcode.upper(5_b) == "b11100" & m_instr.func3 != 0)
-	{
-		if (vendorId) IF(m_instr.immI.lower(12_b) == 0xF11) setResult(vendorId);
-		if (architectureId) IF(m_instr.immI.lower(12_b) == 0xF12) setResult(architectureId);
-		if (implementationId) IF(m_instr.immI.lower(12_b) == 0xF13) setResult(implementationId);
-		if (hartId) IF(m_instr.immI.lower(12_b) == 0xF14) setResult(hartId);
-		if (configPtr) IF(m_instr.immI.lower(12_b) == 0xF15) setResult(configPtr);
-	}
+	if (vendorId) 
+		csrRegister(0xF11, vendorId);
+	if (architectureId)
+		csrRegister(0xF12, architectureId);
+	if (implementationId)
+		csrRegister(0xF13, implementationId);
+	if (hartId)
+		csrRegister(0xF14, hartId);
+	if (configPtr)
+		csrRegister(0xF15, configPtr);
+}
+
+void gtry::scl::riscv::RV32I::csrCycle(BitWidth regW)
+{
+	auto ent = m_area.enter("csrCycle");
+
+	UInt cycles = regW;
+	cycles = reg(cycles + 1, 0);
+	HCL_NAMED(cycles);
+
+	csrRegister(0xC00, cycles);
+}
+
+void gtry::scl::riscv::RV32I::csrInstructionsRetired(BitWidth regW)
+{
+	auto ent = m_area.enter("csrInstructionsRetired");
+
+	UInt instructions = regW;
+
+	// we decouple instruction detection and counting for better timing.
+	// this will make the instruction counter lag behind 1 cycle.
+	IF(reg(!m_discardResult & !m_stall, '0'))
+		instructions += 1;
+
+	instructions = reg(instructions, 0);
+	HCL_NAMED(instructions);
+
+	csrRegister(0xC02, instructions);
+}
+
+void gtry::scl::riscv::RV32I::csrTime(BitWidth regW, hlim::ClockRational resolution)
+{
+	auto ent = m_area.enter("csrTime");
+
+	auto timerCycles = resolution * ClockScope::getClk().absoluteFrequency();
+	scl::Counter timer{ timerCycles.numerator() / timerCycles.denominator() };
+	timer.inc();
+	Bit tickTimer = reg(timer.isLast(), '0');
+	HCL_NAMED(tickTimer);
+
+	UInt timeReg = regW;
+	IF(tickTimer)
+		timeReg += 1;
+	timeReg = reg(timeReg, 0);
+	HCL_NAMED(timeReg);
+
+	csrRegister(0xC01, timeReg);
 }
 
 void gtry::scl::riscv::RV32I::mem(AvalonMM& mem, bool byte, bool halfword)
@@ -607,6 +627,18 @@ void gtry::scl::riscv::RV32I::load(AvalonMM& mem, bool byte, bool halfword)
 
 		IF(*mem.readDataValid)
 			setResult(value);
+	}
+}
+
+void gtry::scl::riscv::RV32I::csrRegister(size_t address, const UInt& data)
+{
+	IF(m_instr.opcode.upper(5_b) == "b11100" & m_instr.func3 != 0)
+	{
+		IF(m_instr.immI.lower(12_b) == address)
+			setResult(data.width() >= 32_b ? data.lower(32_b) : zext(data));
+		if (data.width() > 32_b)
+			IF(m_instr.immI.lower(12_b) == (address | 0x80))
+				setResult(zext(data(32, data.width() - 32_b)));
 	}
 }
 
