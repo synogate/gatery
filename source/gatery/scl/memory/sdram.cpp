@@ -310,8 +310,11 @@ void Controller::makeBusPins(const CommandBus& in, std::string prefix)
 	pinOut(bus.ba).setName(prefix + "BA");
 	pinOut(bus.dqm).setName(prefix + "DQM");
 
+	m_dataIn = scl::sdram::moduleSimulation(bus);
+
 	HCL_NAMED(outEnable);
-	m_dataIn = (BVec)tristatePin(bus.dq, outEnable).setName(prefix + "DQ");
+	BVec m_dataInPin = (BVec)tristatePin(bus.dq, outEnable).setName(prefix + "DQ");
+	m_dataIn.exportOverride(m_dataInPin);
 
 	if (m_useInputRegister)
 		m_dataIn = reg(m_dataIn);
