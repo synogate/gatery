@@ -321,7 +321,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_callSubTaskStackOverflowTest, BoostUnitTestSimul
 		co_return;
 	};
 
-	addSimulationProcess([=]()->SimProcess{
+	addSimulationProcess([=, this]()->SimProcess{
 		for ([[maybe_unused]] auto i : gtry::utils::Range(1'000'000)) {
 			co_await subProcess();
 		}
@@ -349,7 +349,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_callSuspendingSubTask, BoostUnitTestSimulationFi
 		busy = false;
 	};
 
-	addSimulationProcess([=]()->SimProcess{
+	addSimulationProcess([=, this]()->SimProcess{
 		co_await AfterClk(clock);
 		for ([[maybe_unused]] auto i : gtry::utils::Range(1000)) {
 			co_await AfterClk(clock);
@@ -661,7 +661,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_registerOverride, BoostUnitTestSimulationFixture
 		loop = reg(loop, 0);
 		auto outputPin = pinOut(loop);
 
-		addSimulationProcess([=]()->SimProcess{
+		addSimulationProcess([=, this]()->SimProcess{
 
 			co_await AfterClk(clock);
 			co_await AfterClk(clock);
