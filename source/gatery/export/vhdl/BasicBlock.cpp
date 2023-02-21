@@ -405,10 +405,10 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
 		for (auto node : group->getNodes()) {
 			if (!m_ast.isPartOfExport(node)) continue;
 
-			if (auto *extNode = dynamic_cast<hlim::Node_External *>(node))
+			if (dynamic_cast<hlim::Node_External *>(node))
 				continue;
 
-			if (auto *multiDriverNode = dynamic_cast<hlim::Node_MultiDriver *>(node))
+			if (dynamic_cast<hlim::Node_MultiDriver *>(node))
 				continue;
 
 		//	if (auto *pin = dynamic_cast<hlim::Node_Pin *>(node))
