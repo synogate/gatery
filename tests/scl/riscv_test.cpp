@@ -730,16 +730,14 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_jal, BoostUnitTestSimulationFixture)
 	runTicks(clock.getClk(), 32 * 2);
 }
 
-BOOST_FIXTURE_TEST_CASE(riscv_exec_csr_timer, BoostUnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(riscv_exec_csr_cycle, BoostUnitTestSimulationFixture)
 {
 	// default time resolution is 1us. set clock to 1MHz for 1:1 relationsship
 	Clock clock({ .absoluteFrequency = 1'000'000 });
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
-	rv.csr(64_b, 64_b, 
-		{ clock.absoluteFrequency().denominator(), clock.absoluteFrequency().numerator() }
-	);
+	rv.csrCycle();
 
 	addSimulationProcess([&]()->SimProcess {
 		rv.setupSimu();
@@ -774,6 +772,81 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_csr_timer, BoostUnitTestSimulationFixture)
 	design.postprocess();
 	runTicks(clock.getClk(), 128);
 }
+
+BOOST_FIXTURE_TEST_CASE(riscv_exec_csr_timer, BoostUnitTestSimulationFixture)
+{
+	// default time resolution is 1us. set clock to 1MHz for 1:1 relationsship
+	Clock clock({ .absoluteFrequency = 1'000'000 });
+	ClockScope clkScp(clock);
+
+	RV32I_stub rv;
+	rv.csrTime();
+
+	addSimulationProcess([&]()->SimProcess {
+		rv.setupSimu();
+
+		std::mt19937 rng{ std::random_device{}() };
+		rv.ip(rng()).r1(rng()).r2(rng());
+		rv.op().typeI(rv::op::SYSTEM, rv::func::CSRRW, 1, 0, 0xC01);
+
+		co_await AfterClk(clock);
+		BOOST_TEST(rv.hasResult());
+		size_t start = rv.result();
+
+		for (size_t i = 0; i < 14; ++i)
+		{
+			BOOST_TEST(rv.hasResult());
+			BOOST_TEST(rv.result() - start == i);
+
+			rv.ip(rng()).r1(rng()).r2(rng());
+			rv.op().typeI(rv::op::SYSTEM, (rv::func)(i % 7 + 1), 1, 0, 0xC01);
+			co_await AfterClk(clock);
+		}
+
+		rv.ip(rng()).r1(rng()).r2(rng());
+		rv.op().typeI(rv::op::SYSTEM, rv::func::CSRRW, 1, 0, 0xC81);
+		co_await AfterClk(clock);
+		BOOST_TEST(rv.hasResult());
+		BOOST_TEST(rv.result() == 0);
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTicks(clock.getClk(), 128);
+}
+
+BOOST_FIXTURE_TEST_CASE(riscv_exec_csr_machine, BoostUnitTestSimulationFixture)
+{
+	// default time resolution is 1us. set clock to 1MHz for 1:1 relationsship
+	Clock clock({ .absoluteFrequency = 1'000'000 });
+	ClockScope clkScp(clock);
+
+	RV32I_stub rv;
+	rv.csrMachineInformation(1, 2, 3, 4, 5);
+
+	addSimulationProcess([&]()->SimProcess {
+		rv.setupSimu();
+
+		std::mt19937 rng{ std::random_device{}() };
+
+		for (size_t i = 1; i < 6; ++i)
+		{
+			rv.ip(rng()).r1(rng()).r2(rng());
+			rv.op().typeI(rv::op::SYSTEM, rv::func::CSRRW, 1, 0, 0xF10 + int32_t(i));
+
+			co_await AfterClk(clock);
+			BOOST_TEST(rv.hasResult());
+			BOOST_TEST(rv.result() == i);
+		}
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTicks(clock.getClk(), 128);
+}
+
 
 BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 {
