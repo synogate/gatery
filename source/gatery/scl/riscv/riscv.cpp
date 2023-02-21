@@ -427,9 +427,7 @@ void gtry::scl::riscv::RV32I::mem(AvalonMM& mem, bool byte, bool halfword)
 gtry::scl::TileLinkUL gtry::scl::riscv::RV32I::memTLink(bool byte, bool halfword)
 {
 	auto entRV = m_area.enter("mem");
-	TileLinkUL mem;
-	tileLinkInit(mem, 32_b, 32_b, 2_b, 0_b);
-	setName(mem, "dmem");
+	auto mem = tileLinkInit<TileLinkUL>(32_b, 32_b);
 
 	setFullByteEnableMask(mem.a); // set mask according to size and address
 	valid(mem.a) = '0';
@@ -528,6 +526,7 @@ gtry::scl::TileLinkUL gtry::scl::riscv::RV32I::memTLink(bool byte, bool halfword
 		sim_assert(mem.a->address.lower(1_b) == 0 | mem.a->size != 1);
 	}
 
+	setName(mem, "dmem");
 	return mem;
 }
 
