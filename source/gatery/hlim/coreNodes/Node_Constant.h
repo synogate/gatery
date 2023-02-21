@@ -25,6 +25,7 @@ namespace gtry::hlim {
 	class Node_Constant : public Node<Node_Constant>
 	{
 	public:
+		Node_Constant(bool value);
 		Node_Constant(sim::DefaultBitVectorState value, hlim::ConnectionType connectionType);
 		Node_Constant(sim::DefaultBitVectorState value, hlim::ConnectionType::Type connectionType);
 

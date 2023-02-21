@@ -846,12 +846,48 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 
 	HCL_ASSERT(clock != nullptr);
 
-	// Run a simulation to determine the reset values of the registers that will be removed to check the validity of removing them
+	// Run a simulation to determine the reset values of the registers that will be removed
+	// and build logic to potentially override (fix) signals.
 	/// @todo Clone and optimize to prevent issues with loops
 	sim::SimulatorCallbacks ignoreCallbacks;
 	sim::ReferenceSimulator simulator;
 	simulator.compileProgram(circuit, {outputsLeavingRetimingArea}, true);
 	simulator.powerOn();
+
+	std::map<std::tuple<Clock*, NodeGroup*, NodePort>, NodePort> delayedResetSignals;
+	// Get a signal that is zero during reset and in the first non-reset cycle. It turns one after unless the enable signal is held low.
+	auto getDelayedResetSignalFor = [&](Clock *clk, NodeGroup *grp, NodePort enable)->NodePort {
+		auto it = delayedResetSignals.find({clk, grp, enable});
+		if (it != delayedResetSignals.end()) 
+			return it->second;
+
+		Node_Constant *constZeroOne[2];
+		for (auto i = 0; i < 2; i++) {
+			constZeroOne[i] = circuit.createNode<Node_Constant>(i != 0);
+			constZeroOne[i]->recordStackTrace();
+			constZeroOne[i]->moveToGroup(grp);
+			area.add(constZeroOne[i]);
+			if (newNodes) newNodes->add(constZeroOne[i]);
+		}
+
+		auto *reg = circuit.createNode<Node_Register>();
+		reg->recordStackTrace();
+		// Setup clock
+		reg->setClock(clk);
+		// Setup to switch from zero to one
+		reg->connectInput(Node_Register::DATA, {.node = constZeroOne[1], .port = 0ull});
+		reg->connectInput(Node_Register::RESET_VALUE, {.node = constZeroOne[0], .port = 0ull});
+		// Connect to same enable as all the register it is replacing
+		reg->connectInput(Node_Register::ENABLE, enable);
+		reg->moveToGroup(grp);
+		reg->setComment("Use a register to create a reset signal that is delayed by one cycle. I.e. it is zero during reset and for one cycle after, but then becomes and stays one (unless an enable is held low).");
+		
+		area.add(reg);
+		if (newNodes) newNodes->add(reg);
+
+		delayedResetSignals[{clk, grp, enable}] = {.node = reg, .port = 0ull};
+		return {.node = reg, .port = 0ull};
+	};
 
 	for (auto reg : registersToBeRemoved) {
 
@@ -863,21 +899,26 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 			HCL_ASSERT(resetValue.size() == inputValue.size());
 			
 			if (!sim::canBeReplacedWith(resetValue, inputValue)) {
-				if (!failureIsError) return false;
 
-				std::stringstream error;
+				auto delayedResetSignal = getDelayedResetSignalFor(reg->getClocks()[0], reg->getGroup(), reg->getDriver(Node_Register::ENABLE));
 
-				error 
-					<< "An error occured attempting to retime backward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
-					<< "Node from:\n" << output.node->getStackTrace() << "\n";
+				auto *mux = circuit.createNode<Node_Multiplexer>(2);
+				mux->recordStackTrace();
 
-				error 
-					<< "One of the registers that would have to be removed " << reg->getName() << " (" << reg->getTypeName() <<  ", id " << reg->getId() << ") can not be retimed because its reset value is not compatible with its input uppon reset.\n"
-					<< "Register from:\n" << reg->getStackTrace() << "\n"
-					<< "Reset value: " << resetValue << "\n"
-					<< "Value uppon reset: " << inputValue << "\n";
 
-				HCL_ASSERT_HINT(false, error.str());
+				mux->connectSelector(delayedResetSignal);
+				mux->connectInput(0, resetDriver);
+				mux->connectInput(1, {.node = reg, .port = 0ull});
+				mux->moveToGroup(reg->getGroup());
+				mux->setComment("A register with a reset value was retimed backwards from here. To preserve the reset value, this multiplexer overrides the signal during reset and in the first cycle after with the original reset value.");
+
+				std::vector<NodePort> driven = reg->getDirectlyDriven(0);
+				for (auto inputNP : driven)
+					if (inputNP.node != mux)
+						inputNP.node->rewireInput(inputNP.port, {.node = mux, .port = 0ull});
+
+				area.add(mux);
+				if (newNodes) newNodes->add(mux);
 			}
 		}
 	}
@@ -908,6 +949,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 		reg->moveToGroup(np.node->getGroup());
 		// allow further retiming by default
 		reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD).insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
+		reg->setComment("This register was created during backwards retiming as one of the registers on signals going into the retimed area.");
 		
 		area.add(reg);
 		if (newNodes) newNodes->add(reg);

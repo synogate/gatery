@@ -41,6 +41,10 @@ Node_Constant::Node_Constant(sim::DefaultBitVectorState value, hlim::ConnectionT
 {
 }
 
+Node_Constant::Node_Constant(bool value) : Node_Constant(sim::parseBit(value), {.type = hlim::ConnectionType::BOOL, .width = 1 })
+{
+}
+
 void Node_Constant::simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
 {
 	state.insert(m_Value, outputOffsets[0]);
