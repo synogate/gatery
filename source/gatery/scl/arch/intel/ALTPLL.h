@@ -16,7 +16,8 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-#include <gatery/frontend.h>
+
+#include <gatery/frontend/Clock.h>
 #include <gatery/frontend/ExternalComponent.h>
 
 namespace gtry::scl::arch::intel 

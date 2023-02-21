@@ -23,9 +23,18 @@
 #include "RAM64M8.h"
 #include "RAM256X1D.h"
 
+#include <gatery/frontend/UInt.h>
+#include <gatery/frontend/Clock.h>
+#include <gatery/hlim/Clock.h>
 #include <gatery/hlim/postprocessing/MemoryDetector.h>
 #include <gatery/hlim/supportNodes/Node_MemPort.h>
+#include <gatery/hlim/supportNodes/Node_Memory.h>
 #include <gatery/hlim/coreNodes/Node_Register.h>
+
+#include <gatery/frontend/DesignScope.h>
+#include <gatery/frontend/GraphTools.h>
+#include <gatery/frontend/Pack.h>
+#include <gatery/frontend/Attributes.h>
 
 #include "../general/MemoryTools.h"
 

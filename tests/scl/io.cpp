@@ -43,7 +43,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
 	{
 		ClockScope clkScp(clock);
 		auto rx = pinIn().setName("inRx");
-		sim_tap((Bit)rx);
+		tap((Bit)rx);
 
 		gtry::scl::UART uart;
 		uart.baudRate = baudRate;
@@ -59,7 +59,7 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
 
 
 		auto sending = pinIn().setName("sending");
-		sim_tap((Bit)sending);
+		tap((Bit)sending);
 
 		addSimulationProcess([rx, &clock, &dataStream, sending, baudRate]()->SimProcess{
 			dataStream.clear();

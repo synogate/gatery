@@ -125,7 +125,7 @@ namespace gtry
 	Data reg(MemoryPortFactory<Data> readPort, const RegisterSettings& settings = {}) { return reg((Data)readPort, settings); }
 
 	template<typename Data>
-	void sim_tap(MemoryPortFactory<Data> readPort) { sim_tap((Data)readPort); }
+	void tap(MemoryPortFactory<Data> readPort) { tap((Data)readPort); }
 
 
 	using MemType = hlim::Node_Memory::MemType;

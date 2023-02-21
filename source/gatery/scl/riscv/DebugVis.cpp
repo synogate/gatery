@@ -197,11 +197,11 @@ void renderRegisterFileSvg(std::ostream &stream, const RFMirror &rf,
 
 void debugVisualizeRiscVRegisterFile(Bit writeRf, UInt wrAddr, UInt wrData, UInt rs1, UInt rs2)
 {
-	sim_tap(writeRf);
-	sim_tap(wrAddr);
-	sim_tap(wrData);
-	sim_tap(rs1);
-	sim_tap(rs2);
+	tap(writeRf);
+	tap(wrAddr);
+	tap(wrData);
+	tap(rs1);
+	tap(rs2);
 
 	auto visId = dbg::createAreaVisualization(500, 380);
 
@@ -259,7 +259,7 @@ void debugVisualizeRiscVRegisterFile(Bit writeRf, UInt wrAddr, UInt wrData, UInt
 
 void debugVisualizeIP(UInt IP)
 {
-	sim_tap(IP);
+	tap(IP);
 
 	auto visId = dbg::createAreaVisualization(300, 150);
 
@@ -293,10 +293,10 @@ void debugVisualizeIP(UInt IP)
 
 void debugVisualizeInstruction(const Instruction &instruction)
 {
-	sim_tap(instruction.opcode);
-	sim_tap(instruction.instruction);
-	sim_tap(instruction.func3);
-	sim_tap(instruction.rd);
+	tap(instruction.opcode);
+	tap(instruction.instruction);
+	tap(instruction.func3);
+	tap(instruction.rd);
 
 	auto visId = dbg::createAreaVisualization(300, 150);
 

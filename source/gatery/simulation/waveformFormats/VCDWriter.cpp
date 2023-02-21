@@ -19,6 +19,8 @@
 #include "VCDWriter.h"
 #include "../../utils/Range.h"
 
+#include <chrono>
+
 gtry::sim::VCDWriter::VCDWriter(std::string filename) :
 	m_File(filename.c_str(), std::ofstream::binary)
 {

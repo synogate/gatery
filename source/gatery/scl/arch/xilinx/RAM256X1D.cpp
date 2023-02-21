@@ -19,6 +19,8 @@
 
 #include "RAM256X1D.h"
 
+#include <gatery/frontend/UInt.h>
+
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Preprocessor.h>
 

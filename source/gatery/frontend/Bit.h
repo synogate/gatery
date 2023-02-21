@@ -18,7 +18,6 @@
 #pragma once
 
 #include "Signal.h"
-#include "Scope.h"
 
 #include <gatery/hlim/NodePtr.h>
 #include <gatery/utils/Exceptions.h>

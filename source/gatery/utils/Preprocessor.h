@@ -17,6 +17,8 @@
 */
 #pragma once
 
+#include <iostream>
+
 #if defined(_MSC_VER)
 
 #define GET_FUNCTION_NAME __FUNCSIG__

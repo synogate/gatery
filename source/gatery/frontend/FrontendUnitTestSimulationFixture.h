@@ -57,6 +57,9 @@ namespace gtry {
 			/// @return returns true if the timeout was reached.
 			bool runHitsTimeout(const hlim::ClockRational &timeoutSeconds);
 
+			/// Helper function to count nodes in the graph
+			size_t countNodes(const std::function<bool(const hlim::BaseNode*)> &nodeSelector) const;
+
 			DesignScope design;
 
 			virtual void setup();

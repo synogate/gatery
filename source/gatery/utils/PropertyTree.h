@@ -17,6 +17,18 @@
 */
 #pragma once
 
+
+#if __has_include(<yaml-cpp/yaml.h>)
+# include <yaml-cpp/yaml.h>
+# include <external/magic_enum.hpp>
+# define USE_YAMLCPP
+#else
+# pragma message ("yaml-cpp not found. compiling without config file support")
+#endif
+
+#include <string_view>
+#include <ostream>
+
 namespace gtry::utils
 {
 	class DummyPropertyTree

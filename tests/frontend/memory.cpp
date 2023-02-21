@@ -1323,7 +1323,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, BoostUnitTestSim
 	using namespace gtry::utils;
 
 
-	size_t memReadLatency = 8;
+	size_t memReadLatency = 10;
 
 
 	Clock clock({ .absoluteFrequency = 100'000'000 });
@@ -1338,34 +1338,25 @@ BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, BoostUnitTestSim
 	Bit wrEn = pinIn().setName("wrEn");
 	Bit initOverride = pinIn().setName("initOverride");
 	{
-		// extra regs to separate simulation processes
-		UInt addr_ = reg(addr);
-		Bit wrEn_ = reg(wrEn, false);
-		Bit initOverride_ = reg(initOverride);
-
 		Memory<UInt> mem(contents.size(), 32_b);
-		mem.setName("second_stage_emif");
 		mem.setType(MemType::EXTERNAL, memReadLatency);
 		//mem.setType(MemType::MEDIUM, memReadLatency);
-		//mem.initZero(); // Not possible with external memory, needs explicit initialization
 
-		UInt elem = mem[addr_];
+		UInt elem = mem[addr];
 		HCL_NAMED(elem);
 		UInt modifiedElem = elem + 1;
 		HCL_NAMED(modifiedElem);
 
-		IF (initOverride_)
+		IF (initOverride)
 			modifiedElem = 0;
 
-		IF (wrEn_)
-			mem[addr_] = modifiedElem;
+		IF (wrEn)
+			mem[addr] = modifiedElem;
 
 		output = elem;
 		HCL_NAMED(output);
 		for ([[maybe_unused]] auto i : Range(memReadLatency))
 			output = reg(output, {.allowRetimingBackward=true});
-
-		output = reg(output);// extra regs to separate simulation processes
 	}
 	pinOut(output).setName("output");
 
@@ -1409,12 +1400,17 @@ BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, BoostUnitTestSim
 		simu(wrEn) = '0';
 
 		for (auto i : Range(4)) {
+
 			simu(addr) = i;
-			for ([[maybe_unused]] auto i : Range(memReadLatency+2))
+			for ([[maybe_unused]] auto i : Range(memReadLatency))
 				co_await AfterClk(clock);
-//			co_await WaitStable();
+
+			co_await WaitStable();
+
 			BOOST_TEST(simu(output) == contents[i]);
-		}		
+
+			co_await AfterClk(clock);
+		}
 
 		co_await AfterClk(clock);
 		co_await AfterClk(clock);

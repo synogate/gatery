@@ -24,6 +24,7 @@
 
 #include <stdexcept>
 #include <csignal>
+#include <iostream>
 
 
 namespace gtry::utils {

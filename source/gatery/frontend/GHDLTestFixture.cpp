@@ -147,12 +147,13 @@ void GHDLTestFixture::runTest(const hlim::ClockRational &timeoutSeconds)
 	BOOST_CHECK(bp::system(ghdlExecutable, "-a", "--std=08", "--ieee=synopsys", "-frelaxed", "--warn-error", "design.vhd") == 0);
 	BOOST_CHECK(bp::system(ghdlExecutable, "-a", "--std=08", "--ieee=synopsys", "-frelaxed", "--warn-error", "testbench.vhd") == 0);
 	BOOST_CHECK(bp::system(ghdlExecutable, "-e", "--std=08", "--ieee=synopsys", "-frelaxed", "--warn-error", "testbench") == 0);
-	BOOST_CHECK(bp::system(ghdlExecutable, "-r", "--std=08", "testbench", "--ieee-asserts=disable", "--vcd=ghdl.vcd", "--assert-level=error") == 0);
+	BOOST_CHECK(bp::system(ghdlExecutable, "-r", "--std=08", "-frelaxed", "-fsynopsys", "testbench", "--ieee-asserts=disable", "--vcd=ghdl.vcd", "--assert-level=error") == 0);
 }
 
 bool GHDLTestFixture::exportContains(const std::regex &regex)
 {
 	std::fstream file("design.vhd", std::fstream::in);
+	BOOST_TEST((bool) file);
 	std::stringstream buffer;
 	buffer << file.rdbuf();
 

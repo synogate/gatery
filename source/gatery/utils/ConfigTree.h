@@ -20,6 +20,11 @@
 #include "../frontend/BitWidth.h"
 #include "PropertyTree.h"
 
+#include <optional>
+#include <string>
+#include <string_view>
+#include <filesystem>
+
 namespace gtry::utils
 {
 	std::optional<std::string_view> globbingMatchPath(std::string_view pattern, std::string_view str);

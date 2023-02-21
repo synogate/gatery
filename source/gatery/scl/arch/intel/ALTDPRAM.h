@@ -17,7 +17,6 @@
 */
 #pragma once
 
-#include <gatery/frontend.h>
 #include <gatery/frontend/ExternalComponent.h>
 
 namespace gtry::scl::arch::intel {

@@ -20,10 +20,6 @@
 #include <gatery/hlim/NodePort.h>
 #include <gatery/hlim/ConnectionType.h>
 
-#include <gatery/utils/Enumerate.h>
-#include <gatery/utils/Preprocessor.h>
-#include <gatery/utils/Traits.h>
-
 #include <boost/format.hpp>
 
 #include "BitWidth.h"

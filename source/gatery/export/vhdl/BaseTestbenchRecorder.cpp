@@ -177,5 +177,4 @@ void BaseTestbenchRecorder::findClocksAndPorts()
 
 }
 
-
 }

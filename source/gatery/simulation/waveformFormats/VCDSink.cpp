@@ -254,7 +254,7 @@ namespace gtry::sim
 		std::map<hlim::Clock*, std::vector<Signal*>> signalsByClocks;
 
 		for (auto &s : m_id2Signal) {
-			if (!s.isPin) continue;
+			if (!s.isPin && !s.isTap) continue;
 
 			auto it = clockDomains.find(s.driver);
 			if (it == clockDomains.end() || it->second.type != hlim::SignalClockDomain::CLOCK)

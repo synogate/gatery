@@ -17,10 +17,18 @@
 */
 #pragma once
 
-#include "../utils/ConfigTree.h"
-
 #include <set>
 #include <span>
+
+namespace gtry::utils {
+	class DummyConfigTree;
+#ifdef USE_YAMLCPP
+	class YamlConfigTree;
+	using ConfigTree = YamlConfigTree;
+#else
+	using ConfigTree = DummyConfigTree;
+#endif
+}
 
 namespace gtry::hlim {
 

@@ -57,7 +57,9 @@ class Process : public BaseGrouping
 		virtual void writeVHDL(std::ostream &stream, unsigned indentation) = 0;
 
 		virtual std::string getInstanceName() override { return m_name; }
+		inline const std::set<hlim::NodePort> &getNonVariableSignals() const { return m_nonVariableSignals; }
 	protected:
+		std::set<hlim::NodePort> m_nonVariableSignals;
 		std::vector<hlim::BaseNode*> m_nodes;
 };
 

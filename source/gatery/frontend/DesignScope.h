@@ -56,6 +56,7 @@ class DesignScope : public BaseScope<DesignScope>
 
 		static DesignScope *get() { return m_currentScope; }
 		hlim::Circuit &getCircuit() { return m_circuit; }
+		const hlim::Circuit &getCircuit() const { return m_circuit; }
 		
 		template<typename NodeType, typename... Args>
 		static NodeType *createNode(Args&&... args);		

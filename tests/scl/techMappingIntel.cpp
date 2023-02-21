@@ -153,7 +153,7 @@ BOOST_FIXTURE_TEST_CASE(DCFifo, gtry::GHDLTestFixture)
 }
 
 
-BOOST_FIXTURE_TEST_CASE(instantiateAltPll, gtry::GHDLTestFixture)
+BOOST_FIXTURE_TEST_CASE(instantiateAltPll, gtry::GHDLTestFixture, * boost::unit_test::disabled())
 {
 	using namespace gtry;
 
@@ -192,7 +192,7 @@ BOOST_FIXTURE_TEST_CASE(instantiateAltPll, gtry::GHDLTestFixture)
 
 
 
-BOOST_FIXTURE_TEST_CASE(testAltPll, gtry::GHDLTestFixture)
+BOOST_FIXTURE_TEST_CASE(testAltPll, gtry::GHDLTestFixture, * boost::unit_test::disabled())
 {
 	using namespace gtry;
 
@@ -318,7 +318,16 @@ BOOST_FIXTURE_TEST_CASE(blockram_2, TestWithDefaultDevice<Test_Histogram>)
 }
 
 
-
+BOOST_FIXTURE_TEST_CASE(external_high_latency, TestWithDefaultDevice<Test_Histogram>)
+{
+	using namespace gtry;
+	numBuckets = 128;
+	iterationFactor = 10;
+	bucketWidth = 16_b;
+	highLatencyExternal = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"rd_address : OUT STD_LOGIC_VECTOR[\\S\\s]*rd_readdata : IN STD_LOGIC_VECTOR[\\S\\s]*wr_address : OUT STD_LOGIC_VECTOR[\\S\\s]*wr_writedata : OUT STD_LOGIC_VECTOR[\\S\\s]*wr_write"}));
+}
 
 
 

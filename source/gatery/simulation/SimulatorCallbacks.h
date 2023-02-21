@@ -41,10 +41,15 @@ class SimulatorCallbacks
 		virtual void onAnnotationEnd(const hlim::ClockRational &simulationTime, const std::string &id) { }
 
 		/**
+		 * @brief Called immediately when the simulation is powered on before any initialization has happened.
+		 */
+		virtual void onPowerOn() { }
+
+		/**
 		 * @brief Called after the simulation has powered on but before simulation processes have started.
 		 * @details Registers and memories have potentially attained their initialization values, but the reset is potentially still in progress.
 		 */
-		virtual void onPowerOn() { }
+		virtual void onAfterPowerOn() { }
 
 		/**
 		 * @brief Called whenever combinatorial signals have stabilized.
@@ -57,6 +62,19 @@ class SimulatorCallbacks
 		 * @param simulationTime The new simulator time.
 		 */
 		virtual void onNewTick(const hlim::ClockRational &simulationTime) { }
+
+		/**
+		 * @brief Called whenever the simulator switched to a new phase within a simulation tick (Before, During, or After registers at that simulation tick trigger).
+		 * @param phase The new simulator phase.
+		 */
+		virtual void onNewPhase(size_t phase) { }
+
+
+		/**
+		 * @brief Called whenever the simulation finished evaluating micro tick but before having commited the state since another micro tick might be necessary.
+		 * @param microTick The micro tick that was just finished.
+		 */
+		virtual void onAfterMicroTick(size_t microTick) { }
 
 		/**
 		 * @brief Called when a clock changes its value (twice per clock cycle).

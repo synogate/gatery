@@ -19,8 +19,6 @@
 
 #include <gatery/frontend/ExternalComponent.h>
 
-#include <gatery/frontend.h>
-
 namespace gtry::scl::arch::xilinx {
 
 class OSERDESE2 : public gtry::ExternalComponent

@@ -21,6 +21,7 @@
 #include "AST.h"
 #include "Entity.h"
 
+#include "../../frontend/SimSigHandle.h" // For Seconds
 #include "../../simulation/Simulator.h"
 
 #include "../../hlim/coreNodes/Node_Pin.h"
@@ -45,6 +46,7 @@ FileBasedTestbenchRecorder::FileBasedTestbenchRecorder(VHDLExport &exporter, AST
 
 FileBasedTestbenchRecorder::~FileBasedTestbenchRecorder()
 {
+	flush(m_writtenSimulationTime + Seconds{1,1'000'000});
 }
 
 void FileBasedTestbenchRecorder::writeVHDL(std::filesystem::path path, const std::string &testVectorFilename)
@@ -337,22 +339,8 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 	vhdlFile << "END PROCESS;" << std::endl;
 	vhdlFile << "END;" << std::endl;
 
-	m_lastSimulationTime = 0;
-}
-
-
-
-namespace {
-	void formatTime(std::ostream &stream, hlim::ClockRational time) {
-		std::string unit = "sec";
-		if (time.denominator() > 1) { unit = "ms"; time *= 1000; }
-		if (time.denominator() > 1) { unit = "us"; time *= 1000; }
-		if (time.denominator() > 1) { unit = "ns"; time *= 1000; }
-		if (time.denominator() > 1) { unit = "ps"; time *= 1000; }
-		if (time.denominator() > 1) { unit = "fs"; time *= 1000; }
-
-		stream << time.numerator() / time.denominator() << ' ' << unit;
-	}
+	m_writtenSimulationTime = 0;
+	m_flushIntervalStart = 0;
 }
 
 void FileBasedTestbenchRecorder::onPowerOn()
@@ -360,50 +348,61 @@ void FileBasedTestbenchRecorder::onPowerOn()
 	writeVHDL(m_vhdlFilename, m_testVectorFilename);
 }
 
-
 void FileBasedTestbenchRecorder::onNewTick(const hlim::ClockRational &simulationTime)
 {
+	flush(simulationTime);
+}
 
-	auto timeDiff = simulationTime - m_lastSimulationTime;
-	m_lastSimulationTime = simulationTime;
+void FileBasedTestbenchRecorder::onAfterMicroTick(size_t microTick)
+{
+	m_phases.push_back({});
+}
 
-	auto timeDiffInPS = timeDiff * 1'000'000'000'000ull;
-	auto roundedTimeDiffInPS = timeDiffInPS.numerator() / timeDiffInPS.denominator();
-
-	//CodeFormatting &cf = m_ast->getCodeFormatting();
-
-	// Split stuff up in between the time step to allow the vhdl simulators to correctly schedule their processes.
-	// Set signals in the first third, check asserts in the second third.
-	// If only one if the two is to be done, do it in the middle.
-
-	if (!m_assertStatements.str().empty() && (!m_signalOverrides.empty() || !m_resetOverrides.empty()))
-		m_testbenchFile << "ADV\n" << roundedTimeDiffInPS/4 << std::endl;
-	else if (!m_assertStatements.str().empty() || (!m_signalOverrides.empty() || !m_resetOverrides.empty()))
-		m_testbenchFile << "ADV\n" << roundedTimeDiffInPS/2 << std::endl;
-	else 
-		m_testbenchFile << "ADV\n" << roundedTimeDiffInPS << std::endl;
+void FileBasedTestbenchRecorder::onCommitState()
+{
+	// queue check for assert nodes
+}
 
 
-	for (const auto &p : m_signalOverrides) 
-		m_testbenchFile << "SET\n" << p.first << '\n' << p.second << '\n';
 
-	for (const auto &p : m_resetOverrides) 
-		m_testbenchFile << "RST\n" << p.first << '\n' << p.second << '\n';
+void FileBasedTestbenchRecorder::advanceTimeTo(const hlim::ClockRational &simulationTime)
+{
+	auto timeDiffInPS = (simulationTime - m_writtenSimulationTime) * 1'000'000'000'000ull;
+	std::uint64_t roundedTimeDiffInPS = timeDiffInPS.numerator() / timeDiffInPS.denominator();
 
-	if (!m_assertStatements.str().empty() && (!m_signalOverrides.empty() || !m_resetOverrides.empty()))
-		m_testbenchFile << "ADV\n" << roundedTimeDiffInPS/2 << std::endl;
+	m_testbenchFile << "ADV\n" << roundedTimeDiffInPS << std::endl;
+	m_writtenSimulationTime += Seconds{roundedTimeDiffInPS, 1'000'000'000'000ull};
+}
 
-	m_testbenchFile << m_assertStatements.str();
+void FileBasedTestbenchRecorder::flush(const hlim::ClockRational &flushIntervalEnd)
+{
+	auto interval = (flushIntervalEnd - m_flushIntervalStart) / (2 + m_phases.size());
 
-	if (!m_assertStatements.str().empty() && (!m_signalOverrides.empty() || !m_resetOverrides.empty()))
-		m_testbenchFile << "ADV\n" << roundedTimeDiffInPS - roundedTimeDiffInPS/4 - roundedTimeDiffInPS/2 << std::endl;
-	else if (!m_assertStatements.str().empty() || (!m_signalOverrides.empty() || !m_resetOverrides.empty()))
-		m_testbenchFile << "ADV\n" << roundedTimeDiffInPS - roundedTimeDiffInPS/2 << std::endl;
+	for (auto phaseIdx : utils::Range(m_phases.size())) {
+		const auto &phase = m_phases[phaseIdx];
 
+		if (phase.assertStatements.str().empty() && phase.signalOverrides.empty() && phase.resetOverrides.empty())
+			continue;
 
-	m_assertStatements.str(std::string());
-	m_signalOverrides.clear();
-	m_resetOverrides.clear();
+		if (phase.assertStatements.str().empty() && phase.signalOverrides.empty() && phase.resetOverrides.empty())
+			continue;
+
+		advanceTimeTo(m_flushIntervalStart + interval * (1 + phaseIdx));
+
+		m_testbenchFile << phase.assertStatements.str();
+		
+		for (const auto &p : phase.signalOverrides) 
+			m_testbenchFile << "SET\n" << p.first << '\n' << p.second << '\n';
+
+		for (const auto &p : phase.resetOverrides) 
+			m_testbenchFile << "RST\n" << p.first << '\n' << p.second << '\n';
+
+	}
+
+	m_phases.clear();
+	m_phases.push_back({});
+
+	m_flushIntervalStart = flushIntervalEnd;
 }
 
 void FileBasedTestbenchRecorder::onClock(const hlim::Clock *clock, bool risingEdge)
@@ -411,7 +410,7 @@ void FileBasedTestbenchRecorder::onClock(const hlim::Clock *clock, bool risingEd
 	if (!m_clocksOfInterest.contains(clock)) return;
 
 	auto *rootEntity = m_ast->getRootEntity();
-
+// todo
 	m_testbenchFile << "CLK\n" << rootEntity->getNamespaceScope().getClock((hlim::Clock *) clock).name << std::endl;
 
 	if (risingEdge)
@@ -426,7 +425,7 @@ void FileBasedTestbenchRecorder::onReset(const hlim::Clock *clock, bool resetAss
 
 	auto *rootEntity = m_ast->getRootEntity();
 
-	m_resetOverrides[rootEntity->getNamespaceScope().getReset((hlim::Clock *) clock).name] = resetAsserted?"1":"0";
+	m_phases.back().resetOverrides[rootEntity->getNamespaceScope().getReset((hlim::Clock *) clock).name] = resetAsserted?"1":"0";
 }
 
 void FileBasedTestbenchRecorder::onSimProcOutputOverridden(const hlim::NodePort &output, const sim::DefaultBitVectorState &state)
@@ -437,7 +436,7 @@ void FileBasedTestbenchRecorder::onSimProcOutputOverridden(const hlim::NodePort 
 	std::stringstream str_state;
 	str_state << state;
 
-	m_signalOverrides[name_it->second] = str_state.str();
+	m_phases.back().signalOverrides[name_it->second] = str_state.str();
 }
 
 void FileBasedTestbenchRecorder::onSimProcOutputRead(const hlim::NodePort &output, const sim::DefaultBitVectorState &state)
@@ -467,7 +466,7 @@ void FileBasedTestbenchRecorder::onSimProcOutputRead(const hlim::NodePort &outpu
 	const auto& conType = hlim::getOutputConnectionType(drivingOutput);
 	if (conType.interpretation == hlim::ConnectionType::BOOL) {
 		if (state.get(sim::DefaultConfig::DEFINED, 0)) {
-			m_assertStatements << "CHECK" << std::endl << name_it->second << std::endl << state << std::endl;
+			m_phases.back().assertStatements << "CHECK" << std::endl << name_it->second << std::endl << state << std::endl;
 		}
 	} else {
 		bool allDefined = true;
@@ -479,16 +478,16 @@ void FileBasedTestbenchRecorder::onSimProcOutputRead(const hlim::NodePort &outpu
 		}
 
 		if (anyDefined) {
-			m_assertStatements << "CHECK" << std::endl << name_it->second << std::endl;
+			m_phases.back().assertStatements << "CHECK" << std::endl << name_it->second << std::endl;
 			for (int i = (int)conType.width - 1; i >= 0; i--) {
 				bool d = state.get(sim::DefaultConfig::DEFINED, i);
 				bool v = state.get(sim::DefaultConfig::VALUE, i);
 				if (d)
-					m_assertStatements << (v?'1':'0');
+					m_phases.back().assertStatements << (v?'1':'0');
 				else
-					m_assertStatements << '-';
+					m_phases.back().assertStatements << '-';
 			}
-			m_assertStatements << std::endl;
+			m_phases.back().assertStatements << std::endl;
 		}
 	}
 }

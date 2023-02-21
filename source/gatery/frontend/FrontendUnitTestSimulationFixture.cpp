@@ -52,6 +52,7 @@ void UnitTestSimulationFixture::recordVCD(const std::string& filename)
 	m_vcdSink.emplace(design.getCircuit(), *m_simulator, filename.c_str());
 	m_vcdSink->addAllPins();
 	m_vcdSink->addAllNamedSignals();
+	m_vcdSink->addAllTaps();
 }
 
 void UnitTestSimulationFixture::outputVHDL(const std::string& filename, bool includeTest)
@@ -87,6 +88,17 @@ bool UnitTestSimulationFixture::runHitsTimeout(const hlim::ClockRational &timeou
 
 	return !m_stopTestCalled;
 }
+
+size_t UnitTestSimulationFixture::countNodes(const std::function<bool(const hlim::BaseNode*)> &nodeSelector) const
+{
+	size_t count = 0;
+	for (const auto &n : design.getCircuit().getNodes()) {
+		if (nodeSelector(n.get()))
+			count++;
+	}
+	return count;
+}
+
 
 void UnitTestSimulationFixture::setup()
 {

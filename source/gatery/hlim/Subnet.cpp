@@ -18,6 +18,9 @@
 
 #include "gatery/pch.h"
 
+
+#include "../utils/ConfigTree.h"
+
 #include "Subnet.h"
 
 #include "supportNodes/Node_ExportOverride.h"
@@ -277,6 +280,7 @@ template<bool makeConst, typename FinalType>
 FinalType &SubnetTemplate<makeConst, FinalType>::addAllForExport(CircuitType &circuit, const utils::ConfigTree &exportSelectionConfig)
 {
 	bool includeAsserts = exportSelectionConfig["include_asserts"].as(false);
+	bool includeSignalTaps = exportSelectionConfig["include_taps"].as(true);
 
 	std::vector<NodeType*> openList;
 	std::set<NodeType*> handledNodes;
@@ -285,9 +289,12 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllForExport(CircuitType &ci
 	for (auto &n : circuit.getNodes())
 		if (n->hasSideEffects()) {
 			if (auto sigTap = dynamic_cast<Node_SignalTap*>(n.get())) {
-				if (sigTap->getLevel() != Node_SignalTap::LVL_ASSERT && sigTap->getLevel() != Node_SignalTap::LVL_WARN) continue; // Only (potentially) want asserts in export.
-				if (sigTap->getTrigger() != Node_SignalTap::TRIG_FIRST_INPUT_HIGH && sigTap->getTrigger() != Node_SignalTap::TRIG_FIRST_INPUT_LOW) continue; 
-				if (!includeAsserts) continue; // ... and potentially not even those.
+				if (sigTap->getLevel() == Node_SignalTap::LVL_WATCH) {
+					if (!includeSignalTaps) continue;
+				} else {
+					if (sigTap->getTrigger() != Node_SignalTap::TRIG_FIRST_INPUT_HIGH && sigTap->getTrigger() != Node_SignalTap::TRIG_FIRST_INPUT_LOW) continue; 
+					if (!includeAsserts) continue; // ... and potentially not even those.
+				}
 			}
 			openList.push_back(n.get());
 		}
