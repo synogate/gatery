@@ -991,7 +991,7 @@ bool ReferenceSimulator::outputOptimizedAway(const hlim::NodePort &nodePort)
 }
 
 
-DefaultBitVectorState ReferenceSimulator::getValueOfInternalState(const hlim::BaseNode *node, size_t idx)
+DefaultBitVectorState ReferenceSimulator::getValueOfInternalState(const hlim::BaseNode *node, size_t idx, size_t offset, size_t size)
 {
 	DefaultBitVectorState value;
 	auto it = m_program.m_stateMapping.nodeToInternalOffset.find((hlim::BaseNode *) node);
@@ -999,7 +999,10 @@ DefaultBitVectorState ReferenceSimulator::getValueOfInternalState(const hlim::Ba
 		value.resize(0);
 	} else {
 		size_t width = node->getInternalStateSizes()[idx];
-		value = m_dataState.signalState.extract(it->second[idx], width);
+		HCL_ASSERT(offset < width);
+		width = std::min(width - offset, size);
+		offset += it->second[idx];
+		value = m_dataState.signalState.extract(offset, width);
 	}
 	return value;
 }

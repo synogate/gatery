@@ -241,7 +241,7 @@ class ReferenceSimulator : public Simulator
 		virtual void simProcOverrideRegisterOutput(hlim::Node_Register *reg, const DefaultBitVectorState &state) override;
 
 		virtual bool outputOptimizedAway(const hlim::NodePort &nodePort) override;
-		virtual DefaultBitVectorState getValueOfInternalState(const hlim::BaseNode *node, size_t idx) override;
+		virtual DefaultBitVectorState getValueOfInternalState(const hlim::BaseNode *node, size_t idx, size_t offset = 0, size_t size = ~0ull) override;
 		virtual DefaultBitVectorState getValueOfOutput(const hlim::NodePort &nodePort) override;
 		virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfClock(const hlim::Clock *clk) override;
 		virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfReset(const hlim::Clock *clk) override;
