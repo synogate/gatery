@@ -153,6 +153,7 @@ namespace gtry::scl
 
 	TileLinkD tileLinkDefaultResponse(const TileLinkA& request);
 
+	using gtry::connect;
 	void connect(Memory<BVec>& mem, TileLinkUL& link);
 
 	template<TileLinkSignal TLink> TLink reg(TLink& link);
