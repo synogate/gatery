@@ -111,22 +111,6 @@ void BaseTestbenchRecorder::writePortmap(std::ostream &stream)
 
 }
 
-
-namespace {
-	void formatTime(std::ostream &stream, hlim::ClockRational time) {
-		std::string unit = "sec";
-		if (time.denominator() > 1) { unit = "ms"; time *= 1000; }
-		if (time.denominator() > 1) { unit = "us"; time *= 1000; }
-		if (time.denominator() > 1) { unit = "ns"; time *= 1000; }
-		if (time.denominator() > 1) { unit = "ps"; time *= 1000; }
-		if (time.denominator() > 1) { unit = "fs"; time *= 1000; }
-
-		stream << time.numerator() / time.denominator() << ' ' << unit;
-	}
-}
-
-
-
 void BaseTestbenchRecorder::buildClockProcess(std::ostream &stream, const hlim::Clock *clock)
 {
 	CodeFormatting &cf = m_ast->getCodeFormatting();
@@ -142,7 +126,7 @@ void BaseTestbenchRecorder::buildClockProcess(std::ostream &stream, const hlim::
 
 	cf.indent(stream, 2);
 	stream << "WAIT FOR ";
-	formatTime(stream, halfPeriod);
+	hlim::formatTime(stream, halfPeriod);
 	stream << ';' << std::endl;
 
 	cf.indent(stream, 2);
