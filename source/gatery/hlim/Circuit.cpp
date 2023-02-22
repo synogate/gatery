@@ -1039,7 +1039,7 @@ void Circuit::propagateConstants(Subnet &subnet)
 						bypassRegister = true;
 					else if (dataDriver.node != nullptr) {
 						// evaluate reset value. Note that it is ok to only evaluate the reset value (it need not be constant) because the register only evaluates it during the reset.
-						sim::ReferenceSimulator simulator;
+						sim::ReferenceSimulator simulator(false);
 						simulator.compileProgram(*this, {resetDriver}, true);
 						simulator.powerOn();
 

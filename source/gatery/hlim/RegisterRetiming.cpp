@@ -327,7 +327,7 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 	// Run a simulation to determine the reset values of the registers that will be placed there
 	/// @todo Clone and optimize to prevent issues with loops
 	sim::SimulatorCallbacks ignoreCallbacks;
-	sim::ReferenceSimulator simulator;
+	sim::ReferenceSimulator simulator(false);
 	simulator.compileStaticEvaluation(circuit, {outputsLeavingRetimingArea});
 	simulator.powerOn();
 
@@ -850,7 +850,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 	// and build logic to potentially override (fix) signals.
 	/// @todo Clone and optimize to prevent issues with loops
 	sim::SimulatorCallbacks ignoreCallbacks;
-	sim::ReferenceSimulator simulator;
+	sim::ReferenceSimulator simulator(false);
 	simulator.compileProgram(circuit, {outputsLeavingRetimingArea}, true);
 	simulator.powerOn();
 
@@ -1259,7 +1259,7 @@ void ReadModifyWriteHazardLogicBuilder::determineResetValues(std::map<NodePort, 
 	// Run a simulation to determine the reset values of the registers that will be placed there
 	/// @todo Clone and optimize to prevent issues with loops
 	sim::SimulatorCallbacks ignoreCallbacks;
-	sim::ReferenceSimulator simulator;
+	sim::ReferenceSimulator simulator(false);
 	simulator.compileStaticEvaluation(m_circuit, requiredNodePorts);
 	simulator.powerOn();
 

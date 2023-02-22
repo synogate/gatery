@@ -19,6 +19,7 @@
 #include "SimulatorCallbacks.h"
 
 #include "../hlim/Clock.h"
+#include "../hlim/Node.h"
 
 #include <iostream>
 
@@ -26,28 +27,33 @@ namespace gtry::sim {
 
 void SimulatorConsoleOutput::onNewTick(const hlim::ClockRational &simulationTime)
 {
-	std::cout << "New simulation tick: " << simulationTime << std::endl;
+	m_simTime = simulationTime;
 }
 
 void SimulatorConsoleOutput::onClock(const hlim::Clock *clock, bool risingEdge)
 {
-
-	std::cout << "Clock " << clock->getName() << " has " << (risingEdge?"rising":"falling") << " edge." << std::endl;
 }
 
 void SimulatorConsoleOutput::onDebugMessage(const hlim::BaseNode *src, std::string msg)
 {
-	std::cout << msg << std::endl;
+	std::cout << '[';
+	hlim::formatTime(std::cout, m_simTime);
+	std::cout << "] Debug Message: " << msg << std::endl;
 }
 
 void SimulatorConsoleOutput::onWarning(const hlim::BaseNode *src, std::string msg)
 {
-	std::cout << msg << std::endl;
+	std::cout << '[';
+	hlim::formatTime(std::cout, m_simTime);
+	std::cout << "] Warning: " << msg << std::endl;
 }
 
 void SimulatorConsoleOutput::onAssert(const hlim::BaseNode *src, std::string msg)
 {
-	std::cout << msg << std::endl;
+	std::cout << '[';
+	hlim::formatTime(std::cout, m_simTime);
+	std::cout << "] Assert failure: " << msg << std::endl
+			<< "From: \n" << src->getStackTrace() << std::endl;
 }
 
 

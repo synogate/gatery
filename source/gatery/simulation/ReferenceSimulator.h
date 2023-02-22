@@ -225,7 +225,7 @@ struct SignalWatch {
 class ReferenceSimulator : public Simulator
 {
 	public:
-		ReferenceSimulator();
+		ReferenceSimulator(bool enableConsoleOutput = true);
 		virtual void compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs = {}, bool ignoreSimulationProcesses = false) override;
 		void compileStaticEvaluation(const hlim::Circuit& circuit, const std::set<hlim::NodePort>& outputs);
 
@@ -285,6 +285,8 @@ class ReferenceSimulator : public Simulator
 		};
 
 		PerformanceStats m_performanceStats;
+
+		std::optional<SimulatorConsoleOutput> m_simulatorConsoleOutput;
 
 		void advanceMicroTick();
 		void checkSignalWatches();

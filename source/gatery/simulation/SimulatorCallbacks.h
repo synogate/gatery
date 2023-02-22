@@ -132,6 +132,7 @@ class SimulatorConsoleOutput : public SimulatorCallbacks
 		virtual void onWarning(const hlim::BaseNode *src, std::string msg) override;
 		virtual void onAssert(const hlim::BaseNode *src, std::string msg) override;
 	protected:
+		hlim::ClockRational m_simTime;
 };
 
 

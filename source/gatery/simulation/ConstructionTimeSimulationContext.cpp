@@ -195,7 +195,7 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
 
 	// Run simulation
 	sim::SimulatorCallbacks ignoreCallbacks;
-	sim::ReferenceSimulator simulator;
+	sim::ReferenceSimulator simulator(false);
 	simulator.compileProgram(simCircuit);
 	simulator.powerOn();
 

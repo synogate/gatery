@@ -60,6 +60,12 @@ void gtry::sim::VCDWriter::declareWire(size_t width, std::string_view code, std:
 	m_File << "$var wire " << width << " " << code << " " << label << " $end\n";
 }
 
+void gtry::sim::VCDWriter::declareReal(std::string_view code, std::string_view label)
+{
+	assert(!m_EndDefinitions);
+	m_File << "$var real 0 " << code << " " << label << " $end\n";
+}
+
 gtry::sim::VCDWriter::Scope gtry::sim::VCDWriter::beginDumpVars()
 {
 	assert(!m_EndDefinitions);
@@ -127,6 +133,20 @@ void gtry::sim::VCDWriter::writeString(std::string_view code, size_t size, std::
 	}
 //	for(size_t i = text.size(); i < size; ++i)
 //		m_File << "00";
+
+	m_File << ' ' << code << '\n';
+}
+
+void gtry::sim::VCDWriter::writeString(std::string_view code, std::string_view text)
+{
+	assert(m_EndDefinitions);
+	
+	m_File << 's';
+	for (auto c : text)
+		if (c == ' ')
+			m_File << "\\x20";
+		else
+			m_File << c;
 
 	m_File << ' ' << code << '\n';
 }
