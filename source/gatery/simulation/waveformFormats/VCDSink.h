@@ -57,7 +57,7 @@ class VCDSink : public WaveformRecorder
 		std::vector<hlim::Clock*> m_clocks;
 		std::vector<hlim::Clock*> m_resets;
 
-		bool m_includeDebugMessages = false;
+		bool m_includeDebugMessages = true;
 		bool m_includeWarnings = true;
 		bool m_includeAsserts = true;
 
