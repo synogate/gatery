@@ -245,7 +245,7 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
 			}
 
 			file << " label=\"";
-			switch (type.interpretation) {
+			switch (type.type) {
 				case hlim::ConnectionType::BOOL:
 					file << "BOOL"; break;
 				case hlim::ConnectionType::BITVEC:
@@ -531,7 +531,7 @@ void DotExport::writeMergedDotFile(const hlim::Circuit &circuit, const hlim::Con
 		auto type = reg->getOutputConnectionType(0);
 		file << "node_" << areas.size()+memories.size() + i << "[label=\"";
 		file << "Register ";
-		switch (type.interpretation) {
+		switch (type.type) {
 			case hlim::ConnectionType::BOOL:
 				file << "BOOL"; break;
 			case hlim::ConnectionType::BITVEC:

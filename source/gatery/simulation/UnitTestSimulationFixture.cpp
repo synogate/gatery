@@ -28,7 +28,7 @@ namespace gtry::sim {
 
 UnitTestSimulationFixture::UnitTestSimulationFixture()
 {
-	m_simulator.reset(new ReferenceSimulator());
+	m_simulator.reset(new ReferenceSimulator(false));
 	m_simulator->addCallbacks(this);
 }
 

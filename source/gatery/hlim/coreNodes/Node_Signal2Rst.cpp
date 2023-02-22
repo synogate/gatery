@@ -27,7 +27,7 @@ Node_Signal2Rst::Node_Signal2Rst() : Node(1, 0)
 
 void Node_Signal2Rst::connect(const NodePort &np)
 {
-	HCL_ASSERT(hlim::getOutputConnectionType(np).interpretation == ConnectionType::BOOL);
+	HCL_ASSERT(hlim::getOutputConnectionType(np).isBool());
 	connectInput(0, np);
 }
 

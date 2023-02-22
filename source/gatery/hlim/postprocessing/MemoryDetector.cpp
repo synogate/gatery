@@ -597,7 +597,7 @@ void MemoryGroup::ensureNotEnabledFirstCycles(Circuit &circuit, NodeGroup *ng, N
 			rewireNode->recordStackTrace();
 			rewireNode->connectInput(0, counter);
 			rewireNode->setExtract(counterWidth-1, 1);
-			rewireNode->changeOutputType({.interpretation = ConnectionType::BOOL, .width = 1});
+			rewireNode->changeOutputType({.type = ConnectionType::BOOL, .width = 1});
 
 			NodePort counterExpired = {.node = rewireNode, .port = 0ull};
 			circuit.appendSignal(counterExpired)->setName("delayedWrEnableCounterExpired");
@@ -1126,7 +1126,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 		pinRdData->setName(prefix +"rd_readdata");
 		pinRdData->moveToGroup(m_nodeGroup->getParent());
 		pinRdData->recordStackTrace();
-		if (getOutputConnectionType(rp.dataOutput).interpretation == ConnectionType::BOOL)
+		if (getOutputConnectionType(rp.dataOutput).isBool())
 			pinRdData->setBool();
 		else
 			pinRdData->setWidth(getOutputWidth(rp.dataOutput));

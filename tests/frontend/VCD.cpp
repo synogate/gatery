@@ -48,6 +48,14 @@ class VCDTestFixture : public BaseFixture
 };
 
 
+template<class BaseFixture>
+class IgnoreTapMessages : public BaseFixture
+{
+	public:
+		virtual void onDebugMessage(const hlim::BaseNode* src, std::string msg) override { }
+		virtual void onWarning(const hlim::BaseNode* src, std::string msg) override { }
+		virtual void onAssert(const hlim::BaseNode* src, std::string msg) override { }
+};
 
 
 template<class BaseFixture>
@@ -138,6 +146,7 @@ BOOST_FIXTURE_TEST_CASE(tapInGTKWaveProjectFiles, VCDTestFixture<BoostUnitTestSi
 	BOOST_TEST(VCDContains(std::regex{"unused"}));
 	BOOST_TEST(GTKWaveProjectFileContains(std::regex{"unused"}));
 }
+
 /*
 enum MyEnum {
 	ENUM_VALUE_A,
@@ -150,8 +159,12 @@ BOOST_FIXTURE_TEST_CASE(EnumFilterInGTKWaveProjectFiles, VCDTestFixture<BoostUni
 
 	Clock clock({ .absoluteFrequency = 10'000 });
 
+
 	Enum<MyEnum> myEnum;
-	pinIn(myEnum).setName("myEnum");
+	myEnum = Enum<MyEnum>(UInt(pinIn(1_b).setName("input")));
+
+	HCL_NAMED(myEnum);
+	tap(myEnum);
 
 	addSimulationProcess([clock,this]()->SimProcess {
 
@@ -170,7 +183,37 @@ BOOST_FIXTURE_TEST_CASE(EnumFilterInGTKWaveProjectFiles, VCDTestFixture<BoostUni
 	BOOST_TEST(GTKWaveProjectFileContains(std::regex{"myEnum"}));
 	BOOST_TEST(GTKWaveProjectFileContains(std::regex{"MyEnum"}));
 }
-
 */
+
+BOOST_FIXTURE_TEST_CASE(testMessagesInVCD, IgnoreTapMessages<VCDTestFixture<BoostUnitTestSimulationFixture>>)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+
+	Bit b = pinIn();
+	sim_assert(b) << "Something bad has happened: b is " << b;
+
+
+	addSimulationProcess([=,this]()->SimProcess {
+		simu(b) = true;
+
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+
+		simu(b) = false;
+
+		co_await AfterClk(clock);
+
+		stopTest();
+	});
+
+	design.postprocess();
+
+	runTicks(clock.getClk(), 100000);
+
+	BOOST_TEST(VCDContains(std::regex{"Something.*bad.*has.*happened:.*b.*is.*0"}));
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()

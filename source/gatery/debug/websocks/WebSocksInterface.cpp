@@ -62,7 +62,8 @@ std::string JsonSerializer::serializeAllLogMessages(const std::span<std::string>
 	
 	bool first = true;
 	for (const auto &msg : logMessages) {
-		if (!first) json << ",\n"; first = false;
+		if (!first) json << ",\n"; 
+		first = false;
 		json << msg;
 	}
 	json << "]}\n";
@@ -83,7 +84,8 @@ std::string JsonSerializer::serializeLogMessage(const LogMessage &msg)
 	
 	bool firstPart = true;
 	for (const auto &part : msg.parts()) {
-		if (!firstPart) json << ",\n"; firstPart = false;
+		if (!firstPart) json << ",\n";
+		firstPart = false;
 		
 		if (std::holds_alternative<const char*>(part))
 			json << "{\"type\": \"string\", \"data\": \"" << std::get<const char*>(part) << "\"}\n";
@@ -151,7 +153,8 @@ std::ostream &operator<<(std::ostream &json, const hlim::Node_Rewire *rewire)
 		<< "        \"rewireOp\": [";
 	bool firstElement = true;
 	for (const auto &r : rewire->getOp().ranges) {
-		if (!firstElement) json << ",\n"; firstElement = false;
+		if (!firstElement) json << ",\n";
+		firstElement = false;
 		json 
 			<< "        {\n"
 			<< "            \"subwidth\": " << r.subwidth << ",\n"
@@ -264,7 +267,8 @@ std::string JsonSerializer::serializeAllNodes(const hlim::Circuit &circuit)
 		bool firstElement = true;
 		json << "{ \"operation\":\"addNodes\", \"data\": [\n";
 		for (const auto &node : circuit.getNodes()) {
-			if (!firstElement) json << ",\n"; firstElement = false;
+			if (!firstElement) json << ",\n";
+			firstElement = false;
 			json << "{\n    \"id\": " << node->getId() << ",\n    \"name\": \"" << node->getName() << "\",\n"
 					<< "    \"group\": " << node->getGroup()->getId() << ",\n"
 					<< "    \"stack_trace\": ";
@@ -326,12 +330,13 @@ std::string JsonSerializer::serializeAllNodes(const hlim::Circuit &circuit)
 				json << "        {\n";
 				json << "            \"name\": \"" << node->getOutputName(i) << "\",\n"
 						<< "            \"width\": " << node->getOutputConnectionType(i).width << ",\n"
-						<< "            \"interpretation\": \"" << magic_enum::enum_name(node->getOutputConnectionType(i).interpretation) << "\",\n"
+						<< "            \"interpretation\": \"" << magic_enum::enum_name(node->getOutputConnectionType(i).type) << "\",\n"
 						<< "            \"type\": \"" << magic_enum::enum_name(node->getOutputType(i)) << "\",\n"
 						<< "            \"consumers\": [\n";
 				bool firstElement = true;
 				for (const auto &np : node->getDirectlyDriven(i)) {
-					if (!firstElement) json << ",\n"; firstElement = false;
+					if (!firstElement) json << ",\n"; 
+					firstElement = false;
 					json << "                {\"node\": " << (np.node != nullptr?np.node->getId():~0ull) << ", \"port\": " << np.port << '}';
 				}
 				json << "\n            ]\n"
@@ -354,7 +359,8 @@ void JsonSerializer::serializeStackTrace(std::ostream &json, const utils::StackT
 	json << "[";
 	bool first = true;
 	for (const auto &frame : trace.getTrace()) {
-		if (!first) json << ",\n"; first = false;
+		if (!first) json << ",\n";
+		first = false;
 		//json << "{ \"addr\": " << (size_t)frame.address() << ", \"file\": \"" << frame.source_file() << "\", \"line\": " << frame.source_line() << "}";
 		//json << "{ \"addr\": " << (size_t)frame.address() << "}";
 		json << (size_t)frame.address();

@@ -278,8 +278,8 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 			}
 
 
-			auto& nonConstCircuit = const_cast<hlim::Circuit&>(circuit);
 			/*
+			auto& nonConstCircuit = const_cast<hlim::Circuit&>(circuit);
 			auto* loopGroup = nonConstCircuit.getRootNodeGroup()->addChildNodeGroup(hlim::NodeGroup::GroupType::ENTITY);
 			loopGroup->setInstanceName("loopGroup");
 			loopGroup->setName("loopGroup");
@@ -498,8 +498,12 @@ bool SignalWatch::anySignalChanged(const sim::DefaultBitVectorState &state) cons
 
 
 
-ReferenceSimulator::ReferenceSimulator()
+ReferenceSimulator::ReferenceSimulator(bool enableConsoleOutput)
 {
+	if (enableConsoleOutput) {
+		m_simulatorConsoleOutput.emplace();
+		addCallbacks(&m_simulatorConsoleOutput.value());
+	}
 }
 
 void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs, bool ignoreSimulationProcesses)

@@ -51,7 +51,11 @@ DefaultBitVectorState parseBit(char value)
 
 DefaultBitVectorState parseBit(bool value)
 {
-	return parseBit(value ? '1' : '0');
+	sim::DefaultBitVectorState ret;
+	ret.resize(1);
+	ret.set(sim::DefaultConfig::VALUE, 0, value);
+	ret.set(sim::DefaultConfig::DEFINED, 0, true);
+	return ret;
 }
 
 DefaultBitVectorState parseBitVector(std::string_view value)

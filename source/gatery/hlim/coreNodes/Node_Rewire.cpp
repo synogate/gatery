@@ -301,7 +301,7 @@ std::string Node_Rewire::attemptInferOutputName(size_t outputPort) const
 			auto driver = getDriver(i);
 			if (driver.node == nullptr)
 				return "";
-			if (driver.node->getOutputConnectionType(driver.port).interpretation == ConnectionType::DEPENDENCY) continue;
+			if (driver.node->getOutputConnectionType(driver.port).isDependency()) continue;
 			if (driver.node->getName().empty()) {
 				return "";
 			} else {

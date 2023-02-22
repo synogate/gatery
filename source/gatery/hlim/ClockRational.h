@@ -62,4 +62,6 @@ namespace gtry::hlim {
 	inline ClockRational operator/(size_t lhs, const ClockRational &rhs) {
 		return ClockRational(lhs, 1) / rhs;
 	}
+
+	void formatTime(std::ostream &stream, ClockRational time);
 }

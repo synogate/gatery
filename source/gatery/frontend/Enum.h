@@ -63,13 +63,13 @@ namespace gtry {
 	public:
 		// gives a list of c++ enum types and ther values used during hw construction.
 		// used for gtkwave enum translation.
-		static const auto& knwonEnums() { return s_knwonEnums; }
+		static const auto& knownEnums() { return s_knownEnums; }
 
 	protected:
 		template<typename T>
 		void registerKnownEnum();
 	private:
-		inline static std::map<std::string, std::map<int, std::string>> s_knwonEnums;
+		inline static std::map<std::string, std::map<int, std::string>> s_knownEnums;
 	};
 
 	class BaseEnum : public ElementarySignal, public KnownEnum
@@ -208,7 +208,7 @@ namespace gtry {
 		if (name.empty())
 			throw std::runtime_error{ "failed to parse name from enum type" };
 
-		auto& info = s_knwonEnums[name];
+		auto& info = s_knownEnums[name];
 		if (info.empty())
 			for(T val : magic_enum::enum_values<T>())
 				info[(int)val] = magic_enum::enum_name(val);

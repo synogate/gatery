@@ -28,7 +28,7 @@
 #include <gatery/hlim/coreNodes/Node_Signal.h>
 #include <gatery/hlim/supportNodes/Node_Attributes.h>
 
-gtry::SignalReadPort gtry::SignalReadPort::expand(size_t width, hlim::ConnectionType::Interpretation resultType) const
+gtry::SignalReadPort gtry::SignalReadPort::expand(size_t width, hlim::ConnectionType::Type resultType) const
 {
 	hlim::ConnectionType type = connType(*this);
 	HCL_DESIGNCHECK_HINT(type.width <= width, "signal width cannot be implicitly decreased");
@@ -36,10 +36,10 @@ gtry::SignalReadPort gtry::SignalReadPort::expand(size_t width, hlim::Connection
 
 	hlim::NodePort ret{ .node = this->node, .port = this->port };
 
-	if (type.width < width || type.interpretation != resultType)
+	if (type.width < width || type.type != resultType)
 	{
 		auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-		rewire->changeOutputType(hlim::ConnectionType{ .interpretation = resultType, .width = width });
+		rewire->changeOutputType(hlim::ConnectionType{ .type = resultType, .width = width });
 		rewire->connectInput(0, ret);
 
 		switch (expansionPolicy)

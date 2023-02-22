@@ -37,7 +37,12 @@
 
 namespace gtry::sim
 {
-
+	namespace {
+		const char *syntheticModuleName = "synthetic";
+		const char *debugMessagesLabel = "Debug_Messages";
+		const char *warningsLabel = "Warnings";
+		const char *assertsLabel = "Asserts";
+	}
 
 	VCDSink::VCDSink(hlim::Circuit& circuit, Simulator& simulator, const char* filename, const char* logFilename) :
 		WaveformRecorder(circuit, simulator),
@@ -70,13 +75,21 @@ namespace gtry::sim
 	}
 
 	void VCDSink::onDebugMessage(const hlim::BaseNode* src, std::string msg)
-	{}
+	{
+		if (m_includeDebugMessages)
+			m_VCD.writeString(m_debugMessageID, msg);
+	}
 
 	void VCDSink::onWarning(const hlim::BaseNode* src, std::string msg)
-	{}
+	{
+		if (m_includeWarnings)
+			m_VCD.writeString(m_warningsID, msg);
+	}
 
 	void VCDSink::onAssert(const hlim::BaseNode* src, std::string msg)
 	{
+		if (m_includeAsserts)
+			m_VCD.writeString(m_assertsID, msg);
 		try {
 			m_gtkWaveProjectFile.addMarker(m_simulator.getCurrentSimulationTime());
 		} catch (...) {
@@ -192,7 +205,30 @@ namespace gtry::sim
 			}
 		}
 
+		if (m_includeDebugMessages || m_includeWarnings || m_includeAsserts) {
+			auto synthetic_module = m_VCD.beginModule(syntheticModuleName);
+			if (m_includeDebugMessages) {
+				m_debugMessageID = identifierGenerator.getIdentifer();
+				m_VCD.declareReal(m_debugMessageID, debugMessagesLabel);
+			}
+			if (m_includeWarnings) {
+				m_warningsID = identifierGenerator.getIdentifer();
+				m_VCD.declareReal(m_warningsID, warningsLabel);
+			}
+			if (m_includeAsserts) {
+				m_assertsID = identifierGenerator.getIdentifer();
+				m_VCD.declareReal(m_assertsID, assertsLabel);
+			}
+		}
+
 		auto dumpvars = m_VCD.beginDumpVars();
+
+		if (m_includeDebugMessages)
+			m_VCD.writeString(m_debugMessageID, "");
+		if (m_includeWarnings)
+			m_VCD.writeString(m_warningsID, "");
+		if (m_includeAsserts)
+			m_VCD.writeString(m_assertsID, "");
 
 		for(auto& c : m_clock2code) {
 			auto value = m_simulator.getValueOfClock(c.first);
@@ -246,6 +282,16 @@ namespace gtry::sim
 
 	void VCDSink::setupGtkWaveProjFileSignals()
 	{
+		if (m_includeDebugMessages)
+			m_gtkWaveProjectFile.appendSignal(std::string(syntheticModuleName)+'.'+debugMessagesLabel).color = GTKWaveProjectFile::Signal::GREEN;
+		if (m_includeWarnings)
+			m_gtkWaveProjectFile.appendSignal(std::string(syntheticModuleName)+'.'+warningsLabel).color = GTKWaveProjectFile::Signal::ORANGE;
+		if (m_includeAsserts)
+			m_gtkWaveProjectFile.appendSignal(std::string(syntheticModuleName)+'.'+assertsLabel).color = GTKWaveProjectFile::Signal::RED;
+
+		if (m_includeDebugMessages || m_includeWarnings || m_includeAsserts)
+		m_gtkWaveProjectFile.appendBlank();
+
 		// For easier extension in the future (beyond IO pins) determine clock domains for all signals so
 		// that they can be sorted by clocks without relying on the clock ports of the io pins.
 		std::map<hlim::NodePort, hlim::SignalClockDomain> clockDomains;
@@ -292,7 +338,7 @@ namespace gtry::sim
 				std::string vcdName = constructFullSignalName(*signal);
 
 				auto connectionType = hlim::getOutputConnectionType(signal->driver);
-				if (connectionType.interpretation != hlim::ConnectionType::BOOL)
+				if (!connectionType.isBool())
 					vcdName = (boost::format("%s[%d:0]") % vcdName % (connectionType.width-1)).str();
 
 				m_gtkWaveProjectFile.appendSignal(vcdName);

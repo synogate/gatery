@@ -28,7 +28,7 @@ Node_Compare::Node_Compare(Op op) : Node(2, 1), m_op(op)
 {
 	ConnectionType conType;
 	conType.width = 1;
-	conType.interpretation = ConnectionType::BOOL;
+	conType.type = ConnectionType::BOOL;
 	setOutputConnectionType(0, conType);
 }
 
@@ -44,7 +44,7 @@ void Node_Compare::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
 
 	const auto &leftType = hlim::getOutputConnectionType(leftDriver);
 	const auto &rightType = hlim::getOutputConnectionType(rightDriver);
-	HCL_ASSERT_HINT(leftType.interpretation == rightType.interpretation, "Comparing signals with different interpretations not yet implemented!");
+	HCL_ASSERT_HINT(leftType.type == rightType.type, "Comparing signals with different interpretations not yet implemented!");
 
 	// Special handling for zero-width inputs
 	if (leftType.width == 0 && rightType.width == 0) {
@@ -88,7 +88,7 @@ void Node_Compare::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
 		std::uint64_t left = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0], leftType.width);
 		std::uint64_t right = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[1], rightType.width);
 
-		switch (leftType.interpretation) {
+		switch (leftType.type) {
 			case ConnectionType::BOOL:
 				switch (m_op) {
 					case EQ:
@@ -134,7 +134,7 @@ void Node_Compare::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
 		left = sim::extractBigInt(state, inputOffsets[0], leftType.width);
 		right = sim::extractBigInt(state, inputOffsets[1], rightType.width);
 
-		HCL_ASSERT(leftType.interpretation == ConnectionType::BITVEC);
+		HCL_ASSERT(leftType.isBitVec());
 		switch (m_op) {
 			case EQ:
 				result = left == right;

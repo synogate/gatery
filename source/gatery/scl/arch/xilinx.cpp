@@ -44,7 +44,7 @@ void handleDifferentialPin(hlim::Circuit &circuit, const XilinxSettings &setting
 		extractRewire->moveToGroup(pin->getGroup());
 		extractRewire->connectInput(0, driver);
 		extractRewire->setExtract(i, 1);
-		extractRewire->changeOutputType({.interpretation = hlim::ConnectionType::BOOL, .width=1});
+		extractRewire->changeOutputType({.type = hlim::ConnectionType::BOOL, .width=1});
 
 		auto *buffer = circuit.createNode<arch::xilinx::OBUFDS>();
 		buffer->moveToGroup(pin->getGroup());

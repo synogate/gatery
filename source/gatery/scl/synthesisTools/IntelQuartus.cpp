@@ -60,7 +60,7 @@ namespace gtry
 		regOutputIdentifier << regOutputReversePath.front()->getNamespaceScope().get(regOutput).name;
 
 		auto type = regNode->getOutputConnectionType(0);
-		if (type.interpretation == hlim::ConnectionType::BITVEC)
+		if (type.isBitVec())
 			regOutputIdentifier << "[0]";
 
 		regOutputIdentifier << "|clk";
@@ -201,7 +201,7 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 
 		file << " [get_ports " << vhdlPinName;
 
-		if (pin->getConnectionType().interpretation == hlim::ConnectionType::BITVEC)
+		if (pin->getConnectionType().isBitVec())
 			file << "\\[*\\]";
 		file << "]";
 

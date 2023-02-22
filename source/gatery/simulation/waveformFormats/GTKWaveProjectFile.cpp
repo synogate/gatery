@@ -123,7 +123,7 @@ void GTKWaveProjectFile::write(const char *filename) const
 
 void GTKWaveProjectFile::writeEnumFilterFiles()
 {
-	for (const auto& e : KnownEnum::knwonEnums())
+	for (const auto& e : KnownEnum::knownEnums())
 	{
 		std::string filename = getWaveformFile() + "." + e.first + ".filter";
 		std::ofstream f{ filename };

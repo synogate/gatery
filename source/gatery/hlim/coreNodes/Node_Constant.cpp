@@ -26,12 +26,23 @@
 
 namespace gtry::hlim {
 
-Node_Constant::Node_Constant(sim::DefaultBitVectorState value, hlim::ConnectionType::Interpretation connectionType) :
+Node_Constant::Node_Constant(sim::DefaultBitVectorState value, hlim::ConnectionType connectionType) :
 	Node(0, 1),
 	m_Value(std::move(value))
 {
-	setOutputConnectionType(0, ConnectionType{ .interpretation = connectionType, .width = m_Value.size() });
+	HCL_ASSERT(connectionType.width == m_Value.size());
+	setOutputConnectionType(0, connectionType);
 	setOutputType(0, OUTPUT_CONSTANT);
+}
+
+
+Node_Constant::Node_Constant(sim::DefaultBitVectorState value, hlim::ConnectionType::Type connectionType) :
+	Node_Constant(std::move(value), {.type = connectionType, .width = value.size() })
+{
+}
+
+Node_Constant::Node_Constant(bool value) : Node_Constant(sim::parseBit(value), {.type = hlim::ConnectionType::BOOL, .width = 1 })
+{
 }
 
 void Node_Constant::simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
@@ -64,7 +75,7 @@ std::string Node_Constant::getOutputName(size_t idx) const
 
 std::unique_ptr<BaseNode> Node_Constant::cloneUnconnected() const
 {
-	std::unique_ptr<BaseNode> res(new Node_Constant(m_Value, getOutputConnectionType(0).interpretation));
+	std::unique_ptr<BaseNode> res(new Node_Constant(m_Value, getOutputConnectionType(0).type));
 	copyBaseToClone(res.get());
 	return res;
 }

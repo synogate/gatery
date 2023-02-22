@@ -215,7 +215,7 @@ void TestbenchRecorder::onSimProcOutputOverridden(const hlim::NodePort &output, 
 	const auto& conType = hlim::getOutputConnectionType(output);
 
 	char sep = '"';
-	if (conType.interpretation == hlim::ConnectionType::BOOL)
+	if (conType.isBool())
 		sep = '\'';
 
 	str_state << sep;
@@ -249,7 +249,7 @@ void TestbenchRecorder::onSimProcOutputRead(const hlim::NodePort &output, const 
 
 	auto &assertStatements = m_phases.back().assertStatements;
 	const auto& conType = hlim::getOutputConnectionType(drivingOutput);
-	if (conType.interpretation == hlim::ConnectionType::BOOL) {
+	if (conType.isBool()) {
 		if (state.get(sim::DefaultConfig::DEFINED, 0)) {
 			cf.indent(assertStatements, 2);
 			assertStatements << "ASSERT " << name_it->second << " = '" << state << "';" << std::endl;

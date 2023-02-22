@@ -112,7 +112,7 @@ void DepthFirstPolicy<forward>::advance(bool skipDependencies, bool skipExportOn
 	m_stack.pop();
 	if (forward) {
 		for (auto i : utils::Range(currentNode->getNumOutputPorts()))
-			if (!skipDependencies ||  currentNode->getOutputConnectionType(i).interpretation != ConnectionType::DEPENDENCY)
+			if (!skipDependencies ||  currentNode->getOutputConnectionType(i).type != ConnectionType::DEPENDENCY)
 				for (auto np : currentNode->getDirectlyDriven(i))
 					m_stack.push(np);
 	} else {

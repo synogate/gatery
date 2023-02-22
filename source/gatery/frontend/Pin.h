@@ -150,7 +150,7 @@ namespace gtry
 				else
 				{
 					BaseInputPin pin;
-					if (vec.connType().interpretation == hlim::ConnectionType::BOOL)
+					if (vec.connType().isBool())
 						pin.node()->setBool();
 					else
 						pin.node()->setWidth(vec.width().bits());

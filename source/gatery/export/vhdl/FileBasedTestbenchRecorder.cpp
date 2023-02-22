@@ -83,14 +83,14 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 
 		if (ioPin->isOutputPin()) {
 			m_outputToIoPinName[ioPin->getDriver(0)] = name;
-			outputIsBool[ioPin->getDriver(0)] = conType.interpretation == hlim::ConnectionType::BOOL;
+			outputIsBool[ioPin->getDriver(0)] = conType.isBool();
 			outputIsDrivenByNetwork.insert(ioPin->getDriver(0));
 		}
 
 		if (ioPin->isInputPin()) {
 			hlim::NodePort pinOutput(const_cast<hlim::Node_Pin*>(ioPin), 0);
 			m_outputToIoPinName[pinOutput] = name;
-			outputIsBool[pinOutput] = conType.interpretation == hlim::ConnectionType::BOOL;
+			outputIsBool[pinOutput] = conType.isBool();
 		}
 
 	}
@@ -464,7 +464,7 @@ void FileBasedTestbenchRecorder::onSimProcOutputRead(const hlim::NodePort &outpu
 	}
 
 	const auto& conType = hlim::getOutputConnectionType(drivingOutput);
-	if (conType.interpretation == hlim::ConnectionType::BOOL) {
+	if (conType.isBool()) {
 		if (state.get(sim::DefaultConfig::DEFINED, 0)) {
 			m_phases.back().assertStatements << "CHECK" << std::endl << name_it->second << std::endl << state << std::endl;
 		}

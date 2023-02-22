@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2023 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -15,20 +15,19 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
+
 #include "gatery/pch.h"
-#include "ConnectionType.h"
+#include "ClockRational.h"
 
 namespace gtry::hlim {
+	void formatTime(std::ostream &stream, ClockRational time) {
+		const char *unit = "sec";
+		if (time.denominator() > 1) { unit = "ms"; time *= 1000; }
+		if (time.denominator() > 1) { unit = "us"; time *= 1000; }
+		if (time.denominator() > 1) { unit = "ns"; time *= 1000; }
+		if (time.denominator() > 1) { unit = "ps"; time *= 1000; }
+		if (time.denominator() > 1) { unit = "fs"; time *= 1000; }
 
-
-bool ConnectionType::operator==(const ConnectionType &rhs) const
-{
-	if (rhs.type != type) return false;
-	if (rhs.width != width) return false;
-	// Does interpretation matter?
-
-	return true;
+		stream << time.numerator() / time.denominator() << ' ' << unit;
+	}	
 }
-
-}
-

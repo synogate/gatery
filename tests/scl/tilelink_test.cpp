@@ -142,7 +142,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_demux_chanA_test, BoostUnitTestSimulationFixtur
 	demux.attachSink(target->link(), 0);
 	demux.generate();
 
-	addSimulationProcess([=]()->SimProcess {
+	addSimulationProcess([=, this]()->SimProcess {
 
 		auto& iniA = initiator->link().a;
 		auto& iniD = *initiator->link().d;
@@ -191,7 +191,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_demux_chanD_test, BoostUnitTestSimulationFixtur
 	demux.attachSink(target->link(), 0);
 	demux.generate();
 
-	addSimulationProcess([=]()->SimProcess {
+	addSimulationProcess([=, this]()->SimProcess {
 
 		auto& iniA = initiator->link().a;
 		auto& iniD = *initiator->link().d;
@@ -246,7 +246,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_demux_chanA_routing_test, BoostUnitTestSimulati
 	demux.attachSink(target1->link(), 0x100);
 	demux.generate();
 
-	addSimulationProcess([=]()->SimProcess {
+	addSimulationProcess([=, this]()->SimProcess {
 
 		simu(valid(initiator->link().a)) = '0';
 		simu(ready(*initiator->link().d)) = '1';
@@ -301,7 +301,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_errorResponder_test, BoostUnitTestSimulationFix
 
 	scl::tileLinkErrorResponder(initiator->link());
 
-	addSimulationProcess([=]()->SimProcess {
+	addSimulationProcess([=, this]()->SimProcess {
 
 		auto& iniA = initiator->link().a;
 		auto& iniD = *initiator->link().d;
@@ -355,7 +355,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_errorResponder_burst_test, BoostUnitTestSimulat
 	auto initiator = std::make_shared<TileLinkSimuInitiator<TileLinkUH>>(12_b, 16_b, 4_b, 4_b);
 	scl::tileLinkErrorResponder(initiator->link());
 
-	addSimulationProcess([=]()->SimProcess {
+	addSimulationProcess([=, this]()->SimProcess {
 
 		auto& iniA = initiator->link().a;
 		auto& iniD = *initiator->link().d;
@@ -466,7 +466,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_mux_test, BoostUnitTestSimulationFixture)
 	mux.attachSource(initiator2->link());
 	target->link() <<= mux.generate();
 
-	addSimulationProcess([=]()->SimProcess {
+	addSimulationProcess([=, this]()->SimProcess {
 
 		initiator0->issueIdle();
 		initiator1->issueIdle();
@@ -564,7 +564,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_hub_test, BoostUnitTestSimulationFixture)
 
 	hub.generate();
 
-	addSimulationProcess([=]()->SimProcess {
+	addSimulationProcess([=, this]()->SimProcess {
 
 		initiator0->issueIdle();
 		initiator1->issueIdle();
@@ -639,7 +639,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_memory_test, BoostUnitTestSimulationFixture)
 	mem <<= initiator->link();
 	setName(ready(*initiator->link().d), "DE");
 
-	addSimulationProcess([=]()->SimProcess {
+	addSimulationProcess([=, this]()->SimProcess {
 		initiator->issueIdle();
 		simu(ready(*initiator->link().d)) = '1';
 		co_await AfterClk(clock);

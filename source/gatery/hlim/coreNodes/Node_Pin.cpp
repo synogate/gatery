@@ -59,14 +59,14 @@ void Node_Pin::connectEnable(const NodePort &port)
 void Node_Pin::setBool()
 {
 	HCL_DESIGNCHECK(m_isInputPin);
-	m_connectionType = {.interpretation = ConnectionType::BOOL, .width = 1};
+	m_connectionType = {.type = ConnectionType::BOOL, .width = 1};
 	setOutputConnectionType(0, m_connectionType);
 }
 
 void Node_Pin::setWidth(size_t width)
 {
 	HCL_DESIGNCHECK(m_isInputPin);
-	m_connectionType = {.interpretation = ConnectionType::BITVEC, .width = width};
+	m_connectionType = {.type = ConnectionType::BITVEC, .width = width};
 	setOutputConnectionType(0, m_connectionType);
 }
 

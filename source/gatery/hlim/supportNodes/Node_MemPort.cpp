@@ -29,8 +29,8 @@ Node_MemPort::Node_MemPort(std::size_t bitWidth)
 	resizeInputs((size_t)Inputs::count);
 	resizeOutputs((size_t)Outputs::count);
 	changeBitWidth(bitWidth);
-	setOutputConnectionType((size_t)Outputs::orderBefore, {.interpretation = ConnectionType::ConnectionType::DEPENDENCY, .width=0});
-	setOutputConnectionType((size_t)Outputs::memoryWriteDependency, {.interpretation = ConnectionType::ConnectionType::DEPENDENCY, .width=0});
+	setOutputConnectionType((size_t)Outputs::orderBefore, {.type = ConnectionType::ConnectionType::DEPENDENCY, .width=0});
+	setOutputConnectionType((size_t)Outputs::memoryWriteDependency, {.type = ConnectionType::ConnectionType::DEPENDENCY, .width=0});
 	setOutputType((size_t)Outputs::memoryWriteDependency, OUTPUT_LATCHED);
 	m_clocks.resize(1);
 }
@@ -41,7 +41,7 @@ void Node_MemPort::changeBitWidth(std::size_t bitWidth)
 	HCL_ASSERT(getDriver((size_t)Inputs::address).node == nullptr);
 	
 	m_bitWidth = bitWidth;
-	setOutputConnectionType((size_t)Outputs::rdData, {.interpretation = ConnectionType::BITVEC, .width=bitWidth});
+	setOutputConnectionType((size_t)Outputs::rdData, {.type = ConnectionType::BITVEC, .width=bitWidth});
 }
 
 void Node_MemPort::connectMemory(Node_Memory *memory)

@@ -507,3 +507,61 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_memory_rmw, BoostUnitTestSimulationFixture
 
 	BOOST_TEST(pipeBalanceGroup.getNumPipeBalanceGroupStages() == 2);
 }
+
+
+BOOST_FIXTURE_TEST_CASE(retiming_backward_fix_reset, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+	using namespace gtry::sim;
+	using namespace gtry::utils;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	UInt addr = pinIn(4_b).setName("addr");
+	UInt data = pinIn(32_b).setName("data");
+
+	Memory<UInt> mem(16, 32_b);
+	mem.setPowerOnStateZero();
+	mem.setType(MemType::MEDIUM, 1);
+
+	UInt rd = mem[addr];
+	auto out = data ^ rd;
+
+	out = reg(out, 0, {.allowRetimingBackward = true});
+
+	pinOut(out).setName("out");
+
+	UInt undefIn  = pinIn(32_b).setName("undefined_in");
+	pinOut(reg(undefIn, 0)).setName("reference_out");
+
+
+	addSimulationProcess([=,this]()->SimProcess {
+		simu(addr).invalidate();
+		simu(data).invalidate();
+
+		BOOST_TEST(simu(out) == 0);
+
+		co_await AfterClk(clock);
+
+		BOOST_TEST(!simu(out).defined());
+
+		simu(addr) = 0;
+		simu(data) = 0;
+
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(out) == 0x00);
+
+		simu(data) = 0xFF;
+
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(out) == 0xFF);
+
+		stopTest();
+	});		
+
+	design.postprocess();
+
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
+}
+

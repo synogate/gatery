@@ -38,6 +38,13 @@ class VCDSink : public WaveformRecorder
 		virtual void onAssert(const hlim::BaseNode *src, std::string msg) override;
 		virtual void onClock(const hlim::Clock *clock, bool risingEdge) override;
 		virtual void onReset(const hlim::Clock *clock, bool inReset) override;
+
+		/// @brief Add a pseudo-signal to the VCD file which contains debug messages as strings
+		VCDSink &includeDebugMessages() { m_includeDebugMessages = true; return *this; }
+		/// @brief Add a pseudo-signal to the VCD file which contains warnings as strings
+		VCDSink &includeWarnings() { m_includeWarnings = true; return *this; }
+		/// @brief Add a pseudo-signal to the VCD file which contains asserts as strings
+		VCDSink &includeAsserts() { m_includeAsserts = true; return *this; }
 	protected:
 		VCDWriter m_VCD;
 		GTKWaveProjectFile m_gtkWaveProjectFile;
@@ -49,6 +56,14 @@ class VCDSink : public WaveformRecorder
 		std::map<hlim::Clock*, std::string> m_rst2code;
 		std::vector<hlim::Clock*> m_clocks;
 		std::vector<hlim::Clock*> m_resets;
+
+		bool m_includeDebugMessages = true;
+		bool m_includeWarnings = true;
+		bool m_includeAsserts = true;
+
+		std::string m_debugMessageID;
+		std::string m_warningsID;
+		std::string m_assertsID;
 
 		virtual void initialize() override;
 		virtual void signalChanged(size_t id) override;

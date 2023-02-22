@@ -40,7 +40,7 @@ namespace gtry::hlim {
 sim::DefaultBitVectorState evaluateStatically(Circuit &circuit, hlim::NodePort output)
 {
 	sim::SimulatorCallbacks ignoreCallbacks;
-	sim::ReferenceSimulator simulator;
+	sim::ReferenceSimulator simulator(false);
 	simulator.compileStaticEvaluation(circuit, {output});
 	simulator.powerOn();
 

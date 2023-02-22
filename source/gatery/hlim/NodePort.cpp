@@ -38,15 +38,15 @@ RefCtdNodePort& RefCtdNodePort::operator=(const NodePort &np)
 
 
 bool outputIsBVec(const NodePort &output) {
-	return output.node->getOutputConnectionType(output.port).interpretation == ConnectionType::BITVEC;
+	return output.node->getOutputConnectionType(output.port).isBitVec();
 }
 
 bool outputIsBool(const NodePort &output) {
-	return output.node->getOutputConnectionType(output.port).interpretation == ConnectionType::BOOL;
+	return output.node->getOutputConnectionType(output.port).isBool();
 }
 
 bool outputIsDependency(const NodePort &output) {
-	return output.node->getOutputConnectionType(output.port).interpretation == ConnectionType::DEPENDENCY;
+	return output.node->getOutputConnectionType(output.port).isDependency();
 }
 
 

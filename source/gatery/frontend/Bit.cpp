@@ -172,7 +172,7 @@ namespace gtry {
 	hlim::ConnectionType Bit::connType() const
 	{
 		return hlim::ConnectionType{
-			.interpretation = hlim::ConnectionType::BOOL,
+			.type = hlim::ConnectionType::BOOL,
 			.width = 1
 		};
 	}
@@ -197,13 +197,13 @@ namespace gtry {
 	SignalReadPort gtry::Bit::rewireAlias(SignalReadPort port) const
 	{
 		hlim::ConnectionType type = hlim::getOutputConnectionType(port);
-		if (type.interpretation != hlim::ConnectionType::BOOL)
+		if (!type.isBool())
 		{
 			if (m_offsetDynamic.node != nullptr) {
 				// Dynamic selection
 				hlim::ConnectionType idxType = hlim::getOutputConnectionType(m_offsetDynamic);
 
-				HCL_ASSERT_HINT(idxType.interpretation == hlim::ConnectionType::BITVEC, "Index has wrong type");
+				HCL_ASSERT_HINT(idxType.isBitVec(), "Index has wrong type");
 
 				auto *mux = DesignScope::createNode<hlim::Node_Multiplexer>(m_dynRangeWidth);
 				mux->connectSelector(m_offsetDynamic);
@@ -292,7 +292,7 @@ namespace gtry {
 	{
 		hlim::ConnectionType type = m_node->getOutputConnectionType(0);
 
-		if (type.interpretation != hlim::ConnectionType::BOOL)
+		if (!type.isBool())
 		{
 			if (m_offsetDynamic.node != nullptr) {
 				// Dynamic selection
