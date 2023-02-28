@@ -25,6 +25,8 @@
 
 #include <boost/multiprecision/cpp_int.hpp>
 
+#include <span>
+
 namespace gtry::sim {
 
 class SigHandle {
@@ -46,6 +48,13 @@ class SigHandle {
 		template<std::same_as<sim::BigInt> BigInt_> // prevent conversion
 		void operator=(const BigInt_ &v) { assign(v); }
 
+		/// Interprete the given array of integers as one concatenated bit string to assign to this signal
+		void operator=(std::pair<const void*, size_t> array);
+
+		/// Interprete the given array of integers as one concatenated bit string to assign to this signal
+		template<typename T>
+		void operator=(std::span<T> array) { operator=({array.data(), array.size() * sizeof(T)}); }
+
 
 		template<EnumType T>
 		bool operator==(T v) const { if (!allDefined()) return false; return value() == (std::uint64_t) v; }
@@ -54,6 +63,13 @@ class SigHandle {
 		bool operator==(std::string_view v) const;
 		bool operator==(char v) const;
 
+		/// Interprete the given array of integers as one concatenated bit string and return true if all bits in the signal are defined and equal to the given bit string.
+		bool operator==(std::pair<const void*, size_t> array) const;
+		/// Interprete the given array of integers as one concatenated bit string and return true if all bits in the signal are defined and equal to the given bit string.
+		template<typename T>
+		bool operator==(std::span<T> array) const { return operator==({array.data(), array.size() * sizeof(T)}); }
+
+
 		operator std::uint64_t () const { return value(); }
 		operator std::int64_t () const;
 		operator bool () const;
@@ -61,6 +77,11 @@ class SigHandle {
 		//operator std::string () const;
 		operator DefaultBitVectorState () const { return eval(); }
 		operator sim::BigInt () const;
+
+		/// Split the signal's state into integers and return their values.
+		/// @details The value of undefined bits in the returned bit string is arbitrary.
+		template<typename T>
+		std::vector<T> toVector() const;
 
 		void invalidate();
 		bool allDefined() const;
@@ -72,6 +93,8 @@ class SigHandle {
 		hlim::NodePort getOutput() const { return m_output; }
 
 		void overrideDrivingRegister();
+
+		size_t getWidth() const;
 	protected:
 		void assign(const sim::BigInt &v);
 
@@ -99,6 +122,18 @@ inline void SigHandle::operator=(const T& collection)
 		}
 	}
 	*this = state;
+}
+
+template<typename T>
+std::vector<T> SigHandle::toVector() const
+{
+	HCL_DESIGNCHECK_HINT(getWidth() % (sizeof(T)*8) == 0, "The signal width is not a multiple of the width of the words into which its state is to be split!");
+	size_t numWords = getWidth() / (sizeof(T)*8);
+
+	auto state = eval();
+	const T* begin = (const T*) state.data(sim::DefaultConfig::VALUE);
+	const T* end = begin + numWords;
+	return std::vector<T>{begin, end};
 }
 
 }
