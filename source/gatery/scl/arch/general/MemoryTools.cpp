@@ -100,6 +100,7 @@ std::vector<SplitMemoryGroup> createDepthSplitMemories(hlim::NodeGroup *group, c
 
 		// create a sub entity, move everything in
 		auto *subMemory = group->addChildNodeGroup(hlim::NodeGroup::GroupType::SFU);
+		subMemory->setName((boost::format("memory_split_%d") % splitIdx).str());
 		auto *subMemInfo = subMemory->createMetaInfo<hlim::MemoryGroup>(subMemory);
 		subMems[splitIdx].subGroup = subMemInfo;
 		std::map<hlim::BaseNode*, hlim::BaseNode*> &mapSrc2Dst = subMems[splitIdx].original2subGroup;
@@ -296,6 +297,7 @@ std::vector<SplitMemoryGroup> createWidthSplitMemories(hlim::NodeGroup *group, c
 
 		// create a sub entity, move everything in
 		auto *subMemory = group->addChildNodeGroup(hlim::NodeGroup::GroupType::SFU);
+		subMemory->setName((boost::format("memory_split_%d") % splitIdx).str());
 		auto *subMemInfo = subMemory->createMetaInfo<hlim::MemoryGroup>(subMemory);
 		subMems[splitIdx].subGroup = subMemInfo;
 		std::map<hlim::BaseNode*, hlim::BaseNode*> &mapSrc2Dst = subMems[splitIdx].original2subGroup;
