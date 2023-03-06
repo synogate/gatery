@@ -288,3 +288,88 @@ BOOST_FIXTURE_TEST_CASE(LongAsynchronousReset, gtry::BoostUnitTestSimulationFixt
 	runTest({ 1,1 });
 }
 
+
+
+BOOST_FIXTURE_TEST_CASE(enableScopeRegisters, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 1'000'000 });
+	ClockScope clockScope(clock);
+
+	auto delayN = [](Bit input, size_t cycles)->Bit {
+		Area area("delayN", true);
+		HCL_NAMED(input);
+		Bit output = input;
+		for ([[maybe_unused]] auto i : utils::Range(cycles))
+			output = reg(output);
+		HCL_NAMED(output);
+		return output;
+	};
+
+
+	Bit input = pinIn().setName("input");
+	Bit en = pinIn().setName("en");
+
+	size_t cycles = 5;
+
+	UInt counter = 10_b;
+
+	Bit output;
+	ENIF (en) {
+		output = delayN(input, cycles);
+		ENALWAYS {
+			counter = reg(counter+1, 0);
+		}
+	}
+
+	pinOut(output).setName("output");
+	pinOut(counter).setName("counter");
+
+
+	addSimulationProcess([=, this]()->SimProcess {
+		simu(input) = '1';
+		simu(en) = '1';
+		// It should take *cycles* cycles for the 1 to ripple through, so the output should be undefined until then
+		for ([[maybe_unused]] auto i : utils::Range(cycles)) {
+			co_await OnClk(clock);
+			BOOST_TEST(!simu(output).allDefined());
+		}
+		// Now the first '1' should come through
+		co_await OnClk(clock);
+		BOOST_TEST(simu(output) == '1');
+
+		// Feed 0 but freeze
+		simu(input) = '0';
+		simu(en) = '0';
+
+		// The frozen pipeline should stay at '1' for > *cycles* cycles
+		for ([[maybe_unused]] auto i : utils::Range(cycles*2)) {
+			co_await OnClk(clock);
+			BOOST_TEST(simu(output) == '1');
+		}
+
+		// Unfreeze the pipeline
+		simu(en) = '1';
+
+		// The pipeline should keep outputting '1's while ingesting '0's for *cycles* cycles
+		for ([[maybe_unused]] auto i : utils::Range(cycles)) {
+			co_await OnClk(clock);
+			BOOST_TEST(simu(output) == '1');
+		}
+
+		// Only '0's from here on out
+		for ([[maybe_unused]] auto i : utils::Range(cycles*2)) {
+			co_await OnClk(clock);
+			BOOST_TEST(simu(output) == '0');
+		}
+
+		// counter should keep running because auf ENALWAYS
+		BOOST_TEST(simu(counter) == cycles * (1+2+1+2));
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest({ 1,1 });
+}

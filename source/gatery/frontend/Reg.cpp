@@ -48,12 +48,9 @@ namespace gtry
 		if(settings.allowRetimingBackward)
 			reg->getFlags().insert(hlim::Node_Register::Flags::ALLOW_RETIMING_BACKWARD);
 
-		ConditionalScope* scope = ConditionalScope::get();
+		EnableScope* scope = EnableScope::get();
 		if(scope)
-		{
-			reg->connectInput(hlim::Node_Register::ENABLE, scope->getFullCondition());
-			reg->setConditionId(scope->getId());
-		}
+			reg->connectInput(hlim::Node_Register::ENABLE, scope->getFullEnableCondition());
 
 		return SignalReadPort(reg, val.expansionPolicy);
 	}

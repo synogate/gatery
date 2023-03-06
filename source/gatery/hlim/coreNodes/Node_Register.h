@@ -71,9 +71,6 @@ namespace gtry::hlim {
 
 		virtual std::vector<size_t> getInternalStateSizes() const override;
 
-		void setConditionId(size_t id) { m_conditionId = id; }
-		size_t getConditionId() const { return m_conditionId; }
-
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 
 		virtual std::string attemptInferOutputName(size_t outputPort) const override;
@@ -88,7 +85,6 @@ namespace gtry::hlim {
 		bool hasResetValue() const { return getNonSignalDriver((size_t)Input::RESET_VALUE).node != nullptr; }
 		bool hasEnable() const { return getNonSignalDriver((size_t)Input::ENABLE).node != nullptr; }
 	protected:
-		size_t m_conditionId = 0;
 		utils::BitFlags<Flags> m_flags;
 
 		void writeResetValueTo(sim::DefaultBitVectorState &state, const std::array<size_t, 2> &offsets, size_t width, bool clearDefinedIfUnconnected) const;
