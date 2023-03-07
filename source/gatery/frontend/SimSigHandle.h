@@ -56,6 +56,36 @@ class BaseSigHandle
 		bool operator==(const sim::DefaultBitVectorState &state) const { ReadSignalList::addToAllScopes(m_handle.getOutput()); return this->m_handle == state; }
 		bool operator!=(const sim::DefaultBitVectorState &state) const { return !this->operator==(state); }
 
+		/// Interprete the given array of integers as one concatenated bit string to assign to this signal
+		template<std::unsigned_integral T>
+		void operator=(std::span<T> array) { this->m_handle = array; }
+		/// Interprete the given array of integers as one concatenated bit string to assign to this signal
+		template<std::unsigned_integral T>
+		void operator=(const std::vector<T> &array) { this->m_handle = std::span(array); }
+
+		/// Interprete the given array of integers as one concatenated bit string and return true if all bits in the signal are defined and equal to the given bit string.
+		template<std::unsigned_integral T>
+		bool operator==(std::span<T> array) const { return this->m_handle == array; }
+		/// Interprete the given array of integers as one concatenated bit string and return true if any bits in the signal are undefined or unequal to the given bit string.
+		template<std::unsigned_integral T>
+		bool operator!=(std::span<T> array) const { return !this->operator==(array); }
+		/// Interprete the given array of integers as one concatenated bit string and return true if all bits in the signal are defined and equal to the given bit string.
+		template<std::unsigned_integral T>
+		bool operator==(const std::vector<T> &array) const { return this->m_handle == std::span(array); }
+		/// Interprete the given array of integers as one concatenated bit string and return true if any bits in the signal are undefined or unequal to the given bit string.
+		template<std::unsigned_integral T>
+		bool operator!=(const std::vector<T> &array) const { return !this->operator==(array); }
+
+		/// Split the signal's state into integers and return their values.
+		/// @details The value of undefined bits in the returned bit string is arbitrary.
+		template<std::unsigned_integral T>
+		std::vector<T> toVector() const { return this->m_handle.toVector<T>(); }
+
+		/// Split the signal's state into integers and return their values.
+		/// @details The value of undefined bits in the returned bit string is arbitrary.
+		template<std::unsigned_integral T>
+		operator std::vector<T> () const { return this->m_handle.toVector<T>(); }
+
 		void invalidate() { m_handle.invalidate(); }
 		bool allDefined() const { return m_handle.allDefined(); }
 
@@ -101,6 +131,20 @@ class BaseUIntSigHandle : public BaseIntSigHandle<SignalType>
 		bool operator==(T v) const { return this->operator==((std::uint64_t)v); }
 		template<std::unsigned_integral T>
 		bool operator!=(T v) const { return this->operator!=((std::uint64_t)v); }
+
+
+		/// Interprete the given array of integers as one concatenated bit string and return true if all bits in the signal are defined and equal to the given bit string.
+		template<std::unsigned_integral T>
+		bool operator==(std::span<T> array) const { return this->m_handle == array; }
+		/// Interprete the given array of integers as one concatenated bit string and return true if any bits in the signal are undefined or unequal to the given bit string.
+		template<std::unsigned_integral T>
+		bool operator!=(std::span<T> array) const { return !this->operator==(array); }
+		/// Interprete the given array of integers as one concatenated bit string and return true if all bits in the signal are defined and equal to the given bit string.
+		template<std::unsigned_integral T>
+		bool operator==(const std::vector<T> &array) const { return this->m_handle == std::span(array); }
+		/// Interprete the given array of integers as one concatenated bit string and return true if any bits in the signal are undefined or unequal to the given bit string.
+		template<std::unsigned_integral T>
+		bool operator!=(const std::vector<T> &array) const { return !this->operator==(array); }		
 
 		std::uint64_t value() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle.value(); }
 		operator std::uint64_t () const { return value(); }
@@ -263,7 +307,6 @@ inline std::ostream &operator<<(std::ostream &stream, const SigHandleBit &handle
 template<EnumSignal SignalType>
 inline std::ostream &operator<<(std::ostream &stream, const SigHandleEnum<SignalType> &handle) { return stream << (sim::DefaultBitVectorState) handle; }
 
-
 SigHandleBit simu(const InputPin &pin);
 SigHandleBVec simu(const InputPins &pins);
 
@@ -341,4 +384,18 @@ void simAnnotationEndDelayed(const std::string &id, const Clock &clk, int cycles
 
 /**@}*/
 
+}
+
+namespace std {
+	/// Serializes an std::span or std::vector into an std::ostream.
+	/// @details This is required to use in an BOOST_TEST (or similar) expression. Boost test only looks for these in the
+	/// namespace of the right hand argument, so we need to place this into std::
+	template<typename Container> requires (std::same_as<Container, std::span<typename Container::value_type>> || std::same_as<Container, std::vector<typename Container::value_type>>)
+	inline std::ostream &operator<<(std::ostream &stream, const Container &array) { 
+		for (auto i : gtry::utils::Range(array.size())) {
+			if (i > 0) stream << ' ';
+			stream << array[i];
+		}
+		return stream;
+	}
 }

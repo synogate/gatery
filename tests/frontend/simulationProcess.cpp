@@ -802,3 +802,208 @@ BOOST_FIXTURE_TEST_CASE(SimProc_copyCaptureLambdaFork, BoostUnitTestSimulationFi
 }
 
 
+BOOST_FIXTURE_TEST_CASE(simu_assign_vector, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+
+	UInt largeInput = pinIn(128_b).setName("largeInput");
+
+	UInt firstByte = largeInput.lower(8_b);
+	UInt lastByte = largeInput.upper(8_b);
+	pinOut(firstByte);
+	pinOut(lastByte);
+
+	addSimulationProcess([=,this]()->SimProcess {
+
+		BOOST_TEST(!simu(firstByte).allDefined());
+		BOOST_TEST(!simu(lastByte).allDefined());
+
+		co_await AfterClk(clock);
+
+		std::vector<uint8_t> byteInput(16);
+		for (auto i : Range(byteInput.size())) byteInput[i] = 42+i;
+		simu(largeInput) = std::span{byteInput};
+
+		co_await AfterClk(clock);
+
+		BOOST_TEST(simu(firstByte) == 42);
+		BOOST_TEST(simu(lastByte) == 42+15);
+
+		co_await AfterClk(clock);
+
+		std::vector<uint64_t> wordInput(2);
+		for (auto i : Range(wordInput.size())) wordInput[i] = (42+i) | ((uint64_t)(13+i*5) << 7*8);
+		simu(largeInput) = std::span{wordInput};
+
+		co_await AfterClk(clock);
+
+		BOOST_TEST(simu(firstByte) == 42);
+		BOOST_TEST(simu(lastByte) == 13+5);
+
+		co_await AfterClk(clock);
+
+		simu(largeInput) = byteInput;
+
+		co_await AfterClk(clock);
+
+		BOOST_TEST(simu(firstByte) == 42);
+		BOOST_TEST(simu(lastByte) == 42+15);
+
+		co_await AfterClk(clock);
+
+		simu(largeInput) = wordInput;
+
+		co_await AfterClk(clock);
+
+		BOOST_TEST(simu(firstByte) == 42);
+		BOOST_TEST(simu(lastByte) == 13+5);
+
+		co_await AfterClk(clock);
+
+
+		stopTest();
+	});
+
+	design.postprocess();
+
+	runTicks(clock.getClk(), 100000);
+}
+
+
+BOOST_FIXTURE_TEST_CASE(simu_compare_vector, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+
+	UInt largeInput = pinIn(128_b).setName("largeInput");
+
+	UInt middleWord = largeInput(32, 64_b);
+	pinOut(middleWord);
+
+	addSimulationProcess([=,this]()->SimProcess {
+
+		BOOST_TEST(!simu(middleWord).allDefined());
+
+		co_await AfterClk(clock);
+
+		std::vector<uint8_t> byteInput(16);
+		for (auto i : Range(byteInput.size())) byteInput[i] = 42+i;
+		auto middleByteSpan = std::span<uint8_t>(byteInput.begin() + 4, 8);
+
+		BOOST_TEST(simu(middleWord) != middleByteSpan);
+		
+		simu(largeInput) = byteInput;
+
+		co_await AfterClk(clock);
+
+		BOOST_TEST(simu(middleWord) == middleByteSpan);
+
+		for (auto i : Range(byteInput.size())) byteInput[i] = 0;
+		
+		BOOST_TEST(simu(middleWord) != middleByteSpan);
+
+		stopTest();
+	});
+
+	design.postprocess();
+
+	runTicks(clock.getClk(), 100000);
+}
+
+BOOST_FIXTURE_TEST_CASE(simu_read_vector, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+
+	UInt largeInput = pinIn(128_b).setName("largeInput");
+
+	UInt middleWord = largeInput(32, 64_b);
+	pinOut(middleWord);
+
+	addSimulationProcess([=,this]()->SimProcess {
+
+		BOOST_TEST(!simu(middleWord).allDefined());
+
+		co_await AfterClk(clock);
+
+		std::vector<uint8_t> byteInput(16);
+		for (auto i : Range(byteInput.size())) byteInput[i] = 42+i;
+		auto middleByteSpan = std::span<uint8_t>(byteInput.begin() + 4, 8);
+		simu(largeInput) = byteInput;
+
+		co_await AfterClk(clock);
+		
+		// Explicit
+		auto middleVector = simu(middleWord).toVector<uint8_t>();
+
+		BOOST_REQUIRE(middleVector.size() == middleByteSpan.size());
+		for (auto i : Range(middleVector.size())) 
+			BOOST_TEST(middleVector[i] == middleByteSpan[i]);
+
+		co_await AfterClk(clock);
+
+		for (auto i : Range(byteInput.size())) byteInput[i] = 13+i*5;
+		simu(largeInput) = byteInput;
+
+		co_await AfterClk(clock);
+
+		// Implicit
+		middleVector = simu(middleWord);
+
+		BOOST_REQUIRE(middleVector.size() == middleByteSpan.size());
+		for (auto i : Range(middleVector.size())) 
+			BOOST_TEST(middleVector[i] == middleByteSpan[i]);
+
+		stopTest();
+	});
+
+	design.postprocess();
+
+	runTicks(clock.getClk(), 100000);
+}
+
+BOOST_FIXTURE_TEST_CASE(simu_read_large_vector, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+
+	UInt largeInput = pinIn(128_b).setName("largeInput");
+
+	UInt middleWord = largeInput(32, 64_b);
+	pinOut(middleWord);
+
+	addSimulationProcess([=,this]()->SimProcess {
+
+		BOOST_TEST(!simu(middleWord).allDefined());
+
+		co_await AfterClk(clock);
+
+		std::vector<uint8_t> byteInput(16);
+		for (auto i : Range(byteInput.size())) byteInput[i] = 42+i;
+		auto middleByteSpan = std::span<uint8_t>(byteInput.begin() + 4, 8);
+		simu(largeInput) = byteInput;
+
+		co_await AfterClk(clock);
+		
+		// Explicit
+		auto middleVector = simu(middleWord).toVector<uint32_t>();
+
+		BOOST_REQUIRE(middleVector.size()*4 == middleByteSpan.size());
+		for (auto i : Range(middleVector.size())) 
+			BOOST_TEST(middleVector[i] == (middleByteSpan[i*4+0]
+										    | (middleByteSpan[i*4+1] << 8)
+										    | (middleByteSpan[i*4+2] << 16)
+										    | (middleByteSpan[i*4+3] << 24)) );
+
+		stopTest();
+	});
+
+	design.postprocess();
+
+	runTicks(clock.getClk(), 100000);
+}
