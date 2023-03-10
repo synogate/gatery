@@ -363,6 +363,7 @@ namespace gtry {
 
 	std::string_view BaseBitVector::getName() const
 	{
+		if (m_node == nullptr) { return {}; }
 		if (auto *sigNode = dynamic_cast<hlim::Node_Signal*>(m_node->getDriver(0).node))
 			return sigNode->getName();
 		return {};
