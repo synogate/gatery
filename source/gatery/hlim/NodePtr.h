@@ -18,6 +18,7 @@
 #pragma once
 
 #include <type_traits>
+#include <compare>
 
 namespace gtry::hlim {
 

@@ -23,22 +23,55 @@ namespace gtry::scl
 	class Counter
 	{
 	public:
-		Counter(UInt end) :
-			m_area{ "scl_Counter", true },
-			m_value{ end.width() },
-			m_loadValue{ end.width() }
+
+		Counter(size_t end) :
+			m_area{ "scl_Counter", true }
 		{
+			if (!utils::isPow2(end)) {
+				init(end, BitWidth::last(end), true);
+			}
+			else {
+				init(end, BitWidth::count(end), false);
+			}
+			m_area.leave();
+		}
+
+		Counter(UInt end) :
+			m_area{ "scl_Counter", true }
+		{
+			init(end, end.width(), true);
+
+			m_area.leave();
+		}
+		
+		Counter& inc() { m_inc = '1'; return *this; }
+
+		void reset() { load(0); }
+		const UInt& value() const { return m_value; }
+		const Bit& isLast() const { return m_last; }
+		Bit isFirst() const { return m_value == 0; }
+
+		void load(UInt value) { m_load = '1'; m_loadValue = value; }
+	protected:
+		void init(UInt end, BitWidth counterW, bool checkOverflows) 
+		{
+			m_value = counterW;
+			m_loadValue = counterW;
+
 			HCL_NAMED(m_inc);
 
-			m_last = m_value == end - 1;
+			m_last = m_value == (end - 1).lower(counterW);
+
+			
 			IF(m_inc)
 			{
-				IF(m_last)
-					m_value = 0;
-				ELSE
-					m_value += 1;
+				m_value += 1;
+				if (checkOverflows) {
+					IF(m_last)
+						m_value = 0;
+				}
 			}
-			
+
 			HCL_NAMED(m_load);
 			HCL_NAMED(m_loadValue);
 			IF(m_load)
@@ -53,18 +86,8 @@ namespace gtry::scl
 			m_load = '0';
 			m_inc = '0';
 			m_loadValue = ConstUInt(m_loadValue.width());
-
-			m_area.leave();
 		}
-		
-		Counter& inc() { m_inc = '1'; return *this; }
 
-		void reset() { load(0); }
-		const UInt& value() const { return m_value; }
-		const Bit& isLast() const { return m_last; }
-		Bit isFirst() const { return m_value == 0; }
-
-		void load(UInt value) { m_load = '1'; m_loadValue = value; }
 
 	private:
 		Area m_area;

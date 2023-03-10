@@ -20,6 +20,7 @@
 #include "NodePtr.h"
 
 #include <limits>
+#include <compare>
 #include <stddef.h>
 
 namespace gtry::hlim {

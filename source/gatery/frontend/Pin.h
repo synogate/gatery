@@ -116,7 +116,11 @@ namespace gtry {
 
 	inline OutputPin pinOut(const Bit &bit) { return OutputPin(bit); }
 	template<BitVectorValue T>
-	inline OutputPins pinOut(const T &bitVector) { return OutputPins((ValueToBaseSignal<T>)bitVector); }
+	inline OutputPins pinOut(const T& bitVector) {
+		auto sig = (ValueToBaseSignal<T>)bitVector;
+		HCL_DESIGNCHECK_HINT(sig.valid(), "Can not pinOut uninitialized bitvectors");
+		return OutputPins(sig);
+	}
 
 	OutputPins pinOut(const InputPins &input);
 
@@ -145,7 +149,9 @@ namespace gtry
 			{
 				if (isReverse)
 				{
-					OutputPins(vec).setName(makeName());
+					auto name = makeName();
+					HCL_DESIGNCHECK_HINT(vec.valid(), "Can not pinOut uninitialized bitvectors but the member " + name + " is uninitialized!");
+					OutputPins(vec).setName(name);
 				}
 				else
 				{
