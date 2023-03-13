@@ -24,22 +24,22 @@ namespace gtry::scl
 	{
 	public:
 
-		Counter(size_t end) :
+		Counter(size_t end, size_t startupValue = 0) :
 			m_area{ "scl_Counter", true }
 		{
 			if (!utils::isPow2(end)) {
-				init(end, BitWidth::last(end), true);
+				init(end, BitWidth::last(end), true, startupValue);
 			}
 			else {
-				init(end, BitWidth::count(end), false);
+				init(end, BitWidth::count(end), false, startupValue);
 			}
 			m_area.leave();
 		}
 
-		Counter(UInt end) :
-			m_area{ "scl_Counter", true }
+		Counter(UInt end, size_t startupValue = 0) :
+			m_area{ "scl_Counter", true}
 		{
-			init(end, end.width(), true);
+			init(end, end.width(), true, startupValue);
 
 			m_area.leave();
 		}
@@ -53,7 +53,7 @@ namespace gtry::scl
 
 		void load(UInt value) { m_load = '1'; m_loadValue = value; }
 	protected:
-		void init(UInt end, BitWidth counterW, bool checkOverflows) 
+		void init(UInt end, BitWidth counterW, bool checkOverflows, size_t resetValue = 0) 
 		{
 			m_value = counterW;
 			m_loadValue = counterW;
@@ -79,7 +79,7 @@ namespace gtry::scl
 				m_value = m_loadValue;
 			}
 
-			m_value = reg(m_value, 0);
+			m_value = reg(m_value, resetValue);
 			HCL_NAMED(m_value);
 			HCL_NAMED(m_last);
 
