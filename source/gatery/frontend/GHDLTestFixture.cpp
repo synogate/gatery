@@ -118,6 +118,7 @@ void GHDLTestFixture::softlinkAll(const std::filesystem::path &src)
 void GHDLTestFixture::prepRun()
 {
 	design.postprocess();
+	BoostUnitTestSimulationFixture::prepRun();
 
 	m_vhdlExport.emplace("design.vhd");
 	m_vhdlExport->addTestbenchRecorder(getSimulator(), "testbench", true);

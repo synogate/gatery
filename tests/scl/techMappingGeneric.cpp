@@ -82,6 +82,38 @@ BOOST_FIXTURE_TEST_CASE(lutram_1, TestWithDefaultDevice<Test_Histogram>)
 	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
 }
 
+BOOST_FIXTURE_TEST_CASE(lutram_1_noEnable, TestWithDefaultDevice<Test_Histogram>)
+{
+	using namespace gtry;
+	numBuckets = 4;
+	bucketWidth = 8_b;
+	forceNoEnable = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+
+BOOST_FIXTURE_TEST_CASE(lutram_1_resetLogic, TestWithDefaultDevice<Test_Histogram>)
+{
+	using namespace gtry;
+	numBuckets = 4;
+	bucketWidth = 8_b;
+	forceMemoryResetLogic = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(lutram_1_resetLogic_noEnable, TestWithDefaultDevice<Test_Histogram>)
+{
+	using namespace gtry;
+	numBuckets = 4;
+	bucketWidth = 8_b;
+	forceMemoryResetLogic = true;
+	forceNoEnable = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
 BOOST_FIXTURE_TEST_CASE(lutram_2, TestWithDefaultDevice<Test_Histogram>)
 {
 	using namespace gtry;

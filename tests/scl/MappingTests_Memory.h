@@ -25,8 +25,10 @@ struct Test_Histogram : public gtry::GHDLTestFixture
 {
 	size_t numBuckets = 32;
 	gtry::BitWidth bucketWidth = gtry::BitWidth(8);
-	size_t iterationFactor = 10;
+	size_t iterationFactor = 8;
 	bool highLatencyExternal = false;
+	bool forceMemoryResetLogic = false;
+	bool forceNoEnable = false;
 	void execute();
 };
 

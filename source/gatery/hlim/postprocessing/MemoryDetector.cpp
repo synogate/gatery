@@ -948,8 +948,9 @@ void MemoryGroup::buildResetOverrides(Circuit &circuit, NodePort writeAddr, Node
 
 	HCL_ASSERT(resetWritePort->getDriver((size_t)Node_MemPort::Inputs::enable) == resetWritePort->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
 	if (resetWritePort->getDriver((size_t)Node_MemPort::Inputs::wrEnable).node == nullptr) {
-		resetWritePort->rewireInput((size_t)Node_MemPort::Inputs::enable, inResetMode);
-		resetWritePort->rewireInput((size_t)Node_MemPort::Inputs::wrEnable, inResetMode);
+		// This might seem unintuitive, but leaving it unconnected in this case is the correct thing.
+		// If it was unconnected before, it was always writing. Now, we want to always write during reset 
+		// and always write outside of reset, so we can leave it unconnected.
 	} else {
 		auto *orNodeEnable = circuit.createNode<Node_Logic>(Node_Logic::OR);
 		orNodeEnable->moveToGroup(m_fixupNodeGroup);
