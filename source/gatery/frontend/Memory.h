@@ -21,7 +21,7 @@
 #include "Bit.h"
 #include "BVec.h"
 #include "BitWidth.h"
-#include "ConditionalScope.h"
+#include "EnableScope.h"
 #include "Pack.h"
 #include "Clock.h"
 #include "SignalMiscOp.h"
@@ -65,8 +65,8 @@ namespace gtry
 		{
 			auto* readPort = DesignScope::createNode<hlim::Node_MemPort>(m_wordSize);
 			readPort->connectMemory(m_memoryNode);
-			if (auto* scope = gtry::ConditionalScope::get())
-				readPort->connectEnable(scope->getFullCondition());
+			if (auto* scope = gtry::EnableScope::get())
+				readPort->connectEnable(scope->getFullEnableCondition());
 
 			readPort->connectAddress(m_address.readPort());
 			readPort->setClock(ClockScope::getClk().getClk());
@@ -87,9 +87,9 @@ namespace gtry
 			auto* writePort = DesignScope::createNode<hlim::Node_MemPort>(m_wordSize);
 			writePort->connectMemory(m_memoryNode);
 			//writePort->connectEnable(constructEnableBit().readPort());
-			if (auto* scope = gtry::ConditionalScope::get()) {
-				writePort->connectEnable(scope->getFullCondition());
-				writePort->connectWrEnable(scope->getFullCondition());
+			if (auto* scope = gtry::EnableScope::get()) {
+				writePort->connectEnable(scope->getFullEnableCondition());
+				writePort->connectWrEnable(scope->getFullEnableCondition());
 			}
 			writePort->connectAddress(m_address.readPort());
 			writePort->connectWrData(packedValue.readPort());

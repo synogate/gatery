@@ -24,9 +24,14 @@
 
 namespace gtry::sim {
 
+size_t SigHandle::getWidth() const 
+{
+	return m_output.node->getOutputConnectionType(m_output.port).width;
+}
+
 void SigHandle::operator=(std::uint64_t v)
 {
-	auto width = m_output.node->getOutputConnectionType(m_output.port).width;
+	auto width = getWidth();
 	DefaultBitVectorState state;
 	state.resize(width);
 	state.setRange(DefaultConfig::DEFINED, 0, width);
@@ -39,7 +44,7 @@ void SigHandle::operator=(std::uint64_t v)
 
 void SigHandle::operator=(std::int64_t v)
 {
-	auto width = m_output.node->getOutputConnectionType(m_output.port).width;
+	auto width = getWidth();
 	DefaultBitVectorState state;
 	state.resize(width);
 	state.setRange(DefaultConfig::DEFINED, 0, width);
@@ -51,7 +56,7 @@ void SigHandle::operator=(std::int64_t v)
 
 void SigHandle::operator=(std::string_view v)
 {
-	auto width = m_output.node->getOutputConnectionType(m_output.port).width;
+	auto width = getWidth();
 	DefaultBitVectorState state = sim::parseBitVector(v);
 	HCL_ASSERT(width == state.size());
 	operator=(state);
@@ -59,7 +64,7 @@ void SigHandle::operator=(std::string_view v)
 
 void SigHandle::operator=(char v)
 {
-	auto width = m_output.node->getOutputConnectionType(m_output.port).width;
+	auto width = getWidth();
 	DefaultBitVectorState state = sim::parseBit(v);
 	HCL_ASSERT(width == state.size());
 	operator=(state);
@@ -73,9 +78,21 @@ void SigHandle::operator=(const DefaultBitVectorState &state)
 		SimulationContext::current()->overrideSignal(*this, state);
 }
 
+void SigHandle::operator=(std::pair<const void*, size_t> array)
+{
+	auto width = getWidth();
+	HCL_DESIGNCHECK_HINT(width == array.second*8, "The array that is to be assigned to the simulation signal has the wrong size!");
+	auto state = sim::createDefaultBitVectorState(array.second, array.first);
+
+	if (m_overrideRegister)
+		SimulationContext::current()->overrideRegister(*this, state);
+	else
+		SimulationContext::current()->overrideSignal(*this, state);	
+}
+
 void SigHandle::invalidate()
 {
-	auto width = m_output.node->getOutputConnectionType(m_output.port).width;
+	auto width = getWidth();
 	DefaultBitVectorState state;
 	state.resize(width);
 	if (m_overrideRegister)
@@ -87,7 +104,7 @@ void SigHandle::invalidate()
 
 std::uint64_t SigHandle::value() const
 {
-	auto width = m_output.node->getOutputConnectionType(m_output.port).width;
+	auto width = getWidth();
 	if (!width)
 		return 0;
 
@@ -107,7 +124,7 @@ DefaultBitVectorState SigHandle::eval() const
 
 bool SigHandle::allDefined() const
 {
-	auto width = m_output.node->getOutputConnectionType(m_output.port).width;
+	auto width = getWidth();
 	if (!width)
 		return true;
 
@@ -118,7 +135,7 @@ bool SigHandle::allDefined() const
 
 std::uint64_t SigHandle::defined() const
 {
-	auto width = m_output.node->getOutputConnectionType(m_output.port).width;
+	auto width = getWidth();
 	if (!width)
 		return 0;
 
@@ -141,7 +158,7 @@ struct StateBlockOutputIterator {
 
 void SigHandle::assign(const sim::BigInt &v)
 {
-	auto width = m_output.node->getOutputConnectionType(m_output.port).width;
+	auto width = getWidth();
 	DefaultBitVectorState state;
 	state.resize(width);
 	state.setRange(DefaultConfig::DEFINED, 0, width);
@@ -161,7 +178,7 @@ SigHandle::operator sim::BigInt () const
 
 SigHandle::operator std::int64_t () const
 {
-	auto width = m_output.node->getOutputConnectionType(m_output.port).width;
+	auto width = getWidth();
 	if (!width)
 		return 0;
 
@@ -180,7 +197,7 @@ SigHandle::operator std::int64_t () const
 
 SigHandle::operator bool () const
 {
-	auto width = m_output.node->getOutputConnectionType(m_output.port).width;
+	auto width = getWidth();
 	HCL_ASSERT(width == 1);
 
 	DefaultBitVectorState state;
@@ -191,7 +208,7 @@ SigHandle::operator bool () const
 
 SigHandle::operator char () const
 {
-	auto width = m_output.node->getOutputConnectionType(m_output.port).width;
+	auto width = getWidth();
 	HCL_ASSERT(width == 1);
 
 	DefaultBitVectorState state;
@@ -259,6 +276,40 @@ bool SigHandle::operator==(char v) const
 	}
 }
 
+bool SigHandle::operator==(std::pair<const void*, size_t> array) const
+{
+	auto width = getWidth();
+	HCL_DESIGNCHECK_HINT(width == array.second*8, "The array that is to be compared to the simulation signal has the wrong size!");
+	
+	DefaultBitVectorState state;
+	SimulationContext::current()->getSignal(*this, state);
+
+	// If anything in the state is undefined, the comparison is always false.
+	if (!sim::allDefined<DefaultConfig>(state))
+		return false;
+
+	size_t numFullWords = width/8 / sizeof(sim::DefaultConfig::BaseType);
+	size_t remainingBytes = width/8 - numFullWords * sizeof(sim::DefaultConfig::BaseType);
+
+	const sim::DefaultConfig::BaseType *srcWords = (const sim::DefaultConfig::BaseType *) array.first;
+
+	// compare full words directly
+	for (auto wordIdx : utils::Range(numFullWords))
+		if (state.data(sim::DefaultConfig::VALUE)[wordIdx] != srcWords[wordIdx]) return false;
+
+	// For partial words, create a bit mask to mask the differences, then check if any differences remain after the masking.
+	if (remainingBytes > 0) {
+		auto lastStateWord = state.data(sim::DefaultConfig::VALUE)[numFullWords];
+		auto lastCompareWord = srcWords[numFullWords];
+		auto difference = lastStateWord ^ lastCompareWord;
+		sim::DefaultConfig::BaseType mask = ~0ull;
+		mask >>= (sizeof(sim::DefaultConfig::BaseType) - remainingBytes) * 8;
+		difference &= mask;
+		if (difference) 
+			return false;
+	}
+	return true;
+}
 
 void SigHandle::overrideDrivingRegister()
 {

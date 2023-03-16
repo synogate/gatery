@@ -126,7 +126,7 @@ void GHDLTestFixture::prepRun()
 	m_vhdlExport->writeStandAloneProjectFile("compile.sh");
 	(*m_vhdlExport)(design.getCircuit());
 
-	recordVCD("internal.vcd");
+	//recordVCD("internal.vcd");
 }
 
 void GHDLTestFixture::runTest(const hlim::ClockRational &timeoutSeconds)

@@ -152,7 +152,6 @@ std::unique_ptr<BaseNode> Node_Register::cloneUnconnected() const
 {
 	std::unique_ptr<BaseNode> res(new Node_Register());
 	copyBaseToClone(res.get());
-	((Node_Register*)res.get())->m_conditionId = m_conditionId;
 	((Node_Register*)res.get())->m_flags = m_flags;
 	return res;
 }

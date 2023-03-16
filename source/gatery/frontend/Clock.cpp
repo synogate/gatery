@@ -19,7 +19,7 @@
 #include "Clock.h"
 
 #include "DesignScope.h"
-#include "ConditionalScope.h"
+#include "EnableScope.h"
 #include "trace.h"
 #include "SignalLogicOp.h"
 
@@ -265,12 +265,9 @@ namespace gtry
 		if (settings.allowRetimingBackward)
 			reg->getFlags().insert(hlim::Node_Register::Flags::ALLOW_RETIMING_BACKWARD);
 
-		ConditionalScope* scope = ConditionalScope::get();
+		EnableScope* scope = EnableScope::get();
 		if (scope)
-		{
-			reg->connectInput(hlim::Node_Register::ENABLE, scope->getFullCondition());
-			reg->setConditionId(scope->getId());
-		}
+			reg->connectInput(hlim::Node_Register::ENABLE, scope->getFullEnableCondition());
 		return reg;
 	}
 
