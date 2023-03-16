@@ -233,8 +233,48 @@ BOOST_FIXTURE_TEST_CASE(ConstructFromCompound, BoostUnitTestSimulationFixture)
 	RichStruct out = constructFrom(in);
 	BOOST_TEST(in.parameter == out.parameter);
 
+/*
+	std::tuple<int, UInt> inTuple{ 42, 13 };
+	std::tuple<int, UInt> outTuple = constructFrom(inTuple);
+
+	BOOST_TEST(std::get<0>(outTuple) == std::get<0>(inTuple));
+*/
+
 	eval();
 }
+
+
+BOOST_FIXTURE_TEST_CASE(ConstructFromPreservesLoopiness, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+
+	Bit bit;
+	bit = constructFrom(bit);
+	sim_assert(bit == '1');
+	bit = '1';
+
+
+	UInt uInt, uIntTemplate;
+	uIntTemplate = 32_b;
+	uInt = constructFrom(uIntTemplate);
+	sim_assert(uInt == 42);
+	uInt = 42;
+
+
+	RichStruct templateStruct;
+	templateStruct.base.vec = 5_b;
+	templateStruct.base.bit = '0';
+	templateStruct.parameter = 12;
+
+	RichStruct strct;
+	strct = constructFrom(templateStruct);
+	sim_assert(strct.base.vec == 13);
+	strct.base.vec = 13;
+
+	eval();
+}
+
 
 
 BOOST_FIXTURE_TEST_CASE(tapOnCompound, BoostUnitTestSimulationFixture)
