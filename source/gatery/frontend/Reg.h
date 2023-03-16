@@ -18,6 +18,7 @@
 #pragma once
 #include "Signal.h"
 #include "Compound.h"
+#include "ConstructFrom.h"
 
 #include <boost/hana/ext/std/array.hpp>
 #include <boost/hana/ext/std/tuple.hpp>
@@ -102,44 +103,84 @@ namespace gtry
 		});
 	}
 
-	template<Signal S>
+	template<gtry::Signal S>
 	class Reg
 	{
 	public:
 		Reg() = default;
-		Reg(const Reg&) = delete;
+		Reg(const Reg &other) {
+			if (other.m_initialized)
+				init(other.m_resetValue, other.m_settings);
+		}
 
-		template<SignalValue Sv>
-		Reg(const Sv& resetValue, const RegisterSettings& settings = {})
+		template<gtry::SignalValue Sv>
+		Reg(const Sv& resetValue, const gtry::RegisterSettings& settings = {})
 		{
 			init(resetValue, settings);
 		}
 
-		template<SignalValue Sv>
-		void init(const Sv& resetValue, const RegisterSettings& settings = {})
+		template<gtry::SignalValue Sv>
+		void constructFrom(const Sv& templateValue, const gtry::RegisterSettings& settings = {})
 		{
-			m_current = reg(m_next, resetValue, settings);
+			m_settings = settings;
+			m_resetValue = gtry::dontCare(templateValue);
+			m_set = gtry::constructFrom(templateValue);
 			m_next = m_set;
+			m_current = reg(m_next, m_settings);
 			m_set = m_current;
+			m_initialized = true;
 		}
 
-		template<SignalValue Sv>
-		Reg& operator = (Sv&& val) { m_set = val; return *this; }
-		operator S() const { return m_current; }
-		const S& next() const { return m_next; }
-		const S& current() const { return m_current; }
-		const S& combinatorial() const { return m_set; }
+		template<gtry::SignalValue Sv>
+		void init(const Sv& resetValue, const gtry::RegisterSettings& settings = {})
+		{
+			m_settings = settings;
+			m_resetValue = resetValue;
+			m_set = gtry::constructFrom(m_resetValue);
+			m_next = m_set;
+			m_current = reg(m_next, m_resetValue, m_settings);
+			m_set = m_current;
+			m_initialized = true;
+		}
+
+		template<gtry::SignalValue Sv>
+		Reg& operator = (Sv&& val) {
+			HCL_DESIGNCHECK_HINT(m_initialized, "Register class must be initialized before use.");
+			m_set = val; 
+			return *this; 
+		}
+		operator S() const { 
+			HCL_DESIGNCHECK_HINT(m_initialized, "Register class must be initialized before use.");
+			return m_current; 
+		}
+		const S& next() const { 
+			HCL_DESIGNCHECK_HINT(m_initialized, "Register class must be initialized before use.");
+			return m_next; 
+		}
+		const S& current() const { 
+			HCL_DESIGNCHECK_HINT(m_initialized, "Register class must be initialized before use.");
+			return m_current; 
+		}
+		const S& combinatorial() const { 
+			HCL_DESIGNCHECK_HINT(m_initialized, "Register class must be initialized before use.");
+			return m_set; 
+		}
 
 		void setName(std::string _name)
 		{
+			HCL_DESIGNCHECK_HINT(m_initialized, "Register class must be initialized before use.");
 			m_current.setName(_name);
 			m_next.setName(_name + "_next");
 		}
 	private:
+		bool m_initialized = false;
+		S m_resetValue;
 		S m_current;
 		S m_set;
 		S m_next;
+		gtry::RegisterSettings m_settings;
 	};
+
 
 /// @}
 

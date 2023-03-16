@@ -288,3 +288,96 @@ BOOST_FIXTURE_TEST_CASE(LongAsynchronousReset, gtry::BoostUnitTestSimulationFixt
 	runTest({ 1,1 });
 }
 
+
+
+
+BOOST_FIXTURE_TEST_CASE(SimpleRegClass, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	UInt inSignal = UInt{pinIn(2_b)};
+	HCL_NAMED(inSignal);
+
+	Reg<UInt> regA;
+	Reg<UInt> regB;
+
+	regA.constructFrom(inSignal);
+	regA.setName("regA");
+
+	regA = inSignal;
+	UInt outSignal = regA;
+	HCL_NAMED(outSignal);
+	pinOut(outSignal);
+
+	regB.init(3);
+	regB = inSignal;
+	UInt outSignalReset = regB;
+	pinOut(outSignalReset);
+
+	addSimulationProcess([=, this]()->SimProcess {
+
+		BOOST_TEST(simu(outSignalReset) == 3);
+
+		simu(inSignal) = 2;
+
+		co_await AfterClk(clock);
+
+		BOOST_TEST(simu(outSignal) == 2);
+		BOOST_TEST(simu(outSignalReset) == 2);
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest({ 1,1 });
+}
+
+/*
+BOOST_FIXTURE_TEST_CASE(TupleRegisterRegClass, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	static_assert(Signal<std::tuple<int, UInt>>);
+	static_assert(Signal<std::pair<UInt, int>>);
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	std::tuple<int, UInt> inSignal{ 0, UInt{pinIn(2_b)} };
+	std::tuple<int, unsigned> inSignalReset{ 1, 3 };
+
+	Reg<std::tuple<int, UInt>> regA;
+	Reg<std::tuple<int, UInt>> regB;
+
+	regA.constructFrom(inSignal);
+	regA = inSignal;
+	std::tuple<int, UInt> outSignal = regA;
+	pinOut(get<1>(outSignal));
+
+	regB.init(inSignalReset);
+	regB = inSignal;
+	std::tuple<int, UInt> outSignalReset = regB;
+	pinOut(get<1>(outSignalReset));
+
+	addSimulationProcess([=, this]()->SimProcess {
+
+		BOOST_TEST(get<0>(outSignalReset) == 1);
+		BOOST_TEST(simu(get<1>(outSignalReset)) == 3);
+
+		simu(get<1>(inSignal)) = 2;
+
+		co_await AfterClk(clock);
+
+		BOOST_TEST(simu(get<1>(outSignal)) == 2);
+		BOOST_TEST(simu(get<1>(outSignalReset)) == 2);
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest({ 1,1 });
+}
+*/
