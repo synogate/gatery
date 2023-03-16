@@ -294,7 +294,7 @@ public:
 		m_tlink <<= memTLink();
 		pinOut(m_tlink, "dmem");
 
-		DesignScope::get()->getCircuit().addSimulationProcess([=]()->SimProcess {
+		DesignScope::get()->getCircuit().addSimulationProcess([=,this]()->SimProcess {
 			simu(valid(*m_tlink.d)) = '0';
 			simu(ready(m_tlink.a)) = '0';
 

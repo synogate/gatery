@@ -250,7 +250,7 @@ struct Test_GenericMemoryExport : public gtry::GHDLTestFixture
 					simu(input) = newValue;
 					contents[idx] = newValue;
 
-					fork([=, &testsInFlight]()->SimProcess {
+					fork([=,this, &testsInFlight]()->SimProcess {
 						testsInFlight++;
 						for ([[maybe_unused]] auto i : Range(latency+1))
 							co_await OnClk(clock);
