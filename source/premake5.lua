@@ -29,6 +29,7 @@ function GateryWorkspaceDefaults()
             "boost_unit_test_framework", 
             "boost_program_options", 
             "boost_filesystem", 
+            "boost_iostream",
             "pthread",
             "yaml-cpp",
             "boost_json",
