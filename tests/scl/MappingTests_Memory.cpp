@@ -26,6 +26,9 @@ using namespace gtry;
 
 void Test_Histogram::execute()
 {
+	if (highLatencyExternal)
+		forceMemoryResetLogic = true;
+
 	Clock clock({
 			.absoluteFrequency = {{125'000'000,1}},
 			.memoryResetType = (forceMemoryResetLogic?ClockConfig::ResetType::SYNCHRONOUS:ClockConfig::ResetType::NONE),
