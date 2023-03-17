@@ -103,7 +103,7 @@ namespace gtry
 		});
 	}
 
-	template<gtry::Signal S>
+	template<Signal S>
 	class Reg
 	{
 	public:
@@ -113,17 +113,16 @@ namespace gtry
 				init(other.m_resetValue, other.m_settings);
 		}
 
-		template<gtry::SignalValue Sv>
-		Reg(const Sv& resetValue, const gtry::RegisterSettings& settings = {})
+		template<SignalValue Sv>
+		Reg(const Sv& resetValue, const RegisterSettings& settings = {})
 		{
 			init(resetValue, settings);
 		}
 
-		template<gtry::SignalValue Sv>
-		void constructFrom(const Sv& templateValue, const gtry::RegisterSettings& settings = {})
+		void constructFrom(const S& templateValue, const RegisterSettings& settings = {})
 		{
 			m_settings = settings;
-			m_resetValue = gtry::dontCare(templateValue);
+			m_resetValue = dontCare(templateValue);
 			m_set = gtry::constructFrom(templateValue);
 			m_next = m_set;
 			m_current = reg(m_next, m_settings);
@@ -131,8 +130,8 @@ namespace gtry
 			m_initialized = true;
 		}
 
-		template<gtry::SignalValue Sv>
-		void init(const Sv& resetValue, const gtry::RegisterSettings& settings = {})
+		template<SignalValue Sv>
+		void init(const Sv& resetValue, const RegisterSettings& settings = {})
 		{
 			m_settings = settings;
 			m_resetValue = resetValue;
@@ -143,7 +142,7 @@ namespace gtry
 			m_initialized = true;
 		}
 
-		template<gtry::SignalValue Sv>
+		template<SignalValue Sv>
 		Reg& operator = (Sv&& val) {
 			HCL_DESIGNCHECK_HINT(m_initialized, "Register class must be initialized before use.");
 			m_set = val; 
@@ -169,8 +168,8 @@ namespace gtry
 		void setName(std::string _name)
 		{
 			HCL_DESIGNCHECK_HINT(m_initialized, "Register class must be initialized before use.");
-			m_current.setName(_name);
-			m_next.setName(_name + "_next");
+			gtry::setName(m_current, _name);
+			gtry::setName(m_next, _name + "_next");
 		}
 	private:
 		bool m_initialized = false;
@@ -178,7 +177,7 @@ namespace gtry
 		S m_current;
 		S m_set;
 		S m_next;
-		gtry::RegisterSettings m_settings;
+		RegisterSettings m_settings;
 	};
 
 
