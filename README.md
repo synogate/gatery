@@ -28,8 +28,8 @@ sudo dnf install g++ boost-devel git make gmp-devel
 gcc --version
 
 # fetch premake5 and make globally available
-curl -L https://github.com/premake/premake-core/releases/download/v5.0.0-alpha16/premake-5.0.0-alpha16-linux.tar.gz > /tmp/premake-5.0.0-alpha16-linux.tar.gz
-tar -zxf  /tmp/premake-5.0.0-alpha16-linux.tar.gz -C /tmp/
+curl -L https://github.com/premake/premake-core/releases/download/v5.0.0-beta2/premake-5.0.0-beta2-linux.tar.gz > /tmp/premake-5.0.0-beta2-linux.tar.gz
+tar -zxf  /tmp/premake-5.0.0-beta2-linux.tar.gz -C /tmp/
 sudo mv /tmp/premake5 /usr/local/bin/
 
 # fetch template project
@@ -56,8 +56,8 @@ sudo update-alternatives --config g++
 gcc --version
 
 # fetch premake5 and make globally available
-curl -L https://github.com/premake/premake-core/releases/download/v5.0.0-alpha16/premake-5.0.0-alpha16-linux.tar.gz > /tmp/premake-5.0.0-alpha16-linux.tar.gz
-tar -zxf  /tmp/premake-5.0.0-alpha16-linux.tar.gz -C /tmp/
+curl -L https://github.com/premake/premake-core/releases/download/v5.0.0-beta2/premake-5.0.0-beta2-linux.tar.gz > /tmp/premake-5.0.0-beta2-linux.tar.gz
+tar -zxf  /tmp/premake-5.0.0-beta2-linux.tar.gz -C /tmp/
 sudo mv /tmp/premake5 /usr/local/bin/
 
 # Fetch, build, and install boost
