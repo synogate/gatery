@@ -533,6 +533,58 @@ BOOST_FIXTURE_TEST_CASE(SimpleRegClass, gtry::BoostUnitTestSimulationFixture)
 }
 
 
+BOOST_FIXTURE_TEST_CASE(CompoundRegClass, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	TestCompound inSignal{
+		.a = pinIn(2_b),
+		.b = 1
+	};
+
+	TestCompound resetSignal{
+		.a = "b01",
+		.b = 2
+	};
+
+
+	Reg<TestCompound> regA;
+	Reg<TestCompound> regB;
+
+	regA.constructFrom(inSignal);
+	regA.setName("regA");
+
+	regA = inSignal;
+	TestCompound outSignal = regA;
+	HCL_NAMED(outSignal);
+	pinOut(outSignal, "outSignal");
+
+	regB.init(resetSignal);
+	regB = inSignal;
+	TestCompound outSignalReset = regB;
+	pinOut(outSignalReset, "outSignalReset");
+
+	addSimulationProcess([=, this]()->SimProcess {
+
+		BOOST_TEST(simu(outSignalReset.a) == 1);
+
+		simu(inSignal.a) = 2;
+
+		co_await AfterClk(clock);
+
+		BOOST_TEST(simu(outSignal.a) == 2);
+		BOOST_TEST(simu(outSignalReset.a) == 2);
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest({ 1,1 });
+}
+
 /*
 BOOST_FIXTURE_TEST_CASE(TupleRegisterRegClass, gtry::BoostUnitTestSimulationFixture)
 {
