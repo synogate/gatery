@@ -861,7 +861,6 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 
 		std::mt19937 rng{ std::random_device{}() };
 
-		using std::numeric_limits;
 		std::vector<std::pair<uint32_t, uint32_t>> cases = {
 			{ 0, 0 },	// equal
 			{ 1u << 31, 1u << 31 }, // equal high bit set
@@ -869,10 +868,10 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_branch, BoostUnitTestSimulationFixture)
 			{ 1u << 31, 0 }, // high bit unequal
 			{ 1, 2 }, // small difference
 			{ 2, 1 }, // small difference
-			{ numeric_limits<uint32_t>::min(), numeric_limits<uint32_t>::max() }, // big difference unsigned
-			{ numeric_limits<uint32_t>::max(), numeric_limits<uint32_t>::min() }, // big difference unsigned
-			{ numeric_limits<int32_t>::min(), numeric_limits<int32_t>::max() }, // big difference signed
-			{ numeric_limits<int32_t>::max(), numeric_limits<int32_t>::min() }, // big difference signed
+			{ std::numeric_limits<uint32_t>::min(), std::numeric_limits<uint32_t>::max() }, // big difference unsigned
+			{ std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::min() }, // big difference unsigned
+			{ std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max() }, // big difference signed
+			{ std::numeric_limits<int32_t>::max(), std::numeric_limits<int32_t>::min() }, // big difference signed
 		};
 		for (size_t i = 0; i < 32; ++i)
 			cases.push_back({ rng(), rng() });
