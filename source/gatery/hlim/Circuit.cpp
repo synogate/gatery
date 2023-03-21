@@ -611,14 +611,19 @@ void Circuit::mergeMuxes(Subnet &subnet)
 						}
 
 						if (conditionsMatch) {
-							//std::cout << "Conditions match!" << std::endl;
-							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Merging muxes " << prevMuxNode << " and " << muxNode << " because they form an if then else pair");
+							if (prevMuxNode->getNonSignalDriver(prevConditionNegated?2:1) == muxNode->getNonSignalDriver(muxInput?2:1))
+								dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_POSTPROCESSING << "Not merging muxes " << prevMuxNode << " and " << muxNode << " because the former is driving itself.");
+							else {
+								//std::cout << "Conditions match!" << std::endl;
+								dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Merging muxes " << prevMuxNode << " and " << muxNode << " because they form an if then else pair");
 
-							auto bypass = prevMuxNode->getDriver(prevConditionNegated?2:1);
-							// Connect second mux directly to bypass
-							muxNode->connectInput(muxInput, bypass);
+								auto bypass = prevMuxNode->getDriver(prevConditionNegated?2:1);
 
-							done = false;
+								// Connect second mux directly to bypass
+								muxNode->connectInput(muxInput, bypass);
+
+								done = false;
+							}
 						}
 					}
 				}
@@ -656,17 +661,21 @@ void Circuit::mergeRewires(Subnet &subnet)
 								auto prevInputIdx = prevRewireNode->getOp().ranges[0].inputIdx;
 								auto prevInputOffset = prevRewireNode->getOp().ranges[0].inputOffset;
 
-								dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Merging rewires " << prevRewireNode << " and " << rewireNode << " by directly fetching from input " << prevInputIdx << " at bit offset " << prevInputOffset);
+								if (prevRewireNode->getNonSignalDriver(prevInputIdx) == rewireNode->getNonSignalDriver(inputIdx))
+									dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_POSTPROCESSING << "Not merging rewires " << prevRewireNode << " and " << prevRewireNode << " because the former is driving itself.");
+								else {
+									dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Merging rewires " << prevRewireNode << " and " << prevRewireNode << " by directly fetching from input " << prevInputIdx << " at bit offset " << prevInputOffset);
 
-								auto op = rewireNode->getOp();
-								for (auto &r : op.ranges) {
-									if (r.source == Node_Rewire::OutputRange::INPUT && r.inputIdx == inputIdx)
-										r.inputOffset += prevInputOffset;
+									auto op = rewireNode->getOp();
+									for (auto &r : op.ranges) {
+										if (r.source == Node_Rewire::OutputRange::INPUT && r.inputIdx == inputIdx)
+											r.inputOffset += prevInputOffset;
+									}
+									rewireNode->setOp(std::move(op));
+
+									rewireNode->connectInput(inputIdx, prevRewireNode->getDriver(prevInputIdx));
+									done = false;
 								}
-								rewireNode->setOp(std::move(op));
-
-								rewireNode->connectInput(inputIdx, prevRewireNode->getDriver(prevInputIdx));
-								done = false;
 							}
 						}
 					}
@@ -737,10 +746,14 @@ void Circuit::removeIrrelevantMuxes(Subnet &subnet)
 						}
 
 						if (allSubnetOutputsMuxed) {
-							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing mux " << muxNode << " because only input " << muxInputPort << " is relevant further on");
-							//std::cout << "Rewiring past mux" << std::endl;
-							muxOutput.node->connectInput(muxOutput.port, muxNode->getDriver(muxInputPort));
-							done = false;
+							if (muxNode->getNonSignalDriver(muxInputPort) == muxOutput.node->getNonSignalDriver(muxOutput.port))
+								dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_POSTPROCESSING << "Not removing mux " << muxNode << " because it is driving itself");
+							else {
+								dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing mux " << muxNode << " because only input " << muxInputPort << " is relevant further on");
+								//std::cout << "Rewiring past mux" << std::endl;
+								muxOutput.node->connectInput(muxOutput.port, muxNode->getDriver(muxInputPort));
+								done = false;
+							}
 						} else {
 							//std::cout << "Not rewiring past mux" << std::endl;
 						}
@@ -823,17 +836,21 @@ void Circuit::cullMuxConditionNegations(Subnet &subnet)
 
 				if (Node_Logic *logicNode = dynamic_cast<Node_Logic*>(condition.node)) {
 					if (logicNode->getOp() == Node_Logic::NOT) {
-						muxNode->connectSelector(logicNode->getDriver(0));
+						if (logicNode->getNonSignalDriver(0).node == logicNode)
+							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_POSTPROCESSING << "Not removing/bypassing negation " << logicNode << " because it is driving itself");
+						else {
+							muxNode->connectSelector(logicNode->getDriver(0));
 
-						auto input0 = muxNode->getDriver(1);
-						auto input1 = muxNode->getDriver(2);
+							auto input0 = muxNode->getDriver(1);
+							auto input1 = muxNode->getDriver(2);
 
-						muxNode->connectInput(0, input1);
-						muxNode->connectInput(1, input0);
+							muxNode->connectInput(0, input1);
+							muxNode->connectInput(1, input0);
 
-						dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing/bypassing negation " << logicNode << " to mux " << muxNode << " selector by swapping mux inputs.");
+							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing/bypassing negation " << logicNode << " to mux " << muxNode << " selector by swapping mux inputs.");
 
-						done = false; // check same mux again to unravel chain of NOTs
+							done = false; // check same mux again to unravel chain of NOTs
+						}
 					}
 				}
 			} while (!done);
