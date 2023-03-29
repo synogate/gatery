@@ -60,6 +60,8 @@ namespace gtry::hlim {
  * @param output The output that shall receive a register.
  * @param areaToBeRetimed Outputs the area that will be retimed forward (excluding the registers).
  * @param registersToBeRemoved Output of the registers that lead into areaToBeRetimed and which will have to be removed.
+ * @param regSpawnersToSpawn Ouput of the register spawners that need to spawn registers which in teurn can be retimed forward.
+ * @param regSpawnersToRegistersToBeRemoved Output of the outputs of the register spawner where those of the spanwed registers will be that have to be remove (moved forward).
  * @param ignoreRefs Whether or not to throw an exception if a node has to be retimed to which a reference exists.
  * @param failureIsError Whether to throw an exception if a retiming area limited by registers can be determined
  * @returns Whether a valid retiming area could be determined
@@ -200,7 +202,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 
 		// Everything seems good with this node, so proceed
 		if (regSpawner) {  // Register spawners spawn registers, so stop here
-
+			HCL_ASSERT_HINT(regSpawner->getDriver(Node_RegSpawner::INPUT_ENABLE).node == nullptr, "Using register retiming with register spawners that have an enable is a WIP!");
 			regSpawnersToSpawn.insert(regSpawner);
 			regSpawnersToRegistersToBeRemoved.insert(nodePort);
 		} else
