@@ -88,7 +88,7 @@ void Circuit::copySubnet(const std::set<NodePort> &subnetInputs,
 {
 	mapSrc2Dst.clear();
 
-	std::set<BaseNode*> closedList;
+	utils::UnstableSet<BaseNode*> closedList;
 	std::vector<NodePort> openList = std::vector<NodePort>(subnetOutputs.begin(), subnetOutputs.end());
 
 	std::vector<std::pair<std::uint64_t, BaseNode*>> sortedNodes;
@@ -117,7 +117,7 @@ void Circuit::copySubnet(const std::set<NodePort> &subnetInputs,
 		node->setId(m_nextNodeId++, {});
 
 	// Reestablish connections, create clock network on demand
-	std::map<Clock*, Clock*> mapSrc2Dst_clocks;
+	utils::StableMap<Clock*, Clock*> mapSrc2Dst_clocks;
 	std::function<Clock*(Clock*)> lazyCreateClockNetwork;
 
 	lazyCreateClockNetwork = [&](Clock *oldClock)->Clock*{
@@ -167,6 +167,7 @@ BaseNode *Circuit::createUnconnectedClone(BaseNode *srcNode, bool noId)
 Clock *Circuit::createUnconnectedClock(Clock *clock, Clock *newParent)
 {
 	m_clocks.push_back(clock->cloneUnconnected(newParent));
+	m_clocks.back()->setId(m_nextClockId++, {});
 	return m_clocks.back().get();
 }
 
@@ -176,7 +177,7 @@ Clock *Circuit::createUnconnectedClock(Clock *clock, Clock *newParent)
  */
 void Circuit::inferSignalNames()
 {
-	std::set<Node_Signal*> unnamedSignals;
+	utils::StableSet<Node_Signal*> unnamedSignals;
 	for (size_t i = 0; i < m_nodes.size(); i++)
 		if (auto *signal = dynamic_cast<Node_Signal*>(m_nodes[i].get()))
 			if (signal->getName().empty()) {
@@ -198,7 +199,7 @@ void Circuit::inferSignalNames()
 
 		Node_Signal *s = *unnamedSignals.begin();
 		std::vector<Node_Signal*> signalsToName;
-		std::set<Node_Signal*> loopDetection;
+		utils::UnstableSet<Node_Signal*> loopDetection;
 
 		signalsToName.push_back(s);
 		loopDetection.insert(s);
@@ -705,7 +706,7 @@ void Circuit::removeIrrelevantMuxes(Subnet &subnet)
 
 					for (auto muxOutput : muxNode->getDirectlyDriven(0)) {
 						std::vector<NodePort> openList = { muxOutput };
-						std::set<NodePort> closedList;
+						utils::UnstableSet<NodePort> closedList;
 
 						bool allSubnetOutputsMuxed = true;
 

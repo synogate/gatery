@@ -448,7 +448,7 @@ void MemoryGroup::ensureNotEnabledFirstCycles(Circuit &circuit, NodeGroup *ng, N
 
 		// something else is driven by the same signal, abort here
 		bool onlyUser = true;
-		std::set<BaseNode*> alreadyEncountered;
+		utils::UnstableSet<BaseNode*> alreadyEncountered;
 		for (auto nh : driver.node->exploreOutput(driver.port)) {
 			if (alreadyEncountered.contains(nh.node())) {
 				nh.backtrack();
@@ -645,7 +645,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 
 	//visualize(circuit, "beforeRetiming");
 
-	std::set<Node_MemPort*> retimeableWritePorts;
+	utils::StableSet<Node_MemPort*> retimeableWritePorts;
 	for (auto np : m_memory->getPorts()) {
 		auto *memPort = dynamic_cast<Node_MemPort*>(np.node);
 		if (memPort->isWritePort()) {

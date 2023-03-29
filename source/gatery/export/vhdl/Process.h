@@ -73,7 +73,7 @@ class CombinatoryProcess : public Process
 		virtual void writeVHDL(std::ostream &stream, unsigned indentation) override;
 	protected:
 		void formatExpression(std::ostream &stream, size_t indentation, std::ostream &comments, const hlim::NodePort &nodePort,
-								std::set<hlim::NodePort> &dependentInputs, VHDLDataType context, bool forceUnfold = false);
+								utils::StableSet<hlim::NodePort> &dependentInputs, VHDLDataType context, bool forceUnfold = false);
 };
 
 struct RegisterConfig
@@ -84,10 +84,11 @@ struct RegisterConfig
 	hlim::RegisterAttributes::ResetType resetType = hlim::RegisterAttributes::ResetType::NONE;
 	bool resetHighActive = true;
 
-	auto operator<=>(const RegisterConfig&) const = default;
+	//auto operator<=>(const RegisterConfig&) const = default;
 
 	static RegisterConfig fromClock(hlim::Clock *c, bool hasResetValue);
 };
+
 
 class RegisterProcess : public Process
 {
@@ -104,3 +105,21 @@ class RegisterProcess : public Process
 
 
 }
+
+
+template<>
+struct gtry::utils::StableCompare<gtry::vhdl::RegisterConfig>
+{
+	bool operator()(const gtry::vhdl::RegisterConfig &lhs, const gtry::vhdl::RegisterConfig &rhs) const {
+		utils::StableCompare<hlim::Clock*> stableClockCompare;
+		if (stableClockCompare(lhs.clock, rhs.clock)) return true;
+		if (stableClockCompare(rhs.clock, lhs.clock)) return false;
+		if (stableClockCompare(lhs.reset, rhs.reset)) return true;
+		if (stableClockCompare(rhs.reset, lhs.reset)) return false;
+		if (lhs.triggerEvent < rhs.triggerEvent) return true;
+		if (lhs.triggerEvent > rhs.triggerEvent) return false;
+		if (lhs.resetType < rhs.resetType) return true;
+		if (lhs.resetType > rhs.resetType) return false;
+		return lhs.resetHighActive < rhs.resetHighActive;
+	}
+};

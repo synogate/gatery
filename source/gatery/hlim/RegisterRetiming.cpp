@@ -67,7 +67,7 @@ namespace gtry::hlim {
  * @returns Whether a valid retiming area could be determined
  */
 bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort output, 
-								Subnet &areaToBeRetimed, std::set<Node_Register*> &registersToBeRemoved, 
+								Subnet &areaToBeRetimed, utils::StableSet<Node_Register*> &registersToBeRemoved, 
 								std::set<Node_RegSpawner*> &regSpawnersToSpawn, 
 								std::set<NodePort> &regSpawnersToRegistersToBeRemoved,
 								bool ignoreRefs = false, bool failureIsError = true)
@@ -258,7 +258,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, const RetimingSetting &settings)
 {
 	Subnet areaToBeRetimed;
-	std::set<Node_Register*> registersToBeRemoved;
+	utils::StableSet<Node_Register*> registersToBeRemoved;
 	std::set<Node_RegSpawner*> regSpawnersToSpawn;
 	std::set<NodePort> regSpawnersToRegistersToBeRemoved;
 
@@ -282,7 +282,7 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 	}
 	*/
 
-	std::set<hlim::NodePort> outputsLeavingRetimingArea;
+	utils::StableSet<hlim::NodePort> outputsLeavingRetimingArea;
 	// Find every output leaving the area
 	for (auto n : areaToBeRetimed)
 		for (auto i : utils::Range(n->getNumOutputPorts()))
@@ -516,8 +516,8 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
  * @param failureIsError Whether to throw an exception if a retiming area limited by registers can be determined
  * @returns Whether a valid retiming area could be determined
  */
-bool determineAreaToBeRetimedBackward(Circuit &circuit, const Subnet &area, NodePort output, const std::set<Node_MemPort*> &retimeableWritePorts, 
-								Subnet &areaToBeRetimed, std::set<Node_Register*> &registersToBeRemoved, bool ignoreRefs = false, bool failureIsError = true)
+bool determineAreaToBeRetimedBackward(Circuit &circuit, const Subnet &area, NodePort output, const utils::StableSet<Node_MemPort*> &retimeableWritePorts, 
+								Subnet &areaToBeRetimed, utils::StableSet<Node_Register*> &registersToBeRemoved, bool ignoreRefs = false, bool failureIsError = true)
 {
 	BaseNode *clockGivingNode = nullptr;
 	Clock *clock = nullptr;
@@ -784,7 +784,7 @@ writeSubnet();
 	return true;
 }
 
-bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_MemPort*> &retimeableWritePorts,
+bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const utils::StableSet<Node_MemPort*> &retimeableWritePorts,
 						Subnet &retimedArea, NodePort output, bool ignoreRefs, bool failureIsError, Subnet *newNodes)
 {
 
@@ -802,7 +802,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 			c.node->rewireInput(c.port, {.node=sig, .port=0ull});
 	}
 
-	std::set<Node_Register*> registersToBeRemoved;
+	utils::StableSet<Node_Register*> registersToBeRemoved;
 	if (!determineAreaToBeRetimedBackward(circuit, area, output, retimeableWritePorts, retimedArea, registersToBeRemoved, ignoreRefs, failureIsError))
 		return false;
 /*
@@ -814,7 +814,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 */
 	if (retimedArea.empty()) return true; // immediately hit a register, so empty retiming area, nothing to do.
 
-	std::set<hlim::NodePort> outputsEnteringRetimingArea;
+	utils::StableSet<hlim::NodePort> outputsEnteringRetimingArea;
 	// Find every output entering the area
 	for (auto n : retimedArea)
 		for (auto i : utils::Range(n->getNumInputPorts())) {
@@ -823,7 +823,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 				outputsEnteringRetimingArea.insert(driver);
 		}
 
-	std::set<hlim::NodePort> outputsLeavingRetimingArea;
+	utils::StableSet<hlim::NodePort> outputsLeavingRetimingArea;
 	// Find every output leaving the area
 	for (auto n : retimedArea)
 		for (auto i : utils::Range(n->getNumOutputPorts()))
@@ -1252,7 +1252,7 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 
 void ReadModifyWriteHazardLogicBuilder::determineResetValues(std::map<NodePort, sim::DefaultBitVectorState> &resetValues)
 {
-	std::set<NodePort> requiredNodePorts;
+	utils::StableSet<NodePort> requiredNodePorts;
 
 	for (auto &p : resetValues)
 		if (p.first.node != nullptr)

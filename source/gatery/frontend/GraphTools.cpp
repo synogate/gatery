@@ -137,8 +137,8 @@ Bit hookBitAfter(hlim::Node_Signal *signal)
 
 NodeGroupIO::NodeGroupIO(hlim::NodeGroup *nodeGroup)
 {	
-	std::set<hlim::NodePort> inputs;
-	std::set<hlim::NodePort> outputs;
+	utils::StableSet<hlim::NodePort> inputs;
+	utils::StableSet<hlim::NodePort> outputs;
 
 	for (auto &n : nodeGroup->getNodes()) {
 		for (auto i : utils::Range(n->getNumInputPorts())) {

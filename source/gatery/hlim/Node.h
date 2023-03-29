@@ -151,7 +151,7 @@ class BaseNode : public NodeIO
 
 		/// Returns an id that is unique to this node within the circuit.
 		/// @details The id order is preserved when subnets are copied and always reflects creation order.
-		inline std::uint64_t getId() const { return m_nodeId; }
+		inline std::uint64_t getId() const { HCL_ASSERT(m_nodeId != ~0ull); return m_nodeId; }
 
 		void setId(std::uint64_t id, utils::RestrictTo<Circuit>) { m_nodeId = id; }
 

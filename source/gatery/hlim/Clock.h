@@ -17,6 +17,8 @@
 */
 #pragma once
 
+#include <gatery/utils/StableContainers.h>
+
 #include "ClockRational.h"
 #include "Attributes.h"
 
@@ -117,7 +119,11 @@ class Clock
 		/// @brief Binds a logic signal (through a Node_Signal2Clk) to this clock to drive the reset.
 		/// @details If nothing is bound, or if the bound Node_Signal2Rst is not driven (evaluated independently for simulation and export), the reset is driven by the simulator / routed to the top module on export.
 		void setLogicResetDriver(Node_Signal2Rst *driver);
-	protected:
+        /// Returns a unique ID for this clock that can be used as a stable key in containers. 
+        size_t getId() const { HCL_ASSERT(m_id != ~0ull); return m_id; }
+        void setId(std::uint64_t id, utils::RestrictTo<Circuit>) { m_id = id; }
+    protected:
+        size_t m_id = ~0ull;
 		Clock *m_parentClock = nullptr;
 
 		virtual std::unique_ptr<Clock> allocateClone(Clock *newParent) = 0;
@@ -144,7 +150,7 @@ class Clock
 		/// If connected, overrides the reset signal
 		Node_Signal2Rst *m_resetDriver = nullptr;
 		
-		std::set<NodePort> m_clockedNodes;
+		utils::StableSet<NodePort> m_clockedNodes;
 		mutable std::vector<NodePort> m_clockedNodesCache;
 		std::vector<DerivedClock*> m_derivedClocks;
 		friend class BaseNode;		

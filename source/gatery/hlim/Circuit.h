@@ -17,6 +17,8 @@
 */
 #pragma once
 
+#include <gatery/utils/StableContainers.h>
+
 #include "../simulation/simProc/SimulationProcess.h"
 #include "../simulation/SimulationVisualization.h"
 
@@ -191,6 +193,7 @@ class Circuit
 
 		std::uint64_t m_nextNodeId = 0;
 		std::uint64_t m_nextGroupId = 0;
+		std::uint64_t m_nextClockId = 0;
 
 		std::uint64_t m_nextRevisitColor = 1;
 		bool m_revisitColorInUse = false;
@@ -212,6 +215,7 @@ NodeType *Circuit::createNode(Args&&... args) {
 template<typename ClockType, typename... Args>
 ClockType *Circuit::createClock(Args&&... args) {
 	m_clocks.push_back(std::make_unique<ClockType>(std::forward<Args>(args)...));
+	m_clocks.back()->setId(m_nextClockId++, {});
 	return (ClockType *) m_clocks.back().get();
 }
 

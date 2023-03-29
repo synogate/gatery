@@ -33,7 +33,7 @@ const std::vector<BaseNode*> &TopologicalSort::sort(const Subnet &subnet, LoopHa
 	m_sortedNodes.clear();
 	m_unsortedNodes = subnet;
 
-	std::set<NodePort> outputsReady;
+	utils::UnstableSet<NodePort> outputsReady;
 
 	// Checks if all inputs of a node are ready (either because they are bound to a registered output, unconnected, bound to a node outside of the subset, or their input simply is ready)
 	auto allInputsReady = [&outputsReady, &subnet](BaseNode *node)->bool {

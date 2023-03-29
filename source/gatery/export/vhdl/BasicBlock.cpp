@@ -392,7 +392,7 @@ void BasicBlock::handleSFUInstantiation(hlim::NodeGroup *sfu)
 void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::NodeGroup *nodeGroup, bool reccursive)
 {
 	std::vector<hlim::BaseNode*> normalNodes;
-	std::map<RegisterConfig, std::vector<hlim::BaseNode*>> registerNodes;
+	utils::StableMap<RegisterConfig, std::vector<hlim::BaseNode*>> registerNodes;
 
 
 	std::vector<hlim::NodeGroup*> nodeGroupStack = { nodeGroup };

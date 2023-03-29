@@ -17,6 +17,8 @@
 */
 #pragma once
 
+#include <gatery/utils/StableContainers.h>
+
 #include <set>
 #include <span>
 
@@ -57,6 +59,7 @@ class SubnetTemplate {
 		static FinalType allNecessaryForNodes(std::span<NodeType*> limitingNodes, std::span<NodeType*> nodes);
 		static FinalType allDrivenCombinatoricallyByOutputs(std::span<NodePort> outputs);
 		static FinalType allForSimulation(CircuitType &circuit, const std::set<hlim::NodePort> &outputs = {}, bool includeRefed = true);
+		static FinalType allForSimulation(CircuitType &circuit, const utils::StableSet<hlim::NodePort> &outputs, bool includeRefed = true);
 		static FinalType allForExport(CircuitType &circuit, const utils::ConfigTree &exportSelectionConfig = {});
 		static FinalType allUsedNodes(CircuitType &circuit);
 		static FinalType fromNodeGroup(NodeGroup *nodeGroup, bool reccursive = true);
@@ -83,6 +86,8 @@ class SubnetTemplate {
 		FinalType &addAll(CircuitType &circuit);
 		/// Adds all nodes that a simulation might want (skips export side of export overrides)
 		FinalType &addAllForSimulation(CircuitType &circuit, const std::set<hlim::NodePort> &outputs = {}, bool includeRefed = true);
+		/// Adds all nodes that a simulation might want (skips export side of export overrides)
+		FinalType &addAllForSimulation(CircuitType &circuit, const utils::StableSet<hlim::NodePort> &outputs, bool includeRefed = true);
 		/// Adds all nodes that an export might want (skips simulation side of export overrides)
 		FinalType &addAllForExport(CircuitType &circuit, const utils::ConfigTree &exportSelectionConfig = {});
 		/// Adds all nodes that are used or have side effects
@@ -99,7 +104,7 @@ class SubnetTemplate {
 
 		void dilate(bool forward, bool backward);
 
-		inline const std::set<NodeType*> &getNodes() const { return m_nodes; }
+		inline const utils::StableSet<NodeType*> &getNodes() const { return m_nodes; }
 
 		inline bool contains(NodeType *node) const { return m_nodes.contains(node); }
 		inline bool empty() const { return m_nodes.empty(); }
@@ -108,9 +113,13 @@ class SubnetTemplate {
 
 		auto begin() const { return m_nodes.begin(); }
 		auto end() const { return m_nodes.end(); }
-		operator std::set<NodeType*>() const { return m_nodes; }
+		operator utils::StableSet<NodeType*>() const { return m_nodes; }
+		operator std::set<NodeType*>() const { return std::set<NodeType*>(m_nodes.begin(), m_nodes.end()); }
+
+		template<typename Iterator>
+		void insert(Iterator begin, Iterator end) { m_nodes.insert(begin, end); }
 	protected:
-		std::set<NodeType*> m_nodes;
+		utils::StableSet<NodeType*> m_nodes;
 };
 
 class Subnet : public SubnetTemplate<false, Subnet> { };

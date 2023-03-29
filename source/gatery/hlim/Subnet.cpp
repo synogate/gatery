@@ -88,6 +88,14 @@ FinalType SubnetTemplate<makeConst, FinalType>::allForSimulation(CircuitType &ci
 }
 
 template<bool makeConst, typename FinalType>
+FinalType SubnetTemplate<makeConst, FinalType>::allForSimulation(CircuitType &circuit, const utils::StableSet<hlim::NodePort> &outputs, bool includeRefed)
+{
+    FinalType res;
+    res.addAllForSimulation(circuit, outputs, includeRefed);
+    return res;
+}
+
+template<bool makeConst, typename FinalType>
 FinalType SubnetTemplate<makeConst, FinalType>::allForExport(CircuitType &circuit, const utils::ConfigTree &exportSelectionConfig)
 {
 	FinalType res;
@@ -136,8 +144,8 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllDrivenByOutputs(std::span
 template<bool makeConst, typename FinalType>
 FinalType &SubnetTemplate<makeConst, FinalType>::addAllNecessaryForInputs(std::span<NodePort> limitingOutputs, std::span<NodePort> inputs)
 {
-	std::vector<NodeType*> openList;
-	std::set<NodeType*> foundNodes;
+    std::vector<NodeType*> openList;
+    utils::UnstableSet<NodeType*> foundNodes;
 
 	// Find roots
 	for (auto &np : inputs) {
@@ -172,8 +180,8 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllNecessaryForInputs(std::s
 template<bool makeConst, typename FinalType>
 FinalType &SubnetTemplate<makeConst, FinalType>::addAllNecessaryForNodes(std::span<NodeType*> limitingNodes, std::span<NodeType*> nodes)
 {
-	std::vector<NodeType*> openList(nodes.begin(), nodes.end());
-	std::set<NodeType*> foundNodes(limitingNodes.begin(), limitingNodes.end());
+    std::vector<NodeType*> openList(nodes.begin(), nodes.end());
+    utils::UnstableSet<NodeType*> foundNodes(limitingNodes.begin(), limitingNodes.end());
 
 	// Find dependencies
 	while (!openList.empty()) {
@@ -205,7 +213,7 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllDrivenCombinatoricallyByO
 			for (auto &c : o.node->getDirectlyDriven(o.port))
 				openList.push_back(c.node);
 
-	std::set<NodeType*> foundNodes;
+    utils::UnstableSet<NodeType*> foundNodes;
 
 	// Find dependencies
 	while (!openList.empty()) {
@@ -235,11 +243,11 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAll(CircuitType &circuit)
 	return (FinalType&)*this;
 }
 
-template<bool makeConst, typename FinalType>
-FinalType &SubnetTemplate<makeConst, FinalType>::addAllForSimulation(CircuitType &circuit, const std::set<hlim::NodePort> &outputs, bool includeRefed)
+template<typename SubnetType, typename CircuitType, bool makeConst, typename NodeType, typename Container>
+void addAllForSimulationImpl(SubnetType &subnet, CircuitType &circuit, const Container &outputs, bool includeRefed)
 {
-	std::vector<NodeType*> openList;
-	std::set<NodeType*> handledNodes;
+    std::vector<NodeType*> openList;
+    utils::StableSet<NodeType*> handledNodes;
 
 	// Find roots
 	if (outputs.empty()) {
@@ -282,8 +290,8 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllForExport(CircuitType &ci
 	bool includeAsserts = exportSelectionConfig["include_asserts"].as(false);
 	bool includeSignalTaps = exportSelectionConfig["include_taps"].as(true);
 
-	std::vector<NodeType*> openList;
-	std::set<NodeType*> handledNodes;
+    std::vector<NodeType*> openList;
+    utils::StableSet<NodeType*> handledNodes;
 
 	// Find roots
 	for (auto &n : circuit.getNodes())
@@ -327,8 +335,8 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllForExport(CircuitType &ci
 template<bool makeConst, typename FinalType>
 FinalType &SubnetTemplate<makeConst, FinalType>::addAllUsedNodes(CircuitType &circuit)
 {
-	std::vector<NodeType*> openList;
-	std::set<NodeType*> usedNodes;
+    std::vector<NodeType*> openList;
+    utils::StableSet<NodeType*> usedNodes;
 
 	// Find roots
 	for (auto &n : circuit.getNodes())

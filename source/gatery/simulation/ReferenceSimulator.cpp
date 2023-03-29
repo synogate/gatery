@@ -142,9 +142,9 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 	allocateSignals(circuit, nodes);
 	allocateClocks(circuit, nodes);
 
-	std::set<hlim::BaseNode*> subnetToConsider(nodes.begin(), nodes.end());
+	utils::UnstableSet<hlim::BaseNode*> subnetToConsider(nodes.begin(), nodes.end());
 
-	std::set<hlim::NodePort> outputsReady;
+	utils::UnstableSet<hlim::NodePort> outputsReady;
 
 	struct CompareById {
 		bool operator()(const hlim::BaseNode* lhs, const hlim::BaseNode* rhs) const {
@@ -152,7 +152,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 		}
 	};
 	   
-	std::set<hlim::BaseNode*, CompareById> nodesRemaining;
+	utils::StableSet<hlim::BaseNode*, CompareById> nodesRemaining;
 
 	for (auto node : nodes) {
 		if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr) continue;
@@ -249,9 +249,9 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 			
 
 			
-			std::set<hlim::BaseNode*, CompareById> loopNodes = nodesRemaining;
+			utils::StableSet<hlim::BaseNode*, CompareById> loopNodes = nodesRemaining;
 			while (true) {
-				std::set<hlim::BaseNode*, CompareById> tmp = std::move(loopNodes);
+				utils::StableSet<hlim::BaseNode*, CompareById> tmp = std::move(loopNodes);
 				loopNodes.clear();
 
 				bool done = true;
@@ -506,7 +506,7 @@ ReferenceSimulator::ReferenceSimulator(bool enableConsoleOutput)
 	}
 }
 
-void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs, bool ignoreSimulationProcesses)
+void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const utils::StableSet<hlim::NodePort> &outputs, bool ignoreSimulationProcesses)
 {
 
 	if (!ignoreSimulationProcesses) {
@@ -523,7 +523,7 @@ void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const std:
 }
 
 
-void ReferenceSimulator::compileStaticEvaluation(const hlim::Circuit& circuit, const std::set<hlim::NodePort>& outputs)
+void ReferenceSimulator::compileStaticEvaluation(const hlim::Circuit& circuit, const utils::StableSet<hlim::NodePort>& outputs)
 {
 	hlim::Subnet nodeSet;
 	{

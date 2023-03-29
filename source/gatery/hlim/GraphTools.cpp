@@ -62,7 +62,7 @@ Node_Pin *findInputPin(hlim::NodePort output)
 	if (dynamic_cast<const Node_Signal*>(output.node) == nullptr)
 		return nullptr;
 
-	std::set<BaseNode*> encounteredNodes;
+	utils::UnstableSet<BaseNode*> encounteredNodes;
 
 	// Any preceding node must be a signal node or the pin we look for
 	for (auto nh : output.node->exploreInput(0)) {
@@ -112,7 +112,7 @@ Node_Pin *findOutputPin(NodePort output)
 Clock* findFirstOutputClock(NodePort output)
 {
 	Clock* clockFound = nullptr;
-	std::set<BaseNode*> alreadySeen;
+	utils::UnstableSet<BaseNode*> alreadySeen;
 	alreadySeen.insert(output.node);
 	for (auto nh : output.node->exploreOutput(output.port)) {
 		if (alreadySeen.contains(nh.node())) {

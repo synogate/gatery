@@ -19,6 +19,8 @@
 
 #include "../../simulation/SimulatorCallbacks.h"
 
+#include <gatery/utils/StableContainers.h>
+
 #include <string>
 #include <vector>
 #include <set>
