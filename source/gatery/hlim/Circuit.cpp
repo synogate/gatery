@@ -868,12 +868,9 @@ void Circuit::removeNoOps(Subnet &subnet)
 		if (!subnet.contains(m_nodes[i].get())) continue;
 		bool removeNode = false;
 
-		if (auto *rewire = dynamic_cast<Node_Rewire*>(m_nodes[i].get())) {
-			if (rewire->isNoOp()) {
-				dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing rewire " << rewire << " because it is a no-op.");
-				rewire->bypassOutputToInput(0, 0);
-				removeNode = true;
-			}
+		if (m_nodes[i]->bypassIfNoOp()) {
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing " << m_nodes[i].get() << " because it is a no-op.");
+			removeNode = true;
 		}
 
 		if (removeNode && !m_nodes[i]->hasRef()) {

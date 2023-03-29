@@ -270,6 +270,14 @@ bool Node_Rewire::isNoOp() const
 	return true;
 }
 
+bool Node_Rewire::bypassIfNoOp()
+{
+	if (isNoOp()) {
+		bypassOutputToInput(0, 0);
+		return true;
+	}
+	return false;
+}
 
 
 

@@ -116,6 +116,13 @@ class BaseNode : public NodeIO
 		virtual bool hasSideEffects() const;
 		virtual bool isCombinatorial(size_t port) const;
 
+		/// Returns true if the node has no side effects and given its configuration and inputs, the node is not actually needed.
+		virtual bool isNoOp() const { return false; }
+		/// Returns true if isNoOp() but also rewires all nodes connected to the output to not use this node.
+		virtual bool bypassIfNoOp() { return false; }
+
+		virtual void bypassOutputToInput(size_t outputPort, size_t inputPort) override;
+
 		const NodeGroup *getGroup() const { return m_nodeGroup; }
 		NodeGroup *getGroup() { return m_nodeGroup; }
 
