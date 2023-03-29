@@ -138,6 +138,7 @@ namespace gtry
 		Memory(std::uint64_t numWords, Data def = Data{}) { setup(numWords, std::move(def)); }
 
 		void setup(std::uint64_t numWords, Data def = Data{}) {
+			HCL_DESIGNCHECK_HINT(numWords > 1, "Memories must have a non-zero number of address bits, i.e. they must have more than one entry!");
 
 			HCL_DESIGNCHECK(m_memoryNode == nullptr);
 			m_defaultValue = std::move(def);
