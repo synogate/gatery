@@ -85,7 +85,7 @@ void RAM64M8::setInitialization(sim::DefaultBitVectorState memoryInitialization)
 			word &= defined;
 
 			std::string key = "INIT_";
-			key += 'A'+i;
+			key += 'A' + (char)i;
 			m_genericParameters[key].setBitVector(64/8, word, GenericParameter::BitVectorFlavor::BIT_VECTOR);
 		}
 	}
