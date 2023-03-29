@@ -19,12 +19,27 @@
 
 #include "PipeBalanceGroup.h"
 #include "DesignScope.h"
+#include "EnableScope.h"
 
 namespace gtry {
 
 PipeBalanceGroup::PipeBalanceGroup()
 {
 	m_regSpawner = DesignScope::createNode<hlim::Node_RegSpawner>();
+
+	EnableScope* scope = EnableScope::get();
+	if (scope)
+		m_regSpawner->setEnableCondition(scope->getFullEnableCondition());
+}
+
+void PipeBalanceGroup::verifyConsistentEnableScope()
+{
+	EnableScope* scope = EnableScope::get();
+	if (scope) {
+		HCL_DESIGNCHECK_HINT(m_regSpawner->getEnableCondition() == scope->getFullEnableCondition(), "Signals added to a pipeline balance group must not have different enable conditions. Usually this happens if the signals are added from different IF/ENIF/... scopes!");
+	} else {
+		HCL_DESIGNCHECK_HINT(m_regSpawner->getEnableCondition().node == nullptr, "Signals added to a pipeline balance group must not have different enable conditions. Usually this happens if the signals are added from different IF/ENIF/... scopes!");
+	}
 }
 
 size_t PipeBalanceGroup::getNumPipeBalanceGroupStages() const
