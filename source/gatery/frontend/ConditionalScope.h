@@ -42,6 +42,8 @@ namespace gtry {
 			ConditionalScope();
 			~ConditionalScope();
 
+			static Bit globalEnable();
+
 			hlim::NodePort getFullCondition() const { return m_fullCondition; }
 			size_t getId() const { return m_id; }
 
