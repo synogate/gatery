@@ -75,7 +75,11 @@ class RAM64M8 : public gtry::ExternalComponent
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 
 		virtual std::string attemptInferOutputName(size_t outputPort) const override;
+
+		void setInitialization(sim::DefaultBitVectorState memoryInitialization);
 	protected:
+		sim::DefaultBitVectorState m_memoryInitialization;
+		virtual void copyBaseToClone(BaseNode *copy) const override;
 };
 
 }

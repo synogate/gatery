@@ -61,6 +61,11 @@ class GenericParameter {
 			m_flavor = flavor; 
 			return *this;
 		}
+		GenericParameter &setBitVector(sim::DefaultBitVectorState vec, BitVectorFlavor flavor = BitVectorFlavor::STD_LOGIC_VECTOR) { 
+			m_storage = std::move(vec); 
+			m_flavor = flavor; 
+			return *this;
+		}
 
 		bool isDecimal() const { return std::holds_alternative<int>(m_storage); }
 		bool isReal() const { return std::holds_alternative<double>(m_storage); }

@@ -72,6 +72,25 @@ RAM64M8::RAM64M8()
 	declOutputBit(OUT_DO_H,	"DOH");
 }
 
+void RAM64M8::setInitialization(sim::DefaultBitVectorState memoryInitialization)
+{
+	m_memoryInitialization = std::move(memoryInitialization);
+	if (sim::anyDefined(m_memoryInitialization)) {
+		HCL_ASSERT(m_memoryInitialization.size() <= 64*8);
+		for (auto i : utils::Range((m_memoryInitialization.size()+63)/64)) {
+			auto start = i * 64;
+			auto remaining = std::min<size_t>(m_memoryInitialization.size() - i, 64);
+			std::uint64_t word = m_memoryInitialization.extractNonStraddling(sim::DefaultConfig::VALUE, start, remaining);
+			std::uint64_t defined = m_memoryInitialization.extractNonStraddling(sim::DefaultConfig::DEFINED, start, remaining);
+			word &= defined;
+
+			std::string key = "INIT_";
+			key += 'A'+i;
+			m_genericParameters[key].setBitVector(64/8, word, GenericParameter::BitVectorFlavor::BIT_VECTOR);
+		}
+	}
+}
+
 UInt RAM64M8::setup64x7_SDP(const UInt &wrAddr, const UInt &wrData, const Bit &wrEn, const UInt &rdAddr)
 {
 	Bit zero = '0';
@@ -121,7 +140,13 @@ std::string RAM64M8::attemptInferOutputName(size_t outputPort) const
 	return m_name + '_' + getOutputName(outputPort);
 }
 
+void RAM64M8::copyBaseToClone(BaseNode *copy) const
+{
+	ExternalComponent::copyBaseToClone(copy);
+	auto *other = (RAM64M8*)copy;
 
+	other->m_memoryInitialization = m_memoryInitialization;
+}
 
 
 }
