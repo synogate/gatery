@@ -41,14 +41,15 @@ class NodeGroup;
 
 class ConstSubnet;
 
+template<bool, typename baseType>
+struct ConstAdaptor { typedef baseType type; };
+template<typename baseType>
+struct ConstAdaptor<true, baseType> { typedef const baseType type; };
+
+
 template<bool makeConst, typename FinalType>
 class SubnetTemplate {
 	public:
-		template<bool, typename baseType>
-		struct ConstAdaptor { typedef baseType type; };
-		template<typename baseType>
-		struct ConstAdaptor<true, baseType> { typedef const baseType type; };
-
 		typedef typename ConstAdaptor<makeConst, Circuit>::type CircuitType;
 		typedef typename ConstAdaptor<makeConst, BaseNode>::type NodeType;
 
