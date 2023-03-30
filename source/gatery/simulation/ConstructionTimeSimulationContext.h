@@ -19,6 +19,8 @@
 
 #include "SimulationContext.h"
 
+#include <gatery/utils/StableContainers.h>
+
 #include <map>
 
 
@@ -42,7 +44,7 @@ class ConstructionTimeSimulationContext : public SimulationContext {
 
 		virtual Simulator *getSimulator() override { return nullptr; }
 	protected:
-		std::map<hlim::NodePort, DefaultBitVectorState> m_overrides;
+		utils::UnstableMap<hlim::NodePort, DefaultBitVectorState> m_overrides;
 };
 
 }

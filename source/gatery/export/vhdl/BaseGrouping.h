@@ -74,7 +74,7 @@ class BaseGrouping
 		
 		utils::StableSet<hlim::NodePort> m_constants;
 		utils::StableSet<hlim::NodePort> m_localSignals;
-		std::map<hlim::NodePort, hlim::Node_Constant*> m_localSignalDefaultValues;
+		utils::UnstableMap<hlim::NodePort, hlim::Node_Constant*> m_localSignalDefaultValues;
 		utils::StableSet<hlim::NodePort> m_inputs;
 		utils::StableSet<hlim::NodePort> m_outputs;
 		utils::StableSet<hlim::Clock *> m_inputClocks;

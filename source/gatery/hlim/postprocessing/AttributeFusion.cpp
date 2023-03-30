@@ -17,6 +17,8 @@
 */
 #include "gatery/pch.h"
 
+#include <gatery/utils/StableContainers.h>
+
 #include "DefaultValueResolution.h"
 
 #include "../supportNodes/Node_Attributes.h"
@@ -31,7 +33,7 @@ namespace gtry::hlim {
 
 void attributeFusion(Circuit &circuit)
 {
-	std::map<NodePort, std::vector<std::pair<unsigned, Node_Attributes*>>> attributes;
+	utils::StableMap<NodePort, std::vector<std::pair<unsigned, Node_Attributes*>>> attributes;
 
 	// find all attribs and their "distance" (order)
 	for (auto &n : circuit.getNodes()) {

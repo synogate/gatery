@@ -114,9 +114,9 @@ class Circuit
 		Circuit();
 		~Circuit();
 
-		void copySubnet(const std::set<NodePort> &subnetInputs,
-						const std::set<NodePort> &subnetOutputs,
-						std::map<BaseNode*, BaseNode*> &mapSrc2Dst,
+		void copySubnet(const utils::StableSet<NodePort> &subnetInputs,
+						const utils::StableSet<NodePort> &subnetOutputs,
+						utils::StableMap<BaseNode*, BaseNode*> &mapSrc2Dst,
 						bool copyClocks = true);
 
 		template<std::derived_from<BaseNode> NodeType, typename... Args>

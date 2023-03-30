@@ -656,7 +656,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 
 
 
-	std::map<Node_MemPort*, size_t> actuallyRetimedWritePorts;
+	utils::StableMap<Node_MemPort*, size_t> actuallyRetimedWritePorts;
 
 	// If we are aiming for memory with a read latency > 0
 	// Check if any read ports are lacking the registers that models that read latency.

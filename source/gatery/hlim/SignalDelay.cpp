@@ -43,7 +43,7 @@ void SignalDelay::allocate(const Subnet &subnet)
 {
 	m_outputToBitDelays.clear();
 
-	std::map<NodePort, std::pair<size_t, size_t>> allocations;
+	utils::StableMap<NodePort, std::pair<size_t, size_t>> allocations;
 
 	size_t totalSize = 0;
 	for (auto n : subnet.getNodes())

@@ -141,9 +141,9 @@ namespace gtry::sim
 		m_id2sigCode.resize(m_id2Signal.size());
 
 		struct Module {
-			std::map<const hlim::NodeGroup*, Module> subModules;
+			utils::StableMap<const hlim::NodeGroup*, Module> subModules;
 			std::vector<std::pair<hlim::NodePort, size_t>> signals;
-			std::map<hlim::Node_Memory*, std::vector<size_t>> memoryWords;
+			utils::StableMap<hlim::Node_Memory*, std::vector<size_t>> memoryWords;
 		};
 
 		Module root;

@@ -17,6 +17,8 @@
 */
 #include "gatery/pch.h"
 
+#include <gatery/utils/StableContainers.h>
+
 #include "ClockPinAllocation.h"
 
 #include "../Circuit.h"
@@ -30,7 +32,7 @@ namespace gtry::hlim {
 
 std::vector<Clock*> determineRelevantClocks(Circuit &circuit, const Subnet &subnet)
 {
-	std::map<Clock*, bool> relevance;
+	utils::StableMap<Clock*, bool> relevance;
 
 	std::queue<Clock*> openList;
 	// Add leaf clocks to open list

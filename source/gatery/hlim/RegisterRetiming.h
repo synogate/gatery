@@ -143,7 +143,7 @@ class ReadModifyWriteHazardLogicBuilder
 		bool m_retimeToMux = false;
 		NodeGroup *m_newNodesNodeGroup = nullptr;
 
-		void determineResetValues(std::map<NodePort, sim::DefaultBitVectorState> &resetValues);
+		void determineResetValues(utils::UnstableMap<NodePort, sim::DefaultBitVectorState> &resetValues);
 
 		NodePort createRegister(NodePort nodePort, const sim::DefaultBitVectorState &resetValue);
 

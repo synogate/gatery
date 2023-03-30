@@ -1008,7 +1008,7 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 
 
 	// First, determine reset values for all places where we may want to insert registers.
-	std::map<NodePort, sim::DefaultBitVectorState> resetValues;
+	utils::UnstableMap<NodePort, sim::DefaultBitVectorState> resetValues;
 	for (auto &rdPort : m_readPorts) {
 		resetValues.insert({rdPort.addrInputDriver, {}});
 	}
@@ -1250,11 +1250,11 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 
 
 
-void ReadModifyWriteHazardLogicBuilder::determineResetValues(std::map<NodePort, sim::DefaultBitVectorState> &resetValues)
+void ReadModifyWriteHazardLogicBuilder::determineResetValues(utils::UnstableMap<NodePort, sim::DefaultBitVectorState> &resetValues)
 {
 	utils::StableSet<NodePort> requiredNodePorts;
 
-	for (auto &p : resetValues)
+	for (auto &p : resetValues.anyOrder())
 		if (p.first.node != nullptr)
 			requiredNodePorts.insert(p.first);
 
@@ -1265,7 +1265,7 @@ void ReadModifyWriteHazardLogicBuilder::determineResetValues(std::map<NodePort, 
 	simulator.compileStaticEvaluation(m_circuit, requiredNodePorts);
 	simulator.powerOn();
 
-	for (auto &p : resetValues)
+	for (auto &p : resetValues.anyOrder())
 		if (p.first.node != nullptr)
 			p.second = simulator.getValueOfOutput(p.first);
 }

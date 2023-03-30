@@ -114,7 +114,7 @@ class SubnetTemplate {
 		auto begin() const { return m_nodes.begin(); }
 		auto end() const { return m_nodes.end(); }
 		operator utils::StableSet<NodeType*>() const { return m_nodes; }
-		operator std::set<NodeType*>() const { return std::set<NodeType*>(m_nodes.begin(), m_nodes.end()); }
+		operator utils::UnstableSet<NodeType*>() const { return utils::UnstableSet<NodeType*>(m_nodes.begin(), m_nodes.end()); }
 
 		template<typename Iterator>
 		void insert(Iterator begin, Iterator end) { m_nodes.insert(begin, end); }

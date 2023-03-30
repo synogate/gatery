@@ -81,9 +81,9 @@ Circuit::~Circuit()
  * @param subnetOutputs Output ports from where to start copying.
  * @param mapSrc2Dst Map from all copied nodes in the source circuit to the corresponding node in the destination circuit.
  */
-void Circuit::copySubnet(const std::set<NodePort> &subnetInputs,
-						 const std::set<NodePort> &subnetOutputs,
-						 std::map<BaseNode*, BaseNode*> &mapSrc2Dst,
+void Circuit::copySubnet(const utils::StableSet<NodePort> &subnetInputs,
+						 const utils::StableSet<NodePort> &subnetOutputs,
+						 utils::StableMap<BaseNode*, BaseNode*> &mapSrc2Dst,
 						 bool copyClocks)
 {
 	mapSrc2Dst.clear();
@@ -461,7 +461,7 @@ void Circuit::cullUnusedNodes(Subnet &subnet)
 
 
 struct HierarchyCondition {
-	std::map<NodePort, bool> m_conditionsAndNegations;
+	utils::UnstableMap<NodePort, bool> m_conditionsAndNegations;
 	bool m_undefined = false;
 	bool m_contradicting = false;
 
@@ -509,7 +509,7 @@ struct HierarchyCondition {
 		if (m_contradicting && other.m_contradicting) return true;
 
 		if (m_conditionsAndNegations.size() != other.m_conditionsAndNegations.size()) return false;
-		for (const auto &pair : m_conditionsAndNegations) {
+		for (const auto &pair : m_conditionsAndNegations.anyOrder()) {
 			auto it = other.m_conditionsAndNegations.find(pair.first);
 			if (it == other.m_conditionsAndNegations.end()) return false;
 			if (it->second != pair.second) return false;
@@ -522,7 +522,7 @@ struct HierarchyCondition {
 		if (m_contradicting && other.m_contradicting) return false;
 
 		if (m_conditionsAndNegations.size() != other.m_conditionsAndNegations.size()) return false;
-		for (const auto &pair : m_conditionsAndNegations) {
+		for (const auto &pair : m_conditionsAndNegations.anyOrder()) {
 			auto it = other.m_conditionsAndNegations.find(pair.first);
 			if (it == other.m_conditionsAndNegations.end()) return false;
 			if (it->second == pair.second) return false;
@@ -534,7 +534,7 @@ struct HierarchyCondition {
 		if (m_undefined || other.m_undefined) return false;
 		if (m_contradicting && other.m_contradicting) return false;
 
-		for (const auto &pair : m_conditionsAndNegations) {
+		for (const auto &pair : m_conditionsAndNegations.anyOrder()) {
 			auto it = other.m_conditionsAndNegations.find(pair.first);
 			if (it == other.m_conditionsAndNegations.end()) return false;
 			if (it->second != pair.second) return false;
@@ -1167,7 +1167,7 @@ void Circuit::removeFalseLoops()
 /// @details It seems many parts of the vhdl export still require signal nodes so this step adds back in missing ones
 void Circuit::ensureSignalNodePlacement()
 {
-	std::map<NodePort, Node_Signal*> addedSignalsNodes;
+	utils::UnstableMap<NodePort, Node_Signal*> addedSignalsNodes;
 
 	for (auto idx : utils::Range(m_nodes.size())) {
 		auto node = m_nodes[idx].get();

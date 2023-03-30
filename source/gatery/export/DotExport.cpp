@@ -16,7 +16,9 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
+
 #include "DotExport.h"
+#include <gatery/utils/StableContainers.h>
 #include "../hlim/Circuit.h"
 #include "../hlim/NodeGroup.h"
 #include "../hlim/coreNodes/Node_Register.h"
@@ -77,8 +79,8 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
 		throw std::runtime_error("Could not open file!");
 	file << "digraph G {" << std::endl;
 
-	std::map<hlim::BaseNode*, unsigned> node2idx;
-  //  std::map<hlim::NodeGroup*, unsigned> nodeGroup2idx;
+    utils::StableMap<hlim::BaseNode*, unsigned> node2idx;
+  //  utils::UnstableMap<hlim::NodeGroup*, unsigned> nodeGroup2idx;
 
 
 	auto styleNode = [](std::fstream &file, hlim::BaseNode *node) {
@@ -271,26 +273,26 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
 
 void DotExport::writeMergedDotFile(const hlim::Circuit &circuit, const hlim::ConstSubnet &subnet)
 {
-	struct CombinatoryArea {
-		std::set<const hlim::NodeGroup*> nodeGroups;
-		std::vector<const hlim::BaseNode*> nodes;
-		std::vector<const hlim::Node_Register*> inputRegisters;
-		std::vector<const hlim::Node_Register*> outputRegisters;
-	};
+    struct CombinatoryArea {
+        utils::StableSet<const hlim::NodeGroup*> nodeGroups;
+        std::vector<const hlim::BaseNode*> nodes;
+        std::vector<const hlim::Node_Register*> inputRegisters;
+        std::vector<const hlim::Node_Register*> outputRegisters;
+    };
 
-	std::vector<CombinatoryArea> areas;
-	std::map<const hlim::BaseNode*, size_t> node2idx;
-	std::vector<const hlim::Node_Register*> registers;
-	std::vector<const hlim::Node_Memory*> memories;
-	std::vector<const hlim::Node_Signal*> signals;
+    std::vector<CombinatoryArea> areas;
+    utils::UnstableMap<const hlim::BaseNode*, size_t> node2idx;
+    std::vector<const hlim::Node_Register*> registers;
+    std::vector<const hlim::Node_Memory*> memories;
+    std::vector<const hlim::Node_Signal*> signals;
 
 	const bool mergeLatched = true;
 	const bool hideInternalRegisters = false;
 	const bool hideInternalMemories = false;
 
-	{
-		std::set<const hlim::BaseNode*> handledNodes;
-		std::vector<const hlim::BaseNode*> openList;
+    {
+        utils::UnstableSet<const hlim::BaseNode*> handledNodes;
+        std::vector<const hlim::BaseNode*> openList;
 
 		for (auto n : subnet) {
 			if (auto *reg = dynamic_cast<const hlim::Node_Register*>(n)) {

@@ -20,6 +20,7 @@
 
 #include <gatery/hlim/coreNodes/Node_Pin.h>
 #include <gatery/hlim/NodePort.h>
+#include <gatery/hlim/NodeGroup.h>
 #include <gatery/hlim/Clock.h>
 
 namespace gtry::utils {
@@ -52,24 +53,32 @@ bool StableCompare<hlim::RefCtdNodePort>::operator()(const hlim::RefCtdNodePort 
 	}
 }
 
-bool StableCompare<hlim::Clock*>::operator()(const hlim::Clock* const &lhs, const hlim::Clock* const &rhs) const
-{
+template<typename Type>
+bool stableCompareWithId(const Type* const &lhs, const Type* const &rhs) {
 	if (lhs == nullptr)
 		return rhs != nullptr;
 	if (rhs == nullptr) return false;
 	return lhs->getId() < rhs->getId();
 }
 
-bool stableCompareNodes(const hlim::BaseNode* const &lhs, const hlim::BaseNode* const &rhs) {
-	if (lhs == nullptr)
-		return rhs != nullptr;
-	if (rhs == nullptr) return false;
-	return lhs->getId() < rhs->getId();
+bool stableCompareNodes(const hlim::BaseNode* const &lhs, const hlim::BaseNode* const &rhs)
+{
+	return stableCompareWithId(lhs, rhs);
+}
+
+bool StableCompare<hlim::Clock*>::operator()(const hlim::Clock* const &lhs, const hlim::Clock* const &rhs) const
+{
+	return stableCompareWithId(lhs, rhs);
+}
+
+bool StableCompare<hlim::NodeGroup*>::operator()(const hlim::NodeGroup* const &lhs, const hlim::NodeGroup* const &rhs) const
+{
+	return stableCompareWithId(lhs, rhs);
 }
 
 bool StableCompare<hlim::Node_Pin*>::operator()(const hlim::Node_Pin* const &lhs, const hlim::Node_Pin* const &rhs) const
 {
-	return stableCompareNodes(lhs, rhs);
+	return stableCompareWithId(lhs, rhs);
 }
 
 }

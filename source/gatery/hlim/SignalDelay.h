@@ -17,6 +17,8 @@
 */
 #pragma once
 
+#include <gatery/utils/StableContainers.h>
+
 #include <map>
 #include <span>
 #include <vector>
@@ -40,7 +42,7 @@ class SignalDelay {
 	protected:
 		mutable std::vector<float> m_zeros;
 		std::vector<float> m_delays;
-		std::map<NodePort, std::span<float>> m_outputToBitDelays;
+		utils::UnstableMap<NodePort, std::span<float>> m_outputToBitDelays;
 
 
 		void allocate(const Subnet &subnet);

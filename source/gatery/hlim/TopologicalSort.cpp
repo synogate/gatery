@@ -99,14 +99,14 @@ const std::vector<BaseNode*> &TopologicalSort::sort(const Subnet &subnet, LoopHa
 }
 
 
-std::set<BaseNode*> TopologicalSort::getLoop()
+utils::StableSet<BaseNode*> TopologicalSort::getLoop()
 {
 	// A bit hacked: Start with all unsorted nodes and peel away everything that doesn't drive a node from the set
 	// Could be done better
 
-	std::set<hlim::BaseNode*> loopNodes(m_unsortedNodes.begin(), m_unsortedNodes.end());
+	utils::StableSet<hlim::BaseNode*> loopNodes(m_unsortedNodes.begin(), m_unsortedNodes.end());
 	while (true) {
-		std::set<hlim::BaseNode*> tmp = std::move(loopNodes);
+		utils::StableSet<hlim::BaseNode*> tmp = std::move(loopNodes);
 		loopNodes.clear();
 
 		bool done = true;

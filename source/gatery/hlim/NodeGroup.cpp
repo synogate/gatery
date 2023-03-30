@@ -22,6 +22,7 @@
 #include "coreNodes/Node_Signal.h"
 
 #include "../utils/Range.h"
+#include "Circuit.h"
 
 #include <boost/format.hpp>
 
@@ -34,7 +35,7 @@ namespace gtry::hlim
 
 	NodeGroup::NodeGroup(Circuit &circuit, GroupType groupType) : m_circuit(circuit), m_groupType(groupType)
 	{
-		m_groupId = circuit.allocateGroupId();
+		m_id = m_circuit.allocateGroupId({});
 	}
 
 	NodeGroup::~NodeGroup()

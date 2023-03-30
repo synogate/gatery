@@ -61,7 +61,7 @@ using StableSet = std::set<Type, StableCompare<typename ConstFreePointer<Type>::
 template<typename KeyType, typename ValueType>
 using StableMap = std::map<KeyType, ValueType, StableCompare<typename ConstFreePointer<KeyType>::type>>;
 
-// An unstable std::set, but deprived of the ability to iterate over the contained elements thus making it stable to use.
+/// An unstable std::set, but deprived of the ability to iterate over the contained elements thus making it stable to use.
 template<typename Type>
 class UnstableSet
 {
@@ -73,11 +73,48 @@ class UnstableSet
 
 		void insert(const Type &elem) { m_set.insert(elem); }
 		void erase(const Type &elem) { m_set.erase(elem); }
-		bool contains(const Type &elem) { return m_set.contains(elem); }
+		bool contains(const Type &elem) const { return m_set.contains(elem); }
+		auto size() const { return m_set.size(); }
+
+		void clear() { m_set.clear(); }
+
+		/// Returns the underlying set to iterate over the elements in any order in cases where the order doesn't matter
+		auto &anyOrder() { return m_set; }
+		/// Returns the underlying set to iterate over the elements in any order in cases where the order doesn't matter
+		const auto &anyOrder() const { return m_set; }
 	protected:
 		std::set<Type> m_set;
 };
 
+/// An unstable std::map, but deprived of the ability to iterate over the contained elements thus making it stable to use.
+template<typename Key, typename Value>
+class UnstableMap
+{
+	public:
+		using value_type = typename std::map<Key, Value>::value_type;
+
+		UnstableMap() = default;
+		
+		auto &operator[](const Key &key) { return m_map[key]; }
+		const auto &operator[](const Key &key) const { return m_map[key]; }
+
+		void insert(value_type &&value) { m_map.insert(std::forward<value_type>(value)); }
+
+		auto find(const Key &key) { return m_map.find(key); }
+		auto find(const Key &key) const { return m_map.find(key); }
+		auto end() const { return m_map.end(); }
+		bool contains(const Key &key) const { return m_map.contains(key); }
+		auto size() const { return m_map.size(); }
+
+		void clear() { m_map.clear(); }
+
+		/// Returns the underlying map to iterate over the elements in any order in cases where the order doesn't matter
+		auto &anyOrder() { return m_map; }
+		/// Returns the underlying map to iterate over the elements in any order in cases where the order doesn't matter
+		const auto &anyOrder() const { return m_map; }
+	protected:
+		std::map<Key, Value> m_map;
+};
 
 }
 
@@ -91,6 +128,7 @@ namespace gtry::hlim {
 	class Clock;
 	class BaseNode;
 	class Node_Pin;
+	class NodeGroup;
 }
 
 namespace gtry::utils {
@@ -112,6 +150,13 @@ struct StableCompare<hlim::Clock*>
 {
 	bool operator()(const hlim::Clock* const &lhs, const hlim::Clock* const &rhs) const;
 };
+
+template<>
+struct StableCompare<hlim::NodeGroup*>
+{
+	bool operator()(const hlim::NodeGroup* const &lhs, const hlim::NodeGroup* const &rhs) const;
+};
+
 
 bool stableCompareNodes(const hlim::BaseNode* const &lhs, const hlim::BaseNode* const &rhs);
 
