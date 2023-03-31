@@ -18,6 +18,9 @@
 #pragma once
 
 #include <gatery/utils/StableContainers.h>
+#include <gatery/utils/CppTools.h>
+#include <gatery/utils/Exceptions.h>
+#include <gatery/utils/Preprocessor.h>
 
 #include "ClockRational.h"
 #include "Attributes.h"
@@ -34,6 +37,7 @@ class Node_Signal2Clk;
 class Node_Signal2Rst;
 
 class DerivedClock;
+class Circuit;
 
 class Clock
 {
@@ -119,11 +123,11 @@ class Clock
 		/// @brief Binds a logic signal (through a Node_Signal2Clk) to this clock to drive the reset.
 		/// @details If nothing is bound, or if the bound Node_Signal2Rst is not driven (evaluated independently for simulation and export), the reset is driven by the simulator / routed to the top module on export.
 		void setLogicResetDriver(Node_Signal2Rst *driver);
-        /// Returns a unique ID for this clock that can be used as a stable key in containers. 
-        size_t getId() const { HCL_ASSERT(m_id != ~0ull); return m_id; }
-        void setId(std::uint64_t id, utils::RestrictTo<Circuit>) { m_id = id; }
-    protected:
-        size_t m_id = ~0ull;
+		/// Returns a unique ID for this clock that can be used as a stable key in containers. 
+		size_t getId() const { HCL_ASSERT(m_id != ~0ull); return m_id; }
+		void setId(std::uint64_t id, utils::RestrictTo<Circuit>) { m_id = id; }
+	protected:
+		size_t m_id = ~0ull;
 		Clock *m_parentClock = nullptr;
 
 		virtual std::unique_ptr<Clock> allocateClone(Clock *newParent) = 0;

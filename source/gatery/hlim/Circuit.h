@@ -181,7 +181,7 @@ class Circuit
 		void addSimulationVisualization(const SimVizClass &simViz) { m_simulationVisualizations.push_back(simViz.stripType()); }
 		inline const std::vector<sim::SimulationVisualization> &getSimulationVisualizations() const { return m_simulationVisualizations; }
 
-		std::uint64_t allocateGroupId() { return m_nextGroupId++; }
+		std::uint64_t allocateGroupId(utils::RestrictTo<NodeGroup>) { return m_nextGroupId++; }
 
 		std::uint64_t allocateRevisitColor(utils::RestrictTo<RevisitCheck>);
 		void freeRevisitColor(std::uint64_t color, utils::RestrictTo<RevisitCheck>);
@@ -202,6 +202,7 @@ class Circuit
 		std::vector<sim::SimulationVisualization> m_simulationVisualizations;
 
 		void setNodeId(BaseNode *node);
+		void setClockId(Clock *clock);
 };
 
 
@@ -215,7 +216,7 @@ NodeType *Circuit::createNode(Args&&... args) {
 template<typename ClockType, typename... Args>
 ClockType *Circuit::createClock(Args&&... args) {
 	m_clocks.push_back(std::make_unique<ClockType>(std::forward<Args>(args)...));
-	m_clocks.back()->setId(m_nextClockId++, {});
+	setClockId(m_clocks.back().get());
 	return (ClockType *) m_clocks.back().get();
 }
 

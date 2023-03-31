@@ -145,14 +145,8 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 	utils::UnstableSet<hlim::BaseNode*> subnetToConsider(nodes.begin(), nodes.end());
 
 	utils::UnstableSet<hlim::NodePort> outputsReady;
-
-	struct CompareById {
-		bool operator()(const hlim::BaseNode* lhs, const hlim::BaseNode* rhs) const {
-			return lhs->getId() < rhs->getId();
-		}
-	};
 	   
-	utils::StableSet<hlim::BaseNode*, CompareById> nodesRemaining;
+	utils::StableSet<hlim::BaseNode*> nodesRemaining;
 
 	for (auto node : nodes) {
 		if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr) continue;
@@ -249,9 +243,9 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 			
 
 			
-			utils::StableSet<hlim::BaseNode*, CompareById> loopNodes = nodesRemaining;
+			utils::StableSet<hlim::BaseNode*> loopNodes = nodesRemaining;
 			while (true) {
-				utils::StableSet<hlim::BaseNode*, CompareById> tmp = std::move(loopNodes);
+				utils::StableSet<hlim::BaseNode*> tmp = std::move(loopNodes);
 				loopNodes.clear();
 
 				bool done = true;

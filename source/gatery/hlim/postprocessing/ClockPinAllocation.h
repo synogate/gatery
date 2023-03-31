@@ -48,8 +48,8 @@ struct ClockPinAllocation {
 	std::vector<ClockPin> clockPins;
 	std::vector<ResetPin> resetPins;
 
-	utils::UnstableMap<Clock*, size_t> clock2ClockPinIdx;
-	utils::UnstableMap<Clock*, size_t> clock2ResetPinIdx;
+	utils::StableMap<Clock*, size_t> clock2ClockPinIdx;
+	utils::StableMap<Clock*, size_t> clock2ResetPinIdx;
 };
 
 /**

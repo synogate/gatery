@@ -1507,4 +1507,9 @@ void Circuit::setNodeId(BaseNode *node)
 	node->setId(m_nextNodeId++, {});
 }
 
+void Circuit::setClockId(Clock *clock)
+{
+	clock->setId(m_nextClockId++, {});
+}
+
 }
