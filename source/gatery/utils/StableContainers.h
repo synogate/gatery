@@ -71,10 +71,13 @@ class UnstableSet
 		template<typename Iterator>
 		UnstableSet(Iterator begin, Iterator end) : m_set(begin, end) { }
 
+		template< class... Args >
+		auto emplace( Args&&... args ) { return m_set.emplace(std::forward<Args>(args)...); }
 		void insert(const Type &elem) { m_set.insert(elem); }
 		void erase(const Type &elem) { m_set.erase(elem); }
 		bool contains(const Type &elem) const { return m_set.contains(elem); }
 		auto size() const { return m_set.size(); }
+		auto empty() const { return m_set.empty(); }
 
 		void clear() { m_set.clear(); }
 
@@ -98,13 +101,15 @@ class UnstableMap
 		auto &operator[](const Key &key) { return m_map[key]; }
 		const auto &operator[](const Key &key) const { return m_map[key]; }
 
+		template< class... Args >
+		auto emplace( Args&&... args ) { return m_map.emplace(std::forward<Args>(args)...); }
 		void insert(value_type &&value) { m_map.insert(std::forward<value_type>(value)); }
-
 		auto find(const Key &key) { return m_map.find(key); }
 		auto find(const Key &key) const { return m_map.find(key); }
 		auto end() const { return m_map.end(); }
 		bool contains(const Key &key) const { return m_map.contains(key); }
 		auto size() const { return m_map.size(); }
+		auto empty() const { return m_map.empty(); }
 
 		void clear() { m_map.clear(); }
 

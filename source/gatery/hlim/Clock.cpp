@@ -41,7 +41,7 @@ Clock::Clock()
 Clock::~Clock()
 {
 	while (!m_clockedNodes.empty())
-		m_clockedNodes.begin()->node->detachClock(m_clockedNodes.begin()->port);
+		m_clockedNodes.anyOrder().begin()->node->detachClock(m_clockedNodes.anyOrder().begin()->port);
 }
 /*
 Clock &Clock::createClockDivider(ClockRational frequencyDivider, ClockRational phaseShift = 0)
@@ -96,7 +96,8 @@ const std::vector<NodePort>& Clock::getClockedNodes() const
 	if (m_clockedNodesCache.empty())
 	{
 		m_clockedNodesCache.reserve(m_clockedNodes.size());
-		std::copy(m_clockedNodes.begin(), m_clockedNodes.end(), std::back_inserter(m_clockedNodesCache));
+		std::copy(m_clockedNodes.anyOrder().begin(), m_clockedNodes.anyOrder().end(), std::back_inserter(m_clockedNodesCache));
+		std::sort(m_clockedNodesCache.begin(), m_clockedNodesCache.end(), utils::StableCompare<NodePort>());
 	}
 	return m_clockedNodesCache;
 }

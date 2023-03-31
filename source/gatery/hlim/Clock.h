@@ -150,7 +150,7 @@ class Clock
 		/// If connected, overrides the reset signal
 		Node_Signal2Rst *m_resetDriver = nullptr;
 		
-		utils::StableSet<NodePort> m_clockedNodes;
+		utils::UnstableSet<NodePort> m_clockedNodes;
 		mutable std::vector<NodePort> m_clockedNodesCache;
 		std::vector<DerivedClock*> m_derivedClocks;
 		friend class BaseNode;		
