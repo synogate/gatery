@@ -778,6 +778,7 @@ void MemoryGroup::updateNoConflictsAttrib()
 
 void MemoryGroup::buildReset(Circuit &circuit)
 {
+	if (m_readPorts.empty()) return;
 	if (m_memory->getNonSignalDriver((size_t)Node_Memory::Inputs::INITIALIZATION_DATA).node != nullptr) {
 		buildResetLogic(circuit);
 		// Disconnect initialization network's output from memory node
@@ -793,6 +794,7 @@ void MemoryGroup::buildResetLogic(Circuit &circuit)
 	lazyCreateFixupNodeGroup();
 
 	auto *resetWritePort = findSuitableResetWritePort();
+	HCL_ASSERT_HINT(resetWritePort != nullptr, "No suitable write port was found to reset initialize memory " + m_memory->getName());
 	auto *clockDomain = resetWritePort->getClocks()[0];
 
 	if (clockDomain->getRegAttribs().memoryResetType == RegisterAttributes::ResetType::NONE) return;
@@ -842,6 +844,7 @@ void MemoryGroup::buildResetRom(Circuit &circuit)
 	lazyCreateFixupNodeGroup();
 
 	auto *resetWritePort = findSuitableResetWritePort();
+	HCL_ASSERT_HINT(resetWritePort != nullptr, "No suitable write port was found to reset initialize memory " + m_memory->getName());
 	auto *clockDomain = resetWritePort->getClocks()[0];
 
 	if (clockDomain->getRegAttribs().memoryResetType == RegisterAttributes::ResetType::NONE) return;
