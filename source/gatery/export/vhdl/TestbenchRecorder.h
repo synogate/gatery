@@ -19,6 +19,8 @@
 
 #include "BaseTestbenchRecorder.h"
 
+#include <gatery/utils/StableContainers.h>
+
 #include <filesystem>
 
 #include <fstream>

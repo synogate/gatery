@@ -50,6 +50,21 @@ RAM256X1D::RAM256X1D()
 	declOutputBit(OUT_DPO, "DPO");
 }
 
+void RAM256X1D::setInitialization(sim::DefaultBitVectorState memoryInitialization)
+{
+	m_memoryInitialization = std::move(memoryInitialization);
+	if (sim::anyDefined(m_memoryInitialization)) {
+		HCL_ASSERT(m_memoryInitialization.size() <= 256);
+		sim::DefaultBitVectorState init256;
+		init256.resize(256);
+		init256.clearRange(sim::DefaultConfig::VALUE, 0, 256);
+		init256.clearRange(sim::DefaultConfig::DEFINED, 0, 256);
+		init256.copyRange(0, m_memoryInitialization, 0, m_memoryInitialization.size());
+
+		m_genericParameters["INIT"].setBitVector(init256);
+	}
+}
+
 Bit RAM256X1D::setupSDP(const UInt &wrAddr, const Bit &wrData, const Bit &wrEn, const UInt &rdAddr)
 {
 	HCL_ASSERT(wrAddr.size() == 8);
@@ -89,6 +104,14 @@ std::string RAM256X1D::attemptInferOutputName(size_t outputPort) const
 	return m_name + '_' + getOutputName(outputPort);
 }
 
+
+void RAM256X1D::copyBaseToClone(BaseNode *copy) const
+{
+	ExternalComponent::copyBaseToClone(copy);
+	auto *other = (RAM256X1D*)copy;
+
+	other->m_memoryInitialization = m_memoryInitialization;
+}
 
 
 

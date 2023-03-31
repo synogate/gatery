@@ -17,6 +17,7 @@
 */
 #include "gatery/pch.h"
 #include "Node_Logic.h"
+#include "Node_Constant.h"
 
 #include "../SignalDelay.h"
 
@@ -119,6 +120,93 @@ void Node_Logic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::De
 		offset += chunkSize;
 	}
 }
+
+bool Node_Logic::checkIsNoOp(size_t &inputToForward) const
+{
+	if (m_op == NOT) {
+		// For not, it is only a no-op if the input is constant undefined.
+		if (auto *constNode = dynamic_cast<Node_Constant*>(getNonSignalDriver(0).node)) {
+			if (sim::anyDefined(constNode->getValue()))
+				return false;
+			else {
+				inputToForward = 0;
+				return true;
+			}
+		} else
+			return false;
+	}
+
+	// For all binary operations, check if one of the inputs is a constant
+	Node_Constant *constant = nullptr;
+	size_t constIndex;
+	size_t otherDriverIndex;
+	if (auto *constNode = dynamic_cast<Node_Constant*>(getNonSignalDriver(0).node)) {
+		constant = constNode;
+		constIndex = 0;
+		otherDriverIndex = 1;
+	} else 	if (auto *constNode = dynamic_cast<Node_Constant*>(getNonSignalDriver(1).node)) {
+		constant = constNode;
+		constIndex = 1;
+		otherDriverIndex = 0;
+	} 
+
+	if (constant == nullptr)
+		return false;
+
+
+	// Check if all bits are either one or zero
+	if (!sim::allDefined(constant->getValue()))
+		return false;
+	
+	bool allOne = true;
+	bool allZero = true;
+
+	for (auto i : utils::Range(getOutputConnectionType(0).width)) {
+		bool bit = constant->getValue().get(sim::DefaultConfig::VALUE, i);
+		allOne &= bit;
+		allZero &= !bit;
+	}
+
+	if (!allOne && !allZero)
+		return false;
+
+
+	// Decide which to forward
+	switch (m_op) {
+		case AND:
+			if (allOne)
+				inputToForward = otherDriverIndex; // AND with '1' means we can forward the other driver
+			if (allZero)
+				inputToForward = constIndex; // AND with '0' means we can forward the '0' driver
+		break;
+		case OR:
+			if (allOne)
+				inputToForward = constIndex; // OR with '1' means we can forward the '1' driver
+			if (allZero)
+				inputToForward = otherDriverIndex; // OR with '0' means we can forward the other driver
+		break;
+		default:
+			return false;
+	};
+	return true;
+}
+
+bool Node_Logic::isNoOp() const
+{
+	size_t unused;
+	return checkIsNoOp(unused);
+}
+
+bool Node_Logic::bypassIfNoOp()
+{
+	size_t inputIdx;
+	if (checkIsNoOp(inputIdx)) {
+		bypassOutputToInput(0, inputIdx);
+		return true;
+	}
+	return false;
+}
+
 
 std::string Node_Logic::getTypeName() const
 {

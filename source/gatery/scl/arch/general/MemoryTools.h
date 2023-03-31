@@ -22,6 +22,8 @@
 #include <map>
 #include <span>
 
+#include <gatery/utils/StableContainers.h>
+
 namespace gtry::hlim {
 	class BaseNode;
 	class NodeGroup;
@@ -34,7 +36,7 @@ bool memoryIsSingleClock(hlim::NodeGroup *group);
 
 struct SplitMemoryGroup {
 	hlim::MemoryGroup* subGroup;
-	std::map<hlim::BaseNode*, hlim::BaseNode*> original2subGroup;
+	utils::StableMap<hlim::BaseNode*, hlim::BaseNode*> original2subGroup;
 };
 
 /**

@@ -402,20 +402,24 @@ namespace gtry
 		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func)
 		{
 			const T& resetValT = resetVal;
-			return std::make_from_tuple<T>(
-				boost::hana::transform(
-				boost::hana::zip_with([](auto&& a, auto&& b) { return std::tie(a, b); },
-				boost::pfr::structure_tie(val),
-				boost::pfr::structure_tie(resetValT)
-				), [&](auto member) {
+			// Produce list (tuple) of tuples, each tuple pairing an element of val and an element of resetValT
+			auto tupleList = boost::hana::zip_with([](auto&& a, auto&& b) { return std::tie(a, b); },
+				boost::pfr::structure_tie(val),			// returns tuple of lvalue refs to members of val
+				boost::pfr::structure_tie(resetValT)	// returns tuple of lvalue refs to members of resetValT
+			);
 
-					if constexpr(Signal<decltype(get<0>(member))>)
+			// Recursively transform all elements in the list.
+			auto transformedTupleList = boost::hana::transform(
+				tupleList,
+				[&](auto member) {
+					if constexpr (Signal<decltype(get<0>(member))>) // is_same_v
 						return transformSignal(get<0>(member), get<1>(member), func);
 					else
 						return get<1>(member); // use reset value for metadata
-
-				})
+				}
 			);
+			// Reform a T from the transformed list (tuple)
+			return std::make_from_tuple<T>(transformedTupleList);
 		}
 
 		template<ContainerSignal T, typename TFunc>
@@ -466,8 +470,11 @@ namespace gtry
 		template<TupleSignal T, TupleSignal Tr, typename TFunc>
 		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func)
 		{
+			static_assert(std::tuple_size<T>::value == std::tuple_size<Tr>::value, "Mismatch between signal and reset value tuple size");
+
 			using namespace internal;
 
+			// Turn tuples into tuples of lvalue references
 			auto in2 = boost::hana::unpack(val, [](auto&&... args) {
 				return std::tie(args...);
 			});
@@ -475,11 +482,28 @@ namespace gtry
 				return std::tie(args...);
 			});
 
+			static_assert(std::tuple_size<decltype(in2)>::value == std::tuple_size<decltype(in2r)>::value, "Internal gatery error, something got lost uppon transforming signals");
+
+			// Zip in2 and in2r into:
+			// tuple{
+			//		tuple{ val[0], resetVal[0] },
+			//		tuple{ val[1], resetVal[1] },
+			//		tuple{ val[2], resetVal[2] },
+			//  ....
+			// }
+			// all of which l value references.
+
 			auto in3 = boost::hana::zip_with([](auto&& a, auto&& b) {
 				static_assert(std::is_constructible_v<decltype(a), decltype(b)>, "reset type is not convertable to signal type");
 				return std::tie(a, b);
 			}, in2, in2r);
 
+			static_assert(std::tuple_size<decltype(in2)>::value == std::tuple_size<decltype(in3)>::value, "Internal gatery error, something got lost uppon transforming signals");
+
+
+			static_assert(std::is_same_v<decltype(boost::hana::at_c<0>(in3)), decltype(std::get<0>(in3))>);
+
+			// Essentially return Tuple{ transform(in3[0][0], in3[0][1]), transform(in3[1][0], in3[1][1]), ...}
 			return boost::hana::unpack(in3, [&](auto&&... args) {
 				return T{ transformIfSignal(get<0>(args), get<1>(args), func)...};
 			});

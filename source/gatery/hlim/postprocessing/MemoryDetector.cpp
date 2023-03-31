@@ -448,7 +448,7 @@ void MemoryGroup::ensureNotEnabledFirstCycles(Circuit &circuit, NodeGroup *ng, N
 
 		// something else is driven by the same signal, abort here
 		bool onlyUser = true;
-		std::set<BaseNode*> alreadyEncountered;
+		utils::UnstableSet<BaseNode*> alreadyEncountered;
 		for (auto nh : driver.node->exploreOutput(driver.port)) {
 			if (alreadyEncountered.contains(nh.node())) {
 				nh.backtrack();
@@ -645,7 +645,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 
 	//visualize(circuit, "beforeRetiming");
 
-	std::set<Node_MemPort*> retimeableWritePorts;
+	utils::StableSet<Node_MemPort*> retimeableWritePorts;
 	for (auto np : m_memory->getPorts()) {
 		auto *memPort = dynamic_cast<Node_MemPort*>(np.node);
 		if (memPort->isWritePort()) {
@@ -656,7 +656,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 
 
 
-	std::map<Node_MemPort*, size_t> actuallyRetimedWritePorts;
+	utils::StableMap<Node_MemPort*, size_t> actuallyRetimedWritePorts;
 
 	// If we are aiming for memory with a read latency > 0
 	// Check if any read ports are lacking the registers that models that read latency.

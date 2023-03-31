@@ -38,14 +38,14 @@ namespace gtry {
 #define SPAM_SIGNAL_NODES
 	
 ConditionalScope::ConditionalScope(const Bit &condition) :
-	m_id(s_nextId++), m_enScope({})
+	m_id(s_nextId++)
 {
 	setCondition(condition.readPort());
 	m_isElseScope = false;
 }
 
 ConditionalScope::ConditionalScope() :
-	m_id(s_nextId++), m_enScope({})
+	m_id(s_nextId++)
 {
 	m_isElseScope = true;
 	hlim::Node_Logic* invNode = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::NOT);
@@ -111,7 +111,16 @@ void ConditionalScope::setCondition(hlim::NodePort port)
 		m_fullCondition = { .node = andNode, .port = 0ull };
 #endif
 	}
-	m_enScope.setup(m_fullCondition, {});
+	m_enScope.setup(m_fullCondition);
 }
+
+Bit ConditionalScope::globalEnable()
+{
+	if (m_currentScope != nullptr)
+		return Bit(SignalReadPort(m_currentScope->getFullCondition()));
+	else
+		return '1';
+}
+
 
 }

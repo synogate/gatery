@@ -33,7 +33,7 @@ const std::vector<BaseNode*> &TopologicalSort::sort(const Subnet &subnet, LoopHa
 	m_sortedNodes.clear();
 	m_unsortedNodes = subnet;
 
-	std::set<NodePort> outputsReady;
+	utils::UnstableSet<NodePort> outputsReady;
 
 	// Checks if all inputs of a node are ready (either because they are bound to a registered output, unconnected, bound to a node outside of the subset, or their input simply is ready)
 	auto allInputsReady = [&outputsReady, &subnet](BaseNode *node)->bool {
@@ -99,14 +99,14 @@ const std::vector<BaseNode*> &TopologicalSort::sort(const Subnet &subnet, LoopHa
 }
 
 
-std::set<BaseNode*> TopologicalSort::getLoop()
+utils::StableSet<BaseNode*> TopologicalSort::getLoop()
 {
 	// A bit hacked: Start with all unsorted nodes and peel away everything that doesn't drive a node from the set
 	// Could be done better
 
-	std::set<hlim::BaseNode*> loopNodes(m_unsortedNodes.begin(), m_unsortedNodes.end());
+	utils::StableSet<hlim::BaseNode*> loopNodes(m_unsortedNodes.begin(), m_unsortedNodes.end());
 	while (true) {
-		std::set<hlim::BaseNode*> tmp = std::move(loopNodes);
+		utils::StableSet<hlim::BaseNode*> tmp = std::move(loopNodes);
 		loopNodes.clear();
 
 		bool done = true;

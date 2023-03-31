@@ -47,6 +47,9 @@ class Node_Logic : public Node<Node_Logic>
 
 		inline Op getOp() const { return m_op; }
 
+		virtual bool isNoOp() const override;
+		virtual bool bypassIfNoOp() override;
+
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 
 		virtual std::string attemptInferOutputName(size_t outputPort) const override;
@@ -56,6 +59,8 @@ class Node_Logic : public Node<Node_Logic>
 		virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
 	protected:
 		Op m_op;
+
+		bool checkIsNoOp(size_t &inputToForward) const;
 
 		void updateConnectionType();
 };

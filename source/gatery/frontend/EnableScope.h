@@ -19,6 +19,8 @@
 
 #include "Scope.h"
 
+#include "Bit.h"
+
 #include <gatery/hlim/NodePort.h>
 #include <gatery/utils/Traits.h>
 #include <gatery/utils/CppTools.h>
@@ -51,10 +53,10 @@ namespace gtry {
 
 			explicit operator bool() const { return false; }
 
-			/// @todo: Remove once we decouple enable scopes and condition scopes
-			EnableScope(utils::RestrictTo<ConditionalScope>) { }
-			/// @todo: Remove once we decouple enable scopes and condition scopes
-			void setup(const hlim::NodePort &enableCondition, utils::RestrictTo<ConditionalScope>)  { setEnable(enableCondition, true); }
+			/// Empty constructor for use in other scopes that require late initialization via EnableScope::setup
+			EnableScope() { }
+			/// Not to be used directly, setup allows late initalizaiton when the enable scope is used in other scopes.
+			void setup(const hlim::NodePort &enableCondition)  { setEnable(enableCondition, true); }
 		private:
 			void setEnable(const hlim::NodePort &enableCondition, bool checkParent);
 

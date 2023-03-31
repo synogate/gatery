@@ -17,6 +17,8 @@
 */
 #pragma once
 
+#include <gatery/utils/StableContainers.h>
+
 #include <functional>
 #include <vector>
 #include <map>
@@ -33,7 +35,7 @@ struct NodePort;
 
 struct SignalClockDomain;
 
-void inferClockDomains(Circuit &circuit, std::map<hlim::NodePort, SignalClockDomain> &domains);
+void inferClockDomains(Circuit &circuit, utils::UnstableMap<hlim::NodePort, SignalClockDomain> &domains);
 
 void detectUnguardedCDCCrossings(Circuit &circuit, const ConstSubnet &subnet, std::function<void(const BaseNode*)> detectionCallback);
 

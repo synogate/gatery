@@ -20,6 +20,8 @@
 #include <vector>
 #include <map>
 
+#include <gatery/utils/StableContainers.h>
+
 #include "../ClockRational.h"
 
 namespace gtry::hlim {
@@ -46,8 +48,8 @@ struct ClockPinAllocation {
 	std::vector<ClockPin> clockPins;
 	std::vector<ResetPin> resetPins;
 
-	std::map<Clock*, size_t> clock2ClockPinIdx;
-	std::map<Clock*, size_t> clock2ResetPinIdx;
+	utils::StableMap<Clock*, size_t> clock2ClockPinIdx;
+	utils::StableMap<Clock*, size_t> clock2ResetPinIdx;
 };
 
 /**

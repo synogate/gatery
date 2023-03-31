@@ -17,6 +17,8 @@
 */
 #pragma once
 
+#include <gatery/utils/StableContainers.h>
+
 #include "SimulatorCallbacks.h"
 #include "BitVectorState.h"
 #include "../hlim/NodePtr.h"
@@ -81,8 +83,8 @@ class WaveformRecorder : public SimulatorCallbacks
 		std::vector<StateOffsetSize> m_id2StateOffsetSize;
 		std::vector<Signal> m_id2Signal;
 		sim::DefaultBitVectorState m_trackedState;
-		std::map<hlim::NodePort, size_t> m_alreadyAddedNodePorts;
-		std::map<hlim::Node_Memory *, size_t> m_alreadyAddedMemories;
+		utils::UnstableMap<hlim::NodePort, size_t> m_alreadyAddedNodePorts;
+		utils::UnstableMap<hlim::Node_Memory *, size_t> m_alreadyAddedMemories;
 
 		void initializeStates();
 		virtual void initialize() = 0;

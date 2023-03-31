@@ -17,6 +17,8 @@
 */
 #include "gatery/pch.h"
 
+#include <gatery/utils/StableContainers.h>
+
 #include "DefaultValueResolution.h"
 
 #include "../supportNodes/Node_Attributes.h"
@@ -31,7 +33,7 @@ namespace gtry::hlim {
 
 void attributeFusion(Circuit &circuit)
 {
-	std::map<NodePort, std::vector<std::pair<unsigned, Node_Attributes*>>> attributes;
+	utils::StableMap<NodePort, std::vector<std::pair<unsigned, Node_Attributes*>>> attributes;
 
 	// find all attribs and their "distance" (order)
 	for (auto &n : circuit.getNodes()) {
@@ -52,7 +54,7 @@ void attributeFusion(Circuit &circuit)
 
 	// Sort all attribs according to their order and fuse them into the first one.
 	// Move the first one to the driver, mark all others for removal
-	std::set<BaseNode*> nodesToDelete;
+	utils::UnstableSet<BaseNode*> nodesToDelete;
 	for (auto &driver : attributes) {
 		std::sort(driver.second.begin(), driver.second.end(), [](const auto &lhs, const auto &rhs)->bool {
 			if (lhs.first < rhs.first) return true;

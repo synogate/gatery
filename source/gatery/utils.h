@@ -19,6 +19,7 @@
 
 #include "pch.h"
 
+#include "utils/StableContainers.h"
 #include "utils/BitManipulation.h"
 #include "utils/CppTools.h"
 #include "utils/Enumerate.h"

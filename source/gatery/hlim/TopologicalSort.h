@@ -17,6 +17,8 @@
 */
 #pragma once
 
+#include <gatery/utils/StableContainers.h>
+
 #include <vector>
 #include <set>
 
@@ -35,11 +37,11 @@ class TopologicalSort {
 
 		const std::vector<BaseNode*> &sort(const Subnet &subnet, LoopHandling loopHandling = LOOPS_ARE_ERRORS);
 
-		const std::set<BaseNode*> &getUnsortedNodes() const { return m_unsortedNodes; }
-		std::set<BaseNode*> getLoop();
+		const utils::StableSet<BaseNode*> &getUnsortedNodes() const { return m_unsortedNodes; }
+		utils::StableSet<BaseNode*> getLoop();
 	protected:
 		std::vector<BaseNode*> m_sortedNodes;
-		std::set<BaseNode*> m_unsortedNodes;
+		utils::StableSet<BaseNode*> m_unsortedNodes;
 };
 
 

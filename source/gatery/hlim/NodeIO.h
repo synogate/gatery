@@ -63,7 +63,7 @@ class NodeIO
 		inline const ConnectionType &getOutputConnectionType(size_t outputPort) const { return m_outputPorts[outputPort].connectionType; }
 		inline OutputType getOutputType(size_t outputPort) const { return m_outputPorts[outputPort].outputType; }
 
-		void bypassOutputToInput(size_t outputPort, size_t inputPort);
+		virtual void bypassOutputToInput(size_t outputPort, size_t inputPort);
 
 		inline void rewireInput(size_t inputPort, const NodePort &output) { connectInput(inputPort, output); }
 	protected:

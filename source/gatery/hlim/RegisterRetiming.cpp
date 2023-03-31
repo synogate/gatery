@@ -60,14 +60,16 @@ namespace gtry::hlim {
  * @param output The output that shall receive a register.
  * @param areaToBeRetimed Outputs the area that will be retimed forward (excluding the registers).
  * @param registersToBeRemoved Output of the registers that lead into areaToBeRetimed and which will have to be removed.
+ * @param regSpawnersToSpawn Ouput of the register spawners that need to spawn registers which in teurn can be retimed forward.
+ * @param regSpawnersToRegistersToBeRemoved Output of the outputs of the register spawner where those of the spanwed registers will be that have to be remove (moved forward).
  * @param ignoreRefs Whether or not to throw an exception if a node has to be retimed to which a reference exists.
  * @param failureIsError Whether to throw an exception if a retiming area limited by registers can be determined
  * @returns Whether a valid retiming area could be determined
  */
 bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort output, 
-								Subnet &areaToBeRetimed, std::set<Node_Register*> &registersToBeRemoved, 
-								std::set<Node_RegSpawner*> &regSpawnersToSpawn, 
-								std::set<NodePort> &regSpawnersToRegistersToBeRemoved,
+								Subnet &areaToBeRetimed, utils::StableSet<Node_Register*> &registersToBeRemoved, 
+								utils::StableSet<Node_RegSpawner*> &regSpawnersToSpawn, 
+								utils::StableSet<NodePort> &regSpawnersToRegistersToBeRemoved,
 								bool ignoreRefs = false, bool failureIsError = true)
 {
 	BaseNode *clockGivingNode = nullptr;
@@ -200,7 +202,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 
 		// Everything seems good with this node, so proceed
 		if (regSpawner) {  // Register spawners spawn registers, so stop here
-
+			HCL_ASSERT_HINT(regSpawner->getDriver(Node_RegSpawner::INPUT_ENABLE).node == nullptr, "Using register retiming with register spawners that have an enable is a WIP!");
 			regSpawnersToSpawn.insert(regSpawner);
 			regSpawnersToRegistersToBeRemoved.insert(nodePort);
 		} else
@@ -256,9 +258,9 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, const RetimingSetting &settings)
 {
 	Subnet areaToBeRetimed;
-	std::set<Node_Register*> registersToBeRemoved;
-	std::set<Node_RegSpawner*> regSpawnersToSpawn;
-	std::set<NodePort> regSpawnersToRegistersToBeRemoved;
+	utils::StableSet<Node_Register*> registersToBeRemoved;
+	utils::StableSet<Node_RegSpawner*> regSpawnersToSpawn;
+	utils::StableSet<NodePort> regSpawnersToRegistersToBeRemoved;
 
 	if (!determineAreaToBeRetimedForward(circuit, area, output, areaToBeRetimed, registersToBeRemoved, regSpawnersToSpawn, regSpawnersToRegistersToBeRemoved, settings.ignoreRefs, settings.failureIsError))
 		return false;
@@ -280,7 +282,7 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 	}
 	*/
 
-	std::set<hlim::NodePort> outputsLeavingRetimingArea;
+	utils::StableSet<hlim::NodePort> outputsLeavingRetimingArea;
 	// Find every output leaving the area
 	for (auto n : areaToBeRetimed)
 		for (auto i : utils::Range(n->getNumOutputPorts()))
@@ -514,8 +516,8 @@ void retimeForward(Circuit &circuit, Subnet &subnet)
  * @param failureIsError Whether to throw an exception if a retiming area limited by registers can be determined
  * @returns Whether a valid retiming area could be determined
  */
-bool determineAreaToBeRetimedBackward(Circuit &circuit, const Subnet &area, NodePort output, const std::set<Node_MemPort*> &retimeableWritePorts, 
-								Subnet &areaToBeRetimed, std::set<Node_Register*> &registersToBeRemoved, bool ignoreRefs = false, bool failureIsError = true)
+bool determineAreaToBeRetimedBackward(Circuit &circuit, const Subnet &area, NodePort output, const utils::StableSet<Node_MemPort*> &retimeableWritePorts, 
+								Subnet &areaToBeRetimed, utils::StableSet<Node_Register*> &registersToBeRemoved, bool ignoreRefs = false, bool failureIsError = true)
 {
 	BaseNode *clockGivingNode = nullptr;
 	Clock *clock = nullptr;
@@ -782,7 +784,7 @@ writeSubnet();
 	return true;
 }
 
-bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_MemPort*> &retimeableWritePorts,
+bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const utils::StableSet<Node_MemPort*> &retimeableWritePorts,
 						Subnet &retimedArea, NodePort output, bool ignoreRefs, bool failureIsError, Subnet *newNodes)
 {
 
@@ -800,7 +802,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 			c.node->rewireInput(c.port, {.node=sig, .port=0ull});
 	}
 
-	std::set<Node_Register*> registersToBeRemoved;
+	utils::StableSet<Node_Register*> registersToBeRemoved;
 	if (!determineAreaToBeRetimedBackward(circuit, area, output, retimeableWritePorts, retimedArea, registersToBeRemoved, ignoreRefs, failureIsError))
 		return false;
 /*
@@ -812,7 +814,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 */
 	if (retimedArea.empty()) return true; // immediately hit a register, so empty retiming area, nothing to do.
 
-	std::set<hlim::NodePort> outputsEnteringRetimingArea;
+	utils::StableSet<hlim::NodePort> outputsEnteringRetimingArea;
 	// Find every output entering the area
 	for (auto n : retimedArea)
 		for (auto i : utils::Range(n->getNumInputPorts())) {
@@ -821,7 +823,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 				outputsEnteringRetimingArea.insert(driver);
 		}
 
-	std::set<hlim::NodePort> outputsLeavingRetimingArea;
+	utils::StableSet<hlim::NodePort> outputsLeavingRetimingArea;
 	// Find every output leaving the area
 	for (auto n : retimedArea)
 		for (auto i : utils::Range(n->getNumOutputPorts()))
@@ -854,7 +856,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const std::set<Node_
 	simulator.compileProgram(circuit, {outputsLeavingRetimingArea}, true);
 	simulator.powerOn();
 
-	std::map<std::tuple<Clock*, NodeGroup*, NodePort>, NodePort> delayedResetSignals;
+	utils::UnstableMap<std::tuple<Clock*, NodeGroup*, NodePort>, NodePort> delayedResetSignals;
 	// Get a signal that is zero during reset and in the first non-reset cycle. It turns one after unless the enable signal is held low.
 	auto getDelayedResetSignalFor = [&](Clock *clk, NodeGroup *grp, NodePort enable)->NodePort {
 		auto it = delayedResetSignals.find({clk, grp, enable});
@@ -1006,7 +1008,7 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 
 
 	// First, determine reset values for all places where we may want to insert registers.
-	std::map<NodePort, sim::DefaultBitVectorState> resetValues;
+	utils::UnstableMap<NodePort, sim::DefaultBitVectorState> resetValues;
 	for (auto &rdPort : m_readPorts) {
 		resetValues.insert({rdPort.addrInputDriver, {}});
 	}
@@ -1248,11 +1250,11 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 
 
 
-void ReadModifyWriteHazardLogicBuilder::determineResetValues(std::map<NodePort, sim::DefaultBitVectorState> &resetValues)
+void ReadModifyWriteHazardLogicBuilder::determineResetValues(utils::UnstableMap<NodePort, sim::DefaultBitVectorState> &resetValues)
 {
-	std::set<NodePort> requiredNodePorts;
+	utils::StableSet<NodePort> requiredNodePorts;
 
-	for (auto &p : resetValues)
+	for (auto &p : resetValues.anyOrder())
 		if (p.first.node != nullptr)
 			requiredNodePorts.insert(p.first);
 
@@ -1263,7 +1265,7 @@ void ReadModifyWriteHazardLogicBuilder::determineResetValues(std::map<NodePort, 
 	simulator.compileStaticEvaluation(m_circuit, requiredNodePorts);
 	simulator.powerOn();
 
-	for (auto &p : resetValues)
+	for (auto &p : resetValues.anyOrder())
 		if (p.first.node != nullptr)
 			p.second = simulator.getValueOfOutput(p.first);
 }

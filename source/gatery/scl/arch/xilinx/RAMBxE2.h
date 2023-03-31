@@ -187,7 +187,12 @@ class RAMBxE2 : public gtry::ExternalComponent
 
 		virtual hlim::OutputClockRelation getOutputClockRelation(size_t output) const override;
 		virtual bool checkValidInputClocks(std::span<hlim::SignalClockDomain> inputClocks) const override;
+
+		void setInitialization(sim::DefaultBitVectorState memoryInitialization) { m_memoryInitialization = std::move(memoryInitialization); }
 	protected:
+		sim::DefaultBitVectorState m_memoryInitialization;
+		virtual void copyBaseToClone(BaseNode *copy) const override;
+		
 		Type m_type;
 
 		PortSetup m_portSetups[2];

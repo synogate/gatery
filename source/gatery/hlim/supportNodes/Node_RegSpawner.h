@@ -32,10 +32,17 @@ class Node_Register;
 class Node_RegSpawner : public Node<Node_RegSpawner>
 {
 	public:
+		enum {
+			INPUT_ENABLE = 0,
+			INPUT_SIGNAL_OFFSET
+		};
+
 		Node_RegSpawner();
 
 		virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;
 
+		void setEnableCondition(const NodePort &value);
+		NodePort getEnableCondition();
 		size_t addInput(const NodePort &value, const NodePort &reset = {});
 		void setClock(Clock* clk);
 

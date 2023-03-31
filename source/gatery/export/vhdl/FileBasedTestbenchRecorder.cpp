@@ -74,8 +74,8 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 
 	declareSignals(vhdlFile);
 
-	std::map<hlim::NodePort, bool> outputIsBool;	
-	std::set<hlim::NodePort> outputIsDrivenByNetwork;
+	utils::StableMap<hlim::NodePort, bool> outputIsBool;
+	utils::StableSet<hlim::NodePort> outputIsDrivenByNetwork;
 
 	for (auto ioPin : m_allIOPins) {
 		const std::string &name = rootEntity->getNamespaceScope().get(ioPin).name;

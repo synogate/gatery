@@ -1,5 +1,3 @@
-#include "PropertyTree.h"
-#include "PropertyTree.h"
 /*  This file is part of Gatery, a library for circuit design.
 	Copyright (C) 2021 Michael Offel, Andreas Ley
 
