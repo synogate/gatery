@@ -68,8 +68,8 @@ namespace gtry::hlim {
  */
 bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort output, 
 								Subnet &areaToBeRetimed, utils::StableSet<Node_Register*> &registersToBeRemoved, 
-								std::set<Node_RegSpawner*> &regSpawnersToSpawn, 
-								std::set<NodePort> &regSpawnersToRegistersToBeRemoved,
+								utils::StableSet<Node_RegSpawner*> &regSpawnersToSpawn, 
+								utils::StableSet<NodePort> &regSpawnersToRegistersToBeRemoved,
 								bool ignoreRefs = false, bool failureIsError = true)
 {
 	BaseNode *clockGivingNode = nullptr;
@@ -259,8 +259,8 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 {
 	Subnet areaToBeRetimed;
 	utils::StableSet<Node_Register*> registersToBeRemoved;
-	std::set<Node_RegSpawner*> regSpawnersToSpawn;
-	std::set<NodePort> regSpawnersToRegistersToBeRemoved;
+	utils::StableSet<Node_RegSpawner*> regSpawnersToSpawn;
+	utils::StableSet<NodePort> regSpawnersToRegistersToBeRemoved;
 
 	if (!determineAreaToBeRetimedForward(circuit, area, output, areaToBeRetimed, registersToBeRemoved, regSpawnersToSpawn, regSpawnersToRegistersToBeRemoved, settings.ignoreRefs, settings.failureIsError))
 		return false;
@@ -856,7 +856,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const utils::StableS
 	simulator.compileProgram(circuit, {outputsLeavingRetimingArea}, true);
 	simulator.powerOn();
 
-	std::map<std::tuple<Clock*, NodeGroup*, NodePort>, NodePort> delayedResetSignals;
+	utils::UnstableMap<std::tuple<Clock*, NodeGroup*, NodePort>, NodePort> delayedResetSignals;
 	// Get a signal that is zero during reset and in the first non-reset cycle. It turns one after unless the enable signal is held low.
 	auto getDelayedResetSignalFor = [&](Clock *clk, NodeGroup *grp, NodePort enable)->NodePort {
 		auto it = delayedResetSignals.find({clk, grp, enable});

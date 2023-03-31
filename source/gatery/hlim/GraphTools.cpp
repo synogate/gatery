@@ -159,7 +159,7 @@ Clock* findFirstInputClock(NodePort input)
 std::vector<Node_Register*> findAllOutputRegisters(NodePort output)
 {
 	std::vector<Node_Register*> result;
-	std::set<NodePort> alreadyHandled;
+	utils::UnstableSet<NodePort> alreadyHandled;
 	for (auto nh : output.node->exploreOutput(output.port).skipDependencies()) {
 		if(alreadyHandled.contains(nh.nodePort())) {
 			nh.backtrack();
@@ -180,7 +180,7 @@ std::vector<Node_Register*> findAllOutputRegisters(NodePort output)
 std::vector<Node_Register*> findAllInputRegisters(NodePort input)
 {
 	std::vector<Node_Register*> result;
-	std::set<NodePort> alreadyHandled;
+	utils::UnstableSet<NodePort> alreadyHandled;
 	for (auto nh : input.node->exploreInput(input.port).skipExportOnly().skipDependencies()) {
 		if(alreadyHandled.contains(nh.nodePort())) {
 			nh.backtrack();
@@ -295,7 +295,7 @@ size_t getMinRegHintsBetween(NodePort sourceOutput, NodePort destinationInput)
 
 hlim::NodePort findDriver(hlim::BaseNode *node, const FindDriverOpts &opts)
 {
-	std::set<hlim::NodePort> visited;
+	utils::UnstableSet<hlim::NodePort> visited;
 
 	auto driver = node->getDriver(opts.inputPortIdx);
 	while (driver.node != nullptr) {

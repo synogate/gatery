@@ -194,7 +194,7 @@ NodePort Clock::getLogicDriver(bool simulation, bool clk) const
 			driver = m_resetDriver->getNonSignalDriver(0);
 	}
 
-	std::set<NodePort> alreadyVisited;
+	utils::UnstableSet<NodePort> alreadyVisited;
 
 	while (driver.node != nullptr) {
 		if (alreadyVisited.contains(driver)) return {};

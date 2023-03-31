@@ -42,7 +42,7 @@ void writeClockXDC(const vhdl::AST &ast, std::ostream& out)
 		out << "create_clock -period " << std::fixed << std::setprecision(3) << ns << " [get_ports " << name << "]\n";
 	}
 
-	std::map<hlim::Clock*, std::vector<hlim::Clock*>> clock2srcPin;
+	utils::StableMap<hlim::Clock*, std::vector<hlim::Clock*>> clock2srcPin;
 	for (auto clk : top->getClocks())
 		clock2srcPin[clk->getClockPinSource()].push_back(clk);
 

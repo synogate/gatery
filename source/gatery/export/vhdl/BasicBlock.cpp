@@ -433,7 +433,7 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
 			bool nodeFeedingIntoAnythingElse = false;
 			bool nodeFeedingIntoReset = false;
 
-			std::set<hlim::NodePort> visited;
+			utils::UnstableSet<hlim::NodePort> visited;
 			for (auto i : utils::Range(node->getNumOutputPorts())) {
 				for (auto nh : node->exploreOutput(i)) {
 					if (visited.contains(nh.nodePort())) {

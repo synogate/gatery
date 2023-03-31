@@ -216,7 +216,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 			for (auto i : utils::Range(node->getNumInputPorts())) {
 				auto driver = node->getNonSignalDriver(i);
 				{
-					std::set<hlim::NodePort> alreadyVisited;
+					utils::UnstableSet<hlim::NodePort> alreadyVisited;
 					while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) { // Skip all export override nodes
 						alreadyVisited.insert(driver);
 						driver = driver.node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
@@ -392,7 +392,7 @@ void Program::allocateSignals(const hlim::Circuit &circuit, const hlim::Subnet &
 				driver = node->getNonSignalDriver(0);
 
 			{
-				std::set<hlim::NodePort> alreadyVisited;
+				utils::UnstableSet<hlim::NodePort> alreadyVisited;
 				while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) { // Skip all export override nodes
 					alreadyVisited.insert(driver);
 					driver = driver.node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);

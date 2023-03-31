@@ -425,7 +425,7 @@ void Node_Rewire::optimize()
 	}
 
 	// Deduplicate inputs, remove unused inputs
-	std::map<NodePort, size_t> remappedInputs;
+	utils::StableMap<NodePort, size_t> remappedInputs;
 	for (auto &r : op.ranges)
 		if (r.source == Node_Rewire::OutputRange::INPUT) {
 			auto driver = getDriver(r.inputIdx);

@@ -87,8 +87,8 @@ class FSM
 		UInt m_currentState;
 		UInt m_nextState;
 		size_t m_nextStateId = 0;
-		std::map<const BaseState*, std::unique_ptr<UInt>> m_state2encoding;
-		std::map<const BaseState*, size_t> m_state2id;
+		utils::UnstableMap<const BaseState*, std::unique_ptr<UInt>> m_state2encoding;
+		utils::UnstableMap<const BaseState*, size_t> m_state2id;
 		
 		static thread_local FSM *m_fsmContext;
 };

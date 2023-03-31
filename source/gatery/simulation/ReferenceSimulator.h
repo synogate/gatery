@@ -148,7 +148,7 @@ struct Program
 	std::vector<MappedNode> m_powerOnNodes;
 	std::vector<ClockPin> m_clockSources;
 	std::vector<ClockPin> m_resetSources;
-	std::map<hlim::Clock*, ClockDomain> m_clockDomains;
+	utils::UnstableMap<hlim::Clock*, ClockDomain> m_clockDomains;
 	std::vector<ExecutionBlock> m_executionBlocks;
 
 	protected:

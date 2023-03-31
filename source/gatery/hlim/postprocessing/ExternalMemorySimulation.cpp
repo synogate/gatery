@@ -312,7 +312,7 @@ void addExternalMemorySimulator(Circuit &circuit, MemorySimConfig config)
 	// The simulation of ports must work within the reset to accommodate simulation of reset logic.
 	// To this end, find or create a reset-free clock for every clock used in this memory.
 
-	std::map<Clock*, Clock*> clock2resetFreeClk;
+	utils::UnstableMap<Clock*, Clock*> clock2resetFreeClk;
 	auto switchToResetClock = [&clock2resetFreeClk, &circuit](Clock *&clk) {
 		if (clk != nullptr) {
 			auto it = clock2resetFreeClk.find(clk);

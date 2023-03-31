@@ -452,7 +452,7 @@ FinalType gtry::hlim::SubnetTemplate<makeConst, FinalType>::filterLoopNodesOnly(
 			//if (!node->isCombinatorial(i))
 			//	continue;
 
-			std::set<NodeType*> seen;
+			utils::UnstableSet<NodeType*> seen;
 			for (auto&& nh : ((BaseNode*)node)->exploreOutput(i))
 			{
 				if (nh.template isNodeType<Node_Register>())
