@@ -43,16 +43,9 @@ namespace gtry {
 		using Range = SInt::Range;
 		using Base = SliceableBitVector<SInt, SIntDefault>;
 
-		SInt() = default;
+		using Base::Base;
 		SInt(SInt&& rhs) : Base(std::move(rhs)) { }
-		SInt(const SIntDefault &defaultValue) : Base(defaultValue) { }
-
-		SInt(const SignalReadPort& port) : Base(port) { }
-		SInt(hlim::Node_Signal* node, Range range, Expansion expansionPolicy, size_t initialScopeId) : Base(node, range, expansionPolicy, initialScopeId) { } // alias
-		SInt(BitWidth width, Expansion expansionPolicy = Expansion::none) : Base(width, expansionPolicy) { }
-
 		SInt(const SInt &rhs) : Base(rhs) { } // Necessary because otherwise deleted copy ctor takes precedence over templated ctor.
-
 
 		template<BitVectorIntegralLiteral Int>
 		explicit SInt(Int vec) { assign((std::int64_t) vec, Expansion::sign); }

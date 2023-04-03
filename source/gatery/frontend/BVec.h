@@ -45,14 +45,8 @@ namespace gtry {
 		using Base = SliceableBitVector<BVec, BVecDefault>;
 		using DefaultValue = BVecDefault;
 
-		BVec() = default;
+		using Base::Base;
 		BVec(BVec&& rhs) : Base(std::move(rhs)) { }
-		BVec(const BVecDefault &defaultValue) : Base(defaultValue) { }
-
-		BVec(const SignalReadPort& port) : Base(port) { }
-		BVec(hlim::Node_Signal* node, Range range, Expansion expansionPolicy, size_t initialScopeId) : Base(node, range, expansionPolicy, initialScopeId) { } // alias
-		BVec(BitWidth width, Expansion expansionPolicy = Expansion::none) : Base(width, expansionPolicy) { }
-
 		BVec(const BVec &rhs) : Base(rhs) { } // Necessary because otherwise deleted copy ctor takes precedence over templated ctor.
 
 		template<BitVectorIntegralLiteral Int>
