@@ -17,6 +17,8 @@
 */
 #pragma once
 
+#include <gatery/utils/StableContainers.h>
+
 #include "BitVectorState.h"
 #include "SimulatorCallbacks.h"
 
@@ -71,7 +73,7 @@ class Simulator
 		 * @param outputs Unless left empty, confines simulation to that part of the circuit that has an influence on the given outputs.
 		 * @param ignoreSimulationProcesses Wether or not to bring in simulation processes that were stored in the circuit itself.
 		 */
-		virtual void compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs = {}, bool ignoreSimulationProcesses = false) = 0;
+		virtual void compileProgram(const hlim::Circuit &circuit, const utils::StableSet<hlim::NodePort> &outputs = {}, bool ignoreSimulationProcesses = false) = 0;
 
 		/** 
 			@name Simulator control

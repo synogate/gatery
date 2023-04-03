@@ -26,14 +26,16 @@ using namespace gtry;
 
 void Test_Histogram::execute()
 {
-	if (highLatencyExternal)
+	if (highLatencyExternal) {
 		forceMemoryResetLogic = true;
+		forceNoInitialization = true;
+	}
 
 	Clock clock({
 			.absoluteFrequency = {{125'000'000,1}},
 			.memoryResetType = (forceMemoryResetLogic?ClockConfig::ResetType::SYNCHRONOUS:ClockConfig::ResetType::NONE),
 			.initializeRegs = false,
-			.initializeMemory = !forceMemoryResetLogic,
+			.initializeMemory = !forceNoInitialization,
 	});
 	HCL_NAMED(clock);
 	ClockScope scp(clock);
@@ -111,7 +113,9 @@ void Test_MemoryCascade::execute()
 {
 	Clock clock({
 			.absoluteFrequency = {{125'000'000,1}},
+			.memoryResetType = (forceMemoryResetLogic?ClockConfig::ResetType::SYNCHRONOUS:ClockConfig::ResetType::NONE),
 			.initializeRegs = false,
+			.initializeMemory = !forceNoInitialization,
 	});
 	HCL_NAMED(clock);
 	ClockScope scp(clock);

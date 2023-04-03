@@ -405,7 +405,7 @@ set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
 				hlim::NodePort driver(node.get(), outIdx);
 
 				// Do two consumers exist which are both in different entities (which are also different from the producer).
-				std::set<hlim::NodeGroup*> nodeGroups;
+				utils::StableSet<hlim::NodeGroup*> nodeGroups;
 				nodeGroups.insert(node->getGroup());
 
 				for (const auto &np : node->getDirectlyDriven(outIdx))

@@ -43,6 +43,14 @@ EnableScope::~EnableScope()
 
 }
 
+Bit EnableScope::getFullEnable()
+{
+	if (m_currentScope == nullptr)
+		return '1';
+	else
+		return Bit(SignalReadPort(m_currentScope->getFullEnableCondition()));
+}
+
 void EnableScope::setEnable(const hlim::NodePort &enableCondition, bool checkParent)
 {
 	m_fullEnableCondition = m_enableCondition = enableCondition;

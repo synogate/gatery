@@ -62,7 +62,7 @@ Node_Pin *findInputPin(hlim::NodePort output)
 	if (dynamic_cast<const Node_Signal*>(output.node) == nullptr)
 		return nullptr;
 
-	std::set<BaseNode*> encounteredNodes;
+	utils::UnstableSet<BaseNode*> encounteredNodes;
 
 	// Any preceding node must be a signal node or the pin we look for
 	for (auto nh : output.node->exploreInput(0)) {
@@ -112,7 +112,7 @@ Node_Pin *findOutputPin(NodePort output)
 Clock* findFirstOutputClock(NodePort output)
 {
 	Clock* clockFound = nullptr;
-	std::set<BaseNode*> alreadySeen;
+	utils::UnstableSet<BaseNode*> alreadySeen;
 	alreadySeen.insert(output.node);
 	for (auto nh : output.node->exploreOutput(output.port)) {
 		if (alreadySeen.contains(nh.node())) {
@@ -159,7 +159,7 @@ Clock* findFirstInputClock(NodePort input)
 std::vector<Node_Register*> findAllOutputRegisters(NodePort output)
 {
 	std::vector<Node_Register*> result;
-	std::set<NodePort> alreadyHandled;
+	utils::UnstableSet<NodePort> alreadyHandled;
 	for (auto nh : output.node->exploreOutput(output.port).skipDependencies()) {
 		if(alreadyHandled.contains(nh.nodePort())) {
 			nh.backtrack();
@@ -180,7 +180,7 @@ std::vector<Node_Register*> findAllOutputRegisters(NodePort output)
 std::vector<Node_Register*> findAllInputRegisters(NodePort input)
 {
 	std::vector<Node_Register*> result;
-	std::set<NodePort> alreadyHandled;
+	utils::UnstableSet<NodePort> alreadyHandled;
 	for (auto nh : input.node->exploreInput(input.port).skipExportOnly().skipDependencies()) {
 		if(alreadyHandled.contains(nh.nodePort())) {
 			nh.backtrack();
@@ -295,7 +295,7 @@ size_t getMinRegHintsBetween(NodePort sourceOutput, NodePort destinationInput)
 
 hlim::NodePort findDriver(hlim::BaseNode *node, const FindDriverOpts &opts)
 {
-	std::set<hlim::NodePort> visited;
+	utils::UnstableSet<hlim::NodePort> visited;
 
 	auto driver = node->getDriver(opts.inputPortIdx);
 	while (driver.node != nullptr) {

@@ -83,8 +83,8 @@ void NodeCategorization::parse(NodeGroup *group)
 	
 	// Trace from output signals backwards and categorize
 	{
-		std::set<Node_Signal*> closedList;
-		std::set<Node_Signal*> openList;
+		utils::UnstableSet<Node_Signal*> closedList;
+		utils::StableSet<Node_Signal*> openList;
 		for (auto signal : outputSignals)
 			openList.insert(signal.first);
 		for (auto signal : childInputSignals)

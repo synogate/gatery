@@ -17,6 +17,8 @@
 */
 #pragma once
 
+#include <gatery/utils/StableContainers.h>
+
 #include "Bit.h"
 #include "BitWidth.h"
 #include "Signal.h"
@@ -217,7 +219,7 @@ namespace gtry {
 		mutable std::optional<Bit> m_msbAlias;
 		
 		Bit &getDynamicBitAlias(const UInt &idx) const;
-		mutable std::map<hlim::NodePort, Bit> m_dynamicBitAlias;
+		mutable utils::UnstableMap<hlim::NodePort, Bit> m_dynamicBitAlias;
 
 		mutable SignalReadPort m_readPort;
 		mutable void* m_readPortDriver = nullptr;

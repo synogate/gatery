@@ -141,9 +141,9 @@ namespace gtry::sim
 		m_id2sigCode.resize(m_id2Signal.size());
 
 		struct Module {
-			std::map<const hlim::NodeGroup*, Module> subModules;
+			utils::StableMap<const hlim::NodeGroup*, Module> subModules;
 			std::vector<std::pair<hlim::NodePort, size_t>> signals;
-			std::map<hlim::Node_Memory*, std::vector<size_t>> memoryWords;
+			utils::StableMap<hlim::Node_Memory*, std::vector<size_t>> memoryWords;
 		};
 
 		Module root;
@@ -308,10 +308,10 @@ namespace gtry::sim
 
 		// For easier extension in the future (beyond IO pins) determine clock domains for all signals so
 		// that they can be sorted by clocks without relying on the clock ports of the io pins.
-		std::map<hlim::NodePort, hlim::SignalClockDomain> clockDomains;
+		utils::UnstableMap<hlim::NodePort, hlim::SignalClockDomain> clockDomains;
 		hlim::inferClockDomains(m_circuit, clockDomains);
 
-		std::map<hlim::Clock*, std::vector<Signal*>> signalsByClocks;
+		utils::StableMap<hlim::Clock*, std::vector<Signal*>> signalsByClocks;
 
 		for (auto &s : m_id2Signal) {
 			if (!s.isPin && !s.isTap) continue;

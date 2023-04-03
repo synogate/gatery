@@ -81,14 +81,14 @@ Circuit::~Circuit()
  * @param subnetOutputs Output ports from where to start copying.
  * @param mapSrc2Dst Map from all copied nodes in the source circuit to the corresponding node in the destination circuit.
  */
-void Circuit::copySubnet(const std::set<NodePort> &subnetInputs,
-						 const std::set<NodePort> &subnetOutputs,
-						 std::map<BaseNode*, BaseNode*> &mapSrc2Dst,
+void Circuit::copySubnet(const utils::StableSet<NodePort> &subnetInputs,
+						 const utils::StableSet<NodePort> &subnetOutputs,
+						 utils::StableMap<BaseNode*, BaseNode*> &mapSrc2Dst,
 						 bool copyClocks)
 {
 	mapSrc2Dst.clear();
 
-	std::set<BaseNode*> closedList;
+	utils::UnstableSet<BaseNode*> closedList;
 	std::vector<NodePort> openList = std::vector<NodePort>(subnetOutputs.begin(), subnetOutputs.end());
 
 	std::vector<std::pair<std::uint64_t, BaseNode*>> sortedNodes;
@@ -117,7 +117,7 @@ void Circuit::copySubnet(const std::set<NodePort> &subnetInputs,
 		node->setId(m_nextNodeId++, {});
 
 	// Reestablish connections, create clock network on demand
-	std::map<Clock*, Clock*> mapSrc2Dst_clocks;
+	utils::StableMap<Clock*, Clock*> mapSrc2Dst_clocks;
 	std::function<Clock*(Clock*)> lazyCreateClockNetwork;
 
 	lazyCreateClockNetwork = [&](Clock *oldClock)->Clock*{
@@ -167,6 +167,7 @@ BaseNode *Circuit::createUnconnectedClone(BaseNode *srcNode, bool noId)
 Clock *Circuit::createUnconnectedClock(Clock *clock, Clock *newParent)
 {
 	m_clocks.push_back(clock->cloneUnconnected(newParent));
+	m_clocks.back()->setId(m_nextClockId++, {});
 	return m_clocks.back().get();
 }
 
@@ -176,7 +177,7 @@ Clock *Circuit::createUnconnectedClock(Clock *clock, Clock *newParent)
  */
 void Circuit::inferSignalNames()
 {
-	std::set<Node_Signal*> unnamedSignals;
+	utils::StableSet<Node_Signal*> unnamedSignals;
 	for (size_t i = 0; i < m_nodes.size(); i++)
 		if (auto *signal = dynamic_cast<Node_Signal*>(m_nodes[i].get()))
 			if (signal->getName().empty()) {
@@ -198,7 +199,7 @@ void Circuit::inferSignalNames()
 
 		Node_Signal *s = *unnamedSignals.begin();
 		std::vector<Node_Signal*> signalsToName;
-		std::set<Node_Signal*> loopDetection;
+		utils::UnstableSet<Node_Signal*> loopDetection;
 
 		signalsToName.push_back(s);
 		loopDetection.insert(s);
@@ -460,7 +461,7 @@ void Circuit::cullUnusedNodes(Subnet &subnet)
 
 
 struct HierarchyCondition {
-	std::map<NodePort, bool> m_conditionsAndNegations;
+	utils::UnstableMap<NodePort, bool> m_conditionsAndNegations;
 	bool m_undefined = false;
 	bool m_contradicting = false;
 
@@ -508,7 +509,7 @@ struct HierarchyCondition {
 		if (m_contradicting && other.m_contradicting) return true;
 
 		if (m_conditionsAndNegations.size() != other.m_conditionsAndNegations.size()) return false;
-		for (const auto &pair : m_conditionsAndNegations) {
+		for (const auto &pair : m_conditionsAndNegations.anyOrder()) {
 			auto it = other.m_conditionsAndNegations.find(pair.first);
 			if (it == other.m_conditionsAndNegations.end()) return false;
 			if (it->second != pair.second) return false;
@@ -521,7 +522,7 @@ struct HierarchyCondition {
 		if (m_contradicting && other.m_contradicting) return false;
 
 		if (m_conditionsAndNegations.size() != other.m_conditionsAndNegations.size()) return false;
-		for (const auto &pair : m_conditionsAndNegations) {
+		for (const auto &pair : m_conditionsAndNegations.anyOrder()) {
 			auto it = other.m_conditionsAndNegations.find(pair.first);
 			if (it == other.m_conditionsAndNegations.end()) return false;
 			if (it->second == pair.second) return false;
@@ -533,7 +534,7 @@ struct HierarchyCondition {
 		if (m_undefined || other.m_undefined) return false;
 		if (m_contradicting && other.m_contradicting) return false;
 
-		for (const auto &pair : m_conditionsAndNegations) {
+		for (const auto &pair : m_conditionsAndNegations.anyOrder()) {
 			auto it = other.m_conditionsAndNegations.find(pair.first);
 			if (it == other.m_conditionsAndNegations.end()) return false;
 			if (it->second != pair.second) return false;
@@ -705,7 +706,7 @@ void Circuit::removeIrrelevantMuxes(Subnet &subnet)
 
 					for (auto muxOutput : muxNode->getDirectlyDriven(0)) {
 						std::vector<NodePort> openList = { muxOutput };
-						std::set<NodePort> closedList;
+						utils::UnstableSet<NodePort> closedList;
 
 						bool allSubnetOutputsMuxed = true;
 
@@ -868,12 +869,9 @@ void Circuit::removeNoOps(Subnet &subnet)
 		if (!subnet.contains(m_nodes[i].get())) continue;
 		bool removeNode = false;
 
-		if (auto *rewire = dynamic_cast<Node_Rewire*>(m_nodes[i].get())) {
-			if (rewire->isNoOp()) {
-				dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing rewire " << rewire << " because it is a no-op.");
-				rewire->bypassOutputToInput(0, 0);
-				removeNode = true;
-			}
+		if (m_nodes[i]->bypassIfNoOp()) {
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing " << m_nodes[i].get() << " because it is a no-op.");
+			removeNode = true;
 		}
 
 		if (removeNode && !m_nodes[i]->hasRef()) {
@@ -1169,7 +1167,7 @@ void Circuit::removeFalseLoops()
 /// @details It seems many parts of the vhdl export still require signal nodes so this step adds back in missing ones
 void Circuit::ensureSignalNodePlacement()
 {
-	std::map<NodePort, Node_Signal*> addedSignalsNodes;
+	utils::UnstableMap<NodePort, Node_Signal*> addedSignalsNodes;
 
 	for (auto idx : utils::Range(m_nodes.size())) {
 		auto node = m_nodes[idx].get();
@@ -1507,6 +1505,11 @@ void Circuit::freeRevisitColor(std::uint64_t color, utils::RestrictTo<RevisitChe
 void Circuit::setNodeId(BaseNode *node)
 {
 	node->setId(m_nextNodeId++, {});
+}
+
+void Circuit::setClockId(Clock *clock)
+{
+	clock->setId(m_nextClockId++, {});
 }
 
 }

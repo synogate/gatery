@@ -33,7 +33,7 @@ void defaultValueResolution(Circuit &circuit, Subnet &subnet)
 	for (auto &n : subnet) {
 		if (auto *defaultNode = dynamic_cast<Node_Default*>(n)) {
 
-			std::set<BaseNode*> nodesAlreadyVisited;
+			utils::UnstableSet<BaseNode*> nodesAlreadyVisited;
 			bool isLoopy = false;
 
 			for (auto handle : defaultNode->exploreInput(0)) {

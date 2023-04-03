@@ -128,11 +128,10 @@ namespace gtry::hlim {
 		inline Circuit &getCircuit() { return m_circuit; }
 
 		/// Returns an id that is unique to this group within the circuit.
-		inline std::uint64_t getId() const { return m_groupId; }
+		std::uint64_t getId() const { HCL_ASSERT(m_id != ~0ull); return m_id; }
 	protected:
 		Circuit &m_circuit;
-		std::uint64_t m_groupId = ~0ull;
-
+		std::uint64_t m_id = ~0ull;
 		std::string m_name;
 		std::string m_instanceName;
 		std::string m_comment;

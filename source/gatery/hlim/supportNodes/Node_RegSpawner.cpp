@@ -30,7 +30,7 @@
 namespace gtry::hlim {
 
 
-Node_RegSpawner::Node_RegSpawner() : Node(0, 0)
+Node_RegSpawner::Node_RegSpawner() : Node(INPUT_SIGNAL_OFFSET, 0)
 {
 	m_clocks.resize(1);
 }
@@ -44,7 +44,7 @@ void Node_RegSpawner::markResolved()
 {
 	m_wasResolved = true;
 	for (auto i : utils::Range(getNumOutputPorts()))
-		bypassOutputToInput(i, i*2);
+		bypassOutputToInput(i, i*2+INPUT_SIGNAL_OFFSET);
 }
 
 std::vector<Node_Register*> Node_RegSpawner::spawnForward()
@@ -55,6 +55,8 @@ std::vector<Node_Register*> Node_RegSpawner::spawnForward()
 
 	std::vector<Node_Register*> result;
 	result.reserve(getNumOutputPorts());
+
+	NodePort enable = getDriver(0);
 
 	// For each signal passing through
 	for (auto i : utils::Range(getNumOutputPorts())) {
@@ -71,7 +73,11 @@ std::vector<Node_Register*> Node_RegSpawner::spawnForward()
 		reg->setClock(m_clocks[0]);
 
 		// Set reset value
-		reg->connectInput(Node_Register::RESET_VALUE, getDriver(i*2+1));
+		reg->connectInput(Node_Register::RESET_VALUE, getDriver(i*2+1+INPUT_SIGNAL_OFFSET));
+
+		// Set enable
+		if (enable.node != nullptr)
+			reg->connectInput(Node_Register::ENABLE, enable);
 
 		// Fetch everything driven by the signal passing through
 		auto driven = getDirectlyDriven(i);
@@ -90,17 +96,27 @@ std::vector<Node_Register*> Node_RegSpawner::spawnForward()
 	return result;
 }
 
+void Node_RegSpawner::setEnableCondition(const NodePort &value)
+{
+	NodeIO::connectInput(INPUT_ENABLE, value);
+}
+
+NodePort Node_RegSpawner::getEnableCondition()
+{
+	return getDriver(INPUT_ENABLE);
+}
+
 size_t Node_RegSpawner::addInput(const NodePort &value, const NodePort &reset)
 {
 	size_t port = getNumOutputPorts();
-	resizeInputs((port+1)*2);
+	resizeInputs((port+1)*2+INPUT_SIGNAL_OFFSET);
 	resizeOutputs(port+1);
 
 	auto type = hlim::getOutputConnectionType(value);
 	setOutputConnectionType(port, type);
 
-	NodeIO::connectInput(port*2+0, value);
-	NodeIO::connectInput(port*2+1, reset);
+	NodeIO::connectInput(port*2+0+INPUT_SIGNAL_OFFSET, value);
+	NodeIO::connectInput(port*2+1+INPUT_SIGNAL_OFFSET, reset);
 
 	return port;
 }
@@ -109,8 +125,8 @@ void Node_RegSpawner::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, si
 					const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
 	for (auto i : utils::Range(getNumOutputPorts())) {
-		if (inputOffsets[i*2+0] != ~0ull)
-			state.copyRange(outputOffsets[i], state, inputOffsets[i*2+0], getOutputConnectionType(i).width);
+		if (inputOffsets[i*2+0+INPUT_SIGNAL_OFFSET] != ~0ull)
+			state.copyRange(outputOffsets[i], state, inputOffsets[i*2+0+INPUT_SIGNAL_OFFSET], getOutputConnectionType(i).width);
 		else
 			state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[i], getOutputConnectionType(i).width);
 	}

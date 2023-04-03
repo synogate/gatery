@@ -142,17 +142,11 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 	allocateSignals(circuit, nodes);
 	allocateClocks(circuit, nodes);
 
-	std::set<hlim::BaseNode*> subnetToConsider(nodes.begin(), nodes.end());
+	utils::UnstableSet<hlim::BaseNode*> subnetToConsider(nodes.begin(), nodes.end());
 
-	std::set<hlim::NodePort> outputsReady;
-
-	struct CompareById {
-		bool operator()(const hlim::BaseNode* lhs, const hlim::BaseNode* rhs) const {
-			return lhs->getId() < rhs->getId();
-		}
-	};
+	utils::UnstableSet<hlim::NodePort> outputsReady;
 	   
-	std::set<hlim::BaseNode*, CompareById> nodesRemaining;
+	utils::StableSet<hlim::BaseNode*> nodesRemaining;
 
 	for (auto node : nodes) {
 		if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr) continue;
@@ -222,7 +216,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 			for (auto i : utils::Range(node->getNumInputPorts())) {
 				auto driver = node->getNonSignalDriver(i);
 				{
-					std::set<hlim::NodePort> alreadyVisited;
+					utils::UnstableSet<hlim::NodePort> alreadyVisited;
 					while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) { // Skip all export override nodes
 						alreadyVisited.insert(driver);
 						driver = driver.node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
@@ -249,9 +243,9 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 			
 
 			
-			std::set<hlim::BaseNode*, CompareById> loopNodes = nodesRemaining;
+			utils::StableSet<hlim::BaseNode*> loopNodes = nodesRemaining;
 			while (true) {
-				std::set<hlim::BaseNode*, CompareById> tmp = std::move(loopNodes);
+				utils::StableSet<hlim::BaseNode*> tmp = std::move(loopNodes);
 				loopNodes.clear();
 
 				bool done = true;
@@ -398,7 +392,7 @@ void Program::allocateSignals(const hlim::Circuit &circuit, const hlim::Subnet &
 				driver = node->getNonSignalDriver(0);
 
 			{
-				std::set<hlim::NodePort> alreadyVisited;
+				utils::UnstableSet<hlim::NodePort> alreadyVisited;
 				while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) { // Skip all export override nodes
 					alreadyVisited.insert(driver);
 					driver = driver.node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
@@ -506,7 +500,7 @@ ReferenceSimulator::ReferenceSimulator(bool enableConsoleOutput)
 	}
 }
 
-void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs, bool ignoreSimulationProcesses)
+void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const utils::StableSet<hlim::NodePort> &outputs, bool ignoreSimulationProcesses)
 {
 
 	if (!ignoreSimulationProcesses) {
@@ -523,7 +517,7 @@ void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const std:
 }
 
 
-void ReferenceSimulator::compileStaticEvaluation(const hlim::Circuit& circuit, const std::set<hlim::NodePort>& outputs)
+void ReferenceSimulator::compileStaticEvaluation(const hlim::Circuit& circuit, const utils::StableSet<hlim::NodePort>& outputs)
 {
 	hlim::Subnet nodeSet;
 	{
