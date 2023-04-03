@@ -823,7 +823,8 @@ BOOST_FIXTURE_TEST_CASE(simu_assign_vector, BoostUnitTestSimulationFixture)
 		co_await AfterClk(clock);
 
 		std::vector<uint8_t> byteInput(16);
-		for (auto i : Range(byteInput.size())) byteInput[i] = 42+i;
+		for (auto i : Range(byteInput.size()))
+			byteInput[i] = uint8_t(42 + i);
 		simu(largeInput) = std::span{byteInput};
 
 		co_await AfterClk(clock);
@@ -890,7 +891,8 @@ BOOST_FIXTURE_TEST_CASE(simu_compare_vector, BoostUnitTestSimulationFixture)
 		co_await AfterClk(clock);
 
 		std::vector<uint8_t> byteInput(16);
-		for (auto i : Range(byteInput.size())) byteInput[i] = 42+i;
+		for (auto i : Range(byteInput.size()))
+			byteInput[i] = uint8_t(42 + i);
 		auto middleByteSpan = std::span<uint8_t>(byteInput.begin() + 4, 8);
 
 		BOOST_TEST(simu(middleWord) != middleByteSpan);
@@ -931,7 +933,8 @@ BOOST_FIXTURE_TEST_CASE(simu_read_vector, BoostUnitTestSimulationFixture)
 		co_await AfterClk(clock);
 
 		std::vector<uint8_t> byteInput(16);
-		for (auto i : Range(byteInput.size())) byteInput[i] = 42+i;
+		for (auto i : Range(byteInput.size()))
+			byteInput[i] = uint8_t(42 + i);
 		auto middleByteSpan = std::span<uint8_t>(byteInput.begin() + 4, 8);
 		simu(largeInput) = byteInput;
 
@@ -946,7 +949,8 @@ BOOST_FIXTURE_TEST_CASE(simu_read_vector, BoostUnitTestSimulationFixture)
 
 		co_await AfterClk(clock);
 
-		for (auto i : Range(byteInput.size())) byteInput[i] = 13+i*5;
+		for (auto i : Range(byteInput.size()))
+			byteInput[i] = uint8_t(13 + i * 5);
 		simu(largeInput) = byteInput;
 
 		co_await AfterClk(clock);
@@ -984,7 +988,8 @@ BOOST_FIXTURE_TEST_CASE(simu_read_large_vector, BoostUnitTestSimulationFixture)
 		co_await AfterClk(clock);
 
 		std::vector<uint8_t> byteInput(16);
-		for (auto i : Range(byteInput.size())) byteInput[i] = 42+i;
+		for (auto i : Range(byteInput.size()))
+			byteInput[i] = uint8_t(42 + i);
 		auto middleByteSpan = std::span<uint8_t>(byteInput.begin() + 4, 8);
 		simu(largeInput) = byteInput;
 
