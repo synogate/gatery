@@ -405,14 +405,14 @@ namespace gtry
 			return std::make_from_tuple<T>(
 				boost::hana::transform(
 				boost::hana::zip_with([](auto&& a, auto&& b) { return std::tie(a, b); },
-				boost::pfr::structure_tie(val),
-				boost::pfr::structure_tie(resetValT)
-				), [&](auto member) {
-
-					if constexpr(Signal<decltype(get<0>(member))>)
-						return transformSignal(get<0>(member), get<1>(member), func);
+					boost::pfr::structure_tie(val),
+					boost::pfr::structure_tie(resetValT)
+				), 
+				[&](auto member) {
+					if constexpr(Signal<decltype(std::get<0>(member))>)
+						return transformSignal(std::get<0>(member), std::get<1>(member), func);
 					else
-						return get<1>(member); // use reset value for metadata
+						return std::get<1>(member); // use reset value for metadata
 
 				})
 			);
@@ -481,7 +481,7 @@ namespace gtry
 			}, in2, in2r);
 
 			return boost::hana::unpack(in3, [&](auto&&... args) {
-				return T{ transformIfSignal(get<0>(args), get<1>(args), func)...};
+				return T{ transformIfSignal(std::get<0>(args), std::get<1>(args), func)...};
 			});
 		}
 	}
