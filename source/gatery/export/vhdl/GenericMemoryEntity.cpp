@@ -398,7 +398,7 @@ void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned ind
 {
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
-	std::map<RegisterConfig, GenericMemoryPorts> clockResetPairs;
+	utils::StableMap<RegisterConfig, GenericMemoryPorts> clockResetPairs;
 
 	for (auto &wp : m_memGrp->getWritePorts()) {
 		auto &c = wp.node->getClocks()[0];

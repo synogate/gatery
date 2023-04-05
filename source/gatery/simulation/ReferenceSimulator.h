@@ -19,6 +19,7 @@
 
 #include "Simulator.h"
 
+#include <gatery/utils/StableContainers.h>
 #include "simProc/WaitClock.h"
 #include "BitVectorState.h"
 #include "../hlim/NodeIO.h"
@@ -57,8 +58,8 @@ struct DataState
 
 struct StateMapping
 {
-	std::map<hlim::NodePort, size_t> outputToOffset;
-	std::map<hlim::BaseNode*, std::vector<size_t>> nodeToInternalOffset;
+	utils::UnstableMap<hlim::NodePort, size_t> outputToOffset;
+	utils::UnstableMap<hlim::BaseNode*, std::vector<size_t>> nodeToInternalOffset;
 	hlim::ClockPinAllocation clockPinAllocation;
 
 	StateMapping() { clear(); }
@@ -147,7 +148,7 @@ struct Program
 	std::vector<MappedNode> m_powerOnNodes;
 	std::vector<ClockPin> m_clockSources;
 	std::vector<ClockPin> m_resetSources;
-	std::map<hlim::Clock*, ClockDomain> m_clockDomains;
+	utils::UnstableMap<hlim::Clock*, ClockDomain> m_clockDomains;
 	std::vector<ExecutionBlock> m_executionBlocks;
 
 	protected:
@@ -226,8 +227,8 @@ class ReferenceSimulator : public Simulator
 {
 	public:
 		ReferenceSimulator(bool enableConsoleOutput = true);
-		virtual void compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs = {}, bool ignoreSimulationProcesses = false) override;
-		void compileStaticEvaluation(const hlim::Circuit& circuit, const std::set<hlim::NodePort>& outputs);
+		virtual void compileProgram(const hlim::Circuit &circuit, const utils::StableSet<hlim::NodePort> &outputs = {}, bool ignoreSimulationProcesses = false) override;
+		void compileStaticEvaluation(const hlim::Circuit& circuit, const utils::StableSet<hlim::NodePort>& outputs);
 
 
 		virtual void powerOn() override;
@@ -241,7 +242,7 @@ class ReferenceSimulator : public Simulator
 		virtual void simProcOverrideRegisterOutput(hlim::Node_Register *reg, const DefaultBitVectorState &state) override;
 
 		virtual bool outputOptimizedAway(const hlim::NodePort &nodePort) override;
-		virtual DefaultBitVectorState getValueOfInternalState(const hlim::BaseNode *node, size_t idx) override;
+		virtual DefaultBitVectorState getValueOfInternalState(const hlim::BaseNode *node, size_t idx, size_t offset = 0, size_t size = ~0ull) override;
 		virtual DefaultBitVectorState getValueOfOutput(const hlim::NodePort &nodePort) override;
 		virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfClock(const hlim::Clock *clk) override;
 		virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfReset(const hlim::Clock *clk) override;

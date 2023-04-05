@@ -19,6 +19,8 @@
 
 #include "SimulationContext.h"
 
+#include <gatery/utils/StableContainers.h>
+
 #include <map>
 
 namespace gtry::hlim {
@@ -52,7 +54,7 @@ class RunTimeSimulationContext : public SimulationContext {
 		Simulator *m_simulator;
 
 		///@todo: This is not being cached because RunTimeSimulationContext is a very temporary object in the simulator
-		std::map<hlim::NodePort, hlim::Node_Pin*> m_sigOverridePinCache; 
+		utils::UnstableMap<hlim::NodePort, hlim::Node_Pin*> m_sigOverridePinCache; 
 };
 
 

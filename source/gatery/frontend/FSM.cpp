@@ -60,7 +60,7 @@ FSM::FSM(const Clock &clock, const BaseState &startState) :
 		}
 	}
 	
-	for (auto &pair : m_state2encoding)
+	for (auto &pair : m_state2encoding.anyOrder())
 		*pair.second = m_state2id[pair.first];
 }
 

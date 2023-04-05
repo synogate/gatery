@@ -19,6 +19,8 @@
 
 #include "../../simulation/SimulatorCallbacks.h"
 
+#include <gatery/utils/StableContainers.h>
+
 #include <string>
 #include <vector>
 #include <set>
@@ -55,11 +57,11 @@ class BaseTestbenchRecorder : public sim::SimulatorCallbacks
 		std::vector<std::string> m_dependencySortedEntities;
 		std::vector<std::string> m_auxiliaryDataFiles;
 
-		std::set<const hlim::Clock*> m_clocksOfInterest;
-		std::set<const hlim::Clock*> m_resetsOfInterest;
-		std::set<const hlim::Node_Pin*> m_allIOPins;
+		utils::StableSet<const hlim::Clock*> m_clocksOfInterest;
+		utils::StableSet<const hlim::Clock*> m_resetsOfInterest;
+		utils::StableSet<const hlim::Node_Pin*> m_allIOPins;
 
-		std::map<hlim::NodePort, std::string> m_outputToIoPinName;
+		utils::StableMap<hlim::NodePort, std::string> m_outputToIoPinName;
 
 		struct Phase {
 			std::stringstream assertStatements;

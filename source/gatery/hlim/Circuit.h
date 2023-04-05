@@ -17,6 +17,8 @@
 */
 #pragma once
 
+#include <gatery/utils/StableContainers.h>
+
 #include "../simulation/simProc/SimulationProcess.h"
 #include "../simulation/SimulationVisualization.h"
 
@@ -112,9 +114,9 @@ class Circuit
 		Circuit();
 		~Circuit();
 
-		void copySubnet(const std::set<NodePort> &subnetInputs,
-						const std::set<NodePort> &subnetOutputs,
-						std::map<BaseNode*, BaseNode*> &mapSrc2Dst,
+		void copySubnet(const utils::StableSet<NodePort> &subnetInputs,
+						const utils::StableSet<NodePort> &subnetOutputs,
+						utils::StableMap<BaseNode*, BaseNode*> &mapSrc2Dst,
 						bool copyClocks = true);
 
 		template<std::derived_from<BaseNode> NodeType, typename... Args>
@@ -179,7 +181,7 @@ class Circuit
 		void addSimulationVisualization(const SimVizClass &simViz) { m_simulationVisualizations.push_back(simViz.stripType()); }
 		inline const std::vector<sim::SimulationVisualization> &getSimulationVisualizations() const { return m_simulationVisualizations; }
 
-		std::uint64_t allocateGroupId() { return m_nextGroupId++; }
+		std::uint64_t allocateGroupId(utils::RestrictTo<NodeGroup>) { return m_nextGroupId++; }
 
 		std::uint64_t allocateRevisitColor(utils::RestrictTo<RevisitCheck>);
 		void freeRevisitColor(std::uint64_t color, utils::RestrictTo<RevisitCheck>);
@@ -191,6 +193,7 @@ class Circuit
 
 		std::uint64_t m_nextNodeId = 0;
 		std::uint64_t m_nextGroupId = 0;
+		std::uint64_t m_nextClockId = 0;
 
 		std::uint64_t m_nextRevisitColor = 1;
 		bool m_revisitColorInUse = false;
@@ -199,6 +202,7 @@ class Circuit
 		std::vector<sim::SimulationVisualization> m_simulationVisualizations;
 
 		void setNodeId(BaseNode *node);
+		void setClockId(Clock *clock);
 };
 
 
@@ -212,6 +216,7 @@ NodeType *Circuit::createNode(Args&&... args) {
 template<typename ClockType, typename... Args>
 ClockType *Circuit::createClock(Args&&... args) {
 	m_clocks.push_back(std::make_unique<ClockType>(std::forward<Args>(args)...));
+	setClockId(m_clocks.back().get());
 	return (ClockType *) m_clocks.back().get();
 }
 

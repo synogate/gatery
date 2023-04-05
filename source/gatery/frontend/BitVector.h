@@ -17,6 +17,8 @@
 */
 #pragma once
 
+#include <gatery/utils/StableContainers.h>
+
 #include "Bit.h"
 #include "BitWidth.h"
 #include "Signal.h"
@@ -114,6 +116,15 @@ namespace gtry {
 		using const_reverse_iterator = std::vector<Bit>::const_reverse_iterator;
 		using value_type = Bit;
 
+		BaseBitVector() = default;
+		BaseBitVector(const BaseBitVector& rhs) { if (rhs.m_node) assign(rhs.readPort()); }
+		BaseBitVector(BaseBitVector&& rhs);
+		BaseBitVector(const BaseBitVectorDefault& defaultValue);
+
+		BaseBitVector(const SignalReadPort& port) { assign(port); }
+		BaseBitVector(hlim::Node_Signal* node, Range range, Expansion expansionPolicy, size_t initialScopeId); // alias
+		BaseBitVector(BitWidth width, Expansion expansionPolicy = Expansion::none);
+
 		template<BitVectorDerived T>
 		explicit operator T() const { if (m_node) return T(readPort()); else return T{}; }
 
@@ -156,7 +167,6 @@ namespace gtry {
 		const_reverse_iterator crbegin() const { return aliasVec().crbegin(); }
 		const_reverse_iterator crend() const { return aliasVec().crend(); }
 
-
 		bool valid() const final { return m_node != nullptr; }
 		hlim::Node_Signal* node() { return m_node; }
 
@@ -170,20 +180,11 @@ namespace gtry {
 		void addToSignalGroup(hlim::SignalGroup *signalGroup);
 
 	protected:
-		BaseBitVector() = default;
-		BaseBitVector(const BaseBitVector& rhs) { if(rhs.m_node) assign(rhs.readPort()); }
-		BaseBitVector(BaseBitVector&& rhs);
-		BaseBitVector(const BaseBitVectorDefault &defaultValue);
-
-		BaseBitVector(const SignalReadPort& port) { assign(port); }
-		BaseBitVector(hlim::Node_Signal* node, Range range, Expansion expansionPolicy, size_t initialScopeId); // alias
-		BaseBitVector(BitWidth width, Expansion expansionPolicy = Expansion::none);
-
-
 		BaseBitVector& operator = (const BaseBitVector& rhs) { if (rhs.m_node) assign(rhs.readPort()); return *this; }
 		BaseBitVector& operator = (BaseBitVector&& rhs);
 		BaseBitVector& operator = (BitWidth width);
 		BaseBitVector& operator = (const BaseBitVectorDefault &defaultValue);
+
 	protected:
 		void exportOverride(const BaseBitVector& exportOverride);
 
@@ -218,7 +219,7 @@ namespace gtry {
 		mutable std::optional<Bit> m_msbAlias;
 		
 		Bit &getDynamicBitAlias(const UInt &idx) const;
-		mutable std::map<hlim::NodePort, Bit> m_dynamicBitAlias;
+		mutable utils::UnstableMap<hlim::NodePort, Bit> m_dynamicBitAlias;
 
 		mutable SignalReadPort m_readPort;
 		mutable void* m_readPortDriver = nullptr;
@@ -236,16 +237,8 @@ namespace gtry {
 		using Range = BaseBitVector::Range;
 		using OwnType = SliceableBitVector<FinalType, DefaultValueType>;
 
-
-		SliceableBitVector() = default;
+		using BaseBitVector::BaseBitVector;
 		SliceableBitVector(OwnType&& rhs) : BaseBitVector(std::move(rhs)) { }
-		SliceableBitVector(const DefaultValueType &defaultValue) : BaseBitVector(defaultValue) { }
-
-		SliceableBitVector(const SignalReadPort& port) : BaseBitVector(port) { }
-		SliceableBitVector(hlim::Node_Signal* node, Range range, Expansion expansionPolicy, size_t initialScopeId) : BaseBitVector(node, range, expansionPolicy, initialScopeId) { } // alias
-		SliceableBitVector(hlim::Node_Signal* node, const UInt &offset, size_t width, Expansion expansionPolicy, size_t initialScopeId) : BaseBitVector(node, offset, width, expansionPolicy, initialScopeId) { } // alias
-		SliceableBitVector(BitWidth width, Expansion expansionPolicy = Expansion::none) : BaseBitVector(width, expansionPolicy) { }
-
 		SliceableBitVector(const OwnType &rhs) : BaseBitVector(rhs) { } // Necessary because otherwise deleted copy ctor takes precedence over templated ctor.
 
 		FinalType& operator = (BitWidth width) { BaseBitVector::operator=(width); return (FinalType&)*this; }

@@ -74,6 +74,19 @@ bool BaseNode::isCombinatorial(size_t port) const
 }
 
 
+void BaseNode::bypassOutputToInput(size_t outputPort, size_t inputPort)
+{
+	// Usually bypassOutputToInput is used to remove a node.
+	// If a comment is associated with this node, pass it on to the driving node.
+	auto *driverNode = getDriver(inputPort).node;
+	if (driverNode != nullptr) {
+		if (!driverNode->m_comment.empty() && !m_comment.empty())
+			driverNode->m_comment += '\n';
+		driverNode->m_comment += m_comment;
+	}
+	NodeIO::bypassOutputToInput(outputPort, inputPort);
+}
+
 void BaseNode::moveToGroup(NodeGroup *group)
 {
 	if (group == m_nodeGroup) return;
@@ -248,5 +261,6 @@ void BaseNode::forwardSignalDelay(SignalDelay &sigDelay, unsigned input, unsigne
 			out[i] = in[i];
 	}
 }
+
 
 }

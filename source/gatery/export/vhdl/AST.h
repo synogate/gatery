@@ -53,7 +53,7 @@ class Hlim2AstMapping
 		void assignNodeToScope(hlim::BaseNode *node, BaseGrouping *scope);
 		BaseGrouping *getScope(hlim::BaseNode *node) const;
 	protected:
-		std::map<hlim::BaseNode*, BaseGrouping*> m_node2Block;
+		utils::UnstableMap<hlim::BaseNode*, BaseGrouping*> m_node2Block;
 };
 
 

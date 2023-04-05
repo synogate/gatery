@@ -81,14 +81,14 @@ Circuit::~Circuit()
  * @param subnetOutputs Output ports from where to start copying.
  * @param mapSrc2Dst Map from all copied nodes in the source circuit to the corresponding node in the destination circuit.
  */
-void Circuit::copySubnet(const std::set<NodePort> &subnetInputs,
-						 const std::set<NodePort> &subnetOutputs,
-						 std::map<BaseNode*, BaseNode*> &mapSrc2Dst,
+void Circuit::copySubnet(const utils::StableSet<NodePort> &subnetInputs,
+						 const utils::StableSet<NodePort> &subnetOutputs,
+						 utils::StableMap<BaseNode*, BaseNode*> &mapSrc2Dst,
 						 bool copyClocks)
 {
 	mapSrc2Dst.clear();
 
-	std::set<BaseNode*> closedList;
+	utils::UnstableSet<BaseNode*> closedList;
 	std::vector<NodePort> openList = std::vector<NodePort>(subnetOutputs.begin(), subnetOutputs.end());
 
 	std::vector<std::pair<std::uint64_t, BaseNode*>> sortedNodes;
@@ -117,7 +117,7 @@ void Circuit::copySubnet(const std::set<NodePort> &subnetInputs,
 		node->setId(m_nextNodeId++, {});
 
 	// Reestablish connections, create clock network on demand
-	std::map<Clock*, Clock*> mapSrc2Dst_clocks;
+	utils::StableMap<Clock*, Clock*> mapSrc2Dst_clocks;
 	std::function<Clock*(Clock*)> lazyCreateClockNetwork;
 
 	lazyCreateClockNetwork = [&](Clock *oldClock)->Clock*{
@@ -167,6 +167,7 @@ BaseNode *Circuit::createUnconnectedClone(BaseNode *srcNode, bool noId)
 Clock *Circuit::createUnconnectedClock(Clock *clock, Clock *newParent)
 {
 	m_clocks.push_back(clock->cloneUnconnected(newParent));
+	m_clocks.back()->setId(m_nextClockId++, {});
 	return m_clocks.back().get();
 }
 
@@ -176,7 +177,7 @@ Clock *Circuit::createUnconnectedClock(Clock *clock, Clock *newParent)
  */
 void Circuit::inferSignalNames()
 {
-	std::set<Node_Signal*> unnamedSignals;
+	utils::StableSet<Node_Signal*> unnamedSignals;
 	for (size_t i = 0; i < m_nodes.size(); i++)
 		if (auto *signal = dynamic_cast<Node_Signal*>(m_nodes[i].get()))
 			if (signal->getName().empty()) {
@@ -198,7 +199,7 @@ void Circuit::inferSignalNames()
 
 		Node_Signal *s = *unnamedSignals.begin();
 		std::vector<Node_Signal*> signalsToName;
-		std::set<Node_Signal*> loopDetection;
+		utils::UnstableSet<Node_Signal*> loopDetection;
 
 		signalsToName.push_back(s);
 		loopDetection.insert(s);
@@ -460,7 +461,7 @@ void Circuit::cullUnusedNodes(Subnet &subnet)
 
 
 struct HierarchyCondition {
-	std::map<NodePort, bool> m_conditionsAndNegations;
+	utils::UnstableMap<NodePort, bool> m_conditionsAndNegations;
 	bool m_undefined = false;
 	bool m_contradicting = false;
 
@@ -508,7 +509,7 @@ struct HierarchyCondition {
 		if (m_contradicting && other.m_contradicting) return true;
 
 		if (m_conditionsAndNegations.size() != other.m_conditionsAndNegations.size()) return false;
-		for (const auto &pair : m_conditionsAndNegations) {
+		for (const auto &pair : m_conditionsAndNegations.anyOrder()) {
 			auto it = other.m_conditionsAndNegations.find(pair.first);
 			if (it == other.m_conditionsAndNegations.end()) return false;
 			if (it->second != pair.second) return false;
@@ -521,7 +522,7 @@ struct HierarchyCondition {
 		if (m_contradicting && other.m_contradicting) return false;
 
 		if (m_conditionsAndNegations.size() != other.m_conditionsAndNegations.size()) return false;
-		for (const auto &pair : m_conditionsAndNegations) {
+		for (const auto &pair : m_conditionsAndNegations.anyOrder()) {
 			auto it = other.m_conditionsAndNegations.find(pair.first);
 			if (it == other.m_conditionsAndNegations.end()) return false;
 			if (it->second == pair.second) return false;
@@ -533,7 +534,7 @@ struct HierarchyCondition {
 		if (m_undefined || other.m_undefined) return false;
 		if (m_contradicting && other.m_contradicting) return false;
 
-		for (const auto &pair : m_conditionsAndNegations) {
+		for (const auto &pair : m_conditionsAndNegations.anyOrder()) {
 			auto it = other.m_conditionsAndNegations.find(pair.first);
 			if (it == other.m_conditionsAndNegations.end()) return false;
 			if (it->second != pair.second) return false;
@@ -611,14 +612,19 @@ void Circuit::mergeMuxes(Subnet &subnet)
 						}
 
 						if (conditionsMatch) {
-							//std::cout << "Conditions match!" << std::endl;
-							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Merging muxes " << prevMuxNode << " and " << muxNode << " because they form an if then else pair");
+							if (prevMuxNode->getNonSignalDriver(prevConditionNegated?2:1) == muxNode->getNonSignalDriver(muxInput?2:1))
+								dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_POSTPROCESSING << "Not merging muxes " << prevMuxNode << " and " << muxNode << " because the former is driving itself.");
+							else {
+								//std::cout << "Conditions match!" << std::endl;
+								dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Merging muxes " << prevMuxNode << " and " << muxNode << " because they form an if then else pair");
 
-							auto bypass = prevMuxNode->getDriver(prevConditionNegated?2:1);
-							// Connect second mux directly to bypass
-							muxNode->connectInput(muxInput, bypass);
+								auto bypass = prevMuxNode->getDriver(prevConditionNegated?2:1);
 
-							done = false;
+								// Connect second mux directly to bypass
+								muxNode->connectInput(muxInput, bypass);
+
+								done = false;
+							}
 						}
 					}
 				}
@@ -656,17 +662,21 @@ void Circuit::mergeRewires(Subnet &subnet)
 								auto prevInputIdx = prevRewireNode->getOp().ranges[0].inputIdx;
 								auto prevInputOffset = prevRewireNode->getOp().ranges[0].inputOffset;
 
-								dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Merging rewires " << prevRewireNode << " and " << rewireNode << " by directly fetching from input " << prevInputIdx << " at bit offset " << prevInputOffset);
+								if (prevRewireNode->getNonSignalDriver(prevInputIdx) == rewireNode->getNonSignalDriver(inputIdx))
+									dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_POSTPROCESSING << "Not merging rewires " << prevRewireNode << " and " << prevRewireNode << " because the former is driving itself.");
+								else {
+									dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Merging rewires " << prevRewireNode << " and " << prevRewireNode << " by directly fetching from input " << prevInputIdx << " at bit offset " << prevInputOffset);
 
-								auto op = rewireNode->getOp();
-								for (auto &r : op.ranges) {
-									if (r.source == Node_Rewire::OutputRange::INPUT && r.inputIdx == inputIdx)
-										r.inputOffset += prevInputOffset;
+									auto op = rewireNode->getOp();
+									for (auto &r : op.ranges) {
+										if (r.source == Node_Rewire::OutputRange::INPUT && r.inputIdx == inputIdx)
+											r.inputOffset += prevInputOffset;
+									}
+									rewireNode->setOp(std::move(op));
+
+									rewireNode->connectInput(inputIdx, prevRewireNode->getDriver(prevInputIdx));
+									done = false;
 								}
-								rewireNode->setOp(std::move(op));
-
-								rewireNode->connectInput(inputIdx, prevRewireNode->getDriver(prevInputIdx));
-								done = false;
 							}
 						}
 					}
@@ -696,7 +706,7 @@ void Circuit::removeIrrelevantMuxes(Subnet &subnet)
 
 					for (auto muxOutput : muxNode->getDirectlyDriven(0)) {
 						std::vector<NodePort> openList = { muxOutput };
-						std::set<NodePort> closedList;
+						utils::UnstableSet<NodePort> closedList;
 
 						bool allSubnetOutputsMuxed = true;
 
@@ -737,10 +747,14 @@ void Circuit::removeIrrelevantMuxes(Subnet &subnet)
 						}
 
 						if (allSubnetOutputsMuxed) {
-							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing mux " << muxNode << " because only input " << muxInputPort << " is relevant further on");
-							//std::cout << "Rewiring past mux" << std::endl;
-							muxOutput.node->connectInput(muxOutput.port, muxNode->getDriver(muxInputPort));
-							done = false;
+							if (muxNode->getNonSignalDriver(muxInputPort) == muxOutput.node->getNonSignalDriver(muxOutput.port))
+								dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_POSTPROCESSING << "Not removing mux " << muxNode << " because it is driving itself");
+							else {
+								dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing mux " << muxNode << " because only input " << muxInputPort << " is relevant further on");
+								//std::cout << "Rewiring past mux" << std::endl;
+								muxOutput.node->connectInput(muxOutput.port, muxNode->getDriver(muxInputPort));
+								done = false;
+							}
 						} else {
 							//std::cout << "Not rewiring past mux" << std::endl;
 						}
@@ -823,17 +837,21 @@ void Circuit::cullMuxConditionNegations(Subnet &subnet)
 
 				if (Node_Logic *logicNode = dynamic_cast<Node_Logic*>(condition.node)) {
 					if (logicNode->getOp() == Node_Logic::NOT) {
-						muxNode->connectSelector(logicNode->getDriver(0));
+						if (logicNode->getNonSignalDriver(0).node == logicNode)
+							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_POSTPROCESSING << "Not removing/bypassing negation " << logicNode << " because it is driving itself");
+						else {
+							muxNode->connectSelector(logicNode->getDriver(0));
 
-						auto input0 = muxNode->getDriver(1);
-						auto input1 = muxNode->getDriver(2);
+							auto input0 = muxNode->getDriver(1);
+							auto input1 = muxNode->getDriver(2);
 
-						muxNode->connectInput(0, input1);
-						muxNode->connectInput(1, input0);
+							muxNode->connectInput(0, input1);
+							muxNode->connectInput(1, input0);
 
-						dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing/bypassing negation " << logicNode << " to mux " << muxNode << " selector by swapping mux inputs.");
+							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing/bypassing negation " << logicNode << " to mux " << muxNode << " selector by swapping mux inputs.");
 
-						done = false; // check same mux again to unravel chain of NOTs
+							done = false; // check same mux again to unravel chain of NOTs
+						}
 					}
 				}
 			} while (!done);
@@ -851,12 +869,9 @@ void Circuit::removeNoOps(Subnet &subnet)
 		if (!subnet.contains(m_nodes[i].get())) continue;
 		bool removeNode = false;
 
-		if (auto *rewire = dynamic_cast<Node_Rewire*>(m_nodes[i].get())) {
-			if (rewire->isNoOp()) {
-				dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing rewire " << rewire << " because it is a no-op.");
-				rewire->bypassOutputToInput(0, 0);
-				removeNode = true;
-			}
+		if (m_nodes[i]->bypassIfNoOp()) {
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing " << m_nodes[i].get() << " because it is a no-op.");
+			removeNode = true;
 		}
 
 		if (removeNode && !m_nodes[i]->hasRef()) {
@@ -1152,7 +1167,7 @@ void Circuit::removeFalseLoops()
 /// @details It seems many parts of the vhdl export still require signal nodes so this step adds back in missing ones
 void Circuit::ensureSignalNodePlacement()
 {
-	std::map<NodePort, Node_Signal*> addedSignalsNodes;
+	utils::UnstableMap<NodePort, Node_Signal*> addedSignalsNodes;
 
 	for (auto idx : utils::Range(m_nodes.size())) {
 		auto node = m_nodes[idx].get();
@@ -1490,6 +1505,11 @@ void Circuit::freeRevisitColor(std::uint64_t color, utils::RestrictTo<RevisitChe
 void Circuit::setNodeId(BaseNode *node)
 {
 	node->setId(m_nextNodeId++, {});
+}
+
+void Circuit::setClockId(Clock *clock)
+{
+	clock->setId(m_nextClockId++, {});
 }
 
 }

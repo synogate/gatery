@@ -169,6 +169,9 @@ BOOST_FIXTURE_TEST_CASE(scl_ddr_for_clock, TestWithDefaultDevice<Test_ODDR_ForCl
 
 BOOST_FIXTURE_TEST_CASE(lutram_1, TestWithDefaultDevice<Test_Histogram>)
 {
+	forceNoInitialization = true; // todo: activate initialization for lutrams (after proper testing)
+	forceMemoryResetLogic = true;
+
 	using namespace gtry;
 	numBuckets = 4;
 	bucketWidth = 8_b;
@@ -178,6 +181,9 @@ BOOST_FIXTURE_TEST_CASE(lutram_1, TestWithDefaultDevice<Test_Histogram>)
 
 BOOST_FIXTURE_TEST_CASE(lutram_2, TestWithDefaultDevice<Test_Histogram>)
 {
+	forceNoInitialization = true; // todo: activate initialization for lutrams (after proper testing)
+	forceMemoryResetLogic = true;
+
 	using namespace gtry;
 	numBuckets = 32;
 	bucketWidth = 8_b;
@@ -187,6 +193,9 @@ BOOST_FIXTURE_TEST_CASE(lutram_2, TestWithDefaultDevice<Test_Histogram>)
 
 BOOST_FIXTURE_TEST_CASE(blockram_1, TestWithDefaultDevice<Test_Histogram>)
 {
+	forceNoInitialization = true; // todo: implement initialization for blockrams
+	forceMemoryResetLogic = true;
+
 	using namespace gtry;
 	numBuckets = 512;
 	bucketWidth = 32_b;
@@ -196,6 +205,9 @@ BOOST_FIXTURE_TEST_CASE(blockram_1, TestWithDefaultDevice<Test_Histogram>)
 
 BOOST_FIXTURE_TEST_CASE(blockram_2, TestWithDefaultDevice<Test_Histogram>)
 {
+	forceNoInitialization = true; // todo: implement initialization for blockrams
+	forceMemoryResetLogic = true;
+
 	using namespace gtry;
 	numBuckets = 512;
 	iterationFactor = 4;
@@ -206,6 +218,9 @@ BOOST_FIXTURE_TEST_CASE(blockram_2, TestWithDefaultDevice<Test_Histogram>)
 
 BOOST_FIXTURE_TEST_CASE(blockram_cascade, TestWithDefaultDevice<Test_MemoryCascade>)
 {
+	forceNoInitialization = true; // todo: implement initialization for blockrams
+	forceMemoryResetLogic = true;
+
 	using namespace gtry;
 	depth = 1 << 16;
 	execute();

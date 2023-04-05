@@ -194,7 +194,6 @@ BOOST_FIXTURE_TEST_CASE(testMessagesInVCD, IgnoreTapMessages<VCDTestFixture<Boos
 	Bit b = pinIn();
 	sim_assert(b) << "Something bad has happened: b is " << b;
 
-
 	addSimulationProcess([=,this]()->SimProcess {
 		simu(b) = true;
 
@@ -214,6 +213,68 @@ BOOST_FIXTURE_TEST_CASE(testMessagesInVCD, IgnoreTapMessages<VCDTestFixture<Boos
 
 	BOOST_TEST(VCDContains(std::regex{"Something.*bad.*has.*happened:.*b.*is.*0"}));
 }
+
+
+
+
+BOOST_FIXTURE_TEST_CASE(testMemoryInVCD, VCDTestFixture<BoostUnitTestSimulationFixture>)
+{
+	using namespace gtry;
+	using namespace gtry::sim;
+	using namespace gtry::utils;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	std::vector<size_t> contents;
+	contents.resize(16);
+	std::mt19937 rng{ 18055 };
+	for (auto &e : contents)
+		e = rng() % 16;
+
+	Memory<UInt> mem(contents.size(), 4_b);
+	mem.noConflicts();
+	mem.setName("MyMemory");
+
+	UInt addr = pinIn(4_b).setName("addr");
+	auto output = pinOut(mem[addr]).setName("output");
+	UInt input = pinIn(4_b).setName("input");
+	Bit wrEn = pinIn().setName("wrEn");
+	IF (wrEn)
+		mem[addr] = input;
+
+	addSimulationProcess([=,this,&contents,&clock]()->SimProcess {
+
+		simu(wrEn) = '0';
+		co_await AfterClk(clock);
+
+		simu(wrEn) = '1';
+		for (auto i : Range(16)) {
+			simu(addr) = i;
+			simu(input) = contents[i];
+			co_await AfterClk(clock);
+		}
+		simu(wrEn) = '0';
+
+		for (auto i : Range(16)) {
+			simu(addr) = i;
+			co_await WaitStable();
+			BOOST_TEST(simu(output) == contents[i]);
+			co_await AfterClk(clock);
+		}		
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
+
+	BOOST_TEST(VCDContains(std::regex{"MyMemory"}));
+	BOOST_TEST(VCDContains(std::regex{"addr_0015"}));
+}
+
+
+
 
 
 BOOST_AUTO_TEST_SUITE_END()

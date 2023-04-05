@@ -21,6 +21,8 @@
 #include "VCDWriter.h"
 #include "GTKWaveProjectFile.h"
 
+#include <gatery/utils/StableContainers.h>
+
 #include <fstream>
 #include <string>
 #include <map>
@@ -52,8 +54,8 @@ class VCDSink : public WaveformRecorder
 		std::ofstream m_logFile;
 
 		std::vector<std::string> m_id2sigCode;
-		std::map<hlim::Clock*, std::string> m_clock2code;
-		std::map<hlim::Clock*, std::string> m_rst2code;
+		utils::StableMap<hlim::Clock*, std::string> m_clock2code;
+		utils::StableMap<hlim::Clock*, std::string> m_rst2code;
 		std::vector<hlim::Clock*> m_clocks;
 		std::vector<hlim::Clock*> m_resets;
 

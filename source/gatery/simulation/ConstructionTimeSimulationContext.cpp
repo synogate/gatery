@@ -48,12 +48,12 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
 	// Basic idea: Find and copy the combinatorial subnet. Then optimize and execute the subnet to find the value.
 	hlim::Circuit simCircuit;
 
-	std::set<hlim::NodePort> inputPorts;
-	std::set<hlim::NodePort> outputPorts = {handle.getOutput()};
+	utils::StableSet<hlim::NodePort> inputPorts;
+	utils::StableSet<hlim::NodePort> outputPorts = {handle.getOutput()};
 
-	std::map<hlim::NodePort, hlim::NodePort> outputsTranslated;
-	std::map<hlim::NodePort, hlim::NodePort> outputsShorted;
-	std::set<hlim::NodePort> outputsHandled;
+	utils::UnstableMap<hlim::NodePort, hlim::NodePort> outputsTranslated;
+	utils::UnstableMap<hlim::NodePort, hlim::NodePort> outputsShorted;
+	utils::UnstableSet<hlim::NodePort> outputsHandled;
 	std::vector<hlim::NodePort> openList;
 	openList.push_back(handle.getOutput());
 
@@ -135,7 +135,7 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
 	//visualize(simCircuit, "/tmp/circuit_01");
 
 	// Copy subnet
-	std::map<hlim::BaseNode*, hlim::BaseNode*> mapSrc2Dst;
+	utils::StableMap<hlim::BaseNode*, hlim::BaseNode*> mapSrc2Dst;
 	simCircuit.copySubnet(inputPorts, outputPorts, mapSrc2Dst);
 
 	//visualize(simCircuit, "/tmp/circuit_02");

@@ -17,6 +17,8 @@
 */
 #pragma once
 
+#include <gatery/utils/StableContainers.h>
+
 #include "NodePort.h"
 #include "../utils/Exceptions.h"
 #include "../utils/Preprocessor.h"
@@ -226,7 +228,7 @@ class DijkstraExploreNodesForward {
 			protected:
 				bool m_autoProceed = true;
 
-				std::set<BaseNode*> m_closedList;
+				utils::UnstableSet<BaseNode*> m_closedList;
 
 				void uncoverNext();
 		};

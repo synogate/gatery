@@ -84,7 +84,7 @@ void retimeForward(Circuit &circuit, Subnet &subnet);
  * @param failureIsError Whether to throw an exception if the retiming is unsuccessful
  * @returns Whether the retiming was successful
  */
-bool retimeBackwardtoOutput(Circuit &circuit, Subnet &subnet, const std::set<Node_MemPort*> &retimeableWritePorts,
+bool retimeBackwardtoOutput(Circuit &circuit, Subnet &subnet, const utils::StableSet<Node_MemPort*> &retimeableWritePorts,
 						Subnet &retimedArea, NodePort output, bool ignoreRefs = false, bool failureIsError = true, Subnet *newNodes = nullptr);
 
 
@@ -143,7 +143,7 @@ class ReadModifyWriteHazardLogicBuilder
 		bool m_retimeToMux = false;
 		NodeGroup *m_newNodesNodeGroup = nullptr;
 
-		void determineResetValues(std::map<NodePort, sim::DefaultBitVectorState> &resetValues);
+		void determineResetValues(utils::UnstableMap<NodePort, sim::DefaultBitVectorState> &resetValues);
 
 		NodePort createRegister(NodePort nodePort, const sim::DefaultBitVectorState &resetValue);
 

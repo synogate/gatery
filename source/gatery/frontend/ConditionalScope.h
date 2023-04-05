@@ -18,6 +18,7 @@
 #pragma once
 
 #include "Scope.h"
+#include "EnableScope.h"
 
 #include <gatery/hlim/NodePort.h>
 #include <gatery/utils/Traits.h>
@@ -41,6 +42,8 @@ namespace gtry {
 			ConditionalScope();
 			~ConditionalScope();
 
+			static Bit globalEnable();
+
 			hlim::NodePort getFullCondition() const { return m_fullCondition; }
 			size_t getId() const { return m_id; }
 
@@ -53,6 +56,9 @@ namespace gtry {
 			hlim::NodePort m_condition;
 			hlim::NodePort m_fullCondition;
 			bool m_isElseScope;
+
+			/// @todo: Remove once we decouple enable scopes and condition scopes
+			EnableScope m_enScope;
 
 			thread_local static hlim::NodePort m_lastCondition;
 			thread_local static size_t s_nextId;

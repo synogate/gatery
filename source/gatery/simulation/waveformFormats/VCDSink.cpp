@@ -21,6 +21,7 @@
 #include "../../hlim/NodeGroup.h"
 #include "../../hlim/Circuit.h"
 #include "../../hlim/Node.h"
+#include "../../hlim/supportNodes/Node_Memory.h"
 #include "../Simulator.h"
 #include "../../hlim/postprocessing/ClockPinAllocation.h"
 #include "../../hlim/postprocessing/CDCDetection.h"
@@ -140,8 +141,9 @@ namespace gtry::sim
 		m_id2sigCode.resize(m_id2Signal.size());
 
 		struct Module {
-			std::map<const hlim::NodeGroup*, Module> subModules;
+			utils::StableMap<const hlim::NodeGroup*, Module> subModules;
 			std::vector<std::pair<hlim::NodePort, size_t>> signals;
+			utils::StableMap<hlim::Node_Memory*, std::vector<size_t>> memoryWords;
 		};
 
 		Module root;
@@ -159,7 +161,11 @@ namespace gtry::sim
 			Module* m = &root;
 			for(auto it = nodeGroupTrace.rbegin(); it != nodeGroupTrace.rend(); ++it)
 				m = &m->subModules[*it];
-			m->signals.push_back({ signal.driver, id });
+
+			if (signal.driver.node != nullptr)
+				m->signals.push_back({ signal.driver, id });
+			else
+				m->memoryWords[signal.memory].push_back(id);
 		}
 
 		std::function<void(const Module*)> reccurWriteModules;
@@ -175,6 +181,14 @@ namespace gtry::sim
 
 				auto width = hlim::getOutputWidth(sigId.first);
 				m_VCD.declareWire(width, m_id2sigCode[sigId.second], m_id2Signal[sigId.second].name);
+			}
+
+			for(const auto& mem : module->memoryWords) {
+				auto named_module = m_VCD.beginModule("memory_"+mem.first->getName());
+				for(const auto& sigId : mem.second) {
+					auto& signal = m_id2Signal[sigId];
+					m_VCD.declareWire(signal.memoryWordSize, m_id2sigCode[sigId], m_id2Signal[sigId].name);
+				}
 			}
 
 			auto hidden_module = m_VCD.beginModule("__hidden");
@@ -294,10 +308,10 @@ namespace gtry::sim
 
 		// For easier extension in the future (beyond IO pins) determine clock domains for all signals so
 		// that they can be sorted by clocks without relying on the clock ports of the io pins.
-		std::map<hlim::NodePort, hlim::SignalClockDomain> clockDomains;
+		utils::UnstableMap<hlim::NodePort, hlim::SignalClockDomain> clockDomains;
 		hlim::inferClockDomains(m_circuit, clockDomains);
 
-		std::map<hlim::Clock*, std::vector<Signal*>> signalsByClocks;
+		utils::StableMap<hlim::Clock*, std::vector<Signal*>> signalsByClocks;
 
 		for (auto &s : m_id2Signal) {
 			if (!s.isPin && !s.isTap) continue;

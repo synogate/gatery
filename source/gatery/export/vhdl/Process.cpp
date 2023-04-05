@@ -79,9 +79,9 @@ void Process::buildFromNodes(std::vector<hlim::BaseNode*> nodes)
 
 void Process::extractSignals()
 {
-	std::set<hlim::NodePort> potentialLocalSignals;
-	std::set<hlim::NodePort> potentialNonVariableSignals;
-	std::set<hlim::NodePort> potentialConstants;
+	utils::StableSet<hlim::NodePort> potentialLocalSignals;
+	utils::StableSet<hlim::NodePort> potentialNonVariableSignals;
+	utils::StableSet<hlim::NodePort> potentialConstants;
 
 	// In the first pass, insert everything as local signals, then remove from that list everything that also ended up as input, output, or is a pin
 	for (auto node : m_nodes) {
@@ -244,7 +244,7 @@ void CombinatoryProcess::allocateNames()
 }
 
 
-void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentation, std::ostream &comments, const hlim::NodePort &nodePort, std::set<hlim::NodePort> &dependentInputs, VHDLDataType context, bool forceUnfold)
+void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentation, std::ostream &comments, const hlim::NodePort &nodePort, utils::StableSet<hlim::NodePort> &dependentInputs, VHDLDataType context, bool forceUnfold)
 {
 	if (nodePort.node == nullptr) {
 		comments << "-- Warning: Unconnected node, using others=>X" << std::endl;
@@ -592,8 +592,8 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 	{
 		struct Statement {
 			hlim::BaseNode* node = nullptr;
-			std::set<hlim::NodePort> inputs;
-			std::set<hlim::NodePort> outputs;
+			utils::StableSet<hlim::NodePort> inputs;
+			utils::StableSet<hlim::NodePort> outputs;
 			std::string code;
 			std::string comment;
 			size_t weakOrderIdx;
@@ -830,7 +830,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 		for (auto s : m_nonVariableSignals)
 			constructStatementsFor(s);
 
-		std::set<hlim::NodePort> signalsReady;
+		utils::StableSet<hlim::NodePort> signalsReady;
 		for (auto s : m_inputs)
 			signalsReady.insert(s);
 

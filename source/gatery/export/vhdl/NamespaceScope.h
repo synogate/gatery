@@ -20,6 +20,8 @@
 #include "../../hlim/Node.h"
 #include "../../hlim/SignalGroup.h"
 
+#include <gatery/utils/StableContainers.h>
+
 #include "CodeFormatting.h"
 #include "VHDLSignalDeclaration.h"
 
@@ -41,9 +43,28 @@ struct NodeInternalStorageSignal
 	size_t signalIdx;
 
 	inline bool operator==(const NodeInternalStorageSignal &rhs) const { return node == rhs.node && signalIdx == rhs.signalIdx; }
-	inline bool operator<(const NodeInternalStorageSignal &rhs) const { if (node < rhs.node) return true; if (node > rhs.node) return false; return signalIdx < rhs.signalIdx; }
 };
 
+}
+
+template<>
+struct gtry::utils::StableCompare<gtry::vhdl::NodeInternalStorageSignal>
+{
+	bool operator()(const gtry::vhdl::NodeInternalStorageSignal &lhs, const gtry::vhdl::NodeInternalStorageSignal &rhs) const {
+		if (lhs.node == nullptr) {
+			return rhs.node != nullptr;
+		} else {
+			if (rhs.node == nullptr) return false;
+			if (lhs.node->getId() < rhs.node->getId())
+				return true;
+			if (lhs.node->getId() > rhs.node->getId())
+				return false;
+			return lhs.signalIdx < rhs.signalIdx;
+		}
+	}
+};
+
+namespace gtry::vhdl {
 
 struct TypeDefinition
 {
@@ -91,11 +112,11 @@ class NamespaceScope
 
 		std::set<std::string> m_namesInUse;
 		std::map<std::string, size_t> m_nextNameAttempt;
-		std::map<hlim::NodePort, VHDLSignalDeclaration> m_nodeNames;
-		std::map<NodeInternalStorageSignal, std::string> m_nodeStorageNames;
-		std::map<hlim::Clock*, VHDLSignalDeclaration> m_clockNames;
-		std::map<hlim::Clock*, VHDLSignalDeclaration> m_resetNames;
-		std::map<hlim::Node_Pin*, VHDLSignalDeclaration> m_ioPinNames;
+		utils::StableMap<hlim::NodePort, VHDLSignalDeclaration> m_nodeNames;
+		utils::StableMap<NodeInternalStorageSignal, std::string> m_nodeStorageNames;
+		utils::StableMap<hlim::Clock*, VHDLSignalDeclaration> m_clockNames;
+		utils::StableMap<hlim::Clock*, VHDLSignalDeclaration> m_resetNames;
+		utils::StableMap<hlim::Node_Pin*, VHDLSignalDeclaration> m_ioPinNames;
 		std::vector<TypeDefinition> m_typeDefinitions;
 };
 

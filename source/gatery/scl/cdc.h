@@ -31,36 +31,37 @@ namespace gtry::scl
 
 	UInt grayCodeSynchronize(UInt in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
 	UInt grayCodeSynchronize(UInt in, UInt reset, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
-}
 
-template<gtry::Signal T>
-T gtry::scl::synchronize(T val, const gtry::Clock& inClock, const gtry::Clock& outClock, size_t outStages, bool inStage)
-{
-	if(inStage)
-		val = reg(val, { .clock = inClock });
+	template<Signal T>
+	T synchronize(T val, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
+	{
+		if(inStage)
+			val = reg(val, { .clock = inClock });
 
-	val = allowClockDomainCrossing(val, inClock, outClock);
+		val = allowClockDomainCrossing(val, inClock, outClock);
 
-	gtry::Clock syncRegClock = outClock.deriveClock({ .synchronizationRegister = true });
+		Clock syncRegClock = outClock.deriveClock({ .synchronizationRegister = true });
 
-	for(size_t i = 0; i < outStages; ++i)
-		val = reg(val, { .clock = syncRegClock });
+		for(size_t i = 0; i < outStages; ++i)
+			val = reg(val, { .clock = syncRegClock });
 
-	return val;
-}
+		return val;
+	}
 
-template<gtry::Signal T, gtry::SignalValue Treset>
-T gtry::scl::synchronize(T val, const Treset& reset, const gtry::Clock& inClock, const gtry::Clock& outClock, size_t outStages, bool inStage)
-{
-	if(inStage)
-		val = reg(val, reset, { .clock = inClock });
+	template<Signal T, SignalValue Treset>
+	T synchronize(T val, const Treset& reset, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
+	{
+		if(inStage)
+			val = reg(val, reset, { .clock = inClock });
 
-	val = allowClockDomainCrossing(val, inClock, outClock);
+		val = allowClockDomainCrossing(val, inClock, outClock);
 
-	gtry::Clock syncRegClock = outClock.deriveClock({ .synchronizationRegister = true });
+		Clock syncRegClock = outClock.deriveClock({ .synchronizationRegister = true });
 
-	for(size_t i = 0; i < outStages; ++i)
-		val = reg(val, reset, { .clock = syncRegClock });
+		for(size_t i = 0; i < outStages; ++i)
+			val = reg(val, reset, { .clock = syncRegClock });
 
-	return val;
+		return val;
+	}
+
 }

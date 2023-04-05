@@ -17,6 +17,8 @@
 */
 #pragma once
 
+#include <gatery/utils/StableContainers.h>
+
 #include "SimulatorCallbacks.h"
 #include "BitVectorState.h"
 #include "../hlim/NodePtr.h"
@@ -30,6 +32,7 @@ namespace gtry::hlim {
 	struct NodePort;
 	class BaseNode;
 	class NodeGroup;
+	class Node_Memory;
 }
 
 namespace gtry::sim {
@@ -45,11 +48,13 @@ class WaveformRecorder : public SimulatorCallbacks
 		WaveformRecorder(hlim::Circuit &circuit, Simulator &simulator);
 
 		void addSignal(hlim::NodePort np, bool isTap, bool isPin, bool hidden, hlim::NodeGroup *group, const std::string &nameOverride = {}, size_t sortOrder = 0);
+		void addMemory(hlim::Node_Memory *mem, hlim::NodeGroup *group, const std::string &nameOverride = {}, size_t sortOrder = 0);
 		void addAllTaps();
 		void addAllPins();
 		void addAllOutPins();
 		void addAllNamedSignals(bool appendNodeId = false);
 		void addAllSignals(bool appendNodeId = false);
+		void addAllMemories();
 
 		virtual void onAfterPowerOn() override;
 		virtual void onCommitState() override;
@@ -66,6 +71,9 @@ class WaveformRecorder : public SimulatorCallbacks
 			size_t sortOrder = 0;
 			std::string name;
 			hlim::RefCtdNodePort driver;
+			hlim::Node_Memory *memory = nullptr;
+			size_t memoryWordSize = 0;
+			size_t memoryWordIdx = 0;
 			hlim::NodeGroup *nodeGroup = nullptr;
 			bool isBVec;
 			bool isHidden;
@@ -75,7 +83,8 @@ class WaveformRecorder : public SimulatorCallbacks
 		std::vector<StateOffsetSize> m_id2StateOffsetSize;
 		std::vector<Signal> m_id2Signal;
 		sim::DefaultBitVectorState m_trackedState;
-		std::map<hlim::NodePort, size_t> m_alreadyAddedNodePorts;
+		utils::UnstableMap<hlim::NodePort, size_t> m_alreadyAddedNodePorts;
+		utils::UnstableMap<hlim::Node_Memory *, size_t> m_alreadyAddedMemories;
 
 		void initializeStates();
 		virtual void initialize() = 0;

@@ -56,6 +56,7 @@ namespace gtry {
 
 			size_t getNumPipeBalanceGroupStages() const;
 			inline hlim::Node_RegSpawner *getRegSpawner() { return m_regSpawner.get(); }
+			void verifyConsistentEnableScope();
 		protected:
 			hlim::NodePtr<hlim::Node_RegSpawner> m_regSpawner;
 	};
@@ -70,6 +71,7 @@ namespace gtry {
 	template<BaseSignal T>
 	T pipeinput(const T& signal, PipeBalanceGroup& group)
 	{
+		group.verifyConsistentEnableScope();
 		hlim::Node_RegSpawner* spawner = group.getRegSpawner();
 		HCL_DESIGNCHECK_HINT(!spawner->wasResolved(), "This pipeBalanceGroup has already been involved and resolved in retiming and can no longer be modified!");
 		spawner->setClock(ClockScope::getClk().getClk());
@@ -92,6 +94,7 @@ namespace gtry {
 	template<BaseSignal T, typename Tr>
 	T pipeinput(const T& signal, const Tr& resetVal, PipeBalanceGroup& group)
 	{
+		group.verifyConsistentEnableScope();
 		hlim::Node_RegSpawner* spawner = group.getRegSpawner();
 		HCL_DESIGNCHECK_HINT(!spawner->wasResolved(), "This pipeBalanceGroup has already been involved and resolved in retiming and can no longer be modified!");
 		spawner->setClock(ClockScope::getClk().getClk());

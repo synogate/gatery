@@ -7,7 +7,7 @@
 ![Gatery logo](doc/gatery_logo_500.svg)
 
 This is the repository of Gatery, a library for circuit design.
-Visit [the Gatery website](https://synogate.com/gatery.html) for details, where a [tutorial](https://synogate.com/gatery/gatery/tutorial/part1.html) is also available.
+Visit [the Gatery website](https://synogate.com/gatery.html) for details, where a [tutorial](https://www.synogate.com/gatery/tutorial/part1.html) is also available.
 For a quick glance, explore the [project template in a github codespace](https://github.com/codespaces/new?hide_repo_select=true&ref=github_codespace_test&repo=368247767).
 
 [TOC]
@@ -23,13 +23,13 @@ On Fedora:
 
 ```bash
 # install gcc, boost, git (for cloning)
-sudo dnf install g++ boost-devel git make gmp-devel
+sudo dnf install g++ boost-devel git make gmp-devel yaml-cpp-devel
 # verify gcc10 or later
 gcc --version
 
 # fetch premake5 and make globally available
-curl -L https://github.com/premake/premake-core/releases/download/v5.0.0-alpha16/premake-5.0.0-alpha16-linux.tar.gz > /tmp/premake-5.0.0-alpha16-linux.tar.gz
-tar -zxf  /tmp/premake-5.0.0-alpha16-linux.tar.gz -C /tmp/
+curl -L https://github.com/premake/premake-core/releases/download/v5.0.0-beta2/premake-5.0.0-beta2-linux.tar.gz > /tmp/premake-5.0.0-beta2-linux.tar.gz
+tar -zxf  /tmp/premake-5.0.0-beta2-linux.tar.gz -C /tmp/
 sudo mv /tmp/premake5 /usr/local/bin/
 
 # fetch template project
@@ -46,7 +46,7 @@ On Ubuntu:
 # Ubuntu is slightly more involved as gcc10 is a separate package. Also boost needs to be build from scratch since the repository version is not compatible with c++20.
 
 # install gcc, boost, git (for cloning)
-sudo apt install build-essential g++-10 libboost-all-dev git libgmp-dev
+sudo apt install build-essential g++-10 libboost-all-dev git libgmp-dev libyaml-cpp-dev
 # Select gcc10 as default gcc
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 10
 sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 10
@@ -56,8 +56,8 @@ sudo update-alternatives --config g++
 gcc --version
 
 # fetch premake5 and make globally available
-curl -L https://github.com/premake/premake-core/releases/download/v5.0.0-alpha16/premake-5.0.0-alpha16-linux.tar.gz > /tmp/premake-5.0.0-alpha16-linux.tar.gz
-tar -zxf  /tmp/premake-5.0.0-alpha16-linux.tar.gz -C /tmp/
+curl -L https://github.com/premake/premake-core/releases/download/v5.0.0-beta2/premake-5.0.0-beta2-linux.tar.gz > /tmp/premake-5.0.0-beta2-linux.tar.gz
+tar -zxf  /tmp/premake-5.0.0-beta2-linux.tar.gz -C /tmp/
 sudo mv /tmp/premake5 /usr/local/bin/
 
 # Fetch, build, and install boost
@@ -89,6 +89,7 @@ cd ~/Documents/vcpkg_target_dir
 .\bootstrap-vcpkg.bat
 # Fetch and build boost (this may take a while)
 .\vcpkg.exe install boost:x64-windows
+.\vcpkg.exe install yaml-cpp:x64-windows
 .\vcpkg.exe integrate install
 
 # Fetch and build premake

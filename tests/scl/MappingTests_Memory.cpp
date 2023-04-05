@@ -23,11 +23,19 @@
 
 using namespace gtry;
 
+
 void Test_Histogram::execute()
 {
+	if (highLatencyExternal) {
+		forceMemoryResetLogic = true;
+		forceNoInitialization = true;
+	}
+
 	Clock clock({
 			.absoluteFrequency = {{125'000'000,1}},
+			.memoryResetType = (forceMemoryResetLogic?ClockConfig::ResetType::SYNCHRONOUS:ClockConfig::ResetType::NONE),
 			.initializeRegs = false,
+			.initializeMemory = !forceNoInitialization,
 	});
 	HCL_NAMED(clock);
 	ClockScope scp(clock);
@@ -42,10 +50,14 @@ void Test_Histogram::execute()
 		histogram.setType(MemType::EXTERNAL, 10);
 
 	UInt bucketValue = histogram[bucketIdx];
-	IF (increment) {
-		bucketValue += 1;
+	if (forceNoEnable) {
+		bucketValue += ext(mux(increment, std::array<UInt, 2>{"1b0", "1b1"}));
 		histogram[bucketIdx] = bucketValue;
-	}
+	} else
+		IF (increment) {
+			bucketValue += 1;
+			histogram[bucketIdx] = bucketValue;
+		}
 
 	size_t latency = histogram.readLatencyHint();
 	for ([[maybe_unused]] auto i : utils::Range(latency)) {
@@ -56,6 +68,8 @@ void Test_Histogram::execute()
 
 
 	addSimulationProcess([&]()->SimProcess {
+		simu(increment) = '0';
+
 		std::vector<size_t> histCopy;
 		histCopy.resize(numBuckets, 0);
 		std::mt19937 rng;
@@ -99,7 +113,9 @@ void Test_MemoryCascade::execute()
 {
 	Clock clock({
 			.absoluteFrequency = {{125'000'000,1}},
+			.memoryResetType = (forceMemoryResetLogic?ClockConfig::ResetType::SYNCHRONOUS:ClockConfig::ResetType::NONE),
 			.initializeRegs = false,
+			.initializeMemory = !forceNoInitialization,
 	});
 	HCL_NAMED(clock);
 	ClockScope scp(clock);

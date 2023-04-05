@@ -53,7 +53,7 @@ XilinxLutram::XilinxLutram(const XilinxDevice &xilinxDevice) : m_xilinxDevice(xi
 	m_desc.addressBits = 8;	
 
 	m_desc.supportsDualClock = false; // not yet implemented
-	m_desc.supportsPowerOnInitialization = false; // not yet implemented
+	m_desc.supportsPowerOnInitialization = false; // not yet fully tested
 }
 
 
@@ -151,6 +151,8 @@ void XilinxLutram::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
 	if (widthSingleLutram == 1) {
 		auto *ram = DesignScope::createNode<RAM256X1D>();
 
+		ram->setInitialization(memGrp->getMemory()->getPowerOnState());
+
 		UInt rdAddr = (UInt) getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 
 		HCL_ASSERT(hasWritePort);
@@ -176,6 +178,8 @@ void XilinxLutram::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
 		}
 	} else {
 		auto *ram = DesignScope::createNode<RAM64M8>();
+
+		ram->setInitialization(memGrp->getMemory()->getPowerOnState());
 
 		UInt rdAddr = (UInt) getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 

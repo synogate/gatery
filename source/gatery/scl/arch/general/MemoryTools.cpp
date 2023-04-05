@@ -74,8 +74,8 @@ std::vector<SplitMemoryGroup> createDepthSplitMemories(hlim::NodeGroup *group, c
 	std::vector<SplitMemoryGroup> subMems;
 	subMems.resize(splits.size()+1);
 
-	std::set<hlim::NodePort> subnetInputs;
-	std::set<hlim::NodePort> subnetOutputs;
+	utils::StableSet<hlim::NodePort> subnetInputs;
+	utils::StableSet<hlim::NodePort> subnetOutputs;
 
 	for (const auto &rp : memGrp->getReadPorts()) {
 		subnetInputs.insert({.node = rp.node.get(), .port = (size_t) hlim::Node_MemPort::Inputs::enable});
@@ -100,9 +100,10 @@ std::vector<SplitMemoryGroup> createDepthSplitMemories(hlim::NodeGroup *group, c
 
 		// create a sub entity, move everything in
 		auto *subMemory = group->addChildNodeGroup(hlim::NodeGroup::GroupType::SFU);
+		subMemory->setName((boost::format("memory_split_%d") % splitIdx).str());
 		auto *subMemInfo = subMemory->createMetaInfo<hlim::MemoryGroup>(subMemory);
 		subMems[splitIdx].subGroup = subMemInfo;
-		std::map<hlim::BaseNode*, hlim::BaseNode*> &mapSrc2Dst = subMems[splitIdx].original2subGroup;
+		utils::StableMap<hlim::BaseNode*, hlim::BaseNode*> &mapSrc2Dst = subMems[splitIdx].original2subGroup;
 
 		// Only addr lines change width, so we can copy everything else and rescale
 		DesignScope::get()->getCircuit().copySubnet(
@@ -270,8 +271,8 @@ std::vector<SplitMemoryGroup> createWidthSplitMemories(hlim::NodeGroup *group, c
 	std::vector<SplitMemoryGroup> subMems;
 	subMems.resize(splits.size()+1);
 
-	std::set<hlim::NodePort> subnetInputs;
-	std::set<hlim::NodePort> subnetOutputs;
+	utils::StableSet<hlim::NodePort> subnetInputs;
+	utils::StableSet<hlim::NodePort> subnetOutputs;
 
 	for (const auto &rp : memGrp->getReadPorts()) {
 		subnetInputs.insert({.node = rp.node.get(), .port = (size_t) hlim::Node_MemPort::Inputs::enable});
@@ -296,9 +297,10 @@ std::vector<SplitMemoryGroup> createWidthSplitMemories(hlim::NodeGroup *group, c
 
 		// create a sub entity, move everything in
 		auto *subMemory = group->addChildNodeGroup(hlim::NodeGroup::GroupType::SFU);
+		subMemory->setName((boost::format("memory_split_%d") % splitIdx).str());
 		auto *subMemInfo = subMemory->createMetaInfo<hlim::MemoryGroup>(subMemory);
 		subMems[splitIdx].subGroup = subMemInfo;
-		std::map<hlim::BaseNode*, hlim::BaseNode*> &mapSrc2Dst = subMems[splitIdx].original2subGroup;
+		utils::StableMap<hlim::BaseNode*, hlim::BaseNode*> &mapSrc2Dst = subMems[splitIdx].original2subGroup;
 
 		// The data output width changes, so we have to resize the output registers
 		DesignScope::get()->getCircuit().copySubnet(

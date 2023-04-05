@@ -17,6 +17,8 @@
 */
 #pragma once
 
+#include <gatery/utils/StableContainers.h>
+
 #include "BitVectorState.h"
 #include "SimulatorCallbacks.h"
 
@@ -71,7 +73,7 @@ class Simulator
 		 * @param outputs Unless left empty, confines simulation to that part of the circuit that has an influence on the given outputs.
 		 * @param ignoreSimulationProcesses Wether or not to bring in simulation processes that were stored in the circuit itself.
 		 */
-		virtual void compileProgram(const hlim::Circuit &circuit, const std::set<hlim::NodePort> &outputs = {}, bool ignoreSimulationProcesses = false) = 0;
+		virtual void compileProgram(const hlim::Circuit &circuit, const utils::StableSet<hlim::NodePort> &outputs = {}, bool ignoreSimulationProcesses = false) = 0;
 
 		/** 
 			@name Simulator control
@@ -129,7 +131,7 @@ class Simulator
 		virtual DefaultBitVectorState simProcGetValueOfOutput(const hlim::NodePort &nodePort);
 
 		virtual bool outputOptimizedAway(const hlim::NodePort &nodePort) = 0;
-		virtual DefaultBitVectorState getValueOfInternalState(const hlim::BaseNode *node, size_t idx) = 0;
+		virtual DefaultBitVectorState getValueOfInternalState(const hlim::BaseNode *node, size_t idx, size_t offset = 0, size_t size = ~0ull) = 0;
 		virtual DefaultBitVectorState getValueOfOutput(const hlim::NodePort &nodePort) = 0;
 		virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfClock(const hlim::Clock *clk) = 0;
 		virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfReset(const hlim::Clock *clk) = 0;

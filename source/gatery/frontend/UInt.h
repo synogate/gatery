@@ -44,14 +44,8 @@ namespace gtry {
 		using Base = SliceableBitVector<UInt, UIntDefault>;
 		using DefaultValue = UIntDefault;
 
-		UInt() = default;
+		using Base::Base;
 		UInt(UInt&& rhs) : Base(std::move(rhs)) { }
-		UInt(const UIntDefault &defaultValue) : Base(defaultValue) { }
-
-		UInt(const SignalReadPort& port) : Base(port) { }
-		UInt(hlim::Node_Signal* node, Range range, Expansion expansionPolicy, size_t initialScopeId) : Base(node, range, expansionPolicy, initialScopeId) { } // alias
-		UInt(BitWidth width, Expansion expansionPolicy = Expansion::none) : Base(width, expansionPolicy) { }
-
 		UInt(const UInt &rhs) : Base(rhs) { } // Necessary because otherwise deleted copy ctor takes precedence over templated ctor.
 
 		template<BitVectorIntegralLiteral Int>

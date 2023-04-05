@@ -591,5 +591,17 @@ bool RAMBxE2::checkValidInputClocks(std::span<hlim::SignalClockDomain> inputCloc
 	return true;
 }
 
+void RAMBxE2::copyBaseToClone(BaseNode *copy) const
+{
+	ExternalComponent::copyBaseToClone(copy);
+	auto *other = (RAMBxE2*)copy;
+
+	other->m_memoryInitialization = m_memoryInitialization;
+	other->m_type = m_type;
+
+	other->m_portSetups[0] = m_portSetups[0];
+	other->m_portSetups[1] = m_portSetups[1];
+	other->m_clockDomains = m_clockDomains;
+}
 
 }

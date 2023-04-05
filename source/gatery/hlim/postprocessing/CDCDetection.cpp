@@ -26,7 +26,7 @@
 
 namespace gtry::hlim {
 
-void inferClockDomains(Circuit &circuit, std::map<hlim::NodePort, SignalClockDomain> &domains)
+void inferClockDomains(Circuit &circuit, utils::UnstableMap<hlim::NodePort, SignalClockDomain> &domains)
 {
 	domains.clear();
 
@@ -36,7 +36,7 @@ void inferClockDomains(Circuit &circuit, std::map<hlim::NodePort, SignalClockDom
 		Whenever a new output is assigned to a clock domain, this map is accessed and if a subtree is dependent on this output it is recursively rechecked.
 	*/
 	 
-	std::map<NodePort, std::vector<NodePort>> undetermined;
+	utils::UnstableMap<NodePort, std::vector<NodePort>> undetermined;
 
 	std::function<void(const NodePort&, bool)> attemptResolve;
 	std::function<void(const NodePort&, SignalClockDomain)> assignToCD;
@@ -102,7 +102,7 @@ void inferClockDomains(Circuit &circuit, std::map<hlim::NodePort, SignalClockDom
 
 void detectUnguardedCDCCrossings(Circuit &circuit, const ConstSubnet &subnet, std::function<void(const BaseNode*)> detectionCallback)
 {
-	std::map<hlim::NodePort, SignalClockDomain> domains;
+	utils::UnstableMap<hlim::NodePort, SignalClockDomain> domains;
 	inferClockDomains(circuit, domains);
 	std::vector<SignalClockDomain> inputClocks;
 	for (const auto &n : subnet) {

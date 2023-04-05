@@ -23,6 +23,7 @@
 
 #include "../hlim/Circuit.h"
 #include "../hlim/supportNodes/Node_SignalTap.h"
+#include "../hlim/supportNodes/Node_Memory.h"
 #include "../hlim/coreNodes/Node_Pin.h"
 #include "../hlim/coreNodes/Node_Signal.h"
 
@@ -66,6 +67,30 @@ void WaveformRecorder::addSignal(hlim::NodePort np, bool isTap, bool isPin, bool
 		m_id2Signal.push_back(signal);
 	}
 }
+
+void WaveformRecorder::addMemory(hlim::Node_Memory *mem, hlim::NodeGroup *group, const std::string &nameOverride, size_t sortOrder)
+{
+	auto it = m_alreadyAddedMemories.find(mem);
+	if (it == m_alreadyAddedMemories.end()) {
+		m_alreadyAddedMemories[mem] = m_id2Signal.size();
+
+		for (auto wordIdx : utils::Range(mem->getMaxDepth())) {
+			Signal signal;
+			signal.sortOrder = sortOrder;
+			signal.memory = mem;
+			signal.name = (boost::format("addr_%04d") % wordIdx).str();
+			signal.nodeGroup = group;
+			signal.isHidden = false;
+			signal.isBVec = false;
+			signal.isPin = false;
+			signal.isTap = false;
+			signal.memoryWordSize = mem->getMinPortWidth();
+			signal.memoryWordIdx = wordIdx;
+			m_id2Signal.push_back(signal);
+		}
+	}
+}
+
 
 void WaveformRecorder::addAllTaps()
 {
@@ -124,6 +149,14 @@ void WaveformRecorder::addAllSignals(bool appendNodeId)
 		}
 }
 
+void WaveformRecorder::addAllMemories()
+{
+	for (auto &node : m_circuit.getNodes())
+		if (auto *mem = dynamic_cast<hlim::Node_Memory*>(node.get())) {
+			addMemory(mem, mem->getGroup(), {}, mem->getId());
+		}
+}
+
 void WaveformRecorder::onAfterPowerOn()
 {
 	initializeStates();
@@ -138,7 +171,11 @@ void WaveformRecorder::initializeStates()
 	m_id2StateOffsetSize.resize(m_id2Signal.size());
 	for (auto id : utils::Range(m_id2Signal.size())) {
 		auto &signal = m_id2Signal[id];
-		auto size = signal.driver.node->getOutputConnectionType(signal.driver.port).width;
+		size_t size;
+		if (signal.driver.node != nullptr)
+			size = signal.driver.node->getOutputConnectionType(signal.driver.port).width;
+		else
+			size = signal.memoryWordSize;
 		auto offset = allocator.allocate((unsigned int)size);
 		m_id2StateOffsetSize[id].offset = offset;
 		m_id2StateOffsetSize[id].size = size;
@@ -155,7 +192,11 @@ void WaveformRecorder::onCommitState()
 		auto offset = m_id2StateOffsetSize[id].offset;
 		auto size = m_id2StateOffsetSize[id].size;
 
-		auto newState = m_simulator.getValueOfOutput(signal.driver);
+		sim::DefaultBitVectorState newState;
+		if (signal.driver.node != nullptr)
+			newState = m_simulator.getValueOfOutput(signal.driver);
+		else
+			newState = m_simulator.getValueOfInternalState(signal.memory, (size_t) hlim::Node_Memory::Internal::data, signal.memoryWordIdx * signal.memoryWordSize, signal.memoryWordSize);
 		if (newState.size() == 0) continue;
 
 		bool stateChanged = false;
