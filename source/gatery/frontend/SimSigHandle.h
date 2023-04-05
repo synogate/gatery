@@ -39,53 +39,57 @@
 
 namespace gtry {
 
-class Clock;
+	class Clock;
 
-/**
- * @addtogroup gtry_simProcs
- * @{
- */
+	/**
+	 * @addtogroup gtry_simProcs
+	 * @{
+	 */
 
 
-template<gtry::BaseSignal SignalType>
-class BaseSigHandle
-{
+	template<gtry::BaseSignal SignalType>
+	class BaseSigHandle
+	{
 	public:
-		operator sim::DefaultBitVectorState () const { return eval(); }
-		void operator=(const sim::DefaultBitVectorState &state) { this->m_handle = state; }
-		bool operator==(const sim::DefaultBitVectorState &state) const { ReadSignalList::addToAllScopes(m_handle.getOutput()); return this->m_handle == state; }
-		bool operator!=(const sim::DefaultBitVectorState &state) const { return !this->operator==(state); }
+		operator sim::DefaultBitVectorState() const { return eval(); }
+		void operator=(const sim::DefaultBitVectorState& state) { this->m_handle = state; }
+		bool operator==(const sim::DefaultBitVectorState& state) const { ReadSignalList::addToAllScopes(m_handle.getOutput()); return this->m_handle == state; }
+		bool operator!=(const sim::DefaultBitVectorState& state) const { return !this->operator==(state); }
 
 		void invalidate() { m_handle.invalidate(); }
 		bool allDefined() const { return m_handle.allDefined(); }
 
 		sim::DefaultBitVectorState eval() const { ReadSignalList::addToAllScopes(m_handle.getOutput()); return m_handle.eval(); }
 	protected:
-		BaseSigHandle(const hlim::NodePort &np) : m_handle(np) { HCL_DESIGNCHECK(np.node != nullptr); }
+		BaseSigHandle(const hlim::NodePort& np) : m_handle(np) { HCL_DESIGNCHECK(np.node != nullptr); }
 
 		sim::SigHandle m_handle;
-};
+	};
 
-template<gtry::BaseSignal SignalType>
-class BaseIntSigHandle : public BaseSigHandle<SignalType> 
-{
+	template<gtry::BaseSignal SignalType>
+	class BaseIntSigHandle : public BaseSigHandle<SignalType>
+	{
 	public:
 		using BaseSigHandle<SignalType>::operator=;
 
 		template<std::same_as<sim::BigInt> BigInt_> // prevent conversion
-		void operator=(const BigInt_ &v) { this->m_handle = v; }
+		void operator=(const BigInt_& v) { this->m_handle = v; }
 
-		operator sim::BigInt () const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return (sim::BigInt) this->m_handle; }
+		operator sim::BigInt() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return (sim::BigInt)this->m_handle; }
 		std::uint64_t defined() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle.defined(); }
 	protected:
-		BaseIntSigHandle(const hlim::NodePort &np) : BaseSigHandle<SignalType>(np) { }
-};
+		BaseIntSigHandle(const hlim::NodePort& np) : BaseSigHandle<SignalType>(np) { }
+	};
 
-template<gtry::BaseSignal SignalType>
-class BaseUIntSigHandle : public BaseIntSigHandle<SignalType> 
-{
+	template<gtry::BaseSignal SignalType>
+	class BaseUIntSigHandle : public BaseIntSigHandle<SignalType>
+	{
 	public:
 		using BaseIntSigHandle<SignalType>::operator=;
+
+		// plain copy of base class operator to prevent clang intellisense hang bug
+		template<std::same_as<sim::BigInt> BigInt_> // prevent conversion
+		void operator=(const BigInt_& v) { this->m_handle = v; }
 
 		void operator=(std::uint64_t v) { this->m_handle = v; }
 		void operator=(std::string_view v) { this->m_handle = v; }
@@ -103,7 +107,7 @@ class BaseUIntSigHandle : public BaseIntSigHandle<SignalType>
 		bool operator!=(T v) const { return this->operator!=((std::uint64_t)v); }
 
 		std::uint64_t value() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle.value(); }
-		operator std::uint64_t () const { return value(); }
+		operator std::uint64_t() const { return value(); }
 
 		template<std::same_as<int> T> // prevent char to int conversion
 		void operator=(T v) { HCL_DESIGNCHECK_HINT(v >= 0, "UInt and BVec signals can not be negative!"); this->operator=((std::uint64_t)v); }
@@ -112,56 +116,56 @@ class BaseUIntSigHandle : public BaseIntSigHandle<SignalType>
 		template<std::same_as<int> T> // prevent char to int conversion
 		bool operator!=(T v) const { HCL_DESIGNCHECK_HINT(v >= 0, "UInt and BVec signals can not be negative, comparing with negative numbers is most likely a mistake!"); return this->operator!=((std::uint64_t)v); }
 	protected:
-		BaseUIntSigHandle(const hlim::NodePort &np) : BaseIntSigHandle<SignalType>(np) { }
-};
+		BaseUIntSigHandle(const hlim::NodePort& np) : BaseIntSigHandle<SignalType>(np) { }
+	};
 
 
-class SigHandleBVec : public BaseUIntSigHandle<BVec>
-{
+	class SigHandleBVec : public BaseUIntSigHandle<BVec>
+	{
 	public:
 		using BaseUIntSigHandle<BVec>::operator=;
 		using BaseUIntSigHandle<BVec>::operator==;
 
-		void operator=(const SigHandleBVec &rhs) { this->operator=(rhs.eval()); }
-		bool operator==(const SigHandleBVec &rhs) const { return BaseSigHandle<BVec>::operator==(rhs.eval()); }
-		bool operator!=(const SigHandleBVec &rhs) const { return !BaseSigHandle<BVec>::operator==(rhs.eval()); }
+		void operator=(const SigHandleBVec& rhs) { this->operator=(rhs.eval()); }
+		bool operator==(const SigHandleBVec& rhs) const { return BaseSigHandle<BVec>::operator==(rhs.eval()); }
+		bool operator!=(const SigHandleBVec& rhs) const { return !BaseSigHandle<BVec>::operator==(rhs.eval()); }
 
 		SigHandleBVec drivingReg() const { SigHandleBVec res(m_handle.getOutput()); res.m_handle.overrideDrivingRegister(); return res; }
 	protected:
-		SigHandleBVec(const hlim::NodePort &np) : BaseUIntSigHandle<BVec>(np) { }
+		SigHandleBVec(const hlim::NodePort& np) : BaseUIntSigHandle<BVec>(np) { }
 
-		friend SigHandleBVec simu(const BVec &signal);
+		friend SigHandleBVec simu(const BVec& signal);
 
-		friend SigHandleBVec simu(const InputPins &pin);
-		friend SigHandleBVec simu(const OutputPins &pin);		
-};
+		friend SigHandleBVec simu(const InputPins& pin);
+		friend SigHandleBVec simu(const OutputPins& pin);
+	};
 
-class SigHandleUInt : public BaseUIntSigHandle<UInt>
-{
+	class SigHandleUInt : public BaseUIntSigHandle<UInt>
+	{
 	public:
 		using BaseUIntSigHandle<UInt>::operator=;
 		using BaseUIntSigHandle<UInt>::operator==;
 
-		void operator=(const SigHandleUInt &rhs) { this->operator=(rhs.eval()); }
-		bool operator==(const SigHandleUInt &rhs) const { return BaseSigHandle<UInt>::operator==(rhs.eval()); }
-		bool operator!=(const SigHandleUInt &rhs) const { return !BaseSigHandle<UInt>::operator==(rhs.eval()); }
+		void operator=(const SigHandleUInt& rhs) { this->operator=(rhs.eval()); }
+		bool operator==(const SigHandleUInt& rhs) const { return BaseSigHandle<UInt>::operator==(rhs.eval()); }
+		bool operator!=(const SigHandleUInt& rhs) const { return !BaseSigHandle<UInt>::operator==(rhs.eval()); }
 
 		SigHandleUInt drivingReg() const { SigHandleUInt res(m_handle.getOutput()); res.m_handle.overrideDrivingRegister(); return res; }
 	protected:
-		SigHandleUInt(const hlim::NodePort &np) : BaseUIntSigHandle<UInt>(np) { }
+		SigHandleUInt(const hlim::NodePort& np) : BaseUIntSigHandle<UInt>(np) { }
 
-		friend SigHandleUInt simu(const UInt &signal);
-};
+		friend SigHandleUInt simu(const UInt& signal);
+	};
 
-class SigHandleSInt : public BaseIntSigHandle<SInt>
-{
+	class SigHandleSInt : public BaseIntSigHandle<SInt>
+	{
 	public:
 		using BaseIntSigHandle<SInt>::operator=;
 		using BaseIntSigHandle<SInt>::operator==;
 
-		void operator=(const SigHandleSInt &rhs) { this->operator=(rhs.eval()); }
-		bool operator==(const SigHandleSInt &rhs) const { return BaseSigHandle<SInt>::operator==(rhs.eval()); }
-		bool operator!=(const SigHandleSInt &rhs) const { return !BaseSigHandle<SInt>::operator==(rhs.eval()); }
+		void operator=(const SigHandleSInt& rhs) { this->operator=(rhs.eval()); }
+		bool operator==(const SigHandleSInt& rhs) const { return BaseSigHandle<SInt>::operator==(rhs.eval()); }
+		bool operator!=(const SigHandleSInt& rhs) const { return !BaseSigHandle<SInt>::operator==(rhs.eval()); }
 
 		void operator=(std::int64_t v) { this->m_handle = v; }
 		bool operator==(std::int64_t v) const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle == v; }
@@ -176,60 +180,60 @@ class SigHandleSInt : public BaseIntSigHandle<SInt>
 		bool operator!=(T v) const { return this->operator!=((std::uint64_t)v); }
 
 
-		std::int64_t value() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return (std::int64_t) this->m_handle; }
-		operator std::int64_t () const { return value(); }
+		std::int64_t value() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return (std::int64_t)this->m_handle; }
+		operator std::int64_t() const { return value(); }
 
 		SigHandleSInt drivingReg() const { SigHandleSInt res(m_handle.getOutput()); res.m_handle.overrideDrivingRegister(); return res; }
 	protected:
-		SigHandleSInt(const hlim::NodePort &np) : BaseIntSigHandle<SInt>(np) { }
+		SigHandleSInt(const hlim::NodePort& np) : BaseIntSigHandle<SInt>(np) { }
 
-		friend SigHandleSInt simu(const SInt &signal);
-};
+		friend SigHandleSInt simu(const SInt& signal);
+	};
 
 
-class SigHandleBit : public BaseSigHandle<Bit>
-{
+	class SigHandleBit : public BaseSigHandle<Bit>
+	{
 	public:
 		using BaseSigHandle<Bit>::operator=;
 		using BaseSigHandle<Bit>::operator==;
 
-		void operator=(const SigHandleBit &rhs) { this->operator=(rhs.eval()); }
-		bool operator==(const SigHandleBit &rhs) const { return BaseSigHandle<Bit>::operator==(rhs.eval()); }
-		bool operator!=(const SigHandleBit &rhs) const { return !BaseSigHandle<Bit>::operator==(rhs.eval()); }
+		void operator=(const SigHandleBit& rhs) { this->operator=(rhs.eval()); }
+		bool operator==(const SigHandleBit& rhs) const { return BaseSigHandle<Bit>::operator==(rhs.eval()); }
+		bool operator!=(const SigHandleBit& rhs) const { return !BaseSigHandle<Bit>::operator==(rhs.eval()); }
 
-		void operator=(bool b) { this->m_handle = (b?'1':'0'); }
+		void operator=(bool b) { this->m_handle = (b ? '1' : '0'); }
 		void operator=(char c) { this->m_handle = c; }
-		bool operator==(bool b) const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle == (b?'1':'0'); }
+		bool operator==(bool b) const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle == (b ? '1' : '0'); }
 		bool operator==(char c) const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle == c; }
 
 		bool operator!=(bool b) const { return !this->operator==(b); }
 		bool operator!=(char c) const { return !this->operator==(c); }
 
 		bool defined() const { return allDefined(); }
-		bool value() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return (bool) this->m_handle; }
-		operator bool () const { return value(); }
+		bool value() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return (bool)this->m_handle; }
+		operator bool() const { return value(); }
 
 		SigHandleBit drivingReg() const { SigHandleBit res(m_handle.getOutput()); res.m_handle.overrideDrivingRegister(); return res; }
 	protected:
-		SigHandleBit(const hlim::NodePort &np) : BaseSigHandle<Bit>(np) { }
+		SigHandleBit(const hlim::NodePort& np) : BaseSigHandle<Bit>(np) { }
 
-		friend SigHandleBit simu(const Bit &signal);
+		friend SigHandleBit simu(const Bit& signal);
 
-		friend SigHandleBit simu(const InputPin &pin);
-		friend SigHandleBit simu(const OutputPin &pin);
-};
+		friend SigHandleBit simu(const InputPin& pin);
+		friend SigHandleBit simu(const OutputPin& pin);
+	};
 
 
-template<EnumSignal SignalType>
-class SigHandleEnum : public BaseSigHandle<SignalType>
-{
+	template<EnumSignal SignalType>
+	class SigHandleEnum : public BaseSigHandle<SignalType>
+	{
 	public:
 		using BaseSigHandle<SignalType>::operator=;
 		using BaseSigHandle<SignalType>::operator==;
 
-		void operator=(const SigHandleEnum<SignalType> &rhs) { this->operator=(rhs.eval()); }
-		bool operator==(const SigHandleEnum<SignalType> &rhs) const { return BaseSigHandle<SignalType>::operator==(rhs.eval()); }
-		bool operator!=(const SigHandleEnum<SignalType> &rhs) const { return !BaseSigHandle<SignalType>::operator==(rhs.eval()); }
+		void operator=(const SigHandleEnum<SignalType>& rhs) { this->operator=(rhs.eval()); }
+		bool operator==(const SigHandleEnum<SignalType>& rhs) const { return BaseSigHandle<SignalType>::operator==(rhs.eval()); }
+		bool operator!=(const SigHandleEnum<SignalType>& rhs) const { return !BaseSigHandle<SignalType>::operator==(rhs.eval()); }
 
 		void operator=(typename SignalType::enum_type v) { this->m_handle = v; }
 		bool operator==(typename SignalType::enum_type v) const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle == v; }
@@ -240,105 +244,105 @@ class SigHandleEnum : public BaseSigHandle<SignalType>
 
 		SigHandleEnum<SignalType> drivingReg() const { SigHandleEnum<SignalType> res(this->m_handle.getOutput()); res.m_handle.overrideDrivingRegister(); return res; }
 	protected:
-		SigHandleEnum(const hlim::NodePort &np) : BaseSigHandle<SignalType>(np) { }
+		SigHandleEnum(const hlim::NodePort& np) : BaseSigHandle<SignalType>(np) { }
 
-		friend SigHandleEnum<SignalType> simu<>(const SignalType &signal);
-};
-
-
-inline SigHandleBVec simu(const BVec &signal) { return SigHandleBVec(signal.readPort()); }
-inline SigHandleUInt simu(const UInt &signal) { return SigHandleUInt(signal.readPort()); }
-inline SigHandleSInt simu(const SInt &signal) { return SigHandleSInt(signal.readPort()); }
-inline SigHandleBit simu(const Bit &signal) { return SigHandleBit(signal.readPort()); }
-template<EnumSignal SignalType>
-SigHandleEnum<SignalType> simu(const SignalType &signal) {
-	return SigHandleEnum<SignalType>(signal.readPort());
-}
+		friend SigHandleEnum<SignalType> simu<>(const SignalType& signal);
+	};
 
 
-inline std::ostream &operator<<(std::ostream &stream, const SigHandleBVec &handle) { return stream << (sim::DefaultBitVectorState) handle; }
-inline std::ostream &operator<<(std::ostream &stream, const SigHandleUInt &handle) { return stream << (sim::DefaultBitVectorState) handle; }
-inline std::ostream &operator<<(std::ostream &stream, const SigHandleSInt &handle) { return stream << (sim::DefaultBitVectorState) handle; }
-inline std::ostream &operator<<(std::ostream &stream, const SigHandleBit &handle) { return stream << (sim::DefaultBitVectorState) handle; }
-template<EnumSignal SignalType>
-inline std::ostream &operator<<(std::ostream &stream, const SigHandleEnum<SignalType> &handle) { return stream << (sim::DefaultBitVectorState) handle; }
+	inline SigHandleBVec simu(const BVec& signal) { return SigHandleBVec(signal.readPort()); }
+	inline SigHandleUInt simu(const UInt& signal) { return SigHandleUInt(signal.readPort()); }
+	inline SigHandleSInt simu(const SInt& signal) { return SigHandleSInt(signal.readPort()); }
+	inline SigHandleBit simu(const Bit& signal) { return SigHandleBit(signal.readPort()); }
+	template<EnumSignal SignalType>
+	SigHandleEnum<SignalType> simu(const SignalType& signal) {
+		return SigHandleEnum<SignalType>(signal.readPort());
+	}
 
 
-SigHandleBit simu(const InputPin &pin);
-SigHandleBVec simu(const InputPins &pins);
+	inline std::ostream& operator<<(std::ostream& stream, const SigHandleBVec& handle) { return stream << (sim::DefaultBitVectorState)handle; }
+	inline std::ostream& operator<<(std::ostream& stream, const SigHandleUInt& handle) { return stream << (sim::DefaultBitVectorState)handle; }
+	inline std::ostream& operator<<(std::ostream& stream, const SigHandleSInt& handle) { return stream << (sim::DefaultBitVectorState)handle; }
+	inline std::ostream& operator<<(std::ostream& stream, const SigHandleBit& handle) { return stream << (sim::DefaultBitVectorState)handle; }
+	template<EnumSignal SignalType>
+	inline std::ostream& operator<<(std::ostream& stream, const SigHandleEnum<SignalType>& handle) { return stream << (sim::DefaultBitVectorState)handle; }
 
-SigHandleBit simu(const OutputPin &pin);
-SigHandleBVec simu(const OutputPins &pins);
+
+	SigHandleBit simu(const InputPin& pin);
+	SigHandleBVec simu(const InputPins& pins);
+
+	SigHandleBit simu(const OutputPin& pin);
+	SigHandleBVec simu(const OutputPins& pins);
 
 
 
-using Condition = sim::Condition;
+	using Condition = sim::Condition;
 
-template<typename T>
-using SimFunction = sim::SimulationFunction<T>;
+	template<typename T>
+	using SimFunction = sim::SimulationFunction<T>;
 
-using SimProcess = sim::SimulationFunction<void>;
-using WaitFor = sim::WaitFor;
-using WaitUntil = sim::WaitUntil;
-using WaitStable = sim::WaitStable;
-using Seconds = hlim::ClockRational;
-constexpr auto toNanoseconds = hlim::toNanoseconds;
+	using SimProcess = sim::SimulationFunction<void>;
+	using WaitFor = sim::WaitFor;
+	using WaitUntil = sim::WaitUntil;
+	using WaitStable = sim::WaitStable;
+	using Seconds = hlim::ClockRational;
+	constexpr auto toNanoseconds = hlim::toNanoseconds;
 
-Seconds getCurrentSimulationTime();
+	Seconds getCurrentSimulationTime();
 
-using BigInt = sim::BigInt;
+	using BigInt = sim::BigInt;
 
-sim::WaitClock AfterClk(const Clock &clk);
-sim::WaitClock OnClk(const Clock &clk);
+	sim::WaitClock AfterClk(const Clock& clk);
+	sim::WaitClock OnClk(const Clock& clk);
 
-/**
- * @brief Forks a new simulation process that will run in (quasi-)parallel.
- * @details Execution resumes in the new simulation process and returns to the calling simulation process
- * once the forked one suspends or finishes. Forked simulation processes can be used in a fire&forget manner or
- * can be joined again, in which case they can return a return value.
- * @param simProc An instance of gtry::SimFunction.
- * @return A handle that other simulation processes (not necessarily the one that called fork()) can @ref gtry::join on to await the completion forked process.
- * @see gtry::sim::ork
- */
-template<typename ReturnValue>
-auto fork(const sim::SimulationFunction<ReturnValue> &simProc) {
-	return sim::forkFunc(simProc);
-}
+	/**
+	 * @brief Forks a new simulation process that will run in (quasi-)parallel.
+	 * @details Execution resumes in the new simulation process and returns to the calling simulation process
+	 * once the forked one suspends or finishes. Forked simulation processes can be used in a fire&forget manner or
+	 * can be joined again, in which case they can return a return value.
+	 * @param simProc An instance of gtry::SimFunction.
+	 * @return A handle that other simulation processes (not necessarily the one that called fork()) can @ref gtry::join on to await the completion forked process.
+	 * @see gtry::sim::ork
+	 */
+	template<typename ReturnValue>
+	auto fork(const sim::SimulationFunction<ReturnValue>& simProc) {
+		return sim::forkFunc(simProc);
+	}
 
-/**
- * @brief Forks a new simulation process from a lambda expression that will run in (quasi-)parallel.
- * @details Execution resumes in the new simulation process and returns to the calling simulation process
- * once the forked one suspends or finishes. Forked simulation processes can be used in a fire&forget manner or
- * can be joined again, in which case they can return a return value.
- * For lambdas with captures (and functors in general), the simulator must store the lambda instance to prevent it from being destructed before the simulation process terminates.
- * This overload of fork thus takes the uninvoked functor, stores a copy internally, and invokes the copy.
- * @param simProcLambda A lambda expression that gets moved (and stored) until execution is done.
- * @return A handle that other simulation processes (not necessarily the one that called fork()) can @ref gtry::join on to await the completion forked process.
- * @see gtry::sim::fork
- */
-template<std::invocable Functor>
-auto fork(Functor simProcLambda) {
-	using SimFunc = std::invoke_result_t<Functor>;
-	return sim::forkFunc(std::function<SimFunc()>(simProcLambda));
-}
+	/**
+	 * @brief Forks a new simulation process from a lambda expression that will run in (quasi-)parallel.
+	 * @details Execution resumes in the new simulation process and returns to the calling simulation process
+	 * once the forked one suspends or finishes. Forked simulation processes can be used in a fire&forget manner or
+	 * can be joined again, in which case they can return a return value.
+	 * For lambdas with captures (and functors in general), the simulator must store the lambda instance to prevent it from being destructed before the simulation process terminates.
+	 * This overload of fork thus takes the uninvoked functor, stores a copy internally, and invokes the copy.
+	 * @param simProcLambda A lambda expression that gets moved (and stored) until execution is done.
+	 * @return A handle that other simulation processes (not necessarily the one that called fork()) can @ref gtry::join on to await the completion forked process.
+	 * @see gtry::sim::fork
+	 */
+	template<std::invocable Functor>
+	auto fork(Functor simProcLambda) {
+		using SimFunc = std::invoke_result_t<Functor>;
+		return sim::forkFunc(std::function<SimFunc()>(simProcLambda));
+	}
 
-/**
- * @brief Suspends execution until another simulation function has finished, potentially returning a return value from the other simulation function.
- * @param handle A handle to another simulation function as returned from @ref gtry::fork.
- * @return The return value of the awaited simulation function if it isn't void.
- * @see gtry::sim::SimulationFunction::Join
- */
-template<typename Handle>
-auto join(const Handle &handle) {
-	return typename SimFunction<typename Handle::promiseType::returnType>::Join(handle);
-}
+	/**
+	 * @brief Suspends execution until another simulation function has finished, potentially returning a return value from the other simulation function.
+	 * @param handle A handle to another simulation function as returned from @ref gtry::fork.
+	 * @return The return value of the awaited simulation function if it isn't void.
+	 * @see gtry::sim::SimulationFunction::Join
+	 */
+	template<typename Handle>
+	auto join(const Handle& handle) {
+		return typename SimFunction<typename Handle::promiseType::returnType>::Join(handle);
+	}
 
-void simAnnotationStart(const std::string &id, const std::string &desc);
-void simAnnotationStartDelayed(const std::string &id, const std::string &desc, const Clock &clk, int cycles);
+	void simAnnotationStart(const std::string& id, const std::string& desc);
+	void simAnnotationStartDelayed(const std::string& id, const std::string& desc, const Clock& clk, int cycles);
 
-void simAnnotationEnd(const std::string &id);
-void simAnnotationEndDelayed(const std::string &id, const Clock &clk, int cycles);
+	void simAnnotationEnd(const std::string& id);
+	void simAnnotationEndDelayed(const std::string& id, const Clock& clk, int cycles);
 
-/**@}*/
+	/**@}*/
 
 }
