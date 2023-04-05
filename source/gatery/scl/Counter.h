@@ -53,7 +53,7 @@ namespace gtry::scl
 
 		void load(UInt value) { m_load = '1'; m_loadValue = value; }
 	protected:
-		void init(UInt end, BitWidth counterW, bool checkOverflows, size_t resetValue = 0) 
+		void init(UInt end, BitWidth counterW, bool checkOverflows, size_t resetValue = 0)
 		{
 			m_value = counterW;
 			m_loadValue = counterW;
@@ -62,16 +62,16 @@ namespace gtry::scl
 
 			m_last = m_value == (end - 1).lower(counterW);
 
-			
-			IF(m_inc)
-			{
-				m_value += 1;
-				if (checkOverflows) {
-					IF(m_last)
-						m_value = 0;
+			if (counterW != BitWidth(0)) {
+				IF(m_inc)
+				{
+					m_value += 1;
+					if (checkOverflows) {
+						IF(m_last)
+							m_value = 0;
+					}
 				}
 			}
-
 			HCL_NAMED(m_load);
 			HCL_NAMED(m_loadValue);
 			IF(m_load)
