@@ -98,5 +98,12 @@ namespace gtry
 		return ret;
 	}
 
+	template<Signal T>
+	T undefined(const T& blueprint)
+	{
+		T ret = constructFrom(blueprint);
+		unpack(ConstUInt(width(ret)), ret);
+		return ret;
+	}
 /// @}	
 }
