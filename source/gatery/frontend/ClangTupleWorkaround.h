@@ -41,7 +41,7 @@ namespace gtry {
 
 namespace gtry {
 	template <typename _Tp, typename _Tuple>
-	constexpr _Tp make_from_tuple(_Tuple&& __t) noexcept(std::__unpack_std_tuple<std::is_nothrow_constructible, _Tp, _Tuple>)
+	constexpr _Tp make_from_tuple(_Tuple&& __t)
 	{
 		return std::make_from_tuple<_Tp>(std::forward<_Tuple>(__t));
 	}

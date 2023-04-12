@@ -99,8 +99,10 @@ namespace gtry::scl
 		auto transform(std::invocable<Payload> auto&& fun);
 #ifdef __clang__
 		template<typename unused = void>
+		auto transform(std::invocable<Payload> auto&& fun) const requires (Assignable<AssignabilityTestType>);
+#else		
+		auto transform(std::invocable<Payload> auto&& fun) const requires(!BidirStreamSignal<Self>);
 #endif		
-		auto transform(std::invocable<Payload> auto&& fun) const requires (Assignable<AssignabilityTestType>); //requires(!BidirStreamSignal<Self>);
 
 		template<StreamSignal T> T reduceTo();
 		template<StreamSignal T> T reduceTo() const requires(Assignable<AssignabilityTestType>);
@@ -380,9 +382,11 @@ namespace gtry::scl
 
 	template<Signal PayloadT, Signal ...Meta>
 #ifdef __clang__
-		template<typename unused>
+	template<typename unused>
+	inline auto Stream<PayloadT, Meta...>::transform(std::invocable<Payload> auto&& fun) const requires (Assignable<AssignabilityTestType>)
+#else
+	inline auto Stream<PayloadT, Meta...>::transform(std::invocable<Payload> auto&& fun) const requires(!BidirStreamSignal<Self>)
 #endif
-	inline auto Stream<PayloadT, Meta...>::transform(std::invocable<Payload> auto&& fun) const requires (Assignable<AssignabilityTestType>) // requires(!BidirStreamSignal<Self>)
 	{
 		auto&& result = std::invoke(fun, data);
 		Stream<std::remove_cvref_t<decltype(result)>, Meta...> ret;
