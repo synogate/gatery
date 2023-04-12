@@ -20,6 +20,7 @@
 #include "../Fifo.h"
 #include "../flag.h"
 
+
 namespace gtry::scl
 {
 	template<Signal PayloadT, Signal... Meta>
@@ -39,16 +40,42 @@ namespace gtry::scl
 		struct is_stream_signal<Stream<T...>> : std::true_type {};
 	}
 
+#ifdef __clang__
+	template<class T>
+	concept StreamSignal = /*Signal<T> and */internal::is_stream_signal<T>::value;
+#else
 	template<class T>
 	concept StreamSignal = Signal<T> and internal::is_stream_signal<T>::value;
+#endif	
+
+#ifdef __clang__
+	template<typename T>
+	concept Assignable = std::is_assignable_v<T,T>;
+#else
+	template<typename T>
+	concept Assignable = requires(T& a, const T& b) { a = b; };
+#endif
 
 	template<class T>
-	concept BidirStreamSignal = StreamSignal<T> and !requires(T& a, const T& b) { a = b; };
+	concept BidirStreamSignal = StreamSignal<T> and !Assignable<T>;
+
+	template<Signal PayloadT, Signal... Meta>
+	struct StreamAssignabilityTestHelper
+	{
+		PayloadT data;
+		std::tuple<Meta...> _sig;
+	};
 
 	template<Signal PayloadT, Signal... Meta>
 	struct Stream
 	{
 		using Payload = PayloadT;
+		using Self = Stream<PayloadT, Meta...>;
+#ifdef __clang__
+		using AssignabilityTestType = StreamAssignabilityTestHelper<PayloadT, Meta...>; // Clang does not like querying things like assignability on an incomplete type (i.e. while still building the type).
+#else		
+		using AssignabilityTestType = Self;
+#endif
 
 		Payload data;
 		std::tuple<Meta...> _sig;
@@ -62,21 +89,24 @@ namespace gtry::scl
 		template<Signal T>
 		static constexpr bool has();
 
-		template<Signal T> auto add(T&& signal);
-		template<Signal T> auto add(T&& signal) const requires (!BidirStreamSignal<Stream<PayloadT, Meta...>>);
+		template<Signal T> inline auto add(T&& signal);
+		template<Signal T> inline auto add(T&& signal) const requires (Assignable<AssignabilityTestType>);
 
 		template<Signal T> constexpr T& get() { return std::get<T>(_sig); }
 		template<Signal T> constexpr const T& get() const { return std::get<T>(_sig); }
 		template<Signal T> constexpr void set(T&& signal) { get<T>() = std::forward<T>(signal); }
 
 		auto transform(std::invocable<Payload> auto&& fun);
-		auto transform(std::invocable<Payload> auto&& fun) const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>);
+#ifdef __clang__
+		template<typename unused = void>
+#endif		
+		auto transform(std::invocable<Payload> auto&& fun) const requires (Assignable<AssignabilityTestType>); //requires(!BidirStreamSignal<Self>);
 
 		template<StreamSignal T> T reduceTo();
-		template<StreamSignal T> T reduceTo() const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>);
+		template<StreamSignal T> T reduceTo() const requires(Assignable<AssignabilityTestType>);
 
 		template<Signal T> auto remove();
-		template<Signal T> auto remove() const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>);
+		template<Signal T> auto remove() const requires(Assignable<AssignabilityTestType>);
 
 		/**
 		 * @brief	Puts a register in the valid and data path.
@@ -317,11 +347,11 @@ namespace gtry::scl
 
 	template<Signal PayloadT, Signal ...Meta>
 	template<Signal T>
-	inline auto Stream<PayloadT, Meta...>::add(T&& signal) const requires (!BidirStreamSignal<Stream<PayloadT, Meta...>>)
+	inline auto Stream<PayloadT, Meta...>::add(T&& signal) const requires (Assignable<AssignabilityTestType>)
 	{
 		if constexpr (has<T>())
 		{
-			Stream<PayloadT, Meta...> ret = *this;
+			Self ret = *this;
 			ret.set(std::forward<T>(signal));
 			return ret;
 		}
@@ -349,7 +379,10 @@ namespace gtry::scl
 	}
 
 	template<Signal PayloadT, Signal ...Meta>
-	inline auto Stream<PayloadT, Meta...>::transform(std::invocable<Payload> auto&& fun) const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>)
+#ifdef __clang__
+		template<typename unused>
+#endif
+	inline auto Stream<PayloadT, Meta...>::transform(std::invocable<Payload> auto&& fun) const requires (Assignable<AssignabilityTestType>) // requires(!BidirStreamSignal<Self>)
 	{
 		auto&& result = std::invoke(fun, data);
 		Stream<std::remove_cvref_t<decltype(result)>, Meta...> ret;
@@ -373,7 +406,7 @@ namespace gtry::scl
 
 	template<Signal PayloadT, Signal ...Meta>
 	template<StreamSignal T>
-	inline T Stream<PayloadT, Meta...>::reduceTo() const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>)
+	inline T Stream<PayloadT, Meta...>::reduceTo() const requires(Assignable<AssignabilityTestType>)
 	{
 		T ret{ data };
 		std::apply([&](auto&... meta) {
@@ -455,7 +488,7 @@ namespace gtry::scl
 
 	template<Signal PayloadT, Signal ...Meta>
 	template<Signal T>
-	inline auto Stream<PayloadT, Meta...>::remove() const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>)
+	inline auto Stream<PayloadT, Meta...>::remove() const requires(Assignable<AssignabilityTestType>)
 	{
 		auto metaRefs = internal::remove_from_tuple<T>(_sig);
 
@@ -479,7 +512,7 @@ namespace gtry::scl
 
 		dsSig = reg(dsSig, settings);
 
-		Stream<PayloadT, Meta...> ret;
+		Self ret;
 		downstream(ret) = dsSig;
 		upstream(*this) = upstream(ret);
 		return ret;
@@ -491,7 +524,7 @@ namespace gtry::scl
 		if constexpr (has<Valid>())
 			valid(*this).resetValue('0');
 
-		Stream<PayloadT, Meta...> ret;
+		Self ret;
 
 		if constexpr (has<Ready>())
 		{
@@ -527,7 +560,7 @@ namespace gtry::scl
 		if constexpr (has<Ready>())
 			ready(*this).resetValue('0');
 
-		Stream<PayloadT, Meta...> ret;
+		Self ret;
 		ret <<= *this;
 
 		if constexpr (has<Ready>())
@@ -575,7 +608,7 @@ namespace gtry::scl
 	{
 		connect(instance, *this);
 
-		Stream<PayloadT, Meta...> ret;
+		Self ret;
 		connect(ret, instance);
 		return ret;
 	}

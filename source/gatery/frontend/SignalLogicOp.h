@@ -143,7 +143,7 @@ namespace gtry {
 		inline auto sext_bit(const T &bit) { return sext((Bit)bit); }
 		// Convert literals
 		template<BitVectorLiteral T>
-		inline const auto sext_bit(const T &v) { return ValueToBaseSignal<T>{v}; }
+		inline auto sext_bit(const T &v) { return ValueToBaseSignal<T>{v}; }
 		// Forward signals
 		template<BitVectorSignal T>
 		inline const T& sext_bit(const T &v) { return v; }
@@ -156,7 +156,7 @@ namespace gtry {
 
 		/// Given two types returns whichever type of the two is BitVector derived
 		template<typename TL, typename TR> 
-		using getVecType = get_bitvector_type<TL, TR>::type;
+		using getVecType = typename get_bitvector_type<TL, TR>::type;
 	}
 
 

@@ -17,6 +17,7 @@
 */
 #pragma once
 #include "Compound.h"
+#include "ClangTupleWorkaround.h"
 
 namespace gtry 
 {
@@ -51,7 +52,7 @@ namespace gtry
 	template<CompoundSignal T>
 	T constructFrom(const T& val)
 	{
-		return std::make_from_tuple<T>(
+		return gtry::make_from_tuple<T>(
 			boost::hana::transform(boost::pfr::structure_tie(val), [&](auto&& member) {
 				if constexpr(Signal<decltype(member)>)
 					return constructFrom(member);

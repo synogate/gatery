@@ -73,7 +73,7 @@ ARCHITECTURE tb OF )" << m_name << R"( IS
 			m_outputToIoPinName[ioPin->getDriver(0)] = name;
 
 		if (ioPin->isInputPin()) {
-			hlim::NodePort pinOutput(const_cast<hlim::Node_Pin*>(ioPin), 0);
+			hlim::NodePort pinOutput{const_cast<hlim::Node_Pin*>(ioPin), 0};
 			m_outputToIoPinName[pinOutput] = name;
 		}
 	}

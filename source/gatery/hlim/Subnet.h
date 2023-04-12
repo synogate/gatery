@@ -61,7 +61,7 @@ class SubnetTemplate {
 		static FinalType allDrivenCombinatoricallyByOutputs(std::span<NodePort> outputs);
 		static FinalType allForSimulation(CircuitType &circuit, const std::set<hlim::NodePort> &outputs = {}, bool includeRefed = true);
 		static FinalType allForSimulation(CircuitType &circuit, const utils::StableSet<hlim::NodePort> &outputs, bool includeRefed = true);
-		static FinalType allForExport(CircuitType &circuit, const utils::ConfigTree &exportSelectionConfig = {});
+		static FinalType allForExport(CircuitType &circuit, const utils::ConfigTree *exportSelectionConfig = nullptr);
 		static FinalType allUsedNodes(CircuitType &circuit);
 		static FinalType fromNodeGroup(NodeGroup *nodeGroup, bool reccursive = true);
 
@@ -90,7 +90,7 @@ class SubnetTemplate {
 		/// Adds all nodes that a simulation might want (skips export side of export overrides)
 		FinalType &addAllForSimulation(CircuitType &circuit, const utils::StableSet<hlim::NodePort> &outputs, bool includeRefed = true);
 		/// Adds all nodes that an export might want (skips simulation side of export overrides)
-		FinalType &addAllForExport(CircuitType &circuit, const utils::ConfigTree &exportSelectionConfig = {});
+		FinalType &addAllForExport(CircuitType &circuit, const utils::ConfigTree *exportSelectionConfig = nullptr);
 		/// Adds all nodes that are used or have side effects
 		FinalType &addAllUsedNodes(CircuitType &circuit);
 

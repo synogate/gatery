@@ -42,7 +42,7 @@ class GenericMemoryEntity : public Entity
 		hlim::MemoryGroup *m_memGrp;		
 
 		virtual void writeLocalSignalsVHDL(std::ostream &stream) override;
-		virtual void writeStatementsVHDL(std::ostream &stream, unsigned indent);
+		virtual void writeStatementsVHDL(std::ostream &stream, unsigned indent) override;
 
 		void writeResets(std::ostream &stream, unsigned indent, const std::string_view resetName, const std::pair<RegisterConfig, GenericMemoryPorts> &clockReset);
 		void writeWritePorts(std::ostream &stream, unsigned indent, const std::pair<RegisterConfig, GenericMemoryPorts> &clockReset);

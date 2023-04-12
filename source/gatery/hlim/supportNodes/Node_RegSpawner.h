@@ -51,7 +51,7 @@ class Node_RegSpawner : public Node<Node_RegSpawner>
 		std::vector<Node_Register*> spawnForward();
 
 		virtual bool hasSideEffects() const override { return false; }
-		virtual bool isCombinatorial(size_t port) const { return true; }
+		virtual bool isCombinatorial(size_t port) const override { return true; }
 
 		virtual std::string getTypeName() const override;
 		virtual void assertValidity() const override;

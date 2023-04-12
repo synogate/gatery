@@ -30,8 +30,26 @@ namespace std {
 #else
 */
 
-#include <coroutine>
+//#include <coroutine>
 
 /*
 #endif
 */
+
+
+#ifdef __clang__
+#define __cpp_impl_coroutine true
+#define __cpp_lib_coroutine true
+#endif
+
+#include <coroutine>
+
+#ifdef __clang__
+namespace std::experimental {
+	using std::coroutine_traits;
+	using std::coroutine_handle;
+	using std::suspend_always;
+	using std::suspend_never;
+}
+#endif
+

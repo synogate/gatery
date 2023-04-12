@@ -96,7 +96,7 @@ FinalType SubnetTemplate<makeConst, FinalType>::allForSimulation(CircuitType &ci
 }
 
 template<bool makeConst, typename FinalType>
-FinalType SubnetTemplate<makeConst, FinalType>::allForExport(CircuitType &circuit, const utils::ConfigTree &exportSelectionConfig)
+FinalType SubnetTemplate<makeConst, FinalType>::allForExport(CircuitType &circuit, const utils::ConfigTree *exportSelectionConfig)
 {
 	FinalType res;
 	res.addAllForExport(circuit, exportSelectionConfig);
@@ -300,10 +300,14 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllForSimulation(CircuitType
 }
 
 template<bool makeConst, typename FinalType>
-FinalType &SubnetTemplate<makeConst, FinalType>::addAllForExport(CircuitType &circuit, const utils::ConfigTree &exportSelectionConfig)
+FinalType &SubnetTemplate<makeConst, FinalType>::addAllForExport(CircuitType &circuit, const utils::ConfigTree *exportSelectionConfig)
 {
-	bool includeAsserts = exportSelectionConfig["include_asserts"].as(false);
-	bool includeSignalTaps = exportSelectionConfig["include_taps"].as(true);
+	bool includeAsserts = false;
+	if (exportSelectionConfig)
+		(*exportSelectionConfig)["include_asserts"].as(includeAsserts);
+	bool includeSignalTaps = true;
+	if (exportSelectionConfig)
+		(*exportSelectionConfig)["include_taps"].as(includeSignalTaps);
 
 	std::vector<NodeType*> openList;
 	utils::StableSet<NodeType*> handledNodes;

@@ -85,14 +85,14 @@ namespace gtry::scl
 		in <<= source;
 		HCL_NAMED(in);
 
-		if constexpr (source.template has<Valid>())
+		if constexpr (T::template has<Valid>())
 			IF(eop(source))
 			valid(in) = '0';
 
 		T out = constructFrom(in);
 		out = in.regDownstream();
 
-		if constexpr (source.template has<Eop>())
+		if constexpr (T::template has<Eop>())
 		{
 			Bit eopReg = flag(eop(source) & valid(source), transfer(out));
 			IF(eop(source) | eopReg)

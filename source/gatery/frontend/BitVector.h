@@ -191,7 +191,7 @@ namespace gtry {
 		void assign(std::uint64_t value, Expansion policy);
 		void assign(std::int64_t value, Expansion policy);
 		void assign(std::string_view, Expansion policy);
-		virtual void assign(SignalReadPort, bool ignoreConditions = false);
+		virtual void assign(SignalReadPort, bool ignoreConditions = false) override;
 
 		void createNode(size_t width, Expansion policy);
 		SignalReadPort rawDriver() const;

@@ -84,11 +84,11 @@ namespace gtry {
 			void setName(std::string name) override;
 			void addToSignalGroup(hlim::SignalGroup *signalGroup);
 
-			hlim::Node_Signal* node() { return m_node.get(); }
+			hlim::Node_Signal* node() const { return m_node.get(); }
 		protected:
 			virtual void createNode();
 			void assign(size_t v, std::string_view name);
-			virtual void assign(SignalReadPort in, bool ignoreConditions = false);
+			virtual void assign(SignalReadPort in, bool ignoreConditions = false) override;
 
 			void exportOverride(const SignalReadPort& exportOverride);
 
@@ -290,7 +290,7 @@ namespace gtry {
 
 	template<EnumType T>
 	Enum<T> Enum<T>::final() const {
-		return SignalReadPort{ m_node };
+		return SignalReadPort{ node() };
 	}
 
 	template<EnumType T>

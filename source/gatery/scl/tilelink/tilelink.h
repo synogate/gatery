@@ -228,7 +228,7 @@ namespace gtry::scl
 		HCL_NAMED(beatCounter);
 		HCL_NAMED(start);
 		HCL_NAMED(end);
-		return { Sop(start), Eop(end) };
+		return { Sop{start}, Eop{end} };
 	}
 
 	template<StreamSignal T>
@@ -247,7 +247,8 @@ namespace gtry::scl
 		return e.eop;
 	}
 
-	BVec responseOpCode(const TileLinkSignal auto& link)
+	template<TileLinkSignal TLink>
+	BVec responseOpCode(const TLink& link)
 	{
 		BVec op = 3_b;
 		op = (size_t)TileLinkD::AccessAckData;
@@ -255,7 +256,7 @@ namespace gtry::scl
 		IF(link.a->opcode(1, 2_b) == 0) // PutFull & PuPartial
 			op = (size_t)TileLinkD::AccessAck;
 
-		if(link.template capability<TileLinkCapHint>())
+		if(TLink::template capability<TileLinkCapHint>())
 			IF(link.a->opcode == (size_t)TileLinkA::Intent)
 				op = (size_t)TileLinkD::HintAck;
 
@@ -324,6 +325,7 @@ namespace gtry
 	extern template void connect(scl::TileLinkChannelA&, scl::TileLinkChannelA&);
 	extern template void connect(scl::TileLinkChannelD&, scl::TileLinkChannelD&);
 
+#ifndef __clang__
 	extern template auto upstream(scl::TileLinkUL&);
 	extern template auto upstream(scl::TileLinkUH&);
 	extern template auto upstream(scl::TileLinkChannelA&);
@@ -341,6 +343,7 @@ namespace gtry
 	extern template auto downstream(const scl::TileLinkUH&);
 	extern template auto downstream(const scl::TileLinkChannelA&);
 	extern template auto downstream(const scl::TileLinkChannelD&);
+#endif
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkA, opcode, param, size, source, address, mask, data);

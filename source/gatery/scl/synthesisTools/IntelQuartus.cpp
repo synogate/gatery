@@ -402,7 +402,7 @@ set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
 	{
 		for (const auto &node : circuit.getNodes()) {
 			for (auto outIdx : utils::Range(node->getNumOutputPorts())) {
-				hlim::NodePort driver(node.get(), outIdx);
+				hlim::NodePort driver{node.get(), outIdx};
 
 				// Do two consumers exist which are both in different entities (which are also different from the producer).
 				utils::StableSet<hlim::NodeGroup*> nodeGroups;

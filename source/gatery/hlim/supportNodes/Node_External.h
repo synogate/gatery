@@ -150,7 +150,7 @@ class Node_External : public Node<Node_External>
 		void changeOutputWidth(size_t idx, size_t width);
 
 		virtual std::string getTypeName() const override { return m_name; }
-		virtual void assertValidity() const {}
+		virtual void assertValidity() const override {}
 		virtual std::string getInputName(size_t idx) const override;
 		virtual std::string getOutputName(size_t idx) const override;
 

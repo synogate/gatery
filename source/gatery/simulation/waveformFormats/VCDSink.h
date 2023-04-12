@@ -33,7 +33,7 @@ class VCDSink : public WaveformRecorder
 {
 	public:
 		VCDSink(hlim::Circuit &circuit, Simulator &simulator, const char *filename, const char *logFilename = nullptr);
-		~VCDSink();
+		virtual ~VCDSink() override;
 
 		virtual void onDebugMessage(const hlim::BaseNode *src, std::string msg) override;
 		virtual void onWarning(const hlim::BaseNode *src, std::string msg) override;

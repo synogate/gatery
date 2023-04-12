@@ -79,12 +79,12 @@ namespace gtry {
 		/// Split the signal's state into integers and return their values.
 		/// @details The value of undefined bits in the returned bit string is arbitrary.
 		template<std::unsigned_integral T>
-		std::vector<T> toVector() const { return this->m_handle.toVector<T>(); }
+		std::vector<T> toVector() const { return this->m_handle.template toVector<T>(); }
 
 		/// Split the signal's state into integers and return their values.
 		/// @details The value of undefined bits in the returned bit string is arbitrary.
 		template<std::unsigned_integral T>
-		operator std::vector<T> () const { return this->m_handle.toVector<T>(); }
+		operator std::vector<T> () const { return this->m_handle.template toVector<T>(); }
 
 		void invalidate() { m_handle.invalidate(); }
 		bool allDefined() const { return m_handle.allDefined(); }
@@ -267,6 +267,13 @@ namespace gtry {
 		friend SigHandleBit simu(const OutputPin& pin);
 	};
 
+	template<EnumSignal SignalType>
+	class SigHandleEnum;
+
+	template<EnumSignal SignalType>
+	SigHandleEnum<SignalType> simu(const SignalType &signal) {
+		return SigHandleEnum<SignalType>(signal.readPort());
+	}
 
 	template<EnumSignal SignalType>
 	class SigHandleEnum : public BaseSigHandle<SignalType>
@@ -290,18 +297,15 @@ namespace gtry {
 	protected:
 		SigHandleEnum(const hlim::NodePort& np) : BaseSigHandle<SignalType>(np) { }
 
-		friend SigHandleEnum<SignalType> simu<>(const SignalType& signal);
+		friend SigHandleEnum<SignalType> simu<SignalType>(const SignalType &signal);
 	};
 
 
-	inline SigHandleBVec simu(const BVec& signal) { return SigHandleBVec(signal.readPort()); }
-	inline SigHandleUInt simu(const UInt& signal) { return SigHandleUInt(signal.readPort()); }
-	inline SigHandleSInt simu(const SInt& signal) { return SigHandleSInt(signal.readPort()); }
-	inline SigHandleBit simu(const Bit& signal) { return SigHandleBit(signal.readPort()); }
-	template<EnumSignal SignalType>
-	SigHandleEnum<SignalType> simu(const SignalType& signal) {
-		return SigHandleEnum<SignalType>(signal.readPort());
-	}
+	inline SigHandleBVec simu(const BVec &signal) { return SigHandleBVec(signal.readPort()); }
+	inline SigHandleUInt simu(const UInt &signal) { return SigHandleUInt(signal.readPort()); }
+	inline SigHandleSInt simu(const SInt &signal) { return SigHandleSInt(signal.readPort()); }
+	inline SigHandleBit simu(const Bit &signal) { return SigHandleBit(signal.readPort()); }
+
 
 
 	inline std::ostream& operator<<(std::ostream& stream, const SigHandleBVec& handle) { return stream << (sim::DefaultBitVectorState)handle; }

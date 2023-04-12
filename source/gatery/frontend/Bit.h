@@ -127,7 +127,7 @@ namespace hlim {
 		void createNode();
 		void assign(bool);
 		void assign(char);
-		virtual void assign(SignalReadPort in, bool ignoreConditions = false);
+		virtual void assign(SignalReadPort in, bool ignoreConditions = false) override;
 
 		bool valid() const final; // hide method since Bit is always valid
 		SignalReadPort rawDriver() const;

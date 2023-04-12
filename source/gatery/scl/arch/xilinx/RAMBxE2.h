@@ -161,10 +161,10 @@ class RAMBxE2 : public gtry::ExternalComponent
 
 		//RAMBxE2 &setupInitData(const sim::DefaultBitVectorState &init, bool useParity = false);
 
-		virtual void setInput(size_t input, const Bit &bit);
-		virtual void setInput(size_t input, const BVec &bvec);
-		virtual Bit getOutputBit(size_t output);
-		virtual BVec getOutputBVec(size_t output);
+		virtual void setInput(size_t input, const Bit &bit) override;
+		virtual void setInput(size_t input, const BVec &bvec) override;
+		virtual Bit getOutputBit(size_t output) override;
+		virtual BVec getOutputBVec(size_t output) override;
 
 		BVec getReadData(size_t width, bool portA);
 		BVec getReadDataPortA(size_t width) { return getReadData(width, true); }

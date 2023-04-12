@@ -152,6 +152,7 @@ namespace gtry
 	template void connect(scl::TileLinkChannelA&, scl::TileLinkChannelA&);
 	template void connect(scl::TileLinkChannelD&, scl::TileLinkChannelD&);
 
+#ifndef __clang__
 	template auto upstream(scl::TileLinkUL&);
 	template auto upstream(scl::TileLinkUH&);
 	template auto upstream(scl::TileLinkChannelA&);
@@ -169,4 +170,5 @@ namespace gtry
 	template auto downstream(const scl::TileLinkUH&);
 	template auto downstream(const scl::TileLinkChannelA&);
 	template auto downstream(const scl::TileLinkChannelD&);
+#endif
 }

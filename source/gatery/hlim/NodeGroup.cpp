@@ -229,9 +229,12 @@ namespace gtry::hlim
 #ifdef USE_YAMLCPP
 		std::string extPath{ instancePath };
 		extPath += '/';
-
+#ifdef __clang__
+		for (const Setting& elem : m_config) { if (elem.key != key) continue;
+#else
 		for (const Setting& elem : std::ranges::equal_range(m_config, key, {}, &Setting::key))
 		{
+#endif
 			if (const std::string* path = get_if<std::string>(&elem.filter))
 			{
 				if (path->front() == '/')

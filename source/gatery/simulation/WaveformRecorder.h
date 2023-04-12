@@ -46,6 +46,7 @@ class WaveformRecorder : public SimulatorCallbacks
 {
 	public:
 		WaveformRecorder(hlim::Circuit &circuit, Simulator &simulator);
+		virtual ~WaveformRecorder() = default;
 
 		void addSignal(hlim::NodePort np, bool isTap, bool isPin, bool hidden, hlim::NodeGroup *group, const std::string &nameOverride = {}, size_t sortOrder = 0);
 		void addMemory(hlim::Node_Memory *mem, hlim::NodeGroup *group, const std::string &nameOverride = {}, size_t sortOrder = 0);

@@ -80,7 +80,15 @@ namespace gtry::scl
 			UInt selected = BitWidth::count(m_in.size());
 			selected = reg(selected, 0);
 			IF(!locked & reg(ready(*m_out) | !valid(*m_out), '1'))
+#ifdef __clang__
+				{
+					std::list<std::reference_wrapper<T>> streamsOnly;
+					for (auto &s : m_in) streamsOnly.push_back(s.stream);
+					selected = m_selector(streamsOnly);
+				}
+#else			
 				selected = m_selector(m_in | std::views::transform(&InStream::stream));
+#endif				
 			HCL_NAMED(selected);
 			m_selectedInput = selected;
 
@@ -137,8 +145,15 @@ namespace gtry::scl
 		template<class TCont>
 		UInt operator () (const TCont& in)
 		{
+#ifdef __clang__
+			std::vector<Bit> valids;
+			for (const auto &s : in)
+				valids.emplace_back(valid(s.get()));
+			UInt mask = cat(valids);
+#else		
 			UInt mask = cat(in | views::valid);
-			VStream idx = scl::priorityEncoder(mask);
+#endif
+			auto idx = scl::priorityEncoder(mask);
 			IF(!valid(idx))
 				*idx = 0;
 			return *idx;
@@ -151,7 +166,14 @@ namespace gtry::scl
 		UInt operator () (const TCont& in)
 		{
 			auto scope = Area{ "RoundRobin" }.enter();
+#ifdef __clang__
+			std::vector<Bit> valids;
+			for (const auto &s : in)
+				valids.emplace_back(valid(s.get()));
+			UInt mask = cat(valids);
+#else		
 			UInt mask = cat(in | views::valid);
+#endif
 
 			UInt counter = Counter{ mask.size() }.inc().value();
 			HCL_NAMED(counter);

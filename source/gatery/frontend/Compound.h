@@ -19,6 +19,8 @@
 #include "BitVector.h"
 #include "../utils/Traits.h"
 
+#include "ClangTupleWorkaround.h"
+
 #include <string_view>
 #include <type_traits>
 
@@ -388,7 +390,7 @@ namespace gtry
 		template<CompoundSignal T, typename TFunc>
 		T transformSignal(const T& val, TFunc&& func)
 		{
-			return std::make_from_tuple<T>(
+			return gtry::make_from_tuple<T>(
 				boost::hana::transform(boost::pfr::structure_tie(val), [&](auto&& member) {
 					if constexpr(Signal<decltype(member)>)
 						return transformSignal(member, func);
@@ -402,7 +404,7 @@ namespace gtry
 		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func)
 		{
 			const T& resetValT = resetVal;
-			return std::make_from_tuple<T>(
+			return gtry::make_from_tuple<T>(
 				boost::hana::transform(
 				boost::hana::zip_with([](auto&& a, auto&& b) { return std::tie(a, b); },
 					boost::pfr::structure_tie(val),
