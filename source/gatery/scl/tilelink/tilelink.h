@@ -146,7 +146,8 @@ namespace gtry::scl
 	void setFullByteEnableMask(TileLinkChannelA& a);
 	UInt transferLengthFromLogSize(const UInt& logSize, size_t numSymbolsPerBeat);
 
-	BVec responseOpCode(const TileLinkSignal auto& link);
+	template<TileLinkSignal TLink>
+	BVec responseOpCode(const TLink& link);
 
 	template<TileLinkSignal TLink>
 	void tileLinkInit(TLink& link, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth);
