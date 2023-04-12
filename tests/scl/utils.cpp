@@ -90,7 +90,12 @@ BOOST_FIXTURE_TEST_CASE(addWithCarry, BoostUnitTestSimulationFixture)
 	UInt b = pinIn(4_b).setName("b");
 	Bit cin = pinIn().setName("cin");
 
+#ifdef __clang__
+	UInt sum, carry;
+	std::tie(sum, carry) = add(a, b, cin);
+#else
 	auto [sum, carry] = add(a, b, cin);
+#endif	
 	pinOut(sum).setName("sum");
 	pinOut(carry).setName("carry");
 
