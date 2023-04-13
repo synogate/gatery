@@ -101,7 +101,7 @@ namespace gtry::scl
 		template<typename unused = void>
 		auto transform(std::invocable<Payload> auto&& fun) const requires (Assignable<AssignabilityTestType>);
 #else		
-		auto transform(std::invocable<Payload> auto&& fun) const requires(!BidirStreamSignal<Self>);
+		auto transform(std::invocable<Payload> auto&& fun) const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>);
 #endif		
 
 		template<StreamSignal T> T reduceTo();
@@ -385,7 +385,7 @@ namespace gtry::scl
 	template<typename unused>
 	inline auto Stream<PayloadT, Meta...>::transform(std::invocable<Payload> auto&& fun) const requires (Assignable<AssignabilityTestType>)
 #else
-	inline auto Stream<PayloadT, Meta...>::transform(std::invocable<Payload> auto&& fun) const requires(!BidirStreamSignal<Self>)
+	inline auto Stream<PayloadT, Meta...>::transform(std::invocable<Payload> auto&& fun) const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>)
 #endif
 	{
 		auto&& result = std::invoke(fun, data);
