@@ -22,6 +22,8 @@
 #include <gatery/hlim/Subnet.h>
 #include <gatery/hlim/coreNodes/Node_Signal.h>
 #include <gatery/hlim/GraphTools.h>
+#include <gatery/hlim/CNF.h>
+#include <gatery/hlim/RegisterRetiming.h>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/data/dataset.hpp>
@@ -564,4 +566,323 @@ BOOST_FIXTURE_TEST_CASE(retiming_backward_fix_reset, BoostUnitTestSimulationFixt
 
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
 }
+
+
+
+
+BOOST_FIXTURE_TEST_CASE(retiming_enable_suggestion_spawner, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+	using namespace gtry::sim;
+	using namespace gtry::utils;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	UInt input1 = pinIn(32_b).setName("input1");
+	UInt input2 = pinIn(32_b).setName("input2");
+	UInt a = input1;
+	UInt b = input2;
+
+	Bit enable = pinIn().setName("enable");
+	ENIF (enable)
+		pipeinputgroup(a, b);
+
+	UInt output = a + b;
+	output = pipestage(output);
+
+	pinOut(output).setName("output");
+
+	auto area = hlim::Subnet::all(design.getCircuit());
+	auto enableCondition = hlim::suggestForwardRetimingEnableCondition(design.getCircuit(), area, output.readPort());
+	hlim::Conjunction expectedEnableCondition;
+	expectedEnableCondition.parseOutput(enable.readPort());
+	BOOST_TEST(enableCondition.isEqualTo(expectedEnableCondition));
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(retiming_enable_suggestion_reg, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+	using namespace gtry::sim;
+	using namespace gtry::utils;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	UInt input1 = pinIn(32_b).setName("input1");
+	UInt input2 = pinIn(32_b).setName("input2");
+	UInt a = input1;
+	UInt b = input2;
+
+	Bit enable = pinIn().setName("enable");
+	ENIF (enable) {
+		a = reg(a, {.allowRetimingForward = true});
+		b = reg(b, {.allowRetimingForward = true});
+	}
+
+	UInt output = a + b;
+	output = pipestage(output);
+
+	pinOut(output).setName("output");
+
+	auto area = hlim::Subnet::all(design.getCircuit());
+	auto enableCondition = hlim::suggestForwardRetimingEnableCondition(design.getCircuit(), area, output.readPort());
+	hlim::Conjunction expectedEnableCondition;
+	expectedEnableCondition.parseOutput(enable.readPort());
+	BOOST_TEST(enableCondition.isEqualTo(expectedEnableCondition));
+}
+
+
+BOOST_FIXTURE_TEST_CASE(retiming_enable_suggestion_mixed_conditions, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+	using namespace gtry::sim;
+	using namespace gtry::utils;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	UInt input1 = pinIn(32_b).setName("input1");
+	UInt input2 = pinIn(32_b).setName("input2");
+	UInt a = input1;
+	UInt b = input2;
+
+	Bit ready = pinIn().setName("ready");
+	Bit valid = pinIn().setName("valid");
+	ENIF (ready)
+		a = reg(a, {.allowRetimingForward = true});
+
+	ENIF (ready & valid)
+		b = reg(b, {.allowRetimingForward = true});
+
+	UInt output = a + b;
+	output = pipestage(output);
+
+	pinOut(output).setName("output");
+
+	auto area = hlim::Subnet::all(design.getCircuit());
+	auto enableCondition = hlim::suggestForwardRetimingEnableCondition(design.getCircuit(), area, output.readPort());
+	hlim::Conjunction expectedEnableCondition;
+	expectedEnableCondition.parseOutput(ready.readPort());
+	BOOST_TEST(enableCondition.isEqualTo(expectedEnableCondition));
+}
+
+
+
+
+BOOST_FIXTURE_TEST_CASE(retiming_pipeline_enable, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+	using namespace gtry::sim;
+	using namespace gtry::utils;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	UInt input1 = pinIn(32_b).setName("input1");
+	UInt input2 = pinIn(32_b).setName("input2");
+	UInt a = input1;
+	UInt b = input2;
+
+	Bit enable = pinIn().setName("enable");
+	ENIF (enable)
+		pipeinputgroup(a, b);
+
+	UInt output = a + b;
+	output = pipestage(output);
+
+	pinOut(output).setName("output");
+
+	addSimulationProcess([=, this]()->SimProcess {
+		simu(input1) = 1337;
+		simu(input2) = 42;
+		simu(enable) = '1';
+
+
+		BOOST_TEST(!simu(output).defined());
+
+		co_await AfterClk(clock);
+
+		BOOST_TEST(simu(output).defined());
+		BOOST_TEST(simu(output).value() == 1337 + 42);
+
+		simu(input1) = 265367647;
+		simu(input2) = 48423;
+		simu(enable) = '0';
+
+		co_await AfterClk(clock);
+
+		BOOST_TEST(simu(output).value() == 1337 + 42);
+
+		stopTest();
+	});
+
+	design.visualize("before");
+	design.postprocess();
+
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
+}
+
+BOOST_FIXTURE_TEST_CASE(retiming_pipeline_partial_enable, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+	using namespace gtry::sim;
+	using namespace gtry::utils;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	UInt input1 = pinIn(32_b).setName("input1");
+	UInt input2 = pinIn(32_b).setName("input2");
+	UInt a = input1;
+	UInt b = input2;
+
+	Bit ready = pinIn().setName("ready");
+	Bit valid = pinIn().setName("valid");
+	Bit v = valid;
+
+	pipeinputgroup(a, b, v);
+
+	ENIF (ready & v)
+		a = reg(a, {.allowRetimingForward = true});
+		
+	ENIF (ready)
+		b = reg(b, {.allowRetimingForward = true});
+
+	UInt output = a + b;
+	output = pipestage(output);
+
+	pinOut(output).setName("output");
+
+	addSimulationProcess([=, this]()->SimProcess {
+		simu(input1) = 1337;
+		simu(input2) = 42;
+		simu(ready) = '1';
+		simu(valid) = '1';
+
+
+		BOOST_TEST(!simu(output).defined());
+
+		co_await AfterClk(clock);
+
+		BOOST_TEST(simu(output) == 1337 + 42);
+
+		simu(input1) = 265367647;
+		simu(input2) = 48423;
+		simu(ready) = '0';
+
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1337 + 42);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1337 + 42);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1337 + 42);
+
+		simu(valid) = '0';
+		simu(ready) = '1';
+
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1337 + 48423);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1337 + 48423);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1337 + 48423);
+
+		stopTest();
+	});
+
+	design.visualize("before");
+	design.postprocess();
+
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
+}
+
+
+BOOST_FIXTURE_TEST_CASE(retiming_pipeline_statemachine, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+	using namespace gtry::sim;
+	using namespace gtry::utils;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	UInt input = pinIn(10_b).setName("input");
+	UInt data = input;
+
+	Bit ready = pinIn().setName("ready");
+	Bit in_valid = pinIn().setName("valid");
+	Bit valid = in_valid;
+	ENIF (ready) {
+		PipeBalanceGroup grp;
+		data = grp(data);
+		valid = grp(valid, '0');
+	}
+
+
+	UInt output;
+	ENIF (ready & valid) {
+		UInt counter = 10_b;
+		counter = reg(counter+1, 0);
+		output = counter + data;
+	}
+
+	output = pipestage(output);
+
+	pinOut(output).setName("output");
+	pinOut(valid).setName("output_valid");
+
+	addSimulationProcess([=, this]()->SimProcess {
+		simu(input) = 1000;
+		simu(ready) = '0';
+		simu(in_valid) = '0';
+
+
+		BOOST_TEST(!simu(output).defined());
+
+		co_await AfterClk(clock);
+
+		BOOST_TEST(!simu(output).defined());
+
+		simu(ready) = '0';
+		simu(in_valid) = '1';
+
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1000+0);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1000+0);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1000+0);
+
+		simu(ready) = '1';
+		simu(in_valid) = '0';
+
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1000+0);
+
+		simu(ready) = '1';
+		simu(in_valid) = '1';
+
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1000+0);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1000+1);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1000+2);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1000+3);
+
+		stopTest();
+	});
+
+	design.postprocess();
+
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
+}
+
 

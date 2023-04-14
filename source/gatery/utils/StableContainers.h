@@ -95,6 +95,7 @@ class UnstableMap
 {
 	public:
 		using value_type = typename std::map<Key, Value>::value_type;
+		using iterator = typename std::map<Key, Value>::iterator;
 
 		UnstableMap() = default;
 		
@@ -109,6 +110,8 @@ class UnstableMap
 		void insert(value_type &&value) { m_map.insert(std::forward<value_type>(value)); }
 		auto find(const Key &key) { return m_map.find(key); }
 		auto find(const Key &key) const { return m_map.find(key); }
+		auto erase(const Key &key) { return m_map.erase(key); }
+		auto erase(iterator it) { return m_map.erase(it); }
 		auto end() const { return m_map.end(); }
 		bool contains(const Key &key) const { return m_map.contains(key); }
 		auto size() const { return m_map.size(); }

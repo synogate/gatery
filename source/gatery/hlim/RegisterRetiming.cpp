@@ -25,6 +25,8 @@
 #include "Node.h"
 #include "NodePort.h"
 #include "GraphTools.h"
+#include "CNF.h"
+#include "RevisitCheck.h"
 #include "coreNodes/Node_Register.h"
 #include "coreNodes/Node_Constant.h"
 #include "coreNodes/Node_Signal.h"
@@ -48,40 +50,145 @@
 
 #include <sstream>
 #include <iostream>
+#include <optional>
 
-//#define DEBUG_OUTPUT
+#define DEBUG_OUTPUT
 
 namespace gtry::hlim {
+
+Conjunction suggestForwardRetimingEnableCondition(Circuit &circuit, Subnet &area, NodePort output, bool ignoreRefs)
+{
+	std::optional<Conjunction> enableCondition;
+
+	std::vector<NodePort> openList;
+	openList.push_back(output);
+
+	RevisitCheck alreadyHandled(circuit);
+
+	while (!openList.empty()) {
+		auto nodePort = openList.back();
+		openList.pop_back();
+		// Continue if the node was already encountered.
+		if (alreadyHandled.contains(nodePort.node)) continue;
+		alreadyHandled.insert(nodePort.node);
+
+		// Do not leave the specified playground, abort if no register is found before.
+		if (!area.contains(nodePort.node))
+			continue;
+
+		auto *regSpawner = dynamic_cast<Node_RegSpawner*>(nodePort.node);
+
+		// We may not want to retime nodes to which references are still being held
+		// References to node spawners are ok (?)
+		if (nodePort.node->hasRef() && !ignoreRefs && !regSpawner)
+			continue;
+
+		// We can not retime nodes with a side effect
+		if (nodePort.node->hasSideEffects())
+			continue;
+
+		// Everything seems good with this node, so proceed
+		if (regSpawner) {  // Register spawners spawn registers, so stop here
+
+			Conjunction enableTerm;
+			if (regSpawner->getDriver(Node_RegSpawner::INPUT_ENABLE).node != nullptr)
+				enableTerm.parseInput({.node = regSpawner, .port = Node_RegSpawner::INPUT_ENABLE});
+			
+			if (enableCondition)
+				enableCondition->intersectTermsWith(enableTerm);
+			else
+				enableCondition = enableTerm;
+		} else
+		if (auto *reg = dynamic_cast<Node_Register*>(nodePort.node)) {  // Registers need special handling
+			// Don't derive enable hints from anchored registers
+			if (reg->getFlags().contains(Node_Register::Flags::ALLOW_RETIMING_FORWARD)) {
+
+				Conjunction enableTerm;
+				if (reg->getNonSignalDriver(Node_Register::ENABLE).node != nullptr)
+					enableTerm.parseInput({.node = reg, .port = Node_Register::ENABLE});
+				
+				if (enableCondition)
+					enableCondition->intersectTermsWith(enableTerm);
+				else
+					enableCondition = enableTerm;
+			} else {
+				// Retime over this register. Only follow the data port as the enable port is special.
+				for (unsigned i : {Node_Register::DATA, Node_Register::ENABLE}) {
+					auto driver = reg->getDriver(i);
+					if (driver.node != nullptr)
+						openList.push_back(driver);
+				}
+			}
+		} else {
+			// Regular nodes just get added to the retiming area and their inputs are further explored
+			for (size_t i : utils::Range(nodePort.node->getNumInputPorts())) {
+				auto driver = nodePort.node->getDriver(i);
+				if (driver.node != nullptr)
+					if (driver.node->getOutputConnectionType(driver.port).type != ConnectionType::DEPENDENCY)
+						openList.push_back(driver);
+			}
+
+ 			if (auto *memPort = dynamic_cast<Node_MemPort*>(nodePort.node)) { // If it is a memory port attempt to retime entire memory
+				auto *memory = memPort->getMemory();
+			
+				// add all memory ports to open list
+				for (auto np : memory->getPorts()) 
+					openList.push_back(np);
+			}
+		}
+	}
+
+	if (enableCondition)
+		return *enableCondition;
+	return {};
+}
+
+
+
+
+
+struct ForwardRetimingPlan
+{
+	/// Area that will be retimed forward (excluding the registers).
+	Subnet areaToBeRetimed;
+	/// Registers that lead into areaToBeRetimed and which will have to be removed.
+	utils::StableSet<Node_Register*> registersToBeRemoved;
+	/// Register spawners that need to spawn registers which in turn can be retimed forward.
+	utils::StableSet<Node_RegSpawner*> regSpawnersToSpawn;
+
+	struct RegEnableReplacement {
+		Subnet newNodes;
+		Node_Register *reg;
+		NodePort newEnable;
+	};
+
+	/// Enables on anchored registers that need replacement
+	std::vector<RegEnableReplacement> regEnableReplacements;
+};
+
 
 /**
  * @brief Determines the exact area to be forward retimed (but doesn't do any retiming).
  * @details This is the entire fan in up to registers that can be retimed forward.
- * @param area The area to which retiming is to be restricted.
+ * @param area The area to which retiming is to be restricted. The area may increase if the planner needs to create new nodes.
  * @param output The output that shall receive a register.
- * @param areaToBeRetimed Outputs the area that will be retimed forward (excluding the registers).
- * @param registersToBeRemoved Output of the registers that lead into areaToBeRetimed and which will have to be removed.
- * @param regSpawnersToSpawn Ouput of the register spawners that need to spawn registers which in teurn can be retimed forward.
- * @param regSpawnersToRegistersToBeRemoved Output of the outputs of the register spawner where those of the spanwed registers will be that have to be remove (moved forward).
  * @param ignoreRefs Whether or not to throw an exception if a node has to be retimed to which a reference exists.
  * @param failureIsError Whether to throw an exception if a retiming area limited by registers can be determined
- * @returns Whether a valid retiming area could be determined
+ * @returns Whether a valid retiming area could be determined and if so the retiming plan
  */
-bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort output, 
-								Subnet &areaToBeRetimed, utils::StableSet<Node_Register*> &registersToBeRemoved, 
-								utils::StableSet<Node_RegSpawner*> &regSpawnersToSpawn, 
-								utils::StableSet<NodePort> &regSpawnersToRegistersToBeRemoved,
-								bool ignoreRefs = false, bool failureIsError = true)
+std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort output, Conjunction enableCondition, bool ignoreRefs = false, bool failureIsError = true)
 {
+	ForwardRetimingPlan retimingPlan;
+
 	BaseNode *clockGivingNode = nullptr;
 	Clock *clock = nullptr;
 
 	std::vector<NodePort> openList;
 	openList.push_back(output);
 
-
 #ifdef DEBUG_OUTPUT
 	auto writeSubnet = [&]{
-		Subnet subnet = areaToBeRetimed;
+		Subnet subnet = retimingPlan.areaToBeRetimed;
 		subnet.dilate(true, true);
 
 		DotExport exp("retiming_area.dot");
@@ -91,18 +198,20 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 #endif
 
 	while (!openList.empty()) {
+
 		auto nodePort = openList.back();
 		openList.pop_back();
 		// Continue if the node was already encountered.
-		if (areaToBeRetimed.contains(nodePort.node)) continue;
-		if (registersToBeRemoved.contains((Node_Register*)nodePort.node)) continue;
+		if (retimingPlan.areaToBeRetimed.contains(nodePort.node)) continue;
+		if (retimingPlan.registersToBeRemoved.contains((Node_Register*)nodePort.node)) continue;
+		if (retimingPlan.regSpawnersToSpawn.contains((Node_RegSpawner*)nodePort.node)) continue;
 
 		//std::cout << "determineAreaToBeRetimed: processing node " << node->getId() << std::endl;
 
 
 		// Do not leave the specified playground, abort if no register is found before.
 		if (!area.contains(nodePort.node)) {
-			if (!failureIsError) return false;
+			if (!failureIsError) return {};
 
 #ifdef DEBUG_OUTPUT
 	writeSubnet();
@@ -127,7 +236,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 		// We may not want to retime nodes to which references are still being held
 		// References to node spawners are ok (?)
 		if (nodePort.node->hasRef() && !ignoreRefs && !regSpawner) {
-			if (!failureIsError) return false;
+			if (!failureIsError) return {};
 
 #ifdef DEBUG_OUTPUT
 	writeSubnet();
@@ -154,12 +263,11 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 					clockGivingNode = nodePort.node;
 				} else {
 					if (clock != c) {
-						if (!failureIsError) return false;
+						if (!failureIsError) return {};
 
 #ifdef DEBUG_OUTPUT
 	writeSubnet();
 #endif
-
 						std::stringstream error;
 
 						error 
@@ -179,7 +287,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 
 		// We can not retime nodes with a side effect
 		if (nodePort.node->hasSideEffects()) {
-			if (!failureIsError) return false;
+			if (!failureIsError) return {};
 
 #ifdef DEBUG_OUTPUT
 	writeSubnet();
@@ -202,25 +310,114 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 
 		// Everything seems good with this node, so proceed
 		if (regSpawner) {  // Register spawners spawn registers, so stop here
-			HCL_ASSERT_HINT(regSpawner->getDriver(Node_RegSpawner::INPUT_ENABLE).node == nullptr, "Using register retiming with register spawners that have an enable is a WIP!");
-			regSpawnersToSpawn.insert(regSpawner);
-			regSpawnersToRegistersToBeRemoved.insert(nodePort);
+			retimingPlan.regSpawnersToSpawn.insert(regSpawner);
+
+			// We do need to check for enable condition compatibility
+			if (regSpawner->getDriver(Node_RegSpawner::INPUT_ENABLE).node != nullptr) {
+				Conjunction spawnerEnable;
+				spawnerEnable.parseInput({.node = regSpawner, .port = Node_RegSpawner::INPUT_ENABLE});
+
+				if (!enableCondition.isSubsetOf(spawnerEnable)) {
+					if (!failureIsError) return {};
+
+		#ifdef DEBUG_OUTPUT
+			writeSubnet();
+		#endif
+					std::stringstream error;
+
+					error 
+						<< "An error occurred attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
+						<< "Node from:\n" << output.node->getStackTrace() << "\n";
+
+					error 
+						<< "The fanning-in signals are driven by a register spawner " << nodePort.node->getName() << " (" << nodePort.node->getTypeName() << ", id " << nodePort.node->getId()
+						<< ") with an enable signal that is incompatible with the inferred register enable signal of the retiming operation.\n"
+						<< "Register spawner from:\n" << nodePort.node->getStackTrace() << "\n";
+
+					HCL_ASSERT_HINT(false, error.str());					
+				}
+			}
+
 		} else
 		if (auto *reg = dynamic_cast<Node_Register*>(nodePort.node)) {  // Registers need special handling
-			if (registersToBeRemoved.contains(reg)) continue;
+			Conjunction regEnable;
 
-			// Retime over anchored registers and registers with enable signals (since we can't move them yet).
-			if (!reg->getFlags().contains(Node_Register::Flags::ALLOW_RETIMING_FORWARD) || reg->getNonSignalDriver(Node_Register::ENABLE).node != nullptr) {
-				// Retime over this register. This means the enable port is part of the fan-in and we also need to search it for a register.
-				areaToBeRetimed.add(nodePort.node);
-				for (unsigned i : {Node_Register::DATA, Node_Register::ENABLE}) {
-					auto driver = reg->getDriver(i);
-					if (driver.node != nullptr)
-						openList.push_back(driver);
+			// We do need to check for enable condition compatibility
+			if (reg->getDriver(Node_Register::ENABLE).node != nullptr) {
+				regEnable.parseInput({.node = reg, .port = Node_Register::ENABLE});
+
+				if (!enableCondition.isSubsetOf(regEnable)) {
+					if (!failureIsError) return {};
+
+		#ifdef DEBUG_OUTPUT
+			writeSubnet();
+		#endif
+					std::stringstream error;
+
+					error 
+						<< "An error occurred attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
+						<< "Node from:\n" << output.node->getStackTrace() << "\n";
+
+					error 
+						<< "The fanning-in signals are driven by a register " << nodePort.node->getName() << " (" << nodePort.node->getTypeName() << ", id " << nodePort.node->getId()
+						<< ") with an enable signal that is incompatible with the inferred register enable signal of the retiming operation.\n"
+						<< "Register from:\n" << nodePort.node->getStackTrace() << "\n";
+
+					HCL_ASSERT_HINT(false, error.str());					
+				}
+			}
+
+
+			// Retime over anchored registers
+			if (!reg->getFlags().contains(Node_Register::Flags::ALLOW_RETIMING_FORWARD)) {
+				retimingPlan.areaToBeRetimed.add(nodePort.node);
+
+				if (reg->getDriver(Node_Register::DATA).node != nullptr)
+					openList.push_back(reg->getDriver(Node_Register::DATA));
+
+
+				// If the register has an enable, we need to rebuild the subset of the reg's enable conjunction that does not include
+				// the retiming enable conjunction and start retiming into that.
+				// It needs to be duplicated since other parts of the circuit might depend on the original.
+				if (reg->getDriver(Node_Register::ENABLE).node != nullptr) {
+					regEnable.removeTerms(enableCondition);
+
+					// Ensure that the contribution to regEnable are (or become part of) the retiming area
+					for (const auto pair : regEnable.getTerms().anyOrder())
+						area.add(pair.second.conjunctionDriver.node);
+
+					// Build the new enable logic. Here we break a bit with the paradigm of not modifying the 
+					// graph in the planning phase, but if the retiming fails the nodes will be unused and can
+					// be optimized away.
+					// The new enable signal is added to a list to later on replace the old enable of the register
+					// and is further explored for retiming.
+					ForwardRetimingPlan::RegEnableReplacement repl;
+					NodePort retimingEnablePart = regEnable.build(*reg->getGroup(), &repl.newNodes);
+					
+					// The full new enable condition is the global enable condition (unretimed) AND the retimed residual condition
+					Circuit &circuit = reg->getGroup()->getCircuit();
+					auto *andNode = circuit.createNode<Node_Logic>(Node_Logic::AND);
+					repl.newNodes.add(andNode);
+					andNode->moveToGroup(reg->getGroup());
+					andNode->recordStackTrace();
+					andNode->connectInput(0, retimingEnablePart);
+					andNode->connectInput(1, enableCondition.build(*reg->getGroup(), &repl.newNodes));
+					repl.newEnable = {.node = andNode, .port = 0ull};
+					repl.reg = reg;
+					// The and node is still part of the retiming area to bridge from the main retiming area to the retimed residual condition
+					retimingPlan.areaToBeRetimed.add(andNode);
+
+					// Ensure that the new nodes of regEnable become part of the retiming area
+					for (const auto node : repl.newNodes)
+						area.add(node);
+
+					openList.push_back(retimingEnablePart);
+
+					retimingPlan.regEnableReplacements.push_back(std::move(repl));
 				}
 			} else {
 				// Found a register to retime forward, stop here.
-				registersToBeRemoved.insert(reg);
+				retimingPlan.registersToBeRemoved.insert(reg);
 
 				// It is important to not add the register to the area to be retimed!
 				// If the register is part of a loop that is part of the retiming area, 
@@ -230,10 +427,14 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 				// In other words, for registers that are completely embeddded in the retiming area,
 				// this mechanism implicitely advances the reset value by one iteration which is necessary 
 				// because we can not retime a register out of the reset-pin-path.
+
+				// Don't build and retime into a modified enable condition as with anchored registers.
+				// No retiming into the enable condition is needed and the modification/splitting of the 
+				// enable condition is done when implementing the plan.
 			}
 		} else {
 			// Regular nodes just get added to the retiming area and their inputs are further explored
-			areaToBeRetimed.add(nodePort.node);
+			retimingPlan.areaToBeRetimed.add(nodePort.node);
 			for (size_t i : utils::Range(nodePort.node->getNumInputPorts())) {
 				auto driver = nodePort.node->getDriver(i);
 				if (driver.node != nullptr)
@@ -243,7 +444,7 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 
  			if (auto *memPort = dynamic_cast<Node_MemPort*>(nodePort.node)) { // If it is a memory port attempt to retime entire memory
 				auto *memory = memPort->getMemory();
-				areaToBeRetimed.add(memory);
+				retimingPlan.areaToBeRetimed.add(memory);
 			
 				// add all memory ports to open list
 				for (auto np : memory->getPorts()) 
@@ -252,17 +453,45 @@ bool determineAreaToBeRetimedForward(Circuit &circuit, Subnet &area, NodePort ou
 		}
 	}
 
-	return true;
+	return retimingPlan;
 }
+
+NodePort buildHoldingCircuit(NodePort driver, NodePort enable, NodePort resetValue, Clock *clock, NodeGroup &group, Subnet &area)
+{
+	Circuit &circuit = group.getCircuit();
+
+	auto *mux = circuit.createNode<Node_Multiplexer>(2);
+	mux->recordStackTrace();
+	area.add(mux);
+	mux->moveToGroup(&group);
+	mux->connectSelector(enable);
+	mux->connectInput(1, driver);
+
+
+	auto *reg = circuit.createNode<Node_Register>();
+	reg->recordStackTrace();
+	area.add(reg);
+	reg->moveToGroup(&group);
+	reg->setClock(clock);
+	reg->connectInput(Node_Register::DATA, {.node = mux, .port = 0ull});
+	reg->connectInput(Node_Register::RESET_VALUE, resetValue);
+
+	mux->connectInput(0, {.node = reg, .port = 0ull});
+
+	return {.node = mux, .port = 0ull};
+}
+
 
 bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, const RetimingSetting &settings)
 {
-	Subnet areaToBeRetimed;
-	utils::StableSet<Node_Register*> registersToBeRemoved;
-	utils::StableSet<Node_RegSpawner*> regSpawnersToSpawn;
-	utils::StableSet<NodePort> regSpawnersToRegistersToBeRemoved;
+	Conjunction enableCondition = suggestForwardRetimingEnableCondition(circuit, area, output, settings.ignoreRefs);
 
-	if (!determineAreaToBeRetimedForward(circuit, area, output, areaToBeRetimed, registersToBeRemoved, regSpawnersToSpawn, regSpawnersToRegistersToBeRemoved, settings.ignoreRefs, settings.failureIsError))
+	HCL_ASSERT(!enableCondition.isUndefined());
+	HCL_ASSERT(!enableCondition.isContradicting());
+
+	auto retimingPlan = determineAreaToBeRetimedForward(circuit, area, output, enableCondition, settings.ignoreRefs, settings.failureIsError);
+
+	if (!retimingPlan)
 		return false;
 
 	/*
@@ -284,47 +513,42 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 
 	utils::StableSet<hlim::NodePort> outputsLeavingRetimingArea;
 	// Find every output leaving the area
-	for (auto n : areaToBeRetimed)
+	for (auto n : retimingPlan->areaToBeRetimed)
 		for (auto i : utils::Range(n->getNumOutputPorts()))
 			for (auto np : n->getDirectlyDriven(i))
-				if (!areaToBeRetimed.contains(np.node)) {
+				if (!retimingPlan->areaToBeRetimed.contains(np.node)) {
 					outputsLeavingRetimingArea.insert({.node = n, .port = i});
 					break;
 				}
 
-	if (regSpawnersToSpawn.size() > 1) {
-		std::cout << "WARNING: Registers for retiming to a single location are sourced from " << regSpawnersToSpawn.size() << " different register spawners. This is usually a mistake." << std::endl;
+	if (retimingPlan->regSpawnersToSpawn.size() > 1) {
+		std::cout << "WARNING: Registers for retiming to a single location are sourced from " << retimingPlan->regSpawnersToSpawn.size() << " different register spawners. This is usually a mistake." << std::endl;
 		std::cout << "Register spawners: " << std::endl;
-		for (auto spawner : regSpawnersToSpawn) {
+		for (auto spawner : retimingPlan->regSpawnersToSpawn) {
 			std::cout << "Node_RegSpawner id: " << spawner->getId() << " from:\n"
 				<< spawner->getStackTrace() << std::endl;
 		}
 	}
 
+	Subnet newNodes;
+
+	auto registersToCheckForBypass = retimingPlan->registersToBeRemoved;
+
 	// Spawn register spawners
-	for (auto *spawner : regSpawnersToSpawn) {
+	for (auto *spawner : retimingPlan->regSpawnersToSpawn) {
 		auto regs = spawner->spawnForward();
 		// Add new regs to area subnet to keep that up to date
-		for (auto r : regs) area.add(r);
+		for (auto r : regs) {
+			newNodes.add(r);
+			registersToCheckForBypass.insert(r);
+		}
 	}
 
-	// Collect subset of spawned registers for removal
-	for (auto spawnerOutput : regSpawnersToRegistersToBeRemoved) {
-		const auto &driven = spawnerOutput.node->getDirectlyDriven(spawnerOutput.port);
-		HCL_ASSERT(driven.size() == 1);
-		HCL_ASSERT(driven.front().port == Node_Register::DATA);
-		auto *reg = dynamic_cast<Node_Register*>(driven.front().node);
-		HCL_ASSERT(reg != nullptr);
-
-		registersToBeRemoved.insert(reg);
-	}
-
-
-	if (registersToBeRemoved.empty()) // no registers found to retime, probably everything is constant, so no clock available
+	if (registersToCheckForBypass.empty()) // no registers found to retime, probably everything is constant, so no clock available
 		return false;
 
-	HCL_ASSERT(!registersToBeRemoved.empty());
-	auto *clock = (*registersToBeRemoved.begin())->getClocks()[0];
+	HCL_ASSERT(!registersToCheckForBypass.empty());
+	auto *clock = (*registersToCheckForBypass.begin())->getClocks()[0];
 
 	// Run a simulation to determine the reset values of the registers that will be placed there
 	/// @todo Clone and optimize to prevent issues with loops
@@ -346,6 +570,8 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 		reg->connectInput(Node_Register::DATA, np);
 		// add to the node group of its new driver
 		reg->moveToGroup(np.node->getGroup());
+		// If we have an enable condition, build the logic for it in the same node group and connect to the register enable
+		reg->connectInput(Node_Register::ENABLE, enableCondition.build(*np.node->getGroup(), &newNodes));
 
 		// allow further retiming by default
 		reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD);
@@ -359,9 +585,7 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 			reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
 		}
 		
-		area.add(reg);
-		if (settings.newNodes) settings.newNodes->add(reg);
-
+		newNodes.add(reg);
 
 		// If any input bit is defined uppon reset, add that as a reset value
 		auto resetValue = simulator.getValueOfOutput(np);
@@ -369,8 +593,7 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 			auto *resetConst = circuit.createNode<Node_Constant>(resetValue, getOutputConnectionType(np).type);
 			resetConst->recordStackTrace();
 			resetConst->moveToGroup(reg->getGroup());
-			area.add(resetConst);
-			if (settings.newNodes) settings.newNodes->add(resetConst);
+			newNodes.add(resetConst);
 			reg->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0ull});
 		}
 
@@ -378,22 +601,69 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 		std::vector<NodePort> inputsToRewire;
 		for (auto inputNP : np.node->getDirectlyDriven(np.port))
 			if (inputNP.node != reg) // don't rewire the register we just attached
-				if (!areaToBeRetimed.contains(inputNP.node))
+				if (!retimingPlan->areaToBeRetimed.contains(inputNP.node))
 					inputsToRewire.push_back(inputNP);
 
 		for (auto inputNP : inputsToRewire)
 			inputNP.node->rewireInput(inputNP.port, {.node = reg, .port = 0ull});
 	}
+	
+
+	// Replace enables of anchored registers
+	for (const auto &repl : retimingPlan->regEnableReplacements) {
+		repl.reg->connectInput(Node_Register::ENABLE, repl.newEnable);
+		for (auto &n : repl.newNodes)
+			newNodes.add(n);
+	}
+
+
+
+	utils::UnstableMap<NodePort, NodePort> residualEnables;
 
 	// Bypass input registers for the retimed nodes
-	for (auto *reg : registersToBeRemoved) {
-		const auto &allDriven = reg->getDirectlyDriven(0);
-		for (int i = (int)allDriven.size()-1; i >= 0; i--) {
-			if (areaToBeRetimed.contains(allDriven[i].node)) {
-				allDriven[i].node->rewireInput(allDriven[i].port, reg->getDriver((unsigned)Node_Register::DATA));
-			}	
+	// When bypassing, check for enable condition compatibility.
+	for (auto *reg : registersToCheckForBypass) {
+
+		NodePort residualEnable;
+		// Build the "residual enable" unless a cached version already exists
+		if (reg->getDriver(Node_Register::ENABLE).node != nullptr) {
+			auto it = residualEnables.find(reg->getDriver(Node_Register::ENABLE));
+			if (it != residualEnables.end())
+				residualEnable = it->second;
+			else {
+				Conjunction regEnable;
+				regEnable.parseInput({.node=reg, .port=Node_Register::ENABLE});
+				regEnable.removeTerms(enableCondition);
+				residualEnable = regEnable.build(*reg->getGroup(), &newNodes);
+				residualEnables[reg->getDriver(Node_Register::ENABLE)] = residualEnable;
+			}
 		}
+
+		NodePort driver = reg->getDriver((unsigned)Node_Register::DATA);
+		const auto &allDriven = reg->getDirectlyDriven(0);
+
+		// If there is some form of enable remaining, the register can not simply be bypassed.
+		// Instead, a holding circuit needs to be implemented.
+		if (residualEnable.node != nullptr)
+			driver = buildHoldingCircuit(reg->getDriver(Node_Register::DATA), 
+								reg->getDriver(Node_Register::ENABLE),//residualEnable, 
+								reg->getDriver(Node_Register::RESET_VALUE),
+								clock,
+								*reg->getGroup(),
+								newNodes);
+
+		// Finally, rewire everything that goes from the register into the retiming area to use the register's
+		// driver or, potentially, the holding circuit.
+		for (int i = (int)allDriven.size()-1; i >= 0; i--)
+			if (retimingPlan->areaToBeRetimed.contains(allDriven[i].node))
+				allDriven[i].node->rewireInput(allDriven[i].port, driver);
 	}
+
+	for (auto &n : newNodes)
+		area.add(n);
+
+	if (settings.newNodes) 
+		*settings.newNodes = std::move(newNodes);
 
 	return true;
 }

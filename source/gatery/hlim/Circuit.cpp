@@ -25,6 +25,7 @@
 #include "SignalGroup.h"
 #include "Node.h"
 #include "Clock.h"
+#include "CNF.h"
 #include "coreNodes/Node_Signal.h"
 #include "coreNodes/Node_Multiplexer.h"
 #include "coreNodes/Node_Logic.h"
@@ -459,90 +460,6 @@ void Circuit::cullUnusedNodes(Subnet &subnet)
 
 
 
-
-struct HierarchyCondition {
-	utils::UnstableMap<NodePort, bool> m_conditionsAndNegations;
-	bool m_undefined = false;
-	bool m_contradicting = false;
-
-	void parse(NodePort nodeInput) {
-		std::vector<std::pair<NodePort, bool>> stack;
-		if (nodeInput.node != nullptr)
-			stack.push_back({nodeInput.node->getNonSignalDriver(nodeInput.port), false});
-		else
-			m_undefined = true;
-
-		while (!stack.empty()) {
-			auto top = stack.back();
-			stack.pop_back();
-			if (top.first.node == nullptr)
-				m_undefined = true;
-			else {
-				if (Node_Logic *logicNode = dynamic_cast<Node_Logic*>(top.first.node)) {
-					if (logicNode->getOp() == Node_Logic::NOT) {
-						auto driver = logicNode->getNonSignalDriver(0);
-						stack.push_back({driver, !top.second});
-					} else
-					if (logicNode->getOp() == Node_Logic::AND) {
-						for (auto j : utils::Range(logicNode->getNumInputPorts()))
-							stack.push_back({logicNode->getNonSignalDriver(j), top.second});
-					} else {
-						auto it = m_conditionsAndNegations.find(top.first);
-						if (it != m_conditionsAndNegations.end())
-							m_contradicting |= it->second != top.second;
-						else
-							m_conditionsAndNegations[top.first] = top.second;
-					}
-				} else {
-					auto it = m_conditionsAndNegations.find(top.first);
-					if (it != m_conditionsAndNegations.end())
-						m_contradicting |= it->second != top.second;
-					else
-						m_conditionsAndNegations[top.first] = top.second;
-				}
-			}
-		}
-	}
-
-	bool isEqualOf(const HierarchyCondition &other) const {
-		if (m_undefined || other.m_undefined) return false;
-		if (m_contradicting && other.m_contradicting) return true;
-
-		if (m_conditionsAndNegations.size() != other.m_conditionsAndNegations.size()) return false;
-		for (const auto &pair : m_conditionsAndNegations.anyOrder()) {
-			auto it = other.m_conditionsAndNegations.find(pair.first);
-			if (it == other.m_conditionsAndNegations.end()) return false;
-			if (it->second != pair.second) return false;
-		}
-		return true;
-	}
-
-	bool isNegationOf(const HierarchyCondition &other) const {
-		if (m_undefined || other.m_undefined) return false;
-		if (m_contradicting && other.m_contradicting) return false;
-
-		if (m_conditionsAndNegations.size() != other.m_conditionsAndNegations.size()) return false;
-		for (const auto &pair : m_conditionsAndNegations.anyOrder()) {
-			auto it = other.m_conditionsAndNegations.find(pair.first);
-			if (it == other.m_conditionsAndNegations.end()) return false;
-			if (it->second == pair.second) return false;
-		}
-		return true;
-	}
-
-	bool isSubsetOf(const HierarchyCondition &other) const {
-		if (m_undefined || other.m_undefined) return false;
-		if (m_contradicting && other.m_contradicting) return false;
-
-		for (const auto &pair : m_conditionsAndNegations.anyOrder()) {
-			auto it = other.m_conditionsAndNegations.find(pair.first);
-			if (it == other.m_conditionsAndNegations.end()) return false;
-			if (it->second != pair.second) return false;
-		}
-		return true;
-	}
-};
-
 void Circuit::mergeMuxes(Subnet &subnet)
 {
 	bool done;
@@ -555,8 +472,8 @@ void Circuit::mergeMuxes(Subnet &subnet)
 
 				//std::cout << "Found 2-input mux" << std::endl;
 
-				HierarchyCondition condition;
-				condition.parse({.node = muxNode, .port = 0});
+				Conjunction condition;
+				condition.parseInput({.node = muxNode, .port = 0});
 
 				for (size_t muxInput : utils::Range(2)) {
 
@@ -572,13 +489,13 @@ void Circuit::mergeMuxes(Subnet &subnet)
 
 						//std::cout << "Found 2 chained muxes" << std::endl;
 
-						HierarchyCondition prevCondition;
-						prevCondition.parse({.node = prevMuxNode, .port = 0});
+						Conjunction prevCondition;
+						prevCondition.parseInput({.node = prevMuxNode, .port = 0});
 
 						bool conditionsMatch = false;
 						bool prevConditionNegated;
 
-						if (prevCondition.isEqualOf(condition)) {
+						if (prevCondition.isEqualTo(condition)) {
 							conditionsMatch = true;
 							prevConditionNegated = muxInput==1;
 						} else if (condition.isNegationOf(prevCondition)) {
@@ -699,8 +616,8 @@ void Circuit::removeIrrelevantMuxes(Subnet &subnet)
 
 				//std::cout << "Found 2-input mux" << std::endl;
 
-				HierarchyCondition condition;
-				condition.parse({.node = muxNode, .port = 0});
+				Conjunction condition;
+				condition.parseInput({.node = muxNode, .port = 0});
 
 				for (size_t muxInputPort : utils::Range(1,3)) {
 
@@ -730,10 +647,10 @@ void Circuit::removeIrrelevantMuxes(Subnet &subnet)
 
 							if (Node_Multiplexer *subnetOutputMuxNode = dynamic_cast<Node_Multiplexer*>(input.node)) {
 								if (muxNode->getNumInputPorts() == 3) {
-									HierarchyCondition subnetOutputMuxNodeCondition;
-									subnetOutputMuxNodeCondition.parse({.node = subnetOutputMuxNode, .port = 0});
+									Conjunction subnetOutputMuxNodeCondition;
+									subnetOutputMuxNodeCondition.parseInput({.node = subnetOutputMuxNode, .port = 0});
 
-									if (input.port == muxInputPort && condition.isEqualOf(subnetOutputMuxNodeCondition))
+									if (input.port == muxInputPort && condition.isEqualTo(subnetOutputMuxNodeCondition))
 										continue;
 									if (input.port != muxInputPort && condition.isNegationOf(subnetOutputMuxNodeCondition))
 										continue;

@@ -51,6 +51,9 @@ struct RetimingSetting {
 	bool downstreamDisableForwardRT = false;
 };
 
+class Conjunction;
+
+Conjunction suggestForwardRetimingEnableCondition(Circuit &circuit, Subnet &area, NodePort output, bool ignoreRefs = false);
 
 /**
  * @brief Retimes registers forward such that a register is placed after the specified output port without changing functionality.

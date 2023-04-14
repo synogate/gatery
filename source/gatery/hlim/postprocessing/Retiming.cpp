@@ -54,6 +54,8 @@ void resolveRetimingHints(Circuit &circuit, Subnet &subnet)
 	// Resolve all register hints back to front
 	for (std::size_t i = regHints.size()-1; i < regHints.size(); i--) {
 		auto node = regHints[i].second;
+		// Skip orphaned retiming hints
+		if (node->getDirectlyDriven(0).empty()) continue;
 /*
 		{
 			DotExport exp("state.dot");
@@ -74,8 +76,10 @@ void resolveRetimingHints(Circuit &circuit, Subnet &subnet)
 		node->bypassOutputToInput(0, 0);
 	}
 
+
 	for (auto *regSpawner : spawner)
 		regSpawner->markResolved();
+
 }
 
 }
