@@ -253,6 +253,8 @@ namespace gtry {
 
 		FinalType& word(const UInt& index)				{ return aliasRange(Range(index, range())); }
 		const FinalType& word(const UInt& index) const	{ return aliasRange(Range(index, range())); }
+		FinalType& word(const size_t& index, BitWidth width) { return (*this)(index * width.bits(), width); }
+		const FinalType& word(const size_t& index, BitWidth width) const { return (*this)(index * width.bits(), width); }
 
 		FinalType& upper(BitWidth bits)					{ return (*this)((width() - bits).bits(), bits); }
 		FinalType& upper(BitReduce bits)				{ return (*this)(bits.value, bits); }
