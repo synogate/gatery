@@ -122,6 +122,7 @@ namespace gtry {
 			void overrideClkWith(const Bit &clkOverride);
 			void overrideRstWith(const Bit &rstOverride);
 
+			std::string_view name() const { return m_clock->getName(); }
 			void setName(std::string name) { m_clock->setName(std::move(name)); }
 		protected:
 			hlim::Clock *m_clock = nullptr;

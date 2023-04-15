@@ -18,43 +18,40 @@
 #include "gatery/pch.h"
 #include "ExternalComponent.h"
 
+#include <ranges>
 
-namespace gtry {
-
-
-void ExternalComponent::setInput(size_t input, const Bit &bit)
+namespace gtry 
 {
-	HCL_DESIGNCHECK_HINT(input < getNumInputPorts(), "Invalid input idx");
-	HCL_DESIGNCHECK_HINT(!m_inputPorts[input].isVector, "Input is not a bit");
+	void ExternalComponent::setInput(size_t input, const Bit &bit)
+	{
+		HCL_DESIGNCHECK_HINT(input < getNumInputPorts(), "Invalid input idx");
+		HCL_DESIGNCHECK_HINT(!m_inputPorts[input].isVector, "Input is not a bit");
 
-	rewireInput(input, bit.readPort());
-}
+		rewireInput(input, bit.readPort());
+	}
 
-void ExternalComponent::setInput(size_t input, const BVec &bvec)
-{
-	HCL_DESIGNCHECK_HINT(input < getNumInputPorts(), "Invalid input idx");
-	HCL_DESIGNCHECK_HINT(m_inputPorts[input].isVector, "Input is not a bvec");
-	HCL_DESIGNCHECK_HINT(m_inputPorts[input].instanceWidth == bvec.size(), "Input has wrong width");
+	void ExternalComponent::setInput(size_t input, const BVec &bvec)
+	{
+		HCL_DESIGNCHECK_HINT(input < getNumInputPorts(), "Invalid input idx");
+		HCL_DESIGNCHECK_HINT(m_inputPorts[input].isVector, "Input is not a bvec");
+		HCL_DESIGNCHECK_HINT(m_inputPorts[input].instanceWidth == bvec.size(), "Input has wrong width");
 
-	rewireInput(input, bvec.readPort());
-}
+		rewireInput(input, bvec.readPort());
+	}
 
-Bit ExternalComponent::getOutputBit(size_t output)
-{
-	HCL_DESIGNCHECK_HINT(output < getNumOutputPorts(), "Invalid output idx");
-	HCL_DESIGNCHECK_HINT(!m_outputPorts[output].isVector, "Output is not a bit");
+	Bit ExternalComponent::getOutputBit(size_t output)
+	{
+		HCL_DESIGNCHECK_HINT(output < getNumOutputPorts(), "Invalid output idx");
+		HCL_DESIGNCHECK_HINT(!m_outputPorts[output].isVector, "Output is not a bit");
 
-	return Bit(SignalReadPort(hlim::NodePort{ .node = this, .port = (size_t)output }));
-}
+		return Bit(SignalReadPort(hlim::NodePort{ .node = this, .port = (size_t)output }));
+	}
 
-BVec ExternalComponent::getOutputBVec(size_t output)
-{
-	HCL_DESIGNCHECK_HINT(output < getNumOutputPorts(), "Invalid output idx");
-	HCL_DESIGNCHECK_HINT(m_outputPorts[output].isVector, "Output is not a bvec");
+	BVec ExternalComponent::getOutputBVec(size_t output)
+	{
+		HCL_DESIGNCHECK_HINT(output < getNumOutputPorts(), "Invalid output idx");
+		HCL_DESIGNCHECK_HINT(m_outputPorts[output].isVector, "Output is not a bvec");
 
-	return BVec(SignalReadPort(hlim::NodePort{ .node = this, .port = (size_t)output }));
-}
-
-
-
+		return BVec(SignalReadPort(hlim::NodePort{ .node = this, .port = (size_t)output }));
+	}
 }
