@@ -156,16 +156,79 @@ struct ForwardRetimingPlan
 	/// Register spawners that need to spawn registers which in turn can be retimed forward.
 	utils::StableSet<Node_RegSpawner*> regSpawnersToSpawn;
 
-	struct RegEnableReplacement {
+	struct EnableReplacement {
 		Subnet newNodes;
-		Node_Register *reg;
+		NodePort input;
 		NodePort newEnable;
 	};
 
-	/// Enables on anchored registers that need replacement
-	std::vector<RegEnableReplacement> regEnableReplacements;
+	/// Enables on anchored registers and memory write ports that need replacement
+	std::vector<EnableReplacement> enableReplacements;
 };
 
+namespace {
+
+	void forwardPlanningHandleEnablePort(NodePort enableInput, 
+							Conjunction portCondition, 
+							const Conjunction &retimingEnableCondition, 
+							Subnet &retimingArea, 
+							ForwardRetimingPlan &retimingPlan,
+							std::vector<NodePort> &openList) {
+
+		if (enableInput.node->getDriver(enableInput.port).node == nullptr)
+			return;
+
+		// If there is an enable, we need to rebuild the subset of the reg's enable conjunction that does not include
+		// the retiming enable conjunction and start retiming into that.
+		// It needs to be duplicated since other parts of the circuit might depend on the original.
+
+		portCondition.removeTerms(retimingEnableCondition);
+
+		// Ensure that the contribution to regEnable are (or become part of) the retiming area
+		for (const auto pair : portCondition.getTerms().anyOrder())
+			retimingArea.add(pair.second.conjunctionDriver.node);
+
+
+		NodeGroup *group = enableInput.node->getGroup();
+
+		// Build the new enable logic. Here we break a bit with the paradigm of not modifying the 
+		// graph in the planning phase, but if the retiming fails the nodes will be unused and can
+		// be optimized away.
+		// The new enable signal is added to a list to later on replace the old enable of the register
+		// and is further explored for retiming.
+		ForwardRetimingPlan::EnableReplacement repl;
+		NodePort retimingEnablePart = portCondition.build(*group, &repl.newNodes);
+		NodePort nonRetimingEnableCondition = retimingEnableCondition.build(*group, &repl.newNodes);
+		
+		// The full new enable condition is the global enable condition (unretimed) AND the retimed residual condition
+		// If any of them are "empty" (unconnected defaults to TRUE in this case) then we don't need an AND node.
+		if (retimingEnablePart.node != nullptr) {
+			if (nonRetimingEnableCondition.node != nullptr) {
+				Circuit &circuit = group->getCircuit();
+				auto *andNode = circuit.createNode<Node_Logic>(Node_Logic::AND);
+				repl.newNodes.add(andNode);
+				andNode->moveToGroup(group);
+				andNode->recordStackTrace();
+				andNode->connectInput(0, retimingEnablePart);
+				andNode->connectInput(1, nonRetimingEnableCondition);
+				repl.newEnable = {.node = andNode, .port = 0ull};
+				// The and node is still part of the retiming area to bridge from the main retiming area to the retimed residual condition
+				retimingPlan.areaToBeRetimed.add(andNode);
+			} else
+				repl.newEnable = retimingEnablePart;
+		} else
+			repl.newEnable = nonRetimingEnableCondition;
+		repl.input = enableInput;
+
+		// Ensure that the new nodes of regEnable become part of the retiming area
+		for (const auto node : repl.newNodes)
+			retimingArea.add(node);
+
+		openList.push_back(retimingEnablePart);
+		retimingPlan.enableReplacements.push_back(std::move(repl));
+	}
+
+}
 
 /**
  * @brief Determines the exact area to be forward retimed (but doesn't do any retiming).
@@ -375,46 +438,14 @@ std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circ
 				if (reg->getDriver(Node_Register::DATA).node != nullptr)
 					openList.push_back(reg->getDriver(Node_Register::DATA));
 
+				forwardPlanningHandleEnablePort(
+					{.node = reg, .port = Node_Register::ENABLE},
+					std::move(regEnable),
+					enableCondition,
+					area,
+					retimingPlan,
+					openList);
 
-				// If the register has an enable, we need to rebuild the subset of the reg's enable conjunction that does not include
-				// the retiming enable conjunction and start retiming into that.
-				// It needs to be duplicated since other parts of the circuit might depend on the original.
-				if (reg->getDriver(Node_Register::ENABLE).node != nullptr) {
-					regEnable.removeTerms(enableCondition);
-
-					// Ensure that the contribution to regEnable are (or become part of) the retiming area
-					for (const auto pair : regEnable.getTerms().anyOrder())
-						area.add(pair.second.conjunctionDriver.node);
-
-					// Build the new enable logic. Here we break a bit with the paradigm of not modifying the 
-					// graph in the planning phase, but if the retiming fails the nodes will be unused and can
-					// be optimized away.
-					// The new enable signal is added to a list to later on replace the old enable of the register
-					// and is further explored for retiming.
-					ForwardRetimingPlan::RegEnableReplacement repl;
-					NodePort retimingEnablePart = regEnable.build(*reg->getGroup(), &repl.newNodes);
-					
-					// The full new enable condition is the global enable condition (unretimed) AND the retimed residual condition
-					Circuit &circuit = reg->getGroup()->getCircuit();
-					auto *andNode = circuit.createNode<Node_Logic>(Node_Logic::AND);
-					repl.newNodes.add(andNode);
-					andNode->moveToGroup(reg->getGroup());
-					andNode->recordStackTrace();
-					andNode->connectInput(0, retimingEnablePart);
-					andNode->connectInput(1, enableCondition.build(*reg->getGroup(), &repl.newNodes));
-					repl.newEnable = {.node = andNode, .port = 0ull};
-					repl.reg = reg;
-					// The and node is still part of the retiming area to bridge from the main retiming area to the retimed residual condition
-					retimingPlan.areaToBeRetimed.add(andNode);
-
-					// Ensure that the new nodes of regEnable become part of the retiming area
-					for (const auto node : repl.newNodes)
-						area.add(node);
-
-					openList.push_back(retimingEnablePart);
-
-					retimingPlan.regEnableReplacements.push_back(std::move(repl));
-				}
 			} else {
 				// Found a register to retime forward, stop here.
 				retimingPlan.registersToBeRemoved.insert(reg);
@@ -432,6 +463,58 @@ std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circ
 				// No retiming into the enable condition is needed and the modification/splitting of the 
 				// enable condition is done when implementing the plan.
 			}
+		} else if (auto *memPort = dynamic_cast<Node_MemPort*>(nodePort.node)) { // If it is a memory port attempt to retime entire memory
+			auto *memory = memPort->getMemory();
+			retimingPlan.areaToBeRetimed.add(memory);
+		
+			// add all memory ports to open list
+			for (auto np : memory->getPorts()) {
+				HCL_ASSERT(np.node->getDriver((size_t)Node_MemPort::Inputs::enable).node == nullptr);
+				openList.push_back(np);
+			}
+
+			HCL_ASSERT(memPort->getDriver((size_t)Node_MemPort::Inputs::enable).node == nullptr);
+
+			// We do need to check for enable condition compatibility
+			if (memPort->getDriver((size_t)Node_MemPort::Inputs::wrEnable).node != nullptr) {
+				Conjunction portEnable;
+				portEnable.parseInput({.node = memPort, .port = (size_t)Node_MemPort::Inputs::wrEnable});
+
+				if (!enableCondition.isSubsetOf(portEnable)) {
+					if (!failureIsError) return {};
+
+		#ifdef DEBUG_OUTPUT
+			writeSubnet();
+		#endif
+					std::stringstream error;
+
+					error 
+						<< "An error occurred attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
+						<< "Node from:\n" << output.node->getStackTrace() << "\n";
+
+					error 
+						<< "The retiming area contains a memory write port " << nodePort.node->getName() << " (" << nodePort.node->getTypeName() << ", id " << nodePort.node->getId()
+						<< ") with an enable signal that is incompatible with the inferred register enable signal of the retiming operation.\n"
+						<< "Memory write port from:\n" << nodePort.node->getStackTrace() << "\n";
+
+					HCL_ASSERT_HINT(false, error.str());					
+				}
+
+				forwardPlanningHandleEnablePort(
+					{.node = memPort, .port = (size_t)Node_MemPort::Inputs::wrEnable},
+					std::move(portEnable),
+					enableCondition,
+					area,
+					retimingPlan,
+					openList);				
+			}
+
+			retimingPlan.areaToBeRetimed.add(memPort);
+			for (auto i : {Node_MemPort::Inputs::address, Node_MemPort::Inputs::wrData, Node_MemPort::Inputs::wrWordEnable}) {
+				auto driver = nodePort.node->getDriver((size_t)i);
+				if (driver.node != nullptr)
+					openList.push_back(driver);
+			}
 		} else {
 			// Regular nodes just get added to the retiming area and their inputs are further explored
 			retimingPlan.areaToBeRetimed.add(nodePort.node);
@@ -441,15 +524,6 @@ std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circ
 					if (driver.node->getOutputConnectionType(driver.port).type != ConnectionType::DEPENDENCY)
 						openList.push_back(driver);
 			}
-
- 			if (auto *memPort = dynamic_cast<Node_MemPort*>(nodePort.node)) { // If it is a memory port attempt to retime entire memory
-				auto *memory = memPort->getMemory();
-				retimingPlan.areaToBeRetimed.add(memory);
-			
-				// add all memory ports to open list
-				for (auto np : memory->getPorts()) 
-					openList.push_back(np);
-			 }
 		}
 	}
 
@@ -609,9 +683,9 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 	}
 	
 
-	// Replace enables of anchored registers
-	for (const auto &repl : retimingPlan->regEnableReplacements) {
-		repl.reg->connectInput(Node_Register::ENABLE, repl.newEnable);
+	// Replace enables of anchored registers and memory write ports
+	for (const auto &repl : retimingPlan->enableReplacements) {
+		repl.input.node->rewireInput(repl.input.port, repl.newEnable);
 		for (auto &n : repl.newNodes)
 			newNodes.add(n);
 	}

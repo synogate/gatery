@@ -60,7 +60,7 @@ class Conjunction {
 		/// @param targetGroup The node group into which to place the new nodes
 		/// @param newNodes If not nullptr, the area to which to add the new nodes.
 		/// @return The output port of the final logical AND or {} if the Conjunction is empty (always true)
-		NodePort build(NodeGroup &targetGroup, Subnet *newNodes = nullptr);
+		NodePort build(NodeGroup &targetGroup, Subnet *newNodes = nullptr) const;
 
 		struct Term {
 			/// (non-signal) driver of the raw signal that directly or negated enters the conjunction

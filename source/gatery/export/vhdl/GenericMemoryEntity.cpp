@@ -62,12 +62,12 @@ void GenericMemoryEntity::buildFrom(hlim::NodeGroup *memNodeGrp)
 		auto wrEnInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrEnable);
 		auto dataInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrData);
 
-		HCL_ASSERT_HINT(enInput == wrEnInput, "For now I don't want to mix read and write ports, so wrEn == en always.");
+		HCL_ASSERT_HINT(enInput.node == nullptr || enInput == wrEnInput, "For now I don't want to mix read and write ports, so wrEn == en always.");
 
 		if (addrInput.node != nullptr)
 			m_inputs.insert(addrInput);
-		if (enInput.node != nullptr)
-			m_inputs.insert(enInput);
+		if (wrEnInput.node != nullptr)
+			m_inputs.insert(wrEnInput);
 		if (dataInput.node != nullptr)
 			m_inputs.insert(dataInput);
 
@@ -304,10 +304,10 @@ void GenericMemoryEntity::writeWritePorts(std::ostream &stream, unsigned indent,
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
 	for (auto &wp : clockReset.second.writePorts) {
-		auto enablePort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
-		if (enablePort.node != nullptr) {
+		auto wrEnablePort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrEnable);
+		if (wrEnablePort.node != nullptr) {
 			cf.indent(stream, indent);
-			stream << "IF ("<< m_namespaceScope.get(enablePort).name << " = '1') THEN\n";
+			stream << "IF ("<< m_namespaceScope.get(wrEnablePort).name << " = '1') THEN\n";
 			indent++;
 		}
 
@@ -324,7 +324,7 @@ void GenericMemoryEntity::writeWritePorts(std::ostream &stream, unsigned indent,
 		} else
 			stream << dataDecl.name << ";\n";
 
-		if (enablePort.node != nullptr) {
+		if (wrEnablePort.node != nullptr) {
 			indent--;
 			cf.indent(stream, indent);
 			stream << "END IF;\n";

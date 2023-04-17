@@ -285,13 +285,13 @@ void MemoryGroup::convertToReadBeforeWrite(Circuit &circuit)
 					circuit.appendSignal(conflict)->setName("conflict_and_rdEn");
 				}
 
-				HCL_ASSERT(wp->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable) == wp->getNonSignalDriver((size_t)Node_MemPort::Inputs::wrEnable));
-				if (wp->getDriver((size_t)Node_MemPort::Inputs::enable).node != nullptr) {
+				HCL_ASSERT(wp->getDriver((size_t)Node_MemPort::Inputs::enable).node == nullptr || wp->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable) == wp->getNonSignalDriver((size_t)Node_MemPort::Inputs::wrEnable));
+				if (wp->getDriver((size_t)Node_MemPort::Inputs::wrEnable).node != nullptr) {
 					auto *logicAnd = circuit.createNode<Node_Logic>(Node_Logic::AND);
 					logicAnd->moveToGroup(m_fixupNodeGroup);
 					logicAnd->recordStackTrace();
 					logicAnd->connectInput(0, conflict);
-					logicAnd->connectInput(1, wp->getDriver((size_t)Node_MemPort::Inputs::enable));
+					logicAnd->connectInput(1, wp->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
 					conflict = {.node = logicAnd, .port = 0ull};
 					circuit.appendSignal(conflict)->setName("conflict_and_wrEn");
 				}
@@ -374,13 +374,13 @@ void MemoryGroup::resolveWriteOrder(Circuit &circuit)
 				circuit.appendSignal(newWrEn2)->setName("newWrEn");
 
 				// Alternatively, enable write if wp1 does not write (no connection on enable means yes)
-				HCL_ASSERT(wp1.node->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable) == wp1.node->getNonSignalDriver((size_t)Node_MemPort::Inputs::wrEnable));
-				if (wp1.node->getDriver((size_t)Node_MemPort::Inputs::enable).node != nullptr) {
+				HCL_ASSERT(wp1.node->getDriver((size_t)Node_MemPort::Inputs::enable).node == nullptr || wp1.node->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable) == wp1.node->getNonSignalDriver((size_t)Node_MemPort::Inputs::wrEnable));
+				if (wp1.node->getDriver((size_t)Node_MemPort::Inputs::wrEnable).node != nullptr) {
 
 					auto *logicNot = circuit.createNode<Node_Logic>(Node_Logic::NOT);
 					logicNot->moveToGroup(m_fixupNodeGroup);
 					logicNot->recordStackTrace();
-					logicNot->connectInput(0, wp1.node->getDriver((size_t)Node_MemPort::Inputs::enable));
+					logicNot->connectInput(0, wp1.node->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
 
 					auto *logicOr = circuit.createNode<Node_Logic>(Node_Logic::OR);
 					logicOr->moveToGroup(m_fixupNodeGroup);
@@ -393,20 +393,21 @@ void MemoryGroup::resolveWriteOrder(Circuit &circuit)
 				}
 
 				// But only enable write if wp2 actually wants to write (no connection on enable means yes)
-				HCL_ASSERT(wp2->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable) == wp2->getNonSignalDriver((size_t)Node_MemPort::Inputs::wrEnable));
-				if (wp2->getDriver((size_t)Node_MemPort::Inputs::enable).node != nullptr) {
+				HCL_ASSERT(wp2->getDriver((size_t)Node_MemPort::Inputs::enable).node == nullptr || wp2->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable) == wp2->getNonSignalDriver((size_t)Node_MemPort::Inputs::wrEnable));
+				if (wp2->getDriver((size_t)Node_MemPort::Inputs::wrEnable).node != nullptr) {
 					auto *logicAnd = circuit.createNode<Node_Logic>(Node_Logic::AND);
 					logicAnd->moveToGroup(m_fixupNodeGroup);
 					logicAnd->setComment("But we can only enable the former write if the former write actually wants to write.");
 					logicAnd->recordStackTrace();
 					logicAnd->connectInput(0, newWrEn2);
-					logicAnd->connectInput(1, wp2->getDriver((size_t)Node_MemPort::Inputs::enable));
+					logicAnd->connectInput(1, wp2->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
 					newWrEn2 = {.node = logicAnd, .port = 0ull};
 					circuit.appendSignal(newWrEn2)->setName("newWrEn");
 				}
 
 
-				wp2->rewireInput((size_t)Node_MemPort::Inputs::enable, newWrEn2);
+				//wp2->rewireInput((size_t)Node_MemPort::Inputs::enable, newWrEn2);
+				wp2->rewireInput((size_t)Node_MemPort::Inputs::enable, {});
 				wp2->rewireInput((size_t)Node_MemPort::Inputs::wrEnable, newWrEn2);
 			}
 
@@ -437,9 +438,9 @@ void MemoryGroup::ensureNotEnabledFirstCycles(Circuit &circuit, NodeGroup *ng, N
 	// Ensure enable is low in first cycles
 	auto enableDriver = writePort->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable);
 	auto wrEnableDriver = writePort->getNonSignalDriver((size_t)Node_MemPort::Inputs::wrEnable);
-	HCL_ASSERT(enableDriver == wrEnableDriver);
+	HCL_ASSERT(enableDriver.node == nullptr || enableDriver == wrEnableDriver);
 
-	NodePort input = {.node = writePort, .port = (size_t)Node_MemPort::Inputs::enable};
+	NodePort input = {.node = writePort, .port = (size_t)Node_MemPort::Inputs::wrEnable};
 	size_t unhandledCycles = numCycles;
 	while (unhandledCycles > 0) {
 		auto driver = input.node->getDriver(input.port);
@@ -626,7 +627,8 @@ void MemoryGroup::ensureNotEnabledFirstCycles(Circuit &circuit, NodeGroup *ng, N
 
 		input.node->rewireInput(input.port, newEnable);
 
-		writePort->rewireInput((size_t)Node_MemPort::Inputs::wrEnable, writePort->getDriver((size_t)Node_MemPort::Inputs::enable));
+		//writePort->rewireInput((size_t)Node_MemPort::Inputs::wrEnable, writePort->getDriver((size_t)Node_MemPort::Inputs::enable));
+		writePort->rewireInput((size_t)Node_MemPort::Inputs::enable, {});
 	}
 }
 
@@ -718,10 +720,10 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 		});
 
 	for (auto wp : sortedWritePorts) {
-		HCL_ASSERT(wp.first->getDriver((size_t)Node_MemPort::Inputs::enable) == wp.first->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
+		HCL_ASSERT(wp.first->getDriver((size_t)Node_MemPort::Inputs::enable).node == nullptr || wp.first->getDriver((size_t)Node_MemPort::Inputs::enable) == wp.first->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
 		rmwBuilder.addWritePort(ReadModifyWriteHazardLogicBuilder::WritePort{
 			.addrInputDriver = wp.first->getDriver((size_t)Node_MemPort::Inputs::address),
-			.enableInputDriver = wp.first->getDriver((size_t)Node_MemPort::Inputs::enable),
+			.enableInputDriver = wp.first->getDriver((size_t)Node_MemPort::Inputs::wrEnable),
 			.enableMaskInputDriver = {},
 			.dataInInputDriver = wp.first->getDriver((size_t)Node_MemPort::Inputs::wrData),
 			.latencyCompensation = wp.second
@@ -949,7 +951,7 @@ void MemoryGroup::buildResetOverrides(Circuit &circuit, NodePort writeAddr, Node
 	muxNodeData->connectInput(1, writeData);
 	resetWritePort->rewireInput((size_t)Node_MemPort::Inputs::wrData, {.node = muxNodeData, .port = 0ull});
 
-	HCL_ASSERT(resetWritePort->getDriver((size_t)Node_MemPort::Inputs::enable) == resetWritePort->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
+	HCL_ASSERT(resetWritePort->getDriver((size_t)Node_MemPort::Inputs::enable).node == nullptr || resetWritePort->getDriver((size_t)Node_MemPort::Inputs::enable) == resetWritePort->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
 	if (resetWritePort->getDriver((size_t)Node_MemPort::Inputs::wrEnable).node == nullptr) {
 		// This might seem unintuitive, but leaving it unconnected in this case is the correct thing.
 		// If it was unconnected before, it was always writing. Now, we want to always write during reset 
@@ -962,7 +964,8 @@ void MemoryGroup::buildResetOverrides(Circuit &circuit, NodePort writeAddr, Node
 		orNodeEnable->connectInput(0, resetWritePort->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
 		orNodeEnable->connectInput(1, inResetMode);
 
-		resetWritePort->rewireInput((size_t)Node_MemPort::Inputs::enable, {.node = orNodeEnable, .port = 0ull});
+		//resetWritePort->rewireInput((size_t)Node_MemPort::Inputs::enable, {.node = orNodeEnable, .port = 0ull});
+		resetWritePort->rewireInput((size_t)Node_MemPort::Inputs::enable, {});
 		resetWritePort->rewireInput((size_t)Node_MemPort::Inputs::wrEnable, {.node = orNodeEnable, .port = 0ull});
 	}
 }

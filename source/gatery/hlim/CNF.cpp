@@ -171,7 +171,7 @@ namespace gtry::hlim {
 		}
 	}
 
-	NodePort Conjunction::build(NodeGroup &targetGroup, Subnet *newNodes)
+	NodePort Conjunction::build(NodeGroup &targetGroup, Subnet *newNodes) const
 	{
 		HCL_ASSERT_HINT(!m_undefined, "Can not build undefined conjunction");
 		HCL_ASSERT_HINT(!m_contradicting, "Can not build contradicting conjunction");
