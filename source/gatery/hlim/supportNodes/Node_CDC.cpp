@@ -21,6 +21,8 @@
 #include "Node_CDC.h"
 #include "../Clock.h"
 
+#include <gatery/simulation/BitVectorState.h>
+
 #include <external/magic_enum.hpp>
 
 namespace gtry::hlim {

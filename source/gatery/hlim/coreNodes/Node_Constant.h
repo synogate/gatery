@@ -16,7 +16,9 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
+
 #include "../Node.h"
+#include <gatery/simulation/BitVectorState.h>
 
 #include <string_view>
 

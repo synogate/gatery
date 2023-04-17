@@ -18,6 +18,8 @@
 #include "gatery/pch.h"
 #include "Node_Arithmetic.h"
 
+#include <gatery/simulation/BitVectorState.h>
+
 #include "../../utils/BitManipulation.h"
 #include "../../utils/Exceptions.h"
 #include "../../utils/Preprocessor.h"

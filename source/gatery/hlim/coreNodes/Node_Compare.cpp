@@ -18,6 +18,7 @@
 #include "gatery/pch.h"
 #include "Node_Compare.h"
 
+#include <gatery/simulation/BitVectorState.h>
 
 #include "../SignalDelay.h"
 

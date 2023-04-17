@@ -20,15 +20,8 @@
 #include "NodePort.h"
 #include "ConnectionType.h"
 #include "GraphExploration.h"
-#include "../simulation/BitVectorState.h"
-
-#include "../utils/StackTrace.h"
-#include "../utils/LinkedList.h"
-#include "../utils/Exceptions.h"
 
 #include <vector>
-#include <set>
-#include <string>
 
 namespace gtry::hlim {
 

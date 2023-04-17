@@ -19,6 +19,8 @@
 
 #include "../Node.h"
 
+#include <gatery/simulation/BitVectorState.h>
+
 #include <vector>
 #include <string>
 #include <map>

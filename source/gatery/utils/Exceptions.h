@@ -44,6 +44,9 @@ class MHDLError : public BaseError
 		StackTrace m_trace;
 };
 
+extern template class MHDLError<std::logic_error>;
+extern template class MHDLError<std::runtime_error>;
+
 	
 class InternalError : public MHDLError<std::logic_error>
 {

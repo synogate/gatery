@@ -18,6 +18,9 @@
 #include "gatery/pch.h"
 #include "Node_SignalTap.h"
 
+#include <gatery/simulation/BitVectorState.h>
+#include <gatery/simulation/SimulatorCallbacks.h>
+
 #include <boost/format.hpp>
 
 #include <sstream>

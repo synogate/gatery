@@ -21,6 +21,8 @@
 #include "../Attributes.h"
 #include "../../utils/ConfigTree.h"
 
+#include <gatery/simulation/BitVectorState.h>
+
 namespace gtry::hlim {
 
 class Node_MemPort;

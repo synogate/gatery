@@ -20,6 +20,8 @@
 
 #include "Node_ExportOverride.h"
 
+#include <gatery/simulation/BitVectorState.h>
+
 namespace gtry::hlim {
 
 

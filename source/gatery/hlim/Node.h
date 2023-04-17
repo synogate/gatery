@@ -20,22 +20,22 @@
 #include "NodeIO.h"
 #include "NodeVisitor.h"
 
-
-#include "../simulation/BitVectorState.h"
-#include "../simulation/SimulatorCallbacks.h"
-
 #include "../utils/StackTrace.h"
-#include "../utils/LinkedList.h"
-#include "../utils/Exceptions.h"
 #include "../utils/CppTools.h"
 
-#include <boost/smart_ptr.hpp>
-#include <boost/smart_ptr/intrusive_ref_counter.hpp>
-
 #include <vector>
-#include <set>
 #include <string>
 #include <span>
+
+namespace gtry::sim {
+
+class SimulatorCallbacks;
+
+struct DefaultConfig;
+template<class Config> class BitVectorState;
+using DefaultBitVectorState = BitVectorState<DefaultConfig>;
+
+}
 
 namespace gtry::hlim {
 

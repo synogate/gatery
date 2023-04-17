@@ -20,6 +20,8 @@
 
 #include "../../utils/Range.h"
 
+#include <gatery/simulation/BitVectorState.h>
+
 namespace gtry::hlim {
 
 Node_SignalGenerator::Node_SignalGenerator(Clock *clk) {

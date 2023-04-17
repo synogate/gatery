@@ -18,6 +18,8 @@
 #include "gatery/pch.h"
 #include "Node_Shift.h"
 
+#include <gatery/simulation/BitVectorState.h>
+
 namespace gtry::hlim
 {
 	Node_Shift::Node_Shift(dir _direction, fill _fill) :

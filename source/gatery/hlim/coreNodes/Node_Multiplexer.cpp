@@ -20,6 +20,9 @@
 
 #include "../SignalDelay.h"
 
+
+#include <gatery/simulation/BitVectorState.h>
+
 #include <regex>
 
 namespace gtry::hlim {

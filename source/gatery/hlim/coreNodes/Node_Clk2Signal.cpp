@@ -18,6 +18,9 @@
 #include "gatery/pch.h"
 #include "Node_Clk2Signal.h"
 
+
+#include <gatery/simulation/BitVectorState.h>
+
 namespace gtry::hlim {
 
 Node_Clk2Signal::Node_Clk2Signal() : Node(0, 1)

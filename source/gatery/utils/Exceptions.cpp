@@ -18,8 +18,9 @@
 #include "gatery/pch.h"
 #include "Exceptions.h"
 
-namespace mhdl {
-namespace utils {
+namespace gtry::utils {
 
-}
+template class MHDLError<std::logic_error>;
+template class MHDLError<std::runtime_error>;
+
 }

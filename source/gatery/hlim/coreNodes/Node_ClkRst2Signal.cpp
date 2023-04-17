@@ -19,6 +19,8 @@
 #include "Node_ClkRst2Signal.h"
 #include "../Clock.h"
 
+#include <gatery/simulation/BitVectorState.h>
+
 namespace gtry::hlim {
 
 Node_ClkRst2Signal::Node_ClkRst2Signal() : Node(0, 1)

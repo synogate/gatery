@@ -26,6 +26,9 @@
 #include "Node.h"
 #include "NodePort.h"
 
+
+#include <gatery/utils/Range.h>
+
 namespace gtry::hlim {
 
 const std::vector<BaseNode*> &TopologicalSort::sort(const Subnet &subnet, LoopHandling loopHandling)

@@ -19,6 +19,8 @@
 #include "Node_PriorityConditional.h"
 
 
+#include <gatery/simulation/BitVectorState.h>
+
 namespace gtry::hlim {
 
 void Node_PriorityConditional::connectDefault(const NodePort &port) 

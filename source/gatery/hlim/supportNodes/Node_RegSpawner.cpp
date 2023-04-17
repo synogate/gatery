@@ -27,6 +27,8 @@
 #include "../coreNodes/Node_Register.h"
 #include "../Circuit.h"
 
+#include <gatery/simulation/BitVectorState.h>
+
 namespace gtry::hlim {
 
 

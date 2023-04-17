@@ -23,6 +23,7 @@
 #include "../Subnet.h"
 #include "../Node.h"
 #include "../../debug/DebugInterface.h"
+#include <gatery/utils/Range.h>
 
 namespace gtry::hlim {
 
