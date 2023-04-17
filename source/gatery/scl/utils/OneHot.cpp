@@ -18,6 +18,8 @@
 #include "gatery/pch.h"
 #include "OneHot.h"
 
+#include <boost/format.hpp>
+
 using namespace gtry;
 
 gtry::scl::OneHot gtry::scl::decoder(const UInt& in)
@@ -32,8 +34,10 @@ UInt gtry::scl::encoder(const OneHot& in)
 	UInt ret = BitWidth{ utils::Log2C(in.size()) };
 
 	ret = 0;
-	for (size_t i = 0; i < in.size(); ++i)
+	for (size_t i = 0; i < in.size(); ++i) {
 		ret |= ext(i & in[i]);
+		setName(ret, (boost::format("ret_%i") % i).str());
+	}
 
 	return ret;
 }

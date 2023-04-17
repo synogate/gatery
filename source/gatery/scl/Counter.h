@@ -23,36 +23,23 @@ namespace gtry::scl
 	class Counter
 	{
 	public:
-		Counter(UInt end) :
-			m_area{ "scl_Counter", true },
-			m_value{ end.width() },
-			m_loadValue{ end.width() }
+
+		Counter(size_t end, size_t startupValue = 0) :
+			m_area{ "scl_Counter", true }
 		{
-			HCL_NAMED(m_inc);
-
-			m_last = m_value == end - 1;
-			IF(m_inc)
-			{
-				IF(m_last)
-					m_value = 0;
-				ELSE
-					m_value += 1;
+			if (!utils::isPow2(end)) {
+				init(end, BitWidth::last(end), true, startupValue);
 			}
-			
-			HCL_NAMED(m_load);
-			HCL_NAMED(m_loadValue);
-			IF(m_load)
-			{
-				m_value = m_loadValue;
+			else {
+				init(end, BitWidth::count(end), false, startupValue);
 			}
+			m_area.leave();
+		}
 
-			m_value = reg(m_value, 0);
-			HCL_NAMED(m_value);
-			HCL_NAMED(m_last);
-
-			m_load = '0';
-			m_inc = '0';
-			m_loadValue = ConstUInt(m_loadValue.width());
+		Counter(UInt end, size_t startupValue = 0) :
+			m_area{ "scl_Counter", true}
+		{
+			init(end, end.width(), true, startupValue);
 
 			m_area.leave();
 		}
@@ -65,6 +52,42 @@ namespace gtry::scl
 		Bit isFirst() const { return m_value == 0; }
 
 		void load(UInt value) { m_load = '1'; m_loadValue = value; }
+	protected:
+		void init(UInt end, BitWidth counterW, bool checkOverflows, size_t resetValue = 0)
+		{
+			m_value = counterW;
+			m_loadValue = counterW;
+
+			HCL_NAMED(m_inc);
+
+			m_last = m_value == (end - 1).lower(counterW);
+
+			if (counterW != BitWidth(0)) {
+				IF(m_inc)
+				{
+					m_value += 1;
+					if (checkOverflows) {
+						IF(m_last)
+							m_value = 0;
+					}
+				}
+			}
+			HCL_NAMED(m_load);
+			HCL_NAMED(m_loadValue);
+			IF(m_load)
+			{
+				m_value = m_loadValue;
+			}
+
+			m_value = reg(m_value, resetValue);
+			HCL_NAMED(m_value);
+			HCL_NAMED(m_last);
+
+			m_load = '0';
+			m_inc = '0';
+			m_loadValue = ConstUInt(m_loadValue.width());
+		}
+
 
 	private:
 		Area m_area;

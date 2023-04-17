@@ -29,9 +29,9 @@ namespace gtry {
  * @{
  */
 
-
-class ExternalComponent : public hlim::Node_External
-{
+	// NOTE: ExternalComonent is depricated. Use ExternalModule instead.
+	class ExternalComponent : public hlim::Node_External
+	{
 	public:
 		using GenericParameter = hlim::GenericParameter;
 
@@ -40,7 +40,7 @@ class ExternalComponent : public hlim::Node_External
 
 		virtual Bit getOutputBit(size_t output);
 		virtual BVec getOutputBVec(size_t output);
-};
+	};
 
 /// @}
 

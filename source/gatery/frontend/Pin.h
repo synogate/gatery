@@ -116,15 +116,19 @@ namespace gtry {
 
 	inline OutputPin pinOut(const Bit &bit) { return OutputPin(bit); }
 	template<BitVectorValue T>
-	inline OutputPins pinOut(const T &bitVector) { return OutputPins((ValueToBaseSignal<T>)bitVector); }
+	inline OutputPins pinOut(const T& bitVector) {
+		auto sig = (ValueToBaseSignal<T>)bitVector;
+		HCL_DESIGNCHECK_HINT(sig.valid(), "Can not pinOut uninitialized bitvectors");
+		return OutputPins(sig);
+	}
 
 	OutputPins pinOut(const InputPins &input);
 
 	inline InputPin pinIn() { return InputPin(); }
 	inline InputPins pinIn(BitWidth width) { return InputPins(width); }
 
-	void pinIn(Signal auto& signal, std::string prefix);
-	void pinOut(Signal auto& signal, std::string prefix);
+	void pinIn(Signal auto&& signal, std::string prefix);
+	void pinOut(Signal auto&& signal, std::string prefix);
 
 	inline TristatePin tristatePin(const Bit &bit, const Bit &outputEnable) { return TristatePin(bit, outputEnable); }
 
@@ -145,7 +149,9 @@ namespace gtry
 			{
 				if (isReverse)
 				{
-					OutputPins(vec).setName(makeName());
+					auto name = makeName();
+					HCL_DESIGNCHECK_HINT(vec.valid(), "Can not pinOut uninitialized bitvectors but the member " + name + " is uninitialized!");
+					OutputPins(vec).setName(name);
 				}
 				else
 				{
@@ -163,7 +169,7 @@ namespace gtry
 		};
 	}
 
-	void pinIn(Signal auto& signal, std::string prefix)
+	void pinIn(Signal auto&& signal, std::string prefix)
 	{
 		internal::PinVisitor v;
 		v.enter(prefix);
@@ -171,7 +177,7 @@ namespace gtry
 		v.leave();
 	}
 
-	void pinOut(Signal auto& signal, std::string prefix)
+	void pinOut(Signal auto&& signal, std::string prefix)
 	{
 		internal::PinVisitor v;
 		v.reverse();

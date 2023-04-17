@@ -41,6 +41,54 @@ namespace gtry::scl
 		return size > bytePerBeat & hasData();
 	}
 
+	void TileLinkA::setupGet(UInt address, UInt source, std::optional<UInt> size)
+	{
+		this->opcode = (size_t)Get;
+		this->param = 0;
+
+		if (size)
+			this->size = *size;
+		else
+			this->size = BitWidth::count(data.width().bytes()).bits();
+
+		this->source = zext(source);
+		this->address = zext(address);
+		this->mask = fullByteEnableMask(*this);
+		this->data = ConstBVec(this->data.width());
+	}
+
+	void TileLinkA::setupPut(UInt address, BVec data, UInt source, std::optional<UInt> size)
+	{
+		this->opcode = (size_t)PutFullData;
+		this->param = 0;
+
+		if (size)
+			this->size = *size;
+		else
+			this->size = BitWidth::count(data.width().bytes()).bits();
+
+		this->source = zext(source);
+		this->address = zext(address);
+		this->mask = fullByteEnableMask(*this);
+		this->data = data;
+	}
+
+	void TileLinkA::setupPutPartial(UInt address, BVec data, BVec mask, UInt source, std::optional<UInt> size)
+	{
+		this->opcode = (size_t)PutPartialData;
+		this->param = 0;
+
+		if (size)
+			this->size = *size;
+		else
+			this->size = BitWidth::count(data.width().bytes()).bits();
+
+		this->source = zext(source);
+		this->address = zext(address);
+		this->mask = mask;
+		this->data = data;
+	}
+
 	Bit TileLinkD::hasData() const
 	{ 
 		return opcode.lsb(); 
@@ -64,20 +112,20 @@ namespace gtry::scl
 	template Bit eop(const TileLinkChannelA&);
 	template Bit eop(const TileLinkChannelD&);
 
-	void setFullByteEnableMask(TileLinkChannelA& a)
+	BVec fullByteEnableMask(const UInt& address, const UInt& size, BitWidth maskW)
 	{
-		a->mask = (BVec)sext(1);
+		BVec mask = ConstBVec(maskW.mask(), maskW);
 
-		const UInt& size = a->size;
-		const UInt& offset = a->address(0, BitWidth::count(a->mask.width().bits()));
-		for (size_t i = 0; (1ull << i) < a->mask.width().bits(); i++)
+		const UInt& offset = address(0, BitWidth::count(maskW.bits()));
+		for (size_t i = 0; (1ull << i) < maskW.bits(); i++)
 		{
 			IF(size == i)
 			{
-				a->mask = (BVec)zext(0);
-				a->mask(offset, BitWidth{ 1ull << i }) = (BVec)sext(1);
+				mask = (BVec)zext(0);
+				mask(offset, BitWidth{ 1ull << i }) = (BVec)sext(1);
 			}
 		}
+		return mask;
 	}
 
 	UInt transferLengthFromLogSize(const UInt& logSize, size_t numSymbolsPerBeat)

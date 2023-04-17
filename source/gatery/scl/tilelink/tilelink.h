@@ -66,6 +66,10 @@ namespace gtry::scl
 		Bit isGet() const;
 		Bit isPut() const;
 		Bit isBurst() const;
+
+		void setupGet(UInt address, UInt source = 0, std::optional<UInt> size = {});
+		void setupPut(UInt address, BVec data, UInt source = 0, std::optional<UInt> size = {});
+		void setupPutPartial(UInt address, BVec data, BVec mask, UInt source = 0, std::optional<UInt> size = {});
 	};
 	using TileLinkChannelA = RvStream<TileLinkA>;
 
@@ -143,7 +147,10 @@ namespace gtry::scl
 	requires requires (T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
 	Bit eop(const T& source);
 
-	void setFullByteEnableMask(TileLinkChannelA& a);
+	BVec fullByteEnableMask(const UInt& address, const UInt& size, BitWidth maskW);
+	inline BVec fullByteEnableMask(const TileLinkA& a) { return fullByteEnableMask(a.address, a.size, a.mask.width()); }
+	inline void setFullByteEnableMask(TileLinkChannelA& a) { a->mask = fullByteEnableMask(*a); }
+
 	UInt transferLengthFromLogSize(const UInt& logSize, size_t numSymbolsPerBeat);
 
 	template<TileLinkSignal TLink>

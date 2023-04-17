@@ -48,6 +48,14 @@ namespace gtry::scl
 	const Bit valid(const T& signal) { return flag(sop(signal), eop(signal)) | sop(signal); }
 
 
+	struct Empty
+	{
+		UInt empty; // number of empty symbols in this beat
+	};
+
+	UInt& empty(StreamSignal auto& s) { return s.template get<Empty>().empty; }
+	const UInt& empty(const StreamSignal auto& s) { return s.template get<Empty>().empty; }
+
 	template<Signal T, Signal... Meta>
 	using RvPacketStream = Stream<T, scl::Ready, scl::Valid, scl::Eop, Meta...>;
 
