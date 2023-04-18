@@ -79,12 +79,21 @@ GHDLTestFixture::~GHDLTestFixture()
 	//std::filesystem::remove_all("tmp/");
 }
 
+void GHDLTestFixture::addCustomVHDL(std::string name, std::string content)
+{
+	m_customVhdlFiles[std::move(name)] = std::move(content);
+}
+
 void GHDLTestFixture::testCompilation(Flavor flavor)
 {
 	design.postprocess();
 
 
 	m_vhdlExport.emplace("design.vhd");
+
+	for (const auto &file_content : m_customVhdlFiles)
+		m_vhdlExport->addCustomVhdlFile(file_content.first, file_content.second);
+
 	switch (flavor) {
 		case TARGET_GHDL : m_vhdlExport->targetSynthesisTool(new GHDL()); break;
 		case TARGET_QUARTUS : m_vhdlExport->targetSynthesisTool(new IntelQuartus()); break;

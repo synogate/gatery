@@ -41,16 +41,16 @@ class GenericParameter {
 			STD_LOGIC,
 			STD_ULOGIC,
 		};
-		enum class BitVectorFlavor {
-			BIT_VECTOR,
-			STD_LOGIC_VECTOR
-		};
+		//enum class BitVectorFlavor {
+		//	BIT_VECTOR,
+		//	STD_LOGIC_VECTOR
+		//};
 
 		GenericParameter &operator=(int v) { m_storage = v; m_flavor = DecimalFlavor::INTEGER; return *this; }
 		GenericParameter &operator=(size_t v) { HCL_DESIGNCHECK_HINT(v <= std::numeric_limits<int>::max(), "Value too large!"); m_storage = (int) v; m_flavor = DecimalFlavor::NATURAL; return *this; }
 		GenericParameter &operator=(double v) { m_storage = v; return *this; }
 		GenericParameter &operator=(std::string v) { m_storage = std::move(v); return *this; }
-		GenericParameter &operator=(sim::DefaultBitVectorState v) { m_storage = std::move(v); m_flavor = BitVectorFlavor::STD_LOGIC_VECTOR; return *this; }
+		GenericParameter &operator=(sim::DefaultBitVectorState v) { m_storage = std::move(v); m_flavor = BitFlavor::STD_LOGIC; return *this; }
 
 		// too ambiguous
 		// GenericParameter &operator=(bool v) { m_storage = v; }
@@ -58,12 +58,12 @@ class GenericParameter {
 
 		GenericParameter &setBoolean(bool v) { m_storage = v; return *this; }
 		GenericParameter &setBit(char v, BitFlavor flavor = BitFlavor::BIT) { m_storage = v; m_flavor = flavor; return *this;}
-		GenericParameter &setBitVector(size_t size, size_t value, BitVectorFlavor flavor = BitVectorFlavor::STD_LOGIC_VECTOR) { 
+		GenericParameter &setBitVector(size_t size, size_t value, BitFlavor flavor = BitFlavor::STD_LOGIC) { 
 			m_storage = sim::createDefaultBitVectorState(size, value); 
 			m_flavor = flavor; 
 			return *this;
 		}
-		GenericParameter &setBitVector(sim::DefaultBitVectorState vec, BitVectorFlavor flavor = BitVectorFlavor::STD_LOGIC_VECTOR) { 
+		GenericParameter &setBitVector(sim::DefaultBitVectorState vec, BitFlavor flavor = BitFlavor::STD_LOGIC) { 
 			m_storage = std::move(vec); 
 			m_flavor = flavor; 
 			return *this;
@@ -78,7 +78,7 @@ class GenericParameter {
 
 		DecimalFlavor decimalFlavor() const { return std::get<DecimalFlavor>(m_flavor); }
 		BitFlavor bitFlavor() const { return std::get<BitFlavor>(m_flavor); }
-		BitVectorFlavor bitVectorFlavor() const { return std::get<BitVectorFlavor>(m_flavor); }
+		//BitVectorFlavor bitVectorFlavor() const { return std::get<BitVectorFlavor>(m_flavor); }
 
 		int decimal() const { return std::get<int>(m_storage); }
 		double real() const { return std::get<double>(m_storage); }
@@ -102,7 +102,7 @@ class GenericParameter {
 		template<typename T>
 		bool operator!=(const T &rhs) const { return !operator==(rhs); }
 	protected:
-		std::variant<DecimalFlavor, BitFlavor, BitVectorFlavor> m_flavor;
+		std::variant<DecimalFlavor, BitFlavor> m_flavor;
 		std::variant<int, double, bool, char, std::string, sim::DefaultBitVectorState> m_storage;
 };
 
@@ -111,14 +111,14 @@ class Node_External : public Node<Node_External>
 {
 	public:
 		using BitFlavor = GenericParameter::BitFlavor;
-		using BitVectorFlavor = GenericParameter::BitVectorFlavor;
+		//using BitVectorFlavor = GenericParameter::BitVectorFlavor;
 		
 		struct Port {
 			std::string name;
 			std::string componentWidth;
 			size_t instanceWidth;
 			bool isVector;
-			std::variant<BitFlavor, BitVectorFlavor> flavor;
+			BitFlavor flavor;
 			std::optional<size_t> bidirPartner;
 
 			auto operator<=>(const Port &rhs) const = default;
@@ -138,12 +138,13 @@ class Node_External : public Node<Node_External>
 		virtual std::vector<std::string> getSupportFiles() const { return {}; }
 		virtual void setupSupportFile(size_t idx, const std::string &filename, std::ostream &stream) { }
 
+
 		void resizeIOPorts(size_t numInputs, size_t numOutputs);
 
-		void declOutputBitVector(size_t idx, std::string name, size_t width, std::string componentWidth = {}, BitVectorFlavor flavor = BitVectorFlavor::STD_LOGIC_VECTOR);
+		void declOutputBitVector(size_t idx, std::string name, size_t width, std::string componentWidth = {}, BitFlavor flavor = BitFlavor::STD_LOGIC);
 		void declOutputBit(size_t idx, std::string name, BitFlavor flavor = BitFlavor::STD_LOGIC);
 
-		void declInputBitVector(size_t idx, std::string name, size_t width, std::string componentWidth = {}, BitVectorFlavor flavor = BitVectorFlavor::STD_LOGIC_VECTOR);
+		void declInputBitVector(size_t idx, std::string name, size_t width, std::string componentWidth = {}, BitFlavor flavor = BitFlavor::STD_LOGIC);
 		void declInputBit(size_t idx, std::string name, BitFlavor flavor = BitFlavor::STD_LOGIC);
 
 		void declBidirPort(size_t inputIdx, size_t outputIdx);
@@ -168,6 +169,9 @@ class Node_External : public Node<Node_External>
 		std::vector<std::string> m_resetNames;
 		std::vector<Port> m_inputPorts;
 		std::vector<Port> m_outputPorts;
+
+		virtual void resizeInputs(size_t num) override;
+		virtual void resizeOutputs(size_t num) override;
 
 		virtual void copyBaseToClone(BaseNode *copy) const override;
 };

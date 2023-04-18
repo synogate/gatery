@@ -259,16 +259,16 @@ hlim::OutputClockRelation ALTDPRAM::getOutputClockRelation(size_t output) const
 {
 	const auto &outdata_reg = m_genericParameters.find("OUTDATA_REG")->second;
 	if (outdata_reg == "OUTCLOCK") 
-		return { .dependentClocks={ OUTCLOCK } };
+		return { .dependentClocks={ m_clocks[OUTCLOCK] } };
 
 
 	const auto &addr_reg = m_genericParameters.find("RDADDRESS_REG")->second;
 
 	if (addr_reg == "INCLOCK") 
-		return { .dependentClocks={ INCLOCK } };
+		return { .dependentClocks={ m_clocks[INCLOCK] } };
 
 	if (addr_reg == "OUTCLOCK") 
-		return { .dependentClocks={ OUTCLOCK } };
+		return { .dependentClocks={ m_clocks[OUTCLOCK] } };
 
 	// Async read
 	return { .dependentInputs={ IN_RDADDRESSSTALL, IN_RDEN, IN_RDADDRESS } };

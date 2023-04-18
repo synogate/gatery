@@ -148,7 +148,7 @@ void VHDLExport::operator()(hlim::Circuit &circuit)
 		m_ast->generateInterfacePackage(m_interfacePackageContent);
 
 	m_ast->convert((hlim::Circuit &)circuit);
-	m_ast->writeVHDL(m_destination);
+	m_ast->writeVHDL(m_destination, m_customVhdlFiles);
 
 	for (auto &e : m_testbenchRecorderSettings) {
 		if (e.inlineTestData)

@@ -36,6 +36,7 @@
 #include "frontend/ConstructFrom.h"
 #include "frontend/DesignScope.h"
 #include "frontend/ExternalComponent.h"
+#include "frontend/ExternalModule.h"
 #include "frontend/FrontendUnitTestSimulationFixture.h"
 #include "frontend/FSM.h"
 #include "frontend/GraphTools.h"

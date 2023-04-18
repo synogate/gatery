@@ -80,7 +80,7 @@ class AST
 		inline NamespaceScope &getNamespaceScope() { return m_namespaceScope; }
 		inline Hlim2AstMapping &getMapping() { return m_mapping; }
 
-		void writeVHDL(std::filesystem::path destination);
+		void writeVHDL(std::filesystem::path destination, const std::map<std::string, std::string> &customVhdlFiles);
 
 		std::filesystem::path getFilename(std::filesystem::path basePath, const std::string &name);
 

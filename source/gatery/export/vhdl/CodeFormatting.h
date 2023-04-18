@@ -52,10 +52,11 @@ class CodeFormatting
 		virtual void formatDeclaration(std::ostream &stream, const VHDLSignalDeclaration &declaration) const = 0;
 		
 		virtual void formatDataType(std::ostream &stream, VHDLDataType dataType) const = 0;
+		virtual void formatDataTypeConversion(std::ostream &stream, VHDLDataType srcDataType, VHDLDataType dstDataType, std::string_view srcIdentifier) const = 0;
 
 		virtual void formatDecimalFlavor(std::ostream &stream, hlim::GenericParameter::DecimalFlavor flavor) const = 0;
 		virtual void formatBitFlavor(std::ostream &stream, hlim::GenericParameter::BitFlavor flavor) const = 0;
-		virtual void formatBitVectorFlavor(std::ostream &stream, hlim::GenericParameter::BitVectorFlavor flavor) const = 0;
+		virtual void formatBitVectorFlavor(std::ostream &stream, hlim::GenericParameter::BitFlavor flavor) const = 0;
 
 		virtual void formatGenericParameterType(std::ostream &stream, const hlim::GenericParameter &param) const = 0;
 
@@ -111,10 +112,11 @@ class DefaultCodeFormatting : public CodeFormatting
 		virtual void formatConnectionType(std::ostream &stream, const VHDLSignalDeclaration &declaration) const override;
 		virtual void formatDeclaration(std::ostream &stream, const VHDLSignalDeclaration &declaration) const override;
 		virtual void formatDataType(std::ostream &stream, VHDLDataType dataType) const override;
+		virtual void formatDataTypeConversion(std::ostream &stream, VHDLDataType srcDataType, VHDLDataType dstDataType, std::string_view srcIdentifier) const override;
 
 		virtual void formatDecimalFlavor(std::ostream &stream, hlim::GenericParameter::DecimalFlavor flavor) const override;
 		virtual void formatBitFlavor(std::ostream &stream, hlim::GenericParameter::BitFlavor flavor) const override;
-		virtual void formatBitVectorFlavor(std::ostream &stream, hlim::GenericParameter::BitVectorFlavor flavor) const override;
+		virtual void formatBitVectorFlavor(std::ostream &stream, hlim::GenericParameter::BitFlavor flavor) const override;
 		
 		virtual void formatGenericParameterType(std::ostream &stream, const hlim::GenericParameter &param) const override;
 };

@@ -44,6 +44,17 @@ void HelperPackage::writeVHDL(std::ostream &stream)
 	cf.indent(stream, 1);
 	stream << "FUNCTION stdlogic2bool(v : STD_LOGIC) RETURN BOOLEAN;" << std::endl;
 
+	cf.indent(stream, 1);
+	stream << "FUNCTION PORTMAP_TO_STDLOGIC(b : BIT) RETURN STD_LOGIC;" << std::endl;
+	cf.indent(stream, 1);
+	stream << "FUNCTION PORTMAP_TO_STDULOGIC(b : BIT) RETURN STD_ULOGIC;" << std::endl;
+	cf.indent(stream, 1);
+	stream << "FUNCTION PORTMAP_TO_BIT(v : STD_LOGIC) RETURN BIT;" << std::endl;
+	cf.indent(stream, 1);
+	stream << "FUNCTION PORTMAP_TO_STDLOGICVECTOR(v : BIT_VECTOR) RETURN STD_LOGIC_VECTOR;" << std::endl;
+	cf.indent(stream, 1);
+	stream << "FUNCTION PORTMAP_TO_UNSIGNED(v : BIT_VECTOR) RETURN UNSIGNED;" << std::endl;
+
 	stream << "END PACKAGE " << m_name << ';' << std::endl << std::endl;
 
 	stream << "PACKAGE BODY " << m_name << " IS" << std::endl;
@@ -73,6 +84,41 @@ void HelperPackage::writeVHDL(std::ostream &stream)
 		stream << "RETURN v = '1';" << std::endl;
 	cf.indent(stream, 1);
 	stream << "END stdlogic2bool;" << std::endl << std::endl;
+
+	stream << R"Delim(
+	FUNCTION PORTMAP_TO_STDLOGIC(b : BIT) RETURN STD_LOGIC IS
+	BEGIN
+		IF b THEN
+			RETURN '1';
+		ELSE
+			RETURN '0';
+		END IF;
+	END PORTMAP_TO_STDLOGIC;
+
+	FUNCTION PORTMAP_TO_STDULOGIC(b : BIT) RETURN STD_ULOGIC IS
+	BEGIN
+		IF b THEN
+			RETURN '1';
+		ELSE
+			RETURN '0';
+		END IF;
+	END PORTMAP_TO_STDULOGIC;
+	
+	FUNCTION PORTMAP_TO_BIT(v : STD_LOGIC) RETURN BIT IS
+	BEGIN
+		RETURN TO_BIT(v);
+	END PORTMAP_TO_BIT;
+	
+	FUNCTION PORTMAP_TO_STDLOGICVECTOR(v : BIT_VECTOR) RETURN STD_LOGIC_VECTOR IS
+	BEGIN
+		RETURN TO_STDLOGICVECTOR(v);
+	END PORTMAP_TO_STDLOGICVECTOR;
+
+	FUNCTION PORTMAP_TO_UNSIGNED(v : BIT_VECTOR) RETURN UNSIGNED IS
+	BEGIN
+		RETURN UNSIGNED(TO_STDLOGICVECTOR(v));
+	END PORTMAP_TO_UNSIGNED;
+	)Delim";
 
 	stream << "END PACKAGE BODY " << m_name << ';' << std::endl;
 }

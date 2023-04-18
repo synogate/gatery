@@ -27,8 +27,12 @@ namespace gtry::vhdl {
 
 enum class VHDLDataType {
 	BOOL,
+	BIT,
+	BIT_VECTOR,
 	STD_LOGIC,
+	STD_ULOGIC,
 	STD_LOGIC_VECTOR,
+	STD_ULOGIC_VECTOR,
 	UNSIGNED
 };
 

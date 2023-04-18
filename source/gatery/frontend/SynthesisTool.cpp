@@ -112,6 +112,9 @@ std::vector<std::filesystem::path> SynthesisTool::sourceFiles(vhdl::VHDLExport& 
 			for (auto&& package : vhdlExport.getAST()->getPackages())
 				files.emplace_back(vhdlExport.getAST()->getFilename("", package->getName()));
 
+			for (const auto& file_content : vhdlExport.getCustomVHDLFiles())
+				files.emplace_back(vhdlExport.getAST()->getFilename("", file_content.first));
+
 			for (auto&& entity : vhdlExport.getAST()->getDependencySortedEntities())
 				files.emplace_back(vhdlExport.getAST()->getFilename("", entity->getName()));
 		}

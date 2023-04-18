@@ -70,11 +70,14 @@ namespace gtry {
 				TARGET_QUARTUS,
 			};
 
+			void addCustomVHDL(std::string name, std::string content);
+
 			void testCompilation(Flavor flavor = TARGET_GHDL);
 			void runTest(const hlim::ClockRational &timeoutSeconds);
 			bool exportContains(const std::regex &regex);
 		protected:
 			std::filesystem::path m_cwd;
+			std::map<std::string, std::string> m_customVhdlFiles;
 
 			void prepRun() override;
 

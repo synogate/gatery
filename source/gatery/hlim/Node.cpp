@@ -120,6 +120,11 @@ const Circuit *BaseNode::getCircuit() const
 		return nullptr;
 }
 
+void BaseNode::addClock(Clock *clk)
+{
+	m_clocks.push_back(nullptr);
+	attachClock(clk, m_clocks.size()-1);
+}
 
 void BaseNode::attachClock(Clock *clk, size_t clockPort)
 {
@@ -153,7 +158,7 @@ OutputClockRelation BaseNode::getOutputClockRelation(size_t output) const
 
 	if (!m_clocks.empty()) {
 		HCL_ASSERT_HINT(m_clocks.size() == 1, "Missing specialized implementation of getOutputClockRelation for node");
-		res.dependentClocks.push_back(0);
+		res.dependentClocks.push_back(m_clocks[0]);
 	}
 
 	return res;

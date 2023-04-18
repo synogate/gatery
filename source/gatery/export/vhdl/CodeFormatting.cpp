@@ -268,9 +268,14 @@ void DefaultCodeFormatting::formatConnectionType(std::ostream &stream, const VHD
 	formatDataType(stream, declaration.dataType);
 	switch (declaration.dataType) {
 		case VHDLDataType::BOOL:
+		case VHDLDataType::BIT:
 		case VHDLDataType::STD_LOGIC:
+		case VHDLDataType::STD_ULOGIC:
 		break;
+
+		case VHDLDataType::BIT_VECTOR:
 		case VHDLDataType::STD_LOGIC_VECTOR:
+		case VHDLDataType::STD_ULOGIC_VECTOR:
 		case VHDLDataType::UNSIGNED:
 			if (declaration.width == 0)
 				stream << "(-1 downto 0)";
@@ -290,19 +295,154 @@ void DefaultCodeFormatting::formatDataType(std::ostream &stream, VHDLDataType da
 {
 	switch (dataType) {
 		case VHDLDataType::BOOL:
-			stream << "BOOL";
+			stream << "BOOLEAN";
+		break;
+		case VHDLDataType::BIT:
+			stream << "BIT";
+		break;
+		case VHDLDataType::BIT_VECTOR:
+			stream << "BIT_VECTOR";
 		break;
 		case VHDLDataType::STD_LOGIC:
 			stream << "STD_LOGIC";
 		break;
+		case VHDLDataType::STD_ULOGIC:
+			stream << "STD_ULOGIC";
+		break;
 		case VHDLDataType::STD_LOGIC_VECTOR:
 			stream << "STD_LOGIC_VECTOR";
+		break;
+		case VHDLDataType::STD_ULOGIC_VECTOR:
+			stream << "STD_ULOGIC_VECTOR";
 		break;
 		case VHDLDataType::UNSIGNED:
 			stream << "UNSIGNED";
 		break;
 		default:
-			stream << "UNHANDLED_DATA_TYPE";
+			HCL_ASSERT_HINT(false, "UNHANDLED_DATA_TYPE");
+	}
+}
+
+void DefaultCodeFormatting::formatDataTypeConversion(std::ostream &stream, VHDLDataType srcDataType, VHDLDataType dstDataType, std::string_view srcIdentifier) const
+{
+	switch (dstDataType) {
+		case VHDLDataType::BOOL:
+			switch (srcDataType) {
+				case VHDLDataType::BOOL:
+					stream << srcIdentifier;
+				break;
+				default:
+					HCL_ASSERT_HINT(false, "Invalid conversion");
+			}
+		break;
+		case VHDLDataType::BIT:
+			switch (srcDataType) {
+				case VHDLDataType::BIT:
+					stream << srcIdentifier;
+				break;
+				case VHDLDataType::STD_LOGIC:
+				case VHDLDataType::STD_ULOGIC:
+					stream << "PORTMAP_TO_BIT(" << srcIdentifier << ')';
+				break;
+				default:
+					HCL_ASSERT_HINT(false, "Invalid conversion");
+			}
+		break;
+		case VHDLDataType::BIT_VECTOR:
+			switch (srcDataType) {
+				case VHDLDataType::BIT_VECTOR:
+					stream << srcIdentifier;
+				break;
+				case VHDLDataType::STD_LOGIC_VECTOR:
+				case VHDLDataType::STD_ULOGIC_VECTOR:
+					stream << "TO_BITVECTOR(" << srcIdentifier << ')';
+				break;
+				case VHDLDataType::UNSIGNED:
+					stream << "TO_BITVECTOR(STD_LOGIC_VECTOR(" << srcIdentifier << "))";
+				break;
+				default:
+					HCL_ASSERT_HINT(false, "Invalid conversion");
+			}
+		break;
+		case VHDLDataType::STD_LOGIC:
+			switch (srcDataType) {
+				case VHDLDataType::STD_LOGIC:
+					stream << srcIdentifier;
+				break;
+				case VHDLDataType::BIT:
+					stream << "PORTMAP_TO_STDLOGIC(" << srcIdentifier << ')';
+				break;
+				case VHDLDataType::STD_ULOGIC:
+					stream << "STD_LOGIC(" << srcIdentifier << ')';
+				break;
+				default:
+					HCL_ASSERT_HINT(false, "Invalid conversion");
+			}
+		break;
+		case VHDLDataType::STD_ULOGIC:
+			switch (srcDataType) {
+				case VHDLDataType::STD_ULOGIC:
+					stream << srcIdentifier;
+				break;
+				case VHDLDataType::BIT:
+					stream << "PORTMAP_TO_STDULOGIC(" << srcIdentifier << ')';
+				break;
+				case VHDLDataType::STD_LOGIC:
+					stream << "STD_ULOGIC(" << srcIdentifier << ')';
+				break;
+				default:
+					HCL_ASSERT_HINT(false, "Invalid conversion");
+			}
+		break;
+		case VHDLDataType::STD_LOGIC_VECTOR:
+			switch (srcDataType) {
+				case VHDLDataType::STD_LOGIC_VECTOR:
+					stream << srcIdentifier;
+				break;
+				case VHDLDataType::BIT_VECTOR:
+					stream << "TO_STDLOGICVECTOR(" << srcIdentifier << ')';
+				break;
+				case VHDLDataType::STD_ULOGIC_VECTOR:
+				case VHDLDataType::UNSIGNED:
+					stream << "STD_LOGIC_VECTOR(" << srcIdentifier << ')';
+				break;
+				default:
+					HCL_ASSERT_HINT(false, "Invalid conversion");
+			}
+		break;
+		case VHDLDataType::STD_ULOGIC_VECTOR:
+			switch (srcDataType) {
+				case VHDLDataType::STD_ULOGIC_VECTOR:
+					stream << srcIdentifier;
+				break;
+				case VHDLDataType::BIT_VECTOR:
+					stream << "TO_STDULOGICVECTOR(STD_LOGIC_VECTOR(" << srcIdentifier << ")";
+				break;
+				case VHDLDataType::UNSIGNED:
+					stream << "STD_ULOGIC_VECTOR(" << srcIdentifier << ')';
+				break;
+				default:
+					HCL_ASSERT_HINT(false, "Invalid conversion");
+			}
+		break;
+		case VHDLDataType::UNSIGNED:
+			switch (srcDataType) {
+				case VHDLDataType::UNSIGNED:
+					stream << srcIdentifier;
+				break;
+				case VHDLDataType::BIT_VECTOR:
+					stream << "PORTMAP_TO_UNSIGNED(" << srcIdentifier << ')';
+				break;
+				case VHDLDataType::STD_LOGIC_VECTOR:
+				case VHDLDataType::STD_ULOGIC_VECTOR:
+					stream << "UNSIGNED(" << srcIdentifier << ')';
+				break;
+				default:
+					HCL_ASSERT_HINT(false, "Invalid conversion");
+			}
+		break;
+		default:
+			HCL_ASSERT_HINT(false, "UNHANDLED_DATA_TYPE");
 	}
 }
 
@@ -326,11 +466,12 @@ void DefaultCodeFormatting::formatBitFlavor(std::ostream &stream, hlim::GenericP
 	}
 }
 
-void DefaultCodeFormatting::formatBitVectorFlavor(std::ostream &stream, hlim::GenericParameter::BitVectorFlavor flavor) const
+void DefaultCodeFormatting::formatBitVectorFlavor(std::ostream &stream, hlim::GenericParameter::BitFlavor flavor) const
 {
 	switch (flavor) {
-		case hlim::GenericParameter::BitVectorFlavor::BIT_VECTOR: stream << "BIT_VECTOR"; break;
-		case hlim::GenericParameter::BitVectorFlavor::STD_LOGIC_VECTOR: stream << "STD_LOGIC_VECTOR"; break;
+		case hlim::GenericParameter::BitFlavor::BIT: stream << "BIT_VECTOR"; break;
+		case hlim::GenericParameter::BitFlavor::STD_LOGIC: stream << "STD_LOGIC_VECTOR"; break;
+		case hlim::GenericParameter::BitFlavor::STD_ULOGIC: stream << "STD_ULOGIC_VECTOR"; break;
 		default: HCL_ASSERT_HINT(false, "Unhandled case!");
 	}
 }
@@ -342,7 +483,7 @@ void DefaultCodeFormatting::formatGenericParameterType(std::ostream &stream, con
 	else if (param.isString()) stream << "STRING";
 	else if (param.isBoolean()) stream << "BOOLEAN";
 	else if (param.isBit()) formatBitFlavor(stream, param.bitFlavor());
-	else if (param.isBitVector()) formatBitVectorFlavor(stream, param.bitVectorFlavor());
+	else if (param.isBitVector()) formatBitVectorFlavor(stream, param.bitFlavor());
 	else HCL_ASSERT_HINT(false, "Unhandled case!");
 }
 

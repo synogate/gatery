@@ -101,7 +101,7 @@ std::unique_ptr<BaseNode> Node_CDC::cloneUnconnected() const
 OutputClockRelation Node_CDC::getOutputClockRelation(size_t output) const
 {
 	OutputClockRelation res;
-	res.dependentClocks.push_back((size_t)Clocks::OUTPUT_CLOCK);
+	res.dependentClocks.push_back(m_clocks[(size_t)Clocks::OUTPUT_CLOCK]);
 	return res;
 }
 

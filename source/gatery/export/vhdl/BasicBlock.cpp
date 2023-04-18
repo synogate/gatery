@@ -496,7 +496,27 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
 	}
 }
 
-
+namespace {
+	VHDLDataType getExternalNodePortVHDLDataType(const hlim::Node_External::Port &port)
+	{
+		if (port.isVector)
+			switch (port.flavor) {
+				case hlim::GenericParameter::BitFlavor::BIT: return VHDLDataType::BIT_VECTOR;
+				case hlim::GenericParameter::BitFlavor::STD_LOGIC: return VHDLDataType::STD_LOGIC_VECTOR;
+				case hlim::GenericParameter::BitFlavor::STD_ULOGIC: return VHDLDataType::STD_ULOGIC_VECTOR;
+				default:
+					HCL_ASSERT_HINT(false, "Unhandled type!");
+			}
+		else
+			switch (port.flavor) {
+				case hlim::GenericParameter::BitFlavor::BIT: return VHDLDataType::BIT;
+				case hlim::GenericParameter::BitFlavor::STD_LOGIC: return VHDLDataType::STD_LOGIC;
+				case hlim::GenericParameter::BitFlavor::STD_ULOGIC: return VHDLDataType::STD_ULOGIC;
+				default:
+					HCL_ASSERT_HINT(false, "Unhandled type!");
+			}
+	}
+}
 
 void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
 {
@@ -535,13 +555,13 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
 						if (param.isDecimal())
 						 	stream << param.decimal();
 						else if (param.isReal())
-						 	stream << param.real(); 
+						 	stream << boost::format("%.10f") % param.real();
 						else if (param.isBoolean())
 						 	stream << (param.boolean()?"true":"false");
 						else if (param.isString())
 						 	stream << '"' << param.string() << '"';
 						else if (param.isBit())
-						 	stream << '\'' << param.bit() << '\'';
+						 	stream << '\'' << (param.bit()?'1':'0') << '\'';
 						else if (param.isBitVector())
 						 	stream << '"' << param.bitVector() << '"';
 						else	
@@ -594,11 +614,11 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
 						if (node->getDriver(i).node != nullptr) {
 
 							const auto &decl = m_namespaceScope.get(node->getDriver(i));
-							if (decl.dataType == VHDLDataType::UNSIGNED)
-								line << "STD_LOGIC_VECTOR(";
-							line << decl.name;
-							if (decl.dataType == VHDLDataType::UNSIGNED)
-								line << ')';
+
+							auto portDataType = getExternalNodePortVHDLDataType(node->getInputPorts()[i]);
+							auto signalDataType = decl.dataType;
+
+							cf.formatDataTypeConversion(line, signalDataType, portDataType, decl.name);
 						} else {
 							if (node->getInputPorts()[i].isVector)
 								line << "(others => 'X')";
@@ -618,10 +638,12 @@ void BasicBlock::writeStatementsVHDL(std::ostream &stream, unsigned indent)
 						std::stringstream line;
 						if (connected) {
 							const auto &decl = m_namespaceScope.get({.node = node, .port = i});
-							if (decl.dataType == VHDLDataType::UNSIGNED)
-								line << "UNSIGNED(" << node->getOutputName(i) << ") => " << decl.name;
-							else
-								line << node->getOutputName(i) << " => " << decl.name;
+
+							auto portDataType = getExternalNodePortVHDLDataType(node->getOutputPorts()[i]);
+							auto signalDataType = decl.dataType;
+
+							cf.formatDataTypeConversion(line, portDataType, signalDataType, node->getOutputName(i));
+							line << " => " << decl.name;
 						} else {
 							line << node->getOutputName(i) << " => open";
 						}
@@ -760,14 +782,14 @@ void BasicBlock::declareLocalComponents(std::ostream &stream, size_t indentation
 					line << node->getInputName(i) << " : IN ";
 
 				if (type.isVector) {
-					cf.formatBitVectorFlavor(line, std::get<hlim::Node_External::BitVectorFlavor>(type.flavor));
+					cf.formatBitVectorFlavor(line, type.flavor);
 					line << '(';
 					if (type.componentWidth.empty())
 						line << ((int)type.instanceWidth-1)<< " downto 0)";
 					else
 						line << type.componentWidth << "-1 downto 0)";
 				} else {
-					cf.formatBitFlavor(line, std::get<hlim::Node_External::BitFlavor>(type.flavor));
+					cf.formatBitFlavor(line, type.flavor);
 				}
 
 				portmapList.push_back(line.str());
@@ -786,14 +808,14 @@ void BasicBlock::declareLocalComponents(std::ostream &stream, size_t indentation
 				line << node->getOutputName(i) << " : OUT ";
 
 				if (type.isVector) {
-					cf.formatBitVectorFlavor(line, std::get<hlim::Node_External::BitVectorFlavor>(type.flavor));
+					cf.formatBitVectorFlavor(line, type.flavor);
 					line << '(';
 					if (type.componentWidth.empty())
 						line << ((int)type.instanceWidth-1)<< " downto 0)";
 					else
 						line << type.componentWidth << "-1 downto 0)";
 				} else {
-					cf.formatBitFlavor(line, std::get<hlim::Node_External::BitFlavor>(type.flavor));
+					cf.formatBitFlavor(line, type.flavor);
 				}
 
 				portmapList.push_back(line.str());

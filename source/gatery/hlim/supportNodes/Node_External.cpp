@@ -39,12 +39,26 @@ void Node_External::copyBaseToClone(BaseNode *copy) const
 void Node_External::resizeIOPorts(size_t numInputs, size_t numOutputs)
 {
 	resizeInputs(numInputs);
-	m_inputPorts.resize(numInputs);
 	resizeOutputs(numOutputs);
-	m_outputPorts.resize(numOutputs);
 }
 
-void Node_External::declOutputBitVector(size_t idx, std::string name, size_t width, std::string componentWidth, BitVectorFlavor flavor)
+
+void Node_External::resizeInputs(size_t num)
+{
+	BaseNode::resizeInputs(num);
+	m_inputPorts.resize(num);
+}
+
+void Node_External::resizeOutputs(size_t num)
+{
+	BaseNode::resizeOutputs(num);
+	m_outputPorts.resize(num);
+}
+
+
+
+
+void Node_External::declOutputBitVector(size_t idx, std::string name, size_t width, std::string componentWidth, BitFlavor flavor)
 {
 	HCL_DESIGNCHECK_HINT(idx < getNumOutputPorts(), "Invalid output idx");
 	m_outputPorts[idx].name = std::move(name);
@@ -72,7 +86,7 @@ void Node_External::declOutputBit(size_t idx, std::string name, BitFlavor flavor
 	});
 }
 
-void Node_External::declInputBitVector(size_t idx, std::string name, size_t width, std::string componentWidth, BitVectorFlavor flavor)
+void Node_External::declInputBitVector(size_t idx, std::string name, size_t width, std::string componentWidth, BitFlavor flavor)
 {
 	HCL_DESIGNCHECK_HINT(idx < getNumInputPorts(), "Invalid input idx");
 	m_inputPorts[idx].name = std::move(name);

@@ -29,28 +29,26 @@ namespace gtry
 	 * @{
 	 */
 
-	using hlim::GenericParameter;
+	using GenericParameter = hlim::GenericParameter;
+	using PinType = hlim::GenericParameter::BitFlavor;
+
+	struct PinConfig
+	{
+		PinType type = PinType::STD_LOGIC;
+	};
 
 	class ExternalModule
 	{
-	public:
-		enum class PinType
-		{
-			bit, std_logic, std_ulogic
-		};
-
-		struct PinConfig
-		{
-			PinType type = PinType::std_logic;
-		};
-
 	public:
 		ExternalModule(std::string_view name, std::string_view library = {});
 
 		GenericParameter&	generic(std::string_view name);
 
-		const Clock&		clock(std::string_view name, std::optional<std::string_view> resetName = {}, ClockConfig cfg = {});
-		const Clock&		clock(const Clock& parentClock, std::string_view name, std::optional<std::string_view> resetName = {}, ClockConfig cfg = {});
+		void clockIn(std::string_view name, std::string_view resetName = {});
+		void clockIn(const Clock& clock, std::string_view name, std::string_view resetName = {});
+
+		const Clock&		clockOut(std::string_view name, std::optional<std::string_view> resetName = {}, ClockConfig cfg = {});
+		const Clock&		clockOut(const Clock& parentClock, std::string_view name, std::optional<std::string_view> resetName = {}, ClockConfig cfg = {});
 
 		BVec&				in(std::string_view name, BitWidth W, PinConfig cfg = {});
 		Bit&				in(std::string_view name, PinConfig cfg = {});
@@ -59,10 +57,11 @@ namespace gtry
 		BVec				out(std::string_view name, BitWidth W, PinConfig cfg = {});
 		Bit					out(std::string_view name, PinConfig cfg = {});
 
+		void inoutPin(std::string_view portName, std::string_view pinName, BitWidth W, PinConfig cfg = {});
+		void inoutPin(std::string_view portName, std::string_view pinName, PinConfig cfg = {});
+
 	protected:
-		const Clock& addClock(Clock clock, std::string_view pinName, std::optional<std::string_view> resetPinName);
-		static GenericParameter::BitFlavor translateBitType(PinType type);
-		static GenericParameter::BitVectorFlavor translateBVecType(PinType type);
+		const Clock& addClockOut(Clock clock, std::string_view pinName, std::optional<std::string_view> resetPinName);
 
 	private:
 		// todo: Node_External should have a interface which makes this class obsolete
@@ -73,16 +72,18 @@ namespace gtry
 			using Node_External::resizeOutputs;
 			//using Node_External::declOutputBitVector;
 
+			void isEntity(bool b) { m_isEntity = b; }
 			auto& generics() { return m_genericParameters; }
 			auto& ins() { return m_inputPorts; }
 			auto& outs() { return m_outputPorts; }
 			//auto& clocks() { return m_clocks; }
-			//auto& clockNames() { return m_clockNames; }
+			auto& clockNames() { return m_clockNames; }
+			auto& resetNames() { return m_resetNames; }
 			void library(std::string_view name) { m_libraryName = std::string{ name }; }
 			void name(std::string_view name) { m_name = std::string{ name }; }
-			size_t clockIndex(hlim::Clock* clock);
 
-			std::unique_ptr<BaseNode> cloneUnconnected() const override;
+			std::unique_ptr<hlim::BaseNode> cloneUnconnected() const override;
+			void copyBaseToClone(hlim::BaseNode *copy) const override;
 
 			hlim::OutputClockRelation getOutputClockRelation(size_t output) const override;
 			bool checkValidInputClocks(std::span<hlim::SignalClockDomain> inputClocks) const override;
@@ -92,7 +93,7 @@ namespace gtry
 		};
 
 		Node_External_Exposed& m_node;
-		std::deque<Clock> m_clock;
+		std::deque<Clock> m_outClock;
 		std::deque<std::variant<Bit, BVec>> m_in;
 	};
 

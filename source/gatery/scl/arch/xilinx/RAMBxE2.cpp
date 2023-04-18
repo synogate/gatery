@@ -512,13 +512,13 @@ hlim::OutputClockRelation RAMBxE2::getOutputClockRelation(size_t output) const
 		case OUT_CAS_DOUTP_A: 
 		case OUT_DOUT_A_DOUT: 
 		case OUT_DOUTP_A_DOUTP: 
-			return { .dependentClocks={ CLK_A_RD } };
+			return { .dependentClocks={ m_clocks[CLK_A_RD] } };
 
 		case OUT_CAS_DOUT_B: 
 		case OUT_CAS_DOUTP_B: 
 		case OUT_DOUT_B_DOUT: 
 		case OUT_DOUTP_B_DOUTP: 
-			return { .dependentClocks={ CLK_B_WR } };
+			return { .dependentClocks={ m_clocks[CLK_B_WR] } };
 
 
 		// I'm not too certain about these

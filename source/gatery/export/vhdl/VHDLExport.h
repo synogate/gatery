@@ -80,6 +80,9 @@ class VHDLExport
 		inline const std::string &getClocksFilename() const { return m_clocksFilename; }
 
 		InterfacePackageContent &getInterfacePackage() { return m_interfacePackageContent; }
+
+		void addCustomVhdlFile(std::string name, std::string content) { m_customVhdlFiles[std::move(name)] = std::move(content); }
+		inline const std::map<std::string, std::string> &getCustomVHDLFiles() const { return m_customVhdlFiles; }
 	protected:
 		std::filesystem::path m_destination;
 		std::filesystem::path m_destinationTestbench;
@@ -102,6 +105,8 @@ class VHDLExport
 			bool inlineTestData;
 		};
 		std::vector<TestbenchRecorderSettings> m_testbenchRecorderSettings;
+
+		std::map<std::string, std::string> m_customVhdlFiles;
 
 		void doWriteInstantiationTemplateVHDL(std::filesystem::path destination);
 };

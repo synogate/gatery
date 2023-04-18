@@ -28,6 +28,10 @@ ExternalModule::ExternalModule(std::string_view name, std::string_view library) 
 {
 	HCL_DESIGNCHECK_HINT(!name.empty(), "module name cannot be empty");
 
+	m_node.recordStackTrace();
+	m_node.moveToGroup(GroupScope::getCurrentNodeGroup());
+	m_node.isEntity(true);
+
 	m_node.name(name);
 	if (!library.empty())
 		m_node.library(library);
@@ -38,27 +42,40 @@ GenericParameter& ExternalModule::generic(std::string_view name)
 	return m_node.generics()[std::string{ name }];
 }
 
-const Clock& ExternalModule::clock(std::string_view name, std::optional<std::string_view> resetName, ClockConfig cfg)
+void ExternalModule::clockIn(std::string_view name, std::string_view resetName)
 {
-	auto it = std::ranges::find(m_clock, name, &Clock::name);
-	if (it != m_clock.end())
-		return m_clock[it - m_clock.end()];
-
-	return addClock(cfg, name, resetName);
+	clockIn(ClockScope::getClk(), name, resetName);
 }
 
-const Clock& ExternalModule::clock(const Clock& parentClock, std::string_view name, std::optional<std::string_view> resetName, ClockConfig cfg)
+void ExternalModule::clockIn(const Clock& clock, std::string_view name, std::string_view resetName)
 {
-	auto it = std::ranges::find(m_clock, name, &Clock::name);
-	if (it != m_clock.end())
-		return m_clock[it - m_clock.end()];
-
-	return addClock(parentClock.deriveClock(cfg), name, resetName);
+	m_node.addClock(clock.getClk());
+	m_node.clockNames().emplace_back(name);
+	m_node.resetNames().emplace_back(resetName);
 }
 
-const Clock& gtry::ExternalModule::addClock(Clock clock, std::string_view pinName, std::optional<std::string_view> resetPinName)
+
+const Clock& ExternalModule::clockOut(std::string_view name, std::optional<std::string_view> resetName, ClockConfig cfg)
 {
-	Clock& clk = m_clock.emplace_back(clock);
+	auto it = std::ranges::find(m_outClock, name, &Clock::name);
+	if (it != m_outClock.end())
+		return m_outClock[it - m_outClock.end()];
+
+	return addClockOut(cfg, name, resetName);
+}
+
+const Clock& ExternalModule::clockOut(const Clock& parentClock, std::string_view name, std::optional<std::string_view> resetName, ClockConfig cfg)
+{
+	auto it = std::ranges::find(m_outClock, name, &Clock::name);
+	if (it != m_outClock.end())
+		return m_outClock[it - m_outClock.end()];
+
+	return addClockOut(parentClock.deriveClock(cfg), name, resetName);
+}
+
+const Clock& gtry::ExternalModule::addClockOut(Clock clock, std::string_view pinName, std::optional<std::string_view> resetPinName)
+{
+	Clock& clk = m_outClock.emplace_back(clock);
 	clk.setName(std::string{ pinName });
 
 	Bit clockSignal; // has to be unassigned for simulation magic :/
@@ -74,27 +91,6 @@ const Clock& gtry::ExternalModule::addClock(Clock clock, std::string_view pinNam
 	return clk;
 }
 
-GenericParameter::BitFlavor gtry::ExternalModule::translateBitType(PinType type)
-{
-	switch (type)
-	{
-	case PinType::bit: return GenericParameter::BitFlavor::BIT;
-	case PinType::std_logic: return GenericParameter::BitFlavor::STD_LOGIC;
-	case PinType::std_ulogic: return GenericParameter::BitFlavor::STD_ULOGIC;
-	default: HCL_ASSERT(false);
-	}
-}
-
-GenericParameter::BitVectorFlavor gtry::ExternalModule::translateBVecType(PinType type)
-{
-	switch (type)
-	{
-	case PinType::bit: return GenericParameter::BitVectorFlavor::BIT_VECTOR;
-	case PinType::std_logic: return GenericParameter::BitVectorFlavor::STD_LOGIC_VECTOR;
-	default: HCL_ASSERT(false);
-	}
-}
-
 BVec& ExternalModule::in(std::string_view name, BitWidth W, PinConfig cfg)
 {
 	auto it = std::ranges::find(m_node.ins(), name, &Node_External_Exposed::Port::name);
@@ -104,7 +100,7 @@ BVec& ExternalModule::in(std::string_view name, BitWidth W, PinConfig cfg)
 
 		size_t idx = m_node.ins().size();
 		m_node.resizeInputs(idx + 1);
-		m_node.declInputBitVector(idx, std::string{ name }, W.bits(), {}, translateBVecType(cfg.type));
+		m_node.declInputBitVector(idx, std::string{ name }, W.bits(), {}, cfg.type);
 		m_node.rewireInput(idx, signal.readPort());
 		m_node.m_inClock.push_back(ClockScope::getClk().getClk());
 		return signal;
@@ -121,7 +117,7 @@ Bit& ExternalModule::in(std::string_view name, PinConfig cfg)
 
 		size_t idx = m_node.ins().size();
 		m_node.resizeInputs(idx + 1);
-		m_node.declInputBit(idx, std::string{ name }, translateBitType(cfg.type));
+		m_node.declInputBit(idx, std::string{ name }, cfg.type);
 		m_node.rewireInput(idx, signal.readPort());
 		m_node.m_inClock.push_back(ClockScope::getClk().getClk());
 		return signal;
@@ -152,10 +148,8 @@ BVec ExternalModule::out(std::string_view name, BitWidth W, PinConfig cfg)
 	{
 		idx = m_node.outs().size();
 		m_node.resizeOutputs(idx + 1);
-		m_node.declOutputBitVector(idx, std::string{ name }, W.bits(), {}, translateBVecType(cfg.type));
-		m_node.m_outClock.dependentClocks.push_back(
-			m_node.clockIndex(ClockScope::getClk().getClk())
-		);
+		m_node.declOutputBitVector(idx, std::string{ name }, W.bits(), {}, cfg.type);
+		m_node.m_outClock.dependentClocks.push_back(ClockScope::getClk().getClk());
 	}
 	else
 	{
@@ -173,10 +167,8 @@ Bit ExternalModule::out(std::string_view name, PinConfig cfg)
 	{
 		idx = m_node.outs().size();
 		m_node.resizeOutputs(idx + 1);
-		m_node.declOutputBit(idx, std::string{ name }, translateBitType(cfg.type));
-		m_node.m_outClock.dependentClocks.push_back(
-			m_node.clockIndex(ClockScope::getClk().getClk())
-		);
+		m_node.declOutputBit(idx, std::string{ name }, cfg.type);
+		m_node.m_outClock.dependentClocks.push_back(ClockScope::getClk().getClk());
 	}
 	else
 	{
@@ -185,23 +177,23 @@ Bit ExternalModule::out(std::string_view name, PinConfig cfg)
 	return SignalReadPort(hlim::NodePort{ .node = &m_node, .port = (size_t)idx });
 }
 
-size_t gtry::ExternalModule::Node_External_Exposed::clockIndex(hlim::Clock* clock)
-{
-	auto clkit = std::ranges::find(m_clocks, clock);
-	if (clkit == m_clocks.end())
-	{
-		m_clocks.push_back(clock);
-		m_clockNames.push_back(""); // TODO: what to put here?
-		return m_clocks.size() - 1;
-	}
-	return clkit - m_clocks.end();
-}
 
-std::unique_ptr<hlim::BaseNode> gtry::ExternalModule::Node_External_Exposed::cloneUnconnected() const
+
+std::unique_ptr<gtry::hlim::BaseNode> gtry::ExternalModule::Node_External_Exposed::cloneUnconnected() const
 {
 	auto res = std::make_unique<Node_External_Exposed>();
 	copyBaseToClone(res.get());
 	return res;
+}
+
+
+void gtry::ExternalModule::Node_External_Exposed::copyBaseToClone(gtry::hlim::BaseNode *copy) const
+{
+	Node_External::copyBaseToClone(copy);
+	auto *other = (gtry::ExternalModule::Node_External_Exposed*)copy;
+
+	other->m_inClock = m_inClock;
+	other->m_outClock = m_outClock;
 }
 
 hlim::OutputClockRelation gtry::ExternalModule::Node_External_Exposed::getOutputClockRelation(size_t output) const

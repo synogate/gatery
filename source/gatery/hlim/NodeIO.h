@@ -66,8 +66,8 @@ class NodeIO
 		void connectInput(size_t inputPort, const NodePort &output);
 		void disconnectInput(size_t inputPort);
 
-		void resizeInputs(size_t num);
-		void resizeOutputs(size_t num);
+		virtual void resizeInputs(size_t num);
+		virtual void resizeOutputs(size_t num);
 	private:
 		struct OutputPort {
 			ConnectionType connectionType;

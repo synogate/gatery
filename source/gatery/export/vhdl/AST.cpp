@@ -87,7 +87,7 @@ std::filesystem::path AST::getFilename(std::filesystem::path basePath, const std
 	return basePath / (name + m_codeFormatting->getFilenameExtension());
 }
 
-void AST::writeVHDL(std::filesystem::path destination)
+void AST::writeVHDL(std::filesystem::path destination, const std::map<std::string, std::string> &customVhdlFiles)
 {
 	if (destination.has_extension())
 	{
@@ -99,6 +99,9 @@ void AST::writeVHDL(std::filesystem::path destination)
 
 		for (auto& package : m_packages)
 			package->writeVHDL(file);
+
+		for (const auto &pair : customVhdlFiles)
+			file << pair.second << std::endl;
 
 		for (auto* entity : this->getDependencySortedEntities())
 			entity->writeVHDL(file);
@@ -114,6 +117,14 @@ void AST::writeVHDL(std::filesystem::path destination)
 			std::fstream file(filePath.string().c_str(), std::fstream::out);
 			file.exceptions(std::fstream::failbit | std::fstream::badbit);
 			package->writeVHDL(file);
+		}
+
+		for (const auto &pair : customVhdlFiles) {
+			std::filesystem::path filePath = getFilename(destination, pair.first);
+
+			std::fstream file(filePath.string().c_str(), std::fstream::out);
+			file.exceptions(std::fstream::failbit | std::fstream::badbit);
+			file << pair.second;
 		}
 
 		for (auto& entity : m_entities) {

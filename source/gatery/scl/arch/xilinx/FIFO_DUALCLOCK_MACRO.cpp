@@ -89,13 +89,13 @@ FIFO_DUALCLOCK_MACRO::FIFO_DUALCLOCK_MACRO(size_t width, FIFOSize fifoSize)
 
 FIFO_DUALCLOCK_MACRO &FIFO_DUALCLOCK_MACRO::setAlmostEmpty(size_t numOccupied)
 {
-	m_genericParameters["ALMOST_EMPTY_OFFSET"].setBitVector(16, numOccupied, GenericParameter::BitVectorFlavor::BIT_VECTOR);
+	m_genericParameters["ALMOST_EMPTY_OFFSET"].setBitVector(16, numOccupied, GenericParameter::BitFlavor::BIT);
 	return *this;
 }
 
 FIFO_DUALCLOCK_MACRO &FIFO_DUALCLOCK_MACRO::setAlmostFull(size_t numVacant)
 {
-	m_genericParameters["ALMOST_EMPTY_OFFSET"].setBitVector(16, numVacant, GenericParameter::BitVectorFlavor::BIT_VECTOR);
+	m_genericParameters["ALMOST_EMPTY_OFFSET"].setBitVector(16, numVacant, GenericParameter::BitFlavor::BIT);
 	return *this;
 }
 

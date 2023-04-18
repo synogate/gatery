@@ -58,10 +58,10 @@ void inferClockDomains(Circuit &circuit, utils::UnstableMap<hlim::NodePort, Sign
 			assignToCD(np, {.type = SignalClockDomain::CONSTANT });
 		else {
 			if (!ocr.dependentClocks.empty()) {
-				if (np.node->getClocks()[ocr.dependentClocks[0]] == nullptr)
+				if (ocr.dependentClocks[0] == nullptr)
 					assignToCD(np, {.type = SignalClockDomain::UNKNOWN });
 				else
-					assignToCD(np, {.type = SignalClockDomain::CLOCK, .clk=np.node->getClocks()[ocr.dependentClocks[0]] });
+					assignToCD(np, {.type = SignalClockDomain::CLOCK, .clk=ocr.dependentClocks[0] });
 			} else {
 				bool allConst = true;
 				for (auto i : ocr.dependentInputs) {

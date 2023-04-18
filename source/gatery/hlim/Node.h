@@ -51,7 +51,7 @@ class RevisitCheck;
  */
 struct OutputClockRelation {
 	std::vector<size_t> dependentInputs;
-	std::vector<size_t> dependentClocks;
+	std::vector<Clock*> dependentClocks;
 
 	bool isConst() const { return dependentInputs.empty() && dependentClocks.empty(); }
 };
@@ -136,6 +136,7 @@ class BaseNode : public NodeIO
 		virtual void visit(NodeVisitor &visitor) = 0;
 		virtual void visit(ConstNodeVisitor &visitor) const = 0;
 
+		void addClock(Clock *clk);
 		void attachClock(Clock *clk, size_t clockPort);
 		void detachClock(size_t clockPort);
 

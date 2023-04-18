@@ -312,10 +312,10 @@ hlim::OutputClockRelation ALTSYNCRAM::getOutputClockRelation(size_t output) cons
 		outdata_reg = m_genericParameters.find("outdata_reg_b")->second.string();
 
 	if (outdata_reg == "CLOCK0") 
-		return { .dependentClocks={ 0 } };
+		return { .dependentClocks={ m_clocks[0] } };
 
 	if (outdata_reg == "CLOCK1") 
-		return { .dependentClocks={ 1 } };
+		return { .dependentClocks={ m_clocks[1] } };
 
 
 	std::string addr_reg;
@@ -325,10 +325,10 @@ hlim::OutputClockRelation ALTSYNCRAM::getOutputClockRelation(size_t output) cons
 		addr_reg = m_genericParameters.find("address_reg_b")->second.string();
 
 	if (addr_reg == "CLOCK0") 
-		return { .dependentClocks={ 0 } };
+		return { .dependentClocks={ m_clocks[0] } };
 
 	if (addr_reg == "CLOCK1") 
-		return { .dependentClocks={ 1 } };
+		return { .dependentClocks={ m_clocks[1] } };
 
 	HCL_ASSERT_HINT(false, "Inconsistent configuration of ALTSYNCRAM!");
 }
