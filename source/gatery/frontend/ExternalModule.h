@@ -89,7 +89,7 @@ namespace gtry
 			bool checkValidInputClocks(std::span<hlim::SignalClockDomain> inputClocks) const override;
 
 			std::vector<hlim::Clock*> m_inClock;
-			hlim::OutputClockRelation m_outClock;
+			std::vector<hlim::OutputClockRelation> m_outClockRelations;
 		};
 
 		Node_External_Exposed& m_node;

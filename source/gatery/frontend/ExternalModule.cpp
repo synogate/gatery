@@ -149,7 +149,7 @@ BVec ExternalModule::out(std::string_view name, BitWidth W, PinConfig cfg)
 		idx = m_node.outs().size();
 		m_node.resizeOutputs(idx + 1);
 		m_node.declOutputBitVector(idx, std::string{ name }, W.bits(), {}, cfg.type);
-		m_node.m_outClock.dependentClocks.push_back(ClockScope::getClk().getClk());
+		m_node.m_outClockRelations.push_back({.dependentClocks = {ClockScope::getClk().getClk()}});
 	}
 	else
 	{
@@ -168,7 +168,7 @@ Bit ExternalModule::out(std::string_view name, PinConfig cfg)
 		idx = m_node.outs().size();
 		m_node.resizeOutputs(idx + 1);
 		m_node.declOutputBit(idx, std::string{ name }, cfg.type);
-		m_node.m_outClock.dependentClocks.push_back(ClockScope::getClk().getClk());
+		m_node.m_outClockRelations.push_back({.dependentClocks = {ClockScope::getClk().getClk()}});
 	}
 	else
 	{
@@ -193,12 +193,12 @@ void gtry::ExternalModule::Node_External_Exposed::copyBaseToClone(gtry::hlim::Ba
 	auto *other = (gtry::ExternalModule::Node_External_Exposed*)copy;
 
 	other->m_inClock = m_inClock;
-	other->m_outClock = m_outClock;
+	other->m_outClockRelations = m_outClockRelations;
 }
 
 hlim::OutputClockRelation gtry::ExternalModule::Node_External_Exposed::getOutputClockRelation(size_t output) const
 {
-	return m_outClock;
+	return m_outClockRelations[output];
 }
 
 bool ExternalModule::Node_External_Exposed::checkValidInputClocks(std::span<hlim::SignalClockDomain> inputClocks) const
