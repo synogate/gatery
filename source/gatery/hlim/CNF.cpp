@@ -56,13 +56,18 @@ namespace gtry::hlim {
 			.lastLogicDriver = nodeOutput,
 		});
 
-		utils::UnstableSet<NodePort> alreadyVisited;
+		utils::UnstableMap<NodePort, bool> alreadyVisited;
 		while (!stack.empty()) {
 			auto top = stack.back();
 			stack.pop_back();
 
-			HCL_ASSERT_HINT(!alreadyVisited.contains(top.signal), "Encountered a logic loop while parsing a conjunction!");
-			alreadyVisited.insert(top.signal);
+			auto it = alreadyVisited.find(top.signal);
+			if (it != alreadyVisited.end()) {
+				if (it->second != top.negated)
+					m_contradicting = true;
+				continue;
+			}
+			alreadyVisited[top.signal] = top.negated;
 
 			if (top.signal.node == nullptr)
 				m_undefined = true;
