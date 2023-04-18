@@ -18,6 +18,8 @@
 #include "gatery/pch.h"
 #include "ExternalModule.h"
 #include "DesignScope.h"
+#include "Pin.h"
+#include <gatery/hlim/coreNodes/Node_MultiDriver.h>
 
 #include <ranges>
 
@@ -175,6 +177,41 @@ Bit ExternalModule::out(std::string_view name, PinConfig cfg)
 		idx = it - m_node.outs().end();
 	}
 	return SignalReadPort(hlim::NodePort{ .node = &m_node, .port = (size_t)idx });
+}
+
+
+void ExternalModule::inoutPin(std::string_view portName, std::string_view pinName, BitWidth W, PinConfig cfg)
+{
+	HCL_DESIGNCHECK_HINT( std::ranges::find(m_node.ins(), portName, &Node_External_Exposed::Port::name) == m_node.ins().end(), "An input port with that name already exists!");
+	HCL_DESIGNCHECK_HINT( std::ranges::find(m_node.outs(), portName, &Node_External_Exposed::Port::name) == m_node.outs().end(), "An output port with that name already exists!");
+
+	in(portName, W, cfg);
+	out(portName, W, cfg);
+	m_node.declareLastIOPairBidir();
+
+	auto *multiDriver = DesignScope::createNode<hlim::Node_MultiDriver>(2, hlim::ConnectionType{ .type = hlim::ConnectionType::BITVEC, .width = W.value });
+	multiDriver->rewireInput(0, {.node = &m_node, .port = m_node.outs().size()-1});
+	m_node.rewireInput(m_node.ins().size()-1, {.node = multiDriver, .port = 0ull});
+
+	Bit ignoredEnable;
+	multiDriver->rewireInput(1, BVec(tristatePin(BVec(SignalReadPort(multiDriver)), ignoredEnable).setName(std::string(pinName))).readPort());
+}
+
+void ExternalModule::inoutPin(std::string_view portName, std::string_view pinName, PinConfig cfg)
+{
+	HCL_DESIGNCHECK_HINT( std::ranges::find(m_node.ins(), portName, &Node_External_Exposed::Port::name) == m_node.ins().end(), "An input port with that name already exists!");
+	HCL_DESIGNCHECK_HINT( std::ranges::find(m_node.outs(), portName, &Node_External_Exposed::Port::name) == m_node.outs().end(), "An output port with that name already exists!");
+
+	in(portName, cfg);
+	out(portName, cfg);
+	m_node.declareLastIOPairBidir();
+
+	auto *multiDriver = DesignScope::createNode<hlim::Node_MultiDriver>(2, hlim::ConnectionType{ .type = hlim::ConnectionType::BOOL, .width = 1 });
+	multiDriver->rewireInput(0, {.node = &m_node, .port = m_node.outs().size()-1});
+	m_node.rewireInput(m_node.ins().size()-1, {.node = multiDriver, .port = 0ull});
+
+	Bit ignoredEnable;
+	multiDriver->rewireInput(1, Bit(tristatePin(Bit(SignalReadPort(multiDriver)), ignoredEnable).setName(std::string(pinName))).readPort());
 }
 
 

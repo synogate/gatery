@@ -158,6 +158,9 @@ class Node_External : public Node<Node_External>
 		virtual std::string getOutputName(size_t idx) const override;
 
 		virtual std::string attemptInferOutputName(size_t outputPort) const override;
+
+		bool inputIsBidir(size_t idx) const { return (bool)m_inputPorts[idx].bidirPartner; }
+		bool outputIsBidir(size_t idx) const { return (bool)m_outputPorts[idx].bidirPartner; }
 	protected:
 		bool m_isEntity = false;
 		bool m_requiresComponentDeclaration = false;

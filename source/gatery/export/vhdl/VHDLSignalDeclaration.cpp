@@ -22,6 +22,9 @@
 #include "../../hlim/NodePort.h"
 #include "../../hlim/Node.h"
 
+#include "../../hlim/coreNodes/Node_MultiDriver.h"
+#include "../../hlim/supportNodes/Node_External.h"
+
 namespace gtry::vhdl {
 
 VHDLDataType chooseDataTypeFromOutput(const hlim::NodePort &np)
@@ -29,8 +32,18 @@ VHDLDataType chooseDataTypeFromOutput(const hlim::NodePort &np)
 	VHDLDataType dataType;
 	if (hlim::outputIsBool(np))
 		dataType = VHDLDataType::STD_LOGIC;
-	else
-		dataType = VHDLDataType::UNSIGNED;
+	else {
+		// This is a bit of a hack to get bidir signals working without type conversion.
+		if (dynamic_cast<hlim::Node_MultiDriver*>(np.node))
+			dataType = VHDLDataType::STD_LOGIC_VECTOR;
+		else if (auto *extNode = dynamic_cast<hlim::Node_External*>(np.node)) {
+			if (extNode->outputIsBidir(np.port))
+				dataType = VHDLDataType::STD_LOGIC_VECTOR;
+			else
+				dataType = VHDLDataType::UNSIGNED;
+		} else
+			dataType = VHDLDataType::UNSIGNED;
+	}
 
 	return dataType;
 }

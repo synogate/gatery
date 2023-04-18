@@ -90,6 +90,8 @@ namespace gtry
 
 			std::vector<hlim::Clock*> m_inClock;
 			std::vector<hlim::OutputClockRelation> m_outClockRelations;
+
+			void declareLastIOPairBidir() { declBidirPort(m_inputPorts.size()-1, m_outputPorts.size()-1); }
 		};
 
 		Node_External_Exposed& m_node;
