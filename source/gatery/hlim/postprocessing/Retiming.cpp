@@ -45,7 +45,11 @@ void resolveRetimingHints(Circuit &circuit, Subnet &subnet)
 
 	// Locate all register hints in subnet that can be reached from the spawners
 	auto regHints = getRegHintDistanceToSpawners(spawner, subnet);
-	std::sort(regHints.begin(), regHints.end());
+	std::sort(regHints.begin(), regHints.end(), [](const auto &lhs, const auto &rhs){ 
+		if (lhs.first < rhs.first) return true;
+		if (lhs.first > rhs.first) return false;
+		return lhs.second->getId() > rhs.second->getId();
+	});
 	/**
 	 * @todo This sorting is actually not sufficient. They need to be properly topologically sorted (with the added difficult that the graph can be cyclic).
 	 * For now, we get around this by disabling forward retiming for downstream registers, but this is not a good solution.
@@ -56,6 +60,7 @@ void resolveRetimingHints(Circuit &circuit, Subnet &subnet)
 		auto node = regHints[i].second;
 		// Skip orphaned retiming hints
 		if (node->getDirectlyDriven(0).empty()) continue;
+
 /*
 		{
 			DotExport exp("state.dot");
@@ -75,7 +80,6 @@ void resolveRetimingHints(Circuit &circuit, Subnet &subnet)
 		retimeForwardToOutput(circuit, subnet, {.node = node, .port = 0}, {.downstreamDisableForwardRT = true});
 		node->bypassOutputToInput(0, 0);
 	}
-
 
 	for (auto *regSpawner : spawner)
 		regSpawner->markResolved();

@@ -165,7 +165,7 @@ class BaseIterator {
 			bool operator()(const OpenNode &lhs, const OpenNode &rhs) const {
 				if (lhs.distance > rhs.distance) return true;
 				if (lhs.distance < rhs.distance) return false;
-				return lhs.nodePort.node->getId() > rhs.nodePort.node->getId();
+				return utils::StableCompare<NodePort>()(lhs.nodePort, rhs.nodePort);
 			}
 		};
 		std::priority_queue<OpenNode, std::vector<OpenNode>, NearestFirst> m_openList;
