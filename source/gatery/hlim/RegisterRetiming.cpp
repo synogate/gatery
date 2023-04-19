@@ -694,8 +694,12 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 
 	utils::UnstableMap<NodePort, NodePort> residualEnables;
 
+	std::vector<std::pair<NodePort, NodePort>> bypasses;
 	// Bypass input registers for the retimed nodes
 	// When bypassing, check for enable condition compatibility.
+	// Note, we need to check once and then apply the bypasses.
+	// If this is not done in two separate steps, inputs might
+	// gobble up multiple registers in a row.
 	for (auto *reg : registersToCheckForBypass) {
 
 		NodePort residualEnable;
@@ -714,7 +718,6 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 		}
 
 		NodePort driver = reg->getDriver((unsigned)Node_Register::DATA);
-		const auto &allDriven = reg->getDirectlyDriven(0);
 
 		// If there is some form of enable remaining, the register can not simply be bypassed.
 		// Instead, a holding circuit needs to be implemented.
@@ -728,10 +731,18 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 
 		// Finally, rewire everything that goes from the register into the retiming area to use the register's
 		// driver or, potentially, the holding circuit.
-		for (int i = (int)allDriven.size()-1; i >= 0; i--)
-			if (retimingPlan->areaToBeRetimed.contains(allDriven[i].node))
-				allDriven[i].node->rewireInput(allDriven[i].port, driver);
+		// Note, that this needs to be delayed until all bypasses have been determined as an input might
+		// consume multiple registers.
+		for (auto driven : reg->getDirectlyDriven(0))
+			if (retimingPlan->areaToBeRetimed.contains(driven.node))
+				bypasses.push_back({driven, driver});
 	}
+
+	// After everything has been prepared, actually apply the bypasses.
+	for (const auto &driven_newDriver : bypasses)
+		driven_newDriver.first.node->rewireInput(driven_newDriver.first.port, driven_newDriver.second);
+	
+	
 
 	for (auto &n : newNodes)
 		area.add(n);
