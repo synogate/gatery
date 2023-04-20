@@ -63,7 +63,24 @@ const Clock& ExternalModule::clockOut(std::string_view name, std::optional<std::
 	if (it != m_outClock.end())
 		return m_outClock[it - m_outClock.end()];
 
-	return addClockOut(cfg, name, resetName);
+	std::optional<Bit> resetSignal;
+	if (resetName)
+		resetSignal = out(*resetName);
+
+	return addClockOut(cfg, out(name), resetSignal);
+}
+
+const Clock& gtry::ExternalModule::clockOut(std::string_view name, BitWidth W, size_t index, std::optional<std::string_view> resetName, ClockConfig cfg)
+{
+	auto it = std::ranges::find(m_outClock, name, &Clock::name);
+	if (it != m_outClock.end())
+		return m_outClock[it - m_outClock.end()];
+
+	std::optional<Bit> resetSignal;
+	if (resetName)
+		resetSignal = out(*resetName, W)[index];
+
+	return addClockOut(cfg, out(name, W)[index], resetSignal);
 }
 
 const Clock& ExternalModule::clockOut(const Clock& parentClock, std::string_view name, std::optional<std::string_view> resetName, ClockConfig cfg)
@@ -72,23 +89,39 @@ const Clock& ExternalModule::clockOut(const Clock& parentClock, std::string_view
 	if (it != m_outClock.end())
 		return m_outClock[it - m_outClock.end()];
 
-	return addClockOut(parentClock.deriveClock(cfg), name, resetName);
+	std::optional<Bit> resetSignal;
+	if (resetName)
+		resetSignal = out(*resetName);
+
+	return addClockOut(parentClock.deriveClock(cfg), out(name), resetSignal);
 }
 
-const Clock& gtry::ExternalModule::addClockOut(Clock clock, std::string_view pinName, std::optional<std::string_view> resetPinName)
+const Clock& gtry::ExternalModule::clockOut(const Clock& parentClock, std::string_view name, BitWidth W, size_t index, std::optional<std::string_view> resetName, ClockConfig cfg)
+{
+	auto it = std::ranges::find(m_outClock, name, &Clock::name);
+	if (it != m_outClock.end())
+		return m_outClock[it - m_outClock.end()];
+
+	std::optional<Bit> resetSignal;
+	if (resetName)
+		resetSignal = out(*resetName, W)[index];
+
+	return addClockOut(parentClock.deriveClock(cfg), out(name, W)[index], resetSignal);
+}
+
+const Clock& gtry::ExternalModule::addClockOut(Clock clock, Bit clockSignal, std::optional<Bit> resetSignal)
 {
 	Clock& clk = m_outClock.emplace_back(clock);
-	clk.setName(std::string{ pinName });
 
-	Bit clockSignal; // has to be unassigned for simulation magic :/
-	clockSignal.exportOverride(out(pinName));
-	clk.overrideClkWith(clockSignal);
+	Bit clockDummy; // has to be unassigned for simulation magic :/
+	clockDummy.exportOverride(clockSignal);
+	clk.overrideClkWith(clockDummy);
 
-	if(resetPinName)
+	if(resetSignal)
 	{
-		Bit resetSignal;
-		resetSignal.exportOverride(out(*resetPinName));
-		clk.overrideRstWith(resetSignal);
+		Bit resetDummy;
+		resetDummy.exportOverride(*resetSignal);
+		clk.overrideRstWith(resetDummy);
 	}
 	return clk;
 }
@@ -213,8 +246,6 @@ void ExternalModule::inoutPin(std::string_view portName, std::string_view pinNam
 	Bit ignoredEnable;
 	multiDriver->rewireInput(1, Bit(tristatePin(Bit(SignalReadPort(multiDriver)), ignoredEnable).setName(std::string(pinName))).readPort());
 }
-
-
 
 std::unique_ptr<gtry::hlim::BaseNode> gtry::ExternalModule::Node_External_Exposed::cloneUnconnected() const
 {

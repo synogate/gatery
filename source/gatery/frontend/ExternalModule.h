@@ -48,7 +48,9 @@ namespace gtry
 		void clockIn(const Clock& clock, std::string_view name, std::string_view resetName = {});
 
 		const Clock&		clockOut(std::string_view name, std::optional<std::string_view> resetName = {}, ClockConfig cfg = {});
+		const Clock&		clockOut(std::string_view name, BitWidth W, size_t index, std::optional<std::string_view> resetName = {}, ClockConfig cfg = {});
 		const Clock&		clockOut(const Clock& parentClock, std::string_view name, std::optional<std::string_view> resetName = {}, ClockConfig cfg = {});
+		const Clock&		clockOut(const Clock& parentClock, std::string_view name, BitWidth W, size_t index, std::optional<std::string_view> resetName = {}, ClockConfig cfg = {});
 
 		BVec&				in(std::string_view name, BitWidth W, PinConfig cfg = {});
 		Bit&				in(std::string_view name, PinConfig cfg = {});
@@ -61,7 +63,7 @@ namespace gtry
 		void inoutPin(std::string_view portName, std::string_view pinName, PinConfig cfg = {});
 
 	protected:
-		const Clock& addClockOut(Clock clock, std::string_view pinName, std::optional<std::string_view> resetPinName);
+		const Clock& addClockOut(Clock clock, Bit clockSignal, std::optional<Bit> resetSignal);
 
 	private:
 		// todo: Node_External should have a interface which makes this class obsolete
