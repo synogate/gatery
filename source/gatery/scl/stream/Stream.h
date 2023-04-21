@@ -128,6 +128,12 @@ namespace gtry::scl
 		Stream regDownstream(const RegisterSettings& settings = {});
 
 		/**
+		 * @brief	Puts a register spawner for retiming in the valid and data path.
+		 * @return	connected stream
+		*/
+		Stream pipeinputDownstream(PipeBalanceGroup& group);
+
+		/**
 		 * @brief	Puts a register in the ready path.
 		 * @param	Settings forwarded to all instantiated registers.
 		 * @return	connected stream
@@ -557,6 +563,18 @@ namespace gtry::scl
 	}
 
 	template<Signal PayloadT, Signal... Meta>
+	inline Stream<PayloadT, Meta...> gtry::scl::Stream<PayloadT, Meta...>::pipeinputDownstream(PipeBalanceGroup& group)
+	{
+		if constexpr (has<Valid>())
+			valid(*this).resetValue('0');
+
+		Self ret;
+		downstream(ret) = group(copy(downstream(*this)));
+		upstream(*this) = upstream(ret);
+		return ret;
+	}
+
+	template<Signal PayloadT, Signal... Meta>
 	inline Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::regReady(const RegisterSettings& settings)
 	{
 		if constexpr (has<Valid>())
@@ -647,6 +665,12 @@ namespace gtry::scl
 	{
 		static_assert(!stream.template has<Ready>(), "cannot create upstream register from const stream");
 		return stream.regDownstream(settings);
+	}
+
+	template<StreamSignal T>
+	T pipeinput(T& stream, PipeBalanceGroup& group) 
+	{
+		return stream.pipeinputDownstream(group);
 	}
 }
 

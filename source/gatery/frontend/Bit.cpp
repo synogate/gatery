@@ -388,7 +388,9 @@ namespace gtry {
 	{
 		if(signal.resetValue())
 		{
-			return pipeinput<Bit, bool>(signal, *signal.resetValue(), group);
+			Bit res = pipeinput<Bit, bool>(signal, *signal.resetValue(), group);
+			res.resetValue(*signal.resetValue());
+			return res;
 		}
 		else
 		{
