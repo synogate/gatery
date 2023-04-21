@@ -81,6 +81,7 @@ void retimeForward(Circuit &circuit, Subnet &subnet);
  * @param subnet The area to which retiming is to be restricted. The Subnet is modified to include the newly created registers.
  * @param anchoredRegisters Set of registers that are not to be moved (e.g. because they are already deemed in a good location).
  * @param retimeableWritePorts List of write ports that may be retimed (requires additional RMW hazard detection to be build outside of this function).
+ * @param requiredEnableCondition Optional enable condition that the retiming should use (or fail if it can't fulfill it).
  * @param retimedArea The area that was retimed (including registers and potential write ports)
  * @param output The output that shall receive a register.
  * @param ignoreRefs Whether or not to throw an exception if a node has to be retimed to which a reference exists.
@@ -88,6 +89,7 @@ void retimeForward(Circuit &circuit, Subnet &subnet);
  * @returns Whether the retiming was successful
  */
 bool retimeBackwardtoOutput(Circuit &circuit, Subnet &subnet, const utils::StableSet<Node_MemPort*> &retimeableWritePorts,
+						std::optional<Conjunction> requiredEnableCondition,
 						Subnet &retimedArea, NodePort output, bool ignoreRefs = false, bool failureIsError = true, Subnet *newNodes = nullptr);
 
 
@@ -148,7 +150,7 @@ class ReadModifyWriteHazardLogicBuilder
 
 		void determineResetValues(utils::UnstableMap<NodePort, sim::DefaultBitVectorState> &resetValues);
 
-		NodePort createRegister(NodePort nodePort, const sim::DefaultBitVectorState &resetValue);
+		NodePort createRegister(NodePort nodePort, const sim::DefaultBitVectorState &resetValue, NodePort enable = {});
 
 		NodePort buildConflictDetection(NodePort rdAddr, NodePort rdEn, NodePort wrAddr, NodePort wrEn);
 		NodePort andWithMaskBit(NodePort input, NodePort mask, size_t maskBit);

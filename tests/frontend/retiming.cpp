@@ -897,7 +897,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_memory, BoostUnitTestSimulationFixture
 	using namespace gtry::sim;
 	using namespace gtry::utils;
 
-	Clock clock({ .absoluteFrequency = 100'000'000 });
+	Clock clock({ .absoluteFrequency = 100'000'00, .memoryResetType = ClockConfig::ResetType::NONE });
 	ClockScope clkScp(clock);
 
 	UInt input = pinIn(10_b).setName("input");
@@ -988,6 +988,146 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_memory, BoostUnitTestSimulationFixture
 		co_await AfterClk(clock);
 		BOOST_TEST(simu(output) == 500+3);
 
+		simu(ready) = '0';
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+
+		simu(ready) = '1';
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 500+4);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 500+5);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 500+6);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 500+7);
+
+
+		stopTest();
+	});
+
+	design.visualize("before");
+	design.postprocess();
+
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
+}
+
+
+
+
+BOOST_FIXTURE_TEST_CASE(retiming_pipeline_memory_cond_write, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+	using namespace gtry::sim;
+	using namespace gtry::utils;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	UInt input = pinIn(10_b).setName("input");
+	Bit wrEn = pinIn().setName("wrEn");
+	UInt addr = pinIn(4_b).setName("addr");
+	UInt data = input;
+	UInt mem_addr = addr;
+	Bit writeEnable = wrEn;
+
+	Bit ready = pinIn().setName("ready");
+	Bit in_valid = pinIn().setName("valid");
+	Bit valid = in_valid;
+	ENIF (ready) {
+		PipeBalanceGroup grp;
+		data = grp(data);
+		mem_addr = grp(mem_addr);
+		writeEnable = grp(writeEnable);
+		valid = grp(valid, '0');
+	}
+
+
+	Memory<UInt> memory(16, 10_b);
+	memory.setType(MemType::DONT_CARE, 0);
+	memory.initZero();
+
+	UInt output;
+	ENIF (ready & valid) {
+		UInt val = memory[mem_addr];
+		IF (writeEnable)
+			memory[mem_addr] = val+1;
+		output = val + data;
+	}
+
+	output = pipestage(output);
+
+	pinOut(output).setName("output");
+	pinOut(valid).setName("output_valid");
+
+	addSimulationProcess([=, this]()->SimProcess {
+		simu(input) = 1000;
+		simu(addr) = 0;
+		simu(ready) = '0';
+		simu(wrEn) = '1';
+		simu(in_valid) = '0';
+
+
+		BOOST_TEST(!simu(output).defined());
+
+		co_await AfterClk(clock);
+
+		BOOST_TEST(!simu(output).defined());
+
+		simu(ready) = '0';
+		simu(in_valid) = '1';
+
+		co_await AfterClk(clock);
+		BOOST_TEST(!simu(output).defined());
+		co_await AfterClk(clock);
+		BOOST_TEST(!simu(output).defined());
+		co_await AfterClk(clock);
+		BOOST_TEST(!simu(output).defined());
+
+		simu(ready) = '1';
+		simu(in_valid) = '0';
+
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1000+0);
+
+		simu(ready) = '1';
+		simu(in_valid) = '1';
+
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1000+0);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1000+1);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1000+2);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1000+3);
+
+		simu(wrEn) = '0';
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1000+4);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1000+4);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 1000+4);
+
+		simu(wrEn) = '1';
+
+		simu(addr) = 1;
+		simu(input) = 500;
+
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 500+0);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 500+1);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 500+2);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output) == 500+3);
+
 
 		stopTest();
 	});
@@ -996,5 +1136,6 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_memory, BoostUnitTestSimulationFixture
 
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
 }
+
 
 
