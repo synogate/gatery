@@ -30,7 +30,12 @@ class Subnet;
  */
 class Conjunction {
 	public:
-		/// @brief Parse the logic feedung into the given input port.
+		/// @see parseInput
+		inline static Conjunction fromInput(const NodePort &nodeInput) { Conjunction res; res.parseInput(nodeInput); return res; }
+		/// @see parseOutput
+		inline static Conjunction fromOutput(const NodePort &nodeOutput) { Conjunction res; res.parseOutput(nodeOutput); return res; }
+
+		/// @brief Parse the logic feeding into the given input port.
 		/// @details The logic must not have cycles.
 		void parseInput(const NodePort &nodeInput);
 		/// @brief Parse the logic feedung into the given input port.

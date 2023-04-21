@@ -200,8 +200,10 @@ namespace gtry::hlim {
 			auto it = m_terms.find(np);
 			if (it->second.negated) {
 				auto *negationNode = circuit.createNode<Node_Logic>(Node_Logic::NOT);
+				negationNode->moveToGroup(&targetGroup);
 				negationNode->recordStackTrace();
 				negationNode->connectInput(0, it->second.conjunctionDriver);
+				if (newNodes) newNodes->add(negationNode);
 				np = {.node = negationNode, .port = 0ull};
 			} else 
 				np = it->second.conjunctionDriver;
@@ -212,9 +214,11 @@ namespace gtry::hlim {
 		NodePort last = sortedTerms.front();
 		for (auto i : utils::Range<size_t>(1, sortedTerms.size())) {
 			auto *andNode = circuit.createNode<Node_Logic>(Node_Logic::AND);
+			andNode->moveToGroup(&targetGroup);
 			andNode->recordStackTrace();
 			andNode->connectInput(0, last);
 			andNode->connectInput(1, sortedTerms[i]);
+			if (newNodes) newNodes->add(andNode);
 			last = {.node = andNode, .port = 0ull};
 		}
 
