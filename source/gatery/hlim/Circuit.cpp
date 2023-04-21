@@ -54,6 +54,9 @@
 #include "../simulation/ReferenceSimulator.h"
 #include "../utils/Range.h"
 
+
+#include "../export/DotExport.h"
+
 #include "Subnet.h"
 
 
@@ -1247,9 +1250,6 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 	defaultValueResolution(circuit, subnet);
 	circuit.cullUnusedNodes(subnet); // Dirty way of getting rid of default nodes
 
-	subnet = Subnet::all(circuit);
-	resolveRetimingHints(circuit, subnet);
-
 	circuit.propagateConstants(subnet);
 	circuit.cullOrphanedSignalNodes();
 	circuit.cullUnnamedSignalNodes();
@@ -1266,6 +1266,15 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 	circuit.removeConstSelectMuxes(subnet);
 	circuit.propagateConstants(subnet); // do again after muxes are removed
 	circuit.cullUnusedNodes(subnet);
+
+	subnet = Subnet::all(circuit);
+	resolveRetimingHints(circuit, subnet);
+
+	{
+			DotExport exp("after_general_optimization.dot");
+			exp(circuit, ConstSubnet::all(circuit));
+			exp.runGraphViz("after_general_optimization.svg");	
+	}
 
 	attributeFusion(circuit);
 }
