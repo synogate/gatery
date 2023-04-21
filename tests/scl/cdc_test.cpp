@@ -25,6 +25,7 @@
 #include <gatery/utils.h>
 
 #include <gatery/scl/cdc.h>
+#include <gatery/scl/stream/Stream.h>
 
 using namespace gtry;
 using namespace boost::unit_test;
@@ -59,4 +60,42 @@ BOOST_FIXTURE_TEST_CASE(grayCode, BoostUnitTestSimulationFixture)
 
 	design.postprocess();
 	runTicks(clock.getClk(), 2048);
+}
+	struct EmptyStruct {
+	};
+	BOOST_HANA_ADAPT_STRUCT(EmptyStruct);
+
+BOOST_FIXTURE_TEST_CASE(ReqAckSync_poc, BoostUnitTestSimulationFixture)
+{
+	//for (size_t clockIncrement = 0; clockIncrement < 500'000'000; clockIncrement += 25'000'000) {
+		Clock inclk({ .absoluteFrequency = 100'000'000 });
+		Clock outclk({ .absoluteFrequency = 125'000'000 /*+ 16'180'398*/});
+		
+		Bit validIn; pinIn(validIn, "in_valid");
+		Bit readyOut; pinIn(readyOut, "out_ready");
+		Bit validOut; pinOut(validOut, "out_valid");
+		Bit readyIn; pinOut(readyIn, "in_ready");
+
+		gtry::scl::RvStream<EmptyStruct> inStream;
+		valid(inStream) = validIn;
+		gtry::scl::RvStream<EmptyStruct> outStream;
+		ready(outStream) = readyOut;
+		
+		addSimulationProcess([&]()->SimProcess {
+
+			//START HERE DUMMY, name all the signals, then
+			// 
+			//you have to toggle the valid at the input and check that the ready signal goes low the next input clock cycle, 
+			
+			//then wait a bunch of cycles and then check that the valid at the output is still low until we put the ready at the output high, check also that ready input is still low all throughout
+
+			//then check that after some time the ready at the input becomes high again
+
+
+		});
+		
+
+	//}
+	
+	
 }

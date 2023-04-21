@@ -17,6 +17,7 @@
 */
 #pragma once
 #include <gatery/frontend.h>
+#include "stream/Stream.h"
 
 namespace gtry::scl
 {
@@ -28,6 +29,30 @@ namespace gtry::scl
 
 	template<Signal T>
 	T synchronize(T in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
+
+	template<StreamSignal T>
+	T synchronizeReqAck(T& in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true)
+	{
+		Bit inputState;
+		Bit ack;
+		ready(in) = ack == inputState;
+		IF(transfer(in)) 
+			inputState = !inputState;
+
+		Bit syncChainEnd = synchronize(inputState, inClock, outClock, outStages - 1);
+		inputState = reg(inputState, '0', RegisterSettings{ .clock = inClock });
+
+		ENIF(ready(out)) 
+			syncChainEnd = reg(syncChainEnd, '0', RegisterSettings{ .clock = inClock });
+		
+		Bit outputState;
+		valid(out) = outputState != syncChainEnd;
+		IF(transfer(out))
+			outputState = !outputState;
+		ack = synchronize( , outClock, inClock, outStages);
+		outputState = reg(outputState, '0', RegisterSettings{ .clock = outClock });
+
+	}
 
 	UInt grayCodeSynchronize(UInt in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
 	UInt grayCodeSynchronize(UInt in, UInt reset, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
@@ -64,4 +89,7 @@ namespace gtry::scl
 		return val;
 	}
 
+
+
+	
 }
