@@ -96,14 +96,16 @@ namespace gtry::scl
 		ready(inStream) = !fifo.full();
 
 		IF(transfer(inStream))
+		{
 			fifo.push(inStream.remove<Ready>().remove<Valid>().remove<Error>());
 
-		IF(eop(inStream))
-		{
-			IF(error(inStream))
-				fifo.rollbackPush();
-			ELSE
-				fifo.commitPush();
+			IF(eop(inStream))
+			{
+				IF(error(inStream))
+					fifo.rollbackPush();
+				ELSE
+					fifo.commitPush();
+			}
 		}
 	}
 
@@ -131,6 +133,7 @@ namespace gtry::scl
 		RvPacketStream<Payload, Meta...> out;
 		connect(out, fifo);
 
+		fifo.generate();
 		return out;
 	}
 
