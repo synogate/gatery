@@ -1042,4 +1042,22 @@ BOOST_FIXTURE_TEST_CASE(stream_stall, StreamTransferFixture)
 	runTicks(m_clock.getClk(), 1024);
 }
 
+BOOST_FIXTURE_TEST_CASE(TransactionalFifo_StoreForwardStream, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
 
+	scl::RvPacketStream<Bit> in;
+	scl::RvPacketStream<Bit> out = scl::storeForwardFifo(in, 32);
+	//scl::TransactionalFifo<scl::PacketStream<Bit>> fifo(32);
+	//connect(fifo, in);
+	//connect(out, fifo);
+
+	addSimulationProcess([=, this]()->SimProcess {
+
+		co_await OnClk(m_clock);
+		stopTest();
+	});
+
+	design.postprocess();
+	runTicks(m_clock.getClk(), 10240);
+}

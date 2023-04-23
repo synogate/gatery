@@ -18,6 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 #include "Stream.h"
+#include "../TransactionalFifo.h"
 
 namespace gtry::scl
 {
@@ -57,17 +58,22 @@ namespace gtry::scl
 	const UInt& empty(const StreamSignal auto& s) { return s.template get<Empty>().empty; }
 
 	template<Signal T, Signal... Meta>
+	using PacketStream = Stream<T, scl::Eop, Meta...>;
+
+	template<Signal T, Signal... Meta>
 	using RvPacketStream = Stream<T, scl::Ready, scl::Valid, scl::Eop, Meta...>;
 
 	template<Signal T, Signal... Meta>
 	using VPacketStream = Stream<T, scl::Valid, scl::Eop, Meta...>;
 
-	template<Signal T, Signal... Meta>
-	using RsPacketStream = Stream<T, scl::Ready, scl::Valid, scl::Eop, Meta...>;
+	template<Signal Payload, Signal... Meta>
+	void connect(scl::TransactionalFifo<PacketStream<Payload, Meta...>>& fifo, RvPacketStream<Payload, Meta...>& inStream);
 
-	template<Signal T, Signal... Meta>
-	using SPacketStream = Stream<T, scl::Valid, scl::Eop, Meta...>;
-
+	template<Signal Payload, Signal... Meta>
+	void connect(RvPacketStream<Payload, Meta...>& packetStream, scl::TransactionalFifo<PacketStream<Payload, Meta...>>& fifo);
+	
+	template<Signal Payload, Signal... Meta>
+	RvPacketStream<Payload, Meta...> storeForwardFifo(RvPacketStream<Payload, Meta...>& in, size_t minElements);
 
 	template<StreamSignal T>
 	requires (T::template has<Valid>() or T::template has<Eop>())
@@ -84,6 +90,50 @@ BOOST_HANA_ADAPT_STRUCT(gtry::scl::Sop, sop);
 
 namespace gtry::scl
 {
+	template<Signal Payload, Signal... Meta>
+	void connect(scl::TransactionalFifo<PacketStream<Payload, Meta...>>& fifo, RvPacketStream<Payload, Meta...>& inStream)
+	{
+		ready(inStream) = !fifo.full();
+
+		IF(transfer(inStream))
+			fifo.push(inStream.remove<Ready>().remove<Valid>().remove<Error>());
+
+		IF(eop(inStream))
+		{
+			IF(error(inStream))
+				fifo.rollbackPush();
+			ELSE
+				fifo.commitPush();
+		}
+	}
+
+	template<Signal Payload, Signal... Meta>
+	void connect(RvPacketStream<Payload, Meta...>& packetStream, scl::TransactionalFifo<PacketStream<Payload, Meta...>>& fifo)
+	{
+		*packetStream = *fifo.peek();
+
+		// copy metadata
+		std::apply([&](auto&&... meta) {
+			((packetStream.get<std::remove_cvref_t<decltype(meta)>>() = meta), ...);
+		}, fifo.peek()._sig);
+
+		valid(packetStream) = !fifo.empty();
+		IF(transfer(packetStream))
+			fifo.pop();
+	}
+
+	template<Signal Payload, Signal... Meta>
+	RvPacketStream<Payload, Meta...> storeForwardFifo(RvPacketStream<Payload, Meta...>& in, size_t minElements)
+	{
+		TransactionalFifo<PacketStream<Payload, Meta...>> fifo(minElements, in.remove<Ready>().remove<Valid>());
+		connect(fifo, in);
+
+		RvPacketStream<Payload, Meta...> out;
+		connect(out, fifo);
+
+		return out;
+	}
+
 	template<StreamSignal T>
 		requires (T::template has<Valid>() or T::template has<Eop>())
 	T eraseLastBeat(T& source)
