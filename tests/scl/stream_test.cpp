@@ -236,7 +236,7 @@ protected:
 
 	Clock m_clock = Clock({ .absoluteFrequency = 100'000'000 });
 
-	void simulateTransferTest(scl::RvStream<UInt>& source, scl::RvStream<UInt>& sink)
+	void simulateTransferTest(scl::StreamSignal auto& source, scl::StreamSignal auto& sink)
 	{
 		simulateBackPressure(sink);
 		simulateSendData(source, m_groups++);
@@ -256,19 +256,9 @@ protected:
 		simulateSendData(source, m_groups++);
 	}
 
-	void In(scl::RvStream<UInt>& stream, std::string prefix = "in_")
+	void In(scl::StreamSignal auto& stream, std::string prefix = "in_")
 	{
-		gtry::pinOut(ready(stream)).setName(prefix + "ready");
-		valid(stream) = gtry::pinIn().setName(prefix + "valid");
-		*stream = gtry::pinIn(stream->width()).setName(prefix + "data");
-	}
-
-	void In(scl::RvPacketStream<UInt>& stream, std::string prefix = "in_")
-	{
-		gtry::pinOut(ready(stream)).setName(prefix + "ready");
-		valid(stream) = gtry::pinIn().setName(prefix + "valid");
-		eop(stream) = gtry::pinIn().setName(prefix + "eop");
-		*stream = gtry::pinIn(stream->width()).setName(prefix + "data");
+		pinIn(stream, prefix);
 	}
 
 	void Out(scl::StreamSignal auto& stream, std::string prefix = "out")
@@ -276,8 +266,7 @@ protected:
 		pinOut(stream, prefix);
 	}
 
-	template<scl::StreamSignal T>
-	void simulateBackPressure(T& stream)
+	void simulateBackPressure(scl::StreamSignal auto& stream)
 	{
 		addSimulationProcess([&]()->SimProcess {
 			std::mt19937 rng{ std::random_device{}() };
@@ -320,7 +309,8 @@ protected:
 		});
 	}
 
-	void simulateSendData(scl::RvPacketStream<UInt>& stream, size_t group)
+	template<class... Meta>
+	void simulateSendData(scl::RvPacketStream<UInt, Meta...>& stream, size_t group)
 	{
 		addSimulationProcess([=, this, &stream]()->SimProcess {
 			std::mt19937 rng{ std::random_device{}() };
@@ -1046,17 +1036,13 @@ BOOST_FIXTURE_TEST_CASE(TransactionalFifo_StoreForwardStream, StreamTransferFixt
 {
 	ClockScope clkScp(m_clock);
 
-	scl::RvPacketStream<Bit> in;
-	scl::RvPacketStream<Bit> out = scl::storeForwardFifo(in, 32);
-	//scl::TransactionalFifo<scl::PacketStream<Bit>> fifo(32);
-	//connect(fifo, in);
-	//connect(out, fifo);
+	scl::RvPacketStream<UInt, scl::Error> in = { 16_b };
+	scl::RvPacketStream<UInt> out = scl::storeForwardFifo(in, 32);
 
-	addSimulationProcess([=, this]()->SimProcess {
-
-		co_await OnClk(m_clock);
-		stopTest();
-	});
+	In(in);
+	Out(out);
+	transfers(2000);
+	simulateTransferTest(in, out);
 
 	design.postprocess();
 	runTicks(m_clock.getClk(), 10240);

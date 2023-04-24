@@ -66,14 +66,14 @@ namespace gtry::scl
 	template<Signal T, Signal... Meta>
 	using VPacketStream = Stream<T, scl::Valid, scl::Eop, Meta...>;
 
-	template<Signal Payload, Signal... Meta>
-	void connect(scl::TransactionalFifo<PacketStream<Payload, Meta...>>& fifo, RvPacketStream<Payload, Meta...>& inStream);
+	//template<Signal Payload, Signal... Meta>
+	//void connect(scl::TransactionalFifo<PacketStream<Payload, Meta...>>& fifo, RvPacketStream<Payload, Meta...>& inStream);
 
-	template<Signal Payload, Signal... Meta>
-	void connect(RvPacketStream<Payload, Meta...>& packetStream, scl::TransactionalFifo<PacketStream<Payload, Meta...>>& fifo);
+	//template<Signal Payload, Signal... Meta>
+	//void connect(RvPacketStream<Payload, Meta...>& packetStream, scl::TransactionalFifo<PacketStream<Payload, Meta...>>& fifo);
 	
-	template<Signal Payload, Signal... Meta>
-	RvPacketStream<Payload, Meta...> storeForwardFifo(RvPacketStream<Payload, Meta...>& in, size_t minElements);
+	//template<Signal Payload, Signal... Meta>
+	//RvPacketStream<Payload, Meta...> storeForwardFifo(RvPacketStream<Payload, Meta...>& in, size_t minElements);
 
 	template<StreamSignal T>
 	requires (T::template has<Valid>() or T::template has<Eop>())
@@ -90,14 +90,14 @@ BOOST_HANA_ADAPT_STRUCT(gtry::scl::Sop, sop);
 
 namespace gtry::scl
 {
-	template<Signal Payload, Signal... Meta>
-	void connect(scl::TransactionalFifo<PacketStream<Payload, Meta...>>& fifo, RvPacketStream<Payload, Meta...>& inStream)
+	template<Signal Payload, Signal... MetaIn, Signal... MetaFifo>
+	void connect(scl::TransactionalFifo<PacketStream<Payload, MetaFifo...>>& fifo, RvPacketStream<Payload, MetaIn...>& inStream)
 	{
 		ready(inStream) = !fifo.full();
 
 		IF(transfer(inStream))
 		{
-			fifo.push(inStream.remove<Ready>().remove<Valid>().remove<Error>());
+			fifo.push(inStream.remove<Ready>().remove<Valid>());
 
 			IF(eop(inStream))
 			{
@@ -109,8 +109,8 @@ namespace gtry::scl
 		}
 	}
 
-	template<Signal Payload, Signal... Meta>
-	void connect(RvPacketStream<Payload, Meta...>& packetStream, scl::TransactionalFifo<PacketStream<Payload, Meta...>>& fifo)
+	template<Signal Payload, Signal... MetaFifo, Signal... MetaOut>
+	void connect(RvPacketStream<Payload, MetaOut...>& packetStream, scl::TransactionalFifo<PacketStream<Payload, MetaFifo...>>& fifo)
 	{
 		*packetStream = *fifo.peek();
 
@@ -125,9 +125,9 @@ namespace gtry::scl
 	}
 
 	template<Signal Payload, Signal... Meta>
-	RvPacketStream<Payload, Meta...> storeForwardFifo(RvPacketStream<Payload, Meta...>& in, size_t minElements)
+	auto storeForwardFifo(RvPacketStream<Payload, Meta...>& in, size_t minElements)
 	{
-		TransactionalFifo<PacketStream<Payload, Meta...>> fifo(minElements, in.remove<Ready>().remove<Valid>());
+		TransactionalFifo fifo(minElements, in.remove<Ready>().remove<Valid>());
 		connect(fifo, in);
 
 		RvPacketStream<Payload, Meta...> out;
