@@ -160,6 +160,7 @@ class Circuit
 		void removeConstSelectMuxes(Subnet &subnet);
 		void moveClockDriversToTop();
 		void ensureNoLiteralComparison();
+		void removeDisabledWritePorts(Subnet &subnet);
 
 		void removeFalseLoops();
 
