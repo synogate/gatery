@@ -339,6 +339,38 @@ protected:
 		});
 	}
 
+	template<class... Meta>
+	void simulateSendData(scl::RsPacketStream<UInt, Meta...>& stream, size_t group)
+	{
+		addSimulationProcess([=, this, &stream]()->SimProcess {
+			std::mt19937 rng{ std::random_device{}() };
+			for (size_t i = 0; i < m_transfers;)
+			{
+				simu(sop(stream)) = '0';
+				simu(eop(stream)) = '0';
+				simu(*stream).invalidate();
+
+				while ((rng() & 1) == 0)
+					co_await AfterClk(m_clock);
+
+				const size_t packetLen = std::min<size_t>(m_transfers - i, rng() % 5 + 1);
+				for (size_t j = 0; j < packetLen; ++j)
+				{
+					simu(sop(stream)) = j == 0;
+					simu(eop(stream)) = j == packetLen - 1;
+					simu(*stream) = i + j + group * m_transfers;
+
+					co_await scl::performTransferWait(stream, m_clock);
+				}
+				i += packetLen;
+			}
+
+			simu(sop(stream)) = '0';
+			simu(eop(stream)) = '0';
+			simu(*stream).invalidate();
+		});
+	}
+
 	template<scl::StreamSignal T>
 	void simulateRecvData(const T& stream)
 	{
@@ -1036,8 +1068,24 @@ BOOST_FIXTURE_TEST_CASE(TransactionalFifo_StoreForwardStream, StreamTransferFixt
 {
 	ClockScope clkScp(m_clock);
 
-	scl::RvPacketStream<UInt, scl::Error> in = { 16_b };
+	scl::RvPacketStream<UInt> in = { 16_b };
 	scl::RvPacketStream<UInt> out = scl::storeForwardFifo(in, 32);
+
+	In(in);
+	Out(out);
+	transfers(2000);
+	simulateTransferTest(in, out);
+
+	design.postprocess();
+	runTicks(m_clock.getClk(), 10240);
+}
+
+BOOST_FIXTURE_TEST_CASE(TransactionalFifo_StoreForwardStream_sopeop, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::RsPacketStream<UInt> in = { 16_b };
+	scl::RsPacketStream<UInt> out = scl::storeForwardFifo(in, 32);
 
 	In(in);
 	Out(out);
