@@ -20,6 +20,7 @@
 
 #include "../Circuit.h"
 #include "../Clock.h"
+#include "../CNF.h"
 
 #include "../coreNodes/Node_Signal.h"
 #include "../coreNodes/Node_Register.h"
@@ -41,7 +42,7 @@
 
 #include "ExternalMemorySimulation.h"
 
-#define DEBUG_OUTPUT
+//#define DEBUG_OUTPUT
 
 #ifdef DEBUG_OUTPUT
 #include "../Subnet.h"
@@ -666,11 +667,26 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 	// Keep note of which write ports are "delayed" through this retiming to then, in a second step, build rw hazard bypass logic.
 
 	for (auto &rp : m_readPorts) {
+		// Start open minded about the enable condition
+		std::optional<Conjunction> enableCondition;
+		auto extractEnableCondition = [&]{
+			if (!enableCondition && !rp.dedicatedReadLatencyRegisters.empty() && rp.dedicatedReadLatencyRegisters.front() != nullptr) {
+				if (rp.dedicatedReadLatencyRegisters.front()->getDriver(Node_Register::ENABLE).node != nullptr)
+					enableCondition = Conjunction::fromInput({.node = rp.dedicatedReadLatencyRegisters.front().get(), .port = (size_t)Node_Register::ENABLE});
+				else
+					enableCondition = {};
+			}
+		};
+
 		while (!rp.findOutputRegisters(m_memory->getRequiredReadLatency(), m_nodeGroup)) {
+
+			// Once we retimed, make sure further registers will use the same enable condition.
+			extractEnableCondition();
+
 			auto subnet = Subnet::all(circuit);
 			Subnet retimedArea;
 			// On multi-readport memories there can already appear a register due to the retiming of other read ports. In this case, retimeBackwardtoOutput is a no-op.
-			retimeBackwardtoOutput(circuit, subnet, retimeableWritePorts, retimedArea, rp.dataOutput, true, true);
+			retimeBackwardtoOutput(circuit, subnet, retimeableWritePorts, enableCondition, retimedArea, rp.dataOutput, true, true);
 
 			//visualize(circuit, "afterRetiming");
 
@@ -680,6 +696,12 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 					actuallyRetimedWritePorts[wp]++;
 				}
 			}
+		}
+		extractEnableCondition();
+
+		// Store the enable condition in the read port so it can be used more easily.
+		if (enableCondition) {
+			rp.node->rewireInput((size_t)Node_MemPort::Inputs::enable, enableCondition->build(*lazyCreateFixupNodeGroup()));
 		}
 	}
 
@@ -700,7 +722,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 
 	//visualize(circuit, "afterEnableFix");	
 
-	std::sort(sortedWritePorts.begin(), sortedWritePorts.end(), [](const auto &left, const auto &right)->bool{
+	std::sort(sortedWritePorts.begin(), sortedWritePorts.end(), [](const auto &left, const auto &right)->bool {
 		return left.first->isOrderedBefore(right.first);
 	});
 

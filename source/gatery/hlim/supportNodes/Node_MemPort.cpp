@@ -58,11 +58,12 @@ void Node_MemPort::connectMemory(Node_Memory *memory)
 
 void Node_MemPort::disconnectMemory()
 {
+	auto *memory = getMemory();
+
 	disconnectInput((size_t)Inputs::memoryReadDependency);
 	HCL_ASSERT(getDirectlyDriven((size_t) Outputs::memoryWriteDependency).size() == 1);
 
 	auto np = getDirectlyDriven((size_t) Outputs::memoryWriteDependency).front();
-	auto *memory = getMemory();
 	HCL_ASSERT(np.node == memory);
 
 	memory->destroyWriteDependencyInputPort(np.port);

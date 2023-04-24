@@ -38,7 +38,7 @@ namespace gtry {
 		public:
 			static ConditionalScope *get() { return m_currentScope; }
 
-			ConditionalScope(const Bit &condition);
+			ConditionalScope(const Bit &condition, bool override = false);
 			ConditionalScope();
 			~ConditionalScope();
 
@@ -50,7 +50,7 @@ namespace gtry {
 			explicit operator bool() const { return true; }
 
 		private:
-			void setCondition(hlim::NodePort port);
+			void setCondition(hlim::NodePort port, bool override = false);
 
 			const size_t m_id;
 			hlim::NodePort m_condition;

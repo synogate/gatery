@@ -75,6 +75,8 @@ class Node_Memory : public Node<Node_Memory>
 
 		void setType(MemType type, size_t requiredReadLatency = ~0ull);
 		void setNoConflicts();
+		/// Whether ports of the memory can be retimed arbitrarily wrt. each other without any hazard logic. This is a very dangerous option.
+		void allowArbitraryPortRetiming();
 		void loadConfig();
 
 		size_t createWriteDependencyInputPort();

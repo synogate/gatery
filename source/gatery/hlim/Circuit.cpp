@@ -41,6 +41,7 @@
 
 #include "supportNodes/Node_Attributes.h"
 #include "supportNodes/Node_External.h"
+#include "supportNodes/Node_MemPort.h"
 
 #include "postprocessing/MemoryDetector.h"
 #include "postprocessing/DefaultValueResolution.h"
@@ -53,6 +54,10 @@
 #include "../simulation/BitVectorState.h"
 #include "../simulation/ReferenceSimulator.h"
 #include "../utils/Range.h"
+#include "GraphTools.h"
+
+
+#include "../export/DotExport.h"
 
 #include "Subnet.h"
 
@@ -1190,6 +1195,39 @@ void Circuit::ensureNoLiteralComparison()
 	}
 }
 
+void Circuit::removeDisabledWritePorts(Subnet &subnet)
+{
+	for (unsigned i = 0; i < m_nodes.size(); i++) {
+		if (!subnet.contains(m_nodes[i].get())) continue;
+		bool removeNode = false;
+
+		if (auto *memPort = dynamic_cast<Node_MemPort*>(m_nodes[i].get())) {
+
+			if (!memPort->isReadPort()) {
+				NodePort enableDriver = memPort->getNonSignalDriver((size_t)Node_MemPort::Inputs::wrEnable);
+				if (auto *constNode = dynamic_cast<Node_Constant*>(enableDriver.node)) {
+					//auto enableState = evaluateStatically(*this, enableDriver);
+					auto enableState = constNode->getValue();
+					HCL_ASSERT(enableState.size() == 1);
+					if (enableState.get(sim::DefaultConfig::DEFINED, 0) && !enableState.get(sim::DefaultConfig::VALUE, 0)) {
+						dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing " << m_nodes[i].get() << " because it is a write port with a constant zero write enable.");
+
+						memPort->disconnectMemory();
+						removeNode = true;
+					}
+				}
+			}
+		}
+
+		if (removeNode && !m_nodes[i]->hasRef()) {
+			subnet.remove(m_nodes[i].get());
+			if (i+1 != m_nodes.size())
+				m_nodes[i] = std::move(m_nodes.back());
+			m_nodes.pop_back();
+			i--;
+		}
+	}
+}
 
 void Circuit::moveClockDriversToTop()
 {
@@ -1247,9 +1285,6 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 	defaultValueResolution(circuit, subnet);
 	circuit.cullUnusedNodes(subnet); // Dirty way of getting rid of default nodes
 
-	subnet = Subnet::all(circuit);
-	resolveRetimingHints(circuit, subnet);
-
 	circuit.propagateConstants(subnet);
 	circuit.cullOrphanedSignalNodes();
 	circuit.cullUnnamedSignalNodes();
@@ -1266,7 +1301,25 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 	circuit.removeConstSelectMuxes(subnet);
 	circuit.propagateConstants(subnet); // do again after muxes are removed
 	circuit.cullUnusedNodes(subnet);
+	circuit.removeDisabledWritePorts(subnet);
+/*
+	{
+			DotExport exp("before_resolving_retiming.dot");
+			exp(circuit, ConstSubnet::all(circuit));
+			exp.runGraphViz("before_resolving_retiming.svg");	
+	}
+*/
 
+	subnet = Subnet::all(circuit);
+	resolveRetimingHints(circuit, subnet);
+	bypassRetimingBlockers(circuit, subnet);
+/*
+	{
+			DotExport exp("after_general_optimization.dot");
+			exp(circuit, ConstSubnet::all(circuit));
+			exp.runGraphViz("after_general_optimization.svg");	
+	}
+*/
 	attributeFusion(circuit);
 }
 
@@ -1321,6 +1374,7 @@ void MinimalPostprocessing::generalOptimization(Circuit& circuit) const
 
 	subnet = Subnet::all(circuit);
 	resolveRetimingHints(circuit, subnet);
+	bypassRetimingBlockers(circuit, subnet);
 
 	circuit.cullOrphanedSignalNodes();
 	circuit.cullUnnamedSignalNodes();
