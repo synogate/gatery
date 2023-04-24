@@ -38,6 +38,7 @@
 #include "supportNodes/Node_Memory.h"
 #include "supportNodes/Node_MemPort.h"
 #include "supportNodes/Node_RegSpawner.h"
+#include "supportNodes/Node_RetimingBlocker.h"
 #include "../utils/Enumerate.h"
 #include "../utils/Zip.h"
 
@@ -71,9 +72,11 @@ Conjunction suggestForwardRetimingEnableCondition(Circuit &circuit, Subnet &area
 		// Continue if the node was already encountered.
 		if (alreadyHandled.contains(nodePort.node)) continue;
 		alreadyHandled.insert(nodePort.node);
-
 		// Do not leave the specified playground, abort if no register is found before.
 		if (!area.contains(nodePort.node))
+			continue;
+
+		if (dynamic_cast<Node_RetimingBlocker*>(nodePort.node))
 			continue;
 
 		auto *regSpawner = dynamic_cast<Node_RegSpawner*>(nodePort.node);
@@ -271,6 +274,7 @@ std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circ
 
 		//std::cout << "determineAreaToBeRetimed: processing node " << node->getId() << std::endl;
 
+		if (dynamic_cast<Node_RetimingBlocker*>(nodePort.node)) continue;
 
 		// Do not leave the specified playground, abort if no register is found before.
 		if (!area.contains(nodePort.node)) {

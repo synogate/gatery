@@ -163,5 +163,8 @@ namespace hlim {
 	/// Adds the Bit to a PipeBalanceGroup, a group of signals that can receive pipeline registers but must remain balanced, but uses the Bit's reset value for the register if available.
 	Bit pipeinput(const Bit& signal, PipeBalanceGroup& group);
 
+	/// Adds a retiming blocker such that forward register retiming will not attempt to pull a register from this signal.
+	Bit retimingBlocker(const Bit& signal);
+
 /**@}*/
 }

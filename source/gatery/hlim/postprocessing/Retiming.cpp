@@ -21,6 +21,7 @@
 
 #include "../supportNodes/Node_RegSpawner.h"
 #include "../supportNodes/Node_RegHint.h"
+#include "../supportNodes/Node_RetimingBlocker.h"
 
 #include "../Circuit.h"
 #include "../RegisterRetiming.h"
@@ -84,6 +85,13 @@ void resolveRetimingHints(Circuit &circuit, Subnet &subnet)
 	for (auto *regSpawner : spawner)
 		regSpawner->markResolved();
 
+}
+
+void bypassRetimingBlockers(Circuit &circuit, Subnet &subnet)
+{
+	for (auto &n : subnet)
+		if (dynamic_cast<Node_RetimingBlocker*>(n))
+			n->bypassOutputToInput(0, 0);
 }
 
 }

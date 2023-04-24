@@ -53,6 +53,7 @@
 #include "../simulation/BitVectorState.h"
 #include "../simulation/ReferenceSimulator.h"
 #include "../utils/Range.h"
+#include "GraphTools.h"
 
 
 #include "../export/DotExport.h"
@@ -1269,6 +1270,7 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 
 	subnet = Subnet::all(circuit);
 	resolveRetimingHints(circuit, subnet);
+	bypassRetimingBlockers(circuit, subnet);
 
 	{
 			DotExport exp("after_general_optimization.dot");
@@ -1330,6 +1332,7 @@ void MinimalPostprocessing::generalOptimization(Circuit& circuit) const
 
 	subnet = Subnet::all(circuit);
 	resolveRetimingHints(circuit, subnet);
+	bypassRetimingBlockers(circuit, subnet);
 
 	circuit.cullOrphanedSignalNodes();
 	circuit.cullUnnamedSignalNodes();

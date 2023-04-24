@@ -24,4 +24,6 @@ class Subnet;
 
 void resolveRetimingHints(Circuit &circuit, Subnet &subnet);
 
+void bypassRetimingBlockers(Circuit &circuit, Subnet &subnet);
+
 }

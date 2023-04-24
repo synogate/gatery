@@ -36,6 +36,7 @@
 #include <gatery/hlim/supportNodes/Node_ExportOverride.h>
 #include <gatery/hlim/supportNodes/Node_Attributes.h>
 #include <gatery/hlim/supportNodes/Node_RegHint.h>
+#include <gatery/hlim/supportNodes/Node_RetimingBlocker.h>
 
 
 namespace gtry {
@@ -396,5 +397,12 @@ namespace gtry {
 		{
 			return pipeinput<Bit>(signal, group);
 		}
+	}
+
+	Bit retimingBlocker(const Bit& signal)
+	{
+		auto* node = DesignScope::createNode<hlim::Node_RetimingBlocker>();
+		node->connectInput(signal.readPort());
+		return Bit{ SignalReadPort{node}, signal.resetValue() };
 	}
 }

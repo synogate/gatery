@@ -51,6 +51,7 @@ class Node_RegHint;
 
 class Node_CDC;
 class Node_MultiDriver;
+class Node_RetimingBlocker;
 	
 class NodeVisitor
 {
@@ -83,6 +84,7 @@ class NodeVisitor
 		virtual void operator()(Node_RegHint &node) = 0;
 		virtual void operator()(Node_CDC &node) = 0;
 		virtual void operator()(Node_MultiDriver &node) = 0;
+		virtual void operator()(Node_RetimingBlocker &node) = 0;
 };
 
 class ConstNodeVisitor
@@ -116,6 +118,7 @@ class ConstNodeVisitor
 		virtual void operator()(const Node_RegHint &node) = 0;
 		virtual void operator()(const Node_CDC &node) = 0;
 		virtual void operator()(const Node_MultiDriver &node) = 0;
+		virtual void operator()(const Node_RetimingBlocker &node) = 0;
 };
 
 
