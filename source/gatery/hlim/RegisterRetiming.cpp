@@ -53,7 +53,7 @@
 #include <iostream>
 #include <optional>
 
- #define DEBUG_OUTPUT
+ //#define DEBUG_OUTPUT
 
 namespace gtry::hlim {
 
