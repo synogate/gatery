@@ -37,10 +37,10 @@ namespace gtry {
 
 #define SPAM_SIGNAL_NODES
 	
-ConditionalScope::ConditionalScope(const Bit &condition) :
+ConditionalScope::ConditionalScope(const Bit &condition, bool override) :
 	m_id(s_nextId++)
 {
-	setCondition(condition.readPort());
+	setCondition(condition.readPort(), override);
 	m_isElseScope = false;
 }
 
@@ -90,12 +90,12 @@ const Bit& ConditionalScope::getCurrentCondition()
 	return *g_lastConditionBit;
 }
 */
-void ConditionalScope::setCondition(hlim::NodePort port)
+void ConditionalScope::setCondition(hlim::NodePort port, bool override)
 {
 	m_condition = port;
 	m_fullCondition = port;
 
-	if (m_parentScope)
+	if (m_parentScope && !override)
 	{
 		hlim::Node_Logic* andNode = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::AND);
 		andNode->connectInput(0, m_condition);
