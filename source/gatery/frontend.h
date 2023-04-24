@@ -22,6 +22,7 @@
 #include "frontend/Area.h"
 #include "frontend/Attributes.h"
 #include "frontend/Bit.h"
+#include "frontend/BitWidth.h"
 #include "frontend/BVec.h"
 #include "frontend/UInt.h"
 #include "frontend/SInt.h"
