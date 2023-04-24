@@ -133,10 +133,12 @@ Conjunction suggestForwardRetimingEnableCondition(Circuit &circuit, Subnet &area
 
  			if (auto *memPort = dynamic_cast<Node_MemPort*>(nodePort.node)) { // If it is a memory port attempt to retime entire memory
 				auto *memory = memPort->getMemory();
-			
-				// add all memory ports to open list
-				for (auto np : memory->getPorts()) 
-					openList.push_back(np);
+
+				if (!memory->getAttribs().arbitraryPortRetiming) {			
+					// add all memory ports to open list
+					for (auto np : memory->getPorts()) 
+						openList.push_back(np);
+				}
 			}
 		}
 	}
@@ -471,10 +473,12 @@ std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circ
 			auto *memory = memPort->getMemory();
 			retimingPlan.areaToBeRetimed.add(memory);
 		
-			// add all memory ports to open list
-			for (auto np : memory->getPorts()) {
-				HCL_ASSERT(np.node->getDriver((size_t)Node_MemPort::Inputs::enable).node == nullptr);
-				openList.push_back(np);
+			if (!memory->getAttribs().arbitraryPortRetiming) {			
+				// add all memory ports to open list
+				for (auto np : memory->getPorts()) {
+					HCL_ASSERT(np.node->getDriver((size_t)Node_MemPort::Inputs::enable).node == nullptr);
+					openList.push_back(np);
+				}
 			}
 
 			HCL_ASSERT(memPort->getDriver((size_t)Node_MemPort::Inputs::enable).node == nullptr);
@@ -593,11 +597,12 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 	// Find every output leaving the area
 	for (auto n : retimingPlan->areaToBeRetimed)
 		for (auto i : utils::Range(n->getNumOutputPorts()))
-			for (auto np : n->getDirectlyDriven(i))
-				if (!retimingPlan->areaToBeRetimed.contains(np.node)) {
-					outputsLeavingRetimingArea.insert({.node = n, .port = i});
-					break;
-				}
+			if (n->getOutputConnectionType(i).type != ConnectionType::DEPENDENCY)
+				for (auto np : n->getDirectlyDriven(i))
+					if (!retimingPlan->areaToBeRetimed.contains(np.node)) {
+						outputsLeavingRetimingArea.insert({.node = n, .port = i});
+						break;
+					}
 
 	if (retimingPlan->regSpawnersToSpawn.size() > 1) {
 		std::cout << "WARNING: Registers for retiming to a single location are sourced from " << retimingPlan->regSpawnersToSpawn.size() << " different register spawners. This is usually a mistake." << std::endl;

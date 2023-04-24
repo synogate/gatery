@@ -190,6 +190,8 @@ namespace gtry
 
 		void setName(std::string name) { m_memoryNode->setName(std::move(name)); }
 		void noConflicts() { m_memoryNode->setNoConflicts(); }
+		/// Whether ports of the memory can be retimed arbitrarily wrt. each other without any hazard logic. This is a very dangerous option.
+		void allowArbitraryPortRetiming() { m_memoryNode->allowArbitraryPortRetiming(); }
 		bool valid() { return m_memoryNode != nullptr; }
 
 		void fillPowerOnState(sim::DefaultBitVectorState powerOnState) { m_memoryNode->fillPowerOnState(std::move(powerOnState)); }

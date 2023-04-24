@@ -104,6 +104,8 @@ struct PathAttributes : public Attributes {
 
 struct MemoryAttributes : public Attributes {
 	bool noConflicts = false;
+	/// Whether ports of the memory can be retimed arbitrarily wrt. each other without any hazard logic. This is a very dangerous option.
+	bool arbitraryPortRetiming = false;
 };
 
 }

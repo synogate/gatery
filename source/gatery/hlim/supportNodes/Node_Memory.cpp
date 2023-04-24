@@ -68,6 +68,11 @@ namespace gtry::hlim {
 				port->orderAfter(nullptr);
 	}
 
+	void Node_Memory::allowArbitraryPortRetiming()
+	{
+		m_attributes.arbitraryPortRetiming = true;
+	}
+
 	void Node_Memory::loadConfig()
 	{
 /*		
