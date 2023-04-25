@@ -648,6 +648,62 @@ namespace gtry::scl
 		static_assert(!stream.template has<Ready>(), "cannot create upstream register from const stream");
 		return stream.regDownstream(settings);
 	}
+
+
+	template<StreamSignal T>
+	T synchronizeReqAck(T& in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true)
+	{
+		T out;// = constructFrom(in);
+		*out = constructFrom(*in);
+
+		Bit syncInFlight;
+		Bit inputState;		HCL_NAMED(inputState);
+		Bit ack;			HCL_NAMED(ack);
+		Bit syncChainEnd;
+
+		inputState = reg(inputState, '0', RegisterSettings{ .clock = inClock });
+
+		{
+			//ClockScope clk(&inClk);
+
+			syncInFlight = reg(syncInFlight, '0', RegisterSettings{ .clock = inClock });
+
+			ready(in) = ack == inputState & syncInFlight == '1';
+
+			IF(valid(in) & !syncInFlight)
+				inputState = !inputState;
+
+			IF(transfer(in))
+				syncInFlight = '0';
+			ELSE IF(valid(in)) //NOTE: valid cannot go low after going high
+				syncInFlight = '1';
+			HCL_NAMED(syncInFlight);
+
+			syncChainEnd = synchronize(inputState, '0', inClock, outClock, outStages - 1);
+			setName(syncChainEnd, "syncChainEnd_beforeEnableReg");
+		}
+
+		Bit outputState; HCL_NAMED(outputState);
+
+		{
+			//ClockScope clk(outClk);
+			ENIF(ready(out))
+				syncChainEnd = reg(syncChainEnd, '0', RegisterSettings{ .clock = outClock });
+
+			setName(syncChainEnd, "syncChainEnd_afterEnableReg");
+
+
+			valid(out) = outputState != syncChainEnd;
+			IF(transfer(out))
+				outputState = !outputState;
+			ack = synchronize(outputState, '0', outClock, inClock, outStages);
+			outputState = reg(outputState, '0', RegisterSettings{ .clock = outClock });
+		}
+
+		*out = synchronize(*in, inClock, outClock, 1);
+
+		return out;
+	}
 }
 
 namespace gtry {

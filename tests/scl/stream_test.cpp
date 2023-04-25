@@ -352,13 +352,15 @@ protected:
 	template<scl::StreamSignal T>
 	void simulateRecvData(const T& stream)
 	{
+		auto recvClock = ClockScope::getClk();
+
 		addSimulationProcess([=, this, &stream]()->SimProcess {
 			std::vector<size_t> expectedValue(m_groups);
 			while(true)
 			{
-				co_await OnClk(m_clock);
+				co_await OnClk(recvClock);
 
-				if(simu(ready(stream)) == '1' &&
+				if (simu(ready(stream)) == '1' &&
 					simu(valid(stream)) == '1')
 				{
 					size_t data = simu(*(stream.operator ->()));
@@ -370,10 +372,10 @@ protected:
 					}
 				}
 
-				if(std::ranges::all_of(expectedValue, [=, this](size_t val) { return val == m_transfers; }))
+				if (std::ranges::all_of(expectedValue, [=, this](size_t val) { return val == m_transfers; }))
 				{
 					stopTest();
-					co_await AfterClk(m_clock);
+					co_await AfterClk(recvClock);
 				}
 			}
 		});
@@ -1042,4 +1044,52 @@ BOOST_FIXTURE_TEST_CASE(stream_stall, StreamTransferFixture)
 	runTicks(m_clock.getClk(), 1024);
 }
 
+
+BOOST_FIXTURE_TEST_CASE(ReqAckSync_poc, StreamTransferFixture)
+{
+	//for (size_t clockIncrement = 0; clockIncrement < 500'000'000; clockIncrement += 25'000'000) {
+	Clock outClk({ .absoluteFrequency = 161'803'980 /*+ 16'180'398*/ });
+
+	scl::RvStream<UInt> in{ .data = 5_b };
+	In(in);
+
+	scl::RvStream<UInt> out = gtry::scl::synchronizeReqAck(in, inClk, outClk);
+	Out(out);
+	/*
+	Bit validIn;
+	Bit readyOut;
+	Bit validOut;
+	Bit readyIn;
+
+	{
+		ClockScope cscope(inClk);
+		pinIn(validIn, "in_valid");
+		pinOut(readyIn, "in_ready");
+	}
+
+	{
+		ClockScope cscope(outClk);
+		pinOut(validOut, "out_valid");
+		pinIn(readyOut, "out_ready");
+	}
+
+	gtry::scl::RvStream<EmptyStruct> inStream;
+	valid(inStream) = validIn;
+	readyIn = ready(inStream);
+	gtry::scl::RvStream<EmptyStruct> outStream;
+	outStream = gtry::scl::synchronizeReqAck(inStream, inClk, outClk);
+
+	ready(outStream) = readyOut;
+	validOut = valid(outStream);
+	*/
+
+	simulateTransferTest(in, out);
+
+	design.visualize("before");
+	design.postprocess();
+	runTicks(inClk.getClk(), 2048);
+	//}
+
+
+}
 
