@@ -106,7 +106,11 @@ namespace gtry::scl
 
 		IF(transfer(inStream))
 		{
-			fifo.push(inStream.remove<Ready>().remove<Valid>().remove<Error>().remove<Sop>());
+			fifo.push(inStream
+				.template remove<Ready>()
+				.template remove<Valid>()
+				.template remove<Error>()
+				.template remove<Sop>());
 
 			IF(eop(inStream))
 			{
@@ -141,10 +145,15 @@ namespace gtry::scl
 	template<Signal Payload, Signal... Meta>
 	auto storeForwardFifo(RvPacketStream<Payload, Meta...>& in, size_t minElements)
 	{
-		TransactionalFifo fifo(minElements, in.remove<Error>().remove<Sop>().remove<Ready>().remove<Valid>());
+		TransactionalFifo fifo(minElements, in
+			.template remove<Error>()
+			.template remove<Sop>()
+			.template remove<Ready>()
+			.template remove<Valid>());
+
 		connect(fifo, in);
 
-		decltype(in.remove<Error>().remove<Sop>()) out;
+		decltype(in.template remove<Error>().template remove<Sop>()) out;
 		connect(out, fifo);
 
 		fifo.generate();
@@ -157,7 +166,7 @@ namespace gtry::scl
 		TransactionalFifo fifo(minElements, in.remove<Valid>().remove<Error>().remove<Ready>().remove<Sop>());
 		connect(fifo, in);
 
-		decltype(in.remove<Valid>().remove<Error>()) out;
+		decltype(in.template remove<Valid>().template remove<Error>()) out;
 		connect(out, fifo);
 
 		fifo.generate();
