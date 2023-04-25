@@ -118,6 +118,7 @@ namespace gtry::scl
 		 * @return	connected stream
 		*/
 		Stream regDownstreamBlocking(const RegisterSettings& settings = {});
+		Stream regDownstreamBlocking(const RegisterSettings& settings = {}) const requires(Assignable<std::tuple<PayloadT, Meta...>>);
 
 		/**
 		 * @brief	Puts a register in the valid and data path.
@@ -126,6 +127,7 @@ namespace gtry::scl
 		 * @return	connected stream
 		*/
 		Stream regDownstream(const RegisterSettings& settings = {});
+		Stream regDownstream(const RegisterSettings& settings = {}) const requires(Assignable<std::tuple<PayloadT, Meta...>>);
 
 		/**
 		 * @brief	Puts a register spawner for retiming in the valid and data path.
@@ -367,7 +369,7 @@ namespace gtry::scl
 		{
 			return Stream<PayloadT, Meta..., T>{
 				data,
-				std::apply([&](auto&... element) {
+					std::apply([&](auto&... element) {
 					return std::tuple(element..., std::forward<T>(signal));
 				}, _sig)
 			};
@@ -461,7 +463,7 @@ namespace gtry::scl
 			auto head = std::tie(std::get<0>(t));
 			auto tail = std::apply([](auto& tr, auto&... to) {
 				return std::tie(to...);
-				}, t);
+			}, t);
 
 			if constexpr (std::is_same_v<std::remove_cvref_t<T>, Tr>)
 			{
@@ -529,6 +531,27 @@ namespace gtry::scl
 	}
 
 	template<Signal PayloadT, Signal... Meta>
+	inline Stream<PayloadT, Meta...> gtry::scl::Stream<PayloadT, Meta...>::regDownstreamBlocking(const RegisterSettings& settings) const requires(Assignable<std::tuple<PayloadT, Meta...>>)
+	{
+		if constexpr (has<Valid>())
+		{
+			auto tmp = *this;
+			valid(tmp).resetValue('0');
+			return {
+				.data = reg(tmp.data, settings),
+				._sig = reg(tmp._sig, settings)
+			};
+		}
+		else
+		{
+			return {
+				.data = reg(data, settings),
+				._sig = reg(_sig, settings)
+			};
+		}
+	}
+
+	template<Signal PayloadT, Signal... Meta>
 	inline Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::regDownstream(const RegisterSettings& settings)
 	{
 		if constexpr (has<Valid>())
@@ -560,6 +583,12 @@ namespace gtry::scl
 			upstream(*this) = upstream(ret);
 		}
 		return ret;
+	}
+
+	template<Signal PayloadT, Signal... Meta>
+	Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::regDownstream(const RegisterSettings& settings) const requires(Assignable<std::tuple<PayloadT, Meta...>>)
+	{
+		return regDownstreamBlocking(settings);
 	}
 
 	template<Signal PayloadT, Signal... Meta>

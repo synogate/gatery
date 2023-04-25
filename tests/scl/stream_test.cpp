@@ -236,7 +236,7 @@ protected:
 
 	Clock m_clock = Clock({ .absoluteFrequency = 100'000'000 });
 
-	void simulateTransferTest(scl::RvStream<UInt>& source, scl::RvStream<UInt>& sink)
+	void simulateTransferTest(scl::StreamSignal auto& source, scl::StreamSignal auto& sink)
 	{
 		simulateBackPressure(sink);
 		simulateSendData(source, m_groups++);
@@ -256,19 +256,9 @@ protected:
 		simulateSendData(source, m_groups++);
 	}
 
-	void In(scl::RvStream<UInt>& stream, std::string prefix = "in_")
+	void In(scl::StreamSignal auto& stream, std::string prefix = "in")
 	{
-		gtry::pinOut(ready(stream)).setName(prefix + "ready");
-		valid(stream) = gtry::pinIn().setName(prefix + "valid");
-		*stream = gtry::pinIn(stream->width()).setName(prefix + "data");
-	}
-
-	void In(scl::RvPacketStream<UInt>& stream, std::string prefix = "in_")
-	{
-		gtry::pinOut(ready(stream)).setName(prefix + "ready");
-		valid(stream) = gtry::pinIn().setName(prefix + "valid");
-		eop(stream) = gtry::pinIn().setName(prefix + "eop");
-		*stream = gtry::pinIn(stream->width()).setName(prefix + "data");
+		pinIn(stream, prefix);
 	}
 
 	void Out(scl::StreamSignal auto& stream, std::string prefix = "out")
@@ -276,8 +266,7 @@ protected:
 		pinOut(stream, prefix);
 	}
 
-	template<scl::StreamSignal T>
-	void simulateBackPressure(T& stream)
+	void simulateBackPressure(scl::StreamSignal auto& stream)
 	{
 		addSimulationProcess([&]()->SimProcess {
 			std::mt19937 rng{ std::random_device{}() };
@@ -320,7 +309,8 @@ protected:
 		});
 	}
 
-	void simulateSendData(scl::RvPacketStream<UInt>& stream, size_t group)
+	template<class... Meta>
+	void simulateSendData(scl::RvPacketStream<UInt, Meta...>& stream, size_t group)
 	{
 		addSimulationProcess([=, this, &stream]()->SimProcess {
 			std::mt19937 rng{ std::random_device{}() };
@@ -349,17 +339,50 @@ protected:
 		});
 	}
 
+	template<class... Meta>
+	void simulateSendData(scl::RsPacketStream<UInt, Meta...>& stream, size_t group)
+	{
+		addSimulationProcess([=, this, &stream]()->SimProcess {
+			std::mt19937 rng{ std::random_device{}() };
+			for (size_t i = 0; i < m_transfers;)
+			{
+				simu(sop(stream)) = '0';
+				simu(eop(stream)) = '0';
+				simu(*stream).invalidate();
+
+				while ((rng() & 1) == 0)
+					co_await AfterClk(m_clock);
+
+				const size_t packetLen = std::min<size_t>(m_transfers - i, rng() % 5 + 1);
+				for (size_t j = 0; j < packetLen; ++j)
+				{
+					simu(sop(stream)) = j == 0;
+					simu(eop(stream)) = j == packetLen - 1;
+					simu(*stream) = i + j + group * m_transfers;
+
+					co_await scl::performTransferWait(stream, m_clock);
+				}
+				i += packetLen;
+			}
+
+			simu(sop(stream)) = '0';
+			simu(eop(stream)) = '0';
+			simu(*stream).invalidate();
+		});
+	}
+
 	template<scl::StreamSignal T>
 	void simulateRecvData(const T& stream)
 	{
+		auto myTransfer = pinOut(transfer(stream)).setName("simulateRecvData_transfer");
+
 		addSimulationProcess([=, this, &stream]()->SimProcess {
 			std::vector<size_t> expectedValue(m_groups);
 			while(true)
 			{
 				co_await OnClk(m_clock);
 
-				if(simu(ready(stream)) == '1' &&
-					simu(valid(stream)) == '1')
+				if(simu(myTransfer) == '1')
 				{
 					size_t data = simu(*(stream.operator ->()));
 					BOOST_TEST(data / m_transfers < expectedValue.size());
@@ -1042,4 +1065,36 @@ BOOST_FIXTURE_TEST_CASE(stream_stall, StreamTransferFixture)
 	runTicks(m_clock.getClk(), 1024);
 }
 
+BOOST_FIXTURE_TEST_CASE(TransactionalFifo_StoreForwardStream, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
 
+	scl::RvPacketStream<UInt, scl::Error> in = { 16_b };
+	scl::RvPacketStream<UInt> out = scl::storeForwardFifo(in, 32);
+
+	error(in) = '0';
+
+	In(in);
+	Out(out);
+	transfers(1000);
+	simulateTransferTest(in, out);
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(TransactionalFifo_StoreForwardStream_sopeop, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::RsPacketStream<UInt> in = { 16_b };
+	scl::RsPacketStream<UInt> out = scl::storeForwardFifo(in, 32);
+
+	In(in);
+	Out(out);
+	transfers(1000);
+	simulateTransferTest(in, out);
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
