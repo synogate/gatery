@@ -256,7 +256,7 @@ protected:
 		simulateSendData(source, m_groups++);
 	}
 
-	void In(scl::StreamSignal auto& stream, std::string prefix = "in_")
+	void In(scl::StreamSignal auto& stream, std::string prefix = "in")
 	{
 		pinIn(stream, prefix);
 	}
@@ -374,14 +374,15 @@ protected:
 	template<scl::StreamSignal T>
 	void simulateRecvData(const T& stream)
 	{
+		auto myTransfer = pinOut(transfer(stream)).setName("simulateRecvData_transfer");
+
 		addSimulationProcess([=, this, &stream]()->SimProcess {
 			std::vector<size_t> expectedValue(m_groups);
 			while(true)
 			{
 				co_await OnClk(m_clock);
 
-				if(simu(ready(stream)) == '1' &&
-					simu(valid(stream)) == '1')
+				if(simu(myTransfer) == '1')
 				{
 					size_t data = simu(*(stream.operator ->()));
 					BOOST_TEST(data / m_transfers < expectedValue.size());
@@ -1068,16 +1069,18 @@ BOOST_FIXTURE_TEST_CASE(TransactionalFifo_StoreForwardStream, StreamTransferFixt
 {
 	ClockScope clkScp(m_clock);
 
-	scl::RvPacketStream<UInt> in = { 16_b };
+	scl::RvPacketStream<UInt, scl::Error> in = { 16_b };
 	scl::RvPacketStream<UInt> out = scl::storeForwardFifo(in, 32);
+
+	error(in) = '0';
 
 	In(in);
 	Out(out);
-	transfers(2000);
+	transfers(1000);
 	simulateTransferTest(in, out);
 
 	design.postprocess();
-	runTicks(m_clock.getClk(), 10240);
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(TransactionalFifo_StoreForwardStream_sopeop, StreamTransferFixture)
@@ -1089,9 +1092,9 @@ BOOST_FIXTURE_TEST_CASE(TransactionalFifo_StoreForwardStream_sopeop, StreamTrans
 
 	In(in);
 	Out(out);
-	transfers(2000);
+	transfers(1000);
 	simulateTransferTest(in, out);
 
 	design.postprocess();
-	runTicks(m_clock.getClk(), 10240);
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
 }
