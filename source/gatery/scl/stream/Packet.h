@@ -46,7 +46,7 @@ namespace gtry::scl
 	template<StreamSignal T> requires (T::template has<Sop>())
 	const Bit& sop(const T& stream) { return stream.template get<Sop>().sop; }
 	template<StreamSignal T> requires (!T::template has<Valid>() and T::template has<Sop>() and T::template has<Eop>())
-	const Bit valid(const T& signal) { return flag(sop(signal), eop(signal)) | sop(signal); }
+	const Bit valid(const T& signal) { return flag(sop(signal), eop(signal) & ready(signal)) | sop(signal); }
 
 
 	struct Empty
@@ -132,7 +132,7 @@ namespace gtry::scl
 			valid(packetStream) = !fifo.empty();
 		
 		if constexpr (packetStream.template has<Sop>())
-			sop(packetStream) = !fifo.empty() & !flag(ready(packetStream) & !fifo.empty(), eop(packetStream));
+			sop(packetStream) = !fifo.empty() & !flag(ready(packetStream) & !fifo.empty(), ready(packetStream) & eop(packetStream));
 
 		IF(transfer(packetStream))
 			fifo.pop();
