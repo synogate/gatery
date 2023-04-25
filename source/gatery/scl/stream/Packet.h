@@ -129,7 +129,7 @@ namespace gtry::scl
 
 		// copy metadata
 		std::apply([&](auto&&... meta) {
-			((packetStream.get<std::remove_cvref_t<decltype(meta)>>() = meta), ...);
+			((packetStream.template get<std::remove_cvref_t<decltype(meta)>>() = meta), ...);
 		}, fifo.peek()._sig);
 
 		if constexpr (packetStream.template has<Valid>())
@@ -163,7 +163,7 @@ namespace gtry::scl
 	template<Signal Payload, Signal... Meta>
 	auto storeForwardFifo(RsPacketStream<Payload, Meta...>& in, size_t minElements)
 	{
-		TransactionalFifo fifo(minElements, in.remove<Valid>().remove<Error>().remove<Ready>().remove<Sop>());
+		TransactionalFifo fifo(minElements, in.template remove<Valid>().template remove<Error>().template remove<Ready>().template remove<Sop>());
 		connect(fifo, in);
 
 		decltype(in.template remove<Valid>().template remove<Error>()) out;
