@@ -75,14 +75,14 @@ namespace gtry::scl
 	template<class T>
 	concept PacketStreamSignal = StreamSignal<T> and T::template has<scl::Eop>();
 
-	//template<Signal Payload, Signal... Meta>
-	//void connect(scl::TransactionalFifo<PacketStream<Payload, Meta...>>& fifo, RvPacketStream<Payload, Meta...>& inStream);
+	template<Signal Payload, Signal... MetaIn, Signal... MetaFifo>
+	void connect(scl::TransactionalFifo<PacketStream<Payload, MetaFifo...>>& fifo, Stream<Payload, Ready, MetaIn...>& inStream);
 
-	//template<Signal Payload, Signal... Meta>
-	//void connect(RvPacketStream<Payload, Meta...>& packetStream, scl::TransactionalFifo<PacketStream<Payload, Meta...>>& fifo);
-	
-	//template<Signal Payload, Signal... Meta>
-	//RvPacketStream<Payload, Meta...> storeForwardFifo(RvPacketStream<Payload, Meta...>& in, size_t minElements);
+	template<Signal Payload, Signal... MetaFifo, Signal... MetaOut>
+	void connect(Stream<Payload, MetaOut...>& packetStream, scl::TransactionalFifo<PacketStream<Payload, MetaFifo...>>& fifo);
+
+	template<Signal Payload, Signal... Meta> auto storeForwardFifo(RvPacketStream<Payload, Meta...>& in, size_t minElements);
+	template<Signal Payload, Signal... Meta> auto storeForwardFifo(RsPacketStream<Payload, Meta...>& in, size_t minElements);
 
 	template<StreamSignal T>
 	requires (T::template has<Valid>() or T::template has<Eop>())
