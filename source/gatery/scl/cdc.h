@@ -30,9 +30,10 @@ namespace gtry::scl
 	template<Signal T>
 	T synchronize(T in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
 
+	Bit synchronizeEvent(Bit event, const Clock& inClock, const Clock& outClock);
 
-	UInt grayCodeSynchronize(UInt in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
-	UInt grayCodeSynchronize(UInt in, UInt reset, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
+	UInt synchronizeGrayCode(UInt in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
+	UInt synchronizeGrayCode(UInt in, UInt reset, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
 
 	template<Signal T>
 	T synchronize(T val, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)

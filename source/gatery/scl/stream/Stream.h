@@ -696,7 +696,6 @@ namespace gtry::scl
 		return stream.regDownstream(settings);
 	}
 
-
 	template<StreamSignal T>
 	T synchronizeReqAck(T& in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true)
 	{

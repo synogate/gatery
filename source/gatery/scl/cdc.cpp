@@ -34,12 +34,22 @@ gtry::UInt gtry::scl::grayDecode(BVec val)
 	return ret;
 }
 
-gtry::UInt gtry::scl::grayCodeSynchronize(UInt in, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
+gtry::Bit gtry::scl::synchronizeEvent(Bit eventIn, const Clock& inClock, const Clock& outClock)
+{
+	Bit state;
+	state = reg(eventIn ^ state, '0', RegisterSettings {.clock = inClock });
+
+	state = synchronize(state, '0', inClock, outClock, false);
+
+	return state ^ reg(state, '0', RegisterSettings{ .clock = outClock });
+}
+
+gtry::UInt gtry::scl::synchronizeGrayCode(UInt in, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
 {
 	return grayDecode(synchronize(grayEncode(in), inClock, outClock, outStages, inStage));
 }
 
-gtry::UInt gtry::scl::grayCodeSynchronize(UInt in, UInt reset, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
+gtry::UInt gtry::scl::synchronizeGrayCode(UInt in, UInt reset, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
 {
 	return grayDecode(synchronize(grayEncode(in), grayEncode(reset), inClock, outClock, outStages, inStage));
 }
