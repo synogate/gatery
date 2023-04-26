@@ -268,7 +268,9 @@ protected:
 
 	void simulateBackPressure(scl::StreamSignal auto& stream)
 	{
-		addSimulationProcess([&]()->SimProcess {
+		auto recvClock = ClockScope::getClk();
+
+		addSimulationProcess([&, recvClock]()->SimProcess {
 			std::mt19937 rng{ std::random_device{}() };
 
 			simu(ready(stream)) = '0';
@@ -277,12 +279,12 @@ protected:
 			while (simu(valid(stream)) == '0');
 
 			// todo: not good
-			co_await WaitFor(Seconds{1,10} / m_clock.absoluteFrequency());
+			co_await WaitFor(Seconds{1,10} / recvClock.absoluteFrequency());
 
-			while(true)
+			while (true)
 			{
 				simu(ready(stream)) = rng() % 2 != 0;
-				co_await AfterClk(m_clock);
+				co_await AfterClk(recvClock);
 			}
 		});
 	}
@@ -1072,45 +1074,25 @@ BOOST_FIXTURE_TEST_CASE(ReqAckSync_poc, StreamTransferFixture)
 {
 	//for (size_t clockIncrement = 0; clockIncrement < 500'000'000; clockIncrement += 25'000'000) {
 	Clock outClk({ .absoluteFrequency = 161'803'980 /*+ 16'180'398*/ });
+	ClockScope clkScp(m_clock);
 
 	scl::RvStream<UInt> in{ .data = 5_b };
 	In(in);
+	simulateSendData(in, 0);
+	groups(1);
 
-	scl::RvStream<UInt> out = gtry::scl::synchronizeReqAck(in, inClk, outClk);
-	Out(out);
-	/*
-	Bit validIn;
-	Bit readyOut;
-	Bit validOut;
-	Bit readyIn;
-
+	scl::RvStream<UInt> out = gtry::scl::synchronizeReqAck(in, m_clock, outClk);
 	{
-		ClockScope cscope(inClk);
-		pinIn(validIn, "in_valid");
-		pinOut(readyIn, "in_ready");
+		ClockScope clock(outClk);
+		Out(out);
+
+		simulateBackPressure(out);
+		simulateRecvData(out);
 	}
-
-	{
-		ClockScope cscope(outClk);
-		pinOut(validOut, "out_valid");
-		pinIn(readyOut, "out_ready");
-	}
-
-	gtry::scl::RvStream<EmptyStruct> inStream;
-	valid(inStream) = validIn;
-	readyIn = ready(inStream);
-	gtry::scl::RvStream<EmptyStruct> outStream;
-	outStream = gtry::scl::synchronizeReqAck(inStream, inClk, outClk);
-
-	ready(outStream) = readyOut;
-	validOut = valid(outStream);
-	*/
-
-	simulateTransferTest(in, out);
 
 	design.visualize("before");
 	design.postprocess();
-	runTicks(inClk.getClk(), 2048);
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
 	//}
 
 

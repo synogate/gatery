@@ -707,6 +707,7 @@ namespace gtry::scl
 		Bit inputState;		HCL_NAMED(inputState);
 		Bit ack;			HCL_NAMED(ack);
 		Bit syncChainEnd;
+		auto cdcData = constructFrom(*in);
 
 		inputState = reg(inputState, '0', RegisterSettings{ .clock = inClock });
 
@@ -720,22 +721,31 @@ namespace gtry::scl
 			IF(valid(in) & !syncInFlight)
 				inputState = !inputState;
 
+			Bit inputDataEnableCondition = valid(in) & !syncInFlight;
+			HCL_NAMED(inputDataEnableCondition);
+
+
+			ENIF(inputDataEnableCondition) // alternatively valid(in) , since valid(in) is not allowed to turn down
+				cdcData = reg(*in, RegisterSettings{ .clock = inClock });
+			HCL_NAMED(cdcData);
+
 			IF(transfer(in))
 				syncInFlight = '0';
 			ELSE IF(valid(in)) //NOTE: valid cannot go low after going high
 				syncInFlight = '1';
 			HCL_NAMED(syncInFlight);
 
+
 			syncChainEnd = synchronize(inputState, '0', inClock, outClock, outStages - 1);
 			setName(syncChainEnd, "syncChainEnd_beforeEnableReg");
 		}
-
+		Bit syncChainEndBeforeEnableReg = syncChainEnd;
 		Bit outputState; HCL_NAMED(outputState);
 
 		{
 			//ClockScope clk(outClk);
-			ENIF(ready(out))
-				syncChainEnd = reg(syncChainEnd, '0', RegisterSettings{ .clock = outClock });
+			ENIF(ready(out) | !valid(out))
+				syncChainEnd = reg(syncChainEnd, '0', RegisterSettings{ .clock = outClock});
 
 			setName(syncChainEnd, "syncChainEnd_afterEnableReg");
 
@@ -747,8 +757,16 @@ namespace gtry::scl
 			outputState = reg(outputState, '0', RegisterSettings{ .clock = outClock });
 		}
 
-		*out = synchronize(*in, inClock, outClock, 1);
 
+		
+		cdcData = allowClockDomainCrossing(cdcData, inClock, outClock);
+		Bit outputDataEnableCondition = syncChainEndBeforeEnableReg != syncChainEnd;
+		HCL_NAMED(outputDataEnableCondition);
+		ENIF(outputDataEnableCondition)
+			{
+				Clock dontSimplifyEnableReg = outClock.deriveClock({ .synchronizationRegister = true });
+				*out = reg(cdcData, RegisterSettings{ .clock = dontSimplifyEnableReg });
+			}
 		return out;
 	}
 
