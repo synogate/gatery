@@ -256,6 +256,9 @@ namespace gtry::scl
 	template<Signal Tf, StreamSignal Ts>
 	void connect(Fifo<Tf>& sink, Ts& source);
 
+	template<Signal T>
+	void connect(Fifo<T>& sink, RvStream<T>& source);
+
 	/**
 	 * @brief Connect a FIFO as source to a Stream as sink.
 	 * @param sink Stream instance.
@@ -264,6 +267,8 @@ namespace gtry::scl
 	template<StreamSignal Ts, Signal Tf>
 	void connect(Ts& sink, Fifo<Tf>& source);
 
+	template<Signal T>
+	void connect(RvStream<T>& sink, Fifo<T>& source);
 
 
 	template<StreamSignal T> 
@@ -672,12 +677,30 @@ namespace gtry::scl
 		ready(source) = !sink.full();
 	}
 
+	template<Signal T>
+	void connect(Fifo<T>& sink, RvStream<T>& source)
+	{
+		IF(transfer(source))
+			sink.push(*source);
+		ready(source) = !sink.full();
+	}
+
 	template<StreamSignal Ts, Signal Tf>
 	void connect(Ts& sink, Fifo<Tf>& source)
 	{
 		downstream(sink) = source.peek();
 		valid(sink) = !source.empty();
 	
+		IF(transfer(sink))
+			source.pop();
+	}
+
+	template<Signal T>
+	void connect(RvStream<T>& sink, Fifo<T>& source)
+	{
+		*sink = source.peek();
+		valid(sink) = !source.empty();
+
 		IF(transfer(sink))
 			source.pop();
 	}
