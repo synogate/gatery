@@ -36,12 +36,13 @@ gtry::UInt gtry::scl::grayDecode(BVec val)
 
 gtry::Bit gtry::scl::synchronizeEvent(Bit eventIn, const Clock& inClock, const Clock& outClock)
 {
+	Area area("synchronizeEvent", true);
 	Bit state;
 	state = reg(eventIn ^ state, '0', RegisterSettings {.clock = inClock });
 
-	state = synchronize(state, '0', inClock, outClock, false);
+	Bit temp = synchronize(state, '0', inClock, outClock, 2, false);
 
-	return state ^ reg(state, '0', RegisterSettings{ .clock = outClock });
+	return temp ^ reg(temp, '0', RegisterSettings{ .clock = outClock });
 }
 
 gtry::UInt gtry::scl::synchronizeGrayCode(UInt in, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)

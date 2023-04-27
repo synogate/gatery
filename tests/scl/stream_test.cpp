@@ -1069,11 +1069,10 @@ BOOST_FIXTURE_TEST_CASE(stream_stall, StreamTransferFixture)
 	runTicks(m_clock.getClk(), 1024);
 }
 
-
-BOOST_FIXTURE_TEST_CASE(ReqAckSync_poc, StreamTransferFixture)
+BOOST_FIXTURE_TEST_CASE(ReqAckSync_1_10, StreamTransferFixture)
 {
-	//for (size_t clockIncrement = 0; clockIncrement < 500'000'000; clockIncrement += 25'000'000) {
-	Clock outClk({ .absoluteFrequency = 161'803'980 /*+ 16'180'398*/ });
+	Clock outClk({ .absoluteFrequency = 10'000'000 });
+	HCL_NAMED(outClk);
 	ClockScope clkScp(m_clock);
 
 	scl::RvStream<UInt> in{ .data = 5_b };
@@ -1081,7 +1080,7 @@ BOOST_FIXTURE_TEST_CASE(ReqAckSync_poc, StreamTransferFixture)
 	simulateSendData(in, 0);
 	groups(1);
 
-	scl::RvStream<UInt> out = gtry::scl::synchronizeReqAck(in, m_clock, outClk);
+	scl::RvStream<UInt> out = gtry::scl::synchronizeStreamReqAck(in, m_clock, outClk);
 	{
 		ClockScope clock(outClk);
 		Out(out);
@@ -1090,13 +1089,59 @@ BOOST_FIXTURE_TEST_CASE(ReqAckSync_poc, StreamTransferFixture)
 		simulateRecvData(out);
 	}
 
-	design.visualize("before");
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
-	//}
-
-
 }
+
+BOOST_FIXTURE_TEST_CASE(ReqAckSync_1_1, StreamTransferFixture)
+{
+	Clock outClk({ .absoluteFrequency = 100'000'000 });
+	HCL_NAMED(outClk);
+	ClockScope clkScp(m_clock);
+
+	scl::RvStream<UInt> in{ .data = 5_b };
+	In(in);
+	simulateSendData(in, 0);
+	groups(1);
+
+	scl::RvStream<UInt> out = gtry::scl::synchronizeStreamReqAck(in, m_clock, outClk);
+	{
+		ClockScope clock(outClk);
+		Out(out);
+
+		simulateBackPressure(out);
+		simulateRecvData(out);
+	}
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(ReqAckSync_10_1, StreamTransferFixture)
+{
+	Clock outClk({ .absoluteFrequency = 1000'000'000 });
+	HCL_NAMED(outClk);
+	ClockScope clkScp(m_clock);
+
+	scl::RvStream<UInt> in{ .data = 5_b };
+	In(in);
+	simulateSendData(in, 0);
+	groups(1);
+
+	scl::RvStream<UInt> out = gtry::scl::synchronizeStreamReqAck(in, m_clock, outClk);
+	{
+		ClockScope clock(outClk);
+		Out(out);
+
+		simulateBackPressure(out);
+		simulateRecvData(out);
+	}
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
+
 BOOST_FIXTURE_TEST_CASE(TransactionalFifo_StoreForwardStream, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);

@@ -696,76 +696,42 @@ namespace gtry::scl
 		return stream.regDownstream(settings);
 	}
 
-	template<StreamSignal T>
-	T synchronizeReqAck(T& in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true)
+	template<Signal Tp, Signal... Meta>
+	RvStream<Tp, Meta...> synchronizeStreamReqAck(RvStream<Tp, Meta...>& in, const Clock& inClock, const Clock& outClock)
 	{
-		T out;// = constructFrom(in);
-		*out = constructFrom(*in);
+		Area area("synchronizeStreamReqAck", true);
 
-		Bit syncInFlight;
-		Bit inputState;		HCL_NAMED(inputState);
-		Bit ack;			HCL_NAMED(ack);
-		Bit syncChainEnd;
-		auto cdcData = constructFrom(*in);
+		Stream crossingStream = in
+			.template remove<Ready>()
+			.template remove<Valid>();
 
-		inputState = reg(inputState, '0', RegisterSettings{ .clock = inClock });
+		Bit eventIn;
+		Bit idle = flag(ready(in), eventIn, '1');
+		eventIn = valid(in) & idle;
+		HCL_NAMED(eventIn);	
 
-		{
-			//ClockScope clk(&inClk);
-
-			syncInFlight = reg(syncInFlight, '0', RegisterSettings{ .clock = inClock });
-
-			ready(in) = ack == inputState & syncInFlight == '1';
-
-			IF(valid(in) & !syncInFlight)
-				inputState = !inputState;
-
-			Bit inputDataEnableCondition = valid(in) & !syncInFlight;
-			HCL_NAMED(inputDataEnableCondition);
-
-
-			ENIF(inputDataEnableCondition) // alternatively valid(in) , since valid(in) is not allowed to turn down
-				cdcData = reg(*in, RegisterSettings{ .clock = inClock });
-			HCL_NAMED(cdcData);
-
-			IF(transfer(in))
-				syncInFlight = '0';
-			ELSE IF(valid(in)) //NOTE: valid cannot go low after going high
-				syncInFlight = '1';
-			HCL_NAMED(syncInFlight);
-
-
-			syncChainEnd = synchronize(inputState, '0', inClock, outClock, outStages - 1);
-			setName(syncChainEnd, "syncChainEnd_beforeEnableReg");
-		}
-		Bit syncChainEndBeforeEnableReg = syncChainEnd;
-		Bit outputState; HCL_NAMED(outputState);
-
-		{
-			//ClockScope clk(outClk);
-			ENIF(ready(out) | !valid(out))
-				syncChainEnd = reg(syncChainEnd, '0', RegisterSettings{ .clock = outClock});
-
-			setName(syncChainEnd, "syncChainEnd_afterEnableReg");
-
-
-			valid(out) = outputState != syncChainEnd;
-			IF(transfer(out))
-				outputState = !outputState;
-			ack = synchronize(outputState, '0', outClock, inClock, outStages);
-			outputState = reg(outputState, '0', RegisterSettings{ .clock = outClock });
-		}
-
-
+		Bit outputEnableCondition = synchronizeEvent(eventIn, inClock, outClock);
+		HCL_NAMED(outputEnableCondition);
 		
-		cdcData = allowClockDomainCrossing(cdcData, inClock, outClock);
-		Bit outputDataEnableCondition = syncChainEndBeforeEnableReg != syncChainEnd;
-		HCL_NAMED(outputDataEnableCondition);
-		ENIF(outputDataEnableCondition)
-			{
-				Clock dontSimplifyEnableReg = outClock.deriveClock({ .synchronizationRegister = true });
-				*out = reg(cdcData, RegisterSettings{ .clock = dontSimplifyEnableReg });
-			}
+		crossingStream = allowClockDomainCrossing(crossingStream, inClock, outClock);
+
+		ENIF(outputEnableCondition){
+			Clock dontSimplifyEnableRegClk = outClock.deriveClock({ .synchronizationRegister = true });
+			crossingStream = reg(crossingStream, RegisterSettings{ .clock = dontSimplifyEnableRegClk });
+		}
+
+		RvStream out = crossingStream
+			.add(Ready{})
+			.add(Valid{})
+			.template reduceTo<RvStream<Tp, Meta...>>();
+
+		ClockScope cs{ outClock };
+		Bit outValid;
+		outValid = flag(outputEnableCondition, outValid & ready(out));
+		valid(out) = outValid;
+
+		ready(in) = synchronizeEvent(transfer(out), outClock, inClock);
+		
 		return out;
 	}
 

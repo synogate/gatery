@@ -17,7 +17,6 @@
 */
 #pragma once
 #include <gatery/frontend.h>
-//#include "stream/Stream.h"
 
 namespace gtry::scl
 {
@@ -44,6 +43,8 @@ namespace gtry::scl
 		val = allowClockDomainCrossing(val, inClock, outClock);
 
 		Clock syncRegClock = outClock.deriveClock({ .synchronizationRegister = true });
+
+		HCL_DESIGNCHECK_HINT(outStages > 0, "Building a synchronizer chain with zero synchronization registers is probably a mistake!");
 
 		for(size_t i = 0; i < outStages; ++i)
 			val = reg(val, { .clock = syncRegClock });
