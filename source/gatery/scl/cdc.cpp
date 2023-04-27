@@ -17,6 +17,7 @@
 */
 #include "gatery/pch.h"
 #include "cdc.h"
+#include "flag.h"
 
 gtry::BVec gtry::scl::grayEncode(UInt val)
 {
@@ -37,12 +38,14 @@ gtry::UInt gtry::scl::grayDecode(BVec val)
 gtry::Bit gtry::scl::synchronizeEvent(Bit eventIn, const Clock& inClock, const Clock& outClock)
 {
 	Area area("synchronizeEvent", true);
+	ClockScope csIn{ inClock };
+
 	Bit state;
-	state = reg(eventIn ^ state, '0', RegisterSettings {.clock = inClock });
+	state = reg(eventIn ^ state, '0');
 
-	Bit temp = synchronize(state, '0', inClock, outClock, 2, false);
+	ClockScope csOut{ outClock };
 
-	return temp ^ reg(temp, '0', RegisterSettings{ .clock = outClock });
+	return edge(synchronize(state, '0', inClock, outClock, 3, false));
 }
 
 gtry::UInt gtry::scl::synchronizeGrayCode(UInt in, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)

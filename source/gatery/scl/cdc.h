@@ -37,14 +37,14 @@ namespace gtry::scl
 	template<Signal T>
 	T synchronize(T val, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
 	{
+		HCL_DESIGNCHECK_HINT(outStages > 1, "Building a synchronizer chain with zero synchronization registers is probably a mistake!");
+
 		if(inStage)
 			val = reg(val, { .clock = inClock });
 
 		val = allowClockDomainCrossing(val, inClock, outClock);
 
 		Clock syncRegClock = outClock.deriveClock({ .synchronizationRegister = true });
-
-		HCL_DESIGNCHECK_HINT(outStages > 0, "Building a synchronizer chain with zero synchronization registers is probably a mistake!");
 
 		for(size_t i = 0; i < outStages; ++i)
 			val = reg(val, { .clock = syncRegClock });
@@ -55,6 +55,8 @@ namespace gtry::scl
 	template<Signal T, SignalValue Treset>
 	T synchronize(T val, const Treset& reset, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
 	{
+		HCL_DESIGNCHECK_HINT(outStages > 1, "Building a synchronizer chain with zero synchronization registers is probably a mistake!");
+
 		if(inStage)
 			val = reg(val, reset, { .clock = inClock });
 

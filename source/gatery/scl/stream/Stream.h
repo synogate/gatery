@@ -700,7 +700,7 @@ namespace gtry::scl
 	RvStream<Tp, Meta...> synchronizeStreamReqAck(RvStream<Tp, Meta...>& in, const Clock& inClock, const Clock& outClock)
 	{
 		Area area("synchronizeStreamReqAck", true);
-
+		ClockScope csIn{ inClock };
 		Stream crossingStream = in
 			.template remove<Ready>()
 			.template remove<Valid>();
@@ -712,6 +712,10 @@ namespace gtry::scl
 
 		Bit outputEnableCondition = synchronizeEvent(eventIn, inClock, outClock);
 		HCL_NAMED(outputEnableCondition);
+
+		crossingStream = reg(crossingStream);
+
+		ClockScope csOut{ outClock };
 		
 		crossingStream = allowClockDomainCrossing(crossingStream, inClock, outClock);
 
@@ -725,7 +729,6 @@ namespace gtry::scl
 			.add(Valid{})
 			.template reduceTo<RvStream<Tp, Meta...>>();
 
-		ClockScope cs{ outClock };
 		Bit outValid;
 		outValid = flag(outputEnableCondition, outValid & ready(out));
 		valid(out) = outValid;
