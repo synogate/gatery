@@ -17,6 +17,7 @@
 */
 #include "gatery/pch.h"
 #include "cdc.h"
+#include "flag.h"
 
 gtry::BVec gtry::scl::grayEncode(UInt val)
 {
@@ -34,12 +35,25 @@ gtry::UInt gtry::scl::grayDecode(BVec val)
 	return ret;
 }
 
-gtry::UInt gtry::scl::grayCodeSynchronize(UInt in, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
+gtry::Bit gtry::scl::synchronizeEvent(Bit eventIn, const Clock& inClock, const Clock& outClock)
+{
+	Area area("synchronizeEvent", true);
+	ClockScope csIn{ inClock };
+
+	Bit state;
+	state = reg(eventIn ^ state, '0');
+
+	ClockScope csOut{ outClock };
+
+	return edge(synchronize(state, '0', inClock, outClock, 3, false));
+}
+
+gtry::UInt gtry::scl::synchronizeGrayCode(UInt in, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
 {
 	return grayDecode(synchronize(grayEncode(in), inClock, outClock, outStages, inStage));
 }
 
-gtry::UInt gtry::scl::grayCodeSynchronize(UInt in, UInt reset, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
+gtry::UInt gtry::scl::synchronizeGrayCode(UInt in, UInt reset, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
 {
 	return grayDecode(synchronize(grayEncode(in), grayEncode(reset), inClock, outClock, outStages, inStage));
 }

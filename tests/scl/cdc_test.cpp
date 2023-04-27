@@ -60,3 +60,61 @@ BOOST_FIXTURE_TEST_CASE(grayCode, BoostUnitTestSimulationFixture)
 	design.postprocess();
 	runTicks(clock.getClk(), 2048);
 }
+
+BOOST_FIXTURE_TEST_CASE(eventSyncTest, BoostUnitTestSimulationFixture)
+{
+		const size_t eventsToSend = 10;
+
+		for (size_t clockIncrement = 0; clockIncrement < 500'000'000; clockIncrement += 16'180'398) {
+			Clock inClk({ .absoluteFrequency = 100'000'000 });
+			Clock outClk({ .absoluteFrequency = 10'000'000 + clockIncrement});
+			ClockScope clkScp(inClk);
+			Bit eventIn;
+			pinIn(eventIn, "eventIn_" + std::to_string(clockIncrement));
+
+			Bit eventOut = gtry::scl::synchronizeEvent(eventIn, inClk, outClk);
+			{
+				ClockScope clock(outClk);
+				pinOut(eventOut, "eventOut_" + std::to_string(clockIncrement));
+			}
+
+			std::shared_ptr<size_t> eventsSent = std::make_shared<size_t>(0);
+			std::shared_ptr<size_t> eventsCaught = std::make_shared<size_t>(0);
+			
+			addSimulationProcess([=]()->SimProcess {
+				simu(eventIn) = '0';
+				*eventsSent = 0;
+
+				while (*eventsSent < eventsToSend) {
+					simu(eventIn) = '1';
+					co_await OnClk(inClk);
+					simu(eventIn) = '0';
+					(*eventsSent)++;
+					co_await OnClk(inClk);
+					while (*eventsCaught < *eventsSent) {
+						co_await OnClk(inClk);
+					}
+				}
+				});
+
+			addSimulationProcess([=]()->SimProcess {
+				*eventsCaught = 0;
+				while (*eventsCaught < eventsToSend) {
+					while (simu(eventOut) != '1')
+						co_await OnClk(outClk);
+					BOOST_TEST(simu(eventOut) == '1');
+					co_await OnClk(outClk);
+					BOOST_TEST(simu(eventOut) == '0');
+					(*eventsCaught)++;
+				}
+				BOOST_TEST(*eventsSent == *eventsCaught);
+				stopTest();
+			});
+		}
+
+		design.postprocess();
+		BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
+
+

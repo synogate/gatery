@@ -719,6 +719,48 @@ namespace gtry::scl
 		return stream.regDownstream(settings);
 	}
 
+	template<Signal Tp, Signal... Meta>
+	RvStream<Tp, Meta...> synchronizeStreamReqAck(RvStream<Tp, Meta...>& in, const Clock& inClock, const Clock& outClock)
+	{
+		Area area("synchronizeStreamReqAck", true);
+		ClockScope csIn{ inClock };
+		Stream crossingStream = in
+			.template remove<Ready>()
+			.template remove<Valid>();
+
+		Bit eventIn;
+		Bit idle = flag(ready(in), eventIn, '1');
+		eventIn = valid(in) & idle;
+		HCL_NAMED(eventIn);	
+
+		Bit outputEnableCondition = synchronizeEvent(eventIn, inClock, outClock);
+		HCL_NAMED(outputEnableCondition);
+
+		crossingStream = reg(crossingStream);
+
+		ClockScope csOut{ outClock };
+		
+		crossingStream = allowClockDomainCrossing(crossingStream, inClock, outClock);
+
+		ENIF(outputEnableCondition){
+			Clock dontSimplifyEnableRegClk = outClock.deriveClock({ .synchronizationRegister = true });
+			crossingStream = reg(crossingStream, RegisterSettings{ .clock = dontSimplifyEnableRegClk });
+		}
+
+		RvStream out = crossingStream
+			.add(Ready{})
+			.add(Valid{})
+			.template reduceTo<RvStream<Tp, Meta...>>();
+
+		Bit outValid;
+		outValid = flag(outputEnableCondition, outValid & ready(out));
+		valid(out) = outValid;
+
+		ready(in) = synchronizeEvent(transfer(out), outClock, inClock);
+		
+		return out;
+	}
+
 	template<StreamSignal T>
 	T pipeinput(T& stream, PipeBalanceGroup& group) 
 	{
