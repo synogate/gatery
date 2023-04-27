@@ -17,6 +17,7 @@
 */
 #pragma once
 #include "Fifo.h"
+#include "stream/Stream.h" 
 
 namespace gtry::scl
 {
@@ -106,8 +107,21 @@ namespace gtry::scl
 	template<Signal TData>
 	inline void TransactionalFifo<TData>::generateCdc(const UInt& pushPut, UInt& pushGet, UInt& popPut, const UInt& popGet)
 	{
-		HCL_ASSERT(!"no impl");
+		//HCL_ASSERT(!"no impl");
 		// TDOD: implement cdc using handshake as graycode is insufficient for us
+		RvStream<UInt> pushPutStream{ pushPut };
+		valid(pushPutStream) = '1';
+		RvStream<UInt> syncronizablePushPutStream = pushPutStream.regDownstream();
+		auto popPutStream = synchronizeStreamReqAck(syncronizablePushPutStream, *Fifo<TData>::m_pushClock, *Fifo<TData>::m_popClock);
+		popPut = *popPutStream;
+		ready(popPutStream) = '1';
+		
+		RvStream<UInt> popGetStream{ popGet };
+		valid(popGetStream) = '1';
+		RvStream<UInt> synchronizablePopGetStream = popGetStream.regDownstream();
+		auto pushGetStream = synchronizeStreamReqAck(synchronizablePopGetStream, *Fifo<TData>::m_popClock, *Fifo<TData>::m_pushClock);
+		pushGet = *(pushGetStream);
+		ready(pushGetStream) = '1';
 	}
 
 	template<Signal TData>

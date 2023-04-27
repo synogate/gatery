@@ -1098,3 +1098,38 @@ BOOST_FIXTURE_TEST_CASE(TransactionalFifo_StoreForwardStream_sopeop, StreamTrans
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
 }
+
+BOOST_FIXTURE_TEST_CASE(DC_TransactionalFifo_StoreForwardStream, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::RvPacketStream<UInt, scl::Error> in = { 16_b };
+	scl::RvPacketStream<UInt> out = scl::storeForwardFifo(in, 32);
+
+	error(in) = '0';
+
+	In(in);
+	Out(out);
+	transfers(1000);
+	simulateTransferTest(in, out);
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(DC_TransactionalFifo_StoreForwardStream_sopeop, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::RsPacketStream<UInt> in = { 16_b };
+	scl::RsPacketStream<UInt> out = scl::storeForwardFifo(in, 32);
+
+	In(in);
+	Out(out);
+	transfers(1000);
+	simulateTransferTest(in, out);
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
