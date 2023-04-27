@@ -256,6 +256,9 @@ namespace gtry::scl
 	template<Signal Tf, StreamSignal Ts>
 	void connect(Fifo<Tf>& sink, Ts& source);
 
+	template<Signal T>
+	void connect(Fifo<T>& sink, RvStream<T>& source);
+
 	/**
 	 * @brief Connect a FIFO as source to a Stream as sink.
 	 * @param sink Stream instance.
@@ -264,6 +267,8 @@ namespace gtry::scl
 	template<StreamSignal Ts, Signal Tf>
 	void connect(Ts& sink, Fifo<Tf>& source);
 
+	template<Signal T>
+	void connect(RvStream<T>& sink, Fifo<T>& source);
 
 
 	template<StreamSignal T> 
@@ -672,12 +677,30 @@ namespace gtry::scl
 		ready(source) = !sink.full();
 	}
 
+	template<Signal T>
+	void connect(Fifo<T>& sink, RvStream<T>& source)
+	{
+		IF(transfer(source))
+			sink.push(*source);
+		ready(source) = !sink.full();
+	}
+
 	template<StreamSignal Ts, Signal Tf>
 	void connect(Ts& sink, Fifo<Tf>& source)
 	{
 		downstream(sink) = source.peek();
 		valid(sink) = !source.empty();
 	
+		IF(transfer(sink))
+			source.pop();
+	}
+
+	template<Signal T>
+	void connect(RvStream<T>& sink, Fifo<T>& source)
+	{
+		*sink = source.peek();
+		valid(sink) = !source.empty();
+
 		IF(transfer(sink))
 			source.pop();
 	}
@@ -694,6 +717,48 @@ namespace gtry::scl
 	{
 		static_assert(!stream.template has<Ready>(), "cannot create upstream register from const stream");
 		return stream.regDownstream(settings);
+	}
+
+	template<Signal Tp, Signal... Meta>
+	RvStream<Tp, Meta...> synchronizeStreamReqAck(RvStream<Tp, Meta...>& in, const Clock& inClock, const Clock& outClock)
+	{
+		Area area("synchronizeStreamReqAck", true);
+		ClockScope csIn{ inClock };
+		Stream crossingStream = in
+			.template remove<Ready>()
+			.template remove<Valid>();
+
+		Bit eventIn;
+		Bit idle = flag(ready(in), eventIn, '1');
+		eventIn = valid(in) & idle;
+		HCL_NAMED(eventIn);	
+
+		Bit outputEnableCondition = synchronizeEvent(eventIn, inClock, outClock);
+		HCL_NAMED(outputEnableCondition);
+
+		crossingStream = reg(crossingStream);
+
+		ClockScope csOut{ outClock };
+		
+		crossingStream = allowClockDomainCrossing(crossingStream, inClock, outClock);
+
+		ENIF(outputEnableCondition){
+			Clock dontSimplifyEnableRegClk = outClock.deriveClock({ .synchronizationRegister = true });
+			crossingStream = reg(crossingStream, RegisterSettings{ .clock = dontSimplifyEnableRegClk });
+		}
+
+		RvStream out = crossingStream
+			.add(Ready{})
+			.add(Valid{})
+			.template reduceTo<RvStream<Tp, Meta...>>();
+
+		Bit outValid;
+		outValid = flag(outputEnableCondition, outValid & ready(out));
+		valid(out) = outValid;
+
+		ready(in) = synchronizeEvent(transfer(out), outClock, inClock);
+		
+		return out;
 	}
 
 	template<StreamSignal T>

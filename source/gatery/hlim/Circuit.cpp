@@ -20,6 +20,7 @@
 #include "RevisitCheck.h"
 
 #include "../debug/DebugInterface.h"
+#include "../export/DotExport.h"
 
 #include "NodeGroup.h"
 #include "SignalGroup.h"
@@ -1264,10 +1265,11 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
 	dbg::changeState(dbg::State::POSTPROCESS);
 	postProcessor.run(*this);
 
-	detectUnguardedCDCCrossings(*this, ConstSubnet::all(*this), [](const BaseNode *affectedNode) {
+	detectUnguardedCDCCrossings(*this, ConstSubnet::all(*this), [this](const BaseNode *affectedNode) {
 		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING 
 				<< "Unintentional clock domain crossing detected at node " << affectedNode
 		);
+		visualize(*this, "CDC");
 		std::stringstream msg;
 		msg << "Unintentional clock domain crossing detected at node: " << affectedNode->getName() << " " << affectedNode->getTypeName() << " (" << affectedNode->getId() << " ) from:"
 			<< affectedNode->getStackTrace();

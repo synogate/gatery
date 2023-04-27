@@ -268,7 +268,9 @@ protected:
 
 	void simulateBackPressure(scl::StreamSignal auto& stream)
 	{
-		addSimulationProcess([&]()->SimProcess {
+		auto recvClock = ClockScope::getClk();
+
+		addSimulationProcess([&, recvClock]()->SimProcess {
 			std::mt19937 rng{ std::random_device{}() };
 
 			simu(ready(stream)) = '0';
@@ -277,12 +279,12 @@ protected:
 			while (simu(valid(stream)) == '0');
 
 			// todo: not good
-			co_await WaitFor(Seconds{1,10} / m_clock.absoluteFrequency());
+			co_await WaitFor(Seconds{1,10} / recvClock.absoluteFrequency());
 
-			while(true)
+			while (true)
 			{
 				simu(ready(stream)) = rng() % 2 != 0;
-				co_await AfterClk(m_clock);
+				co_await AfterClk(recvClock);
 			}
 		});
 	}
@@ -374,13 +376,15 @@ protected:
 	template<scl::StreamSignal T>
 	void simulateRecvData(const T& stream)
 	{
+		auto recvClock = ClockScope::getClk();
+
 		auto myTransfer = pinOut(transfer(stream)).setName("simulateRecvData_transfer");
 
 		addSimulationProcess([=, this, &stream]()->SimProcess {
 			std::vector<size_t> expectedValue(m_groups);
 			while(true)
 			{
-				co_await OnClk(m_clock);
+				co_await OnClk(recvClock);
 
 				if(simu(myTransfer) == '1')
 				{
@@ -393,10 +397,10 @@ protected:
 					}
 				}
 
-				if(std::ranges::all_of(expectedValue, [=, this](size_t val) { return val == m_transfers; }))
+				if (std::ranges::all_of(expectedValue, [=, this](size_t val) { return val == m_transfers; }))
 				{
 					stopTest();
-					co_await AfterClk(m_clock);
+					co_await AfterClk(recvClock);
 				}
 			}
 		});
@@ -1064,6 +1068,79 @@ BOOST_FIXTURE_TEST_CASE(stream_stall, StreamTransferFixture)
 	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
+
+BOOST_FIXTURE_TEST_CASE(ReqAckSync_1_10, StreamTransferFixture)
+{
+	Clock outClk({ .absoluteFrequency = 10'000'000 });
+	HCL_NAMED(outClk);
+	ClockScope clkScp(m_clock);
+
+	scl::RvStream<UInt> in{ .data = 5_b };
+	In(in);
+	simulateSendData(in, 0);
+	groups(1);
+
+	scl::RvStream<UInt> out = gtry::scl::synchronizeStreamReqAck(in, m_clock, outClk);
+	{
+		ClockScope clock(outClk);
+		Out(out);
+
+		simulateBackPressure(out);
+		simulateRecvData(out);
+	}
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(ReqAckSync_1_1, StreamTransferFixture)
+{
+	Clock outClk({ .absoluteFrequency = 100'000'000 });
+	HCL_NAMED(outClk);
+	ClockScope clkScp(m_clock);
+
+	scl::RvStream<UInt> in{ .data = 5_b };
+	In(in);
+	simulateSendData(in, 0);
+	groups(1);
+
+	scl::RvStream<UInt> out = gtry::scl::synchronizeStreamReqAck(in, m_clock, outClk);
+	{
+		ClockScope clock(outClk);
+		Out(out);
+
+		simulateBackPressure(out);
+		simulateRecvData(out);
+	}
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(ReqAckSync_10_1, StreamTransferFixture)
+{
+	Clock outClk({ .absoluteFrequency = 1000'000'000 });
+	HCL_NAMED(outClk);
+	ClockScope clkScp(m_clock);
+
+	scl::RvStream<UInt> in{ .data = 5_b };
+	In(in);
+	simulateSendData(in, 0);
+	groups(1);
+
+	scl::RvStream<UInt> out = gtry::scl::synchronizeStreamReqAck(in, m_clock, outClk);
+	{
+		ClockScope clock(outClk);
+		Out(out);
+
+		simulateBackPressure(out);
+		simulateRecvData(out);
+	}
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
 
 BOOST_FIXTURE_TEST_CASE(TransactionalFifo_StoreForwardStream, StreamTransferFixture)
 {
