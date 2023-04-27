@@ -20,12 +20,12 @@
 
 namespace gtry::scl
 {
-	inline Bit flag(const Bit& set, const Bit& reset)
+	inline Bit flag(const Bit& set, const Bit& reset, char resetValue = '0')
 	{
 		Bit ret;
 		ret |= set;
 		ret &= !reset;
-		ret = reg(ret, '0');
+		ret = reg(ret, resetValue);
 		return ret;
 	}
 
