@@ -30,6 +30,8 @@ namespace gtry::scl
 	struct Valid;
 	struct ByteEnable;
 	struct Error;
+	struct TxId;
+	struct Sop;
 
 	namespace internal
 	{
@@ -109,6 +111,10 @@ namespace gtry::scl
 
 		template<Signal T> auto remove();
 		template<Signal T> auto remove() const requires(Assignable<AssignabilityTestType>);
+		auto removeUpstream() { return remove<Ready>(); }
+		auto removeUpstream() const requires(Assignable<AssignabilityTestType>) { return *this; }
+		auto removeFlowControl() { return remove<Ready>().remove<Valid>().remove<Sop>(); }
+		auto removeFlowControl() const requires(Assignable<AssignabilityTestType>) { return remove<Valid>().remove<Sop>(); }
 
 		/**
 		 * @brief	Puts a register in the valid and data path.
@@ -180,12 +186,12 @@ namespace gtry::scl
 	 * @param stream to test
 	 * @return source has data
 	*/
-	template<StreamSignal T> const Bit valid(const T& stream) { return '1'; }
-
-	template<StreamSignal T> const Bit eop(const T& stream) { return '1'; }
-	template<StreamSignal T> const Bit sop(const T& stream) { return '1'; }
-	template<StreamSignal T> const UInt byteEnable(const T& stream) { return ConstUInt(1, 1_b); }
-	template<StreamSignal T> const Bit error(const T& stream) { return '0'; }
+	const Bit valid(const StreamSignal auto& stream) { return '1'; }
+	const Bit eop(const StreamSignal auto& stream) { return '1'; }
+	const Bit sop(const StreamSignal auto& stream) { return '1'; }
+	const UInt byteEnable(const StreamSignal auto& stream) { return ConstUInt(1, 1_b); }
+	const Bit error(const StreamSignal auto& stream) { return '0'; }
+	const UInt txid(const StreamSignal auto& stream) { return 0; }
 
 	struct Ready
 	{
@@ -230,6 +236,16 @@ namespace gtry::scl
 	template<StreamSignal T> requires (T::template has<Error>())
 	const Bit& error(const T& stream) { return stream.template get<Error>().error; }
 
+
+	struct TxId
+	{
+		UInt txid;
+	};
+
+	template<StreamSignal T> requires (T::template has<TxId>())
+	UInt& txid(T& stream) { return stream.template get<TxId>().txid; }
+	template<StreamSignal T> requires (T::template has<TxId>())
+	const UInt& txid(const T& stream) { return stream.template get<TxId>().txid; }
 
 	template<Signal T, Signal... Meta>
 	using RvStream = Stream<T, scl::Ready, scl::Valid, Meta...>;
@@ -766,6 +782,15 @@ namespace gtry::scl
 	{
 		return stream.pipeinputDownstream(group);
 	}
+
+	template<Signal T, Signal... Meta>
+	Stream<T, Meta...> lookup(Stream<UInt, Meta...>& addr, Memory<T>& memory)
+	{
+		Stream<T, Meta...> out = addr.transform([&](const UInt& address) {
+			return memory[address].read();
+		});
+		return out.regDownstream(RegisterSettings{ .allowRetimingBackward = true });
+	}
 }
 
 namespace gtry {
@@ -809,3 +834,4 @@ namespace gtry {
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Ready, ready);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Valid, valid);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::ByteEnable, byteEnable);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::TxId, txid);
