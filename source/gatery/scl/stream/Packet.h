@@ -78,8 +78,14 @@ namespace gtry::scl
 	template<Signal Payload, Signal... MetaIn, Signal... MetaFifo>
 	void connect(scl::TransactionalFifo<PacketStream<Payload, MetaFifo...>>& fifo, Stream<Payload, Ready, MetaIn...>& inStream);
 
+	template<Signal Payload, Signal... MetaIn>
+	void connect(scl::TransactionalFifo<Payload>& fifo, Stream<Payload, Ready, MetaIn...>& inStream);
+
 	template<Signal Payload, Signal... MetaFifo, Signal... MetaOut>
 	void connect(Stream<Payload, MetaOut...>& packetStream, scl::TransactionalFifo<PacketStream<Payload, MetaFifo...>>& fifo);
+
+	template<Signal Payload, Signal... MetaOut>
+	void connect(Stream<Payload, MetaOut...>& packetStream, scl::TransactionalFifo<Payload>& fifo);
 
 	template<Signal Payload, Signal... Meta> auto storeForwardFifo(RvPacketStream<Payload, Meta...>& in, size_t minElements);
 	template<Signal Payload, Signal... Meta> auto storeForwardFifo(RsPacketStream<Payload, Meta...>& in, size_t minElements);
@@ -122,6 +128,25 @@ namespace gtry::scl
 		}
 	}
 
+	template<Signal Payload, Signal... MetaIn>
+	void connect(scl::TransactionalFifo<Payload>& fifo, Stream<Payload, Ready, MetaIn...>& inStream)
+	{
+		ready(inStream) = !fifo.full();
+
+		IF(transfer(inStream))
+		{
+			fifo.push(*inStream);
+
+			IF(eop(inStream))
+			{
+				IF(error(inStream))
+					fifo.rollbackPush();
+				ELSE
+					fifo.commitPush();
+			}
+		}
+	}
+
 	template<Signal Payload, Signal... MetaFifo, Signal... MetaOut>
 	void connect(Stream<Payload, MetaOut...>& packetStream, scl::TransactionalFifo<PacketStream<Payload, MetaFifo...>>& fifo)
 	{
@@ -131,6 +156,21 @@ namespace gtry::scl
 		std::apply([&](auto&&... meta) {
 			((packetStream.template get<std::remove_cvref_t<decltype(meta)>>() = meta), ...);
 		}, fifo.peek()._sig);
+
+		if constexpr (packetStream.template has<Valid>())
+			valid(packetStream) = !fifo.empty();
+		
+		if constexpr (packetStream.template has<Sop>())
+			sop(packetStream) = !fifo.empty() & !flag(ready(packetStream) & !fifo.empty(), ready(packetStream) & eop(packetStream));
+
+		IF(transfer(packetStream))
+			fifo.pop();
+	}
+
+	template<Signal Payload, Signal... MetaOut>
+	void connect(Stream<Payload, MetaOut...>& packetStream, scl::TransactionalFifo<Payload>& fifo)
+	{
+		*packetStream = fifo.peek();
 
 		if constexpr (packetStream.template has<Valid>())
 			valid(packetStream) = !fifo.empty();
