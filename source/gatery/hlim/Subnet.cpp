@@ -423,24 +423,55 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllFromNodeGroup(NodeGroup* 
 template<bool makeConst, typename FinalType>
 void SubnetTemplate<makeConst, FinalType>::dilate(bool forward, bool backward)
 {
+	DilateDir dir = DilateDir::none;
+	if (forward)
+		dir = DilateDir::output;
+	if (backward)
+		dir = DilateDir::input;
+	if (forward && backward)
+		dir = DilateDir::both;
+
+	dilate(dir, 1);
+}
+
+template<bool makeConst, typename FinalType>
+void SubnetTemplate<makeConst, FinalType>::dilate(DilateDir dir, size_t steps)
+{
+	dilateIf([=](const NodeType& node) {
+		return dir;
+	}, steps);
+}
+
+template<bool makeConst, typename FinalType>
+void SubnetTemplate<makeConst, FinalType>::dilateIf(std::function<DilateDir(const NodeType&)> filter, size_t stepLimit)
+{
+	size_t steps = 0;
 	std::vector<NodeType*> newNodes;
-	for (auto n : m_nodes) {
-		if (backward)
-			for (auto i : utils::Range(n->getNumInputPorts())) {
-				auto np = n->getDriver(i);
-				if (np.node != nullptr && !m_nodes.contains(np.node))
-					newNodes.push_back(np.node);
-			}
+	std::vector<NodeType*> lastStepNodes{ m_nodes.begin(), m_nodes.end() };
 
-		if (forward)
-			for (auto i : utils::Range(n->getNumOutputPorts())) {
-				for (auto np : n->getDirectlyDriven(i))
-					if (!m_nodes.contains(np.node))
-						newNodes.push_back(np.node);
-			}
-	}
+	do
+	{
+		newNodes.clear();
 
-	m_nodes.insert(newNodes.begin(), newNodes.end());
+		for (NodeType* n : lastStepNodes)
+		{
+			DilateDir dir = filter(*n);
+
+			if (dir == DilateDir::input || dir == DilateDir::both)
+				for (auto i : utils::Range(n->getNumInputPorts())) 
+					if(auto np = n->getDriver(i); np.node)
+						if (auto [it, inserted] = m_nodes.insert(np.node); inserted)
+							newNodes.push_back(np.node);
+
+			if (dir == DilateDir::output || dir == DilateDir::both)
+				for (auto i : utils::Range(n->getNumOutputPorts())) 
+					for (auto np : n->getDirectlyDriven(i))
+						if (auto [it, inserted] = m_nodes.insert(np.node); inserted)
+							newNodes.push_back(np.node);
+		}
+		lastStepNodes.swap(newNodes);
+
+	} while (++steps != stepLimit && !newNodes.empty());
 }
 
 template<bool makeConst, typename FinalType>
