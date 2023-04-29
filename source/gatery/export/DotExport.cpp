@@ -20,6 +20,7 @@
 #include "DotExport.h"
 #include <gatery/utils/StableContainers.h>
 #include "../hlim/Circuit.h"
+#include "../hlim/Clock.h"
 #include "../hlim/NodeGroup.h"
 #include "../hlim/coreNodes/Node_Register.h"
 #include "../hlim/coreNodes/Node_Multiplexer.h"
@@ -152,7 +153,17 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
 						file << 'B';
 					file << ']';
 				}
+				for (auto* clk : node->getClocks())
+					if(clk)
+						file << ' ' << clk->getName();
 				file << "\"";
+				if (auto* reg = dynamic_cast<hlim::Node_Signal*>(node))
+				{
+					file << " tooltip=\"";
+					for (std::string trace : node->getStackTrace().formatEntriesFiltered())
+						file << trace << "\n";
+					file << "\"";
+				}
 				styleNode(file, node);
 				file << "];" << std::endl;
 				node2idx[node] = idx;
@@ -249,15 +260,18 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
 			file << " label=\"";
 			switch (type.type) {
 				case hlim::ConnectionType::BOOL:
-					file << "BOOL"; break;
+					file << "Bit"; break;
 				case hlim::ConnectionType::BITVEC:
-					file << "UInt(" << type.width << ')'; break;
+					file << "Vec(" << type.width << ')'; break;
 				case hlim::ConnectionType::DEPENDENCY:
 					file << "DEPENDENCY"; break;
 			}
 
-			if (dynamic_cast<hlim::Node_Register*>(node) && port == hlim::Node_Register::Input::RESET_VALUE)
-				file << " (reset)";
+			if (auto* reg = dynamic_cast<hlim::Node_Register*>(node))
+				if (port == hlim::Node_Register::Input::RESET_VALUE)
+					file << " (reset)";
+				else if (port == hlim::Node_Register::Input::ENABLE)
+					file << " (en)";
 
 			if (!auxLabel.empty())
 				file << " " << auxLabel;
