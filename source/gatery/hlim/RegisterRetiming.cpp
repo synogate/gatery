@@ -53,7 +53,9 @@
 #include <iostream>
 #include <optional>
 
- //#define DEBUG_OUTPUT
+#ifdef _DEBUG
+# define DEBUG_OUTPUT
+#endif
 
 namespace gtry::hlim {
 
@@ -1094,10 +1096,22 @@ std::optional<BackwardRetimingPlan> determineAreaToBeRetimedBackward(Circuit &ci
 			exp(circuit, retimingPlan.areaToBeRetimed.asConst());
 			exp.runGraphViz("areaToBeRetimed.svg");	
 		}
+		{
+			ConstSubnet net;
+			net.add(output.node);
+			net.dilate(DilateDir::output, 1);
+			net.dilateIf<Node_Register, Node_MemPort>(DilateDir::none, DilateDir::output);
+			net.dilateIf<Node_Register>(DilateDir::input, DilateDir::none, 1);
+
+			DotExport exp("retiming_registers.dot");
+			exp(circuit, net);
+			exp.runGraphViz("retiming_registers.svg");
+		}
+
 
 		Subnet subnet = retimingPlan.areaToBeRetimed;
-		subnet.dilate(false, true);
-		subnet.dilate(false, true);
+		//subnet.dilate(false, true);
+		//subnet.dilate(false, true);
 		subnet.dilate(false, true);
 		subnet.dilate(true, true);
 
