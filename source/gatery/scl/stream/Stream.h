@@ -116,8 +116,8 @@ namespace gtry::scl
 		template<Signal T> auto remove() const requires(Assignable<AssignabilityTestType>);
 		auto removeUpstream() { return remove<Ready>(); }
 		auto removeUpstream() const requires(Assignable<AssignabilityTestType>) { return *this; }
-		auto removeFlowControl() { return remove<Ready>().remove<Valid>().remove<Sop>(); }
-		auto removeFlowControl() const requires(Assignable<AssignabilityTestType>) { return remove<Valid>().remove<Sop>(); }
+		auto removeFlowControl() { return remove<Ready>().template remove<Valid>().template remove<Sop>(); }
+		auto removeFlowControl() const requires(Assignable<AssignabilityTestType>) { return remove<Valid>().template remove<Sop>(); }
 
 		/**
 		 * @brief	Puts a register in the valid and data path.
