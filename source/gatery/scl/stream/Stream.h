@@ -109,6 +109,9 @@ namespace gtry::scl
 		template<StreamSignal T> T reduceTo();
 		template<StreamSignal T> T reduceTo() const requires(Assignable<AssignabilityTestType>);
 
+		template<StreamSignal T> operator T ();
+		template<StreamSignal T> operator T () const requires(Assignable<AssignabilityTestType>);
+
 		template<Signal T> auto remove();
 		template<Signal T> auto remove() const requires(Assignable<AssignabilityTestType>);
 		auto removeUpstream() { return remove<Ready>(); }
@@ -445,6 +448,40 @@ namespace gtry::scl
 		std::apply([&](auto&... meta) {
 			((ret.template get<std::remove_cvref_t<decltype(meta)>>() = meta), ...);
 		}, ret._sig);
+		return ret;
+	}
+
+	template<Signal PayloadT, Signal ...Meta>
+	template<StreamSignal T> 
+	Stream<PayloadT, Meta...>::operator T ()
+	{
+		T ret{ data };
+
+		auto assignIfExist = [&](auto&& ms) {
+			if constexpr (T::template has<std::remove_cvref_t<decltype(ms)>>())
+				ret.template get<std::remove_cvref_t<decltype(ms)>>() <<= ms;
+		};
+
+		std::apply([&](auto&... meta) {
+			(assignIfExist(meta), ...);
+		}, _sig);
+		return ret;
+	}
+
+	template<Signal PayloadT, Signal ...Meta>
+	template<StreamSignal T> 
+	Stream<PayloadT, Meta...>::operator T () const requires(Assignable<AssignabilityTestType>)
+	{
+		T ret{ data };
+
+		auto assignIfExist = [&](auto&& ms) {
+			if constexpr (T::template has<std::remove_cvref_t<decltype(ms)>>())
+				ret.template get<std::remove_cvref_t<decltype(ms)>>() = ms;
+		};
+
+		std::apply([&](auto&... meta) {
+			(assignIfExist(meta), ...);
+		}, _sig);
 		return ret;
 	}
 
@@ -789,7 +826,7 @@ namespace gtry::scl
 		Stream<T, Meta...> out = addr.transform([&](const UInt& address) {
 			return memory[address].read();
 		});
-		return out.regDownstream(RegisterSettings{ .allowRetimingBackward = true });
+		return out.regDownstreamBlocking(RegisterSettings{ .allowRetimingBackward = true });
 	}
 }
 
