@@ -31,74 +31,74 @@
 
 namespace gtry::hlim {
 
-struct NodePort;
-struct RefCtdNodePort;
-class BaseNode;
-class NodeGroup;
-class Clock;
-class Subnet;
-class Circuit;
-class RevisitCheck;
-class SignalGroup;
+	struct NodePort;
+	struct RefCtdNodePort;
+	class BaseNode;
+	class NodeGroup;
+	class Clock;
+	class Subnet;
+	class Circuit;
+	class RevisitCheck;
+	class SignalGroup;
 
-class Node_Signal;
-class Node_Attributes;
+	class Node_Signal;
+	class Node_Attributes;
 
-/*
-class Circuit;
-class Report;
-class PostProcessor;
+	/*
+	class Circuit;
+	class Report;
+	class PostProcessor;
 
-class PostProcessingStep {
+	class PostProcessingStep {
+		public:
+			virtual ~PostProcessingStep() = default;
+			virtual void perform(PostProcessor &postProcessor, Circuit &circuit, Report &report);
+		protected:
+	};
+
+	class PostProcessor {
+		public:
+			enum Phase {
+				OPTIMIZATION,
+				COMPLEX_OPERATION_DECOMPOSITION,
+				SIGNAL_NAMING,
+				PLATFORM_ADAPTATION,
+				NUM_PHASES
+			};
+
+			PostProcessor &setReport(Report &report) { m_report = &report; return *this; }
+
+			void addPass(Phase phase, std::unique_ptr<PostProcessingStep> pass) { m_passes[phase].push_back(std::move(pass)); }
+		protected:
+			Report *m_report = nullptr;
+			std::array<std::vector<std::unique_ptr<PostProcessingStep>>, NUM_PHASES> m_passes;
+	};
+	*/
+
+
+	class PostProcessor {
 	public:
-		virtual ~PostProcessingStep() = default;
-		virtual void perform(PostProcessor &postProcessor, Circuit &circuit, Report &report);
-	protected:
-};
+		virtual void run(Circuit& circuit) const = 0;
+	};
 
-class PostProcessor {
-	public:
-		enum Phase {
-			OPTIMIZATION,
-			COMPLEX_OPERATION_DECOMPOSITION,
-			SIGNAL_NAMING,
-			PLATFORM_ADAPTATION,
-			NUM_PHASES
-		};
+	class TechnologyMapping;
 
-		PostProcessor &setReport(Report &report) { m_report = &report; return *this; }
-
-		void addPass(Phase phase, std::unique_ptr<PostProcessingStep> pass) { m_passes[phase].push_back(std::move(pass)); }
-	protected:
-		Report *m_report = nullptr;
-		std::array<std::vector<std::unique_ptr<PostProcessingStep>>, NUM_PHASES> m_passes;
-};
-*/
-
-
-class PostProcessor {
-	public:
-		virtual void run(Circuit &circuit) const = 0;
-};
-
-class TechnologyMapping;
-
-class DefaultPostprocessing : public PostProcessor
-{
+	class DefaultPostprocessing : public PostProcessor
+	{
 	public:
 		DefaultPostprocessing() { }
-		DefaultPostprocessing(const TechnologyMapping &techMapping) : m_techMapping(&techMapping) { }
-		virtual void run(Circuit &circuit) const override;
+		DefaultPostprocessing(const TechnologyMapping& techMapping) : m_techMapping(&techMapping) { }
+		virtual void run(Circuit& circuit) const override;
 	protected:
-		const TechnologyMapping *m_techMapping = nullptr;
+		const TechnologyMapping* m_techMapping = nullptr;
 
-		void generalOptimization(Circuit &circuit) const;
-		void memoryDetection(Circuit &circuit) const;
-		void exportPreparation(Circuit &circuit) const;
-};
+		void generalOptimization(Circuit& circuit) const;
+		void memoryDetection(Circuit& circuit) const;
+		void exportPreparation(Circuit& circuit) const;
+	};
 
-class MinimalPostprocessing : public PostProcessor
-{
+	class MinimalPostprocessing : public PostProcessor
+	{
 	public:
 		MinimalPostprocessing() { }
 		virtual void run(Circuit& circuit) const override;
@@ -106,81 +106,81 @@ class MinimalPostprocessing : public PostProcessor
 		void generalOptimization(Circuit& circuit) const;
 		void memoryDetection(Circuit& circuit) const;
 		void exportPreparation(Circuit& circuit) const;
-};
+	};
 
-class Circuit
-{
+	class Circuit
+	{
 	public:
 		Circuit();
 		~Circuit();
 
-		void copySubnet(const utils::StableSet<NodePort> &subnetInputs,
-						const utils::StableSet<NodePort> &subnetOutputs,
-						utils::StableMap<BaseNode*, BaseNode*> &mapSrc2Dst,
-						bool copyClocks = true);
+		void copySubnet(const utils::StableSet<NodePort>& subnetInputs,
+			const utils::StableSet<NodePort>& subnetOutputs,
+			utils::StableMap<BaseNode*, BaseNode*>& mapSrc2Dst,
+			bool copyClocks = true);
 
 		template<std::derived_from<BaseNode> NodeType, typename... Args>
-		NodeType *createNode(Args&&... args);
+		NodeType* createNode(Args&&... args);
 
-		BaseNode *createUnconnectedClone(BaseNode *srcNode, bool noId = false);
+		BaseNode* createUnconnectedClone(BaseNode* srcNode, bool noId = false);
 
 		template<typename... Args>
-		SignalGroup *createSignalGroup(Args&&... args);
+		SignalGroup* createSignalGroup(Args&&... args);
 
 		template<typename ClockType, typename... Args>
-		ClockType *createClock(Args&&... args);
+		ClockType* createClock(Args&&... args);
 
-		Clock *createUnconnectedClock(Clock *clock, Clock *newParent);
+		Clock* createUnconnectedClock(Clock* clock, Clock* newParent);
 
-		inline NodeGroup *getRootNodeGroup() { return m_root.get(); }
-		inline const NodeGroup *getRootNodeGroup() const { return m_root.get(); }
+		inline NodeGroup* getRootNodeGroup() { return m_root.get(); }
+		inline const NodeGroup* getRootNodeGroup() const { return m_root.get(); }
 
-		inline std::vector<std::unique_ptr<BaseNode>> &getNodes() { return m_nodes; }
-		inline const std::vector<std::unique_ptr<BaseNode>> &getNodes() const { return m_nodes; }
-		inline const std::vector<std::unique_ptr<Clock>> &getClocks() const { return m_clocks; }
+		inline std::vector<std::unique_ptr<BaseNode>>& getNodes() { return m_nodes; }
+		inline const std::vector<std::unique_ptr<BaseNode>>& getNodes() const { return m_nodes; }
+		inline const std::vector<std::unique_ptr<Clock>>& getClocks() const { return m_clocks; }
 
 		void inferSignalNames();
 
 		void insertConstUndefinedNodes();
 		void disconnectZeroBitSignalNodes();
 		void disconnectZeroBitOutputPins();
-		void optimizeRewireNodes(Subnet &subnet);
+		void optimizeRewireNodes(Subnet& subnet);
 		void cullSequentiallyDuplicatedSignalNodes();
 		void cullUnnamedSignalNodes();
 		void cullOrphanedSignalNodes();
-		void cullUnusedNodes(Subnet &subnet);
-		void mergeMuxes(Subnet &subnet);
-		void cullMuxConditionNegations(Subnet &subnet);
-		void removeIrrelevantMuxes(Subnet &subnet);
-		void removeIrrelevantComparisons(Subnet &subnet);
-		void mergeRewires(Subnet &subnet);
-		void removeNoOps(Subnet &subnet);
-		void foldRegisterMuxEnableLoops(Subnet &subnet);
-		void propagateConstants(Subnet &subnet);
-		void removeConstSelectMuxes(Subnet &subnet);
+		void cullUnusedNodes(Subnet& subnet);
+		void mergeMuxes(Subnet& subnet);
+		void cullMuxConditionNegations(Subnet& subnet);
+		void removeIrrelevantMuxes(Subnet& subnet);
+		void removeIrrelevantComparisons(Subnet& subnet);
+		void mergeRewires(Subnet& subnet);
+		void removeNoOps(Subnet& subnet);
+		void foldRegisterMuxEnableLoops(Subnet& subnet);
+		void propagateConstants(Subnet& subnet);
+		void removeConstSelectMuxes(Subnet& subnet);
 		void moveClockDriversToTop();
 		void ensureNoLiteralComparison();
-		void removeDisabledWritePorts(Subnet &subnet);
+		void removeDisabledWritePorts(Subnet& subnet);
 
 		void removeFalseLoops();
 
 		void ensureSignalNodePlacement();
 		void ensureMultiDriverNodePlacement();
 
-		void optimizeSubnet(Subnet &subnet);
-		void postprocess(const PostProcessor &postProcessor);
+		void optimizeSubnet(Subnet& subnet);
+		void postprocess(const PostProcessor& postProcessor);
 
-		Node_Signal *appendSignal(NodePort &nodePort);
-		Node_Signal *appendSignal(RefCtdNodePort &nodePort);
+		Node_Signal* appendSignal(NodePort& nodePort);
+		Node_Signal* appendSignal(RefCtdNodePort& nodePort);
 
-		Node_Attributes *getCreateAttribNode(NodePort &nodePort);
+		Node_Attributes* getCreateAttribNode(NodePort& nodePort);
 
 		void addSimulationProcess(std::function<sim::SimulationFunction<void>()> simProc) { m_simulationProcesses.push_back(std::move(simProc)); }
-		inline const std::vector<std::function<sim::SimulationFunction<void>()>> &getSimulationProcesses() const { return m_simulationProcesses; }
+		inline const std::vector<std::function<sim::SimulationFunction<void>()>>& getSimulationProcesses() const { return m_simulationProcesses; }
 
 		template<class SimVizClass>
-		void addSimulationVisualization(const SimVizClass &simViz) { m_simulationVisualizations.push_back(simViz.stripType()); }
-		inline const std::vector<sim::SimulationVisualization> &getSimulationVisualizations() const { return m_simulationVisualizations; }
+		void addSimulationVisualization(const SimVizClass& simViz) { m_simulationVisualizations.push_back(simViz.stripType()); }
+		inline const std::vector<sim::SimulationVisualization>& getSimulationVisualizations() const { return m_simulationVisualizations; }
 
 		std::uint64_t allocateGroupId(utils::RestrictTo<NodeGroup>) { return m_nextGroupId++; }
 
@@ -202,30 +202,33 @@ class Circuit
 		std::vector<std::function<sim::SimulationFunction<void>()>> m_simulationProcesses;
 		std::vector<sim::SimulationVisualization> m_simulationVisualizations;
 
-		void setNodeId(BaseNode *node);
-		void setClockId(Clock *clock);
-};
+		std::vector<size_t> m_debugNodeId;
+
+		void setNodeId(BaseNode* node);
+		void setClockId(Clock* clock);
+		void readDebugNodeIds();
+	};
 
 
-template<std::derived_from<BaseNode> NodeType, typename... Args>
-NodeType *Circuit::createNode(Args&&... args) {
-	m_nodes.push_back(std::make_unique<NodeType>(std::forward<Args>(args)...));
-	setNodeId(m_nodes.back().get());
-	return (NodeType *) m_nodes.back().get();
-}
+	template<std::derived_from<BaseNode> NodeType, typename... Args>
+	NodeType* Circuit::createNode(Args&&... args) {
+		m_nodes.push_back(std::make_unique<NodeType>(std::forward<Args>(args)...));
+		setNodeId(m_nodes.back().get());
+		return (NodeType*)m_nodes.back().get();
+	}
 
-template<typename ClockType, typename... Args>
-ClockType *Circuit::createClock(Args&&... args) {
-	m_clocks.push_back(std::make_unique<ClockType>(std::forward<Args>(args)...));
-	setClockId(m_clocks.back().get());
-	return (ClockType *) m_clocks.back().get();
-}
+	template<typename ClockType, typename... Args>
+	ClockType* Circuit::createClock(Args&&... args) {
+		m_clocks.push_back(std::make_unique<ClockType>(std::forward<Args>(args)...));
+		setClockId(m_clocks.back().get());
+		return (ClockType*)m_clocks.back().get();
+	}
 
-template<typename... Args>
-SignalGroup *Circuit::createSignalGroup(Args&&... args) {
-	m_signalGroups.push_back(std::make_unique<SignalGroup>(std::forward<Args>(args)...));
-	return m_signalGroups.back().get();
-}
+	template<typename... Args>
+	SignalGroup* Circuit::createSignalGroup(Args&&... args) {
+		m_signalGroups.push_back(std::make_unique<SignalGroup>(std::forward<Args>(args)...));
+		return m_signalGroups.back().get();
+	}
 
 
 }

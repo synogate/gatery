@@ -73,6 +73,10 @@ namespace gtry::hlim {
 
 Circuit::Circuit()
 {
+#ifdef _DEBUG
+	readDebugNodeIds();
+#endif
+
 	m_root.reset(new NodeGroup(*this, NodeGroup::GroupType::ENTITY));
 }
 
@@ -1477,12 +1481,33 @@ void Circuit::freeRevisitColor(std::uint64_t color, utils::RestrictTo<RevisitChe
 
 void Circuit::setNodeId(BaseNode *node)
 {
+#ifdef WIN32 // TODO find a portable way to do the same on linux
+	if (std::ranges::find(m_debugNodeId, m_nextNodeId) != m_debugNodeId.end())
+		DebugBreak();
+#endif
+
 	node->setId(m_nextNodeId++, {});
 }
 
 void Circuit::setClockId(Clock *clock)
 {
 	clock->setId(m_nextClockId++, {});
+}
+
+void Circuit::readDebugNodeIds()
+{
+	{
+		std::ifstream f{ "debug_nodes.txt" };
+		while (f)
+		{
+			size_t id = 0;
+			f >> id;
+			if (id)
+				m_debugNodeId.push_back(id);
+		}
+		std::ranges::sort(m_debugNodeId);
+	}
+	std::filesystem::remove("debug_nodes.txt");
 }
 
 }
