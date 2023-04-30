@@ -80,12 +80,12 @@ namespace gtry::hlim {
 					if (value.get(sim::DefaultConfig::DEFINED, 0)) {
 						if (value.get(sim::DefaultConfig::VALUE, 0) ^ top.negated) {
 							// The term is ANDed with a constant one, we can just ignore this
-							//doAddAsTerm = false;
+							doAddAsTerm = false;
 						} else {
 							// The term is ANDed with a constant zero. We can ignore this, 
 							// but this turns the entire expression FALSE
-							// doAddAsTerm = false;
-							// m_contradicting = true;
+							doAddAsTerm = false;
+							m_contradicting = true;
 						}
 					}
 				} else
@@ -159,7 +159,7 @@ namespace gtry::hlim {
 			if (it == other.m_terms.end()) return false;
 			if (it->second.negated == pair.second.negated) return false;
 		}
-		return true;
+		return m_terms.size() > 0;
 	}
 
 	bool Conjunction::isSubsetOf(const Conjunction &other) const {
