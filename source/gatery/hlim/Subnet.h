@@ -74,6 +74,7 @@ namespace gtry::hlim {
 
 		/// Adds just a single node
 		FinalType& add(NodeType* node);
+		FinalType& add(CircuitType& circuit, size_t nodeId);
 
 		/// Removes a single node
 		FinalType& remove(NodeType* node);
@@ -111,9 +112,9 @@ namespace gtry::hlim {
 		ConstSubnet& asConst() const { return (ConstSubnet&)*this; }
 
 		void dilate(bool forward, bool backward);
-		void dilate(DilateDir dir, size_t steps = 0);
-		void dilateIf(std::function<DilateDir(const NodeType&)> filter, size_t stepLimit = 0);
-		template<class... FilterNodeType> void dilateIf(DilateDir match, DilateDir notMatch = DilateDir::none, size_t stepLimit = 0);
+		void dilate(DilateDir dir, size_t steps = 0, std::optional<NodeType*> startNode = {});
+		void dilateIf(std::function<DilateDir(const NodeType&)> filter, size_t stepLimit = 0, std::optional<NodeType*> startNode = {});
+		template<class... FilterNodeType> void dilateIf(DilateDir match, DilateDir notMatch = DilateDir::none, size_t stepLimit = 0, std::optional<NodeType*> startNode = {});
 
 		inline const utils::StableSet<NodeType*>& getNodes() const { return m_nodes; }
 
@@ -141,10 +142,10 @@ namespace gtry::hlim {
 
 	template<bool makeConst, typename FinalType>
 	template<class... FilterNodeType>
-	void SubnetTemplate<makeConst, FinalType>::dilateIf(DilateDir match, DilateDir notMatch, size_t stepLimit)
+	void SubnetTemplate<makeConst, FinalType>::dilateIf(DilateDir match, DilateDir notMatch, size_t stepLimit, std::optional<NodeType*> startNode)
 	{
 		dilateIf([=](const NodeType& node) {
 			return (dynamic_cast<const FilterNodeType*>(&node) || ...) ? match : notMatch;
-		}, stepLimit);
+		}, stepLimit, startNode);
 	}
 }

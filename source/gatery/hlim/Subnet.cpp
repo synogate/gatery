@@ -127,6 +127,15 @@ FinalType &SubnetTemplate<makeConst, FinalType>::add(NodeType *node)
 }
 
 template<bool makeConst, typename FinalType>
+FinalType& SubnetTemplate<makeConst, FinalType>::add(CircuitType& circuit, size_t nodeId)
+{
+	for (auto& n : circuit.getNodes())
+		if (n->getId() == 609)
+			add(n.get());
+	return (FinalType&)*this;
+}
+
+template<bool makeConst, typename FinalType>
 FinalType &SubnetTemplate<makeConst, FinalType>::remove(NodeType *node)
 {
 	m_nodes.erase(node);
@@ -435,19 +444,27 @@ void SubnetTemplate<makeConst, FinalType>::dilate(bool forward, bool backward)
 }
 
 template<bool makeConst, typename FinalType>
-void SubnetTemplate<makeConst, FinalType>::dilate(DilateDir dir, size_t steps)
+void SubnetTemplate<makeConst, FinalType>::dilate(DilateDir dir, size_t steps, std::optional<NodeType*> startNode)
 {
 	dilateIf([=](const NodeType& node) {
 		return dir;
-	}, steps);
+	}, steps, startNode);
 }
 
 template<bool makeConst, typename FinalType>
-void SubnetTemplate<makeConst, FinalType>::dilateIf(std::function<DilateDir(const NodeType&)> filter, size_t stepLimit)
+void SubnetTemplate<makeConst, FinalType>::dilateIf(std::function<DilateDir(const NodeType&)> filter, size_t stepLimit, std::optional<NodeType*> startNode)
 {
 	size_t steps = 0;
 	std::vector<NodeType*> newNodes;
-	std::vector<NodeType*> lastStepNodes{ m_nodes.begin(), m_nodes.end() };
+	std::vector<NodeType*> lastStepNodes;
+
+	if (startNode)
+	{
+		add(*startNode);
+		lastStepNodes.push_back(*startNode);
+	}
+	else
+		lastStepNodes.insert(lastStepNodes.begin(), m_nodes.begin(), m_nodes.end());
 
 	do
 	{

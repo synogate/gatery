@@ -1098,8 +1098,7 @@ std::optional<BackwardRetimingPlan> determineAreaToBeRetimedBackward(Circuit &ci
 		}
 		{
 			ConstSubnet net;
-			net.add(output.node);
-			net.dilate(DilateDir::output, 1);
+			net.dilate(DilateDir::output, 1, output.node);
 			net.dilateIf<Node_Register, Node_MemPort>(DilateDir::none, DilateDir::output);
 			net.dilateIf<Node_Register>(DilateDir::input, DilateDir::none, 1);
 
