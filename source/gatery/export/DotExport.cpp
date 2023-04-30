@@ -273,6 +273,12 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
 				else if (port == hlim::Node_Register::Input::ENABLE)
 					file << " (en)";
 
+			if (auto* reg = dynamic_cast<hlim::Node_Multiplexer*>(node))
+				if (port == 0)
+					file << " (sel)";
+				else
+					file << " (" << (port - 1) << ")";
+
 			if (!auxLabel.empty())
 				file << " " << auxLabel;
 			file << "\"";
