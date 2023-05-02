@@ -109,8 +109,8 @@ namespace gtry::scl
 		template<StreamSignal T> T reduceTo();
 		template<StreamSignal T> T reduceTo() const requires(Assignable<AssignabilityTestType>);
 
-		template<StreamSignal T> operator T ();
-		template<StreamSignal T> operator T () const requires(Assignable<AssignabilityTestType>);
+		template<StreamSignal T> explicit operator T ();
+		template<StreamSignal T> explicit operator T () const requires(Assignable<AssignabilityTestType>);
 
 		template<Signal T> auto remove();
 		template<Signal T> auto remove() const requires(Assignable<AssignabilityTestType>);
@@ -874,3 +874,4 @@ BOOST_HANA_ADAPT_STRUCT(gtry::scl::Ready, ready);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Valid, valid);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::ByteEnable, byteEnable);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::TxId, txid);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::Error, error);
