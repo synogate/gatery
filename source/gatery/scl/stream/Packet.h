@@ -98,6 +98,12 @@ namespace gtry::scl
 	auto addEopDeferred(T& source, Bit insert);
 
 	auto addPacketSignalsFromCount(StreamSignal auto& source, UInt size);
+
+	template<Signal Payload, Signal ... Meta>
+	RvPacketStream<Payload, Meta...> addReadyAndFailOnBackpressure(VPacketStream<Payload, Meta...>& source);
+
+	template<Signal Payload, Signal ... Meta>
+	RsPacketStream<Payload, Meta...> addReadyAndFailOnBackpressure(SPacketStream<Payload, Meta...>& source);
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Eop, eop);
@@ -294,4 +300,47 @@ namespace gtry::scl
 		auto out = source.add(Eop{ end }).add(Sop{ start });
 		return out;
 	}
+
+	namespace internal
+	{
+		template<Signal Payload, Signal ... Meta>
+		auto addReadyAndFailOnBackpressure(Stream<Payload, Meta...>& source)
+		{
+			Area ent{ "scl_addReadyAndFailOnBackpreasure", true };
+			Stream ret = source
+				.add(Ready{})
+				.add(Error{ error(source) });
+
+			Bit hadError = flag(valid(source) & !ready(ret), transfer(ret) & eop(ret));
+			HCL_NAMED(hadError);
+			error(ret) |= hadError;
+
+			// If we have an EOP and we are not ready, we try to generate an eop.
+			// If there is no bubble to generate the eop, we discard the entire next packet.
+			Bit hadUnhandledEop = flag(valid(source) & eop(source), transfer(ret));
+			HCL_NAMED(hadUnhandledEop);
+			IF(hadUnhandledEop & !valid(source))
+			{
+				if constexpr (ret.template has<Valid>())
+					valid(ret) = '1';
+				eop(ret) = '1';
+			}
+
+			HCL_NAMED(ret);
+			return ret;
+		}
+	}
+
+	template<Signal Payload, Signal ... Meta>
+	RvPacketStream<Payload, Meta...> addReadyAndFailOnBackpressure(VPacketStream<Payload, Meta...>& source)
+	{
+		return (RvPacketStream<Payload, Meta...>)internal::addReadyAndFailOnBackpressure(source);
+	}
+
+	template<Signal Payload, Signal ... Meta>
+	RsPacketStream<Payload, Meta...> addReadyAndFailOnBackpressure(SPacketStream<Payload, Meta...>& source)
+	{
+		return (RsPacketStream<Payload, Meta...>)internal::addReadyAndFailOnBackpressure(source);
+	}
+
 }

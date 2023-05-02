@@ -312,33 +312,53 @@ protected:
 	}
 
 	template<class... Meta>
-	void simulateSendData(scl::RvPacketStream<UInt, Meta...>& stream, size_t group)
+	void simulateSendData(scl::Stream<UInt, Meta...>& stream, size_t group)
 	{
 		addSimulationProcess([=, this, &stream]()->SimProcess {
 			std::mt19937 rng{ std::random_device{}() };
 			for(size_t i = 0; i < m_transfers;)
 			{
 				const size_t packetLen = std::min<size_t>(m_transfers - i, rng() % 5 + 1);
-				for(size_t j = 0; j < packetLen; ++j)
-				{
-					simu(valid(stream)) = '0';
-					simu(eop(stream)).invalidate();
-					simu(*stream).invalidate();
-
-					while((rng() & 1) == 0)
-						co_await AfterClk(m_clock);
-
-					simu(valid(stream)) = '1';
-					simu(eop(stream)) = j == packetLen - 1;
-					simu(*stream) = i + j + group * m_transfers;
-
-					co_await scl::performTransferWait(stream, m_clock);
-				}
+				co_await sendDataPacket(stream, group, i, packetLen, rng());
 				i += packetLen;
 			}
 			simu(valid(stream)) = '0';
 			simu(*stream).invalidate();
 		});
+	}
+
+	template<class... Meta>
+	SimProcess sendDataPacket(scl::Stream<UInt, Meta...>& stream, size_t group, size_t packetOffset, size_t packetLen, uint64_t invalidBeats = 0)
+	{
+		constexpr bool hasValid = stream.template has<scl::Valid>();
+		for (size_t j = 0; j < packetLen; ++j)
+		{
+			simu(eop(stream)).invalidate();
+			simu(*stream).invalidate();
+			
+			if constexpr (hasValid)
+			{
+				simu(valid(stream)) = '0';
+				while ((invalidBeats & 1) != 0)
+				{
+					co_await AfterClk(m_clock);
+					invalidBeats >>= 1;
+				}
+				simu(valid(stream)) = '1';
+			}
+			else
+			{
+				simu(sop(stream)) = j == 0;
+			}
+
+			simu(eop(stream)) = j == packetLen - 1;
+			simu(*stream) = packetOffset + j + group * m_transfers;
+
+			co_await scl::performTransferWait(stream, m_clock);
+		}
+
+		if(!hasValid)
+			simu(sop(stream)) = '0';
 	}
 
 	template<class... Meta>
@@ -1148,10 +1168,8 @@ BOOST_FIXTURE_TEST_CASE(TransactionalFifo_StoreForwardStream, StreamTransferFixt
 
 	scl::RvPacketStream<UInt, scl::Error> in = { 16_b };
 	scl::RvPacketStream<UInt> out = scl::storeForwardFifo(in, 32);
-
-	error(in) = '0';
-
 	In(in);
+	error(in) = '0';
 	Out(out);
 	transfers(1000);
 	simulateTransferTest(in, out);
@@ -1233,3 +1251,183 @@ BOOST_FIXTURE_TEST_CASE(TransactionalFifoCDCSafe, StreamTransferFixture)
 	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
 }
 
+namespace gtry::scl
+{
+}
+
+BOOST_FIXTURE_TEST_CASE(addReadyAndFailOnBackpressure_test, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::VPacketStream<UInt, scl::Error> in = { 16_b };
+	scl::RvPacketStream<UInt, scl::Error> out = scl::addReadyAndFailOnBackpressure(in);
+
+	In(in);
+	Out(out);
+	groups(1);
+
+	addSimulationProcess([=, this, &out, &in]()->SimProcess {
+		simu(error(in)) = '0';
+		simu(ready(out)) = '1';
+
+		// simple packet passthrough test
+		fork(sendDataPacket(in, 0, 0, 3));
+		do co_await performTransferWait(out, m_clock);
+		while(simu(eop(out)) == '0');
+		BOOST_TEST(simu(error(out)) == '0');
+
+		// simple error passthrough test
+		fork(sendDataPacket(in, 0, 0, 3));
+		simu(error(in)) = '1';
+		do co_await performTransferWait(out, m_clock);
+		while (simu(eop(out)) == '0');
+		BOOST_TEST(simu(error(out)) == '1');
+		simu(error(in)) = '0';
+
+		// one beat not ready
+		fork(sendDataPacket(in, 0, 0, 3));
+		co_await OnClk(m_clock);
+		simu(ready(out)) = '0';
+		co_await OnClk(m_clock);
+		simu(ready(out)) = '1';
+		co_await OnClk(m_clock);
+		BOOST_TEST(simu(eop(out)) == '1');
+		BOOST_TEST(simu(error(out)) == '1');
+
+		// next packet after error should be valid
+		fork(sendDataPacket(in, 0, 0, 3));
+		do co_await performTransferWait(out, m_clock);
+		while (simu(eop(out)) == '0');
+		BOOST_TEST(simu(error(out)) == '0');
+
+		// eop beat not ready and bubble for generated eop
+		fork(sendDataPacket(in, 0, 0, 3));
+		co_await OnClk(m_clock);
+		co_await OnClk(m_clock);
+		simu(ready(out)) = '0';
+		co_await OnClk(m_clock);
+		co_await OnClk(m_clock);
+		co_await OnClk(m_clock);
+		simu(ready(out)) = '1';
+		co_await OnClk(m_clock);
+		BOOST_TEST(simu(valid(out)) == '1');
+		BOOST_TEST(simu(eop(out)) == '1');
+		BOOST_TEST(simu(error(out)) == '1');
+
+		// next packet after error should be valid
+		fork(sendDataPacket(in, 0, 0, 3));
+		do co_await performTransferWait(out, m_clock);
+		while (simu(eop(out)) == '0');
+		BOOST_TEST(simu(error(out)) == '0');
+
+		// eop beat not ready and NO bubble for generated eop
+		fork(sendDataPacket(in, 0, 0, 3));
+		co_await OnClk(m_clock);
+		co_await OnClk(m_clock);
+		simu(ready(out)) = '0';
+		co_await OnClk(m_clock);
+		co_await OnClk(m_clock);
+		co_await OnClk(m_clock);
+		simu(ready(out)) = '1';
+
+		fork(sendDataPacket(in, 0, 0, 3));
+		do co_await performTransferWait(out, m_clock);
+		while (simu(eop(out)) == '0');
+		BOOST_TEST(simu(error(out)) == '1');
+
+
+		stopTest();
+
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(addReadyAndFailOnBackpressure_sop_test, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::SPacketStream<UInt, scl::Error> in = { 16_b };
+	scl::RsPacketStream<UInt, scl::Error> out = scl::addReadyAndFailOnBackpressure(in);
+
+	In(in);
+	Out(out);
+	groups(1);
+
+	addSimulationProcess([=, this, &out, &in]()->SimProcess {
+		simu(error(in)) = '0';
+		simu(ready(out)) = '1';
+
+		// simple packet passthrough test
+		fork(sendDataPacket(in, 0, 0, 3));
+		do co_await performTransferWait(out, m_clock);
+		while (simu(eop(out)) == '0');
+		BOOST_TEST(simu(error(out)) == '0');
+
+		// simple error passthrough test
+		fork(sendDataPacket(in, 0, 0, 3));
+		simu(error(in)) = '1';
+		do co_await performTransferWait(out, m_clock);
+		while (simu(eop(out)) == '0');
+		BOOST_TEST(simu(error(out)) == '1');
+		simu(error(in)) = '0';
+
+		// one beat not ready
+		fork(sendDataPacket(in, 0, 0, 3));
+		co_await OnClk(m_clock);
+		simu(ready(out)) = '0';
+		co_await OnClk(m_clock);
+		simu(ready(out)) = '1';
+		co_await OnClk(m_clock);
+		BOOST_TEST(simu(eop(out)) == '1');
+		BOOST_TEST(simu(error(out)) == '1');
+
+		// next packet after error should be valid
+		fork(sendDataPacket(in, 0, 0, 3));
+		do co_await performTransferWait(out, m_clock);
+		while (simu(eop(out)) == '0');
+		BOOST_TEST(simu(error(out)) == '0');
+
+		// eop beat not ready and bubble for generated eop
+		fork(sendDataPacket(in, 0, 6, 3));
+		co_await OnClk(m_clock);
+		co_await OnClk(m_clock);
+		simu(ready(out)) = '0';
+		co_await OnClk(m_clock);
+		co_await OnClk(m_clock);
+		co_await OnClk(m_clock);
+		simu(ready(out)) = '1';
+		co_await OnClk(m_clock);
+		BOOST_TEST(simu(eop(out)) == '1');
+		BOOST_TEST(simu(error(out)) == '1');
+
+		// next packet after error should be valid
+		fork(sendDataPacket(in, 0, 0, 3));
+		do co_await performTransferWait(out, m_clock);
+		while (simu(eop(out)) == '0');
+		BOOST_TEST(simu(error(out)) == '0');
+
+		// eop beat not ready and NO bubble for generated eop
+		fork(sendDataPacket(in, 0, 0, 3));
+		co_await OnClk(m_clock);
+		co_await OnClk(m_clock);
+		simu(ready(out)) = '0';
+		co_await OnClk(m_clock);
+		co_await OnClk(m_clock);
+		co_await OnClk(m_clock);
+		simu(ready(out)) = '1';
+
+		fork(sendDataPacket(in, 0, 0, 3));
+		do co_await performTransferWait(out, m_clock);
+		while (simu(eop(out)) == '0');
+		BOOST_TEST(simu(error(out)) == '1');
+
+
+		stopTest();
+
+		});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
