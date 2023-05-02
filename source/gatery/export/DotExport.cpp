@@ -614,4 +614,12 @@ void visualize(const hlim::Circuit &circuit, const std::string &filename, hlim::
 	exp.runGraphViz(filename+".svg");
 }
 
+void visualize(const hlim::Circuit &circuit, const std::string &filename, const hlim::ConstSubnet &subnet)
+{
+	DotExport exp(filename+".dot");
+	exp(circuit, subnet);
+	exp.runGraphViz(filename+".svg");
+}
+
+
 }

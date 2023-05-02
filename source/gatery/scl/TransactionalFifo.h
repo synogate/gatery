@@ -17,6 +17,7 @@
 */
 #pragma once
 #include "Fifo.h"
+#include "stream/Stream.h" 
 
 namespace gtry::scl
 {
@@ -103,16 +104,21 @@ namespace gtry::scl
 		m_popRollback = '1';
 	}
 
+	namespace internal {
+		void generateCDCReqAck(const UInt& inData, UInt& outData, const Clock& inDataClock, const Clock& outDataClock);
+	}
+
 	template<Signal TData>
 	inline void TransactionalFifo<TData>::generateCdc(const UInt& pushPut, UInt& pushGet, UInt& popPut, const UInt& popGet)
 	{
-		HCL_ASSERT(!"no impl");
-		// TDOD: implement cdc using handshake as graycode is insufficient for us
+		internal::generateCDCReqAck(pushPut, popPut, *Fifo<TData>::m_pushClock, *Fifo<TData>::m_popClock);
+		internal::generateCDCReqAck(popGet, pushGet, *Fifo<TData>::m_popClock, *Fifo<TData>::m_pushClock);
 	}
 
 	template<Signal TData>
 	UInt TransactionalFifo<TData>::generatePush(Memory<TData>&mem, const UInt & get)
 	{
+		ClockScope clk{ *Fifo<TData>::m_pushClock };
 		if (!m_hasPushCommit)
 			commitPush();
 
@@ -154,6 +160,7 @@ namespace gtry::scl
 	template<Signal TData>
 	UInt TransactionalFifo<TData>::generatePop(const Memory<TData>& mem, const UInt& put)
 	{
+		ClockScope clk{ *Fifo<TData>::m_popClock };
 		if (!m_hasPopCommit)
 			commitPop();
 
