@@ -44,6 +44,10 @@ namespace gtry::utils
 
 	std::vector<std::string> StackTrace::formatEntries() const 
 	{ 
+#ifdef WIN32
+		// ifdef mio .... andy does not like filtering the stack trace
+		return formatEntriesFiltered();
+#else
 		static FrameResolver resolver;
 
 		std::vector<std::string> result;
@@ -51,6 +55,80 @@ namespace gtry::utils
 		for (auto i : Range(m_trace.size()))
 			result[i] = resolver.to_string(m_trace[i]); // (boost::format("[%08X] %s - %s(%d)") % m_trace[i].address() % m_trace[i].name() % m_trace[i].source_file() % m_trace[i].source_line()).str();
 	
+		return result;
+#endif
+	}
+
+	std::vector<std::string> StackTrace::formatEntriesFiltered() const
+	{
+		static FrameResolver resolver;
+
+		std::vector<std::string> result;
+		for (auto i : Range(m_trace.size()))
+		{
+			std::string formatted = resolver.to_string(m_trace[i]);
+
+			if (formatted.starts_with("boost::"))
+				continue;
+			if (formatted.starts_with("`boost::"))
+				continue;
+			if (formatted.starts_with("std::"))
+				continue;
+			if (formatted.starts_with("`std::"))
+				continue;
+			if (formatted.starts_with("gtry::") && !formatted.starts_with("gtry::scl::"))
+				continue;
+			if (formatted.starts_with("`gtry::") && !formatted.starts_with("`gtry::scl::"))
+				continue;
+
+			result.emplace_back(move(formatted));
+		}
+
+		while (!result.empty())
+			if (!result.back().starts_with("main "))
+				result.pop_back();
+			else
+				break;
+
+		if (result.size() > 1)
+		{
+			// remove common path prefix
+			std::string prefix;
+
+			for (const std::string& frame : result)
+			{
+				size_t pos = frame.find(" at ");
+				if (pos == std::string::npos)
+					continue;
+				pos += 4;
+
+				if (prefix.empty())
+				{
+					prefix = frame.substr(pos);
+					continue;
+				}
+
+				size_t prefixLen = 0;
+				for (char ref : prefix)
+					if (pos == frame.size() || ref != frame[pos++])
+						break;
+					else
+						prefixLen++;
+
+				prefix.resize(prefixLen);
+			}
+
+			for (std::string& frame : result)
+			{
+				size_t pos = frame.find(" at ");
+				if (pos == std::string::npos)
+					continue;
+				pos += 4;
+
+				frame = frame.substr(0, pos) + frame.substr(pos + prefix.size());
+			}
+		}
+
 		return result;
 	}
 
@@ -68,9 +146,14 @@ namespace gtry::utils
 #ifdef WIN32
 		std::string res;
 		idebug.to_string_impl(frame.address(), res);
+
+		for (char& c : res)
+			if (c == '\\')
+				c = '/';
+
 		return res;
 #else
-		return (boost::format("[%08X] %s - %s(%d)") % frame.address() % frame.name() % frame.source_file() % frame.source_line()).str();
+		return (boost::format("%s at %s:%d") % frame.name() % frame.source_file() % frame.source_line()).str();
 #endif
 	}
 }

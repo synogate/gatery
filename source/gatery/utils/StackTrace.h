@@ -45,6 +45,7 @@ namespace gtry::utils {
 		void record(size_t size, size_t skipTop);
 		const std::vector<boost::stacktrace::frame> &getTrace() const { return m_trace; }
 		std::vector<std::string> formatEntries() const;
+		std::vector<std::string> formatEntriesFiltered() const;
 	protected:
 		std::vector<boost::stacktrace::frame> m_trace;
 	};

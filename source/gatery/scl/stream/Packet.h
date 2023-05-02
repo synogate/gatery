@@ -32,7 +32,7 @@ namespace gtry::scl
 	template<StreamSignal T> requires (T::template has<Eop>())
 	const Bit& eop(const T& stream) { return stream.template get<Eop>().eop; }
 	template<StreamSignal T> requires (T::template has<Valid>() and T::template has<Eop>())
-	const Bit sop(const T& signal) { return !flag(transfer(signal), eop(signal)); }
+	const Bit sop(const T& signal) { return !flag(transfer(signal), transfer(signal) & eop(signal)); }
 
 
 	struct Sop
@@ -46,7 +46,7 @@ namespace gtry::scl
 	template<StreamSignal T> requires (T::template has<Sop>())
 	const Bit& sop(const T& stream) { return stream.template get<Sop>().sop; }
 	template<StreamSignal T> requires (!T::template has<Valid>() and T::template has<Sop>() and T::template has<Eop>())
-	const Bit valid(const T& signal) { return flag(sop(signal), eop(signal) & ready(signal)) | sop(signal); }
+	const Bit valid(const T& signal) { return flag(sop(signal) & ready(signal), eop(signal) & ready(signal)) | sop(signal); }
 
 
 	struct Empty

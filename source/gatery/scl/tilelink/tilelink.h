@@ -127,6 +127,11 @@ namespace gtry::scl
 	using TileLinkUB = TileLinkU<TileLinkCapBurst>;
 	using TileLinkUH = TileLinkU<TileLinkCapBurst, TileLinkCapHint, TileLinkCapAtomicArith, TileLinkCapAtomicLogic>;
 
+	inline UInt& txid(TileLinkChannelA& stream) { return stream->source; }
+	inline const UInt& txid(const TileLinkChannelA& stream) { return stream->source; }
+	inline UInt& txid(TileLinkChannelD& stream) { return stream->source; }
+	inline const UInt& txid(const TileLinkChannelD& stream) { return stream->source; }
+
 	template<StreamSignal T>
 	requires(T::template has<TileLinkA>())
 	UInt transferLength(const T& source);

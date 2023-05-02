@@ -22,6 +22,7 @@
 #include "Circuit.h"
 #include "coreNodes/Node_Logic.h"
 #include "coreNodes/Node_Signal.h"
+#include "coreNodes/Node_Constant.h"
 
 #include "CNF.h"
 #include "Subnet.h"
@@ -72,7 +73,22 @@ namespace gtry::hlim {
 			if (top.signal.node == nullptr)
 				m_undefined = true;
 			else {
-				bool isRegularNode = true;
+				bool doAddAsTerm = true;
+				if (Node_Constant *constNode = dynamic_cast<Node_Constant*>(top.signal.node)) {
+					const auto &value = constNode->getValue();
+					HCL_ASSERT(value.size() == 1);
+					if (value.get(sim::DefaultConfig::DEFINED, 0)) {
+						if (value.get(sim::DefaultConfig::VALUE, 0) ^ top.negated) {
+							// The term is ANDed with a constant one, we can just ignore this
+							doAddAsTerm = false;
+						} else {
+							// The term is ANDed with a constant zero. We can ignore this, 
+							// but this turns the entire expression FALSE
+							doAddAsTerm = false;
+							m_contradicting = true;
+						}
+					}
+				} else
 				if (Node_Logic *logicNode = dynamic_cast<Node_Logic*>(top.signal.node)) {
 					if (logicNode->getOp() == Node_Logic::NOT) {
 						stack.push_back({
@@ -80,7 +96,7 @@ namespace gtry::hlim {
 							.negated = !top.negated,
 							.lastLogicDriver = logicNode->getDriver(0),
 						});
-						isRegularNode = false;
+						doAddAsTerm = false;
 					} else
 					if (logicNode->getOp() == Node_Logic::AND) {
 						for (auto j : utils::Range(logicNode->getNumInputPorts()))
@@ -89,7 +105,7 @@ namespace gtry::hlim {
 								.negated = top.negated,
 								.lastLogicDriver = logicNode->getDriver(j),
 							});
-						isRegularNode = false;
+						doAddAsTerm = false;
 					}
 				} else
 				if (dynamic_cast<Node_Signal*>(top.signal.node)) {
@@ -98,10 +114,10 @@ namespace gtry::hlim {
 						.negated = top.negated,
 						.lastLogicDriver = top.lastLogicDriver,
 					});
-					isRegularNode = false;
+					doAddAsTerm = false;
 				}
 				
-				if (isRegularNode) {
+				if (doAddAsTerm) {
 					auto it = m_terms.find(top.signal);
 					if (it != m_terms.end())
 						m_contradicting |= it->second.negated != top.negated;
@@ -118,7 +134,8 @@ namespace gtry::hlim {
 
 	bool Conjunction::isEqualTo(const Conjunction &other) const {
 		if (m_undefined || other.m_undefined) return false;
-		if (m_contradicting && other.m_contradicting) return true;
+		if (m_contradicting || other.m_contradicting) 
+			return m_contradicting && other.m_contradicting;
 
 		if (m_terms.size() != other.m_terms.size()) return false;
 		for (const auto &pair : m_terms.anyOrder()) {
@@ -131,7 +148,10 @@ namespace gtry::hlim {
 
 	bool Conjunction::isNegationOf(const Conjunction &other) const {
 		if (m_undefined || other.m_undefined) return false;
-		if (m_contradicting && other.m_contradicting) return false;
+		if (m_contradicting)
+			return !other.m_contradicting && other.m_terms.empty();
+		if (other.m_contradicting)
+			return !m_contradicting && m_terms.empty();
 
 		if (m_terms.size() != other.m_terms.size()) return false;
 		for (const auto &pair : m_terms.anyOrder()) {
@@ -139,12 +159,12 @@ namespace gtry::hlim {
 			if (it == other.m_terms.end()) return false;
 			if (it->second.negated == pair.second.negated) return false;
 		}
-		return true;
+		return m_terms.size() > 0;
 	}
 
 	bool Conjunction::isSubsetOf(const Conjunction &other) const {
 		if (m_undefined || other.m_undefined) return false;
-		if (m_contradicting && other.m_contradicting) return false;
+		if (m_contradicting || other.m_contradicting) return false;
 
 		for (const auto &pair : m_terms.anyOrder()) {
 			auto it = other.m_terms.find(pair.second.driver);
