@@ -1,14 +1,13 @@
 #include "gatery/pch.h"
 #include "TransactionalFifo.h"
 
-void gtry::scl::internal::generateCDCReqAck(const UInt& inData, UInt& outData, Clock& inDataClock, Clock& outDataClock)
-
+void gtry::scl::internal::generateCDCReqAck(const UInt& inData, UInt& outData, const Clock& inDataClock, const Clock& outDataClock)
 {
-	//then use this function twice to implement generateCDC and hopefully break the include loops (add include streams to the start of this file if it's needed
 	RvStream<UInt> inDataStream{ inData };
 	valid(inDataStream) = '1';
-	RvStream<UInt> syncronizableInDataStream = inDataStream.regDownstream();
-	auto outDataStream = synchronizeStreamReqAck(syncronizableInDataStream, inDataClock, outDataClock);
-	outData = *outDataStream;
+	RvStream<UInt> synchronizableInDataStream = inDataStream.regDownstream(RegisterSettings{.clock = inDataClock});
+	auto outDataStream = synchronizeStreamReqAck(synchronizableInDataStream, inDataClock, outDataClock);
+	ENIF(valid(outDataStream))
+		outData = reg(*outDataStream, 0 , RegisterSettings{ .clock = outDataClock });
 	ready(outDataStream) = '1';
 }

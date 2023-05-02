@@ -1203,25 +1203,22 @@ BOOST_FIXTURE_TEST_CASE(TransactionalFifoCDCSafe, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-	scl::RvPacketStream<UInt, scl::Error> in = { 16_b };
-	decltype(in.template remove<scl::Error>().template remove<scl::Sop>()) out;
+	scl::RvPacketStream<UInt> in = { 16_b };
+	scl::RvPacketStream<UInt> out;
 	
 
-	scl::TransactionalFifo fifo(32, in
-		.template remove<scl::Error>()
-		.template remove<scl::Sop>()
-		.template remove<scl::Ready>()
-		.template remove<scl::Valid>());
+	scl::TransactionalFifo fifo(32, scl::PacketStream<UInt>{ in->width() });
 	
 	In(in);
 
 	fifo <<= in;
 
-	Clock outClk({ .absoluteFrequency = 10'000'000 });
-	HCL_NAMED(outClk);
 	simulateSendData(in, 0);
 	transfers(100);
+	groups(1);
 
+	Clock outClk({ .absoluteFrequency = 100'000'000 });
+	HCL_NAMED(outClk);
 	{
 		ClockScope clock(outClk);
 		out <<= fifo;

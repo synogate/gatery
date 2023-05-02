@@ -71,5 +71,6 @@ class DotExport
 };
 
 void visualize(const hlim::Circuit &circuit, const std::string &filename, hlim::NodeGroup *nodeGroup = nullptr);
+void visualize(const hlim::Circuit &circuit, const std::string &filename, const hlim::ConstSubnet &subnet);
 
 }

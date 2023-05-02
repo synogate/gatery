@@ -1269,7 +1269,14 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
 		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING 
 				<< "Unintentional clock domain crossing detected at node " << affectedNode
 		);
-		visualize(*this, "CDC");
+		visualize(*this, "CDC_full");
+
+		ConstSubnet net;
+		net.add(affectedNode); 
+		for(size_t i=0; i< 10; i++)
+			net.dilate(false, true);
+		
+		visualize(*this, "CDC_partial", net);
 		std::stringstream msg;
 		msg << "Unintentional clock domain crossing detected at node: " << affectedNode->getName() << " " << affectedNode->getTypeName() << " (" << affectedNode->getId() << " ) from:"
 			<< affectedNode->getStackTrace();
