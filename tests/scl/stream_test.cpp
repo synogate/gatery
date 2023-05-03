@@ -315,11 +315,14 @@ protected:
 	void simulateSendData(scl::Stream<UInt, Meta...>& stream, size_t group)
 	{
 		addSimulationProcess([=, this, &stream]()->SimProcess {
+			if constexpr (stream.template has<scl::Error>())
+				simu(error(stream)) = '0';
+
 			std::mt19937 rng{ std::random_device{}() };
 			for(size_t i = 0; i < m_transfers;)
 			{
 				const size_t packetLen = std::min<size_t>(m_transfers - i, rng() % 5 + 1);
-				co_await sendDataPacket(stream, group, i, packetLen, rng());
+				co_await sendDataPacket(stream, group, i, packetLen, rng() & rng());
 				i += packetLen;
 			}
 			simu(valid(stream)) = '0';
@@ -339,11 +342,9 @@ protected:
 			if constexpr (hasValid)
 			{
 				simu(valid(stream)) = '0';
-				while ((invalidBeats & 1) != 0)
-				{
+				for (;(invalidBeats & 1) != 0; invalidBeats >>= 1)
 					co_await AfterClk(m_clock);
-					invalidBeats >>= 1;
-				}
+				invalidBeats >>= 1;
 				simu(valid(stream)) = '1';
 			}
 			else
@@ -1169,7 +1170,6 @@ BOOST_FIXTURE_TEST_CASE(TransactionalFifo_StoreForwardStream, StreamTransferFixt
 	scl::RvPacketStream<UInt, scl::Error> in = { 16_b };
 	scl::RvPacketStream<UInt> out = scl::storeForwardFifo(in, 32);
 	In(in);
-	error(in) = '0';
 	Out(out);
 	transfers(1000);
 	simulateTransferTest(in, out);
@@ -1186,7 +1186,6 @@ BOOST_FIXTURE_TEST_CASE(TransactionalFifo_StoreForwardStream_PayloadOnly, Stream
 
 	scl::RvPacketStream<UInt, scl::Error> in = { 16_b };
 	In(in);
-	error(in) = '0';
 	fifo <<= in;
 
 	scl::RvPacketStream<UInt> out = { 16_b };
