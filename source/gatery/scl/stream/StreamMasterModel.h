@@ -28,15 +28,15 @@ namespace gtry::scl
 	public:
 
 		void init(BitWidth payloadW, bool debug = false);
-
 		void probability(float valid);
+
 
 		SimFunction<TransactionIn> request(TransactionOut tx, const Clock& clk);
 		SimProcess idle(size_t requestsPending = 0);
 
-		SimFunction<bool> push(uint64_t address, uint64_t logByteSize, uint64_t data, const Clock& clk);
+		SimFunction<bool> push();
 
-		auto& getLink() { return m_link; }
+		//auto& getLink() { return m_link; }
 
 	protected:
 		SimFunction<size_t> allocSourceId(const Clock& clk);
@@ -48,6 +48,7 @@ namespace gtry::scl
 		size_t m_requestNext = 0;
 		Condition m_requestCurrentChanged;
 
+		scl::RvPacketStream<UInt> in;
 		float m_validProbability = 1;
 		float m_readyProbability = 1;
 		std::vector<bool> m_sourceInUse;

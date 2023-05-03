@@ -13,7 +13,7 @@ namespace gtry::scl
 		Clock clk = ClockScope::getClk();
 
 		//tileLinkInit(m_link, addrWidth, dataWidth, sizeWidth, sourceWidth);
-		scl::RvPacketStream<UInt> in{ payloadW };
+		*in = payloadW;
 		In(in);
 
 		if (debug) {
@@ -33,7 +33,6 @@ namespace gtry::scl
 				co_await OnClk(clk);
 				if (in->eop) {
 					idle = 1;
-					simu(valid(in)) = '0';
 				}
 				if (idle) {
 					bool isValid = (m_dis(m_rng) <= m_validProbability);
