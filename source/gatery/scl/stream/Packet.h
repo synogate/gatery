@@ -108,6 +108,7 @@ namespace gtry::scl
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Eop, eop);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Sop, sop);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::Empty, empty);
 
 namespace gtry::scl
 {
