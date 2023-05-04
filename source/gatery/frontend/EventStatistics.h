@@ -17,19 +17,11 @@
 */
 #pragma once
 
-//#include "Signal.h"
 #include "Bit.h"
 #include <filesystem>
-//#include <gatery/frontend.h>
 #include "Scope.h"
 #include <functional>
-//#include <gatery/utils.h>
-//#include <gatery/hlim/NodePtr.h>
-//#include <gatery/utils/Exceptions.h>
-//#include <gatery/utils/Traits.h>
 
-//#include <vector>
-//#include <optional>
 
 
 
@@ -47,7 +39,7 @@
 
 	/**
 	 * @brief Event counter for attached Signals
-	 * @details ...
+	 * @details Counts how offen an added Bit was high during runtime of the simulation.  
 	 */
 class EventStatistics : public BaseScope<EventStatistics> {
 public:

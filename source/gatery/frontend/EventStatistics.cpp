@@ -16,17 +16,7 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
-//#include "gatery/pch.h"
-
-//#include "Bit.h"
-//#include "BVec.h"
-//#include "ConditionalScope.h"
-//#include "Constant.h"
-//#include "DesignScope.h"
-//#include "PipeBalanceGroup.h"
-//#include "Reg.h"
 #include "DesignScope.h"
-//#include "SignalCompareOp.h"
 #include "Clock.h"
 #include "EventStatistics.h"
 #include "SimSigHandle.h"
@@ -34,7 +24,10 @@
 
 
 namespace gtry {
-
+	/**
+	 * @brief Adds Bit Signal to observing list
+	 * @details Counts how offen an added Bit was high during runtime of the simulation.
+	 */
 	void EventStatistics::addEvent(std::string_view name, Bit trigger) {
 		auto clk = ClockScope::getClk();
 		auto pathName = getNodePath(name);
@@ -48,22 +41,31 @@ namespace gtry {
 					m_counter[pathName] += 1;
 			}
 			});
-		
-		
+		//******************************
+		//return nodepath when done?
 	};
 
+	/**
+	 * @brief Prints all observed signals with counter values to the terminal
+	 */
 	void EventStatistics::dumpStatistics() {
 		std::cout << "Signal statistics" << std::endl;
 		for (const auto& elems : m_counter)
 			std::cout << elems.first << "|" << elems.second << std::endl;
 	};
 
+	/**
+	 * @brief Getter for signal counter. Expects full Nodepath.
+	 */
 	size_t EventStatistics::readEventCounter(std::string_view name) {
 		auto itCounter = m_counter.find(name);
 		HCL_DESIGNCHECK_HINT(itCounter != m_counter.end(), "An event counter with this name was never registered");
 		return itCounter->second;
 	};
 
+	/**
+	 * @brief Prints all observed signals with counter values to a .csv file. 
+	 */
 	void EventStatistics::writeStatTable(std::filesystem::path file_name) {
 		std::ofstream file;
 		file.open(file_name.string());
@@ -74,6 +76,9 @@ namespace gtry {
 		std::cout << "Statistic table written to " << file_name << std::endl;
 	};
 
+	/**
+	 * @brief Returns full Nodepath for given Node
+	 */
 	std::string EventStatistics::getNodePath(std::string_view name)
 	{
 		auto currentEntity = GroupScope::getCurrentNodeGroup();

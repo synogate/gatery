@@ -17,13 +17,6 @@
 */
 #include "frontend/pch.h"
 #include <boost/test/unit_test.hpp>
-//#include <boost/test/data/dataset.hpp>
-//#include <boost/test/data/test_case.hpp>
-//#include <boost/test/data/monomorphic.hpp>
-
-//#include <boost/multiprecision/cpp_int.hpp>
-//#include <boost/random.hpp>
-
 #include <gatery/frontend/EventStatistics.h>
 
 
