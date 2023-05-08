@@ -102,10 +102,10 @@ namespace gtry::scl
 	auto addPacketSignalsFromCount(StreamSignal auto& source, UInt size);
 
 	template<Signal Payload, Signal ... Meta>
-	RvPacketStream<Payload, Meta...> addReadyAndFailOnBackpressure(VPacketStream<Payload, Meta...>& source);
+	RvPacketStream<Payload, Meta...> addReadyAndFailOnBackpressure(const VPacketStream<Payload, Meta...>& source);
 
 	template<Signal Payload, Signal ... Meta>
-	RsPacketStream<Payload, Meta...> addReadyAndFailOnBackpressure(SPacketStream<Payload, Meta...>& source);
+	RsPacketStream<Payload, Meta...> addReadyAndFailOnBackpressure(const SPacketStream<Payload, Meta...>& source);
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Eop, eop);
@@ -323,7 +323,7 @@ namespace gtry::scl
 	namespace internal
 	{
 		template<Signal Payload, Signal ... Meta>
-		auto addReadyAndFailOnBackpressure(Stream<Payload, Meta...>& source)
+		auto addReadyAndFailOnBackpressure(const Stream<Payload, Meta...>& source)
 		{
 			Area ent{ "scl_addReadyAndFailOnBackpreasure", true };
 			Stream ret = source
@@ -351,13 +351,13 @@ namespace gtry::scl
 	}
 
 	template<Signal Payload, Signal ... Meta>
-	RvPacketStream<Payload, Meta...> addReadyAndFailOnBackpressure(VPacketStream<Payload, Meta...>& source)
+	RvPacketStream<Payload, Meta...> addReadyAndFailOnBackpressure(const VPacketStream<Payload, Meta...>& source)
 	{
 		return (RvPacketStream<Payload, Meta...>)internal::addReadyAndFailOnBackpressure(source);
 	}
 
 	template<Signal Payload, Signal ... Meta>
-	RsPacketStream<Payload, Meta...> addReadyAndFailOnBackpressure(SPacketStream<Payload, Meta...>& source)
+	RsPacketStream<Payload, Meta...> addReadyAndFailOnBackpressure(const SPacketStream<Payload, Meta...>& source)
 	{
 		return (RsPacketStream<Payload, Meta...>)internal::addReadyAndFailOnBackpressure(source);
 	}
