@@ -291,29 +291,41 @@ namespace gtry::scl
 
 
 	template<StreamSignal T> 
-	SimProcess performTransferWait(const T &stream, const Clock &clock) {
-		co_await OnClk(clock);
+	bool simuReady(const T &stream) {
+		if constexpr (stream.template has<scl::Ready>())
+			return simu(ready(stream));
+		else
+			return true;
 	}
 
-	template<StreamSignal T> requires (T::template has<Ready>() && !T::template has<Valid>())
+	template<StreamSignal T> 
+	bool simuValid(const T &stream) {
+		if constexpr (stream.template has<scl::Valid>())
+			return simu(valid(stream));
+		else
+			return true;
+	}
+
+	template<StreamSignal T> 
+	bool simuSop(const T &stream) {
+		if constexpr (stream.template has<scl::Sop>())
+			return simu(sop(stream));
+		else
+			return true;
+	}
+
+	template<StreamSignal T>
 	SimProcess performTransferWait(const T &stream, const Clock &clock) {
 		do
 			co_await OnClk(clock);
-		while (!simu(ready(stream)));
+		while (!simuReady(stream) || !simuValid(stream));
 	}
 
-	template<StreamSignal T> requires (!T::template has<Ready>() && T::template has<Valid>())
-	SimProcess performTransferWait(const T &stream, const Clock &clock) {
+	template<StreamSignal T>
+	SimProcess waitSop(const T& stream, const Clock& clock) {
 		do
 			co_await OnClk(clock);
-		while (!simu(valid(stream)));
-	}
-
-	template<StreamSignal T> requires (T::template has<Ready>() && T::template has<Valid>())
-	SimProcess performTransferWait(const T &stream, const Clock &clock) {
-		do
-			co_await OnClk(clock);
-		while (!simu(ready(stream)) || !simu(valid(stream)));
+		while (!simuReady(stream) || !(simuValid(stream) && simuSop(stream)));
 	}
 
 	template<StreamSignal T>
@@ -329,6 +341,7 @@ namespace gtry::scl
 		co_await performTransferWait(stream, clock);
 		simu(valid(stream)) = '0';
 	}
+
 }
 
 namespace gtry::scl

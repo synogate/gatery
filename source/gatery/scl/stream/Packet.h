@@ -54,8 +54,10 @@ namespace gtry::scl
 		UInt empty; // number of empty symbols in this beat
 	};
 
-	UInt& empty(StreamSignal auto& s) { return s.template get<Empty>().empty; }
-	const UInt& empty(const StreamSignal auto& s) { return s.template get<Empty>().empty; }
+	template<StreamSignal T> requires (T::template has<Empty>())
+	UInt& empty(T& s) { return s.template get<Empty>().empty; }
+	template<StreamSignal T> requires (T::template has<Empty>())
+	const UInt& empty(const T& s) { return s.template get<Empty>().empty; }
 
 	template<Signal T, Signal... Meta>
 	using PacketStream = Stream<T, scl::Eop, Meta...>;
@@ -108,6 +110,7 @@ namespace gtry::scl
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Eop, eop);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Sop, sop);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::Empty, empty);
 
 namespace gtry::scl
 {

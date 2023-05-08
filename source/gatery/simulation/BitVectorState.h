@@ -141,7 +141,7 @@ class BitVectorState
 		bool operator == (const BitVectorState& o) const;
 		bool operator != (const BitVectorState& o) const { return !(*this == o); }
 
-
+		void append(const BitVectorState<Config> &src);
 protected:
 		size_t m_size = 0;
 		std::array<std::vector<typename Config::BaseType>, Config::NUM_PLANES> m_values;
@@ -870,6 +870,12 @@ inline bool BitVectorState<Config>::operator==(const BitVectorState& o) const
 	return true;
 }
 
-
+template<class Config>
+void BitVectorState<Config>::append(const BitVectorState<Config> &src)
+{
+	auto offset = size();
+	resize(size() + src.size());
+	copyRange(offset, src, 0, src.size());
+}
 
 }

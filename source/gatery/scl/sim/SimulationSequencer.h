@@ -17,42 +17,52 @@
 */
 #pragma once
 #include <gatery/frontend.h>
-#include "Packet.h"
 
 
 namespace gtry::scl
 {
-	class PacketStreamMasterModel
+	class SimulationSequencerSlot;
+
+	class SimulationSequencer
 	{
-
 	public:
+		struct Data
+		{
+			size_t slotCurrent = 0;
+			size_t slotTotal = 0;
+			Condition waitCondition;
+		};
 
-		void init(BitWidth payloadW, bool debug = false);
-		void probability(float valid);
-
-
-		SimFunction<TransactionIn> request(TransactionOut tx, const Clock& clk);
-		SimProcess idle(size_t requestsPending = 0);
-
-		SimFunction<bool> push();
-
-		//auto& getLink() { return m_link; }
-
-	protected:
-		SimFunction<size_t> allocSourceId(const Clock& clk);
-
-		std::tuple<size_t, size_t> prepareTransaction(TransactionOut& tx) const;
+		SimulationSequencerSlot allocate();
 
 	private:
-		size_t m_requestCurrent = 0;
-		size_t m_requestNext = 0;
-		Condition m_requestCurrentChanged;
-
-		scl::RvPacketStream<UInt> in;
-		float m_validProbability = 1;
-		float m_readyProbability = 1;
-		std::vector<bool> m_sourceInUse;
-		std::mt19937 m_rng;
-		std::uniform_real_distribution<float> m_dis;
+		std::shared_ptr<Data> m_data;
 	};
+
+	class SimulationSequencerSlot
+	{
+	public:
+		SimulationSequencerSlot(std::shared_ptr<SimulationSequencer::Data> data, size_t slot) : m_data(data), m_mySlot(slot) {}
+
+		~SimulationSequencerSlot() noexcept(false)
+		{
+			HCL_ASSERT(m_data->slotCurrent == m_mySlot);
+			m_data->slotCurrent++;
+			m_data->waitCondition.notify_all();
+		}
+
+		SimFunction<void> wait();
+
+	private:
+		std::shared_ptr<SimulationSequencer::Data> m_data;
+		const size_t m_mySlot;
+	};
+	/*
+	* usage example for self-reference/explanation
+	void foo(SimulationSequencer& seq)
+	{
+		auto slot = seq.allocate();
+		co_await slot.wait();
+	}
+	*/
 }
