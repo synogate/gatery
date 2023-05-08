@@ -40,7 +40,7 @@ namespace gtry {
 			/// Prints all observed signals with counter values to the terminal
 			static void dumpStatistics() { get()->protDumpStatistics(); }
 			/// Getter for signal counter. Expects full Nodepath.
-			static size_t readEventCounter(std::string_view name) { get()->protReadEventCounter(name); }
+			static size_t readEventCounter(std::string_view name) { return get()->protReadEventCounter(name); }
 			/// Prints all observed signals with counter values to a .csv file. 
 			static void writeStatTable(const std::filesystem::path &file_name) { get()->protWriteStatTable(file_name); }
 
