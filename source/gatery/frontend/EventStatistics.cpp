@@ -24,11 +24,8 @@
 
 
 namespace gtry {
-	/**
-	 * @brief Adds Bit Signal to observing list
-	 * @details Counts how offen an added Bit was high during runtime of the simulation.
-	 */
-	void EventStatistics::addEvent(std::string_view name, Bit trigger) {
+
+	void EventStatistics::addEvent(std::string_view name, const Bit& trigger) {
 		auto clk = ClockScope::getClk();
 		auto pathName = getNodePath(name);
 		m_counter[pathName] = 0;
@@ -41,45 +38,33 @@ namespace gtry {
 					m_counter[pathName] += 1;
 			}
 			});
-		//******************************
-		//return nodepath when done?
+
 	};
 
-	/**
-	 * @brief Prints all observed signals with counter values to the terminal
-	 */
-	void EventStatistics::dumpStatistics() {
+	void EventStatistics::protDumpStatistics() const {
 		std::cout << "Signal statistics" << std::endl;
 		for (const auto& elems : m_counter)
 			std::cout << elems.first << "|" << elems.second << std::endl;
 	};
 
-	/**
-	 * @brief Getter for signal counter. Expects full Nodepath.
-	 */
-	size_t EventStatistics::readEventCounter(std::string_view name) {
+	size_t EventStatistics::protReadEventCounter(std::string_view name) const {
 		auto itCounter = m_counter.find(name);
 		HCL_DESIGNCHECK_HINT(itCounter != m_counter.end(), "An event counter with this name was never registered");
 		return itCounter->second;
 	};
 
-	/**
-	 * @brief Prints all observed signals with counter values to a .csv file. 
-	 */
-	void EventStatistics::writeStatTable(std::filesystem::path file_name) {
+	void EventStatistics::protWriteStatTable(const std::filesystem::path &file_name) const {
 		std::ofstream file;
-		file.open(file_name.string());
+		file.exceptions(std::ofstream::failbit | std::ofstream::badbit);
+		file.open(file_name.string(), std::fstream::out);
 		file << "Signal name;Counter value;\n";
 		for (const auto& elems : m_counter)
 			file << elems.first << ";" << elems.second << ";\n";
 		file.close();
-		std::cout << "Statistic table written to " << file_name << std::endl;
+		//std::cout << "Statistic table written to " << file_name << std::endl;
 	};
 
-	/**
-	 * @brief Returns full Nodepath for given Node
-	 */
-	std::string EventStatistics::getNodePath(std::string_view name)
+	std::string EventStatistics::getNodePath(std::string_view name) const
 	{
 		auto currentEntity = GroupScope::getCurrentNodeGroup();
 		std::string pathName = std::string(name);
@@ -93,7 +78,7 @@ namespace gtry {
 		return pathName;
 	};
 
-	void registerEvent(std::string_view name, Bit trigger) {
+	void registerEvent(std::string_view name, const Bit& trigger) {
 
 		EventStatistics::get()->addEvent(name, trigger);
 

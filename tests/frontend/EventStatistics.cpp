@@ -62,9 +62,9 @@ BOOST_FIXTURE_TEST_CASE(Statistic_counter, BoostUnitTestSimulationFixture)
 
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
 
-	EventStatistics::get()->dumpStatistics();  // test full path output
+	EventStatistics::dumpStatistics();  // test full path output
 
 	//  Check the contents of the statistics counters via
 
-	BOOST_TEST(EventStatistics::get()->readEventCounter("top/watch_bit") == 2);
+	BOOST_TEST(EventStatistics::readEventCounter("top/watch_bit") == 2);
 }

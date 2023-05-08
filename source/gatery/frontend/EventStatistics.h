@@ -26,36 +26,37 @@
 
 
 
-
-/**
- * @addtogroup gtry_signals
- * @{
- */
- 
-	
-	
-
-	namespace gtry{
+namespace gtry {
 
 	/**
 	 * @brief Event counter for attached Signals
 	 * @details Counts how offen an added Bit was high during runtime of the simulation.  
 	 */
-class EventStatistics : public BaseScope<EventStatistics> {
-public:
-	void addEvent(std::string_view name, Bit trigger);
-	void dumpStatistics();
-	size_t readEventCounter(std::string_view name);
-	void writeStatTable(std::filesystem::path file_name);
-	static EventStatistics* get() { return m_currentScope; }
+	class EventStatistics : public BaseScope<EventStatistics> {
+		public:
+			/// @brief Adds Bit Signal to observing list
+			/// @details Counts how offen an added Bit was high during runtime of the simulation.
+			void addEvent(std::string_view name, const Bit &trigger);
+			/// Prints all observed signals with counter values to the terminal
+			static void dumpStatistics() { get()->protDumpStatistics(); }
+			/// Getter for signal counter. Expects full Nodepath.
+			static size_t readEventCounter(std::string_view name) { get()->protReadEventCounter(name); }
+			/// Prints all observed signals with counter values to a .csv file. 
+			static void writeStatTable(const std::filesystem::path &file_name) { get()->protWriteStatTable(file_name); }
 
-protected:
-	std::map<std::string, size_t, std::less<>> m_counter;
-	std::string getNodePath(std::string_view name);
-};
+			static EventStatistics* get() { return m_currentScope; }
+		protected:
+			std::map<std::string, size_t, std::less<>> m_counter;
 
-void registerEvent(std::string_view name, Bit trigger);
+			/// Returns full Nodepath for given Node
+			std::string getNodePath(std::string_view name) const;
 
-/**@}*/
+			void protDumpStatistics() const;
+			size_t protReadEventCounter(std::string_view name) const;
+			void protWriteStatTable(const std::filesystem::path &file_name) const;
+	};
+
+	/// Register an event to be recorded in the EventStatistics
+	void registerEvent(std::string_view name, const Bit& trigger);
 
 }
