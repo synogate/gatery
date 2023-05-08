@@ -27,8 +27,8 @@
 #include <gatery/scl/stream/StreamArbiter.h>
 #include <gatery/scl/stream/adaptWidth.h>
 #include <gatery/scl/stream/Packet.h>
-#include <gatery/scl/stream/PacketStreamFixture.h>
-#include <gatery/scl/io/SpiMaster.h>
+#include <gatery/scl/stream/PacketStreamHelpers.h>
+#include <gatery/scl/io/SpiMaster.h> 
 
 #include <gatery/debug/websocks/WebSocksInterface.h>
 #include <gatery/scl/sim/SimulationSequencer.h>
@@ -223,7 +223,222 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 	runTicks(clock.getClk(), 256);
 }
 
-BOOST_FIXTURE_TEST_CASE(stream_transform, scl::scl::StreamTransferFixture)
+namespace gtry::scl {
+	class StreamTransferFixture : public BoostUnitTestSimulationFixture
+	{
+	protected:
+		void transfers(size_t numTransfers)
+		{
+			HCL_ASSERT(m_groups == 0);
+			m_transfers = numTransfers;
+		}
+		void groups(size_t numGroups)
+		{
+			HCL_ASSERT(m_groups == 0);
+			m_groups = numGroups;
+		}
+
+		Clock m_clock = Clock({ .absoluteFrequency = 100'000'000 });
+
+		void simulateTransferTest(scl::StreamSignal auto& source, scl::StreamSignal auto& sink)
+		{
+			simulateBackPressure(sink);
+			simulateSendData(source, m_groups++);
+			simulateRecvData(sink);
+		}
+
+		template<scl::StreamSignal T>
+		void simulateArbiterTestSink(T& sink)
+		{
+			simulateBackPressure(sink);
+			simulateRecvData(sink);
+		}
+
+		template<scl::StreamSignal T>
+		void simulateArbiterTestSource(T& source)
+		{
+			simulateSendData(source, m_groups++);
+		}
+
+		void In(scl::StreamSignal auto& stream, std::string prefix = "in")
+		{
+			pinIn(stream, prefix);
+		}
+
+		void Out(scl::StreamSignal auto& stream, std::string prefix = "out")
+		{
+			pinOut(stream, prefix);
+		}
+
+		void simulateBackPressure(scl::StreamSignal auto& stream)
+		{
+			auto recvClock = ClockScope::getClk();
+
+			addSimulationProcess([&, recvClock]()->SimProcess {
+				std::mt19937 rng{ std::random_device{}() };
+
+				simu(ready(stream)) = '0';
+				do
+					co_await WaitStable();
+				while (simu(valid(stream)) == '0');
+
+				// todo: not good
+				co_await WaitFor(Seconds{ 1,10 } / recvClock.absoluteFrequency());
+
+				while (true)
+				{
+					simu(ready(stream)) = rng() % 2 != 0;
+					co_await AfterClk(recvClock);
+				}
+				});
+		}
+
+		void simulateSendData(scl::RvStream<UInt>& stream, size_t group)
+		{
+			addSimulationProcess([=, this, &stream]()->SimProcess {
+				std::mt19937 rng{ std::random_device{}() };
+				for (size_t i = 0; i < m_transfers; ++i)
+				{
+					simu(valid(stream)) = '0';
+					simu(*stream).invalidate();
+
+					while ((rng() & 1) == 0)
+						co_await AfterClk(m_clock);
+
+					simu(valid(stream)) = '1';
+					simu(*stream) = i + group * m_transfers;
+
+					co_await scl::performTransferWait(stream, m_clock);
+				}
+				simu(valid(stream)) = '0';
+				simu(*stream).invalidate();
+				});
+		}
+
+		template<class... Meta>
+		void simulateSendData(scl::Stream<UInt, Meta...>& stream, size_t group)
+		{
+			addSimulationProcess([=, this, &stream]()->SimProcess {
+				if constexpr (stream.template has<scl::Error>())
+					simu(error(stream)) = '0';
+
+				std::mt19937 rng{ std::random_device{}() };
+				for (size_t i = 0; i < m_transfers;)
+				{
+					const size_t packetLen = std::min<size_t>(m_transfers - i, rng() % 5 + 1);
+					co_await sendDataPacket(stream, group, i, packetLen, rng() & rng());
+					i += packetLen;
+				}
+				simu(valid(stream)) = '0';
+				simu(*stream).invalidate();
+				});
+		}
+
+		template<class... Meta>
+		SimProcess sendDataPacket(scl::Stream<UInt, Meta...>& stream, size_t group, size_t packetOffset, size_t packetLen, uint64_t invalidBeats = 0)
+		{
+			constexpr bool hasValid = stream.template has<scl::Valid>();
+			for (size_t j = 0; j < packetLen; ++j)
+			{
+				simu(eop(stream)).invalidate();
+				simu(*stream).invalidate();
+
+				if constexpr (hasValid)
+				{
+					simu(valid(stream)) = '0';
+					for (; (invalidBeats & 1) != 0; invalidBeats >>= 1)
+						co_await AfterClk(m_clock);
+					invalidBeats >>= 1;
+					simu(valid(stream)) = '1';
+				}
+				else
+				{
+					simu(sop(stream)) = j == 0;
+				}
+
+				simu(eop(stream)) = j == packetLen - 1;
+				simu(*stream) = packetOffset + j + group * m_transfers;
+
+				co_await scl::performTransferWait(stream, m_clock);
+			}
+
+			if (!hasValid)
+				simu(sop(stream)) = '0';
+		}
+
+		template<class... Meta>
+		void simulateSendData(scl::RsPacketStream<UInt, Meta...>& stream, size_t group)
+		{
+			addSimulationProcess([=, this, &stream]()->SimProcess {
+				std::mt19937 rng{ std::random_device{}() };
+				for (size_t i = 0; i < m_transfers;)
+				{
+					simu(sop(stream)) = '0';
+					simu(eop(stream)) = '0';
+					simu(*stream).invalidate();
+
+					while ((rng() & 1) == 0)
+						co_await AfterClk(m_clock);
+
+					const size_t packetLen = std::min<size_t>(m_transfers - i, rng() % 5 + 1);
+					for (size_t j = 0; j < packetLen; ++j)
+					{
+						simu(sop(stream)) = j == 0;
+						simu(eop(stream)) = j == packetLen - 1;
+						simu(*stream) = i + j + group * m_transfers;
+
+						co_await scl::performTransferWait(stream, m_clock);
+					}
+					i += packetLen;
+				}
+
+				simu(sop(stream)) = '0';
+				simu(eop(stream)) = '0';
+				simu(*stream).invalidate();
+				});
+		}
+
+		template<scl::StreamSignal T>
+		void simulateRecvData(const T& stream)
+		{
+			auto recvClock = ClockScope::getClk();
+
+			auto myTransfer = pinOut(transfer(stream)).setName("simulateRecvData_transfer");
+
+			addSimulationProcess([=, this, &stream]()->SimProcess {
+				std::vector<size_t> expectedValue(m_groups);
+				while (true)
+				{
+					co_await OnClk(recvClock);
+
+					if (simu(myTransfer) == '1')
+					{
+						size_t data = simu(*(stream.operator ->()));
+						BOOST_TEST(data / m_transfers < expectedValue.size());
+						if (data / m_transfers < expectedValue.size())
+						{
+							BOOST_TEST(data % m_transfers == expectedValue[data / m_transfers]);
+							expectedValue[data / m_transfers]++;
+						}
+					}
+
+					if (std::ranges::all_of(expectedValue, [=, this](size_t val) { return val == m_transfers; }))
+					{
+						stopTest();
+						co_await AfterClk(recvClock);
+					}
+				}
+				});
+		}
+
+	private:
+		size_t m_groups = 0;
+		size_t m_transfers = 16;
+	};
+}
+
+
+BOOST_FIXTURE_TEST_CASE(stream_transform, scl::StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
@@ -1227,7 +1442,7 @@ BOOST_FIXTURE_TEST_CASE(addReadyAndFailOnBackpressure_sop_test, scl::StreamTrans
 template<typename StreamType>
 struct PacketSendAndReceiveTest : public scl::StreamTransferFixture
 {
-	std::vector<SimPacket> allPackets;
+	std::vector<scl::SimPacket> allPackets;
 	bool addPipelineReg = true;
 	BitWidth txIdSize = 4_b;
 	std::uint64_t unreadyMask = 0;
@@ -1255,28 +1470,24 @@ struct PacketSendAndReceiveTest : public scl::StreamTransferFixture
 		In(in);
 		Out(out);
 		groups(1);
-		scl::SimulationSequencer garbage;
 
 		addSimulationProcess([&, this]()->SimProcess {
 
-			fork([this,&in,&garbage]()->SimProcess {
-				for (const auto &packet : allPackets)
-					co_await this->sendPacket(in, packet, garbage, m_clock);
-			});
+			scl::SimulationSequencer sendingSequencer;
+			for (const auto &packet : allPackets)
+				fork(sendPacket(in, packet, m_clock, sendingSequencer));
 
 			for (const auto &packet : allPackets) {
-				SimPacket rvdPacket = co_await this->receivePacket(out, garbage, m_clock, unreadyMask);
+				scl::SimPacket rvdPacket = co_await scl::receivePacket(out, m_clock, unreadyMask);
 				BOOST_TEST(rvdPacket.payload == packet.payload);
-				if (packet.txid()) {
-					//BOOST_TEST(rvdPacket.txid());
-					BOOST_TEST(*rvdPacket.txid() == *packet.txid());
+
+				if constexpr (StreamType::template has<scl::TxId>()){
+					BOOST_TEST(rvdPacket.txid() == packet.txid());
 				}
-				if (packet.error()) {
-					//BOOST_TEST(rvdPacket.error());
-					BOOST_TEST(*rvdPacket.error() == *packet.error());
+				if constexpr (StreamType::template has<scl::Error>()) {
+					BOOST_TEST(rvdPacket.error() == packet.error());
 				}
 			}
-
 			stopTest();
 		});
 
@@ -1285,83 +1496,82 @@ struct PacketSendAndReceiveTest : public scl::StreamTransferFixture
 	}
 };
 
-/*
 
 BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_singleBeatPacket, PacketSendAndReceiveTest<scl::SPacketStream<gtry::BVec>>) {
-	allPackets = std::vector<SimPacket>{
-		SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
+	allPackets = std::vector<scl::SimPacket>{
+		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
 	};
 	runTest();
 }
 
 BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_multiBeatPacket, PacketSendAndReceiveTest<scl::SPacketStream<BVec>>) {
-	allPackets = std::vector<SimPacket>{
-		SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23 }),
+	allPackets = std::vector<scl::SimPacket>{
+		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23 }),
 	};
 	runTest();
 }
 
 BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_longMultiBeatPacket, PacketSendAndReceiveTest<scl::SPacketStream<BVec>>) {
-	allPackets = std::vector<SimPacket>{
-		SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }),
+	allPackets = std::vector<scl::SimPacket>{
+		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }),
 	};
 	runTest();
 }
 
 BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_seqeuence_of_packets_packetStream, PacketSendAndReceiveTest<scl::PacketStream<BVec>>) {
-	allPackets = std::vector<SimPacket>{
-		SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }),
-		SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
-		SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23 }),
+	allPackets = std::vector<scl::SimPacket>{
+		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }),
+		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
+		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23 }),
 	};
 	addPipelineReg = false;
 	runTest();
 }
 
 BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_seqeuence_of_packets_RvPacketStream, PacketSendAndReceiveTest<scl::RvPacketStream<BVec>>) {
-	allPackets = std::vector<SimPacket>{
-		SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }),
-		SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
-		SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23 }),
+	allPackets = std::vector<scl::SimPacket>{
+		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }),
+		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
+		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23 }),
 	};
 	runTest();
 }
 
 BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_seqeuence_of_packets_VPacketStream, PacketSendAndReceiveTest<scl::VPacketStream<BVec>>) {
-	allPackets = std::vector<SimPacket>{
-		SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }),
-		SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
-		SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23 }),
+	allPackets = std::vector<scl::SimPacket>{
+		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }),
+		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
+		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23 }),
 	};
 	runTest();
 }
 
 
 BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_sequence_of_packets_RsPacketStream, PacketSendAndReceiveTest<scl::RsPacketStream<BVec>>) {
-	allPackets = std::vector<SimPacket>{
-		SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }),
-		SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
-		SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23 }),
+	allPackets = std::vector<scl::SimPacket>{
+		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }),
+		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
+		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23 }),
 	};
 	runTest();
 }
 
 BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_seqeuence_of_packets_SPacketStream, PacketSendAndReceiveTest<scl::SPacketStream<BVec>>) {
-	allPackets = std::vector<SimPacket>{
-		SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }),
-		SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
-		SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23 }),
+	allPackets = std::vector<scl::SimPacket>{
+		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }),
+		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
+		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23 }),
 	};
 	runTest();
 }
-*/
+
 
 BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_seqeuence_of_packets_RvPacketStream_bubbles, PacketSendAndReceiveTest<scl::RvPacketStream<BVec>>) {
 	std::mt19937 rng(2678);
-	allPackets = std::vector<SimPacket>{
-		SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }).invalidBeats(rng()),
-		SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }).invalidBeats(rng()),
-		SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23 }).invalidBeats(rng()),
+	allPackets = std::vector<scl::SimPacket>{
+		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }).invalidBeats(rng()),
+		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }).invalidBeats(rng()),
+		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23 }).invalidBeats(rng()),
 	};
 	runTest();
 }
@@ -1370,10 +1580,10 @@ BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_seqeuence_of_packets_Rv
 BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_seqeuence_of_packets_RvPacketStream_bubbles_backpressure, PacketSendAndReceiveTest<scl::RvPacketStream<BVec>>) {
 	std::mt19937 rng(2678);
 	unreadyMask = 0b10110001101;
-	allPackets = std::vector<SimPacket>{
-		SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }).invalidBeats(rng()),
-		SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }).invalidBeats(rng()),
-		SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23 }).invalidBeats(rng()),
+	allPackets = std::vector<scl::SimPacket>{
+		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }).invalidBeats(rng()),
+		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }).invalidBeats(rng()),
+		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23 }).invalidBeats(rng()),
 	};
 	runTest();
 }
@@ -1382,10 +1592,10 @@ BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_seqeuence_of_packets_Rv
 using RsePacketStream = scl::RsPacketStream<BVec, scl::Empty>;
 
 BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_sequence_of_packets_RsPacketStream_empty, PacketSendAndReceiveTest<RsePacketStream>) {
-	allPackets = std::vector<SimPacket>{
-		SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 }),
-		SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
-		SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23, 0x24 }),
+	allPackets = std::vector<scl::SimPacket>{
+		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 }),
+		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
+		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23, 0x24 }),
 	};
 	runTest();
 }
@@ -1394,11 +1604,11 @@ using RseePacketStream = scl::RsPacketStream<BVec, scl::Empty, scl::Error>;
 
 BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_sequence_of_packets_RsPacketStream_empty_error, PacketSendAndReceiveTest<RseePacketStream>) {
 	
-	allPackets = std::vector<SimPacket>{
-		SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 }).error(false),
-		SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }).error(true),
-		SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23, 0x24 }).error(false),
-		SimPacket(std::vector<uint8_t>{ 0x30, 0x31, 0x32 }).error(true),
+	allPackets = std::vector<scl::SimPacket>{
+		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 }).error(false),
+		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }).error(true),
+		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23, 0x24 }).error(false),
+		scl::SimPacket(std::vector<uint8_t>{ 0x30, 0x31, 0x32 }).error(true),
 	};
 	runTest();
 }
@@ -1406,11 +1616,21 @@ BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_sequence_of_packets_RsP
 using RsetPacketStream = scl::RsPacketStream<BVec, scl::Empty, scl::TxId>;
 
 BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_sequence_of_packets_RsPacketStream_empty_txid, PacketSendAndReceiveTest<RsetPacketStream>) {
-	allPackets = std::vector<SimPacket>{
-		SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 }).txid(0),
-		SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }).txid(1),
-		SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23, 0x24 }).txid(2),
-		SimPacket(std::vector<uint8_t>{ 0x30, 0x31, 0x32 }).txid(0),
+	allPackets = std::vector<scl::SimPacket>{
+		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 }).txid(0),
+		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }).txid(1),
+		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23, 0x24 }).txid(2),
+		scl::SimPacket(std::vector<uint8_t>{ 0x30, 0x31, 0x32 }).txid(0),
+	};
+	runTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_imposing_txid_with_no_support_RvPacketStream, PacketSendAndReceiveTest<scl::RvPacketStream<BVec>>) {
+	allPackets = std::vector<scl::SimPacket>{
+		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }).txid(0),
+		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }).txid(2),
+		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23 }).txid(1),
+		scl::SimPacket(std::vector<uint8_t>{ 0x30, 0x31 }).txid(0),
 	};
 	runTest();
 }

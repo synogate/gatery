@@ -306,14 +306,6 @@ namespace gtry::scl
 			return true;
 	}
 
-	template<StreamSignal T> 
-	bool simuSop(const T &stream) {
-		if constexpr (stream.template has<scl::Sop>())
-			return simu(sop(stream));
-		else
-			return true;
-	}
-
 	template<StreamSignal T>
 	SimProcess performTransferWait(const T &stream, const Clock &clock) {
 		do

@@ -36,20 +36,17 @@ namespace gtry::scl
 		SimulationSequencerSlot allocate();
 
 	private:
-		std::shared_ptr<Data> m_data;
+		std::shared_ptr<Data> m_data = std::make_shared<Data>();
 	};
 
 	class SimulationSequencerSlot
 	{
 	public:
 		SimulationSequencerSlot(std::shared_ptr<SimulationSequencer::Data> data, size_t slot) : m_data(data), m_mySlot(slot) {}
+		SimulationSequencerSlot(const SimulationSequencerSlot&) = delete;
+		SimulationSequencerSlot(SimulationSequencerSlot&&);
 
-		~SimulationSequencerSlot() noexcept(false)
-		{
-			HCL_ASSERT(m_data->slotCurrent == m_mySlot);
-			m_data->slotCurrent++;
-			m_data->waitCondition.notify_all();
-		}
+		~SimulationSequencerSlot() noexcept(false);
 
 		SimFunction<void> wait();
 

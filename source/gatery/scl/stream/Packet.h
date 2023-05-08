@@ -191,6 +191,22 @@ namespace gtry::scl
 			fifo.pop();
 	}
 
+	template<StreamSignal T>
+	bool simuSop(const T& stream) {
+		if constexpr (stream.template has<scl::Sop>())
+			return simu(sop(stream));
+		else
+			return true;
+	}
+
+	template<StreamSignal T>
+	bool simuEop(const T& stream) {
+		if constexpr (stream.template has<scl::Eop>())
+			return simu(eop(stream));
+		else
+			return true;
+	}
+
 	template<Signal Payload, Signal... Meta>
 	auto storeForwardFifo(RvPacketStream<Payload, Meta...>& in, size_t minElements)
 	{

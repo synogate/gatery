@@ -20,9 +20,24 @@
 namespace gtry::scl {
 
 	SimulationSequencerSlot SimulationSequencer::allocate(){
-		m_data->slotTotal++;
-		SimulationSequencerSlot ret(m_data, m_data->slotTotal);
-		return ret;
+		return { m_data, m_data->slotTotal++ };
+	}
+
+	SimulationSequencerSlot::SimulationSequencerSlot(SimulationSequencerSlot&& other) :
+		m_data(std::move(other.m_data)),
+		m_mySlot(other.m_mySlot)
+	{
+		other.m_data.reset();
+	}
+
+	SimulationSequencerSlot::~SimulationSequencerSlot() noexcept(false)
+	{
+		if(m_data)
+		{
+			HCL_ASSERT(m_data->slotCurrent == m_mySlot);
+			m_data->slotCurrent++;
+			m_data->waitCondition.notify_all();
+		}
 	}
 
 	SimFunction<void> SimulationSequencerSlot::wait()
