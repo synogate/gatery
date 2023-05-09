@@ -54,12 +54,4 @@ namespace gtry::scl
 		std::shared_ptr<SimulationSequencer::Data> m_data;
 		const size_t m_mySlot;
 	};
-	/*
-	* usage example for self-reference/explanation
-	void foo(SimulationSequencer& seq)
-	{
-		auto slot = seq.allocate();
-		co_await slot.wait();
-	}
-	*/
 }

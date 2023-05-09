@@ -29,11 +29,17 @@ namespace gtry::scl
 		sim::DefaultBitVectorState payload;
 
 		SimPacket() = default;
-		SimPacket(const std::span<uint8_t> data) { *this = data; }
-		SimPacket(const std::vector<uint8_t>& data) { *this = data; }
+		SimPacket(std::span<const uint8_t> data) { *this = data; }
+		SimPacket(uint64_t payload, BitWidth payloadW) {
+			HCL_DESIGNCHECK_HINT(BitWidth::last(payload) <= payloadW, "The selected payload width would result in data truncation. Design not allowed" );
+			size_t numberOfBytesInPayload = payloadW.numBeats(8_b);
+			for (size_t byteIterator = 0; byteIterator < numberOfBytesInPayload; byteIterator++) {
+				this->payload.append(sim::createDefaultBitVectorState(1, payload & 0xFF));
+				payload >>= 8;
+			}
+		}
 
-		SimPacket& operator =(const std::span<uint8_t> data) { payload = sim::createDefaultBitVectorState(data.size(), data.data()); return *this; }
-		SimPacket& operator =(const std::vector<uint8_t>& data) { payload = sim::createDefaultBitVectorState(data.size(), data.data()); return *this; }
+		SimPacket& operator =(std::span<const uint8_t> data) { payload = sim::createDefaultBitVectorState(data.size(), data.data()); return *this; }
 		SimPacket& operator<<(const sim::DefaultBitVectorState& additionalData) { payload.append(additionalData); return *this; }
 
 		SimPacket& txid(size_t id) { m_txid = id; return *this; }
@@ -89,11 +95,7 @@ namespace gtry::scl
 		constexpr bool hasEmpty = stream.template has<scl::Empty>();
 		constexpr bool hasEop = stream.template has<scl::Eop>();
 
-		bool designCheck = true;
-		if (!hasEop && numberOfBeats != 0)
-			designCheck = false;
-
-		HCL_DESIGNCHECK_HINT(designCheck, "Trying to send multi-beat data packets without an End of Packet Field");
+		HCL_DESIGNCHECK_HINT(hasEop || numberOfBeats == 1, "Trying to send multi-beat data packets without an End of Packet Field");
 
 		size_t emptyBytes = 0;
 		if constexpr (hasEmpty) {
