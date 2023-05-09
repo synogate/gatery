@@ -27,6 +27,7 @@
 #include "tech/TargetTechnology.h"
 
 #include <memory>
+#include "EventStatistics.h"
 
 namespace gtry {
 
@@ -75,7 +76,7 @@ class DesignScope : public BaseScope<DesignScope>
 	protected:
 		hlim::Circuit m_circuit;
 		GroupScope m_rootScope;
-
+		
 		std::unique_ptr<Clock> m_defaultClock;
 		std::unique_ptr<ClockScope> m_defaultClockScope;
 
@@ -83,6 +84,8 @@ class DesignScope : public BaseScope<DesignScope>
 		
 		std::unique_ptr<TargetTechnology> m_targetTech;
 		std::optional<TechnologyScope> m_defaultTechScope;
+
+		EventStatistics m_eventStatistics;
 };
 
 template<typename NodeType, typename... Args>

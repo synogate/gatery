@@ -20,6 +20,7 @@
 #include <gatery/scl/cdc.h>
 
 #include <gatery/frontend/tech/TechnologyCapabilities.h>
+#include <gatery/frontend/EventStatistics.h>
 
 namespace gtry::scl
 {
@@ -180,6 +181,7 @@ namespace gtry::scl
 
 		Bit ae = reg(m_popSize <= namedLevel, '1');
 		ae.setName(signalName);
+		registerEvent(signalName, ae);
 		return ae;
 	}
 
@@ -200,6 +202,7 @@ namespace gtry::scl
 
 		Bit af = reg(m_pushSize >= namedLevel, '0');
 		af.setName(signalName);
+		registerEvent(signalName, af);
 		return af;
 	}
 
@@ -360,6 +363,8 @@ namespace gtry::scl
 		m_pushFull = reg(put.msb() != get.msb() & put(0, -1_b) == get(0, -1_b), '0');
 		HCL_NAMED(m_pushFull);
 
+		registerEvent("full", m_pushFull);
+
 		return put;
 	}
 
@@ -380,6 +385,8 @@ namespace gtry::scl
 		m_popSize = put - get;
 		m_popEmpty = reg(put.msb() == get.msb() & put(0, -1_b) == get(0, -1_b), '1');
 		HCL_NAMED(m_popEmpty);
+
+		registerEvent("empty", m_popEmpty);
 
 		return get;
 	}
