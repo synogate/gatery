@@ -289,21 +289,20 @@ namespace gtry::scl
 	template<Signal T>
 	void connect(RvStream<T>& sink, Fifo<T>& source);
 
-
 	template<StreamSignal T> 
-	bool simuReady(const T &stream) {
+	auto simuReady(const T &stream) {
 		if constexpr (stream.template has<scl::Ready>())
 			return simu(ready(stream));
 		else
-			return true;
+			return '1';
 	}
 
 	template<StreamSignal T> 
-	bool simuValid(const T &stream) {
+	auto simuValid(const T &stream) {
 		if constexpr (stream.template has<scl::Valid>())
 			return simu(valid(stream));
 		else
-			return true;
+			return '1';
 	}
 
 	template<StreamSignal T>

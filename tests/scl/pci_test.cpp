@@ -187,7 +187,7 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 
 		while (true)
 		{
-			if (simu(ready(out)) & simu(valid(out)))
+			if ((bool)simu(ready(out)) & (bool)simu(valid(out)))
 			{
 				BOOST_TEST(!cplQueue.empty());
 

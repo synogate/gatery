@@ -192,19 +192,19 @@ namespace gtry::scl
 	}
 
 	template<StreamSignal T>
-	bool simuSop(const T& stream) {
+	auto simuSop(const T& stream) {
 		if constexpr (stream.template has<scl::Sop>())
 			return simu(sop(stream));
 		else
-			return true;
+			return '1';
 	}
 
 	template<StreamSignal T>
-	bool simuEop(const T& stream) {
+	auto simuEop(const T& stream) {
 		if constexpr (stream.template has<scl::Eop>())
 			return simu(eop(stream));
 		else
-			return true;
+			return '1';
 	}
 
 	template<Signal Payload, Signal... Meta>

@@ -45,7 +45,9 @@ struct PacketSendAndReceiveTest : public BoostUnitTestSimulationFixture
 	Clock packetTestclk = Clock({ .absoluteFrequency = 100'000'000 });
 	std::vector<scl::SimPacket> allPackets;
 	bool addPipelineReg = true;
-	BitWidth txIdSize = 4_b;
+	BitWidth txIdW = 4_b;
+	bool backpressureRNG = false;
+	size_t readyProbabilityPercent = 50;
 	std::uint64_t unreadyMask = 0;
 
 	void runTest() {
@@ -59,8 +61,8 @@ struct PacketSendAndReceiveTest : public BoostUnitTestSimulationFixture
 			empty(out) = BitWidth::last(in->width().bytes() - 1);
 		}
 		if constexpr (StreamType::template has<scl::TxId>()) {
-			txid(in) = txIdSize;
-			txid(out) = txIdSize;
+			txid(in) = txIdW;
+			txid(out) = txIdW;
 		}
 
 		if (addPipelineReg)
@@ -74,11 +76,18 @@ struct PacketSendAndReceiveTest : public BoostUnitTestSimulationFixture
 
 		addSimulationProcess([&, this]()->SimProcess {
 			scl::SimulationSequencer sendingSequencer;
+			
+			if constexpr (StreamType::template has<scl::Ready>())
+				if(backpressureRNG)
+					fork(readyDriverRNG(out, packetTestclk, readyProbabilityPercent));
+				else
+					fork(readyDriver(out, packetTestclk, unreadyMask));
+
 			for (const auto& packet : allPackets)
 				fork(sendPacket(in, packet, packetTestclk, sendingSequencer));
 
 			for (const auto& packet : allPackets) {
-				scl::SimPacket rvdPacket = co_await scl::receivePacket(out, packetTestclk, unreadyMask);
+				scl::SimPacket rvdPacket = co_await scl::receivePacket(out, packetTestclk);
 				BOOST_TEST(rvdPacket.payload == packet.payload);
 
 				if constexpr (StreamType::template has<scl::TxId>()) {
@@ -118,7 +127,7 @@ BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_longMultiBeatPacket, Pa
 	runTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_seqeuence_of_packets_packetStream, PacketSendAndReceiveTest<scl::PacketStream<BVec>>) {
+BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_sequence_of_packets_packetStream, PacketSendAndReceiveTest<scl::PacketStream<BVec>>) {
 	allPackets = std::vector<scl::SimPacket>{
 		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }),
 		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
@@ -128,7 +137,7 @@ BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_seqeuence_of_packets_pa
 	runTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_seqeuence_of_packets_RvPacketStream, PacketSendAndReceiveTest<scl::RvPacketStream<BVec>>) {
+BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_sequence_of_packets_RvPacketStream, PacketSendAndReceiveTest<scl::RvPacketStream<BVec>>) {
 	allPackets = std::vector<scl::SimPacket>{
 		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }),
 		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
@@ -137,7 +146,7 @@ BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_seqeuence_of_packets_Rv
 	runTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_seqeuence_of_packets_VPacketStream, PacketSendAndReceiveTest<scl::VPacketStream<BVec>>) {
+BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_sequence_of_packets_VPacketStream, PacketSendAndReceiveTest<scl::VPacketStream<BVec>>) {
 	allPackets = std::vector<scl::SimPacket>{
 		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }),
 		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
@@ -156,7 +165,7 @@ BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_sequence_of_packets_RsP
 	runTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_seqeuence_of_packets_SPacketStream, PacketSendAndReceiveTest<scl::SPacketStream<BVec>>) {
+BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_sequence_of_packets_SPacketStream, PacketSendAndReceiveTest<scl::SPacketStream<BVec>>) {
 	allPackets = std::vector<scl::SimPacket>{
 		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }),
 		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
@@ -166,7 +175,7 @@ BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_seqeuence_of_packets_SP
 }
 
 
-BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_seqeuence_of_packets_RvPacketStream_bubbles, PacketSendAndReceiveTest<scl::RvPacketStream<BVec>>) {
+BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_sequence_of_packets_RvPacketStream_bubbles, PacketSendAndReceiveTest<scl::RvPacketStream<BVec>>) {
 	std::mt19937 rng(2678);
 	allPackets = std::vector<scl::SimPacket>{
 		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }).invalidBeats(rng()),
@@ -177,7 +186,7 @@ BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_seqeuence_of_packets_Rv
 }
 
 
-BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_seqeuence_of_packets_RvPacketStream_bubbles_backpressure, PacketSendAndReceiveTest<scl::RvPacketStream<BVec>>) {
+BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_sequence_of_packets_RvPacketStream_bubbles_backpressure, PacketSendAndReceiveTest<scl::RvPacketStream<BVec>>) {
 	std::mt19937 rng(2678);
 	unreadyMask = 0b10110001101;
 	allPackets = std::vector<scl::SimPacket>{
@@ -187,7 +196,16 @@ BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_seqeuence_of_packets_Rv
 	};
 	runTest();
 }
-
+BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_sequence_of_packets_RvPacketStream_rng_backpressure, PacketSendAndReceiveTest<scl::RvPacketStream<BVec>>) {
+	backpressureRNG = true;
+	readyProbabilityPercent = 70;
+	allPackets = std::vector<scl::SimPacket>{
+		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }),
+		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
+		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23 }),
+	};
+	runTest();
+}
 
 using RsePacketStream = scl::RsPacketStream<BVec, scl::Empty>;
 
@@ -206,10 +224,10 @@ using RseePacketStream = scl::RsPacketStream<BVec, scl::Empty, scl::Error>;
 BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_sequence_of_packets_RsPacketStream_empty_error, PacketSendAndReceiveTest<RseePacketStream>) {
 
 	allPackets = std::vector<scl::SimPacket>{
-		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 }).error(false),
-		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }).error(true),
-		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23, 0x24 }).error(false),
-		scl::SimPacket(std::vector<uint8_t>{ 0x30, 0x31, 0x32 }).error(true),
+		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 }).error('0'),
+		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }).error('1'),
+		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23, 0x24 }).error('0'),
+		scl::SimPacket(std::vector<uint8_t>{ 0x30, 0x31, 0x32 }).error('1'),
 	};
 	runTest();
 }
@@ -225,25 +243,16 @@ BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_sequence_of_packets_RsP
 	};
 	runTest();
 }
-BOOST_FIXTURE_TEST_CASE(packetSenderFramework_testsimple_imposing_txid_with_no_support_RvPacketStream, PacketSendAndReceiveTest<scl::RvPacketStream<BVec>>) {
-	allPackets = std::vector<scl::SimPacket>{
-		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }).txid(0),
-		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }).txid(2),
-		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21, 0x22, 0x23 }).txid(1),
-		scl::SimPacket(std::vector<uint8_t>{ 0x30, 0x31 }).txid(0),
-	};
-	runTest();
-}
 
 using RsePacketStream = scl::RsPacketStream<BVec, scl::Empty>;
 BOOST_FIXTURE_TEST_CASE(packetSenderFramework_test_RvStream, PacketSendAndReceiveTest<RsePacketStream>) {
 	allPackets = std::vector<scl::SimPacket>{
 		scl::SimPacket{0xABCD , 16_b},
 		scl::SimPacket{0xABCD , 32_b},
-		scl::SimPacket{0xABCD , 40_b},
-		scl::SimPacket{0xABCD , 50_b},
-		scl::SimPacket{0xABCD , 60_b},
-		scl::SimPacket{0xABCD , 100_b},
+		scl::SimPacket{0xABCD , 48_b},
+		scl::SimPacket{0xABCD , 64_b},
+		scl::SimPacket{0xABCD , 80_b},
+		scl::SimPacket{0xABCD , 128_b},
 	};
 
 	runTest();

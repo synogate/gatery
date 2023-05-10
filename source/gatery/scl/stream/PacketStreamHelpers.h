@@ -24,7 +24,6 @@
 
 namespace gtry::scl
 {
-
 	struct SimPacket {
 		sim::DefaultBitVectorState payload;
 
@@ -37,17 +36,18 @@ namespace gtry::scl
 				this->payload.append(sim::createDefaultBitVectorState(1, payload & 0xFF));
 				payload >>= 8;
 			}
+			this->payload.resize(payloadW.bits());
 		}
 
 		SimPacket& operator =(std::span<const uint8_t> data) { payload = sim::createDefaultBitVectorState(data.size(), data.data()); return *this; }
 		SimPacket& operator<<(const sim::DefaultBitVectorState& additionalData) { payload.append(additionalData); return *this; }
 
 		SimPacket& txid(size_t id) { m_txid = id; return *this; }
-		SimPacket& error(bool err) { m_error = err; return *this; }
+		SimPacket& error(char err) { m_error = err; return *this; }
 		SimPacket& invalidBeats(std::uint64_t invalidBeats) { m_invalidBeats = invalidBeats; return *this; }
 
 		size_t txid() const { return m_txid; }
-		bool error() const { return m_error; }
+		char error() const { return m_error; }
 		std::uint64_t invalidBeats() const { return m_invalidBeats; }
 
 		std::span<uint8_t> data() {
@@ -57,7 +57,7 @@ namespace gtry::scl
 		operator std::span<uint8_t>() { return data(); }
 	protected:
 		size_t m_txid = 0;
-		bool m_error = false;
+		char m_error = '0';
 		std::uint64_t m_invalidBeats = 0;
 	};
 
@@ -68,17 +68,41 @@ namespace gtry::scl
 	SimProcess sendPacket(const scl::Stream<BVec, Meta...>& stream, const SimPacket& packet, Clock clk, scl::SimulationSequencer& sequencer);
 
 	template<class... Meta>
-	SimFunction<SimPacket> receivePacket(const scl::Stream<BVec, Meta...>& stream, Clock clk, std::uint64_t unreadyBeatMask = 0);
+	SimFunction<SimPacket> receivePacket(const scl::Stream<BVec, Meta...>& stream, Clock clk);
 
 	template<class... Meta>
-	SimFunction<SimPacket> receivePacket(const scl::Stream<BVec, Meta...>& stream, Clock clk, std::uint64_t unreadyBeatMask, scl::SimulationSequencer& sequencer);
+	SimFunction<SimPacket> receivePacket(const scl::Stream<BVec, Meta...>& stream, Clock clk, scl::SimulationSequencer& sequencer);
 
+	template<class... Meta>
+	SimProcess readyDriver(const scl::Stream<BVec, Meta...>& stream, Clock clk, const uint64_t& unreadyMask = 0);
+
+	template<class... Meta>
+	SimProcess readyDriverRNG(const scl::Stream<BVec, Meta...>& stream, Clock clk, size_t readyProbabilityPercent);
+
+	template<class... Meta>
+	SimProcess invalidateStream(const scl::Stream<BVec, Meta...>& stream);
 }
 
 
 
 namespace gtry::scl
 {
+	template<class... Meta>
+	SimProcess invalidateStream(const scl::Stream<BVec, Meta...>& stream) {
+
+		simu(*stream).invalidate();
+		if constexpr (stream.template has<scl::Eop>())
+			simu(eop(stream)).invalidate();
+		if constexpr (stream.template has<scl::TxId>())
+			simu(txid(stream)).invalidate();
+		if constexpr (stream.template has<scl::Sop>())
+			simu(sop(stream)).invalidate();
+		if constexpr (stream.template has<scl::Error>())
+			simu(error(stream)).invalidate();
+		if constexpr (stream.template has<scl::Empty>())
+			simu(empty(stream)).invalidate();
+		co_return;
+	}
 
 	template<class... Meta>
 	SimProcess sendPacket(const scl::Stream<BVec, Meta...>& stream, const SimPacket& packet, Clock clk)
@@ -97,23 +121,12 @@ namespace gtry::scl
 
 		HCL_DESIGNCHECK_HINT(hasEop || numberOfBeats == 1, "Trying to send multi-beat data packets without an End of Packet Field");
 
-		size_t emptyBytes = 0;
-		if constexpr (hasEmpty) {
-			HCL_DESIGNCHECK_HINT((stream->size() % 8) == 0, "Stream payload width must be a whole number of bytes when using the empty signal");
-			HCL_DESIGNCHECK_HINT((packet.payload.size() % 8) == 0, "Packet payload width must be a whole number of bytes when using the empty signal");
-			size_t packetSizeBytes = packet.payload.size() / 8;
-			size_t streamSizeBytes = stream->size() / 8;
-			emptyBytes = streamSizeBytes - (packetSizeBytes % streamSizeBytes);
-		}
-
 		if constexpr (!hasTxId) {
-			if(packet.txid() != 0)
-				std::cout << "Warning: Trying to send a packet with a tx ID on a stream without a tx id field. Tx ID will be ignored" << std::endl;
+			HCL_DESIGNCHECK_HINT(packet.txid() == 0, "It is not allowed to send a packet with a tx ID on a stream without a tx ID field");
 		}
 
 		if constexpr (!hasError) {
-			if(packet.error())
-				std::cout << "Warning: Trying to send a packet with an error flag on a stream without an error flag field. Error flag will be ignored" << std::endl;
+			HCL_DESIGNCHECK_HINT(packet.error() == '0', "It is not allowed to send a packet with an error on a stream without an error field");
 		}
 
 		std::uint64_t invalidBeatMask = packet.invalidBeats();
@@ -127,20 +140,7 @@ namespace gtry::scl
 
 			if constexpr (hasValid) {
 				simu(valid(stream)) = '0';
-				simu(*stream).invalidate();
-
-				if constexpr (hasEop)
-					simu(eop(stream)).invalidate();
-				if constexpr (hasTxId)
-					simu(txid(stream)).invalidate();
-				if constexpr (hasSop)
-					simu(sop(stream)).invalidate();
-				if constexpr (hasError)
-					simu(error(stream)).invalidate();
-				if constexpr (hasTxId)
-					simu(txid(stream)).invalidate();
-				if constexpr (hasEmpty)
-					simu(empty(stream)).invalidate();
+				invalidateStream(stream);
 
 				while (invalidBeatMask & 1) {
 					co_await OnClk(clk);
@@ -163,9 +163,13 @@ namespace gtry::scl
 
 			if constexpr (hasEmpty) {
 				simu(empty(stream)).invalidate();
-				if (isLastBeat)
-					simu(empty(stream)) = emptyBytes;
-
+				if (isLastBeat){
+					HCL_DESIGNCHECK_HINT((stream->size() % 8) == 0, "Stream payload width must be a whole number of bytes when using the empty signal");
+					HCL_DESIGNCHECK_HINT((packet.payload.size() % 8) == 0, "Packet payload width must be a whole number of bytes when using the empty signal");
+					size_t packetSizeBytes = packet.payload.size() / 8;
+					size_t streamSizeBytes = stream->size() / 8;
+					simu(empty(stream)) = streamSizeBytes - (packetSizeBytes % streamSizeBytes);
+				}
 			}
 			if constexpr (hasError) {
 				simu(error(stream)).invalidate();
@@ -183,19 +187,12 @@ namespace gtry::scl
 			simu(sop(stream)) = '0';
 		if constexpr (hasError)
 			simu(error(stream)).invalidate();
-		if constexpr (hasTxId)
-			simu(txid(stream)).invalidate();
 		if constexpr (hasEmpty)
 			simu(empty(stream)).invalidate();
 
 		if constexpr (hasValid) {
 			simu(valid(stream)) = '0';
-			if constexpr (hasEop)
-				simu(eop(stream)).invalidate();
-			if constexpr (hasSop)
-				simu(sop(stream)).invalidate();
-			if constexpr (hasEmpty)
-				simu(empty(stream)).invalidate();
+			invalidateStream(stream);
 		}
 		simu(*stream).invalidate();
 	}
@@ -208,7 +205,41 @@ namespace gtry::scl
 	}
 
 	template<class... Meta>
-	SimFunction<SimPacket> receivePacket(const scl::Stream<BVec, Meta...>& stream, Clock clk, std::uint64_t unreadyBeatMask)
+	SimProcess readyDriver(const scl::Stream<BVec, Meta...>& stream, Clock clk, const uint64_t& unreadyMask){
+		static_assert(stream.template has<Ready>(), "Attempting to use a ready driver on a stream which does not feature a ready field is probably a mistake.");
+
+		simuReady(stream) = '0';
+		while (simuSop(stream) == '0') {
+			co_await OnClk(clk);
+		}
+		uint64_t unreadyMaskCopy = unreadyMask;
+		while (true) {
+			simuReady(stream) = (unreadyMaskCopy & 1 ) ? '0' : '1';
+			unreadyMaskCopy >>= 1;
+			if constexpr (stream.template has<Eop>()){
+				if (simuEop(stream) == '1' && simuReady(stream) == '1') {
+					unreadyMaskCopy = unreadyMask;
+				}
+			}
+			co_await OnClk(clk);
+		}
+	}
+
+	template<class... Meta>
+	SimProcess readyDriverRNG(const scl::Stream<BVec, Meta...>& stream, Clock clk, size_t readyProbabilityPercent ) {
+		static_assert(stream.template has<Ready>(), "Attempting to use a ready driver on a stream which does not feature a ready field is probably a mistake.");
+		assert(readyProbabilityPercent <= 100);
+
+		std::srand(1234);
+
+		while (true) {
+			simuReady(stream) = (std::rand() % 100) <= readyProbabilityPercent;
+			co_await OnClk(clk);
+		}
+	}
+			
+	template<class... Meta>
+	SimFunction<SimPacket> receivePacket(const scl::Stream<BVec, Meta...>& stream, Clock clk)
 	{
 		SimPacket result;
 
@@ -217,43 +248,19 @@ namespace gtry::scl
 		constexpr bool hasError = stream.template has<scl::Error>();
 		constexpr bool hasTxId = stream.template has<scl::TxId>();
 		constexpr bool hasEop = stream.template has<scl::Eop>();
-
-
-		HCL_DESIGNCHECK_HINT(unreadyBeatMask == 0 || hasReady, "Can not produce backpressure on a stream without ready signal");
-
-		if constexpr (hasReady) {
-			simu(ready(stream)) = '0';
-
-			while (unreadyBeatMask & 1) {
-				co_await OnClk(clk);
-				unreadyBeatMask >>= 1;
-			}
-			unreadyBeatMask >>= 1;
-
-			simu(ready(stream)) = '1';
-		}
+		constexpr bool hasSop = stream.template has<scl::Sop>();
 
 		co_await waitSop(stream, clk);
 		bool needAwaitNextBeat = false;
-		// fetch transaction-id and stuff
+
 		if constexpr (hasTxId)
 			result.txid(simu(txid(stream)));
 
 		do {
-			// when we start the loop, we don't want to await the next beat because we already awaited the sop
 			if (needAwaitNextBeat) {
-				if constexpr (hasReady) {
-					simu(ready(stream)) = '0';
-
-					while (unreadyBeatMask & 1) {
-						co_await OnClk(clk);
-						unreadyBeatMask >>= 1;
-					}
-					unreadyBeatMask >>= 1;
-
-					simu(ready(stream)) = '1';
-				}
-				// wait for next beat
+				while (simuReady(stream) == '0')
+					co_await OnClk(clk);
+				
 				co_await performTransferWait(stream, clk);
 				if constexpr (hasTxId)
 					BOOST_TEST(simu(txid(stream)) == result.txid());
@@ -261,8 +268,8 @@ namespace gtry::scl
 			}
 			needAwaitNextBeat = true;
 
-			// fetch payload
 			auto beatPayload = simu(*stream).eval();
+
 			// Potentially crop off bytes in last beat
 			if constexpr (hasEmpty)
 				if (simuEop(stream)) {
@@ -275,23 +282,19 @@ namespace gtry::scl
 				if (simuEop(stream))
 					result.error(simu(error(stream)));
 
-			// Append to what we already have received
 			result << beatPayload;
 		} while (!simuEop(stream));
-
-		if constexpr (hasReady)
-			simu(ready(stream)) = '0';
 
 		co_return result;
 	}
 
 	template<class... Meta>
-	SimFunction<SimPacket> receivePacket(const scl::Stream<BVec, Meta...>& stream, Clock clk, std::uint64_t unreadyBeatMask, scl::SimulationSequencer& sequencer)
+	SimFunction<SimPacket> receivePacket(const scl::Stream<BVec, Meta...>& stream, Clock clk, scl::SimulationSequencer& sequencer)
 	{
 		auto slot = sequencer.allocate();
 		co_await slot.wait();
 
-		auto packet = co_await receivePacket(stream, clk, unreadyBeatMask);
+		auto packet = co_await receivePacket(stream, clk);
 		co_return packet;
 	}
 
