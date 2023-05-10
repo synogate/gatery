@@ -80,28 +80,29 @@ premake5 gmake2
 On Windows:
 
 ```bash
-# Go to visualstudio.microsoft.com and download/install Visual Studio with the packages for C++ development and Git for Windows. Also install from individual components "MSVC v142 - VS 2019 C++ x84/x86 build tools (v.14.28 - 16.8)".
+# Go to visualstudio.microsoft.com and download/install Visual Studio with the packages for C++ development and Git for Windows. Also install from individual components "MSVC v142 - VS 2019 C++ x84/x86 build tools".
+
+#Commands work only with Windows PowerShell!
 
 # Assume Visual Studio and Git for Windows installed
 # Get boost via vcpkg, so fetch and install vcpkg (a package manager)
-git clone https://github.com/microsoft/vcpkg ~/Documents/vcpkg_target_dir
-cd ~/Documents/vcpkg_target_dir
+git clone https://github.com/microsoft/vcpkg "$Env:USERPROFILE/Documents/vcpkg_target_dir"
+cd "$Env:USERPROFILE/Documents/vcpkg_target_dir"
 .\bootstrap-vcpkg.bat
 # Fetch and build boost (this may take a while)
 .\vcpkg.exe install boost:x64-windows
-.\vcpkg.exe install yaml-cpp:x64-windows
 .\vcpkg.exe integrate install
 
 # Fetch and build premake
-git clone https://github.com/premake/premake-core ~/Documents/premake_target_dir
-cd ~/Documents/premake_target_dir
-./Bootstrap.bat
+git clone https://github.com/premake/premake-core "$Env:USERPROFILE/Documents/premake_target_dir"
+cd "$Env:USERPROFILE/Documents/premake_target_dir"
+.\Bootstrap.bat
 
 # fetch template project
-git clone --recursive https://github.com/synogate/gatery_template.git ~/Documents/gatery/hello_world/
-cd ~/Documents/gatery/hello_world/
+git clone --recursive https://github.com/synogate/gatery_template.git "$Env:USERPROFILE/Documents/gatery/hello_world/"
+cd "$Env:USERPROFILE/Documents/gatery/hello_world/"
 # Generate visual studio solutions with premake
-~/Documents/premake_target_dir/bin/release/premake5.exe vs2019
+&"$Env:USERPROFILE/Documents/premake_target_dir/bin/release/premake5.exe" vs2022
 ```
 
 ## Getting started

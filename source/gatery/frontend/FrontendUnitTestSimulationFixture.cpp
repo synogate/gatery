@@ -24,6 +24,7 @@
 #include <gatery/hlim/Circuit.h>
 #include <boost/test/unit_test.hpp>
 #include <gatery/debug/websocks/WebSocksInterface.h>
+#include <gatery/frontend/EventStatistics.h>
 
 
 namespace gtry {
@@ -44,6 +45,9 @@ void UnitTestSimulationFixture::runTicks(const hlim::Clock* clock, unsigned numT
 {
 	prepRun();
 	sim::UnitTestSimulationFixture::runTicks(design.getCircuit(), clock, numTicks);
+
+	if (m_statisticsCounterCsvFile)
+		EventStatistics::writeStatTable(*m_statisticsCounterCsvFile);
 }
 
 
@@ -87,6 +91,9 @@ bool UnitTestSimulationFixture::runHitsTimeout(const hlim::ClockRational &timeou
 	if (!m_warnings.empty())
 		BOOST_ERROR(m_warnings.front());
 
+	if (m_statisticsCounterCsvFile)
+		EventStatistics::writeStatTable(*m_statisticsCounterCsvFile);
+
 	return !m_stopTestCalled;
 }
 
@@ -128,7 +135,6 @@ void BoostUnitTestSimulationFixture::runTest(const hlim::ClockRational &timeoutS
 	BOOST_CHECK_MESSAGE(!runHitsTimeout(timeoutSeconds), "Simulation timed out without being called to a stop by any simulation process!");
 }
 
-
 void BoostUnitTestSimulationFixture::prepRun()
 {
 	UnitTestSimulationFixture::prepRun();
@@ -142,6 +148,8 @@ void BoostUnitTestSimulationFixture::prepRun()
 			recordVCD(filename + ".vcd");
 		else if (arg == "--vhdl")
 			outputVHDL(filename + ".vhd");
+		else if (arg == "--csv")
+			m_statisticsCounterCsvFile = filename + ".csv";
 		else if (arg == "--graph-vis" || arg == "--dot")
 			design.visualize(filename);
 	}

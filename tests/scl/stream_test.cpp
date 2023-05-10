@@ -346,7 +346,7 @@ protected:
 			if constexpr (hasValid)
 			{
 				simu(valid(stream)) = '0';
-				for (; (invalidBeats & 1) != 0; invalidBeats >>= 1)
+				for (;(invalidBeats & 1) != 0; invalidBeats >>= 1)
 					co_await AfterClk(m_clock);
 				invalidBeats >>= 1;
 				simu(valid(stream)) = '1';
