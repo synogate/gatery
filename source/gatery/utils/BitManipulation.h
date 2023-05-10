@@ -278,6 +278,18 @@ inline T lowestSetBitMask(T val)
 {
 	return val & (0-val);
 }
-	
+
+inline std::uint8_t flipEndian(std::uint8_t v) { return v; }
+inline std::int8_t flipEndian(std::int8_t v) { return v; }
+
+inline std::uint16_t flipEndian(std::uint16_t v) { return (v << 8) | (v >> 8); }
+inline std::int16_t flipEndian(std::int16_t v) { return (std::int16_t) flipEndian((std::uint16_t)v); }
+
+inline std::uint32_t flipEndian(std::uint32_t v) { return (std::uint32_t)flipEndian((std::uint16_t)v) << 16 | flipEndian((std::uint16_t)(v >> 16)); }
+inline std::int32_t flipEndian(std::int32_t v) { return (std::int32_t) flipEndian((std::uint32_t)v); }
+
+inline std::uint64_t flipEndian(std::uint64_t v) { return (std::uint64_t)flipEndian((std::uint32_t)v) << 32 | flipEndian((std::uint32_t)(v >> 32)); }
+inline std::int64_t flipEndian(std::int64_t v) { return (std::int64_t) flipEndian((std::uint64_t)v); }
+
 }
 	
