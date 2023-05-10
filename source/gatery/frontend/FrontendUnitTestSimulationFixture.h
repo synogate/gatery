@@ -71,6 +71,7 @@ namespace gtry {
 			bool m_stopTestCalled = false;
 			std::optional<sim::VCDSink> m_vcdSink;
 			std::optional<vhdl::VHDLExport> m_vhdlExport;
+			std::optional<std::filesystem::path> m_statisticsCounterCsvFile;
 	};
 
 	/**
