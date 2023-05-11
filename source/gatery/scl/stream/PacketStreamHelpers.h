@@ -203,17 +203,15 @@ namespace gtry::scl
 		static_assert(stream.template has<Ready>(), "Attempting to use a ready driver on a stream which does not feature a ready field is probably a mistake.");
 
 		simuReady(stream) = '0';
-		while (simuSop(stream) == '0') {
+		while (simuSop(stream) != '1' || simuValid(stream) != '1') {
 			co_await OnClk(clk);
 		}
 		uint64_t unreadyMaskCopy = unreadyMask;
 		while (true) {
 			simuReady(stream) = (unreadyMaskCopy & 1 ) ? '0' : '1';
 			unreadyMaskCopy >>= 1;
-			if constexpr (stream.template has<Eop>()){
-				if (simuEop(stream) == '1' && simuReady(stream) == '1') {
-					unreadyMaskCopy = unreadyMask;
-				}
+			if (simuEop(stream) == '1' && simuReady(stream) == '1') {
+				unreadyMaskCopy = unreadyMask;
 			}
 			co_await OnClk(clk);
 		}
@@ -223,6 +221,11 @@ namespace gtry::scl
 	SimProcess readyDriverRNG(const scl::Stream<BVec, Meta...>& stream, Clock clk, size_t readyProbabilityPercent, unsigned int seed) {
 		static_assert(stream.template has<Ready>(), "Attempting to use a ready driver on a stream which does not feature a ready field is probably a mistake.");
 		assert(readyProbabilityPercent <= 100);
+
+		simuReady(stream) = '0';
+		while (simuSop(stream) != '1' || simuValid(stream) != '1') {
+			co_await OnClk(clk);
+		}
 
 		std::mt19937 gen(seed);
 		std::uniform_int_distribution<> distrib(0,99);
@@ -261,7 +264,6 @@ namespace gtry::scl
 			if constexpr (hasEmpty)
 				if (simuEop(stream)) {
 					size_t numBytesToCrop = simu(empty(stream));
-					//BOOST_TEST(numBytesToCrop < stream->size()/8);
 					numBytesToCrop = std::min(numBytesToCrop, stream->size() / 8 - 1);
 					beatPayload.resize(stream->size() - numBytesToCrop * 8);
 				}

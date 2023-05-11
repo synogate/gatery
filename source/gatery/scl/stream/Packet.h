@@ -225,7 +225,7 @@ namespace gtry::scl
 				}
 			}
 			else {
-				return internal::performTransferWait(stream, clock);
+				co_await internal::performTransferWait(stream, clock);
 			}
 		}
 
