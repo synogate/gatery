@@ -9,7 +9,7 @@ linux-build:
     - linux
   script:
     - premake5 gmake2
-    - make -j
+    - make -j16
   artifacts:
     expire_in: 2 days
     paths:
