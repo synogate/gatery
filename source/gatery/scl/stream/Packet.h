@@ -207,6 +207,32 @@ namespace gtry::scl
 			return '1';
 	}
 
+
+	template<StreamSignal T>
+	class SimuStreamPerformTransferWait {
+	public:
+		SimProcess wait(const T& stream, const Clock& clock) {
+			if constexpr (stream.template has<Sop>()) {
+				if (!m_isInPacket){
+					do
+						co_await internal::performTransferWait(stream, clock);
+					while (!simu(sop(stream)));
+					m_isInPacket = true;
+				}
+				else{
+					co_await internal::performTransferWait(stream, clock);
+					m_isInPacket = !(bool)simu(eop(stream));
+				}
+			}
+			else {
+				return internal::performTransferWait(stream, clock);
+			}
+		}
+
+	protected:
+		bool m_isInPacket = false;
+	};
+
 	template<Signal Payload, Signal... Meta>
 	auto storeForwardFifo(RvPacketStream<Payload, Meta...>& in, size_t minElements)
 	{

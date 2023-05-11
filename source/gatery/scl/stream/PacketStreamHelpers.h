@@ -77,10 +77,10 @@ namespace gtry::scl
 	SimProcess readyDriver(const scl::Stream<BVec, Meta...>& stream, Clock clk, const uint64_t& unreadyMask = 0);
 
 	template<class... Meta>
-	SimProcess readyDriverRNG(const scl::Stream<BVec, Meta...>& stream, Clock clk, size_t readyProbabilityPercent);
+	SimProcess readyDriverRNG(const scl::Stream<BVec, Meta...>& stream, Clock clk, size_t readyProbabilityPercent, unsigned int seed = 1234);
 
 	template<class... Meta>
-	SimProcess invalidateStream(const scl::Stream<BVec, Meta...>& stream);
+	SimProcess simuStreamInvalidate(const scl::Stream<BVec, Meta...>& stream);
 }
 
 
@@ -88,19 +88,29 @@ namespace gtry::scl
 namespace gtry::scl
 {
 	template<class... Meta>
-	SimProcess invalidateStream(const scl::Stream<BVec, Meta...>& stream) {
+	SimProcess simuStreamInvalidate(const scl::Stream<BVec, Meta...>& stream) {
 
-		simu(*stream).invalidate();
 		if constexpr (stream.template has<scl::Eop>())
-			simu(eop(stream)).invalidate();
+			simu(eop(stream)) = '0';
+		if constexpr (stream.template has<scl::Sop>())
+			simu(sop(stream)) = '0';
 		if constexpr (stream.template has<scl::TxId>())
 			simu(txid(stream)).invalidate();
-		if constexpr (stream.template has<scl::Sop>())
-			simu(sop(stream)).invalidate();
 		if constexpr (stream.template has<scl::Error>())
 			simu(error(stream)).invalidate();
 		if constexpr (stream.template has<scl::Empty>())
 			simu(empty(stream)).invalidate();
+
+		simu(*stream).invalidate();
+
+		if constexpr (stream.template has<scl::Valid>()) {
+			simu(valid(stream)) = '0';
+			if constexpr (stream.template has<scl::Eop>())
+				simu(eop(stream)).invalidate();
+			if constexpr (stream.template has<scl::Sop>())
+				simu(sop(stream)).invalidate();
+		}
+
 		co_return;
 	}
 
@@ -138,10 +148,10 @@ namespace gtry::scl
 			auto beatData = packet.payload.extract(payloadOffset, std::min(stream->size(), packet.payload.size() - payloadOffset));
 			beatData.resize(stream->size());
 
+			simuStreamInvalidate(stream);
+			
 			if constexpr (hasValid) {
 				simu(valid(stream)) = '0';
-				invalidateStream(stream);
-
 				while (invalidBeatMask & 1) {
 					co_await OnClk(clk);
 					invalidBeatMask >>= 1;
@@ -178,23 +188,7 @@ namespace gtry::scl
 			}
 			co_await performTransferWait(stream, clk);
 		}
-
-		if constexpr (hasEop)
-			simu(eop(stream)) = '0';
-		if constexpr (hasTxId)
-			simu(txid(stream)).invalidate();
-		if constexpr (hasSop)
-			simu(sop(stream)) = '0';
-		if constexpr (hasError)
-			simu(error(stream)).invalidate();
-		if constexpr (hasEmpty)
-			simu(empty(stream)).invalidate();
-
-		if constexpr (hasValid) {
-			simu(valid(stream)) = '0';
-			invalidateStream(stream);
-		}
-		simu(*stream).invalidate();
+		simuStreamInvalidate(stream);
 	}
 
 	template<class... Meta>
@@ -226,14 +220,15 @@ namespace gtry::scl
 	}
 
 	template<class... Meta>
-	SimProcess readyDriverRNG(const scl::Stream<BVec, Meta...>& stream, Clock clk, size_t readyProbabilityPercent ) {
+	SimProcess readyDriverRNG(const scl::Stream<BVec, Meta...>& stream, Clock clk, size_t readyProbabilityPercent, unsigned int seed) {
 		static_assert(stream.template has<Ready>(), "Attempting to use a ready driver on a stream which does not feature a ready field is probably a mistake.");
 		assert(readyProbabilityPercent <= 100);
 
-		std::srand(1234);
+		std::mt19937 gen(seed);
+		std::uniform_int_distribution<> distrib(0,99);
 
 		while (true) {
-			simuReady(stream) = (std::rand() % 100) <= readyProbabilityPercent;
+			simuReady(stream) = distrib(gen) < readyProbabilityPercent;
 			co_await OnClk(clk);
 		}
 	}
@@ -241,33 +236,25 @@ namespace gtry::scl
 	template<class... Meta>
 	SimFunction<SimPacket> receivePacket(const scl::Stream<BVec, Meta...>& stream, Clock clk)
 	{
+		scl::SimuStreamPerformTransferWait<scl::Stream<BVec, Meta...>> streamTransfer;
 		SimPacket result;
 
 		constexpr bool hasEmpty = stream.template has<scl::Empty>();
-		constexpr bool hasReady = stream.template has<scl::Ready>();
 		constexpr bool hasError = stream.template has<scl::Error>();
 		constexpr bool hasTxId = stream.template has<scl::TxId>();
-		constexpr bool hasEop = stream.template has<scl::Eop>();
-		constexpr bool hasSop = stream.template has<scl::Sop>();
 
-		co_await waitSop(stream, clk);
-		bool needAwaitNextBeat = false;
-
-		if constexpr (hasTxId)
-			result.txid(simu(txid(stream)));
+		bool firstBeat = true;
 
 		do {
-			if (needAwaitNextBeat) {
-				while (simuReady(stream) == '0')
-					co_await OnClk(clk);
-				
-				co_await performTransferWait(stream, clk);
-				if constexpr (hasTxId)
-					BOOST_TEST(simu(txid(stream)) == result.txid());
+			co_await streamTransfer.wait(stream, clk);
 
+			if constexpr (hasTxId) {
+				if (firstBeat) {
+					result.txid(simu(txid(stream)));
+					firstBeat = false;
+				}
+				BOOST_TEST(simu(txid(stream)) == result.txid());
 			}
-			needAwaitNextBeat = true;
-
 			auto beatPayload = simu(*stream).eval();
 
 			// Potentially crop off bytes in last beat

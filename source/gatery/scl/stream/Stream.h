@@ -305,19 +305,35 @@ namespace gtry::scl
 			return '1';
 	}
 
-	template<StreamSignal T>
-	SimProcess performTransferWait(const T &stream, const Clock &clock) {
-		do
+	namespace internal
+	{
+		template<StreamSignal T>
+		SimProcess performTransferWait(const T& stream, const Clock& clock) {
 			co_await OnClk(clock);
-		while (!simuReady(stream) || !simuValid(stream));
-	}
+		}
 
-	template<StreamSignal T>
-	SimProcess waitSop(const T& stream, const Clock& clock) {
-		do
-			co_await OnClk(clock);
-		while (!simuReady(stream) || !(simuValid(stream) && simuSop(stream)));
+		template<StreamSignal T> requires (T::template has<Ready>() && !T::template has<Valid>())
+		SimProcess performTransferWait(const T& stream, const Clock& clock) {
+			do
+				co_await OnClk(clock);
+			while (!simu(ready(stream)));
+		}
+
+		template<StreamSignal T> requires (!T::template has<Ready>() && T::template has<Valid>())
+		SimProcess performTransferWait(const T& stream, const Clock& clock) {
+			do
+				co_await OnClk(clock);
+			while (!simu(valid(stream)));
+		}
+
+		template<StreamSignal T> requires (T::template has<Ready>() && T::template has<Valid>())
+		SimProcess performTransferWait(const T& stream, const Clock& clock) {
+			do
+				co_await OnClk(clock);
+			while (!simu(ready(stream)) || !simu(valid(stream)));
+		}
 	}
+	SimProcess performTransferWait(const StreamSignal auto& stream, const Clock& clock) { return internal::performTransferWait(stream, clock); }
 
 	template<StreamSignal T>
 	SimProcess performTransfer(const T& stream, const Clock& clock) 
