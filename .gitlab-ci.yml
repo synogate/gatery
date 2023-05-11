@@ -1,4 +1,3 @@
-
 stages:
   - build
   - test
@@ -10,7 +9,7 @@ linux-build:
     - linux
   script:
     - premake5 gmake2
-    - make -j4
+    - make -j
   artifacts:
     expire_in: 2 days
     paths:
