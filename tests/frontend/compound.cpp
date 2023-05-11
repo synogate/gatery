@@ -200,7 +200,7 @@ BOOST_FIXTURE_TEST_CASE(ConstructFromSignal, BoostUnitTestSimulationFixture)
 	sim_assert(de == TestEnum::VAL2);
 	de = TestEnum::VAL2;
 
-	design.visualize("test");
+	//design.visualize("test");
 
 	eval();
 }
