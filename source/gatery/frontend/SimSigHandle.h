@@ -255,7 +255,8 @@ namespace gtry {
 
 		bool defined() const { return allDefined(); }
 		bool value() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return (bool)this->m_handle; }
-		operator bool() const { return value(); }
+		explicit operator bool() const { return value(); }
+		operator char() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return this->m_handle; }
 
 		SigHandleBit drivingReg() const { SigHandleBit res(m_handle.getOutput()); res.m_handle.overrideDrivingRegister(); return res; }
 	protected:

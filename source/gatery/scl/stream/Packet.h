@@ -54,8 +54,10 @@ namespace gtry::scl
 		UInt empty; // number of empty symbols in this beat
 	};
 
-	UInt& empty(StreamSignal auto& s) { return s.template get<Empty>().empty; }
-	const UInt& empty(const StreamSignal auto& s) { return s.template get<Empty>().empty; }
+	template<StreamSignal T> requires (T::template has<Empty>())
+	UInt& empty(T& s) { return s.template get<Empty>().empty; }
+	template<StreamSignal T> requires (T::template has<Empty>())
+	const UInt& empty(const T& s) { return s.template get<Empty>().empty; }
 
 	template<Signal T, Signal... Meta>
 	using PacketStream = Stream<T, scl::Eop, Meta...>;
@@ -188,6 +190,48 @@ namespace gtry::scl
 		IF(transfer(packetStream))
 			fifo.pop();
 	}
+
+	template<StreamSignal T>
+	auto simuSop(const T& stream) {
+		if constexpr (stream.template has<scl::Sop>())
+			return simu(sop(stream));
+		else
+			return '1';
+	}
+
+	template<StreamSignal T>
+	auto simuEop(const T& stream) {
+		if constexpr (stream.template has<scl::Eop>())
+			return simu(eop(stream));
+		else
+			return '1';
+	}
+
+
+	template<StreamSignal T>
+	class SimuStreamPerformTransferWait {
+	public:
+		SimProcess wait(const T& stream, const Clock& clock) {
+			if constexpr (stream.template has<Sop>()) {
+				if (!m_isInPacket){
+					do
+						co_await internal::performTransferWait(stream, clock);
+					while (!simu(sop(stream)));
+					m_isInPacket = true;
+				}
+				else{
+					co_await internal::performTransferWait(stream, clock);
+					m_isInPacket = !(bool)simu(eop(stream));
+				}
+			}
+			else {
+				co_await internal::performTransferWait(stream, clock);
+			}
+		}
+
+	protected:
+		bool m_isInPacket = false;
+	};
 
 	template<Signal Payload, Signal... Meta>
 	auto storeForwardFifo(RvPacketStream<Payload, Meta...>& in, size_t minElements)

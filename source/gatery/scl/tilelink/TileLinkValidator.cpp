@@ -33,7 +33,7 @@ namespace gtry::scl
 	bool readyValue(const T& stream) { return true; }
 
 	template<StreamSignal T> requires (T::template has<Ready>())
-	bool readyValue(const T& stream) { return simu(ready(stream)); }
+	bool readyValue(const T& stream) { return (bool)simu(ready(stream)); }
 
 	template<StreamSignal T> 
 	bool validDefined(const T &stream) { return true; }
@@ -45,7 +45,7 @@ namespace gtry::scl
 	bool validValue(const T& stream) { return true; }
 
 	template<StreamSignal T> requires (T::template has<Valid>())
-	bool validValue(const T& stream) { return simu(valid(stream)); }
+	bool validValue(const T& stream) { return (bool)simu(valid(stream)); }
 
 	template<StreamSignal T>
 	bool transferValue(const T& stream) { return readyValue(stream) & validValue(stream); }
@@ -436,7 +436,7 @@ namespace gtry::scl
 			const size_t size = simu(d->size);
 			const size_t source = simu(d->source);
 			const size_t sink = simu(d->sink);
-			const bool error = simu(d->error);
+			const bool error = (bool)simu(d->error);
 
 			for (size_t i = 0; i < burstBeats; ++i)
 			{

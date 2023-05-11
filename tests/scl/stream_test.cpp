@@ -27,9 +27,12 @@
 #include <gatery/scl/stream/StreamArbiter.h>
 #include <gatery/scl/stream/adaptWidth.h>
 #include <gatery/scl/stream/Packet.h>
-#include <gatery/scl/io/SpiMaster.h>
+#include <gatery/scl/stream/PacketStreamHelpers.h>
+#include <gatery/scl/io/SpiMaster.h> 
 
 #include <gatery/debug/websocks/WebSocksInterface.h>
+#include <gatery/scl/sim/SimulationSequencer.h>
+
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -220,6 +223,7 @@ BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
 	runTicks(clock.getClk(), 256);
 }
 
+
 class StreamTransferFixture : public BoostUnitTestSimulationFixture
 {
 protected:
@@ -279,26 +283,26 @@ protected:
 			while (simu(valid(stream)) == '0');
 
 			// todo: not good
-			co_await WaitFor(Seconds{1,10} / recvClock.absoluteFrequency());
+			co_await WaitFor(Seconds{ 1,10 } / recvClock.absoluteFrequency());
 
 			while (true)
 			{
 				simu(ready(stream)) = rng() % 2 != 0;
 				co_await AfterClk(recvClock);
 			}
-		});
+			});
 	}
 
 	void simulateSendData(scl::RvStream<UInt>& stream, size_t group)
 	{
 		addSimulationProcess([=, this, &stream]()->SimProcess {
 			std::mt19937 rng{ std::random_device{}() };
-			for(size_t i = 0; i < m_transfers; ++i)
+			for (size_t i = 0; i < m_transfers; ++i)
 			{
 				simu(valid(stream)) = '0';
 				simu(*stream).invalidate();
 
-				while((rng() & 1) == 0)
+				while ((rng() & 1) == 0)
 					co_await AfterClk(m_clock);
 
 				simu(valid(stream)) = '1';
@@ -308,7 +312,7 @@ protected:
 			}
 			simu(valid(stream)) = '0';
 			simu(*stream).invalidate();
-		});
+			});
 	}
 
 	template<class... Meta>
@@ -319,7 +323,7 @@ protected:
 				simu(error(stream)) = '0';
 
 			std::mt19937 rng{ std::random_device{}() };
-			for(size_t i = 0; i < m_transfers;)
+			for (size_t i = 0; i < m_transfers;)
 			{
 				const size_t packetLen = std::min<size_t>(m_transfers - i, rng() % 5 + 1);
 				co_await sendDataPacket(stream, group, i, packetLen, rng() & rng());
@@ -327,7 +331,7 @@ protected:
 			}
 			simu(valid(stream)) = '0';
 			simu(*stream).invalidate();
-		});
+			});
 	}
 
 	template<class... Meta>
@@ -338,7 +342,7 @@ protected:
 		{
 			simu(eop(stream)).invalidate();
 			simu(*stream).invalidate();
-			
+
 			if constexpr (hasValid)
 			{
 				simu(valid(stream)) = '0';
@@ -358,7 +362,7 @@ protected:
 			co_await scl::performTransferWait(stream, m_clock);
 		}
 
-		if(!hasValid)
+		if (!hasValid)
 			simu(sop(stream)) = '0';
 	}
 
@@ -391,7 +395,7 @@ protected:
 			simu(sop(stream)) = '0';
 			simu(eop(stream)) = '0';
 			simu(*stream).invalidate();
-		});
+			});
 	}
 
 	template<scl::StreamSignal T>
@@ -403,11 +407,11 @@ protected:
 
 		addSimulationProcess([=, this, &stream]()->SimProcess {
 			std::vector<size_t> expectedValue(m_groups);
-			while(true)
+			while (true)
 			{
 				co_await OnClk(recvClock);
 
-				if(simu(myTransfer) == '1')
+				if (simu(myTransfer) == '1')
 				{
 					size_t data = simu(*(stream.operator ->()));
 					BOOST_TEST(data / m_transfers < expectedValue.size());
@@ -424,13 +428,14 @@ protected:
 					co_await AfterClk(recvClock);
 				}
 			}
-		});
+			});
 	}
 
 private:
 	size_t m_groups = 0;
 	size_t m_transfers = 16;
 };
+
 
 BOOST_FIXTURE_TEST_CASE(stream_transform, StreamTransferFixture)
 {

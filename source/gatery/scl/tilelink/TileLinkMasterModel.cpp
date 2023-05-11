@@ -111,7 +111,7 @@ namespace gtry::scl
 				.defined = simu((*m_link.d)->data).defined(),
 			});
 		}
-		ret.error = simu((*m_link.d)->error);
+		ret.error = (bool)simu((*m_link.d)->error);
 
 		m_sourceInUse[sourceId] = false;
 		co_return ret;

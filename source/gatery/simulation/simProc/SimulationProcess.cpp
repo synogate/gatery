@@ -30,9 +30,12 @@ SimulationCoroutineHandler::~SimulationCoroutineHandler()
 
 void SimulationCoroutineHandler::stopAll()
 {
+	auto lastHandler = activeHandler;
+	activeHandler = this;
 	m_simulationCoroutines.clear();
 	while (!m_coroutinesReadyToResume.empty())
 		m_coroutinesReadyToResume.pop();
+	activeHandler = lastHandler;
 }
 
 
