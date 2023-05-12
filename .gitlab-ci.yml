@@ -9,7 +9,7 @@ linux-build:
     - linux
   script:
     - premake5 gmake2
-    - make -j
+    - make -j16
   artifacts:
     expire_in: 2 days
     paths:
@@ -29,6 +29,8 @@ windows-build:
 
 documentation-job:
   stage: build
+  tags:
+    - documount
   script:
     - doxygen doc/Doxyfile
     # commented out because it fails the build due to missing permissions
