@@ -51,7 +51,7 @@ namespace gtry::scl
 		std::uint64_t invalidBeats() const { return m_invalidBeats; }
 
 		std::span<uint8_t> data() {
-			HCL_DESIGNCHECK_HINT(payload.size() % 8, "Packet payload size is not a multiple of 8 bits!");
+			HCL_DESIGNCHECK_HINT(payload.size() % 8 == 0, "Packet payload size is not a multiple of 8 bits!");
 			return std::span<uint8_t>((uint8_t*)payload.data(sim::DefaultConfig::VALUE), payload.size() / 8);
 		}
 		operator std::span<uint8_t>() { return data(); }
