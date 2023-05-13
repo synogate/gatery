@@ -85,6 +85,8 @@ test-linux-coverage:
     expire_in: 4 weeks
     paths:
         - cov/
+  only:
+    - master
 
 documentation-job:
   stage: deploy
