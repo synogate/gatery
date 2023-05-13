@@ -2,6 +2,7 @@ stages:
   - build
   - test
   - coverage
+  - deploy
 
 linux-build:
   stage: build
@@ -9,7 +10,7 @@ linux-build:
     - linux
   script:
     - premake5 gmake2
-    - make -j16
+    - make -j20
   artifacts:
     expire_in: 2 days
     paths:
@@ -27,21 +28,9 @@ windows-build:
     paths:
       - bin/
 
-documentation-job:
-  stage: build
-  tags:
-    - documount
-  script:
-    - doxygen doc/Doxyfile
-    # commented out because it fails the build due to missing permissions
-    - rm -rf /mnt/doxygenDocu/gatery/*
-    - mv doc/gen/html/ /mnt/doxygenDocu/gatery
-  only:
-    - master
-
 test-linux-frontend:
   stage: test
-  allow_failure: true
+  needs: ["linux-build"]
   tags:
     - linux
   script:
@@ -49,7 +38,7 @@ test-linux-frontend:
 
 test-linux-scl:
   stage: test
-  allow_failure: true
+  needs: ["linux-build"]
   tags:
     - linux
   script:
@@ -57,7 +46,7 @@ test-linux-scl:
 
 test-windows-frontend:
   stage: test
-  allow_failure: true
+  needs: ["windows-build"]
   tags:
     - windows
   script:
@@ -65,7 +54,7 @@ test-windows-frontend:
 
 test-windows-scl:
   stage: test
-  allow_failure: true
+  needs: ["windows-build"]
   tags:
     - windows
   script:
@@ -73,6 +62,7 @@ test-windows-scl:
 
 test-linux-coverage:
   stage: coverage
+  needs: ["linux-build"]
   tags:
     - linux
   script:
@@ -95,3 +85,15 @@ test-linux-coverage:
     expire_in: 4 weeks
     paths:
         - cov/
+
+documentation-job:
+  stage: deploy
+  tags:
+    - documount
+  script:
+    - doxygen doc/Doxyfile
+    # commented out because it fails the build due to missing permissions
+    - rm -rf /mnt/doxygenDocu/gatery/*
+    - mv doc/gen/html/ /mnt/doxygenDocu/gatery
+  only:
+    - master
