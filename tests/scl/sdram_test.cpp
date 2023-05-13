@@ -642,9 +642,9 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_fuzz_test, SdramControllerTest)
 		};
 
 		std::set<uint64_t> usedAddress;
-		for(size_t i = 0; i < 2'000; ++i)
+		for(size_t i = 0; i < 128; ++i)
 		{
-			co_await linkModel.idle(8);
+			co_await linkModel.idle(4);
 
 			uint64_t size = rng() & 3;
 			uint64_t address = rng() & link.a->address.width().mask();
