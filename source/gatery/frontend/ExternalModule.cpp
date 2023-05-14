@@ -188,7 +188,7 @@ BVec ExternalModule::out(std::string_view name, BitWidth W, PinConfig cfg)
 	}
 	else
 	{
-		idx = it - m_node.outs().end();
+		idx = it - m_node.outs().begin();
 	}
 	return SignalReadPort(hlim::NodePort{ .node = &m_node, .port = (size_t)idx });
 }
@@ -207,7 +207,7 @@ Bit ExternalModule::out(std::string_view name, PinConfig cfg)
 	}
 	else
 	{
-		idx = it - m_node.outs().end();
+		idx = it - m_node.outs().begin();
 	}
 	return SignalReadPort(hlim::NodePort{ .node = &m_node, .port = (size_t)idx });
 }
