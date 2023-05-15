@@ -253,7 +253,6 @@ namespace gtry::scl
 					result.txid(simu(txid(stream)));
 					firstBeat = false;
 				}
-				//BOOST_TEST(simu(txid(stream)) == result.txid()); must be moved into a packet validation function
 			}
 			auto beatPayload = simu(*stream).eval();
 
