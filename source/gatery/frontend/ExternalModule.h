@@ -35,6 +35,7 @@ namespace gtry
 	struct PinConfig
 	{
 		PinType type = PinType::STD_LOGIC;
+		std::optional<Clock> clockOverride;
 	};
 
 	class ExternalModule

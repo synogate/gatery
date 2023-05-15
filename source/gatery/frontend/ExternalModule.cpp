@@ -137,7 +137,10 @@ BVec& ExternalModule::in(std::string_view name, BitWidth W, PinConfig cfg)
 		m_node.resizeInputs(idx + 1);
 		m_node.declInputBitVector(idx, std::string{ name }, W.bits(), {}, cfg.type);
 		m_node.rewireInput(idx, signal.readPort());
-		m_node.m_inClock.push_back(ClockScope::getClk().getClk());
+		if (cfg.clockOverride)
+			m_node.m_inClock.push_back(cfg.clockOverride->getClk());
+		else
+			m_node.m_inClock.push_back(ClockScope::getClk().getClk());
 		return signal;
 	}
 	return get<BVec>(m_in[it - m_node.ins().begin()]);
@@ -154,7 +157,10 @@ Bit& ExternalModule::in(std::string_view name, PinConfig cfg)
 		m_node.resizeInputs(idx + 1);
 		m_node.declInputBit(idx, std::string{ name }, cfg.type);
 		m_node.rewireInput(idx, signal.readPort());
-		m_node.m_inClock.push_back(ClockScope::getClk().getClk());
+		if (cfg.clockOverride)
+			m_node.m_inClock.push_back(cfg.clockOverride->getClk());
+		else
+			m_node.m_inClock.push_back(ClockScope::getClk().getClk());
 		return signal;
 	}
 	return get<Bit>(m_in[it - m_node.ins().begin()]);
@@ -184,7 +190,10 @@ BVec ExternalModule::out(std::string_view name, BitWidth W, PinConfig cfg)
 		idx = m_node.outs().size();
 		m_node.resizeOutputs(idx + 1);
 		m_node.declOutputBitVector(idx, std::string{ name }, W.bits(), {}, cfg.type);
-		m_node.m_outClockRelations.push_back({.dependentClocks = {ClockScope::getClk().getClk()}});
+		if (cfg.clockOverride)
+			m_node.m_outClockRelations.push_back({.dependentClocks = {cfg.clockOverride->getClk()}});
+		else
+			m_node.m_outClockRelations.push_back({.dependentClocks = {ClockScope::getClk().getClk()}});
 	}
 	else
 	{
@@ -203,7 +212,10 @@ Bit ExternalModule::out(std::string_view name, PinConfig cfg)
 		idx = m_node.outs().size();
 		m_node.resizeOutputs(idx + 1);
 		m_node.declOutputBit(idx, std::string{ name }, cfg.type);
-		m_node.m_outClockRelations.push_back({.dependentClocks = {ClockScope::getClk().getClk()}});
+		if (cfg.clockOverride)
+			m_node.m_outClockRelations.push_back({.dependentClocks = {cfg.clockOverride->getClk()}});
+		else
+			m_node.m_outClockRelations.push_back({.dependentClocks = {ClockScope::getClk().getClk()}});
 	}
 	else
 	{
@@ -217,6 +229,10 @@ void ExternalModule::inoutPin(std::string_view portName, std::string_view pinNam
 {
 	HCL_DESIGNCHECK_HINT( std::ranges::find(m_node.ins(), portName, &Node_External_Exposed::Port::name) == m_node.ins().end(), "An input port with that name already exists!");
 	HCL_DESIGNCHECK_HINT( std::ranges::find(m_node.outs(), portName, &Node_External_Exposed::Port::name) == m_node.outs().end(), "An output port with that name already exists!");
+
+	std::optional<ClockScope> optScp;
+	if (cfg.clockOverride)
+		optScp.emplace(*cfg.clockOverride);
 
 	in(portName, W, cfg);
 	out(portName, W, cfg);
@@ -234,6 +250,10 @@ void ExternalModule::inoutPin(std::string_view portName, std::string_view pinNam
 {
 	HCL_DESIGNCHECK_HINT( std::ranges::find(m_node.ins(), portName, &Node_External_Exposed::Port::name) == m_node.ins().end(), "An input port with that name already exists!");
 	HCL_DESIGNCHECK_HINT( std::ranges::find(m_node.outs(), portName, &Node_External_Exposed::Port::name) == m_node.outs().end(), "An output port with that name already exists!");
+
+	std::optional<ClockScope> optScp;
+	if (cfg.clockOverride)
+		optScp.emplace(*cfg.clockOverride);
 
 	in(portName, cfg);
 	out(portName, cfg);
