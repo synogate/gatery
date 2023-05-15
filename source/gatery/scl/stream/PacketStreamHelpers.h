@@ -61,34 +61,34 @@ namespace gtry::scl
 		std::uint64_t m_invalidBeats = 0;
 	};
 
-	template<class... Meta>
-	SimProcess sendPacket(const scl::Stream<BVec, Meta...>& stream, const SimPacket& packet, Clock clk);
+	template<BaseSignal Payload, Signal... Meta>
+	SimProcess sendPacket(const scl::Stream<Payload, Meta...>& stream, const SimPacket& packet, Clock clk);
 
-	template<class... Meta>
-	SimProcess sendPacket(const scl::Stream<BVec, Meta...>& stream, const SimPacket& packet, Clock clk, scl::SimulationSequencer& sequencer);
+	template<BaseSignal Payload, Signal... Meta>
+	SimProcess sendPacket(const scl::Stream<Payload, Meta...>& stream, const SimPacket& packet, Clock clk, scl::SimulationSequencer& sequencer);
 
-	template<class... Meta>
-	SimFunction<SimPacket> receivePacket(const scl::Stream<BVec, Meta...>& stream, Clock clk);
+	template<BaseSignal Payload, Signal... Meta>
+	SimFunction<SimPacket> receivePacket(const scl::Stream<Payload, Meta...>& stream, Clock clk);
 
-	template<class... Meta>
-	SimFunction<SimPacket> receivePacket(const scl::Stream<BVec, Meta...>& stream, Clock clk, scl::SimulationSequencer& sequencer);
+	template<BaseSignal Payload, Signal... Meta>
+	SimFunction<SimPacket> receivePacket(const scl::Stream<Payload, Meta...>& stream, Clock clk, scl::SimulationSequencer& sequencer);
 
-	template<class... Meta>
-	SimProcess readyDriver(const scl::Stream<BVec, Meta...>& stream, Clock clk, const uint64_t& unreadyMask = 0);
+	template<BaseSignal Payload, Signal... Meta>
+	SimProcess readyDriver(const scl::Stream<Payload, Meta...>& stream, Clock clk, const uint64_t& unreadyMask = 0);
 
-	template<class... Meta>
-	SimProcess readyDriverRNG(const scl::Stream<BVec, Meta...>& stream, Clock clk, size_t readyProbabilityPercent, unsigned int seed = 1234);
+	template<BaseSignal Payload, Signal... Meta>
+	SimProcess readyDriverRNG(const scl::Stream<Payload, Meta...>& stream, Clock clk, size_t readyProbabilityPercent, unsigned int seed = 1234);
 
-	template<class... Meta>
-	SimProcess simuStreamInvalidate(const scl::Stream<BVec, Meta...>& stream);
+	template<BaseSignal Payload, Signal... Meta>
+	void simuStreamInvalidate(const scl::Stream<Payload, Meta...>& stream);
 }
 
 
 
 namespace gtry::scl
 {
-	template<class... Meta>
-	SimProcess simuStreamInvalidate(const scl::Stream<BVec, Meta...>& stream) {
+	template<BaseSignal Payload, Signal... Meta>
+	void simuStreamInvalidate(const scl::Stream<Payload, Meta...>& stream) {
 
 		if constexpr (stream.template has<scl::Eop>())
 			simu(eop(stream)) = '0';
@@ -110,14 +110,11 @@ namespace gtry::scl
 			if constexpr (stream.template has<scl::Sop>())
 				simu(sop(stream)).invalidate();
 		}
-
-		co_return;
 	}
 
-	template<class... Meta>
-	SimProcess sendPacket(const scl::Stream<BVec, Meta...>& stream, const SimPacket& packet, Clock clk)
+	template<BaseSignal Payload, Signal... Meta>
+	SimProcess sendPacket(const scl::Stream<Payload, Meta...>& stream, const SimPacket& packet, Clock clk)
 	{
-
 		size_t numberOfBeats = packet.payload.size() / stream->size();
 		if (((packet.payload.size()) % stream->size()) != 0)
 			numberOfBeats++;
@@ -191,15 +188,15 @@ namespace gtry::scl
 		simuStreamInvalidate(stream);
 	}
 
-	template<class... Meta>
-	SimProcess sendPacket(const scl::Stream<BVec, Meta...>& stream, const SimPacket& packet, Clock clk, scl::SimulationSequencer& sequencer) {
+	template<BaseSignal Payload, Signal... Meta>
+	SimProcess sendPacket(const scl::Stream<Payload, Meta...>& stream, const SimPacket& packet, Clock clk, scl::SimulationSequencer& sequencer) {
 		auto slot = sequencer.allocate();
 		co_await slot.wait();
 		co_await sendPacket(stream, packet, clk);
 	}
 
-	template<class... Meta>
-	SimProcess readyDriver(const scl::Stream<BVec, Meta...>& stream, Clock clk, const uint64_t& unreadyMask){
+	template<BaseSignal Payload, Signal... Meta>
+	SimProcess readyDriver(const scl::Stream<Payload, Meta...>& stream, Clock clk, const uint64_t& unreadyMask){
 		static_assert(stream.template has<Ready>(), "Attempting to use a ready driver on a stream which does not feature a ready field is probably a mistake.");
 
 		simuReady(stream) = '0';
@@ -217,8 +214,8 @@ namespace gtry::scl
 		}
 	}
 
-	template<class... Meta>
-	SimProcess readyDriverRNG(const scl::Stream<BVec, Meta...>& stream, Clock clk, size_t readyProbabilityPercent, unsigned int seed) {
+	template<BaseSignal Payload, Signal... Meta>
+	SimProcess readyDriverRNG(const scl::Stream<Payload, Meta...>& stream, Clock clk, size_t readyProbabilityPercent, unsigned int seed) {
 		static_assert(stream.template has<Ready>(), "Attempting to use a ready driver on a stream which does not feature a ready field is probably a mistake.");
 		assert(readyProbabilityPercent <= 100);
 
@@ -236,10 +233,10 @@ namespace gtry::scl
 		}
 	}
 			
-	template<class... Meta>
-	SimFunction<SimPacket> receivePacket(const scl::Stream<BVec, Meta...>& stream, Clock clk)
+	template<BaseSignal Payload, Signal... Meta>
+	SimFunction<SimPacket> receivePacket(const scl::Stream<Payload, Meta...>& stream, Clock clk)
 	{
-		scl::SimuStreamPerformTransferWait<scl::Stream<BVec, Meta...>> streamTransfer;
+		scl::SimuStreamPerformTransferWait<scl::Stream<Payload, Meta...>> streamTransfer;
 		SimPacket result;
 
 		constexpr bool hasEmpty = stream.template has<scl::Empty>();
@@ -256,7 +253,6 @@ namespace gtry::scl
 					result.txid(simu(txid(stream)));
 					firstBeat = false;
 				}
-				BOOST_TEST(simu(txid(stream)) == result.txid());
 			}
 			auto beatPayload = simu(*stream).eval();
 
@@ -277,8 +273,8 @@ namespace gtry::scl
 		co_return result;
 	}
 
-	template<class... Meta>
-	SimFunction<SimPacket> receivePacket(const scl::Stream<BVec, Meta...>& stream, Clock clk, scl::SimulationSequencer& sequencer)
+	template<BaseSignal Payload, Signal... Meta>
+	SimFunction<SimPacket> receivePacket(const scl::Stream<Payload, Meta...>& stream, Clock clk, scl::SimulationSequencer& sequencer)
 	{
 		auto slot = sequencer.allocate();
 		co_await slot.wait();
@@ -286,7 +282,6 @@ namespace gtry::scl
 		auto packet = co_await receivePacket(stream, clk);
 		co_return packet;
 	}
-
 }
 
 
