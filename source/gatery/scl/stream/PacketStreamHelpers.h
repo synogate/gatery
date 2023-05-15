@@ -80,7 +80,7 @@ namespace gtry::scl
 	SimProcess readyDriverRNG(const scl::Stream<Payload, Meta...>& stream, Clock clk, size_t readyProbabilityPercent, unsigned int seed = 1234);
 
 	template<BaseSignal Payload, Signal... Meta>
-	SimProcess simuStreamInvalidate(const scl::Stream<Payload, Meta...>& stream);
+	void simuStreamInvalidate(const scl::Stream<Payload, Meta...>& stream);
 }
 
 
@@ -88,7 +88,7 @@ namespace gtry::scl
 namespace gtry::scl
 {
 	template<BaseSignal Payload, Signal... Meta>
-	SimProcess simuStreamInvalidate(const scl::Stream<Payload, Meta...>& stream) {
+	void simuStreamInvalidate(const scl::Stream<Payload, Meta...>& stream) {
 
 		if constexpr (stream.template has<scl::Eop>())
 			simu(eop(stream)) = '0';
@@ -110,8 +110,6 @@ namespace gtry::scl
 			if constexpr (stream.template has<scl::Sop>())
 				simu(sop(stream)).invalidate();
 		}
-
-		co_return;
 	}
 
 	template<BaseSignal Payload, Signal... Meta>
@@ -147,7 +145,7 @@ namespace gtry::scl
 			auto beatData = packet.payload.extract(payloadOffset, std::min(stream->size(), packet.payload.size() - payloadOffset));
 			beatData.resize(stream->size());
 
-			co_await simuStreamInvalidate(stream);
+			simuStreamInvalidate(stream);
 			
 			if constexpr (hasValid) {
 				simu(valid(stream)) = '0';
@@ -187,7 +185,7 @@ namespace gtry::scl
 			}
 			co_await performTransferWait(stream, clk);
 		}
-		co_await simuStreamInvalidate(stream);
+		simuStreamInvalidate(stream);
 	}
 
 	template<BaseSignal Payload, Signal... Meta>
