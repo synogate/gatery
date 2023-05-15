@@ -33,6 +33,7 @@
 #include "../hlim/coreNodes/Node_PriorityConditional.h"
 #include "../hlim/coreNodes/Node_Rewire.h"
 #include "../hlim/coreNodes/Node_Pin.h"
+#include "../hlim/supportNodes/Node_External.h"
 #include "../hlim/NodeVisitor.h"
 #include "../hlim/supportNodes/Node_ExportOverride.h"
 #include "../hlim/Subnet.h"
@@ -226,8 +227,12 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 				}
 				readyNodeInputs[i] = driver;
 				if (driver.node != nullptr && !outputsReady.contains(driver) && subnetToConsider.contains(driver.node)) {
-					allInputsReady = false;
-					break;
+
+					// Allow feedback loops on external nodes
+					if (!dynamic_cast<hlim::Node_External*>(node) || driver.node != node) {
+						allInputsReady = false;
+						break;
+					}
 				}
 			}
 
