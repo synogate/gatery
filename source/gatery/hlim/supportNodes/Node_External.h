@@ -40,6 +40,7 @@ class GenericParameter {
 			BIT,
 			STD_LOGIC,
 			STD_ULOGIC,
+			VL,
 		};
 		//enum class BitVectorFlavor {
 		//	BIT_VECTOR,

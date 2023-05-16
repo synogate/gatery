@@ -33,7 +33,9 @@ enum class VHDLDataType {
 	STD_ULOGIC,
 	STD_LOGIC_VECTOR,
 	STD_ULOGIC_VECTOR,
-	UNSIGNED
+	UNSIGNED,
+	VL_LOGIC,
+	VL_LOGIC_VECTOR,
 };
 
 VHDLDataType chooseDataTypeFromOutput(const hlim::NodePort &np);
