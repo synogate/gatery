@@ -133,9 +133,11 @@ void BaseNode::attachClock(Clock *clk, size_t clockPort)
 	detachClock(clockPort);
 
 	m_clocks[clockPort] = clk;
-	clk->m_clockedNodes.emplace(NodePort{.node = this, .port = clockPort});
-	if (!clk->m_clockedNodesCache.empty())
-		clk->m_clockedNodesCache.emplace_back(NodePort{ .node = this, .port = clockPort });
+	if (clk != nullptr) {
+		clk->m_clockedNodes.emplace(NodePort{.node = this, .port = clockPort});
+		if (!clk->m_clockedNodesCache.empty())
+			clk->m_clockedNodesCache.emplace_back(NodePort{ .node = this, .port = clockPort });
+	}
 }
 
 void BaseNode::detachClock(size_t clockPort)
