@@ -271,8 +271,10 @@ void DefaultCodeFormatting::formatConnectionType(std::ostream &stream, const VHD
 		case VHDLDataType::BIT:
 		case VHDLDataType::STD_LOGIC:
 		case VHDLDataType::STD_ULOGIC:
+		case VHDLDataType::VL_LOGIC:
 		break;
 
+		case VHDLDataType::VL_LOGIC_VECTOR:
 		case VHDLDataType::BIT_VECTOR:
 		case VHDLDataType::STD_LOGIC_VECTOR:
 		case VHDLDataType::STD_ULOGIC_VECTOR:
@@ -344,6 +346,9 @@ void DefaultCodeFormatting::formatDataTypeConversion(std::ostream &stream, VHDLD
 				case VHDLDataType::STD_ULOGIC:
 					stream << "PORTMAP_TO_BIT(" << srcIdentifier << ')';
 				break;
+				case VHDLDataType::VL_LOGIC:
+					stream << "TO_BIT(" << srcIdentifier << ')';
+				break;
 				default:
 					HCL_ASSERT_HINT(false, "Invalid conversion");
 			}
@@ -360,6 +365,26 @@ void DefaultCodeFormatting::formatDataTypeConversion(std::ostream &stream, VHDLD
 				case VHDLDataType::UNSIGNED:
 					stream << "TO_BITVECTOR(STD_LOGIC_VECTOR(" << srcIdentifier << "))";
 				break;
+				case VHDLDataType::VL_LOGIC:
+					stream << "TO_BITVECTOR(" << srcIdentifier << ')';
+				break;
+				default:
+					HCL_ASSERT_HINT(false, "Invalid conversion");
+			}
+		break;
+		case VHDLDataType::VL_LOGIC:
+			switch (srcDataType) {
+				case VHDLDataType::VL_LOGIC:
+					stream << srcIdentifier;
+				break;
+				case VHDLDataType::BIT:
+					stream << "TO_VLULOGIC(" << srcIdentifier << ')';
+				break;
+				case VHDLDataType::STD_LOGIC:
+				case VHDLDataType::STD_ULOGIC:
+					stream << "TO_VLULOGIC(PORTMAP_TO_BIT(" << srcIdentifier << "))";
+					stream << "TO_VLULOGIC(PORTMAP_TO_BIT(" << srcIdentifier << "))";
+				break;
 				default:
 					HCL_ASSERT_HINT(false, "Invalid conversion");
 			}
@@ -375,6 +400,9 @@ void DefaultCodeFormatting::formatDataTypeConversion(std::ostream &stream, VHDLD
 				case VHDLDataType::STD_ULOGIC:
 					stream << "STD_LOGIC(" << srcIdentifier << ')';
 				break;
+				case VHDLDataType::VL_LOGIC:
+					stream << "STD_LOGIC(TO_BIT(" << srcIdentifier << "))";
+				break;
 				default:
 					HCL_ASSERT_HINT(false, "Invalid conversion");
 			}
@@ -389,6 +417,28 @@ void DefaultCodeFormatting::formatDataTypeConversion(std::ostream &stream, VHDLD
 				break;
 				case VHDLDataType::STD_LOGIC:
 					stream << "STD_ULOGIC(" << srcIdentifier << ')';
+				break;
+				case VHDLDataType::VL_LOGIC:
+					stream << "STD_ULOGIC(TO_BIT(" << srcIdentifier << "))";
+				break;
+				default:
+					HCL_ASSERT_HINT(false, "Invalid conversion");
+			}
+		break;
+		case VHDLDataType::VL_LOGIC_VECTOR:
+			switch (srcDataType) {
+				case VHDLDataType::VL_LOGIC_VECTOR:
+					stream << srcIdentifier;
+				break;
+				case VHDLDataType::BIT_VECTOR:
+					stream << "TO_VLLOGICVECTOR(" << srcIdentifier << ')';
+				break;
+				case VHDLDataType::STD_ULOGIC_VECTOR:
+				case VHDLDataType::STD_LOGIC_VECTOR:
+					stream << "TO_VLLOGICVECTOR(TO_BITVECTOR(" << srcIdentifier << "))";
+				break;
+				case VHDLDataType::UNSIGNED:
+					stream << "TO_VLLOGICVECTOR(TO_BITVECTOR(STD_LOGIC_VECTOR((" << srcIdentifier << ")))";
 				break;
 				default:
 					HCL_ASSERT_HINT(false, "Invalid conversion");
@@ -406,6 +456,9 @@ void DefaultCodeFormatting::formatDataTypeConversion(std::ostream &stream, VHDLD
 				case VHDLDataType::UNSIGNED:
 					stream << "STD_LOGIC_VECTOR(" << srcIdentifier << ')';
 				break;
+				case VHDLDataType::VL_LOGIC_VECTOR:
+					stream << "STD_LOGIC_VECTOR(TO_BITVECTOR(" << srcIdentifier << "))";
+				break;
 				default:
 					HCL_ASSERT_HINT(false, "Invalid conversion");
 			}
@@ -420,6 +473,9 @@ void DefaultCodeFormatting::formatDataTypeConversion(std::ostream &stream, VHDLD
 				break;
 				case VHDLDataType::UNSIGNED:
 					stream << "STD_ULOGIC_VECTOR(" << srcIdentifier << ')';
+				break;
+				case VHDLDataType::VL_LOGIC_VECTOR:
+					stream << "STD_ULOGIC_VECTOR(TO_BITVECTOR(" << srcIdentifier << "))";
 				break;
 				default:
 					HCL_ASSERT_HINT(false, "Invalid conversion");
@@ -436,6 +492,9 @@ void DefaultCodeFormatting::formatDataTypeConversion(std::ostream &stream, VHDLD
 				case VHDLDataType::STD_LOGIC_VECTOR:
 				case VHDLDataType::STD_ULOGIC_VECTOR:
 					stream << "UNSIGNED(" << srcIdentifier << ')';
+				break;
+				case VHDLDataType::VL_LOGIC_VECTOR:
+					stream << "UNSIGNED(TO_BITVECTOR(" << srcIdentifier << "))";
 				break;
 				default:
 					HCL_ASSERT_HINT(false, "Invalid conversion");

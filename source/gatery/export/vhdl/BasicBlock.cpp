@@ -504,6 +504,7 @@ namespace {
 				case hlim::GenericParameter::BitFlavor::BIT: return VHDLDataType::BIT_VECTOR;
 				case hlim::GenericParameter::BitFlavor::STD_LOGIC: return VHDLDataType::STD_LOGIC_VECTOR;
 				case hlim::GenericParameter::BitFlavor::STD_ULOGIC: return VHDLDataType::STD_ULOGIC_VECTOR;
+				case hlim::GenericParameter::BitFlavor::VL: return VHDLDataType::VL_LOGIC_VECTOR;
 				default:
 					HCL_ASSERT_HINT(false, "Unhandled type!");
 			}
@@ -512,6 +513,7 @@ namespace {
 				case hlim::GenericParameter::BitFlavor::BIT: return VHDLDataType::BIT;
 				case hlim::GenericParameter::BitFlavor::STD_LOGIC: return VHDLDataType::STD_LOGIC;
 				case hlim::GenericParameter::BitFlavor::STD_ULOGIC: return VHDLDataType::STD_ULOGIC;
+				case hlim::GenericParameter::BitFlavor::VL: return VHDLDataType::VL_LOGIC;
 				default:
 					HCL_ASSERT_HINT(false, "Unhandled type!");
 			}
