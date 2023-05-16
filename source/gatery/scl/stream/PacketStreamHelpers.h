@@ -62,10 +62,10 @@ namespace gtry::scl
 	};
 
 	template<BaseSignal Payload, Signal... Meta>
-	SimProcess sendPacket(const scl::Stream<Payload, Meta...>& stream, const SimPacket& packet, Clock clk);
+	SimProcess sendPacket(const scl::Stream<Payload, Meta...>& stream, SimPacket packet, Clock clk);
 
 	template<BaseSignal Payload, Signal... Meta>
-	SimProcess sendPacket(const scl::Stream<Payload, Meta...>& stream, const SimPacket& packet, Clock clk, scl::SimulationSequencer& sequencer);
+	SimProcess sendPacket(const scl::Stream<Payload, Meta...>& stream, SimPacket packet, Clock clk, scl::SimulationSequencer& sequencer);
 
 	template<BaseSignal Payload, Signal... Meta>
 	SimFunction<SimPacket> receivePacket(const scl::Stream<Payload, Meta...>& stream, Clock clk);
@@ -113,7 +113,7 @@ namespace gtry::scl
 	}
 
 	template<BaseSignal Payload, Signal... Meta>
-	SimProcess sendPacket(const scl::Stream<Payload, Meta...>& stream, const SimPacket& packet, Clock clk)
+	SimProcess sendPacket(const scl::Stream<Payload, Meta...>& stream, SimPacket packet, Clock clk)
 	{
 		size_t numberOfBeats = packet.payload.size() / stream->size();
 		if (((packet.payload.size()) % stream->size()) != 0)
@@ -189,7 +189,7 @@ namespace gtry::scl
 	}
 
 	template<BaseSignal Payload, Signal... Meta>
-	SimProcess sendPacket(const scl::Stream<Payload, Meta...>& stream, const SimPacket& packet, Clock clk, scl::SimulationSequencer& sequencer) {
+	SimProcess sendPacket(const scl::Stream<Payload, Meta...>& stream, SimPacket packet, Clock clk, scl::SimulationSequencer& sequencer) {
 		auto slot = sequencer.allocate();
 		co_await slot.wait();
 		co_await sendPacket(stream, packet, clk);
