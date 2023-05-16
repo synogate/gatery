@@ -63,8 +63,11 @@ namespace gtry
 		void inoutPin(std::string_view portName, std::string_view pinName, BitWidth W, PinConfig cfg = {});
 		void inoutPin(std::string_view portName, std::string_view pinName, PinConfig cfg = {});
 
+		void isEntity(bool b) { m_node.isEntity(b); }
+		void requiresComponentDeclaration(bool b) { m_node.requiresComponentDeclaration(b); }
 	protected:
 		const Clock& addClockOut(Clock clock, Bit clockSignal, std::optional<Bit> resetSignal);
+		hlim::Node_External& node() { return m_node; }
 
 	private:
 		// todo: Node_External should have a interface which makes this class obsolete
@@ -76,6 +79,7 @@ namespace gtry
 			//using Node_External::declOutputBitVector;
 
 			void isEntity(bool b) { m_isEntity = b; }
+			void requiresComponentDeclaration(bool b) { m_requiresComponentDeclaration = b; }
 			auto& generics() { return m_genericParameters; }
 			auto& ins() { return m_inputPorts; }
 			auto& outs() { return m_outputPorts; }
