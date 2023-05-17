@@ -570,7 +570,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
 	}
 
 	if (const hlim::Node_Clk2Signal* clk2signal = dynamic_cast<const hlim::Node_Clk2Signal*>(nodePort.node)) {
-		stream << m_namespaceScope.getClock(clk2signal->getClocks()[0]).name;
+		stream << m_namespaceScope.getClock(clk2signal->getClocks()[0]->getClockPinSource()).name;
 		return;
 	}
 
@@ -892,7 +892,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 					statement.node = n;
 					statement.weakOrderIdx = n->getId(); // chronological order
 
-					code << m_namespaceScope.getClock(sig2clk->getClocks()[0]).name << " <= ";
+					code << m_namespaceScope.getClock(sig2clk->getClocks()[0]->getClockPinSource()).name << " <= ";
 					formatExpression(code, indentation+2, comment, sig2clk->getDriver(0), statement.inputs, VHDLDataType::STD_LOGIC, false);
 					code << ";" << std::endl;
 
@@ -911,7 +911,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 					statement.node = n;
 					statement.weakOrderIdx = n->getId(); // chronological order
 
-					code << m_namespaceScope.getReset(sig2rst->getClocks()[0]).name << " <= ";
+					code << m_namespaceScope.getReset(sig2rst->getClocks()[0]->getResetPinSource()).name << " <= ";
 					formatExpression(code, indentation+2, comment, sig2rst->getDriver(0), statement.inputs, VHDLDataType::STD_LOGIC, false);
 					code << ";" << std::endl;
 
