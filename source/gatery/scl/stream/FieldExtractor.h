@@ -20,6 +20,7 @@
 #include <gatery/frontend.h>
 #include "Stream.h"
 #include "Packet.h"
+#include "../Counter.h"
 
 #include <boost/format.hpp>
 
@@ -45,6 +46,7 @@ namespace gtry::scl
 		requires (
 			Stream<gtry::Vector<BVec>, MetaOutput...>::template has<Ready>() == Stream<BVec, MetaInput...>::template has<Ready>() &&
 			Stream<gtry::Vector<BVec>, MetaOutput...>::template has<Valid>() &&
+			//Stream<gtry::Vector<BVec>, MetaOutput...>::template has<Error>() &&
 			Stream<BVec, MetaInput...>::template has<Eop>())
 	inline void extractFields(Stream<gtry::Vector<BVec>, MetaOutput...> &output, Stream<BVec, MetaInput...> &packetStream, const std::span<Field> fields)
 	{
@@ -183,6 +185,35 @@ namespace gtry::scl
 				}
 			}
 		}
+	}
+
+
+
+	/**
+	 * @brief Extracts a monolithic header from a packet stream.
+	 */
+	template<Signal... MetaOutput, Signal... MetaInput, Signal Header> 
+		requires (
+			Stream<Header, MetaOutput...>::template has<Ready>() == Stream<BVec, MetaInput...>::template has<Ready>() &&
+			Stream<Header, MetaOutput...>::template has<Valid>() &&
+			Stream<BVec, MetaInput...>::template has<Eop>())
+	inline void extractHeader(Stream<Header, MetaOutput...> &output, Stream<BVec, MetaInput...> &packetStream, size_t offset = 0)
+	{
+		std::array<Field, 1> fields = {
+			{ 
+				.offset = offset,
+				.size = size(*output),
+			},
+		};
+
+		scl::Stream<Vector<Field>, MetaOutput...> fieldStream;
+		extractFields(fieldStream, packetStream, fields);
+
+		output <<= fieldStream.transform([&output](const Vector<Field> &fields) {
+			Header header = constructFrom(*output);
+			unpack(fields[0], header);
+			return header;
+		});
 	}
 
 }
