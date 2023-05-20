@@ -225,7 +225,7 @@ namespace gtry::scl
 		}
 
 		std::mt19937 gen(seed);
-		std::uniform_int_distribution<> distrib(0,99);
+		std::uniform_int_distribution<size_t> distrib(0,99);
 
 		while (true) {
 			simuReady(stream) = distrib(gen) < readyProbabilityPercent;
