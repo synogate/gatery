@@ -860,13 +860,12 @@ inline bool BitVectorState<Config>::operator==(const BitVectorState& o) const
 		return false;
 
 	for (size_t p = 0; p < m_values.size(); ++p)
-	{
-		for (size_t i = 0; i < m_values[p].size(); ++i)
-		{
-			if (m_values[p][i] != o.m_values[p][i])
+		for (size_t i = 0; i < m_values[p].size(); ++i) {
+			typename Config::BaseType mask = utils::bitMaskRange(0, std::min<size_t>(Config::NUM_BITS_PER_BLOCK, m_size - i*Config::NUM_BITS_PER_BLOCK));
+			if ((m_values[p][i] & mask) != (o.m_values[p][i] & mask))
 				return false;
 		}
-	}
+
 	return true;
 }
 
