@@ -48,6 +48,25 @@ gtry::Bit gtry::scl::synchronizeEvent(Bit eventIn, const Clock& inClock, const C
 	return edge(synchronize(state, '0', inClock, outClock, 3, false));
 }
 
+gtry::Bit gtry::scl::synchronizeRelease(Bit reset, const Clock& inClock, const Clock& outClock, ClockConfig::ResetActive resetActive)
+{
+	Area area("synchronizeRelease", true);
+
+	auto resetClock = outClock.deriveClock({
+		.resetType = ClockConfig::ResetType::ASYNCHRONOUS,
+		.resetActive = resetActive,
+		.synchronizationRegister = true
+	});
+	Bit dummyReset;
+	dummyReset.exportOverride(allowClockDomainCrossing(reset, inClock, resetClock));
+	resetClock.overrideRstWith(dummyReset);
+
+	Bit val = resetActive == ClockConfig::ResetActive::HIGH ? '0' : '1';
+	for (size_t i = 0; i < 3; ++i)
+		val = reg(val, resetActive == ClockConfig::ResetActive::HIGH ? '1' : '0', {.clock = resetClock});
+	return val;
+}
+
 gtry::UInt gtry::scl::synchronizeGrayCode(UInt in, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
 {
 	return grayDecode(synchronize(grayEncode(in), inClock, outClock, outStages, inStage));

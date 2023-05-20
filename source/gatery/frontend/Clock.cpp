@@ -84,6 +84,9 @@ namespace gtry
 			absoluteFrequency = clockFromString(config.as<std::string>());
 		else
 		{
+			if(config["name"])
+				name = config["name"].as<std::string>();
+
 			if (config["period"])
 				absoluteFrequency = clockFromString(config["period"].as<std::string>());
 
