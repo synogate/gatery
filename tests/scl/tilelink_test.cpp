@@ -27,6 +27,7 @@
 #include <gatery/scl/tilelink/tilelink.h>
 #include <gatery/scl/tilelink/TileLinkHub.h>
 #include <gatery/scl/tilelink/TileLinkErrorResponder.h>
+#include <gatery/scl/tilelink/TileLinkFifo.h>
 #include <gatery/scl/tilelink/TileLinkStreamFetch.h>
 #include <gatery/scl/tilelink/TileLinkMasterModel.h>
 #include <gatery/scl/tilelink/TileLinkAdapter.h>
@@ -951,6 +952,37 @@ BOOST_FIXTURE_TEST_CASE(tilelink_doublewidth_test, LinkTest)
 			auto [val, def, err] = co_await linkModel.get(1, 0, clock());
 			BOOST_TEST(!err);
 			BOOST_TEST((val & def) == 0xBB);
+		}
+
+		co_await OnClk(clock());
+		stopTest();
+	});
+}
+
+BOOST_FIXTURE_TEST_CASE(tilelink_fifo_test, LinkTest)
+{
+	Memory<BVec> mem(256, 8_b);
+
+	auto memLink = scl::tileLinkInit<scl::TileLinkUL>(8_b, 8_b, 2_b);
+	mem <<= memLink;
+
+	auto memFifo = scl::tileLinkFifo(memLink);
+
+	linkModel.init("m", 8_b, 8_b, 0_b, 2_b);
+	memFifo.a <<= link.a;
+	*link.d <<= *memFifo.d;
+
+	addSimulationProcess([&]()->SimProcess {
+		co_await OnClk(clock());
+
+		for (size_t i = 0; i < 4; ++i)
+			fork(linkModel.put(i, 0, i + 16, clock()));
+
+		for (size_t i = 0; i < 4; ++i)
+		{
+			auto [val, def, err] = co_await linkModel.get(i, 0, clock());
+			BOOST_TEST(!err);
+			BOOST_TEST((val & def) == i + 16);
 		}
 
 		co_await OnClk(clock());
