@@ -95,6 +95,7 @@ namespace gtry {
 			using ClockRational = hlim::ClockRational;
 			using TriggerEvent = hlim::Clock::TriggerEvent;
 			using ResetType = hlim::RegisterAttributes::ResetType;
+			using ResetActive = hlim::RegisterAttributes::Active;
 
 			//Clock(size_t freq);
 			Clock(const ClockConfig &config);
@@ -121,6 +122,10 @@ namespace gtry {
 
 			void overrideClkWith(const Bit &clkOverride);
 			void overrideRstWith(const Bit &rstOverride);
+
+			Bit reset(ResetActive active) const;
+			void reset(const Bit& signal);
+			void reset(const Bit& signal, const Clock& sourceClock);
 
 			std::string_view name() const { return m_clock->getName(); }
 			void setName(std::string name) { m_clock->setName(std::move(name)); }

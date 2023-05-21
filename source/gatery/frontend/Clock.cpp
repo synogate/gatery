@@ -33,6 +33,8 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include <gatery/scl/cdc.h>
+
 namespace gtry
 {
 	hlim::ClockRational clockFromString(std::string text)
@@ -254,6 +256,39 @@ namespace gtry
 		auto *node = DesignScope::createNode<hlim::Node_Signal2Rst>();
 		node->connect(rstOverride.readPort());
 		m_clock->setLogicResetDriver(node);
+	}
+
+	Bit Clock::reset(ResetActive active) const
+	{
+		auto* node = DesignScope::createNode<hlim::Node_ClkRst2Signal>();
+		node->setClock(m_clock);
+		Bit signal{SignalReadPort(node)};
+
+		if(active != m_clock->getRegAttribs().resetActive)
+			signal = !signal;
+
+		return signal;
+	}
+
+	void Clock::reset(const Bit& signal)
+	{
+		Bit dummy;
+		dummy.exportOverride(signal);
+
+		auto* node = DesignScope::createNode<hlim::Node_Signal2Rst>();
+		node->connect(dummy.readPort());
+		m_clock->setLogicResetDriver(node);
+	}
+
+	void Clock::reset(const Bit& signal, const Clock& sourceClock)
+	{
+		Bit synchronizedSignal;
+		if(m_clock->getRegAttribs().resetType == ResetType::SYNCHRONOUS)
+			synchronizedSignal = scl::synchronize(signal, sourceClock, *this);
+		else
+			synchronizedSignal = scl::synchronizeRelease(signal, sourceClock, *this, m_clock->getRegAttribs().resetActive);
+
+		reset(synchronizedSignal);
 	}
 
 	hlim::Node_Register *Clock::prepRegister(std::string_view name, const RegisterSettings& settings) const
