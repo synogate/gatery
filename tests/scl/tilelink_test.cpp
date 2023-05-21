@@ -27,7 +27,7 @@
 #include <gatery/scl/tilelink/tilelink.h>
 #include <gatery/scl/tilelink/TileLinkHub.h>
 #include <gatery/scl/tilelink/TileLinkErrorResponder.h>
-#include <gatery/scl/tilelink/TileLinkFifo.h>
+#include <gatery/scl/tilelink/TileLinkFiFo.h>
 #include <gatery/scl/tilelink/TileLinkStreamFetch.h>
 #include <gatery/scl/tilelink/TileLinkMasterModel.h>
 #include <gatery/scl/tilelink/TileLinkAdapter.h>
