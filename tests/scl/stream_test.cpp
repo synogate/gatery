@@ -1435,3 +1435,60 @@ BOOST_FIXTURE_TEST_CASE(addReadyAndFailOnBackpressure_sop_test, StreamTransferFi
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
 }
+
+BOOST_FIXTURE_TEST_CASE(store_forward_fifo_fuzz, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	std::mt19937 rng{ 12524 };
+
+	scl::RvPacketStream<BVec, scl::Error> inPacketStream{ 8_b };
+	scl::RvPacketStream outPacketStream = scl::storeForwardFifo(inPacketStream, 16);
+	pinIn(inPacketStream, "inPacketStream");
+	pinOut(outPacketStream, "outPacketStream");
+
+	std::uniform_int_distribution<size_t> rngSize{ 1, 16 };
+	std::queue<scl::SimPacket> packets;
+
+	// insert packets
+	addSimulationProcess([&, this]()->SimProcess {
+		std::vector<uint8_t> data;
+		for (size_t i = 0; i < 256; ++i)
+		{
+			data.resize(rngSize(rng));
+			for (uint8_t& it : data)
+				it = (uint8_t)rng();
+
+			scl::SimPacket packet{ data };
+			packet.error(rng() % 2 + '0');
+			packet.invalidBeats(rng() & rng());
+			co_await sendPacket(inPacketStream, packet, clk);
+
+			if (packet.error() == '0')
+				packets.push(packet);
+		}
+
+		while (!packets.empty())
+			co_await OnClk(clk);
+		stopTest();
+	});
+
+	// receive packets
+	addSimulationProcess([&, this]()->SimProcess {
+		fork(scl::readyDriverRNG(outPacketStream, clk, 50));
+		while (true)
+		{
+			scl::SimPacket packet = co_await scl::receivePacket(outPacketStream, clk);
+			BOOST_TEST(!packets.empty());
+			if (!packets.empty())
+			{
+				BOOST_TEST(packets.front().payload == packet.payload);
+				packets.pop();
+			}
+		}
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
