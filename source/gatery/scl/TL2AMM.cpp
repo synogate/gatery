@@ -68,5 +68,22 @@ TileLinkUL translators::makeTlSlave(AvalonMM amm, BitWidth sourceW)
 
 AvalonMM translators::makeAmmSlave(TileLinkUL tlmm)
 {
+	AvalonMM ret;
+
+	ret.address = tlmm.a->address;
+	ret.ready = ready(tlmm.a);
+	ret.readDataValid = valid(*tlmm.d);
+	ret.byteEnable = (UInt) tlmm.a->mask;
+
+	
+	ret.write = tlmm.a->isPut();
+	ret.writeData = (UInt)tlmm.a->data;
+
+	ret.read = tlmm.a->isGet();
+	ret.readData = (UInt) (*tlmm.d)->data;
+
+	ret.response = 0;
+	tlmm.a->source = 0;
+
 	return AvalonMM();
 }
