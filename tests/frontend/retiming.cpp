@@ -723,7 +723,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_enable, BoostUnitTestSimulationFixture
 		stopTest();
 	});
 
-	design.visualize("before");
+	//design.visualize("before");
 	design.postprocess();
 
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
@@ -797,7 +797,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_partial_enable, BoostUnitTestSimulatio
 		stopTest();
 	});
 
-	design.visualize("before");
+	//design.visualize("before");
 	design.postprocess();
 
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
@@ -1007,7 +1007,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_memory, BoostUnitTestSimulationFixture
 		stopTest();
 	});
 
-	design.visualize("before");
+	//design.visualize("before");
 	design.postprocess();
 
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());

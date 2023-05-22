@@ -288,7 +288,7 @@ BOOST_FIXTURE_TEST_CASE(tapOnCompound, BoostUnitTestSimulationFixture)
 		
 		tap(obj);
 	}
-	design.visualize("tapOnCompound");
+	//design.visualize("tapOnCompound");
 	design.postprocess();
 
 	BOOST_TEST(countNodes([](const auto *node) { return dynamic_cast<const hlim::Node_SignalTap*>(node) != nullptr; }) == 4);	
@@ -319,7 +319,7 @@ BOOST_FIXTURE_TEST_CASE(tapOnUnreflectedCompound, BoostUnitTestSimulationFixture
 		
 		tap(obj);
 	}
-	design.visualize("tapOnUnreflectedCompound");
+	//design.visualize("tapOnUnreflectedCompound");
 	design.postprocess();
 
 	BOOST_TEST(countNodes([](const auto *node) { return dynamic_cast<const hlim::Node_SignalTap*>(node) != nullptr; }) == 6);

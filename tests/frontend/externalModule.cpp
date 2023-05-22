@@ -219,7 +219,7 @@ BOOST_FIXTURE_TEST_CASE(BidirTest, BiDirDut)
 	
 	testCompilation();
 
-	design.visualize("test");
+	//design.visualize("test");
 	
 
 	BOOST_TEST(exportContains(std::regex{"clock_A : IN STD_LOGIC"})); // We have clock_A
@@ -239,7 +239,7 @@ BOOST_FIXTURE_TEST_CASE(BidirTest_deep_hierarchy, BiDirDut)
 	
 	testCompilation();
 
-	design.visualize("test");
+	//design.visualize("test");
 	
 
 	BOOST_TEST(exportContains(std::regex{"clock_A : IN STD_LOGIC"})); // We have clock_A
