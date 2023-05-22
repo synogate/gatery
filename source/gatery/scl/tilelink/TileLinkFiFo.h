@@ -85,6 +85,6 @@ namespace gtry::scl
 	template<TileLinkSignal TLink>
 	TLink tileLinkFifo(TLink& link, size_t depthMin)
 	{
-		return TileLinkFifo{}.connectSlave(link, depthMin).connectMaster<TLink>();
+		return TileLinkFifo{}.connectSlave(link, depthMin).template connectMaster<TLink>();
 	}
 }
