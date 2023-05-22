@@ -28,6 +28,7 @@
 #include <gatery/scl/stream/adaptWidth.h>
 #include <gatery/scl/stream/Packet.h>
 #include <gatery/scl/stream/PacketStreamHelpers.h>
+#include <gatery/scl/stream/StreamBroadcaster.h>
 #include <gatery/scl/io/SpiMaster.h> 
 
 #include <gatery/debug/websocks/WebSocksInterface.h>
@@ -1491,4 +1492,77 @@ BOOST_FIXTURE_TEST_CASE(store_forward_fifo_fuzz, BoostUnitTestSimulationFixture)
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
+
+BOOST_FIXTURE_TEST_CASE(streamBroadcaster, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	std::mt19937 rng{ 12524 };
+
+	scl::RvStream<BVec> inStream{ 8_b };
+	scl::RvStream<BVec> outStream1{ 8_b };
+	scl::RvStream<BVec> outStream2{ 8_b };
+
+	{
+		scl::StreamBroadcaster inBCaster(inStream);
+
+		outStream1 <<= inBCaster;
+		outStream2 <<= inBCaster;
+	}
+
+	pinIn(inStream, "inStream");
+	pinOut(outStream1, "outStream1");
+	pinOut(outStream2, "outStream2");
+
+	addSimulationProcess([&, this]()->SimProcess {
+
+		std::vector<std::uint8_t> allData;
+		allData.resize(1024);
+		for (auto &b : allData)
+			b = rng();
+
+		size_t numDone = 0;
+
+		auto checkOutput = [&](scl::RvStream<BVec> &stream)->SimProcess {
+
+			fork([&]->SimProcess {
+				while (true) {
+					simu(ready(stream)) = (rng() & 1) == 1;
+					co_await OnClk(clk);
+				}
+			});
+
+			for (auto &b : allData) {
+				co_await performTransferWait(stream, clk);
+				BOOST_TEST(simu(*stream) == b);
+			}
+			numDone++;
+		};
+
+		fork([&]->SimProcess {
+			while (true) {
+				simu(valid(inStream)) = (rng() & 1) == 1;
+				co_await OnClk(clk);
+			}
+		});
+
+		fork(checkOutput(outStream1));
+		fork(checkOutput(outStream2));
+
+		for (auto &b : allData) {
+			simu(*inStream) = b;
+			co_await performTransferWait(inStream, clk);
+		}
+
+		while (numDone != 2)
+			co_await OnClk(clk);
+
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 10000, 100'000'000 }));
 }
