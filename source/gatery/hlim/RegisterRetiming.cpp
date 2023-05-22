@@ -1571,13 +1571,17 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const utils::StableS
 	// Insert regular registers
 	for (auto np : outputsEnteringRetimingArea) {
 
+		NodeGroup *nodeGroup = np.node->getGroup();
+		if (nodeGroup->getGroupType() == NodeGroup::GroupType::SFU)
+			nodeGroup = nodeGroup->getParent();	
+
 		// Don't insert registers on constants
 		if (dynamic_cast<Node_Constant*>(np.node)) continue;
 		// Don't insert registers on signals leading to constants
 		if (auto *signal = dynamic_cast<Node_Signal*>(np.node))
 			if (dynamic_cast<Node_Constant*>(signal->getNonSignalDriver(0).node)) continue;
 
-		NodePort enableSignal = enableCondition.build(*np.node->getGroup(), &newlyCreatedNodes);
+		NodePort enableSignal = enableCondition.build(*nodeGroup, &newlyCreatedNodes);
 
 		auto *reg = circuit.createNode<Node_Register>();
 		reg->recordStackTrace();
@@ -1588,7 +1592,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const utils::StableS
 		// Connect to same enable as all the removed registers
 		reg->connectInput(Node_Register::ENABLE, enableSignal);
 		// add to the node group of its new driver
-		reg->moveToGroup(np.node->getGroup());
+		reg->moveToGroup(nodeGroup);
 		// allow further retiming by default
 		reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD).insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
 		reg->setComment("This register was created during backwards retiming as one of the registers on signals going into the retimed area.");
@@ -1638,7 +1642,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const utils::StableS
 		if (it != enablePortRegCache.end()) {
 			input.node->rewireInput(input.port, it->second);
 		} else {
-			NodePort enableSignal = enableCondition.build(*input.node->getGroup(), &newlyCreatedNodes);
+			NodePort enableSignal = enableCondition.build(*nodeGroup, &newlyCreatedNodes);
 
 			auto *reg = circuit.createNode<Node_Register>();
 			reg->recordStackTrace();
