@@ -33,27 +33,50 @@ using namespace boost::unit_test;
 using namespace gtry;
 using namespace gtry::scl;
 
+scl::TileLinkUL ub2ul(scl::TileLinkUB& link)
+{
+	scl::TileLinkUL out;
+
+	out.a = constructFrom(link.a);
+	link.a <<= out.a;
+
+	*out.d = constructFrom(*link.d);
+	*out.d <<= *link.d;
+
+	return out;
+}
+void setupAmmforEmif(AvalonMM amm) {
+	amm.read.emplace();
+	amm.readDataValid.emplace();
+	amm.ready.emplace();
+	amm.write.emplace();
+	amm.address = 8_b;
+	amm.byteEnable = 4_b;
+	amm.writeData = 32_b;
+	amm.readData = 32_b;
+}
 
 BOOST_FIXTURE_TEST_CASE(tl2amm_basic_test, BoostUnitTestSimulationFixture) {
 	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
+	AvalonMM out;
+	setupAmmForEmif();
+	
+
+
 	scl::TileLinkUL in;
-	scl::tileLinkInit(in, 8_b, 16_b, 1_b, 4_b);
 
 	scl::TileLinkMasterModel linkModel;
 	linkModel.init("tlmm_", 8_b, 16_b, 1_b, 4_b);
+	in <<= ub2ul(linkModel.getLink());
 
-	AvalonMM out;
-
-	pinIn(in.a, "");
-	pinOut(in.d, "");
 	pinOut(out.address, );
 
 	addSimulationProcess([&]()->SimProcess {
 
 		stopTest();
-	});
+		});
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
