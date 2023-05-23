@@ -118,15 +118,24 @@ namespace gtry::scl
 
 	void SipHash::round(SipHashState& state)
 	{
-		GroupScope entity(GroupScope::GroupType::ENTITY);
-		entity.setName("SipHashRound");
+		Area area{ "SipHashRound" };
+		auto ent = area.enter();
+
+		size_t pipelineAmount = 0;
+		if (auto config = ent.config("pipeline"))
+			pipelineAmount = config.as<size_t>();
 
 		sipOp(state[0], state[1], 32, 13);
 		sipOp(state[2], state[3], 0, 16);
 		setName(state, "midstate");
+		if (pipelineAmount > 1)
+			state = pipestage(state);
+
 		sipOp(state[2], state[1], 32, 17);
 		sipOp(state[0], state[3], 0, 21);
 		setName(state, "state");
+		if (pipelineAmount > 0)
+			state = pipestage(state);
 	}
 
 	UInt SipHash::pad(const UInt& block, size_t msgByteSize)
