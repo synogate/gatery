@@ -39,6 +39,8 @@ namespace gtry::scl
 	class StreamBroadcaster
 	{
 		public:
+			StreamBroadcaster(T &&stream) : StreamBroadcaster(stream) { }
+
 			StreamBroadcaster(T &stream) { 
 				m_helper = std::make_shared<Helper>();
 				m_helper->source = constructFrom(stream);
@@ -68,6 +70,12 @@ namespace gtry::scl
 			}
 
 			operator T() {
+				T res;
+				broadcastTo(res);
+				return res;
+			}
+
+			T bcastTo() {
 				T res;
 				broadcastTo(res);
 				return res;
