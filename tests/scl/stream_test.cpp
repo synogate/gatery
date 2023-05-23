@@ -1528,7 +1528,7 @@ BOOST_FIXTURE_TEST_CASE(streamBroadcaster, BoostUnitTestSimulationFixture)
 
 		auto checkOutput = [&](scl::RvStream<BVec> &stream)->SimProcess {
 
-			fork([&]->SimProcess {
+			fork([&]()->SimProcess {
 				while (true) {
 					simu(ready(stream)) = (rng() & 1) == 1;
 					co_await OnClk(clk);
@@ -1542,7 +1542,7 @@ BOOST_FIXTURE_TEST_CASE(streamBroadcaster, BoostUnitTestSimulationFixture)
 			numDone++;
 		};
 
-		fork([&]->SimProcess {
+		fork([&]()->SimProcess {
 			while (true) {
 				simu(valid(inStream)) = (rng() & 1) == 1;
 				co_await OnClk(clk);
