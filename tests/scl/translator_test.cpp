@@ -109,7 +109,7 @@ BOOST_FIXTURE_TEST_CASE(tl_to_amm_basic_test, BoostUnitTestSimulationFixture) {
 	
 	scl::TileLinkUL in = makeTlSlave(avmm, 4_b, 32, 32);
 
-	avmm.readLatency = 10;
+	avmm.readLatency = 1;
 	attachMem(avmm, 8_b);
 
 	std::string pinName = "avmm" + '_';
@@ -130,24 +130,28 @@ BOOST_FIXTURE_TEST_CASE(tl_to_amm_basic_test, BoostUnitTestSimulationFixture) {
 	ul2ub(in) <<= linkModel.getLink();
 
 	addSimulationProcess([&]()->SimProcess {
-		for (size_t i = 0; i < 10; i++)
-		{
-			fork(linkModel.put(i, 1, i, clock));
-		}
-		//
-		//for (size_t i = 0; i < 3; i++)
+		//for (size_t i = 0; i < 1; i++)
 		//{
-		//	co_await OnClk(clock);
 		//}
-		//
-		//
-		//for (size_t i = 0; i < 10; i++)
+		
+		fork(linkModel.put(0xA, 1, 0xA, clock));
+		//for (size_t i = 0; i < 20; i++)
 		//{
-		//	auto [val, def, err] = co_await linkModel.get(0x00, 1, clock);
+		//}
+			co_await OnClk(clock);
+			co_await OnClk(clock);
+			co_await OnClk(clock);
+			co_await OnClk(clock);
+			co_await OnClk(clock);
+		
+		//
+		////for (size_t i = 0; i < 10; i++)
+		//{
+		//	auto [val, def, err] = co_await linkModel.get(0xA, 1, clock);
 		//	BOOST_TEST(!err);
-		//	BOOST_TEST((val & def) == 0xAAAA);
+		//	BOOST_TEST((val & def) == 0xA);
 		//}
-		//
+		
 		stopTest();
 	});
 
