@@ -110,20 +110,28 @@ AvalonMM makeAmmSlave(TileLinkUL tlmm)
 {
 	AvalonMM ret;
 
-	ret.address = tlmm.a->address;
 	ret.ready = ready(tlmm.a);
 	ret.readDataValid = valid(*tlmm.d);
-	ret.byteEnable = (UInt) tlmm.a->mask;
+	ret.readData = (UInt)(*tlmm.d)->data;
 
-	
-	ret.write = tlmm.a->isPut();
-	ret.writeData = (UInt)tlmm.a->data;
+	Bit byteEnable;
+	if (!ret.byteEnable)
+		byteEnable = '0';
+	else
+		byteEnable = ~(*ret.byteEnable) != 0;
 
-	ret.read = tlmm.a->isGet();
-	ret.readData = (UInt) (*tlmm.d)->data;
+	IF(ret.write.value()) {
+		IF(byteEnable)
+			tlmm.a->setupPutPartial(ret.address, (BVec)ret.writeData.value(), (BVec)ret.byteEnable.value(), 0);
+		ELSE
+			tlmm.a->setupPut(ret.address, (BVec)ret.writeData.value(), 0);
+	} ELSE	IF(ret.read.value())
+				tlmm.a->setupGet(ret.address, 0);
+			ELSE
+				undefined(tlmm.a->opcode);
 
 	ret.response = 0;
 	tlmm.a->source = 0;
 
-	return AvalonMM();
+	return ret;
 }
