@@ -47,7 +47,7 @@ namespace gtry::scl
 		SimPacket& invalidBeats(std::uint64_t invalidBeats) { m_invalidBeats = invalidBeats; return *this; }
 
 		size_t txid() const { return m_txid; }
-		size_t asUint64_t(BitWidth numberOfLSBsToConvert) { return payload.extractNonStraddling(sim::DefaultConfig::VALUE, 0, numberOfLSBsToConvert.bits()); }
+		size_t asUint64(BitWidth numberOfLSBsToConvert) { return payload.extractNonStraddling(sim::DefaultConfig::VALUE, 0, numberOfLSBsToConvert.bits()); }
 		char error() const { return m_error; }
 		std::uint64_t invalidBeats() const { return m_invalidBeats; }
 
