@@ -18,42 +18,46 @@
 #include "gatery/pch.h"
 #include "TL2AMM.h"
 
-TileLinkUL translators::makeTlSlave(AvalonMM amm, BitWidth sourceW)
+TileLinkUL makeTlSlave(AvalonMM& avmm, BitWidth sourceW)
 {
 	TileLinkUL ret;
 
-	ret.a->address = amm.address;
+	ret.a->address = constructFrom(avmm.address);
 
-	HCL_DESIGNCHECK_HINT(amm.writeData.has_value(), "These interfaces are not compatible. There is no writeData field in your AMM interface");
-	ret.a->data = (BVec) amm.writeData.value();
+	HCL_DESIGNCHECK_HINT(avmm.writeData.has_value(), "These interfaces are not compatible. There is no writeData field in your AMM interface");
+	ret.a->data = constructFrom((BVec)avmm.writeData.value());
 	ret.a->size = BitWidth::count((ret.a->data).width().bytes());
 
 
-	if (amm.byteEnable)
-		ret.a->mask = (BVec)amm.byteEnable.value();
-	else {
-		ret.a->mask = (ret.a->data).width().bytes();
-		ret.a->mask = (ret.a->mask).width().mask();
+	if (avmm.byteEnable) {
+		ret.a->mask = constructFrom((BVec)avmm.byteEnable.value());
+		avmm.byteEnable = (UInt) ret.a->mask;
 	}
+	else 
+		ret.a->mask = BitWidth((ret.a->data).width().bytes());
+
+
 	ret.a->source = sourceW;
 
-	HCL_DESIGNCHECK_HINT(amm.readData.has_value(), "These interfaces are not compatible. There is no readData field in your AMM interface");
-	(*ret.d)->data = (BVec) amm.readData.value();
-	(*ret.d)->size = BitWidth::count(((*ret.d)->data).width().bytes());
-
-	(*ret.d)->source = sourceW;
-	if (amm.response)
-		{HCL_ASSERT_HINT(false, "avalon MM response not yet implemented");}
-	else 
-		(*ret.d)->error = '0';
-
-	if (amm.ready)	
-		ready(ret.a) = amm.ready.value();
+	if (avmm.ready)	
+		ready(ret.a) = avmm.ready.value();
 	else			
 		ready(ret.a) = '1';
 
-	valid(*ret.d) = flag(valid(ret.a) & ret.a->isPut(), ready(*ret.d)) | amm.readDataValid.value();
+	HCL_DESIGNCHECK_HINT(avmm.readData.has_value(), "These interfaces are not compatible. There is no readData field in your AMM interface");
+	(*ret.d)->data = (BVec)avmm.readData.value();
+	(*ret.d)->size = BitWidth::count(((*ret.d)->data).width().bytes());
 
+	(*ret.d)->source = sourceW;
+	(*ret.d)->sink = 0_b;
+	if (avmm.response)
+		{HCL_ASSERT_HINT(false, "Avalon MM response not yet implemented");}
+	else 
+		(*ret.d)->error = '0';
+
+
+	valid(*ret.d) = flag(valid(ret.a) & ret.a->isPut(), transfer(*ret.d)) | avmm.readDataValid.value();
+	
 	UInt source = constructFrom((*ret.d)->source);
 	IF(transfer(ret.a))
 		source = ret.a->source;
@@ -63,10 +67,46 @@ TileLinkUL translators::makeTlSlave(AvalonMM amm, BitWidth sourceW)
 	IF(valid(*ret.d))
 		(*ret.d)->source = source;
 	
+
+	BVec opcode = constructFrom((*ret.d)->opcode);
+	IF(transfer(ret.a)) {
+		IF(ret.a->isGet()) {
+			opcode = (size_t) TileLinkD::AccessAckData;
+		}
+		ELSE{
+			opcode = (size_t) TileLinkD::AccessAck;
+		}
+	}
+	
+	opcode = reg(opcode, BVec("3b"));
+
+	(*ret.d)->opcode = undefined( opcode);
+	IF(valid(*ret.d))
+		(*ret.d)->opcode = opcode;
+	
+
+
+	
+	
+	if (avmm.read.has_value())
+		avmm.read = valid(ret.a) & ret.a->isGet();
+	else
+		HCL_ASSERT_HINT(false, "Your Avalon Slave does not have a read signal, making it incompatible with TL slaves");
+
+	if (avmm.write.has_value())
+		avmm.write = valid(ret.a) & ret.a->isPut();
+	else
+		HCL_ASSERT_HINT(false, "Your Avalon Slave does not have a write signal, making it incompatible with TL slaves");
+
+
+	avmm.address = ret.a->address;
+	avmm.writeData = (UInt) ret.a->data;
+
+
 	return ret;
 }
 
-AvalonMM translators::makeAmmSlave(TileLinkUL tlmm)
+AvalonMM makeAmmSlave(TileLinkUL tlmm)
 {
 	AvalonMM ret;
 

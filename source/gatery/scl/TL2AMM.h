@@ -24,11 +24,7 @@
 using namespace gtry;
 using namespace scl;
 
-class translators{
 
-public:
-	TileLinkUL makeTlSlave(AvalonMM amm, BitWidth sourceW);
-	AvalonMM makeAmmSlave(TileLinkUL tlmm);
-private:
+TileLinkUL makeTlSlave(AvalonMM& amm, BitWidth sourceW);
+AvalonMM makeAmmSlave(TileLinkUL tlmm);
 
-};
