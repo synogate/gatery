@@ -112,7 +112,7 @@ BOOST_FIXTURE_TEST_CASE(tl_to_amm_basic_test, BoostUnitTestSimulationFixture) {
 	scl::TileLinkUL in = makeTlSlave(avmm, 4_b);
 
 	//pinIn(in, "in_");
-	avmm.readLatency = 1;
+	//avmm.readLatency = 1;
 	attachMem(avmm, 8_b);
 	
 	scl::TileLinkMasterModel linkModel;
