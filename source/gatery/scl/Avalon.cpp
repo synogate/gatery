@@ -242,6 +242,9 @@ namespace gtry::scl
 		if (!addrWidth)
 			addrWidth = avmm.address.width();
 
+		if (avmm.ready)
+			*avmm.ready = '1';
+
 		Memory<UInt> mem{ (size_t) avmm.address.width().count(), dataWidth };
 
 		if (avmm.readData)

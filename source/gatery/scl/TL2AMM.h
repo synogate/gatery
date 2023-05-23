@@ -25,6 +25,6 @@ using namespace gtry;
 using namespace scl;
 
 
-TileLinkUL makeTlSlave(AvalonMM& amm, BitWidth sourceW);
+TileLinkUL makeTlSlave(AvalonMM& amm, BitWidth sourceW, size_t maxReadRequestsInFlight, size_t maxWriteRequestsInFlight);
 AvalonMM makeAmmSlave(TileLinkUL tlmm);
 

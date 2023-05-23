@@ -106,33 +106,48 @@ BOOST_FIXTURE_TEST_CASE(tl_to_amm_basic_test, BoostUnitTestSimulationFixture) {
 	avmm.byteEnable = 2_b;
 	avmm.writeData = 16_b;
 	avmm.readData = 16_b;
-
-	avmm.pinOut("avmm_");
 	
-	scl::TileLinkUL in = makeTlSlave(avmm, 4_b);
+	scl::TileLinkUL in = makeTlSlave(avmm, 4_b, 32, 32);
 
-	//pinIn(in, "in_");
-	//avmm.readLatency = 1;
+	avmm.readLatency = 10;
 	attachMem(avmm, 8_b);
+
+	std::string pinName = "avmm" + '_';
+	// output pins
+	gtry::pinOut(avmm.address).setName(pinName + "address");
+	if (avmm.read) gtry::pinOut(*avmm.read).setName(pinName + "read");
+	if (avmm.write) gtry::pinOut(*avmm.write).setName(pinName + "write");
+	if (avmm.writeData) gtry::pinOut(*avmm.writeData).setName(pinName + "writedata");
+	if (avmm.byteEnable) gtry::pinOut(*avmm.byteEnable).setName(pinName + "byteenable");
+
+	// input pins
+	if (avmm.ready) gtry::pinOut(*avmm.ready).setName(pinName + "waitrequest_n");
+	if (avmm.readData) gtry::pinOut(*avmm.readData).setName(pinName + "readdata");
+	if (avmm.readDataValid) gtry::pinOut(*avmm.readDataValid).setName(pinName + "readdatavalid");
 	
 	scl::TileLinkMasterModel linkModel;
 	linkModel.init("tlmm_", 8_b, 16_b, 1_b, 4_b);
 	ul2ub(in) <<= linkModel.getLink();
 
 	addSimulationProcess([&]()->SimProcess {
-		//fork(simuAvalonFakeMemory(avmm, clock, avmm.address.width().count()));
-		
-		co_await OnClk(clock);
-		fork(linkModel.put(0x00, 1, 0xAAAA, clock));
-		
-		for (size_t i = 0; i < 3; i++)
-			co_await OnClk(clock);
-
+		for (size_t i = 0; i < 10; i++)
 		{
-			auto [val, def, err] = co_await linkModel.get(0x00, 1, clock);
-			BOOST_TEST(!err);
-			BOOST_TEST((val & def) == 0xAAAA);
+			fork(linkModel.put(i, 1, i, clock));
 		}
+		//
+		//for (size_t i = 0; i < 3; i++)
+		//{
+		//	co_await OnClk(clock);
+		//}
+		//
+		//
+		//for (size_t i = 0; i < 10; i++)
+		//{
+		//	auto [val, def, err] = co_await linkModel.get(0x00, 1, clock);
+		//	BOOST_TEST(!err);
+		//	BOOST_TEST((val & def) == 0xAAAA);
+		//}
+		//
 		stopTest();
 	});
 

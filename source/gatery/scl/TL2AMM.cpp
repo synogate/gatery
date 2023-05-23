@@ -18,7 +18,14 @@
 #include "gatery/pch.h"
 #include "TL2AMM.h"
 
-TileLinkUL makeTlSlave(AvalonMM& avmm, BitWidth sourceW)
+struct TileLinkRequestSubset {
+	BVec opcodeA = 3_b;
+	UInt source;
+};
+
+BOOST_HANA_ADAPT_STRUCT(TileLinkRequestSubset, opcodeA, source);
+
+TileLinkUL makeTlSlave(AvalonMM& avmm, BitWidth sourceW, size_t maxReadRequestsInFlight, size_t maxWriteRequestsInFlight)
 {
 	TileLinkUL ret;
 
@@ -31,62 +38,65 @@ TileLinkUL makeTlSlave(AvalonMM& avmm, BitWidth sourceW)
 
 	if (avmm.byteEnable) {
 		ret.a->mask = constructFrom((BVec)avmm.byteEnable.value());
-		avmm.byteEnable = (UInt) ret.a->mask;
+		avmm.byteEnable = (UInt)ret.a->mask;
 	}
-	else 
+	else
 		ret.a->mask = BitWidth((ret.a->data).width().bytes());
 
 
 	ret.a->source = sourceW;
 
-	if (avmm.ready)	
+	if (avmm.ready)
 		ready(ret.a) = avmm.ready.value();
-	else			
+	else
 		ready(ret.a) = '1';
+
+	TileLinkD response = tileLinkDefaultResponse(*(ret.a));
+	// make fifos of responses then arbiter those fifos
+
+
+	scl::Fifo<TileLinkD> writeRequestFifo{ maxWriteRequestsInFlight , response };
+	HCL_NAMED(writeRequestFifo);
+	scl::Fifo<TileLinkD> readRequestFifo{ maxReadRequestsInFlight , response };
+	HCL_NAMED(readRequestFifo);
+
+	sim_assert(!writeRequestFifo.full());
+	sim_assert(!readRequestFifo.full());
+
+	IF(transfer(ret.a)) {
+		IF(ret.a->isGet()) {
+			readRequestFifo.push(response);
+		}
+		ELSE{
+			writeRequestFifo.push(response);
+		}
+	}
+
+	valid(*ret.d) = !writeRequestFifo.empty() | avmm.readDataValid.value();
+
+
+	*(*ret.d) = writeRequestFifo.peek();
+	IF(avmm.readDataValid.value()){
+		*(*ret.d) = readRequestFifo.peek();
+	}
+
+	IF(transfer(*ret.d)) {
+		IF(avmm.readDataValid.value())
+			readRequestFifo.pop();
+		ELSE IF(!writeRequestFifo.empty())
+			writeRequestFifo.pop();
+	}
+
+	readRequestFifo.generate();
+	writeRequestFifo.generate();
 
 	HCL_DESIGNCHECK_HINT(avmm.readData.has_value(), "These interfaces are not compatible. There is no readData field in your AMM interface");
 	(*ret.d)->data = (BVec)avmm.readData.value();
-	(*ret.d)->size = BitWidth::count(((*ret.d)->data).width().bytes());
 
-	(*ret.d)->source = sourceW;
-	(*ret.d)->sink = 0_b;
 	if (avmm.response)
-		{HCL_ASSERT_HINT(false, "Avalon MM response not yet implemented");}
-	else 
-		(*ret.d)->error = '0';
-
-
-	valid(*ret.d) = flag(valid(ret.a) & ret.a->isPut(), transfer(*ret.d)) | avmm.readDataValid.value();
-	
-	UInt source = constructFrom((*ret.d)->source);
-	IF(transfer(ret.a))
-		source = ret.a->source;
-	source = reg(source, 0);
-
-	(*ret.d)->source = undefined(source);
-	IF(valid(*ret.d))
-		(*ret.d)->source = source;
-	
-
-	BVec opcode = constructFrom((*ret.d)->opcode);
-	IF(transfer(ret.a)) {
-		IF(ret.a->isGet()) {
-			opcode = (size_t) TileLinkD::AccessAckData;
-		}
-		ELSE{
-			opcode = (size_t) TileLinkD::AccessAck;
-		}
+	{
+		HCL_ASSERT_HINT(false, "Avalon MM response not yet implemented");
 	}
-	
-	opcode = reg(opcode, BVec("3b"));
-
-	(*ret.d)->opcode = undefined( opcode);
-	IF(valid(*ret.d))
-		(*ret.d)->opcode = opcode;
-	
-
-
-	
 	
 	if (avmm.read.has_value())
 		avmm.read = valid(ret.a) & ret.a->isGet();
