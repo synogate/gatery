@@ -231,7 +231,8 @@ namespace {
 		for (const auto node : repl.newNodes)
 			retimingArea.add(node);
 
-		openList.push_back(retimingEnablePart);
+		if (retimingEnablePart.node != nullptr)
+			openList.push_back(retimingEnablePart);
 		retimingPlan.enableReplacements.push_back(std::move(repl));
 	}
 
