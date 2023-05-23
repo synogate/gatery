@@ -1566,3 +1566,163 @@ BOOST_FIXTURE_TEST_CASE(streamBroadcaster, BoostUnitTestSimulationFixture)
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 10000, 100'000'000 }));
 }
+
+namespace gtry::scl
+{
+	template<BaseSignal Payload, Signal... Meta>
+	Stream<Payload, Meta...> streamShiftLeft(Stream<Payload, Meta...>& in, UInt shift)
+	{
+		Area ent{ "scl_streamShiftLeft", true };
+		HCL_NAMED(shift);
+		HCL_NAMED(in);
+
+		Stream<Payload, Meta...> out = constructFrom(in);
+		out <<= in;
+
+		ENIF(transfer(in))
+		{
+			Payload fullValue = (Payload)cat(*in, reg(*in));
+			*out = (fullValue << shift).upper(out->width());
+			HCL_NAMED(fullValue);
+		}
+		HCL_NAMED(out);
+		return out;
+	}
+
+	UInt streamPacketBeatCounter(const StreamSignal auto& in, BitWidth counterW)
+	{
+		scl::Counter counter{ counterW.count() };
+		IF(transfer(in))
+		{
+			counter.inc();
+			IF(eop(in))
+				counter.reset();
+		}
+		return counter.value();
+	}
+
+	template<BaseSignal Payload, Signal... Meta>
+	UInt streamBeatBitLength(const Stream<Payload, Meta...>& in)
+	{
+		UInt len = in->width().bits();
+		
+		IF(eop(in))
+		{
+			UInt byteLen = in->width().bytes() - empty(in);
+			len = cat(byteLen, "b000");
+		}
+		return len;
+	}
+
+	template<BaseSignal Payload, Signal ... Meta>
+	RvPacketStream<Payload, Meta...> streamInsert(RvPacketStream<Payload, Meta...>& base, RvPacketStream<Payload, Meta...>& insert, RvStream<UInt>& bitOffset)
+	{
+		Area ent{ "scl_streamInsert", true };
+		RvPacketStream out = constructFrom(base);
+
+		UInt insertBitOffset = bitOffset->lower(BitWidth::count(base->width().bits()));	HCL_NAMED(insertBitOffset);
+		UInt insertBeat = bitOffset->upper(-insertBitOffset.width());					HCL_NAMED(insertBeat);
+
+		UInt baseShift = streamBeatBitLength(insert);									HCL_NAMED(baseShift);
+		RvPacketStream baseShifted = streamShiftLeft(base, baseShift);					HCL_NAMED(baseShifted);
+		RvPacketStream insertShifted = streamShiftLeft(insert, insertBitOffset);		HCL_NAMED(insertShifted);
+
+		UInt beatCounter = insertBeat.width();				HCL_NAMED(beatCounter);
+		IF(transfer(base))
+		{
+			IF(beatCounter != insertBeat)
+				beatCounter += 1;
+			IF(eop(out))
+				beatCounter = 0;
+		}
+		beatCounter = reg(beatCounter, 0);
+
+		out <<= base;
+		valid(out) = '0';
+		ready(base) = '0';
+		ready(insert) = '0';
+		ready(bitOffset) = '0';
+
+		IF(beatCounter < insertBeat)
+		{
+			ready(base) = ready(out);
+			valid(out) = valid(base);
+		}
+		IF(beatCounter == insertBeat)
+		{
+
+		}
+		
+
+		return out;
+	}
+
+}
+
+BOOST_FIXTURE_TEST_CASE(streamShiftLeft_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	UInt shift = pinIn(8_b).setName("shift");
+	scl::RvPacketStream<BVec> in{ 16_b };
+	scl::RvPacketStream out = scl::streamShiftLeft(in, shift);
+	pinIn(in, "in");
+	pinOut(out, "out");
+
+	// insert packets
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(ready(out)) = '1';
+
+		for(size_t i = 0; i < 17; ++i)
+		{
+			simu(shift) = i;
+			fork(sendPacket(in, scl::SimPacket{ 0xFFFF0000FFFF0000ull, 64_b }, clk));
+
+			scl::SimPacket packet = co_await receivePacket(out, clk);
+			BOOST_TEST(packet.payload.size() == 64);
+		}
+
+		co_await OnClk(clk);
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
+
+BOOST_FIXTURE_TEST_CASE(streamInsert_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	std::mt19937 rng{ 12524 };
+
+	scl::RvStream<UInt> inOffset{ 8_b };
+	scl::RvPacketStream<BVec> inBase{ 8_b };
+	scl::RvPacketStream<BVec> inInsert{ 8_b };
+	scl::RvPacketStream out = scl::streamInsert(inBase, inInsert, inOffset);
+
+	pinIn(inOffset, "inOffset");
+	pinIn(inBase, "inBase");
+	pinIn(inInsert, "inInsert");
+	pinOut(out, "out");
+
+	// insert packets
+	addSimulationProcess([&, this]()->SimProcess {
+
+		fork(sendPacket(inBase, scl::SimPacket{ 0, 32_b }, clk));
+		fork(sendPacket(inInsert, scl::SimPacket{ 0xFF, 8_b }, clk));
+		fork(sendPacket(inOffset, scl::SimPacket{ 12, 8_b }, clk));
+		
+		scl::SimPacket packet = co_await receivePacket(out, clk);
+		BOOST_TEST(packet.payload.size() == 40);
+
+		co_await OnClk(clk);
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
