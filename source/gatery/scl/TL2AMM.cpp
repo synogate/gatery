@@ -17,6 +17,8 @@
 */
 #include "gatery/pch.h"
 #include "TL2AMM.h"
+#include <gatery/scl/stream/StreamArbiter.h>
+#include <gatery/scl/stream/adaptWidth.h>
 
 struct TileLinkRequestSubset {
 	BVec opcodeA = 3_b;
@@ -27,41 +29,36 @@ BOOST_HANA_ADAPT_STRUCT(TileLinkRequestSubset, opcodeA, source);
 
 TileLinkUL makeTlSlave(AvalonMM& avmm, BitWidth sourceW, size_t maxReadRequestsInFlight, size_t maxWriteRequestsInFlight)
 {
-	TileLinkUL ret;
+	HCL_ASSERT_HINT(!avmm.response, "Avalon MM response not yet implemented");
+	HCL_DESIGNCHECK_HINT(avmm.writeData, "These interfaces are not compatible. There is no writeData field in your AMM interface");
+	auto ret = tileLinkInit<TileLinkUL>(avmm.address.width(), avmm.writeData->width(), sourceW);
 
-	ret.a->address = constructFrom(avmm.address);
+	if (avmm.read)
+		avmm.read = valid(ret.a) & ret.a->isGet();
 
-	HCL_DESIGNCHECK_HINT(avmm.writeData.has_value(), "These interfaces are not compatible. There is no writeData field in your AMM interface");
-	ret.a->data = constructFrom((BVec)avmm.writeData.value());
-	ret.a->size = BitWidth::count((ret.a->data).width().bytes());
+	if (avmm.write)
+		avmm.write = valid(ret.a) & ret.a->isPut();
 
+	avmm.address = ret.a->address;
+	avmm.writeData = (UInt)ret.a->data;
 
-	if (avmm.byteEnable) {
-		ret.a->mask = constructFrom((BVec)avmm.byteEnable.value());
+	if (avmm.byteEnable)
 		avmm.byteEnable = (UInt)ret.a->mask;
-	}
-	else
-		ret.a->mask = BitWidth((ret.a->data).width().bytes());
-
-
-	ret.a->source = sourceW;
-
-	if (avmm.ready)
-		ready(ret.a) = avmm.ready.value();
-	else
-		ready(ret.a) = '1';
 
 	TileLinkD response = tileLinkDefaultResponse(*(ret.a));
-	// make fifos of responses then arbiter those fifos
-
 
 	scl::Fifo<TileLinkD> writeRequestFifo{ maxWriteRequestsInFlight , response };
 	HCL_NAMED(writeRequestFifo);
 	scl::Fifo<TileLinkD> readRequestFifo{ maxReadRequestsInFlight , response };
 	HCL_NAMED(readRequestFifo);
 
-	sim_assert(!writeRequestFifo.full());
-	sim_assert(!readRequestFifo.full());
+	if (avmm.ready)
+		ready(ret.a) = avmm.ready.value();
+	else
+		ready(ret.a) = '1';
+
+	ready(ret.a) &= !writeRequestFifo.full();
+	ready(ret.a) &= !readRequestFifo.full();
 
 	IF(transfer(ret.a)) {
 		IF(ret.a->isGet()) {
@@ -72,46 +69,41 @@ TileLinkUL makeTlSlave(AvalonMM& avmm, BitWidth sourceW, size_t maxReadRequestsI
 		}
 	}
 
-	valid(*ret.d) = !writeRequestFifo.empty() | avmm.readDataValid.value();
+	scl::RvStream<TileLinkD> writeRes = { constructFrom(response) };
+	writeRes <<= writeRequestFifo;
+	scl::RvStream writeResBuffered = writeRes.regDownstream();
 
+	scl::RvStream<TileLinkD> readRes = { constructFrom(response) };
+	readRes <<= readRequestFifo;
+	scl::RvStream readResBuffered = readRes.regDownstream();
 
-	*(*ret.d) = writeRequestFifo.peek();
-	IF(avmm.readDataValid.value()){
-		*(*ret.d) = readRequestFifo.peek();
-	}
+	Bit responseReady = *avmm.read;
+	if (!avmm.readDataValid)
+		for (size_t i = 0; i < avmm.readLatency; ++i)
+			responseReady = reg(responseReady, '0');
+	else
+		responseReady = *avmm.readDataValid;
+	HCL_NAMED(responseReady);
 
-	IF(transfer(*ret.d)) {
-		IF(avmm.readDataValid.value())
-			readRequestFifo.pop();
-		ELSE IF(!writeRequestFifo.empty())
-			writeRequestFifo.pop();
-	}
+	scl::RvStream readResStalled = stall(readResBuffered, !responseReady);
+
+	HCL_DESIGNCHECK_HINT(avmm.readData, "These interfaces are not compatible. There is no readData field in your AMM interface");
+	readResStalled->data = (BVec)*avmm.readData;
+	HCL_NAMED(readResStalled);
+
+	if (avmm.readDataValid)
+		sim_assert(!*avmm.readDataValid | valid(readResStalled));
+	else
+		HCL_DESIGNCHECK(avmm.readLatency > 1);
+
+	scl::StreamArbiter<scl::RvStream<TileLinkD>> responseArbiter;
+	responseArbiter.attach(readResStalled, 0);
+	responseArbiter.attach(writeResBuffered, 1);
+	responseArbiter.generate();
+	(*ret.d) <<= responseArbiter.out();
 
 	readRequestFifo.generate();
 	writeRequestFifo.generate();
-
-	HCL_DESIGNCHECK_HINT(avmm.readData.has_value(), "These interfaces are not compatible. There is no readData field in your AMM interface");
-	(*ret.d)->data = (BVec)avmm.readData.value();
-
-	if (avmm.response)
-	{
-		HCL_ASSERT_HINT(false, "Avalon MM response not yet implemented");
-	}
-	
-	if (avmm.read.has_value())
-		avmm.read = valid(ret.a) & ret.a->isGet();
-	else
-		HCL_ASSERT_HINT(false, "Your Avalon Slave does not have a read signal, making it incompatible with TL slaves");
-
-	if (avmm.write.has_value())
-		avmm.write = valid(ret.a) & ret.a->isPut();
-	else
-		HCL_ASSERT_HINT(false, "Your Avalon Slave does not have a write signal, making it incompatible with TL slaves");
-
-
-	avmm.address = ret.a->address;
-	avmm.writeData = (UInt) ret.a->data;
-
 
 	return ret;
 }

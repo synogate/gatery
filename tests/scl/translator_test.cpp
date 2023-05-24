@@ -92,6 +92,67 @@ SimProcess simuAvalonFakeMemory(const AvalonMM& avmm, const Clock& clk, const si
 		co_await OnClk(clk);
 	}
 }
+enum RequestType {
+	Put,
+	PutPartial,
+	Get,
+};
+
+struct Request {
+	uint64_t address;
+	sim::DefaultBitVectorState data;
+	RequestType requestType;
+};
+
+SimProcess simuTileLinkMemCoherenceSupervisor(const TileLinkUL& tl, const Clock& clk) {
+	std::map<uint64_t, sim::DefaultBitVectorState> mem; //address to data
+	std::map<uint64_t, Request> pendingRequests; //source to requests
+
+	while (true) {
+		if (simu(transfer(*tl.d)) == '1') {
+			uint64_t responseSource = simu((*tl.d)->source);
+			auto it = pendingRequests.find(responseSource);
+			bool temp = it != pendingRequests.end();
+			BOOST_TEST(temp);//check that this source was issued beforehand
+
+			if (it->second.requestType == Put) {
+				mem.insert({ it->second.address, it->second.data });
+				std::cout << "put " << it->second.address << " : " << 
+			}
+			else if (it->second.requestType == Get) {
+				BOOST_TEST(mem[it->second.address] == simu((*tl.d)->data));
+			}
+			//dont forget to pop the requests from the pendingRequests
+			pendingRequests.erase(responseSource);
+		}
+
+		if (simu(transfer(tl.a)) == '1') {
+
+			RequestType requestType;
+			if (simu(tl.a->isGet()))
+				requestType = Get;
+			else if (simu(tl.a->isPut())) {
+				requestType = Put;
+			}
+
+			Request request;
+			request.address = simu(tl.a->address);
+			request.requestType = requestType;
+			if (request.requestType == Put) {
+				request.data = simu(tl.a->data);
+			}
+			bool check = pendingRequests.find(simu(tl.a->source)) == pendingRequests.end();
+			BOOST_TEST(check);
+			pendingRequests.insert({ simu(tl.a->source), request });
+		}
+
+		
+
+
+
+		co_await OnClk(clk);
+	}
+}
 
 BOOST_FIXTURE_TEST_CASE(tl_to_amm_basic_test, BoostUnitTestSimulationFixture) {
 	Clock clock({ .absoluteFrequency = 100'000'000 });
@@ -109,7 +170,7 @@ BOOST_FIXTURE_TEST_CASE(tl_to_amm_basic_test, BoostUnitTestSimulationFixture) {
 	
 	scl::TileLinkUL in = makeTlSlave(avmm, 4_b, 32, 32);
 
-	avmm.readLatency = 1;
+	avmm.readLatency = 5;
 	attachMem(avmm, 8_b);
 
 	std::string pinName = "avmm" + '_';
@@ -129,28 +190,28 @@ BOOST_FIXTURE_TEST_CASE(tl_to_amm_basic_test, BoostUnitTestSimulationFixture) {
 	linkModel.init("tlmm_", 8_b, 16_b, 1_b, 4_b);
 	ul2ub(in) <<= linkModel.getLink();
 
+
 	addSimulationProcess([&]()->SimProcess {
-		//for (size_t i = 0; i < 1; i++)
-		//{
-		//}
+		co_await simuTileLinkMemCoherenceSupervisor(in, clock);
+	});
+
+	addSimulationProcess([&]()->SimProcess {
+		co_await OnClk(clock);
+		for (size_t i = 0; i < 10; i++)
+		{
+			fork(linkModel.put(i, 1, i, clock));
+		}
 		
-		fork(linkModel.put(0xA, 1, 0xA, clock));
-		//for (size_t i = 0; i < 20; i++)
-		//{
-		//}
+		for (size_t i = 0; i < 20; i++)
+		{
 			co_await OnClk(clock);
-			co_await OnClk(clock);
-			co_await OnClk(clock);
-			co_await OnClk(clock);
-			co_await OnClk(clock);
-		
-		//
-		////for (size_t i = 0; i < 10; i++)
-		//{
-		//	auto [val, def, err] = co_await linkModel.get(0xA, 1, clock);
-		//	BOOST_TEST(!err);
-		//	BOOST_TEST((val & def) == 0xA);
-		//}
+		}
+
+		for (size_t i = 0; i < 10; i++)
+		{
+			fork(linkModel.get(i, 1, clock));
+		}
+		co_await linkModel.get(10, 1, clock);
 		
 		stopTest();
 	});
