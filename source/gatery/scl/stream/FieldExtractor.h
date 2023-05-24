@@ -200,16 +200,16 @@ namespace gtry::scl
 	inline void extractHeader(Stream<Header, MetaOutput...> &output, Stream<BVec, MetaInput...> &packetStream, size_t offset = 0)
 	{
 		std::array<Field, 1> fields = {
-			{ 
+			Field {
 				.offset = offset,
-				.size = size(*output),
+				.size = width(*output),
 			},
 		};
 
-		scl::Stream<Vector<Field>, MetaOutput...> fieldStream;
+		scl::Stream<Vector<BVec>, MetaOutput...> fieldStream;
 		extractFields(fieldStream, packetStream, fields);
 
-		output <<= fieldStream.transform([&output](const Vector<Field> &fields) {
+		output <<= fieldStream.transform([&output](const Vector<BVec> &fields) {
 			Header header = constructFrom(*output);
 			unpack(fields[0], header);
 			return header;
