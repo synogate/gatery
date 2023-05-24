@@ -90,7 +90,7 @@ namespace gtry
 			}
 
 			auto out = constructFrom(*begin(table));
-			unpack(SignalReadPort(node), out);
+			unpack(BVec(SignalReadPort(node)), out);
 			return out;
 		}
 	}

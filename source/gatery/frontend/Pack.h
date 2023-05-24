@@ -141,4 +141,10 @@ namespace gtry
 
 		HCL_DESIGNCHECK_HINT(bitOffset == vec.size(), "parameter width missmatch during unpack");
 	}
+
+	template<typename... Comp>
+	void unpack(const BVec& vec, Comp&& ... compound)
+	{
+		unpack((UInt) vec, compound...);
+	}
 }
