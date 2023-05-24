@@ -70,6 +70,12 @@ namespace gtry {
 		template<std::unsigned_integral T>
 		bool operator!=(std::span<T> array) const { return !this->operator==(array); }
 		/// Interprete the given array of integers as one concatenated bit string and return true if all bits in the signal are defined and equal to the given bit string.
+		template<std::unsigned_integral T, size_t N>
+		bool operator==(std::span<T, N> array) const { return this->m_handle == array; }
+		/// Interprete the given array of integers as one concatenated bit string and return true if any bits in the signal are undefined or unequal to the given bit string.
+		template<std::unsigned_integral T, size_t N>
+		bool operator!=(std::span<T, N> array) const { return !this->operator==(array); }
+		/// Interprete the given array of integers as one concatenated bit string and return true if all bits in the signal are defined and equal to the given bit string.
 		template<std::unsigned_integral T>
 		bool operator==(const std::vector<T> &array) const { return this->m_handle == std::span(array); }
 		/// Interprete the given array of integers as one concatenated bit string and return true if any bits in the signal are undefined or unequal to the given bit string.
@@ -101,6 +107,7 @@ namespace gtry {
 	{
 	public:
 		using BaseSigHandle<SignalType>::operator=;
+		using BaseSigHandle<SignalType>::operator==;
 
 		template<std::same_as<sim::BigInt> BigInt_> // prevent conversion
 		void operator=(const BigInt_& v) { this->m_handle = v; }
@@ -116,6 +123,7 @@ namespace gtry {
 	{
 	public:
 		using BaseIntSigHandle<SignalType>::operator=;
+		using BaseIntSigHandle<SignalType>::operator==;
 
 		// plain copy of base class operator to prevent clang intellisense hang bug
 		template<std::same_as<sim::BigInt> BigInt_> // prevent conversion

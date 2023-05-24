@@ -68,6 +68,9 @@ class SigHandle {
 		/// Interprete the given array of integers as one concatenated bit string and return true if all bits in the signal are defined and equal to the given bit string.
 		template<typename T>
 		bool operator==(std::span<T> array) const { return operator==({array.data(), array.size() * sizeof(T)}); }
+		/// Interprete the given array of integers as one concatenated bit string and return true if all bits in the signal are defined and equal to the given bit string.
+		template<typename T, size_t N>
+		bool operator==(std::span<T, N> array) const { return operator==({array.data(), array.size() * sizeof(T)}); }
 
 
 		operator std::uint64_t () const { return value(); }
