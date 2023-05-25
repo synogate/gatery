@@ -1569,21 +1569,48 @@ BOOST_FIXTURE_TEST_CASE(streamBroadcaster, BoostUnitTestSimulationFixture)
 
 namespace gtry::scl
 {
+	struct EmptyBits
+	{
+		UInt emptyBits;
+	};
+
+	auto streamAddEmptyBits(StreamSignal auto& in)
+	{
+		UInt emptyBits = ConstUInt(0, BitWidth::count(in->width().bits()));
+		if constexpr (requires { empty(in); })
+			emptyBits = cat(empty(in), "b000");
+
+		return in.remove<scl::Empty>().add(EmptyBits{ emptyBits });
+	}
+
 	template<BaseSignal Payload, Signal... Meta>
-	Stream<Payload, Meta...> streamShiftLeft(Stream<Payload, Meta...>& in, UInt shift)
+	auto streamShiftLeft(Stream<Payload, Meta...>& in, UInt shift)
 	{
 		Area ent{ "scl_streamShiftLeft", true };
+		HCL_DESIGNCHECK_HINT(shift.width() <= BitWidth::count(in->width().bits()), "beat shift not implemented");
 		HCL_NAMED(shift);
-		HCL_NAMED(in);
 
-		Stream<Payload, Meta...> out = constructFrom(in);
-		out <<= in;
+		Stream out = streamAddEmptyBits(in);
+		UInt& emptyBits = out.get<EmptyBits>().emptyBits;
 
-		ENIF(transfer(in))
+		Bit delayedEop;			HCL_NAMED(delayedEop);
+		Bit shouldDelayEop = valid(in) & eop(in) & zext(emptyBits) < zext(shift);
+		HCL_NAMED(shouldDelayEop);
+
+		emptyBits -= resizeTo(shift, emptyBits.width());
+		IF(shouldDelayEop & !delayedEop)
+		{
+			eop(out) = '0';
+			ready(in) = '0';
+		}
+
+		ENIF(transfer(out))
 		{
 			Payload fullValue = (Payload)cat(*in, reg(*in));
 			*out = (fullValue << shift).upper(out->width());
 			HCL_NAMED(fullValue);
+
+			delayedEop = flag(shouldDelayEop, delayedEop);
 		}
 		HCL_NAMED(out);
 		return out;
@@ -1606,11 +1633,11 @@ namespace gtry::scl
 	{
 		UInt len = in->width().bits();
 		
-		IF(eop(in))
-		{
-			UInt byteLen = in->width().bytes() - empty(in);
-			len = cat(byteLen, "b000");
-		}
+		//IF(eop(in))
+		//{
+		//	UInt byteLen = in->width().bytes() - empty(in);
+		//	len = cat(byteLen, "b000");
+		//}
 		return len;
 	}
 
@@ -1659,13 +1686,18 @@ namespace gtry::scl
 
 }
 
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::EmptyBits, emptyBits);
+
 BOOST_FIXTURE_TEST_CASE(streamShiftLeft_test, BoostUnitTestSimulationFixture)
 {
 	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScope(clk);
 
-	UInt shift = pinIn(8_b).setName("shift");
-	scl::RvPacketStream<BVec> in{ 16_b };
+	UInt shift = pinIn(4_b).setName("shift");
+
+	scl::RvPacketStream<BVec, scl::Empty> in{ 16_b };
+	empty(in) = 1_b;
+
 	scl::RvPacketStream out = scl::streamShiftLeft(in, shift);
 	pinIn(in, "in");
 	pinOut(out, "out");
@@ -1674,13 +1706,26 @@ BOOST_FIXTURE_TEST_CASE(streamShiftLeft_test, BoostUnitTestSimulationFixture)
 	addSimulationProcess([&, this]()->SimProcess {
 		simu(ready(out)) = '1';
 
-		for(size_t i = 0; i < 17; ++i)
+		for(size_t e = 0; e < empty(in).width().count(); ++e)
 		{
-			simu(shift) = i;
-			fork(sendPacket(in, scl::SimPacket{ 0xFFFF0000FFFF0000ull, 64_b }, clk));
+			scl::SimPacket packet{ 
+				e ? 0xFF0000FFFF0000ull : 0xFFFF0000FFFF0000ull,
+				e ? 56_b : 64_b 
+			};
 
-			scl::SimPacket packet = co_await receivePacket(out, clk);
-			BOOST_TEST(packet.payload.size() == 64);
+			for (size_t i = 0; i < shift.width().count(); ++i)
+			{
+				simu(shift) = i;
+				fork(sendPacket(in, packet, clk));
+
+				// we do not test much until receivePacket supports EmptyBits
+				scl::SimPacket packet = co_await receivePacket(out, clk);
+
+				if(e == 0)
+					BOOST_TEST(packet.payload.size() == (i == 0 ? 64 : 80));
+				else
+					BOOST_TEST(packet.payload.size() == (i < 9 ? 64 : 80));
+			}
 		}
 
 		co_await OnClk(clk);
