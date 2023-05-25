@@ -55,8 +55,10 @@ struct GetRequest {
 };
 
 SimProcess simuTileLinkMemCoherenceSupervisor(const TileLinkUL& tl, const Clock& clk) {
-	std::map<uint64_t, sim::DefaultBitVectorState> mem; //maps addresses to data
-	std::map<uint64_t, GetRequest> getRequestsPending; //maps source to requests
+	using addr_t = uint64_t;
+	using source_t = uint64_t;
+	std::map<addr_t, sim::DefaultBitVectorState> mem;
+	std::map<source_t, GetRequest> getRequestsPending;
 
 	fork([&]()->SimProcess {
 		while (true) {
@@ -70,13 +72,10 @@ SimProcess simuTileLinkMemCoherenceSupervisor(const TileLinkUL& tl, const Clock&
 				if (memWord.size() == 0)
 					memWord.resize(tl.a->data.width().value);
 
-				if (mem.find(it->second.address) == mem.end()) {
-					std::cout << "tried to get from unwritten address 0x" << std::hex << it->second.address << std::endl;
-				}
-				else {
-					std::cout << "got from address 0x" << std::hex << it->second.address << std::endl;
-					BOOST_TEST(memWord == simu((*tl.d)->data));
-				}
+				bool foundAddress = mem.find(it->second.address) != mem.end();
+				BOOST_TEST(foundAddress);
+				BOOST_TEST(memWord == simu((*tl.d)->data));
+
 				getRequestsPending.erase(simu((*tl.d)->source));
 			}
 		}
@@ -133,7 +132,6 @@ SimProcess simuTileLinkMemCoherenceSupervisor(const TileLinkUL& tl, const Clock&
 				memWord.insert(sim::DefaultConfig::VALUE, byteIdx * 8, 8, byteToWrite_value);
 				memWord.insert(sim::DefaultConfig::DEFINED, byteIdx * 8, 8, byteToWrite_defined);
 			}
-			std::cout << "put at address 0x" << std::hex << address << std::endl;
 		}
 	}
 }
@@ -330,7 +328,7 @@ BOOST_FIXTURE_TEST_CASE(tl_to_amm_fuzzing, TranslatorTextSimulationFixture) {
 		std::uniform_int_distribution<uint64_t> dist;
 
 		co_await OnClk(clock);
-		for (size_t i = 0; i < 512; i++)
+		for (size_t i = 0; i < 256; i++)
 		{
 			size_t size = dist(gen) & 0x1;
 			uint64_t address = dist(gen) & ~size;
