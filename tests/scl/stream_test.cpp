@@ -1633,11 +1633,14 @@ namespace gtry::scl
 	{
 		UInt len = in->width().bits();
 		
-		//IF(eop(in))
-		//{
-		//	UInt byteLen = in->width().bytes() - empty(in);
-		//	len = cat(byteLen, "b000");
-		//}
+		if constexpr (requires { empty(in); })
+		{
+			IF(eop(in))
+			{
+				UInt byteLen = in->width().bytes() - empty(in);
+				len = cat(byteLen, "b000");
+			}
+		}
 		return len;
 	}
 
@@ -1650,36 +1653,85 @@ namespace gtry::scl
 		UInt insertBitOffset = bitOffset->lower(BitWidth::count(base->width().bits()));	HCL_NAMED(insertBitOffset);
 		UInt insertBeat = bitOffset->upper(-insertBitOffset.width());					HCL_NAMED(insertBeat);
 
-		UInt baseShift = streamBeatBitLength(insert);									HCL_NAMED(baseShift);
+		UInt baseShift = insertBitOffset.width();										HCL_NAMED(baseShift);
 		RvPacketStream baseShifted = streamShiftLeft(base, baseShift);					HCL_NAMED(baseShifted);
 		RvPacketStream insertShifted = streamShiftLeft(insert, insertBitOffset);		HCL_NAMED(insertShifted);
 
-		UInt beatCounter = insertBeat.width();				HCL_NAMED(beatCounter);
-		IF(transfer(base))
-		{
-			IF(beatCounter != insertBeat)
-				beatCounter += 1;
-			IF(eop(out))
-				beatCounter = 0;
-		}
-		beatCounter = reg(beatCounter, 0);
+		baseShift = reg(baseShift);
+		IF(valid(insert) & eop(insert))
+			baseShift = streamBeatBitLength(insert).lower(-1_b);
 
 		out <<= base;
 		valid(out) = '0';
-		ready(base) = '0';
-		ready(insert) = '0';
+		ready(baseShifted) = '0';
+		ready(insertShifted) = '0';
 		ready(bitOffset) = '0';
 
-		IF(beatCounter < insertBeat)
+		enum class State
 		{
-			ready(base) = ready(out);
-			valid(out) = valid(base);
-		}
-		IF(beatCounter == insertBeat)
-		{
+			base,
+			insertingFirst,
+			inserting,
+			insertingLast,
+			baseEnd
+		};
+		Reg<Enum<State>> state{ State::base };
+		state.setName("state");
 
+		IF(state.current() == State::base)
+		{
+			ready(baseShifted) = ready(out);
+			valid(out) = valid(base);
+
+			UInt beatCounter = streamPacketBeatCounter(base, insertBeat.width());
+			IF(beatCounter == insertBeat)
+				state = State::insertingFirst;
 		}
+
+		IF(state.combinatorial() == State::insertingFirst)
+		{
+			ready(baseShifted) = '0';
+			ready(insertShifted) = ready(out);
+			valid(out) = valid(base) & valid(insertShifted);
+
+			for (size_t i = 0; i < out->width().bits(); i++)
+				IF(i >= insertBitOffset)
+					(*out)[i] = (*insertShifted)[i];
 		
+			state = State::inserting;
+		}
+
+		IF(state.combinatorial() == State::inserting & valid(insertShifted) & eop(insertShifted))
+			state = State::insertingLast;
+
+		IF(state.current() == State::inserting)
+		{
+			ready(insertShifted) = ready(out);
+			valid(out) = valid(insertShifted);
+			*out = *insertShifted;
+		}
+
+		IF(state.combinatorial() == State::insertingLast)
+		{
+			ready(baseShifted) = ready(out);
+			ready(insertShifted) = ready(out);
+			valid(out) = valid(baseShifted) & valid(insertShifted);
+
+			for (size_t i = 0; i < out->width().bits(); i++)
+				IF(i >= (insertBitOffset + baseShift))
+					(*out)[i] = (*baseShifted)[i];
+
+			state = State::baseEnd;
+		}
+
+		IF(state.current() == State::baseEnd)
+		{
+			ready(baseShifted) = ready(out);
+			valid(out) = valid(base);
+
+			IF(eop(out))
+				state = State::base;
+		}
 
 		return out;
 	}
@@ -1756,11 +1808,11 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_test, BoostUnitTestSimulationFixture)
 
 	// insert packets
 	addSimulationProcess([&, this]()->SimProcess {
-
 		fork(sendPacket(inBase, scl::SimPacket{ 0, 32_b }, clk));
 		fork(sendPacket(inInsert, scl::SimPacket{ 0xFF, 8_b }, clk));
 		fork(sendPacket(inOffset, scl::SimPacket{ 12, 8_b }, clk));
 		
+		simu(ready(out)) = '1';
 		scl::SimPacket packet = co_await receivePacket(out, clk);
 		BOOST_TEST(packet.payload.size() == 40);
 
