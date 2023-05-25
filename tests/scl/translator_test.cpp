@@ -25,25 +25,17 @@
 
 #include <gatery/scl/tilelink/tilelink.h>
 #include <gatery/scl/tilelink/TileLinkMasterModel.h>
+#include <gatery/scl/tilelink/TileLinkValidator.h>
 #include <gatery/scl/Avalon.h>
 #include <gatery/scl/TL2AMM.h>
+#include <gatery/scl/stream/Stream.h>
+
+#include <gatery/utils/Range.h>
 
 using namespace boost::unit_test;
 using namespace gtry;
 using namespace gtry::scl;
 
-scl::TileLinkUL ub2ul(scl::TileLinkUB& link)
-{
-	scl::TileLinkUL out;
-
-	out.a = constructFrom(link.a);
-	link.a <<= out.a;
-
-	*out.d = constructFrom(*link.d);
-	*out.d <<= *link.d;
-
-	return out;
-}
 gtry::scl::TileLinkUB ul2ub(gtry::scl::TileLinkUL& link)
 {
 	scl::TileLinkUB out;
@@ -57,164 +49,302 @@ gtry::scl::TileLinkUB ul2ub(gtry::scl::TileLinkUL& link)
 	return out;
 }
 
-SimProcess simuAvalonFakeMemory(const AvalonMM& avmm, const Clock& clk, const size_t memSize, size_t memLatency = 0) {
-	std::vector<uint32_t> mem(memSize);
-	
-	while (true) {
-		simu(avmm.ready.value()) = '1';
-		simu(avmm.readData.value()).invalidate();
-		simu(avmm.readDataValid.value()) = '0';
-
-
-		while (simu(avmm.read.value()) == '0' && simu(avmm.write.value()) == '0') {
-			co_await OnClk(clk);
-		}
-		HCL_ASSERT((simu(avmm.read.value()) == '1' && simu(avmm.write.value()) == '1') != true);
-
-		simu(avmm.ready.value()) = '0';
-		size_t address = simu(avmm.address);
-		bool isRead = simu(avmm.read.value()) == '1';
-		bool isWrite = simu(avmm.write.value()) == '1';
-		uint32_t dataToWrite = simu(avmm.writeData.value());
-
-		for (size_t i = 0; i < memLatency; i++)
-		{
-			co_await OnClk(clk);
-		}
-		if (isRead) {
-			simu(avmm.readData.value()) = mem[address];
-			simu(avmm.readDataValid.value()) = '1';
-		}
-		else if (isWrite) {
-			mem[address] = dataToWrite;
-		}
-		simu(avmm.ready.value()) = '1';
-		co_await OnClk(clk);
-	}
-}
-enum RequestType {
-	Put,
-	PutPartial,
-	Get,
-};
-
-struct Request {
+struct GetRequest {
 	uint64_t address;
-	sim::DefaultBitVectorState data;
-	RequestType requestType;
+	sim::DefaultBitVectorState dataInMem;
 };
 
 SimProcess simuTileLinkMemCoherenceSupervisor(const TileLinkUL& tl, const Clock& clk) {
-	std::map<uint64_t, sim::DefaultBitVectorState> mem; //address to data
-	std::map<uint64_t, Request> pendingRequests; //source to requests
+	std::map<uint64_t, sim::DefaultBitVectorState> mem; //maps addresses to data
+	std::map<uint64_t, GetRequest> getRequestsPending; //maps source to requests
 
-	while (true) {
-		if (simu(transfer(*tl.d)) == '1') {
-			uint64_t responseSource = simu((*tl.d)->source);
-			auto it = pendingRequests.find(responseSource);
-			bool temp = it != pendingRequests.end();
-			BOOST_TEST(temp);//check that this source was issued beforehand
+	fork([&]()->SimProcess {
+		while (true) {
+			co_await performTransferWait((*tl.d), clk);
+			if (simu((*tl.d)->opcode) == (size_t) TileLinkD::AccessAckData) {
+				auto it = getRequestsPending.find(simu((*tl.d)->source));
+				bool checkThatSourceIsNew = it != getRequestsPending.end();
+				BOOST_TEST(checkThatSourceIsNew);
 
-			if (it->second.requestType == Put) {
-				mem.insert({ it->second.address, it->second.data });
-				std::cout << "put " << it->second.address << " : " << 
+				auto& memWord = it->second.dataInMem;
+				if (memWord.size() == 0)
+					memWord.resize(tl.a->data.width().value);
+
+				if (mem.find(it->second.address) == mem.end()) {
+					std::cout << "tried to get from unwritten address 0x" << std::hex << it->second.address << std::endl;
+				}
+				else {
+					std::cout << "got from address 0x" << std::hex << it->second.address << std::endl;
+					BOOST_TEST(memWord == simu((*tl.d)->data));
+				}
+				getRequestsPending.erase(simu((*tl.d)->source));
 			}
-			else if (it->second.requestType == Get) {
-				BOOST_TEST(mem[it->second.address] == simu((*tl.d)->data));
-			}
-			//dont forget to pop the requests from the pendingRequests
-			pendingRequests.erase(responseSource);
 		}
+	});
 
-		if (simu(transfer(tl.a)) == '1') {
+	while(true){
+		co_await performTransferWait(tl.a, clk);
 
-			RequestType requestType;
-			if (simu(tl.a->isGet()))
-				requestType = Get;
-			else if (simu(tl.a->isPut())) {
-				requestType = Put;
-			}
+		BOOST_TEST(simu(tl.a->opcode).allDefined());
+		auto truncation = gtry::utils::Log2C(tl.a->data.width().bytes());
 
-			Request request;
-			request.address = simu(tl.a->address);
-			request.requestType = requestType;
-			if (request.requestType == Put) {
-				request.data = simu(tl.a->data);
-			}
-			bool check = pendingRequests.find(simu(tl.a->source)) == pendingRequests.end();
+		if (simu(tl.a->opcode) == (size_t) TileLinkA::Get) {
+			GetRequest getRequest;
+
+			BOOST_TEST(simu(tl.a->address).allDefined());
+
+			getRequest.address = simu(tl.a->address) >> truncation;
+			getRequest.dataInMem = mem[getRequest.address];
+
+			bool check = getRequestsPending.find(simu(tl.a->source)) == getRequestsPending.end();
 			BOOST_TEST(check);
-			pendingRequests.insert({ simu(tl.a->source), request });
+			getRequestsPending[simu(tl.a->source)] = getRequest;
 		}
+		else if (simu(tl.a->opcode) == (size_t)TileLinkA::PutFullData || simu(tl.a->opcode) == (size_t)TileLinkA::PutPartialData) {
+			uint64_t address = simu(tl.a->address) >> truncation;
 
-		
+			auto& memWord = mem[address];
 
+			if (memWord.size() == 0)
+				memWord.resize(tl.a->data.width().value);
 
+			const sim::DefaultBitVectorState& wrMask = simu(tl.a->mask);
+			const sim::DefaultBitVectorState wrData = simu(tl.a->data);
 
-		co_await OnClk(clk);
+			for (auto byteIdx : gtry::utils::Range(wrMask.size())) {
+
+				std::uint8_t byteToWrite_value = memWord.extract(sim::DefaultConfig::VALUE, byteIdx * 8, 8);
+				std::uint8_t byteToWrite_defined = memWord.extract(sim::DefaultConfig::DEFINED, byteIdx * 8, 8);
+
+				std::uint8_t newByteToWrite_value = wrData.extract(sim::DefaultConfig::VALUE, byteIdx * 8, 8);
+				std::uint8_t newByteToWrite_defined = wrData.extract(sim::DefaultConfig::DEFINED, byteIdx * 8, 8);
+
+				if (wrMask.get(sim::DefaultConfig::DEFINED, byteIdx)) {
+					if (wrMask.get(sim::DefaultConfig::VALUE, byteIdx)) {
+						byteToWrite_defined = newByteToWrite_defined;
+						byteToWrite_value = newByteToWrite_value;
+					}
+				}
+				else {
+					byteToWrite_defined = byteToWrite_defined & newByteToWrite_defined & (byteToWrite_value ^ newByteToWrite_value);
+					byteToWrite_value = newByteToWrite_value;
+				}
+
+				memWord.insert(sim::DefaultConfig::VALUE, byteIdx * 8, 8, byteToWrite_value);
+				memWord.insert(sim::DefaultConfig::DEFINED, byteIdx * 8, 8, byteToWrite_defined);
+			}
+			std::cout << "put at address 0x" << std::hex << address << std::endl;
+		}
 	}
 }
 
-BOOST_FIXTURE_TEST_CASE(tl_to_amm_basic_test, BoostUnitTestSimulationFixture) {
+struct TranslatorTextSimulationFixture : public BoostUnitTestSimulationFixture {
+public:
+	void prepareTest(scl::TileLinkUL& in, AvalonMM& avmm, scl::TileLinkMasterModel& linkModel, const Clock& clock) {
+
+		avmm.read.emplace();
+		avmm.readDataValid.emplace();
+		avmm.ready.emplace();
+		avmm.write.emplace();
+		avmm.address = 4_b;
+		avmm.byteEnable = 2_b;
+		avmm.writeData = 16_b;
+		avmm.readData = avmm.writeData->width();
+
+		in = makeTlSlave(avmm, 4_b, 32, 32);
+
+		avmm.readLatency = 5;
+		attachMem(avmm, avmm.address.width());
+
+		std::string pinName = "avmm" + '_';
+		gtry::pinOut(avmm.address).setName(pinName + "address");
+		if (avmm.read) gtry::pinOut(*avmm.read).setName(pinName + "read");
+		if (avmm.write) gtry::pinOut(*avmm.write).setName(pinName + "write");
+		if (avmm.writeData) gtry::pinOut(*avmm.writeData).setName(pinName + "writedata");
+		if (avmm.byteEnable) gtry::pinOut(*avmm.byteEnable).setName(pinName + "byteenable");
+		if (avmm.ready) gtry::pinOut(*avmm.ready).setName(pinName + "waitrequest_n");
+		if (avmm.readData) gtry::pinOut(*avmm.readData).setName(pinName + "readdata");
+		if (avmm.readDataValid) gtry::pinOut(*avmm.readDataValid).setName(pinName + "readdatavalid");
+
+		linkModel.init("tlmm_", 
+			in.a->address.width(),
+			in.a->data.width(),
+			in.a->size.width(),
+			in.a->source.width());
+
+		ul2ub(in) <<= linkModel.getLink();
+
+		addSimulationProcess([&]()->SimProcess {
+			co_await simuTileLinkMemCoherenceSupervisor(in, clock);
+		});
+
+		addSimulationProcess([&]()->SimProcess {
+			co_await OnClk(clock);
+			co_await validateTileLink(in.a, (*in.d), clock);
+		});
+
+	}
+};
+
+BOOST_FIXTURE_TEST_CASE(tl_to_amm_basic_test, TranslatorTextSimulationFixture) {
+
 	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
-	AvalonMM avmm;
-	avmm.read.emplace();
-	avmm.readDataValid.emplace();
-	avmm.ready.emplace();
-	avmm.write.emplace();
-	avmm.address = 8_b;
-	avmm.byteEnable = 2_b;
-	avmm.writeData = 16_b;
-	avmm.readData = 16_b;
-	
-	scl::TileLinkUL in = makeTlSlave(avmm, 4_b, 32, 32);
-
-	avmm.readLatency = 5;
-	attachMem(avmm, 8_b);
-
-	std::string pinName = "avmm" + '_';
-	// output pins
-	gtry::pinOut(avmm.address).setName(pinName + "address");
-	if (avmm.read) gtry::pinOut(*avmm.read).setName(pinName + "read");
-	if (avmm.write) gtry::pinOut(*avmm.write).setName(pinName + "write");
-	if (avmm.writeData) gtry::pinOut(*avmm.writeData).setName(pinName + "writedata");
-	if (avmm.byteEnable) gtry::pinOut(*avmm.byteEnable).setName(pinName + "byteenable");
-
-	// input pins
-	if (avmm.ready) gtry::pinOut(*avmm.ready).setName(pinName + "waitrequest_n");
-	if (avmm.readData) gtry::pinOut(*avmm.readData).setName(pinName + "readdata");
-	if (avmm.readDataValid) gtry::pinOut(*avmm.readDataValid).setName(pinName + "readdatavalid");
-	
 	scl::TileLinkMasterModel linkModel;
-	linkModel.init("tlmm_", 8_b, 16_b, 1_b, 4_b);
-	ul2ub(in) <<= linkModel.getLink();
 
+	scl::TileLinkUL in;
+	AvalonMM avmm;
 
-	addSimulationProcess([&]()->SimProcess {
-		co_await simuTileLinkMemCoherenceSupervisor(in, clock);
-	});
+	prepareTest(in, avmm, linkModel, clock);
 
 	addSimulationProcess([&]()->SimProcess {
+
 		co_await OnClk(clock);
 		for (size_t i = 0; i < 10; i++)
 		{
-			fork(linkModel.put(i, 1, i, clock));
-		}
-		
-		for (size_t i = 0; i < 20; i++)
-		{
-			co_await OnClk(clock);
+			fork(linkModel.put(i*2, 1, i, clock));
 		}
 
 		for (size_t i = 0; i < 10; i++)
 		{
-			fork(linkModel.get(i, 1, clock));
+			fork(linkModel.get(i*2, 1, clock));
 		}
 		co_await linkModel.get(10, 1, clock);
-		
+
 		stopTest();
 	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(tl_to_amm_basic_test_chaos_monkey, TranslatorTextSimulationFixture) {
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	scl::TileLinkMasterModel linkModel;
+	linkModel.probability(0.5f, 0.5f); //start rv chaos monkey
+	scl::TileLinkUL in;
+	AvalonMM avmm;
+
+	prepareTest(in, avmm, linkModel, clock);
+
+	addSimulationProcess([&]()->SimProcess {
+
+		co_await OnClk(clock);
+
+		for (size_t i = 0; i < 10; i++)
+		{
+			fork(linkModel.put(i*2, 1, i, clock));
+		}
+
+		for (size_t i = 0; i < 10; i++)
+		{
+			fork(linkModel.get(i*2, 1, clock));
+		}
+		co_await linkModel.get(10, 1, clock);
+
+		stopTest();
+		});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(tl_to_amm_partial_basic_test, TranslatorTextSimulationFixture) {
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	scl::TileLinkMasterModel linkModel;
+
+	scl::TileLinkUL in;
+	AvalonMM avmm;
+
+	prepareTest(in, avmm, linkModel, clock);
+
+	addSimulationProcess([&]()->SimProcess {
+
+		co_await OnClk(clock);
+		for (size_t i = 0; i < 10; i++)
+		{
+			fork(linkModel.put(i, 0, i, clock));
+		}
+
+		for (size_t i = 0; i < 10; i++)
+		{
+			fork(linkModel.get(i, 0, clock));
+		}
+		co_await linkModel.get(10, 1, clock);
+
+		stopTest();
+		});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(tl_to_amm_put_get, TranslatorTextSimulationFixture) {
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	scl::TileLinkMasterModel linkModel;
+
+	scl::TileLinkUL in;
+	AvalonMM avmm;
+
+	prepareTest(in, avmm, linkModel, clock);
+
+	addSimulationProcess([&]()->SimProcess {
+
+		co_await OnClk(clock);
+		for (size_t i = 0; i < 10; i++)
+		{
+			fork(linkModel.put(0x4, 0, i, clock));
+			fork(linkModel.get(0x4, 0, clock));
+		}
+		co_await linkModel.get(10, 1, clock);
+
+		stopTest();
+		});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(tl_to_amm_fuzzing, TranslatorTextSimulationFixture) {
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	scl::TileLinkMasterModel linkModel;
+	scl::TileLinkUL in;
+	AvalonMM avmm;
+	linkModel.probability(0.5f, 0.5f); //start rv chaos monkey
+	prepareTest(in, avmm, linkModel, clock);
+
+	addSimulationProcess([&]()->SimProcess {
+		std::mt19937 gen(27182818284);
+		std::uniform_int_distribution<uint64_t> dist;
+
+		co_await OnClk(clock);
+		for (size_t i = 0; i < 512; i++)
+		{
+			size_t size = dist(gen) & 0x1;
+			uint64_t address = dist(gen) & ~size;
+
+			if (dist(gen) & 0x1)
+				fork(linkModel.put(address, size, dist(gen), clock));
+			else if (dist(gen) & 0x1)
+				fork(linkModel.get(address, size, clock));
+
+			co_await OnClk(clock);
+		}
+		co_await linkModel.get(0, 1, clock);
+		stopTest();
+		});
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
