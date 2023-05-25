@@ -310,6 +310,9 @@ struct FieldExtractionTest : public BoostUnitTestSimulationFixture
 		ClockScope clkScp(packetTestclk);
 
 		StreamType in = { streamWidth };
+		if constexpr (StreamType::template has<scl::Empty>()) {
+			empty(in) = 1_b;
+		}
 		if constexpr (StreamType::template has<scl::TxId>()) {
 			txid(in) = txIdW;
 		}
@@ -351,11 +354,21 @@ struct FieldExtractionTest : public BoostUnitTestSimulationFixture
 					BOOST_TEST(simu(txid(out)) == packet.txid());
 				}
 
-				for (auto fieldIdx : gtry::utils::Range(out->size())) {
-					auto expected = packet.payload.extract(fields[fieldIdx].offset, fields[fieldIdx].size.value);
-					BOOST_TEST(simu(out->at(fieldIdx)) == expected,
-						"Error in field " << fieldIdx << " for packet " << packetIdx << ": Circuit yielded " << simu(out->at(fieldIdx)) << " but should be " << expected);
-				}
+				bool packetTooShort = false;
+				for (const auto &f : fields)
+					if (f.offset + f.size.value > packet.payload.size()) {
+						packetTooShort = true;
+						break;
+					}
+
+				BOOST_TEST(simu(error(out)) == packetTooShort);
+
+				if (!packetTooShort)
+					for (auto fieldIdx : gtry::utils::Range(out->size())) {
+						auto expected = packet.payload.extract(fields[fieldIdx].offset, fields[fieldIdx].size.value);
+						BOOST_TEST(simu(out->at(fieldIdx)) == expected,
+							"Error in field " << fieldIdx << " for packet " << packetIdx << ": Circuit yielded " << simu(out->at(fieldIdx)) << " but should be " << expected);
+					}
 
 				packetIdx++;
 			}
@@ -364,12 +377,12 @@ struct FieldExtractionTest : public BoostUnitTestSimulationFixture
 
 		//design.visualize("before");
 		design.postprocess();
-		BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+		BOOST_TEST(!runHitsTimeout({ 150, 1'000'000 }));
 	}
 };
 
 
-using VFieldStream = scl::VStream<gtry::Vector<BVec>>;
+using VFieldStream = scl::VStream<gtry::Vector<BVec>, scl::Error>;
 using FieldExtractionTest_VFieldStream = FieldExtractionTest<scl::VPacketStream<BVec>, VFieldStream>;
 
 BOOST_FIXTURE_TEST_CASE(fieldExtraction, FieldExtractionTest_VFieldStream) {
@@ -392,6 +405,84 @@ BOOST_FIXTURE_TEST_CASE(fieldExtraction, FieldExtractionTest_VFieldStream) {
 	runTest();
 }
 
+BOOST_FIXTURE_TEST_CASE(fieldExtractionSingleBeat, FieldExtractionTest_VFieldStream) {
+
+	BOOST_REQUIRE(streamWidth == 16_b);
+
+	allPackets = std::vector<scl::SimPacket>{
+		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01 }),
+		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }),
+		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21 }),
+	};
+
+
+	for (size_t offset : {0, 1, 2, 4})
+		for (size_t size : {1, 2, 4})
+			fields.push_back(scl::Field {
+				.offset = offset,
+				.size = BitWidth(size),
+			});
+
+
+	runTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(fieldExtractionPacketsTooShort, FieldExtractionTest_VFieldStream) {
+
+	allPackets = std::vector<scl::SimPacket>{
+		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01 }).invalidBeats(gen()),
+		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11 }).invalidBeats(gen()),
+		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21 }).invalidBeats(gen()),
+	};
+
+
+	for (size_t offset : {0, 8, 16, 24})
+		for (size_t size : {4, 8, 16, 24})
+			fields.push_back(scl::Field {
+				.offset = offset,
+				.size = BitWidth(size),
+			});
+
+
+	runTest();
+}
+
+using FieldExtractionTest_VFieldStream_Empty = FieldExtractionTest<scl::VPacketStream<BVec, scl::Empty>, VFieldStream>;
+
+BOOST_FIXTURE_TEST_CASE(fieldExtractionPacketsTooShortEmpty, FieldExtractionTest_VFieldStream_Empty) {
+
+	allPackets = std::vector<scl::SimPacket>{
+		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01 }).invalidBeats(gen()),
+		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11, 0x12 }).invalidBeats(gen()),
+		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21 }).invalidBeats(gen()),
+	};
+
+	fields.push_back(scl::Field {
+		.offset = 16,
+		.size = 10_b,
+	});
+
+	runTest();
+}
+
+
+BOOST_FIXTURE_TEST_CASE(fieldExtractionPacketsNotTooShortEmpty, FieldExtractionTest_VFieldStream_Empty) {
+
+	allPackets = std::vector<scl::SimPacket>{
+		scl::SimPacket(std::vector<uint8_t>{ 0x00, 0x01 }).invalidBeats(gen()),
+		scl::SimPacket(std::vector<uint8_t>{ 0x10, 0x11, 0x12 }).invalidBeats(gen()),
+		scl::SimPacket(std::vector<uint8_t>{ 0x20, 0x21 }).invalidBeats(gen()),
+	};
+
+	fields.push_back(scl::Field {
+		.offset = 16,
+		.size = 7_b,
+	});
+
+	runTest();
+}
+
+
 BOOST_FIXTURE_TEST_CASE(fieldExtractionFuzz, FieldExtractionTest_VFieldStream) {
 
 	randomPackets(100, 20, 50);
@@ -401,7 +492,7 @@ BOOST_FIXTURE_TEST_CASE(fieldExtractionFuzz, FieldExtractionTest_VFieldStream) {
 }
 
 
-using RvFieldStream = scl::RvStream<gtry::Vector<BVec>>;
+using RvFieldStream = scl::RvStream<gtry::Vector<BVec>, scl::Error>;
 using FieldExtractionTest_RvFieldStream = FieldExtractionTest<scl::RvPacketStream<BVec>, RvFieldStream>;
 
 
@@ -466,7 +557,7 @@ BOOST_FIXTURE_TEST_CASE(fieldExtractionFuzzWBackPressure, FieldExtractionTest_Rv
 }
 
 
-using RvTxidFieldStream = scl::RvStream<gtry::Vector<BVec>, scl::TxId>;
+using RvTxidFieldStream = scl::RvStream<gtry::Vector<BVec>, scl::TxId, scl::Error>;
 using FieldExtractionTest_RvTxidFieldStream = FieldExtractionTest<scl::RsPacketStream<BVec, scl::Empty, scl::TxId>, RvTxidFieldStream>;
 
 BOOST_FIXTURE_TEST_CASE(fieldExtractionFuzz_RsetPacketStream, FieldExtractionTest_RvTxidFieldStream) {
@@ -478,6 +569,20 @@ BOOST_FIXTURE_TEST_CASE(fieldExtractionFuzz_RsetPacketStream, FieldExtractionTes
 
 	backpressureRNG = true;
 	readyProbabilityPercent = 80;
+
+	runTest();
+}
+
+
+BOOST_FIXTURE_TEST_CASE(fieldExtractionFuzz_RsetPacketStreamWHighBackPressure, FieldExtractionTest_RvTxidFieldStream) {
+
+	txIdW = 4_b;
+
+	randomPackets(100, 20, 50);
+	randomFields(10, 0, 20);
+
+	backpressureRNG = true;
+	readyProbabilityPercent = 2;
 
 	runTest();
 }

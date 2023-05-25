@@ -44,10 +44,11 @@ namespace gtry::scl
 	 */
 	template<Signal... MetaOutput, Signal... MetaInput> 
 		requires (
-			Stream<gtry::Vector<BVec>, MetaOutput...>::template has<Ready>() == Stream<BVec, MetaInput...>::template has<Ready>() &&
-			Stream<gtry::Vector<BVec>, MetaOutput...>::template has<Valid>() &&
-			//Stream<gtry::Vector<BVec>, MetaOutput...>::template has<Error>() &&
-			Stream<BVec, MetaInput...>::template has<Eop>())
+			(!Stream<gtry::Vector<BVec>, MetaOutput...>::template has<Ready>() || Stream<BVec, MetaInput...>::template has<Ready>()) && // Backpressure on output requires backpressure on input
+			Stream<gtry::Vector<BVec>, MetaOutput...>::template has<Valid>() && // The output stream is invalid until the header has been fully extracted
+			Stream<gtry::Vector<BVec>, MetaOutput...>::template has<Error>() && // The output stream must report on packets being too short
+			Stream<BVec, MetaInput...>::template has<Eop>() // The input must be a packet stream
+		)
 	inline void extractFields(Stream<gtry::Vector<BVec>, MetaOutput...> &output, Stream<BVec, MetaInput...> &packetStream, const std::span<Field> fields)
 	{
 		Area area("fieldExtractor", true);
@@ -57,9 +58,22 @@ namespace gtry::scl
 		// Figure out the last beat to be able to size the beat counter correctly
 		size_t lastHeaderBeat = 0;
 		for (const auto &field : fields) {
+			if (field.size == 0_b) continue;
+
 			size_t lastBeat = (field.offset + field.size.value-1) / beatWidth.value;
 			lastHeaderBeat = std::max(lastHeaderBeat, lastBeat);
 		}
+		// Figure out how much of the last beat is needed in case we have an Empty field
+		size_t requiredBitsInLastHeaderBeat = 0;
+		for (const auto &field : fields) {
+			if (field.size == 0_b) continue;
+
+			size_t lastBeat = (field.offset + field.size.value-1) / beatWidth.value;
+			size_t lastBit = (field.offset + field.size.value-1) % beatWidth.value;
+			if (lastBeat == lastHeaderBeat)
+				requiredBitsInLastHeaderBeat = std::max(requiredBitsInLastHeaderBeat, lastBit+1);
+		}
+
 
 		// Create a counter that counts the beats and is used
 		// to determine when to extract fields from the stream
@@ -73,6 +87,11 @@ namespace gtry::scl
 		outputTransfered.setName("outputTransfered");
 		Reg<Bit> packetFullyIngested('0');
 		packetFullyIngested.setName("packetFullyIngested");
+		Reg<UInt> txidStore;
+		if constexpr (packetStream.template has<TxId>()) {
+			txidStore.constructFrom(txid(packetStream));
+			txidStore.setName("txidStore");
+		}
 
 		// We can receive data if either:
 		// - We have not yet fully ingested to current packet (i.e. for discarding the payload)
@@ -91,26 +110,43 @@ namespace gtry::scl
 			// be ready.
 			IF (beatCount.value() == lastHeaderBeat) {
 				outputValid = '1';
-				fieldsExtracted = '1';
+
+				// If there is no Empty field, then at this point we have everything to fully
+				// extract all fields. If there is an empty field, and if this is the EOP (where Empty is valid), 
+				// then we need to check if this beat actually contains sufficient bytes for all fields.
+				if constexpr (packetStream.template has<Empty>()) {
+					size_t requiredBytes = (requiredBitsInLastHeaderBeat + 7) / 8;
+					size_t maxEmptyBytes = packetStream->size() / 8 - requiredBytes;
+					fieldsExtracted = !scl::eop(packetStream) | (scl::empty(packetStream) <= maxEmptyBytes);
+				} else
+					fieldsExtracted = '1';
 			}
 
 			// If we hit the eop, remember that we fully ingested the packet
 			// and can continue if or once the output has been transfered.
 			IF (scl::eop(packetStream)) {
 				packetFullyIngested = '1';
-				// todo: What do we do if the fields were not fully parsed yet?
+
+				// If we have not extracted the header by now, mark the output as valid
+				// nontheless and set the error flag.
+				IF (!fieldsExtracted.combinatorial())
+					outputValid = '1';
 			}
+
+			// Since we may transmit the output after the packet has been fully ingested, we may have to remember the txid
+			if constexpr (packetStream.template has<TxId>())
+				txidStore = txid(packetStream);
 		}
 
 		// Potentially forward additional fields
 		if constexpr (output.template has<TxId>() && packetStream.template has<TxId>())
-			txid(output) = reg(txid(packetStream));
-
-		if constexpr (output.template has<Error>() && packetStream.template has<Error>())
-			error(output) = reg(error(packetStream));
+			txid(output) = txidStore.combinatorial();
 
 
-		valid(output) = outputValid;
+		// If we ran out of packets before the last header field, we become valid without having extracted everything.
+		// In this case, set the error flag.
+		error(output) = outputValid.combinatorial() & !fieldsExtracted.combinatorial();
+		valid(output) = outputValid.combinatorial();
 
 		// If we transfer the output, it is no longer valid
 		// but mark that we transferred and may proceed with
@@ -134,6 +170,7 @@ namespace gtry::scl
 		// Build extractors for all fields
 		for (auto fieldIdx : utils::Range(fields.size())) {
 			const auto &field = fields[fieldIdx];
+			if (field.size == 0_b) continue;
 
 			// All outputs are registered to hold their values until
 			// all fields have been gathered and then until they have
@@ -142,8 +179,8 @@ namespace gtry::scl
 			BVec fieldStore = field.size;
 			setName(fieldStore, (boost::format("fieldStore_%d") % fieldIdx).str());
 
-			fieldStore = reg(fieldStore);
 			output->at(fieldIdx) = fieldStore;
+			fieldStore = reg(fieldStore);
 
 			IF (valid(packetStream)) {
 				// Bit address of the end of the field
