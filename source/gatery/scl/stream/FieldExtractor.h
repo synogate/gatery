@@ -47,6 +47,7 @@ namespace gtry::scl
 			(!Stream<gtry::Vector<BVec>, MetaOutput...>::template has<Ready>() || Stream<BVec, MetaInput...>::template has<Ready>()) && // Backpressure on output requires backpressure on input
 			Stream<gtry::Vector<BVec>, MetaOutput...>::template has<Valid>() && // The output stream is invalid until the header has been fully extracted
 			Stream<gtry::Vector<BVec>, MetaOutput...>::template has<Error>() && // The output stream must report on packets being too short
+			!Stream<BVec, MetaInput...>::template has<Error>() && // The input stream must no have an error field (since we don't react to it)
 			Stream<BVec, MetaInput...>::template has<Eop>() // The input must be a packet stream
 		)
 	inline void extractFields(Stream<gtry::Vector<BVec>, MetaOutput...> &output, Stream<BVec, MetaInput...> &packetStream, const std::span<Field> fields)
