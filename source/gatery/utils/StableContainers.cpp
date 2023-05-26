@@ -19,6 +19,7 @@
 #include "StableContainers.h"
 
 #include <gatery/hlim/coreNodes/Node_Pin.h>
+#include <gatery/hlim/coreNodes/Node_MultiDriver.h>
 #include <gatery/hlim/NodePort.h>
 #include <gatery/hlim/NodeGroup.h>
 #include <gatery/hlim/Clock.h>
@@ -77,6 +78,11 @@ bool StableCompare<hlim::NodeGroup*>::operator()(const hlim::NodeGroup* const &l
 }
 
 bool StableCompare<hlim::Node_Pin*>::operator()(const hlim::Node_Pin* const &lhs, const hlim::Node_Pin* const &rhs) const
+{
+	return stableCompareWithId(lhs, rhs);
+}
+
+bool StableCompare<hlim::Node_MultiDriver*>::operator()(const hlim::Node_MultiDriver* const &lhs, const hlim::Node_MultiDriver* const &rhs) const
 {
 	return stableCompareWithId(lhs, rhs);
 }

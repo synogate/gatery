@@ -116,13 +116,44 @@ void BasicBlock::extractSignals()
 			m_localSignals.insert(assignment.destination);
 	}
 
-	// In case no assignments outside of port maps happen with this
 	for (auto m : m_multiDriverNodes) {
-		hlim::NodePort np{.node = m, .port = 0ull};
-		if (isConsumedExternally(np))
-			m_outputs.insert(np);
-		else
-			m_localSignals.insert(np);
+
+		if (m_bidirSignals.contains(m)) // already handled because it is interconnected to another in m_multiDriverNodes
+			continue;
+
+		auto interconnected = getAllInterConnected(m);
+
+		hlim::Node_Pin *drivingPin = nullptr;
+		bool multipleDriven = drivenByMultipleIOPins(interconnected, drivingPin);
+		HCL_DESIGNCHECK_HINT(!multipleDriven, "Multiple io-pins are driving a bidirectional signal. This can not be expressed in VHDL");
+
+		BiDirSignal driver;
+		driver.pinDriver = drivingPin;
+		if (!driver.pinDriver) {
+			// find the highest point
+			driver.highestPointSignal = m;
+			auto *highestScope = m_ast.getMapping().getScope(m);
+
+			for (auto mdnode : interconnected.mdNodes) {
+				auto *scope = m_ast.getMapping().getScope(mdnode);
+				if (highestScope->isChildOf(scope)) {
+					driver.highestPointSignal = mdnode;
+					highestScope = scope;
+				}
+			}
+		}
+
+		for (hlim::Node_MultiDriver *mdnode : interconnected.mdNodes)
+			if (m_ast.getMapping().getScope(mdnode) == this)
+				m_bidirSignals[mdnode] = driver;
+
+		if (driver.highestPointSignal) {
+			hlim::NodePort np{.node = driver.highestPointSignal, .port = 0ull};
+			if (m_ast.getMapping().getScope(driver.highestPointSignal) != this)
+				m_inputs.insert(np);
+			else
+				m_localSignals.insert(np);
+		}
 	}
 
 
@@ -134,8 +165,18 @@ void BasicBlock::allocateNames()
 	for (auto &constant : m_constants)
 		m_namespaceScope.allocateName(constant, findNearestDesiredName(constant), chooseDataTypeFromOutput(constant), CodeFormatting::SIG_CONSTANT);
 
-	for (auto &local : m_localSignals) 
+	for (auto &local : m_localSignals)
 		m_namespaceScope.allocateName(local, findNearestDesiredName(local), chooseDataTypeFromOutput(local), CodeFormatting::SIG_LOCAL_SIGNAL);
+
+	for (auto &bidir : m_bidirSignals) {
+		hlim::NodePort output = {.node = bidir.first, .port = 0ull};
+		if (!m_localSignals.contains(output)) {
+			if (bidir.second.pinDriver)
+				m_namespaceScope.alias(output, bidir.second.pinDriver);
+			else
+				m_namespaceScope.alias(output, {.node = bidir.second.highestPointSignal, .port = 0ull});
+		}
+	}
 
 	for (auto &proc : m_processes)
 		proc->allocateNames();
@@ -224,11 +265,9 @@ void BasicBlock::collectInstantiations(hlim::NodeGroup *nodeGroup, bool reccursi
 			else
 			if (auto *multiNode = dynamic_cast<hlim::Node_MultiDriver *>(node))
 				handleMultiDriverNodeInstantiation(multiNode);
-				/*
 			else
 			if (auto *pin = dynamic_cast<hlim::Node_Pin *>(node))
 				handlePinInstantiation(pin);
-				*/
 		}
 
 		for (const auto &childGroup : group->getChildren()) {
@@ -301,38 +340,19 @@ void BasicBlock::handleExternalNodeInstantiation(hlim::Node_External *externalNo
 void BasicBlock::handleMultiDriverNodeInstantiation(hlim::Node_MultiDriver *multi)
 {
 	m_multiDriverNodes.push_back(multi);
-	for (auto i : utils::Range(multi->getNumInputPorts())) {
-		const auto driver = hlim::findDriver(multi, {.inputPortIdx = i, .skipExportOverrideNodes = hlim::Node_ExportOverride::EXP_INPUT});
-		if (driver.node == nullptr) continue;
-
-		// Check if this is a direct inout link to an external node.
-		// In this case, only the "output" (which poses as the inout) needs to be bound to the multi driver
-		// which happens in the port map of the instantiation of the external node.
-		// No Assignment of the input is necessary.
-		if (auto *extNode = dynamic_cast<hlim::Node_External*>(driver.node))
-			if (extNode->getOutputPorts()[driver.port].bidirPartner)
-				if (extNode->getNonSignalDriver(*extNode->getOutputPorts()[driver.port].bidirPartner).node == multi)
-					continue;
-
-		m_assignments.push_back(AssignmentInstance{
-			.enable = {},
-			.source = multi->getDriver(i),
-			.destination = {.node = multi, .port = 0ull},
-		});
-
-		ConcurrentStatement statement;
-		statement.type = ConcurrentStatement::TYPE_ASSIGNMENT;
-		statement.ref.assignmentIdx = m_assignments.size()-1;
-		statement.sortIdx = 0; /// @todo
-
-		m_statements.push_back(statement);
-	}
-
 	m_ast.getMapping().assignNodeToScope(multi, this);
 }
 
 void BasicBlock::handlePinInstantiation(hlim::Node_Pin *pin)
 {
+	if (pin->isInputPin() && pin->isOutputPin()) 
+		if (dynamic_cast<hlim::Node_MultiDriver*>(findDriver(pin, {.inputPortIdx = 0, .skipExportOverrideNodes = hlim::Node_ExportOverride::EXP_INPUT}).node)) {
+			m_ioPins.insert(pin);
+			m_ast.getMapping().assignNodeToScope(pin, this);
+		}
+	// Otherwise, push into and handle by process
+/*
+
 	if (pin->isOutputPin()) {
 		const auto &driver = pin->getDriver(0);
 		if (driver.node != nullptr) {
@@ -352,8 +372,7 @@ void BasicBlock::handlePinInstantiation(hlim::Node_Pin *pin)
 			m_statements.push_back(statement);
 		}
 	}
-
-	m_ast.getMapping().assignNodeToScope(pin, this);
+*/
 }
 
 void BasicBlock::writeSupportFiles(const std::filesystem::path &destination) const
@@ -411,8 +430,10 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
 			if (dynamic_cast<hlim::Node_MultiDriver *>(node))
 				continue;
 
-		//	if (auto *pin = dynamic_cast<hlim::Node_Pin *>(node))
-			//	continue;
+			// bidir pins (without enable) must be handled with special care through intricate wiring, rather than assigning to them in a process.
+			if (auto *pin = dynamic_cast<hlim::Node_Pin *>(node))
+				if (m_ioPins.contains(pin))
+					continue;
 
 			hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
 			if (regNode != nullptr) {

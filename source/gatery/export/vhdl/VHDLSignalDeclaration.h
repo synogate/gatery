@@ -41,8 +41,8 @@ enum class VHDLDataType {
 VHDLDataType chooseDataTypeFromOutput(const hlim::NodePort &np);
 
 struct VHDLSignalDeclaration {
-	VHDLDataType dataType;
-	size_t width;
+	VHDLDataType dataType = VHDLDataType::BOOL;
+	size_t width = 0;
 	std::string name;
 };
 

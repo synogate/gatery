@@ -110,7 +110,18 @@ class BasicBlock : public BaseGrouping
 		std::vector<std::string> m_entityInstanceNames;
 		std::vector<ExternalNodeInstance> m_externalNodes;
 		std::vector<AssignmentInstance> m_assignments;
-		std::vector<hlim::Node_MultiDriver *> m_multiDriverNodes;
+
+		std::vector<hlim::Node_MultiDriver*> m_multiDriverNodes;
+		struct BiDirSignal {
+			/// If not nullptr, the entire group of bidir signals is NOT connected to a bidir io port and at the highest point in the hierarchy a local signal must be 
+			/// declared that serves as the signal declaration that is handed down.
+			hlim::Node_MultiDriver *highestPointSignal = nullptr;
+			/// If not nullptr, the entire group of bidir signals is connected to a bidir io port and this io port serves as the signal declaration that is handed down.
+			hlim::Node_Pin *pinDriver = nullptr;
+		};
+		/// For each Node_MultiDriver (in this block), maps to the "source" of the signal (in terms of decleration and wiring).
+		utils::StableMap<hlim::Node_MultiDriver*, BiDirSignal> m_bidirSignals;
+
 
 		std::vector<ConcurrentStatement> m_statements;
 
