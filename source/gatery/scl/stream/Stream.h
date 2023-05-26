@@ -256,38 +256,6 @@ namespace gtry::scl
 	template<Signal T, Signal... Meta>
 	using VStream = Stream<T, scl::Valid, Meta...>;
 
-	/**
-	 * @brief Puts a register in the ready, valid and data path.
-	 * @param stream Source stream
-	 * @param Settings forwarded to all instantiated registers.
-	 * @return connected stream
-	*/
-	template<StreamSignal T> 
-	T reg(T& stream, const RegisterSettings& settings = {});
-	template<StreamSignal T>
-	T reg(const T& stream, const RegisterSettings& settings = {});
-
-	/**
-	 * @brief Connect a Stream as source to a FIFO as sink.
-	 * @param sink FIFO instance.
-	 * @param source Stream instance.
-	*/
-	template<Signal Tf, StreamSignal Ts>
-	void connect(Fifo<Tf>& sink, Ts& source);
-
-	template<Signal T>
-	void connect(Fifo<T>& sink, RvStream<T>& source);
-
-	/**
-	 * @brief Connect a FIFO as source to a Stream as sink.
-	 * @param sink Stream instance.
-	 * @param source FIFO instance.
-	*/
-	template<StreamSignal Ts, Signal Tf>
-	void connect(Ts& sink, Fifo<Tf>& source);
-
-	template<Signal T>
-	void connect(RvStream<T>& sink, Fifo<T>& source);
 
 	template<StreamSignal T> 
 	auto simuReady(const T &stream) {
@@ -349,6 +317,41 @@ namespace gtry::scl
 		simu(valid(stream)) = '0';
 	}
 
+}
+
+namespace gtry {
+	/**
+	 * @brief Puts a register in the ready, valid and data path.
+	 * @param stream Source stream
+	 * @param Settings forwarded to all instantiated registers.
+	 * @return connected stream
+	*/
+	template<scl::StreamSignal T> 
+	T reg(T& stream, const RegisterSettings& settings = {});
+	template<scl::StreamSignal T>
+	T reg(const T& stream, const RegisterSettings& settings = {});
+
+	/**
+	 * @brief Connect a Stream as source to a FIFO as sink.
+	 * @param sink FIFO instance.
+	 * @param source Stream instance.
+	*/
+	template<Signal Tf, scl::StreamSignal Ts>
+	void connect(scl::Fifo<Tf>& sink, Ts& source);
+
+	template<Signal T>
+	void connect(scl::Fifo<T>& sink, scl::RvStream<T>& source);
+
+	/**
+	 * @brief Connect a FIFO as source to a Stream as sink.
+	 * @param sink Stream instance.
+	 * @param source FIFO instance.
+	*/
+	template<scl::StreamSignal Ts, Signal Tf>
+	void connect(Ts& sink, scl::Fifo<Tf>& source);
+
+	template<Signal T>
+	void connect(scl::RvStream<T>& sink, scl::Fifo<T>& source);
 }
 
 namespace gtry::scl
@@ -447,6 +450,15 @@ namespace gtry::scl
 		return ret;
 	}
 
+	template<typename ...T>
+	void ignoreAll(T ...t) { }
+
+	template<typename QueryMeta, Signal PayloadT, Signal ...Meta>
+	int reductionChecker(const Stream<PayloadT, Meta...>&) { 
+		static_assert(Stream<PayloadT, Meta...>::template has<QueryMeta>(), "Trying to reduce to a stream type that actually has additional meta flags in its signature.");
+		return 0;
+	}
+
 	template<Signal PayloadT, Signal ...Meta>
 	template<StreamSignal T>
 	inline T Stream<PayloadT, Meta...>::reduceTo()
@@ -455,6 +467,7 @@ namespace gtry::scl
 		connect(ret.data, data);
 
 		std::apply([&](auto&... meta) {
+			ignoreAll(reductionChecker<std::remove_cvref_t<decltype(meta)>>(*this)...);
 			((meta <<= std::get<std::remove_cvref_t<decltype(meta)>>(_sig)), ...);
 		}, ret._sig);
 		return ret;
@@ -466,10 +479,12 @@ namespace gtry::scl
 	{
 		T ret{ data };
 		std::apply([&](auto&... meta) {
+			ignoreAll(reductionChecker<std::remove_cvref_t<decltype(meta)>>(*this)...);
 			((ret.template get<std::remove_cvref_t<decltype(meta)>>() = meta), ...);
 		}, ret._sig);
 		return ret;
 	}
+
 
 	template<Signal PayloadT, Signal ...Meta>
 	template<StreamSignal T> 
@@ -742,56 +757,6 @@ namespace gtry::scl
 		return ret;
 	}
 
-	template<Signal Tf, StreamSignal Ts>
-	void connect(Fifo<Tf>& sink, Ts& source)
-	{
-		IF(transfer(source))
-			sink.push(downstream(source));
-		ready(source) = !sink.full();
-	}
-
-	template<Signal T>
-	void connect(Fifo<T>& sink, RvStream<T>& source)
-	{
-		IF(transfer(source))
-			sink.push(*source);
-		ready(source) = !sink.full();
-	}
-
-	template<StreamSignal Ts, Signal Tf>
-	void connect(Ts& sink, Fifo<Tf>& source)
-	{
-		downstream(sink) = source.peek();
-		valid(sink) = !source.empty();
-	
-		IF(transfer(sink))
-			source.pop();
-	}
-
-	template<Signal T>
-	void connect(RvStream<T>& sink, Fifo<T>& source)
-	{
-		*sink = source.peek();
-		valid(sink) = !source.empty();
-
-		IF(transfer(sink))
-			source.pop();
-	}
-
-	template<StreamSignal T>
-	T reg(T& stream, const RegisterSettings& settings)
-	{
-		// we can use blocking reg here since regReady guarantees high ready signal
-		return stream.regDownstreamBlocking(settings).regReady(settings);
-	}
-
-	template<StreamSignal T>
-	T reg(const T& stream, const RegisterSettings& settings)
-	{
-		static_assert(!stream.template has<Ready>(), "cannot create upstream register from const stream");
-		return stream.regDownstream(settings);
-	}
-
 	template<Signal Tp, Signal... Meta>
 	RvStream<Tp, Meta...> synchronizeStreamReqAck(RvStream<Tp, Meta...>& in, const Clock& inClock, const Clock& outClock)
 	{
@@ -853,6 +818,57 @@ namespace gtry::scl
 }
 
 namespace gtry {
+
+	template<Signal Tf, scl::StreamSignal Ts>
+	void connect(scl::Fifo<Tf>& sink, Ts& source)
+	{
+		IF(scl::transfer(source))
+			sink.push(downstream(source));
+		scl::ready(source) = !sink.full();
+	}
+
+	template<Signal T>
+	void connect(scl::Fifo<T>& sink, scl::RvStream<T>& source)
+	{
+		IF(scl::transfer(source))
+			sink.push(*source);
+		scl::ready(source) = !sink.full();
+	}
+
+	template<scl::StreamSignal Ts, Signal Tf>
+	void connect(Ts& sink, scl::Fifo<Tf>& source)
+	{
+		downstream(sink) = source.peek();
+		scl::valid(sink) = !source.empty();
+	
+		IF(scl::transfer(sink))
+			source.pop();
+	}
+
+	template<Signal T>
+	void connect(scl::RvStream<T>& sink, scl::Fifo<T>& source)
+	{
+		*sink = source.peek();
+		scl::valid(sink) = !source.empty();
+
+		IF(scl::transfer(sink))
+			source.pop();
+	}
+
+	template<scl::StreamSignal T>
+	T reg(T& stream, const RegisterSettings& settings)
+	{
+		// we can use blocking reg here since regReady guarantees high ready signal
+		return stream.regDownstreamBlocking(settings).regReady(settings);
+	}
+
+	template<scl::StreamSignal T>
+	T reg(const T& stream, const RegisterSettings& settings)
+	{
+		static_assert(!stream.template has<scl::Ready>(), "cannot create upstream register from const stream");
+		return stream.regDownstream(settings);
+	}
+
 
 	template<scl::StreamSignal T>
 	struct VisitCompound<T>
