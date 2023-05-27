@@ -157,7 +157,8 @@ namespace gtry::scl
 		GroupScope entity(GroupScope::GroupType::ENTITY);
 		entity.setName("SipHash");
 
-		HCL_DESIGNCHECK_HINT(block.size() <= 56 && block.size() % 8 == 0, "no impl");
+		//HCL_DESIGNCHECK_HINT(block.size() <= 56 && block.size() % 8 == 0, "no impl");
+		HCL_DESIGNCHECK_HINT(block.size() % 8 == 0, "no impl");
 
 		SipHash hash;
 		hash.enableRegister(placeregister);
