@@ -23,6 +23,7 @@ namespace gtry::scl
 {
 	class TileLinkMasterModel
 	{
+	public:
 		struct Data
 		{
 			uint64_t mask;
@@ -37,6 +38,8 @@ namespace gtry::scl
 			uint64_t logByteSize;
 			uint64_t inBurstBeats;
 			std::vector<Data> data;
+			std::optional<uint64_t> source;
+			bool freeSource = true;
 		};
 
 		struct TransactionIn
@@ -44,6 +47,7 @@ namespace gtry::scl
 			TileLinkD::OpCode op;
 			std::vector<Data> data;
 			bool error;
+			uint64_t source;
 		};
 
 	public:
@@ -53,12 +57,18 @@ namespace gtry::scl
 		void probability(float valid, float ready);
 
 		SimFunction<TransactionIn> request(TransactionOut tx, const Clock& clk);
+		void freeSourceId(const size_t& sourceId);
 		SimProcess idle(size_t requestsPending = 0);
+
 
 		SimFunction<std::tuple<uint64_t,uint64_t,bool>> get(uint64_t address, uint64_t logByteSize, const Clock &clk);
 		SimFunction<bool> put(uint64_t address, uint64_t logByteSize, uint64_t data, const Clock &clk);
 
 		auto &getLink() { return m_link; }
+
+		TransactionOut setupGet(uint64_t address, uint64_t logByteSize);
+		TransactionOut setupPut(uint64_t address, uint64_t logByteSize, uint64_t data);
+		std::tuple<uint64_t, uint64_t, bool> extractResult(const TransactionIn& res, TransactionOut req);
 
 	protected:
 		SimFunction<size_t> allocSourceId(const Clock &clk);

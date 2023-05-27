@@ -63,7 +63,14 @@ namespace gtry::scl
 		simu(m_link.a->address) = tx.address;
 		simu(m_link.a->size) = tx.logByteSize;
 
-		const size_t sourceId = co_await allocSourceId(clk);
+		size_t sourceId;
+		if (tx.source)
+		{
+			sourceId = *tx.source;
+			m_sourceInUse[sourceId] = true;
+		}
+		else
+			sourceId = co_await allocSourceId(clk);
 		simu(m_link.a->source) = sourceId;
 
 		fork([=, this]()->SimProcess
@@ -96,7 +103,9 @@ namespace gtry::scl
 			m_requestCurrentChanged.notify_oldest();
 		});
 
-		TransactionIn ret;
+		TransactionIn ret {
+			.source = sourceId
+		};
 
 		for (size_t i = 0; i < tx.inBurstBeats; ++i)
 		{
@@ -113,59 +122,26 @@ namespace gtry::scl
 		}
 		ret.error = (bool)simu((*m_link.d)->error);
 
-		m_sourceInUse[sourceId] = false;
+		if(tx.freeSource)
+			freeSourceId(sourceId);
 		co_return ret;
+	}
+
+	void TileLinkMasterModel::freeSourceId(const size_t& sourceId)
+	{
+		m_sourceInUse[sourceId] = false;
 	}
 
 	SimFunction<std::tuple<uint64_t,uint64_t,bool>> TileLinkMasterModel::get(uint64_t address, uint64_t logByteSize, const Clock &clk) 
 	{
-		TransactionOut req{
-			.op = TileLinkA::Get,
-			.address = address,
-			.logByteSize = logByteSize,
-		};
-
-		const size_t bytePerBeat = m_link.a->mask.width().bits();
-		const size_t byteSize = 1ull << logByteSize;
-		req.inBurstBeats = (byteSize + bytePerBeat - 1) / bytePerBeat;
-
-		auto [offset, mask] = prepareTransaction(req);
-		req.data.resize(1);
-		req.data[0].defined = 0;
-
+		TransactionOut req = setupGet(address, logByteSize);
 		TransactionIn res = co_await request(req, clk);
-
-		uint64_t value = 0;
-		uint64_t defined = 0;
-		for (size_t i = 0; i < res.data.size(); ++i)
-		{
-			const size_t w = m_link.a->data.width().bits();
-			
-			Data& d = res.data[i];
-			value |= d.value >> offset << (i * w);
-			defined |= d.defined >> offset << (i * w);
-		}
-		co_return std::tuple<uint64_t, uint64_t, bool>{value, defined, res.error};
+		co_return extractResult(res, req);
 	}
 
 	SimFunction<bool> TileLinkMasterModel::put(uint64_t address, uint64_t logByteSize, uint64_t data, const Clock &clk) 
 	{
-		TransactionOut req{
-			.op = TileLinkA::PutFullData,
-			.address = address,
-			.logByteSize = logByteSize,
-			.inBurstBeats = 1,
-		};
-
-		auto [offset, mask] = prepareTransaction(req);
-
-		for (Data& d : req.data)
-		{
-			d.defined = mask;
-			d.value = (data << offset) & mask;
-			data >>= m_link.a->data.width().bits();
-		}
-
+		TransactionOut req = setupPut(address, logByteSize, data);
 		TransactionIn res = co_await request(req, clk);
 		co_return res.error;
 	}
@@ -208,5 +184,63 @@ namespace gtry::scl
 			co_await m_requestCurrentChanged.wait();
 			m_requestCurrentChanged.notify_oldest();
 		}
+	}
+
+	TileLinkMasterModel::TransactionOut TileLinkMasterModel::setupGet(uint64_t address, uint64_t logByteSize)
+	{
+		TransactionOut req{
+			.op = TileLinkA::Get,
+			.address = address,
+			.logByteSize = logByteSize,
+		};
+
+		const size_t bytePerBeat = m_link.a->mask.width().bits();
+		const size_t byteSize = 1ull << logByteSize;
+		req.inBurstBeats = (byteSize + bytePerBeat - 1) / bytePerBeat;
+
+		auto [offset, mask] = prepareTransaction(req);
+		req.data.resize(1);
+		req.data[0].defined = 0;
+
+		return req;
+	}
+
+	TileLinkMasterModel::TransactionOut TileLinkMasterModel::setupPut(uint64_t address, uint64_t logByteSize, uint64_t data)
+	{
+		TransactionOut req{
+			.op = TileLinkA::PutFullData,
+			.address = address,
+			.logByteSize = logByteSize,
+			.inBurstBeats = 1,
+		};
+
+		auto [offset, mask] = prepareTransaction(req);
+
+		for (Data& d : req.data)
+		{
+			d.defined = mask;
+			d.value = (data << offset) & mask;
+			data >>= m_link.a->data.width().bits();
+		}
+
+		return req;
+	}
+
+	std::tuple<uint64_t, uint64_t, bool> TileLinkMasterModel::extractResult(const TransactionIn& res, TransactionOut req)
+	{
+		auto [offset, mask] = prepareTransaction(req);
+
+		uint64_t value = 0;
+		uint64_t defined = 0;
+		for (size_t i = 0; i < res.data.size(); ++i)
+		{
+			const size_t w = m_link.a->data.width().bits();
+
+			const Data& d = res.data[i];
+			value |= d.value >> offset << (i * w);
+			defined |= d.defined >> offset << (i * w);
+		}
+
+		return std::tuple<uint64_t, uint64_t, bool>{value, defined, res.error};
 	}
 }
