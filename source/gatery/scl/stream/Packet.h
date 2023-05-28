@@ -106,6 +106,12 @@ namespace gtry::scl
 
 	template<Signal Payload, Signal ... Meta>
 	RsPacketStream<Payload, Meta...> addReadyAndFailOnBackpressure(const SPacketStream<Payload, Meta...>& source);
+
+	// for internal use only, we should introduce a symbol width and remove this
+	struct EmptyBits
+	{
+		UInt emptyBits;
+	};
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Eop, eop);
