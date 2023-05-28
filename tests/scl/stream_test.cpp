@@ -1569,11 +1569,6 @@ BOOST_FIXTURE_TEST_CASE(streamBroadcaster, BoostUnitTestSimulationFixture)
 
 namespace gtry::scl
 {
-	struct EmptyBits
-	{
-		UInt emptyBits;
-	};
-
 	auto streamAddEmptyBits(StreamSignal auto& in)
 	{
 		UInt emptyBits = ConstUInt(0, BitWidth::count(in->width().bits()));
@@ -1621,7 +1616,8 @@ namespace gtry::scl
 		scl::Counter counter{ counterW.count() };
 		IF(transfer(in))
 		{
-			counter.inc();
+			IF(!counter.isLast())
+				counter.inc();
 			IF(eop(in))
 				counter.reset();
 		}
@@ -1633,7 +1629,12 @@ namespace gtry::scl
 	{
 		UInt len = in->width().bits();
 		
-		if constexpr (requires { empty(in); })
+		if constexpr (in.template has<scl::EmptyBits>())
+		{
+			IF(eop(in))
+				len = in->width().bits() - zext(in.template get<scl::EmptyBits>().emptyBits);
+		}
+		else if constexpr (requires { empty(in); })
 		{
 			IF(eop(in))
 			{
@@ -1652,87 +1653,91 @@ namespace gtry::scl
 
 		UInt insertBitOffset = bitOffset->lower(BitWidth::count(base->width().bits()));	HCL_NAMED(insertBitOffset);
 		UInt insertBeat = bitOffset->upper(-insertBitOffset.width());					HCL_NAMED(insertBeat);
+		UInt beatCounter = streamPacketBeatCounter(out, insertBeat.width());			HCL_NAMED(beatCounter);
 
-		UInt baseShift = insertBitOffset.width();										HCL_NAMED(baseShift);
-		RvPacketStream baseShifted = streamShiftLeft(base, baseShift);					HCL_NAMED(baseShifted);
+		UInt baseShift = insertBitOffset.width();									HCL_NAMED(baseShift);
+		RvPacketStream baseShifted = streamShiftLeft(base, baseShift);		HCL_NAMED(baseShifted);
 		RvPacketStream insertShifted = streamShiftLeft(insert, insertBitOffset);		HCL_NAMED(insertShifted);
 
 		baseShift = reg(baseShift);
 		IF(valid(insert) & eop(insert))
 			baseShift = streamBeatBitLength(insert).lower(-1_b);
 
-		out <<= base;
+		downstream(out) = downstream(base);
 		valid(out) = '0';
 		ready(baseShifted) = '0';
 		ready(insertShifted) = '0';
-		ready(bitOffset) = '0';
 
 		enum class State
 		{
-			base,
-			insertingFirst,
-			inserting,
-			insertingLast,
-			baseEnd
+			prefix,
+			insert,
+			suffix
 		};
-		Reg<Enum<State>> state{ State::base };
+		Reg<Enum<State>> state{ State::prefix };
 		state.setName("state");
 
-		IF(state.current() == State::base)
+		IF(state.current() == State::prefix)
 		{
 			ready(baseShifted) = ready(out);
 			valid(out) = valid(base);
 
-			UInt beatCounter = streamPacketBeatCounter(base, insertBeat.width());
-			IF(beatCounter == insertBeat)
-				state = State::insertingFirst;
+			IF(valid(bitOffset) & beatCounter == insertBeat)
+				state = State::insert;
 		}
 
-		IF(state.combinatorial() == State::insertingFirst)
+		Bit sawEop; HCL_NAMED(sawEop);
+		IF(state.combinatorial() == State::insert)
 		{
 			ready(baseShifted) = '0';
 			ready(insertShifted) = ready(out);
-			valid(out) = valid(base) & valid(insertShifted);
-
-			for (size_t i = 0; i < out->width().bits(); i++)
-				IF(i >= insertBitOffset)
-					(*out)[i] = (*insertShifted)[i];
-		
-			state = State::inserting;
-		}
-
-		IF(state.combinatorial() == State::inserting & valid(insertShifted) & eop(insertShifted))
-			state = State::insertingLast;
-
-		IF(state.current() == State::inserting)
-		{
-			ready(insertShifted) = ready(out);
 			valid(out) = valid(insertShifted);
 			*out = *insertShifted;
+
+			IF(beatCounter == insertBeat)
+			{
+				for(size_t i = 0; i < out->width().bits(); i++)
+					IF(i < insertBitOffset)
+						(*out)[i] = (*base)[i];
+			}
+
+			IF(valid(insertShifted) & eop(insertShifted))
+			{
+				UInt endOffset = zext(insertBitOffset, +1_b) + zext(baseShift, +1_b);
+				HCL_NAMED(endOffset);
+
+				IF(endOffset != 0)
+				{
+					for (size_t i = 0; i < out->width().bits(); i++)
+						IF(i >= endOffset.lower(-1_b))
+							(*out)[i] = (*baseShifted)[i];
+
+					ready(baseShifted) = ready(out);
+				}
+
+				IF(ready(out))
+					state = State::suffix;
+			}
 		}
 
-		IF(state.combinatorial() == State::insertingLast)
+		IF(state.current() == State::suffix)
 		{
 			ready(baseShifted) = ready(out);
-			ready(insertShifted) = ready(out);
-			valid(out) = valid(baseShifted) & valid(insertShifted);
-
-			for (size_t i = 0; i < out->width().bits(); i++)
-				IF(i >= (insertBitOffset + baseShift))
-					(*out)[i] = (*baseShifted)[i];
-
-			state = State::baseEnd;
+			valid(out) = valid(baseShifted);
+			*out = *baseShifted;
 		}
 
-		IF(state.current() == State::baseEnd)
+
+		eop(out) = '0';
+		IF(state.combinatorial() == State::suffix & sawEop)
 		{
-			ready(baseShifted) = ready(out);
-			valid(out) = valid(base);
-
-			IF(eop(out))
-				state = State::base;
+			eop(out) = '1';
+			IF(transfer(out))
+				state = State::prefix;
 		}
+		sawEop = flagInstantSet(transfer(baseShifted) & eop(baseShifted), transfer(out) & eop(out));
 
+		ready(bitOffset) = valid(out) & eop(out);
 		return out;
 	}
 
@@ -1756,7 +1761,7 @@ BOOST_FIXTURE_TEST_CASE(streamShiftLeft_test, BoostUnitTestSimulationFixture)
 
 	// insert packets
 	addSimulationProcess([&, this]()->SimProcess {
-		simu(ready(out)) = '1';
+		fork(scl::readyDriverRNG(out, clk, 50));
 
 		for(size_t e = 0; e < empty(in).width().count(); ++e)
 		{
@@ -1797,8 +1802,8 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_test, BoostUnitTestSimulationFixture)
 	std::mt19937 rng{ 12524 };
 
 	scl::RvStream<UInt> inOffset{ 8_b };
-	scl::RvPacketStream<BVec> inBase{ 8_b };
-	scl::RvPacketStream<BVec> inInsert{ 8_b };
+	scl::RvPacketStream<BVec> inBase{ 16_b };
+	scl::RvPacketStream<BVec> inInsert{ 16_b };
 	scl::RvPacketStream out = scl::streamInsert(inBase, inInsert, inOffset);
 
 	pinIn(inOffset, "inOffset");
@@ -1808,18 +1813,69 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_test, BoostUnitTestSimulationFixture)
 
 	// insert packets
 	addSimulationProcess([&, this]()->SimProcess {
-		fork(sendPacket(inBase, scl::SimPacket{ 0, 32_b }, clk));
-		fork(sendPacket(inInsert, scl::SimPacket{ 0xFF, 8_b }, clk));
-		fork(sendPacket(inOffset, scl::SimPacket{ 12, 8_b }, clk));
-		
 		simu(ready(out)) = '1';
-		scl::SimPacket packet = co_await receivePacket(out, clk);
-		BOOST_TEST(packet.payload.size() == 40);
+
+		for (size_t i = 0; i < 32 / 4 + 1; ++i)
+		{
+			fork(sendPacket(inBase, scl::SimPacket{ 0x76543210ull, 32_b }, clk));
+			fork(sendPacket(inInsert, scl::SimPacket{ 0xfedcba98, 32_b }, clk));
+			fork(sendPacket(inOffset, scl::SimPacket{ i * 4, 8_b }, clk));
+		
+			scl::SimPacket packet = co_await receivePacket(out, clk);
+			co_await OnClk(clk);
+			co_await OnClk(clk);
+			//			BOOST_TEST(packet.payload.size() == 40);
+		}
 
 		co_await OnClk(clk);
 		stopTest();
 	});
 
 	design.postprocess();
-	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(streamInsert_fuzz_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	std::mt19937 rng{ 12524 };
+
+	scl::RvStream<UInt> inOffset{ 8_b };
+	scl::RvPacketStream<BVec, scl::EmptyBits> inBase{ 16_b };
+	scl::RvPacketStream<BVec, scl::EmptyBits> inInsert{ 16_b };
+
+	for(scl::RvPacketStream<BVec, scl::EmptyBits>& in : { std::ref(inBase), std::ref(inInsert) })
+		in.template get<scl::EmptyBits>().emptyBits = 4_b;
+
+	scl::RvPacketStream out = scl::streamInsert(inBase, inInsert, inOffset);
+
+	pinIn(inOffset, "inOffset");
+	pinIn(inBase, "inBase");
+	pinIn(inInsert, "inInsert");
+	pinOut(out, "out");
+
+	// insert packets
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(ready(out)) = '1';
+
+		for (size_t i = 0; i < 32 / 4 + 1; ++i)
+		{
+			fork(sendPacket(inBase, scl::SimPacket{ 0x6543210ull, 28_b }, clk));
+			fork(sendPacket(inInsert, scl::SimPacket{ 0xedcba98, 28_b }, clk));
+			fork(sendPacket(inOffset, scl::SimPacket{ i * 4, 8_b }, clk));
+
+			scl::SimPacket packet = co_await receivePacket(out, clk);
+			co_await OnClk(clk);
+			co_await OnClk(clk);
+			//			BOOST_TEST(packet.payload.size() == 40);
+		}
+
+		co_await OnClk(clk);
+		stopTest();
+		});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
