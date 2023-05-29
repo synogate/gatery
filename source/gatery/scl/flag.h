@@ -26,8 +26,9 @@ namespace gtry::scl
 	inline Bit edge(const Bit& in) { return in != reg(in, '0'); }
 	inline Bit edgeRising(const Bit& in) { return in & !reg(in, '0'); }
 	inline Bit edgeFalling(const Bit& in) { return !in & reg(in, '0'); }
-}
 
+	template<Signal T> T capture(const T& in, Bit condition);
+}
 
 namespace gtry::scl
 {
@@ -47,5 +48,15 @@ namespace gtry::scl
 		ret = reg(ret, resetValue);
 		ret |= set;
 		return ret;
+	}
+
+	template<Signal T>
+	T capture(const T& in, Bit condition)
+	{
+		T value = constructFrom(in);
+		value = reg(value);
+		IF(condition)
+			value = in;
+		return value;
 	}
 }

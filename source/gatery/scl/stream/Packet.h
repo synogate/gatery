@@ -19,6 +19,7 @@
 #include <gatery/frontend.h>
 #include "Stream.h"
 #include "../TransactionalFifo.h"
+#include "../Counter.h"
 
 namespace gtry::scl
 {
@@ -106,11 +107,38 @@ namespace gtry::scl
 
 	template<Signal Payload, Signal ... Meta>
 	RsPacketStream<Payload, Meta...> addReadyAndFailOnBackpressure(const SPacketStream<Payload, Meta...>& source);
+
+	template<BaseSignal Payload, Signal... Meta>
+	auto streamShiftLeft(Stream<Payload, Meta...>& in, UInt shift, Bit reset = '0');
+
+	UInt streamPacketBeatCounter(const StreamSignal auto& in, BitWidth counterW);
+
+	template<BaseSignal Payload, Signal... Meta>
+	UInt streamBeatBitLength(const Stream<Payload, Meta...>& in);
+
+	// for internal use only, we should introduce a symbol width and remove this
+	struct EmptyBits
+	{
+		UInt emptyBits;
+	};
+
+	template<StreamSignal Ts>
+	const UInt emptyBits(const Ts& in) { return ConstUInt(0, BitWidth::count(in->width().bits())); }
+
+	template<BaseSignal Payload, Signal... Meta> requires (not Stream<Payload, Meta...>::template has<EmptyBits>() and Stream<Payload, Meta...>::template has<Empty>())
+	const UInt emptyBits(const Stream<Payload, Meta...>& in) { return cat(empty(in), "b000"); }
+
+	template<BaseSignal Payload, Signal... Meta> requires (Stream<Payload, Meta...>::template has<EmptyBits>())
+	UInt& emptyBits(Stream<Payload, Meta...>& in) { return in.template get<EmptyBits>().emptyBits; }
+
+	template<BaseSignal Payload, Signal... Meta> requires (Stream<Payload, Meta...>::template has<EmptyBits>())
+	const UInt& emptyBits(const Stream<Payload, Meta...>& in) { return in.template get<EmptyBits>().emptyBits; }
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Eop, eop);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Sop, sop);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Empty, empty);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::EmptyBits, emptyBits);
 
 namespace gtry::scl
 {
@@ -388,4 +416,70 @@ namespace gtry::scl
 		return (RsPacketStream<Payload, Meta...>)internal::addReadyAndFailOnBackpressure(source);
 	}
 
+	template<BaseSignal Payload, Signal... Meta>
+	auto streamShiftLeft(Stream<Payload, Meta...>& in, UInt shift, Bit reset)
+	{
+		Area ent{ "scl_streamShiftLeft", true };
+		HCL_DESIGNCHECK_HINT(shift.width() <= BitWidth::count(in->width().bits()), "beat shift not implemented");
+		HCL_NAMED(shift);
+
+		Stream out = in.remove<scl::Empty>().add(EmptyBits{ emptyBits(in) });
+		UInt& emptyBits = out.get<EmptyBits>().emptyBits;
+
+		Bit delayedEop;			HCL_NAMED(delayedEop);
+		Bit shouldDelayEop = valid(in) & eop(in) & zext(emptyBits) < zext(shift);
+		HCL_NAMED(shouldDelayEop);
+
+		emptyBits -= resizeTo(shift, emptyBits.width());
+		IF(shouldDelayEop & !delayedEop)
+		{
+			eop(out) = '0';
+			ready(in) = '0';
+		}
+
+		ENIF(transfer(out))
+		{
+			Payload fullValue = (Payload)cat(*in, reg(*in));
+			*out = (fullValue << shift).upper(out->width());
+			HCL_NAMED(fullValue);
+
+			delayedEop = flag(shouldDelayEop, delayedEop | reset);
+		}
+		HCL_NAMED(out);
+		return out;
+	}
+
+	UInt streamPacketBeatCounter(const StreamSignal auto& in, BitWidth counterW)
+	{
+		scl::Counter counter{ counterW.count() };
+		IF(transfer(in))
+		{
+			IF(!counter.isLast())
+				counter.inc();
+			IF(eop(in))
+				counter.reset();
+		}
+		return counter.value();
+	}
+
+	template<BaseSignal Payload, Signal... Meta>
+	UInt streamBeatBitLength(const Stream<Payload, Meta...>& in)
+	{
+		UInt len = in->width().bits();
+
+		if constexpr (in.template has<scl::EmptyBits>())
+		{
+			IF(eop(in))
+				len = in->width().bits() - zext(in.template get<scl::EmptyBits>().emptyBits);
+		}
+		else if constexpr (requires { empty(in); })
+		{
+			IF(eop(in))
+			{
+				UInt byteLen = in->width().bytes() - empty(in);
+				len = cat(byteLen, "b000");
+			}
+		}
+		return len;
+	}
 }

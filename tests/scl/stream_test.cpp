@@ -1566,3 +1566,159 @@ BOOST_FIXTURE_TEST_CASE(streamBroadcaster, BoostUnitTestSimulationFixture)
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 10000, 100'000'000 }));
 }
+
+BOOST_FIXTURE_TEST_CASE(streamShiftLeft_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	UInt shift = pinIn(4_b).setName("shift");
+
+	scl::RvPacketStream<BVec, scl::Empty> in{ 16_b };
+	empty(in) = 1_b;
+
+	scl::RvPacketStream out = scl::streamShiftLeft(in, shift);
+	pinIn(in, "in");
+	pinOut(out, "out");
+
+	// insert packets
+	addSimulationProcess([&, this]()->SimProcess {
+		fork(scl::readyDriverRNG(out, clk, 50));
+
+		for(size_t e = 0; e < empty(in).width().count(); ++e)
+		{
+			scl::SimPacket packet{ 
+				e ? 0xFF0000FFFF0000ull : 0xFFFF0000FFFF0000ull,
+				e ? 56_b : 64_b 
+			};
+
+			for (size_t i = 0; i < shift.width().count(); ++i)
+			{
+				simu(shift) = i;
+				fork(sendPacket(in, packet, clk));
+
+				// we do not test much until receivePacket supports EmptyBits
+				scl::SimPacket packet = co_await receivePacket(out, clk);
+
+				if(e == 0)
+					BOOST_TEST(packet.payload.size() == (i == 0 ? 64 : 80));
+				else
+					BOOST_TEST(packet.payload.size() == (i < 9 ? 64 : 80));
+			}
+		}
+
+		co_await OnClk(clk);
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(streamInsert_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	std::mt19937 rng{ 12524 };
+
+	scl::RvStream<UInt> inOffset{ 8_b };
+	scl::RvPacketStream<BVec> inBase{ 16_b };
+	scl::RvPacketStream<BVec> inInsert{ 16_b };
+	scl::RvPacketStream out = scl::streamInsert(inBase, inInsert, inOffset);
+
+	pinIn(inOffset, "inOffset");
+	pinIn(inBase, "inBase");
+	pinIn(inInsert, "inInsert");
+	pinOut(out, "out");
+
+	// insert packets
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(ready(out)) = '1';
+
+		for (size_t i = 0; i < 32 / 4 + 1; ++i)
+		{
+			fork(sendPacket(inBase, scl::SimPacket{ 0x76543210ull, 32_b }, clk));
+			fork(sendPacket(inInsert, scl::SimPacket{ 0xfedcba98, 32_b }, clk));
+			fork(sendPacket(inOffset, scl::SimPacket{ i * 4, 8_b }, clk));
+		
+			scl::SimPacket packet = co_await receivePacket(out, clk);
+			co_await OnClk(clk);
+		}
+
+		co_await OnClk(clk);
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(streamInsert_fuzz_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	std::mt19937_64 rng{ 12524 };
+
+	scl::RvStream<UInt> inOffset{ 8_b };
+	scl::RvPacketStream<BVec, scl::EmptyBits> inBase{ 8_b };
+	scl::RvPacketStream<BVec, scl::EmptyBits> inInsert{ inBase->width() };
+
+	for (scl::RvPacketStream<BVec, scl::EmptyBits>& in : { std::ref(inBase), std::ref(inInsert) })
+		in.template get<scl::EmptyBits>().emptyBits = BitWidth::count(inBase->width().bits());
+
+	scl::RvPacketStream out = scl::streamInsert(inBase, inInsert, inOffset);
+
+	pinIn(inOffset, "inOffset");
+	pinIn(inBase, "inBase");
+	pinIn(inInsert, "inInsert");
+	pinOut(out, "out");
+
+	// insert packets
+	addSimulationProcess([&, this]()->SimProcess {
+		fork(scl::readyDriverRNG(out, clk, 90));
+
+		for (size_t i = 0; i < 128; ++i)
+		{
+			uint64_t baseW = rng() % 64 + 1;
+			uint64_t baseData = rng() & gtry::utils::bitMaskRange(0, baseW);
+			uint64_t insertW = baseW != 64 ? rng() % (64 - baseW) : 0;
+			uint64_t insertData = rng() & gtry::utils::bitMaskRange(0, insertW);
+			uint64_t insertOffset = rng() % (baseW + 1);
+
+			fork(sendPacket(inBase, scl::SimPacket{ baseData, BitWidth(baseW) }, clk));
+			if (insertW)
+			{
+				fork(sendPacket(inInsert, scl::SimPacket{ insertData, BitWidth{insertW} }, clk));
+				fork(sendPacket(inOffset, scl::SimPacket{ insertOffset, 8_b }, clk));
+			}
+
+			scl::SimPacket packet = co_await receivePacket(out, clk);
+
+			uint64_t expected = 
+				(baseData & gtry::utils::bitMaskRange(0, insertOffset)) |
+				(insertData << insertOffset) |
+				((baseData & ~gtry::utils::bitMaskRange(0, insertOffset)) << insertW);
+
+			uint64_t received = packet.asUint64(BitWidth(baseW + insertW));
+
+			BOOST_TEST(packet.payload.size() == baseW + insertW);
+			BOOST_TEST(received == expected);
+
+			if (packet.payload.size() != baseW + insertW)
+				break;
+			if (received != expected)
+				break;
+
+			if(rng() % 16 == 0)
+				co_await OnClk(clk);
+		}
+
+		co_await OnClk(clk);
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 10, 1'000'000 }));
+}
