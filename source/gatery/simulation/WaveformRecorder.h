@@ -48,13 +48,13 @@ class WaveformRecorder : public SimulatorCallbacks
 		WaveformRecorder(hlim::Circuit &circuit, Simulator &simulator);
 		virtual ~WaveformRecorder() = default;
 
-		void addSignal(hlim::NodePort np, bool isTap, bool isPin, bool hidden, hlim::NodeGroup *group, const std::string &nameOverride = {}, size_t sortOrder = 0);
+		void addSignal(hlim::NodePort driver, hlim::BaseNode *relevantNode, bool hidden);
 		void addMemory(hlim::Node_Memory *mem, hlim::NodeGroup *group, const std::string &nameOverride = {}, size_t sortOrder = 0);
 		void addAllTaps();
 		void addAllPins();
 		void addAllOutPins();
-		void addAllNamedSignals(bool appendNodeId = false);
-		void addAllSignals(bool appendNodeId = false);
+		void addAllNamedSignals();
+		void addAllSignals();
 		void addAllMemories();
 
 		virtual void onAfterPowerOn() override;
@@ -65,13 +65,26 @@ class WaveformRecorder : public SimulatorCallbacks
 		Simulator &m_simulator;
 		bool m_initialized = false;
 
+		/// @brief Keys to deduplicate signals in the waveform.
+		/// @details This is supposed to prevent signals from being 
+		/// added multiple times, but still allow the same signal to
+		/// be added under different names.
+		struct SignalReference {
+			/// The signal itself
+			hlim::RefCtdNodePort driver;
+			/// The context (i.e. name, group, ...) in which the signal is considered.
+			hlim::NodePtr<hlim::BaseNode> relevantNode;
+
+			auto operator<=>(const SignalReference&) const = default;
+		};
+
 		struct StateOffsetSize {
 			size_t offset, size;
 		};
 		struct Signal {
 			size_t sortOrder = 0;
 			std::string name;
-			hlim::RefCtdNodePort driver;
+			SignalReference signalRef;
 			hlim::Node_Memory *memory = nullptr;
 			size_t memoryWordSize = 0;
 			size_t memoryWordIdx = 0;
@@ -84,7 +97,7 @@ class WaveformRecorder : public SimulatorCallbacks
 		std::vector<StateOffsetSize> m_id2StateOffsetSize;
 		std::vector<Signal> m_id2Signal;
 		sim::DefaultBitVectorState m_trackedState;
-		utils::UnstableMap<hlim::NodePort, size_t> m_alreadyAddedNodePorts;
+		utils::UnstableMap<SignalReference, size_t> m_alreadyAddedNodePorts;
 		utils::UnstableMap<hlim::Node_Memory *, size_t> m_alreadyAddedMemories;
 
 		void initializeStates();

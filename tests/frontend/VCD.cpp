@@ -276,5 +276,54 @@ BOOST_FIXTURE_TEST_CASE(testMemoryInVCD, VCDTestFixture<BoostUnitTestSimulationF
 
 
 
+BOOST_FIXTURE_TEST_CASE(testMultiSignalsSameDriver, VCDTestFixture<BoostUnitTestSimulationFixture>)
+{
+	using namespace gtry;
+	using namespace gtry::sim;
+	using namespace gtry::utils;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	UInt input = pinIn(4_b).setName("input1");
+	UInt input2 = pinIn(4_b).setName("input2");
+	HCL_NAMED(input);
+	UInt dummy = input;
+	HCL_NAMED(dummy);
+	tap(dummy);
+
+	UInt output = input ^ input2;
+
+	UInt outDummy = output;
+	HCL_NAMED(outDummy);
+	tap(outDummy);
+
+	HCL_NAMED(output);
+	pinOut(output).setName("out");
+
+	UInt outDummyAfter = output;
+	HCL_NAMED(outDummyAfter);
+	tap(outDummyAfter);
+
+	addSimulationProcess([=,this]()->SimProcess {
+
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
+
+	BOOST_TEST(VCDContains(std::regex{"\\$var wire 4 . input \\$end"}));
+	BOOST_TEST(VCDContains(std::regex{"\\$var wire 4 . dummy \\$end"}));
+	BOOST_TEST(VCDContains(std::regex{"\\$var wire 4 . output \\$end"}));
+	BOOST_TEST(VCDContains(std::regex{"\\$var wire 4 . outDummy \\$end"}));
+	BOOST_TEST(VCDContains(std::regex{"\\$var wire 4 . outDummyAfter \\$end"}));
+}
+
+
+
+
 
 BOOST_AUTO_TEST_SUITE_END()
