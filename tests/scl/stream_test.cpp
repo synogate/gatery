@@ -1597,13 +1597,8 @@ BOOST_FIXTURE_TEST_CASE(streamShiftLeft_test, BoostUnitTestSimulationFixture)
 				simu(shift) = i;
 				fork(sendPacket(in, packet, clk));
 
-				// we do not test much until receivePacket supports EmptyBits
-				scl::SimPacket packet = co_await receivePacket(out, clk);
-
-				if(e == 0)
-					BOOST_TEST(packet.payload.size() == (i == 0 ? 64 : 80));
-				else
-					BOOST_TEST(packet.payload.size() == (i < 9 ? 64 : 80));
+				scl::SimPacket outPacket = co_await receivePacket(out, clk);
+				BOOST_TEST(outPacket.payload.size() == packet.payload.size() + i);
 			}
 		}
 
