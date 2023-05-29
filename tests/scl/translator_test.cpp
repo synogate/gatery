@@ -150,8 +150,10 @@ public:
 		avmm.byteEnable = 2_b;
 		avmm.writeData = 16_b;
 		avmm.readData = avmm.writeData->width();
+		avmm.maximumPendingReadTransactions = 32;
+		avmm.maximumPendingWriteTransactions = 32;
 
-		in = tileLinkBridge(avmm, 4_b, 32, 32);
+		in = tileLinkBridge(avmm, 4_b);
 
 		avmm.readLatency = 5;
 		attachMem(avmm, avmm.address.width());

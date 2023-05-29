@@ -20,7 +20,7 @@
 #include <gatery/scl/stream/StreamArbiter.h>
 #include <gatery/scl/stream/adaptWidth.h>
 
-TileLinkUL tileLinkBridge(AvalonMM& avmm, BitWidth sourceW, size_t maxReadRequestsInFlight, size_t maxWriteRequestsInFlight)
+TileLinkUL tileLinkBridge(AvalonMM& avmm, BitWidth sourceW)
 {
 	HCL_ASSERT_HINT(!avmm.response, "Avalon MM response not yet implemented");
 	HCL_DESIGNCHECK_HINT(avmm.writeData, "These interfaces are not compatible. There is no writeData field in your AMM interface");
@@ -44,6 +44,12 @@ TileLinkUL tileLinkBridge(AvalonMM& avmm, BitWidth sourceW, size_t maxReadReques
 	TileLinkD response = tileLinkDefaultResponse(*(ret.a));
 	response.data.resetNode();
 	response.data = 0_b;
+
+	size_t maxReadRequestsInFlight = avmm.maximumPendingReadTransactions == 0 ? 32 : avmm.maximumPendingReadTransactions;
+	maxReadRequestsInFlight = std::min(ret.a->source.width().count(), maxReadRequestsInFlight);
+	
+	size_t maxWriteRequestsInFlight = avmm.maximumPendingWriteTransactions == 0 ? 32 : avmm.maximumPendingWriteTransactions;
+	maxWriteRequestsInFlight = std::min(ret.a->source.width().count(), maxWriteRequestsInFlight);
 
 	scl::Fifo<TileLinkD> writeRequestFifo{ maxWriteRequestsInFlight , response };
 	HCL_NAMED(writeRequestFifo);

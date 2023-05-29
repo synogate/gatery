@@ -25,6 +25,6 @@ using namespace gtry;
 using namespace scl;
 
 
-TileLinkUL tileLinkBridge(AvalonMM& amm, BitWidth sourceW, size_t maxReadRequestsInFlight, size_t maxWriteRequestsInFlight);
+TileLinkUL tileLinkBridge(AvalonMM& amm, BitWidth sourceW);
 
 
