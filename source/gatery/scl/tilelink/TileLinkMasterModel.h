@@ -54,7 +54,7 @@ namespace gtry::scl
 
 		void init(std::string_view prefix, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth = 0_b, BitWidth sourceWidth = 0_b);
 
-		void probability(float valid, float ready);
+		void probability(float valid, float ready, uint32_t seed = 1337);
 
 		SimFunction<TransactionIn> request(TransactionOut tx, const Clock& clk);
 		void freeSourceId(const size_t& sourceId);
@@ -84,7 +84,7 @@ namespace gtry::scl
 		float m_validProbability = 1;
 		float m_readyProbability = 1;
 		std::vector<bool> m_sourceInUse;
-		std::mt19937 m_rng;
+		std::mt19937 m_rng = std::mt19937{ 1337 };
 		std::uniform_real_distribution<float> m_dis;
 	};
 }

@@ -27,7 +27,6 @@ namespace gtry::scl
 		pinIn(m_link, std::string{ prefix });
 
 		m_sourceInUse.resize(sourceWidth.count(), false);
-		m_rng.seed(std::random_device{}());
 
 		Clock clk = ClockScope::getClk();
 
@@ -44,8 +43,9 @@ namespace gtry::scl
 		});
 	}
 
-	void TileLinkMasterModel::probability(float valid, float ready)
+	void TileLinkMasterModel::probability(float valid, float ready, uint32_t seed)
 	{
+		m_rng.seed(seed);
 		m_validProbability = valid;
 		m_readyProbability = ready;
 	}
