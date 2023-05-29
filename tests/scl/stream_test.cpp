@@ -1567,229 +1567,6 @@ BOOST_FIXTURE_TEST_CASE(streamBroadcaster, BoostUnitTestSimulationFixture)
 	BOOST_TEST(!runHitsTimeout({ 10000, 100'000'000 }));
 }
 
-namespace gtry::scl
-{
-	template<StreamSignal Ts>
-	const UInt emptyBits(const Ts& in) { return ConstUInt(0, BitWidth::count(in->width().bits())); }
-
-	template<BaseSignal Payload, Signal... Meta> requires (not Stream<Payload, Meta...>::template has<EmptyBits>() and Stream<Payload, Meta...>::template has<Empty>())
-	const UInt emptyBits(const Stream<Payload, Meta...>& in) { return cat(empty(in), "b000"); }
-
-	template<BaseSignal Payload, Signal... Meta> requires (Stream<Payload, Meta...>::template has<EmptyBits>())
-	UInt& emptyBits(Stream<Payload, Meta...>& in) { return in.template get<EmptyBits>().emptyBits; }
-
-	template<BaseSignal Payload, Signal... Meta> requires (Stream<Payload, Meta...>::template has<EmptyBits>())
-	const UInt& emptyBits(const Stream<Payload, Meta...>& in) { return in.template get<EmptyBits>().emptyBits; }
-
-	template<BaseSignal Payload, Signal... Meta>
-	auto streamShiftLeft(Stream<Payload, Meta...>& in, UInt shift, Bit reset = '0')
-	{
-		Area ent{ "scl_streamShiftLeft", true };
-		HCL_DESIGNCHECK_HINT(shift.width() <= BitWidth::count(in->width().bits()), "beat shift not implemented");
-		HCL_NAMED(shift);
-
-		Stream out = in.remove<scl::Empty>().add(EmptyBits{ emptyBits(in) });
-		UInt& emptyBits = out.get<EmptyBits>().emptyBits;
-
-		Bit delayedEop;			HCL_NAMED(delayedEop);
-		Bit shouldDelayEop = valid(in) & eop(in) & zext(emptyBits) < zext(shift);
-		HCL_NAMED(shouldDelayEop);
-
-		emptyBits -= resizeTo(shift, emptyBits.width());
-		IF(shouldDelayEop & !delayedEop)
-		{
-			eop(out) = '0';
-			ready(in) = '0';
-		}
-
-		ENIF(transfer(out))
-		{
-			Payload fullValue = (Payload)cat(*in, reg(*in));
-			*out = (fullValue << shift).upper(out->width());
-			HCL_NAMED(fullValue);
-
-			delayedEop = flag(shouldDelayEop, delayedEop | reset);
-		}
-		HCL_NAMED(out);
-		return out;
-	}
-
-	UInt streamPacketBeatCounter(const StreamSignal auto& in, BitWidth counterW)
-	{
-		scl::Counter counter{ counterW.count() };
-		IF(transfer(in))
-		{
-			IF(!counter.isLast())
-				counter.inc();
-			IF(eop(in))
-				counter.reset();
-		}
-		return counter.value();
-	}
-
-	template<BaseSignal Payload, Signal... Meta>
-	UInt streamBeatBitLength(const Stream<Payload, Meta...>& in)
-	{
-		UInt len = in->width().bits();
-		
-		if constexpr (in.template has<scl::EmptyBits>())
-		{
-			IF(eop(in))
-				len = in->width().bits() - zext(in.template get<scl::EmptyBits>().emptyBits);
-		}
-		else if constexpr (requires { empty(in); })
-		{
-			IF(eop(in))
-			{
-				UInt byteLen = in->width().bytes() - empty(in);
-				len = cat(byteLen, "b000");
-			}
-		}
-		return len;
-	}
-
-	template<Signal T>
-	T capture(const T& in, Bit condition)
-	{
-		T value = constructFrom(in);
-		value = reg(value);
-		IF(condition)
-			value = in;
-		return value;
-	}
-
-	template<BaseSignal Payload, Signal ... Meta>
-	auto streamInsert(RvPacketStream<Payload, Meta...>& base, RvPacketStream<Payload, Meta...>& insert, RvStream<UInt>& bitOffset)
-	{
-		Area ent{ "scl_streamInsert", true };
-
-		UInt insertBitOffset = bitOffset->lower(BitWidth::count(base->width().bits()));	HCL_NAMED(insertBitOffset);
-		UInt insertBeat = bitOffset->upper(-insertBitOffset.width());					HCL_NAMED(insertBeat);
-
-		Bit baseShiftReset = !valid(bitOffset);											HCL_NAMED(baseShiftReset);
-		UInt baseShift = insertBitOffset.width();										HCL_NAMED(baseShift);
-		RvPacketStream baseShifted = streamShiftLeft(base, baseShift, baseShiftReset);	HCL_NAMED(baseShifted);
-		RvPacketStream insertShifted = streamShiftLeft(insert, insertBitOffset);		HCL_NAMED(insertShifted);
-		Bit insertShiftedShouldDelayEop = valid(insert) & eop(insert) & zext(emptyBits(insert)) < zext(insertBitOffset); HCL_NAMED(insertShiftedShouldDelayEop);
-
-		RvPacketStream out = constructFrom(baseShifted);
-		UInt beatCounter = streamPacketBeatCounter(out, insertBeat.width());			HCL_NAMED(beatCounter);
-
-		IF(transfer(out) & eop(out))
-			baseShift = baseShift.width().mask();
-		baseShift = reg(baseShift, baseShift.width().mask());
-		IF(valid(insert) & eop(insert))
-			baseShift = streamBeatBitLength(insert).lower(-1_b);
-
-		UInt emptyBitsInsert = capture(emptyBits(insert), valid(insert) & eop(insert));	HCL_NAMED(emptyBitsInsert);
-		UInt emptyBitsBase = capture(emptyBits(base), valid(base) & eop(base));			HCL_NAMED(emptyBitsBase);
-		UInt emptyBitsOut = emptyBitsInsert + emptyBitsBase;							HCL_NAMED(emptyBitsOut);
-
-		downstream(out) = downstream(baseShifted);
-		emptyBits(out) = emptyBitsOut;
-		valid(out) = '0';
-		ready(baseShifted) = '0';
-		ready(insertShifted) = '0';
-
-		enum class State
-		{
-			prefix,
-			insert,
-			suffix
-		};
-		Reg<Enum<State>> state{ State::prefix };
-		state.setName("state");
-
-		IF(state.current() == State::prefix)
-		{
-			ready(baseShifted) = ready(out);
-			valid(out) = valid(base);
-			*out = *base;
-
-			IF(valid(bitOffset) & beatCounter == insertBeat)
-				state = State::insert;
-		}
-
-		Bit sawEop; HCL_NAMED(sawEop);
-		IF(state.combinatorial() == State::insert)
-		{
-			ready(baseShifted) = '0';
-			ready(insertShifted) = ready(out);
-			valid(out) = valid(insertShifted);
-			*out = *insertShifted;
-
-			IF(beatCounter == insertBeat)
-			{
-				for(size_t i = 0; i < out->width().bits(); i++)
-					IF(i < insertBitOffset)
-						(*out)[i] = (*base)[i];
-
-				Bit noSuffixPhase = '0';
-				IF(eop(base) & (emptyBits(base) + insertBitOffset == 0))
-				{
-					noSuffixPhase = '1';
-					HCL_NAMED(noSuffixPhase);
-					tap(noSuffixPhase);
-					ready(baseShifted) = ready(out);
-				}
-
-				//IF(valid(insert) & eop(insert))
-				//IF(insertBitOffset != 0)
-				//ready(baseShifted) = ready(out);
-			}
-
-			IF(!eop(insertShifted) & insertShiftedShouldDelayEop)
-				ready(baseShifted) = ready(out);
-
-			IF(eop(insertShifted))
-			{
-				UInt numBaseBits = emptyBits(insertShifted);
-				HCL_NAMED(numBaseBits);
-
-				for (size_t i = 1; i < out->width().bits(); i++)
-					IF(out->width().bits() - i <= numBaseBits)
-					(*out)[i] = (*baseShifted)[i];
-
-				IF(numBaseBits != 0)
-					ready(baseShifted) = ready(out);
-				//IF(/*find condition for base shift not used*/)
-				//	ready(baseShifted) = ready(out);
-
-				IF(valid(insertShifted) & ready(out))
-					state = State::suffix;
-			}
-		}
-
-		IF(state.current() == State::suffix)
-		{
-			ready(baseShifted) = ready(out);
-			valid(out) = valid(baseShifted);
-			*out = *baseShifted;
-		}
-
-		eop(out) = '0';
-		IF(state.combinatorial() == State::suffix & sawEop)
-		{
-			eop(out) = '1';
-			IF(transfer(out))
-				state = State::prefix;
-		}
-		IF(valid(base) & eop(base) & !valid(bitOffset))
-		{
-			eop(out) = '1';
-			emptyBits(out) = emptyBitsBase;
-		}
-
-		sawEop = flagInstantSet(transfer(baseShifted) & eop(baseShifted), transfer(out) & eop(out));
-
-		ready(bitOffset) = valid(out) & eop(out);
-		return out;
-	}
-
-}
-
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::EmptyBits, emptyBits);
-
 BOOST_FIXTURE_TEST_CASE(streamShiftLeft_test, BoostUnitTestSimulationFixture)
 {
 	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
@@ -1838,7 +1615,6 @@ BOOST_FIXTURE_TEST_CASE(streamShiftLeft_test, BoostUnitTestSimulationFixture)
 	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
 }
 
-
 BOOST_FIXTURE_TEST_CASE(streamInsert_test, BoostUnitTestSimulationFixture)
 {
 	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
@@ -1868,8 +1644,6 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_test, BoostUnitTestSimulationFixture)
 		
 			scl::SimPacket packet = co_await receivePacket(out, clk);
 			co_await OnClk(clk);
-			co_await OnClk(clk);
-			//			BOOST_TEST(packet.payload.size() == 40);
 		}
 
 		co_await OnClk(clk);
@@ -1889,10 +1663,10 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_fuzz_test, BoostUnitTestSimulationFixture)
 
 	scl::RvStream<UInt> inOffset{ 8_b };
 	scl::RvPacketStream<BVec, scl::EmptyBits> inBase{ 8_b };
-	scl::RvPacketStream<BVec, scl::EmptyBits> inInsert{ 8_b };
+	scl::RvPacketStream<BVec, scl::EmptyBits> inInsert{ inBase->width() };
 
-	for(scl::RvPacketStream<BVec, scl::EmptyBits>& in : { std::ref(inBase), std::ref(inInsert) })
-		in.template get<scl::EmptyBits>().emptyBits = 3_b;
+	for (scl::RvPacketStream<BVec, scl::EmptyBits>& in : { std::ref(inBase), std::ref(inInsert) })
+		in.template get<scl::EmptyBits>().emptyBits = BitWidth::count(inBase->width().bits());
 
 	scl::RvPacketStream out = scl::streamInsert(inBase, inInsert, inOffset);
 
@@ -1903,13 +1677,13 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_fuzz_test, BoostUnitTestSimulationFixture)
 
 	// insert packets
 	addSimulationProcess([&, this]()->SimProcess {
-		simu(ready(out)) = '1';
+		fork(scl::readyDriverRNG(out, clk, 90));
 
-		for (size_t i = 0; i < 1024; ++i)
+		for (size_t i = 0; i < 128; ++i)
 		{
-			uint64_t baseW = rng() % 32 + 1;
+			uint64_t baseW = rng() % 64 + 1;
 			uint64_t baseData = rng() & gtry::utils::bitMaskRange(0, baseW);
-			uint64_t insertW = baseW != 32 ? rng() % (32 - baseW) : 0;
+			uint64_t insertW = baseW != 64 ? rng() % (64 - baseW) : 0;
 			uint64_t insertData = rng() & gtry::utils::bitMaskRange(0, insertW);
 			uint64_t insertOffset = rng() % (baseW + 1);
 
@@ -1936,13 +1710,15 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_fuzz_test, BoostUnitTestSimulationFixture)
 				break;
 			if (received != expected)
 				break;
-			//co_await OnClk(clk);
+
+			if(rng() % 16 == 0)
+				co_await OnClk(clk);
 		}
 
 		co_await OnClk(clk);
 		stopTest();
-		});
+	});
 
 	design.postprocess();
-	BOOST_TEST(!runHitsTimeout({ 100, 1'000'000 }));
+	BOOST_TEST(!runHitsTimeout({ 10, 1'000'000 }));
 }
