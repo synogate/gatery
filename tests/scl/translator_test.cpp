@@ -27,7 +27,7 @@
 #include <gatery/scl/tilelink/TileLinkMasterModel.h>
 #include <gatery/scl/tilelink/TileLinkValidator.h>
 #include <gatery/scl/Avalon.h>
-#include <gatery/scl/TL2AMM.h>
+#include <gatery/scl/tileLinkBridge.h>
 #include <gatery/scl/stream/Stream.h>
 
 #include <gatery/utils/Range.h>
@@ -36,7 +36,7 @@ using namespace boost::unit_test;
 using namespace gtry;
 using namespace gtry::scl;
 
-gtry::scl::TileLinkUB ul2ub(gtry::scl::TileLinkUL& link)
+static gtry::scl::TileLinkUB ul2ub(gtry::scl::TileLinkUL& link)
 {
 	scl::TileLinkUB out;
 
@@ -49,15 +49,16 @@ gtry::scl::TileLinkUB ul2ub(gtry::scl::TileLinkUL& link)
 	return out;
 }
 
-struct GetRequest {
-	uint64_t address;
-	sim::DefaultBitVectorState dataInMem;
-};
-
 SimProcess simuTileLinkMemCoherenceSupervisor(const TileLinkUL& tl, const Clock& clk) {
 	using addr_t = uint64_t;
 	using source_t = uint64_t;
 	std::map<addr_t, sim::DefaultBitVectorState> mem;
+
+	struct GetRequest {
+		uint64_t address;
+		sim::DefaultBitVectorState dataInMem;
+	};
+
 	std::map<source_t, GetRequest> getRequestsPending;
 
 	fork([&]()->SimProcess {
@@ -67,16 +68,17 @@ SimProcess simuTileLinkMemCoherenceSupervisor(const TileLinkUL& tl, const Clock&
 				auto it = getRequestsPending.find(simu((*tl.d)->source));
 				bool checkThatSourceIsNew = it != getRequestsPending.end();
 				BOOST_TEST(checkThatSourceIsNew);
+				if (checkThatSourceIsNew) {
+					auto& memWord = it->second.dataInMem;
+					if (memWord.size() == 0)
+						memWord.resize(tl.a->data.width().value);
 
-				auto& memWord = it->second.dataInMem;
-				if (memWord.size() == 0)
-					memWord.resize(tl.a->data.width().value);
+					bool foundAddress = mem.find(it->second.address) != mem.end();
+					BOOST_TEST(foundAddress);
+					BOOST_TEST(memWord == simu((*tl.d)->data));
 
-				bool foundAddress = mem.find(it->second.address) != mem.end();
-				BOOST_TEST(foundAddress);
-				BOOST_TEST(memWord == simu((*tl.d)->data));
-
-				getRequestsPending.erase(simu((*tl.d)->source));
+					getRequestsPending.erase(it);
+				}
 			}
 		}
 	});
@@ -149,7 +151,7 @@ public:
 		avmm.writeData = 16_b;
 		avmm.readData = avmm.writeData->width();
 
-		in = makeTlSlave(avmm, 4_b, 32, 32);
+		in = tileLinkBridge(avmm, 4_b, 32, 32);
 
 		avmm.readLatency = 5;
 		attachMem(avmm, avmm.address.width());

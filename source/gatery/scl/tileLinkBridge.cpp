@@ -16,11 +16,11 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
-#include "TL2AMM.h"
+#include "tileLinkBridge.h"
 #include <gatery/scl/stream/StreamArbiter.h>
 #include <gatery/scl/stream/adaptWidth.h>
 
-TileLinkUL makeTlSlave(AvalonMM& avmm, BitWidth sourceW, size_t maxReadRequestsInFlight, size_t maxWriteRequestsInFlight)
+TileLinkUL tileLinkBridge(AvalonMM& avmm, BitWidth sourceW, size_t maxReadRequestsInFlight, size_t maxWriteRequestsInFlight)
 {
 	HCL_ASSERT_HINT(!avmm.response, "Avalon MM response not yet implemented");
 	HCL_DESIGNCHECK_HINT(avmm.writeData, "These interfaces are not compatible. There is no writeData field in your AMM interface");
@@ -36,7 +36,8 @@ TileLinkUL makeTlSlave(AvalonMM& avmm, BitWidth sourceW, size_t maxReadRequestsI
 	avmm.address = ret.a->address.upper(-excessBits);
 	avmm.writeData = (UInt)ret.a->data;
 
-	HCL_DESIGNCHECK_HINT(avmm.byteEnable.has_value() || (*avmm.writeData).width() == 8_b, "You must have a byteEnable field if you want to have the granularity of interacting with specific bytes");
+	if(!avmm.byteEnable)
+		sim_assert(~ret.a->mask == 0) << "You must have a byteEnable field if you want to have the granularity of interacting with specific bytes";
 	avmm.byteEnable = (UInt)ret.a->mask;
 
 
@@ -86,11 +87,13 @@ TileLinkUL makeTlSlave(AvalonMM& avmm, BitWidth sourceW, size_t maxReadRequestsI
 	HCL_DESIGNCHECK_HINT(avmm.readData, "These interfaces are not compatible. There is no readData field in your AMM interface");
 	scl::RvStream<UInt> readData(*avmm.readData);
 	valid(readData) = responseReady;
+	ready(ret.a) &= ready(readData);
 
 	scl::RvStream<UInt> readDataFifo = readData.fifo(true, maxReadRequestsInFlight);
 
 	scl::RvStream readResStalled = stall(readResBuffered, !valid(readDataFifo));
 	ready(readDataFifo) = ready(readResStalled);
+
 
 	readResStalled->data = (BVec)*readDataFifo;
 	HCL_NAMED(readResStalled);
@@ -112,11 +115,4 @@ TileLinkUL makeTlSlave(AvalonMM& avmm, BitWidth sourceW, size_t maxReadRequestsI
 	writeRequestFifo.generate();
 
 	return ret;
-}
-
-AvalonMM makeAmmSlave(TileLinkUL& tlmm)
-{
-	HCL_DESIGNCHECK_HINT(false, "not yet implemented");
-
-	return AvalonMM();
 }
