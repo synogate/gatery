@@ -23,6 +23,7 @@ namespace gtry::scl
 {
 	class TileLinkMasterModel
 	{
+	public:
 		struct Data
 		{
 			uint64_t mask;
@@ -37,6 +38,8 @@ namespace gtry::scl
 			uint64_t logByteSize;
 			uint64_t inBurstBeats;
 			std::vector<Data> data;
+			std::optional<uint64_t> source;
+			bool freeSource = true;
 		};
 
 		struct TransactionIn
@@ -44,21 +47,28 @@ namespace gtry::scl
 			TileLinkD::OpCode op;
 			std::vector<Data> data;
 			bool error;
+			uint64_t source;
 		};
 
 	public:
 
 		void init(std::string_view prefix, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth = 0_b, BitWidth sourceWidth = 0_b);
 
-		void probability(float valid, float ready);
+		void probability(float valid, float ready, uint32_t seed = 1337);
 
 		SimFunction<TransactionIn> request(TransactionOut tx, const Clock& clk);
+		void freeSourceId(const size_t& sourceId);
 		SimProcess idle(size_t requestsPending = 0);
+
 
 		SimFunction<std::tuple<uint64_t,uint64_t,bool>> get(uint64_t address, uint64_t logByteSize, const Clock &clk);
 		SimFunction<bool> put(uint64_t address, uint64_t logByteSize, uint64_t data, const Clock &clk);
 
 		auto &getLink() { return m_link; }
+
+		TransactionOut setupGet(uint64_t address, uint64_t logByteSize);
+		TransactionOut setupPut(uint64_t address, uint64_t logByteSize, uint64_t data);
+		std::tuple<uint64_t, uint64_t, bool> extractResult(const TransactionIn& res, TransactionOut req);
 
 	protected:
 		SimFunction<size_t> allocSourceId(const Clock &clk);
@@ -74,7 +84,7 @@ namespace gtry::scl
 		float m_validProbability = 1;
 		float m_readyProbability = 1;
 		std::vector<bool> m_sourceInUse;
-		std::mt19937 m_rng;
+		std::mt19937 m_rng = std::mt19937{ 1337 };
 		std::uniform_real_distribution<float> m_dis;
 	};
 }

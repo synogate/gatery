@@ -91,6 +91,34 @@ namespace gtry {
 	}
 
 
+
+
+	BaseBidirPin::BaseBidirPin(hlim::NodePort nodePort, std::string name) {
+		m_pinNode = DesignScope::createNode<hlim::Node_Pin>(true, true, true);
+		m_pinNode->connect(nodePort);
+		m_pinNode->setName(std::move(name));
+		if (ClockScope::anyActive())
+			m_pinNode->setClockDomain(ClockScope::getClk().getClk());
+	}
+
+	BidirPin::BidirPin(const Bit &bit) : BaseBidirPin(bit.readPort(), std::string(bit.getName()))
+	{
+	 
+	}
+
+	BidirPin::operator Bit () const
+	{
+		return Bit(SignalReadPort({.node=m_pinNode, .port=0ull}));
+	}
+
+
+	BidirPins::operator UInt () const 
+	{ 
+		return UInt(SignalReadPort({.node=m_pinNode, .port=0ull})); 
+	}
+
+
+
 	OutputPins pinOut(const InputPins &input) { return OutputPins((UInt)input); }
 
 }

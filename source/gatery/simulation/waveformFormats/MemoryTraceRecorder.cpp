@@ -87,9 +87,9 @@ void MemoryTraceRecorder::initialize()
 {
 	for (auto &sig : m_id2Signal) {
 		m_trace.signals.push_back({
-			.driver = sig.driver,
+			.driver = sig.signalRef.driver,
 			.name = sig.name,
-			.width = hlim::getOutputWidth(sig.driver),
+			.width = hlim::getOutputWidth(sig.signalRef.driver),
 			.isBool = !sig.isBVec,
 		});
 	}

@@ -47,7 +47,7 @@ namespace gtry::scl
 		SimPacket& invalidBeats(std::uint64_t invalidBeats) { m_invalidBeats = invalidBeats; return *this; }
 
 		size_t txid() const { return m_txid; }
-		size_t asUint64(BitWidth numberOfLSBsToConvert) { return payload.extractNonStraddling(sim::DefaultConfig::VALUE, 0, numberOfLSBsToConvert.bits()); }
+		uint64_t asUint64(BitWidth numberOfLSBsToConvert) const { return payload.extractNonStraddling(sim::DefaultConfig::VALUE, 0, numberOfLSBsToConvert.bits()); }
 		char error() const { return m_error; }
 		std::uint64_t invalidBeats() const { return m_invalidBeats; }
 
@@ -101,6 +101,8 @@ namespace gtry::scl
 			simu(error(stream)).invalidate();
 		if constexpr (stream.template has<scl::Empty>())
 			simu(empty(stream)).invalidate();
+		if constexpr (stream.template has<scl::EmptyBits>())
+			simu(stream.template get<scl::EmptyBits>().emptyBits).invalidate();
 
 		simu(*stream).invalidate();
 
@@ -124,7 +126,6 @@ namespace gtry::scl
 		constexpr bool hasTxId	= stream.template has<scl::TxId>();
 		constexpr bool hasValid = stream.template has<scl::Valid>();
 		constexpr bool hasSop	= stream.template has<scl::Sop>();
-		constexpr bool hasEmpty = stream.template has<scl::Empty>();
 		constexpr bool hasEop = stream.template has<scl::Eop>();
 
 		HCL_DESIGNCHECK_HINT(hasEop || numberOfBeats == 1, "Trying to send multi-beat data packets without an End of Packet Field");
@@ -169,7 +170,15 @@ namespace gtry::scl
 			if constexpr (hasEop)
 				simu(eop(stream)) = isLastBeat;
 
-			if constexpr (hasEmpty) {
+			if constexpr (stream.template has<scl::EmptyBits>())
+			{
+				const UInt& emptyBits = stream.template get<scl::EmptyBits>().emptyBits;
+				simu(emptyBits).invalidate();
+				if (isLastBeat)
+					simu(emptyBits) = stream->size() - (packet.payload.size() % stream->size());
+			}
+			else if constexpr (stream.template has<scl::Empty>())
+			{
 				simu(empty(stream)).invalidate();
 				if (isLastBeat){
 					HCL_DESIGNCHECK_HINT((stream->size() % 8) == 0, "Stream payload width must be a whole number of bytes when using the empty signal");
@@ -179,6 +188,7 @@ namespace gtry::scl
 					simu(empty(stream)) = streamSizeBytes - (packetSizeBytes % streamSizeBytes);
 				}
 			}
+
 			if constexpr (hasError) {
 				simu(error(stream)).invalidate();
 				if (isLastBeat)
@@ -240,33 +250,37 @@ namespace gtry::scl
 		scl::SimuStreamPerformTransferWait<scl::Stream<Payload, Meta...>> streamTransfer;
 		SimPacket result;
 
-		constexpr bool hasEmpty = stream.template has<scl::Empty>();
-		constexpr bool hasError = stream.template has<scl::Error>();
-		constexpr bool hasTxId = stream.template has<scl::TxId>();
-
 		bool firstBeat = true;
-
 		do {
 			co_await streamTransfer.wait(stream, clk);
-
-			if constexpr (hasTxId) {
-				if (firstBeat) {
-					result.txid(simu(txid(stream)));
-					firstBeat = false;
-				}
-			}
 			auto beatPayload = simu(*stream).eval();
 
-			// Potentially crop off bytes in last beat
-			if constexpr (hasEmpty)
-				if (simuEop(stream)) {
-					size_t numBytesToCrop = simu(empty(stream));
-					numBytesToCrop = std::min(numBytesToCrop, stream->size() / 8 - 1);
-					beatPayload.resize(stream->size() - numBytesToCrop * 8);
+			if (firstBeat) 
+			{
+				firstBeat = false;
+				if constexpr (stream.template has<scl::TxId>())
+					result.txid(simu(txid(stream)));
+			}
+
+			if (simuEop(stream))
+			{
+				// Potentially crop off bytes in last beat
+				if constexpr (stream.template has<scl::EmptyBits>())
+				{
+					size_t numBitsToCrop = simu(stream.template get<scl::EmptyBits>().emptyBits);
+					HCL_DESIGNCHECK(numBitsToCrop < beatPayload.size());
+					beatPayload.resize(beatPayload.size() - numBitsToCrop);
 				}
-			if constexpr (hasError)
-				if (simuEop(stream))
+				else if constexpr (stream.template has<scl::Empty>())
+				{
+					size_t numBytesToCrop = simu(empty(stream));
+					HCL_DESIGNCHECK(numBytesToCrop * 8 < beatPayload.size());
+					beatPayload.resize(beatPayload.size() - numBytesToCrop * 8);
+				}
+
+				if constexpr (stream.template has<scl::Error>())
 					result.error(simu(error(stream)));
+			}
 
 			result << beatPayload;
 		} while (!simuEop(stream));

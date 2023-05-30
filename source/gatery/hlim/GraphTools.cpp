@@ -24,6 +24,7 @@
 #include "coreNodes/Node_Pin.h"
 #include "coreNodes/Node_Signal.h"
 #include "coreNodes/Node_Register.h"
+#include "coreNodes/Node_MultiDriver.h"
 #include "supportNodes/Node_ExportOverride.h"
 #include "supportNodes/Node_External.h"
 #include "supportNodes/Node_RegSpawner.h"
@@ -32,6 +33,8 @@
 #include "NodePort.h"
 #include "Node.h"
 #include "../simulation/ReferenceSimulator.h"
+
+#include "RevisitCheck.h"
 
 #include <set>
 
@@ -310,6 +313,64 @@ hlim::NodePort findDriver(hlim::BaseNode *node, const FindDriverOpts &opts)
 			break;
 	}
 	return driver;
+}
+
+InterconnectedNodes getAllInterConnected(Node_MultiDriver *mdNode)
+{
+	InterconnectedNodes res;
+
+	RevisitCheck revisitCheck(*mdNode->getCircuit());
+	std::vector<Node_MultiDriver*> openList = { mdNode };
+
+	while (!openList.empty()) {
+		auto node = openList.back();
+		openList.pop_back();
+		if (revisitCheck.contains(node)) continue;
+		revisitCheck.insert(node);
+		res.mdNodes.push_back(node);
+
+		for (auto i : utils::Range(node->getNumInputPorts())) {
+			auto driver = findDriver(node, {.inputPortIdx = i, .skipExportOverrideNodes = Node_ExportOverride::EXP_INPUT });
+			if (auto *inputMDNode = dynamic_cast<Node_MultiDriver*>(driver.node))
+				openList.push_back(inputMDNode);
+			else
+				res.nodePorts[driver.node].outputPorts.insert(driver.port);
+		}
+
+		std::function<void(NodePort)> exploreDriven;
+		exploreDriven = [&](NodePort output) {
+			for (auto driven : output.node->getDirectlyDriven(output.port)) {
+				if (auto *inputMDNode = dynamic_cast<Node_MultiDriver*>(driven.node))
+					openList.push_back(inputMDNode);
+				else if (auto *exportNode = dynamic_cast<Node_ExportOverride*>(driven.node)) {
+					if (!revisitCheck.contains(exportNode)) {
+						revisitCheck.insert(exportNode);
+						exploreDriven({.node = exportNode, .port = 0ull});
+					}
+				} else
+					res.nodePorts[driven.node].inputPorts.insert(driven.port);
+			}
+		};
+
+		exploreDriven({.node = node, .port = 0ull});
+	}
+
+	return res;
+}
+
+bool drivenByMultipleIOPins(const InterconnectedNodes &in, Node_Pin *&firstDrivingPin)
+{
+	firstDrivingPin = nullptr;
+	for (const auto &n : in.nodePorts)
+		if (auto *pin = dynamic_cast<Node_Pin*>(n.first))
+			if (!n.second.outputPorts.empty()) {
+				if (firstDrivingPin == nullptr)
+					firstDrivingPin = pin;
+				else
+					return true;
+			}
+
+	return false;
 }
 
 }

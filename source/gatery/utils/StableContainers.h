@@ -139,6 +139,7 @@ namespace gtry::hlim {
 	class Clock;
 	class BaseNode;
 	class Node_Pin;
+	class Node_MultiDriver;
 	class NodeGroup;
 }
 
@@ -186,6 +187,12 @@ template<>
 struct StableCompare<hlim::Node_Pin*>
 {
 	bool operator()(const hlim::Node_Pin* const &lhs, const hlim::Node_Pin* const &rhs) const;
+};
+
+template<>
+struct StableCompare<hlim::Node_MultiDriver*>
+{
+	bool operator()(const hlim::Node_MultiDriver* const &lhs, const hlim::Node_MultiDriver* const &rhs) const;
 };
 
 }

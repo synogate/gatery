@@ -114,6 +114,32 @@ namespace gtry {
 	};	
 
 
+	class BaseBidirPin : public BasePin { 
+		public:
+			BaseBidirPin(hlim::NodePort nodePort, std::string name);
+	};
+
+	class BidirPin : public BaseBidirPin {
+		public:
+			BidirPin(const Bit &bit);
+			operator Bit () const;
+			inline BidirPin &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
+	};
+
+	class BidirPins : public BaseBidirPin {
+		public:
+			template<BitVectorDerived T>
+			BidirPins(const T &bitVector) : BaseBidirPin(bitVector.readPort(), std::string(bitVector.getName())) { }
+
+			operator UInt () const;
+
+			template<BitVectorDerived T> requires (!std::same_as<UInt, T>)
+			explicit operator T () const { return T(SignalReadPort({.node=m_pinNode, .port=0ull})); }
+
+			inline BidirPins &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
+	};	
+
+
 	inline OutputPin pinOut(const Bit &bit) { return OutputPin(bit); }
 	template<BitVectorValue T>
 	inline OutputPins pinOut(const T& bitVector) {
@@ -134,6 +160,11 @@ namespace gtry {
 
 	template<BitVectorValue T>
 	inline TristatePins tristatePin(const T &bitVector, const Bit &outputEnable) { return TristatePins((ValueToBaseSignal<T>)bitVector, outputEnable); }
+
+	inline BidirPin bidirPin(const Bit &bit) { return BidirPin(bit); }
+
+	template<BitVectorValue T>
+	inline BidirPins bidirPin(const T &bitVector) { return BidirPins((ValueToBaseSignal<T>)bitVector); }
 
 }
 

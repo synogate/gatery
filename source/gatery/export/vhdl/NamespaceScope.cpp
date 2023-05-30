@@ -70,6 +70,21 @@ const VHDLSignalDeclaration &NamespaceScope::get(const hlim::NodePort nodePort) 
 	return m_parent->get(nodePort);
 }
 
+void NamespaceScope::alias(const hlim::NodePort nodePort, const hlim::NodePort target)
+{
+	const auto &decl = get(target);
+	HCL_ASSERT_HINT(!m_nodeNames.contains(nodePort), "Trying to alias a signal that already jhas a declaration!");
+	m_nodeNames[nodePort] = decl;
+}
+
+void NamespaceScope::alias(const hlim::NodePort nodePort, const hlim::Node_Pin *ioPin)
+{
+	const auto &decl = get(ioPin);
+	HCL_ASSERT_HINT(!m_nodeNames.contains(nodePort), "Trying to alias a signal that already jhas a declaration!");
+	m_nodeNames[nodePort] = decl;
+}
+
+
 std::string NamespaceScope::allocateName(hlim::Clock *clock, const std::string &desiredName)
 {
 	HCL_ASSERT(!desiredName.empty());

@@ -162,8 +162,8 @@ namespace gtry::sim
 			for(auto it = nodeGroupTrace.rbegin(); it != nodeGroupTrace.rend(); ++it)
 				m = &m->subModules[*it];
 
-			if (signal.driver.node != nullptr)
-				m->signals.push_back({ signal.driver, id });
+			if (signal.signalRef.driver.node != nullptr)
+				m->signals.push_back({ signal.signalRef.driver, id });
 			else
 				m->memoryWords[signal.memory].push_back(id);
 		}
@@ -316,7 +316,7 @@ namespace gtry::sim
 		for (auto &s : m_id2Signal) {
 			if (!s.isPin && !s.isTap) continue;
 
-			auto it = clockDomains.find(s.driver);
+			auto it = clockDomains.find(s.signalRef.driver);
 			if (it == clockDomains.end() || it->second.type != hlim::SignalClockDomain::CLOCK)
 				signalsByClocks[nullptr].push_back(&s);
 			else
@@ -351,8 +351,10 @@ namespace gtry::sim
 			for (auto *signal : clockDomain.second) {
 				std::string vcdName = constructFullSignalName(*signal);
 
-				auto connectionType = hlim::getOutputConnectionType(signal->driver);
-				if (!connectionType.isBool())
+				auto connectionType = hlim::getOutputConnectionType(signal->signalRef.driver);
+
+				// GTKWave does not include 1 bit vectors in the signal list, so we need to treat them as bits
+				if (!connectionType.isBool() && connectionType.width > 1)
 					vcdName = (boost::format("%s[%d:0]") % vcdName % (connectionType.width-1)).str();
 
 				m_gtkWaveProjectFile.appendSignal(vcdName);

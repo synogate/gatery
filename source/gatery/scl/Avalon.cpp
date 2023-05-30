@@ -242,6 +242,9 @@ namespace gtry::scl
 		if (!addrWidth)
 			addrWidth = avmm.address.width();
 
+		if (avmm.ready)
+			*avmm.ready = '1';
+
 		Memory<UInt> mem{ (size_t) avmm.address.width().count(), dataWidth };
 
 		if (avmm.readData)
@@ -263,7 +266,20 @@ namespace gtry::scl
 		if (avmm.writeData)
 		{
 			IF(*avmm.write)
-				mem[avmm.address(0, addrWidth)] = *avmm.writeData;
+			{
+				auto writePort = mem[avmm.address.lower(addrWidth)];
+				if (avmm.byteEnable) {
+					UInt currentMem = writePort.read();
+					for (size_t i = 0; i < avmm.byteEnable->size(); i++)
+					{
+						IF ((*avmm.byteEnable)[i])
+							currentMem.word(i, 8_b) = avmm.writeData->word(i, 8_b);
+					}
+					writePort = currentMem;
+				}
+				else
+					writePort = *avmm.writeData;
+			}
 		}
 
 		return mem;

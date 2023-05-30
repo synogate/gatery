@@ -45,6 +45,9 @@ namespace gtry::scl
 	template<StreamSignal T>
 	requires (T::template has<Ready>() and T::template has<Valid>())
 	T stallPacket(T& source, Bit stallCondition);
+
+	template<BaseSignal Payload, Signal ... Meta, Signal... MetaInsert>
+	auto streamInsert(RvPacketStream<Payload, Meta...>& base, RvPacketStream<Payload, MetaInsert...>& insert, RvStream<UInt>& bitOffset);
 }
 
 namespace gtry::scl
@@ -215,5 +218,121 @@ namespace gtry::scl
 	T stallPacket(T& source, Bit stallCondition)
 	{
 		return stall(source, stallCondition & sop(source));
+	}
+
+	template<BaseSignal Payload, Signal ... Meta, Signal... MetaInsert>
+	auto streamInsert(RvPacketStream<Payload, Meta...>& base, RvPacketStream<Payload, MetaInsert...>& insert, RvStream<UInt>& bitOffset)
+	{
+		Area ent{ "scl_streamInsert", true };
+		HCL_DESIGNCHECK_HINT(base->width() == insert->width(), "insert width must match base width");
+
+		UInt insertBitOffset = bitOffset->lower(BitWidth::count(base->width().bits()));	HCL_NAMED(insertBitOffset);
+		UInt insertBeat = bitOffset->upper(-insertBitOffset.width());					HCL_NAMED(insertBeat);
+
+		Bit baseShiftReset = !valid(bitOffset);											HCL_NAMED(baseShiftReset);
+		UInt baseShift = insertBitOffset.width();										HCL_NAMED(baseShift);
+		RvPacketStream baseShifted = streamShiftLeft(base, baseShift, baseShiftReset);	HCL_NAMED(baseShifted);
+		RvPacketStream insertShifted = streamShiftLeft(insert, insertBitOffset);		HCL_NAMED(insertShifted);
+		Bit insertShiftedShouldDelayEop = valid(insert) & eop(insert) & zext(emptyBits(insert)) < zext(insertBitOffset); HCL_NAMED(insertShiftedShouldDelayEop);
+
+		RvPacketStream out = constructFrom(baseShifted);
+		UInt beatCounter = streamPacketBeatCounter(out, insertBeat.width());			HCL_NAMED(beatCounter);
+
+		IF(transfer(out) & eop(out))
+			baseShift = 0;
+		baseShift = reg(baseShift, 0);
+		IF(valid(insert) & eop(insert))
+			baseShift = streamBeatBitLength(insert).lower(-1_b);
+
+		UInt emptyBitsInsert = capture(emptyBits(insert), valid(insert) & eop(insert));	HCL_NAMED(emptyBitsInsert);
+		UInt emptyBitsBase = capture(emptyBits(base), valid(base) & eop(base));			HCL_NAMED(emptyBitsBase);
+		UInt emptyBitsOut = emptyBitsInsert + emptyBitsBase;							HCL_NAMED(emptyBitsOut);
+
+		downstream(out) = downstream(baseShifted);
+		emptyBits(out) = emptyBitsOut;
+		valid(out) = '0';
+		ready(baseShifted) = '0';
+		ready(insertShifted) = '0';
+
+		enum class State
+		{
+			prefix,
+			insert,
+			suffix
+		};
+		Reg<Enum<State>> state{ State::prefix };
+		state.setName("state");
+
+		IF(state.current() == State::prefix)
+		{
+			ready(baseShifted) = ready(out);
+			valid(out) = valid(base);
+			*out = *base;
+
+			IF(valid(bitOffset) & beatCounter == insertBeat)
+				state = State::insert;
+		}
+
+		Bit sawEop; HCL_NAMED(sawEop);
+		IF(state.combinatorial() == State::insert)
+		{
+			ready(baseShifted) = '0';
+			ready(insertShifted) = ready(out);
+			valid(out) = valid(insertShifted);
+			*out = *insertShifted;
+
+			IF(beatCounter == insertBeat)
+			{
+				for (size_t i = 0; i < out->width().bits(); i++)
+					IF(i < insertBitOffset)
+					(*out)[i] = (*base)[i];
+			}
+
+			UInt insertShift = zext(base->width().bits(), +1_b) - zext(emptyBits(insertShifted)) - zext(insertBitOffset);
+			HCL_NAMED(insertShift);
+			IF(valid(insert) & eop(insert) & insertShift.msb())
+				ready(baseShifted) = ready(out);
+
+			IF(eop(insertShifted))
+			{
+				UInt numBaseBits = emptyBits(insertShifted);
+				HCL_NAMED(numBaseBits);
+
+				for (size_t i = 1; i < out->width().bits(); i++)
+					IF(out->width().bits() - i <= numBaseBits)
+					(*out)[i] = (*baseShifted)[i];
+
+				IF(!(numBaseBits == 0 & insertBitOffset == 0))
+					ready(baseShifted) = ready(out);
+
+				IF(valid(insertShifted) & ready(out))
+					state = State::suffix;
+			}
+		}
+
+		IF(state.current() == State::suffix)
+		{
+			ready(baseShifted) = ready(out);
+			valid(out) = valid(baseShifted);
+			*out = *baseShifted;
+		}
+
+		eop(out) = '0';
+		IF(state.combinatorial() == State::suffix & sawEop)
+		{
+			eop(out) = '1';
+			IF(transfer(out))
+				state = State::prefix;
+		}
+		IF(valid(base) & eop(base) & !valid(bitOffset))
+		{
+			eop(out) = '1';
+			emptyBits(out) = emptyBitsBase;
+		}
+
+		sawEop = flagInstantSet(transfer(baseShifted) & eop(baseShifted), transfer(out) & eop(out));
+
+		ready(bitOffset) = valid(out) & eop(out);
+		return out;
 	}
 }

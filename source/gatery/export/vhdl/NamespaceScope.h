@@ -86,6 +86,8 @@ class NamespaceScope
 
 		std::string allocateName(hlim::NodePort nodePort, const std::string &desiredName, VHDLDataType dataType, CodeFormatting::SignalType type);
 		const VHDLSignalDeclaration &get(const hlim::NodePort nodePort) const;
+		void alias(const hlim::NodePort nodePort, const hlim::NodePort target);
+		void alias(const hlim::NodePort nodePort, const hlim::Node_Pin *ioPin);
 
 		std::string allocateName(NodeInternalStorageSignal nodePort, const std::string &desiredName);
 		const std::string &getName(NodeInternalStorageSignal nodePort) const;

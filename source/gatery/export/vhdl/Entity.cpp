@@ -26,6 +26,7 @@
 
 #include "../../hlim/Clock.h"
 #include "../../hlim/coreNodes/Node_Pin.h"
+#include "../../hlim/coreNodes/Node_MultiDriver.h"
 
 
 #include <memory>
@@ -256,9 +257,12 @@ std::vector<std::string> Entity::getPortsVHDL()
 
 	for (const auto &signal : m_inputs) {
 		const auto &decl = m_namespaceScope.get(signal);
-
 		std::stringstream line;
-		line << decl.name << " : IN ";
+		bool bidirectional = dynamic_cast<hlim::Node_MultiDriver *>(signal.node) != nullptr;;
+		if (bidirectional)
+			line << decl.name << " : INOUT ";
+		else
+			line << decl.name << " : IN ";
 		cf.formatConnectionType(line, decl);
 		unsortedPortList.push_back({clockOffset + signal.node->getId(), line.str()});
 	}
@@ -360,7 +364,7 @@ void Entity::writeInstantiationVHDL(std::ostream &stream, unsigned indent, const
 			line << m_parent->getNamespaceScope().getReset(s).name;
 			portmapList.push_back(line.str());
 		}
-	}	
+	}
 	for (auto &s : m_ioPins) {
 		const auto &decl = m_namespaceScope.get(s);
 		const auto &parentDecl = m_parent->getNamespaceScope().get(s);

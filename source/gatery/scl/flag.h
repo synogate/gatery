@@ -20,7 +20,19 @@
 
 namespace gtry::scl
 {
-	inline Bit flag(const Bit& set, const Bit& reset, char resetValue = '0')
+	Bit flag(const Bit& set, const Bit& reset, char resetValue = '0');
+	Bit flagInstantSet(const Bit& set, const Bit& reset, char resetValue = '0');
+
+	inline Bit edge(const Bit& in) { return in != reg(in, '0'); }
+	inline Bit edgeRising(const Bit& in) { return in & !reg(in, '0'); }
+	inline Bit edgeFalling(const Bit& in) { return !in & reg(in, '0'); }
+
+	template<Signal T> T capture(const T& in, Bit condition);
+}
+
+namespace gtry::scl
+{
+	inline Bit flag(const Bit& set, const Bit& reset, char resetValue)
 	{
 		Bit ret;
 		ret |= set;
@@ -29,7 +41,22 @@ namespace gtry::scl
 		return ret;
 	}
 
-	inline Bit edge(const Bit& in) { return in != reg(in, '0'); }
-	inline Bit edgeRising(const Bit& in) { return in & !reg(in, '0'); }
-	inline Bit edgeFalling(const Bit& in) { return !in & reg(in, '0'); }
+	inline Bit flagInstantSet(const Bit& set, const Bit& reset, char resetValue)
+	{
+		Bit ret;
+		ret &= !reset;
+		ret = reg(ret, resetValue);
+		ret |= set;
+		return ret;
+	}
+
+	template<Signal T>
+	T capture(const T& in, Bit condition)
+	{
+		T value = constructFrom(in);
+		value = reg(value);
+		IF(condition)
+			value = in;
+		return value;
+	}
 }

@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2023 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -17,34 +17,14 @@
 */
 #pragma once
 
-#include <string>
+#include <gatery/frontend.h>
+#include <gatery/scl/tilelink/tilelink.h>
+#include <gatery/scl/Avalon.h>
 
-namespace gtry::hlim {
-	struct NodePort;
-}
-
-namespace gtry::vhdl {
-
-enum class VHDLDataType {
-	BOOL,
-	BIT,
-	BIT_VECTOR,
-	STD_LOGIC,
-	STD_ULOGIC,
-	STD_LOGIC_VECTOR,
-	STD_ULOGIC_VECTOR,
-	UNSIGNED,
-	VL_LOGIC,
-	VL_LOGIC_VECTOR,
-};
-
-VHDLDataType chooseDataTypeFromOutput(const hlim::NodePort &np);
-
-struct VHDLSignalDeclaration {
-	VHDLDataType dataType = VHDLDataType::BOOL;
-	size_t width = 0;
-	std::string name;
-};
+using namespace gtry;
+using namespace scl;
 
 
-}
+TileLinkUL tileLinkBridge(AvalonMM& amm, BitWidth sourceW);
+
+

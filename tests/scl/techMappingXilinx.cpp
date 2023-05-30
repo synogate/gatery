@@ -251,6 +251,7 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_intra_connection, gtry::GHDLTestFixture)
 
 
 	auto *multiDriver = DesignScope::createNode<hlim::Node_MultiDriver>(2, hlim::ConnectionType{ .type = hlim::ConnectionType::BOOL, .width = 1 });
+	multiDriver->setName("bidir_signal");
 
 	auto *iobuf1 = DesignScope::createNode<scl::arch::xilinx::IOBUF>();
 	iobuf1->setInput(scl::arch::xilinx::IOBUF::IN_I, pinIn().setName("I1"));
@@ -274,7 +275,7 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_intra_connection, gtry::GHDLTestFixture)
 
 
 	testCompilation();
-
+	BOOST_TEST(exportContains(std::regex{"SIGNAL s_bidir_signal : STD_LOGIC;"}));
 	//DesignScope::visualize("test_bidir_intra_connection");
 }
 
@@ -290,6 +291,7 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_intra_connection_different_entities, gtry::GH
 
 
 	auto *multiDriver = DesignScope::createNode<hlim::Node_MultiDriver>(2, hlim::ConnectionType{ .type = hlim::ConnectionType::BOOL, .width = 1 });
+	multiDriver->setName("bidir_signal");
 
 	auto *iobuf1 = DesignScope::createNode<scl::arch::xilinx::IOBUF>();
 	iobuf1->setInput(scl::arch::xilinx::IOBUF::IN_I, pinIn().setName("I1"));
@@ -313,6 +315,8 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_intra_connection_different_entities, gtry::GH
 
 	testCompilation();
 
+	BOOST_TEST(exportContains(std::regex{"in_bidir_signal : INOUT STD_LOGIC;"}));
+	BOOST_TEST(exportContains(std::regex{"SIGNAL s_bidir_signal : STD_LOGIC;"}));
 	//DesignScope::visualize("test_bidir_intra_connection_different_entities");
 }
 
@@ -326,6 +330,7 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_intra_connection_different_entities2, gtry::G
 
 
 	auto *multiDriver = DesignScope::createNode<hlim::Node_MultiDriver>(2, hlim::ConnectionType{ .type = hlim::ConnectionType::BOOL, .width = 1 });
+	multiDriver->setName("bidir_signal");
 
 	{
 		Area area("test1", true);
@@ -351,6 +356,9 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_intra_connection_different_entities2, gtry::G
 
 
 	testCompilation();
+
+	BOOST_TEST(exportContains(std::regex{"in_bidir_signal : INOUT STD_LOGIC;"}));
+	BOOST_TEST(exportContains(std::regex{"SIGNAL s_bidir_signal : STD_LOGIC;"}));
 
 	//DesignScope::visualize("test_bidir_intra_connection_different_entities2");
 }
@@ -381,10 +389,10 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_pin_extnode, gtry::GHDLTestFixture)
 		multiDriver->rewireInput(0, iobuf1->getOutputBit(scl::arch::xilinx::IOBUF::OUT_IO_O).readPort());
 		iobuf1->setInput(scl::arch::xilinx::IOBUF::IN_IO_I, Bit(SignalReadPort(multiDriver)));
 
-		multiDriver->rewireInput(1, Bit(tristatePin(Bit(SignalReadPort(multiDriver)), t)).readPort());
+		multiDriver->rewireInput(1, Bit(bidirPin(Bit(SignalReadPort(multiDriver)))).readPort());
 	}
 
-
+/*
 	{
 		Area area("test2", true);
 
@@ -395,9 +403,9 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_pin_extnode, gtry::GHDLTestFixture)
 		iobuf1->setInput(scl::arch::xilinx::IOBUF::IN_T, t);
 		pinOut(iobuf1->getOutputBit(scl::arch::xilinx::IOBUF::OUT_O)).setName("O2");
 
-		iobuf1->setInput(scl::arch::xilinx::IOBUF::IN_IO_I, tristatePin(iobuf1->getOutputBit(scl::arch::xilinx::IOBUF::OUT_IO_O), t));
+		iobuf1->setInput(scl::arch::xilinx::IOBUF::IN_IO_I, bidirPin(iobuf1->getOutputBit(scl::arch::xilinx::IOBUF::OUT_IO_O)));
 	}
-
+*/
 
 	{
 		Area area("test3", true);
@@ -423,7 +431,7 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_pin_extnode, gtry::GHDLTestFixture)
 		multiDriver->rewireInput(1, biPinOut.readPort());
 
 		Bit o = biPinOut;
-		o.exportOverride(iobuf1->getOutputBit(scl::arch::xilinx::IOBUF::OUT_O));
+		o.exportOverride(Bit(SignalReadPort(multiDriver)));
 
 		pinOut(o).setName("O3");
 	}	

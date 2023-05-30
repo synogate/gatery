@@ -19,6 +19,8 @@
 
 #include "../simulation/BitVectorState.h"
 
+#include <gatery/utils/StableContainers.h>
+
 #include <span>
 
 namespace gtry::hlim {
@@ -89,4 +91,21 @@ namespace gtry::hlim {
 	hlim::NodePort findDriver(hlim::BaseNode *node, const FindDriverOpts &opts = {});
 
 
+
+
+	class Node_MultiDriver;
+	class Node_Pin;
+
+	struct InterconnectedNodes {
+		struct Ports {
+			std::set<size_t> inputPorts;
+			std::set<size_t> outputPorts;
+		};
+		/// List of all nodes driving into and/or being driven by the interconnected area as well as which ports are driving/driven.
+		utils::StableMap<BaseNode*, Ports> nodePorts;
+		/// List of all multi driver nodes that span an area that is interconnected (all effectively the same signal)
+		std::vector<Node_MultiDriver *> mdNodes;
+	};	
+	InterconnectedNodes getAllInterConnected(Node_MultiDriver *mdNode);
+	bool drivenByMultipleIOPins(const InterconnectedNodes &in, Node_Pin *&firstDrivingPin);
 }

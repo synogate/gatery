@@ -157,7 +157,7 @@ namespace gtry::scl
 							The actual amount depends on the available target architecture. 
 		 * @return connected stream
 		*/
-		Stream fifo(size_t minDepth = 16);
+		Stream fifo(bool cutThrough = false, size_t minDepth = 16);
 
 		/**
 		 * @brief Attach the stream as source and a new stream as sink to the FIFO.
@@ -167,7 +167,7 @@ namespace gtry::scl
 		 * @return connected stream
 		*/
 		template<Signal T>
-		Stream fifo(Fifo<T>& instance);
+		Stream fifo(Fifo<T>& instance, bool cutThrough = false);
 	};
 
 	/**
@@ -738,22 +738,33 @@ namespace gtry::scl
 	}
 
 	template<Signal PayloadT, Signal... Meta>
-	inline Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::fifo(size_t minDepth)
+	inline Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::fifo(bool cutThrough, size_t minDepth)
 	{
 		Fifo inst{ minDepth, copy(downstream(*this)) };
-		Stream ret = fifo(inst);
+		Stream ret = fifo(inst, cutThrough);
 		inst.generate();
+
 		return ret;
 	}
 
 	template<Signal PayloadT, Signal... Meta>
 	template<Signal T>
-	inline Stream<PayloadT, Meta...> gtry::scl::Stream<PayloadT, Meta...>::fifo(Fifo<T>& instance)
+	inline Stream<PayloadT, Meta...> gtry::scl::Stream<PayloadT, Meta...>::fifo(Fifo<T>& instance, bool cutThrough)
 	{
-		connect(instance, *this);
-
 		Self ret;
 		connect(ret, instance);
+
+		if (cutThrough)
+		{
+			IF(!valid(ret))
+			{
+				downstream(ret) = downstream(*this);
+				IF(ready(ret))
+					valid(*this) = '0';
+			}
+		}
+		connect(instance, *this);
+
 		return ret;
 	}
 
