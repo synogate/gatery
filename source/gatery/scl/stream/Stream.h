@@ -317,9 +317,7 @@ namespace gtry::scl
 		simu(valid(stream)) = '0';
 	}
 
-}
-
-namespace gtry {
+	using gtry::reg;
 	/**
 	 * @brief Puts a register in the ready, valid and data path.
 	 * @param stream Source stream
@@ -331,6 +329,7 @@ namespace gtry {
 	template<scl::StreamSignal T>
 	T reg(const T& stream, const RegisterSettings& settings = {});
 
+	using gtry::connect;
 	/**
 	 * @brief Connect a Stream as source to a FIFO as sink.
 	 * @param sink FIFO instance.
@@ -826,9 +825,6 @@ namespace gtry::scl
 			return out.regDownstream(RegisterSettings{ .allowRetimingBackward = true });
 		return out;
 	}
-}
-
-namespace gtry {
 
 	template<Signal Tf, scl::StreamSignal Ts>
 	void connect(scl::Fifo<Tf>& sink, Ts& source)
@@ -879,6 +875,9 @@ namespace gtry {
 		static_assert(!stream.template has<scl::Ready>(), "cannot create upstream register from const stream");
 		return stream.regDownstream(settings);
 	}
+}
+
+namespace gtry {
 
 
 	template<scl::StreamSignal T>

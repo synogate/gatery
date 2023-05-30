@@ -246,7 +246,9 @@ void ExternalModule::inoutPin(std::string_view portName, std::string_view pinNam
 	multiDriver->rewireInput(0, {.node = &m_node, .port = m_node.outs().size()-1});
 	m_node.rewireInput(m_node.ins().size()-1, {.node = multiDriver, .port = 0ull});
 
-	multiDriver->rewireInput(1, BVec(bidirPin(BVec(SignalReadPort(multiDriver))).setName(std::string(pinName))).readPort());
+	BVec out = W;
+	out.exportOverride(SignalReadPort(multiDriver));
+	multiDriver->rewireInput(1, BVec(bidirPin(out).setName(std::string(pinName))).readPort());
 }
 
 void ExternalModule::inoutPin(std::string_view portName, std::string_view pinName, PinConfig cfg)
@@ -266,7 +268,9 @@ void ExternalModule::inoutPin(std::string_view portName, std::string_view pinNam
 	multiDriver->rewireInput(0, {.node = &m_node, .port = m_node.outs().size()-1});
 	m_node.rewireInput(m_node.ins().size()-1, {.node = multiDriver, .port = 0ull});
 
-	multiDriver->rewireInput(1, Bit(bidirPin(Bit(SignalReadPort(multiDriver))).setName(std::string(pinName))).readPort());
+	Bit out;
+	out.exportOverride(Bit(SignalReadPort(multiDriver)));
+	multiDriver->rewireInput(1, Bit(bidirPin(out).setName(std::string(pinName))).readPort());
 }
 
 std::unique_ptr<gtry::hlim::BaseNode> gtry::ExternalModule::Node_External_Exposed::cloneUnconnected() const

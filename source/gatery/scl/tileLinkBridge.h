@@ -21,10 +21,11 @@
 #include <gatery/scl/tilelink/tilelink.h>
 #include <gatery/scl/Avalon.h>
 
-using namespace gtry;
-using namespace scl;
 
+namespace gtry::scl {
 
-TileLinkUL tileLinkBridge(AvalonMM& amm, BitWidth sourceW);
+	TileLinkUL tileLinkBridge(AvalonMM& amm, BitWidth sourceW);
+
+}
 
 

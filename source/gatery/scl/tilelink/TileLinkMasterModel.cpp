@@ -80,8 +80,8 @@ namespace gtry::scl
 
 			for (const Data& d : tx.data)
 			{
-				state.insertNonStraddling(sim::DefaultConfig::VALUE, 0, state.size(), d.value);
-				state.insertNonStraddling(sim::DefaultConfig::DEFINED, 0, state.size(), d.defined);
+				state.insertNonStraddling(sim::DefaultConfig::VALUE, 0, std::min<size_t>(state.size(), 64), d.value);
+				state.insertNonStraddling(sim::DefaultConfig::DEFINED, 0, std::min<size_t>(state.size(), 64), d.defined);
 				simu(m_link.a->data) = state;
 				simu(m_link.a->mask) = d.mask;
 
