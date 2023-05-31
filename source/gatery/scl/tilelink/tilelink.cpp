@@ -45,15 +45,20 @@ namespace gtry::scl
 	{
 		this->opcode = (size_t)Get;
 		this->param = 0;
-
-		if (size)
-			this->size = *size;
-		else
-			this->size = BitWidth::count(data.width().bytes()).bits();
-
 		this->source = zext(source);
 		this->address = zext(address);
-		this->mask = fullByteEnableMask(*this);
+
+		if (size)
+		{
+			this->size = *size;
+			this->mask = fullByteEnableMask(*this);
+		}
+		else
+		{
+			this->size = utils::Log2C(data.width().bytes());
+			this->mask = (BVec)oext(0);
+		}
+
 		this->data = ConstBVec(this->data.width());
 	}
 
@@ -61,15 +66,20 @@ namespace gtry::scl
 	{
 		this->opcode = (size_t)PutFullData;
 		this->param = 0;
-
-		if (size)
-			this->size = *size;
-		else
-			this->size = BitWidth::count(data.width().bytes()).bits();
-
 		this->source = zext(source);
 		this->address = zext(address);
-		this->mask = fullByteEnableMask(*this);
+
+		if (size)
+		{
+			this->size = *size;
+			this->mask = fullByteEnableMask(*this);
+		}
+		else
+		{
+			this->size = utils::Log2C(this->data.width().bytes());
+			this->mask = (BVec)oext(0);
+		}
+
 		this->data = data;
 	}
 
@@ -81,7 +91,7 @@ namespace gtry::scl
 		if (size)
 			this->size = *size;
 		else
-			this->size = BitWidth::count(data.width().bytes()).bits();
+			this->size = utils::Log2C(this->data.width().bytes());
 
 		this->source = zext(source);
 		this->address = zext(address);
@@ -114,7 +124,8 @@ namespace gtry::scl
 
 	BVec fullByteEnableMask(const UInt& address, const UInt& size, BitWidth maskW)
 	{
-		BVec mask = ConstBVec(maskW.mask(), maskW);
+		BVec mask = ConstBVec(maskW);
+		mask = (BVec)oext(0);
 
 		const UInt& offset = address(0, BitWidth::count(maskW.bits()));
 		for (size_t i = 0; (1ull << i) < maskW.bits(); i++)
