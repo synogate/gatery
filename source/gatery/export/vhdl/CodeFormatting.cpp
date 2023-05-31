@@ -378,12 +378,12 @@ void DefaultCodeFormatting::formatDataTypeConversion(std::ostream &stream, VHDLD
 					stream << srcIdentifier;
 				break;
 				case VHDLDataType::BIT:
-					stream << "TO_VLULOGIC(" << srcIdentifier << ')';
+					stream << srcIdentifier;
 				break;
 				case VHDLDataType::STD_LOGIC:
 				case VHDLDataType::STD_ULOGIC:
-					stream << "TO_VLULOGIC(PORTMAP_TO_BIT(" << srcIdentifier << "))";
-					stream << "TO_VLULOGIC(PORTMAP_TO_BIT(" << srcIdentifier << "))";
+					stream << srcIdentifier;
+					stream << srcIdentifier;
 				break;
 				default:
 					HCL_ASSERT_HINT(false, "Invalid conversion");
@@ -431,14 +431,14 @@ void DefaultCodeFormatting::formatDataTypeConversion(std::ostream &stream, VHDLD
 					stream << srcIdentifier;
 				break;
 				case VHDLDataType::BIT_VECTOR:
-					stream << "TO_VLLOGICVECTOR(" << srcIdentifier << ')';
+					stream << srcIdentifier;
 				break;
 				case VHDLDataType::STD_ULOGIC_VECTOR:
 				case VHDLDataType::STD_LOGIC_VECTOR:
-					stream << "TO_VLLOGICVECTOR(TO_BITVECTOR(" << srcIdentifier << "))";
+					stream << srcIdentifier;
 				break;
 				case VHDLDataType::UNSIGNED:
-					stream << "TO_VLLOGICVECTOR(TO_BITVECTOR(STD_LOGIC_VECTOR((" << srcIdentifier << ")))";
+					stream << "STD_LOGIC_VECTOR(" << srcIdentifier << ")";
 				break;
 				default:
 					HCL_ASSERT_HINT(false, "Invalid conversion");
