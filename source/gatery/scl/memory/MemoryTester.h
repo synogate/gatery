@@ -45,7 +45,7 @@ namespace gtry::scl
 			IF(transfer(mem.a))
 			{
 				availableSourceId[mem.a->source] = '0';
-				mem.a->address += 2;
+				mem.a->address += mem.a->data.width().bytes();
 				
 				IF(state.current() == State::write)
 				{
@@ -61,8 +61,8 @@ namespace gtry::scl
 			mem.a->opcode = (size_t)TileLinkA::PutFullData;
 			mem.a->param = 0;
 			mem.a->address = reg(mem.a->address, 0);
-			mem.a->size = 1;
-			mem.a->mask = 3;
+			mem.a->size = (UInt)utils::Log2C(mem.a->data.width().bytes());
+			mem.a->mask = (BVec)oext(0);
 			IF(state.current() == State::read)
 				mem.a->opcode = (size_t)TileLinkA::Get;
 			
