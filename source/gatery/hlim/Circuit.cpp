@@ -656,7 +656,7 @@ void Circuit::removeIrrelevantMuxes(Subnet &subnet)
 							}
 
 							if (Node_Multiplexer *subnetOutputMuxNode = dynamic_cast<Node_Multiplexer*>(input.node)) {
-								if (muxNode->getNumInputPorts() == 3) {
+								if (subnetOutputMuxNode->getNumInputPorts() == 3) {
 									Conjunction subnetOutputMuxNodeCondition;
 									subnetOutputMuxNodeCondition.parseInput({.node = subnetOutputMuxNode, .port = 0});
 
