@@ -40,6 +40,7 @@
 #include "../../hlim/coreNodes/Node_ClkRst2Signal.h"
 #include "../../hlim/coreNodes/Node_Signal2Clk.h"
 #include "../../hlim/coreNodes/Node_Signal2Rst.h"
+#include "../../hlim/coreNodes/Node_Shift.h"
 
 #include "../../hlim/supportNodes/Node_Attributes.h"
 #include "../../hlim/supportNodes/Node_ExportOverride.h"
@@ -571,6 +572,22 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
 
 	if (const hlim::Node_Clk2Signal* clk2signal = dynamic_cast<const hlim::Node_Clk2Signal*>(nodePort.node)) {
 		stream << m_namespaceScope.getClock(clk2signal->getClocks()[0]->getClockPinSource()).name;
+		return;
+	}
+
+	if (const hlim::Node_Shift* shift = dynamic_cast<const hlim::Node_Shift*>(nodePort.node)) {
+
+		if (shift->getDirection() == hlim::Node_Shift::dir::left)
+			stream << "SHIFT_LEFT(";
+		else
+			stream << "SHIFT_RIGHT(";
+
+		HCL_ASSERT(shift->getFillMode() == hlim::Node_Shift::fill::zero);
+
+		formatExpression(stream, indentation, comments, shift->getDriver(hlim::Node_Shift::INPUT_OPERAND), dependentInputs, context);
+		stream << ", to_integer(";
+		formatExpression(stream, indentation, comments, shift->getDriver(hlim::Node_Shift::INPUT_AMOUNT), dependentInputs, context);
+		stream << "))";
 		return;
 	}
 

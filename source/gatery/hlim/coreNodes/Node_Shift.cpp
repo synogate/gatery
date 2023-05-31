@@ -23,7 +23,7 @@
 namespace gtry::hlim
 {
 	Node_Shift::Node_Shift(dir _direction, fill _fill) :
-		Node<Node_Shift>(2, 1),
+		Node<Node_Shift>(NUM_INPUTS, 1),
 		m_direction(_direction),
 		m_fill(_fill)
 	{
@@ -31,7 +31,7 @@ namespace gtry::hlim
 
 	void Node_Shift::connectOperand(const NodePort& port)
 	{
-		NodeIO::connectInput(0, port);
+		NodeIO::connectInput(INPUT_OPERAND, port);
 
 		if (port.node)
 			setOutputConnectionType(0, port.node->getOutputConnectionType(port.port));
@@ -39,7 +39,7 @@ namespace gtry::hlim
 
 	void Node_Shift::connectAmount(const NodePort& port)
 	{
-		NodeIO::connectInput(1, port);
+		NodeIO::connectInput(INPUT_AMOUNT, port);
 	}
 
 	void Node_Shift::simulateEvaluate(sim::SimulatorCallbacks& simCallbacks, sim::DefaultBitVectorState& state, const size_t* internalOffsets, const size_t* inputOffsets, const size_t* outputOffsets) const
