@@ -85,6 +85,15 @@ void resolveRetimingHints(Circuit &circuit, Subnet &subnet)
 	for (auto *regSpawner : spawner)
 		regSpawner->markResolved();
 
+	for (auto& n : subnet)
+		if (auto* regHint = dynamic_cast<Node_RegHint*>(n)) {
+			bool found = false;
+			for (auto h : regHints)
+				if (h.second == regHint)
+					found = true;
+			HCL_ASSERT(found);
+			HCL_ASSERT(regHint->getDirectlyDriven(0).empty());
+		}
 }
 
 void bypassRetimingBlockers(Circuit &circuit, Subnet &subnet)
