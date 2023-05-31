@@ -24,6 +24,13 @@
 
 namespace gtry::scl {
 
+	/**
+	 * @brief Translates an Avalon Slave into a TileLink Slave (to be connected to a tilelink master)
+	 * @details The bridge strips and stores source/txids from requests and reattaches them to responses.
+	 * The bridge can be backpressured but never propagates backpressure to the Avalon Slave. 
+	 * Instead, it buffers responses in an internal fifo, the capacity of which can be controlled by 
+	 * meta data in amm.
+	 */
 	TileLinkUL tileLinkBridge(AvalonMM& amm, BitWidth sourceW);
 
 }
