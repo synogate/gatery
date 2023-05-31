@@ -479,7 +479,7 @@ namespace gtry::scl
 		{
 			IF(eop(in))
 			{
-				UInt byteLen = in->width().bytes() - empty(in);
+				UInt byteLen = in->width().bytes() - zext(empty(in));
 				len = cat(byteLen, "b000");
 			}
 		}

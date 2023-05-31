@@ -362,6 +362,9 @@ namespace gtry::scl
 		ENIF(ready(out))
 		{
 			PipeBalanceGroup group;
+			if constexpr (T::template has<Valid>())
+				valid(in).resetValue('0');
+
 			downstream(out) = gtry::pipeinput(copy(downstream(in)), group);
 		}
 		upstream(in) = upstream(out);
