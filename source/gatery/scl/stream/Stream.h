@@ -351,6 +351,22 @@ namespace gtry::scl
 
 	template<Signal T>
 	void connect(scl::RvStream<T>& sink, scl::Fifo<T>& source);
+
+
+	using gtry::pipeinput;
+	/// Add register spawners to the downstream signals which are enabled by the upstream ready (if it exists).
+	template<scl::StreamSignal T>
+	T pipeinput(T&& in)
+	{
+		T out;
+		ENIF(ready(out))
+		{
+			PipeBalanceGroup group;
+			downstream(out) = gtry::pipeinput(copy(downstream(in)), group);
+		}
+		upstream(in) = upstream(out);
+		return out;
+	}
 }
 
 namespace gtry::scl
