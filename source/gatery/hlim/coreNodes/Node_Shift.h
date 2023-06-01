@@ -34,6 +34,12 @@ namespace gtry::hlim
 			rotate	  // fill with shift out bits
 		};
 
+		enum Input {
+			INPUT_OPERAND = 0,
+			INPUT_AMOUNT = 1,
+			NUM_INPUTS
+		};
+
 		Node_Shift(dir _direction, fill _fill);
 
 		void connectOperand(const NodePort& port);

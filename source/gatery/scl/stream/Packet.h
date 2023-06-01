@@ -423,7 +423,10 @@ namespace gtry::scl
 		HCL_DESIGNCHECK_HINT(shift.width() <= BitWidth::count(in->width().bits()), "beat shift not implemented");
 		HCL_NAMED(shift);
 
-		Stream out = in.template remove<scl::Empty>().add(EmptyBits{ emptyBits(in) });
+		Stream out = in
+			.template remove<scl::Empty>()
+			.add(Eop{eop(in)})
+			.add(EmptyBits{ emptyBits(in) });
 		UInt& emptyBits = out.template get<EmptyBits>().emptyBits;
 
 		Bit delayedEop;			HCL_NAMED(delayedEop);
@@ -476,7 +479,7 @@ namespace gtry::scl
 		{
 			IF(eop(in))
 			{
-				UInt byteLen = in->width().bytes() - empty(in);
+				UInt byteLen = in->width().bytes() - zext(empty(in));
 				len = cat(byteLen, "b000");
 			}
 		}

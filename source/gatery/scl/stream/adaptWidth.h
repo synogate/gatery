@@ -221,7 +221,7 @@ namespace gtry::scl
 	}
 
 	template<BaseSignal Payload, Signal ... Meta, Signal... MetaInsert>
-	auto streamInsert(RvPacketStream<Payload, Meta...>& base, RvPacketStream<Payload, MetaInsert...>& insert, RvStream<UInt>& bitOffset)
+	auto streamInsert(RvPacketStream<Payload, Meta...>& base, RvStream<Payload, MetaInsert...>& insert, RvStream<UInt>& bitOffset)
 	{
 		Area ent{ "scl_streamInsert", true };
 		HCL_DESIGNCHECK_HINT(base->width() == insert->width(), "insert width must match base width");

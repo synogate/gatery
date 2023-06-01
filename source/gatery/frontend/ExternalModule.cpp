@@ -20,6 +20,7 @@
 #include "DesignScope.h"
 #include "Pin.h"
 #include <gatery/hlim/coreNodes/Node_MultiDriver.h>
+#include <gatery/frontend/Constant.h>
 
 #include <ranges>
 
@@ -67,6 +68,9 @@ const Clock& ExternalModule::clockOut(std::string_view name, std::optional<std::
 	if (resetName)
 		resetSignal = out(*resetName);
 
+	if (!cfg.name)
+		cfg.name = name;
+
 	return addClockOut(cfg, out(name), resetSignal);
 }
 
@@ -79,6 +83,9 @@ const Clock& gtry::ExternalModule::clockOut(std::string_view name, BitWidth W, s
 	std::optional<Bit> resetSignal;
 	if (resetName)
 		resetSignal = out(*resetName, W)[index];
+
+	if (!cfg.name)
+		cfg.name = name;
 
 	return addClockOut(cfg, out(name, W)[index], resetSignal);
 }
@@ -93,6 +100,9 @@ const Clock& ExternalModule::clockOut(const Clock& parentClock, std::string_view
 	if (resetName)
 		resetSignal = out(*resetName);
 
+	if (!cfg.name)
+		cfg.name = name;
+
 	return addClockOut(parentClock.deriveClock(cfg), out(name), resetSignal);
 }
 
@@ -105,6 +115,9 @@ const Clock& gtry::ExternalModule::clockOut(const Clock& parentClock, std::strin
 	std::optional<Bit> resetSignal;
 	if (resetName)
 		resetSignal = out(*resetName, W)[index];
+
+	if (!cfg.name)
+		cfg.name = name;
 
 	return addClockOut(parentClock.deriveClock(cfg), out(name, W)[index], resetSignal);
 }
@@ -246,7 +259,7 @@ void ExternalModule::inoutPin(std::string_view portName, std::string_view pinNam
 	multiDriver->rewireInput(0, {.node = &m_node, .port = m_node.outs().size()-1});
 	m_node.rewireInput(m_node.ins().size()-1, {.node = multiDriver, .port = 0ull});
 
-	BVec out = W;
+	BVec out = ConstBVec(W);
 	out.exportOverride(SignalReadPort(multiDriver));
 	multiDriver->rewireInput(1, BVec(bidirPin(out).setName(std::string(pinName))).readPort());
 }
@@ -268,7 +281,7 @@ void ExternalModule::inoutPin(std::string_view portName, std::string_view pinNam
 	multiDriver->rewireInput(0, {.node = &m_node, .port = m_node.outs().size()-1});
 	m_node.rewireInput(m_node.ins().size()-1, {.node = multiDriver, .port = 0ull});
 
-	Bit out;
+	Bit out = 'x';
 	out.exportOverride(Bit(SignalReadPort(multiDriver)));
 	multiDriver->rewireInput(1, Bit(bidirPin(out).setName(std::string(pinName))).readPort());
 }
