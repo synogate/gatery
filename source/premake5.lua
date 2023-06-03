@@ -20,7 +20,7 @@ function GateryWorkspaceDefaults()
         optimize "On"
 
     filter { "system:windows" }
-        buildoptions { "/Zc:preprocessor" }
+        buildoptions { "/Zc:preprocessor", "/bigobj" }
 
     filter { "system:linux" }
         buildoptions { "-std=c++2a", "-fcoroutines" }
