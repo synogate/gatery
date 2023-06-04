@@ -840,8 +840,12 @@ namespace gtry::scl
 		Stream<T, Meta...> out = addr.transform([&](const UInt& address) {
 			return memory[address].read();
 		});
-		if(memory.readLatencyHint())
-			return out.regDownstream(RegisterSettings{ .allowRetimingBackward = true });
+		if (memory.readLatencyHint())
+		{
+			for(size_t i = 0; i < memory.readLatencyHint() - 1; ++i)
+				out = out.regDownstreamBlocking({ .allowRetimingBackward = true });
+			out = out.regDownstream({ .allowRetimingBackward = true });
+		}
 		return out;
 	}
 
