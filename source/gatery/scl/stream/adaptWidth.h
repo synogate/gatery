@@ -47,7 +47,7 @@ namespace gtry::scl
 	T stallPacket(T& source, Bit stallCondition);
 
 	template<BaseSignal Payload, Signal ... Meta, Signal... MetaInsert>
-	auto streamInsert(RvPacketStream<Payload, Meta...>& base, RvPacketStream<Payload, MetaInsert...>& insert, RvStream<UInt>& bitOffset);
+	auto streamInsert(RvPacketStream<Payload, Meta...>& base, RvStream<Payload, MetaInsert...>& insert, RvStream<UInt>& bitOffset);
 }
 
 namespace gtry::scl
