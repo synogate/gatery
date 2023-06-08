@@ -63,10 +63,10 @@ class GroupScope : public BaseScope<GroupScope>
 	public:
 		using GroupType = hlim::NodeGroup::GroupType;
 		
-		GroupScope(GroupType groupType);
+		GroupScope(GroupType groupType, std::string_view name);
 		GroupScope(hlim::NodeGroup *nodeGroup);
 		
-		GroupScope &setName(std::string name);
+		//GroupScope &setName(std::string name);
 		GroupScope &setComment(std::string comment);
 
 		std::string instancePath() const { return m_nodeGroup->instancePath(); }
@@ -80,6 +80,10 @@ class GroupScope : public BaseScope<GroupScope>
 
 		static GroupScope *get() { return m_currentScope; }
 		static hlim::NodeGroup *getCurrentNodeGroup() { return m_currentScope==nullptr?nullptr:m_currentScope->m_nodeGroup; }
+
+		void setPartition(bool value) { m_nodeGroup->setPartition(value); }
+		bool isPartition() { return m_nodeGroup->isPartition(); }
+
 	protected:
 		hlim::NodeGroup *m_nodeGroup;
 };

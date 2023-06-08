@@ -69,9 +69,8 @@ MemoryGroup *formMemoryGroupIfNecessary(Circuit &circuit, Node_Memory *memory)
 
 		auto *logicalMemNodeGroup = memory->getGroup();
 
-		auto *physMemNodeGroup = logicalMemNodeGroup->addChildNodeGroup(NodeGroup::GroupType::ENTITY);
+		auto *physMemNodeGroup = logicalMemNodeGroup->addChildNodeGroup(NodeGroup::GroupType::ENTITY, "physical_memory");
 		physMemNodeGroup->recordStackTrace();
-		physMemNodeGroup->setName("physical_memory");
 		memory->moveToGroup(physMemNodeGroup);
 
 		memoryGroup = memory->getGroup()->createMetaInfo<MemoryGroup>(memory->getGroup());
@@ -237,12 +236,13 @@ void MemoryGroup::pullInPorts(Node_Memory *memory)
 NodeGroup *MemoryGroup::lazyCreateFixupNodeGroup()
 {
 	if (m_fixupNodeGroup == nullptr) {
-		m_fixupNodeGroup = m_nodeGroup->getParent()->addChildNodeGroup(NodeGroup::GroupType::ENTITY);
-		m_fixupNodeGroup->recordStackTrace();
+		std::string name;
 		if (m_memory->getName().empty())
-			m_fixupNodeGroup->setName("Memory_Helper");
+			name = "Memory_Helper";
 		else
-			m_fixupNodeGroup->setName(m_memory->getName()+"_Memory_Helper");
+			name = m_memory->getName()+"_Memory_Helper";
+		m_fixupNodeGroup = m_nodeGroup->getParent()->addChildNodeGroup(NodeGroup::GroupType::ENTITY, name);
+		m_fixupNodeGroup->recordStackTrace();
 		m_fixupNodeGroup->setComment("Auto generated to handle various memory access issues such as read during write and read modify write hazards.");
 	}
 	return m_fixupNodeGroup;

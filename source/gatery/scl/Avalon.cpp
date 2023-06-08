@@ -137,8 +137,7 @@ namespace gtry::scl
 
 	AvalonMM AvalonNetworkSection::demux()
 	{
-		GroupScope entity(GroupScope::GroupType::ENTITY);
-		entity.setName("AvalonMMDemux");
+		GroupScope entity(GroupScope::GroupType::ENTITY, "AvalonMMDemux");
 
 		for (AvalonNetworkSection& sub : m_subSections)
 			m_port.emplace_back(std::make_pair(sub.m_name, sub.demux()));

@@ -46,8 +46,8 @@ class ClockScope;
 class DesignScope : public BaseScope<DesignScope>
 {
 	public:
-		DesignScope();
-		DesignScope(std::unique_ptr<TargetTechnology> targetTech);
+		DesignScope(std::string_view topName = "top");
+		DesignScope(std::unique_ptr<TargetTechnology> targetTech, std::string_view topName = "top");
 
 		/// Specifies a target technology (such as a specific FPGA device) to target with this design.
 		void setTargetTechnology(std::unique_ptr<TargetTechnology> targetTech);

@@ -31,9 +31,8 @@ UInt tmdsEncode(Clock &pixelClock, Bit dataEnable, UInt data, UInt ctrl)
 	HCL_NAMED(data);
 	HCL_NAMED(ctrl);
 	
-	GroupScope entity(GroupScope::GroupType::ENTITY);
+	GroupScope entity(GroupScope::GroupType::ENTITY, "tmdsEncode");
 	entity
-		.setName("tmdsEncode")
 		.setComment("Encodes 8-bit data words to 10-bit TMDS words with control bits");
 		
 
@@ -134,8 +133,7 @@ UInt tmdsEncode(Clock &pixelClock, Bit dataEnable, UInt data, UInt ctrl)
 
 UInt tmdsEncodeSymbol(const UInt& data)
 {
-	GroupScope ent{ GroupScope::GroupType::ENTITY };
-	ent.setName("tmdsEncodeSymbol");
+	GroupScope ent{ GroupScope::GroupType::ENTITY, "tmdsEncodeSymbol" };
 
 	UInt sumOfOnes = bitcount(data);
 	HCL_NAMED(sumOfOnes);
@@ -237,8 +235,7 @@ TmdsEncoder::TmdsEncoder(Clock& clk) :
 
 void TmdsEncoder::addSync(const Bit& hsync, const Bit& vsync)
 {
-	GroupScope ent{ GroupScope::GroupType::ENTITY };
-	ent.setName("tmdsEncoderSync");
+	GroupScope ent{ GroupScope::GroupType::ENTITY, "tmdsEncoderSync" };
 
 	IF(hsync)
 		setSync(true, false);
@@ -338,8 +335,7 @@ SerialTMDS gtry::scl::hdmi::TmdsEncoder::serialOutput() const
 */
 SerialTMDS gtry::scl::hdmi::TmdsEncoder::serialOutputInPixelClock(Bit& tick) const
 {
-	GroupScope ent{ GroupScope::GroupType::ENTITY };
-	ent.setName("tmdsEncoderSerializer");
+	GroupScope ent{ GroupScope::GroupType::ENTITY, "tmdsEncoderSerializer" };
 
 	std::array<UInt, 3> channels = constructFrom(m_Channel);
 	UInt counter = 4_b;

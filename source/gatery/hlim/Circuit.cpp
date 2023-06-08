@@ -71,13 +71,13 @@
 
 namespace gtry::hlim {
 
-Circuit::Circuit()
+Circuit::Circuit(std::string_view topName)
 {
 #ifdef _DEBUG
 	readDebugNodeIds();
 #endif
 
-	m_root.reset(new NodeGroup(*this, NodeGroup::GroupType::ENTITY));
+	m_root.reset(new NodeGroup(*this, NodeGroup::GroupType::ENTITY, topName, nullptr));
 }
 
 Circuit::~Circuit()
