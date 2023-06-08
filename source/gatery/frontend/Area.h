@@ -102,6 +102,9 @@ namespace gtry
 			return (MetaType*)m_nodeGroup->getMetaInfo();
 		}
 
+		void setPartition(bool value) { m_nodeGroup->setPartition(value); }
+		bool isPartition() { return m_nodeGroup->isPartition(); }
+
 	private:
 		hlim::NodeGroup* m_nodeGroup;
 
