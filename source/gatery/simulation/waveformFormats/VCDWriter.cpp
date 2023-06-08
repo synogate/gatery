@@ -21,9 +21,12 @@
 
 #include <chrono>
 
-gtry::sim::VCDWriter::VCDWriter(std::string filename) :
-	m_File(filename.c_str(), std::ofstream::binary)
+gtry::sim::VCDWriter::VCDWriter(std::string filename) 
 {
+	std::filesystem::create_directories(std::filesystem::path(filename).parent_path());
+
+	m_File.open(filename.c_str(), std::ofstream::binary);
+
 	if(!m_File)
 		throw std::runtime_error("Could not open vcd file for writing! " + filename);
 

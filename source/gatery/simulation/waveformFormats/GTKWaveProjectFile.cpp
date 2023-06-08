@@ -85,6 +85,7 @@ void GTKWaveProjectFile::setCursor(const hlim::ClockRational &time)
 
 void GTKWaveProjectFile::write(const char *filename) const
 {
+	std::filesystem::create_directories(std::filesystem::path(filename).parent_path());
 	std::fstream file(filename, std::fstream::out | std::fstream::binary);
 	file 
 		<< "[*]\n[*] Exported from Gatery\n[*]\n"

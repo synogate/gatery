@@ -57,7 +57,6 @@ namespace gtry::sim
 				throw std::runtime_error(std::string("Could not open log file for writing: ") + logFilename);
 		}
 
-		std::filesystem::create_directories(std::filesystem::path(filename).parent_path());
 		m_gtkWaveProjectFile.setWaveformFile(filename);
 
 		auto clockPins = hlim::extractClockPins(circuit, hlim::Subnet::allForSimulation(circuit));
