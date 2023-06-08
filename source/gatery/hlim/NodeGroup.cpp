@@ -73,25 +73,6 @@ namespace gtry::hlim
 			m_nodes.front()->moveToGroup(nullptr);
 	}
 
-	//void NodeGroup::setName(std::string name)
-	//{
-	//	if (name != m_name)
-	//	{
-	//		if (m_parent)
-	//		{
-	//			size_t index = m_parent->m_childInstanceCounter[name]++;
-	//			setInstanceName(name + std::to_string(index));
-	//		}
-	//		else if (m_instanceName.empty())
-	//		{
-	//			setInstanceName(name);
-	//		}
-
-	//		m_properties["name"] = name;
-	//		m_name = move(name);
-	//	}
-	//}
-
 	NodeGroup* NodeGroup::addChildNodeGroup(GroupType groupType, std::string_view name)
 	{
 		auto& child = *m_children.emplace_back(std::make_unique<NodeGroup>(m_circuit, groupType, name, this));

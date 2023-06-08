@@ -34,13 +34,6 @@ namespace gtry
 		m_nodeGroup = nodeGroup;
 	}
 
-
-	//GroupScope& GroupScope::setName(std::string name)
-	//{
-	//	m_nodeGroup->setName(std::move(name));
-	//	return *this;
-	//}
-
 	GroupScope& GroupScope::setComment(std::string comment)
 	{
 		m_nodeGroup->setComment(std::move(comment));

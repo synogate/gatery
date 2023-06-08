@@ -78,7 +78,6 @@ namespace gtry::hlim {
 		void recordStackTrace() { m_stackTrace.record(10, 1); }
 		const utils::StackTrace& getStackTrace() const { return m_stackTrace; }
 
-		//void setName(std::string name);
 		void setInstanceName(std::string name) { m_instanceName = std::move(name); }
 		void setComment(std::string comment) { m_comment = std::move(comment); }
 

@@ -66,7 +66,6 @@ class GroupScope : public BaseScope<GroupScope>
 		GroupScope(GroupType groupType, std::string_view name);
 		GroupScope(hlim::NodeGroup *nodeGroup);
 		
-		//GroupScope &setName(std::string name);
 		GroupScope &setComment(std::string comment);
 
 		std::string instancePath() const { return m_nodeGroup->instancePath(); }
