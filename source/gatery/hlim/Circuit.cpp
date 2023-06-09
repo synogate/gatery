@@ -43,6 +43,7 @@
 #include "supportNodes/Node_Attributes.h"
 #include "supportNodes/Node_External.h"
 #include "supportNodes/Node_MemPort.h"
+#include "supportNodes/Node_ExportOverride.h"
 
 #include "postprocessing/MemoryDetector.h"
 #include "postprocessing/DefaultValueResolution.h"
@@ -918,13 +919,16 @@ void Circuit::propagateConstants(Subnet &subnet)
 			// This one must not be folded
 			overridableNodes.add(n.get());
 
-			// All registers driving thsi node also must not be folded.
+			// All registers driving this node also must not be folded.
 			for (auto i : utils::Range(n->getNumInputPorts())) {
 				auto driver = n->getNonSignalDriver(i);
 				if (dynamic_cast<Node_Register*>(driver.node))
 					overridableNodes.add(driver.node);
 			}
 		}
+		// Also add export override nodes to this list, as they can behave differently on export and we should not constant fold through them.
+		if (dynamic_cast<Node_ExportOverride*>(n.get()))
+			overridableNodes.add(n.get());
 	}
 
 
@@ -958,6 +962,10 @@ void Circuit::propagateConstants(Subnet &subnet)
 		for(size_t i = 0; i < nodeList.size(); ++i)
 		{
 			NodePort successor = nodeList[i];
+
+			// If this node is overridable, skip it.
+			if (overridableNodes.contains(successor.node))
+				continue;
 
 			if (!subnet.contains(successor.node)) continue;
 

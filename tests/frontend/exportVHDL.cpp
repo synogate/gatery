@@ -448,4 +448,28 @@ BOOST_FIXTURE_TEST_CASE(signalTapForcesVariableToSignal, gtry::GHDLTestFixture)
 }
 
 
+
+BOOST_FIXTURE_TEST_CASE(exportOverrideConstant, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+    {
+		Bit input1 = pinIn().setName("input1");
+		Bit input2 = pinIn().setName("input2");
+
+		Bit input2C = '1';
+		input2C.exportOverride(input2);
+
+		Bit output = input1 | input2C;
+        pinOut(output).setName("output");
+    }
+
+	testCompilation();
+
+	BOOST_TEST(exportContains(std::regex{"output <= \\(input1 or input2\\)"}));
+}
+
+
+
+
 BOOST_AUTO_TEST_SUITE_END()
