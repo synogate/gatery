@@ -62,6 +62,7 @@ class Entity : public BasicBlock
 
 		virtual void writeSupportFiles(const std::filesystem::path &destination) const override;
 	protected:
+		hlim::NodeGroup *m_nodeGroup = nullptr;
 		std::vector<std::unique_ptr<Block>> m_blocks;
 
 		virtual void writeLibrariesVHDL(std::ostream &stream);

@@ -470,6 +470,65 @@ BOOST_FIXTURE_TEST_CASE(exportOverrideConstant, gtry::GHDLTestFixture)
 }
 
 
+BOOST_FIXTURE_TEST_CASE(signalNamesDontPropagateIntoSubEntities, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+    {
+		Bit input1 = pinIn().setName("input1");
+		Bit input2 = pinIn().setName("input2");
+
+		HCL_NAMED(input1);
+		HCL_NAMED(input2);
+
+		Bit output;
+		{
+			Area subArea("sub", true);
+
+			output = input1 ^ input2;
+		}
+
+        pinOut(output).setName("output");
+    }
+
+	design.visualize("before");
+	testCompilation();
+	design.visualize("after");
+
+	BOOST_TEST(!exportContains(std::regex{" <= \\(in_input1 xor in_input2\\);"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(signalNamesDontPropagateIntoSubEntitiesMultiLevel, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+    {
+		Bit input1 = pinIn().setName("input1");
+		Bit input2 = pinIn().setName("input2");
+
+		HCL_NAMED(input1);
+		HCL_NAMED(input2);
+
+		Bit output;
+		{
+			Area subArea1("sub1", true);
+			Area subArea2("sub2", true);
+			Area subArea3("sub3", true);
+			setName(input1, "I1");
+			setName(input2, "I2");
+
+			output = input1 ^ input2;
+		}
+
+        pinOut(output).setName("output");
+    }
+
+	testCompilation();
+
+	BOOST_TEST(!exportContains(std::regex{" <= \\(in_input1 xor in_input2\\);"}));
+}
+
+
 
 
 BOOST_AUTO_TEST_SUITE_END()

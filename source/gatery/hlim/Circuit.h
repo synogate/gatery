@@ -164,6 +164,7 @@ namespace gtry::hlim {
 
 		void removeFalseLoops();
 
+		void ensureEntityPortSignalNodes();
 		void ensureSignalNodePlacement();
 		void ensureMultiDriverNodePlacement();
 

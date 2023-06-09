@@ -130,6 +130,7 @@ void DepthFirstPolicy<forward>::advance(bool skipDependencies, bool skipExportOn
 template<bool forward>
 void DepthFirstPolicy<forward>::backtrack()
 {
+	HCL_ASSERT(!m_stack.empty());
 	m_stack.pop();
 }
 

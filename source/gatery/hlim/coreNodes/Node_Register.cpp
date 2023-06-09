@@ -162,6 +162,7 @@ std::string Node_Register::attemptInferOutputName(size_t outputPort) const
 
 	auto driver0 = getDriver(0);
 	if (driver0.node == nullptr) return "";
+	if (inputIsComingThroughParentNodeGroup(0)) return "";
 	if (driver0.node->getName().empty()) return "";
 
 	std::regex expression("(.*)_delayed(\\d+)");

@@ -124,7 +124,7 @@ class ReadModifyWriteHazardLogicBuilder
 			size_t latencyCompensation;
 		};
 
-		ReadModifyWriteHazardLogicBuilder(Circuit &circuit, Clock *clockDomain) : m_circuit(circuit), m_clockDomain(clockDomain) { }
+		ReadModifyWriteHazardLogicBuilder(Circuit &circuit, Clock *clockDomain, NodeGroup *nodeGroup) : m_circuit(circuit), m_clockDomain(clockDomain), m_newNodesNodeGroup(nodeGroup) { }
 
 		/// Whether to retime one register to the input of the bypass mux to improve timing.
 		void retimeRegisterToMux() { m_retimeToMux = true; }
@@ -135,9 +135,7 @@ class ReadModifyWriteHazardLogicBuilder
 		inline void addReadPort(const ReadPort &readPort) { m_readPorts.push_back(readPort); }
 		/// Adds a new write port. Write ports are assumed to write (and overwrite) in the order in which they are given.
 		inline void addWritePort(const WritePort &writePort) { m_writePorts.push_back(writePort); }
-
-		inline void placeNewNodesIn(NodeGroup *nodeGroup) { m_newNodesNodeGroup = nodeGroup; }
-
+		
 		void build(bool useMemory = false);
 	protected:
 		Circuit &m_circuit;

@@ -730,7 +730,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 		HCL_ASSERT(sortedWritePorts[0].first->isOrderedBefore(sortedWritePorts[1].first));
 
 	auto *clock = sortedWritePorts.front().first->getClocks()[0];
-	ReadModifyWriteHazardLogicBuilder rmwBuilder(circuit, clock);
+	ReadModifyWriteHazardLogicBuilder rmwBuilder(circuit, clock, m_fixupNodeGroup);
 	
 	size_t maxLatency = 0;
 	
@@ -756,7 +756,6 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 
 	bool useMemory = maxLatency > 2;
 	rmwBuilder.retimeRegisterToMux();
-	rmwBuilder.placeNewNodesIn(m_fixupNodeGroup);
 	rmwBuilder.build(useMemory);
 
 

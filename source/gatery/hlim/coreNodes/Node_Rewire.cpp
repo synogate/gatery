@@ -297,6 +297,7 @@ std::string Node_Rewire::attemptInferOutputName(size_t outputPort) const
 	if (m_rewireOperation.isBitExtract(bitIndex)) {
 		auto driver0 = getDriver(0);
 		if (driver0.node == nullptr) return "";
+		if (inputIsComingThroughParentNodeGroup(0)) return "";
 		if (driver0.node->getName().empty()) return "";
 
 		std::stringstream name;
@@ -310,6 +311,7 @@ std::string Node_Rewire::attemptInferOutputName(size_t outputPort) const
 			if (driver.node == nullptr)
 				return "";
 			if (driver.node->getOutputConnectionType(driver.port).isDependency()) continue;
+			if (inputIsComingThroughParentNodeGroup(i)) return "";
 			if (driver.node->getName().empty()) {
 				return "";
 			} else {
