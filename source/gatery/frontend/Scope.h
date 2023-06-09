@@ -81,7 +81,7 @@ class GroupScope : public BaseScope<GroupScope>
 		static hlim::NodeGroup *getCurrentNodeGroup() { return m_currentScope==nullptr?nullptr:m_currentScope->m_nodeGroup; }
 
 		void setPartition(bool value) { m_nodeGroup->setPartition(value); }
-		bool isPartition() { return m_nodeGroup->isPartition(); }
+		bool isPartition() const { return m_nodeGroup->isPartition(); }
 
 	protected:
 		hlim::NodeGroup *m_nodeGroup;

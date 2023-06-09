@@ -103,7 +103,7 @@ namespace gtry
 		}
 
 		void setPartition(bool value) { m_nodeGroup->setPartition(value); }
-		bool isPartition() { return m_nodeGroup->isPartition(); }
+		bool isPartition() const { return m_nodeGroup->isPartition(); }
 
 	private:
 		hlim::NodeGroup* m_nodeGroup;

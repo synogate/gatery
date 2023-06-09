@@ -130,7 +130,7 @@ namespace gtry::hlim {
 		std::uint64_t getId() const { HCL_ASSERT(m_id != ~0ull); return m_id; }
 
 		void setPartition(bool value) { m_isPartition = value; }
-		bool isPartition() { return m_isPartition; }
+		bool isPartition() const { return m_isPartition; }
 	protected:
 		Circuit &m_circuit;
 		std::uint64_t m_id = ~0ull;
