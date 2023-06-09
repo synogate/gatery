@@ -23,7 +23,9 @@
 
 gtry::sim::VCDWriter::VCDWriter(std::string filename) 
 {
-	std::filesystem::create_directories(std::filesystem::path(filename).parent_path());
+	auto parentPath = std::filesystem::path(filename).parent_path();
+	if (!parentPath.empty())
+		std::filesystem::create_directories(parentPath);
 
 	m_File.open(filename.c_str(), std::ofstream::binary);
 
