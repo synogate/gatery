@@ -46,8 +46,7 @@ namespace gtry::scl
 	{
 		HCL_ASSERT_HINT(m_tables.empty(), "invalid state");
 
-		GroupScope entity(GroupScope::GroupType::ENTITY);
-		entity.setName("TabulationHashing");
+		GroupScope entity(GroupScope::GroupType::ENTITY, "TabulationHashing");
 
 		const size_t numTables = (data.width().value + m_symbolWidth.value - 1) / m_symbolWidth.value;
 		m_tables.resize(numTables);
@@ -69,8 +68,7 @@ namespace gtry::scl
 	AvalonMM TabulationHashing::singleUpdatePort(bool readable)
 	{
 		HCL_ASSERT_HINT(!m_tables.empty(), "invalid state. call generator function first");
-		GroupScope entity(GroupScope::GroupType::ENTITY);
-		entity.setName("TabulationHashing_UpdatePort");
+		GroupScope entity(GroupScope::GroupType::ENTITY, "TabulationHashing_UpdatePort");
 
 		AvalonMM avmm;
 
@@ -107,8 +105,7 @@ namespace gtry::scl
 	{
 		HCL_ASSERT_HINT(!m_tables.empty(), "invalid state. call generator function first");
 		HCL_ASSERT(tableIdx < m_tables.size());
-		GroupScope entity(GroupScope::GroupType::ENTITY);
-		entity.setName("TabulationHashing_UpdatePort");
+		GroupScope entity(GroupScope::GroupType::ENTITY, "TabulationHashing_UpdatePort");
 
 		AvalonMM avmm;
 		avmm.connect(m_tables[tableIdx]);
@@ -119,9 +116,7 @@ namespace gtry::scl
 	void TabulationHashing::updatePorts(AvalonNetworkSection& net)
 	{
 		HCL_ASSERT_HINT(!m_tables.empty(), "invalid state. call generator function first");
-		GroupScope entity(GroupScope::GroupType::ENTITY);
-		entity.setName("TabulationHashing_Update");
-
+		GroupScope entity(GroupScope::GroupType::ENTITY, "TabulationHashing_Update");
 
 		for (size_t i = 0; i < m_tables.size(); ++i)
 		{

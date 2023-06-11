@@ -152,8 +152,7 @@ namespace gtry::scl
 		if (mems.empty())
 			return;
 
-		GroupScope ent{ GroupScope::GroupType::ENTITY };
-		ent.setName("MemoryMapRamStage");
+		GroupScope ent{ GroupScope::GroupType::ENTITY, "MemoryMapRamStage" };
 
 		struct SigVis : CompoundNameVisitor
 		{

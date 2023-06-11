@@ -51,8 +51,7 @@ namespace gtry::scl
 
 	void DisplaySync::init(DisplayMode& mode)
 	{
-		GroupScope ent{ GroupScope::GroupType::ENTITY };
-		ent.setName("DisplaySync");
+		GroupScope ent{ GroupScope::GroupType::ENTITY, "DisplaySync" };
 
 		HCL_NAMED(mode);
 

@@ -111,7 +111,7 @@ namespace gtry::hlim {
 	class Circuit
 	{
 	public:
-		Circuit();
+		Circuit(std::string_view topName = "top");
 		~Circuit();
 
 		void copySubnet(const utils::StableSet<NodePort>& subnetInputs,

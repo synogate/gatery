@@ -22,8 +22,7 @@ namespace gtry::scl {
 
 UART::Stream UART::receive(Bit rx)
 {
-	GroupScope entity(GroupScope::GroupType::ENTITY);
-	entity.setName("uart_recv");
+	GroupScope entity(GroupScope::GroupType::ENTITY, "uart_recv");
 
 	{
 		auto visId = dbg::createAreaVisualization(200, 150);
@@ -154,8 +153,7 @@ UART::Stream UART::receive(Bit rx)
 
 Bit UART::send(Stream &stream)
 {
-	GroupScope entity(GroupScope::GroupType::ENTITY);
-	entity.setName("uart_send");
+	GroupScope entity(GroupScope::GroupType::ENTITY, "uart_send");
 
 	{
 		auto visId = dbg::createAreaVisualization(200, 160);

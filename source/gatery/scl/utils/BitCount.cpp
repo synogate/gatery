@@ -29,9 +29,8 @@ namespace gtry::scl {
 		
 		HCL_NAMED(vec);
 		
-		GroupScope entity(GroupScope::GroupType::ENTITY);
+		GroupScope entity(GroupScope::GroupType::ENTITY, "bitcount");
 		entity
-			.setName("bitcount")
 			.setComment("Counts the number of high bits");
 		
 #if 1
