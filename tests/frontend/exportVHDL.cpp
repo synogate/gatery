@@ -25,6 +25,8 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
+#include <thread>
+
 
 using namespace boost::unit_test;
 
@@ -526,6 +528,44 @@ BOOST_FIXTURE_TEST_CASE(signalNamesDontPropagateIntoSubEntitiesMultiLevel, gtry:
 	testCompilation();
 
 	BOOST_TEST(!exportContains(std::regex{" <= \\(in_input1 xor in_input2\\);"}));
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(noRewriteWithoutChange, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Bit in = pinIn().setName("in");
+	pinOut(in).setName("out");
+
+    {
+		vhdl::VHDLExport vhdl("design.vhdl", false);
+		vhdl.writeProjectFile("projectFile.txt");
+		vhdl.writeStandAloneProjectFile("standAloneProjectFile.txt");		
+		vhdl.writeConstraintsFile("constraints.txt");
+		vhdl.writeClocksFile("clocks.txt");
+		vhdl(design.getCircuit());
+    }
+
+	auto writeTime1 = std::filesystem::last_write_time("design.vhdl");
+
+	using namespace std::chrono;
+	std::this_thread::sleep_for(1s);
+
+    {
+		vhdl::VHDLExport vhdl("design.vhdl", false);
+		vhdl.writeProjectFile("projectFile.txt");
+		vhdl.writeStandAloneProjectFile("standAloneProjectFile.txt");		
+		vhdl.writeConstraintsFile("constraints.txt");
+		vhdl.writeClocksFile("clocks.txt");
+		vhdl(design.getCircuit());
+    }
+
+	auto writeTime2 = std::filesystem::last_write_time("design.vhdl");
+
+	bool fileWasRewritten = writeTime2 != writeTime1;
+	BOOST_TEST(!fileWasRewritten);
 }
 
 

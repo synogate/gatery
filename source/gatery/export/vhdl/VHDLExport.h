@@ -39,6 +39,10 @@ namespace gtry::sim {
 	class Simulator;
 }
 
+namespace gtry::utils {
+	class DiskFileSystem;
+}
+
 namespace gtry::vhdl {
 
 /**
@@ -47,11 +51,14 @@ namespace gtry::vhdl {
 class VHDLExport
 {
 	public:
-		VHDLExport(std::filesystem::path destination);
-		VHDLExport(std::filesystem::path destination, std::filesystem::path destinationTestbench);
+
+		VHDLExport(std::filesystem::path destination, bool rewriteUnchangedFiles = true);
+		VHDLExport(std::filesystem::path destination, std::filesystem::path destinationTestbench, bool rewriteUnchangedFiles = true);
 		~VHDLExport();
 
-		VHDLExport &targetSynthesisTool(SynthesisTool *synthesisTool);
+
+		VHDLExport &outputMode(OutputMode outputMode);
+		VHDLExport &targetSynthesisTool(SynthesisTool *synthesisTool);		
 		VHDLExport &setFormatting(CodeFormatting *codeFormatting);
 		VHDLExport &writeClocksFile(std::string filename);
 		VHDLExport &writeConstraintsFile(std::string filename);
@@ -66,9 +73,11 @@ class VHDLExport
 		void operator()(hlim::Circuit &circuit);
 
 		AST *getAST() { return m_ast.get(); }
-		std::filesystem::path getDestination();
-		const std::filesystem::path &getTestbenchDestination() { return m_destinationTestbench; }
-		std::filesystem::path getSingleFileFilename() { return m_destination.filename(); }
+		utils::FileSystem &getDestination();
+		std::filesystem::path getDestinationPath() const;
+		utils::FileSystem &getTestbenchDestination();
+		std::filesystem::path getTestbenchDestinationPath() const;
+		std::filesystem::path getSingleFileFilename() { return m_singleFileName; }
 		bool isSingleFileExport();
 
 		void addTestbenchRecorder(sim::Simulator &simulator, const std::string &name, bool inlineTestData = false);
@@ -84,8 +93,11 @@ class VHDLExport
 		void addCustomVhdlFile(std::string name, std::string content) { m_customVhdlFiles[std::move(name)] = std::move(content); }
 		inline const std::map<std::string, std::string> &getCustomVHDLFiles() const { return m_customVhdlFiles; }
 	protected:
-		std::filesystem::path m_destination;
-		std::filesystem::path m_destinationTestbench;
+		OutputMode m_outputMode = OutputMode::AUTO;
+		std::filesystem::path m_singleFileName;
+
+		std::unique_ptr<utils::DiskFileSystem> m_fileSystem;
+		std::unique_ptr<utils::DiskFileSystem> m_fileSystemTestbench;
 		std::unique_ptr<CodeFormatting> m_codeFormatting;
 		std::unique_ptr<SynthesisTool> m_synthesisTool;
 		std::vector<std::unique_ptr<BaseTestbenchRecorder>> m_testbenchRecorder;

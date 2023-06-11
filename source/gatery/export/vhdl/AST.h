@@ -31,6 +31,10 @@ namespace gtry {
 	class SynthesisTool;
 }
 
+namespace gtry::utils {
+	class FileSystem;
+}
+
 namespace gtry::hlim {
 	class Circuit;
 	class BaseNode;
@@ -54,6 +58,13 @@ class Hlim2AstMapping
 		BaseGrouping *getScope(hlim::BaseNode *node) const;
 	protected:
 		utils::UnstableMap<hlim::BaseNode*, BaseGrouping*> m_node2Block;
+};
+
+enum class OutputMode {
+	AUTO,
+	SINGLE_FILE,
+	FILE_PER_PARTITION,
+	FILE_PER_ENTITY
 };
 
 
@@ -80,9 +91,9 @@ class AST
 		inline NamespaceScope &getNamespaceScope() { return m_namespaceScope; }
 		inline Hlim2AstMapping &getMapping() { return m_mapping; }
 
-		void writeVHDL(std::filesystem::path destination, const std::map<std::string, std::string> &customVhdlFiles);
+		void writeVHDL(utils::FileSystem &fileSystem, OutputMode outputMode, std::filesystem::path singleFileName, const std::map<std::string, std::string> &customVhdlFiles);
 
-		std::filesystem::path getFilename(std::filesystem::path basePath, const std::string &name);
+		std::filesystem::path getFilename(const std::string &name);
 
 		inline const std::vector<std::unique_ptr<Entity>> &getEntities() { return m_entities; }
 		inline const std::vector<std::unique_ptr<Package>> &getPackages() { return m_packages; }

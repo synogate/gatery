@@ -28,6 +28,8 @@
 #include "../../hlim/Clock.h"
 #include "../../hlim/NodeGroup.h"
 
+#include <gatery/utils/FileSystem.h>
+
 #include <fstream>
 #include <functional>
 
@@ -82,57 +84,47 @@ Entity &AST::createEntity(const std::string &desiredName, BasicBlock *parent)
 	return *m_entities.back();
 }
 
-std::filesystem::path AST::getFilename(std::filesystem::path basePath, const std::string &name)
+std::filesystem::path AST::getFilename(const std::string &name)
 {
-	return basePath / (name + m_codeFormatting->getFilenameExtension());
+	return name + m_codeFormatting->getFilenameExtension();
 }
 
-void AST::writeVHDL(std::filesystem::path destination, const std::map<std::string, std::string> &customVhdlFiles)
+void AST::writeVHDL(utils::FileSystem &fileSystem, OutputMode outputMode, std::filesystem::path singleFileName, const std::map<std::string, std::string> &customVhdlFiles)
 {
-	if (destination.has_extension())
+	if (outputMode == OutputMode::SINGLE_FILE || (outputMode == OutputMode::AUTO && !singleFileName.empty()))
 	{
 		for (auto& entity : m_entities)
-			entity->writeSupportFiles(destination.parent_path());
+			entity->writeSupportFiles(fileSystem);
 
-		std::ofstream file{ destination.c_str(), std::ofstream::binary };
-		file.exceptions(std::fstream::failbit | std::fstream::badbit);
+		auto file = fileSystem.writeFile(singleFileName);
 
 		for (auto& package : m_packages)
-			package->writeVHDL(file);
+			package->writeVHDL(file->stream());
 
 		for (const auto &pair : customVhdlFiles)
-			file << pair.second << std::endl;
+			file->stream() << pair.second << std::endl;
 
 		for (auto* entity : this->getDependencySortedEntities())
-			entity->writeVHDL(file);
-	}
-	else
-	{
+			entity->writeVHDL(file->stream());
+	} else if (outputMode == OutputMode::FILE_PER_PARTITION) {
+		HCL_ASSERT_HINT(false, "Not implemented yet!");
+	} else {
 		for (auto& entity : m_entities)
-			entity->writeSupportFiles(destination);
+			entity->writeSupportFiles(fileSystem);
 
 		for (auto& package : m_packages) {
-			std::filesystem::path filePath = getFilename(destination, package->getName());
-
-			std::fstream file(filePath.string().c_str(), std::fstream::out);
-			file.exceptions(std::fstream::failbit | std::fstream::badbit);
-			package->writeVHDL(file);
+			auto file = fileSystem.writeFile(getFilename(package->getName()));
+			package->writeVHDL(file->stream());
 		}
 
 		for (const auto &pair : customVhdlFiles) {
-			std::filesystem::path filePath = getFilename(destination, pair.first);
-
-			std::fstream file(filePath.string().c_str(), std::fstream::out);
-			file.exceptions(std::fstream::failbit | std::fstream::badbit);
-			file << pair.second;
+			auto file = fileSystem.writeFile(getFilename(pair.first));
+			file->stream() << pair.second;
 		}
 
 		for (auto& entity : m_entities) {
-			std::filesystem::path filePath = getFilename(destination, entity->getName());
-
-			std::fstream file(filePath.string().c_str(), std::fstream::out);
-			file.exceptions(std::fstream::failbit | std::fstream::badbit);
-			entity->writeVHDL(file);
+			auto file = fileSystem.writeFile(getFilename(entity->getName()));
+			entity->writeVHDL(file->stream());
 		}
 	}
 }

@@ -36,6 +36,8 @@
 #include "../../hlim/GraphTools.h"
 #include "../../hlim/Clock.h"
 
+#include "../../utils/FileSystem.h"
+
 
 namespace gtry::vhdl {
 
@@ -375,13 +377,12 @@ void BasicBlock::handlePinInstantiation(hlim::Node_Pin *pin)
 */
 }
 
-void BasicBlock::writeSupportFiles(const std::filesystem::path &destination) const
+void BasicBlock::writeSupportFiles(utils::FileSystem &fileSystem) const
 {
 	for (const auto &extNode : m_externalNodes) {
 		for (auto i : utils::Range(extNode.supportFilenames.size())) {
-			auto path = destination / extNode.supportFilenames[i];
-			std::fstream stream(path.string().c_str(), std::fstream::out | std::fstream::binary);
-			extNode.node->setupSupportFile(i, extNode.supportFilenames[i], stream);
+			auto fileHandle = fileSystem.writeFile(extNode.supportFilenames[i]);
+			extNode.node->setupSupportFile(i, extNode.supportFilenames[i], fileHandle->stream());
 		}
 	}
 }

@@ -32,6 +32,11 @@ namespace gtry::sim {
 	class Simulator;
 }
 
+namespace gtry::utils {
+	class FileSystem;
+	class FileSink;
+}
+
 namespace gtry::vhdl {
 
 class VHDLExport;
@@ -40,7 +45,7 @@ class AST;
 class FileBasedTestbenchRecorder : public BaseTestbenchRecorder
 {
 	public:
-		FileBasedTestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, std::string name);
+		FileBasedTestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, utils::FileSystem &fileSystem, std::string name);
 		~FileBasedTestbenchRecorder();
 
 		virtual void onPowerOn() override;
@@ -59,14 +64,14 @@ class FileBasedTestbenchRecorder : public BaseTestbenchRecorder
 
 	protected:
 		VHDLExport &m_exporter;
-		std::fstream m_testbenchFile;
+		std::unique_ptr<utils::FileSink> m_testvectorFile;
+		std::unique_ptr<utils::FileSink> m_testbenchFile;
 		hlim::ClockRational m_writtenSimulationTime;
 		hlim::ClockRational m_flushIntervalStart;
 
 		std::string m_testVectorFilename;
-		std::string m_vhdlFilename;
 
-		void writeVHDL(std::filesystem::path path, const std::string &testVectorFilename);
+		void writeVHDL();
 
 		void advanceTimeTo(const hlim::ClockRational &simulationTime);
 

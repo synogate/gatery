@@ -485,11 +485,11 @@ std::string Entity::getInstanceName()
 	HCL_ASSERT_HINT(false, "Did not find entity instantiation in parent's list of entities!");
 }
 
-void Entity::writeSupportFiles(const std::filesystem::path &destination) const
+void Entity::writeSupportFiles(utils::FileSystem &fileSystem) const
 {
-	BasicBlock::writeSupportFiles(destination);
+	BasicBlock::writeSupportFiles(fileSystem);
 	for (auto &b : m_blocks)
-		b->writeSupportFiles(destination);
+		b->writeSupportFiles(fileSystem);
 }
 
 }

@@ -27,6 +27,7 @@
 #include "../../simulation/Simulator.h"
 #include "../../hlim/coreNodes/Node_Pin.h"
 
+#include "../../utils/FileSystem.h"
 
 #include <sstream>
 #include <iostream>
@@ -34,10 +35,10 @@
 namespace gtry::vhdl {
 
 
-TestbenchRecorder::TestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, std::string name) : BaseTestbenchRecorder(ast, simulator, std::move(name)), m_exporter(exporter)
+TestbenchRecorder::TestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, utils::FileSystem &fileSystem, std::string name) : BaseTestbenchRecorder(ast, simulator, std::move(name)), m_exporter(exporter)
 {
 	m_dependencySortedEntities.push_back(m_name);
-	m_testbenchFile.open(m_ast->getFilename(basePath, m_name).c_str(), std::fstream::out);
+	m_testbenchFile = fileSystem.writeFile(m_ast->getFilename(m_name));
 }
 
 TestbenchRecorder::~TestbenchRecorder()
@@ -48,7 +49,7 @@ TestbenchRecorder::~TestbenchRecorder()
 
 void TestbenchRecorder::writeHeader()
 {
-	m_testbenchFile << R"(
+	m_testbenchFile->stream() << R"(
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.all;
@@ -64,7 +65,7 @@ ARCHITECTURE tb OF )" << m_name << R"( IS
 
 	CodeFormatting &cf = m_ast->getCodeFormatting();
 
-	declareSignals(m_testbenchFile);
+	declareSignals(m_testbenchFile->stream());
 
 	for (auto ioPin : m_allIOPins) {
 		const std::string &name = rootEntity->getNamespaceScope().get(ioPin).name;
@@ -78,33 +79,33 @@ ARCHITECTURE tb OF )" << m_name << R"( IS
 		}
 	}
 
-	m_testbenchFile << "BEGIN" << std::endl;
+	m_testbenchFile->stream() << "BEGIN" << std::endl;
 
-	cf.indent(m_testbenchFile, 1);
-	m_testbenchFile << "inst_root : entity work." << rootEntity->getName() << "(impl) port map (" << std::endl;
+	cf.indent(m_testbenchFile->stream(), 1);
+	m_testbenchFile->stream() << "inst_root : entity work." << rootEntity->getName() << "(impl) port map (" << std::endl;
 
-	writePortmap(m_testbenchFile);
+	writePortmap(m_testbenchFile->stream());
    
-	cf.indent(m_testbenchFile, 1);
-	m_testbenchFile << ");" << std::endl;
+	cf.indent(m_testbenchFile->stream(), 1);
+	m_testbenchFile->stream() << ");" << std::endl;
 
 	for (auto &clock : m_clocksOfInterest)
-		buildClockProcess(m_testbenchFile, clock);
+		buildClockProcess(m_testbenchFile->stream(), clock);
 
-	cf.indent(m_testbenchFile, 1);
-	m_testbenchFile << "sim_process : PROCESS" << std::endl;
-	cf.indent(m_testbenchFile, 1);
-	m_testbenchFile << "BEGIN" << std::endl;
+	cf.indent(m_testbenchFile->stream(), 1);
+	m_testbenchFile->stream() << "sim_process : PROCESS" << std::endl;
+	cf.indent(m_testbenchFile->stream(), 1);
+	m_testbenchFile->stream() << "BEGIN" << std::endl;
 }
 
 void TestbenchRecorder::writeFooter()
 {
 //	CodeFormatting &cf = m_ast->getCodeFormatting();
-//	cf.indent(m_testbenchFile, 1);
-	m_testbenchFile << "TB_testbench_is_done <= '1';" << std::endl;
-	m_testbenchFile << "WAIT;" << std::endl;
-	m_testbenchFile << "END PROCESS;" << std::endl;
-	m_testbenchFile << "END;" << std::endl;
+//	cf.indent(m_testbenchFile->stream(), 1);
+	m_testbenchFile->stream() << "TB_testbench_is_done <= '1';" << std::endl;
+	m_testbenchFile->stream() << "WAIT;" << std::endl;
+	m_testbenchFile->stream() << "END PROCESS;" << std::endl;
+	m_testbenchFile->stream() << "END;" << std::endl;
 }
 
 
@@ -143,15 +144,15 @@ void TestbenchRecorder::advanceTimeTo(const hlim::ClockRational &simulationTime)
 
 	size_t t = deltaT.numerator() / deltaT.denominator();
 	if (t > 1'000'000 && unit > 1) {
-		cf.indent(m_testbenchFile, 2);
-		m_testbenchFile << "WAIT FOR " << (t / 1'000'000) << ' ' << unit2str[unit-2] << ";\n";
+		cf.indent(m_testbenchFile->stream(), 2);
+		m_testbenchFile->stream() << "WAIT FOR " << (t / 1'000'000) << ' ' << unit2str[unit-2] << ";\n";
 		m_writtenSimulationTime += hlim::ClockRational(t / 1'000'000, unit2denom[unit-2]);
 
 		t = t % 1'000'000;
 	}
 
-	cf.indent(m_testbenchFile, 2);
-	m_testbenchFile << "WAIT FOR " << t << ' ' << unit2str[unit] << ";\n";
+	cf.indent(m_testbenchFile->stream(), 2);
+	m_testbenchFile->stream() << "WAIT FOR " << t << ' ' << unit2str[unit] << ";\n";
 	m_writtenSimulationTime += hlim::ClockRational(t, unit2denom[unit]);
 }
 
@@ -279,20 +280,20 @@ void TestbenchRecorder::onAnnotationStart(const hlim::ClockRational &simulationT
 
 	flush(simulationTime);
 
-	m_testbenchFile << std::endl;
-	cf.indent(m_testbenchFile, 2);
-	m_testbenchFile << "-- Begin: " << id << std::endl;
+	m_testbenchFile->stream() << std::endl;
+	cf.indent(m_testbenchFile->stream(), 2);
+	m_testbenchFile->stream() << "-- Begin: " << id << std::endl;
 	if (!desc.empty()) {
-		cf.indent(m_testbenchFile, 2);
-		m_testbenchFile << "-- ";
+		cf.indent(m_testbenchFile->stream(), 2);
+		m_testbenchFile->stream() << "-- ";
 		for (auto i : utils::Range(desc.size())) {
-			m_testbenchFile << desc[i];
+			m_testbenchFile->stream() << desc[i];
 			if (desc[i] == '\n' && i+1 < desc.size()) {
-				cf.indent(m_testbenchFile, 2);
-				m_testbenchFile << "-- ";
+				cf.indent(m_testbenchFile->stream(), 2);
+				m_testbenchFile->stream() << "-- ";
 			}
 		}
-		m_testbenchFile << std::endl;
+		m_testbenchFile->stream() << std::endl;
 	}
 }
 
@@ -302,9 +303,9 @@ void TestbenchRecorder::onAnnotationEnd(const hlim::ClockRational &simulationTim
 
 	flush(simulationTime);
 
-	cf.indent(m_testbenchFile, 2);
-	m_testbenchFile << "-- End: " << id << std::endl;
-	m_testbenchFile << std::endl;
+	cf.indent(m_testbenchFile->stream(), 2);
+	m_testbenchFile->stream() << "-- End: " << id << std::endl;
+	m_testbenchFile->stream() << std::endl;
 }
 
 void TestbenchRecorder::flush(const hlim::ClockRational &flushIntervalEnd)
@@ -319,13 +320,13 @@ void TestbenchRecorder::flush(const hlim::ClockRational &flushIntervalEnd)
 
 		advanceTimeTo(m_flushIntervalStart + interval * (1 + phaseIdx));
 
-		m_testbenchFile << phase.assertStatements.str();
+		m_testbenchFile->stream() << phase.assertStatements.str();
 
 		for (const auto &p : phase.signalOverrides)
-			m_testbenchFile << p.second;
+			m_testbenchFile->stream() << p.second;
 
 		for (const auto &p : phase.resetOverrides)
-			m_testbenchFile << p.second;
+			m_testbenchFile->stream() << p.second;
 	}
 
 	m_phases.clear();

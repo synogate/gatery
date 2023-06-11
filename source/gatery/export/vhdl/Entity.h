@@ -60,7 +60,7 @@ class Entity : public BasicBlock
 
 		std::map<std::string, std::set<std::string>> collectNeededLibraries();
 
-		virtual void writeSupportFiles(const std::filesystem::path &destination) const override;
+		virtual void writeSupportFiles(utils::FileSystem &fileSystem) const override;
 	protected:
 		hlim::NodeGroup *m_nodeGroup = nullptr;
 		std::vector<std::unique_ptr<Block>> m_blocks;

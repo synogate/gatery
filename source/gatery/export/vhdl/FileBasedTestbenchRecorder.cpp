@@ -27,6 +27,7 @@
 #include "../../hlim/coreNodes/Node_Pin.h"
 #include "../../hlim/coreNodes/Node_Signal.h"
 
+#include "../../utils/FileSystem.h"
 
 #include <sstream>
 #include <iostream>
@@ -34,14 +35,14 @@
 namespace gtry::vhdl {
 
 
-FileBasedTestbenchRecorder::FileBasedTestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, std::filesystem::path basePath, std::string name) : BaseTestbenchRecorder(ast, simulator, std::move(name)), m_exporter(exporter)
+FileBasedTestbenchRecorder::FileBasedTestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, utils::FileSystem &fileSystem, std::string name) : BaseTestbenchRecorder(ast, simulator, std::move(name)), m_exporter(exporter)
 {
 	m_dependencySortedEntities.push_back(m_name);
 	m_testVectorFilename = m_name + ".testvectors";
 	m_auxiliaryDataFiles.push_back(m_testVectorFilename);
-	m_testbenchFile.open((basePath / m_testVectorFilename).string().c_str(), std::fstream::out);
 
-	m_vhdlFilename = m_ast->getFilename(basePath, m_name).string();
+	m_testvectorFile = fileSystem.writeFile(m_testVectorFilename);
+	m_testbenchFile = fileSystem.writeFile(m_ast->getFilename(m_name));
 }
 
 FileBasedTestbenchRecorder::~FileBasedTestbenchRecorder()
@@ -49,9 +50,9 @@ FileBasedTestbenchRecorder::~FileBasedTestbenchRecorder()
 	flush(m_writtenSimulationTime + Seconds{1,1'000'000});
 }
 
-void FileBasedTestbenchRecorder::writeVHDL(std::filesystem::path path, const std::string &testVectorFilename)
+void FileBasedTestbenchRecorder::writeVHDL()
 {
-	std::fstream vhdlFile(path.string().c_str(), std::fstream::out);
+	auto &vhdlFile = m_testbenchFile->stream();
 
 	vhdlFile << R"(
 LIBRARY ieee;
@@ -150,7 +151,7 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 	vhdlFile << "BEGIN" << std::endl;
 
 	cf.indent(vhdlFile, 2);
-	vhdlFile << "file_open(test_vector_file, \"" << testVectorFilename << "\", read_mode);" << std::endl;
+	vhdlFile << "file_open(test_vector_file, \"" << m_testVectorFilename << "\", read_mode);" << std::endl;
 
 	cf.indent(vhdlFile, 2);
 	vhdlFile << "IF endfile(test_vector_file) THEN" << std::endl;
@@ -345,7 +346,7 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 
 void FileBasedTestbenchRecorder::onPowerOn()
 {
-	writeVHDL(m_vhdlFilename, m_testVectorFilename);
+	writeVHDL();
 }
 
 void FileBasedTestbenchRecorder::onNewTick(const hlim::ClockRational &simulationTime)
@@ -370,7 +371,7 @@ void FileBasedTestbenchRecorder::advanceTimeTo(const hlim::ClockRational &simula
 	auto timeDiffInPS = (simulationTime - m_writtenSimulationTime) * 1'000'000'000'000ull;
 	std::uint64_t roundedTimeDiffInPS = timeDiffInPS.numerator() / timeDiffInPS.denominator();
 
-	m_testbenchFile << "ADV\n" << roundedTimeDiffInPS << std::endl;
+	m_testvectorFile->stream() << "ADV\n" << roundedTimeDiffInPS << std::endl;
 	m_writtenSimulationTime += Seconds{roundedTimeDiffInPS, 1'000'000'000'000ull};
 }
 
@@ -389,13 +390,13 @@ void FileBasedTestbenchRecorder::flush(const hlim::ClockRational &flushIntervalE
 
 		advanceTimeTo(m_flushIntervalStart + interval * (1 + phaseIdx));
 
-		m_testbenchFile << phase.assertStatements.str();
+		m_testvectorFile->stream() << phase.assertStatements.str();
 		
 		for (const auto &p : phase.signalOverrides) 
-			m_testbenchFile << "SET\n" << p.first << '\n' << p.second << '\n';
+			m_testvectorFile->stream() << "SET\n" << p.first << '\n' << p.second << '\n';
 
 		for (const auto &p : phase.resetOverrides) 
-			m_testbenchFile << "RST\n" << p.first << '\n' << p.second << '\n';
+			m_testvectorFile->stream() << "RST\n" << p.first << '\n' << p.second << '\n';
 
 	}
 
@@ -411,12 +412,12 @@ void FileBasedTestbenchRecorder::onClock(const hlim::Clock *clock, bool risingEd
 
 	auto *rootEntity = m_ast->getRootEntity();
 // todo
-	m_testbenchFile << "CLK\n" << rootEntity->getNamespaceScope().getClock((hlim::Clock *) clock).name << std::endl;
+	m_testvectorFile->stream() << "CLK\n" << rootEntity->getNamespaceScope().getClock((hlim::Clock *) clock).name << std::endl;
 
 	if (risingEdge)
-		m_testbenchFile << "1\n";
+		m_testvectorFile->stream() << "1\n";
 	else
-		m_testbenchFile << "0\n";
+		m_testvectorFile->stream() << "0\n";
 }
 
 void FileBasedTestbenchRecorder::onReset(const hlim::Clock *clock, bool resetAsserted)
