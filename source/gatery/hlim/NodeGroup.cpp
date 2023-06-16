@@ -73,6 +73,18 @@ namespace gtry::hlim
 			m_nodes.front()->moveToGroup(nullptr);
 	}
 
+	const NodeGroup* NodeGroup::getPartition() const
+	{
+		const auto* it = this;
+		while (it != nullptr) {
+			if (it->isPartition())
+				return it;
+			it = it->getParent();
+		}
+		return nullptr;
+	}
+
+
 	NodeGroup* NodeGroup::addChildNodeGroup(GroupType groupType, std::string_view name)
 	{
 		auto& child = *m_children.emplace_back(std::make_unique<NodeGroup>(m_circuit, groupType, name, this));

@@ -95,6 +95,7 @@ namespace gtry::hlim {
 
 		NodeGroup* getParent() { return m_parent; }
 		const NodeGroup* getParent() const { return m_parent; }
+		const NodeGroup* getPartition() const;
 		const std::string& getName() const { return m_name; }
 		const std::string& getInstanceName() const { return m_instanceName; }
 		const std::string& getComment() const { return m_comment; }

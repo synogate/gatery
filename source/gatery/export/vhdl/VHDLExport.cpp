@@ -110,6 +110,12 @@ VHDLExport::~VHDLExport()
 	m_testbenchRecorder.clear(); // Explicitly clear to trigger destructors and flushes before anything important destructs.
 }
 
+VHDLExport &VHDLExport::outputMode(OutputMode outputMode)
+{
+	m_outputMode = outputMode;
+	return *this;
+}
+
 VHDLExport &VHDLExport::targetSynthesisTool(SynthesisTool *synthesisTool)
 {
 	m_synthesisTool.reset(synthesisTool);

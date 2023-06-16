@@ -38,6 +38,7 @@ class Entity : public BasicBlock
 		virtual ~Entity();
 
 		inline const std::string &getName() const { return m_name; }
+		inline hlim::NodeGroup *getNodeGroup() const { return m_nodeGroup; }
 
 		void buildFrom(hlim::NodeGroup *nodeGroup);
 

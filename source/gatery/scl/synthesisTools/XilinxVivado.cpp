@@ -188,24 +188,12 @@ void XilinxVivado::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::str
 	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
 	auto &file = fileHandle->stream();
 
-	std::vector<std::filesystem::path> files;
 
-	if (!vhdlExport.isSingleFileExport()) {
-		for (auto&& package : vhdlExport.getAST()->getPackages())
-			files.emplace_back(vhdlExport.getAST()->getFilename(package->getName()));
-
-		for (auto&& entity : vhdlExport.getAST()->getDependencySortedEntities())
-			files.emplace_back(vhdlExport.getAST()->getFilename(entity->getName()));
-	} else {
-		files.push_back(vhdlExport.getSingleFileFilename());
-	}
-
-	for (auto& f : files)
-	{
+	for (const auto &sourceFile : vhdlExport.getAST()->getSourceFiles()) {
 		file << "read_vhdl -vhdl2008 ";
 		if (!vhdlExport.getName().empty())
 			file << "-library " << vhdlExport.getName() << ' ';
-		file << f.string() << '\n';
+		file << sourceFile.filename.string() << '\n';
 	}
 
 	auto testbenchRelativePath = std::filesystem::relative(vhdlExport.getDestinationPath(), vhdlExport.getTestbenchDestinationPath());

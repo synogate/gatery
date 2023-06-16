@@ -108,21 +108,8 @@ std::vector<std::filesystem::path> SynthesisTool::sourceFiles(vhdl::VHDLExport& 
 	std::vector<std::filesystem::path> files;
 
 	if (synthesis)
-	{
-		if (!vhdlExport.isSingleFileExport()) {
-			for (auto&& package : vhdlExport.getAST()->getPackages())
-				files.emplace_back(vhdlExport.getAST()->getFilename(package->getName()));
-
-			for (const auto& file_content : vhdlExport.getCustomVHDLFiles())
-				files.emplace_back(vhdlExport.getAST()->getFilename(file_content.first));
-
-			for (auto&& entity : vhdlExport.getAST()->getDependencySortedEntities())
-				files.emplace_back(vhdlExport.getAST()->getFilename(entity->getName()));
-		}
-		else {
-			files.push_back(vhdlExport.getSingleFileFilename());
-		}
-	}
+		for (const auto &sourceFile : vhdlExport.getAST()->getSourceFiles())
+			files.push_back(sourceFile.filename);
 
 	if (simulation)
 	{

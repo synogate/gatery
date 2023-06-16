@@ -570,5 +570,42 @@ BOOST_FIXTURE_TEST_CASE(noRewriteWithoutChange, gtry::GHDLTestFixture)
 
 
 
+BOOST_FIXTURE_TEST_CASE(oneFilePerPartition, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Bit in = pinIn().setName("in");
+
+	{
+		Area area1("area1", true);
+		area1.setPartition(true);
+		Area area2("area2", true);
+		in ^= pinIn().setName("in2");
+	}
+
+	{
+		Area area3("area3", true);
+		area3.setPartition(true);
+		in ^= pinIn().setName("in3");
+	}
+
+	pinOut(in).setName("out");
+
+    {
+		vhdl::VHDLExport vhdl("design.vhdl", false);
+		vhdl.outputMode(vhdl::OutputMode::FILE_PER_PARTITION);
+		vhdl.writeProjectFile("projectFile.txt");
+		vhdl.writeStandAloneProjectFile("standAloneProjectFile.txt");		
+		vhdl.writeConstraintsFile("constraints.txt");
+		vhdl.writeClocksFile("clocks.txt");
+		vhdl(design.getCircuit());
+    }
+
+	BOOST_TEST(std::filesystem::exists("area1.vhd"));
+	BOOST_TEST(!std::filesystem::exists("area2.vhd"));
+	BOOST_TEST(std::filesystem::exists("area3.vhd"));
+}
+
+
 
 BOOST_AUTO_TEST_SUITE_END()
