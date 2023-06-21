@@ -74,11 +74,11 @@ namespace gtry::scl
 	template<BaseSignal Payload, Signal... Meta>
 	SimFunction<SimPacket> receivePacket(const scl::Stream<Payload, Meta...>& stream, Clock clk, scl::SimulationSequencer& sequencer);
 
-	template<BaseSignal Payload, Signal... Meta>
-	SimProcess readyDriver(const scl::Stream<Payload, Meta...>& stream, Clock clk, const uint64_t& unreadyMask = 0);
+	template<Signal... Payload>
+	SimProcess readyDriver(const scl::Stream<Payload...>& stream, Clock clk, const uint64_t& unreadyMask = 0);
 
-	template<BaseSignal Payload, Signal... Meta>
-	SimProcess readyDriverRNG(const scl::Stream<Payload, Meta...>& stream, Clock clk, size_t readyProbabilityPercent, unsigned int seed = 1234);
+	template<Signal... Payload>
+	SimProcess readyDriverRNG(const scl::Stream<Payload...>& stream, Clock clk, size_t readyProbabilityPercent, unsigned int seed = 1234);
 
 	template<BaseSignal Payload, Signal... Meta>
 	void simuStreamInvalidate(const scl::Stream<Payload, Meta...>& stream);
@@ -206,8 +206,8 @@ namespace gtry::scl
 		co_await sendPacket(stream, packet, clk);
 	}
 
-	template<BaseSignal Payload, Signal... Meta>
-	SimProcess readyDriver(const scl::Stream<Payload, Meta...>& stream, Clock clk, const uint64_t& unreadyMask){
+	template<Signal... Payload>
+	SimProcess readyDriver(const scl::Stream<Payload...>& stream, Clock clk, const uint64_t& unreadyMask){
 		static_assert(stream.template has<Ready>(), "Attempting to use a ready driver on a stream which does not feature a ready field is probably a mistake.");
 
 		simuReady(stream) = '0';
@@ -225,8 +225,8 @@ namespace gtry::scl
 		}
 	}
 
-	template<BaseSignal Payload, Signal... Meta>
-	SimProcess readyDriverRNG(const scl::Stream<Payload, Meta...>& stream, Clock clk, size_t readyProbabilityPercent, unsigned int seed) {
+	template<Signal... Payload>
+	SimProcess readyDriverRNG(const scl::Stream<Payload...>& stream, Clock clk, size_t readyProbabilityPercent, unsigned int seed) {
 		static_assert(stream.template has<Ready>(), "Attempting to use a ready driver on a stream which does not feature a ready field is probably a mistake.");
 		assert(readyProbabilityPercent <= 100);
 
