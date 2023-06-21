@@ -52,8 +52,8 @@ class VHDLExport
 {
 	public:
 
-		VHDLExport(std::filesystem::path destination, bool rewriteUnchangedFiles = true);
-		VHDLExport(std::filesystem::path destination, std::filesystem::path destinationTestbench, bool rewriteUnchangedFiles = true);
+		VHDLExport(std::filesystem::path destination, bool rewriteUnchangedFiles = false);
+		VHDLExport(std::filesystem::path destination, std::filesystem::path destinationTestbench, bool rewriteUnchangedFiles = false);
 		~VHDLExport();
 
 
