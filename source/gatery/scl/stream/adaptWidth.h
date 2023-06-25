@@ -48,6 +48,9 @@ namespace gtry::scl
 
 	template<BaseSignal Payload, Signal ... Meta, Signal... MetaInsert>
 	auto streamInsert(RvPacketStream<Payload, Meta...>& base, RvStream<Payload, MetaInsert...>& insert, RvStream<UInt>& bitOffset);
+
+	template<scl::StreamSignal TStream>
+	TStream streamDropPacket(TStream&& in, Bit drop);
 }
 
 namespace gtry::scl
@@ -333,6 +336,31 @@ namespace gtry::scl
 		sawEop = flagInstantSet(transfer(baseShifted) & eop(baseShifted), transfer(out) & eop(out));
 
 		ready(bitOffset) = valid(out) & eop(out);
+		return out;
+	}
+
+	template<scl::StreamSignal TStream>
+	TStream streamDropPacket(TStream&& in, Bit drop)
+	{
+		Area area("scl_streamDropPacket", true);
+		HCL_NAMED(in);
+		HCL_NAMED(drop);
+
+		TStream out;
+		out <<= in;
+		Bit dropPacket = scl::flagInstantSet(drop & sop(in) & transfer(in), eop(in) & transfer(in));
+		HCL_NAMED(dropPacket);
+
+		if constexpr (TStream::template has<scl::Valid>())
+			valid(out) &= !dropPacket;
+
+		if constexpr (TStream::template has<scl::Sop>())
+			sop(out) &= !dropPacket;
+
+		if constexpr (TStream::template has<scl::Eop>())
+			eop(out) &= !dropPacket;
+
+		HCL_NAMED(out);
 		return out;
 	}
 }
