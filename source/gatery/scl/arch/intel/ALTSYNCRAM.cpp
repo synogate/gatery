@@ -72,7 +72,8 @@ ALTSYNCRAM::ALTSYNCRAM(size_t size)
 
 	declOutputBitVector(OUT_Q_A, "Q_A", 0, "width_a");
 	declOutputBitVector(OUT_Q_B, "Q_B", 0, "width_b");
-
+	setOutputType(OUT_Q_A, OUTPUT_LATCHED);
+	setOutputType(OUT_Q_B, OUTPUT_LATCHED);
 }
 
 std::string ALTSYNCRAM::RDWBehavior2Str(RDWBehavior rdw)
