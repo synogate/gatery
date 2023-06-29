@@ -111,6 +111,12 @@ void AST::distributeToFiles(OutputMode outputMode, std::filesystem::path singleF
 
 	} else if (outputMode == OutputMode::FILE_PER_PARTITION) {
 
+		for (auto &p : m_packages) {
+			m_sourceFiles.push_back({.filename = getFilename(p->getName())});
+			m_sourceFiles.back().packages.push_back(p.get());
+		}
+
+
 		std::map<const hlim::NodeGroup*, Entity*> entityMapping;
 		for (auto &e : m_entities)
 			entityMapping[e->getNodeGroup()] = e.get();
