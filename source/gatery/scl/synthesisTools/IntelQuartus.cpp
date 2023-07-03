@@ -28,6 +28,7 @@
 #include <gatery/hlim/coreNodes/Node_Pin.h>
 #include <gatery/hlim/coreNodes/Node_Register.h>
 #include <gatery/hlim/coreNodes/Node_Signal.h>
+#include <gatery/hlim/supportNodes/Node_CDC.h>
 
 #include <gatery/hlim/Attributes.h>
 #include <gatery/hlim/GraphTools.h>
@@ -247,7 +248,82 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 	std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
 	file.exceptions(std::fstream::failbit | std::fstream::badbit);
 
-	// todo: write constraints
+	for (auto& node : circuit.getNodes()) {
+		if (auto* cdcNode = dynamic_cast<hlim::Node_CDC*>(node.get()))
+		{
+			vhdlExport.getAST()->isPartOfExport(cdcNode);
+
+			// exclude cdcNodes with virtual clocks
+			if (cdcNode->getClocks()[0]->getName() == "GateryDefaultClock" or cdcNode->getClocks()[1]->getName() == "GateryDefaultClock")
+				continue;
+
+			// find all input registers
+			std::vector<std::string> cdcIn;
+			utils::UnstableSet<hlim::NodePort> alreadyVisited;
+			for (auto nh : cdcNode->exploreInput(0)) {
+				if (alreadyVisited.contains(nh.nodePort())) {
+					nh.backtrack();
+					continue;
+				}
+				alreadyVisited.insert(nh.nodePort());
+
+				if (nh.isNodeType<hlim::Node_Register>()) {
+
+					std::vector<vhdl::BaseGrouping*> regOutputReversePath;
+					if (!vhdlExport.getAST()->findLocalDeclaration(nh.nodePort(), regOutputReversePath))
+						continue;
+					std::string regOutputIdentifier;
+					for (size_t i = regOutputReversePath.size() - 2; i < regOutputReversePath.size(); --i)
+						regOutputIdentifier += regOutputReversePath[i]->getInstanceName() + '|';
+					regOutputIdentifier += regOutputReversePath.front()->getNamespaceScope().get(nh.nodePort()).name;
+					auto type = nh.node()->getOutputConnectionType(0);
+					if (type.isBitVec())
+						regOutputIdentifier += "[*]";
+
+					cdcIn.push_back(regOutputIdentifier);
+					nh.backtrack();
+				}
+
+			}
+			// find all output registers
+			std::vector<std::string> cdcOut;
+			for (auto nh : cdcNode->exploreOutput(0)) {
+				if (alreadyVisited.contains(nh.nodePort())) {
+					nh.backtrack();
+					continue;
+				}
+				alreadyVisited.insert(nh.nodePort());
+
+				if (nh.isNodeType<hlim::Node_Register>()) {
+
+					std::vector<vhdl::BaseGrouping*> regOutputReversePath;
+					if (!vhdlExport.getAST()->findLocalDeclaration(nh.nodePort(), regOutputReversePath))
+						continue;
+					std::string regOutputIdentifier;
+					for (size_t i = regOutputReversePath.size() - 2; i < regOutputReversePath.size(); --i)
+						regOutputIdentifier += regOutputReversePath[i]->getInstanceName() + '|';
+					regOutputIdentifier += regOutputReversePath.front()->getNamespaceScope().get(nh.nodePort()).name;
+					auto type = nh.node()->getOutputConnectionType(0);
+					if (type.isBitVec())
+						regOutputIdentifier += "[*]";
+
+					cdcOut.push_back(regOutputIdentifier);
+					nh.backtrack();
+				}
+
+			}
+			// write constraints to file
+			for(auto itIn : cdcIn)
+				for (auto itOut : cdcOut)
+				{
+					file << "set_max_skew -get_skew_value_from_clock_period min_clock_period -skew_value_multiplier 0.8 -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
+					file << "set_net_delay -max -get_value_from_clock_period dst_clock_period -value_multiplier 0.8 -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
+				}
+
+		}
+	}
+	
+
 }
 
 void IntelQuartus::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename)
