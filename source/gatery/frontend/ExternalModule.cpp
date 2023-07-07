@@ -62,7 +62,7 @@ const Clock& ExternalModule::clockOut(std::string_view name, std::optional<std::
 {
 	auto it = std::ranges::find(m_outClock, name, &Clock::name);
 	if (it != m_outClock.end())
-		return m_outClock[it - m_outClock.end()];
+		return *it;
 
 	std::optional<Bit> resetSignal;
 	if (resetName)
@@ -78,7 +78,7 @@ const Clock& gtry::ExternalModule::clockOut(std::string_view name, BitWidth W, s
 {
 	auto it = std::ranges::find(m_outClock, name, &Clock::name);
 	if (it != m_outClock.end())
-		return m_outClock[it - m_outClock.end()];
+		return *it;
 
 	std::optional<Bit> resetSignal;
 	if (resetName)
@@ -94,7 +94,7 @@ const Clock& ExternalModule::clockOut(const Clock& parentClock, std::string_view
 {
 	auto it = std::ranges::find(m_outClock, name, &Clock::name);
 	if (it != m_outClock.end())
-		return m_outClock[it - m_outClock.end()];
+		return *it;
 
 	std::optional<Bit> resetSignal;
 	if (resetName)
@@ -110,7 +110,7 @@ const Clock& gtry::ExternalModule::clockOut(const Clock& parentClock, std::strin
 {
 	auto it = std::ranges::find(m_outClock, name, &Clock::name);
 	if (it != m_outClock.end())
-		return m_outClock[it - m_outClock.end()];
+		return *it;
 
 	std::optional<Bit> resetSignal;
 	if (resetName)
@@ -212,7 +212,7 @@ BVec ExternalModule::out(std::string_view name, BitWidth W, PinConfig cfg)
 	{
 		idx = it - m_node.outs().begin();
 	}
-	BVec result = W;
+	BVec result = ConstBVec(W);
 	result.exportOverride(SignalReadPort(hlim::NodePort{ .node = &m_node, .port = (size_t)idx }));
 	return result;
 }
@@ -236,7 +236,7 @@ Bit ExternalModule::out(std::string_view name, PinConfig cfg)
 	{
 		idx = it - m_node.outs().begin();
 	}
-	Bit result;
+	Bit result = 'x';
 	result.exportOverride(SignalReadPort(hlim::NodePort{ .node = &m_node, .port = (size_t)idx }));
 	return result;
 }

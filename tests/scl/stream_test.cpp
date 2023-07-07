@@ -1717,3 +1717,67 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_fuzz_test, BoostUnitTestSimulationFixture)
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 10, 1'000'000 }));
 }
+
+BOOST_FIXTURE_TEST_CASE(streamDropPacket_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	std::mt19937_64 rng{ 12524 };
+
+	Bit drop = pinIn().setName("drop");
+	scl::RvPacketStream<BVec> in{ 8_b };
+	pinIn(in, "in");
+
+	scl::RvPacketStream out = scl::streamDropPacket(std::move(in), drop);
+	pinOut(out, "out");
+
+	std::queue<scl::SimPacket> expected;
+	bool expectedComplete = false;
+	
+	addSimulationProcess([&, this]()->SimProcess {
+
+		for (size_t i = 0; i < 32; ++i)
+		{
+			BitWidth packetLen = (rng() % 4 + 1) * in->width();
+			scl::SimPacket packet{
+				gtry::utils::bitfieldExtract(rng(), 0, packetLen.bits()),
+				packetLen
+			};
+
+			if (rng() % 2)
+			{
+				expected.push(packet);
+				simu(drop) = '0';
+			}
+			else
+			{
+				simu(drop) = '1';
+			}
+
+			co_await sendPacket(in, packet, clk);
+		}
+		expectedComplete = true;
+	});
+	
+	addSimulationProcess([&, this]()->SimProcess {
+		fork(scl::readyDriverRNG(out, clk, 70));
+
+		while (!expected.empty() || !expectedComplete)
+		{
+			scl::SimPacket packet = co_await receivePacket(out, clk);
+			BOOST_TEST(!expected.empty());
+			if(!expected.empty())
+			{
+				BOOST_TEST(packet.payload == expected.front().payload);
+				expected.pop();
+			}
+		}
+
+		co_await OnClk(clk);
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 4, 1'000'000 }));
+}
