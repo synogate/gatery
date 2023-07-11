@@ -23,31 +23,31 @@ namespace gtry::scl::strm
 {
 	template<StreamSignal T>
 	requires (std::is_base_of_v<BaseBitVector, typename T::Payload>)
-	auto extendWidth(T& source, BitWidth width, Bit reset = '0');
+	auto extendWidth(T&& source, BitWidth width, Bit reset = '0');
 
 	template<StreamSignal T>
 	requires (std::is_base_of_v<BaseBitVector, typename T::Payload> and T::template has<Ready>())
-	T reduceWidth(T& source, BitWidth width, Bit reset = '0');
+	T reduceWidth(T&& source, BitWidth width, Bit reset = '0');
 
 	template<StreamSignal T> 
 	requires (T::template has<Ready>() and T::template has<Valid>())
-	T eraseBeat(T& source, UInt beatOffset, UInt beatCount);
+	T eraseBeat(T&& source, UInt beatOffset, UInt beatCount);
 
 
 	template<StreamSignal T, SignalValue Tval> 
 	requires (T::template has<Ready>())
-	T insertBeat(T& source, UInt beatOffset, const Tval& value);
+	T insertBeat(T&& source, UInt beatOffset, const Tval& value);
 
 	template<StreamSignal T>
 	requires (T::template has<Ready>() and T::template has<Valid>())
-	T stall(T& source, Bit stallCondition);
+	T stall(T&& source, Bit stallCondition);
 
 	template<StreamSignal T>
 	requires (T::template has<Ready>() and T::template has<Valid>())
-	T stallPacket(T& source, Bit stallCondition);
+	T stallPacket(T&& source, Bit stallCondition);
 
 	template<BaseSignal Payload, Signal ... Meta, Signal... MetaInsert>
-	auto insert(RvPacketStream<Payload, Meta...>& base, RvStream<Payload, MetaInsert...>& insert, RvStream<UInt>& bitOffset);
+	auto insert(RvPacketStream<Payload, Meta...>&& base, RvStream<Payload, MetaInsert...>&& insert, RvStream<UInt>&& bitOffset);
 
 	template<scl::StreamSignal TStream>
 	TStream dropPacket(TStream&& in, Bit drop);
@@ -71,7 +71,7 @@ namespace gtry::scl::strm
 
 	template<StreamSignal T>
 	requires (std::is_base_of_v<BaseBitVector, typename T::Payload>)
-	auto extendWidth(T& source, BitWidth width, Bit reset)
+	auto extendWidth(T&& source, BitWidth width, Bit reset)
 	{
 		HCL_DESIGNCHECK(source->width() <= width);
 		const size_t ratio = width / source->width();
@@ -108,7 +108,7 @@ namespace gtry::scl::strm
 	template<StreamSignal T>
 	requires (std::is_base_of_v<BaseBitVector, typename T::Payload>
 		and T::template has<Ready>())
-	T reduceWidth(T& source, BitWidth width, Bit reset)
+	T reduceWidth(T&& source, BitWidth width, Bit reset)
 	{
 		auto scope = Area{ "strm_reduceWidth" }.enter();
 		T out;
@@ -147,7 +147,7 @@ namespace gtry::scl::strm
 
 	template<StreamSignal T> 
 		requires (T::template has<Ready>() and T::template has<Valid>())
-	T eraseBeat(T& source, UInt beatOffset, UInt beatCount)
+	T eraseBeat(T&& source, UInt beatOffset, UInt beatCount)
 	{
 		auto scope = Area{ "scl_eraseBeat" }.enter();
 
@@ -176,7 +176,7 @@ namespace gtry::scl::strm
 
 	template<StreamSignal T, SignalValue Tval> 
 	requires (T::template has<Ready>())
-	T insertBeat(T& source, UInt beatOffset, const Tval& value)
+	T insertBeat(T&& source, UInt beatOffset, const Tval& value)
 	{
 		auto scope = Area{ "strm_insertBeat" }.enter();
 		T out;
@@ -203,7 +203,7 @@ namespace gtry::scl::strm
 
 	template<StreamSignal T>
 	requires (T::template has<Ready>() and T::template has<Valid>())
-	T stall(T& source, Bit stallCondition)
+	T stall(T&& source, Bit stallCondition)
 	{
 		T out;
 		out <<= source;
@@ -218,13 +218,13 @@ namespace gtry::scl::strm
 
 	template<StreamSignal T>
 	requires (T::template has<Ready>() and T::template has<Valid>())
-	T stallPacket(T& source, Bit stallCondition)
+	T stallPacket(T&& source, Bit stallCondition)
 	{
-		return stall(source, stallCondition & sop(source));
+		return stall(std::move(source), stallCondition & sop(source));
 	}
 
 	template<BaseSignal Payload, Signal ... Meta, Signal... MetaInsert>
-	auto insert(RvPacketStream<Payload, Meta...>& base, RvStream<Payload, MetaInsert...>& insert, RvStream<UInt>& bitOffset)
+	auto insert(RvPacketStream<Payload, Meta...>&& base, RvStream<Payload, MetaInsert...>&& insert, RvStream<UInt>&& bitOffset)
 	{
 		Area ent{ "strm_streamInsert", true };
 		HCL_DESIGNCHECK_HINT(base->width() == insert->width(), "insert width must match base width");

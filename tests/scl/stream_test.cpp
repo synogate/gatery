@@ -728,18 +728,18 @@ BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 	{
 		// add valid no ready compile test
 		scl::Stream<UInt> inT{ 4_b };
-		auto outT = scl::strm::extendWidth(inT, 8_b);
+		auto outT = scl::strm::extendWidth(std::move(inT), 8_b);
 	}
 	{
 		// add valid compile test
 		scl::Stream<UInt, scl::Ready> inT{ 4_b };
-		auto outT = scl::strm::extendWidth(inT, 8_b);
+		auto outT = scl::strm::extendWidth(std::move(inT), 8_b);
 	}
 
 	scl::RvStream<UInt> in{ 4_b };
 	In(in);
 
-	auto out = scl::strm::extendWidth(in, 8_b);
+	auto out = scl::strm::extendWidth(std::move(in), 8_b);
 	Out(out);
 
 	// send data
@@ -780,7 +780,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth, StreamTransferFixture)
 	scl::RvStream<UInt> in{ 24_b };
 	In(in);
 
-	scl::RvStream<UInt> out = scl::strm::reduceWidth(in, 8_b);
+	scl::RvStream<UInt> out = scl::strm::reduceWidth(std::move(in), 8_b);
 	Out(out);
 
 	// send data
@@ -816,7 +816,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth_RvPacketStream, StreamTransferFixture
 	scl::RvPacketStream<UInt> in{ 24_b };
 	In(in);
 
-	auto out = scl::strm::reduceWidth(in, 8_b);
+	auto out = scl::strm::reduceWidth(std::move(in), 8_b);
 	Out(out);
 
 	// send data
@@ -850,7 +850,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
 	scl::RvPacketStream<UInt> in{ 8_b };
 	In(in);
 
-	scl::RvPacketStream<UInt> out = scl::strm::eraseBeat(in, 0, 1);
+	scl::RvPacketStream<UInt> out = scl::strm::eraseBeat(std::move(in), 0, 1);
 	Out(out);
 
 	// send data
@@ -927,7 +927,7 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 	In(in);
 
 	UInt insertData = pinIn(8_b).setName("insertData");
-	scl::RvPacketStream<UInt> out = scl::strm::insertBeat(in, 0, insertData);
+	scl::RvPacketStream<UInt> out = scl::strm::insertBeat(std::move(in), 0, insertData);
 	Out(out);
 
 	// send data
@@ -1058,7 +1058,7 @@ BOOST_FIXTURE_TEST_CASE(stream_stall, StreamTransferFixture)
 	In(in);
 
 	Bit stallCondition = pinIn().setName("stall");
-	scl::RvStream<UInt> out = scl::strm::stall(in, stallCondition);
+	scl::RvStream<UInt> out = scl::strm::stall(std::move(in), stallCondition);
 	Out(out);
 
 	addSimulationProcess([=, this, &out, &in]()->SimProcess {
@@ -1620,7 +1620,7 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_test, BoostUnitTestSimulationFixture)
 	scl::RvStream<UInt> inOffset{ 8_b };
 	scl::RvPacketStream<BVec> inBase{ 16_b };
 	scl::RvPacketStream<BVec> inInsert{ 16_b };
-	scl::RvPacketStream out = scl::strm::insert(inBase, inInsert, inOffset);
+	scl::RvPacketStream out = scl::strm::insert(std::move(inBase), std::move(inInsert), std::move(inOffset));
 
 	pinIn(inOffset, "inOffset");
 	pinIn(inBase, "inBase");
@@ -1663,7 +1663,7 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_fuzz_test, BoostUnitTestSimulationFixture)
 	for (scl::RvPacketStream<BVec, scl::EmptyBits>& in : { std::ref(inBase), std::ref(inInsert) })
 		in.template get<scl::EmptyBits>().emptyBits = BitWidth::count(inBase->width().bits());
 
-	scl::RvPacketStream out = scl::strm::insert(inBase, inInsert, inOffset);
+	scl::RvPacketStream out = scl::strm::insert(std::move(inBase), std::move(inInsert), std::move(inOffset));
 
 	pinIn(inOffset, "inOffset");
 	pinIn(inBase, "inBase");
