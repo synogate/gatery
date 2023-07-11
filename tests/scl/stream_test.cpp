@@ -1620,7 +1620,7 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_test, BoostUnitTestSimulationFixture)
 	scl::RvStream<UInt> inOffset{ 8_b };
 	scl::RvPacketStream<BVec> inBase{ 16_b };
 	scl::RvPacketStream<BVec> inInsert{ 16_b };
-	scl::RvPacketStream out = scl::streamInsert(inBase, inInsert, inOffset);
+	scl::RvPacketStream out = scl::strm::insert(inBase, inInsert, inOffset);
 
 	pinIn(inOffset, "inOffset");
 	pinIn(inBase, "inBase");
@@ -1663,7 +1663,7 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_fuzz_test, BoostUnitTestSimulationFixture)
 	for (scl::RvPacketStream<BVec, scl::EmptyBits>& in : { std::ref(inBase), std::ref(inInsert) })
 		in.template get<scl::EmptyBits>().emptyBits = BitWidth::count(inBase->width().bits());
 
-	scl::RvPacketStream out = scl::streamInsert(inBase, inInsert, inOffset);
+	scl::RvPacketStream out = scl::strm::insert(inBase, inInsert, inOffset);
 
 	pinIn(inOffset, "inOffset");
 	pinIn(inBase, "inBase");
@@ -1729,7 +1729,7 @@ BOOST_FIXTURE_TEST_CASE(streamDropPacket_test, BoostUnitTestSimulationFixture)
 	scl::RvPacketStream<BVec> in{ 8_b };
 	pinIn(in, "in");
 
-	scl::RvPacketStream out = scl::streamDropPacket(std::move(in), drop);
+	scl::RvPacketStream out = scl::strm::dropPacket(std::move(in), drop);
 	pinOut(out, "out");
 
 	std::queue<scl::SimPacket> expected;

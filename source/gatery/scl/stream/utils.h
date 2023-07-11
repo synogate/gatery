@@ -41,6 +41,16 @@ namespace gtry::scl::strm
 	template<StreamSignal T>
 	requires (T::template has<Ready>() and T::template has<Valid>())
 	T stall(T& source, Bit stallCondition);
+
+	template<StreamSignal T>
+	requires (T::template has<Ready>() and T::template has<Valid>())
+	T stallPacket(T& source, Bit stallCondition);
+
+	template<BaseSignal Payload, Signal ... Meta, Signal... MetaInsert>
+	auto insert(RvPacketStream<Payload, Meta...>& base, RvStream<Payload, MetaInsert...>& insert, RvStream<UInt>& bitOffset);
+
+	template<scl::StreamSignal TStream>
+	TStream dropPacket(TStream&& in, Bit drop);
 }
 
 namespace gtry::scl::strm
@@ -205,37 +215,6 @@ namespace gtry::scl::strm
 		}
 		return out;
 	}
-}
-
-
-
-namespace gtry::scl
-{
-
-
-
-
-
-
-	template<StreamSignal T>
-	requires (T::template has<Ready>() and T::template has<Valid>())
-	T stallPacket(T& source, Bit stallCondition);
-
-	template<BaseSignal Payload, Signal ... Meta, Signal... MetaInsert>
-	auto streamInsert(RvPacketStream<Payload, Meta...>& base, RvStream<Payload, MetaInsert...>& insert, RvStream<UInt>& bitOffset);
-
-	template<scl::StreamSignal TStream>
-	TStream streamDropPacket(TStream&& in, Bit drop);
-}
-
-namespace gtry::scl
-{
-
-	
-
-	
-
-
 
 	template<StreamSignal T>
 	requires (T::template has<Ready>() and T::template has<Valid>())
@@ -245,9 +224,9 @@ namespace gtry::scl
 	}
 
 	template<BaseSignal Payload, Signal ... Meta, Signal... MetaInsert>
-	auto streamInsert(RvPacketStream<Payload, Meta...>& base, RvStream<Payload, MetaInsert...>& insert, RvStream<UInt>& bitOffset)
+	auto insert(RvPacketStream<Payload, Meta...>& base, RvStream<Payload, MetaInsert...>& insert, RvStream<UInt>& bitOffset)
 	{
-		Area ent{ "scl_streamInsert", true };
+		Area ent{ "strm_streamInsert", true };
 		HCL_DESIGNCHECK_HINT(base->width() == insert->width(), "insert width must match base width");
 
 		UInt insertBitOffset = bitOffset->lower(BitWidth::count(base->width().bits()));	HCL_NAMED(insertBitOffset);
@@ -361,7 +340,7 @@ namespace gtry::scl
 	}
 
 	template<scl::StreamSignal TStream>
-	TStream streamDropPacket(TStream&& in, Bit drop)
+	TStream dropPacket(TStream&& in, Bit drop)
 	{
 		Area area("scl_streamDropPacket", true);
 		HCL_NAMED(in);
