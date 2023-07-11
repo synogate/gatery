@@ -184,7 +184,7 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 	HCL_NAMED(txPacketStream);
 	auto txPreambledStream = insertBeat(txPacketStream, 0, 0x80u);
 	HCL_NAMED(txPreambledStream);
-	auto txBitVecStream = reduceWidth(txPreambledStream, 1_b);
+	auto txBitVecStream = strm::reduceWidth(txPreambledStream, 1_b);
 	HCL_NAMED(txBitVecStream);
 	auto txBitStream = txBitVecStream.transform([](const UInt& in) { return in.lsb(); });
 	HCL_NAMED(txBitStream);
