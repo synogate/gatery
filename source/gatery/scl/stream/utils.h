@@ -30,8 +30,13 @@ namespace gtry::scl::strm
 	T reduceWidth(T& source, BitWidth width, Bit reset = '0');
 
 	template<StreamSignal T> 
-		requires (T::template has<Ready>() and T::template has<Valid>())
+	requires (T::template has<Ready>() and T::template has<Valid>())
 	T eraseBeat(T& source, UInt beatOffset, UInt beatCount);
+
+
+	template<StreamSignal T, SignalValue Tval> 
+	requires (T::template has<Ready>())
+	T insertBeat(T& source, UInt beatOffset, const Tval& value);
 }
 
 namespace gtry::scl::strm
@@ -154,44 +159,12 @@ namespace gtry::scl::strm
 		HCL_NAMED(out);
 		return out;
 	}
-}
-
-
-
-namespace gtry::scl
-{
-
-
-
-	template<StreamSignal T, SignalValue Tval> 
-	requires (T::template has<Ready>())
-	T insertBeat(T& source, UInt beatOffset, const Tval& value);
-
-	template<StreamSignal T>
-	requires (T::template has<Ready>() and T::template has<Valid>())
-	T stall(T& source, Bit stallCondition);
-
-	template<StreamSignal T>
-	requires (T::template has<Ready>() and T::template has<Valid>())
-	T stallPacket(T& source, Bit stallCondition);
-
-	template<BaseSignal Payload, Signal ... Meta, Signal... MetaInsert>
-	auto streamInsert(RvPacketStream<Payload, Meta...>& base, RvStream<Payload, MetaInsert...>& insert, RvStream<UInt>& bitOffset);
-
-	template<scl::StreamSignal TStream>
-	TStream streamDropPacket(TStream&& in, Bit drop);
-}
-
-namespace gtry::scl
-{
-
-	
 
 	template<StreamSignal T, SignalValue Tval> 
 	requires (T::template has<Ready>())
 	T insertBeat(T& source, UInt beatOffset, const Tval& value)
 	{
-		auto scope = Area{ "scl_insertBeat" }.enter();
+		auto scope = Area{ "strm_insertBeat" }.enter();
 		T out;
 		out <<= source;
 
@@ -213,6 +186,37 @@ namespace gtry::scl
 		HCL_NAMED(out);
 		return out;
 	}
+}
+
+
+
+namespace gtry::scl
+{
+
+
+
+
+	template<StreamSignal T>
+	requires (T::template has<Ready>() and T::template has<Valid>())
+	T stall(T& source, Bit stallCondition);
+
+	template<StreamSignal T>
+	requires (T::template has<Ready>() and T::template has<Valid>())
+	T stallPacket(T& source, Bit stallCondition);
+
+	template<BaseSignal Payload, Signal ... Meta, Signal... MetaInsert>
+	auto streamInsert(RvPacketStream<Payload, Meta...>& base, RvStream<Payload, MetaInsert...>& insert, RvStream<UInt>& bitOffset);
+
+	template<scl::StreamSignal TStream>
+	TStream streamDropPacket(TStream&& in, Bit drop);
+}
+
+namespace gtry::scl
+{
+
+	
+
+	
 
 	template<StreamSignal T>
 	requires (T::template has<Ready>() and T::template has<Valid>())

@@ -780,7 +780,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth, StreamTransferFixture)
 	scl::RvStream<UInt> in{ 24_b };
 	In(in);
 
-	scl::RvStream<UInt> out = scl::reduceWidth(in, 8_b);
+	scl::RvStream<UInt> out = scl::strm::reduceWidth(in, 8_b);
 	Out(out);
 
 	// send data
@@ -816,7 +816,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth_RvPacketStream, StreamTransferFixture
 	scl::RvPacketStream<UInt> in{ 24_b };
 	In(in);
 
-	auto out = scl::reduceWidth(in, 8_b);
+	auto out = scl::strm::reduceWidth(in, 8_b);
 	Out(out);
 
 	// send data
@@ -850,7 +850,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
 	scl::RvPacketStream<UInt> in{ 8_b };
 	In(in);
 
-	scl::RvPacketStream<UInt> out = scl::eraseBeat(in, 0, 1);
+	scl::RvPacketStream<UInt> out = scl::strm::eraseBeat(in, 0, 1);
 	Out(out);
 
 	// send data
@@ -927,7 +927,7 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 	In(in);
 
 	UInt insertData = pinIn(8_b).setName("insertData");
-	scl::RvPacketStream<UInt> out = scl::insertBeat(in, 0, insertData);
+	scl::RvPacketStream<UInt> out = scl::strm::insertBeat(in, 0, insertData);
 	Out(out);
 
 	// send data

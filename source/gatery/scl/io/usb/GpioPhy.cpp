@@ -182,7 +182,7 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 
 	auto txPacketStream = addEopDeferred(txStream, edgeFalling(valid(txStream)));
 	HCL_NAMED(txPacketStream);
-	auto txPreambledStream = insertBeat(txPacketStream, 0, 0x80u);
+	auto txPreambledStream = strm::insertBeat(txPacketStream, 0, 0x80u);
 	HCL_NAMED(txPreambledStream);
 	auto txBitVecStream = strm::reduceWidth(txPreambledStream, 1_b);
 	HCL_NAMED(txBitVecStream);
