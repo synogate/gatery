@@ -20,7 +20,7 @@
 
 #include <gatery/scl/io/codingNRZI.h>
 #include <gatery/scl/io/RecoverDataDifferential.h>
-#include <gatery/scl/stream/adaptWidth.h>
+#include <gatery/scl/stream/utils.h>
 #include <gatery/scl/stream/Packet.h>
 #include <gatery/scl/flag.h>
 #include <gatery/scl/Counter.h>
@@ -262,7 +262,7 @@ void gtry::scl::usb::GpioPhy::generateRx(const VStream<UInt>& in)
 			valid(inBit) = '0';
 	}
 
-	VStream<UInt> lineInWord = extendWidth(inBit, 8_b, !m_status.rxActive);
+	VStream<UInt> lineInWord = strm::extendWidth(inBit, 8_b, !m_status.rxActive);
 
 	Bit rxDataActive = flag(valid(lineInWord), !m_status.rxActive);
 	HCL_NAMED(rxDataActive);

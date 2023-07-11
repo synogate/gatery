@@ -25,7 +25,7 @@
 #include <gatery/simulation/Simulator.h>
 
 #include <gatery/scl/stream/StreamArbiter.h>
-#include <gatery/scl/stream/adaptWidth.h>
+#include <gatery/scl/stream/utils.h>
 #include <gatery/scl/stream/Packet.h>
 #include <gatery/scl/stream/PacketStreamHelpers.h>
 #include <gatery/scl/stream/StreamBroadcaster.h>
@@ -728,18 +728,18 @@ BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 	{
 		// add valid no ready compile test
 		scl::Stream<UInt> inT{ 4_b };
-		auto outT = scl::extendWidth(inT, 8_b);
+		auto outT = scl::strm::extendWidth(inT, 8_b);
 	}
 	{
 		// add valid compile test
 		scl::Stream<UInt, scl::Ready> inT{ 4_b };
-		auto outT = scl::extendWidth(inT, 8_b);
+		auto outT = scl::strm::extendWidth(inT, 8_b);
 	}
 
 	scl::RvStream<UInt> in{ 4_b };
 	In(in);
 
-	auto out = scl::extendWidth(in, 8_b);
+	auto out = scl::strm::extendWidth(in, 8_b);
 	Out(out);
 
 	// send data

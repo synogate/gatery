@@ -17,7 +17,7 @@
 */
 #include "gatery/pch.h"
 #include "SpiMaster.h"
-#include "../stream/adaptWidth.h"
+#include "../stream/utils.h"
 
 gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>& in)
 {
@@ -75,7 +75,7 @@ gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>& i
 		return r; 
 	});
 
-	RvStream<BVec> out = extendWidth(outBitVec, in->width());
+	RvStream<BVec> out = strm::extendWidth(outBitVec, in->width());
 	*out = swapEndian(*out, 1_b);
 	HCL_NAMED(out);
 

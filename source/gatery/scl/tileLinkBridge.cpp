@@ -19,7 +19,7 @@
 #include "tileLinkBridge.h"
 #include <gatery/frontend/Reverse.h>
 #include <gatery/scl/stream/StreamArbiter.h>
-#include <gatery/scl/stream/adaptWidth.h>
+#include <gatery/scl/stream/utils.h>
 
 namespace gtry::scl {
 

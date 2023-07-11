@@ -26,7 +26,7 @@
 #include <gatery/simulation/BitVectorState.h>
 
 #include <gatery/scl/stream/StreamArbiter.h>
-#include <gatery/scl/stream/adaptWidth.h>
+#include <gatery/scl/stream/utils.h>
 #include <gatery/scl/stream/Packet.h>
 #include <gatery/scl/stream/PacketStreamHelpers.h>
 #include <gatery/scl/stream/FieldExtractor.h>

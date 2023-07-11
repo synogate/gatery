@@ -22,7 +22,7 @@
 #include "../ShiftReg.h"
 #include "../io/ddr.h"
 #include "../stream/StreamArbiter.h"
-#include "../stream/adaptWidth.h"
+#include "../stream/utils.h"
 
 using namespace gtry::scl::sdram;
 

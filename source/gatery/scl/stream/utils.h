@@ -19,11 +19,70 @@
 #include "Packet.h"
 #include "../Counter.h"
 
-namespace gtry::scl
+namespace gtry::scl::strm
 {
 	template<StreamSignal T>
-	requires (std::is_base_of_v<BaseBitVector, typename T::Payload>)
+		requires (std::is_base_of_v<BaseBitVector, typename T::Payload>)
 	auto extendWidth(T& source, BitWidth width, Bit reset = '0');
+}
+
+namespace gtry::scl::strm
+{
+	template<BaseSignal T>
+	T makeShiftReg(BitWidth size, const T& in, const Bit& en)
+	{
+		T value = size;
+
+		T newValue = value >> (int)in.width().bits();
+		newValue.upper(in.width()) = in;
+
+		IF(en)
+			value = newValue;
+		value = reg(value);
+		return newValue;
+	}
+
+	template<StreamSignal T>
+		requires (std::is_base_of_v<BaseBitVector, typename T::Payload>)
+	auto extendWidth(T& source, BitWidth width, Bit reset)
+	{
+		HCL_DESIGNCHECK(source->width() <= width);
+		const size_t ratio = width / source->width();
+
+		auto scope = Area{ "strm_extendWidth" }.enter();
+
+		Counter counter{ ratio };
+		IF(transfer(source))
+			counter.inc();
+		IF(reset)
+			counter.reset();
+
+		auto ret = source.add(
+			Valid{ counter.isLast() & valid(source) }
+		);
+		if constexpr (T::template has<Ready>())
+			ready(source) = ready(ret) | !counter.isLast();
+
+		ret->resetNode();
+		*ret = makeShiftReg(width, *source, transfer(source));
+
+		if constexpr (T::template has<ByteEnable>())
+		{
+			auto& be = byteEnable(ret);
+			BitWidth srcBeWidth = be.width();
+			be.resetNode();
+			be = makeShiftReg(srcBeWidth * ratio, byteEnable(source), transfer(source));
+		}
+
+		HCL_NAMED(ret);
+		return ret;
+	}
+}
+
+
+
+namespace gtry::scl
+{
 
 	template<StreamSignal T>
 	requires (std::is_base_of_v<BaseBitVector, typename T::Payload>
@@ -55,55 +114,9 @@ namespace gtry::scl
 
 namespace gtry::scl
 {
-	template<BaseSignal T>
-	T makeShiftReg(BitWidth size, const T& in, const Bit& en)
-	{
-		T value = size;
 
-		T newValue = value >> (int)in.width().bits();
-		newValue.upper(in.width()) = in;
 
-		IF(en)
-			value = newValue;
-		value = reg(value);
-		return newValue;
-	}
-
-	template<StreamSignal T>
-	requires (std::is_base_of_v<BaseBitVector, typename T::Payload>)
-	auto extendWidth(T& source, BitWidth width, Bit reset)
-	{
-		HCL_DESIGNCHECK(source->width() <= width);
-		const size_t ratio = width / source->width();
-
-		auto scope = Area{ "scl_extendWidth" }.enter();
-
-		Counter counter{ ratio };
-		IF(transfer(source))
-			counter.inc();
-		IF(reset)
-			counter.reset();
-
-		auto ret = source.add(
-			Valid{ counter.isLast() & valid(source) }
-		);
-		if constexpr (T::template has<Ready>())
-			ready(source) = ready(ret) | !counter.isLast();
-
-		ret->resetNode();
-		*ret = makeShiftReg(width, *source, transfer(source));
-
-		if constexpr (T::template has<ByteEnable>())
-		{
-			auto& be = byteEnable(ret);
-			BitWidth srcBeWidth = be.width();
-			be.resetNode();
-			be = makeShiftReg(srcBeWidth * ratio, byteEnable(source), transfer(source));
-		}
-
-		HCL_NAMED(ret);
-		return ret;
-	}
+	
 
 	template<StreamSignal T>
 	requires (std::is_base_of_v<BaseBitVector, typename T::Payload>
