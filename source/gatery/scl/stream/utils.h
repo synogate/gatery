@@ -37,6 +37,10 @@ namespace gtry::scl::strm
 	template<StreamSignal T, SignalValue Tval> 
 	requires (T::template has<Ready>())
 	T insertBeat(T& source, UInt beatOffset, const Tval& value);
+
+	template<StreamSignal T>
+	requires (T::template has<Ready>() and T::template has<Valid>())
+	T stall(T& source, Bit stallCondition);
 }
 
 namespace gtry::scl::strm
@@ -186,6 +190,21 @@ namespace gtry::scl::strm
 		HCL_NAMED(out);
 		return out;
 	}
+
+	template<StreamSignal T>
+	requires (T::template has<Ready>() and T::template has<Valid>())
+	T stall(T& source, Bit stallCondition)
+	{
+		T out;
+		out <<= source;
+
+		IF(stallCondition)
+		{
+			valid(out) = '0';
+			ready(source) = '0';
+		}
+		return out;
+	}
 }
 
 
@@ -196,9 +215,7 @@ namespace gtry::scl
 
 
 
-	template<StreamSignal T>
-	requires (T::template has<Ready>() and T::template has<Valid>())
-	T stall(T& source, Bit stallCondition);
+
 
 	template<StreamSignal T>
 	requires (T::template has<Ready>() and T::template has<Valid>())
@@ -218,20 +235,7 @@ namespace gtry::scl
 
 	
 
-	template<StreamSignal T>
-	requires (T::template has<Ready>() and T::template has<Valid>())
-	T stall(T& source, Bit stallCondition)
-	{
-		T out;
-		out <<= source;
 
-		IF(stallCondition)
-		{
-			valid(out) = '0';
-			ready(source) = '0';
-		}
-		return out;
-	}
 
 	template<StreamSignal T>
 	requires (T::template has<Ready>() and T::template has<Valid>())

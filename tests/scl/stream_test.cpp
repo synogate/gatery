@@ -1058,7 +1058,7 @@ BOOST_FIXTURE_TEST_CASE(stream_stall, StreamTransferFixture)
 	In(in);
 
 	Bit stallCondition = pinIn().setName("stall");
-	scl::RvStream<UInt> out = stall(in, stallCondition);
+	scl::RvStream<UInt> out = scl::strm::stall(in, stallCondition);
 	Out(out);
 
 	addSimulationProcess([=, this, &out, &in]()->SimProcess {
