@@ -21,34 +21,88 @@
 
 namespace gtry::scl::strm
 {
+
+
+	/**
+	 * @brief extends the width of a simple payload stream. A 4-bit stream sent every beat extended to 8-bits means that the same data is send over an 8-bit bus once every 2 beats.
+	 * @param source source stream
+	 * @param width desired extended stream width
+	 * @param reset line
+	 * @return same typed stream as source input
+	*/
 	template<StreamSignal T>
 	requires (std::is_base_of_v<BaseBitVector, typename T::Payload>)
-	auto extendWidth(T&& source, BitWidth width, Bit reset = '0');
-
+	auto extendWidth(T&& source, const BitWidth& width, Bit reset = '0');
+	
+	/**
+	 * @brief reduces the width of a simple payload stream. An 8-bit stream reduced to 4 bits will be sent in double the amount of time.
+	 * @param source source stream
+	 * @param width desired reduced stream width
+	 * @param reset line
+	 * @return same typed stream as source input
+	*/
 	template<StreamSignal T>
 	requires (std::is_base_of_v<BaseBitVector, typename T::Payload> and T::template has<Ready>())
 	T reduceWidth(T&& source, BitWidth width, Bit reset = '0');
 
+	/**
+	 * @brief erases beat(s) from a multi-beat packet stream
+	 * @param source source stream
+	 * @param beatOffset when to start erasing beat(s)
+	 * @param beatCount number of beats to erase
+	 * @return same typed stream as source input
+	*/
 	template<StreamSignal T> 
 	requires (T::template has<Ready>() and T::template has<Valid>())
 	T eraseBeat(T&& source, UInt beatOffset, UInt beatCount);
 
-
+	/**
+	 * @brief inserts data into a multi-beat packet stream
+	 * @param source source stream
+	 * @param beatOffset which beat offset to start inserting data in
+	 * @param value data to insert into stream
+	 * @return same typed stream as source input
+	*/
 	template<StreamSignal T, SignalValue Tval> 
 	requires (T::template has<Ready>())
 	T insertBeat(T&& source, UInt beatOffset, const Tval& value);
 
+	/**
+	 * @brief stalls a stream using a stall condition. This function ensures a stream is backpressured without losing any data
+	 * @param source source stream
+	 * @param stallCondition when to stall (high -> stall)
+	 * @return same typed stream as source input
+	*/
 	template<StreamSignal T>
 	requires (T::template has<Ready>() and T::template has<Valid>())
 	T stall(T&& source, Bit stallCondition);
 
+	/**
+	 * @brief stalls a packet stream using a stall condition. This function ensures a stream is backpressured without losing any data. It will not interrupt an ongoing packet
+	 * @param source source stream
+	 * @param stallCondition when to stall (high -> stall)
+	 * @return same typed stream as source input
+	*/
 	template<StreamSignal T>
 	requires (T::template has<Ready>() and T::template has<Valid>())
 	T stallPacket(T&& source, Bit stallCondition);
 
+	/**
+	 * @brief inserts a stream into a packet stream with bit offset precision.
+	 * @param base stream into which data can be inserted
+	 * @param insert data stream to insert into main packet stream
+	 * @param bitOffset offset with which to start inserting data
+	 * @return same typed stream as base input
+	*/
 	template<BaseSignal Payload, Signal ... Meta, Signal... MetaInsert>
 	auto insert(RvPacketStream<Payload, Meta...>&& base, RvStream<Payload, MetaInsert...>&& insert, RvStream<UInt>&& bitOffset);
 
+	/**
+	 * @brief drops packets from a packet stream
+	 * @param in input packet stream
+	 * @param drop condition with which to drop packets. Must be asserted in the same cycle as the start of packet is transferred.
+	 * @return same typed stream as in input
+	*/
 	template<scl::StreamSignal TStream>
 	TStream dropPacket(TStream&& in, Bit drop);
 }
@@ -71,12 +125,12 @@ namespace gtry::scl::strm
 
 	template<StreamSignal T>
 	requires (std::is_base_of_v<BaseBitVector, typename T::Payload>)
-	auto extendWidth(T&& source, BitWidth width, Bit reset)
+	auto extendWidth(T&& source, const BitWidth& width, Bit reset)
 	{
 		HCL_DESIGNCHECK(source->width() <= width);
 		const size_t ratio = width / source->width();
 
-		auto scope = Area{ "strm_extendWidth" }.enter();
+		auto scope = Area{ "scl_extendWidth" }.enter();
 
 		Counter counter{ ratio };
 		IF(transfer(source))
@@ -110,7 +164,7 @@ namespace gtry::scl::strm
 		and T::template has<Ready>())
 	T reduceWidth(T&& source, BitWidth width, Bit reset)
 	{
-		auto scope = Area{ "strm_reduceWidth" }.enter();
+		auto scope = Area{ "scl_reduceWidth" }.enter();
 		T out;
 
 		HCL_DESIGNCHECK(source->width() >= width);
@@ -146,7 +200,7 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal T> 
-		requires (T::template has<Ready>() and T::template has<Valid>())
+	requires (T::template has<Ready>() and T::template has<Valid>())
 	T eraseBeat(T&& source, UInt beatOffset, UInt beatCount)
 	{
 		auto scope = Area{ "scl_eraseBeat" }.enter();
@@ -178,7 +232,7 @@ namespace gtry::scl::strm
 	requires (T::template has<Ready>())
 	T insertBeat(T&& source, UInt beatOffset, const Tval& value)
 	{
-		auto scope = Area{ "strm_insertBeat" }.enter();
+		auto scope = Area{ "scl_insertBeat" }.enter();
 		T out;
 		out <<= source;
 
@@ -207,7 +261,7 @@ namespace gtry::scl::strm
 	{
 		T out;
 		out <<= source;
-
+	
 		IF(stallCondition)
 		{
 			valid(out) = '0';
@@ -220,13 +274,13 @@ namespace gtry::scl::strm
 	requires (T::template has<Ready>() and T::template has<Valid>())
 	T stallPacket(T&& source, Bit stallCondition)
 	{
-		return stall(std::move(source), stallCondition & sop(source));
+		return stall(move(source), stallCondition & sop(source));
 	}
 
 	template<BaseSignal Payload, Signal ... Meta, Signal... MetaInsert>
 	auto insert(RvPacketStream<Payload, Meta...>&& base, RvStream<Payload, MetaInsert...>&& insert, RvStream<UInt>&& bitOffset)
 	{
-		Area ent{ "strm_streamInsert", true };
+		Area ent{ "scl_streamInsert", true };
 		HCL_DESIGNCHECK_HINT(base->width() == insert->width(), "insert width must match base width");
 
 		UInt insertBitOffset = bitOffset->lower(BitWidth::count(base->width().bits()));	HCL_NAMED(insertBitOffset);

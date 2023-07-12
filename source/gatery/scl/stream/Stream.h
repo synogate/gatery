@@ -23,6 +23,8 @@
 
 namespace gtry::scl
 {
+	using std::move;
+
 	template<Signal PayloadT, Signal... Meta>
 	struct Stream;
 

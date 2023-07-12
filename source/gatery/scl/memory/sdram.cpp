@@ -143,7 +143,7 @@ std::tuple<Controller::CommandStream, Controller::DataOutStream> Controller::ban
 		valid(timedCmd) = '0';
 	}
 	HCL_NAMED(delayDataStream);
-	DataOutStream dataStalled = strm::stall(std::move(data), delayDataStream);
+	DataOutStream dataStalled = strm::stall(move(data), delayDataStream);
 
 	setName(timedCmd, "outCmd");
 	setName(dataStalled, "outData");
@@ -282,7 +282,7 @@ Controller::CommandStream Controller::enforceTiming(CommandStream& cmd, UInt ban
 {
 	Bit cmdTimingValid = m_timer->can(cmd->code, bank);
 	HCL_NAMED(cmdTimingValid);
-	return scl::strm::stall(std::move(cmd), !cmdTimingValid);
+	return scl::strm::stall(move(cmd), !cmdTimingValid);
 }
 
 void Controller::makeBusPins(const CommandBus& in, std::string prefix)
