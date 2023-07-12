@@ -155,21 +155,23 @@ namespace gtry::scl
 
 		/**
 		 * @brief Create a FIFO for buffering.
+		 * @param fallThrough allow data to flow past the fifo in the same cycle when it's empty.
 		 * @param minDepth The FIFO can hold at least that many data beats. 
 							The actual amount depends on the available target architecture. 
 		 * @return connected stream
 		*/
-		Stream fifo(bool cutThrough = false, size_t minDepth = 16);
+		Stream fifo(bool fallThrough = false, size_t minDepth = 16);
 
 		/**
 		 * @brief Attach the stream as source and a new stream as sink to the FIFO.
 		 *			This is useful to make further settings or access advanced FIFO signals.
 		 *			For clock domain crossing you should use gtry::connect.
 		 * @param instance The FIFO to use.
+		 * @param fallThrough allow data to flow past the fifo in the same cycle when it's empty.
 		 * @return connected stream
 		*/
 		template<Signal T>
-		Stream fifo(Fifo<T>& instance, bool cutThrough = false);
+		Stream fifo(Fifo<T>& instance, bool fallThrough = false);
 	};
 
 	/**
@@ -758,10 +760,10 @@ namespace gtry::scl
 	}
 
 	template<Signal PayloadT, Signal... Meta>
-	inline Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::fifo(bool cutThrough, size_t minDepth)
+	inline Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::fifo(bool fallThrough, size_t minDepth)
 	{
 		Fifo inst{ minDepth, copy(downstream(*this)) };
-		Stream ret = fifo(inst, cutThrough);
+		Stream ret = fifo(inst, fallThrough);
 		inst.generate();
 
 		return ret;
@@ -769,12 +771,12 @@ namespace gtry::scl
 
 	template<Signal PayloadT, Signal... Meta>
 	template<Signal T>
-	inline Stream<PayloadT, Meta...> gtry::scl::Stream<PayloadT, Meta...>::fifo(Fifo<T>& instance, bool cutThrough)
+	inline Stream<PayloadT, Meta...> gtry::scl::Stream<PayloadT, Meta...>::fifo(Fifo<T>& instance, bool fallThrough)
 	{
 		Self ret;
 		connect(ret, instance);
 
-		if (cutThrough)
+		if (fallThrough)
 		{
 			IF(!valid(ret))
 			{
