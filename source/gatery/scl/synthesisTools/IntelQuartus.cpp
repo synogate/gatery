@@ -254,7 +254,7 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 			vhdlExport.getAST()->isPartOfExport(cdcNode);
 
 			// exclude cdcNodes with virtual clocks
-			if (cdcNode->getClocks()[0]->getName() == "GateryDefaultClock" or cdcNode->getClocks()[1]->getName() == "GateryDefaultClock")
+			if (cdcNode->getClocks()[0]->getName() == "PinSplitDummyClock" or cdcNode->getClocks()[1]->getName() == "PinSplitDummyClock")
 				continue;
 
 			// find all input registers
@@ -316,8 +316,10 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 			for(auto itIn : cdcIn)
 				for (auto itOut : cdcOut)
 				{
-					file << "set_max_skew -get_skew_value_from_clock_period min_clock_period -skew_value_multiplier 0.8 -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
-					file << "set_net_delay -max -get_value_from_clock_period dst_clock_period -value_multiplier 0.8 -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
+					//file << "set_max_skew -get_skew_value_from_clock_period min_clock_period -skew_value_multiplier 0.8 -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
+					//file << "set_net_delay -max -get_value_from_clock_period dst_clock_period -value_multiplier 0.8 -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
+					file << "set_false_path -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
+
 				}
 
 		}
