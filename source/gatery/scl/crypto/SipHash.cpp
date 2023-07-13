@@ -30,8 +30,7 @@ namespace gtry::scl
 
 	void SipHash::initialize(SipHashState& state, const UInt& key)
 	{
-		GroupScope entity(GroupScope::GroupType::ENTITY);
-		entity.setName("SipHashInit");
+		GroupScope entity(GroupScope::GroupType::ENTITY, "SipHashInit");
 
 		state[0] = "x736f6d6570736575";
 		state[1] = "x646f72616e646f6d";
@@ -56,8 +55,7 @@ namespace gtry::scl
 
 	void SipHash::block(SipHashState& state, const UInt& block)
 	{
-		GroupScope entity(GroupScope::GroupType::ENTITY);
-		entity.setName("SipHashBlock");
+		GroupScope entity(GroupScope::GroupType::ENTITY, "SipHashBlock");
 
 		HCL_DESIGNCHECK_HINT(block.size() % 64 == 0, "SipHash blocks need to be a multiple of 64 bit");
 
@@ -83,8 +81,7 @@ namespace gtry::scl
 
 	UInt SipHash::finalize(SipHashState& state)
 	{
-		GroupScope entity(GroupScope::GroupType::ENTITY);
-		entity.setName("SipHashFinalize");
+		GroupScope entity(GroupScope::GroupType::ENTITY, "SipHashFinalize");
 
 		state[2] ^= (m_hashWidth == 64 ? 0xFF : 0xEE);
 
@@ -140,8 +137,7 @@ namespace gtry::scl
 
 	UInt SipHash::pad(const UInt& block, size_t msgByteSize)
 	{
-		GroupScope entity(GroupScope::GroupType::ENTITY);
-		entity.setName("SipHashPad");
+		GroupScope entity(GroupScope::GroupType::ENTITY, "SipHashPad");
 
 		UInt paddedLength = ConstUInt(msgByteSize, 8_b);
 		HCL_NAMED(paddedLength);
@@ -154,8 +150,8 @@ namespace gtry::scl
 
 	std::tuple<UInt, size_t> sipHash(const UInt& block, const UInt& key, bool placeregister)
 	{
-		GroupScope entity(GroupScope::GroupType::ENTITY);
-		entity.setName("SipHash");
+		GroupScope entity(GroupScope::GroupType::ENTITY, "SipHash");
+
 
 		//HCL_DESIGNCHECK_HINT(block.size() <= 56 && block.size() % 8 == 0, "no impl");
 		HCL_DESIGNCHECK_HINT(block.size() % 8 == 0, "no impl");

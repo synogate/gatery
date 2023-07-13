@@ -30,6 +30,8 @@
 #include <gatery/export/vhdl/Entity.h>
 #include <gatery/export/vhdl/Package.h>
 
+#include <gatery/utils/FileSystem.h>
+
 #include <fstream>
 
 namespace gtry {
@@ -115,17 +117,16 @@ void XilinxVivado::resolveAttributes(const hlim::MemoryAttributes &attribs, hlim
 
 void XilinxVivado::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
 {
-	std::string fullPath = (vhdlExport.getDestination() / filename).string();
-	std::fstream file(fullPath.c_str(), std::fstream::out);
-	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
+	auto &file = fileHandle->stream();
 
 	writeClockXDC(*vhdlExport.getAST(), file);
 }
 
 void XilinxVivado::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
 {
-	std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
-	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
+	auto &file = fileHandle->stream();
 
 	forEachPathAttribute(vhdlExport, circuit, [&](hlim::Node_PathAttributes* pa, std::string start, std::string end) {
 		const auto &startConType = hlim::getOutputConnectionType(pa->getDriver(0));
@@ -184,37 +185,25 @@ set cell_end_input_pin [get_pin -of_object $cell_end -filter {DIRECTION == IN &&
 
 void XilinxVivado::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename)
 {
-	std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
-	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
+	auto &file = fileHandle->stream();
 
-	std::vector<std::filesystem::path> files;
 
-	if (!vhdlExport.isSingleFileExport()) {
-		for (auto&& package : vhdlExport.getAST()->getPackages())
-			files.emplace_back(vhdlExport.getAST()->getFilename("", package->getName()));
-
-		for (auto&& entity : vhdlExport.getAST()->getDependencySortedEntities())
-			files.emplace_back(vhdlExport.getAST()->getFilename("", entity->getName()));
-	} else {
-		files.push_back(vhdlExport.getSingleFileFilename());
-	}
-
-	for (auto& f : files)
-	{
+	for (const auto &sourceFile : vhdlExport.getAST()->getSourceFiles()) {
 		file << "read_vhdl -vhdl2008 ";
 		if (!vhdlExport.getName().empty())
 			file << "-library " << vhdlExport.getName() << ' ';
-		file << f.string() << '\n';
+		file << sourceFile.filename.string() << '\n';
 	}
 
-	auto testbenchRelativePath = std::filesystem::relative(vhdlExport.getTestbenchDestination(), vhdlExport.getDestination());
+	auto testbenchRelativePath = std::filesystem::relative(vhdlExport.getDestinationPath(), vhdlExport.getTestbenchDestinationPath());
 
 	for (const auto &e : vhdlExport.getTestbenchRecorder()) {
 		for (const auto &name : e->getDependencySortedEntities()) {
 			file << "read_vhdl -vhdl2008 ";
 			if (!vhdlExport.getName().empty())
 				file << "-library " << vhdlExport.getName() << ' ';
-			file << (testbenchRelativePath / vhdlExport.getAST()->getFilename("", name)).string() << std::endl;
+			file << (testbenchRelativePath / vhdlExport.getAST()->getFilename(name)).string() << std::endl;
 		}
 
 		for (const auto &name : e->getAuxiliaryDataFiles()) {

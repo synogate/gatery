@@ -213,6 +213,7 @@ std::string Node_Arithmetic::attemptInferOutputName(size_t outputPort) const
 
 	auto driver0 = getDriver(0);
 	if (driver0.node == nullptr) return "";
+	if (inputIsComingThroughParentNodeGroup(0)) return "";
 	if (driver0.node->getName().empty()) return "";
 
 	name << driver0.node->getName();
@@ -228,6 +229,7 @@ std::string Node_Arithmetic::attemptInferOutputName(size_t outputPort) const
 
 	auto driver1 = getDriver(1);
 	if (driver1.node == nullptr) return "";
+	if (inputIsComingThroughParentNodeGroup(1)) return "";
 	if (driver1.node->getName().empty()) return "";
 
 	name << driver1.node->getName();

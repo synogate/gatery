@@ -23,22 +23,15 @@
 namespace gtry 
 {
 
-	GroupScope::GroupScope(hlim::NodeGroup::GroupType groupType) : BaseScope<GroupScope>()
+	GroupScope::GroupScope(hlim::NodeGroup::GroupType groupType, std::string_view name) : BaseScope<GroupScope>()
 	{
-		m_nodeGroup = m_parentScope->m_nodeGroup->addChildNodeGroup(groupType);
+		m_nodeGroup = m_parentScope->m_nodeGroup->addChildNodeGroup(groupType, name);
 		m_nodeGroup->recordStackTrace();
 	}
 
 	GroupScope::GroupScope(hlim::NodeGroup* nodeGroup) : BaseScope<GroupScope>()
 	{
 		m_nodeGroup = nodeGroup;
-	}
-
-
-	GroupScope& GroupScope::setName(std::string name)
-	{
-		m_nodeGroup->setName(std::move(name));
-		return *this;
 	}
 
 	GroupScope& GroupScope::setComment(std::string comment)

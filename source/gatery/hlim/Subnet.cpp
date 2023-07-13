@@ -507,7 +507,9 @@ FinalType gtry::hlim::SubnetTemplate<makeConst, FinalType>::filterLoopNodesOnly(
 			utils::UnstableSet<NodeType*> seen;
 			for (auto&& nh : ((BaseNode*)node)->exploreOutput(i))
 			{
-				if (nh.template isNodeType<Node_Register>())
+				if (auto drivingOutput = nh.node()->getDriver(nh.port()); drivingOutput.node->getOutputType(drivingOutput.port) != hlim::NodeIO::OUTPUT_IMMEDIATE)
+					nh.backtrack();
+				else if (nh.template isNodeType<Node_Register>())
 					nh.backtrack();
 				else if (nh.template isNodeType<Node_Memory>())
 					nh.backtrack();

@@ -31,6 +31,10 @@ namespace gtry {
 	class SynthesisTool;
 }
 
+namespace gtry::utils {
+	class FileSystem;
+}
+
 namespace gtry::hlim {
 	class Circuit;
 	class BaseNode;
@@ -54,6 +58,21 @@ class Hlim2AstMapping
 		BaseGrouping *getScope(hlim::BaseNode *node) const;
 	protected:
 		utils::UnstableMap<hlim::BaseNode*, BaseGrouping*> m_node2Block;
+};
+
+enum class OutputMode {
+	AUTO,
+	SINGLE_FILE,
+	FILE_PER_PARTITION,
+	FILE_PER_ENTITY
+};
+
+
+struct SourceFile {
+	std::filesystem::path filename;
+	std::vector<Entity*> entities;
+	std::vector<Package*> packages;
+	std::vector<std::string> customVhdlFiles;
 };
 
 
@@ -80,12 +99,15 @@ class AST
 		inline NamespaceScope &getNamespaceScope() { return m_namespaceScope; }
 		inline Hlim2AstMapping &getMapping() { return m_mapping; }
 
-		void writeVHDL(std::filesystem::path destination, const std::map<std::string, std::string> &customVhdlFiles);
+		void distributeToFiles(OutputMode outputMode, std::filesystem::path singleFileName, const std::map<std::string, std::string> &customVhdlFiles);
 
-		std::filesystem::path getFilename(std::filesystem::path basePath, const std::string &name);
+		void writeVHDL(utils::FileSystem &fileSystem, OutputMode outputMode, std::filesystem::path singleFileName, const std::map<std::string, std::string> &customVhdlFiles);
+
+		std::filesystem::path getFilename(const std::string &name);
 
 		inline const std::vector<std::unique_ptr<Entity>> &getEntities() { return m_entities; }
 		inline const std::vector<std::unique_ptr<Package>> &getPackages() { return m_packages; }
+		inline const std::vector<SourceFile> &getSourceFiles() { return m_sourceFiles; }
 
 		inline Entity *getRootEntity() { return m_entities.front().get(); }
 		inline const Entity *getRootEntity() const { return m_entities.front().get(); }
@@ -102,6 +124,7 @@ class AST
 		NamespaceScope m_namespaceScope;
 		std::vector<std::unique_ptr<Entity>> m_entities;
 		std::vector<std::unique_ptr<Package>> m_packages;
+		std::vector<SourceFile> m_sourceFiles;
 		Hlim2AstMapping m_mapping;
 
 		hlim::ConstSubnet m_exportArea;

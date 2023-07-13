@@ -72,6 +72,9 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
 				auto type = hlim::getOutputConnectionType(nodePort);
 				HCL_ASSERT(type.width == it->second.size());
 				auto *c_node = simCircuit.createNode<hlim::Node_Constant>(it->second, type.type);
+				c_node->recordStackTrace();
+				c_node->moveToGroup(simCircuit.getRootNodeGroup());
+
 				outputsTranslated[nodePort] = {.node = c_node, .port = 0ull};
 
 				for (auto c : nodePort.node->getDirectlyDriven(nodePort.port))
@@ -98,6 +101,8 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
 				undefinedState.clearRange(DefaultConfig::DEFINED, 0, type.width);
 
 				auto *c_node = simCircuit.createNode<hlim::Node_Constant>(std::move(undefinedState), type.type);
+				c_node->recordStackTrace();
+				c_node->moveToGroup(simCircuit.getRootNodeGroup());
 				outputsTranslated[nodePort] = {.node = c_node, .port = 0ull};
 			}
 
@@ -116,6 +121,8 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
 			undefinedState.clearRange(DefaultConfig::DEFINED, 0, type.width);
 
 			auto *c_node = simCircuit.createNode<hlim::Node_Constant>(std::move(undefinedState), type.type);
+			c_node->recordStackTrace();
+			c_node->moveToGroup(simCircuit.getRootNodeGroup());
 			outputsTranslated[nodePort] = {.node = c_node, .port = 0ull};
 
 			for (auto c : nodePort.node->getDirectlyDriven(nodePort.port))
@@ -181,6 +188,8 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
 
 	// Force output's existence throughout optimization
 	auto *pin = simCircuit.createNode<hlim::Node_Pin>(false, true, false);
+	pin->recordStackTrace();
+	pin->moveToGroup(simCircuit.getRootNodeGroup());
 	pin->connect(newOutput);
 
 	//visualize(simCircuit, "/tmp/circuit_04");

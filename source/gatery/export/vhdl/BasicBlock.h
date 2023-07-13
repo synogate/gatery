@@ -27,6 +27,10 @@ namespace gtry::hlim {
 	class Node_MultiDriver;
 }
 
+namespace gtry::utils {
+	class FileSystem;
+}
+
 namespace gtry::vhdl {
 
 class Entity;
@@ -96,7 +100,7 @@ class BasicBlock : public BaseGrouping
 		inline const std::vector<ExternalNodeInstance> getExternalNodes() const { return m_externalNodes; }
 		void addNeededLibraries(std::map<std::string, std::set<std::string>> &libs) const;
 
-		virtual void writeSupportFiles(const std::filesystem::path &destination) const;
+		virtual void writeSupportFiles(utils::FileSystem &fileSystem) const;
 	protected:
 		void collectInstantiations(hlim::NodeGroup *nodeGroup, bool reccursive);
 		void processifyNodes(const std::string &desiredProcessName, hlim::NodeGroup *nodeGroup, bool reccursive);

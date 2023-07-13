@@ -100,23 +100,29 @@ std::tuple<bool,bool,bool> BaseGrouping::isConsumedInternallyHigherLower(hlim::N
 	return {internally, higher, lower};
 }
 
-std::string BaseGrouping::findNearestDesiredName(hlim::NodePort nodePort)
+std::string BaseGrouping::findNearestDesiredName(hlim::NodePort nodePort, hlim::NodeGroup *subtreeToRestrictTo)
 {
 	HCL_ASSERT(nodePort.node != nullptr);
 
-	if (nodePort.node->hasGivenName())
-		return nodePort.node->getName();
+	if (subtreeToRestrictTo == nullptr || nodePort.node->getGroup() == subtreeToRestrictTo || nodePort.node->getGroup()->isChildOf(subtreeToRestrictTo)) {
+		if (nodePort.node->hasGivenName())
+			return nodePort.node->getName();
 
-	if (dynamic_cast<hlim::Node_Signal*>(nodePort.node) != nullptr && !nodePort.node->getName().empty())
-		return nodePort.node->getName();
+		if (dynamic_cast<hlim::Node_Signal*>(nodePort.node) != nullptr && !nodePort.node->getName().empty())
+			return nodePort.node->getName();
+	}
 
-	for (auto driven : nodePort.node->getDirectlyDriven(nodePort.port))
-		if (dynamic_cast<hlim::Node_Signal*>(driven.node) != nullptr && !driven.node->getName().empty())
-			return driven.node->getName();
+	for (auto driven : nodePort.node->getDirectlyDriven(nodePort.port)) {
+		if (subtreeToRestrictTo == nullptr || driven.node->getGroup() == subtreeToRestrictTo || driven.node->getGroup()->isChildOf(subtreeToRestrictTo))
+			if (dynamic_cast<hlim::Node_Signal*>(driven.node) != nullptr && !driven.node->getName().empty())
+				return driven.node->getName();
+	}
 	
-	auto name = nodePort.node->attemptInferOutputName(nodePort.port);
-	if (!name.empty()) 
-		return name;
+	if (subtreeToRestrictTo == nullptr || nodePort.node->getGroup() == subtreeToRestrictTo || nodePort.node->getGroup()->isChildOf(subtreeToRestrictTo)) {
+		auto name = nodePort.node->attemptInferOutputName(nodePort.port);
+		if (!name.empty()) 
+			return name;
+	}
 		
 	return "unnamed";
 }

@@ -1244,7 +1244,7 @@ BOOST_FIXTURE_TEST_CASE(long_latency_mem_read_modify_write, BoostUnitTestSimulat
 		IF (delayedWrEn)
 			mem[delayedAddr] = modifiedElem;
 
-		hlim::ReadModifyWriteHazardLogicBuilder rmwBuilder(DesignScope::get()->getCircuit(), clock.getClk());
+		hlim::ReadModifyWriteHazardLogicBuilder rmwBuilder(DesignScope::get()->getCircuit(), clock.getClk(), design.getCircuit().getRootNodeGroup());
 		
 		rmwBuilder.addReadPort(hlim::ReadModifyWriteHazardLogicBuilder::ReadPort{
 			.addrInputDriver = addr.readPort(),

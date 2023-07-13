@@ -63,9 +63,8 @@ BOOST_FIXTURE_TEST_CASE(TestGCD, BoostUnitTestSimulationFixture)
 			HCL_NAMED(x_vec);
 			HCL_NAMED(y_vec);
 
-			GroupScope entity(GroupScope::GroupType::ENTITY);
+			GroupScope entity(GroupScope::GroupType::ENTITY, "gcd");
 			entity
-				.setName("gcd")
 				.setComment("Statemachine to compute the GCD of two 8-bit integers.");
 
 

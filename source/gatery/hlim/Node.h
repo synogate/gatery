@@ -156,6 +156,9 @@ class BaseNode : public NodeIO
 
 		void setId(std::uint64_t id, utils::RestrictTo<Circuit>) { m_nodeId = id; }
 
+		/// Returns true, if the signal connected to the input port is coming from a different node group which is also not a child of this node's node group.
+		bool inputIsComingThroughParentNodeGroup(size_t inputPort) const;
+
 		/// Attempts to create a reasonable name based on its input names and operations.
 		virtual std::string attemptInferOutputName(size_t outputPort) const;
 
