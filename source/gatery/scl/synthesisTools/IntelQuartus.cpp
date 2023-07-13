@@ -247,7 +247,7 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
 {
 	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
-	//auto &file = fileHandle->stream();
+	auto &file = fileHandle->stream();
 
 	for (auto& node : circuit.getNodes()) {
 		if (auto* cdcNode = dynamic_cast<hlim::Node_CDC*>(node.get()))
@@ -255,7 +255,7 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 			vhdlExport.getAST()->isPartOfExport(cdcNode);
 
 			// exclude cdcNodes with virtual clocks
-			if (cdcNode->getClocks()[0]->getName() == "GateryDefaultClock" or cdcNode->getClocks()[1]->getName() == "GateryDefaultClock")
+			if (cdcNode->getClocks()[0]->getName() == "PinSplitDummyClock" or cdcNode->getClocks()[1]->getName() == "PinSplitDummyClock")
 				continue;
 
 			// find all input registers
