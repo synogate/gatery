@@ -70,6 +70,11 @@ namespace gtry::scl
 		std::tuple<Meta...> _sig;
 	};
 
+	enum class FallThrough {
+		off,
+		on,
+	};
+
 	template<Signal PayloadT, Signal... Meta>
 	struct Stream
 	{
@@ -152,27 +157,28 @@ namespace gtry::scl
 		 * @return	connected stream
 		*/
 		Stream regReady(const RegisterSettings& settings = {});
-
-		/**
-		 * @brief Create a FIFO for buffering.
-		 * @param fallThrough allow data to flow past the fifo in the same cycle when it's empty.
-		 * @param minDepth The FIFO can hold at least that many data beats. 
-							The actual amount depends on the available target architecture. 
-		 * @return connected stream
-		*/
-		Stream fifo(bool fallThrough = false, size_t minDepth = 16);
-
-		/**
-		 * @brief Attach the stream as source and a new stream as sink to the FIFO.
-		 *			This is useful to make further settings or access advanced FIFO signals.
-		 *			For clock domain crossing you should use gtry::connect.
-		 * @param instance The FIFO to use.
-		 * @param fallThrough allow data to flow past the fifo in the same cycle when it's empty.
-		 * @return connected stream
-		*/
-		template<Signal T>
-		Stream fifo(Fifo<T>& instance, bool fallThrough = false);
 	};
+
+	/**
+	* @brief Attach the stream as source and a new stream as sink to the FIFO.
+	*			This is useful to make further settings or access advanced FIFO signals.
+	*			For clock domain crossing you should use gtry::connect.
+	* @param instance The FIFO to use.
+	* @param fallThrough allow data to flow past the fifo in the same cycle when it's empty. 
+	* @return connected stream
+	*/
+	template<Signal T, Signal PayloadT, Signal... Meta>
+	Stream<PayloadT, Meta...> fifo(Stream<PayloadT, Meta...>&& in, Fifo<T>& instance, FallThrough fallThrough = FallThrough::off);
+
+	/**
+	* @brief Create a FIFO for buffering.
+	* @param minDepth The FIFO can hold at least that many data beats. 
+	The actual amount depends on the available target architecture.
+	* @param fallThrough allow data to flow past the fifo in the same cycle when it's empty.
+	* @return connected stream
+	*/
+	template<Signal PayloadT, Signal... Meta>
+	Stream<PayloadT, Meta...> fifo(Stream<PayloadT, Meta...>&& in, size_t minDepth = 16, FallThrough fallThrough = FallThrough::off);
 
 	/**
 	 * @brief High when all transfer conditions (ready and valid high) are met.
@@ -759,33 +765,34 @@ namespace gtry::scl
 		return ret;
 	}
 
-	template<Signal PayloadT, Signal... Meta>
-	inline Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::fifo(bool fallThrough, size_t minDepth)
+
+
+	template<Signal T, Signal PayloadT, Signal... Meta>
+	Stream<PayloadT, Meta...> fifo(Stream<PayloadT, Meta...>&& in, Fifo<T>& instance, FallThrough fallThrough)
 	{
-		Fifo inst{ minDepth, copy(downstream(*this)) };
-		Stream ret = fifo(inst, fallThrough);
-		inst.generate();
+		Stream<PayloadT, Meta...> ret;
+		connect(ret, instance);
+
+		if (fallThrough == FallThrough::on) 
+		{
+			IF(!valid(ret))
+			{
+				downstream(ret) = downstream(in);
+				IF(ready(ret))
+					valid(in) = '0';
+			}
+		}
+		connect(instance, in);
 
 		return ret;
 	}
 
 	template<Signal PayloadT, Signal... Meta>
-	template<Signal T>
-	inline Stream<PayloadT, Meta...> gtry::scl::Stream<PayloadT, Meta...>::fifo(Fifo<T>& instance, bool fallThrough)
+	inline Stream<PayloadT, Meta...> fifo(Stream<PayloadT, Meta...>&& in, size_t minDepth, FallThrough fallThrough)
 	{
-		Self ret;
-		connect(ret, instance);
-
-		if (fallThrough)
-		{
-			IF(!valid(ret))
-			{
-				downstream(ret) = downstream(*this);
-				IF(ready(ret))
-					valid(*this) = '0';
-			}
-		}
-		connect(instance, *this);
+		Fifo inst{ minDepth, copy(downstream(in)) };
+		Stream ret = fifo(move(in), inst, fallThrough);
+		inst.generate();
 
 		return ret;
 	}

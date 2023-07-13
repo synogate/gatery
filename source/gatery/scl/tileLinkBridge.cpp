@@ -102,7 +102,7 @@ namespace gtry::scl {
 		valid(readData) = responseReady;
 		ready(ret.a) &= ready(readData);
 
-		scl::RvStream<UInt> readDataFifo = readData.fifo(true, maxReadRequestsInFlight);
+		scl::RvStream<UInt> readDataFifo = fifo(move(readData), maxReadRequestsInFlight, scl::FallThrough::on);
 
 		scl::RvStream readResStalled = strm::stall(move(readResBuffered), !valid(readDataFifo));
 		ready(readDataFifo) = ready(readResStalled);

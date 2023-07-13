@@ -550,7 +550,7 @@ BOOST_FIXTURE_TEST_CASE(stream_fifo, StreamTransferFixture)
 	scl::RvStream<UInt> in{ .data = 10_b };
 	In(in);
 
-	scl::RvStream<UInt> out = in.fifo();
+	scl::RvStream<UInt> out = scl::fifo(move(in));
 	Out(out);
 
 	transfers(500);
