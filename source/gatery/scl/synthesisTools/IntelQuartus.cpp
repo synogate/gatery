@@ -147,10 +147,10 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
 	auto &file = fileHandle->stream();
 
-	writeClockSDC(*vhdlExport.getAST(), file);
-
 	//write clock constraint for altera JTAG
 	file << "create_clock -period 100.000 [get_ports altera_reserved_tck]\n";
+
+	writeClockSDC(*vhdlExport.getAST(), file);
 
 	for (auto& pin : vhdlExport.getAST()->getRootEntity()->getIoPins()) 
 	{
@@ -327,6 +327,17 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 					file << "set_net_delay -max -get_value_from_clock_period dst_clock_period -value_multiplier 0.8 -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
 				}
 
+		}
+		if (auto* portNode = dynamic_cast<hlim::Node_Pin*>(node.get()))
+		{
+			if (portNode->getPortDelay().numerator() > 0)
+			{
+				auto del = portNode->getPortDelay().numerator() * 1'000'000'000.0 / portNode->getPortDelay().denominator();
+				if (portNode->isInputPin())
+					file << "set_input_delay -clock " + portNode->getClocks().front()->getName() + " " + std::to_string(del) + " " + portNode->getName() + "\n";
+				else
+					file << "set_output_delay -clock " + portNode->getClocks().front()->getName() + " " + std::to_string(del) + " " + portNode->getName() + "\n";
+			}
 		}
 	}
 	
