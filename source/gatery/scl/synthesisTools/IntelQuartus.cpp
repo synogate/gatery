@@ -149,6 +149,9 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 
 	writeClockSDC(*vhdlExport.getAST(), file);
 
+	//write clock constraint for altera JTAG
+	file << "create_clock -period 100.000 [get_ports altera_reserved_tck]\n";
+
 	for (auto& pin : vhdlExport.getAST()->getRootEntity()->getIoPins()) 
 	{
 		std::string_view direction;
@@ -256,6 +259,9 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 
 			// exclude cdcNodes with virtual clocks
 			if (cdcNode->getClocks()[0]->getName() == "PinSplitDummyClock" or cdcNode->getClocks()[1]->getName() == "PinSplitDummyClock")
+				continue;
+			// exclude cdcNodes that got the same input and output clock
+			if (cdcNode->getClocks()[0]->getClockPinSource() == cdcNode->getClocks()[1]->getClockPinSource())
 				continue;
 
 			// find all input registers
