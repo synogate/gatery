@@ -18,6 +18,7 @@
 #pragma once
 
 #include "../Node.h"
+#include "../ClockRational.h"
 
 namespace gtry::hlim {
 
@@ -67,6 +68,9 @@ namespace gtry::hlim {
 			inline const std::string &getDifferentialPosName() { return m_differentialPosName; }
 			inline const std::string &getDifferentialNegName() { return m_differentialNegName; }
 
+			inline const ClockRational& getPortDelay() const { return m_portDelay; }
+			void setPortDelay(size_t delayInNs) { m_portDelay.assign(delayInNs, 1'000'000'000); }
+
 			 virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
 
 			 virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
@@ -79,6 +83,9 @@ namespace gtry::hlim {
 			bool m_differential = false;			
 			std::string m_differentialPosName;
 			std::string m_differentialNegName;
+
+			ClockRational m_portDelay = ClockRational{ 0, 1 };
+			// ns = m_portDelay.numerator() * 1'000'000'000ul / m_portDelay.denominator()
 	};
 
 }
