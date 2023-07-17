@@ -275,7 +275,43 @@ BOOST_FIXTURE_TEST_CASE(ConstructFromPreservesLoopiness, BoostUnitTestSimulation
 	eval();
 }
 
+BOOST_FIXTURE_TEST_CASE(testFinalCompound, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
 
+	RichStruct in;
+	in.base.vec = 5u;
+	in.base.bit = '0';
+	in.parameter = 13;
+	for (size_t i = 0; i < 7; ++i)
+	{
+		in.list.emplace_back();
+		in.list.back().vec = 7;
+		in.list.back().bit = '1';
+	}
+
+	const RichStruct out = final(in);
+	sim_assert(out.parameter == 13);
+
+	in.base.vec = 4;
+	sim_assert(out.base.vec == 4);
+	in.base.bit = '1';
+	sim_assert(out.base.bit == '1');
+
+	for (SimpleStruct& it : in.list)
+	{
+		it.vec = 6;
+		it.bit = '0';
+	}
+	
+	for (const SimpleStruct& it : out.list)
+	{
+		sim_assert(it.vec == 6);
+		sim_assert(it.bit == '0');
+	}
+
+	eval();
+}
 
 BOOST_FIXTURE_TEST_CASE(tapOnCompound, BoostUnitTestSimulationFixture)
 {
