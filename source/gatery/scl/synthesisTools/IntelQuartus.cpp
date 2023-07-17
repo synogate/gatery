@@ -36,10 +36,14 @@
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Preprocessor.h>
 
+#include <gatery/utils/FileSystem.h>
+
 #include <gatery/debug/DebugInterface.h>
 #include <gatery/export/vhdl/VHDLExport.h>
 #include <gatery/export/vhdl/Entity.h>
 #include <gatery/export/vhdl/Package.h>
+
+#include <gatery/scl/arch/general/FPGADevice.h>
 
 #include <string_view>
 #include <boost/range/adaptor/reversed.hpp>
@@ -142,111 +146,30 @@ void IntelQuartus::resolveAttributes(const hlim::MemoryAttributes &attribs, hlim
 
 void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
 {
-	std::string fullPath = (vhdlExport.getDestination() / filename).string();
-	std::fstream file(fullPath.c_str(), std::fstream::out);
-	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
+	auto &file = fileHandle->stream();
+
+	//write clock constraint for altera JTAG
+	file << "create_clock -period 100.000 [get_ports altera_reserved_tck]\n";
 
 	writeClockSDC(*vhdlExport.getAST(), file);
 
-	for (auto& pin : vhdlExport.getAST()->getRootEntity()->getIoPins()) 
-	{
-		std::string_view direction;
-		std::vector<hlim::Node_Register*> allRegs;
-		if (pin->isInputPin())
-		{
-			direction = "input";
-			allRegs = hlim::findAllOutputRegisters({ .node = pin, .port = 0ull });
-		}
-		else if (pin->isOutputPin())
-		{
-			direction = "output";
-			allRegs = hlim::findAllInputRegisters({ .node = pin, .port = 0ull });
-		}
-		else
-		{
-			continue;
-		}
-
-		hlim::Node_Register* regNode = nullptr;
-		std::string path;
-		for (auto &reg : allRegs)
-			if (registerClockPin(*vhdlExport.getAST(), reg, path)) {
-				regNode = reg;
-				break;
-			}
-
-		const std::string &vhdlPinName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().get(pin).name;
-
-		if (regNode == nullptr)
-		{
-			file << "# no clock found for " << direction << ' ' << vhdlPinName << '\n';
-			continue;
-		}
-		hlim::Clock* clock = regNode->getClocks().front()->getClockPinSource();
-
-		const std::string &vhdlClockName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().getClock(clock).name;
-
-		bool allOnSameClock = std::all_of(allRegs.begin(), allRegs.end(), [=](hlim::Node_Register* regNode) {
-			return regNode->getClocks().front()->getClockPinSource() == clock;
-		});
-		if (!allOnSameClock)
-		{
-			file << "# multiple clocks found for " << direction << ' ' << vhdlPinName << '\n';
-			continue;
-		}
-
-		float period = clock->absoluteFrequency().denominator() / float(clock->absoluteFrequency().numerator());
-		period *= 1e9f;
-		file << "set_" << direction << "_delay " << period / 3;
-		file << " -clock " << vhdlClockName;
-
-		file << " [get_ports " << vhdlPinName;
-
-		if (pin->getConnectionType().isBitVec())
-			file << "\\[*\\]";
-		file << "]";
-
-		file << " -reference_pin " << path << "\n";
+	auto* fpga = dynamic_cast<scl::arch::FPGADevice*>(DesignScope::get()->getTargetTechnology());
+	if (fpga == nullptr) {
+		// no fpga specified or not targeting an fpga
+	}
+	else {
+		if (fpga->getFamily() != "Agilex")
+			file << "derive_pll_clocks\n";
 	}
 
-
-	for (auto& reset : vhdlExport.getAST()->getRootEntity()->getResets()) {
-
-		std::vector<hlim::Node_Register*> allRegs = hlim::findRegistersAffectedByReset(reset);
-
-		hlim::Node_Register* regNode = nullptr;
-		std::string path;
-		for (auto &reg : allRegs)
-			if (registerClockPin(*vhdlExport.getAST(), reg, path)) {
-				regNode = reg;
-				break;
-			}
-
-
-		const std::string &vhdlResetName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().getReset(reset).name;
-
-		if (regNode == nullptr)
-		{
-			file << "# no clock found for reset " << vhdlResetName << '\n';
-			continue;
-		}
-		hlim::Clock* clock = regNode->getClocks().front();
-
-		float period = clock->absoluteFrequency().denominator() / float(clock->absoluteFrequency().numerator());
-		period *= 1e9f;
-		file << "set_input_delay " << period / 2;
-		file << " -clock " << clock->getName();
-		file << " [get_ports " << vhdlResetName << "] -reference_pin " << path << "\n";
-	}
-
-	file << "derive_pll_clocks\n";
 	file << "derive_clock_uncertainty\n";
 }
 
 void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
 {
-	std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
-	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
+	auto &file = fileHandle->stream();
 
 	for (auto& node : circuit.getNodes()) {
 		if (auto* cdcNode = dynamic_cast<hlim::Node_CDC*>(node.get()))
@@ -255,6 +178,9 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 
 			// exclude cdcNodes with virtual clocks
 			if (cdcNode->getClocks()[0]->getName() == "PinSplitDummyClock" or cdcNode->getClocks()[1]->getName() == "PinSplitDummyClock")
+				continue;
+			// exclude cdcNodes that got the same input and output clock
+			if (cdcNode->getClocks()[0]->getClockPinSource() == cdcNode->getClocks()[1]->getClockPinSource())
 				continue;
 
 			// find all input registers
@@ -316,22 +242,124 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 			for(auto itIn : cdcIn)
 				for (auto itOut : cdcOut)
 				{
-					//file << "set_max_skew -get_skew_value_from_clock_period min_clock_period -skew_value_multiplier 0.8 -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
-					//file << "set_net_delay -max -get_value_from_clock_period dst_clock_period -value_multiplier 0.8 -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
-					file << "set_false_path -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
-
+					file << "set_max_skew -get_skew_value_from_clock_period min_clock_period -skew_value_multiplier 0.8 -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
+					file << "set_net_delay -max -get_value_from_clock_period dst_clock_period -value_multiplier 0.8 -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
 				}
 
 		}
+		if (auto* portNode = dynamic_cast<hlim::Node_Pin*>(node.get()))
+		{
+			if (portNode->getPortDelay().numerator() > 0)
+			{
+				auto del = portNode->getPortDelay().numerator() * 1'000'000'000.0 / portNode->getPortDelay().denominator();
+				if (portNode->isInputPin())
+					file << "set_input_delay -clock " + portNode->getClocks().front()->getName() + " " + std::to_string(del) + " " + portNode->getName() + "\n";
+				else
+					file << "set_output_delay -clock " + portNode->getClocks().front()->getName() + " " + std::to_string(del) + " " + portNode->getName() + "\n";
+			}
+		}
 	}
+
+	for (auto& pin : vhdlExport.getAST()->getRootEntity()->getIoPins())
+{
+	std::string_view direction;
+	std::vector<hlim::Node_Register*> allRegs;
+	if (pin->isInputPin())
+	{
+		direction = "input";
+		allRegs = hlim::findAllOutputRegisters({ .node = pin, .port = 0ull });
+	}
+	else if (pin->isOutputPin())
+	{
+		direction = "output";
+		allRegs = hlim::findAllInputRegisters({ .node = pin, .port = 0ull });
+	}
+	else
+	{
+		continue;
+	}
+
+	hlim::Node_Register* regNode = nullptr;
+	std::string path;
+	for (auto &reg : allRegs)
+		if (registerClockPin(*vhdlExport.getAST(), reg, path)) {
+			regNode = reg;
+			break;
+		}
+
+	const std::string &vhdlPinName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().get(pin).name;
+
+	if (regNode == nullptr)
+	{
+		file << "# no clock found for " << direction << ' ' << vhdlPinName << '\n';
+		continue;
+	}
+	hlim::Clock* clock = regNode->getClocks().front()->getClockPinSource();
+
+	const std::string &vhdlClockName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().getClock(clock).name;
+
+	bool allOnSameClock = std::all_of(allRegs.begin(), allRegs.end(), [=](hlim::Node_Register* regNode) {
+		return regNode->getClocks().front()->getClockPinSource() == clock;
+	});
+	if (!allOnSameClock)
+	{
+		file << "# multiple clocks found for " << direction << ' ' << vhdlPinName << '\n';
+		continue;
+	}
+
+	float period = clock->absoluteFrequency().denominator() / float(clock->absoluteFrequency().numerator());
+	period *= 1e9f;
+	file << "set_" << direction << "_delay " << period / 3;
+	file << " -clock " << vhdlClockName;
+
+	file << " [get_ports " << vhdlPinName;
+
+	if (pin->getConnectionType().isBitVec())
+		file << "\\[*\\]";
+	file << "]";
+
+	file << " -reference_pin " << path << "\n";
+}
+
+
+for (auto& reset : vhdlExport.getAST()->getRootEntity()->getResets()) {
+
+	std::vector<hlim::Node_Register*> allRegs = hlim::findRegistersAffectedByReset(reset);
+
+	hlim::Node_Register* regNode = nullptr;
+	std::string path;
+	for (auto &reg : allRegs)
+		if (registerClockPin(*vhdlExport.getAST(), reg, path)) {
+			regNode = reg;
+			break;
+		}
+
+
+	const std::string &vhdlResetName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().getReset(reset).name;
+
+	if (regNode == nullptr)
+	{
+		file << "# no clock found for reset " << vhdlResetName << '\n';
+		continue;
+	}
+	hlim::Clock* clock = regNode->getClocks().front();
+
+	float period = clock->absoluteFrequency().denominator() / float(clock->absoluteFrequency().numerator());
+	period *= 1e9f;
+	file << "set_input_delay " << period / 2;
+	file << " -clock " << clock->getName();
+	file << " [get_ports " << vhdlResetName << "] -reference_pin " << path << "\n";
+}
+
 	
 
 }
 
 void IntelQuartus::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename)
 {
-	std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
-	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
+	auto &file = fileHandle->stream();
+
 	file << R"(
 # This script is intended for adding the core to an existing project
 #	 1. Open the quartus tcl console (View->Utility Windows->Tcl Console) 
@@ -386,14 +414,15 @@ if {$currentDirectory != $projectDirectory} {
 		{
 			// because quartus
 
-			std::filesystem::path path = vhdlExport.getDestination() / filename;
+			std::filesystem::path path = filename;
 			path.replace_extension(".qpf");
 
-			std::fstream file(path.string().c_str(), std::fstream::out);
-
+			vhdlExport.getDestination().writeFile(path);
 		}
 
-		std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
+		auto fileHandle = vhdlExport.getDestination().writeFile(filename);
+		auto &file = fileHandle->stream();
+
 
 		file << R"(
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
@@ -434,7 +463,7 @@ set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
 
 	void IntelQuartus::writeModelsimScripts(vhdl::VHDLExport& vhdlExport)
 	{
-		auto relativePath = std::filesystem::relative(vhdlExport.getDestination(), vhdlExport.getTestbenchDestination());
+		auto relativePath = std::filesystem::relative(vhdlExport.getDestinationPath(), vhdlExport.getTestbenchDestinationPath());
 
 		for (std::filesystem::path& tb : sourceFiles(vhdlExport, false, true))
 		{
@@ -443,8 +472,8 @@ set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
 				std::string_view{ "work" } : 
 				vhdlExport.getName();
 
-			std::filesystem::path path = vhdlExport.getTestbenchDestination() / ("modelsim_" + top + ".do");
-			std::ofstream file{ path.string().c_str(), std::ofstream::binary };
+			auto fileHandle = vhdlExport.getDestination().writeFile(std::string("modelsim_") + top + ".do");
+			auto &file = fileHandle->stream();
 
 			for (std::filesystem::path& source : sourceFiles(vhdlExport, true, false))
 				file << "vcom -quiet -2008 -createlib -work " << library << " " << escapeTcl((relativePath/source).string()) << '\n';

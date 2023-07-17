@@ -57,7 +57,10 @@ std::string GLOBAL::attemptInferOutputName(size_t outputPort) const
 	
 	if (driver.node == nullptr)
 		return ExternalComponent::attemptInferOutputName(outputPort);
-	
+
+	if (inputIsComingThroughParentNodeGroup(0))
+		return ExternalComponent::attemptInferOutputName(outputPort);
+
 	if (driver.node->getName().empty())
 		return ExternalComponent::attemptInferOutputName(outputPort);
 

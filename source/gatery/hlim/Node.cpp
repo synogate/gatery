@@ -220,6 +220,15 @@ void BaseNode::copyBaseToClone(BaseNode *copy) const
 	}
 }
 
+
+bool BaseNode::inputIsComingThroughParentNodeGroup(size_t inputPort) const
+{
+	auto driver = getDriver(inputPort);
+	if (driver.node == nullptr) return false;
+	return driver.node->getGroup() != m_nodeGroup && !driver.node->getGroup()->isChildOf(m_nodeGroup);
+}
+
+
 std::string BaseNode::attemptInferOutputName(size_t outputPort) const
 {
 	std::stringstream name;
@@ -229,6 +238,9 @@ std::string BaseNode::attemptInferOutputName(size_t outputPort) const
 		if (driver.node == nullptr)
 			return "";
 		if (hlim::outputIsDependency(driver)) continue;
+		
+		if (inputIsComingThroughParentNodeGroup(i)) return "";
+
 		if (driver.node->getName().empty()) {
 			return "";
 		} else {

@@ -98,6 +98,7 @@ Entity::~Entity()
 
 void Entity::buildFrom(hlim::NodeGroup *nodeGroup)
 {
+	m_nodeGroup = nodeGroup;
 	HCL_ASSERT(nodeGroup->getGroupType() == hlim::NodeGroup::GroupType::ENTITY);
 
 	m_comment = nodeGroup->getComment();
@@ -149,13 +150,13 @@ void Entity::extractSignals()
 void Entity::allocateNames()
 {
 	for (auto &constant : m_constants)
-		m_namespaceScope.allocateName(constant, findNearestDesiredName(constant), chooseDataTypeFromOutput(constant), CodeFormatting::SIG_CONSTANT);
+		m_namespaceScope.allocateName(constant, findNearestDesiredName(constant, m_nodeGroup), chooseDataTypeFromOutput(constant), CodeFormatting::SIG_CONSTANT);
 
 	for (auto &input : m_inputs)
-		m_namespaceScope.allocateName(input, findNearestDesiredName(input), chooseDataTypeFromOutput(input), CodeFormatting::SIG_ENTITY_INPUT);
+		m_namespaceScope.allocateName(input, findNearestDesiredName(input, m_nodeGroup), chooseDataTypeFromOutput(input), CodeFormatting::SIG_ENTITY_INPUT);
 
 	for (auto &output : m_outputs)
-		m_namespaceScope.allocateName(output, findNearestDesiredName(output), chooseDataTypeFromOutput(output), CodeFormatting::SIG_ENTITY_OUTPUT);
+		m_namespaceScope.allocateName(output, findNearestDesiredName(output, m_nodeGroup), chooseDataTypeFromOutput(output), CodeFormatting::SIG_ENTITY_OUTPUT);
 
 	for (auto &clock : m_inputClocks)
 		m_namespaceScope.allocateName(clock, clock->getName());
@@ -484,11 +485,11 @@ std::string Entity::getInstanceName()
 	HCL_ASSERT_HINT(false, "Did not find entity instantiation in parent's list of entities!");
 }
 
-void Entity::writeSupportFiles(const std::filesystem::path &destination) const
+void Entity::writeSupportFiles(utils::FileSystem &fileSystem) const
 {
-	BasicBlock::writeSupportFiles(destination);
+	BasicBlock::writeSupportFiles(fileSystem);
 	for (auto &b : m_blocks)
-		b->writeSupportFiles(destination);
+		b->writeSupportFiles(fileSystem);
 }
 
 }

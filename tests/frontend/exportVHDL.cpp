@@ -25,6 +25,8 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
+#include <thread>
+
 
 using namespace boost::unit_test;
 
@@ -446,6 +448,164 @@ BOOST_FIXTURE_TEST_CASE(signalTapForcesVariableToSignal, gtry::GHDLTestFixture)
 	BOOST_TEST(exportContains(std::regex{"SIGNAL s_intermediate : STD_LOGIC;"}));
 	BOOST_TEST(exportContains(std::regex{"<= \\(s_intermediate xor input3\\)"}));
 }
+
+
+
+BOOST_FIXTURE_TEST_CASE(exportOverrideConstant, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+    {
+		Bit input1 = pinIn().setName("input1");
+		Bit input2 = pinIn().setName("input2");
+
+		Bit input2C = '1';
+		input2C.exportOverride(input2);
+
+		Bit output = input1 | input2C;
+        pinOut(output).setName("output");
+    }
+
+	testCompilation();
+
+	BOOST_TEST(exportContains(std::regex{"output <= \\(input1 or input2\\)"}));
+}
+
+
+BOOST_FIXTURE_TEST_CASE(signalNamesDontPropagateIntoSubEntities, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+    {
+		Bit input1 = pinIn().setName("input1");
+		Bit input2 = pinIn().setName("input2");
+
+		HCL_NAMED(input1);
+		HCL_NAMED(input2);
+
+		Bit output;
+		{
+			Area subArea("sub", true);
+
+			output = input1 ^ input2;
+		}
+
+        pinOut(output).setName("output");
+    }
+
+	design.visualize("before");
+	testCompilation();
+	design.visualize("after");
+
+	BOOST_TEST(!exportContains(std::regex{" <= \\(in_input1 xor in_input2\\);"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(signalNamesDontPropagateIntoSubEntitiesMultiLevel, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+    {
+		Bit input1 = pinIn().setName("input1");
+		Bit input2 = pinIn().setName("input2");
+
+		HCL_NAMED(input1);
+		HCL_NAMED(input2);
+
+		Bit output;
+		{
+			Area subArea1("sub1", true);
+			Area subArea2("sub2", true);
+			Area subArea3("sub3", true);
+			setName(input1, "I1");
+			setName(input2, "I2");
+
+			output = input1 ^ input2;
+		}
+
+        pinOut(output).setName("output");
+    }
+
+	testCompilation();
+
+	BOOST_TEST(!exportContains(std::regex{" <= \\(in_input1 xor in_input2\\);"}));
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(noRewriteWithoutChange, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Bit in = pinIn().setName("in");
+	pinOut(in).setName("out");
+
+    {
+		vhdl::VHDLExport vhdl("design.vhdl", false);
+		vhdl.writeProjectFile("projectFile.txt");
+		vhdl.writeStandAloneProjectFile("standAloneProjectFile.txt");		
+		vhdl.writeConstraintsFile("constraints.txt");
+		vhdl.writeClocksFile("clocks.txt");
+		vhdl(design.getCircuit());
+    }
+
+	auto writeTime1 = std::filesystem::last_write_time("design.vhdl");
+
+	using namespace std::chrono;
+	std::this_thread::sleep_for(1s);
+
+    {
+		vhdl::VHDLExport vhdl("design.vhdl", false);
+		vhdl.writeProjectFile("projectFile.txt");
+		vhdl.writeStandAloneProjectFile("standAloneProjectFile.txt");		
+		vhdl.writeConstraintsFile("constraints.txt");
+		vhdl.writeClocksFile("clocks.txt");
+		vhdl(design.getCircuit());
+    }
+
+	auto writeTime2 = std::filesystem::last_write_time("design.vhdl");
+
+	bool fileWasRewritten = writeTime2 != writeTime1;
+	BOOST_TEST(!fileWasRewritten);
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(oneFilePerPartition, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Bit in = pinIn().setName("in");
+
+	{
+		Area area1("area1", true);
+		area1.setPartition(true);
+		Area area2("area2", true);
+		in ^= pinIn().setName("in2");
+	}
+
+	{
+		Area area3("area3", true);
+		area3.setPartition(true);
+		in ^= pinIn().setName("in3");
+	}
+
+	pinOut(in).setName("out");
+
+    {
+		vhdl::VHDLExport vhdl("design.vhdl", false);
+		vhdl.outputMode(vhdl::OutputMode::FILE_PER_PARTITION);
+		vhdl.writeProjectFile("projectFile.txt");
+		vhdl.writeStandAloneProjectFile("standAloneProjectFile.txt");		
+		vhdl.writeConstraintsFile("constraints.txt");
+		vhdl.writeClocksFile("clocks.txt");
+		vhdl(design.getCircuit());
+    }
+
+	BOOST_TEST(std::filesystem::exists("area1.vhd"));
+	BOOST_TEST(!std::filesystem::exists("area2.vhd"));
+	BOOST_TEST(std::filesystem::exists("area3.vhd"));
+}
+
 
 
 BOOST_AUTO_TEST_SUITE_END()

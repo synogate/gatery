@@ -139,7 +139,6 @@ class BitVectorState
 		std::pair<iterator, iterator> range(typename Config::Plane plane, size_t offset, size_t size);
 
 		bool operator == (const BitVectorState& o) const;
-		bool operator != (const BitVectorState& o) const { return !(*this == o); }
 
 		void append(const BitVectorState<Config> &src);
 protected:

@@ -28,6 +28,8 @@
 #include "../../hlim/Clock.h"
 #include "../../hlim/NodeGroup.h"
 
+#include <gatery/utils/FileSystem.h>
+
 #include <fstream>
 #include <functional>
 
@@ -82,58 +84,105 @@ Entity &AST::createEntity(const std::string &desiredName, BasicBlock *parent)
 	return *m_entities.back();
 }
 
-std::filesystem::path AST::getFilename(std::filesystem::path basePath, const std::string &name)
+std::filesystem::path AST::getFilename(const std::string &name)
 {
-	return basePath / (name + m_codeFormatting->getFilenameExtension());
+	return name + m_codeFormatting->getFilenameExtension();
 }
 
-void AST::writeVHDL(std::filesystem::path destination, const std::map<std::string, std::string> &customVhdlFiles)
+void AST::distributeToFiles(OutputMode outputMode, std::filesystem::path singleFileName, const std::map<std::string, std::string> &customVhdlFiles)
 {
-	if (destination.has_extension())
-	{
-		for (auto& entity : m_entities)
-			entity->writeSupportFiles(destination.parent_path());
+	m_sourceFiles.clear();
 
-		std::ofstream file{ destination.c_str(), std::ofstream::binary };
-		file.exceptions(std::fstream::failbit | std::fstream::badbit);
+	if (outputMode == OutputMode::SINGLE_FILE || (outputMode == OutputMode::AUTO && !singleFileName.empty())) {
+		m_sourceFiles.resize(1);
 
-		for (auto& package : m_packages)
-			package->writeVHDL(file);
+		m_sourceFiles.back().filename = singleFileName;
+		m_sourceFiles.back().entities.reserve(m_entities.size());
+		for (auto *e : getDependencySortedEntities())
+			m_sourceFiles.back().entities.push_back(e);
+
+		m_sourceFiles.back().filename = singleFileName;
+		m_sourceFiles.back().packages.reserve(m_packages.size());
+		for (auto &e : m_packages)
+			m_sourceFiles.back().packages.push_back(e.get());
 
 		for (const auto &pair : customVhdlFiles)
-			file << pair.second << std::endl;
+			m_sourceFiles.back().customVhdlFiles.push_back(pair.second);
 
-		for (auto* entity : this->getDependencySortedEntities())
-			entity->writeVHDL(file);
-	}
-	else
-	{
-		for (auto& entity : m_entities)
-			entity->writeSupportFiles(destination);
+	} else if (outputMode == OutputMode::FILE_PER_PARTITION) {
 
-		for (auto& package : m_packages) {
-			std::filesystem::path filePath = getFilename(destination, package->getName());
+		for (auto &p : m_packages) {
+			m_sourceFiles.push_back({.filename = getFilename(p->getName())});
+			m_sourceFiles.back().packages.push_back(p.get());
+		}
 
-			std::fstream file(filePath.string().c_str(), std::fstream::out);
-			file.exceptions(std::fstream::failbit | std::fstream::badbit);
-			package->writeVHDL(file);
+
+		std::map<const hlim::NodeGroup*, Entity*> entityMapping;
+		for (auto &e : m_entities)
+			entityMapping[e->getNodeGroup()] = e.get();
+
+
+		std::map<Entity*, std::vector<Entity*>> entitiesByPartition;
+		for (auto *e : getDependencySortedEntities()) {
+			const hlim::NodeGroup *partition = e->getNodeGroup()->getPartition();
+			Entity *entity;
+			if (partition != nullptr)
+				entity = entityMapping[partition];
+			else
+				entity = getRootEntity();
+			entitiesByPartition[entity].push_back(e);
+		}
+
+		m_sourceFiles.reserve(entitiesByPartition.size());
+		for (auto &pair : entitiesByPartition) {
+			m_sourceFiles.push_back({.filename = getFilename(pair.first->getName())});
+			m_sourceFiles.back().entities = pair.second;
 		}
 
 		for (const auto &pair : customVhdlFiles) {
-			std::filesystem::path filePath = getFilename(destination, pair.first);
-
-			std::fstream file(filePath.string().c_str(), std::fstream::out);
-			file.exceptions(std::fstream::failbit | std::fstream::badbit);
-			file << pair.second;
+			m_sourceFiles.push_back({.filename = getFilename(pair.first)});
+			m_sourceFiles.back().customVhdlFiles.push_back(pair.second);
 		}
 
-		for (auto& entity : m_entities) {
-			std::filesystem::path filePath = getFilename(destination, entity->getName());
+	} else {
+		m_sourceFiles.reserve(m_entities.size() + m_packages.size() + customVhdlFiles.size());
 
-			std::fstream file(filePath.string().c_str(), std::fstream::out);
-			file.exceptions(std::fstream::failbit | std::fstream::badbit);
-			entity->writeVHDL(file);
+		for (auto &p : m_packages) {
+			m_sourceFiles.push_back({.filename = getFilename(p->getName())});
+			m_sourceFiles.back().packages.push_back(p.get());
 		}
+
+		for (const auto &pair : customVhdlFiles) {
+			m_sourceFiles.push_back({.filename = getFilename(pair.first)});
+			m_sourceFiles.back().customVhdlFiles.push_back(pair.second);
+		}
+
+		for (auto &e : m_entities) {
+			m_sourceFiles.push_back({.filename = getFilename(e->getName())});
+			m_sourceFiles.back().entities.push_back(e.get());
+		}
+	}
+}
+
+void AST::writeVHDL(utils::FileSystem &fileSystem, OutputMode outputMode, std::filesystem::path singleFileName, const std::map<std::string, std::string> &customVhdlFiles)
+{
+	distributeToFiles(outputMode, singleFileName, customVhdlFiles);
+
+	for (auto& entity : m_entities)
+		entity->writeSupportFiles(fileSystem);
+
+
+	for (const auto &f : m_sourceFiles) {
+		auto file = fileSystem.writeFile(f.filename);
+
+		for (auto& package : f.packages)
+			package->writeVHDL(file->stream());
+
+		for (const auto &elem : f.customVhdlFiles)
+			file->stream() << elem << std::endl;
+
+		for (auto* entity : f.entities)
+			entity->writeVHDL(file->stream());
 	}
 }
 

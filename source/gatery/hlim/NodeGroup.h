@@ -72,30 +72,30 @@ namespace gtry::hlim {
 			SFU = 0x03,
 		};
 
-		NodeGroup(Circuit &circuit, GroupType groupType);
+		NodeGroup(Circuit &circuit, GroupType groupType, std::string_view name, NodeGroup* parent);
 		virtual ~NodeGroup();
 
 		void recordStackTrace() { m_stackTrace.record(10, 1); }
 		const utils::StackTrace& getStackTrace() const { return m_stackTrace; }
 
-		void setName(std::string name);
 		void setInstanceName(std::string name) { m_instanceName = std::move(name); }
 		void setComment(std::string comment) { m_comment = std::move(comment); }
 
-		NodeGroup* addChildNodeGroup(GroupType groupType);
+		NodeGroup* addChildNodeGroup(GroupType groupType, std::string_view name);
 		NodeGroup* findChild(std::string_view name);
 
 		void moveInto(NodeGroup* newParent);
 
 		template<typename Type, typename... Args>
-		Type* addSpecialChildNodeGroup(Args&&... args) {
-			m_children.push_back(std::make_unique<Type>(m_circuit, std::forward<Args>(args)...));
+		Type* addSpecialChildNodeGroup(std::string_view name, Args&&... args) {
+			m_children.push_back(std::make_unique<Type>(m_circuit, name, std::forward<Args>(args)...));
 			m_children.back()->m_parent = this;
 			return (Type*)m_children.back().get();
 		}
 
 		NodeGroup* getParent() { return m_parent; }
 		const NodeGroup* getParent() const { return m_parent; }
+		const NodeGroup* getPartition() const;
 		const std::string& getName() const { return m_name; }
 		const std::string& getInstanceName() const { return m_instanceName; }
 		const std::string& getComment() const { return m_comment; }
@@ -129,6 +129,9 @@ namespace gtry::hlim {
 
 		/// Returns an id that is unique to this group within the circuit.
 		std::uint64_t getId() const { HCL_ASSERT(m_id != ~0ull); return m_id; }
+
+		void setPartition(bool value) { m_isPartition = value; }
+		bool isPartition() const { return m_isPartition; }
 	protected:
 		Circuit &m_circuit;
 		std::uint64_t m_id = ~0ull;
@@ -150,6 +153,7 @@ namespace gtry::hlim {
 		std::unique_ptr<NodeGroupMetaInfo> m_metaInfo;
 
 		friend class BaseNode;
+		bool m_isPartition = false;
 
 	private:
 		static NodeGroupConfig ms_config;

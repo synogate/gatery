@@ -28,6 +28,7 @@
 
 #include "../hlim/supportNodes/Node_PathAttributes.h"
 #include "../hlim/Clock.h"
+#include "../utils/FileSystem.h"
 
 #include <fstream>
 
@@ -107,27 +108,14 @@ std::vector<std::filesystem::path> SynthesisTool::sourceFiles(vhdl::VHDLExport& 
 	std::vector<std::filesystem::path> files;
 
 	if (synthesis)
-	{
-		if (!vhdlExport.isSingleFileExport()) {
-			for (auto&& package : vhdlExport.getAST()->getPackages())
-				files.emplace_back(vhdlExport.getAST()->getFilename("", package->getName()));
-
-			for (const auto& file_content : vhdlExport.getCustomVHDLFiles())
-				files.emplace_back(vhdlExport.getAST()->getFilename("", file_content.first));
-
-			for (auto&& entity : vhdlExport.getAST()->getDependencySortedEntities())
-				files.emplace_back(vhdlExport.getAST()->getFilename("", entity->getName()));
-		}
-		else {
-			files.push_back(vhdlExport.getSingleFileFilename());
-		}
-	}
+		for (const auto &sourceFile : vhdlExport.getAST()->getSourceFiles())
+			files.push_back(sourceFile.filename);
 
 	if (simulation)
 	{
 		for (const auto& e : vhdlExport.getTestbenchRecorder()) {
 			for (const auto& name : e->getDependencySortedEntities()) {
-				files.push_back(vhdlExport.getAST()->getFilename("", name));
+				files.push_back(vhdlExport.getAST()->getFilename(name));
 			}
 		}
 	}
@@ -161,9 +149,9 @@ void DefaultSynthesisTool::resolveAttributes(const hlim::MemoryAttributes &attri
 
 void DefaultSynthesisTool::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
 {
-	std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
-	file.exceptions(std::fstream::failbit | std::fstream::badbit);
-
+	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
+	auto &file = fileHandle->stream();
+	
 	file << "# List of constraints:" << std::endl;
 
 	forEachPathAttribute(vhdlExport, circuit, [&](hlim::Node_PathAttributes* pa, std::string start, std::string end) {
@@ -181,8 +169,8 @@ void DefaultSynthesisTool::writeConstraintFile(vhdl::VHDLExport &vhdlExport, con
 
 void DefaultSynthesisTool::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
 {
-	std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
-	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
+	auto &file = fileHandle->stream();
 
 	file << "# List of clocks:" << std::endl;
 
@@ -198,8 +186,8 @@ void DefaultSynthesisTool::writeClocksFile(vhdl::VHDLExport &vhdlExport, const h
 
 void DefaultSynthesisTool::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename)
 {
-	std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
-	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
+	auto &file = fileHandle->stream();
 
 	file << "# List of source files in dependency order:" << std::endl;
 
@@ -207,10 +195,10 @@ void DefaultSynthesisTool::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, 
 
 	if (!vhdlExport.isSingleFileExport()) { // todo: refactor this into base class
 		for (auto&& package : vhdlExport.getAST()->getPackages())
-			files.emplace_back(vhdlExport.getAST()->getFilename("", package->getName()));
+			files.emplace_back(vhdlExport.getAST()->getFilename(package->getName()));
 
 		for (auto&& entity : vhdlExport.getAST()->getDependencySortedEntities())
-			files.emplace_back(vhdlExport.getAST()->getFilename("", entity->getName()));
+			files.emplace_back(vhdlExport.getAST()->getFilename(entity->getName()));
 	} else {
 		files.push_back(vhdlExport.getSingleFileFilename());
 	}
@@ -222,8 +210,7 @@ void DefaultSynthesisTool::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, 
 	for (const auto &e : vhdlExport.getTestbenchRecorder()) {
 		file << "## testbench " << e->getName() << ':' << std::endl;
 		for (const auto &name : e->getDependencySortedEntities())
-			file << vhdlExport.getAST()->getFilename("", name) << std::endl;;
-
+			file << vhdlExport.getAST()->getFilename(name) << std::endl;
 	}
 
 

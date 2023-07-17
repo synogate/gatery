@@ -132,8 +132,7 @@ namespace gtry::scl
 	template<typename Tkey, typename Tval>
 	inline typename TinyCuckoo<Tkey, Tval>::Out TinyCuckoo<Tkey, Tval>::operator()(const Tkey& key, const UInt& hash)
 	{
-		GroupScope entity(GroupScope::GroupType::ENTITY);
-		entity.setName("TinyCuckoo_lookup");
+		GroupScope entity(GroupScope::GroupType::ENTITY, "TinyCuckoo_lookup");
 
 		SymbolSelect hashSel{ BitWidth{hash.size() / m_tables.size()} };
 
@@ -142,8 +141,7 @@ namespace gtry::scl
 
 		Out ret;
 		{
-			GroupScope entity(GroupScope::GroupType::ENTITY);
-			entity.setName("table");
+			GroupScope entity(GroupScope::GroupType::ENTITY, "table");
 
 			ret.value = item0.value;
 			ret.found = item0.valid & item0.key == key;
@@ -152,8 +150,7 @@ namespace gtry::scl
 
 		for (size_t i = 1; i < m_tables.size(); ++i)
 		{
-			GroupScope entity(GroupScope::GroupType::ENTITY);
-			entity.setName("table");
+			GroupScope entity(GroupScope::GroupType::ENTITY, "table");
 
 			Item item = m_tables[i][hash(hashSel[i])];
 			HCL_NAMED(item);
@@ -171,8 +168,7 @@ namespace gtry::scl
 	template<typename Tkey, typename Tval>
 	inline void TinyCuckoo<Tkey, Tval>::addCpuInterface(AvalonNetworkSection& net)
 	{
-		GroupScope entity(GroupScope::GroupType::ENTITY);
-		entity.setName("TinyCuckoo_addCpuInterface");
+		GroupScope entity(GroupScope::GroupType::ENTITY, "TinyCuckoo_addCpuInterface");
 
 		for (size_t i = 0; i < m_tables.size(); ++i)
 		{

@@ -842,9 +842,9 @@ namespace gtry::scl
 		});
 		if (memory.readLatencyHint())
 		{
-			for(size_t i = 0; i < memory.readLatencyHint() - 1; ++i)
-				out = out.regDownstreamBlocking({ .allowRetimingBackward = true });
-			out = out.regDownstream({ .allowRetimingBackward = true });
+			for (size_t i = 0; i < memory.readLatencyHint() - 1; ++i)
+				out <<= out.regDownstreamBlocking({ .allowRetimingBackward = true });
+			return out.regDownstream({ .allowRetimingBackward = true });
 		}
 		return out;
 	}

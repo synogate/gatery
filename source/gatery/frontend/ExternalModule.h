@@ -42,6 +42,8 @@ namespace gtry
 	{
 	public:
 		ExternalModule(std::string_view name, std::string_view library = {});
+		ExternalModule(ExternalModule&&) = default;
+		ExternalModule(const ExternalModule&) = delete;
 
 		GenericParameter&	generic(std::string_view name);
 

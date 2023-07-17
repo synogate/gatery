@@ -29,8 +29,10 @@
 #include "../../utils/Range.h"
 #include "../../utils/Enumerate.h"
 #include "../../utils/Exceptions.h"
+#include "../../utils/FileSystem.h"
 
 #include "../../hlim/coreNodes/Node_Arithmetic.h"
+
 #include "../../hlim/coreNodes/Node_Compare.h"
 #include "../../hlim/coreNodes/Node_Constant.h"
 #include "../../hlim/coreNodes/Node_Logic.h"
@@ -47,6 +49,9 @@
 
 #include "../../frontend/SynthesisTool.h"
 
+#include <gatery/utils/FileSystem.h>
+
+
 #include <set>
 #include <map>
 #include <string>
@@ -60,19 +65,42 @@
 namespace gtry::vhdl {
 
 
-VHDLExport::VHDLExport(std::filesystem::path destination)
+VHDLExport::VHDLExport(std::filesystem::path destination, bool rewriteUnchangedFiles)
 {
-	m_destination = std::move(destination);
-	m_destinationTestbench = getDestination();
+	if (destination.has_extension()) {
+		m_singleFileName = destination.filename();
+		
+		std::filesystem::path dir = destination.parent_path();
+		if (dir.empty())
+			dir = ".";
+
+		m_fileSystem = std::make_unique<utils::DiskFileSystem>(dir, !rewriteUnchangedFiles);
+		m_fileSystemTestbench = std::make_unique<utils::DiskFileSystem>(dir);
+	} else {
+		m_fileSystem = std::make_unique<utils::DiskFileSystem>(destination, !rewriteUnchangedFiles);
+		m_fileSystemTestbench = std::make_unique<utils::DiskFileSystem>(destination);
+	}
+
 	m_codeFormatting.reset(new DefaultCodeFormatting());
 	m_synthesisTool.reset(new DefaultSynthesisTool());
 }
 
 
-VHDLExport::VHDLExport(std::filesystem::path destination, std::filesystem::path destinationTestbench)
+VHDLExport::VHDLExport(std::filesystem::path destination, std::filesystem::path destinationTestbench, bool rewriteUnchangedFiles)
 {
-	m_destination = std::move(destination);
-	m_destinationTestbench = std::move(destinationTestbench);
+	if (destination.has_extension()) {
+		m_singleFileName = destination.filename();
+		
+		std::filesystem::path dir = destination.parent_path();
+		if (dir.empty())
+			dir = ".";
+
+		m_fileSystem = std::make_unique<utils::DiskFileSystem>(dir, !rewriteUnchangedFiles);
+	} else
+		m_fileSystem = std::make_unique<utils::DiskFileSystem>(destination);
+
+	m_fileSystemTestbench = std::make_unique<utils::DiskFileSystem>(destinationTestbench);
+
 	m_codeFormatting.reset(new DefaultCodeFormatting());
 	m_synthesisTool.reset(new DefaultSynthesisTool());
 }
@@ -80,6 +108,12 @@ VHDLExport::VHDLExport(std::filesystem::path destination, std::filesystem::path 
 VHDLExport::~VHDLExport()
 {
 	m_testbenchRecorder.clear(); // Explicitly clear to trigger destructors and flushes before anything important destructs.
+}
+
+VHDLExport &VHDLExport::outputMode(OutputMode outputMode)
+{
+	m_outputMode = outputMode;
+	return *this;
 }
 
 VHDLExport &VHDLExport::targetSynthesisTool(SynthesisTool *synthesisTool)
@@ -136,11 +170,6 @@ CodeFormatting *VHDLExport::getFormatting()
 
 void VHDLExport::operator()(hlim::Circuit &circuit)
 {
-	if (!getDestination().empty())
-		std::filesystem::create_directories(getDestination());
-	if (!m_destinationTestbench.empty())
-		std::filesystem::create_directories(m_destinationTestbench);
-
 	m_synthesisTool->prepareCircuit(circuit);
 
 	m_ast.reset(new AST(m_codeFormatting.get(), m_synthesisTool.get()));
@@ -148,13 +177,13 @@ void VHDLExport::operator()(hlim::Circuit &circuit)
 		m_ast->generateInterfacePackage(m_interfacePackageContent);
 
 	m_ast->convert((hlim::Circuit &)circuit);
-	m_ast->writeVHDL(m_destination, m_customVhdlFiles);
+	m_ast->writeVHDL(*m_fileSystem, m_outputMode, m_singleFileName, m_customVhdlFiles);
 
 	for (auto &e : m_testbenchRecorderSettings) {
 		if (e.inlineTestData)
-			m_testbenchRecorder.push_back(std::make_unique<TestbenchRecorder>(*this, m_ast.get(), *e.simulator, m_destinationTestbench, e.name));
+			m_testbenchRecorder.push_back(std::make_unique<TestbenchRecorder>(*this, m_ast.get(), *e.simulator, *m_fileSystemTestbench, e.name));
 		else
-			m_testbenchRecorder.push_back(std::make_unique<FileBasedTestbenchRecorder>(*this, m_ast.get(), *e.simulator, m_destinationTestbench, e.name));
+			m_testbenchRecorder.push_back(std::make_unique<FileBasedTestbenchRecorder>(*this, m_ast.get(), *e.simulator, *m_fileSystemTestbench, e.name));
 			
 		e.simulator->addCallbacks(m_testbenchRecorder.back().get());
 	}
@@ -175,21 +204,32 @@ void VHDLExport::operator()(hlim::Circuit &circuit)
 		doWriteInstantiationTemplateVHDL(m_instantiationTemplateVHDL);
 }
 
-bool VHDLExport::isSingleFileExport()
+
+std::filesystem::path VHDLExport::getDestinationPath() const
 {
-	return m_destination.has_extension();
+	return m_fileSystem->basePath();
 }
 
-std::filesystem::path VHDLExport::getDestination()
+utils::FileSystem &VHDLExport::getDestination()
 {
-	if (isSingleFileExport())
-	{
-		std::filesystem::path dir = m_destination.parent_path();
-		if (dir.empty())
-			dir = ".";
-		return dir;
-	}
-	return m_destination;
+	return *m_fileSystem;
+}
+
+std::filesystem::path VHDLExport::getTestbenchDestinationPath() const
+{
+	return m_fileSystemTestbench->basePath();
+}
+
+
+utils::FileSystem &VHDLExport::getTestbenchDestination()
+{
+	return *m_fileSystemTestbench;
+}
+
+
+bool VHDLExport::isSingleFileExport()
+{
+	return !m_singleFileName.empty() && (m_outputMode == OutputMode::AUTO || m_outputMode == OutputMode::SINGLE_FILE);
 }
 
 void VHDLExport::addTestbenchRecorder(sim::Simulator &simulator, const std::string &name, bool inlineTestData)
@@ -202,8 +242,6 @@ void VHDLExport::doWriteInstantiationTemplateVHDL(std::filesystem::path destinat
 	CodeFormatting &cf = m_ast->getCodeFormatting();
 	auto *rootEntity = m_ast->getRootEntity();
 
-
-
 	std::vector<hlim::Clock*> clocks(rootEntity->getClocks().begin(), rootEntity->getClocks().end());
 	std::vector<hlim::Clock*> resets(rootEntity->getResets().begin(), rootEntity->getResets().end());
 	std::vector<hlim::Node_Pin*> ioPins(rootEntity->getIoPins().begin(), rootEntity->getIoPins().end());
@@ -213,12 +251,8 @@ void VHDLExport::doWriteInstantiationTemplateVHDL(std::filesystem::path destinat
 		return lhs->getId() > rhs->getId();
 	});
 
-
-	if (!destination.parent_path().empty())
-		std::filesystem::create_directories(destination.parent_path());
-
-	std::ofstream file{ destination.c_str(), std::ofstream::binary };
-	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+	auto fileHandle = m_fileSystem->writeFile(destination);
+	auto &file = fileHandle->stream();
 
 	file << "library ieee;\n"
 		   << "use ieee.std_logic_1164.ALL;\n"

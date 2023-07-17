@@ -27,6 +27,7 @@
 
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Preprocessor.h>
+#include <gatery/utils/FileSystem.h>
 
 namespace gtry {
 
@@ -92,9 +93,8 @@ void Synopsys::resolveAttributes(const hlim::MemoryAttributes &attribs, hlim::Re
 
 void Synopsys::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
 {
-	std::string fullPath = (vhdlExport.getDestination() / filename).string();
-	std::fstream file(fullPath.c_str(), std::fstream::out);
-	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
+	auto &file = fileHandle->stream();
 
 	writeClockSDC(*vhdlExport.getAST(), file);
 }

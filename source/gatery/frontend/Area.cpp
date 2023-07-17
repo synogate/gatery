@@ -21,9 +21,8 @@
 gtry::Area::Area(std::string_view name, bool instantEnter)
 {
 	auto* parent = GroupScope::getCurrentNodeGroup();
-	m_nodeGroup = parent->addChildNodeGroup(hlim::NodeGroup::GroupType::ENTITY);
+	m_nodeGroup = parent->addChildNodeGroup(hlim::NodeGroup::GroupType::ENTITY, name);
 	m_nodeGroup->recordStackTrace();
-	m_nodeGroup->setName(std::string(name));
 
 	if (instantEnter)
 		m_inScope.emplace(m_nodeGroup);
@@ -36,8 +35,8 @@ gtry::GroupScope gtry::Area::enter() const
 
 std::pair<gtry::GroupScope, gtry::GroupScope> gtry::Area::enter(std::string_view subName) const
 {
-	hlim::NodeGroup* sub = m_nodeGroup->addChildNodeGroup(hlim::NodeGroup::GroupType::ENTITY);
+	hlim::NodeGroup* sub = m_nodeGroup->addChildNodeGroup(hlim::NodeGroup::GroupType::ENTITY, subName);
 	sub->recordStackTrace();
-	sub->setName(std::string(subName));
+
 	return { m_nodeGroup, sub };
 }
