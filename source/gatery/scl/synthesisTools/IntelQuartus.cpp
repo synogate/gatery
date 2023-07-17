@@ -152,8 +152,15 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 
 	writeClockSDC(*vhdlExport.getAST(), file);
 
+	auto* fpga = dynamic_cast<scl::arch::FPGADevice*>(DesignScope::get()->getTargetTechnology());
+	if (fpga == nullptr) {
+		// no fpga specified or not targeting an fpga
+	}
+	else {
+		if (fpga->getFamily() != "Agilex")
+			file << "derive_pll_clocks\n";
+	}
 
-	file << "derive_pll_clocks\n";
 	file << "derive_clock_uncertainty\n";
 }
 
