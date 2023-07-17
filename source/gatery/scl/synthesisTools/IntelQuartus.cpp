@@ -43,6 +43,8 @@
 #include <gatery/export/vhdl/Entity.h>
 #include <gatery/export/vhdl/Package.h>
 
+#include <gatery/scl/arch/general/FPGADevice.h>
+
 #include <string_view>
 #include <boost/range/adaptor/reversed.hpp>
 
@@ -258,7 +260,7 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 		}
 	}
 
-	/*for (auto& pin : vhdlExport.getAST()->getRootEntity()->getIoPins())
+	for (auto& pin : vhdlExport.getAST()->getRootEntity()->getIoPins())
 {
 	std::string_view direction;
 	std::vector<hlim::Node_Register*> allRegs;
@@ -348,7 +350,7 @@ for (auto& reset : vhdlExport.getAST()->getRootEntity()->getResets()) {
 	file << " -clock " << clock->getName();
 	file << " [get_ports " << vhdlResetName << "] -reference_pin " << path << "\n";
 }
-*/
+
 	
 
 }
