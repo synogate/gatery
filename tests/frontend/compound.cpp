@@ -50,6 +50,9 @@ BOOST_FIXTURE_TEST_CASE(CompoundName, BoostUnitTestSimulationFixture)
 	static_assert(Signal<BVec>);
 	static_assert(Signal<BVec&>);
 	static_assert(Signal<const BVec&>);
+	static_assert(Signal<Reverse<BVec>>);
+	static_assert(Signal<Reverse<BVec>&>);
+	static_assert(Signal<const Reverse<BVec>&>);
 	static_assert(Signal<std::vector<BVec>>);
 	static_assert(Signal<std::vector<BVec>&>);
 	static_assert(Signal<const std::vector<BVec>>);

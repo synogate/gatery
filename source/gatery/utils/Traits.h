@@ -303,14 +303,8 @@ namespace gtry {
 
 	////
 
-	namespace internal
-	{
-		template<class T>
-		struct is_reverse_signal;
-	}
-
 	template<class T>
-	concept ReverseSignal = internal::is_reverse_signal<T>::value;
+	concept ReverseSignal = std::remove_cvref_t<T>::is_reverse_signal::value;
 
 	template<typename T>
 	concept Signal =

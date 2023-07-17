@@ -25,6 +25,9 @@ namespace gtry
 	class Reverse
 	{
 	public:
+		using is_reverse_signal = std::true_type;
+
+	public:
 		Reverse() = default;
 		Reverse(const Reverse&) = delete;
 		Reverse(Reverse&& rhs);
@@ -205,15 +208,6 @@ namespace gtry
 
 	template<CompoundSignal T> using DownstreamSignal = decltype(copy(downstream(std::declval<T>())));
 	template<CompoundSignal T> using UpstreamSignal = decltype(copy(upstream(std::declval<T>())));
-
-	namespace internal
-	{
-		template<class T>
-		struct is_reverse_signal : std::false_type {};
-
-		template<Signal T>
-		struct is_reverse_signal<Reverse<T>> : std::true_type {};
-	}
 
 	template<gtry::Signal T>
 	void connect(T& lhs, T& rhs)
