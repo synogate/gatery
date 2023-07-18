@@ -44,12 +44,12 @@ namespace gtry {
 
 	class BaseOutputPin : public BasePin {
 		public:
-			BaseOutputPin(hlim::NodePort nodePort, std::string name, size_t outputDelayInNs = 0);
+			BaseOutputPin(hlim::NodePort nodePort, std::string name, const hlim::Node_Pin::PinParameter& params = {});
 	};	
 
 	class OutputPin : public BaseOutputPin {
 		public:
-			OutputPin(const Bit &bit, size_t outputDelayInNs = 0);
+			OutputPin(const Bit &bit, const hlim::Node_Pin::PinParameter& params = {});
 
 			inline OutputPin &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
 			inline OutputPin &setDifferential(std::string_view posPrefix = "_p", std::string_view negPrefix = "_n") { m_pinNode->setDifferential(posPrefix, negPrefix); return *this; }
@@ -58,7 +58,7 @@ namespace gtry {
 
 	class OutputPins : public BaseOutputPin {
 		public:
-			OutputPins(const ElementarySignal& bitVector, size_t outputDelayInNs = 0) : BaseOutputPin(bitVector.readPort(), std::string(bitVector.getName()), outputDelayInNs) { }
+			OutputPins(const ElementarySignal& bitVector, const hlim::Node_Pin::PinParameter& params = {}) : BaseOutputPin(bitVector.readPort(), std::string(bitVector.getName()), params) { }
 
 			inline OutputPins &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
 			inline OutputPins &setDifferential(std::string_view posPrefix = "_p", std::string_view negPrefix = "_n") { m_pinNode->setDifferential(posPrefix, negPrefix); return *this; }
@@ -72,14 +72,14 @@ namespace gtry {
 
 	class InputPin : public BaseInputPin {
 		public:
-			InputPin(size_t inputDelayInNs = 0);
+			InputPin(const hlim::Node_Pin::PinParameter& params = {});
 			operator Bit () const;
 			inline InputPin &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
 	};
 
 	class InputPins : public BaseInputPin {
 		public:
-			InputPins(BitWidth width, size_t inputDelayInNs = 0);
+			InputPins(BitWidth width, const hlim::Node_Pin::PinParameter& params = {});
 			operator UInt () const;
 
 			template<BitVectorDerived T> requires (!std::same_as<UInt, T>)
@@ -140,18 +140,18 @@ namespace gtry {
 	};	
 
 
-	inline OutputPin pinOut(const Bit &bit, size_t outputDelayInNs = 0) { return OutputPin(bit, outputDelayInNs); }
+	inline OutputPin pinOut(const Bit &bit, const hlim::Node_Pin::PinParameter& params = {}) { return OutputPin(bit, params); }
 	template<BitVectorValue T>
-	inline OutputPins pinOut(const T& bitVector, size_t outputDelayInNs = 0) {
+	inline OutputPins pinOut(const T& bitVector, const hlim::Node_Pin::PinParameter& params = {}) {
 		auto sig = (ValueToBaseSignal<T>)bitVector;
 		HCL_DESIGNCHECK_HINT(sig.valid(), "Can not pinOut uninitialized bitvectors");
-		return OutputPins(sig, outputDelayInNs);
+		return OutputPins(sig, params);
 	}
 
-	OutputPins pinOut(const InputPins &input, size_t outputDelayInNs = 0);
+	OutputPins pinOut(const InputPins &input, const hlim::Node_Pin::PinParameter& params = {});
 
-	inline InputPin pinIn(size_t inputDelayInNs = 0) { return InputPin(inputDelayInNs); }
-	inline InputPins pinIn(BitWidth width, size_t inputDelayInNs = 0) { return InputPins(width, inputDelayInNs); }
+	inline InputPin pinIn(const hlim::Node_Pin::PinParameter& params = {}) { return InputPin(params); }
+	inline InputPins pinIn(BitWidth width, const hlim::Node_Pin::PinParameter& params = {}) { return InputPins(width, params); }
 
 	void pinIn(Signal auto&& signal, std::string prefix);
 	void pinOut(Signal auto&& signal, std::string prefix);
