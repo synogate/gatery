@@ -24,6 +24,7 @@
 #include <gatery/hlim/Clock.h>
 #include <gatery/export/vhdl/AST.h>
 #include <gatery/export/vhdl/Entity.h>
+#include <gatery/hlim/coreNodes/Node_Pin.h>
 
 #include <fstream>
 #include <sstream>
@@ -38,8 +39,11 @@ void writeClockXDC(const vhdl::AST &ast, std::ostream& out)
 		auto&& name = top->getNamespaceScope().getClock(clk).name;
 		hlim::ClockRational freq = clk->absoluteFrequency();
 		double ns = double(freq.denominator() * 1'000'000'000) / freq.numerator();
-
-		out << "create_clock -period " << std::fixed << std::setprecision(3) << ns << " [get_ports " << name << "]\n";
+		if (clk->getLogicDriver(false, clk).node == nullptr)
+		{
+				out << "create_clock -period " << std::fixed << std::setprecision(3) << ns << " [get_ports " << name << "]\n";
+		}
+		
 	}
 }
 
