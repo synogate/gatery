@@ -170,7 +170,8 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 {
 	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
 	auto &file = fileHandle->stream();
-
+	std::string delaySettings = "";
+	file << "# CDC constraints \n";
 	for (auto& node : circuit.getNodes()) {
 		if (auto* cdcNode = dynamic_cast<hlim::Node_CDC*>(node.get()))
 		{
@@ -236,7 +237,7 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 					cdcOut.push_back(regOutputIdentifier);
 					nh.backtrack();
 				}
-
+				//set_instance_assignment -name VERIFIED_GRAY_CODED_BUS_DESTINATIONS ON -to dst_reg[*], 
 			}
 			// write constraints to file
 			for(auto itIn : cdcIn)
@@ -249,27 +250,37 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 		}
 		if (auto* portNode = dynamic_cast<hlim::Node_Pin*>(node.get()))
 		{
-			if (portNode->getPortDelay().numerator() > 0)
+			auto pinParam = portNode->getPinParameter();
+			if (pinParam.portDelay)
 			{
-				auto del = portNode->getPortDelay().numerator() * 1'000'000'000.0 / portNode->getPortDelay().denominator();
-				if (portNode->isInputPin())
-					file << "set_input_delay -clock " + portNode->getClocks().front()->getName() + " " + std::to_string(del) + " " + portNode->getName() + "\n";
-				else
-					file << "set_output_delay -clock " + portNode->getClocks().front()->getName() + " " + std::to_string(del) + " " + portNode->getName() + "\n";
+				if (pinParam.portDelay.value().numerator() > 0)
+				{
+					auto del = pinParam.portDelay.value().numerator() * 1'000'000'000.0 / pinParam.portDelay.value().denominator();
+					if (portNode->isInputPin())
+						delaySettings += "set_input_delay -clock " + portNode->getClocks().front()->getName() + " " + std::to_string(del) + " " + portNode->getName() + "\n";
+					else
+						delaySettings += "set_output_delay -clock " + portNode->getClocks().front()->getName() + " " + std::to_string(del) + " " + portNode->getName() + "\n";
+				}
 			}
 			else
 			{
 				std::string direction;
-				if (portNode->isInputPin())
+				if (portNode->isBiDirectional())
+					direction = "InOut";
+				else if (portNode->isInputPin())
 					direction = "Input";
 				else
 					direction = "Output";
-				//HCL_DESIGNCHECK_HINT(false, direction + " pin " + portNode->getName() + " has no delay setting!\n");
+
+				if (pinParam.delaySpecifiedElsewhere)
+					delaySettings += "# " + direction + " pin " + portNode->getName() + " has its delay defined elsewhere!\n";
+				else
+					delaySettings += "# " + direction + " pin " + portNode->getName() + " has no delay setting!\n";
 			}
 		}
 	}
-
-
+	file << "\n# Port Pin delay constraints\n";
+	file << delaySettings;
 
 	
 
