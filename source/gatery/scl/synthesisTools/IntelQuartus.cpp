@@ -169,13 +169,13 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
 {
 	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
-	auto &file = fileHandle->stream();
+	auto &sdcFile = fileHandle->stream();
 
 	auto fileHandle2 = vhdlExport.getDestination().writeFile("constraints.tcl");
-	auto &file2 = fileHandle2->stream();
+	auto &tclFile = fileHandle2->stream();
 
-	std::string delaySettings = "";
-	file << "# CDC constraints \n";
+	std::stringstream delaySettings;
+	sdcFile << "# CDC constraints \n";
 	for (auto& node : circuit.getNodes()) {
 		if (auto* cdcNode = dynamic_cast<hlim::Node_CDC*>(node.get()))
 		{
@@ -203,15 +203,17 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 					std::vector<vhdl::BaseGrouping*> regOutputReversePath;
 					if (!vhdlExport.getAST()->findLocalDeclaration(nh.nodePort(), regOutputReversePath))
 						continue;
-					std::string regOutputIdentifier;
-					for (size_t i = regOutputReversePath.size() - 2; i < regOutputReversePath.size(); --i)
-						regOutputIdentifier += regOutputReversePath[i]->getInstanceName() + '|';
-					regOutputIdentifier += regOutputReversePath.front()->getNamespaceScope().get(nh.nodePort()).name;
+
+					std::stringstream regOutputIdentifier;
+					for (size_t i = regOutputReversePath.size() - 2; i < regOutputReversePath.size(); --i) 
+						regOutputIdentifier << regOutputReversePath[i]->getInstanceName() + '|';
+					regOutputIdentifier << regOutputReversePath.front()->getNamespaceScope().get(nh.nodePort()).name;
+
 					auto type = nh.node()->getOutputConnectionType(0);
 					if (type.isBitVec())
-						regOutputIdentifier += "[*]";
-
-					cdcIn.push_back(regOutputIdentifier);
+						regOutputIdentifier << "[*]";
+						
+					cdcIn.push_back(regOutputIdentifier.str());
 					nh.backtrack();
 				}
 
@@ -230,69 +232,69 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 					std::vector<vhdl::BaseGrouping*> regOutputReversePath;
 					if (!vhdlExport.getAST()->findLocalDeclaration(nh.nodePort(), regOutputReversePath))
 						continue;
-					std::string regOutputIdentifier;
+
+					std::stringstream regOutputIdentifier;
 					for (size_t i = regOutputReversePath.size() - 2; i < regOutputReversePath.size(); --i)
-						regOutputIdentifier += regOutputReversePath[i]->getInstanceName() + '|';
-					regOutputIdentifier += regOutputReversePath.front()->getNamespaceScope().get(nh.nodePort()).name;
+						regOutputIdentifier << regOutputReversePath[i]->getInstanceName() + '|';
+					regOutputIdentifier << regOutputReversePath.front()->getNamespaceScope().get(nh.nodePort()).name;
+
 					auto type = nh.node()->getOutputConnectionType(0);
 					if (type.isBitVec())
-						regOutputIdentifier += "[*]";
+						regOutputIdentifier << "[*]";
 
-					cdcOut.push_back(regOutputIdentifier);
+					cdcOut.push_back(regOutputIdentifier.str());
 					nh.backtrack();
 				}
 
 			}
-			// write constraints to file
+			// write constraints to .sdc file
 			for(auto itIn : cdcIn)
 				for (auto itOut : cdcOut)
 				{
-					file << "set_max_skew -get_skew_value_from_clock_period min_clock_period -skew_value_multiplier 0.8 -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
-					file << "set_net_delay -max -get_value_from_clock_period dst_clock_period -value_multiplier 0.8 -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
+					sdcFile << "set_max_skew -get_skew_value_from_clock_period min_clock_period -skew_value_multiplier 0.8 -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
+					sdcFile << "set_net_delay -max -get_value_from_clock_period dst_clock_period -value_multiplier 0.8 -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
 				}
 
+			// write constraints to .tcl file
 			if(cdcNode->getIsGrayCoded())
 				for (auto itOut : cdcOut)
 				{
-					file2 << "set_instance_assignment -name VERIFIED_GRAY_CODED_BUS_DESTINATIONS ON -to " + itOut + "\n";
+					tclFile << "set_instance_assignment -name VERIFIED_GRAY_CODED_BUS_DESTINATIONS ON -to " + itOut + "\n";
 				}
 
 		}
 		if (auto* portNode = dynamic_cast<hlim::Node_Pin*>(node.get()))
 		{
+			std::string direction;
+			if (portNode->isBiDirectional())
+				direction = "InOut";
+			else if (portNode->isInputPin())
+				direction = "Input";
+			else
+				direction = "Output";
+
 			auto pinParam = portNode->getPinParameter();
 			if (pinParam.portDelay)
 			{
 				if (pinParam.portDelay.value().numerator() > 0)
 				{
 					auto del = pinParam.portDelay.value().numerator() * 1'000'000'000.0 / pinParam.portDelay.value().denominator();
-					if (portNode->isInputPin())
-						delaySettings += "set_input_delay -clock " + portNode->getClocks().front()->getName() + " " + std::to_string(del) + " " + portNode->getName() + "\n";
-					else
-						delaySettings += "set_output_delay -clock " + portNode->getClocks().front()->getName() + " " + std::to_string(del) + " " + portNode->getName() + "\n";
+					if (direction != "InOut")
+						delaySettings << "set_" << direction << "_delay -clock " << portNode->getClocks().front()->getName() << " " << std::to_string(del) << " " << portNode->getName() << "\n";
 				}
 			}
 			else
 			{
-				std::string direction;
-				if (portNode->isBiDirectional())
-					direction = "InOut";
-				else if (portNode->isInputPin())
-					direction = "Input";
-				else
-					direction = "Output";
-
+				delaySettings << "# " + direction << " pin " << portNode->getName();
 				if (pinParam.delaySpecifiedElsewhere)
-					delaySettings += "# " + direction + " pin " + portNode->getName() + " has its delay defined elsewhere!\n";
+					delaySettings << " has its delay defined elsewhere!\n";
 				else
-					delaySettings += "# " + direction + " pin " + portNode->getName() + " has no delay setting!\n";
+					delaySettings << " has no delay setting!\n";
 			}
 		}
 	}
-	file << "\n# Port Pin delay constraints\n";
-	file << delaySettings;
-
-	
+	sdcFile << "\n# Port Pin delay constraints\n";
+	sdcFile << delaySettings.str();
 
 }
 
