@@ -251,8 +251,9 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 			for(auto itIn : cdcIn)
 				for (auto itOut : cdcOut)
 				{
-					sdcFile << "set_max_skew -get_skew_value_from_clock_period min_clock_period -skew_value_multiplier 0.8 -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
-					sdcFile << "set_net_delay -max -get_value_from_clock_period dst_clock_period -value_multiplier 0.8 -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
+					sdcFile << "set_false_path -from [get_registers " << itIn << "] -to [get_registers " << itOut << "]\n";
+					sdcFile << "set_max_skew -get_skew_value_from_clock_period min_clock_period -skew_value_multiplier 0.8 -from [get_registers " << itIn << "] -to [get_registers " << itOut << "]\n";
+					sdcFile << "set_net_delay -max -get_value_from_clock_period dst_clock_period -value_multiplier 0.8 -from [get_registers " << itIn << "] -to [get_registers " << itOut << "]\n";
 				}
 
 			// write constraints to .tcl file
@@ -267,11 +268,11 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 		{
 			std::string direction;
 			if (portNode->isBiDirectional())
-				direction = "InOut";
+				direction = "inOut";
 			else if (portNode->isInputPin())
-				direction = "Input";
+				direction = "input";
 			else
-				direction = "Output";
+				direction = "output";
 
 			auto pinParam = portNode->getPinParameter();
 			if (pinParam.portDelay)
