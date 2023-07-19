@@ -286,10 +286,14 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 			else
 			{
 				delaySettings << "# " + direction << " pin " << portNode->getName();
-				if (pinParam.delaySpecifiedElsewhere)
+				if (pinParam.delaySpecifiedElsewhere) {
 					delaySettings << " has its delay defined elsewhere!\n";
-				else
+					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << portNode->getName() << " has its delay defined elsewhere!");
+				}
+				else {
 					delaySettings << " has no delay setting!\n";
+					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << portNode->getName() << " has no delay setting!");
+				}
 			}
 		}
 	}
