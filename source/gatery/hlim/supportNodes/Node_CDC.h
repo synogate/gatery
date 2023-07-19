@@ -56,6 +56,12 @@ class Node_CDC : public Node<Node_CDC>
 
 		virtual OutputClockRelation getOutputClockRelation(size_t output) const override;
 		virtual bool checkValidInputClocks(std::span<SignalClockDomain> inputClocks) const override;
+
+		bool getIsGrayCoded() const { return m_isGrayCoded; }
+		void isGrayCoded(bool &value) { m_isGrayCoded = value; }
+
+	protected:
+		bool m_isGrayCoded;
 };
 
 }

@@ -59,23 +59,23 @@ class Clock;
 namespace internal {
 
 /// Inserts a node that allows clock domain crossing and verifies that the crossing happens from/to the specified clocks.
-SignalReadPort allowClockDomainCrossing(const ElementarySignal& in, const Clock &srcClock, const Clock &dstClock);
+SignalReadPort allowClockDomainCrossing(const ElementarySignal& in, const Clock &srcClock, const Clock &dstClock, bool isGrayCoded);
 
 }
 
 /// Inserts a node that allows clock domain crossing and verifies that the crossing happens from/to the specified clocks.
 template<BaseSignal SignalType>
-inline SignalType allowClockDomainCrossing(const SignalType& in, const Clock &srcClock, const Clock &dstClock) {
-	return internal::allowClockDomainCrossing(in, srcClock, dstClock);
+inline SignalType allowClockDomainCrossing(const SignalType& in, const Clock &srcClock, const Clock &dstClock, bool isGrayCoded = false) {
+	return internal::allowClockDomainCrossing(in, srcClock, dstClock, isGrayCoded);
 }
 	
 
 /// Inserts a node that allows clock domain crossing and verifies that the crossing happens from/to the specified clocks.
 template<Signal T>
-T allowClockDomainCrossing(const T& val, const Clock &srcClock, const Clock &dstClock)
+T allowClockDomainCrossing(const T& val, const Clock &srcClock, const Clock &dstClock, bool isGrayCoded = false)
 {
 	return internal::transformSignal(val, [&](const BaseSignal auto& sig) {
-		return allowClockDomainCrossing(sig, srcClock, dstClock);
+		return allowClockDomainCrossing(sig, srcClock, dstClock, isGrayCoded);
 	});
 }
 

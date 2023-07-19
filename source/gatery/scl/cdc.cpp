@@ -69,10 +69,10 @@ gtry::Bit gtry::scl::synchronizeRelease(Bit reset, const Clock& inClock, const C
 
 gtry::UInt gtry::scl::synchronizeGrayCode(UInt in, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
 {
-	return grayDecode(synchronize(grayEncode(in), inClock, outClock, outStages, inStage));
+	return grayDecode(synchronize(grayEncode(in), inClock, outClock, outStages, inStage, true));
 }
 
 gtry::UInt gtry::scl::synchronizeGrayCode(UInt in, UInt reset, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
 {
-	return grayDecode(synchronize(grayEncode(in), grayEncode(reset), inClock, outClock, outStages, inStage));
+	return grayDecode(synchronize(grayEncode(in), grayEncode(reset), inClock, outClock, outStages, inStage, true));
 }

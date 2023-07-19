@@ -42,12 +42,13 @@ void pathAttribute(ElementarySignal &start, ElementarySignal &end, PathAttribute
 	node->connectEnd(end.readPort());
 }
 
-SignalReadPort internal::allowClockDomainCrossing(const ElementarySignal& in, const Clock &srcClock, const Clock &dstClock)
+SignalReadPort internal::allowClockDomainCrossing(const ElementarySignal& in, const Clock &srcClock, const Clock &dstClock, bool isGrayCoded)
 {
 	auto* node = DesignScope::createNode<hlim::Node_CDC>();
 	node->attachClock(srcClock.getClk(), (size_t)hlim::Node_CDC::Clocks::INPUT_CLOCK);
 	node->attachClock(dstClock.getClk(), (size_t)hlim::Node_CDC::Clocks::OUTPUT_CLOCK);
 	node->connectInput(in.readPort());
+	node->isGrayCoded(isGrayCoded);
 	return SignalReadPort( node );
 }
 
