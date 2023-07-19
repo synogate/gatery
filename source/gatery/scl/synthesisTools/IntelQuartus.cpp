@@ -170,6 +170,10 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 {
 	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
 	auto &file = fileHandle->stream();
+
+	auto fileHandle2 = vhdlExport.getDestination().writeFile("constraints.tcl");
+	auto &file2 = fileHandle2->stream();
+
 	std::string delaySettings = "";
 	file << "# CDC constraints \n";
 	for (auto& node : circuit.getNodes()) {
@@ -237,7 +241,7 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 					cdcOut.push_back(regOutputIdentifier);
 					nh.backtrack();
 				}
-				//set_instance_assignment -name VERIFIED_GRAY_CODED_BUS_DESTINATIONS ON -to dst_reg[*], 
+
 			}
 			// write constraints to file
 			for(auto itIn : cdcIn)
@@ -245,6 +249,12 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 				{
 					file << "set_max_skew -get_skew_value_from_clock_period min_clock_period -skew_value_multiplier 0.8 -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
 					file << "set_net_delay -max -get_value_from_clock_period dst_clock_period -value_multiplier 0.8 -from [get_registers " + itIn + "] -to [get_registers " + itOut + "]\n";
+				}
+
+			if(cdcNode->getIsGrayCoded())
+				for (auto itOut : cdcOut)
+				{
+					file2 << "set_instance_assignment -name VERIFIED_GRAY_CODED_BUS_DESTINATIONS ON -to " + itOut + "\n";
 				}
 
 		}
