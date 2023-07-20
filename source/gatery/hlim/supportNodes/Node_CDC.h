@@ -57,11 +57,17 @@ class Node_CDC : public Node<Node_CDC>
 		virtual OutputClockRelation getOutputClockRelation(size_t output) const override;
 		virtual bool checkValidInputClocks(std::span<SignalClockDomain> inputClocks) const override;
 
-		bool getIsGrayCoded() const { return m_isGrayCoded; }
-		void isGrayCoded(bool &value) { m_isGrayCoded = value; }
+		struct CdcNodeParameter {
+			std::optional<bool> isGrayCoded = {};
+			std::optional<double> maxSkew = {};
+			std::optional<double> netDelay = {};
+		};
+
+		inline CdcNodeParameter getCdcNodeParameter() const { return m_param; }
+		void setCdcNodeParameter(CdcNodeParameter parameter) { m_param = parameter; }
 
 	protected:
-		bool m_isGrayCoded;
+		CdcNodeParameter m_param;
 };
 
 }

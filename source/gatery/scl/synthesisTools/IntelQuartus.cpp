@@ -257,17 +257,21 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 				}
 
 			}
+
+			double maxSkew = cdcNode->getCdcNodeParameter().maxSkew ? cdcNode->getCdcNodeParameter().maxSkew.value() : 0.8;
+			double netDelay = cdcNode->getCdcNodeParameter().netDelay ? cdcNode->getCdcNodeParameter().netDelay.value() : 0.8;
+
 			// write constraints to .sdc file
 			for(auto itIn : cdcIn)
 				for (auto itOut : cdcOut)
 				{
 					sdcFile << "set_false_path -from [get_registers " << itIn << "] -to [get_registers " << itOut << "]\n";
-					sdcFile << "set_max_skew -get_skew_value_from_clock_period min_clock_period -skew_value_multiplier 0.8 -from [get_registers " << itIn << "] -to [get_registers " << itOut << "]\n";
-					sdcFile << "set_net_delay -max -get_value_from_clock_period dst_clock_period -value_multiplier 0.8 -from [get_registers " << itIn << "] -to [get_registers " << itOut << "]\n";
+					sdcFile << "set_max_skew -get_skew_value_from_clock_period min_clock_period -skew_value_multiplier " << maxSkew << " - from[get_registers " << itIn << "] - to[get_registers " << itOut << "]\n";
+					sdcFile << "set_net_delay -max -get_value_from_clock_period dst_clock_period -value_multiplier " << netDelay << " -from [get_registers " << itIn << "] -to [get_registers " << itOut << "]\n";
 				}
 
 			// write constraints to .tcl file
-			if(cdcNode->getIsGrayCoded())
+			if(cdcNode->getCdcNodeParameter().isGrayCoded)
 				for (auto itOut : cdcOut)
 				{
 					tclFile << "set_instance_assignment -name VERIFIED_GRAY_CODED_BUS_DESTINATIONS ON -to " + itOut + "\n";

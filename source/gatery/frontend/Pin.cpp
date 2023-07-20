@@ -31,7 +31,7 @@ namespace gtry {
 		m_pinNode = DesignScope::createNode<hlim::Node_Pin>(false, true, false);
 		m_pinNode->connect(nodePort);
 		m_pinNode->setName(std::move(name));
-		m_pinNode->setPinParameter(params);
+		m_pinNode->setPinNodeParameter(params);
 		if (ClockScope::anyActive())
 			m_pinNode->setClockDomain(ClockScope::getClk().getClk());
 	}
@@ -49,7 +49,7 @@ namespace gtry {
 
 	InputPin::InputPin(const hlim::Node_Pin::PinNodeParameter& params) {
 		m_pinNode->setBool();
-		m_pinNode->setPinParameter(params);
+		m_pinNode->setPinNodeParameter(params);
 	}
 
 
@@ -60,7 +60,7 @@ namespace gtry {
 
 	InputPins::InputPins(BitWidth width, const hlim::Node_Pin::PinNodeParameter& params) {
 		m_pinNode->setWidth(width.value);
-		m_pinNode->setPinParameter(params);
+		m_pinNode->setPinNodeParameter(params);
 	}
 
 	InputPins::operator UInt () const { return UInt(SignalReadPort({.node=m_pinNode, .port=0ull})); }

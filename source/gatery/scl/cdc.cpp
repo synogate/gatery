@@ -18,6 +18,7 @@
 #include "gatery/pch.h"
 #include "cdc.h"
 #include "flag.h"
+#include <gatery/hlim/supportNodes/Node_CDC.h>
 
 gtry::BVec gtry::scl::grayEncode(UInt val)
 {
@@ -69,10 +70,10 @@ gtry::Bit gtry::scl::synchronizeRelease(Bit reset, const Clock& inClock, const C
 
 gtry::UInt gtry::scl::synchronizeGrayCode(UInt in, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
 {
-	return grayDecode(synchronize(grayEncode(in), inClock, outClock, outStages, inStage, true));
+	return grayDecode(synchronize(grayEncode(in), inClock, outClock, outStages, inStage, hlim::Node_CDC::CdcNodeParameter{.isGrayCoded = true}));
 }
 
 gtry::UInt gtry::scl::synchronizeGrayCode(UInt in, UInt reset, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
 {
-	return grayDecode(synchronize(grayEncode(in), grayEncode(reset), inClock, outClock, outStages, inStage, true));
+	return grayDecode(synchronize(grayEncode(in), grayEncode(reset), inClock, outClock, outStages, inStage, hlim::Node_CDC::CdcNodeParameter{ .isGrayCoded = true }));
 }
