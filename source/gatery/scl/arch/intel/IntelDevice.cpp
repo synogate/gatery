@@ -193,6 +193,9 @@ void IntelDevice::fromConfig(const gtry::utils::ConfigTree &configTree)
 {
 	FPGADevice::fromConfig(configTree);
 	
+	if (m_family == "Agilex")
+		m_requiresDerivePllClocks = false;
+
 	auto customComposition = configTree["custom_composition"];
 	if (customComposition) {
 		setupCustomComposition(customComposition);
@@ -291,6 +294,7 @@ void IntelDevice::setupDevice(std::string device)
 
 	if (agilexDevStr.parse(m_device)) {
 		m_family = "Agilex";
+		m_requiresDerivePllClocks = false;
 
 		bool add_eSRAM = false;
 		bool add_crypto = false;

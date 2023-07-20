@@ -34,9 +34,12 @@ class IntelDevice : public FPGADevice {
 		void setupMAX10();
 
 		void setupDevice(std::string device);
+
+		bool requiresDerivePllClocks() const { return m_requiresDerivePllClocks; }
 	protected:
 		void setupCustomComposition(const gtry::utils::ConfigTree &customComposition);
 
+		bool m_requiresDerivePllClocks = true;
 		std::map<std::string_view, size_t> m_lpmInstanceCounter;
 };
 
