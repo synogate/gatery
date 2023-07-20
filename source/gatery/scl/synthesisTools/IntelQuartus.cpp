@@ -69,28 +69,6 @@ namespace gtry
 		return true;
 	}
 
-	bool registerClockPin(vhdl::AST& ast, hlim::Node_Register* regNode, std::string &path)
-	{
-		hlim::NodePort regOutput = { .node = regNode, .port = 0ull };
-
-		std::vector<vhdl::BaseGrouping*> regOutputReversePath;
-		if (!ast.findLocalDeclaration(regOutput, regOutputReversePath))
-			return false;
-		
-		std::stringstream regOutputIdentifier;
-		for (size_t i = regOutputReversePath.size() - 2; i < regOutputReversePath.size(); --i)
-			regOutputIdentifier << regOutputReversePath[i]->getInstanceName() << '|';
-		regOutputIdentifier << regOutputReversePath.front()->getNamespaceScope().get(regOutput).name;
-
-		auto type = regNode->getOutputConnectionType(0);
-		if (type.isBitVec())
-			regOutputIdentifier << "[0]";
-
-		regOutputIdentifier << "|clk";
-		path = regOutputIdentifier.str();
-		return true;
-	}
-
 IntelQuartus::IntelQuartus()
 {
 	m_vendors = {
