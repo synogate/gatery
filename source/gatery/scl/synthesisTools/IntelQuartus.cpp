@@ -43,13 +43,31 @@
 #include <gatery/export/vhdl/Entity.h>
 #include <gatery/export/vhdl/Package.h>
 
-#include <gatery/scl/arch/general/FPGADevice.h>
+#include <gatery/scl/arch/intel/IntelDevice.h>
 
 #include <string_view>
 #include <boost/range/adaptor/reversed.hpp>
 
 namespace gtry 
 {
+
+	bool getNetlistSignalName(vhdl::AST& ast, hlim::NodePort output, std::string& path)
+	{
+
+		std::vector<vhdl::BaseGrouping*> regOutputReversePath;
+		if (!ast.findLocalDeclaration(output, regOutputReversePath))
+			return false;
+
+		std::stringstream regOutputIdentifier;
+		for (size_t i = regOutputReversePath.size() - 2; i < regOutputReversePath.size(); --i)
+			regOutputIdentifier << regOutputReversePath[i]->getInstanceName() << '|';
+		regOutputIdentifier << regOutputReversePath.front()->getNamespaceScope().get(output).name;
+
+		auto type = output.node->getOutputConnectionType(0);
+		
+		path = regOutputIdentifier.str();
+		return true;
+	}
 
 	bool registerClockPin(vhdl::AST& ast, hlim::Node_Register* regNode, std::string &path)
 	{
@@ -154,12 +172,12 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 
 	writeClockSDC(*vhdlExport.getAST(), file);
 
-	auto* fpga = dynamic_cast<scl::arch::FPGADevice*>(DesignScope::get()->getTargetTechnology());
-	if (fpga == nullptr) {
+	auto* intelFpga = dynamic_cast<scl::arch::intel::IntelDevice*>(DesignScope::get()->getTargetTechnology());
+	if (intelFpga == nullptr) {
 		// no fpga specified or not targeting an fpga
 	}
 	else {
-		if (fpga->getFamily() != "Agilex")
+		if (intelFpga->requiresDerivePllClocks())
 			file << "derive_pll_clocks\n";
 	}
 
@@ -168,11 +186,11 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 
 void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
 {
-	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
-	auto &sdcFile = fileHandle->stream();
+	auto sdcFileHandle = vhdlExport.getDestination().writeFile(filename);
+	auto &sdcFile = sdcFileHandle->stream();
 
-	auto fileHandle2 = vhdlExport.getDestination().writeFile("constraints.tcl");
-	auto &tclFile = fileHandle2->stream();
+	auto tclFileHandle = vhdlExport.getDestination().writeFile("constraints.tcl");
+	auto &tclFile = tclFileHandle->stream();
 
 	std::stringstream delaySettings;
 	sdcFile << "# CDC constraints \n";
@@ -199,22 +217,18 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 				alreadyVisited.insert(nh.nodePort());
 
 				if (nh.isNodeType<hlim::Node_Register>()) {
+					std::string path;
+					if (getNetlistSignalName (*vhdlExport.getAST(), nh.nodePort(), path))
+					{
+						auto type = nh.node()->getOutputConnectionType(0);
+						if (type.isBitVec())
+							path += "[*]";
 
-					std::vector<vhdl::BaseGrouping*> regOutputReversePath;
-					if (!vhdlExport.getAST()->findLocalDeclaration(nh.nodePort(), regOutputReversePath))
+						cdcIn.push_back(path);
+						nh.backtrack();
+					}
+					else
 						continue;
-
-					std::stringstream regOutputIdentifier;
-					for (size_t i = regOutputReversePath.size() - 2; i < regOutputReversePath.size(); --i) 
-						regOutputIdentifier << regOutputReversePath[i]->getInstanceName() + '|';
-					regOutputIdentifier << regOutputReversePath.front()->getNamespaceScope().get(nh.nodePort()).name;
-
-					auto type = nh.node()->getOutputConnectionType(0);
-					if (type.isBitVec())
-						regOutputIdentifier << "[*]";
-						
-					cdcIn.push_back(regOutputIdentifier.str());
-					nh.backtrack();
 				}
 
 			}
@@ -228,22 +242,18 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 				alreadyVisited.insert(nh.nodePort());
 
 				if (nh.isNodeType<hlim::Node_Register>()) {
+					std::string path;
+					if (getNetlistSignalName(*vhdlExport.getAST(), nh.nodePort(), path))
+					{
+						auto type = nh.node()->getOutputConnectionType(0);
+						if (type.isBitVec())
+							path += "[*]";
 
-					std::vector<vhdl::BaseGrouping*> regOutputReversePath;
-					if (!vhdlExport.getAST()->findLocalDeclaration(nh.nodePort(), regOutputReversePath))
+						cdcOut.push_back(path);
+						nh.backtrack();
+					}
+					else
 						continue;
-
-					std::stringstream regOutputIdentifier;
-					for (size_t i = regOutputReversePath.size() - 2; i < regOutputReversePath.size(); --i)
-						regOutputIdentifier << regOutputReversePath[i]->getInstanceName() + '|';
-					regOutputIdentifier << regOutputReversePath.front()->getNamespaceScope().get(nh.nodePort()).name;
-
-					auto type = nh.node()->getOutputConnectionType(0);
-					if (type.isBitVec())
-						regOutputIdentifier << "[*]";
-
-					cdcOut.push_back(regOutputIdentifier.str());
-					nh.backtrack();
 				}
 
 			}
@@ -274,26 +284,35 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 			else
 				direction = "output";
 
-			auto pinParam = portNode->getPinParameter();
+			const std::string& vhdlClockName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().getClock(portNode->getClocks().front()).name;
+			const std::string& vhdlPinName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().get(portNode).name;
+
+			auto pinParam = portNode->getPinNodeParameter();
 			if (pinParam.portDelay)
 			{
-				if (pinParam.portDelay.value().numerator() > 0)
-				{
-					auto del = pinParam.portDelay.value().numerator() * 1'000'000'000.0 / pinParam.portDelay.value().denominator();
-					if (direction != "InOut")
-						delaySettings << "set_" << direction << "_delay -clock " << portNode->getClocks().front()->getName() << " " << std::to_string(del) << " " << portNode->getName() << "\n";
+				if (direction != "InOut") {
+					if (pinParam.portDelay.value().denominator() > 0)
+					{
+						auto del = pinParam.portDelay.value().numerator() * 1'000'000'000.0 / pinParam.portDelay.value().denominator();
+
+						delaySettings << "set_" << direction << "_delay -clock " << vhdlClockName << " " << std::to_string(del) << " " << vhdlPinName << "\n";
+					}
+					else
+					{
+						delaySettings << "# " << direction << " pin " << vhdlClockName << " has a portDelay with denominator = 0\n";
+					}
 				}
 			}
 			else
 			{
-				delaySettings << "# " + direction << " pin " << portNode->getName();
+				delaySettings << "# " + direction << " pin " << vhdlPinName;
 				if (pinParam.delaySpecifiedElsewhere) {
 					delaySettings << " has its delay defined elsewhere!\n";
-					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << portNode->getName() << " has its delay defined elsewhere!");
+					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << vhdlPinName << " has its delay defined elsewhere!");
 				}
 				else {
 					delaySettings << " has no delay setting!\n";
-					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << portNode->getName() << " has no delay setting!");
+					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << vhdlPinName << " has no delay setting!");
 				}
 			}
 		}
