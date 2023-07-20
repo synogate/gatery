@@ -24,11 +24,13 @@ namespace gtry::scl
 	BVec grayEncode(UInt val);
 	UInt grayDecode(BVec val);
 
+	using CdcNodeParameter = hlim::Node_CDC::CdcNodeParameter;
+
 	template<Signal T, SignalValue Treset>
-	T synchronize(T in, const Treset& reset, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true, const hlim::Node_CDC::CdcNodeParameter params = {});
+	T synchronize(T in, const Treset& reset, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true, const CdcNodeParameter params = {});
 
 	template<Signal T>
-	T synchronize(T in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true, const hlim::Node_CDC::CdcNodeParameter params = {});
+	T synchronize(T in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true, const CdcNodeParameter params = {});
 
 	Bit synchronizeEvent(Bit event, const Clock& inClock, const Clock& outClock);
 	Bit synchronizeRelease(Bit reset, const Clock& inClock, const Clock& outClock, ClockConfig::ResetActive resetActive = ClockConfig::ResetActive::HIGH);
@@ -41,7 +43,7 @@ namespace gtry::scl
 namespace gtry::scl
 {
 	template<Signal T>
-	T synchronize(T val, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage, const hlim::Node_CDC::CdcNodeParameter params)
+	T synchronize(T val, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage, const CdcNodeParameter params)
 	{
 		HCL_DESIGNCHECK_HINT(outStages > 1, "Building a synchronizer chain with zero synchronization registers is probably a mistake!");
 
@@ -59,7 +61,7 @@ namespace gtry::scl
 	}
 
 	template<Signal T, SignalValue Treset>
-	T synchronize(T val, const Treset& reset, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage, const hlim::Node_CDC::CdcNodeParameter params)
+	T synchronize(T val, const Treset& reset, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage, const CdcNodeParameter params)
 	{
 		HCL_DESIGNCHECK_HINT(outStages > 1, "Building a synchronizer chain with zero synchronization registers is probably a mistake!");
 

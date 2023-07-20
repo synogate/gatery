@@ -59,7 +59,9 @@ class Node_CDC : public Node<Node_CDC>
 
 		struct CdcNodeParameter {
 			std::optional<bool> isGrayCoded = {};
+			/// Max skew to set in SDC file as a multiple of the source or destination clock period (whichever is smaller)
 			std::optional<double> maxSkew = {};
+			/// Max net delay to set in SDC file as a multiple of the destination clock period
 			std::optional<double> netDelay = {};
 		};
 
