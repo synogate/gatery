@@ -189,7 +189,9 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 	auto sdcFileHandle = vhdlExport.getDestination().writeFile(filename);
 	auto &sdcFile = sdcFileHandle->stream();
 
-	auto tclFileHandle = vhdlExport.getDestination().writeFile("constraints.tcl");
+	std::filesystem::path tclFilename = filename;
+	tclFilename.replace_extension(".tcl");
+	auto tclFileHandle = vhdlExport.getDestination().writeFile(tclFilename);
 	auto &tclFile = tclFileHandle->stream();
 
 	std::stringstream delaySettings;
@@ -266,7 +268,7 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 				for (auto itOut : cdcOut)
 				{
 					sdcFile << "set_false_path -from [get_registers " << itIn << "] -to [get_registers " << itOut << "]\n";
-					sdcFile << "set_max_skew -get_skew_value_from_clock_period min_clock_period -skew_value_multiplier " << maxSkew << " - from[get_registers " << itIn << "] - to[get_registers " << itOut << "]\n";
+					sdcFile << "set_max_skew -get_skew_value_from_clock_period min_clock_period -skew_value_multiplier " << maxSkew << " -from [get_registers " << itIn << "] -to [get_registers " << itOut << "]\n";
 					sdcFile << "set_net_delay -max -get_value_from_clock_period dst_clock_period -value_multiplier " << netDelay << " -from [get_registers " << itIn << "] -to [get_registers " << itOut << "]\n";
 				}
 
