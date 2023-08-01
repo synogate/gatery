@@ -41,8 +41,8 @@ BOOST_FIXTURE_TEST_CASE(TestGCD, BoostUnitTestSimulationFixture)
 		return a;
 	};
 
-	size_t x = std::random_device{}() % 255;
-	size_t y = std::random_device{}() % 255;
+	size_t x = std::random_device{}() % 254 + 1;
+	size_t y = std::random_device{}() % 254 + 1;
 
 	unsigned maxTicks = 200;
 
