@@ -51,7 +51,7 @@ void Controller::generate(TileLinkUB& link)
 
 	StreamArbiter<DataOutStream> outArbiter;
 	StreamArbiter<CommandStream> cmdArbiter;
-	auto maintenanceStream = maintenanceArbiter.out().regDownstream();
+	auto maintenanceStream = regDownstream(move(maintenanceArbiter.out()));
 	cmdArbiter.attach(maintenanceStream);
 
 
@@ -68,7 +68,7 @@ void Controller::generate(TileLinkUB& link)
 		ELSE
 			valid(aIn) = '0';
 
-		TileLinkChannelA aInReg = aIn.regReady();
+		TileLinkChannelA aInReg = regReady(move(aIn));
 		auto [cmd, data] = bankController(aInReg, m_bankState[i], ConstUInt(i, m_cmdBus.ba.width()));
 		cmd->bank = ConstUInt(i, m_cmdBus.ba.width()); // optional optimization
 

@@ -357,6 +357,14 @@ namespace gtry
 		template<TupleSignal T, TupleSignal Tr, typename TFunc>
 		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func);
 
+		// cannot transform Reverse signals. (Signals with upstream components) Use downstream() to extract the downstream part.
+		template<ReverseSignal T, typename TFunc>
+		T transformSignal(const T& val, TFunc&& func) = delete;
+
+		// cannot transform Reverse signals. (Signals with upstream components) Use downstream() to extract the downstream part.
+		template<ReverseSignal T, ReverseSignal Tr, typename TFunc>
+		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func) = delete;
+
 		template<typename T, typename TFunc>
 		T transformIfSignal(const T& signal, TFunc&& func)
 		{

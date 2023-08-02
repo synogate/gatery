@@ -306,7 +306,7 @@ namespace gtry::scl
 			valid(in) = '0';
 
 		T out = constructFrom(in);
-		out = in.regDownstream();
+		out = regDownstream(move(in));
 
 		if constexpr (T::template has<Eop>())
 		{

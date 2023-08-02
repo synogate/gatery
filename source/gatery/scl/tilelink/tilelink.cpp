@@ -198,7 +198,7 @@ namespace gtry::scl
 			d = d.regDownstreamBlocking({ .allowRetimingBackward = true });
 
 		ready(link.a) = ready(d);
-		*link.d <<= d.regReady();
+		*link.d <<= regReady(move(d));
 	}
 }
 

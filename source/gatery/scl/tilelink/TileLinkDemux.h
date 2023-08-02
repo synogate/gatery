@@ -148,7 +148,7 @@ namespace gtry::scl
 		// connect channel D
 		uint32_t sortKey = -1;
 		StreamArbiter<TileLinkChannelD, TArbiterPolicy> arbiter;
-		arbiter.attach((*unmapped.d).regDownstream(), sortKey--);
+		arbiter.attach(regDownstream(move(*unmapped.d)), sortKey--);
 
 		for (Sink& s : m_sink)
 			arbiter.attach(*s.bus.d, sortKey--);

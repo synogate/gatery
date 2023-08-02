@@ -137,32 +137,38 @@ namespace gtry::scl
 		Stream regDownstreamBlocking(const RegisterSettings& settings = {}) const requires(Assignable<std::tuple<PayloadT, Meta...>>);
 
 		/**
-		 * @brief	Puts a register in the valid and data path.
-					This version ensures that data is captured when ready is low to fill pipeline bubbles.
-		 * @param	Settings forwarded to all instantiated registers.
-		 * @return	connected stream
-		*/
-		Stream regDownstream(const RegisterSettings& settings = {});
-		Stream regDownstream(const RegisterSettings& settings = {}) const requires(Assignable<std::tuple<PayloadT, Meta...>>);
-
-		/**
 		 * @brief	Puts a register spawner for retiming in the valid and data path.
 		 * @return	connected stream
 		*/
 		Stream pipeinputDownstream(PipeBalanceGroup& group);
 
-		/**
-		 * @brief	Puts a register in the ready path.
-		 * @param	Settings forwarded to all instantiated registers.
-		 * @return	connected stream
-		*/
-		Stream regReady(const RegisterSettings& settings = {});
 	};
+
+	/**
+	* @brief	Puts a register in the valid and data path.
+	This version ensures that data is captured when ready is low to fill pipeline bubbles.
+	* @param	Settings forwarded to all instantiated registers.
+	* @return	connected stream
+	*/
+
+	template<Signal PayloadT, Signal... Meta>
+	Stream<PayloadT, Meta...> regDownstream(Stream<PayloadT, Meta...>&& in, const RegisterSettings& settings = {});
+	//Stream regDownstream(const RegisterSettings& settings = {}) const requires(Assignable<std::tuple<PayloadT, Meta...>>);
+
+	/**
+	* @brief	Puts a register in the ready path and adds additional circuitry to keep the expected behavior of a stream
+	* @param in The input stream.
+	* @param	Settings forwarded to all instantiated registers.
+	* @return	connected stream
+	*/
+	template<Signal PayloadT, Signal... Meta>
+	Stream<PayloadT, Meta...> regReady(Stream<PayloadT, Meta...>&& in, const RegisterSettings& settings = {});
 
 	/**
 	* @brief Attach the stream as source and a new stream as sink to the FIFO.
 	*			This is useful to make further settings or access advanced FIFO signals.
 	*			For clock domain crossing you should use gtry::connect.
+	* @param in The input stream.
 	* @param instance The FIFO to use.
 	* @param fallThrough allow data to flow past the fifo in the same cycle when it's empty. 
 	* @return connected stream
@@ -172,6 +178,7 @@ namespace gtry::scl
 
 	/**
 	* @brief Create a FIFO for buffering.
+	* @param in The input stream.
 	* @param minDepth The FIFO can hold at least that many data beats. 
 	The actual amount depends on the available target architecture.
 	* @param fallThrough allow data to flow past the fifo in the same cycle when it's empty.
@@ -327,7 +334,7 @@ namespace gtry::scl
 		simu(valid(stream)) = '0';
 	}
 
-	using gtry::reg;
+
 	/**
 	 * @brief Puts a register in the ready, valid and data path.
 	 * @param stream Source stream
@@ -335,9 +342,9 @@ namespace gtry::scl
 	 * @return connected stream
 	*/
 	template<scl::StreamSignal T> 
-	T reg(T& stream, const RegisterSettings& settings = {});
+	T regDecouple(T& stream, const RegisterSettings& settings = {});
 	template<scl::StreamSignal T>
-	T reg(const T& stream, const RegisterSettings& settings = {});
+	T regDecouple(const T& stream, const RegisterSettings& settings = {});
 
 	using gtry::connect;
 	/**
@@ -673,44 +680,44 @@ namespace gtry::scl
 	}
 
 	template<Signal PayloadT, Signal... Meta>
-	inline Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::regDownstream(const RegisterSettings& settings)
+	inline Stream<PayloadT, Meta...> regDownstream(Stream<PayloadT, Meta...> &&in, const RegisterSettings& settings)
 	{
-		if constexpr (has<Valid>())
-			valid(*this).resetValue('0');
+		if constexpr (in.has<Valid>())
+			valid(in).resetValue('0');
 
-		Self ret;
+		Stream<PayloadT, Meta...> ret;
 
-		if constexpr (has<Ready>())
+		if constexpr (in.has<Ready>())
 		{
 			Bit valid_reg;
-			auto dsSig = constructFrom(copy(downstream(*this)));
+			auto dsSig = constructFrom(copy(downstream(in)));
 
-			IF(!valid_reg | ready(*this))
+			IF(!valid_reg | ready(in))
 			{
-				valid_reg = valid(*this);
-				dsSig = downstream(*this);
+				valid_reg = valid(in);
+				dsSig = downstream(in);
 			}
 
 			valid_reg = reg(valid_reg, '0', settings);
 			dsSig = reg(dsSig, settings);
 
 			downstream(ret) = dsSig;
-			upstream(*this) = upstream(ret);
-			ready(*this) |= !valid_reg;
+			upstream(in) = upstream(ret);
+			ready(in) |= !valid_reg;
 		}
 		else
 		{
-			downstream(ret) = reg(copy(downstream(*this)));
-			upstream(*this) = upstream(ret);
+			downstream(ret) = reg(copy(downstream(in)));
+			upstream(in) = upstream(ret);
 		}
 		return ret;
 	}
 
-	template<Signal PayloadT, Signal... Meta>
-	Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::regDownstream(const RegisterSettings& settings) const requires(Assignable<std::tuple<PayloadT, Meta...>>)
-	{
-		return regDownstreamBlocking(settings);
-	}
+	//template<Signal PayloadT, Signal... Meta>
+	//Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::regDownstream(const RegisterSettings& settings) const requires(Assignable<std::tuple<PayloadT, Meta...>>)
+	//{
+	//	return regDownstreamBlocking(settings);
+	//}
 
 	template<Signal PayloadT, Signal... Meta>
 	inline Stream<PayloadT, Meta...> gtry::scl::Stream<PayloadT, Meta...>::pipeinputDownstream(PipeBalanceGroup& group)
@@ -725,23 +732,23 @@ namespace gtry::scl
 	}
 
 	template<Signal PayloadT, Signal... Meta>
-	inline Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::regReady(const RegisterSettings& settings)
+	inline Stream<PayloadT, Meta...> regReady(Stream<PayloadT, Meta...> &&in, const RegisterSettings& settings)
 	{
-		if constexpr (has<Valid>())
-			valid(*this).resetValue('0');
-		if constexpr (has<Ready>())
-			ready(*this).resetValue('0');
+		if constexpr (in.has<Valid>())
+			valid(in).resetValue('0');
+		if constexpr (in.has<Ready>())
+			ready(in).resetValue('0');
 
-		Self ret;
-		ret <<= *this;
+		Stream ret = constructFrom(in);
+		ret <<= in;
 
-		if constexpr (has<Ready>())
+		if constexpr (in.has<Ready>())
 		{
 			Bit valid_reg;
-			auto data_reg = constructFrom(copy(downstream(*this)));
+			auto data_reg = constructFrom(copy(downstream(in)));
 
 			// we are ready as long as our buffer is unused
-			ready(*this) = !valid_reg;
+			ready(in) = !valid_reg;
 
 			IF(ready(ret))
 				valid_reg = '0';
@@ -749,8 +756,8 @@ namespace gtry::scl
 			IF(!valid_reg)
 			{
 				IF(!ready(ret))
-					valid_reg = valid(*this);
-				data_reg = downstream(*this);
+					valid_reg = valid(in);
+				data_reg = downstream(in);
 			}
 
 			valid_reg = reg(valid_reg, '0', settings);
@@ -855,7 +862,7 @@ namespace gtry::scl
 		{
 			for (size_t i = 0; i < memory.readLatencyHint() - 1; ++i)
 				out <<= out.regDownstreamBlocking({ .allowRetimingBackward = true });
-			return out.regDownstream({ .allowRetimingBackward = true });
+			return regDownstream(move(out),{ .allowRetimingBackward = true });
 		}
 		return out;
 	}
@@ -897,17 +904,17 @@ namespace gtry::scl
 	}
 
 	template<scl::StreamSignal T>
-	T reg(T& stream, const RegisterSettings& settings)
+	T regDecouple(T& stream, const RegisterSettings& settings)
 	{
 		// we can use blocking reg here since regReady guarantees high ready signal
-		return stream.regDownstreamBlocking(settings).regReady(settings);
+		return regReady(stream.regDownstreamBlocking(settings),settings);
 	}
 
 	template<scl::StreamSignal T>
-	T reg(const T& stream, const RegisterSettings& settings)
+	T regDecouple(const T& stream, const RegisterSettings& settings)
 	{
 		static_assert(!stream.template has<scl::Ready>(), "cannot create upstream register from const stream");
-		return stream.regDownstream(settings);
+		return regDownstream(stream, settings);
 	}
 }
 
