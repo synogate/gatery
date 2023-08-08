@@ -35,7 +35,7 @@ namespace gtry::scl
 			slave.a->source.width()
 		);
 
-		scl::TileLinkChannelA masterA = regReady(move(master.a));
+		scl::TileLinkChannelA masterA = strm::regReady(move(master.a));
 		HCL_NAMED(masterA);
 
 		// request
@@ -255,7 +255,7 @@ namespace gtry::scl
 		HCL_NAMED(slave);
 
 		// this register is required to prevent response before request situations on long bursts and low latency slaves
-		TileLinkChannelA aReg = regReady(move(master.a));
+		TileLinkChannelA aReg = strm::regReady(move(master.a));
 
 		auto&& metaBlueprint = internal::addBurstRequest(slave.a, aReg);
 		internal::addBurstResponse(*slave.d, *master.d, metaBlueprint);

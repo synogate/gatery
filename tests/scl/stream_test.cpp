@@ -485,7 +485,7 @@ BOOST_FIXTURE_TEST_CASE(stream_downstreamReg, StreamTransferFixture)
 	scl::RvStream<UInt> in{ .data = 5_b };
 	In(in);
 
-	scl::RvStream<UInt> out = regDownstream(move(in));
+	scl::RvStream<UInt> out = scl::strm::regDownstream(move(in));
 	Out(out);
 
 	simulateTransferTest(in, out);
@@ -501,7 +501,7 @@ BOOST_FIXTURE_TEST_CASE(stream_uptreamReg, StreamTransferFixture)
 	scl::RvStream<UInt> in{ .data = 5_b };
 	In(in);
 
-	scl::RvStream<UInt> out = regReady(move(in));
+	scl::RvStream<UInt> out = scl::strm::regReady(move(in));
 	Out(out);
 
 	simulateTransferTest(in, out);
@@ -533,7 +533,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reg_chaining, StreamTransferFixture)
 	scl::RvStream<UInt> in{ .data = 5_b };
 	In(in);
 
-	scl::RvStream<UInt> out = regDownstream(move(in.regDownstreamBlocking().regDownstreamBlocking().regDownstreamBlocking()));
+	scl::RvStream<UInt> out = scl::strm::regDownstream(scl::strm::regDownstreamBlocking(scl::strm::regDownstreamBlocking(scl::strm::regDownstreamBlocking(move(in)))));
 	Out(out);
 
 	simulateTransferTest(in, out);
@@ -550,7 +550,7 @@ BOOST_FIXTURE_TEST_CASE(stream_fifo, StreamTransferFixture)
 	scl::RvStream<UInt> in{ .data = 10_b };
 	In(in);
 
-	scl::RvStream<UInt> out = scl::fifo(move(in));
+	scl::RvStream<UInt> out = scl::strm::fifo(move(in));
 	Out(out);
 
 	transfers(500);

@@ -82,11 +82,11 @@ namespace gtry::scl {
 
 		scl::RvStream<TileLinkD> writeRes = { constructFrom(response) };
 		writeRes <<= writeRequestFifo;
-		scl::RvStream writeResBuffered = regDownstream(move(writeRes));
+		scl::RvStream writeResBuffered = strm::regDownstream(move(writeRes));
 
 		scl::RvStream<TileLinkD> readRes = { constructFrom(response) };
 		readRes <<= readRequestFifo;
-		scl::RvStream readResBuffered = regDownstream(move(readRes));
+		scl::RvStream readResBuffered = strm::regDownstream(move(readRes));
 
 
 		Bit responseReady = *avmm.read;
@@ -102,7 +102,7 @@ namespace gtry::scl {
 		valid(readData) = responseReady;
 		ready(ret.a) &= ready(readData);
 
-		scl::RvStream<UInt> readDataFifo = fifo(move(readData), maxReadRequestsInFlight, scl::FallThrough::on);
+		scl::RvStream<UInt> readDataFifo = strm::fifo(move(readData), maxReadRequestsInFlight, scl::FallThrough::on);
 
 		scl::RvStream readResStalled = strm::stall(move(readResBuffered), !valid(readDataFifo));
 		ready(readDataFifo) = ready(readResStalled);

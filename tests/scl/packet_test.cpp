@@ -67,7 +67,7 @@ struct PacketSendAndReceiveTest : public BoostUnitTestSimulationFixture
 		}
 
 		if (addPipelineReg)
-			out <<= regDownstream(move(in));
+			out <<= scl::strm::regDownstream(move(in));
 		else
 			out <<= in;
 

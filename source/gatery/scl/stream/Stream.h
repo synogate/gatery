@@ -125,79 +125,113 @@ namespace gtry::scl
 		auto removeUpstream() const requires(Assignable<AssignabilityTestType>) { return *this; }
 		auto removeFlowControl() { return remove<Ready>().template remove<Valid>().template remove<Sop>(); }
 		auto removeFlowControl() const requires(Assignable<AssignabilityTestType>) { return remove<Valid>().template remove<Sop>(); }
-
-		/**
-		 * @brief	Puts a register in the valid and data path.
-					The register enable is connected to ready and ready is just forwarded.
-					Note that valid will not become high while ready is low, which violates stream semantics.
-		 * @param	Settings forwarded to all instantiated registers.
-		 * @return	connected stream
-		*/
-		Stream regDownstreamBlocking(const RegisterSettings& settings = {});
-		Stream regDownstreamBlocking(const RegisterSettings& settings = {}) const requires(Assignable<std::tuple<PayloadT, Meta...>>);
-
-		/**
-		 * @brief	Puts a register spawner for retiming in the valid and data path.
-		 * @return	connected stream
-		*/
-		Stream pipeinputDownstream(PipeBalanceGroup& group);
-
 	};
 
-	/**
-	* @brief	Puts a register in the valid and data path.
-	This version ensures that data is captured when ready is low to fill pipeline bubbles.
-	* @param	Settings forwarded to all instantiated registers.
-	* @return	connected stream
-	*/
+	namespace strm{
 
-	template<Signal PayloadT, Signal... Meta>
-	Stream<PayloadT, Meta...> regDownstream(Stream<PayloadT, Meta...>&& in, const RegisterSettings& settings = {});
-	//Stream regDownstream(const RegisterSettings& settings = {}) const requires(Assignable<std::tuple<PayloadT, Meta...>>);
+		/**
+		* @brief	Puts a register spawner for retiming in the valid and data path.
+		* @return	connected stream
+		*/
+		template<StreamSignal StreamT>
+		StreamT pipeinputDownstream(StreamT&& in, PipeBalanceGroup& group);
+
+		//untested
+		auto pipeinputDownstream(PipeBalanceGroup& group)
+		{
+			return [=](auto&& in) { return pipeinputDownstream(std::forward<decltype(in)>(in), group); };
+		}
+
+		/**
+		* @brief	Puts a register in the valid and data path.
+		This version ensures that data is captured when ready is low to fill pipeline bubbles.
+		* @param	Settings forwarded to all instantiated registers.
+		* @return	connected stream
+		*/
+		template<StreamSignal StreamT>
+		StreamT regDownstream(StreamT&& in, const RegisterSettings& settings = {});
+
+		//untested
+		auto regDownstream(const RegisterSettings& settings = {})
+		{
+			return [=](auto&& in) { return regDownstream(std::forward<decltype(in)>(in), settings); };
+		}
+
+		/**
+		* @brief	Puts a register in the ready path and adds additional circuitry to keep the expected behavior of a stream
+		* @param	in The input stream.
+		* @param	Settings forwarded to all instantiated registers.
+		* @return	connected stream
+		*/
+		template<StreamSignal StreamT>
+		StreamT regReady(StreamT&& in, const RegisterSettings& settings = {});
+
+		//untested
+		auto regReady(const RegisterSettings& settings = {})
+		{
+			return [=](auto&& in) { return regReady(std::forward<decltype(in)>(in), settings); };
+		}
+
+		/**
+		* @brief	Puts a register in the valid and data path.
+		The register enable is connected to ready and ready is just forwarded.
+		Note that valid will not become high while ready is low, which violates stream semantics.
+		* @param	Settings forwarded to all instantiated registers.
+		* @return	connected stream
+		*/
+		template<StreamSignal StreamT>
+		StreamT regDownstreamBlocking(StreamT&& in, const RegisterSettings& settings = {});
+
+		//untested
+		auto regDownstreamBlocking(const RegisterSettings& settings = {})
+		{
+			return [=](auto&& in) { return regDownstreamBlocking(std::forward<decltype(in)>(in), settings); };
+		}
+
+		/**
+		* @brief Attach the stream as source and a new stream as sink to the FIFO.
+		*			This is useful to make further settings or access advanced FIFO signals.
+		*			For clock domain crossing you should use gtry::connect.
+		* @param in The input stream.
+		* @param instance The FIFO to use.
+		* @param fallThrough allow data to flow past the fifo in the same cycle when it's empty.
+		* @return connected stream
+		*/
+		template<Signal T, StreamSignal StreamT>
+		StreamT fifo(StreamT&& in, Fifo<T>& instance, FallThrough fallThrough = FallThrough::off);
+
+		/**
+		* @brief Create a FIFO for buffering.
+		* @param in The input stream.
+		* @param minDepth The FIFO can hold at least that many data beats.
+		The actual amount depends on the available target architecture.
+		* @param fallThrough allow data to flow past the fifo in the same cycle when it's empty.
+		* @return connected stream
+		*/
+		template<StreamSignal StreamT>
+		StreamT fifo(StreamT&& in, size_t minDepth = 16, FallThrough fallThrough = FallThrough::off);
+
+		auto fifo(size_t minDepth = 16, FallThrough fallThrough = FallThrough::off)
+		{
+			return [=](auto&& in) { return fifo(std::forward<decltype(in)>(in), minDepth, fallThrough); };
+		}
+
+
+		/**
+		* @brief High when all transfer conditions (ready and valid high) are met.
+		* @param stream to test
+		* @return transfer occurring
+		*/
+		template<StreamSignal T> Bit transfer(const T& stream) { return valid(stream) & ready(stream); }
+
+	}
+
+	using strm::transfer;
 
 	/**
-	* @brief	Puts a register in the ready path and adds additional circuitry to keep the expected behavior of a stream
-	* @param in The input stream.
-	* @param	Settings forwarded to all instantiated registers.
-	* @return	connected stream
-	*/
-	template<Signal PayloadT, Signal... Meta>
-	Stream<PayloadT, Meta...> regReady(Stream<PayloadT, Meta...>&& in, const RegisterSettings& settings = {});
-
-	/**
-	* @brief Attach the stream as source and a new stream as sink to the FIFO.
-	*			This is useful to make further settings or access advanced FIFO signals.
-	*			For clock domain crossing you should use gtry::connect.
-	* @param in The input stream.
-	* @param instance The FIFO to use.
-	* @param fallThrough allow data to flow past the fifo in the same cycle when it's empty. 
-	* @return connected stream
-	*/
-	template<Signal T, Signal PayloadT, Signal... Meta>
-	Stream<PayloadT, Meta...> fifo(Stream<PayloadT, Meta...>&& in, Fifo<T>& instance, FallThrough fallThrough = FallThrough::off);
-
-	/**
-	* @brief Create a FIFO for buffering.
-	* @param in The input stream.
-	* @param minDepth The FIFO can hold at least that many data beats. 
-	The actual amount depends on the available target architecture.
-	* @param fallThrough allow data to flow past the fifo in the same cycle when it's empty.
-	* @return connected stream
-	*/
-	template<Signal PayloadT, Signal... Meta>
-	Stream<PayloadT, Meta...> fifo(Stream<PayloadT, Meta...>&& in, size_t minDepth = 16, FallThrough fallThrough = FallThrough::off);
-
-	/**
-	 * @brief High when all transfer conditions (ready and valid high) are met.
-	 * @param stream to test
-	 * @return transfer occurring
-	*/
-	template<StreamSignal T> Bit transfer(const T& stream) { return valid(stream) & ready(stream); }
-
-	/**
-	 * @brief High when sink can accept incoming data.
-	 * @param stream to test
-	 * @return sink ready
+	* @brief High when sink can accept incoming data.
+	* @param stream to test
+	* @return sink ready
 	*/
 	template<StreamSignal T> const Bit ready(const T& stream) { return '1'; }
 
@@ -639,53 +673,53 @@ namespace gtry::scl
 		}, metaRefs);
 	}
 
-	template<Signal PayloadT, Signal... Meta>
-	inline Stream<PayloadT, Meta...> gtry::scl::Stream<PayloadT, Meta...>::regDownstreamBlocking(const RegisterSettings& settings)
-	{
-		if constexpr (has<Valid>())
-			valid(*this).resetValue('0');
-
-		auto dsSig = constructFrom(copy(downstream(*this)));
-
-		IF(ready(*this))
-			dsSig = downstream(*this);
-
-		dsSig = reg(dsSig, settings);
-
-		Self ret;
-		downstream(ret) = dsSig;
-		upstream(*this) = upstream(ret);
-		return ret;
-	}
-
-	template<Signal PayloadT, Signal... Meta>
-	inline Stream<PayloadT, Meta...> gtry::scl::Stream<PayloadT, Meta...>::regDownstreamBlocking(const RegisterSettings& settings) const requires(Assignable<std::tuple<PayloadT, Meta...>>)
-	{
-		if constexpr (has<Valid>())
-		{
-			auto tmp = *this;
-			valid(tmp).resetValue('0');
-			return {
-				.data = reg(tmp.data, settings),
-				._sig = reg(tmp._sig, settings)
-			};
-		}
-		else
-		{
-			return {
-				.data = reg(data, settings),
-				._sig = reg(_sig, settings)
-			};
-		}
-	}
-
-	template<Signal PayloadT, Signal... Meta>
-	inline Stream<PayloadT, Meta...> regDownstream(Stream<PayloadT, Meta...> &&in, const RegisterSettings& settings)
+	template<StreamSignal StreamT>
+	inline StreamT strm::regDownstreamBlocking(StreamT&& in, const RegisterSettings& settings)
 	{
 		if constexpr (in.has<Valid>())
 			valid(in).resetValue('0');
 
-		Stream<PayloadT, Meta...> ret;
+		auto dsSig = constructFrom(copy(downstream(in)));
+
+		IF(ready(in))
+			dsSig = downstream(in);
+
+		dsSig = reg(dsSig, settings);
+
+		StreamT ret;
+		downstream(ret) = dsSig;
+		upstream(in) = upstream(ret);
+		return ret;
+	}
+
+	//template<Signal PayloadT, Signal... Meta>
+	//inline Stream<PayloadT, Meta...> strm::regDownstreamBlocking(const RegisterSettings& settings) const requires(Assignable<std::tuple<PayloadT, Meta...>>)
+	//{
+	//	if constexpr (has<Valid>())
+	//	{
+	//		auto tmp = *this;
+	//		valid(tmp).resetValue('0');
+	//		return {
+	//			.data = reg(tmp.data, settings),
+	//			._sig = reg(tmp._sig, settings)
+	//		};
+	//	}
+	//	else
+	//	{
+	//		return {
+	//			.data = reg(data, settings),
+	//			._sig = reg(_sig, settings)
+	//		};
+	//	}
+	//}
+
+	template<StreamSignal StreamT>
+	inline StreamT strm::regDownstream(StreamT &&in, const RegisterSettings& settings)
+	{
+		if constexpr (in.has<Valid>())
+			valid(in).resetValue('0');
+
+		StreamT ret;
 
 		if constexpr (in.has<Ready>())
 		{
@@ -713,26 +747,20 @@ namespace gtry::scl
 		return ret;
 	}
 
-	//template<Signal PayloadT, Signal... Meta>
-	//Stream<PayloadT, Meta...> Stream<PayloadT, Meta...>::regDownstream(const RegisterSettings& settings) const requires(Assignable<std::tuple<PayloadT, Meta...>>)
-	//{
-	//	return regDownstreamBlocking(settings);
-	//}
-
-	template<Signal PayloadT, Signal... Meta>
-	inline Stream<PayloadT, Meta...> gtry::scl::Stream<PayloadT, Meta...>::pipeinputDownstream(PipeBalanceGroup& group)
+	template<StreamSignal StreamT>
+	inline StreamT strm::pipeinputDownstream(StreamT&& in, PipeBalanceGroup& group)
 	{
-		if constexpr (has<Valid>())
-			valid(*this).resetValue('0');
+		if constexpr (in.has<Valid>())
+			valid(in).resetValue('0');
 
-		Self ret;
-		downstream(ret) = group(copy(downstream(*this)));
-		upstream(*this) = upstream(ret);
+		StreamT ret;
+		downstream(ret) = group(copy(downstream(in)));
+		upstream(in) = upstream(ret);
 		return ret;
 	}
 
-	template<Signal PayloadT, Signal... Meta>
-	inline Stream<PayloadT, Meta...> regReady(Stream<PayloadT, Meta...> &&in, const RegisterSettings& settings)
+	template<StreamSignal StreamT>
+	inline StreamT strm::regReady(StreamT &&in, const RegisterSettings& settings)
 	{
 		if constexpr (in.has<Valid>())
 			valid(in).resetValue('0');
@@ -774,10 +802,10 @@ namespace gtry::scl
 
 
 
-	template<Signal T, Signal PayloadT, Signal... Meta>
-	Stream<PayloadT, Meta...> fifo(Stream<PayloadT, Meta...>&& in, Fifo<T>& instance, FallThrough fallThrough)
+	template<Signal T, StreamSignal StreamT>
+	StreamT strm::fifo(StreamT&& in, Fifo<T>& instance, FallThrough fallThrough)
 	{
-		Stream<PayloadT, Meta...> ret;
+		StreamT ret;
 		connect(ret, instance);
 
 		if (fallThrough == FallThrough::on) 
@@ -794,8 +822,8 @@ namespace gtry::scl
 		return ret;
 	}
 
-	template<Signal PayloadT, Signal... Meta>
-	inline Stream<PayloadT, Meta...> fifo(Stream<PayloadT, Meta...>&& in, size_t minDepth, FallThrough fallThrough)
+	template<StreamSignal StreamT>
+	inline StreamT strm::fifo(StreamT&& in, size_t minDepth, FallThrough fallThrough)
 	{
 		Fifo inst{ minDepth, copy(downstream(in)) };
 		Stream ret = fifo(move(in), inst, fallThrough);
@@ -849,7 +877,7 @@ namespace gtry::scl
 	template<StreamSignal T>
 	T pipeinput(T& stream, PipeBalanceGroup& group) 
 	{
-		return stream.pipeinputDownstream(group);
+		return scl::strm::pipeinputDownstream(move(stream), group);
 	}
 
 	template<Signal T, Signal... Meta>
@@ -861,8 +889,8 @@ namespace gtry::scl
 		if (memory.readLatencyHint())
 		{
 			for (size_t i = 0; i < memory.readLatencyHint() - 1; ++i)
-				out <<= out.regDownstreamBlocking({ .allowRetimingBackward = true });
-			return regDownstream(move(out),{ .allowRetimingBackward = true });
+				out <<= scl::strm::regDownstreamBlocking(move(out), { .allowRetimingBackward = true });
+			return strm::regDownstream(move(out),{ .allowRetimingBackward = true });
 		}
 		return out;
 	}
@@ -907,14 +935,14 @@ namespace gtry::scl
 	T regDecouple(T& stream, const RegisterSettings& settings)
 	{
 		// we can use blocking reg here since regReady guarantees high ready signal
-		return regReady(stream.regDownstreamBlocking(settings),settings);
+		return strm::regReady(strm::regDownstreamBlocking(move(stream), settings), settings);
 	}
 
 	template<scl::StreamSignal T>
 	T regDecouple(const T& stream, const RegisterSettings& settings)
 	{
 		static_assert(!stream.template has<scl::Ready>(), "cannot create upstream register from const stream");
-		return regDownstream(stream, settings);
+		return strm::regDownstream(stream, settings);
 	}
 }
 
