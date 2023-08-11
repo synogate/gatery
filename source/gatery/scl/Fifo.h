@@ -390,4 +390,11 @@ namespace gtry::scl
 
 		return get;
 	}
+
+	enum class FallThrough {
+		off,
+		on,
+	};
 }
+
+
