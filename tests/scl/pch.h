@@ -19,3 +19,4 @@
 #include <gatery/scl/utils/BitCount.h>
 #include <gatery/scl/utils/OneHot.h>
 #include <gatery/scl/kvs/TinyCuckoo.h>
+#include <gatery/scl/Fifo.h>

@@ -18,6 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 #include "../stream/Stream.h"
+#include "../stream/utils.h"
 #include "../stream/Packet.h"
 #include "../utils/OneHot.h"
 

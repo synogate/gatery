@@ -18,6 +18,7 @@
 #pragma once
 #include "Packet.h"
 #include "../Counter.h"
+#include "../Fifo.h"
 
 namespace gtry::scl::strm
 {
@@ -105,6 +106,76 @@ namespace gtry::scl::strm
 	*/
 	template<scl::StreamSignal TStream>
 	TStream dropPacket(TStream&& in, Bit drop);
+
+	/**
+	* @brief Puts a register in the ready, valid and data path.
+	* @param stream Source stream
+	* @param Settings forwarded to all instantiated registers.
+	* @return connected stream
+	*/
+	template<StreamSignal T> 
+	T regDecouple(T& stream, const RegisterSettings& settings = {});
+	template<StreamSignal T>
+	T regDecouple(const T& stream, const RegisterSettings& settings = {});
+
+	/**
+	* @brief Attach the stream as source and a new stream as sink to the FIFO.
+	*			This is useful to make further settings or access advanced FIFO signals.
+	*			For clock domain crossing you should use gtry::connect.
+	* @param in The input stream.
+	* @param instance The FIFO to use.
+	* @param fallThrough allow data to flow past the fifo in the same cycle when it's empty.
+	* @return connected stream
+	*/
+	template<Signal T, StreamSignal StreamT>
+	StreamT fifo(StreamT&& in, Fifo<T>& instance, FallThrough fallThrough = FallThrough::off);
+
+	/**
+	* @brief Create a FIFO for buffering.
+	* @param in The input stream.
+	* @param minDepth The FIFO can hold at least that many data beats.
+	The actual amount depends on the available target architecture.
+	* @param fallThrough allow data to flow past the fifo in the same cycle when it's empty.
+	* @return connected stream
+	*/
+	template<StreamSignal StreamT>
+	StreamT fifo(StreamT&& in, size_t minDepth = 16, FallThrough fallThrough = FallThrough::off);
+
+	inline auto fifo(size_t minDepth = 16, FallThrough fallThrough = FallThrough::off)
+	{
+		return [=](auto&& in) { return fifo(std::forward<decltype(in)>(in), minDepth, fallThrough); };
+	}
+
+	using gtry::connect;
+	/**
+	* @brief Connect a Stream as source to a FIFO as sink.
+	* @param sink FIFO instance.
+	* @param source Stream instance.
+	*/
+	template<Signal Tf, StreamSignal Ts>
+	void connect(scl::Fifo<Tf>& sink, Ts& source);
+
+	template<Signal T>
+	void connect(scl::Fifo<T>& sink, RvStream<T>& source);
+
+	/**
+	* @brief Connect a FIFO as source to a Stream as sink.
+	* @param sink Stream instance.
+	* @param source FIFO instance.
+	*/
+	template<StreamSignal Ts, Signal Tf>
+	void connect(Ts& sink, scl::Fifo<Tf>& source);
+	template<Signal T>
+	void connect(RvStream<T>& sink, scl::Fifo<T>& source);
+
+	/**
+	 * @brief allows to send a request-acknowledge handshaked data across clock domains
+	 * @param in input stream with data to pass across clock domains 
+	 * @param inClock clock domain of input stream
+	 * @param outClock clock domain of returned stream
+	*/
+	template<Signal Tp, Signal... Meta>
+	RvStream<Tp, Meta...> synchronizeStreamReqAck(RvStream<Tp, Meta...>& in, const Clock& inClock, const Clock& outClock);
 }
 
 namespace gtry::scl::strm
@@ -417,4 +488,127 @@ namespace gtry::scl::strm
 		HCL_NAMED(out);
 		return out;
 	}
+
+	template<StreamSignal T>
+	T regDecouple(T& stream, const RegisterSettings& settings)
+	{
+		// we can use blocking reg here since regReady guarantees high ready signal
+		return strm::regReady(strm::regDownstreamBlocking(move(stream), settings), settings);
+	}
+
+	template<StreamSignal T>
+	T regDecouple(const T& stream, const RegisterSettings& settings)
+	{
+		static_assert(!stream.template has<Ready>(), "cannot create upstream register from const stream");
+		return strm::regDownstream(stream, settings);
+	}
+
+	template<Signal T, StreamSignal StreamT>
+	StreamT fifo(StreamT&& in, Fifo<T>& instance, FallThrough fallThrough)
+	{
+		StreamT ret;
+		connect(ret, instance);
+
+		if (fallThrough == FallThrough::on) 
+		{
+			IF(!valid(ret))
+			{
+				downstream(ret) = downstream(in);
+				IF(ready(ret))
+					valid(in) = '0';
+			}
+		}
+		connect(instance, in);
+
+		return ret;
+	}
+
+	template<StreamSignal StreamT>
+	inline StreamT fifo(StreamT&& in, size_t minDepth, FallThrough fallThrough)
+	{
+		Fifo inst{ minDepth, copy(downstream(in)) };
+		Stream ret = fifo(move(in), inst, fallThrough);
+		inst.generate();
+
+		return ret;
+	}
+
+	template<Signal Tf, StreamSignal Ts>
+	void connect(scl::Fifo<Tf>& sink, Ts& source)
+	{
+		IF(transfer(source))
+			sink.push(downstream(source));
+		ready(source) = !sink.full();
+	}
+
+	template<Signal T>
+	void connect(scl::Fifo<T>& sink, RvStream<T>&source)
+	{
+		IF(transfer(source))
+			sink.push(*source);
+		ready(source) = !sink.full();
+	}
+
+	template<StreamSignal Ts, Signal Tf>
+	void connect(Ts& sink, scl::Fifo<Tf>& source)
+	{
+		downstream(sink) = source.peek();
+		valid(sink) = !source.empty();
+
+		IF(transfer(sink))
+			source.pop();
+	}
+
+	template<Signal T>
+	void connect(RvStream<T>& sink, scl::Fifo<T>& source)
+	{
+		*sink = source.peek();
+		valid(sink) = !source.empty();
+
+		IF(transfer(sink))
+			source.pop();
+	}
+
+	template<Signal Tp, Signal... Meta>
+	RvStream<Tp, Meta...> synchronizeStreamReqAck(RvStream<Tp, Meta...>& in, const Clock& inClock, const Clock& outClock)
+	{
+		Area area("synchronizeStreamReqAck", true);
+		ClockScope csIn{ inClock };
+		Stream crossingStream = in
+			.template remove<Ready>()
+			.template remove<Valid>();
+
+		Bit eventIn;
+		Bit idle = flag(ready(in), eventIn, '1');
+		eventIn = valid(in) & idle;
+		HCL_NAMED(eventIn);	
+
+		Bit outputEnableCondition = synchronizeEvent(eventIn, inClock, outClock);
+		HCL_NAMED(outputEnableCondition);
+
+		crossingStream = reg(crossingStream);
+
+		ClockScope csOut{ outClock };
+
+		crossingStream = allowClockDomainCrossing(crossingStream, inClock, outClock);
+
+		ENIF(outputEnableCondition){
+			Clock dontSimplifyEnableRegClk = outClock.deriveClock({ .synchronizationRegister = true });
+			crossingStream = reg(crossingStream, RegisterSettings{ .clock = dontSimplifyEnableRegClk });
+		}
+
+		RvStream out = crossingStream
+			.add(Ready{})
+			.add(Valid{})
+			.template reduceTo<RvStream<Tp, Meta...>>();
+
+		Bit outValid;
+		outValid = flag(outputEnableCondition, outValid & ready(out));
+		valid(out) = outValid;
+
+		ready(in) = synchronizeEvent(transfer(out), outClock, inClock);
+
+		return out;
+	}
+
 }
