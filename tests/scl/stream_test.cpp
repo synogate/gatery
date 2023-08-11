@@ -442,13 +442,13 @@ BOOST_FIXTURE_TEST_CASE(stream_transform, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
-//	{
-//		// const compile test
-//		const scl::VStream<UInt, scl::Eop> vs{ 5_b };
-//		auto res = remove<scl::Eop>(vs);
-//		auto rsr = vs.reduceTo<scl::Stream<UInt>>();
-//		auto vso = vs.transform(std::identity{});
-//	}
+	{
+		// const compile test
+		const scl::VStream<UInt, scl::Eop> vs{ 5_b };
+		auto res = remove<scl::Eop>(vs);
+		auto rsr = vs.reduceTo<scl::Stream<UInt>>();
+		auto vso = vs.transform(std::identity{});
+	}
 
 	scl::RvStream<UInt> in = remove<scl::Eop>(remove<scl::Sop>(scl::strm::RvPacketStream<UInt, scl::Sop>{ 5_b })
 								.reduceTo<scl::RvStream<UInt>>());
