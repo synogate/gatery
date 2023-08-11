@@ -19,6 +19,7 @@
 #include <gatery/frontend.h>
 #include "../Fifo.h"
 #include "../flag.h"
+#include "StreamConcept.h"
 
 
 namespace gtry::scl
@@ -68,11 +69,6 @@ namespace gtry::scl
 	{
 		PayloadT data;
 		std::tuple<Meta...> _sig;
-	};
-
-	enum class FallThrough {
-		off,
-		on,
 	};
 
 	template<Signal PayloadT, Signal... Meta>
