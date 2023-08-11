@@ -1717,3 +1717,39 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_fuzz_test, BoostUnitTestSimulationFixture)
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 10, 1'000'000 }));
 }
+
+BOOST_FIXTURE_TEST_CASE(stream_optional_register_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	scl::RvStream<UInt> in{ 8_b };
+	scl::RvStream<UInt> out = in.regDownstream();
+
+	out = out.regDownstream();
+
+	pinIn(in, "in");
+	pinOut(out, "out");
+
+	// insert packets
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(ready(out)) = '0';
+
+		co_await sendPacket(in, scl::SimPacket{ 1, 8_b }, clk);
+		co_await sendPacket(in, scl::SimPacket{ 2, 8_b }, clk);
+
+		simu(ready(out)) = '1';
+
+		scl::SimPacket packet;
+		packet = co_await receivePacket(out, clk);
+		BOOST_TEST(packet.asUint64(8_b) == 1);
+		packet = co_await receivePacket(out, clk);
+		BOOST_TEST(packet.asUint64(8_b) == 2);
+
+		co_await OnClk(clk);
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}

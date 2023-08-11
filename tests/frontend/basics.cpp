@@ -1368,6 +1368,53 @@ BOOST_FIXTURE_TEST_CASE(msbBroadcast, BoostUnitTestSimulationFixture)
 	runEvalOnlyTest();
 }
 
+BOOST_FIXTURE_TEST_CASE(ReturnPathAssignment, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Bit b;
+	Bit b_final1 = b;
+	b = '0';
+	sim_assert(b_final1 == '0') << "b_final1";
+
+	Bit a;
+	Bit a_final = a;
+
+	// moving a unassigned signal into an existing signal should make the existing signal to
+	// behave like a new signal with no relations to its previous state
+	b = std::move(a);
+	Bit b_final2 = b;
+	b = '1';
+
+	sim_assert(a_final == '1') << "a_final";
+	sim_assert(b_final2 == '1') << "b_final2";
+
+	runEvalOnlyTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(ReturnPathAssignmentVector, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	BVec b = 8_b;
+	BVec b_final1 = b;
+	b = 0;
+	sim_assert(b_final1 == 0) << "b_final1";
+
+	BVec a = 8_b;
+	BVec a_final = a;
+
+	// moving a unassigned signal into an existing signal should make the existing signal to
+	// behave like a new signal with no relations to its previous state
+	b = std::move(a);
+	BVec b_final2 = b;
+	b = 1;
+
+	sim_assert(a_final == 1) << "a_final";
+	sim_assert(b_final2 == 1) << "b_final2";
+
+	runEvalOnlyTest();
+}
 
 
 BOOST_FIXTURE_TEST_CASE(tristateBit, gtry::BoostUnitTestSimulationFixture)
