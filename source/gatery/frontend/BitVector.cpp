@@ -381,6 +381,16 @@ namespace gtry {
 		assign(SignalReadPort(signal), true);
 	}
 
+	void BaseBitVector::setName(std::string name) const
+	{
+		HCL_DESIGNCHECK_HINT(m_node != nullptr, "Can only set names to initialized BaseBitVectors!");
+
+		auto* signal = DesignScope::createNode<hlim::Node_Signal>();
+		signal->connectInput(readPort());
+		signal->setName(name);
+		signal->recordStackTrace();
+	}
+
 	void BaseBitVector::addToSignalGroup(hlim::SignalGroup *signalGroup)
 	{
 		m_node->moveToSignalGroup(signalGroup);

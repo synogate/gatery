@@ -177,6 +177,7 @@ namespace gtry {
 		SignalReadPort outPort() const override final;
 		std::string_view getName() const override final;
 		void setName(std::string name) override;
+		void setName(std::string name) const override;
 		void addToSignalGroup(hlim::SignalGroup *signalGroup);
 
 	protected:

@@ -95,6 +95,14 @@ namespace gtry
 		assign(SignalReadPort(signal), true);
 	}
 
+	void BaseEnum::setName(std::string name) const
+	{
+		auto* signal = DesignScope::createNode<hlim::Node_Signal>();
+		signal->connectInput(readPort());
+		signal->setName(name);
+		signal->recordStackTrace();
+	}
+
 	void BaseEnum::addToSignalGroup(hlim::SignalGroup *signalGroup)  {
 		m_node->moveToSignalGroup(signalGroup);
 	}

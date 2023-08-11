@@ -313,7 +313,7 @@ namespace gtry
 		}
 	};
 
-	template<typename Comp>
+	template<typename Comp> requires(!std::is_const_v<Comp>)
 	void setName(Comp& compound, std::string_view prefix)
 	{
 		struct NameVisitor : CompoundNameVisitor
@@ -327,8 +327,19 @@ namespace gtry
 		v.leave();
 	}
 
-	void setName(const Bit&, std::string_view) = delete;
-	void setName(const UInt&, std::string_view) = delete;
+	template<typename Comp>
+	void setName(const Comp& compound, std::string_view prefix)
+	{
+		struct NameVisitor : CompoundNameVisitor
+		{
+			void operator () (const ElementarySignal& vec, const ElementarySignal& ) override { vec.setName(makeName()); }
+		};
+
+		NameVisitor v;
+		v.enter(prefix);
+		VisitCompound<Comp>{}(compound, compound, v);
+		v.leave();
+	}
 
 	namespace internal
 	{
