@@ -46,11 +46,6 @@ namespace gtry::scl
 		bool val = false;
 	};
 
-	enum class FallThrough {
-		off,
-		on,
-	};
-
 	template<Signal TData>
 	class Fifo
 	{

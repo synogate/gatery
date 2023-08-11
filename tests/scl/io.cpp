@@ -151,7 +151,7 @@ void setup_recoverDataDifferential(hlim::ClockRational actualBusClockFrequency, 
 
 	scl::VStream<gtry::UInt> stream = scl::recoverDataDifferential(busClock, ioP, ioN);
 
-	auto streamValid = valid(stream);
+	auto streamValid = scl::valid(stream);
 	pinOut(streamValid, "out_valid");
 	auto streamData = *stream;
 	pinOut(streamData, "out_data");
