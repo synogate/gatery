@@ -245,9 +245,9 @@ namespace gtry::scl
 	}
 			
 	template<BaseSignal Payload, Signal... Meta>
-	SimFunction<SimPacket> receivePacket(const scl::Stream<Payload, Meta...>& stream, Clock clk)
+	SimFunction<SimPacket> receivePacket(const Stream<Payload, Meta...>& stream, Clock clk)
 	{
-		scl::SimuStreamPerformTransferWait<scl::Stream<Payload, Meta...>> streamTransfer;
+		SimuStreamPerformTransferWait<Stream<Payload, Meta...>> streamTransfer;
 		SimPacket result;
 
 		bool firstBeat = true;
