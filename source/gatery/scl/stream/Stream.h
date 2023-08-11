@@ -613,7 +613,7 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal StreamT>
-	inline StreamT strm::regDownstreamBlocking(StreamT&& in, const RegisterSettings& settings)
+	inline StreamT regDownstreamBlocking(StreamT&& in, const RegisterSettings& settings)
 	{
 		if constexpr (in.has<Valid>())
 			valid(in).resetValue('0');
@@ -653,7 +653,7 @@ namespace gtry::scl::strm
 	//}
 
 	template<StreamSignal StreamT>
-	inline StreamT strm::regDownstream(StreamT &&in, const RegisterSettings& settings)
+	inline StreamT regDownstream(StreamT &&in, const RegisterSettings& settings)
 	{
 		if constexpr (in.has<Valid>())
 			valid(in).resetValue('0');
@@ -687,7 +687,7 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal StreamT>
-	inline StreamT strm::pipeinputDownstream(StreamT&& in, PipeBalanceGroup& group)
+	inline StreamT pipeinputDownstream(StreamT&& in, PipeBalanceGroup& group)
 	{
 		if constexpr (in.has<Valid>())
 			valid(in).resetValue('0');
@@ -699,7 +699,7 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal StreamT>
-	inline StreamT strm::regReady(StreamT &&in, const RegisterSettings& settings)
+	inline StreamT regReady(StreamT &&in, const RegisterSettings& settings)
 	{
 		if constexpr (in.has<Valid>())
 			valid(in).resetValue('0');
@@ -742,7 +742,7 @@ namespace gtry::scl::strm
 
 
 	template<Signal T, StreamSignal StreamT>
-	StreamT strm::fifo(StreamT&& in, Fifo<T>& instance, FallThrough fallThrough)
+	StreamT fifo(StreamT&& in, Fifo<T>& instance, FallThrough fallThrough)
 	{
 		StreamT ret;
 		connect(ret, instance);
@@ -762,7 +762,7 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal StreamT>
-	inline StreamT strm::fifo(StreamT&& in, size_t minDepth, FallThrough fallThrough)
+	inline StreamT fifo(StreamT&& in, size_t minDepth, FallThrough fallThrough)
 	{
 		Fifo inst{ minDepth, copy(downstream(in)) };
 		Stream ret = fifo(move(in), inst, fallThrough);

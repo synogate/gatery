@@ -22,7 +22,7 @@
 #include <gatery/scl/sim/SimulationSequencer.h>
 #include <gatery/scl/stream/Stream.h>
 
-namespace gtry::scl
+namespace gtry::scl::strm
 {
 	struct SimPacket {
 		sim::DefaultBitVectorState payload;
@@ -86,7 +86,7 @@ namespace gtry::scl
 
 
 
-namespace gtry::scl
+namespace gtry::scl::strm
 {
 	template<BaseSignal Payload, Signal... Meta>
 	void simuStreamInvalidate(const scl::Stream<Payload, Meta...>& stream) {
@@ -247,7 +247,7 @@ namespace gtry::scl
 	template<BaseSignal Payload, Signal... Meta>
 	SimFunction<SimPacket> receivePacket(const Stream<Payload, Meta...>& stream, Clock clk)
 	{
-		SimuStreamPerformTransferWait<Stream<Payload, Meta...>> streamTransfer;
+		strm::SimuStreamPerformTransferWait<Stream<Payload, Meta...>> streamTransfer;
 		SimPacket result;
 
 		bool firstBeat = true;

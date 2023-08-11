@@ -21,7 +21,7 @@
 
 namespace gtry::scl::strm
 {
-
+	using scl::performTransferWait;
 
 	/**
 	 * @brief extends the width of a simple payload stream. A 4-bit stream sent every beat extended to 8-bits means that the same data is send over an 8-bit bus once every 2 beats.

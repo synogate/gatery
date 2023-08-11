@@ -100,7 +100,7 @@ namespace gtry::scl
 		if constexpr (packetStream.template has<Ready>())
 			ready(packetStream) = !packetFullyIngested | outputTransfered;
 
-		IF (scl::transfer(packetStream)) {
+		IF (transfer(packetStream)) {
 			// Have the counter stick once all fields have been extracted.
 			// Otherwise, count the beats
 			IF (!fieldsExtracted)
@@ -118,14 +118,14 @@ namespace gtry::scl
 				if constexpr (packetStream.template has<Empty>()) {
 					size_t requiredBytes = (requiredBitsInLastHeaderBeat + 7) / 8;
 					size_t maxEmptyBytes = packetStream->size() / 8 - requiredBytes;
-					fieldsExtracted = !scl::eop(packetStream) | (scl::empty(packetStream) <= maxEmptyBytes);
+					fieldsExtracted = !eop(packetStream) | (empty(packetStream) <= maxEmptyBytes);
 				} else
 					fieldsExtracted = '1';
 			}
 
 			// If we hit the eop, remember that we fully ingested the packet
 			// and can continue if or once the output has been transfered.
-			IF (scl::eop(packetStream)) {
+			IF (eop(packetStream)) {
 				packetFullyIngested = '1';
 
 				// If we have not extracted the header by now, mark the output as valid
