@@ -228,7 +228,7 @@ void gtry::scl::sdram::Controller::makeReadQueue(const CommandStream& cmd)
 Controller::CommandStream Controller::translateCommand(const BankState& state, const TileLinkChannelA& request) const
 {
 	auto scope = Area("translateCommand").enter();
-	HCL_NAMED(request);
+	//HCL_NAMED(request);
 
 	CommandStream cmd{ {
 		.code = CommandCode::Precharge,
@@ -265,7 +265,7 @@ Controller::CommandStream Controller::translateCommand(const BankState& state, c
 Controller::DataOutStream gtry::scl::sdram::Controller::translateCommandData(const TileLinkChannelA& request) const
 {
 	auto scope = Area("translateCommandData").enter();
-	HCL_NAMED(request);
+	//HCL_NAMED(request);
 
 	DataOutStream out{ request->data };
 
