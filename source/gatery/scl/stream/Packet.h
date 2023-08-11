@@ -21,7 +21,7 @@
 #include "../TransactionalFifo.h"
 #include "../Counter.h"
 
-namespace gtry::scl
+namespace gtry::scl::strm
 {
 	struct Eop
 	{
@@ -61,22 +61,22 @@ namespace gtry::scl
 	const UInt& empty(const T& s) { return s.template get<Empty>().empty; }
 
 	template<Signal T, Signal... Meta>
-	using PacketStream = Stream<T, scl::Eop, Meta...>;
+	using PacketStream = Stream<T, Eop, Meta...>;
 
 	template<Signal T, Signal... Meta>
-	using RvPacketStream = Stream<T, scl::Ready, scl::Valid, scl::Eop, Meta...>;
+	using RvPacketStream = Stream<T, Ready, Valid, Eop, Meta...>;
 
 	template<Signal T, Signal... Meta>
-	using VPacketStream = Stream<T, scl::Valid, scl::Eop, Meta...>;
+	using VPacketStream = Stream<T, Valid, Eop, Meta...>;
 
 	template<Signal T, Signal... Meta>
-	using RsPacketStream = Stream<T, scl::Ready, scl::Sop, scl::Eop, Meta...>;
+	using RsPacketStream = Stream<T, Ready, Sop, Eop, Meta...>;
 
 	template<Signal T, Signal... Meta>
-	using SPacketStream = Stream<T, scl::Sop, scl::Eop, Meta...>;
+	using SPacketStream = Stream<T, Sop, Eop, Meta...>;
 
 	template<class T>
-	concept PacketStreamSignal = StreamSignal<T> and T::template has<scl::Eop>();
+	concept PacketStreamSignal = StreamSignal<T> and T::template has<Eop>();
 
 	template<Signal Payload, Signal... MetaIn, Signal... MetaFifo>
 	void connect(scl::TransactionalFifo<PacketStream<Payload, MetaFifo...>>& fifo, Stream<Payload, Ready, MetaIn...>& inStream);
@@ -135,12 +135,25 @@ namespace gtry::scl
 	const UInt& emptyBits(const Stream<Payload, Meta...>& in) { return in.template get<EmptyBits>().emptyBits; }
 }
 
+namespace gtry::scl {
+	using strm::Eop;
+	using strm::Sop;
+	using strm::Empty;
+	using strm::EmptyBits;
+
+	using strm::PacketStream;
+	using strm::RvPacketStream;
+	using strm::VPacketStream;
+	using strm::RsPacketStream;
+	using strm::SPacketStream;
+}
+
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Eop, eop);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Sop, sop);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Empty, empty);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::EmptyBits, emptyBits);
 
-namespace gtry::scl
+namespace gtry::scl::strm
 {
 	template<Signal Payload, Signal... MetaIn, Signal... MetaFifo>
 	void connect(scl::TransactionalFifo<PacketStream<Payload, MetaFifo...>>& fifo, Stream<Payload, Ready, MetaIn...>& inStream)
@@ -243,17 +256,17 @@ namespace gtry::scl
 			if constexpr (stream.template has<Sop>()) {
 				if (!m_isInPacket){
 					do
-						co_await internal::performTransferWait(stream, clock);
+						co_await performTransferWait(stream, clock);
 					while (!simu(sop(stream)));
 					m_isInPacket = true;
 				}
 				else{
-					co_await internal::performTransferWait(stream, clock);
+					co_await performTransferWait(stream, clock);
 					m_isInPacket = !(bool)simu(eop(stream));
 				}
 			}
 			else {
-				co_await internal::performTransferWait(stream, clock);
+				co_await performTransferWait(stream, clock);
 			}
 		}
 
@@ -335,7 +348,7 @@ namespace gtry::scl
 			eop(in) = '1';
 		}
 
-		auto out = scl::eraseLastBeat(in);
+		auto out = eraseLastBeat(in);
 		insertState = flag(insert, transfer(out)) | insert;
 		HCL_NAMED(out);
 		return out;
