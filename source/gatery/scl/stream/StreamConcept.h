@@ -16,4 +16,23 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
+#include <gatery/utils/Traits.h>
 
+namespace gtry::scl::strm 
+{
+	namespace internal {
+		struct TestMeta {};
+	}
+
+	template<class T>
+	concept StreamSignal = CompoundSignal<T> and requires (T stream) { 
+		{ *stream } -> Signal;
+		{ *stream.operator ->() } -> Signal;
+
+		{ stream.template add(internal::TestMeta{}) } -> Signal;
+		{ stream.template remove<internal::TestMeta>() } -> Signal;
+		{ stream.template has<internal::TestMeta>() } -> std::convertible_to<bool>;
+
+	//	{ stream.template transform([](Signal auto&&) { return Bit{}; }) } -> Signal;
+	};
+}
