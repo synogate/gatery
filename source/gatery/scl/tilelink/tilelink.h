@@ -169,6 +169,7 @@ namespace gtry::scl
 	using gtry::connect;
 	void connect(Memory<BVec>& mem, TileLinkUL& link);
 
+	using gtry::reg;
 	template<TileLinkSignal TLink> TLink reg(TLink& link);
 	template<TileLinkSignal TLink> TLink reg(TLink&& link);
 }

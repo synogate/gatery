@@ -118,7 +118,7 @@ void HelperPackage::writeVHDL(std::ostream &stream)
 	BEGIN
 		RETURN UNSIGNED(TO_STDLOGICVECTOR(v));
 	END PORTMAP_TO_UNSIGNED;
-	)Delim";
+)Delim";
 
 	stream << "END PACKAGE BODY " << m_name << ';' << std::endl;
 }

@@ -1,4 +1,3 @@
-#include "Scope.h"
 /*  This file is part of Gatery, a library for circuit design.
 	Copyright (C) 2021 Michael Offel, Andreas Ley
 
@@ -16,27 +15,23 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
-#include "Scope.h"
-#include "trace.h"
+#pragma once
+
+#include "../utils/Traits.h"
 
 namespace gtry 
 {
-
-	GroupScope::GroupScope(hlim::NodeGroup::GroupType groupType, std::string_view name) : BaseScope<GroupScope>()
+	template<BaseSignal TSig>
+	TSig final(const TSig& sig)
 	{
-		m_nodeGroup = m_parentScope->m_nodeGroup->addChildNodeGroup(groupType, name);
-		m_nodeGroup->recordStackTrace();
+		return TSig{ sig.outPort() };
 	}
 
-	GroupScope::GroupScope(hlim::NodeGroup* nodeGroup) : BaseScope<GroupScope>()
+	template<Signal TSig>
+	TSig final(const TSig& sig)
 	{
-		m_nodeGroup = nodeGroup;
-	}
-
-	GroupScope& GroupScope::setComment(std::string comment)
-	{
-		m_nodeGroup->setComment(std::move(comment));
-		return *this;
+		return internal::transformIfSignal(sig, [](const auto& subsig) {
+			return final(subsig);
+		});
 	}
 }

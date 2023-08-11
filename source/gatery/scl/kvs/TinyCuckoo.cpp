@@ -27,8 +27,7 @@ namespace gtry::scl
 
 	TinyCuckooOut tinyCuckoo(const TinyCuckooIn& in)
 	{
-		GroupScope entity(GroupScope::GroupType::ENTITY);
-		entity.setName("TinyCuckoo");
+		GroupScope entity(GroupScope::GroupType::ENTITY, "TinyCuckoo");
 
 		TinyCuckooOut out;
 		out.found = '0';
@@ -42,8 +41,7 @@ namespace gtry::scl
 
 		for (size_t i = 0; i < in.numTables; ++i)
 		{
-			GroupScope entity(GroupScope::GroupType::ENTITY);
-			entity.setName("TinyCuckooTable");
+			GroupScope entity(GroupScope::GroupType::ENTITY, "TinyCuckooTable");
 
 			Memory<TinyCuckooItem> mem(1ull << in.tableWidth().value, in.update.item);
 			//mem.setType(MemType::MEDIUM);

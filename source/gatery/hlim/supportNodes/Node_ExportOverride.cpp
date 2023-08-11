@@ -131,11 +131,12 @@ std::string Node_ExportOverride::attemptInferOutputName(size_t outputPort) const
 {
 	std::stringstream name;
 
+
 	auto driver0 = getDriver(SIM_INPUT);
-	if (driver0.node != nullptr && !driver0.node->getName().empty()) return driver0.node->getName() + "_export_override";
+	if (driver0.node != nullptr && inputIsComingThroughParentNodeGroup(SIM_INPUT) && !driver0.node->getName().empty()) return driver0.node->getName() + "_export_override";
 
 	auto driver1 = getDriver(EXP_INPUT);
-	if (driver1.node != nullptr && !driver1.node->getName().empty()) return driver1.node->getName() + "_export_override";
+	if (driver1.node != nullptr && inputIsComingThroughParentNodeGroup(EXP_INPUT) && !driver1.node->getName().empty()) return driver1.node->getName() + "_export_override";
 
 	return "";
 }

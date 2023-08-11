@@ -133,6 +133,9 @@ std::string FIFO_SYNC_MACRO::attemptInferOutputName(size_t outputPort) const
 	if (driver.node == nullptr)
 		return "";
 	
+	if (inputIsComingThroughParentNodeGroup(IN_DI)) 
+		return "";
+
 	if (driver.node->getName().empty())
 		return "";
 

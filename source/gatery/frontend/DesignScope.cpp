@@ -26,16 +26,16 @@
 
 namespace gtry {
 
-	DesignScope::DesignScope() : DesignScope(std::make_unique<DefaultTargetTechnology>())
+	DesignScope::DesignScope(std::string_view topName) : DesignScope(std::make_unique<DefaultTargetTechnology>(), topName)
 	{ 
 	}
 
-	DesignScope::DesignScope(std::unique_ptr<TargetTechnology> targetTech) : 
+	DesignScope::DesignScope(std::unique_ptr<TargetTechnology> targetTech, std::string_view topName) :
 				BaseScope<DesignScope>(), 
+				m_circuit(topName),
 				m_rootScope(m_circuit.getRootNodeGroup()), 
 				m_targetTech(std::move(targetTech))
 	{ 
-		m_rootScope.setName("top");
 		
 		HCL_DESIGNCHECK_HINT(m_parentScope == nullptr, "Only one design scope can be active at a time!");
 		m_defaultTechScope.emplace(m_targetTech->getTechCaps());

@@ -197,7 +197,7 @@ namespace gtry::scl
 		meta->almostFullSignalLevel.push_back({ signalName, levelName });
 
 		HCL_ASSERT_HINT(meta->fifoChoice.readWidth == meta->fifoChoice.writeWidth, "Almost full level computation assumes no mixed read/write widths");
-		UInt namedLevel = meta->fifoChoice.readDepth - level;
+		UInt namedLevel = meta->fifoChoice.readDepth - zext(level);
 		namedLevel.setName(levelName);
 
 		Bit af = reg(m_pushSize >= namedLevel, '0');

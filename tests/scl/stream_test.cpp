@@ -1718,38 +1718,66 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_fuzz_test, BoostUnitTestSimulationFixture)
 	BOOST_TEST(!runHitsTimeout({ 10, 1'000'000 }));
 }
 
-BOOST_FIXTURE_TEST_CASE(stream_optional_register_test, BoostUnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(streamDropPacket_test, BoostUnitTestSimulationFixture)
 {
 	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScope(clk);
 
-	scl::RvStream<UInt> in{ 8_b };
-	scl::RvStream<UInt> out = in.regDownstream();
+	std::mt19937_64 rng{ 12524 };
 
-	out = out.regDownstream();
-
+	Bit drop = pinIn().setName("drop");
+	scl::RvPacketStream<BVec> in{ 8_b };
 	pinIn(in, "in");
+
+	scl::RvPacketStream out = scl::streamDropPacket(std::move(in), drop);
 	pinOut(out, "out");
 
-	// insert packets
+	std::queue<scl::SimPacket> expected;
+	bool expectedComplete = false;
+	
 	addSimulationProcess([&, this]()->SimProcess {
-		simu(ready(out)) = '0';
 
-		co_await sendPacket(in, scl::SimPacket{ 1, 8_b }, clk);
-		co_await sendPacket(in, scl::SimPacket{ 2, 8_b }, clk);
+		for (size_t i = 0; i < 32; ++i)
+		{
+			BitWidth packetLen = (rng() % 4 + 1) * in->width();
+			scl::SimPacket packet{
+				gtry::utils::bitfieldExtract(rng(), 0, packetLen.bits()),
+				packetLen
+			};
 
-		simu(ready(out)) = '1';
+			if (rng() % 2)
+			{
+				expected.push(packet);
+				simu(drop) = '0';
+			}
+			else
+			{
+				simu(drop) = '1';
+			}
 
-		scl::SimPacket packet;
-		packet = co_await receivePacket(out, clk);
-		BOOST_TEST(packet.asUint64(8_b) == 1);
-		packet = co_await receivePacket(out, clk);
-		BOOST_TEST(packet.asUint64(8_b) == 2);
+			co_await sendPacket(in, packet, clk);
+		}
+		expectedComplete = true;
+	});
+	
+	addSimulationProcess([&, this]()->SimProcess {
+		fork(scl::readyDriverRNG(out, clk, 70));
+
+		while (!expected.empty() || !expectedComplete)
+		{
+			scl::SimPacket packet = co_await receivePacket(out, clk);
+			BOOST_TEST(!expected.empty());
+			if(!expected.empty())
+			{
+				BOOST_TEST(packet.payload == expected.front().payload);
+				expected.pop();
+			}
+		}
 
 		co_await OnClk(clk);
 		stopTest();
 	});
 
 	design.postprocess();
-	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+	BOOST_TEST(!runHitsTimeout({ 4, 1'000'000 }));
 }

@@ -136,7 +136,26 @@ namespace gtry::utils
 			return def;
 		}
 
-		T ret = m_nodes.front().as<T>();
+		T ret;
+		try {
+			ret = m_nodes.front().as<T>();
+		} catch (...) {
+			auto str = m_nodes.front().as<std::string>();
+			if (str.empty() || str[0] != '$')
+				throw;
+			str = replaceEnvVars(str);
+			if constexpr (std::is_same_v<T, bool>) {
+				if (str == "false" || str == "No")
+					ret = false;
+				else if (str == "true" || str == "Yes")
+					ret = true;
+				else 
+					throw;
+			} else
+				if constexpr (std::is_integral_v<T> || std::is_floating_point_v<T>)
+					ret = boost::lexical_cast<T>(str);
+				else throw;
+		}
 		for (auto& rec : m_recorder)
 			rec = ret;
 		return std::move(ret);

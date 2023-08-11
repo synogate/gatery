@@ -211,11 +211,6 @@ namespace gtry {
 		return rewireAlias(ret);
 	}
 
-	Bit Bit::final() const
-	{
-		return rewireAlias(SignalReadPort{ m_node });
-	}
-
 	SignalReadPort gtry::Bit::rewireAlias(SignalReadPort port) const
 	{
 		hlim::ConnectionType type = hlim::getOutputConnectionType(port);
@@ -425,5 +420,10 @@ namespace gtry {
 		auto* node = DesignScope::createNode<hlim::Node_RetimingBlocker>();
 		node->connectInput(signal.readPort());
 		return Bit{ SignalReadPort{node}, signal.resetValue() };
+	}
+	
+	Bit final(const Bit& signal)
+	{
+		return Bit{ signal.outPort(), signal.resetValue() };
 	}
 }

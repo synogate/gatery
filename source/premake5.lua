@@ -5,7 +5,7 @@ function GateryWorkspaceDefaults()
     architecture "x64"
     symbols "On"
     flags { "MultiProcessorCompile" }
-    cppdialect "c++latest"
+    cppdialect "c++20"
 
     defines { "_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING" }
 
@@ -20,7 +20,7 @@ function GateryWorkspaceDefaults()
         optimize "On"
 
     filter { "system:windows" }
-        buildoptions { "/Zc:preprocessor" }
+        buildoptions { "/Zc:preprocessor", "/bigobj" }
 
     filter { "system:linux" }
         buildoptions { "-std=c++2a", "-fcoroutines" }

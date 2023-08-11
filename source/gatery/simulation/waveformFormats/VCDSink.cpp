@@ -35,6 +35,7 @@
 #include <iomanip>
 #include <string>
 #include <functional>
+#include <filesystem>
 
 namespace gtry::sim
 {
@@ -50,6 +51,9 @@ namespace gtry::sim
 		m_VCD(filename)
 	{
 		if(logFilename != nullptr) {
+			auto parentPath = std::filesystem::path(logFilename).parent_path();
+			if (!parentPath.empty())
+				std::filesystem::create_directories(parentPath);		
 			m_logFile.open(logFilename, std::fstream::binary);
 			if(!m_logFile)
 				throw std::runtime_error(std::string("Could not open log file for writing: ") + logFilename);

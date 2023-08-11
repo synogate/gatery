@@ -35,6 +35,8 @@
 #include <gatery/utils/Exceptions.h>
 #include <gatery/utils/Preprocessor.h>
 
+#include <gatery/utils/FileSystem.h>
+
 #include <gatery/debug/DebugInterface.h>
 #include <gatery/export/vhdl/VHDLExport.h>
 #include <gatery/export/vhdl/Entity.h>
@@ -141,9 +143,8 @@ void IntelQuartus::resolveAttributes(const hlim::MemoryAttributes &attribs, hlim
 
 void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
 {
-	std::string fullPath = (vhdlExport.getDestination() / filename).string();
-	std::fstream file(fullPath.c_str(), std::fstream::out);
-	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
+	auto &file = fileHandle->stream();
 
 	writeClockSDC(*vhdlExport.getAST(), file);
 
@@ -244,16 +245,17 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 
 void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
 {
-	std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
-	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
+	//auto &file = fileHandle->stream();
 
 	// todo: write constraints
 }
 
 void IntelQuartus::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename)
 {
-	std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
-	file.exceptions(std::fstream::failbit | std::fstream::badbit);
+	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
+	auto &file = fileHandle->stream();
+
 	file << R"(
 # This script is intended for adding the core to an existing project
 #	 1. Open the quartus tcl console (View->Utility Windows->Tcl Console) 
@@ -308,14 +310,15 @@ if {$currentDirectory != $projectDirectory} {
 		{
 			// because quartus
 
-			std::filesystem::path path = vhdlExport.getDestination() / filename;
+			std::filesystem::path path = filename;
 			path.replace_extension(".qpf");
 
-			std::fstream file(path.string().c_str(), std::fstream::out);
-
+			vhdlExport.getDestination().writeFile(path);
 		}
 
-		std::fstream file((vhdlExport.getDestination() / filename).string().c_str(), std::fstream::out);
+		auto fileHandle = vhdlExport.getDestination().writeFile(filename);
+		auto &file = fileHandle->stream();
+
 
 		file << R"(
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
@@ -356,7 +359,7 @@ set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
 
 	void IntelQuartus::writeModelsimScripts(vhdl::VHDLExport& vhdlExport)
 	{
-		auto relativePath = std::filesystem::relative(vhdlExport.getDestination(), vhdlExport.getTestbenchDestination());
+		auto relativePath = std::filesystem::relative(vhdlExport.getDestinationPath(), vhdlExport.getTestbenchDestinationPath());
 
 		for (std::filesystem::path& tb : sourceFiles(vhdlExport, false, true))
 		{
@@ -365,8 +368,8 @@ set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
 				std::string_view{ "work" } : 
 				vhdlExport.getName();
 
-			std::filesystem::path path = vhdlExport.getTestbenchDestination() / ("modelsim_" + top + ".do");
-			std::ofstream file{ path.string().c_str(), std::ofstream::binary };
+			auto fileHandle = vhdlExport.getDestination().writeFile(std::string("modelsim_") + top + ".do");
+			auto &file = fileHandle->stream();
 
 			for (std::filesystem::path& source : sourceFiles(vhdlExport, true, false))
 				file << "vcom -quiet -2008 -createlib -work " << library << " " << escapeTcl((relativePath/source).string()) << '\n';

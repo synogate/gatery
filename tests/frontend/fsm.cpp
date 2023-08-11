@@ -41,8 +41,8 @@ BOOST_FIXTURE_TEST_CASE(TestGCD, BoostUnitTestSimulationFixture)
 		return a;
 	};
 
-	size_t x = std::random_device{}() % 255;
-	size_t y = std::random_device{}() % 255;
+	size_t x = std::random_device{}() % 254 + 1;
+	size_t y = std::random_device{}() % 254 + 1;
 
 	unsigned maxTicks = 200;
 
@@ -63,9 +63,8 @@ BOOST_FIXTURE_TEST_CASE(TestGCD, BoostUnitTestSimulationFixture)
 			HCL_NAMED(x_vec);
 			HCL_NAMED(y_vec);
 
-			GroupScope entity(GroupScope::GroupType::ENTITY);
+			GroupScope entity(GroupScope::GroupType::ENTITY, "gcd");
 			entity
-				.setName("gcd")
 				.setComment("Statemachine to compute the GCD of two 8-bit integers.");
 
 

@@ -123,6 +123,8 @@ namespace gtry::hlim {
 	}
 
 	std::size_t Node_Memory::getMinPortWidth() const {
+		HCL_ASSERT_HINT(!getPorts().empty(), "Can't get min port width if there are no ports.")
+
 		std::size_t size = ~0ull;
 
 		for (auto np : getPorts()) {

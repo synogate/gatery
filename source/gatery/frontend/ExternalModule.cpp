@@ -20,6 +20,7 @@
 #include "DesignScope.h"
 #include "Pin.h"
 #include <gatery/hlim/coreNodes/Node_MultiDriver.h>
+#include <gatery/frontend/Constant.h>
 
 #include <ranges>
 
@@ -61,11 +62,14 @@ const Clock& ExternalModule::clockOut(std::string_view name, std::optional<std::
 {
 	auto it = std::ranges::find(m_outClock, name, &Clock::name);
 	if (it != m_outClock.end())
-		return m_outClock[it - m_outClock.end()];
+		return *it;
 
 	std::optional<Bit> resetSignal;
 	if (resetName)
 		resetSignal = out(*resetName);
+
+	if (!cfg.name)
+		cfg.name = name;
 
 	return addClockOut(cfg, out(name), resetSignal);
 }
@@ -74,11 +78,14 @@ const Clock& gtry::ExternalModule::clockOut(std::string_view name, BitWidth W, s
 {
 	auto it = std::ranges::find(m_outClock, name, &Clock::name);
 	if (it != m_outClock.end())
-		return m_outClock[it - m_outClock.end()];
+		return *it;
 
 	std::optional<Bit> resetSignal;
 	if (resetName)
 		resetSignal = out(*resetName, W)[index];
+
+	if (!cfg.name)
+		cfg.name = name;
 
 	return addClockOut(cfg, out(name, W)[index], resetSignal);
 }
@@ -87,11 +94,14 @@ const Clock& ExternalModule::clockOut(const Clock& parentClock, std::string_view
 {
 	auto it = std::ranges::find(m_outClock, name, &Clock::name);
 	if (it != m_outClock.end())
-		return m_outClock[it - m_outClock.end()];
+		return *it;
 
 	std::optional<Bit> resetSignal;
 	if (resetName)
 		resetSignal = out(*resetName);
+
+	if (!cfg.name)
+		cfg.name = name;
 
 	return addClockOut(parentClock.deriveClock(cfg), out(name), resetSignal);
 }
@@ -100,11 +110,14 @@ const Clock& gtry::ExternalModule::clockOut(const Clock& parentClock, std::strin
 {
 	auto it = std::ranges::find(m_outClock, name, &Clock::name);
 	if (it != m_outClock.end())
-		return m_outClock[it - m_outClock.end()];
+		return *it;
 
 	std::optional<Bit> resetSignal;
 	if (resetName)
 		resetSignal = out(*resetName, W)[index];
+
+	if (!cfg.name)
+		cfg.name = name;
 
 	return addClockOut(parentClock.deriveClock(cfg), out(name, W)[index], resetSignal);
 }
@@ -199,7 +212,9 @@ BVec ExternalModule::out(std::string_view name, BitWidth W, PinConfig cfg)
 	{
 		idx = it - m_node.outs().begin();
 	}
-	return SignalReadPort(hlim::NodePort{ .node = &m_node, .port = (size_t)idx });
+	BVec result = ConstBVec(W);
+	result.exportOverride(SignalReadPort(hlim::NodePort{ .node = &m_node, .port = (size_t)idx }));
+	return result;
 }
 
 Bit ExternalModule::out(std::string_view name, PinConfig cfg)
@@ -221,7 +236,9 @@ Bit ExternalModule::out(std::string_view name, PinConfig cfg)
 	{
 		idx = it - m_node.outs().begin();
 	}
-	return SignalReadPort(hlim::NodePort{ .node = &m_node, .port = (size_t)idx });
+	Bit result = 'x';
+	result.exportOverride(SignalReadPort(hlim::NodePort{ .node = &m_node, .port = (size_t)idx }));
+	return result;
 }
 
 
@@ -242,7 +259,9 @@ void ExternalModule::inoutPin(std::string_view portName, std::string_view pinNam
 	multiDriver->rewireInput(0, {.node = &m_node, .port = m_node.outs().size()-1});
 	m_node.rewireInput(m_node.ins().size()-1, {.node = multiDriver, .port = 0ull});
 
-	multiDriver->rewireInput(1, BVec(bidirPin(BVec(SignalReadPort(multiDriver))).setName(std::string(pinName))).readPort());
+	BVec out = ConstBVec(W);
+	out.exportOverride(SignalReadPort(multiDriver));
+	multiDriver->rewireInput(1, BVec(bidirPin(out).setName(std::string(pinName))).readPort());
 }
 
 void ExternalModule::inoutPin(std::string_view portName, std::string_view pinName, PinConfig cfg)
@@ -262,7 +281,9 @@ void ExternalModule::inoutPin(std::string_view portName, std::string_view pinNam
 	multiDriver->rewireInput(0, {.node = &m_node, .port = m_node.outs().size()-1});
 	m_node.rewireInput(m_node.ins().size()-1, {.node = multiDriver, .port = 0ull});
 
-	multiDriver->rewireInput(1, Bit(bidirPin(Bit(SignalReadPort(multiDriver))).setName(std::string(pinName))).readPort());
+	Bit out = 'x';
+	out.exportOverride(Bit(SignalReadPort(multiDriver)));
+	multiDriver->rewireInput(1, Bit(bidirPin(out).setName(std::string(pinName))).readPort());
 }
 
 std::unique_ptr<gtry::hlim::BaseNode> gtry::ExternalModule::Node_External_Exposed::cloneUnconnected() const

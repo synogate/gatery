@@ -119,8 +119,6 @@ namespace hlim {
 		hlim::Node_Signal* node() { return m_node; }
 		const hlim::Node_Signal* node() const { return m_node; }
 
-		Bit final() const;
-
 	protected:
 		SignalReadPort rewireAlias(SignalReadPort port) const;
 
@@ -165,6 +163,9 @@ namespace hlim {
 
 	/// Adds a retiming blocker such that forward register retiming will not attempt to pull a register from this signal.
 	Bit retimingBlocker(const Bit& signal);
+
+	/// Overload of default final to account for reset value
+	Bit final(const Bit& signal);
 
 /**@}*/
 }

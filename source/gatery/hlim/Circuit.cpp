@@ -43,6 +43,7 @@
 #include "supportNodes/Node_Attributes.h"
 #include "supportNodes/Node_External.h"
 #include "supportNodes/Node_MemPort.h"
+#include "supportNodes/Node_ExportOverride.h"
 
 #include "postprocessing/MemoryDetector.h"
 #include "postprocessing/DefaultValueResolution.h"
@@ -71,13 +72,13 @@
 
 namespace gtry::hlim {
 
-Circuit::Circuit()
+Circuit::Circuit(std::string_view topName)
 {
 #ifdef _DEBUG
 	readDebugNodeIds();
 #endif
 
-	m_root.reset(new NodeGroup(*this, NodeGroup::GroupType::ENTITY));
+	m_root.reset(new NodeGroup(*this, NodeGroup::GroupType::ENTITY, topName, nullptr));
 }
 
 Circuit::~Circuit()
@@ -169,6 +170,7 @@ void Circuit::copySubnet(const utils::StableSet<NodePort> &subnetInputs,
 BaseNode *Circuit::createUnconnectedClone(BaseNode *srcNode, bool noId)
 {
 	m_nodes.push_back(srcNode->cloneUnconnected());
+	m_nodes.back()->moveToGroup(m_root.get());
 	if (!noId)
 		m_nodes.back()->setId(m_nextNodeId++, {});
 	return m_nodes.back().get();
@@ -194,15 +196,20 @@ void Circuit::inferSignalNames()
 			if (signal->getName().empty()) {
 				auto driver = signal->getDriver(0);
 				if (driver.node != nullptr) {
-					auto name = driver.node->attemptInferOutputName(driver.port);
-					if (!name.empty()) {
-						if (name.size() > 200)
-							signal->setInferredName("unnamed");
-						else
-							signal->setInferredName(std::move(name));
+					if (signal->inputIsComingThroughParentNodeGroup(0)) {
+						signal->setInferredName("unnamed");
+					} else {
+						auto name = driver.node->attemptInferOutputName(driver.port);
+						if (!name.empty()) {
+							if (name.size() > 200)
+								signal->setInferredName("unnamed");
+							else
+								signal->setInferredName(std::move(name));
+						} else
+							unnamedSignals.insert(signal);
 					}
 				} else 
-					unnamedSignals.insert(signal);
+					signal->setInferredName("undefined");
 			}
 
 
@@ -210,36 +217,40 @@ void Circuit::inferSignalNames()
 
 		Node_Signal *s = *unnamedSignals.begin();
 		std::vector<Node_Signal*> signalsToName;
-		utils::UnstableSet<Node_Signal*> loopDetection;
+		utils::UnstableSet<BaseNode*> loopDetection;
 
 		signalsToName.push_back(s);
 		loopDetection.insert(s);
 
 		for (auto nh : s->exploreInput(0).skipDependencies()) {
-			if (nh.isSignal()) {
-				if (loopDetection.contains((Node_Signal*)nh.node())) {
-					nh.node()->setInferredName("loop");
-					nh.backtrack();
-				} else
-					if (!nh.node()->getName().empty()) {
-						nh.backtrack();
-					} else {
-						signalsToName.push_back((Node_Signal*)nh.node());
-						loopDetection.insert((Node_Signal*)nh.node());
-					}
+			if (loopDetection.contains(nh.node())) {
+				nh.backtrack();
+				continue;
 			}
+			if (nh.isSignal()) {
+				if (!nh.node()->getName().empty()) {
+					nh.backtrack();
+				} else {
+					signalsToName.push_back((Node_Signal*)nh.node());
+				}
+			}
+			loopDetection.insert(nh.node());
 		}
 
 		for (auto it = signalsToName.rbegin(); it != signalsToName.rend(); ++it) {
 			if ((*it)->getName().empty()) {
 				auto driver = (*it)->getDriver(0);
 				if (driver.node != nullptr) {
-					auto name = driver.node->attemptInferOutputName(driver.port);
-					if (!name.empty()) {
-						if (name.size() > 200)
-							(*it)->setInferredName("unnamed");
-						else
-							(*it)->setInferredName(std::move(name));
+					if ((*it)->inputIsComingThroughParentNodeGroup(0))
+						(*it)->setInferredName("unnamed");
+					else {
+						auto name = driver.node->attemptInferOutputName(driver.port);
+						if (!name.empty()) {
+							if (name.size() > 200)
+								(*it)->setInferredName("unnamed");
+							else
+								(*it)->setInferredName(std::move(name));
+						}
 					}
 				} else
 					(*it)->setInferredName("undefined");
@@ -358,22 +369,26 @@ void Circuit::cullUnnamedSignalNodes()
 		// We want to keep one signal node between non-signal nodes, so only cull if the input or all outputs are signals.
 		bool inputIsSignalOrUnconnected = (signal->getDriver(0).node == nullptr) || (dynamic_cast<Node_Signal*>(signal->getDriver(0).node) != nullptr);
 
-		bool allOutputsAreSignals = true;
-		for (const auto &c : signal->getDirectlyDriven(0)) {
-			allOutputsAreSignals &= (dynamic_cast<Node_Signal*>(c.node) != nullptr);
-		}
+		// Don't cull if inputs is from another, higher group
+		if (!signal->inputIsComingThroughParentNodeGroup(0)) {
 
-		if (inputIsSignalOrUnconnected || allOutputsAreSignals) {
-			if (signal->getDriver(0).node != signal)
-				signal->bypassOutputToInput(0, 0);
-			signal->disconnectInput();
+			bool allOutputsAreSignals = true;
+			for (const auto &c : signal->getDirectlyDriven(0)) {
+				allOutputsAreSignals &= (dynamic_cast<Node_Signal*>(c.node) != nullptr);
+			}
 
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Culling unnamed signal node " << signal);
+			if (inputIsSignalOrUnconnected || allOutputsAreSignals) {
+				if (signal->getDriver(0).node != signal)
+					signal->bypassOutputToInput(0, 0);
+				signal->disconnectInput();
 
-			if (i+1 != m_nodes.size())
-				m_nodes[i] = std::move(m_nodes.back());
-			m_nodes.pop_back();
-			i--;
+				dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Culling unnamed signal node " << signal);
+
+				if (i+1 != m_nodes.size())
+					m_nodes[i] = std::move(m_nodes.back());
+				m_nodes.pop_back();
+				i--;
+			}
 		}
 	}
 }
@@ -656,7 +671,7 @@ void Circuit::removeIrrelevantMuxes(Subnet &subnet)
 							}
 
 							if (Node_Multiplexer *subnetOutputMuxNode = dynamic_cast<Node_Multiplexer*>(input.node)) {
-								if (muxNode->getNumInputPorts() == 3) {
+								if (subnetOutputMuxNode->getNumInputPorts() == 3) {
 									Conjunction subnetOutputMuxNodeCondition;
 									subnetOutputMuxNodeCondition.parseInput({.node = subnetOutputMuxNode, .port = 0});
 
@@ -918,13 +933,16 @@ void Circuit::propagateConstants(Subnet &subnet)
 			// This one must not be folded
 			overridableNodes.add(n.get());
 
-			// All registers driving thsi node also must not be folded.
+			// All registers driving this node also must not be folded.
 			for (auto i : utils::Range(n->getNumInputPorts())) {
 				auto driver = n->getNonSignalDriver(i);
 				if (dynamic_cast<Node_Register*>(driver.node))
 					overridableNodes.add(driver.node);
 			}
 		}
+		// Also add export override nodes to this list, as they can behave differently on export and we should not constant fold through them.
+		if (dynamic_cast<Node_ExportOverride*>(n.get()))
+			overridableNodes.add(n.get());
 	}
 
 
@@ -958,6 +976,10 @@ void Circuit::propagateConstants(Subnet &subnet)
 		for(size_t i = 0; i < nodeList.size(); ++i)
 		{
 			NodePort successor = nodeList[i];
+
+			// If this node is overridable, skip it.
+			if (overridableNodes.contains(successor.node))
+				continue;
 
 			if (!subnet.contains(successor.node)) continue;
 
@@ -1090,6 +1112,72 @@ void Circuit::removeFalseLoops()
 //		}
 //	}
 }
+
+void Circuit::ensureEntityPortSignalNodes()
+{
+	utils::UnstableMap<std::pair<NodePort, NodeGroup*>, Node_Signal*> addedSignalsNodes;
+
+	auto insertSignalNode = [&addedSignalsNodes, this](NodePort driven, NodeGroup *group) -> Node_Signal* {
+		auto driver = driven.node->getDriver(driven.port);
+
+		// Check if such a signal already exists (to avoid too many duplicates)
+		Node_Signal *signal;
+		auto it = addedSignalsNodes.find(std::make_pair(driver, group));
+		if (it != addedSignalsNodes.end())
+			signal = it->second;
+		else {
+			signal = createNode<Node_Signal>();
+			signal->recordStackTrace();
+			signal->moveToGroup(group);
+			signal->connectInput(driver);
+			addedSignalsNodes[std::make_pair(driver, group)] = signal;
+		}
+		driven.node->rewireInput(driven.port, {.node = signal, .port = 0ull});
+		return signal;
+	};
+
+	for (auto idx : utils::Range(m_nodes.size())) {
+		auto node = m_nodes[idx].get();
+
+		if (node->getGroup()->getGroupType() == NodeGroup::GroupType::SFU)
+			continue;
+
+		// Check all outputs that are not dependencies
+		for (auto outputIdx : utils::Range(node->getNumOutputPorts())) {
+			if (node->getOutputConnectionType(outputIdx).type == ConnectionType::DEPENDENCY) continue;
+
+			// Check all driven by this port if they are in a different node group
+			auto allDriven = node->getDirectlyDriven(0);
+			for (auto &driven : allDriven) {
+				if (driven.node->getGroup() == node->getGroup())
+					continue;
+
+				// if this is a child node group
+				if (driven.node->getGroup()->isChildOf(node->getGroup())) {
+					// In this case, the signal must be routed into driven.node->getGroup() through an "input port"
+					// of driven.node->getGroup() and we want to ensure that there are "input port signal nodes" every step of the way.
+
+					// if we are in a special node group, move up until we are out of it, because we must not mess with those.
+					NodeGroup *group = driven.node->getGroup();
+					while (group->getGroupType() == NodeGroup::GroupType::SFU)
+						group = group->getParent();
+
+					if (group != node->getGroup()) {
+						// Check if the driven is a signal, otherwise insert a signal in the same group
+						auto *signal = dynamic_cast<Node_Signal*>(driven.node);
+						if (signal == nullptr || signal->getGroup() != group) 
+							signal = insertSignalNode(driven, group);
+
+						// Walk the hierarchy upwards inserting a signal node on every step
+						while (signal->getGroup()->getParent() != node->getGroup())
+							signal = insertSignalNode({.node = signal, .port = 0ull}, signal->getGroup()->getParent());
+					}
+				}
+			}
+		}
+	}
+}
+
 
 /// @details It seems many parts of the vhdl export still require signal nodes so this step adds back in missing ones
 void Circuit::ensureSignalNodePlacement()
@@ -1299,6 +1387,7 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 	circuit.cullUnusedNodes(subnet); // Dirty way of getting rid of default nodes
 
 	circuit.propagateConstants(subnet);
+	circuit.ensureEntityPortSignalNodes();
 	circuit.cullOrphanedSignalNodes();
 	circuit.cullUnnamedSignalNodes();
 	circuit.cullSequentiallyDuplicatedSignalNodes();
@@ -1389,6 +1478,7 @@ void MinimalPostprocessing::generalOptimization(Circuit& circuit) const
 	resolveRetimingHints(circuit, subnet);
 	bypassRetimingBlockers(circuit, subnet);
 
+	circuit.ensureEntityPortSignalNodes();
 	circuit.cullOrphanedSignalNodes();
 	circuit.cullUnnamedSignalNodes();
 	subnet = Subnet::all(circuit);

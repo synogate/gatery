@@ -59,6 +59,8 @@ std::string OBUFDS::attemptInferOutputName(size_t outputPort) const
 	auto driver = getDriver(0);
 	if (driver.node == nullptr)
 		return "";
+	if (inputIsComingThroughParentNodeGroup(0)) 
+		return "";
 	if (driver.node->getName().empty())
 		return "";
 

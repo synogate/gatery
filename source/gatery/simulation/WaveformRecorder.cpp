@@ -74,6 +74,8 @@ void WaveformRecorder::addSignal(hlim::NodePort driver, hlim::BaseNode *relevant
 
 void WaveformRecorder::addMemory(hlim::Node_Memory *mem, hlim::NodeGroup *group, const std::string &nameOverride, size_t sortOrder)
 {
+	if (mem->getPorts().empty())
+		return; // Ignore memories without any ports
 	auto it = m_alreadyAddedMemories.find(mem);
 	if (it == m_alreadyAddedMemories.end()) {
 		m_alreadyAddedMemories[mem] = m_id2Signal.size();

@@ -30,6 +30,7 @@ namespace gtry::scl
 		template<TileLinkSignal TLink> TLink connectMaster();
 
 	private:
+		Area m_area = { "scl_TileLinkFifo" };
 		Fifo<TileLinkA> m_a;
 		Fifo<TileLinkD> m_d;
 
@@ -48,6 +49,7 @@ namespace gtry::scl
 	{
 		HCL_DESIGNCHECK(!m_slaveConnected);
 		m_slaveConnected = true;
+		auto ent = m_area.enter();
 
 		if(depthMin == 0)
 			depthMin = txid(link.a).width().count();
@@ -58,6 +60,9 @@ namespace gtry::scl
 		m_d.setup(depthMin, **link.d);
 		m_d <<= *link.d;
 
+		if (m_d.depth() >= txid(link.a).width().count())
+			ready(*link.d) = '1';
+
 		return *this;
 	}
 
@@ -67,6 +72,7 @@ namespace gtry::scl
 		HCL_DESIGNCHECK(m_slaveConnected);
 		HCL_DESIGNCHECK(!m_masterConnected);
 		m_masterConnected = true;
+		auto ent = m_area.enter();
 
 		TLink ret{
 			.a = constructFrom(m_a.peek()),
@@ -78,6 +84,9 @@ namespace gtry::scl
 
 		*ret.d <<= m_d;
 		m_d.generate();
+
+		if (m_a.depth() >= txid(ret.a).width().count())
+			ready(ret.a) = '1';
 
 		return ret;
 	}

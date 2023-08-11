@@ -1553,3 +1553,70 @@ BOOST_FIXTURE_TEST_CASE(testUndefinedDontCareComparison, gtry::BoostUnitTestSimu
 	design.postprocess();
 	runTest({ 1,1 });
 }
+
+BOOST_FIXTURE_TEST_CASE(testBitLoopAssignment, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	Bit a = pinIn().setName("a");
+	Bit b = pinIn().setName("enable");
+
+	Bit c = a;
+	IF(b)
+		c = final(c);
+
+	Bit c_readout = c;
+
+	pinOut(c).setName("c");
+	c = '0';
+
+	addSimulationProcess([=, this]()->SimProcess {
+		simu(a) = '1';
+		simu(b) = '1';
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(c_readout) == '0');
+
+		simu(a) = '1';
+		simu(b) = '0';
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(c_readout) == '1');
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest({ 1,1 });
+}
+
+BOOST_FIXTURE_TEST_CASE(testBitFinalResetValue, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	Bit a = pinIn().setName("a");
+	a.resetValue('0');
+
+	Bit b = a;
+	Bit c = reg(final(b));
+	b = '1';
+
+	pinOut(c).setName("c");
+
+	addSimulationProcess([=, this]()->SimProcess {
+		BOOST_TEST(simu(c) == '0');
+
+		simu(a) = '0';
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(c) == '1');
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest({ 1,1 });
+}

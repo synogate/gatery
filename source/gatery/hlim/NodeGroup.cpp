@@ -33,8 +33,37 @@ namespace gtry::hlim
 {
 	NodeGroupConfig NodeGroup::ms_config;
 
-	NodeGroup::NodeGroup(Circuit &circuit, GroupType groupType) : m_circuit(circuit), m_groupType(groupType)
+	NodeGroup::NodeGroup(Circuit &circuit, GroupType groupType, std::string_view name, NodeGroup* parent) : m_circuit(circuit), m_groupType(groupType), m_parent(parent)
 	{
+		if (m_parent)
+		{
+			size_t index = m_parent->m_childInstanceCounter[std::string(name)]++;
+			setInstanceName(std::string(name) + std::to_string(index));
+		}
+		else if (m_instanceName.empty())
+		{
+			setInstanceName(std::string(name));
+		}
+
+		std::string fullName = std::string(name);
+		auto* it = m_parent;
+		while (it != nullptr)
+		{
+			if (it->isPartition())
+			{
+				fullName = it->getName() + '_' + fullName;
+				break;
+			}
+			it = it->getParent();
+		}
+
+		m_properties["name"] = fullName;
+		m_name = move(fullName);
+
+		if (auto config = this->config("partition"))
+			if (config.as<bool>())
+				this->setPartition(true);
+
 		m_id = m_circuit.allocateGroupId({});
 	}
 
@@ -44,29 +73,22 @@ namespace gtry::hlim
 			m_nodes.front()->moveToGroup(nullptr);
 	}
 
-	void NodeGroup::setName(std::string name)
+	const NodeGroup* NodeGroup::getPartition() const
 	{
-		if (name != m_name)
-		{
-			if (m_parent)
-			{
-				size_t index = m_parent->m_childInstanceCounter[name]++;
-				setInstanceName(name + std::to_string(index));
-			}
-			else if (m_instanceName.empty())
-			{
-				setInstanceName(name);
-			}
-
-			m_properties["name"] = name;
-			m_name = move(name);
+		const auto* it = this;
+		while (it != nullptr) {
+			if (it->isPartition())
+				return it;
+			it = it->getParent();
 		}
+		return nullptr;
 	}
 
-	NodeGroup* NodeGroup::addChildNodeGroup(GroupType groupType)
+
+	NodeGroup* NodeGroup::addChildNodeGroup(GroupType groupType, std::string_view name)
 	{
-		auto& child = *m_children.emplace_back(std::make_unique<NodeGroup>(m_circuit, groupType));
-		child.m_parent = this;
+		auto& child = *m_children.emplace_back(std::make_unique<NodeGroup>(m_circuit, groupType, name, this));
+
 		return &child;
 	}
 

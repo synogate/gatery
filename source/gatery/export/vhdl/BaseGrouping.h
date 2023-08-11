@@ -86,7 +86,7 @@ class BaseGrouping
 		bool isConsumedExternally(hlim::NodePort nodePort);
 		std::tuple<bool,bool,bool> isConsumedInternallyHigherLower(hlim::NodePort nodePort);
 		
-		std::string findNearestDesiredName(hlim::NodePort nodePort);
+		std::string findNearestDesiredName(hlim::NodePort nodePort, hlim::NodeGroup *subtreeToRestrictTo = nullptr);
 
 		void verifySignalsDisjoint();
 

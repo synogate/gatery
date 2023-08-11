@@ -122,6 +122,9 @@ std::string Node_Multiplexer::attemptInferOutputName(size_t outputPort) const
 		if (driver.node->getName().empty())
 			continue;
 
+		if (inputIsComingThroughParentNodeGroup(i)) 
+			continue;
+
 		if (driver.node->getName().length() > longestInput.length())
 			longestInput = driver.node->getName();
 	}
@@ -146,6 +149,7 @@ std::string Node_Multiplexer::attemptInferOutputName(size_t outputPort) const
 		if (driver.node == nullptr)
 			return "";
 		if (driver.node->getOutputConnectionType(driver.port)isDependency()) continue;
+		if (inputIsComingThroughParentNodeGroup(i)) continue;
 		if (driver.node->getName().empty()) {
 			return "";
 		} else {

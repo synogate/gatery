@@ -99,8 +99,7 @@ std::vector<SplitMemoryGroup> createDepthSplitMemories(hlim::NodeGroup *group, c
 	for (auto splitIdx : utils::Range(subMems.size())) {
 
 		// create a sub entity, move everything in
-		auto *subMemory = group->addChildNodeGroup(hlim::NodeGroup::GroupType::SFU);
-		subMemory->setName((boost::format("memory_split_%d") % splitIdx).str());
+		auto *subMemory = group->addChildNodeGroup(hlim::NodeGroup::GroupType::SFU, (boost::format("memory_split_%d") % splitIdx).str());
 		auto *subMemInfo = subMemory->createMetaInfo<hlim::MemoryGroup>(subMemory);
 		subMems[splitIdx].subGroup = subMemInfo;
 		utils::StableMap<hlim::BaseNode*, hlim::BaseNode*> &mapSrc2Dst = subMems[splitIdx].original2subGroup;
@@ -160,7 +159,7 @@ void splitMemoryAlongDepthMux(hlim::NodeGroup *group, size_t log2SplitDepth, boo
 
 	HCL_ASSERT_HINT(log2SplitDepth+1 == utils::Log2C(memGrp->getMemory()->getMaxDepth()), "Muxing on a single address bit, this only works if splitting on the highest addr bit!");
 
-	group->setName((boost::format("memory_split_at_addrbit_%d_w_mux") % log2SplitDepth).str());
+	//group->setName((boost::format("memory_split_at_addrbit_%d_w_mux") % log2SplitDepth).str());
 	GroupScope scope(group);
 
 	// Split memory
@@ -296,8 +295,7 @@ std::vector<SplitMemoryGroup> createWidthSplitMemories(hlim::NodeGroup *group, c
 	for (auto splitIdx : utils::Range(subMems.size())) {
 
 		// create a sub entity, move everything in
-		auto *subMemory = group->addChildNodeGroup(hlim::NodeGroup::GroupType::SFU);
-		subMemory->setName((boost::format("memory_split_%d") % splitIdx).str());
+		auto *subMemory = group->addChildNodeGroup(hlim::NodeGroup::GroupType::SFU, (boost::format("memory_split_%d") % splitIdx).str());
 		auto *subMemInfo = subMemory->createMetaInfo<hlim::MemoryGroup>(subMemory);
 		subMems[splitIdx].subGroup = subMemInfo;
 		utils::StableMap<hlim::BaseNode*, hlim::BaseNode*> &mapSrc2Dst = subMems[splitIdx].original2subGroup;
@@ -390,7 +388,7 @@ void splitMemoryAlongWidth(hlim::NodeGroup *group, size_t maxWidth)
 	size_t width = memGrp->getMemory()->getMinPortWidth();
 	HCL_ASSERT(maxWidth < width);
 
-	group->setName((boost::format("memory_split_every_%d_bits") % maxWidth).str());
+	//group->setName((boost::format("memory_split_every_%d_bits") % maxWidth).str());
 	GroupScope scope(group);
 
 	// Split memory
