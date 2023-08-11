@@ -25,6 +25,22 @@ namespace gtry::scl::strm
 	using scl::performTransferWait;
 
 	/**
+	* @brief	Puts a register in the valid and data path.
+	The register enable is connected to ready and ready is just forwarded.
+	Note that valid will not become high while ready is low, which violates stream semantics.
+	* @param	Settings forwarded to all instantiated registers.
+	* @return	connected stream
+	*/
+	template<StreamSignal StreamT>
+	StreamT regDownstreamBlocking(StreamT&& in, const RegisterSettings& settings = {});
+
+	//untested
+	inline auto regDownstreamBlocking(const RegisterSettings& settings = {})
+	{
+		return [=](auto&& in) { return regDownstreamBlocking(std::forward<decltype(in)>(in), settings); };
+	}
+
+	/**
 	 * @brief extends the width of a simple payload stream. A 4-bit stream sent every beat extended to 8-bits means that the same data is send over an 8-bit bus once every 2 beats.
 	 * @param source source stream
 	 * @param width desired extended stream width
@@ -176,10 +192,37 @@ namespace gtry::scl::strm
 	*/
 	template<Signal Tp, Signal... Meta>
 	RvStream<Tp, Meta...> synchronizeStreamReqAck(RvStream<Tp, Meta...>& in, const Clock& inClock, const Clock& outClock);
+
+	/**
+	 * @brief attaches a memory to a stream carrying addresses and returns a stream of the memory data
+	 * @param addr the address stream to look up in memory
+	 * @param memory - self explanatory
+	*/
+	template<Signal T, Signal... Meta>
+	Stream<T, Meta...> lookup(Stream<UInt, Meta...>& addr, Memory<T>& memory);
 }
 
 namespace gtry::scl::strm
 {
+	template<StreamSignal StreamT>
+	inline StreamT regDownstreamBlocking(StreamT&& in, const RegisterSettings& settings)
+	{
+		if constexpr (in.has<Valid>())
+			valid(in).resetValue('0');
+
+		auto dsSig = constructFrom(copy(downstream(in)));
+
+		IF(ready(in))
+			dsSig = downstream(in);
+
+		dsSig = reg(dsSig, settings);
+
+		StreamT ret;
+		downstream(ret) = dsSig;
+		upstream(in) = upstream(ret);
+		return ret;
+	}
+
 	template<BaseSignal T>
 	T makeShiftReg(BitWidth size, const T& in, const Bit& en)
 	{
@@ -611,4 +654,18 @@ namespace gtry::scl::strm
 		return out;
 	}
 
+	template<Signal T, Signal... Meta>
+	Stream<T, Meta...> lookup(Stream<UInt, Meta...>& addr, Memory<T>& memory)
+	{
+		Stream<T, Meta...> out = addr.transform([&](const UInt& address) {
+			return memory[address].read();
+			});
+		if (memory.readLatencyHint())
+		{
+			for (size_t i = 0; i < memory.readLatencyHint() - 1; ++i)
+				out <<= scl::strm::regDownstreamBlocking(move(out), { .allowRetimingBackward = true });
+			return strm::regDownstream(move(out),{ .allowRetimingBackward = true });
+		}
+		return out;
+	}
 }

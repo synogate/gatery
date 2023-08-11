@@ -159,22 +159,6 @@ namespace gtry::scl::strm
 	}
 
 	/**
-	* @brief	Puts a register in the valid and data path.
-	The register enable is connected to ready and ready is just forwarded.
-	Note that valid will not become high while ready is low, which violates stream semantics.
-	* @param	Settings forwarded to all instantiated registers.
-	* @return	connected stream
-	*/
-	template<StreamSignal StreamT>
-	StreamT regDownstreamBlocking(StreamT&& in, const RegisterSettings& settings = {});
-
-	//untested
-	inline auto regDownstreamBlocking(const RegisterSettings& settings = {})
-	{
-		return [=](auto&& in) { return regDownstreamBlocking(std::forward<decltype(in)>(in), settings); };
-	}
-
-	/**
 	* @brief High when all transfer conditions (ready and valid high) are met.
 	* @param stream to test
 	* @return transfer occurring
@@ -547,46 +531,6 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal StreamT>
-	inline StreamT regDownstreamBlocking(StreamT&& in, const RegisterSettings& settings)
-	{
-		if constexpr (in.has<Valid>())
-			valid(in).resetValue('0');
-
-		auto dsSig = constructFrom(copy(downstream(in)));
-
-		IF(ready(in))
-			dsSig = downstream(in);
-
-		dsSig = reg(dsSig, settings);
-
-		StreamT ret;
-		downstream(ret) = dsSig;
-		upstream(in) = upstream(ret);
-		return ret;
-	}
-
-	//template<Signal PayloadT, Signal... Meta>
-	//inline Stream<PayloadT, Meta...> strm::regDownstreamBlocking(const RegisterSettings& settings) const requires(Assignable<std::tuple<PayloadT, Meta...>>)
-	//{
-	//	if constexpr (has<Valid>())
-	//	{
-	//		auto tmp = *this;
-	//		valid(tmp).resetValue('0');
-	//		return {
-	//			.data = reg(tmp.data, settings),
-	//			._sig = reg(tmp._sig, settings)
-	//		};
-	//	}
-	//	else
-	//	{
-	//		return {
-	//			.data = reg(data, settings),
-	//			._sig = reg(_sig, settings)
-	//		};
-	//	}
-	//}
-
-	template<StreamSignal StreamT>
 	inline StreamT regDownstream(StreamT &&in, const RegisterSettings& settings)
 	{
 		if constexpr (in.has<Valid>())
@@ -679,20 +623,6 @@ namespace gtry::scl::strm
 		return scl::strm::pipeinputDownstream(move(stream), group);
 	}
 
-	template<Signal T, Signal... Meta>
-	Stream<T, Meta...> lookup(Stream<UInt, Meta...>& addr, Memory<T>& memory)
-	{
-		Stream<T, Meta...> out = addr.transform([&](const UInt& address) {
-			return memory[address].read();
-		});
-		if (memory.readLatencyHint())
-		{
-			for (size_t i = 0; i < memory.readLatencyHint() - 1; ++i)
-				out <<= scl::strm::regDownstreamBlocking(move(out), { .allowRetimingBackward = true });
-			return strm::regDownstream(move(out),{ .allowRetimingBackward = true });
-		}
-		return out;
-	}
 }
 
 namespace gtry {
