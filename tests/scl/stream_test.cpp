@@ -1107,7 +1107,7 @@ BOOST_FIXTURE_TEST_CASE(ReqAckSync_1_10, StreamTransferFixture)
 	simulateSendData(in, 0);
 	groups(1);
 
-	scl::RvStream<UInt> out = gtry::scl::synchronizeStreamReqAck(in, m_clock, outClk);
+	scl::RvStream<UInt> out = gtry::scl::strm::synchronizeStreamReqAck(in, m_clock, outClk);
 	{
 		ClockScope clock(outClk);
 		Out(out);
@@ -1131,7 +1131,7 @@ BOOST_FIXTURE_TEST_CASE(ReqAckSync_1_1, StreamTransferFixture)
 	simulateSendData(in, 0);
 	groups(1);
 
-	scl::RvStream<UInt> out = gtry::scl::synchronizeStreamReqAck(in, m_clock, outClk);
+	scl::RvStream<UInt> out = gtry::scl::strm::synchronizeStreamReqAck(in, m_clock, outClk);
 	{
 		ClockScope clock(outClk);
 		Out(out);
@@ -1155,7 +1155,7 @@ BOOST_FIXTURE_TEST_CASE(ReqAckSync_10_1, StreamTransferFixture)
 	simulateSendData(in, 0);
 	groups(1);
 
-	scl::RvStream<UInt> out = gtry::scl::synchronizeStreamReqAck(in, m_clock, outClk);
+	scl::RvStream<UInt> out = gtry::scl::strm::synchronizeStreamReqAck(in, m_clock, outClk);
 	{
 		ClockScope clock(outClk);
 		Out(out);
@@ -1493,7 +1493,7 @@ BOOST_FIXTURE_TEST_CASE(store_forward_fifo_fuzz, BoostUnitTestSimulationFixture)
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
 }
-
+ 
 
 BOOST_FIXTURE_TEST_CASE(streamBroadcaster, BoostUnitTestSimulationFixture)
 {
@@ -1536,7 +1536,7 @@ BOOST_FIXTURE_TEST_CASE(streamBroadcaster, BoostUnitTestSimulationFixture)
 			});
 
 			for (auto &b : allData) {
-				co_await performTransferWait(stream, clk);
+				co_await scl::performTransferWait(stream, clk);
 				BOOST_TEST(simu(*stream) == b);
 			}
 			numDone++;
@@ -1554,7 +1554,7 @@ BOOST_FIXTURE_TEST_CASE(streamBroadcaster, BoostUnitTestSimulationFixture)
 
 		for (auto &b : allData) {
 			simu(*inStream) = b;
-			co_await performTransferWait(inStream, clk);
+			co_await scl::performTransferWait(inStream, clk);
 		}
 
 		while (numDone != 2)
