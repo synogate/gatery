@@ -46,10 +46,10 @@ namespace gtry::scl::strm
 
 #ifdef __clang__
 	template<class T>
-	concept StreamSignal = /*Signal<T> and */internal::is_stream_signal<std::remove_cvref_t<T>>::value;
+	concept StreamSignal = /*Signal<T> and */internal::is_stream_signal<std::remove_reference_t<T>>::value;
 #else
 	template<class T>
-	concept StreamSignal = Signal<T> and internal::is_stream_signal<std::remove_cvref_t<T>>::value;
+	concept StreamSignal = Signal<T> and internal::is_stream_signal<std::remove_reference_t<T>>::value;
 #endif	
 
 #ifdef __clang__
@@ -115,11 +115,22 @@ namespace gtry::scl::strm
 		template<StreamSignal T> explicit operator T () const requires(Assignable<AssignabilityTestType>);
 	};
 	
-	template<Signal T, StreamSignal StreamT> 
+	//template<Signal T, typename StreamT> requires (StreamSignal<std::remove_cvref_t<StreamT>>)
+	template<Signal T, StreamSignal StreamT>
 	auto remove(StreamT&& in);
 	
 	template<StreamSignal StreamT>
-	inline auto removeFlowControl(StreamT&& in) { return remove<Ready>(remove<Valid>(remove<Sop>(move(in)))); }
+//	inline auto removeFlowControl(StreamT&& in) {
+//		if constexpr (in.template has<Sop>()) 
+//			return remove<Ready>(remove<Valid>(remove<Sop>(move(in))));
+//		else 
+//			return remove<Ready>(remove<Valid>(move(in)));
+//	}
+	//inline auto removeFlowControl(StreamT&& in) { return remove<Ready>(remove<Valid>(remove<Sop>(move(in)))); }
+	inline auto removeFlowControl(StreamT&& in) {
+		if constexpr (in.template has<Ready>())
+			ready(in) = '1';
+		return remove<Ready>(remove<Valid>(in)); }
 
 	template<StreamSignal StreamT>
 	inline auto removeUpstream(StreamT&& in) { return remove<Ready>(move(in)); }
@@ -132,7 +143,7 @@ namespace gtry::scl::strm
 	StreamT pipeinputDownstream(StreamT&& in, PipeBalanceGroup& group);
 
 	//untested
-	auto pipeinputDownstream(PipeBalanceGroup& group)
+	inline auto pipeinputDownstream(PipeBalanceGroup& group)
 	{
 		return [=](auto&& in) { return pipeinputDownstream(std::forward<decltype(in)>(in), group); };
 	}
@@ -147,7 +158,7 @@ namespace gtry::scl::strm
 	StreamT regDownstream(StreamT&& in, const RegisterSettings& settings = {});
 
 	//untested
-	auto regDownstream(const RegisterSettings& settings = {})
+	inline auto regDownstream(const RegisterSettings& settings = {})
 	{
 		return [=](auto&& in) { return regDownstream(std::forward<decltype(in)>(in), settings); };
 	}
@@ -162,7 +173,7 @@ namespace gtry::scl::strm
 	StreamT regReady(StreamT&& in, const RegisterSettings& settings = {});
 
 	//untested
-	auto regReady(const RegisterSettings& settings = {})
+	inline auto regReady(const RegisterSettings& settings = {})
 	{
 		return [=](auto&& in) { return regReady(std::forward<decltype(in)>(in), settings); };
 	}
@@ -178,7 +189,7 @@ namespace gtry::scl::strm
 	StreamT regDownstreamBlocking(StreamT&& in, const RegisterSettings& settings = {});
 
 	//untested
-	auto regDownstreamBlocking(const RegisterSettings& settings = {})
+	inline auto regDownstreamBlocking(const RegisterSettings& settings = {})
 	{
 		return [=](auto&& in) { return regDownstreamBlocking(std::forward<decltype(in)>(in), settings); };
 	}
@@ -206,7 +217,7 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	StreamT fifo(StreamT&& in, size_t minDepth = 16, FallThrough fallThrough = FallThrough::off);
 
-	auto fifo(size_t minDepth = 16, FallThrough fallThrough = FallThrough::off)
+	inline auto fifo(size_t minDepth = 16, FallThrough fallThrough = FallThrough::off)
 	{
 		return [=](auto&& in) { return fifo(std::forward<decltype(in)>(in), minDepth, fallThrough); };
 	}
@@ -655,31 +666,36 @@ namespace gtry::scl::strm
 		}
 	}
 
-	template<Signal T, StreamSignal StreamT>
-	auto remove(StreamT&& in)
+	template<Signal PayloadT, Signal ...Meta>
+	template<Signal T>
+	inline auto Stream<PayloadT, Meta...>::remove()
 	{
-		auto metaRefs = internal::remove_from_tuple<T>(in._sig);
+		auto metaRefs = internal::remove_from_tuple<T>(_sig);
 
 		return std::apply([&](auto&... meta) {
-			if constexpr (std::is_const_v<std::remove_reference_t<StreamT>>)
-			{
-				return Stream<std::remove_cvref_t<StreamT>::Payload, std::remove_cvref_t<decltype(meta)>...>{
-					in.data, metaRefs
-				};
-			}
-			else
-			{
-				Stream<std::remove_cvref_t<StreamT>::Payload, std::remove_cvref_t<decltype(meta)>...> ret;
-				connect(ret.data, in.data);
-				downstream(ret._sig) = downstream(metaRefs);
-				upstream(metaRefs) = upstream(ret._sig);
-				return ret;
-			}
-		}, metaRefs);
+			Stream<PayloadT, std::remove_cvref_t<decltype(meta)>...> ret;
+			connect(ret.data, this->data);
+			downstream(ret._sig) = downstream(metaRefs);
+			upstream(metaRefs) = upstream(ret._sig);
+			return ret;
+			}, metaRefs);
+	}
+
+	template<Signal PayloadT, Signal ...Meta>
+	template<Signal T>
+	inline auto Stream<PayloadT, Meta...>::remove() const requires(Assignable<AssignabilityTestType>)
+	{
+		auto metaRefs = internal::remove_from_tuple<T>(_sig);
+
+		return std::apply([&](auto&... meta) {
+			return Stream<PayloadT, std::remove_cvref_t<decltype(meta)>...>{
+				this->data, metaRefs
+			};
+			}, metaRefs);
 	}
 
 	template<StreamSignal StreamT>
-	StreamT strm::regDownstreamBlocking(StreamT&& in, const RegisterSettings& settings)
+	inline StreamT regDownstreamBlocking(StreamT&& in, const RegisterSettings& settings)
 	{
 		if constexpr (in.has<Valid>())
 			valid(in).resetValue('0');
@@ -698,7 +714,7 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal StreamT>
-	inline StreamT strm::regDownstream(StreamT &&in, const RegisterSettings& settings)
+	StreamT regDownstream(StreamT &&in, const RegisterSettings& settings)
 	{
 		if constexpr (in.has<Valid>())
 			valid(in).resetValue('0');
@@ -732,7 +748,7 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal StreamT>
-	inline StreamT strm::pipeinputDownstream(StreamT&& in, PipeBalanceGroup& group)
+	StreamT pipeinputDownstream(StreamT&& in, PipeBalanceGroup& group)
 	{
 		if constexpr (in.has<Valid>())
 			valid(in).resetValue('0');
@@ -744,7 +760,7 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal StreamT>
-	inline StreamT strm::regReady(StreamT &&in, const RegisterSettings& settings)
+	StreamT regReady(StreamT &&in, const RegisterSettings& settings)
 	{
 		if constexpr (in.template has<Valid>())
 			valid(in).resetValue('0');
@@ -787,7 +803,7 @@ namespace gtry::scl::strm
 
 
 	template<Signal T, StreamSignal StreamT>
-	StreamT strm::fifo(StreamT&& in, Fifo<T>& instance, FallThrough fallThrough)
+	StreamT fifo(StreamT&& in, Fifo<T>& instance, FallThrough fallThrough)
 	{
 		StreamT ret;
 		connect(ret, instance);
@@ -807,7 +823,7 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal StreamT>
-	inline StreamT strm::fifo(StreamT&& in, size_t minDepth, FallThrough fallThrough)
+	StreamT fifo(StreamT&&  in, size_t minDepth, FallThrough fallThrough)
 	{
 		Fifo inst{ minDepth, copy(downstream(in)) };
 		Stream ret = fifo(move(in), inst, fallThrough);
@@ -815,13 +831,14 @@ namespace gtry::scl::strm
 
 		return ret;
 	}
-
+	
 	template<Signal Tp, Signal... Meta>
 	RvStream<Tp, Meta...> synchronizeStreamReqAck(RvStream<Tp, Meta...>& in, const Clock& inClock, const Clock& outClock)
 	{
 		Area area("synchronizeStreamReqAck", true);
 		ClockScope csIn{ inClock };
-		Stream crossingStream = remove<Ready>(remove<Valid>(move(in)));
+
+		Stream crossingStream = remove<Valid>(remove<Ready>(move(in)));
 
 		Bit eventIn;
 		Bit idle = flag(ready(in), eventIn, '1');
@@ -956,9 +973,9 @@ namespace gtry {
 
 		void operator () (const T& a, const T& b, CompoundVisitor& v)
 		{
-			std::apply([&](auto&... meta) {
-				(VisitCompound<std::remove_reference_t<decltype(meta)>>{}(
-					meta, b.template get<std::remove_reference_t<decltype(meta)>>(), v)
+			std::apply([&](const auto&... meta) {
+				(VisitCompound<std::remove_cvref_t<decltype(meta)>>{}(
+					meta, b.template get<std::remove_cvref_t<decltype(meta)>>(), v)
 					, ...);
 			}, a._sig);
 
