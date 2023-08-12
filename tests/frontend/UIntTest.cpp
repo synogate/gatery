@@ -178,3 +178,18 @@ BOOST_FIXTURE_TEST_CASE(UIntSelectorAccess, BoostUnitTestSimulationFixture)
 */
 	eval();
 }
+
+
+BOOST_FIXTURE_TEST_CASE(UIntMultiplyTest, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	UInt a = 1ull << 63;
+	UInt b = zext(a, 128_b) * zext(a);
+
+	sim_assert(b.lower(-2_b) == 0) << "lower " << b;
+	sim_assert(b.upper(2_b) == 1) << "upper " << b;
+
+	eval();
+}
+
