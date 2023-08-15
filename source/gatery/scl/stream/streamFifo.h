@@ -24,16 +24,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 namespace gtry::scl::strm {
 	/**
-	 * @brief Fallthrough-ness in the gatery sense means the ability to bypass the fifo entirely when it is empty, 
-	 * resulting in no additional cycles of latency in this specific case. A non-fallthrough fifo systematically 
-	 * adds at least one cycle of latency between the input and the output of the fifo.
-	*/
-	enum class FallThrough {
-		off,
-		on,
-	};
-
-	/**
 	* @brief Attach the stream as source and a new stream as sink to the FIFO.
 	*			This is useful to make further settings or access advanced FIFO signals.
 	*			For clock domain crossing you should use gtry::connect.

@@ -390,6 +390,16 @@ namespace gtry::scl
 
 		return get;
 	}
+
+	/**
+	* @brief Fallthrough-ness in the gatery sense means the ability to bypass the fifo entirely when it is empty, 
+	* resulting in no additional cycles of latency in this specific case. A non-fallthrough fifo systematically 
+	* adds at least one cycle of latency between the input and the output of the fifo.
+	*/
+	enum class FallThrough {
+		off,
+		on,
+	};
 }
 
 

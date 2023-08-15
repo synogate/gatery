@@ -18,8 +18,7 @@
 #include "gatery/pch.h"
 #include "tileLinkBridge.h"
 #include <gatery/frontend/Reverse.h>
-#include <gatery/scl/stream/StreamArbiter.h>
-#include <gatery/scl/stream/utils.h>
+#include <gatery/scl/stream/strm.h>
 
 namespace gtry::scl {
 
