@@ -24,11 +24,7 @@
 #include <gatery/simulation/waveformFormats/VCDSink.h>
 #include <gatery/simulation/Simulator.h>
 
-#include <gatery/scl/stream/StreamArbiter.h>
-#include <gatery/scl/stream/utils.h>
-#include <gatery/scl/stream/Packet.h>
-#include <gatery/scl/stream/PacketStreamHelpers.h>
-#include <gatery/scl/stream/StreamBroadcaster.h>
+#include <gatery/scl/stream/strm.h>
 #include <gatery/scl/io/SpiMaster.h> 
 
 #include <gatery/debug/websocks/WebSocksInterface.h>
@@ -1211,7 +1207,7 @@ BOOST_FIXTURE_TEST_CASE(TransactionalFifo_StoreForwardStream_sopeop, StreamTrans
 	ClockScope clkScp(m_clock);
 
 	scl::RsPacketStream<UInt> in = { 16_b };
-	scl::RsPacketStream<UInt> out = storeForwardFifo(in, 32);
+	scl::Stream out = storeForwardFifo(in, 32);
 
 	In(in);
 	Out(out);

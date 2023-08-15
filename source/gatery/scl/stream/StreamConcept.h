@@ -33,10 +33,15 @@ namespace gtry::scl::strm
 		{ stream.template add(internal::TestMeta{}) } -> Signal;
 		{ stream.template remove<internal::TestMeta>() } -> Signal;
 		{ stream.template has<internal::TestMeta>() } -> std::convertible_to<bool>;
+		{ stream.removeFlowControl() } -> Signal;
 
 	//	{ stream.template transform([](Signal auto&&) { return Bit{}; }) } -> Signal;
 	};
+
+	template<StreamSignal StreamT>
+	using StreamData = decltype(std::declval<StreamT>().removeFlowControl());
 }
 namespace gtry::scl {
 	using strm::StreamSignal;
+	using strm::StreamData;
 }

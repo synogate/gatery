@@ -17,7 +17,8 @@
 */
 #pragma once
 #include "Fifo.h"
-#include "stream/Stream.h" 
+#include "stream/StreamConcept.h" 
+#include "stream/metaSignals.h"
 
 namespace gtry::scl
 {

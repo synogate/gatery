@@ -28,21 +28,6 @@ namespace gtry::scl::strm
 	template<class T>
 	concept PacketStreamSignal = StreamSignal<T> and T::template has<Eop>();
 
-	template<Signal Payload, Signal... MetaIn, Signal... MetaFifo>
-	void connect(scl::TransactionalFifo<PacketStream<Payload, MetaFifo...>>& fifo, Stream<Payload, Ready, MetaIn...>& inStream);
-
-	template<Signal Payload, Signal... MetaIn>
-	void connect(scl::TransactionalFifo<Payload>& fifo, Stream<Payload, Ready, MetaIn...>& inStream);
-
-	template<Signal Payload, Signal... MetaFifo, Signal... MetaOut>
-	void connect(Stream<Payload, MetaOut...>& packetStream, scl::TransactionalFifo<PacketStream<Payload, MetaFifo...>>& fifo);
-
-	template<Signal Payload, Signal... MetaOut>
-	void connect(Stream<Payload, MetaOut...>& packetStream, scl::TransactionalFifo<Payload>& fifo);
-
-	template<Signal Payload, Signal... Meta> auto storeForwardFifo(RvPacketStream<Payload, Meta...>& in, size_t minElements);
-	template<Signal Payload, Signal... Meta> auto storeForwardFifo(RsPacketStream<Payload, Meta...>& in, size_t minElements);
-
 	template<StreamSignal T>
 	requires (T::template has<Valid>() or T::template has<Eop>())
 	T eraseLastBeat(T& source);
@@ -80,83 +65,6 @@ namespace gtry::scl::strm
 
 namespace gtry::scl::strm
 {
-	template<Signal Payload, Signal... MetaIn, Signal... MetaFifo>
-	void connect(scl::TransactionalFifo<PacketStream<Payload, MetaFifo...>>& fifo, Stream<Payload, Ready, MetaIn...>& inStream)
-	{
-		ready(inStream) = !fifo.full();
-
-		IF(transfer(inStream))
-		{
-			fifo.push(inStream
-				.template remove<Ready>()
-				.template remove<Valid>()
-				.template remove<Error>()
-				.template remove<Sop>());
-
-			IF(eop(inStream))
-			{
-				IF(error(inStream))
-					fifo.rollbackPush();
-				ELSE
-					fifo.commitPush();
-			}
-		}
-	}
-
-	template<Signal Payload, Signal... MetaIn>
-	void connect(scl::TransactionalFifo<Payload>& fifo, Stream<Payload, Ready, MetaIn...>& inStream)
-	{
-		ready(inStream) = !fifo.full();
-
-		IF(transfer(inStream))
-		{
-			fifo.push(*inStream);
-
-			IF(eop(inStream))
-			{
-				IF(error(inStream))
-					fifo.rollbackPush();
-				ELSE
-					fifo.commitPush();
-			}
-		}
-	}
-
-	template<Signal Payload, Signal... MetaFifo, Signal... MetaOut>
-	void connect(Stream<Payload, MetaOut...>& packetStream, scl::TransactionalFifo<PacketStream<Payload, MetaFifo...>>& fifo)
-	{
-		*packetStream = *fifo.peek();
-
-		// copy metadata
-		std::apply([&](auto&&... meta) {
-			((packetStream.template get<std::remove_cvref_t<decltype(meta)>>() = meta), ...);
-		}, fifo.peek()._sig);
-
-		if constexpr (packetStream.template has<Valid>())
-			valid(packetStream) = !fifo.empty();
-		
-		if constexpr (packetStream.template has<Sop>())
-			sop(packetStream) = !fifo.empty() & !flag(ready(packetStream) & !fifo.empty(), ready(packetStream) & eop(packetStream));
-
-		IF(transfer(packetStream))
-			fifo.pop();
-	}
-
-	template<Signal Payload, Signal... MetaOut>
-	void connect(Stream<Payload, MetaOut...>& packetStream, scl::TransactionalFifo<Payload>& fifo)
-	{
-		*packetStream = fifo.peek();
-
-		if constexpr (packetStream.template has<Valid>())
-			valid(packetStream) = !fifo.empty();
-		
-		if constexpr (packetStream.template has<Sop>())
-			sop(packetStream) = !fifo.empty() & !flag(ready(packetStream) & !fifo.empty(), ready(packetStream) & eop(packetStream));
-
-		IF(transfer(packetStream))
-			fifo.pop();
-	}
-
 	template<StreamSignal T>
 	auto simuSop(const T& stream) {
 		if constexpr (stream.template has<scl::Sop>())
@@ -198,37 +106,6 @@ namespace gtry::scl::strm
 	protected:
 		bool m_isInPacket = false;
 	};
-
-	template<Signal Payload, Signal... Meta>
-	auto storeForwardFifo(RvPacketStream<Payload, Meta...>& in, size_t minElements)
-	{
-		TransactionalFifo fifo(minElements, in
-			.template remove<Error>()
-			.template remove<Sop>()
-			.template remove<Ready>()
-			.template remove<Valid>());
-
-		connect(fifo, in);
-
-		decltype(in.template remove<Error>().template remove<Sop>()) out;
-		connect(out, fifo);
-
-		fifo.generate();
-		return out;
-	}
-
-	template<Signal Payload, Signal... Meta>
-	auto storeForwardFifo(RsPacketStream<Payload, Meta...>& in, size_t minElements)
-	{
-		TransactionalFifo fifo(minElements, in.template remove<Valid>().template remove<Error>().template remove<Ready>().template remove<Sop>());
-		connect(fifo, in);
-
-		decltype(in.template remove<Valid>().template remove<Error>()) out;
-		connect(out, fifo);
-
-		fifo.generate();
-		return out;
-	}
 
 	template<StreamSignal T>
 		requires (T::template has<Valid>() or T::template has<Eop>())

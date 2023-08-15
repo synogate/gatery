@@ -18,6 +18,7 @@
 #include "gatery/pch.h"
 #include "TransactionalFifo.h"
 #include "stream/utils.h"
+#include "stream/Stream.h"
 
 void gtry::scl::internal::generateCDCReqAck(const UInt& inData, UInt& outData, const Clock& inDataClock, const Clock& outDataClock)
 {

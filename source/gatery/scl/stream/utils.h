@@ -18,8 +18,8 @@
 #pragma once
 
 #include "../Counter.h"
-#include "../Fifo.h"
 #include "metaSignals.h"
+#include "../cdc.h"
 
 namespace gtry::scl::strm
 {
@@ -156,56 +156,6 @@ namespace gtry::scl::strm
 	T regDecouple(const T& stream, const RegisterSettings& settings = {});
 
 	/**
-	* @brief Attach the stream as source and a new stream as sink to the FIFO.
-	*			This is useful to make further settings or access advanced FIFO signals.
-	*			For clock domain crossing you should use gtry::connect.
-	* @param in The input stream.
-	* @param instance The FIFO to use.
-	* @param fallThrough allow data to flow past the fifo in the same cycle when it's empty.
-	* @return connected stream
-	*/
-	template<Signal T, StreamSignal StreamT>
-	StreamT fifo(StreamT&& in, Fifo<T>& instance, FallThrough fallThrough = FallThrough::off);
-
-	/**
-	* @brief Create a FIFO for buffering.
-	* @param in The input stream.
-	* @param minDepth The FIFO can hold at least that many data beats.
-	The actual amount depends on the available target architecture.
-	* @param fallThrough allow data to flow past the fifo in the same cycle when it's empty.
-	* @return connected stream
-	*/
-	template<StreamSignal StreamT>
-	StreamT fifo(StreamT&& in, size_t minDepth = 16, FallThrough fallThrough = FallThrough::off);
-
-	inline auto fifo(size_t minDepth = 16, FallThrough fallThrough = FallThrough::off)
-	{
-		return [=](auto&& in) { return fifo(std::forward<decltype(in)>(in), minDepth, fallThrough); };
-	}
-
-	using gtry::connect;
-	/**
-	* @brief Connect a Stream as source to a FIFO as sink.
-	* @param sink FIFO instance.
-	* @param source Stream instance.
-	*/
-	template<Signal Tf, StreamSignal StreamT> 
-	void connect(scl::Fifo<Tf>& sink, StreamT& source);
-	template<Signal T, StreamSignal StreamT> requires std::is_assignable_v<T, typename std::remove_cvref_t<StreamT>::Payload>
-	void connect(scl::Fifo<T>& sink, StreamT& source);
-
-
-	/**
-	* @brief Connect a FIFO as source to a Stream as sink.
-	* @param sink Stream instance.
-	* @param source FIFO instance.
-	*/
-	template<StreamSignal StreamT, Signal Tf> 
-	void connect(StreamT& sink, scl::Fifo<Tf>& source);
-	template<StreamSignal StreamT, Signal T> requires std::is_assignable_v<typename std::remove_cvref_t<StreamT>::Payload, T>
-	void connect(StreamT& sink, scl::Fifo<T>& source);
-
-	/**
 	* @brief allows to send a request-acknowledge handshaked data across clock domains
 	* @param in input stream with data to pass across clock domains 
 	* @param inClock clock domain of input stream
@@ -259,7 +209,7 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	inline StreamT regDownstreamBlocking(StreamT&& in, const RegisterSettings& settings)
 	{
-		if constexpr (in.has<Valid>())
+		if constexpr (in.template has<Valid>())
 			valid(in).resetValue('0');
 
 		auto dsSig = constructFrom(copy(downstream(in)));
@@ -278,15 +228,15 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	inline StreamT regReady(StreamT &&in, const RegisterSettings& settings)
 	{
-		if constexpr (in.has<Valid>())
+		if constexpr (in.template has<Valid>())
 			valid(in).resetValue('0');
-		if constexpr (in.has<Ready>())
+		if constexpr (in.template has<Ready>())
 			ready(in).resetValue('0');
 
 		StreamT ret = constructFrom(in);
 		ret <<= in;
 
-		if constexpr (in.has<Ready>())
+		if constexpr (in.template has<Ready>())
 		{
 			Bit valid_reg;
 			auto data_reg = constructFrom(copy(downstream(in)));
@@ -319,12 +269,12 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	inline StreamT regDownstream(StreamT &&in, const RegisterSettings& settings)
 	{
-		if constexpr (in.has<Valid>())
+		if constexpr (in.template has<Valid>())
 			valid(in).resetValue('0');
 
 		StreamT ret;
 
-		if constexpr (in.has<Ready>())
+		if constexpr (in.template has<Ready>())
 		{
 			Bit valid_reg;
 			auto dsSig = constructFrom(copy(downstream(in)));
@@ -557,72 +507,6 @@ namespace gtry::scl::strm
 		return strm::regDownstream(stream, settings);
 	}
 
-	template<Signal T, StreamSignal StreamT>
-	StreamT fifo(StreamT&& in, Fifo<T>& instance, FallThrough fallThrough)
-	{
-		StreamT ret;
-		connect(ret, instance);
-
-		if (fallThrough == FallThrough::on) 
-		{
-			IF(!valid(ret))
-			{
-				downstream(ret) = downstream(in);
-				IF(ready(ret))
-					valid(in) = '0';
-			}
-		}
-		connect(instance, in);
-
-		return ret;
-	}
-
-	template<StreamSignal StreamT>
-	inline StreamT fifo(StreamT&& in, size_t minDepth, FallThrough fallThrough)
-	{
-		Fifo inst{ minDepth, copy(downstream(in)) };
-		StreamT ret = fifo(move(in), inst, fallThrough);
-		inst.generate();
-
-		return ret;
-	}
-
-	template<Signal Tf, StreamSignal StreamT> 
-	void connect(scl::Fifo<Tf>& sink, StreamT& source)
-	{
-		IF(transfer(source))
-			sink.push(downstream(source));
-		ready(source) = !sink.full();
-	}
-
-	template<Signal T, StreamSignal StreamT> requires std::is_assignable_v<T, typename std::remove_cvref_t<StreamT>::Payload>
-	void connect(scl::Fifo<T>& sink, StreamT& source)
-	{
-		IF(transfer(source))
-			sink.push(*source);
-		ready(source) = !sink.full();
-	}
-
-	template<StreamSignal StreamT, Signal Tf>
-	void connect(StreamT& sink, scl::Fifo<Tf>& source)
-	{
-		downstream(sink) = source.peek();
-		valid(sink) = !source.empty();
-
-		IF(transfer(sink))
-			source.pop();
-	}
-
-	template<StreamSignal StreamT, Signal T> requires std::is_assignable_v<typename std::remove_cvref_t<StreamT>::Payload, T>
-	void connect(StreamT& sink, scl::Fifo<T>& source)
-	{
-		*sink = source.peek();
-		valid(sink) = !source.empty();
-	
-		IF(transfer(sink))
-			source.pop();
-	}
-
 	template<StreamSignal StreamT>
 	StreamT synchronizeStreamReqAck(StreamT& in, const Clock& inClock, const Clock& outClock)
 	{
@@ -683,7 +567,7 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	inline StreamT pipeinputDownstream(StreamT&& in, PipeBalanceGroup& group)
 	{
-		if constexpr (in.has<Valid>())
+		if constexpr (in.template has<Valid>())
 			valid(in).resetValue('0');
 
 		StreamT ret;
