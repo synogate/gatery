@@ -65,22 +65,6 @@ namespace gtry::scl::strm
 
 namespace gtry::scl::strm
 {
-	template<StreamSignal T>
-	auto simuSop(const T& stream) {
-		if constexpr (stream.template has<scl::Sop>())
-			return simu(sop(stream));
-		else
-			return '1';
-	}
-
-	template<StreamSignal T>
-	auto simuEop(const T& stream) {
-		if constexpr (stream.template has<scl::Eop>())
-			return simu(eop(stream));
-		else
-			return '1';
-	}
-
 
 	template<StreamSignal T>
 	class SimuStreamPerformTransferWait {

@@ -183,6 +183,22 @@ namespace gtry::scl::strm {
 		else
 			return '1';
 	}
+
+	template<StreamSignal T>
+	auto simuSop(const T& stream) {
+		if constexpr (stream.template has<Sop>())
+			return simu(sop(stream));
+		else
+			return '1';
+	}
+
+	template<StreamSignal T>
+	auto simuEop(const T& stream) {
+		if constexpr (stream.template has<Eop>())
+			return simu(eop(stream));
+		else
+			return '1';
+	}
 }
 
 
