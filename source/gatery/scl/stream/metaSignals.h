@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../flag.h"
 
 namespace gtry::scl::strm {
+	using std::move;
 
 	struct Ready;
 	struct Valid;
@@ -203,7 +204,7 @@ namespace gtry::scl::strm {
 
 
 namespace gtry::scl {
-	using std::move;
+	using strm::move;
 
 	using strm::valid;
 	using strm::ready;

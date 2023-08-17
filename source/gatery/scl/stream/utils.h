@@ -23,7 +23,6 @@
 
 namespace gtry::scl::strm
 {
-	using std::move;
 
 	/**
 	* @brief	Puts a register in the valid and data path.
