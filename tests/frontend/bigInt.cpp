@@ -28,9 +28,9 @@ using namespace boost::unit_test;
 
 using BoostUnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
 
-
 BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, BigIntArithmetic, data::make({60, 65, 128, 260}), bitsize)
 {
+
 	using namespace gtry;
 
 	UInt a = pinIn(BitWidth((size_t)bitsize));
@@ -58,13 +58,17 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, BigIntArithmetic, data::m
 			co_await WaitFor({1,1000000});
 			
 			BOOST_TEST(simu(add).allDefined());
-			BOOST_CHECK_MESSAGE((sim::BigInt)simu(add) == ((in1+in2) & mask), "in1: 0x" << std::hex << in1 << " in2: 0x" << std::hex << in2 << " result: 0x" << std::hex << (sim::BigInt)simu(add) << " should be 0x" << ((in1+in2) & mask));
+			BOOST_CHECK_MESSAGE((sim::BigInt)simu(add) == ((in1+in2) & mask), "Addition failed: in1: 0x" << std::hex << in1 << " in2: 0x" << std::hex << in2 << " result: 0x" << std::hex << (sim::BigInt)simu(add) << " should be 0x" << ((in1+in2) & mask));
 			
+			sim::BigInt difference = in1 - in2;
+			if (difference < 0)
+				difference = sim::bitwiseNegation(-difference, bitsize) + 1;
+
 			BOOST_TEST(simu(sub).allDefined());
-			BOOST_TEST((sim::BigInt)simu(sub) == ((in1-in2) & mask));
+			BOOST_CHECK_MESSAGE((sim::BigInt)simu(sub) == (difference & mask), "Subtraction failed: in1: 0x" << std::hex << in1 << " in2: 0x" << std::hex << in2 << " result: 0x" << std::hex << (sim::BigInt)simu(sub) << " should be 0x" << (difference & mask));
 
 			BOOST_TEST(simu(mul).allDefined());
-			BOOST_TEST((sim::BigInt)simu(mul) == ((in1*in2) & mask));
+			BOOST_CHECK_MESSAGE((sim::BigInt)simu(mul) == ((in1*in2) & mask), "Multiplication failed: in1: 0x" << std::hex << in1 << " in2: 0x" << std::hex << in2 << " result: 0x" << std::hex << (sim::BigInt)simu(mul) << " should be 0x" << ((in1*in2) & mask));
 
 			if (in2 != 0) {
 				BOOST_TEST(simu(div).allDefined());
@@ -104,7 +108,7 @@ BOOST_DATA_TEST_CASE_F(BoostUnitTestSimulationFixture, BigIntCompare, data::make
 
 	addSimulationProcess([=, this]()->SimProcess {
 		boost::random::mt19937 mt;
-   		boost::random::uniform_int_distribution<sim::BigInt> ui(0, BigInt(1) << (size_t)bitsize);
+   		boost::random::uniform_int_distribution<sim::BigInt> ui(0, (BigInt(1) << (size_t)bitsize) -1);
 
 		for ([[maybe_unused]] auto i : gtry::utils::Range(100)) {
 			sim::BigInt in1 = ui(mt);

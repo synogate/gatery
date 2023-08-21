@@ -146,7 +146,7 @@ protected:
 		std::array<std::vector<typename Config::BaseType>, Config::NUM_PLANES> m_values;
 };
 
-typedef boost::multiprecision::number<boost::multiprecision::cpp_int_backend<64, 0, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked, void>> BigInt;
+typedef boost::multiprecision::number<boost::multiprecision::cpp_int_backend<>> BigInt;
 
 
 template<typename Config>
@@ -334,37 +334,45 @@ BigInt extractBigInt(const BitVectorState<Config> &vec, size_t offset, size_t si
 		return vec.extract(Config::VALUE, offset, size);
 	} else {
 		HCL_ASSERT(offset % Config::NUM_BITS_PER_BLOCK == 0);
-	/*
-			boost::multiprecision::import_bits(
-				left, 
-				vec.data(Config::VALUE) + offset / 64, 
-				vec.data(Config::VALUE) + (offset + width) / 64,
-				Config::NUM_BITS_PER_BLOCK,
-				false
-			);
-	*/
-		BigInt result = 0;
 
-		// Start with last chunk to force allocation
-		{
-			size_t lastChunkOffset = (offset + size) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
-			size_t lastChunkWidth = size - (lastChunkOffset - offset);
-			if (lastChunkWidth > 0)
-				result = vec.extractNonStraddling(Config::VALUE, lastChunkOffset, lastChunkWidth);
-			else
-				result = 0;
-		}
+		BigInt partialChunk;
 
-		for (size_t chunkIdx : utils::Range(size/Config::NUM_BITS_PER_BLOCK)) {
-			size_t revChunk = offset / Config::NUM_BITS_PER_BLOCK + (size / Config::NUM_BITS_PER_BLOCK - 1 - chunkIdx);
+		size_t lastChunkOffset = (offset + size) / Config::NUM_BITS_PER_BLOCK * Config::NUM_BITS_PER_BLOCK;
+		size_t lastChunkWidth = size - (lastChunkOffset - offset);
+		if (lastChunkWidth > 0)
+			partialChunk = vec.extractNonStraddling(Config::VALUE, lastChunkOffset, lastChunkWidth);
+		else
+			partialChunk = 0;
 
-			result <<= (size_t)Config::NUM_BITS_PER_BLOCK;
-			result |= vec.data(Config::VALUE)[revChunk];
-		}
+		BigInt fullChunkPart;
+		boost::multiprecision::import_bits(
+			fullChunkPart, 
+			vec.data(Config::VALUE) + offset / Config::NUM_BITS_PER_BLOCK, 
+			vec.data(Config::VALUE) + (offset + size) / Config::NUM_BITS_PER_BLOCK,
+			Config::NUM_BITS_PER_BLOCK,
+			false
+		);
 
-		return result;
+		return fullChunkPart | (partialChunk << (lastChunkOffset - offset));
 	}
 }
+
+inline gtry::sim::BigInt bitwiseNegation(const gtry::sim::BigInt &v, size_t width)
+{
+	// Export and reimport so it can't track the sign.
+	std::vector<std::uint64_t> words;
+	export_bits(v, std::back_inserter(words), 64, false);
+	for (auto &elem : words)
+		elem = ~elem;
+
+	while (words.size() < width/64)
+		words.push_back(~0ull);
+	
+	gtry::sim::BigInt result;
+   	import_bits(result, words.begin(), words.end(), 64, false);
+	return result;
+}
+
 
 /**
  * @brief Inserts values represented as a boost::multiprecision::number into a BitVectorState. This does not set or clear any DEFINED flags.
@@ -377,17 +385,32 @@ BigInt extractBigInt(const BitVectorState<Config> &vec, size_t offset, size_t si
 template<typename Config>
 void insertBigInt(BitVectorState<Config> &vec, size_t offset, size_t size, BigInt v)
 {
+	// Convert negative numbers to positive 2-complements
+	if (v < 0)
+		v = bitwiseNegation(v, size) + 1;
+
+	std::vector<typename Config::BaseType> words;
+	export_bits(v, std::back_inserter(words), Config::NUM_BITS_PER_BLOCK, false);
+
 	if (size <= Config::NUM_BITS_PER_BLOCK) {
-		vec.insert(Config::VALUE, offset, size, (typename Config::BaseType)v);
+		if (words.empty())
+			vec.clearRange(Config::VALUE, offset, size);
+		else
+			vec.insert(Config::VALUE, offset, size, words[0]);
 	} else {
 		HCL_ASSERT(offset % Config::NUM_BITS_PER_BLOCK == 0);
 
 		size_t chunk = 0;
 		while (chunk < size) {
 			size_t chunkSize = std::min<size_t>(Config::NUM_BITS_PER_BLOCK, size-chunk);
-			vec.insertNonStraddling(Config::VALUE, offset + chunk, chunkSize, (typename Config::BaseType) v);
+
+			size_t wordIdx = chunk / Config::NUM_BITS_PER_BLOCK;
+			if (wordIdx < words.size())
+				vec.insertNonStraddling(Config::VALUE, offset + chunk, chunkSize, words[wordIdx]);
+			else
+				vec.clearRange(Config::VALUE, offset + chunk, chunkSize);
+
 			chunk += chunkSize;
-			v >>= (size_t) Config::NUM_BITS_PER_BLOCK;
 		}
 	}
 }

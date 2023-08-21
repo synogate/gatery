@@ -135,14 +135,35 @@ namespace gtry {
 
 	Bit& Bit::operator=(Bit&& rhs)
 	{
-		if(rhs.m_resetValue)
-			m_resetValue = rhs.m_resetValue;
+		auto port = rhs.node()->getDriver(0);
+		if (port.node == nullptr)
+		{
+			// special case where we move a unassigned signal into an existing signal
+			// an implementation with conditional scopes is possibile but has many corner cases
+			// think of assigning a signal that is only conditionally loopy
+			HCL_ASSERT_HINT(ConditionalScope::get() == nullptr, "no impl");
+			HCL_ASSERT_HINT(hlim::getOutputConnectionType(readPort()).type == hlim::ConnectionType::BOOL, "cannot move loops into vector aliases");
 
-		assign(rhs.readPort());
+			m_node = hlim::NodePtr<hlim::Node_Signal>{};
+			createNode();
 
-		SignalReadPort outRange{ m_node };
-		outRange = rewireAlias(outRange);
-		rhs.assign(outRange);
+			m_resetValue.reset();
+			m_resetValue = rhs.resetValue();
+
+			rhs.assign(SignalReadPort{ m_node });
+		}
+		else
+		{
+			if (rhs.m_resetValue)
+				m_resetValue = rhs.m_resetValue;
+
+			assign(rhs.readPort());
+
+			SignalReadPort outRange{ m_node };
+			outRange = rewireAlias(outRange);
+			rhs.assign(outRange);
+		}
+	
 		return *this;
 	}
 
