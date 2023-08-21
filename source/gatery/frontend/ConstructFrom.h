@@ -100,7 +100,7 @@ namespace gtry
 	template<Signal T>
 	T dontCare(const T& blueprint)
 	{
-		// TODO: we should add some kind of read dont care to 
+		// TODO: we should add some kine of read dont care to 
 		//		 ignore conditional scopes on first assignment.
 
 		T ret = constructFrom(blueprint);
