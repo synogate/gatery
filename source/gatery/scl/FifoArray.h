@@ -42,37 +42,55 @@ namespace gtry::scl {
 	class FifoArray
 	{
 	public:
-		FifoArray(size_t numberOfFifos, size_t elementsPerFifo, SigT dataSample);
-		void push(UInt selectFifo);
-		void pop(UInt selectFifo);
-		inline SigT peek() { return final(m_popData); }
-		inline void present(SigT data) { m_pushData = data; }
+		inline FifoArray() {}
+		void setup(size_t numberOfFifos, size_t elementsPerFifo, SigT dataSample);
+		explicit inline FifoArray(size_t numberOfFifos, size_t elementsPerFifo, SigT dataSample){ setup(numberOfFifos, elementsPerFifo, dataSample);}
+		inline selectPush()
 
-		inline Bit push_failed() { return final(m_push_failed); }
-		inline Bit pop_failed() { return final(m_pop_failed); }
+		inline void push(SigT data) { m_mustPush = '1'; m_pushData = data; }
+		void pop();
+		void generate();
+
+		inline SigT peek() { return final(m_popData); }
+
+		inline Bit full(UInt selectFifo) { m_pushFifoSelector = selecFifo; return m_full; }
+		inline Bit empty(UInt selectFifo) { return m_empty; }
 
 		bool m_hasSetup = false;
+		bool m_hasGenerate = false;
 		
 	protected:
 
 		inline Bit isEmpty(internal::fifoPointer_t putPtr, internal::fifoPointer_t getPtr) { return putPtr.value == getPtr.value & putPtr.trick == getPtr.trick; }
 		inline Bit isFull(internal::fifoPointer_t putPtr, internal::fifoPointer_t getPtr) { return putPtr.value == getPtr.value & putPtr.trick != getPtr.trick; }
 
-		SigT m_pushData;
+		SigT	m_pushData;
+		UInt	m_pushFifoSelector;
+		Bit		m_pushFull;
+		Bit		m_mustPush = '0';
+
+
 		SigT m_popData;
 
-		Bit m_push_failed = dontCare(Bit{});
-		Bit m_pop_failed = dontCare(Bit{});
+		internal::fifoPointer_t m_popGetPtr;
+		internal::fifoPointer_t m_popPutPtr;
+
+		Area m_area{ "scl_fifoArray" };
+
+		UInt m_popFifoSelector;
+
+		Bit m_empty;
 
 		Memory<SigT> m_dataMem;
 		Memory<internal::fifoPointer_t> m_putPtrMem;
 		Memory<internal::fifoPointer_t> m_getPtrMem;
-	private:
 	
 	};
 
+
+
 	template<Signal SigT>
-	FifoArray<SigT>::FifoArray(size_t numberOfFifos, size_t elementsPerFifo, SigT dataSample)
+	inline void FifoArray<SigT>::setup(size_t numberOfFifos, size_t elementsPerFifo, SigT dataSample)
 	{
 		HCL_DESIGNCHECK_HINT(!m_hasSetup, "fifo array already initialized");
 		m_hasSetup = true;
@@ -87,7 +105,16 @@ namespace gtry::scl {
 
 		m_popData = dontCare(dataSample); HCL_NAMED(m_popData);
 		m_pushData = constructFrom(dataSample); HCL_NAMED(m_pushData);
-	
+
+		m_pushGetPtr = constructFrom(ptrSample); HCL_NAMED(m_pushGetPtr);
+		m_pushPutPtr = constructFrom(ptrSample); HCL_NAMED(m_pushPutPtr);
+		m_popGetPtr =  constructFrom(ptrSample); HCL_NAMED(m_popGetPtr);
+		m_popPutPtr =  constructFrom(ptrSample); HCL_NAMED(m_popPutPtr);
+
+
+		m_pushFifoSelector = BitWidth::count(elementsPerFifo);
+		m_popFifoSelector = BitWidth::count(elementsPerFifo);
+
 		m_dataMem.setup(numberOfFifos * elementsPerFifo, dataSample);
 		m_dataMem.setName("DataMemory");
 
@@ -101,24 +128,10 @@ namespace gtry::scl {
 	}
 
 	template<Signal SigT>
-	inline void FifoArray<SigT>::push(UInt selectFifo)
-	{
-		Area area("push", true);
-		internal::fifoPointer_t putPtr = m_putPtrMem[selectFifo]; HCL_NAMED(putPtr);
-		internal::fifoPointer_t getPtr = m_getPtrMem[selectFifo]; HCL_NAMED(getPtr);
-
-		m_push_failed = '1';
-		IF(!isFull(putPtr, getPtr)) {
-			m_dataMem[cat(selectFifo, putPtr.value)] = m_pushData;
-			m_putPtrMem[selectFifo] = putPtr.increment();
-			m_push_failed = '0';
-		}
-		//ELSE m_push_failed = '1';
-	}
-
-	template<Signal SigT>
 	inline void FifoArray<SigT>::pop(UInt selectFifo)
 	{
+		m_hasPop = true;
+
 		Area area("scl_fifoArray_pop", true);
 		HCL_NAMED(selectFifo);
 		internal::fifoPointer_t putPtr = m_putPtrMem[selectFifo]; HCL_NAMED(putPtr);
@@ -133,6 +146,34 @@ namespace gtry::scl {
 		}
 		//ELSE m_pop_failed = '1';
 	}
+
+
+	template<Signal SigT>
+	inline void FifoArray<SigT>::generate()
+	{
+		HCL_DESIGNCHECK_HINT(m_hasSetup, "fifo has not been set up");
+		HCL_DESIGNCHECK_HINT(!m_hasGenerate, "fifo has already been generated");
+		m_hasGenerate = true;
+
+		internal::fifoPointer_t putPtr = m_putPtrMem[m_pushFifoSelector]; HCL_NAMED(putPtr);
+		internal::fifoPointer_t getPtr = m_getPtrMem[m_pushFifoSelector]; HCL_NAMED(getPtr);
+
+		m_full = isFull(putPtr, getPtr);
+
+		IF(m_mustPush & !m_full) {
+			m_dataMem[cat(selectFifo, putPtr.value)] = m_pushData;
+			m_putPtrMem[selectFifo] = putPtr.increment();
+		}
+
+		internal::fifoPointer_t putPtr = m_putPtrMem[m_popFifoSelector]; HCL_NAMED(putPtr);
+		internal::fifoPointer_t getPtr = m_getPtrMem[m_popFifoSelector]; HCL_NAMED(getPtr);	
+
+		m_empty = isEmpty(putPtr, getPtr);
+		
+
+
+	}
+
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::internal::fifoPointer_t, trick, value);
