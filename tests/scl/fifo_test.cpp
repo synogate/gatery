@@ -650,6 +650,27 @@ BOOST_FIXTURE_TEST_CASE(DualClockFifo, BoostUnitTestSimulationFixture)
 }
 
 
+BOOST_FIXTURE_TEST_CASE(FifoArray_poc, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+
+	size_t number
+
+
+	addSimulationProcess([=, this]()->SimProcess {
+
+
+
+
+	});
+
+
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
+
 /*
 
 BOOST_FIXTURE_TEST_CASE(DC_TransactionalFifo_basic, BoostUnitTestSimulationFixture)
