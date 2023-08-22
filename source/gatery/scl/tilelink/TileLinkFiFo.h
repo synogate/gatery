@@ -19,7 +19,7 @@
 #include <gatery/frontend.h>
 
 #include "tilelink.h"
-#include "../Fifo.h"
+#include "../stream/streamFifo.h"
 
 namespace gtry::scl
 {

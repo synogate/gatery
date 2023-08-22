@@ -22,7 +22,7 @@
 #include "../ShiftReg.h"
 #include "../io/ddr.h"
 #include "../stream/StreamArbiter.h"
-#include "../stream/adaptWidth.h"
+#include "../stream/utils.h"
 
 using namespace gtry::scl::sdram;
 
@@ -51,7 +51,7 @@ void Controller::generate(TileLinkUB& link)
 
 	StreamArbiter<DataOutStream> outArbiter;
 	StreamArbiter<CommandStream> cmdArbiter;
-	auto maintenanceStream = maintenanceArbiter.out().regDownstream();
+	auto maintenanceStream = strm::regDownstream(move(maintenanceArbiter.out()));
 	cmdArbiter.attach(maintenanceStream);
 
 
@@ -68,7 +68,7 @@ void Controller::generate(TileLinkUB& link)
 		ELSE
 			valid(aIn) = '0';
 
-		TileLinkChannelA aInReg = aIn.regReady();
+		TileLinkChannelA aInReg = strm::regReady(move(aIn));
 		auto [cmd, data] = bankController(aInReg, m_bankState[i], ConstUInt(i, m_cmdBus.ba.width()));
 		cmd->bank = ConstUInt(i, m_cmdBus.ba.width()); // optional optimization
 
@@ -143,7 +143,7 @@ std::tuple<Controller::CommandStream, Controller::DataOutStream> Controller::ban
 		valid(timedCmd) = '0';
 	}
 	HCL_NAMED(delayDataStream);
-	DataOutStream dataStalled = stall(data, delayDataStream);
+	DataOutStream dataStalled = strm::stall(move(data), delayDataStream);
 
 	setName(timedCmd, "outCmd");
 	setName(dataStalled, "outData");
@@ -228,7 +228,7 @@ void gtry::scl::sdram::Controller::makeReadQueue(const CommandStream& cmd)
 Controller::CommandStream Controller::translateCommand(const BankState& state, const TileLinkChannelA& request) const
 {
 	auto scope = Area("translateCommand").enter();
-	HCL_NAMED(request);
+	//HCL_NAMED(request);
 
 	CommandStream cmd{ {
 		.code = CommandCode::Precharge,
@@ -265,7 +265,7 @@ Controller::CommandStream Controller::translateCommand(const BankState& state, c
 Controller::DataOutStream gtry::scl::sdram::Controller::translateCommandData(const TileLinkChannelA& request) const
 {
 	auto scope = Area("translateCommandData").enter();
-	HCL_NAMED(request);
+	//HCL_NAMED(request);
 
 	DataOutStream out{ request->data };
 
@@ -282,7 +282,7 @@ Controller::CommandStream Controller::enforceTiming(CommandStream& cmd, UInt ban
 {
 	Bit cmdTimingValid = m_timer->can(cmd->code, bank);
 	HCL_NAMED(cmdTimingValid);
-	return scl::stall(cmd, !cmdTimingValid);
+	return scl::strm::stall(move(cmd), !cmdTimingValid);
 }
 
 void Controller::makeBusPins(const CommandBus& in, std::string prefix)

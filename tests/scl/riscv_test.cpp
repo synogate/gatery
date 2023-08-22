@@ -1956,7 +1956,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulati
 
 	scl::riscv::DualCycleRV rv;
 	//TODO remove register and find cyclic dependency
-	hub.attachSource(reg(rv.fetchTileLink(instructionMemOffset)));
+	hub.attachSource(regDecouple(rv.fetchTileLink(instructionMemOffset)));
 	rv.execute();
 	hub.attachSource(rv.memTLink());
 

@@ -313,7 +313,7 @@ namespace gtry
 		}
 	};
 
-	template<typename Comp>
+	template<typename Comp> requires(!std::is_const_v<Comp>)
 	void setName(Comp& compound, std::string_view prefix)
 	{
 		struct NameVisitor : CompoundNameVisitor
@@ -327,8 +327,19 @@ namespace gtry
 		v.leave();
 	}
 
-	void setName(const Bit&, std::string_view) = delete;
-	void setName(const UInt&, std::string_view) = delete;
+	template<typename Comp>
+	void setName(const Comp& compound, std::string_view prefix)
+	{
+		struct NameVisitor : CompoundNameVisitor
+		{
+			void operator () (const ElementarySignal& vec, const ElementarySignal& ) override { vec.setName(makeName()); }
+		};
+
+		NameVisitor v;
+		v.enter(prefix);
+		VisitCompound<Comp>{}(compound, compound, v);
+		v.leave();
+	}
 
 	namespace internal
 	{
@@ -356,6 +367,14 @@ namespace gtry
 
 		template<TupleSignal T, TupleSignal Tr, typename TFunc>
 		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func);
+
+		// cannot transform Reverse signals. (Signals with upstream components) Use downstream() to extract the downstream part.
+		template<ReverseSignal T, typename TFunc>
+		T transformSignal(const T& val, TFunc&& func) = delete;
+
+		// cannot transform Reverse signals. (Signals with upstream components) Use downstream() to extract the downstream part.
+		template<ReverseSignal T, ReverseSignal Tr, typename TFunc>
+		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func) = delete;
 
 		template<typename T, typename TFunc>
 		T transformIfSignal(const T& signal, TFunc&& func)

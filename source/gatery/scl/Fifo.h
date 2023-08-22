@@ -279,6 +279,9 @@ namespace gtry::scl
 		HCL_DESIGNCHECK_HINT(!m_hasGenerate, "generate called twice");
 		m_hasGenerate = true;
 
+		if (!m_pushClock || !m_popClock)
+			return; // no push or pop port, nothing to do
+
 		auto scope = m_area.enter();
 		auto scopeLock = ConditionalScope::lock(); // exit conditionals
 
@@ -390,4 +393,16 @@ namespace gtry::scl
 
 		return get;
 	}
+
+	/**
+	* @brief Fallthrough-ness in the gatery sense means the ability to bypass the fifo entirely when it is empty, 
+	* resulting in no additional cycles of latency in this specific case. A non-fallthrough fifo systematically 
+	* adds at least one cycle of latency between the input and the output of the fifo.
+	*/
+	enum class FallThrough {
+		off,
+		on,
+	};
 }
+
+

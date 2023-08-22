@@ -106,6 +106,7 @@ namespace hlim {
 		SignalReadPort outPort() const final;
 		std::string_view getName() const final;
 		void setName(std::string name) override;
+		void setName(std::string name) const override;
 		void addToSignalGroup(hlim::SignalGroup *signalGroup);
 
 		/// Defines a reset value for this signal. All register created on this signal without an explicit reset value will use this reset value.

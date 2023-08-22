@@ -20,9 +20,9 @@
 
 #include <gatery/frontend.h>
 #include <gatery/scl/sim/SimulationSequencer.h>
-#include <gatery/scl/stream/Stream.h>
+#include "Packet.h"
 
-namespace gtry::scl
+namespace gtry::scl::strm
 {
 	struct SimPacket {
 		sim::DefaultBitVectorState payload;
@@ -62,61 +62,59 @@ namespace gtry::scl
 		std::uint64_t m_invalidBeats = 0;
 	};
 
-	template<BaseSignal Payload, Signal... Meta>
-	SimProcess sendPacket(const scl::Stream<Payload, Meta...>& stream, SimPacket packet, Clock clk);
+	template<StreamSignal StreamT>
+	SimProcess sendPacket(const StreamT& stream, SimPacket packet, Clock clk);
 
-	template<BaseSignal Payload, Signal... Meta>
-	SimProcess sendPacket(const scl::Stream<Payload, Meta...>& stream, SimPacket packet, Clock clk, scl::SimulationSequencer& sequencer);
+	template<StreamSignal StreamT>
+	SimProcess sendPacket(const StreamT& stream, SimPacket packet, Clock clk, scl::SimulationSequencer& sequencer);
 
-	template<BaseSignal Payload, Signal... Meta>
-	SimFunction<SimPacket> receivePacket(const scl::Stream<Payload, Meta...>& stream, Clock clk);
+	template<StreamSignal StreamT>
+	SimFunction<SimPacket> receivePacket(const StreamT& stream, Clock clk);
 
-	template<BaseSignal Payload, Signal... Meta>
-	SimFunction<SimPacket> receivePacket(const scl::Stream<Payload, Meta...>& stream, Clock clk, scl::SimulationSequencer& sequencer);
+	template<StreamSignal StreamT>
+	SimFunction<SimPacket> receivePacket(const StreamT& stream, Clock clk, scl::SimulationSequencer& sequencer);
 
-	template<Signal... Payload>
-	SimProcess readyDriver(const scl::Stream<Payload...>& stream, Clock clk, const uint64_t& unreadyMask = 0);
+	template<StreamSignal StreamT>
+	SimProcess readyDriver(const StreamT& stream, Clock clk, const uint64_t& unreadyMask = 0);
 
-	template<Signal... Payload>
-	SimProcess readyDriverRNG(const scl::Stream<Payload...>& stream, Clock clk, size_t readyProbabilityPercent, unsigned int seed = 1234);
+	template<StreamSignal StreamT>
+	SimProcess readyDriverRNG(const StreamT& stream, Clock clk, size_t readyProbabilityPercent, unsigned int seed = 1234);
 
-	template<BaseSignal Payload, Signal... Meta>
-	void simuStreamInvalidate(const scl::Stream<Payload, Meta...>& stream);
+	template<StreamSignal StreamT>
+	void simuStreamInvalidate(const StreamT& stream);
 }
 
-
-
-namespace gtry::scl
+namespace gtry::scl::strm
 {
-	template<BaseSignal Payload, Signal... Meta>
-	void simuStreamInvalidate(const scl::Stream<Payload, Meta...>& stream) {
+	template<StreamSignal StreamT>
+	void simuStreamInvalidate(const StreamT& stream) {
 
-		if constexpr (stream.template has<scl::Eop>())
+		if constexpr (stream.template has<Eop>())
 			simu(eop(stream)) = '0';
-		if constexpr (stream.template has<scl::Sop>())
+		if constexpr (stream.template has<Sop>())
 			simu(sop(stream)) = '0';
-		if constexpr (stream.template has<scl::TxId>())
+		if constexpr (stream.template has<TxId>())
 			simu(txid(stream)).invalidate();
-		if constexpr (stream.template has<scl::Error>())
+		if constexpr (stream.template has<Error>())
 			simu(error(stream)).invalidate();
-		if constexpr (stream.template has<scl::Empty>())
+		if constexpr (stream.template has<Empty>())
 			simu(empty(stream)).invalidate();
-		if constexpr (stream.template has<scl::EmptyBits>())
-			simu(stream.template get<scl::EmptyBits>().emptyBits).invalidate();
+		if constexpr (stream.template has<EmptyBits>())
+			simu(stream.template get<EmptyBits>().emptyBits).invalidate();
 
 		simu(*stream).invalidate();
 
-		if constexpr (stream.template has<scl::Valid>()) {
+		if constexpr (stream.template has<Valid>()) {
 			simu(valid(stream)) = '0';
-			if constexpr (stream.template has<scl::Eop>())
+			if constexpr (stream.template has<Eop>())
 				simu(eop(stream)).invalidate();
-			if constexpr (stream.template has<scl::Sop>())
+			if constexpr (stream.template has<Sop>())
 				simu(sop(stream)).invalidate();
 		}
 	}
 
-	template<BaseSignal Payload, Signal... Meta>
-	SimProcess sendPacket(const scl::Stream<Payload, Meta...>& stream, SimPacket packet, Clock clk)
+	template<StreamSignal StreamT>
+	SimProcess sendPacket(const StreamT& stream, SimPacket packet, Clock clk)
 	{
 		size_t numberOfBeats = packet.payload.size() / stream->size();
 		if (((packet.payload.size()) % stream->size()) != 0)
@@ -148,7 +146,7 @@ namespace gtry::scl
 			beatData.resize(stream->size());
 
 			simuStreamInvalidate(stream);
-			
+
 			if constexpr (hasValid) {
 				simu(valid(stream)) = '0';
 				while (invalidBeatMask & 1) {
@@ -199,15 +197,15 @@ namespace gtry::scl
 		simuStreamInvalidate(stream);
 	}
 
-	template<BaseSignal Payload, Signal... Meta>
-	SimProcess sendPacket(const scl::Stream<Payload, Meta...>& stream, SimPacket packet, Clock clk, scl::SimulationSequencer& sequencer) {
+	template<StreamSignal StreamT>
+	SimProcess sendPacket(const StreamT& stream, SimPacket packet, Clock clk, scl::SimulationSequencer& sequencer) {
 		auto slot = sequencer.allocate();
 		co_await slot.wait();
 		co_await sendPacket(stream, packet, clk);
 	}
 
-	template<Signal... Payload>
-	SimProcess readyDriver(const scl::Stream<Payload...>& stream, Clock clk, const uint64_t& unreadyMask){
+	template<StreamSignal StreamT>
+	SimProcess readyDriver(const StreamT& stream, Clock clk, const uint64_t& unreadyMask){
 		static_assert(stream.template has<Ready>(), "Attempting to use a ready driver on a stream which does not feature a ready field is probably a mistake.");
 
 		simuReady(stream) = '0';
@@ -225,8 +223,8 @@ namespace gtry::scl
 		}
 	}
 
-	template<Signal... Payload>
-	SimProcess readyDriverRNG(const scl::Stream<Payload...>& stream, Clock clk, size_t readyProbabilityPercent, unsigned int seed) {
+	template<StreamSignal StreamT>
+	SimProcess readyDriverRNG(const StreamT& stream, Clock clk, size_t readyProbabilityPercent, unsigned int seed) {
 		static_assert(stream.template has<Ready>(), "Attempting to use a ready driver on a stream which does not feature a ready field is probably a mistake.");
 		assert(readyProbabilityPercent <= 100);
 
@@ -243,11 +241,11 @@ namespace gtry::scl
 			co_await OnClk(clk);
 		}
 	}
-			
-	template<BaseSignal Payload, Signal... Meta>
-	SimFunction<SimPacket> receivePacket(const scl::Stream<Payload, Meta...>& stream, Clock clk)
+
+	template<StreamSignal StreamT>
+	SimFunction<SimPacket> receivePacket(const StreamT& stream, Clock clk)
 	{
-		scl::SimuStreamPerformTransferWait<scl::Stream<Payload, Meta...>> streamTransfer;
+		strm::SimuStreamPerformTransferWait<StreamT> streamTransfer;
 		SimPacket result;
 
 		bool firstBeat = true;
@@ -288,8 +286,8 @@ namespace gtry::scl
 		co_return result;
 	}
 
-	template<BaseSignal Payload, Signal... Meta>
-	SimFunction<SimPacket> receivePacket(const scl::Stream<Payload, Meta...>& stream, Clock clk, scl::SimulationSequencer& sequencer)
+	template<StreamSignal StreamT>
+	SimFunction<SimPacket> receivePacket(const StreamT& stream, Clock clk, scl::SimulationSequencer& sequencer)
 	{
 		auto slot = sequencer.allocate();
 		co_await slot.wait();

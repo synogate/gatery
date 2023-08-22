@@ -18,6 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 #include "../stream/Stream.h"
+#include "../stream/utils.h"
 #include "../stream/Packet.h"
 #include "../utils/OneHot.h"
 
@@ -116,7 +117,7 @@ namespace gtry::scl
 	}
 
 	template<class T>
-	concept TileLinkSignal = Signal<T> and internal::is_tilelink_signal<T>::value;
+	concept TileLinkSignal = Signal<T> and internal::is_tilelink_signal<std::remove_cvref_t<T>>::value;
 
 	struct TileLinkCapBurst;
 	struct TileLinkCapHint;
@@ -169,9 +170,7 @@ namespace gtry::scl
 	using gtry::connect;
 	void connect(Memory<BVec>& mem, TileLinkUL& link);
 
-	using gtry::reg;
-	template<TileLinkSignal TLink> TLink reg(TLink& link);
-	template<TileLinkSignal TLink> TLink reg(TLink&& link);
+	template<TileLinkSignal TLink> TLink regDecouple(TLink&& link);
 }
 
 // impl
@@ -304,18 +303,15 @@ namespace gtry::scl
 	}
 
 	template<TileLinkSignal TLink>
-	TLink reg(TLink& link)
+	TLink regDecouple(TLink&& link)
 	{
 		TLink out{
-			.a = reg(link.a),
+			.a = regDecouple(link.a),
 			.d = constructFrom(*link.d)
 		};
-		*link.d <<= reg(*out.d);
+		*link.d <<= regDecouple(*out.d);
 		return out;
 	}
-	
-	template<TileLinkSignal TLink>
-	TLink reg(TLink&& link) { return reg(link); }
 
 	extern template struct Stream<TileLinkA, Ready, Valid>;
 	extern template struct Stream<TileLinkD, Ready, Valid>;

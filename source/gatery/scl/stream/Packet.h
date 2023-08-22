@@ -18,80 +18,15 @@
 #pragma once
 #include <gatery/frontend.h>
 #include "Stream.h"
+#include "utils.h"
 #include "../TransactionalFifo.h"
 #include "../Counter.h"
+#include "metaSignals.h"
 
-namespace gtry::scl
+namespace gtry::scl::strm
 {
-	struct Eop
-	{
-		Bit eop;
-	};
-
-	template<StreamSignal T> requires (T::template has<Eop>())
-	Bit& eop(T& stream) { return stream.template get<Eop>().eop; }
-	template<StreamSignal T> requires (T::template has<Eop>())
-	const Bit& eop(const T& stream) { return stream.template get<Eop>().eop; }
-	template<StreamSignal T> requires (T::template has<Valid>() and T::template has<Eop>())
-	const Bit sop(const T& signal) { return !flag(transfer(signal), transfer(signal) & eop(signal)); }
-
-
-	struct Sop
-	{
-		// reset to zero, sop is used for packet streams without valid.
-		Bit sop = Bit{ SignalReadPort{}, false };
-	};
-
-	template<StreamSignal T> requires (T::template has<Sop>())
-	Bit& sop(T& stream) { return stream.template get<Sop>().sop; }
-	template<StreamSignal T> requires (T::template has<Sop>())
-	const Bit& sop(const T& stream) { return stream.template get<Sop>().sop; }
-	template<StreamSignal T> requires (!T::template has<Valid>() and T::template has<Sop>() and T::template has<Eop>())
-	const Bit valid(const T& signal) { return flag(sop(signal) & ready(signal), eop(signal) & ready(signal)) | sop(signal); }
-
-
-	struct Empty
-	{
-		UInt empty; // number of empty symbols in this beat
-	};
-
-	template<StreamSignal T> requires (T::template has<Empty>())
-	UInt& empty(T& s) { return s.template get<Empty>().empty; }
-	template<StreamSignal T> requires (T::template has<Empty>())
-	const UInt& empty(const T& s) { return s.template get<Empty>().empty; }
-
-	template<Signal T, Signal... Meta>
-	using PacketStream = Stream<T, scl::Eop, Meta...>;
-
-	template<Signal T, Signal... Meta>
-	using RvPacketStream = Stream<T, scl::Ready, scl::Valid, scl::Eop, Meta...>;
-
-	template<Signal T, Signal... Meta>
-	using VPacketStream = Stream<T, scl::Valid, scl::Eop, Meta...>;
-
-	template<Signal T, Signal... Meta>
-	using RsPacketStream = Stream<T, scl::Ready, scl::Sop, scl::Eop, Meta...>;
-
-	template<Signal T, Signal... Meta>
-	using SPacketStream = Stream<T, scl::Sop, scl::Eop, Meta...>;
-
 	template<class T>
-	concept PacketStreamSignal = StreamSignal<T> and T::template has<scl::Eop>();
-
-	template<Signal Payload, Signal... MetaIn, Signal... MetaFifo>
-	void connect(scl::TransactionalFifo<PacketStream<Payload, MetaFifo...>>& fifo, Stream<Payload, Ready, MetaIn...>& inStream);
-
-	template<Signal Payload, Signal... MetaIn>
-	void connect(scl::TransactionalFifo<Payload>& fifo, Stream<Payload, Ready, MetaIn...>& inStream);
-
-	template<Signal Payload, Signal... MetaFifo, Signal... MetaOut>
-	void connect(Stream<Payload, MetaOut...>& packetStream, scl::TransactionalFifo<PacketStream<Payload, MetaFifo...>>& fifo);
-
-	template<Signal Payload, Signal... MetaOut>
-	void connect(Stream<Payload, MetaOut...>& packetStream, scl::TransactionalFifo<Payload>& fifo);
-
-	template<Signal Payload, Signal... Meta> auto storeForwardFifo(RvPacketStream<Payload, Meta...>& in, size_t minElements);
-	template<Signal Payload, Signal... Meta> auto storeForwardFifo(RsPacketStream<Payload, Meta...>& in, size_t minElements);
+	concept PacketStreamSignal = StreamSignal<T> and T::template has<Eop>();
 
 	template<StreamSignal T>
 	requires (T::template has<Valid>() or T::template has<Eop>())
@@ -116,125 +51,20 @@ namespace gtry::scl
 	template<BaseSignal Payload, Signal... Meta>
 	UInt streamBeatBitLength(const Stream<Payload, Meta...>& in);
 
-	// for internal use only, we should introduce a symbol width and remove this
-	struct EmptyBits
-	{
-		UInt emptyBits;
-	};
+	/**
+	* @brief inserts a stream into a packet stream with bit offset precision.
+	* @param base stream into which data can be inserted
+	* @param insert data stream to insert into main packet stream
+	* @param bitOffset offset with which to start inserting data
+	* @return same typed stream as base input
+	*/
+	template<BaseSignal Payload, Signal ... Meta, Signal... MetaInsert>
+	auto insert(RvPacketStream<Payload, Meta...>&& base, RvStream<Payload, MetaInsert...>&& insert, RvStream<UInt>&& bitOffset);
 
-	template<StreamSignal Ts>
-	const UInt emptyBits(const Ts& in) { return ConstUInt(0, BitWidth::count(in->width().bits())); }
-
-	template<BaseSignal Payload, Signal... Meta> requires (not Stream<Payload, Meta...>::template has<EmptyBits>() and Stream<Payload, Meta...>::template has<Empty>())
-	const UInt emptyBits(const Stream<Payload, Meta...>& in) { return cat(empty(in), "b000"); }
-
-	template<BaseSignal Payload, Signal... Meta> requires (Stream<Payload, Meta...>::template has<EmptyBits>())
-	UInt& emptyBits(Stream<Payload, Meta...>& in) { return in.template get<EmptyBits>().emptyBits; }
-
-	template<BaseSignal Payload, Signal... Meta> requires (Stream<Payload, Meta...>::template has<EmptyBits>())
-	const UInt& emptyBits(const Stream<Payload, Meta...>& in) { return in.template get<EmptyBits>().emptyBits; }
 }
 
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::Eop, eop);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::Sop, sop);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::Empty, empty);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::EmptyBits, emptyBits);
-
-namespace gtry::scl
+namespace gtry::scl::strm
 {
-	template<Signal Payload, Signal... MetaIn, Signal... MetaFifo>
-	void connect(scl::TransactionalFifo<PacketStream<Payload, MetaFifo...>>& fifo, Stream<Payload, Ready, MetaIn...>& inStream)
-	{
-		ready(inStream) = !fifo.full();
-
-		IF(transfer(inStream))
-		{
-			fifo.push(inStream
-				.template remove<Ready>()
-				.template remove<Valid>()
-				.template remove<Error>()
-				.template remove<Sop>());
-
-			IF(eop(inStream))
-			{
-				IF(error(inStream))
-					fifo.rollbackPush();
-				ELSE
-					fifo.commitPush();
-			}
-		}
-	}
-
-	template<Signal Payload, Signal... MetaIn>
-	void connect(scl::TransactionalFifo<Payload>& fifo, Stream<Payload, Ready, MetaIn...>& inStream)
-	{
-		ready(inStream) = !fifo.full();
-
-		IF(transfer(inStream))
-		{
-			fifo.push(*inStream);
-
-			IF(eop(inStream))
-			{
-				IF(error(inStream))
-					fifo.rollbackPush();
-				ELSE
-					fifo.commitPush();
-			}
-		}
-	}
-
-	template<Signal Payload, Signal... MetaFifo, Signal... MetaOut>
-	void connect(Stream<Payload, MetaOut...>& packetStream, scl::TransactionalFifo<PacketStream<Payload, MetaFifo...>>& fifo)
-	{
-		*packetStream = *fifo.peek();
-
-		// copy metadata
-		std::apply([&](auto&&... meta) {
-			((packetStream.template get<std::remove_cvref_t<decltype(meta)>>() = meta), ...);
-		}, fifo.peek()._sig);
-
-		if constexpr (packetStream.template has<Valid>())
-			valid(packetStream) = !fifo.empty();
-		
-		if constexpr (packetStream.template has<Sop>())
-			sop(packetStream) = !fifo.empty() & !flag(ready(packetStream) & !fifo.empty(), ready(packetStream) & eop(packetStream));
-
-		IF(transfer(packetStream))
-			fifo.pop();
-	}
-
-	template<Signal Payload, Signal... MetaOut>
-	void connect(Stream<Payload, MetaOut...>& packetStream, scl::TransactionalFifo<Payload>& fifo)
-	{
-		*packetStream = fifo.peek();
-
-		if constexpr (packetStream.template has<Valid>())
-			valid(packetStream) = !fifo.empty();
-		
-		if constexpr (packetStream.template has<Sop>())
-			sop(packetStream) = !fifo.empty() & !flag(ready(packetStream) & !fifo.empty(), ready(packetStream) & eop(packetStream));
-
-		IF(transfer(packetStream))
-			fifo.pop();
-	}
-
-	template<StreamSignal T>
-	auto simuSop(const T& stream) {
-		if constexpr (stream.template has<scl::Sop>())
-			return simu(sop(stream));
-		else
-			return '1';
-	}
-
-	template<StreamSignal T>
-	auto simuEop(const T& stream) {
-		if constexpr (stream.template has<scl::Eop>())
-			return simu(eop(stream));
-		else
-			return '1';
-	}
-
 
 	template<StreamSignal T>
 	class SimuStreamPerformTransferWait {
@@ -243,54 +73,23 @@ namespace gtry::scl
 			if constexpr (stream.template has<Sop>()) {
 				if (!m_isInPacket){
 					do
-						co_await internal::performTransferWait(stream, clock);
+						co_await performTransferWait(stream, clock);
 					while (!simu(sop(stream)));
 					m_isInPacket = true;
 				}
 				else{
-					co_await internal::performTransferWait(stream, clock);
+					co_await performTransferWait(stream, clock);
 					m_isInPacket = !(bool)simu(eop(stream));
 				}
 			}
 			else {
-				co_await internal::performTransferWait(stream, clock);
+				co_await performTransferWait(stream, clock);
 			}
 		}
 
 	protected:
 		bool m_isInPacket = false;
 	};
-
-	template<Signal Payload, Signal... Meta>
-	auto storeForwardFifo(RvPacketStream<Payload, Meta...>& in, size_t minElements)
-	{
-		TransactionalFifo fifo(minElements, in
-			.template remove<Error>()
-			.template remove<Sop>()
-			.template remove<Ready>()
-			.template remove<Valid>());
-
-		connect(fifo, in);
-
-		decltype(in.template remove<Error>().template remove<Sop>()) out;
-		connect(out, fifo);
-
-		fifo.generate();
-		return out;
-	}
-
-	template<Signal Payload, Signal... Meta>
-	auto storeForwardFifo(RsPacketStream<Payload, Meta...>& in, size_t minElements)
-	{
-		TransactionalFifo fifo(minElements, in.template remove<Valid>().template remove<Error>().template remove<Ready>().template remove<Sop>());
-		connect(fifo, in);
-
-		decltype(in.template remove<Valid>().template remove<Error>()) out;
-		connect(out, fifo);
-
-		fifo.generate();
-		return out;
-	}
 
 	template<StreamSignal T>
 		requires (T::template has<Valid>() or T::template has<Eop>())
@@ -306,7 +105,7 @@ namespace gtry::scl
 			valid(in) = '0';
 
 		T out = constructFrom(in);
-		out = in.regDownstream();
+		out = regDownstream(move(in));
 
 		if constexpr (T::template has<Eop>())
 		{
@@ -335,7 +134,7 @@ namespace gtry::scl
 			eop(in) = '1';
 		}
 
-		auto out = scl::eraseLastBeat(in);
+		auto out = eraseLastBeat(in);
 		insertState = flag(insert, transfer(out)) | insert;
 		HCL_NAMED(out);
 		return out;
@@ -484,5 +283,122 @@ namespace gtry::scl
 			}
 		}
 		return len;
+	}
+
+
+	template<BaseSignal Payload, Signal ... Meta, Signal... MetaInsert>
+	auto insert(RvPacketStream<Payload, Meta...>&& base, RvStream<Payload, MetaInsert...>&& insert, RvStream<UInt>&& bitOffset)
+	{
+		Area ent{ "scl_streamInsert", true };
+		HCL_DESIGNCHECK_HINT(base->width() == insert->width(), "insert width must match base width");
+
+		UInt insertBitOffset = bitOffset->lower(BitWidth::count(base->width().bits()));	HCL_NAMED(insertBitOffset);
+		UInt insertBeat = bitOffset->upper(-insertBitOffset.width());					HCL_NAMED(insertBeat);
+
+		Bit baseShiftReset = !valid(bitOffset);											HCL_NAMED(baseShiftReset);
+		UInt baseShift = insertBitOffset.width();										HCL_NAMED(baseShift);
+		RvPacketStream baseShifted = streamShiftLeft(base, baseShift, baseShiftReset);	HCL_NAMED(baseShifted);
+		RvPacketStream insertShifted = streamShiftLeft(insert, insertBitOffset);		HCL_NAMED(insertShifted);
+		Bit insertShiftedShouldDelayEop = valid(insert) & eop(insert) & zext(emptyBits(insert)) < zext(insertBitOffset); HCL_NAMED(insertShiftedShouldDelayEop);
+
+		RvPacketStream out = constructFrom(baseShifted);
+		UInt beatCounter = streamPacketBeatCounter(out, insertBeat.width());			HCL_NAMED(beatCounter);
+
+		IF(transfer(out) & eop(out))
+			baseShift = 0;
+		baseShift = reg(baseShift, 0);
+		IF(valid(insert) & eop(insert))
+			baseShift = streamBeatBitLength(insert).lower(-1_b);
+
+		UInt emptyBitsInsert = capture(emptyBits(insert), valid(insert) & eop(insert));	HCL_NAMED(emptyBitsInsert);
+		UInt emptyBitsBase = capture(emptyBits(base), valid(base) & eop(base));			HCL_NAMED(emptyBitsBase);
+		UInt emptyBitsOut = emptyBitsInsert + emptyBitsBase;							HCL_NAMED(emptyBitsOut);
+
+		downstream(out) = downstream(baseShifted);
+		emptyBits(out) = emptyBitsOut;
+		valid(out) = '0';
+		ready(baseShifted) = '0';
+		ready(insertShifted) = '0';
+
+		enum class State
+		{
+			prefix,
+			insert,
+			suffix
+		};
+		Reg<Enum<State>> state{ State::prefix };
+		state.setName("state");
+
+		IF(state.current() == State::prefix)
+		{
+			ready(baseShifted) = ready(out);
+			valid(out) = valid(base);
+			*out = *base;
+
+			IF(valid(bitOffset) & beatCounter == insertBeat)
+				state = State::insert;
+		}
+
+		Bit sawEop; HCL_NAMED(sawEop);
+		IF(state.combinatorial() == State::insert)
+		{
+			ready(baseShifted) = '0';
+			ready(insertShifted) = ready(out);
+			valid(out) = valid(insertShifted);
+			*out = *insertShifted;
+
+			IF(beatCounter == insertBeat)
+			{
+				for (size_t i = 0; i < out->width().bits(); i++)
+					IF(i < insertBitOffset)
+					(*out)[i] = (*base)[i];
+			}
+
+			UInt insertShift = zext(base->width().bits(), +1_b) - zext(emptyBits(insertShifted)) - zext(insertBitOffset);
+			HCL_NAMED(insertShift);
+			IF(valid(insert) & eop(insert) & insertShift.msb())
+				ready(baseShifted) = ready(out);
+
+			IF(eop(insertShifted))
+			{
+				UInt numBaseBits = emptyBits(insertShifted);
+				HCL_NAMED(numBaseBits);
+
+				for (size_t i = 1; i < out->width().bits(); i++)
+					IF(out->width().bits() - i <= numBaseBits)
+					(*out)[i] = (*baseShifted)[i];
+
+				IF(!(numBaseBits == 0 & insertBitOffset == 0))
+					ready(baseShifted) = ready(out);
+
+				IF(valid(insertShifted) & ready(out))
+					state = State::suffix;
+			}
+		}
+
+		IF(state.current() == State::suffix)
+		{
+			ready(baseShifted) = ready(out);
+			valid(out) = valid(baseShifted);
+			*out = *baseShifted;
+		}
+
+		eop(out) = '0';
+		IF(state.combinatorial() == State::suffix & sawEop)
+		{
+			eop(out) = '1';
+			IF(transfer(out))
+				state = State::prefix;
+		}
+		IF(valid(base) & eop(base) & !valid(bitOffset))
+		{
+			eop(out) = '1';
+			emptyBits(out) = emptyBitsBase;
+		}
+
+		sawEop = flagInstantSet(transfer(baseShifted) & eop(baseShifted), transfer(out) & eop(out));
+
+		ready(bitOffset) = valid(out) & eop(out);
+		return out;
 	}
 }

@@ -18,8 +18,7 @@
 #include "gatery/pch.h"
 #include "tileLinkBridge.h"
 #include <gatery/frontend/Reverse.h>
-#include <gatery/scl/stream/StreamArbiter.h>
-#include <gatery/scl/stream/adaptWidth.h>
+#include <gatery/scl/stream/strm.h>
 
 namespace gtry::scl {
 
@@ -82,11 +81,11 @@ namespace gtry::scl {
 
 		scl::RvStream<TileLinkD> writeRes = { constructFrom(response) };
 		writeRes <<= writeRequestFifo;
-		scl::RvStream writeResBuffered = writeRes.regDownstream();
+		scl::RvStream writeResBuffered = strm::regDownstream(move(writeRes));
 
 		scl::RvStream<TileLinkD> readRes = { constructFrom(response) };
 		readRes <<= readRequestFifo;
-		scl::RvStream readResBuffered = readRes.regDownstream();
+		scl::RvStream readResBuffered = strm::regDownstream(move(readRes));
 
 
 		Bit responseReady = *avmm.read;
@@ -102,9 +101,9 @@ namespace gtry::scl {
 		valid(readData) = responseReady;
 		ready(ret.a) &= ready(readData);
 
-		scl::RvStream<UInt> readDataFifo = readData.fifo(true, maxReadRequestsInFlight);
+		scl::RvStream<UInt> readDataFifo = strm::fifo(move(readData), maxReadRequestsInFlight, scl::FallThrough::on);
 
-		scl::RvStream readResStalled = stall(readResBuffered, !valid(readDataFifo));
+		scl::RvStream readResStalled = strm::stall(move(readResBuffered), !valid(readDataFifo));
 		ready(readDataFifo) = ready(readResStalled);
 
 
