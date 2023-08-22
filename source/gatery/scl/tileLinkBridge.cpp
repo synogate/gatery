@@ -79,12 +79,10 @@ namespace gtry::scl {
 			}
 		}
 
-		scl::RvStream<TileLinkD> writeRes = { constructFrom(response) };
-		writeRes <<= writeRequestFifo;
+		scl::RvStream<TileLinkD> writeRes = strm::pop(writeRequestFifo);
 		scl::RvStream writeResBuffered = strm::regDownstream(move(writeRes));
 
-		scl::RvStream<TileLinkD> readRes = { constructFrom(response) };
-		readRes <<= readRequestFifo;
+		scl::RvStream<TileLinkD> readRes = strm::pop(readRequestFifo);
 		scl::RvStream readResBuffered = strm::regDownstream(move(readRes));
 
 

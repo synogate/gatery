@@ -1188,10 +1188,9 @@ BOOST_FIXTURE_TEST_CASE(TransactionalFifo_StoreForwardStream_PayloadOnly, Stream
 
 	scl::RvPacketStream<UInt, scl::Error> in = { 16_b };
 	In(in);
-	fifo <<= in;
+	scl::strm::pushStoreForward(fifo, move(in));
 
-	scl::RvPacketStream<UInt> out = { 16_b };
-	out <<= fifo;
+	scl::RvStream<UInt> out = scl::strm::pop(fifo);
 	Out(out);
 
 	fifo.generate();
@@ -1224,13 +1223,11 @@ BOOST_FIXTURE_TEST_CASE(TransactionalFifoCDCSafe, StreamTransferFixture)
 
 	scl::RvPacketStream<UInt> in = { 16_b };
 	scl::RvPacketStream<UInt> out;
-	
 
 	scl::TransactionalFifo fifo(32, scl::PacketStream<UInt>{ in->width() });
 	
 	In(in);
-
-	fifo <<= in;
+	pushStoreForward(fifo, in);
 
 	simulateSendData(in, 0);
 	transfers(100);
@@ -1240,7 +1237,7 @@ BOOST_FIXTURE_TEST_CASE(TransactionalFifoCDCSafe, StreamTransferFixture)
 	HCL_NAMED(outClk);
 	{
 		ClockScope clock(outClk);
-		out <<= fifo;
+		out = scl::strm::pop(fifo);
 		Out(out);
 		fifo.generate();
 
@@ -1781,7 +1778,7 @@ BOOST_FIXTURE_TEST_CASE(fifoPopCompile_test, BoostUnitTestSimulationFixture)
 
 	{
 		scl::Fifo<BVec> fifo{ 4, 8_b };
-		scl::RvStream<BVec> fifoPopPort = pop(fifo);
+		scl::RvStream<BVec> fifoPopPort = scl::strm::pop(fifo);
 		fifo.generate();
 	}
 

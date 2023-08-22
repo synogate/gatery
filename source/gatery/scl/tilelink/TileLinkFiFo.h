@@ -55,13 +55,13 @@ namespace gtry::scl
 			depthMin = txid(link.a).width().count();
 
 		m_a.setup(depthMin, *link.a);
-		link.a <<= m_a;
-
-		m_d.setup(depthMin, **link.d);
-		m_d <<= *link.d;
+		link.a <<= strm::pop(m_a);
 
 		if (m_d.depth() >= txid(link.a).width().count())
 			ready(*link.d) = '1';
+
+		m_d.setup(depthMin, **link.d);
+		push(m_d, move(*link.d));
 
 		return *this;
 	}
@@ -79,14 +79,14 @@ namespace gtry::scl
 			.d = constructFrom(m_d.peek())
 		};
 
-		m_a <<= ret.a;
-		m_a.generate();
-
-		*ret.d <<= m_d;
-		m_d.generate();
-
 		if (m_a.depth() >= txid(ret.a).width().count())
 			ready(ret.a) = '1';
+
+		push(m_a, move(ret.a));
+		m_a.generate();
+
+		*ret.d <<= strm::pop(m_d);
+		m_d.generate();
 
 		return ret;
 	}
