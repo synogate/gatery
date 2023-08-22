@@ -291,7 +291,7 @@ namespace gtry::scl
 		auto ret = fifo	.peek()
 						.add(Ready{})
 						.add(Valid{ !fifo.empty() })
-						.reduceTo<RvStream<PayloadT, Meta...>>();
+						.template reduceTo<RvStream<PayloadT, Meta...>>();
 
 		IF(transfer(ret))
 			fifo.pop();
