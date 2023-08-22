@@ -1773,3 +1773,26 @@ BOOST_FIXTURE_TEST_CASE(streamDropPacket_test, BoostUnitTestSimulationFixture)
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 4, 1'000'000 }));
 }
+
+BOOST_FIXTURE_TEST_CASE(fifoPopCompile_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	{
+		scl::Fifo<BVec> fifo{ 4, 8_b };
+		scl::RvStream<BVec> fifoPopPort = pop(fifo);
+		fifo.generate();
+	}
+
+	{
+		scl::Stream<BVec, scl::Empty> templateStream{ 8_b };
+		empty(templateStream) = 1_b;
+
+		scl::Fifo<scl::Stream<BVec, scl::Empty>> fifo{ 4, templateStream };
+		scl::RvStream<BVec, scl::Empty> fifoPopPort = pop(fifo);
+		fifo.generate();
+	}
+
+
+}

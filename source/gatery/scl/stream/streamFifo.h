@@ -272,3 +272,30 @@ namespace gtry::scl::strm {
 		return out;
 	}
 }
+
+namespace gtry::scl
+{
+	template<Signal PayloadT>
+	RvStream<PayloadT> pop(Fifo<PayloadT>& fifo)
+	{
+		RvStream<PayloadT> ret = { fifo.peek() };
+		valid(ret) = !fifo.empty();
+		IF(transfer(ret))
+			fifo.pop();
+		return ret;
+	}
+
+	template<Signal PayloadT, Signal... Meta>
+	RvStream<PayloadT, Meta...> pop(Fifo<Stream<PayloadT, Meta...>>& fifo)
+	{
+		auto ret = fifo	.peek()
+						.add(Ready{})
+						.add(Valid{ !fifo.empty() })
+						.reduceTo<RvStream<PayloadT, Meta...>>();
+
+		IF(transfer(ret))
+			fifo.pop();
+
+		return ret;
+	}
+}

@@ -279,6 +279,9 @@ namespace gtry::scl
 		HCL_DESIGNCHECK_HINT(!m_hasGenerate, "generate called twice");
 		m_hasGenerate = true;
 
+		if (!m_pushClock || !m_popClock)
+			return; // no push or pop port, nothing to do
+
 		auto scope = m_area.enter();
 		auto scopeLock = ConditionalScope::lock(); // exit conditionals
 
