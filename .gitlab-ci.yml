@@ -94,6 +94,6 @@ documentation-job:
     - documount
   script:
     - doxygen doc/Doxyfile
-    - rsync -vru --delete code/gatery/doc/ /mnt/doxygenDocu/gatery
+    - rsync -r --delete --checksum doc/gen/html/ /mnt/doxygenDocu/gatery
   only:
     - master
