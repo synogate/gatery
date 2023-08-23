@@ -183,7 +183,7 @@ namespace gtry::scl {
 		
 		m_getPtrMem.setup(m_numberOfFifos, ptrSample);
 		m_getPtrMem.setName("getPointerMemory");
-		m_putPtrMem.setType(MemType::DONT_CARE, 0);
+		m_getPtrMem.setType(MemType::DONT_CARE, 0);
 		m_getPtrMem.initZero();
 
 		/* pop section */
