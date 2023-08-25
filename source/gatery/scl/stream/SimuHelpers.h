@@ -114,6 +114,14 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal StreamT>
+	SimProcess sendBeat(const StreamT& stream, size_t payload , Clock clk, SimulationSequencer sequencer)
+	{
+		BitWidth payloadW = stream->width();
+		payload &= payloadW.mask();
+		return strm::sendPacket(stream, SimPacket{ payload,stream->width() }, clk, sequencer);
+	}
+
+	template<StreamSignal StreamT>
 	SimProcess sendPacket(const StreamT& stream, SimPacket packet, Clock clk)
 	{
 		size_t numberOfBeats = packet.payload.size() / stream->size();

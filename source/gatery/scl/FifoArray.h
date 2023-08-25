@@ -100,6 +100,8 @@ namespace gtry::scl {
 		*/
 		const Bit& empty() const { return m_empty; }
 
+		const UInt& size() const { return m_size; }
+
 		/**
 		 * @brief Generates the fifo.
 		*/
@@ -115,7 +117,7 @@ namespace gtry::scl {
 
 		Bit isEmpty(internal::fifoPointer_t putPtr, internal::fifoPointer_t getPtr) { return putPtr.value == getPtr.value & putPtr.trick == getPtr.trick; }
 		Bit isFull(internal::fifoPointer_t putPtr, internal::fifoPointer_t getPtr)	{ return putPtr.value == getPtr.value & putPtr.trick != getPtr.trick; }
-		UInt size(internal::fifoPointer_t putPtr, internal::fifoPointer_t getPtr) { return cat(putPtr.trick, putPtr.value) - cat(getPtr.trick, getPtr.value); }
+		UInt size(internal::fifoPointer_t putPtr, internal::fifoPointer_t getPtr)	{ return cat(putPtr.trick, putPtr.value) - cat(getPtr.trick, getPtr.value); }
 
 		SigT	m_pushData;
 		UInt	m_pushFifoSelector;
@@ -126,6 +128,7 @@ namespace gtry::scl {
 		SigT	m_popData;
 		UInt	m_popFifoSelector;
 		Bit		m_empty;
+		UInt	m_size;
 		Bit		m_mustPop = '0';
 		//Bit		m_isPopping = '0';
 
@@ -156,6 +159,7 @@ namespace gtry::scl {
 
 		m_pushFifoSelector = BitWidth::count(numberOfFifos);
 		m_popFifoSelector = BitWidth::count(numberOfFifos);
+		m_size = BitWidth::last(elementsPerFifo);
 
 		m_numberOfFifos = numberOfFifos;
 		m_elementsPerFifo = elementsPerFifo;
@@ -170,7 +174,7 @@ namespace gtry::scl {
 		HCL_DESIGNCHECK_HINT(!m_hasGenerate, "The fifo array has already been generated");
 		m_hasGenerate = true;
 
-		/* memories generate */
+		/* memories generation */
 		m_dataMem.setup(m_numberOfFifos * m_elementsPerFifo, m_pushData);
 		m_dataMem.setName("DataMemory");
 
@@ -186,28 +190,33 @@ namespace gtry::scl {
 		m_getPtrMem.setType(MemType::DONT_CARE, 0);
 		m_getPtrMem.initZero();
 
-		/* pop section */
-		internal::fifoPointer_t putPtr = m_putPtrMem[m_popFifoSelector]; setName(putPtr, "putPtr_pop");
-		internal::fifoPointer_t getPtr = m_getPtrMem[m_popFifoSelector]; setName(getPtr, "getPtr_pop");	
 
-		m_empty = isEmpty(putPtr, getPtr);
+		HCL_NAMED(m_popFifoSelector);
+		internal::fifoPointer_t popPutPtr = m_putPtrMem[m_popFifoSelector]; setName(popPutPtr, "putPtr_pop");
+		internal::fifoPointer_t popGetPtr = m_getPtrMem[m_popFifoSelector]; setName(popGetPtr, "getPtr_pop");	
+
+		HCL_NAMED(m_pushFifoSelector);
+		internal::fifoPointer_t pushPutPtr = m_putPtrMem[m_pushFifoSelector]; setName(pushPutPtr, "putPtr_push");
+		internal::fifoPointer_t pushGetPtr = m_getPtrMem[m_pushFifoSelector]; setName(pushGetPtr, "getPtr_push");
+
+		m_empty = isEmpty(popPutPtr, popGetPtr);
+		m_size = size(popPutPtr, popGetPtr);
+
 		m_popData = dontCare(m_popData);
 		IF(!m_empty) {
-			m_popData = m_dataMem[cat(m_popFifoSelector, getPtr.value)];
+			m_popData = m_dataMem[cat(m_popFifoSelector, popGetPtr.value)];
 			IF(m_mustPop)
-				m_getPtrMem[m_popFifoSelector] = getPtr.increment();
+				m_getPtrMem[m_popFifoSelector] = popGetPtr.increment();
 		}
-		//m_popData = reg(m_popData, { .allowRetimingBackward = true });
 
-		/* push section */
-		putPtr = m_putPtrMem[m_pushFifoSelector]; setName(putPtr, "putPtr_push");
-		getPtr = m_getPtrMem[m_pushFifoSelector]; setName(getPtr, "getPtr_push");
+		HCL_NAMED(m_empty);
+		HCL_NAMED(m_mustPop);
 
-		m_full = isFull(putPtr, getPtr);
+		m_full = isFull(pushPutPtr, pushGetPtr); HCL_NAMED(m_full);
 
 		IF(m_mustPush & !m_full) {
-			m_dataMem[cat(m_pushFifoSelector, putPtr.value)] = m_pushData;
-			m_putPtrMem[m_pushFifoSelector] = putPtr.increment();
+			m_dataMem[cat(m_pushFifoSelector, pushPutPtr.value)] = m_pushData;
+			m_putPtrMem[m_pushFifoSelector] = pushPutPtr.increment();
 		}
 	}
 }

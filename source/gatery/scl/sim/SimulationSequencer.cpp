@@ -32,7 +32,7 @@ namespace gtry::scl {
 
 	SimulationSequencerSlot::~SimulationSequencerSlot() noexcept(false)
 	{
-		if(m_data)
+		if(m_data && !simulationIsShuttingDown())
 		{
 			HCL_ASSERT(m_data->slotCurrent == m_mySlot);
 			m_data->slotCurrent++;
