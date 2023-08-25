@@ -116,6 +116,11 @@ class Simulator
 		 */
 		virtual void abort() = 0;
 
+		/**
+		 * @return returns whether abort() has been called
+		*/
+		virtual bool abortCalled() const = 0;
+
 		/// @}
 
 		/** 
@@ -140,6 +145,11 @@ class Simulator
 
 		/// Returns the elapsed simulation time (in seconds) since @ref powerOn.
 		inline const hlim::ClockRational &getCurrentSimulationTime() const { return m_simulationTime; }
+
+		/// @brief Returns true in the time period where the simulator is pulling down all the simulation coroutines on reseting or closing the simulation.
+		/// @details This allows coroutine code to differentiate between destructing because of going out of scope normally and destructing because the
+		///			 entire coroutine stack is being destructed.
+		virtual bool simulationIsShuttingDown() const = 0;
 
 		/// Returns the elapsed micro ticks (reevaluations) within the current time step.
 		inline size_t getCurrentMicroTick() const { return m_microTick; }

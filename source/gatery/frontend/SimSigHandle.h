@@ -347,6 +347,11 @@ namespace gtry {
 
 	Seconds getCurrentSimulationTime();
 
+	/// @brief Returns true in the time period where the simulator is pulling down all the simulation coroutines on reseting or closing the simulation.
+	/// @details This allows coroutine code to differentiate between destructing because of going out of scope normally and destructing because the
+	///			 entire coroutine stack is being destructed.
+	bool simulationIsShuttingDown();
+
 	using BigInt = sim::BigInt;
 
 	sim::WaitClock AfterClk(const Clock& clk);

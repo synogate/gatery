@@ -113,5 +113,12 @@ Seconds getCurrentSimulationTime()
 	return sim->getCurrentSimulationTime();
 }
 
+bool simulationIsShuttingDown()
+{
+	auto *sim = sim::SimulationContext::current()->getSimulator();
+	HCL_DESIGNCHECK_HINT(sim, "Can only get simulationIsShuttingDown if running in a simulation!");
+
+	return sim->simulationIsShuttingDown();
+}
 
 }
