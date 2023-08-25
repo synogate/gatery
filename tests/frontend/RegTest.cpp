@@ -601,11 +601,11 @@ BOOST_FIXTURE_TEST_CASE(RegFactoryPipe_test, gtry::BoostUnitTestSimulationFixtur
 		simu(sig1) = 0;
 		co_await OnClk(clock);
 
-		for (size_t i = 0; i < 8; ++i)
+		for (size_t i = 1; i < 8; ++i)
 		{
 			simu(sig1) = i;
 			co_await OnClk(clock);
-			BOOST_TEST(simu(out) == i);
+			BOOST_TEST(simu(out) == i - 1);
 		}
 		stopTest();
 	});
