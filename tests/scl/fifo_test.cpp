@@ -704,7 +704,7 @@ BOOST_FIXTURE_TEST_CASE(FifoArray_poc, BoostUnitTestSimulationFixture)
 		simu(popSelector) = 0;
 		simu(popEnable) = '0';
 
-		co_await WaitFor({0});
+		co_await WaitFor(Seconds{0});
 
 		BOOST_TEST(simu(dutFifo.full()) == '0');
 		BOOST_TEST(simu(dutFifo.empty()) == '1');
@@ -715,7 +715,7 @@ BOOST_FIXTURE_TEST_CASE(FifoArray_poc, BoostUnitTestSimulationFixture)
 
 		simu(pushEnable) = '0';
 
-		co_await WaitFor({0});
+		co_await WaitFor(Seconds{0});
 
 		BOOST_TEST(simu(dutFifo.empty()) == '0');
 		simu(popEnable) = '1';
