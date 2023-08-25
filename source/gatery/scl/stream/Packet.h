@@ -19,7 +19,6 @@
 #include <gatery/frontend.h>
 #include "Stream.h"
 #include "utils.h"
-#include "../TransactionalFifo.h"
 #include "../Counter.h"
 #include "metaSignals.h"
 
