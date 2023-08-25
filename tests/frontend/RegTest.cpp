@@ -585,6 +585,36 @@ BOOST_FIXTURE_TEST_CASE(CompoundRegClass, gtry::BoostUnitTestSimulationFixture)
 	runTest({ 1,1 });
 }
 
+BOOST_FIXTURE_TEST_CASE(RegFactoryPipe_test, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	UInt sig1 = pinIn(8_b).setName("sig1");
+	UInt out = sig1 | reg();
+	pinOut(out, "out");
+
+	addSimulationProcess([=, this]()->SimProcess {
+
+		simu(sig1) = 0;
+		co_await OnClk(clock);
+
+		for (size_t i = 0; i < 8; ++i)
+		{
+			simu(sig1) = i;
+			co_await OnClk(clock);
+			BOOST_TEST(simu(out) == i);
+		}
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest({ 1,1 });
+}
+
+
 /*
 BOOST_FIXTURE_TEST_CASE(TupleRegisterRegClass, gtry::BoostUnitTestSimulationFixture)
 {
