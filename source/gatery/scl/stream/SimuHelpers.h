@@ -24,6 +24,11 @@
 
 namespace gtry::scl::strm
 {
+	/**
+	 * @brief The SimPacket is a datastructure used to represent packets in Gatery during simulation. 
+	 * In order to send a simulation packet through a stream the user must initialize a SimPacket of
+	 * the desired packet, using one of the constructor helpers provided.
+	*/
 	struct SimPacket {
 		sim::DefaultBitVectorState payload;
 
@@ -61,6 +66,18 @@ namespace gtry::scl::strm
 		char m_error = '0';
 		std::uint64_t m_invalidBeats = 0;
 	};
+
+	/**
+	 * @brief Helper for sending a Beat of data through a stream during simulation. Thanks to the use of a sequencer,
+	 * the beats will be scheduled to be sent in the chronological order in which the function is called.
+	 * @param stream Stream onto which to schedule the beat to be sent.
+	 * @param payload Unsigned integer representation of the payload to be sent.
+	 * @param clk Clock scope of the stream.
+	 * @param sequencer Sequencer used to schedule event.
+	 * @return a co_await-able SimProcess
+	*/
+	template<StreamSignal StreamT>
+	SimProcess sendBeat(const StreamT& stream, size_t payload, const Clock& clk, SimulationSequencer& sequencer);
 
 	template<StreamSignal StreamT>
 	SimProcess sendPacket(const StreamT& stream, SimPacket packet, Clock clk);
@@ -114,7 +131,7 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal StreamT>
-	SimProcess sendBeat(const StreamT& stream, size_t payload , Clock clk, SimulationSequencer sequencer)
+	SimProcess sendBeat(const StreamT& stream, size_t payload, const Clock& clk, SimulationSequencer& sequencer)
 	{
 		BitWidth payloadW = stream->width();
 		payload &= payloadW.mask();
