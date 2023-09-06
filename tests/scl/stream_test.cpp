@@ -29,6 +29,7 @@
 
 #include <gatery/debug/websocks/WebSocksInterface.h>
 #include <gatery/scl/sim/SimulationSequencer.h>
+#include <gatery/scl/stream/SimuHelpers.h>
 
 
 using namespace boost::unit_test;
@@ -1790,6 +1791,136 @@ BOOST_FIXTURE_TEST_CASE(fifoPopCompile_test, BoostUnitTestSimulationFixture)
 		scl::RvStream<BVec, scl::Empty> fifoPopPort = pop(fifo);
 		fifo.generate();
 	}
+}
+
+BOOST_FIXTURE_TEST_CASE(serialPushParallelPop_fuzzTest, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	scl::RvStream<UInt> in(16_b);
+	pinIn(in, "in");
+
+	auto out = scl::strm::serialPushParallelPopBuffer(move(in), 3);
+	pinOut(out, "out");
+
+	std::set<size_t> inputs;
+	size_t numToSend = 512;
+	
+
+	/*input valid driver*/
+	addSimulationProcess([&, this]() -> SimProcess {
+		std::mt19937 gen(10317);
+		while (true) {
+			simu(valid(in)) = (gen() & 0x1) == 0 ? '0' : '1';
+			co_await OnClk(clk);
+		}
+	});
+
+	/*input data driver*/
+	addSimulationProcess([&, this]() -> SimProcess {
+		scl::SimulationSequencer seq;
+		for (size_t i = 0; i < numToSend; i++)
+		{
+			simu(*in) = i;
+			co_await performTransferWait(in, clk);
+			BOOST_TEST((inputs.find(i & 0xFFFF) == inputs.end()));
+			inputs.insert(i & 0xFFFF);
+		}
+	});
 
 
+	size_t total = 0;
+	size_t seed = 12;
+	std::mt19937 gen(seed);
+	/*output transfers driver*/
+	for (auto& outStrm : out) {
+		gen.seed(seed++);
+		addSimulationProcess([&, this]() -> SimProcess {
+			while (true) {
+				simu(ready(outStrm)) = (gen() & 0b11) == 0 ? '1' : '0';
+				co_await OnClk(clk);
+				if (simu(ready(outStrm)) == '1' && simu(valid(outStrm)) == '1') {
+					total++;
+					BOOST_TEST((inputs.find(simu(*outStrm)) != inputs.end()));
+					inputs.erase(simu(*outStrm));
+				}
+
+				if (total == numToSend) {
+					BOOST_TEST((inputs.size() == 0));
+					stopTest();
+				}
+			}
+			});
+	}
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 100, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(serialPushParallelPop_popLast, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	scl::RvStream<UInt> in(16_b);
+	pinIn(in, "in");
+
+	auto out = scl::strm::serialPushParallelPopBuffer(move(in), 3);
+	pinOut(out, "out");
+
+	std::set<size_t> inputs;
+	size_t numToSend = 512;
+
+
+	/*input valid driver*/
+	addSimulationProcess([&, this]() -> SimProcess {
+		std::mt19937 gen(10317);
+		while (true) {
+			simu(valid(in)) = '1';//(gen() & 0x1) == 0 ? '0' : '1';
+			co_await OnClk(clk);
+		}
+		});
+
+	/*input data driver*/
+	addSimulationProcess([&, this]() -> SimProcess {
+		scl::SimulationSequencer seq;
+		for (size_t i = 0; i < numToSend; i++)
+		{
+			simu(*in) = i;
+			co_await performTransferWait(in, clk);
+			BOOST_TEST((inputs.find(i & 0xFFFF) == inputs.end()));
+			inputs.insert(i & 0xFFFF);
+		}
+		});
+
+
+	size_t total = 0;
+	size_t seed = 12;
+	std::mt19937 gen(seed);
+	/*output transfers driver*/
+	for (auto& outStrm : out) {
+		gen.seed(seed++);
+		addSimulationProcess([&, this]() -> SimProcess {
+			simu(ready(outStrm)) = '0'; //(gen() & 0b11) == 0 ? '1' : '0';
+			simu(ready(out.back())) = '1'; //(gen() & 0b11) == 0 ? '1' : '0';
+			while (true) {
+				
+				co_await OnClk(clk);
+				if (simu(ready(outStrm)) == '1' && simu(valid(outStrm)) == '1') {
+					total++;
+					BOOST_TEST((inputs.find(simu(*outStrm)) != inputs.end()));
+					inputs.erase(simu(*outStrm));
+				}
+
+				if (total == numToSend) {
+					BOOST_TEST((inputs.size() == 0));
+					stopTest();
+				}
+			}
+			});
+	}
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 100, 1'000'000 }));
 }
