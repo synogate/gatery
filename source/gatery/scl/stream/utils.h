@@ -121,7 +121,7 @@ namespace gtry::scl::strm
 	 * @return same typed stream as source input
 	*/
 	template<StreamSignal T>
-	requires (T::template has<Ready>() and T::template has<Valid>())
+	//requires (T::template has<Ready>() and T::template has<Valid>())
 	T stall(T&& source, Bit stallCondition);
 
 	/**
@@ -201,6 +201,10 @@ namespace gtry::scl::strm
 		upstream(in) = upstream(out);
 		return out;
 	}
+
+	template<StreamSignal StreamT>
+	Vector<StreamT> serialPushParallelPopBuffer(StreamT&& in, size_t numberOfElements);
+
 }
 
 namespace gtry::scl::strm
@@ -446,7 +450,7 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal T>
-		requires (T::template has<Ready>() and T::template has<Valid>())
+	//	requires (T::template has<Ready>() and T::template has<Valid>())
 	T stall(T&& source, Bit stallCondition)
 	{
 		T out;
@@ -579,6 +583,50 @@ namespace gtry::scl::strm
 	T pipeinput(T& stream, PipeBalanceGroup& group) 
 	{
 		return scl::strm::pipeinputDownstream(move(stream), group);
+	}
+
+	template<StreamSignal StreamT>
+	Vector<StreamT> serialPushParallelPopBuffer(StreamT&& in, size_t numberOfElements) 
+	{
+		Vector<StreamT> popStreams;
+		Vector<StreamT> shiftStreams;
+
+		popStreams.reserve(numberOfElements);
+		shiftStreams.reserve(numberOfElements);
+
+		shiftStreams.push_back(move(in));
+
+		for (size_t i = 0; i < numberOfElements; i++)
+		{
+			StreamT popStream(constructFrom(*in));
+
+			IF(transfer(popStream))
+				valid(popStream) = '0';
+
+			IF(transfer(shiftStreams.back()))
+				downstream(popStream) = downstream(shiftStreams.back());
+
+			downstream(popStream) = reg(copy(downstream(popStream))); // copy gets rid of the references returned by the downstream function
+
+
+			StreamT shiftStream(*popStream);
+			valid(shiftStream) = valid(popStream);
+			ready(shiftStreams.back()) = !valid(popStream) | ready(popStream) | ready(shiftStream);
+
+			StreamT temp = strm::stall(move(shiftStream), transfer(popStream));
+
+			StreamT temp2(*popStream);
+			valid(temp2) = valid(popStream);
+			ready(popStream) = ready(temp2);
+			popStreams.push_back(move(temp2));
+
+			IF(transfer(temp))
+				valid(popStream) = '0';
+
+			shiftStreams.push_back(move(temp)); 
+		}
+		ready(shiftStreams.back()) = '0';
+		return popStreams;
 	}
 }
 
