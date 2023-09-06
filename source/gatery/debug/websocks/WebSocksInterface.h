@@ -67,7 +67,7 @@ class WebSocksInterface : public DebugInterface
 		virtual size_t createAreaVisualization(unsigned width, unsigned height) override;
 		virtual void updateAreaVisualization(size_t id, const std::string content) override;
 	protected:
-        boost::asio::io_context m_ioc;
+		boost::asio::io_context m_ioc;
 
 		struct Visualization {
 			std::string title;
