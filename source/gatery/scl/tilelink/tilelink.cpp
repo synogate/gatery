@@ -195,10 +195,10 @@ namespace gtry::scl
 		// create downstream registers
 		valid(d).resetValue('0');
 		for (size_t i = 0; i < mem.readLatencyHint(); ++i)
-			d = d.regDownstreamBlocking({ .allowRetimingBackward = true });
+			d = scl::strm::regDownstreamBlocking(move(d), { .allowRetimingBackward = true });
 
 		ready(link.a) = ready(d);
-		*link.d <<= d.regReady();
+		*link.d <<= strm::regReady(move(d));
 	}
 }
 

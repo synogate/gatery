@@ -178,18 +178,34 @@ namespace gtry {
 
 	BaseBitVector& BaseBitVector::operator=(BaseBitVector&& rhs)
 	{
-		assign(rhs.readPort());
-
-		SignalReadPort outRange{ m_node, m_expansionPolicy };
-		if (m_range.subset)
+		auto port = rhs.node()->getDriver(0);
+		if (port.node == nullptr)
 		{
-			auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-			rewire->connectInput(0, outRange);
-			rewire->setOp(pickSelection(m_range));
-			outRange = SignalReadPort(rewire, m_expansionPolicy);
-		}
+			// special case where we move a unassigned signal into an existing signal
+			// an implementation with conditional scopes is possibile but has many corner cases
+			// think of assigning a signal that is only conditionally loopy
+			HCL_ASSERT_HINT(!m_node || ConditionalScope::get() == nullptr, "no impl");
 
-		rhs.assign(outRange);
+			resetNode();
+			createNode(rhs.size(), rhs.m_expansionPolicy);
+
+			rhs.assign(SignalReadPort{ m_node, m_expansionPolicy });
+		}
+		else
+		{
+			assign(rhs.readPort());
+
+			SignalReadPort outRange{ m_node, m_expansionPolicy };
+			if (m_range.subset)
+			{
+				auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
+				rewire->connectInput(0, outRange);
+				rewire->setOp(pickSelection(m_range));
+				outRange = SignalReadPort(rewire, m_expansionPolicy);
+			}
+
+			rhs.assign(outRange);
+		}
 		return *this;
 	}
 
@@ -379,6 +395,16 @@ namespace gtry {
 		signal->recordStackTrace();
 
 		assign(SignalReadPort(signal), true);
+	}
+
+	void BaseBitVector::setName(std::string name) const
+	{
+		HCL_DESIGNCHECK_HINT(m_node != nullptr, "Can only set names to initialized BaseBitVectors!");
+
+		auto* signal = DesignScope::createNode<hlim::Node_Signal>();
+		signal->connectInput(readPort());
+		signal->setName(name);
+		signal->recordStackTrace();
 	}
 
 	void BaseBitVector::addToSignalGroup(hlim::SignalGroup *signalGroup)

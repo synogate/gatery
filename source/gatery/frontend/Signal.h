@@ -78,6 +78,7 @@ namespace gtry {
 		virtual SignalReadPort outPort() const = 0;
 		virtual std::string_view getName() const = 0;
 		virtual void setName(std::string name) = 0;
+		virtual void setName(std::string name) const = 0;
 
 		virtual void assign(SignalReadPort, bool ignoreConditions = false) = 0;
 

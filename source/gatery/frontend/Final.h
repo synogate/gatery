@@ -15,18 +15,23 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
-#include "TransactionalFifo.h"
-#include "stream/utils.h"
-#include "stream/Stream.h"
+#pragma once
 
-void gtry::scl::internal::generateCDCReqAck(const UInt& inData, UInt& outData, const Clock& inDataClock, const Clock& outDataClock)
+#include "../utils/Traits.h"
+
+namespace gtry 
 {
-	RvStream<UInt> inDataStream{ inData };
-	valid(inDataStream) = '1';
-	RvStream<UInt> synchronizableInDataStream = strm::regDownstream(move(inDataStream), RegisterSettings{.clock = inDataClock});
-	auto outDataStream = synchronizeStreamReqAck(synchronizableInDataStream, inDataClock, outDataClock);
-	ENIF(valid(outDataStream))
-		outData = reg(*outDataStream, 0 , RegisterSettings{ .clock = outDataClock });
-	ready(outDataStream) = '1';
+	template<BaseSignal TSig>
+	TSig final(const TSig& sig)
+	{
+		return TSig{ sig.outPort() };
+	}
+
+	template<Signal TSig>
+	TSig final(const TSig& sig)
+	{
+		return internal::transformIfSignal(sig, [](const auto& subsig) {
+			return final(subsig);
+		});
+	}
 }

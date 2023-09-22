@@ -94,8 +94,6 @@ documentation-job:
     - documount
   script:
     - doxygen doc/Doxyfile
-    # commented out because it fails the build due to missing permissions
-    - rm -rf /mnt/doxygenDocu/gatery/*
-    - mv doc/gen/html/ /mnt/doxygenDocu/gatery
+    - rsync -r --delete --checksum doc/gen/html/ /mnt/doxygenDocu/gatery
   only:
     - master

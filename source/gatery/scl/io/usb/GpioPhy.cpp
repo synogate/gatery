@@ -20,7 +20,7 @@
 
 #include <gatery/scl/io/codingNRZI.h>
 #include <gatery/scl/io/RecoverDataDifferential.h>
-#include <gatery/scl/stream/adaptWidth.h>
+#include <gatery/scl/stream/utils.h>
 #include <gatery/scl/stream/Packet.h>
 #include <gatery/scl/flag.h>
 #include <gatery/scl/Counter.h>
@@ -182,9 +182,9 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 
 	auto txPacketStream = addEopDeferred(txStream, edgeFalling(valid(txStream)));
 	HCL_NAMED(txPacketStream);
-	auto txPreambledStream = insertBeat(txPacketStream, 0, 0x80u);
+	auto txPreambledStream = strm::insertBeat(move(txPacketStream), 0, 0x80u);
 	HCL_NAMED(txPreambledStream);
-	auto txBitVecStream = reduceWidth(txPreambledStream, 1_b);
+	auto txBitVecStream = strm::reduceWidth(move(txPreambledStream), 1_b);
 	HCL_NAMED(txBitVecStream);
 	auto txBitStream = txBitVecStream.transform([](const UInt& in) { return in.lsb(); });
 	HCL_NAMED(txBitStream);
@@ -262,7 +262,7 @@ void gtry::scl::usb::GpioPhy::generateRx(const VStream<UInt>& in)
 			valid(inBit) = '0';
 	}
 
-	VStream<UInt> lineInWord = extendWidth(inBit, 8_b, !m_status.rxActive);
+	VStream<UInt> lineInWord = strm::extendWidth(move(inBit), 8_b, !m_status.rxActive);
 
 	Bit rxDataActive = flag(valid(lineInWord), !m_status.rxActive);
 	HCL_NAMED(rxDataActive);

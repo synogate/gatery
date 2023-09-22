@@ -103,6 +103,18 @@ namespace gtry
 		});
 	}
 
+	struct RegFactory
+	{
+		RegisterSettings settings;
+		auto operator() (Signal auto&& sig) { return reg(sig, settings); }
+	};
+
+	/**
+	 * @brief A special overload of reg that is used for the pipe operator. It is implimented with the RegFactory class to support.
+	 *			Cases where we would like to initialize a signal as a register using Signal a = reg(); syntax.
+	*/
+	inline RegFactory reg(const RegisterSettings& settings = {}) { return { settings }; }
+
 	template<Signal S>
 	class Reg
 	{

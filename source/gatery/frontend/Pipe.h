@@ -15,18 +15,18 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
-#include "TransactionalFifo.h"
-#include "stream/utils.h"
-#include "stream/Stream.h"
+#pragma once
+#include "../utils/Traits.h"
 
-void gtry::scl::internal::generateCDCReqAck(const UInt& inData, UInt& outData, const Clock& inDataClock, const Clock& outDataClock)
+namespace gtry 
 {
-	RvStream<UInt> inDataStream{ inData };
-	valid(inDataStream) = '1';
-	RvStream<UInt> synchronizableInDataStream = strm::regDownstream(move(inDataStream), RegisterSettings{.clock = inDataClock});
-	auto outDataStream = synchronizeStreamReqAck(synchronizableInDataStream, inDataClock, outDataClock);
-	ENIF(valid(outDataStream))
-		outData = reg(*outDataStream, 0 , RegisterSettings{ .clock = outDataClock });
-	ready(outDataStream) = '1';
+	/**
+	 * @brief The pipe operator is an alternative syntax for calling functions. The benefit is to write function calls in the order they are executed.
+	 *			It is limited to non-container signals, because iteratables have an overload in the std ranges library.
+	*/
+	template<Signal SigT> requires (not ContainerSignal<SigT>)
+	auto operator | (SigT&& in, std::invocable<SigT&&> auto&& func)
+	{
+		return std::invoke(std::forward<decltype(func)>(func), std::forward<decltype(in)>(in));
+	}
 }

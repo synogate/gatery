@@ -106,6 +106,7 @@ namespace hlim {
 		SignalReadPort outPort() const final;
 		std::string_view getName() const final;
 		void setName(std::string name) override;
+		void setName(std::string name) const override;
 		void addToSignalGroup(hlim::SignalGroup *signalGroup);
 
 		/// Defines a reset value for this signal. All register created on this signal without an explicit reset value will use this reset value.
@@ -118,8 +119,6 @@ namespace hlim {
 
 		hlim::Node_Signal* node() { return m_node; }
 		const hlim::Node_Signal* node() const { return m_node; }
-
-		Bit final() const;
 
 	protected:
 		SignalReadPort rewireAlias(SignalReadPort port) const;
@@ -165,6 +164,9 @@ namespace hlim {
 
 	/// Adds a retiming blocker such that forward register retiming will not attempt to pull a register from this signal.
 	Bit retimingBlocker(const Bit& signal);
+
+	/// Overload of default final to account for reset value
+	Bit final(const Bit& signal);
 
 /**@}*/
 }

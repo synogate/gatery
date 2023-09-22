@@ -31,6 +31,9 @@ namespace gtry
 	template<ContainerSignal T>
 	T constructFrom(const T& val);
 
+	template<ReverseSignal T>
+	T constructFrom(const T& val);
+
 	template<TupleSignal T>
 	auto constructFrom(const T& val);
 
@@ -56,7 +59,7 @@ namespace gtry
 			boost::hana::transform(boost::pfr::structure_tie(val), [&](auto&& member) {
 				if constexpr(Signal<decltype(member)>)
 					return constructFrom(member);
-				else if constexpr(internal::SignalHolder<decltype(member)>)
+				else if constexpr (internal::SignalHolder<decltype(member)>)
 					return constructFrom(*member);
 				else
 					return member;
@@ -76,6 +79,12 @@ namespace gtry
 			ret.insert(ret.end(), constructFrom(it));
 
 		return ret;
+	}
+
+	template<ReverseSignal T>
+	T constructFrom(const T& val)
+	{
+		return constructFrom(*val);
 	}
 
 	template<TupleSignal T>

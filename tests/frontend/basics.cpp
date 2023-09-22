@@ -1368,6 +1368,53 @@ BOOST_FIXTURE_TEST_CASE(msbBroadcast, BoostUnitTestSimulationFixture)
 	runEvalOnlyTest();
 }
 
+BOOST_FIXTURE_TEST_CASE(ReturnPathAssignment, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Bit b;
+	Bit b_final1 = b;
+	b = '0';
+	sim_assert(b_final1 == '0') << "b_final1";
+
+	Bit a;
+	Bit a_final = a;
+
+	// moving a unassigned signal into an existing signal should make the existing signal to
+	// behave like a new signal with no relations to its previous state
+	b = std::move(a);
+	Bit b_final2 = b;
+	b = '1';
+
+	sim_assert(a_final == '1') << "a_final";
+	sim_assert(b_final2 == '1') << "b_final2";
+
+	runEvalOnlyTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(ReturnPathAssignmentVector, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	BVec b = 8_b;
+	BVec b_final1 = b;
+	b = 0;
+	sim_assert(b_final1 == 0) << "b_final1";
+
+	BVec a = 8_b;
+	BVec a_final = a;
+
+	// moving a unassigned signal into an existing signal should make the existing signal to
+	// behave like a new signal with no relations to its previous state
+	b = std::move(a);
+	BVec b_final2 = b;
+	b = 1;
+
+	sim_assert(a_final == 1) << "a_final";
+	sim_assert(b_final2 == 1) << "b_final2";
+
+	runEvalOnlyTest();
+}
 
 
 BOOST_FIXTURE_TEST_CASE(tristateBit, gtry::BoostUnitTestSimulationFixture)
@@ -1499,6 +1546,73 @@ BOOST_FIXTURE_TEST_CASE(testUndefinedDontCareComparison, gtry::BoostUnitTestSimu
 		BOOST_TEST(simu(output) != "10xXX");
 		BOOST_TEST(simu(output) == "10xX-");
 		BOOST_TEST(!simu(output).allDefined());
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest({ 1,1 });
+}
+
+BOOST_FIXTURE_TEST_CASE(testBitLoopAssignment, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	Bit a = pinIn().setName("a");
+	Bit b = pinIn().setName("enable");
+
+	Bit c = a;
+	IF(b)
+		c = final(c);
+
+	Bit c_readout = c;
+
+	pinOut(c).setName("c");
+	c = '0';
+
+	addSimulationProcess([=, this]()->SimProcess {
+		simu(a) = '1';
+		simu(b) = '1';
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(c_readout) == '0');
+
+		simu(a) = '1';
+		simu(b) = '0';
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(c_readout) == '1');
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest({ 1,1 });
+}
+
+BOOST_FIXTURE_TEST_CASE(testBitFinalResetValue, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	Bit a = pinIn().setName("a");
+	a.resetValue('0');
+
+	Bit b = a;
+	Bit c = reg(final(b));
+	b = '1';
+
+	pinOut(c).setName("c");
+
+	addSimulationProcess([=, this]()->SimProcess {
+		BOOST_TEST(simu(c) == '0');
+
+		simu(a) = '0';
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(c) == '1');
 
 		stopTest();
 	});

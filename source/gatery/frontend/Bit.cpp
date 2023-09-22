@@ -135,14 +135,35 @@ namespace gtry {
 
 	Bit& Bit::operator=(Bit&& rhs)
 	{
-		if(rhs.m_resetValue)
-			m_resetValue = rhs.m_resetValue;
+		auto port = rhs.node()->getDriver(0);
+		if (port.node == nullptr)
+		{
+			// special case where we move a unassigned signal into an existing signal
+			// an implementation with conditional scopes is possibile but has many corner cases
+			// think of assigning a signal that is only conditionally loopy
+			HCL_ASSERT_HINT(ConditionalScope::get() == nullptr, "no impl");
+			HCL_ASSERT_HINT(hlim::getOutputConnectionType(readPort()).type == hlim::ConnectionType::BOOL, "cannot move loops into vector aliases");
 
-		assign(rhs.readPort());
+			m_node = hlim::NodePtr<hlim::Node_Signal>{};
+			createNode();
 
-		SignalReadPort outRange{ m_node };
-		outRange = rewireAlias(outRange);
-		rhs.assign(outRange);
+			m_resetValue.reset();
+			m_resetValue = rhs.resetValue();
+
+			rhs.assign(SignalReadPort{ m_node });
+		}
+		else
+		{
+			if (rhs.m_resetValue)
+				m_resetValue = rhs.m_resetValue;
+
+			assign(rhs.readPort());
+
+			SignalReadPort outRange{ m_node };
+			outRange = rewireAlias(outRange);
+			rhs.assign(outRange);
+		}
+	
 		return *this;
 	}
 
@@ -188,11 +209,6 @@ namespace gtry {
 	{
 		SignalReadPort ret{ m_node };
 		return rewireAlias(ret);
-	}
-
-	Bit Bit::final() const
-	{
-		return rewireAlias(SignalReadPort{ m_node });
 	}
 
 	SignalReadPort gtry::Bit::rewireAlias(SignalReadPort port) const
@@ -248,6 +264,14 @@ namespace gtry {
 		signal->recordStackTrace();
 
 		assign(SignalReadPort(signal), true);
+	}
+
+	void Bit::setName(std::string name) const
+	{
+		auto* signal = DesignScope::createNode<hlim::Node_Signal>();
+		signal->connectInput(readPort());
+		signal->setName(name);
+		signal->recordStackTrace();
 	}
 
 	void Bit::addToSignalGroup(hlim::SignalGroup *signalGroup)
@@ -404,5 +428,10 @@ namespace gtry {
 		auto* node = DesignScope::createNode<hlim::Node_RetimingBlocker>();
 		node->connectInput(signal.readPort());
 		return Bit{ SignalReadPort{node}, signal.resetValue() };
+	}
+	
+	Bit final(const Bit& signal)
+	{
+		return Bit{ signal.outPort(), signal.resetValue() };
 	}
 }
