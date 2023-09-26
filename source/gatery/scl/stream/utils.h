@@ -70,6 +70,16 @@ namespace gtry::scl::strm
 		return [=](auto&& in) { return regDownstream(std::forward<decltype(in)>(in), settings); };
 	}
 
+
+	template<StreamSignal StreamT>
+	StreamT delay(StreamT&& in, size_t minCycles);
+
+	//untested
+	inline auto delay(size_t minCycles)
+	{
+		return [=](auto&& in) { return delay(std::forward<decltype(in)>(in), minCycles); };
+	}
+
 	/**
 	 * @brief extends the width of a simple payload stream. A 4-bit stream sent every beat extended to 8-bits means that the same data is send over an 8-bit bus once every 2 beats.
 	 * @param source source stream
@@ -299,6 +309,15 @@ namespace gtry::scl::strm
 		{
 			downstream(ret) = reg(copy(downstream(in)));
 			upstream(in) = upstream(ret);
+		}
+		return ret;
+	}
+
+	template<StreamSignal StreamT>
+	StreamT delay(StreamT&& in, size_t minCycles) {
+		StreamT ret = in;
+		for (size_t i = 0;i< minCycles;i++) {
+			ret = regDownstream(ret);
 		}
 		return ret;
 	}

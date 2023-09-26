@@ -1858,6 +1858,67 @@ BOOST_FIXTURE_TEST_CASE(serialPushParallelPop_fuzzTest, BoostUnitTestSimulationF
 	BOOST_TEST(!runHitsTimeout({ 100, 1'000'000 }));
 }
 
+BOOST_FIXTURE_TEST_CASE(delay_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	scl::RvStream<UInt> in(16_b);
+	pinIn(in, "in");
+
+	scl::RvStream<UInt> out = scl::strm::delay(move(in), 5);
+	pinOut(out, "out");
+
+	size_t numToSend = 512;
+	std::set<size_t> inputs;
+
+
+	/*input valid driver*/
+	addSimulationProcess([&, this]() -> SimProcess {
+		std::mt19937 gen(10317);
+		while (true) {
+			simu(valid(in)) = '1';//(gen() & 0x1) == 0 ? '0' : '1';
+			co_await OnClk(clk);
+		}
+		});
+
+	/*input data driver*/
+	addSimulationProcess([&, this]() -> SimProcess {
+		scl::SimulationSequencer seq;
+		for (size_t i = 0; i < numToSend; i++)
+		{
+			simu(*in) = i;
+			co_await performTransferWait(in, clk);
+			BOOST_TEST((inputs.find(i & 0xFFFF) == inputs.end()));
+			inputs.insert(i & 0xFFFF);
+		}
+		});
+
+
+	size_t total = 0;
+	std::mt19937 gen(50);
+	/*output transfers driver*/
+	addSimulationProcess([&, this]() -> SimProcess {
+		simu(ready(out)) = '1'; //(gen() & 0b11) == 0 ? '1' : '0';
+		while (true) {
+			co_await OnClk(clk);
+			if (simu(ready(out)) == '1' && simu(valid(out)) == '1') {
+				BOOST_TEST((inputs.find(simu(*out)) != inputs.end()));
+				inputs.erase(simu(*out));
+			}
+
+			if (total == numToSend) {
+				BOOST_TEST((inputs.size() == 0));
+				stopTest();
+			}
+		}
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 100, 1'000'000 }));
+}
+
+
 BOOST_FIXTURE_TEST_CASE(serialPushParallelPop_popLast, BoostUnitTestSimulationFixture)
 {
 	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
@@ -1905,7 +1966,7 @@ BOOST_FIXTURE_TEST_CASE(serialPushParallelPop_popLast, BoostUnitTestSimulationFi
 			simu(ready(outStrm)) = '0'; //(gen() & 0b11) == 0 ? '1' : '0';
 			simu(ready(out.back())) = '1'; //(gen() & 0b11) == 0 ? '1' : '0';
 			while (true) {
-				
+
 				co_await OnClk(clk);
 				if (simu(ready(outStrm)) == '1' && simu(valid(outStrm)) == '1') {
 					total++;
