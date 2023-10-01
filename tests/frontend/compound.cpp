@@ -363,3 +363,22 @@ BOOST_FIXTURE_TEST_CASE(tapOnUnreflectedCompound, BoostUnitTestSimulationFixture
 
 	BOOST_TEST(countNodes([](const auto *node) { return dynamic_cast<const hlim::Node_SignalTap*>(node) != nullptr; }) == 6);
 }
+
+
+BOOST_FIXTURE_TEST_CASE(constructFromDownStreamTupleatedMetaVars, gtry::BoostUnitTestSimulationFixture)
+{
+	struct HelperStruct {
+		int i;
+		UInt v;
+	};
+
+	int j = 5;
+	int i = constructFrom(j);
+	BOOST_TEST(i == j);
+
+
+	HelperStruct a;
+	a.i = 5;
+	auto b = downstream(a);
+	auto c = constructFrom(copy(b));
+}

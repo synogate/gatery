@@ -27,6 +27,8 @@ namespace gtry
  * @addtogroup gtry_frontend
  * @{
  */
+	template<typename T> requires (!Signal<T>)
+	auto constructFrom(const T& val) { return val; }
 
 	template<ContainerSignal T>
 	T constructFrom(const T& val);
