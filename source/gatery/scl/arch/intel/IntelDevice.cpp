@@ -192,9 +192,6 @@ struct MAX10DeviceString {
 void IntelDevice::fromConfig(const gtry::utils::ConfigTree &configTree)
 {
 	FPGADevice::fromConfig(configTree);
-	
-	if (m_family == "Agilex")
-		m_requiresDerivePllClocks = false;
 
 	auto customComposition = configTree["custom_composition"];
 	if (customComposition) {
@@ -294,8 +291,6 @@ void IntelDevice::setupDevice(std::string device)
 
 	if (agilexDevStr.parse(m_device)) {
 		m_family = "Agilex";
-		m_requiresDerivePllClocks = false;
-
 		bool add_eSRAM = false;
 		bool add_crypto = false;
 
@@ -341,6 +336,7 @@ void IntelDevice::setupDevice(std::string device)
 
 	} else if (arria10DevStr.parse(m_device)) {
 		m_family = "Arria 10";
+		m_requiresDerivePllClocks = true;
 
 		m_embeddedMemoryList->add(std::make_unique<MLAB>(*this));
 		m_embeddedMemoryList->add(std::make_unique<M20K>(*this));
@@ -361,6 +357,7 @@ void IntelDevice::setupDevice(std::string device)
 
 		if (cyclone10DevStr.variant == Cyclone10DeviceString::GX) {
 			m_family = "Cyclone 10 GX";
+			m_requiresDerivePllClocks = true;
 			m_embeddedMemoryList->add(std::make_unique<MLAB>(*this));
 			m_embeddedMemoryList->add(std::make_unique<M20K>(*this));
 		} else {
