@@ -46,7 +46,7 @@ gtry::Bit gtry::scl::synchronizeEvent(Bit eventIn, const Clock& inClock, const C
 
 	ClockScope csOut{ outClock };
 
-	return edge(synchronize(state, '0', inClock, outClock, 3, false));
+	return edge(synchronize(state, '0', inClock, outClock, {.outStages = 3, .inStage = false}));
 }
 
 gtry::Bit gtry::scl::synchronizeRelease(Bit reset, const Clock& inClock, const Clock& outClock, ClockConfig::ResetActive resetActive)
@@ -68,12 +68,14 @@ gtry::Bit gtry::scl::synchronizeRelease(Bit reset, const Clock& inClock, const C
 	return val;
 }
 
-gtry::UInt gtry::scl::synchronizeGrayCode(UInt in, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
+gtry::UInt gtry::scl::synchronizeGrayCode(UInt in, const Clock& inClock, const Clock& outClock, SynchronizeParams params)
 {
-	return grayDecode(synchronize(grayEncode(in), inClock, outClock, outStages, inStage, hlim::Node_CDC::CdcNodeParameter{.isGrayCoded = true}));
+	params.cdcParams.isGrayCoded = true;
+	return grayDecode(synchronize(grayEncode(in), inClock, outClock, params));
 }
 
-gtry::UInt gtry::scl::synchronizeGrayCode(UInt in, UInt reset, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
+gtry::UInt gtry::scl::synchronizeGrayCode(UInt in, UInt reset, const Clock& inClock, const Clock& outClock, SynchronizeParams params)
 {
-	return grayDecode(synchronize(grayEncode(in), grayEncode(reset), inClock, outClock, outStages, inStage, hlim::Node_CDC::CdcNodeParameter{ .isGrayCoded = true }));
+	params.cdcParams.isGrayCoded = true;
+	return grayDecode(synchronize(grayEncode(in), grayEncode(reset), inClock, outClock, params));
 }
