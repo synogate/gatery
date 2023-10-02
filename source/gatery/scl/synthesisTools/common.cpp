@@ -24,6 +24,7 @@
 #include <gatery/hlim/Clock.h>
 #include <gatery/export/vhdl/AST.h>
 #include <gatery/export/vhdl/Entity.h>
+#include <gatery/hlim/coreNodes/Node_Pin.h>
 
 #include <fstream>
 #include <sstream>
@@ -38,37 +39,12 @@ void writeClockXDC(const vhdl::AST &ast, std::ostream& out)
 		auto&& name = top->getNamespaceScope().getClock(clk).name;
 		hlim::ClockRational freq = clk->absoluteFrequency();
 		double ns = double(freq.denominator() * 1'000'000'000) / freq.numerator();
-
-		out << "create_clock -period " << std::fixed << std::setprecision(3) << ns << " [get_ports " << name << "]\n";
+		if (clk->getLogicDriver(false, clk).node == nullptr)
+		{
+				out << "create_clock -period " << std::fixed << std::setprecision(3) << ns << " [get_ports " << name << "]\n";
+		}
+		
 	}
-
-	utils::StableMap<hlim::Clock*, std::vector<hlim::Clock*>> clock2srcPin;
-	for (auto clk : top->getClocks())
-		clock2srcPin[clk->getClockPinSource()].push_back(clk);
-
-	for (const auto &pairA : clock2srcPin)
-		for (const auto &pairB : clock2srcPin)
-			if (pairA.first < pairB.first) {
-				bool first;
-
-				out << "set_clock_groups -asynchronous -group [get_clocks {";
-				first = true;
-				for (auto c : pairA.second) {
-					if (!first) out << ", ";
-					first = false;
-
-					out << top->getNamespaceScope().getClock(c).name;
-				}
-				out << "}] -group [get_clocks {";
-				first = true;
-				for (auto c : pairB.second) {
-					if (!first) out << ", ";
-					first = false;
-
-					out << top->getNamespaceScope().getClock(c).name;
-				}
-				out << "}]\n";
-			}
 }
 
 void writeClockSDC(const vhdl::AST &ast, std::ostream& out)

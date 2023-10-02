@@ -32,8 +32,8 @@ gtry::scl::VStream<gtry::UInt> gtry::scl::recoverDataDifferential(const gtry::Cl
 	ioP.resetValue('0');
 	ioN.resetValue('1');
 	// avoid meta stable inputs
-	Bit p = synchronize(ioP, signalClock, ClockScope::getClk(), 3, false);
-	Bit n = synchronize(ioN, signalClock, ClockScope::getClk(), 3, false);
+	Bit p = synchronize(ioP, signalClock, ClockScope::getClk(), {.outStages = 3, .inStage = false});
+	Bit n = synchronize(ioN, signalClock, ClockScope::getClk(), {.outStages = 3, .inStage = false});
 	HCL_NAMED(p);
 	HCL_NAMED(n);
 

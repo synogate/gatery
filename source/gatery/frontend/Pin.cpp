@@ -26,16 +26,17 @@
 
 namespace gtry {
 
-	BaseOutputPin::BaseOutputPin(hlim::NodePort nodePort, std::string name)
+	BaseOutputPin::BaseOutputPin(hlim::NodePort nodePort, std::string name, const PinNodeParameter& params)
 	{
 		m_pinNode = DesignScope::createNode<hlim::Node_Pin>(false, true, false);
 		m_pinNode->connect(nodePort);
 		m_pinNode->setName(std::move(name));
+		m_pinNode->setPinNodeParameter(params);
 		if (ClockScope::anyActive())
 			m_pinNode->setClockDomain(ClockScope::getClk().getClk());
 	}
 
-	OutputPin::OutputPin(const Bit &bit) : BaseOutputPin(bit.readPort(), std::string(bit.getName())) { }
+	OutputPin::OutputPin(const Bit &bit, const PinNodeParameter& params) : BaseOutputPin(bit.readPort(), std::string(bit.getName()), params) { }
 
 
 
@@ -46,8 +47,9 @@ namespace gtry {
 			m_pinNode->setClockDomain(ClockScope::getClk().getClk());
 	}
 
-	InputPin::InputPin() {
+	InputPin::InputPin(const PinNodeParameter& params) {
 		m_pinNode->setBool();
+		m_pinNode->setPinNodeParameter(params);
 	}
 
 
@@ -56,8 +58,9 @@ namespace gtry {
 		return Bit(SignalReadPort({.node=m_pinNode, .port=0ull}));
 	}
 
-	InputPins::InputPins(BitWidth width) {
+	InputPins::InputPins(BitWidth width, const PinNodeParameter& params) {
 		m_pinNode->setWidth(width.value);
+		m_pinNode->setPinNodeParameter(params);
 	}
 
 	InputPins::operator UInt () const { return UInt(SignalReadPort({.node=m_pinNode, .port=0ull})); }
@@ -119,6 +122,6 @@ namespace gtry {
 
 
 
-	OutputPins pinOut(const InputPins &input) { return OutputPins((UInt)input); }
+	OutputPins pinOut(const InputPins &input, const PinNodeParameter& params) { return OutputPins((UInt)input, params); }
 
 }

@@ -28,6 +28,7 @@
 #include <gatery/hlim/coreNodes/Node_Pin.h>
 #include <gatery/hlim/coreNodes/Node_Register.h>
 #include <gatery/hlim/coreNodes/Node_Signal.h>
+#include <gatery/hlim/supportNodes/Node_CDC.h>
 
 #include <gatery/hlim/Attributes.h>
 #include <gatery/hlim/GraphTools.h>
@@ -42,30 +43,28 @@
 #include <gatery/export/vhdl/Entity.h>
 #include <gatery/export/vhdl/Package.h>
 
+#include <gatery/scl/arch/intel/IntelDevice.h>
+
 #include <string_view>
 #include <boost/range/adaptor/reversed.hpp>
 
 namespace gtry 
 {
 
-	bool registerClockPin(vhdl::AST& ast, hlim::Node_Register* regNode, std::string &path)
+	bool getNetlistSignalName(vhdl::AST& ast, hlim::NodePort output, std::string& path)
 	{
-		hlim::NodePort regOutput = { .node = regNode, .port = 0ull };
 
 		std::vector<vhdl::BaseGrouping*> regOutputReversePath;
-		if (!ast.findLocalDeclaration(regOutput, regOutputReversePath))
+		if (!ast.findLocalDeclaration(output, regOutputReversePath))
 			return false;
-		
+
 		std::stringstream regOutputIdentifier;
 		for (size_t i = regOutputReversePath.size() - 2; i < regOutputReversePath.size(); --i)
 			regOutputIdentifier << regOutputReversePath[i]->getInstanceName() << '|';
-		regOutputIdentifier << regOutputReversePath.front()->getNamespaceScope().get(regOutput).name;
+		regOutputIdentifier << regOutputReversePath.front()->getNamespaceScope().get(output).name;
 
-		auto type = regNode->getOutputConnectionType(0);
-		if (type.isBitVec())
-			regOutputIdentifier << "[0]";
-
-		regOutputIdentifier << "|clk";
+		auto type = output.node->getOutputConnectionType(0);
+		
 		path = regOutputIdentifier.str();
 		return true;
 	}
@@ -146,109 +145,165 @@ void IntelQuartus::writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Cir
 	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
 	auto &file = fileHandle->stream();
 
+	//write clock constraint for altera JTAG
+	file << "create_clock -period 100.000 [get_ports altera_reserved_tck]\n";
+
 	writeClockSDC(*vhdlExport.getAST(), file);
 
-	for (auto& pin : vhdlExport.getAST()->getRootEntity()->getIoPins()) 
-	{
-		std::string_view direction;
-		std::vector<hlim::Node_Register*> allRegs;
-		if (pin->isInputPin())
-		{
-			direction = "input";
-			allRegs = hlim::findAllOutputRegisters({ .node = pin, .port = 0ull });
-		}
-		else if (pin->isOutputPin())
-		{
-			direction = "output";
-			allRegs = hlim::findAllInputRegisters({ .node = pin, .port = 0ull });
-		}
-		else
-		{
-			continue;
-		}
-
-		hlim::Node_Register* regNode = nullptr;
-		std::string path;
-		for (auto &reg : allRegs)
-			if (registerClockPin(*vhdlExport.getAST(), reg, path)) {
-				regNode = reg;
-				break;
-			}
-
-		const std::string &vhdlPinName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().get(pin).name;
-
-		if (regNode == nullptr)
-		{
-			file << "# no clock found for " << direction << ' ' << vhdlPinName << '\n';
-			continue;
-		}
-		hlim::Clock* clock = regNode->getClocks().front()->getClockPinSource();
-
-		const std::string &vhdlClockName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().getClock(clock).name;
-
-		bool allOnSameClock = std::all_of(allRegs.begin(), allRegs.end(), [=](hlim::Node_Register* regNode) {
-			return regNode->getClocks().front()->getClockPinSource() == clock;
-		});
-		if (!allOnSameClock)
-		{
-			file << "# multiple clocks found for " << direction << ' ' << vhdlPinName << '\n';
-			continue;
-		}
-
-		float period = clock->absoluteFrequency().denominator() / float(clock->absoluteFrequency().numerator());
-		period *= 1e9f;
-		file << "set_" << direction << "_delay " << period / 3;
-		file << " -clock " << vhdlClockName;
-
-		file << " [get_ports " << vhdlPinName;
-
-		if (pin->getConnectionType().isBitVec())
-			file << "\\[*\\]";
-		file << "]";
-
-		file << " -reference_pin " << path << "\n";
+	auto* intelFpga = dynamic_cast<scl::arch::intel::IntelDevice*>(DesignScope::get()->getTargetTechnology());
+	if (intelFpga == nullptr) {
+		// no fpga specified or not targeting an fpga
+	}
+	else {
+		if (intelFpga->requiresDerivePllClocks())
+			file << "derive_pll_clocks\n";
 	}
 
-
-	for (auto& reset : vhdlExport.getAST()->getRootEntity()->getResets()) {
-
-		std::vector<hlim::Node_Register*> allRegs = hlim::findRegistersAffectedByReset(reset);
-
-		hlim::Node_Register* regNode = nullptr;
-		std::string path;
-		for (auto &reg : allRegs)
-			if (registerClockPin(*vhdlExport.getAST(), reg, path)) {
-				regNode = reg;
-				break;
-			}
-
-
-		const std::string &vhdlResetName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().getReset(reset).name;
-
-		if (regNode == nullptr)
-		{
-			file << "# no clock found for reset " << vhdlResetName << '\n';
-			continue;
-		}
-		hlim::Clock* clock = regNode->getClocks().front();
-
-		float period = clock->absoluteFrequency().denominator() / float(clock->absoluteFrequency().numerator());
-		period *= 1e9f;
-		file << "set_input_delay " << period / 2;
-		file << " -clock " << clock->getName();
-		file << " [get_ports " << vhdlResetName << "] -reference_pin " << path << "\n";
-	}
-
-	file << "derive_pll_clocks\n";
 	file << "derive_clock_uncertainty\n";
 }
 
 void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename)
 {
-	auto fileHandle = vhdlExport.getDestination().writeFile(filename);
-	//auto &file = fileHandle->stream();
+	auto sdcFileHandle = vhdlExport.getDestination().writeFile(filename);
+	auto &sdcFile = sdcFileHandle->stream();
 
-	// todo: write constraints
+	std::filesystem::path tclFilename = filename;
+	tclFilename.replace_extension(".tcl");
+	auto tclFileHandle = vhdlExport.getDestination().writeFile(tclFilename);
+	auto &tclFile = tclFileHandle->stream();
+
+	std::stringstream delaySettings;
+	sdcFile << "# CDC constraints \n";
+	for (auto& node : circuit.getNodes()) {
+		if (auto* cdcNode = dynamic_cast<hlim::Node_CDC*>(node.get()))
+		{
+			vhdlExport.getAST()->isPartOfExport(cdcNode);
+
+			// exclude cdcNodes with virtual clocks
+			if (cdcNode->getClocks()[0]->getName() == "PinSplitDummyClock" or cdcNode->getClocks()[1]->getName() == "PinSplitDummyClock")
+				continue;
+			// exclude cdcNodes that got the same input and output clock
+			if (cdcNode->getClocks()[0]->getClockPinSource() == cdcNode->getClocks()[1]->getClockPinSource())
+				continue;
+
+			// find all input registers
+			std::vector<std::string> cdcIn;
+			utils::UnstableSet<hlim::NodePort> alreadyVisited;
+			for (auto nh : cdcNode->exploreInput(0)) {
+				if (alreadyVisited.contains(nh.nodePort())) {
+					nh.backtrack();
+					continue;
+				}
+				alreadyVisited.insert(nh.nodePort());
+
+				if (nh.isNodeType<hlim::Node_Register>()) {
+					std::string path;
+					if (getNetlistSignalName (*vhdlExport.getAST(), nh.nodePort(), path))
+					{
+						auto type = nh.node()->getOutputConnectionType(0);
+						if (type.isBitVec())
+							path += "[*]";
+
+						cdcIn.push_back(path);
+						nh.backtrack();
+					}
+					else
+						continue;
+				}
+
+			}
+			// find all output registers
+			std::vector<std::string> cdcOut;
+			for (auto nh : cdcNode->exploreOutput(0)) {
+				if (alreadyVisited.contains(nh.nodePort())) {
+					nh.backtrack();
+					continue;
+				}
+				alreadyVisited.insert(nh.nodePort());
+
+				if (nh.isNodeType<hlim::Node_Register>()) {
+					std::string path;
+					if (getNetlistSignalName(*vhdlExport.getAST(), nh.nodePort(), path))
+					{
+						auto type = nh.node()->getOutputConnectionType(0);
+						if (type.isBitVec())
+							path += "[*]";
+
+						cdcOut.push_back(path);
+						nh.backtrack();
+					}
+					else
+						continue;
+				}
+
+			}
+
+			double maxSkew = cdcNode->getCdcNodeParameter().maxSkew ? cdcNode->getCdcNodeParameter().maxSkew.value() : 0.8;
+			double netDelay = cdcNode->getCdcNodeParameter().netDelay ? cdcNode->getCdcNodeParameter().netDelay.value() : 0.8;
+
+			// write constraints to .sdc file
+			for(auto itIn : cdcIn)
+				for (auto itOut : cdcOut)
+				{
+					sdcFile << "set_false_path -from [get_registers " << itIn << "] -to [get_registers " << itOut << "]\n";
+					sdcFile << "set_max_skew -get_skew_value_from_clock_period min_clock_period -skew_value_multiplier " << maxSkew << " -from [get_registers " << itIn << "] -to [get_registers " << itOut << "]\n";
+					sdcFile << "set_net_delay -max -get_value_from_clock_period dst_clock_period -value_multiplier " << netDelay << " -from [get_registers " << itIn << "] -to [get_registers " << itOut << "]\n";
+				}
+
+			// write constraints to .tcl file
+			if(cdcNode->getCdcNodeParameter().isGrayCoded)
+				for (auto itOut : cdcOut)
+				{
+					tclFile << "set_instance_assignment -name VERIFIED_GRAY_CODED_BUS_DESTINATIONS ON -to " + itOut + "\n";
+				}
+
+		}
+		if (auto* portNode = dynamic_cast<hlim::Node_Pin*>(node.get()))
+		{
+			std::string direction;
+			if (portNode->isBiDirectional())
+				direction = "inOut";
+			else if (portNode->isInputPin())
+				direction = "input";
+			else
+				direction = "output";
+
+			const std::string& vhdlClockName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().getClock(portNode->getClocks().front()).name;
+			const std::string& vhdlPinName = vhdlExport.getAST()->getRootEntity()->getNamespaceScope().get(portNode).name;
+
+			auto pinParam = portNode->getPinNodeParameter();
+			if (pinParam.portDelay)
+			{
+				if (direction != "InOut") {
+					if (pinParam.portDelay.value().denominator() > 0)
+					{
+						auto del = pinParam.portDelay.value().numerator() * 1'000'000'000.0 / pinParam.portDelay.value().denominator();
+
+						delaySettings << "set_" << direction << "_delay -clock " << vhdlClockName << " " << std::to_string(del) << " " << vhdlPinName << "\n";
+					}
+					else
+					{
+						delaySettings << "# " << direction << " pin " << vhdlClockName << " has a portDelay with denominator = 0\n";
+					}
+				}
+			}
+			else
+			{
+				delaySettings << "# " + direction << " pin " << vhdlPinName;
+				if (pinParam.delaySpecifiedElsewhere) {
+					delaySettings << " has its delay defined elsewhere!\n";
+					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << vhdlPinName << " has its delay defined elsewhere!");
+				}
+				else {
+					delaySettings << " has no delay setting!\n";
+					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << vhdlPinName << " has no delay setting!");
+				}
+			}
+		}
+	}
+	sdcFile << "\n# Port Pin delay constraints\n";
+	sdcFile << delaySettings.str();
+
 }
 
 void IntelQuartus::writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename)

@@ -34,9 +34,14 @@ class IntelDevice : public FPGADevice {
 		void setupMAX10();
 
 		void setupDevice(std::string device);
+
+		/// Whether or not the device family (Arria 10 and Cyclone 10 GX) requires the "derive_pll_clocks" tcl instruction in their timing constraints file.
+		bool requiresDerivePllClocks() const { return m_requiresDerivePllClocks; }
 	protected:
 		void setupCustomComposition(const gtry::utils::ConfigTree &customComposition);
 
+		/// Whether or not the device family (Arria 10 and Cyclone 10 GX) requires the "derive_pll_clocks" tcl instruction in their timing constraints file.
+		bool m_requiresDerivePllClocks = false;
 		std::map<std::string_view, size_t> m_lpmInstanceCounter;
 };
 

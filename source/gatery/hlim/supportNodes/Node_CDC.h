@@ -56,6 +56,20 @@ class Node_CDC : public Node<Node_CDC>
 
 		virtual OutputClockRelation getOutputClockRelation(size_t output) const override;
 		virtual bool checkValidInputClocks(std::span<SignalClockDomain> inputClocks) const override;
+
+		struct CdcNodeParameter {
+			std::optional<bool> isGrayCoded = {};
+			/// Max skew to set in SDC file as a multiple of the source or destination clock period (whichever is smaller)
+			std::optional<double> maxSkew = {};
+			/// Max net delay to set in SDC file as a multiple of the destination clock period
+			std::optional<double> netDelay = {};
+		};
+
+		inline CdcNodeParameter getCdcNodeParameter() const { return m_param; }
+		void setCdcNodeParameter(CdcNodeParameter parameter) { m_param = parameter; }
+
+	protected:
+		CdcNodeParameter m_param;
 };
 
 }

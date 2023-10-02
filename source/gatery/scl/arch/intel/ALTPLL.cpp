@@ -191,7 +191,7 @@ namespace gtry::scl::arch::intel
 		if (resetType != ClockConfig::ResetType::NONE)
 		{
 			Bit pllReset = !getOutputBit(OUT_LOCKED);
-			pllReset = scl::synchronize(pllReset, *m_inClk, out, 2, false);
+			pllReset = scl::synchronize(pllReset, *m_inClk, out, {.outStages = 2, .inStage = false});
 
 			Bit rstSignal; // Leave unconnected to let the simulator drive the clock's reset signal during simulation
 			rstSignal.exportOverride(pllReset);
