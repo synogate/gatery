@@ -122,13 +122,12 @@ namespace gtry
 	inline Reverse<T>::Reverse(Reverse&& rhs) :
 		m_obj(internal::constructFromIfSignal(*rhs))
 	{
-		m_obj = std::move(rhs.m_obj);
+		m_obj = std::move(rhs.m_obj); 
 	}
 
 	template<Signal T>
 	inline Reverse<T>& Reverse<T>::operator=(Reverse&& rhs)
 	{
-		m_obj = internal::constructFromIfSignal(*rhs);
 		m_obj = std::move(rhs.m_obj);
 		return *this;
 	}
