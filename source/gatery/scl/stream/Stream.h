@@ -132,9 +132,9 @@ namespace gtry::scl::strm
 	template<Signal T>
 	inline constexpr bool Stream<PayloadT, Meta...>::has()
 	{
-		bool ret = std::is_base_of_v<std::remove_reference_t<T>, std::remove_reference_t<PayloadT>>;
+		bool ret = std::is_base_of_v<std::remove_cvref_t<T>, std::remove_reference_t<PayloadT>>;
 		if constexpr (sizeof...(Meta) != 0)
-			ret |= (std::is_same_v<std::remove_reference_t<Meta>, std::remove_reference_t<T>> | ...);
+			ret |= (std::is_same_v<std::remove_reference_t<Meta>, std::remove_cvref_t<T>> | ...);
 		return ret;
 	}
 
@@ -168,7 +168,7 @@ namespace gtry::scl::strm
 			ret.template get<T>() <<= signal;
 
 			std::apply([&](auto& ...meta) {
-				((ret.template get<std::remove_reference_t<decltype(meta)>>() <<= meta), ...);
+				(connect(ret.template get<std::remove_cvref_t<decltype(meta)>>(), meta), ...);
 			}, _sig);
 			return ret;
 		}

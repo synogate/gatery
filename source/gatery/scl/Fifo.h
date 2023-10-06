@@ -336,13 +336,13 @@ namespace gtry::scl
 			"Technology mapping yielded invalid choice, only supporting equal latencies for latency_read_full and latency_read_almostFull.");
 		HCL_DESIGNCHECK_HINT(meta->fifoChoice.latency_read_full >= 4, 
 			"Insufficient latency_read_full chosen by technology mapping to build proper synchronizer chain.");
-		pushGet = synchronizeGrayCode(popGet, ConstUInt(0, popGet.width()), *m_popClock, *m_pushClock, meta->fifoChoice.latency_read_full-2, true);
+		pushGet = synchronizeGrayCode(popGet, ConstUInt(0, popGet.width()), *m_popClock, *m_pushClock, {.outStages = meta->fifoChoice.latency_read_full-2, .inStage = true});
 
 		HCL_DESIGNCHECK_HINT(meta->fifoChoice.latency_write_empty == meta->fifoChoice.latency_write_almostEmpty, 
 			"Technology mapping yielded invalid choice, only supporting equal latencies for latency_write_empty and latency_write_almostEmpty.");
 		HCL_DESIGNCHECK_HINT(meta->fifoChoice.latency_write_empty >= 4, 
 			"Insufficient latency_write_empty chosen by technology mapping to build proper synchronizer chain.");
-		popPut = synchronizeGrayCode(pushPut, ConstUInt(0, popGet.width()), *m_pushClock, *m_popClock, meta->fifoChoice.latency_write_empty-2, true);
+		popPut = synchronizeGrayCode(pushPut, ConstUInt(0, popGet.width()), *m_pushClock, *m_popClock, {.outStages = meta->fifoChoice.latency_write_empty-2, .inStage = true});
 	}
 
 	template<Signal TData>

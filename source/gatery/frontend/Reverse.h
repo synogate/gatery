@@ -197,7 +197,11 @@ namespace gtry
 			}, signal);
 	}
 
+	/// Copies a tuple of references to turn the references into proper lvalues. 
+	/// @details This sometimes needs to be used in combination with upstream/downstream since those return tuples of references.
 	template<class T> auto copy(const T& val) { return val; }
+	/// Copies a tuple of references to turn the references into proper lvalues. 
+	/// @details This sometimes needs to be used in combination with upstream/downstream since those return tuples of references.
 	template<class... T> auto copy(const std::tuple<T...>& tup)
 	{
 		return std::apply([](auto&&... args) {

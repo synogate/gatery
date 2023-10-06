@@ -17,59 +17,88 @@
 */
 #pragma once
 #include <gatery/frontend.h>
+#include <gatery/hlim/supportNodes/Node_CDC.h>
 
 namespace gtry::scl
 {
+	/// Converts an integer number coded in regular binary to gray code (such that neighboring integer values only change in one bit)
 	BVec grayEncode(UInt val);
+	/// Converts a grey coded integer number back to normal binary
 	UInt grayDecode(BVec val);
 
-	template<Signal T, SignalValue Treset>
-	T synchronize(T in, const Treset& reset, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
+	using CdcParameter = hlim::Node_CDC::CdcNodeParameter;
 
+	struct SynchronizeParams {
+		/// Clock domain crossing parameters such as timing constraints
+		CdcParameter cdcParams;
+		/// How many registers to build on the receiving side to prevent signal metastability
+		size_t outStages = 3;
+		/// Whether or not to build a register immediately before crossing the clock domain
+		bool inStage = true;
+	};
+
+	/// Cross a signal from one clock domain into another through a synchronizer chain that ensures signal stability
+	/// @details This also adds an explicit cdc node which prevents cdc crossing errors as well as storing timing constraint information
+	/// that can be written to sdc/xdc files for supported tools.
+	template<Signal T, SignalValue Treset>
+	T synchronize(T in, const Treset& reset, const Clock& inClock, const Clock& outClock, const SynchronizeParams &params = {});
+
+	/// Cross a signal from one clock domain into another through a synchronizer chain that ensures signal stability
+	/// @details This also adds an explicit cdc node which prevents cdc crossing errors as well as storing timing constraint information
+	/// that can be written to sdc/xdc files for supported tools.
 	template<Signal T>
-	T synchronize(T in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
+	T synchronize(T in, const Clock& inClock, const Clock& outClock, const SynchronizeParams &params = {});
 
 	Bit synchronizeEvent(Bit event, const Clock& inClock, const Clock& outClock);
 	Bit synchronizeRelease(Bit reset, const Clock& inClock, const Clock& outClock, ClockConfig::ResetActive resetActive = ClockConfig::ResetActive::HIGH);
 
-	UInt synchronizeGrayCode(UInt in, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
-	UInt synchronizeGrayCode(UInt in, UInt reset, const Clock& inClock, const Clock& outClock, size_t outStages = 3, bool inStage = true);
+	/// Cross an integer (e.g. counter value) from one clock domain into another but use grey code for the crossing.
+	/// @details The gray code ensures that it is at most off by one when sampling as the integer increases
+	/// This also adds an explicit cdc node which prevents cdc crossing errors as well as storing timing constraint information
+	/// that can be written to sdc/xdc files for supported tools.
+	UInt synchronizeGrayCode(UInt in, const Clock& inClock, const Clock& outClock, SynchronizeParams params = {});
+
+	/// Cross an integer (e.g. counter value) from one clock domain into another but use grey code for the crossing.
+	/// @details The gray code ensures that it is at most off by one when sampling as the integer increases
+	/// This also adds an explicit cdc node which prevents cdc crossing errors as well as storing timing constraint information
+	/// that can be written to sdc/xdc files for supported tools.
+	UInt synchronizeGrayCode(UInt in, UInt reset, const Clock& inClock, const Clock& outClock, SynchronizeParams params = {});
 }
 
 
 namespace gtry::scl
 {
 	template<Signal T>
-	T synchronize(T val, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
+	T synchronize(T val, const Clock& inClock, const Clock& outClock, const SynchronizeParams &params)
 	{
-		HCL_DESIGNCHECK_HINT(outStages > 1, "Building a synchronizer chain with zero synchronization registers is probably a mistake!");
+		HCL_DESIGNCHECK_HINT(params.outStages > 1, "Building a synchronizer chain with zero synchronization registers is probably a mistake!");
 
-		if(inStage)
+		if (params.inStage)
 			val = reg(val, { .clock = inClock });
 
-		val = allowClockDomainCrossing(val, inClock, outClock);
+		val = allowClockDomainCrossing(val, inClock, outClock, params.cdcParams);
 
 		Clock syncRegClock = outClock.deriveClock({ .synchronizationRegister = true });
 
-		for(size_t i = 0; i < outStages; ++i)
+		for(size_t i = 0; i < params.outStages; ++i)
 			val = reg(val, { .clock = syncRegClock });
 
 		return val;
 	}
 
 	template<Signal T, SignalValue Treset>
-	T synchronize(T val, const Treset& reset, const Clock& inClock, const Clock& outClock, size_t outStages, bool inStage)
+	T synchronize(T val, const Treset& reset, const Clock& inClock, const Clock& outClock, const SynchronizeParams &params)
 	{
-		HCL_DESIGNCHECK_HINT(outStages > 1, "Building a synchronizer chain with zero synchronization registers is probably a mistake!");
+		HCL_DESIGNCHECK_HINT(params.outStages > 1, "Building a synchronizer chain with zero synchronization registers is probably a mistake!");
 
-		if(inStage)
+		if (params.inStage)
 			val = reg(val, reset, { .clock = inClock });
 
-		val = allowClockDomainCrossing(val, inClock, outClock);
+		val = allowClockDomainCrossing(val, inClock, outClock, params.cdcParams);
 
 		Clock syncRegClock = outClock.deriveClock({ .synchronizationRegister = true });
 
-		for(size_t i = 0; i < outStages; ++i)
+		for(size_t i = 0; i < params.outStages; ++i)
 			val = reg(val, reset, { .clock = syncRegClock });
 
 		return val;

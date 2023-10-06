@@ -22,6 +22,7 @@
 #include "../hlim/Attributes.h"
 
 #include <gatery/utils/Traits.h>
+#include "../hlim/supportNodes/Node_CDC.h"
 
 namespace gtry {
 
@@ -59,23 +60,23 @@ class Clock;
 namespace internal {
 
 /// Inserts a node that allows clock domain crossing and verifies that the crossing happens from/to the specified clocks.
-SignalReadPort allowClockDomainCrossing(const ElementarySignal& in, const Clock &srcClock, const Clock &dstClock);
+SignalReadPort allowClockDomainCrossing(const ElementarySignal& in, const Clock &srcClock, const Clock &dstClock, const hlim::Node_CDC::CdcNodeParameter params = {});
 
 }
 
 /// Inserts a node that allows clock domain crossing and verifies that the crossing happens from/to the specified clocks.
 template<BaseSignal SignalType>
-inline SignalType allowClockDomainCrossing(const SignalType& in, const Clock &srcClock, const Clock &dstClock) {
-	return internal::allowClockDomainCrossing(in, srcClock, dstClock);
+inline SignalType allowClockDomainCrossing(const SignalType& in, const Clock &srcClock, const Clock &dstClock, const hlim::Node_CDC::CdcNodeParameter params = {}) {
+	return internal::allowClockDomainCrossing(in, srcClock, dstClock, params);
 }
 	
 
 /// Inserts a node that allows clock domain crossing and verifies that the crossing happens from/to the specified clocks.
 template<Signal T>
-T allowClockDomainCrossing(const T& val, const Clock &srcClock, const Clock &dstClock)
+T allowClockDomainCrossing(const T& val, const Clock &srcClock, const Clock &dstClock, const hlim::Node_CDC::CdcNodeParameter params = {})
 {
 	return internal::transformSignal(val, [&](const BaseSignal auto& sig) {
-		return allowClockDomainCrossing(sig, srcClock, dstClock);
+		return allowClockDomainCrossing(sig, srcClock, dstClock, params);
 	});
 }
 

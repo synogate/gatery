@@ -158,6 +158,7 @@ std::unique_ptr<BaseNode> Node_Pin::cloneUnconnected() const {
 	other->m_differential = m_differential;
 	other->m_differentialPosName = m_differentialPosName;
 	other->m_differentialNegName = m_differentialNegName;
+	other->m_param = m_param;
 
 	return copy;
 }
