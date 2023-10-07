@@ -265,11 +265,13 @@ namespace gtry
 			v.enterPackStruct();
 			boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto member) {
 				auto& suba = boost::hana::second(member)(a);
-
-				v.enter(boost::hana::first(member).c_str());
-				VisitCompound<std::remove_cvref_t<decltype(suba)>>{}(suba, v);
-				v.leave();
-				});
+				if constexpr (Signal<decltype(suba)>)
+				{
+					v.enter(boost::hana::first(member).c_str());
+					VisitCompound<std::remove_cvref_t<decltype(suba)>>{}(suba, v);
+					v.leave();
+				}
+			});
 			v.leavePack();
 		}
 
