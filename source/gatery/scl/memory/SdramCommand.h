@@ -28,6 +28,7 @@ namespace gtry::scl::sdram
 		Selection column;
 		Selection row;
 		Selection bank;
+		Selection bankGroup;
 	};
 
 	struct CommandBus
