@@ -134,6 +134,11 @@ namespace gtry::scl::strm
 	//requires (T::template has<Ready>() and T::template has<Valid>())
 	T stall(T&& source, Bit stallCondition);
 
+	inline auto stall(Bit stallCondition)
+	{
+		return [=](auto&& source) { return stall(std::forward<decltype(source)>(source), stallCondition); };
+	}
+
 	/**
 	 * @brief stalls a packet stream using a stall condition. This function ensures a stream is backpressured without losing any data. It will not interrupt an ongoing packet
 	 * @param source source stream
@@ -315,9 +320,14 @@ namespace gtry::scl::strm
 
 	template<StreamSignal StreamT>
 	StreamT delay(StreamT&& in, size_t minCycles) {
-		StreamT ret = in;
-		for (size_t i = 0;i< minCycles;i++) {
-			ret = regDownstream(ret);
+		StreamT ret = move(in);
+
+		for (int i = 0; i < ((int) minCycles) - 1; i++) {
+			ret = regDownstreamBlocking(move(ret));
+		}
+
+		if(minCycles > 0 ) {
+			ret = regDownstream(move(ret));
 		}
 		return ret;
 	}
