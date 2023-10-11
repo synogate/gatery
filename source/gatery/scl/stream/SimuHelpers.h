@@ -28,6 +28,7 @@ namespace gtry::scl::strm
 		sim::DefaultBitVectorState payload;
 
 		SimPacket() = default;
+		SimPacket(sim::DefaultBitVectorState payload) : payload(std::move(payload)) {}
 		SimPacket(std::span<const uint8_t> data) { *this = data; }
 		SimPacket(uint64_t payload, BitWidth payloadW) {
 			HCL_DESIGNCHECK_HINT(BitWidth::last(payload) <= payloadW, "The selected payload width would result in data truncation. Design not allowed" );
@@ -116,8 +117,9 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	SimProcess sendPacket(const StreamT& stream, SimPacket packet, Clock clk)
 	{
-		size_t numberOfBeats = packet.payload.size() / stream->size();
-		if (((packet.payload.size()) % stream->size()) != 0)
+		size_t payloadBeatBits = width(*stream).bits();
+		size_t numberOfBeats = packet.payload.size() / payloadBeatBits;
+		if ((packet.payload.size() % payloadBeatBits) != 0)
 			numberOfBeats++;
 
 		constexpr bool hasError = stream.template has<scl::Error>();
@@ -141,9 +143,9 @@ namespace gtry::scl::strm
 		HCL_DESIGNCHECK_HINT(invalidBeatMask == 0 || hasValid, "Can not produce bubbles on a stream without valid signal");
 
 		for (size_t j = 0; j < numberOfBeats; j++) {
-			size_t payloadOffset = j * stream->size();
-			auto beatData = packet.payload.extract(payloadOffset, std::min(stream->size(), packet.payload.size() - payloadOffset));
-			beatData.resize(stream->size());
+			size_t payloadOffset = j * payloadBeatBits;
+			auto beatData = packet.payload.extract(payloadOffset, std::min(payloadBeatBits, packet.payload.size() - payloadOffset));
+			beatData.resize(payloadBeatBits);
 
 			simuStreamInvalidate(stream);
 
@@ -173,16 +175,16 @@ namespace gtry::scl::strm
 				const UInt& emptyBits = stream.template get<scl::EmptyBits>().emptyBits;
 				simu(emptyBits).invalidate();
 				if (isLastBeat)
-					simu(emptyBits) = stream->size() - (packet.payload.size() % stream->size());
+					simu(emptyBits) = payloadBeatBits - (packet.payload.size() % payloadBeatBits);
 			}
 			else if constexpr (stream.template has<scl::Empty>())
 			{
 				simu(empty(stream)).invalidate();
-				if (isLastBeat){
-					HCL_DESIGNCHECK_HINT((stream->size() % 8) == 0, "Stream payload width must be a whole number of bytes when using the empty signal");
+				if (isLastBeat) {
+					HCL_DESIGNCHECK_HINT((payloadBeatBits % 8) == 0, "Stream payload width must be a whole number of bytes when using the empty signal");
 					HCL_DESIGNCHECK_HINT((packet.payload.size() % 8) == 0, "Packet payload width must be a whole number of bytes when using the empty signal");
 					size_t packetSizeBytes = packet.payload.size() / 8;
-					size_t streamSizeBytes = stream->size() / 8;
+					size_t streamSizeBytes = payloadBeatBits / 8;
 					simu(empty(stream)) = streamSizeBytes - (packetSizeBytes % streamSizeBytes);
 				}
 			}
