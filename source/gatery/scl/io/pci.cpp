@@ -21,7 +21,7 @@
 #include "../Fifo.h"
 #include "../stream/StreamArbiter.h"
 
-gtry::Bit gtry::scl::pci::isCompletionTlp(const UInt& tlpHeader)
+gtry::Bit gtry::scl::pci::isCompletionTlp(const BVec& tlpHeader)
 {
 	HCL_DESIGNCHECK_HINT(tlpHeader.width() >= 8_b, "first 8b of tlp header required for decoding");
 	Bit completion_tlp = tlpHeader(0, 5_b) == "b01010";
@@ -29,7 +29,7 @@ gtry::Bit gtry::scl::pci::isCompletionTlp(const UInt& tlpHeader)
 	return completion_tlp;
 }
 
-gtry::Bit gtry::scl::pci::isMemTlp(const UInt& tlpHeader)
+gtry::Bit gtry::scl::pci::isMemTlp(const BVec& tlpHeader)
 {
 	HCL_DESIGNCHECK_HINT(tlpHeader.width() >= 8_b, "first 8b of tlp header required for decoding");
 	Bit mem_tlp = tlpHeader(0, 5_b) == 0;
@@ -37,7 +37,7 @@ gtry::Bit gtry::scl::pci::isMemTlp(const UInt& tlpHeader)
 	return mem_tlp;
 }
 
-gtry::Bit gtry::scl::pci::isDataTlp(const UInt& tlpHeader)
+gtry::Bit gtry::scl::pci::isDataTlp(const BVec& tlpHeader)
 {
 	HCL_DESIGNCHECK_HINT(tlpHeader.width() >= 32_b, "first word of tlp header required for decoding");
 	Bit data_tlp = tlpHeader[30];
@@ -67,12 +67,12 @@ void gtry::scl::pci::AvmmBridge::generateFifoBridge(RvStream<Tlp>& rx, AvalonMM&
 	sim_assert(!valid(rx) | rx->header(TlpOffset::type) == 0) << "not a memory tlp";
 
 	// decode command
-	avmm.address = rx->header(64, 32_b);
+	avmm.address = (UInt) rx->header(64, 32_b);
 	avmm.address(0, 2_b) = 0;
 
 	avmm.write = transfer(rx) & isDataTlp(rx->header);
 	avmm.read = transfer(rx) & !*avmm.write;
-	avmm.writeData = rx->data;
+	avmm.writeData = (UInt) rx->data;
 
 	// store cpl data for command
 	size_t pipelineDepth = std::max<size_t>(avmm.maximumPendingReadTransactions, 1);
@@ -88,8 +88,8 @@ void gtry::scl::pci::AvmmBridge::generateFifoBridge(RvStream<Tlp>& rx, AvalonMM&
 	avmm.createReadDataValid();
 	valid(m_tx) = *avmm.readDataValid;
 	m_tx->header = "96x00000000000000044a000001";
-	m_tx->header(48, 16_b) = pack(m_cplId);
-	m_tx->data = *avmm.readData;
+	m_tx->header(48, 16_b) = (BVec) pack(m_cplId);
+	m_tx->data = (BVec) *avmm.readData;
 
 	// join response and cpl data
 	MemTlpCplData res = resQueue.peek();
@@ -120,7 +120,7 @@ gtry::scl::pci::Tlp gtry::scl::pci::Tlp::discardHighAddressBits() const
 	return tlpHdr;
 }
 
-void gtry::scl::pci::MemTlpCplData::decode(const UInt& tlpHdr)
+void gtry::scl::pci::MemTlpCplData::decode(const BVec& tlpHdr)
 {
 	attr.trafficClass = tlpHdr(20, 3_b);
 	attr.idBasedOrdering = tlpHdr[18];
@@ -134,14 +134,14 @@ void gtry::scl::pci::MemTlpCplData::decode(const UInt& tlpHdr)
 	requester.bus = tlpHdr(56, 8_b);
 }
 
-void gtry::scl::pci::MemTlpCplData::encode(UInt& tlpHdr) const
+void gtry::scl::pci::MemTlpCplData::encode(BVec& tlpHdr) const
 {
 	tlpHdr(20, 3_b) = attr.trafficClass;
 	tlpHdr[18] = attr.idBasedOrdering;
 	tlpHdr[13] = attr.relaxedOrdering;
 	tlpHdr[12] = attr.noSnoop;
 
-	tlpHdr(64, 32_b) = cat(requester.bus, requester.dev, requester.func, tag, '0', lowerAddress);
+	tlpHdr(64, 32_b) = (BVec) cat(requester.bus, requester.dev, requester.func, tag, '0', lowerAddress);
 }
 
 void gtry::scl::pci::IntelPTileCompleter::generate()
@@ -161,7 +161,7 @@ void gtry::scl::pci::IntelPTileCompleter::generate()
 		in[i]->header = 128_b;
 		in[i]->data = 32_b;
 
-		UInt header = swapEndian(in[i]->header, 8_b, 32_b);
+		BVec header = swapEndian(in[i]->header, 8_b, 32_b);
 		IF(header[29]) // 4 DW tlp header
 			header(64, 32_b) = header(96, 32_b);
 

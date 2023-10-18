@@ -26,16 +26,16 @@ namespace gtry::scl
 	{
 		struct PciId
 		{
-			UInt bus = 8_b;
-			UInt dev = 5_b;
-			UInt func = 3_b;
+			BVec bus = 8_b;
+			BVec dev = 5_b;
+			BVec func = 3_b;
 
-			UInt ariFunc() const { return cat(dev, func); }
+			BVec ariFunc() const { return (BVec) cat(dev, func); }
 		};
 
 		struct TlpHeaderAttr
 		{
-			UInt trafficClass = 3_b;
+			BVec trafficClass = 3_b;
 			Bit relaxedOrdering;
 			Bit idBasedOrdering;
 			Bit noSnoop;
@@ -44,12 +44,12 @@ namespace gtry::scl
 		struct MemTlpCplData
 		{
 			PciId requester;
-			UInt tag = 8_b;
+			BVec tag = 8_b;
 			TlpHeaderAttr attr;
 			UInt lowerAddress = 7_b;
 
-			void decode(const UInt& tlpHdr);
-			void encode(UInt& tlpHdr) const;
+			void decode(const BVec& tlpHdr);
+			void encode(BVec& tlpHdr) const;
 		};
 
 		namespace TlpOffset
@@ -65,17 +65,17 @@ namespace gtry::scl
 
 		struct Tlp
 		{
-			UInt prefix; // optional prefix
-			UInt header; // 96b or 128b header
-			UInt data; // payload
+			BVec prefix; // optional prefix
+			BVec header; // 96b or 128b header
+			BVec data; // payload
 
 			Tlp discardHighAddressBits() const;
 		};
 
 
-		Bit isCompletionTlp(const UInt& tlpHeader);
-		Bit isMemTlp(const UInt& tlpHeader);
-		Bit isDataTlp(const UInt& tlpHeader);
+		Bit isCompletionTlp(const BVec& tlpHeader);
+		Bit isMemTlp(const BVec& tlpHeader);
+		Bit isDataTlp(const BVec& tlpHeader);
 
 		class AvmmBridge
 		{
