@@ -383,7 +383,6 @@ void DefaultCodeFormatting::formatDataTypeConversion(std::ostream &stream, VHDLD
 				case VHDLDataType::STD_LOGIC:
 				case VHDLDataType::STD_ULOGIC:
 					stream << srcIdentifier;
-					stream << srcIdentifier;
 				break;
 				default:
 					HCL_ASSERT_HINT(false, "Invalid conversion");
