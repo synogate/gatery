@@ -205,7 +205,7 @@ namespace gtry::scl::pci {
 		StreamBroadcaster<TlpIntelPacketStream<Meta...>> bCaster(move(in));
 
 		//remove the possible empty field signaling the emptiness of the data in tlp's
-		RvPacketStream<Header, Meta...> hdrStream(strm::extractMeta<Header>(move(bCaster.bcastTo().remove<Empty>().remove<Prefix>())));
+		RvPacketStream<Header, Meta...> hdrStream(strm::extractMeta<Header>(move(bCaster.bcastTo().template remove<Empty>().template remove<Prefix>())));
 
 		Bit hasData = hdrStream->hasData();
 		Bit is3dw = hdrStream->is3dw();
@@ -230,7 +230,7 @@ namespace gtry::scl::pci {
 
 		auto ret(scl::strm::insert(move(extendedHdrStream), move(dataPacketStream), move(offset)));
 
-		return ret.reduceTo<TlpPacketStream<Meta...>>();
+		return ret.template reduceTo<TlpPacketStream<Meta...>>();
 	}
 
 
@@ -240,10 +240,10 @@ namespace gtry::scl::pci {
 		HCL_DESIGNCHECK_HINT(false, "this design is unfinished, do not use it");
 		TlpIntelPacketStream<Meta...> ret;
 
-		ret.get<Header>() = in.lower(pack(Header{}).width());
+		ret.template get<Header>() = in.lower(pack(Header{}).width());
 		*ret = *in;
 
-		ENIF(valid & sop(in)) ret.get<Header>() = reg(ret.get<Header>());
+		ENIF(valid & sop(in)) ret.template get<Header>() = reg(ret.template get<Header>());
 
 		valid(ret) = valid(in) & !sop(in);
 		ready(in) = ready(ret);
