@@ -495,7 +495,7 @@ namespace gtry::scl::strm
 
 	template<Signal SignalT, StreamSignal StreamT> requires (StreamT::template has<SignalT>()) 
 		auto extractMeta(StreamT&& in) {
-		return in.transform([&](auto&& payload) { return in.get<SignalT>(); }).remove<SignalT>();
+		return in.transform([&](auto&& payload) { return in.template get<SignalT>(); }).template remove<SignalT>();
 	}
 
 	template<StreamSignal StreamT> 

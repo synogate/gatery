@@ -30,7 +30,7 @@ namespace gtry::scl::pci
 
 	enum class TlpOpcode {
 		memoryReadRequest32bit							= 0b000'0'0000,	//MRd32
-		memoryReadRequest64bit							= 0b001'0'0000,	//MRd64
+		memoryReadRequest64bit							= 0b001'0'0000,	//MRd64 
 		memoryReadRequestLocked32bit					= 0b000'0'0001,	//MRdLk32
 		memoryReadRequestLocked64bit					= 0b001'0'0001,	//MRdLk64
 		memoryWriteRequest32bit							= 0b010'0'0000,	//MWr
@@ -44,7 +44,7 @@ namespace gtry::scl::pci
 		//messageRequest								= 0b001'1'0000,	//Msg
 		//messageRequestWithDataPayload					= 0b011'1'0000,	//MsgD
 		completionWithoutData							= 0b000'0'1010,	//Cpl
-		completionWithData								= 0b010'0'1010,	//CplD
+		completionWithData								= 0b010'0'1010,	//CplD 
 		completionforLockedMemoryReadWithoutData		= 0b000'0'1011,	//CplLk
 		completionforLockedMemoryReadWithData			= 0b010'0'1011,	//CplDLk
 		fetchAndAddAtomicOpRequest32bit					= 0b010'0'1100,	//FetchAdd32
@@ -78,6 +78,10 @@ namespace gtry::scl::pci
 		size_t completionStatus = 0b000;
 		bool byteCountModifier = 0;
 		std::optional<size_t> byteCount;
+
+
+		//make a function that casts this struct to a SimPacket. this will be made by using a function that transforms this struct into a defaultbitvectorstate. we need a package of helpers to make a defaultbitvectorstate out of elementary things
+
 	};
 
 	struct Support {
@@ -140,9 +144,6 @@ namespace gtry::scl::pci
 		Header header;  // 3 or 4 dw
 		BVec data;		// 0 to 1023 dw
 
-		//static Tlp makeMemoryWriteRequest();
-		//static Tlp makeMemoryReadRequest();
-		//static Tlp makeCompletion(Tlp request, BVec Data);
 	};
 
 	//A TLP packet stream is a packet stream whose payload represents a TLP (transaction layer protocol) and each beat contains 1 
@@ -199,7 +200,6 @@ namespace gtry::scl::pci {
 	TlpPacketStream<Meta...> toTlpPacketStream(TlpIntelPacketStream<Meta...>&& in) 
 	{
 		HCL_DESIGNCHECK_HINT(false, "this design is untested, do not use it");
-		//UNTESTED: USE AT YOUR OWN RISK
 		BitWidth dataW = in->width();
 
 		StreamBroadcaster<TlpIntelPacketStream<Meta...>> bCaster(move(in));
@@ -252,8 +252,3 @@ namespace gtry::scl::pci {
 		return {};
 	}
 }
-
-//BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::PciId, bus, dev, func);
-//BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::TlpHeaderAttr, trafficClass, relaxedOrdering, idBasedOrdering, noSnoop);
-//BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::MemTlpCplData, requester, tag, attr, lowerAddress);
-//BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::Tlp, prefix, header, data);
