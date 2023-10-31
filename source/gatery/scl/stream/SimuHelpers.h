@@ -25,9 +25,9 @@
 namespace gtry::scl::strm
 {
 	/**
-	 * @brief The SimPacket is a datastructure used to represent packets in Gatery during simulation. 
+	 * @brief The SimPacket is a data structure used to represent packets in Gatery during simulation. 
 	 * In order to send a simulation packet through a stream the user must initialize a SimPacket of
-	 * the desired packet, using one of the constructor helpers provided.
+	 * the desired packet, using one of the ctor helpers provided.
 	*/
 	struct SimPacket {
 		sim::DefaultBitVectorState payload;
@@ -44,8 +44,8 @@ namespace gtry::scl::strm
 			this->payload.resize(payloadW.bits());
 		}
 
-		SimPacket& operator =(std::span<const uint8_t> data) { payload = sim::createDefaultBitVectorState(data.size(), data.data()); return *this; }
-		SimPacket& operator<<(const sim::DefaultBitVectorState& additionalData) { payload.append(additionalData); return *this; }
+		SimPacket& operator= (std::span<const uint8_t> data) { payload = sim::createDefaultBitVectorState(data.size(), data.data()); return *this; }
+		SimPacket& operator<< (const sim::DefaultBitVectorState& additionalData) { payload.append(additionalData); return *this; }
 
 		SimPacket& txid(size_t id) { m_txid = id; return *this; }
 		SimPacket& error(char err) { m_error = err; return *this; }
@@ -92,7 +92,7 @@ namespace gtry::scl::strm
 	SimFunction<SimPacket> receivePacket(const StreamT& stream, Clock clk, scl::SimulationSequencer& sequencer);
 
 	template<StreamSignal StreamT>
-	SimProcess readyDriver(const StreamT& stream, Clock clk, const uint64_t& unreadyMask = 0);
+	SimProcess readyDriver(const StreamT& stream, Clock clk, const uint64_t unreadyMask = 0);
 
 	template<StreamSignal StreamT>
 	SimProcess readyDriverRNG(const StreamT& stream, Clock clk, size_t readyProbabilityPercent, unsigned int seed = 1234);
@@ -197,8 +197,12 @@ namespace gtry::scl::strm
 			{
 				const UInt& emptyBits = stream.template get<scl::EmptyBits>().emptyBits;
 				simu(emptyBits).invalidate();
-				if (isLastBeat)
+				if (isLastBeat) {
 					simu(emptyBits) = stream->size() - (packet.payload.size() % stream->size());
+					if (packet.payload.size() % stream->size() == 0)
+						simu(emptyBits) = 0;
+
+				}
 			}
 			else if constexpr (stream.template has<scl::Empty>())
 			{
@@ -208,7 +212,10 @@ namespace gtry::scl::strm
 					HCL_DESIGNCHECK_HINT((packet.payload.size() % 8) == 0, "Packet payload width must be a whole number of bytes when using the empty signal");
 					size_t packetSizeBytes = packet.payload.size() / 8;
 					size_t streamSizeBytes = stream->size() / 8;
-					simu(empty(stream)) = streamSizeBytes - (packetSizeBytes % streamSizeBytes);
+					size_t leftOvers = packetSizeBytes % streamSizeBytes;
+					size_t emptyRet = streamSizeBytes - leftOvers;
+					if (leftOvers == 0) emptyRet = 0; // this adaptation allows for non-power-of-2 streams to work 
+					simu(empty(stream)) = emptyRet;
 				}
 			}
 
@@ -230,7 +237,7 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal StreamT>
-	SimProcess readyDriver(const StreamT& stream, Clock clk, const uint64_t& unreadyMask){
+	SimProcess readyDriver(const StreamT& stream, Clock clk, const uint64_t unreadyMask){
 		static_assert(stream.template has<Ready>(), "Attempting to use a ready driver on a stream which does not feature a ready field is probably a mistake.");
 
 		simuReady(stream) = '0';

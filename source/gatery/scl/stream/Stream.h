@@ -117,6 +117,9 @@ namespace gtry::scl::strm
 		template<StreamSignal T> explicit operator T ();
 		template<StreamSignal T> explicit operator T () const requires(Assignable<AssignabilityTestType>);
 
+		/**
+		 * @brief removes the MetaSignal T from the stream. Does not affect the payload
+		*/
 		template<Signal T> auto remove();
 		template<Signal T> auto remove() const requires(Assignable<AssignabilityTestType>);
 		auto removeUpstream() { return remove<Ready>(); }

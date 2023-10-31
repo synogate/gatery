@@ -179,6 +179,21 @@ namespace gtry::scl::strm
 	StreamT synchronizeStreamReqAck(StreamT& in, const Clock& inClock, const Clock& outClock);
 
 	/**
+	 * @brief This helper creates a stream whose payload is SignalT, a metaSignal of the original stream
+	 * @param input stream
+	 * @return stream with SignalT as Payload
+	*/
+	template<Signal SignalT, StreamSignal StreamT> requires (StreamT::template has<SignalT>())
+	auto extractMeta(StreamT&& in);
+
+	/**
+	 * @brief   This helper returns a stream whose payload is the raw (packed BVec) version of its original payload
+	 * @return  stream with BVec as payload
+	*/
+	template<StreamSignal StreamT> 
+	auto rawPayload(StreamT&& in);
+
+	/**
 	* @brief attaches a memory to a stream carrying addresses and returns a stream of the memory data
 	* @param addr the address stream to look up in memory
 	* @param memory - self explanatory
@@ -352,7 +367,7 @@ namespace gtry::scl::strm
 	{
 		HCL_DESIGNCHECK(source->width() <= width);
 		const size_t ratio = width / source->width();
-
+		
 		auto scope = Area{ "scl_extendWidth" }.enter();
 
 		Counter counter{ ratio };
@@ -476,6 +491,16 @@ namespace gtry::scl::strm
 		}
 		HCL_NAMED(out);
 		return out;
+	}
+
+	template<Signal SignalT, StreamSignal StreamT> requires (StreamT::template has<SignalT>()) 
+		auto extractMeta(StreamT&& in) {
+		return in.transform([&](auto&& payload) { return in.get<SignalT>(); }).remove<SignalT>();
+	}
+
+	template<StreamSignal StreamT> 
+	auto rawPayload(StreamT&& in) {
+		return in.transform([](auto&& payload) { return (BVec)pack(payload); });
 	}
 
 	template<StreamSignal T>
