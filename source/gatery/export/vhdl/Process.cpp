@@ -549,6 +549,12 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
 							stream << "1";
 						stream << '"';
 					break;
+					case hlim::Node_Rewire::OutputRange::CONST_UNDEFINED:
+						stream << '"';
+						for ([[maybe_unused]] auto j : utils::Range(range.subwidth))
+							stream << "x";
+						stream << '"';
+					break;
 					default:
 						stream << "UNHANDLED_REWIRE_OP";
 				}

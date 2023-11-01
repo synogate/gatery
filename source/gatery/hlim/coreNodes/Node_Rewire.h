@@ -33,6 +33,7 @@ class Node_Rewire : public Node<Node_Rewire>
 				INPUT,
 				CONST_ZERO,
 				CONST_ONE,
+				CONST_UNDEFINED,
 			};
 			Source source;
 			size_t inputIdx;

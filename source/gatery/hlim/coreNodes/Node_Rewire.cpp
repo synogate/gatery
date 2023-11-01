@@ -209,9 +209,17 @@ void Node_Rewire::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::D
 				}
 			} else {
 				uint64_t dstMask = utils::bitMaskRange(outputOffset, range.subwidth);
-				resDefined |= dstMask;
-				if (range.source == OutputRange::CONST_ONE)
-					resValue |= dstMask;
+				switch (range.source) {
+					case OutputRange::CONST_ONE:
+						resDefined |= dstMask;
+						resValue |= dstMask;
+					break;
+					case OutputRange::CONST_ZERO:
+						resDefined |= dstMask;
+					break;
+					case OutputRange::CONST_UNDEFINED:
+					break;
+				}
 			}
 			outputOffset += range.subwidth;
 		}
@@ -229,8 +237,19 @@ void Node_Rewire::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::D
 					state.copyRange(outputOffsets[0] + outputOffset, state, inputOffsets[range.inputIdx]+range.inputOffset, range.subwidth);
 
 			} else {
-				state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth);
-				state.setRange(sim::DefaultConfig::VALUE, outputOffsets[0] + outputOffset, range.subwidth, range.source == OutputRange::CONST_ONE);
+				switch (range.source) {
+					case OutputRange::CONST_ONE:
+						state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth);
+						state.setRange(sim::DefaultConfig::VALUE, outputOffsets[0] + outputOffset, range.subwidth);
+					break;
+					case OutputRange::CONST_ZERO:
+						state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth);
+						state.clearRange(sim::DefaultConfig::VALUE, outputOffsets[0] + outputOffset, range.subwidth);
+					break;
+					case OutputRange::CONST_UNDEFINED:
+						state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth);
+					break;
+				}				
 			}
 			outputOffset += range.subwidth;
 		}
