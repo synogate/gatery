@@ -41,7 +41,6 @@ namespace gtry {
 	class BVec : public SliceableBitVector<BVec, BVecDefault>
 	{
 	public:
-		using Range = BVec::Range;
 		using Base = SliceableBitVector<BVec, BVecDefault>;
 		using DefaultValue = BVecDefault;
 

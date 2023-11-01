@@ -22,6 +22,7 @@
 #include "Bit.h"
 #include "BitWidth.h"
 #include "Signal.h"
+#include "BitVectorSlice.h"
 
 #include <gatery/utils/Traits.h>
 
@@ -36,33 +37,6 @@
 namespace gtry {
 
 	class UInt;
-
-	struct Selection {
-		int start = 0;
-		int width = 0;
-		bool untilEndOfSource = false;
-
-		static Selection All();
-		static Selection From(int start);
-		static Selection Range(int start, int end);
-		static Selection Range(size_t start, size_t end);
-		static Selection RangeIncl(int start, int endIncl);
-
-		static Selection Slice(size_t offset, size_t size);
-
-		static Selection Symbol(int idx, BitWidth symbolWidth);
-		static Selection Symbol(size_t idx, BitWidth symbolWidth) { return Symbol(int(idx), symbolWidth); }
-
-		auto operator <=> (const Selection& rhs) const = default;
-	};
-
-	struct SymbolSelect
-	{
-		BitWidth symbolWidth;
-		Selection operator [] (int idx) const { return Selection::Symbol(idx, symbolWidth); }
-		Selection operator [] (size_t idx) const { return Selection::Symbol(int(idx), symbolWidth); }
-	};
-
 
 	class BaseBitVectorDefault {
 		public:
@@ -79,35 +53,6 @@ namespace gtry {
 	class BaseBitVector : public ElementarySignal
 	{
 	public:
-		struct Range {
-			Range() = default;
-			Range(const Range&) = default;
-			/// Creates a new Range based on an old Range and a Selection that was specified relative to that.
-			/// @details This is needed whenever a slice of a slice is created.
-			Range(const Selection& s, const Range& r);
-			/// Creates a new Range based on an old Range and a dynamic offset+size that was specified relative to that.
-			/// @details This is needed whenever a dynamic slice of a slice is created.
-			Range(const UInt &dynamicOffset, BitWidth w, const Range& r);
-
-			Range(const UInt& index, const Range& r);
-
-			auto operator <=> (const Range&) const = default;
-
-			size_t bitOffset(size_t idx) const { HCL_ASSERT(idx < width); HCL_ASSERT(offsetDynamic.node == nullptr); return offset + idx; }
-
-			/// In case of a sliced bit vector, this range represents the width of the slice.
-			size_t width = 0;
-			/// In case of a sliced bit vector, this range represents the static offset of the slice.
-			size_t offset = 0;
-			/// Whether or not this is actually a slice of a larger bitvector with which it aliases.
-			bool subset = false;
-
-			/// In case of dynamic slices, this dynamic offset is to be added to the static offset in m_range to compute the actual offset.
-			hlim::RefCtdNodePort offsetDynamic;
-			/// If offsetDynamic.node is not nullptr, defines the last value for offsetDynamic for which the result will not be undefined (out of bounds).
-			size_t maxDynamicIndex = 0ull;
-		};
-
 		using isBitVectorSignal = void;
 
 		using iterator = std::vector<Bit>::iterator;
@@ -122,7 +67,7 @@ namespace gtry {
 		BaseBitVector(const BaseBitVectorDefault& defaultValue);
 
 		BaseBitVector(const SignalReadPort& port) { assign(port); }
-		BaseBitVector(hlim::Node_Signal* node, Range range, Expansion expansionPolicy, size_t initialScopeId); // alias
+		BaseBitVector(hlim::Node_Signal* node, std::shared_ptr<BitVectorSlice> range, Expansion expansionPolicy, size_t initialScopeId); // alias
 		BaseBitVector(BitWidth width, Expansion expansionPolicy = Expansion::none);
 
 		template<BitVectorDerived T>
@@ -171,7 +116,7 @@ namespace gtry {
 		hlim::Node_Signal* node() { return m_node; }
 
 		// these methods are undefined for invalid signals (uninitialized)
-		BitWidth width() const override final { return BitWidth{ m_range.width }; }
+		BitWidth width() const override final { return m_width; }
 		hlim::ConnectionType connType() const override final;
 		SignalReadPort readPort() const override final;
 		SignalReadPort outPort() const override final;
@@ -198,7 +143,7 @@ namespace gtry {
 		SignalReadPort rawDriver() const;
 
 		inline hlim::Node_Signal* node() const { return m_node; }
-		inline const Range &range() const { return m_range; }
+		inline const std::shared_ptr<BitVectorSlice> &range() const { return m_range; }
 		inline const Expansion &expansionPolicy() const { return m_expansionPolicy; }
 
 		/// Needed to derive width from forward declared uint in SliceableBitVector template
@@ -207,7 +152,8 @@ namespace gtry {
 		/// Signal node (potentially aliased) whose input represents this signal.
 		hlim::NodePtr<hlim::Node_Signal> m_node;
 		/// In case of a sliced bit vector, this range represents the offset and the width of the slice.
-		Range m_range;
+		std::shared_ptr<BitVectorSlice> m_range;
+		BitWidth m_width;
 
 		Expansion m_expansionPolicy = Expansion::none;
 
@@ -231,11 +177,54 @@ namespace gtry {
 	inline BaseBitVector::const_iterator begin(const BaseBitVector& bvec) { return bvec.begin(); }
 	inline BaseBitVector::const_iterator end(const BaseBitVector& bvec) { return bvec.end(); }
 
+	template<class T>
+	class SignalParts
+	{
+	public:
+		class iterator
+		{
+		public:
+			iterator(T& signal, size_t parts, size_t idx) : m_signal(signal), m_parts(parts), m_idx(idx) { }
+
+			T& operator * () const { return m_signal.part(m_parts, m_idx); }
+			T* operator -> () const { return &m_signal.part(m_parts, m_idx); }
+
+			iterator& operator ++ () { ++m_idx; return *this; }
+			iterator operator ++ (int) { iterator tmp(*this); ++m_idx; return tmp; }
+
+			auto operator <=> (const iterator& rhs) const { return m_idx <=> rhs.m_idx; }
+			bool operator == (const iterator& rhs) const { return m_idx == rhs.m_idx; }
+			bool operator != (const iterator& rhs) const { return m_idx != rhs.m_idx; }
+
+		private:
+			T& m_signal;
+			const size_t m_parts;
+			size_t m_idx;
+		};
+	public:
+		SignalParts(T& signal, size_t parts) : m_signal(signal), m_parts(parts) { }
+
+		T& operator[](size_t idx) const			{ return at(idx); }
+		T& operator[](const UInt& idx) const	{ return at(idx); }
+		T& at(size_t idx) const					{ return m_signal.part(m_parts, idx); }
+		T& at(const UInt& idx) const			{ return m_signal.part(m_parts, idx); }
+
+		iterator begin() const { return iterator(m_signal, m_parts, 0); }
+		iterator end() const { return iterator(m_signal, m_parts, m_parts); }
+		size_t size() const { return m_parts; }
+
+	private:
+		T& m_signal;
+		const size_t m_parts;
+	};
+
+	template<class T> SignalParts<T>::iterator begin(const SignalParts<T>& parts) { return parts.begin(); }
+	template<class T> SignalParts<T>::iterator end(const SignalParts<T>& parts) { return parts.end(); }
+
 	template<typename FinalType, typename DefaultValueType>
 	class SliceableBitVector : public BaseBitVector
 	{
 	public:
-		using Range = BaseBitVector::Range;
 		using OwnType = SliceableBitVector<FinalType, DefaultValueType>;
 
 		using BaseBitVector::BaseBitVector;
@@ -252,8 +241,8 @@ namespace gtry {
 		FinalType& operator() (size_t offset, BitReduce reduction) { return (*this)(Selection::Slice(int(offset), int(BaseBitVector::size() - reduction.value))); }
 		const FinalType& operator() (size_t offset, BitReduce reduction) const { return (*this)(Selection::Slice(int(offset), int(BaseBitVector::size() - reduction.value))); }
 
-		FinalType& word(const UInt& index)				{ return aliasRange(Range(index, range())); }
-		const FinalType& word(const UInt& index) const	{ return aliasRange(Range(index, range())); }
+		FinalType& word(const UInt& index)				{ return aliasRange(BitVectorSlice(index, range())); }
+		const FinalType& word(const UInt& index) const	{ return aliasRange(BitVectorSlice(index, range())); }
 		FinalType& word(const size_t& index, BitWidth width) { return (*this)(index * width.bits(), width); }
 		const FinalType& word(const size_t& index, BitWidth width) const { return (*this)(index * width.bits(), width); }
 
@@ -266,21 +255,111 @@ namespace gtry {
 		const FinalType& lower(BitWidth bits) const		{ return (*this)(0, bits); }
 		const FinalType& lower(BitReduce bits) const	{ return (*this)(0, bits); }
 
-		/// Slices a sub-vector out of the bit vector with a fixed width but a dynamic offset.
-		FinalType& operator() (const UInt &offset, BitWidth size) { return aliasRange(Range(offset, size, range())); }
-		/// Slices a sub-vector out of the bit vector with a fixed width but a dynamic offset.
-		const FinalType& operator() (const UInt &offset, BitWidth size) const { return aliasRange(Range(offset, size, range())); }
+		SignalParts<FinalType> parts(size_t parts);
+		SignalParts<const FinalType> parts(size_t parts) const;
 
-		FinalType& operator()(const Selection& selection) { return aliasRange(Range(selection, range())); }
-		const FinalType& operator() (const Selection& selection) const { return aliasRange(Range(selection, range())); }
+		FinalType& part(size_t parts, const UInt& index);
+		const FinalType& part(size_t parts, const UInt& index) const;
+		FinalType& part(size_t parts, size_t index);
+		const FinalType& part(size_t parts, size_t index) const;
+
+		/// Slices a sub-vector out of the bit vector with a fixed width but a dynamic offset.
+		template<std::same_as<UInt> To>
+		FinalType& operator() (const To& offset, BitWidth size);
+		/// Slices a sub-vector out of the bit vector with a fixed width but a dynamic offset.
+		template<std::same_as<UInt> To>
+		const FinalType& operator() (const To& offset, BitWidth size) const;
+
+		FinalType& operator()(const Selection& selection);
+		const FinalType& operator() (const Selection& selection) const;
 	protected:
-		inline FinalType& aliasRange(const Range& range) const {
-			auto [it, exists] = m_rangeAlias.try_emplace(range, node(), range, expansionPolicy(), m_initialScopeId);
+		template<typename T>
+		FinalType& aliasRange(std::shared_ptr<T> range) const {
+			auto [it, exists] = m_rangeAlias.try_emplace(*range, node(), range, expansionPolicy(), m_initialScopeId);
 			return it->second;
 		}
-		mutable std::map<Range, FinalType> m_rangeAlias;
+
+		mutable std::map<std::variant<BitVectorSliceStatic, BitVectorSliceDynamic>, FinalType> m_rangeAlias;
 	};
 
 	template<BitVectorSignal T>
 	T resizeTo(const T& vec, BitWidth width) { if(width > vec.width()) return ext(vec, width); else return vec(0, width); }
+
+	template<typename FinalType, typename DefaultValueType>
+	inline SignalParts<FinalType> SliceableBitVector<FinalType, DefaultValueType>::parts(size_t parts)
+	{
+		return SignalParts<FinalType>((FinalType&)*this, parts);
+	}
+
+	template<typename FinalType, typename DefaultValueType>
+	inline SignalParts<const FinalType> SliceableBitVector<FinalType, DefaultValueType>::parts(size_t parts) const
+	{
+		return SignalParts<const FinalType>((const FinalType&)*this, parts);
+	}
+
+	template<typename FinalType, typename DefaultValueType>
+	inline FinalType& SliceableBitVector<FinalType, DefaultValueType>::part(size_t parts, const UInt& index)
+	{
+		BitWidth partW = width() / parts;
+		return aliasRange(
+			std::make_shared<BitVectorSliceDynamic>(index, parts - 1, partW.bits(), partW, range())
+		);
+	}
+
+	template<typename FinalType, typename DefaultValueType>
+	inline const FinalType& SliceableBitVector<FinalType, DefaultValueType>::part(size_t parts, const UInt& index) const
+	{
+		BitWidth partW = width() / parts;
+		return aliasRange(
+			std::make_shared<BitVectorSliceDynamic>(index, parts - 1, partW.bits(), partW, range())
+		);
+	}
+
+	template<typename FinalType, typename DefaultValueType>
+	inline FinalType& SliceableBitVector<FinalType, DefaultValueType>::part(size_t parts, size_t index)
+	{
+		HCL_DESIGNCHECK(index < parts);
+		return (*this)(index * (width() / parts).bits(), width() / parts);
+	}
+
+	template<typename FinalType, typename DefaultValueType>
+	inline const FinalType& SliceableBitVector<FinalType, DefaultValueType>::part(size_t parts, size_t index) const
+	{
+		HCL_DESIGNCHECK(index < parts);
+		return (*this)(index * (width() / parts).bits(), width() / parts);
+	}
+
+	template<typename FinalType, typename DefaultValueType>
+	template<std::same_as<UInt> To>
+	inline FinalType& SliceableBitVector<FinalType, DefaultValueType>::operator()(const To& offset, BitWidth size)
+	{
+		return aliasRange(
+			std::make_shared<BitVectorSliceDynamic>(offset, ((BaseBitVector&)offset).width().last(), 1, size, range())
+		);
+	}
+
+	template<typename FinalType, typename DefaultValueType>
+	template<std::same_as<UInt> To>
+	inline const FinalType& SliceableBitVector<FinalType, DefaultValueType>::operator()(const To& offset, BitWidth size) const
+	{
+		return aliasRange(
+			std::make_shared<BitVectorSliceDynamic>(offset, ((BaseBitVector&)offset).width().last(), 1, size, range())
+		);
+	}
+
+	template<typename FinalType, typename DefaultValueType>
+	inline FinalType& SliceableBitVector<FinalType, DefaultValueType>::operator()(const Selection& selection)
+	{
+		return aliasRange(
+			std::make_shared<BitVectorSliceStatic>(selection, width(), range())
+		);
+	}
+
+	template<typename FinalType, typename DefaultValueType>
+	inline const FinalType& SliceableBitVector<FinalType, DefaultValueType>::operator()(const Selection& selection) const
+	{
+		return aliasRange(
+			std::make_shared<BitVectorSliceStatic>(selection, width(), range())
+		);
+	}
 }

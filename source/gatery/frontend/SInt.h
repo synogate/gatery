@@ -40,7 +40,6 @@ namespace gtry {
 	class SInt : public SliceableBitVector<SInt, SIntDefault>
 	{
 	public:
-		using Range = SInt::Range;
 		using Base = SliceableBitVector<SInt, SIntDefault>;
 
 		using Base::Base;

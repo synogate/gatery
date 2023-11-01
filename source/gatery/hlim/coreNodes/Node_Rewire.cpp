@@ -104,8 +104,15 @@ void Node_Rewire::setExtract(size_t offset, size_t count)
 {
 	HCL_DESIGNCHECK(getNumInputPorts() == 1);
 
+	size_t inWidth = getDriverConnType(0).width;
+
 	RewireOperation op;
-	op.addInput(0, offset, count);
+	if(offset < inWidth)
+		op.addInput(0, offset, std::min(offset + count, inWidth) - offset);
+
+	if(offset + count > inWidth)
+		op.addConstant(OutputRange::CONST_UNDEFINED, std::min(offset + count - inWidth, count));
+
 	setOp(std::move(op));
 }
 
