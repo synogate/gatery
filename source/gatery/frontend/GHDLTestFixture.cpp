@@ -84,7 +84,8 @@ GHDLTestFixture::GHDLTestFixture()
 
 	if (!std::filesystem::create_directories(m_cwd))
 		for (auto&& f : std::filesystem::directory_iterator{ m_cwd })
-			std::filesystem::remove(f);
+			if(f.is_regular_file())
+				std::filesystem::remove(f);
 
 	m_ghdlArgs = GHDLGlobalFixture::GHDLArgs();
 	m_ghdlArgs.push_back("--std=08");

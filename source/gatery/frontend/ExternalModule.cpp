@@ -26,7 +26,7 @@
 
 using namespace gtry;
 
-ExternalModule::ExternalModule(std::string_view name, std::string_view library) :
+ExternalModule::ExternalModule(std::string_view name, std::string_view library, std::string_view package) :
 	m_node(*DesignScope::get()->getCircuit().createNode<Node_External_Exposed>())
 {
 	HCL_DESIGNCHECK_HINT(!name.empty(), "module name cannot be empty");
@@ -38,6 +38,8 @@ ExternalModule::ExternalModule(std::string_view name, std::string_view library) 
 	m_node.name(name);
 	if (!library.empty())
 		m_node.library(library);
+	if(!package.empty())
+		m_node.package(package);
 }
 
 GenericParameter& ExternalModule::generic(std::string_view name)
