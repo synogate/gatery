@@ -82,7 +82,7 @@ void SigHandle::operator=(std::pair<const void*, size_t> array)
 {
 	auto width = getWidth();
 	HCL_DESIGNCHECK_HINT(width == array.second*8, "The array that is to be assigned to the simulation signal has the wrong size!");
-	auto state = sim::createDefaultBitVectorState(array.second, array.first);
+	auto state = sim::createDefaultBitVectorState(array.second*8, array.first);
 
 	if (m_overrideRegister)
 		SimulationContext::current()->overrideRegister(*this, state);

@@ -1691,7 +1691,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, BoostUnitTestSimulationFixture)
 
 	scl::riscv::SingleCycleI rv(8_b, 32_b);
 	Memory<UInt>& imem = rv.fetch();
-	imem.fillPowerOnState(sim::createDefaultBitVectorState(sizeof(gcd_bin), gcd_bin));
+	imem.fillPowerOnState(sim::createDefaultBitVectorState(sizeof(gcd_bin) * 8, gcd_bin));
 	rv.fetchOperands();
 
 	scl::AvalonMM avmm;
@@ -1709,7 +1709,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, BoostUnitTestSimulationFixture)
 	std::vector<unsigned char> dmemData(4096, 0);
 	dmemData[0] = 15; // (rng() & 0x3F) + 1;
 	dmemData[4] = 5; // (rng() & 0x3F) + 1;
-	dmem.fillPowerOnState(sim::createDefaultBitVectorState(dmemData.size(), dmemData.data()));
+	dmem.fillPowerOnState(sim::createDefaultBitVectorState(dmemData.size()*8, dmemData.data()));
 	auto dport = dmem[avmm.address(2, 10_b)];
 	
 	IF(*avmm.write)
@@ -1760,7 +1760,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, BoostUnitTestSimulationFixture)
 
 	scl::riscv::DualCycleRV rv(8_b, 32_b);
 	Memory<UInt>& imem = rv.fetch();
-	imem.fillPowerOnState(sim::createDefaultBitVectorState(sizeof(gcd_bin), gcd_bin));
+	imem.fillPowerOnState(sim::createDefaultBitVectorState(sizeof(gcd_bin)*8, gcd_bin));
 
 	scl::AvalonMM avmm;
 	avmm.readLatency = 1;
@@ -1777,7 +1777,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, BoostUnitTestSimulationFixture)
 	std::vector<unsigned char> dmemData(4096, 0);
 	dmemData[0] = (rng() & 0x3F) + 1;
 	dmemData[4] = (rng() & 0x3F) + 1;
-	dmem.fillPowerOnState(sim::createDefaultBitVectorState(dmemData.size(), dmemData.data()));
+	dmem.fillPowerOnState(sim::createDefaultBitVectorState(dmemData.size()*8, dmemData.data()));
 	auto dport = dmem[avmm.address(2, 10_b)];
 
 	IF(*avmm.write)
@@ -1901,7 +1901,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink, BoostUnitTestSimulationFixture)
 	dmemData[0] = (rng() & 0x3F) + 1;
 	dmemData[4] = (rng() & 0x3F) + 1;
 	//std::cout << "in=" << (size_t)dmemData[0] << ',' << (size_t)dmemData[4] << '\n';
-	dmem.fillPowerOnState(sim::createDefaultBitVectorState(dmemData.size(), dmemData.data()));
+	dmem.fillPowerOnState(sim::createDefaultBitVectorState(dmemData.size()*8, dmemData.data()));
 	auto dport = dmem[avmm.address(2, 10_b)];
 
 	IF(*avmm.write)
@@ -1970,7 +1970,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulati
 		std::vector<unsigned char> dmemData(4096, 0);
 		dmemData[0] = (uint8_t)opA;
 		dmemData[4] = (uint8_t)opB;
-		dmem.fillPowerOnState(sim::createDefaultBitVectorState(dmemData.size(), dmemData.data()));
+		dmem.fillPowerOnState(sim::createDefaultBitVectorState(dmemData.size()*8, dmemData.data()));
 
 		scl::tileLinkInit(dmemBus, 12_b, 32_b, 2_b, hub.sourceWidth());
 		HCL_NAMED(dmemBus);
@@ -1985,7 +1985,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulati
 
 	{
 		Memory<BVec> imem(64, 32_b);
-		imem.fillPowerOnState(sim::createDefaultBitVectorState(sizeof(gcd_bin), gcd_bin));
+		imem.fillPowerOnState(sim::createDefaultBitVectorState(sizeof(gcd_bin)*8, gcd_bin));
 
 		scl::TileLinkUL imemBus;
 		scl::tileLinkInit(imemBus, 8_b, 32_b, 2_b, hub.sourceWidth());
@@ -2119,7 +2119,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle_export, BoostUnitTestSimulationFixtur
 		//scl::riscv::SingleCycleI rv(8_b, 32_b);
 		scl::riscv::DualCycleRV rv(8_b, 32_b);
 		Memory<UInt>& imem = rv.fetch();
-		imem.fillPowerOnState(sim::createDefaultBitVectorState(linked_text_len, linked_text));
+		imem.fillPowerOnState(sim::createDefaultBitVectorState(linked_text_len*8, linked_text));
 		//rv.fetchOperands();
 
 		scl::AvalonMM avmm;
@@ -2135,7 +2135,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle_export, BoostUnitTestSimulationFixtur
 		std::vector<unsigned char> dmemData(4096, 0);
 		//dmemData[0] = (rng() & 0x3F) + 1;
 		//dmemData[4] = (rng() & 0x3F) + 1;
-		//dmem.setPowerOnState(sim::createDefaultBitVectorState(dmemData.size(), dmemData.data()));
+		//dmem.setPowerOnState(sim::createDefaultBitVectorState(dmemData.size()*8, dmemData.data()));
 		auto dport = dmem[avmm.address(2, 10_b)];
 
 		scl::UART::Stream uart_tx;

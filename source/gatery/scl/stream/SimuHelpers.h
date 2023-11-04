@@ -34,13 +34,13 @@ namespace gtry::scl::strm
 			HCL_DESIGNCHECK_HINT(BitWidth::last(payload) <= payloadW, "The selected payload width would result in data truncation. Design not allowed" );
 			size_t numberOfBytesInPayload = payloadW.numBeats(8_b);
 			for (size_t byteIterator = 0; byteIterator < numberOfBytesInPayload; byteIterator++) {
-				this->payload.append(sim::createDefaultBitVectorState(1, payload & 0xFF));
+				this->payload.append(sim::createDefaultBitVectorState(8, payload & 0xFF));
 				payload >>= 8;
 			}
 			this->payload.resize(payloadW.bits());
 		}
 
-		SimPacket& operator =(std::span<const uint8_t> data) { payload = sim::createDefaultBitVectorState(data.size(), data.data()); return *this; }
+		SimPacket& operator =(std::span<const uint8_t> data) { payload = sim::createDefaultBitVectorState(data.size() * 8, data.data()); return *this; }
 		SimPacket& operator<<(const sim::DefaultBitVectorState& additionalData) { payload.append(additionalData); return *this; }
 
 		SimPacket& txid(size_t id) { m_txid = id; return *this; }
