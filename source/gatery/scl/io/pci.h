@@ -21,6 +21,8 @@
 #include "../stream/Packet.h"
 #include "../stream/SimuHelpers.h"
 
+#include <gatery/scl/tilelink/tilelink.h>
+
 
 namespace gtry::scl::pci
 {
@@ -90,7 +92,7 @@ namespace gtry::scl::pci
 		bool configOps	= false;
 		bool atomicOps	= false;
 		bool messageOps = false;
-		bool addressing64bit = true;
+		bool addressing64bit = false;
 		bool addressing32bit = false;
 	};
 
@@ -98,21 +100,24 @@ namespace gtry::scl::pci
 
 	struct Header {
 		struct DW0 {
-			BVec length = 10_b;
-			BVec at = 2_b;			//Address type
-			Bit noSnoopAttr0;
-			Bit relaxedOrderingAttr1;
-			Bit ep;					//indicator of poisoned tlp
-			Bit td;					//tlp digest
+			BVec type = 5_b;		//type
+			BVec fmt = 3_b;			//format
 			Bit th;					//presence of TPH (processing hint)
 			Bit reservedByte1Bit1;
 			Bit idBasedOrderingAttr2;			//Attribute[2]
 			Bit reservedByte1Bit3;
 			BVec tc = 3_b;			//traffic class
 			Bit reservedByte1Bit7;
-			BVec type = 5_b;		//type
-			BVec fmt = 3_b;			//format
+			BVec lengthMsb = 2_b;
+			BVec at = 2_b;			//Address type
+			Bit noSnoopAttr0;
+			Bit relaxedOrderingAttr1;
+			Bit ep;					//indicator of poisoned tlp
+			Bit td;					//tlp digest
+			BVec lengthLsb = 8_b;
 
+			BVec length() { return (BVec) cat(lengthMsb, lengthLsb); }
+			void length(BVec len) { cat(lengthMsb, lengthLsb) = (UInt) len; }
 		};
 		struct DW1 {
 			BVec dw = 32_b;
@@ -124,10 +129,10 @@ namespace gtry::scl::pci
 			BVec dw = 32_b;
 		};
 	
-		DW3 dw3;
-		DW2 dw2;
-		DW1 dw1;
 		DW0 dw0;
+		DW1 dw1;
+		DW2 dw2;
+		DW3 dw3;
 
 		Bit is3dw()		{ return dw0.fmt == 0b000 | dw0.fmt == 0b010; }
 		Bit is4dw()		{ return !is3dw(); }
@@ -135,7 +140,7 @@ namespace gtry::scl::pci
 
 		Bit isCompletion()	{ return dw0.type == 0b01010; }
 		Bit isMemRW()		{ return dw0.type == 0b00000 | dw0.type == 0b00001; }
-		UInt dataSize()		{ UInt ret = 1024; IF(dw0.length != 0) ret = (UInt)zext(dw0.length); return ret; }
+		UInt dataSize()		{ UInt ret = 1024; IF(dw0.length() != 0) ret = (UInt)zext(dw0.length()); return ret; }
 		UInt hdrSizeInDw()		{ UInt ret = 4; IF(is3dw()) ret = 3; return ret; }
 	};
 
@@ -143,7 +148,6 @@ namespace gtry::scl::pci
 		Prefix prefix;  // 0 or 1 dw
 		Header header;  // 3 or 4 dw
 		BVec data;		// 0 to 1023 dw
-
 	};
 
 	//A TLP packet stream is a packet stream whose payload represents a TLP (transaction layer protocol) and each beat contains 1 
@@ -196,6 +200,8 @@ namespace gtry::scl::pci
 
 
 namespace gtry::scl::pci {
+	TileLinkUL makeTileLinkMaster(TlpPacketStream<EmptyBits>&& complReq, TlpPacketStream<EmptyBits>& complCompl);
+
 	template<Signal ...Meta>
 	TlpPacketStream<Meta...> toTlpPacketStream(TlpIntelPacketStream<Meta...>&& in) 
 	{
@@ -251,4 +257,131 @@ namespace gtry::scl::pci {
 		/* add support for other kinds of metadata*/
 		return {};
 	}
+
+
+
+
+
+
+
+
+	namespace amd {
+		struct CQUser {
+			BVec parity = 64_b;
+
+			BVec tph_st_tag = 16_b;
+			BVec tph_type = 4_b;
+			BVec tph_present = 2_b;
+
+			Bit discontinue;
+
+			BVec is_eop1_ptr = 4_b;
+			BVec is_eop0_ptr = 4_b;
+			BVec is_eop = 2_b;
+
+			BVec is_sop1_ptr = 2_b;
+			BVec is_sop0_ptr = 2_b;
+			BVec is_sop = 2_b;
+
+			BVec byte_en = 64_b;
+			BVec last_be = 8_b;
+			BVec first_be = 8_b;
+		};
+
+		struct CCUser {
+			BVec parity = 64_b;
+
+			Bit discontinue;
+
+			BVec is_eop1_ptr = 4_b;
+			BVec is_eop0_ptr = 4_b;
+			BVec is_eop = 2_b;
+
+			BVec is_sop1_ptr = 2_b;
+			BVec is_sop0_ptr = 2_b;
+			BVec is_sop = 2_b;
+		};
+
+		struct RQUser {
+			BVec parity = 64_b;
+
+			BVec seq_num1 = 6_b;
+			BVec seq_num0 = 6_b;
+
+			BVec tph_st_tag = 16_b;
+			BVec tph_indirect_tag_en = 2_b;
+			BVec tph_type = 4_b;
+			BVec tph_present = 2_b;
+
+			Bit discontinue;
+
+			BVec is_eop1_ptr = 4_b;
+			BVec is_eop0_ptr = 4_b;
+			BVec is_eop = 2_b;
+
+			BVec is_sop1_ptr = 2_b;
+			BVec is_sop0_ptr = 2_b;
+			BVec is_sop = 2_b;
+
+			BVec addr_offset = 4_b;
+
+			BVec last_be = 8_b;
+			BVec first_be = 8_b;
+		};
+
+		struct RQExtras {
+			Bit tag_vld0;
+			Bit tag_vld1;
+
+			BVec tag0 = 8_b;
+			BVec tag1 = 8_b;
+
+			BVec seq_num0 = 6_b;
+			BVec seq_num1 = 6_b;
+
+			Bit seq_num_vld0;
+			Bit seq_num_vld1;
+		};
+
+		struct RCUser {
+			BVec parity = 64_b;
+
+			Bit discontinue;
+
+			BVec is_eop3_ptr = 4_b;
+			BVec is_eop2_ptr = 4_b;
+			BVec is_eop1_ptr = 4_b;
+			BVec is_eop0_ptr = 4_b;
+			BVec is_eop = 4_b;
+
+			BVec is_sop3_ptr = 2_b;
+			BVec is_sop2_ptr = 2_b;
+			BVec is_sop1_ptr = 2_b;
+			BVec is_sop0_ptr = 2_b;
+			BVec is_sop = 4_b;
+
+			BVec byte_en = 64_b;
+		};
+
+
+		/**
+		* @brief amd axi4 generic packet stream
+		*/
+		template<Signal ...Meta>
+		using axi4PacketStream = RvPacketStream<BVec, Keep, Meta...>;
+
+		/**
+		 * @brief function to convert between amd's proprietary completer request packet format to a standard TLPPacketStream
+		 * @toImprove:	add support for 3dw tlp creation, at the moment we generate only 4dw tlps, even when dealing with 32 bit
+		 *				requests, which is non-conformant with native tlps.
+		*/
+		TlpPacketStream<scl::EmptyBits>  completerRequestVendorUnlocking(axi4PacketStream<CQUser> in);
+		
+		/**
+		 * @brief:
+		*/
+		axi4PacketStream<CCUser> completerCompletionVendorUnlocking(TlpPacketStream<EmptyBits> in);
+
+	}
+
 }
