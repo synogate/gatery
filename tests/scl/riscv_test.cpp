@@ -1792,7 +1792,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle, BoostUnitTestSimulationFixture)
 	pinOut(*avmm.writeData).setName("avmm_writedata");
 
 	uint64_t expectedResult = scl::gcd(dmemData[0], dmemData[4]);
-	size_t timeout = std::max(dmemData[0], dmemData[4]) * 8ull + 32;
+	// size_t timeout = std::max(dmemData[0], dmemData[4]) * 8ull + 32;
 	bool found = false;
 	addSimulationProcess([&]()->SimProcess {
 		while (true)
@@ -1916,7 +1916,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink, BoostUnitTestSimulationFixture)
 	pinOut(*avmm.writeData).setName("avmm_writedata");
 
 	uint64_t expectedResult = scl::gcd(dmemData[0], dmemData[4]);
-	size_t timeout = std::max(dmemData[0], dmemData[4]) * 8ull + 32;
+	// size_t timeout = std::max(dmemData[0], dmemData[4]) * 8ull + 32;
 	bool found = false;
 	addSimulationProcess([&]()->SimProcess {
 		while (true)
