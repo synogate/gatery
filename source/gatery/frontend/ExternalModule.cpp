@@ -38,7 +38,7 @@ ExternalModule::ExternalModule(std::string_view name, std::string_view library, 
 	m_node.name(name);
 	if (!library.empty())
 		m_node.library(library);
-	if (!package.empty())
+	if(!package.empty())
 		m_node.package(package);
 }
 

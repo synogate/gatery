@@ -20,20 +20,20 @@
 
 namespace gtry::sim {
 
-DefaultBitVectorState createDefaultBitVectorState(std::size_t size, const void *data) {
+DefaultBitVectorState createDefaultBitVectorState(std::size_t bitWidth, const void *data) {
 	BitVectorState<DefaultConfig> state;
-	state.resize(size*8);
-	state.setRange(DefaultConfig::DEFINED, 0, size*8);
-	memcpy(state.data(DefaultConfig::VALUE), data, size);
+	state.resize(bitWidth);
+	state.setRange(DefaultConfig::DEFINED, 0, bitWidth);
+	memcpy(state.data(DefaultConfig::VALUE), data, (bitWidth + 7) / 8);
 	return state;
 }
 
-DefaultBitVectorState createDefaultBitVectorState(std::size_t size, size_t value)
+DefaultBitVectorState createDefaultBitVectorState(std::size_t bitWidth, size_t value)
 {
 	BitVectorState<DefaultConfig> state;
-	state.resize(size*8);
-	state.setRange(DefaultConfig::DEFINED, 0, size*8);
-	state.clearRange(DefaultConfig::VALUE, 0, size*8);
+	state.resize(bitWidth);
+	state.setRange(DefaultConfig::DEFINED, 0, bitWidth);
+	state.clearRange(DefaultConfig::VALUE, 0, bitWidth);
 	state.insertNonStraddling(DefaultConfig::VALUE, 0, sizeof(value), value);
 	return state;
 }

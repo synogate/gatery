@@ -399,8 +399,6 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceRead, BoostUnitTestSimulationFixture)
 	runTest({ 1,1000 });
 }
 
-
-
 BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfStaticSliceRead, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
@@ -415,26 +413,22 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfStaticSliceRead, BoostUnitTestSimulati
 	UInt b = a(2, 8_b)(index, 2_b);
 
 	addSimulationProcess([=, this]()->SimProcess {
-	
-		for (auto i : gtry::utils::Range(7)) {
+		for (auto i : gtry::utils::Range(8)) {
 			simu(index) = i;
-			co_await WaitFor({1,1000000});
-			BOOST_TEST(simu(b) == ((v_ >> i) & 0b11));
-		}
+			co_await WaitFor({ 1,1000000 });
 
-		simu(index) = 7;
-		co_await WaitFor({1,1000000});
-		BOOST_TEST(!simu(b).allDefined());
+			size_t expectedDefined = (0xFFF >> 2 & 0xFF) >> i & 3;
+			size_t expectedValue = v >> (i + 2) & expectedDefined;
+			BOOST_TEST(simu(b).defined() == expectedDefined);
+			BOOST_TEST(simu(b).value() == expectedValue);
+		}
 
 		stopTest();
 	});
 
 	design.postprocess();
-
 	runTest({ 1,1000 });
 }
-
-
 
 BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfStaticSliceReverseRead, BoostUnitTestSimulationFixture)
 {
@@ -449,22 +443,20 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfStaticSliceReverseRead, BoostUnitTestS
 	UInt b = a(index, 8_b)(2, 2_b);
 
 	addSimulationProcess([=, this]()->SimProcess {
-	
-		for (auto i : gtry::utils::Range(5)) {
+		for (auto i : gtry::utils::Range(8)) {
 			simu(index) = i;
 			co_await WaitFor({1,1000000});
-			BOOST_TEST(simu(b) == ((v >> (i+2)) & 0b11));
-		}
 
-		simu(index) = 5;
-		co_await WaitFor({1,1000000});
-		BOOST_TEST(!simu(b).allDefined());
+			size_t expectedDefined = (0xFFF >> i & 0xFF) >> 2 & 3;
+			size_t expectedValue = v >> (i + 2) & expectedDefined;
+			BOOST_TEST(simu(b).defined() == expectedDefined);
+			BOOST_TEST(simu(b).value() == expectedValue);
+		}
 
 		stopTest();
 	});
 
 	design.postprocess();
-
 	runTest({ 1,1000 });
 }
 
@@ -489,34 +481,130 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfDynamicSliceRead, BoostUnitTestSimulat
 
 	addSimulationProcess([=, this]()->SimProcess {
 	
-		for (auto i : gtry::utils::Range(5)) {
-			for (auto j : gtry::utils::Range(7)) {
+		for (auto i : gtry::utils::Range(index1.width().count())) {
+			for (auto j : gtry::utils::Range(index2.width().count())) {
 				simu(index1) = i;
 				simu(index2) = j;
 				co_await WaitFor({1,1000000});
-				BOOST_TEST(simu(b) == ((v >> (i+j)) & 0b11));
+
+				size_t expectedDefined = (0xFFF >> i & 0xFF) >> j & 3;
+				size_t expectedValue = v >> (i + j) & expectedDefined;
+				BOOST_TEST(simu(b).defined() == expectedDefined);
+				BOOST_TEST(simu(b).value() == expectedValue);
 			}
 		}
-
-		simu(index1) = 5;
-		simu(index2) = 3;
-		co_await WaitFor({1,1000000});
-		BOOST_TEST(!simu(b).allDefined());
-
-		simu(index1) = 0;
-		simu(index2) = 7;
-		co_await WaitFor({1,1000000});
-		BOOST_TEST(!simu(b).allDefined());
 
 		stopTest();
 	});
 
 	design.postprocess();
-
 	runTest({ 1,1000 });
 }
 
+BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfDynamicMulSliceRead, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
 
+	size_t v = 0b1011'0010'1000ull;
+
+	UInt a = v;
+	const UInt& a2 = a;
+	HCL_NAMED(a);
+
+	UInt index1 = pinIn(2_b);
+	UInt index2 = pinIn(2_b);
+	HCL_NAMED(index1);
+	HCL_NAMED(index2);
+
+	UInt& b = a.parts(3)[index1](index2, 2_b);
+	const UInt& b2 = a2.parts(3)[index1](index2, 2_b);
+	HCL_NAMED(b);
+
+	addSimulationProcess([=, this]()->SimProcess {
+		for (auto i : gtry::utils::Range(index1.width().count())) {
+			for (auto j : gtry::utils::Range(index2.width().count())) {
+				simu(index1) = i;
+				simu(index2) = j;
+				co_await WaitFor({ 1,1000000 });
+
+				size_t expectedDefined = (0xFFF >> i * 4 & 0xF) >> j & 3;
+				size_t expectedValue = (v >> i * 4 & 0xF) >> j & 3;
+				BOOST_TEST(simu(b).defined() == expectedDefined);
+				BOOST_TEST((simu(b).value() & expectedDefined) == expectedValue);
+				BOOST_TEST(simu(b2).defined() == expectedDefined);
+				BOOST_TEST((simu(b2).value() & expectedDefined) == expectedValue);
+			}
+		}
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest({ 1,1000 });
+}
+
+BOOST_FIXTURE_TEST_CASE(StaticMulSliceRead, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	size_t v = 0b1011'0010'1000ull;
+
+	UInt a = v;
+	const UInt& a2 = a;
+	HCL_NAMED(a);
+
+	UInt& b = a.parts(3)[1];
+	const UInt& b2 = a2.parts(3)[1];
+	HCL_NAMED(b);
+
+	addSimulationProcess([=, this]()->SimProcess {
+		co_await WaitFor({ 1,1000000 });
+
+		size_t expectedDefined = 0xFFF >> 1 * 4 & 0xF;
+		size_t expectedValue = v >> 1 * 4 & 0xF;
+
+		BOOST_TEST(simu(b).defined() == expectedDefined);
+		BOOST_TEST((simu(b).value() & expectedDefined) == expectedValue);
+		BOOST_TEST(simu(b2).defined() == expectedDefined);
+		BOOST_TEST((simu(b2).value() & expectedDefined) == expectedValue);
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest({ 1,1000 });
+}
+
+BOOST_FIXTURE_TEST_CASE(StaticMulSliceIterator, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+	size_t v = 0b1011'0010'1000ull;
+
+	UInt a = v;
+	HCL_NAMED(a);
+
+	UInt b = "3b0";
+	for (UInt& word : a.parts(3))
+		b ^= word;
+	HCL_NAMED(b);
+
+	addSimulationProcess([=, this]()->SimProcess {
+		co_await WaitFor({ 1,1000000 });
+
+	//	size_t expectedDefined = 0xFFF >> 1 * 4 & 0xF;
+	//	size_t expectedValue = v >> 1 * 4 & 0xF;
+	//
+	//	BOOST_TEST(simu(b).defined() == expectedDefined);
+	//	BOOST_TEST((simu(b).value() & expectedDefined) == expectedValue);
+	//	BOOST_TEST(simu(b2).defined() == expectedDefined);
+	//	BOOST_TEST((simu(b2).value() & expectedDefined) == expectedValue);
+
+		stopTest();
+		});
+
+	design.postprocess();
+	runTest({ 1,1000 });
+}
 
 BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWithStaticBitSliceRead, BoostUnitTestSimulationFixture)
 {
@@ -553,12 +641,11 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWithStaticBitSliceRead, BoostUnitTestSim
 	runTest({ 1,1000 });
 }
 
-
 BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWithDynamicBitSliceRead, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
 
-	size_t v = 0b101100101000ull;
+	size_t v = 0b1011'0010'1000;
 
 	UInt a = v;
 	HCL_NAMED(a);
@@ -572,32 +659,26 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWithDynamicBitSliceRead, BoostUnitTestSi
 	HCL_NAMED(b);
 
 	addSimulationProcess([=, this]()->SimProcess {
-	
-		for (auto i : gtry::utils::Range(5)) {
-			for (auto j : gtry::utils::Range(8)) {
+		for (auto i : gtry::utils::Range(8)) {
+			for (auto j : gtry::utils::Range(16)) {
 				simu(index1) = i;
 				simu(index2) = j;
-				co_await WaitFor({1,1000000});
-				BOOST_TEST(simu(b) == (bool)((v >> (i+j)) & 0b1));
+				co_await WaitFor({ 1,1000000 });
+
+				size_t expectedDefined = (0xFFF >> i & 0xFF) >> j & 1;
+				BOOST_TEST(simu(b).defined() == (expectedDefined != 0));
+				if(expectedDefined)
+				{
+					size_t expectedValue = (v >> (i + j)) & 1;
+					BOOST_TEST(simu(b) == (expectedValue != 0));
+				}
 			}
 		}
-
-		simu(index1) = 5;
-		simu(index2) = 3;
-		co_await WaitFor({1,1000000});
-		BOOST_TEST(!simu(b).allDefined());
-
-		simu(index1) = 0;
-		simu(index2) = 8;
-		co_await WaitFor({1,1000000});
-		BOOST_TEST(!simu(b).allDefined());
 
 		stopTest();
 	});
 
-
 	design.postprocess();
-
 	runTest({ 1,1000 });
 }
 
@@ -684,7 +765,6 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfSliceWrite, BoostUnitTestSimulationFix
 	using namespace gtry;
 
 	size_t a_ = 0xC3;
-	size_t v = 0b11001010; 
 
 	UInt a = a_;
 	a.setName("a_before");
@@ -697,22 +777,55 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfSliceWrite, BoostUnitTestSimulationFix
 	a(index, 3_b)(1, 2_b) = b;
 	HCL_NAMED(a);
 
-
 	addSimulationProcess([=, this]()->SimProcess {
-		for (auto i : gtry::utils::Range(6)) {
-			simu(index) = i;
-			simu(b) = (v >> (i+1)) & 0b11;
-			co_await WaitFor({1,1000000});
+		for (auto i : gtry::utils::Range(8)) {
+			for (size_t j = 0; j < 2; ++j)
+			{
+				simu(index) = i;
+				simu(b) = j * 0b11;
+				co_await WaitFor({1,1000000});
 
-			size_t mask = (0b110 << i);
-			BOOST_TEST(simu(a) == (a_ & ~mask | v & mask));
+				BOOST_TEST(simu(a).allDefined());
+
+				size_t mask = 0b110ull << i;
+				size_t expectedValue = ((a_ & ~mask) | (j * 0b110 << i)) & 0xFF;
+				BOOST_TEST(simu(a) == expectedValue);
+			}
 		}
 
 		stopTest();
 	});
 
+	design.postprocess();
+	runTest({ 1,1000 });
+}
+
+BOOST_FIXTURE_TEST_CASE(StaticBVecSliceOfSliceWrite, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	size_t a_ = 0b11001010;
+
+	UInt a = a_;
+	a.setName("a_before");
+	UInt b = pinIn(2_b);
+	HCL_NAMED(b);
+
+	a(1, 3_b)(1, 2_b) = b;
+	HCL_NAMED(a);
+
+	addSimulationProcess([=, this]()->SimProcess {
+		simu(b) = 0;
+		co_await WaitFor({ 1,1000000 });
+		BOOST_TEST(simu(a) == 0b11000010);
+
+		simu(b) = 3;
+		co_await WaitFor({ 1,1000000 });
+		BOOST_TEST(simu(a) == 0b11001110);
+
+		stopTest();
+	});
 
 	design.postprocess();
-
 	runTest({ 1,1000 });
 }

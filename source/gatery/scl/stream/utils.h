@@ -418,7 +418,7 @@ namespace gtry::scl::strm
 		ready(source) &= counter.isLast();
 
 		out->resetNode();
-		*out = (*source)(zext(counter.value(), +width) * width.bits(), width);
+		*out = source->part(ratio, counter.value());
 
 		if constexpr (out.template has<ByteEnable>())
 		{

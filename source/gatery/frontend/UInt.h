@@ -40,7 +40,6 @@ namespace gtry {
 	class UInt : public SliceableBitVector<UInt, UIntDefault>
 	{
 	public:
-		using Range = BaseBitVector::Range;
 		using Base = SliceableBitVector<UInt, UIntDefault>;
 		using DefaultValue = UIntDefault;
 

@@ -91,6 +91,7 @@ namespace gtry
 			void library(std::string_view name) { m_libraryName = std::string{ name }; }
 			void package(std::string_view name) { m_packageName = std::string{ name }; }
 			void name(std::string_view name) { m_name = std::string{ name }; }
+			void package(std::string_view name) { m_packageName = std::string{ name }; m_requiresNoFullInstantiationPath = true; m_isEntity = false; }
 
 			std::unique_ptr<hlim::BaseNode> cloneUnconnected() const override;
 			void copyBaseToClone(hlim::BaseNode *copy) const override;

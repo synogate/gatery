@@ -578,7 +578,7 @@ void gtry::scl::usb::Function::generateDescriptorRom()
 	m_descLength		= descMem.addressWidth();
 	m_descLengthActive	= descMem.addressWidth();
 
-	descMem.fillPowerOnState(sim::createDefaultBitVectorState(data.size(), data.data()));
+	descMem.fillPowerOnState(sim::createDefaultBitVectorState(data.size() * 8, data.data()));
 	m_descData = reg(descMem[m_descAddressActive]);
 	HCL_NAMED(m_descData);
 }

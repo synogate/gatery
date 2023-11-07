@@ -61,6 +61,7 @@ struct MemorySimConfig {
 		sim::SigHandle addr;
 		std::optional<sim::SigHandle> en;
 		sim::SigHandle data;
+		std::optional<sim::SigHandle> wrMask;
 		size_t width = 0;
 		size_t inputLatency = 1;
 	};

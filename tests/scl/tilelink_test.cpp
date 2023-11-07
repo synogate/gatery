@@ -755,7 +755,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_stream_fetch_test, BoostUnitTestSimulationFixtu
 		memData.push_back((uint8_t)i);
 
 	Memory<BVec> mem(256, 16_b);
-	mem.fillPowerOnState(sim::createDefaultBitVectorState(memData.size(), memData.data()));
+	mem.fillPowerOnState(sim::createDefaultBitVectorState(memData.size()*8, memData.data()));
 
 	RvStream<TileLinkStreamFetch::Command> cmd;
 	cmd->address = mem.addressWidth();

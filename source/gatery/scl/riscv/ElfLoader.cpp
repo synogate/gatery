@@ -241,7 +241,7 @@ gtry::sim::DefaultBitVectorState gtry::scl::riscv::ElfLoader::MegaSegment::memor
 
 	for (const Segment* s : subSections)
 	{
-		auto sectionState = sim::createDefaultBitVectorState(s->data.size(), s->data.data());
+		auto sectionState = sim::createDefaultBitVectorState(s->data.size() * 8, s->data.data());
 		ret.copyRange((s->offset - offset) * 8, sectionState, 0, sectionState.size());
 
 		if (s->data.size() != s->size.bytes())

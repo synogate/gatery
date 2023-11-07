@@ -56,9 +56,9 @@ struct BigDut : public gtry::GHDLTestFixture
 				dut.generic("generic_logic").setBit(true, PinType::STD_LOGIC);
 				dut.generic("generic_ulogic").setBit(true, PinType::STD_ULOGIC);
 
-				dut.generic("generic_bitvector").setBitVector(1, 42, PinType::BIT);
-				dut.generic("generic_logic_vector").setBitVector(1, 42, PinType::STD_LOGIC);
-				dut.generic("generic_ulogic_vector").setBitVector(1, 42, PinType::STD_ULOGIC);
+				dut.generic("generic_bitvector").setBitVector(8, 42, PinType::BIT);
+				dut.generic("generic_logic_vector").setBitVector(8, 42, PinType::STD_LOGIC);
+				dut.generic("generic_ulogic_vector").setBitVector(8, 42, PinType::STD_ULOGIC);
 
 
 				{

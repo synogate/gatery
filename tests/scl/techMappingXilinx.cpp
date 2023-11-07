@@ -24,8 +24,9 @@
 #include <gatery/scl/arch/xilinx/XilinxDevice.h>
 #include <gatery/scl/utils/GlobalBuffer.h>
 
-
 #include <gatery/scl/arch/xilinx/IOBUF.h>
+#include <gatery/scl/arch/xilinx/URAM288.h>
+
 #include <gatery/hlim/coreNodes/Node_MultiDriver.h>
 
 
@@ -363,7 +364,30 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_intra_connection_different_entities2, gtry::G
 	//DesignScope::visualize("test_bidir_intra_connection_different_entities2");
 }
 
+BOOST_FIXTURE_TEST_CASE(uram288_cascade, TestWithDefaultDevice<gtry::GHDLTestFixture>)
+{
+	using namespace gtry;
 
+	std::array<scl::arch::xilinx::URAM288, 8> ram;
+	for(size_t i = 1; i < ram.size(); ++i)
+		ram[i].cascade(ram[i - 1]);
+
+	ram[3].cascadeReg(true);
+
+	for(auto &r : ram)
+	{
+		r.clock(ClockScope::getClk());
+		r.enableOutputRegister(scl::arch::xilinx::URAM288::A, true);
+		r.enableOutputRegister(scl::arch::xilinx::URAM288::B, true);
+	}
+
+	scl::arch::xilinx::URAM288::PortIn in;
+	pinIn(in, "in_a");
+	ram.front().port(scl::arch::xilinx::URAM288::A, reg(in));
+	pinOut(reg(ram.back().port(scl::arch::xilinx::URAM288::A)), "out_a");
+
+	testCompilation();
+}
 
 BOOST_FIXTURE_TEST_CASE(test_bidir_pin_extnode, gtry::GHDLTestFixture)
 {

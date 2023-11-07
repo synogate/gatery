@@ -153,7 +153,7 @@ namespace gtry::scl
 		for (size_t p = 0; p < m_port.size(); ++p)
 		{
 			AvalonMM& mm = m_port[p].second;
-			Bit slaveSelect = ret.address(subAddressWidth, portAddrWidth) == p;
+			Bit slaveSelect = ret.address(subAddressWidth.bits(), portAddrWidth) == p;
 			attachSlave(ret, mm, slaveSelect);
 		}
 		return ret;

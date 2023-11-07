@@ -556,8 +556,8 @@ DefaultBitVectorState createDefaultBitVectorState(std::size_t numWords, std::siz
 	return createBitVectorState<DefaultConfig, Functor>(numWords, wordSize, functor);
 }
 
-DefaultBitVectorState createDefaultBitVectorState(std::size_t size, const void *data);
-DefaultBitVectorState createDefaultBitVectorState(std::size_t size, size_t value);
+DefaultBitVectorState createDefaultBitVectorState(std::size_t bitWidth, const void *data);
+DefaultBitVectorState createDefaultBitVectorState(std::size_t bitWidth, size_t value);
 
 template<class Config>
 void BitVectorState<Config>::resize(size_t size)

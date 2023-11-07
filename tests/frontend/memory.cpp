@@ -22,6 +22,7 @@
 #include <boost/test/data/monomorphic.hpp>
 
 #include <gatery/hlim/RegisterRetiming.h>
+#include <gatery/hlim/postprocessing/ExternalMemorySimulation.h>
 
 #include <cstdint>
 
@@ -1425,3 +1426,118 @@ BOOST_FIXTURE_TEST_CASE(long_latency_memport_read_modify_write, BoostUnitTestSim
 	//recordVCD("test.vcd");
 	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->absoluteFrequency());
 }
+
+
+BOOST_FIXTURE_TEST_CASE(memory_simulator_masked_writes, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+	using namespace gtry::sim;
+	using namespace gtry::utils;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	std::vector<std::uint8_t> contents;
+	contents.resize(16);
+	std::mt19937 rng{ 18055 };
+	for (auto &e : contents)
+		e = rng() % 16;
+
+
+	UInt addrRd = pinIn(4_b);
+	UInt addrWr = pinIn(4_b);
+	UInt output = pinIn(8_b);
+	UInt input = pinIn(8_b);
+	Bit wrEn = pinIn();
+	UInt wrMask = pinIn(8_b);
+
+	pinOut(addrRd);
+	pinOut(addrWr);
+	pinOut(output);
+	pinOut(input);
+	pinOut(wrEn);
+	pinOut(wrMask);
+
+
+	gtry::hlim::MemorySimConfig memSimConfig; 
+	memSimConfig.size = contents.size() * 8;
+
+	memSimConfig.readPorts.push_back(gtry::hlim::MemorySimConfig::RdPrtNodePorts{
+		.clk = clock.getClk(),
+		.addr = simu(addrRd).getBackendHandle(),
+		.data = simu(output).getBackendHandle(),
+		.width = output.size(),
+		.inputLatency = 1,
+		.outputLatency = 0,
+		.rdw = gtry::hlim::MemorySimConfig::RdPrtNodePorts::READ_UNDEFINED,
+	});
+
+	memSimConfig.writePorts.push_back(gtry::hlim::MemorySimConfig::WrPrtNodePorts{
+		.clk = clock.getClk(),
+		.addr = simu(addrWr).getBackendHandle(),
+		.en = simu(wrEn).getBackendHandle(),
+		.data = simu(input).getBackendHandle(),
+		.wrMask = simu(wrMask).getBackendHandle(),
+		.width = input.size(),
+		.inputLatency = 1,
+	});
+
+	gtry::hlim::addExternalMemorySimulator(design.getCircuit(), std::move(memSimConfig));
+
+
+
+	addSimulationProcess([=,this,&contents]()->SimProcess {
+		std::mt19937 rng{ 18055 };
+
+		simu(wrEn) = '0';
+		co_await AfterClk(clock);
+
+		simu(wrEn) = '1';
+		simu(wrMask) = "xFF";
+		for (auto i : Range(16)) {
+			simu(addrWr) = i;
+			simu(input) = contents[i];
+			co_await AfterClk(clock);
+		}
+		simu(wrEn) = '0';
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+
+
+		for (auto i : Range(16)) {
+			simu(addrRd) = i;
+			co_await AfterClk(clock);
+			BOOST_TEST(simu(output) == contents[i]);
+		}		
+
+		simu(wrEn) = '1';
+
+		for (auto i : Range(32)) {
+			size_t a = rng() % 16;
+			size_t mask = rng() % 256;
+			size_t value = rng() % 256;
+			contents[a] = (contents[a] & ~mask) | (value & mask);
+			simu(addrWr) = a;
+			simu(input) = value;
+			simu(wrMask) = mask;
+			co_await AfterClk(clock);
+		}
+
+		simu(wrEn) = '0';
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+
+		for (auto i : Range(16)) {
+			simu(addrRd) = i;
+			co_await AfterClk(clock);
+			BOOST_TEST(simu(output) == contents[i]);
+		}		
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
+}
+
+

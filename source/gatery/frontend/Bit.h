@@ -18,6 +18,7 @@
 #pragma once
 
 #include "Signal.h"
+#include "BitVectorSlice.h"
 
 #include <gatery/hlim/NodePtr.h>
 #include <gatery/utils/Exceptions.h>
@@ -76,8 +77,7 @@ namespace hlim {
 
 		/// For internal use by bit vector types only
 		Bit(const SignalReadPort& port, std::optional<bool> resetValue = std::nullopt);
-		Bit(hlim::Node_Signal* node, size_t offset, size_t initialScopeId); // alias Bit
-		Bit(hlim::Node_Signal* node, hlim::NodePort idx, size_t dynRangeOffset, size_t dynRangeWidth, size_t initialScopeId); // alias Bit
+		Bit(hlim::Node_Signal* node, const std::shared_ptr<BitVectorSlice>& slice, size_t initialScopeId); // alias Bit
 
 		/// Constructs a bit signal from a constant passed as a bit literal (char or bool).
 		template<BitLiteral T>
@@ -121,8 +121,6 @@ namespace hlim {
 		const hlim::Node_Signal* node() const { return m_node; }
 
 	protected:
-		SignalReadPort rewireAlias(SignalReadPort port) const;
-
 		void createNode();
 		void assign(bool);
 		void assign(char);
@@ -134,14 +132,8 @@ namespace hlim {
 	private:
 		/// Signal node in the graph whose input represents this signal. It can be an alias of a bitvector, in which case m_offset or m_offsetDynamic identify the bit within.
 		hlim::NodePtr<hlim::Node_Signal> m_node;
-		/// In the case that m_node's interpretation is not BOOL but BVEC, this UInt can identify the bit within.
-		hlim::RefCtdNodePort m_offsetDynamic;
-		/// In the case that m_offsetDynamic is used, m_dynRangeOffset specifies the start of the range of bits into which m_offsetDynamic indexes.
-		size_t m_dynRangeOffset;
-		/// In the case that m_offsetDynamic is used, m_dynRangeWidth specifies the width of the range of bits into which m_offsetDynamic indexes.
-		size_t m_dynRangeWidth;
-		/// In the case that m_node's interpretation is not BOOL but BVEC and m_offsetDynamic contains a nullptr, this value can statically identify the bit within.
-		size_t m_offset = 0;
+
+		std::shared_ptr<BitVectorSlice> m_slice;
 
 		/// Optional reset value for this signal.
 		/// @see resetValue(char v)

@@ -313,8 +313,8 @@ namespace gtry::scl
 		return out;
 	}
 
-	extern template struct Stream<TileLinkA, Ready, Valid>;
-	extern template struct Stream<TileLinkD, Ready, Valid>;
+	extern template struct strm::Stream<TileLinkA, Ready, Valid>;
+	extern template struct strm::Stream<TileLinkD, Ready, Valid>;
 
 	extern template UInt transferLength(const TileLinkChannelA&);
 	extern template UInt transferLength(const TileLinkChannelD&);

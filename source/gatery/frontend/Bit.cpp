@@ -117,19 +117,11 @@ namespace gtry {
 			m_node->connectInput(port);
 	}
 
-	Bit::Bit(hlim::Node_Signal* node, size_t offset, size_t initialScopeId) :
+	Bit::Bit(hlim::Node_Signal* node, const std::shared_ptr<BitVectorSlice>& slice, size_t initialScopeId) :
 		m_node(node),
-		m_offset(offset)
+		m_slice(slice)
 	{
-		m_initialScopeId = initialScopeId;
-	}
-
-	Bit::Bit(hlim::Node_Signal* node, hlim::NodePort idx, size_t dynRangeOffset, size_t dynRangeWidth, size_t initialScopeId) :
-		m_node(node),
-		m_offsetDynamic(idx),
-		m_dynRangeOffset(dynRangeOffset),
-		m_dynRangeWidth(dynRangeWidth)
-	{
+		m_slice->makeItABit();
 		m_initialScopeId = initialScopeId;
 	}
 
@@ -149,8 +141,6 @@ namespace gtry {
 
 			m_resetValue.reset();
 			m_resetValue = rhs.resetValue();
-
-			rhs.assign(SignalReadPort{ m_node });
 		}
 		else
 		{
@@ -158,12 +148,9 @@ namespace gtry {
 				m_resetValue = rhs.m_resetValue;
 
 			assign(rhs.readPort());
-
-			SignalReadPort outRange{ m_node };
-			outRange = rewireAlias(outRange);
-			rhs.assign(outRange);
 		}
 	
+		rhs.assign(outPort());
 		return *this;
 	}
 
@@ -201,51 +188,17 @@ namespace gtry {
 
 	SignalReadPort Bit::readPort() const
 	{
-		SignalReadPort ret = rawDriver();
-		return rewireAlias(ret);
+		SignalReadPort port = rawDriver();
+		if (m_slice)
+			port = m_slice->readPort(port);
+		return port;
 	}
 
 	SignalReadPort Bit::outPort() const
 	{
-		SignalReadPort ret{ m_node };
-		return rewireAlias(ret);
-	}
-
-	SignalReadPort gtry::Bit::rewireAlias(SignalReadPort port) const
-	{
-		hlim::ConnectionType type = hlim::getOutputConnectionType(port);
-		if (!type.isBool())
-		{
-			if (m_offsetDynamic.node != nullptr) {
-				// Dynamic selection
-				hlim::ConnectionType idxType = hlim::getOutputConnectionType(m_offsetDynamic);
-
-				HCL_ASSERT_HINT(idxType.isBitVec(), "Index has wrong type");
-
-				auto *mux = DesignScope::createNode<hlim::Node_Multiplexer>(m_dynRangeWidth);
-				mux->connectSelector(m_offsetDynamic);
-
-				for (auto i : utils::Range(m_dynRangeWidth)) {
-					auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-					rewire->connectInput(0, port);
-					rewire->setExtract(m_dynRangeOffset + i, 1);
-					rewire->changeOutputType(connType());
-					mux->connectInput(i, {.node=rewire, .port=0ull});
-				}
-				port = SignalReadPort(mux);
-			} else {
-				// Static selection
-
-				// TODO: cache rewire node if m_node's input is unchanged
-				auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-				rewire->connectInput(0, port);
-				rewire->changeOutputType(connType());
-
-				size_t offset = std::min(m_offset, type.width - 1); // used for msb alias, but can alias any future offset
-				rewire->setExtract(offset, 1);
-				port = SignalReadPort(rewire);
-			}
-		}
+		SignalReadPort port{ m_node };
+		if (m_slice)
+			port = m_slice->readPort(port);
 		return port;
 	}
 
@@ -317,59 +270,8 @@ namespace gtry {
 	{
 		hlim::ConnectionType type = m_node->getOutputConnectionType(0);
 
-		if (!type.isBool())
-		{
-			if (m_offsetDynamic.node != nullptr) {
-				// Dynamic selection
-
-				// first, mux individual bits and fuse
-				auto* fuseRewire = DesignScope::createNode<hlim::Node_Rewire>(m_dynRangeWidth);
-				for (auto i : utils::Range(m_dynRangeWidth)) {
-					// extract
-					auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-					rewire->connectInput(0, rawDriver());
-					rewire->setExtract(m_dynRangeOffset + i, 1);
-					rewire->changeOutputType(connType());
-
-					// mux
-					auto selectorBit = UInt(SignalReadPort(m_offsetDynamic)) == i;
-					
-					auto *mux = DesignScope::createNode<hlim::Node_Multiplexer>(2);
-					mux->connectSelector(selectorBit.readPort());
-					mux->connectInput(0, {.node=rewire, .port=0ull});
-					mux->connectInput(1, in);
-
-					// merge
-					fuseRewire->connectInput(i, {.node=mux, .port=0ull});
-				}
-				fuseRewire->setConcat();
-
-
-				// second, if m_offsetDynamicRange was a subset of m_node, rewire into that as well.
-				if (m_dynRangeOffset == 0 && m_dynRangeWidth == type.width) {
-					in = SignalReadPort(fuseRewire);
-				} else {
-					auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(2);
-					rewire->connectInput(0, rawDriver());
-					rewire->connectInput(1, {.node=fuseRewire, .port=0ull});
-					rewire->changeOutputType(type);
-					rewire->setReplaceRange(m_dynRangeOffset);
-
-					in = SignalReadPort(rewire);
-				}
-			} else {
-				// Static selection
-
-				auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(2);
-				rewire->connectInput(0, rawDriver());
-				rewire->connectInput(1, in);
-				rewire->changeOutputType(type);
-				size_t offset = std::min(m_offset, type.width - 1); // used for msb alias, but can alias any future offset
-				rewire->setReplaceRange(offset);
-
-				in = SignalReadPort(rewire);
-			}
-		}
+		if (m_slice)
+			in = m_slice->assign(rawDriver(), in);
 
 		// In any case, build multiplexer in case the assignment is conditional
 		if (auto* scope = ConditionalScope::get(); !ignoreConditions && scope && scope->getId() > m_initialScopeId)

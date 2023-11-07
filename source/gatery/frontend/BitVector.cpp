@@ -90,13 +90,6 @@ namespace gtry {
 		};
 	}
 
-	static hlim::Node_Rewire::RewireOperation pickSelection(const BaseBitVector::Range& range)
-	{
-		hlim::Node_Rewire::RewireOperation op;
-		op.addInput(0, range.offset, range.width);
-		return op;
-	}
-
 	static hlim::Node_Rewire::RewireOperation replaceSelection(size_t rangeOffset, size_t rangeWidth, size_t totalWidth)
 	{
 		HCL_ASSERT(rangeOffset+rangeWidth <= totalWidth);
@@ -154,15 +147,13 @@ namespace gtry {
 		}
 	}
 
-	BaseBitVector::BaseBitVector(hlim::Node_Signal* node, Range range, Expansion expansionPolicy, size_t initialScopeId) :
+	BaseBitVector::BaseBitVector(hlim::Node_Signal* node, std::shared_ptr<BitVectorSlice> range, Expansion expansionPolicy, size_t initialScopeId) :
 		m_node(node),
-		m_range(range),
+		m_range(move(range)),
+		m_width(m_range->width()),
 		m_expansionPolicy(expansionPolicy)
 	{
-		auto connType = node->getOutputConnectionType(0);
-		HCL_DESIGNCHECK(connType.isBitVec());
-		HCL_DESIGNCHECK(m_range.offset+m_range.width <= connType.width);
-
+		HCL_DESIGNCHECK(m_range);
 		m_initialScopeId = initialScopeId;
 	}
 
@@ -188,24 +179,12 @@ namespace gtry {
 
 			resetNode();
 			createNode(rhs.size(), rhs.m_expansionPolicy);
-
-			rhs.assign(SignalReadPort{ m_node, m_expansionPolicy });
 		}
 		else
 		{
 			assign(rhs.readPort());
-
-			SignalReadPort outRange{ m_node, m_expansionPolicy };
-			if (m_range.subset)
-			{
-				auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-				rewire->connectInput(0, outRange);
-				rewire->setOp(pickSelection(m_range));
-				outRange = SignalReadPort(rewire, m_expansionPolicy);
-			}
-
-			rhs.assign(outRange);
 		}
+		rhs.assign(outPort());
 		return *this;
 	}
 
@@ -237,7 +216,7 @@ namespace gtry {
 
 	void BaseBitVector::resize(size_t width)
 	{
-		HCL_DESIGNCHECK_HINT(!m_range.subset, "BaseBitVector::resize is not allowed for alias BaseBitVector's. use zext instead.");
+		HCL_DESIGNCHECK_HINT(!m_range, "BaseBitVector::resize is not allowed for alias BaseBitVector's. use zext instead.");
 		HCL_DESIGNCHECK_HINT(m_node->getDirectlyDriven(0).empty(), "BaseBitVector::resize is allowed for unused signals (final)");
 		HCL_DESIGNCHECK_HINT(width > size(), "BaseBitVector::resize width decrease not allowed");
 		HCL_DESIGNCHECK_HINT(width <= size() || m_expansionPolicy != Expansion::none, "BaseBitVector::resize width increase only allowed when expansion policy is set");
@@ -257,15 +236,15 @@ namespace gtry {
 		}
 
 		m_node->connectInput({ .node = rewire, .port = 0 }); // unconditional (largest of all paths wins)
-		m_range.width = width;
+		m_width = BitWidth{ width };
 		m_bitAlias.clear();
 	}
 
 	void gtry::BaseBitVector::resetNode()
 	{
-		HCL_DESIGNCHECK_HINT(!m_range.subset, "BaseBitVector::resetNode is not allowed for alias BaseBitVector's.");
+		HCL_DESIGNCHECK_HINT(!m_range, "BaseBitVector::resetNode is not allowed for alias BaseBitVector's.");
 		m_node = nullptr;
-		m_range = Range{};
+		m_range.reset();
 		m_bitAlias.clear();
 		m_lsbAlias = std::nullopt;
 		m_msbAlias = std::nullopt;
@@ -279,28 +258,12 @@ namespace gtry {
 		if (it != m_dynamicBitAlias.end())	
 			return it->second;
 
-		// Force idx to undefined if out of range.
-		UInt OoB_idx = idx;
-		if ((1ull << OoB_idx.size())-1 >= m_range.width) // if we can represent more than allowed
-			IF (OoB_idx >= m_range.width)
-				OoB_idx = ConstUInt(BitWidth{ OoB_idx.size() });
-		
+		auto slice = std::make_shared<BitVectorSliceDynamic>(idx, std::min(size() - 1, idx.width().last()), 1, 1_b, m_range);
 
-		if (m_range.offsetDynamic.node != nullptr) {
-			// If we are already a dynamic slice, we need to add both indices
-			UInt currentOffset(SignalReadPort(m_range.offsetDynamic));
-			UInt newOffset;
-			if (currentOffset.size() > OoB_idx.size())
-				newOffset = ext(currentOffset, +1_b) + ext(OoB_idx);
-			else
-				newOffset = ext(currentOffset) + ext(OoB_idx, +1_b);
-
-			auto it2 = m_dynamicBitAlias.try_emplace(idx.readPort(), m_node, (hlim::NodePort)newOffset.readPort(), m_range.offset, m_range.maxDynamicIndex+m_range.width, m_initialScopeId);
-			return it2.first->second;
-		} else {
-			auto it2 = m_dynamicBitAlias.try_emplace(idx.readPort(), m_node, (hlim::NodePort)OoB_idx.readPort(), m_range.offset, m_range.width, m_initialScopeId);
-			return it2.first->second;
-		}
+		auto it2 = m_dynamicBitAlias.try_emplace(idx.readPort(), 
+			m_node, slice, m_initialScopeId
+		);
+		return it2.first->second;
 	}
 
 	Bit& BaseBitVector::operator[](const UInt &idx)
@@ -315,7 +278,7 @@ namespace gtry {
 
 	hlim::ConnectionType BaseBitVector::connType() const
 	{
-		return hlim::ConnectionType{ .type = hlim::ConnectionType::BITVEC, .width = m_range.width };
+		return hlim::ConnectionType{ .type = hlim::ConnectionType::BITVEC, .width = width().bits() };
 	}
 
 	SignalReadPort BaseBitVector::readPort() const
@@ -326,38 +289,10 @@ namespace gtry {
 			m_readPort = driver;
 			m_readPortDriver = driver.node;
 
-			if (m_range.subset)
+			if (m_range)
 			{
-				if (m_range.offsetDynamic.node != nullptr) {
-					// Dynamic+static offset
-					// Build a multiplexer that is fed with all possible different slices.
-
-					hlim::ConnectionType idxType = hlim::getOutputConnectionType(m_range.offsetDynamic);
-
-					HCL_ASSERT_HINT(idxType.isBitVec(), "Index has wrong type");
-
-					HCL_ASSERT(m_range.width > 0); /// @todo should we allow this?
-					size_t fullOptions = m_range.maxDynamicIndex + 1;
-
-					/// @todo do we allow dynamically slicing words that are partially out of bounds?
-					auto *mux = DesignScope::createNode<hlim::Node_Multiplexer>(fullOptions);
-					mux->connectSelector(m_range.offsetDynamic);
-
-					for (auto i : utils::Range(fullOptions)) {
-						auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-						rewire->connectInput(0, m_readPort);
-						rewire->setExtract(m_range.offset + i, m_range.width);
-						rewire->changeOutputType(connType());
-						mux->connectInput(i, {.node=rewire, .port=0ull});
-					}
-					m_readPort = SignalReadPort(mux);
-				} else {
-					// Static only offset
-					auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-					rewire->connectInput(0, m_readPort);
-					rewire->setOp(pickSelection(m_range));
-					m_readPort = SignalReadPort(rewire, m_expansionPolicy);
-				}
+				m_readPort = m_range->readPort(driver);
+				m_readPort.expansionPolicy = m_expansionPolicy;
 			}
 		}
 		return m_readPort;
@@ -365,15 +300,10 @@ namespace gtry {
 
 	SignalReadPort BaseBitVector::outPort() const
 	{
-		SignalReadPort port{ m_node, m_expansionPolicy };
-
-		if (m_range.subset)
-		{
-			auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
-			rewire->connectInput(0, m_readPort);
-			rewire->setOp(pickSelection(m_range));
-			port = SignalReadPort(rewire, m_expansionPolicy);
-		}
+		SignalReadPort port{ m_node };
+		if (m_range)
+			port = m_range->readPort(port);
+		port.expansionPolicy = m_expansionPolicy;
 		return port;
 	}
 
@@ -458,42 +388,14 @@ namespace gtry {
 		if (!m_node)
 			createNode(in.width().bits(), in.expansionPolicy);
 
-		const bool incrementWidth = in.width().bits() > m_range.width;
+		const bool incrementWidth = in.width().bits() > width().bits();
 		if(!incrementWidth)
-			in = in.expand(m_range.width, hlim::ConnectionType::BITVEC);
+			in = in.expand(width().bits(), hlim::ConnectionType::BITVEC);
 
-		if (m_range.subset)
+		if (m_range)
 		{
 			HCL_ASSERT(!incrementWidth);
-			std::string in_name = in.node->getName();
-
-			if (m_range.offsetDynamic.node != nullptr) {
-				// Dynamic selection
-
-				hlim::ConnectionType idxType = hlim::getOutputConnectionType(m_range.offsetDynamic);
-
-				HCL_ASSERT_HINT(idxType.isBitVec(), "Index has wrong type");
-
-				auto *mux = DesignScope::createNode<hlim::Node_Multiplexer>(m_range.maxDynamicIndex+1);
-				mux->connectSelector(m_range.offsetDynamic);
-
-				for (auto i : utils::Range(m_range.maxDynamicIndex+1)) {
-					auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(2);
-					rewire->connectInput(0, rawDriver());
-					rewire->connectInput(1, in);
-					rewire->setOp(replaceSelection(m_range.offset+i, m_range.width, m_node->getOutputConnectionType(0).width));
-					rewire->changeOutputType(connType());
-					mux->connectInput(i, {.node=rewire, .port=0ull});
-				}
-				in = SignalReadPort(mux);
-			} else {
-				// Static selection
-				auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(2);
-				rewire->connectInput(0, rawDriver());
-				rewire->connectInput(1, in);
-				rewire->setOp(replaceSelection(m_range.offset, m_range.width, m_node->getOutputConnectionType(0).width));
-				in = SignalReadPort(rewire);
-			}
+			in = m_range->assign(rawDriver(), in);
 		}
 
 		if (auto* scope = ConditionalScope::get(); !ignoreConditions && scope && scope->getId() > m_initialScopeId)
@@ -504,7 +406,7 @@ namespace gtry {
 			if (incrementWidth)
 			{
 				HCL_ASSERT(m_expansionPolicy != Expansion::none);
-				HCL_ASSERT(!m_range.subset);
+				HCL_ASSERT(!m_range);
 
 				auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
 				rewire->connectInput(0, oldSignal);
@@ -534,15 +436,15 @@ namespace gtry {
 			{
 				auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(1);
 				rewire->connectInput(0, SignalReadPort{ m_node });
-				rewire->setExtract(0, m_range.width);
+				rewire->setExtract(0, width().bits());
 
 				for (const hlim::NodePort& port : nodeInputs)
 					port.node->rewireInput(port.port, SignalReadPort{ rewire });
 
-				HCL_ASSERT(!m_range.subset);
+				HCL_ASSERT(!m_range);
 			}
 
-			m_range.width = in.width().bits();
+			m_width = in.width();
 		}
 
 		m_node->connectInput(in);
@@ -552,7 +454,7 @@ namespace gtry {
 	{
 		HCL_ASSERT(!m_node);
 
-		m_range.width = width;
+		m_width = BitWidth{ width };
 		m_expansionPolicy = policy;
 
 		m_node = DesignScope::createNode<hlim::Node_Signal>();
@@ -570,16 +472,14 @@ namespace gtry {
 
 	std::vector<Bit>& BaseBitVector::aliasVec() const
 	{
-		if (m_bitAlias.size() != m_range.width)
+		if (m_bitAlias.size() != width().bits())
 		{
-			m_bitAlias.reserve(m_range.width);
-			for (size_t i = 0; i < m_range.width; ++i)
-				if (m_range.offsetDynamic.node == nullptr)
-					m_bitAlias.emplace_back(m_node, m_range.bitOffset(i), m_initialScopeId);
-				else {
-					// If the bit is taken from a slice with a dynamic offset, then this makes the bit selection dynamic.
-					m_bitAlias.emplace_back(m_node, m_range.offsetDynamic, m_range.offset+i, m_range.maxDynamicIndex+1, m_initialScopeId);
-				}
+			m_bitAlias.reserve(width().bits());
+			for (size_t i = 0; i < width().bits(); ++i)
+			{
+				auto slice = std::make_shared<BitVectorSliceStatic>(Selection::Slice(i, 1), width(), m_range);
+				m_bitAlias.emplace_back(m_node, slice, m_initialScopeId);
+			}
 		}
 		return m_bitAlias;
 	}
@@ -588,10 +488,9 @@ namespace gtry {
 	{
 		if (!m_msbAlias)
 		{
-			if (!m_range.subset)
-				m_msbAlias.emplace(m_node, ~0u, m_initialScopeId);
-			else
-				m_msbAlias.emplace(m_node, m_range.bitOffset(m_range.width - 1), m_initialScopeId);
+			HCL_DESIGNCHECK(width() != 0_b);
+			auto slice = std::make_shared<BitVectorSliceStatic>(Selection::Slice(width().bits() - 1, 1), width(), m_range);
+			m_msbAlias.emplace(m_node, slice, m_initialScopeId);
 		}
 		return *m_msbAlias;
 	}
@@ -599,85 +498,12 @@ namespace gtry {
 	Bit& BaseBitVector::aliasLsb() const
 	{
 		if (!m_lsbAlias)
-			m_lsbAlias.emplace(m_node, m_range.bitOffset(0), m_initialScopeId);
+		{
+			HCL_DESIGNCHECK(width() != 0_b);
+			auto slice = std::make_shared<BitVectorSliceStatic>(Selection::Slice(0, 1), width(), m_range);
+			m_lsbAlias.emplace(m_node, slice, m_initialScopeId);
+		}
 		return *m_lsbAlias;
-	}
-
-
-	BaseBitVector::Range::Range(const Selection& s, const Range& r)
-	{
-		if (s.start >= 0)
-			offset = (size_t)s.start;
-		else
-		{
-			offset = size_t(s.start + r.width);
-		}
-
-		if (s.untilEndOfSource) {
-			width = r.width - offset;
-		} else if (s.width >= 0)
-			width = size_t(s.width);
-		else
-		{
-			width = size_t(s.width + r.width);
-		}
-
-		offset += r.offset;
-		subset = true;
-
-		if (r.offsetDynamic.node != nullptr) {
-			offsetDynamic = r.offsetDynamic;
-			maxDynamicIndex = r.maxDynamicIndex;
-		}
-
-		HCL_DESIGNCHECK(offset+width <= r.offset+r.width);
-		HCL_DESIGNCHECK(offset >= r.offset);
-	}
-	
-	BaseBitVector::Range::Range(const UInt &dynamicOffset, BitWidth w, const Range& r) : Range(r)
-	{
-		subset = true;
-
-		width = w.bits();
-		HCL_DESIGNCHECK_HINT(w.bits() <= r.width, "Width of slice is larger than the width of the bitvector that is being sliced from.");
-		// The max value for this index is such that it still fits fully within the parent slice.
-		size_t maxThisDynamicIndex = r.width - w.bits();
-
-		UInt idx = dynamicOffset;
-		// Force idx to undefined if out of range.
-		// For dynamic slices of dynamic slices, this needs to be done for each index in the chain individually
-		if ((1ull << idx.size())-1 > maxThisDynamicIndex) // if we can represent more than allowed
-			IF (idx > maxThisDynamicIndex)
-				idx = ConstUInt(BitWidth{ idx.size() });
-		
-		if (r.offsetDynamic.node != nullptr) {
-			UInt prevIdx(SignalReadPort(r.offsetDynamic));
-			UInt finalIdx;
-			if (prevIdx.size() > idx.size())
-				finalIdx = ext(prevIdx, +1_b) + ext(idx);
-			else
-				finalIdx = ext(prevIdx) + ext(idx, +1_b);
-
-			offsetDynamic.node = finalIdx.readPort().node;
-			offsetDynamic.port = finalIdx.readPort().port;
-
-			// The max index increases if the new slice is smaller than the previous slice.
-			maxDynamicIndex = r.maxDynamicIndex + r.width - w.bits();
-		} else {
-			offsetDynamic.node = idx.readPort().node;
-			offsetDynamic.port = idx.readPort().port;
-			maxDynamicIndex = maxThisDynamicIndex;
-		}
-	}
-
-	BaseBitVector::Range::Range(const UInt& index, const Range& r) :
-		Range(
-			index * (r.width / index.width().count()), 
-			BitWidth{ r.width / index.width().count() }, 
-			r
-		)
-	{
-		HCL_DESIGNCHECK_HINT(r.width % index.width().count() == 0, "indexed range width must be divisible by 2^index width");
 	}
 
 	size_t BaseBitVector::getUIntBitWidth(const UInt &uint)
