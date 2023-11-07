@@ -41,7 +41,7 @@ namespace gtry
 	class ExternalModule
 	{
 	public:
-		ExternalModule(std::string_view name, std::string_view library = {});
+		ExternalModule(std::string_view name, std::string_view library = {}, std::string_view package = {});
 		ExternalModule(ExternalModule&&) = default;
 		ExternalModule(const ExternalModule&) = delete;
 
@@ -89,6 +89,7 @@ namespace gtry
 			auto& clockNames() { return m_clockNames; }
 			auto& resetNames() { return m_resetNames; }
 			void library(std::string_view name) { m_libraryName = std::string{ name }; }
+			void package(std::string_view name) { m_packageName = std::string{ name }; }
 			void name(std::string_view name) { m_name = std::string{ name }; }
 
 			std::unique_ptr<hlim::BaseNode> cloneUnconnected() const override;
