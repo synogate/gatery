@@ -26,6 +26,7 @@ namespace gtry::scl::strm {
 	struct Ready;
 	struct Valid;
 	struct ByteEnable;
+	struct Keep;
 	struct Error;
 	struct TxId;
 	struct Sop;
@@ -56,6 +57,7 @@ namespace gtry::scl::strm {
 	const Bit eop(const StreamSignal auto& stream) { return '1'; }
 	const Bit sop(const StreamSignal auto& stream) { return '1'; }
 	const UInt byteEnable(const StreamSignal auto& stream) { return ConstUInt(1, 1_b); }
+	const BVec keep(const StreamSignal auto& stream) { return ConstBVec(1, 1_b); }
 	const Bit error(const StreamSignal auto& stream) { return '0'; }
 	const UInt txid(const StreamSignal auto& stream) { return 0; }
 
@@ -91,6 +93,14 @@ namespace gtry::scl::strm {
 	template<StreamSignal T> requires (T::template has<ByteEnable>())
 		const BVec& byteEnable(const T& stream) { return stream.template get<ByteEnable>().byteEnable; }
 
+	struct Keep
+	{
+		BVec keep;
+	};
+	template<StreamSignal T> requires (T::template has<Keep>())
+		BVec& keep(T& stream) { return stream.template get<Keep>().keep; }
+	template<StreamSignal T> requires (T::template has<Keep>())
+		const BVec& keep(const T& stream) { return stream.template get<Keep>().keep; }
 
 	struct Error
 	{
@@ -213,6 +223,7 @@ namespace gtry::scl {
 	using strm::Ready;
 	using strm::Valid;
 	using strm::ByteEnable;
+	using strm::Keep;
 	using strm::Error;
 	using strm::TxId;
 	using strm::Sop;
@@ -225,6 +236,7 @@ namespace gtry::scl {
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::Ready, ready);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::Valid, valid);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::ByteEnable, byteEnable);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::Keep, keep);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::Error, error);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::TxId, txid);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::Sop, sop);
