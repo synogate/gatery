@@ -37,7 +37,6 @@ namespace gtry {
 boost::filesystem::path GHDLGlobalFixture::m_ghdlExecutable;
 std::filesystem::path GHDLGlobalFixture::m_intelLibrary;
 std::filesystem::path GHDLGlobalFixture::m_xilinxLibrary;
-std::vector<std::string> GHDLGlobalFixture::m_ghdlArgs;
 
 
 GHDLGlobalFixture::GHDLGlobalFixture()
@@ -55,53 +54,29 @@ GHDLGlobalFixture::GHDLGlobalFixture()
 			m_xilinxLibrary = testSuite.argv[i+1];
 	}
 
-	auto&& libEnv = boost::this_process::wenvironment()[L"GHDL_LIBS_PATH"];
-	if (!libEnv.empty())
-	{
-		for (auto&& dir : std::filesystem::directory_iterator{ libEnv.to_string() })
-		{
-			if (dir.is_directory())
-				m_ghdlArgs.push_back("-P" + dir.path().string());
-
-			// auto detect vivado and quartus libraries for test case filtering
-			if(dir.path().filename() == "xilinx-vivado")
-				m_xilinxLibrary = dir.path();
-			if (dir.path().filename() == "intel")
-				m_intelLibrary = dir.path();
-		}
-	}
 }
 
 GHDLGlobalFixture::~GHDLGlobalFixture()
 {
 }
 
+
+
 GHDLTestFixture::GHDLTestFixture()
 {
-	const auto& testCase = boost::unit_test::framework::current_test_case();
-	std::filesystem::path testCaseFile{ std::string{ testCase.p_file_name.begin(), testCase.p_file_name.end() } };
-	m_cwd = std::filesystem::path{ "tmp" } / testCaseFile.stem() / testCase.p_name.get();
+	m_cwd = std::filesystem::current_path();
 
-	if (!std::filesystem::create_directories(m_cwd))
-		for (auto&& f : std::filesystem::directory_iterator{ m_cwd })
-			if(f.is_regular_file())
-				std::filesystem::remove(f);
-
-	m_ghdlArgs = GHDLGlobalFixture::GHDLArgs();
-	m_ghdlArgs.push_back("--std=08");
-	m_ghdlArgs.push_back("-frelaxed");
-	m_ghdlArgs.push_back("--warn-error");
-
-	if (GHDLGlobalFixture::hasIntelLibrary())
-		m_ghdlArgs.push_back("-P" + GHDLGlobalFixture::getIntelLibrary().string());
-
-	if (GHDLGlobalFixture::hasXilinxLibrary())
-		m_ghdlArgs.push_back("-P" + GHDLGlobalFixture::getXilinxLibrary().string());
+	std::filesystem::path tmpDir("tmp/");
+	std::error_code ignored;
+	std::filesystem::remove_all(tmpDir, ignored);
+	std::filesystem::create_directories(tmpDir);
+    std::filesystem::current_path(tmpDir);
 }
 
 GHDLTestFixture::~GHDLTestFixture()
 {
 	std::filesystem::current_path(m_cwd);
+	//std::filesystem::remove_all("tmp/");
 }
 
 void GHDLTestFixture::addCustomVHDL(std::string name, std::string content)
@@ -113,25 +88,40 @@ void GHDLTestFixture::testCompilation(Flavor flavor)
 {
 	design.postprocess();
 
-	m_vhdlExport.emplace(m_cwd / "design.vhd");
+
+	m_vhdlExport.emplace("design.vhd");
+
 	for (const auto &file_content : m_customVhdlFiles)
 		m_vhdlExport->addCustomVhdlFile(file_content.first, file_content.second);
 
-	gtry::SynthesisTool* synthesisTool = nullptr;
 	switch (flavor) {
-		case TARGET_GHDL:  synthesisTool = new GHDL(); break;
-		case TARGET_QUARTUS : synthesisTool = new IntelQuartus(); break;
+		case TARGET_GHDL : m_vhdlExport->targetSynthesisTool(new GHDL()); break;
+		case TARGET_QUARTUS : m_vhdlExport->targetSynthesisTool(new IntelQuartus()); break;
 	}
-	m_vhdlExport->targetSynthesisTool(synthesisTool);
+	m_vhdlExport->writeStandAloneProjectFile("compile.sh");
 	(*m_vhdlExport)(design.getCircuit());
 
-	synthesisTool->writeStandAloneProject(*m_vhdlExport, "compile.sh");
-	synthesisTool->writeStandAloneProject(*m_vhdlExport, "compile.bat");
 	m_vhdlExport.reset();
 	
 	boost::filesystem::path ghdlExecutable = bp::search_path("ghdl");
-	BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-a", "--ieee=synopsys", m_ghdlArgs, "design.vhd") == 0);
-	BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-e", "--ieee=synopsys", m_ghdlArgs, "top") == 0);
+
+
+	if (GHDLGlobalFixture::hasIntelLibrary())
+		softlinkAll(GHDLGlobalFixture::getIntelLibrary());
+
+	if (GHDLGlobalFixture::hasXilinxLibrary())
+		softlinkAll(GHDLGlobalFixture::getXilinxLibrary());
+
+	BOOST_CHECK(bp::system(ghdlExecutable, "-a", "--std=08", "--ieee=synopsys", "-frelaxed", "--warn-error", "design.vhd") == 0);
+	BOOST_CHECK(bp::system(ghdlExecutable, "-e", "--std=08", "--ieee=synopsys", "-frelaxed", "--warn-error", "top") == 0);
+}
+
+void GHDLTestFixture::softlinkAll(const std::filesystem::path &src)
+{
+	for (const auto &entry : std::filesystem::directory_iterator{src}) {
+		if (entry.is_directory() && entry.path().filename() != "." && entry.path().filename() != "..") 
+			std::filesystem::create_directory_symlink(entry.path(), entry.path().filename());
+	}
 }
 
 void GHDLTestFixture::prepRun()
@@ -139,7 +129,7 @@ void GHDLTestFixture::prepRun()
 	design.postprocess();
 	BoostUnitTestSimulationFixture::prepRun();
 
-	m_vhdlExport.emplace(m_cwd / "design.vhd");
+	m_vhdlExport.emplace("design.vhd");
 	m_vhdlExport->addTestbenchRecorder(getSimulator(), "testbench", true);
 	m_vhdlExport->targetSynthesisTool(new GHDL());
 	m_vhdlExport->writeStandAloneProjectFile("compile.sh");
@@ -157,15 +147,22 @@ void GHDLTestFixture::runTest(const hlim::ClockRational &timeoutSeconds)
 	m_vhdlExport.reset();
 
 	boost::filesystem::path ghdlExecutable = bp::search_path("ghdl");
-	BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-a", "--ieee=synopsys", m_ghdlArgs, "design.vhd") == 0);
-	BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-a", "--ieee=synopsys", m_ghdlArgs, "testbench.vhd") == 0);
-	BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-e", "--ieee=synopsys", m_ghdlArgs, "testbench") == 0);
-	BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-r", "-fsynopsys", m_ghdlArgs, "testbench", "--ieee-asserts=disable", "--vcd=ghdl.vcd", "--assert-level=error") == 0);
+
+	if (GHDLGlobalFixture::hasIntelLibrary())
+		softlinkAll(GHDLGlobalFixture::getIntelLibrary());
+
+	if (GHDLGlobalFixture::hasXilinxLibrary())
+		softlinkAll(GHDLGlobalFixture::getXilinxLibrary());
+
+	BOOST_CHECK(bp::system(ghdlExecutable, "-a", "--std=08", "--ieee=synopsys", "-frelaxed", "--warn-error", "design.vhd") == 0);
+	BOOST_CHECK(bp::system(ghdlExecutable, "-a", "--std=08", "--ieee=synopsys", "-frelaxed", "--warn-error", "testbench.vhd") == 0);
+	BOOST_CHECK(bp::system(ghdlExecutable, "-e", "--std=08", "--ieee=synopsys", "-frelaxed", "--warn-error", "testbench") == 0);
+	BOOST_CHECK(bp::system(ghdlExecutable, "-r", "--std=08", "-frelaxed", "-fsynopsys", "testbench", "--ieee-asserts=disable", "--vcd=ghdl.vcd", "--assert-level=error") == 0);
 }
 
 bool GHDLTestFixture::exportContains(const std::regex &regex)
 {
-	std::ifstream file(m_cwd / "design.vhd", std::fstream::binary);
+	std::fstream file("design.vhd", std::fstream::in);
 	BOOST_TEST((bool) file);
 	std::stringstream buffer;
 	buffer << file.rdbuf();
