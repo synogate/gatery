@@ -26,6 +26,8 @@
 
 #include <gatery/scl/arch/xilinx/IOBUF.h>
 #include <gatery/scl/arch/xilinx/URAM288.h>
+#include <gatery/scl/arch/xilinx/UltraRAM.h>
+#include <gatery/scl/tilelink/TileLinkMasterModel.h>
 
 #include <gatery/hlim/coreNodes/Node_MultiDriver.h>
 
@@ -387,6 +389,52 @@ BOOST_FIXTURE_TEST_CASE(uram288_cascade, TestWithDefaultDevice<gtry::GHDLTestFix
 	pinOut(reg(ram.back().port(scl::arch::xilinx::URAM288::A)), "out_a");
 
 	testCompilation();
+}
+
+BOOST_FIXTURE_TEST_CASE(ultraRamHelper, TestWithDefaultDevice<gtry::GHDLTestFixture>)
+{
+	using namespace gtry;
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	std::array ram = gtry::scl::arch::xilinx::ultraRam(61440, { .name = "testRam", .aSourceW = 1_b, .bSourceW = 1_b });
+
+	std::array<scl::TileLinkMasterModel, 2> m;
+	for (size_t i = 0; i < m.size(); ++i)
+	{
+		m[i].init("m" + std::to_string(i), 16_b, 64_b, 2_b, 1_b);
+		(scl::TileLinkUB&)ram[i] <<= regDecouple(move(m[i].getLink()));
+	}
+
+	testCompilation();
+
+	addSimulationProcess([&]()->SimProcess {
+		co_await OnClk(clock);
+
+		{ // write conflict
+			fork(m[0].put(8, 3, 0x1234, clock));
+			fork(m[1].put(8, 3, 0xABCD, clock));
+			auto [val, def, err] = co_await m[1].get(8, 3, clock);
+			BOOST_TEST(val == 0xabcd);
+		}
+
+		{ // write before read
+			fork(m[0].put(8, 3, 0x1234, clock));
+			auto [val, def, err] = co_await m[1].get(8, 3, clock);
+			BOOST_TEST(val == 0x1234);
+		}
+
+		{ // read before write
+			fork(m[1].put(8, 3, 0xABCD, clock));
+			auto [val, def, err] = co_await m[0].get(8, 3, clock);
+			BOOST_TEST(val == 0x1234);
+		}
+
+		co_await OnClk(clock);
+		stopTest();
+	});
+
+	runTest({ 1,1'000'000 });
 }
 
 BOOST_FIXTURE_TEST_CASE(test_bidir_pin_extnode, gtry::GHDLTestFixture)

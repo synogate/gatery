@@ -71,6 +71,7 @@ namespace gtry::scl::arch::xilinx
 
 			generic("CASCADE_ORDER" + port) = "LAST";
 			generic("SELF_ADDR" + port).setBitVector(11, m_cascadeAddress);
+			generic("SELF_MASK" + port).setBitVector(11, 0);
 
 			// map: addr, bwe, dbiterr, din, dout, en, rdaccess, rdb_wr, sbiterr
 			in("CAS_IN_ADDR" + port, 23_b) = inRam.out("CAS_OUT_ADDR" + port, 23_b);
