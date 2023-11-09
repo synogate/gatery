@@ -284,7 +284,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_timer_test, ClockedTest)
 		co_await AfterClk(clock());
 		simu(bus.csn) = '1';
 
-		for (size_t i = 0; i < 9; ++i)
+		for (int i = 0; i < 9; ++i)
 		{
 			BOOST_TEST(simu(b0Activate) == !(i < timings.rc - 1));
 			BOOST_TEST(simu(b0Precharge) == !(i < timings.ras - 1));
@@ -306,7 +306,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_timer_test, ClockedTest)
 		co_await AfterClk(clock());
 		simu(bus.csn) = '1';
 
-		for (size_t i = 0; i < 3; ++i)
+		for (int i = 0; i < 3; ++i)
 		{
 			BOOST_TEST(simu(b0Activate) == !(i < timings.rp - 1));
 			BOOST_TEST(simu(b0Precharge) == '1');
@@ -330,7 +330,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_timer_test, ClockedTest)
 		co_await AfterClk(clock());
 		simu(bus.csn) = '1';
 
-		for (size_t i = 0; i < 7; ++i)
+		for (int i = 0; i < 7; ++i)
 		{
 			BOOST_TEST(simu(b0Activate) == '1');
 			BOOST_TEST(simu(b0Precharge) == !(i < 3));
@@ -358,13 +358,13 @@ BOOST_FIXTURE_TEST_CASE(sdram_timer_test, ClockedTest)
 		for (size_t i = 0; i < 7; ++i)
 		{
 			BOOST_TEST(simu(b0Activate) == '1');
-			BOOST_TEST(simu(b0Precharge) == !(i < 3));
-			BOOST_TEST(simu(b0Read) == !(i < 3));
+			BOOST_TEST(simu(b0Precharge) == !(i < 3u));
+			BOOST_TEST(simu(b0Read) == !(i < 3u));
 			BOOST_TEST(simu(b0Write) == !(i < writeDelay));
 			BOOST_TEST(simu(b0BurstStop) == '1');
 			BOOST_TEST(simu(b1Activate) == '1');
 			BOOST_TEST(simu(b1Precharge) == '1');
-			BOOST_TEST(simu(b1Read) == !(i < 3));
+			BOOST_TEST(simu(b1Read) == !(i < 3u));
 			BOOST_TEST(simu(b1Write) == !(i < writeDelay));
 			BOOST_TEST(simu(b1BurstStop) == '1');
 			co_await AfterClk(clock());

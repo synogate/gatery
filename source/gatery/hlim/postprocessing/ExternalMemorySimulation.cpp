@@ -38,6 +38,7 @@ struct WritePortRequest {
 	size_t addr = 0;
 	bool addrUndefined = false;
 	sim::DefaultBitVectorState data;
+	sim::DefaultBitVectorState mask;
 
 	void readFromSimulation(const MemorySimConfig::WrPrtNodePorts &port, size_t memorySize) {
 		auto addrState = port.addr.eval();
@@ -57,6 +58,10 @@ struct WritePortRequest {
 			enabled = enabledState.get(sim::DefaultConfig::VALUE, 0);
 		}
 		data = port.data.eval();
+		if (port.wrMask) {		
+			mask = port.wrMask->eval();
+			HCL_ASSERT_HINT(mask.size() == data.size(), "Expecting the write mask to be a bit mask with the same width as the written data");
+		}
 	}
 };
 
@@ -169,10 +174,22 @@ sim::SimulationFunction<void> handleReadPortOnce(MemorySimConfig &config, size_t
 							ptrdiff_t read2writeShift = overlapStart - wrStart - wordOverlapStart;
 
 							if (port.rdw == MemorySimConfig::RdPrtNodePorts::READ_UNDEFINED) {
-								response.data.clearRange(sim::DefaultConfig::DEFINED, wordOverlapStart, wordOverlapSize);
+								if (wr.mask.size() != 0) {
+									// Don't collide on bits not being written due to write mask
+									for (auto i : utils::Range(wordOverlapStart, wordOverlapEnd))
+										if (!wr.mask.get(sim::DefaultConfig::DEFINED, i+read2writeShift) || wr.mask.get(sim::DefaultConfig::VALUE, i+read2writeShift))
+											response.data.clear(sim::DefaultConfig::DEFINED, i);
+								} else
+									response.data.clearRange(sim::DefaultConfig::DEFINED, wordOverlapStart, wordOverlapSize);
 							} else {
 								// MemorySimConfig::RdPrtNodePorts::READ_AFTER_WRITE
 								for (auto i : utils::Range(wordOverlapStart, wordOverlapEnd)) {
+
+									// Don't collide on bits not being written due to write mask
+									if (wr.mask.size() != 0)
+										if (wr.mask.get(sim::DefaultConfig::DEFINED, i+read2writeShift) && !wr.mask.get(sim::DefaultConfig::VALUE, i+read2writeShift))
+											continue;
+
 									if (bitsCollided[i]) {
 										// Multiple write ports are writing to this location, undefined result (even if same data).
 										response.data.clear(sim::DefaultConfig::DEFINED, i);
@@ -281,7 +298,15 @@ sim::SimulationFunction<void> handleWritePortOnce(MemorySimConfig &config, size_
 								size_t wordOverlapStart = overlapStart - wrStart;
 								size_t wordOverlapSize = overlapEnd - overlapStart;
 
-								request.data.clearRange(sim::DefaultConfig::DEFINED, wordOverlapStart, wordOverlapSize);
+								ptrdiff_t writeShift = overlapStart - otherStart - wordOverlapStart;
+
+								if (otherRequest.mask.size() != 0) {
+									// Don't collide on bits not being written due to write mask
+									for (auto i : utils::Range(wordOverlapStart, wordOverlapStart + wordOverlapSize))
+										if (!otherRequest.mask.get(sim::DefaultConfig::DEFINED, i+writeShift) || otherRequest.mask.get(sim::DefaultConfig::VALUE, i+writeShift))
+											request.data.clear(sim::DefaultConfig::DEFINED, i);
+								} else
+									request.data.clearRange(sim::DefaultConfig::DEFINED, wordOverlapStart, wordOverlapSize);
 							}
 						}
 					}
@@ -291,7 +316,23 @@ sim::SimulationFunction<void> handleWritePortOnce(MemorySimConfig &config, size_
 					std::cout << "Warning: Two write ports are trying to write to the same memory location." << std::endl;
 			}
 			// Actually perform the write to memory, which might be partially or fully undefined by now
-			memState.memory.copyRange(wrStart, request.data, 0, port.width);
+			if (request.mask.size() == 0)
+				memState.memory.copyRange(wrStart, request.data, 0, port.width);
+			else {
+				// For write masks, look at each bit (todo: optimize)
+				for (auto i : utils::Range(port.width))
+					if (request.mask.get(sim::DefaultConfig::DEFINED, i)) {
+						// If the write mask is defined, only copy the bit if it is high
+						if (request.mask.get(sim::DefaultConfig::VALUE, i)) {
+							memState.memory.set(sim::DefaultConfig::DEFINED, wrStart+i, request.data.get(sim::DefaultConfig::DEFINED, i));
+							memState.memory.set(sim::DefaultConfig::VALUE, wrStart+i, request.data.get(sim::DefaultConfig::VALUE, i));
+						}
+					} else
+						// If the write mask is undefined, the resulting bit is defined if it was defined before and its value would not change with the write.
+						memState.memory.set(sim::DefaultConfig::DEFINED, wrStart+i, 
+											memState.memory.get(sim::DefaultConfig::DEFINED, wrStart+i) && 
+														(memState.memory.get(sim::DefaultConfig::VALUE, wrStart+i) == request.data.get(sim::DefaultConfig::VALUE, i)));
+			}
 		}
 	}
 }

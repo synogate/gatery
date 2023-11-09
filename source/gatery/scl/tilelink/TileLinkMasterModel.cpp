@@ -198,7 +198,7 @@ namespace gtry::scl
 		const size_t byteSize = 1ull << logByteSize;
 		req.inBurstBeats = (byteSize + bytePerBeat - 1) / bytePerBeat;
 
-		auto [offset, mask] = prepareTransaction(req);
+		/*auto [offset, mask] = */prepareTransaction(req);
 		req.data.resize(1);
 		req.data[0].defined = 0;
 

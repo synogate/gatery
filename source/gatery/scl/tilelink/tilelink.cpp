@@ -110,8 +110,8 @@ namespace gtry::scl
 		return size > bytePerBeat & hasData();
 	}
 
-	template struct Stream<TileLinkA, Ready, Valid>;
-	template struct Stream<TileLinkD, Ready, Valid>;
+	template struct strm::Stream<TileLinkA, Ready, Valid>;
+	template struct strm::Stream<TileLinkD, Ready, Valid>;
 
 	template UInt transferLength(const TileLinkChannelA&);
 	template UInt transferLength(const TileLinkChannelD&);
