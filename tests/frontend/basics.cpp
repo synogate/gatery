@@ -1620,3 +1620,38 @@ BOOST_FIXTURE_TEST_CASE(testBitFinalResetValue, gtry::BoostUnitTestSimulationFix
 	design.postprocess();
 	runTest({ 1,1 });
 }
+
+
+BOOST_FIXTURE_TEST_CASE(simuOnExportOverride, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	Bit a = pinIn().setName("a");
+	Bit b = pinIn().setName("b");
+
+	Bit c = a;
+	c.exportOverride(b);
+	
+	pinOut(c).setName("c");
+
+	addSimulationProcess([=, this]()->SimProcess {
+		std::mt19937 rng = std::mt19937{ 1337 };
+		
+		for ([[maybe_unused]] auto i : gtry::utils::Range(100)) {
+			bool Va = rng() & 1;
+			bool Vb = rng() & 1;
+			simu(a) = Va;
+			simu(b) = Vb;
+			co_await AfterClk(clock);
+			BOOST_TEST(simu(c) == Va);
+		}
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest({ 1,1 });
+}
