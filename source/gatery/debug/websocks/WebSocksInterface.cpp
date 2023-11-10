@@ -453,6 +453,7 @@ void WebSocksInterface::acceptSession(tcp::socket socket)
 	m_sessions.emplace_back(std::move(socket));
 	auto &session = m_sessions.back();
 
+#if BOOST_VERSION < 108200
 	async_read(session.websockStream.next_layer(), session.buffer, session.req, [&session, this](beast::error_code ec, std::size_t bytes_transferred){
 		if (ec) {
 			std::cout << "Websocket connection failed to connect, could not read handshake: " << ec.message() << std::endl;
@@ -469,6 +470,9 @@ void WebSocksInterface::acceptSession(tcp::socket socket)
 			session.ready = true;
 		});
 	});
+#else
+#pragma message ("WebSocksInterface not yet supported on boost version >= 1.82")
+#endif
 }
 
 void WebSocksInterface::awaitRequest(Session &session)

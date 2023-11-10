@@ -12,6 +12,9 @@
 #ifdef _WIN32
 #pragma warning(push, 0)
 #pragma warning(disable : 4146) // boost rational "unary minus operator applied to unsigned type, result still unsigned"
+#pragma warning(disable : 4018) // boost process environment "'<': signed/unsigned mismatch"
+#define _STDFLOAT_ // boost "The contents of <stdfloat> are available only with C++23 or later."
+//#include <stdfloat>
 #endif
 
 #include <boost/algorithm/string.hpp>
@@ -32,6 +35,7 @@
 #include <boost/spirit/home/x3.hpp>
 #include <boost/stacktrace.hpp>
 #include <boost/pfr.hpp>
+#include <boost/process.hpp>
 #include <boost/optional.hpp>
 
 #include "utils/CoroutineWrapper.h"
