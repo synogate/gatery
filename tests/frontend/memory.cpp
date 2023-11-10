@@ -1516,7 +1516,7 @@ BOOST_FIXTURE_TEST_CASE(memory_simulator_masked_writes, BoostUnitTestSimulationF
 			size_t a = rng() % 16;
 			size_t mask = rng() % 256;
 			size_t value = rng() % 256;
-			contents[a] = (contents[a] & ~mask) | (value & mask);
+			contents[a] = uint8_t((contents[a] & ~mask) | (value & mask));
 			simu(addrWr) = a;
 			simu(input) = value;
 			simu(wrMask) = mask;
