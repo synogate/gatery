@@ -160,10 +160,15 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 		mappedNode.internal = m_stateMapping.nodeToInternalOffset[node];
 		for (auto i : utils::Range(node->getNumInputPorts())) {
 			auto driver = node->getNonSignalDriver(i);
-			mappedNode.inputs.push_back(m_stateMapping.outputToOffset[driver]);
+			auto it = m_stateMapping.outputToOffset.find(driver);
+			HCL_ASSERT(it != m_stateMapping.outputToOffset.end());
+			mappedNode.inputs.push_back(it->second);
 		}
-		for (auto i : utils::Range(node->getNumOutputPorts()))
-			mappedNode.outputs.push_back(m_stateMapping.outputToOffset[{.node = node, .port = i}]);
+		for (auto i : utils::Range(node->getNumOutputPorts())) {
+			auto it = m_stateMapping.outputToOffset.find({.node = node, .port = i});
+			HCL_ASSERT(it != m_stateMapping.outputToOffset.end());
+			mappedNode.outputs.push_back(it->second);
+		}
 
 		for (auto i : utils::Range(node->getNumOutputPorts())) {
 
@@ -354,11 +359,16 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 		mappedNode.internal = m_stateMapping.nodeToInternalOffset[readyNode];
 		for (auto i : utils::Range(readyNode->getNumInputPorts())) {
 			auto driver = readyNodeInputs[i];
-			mappedNode.inputs.push_back(m_stateMapping.outputToOffset[driver]);
+			auto it = m_stateMapping.outputToOffset.find(driver);
+			HCL_ASSERT(it != m_stateMapping.outputToOffset.end());
+			mappedNode.inputs.push_back(it->second);
 		}
 
-		for (auto i : utils::Range(readyNode->getNumOutputPorts()))
-			mappedNode.outputs.push_back(m_stateMapping.outputToOffset[{.node = readyNode, .port = i}]);
+		for (auto i : utils::Range(readyNode->getNumOutputPorts())) {
+			auto it = m_stateMapping.outputToOffset.find({.node = readyNode, .port = i});
+			HCL_ASSERT(it != m_stateMapping.outputToOffset.end());
+			mappedNode.outputs.push_back(it->second);
+		}
 
 		execBlock.addStep(std::move(mappedNode));
 
@@ -392,9 +402,12 @@ void Program::allocateSignals(const hlim::Circuit &circuit, const hlim::Subnet &
 	for (auto node : nodes) {
 		// Signals simply point to the actual producer's output, as do export overrides
 		if (dynamic_cast<hlim::Node_Signal*>(node) || dynamic_cast<hlim::Node_ExportOverride*>(node)) {
+
 			hlim::NodePort driver;
 			if (dynamic_cast<hlim::Node_Signal*>(node))
 				driver = node->getNonSignalDriver(0);
+			else
+				driver = node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
 
 			{
 				utils::UnstableSet<hlim::NodePort> alreadyVisited;
