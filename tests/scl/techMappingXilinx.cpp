@@ -447,7 +447,8 @@ BOOST_FIXTURE_TEST_CASE(mulAccumulate, TestWithDefaultDevice<gtry::GHDLTestFixtu
 	SInt a = (SInt)pinIn(18_b).setName("a");
 	SInt b = (SInt)pinIn(18_b).setName("b");
 	Bit restart = pinIn().setName("restart");
-	SInt p = scl::arch::xilinx::mulAccumulate(a, b, restart);
+	Bit valid = pinIn().setName("valid");
+	SInt p = scl::arch::xilinx::mulAccumulate(a, b, restart, valid);
 	pinOut(p, "p");
 
 	addSimulationProcess([&]()->SimProcess {
@@ -455,32 +456,36 @@ BOOST_FIXTURE_TEST_CASE(mulAccumulate, TestWithDefaultDevice<gtry::GHDLTestFixtu
 		simu(a) = 0;
 		simu(b) = 0;
 		simu(restart) = '1';
+		simu(valid) = '1';
 		co_await OnClk(clock);
 
 		simu(a) = 1;
 		simu(b) = 1;
 		simu(restart) = '0';
 		for(size_t i = 0; i < 4; ++i)
+		{
+			simu(valid) = i % 2 == 1;
 			co_await OnClk(clock);
+		}
 
-		BOOST_TEST(simu(p) == 1);
+		BOOST_TEST(simu(p) == 0);
 		co_await OnClk(clock);
-		BOOST_TEST(simu(p) == 2);
+		BOOST_TEST(simu(p) == 1);
 
 		simu(a) = -3;
 		simu(b) = 4;
 		simu(restart) = '1';
 		co_await OnClk(clock);
-		BOOST_TEST(simu(p) == 3);
+		BOOST_TEST(simu(p) == 1);
 		simu(a) = 5;
 		simu(b) = -1;
 		simu(restart) = '0';
 
 		co_await OnClk(clock);
-		BOOST_TEST(simu(p) == 4);
+		BOOST_TEST(simu(p) == 2);
 
 		co_await OnClk(clock);
-		BOOST_TEST(simu(p) == 5);
+		BOOST_TEST(simu(p) == 3);
 
 		co_await OnClk(clock);
 		BOOST_TEST(simu(p) == -12);

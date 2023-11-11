@@ -91,7 +91,8 @@ namespace gtry::scl::arch::xilinx
 	 * @param a 27 bit input
 	 * @param b 18 bit input
 	 * @param restart reset the accumulator to zero before adding the multiplication result
+	 * @param valid the input is ignored if valid is low
 	 * @return the accumulated multiplication results extended by 3 bits to 48 bits delayed by 3 clock cycles
 	*/
-	SInt mulAccumulate(SInt a, SInt b, Bit restart, std::string_view instanceName = {});
+	SInt mulAccumulate(SInt a, SInt b, Bit restart, Bit valid, std::string_view instanceName = {});
 }
