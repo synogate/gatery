@@ -461,14 +461,34 @@ BOOST_FIXTURE_TEST_CASE(mulAccumulate, TestWithDefaultDevice<gtry::GHDLTestFixtu
 		simu(b) = 1;
 		simu(restart) = '0';
 		for(size_t i = 0; i < 4; ++i)
-		{
-			simu(restart) = '0';
 			co_await OnClk(clock);
-		}
 
 		BOOST_TEST(simu(p) == 1);
 		co_await OnClk(clock);
 		BOOST_TEST(simu(p) == 2);
+
+		simu(a) = -3;
+		simu(b) = 4;
+		simu(restart) = '1';
+		co_await OnClk(clock);
+		BOOST_TEST(simu(p) == 3);
+		simu(a) = 5;
+		simu(b) = -1;
+		simu(restart) = '0';
+
+		co_await OnClk(clock);
+		BOOST_TEST(simu(p) == 4);
+
+		co_await OnClk(clock);
+		BOOST_TEST(simu(p) == 5);
+
+		co_await OnClk(clock);
+		BOOST_TEST(simu(p) == -12);
+
+		co_await OnClk(clock);
+		BOOST_TEST(simu(p) == -17);
+
+		co_await OnClk(clock);
 		stopTest();
 	});
 
