@@ -27,6 +27,7 @@
 #include <gatery/scl/arch/xilinx/IOBUF.h>
 #include <gatery/scl/arch/xilinx/URAM288.h>
 #include <gatery/scl/arch/xilinx/UltraRAM.h>
+#include <gatery/scl/arch/xilinx/DSP48E2.h>
 #include <gatery/scl/tilelink/TileLinkMasterModel.h>
 
 #include <gatery/hlim/coreNodes/Node_MultiDriver.h>
@@ -431,6 +432,43 @@ BOOST_FIXTURE_TEST_CASE(ultraRamHelper, TestWithDefaultDevice<gtry::GHDLTestFixt
 		}
 
 		co_await OnClk(clock);
+		stopTest();
+	});
+
+	runTest({ 1,1'000'000 });
+}
+
+BOOST_FIXTURE_TEST_CASE(mulAccumulate, TestWithDefaultDevice<gtry::GHDLTestFixture>)
+{
+	using namespace gtry;
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	SInt a = (SInt)pinIn(18_b).setName("a");
+	SInt b = (SInt)pinIn(18_b).setName("b");
+	Bit restart = pinIn().setName("restart");
+	SInt p = scl::arch::xilinx::mulAccumulate(a, b, restart);
+	pinOut(p, "p");
+
+	addSimulationProcess([&]()->SimProcess {
+
+		simu(a) = 0;
+		simu(b) = 0;
+		simu(restart) = '1';
+		co_await OnClk(clock);
+
+		simu(a) = 1;
+		simu(b) = 1;
+		simu(restart) = '0';
+		for(size_t i = 0; i < 4; ++i)
+		{
+			simu(restart) = '0';
+			co_await OnClk(clock);
+		}
+
+		BOOST_TEST(simu(p) == 1);
+		co_await OnClk(clock);
+		BOOST_TEST(simu(p) == 2);
 		stopTest();
 	});
 
