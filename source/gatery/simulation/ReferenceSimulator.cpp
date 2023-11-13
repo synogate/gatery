@@ -161,8 +161,10 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 		for (auto i : utils::Range(node->getNumInputPorts())) {
 			auto driver = node->getNonSignalDriver(i);
 			auto it = m_stateMapping.outputToOffset.find(driver);
-			HCL_ASSERT(it != m_stateMapping.outputToOffset.end());
-			mappedNode.inputs.push_back(it->second);
+			if (it != m_stateMapping.outputToOffset.end())
+				mappedNode.inputs.push_back(it->second);
+			else
+				mappedNode.inputs.push_back(~0ull);
 		}
 		for (auto i : utils::Range(node->getNumOutputPorts())) {
 			auto it = m_stateMapping.outputToOffset.find({.node = node, .port = i});
@@ -360,8 +362,10 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 		for (auto i : utils::Range(readyNode->getNumInputPorts())) {
 			auto driver = readyNodeInputs[i];
 			auto it = m_stateMapping.outputToOffset.find(driver);
-			HCL_ASSERT(it != m_stateMapping.outputToOffset.end());
-			mappedNode.inputs.push_back(it->second);
+			if (it != m_stateMapping.outputToOffset.end())
+				mappedNode.inputs.push_back(it->second);
+			else
+				mappedNode.inputs.push_back(~0ull);
 		}
 
 		for (auto i : utils::Range(readyNode->getNumOutputPorts())) {

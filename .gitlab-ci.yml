@@ -90,10 +90,12 @@ test-linux-coverage:
 
 documentation-job:
   stage: deploy
+  needs: ["test-linux-coverage"]
   tags:
     - documount
   script:
     - doxygen doc/Doxyfile
     - rsync -r --delete --checksum doc/gen/html/ /mnt/doxygenDocu/gatery
+    - rsync -r --delete --checksum cov/ /mnt/doxygenDocu/gateryCov
   only:
     - master
