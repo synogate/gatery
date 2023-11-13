@@ -19,6 +19,8 @@
 #include <gatery/frontend.h>
 #include <gatery/hlim/supportNodes/Node_CDC.h>
 
+#include "Counter.h"
+
 namespace gtry::scl
 {
 	/// Converts an integer number coded in regular binary to gray code (such that neighboring integer values only change in one bit)
@@ -63,6 +65,9 @@ namespace gtry::scl
 	/// This also adds an explicit cdc node which prevents cdc crossing errors as well as storing timing constraint information
 	/// that can be written to sdc/xdc files for supported tools.
 	UInt synchronizeGrayCode(UInt in, UInt reset, const Clock& inClock, const Clock& outClock, SynchronizeParams params = {});
+
+	template<typename T, typename Targ>
+	Vector<T> doublePump(std::function<T(const Targ&)> circuit, Vector<Targ> args, const Clock& fastClock);
 }
 
 
@@ -104,7 +109,29 @@ namespace gtry::scl
 		return val;
 	}
 
+	template<typename T, typename Targ>
+	Vector<T> doublePump(std::function<T(const Targ&)> circuit, Vector<Targ> args, const Clock& fastClock)
+	{
+		const Clock& clk = ClockScope::getClk();
+		HCL_DESIGNCHECK_HINT(clk.absoluteFrequency() * args.size() == fastClock.absoluteFrequency(), "fast clock needs to be exactly the right multiple of the current clock for the given input");
+		args = allowClockDomainCrossing(args, clk, fastClock);
+		HCL_NAMED(args);
 
+		ClockScope fastScope{ fastClock };
 
-	
+		scl::Counter ctr{ args.size() };
+		ctr.inc();
+		Targ beatArgs = reg(mux(ctr.value(), args));
+		HCL_NAMED(beatArgs);
+		T beatOut = circuit(beatArgs);
+		HCL_NAMED(beatOut);
+
+		Vector<T> out(args.size());
+		for (T& it : out) it = constructFrom(beatOut);
+		demux(ctr.value(), out, beatOut);
+		out = reg(out);
+
+		HCL_NAMED(out);
+		return allowClockDomainCrossing(out, fastClock, clk);
+	}
 }

@@ -500,6 +500,60 @@ BOOST_FIXTURE_TEST_CASE(mulAccumulate, TestWithDefaultDevice<gtry::GHDLTestFixtu
 	runTest({ 1,1'000'000 });
 }
 
+BOOST_FIXTURE_TEST_CASE(DSP48E2_double_clb_test, TestWithDefaultDevice<gtry::GHDLTestFixture>)
+{
+	using namespace gtry;
+	Clock clock({ .absoluteFrequency = 100'000'000, .name = "clk" });
+	Clock clockFast = clock.deriveClock({ .frequencyMultiplier = 2, .name = "clk2x" });
+	ClockScope clkScp(clock);
+
+	Vector<std::tuple<SInt, SInt, Bit, Bit>> in(2);
+	for(auto& it : in)
+	{
+		get<0>(it) = 18_b;
+		get<1>(it) = 18_b;
+	}
+	pinIn(in, "in");
+
+	Vector<SInt> out = scl::doublePump<SInt, std::tuple<SInt, SInt, Bit, Bit>>([](const std::tuple<SInt, SInt, Bit, Bit>& params) {
+		return gtry::scl::arch::xilinx::mulAccumulate(
+			get<0>(params), 
+			get<1>(params),
+			get<2>(params),
+			get<3>(params)
+		);
+	}, in, clockFast);
+	pinOut(out, "out");
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(get<0>(in[0])) = 1;
+		simu(get<1>(in[0])) = 3;
+		simu(get<2>(in[0])) = '1';
+		simu(get<3>(in[0])) = '1';
+		simu(get<0>(in[1])) = 5;
+		simu(get<1>(in[1])) = 7;
+		simu(get<2>(in[1])) = '0';
+		simu(get<3>(in[1])) = '1';
+
+		co_await OnClk(clock);
+		simu(get<2>(in[0])) = '0';
+
+		for (size_t i = 0; i < 3; ++i)
+			co_await OnClk(clock);
+
+		for(int i = 0; i < 8; ++i)
+		{
+			BOOST_TEST(simu(out[1]) == 38 * (i + 1));
+			co_await OnClk(clock);
+		}
+
+		stopTest();
+	});
+
+	runTest({ 1,1'000'000 });
+}
+
+
 BOOST_FIXTURE_TEST_CASE(test_bidir_pin_extnode, gtry::GHDLTestFixture)
 {
 	using namespace gtry;
