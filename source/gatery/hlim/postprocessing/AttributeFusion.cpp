@@ -33,6 +33,7 @@ namespace gtry::hlim {
 
 void attributeFusion(Circuit &circuit)
 {
+	return;
 	utils::StableMap<NodePort, std::vector<std::pair<unsigned, Node_Attributes*>>> attributes;
 
 	// find all attribs and their "distance" (order)
