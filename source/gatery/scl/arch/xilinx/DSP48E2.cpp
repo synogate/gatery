@@ -77,7 +77,7 @@ namespace gtry::scl::arch::xilinx
 		rstP() = rst;
 	}
 
-	SInt mulAccumulate(SInt a, SInt b, Bit restart, std::string_view instanceName)
+	SInt mulAccumulate(SInt a, SInt b, Bit restart, Bit valid, std::string_view instanceName)
 	{
 		Area ent{ "scl_mulAccumulate", true };
 		if(!instanceName.empty())
@@ -89,9 +89,13 @@ namespace gtry::scl::arch::xilinx
 		// model
 		SInt m = reg(reg(sext(a, 45_b) * sext(b, 45_b)));
 		SInt acc = 48_b;
-		IF(reg(reg(restart)))
-			acc = 0;
-		acc += sext(m);
+		Bit restartDelayed = reg(reg(restart));
+		IF(reg(reg(valid)))
+		{
+			IF(restartDelayed)
+				acc = 0;
+			acc += sext(m);
+		}
 		acc = reg(acc);
 
 		// export
@@ -99,6 +103,8 @@ namespace gtry::scl::arch::xilinx
 		dsp.clock(ClockScope::getClk());
 		dsp.a() = (BVec)sext(a, 27_b);
 		dsp.b() = (BVec)sext(b, 18_b);
+
+		dsp.ceP() &= reg(reg(valid));
 
 		dsp.inMode()[0] = '1'; // select A1 register
 		dsp.inMode()[4] = '1'; // select B1 register

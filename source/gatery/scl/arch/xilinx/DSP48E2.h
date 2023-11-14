@@ -80,12 +80,19 @@ namespace gtry::scl::arch::xilinx
 		BVec carryOut() { return out("CARRYOUT", 4_b); }
 
 		// needs specific pattern detector config to work
-		Bit overflow() { return out("OVERFLOW"); } 
+		Bit overflow() { return out("OVERFLOW"); }
 		Bit underflow() { return out("UNDERFLOW"); }
 		Bit patternDetect() { return out("PATTERNDETECT"); }
 		Bit patternDetectB() { return out("PATTERNBDETECT"); }
 	};
 
-	// DSP48E2 wrapper for macc including simulation model
-	SInt mulAccumulate(SInt a, SInt b, Bit restart, std::string_view instanceName = {});
+	/**
+	 * @brief wrapper around the DSP48E2 module in multiply accumulate configuration
+	 * @param a 27 bit input
+	 * @param b 18 bit input
+	 * @param restart reset the accumulator to zero before adding the multiplication result
+	 * @param valid the input is ignored if valid is low
+	 * @return the accumulated multiplication results extended by 3 bits to 48 bits delayed by 3 clock cycles
+	*/
+	SInt mulAccumulate(SInt a, SInt b, Bit restart, Bit valid, std::string_view instanceName = {});
 }

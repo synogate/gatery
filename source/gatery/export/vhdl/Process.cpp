@@ -729,7 +729,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 					formatExpression(code, indentation+2, comment, muxNode->getDriver(1), statement.inputs, targetContext, false);
 					code << ";" << std::endl;
 				} else
-				if (muxNode->getNumInputPorts() == 3) {
+				if (muxNode->getNumInputPorts() == 3 && hlim::getOutputConnectionType(muxNode->getDriver(0)).type == hlim::ConnectionType::BOOL) {
 					code << "IF ";
 					formatExpression(code, indentation+2, comment, muxNode->getDriver(0), statement.inputs, VHDLDataType::BOOL, false);
 					code << " THEN"<< std::endl;
