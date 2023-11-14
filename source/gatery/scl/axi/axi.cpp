@@ -45,4 +45,29 @@ namespace gtry::scl
 
 		return axi;
 	}
+	
+	UInt burstAddress(const UInt& beat, const UInt& startAddr, const UInt& size, const BVec& burst)
+	{
+		UInt beatAddress = startAddr;
+		IF(burst == (size_t)AxiBurstType::INCR)
+			beatAddress |= zext(beat, startAddr.width()) << size;
+		HCL_NAMED(beatAddress);
+		return beatAddress;
+	}
+
+	RvPacketStream<AxiAddress> axiAddBurst(RvStream<AxiAddress>&& req)
+	{
+		RvPacketStream<AxiAddress> out;
+		
+		scl::Counter beatCtr{ req->len + 1 };
+		IF(transfer(out))
+			beatCtr.inc();
+
+		*out = *req;
+		out->addr = burstAddress(beatCtr.value(), req->addr, req->size, req->burst);
+		valid(out) = valid(req);
+		ready(req) = ready(out) & valid(req) & beatCtr.isLast();
+		eop(out) = beatCtr.isLast();
+		return out;
+	}
 }

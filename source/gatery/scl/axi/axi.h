@@ -19,6 +19,7 @@
 #include <gatery/frontend.h>
 
 #include "../stream/Stream.h"
+#include "../stream/utils.h"
 
 namespace gtry::scl
 {
@@ -90,7 +91,16 @@ namespace gtry::scl
 		RvPacketStream<AxiReadData> r;
 
 		static Axi4 fromConfig(const AxiConfig& cfg);
+
+		template<Signal T>
+		static Axi4 fromMemory(Memory<T>& mem, BitWidth idW = 0_b);
 	};
+
+	UInt burstAddress(const UInt& beat, const UInt& startAddr, const UInt& size, const BVec& burst);
+	RvPacketStream<AxiAddress> axiAddBurst(RvStream<AxiAddress>&& req);
+
+	template<Signal T> RvPacketStream<AxiReadData> connectMemoryReadPort(Memory<T>& mem, RvStream<AxiAddress>&& req);
+	template<Signal T> RvStream<AxiWriteResponse> connectMemoryWritePort(Memory<T>& mem, RvStream<AxiAddress>&& req, RvPacketStream<AxiWriteData>&& data);
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiAddress, id, addr, len, size, burst, cache, prot, qos, region, user);
@@ -98,3 +108,65 @@ BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiWriteData, data, strb, user);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiWriteResponse, id, resp, user);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiReadData, id, data, resp, user);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::Axi4, ar, aw, w, b, r);
+
+namespace gtry::scl
+{
+	template<Signal T>
+	inline Axi4 Axi4::fromMemory(Memory<T>& mem, BitWidth idW)
+	{
+		Axi4 axi = Axi4::fromConfig({
+			.addrW = mem.addressWidth(),
+			.dataW = BitWidth{ utils::nextPow2(width(mem.defaultValue()).bits()) },
+			.idW = idW,
+		});
+		axi.r = connectMemoryReadPort(mem, move(*axi.ar));
+		axi.b = connectMemoryWritePort(mem, move(*axi.aw), move(*axi.w));
+		return axi;
+	}
+
+	template<Signal T>
+	inline RvPacketStream<AxiReadData> connectMemoryReadPort(Memory<T>& mem, RvStream<AxiAddress>&& req)
+	{
+		RvPacketStream<AxiReadData> resp = axiAddBurst(move(req)).transform([&](const AxiAddress& ar) {
+			BitWidth payloadW = width(mem.defaultValue());
+			BVec data = ConstBVec(BitWidth{ utils::nextPow2(payloadW.bits()) });
+			data.lower(payloadW) = (BVec)pack(mem[ar.addr]);
+
+			return AxiReadData{
+				.id = ar.id,
+				.data = data,
+				.resp = ConstBVec((size_t)AxiResponseCode::OKAY, 2_b),
+				.user = BVec{0}
+			};
+		});
+
+		for (size_t i = 0; i < mem.readLatencyHint(); ++i)
+			resp = strm::regDownstreamBlocking(move(resp), { .allowRetimingBackward = true });
+		
+		return resp;
+	}
+
+	template<Signal T>
+	RvStream<AxiWriteResponse> connectMemoryWritePort(Memory<T>& mem, RvStream<AxiAddress>&& req, RvPacketStream<AxiWriteData>&& data)
+	{
+		RvStream<AxiWriteResponse> out;
+
+		RvPacketStream<AxiAddress> burstReq = axiAddBurst(move(req));
+		ready(burstReq) = ready(out) & valid(data);
+		ready(data) = ready(out) & valid(burstReq);
+		sim_assert(!valid(burstReq) | eop(burstReq) == eop(data));
+
+		T unpackedData = constructFrom(mem.defaultValue());
+		unpack(data->data, unpackedData);
+
+		IF(transfer(data))
+			mem[burstReq->addr] = unpackedData;
+
+		valid(out) = valid(burstReq) & eop(burstReq);
+		out->id = burstReq->id;
+		out->resp = (size_t)AxiResponseCode::OKAY;
+		out->user = 0;
+		return out;
+	}
+}
+
