@@ -26,6 +26,9 @@
 
 #include <gatery/scl/arch/xilinx/IOBUF.h>
 #include <gatery/scl/arch/xilinx/URAM288.h>
+#include <gatery/scl/arch/xilinx/UltraRAM.h>
+#include <gatery/scl/arch/xilinx/DSP48E2.h>
+#include <gatery/scl/tilelink/TileLinkMasterModel.h>
 
 #include <gatery/hlim/coreNodes/Node_MultiDriver.h>
 
@@ -388,6 +391,168 @@ BOOST_FIXTURE_TEST_CASE(uram288_cascade, TestWithDefaultDevice<gtry::GHDLTestFix
 
 	testCompilation();
 }
+
+BOOST_FIXTURE_TEST_CASE(ultraRamHelper, TestWithDefaultDevice<gtry::GHDLTestFixture>)
+{
+	using namespace gtry;
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	std::array ram = gtry::scl::arch::xilinx::ultraRam(61440, { .name = "testRam", .aSourceW = 1_b, .bSourceW = 1_b });
+
+	std::array<scl::TileLinkMasterModel, 2> m;
+	for (size_t i = 0; i < m.size(); ++i)
+	{
+		m[i].init("m" + std::to_string(i), 16_b, 64_b, 2_b, 1_b);
+		(scl::TileLinkUB&)ram[i] <<= regDecouple(move(m[i].getLink()));
+	}
+
+	testCompilation();
+
+	addSimulationProcess([&]()->SimProcess {
+		co_await OnClk(clock);
+
+		{ // write conflict
+			fork(m[0].put(8, 3, 0x1234, clock));
+			fork(m[1].put(8, 3, 0xABCD, clock));
+			auto [val, def, err] = co_await m[1].get(8, 3, clock);
+			BOOST_TEST(val == 0xabcd);
+		}
+
+		{ // write before read
+			fork(m[0].put(8, 3, 0x1234, clock));
+			auto [val, def, err] = co_await m[1].get(8, 3, clock);
+			BOOST_TEST(val == 0x1234);
+		}
+
+		{ // read before write
+			fork(m[1].put(8, 3, 0xABCD, clock));
+			auto [val, def, err] = co_await m[0].get(8, 3, clock);
+			BOOST_TEST(val == 0x1234);
+		}
+
+		co_await OnClk(clock);
+		stopTest();
+	});
+
+	runTest({ 1,1'000'000 });
+}
+
+BOOST_FIXTURE_TEST_CASE(mulAccumulate, TestWithDefaultDevice<gtry::GHDLTestFixture>)
+{
+	using namespace gtry;
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	SInt a = (SInt)pinIn(18_b).setName("a");
+	SInt b = (SInt)pinIn(18_b).setName("b");
+	Bit restart = pinIn().setName("restart");
+	Bit valid = pinIn().setName("valid");
+	SInt p = scl::arch::xilinx::mulAccumulate(a, b, restart, valid);
+	pinOut(p, "p");
+
+	addSimulationProcess([&]()->SimProcess {
+
+		simu(a) = 0;
+		simu(b) = 0;
+		simu(restart) = '1';
+		simu(valid) = '1';
+		co_await OnClk(clock);
+
+		simu(a) = 1;
+		simu(b) = 1;
+		simu(restart) = '0';
+		for(size_t i = 0; i < 4; ++i)
+		{
+			simu(valid) = i % 2 == 1;
+			co_await OnClk(clock);
+		}
+
+		BOOST_TEST(simu(p) == 0);
+		co_await OnClk(clock);
+		BOOST_TEST(simu(p) == 1);
+
+		simu(a) = -3;
+		simu(b) = 4;
+		simu(restart) = '1';
+		co_await OnClk(clock);
+		BOOST_TEST(simu(p) == 1);
+		simu(a) = 5;
+		simu(b) = -1;
+		simu(restart) = '0';
+
+		co_await OnClk(clock);
+		BOOST_TEST(simu(p) == 2);
+
+		co_await OnClk(clock);
+		BOOST_TEST(simu(p) == 3);
+
+		co_await OnClk(clock);
+		BOOST_TEST(simu(p) == -12);
+
+		co_await OnClk(clock);
+		BOOST_TEST(simu(p) == -17);
+
+		co_await OnClk(clock);
+		stopTest();
+	});
+
+	runTest({ 1,1'000'000 });
+}
+
+BOOST_FIXTURE_TEST_CASE(DSP48E2_double_clb_test, TestWithDefaultDevice<gtry::GHDLTestFixture>)
+{
+	using namespace gtry;
+	Clock clock({ .absoluteFrequency = 100'000'000, .name = "clk" });
+	Clock clockFast = clock.deriveClock({ .frequencyMultiplier = 2, .name = "clk2x" });
+	ClockScope clkScp(clock);
+
+	Vector<std::tuple<SInt, SInt, Bit, Bit>> in(2);
+	for(auto& it : in)
+	{
+		get<0>(it) = 18_b;
+		get<1>(it) = 18_b;
+	}
+	pinIn(in, "in");
+
+	Vector<SInt> out = scl::doublePump<SInt, std::tuple<SInt, SInt, Bit, Bit>>([](const std::tuple<SInt, SInt, Bit, Bit>& params) {
+		return gtry::scl::arch::xilinx::mulAccumulate(
+			get<0>(params), 
+			get<1>(params),
+			get<2>(params),
+			get<3>(params)
+		);
+	}, in, clockFast);
+	pinOut(out, "out");
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(get<0>(in[0])) = 1;
+		simu(get<1>(in[0])) = 3;
+		simu(get<2>(in[0])) = '1';
+		simu(get<3>(in[0])) = '1';
+		simu(get<0>(in[1])) = 5;
+		simu(get<1>(in[1])) = 7;
+		simu(get<2>(in[1])) = '0';
+		simu(get<3>(in[1])) = '1';
+
+		co_await OnClk(clock);
+		simu(get<2>(in[0])) = '0';
+
+		for (size_t i = 0; i < 3; ++i)
+			co_await OnClk(clock);
+
+		for(int i = 0; i < 8; ++i)
+		{
+			BOOST_TEST(simu(out[1]) == 38 * (i + 1));
+			co_await OnClk(clock);
+		}
+
+		stopTest();
+	});
+
+	runTest({ 1,1'000'000 });
+}
+
 
 BOOST_FIXTURE_TEST_CASE(test_bidir_pin_extnode, gtry::GHDLTestFixture)
 {

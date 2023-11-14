@@ -114,11 +114,11 @@ SimProcess simuTileLinkMemCoherenceSupervisor(const TileLinkUL& tl, const Clock&
 
 			for (auto byteIdx : gtry::utils::Range(wrMask.size())) {
 
-				std::uint8_t byteToWrite_value = memWord.extract(sim::DefaultConfig::VALUE, byteIdx * 8, 8);
-				std::uint8_t byteToWrite_defined = memWord.extract(sim::DefaultConfig::DEFINED, byteIdx * 8, 8);
+				size_t byteToWrite_value = memWord.extract(sim::DefaultConfig::VALUE, byteIdx * 8, 8);
+				size_t byteToWrite_defined = memWord.extract(sim::DefaultConfig::DEFINED, byteIdx * 8, 8);
 
-				std::uint8_t newByteToWrite_value = wrData.extract(sim::DefaultConfig::VALUE, byteIdx * 8, 8);
-				std::uint8_t newByteToWrite_defined = wrData.extract(sim::DefaultConfig::DEFINED, byteIdx * 8, 8);
+				size_t newByteToWrite_value = wrData.extract(sim::DefaultConfig::VALUE, byteIdx * 8, 8);
+				size_t newByteToWrite_defined = wrData.extract(sim::DefaultConfig::DEFINED, byteIdx * 8, 8);
 
 				if (wrMask.get(sim::DefaultConfig::DEFINED, byteIdx)) {
 					if (wrMask.get(sim::DefaultConfig::VALUE, byteIdx)) {
@@ -328,7 +328,7 @@ BOOST_FIXTURE_TEST_CASE(tl_to_amm_fuzzing, TranslatorTextSimulationFixture) {
 	prepareTest(in, avmm, linkModel, clock);
 
 	addSimulationProcess([&]()->SimProcess {
-		std::mt19937 gen(27182818284);
+		std::mt19937 gen(2182818284);
 		std::uniform_int_distribution<uint64_t> dist;
 
 		co_await OnClk(clock);

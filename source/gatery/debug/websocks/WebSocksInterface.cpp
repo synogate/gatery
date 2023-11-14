@@ -453,7 +453,7 @@ void WebSocksInterface::acceptSession(tcp::socket socket)
 	m_sessions.emplace_back(std::move(socket));
 	auto &session = m_sessions.back();
 
-	async_read(session.websockStream.next_layer(), session.buffer, session.req, [&session, this](beast::error_code ec, std::size_t bytes_transferred){
+	boost::beast::http::async_read(session.websockStream.next_layer(), session.buffer, session.req, [&session, this](beast::error_code ec, std::size_t bytes_transferred){
 		if (ec) {
 			std::cout << "Websocket connection failed to connect, could not read handshake: " << ec.message() << std::endl;
 			closeSession(session);
