@@ -58,32 +58,11 @@ namespace gtry::scl::pci
 		other															//error or unimplemented
 	};
 
-	struct TlpInstruction {
-		TlpOpcode opcode;
-		bool	th = 0;						//presence of TPH (processing hint)
-		bool	idBasedOrderingAttr2 = 0;	//Attribute[2]
-		uint8_t	tc = 0b000;					//traffic class
-		std::optional<size_t> length;		//length msb
-		size_t at = 0b00;					//Address type
-		bool	noSnoopAttr0 = 0;
-		bool	relaxedOrderingAttr1 = 0;
-		bool	ep;							//indicator of poisoned tlp
-		bool	td;							//tlp digest
-
-
-		std::optional<size_t> requesterID;
-		std::optional<uint8_t> tag;
-		size_t firstDWByteEnable = 0b1111;
-		size_t lastDWByteEnable = 0b1111;
-		std::optional<uint64_t> address;
-		std::optional<size_t> completerID;
-		size_t completionStatus = 0b000;
-		bool byteCountModifier = 0;
-		std::optional<size_t> byteCount;
-
-
-		//make a function that casts this struct to a SimPacket. this will be made by using a function that transforms this struct into a defaultbitvectorstate. we need a package of helpers to make a defaultbitvectorstate out of elementary things
-
+	enum class CompletionStatus {
+		successfulCompletion		= 0b000, //SC
+		unsupportedRequest			= 0b001, //UR
+		configRequestRetryStatus	= 0b010, //CRS
+		completerAbort				= 0b100, //CA
 	};
 
 	struct Support {
@@ -119,20 +98,24 @@ namespace gtry::scl::pci
 			BVec length() { return (BVec) cat(lengthMsb, lengthLsb); }
 			void length(BVec len) { cat(lengthMsb, lengthLsb) = (UInt) len; }
 		};
-		struct DW1 {
-			BVec dw = 32_b;
-		};
-		struct DW2 {
-			BVec dw = 32_b;
-		};
-		struct DW3 {
-			BVec dw = 32_b;
-		};
 	
 		DW0 dw0;
-		DW1 dw1;
-		DW2 dw2;
-		DW3 dw3;
+		BVec dw1 = 32_b;
+		BVec dw2 = 32_b;
+		BVec dw3 = 32_b;
+
+		void opcode(TlpOpcode op) { BVec fmttype = 8_b; fmttype = (size_t)op; dw0.type = fmttype.lower(5_b); dw0.fmt = fmttype.upper(-5_b); }
+
+		void requesterId(BVec requesterId, bool isRequest) { if (isRequest) dw1.lower(16_b) = requesterId; else dw2.lower(16_b) = requesterId; }
+		void tag(BVec tag, bool isRequest) { if (isRequest) dw1(16, 8_b) = tag; else dw2(16, 8_b) = tag; }
+
+		//completion specific parts
+		void completerId(BVec completerId) { dw1.lower(16_b); }
+		BVec completerId() { return dw1.lower(16_b); }
+
+		void completionStatus(CompletionStatus cs) { dw1(29, 3_b) = (size_t) cs; }
+		void byteCount(UInt byteCount) { BVec bc = 12_b; bc = (BVec) byteCount; dw1(16, 4_b) = bc.upper(4_b); dw1.upper(8_b) = bc.lower(8_b); }
+		void lowerAddress(UInt lowerAddress, bool isCompletion) { HCL_DESIGNCHECK_HINT(isCompletion, "this is probably not the function you are looking for"); dw2(24, 7_b) = (BVec) lowerAddress; }
 
 		Bit is3dw()		{ return dw0.fmt == 0b000 | dw0.fmt == 0b010; }
 		Bit is4dw()		{ return !is3dw(); }
@@ -144,6 +127,55 @@ namespace gtry::scl::pci
 		UInt hdrSizeInDw()		{ UInt ret = 4; IF(is3dw()) ret = 3; return ret; }
 	};
 
+	struct tlpAnswerInfo {
+		Header::DW0 dw0;
+		BVec requesterID = 16_b;
+		BVec tag = 8_b;
+		UInt lowerAddress = 7_b;
+		Bit error = '0';
+	};
+
+
+
+	struct TlpInstruction {
+		TlpOpcode opcode;
+		bool	th = 0;						//presence of TPH (processing hint)
+		bool	idBasedOrderingAttr2 = 0;	//Attribute[2]
+		uint8_t	tc = 0b000;					//traffic class
+		std::optional<size_t> length;		//length
+		size_t at = 0b00;					//Address type
+		bool	noSnoopAttr0 = 0;
+		bool	relaxedOrderingAttr1 = 0;
+		bool	ep = 0;							//indicator of poisoned tlp
+		bool	td = 0;							//tlp digest
+		uint8_t ph = 0b00;
+
+		size_t requesterID = 0xABCD;
+		uint8_t tag = 0xEF;
+		size_t firstDWByteEnable = 0b1111;
+		size_t lastDWByteEnable = 0b1111;
+		std::optional<uint64_t> address;
+		std::optional<size_t> completerID;
+		size_t completionStatus = 0b000;
+		bool byteCountModifier = 0;
+		std::optional<size_t> byteCount;
+		std::optional<std::vector<uint32_t>> payload;
+
+		TlpInstruction& safeLength(size_t length) { this->length = length; HCL_DESIGNCHECK_HINT(!(*this->length == 1 && this->lastDWByteEnable != 0), "lastBE must be zero if length = 1"); return *this; }
+		TlpInstruction& safeAddress(size_t address) { this->address = address; HCL_DESIGNCHECK_HINT((*this->address & 0b11) == 0, "address must be word aligned"); return *this; }
+
+		operator sim::DefaultBitVectorState();
+		static TlpInstruction createFrom(const sim::DefaultBitVectorState& raw);
+		auto operator <=> (const TlpInstruction& other) const = default;
+
+		//operator Header() const; //casting to Header, does it make sense ?
+		//operator scl::strm::SimPacket(); //casting to SimPacket
+
+		//make a function that casts this struct to a SimPacket. this will be made by using a function that transforms this struct into a defaultbitvectorstate. we need a package of helpers to make a defaultbitvectorstate out of elementary things
+	};
+
+	std::ostream& operator << (std::ostream& s, const TlpInstruction& inst);
+
 	struct Tlp {
 		Prefix prefix;  // 0 or 1 dw
 		Header header;  // 3 or 4 dw
@@ -154,6 +186,11 @@ namespace gtry::scl::pci
 	// or more dw's ( 1 double word in pcie jargon means 32 bits). 
 	template <Signal ...Meta>
 	using TlpPacketStream = RvPacketStream<BVec, Meta...>;
+
+	struct CompleterInterface {
+		TlpPacketStream<EmptyBits> request;
+		TlpPacketStream<EmptyBits> completion;
+	};
 
 	//A TLP intel packet stream consists of a header, prefix, and data. The header and prefix are synchronous and coincident with the Sop
 	//The Data is synchronous with the valid signal
@@ -200,7 +237,7 @@ namespace gtry::scl::pci
 
 
 namespace gtry::scl::pci {
-	TileLinkUL makeTileLinkMaster(TlpPacketStream<EmptyBits>&& complReq, TlpPacketStream<EmptyBits>& complCompl);
+	pci::CompleterInterface makeTileLinkMaster(scl::TileLinkUL&& tl, BitWidth tlpW);
 
 	template<Signal ...Meta>
 	TlpPacketStream<Meta...> toTlpPacketStream(TlpIntelPacketStream<Meta...>&& in) 
@@ -258,75 +295,68 @@ namespace gtry::scl::pci {
 		return {};
 	}
 
-
-
-
-
-
-
-
 	namespace amd {
 		struct CQUser {
-			BVec parity = 64_b;
+			BVec first_be = 8_b;
+			BVec last_be = 8_b;
+			BVec byte_en = 64_b;
 
-			BVec tph_st_tag = 16_b;
-			BVec tph_type = 4_b;
-			BVec tph_present = 2_b;
+			BVec is_sop = 2_b;
+			BVec is_sop0_ptr = 2_b;
+			BVec is_sop1_ptr = 2_b;
+
+			BVec is_eop = 2_b;
+			BVec is_eop0_ptr = 4_b;
+			BVec is_eop1_ptr = 4_b;
 
 			Bit discontinue;
 
-			BVec is_eop1_ptr = 4_b;
-			BVec is_eop0_ptr = 4_b;
-			BVec is_eop = 2_b;
+			BVec tph_present = 2_b;
+			BVec tph_type = 4_b;
 
-			BVec is_sop1_ptr = 2_b;
-			BVec is_sop0_ptr = 2_b;
-			BVec is_sop = 2_b;
-
-			BVec byte_en = 64_b;
-			BVec last_be = 8_b;
-			BVec first_be = 8_b;
+			BVec tph_st_tag = 16_b;
+			BVec parity = 64_b;
 		};
 
 		struct CCUser {
-			BVec parity = 64_b;
+			BVec is_sop = 2_b;
+			BVec is_sop0_ptr = 2_b;
+			BVec is_sop1_ptr = 2_b;
+			
+			BVec is_eop = 2_b;
+			BVec is_eop0_ptr = 4_b;
+			BVec is_eop1_ptr = 4_b;
 
 			Bit discontinue;
 
-			BVec is_eop1_ptr = 4_b;
-			BVec is_eop0_ptr = 4_b;
-			BVec is_eop = 2_b;
-
-			BVec is_sop1_ptr = 2_b;
-			BVec is_sop0_ptr = 2_b;
-			BVec is_sop = 2_b;
+			BVec parity = 64_b;
 		};
 
 		struct RQUser {
-			BVec parity = 64_b;
-
-			BVec seq_num1 = 6_b;
-			BVec seq_num0 = 6_b;
-
-			BVec tph_st_tag = 16_b;
-			BVec tph_indirect_tag_en = 2_b;
-			BVec tph_type = 4_b;
-			BVec tph_present = 2_b;
-
-			Bit discontinue;
-
-			BVec is_eop1_ptr = 4_b;
-			BVec is_eop0_ptr = 4_b;
-			BVec is_eop = 2_b;
-
-			BVec is_sop1_ptr = 2_b;
-			BVec is_sop0_ptr = 2_b;
-			BVec is_sop = 2_b;
+			BVec first_be = 8_b;
+			BVec last_be = 8_b;
 
 			BVec addr_offset = 4_b;
 
-			BVec last_be = 8_b;
-			BVec first_be = 8_b;
+			BVec is_sop = 2_b;
+			BVec is_sop0_ptr = 2_b;
+			BVec is_sop1_ptr = 2_b;
+
+			BVec is_eop = 2_b;
+			BVec is_eop0_ptr = 4_b;
+			BVec is_eop1_ptr = 4_b;
+
+			Bit discontinue;
+			
+			BVec tph_present = 2_b;
+			BVec tph_type = 4_b;
+			BVec tph_indirect_tag_en = 2_b;
+			BVec tph_st_tag = 16_b;
+
+			BVec seq_num0 = 6_b;
+			BVec seq_num1 = 6_b;
+
+			BVec parity = 64_b;
 		};
 
 		struct RQExtras {
@@ -344,23 +374,23 @@ namespace gtry::scl::pci {
 		};
 
 		struct RCUser {
-			BVec parity = 64_b;
+			BVec byte_en = 64_b;
+
+			BVec is_sop = 4_b;
+			BVec is_sop0_ptr = 2_b;
+			BVec is_sop1_ptr = 2_b;
+			BVec is_sop2_ptr = 2_b;
+			BVec is_sop3_ptr = 2_b;
+
+			BVec is_eop = 4_b;
+			BVec is_eop0_ptr = 4_b;
+			BVec is_eop1_ptr = 4_b;
+			BVec is_eop2_ptr = 4_b;
+			BVec is_eop3_ptr = 4_b;
 
 			Bit discontinue;
 
-			BVec is_eop3_ptr = 4_b;
-			BVec is_eop2_ptr = 4_b;
-			BVec is_eop1_ptr = 4_b;
-			BVec is_eop0_ptr = 4_b;
-			BVec is_eop = 4_b;
-
-			BVec is_sop3_ptr = 2_b;
-			BVec is_sop2_ptr = 2_b;
-			BVec is_sop1_ptr = 2_b;
-			BVec is_sop0_ptr = 2_b;
-			BVec is_sop = 4_b;
-
-			BVec byte_en = 64_b;
+			BVec parity = 64_b;
 		};
 
 
@@ -385,3 +415,18 @@ namespace gtry::scl::pci {
 	}
 
 }
+
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::tlpAnswerInfo, dw0, requesterID, tag, lowerAddress, error);
+//BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::CompleterInterface, request, completion);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::Header::DW0, type, fmt, th, reservedByte1Bit1, idBasedOrderingAttr2, reservedByte1Bit3, tc, reservedByte1Bit7, lengthMsb, at, noSnoopAttr0, relaxedOrderingAttr1, ep, td, lengthLsb);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::Header, dw0, dw1, dw2, dw3);
+
+
+
+
+
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::amd::CQUser, first_be, last_be, byte_en, is_sop, is_sop0_ptr, is_sop1_ptr, is_eop, is_eop0_ptr, is_eop1_ptr, discontinue, tph_present, tph_type, tph_st_tag, parity);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::amd::CCUser, is_sop, is_sop0_ptr, is_sop1_ptr, is_eop, is_eop0_ptr, is_eop1_ptr, discontinue, parity);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::amd::RQUser, first_be, last_be, addr_offset, is_sop, is_sop0_ptr, is_sop1_ptr, is_eop, is_eop0_ptr, is_eop1_ptr, discontinue, tph_present, tph_type, tph_indirect_tag_en, tph_st_tag, seq_num0, seq_num1, parity);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::amd::RQExtras, tag_vld0, tag_vld1, tag0, tag1, seq_num0, seq_num1, seq_num_vld0, seq_num_vld1);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::amd::RCUser, byte_en, is_sop, is_sop0_ptr, is_sop1_ptr, is_sop2_ptr, is_sop3_ptr, is_eop, is_eop0_ptr, is_eop1_ptr, is_eop2_ptr, is_eop3_ptr, discontinue, parity);

@@ -464,6 +464,7 @@ namespace gtry {
 
 	SignalReadPort BaseBitVector::rawDriver() const
 	{
+		HCL_ASSERT_HINT(valid(), "This signal has not been initialized with a BitWidth");
 		hlim::NodePort driver = m_node->getDriver(0);
 		if (!driver.node)
 			driver = hlim::NodePort{ .node = m_node, .port = 0ull };
