@@ -529,43 +529,18 @@ namespace gtry
 		}
 	}
 
-
-	namespace internal
-	{
-		void width(const BaseSignal auto& signal, BitWidth& sum);
-		void width(const ContainerSignal auto& signal, BitWidth& sum);
-		void width(const CompoundSignal auto& signal, BitWidth& sum);
-		void width(const TupleSignal auto& signal, BitWidth& sum);
-
-		void width(const BaseSignal auto& signal, BitWidth& sum)
-		{
-			sum += signal.width();
-		}
-
-		void width(const ContainerSignal auto& signal, BitWidth& sum)
-		{
-			for(auto& it : signal)
-				width(it, sum);
-		}
-
-		void width(const CompoundSignal auto& signal, BitWidth& sum)
-		{
-			width(boost::pfr::structure_tie(signal), sum);
-		}
-
-		void width(const TupleSignal auto& signal, BitWidth& sum)
-		{
-			boost::hana::for_each(signal, [&](const auto& member) {
-				if constexpr(Signal<decltype(member)>)
-					width(member, sum);
-			});
-		}
-	}
+	BitWidth width(const BaseSignal auto& signal) { return signal.width(); }
 
 	BitWidth width(const Signal auto& ...args)
 	{
 		BitWidth sum;
-		(internal::width(args, sum), ...);
+
+		(internal::transformSignal(args, [&](const auto& arg) {
+			if constexpr (Signal<decltype(arg)>)
+				sum += width(arg);
+			return arg;
+		}), ...);
+
 		return sum;
 	}
 }
