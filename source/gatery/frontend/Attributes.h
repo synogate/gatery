@@ -75,8 +75,11 @@ inline SignalType allowClockDomainCrossing(const SignalType& in, const Clock &sr
 template<Signal T>
 T allowClockDomainCrossing(const T& val, const Clock &srcClock, const Clock &dstClock, const hlim::Node_CDC::CdcNodeParameter params = {})
 {
-	return internal::transformSignal(val, [&](const BaseSignal auto& sig) {
-		return allowClockDomainCrossing(sig, srcClock, dstClock, params);
+	return internal::transformSignal(val, [&](const auto& sig) {
+		if constexpr (!Signal<decltype(sig)>)
+			return sig;
+		else
+			return allowClockDomainCrossing(sig, srcClock, dstClock, params);
 	});
 }
 

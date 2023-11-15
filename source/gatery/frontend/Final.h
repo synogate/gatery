@@ -30,8 +30,11 @@ namespace gtry
 	template<Signal TSig>
 	TSig final(const TSig& sig)
 	{
-		return internal::transformIfSignal(sig, [](const auto& subsig) {
-			return final(subsig);
+		return internal::transformSignal(sig, [](const auto& subsig) {
+			if constexpr (!Signal<decltype(subsig)>)
+				return subsig;
+			else
+				return final(subsig);
 		});
 	}
 }
