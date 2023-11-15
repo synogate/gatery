@@ -46,6 +46,8 @@ class Node_Attributes : public Node<Node_Attributes>
 
 		inline SignalAttributes &getAttribs() { return m_attributes; }
 		inline const SignalAttributes &getAttribs() const { return m_attributes; }
+
+		virtual bool hasSideEffects() const { return true; }
 	protected:
 		SignalAttributes m_attributes;
 };

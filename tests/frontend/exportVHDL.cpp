@@ -607,5 +607,57 @@ BOOST_FIXTURE_TEST_CASE(oneFilePerPartition, gtry::GHDLTestFixture)
 }
 
 
+BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+    {
+		Bit input1 = pinIn().setName("input1");
+		Bit input2 = pinIn().setName("input2");
+
+		Bit input = input1 ^ input2;
+
+		setName(input, "input_xor");
+
+		SignalAttributes attrib;
+		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe\""};
+		attribute(input, attrib);
+
+        pinOut(input).setName("output");
+    }
+
+    {
+		Bit input = pinIn().setName("inputSingle");
+
+		setName(input, "input_single");
+
+		SignalAttributes attrib;
+		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_single\""};
+		attribute(input, attrib);
+
+        pinOut(input).setName("outputSingle");
+    }	
+    {
+		Bit input = '0';
+
+		setName(input, "input_const");
+
+		SignalAttributes attrib;
+		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_const\""};
+		attribute(input, attrib);
+
+        pinOut(input).setName("outputConst");
+    }	
+
+//	design.visualize("before");
+	testCompilation();
+//	design.visualize("after");
+
+	BOOST_TEST(exportContains(std::regex{"maybe"}));
+	BOOST_TEST(exportContains(std::regex{"maybe_single"}));
+	BOOST_TEST(exportContains(std::regex{"maybe_const"}));
+}
+
+
 
 BOOST_AUTO_TEST_SUITE_END()
