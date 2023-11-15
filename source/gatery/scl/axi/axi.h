@@ -50,9 +50,9 @@ namespace gtry::scl
 	{
 		BVec id;
 		UInt addr;
-		UInt len = 8_b;
-		UInt size = 3_b;
-		BVec burst = 2_b;
+		UInt len = 8_b;		// len + 1 = number of beats
+		UInt size = 3_b;	// 2^size = number of bytes in one beat
+		BVec burst = 2_b;	// burst address type
 		BVec cache = 4_b;
 		BVec prot = 3_b;
 		UInt qos = 4_b;
@@ -94,6 +94,8 @@ namespace gtry::scl
 
 		template<Signal T>
 		static Axi4 fromMemory(Memory<T>& mem, BitWidth idW = 0_b);
+
+		AxiConfig config() const;
 	};
 
 	UInt burstAddress(const UInt& beat, const UInt& startAddr, const UInt& size, const BVec& burst);

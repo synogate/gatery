@@ -45,6 +45,20 @@ namespace gtry::scl
 
 		return axi;
 	}
+
+	AxiConfig Axi4::config() const
+	{
+		return {
+			.addrW = (*ar)->addr.width(),
+			.dataW = (*w)->data.width(),
+			.idW = (*ar)->id.width(),
+			.arUserW = (*ar)->user.width(),
+			.awUserW = (*aw)->user.width(),
+			.wUserW = (*w)->user.width(),
+			.bUserW = b->user.width(),
+			.rUserW = r->user.width(),
+		};
+	}
 	
 	UInt burstAddress(const UInt& beat, const UInt& startAddr, const UInt& size, const BVec& burst)
 	{
