@@ -121,7 +121,7 @@ namespace gtry::scl
 		HCL_NAMED(axi);
 	}
 
-	void axiDma(RvStream<AxiToStreamCmd>&& fetchCmd, RvStream<AxiToStreamCmd>&& storeCmd, Axi4& axi, size_t dataFifoDepth)
+	void axiDMA(RvStream<AxiToStreamCmd>&& fetchCmd, RvStream<AxiToStreamCmd>&& storeCmd, Axi4& axi, size_t dataFifoDepth)
 	{
 		Area area{ "scl_axiDma", true };
 
