@@ -141,10 +141,7 @@ BOOST_FIXTURE_TEST_CASE(axi_dma_test, BoostUnitTestSimulationFixture)
 	mem.fillPowerOnState(sim::createDefaultBitVectorState(memData.size() * 16, memData.data()));
 
 	scl::Axi4 axi = scl::Axi4::fromMemory(mem);
-
-	scl::Stream mid = scl::axiToStream(move(axiToStreamCmd), axi);
-	HCL_NAMED(mid);
-	scl::axiFromStream(move(axiFromStreamCmd), mid.template remove<scl::Eop>(), axi);
+	scl::axiDma(move(axiToStreamCmd), move(axiFromStreamCmd), axi, 2);
 	HCL_NAMED(axi); tap(axi);
 
 	// generate circuit to check memory contents
@@ -200,10 +197,8 @@ BOOST_FIXTURE_TEST_CASE(axi_dma_test, BoostUnitTestSimulationFixture)
 				BOOST_TEST(simu(*checkOut) == j);
 			}
 		}
-
 		stopTest();
 	});
-
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));

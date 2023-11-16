@@ -18,6 +18,8 @@
 #include "gatery/pch.h"
 #include "AxiDMA.h"
 
+#include "../stream/streamFifo.h"
+
 namespace gtry::scl
 {
 	RvStream<AxiAddress> axiGenerateAddressFromCommand(RvStream<AxiToStreamCmd>&& cmd, const AxiConfig& config)
@@ -117,5 +119,20 @@ namespace gtry::scl
 		axiFromStream(move(data), *axi.w, cmd->bytesPerBurst / axi.r->data.width().bytes());
 		ready(axi.b) = '1';
 		HCL_NAMED(axi);
+	}
+
+	void axiDma(RvStream<AxiToStreamCmd>&& fetchCmd, RvStream<AxiToStreamCmd>&& storeCmd, Axi4& axi, size_t dataFifoDepth)
+	{
+		Area area{ "scl_axiDma", true };
+
+		scl::Stream mid = scl::axiToStream(move(fetchCmd), axi);
+		HCL_NAMED(mid);
+
+		if (dataFifoDepth > 1)
+			mid = strm::fifo(move(mid), dataFifoDepth, gtry::scl::FallThrough::on);
+		if (dataFifoDepth > 0)
+			mid = strm::regDownstream(move(mid));
+
+		scl::axiFromStream(move(storeCmd), mid.template remove<scl::Eop>(), axi);
 	}
 }

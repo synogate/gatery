@@ -34,6 +34,8 @@ namespace gtry::scl
 	RvPacketStream<BVec> axiToStream(RvStream<AxiToStreamCmd>&& cmd, Axi4& axi);
 	void axiFromStream(RvStream<BVec>&& in, RvPacketStream<AxiWriteData>& out, size_t beatsPerBurst);
 	void axiFromStream(RvStream<AxiToStreamCmd>&& cmd, RvStream<BVec>&& data, Axi4& axi);
+
+	void axiDma(RvStream<AxiToStreamCmd>&& fetchCmd, RvStream<AxiToStreamCmd>&& storeCmd, Axi4& axi, size_t dataFifoDepth);
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiToStreamCmd,
