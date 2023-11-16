@@ -32,6 +32,8 @@ namespace gtry::scl
 	RvStream<AxiAddress> axiGenerateAddressFromCommand(RvStream<AxiToStreamCmd>&& cmd, const AxiConfig& config);
 	RvPacketStream<BVec> axiToStream(RvPacketStream<AxiReadData>&& dataStream);
 	RvPacketStream<BVec> axiToStream(RvStream<AxiToStreamCmd>&& cmd, Axi4& axi);
+	void axiFromStream(RvStream<BVec>&& in, RvPacketStream<AxiWriteData>& out, size_t beatsPerBurst);
+	void axiFromStream(RvStream<AxiToStreamCmd>&& cmd, RvStream<BVec>&& data, Axi4& axi);
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiToStreamCmd,

@@ -59,7 +59,7 @@ namespace gtry::scl
 			.rUserW = r->user.width(),
 		};
 	}
-	
+
 	UInt burstAddress(const UInt& beat, const UInt& startAddr, const UInt& size, const BVec& burst)
 	{
 		UInt beatAddress = startAddr;
@@ -72,7 +72,7 @@ namespace gtry::scl
 	RvPacketStream<AxiAddress> axiAddBurst(RvStream<AxiAddress>&& req)
 	{
 		RvPacketStream<AxiAddress> out;
-		
+
 		scl::Counter beatCtr{ req->len + 1 };
 		IF(transfer(out))
 			beatCtr.inc();
@@ -83,5 +83,18 @@ namespace gtry::scl
 		ready(req) = ready(out) & valid(req) & beatCtr.isLast();
 		eop(out) = beatCtr.isLast();
 		return out;
+	}
+
+	void axiDisableWrites(Axi4& axi)
+	{
+		valid(*axi.aw) = '0';
+		valid(*axi.w) = '0';
+		ready(axi.b) = '1';
+	}
+
+	void axiDisableReads(Axi4& axi)
+	{
+		valid(*axi.ar) = '0';
+		ready(axi.r) = '1';
 	}
 }

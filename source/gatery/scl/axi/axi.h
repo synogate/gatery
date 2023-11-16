@@ -98,6 +98,9 @@ namespace gtry::scl
 		AxiConfig config() const;
 	};
 
+	void axiDisableWrites(Axi4& axi);
+	void axiDisableReads(Axi4& axi);
+
 	UInt burstAddress(const UInt& beat, const UInt& startAddr, const UInt& size, const BVec& burst);
 	RvPacketStream<AxiAddress> axiAddBurst(RvStream<AxiAddress>&& req);
 
@@ -116,8 +119,11 @@ namespace gtry::scl
 	template<Signal T>
 	inline Axi4 Axi4::fromMemory(Memory<T>& mem, BitWidth idW)
 	{
+		Area ent{ "scl_axi_fromMemory", true };
+
+		BitWidth dataW = BitWidth{ utils::nextPow2(width(mem.defaultValue()).bits()) };
 		Axi4 axi = Axi4::fromConfig({
-			.addrW = mem.addressWidth(),
+			.addrW = mem.addressWidth() + BitWidth::count(dataW.bytes()),
 			.dataW = BitWidth{ utils::nextPow2(width(mem.defaultValue()).bits()) },
 			.idW = idW,
 		});
@@ -131,8 +137,11 @@ namespace gtry::scl
 	{
 		RvPacketStream<AxiReadData> resp = axiAddBurst(move(req)).transform([&](const AxiAddress& ar) {
 			BitWidth payloadW = width(mem.defaultValue());
-			BVec data = ConstBVec(BitWidth{ utils::nextPow2(payloadW.bits()) });
-			data.lower(payloadW) = (BVec)pack(mem[ar.addr]);
+			BitWidth dataW = BitWidth{ utils::nextPow2(payloadW.bits()) };
+			BVec data = ConstBVec(dataW);
+			BitWidth wordAddrW = BitWidth::count(payloadW.bytes());
+			UInt wordAddr = ar.addr.upper(-BitWidth::count(dataW.bytes()));
+			data.lower(payloadW) = (BVec)pack(mem[wordAddr]);
 
 			return AxiReadData{
 				.id = ar.id,
@@ -154,6 +163,7 @@ namespace gtry::scl
 		RvStream<AxiWriteResponse> out;
 
 		RvPacketStream<AxiAddress> burstReq = axiAddBurst(move(req));
+		HCL_NAMED(burstReq);
 		ready(burstReq) = ready(out) & valid(data);
 		ready(data) = ready(out) & valid(burstReq);
 		sim_assert(!valid(burstReq) | eop(burstReq) == eop(data));
@@ -161,8 +171,9 @@ namespace gtry::scl
 		T unpackedData = constructFrom(mem.defaultValue());
 		unpack(data->data, unpackedData);
 
+		BitWidth wordAddrW = BitWidth::count(data->data.width().bytes());
 		IF(transfer(data))
-			mem[burstReq->addr] = unpackedData;
+			mem[burstReq->addr.upper(-wordAddrW)] = unpackedData;
 
 		valid(out) = valid(burstReq) & eop(burstReq);
 		out->id = burstReq->id;

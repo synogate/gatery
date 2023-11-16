@@ -114,3 +114,97 @@ BOOST_FIXTURE_TEST_CASE(axi_axiGenerateAddressFromCommand_test, BoostUnitTestSim
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
+
+BOOST_FIXTURE_TEST_CASE(axi_dma_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000, .memoryResetType = ClockConfig::ResetType::NONE });
+	ClockScope clkScp(clock);
+
+	scl::RvStream<scl::AxiToStreamCmd> axiToStreamCmd{ {
+			.startAddress = 8_b,
+			.endAddress = 8_b,
+			.bytesPerBurst = 16
+	} };
+	pinIn(axiToStreamCmd, "axiToStreamCmd");
+
+	scl::RvStream<scl::AxiToStreamCmd> axiFromStreamCmd{ {
+		.startAddress = 8_b,
+		.endAddress = 8_b,
+		.bytesPerBurst = 16
+	} };
+	pinIn(axiFromStreamCmd, "axiFromStreamCmd");
+
+	Memory<BVec> mem{ 256, 16_b };
+	std::vector<uint16_t> memData;
+	for (uint16_t i = 0; i < 8; ++i)
+		memData.push_back(i);
+	mem.fillPowerOnState(sim::createDefaultBitVectorState(memData.size() * 16, memData.data()));
+
+	scl::Axi4 axi = scl::Axi4::fromMemory(mem);
+
+	scl::Stream mid = scl::axiToStream(move(axiToStreamCmd), axi);
+	HCL_NAMED(mid);
+	scl::axiFromStream(move(axiFromStreamCmd), mid.template remove<scl::Eop>(), axi);
+	HCL_NAMED(axi); tap(axi);
+
+	// generate circuit to check memory contents
+	scl::RvStream<scl::AxiToStreamCmd> checkCmd{ {
+		.startAddress = 8_b,
+		.endAddress = 8_b,
+		.bytesPerBurst = 16
+	} };
+	pinIn(checkCmd, "checkCmd");
+
+	scl::Axi4 checkAxi = scl::Axi4::fromMemory(mem);
+	scl::Stream checkOut = scl::axiToStream(move(checkCmd), checkAxi);
+	pinOut(checkOut, "checkOut");
+	axiDisableWrites(checkAxi);
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(valid(axiToStreamCmd)) = '0';
+		co_await OnClk(clock);
+
+		simu(axiToStreamCmd->startAddress) = 0;
+		simu(axiToStreamCmd->endAddress) = 16;
+		while (true)
+			co_await scl::performTransfer(axiToStreamCmd, clock);
+	});
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(valid(axiFromStreamCmd)) = '0';
+		co_await OnClk(clock);
+
+		for (size_t i = 0; i < 3; ++i)
+		{
+			simu(axiFromStreamCmd->startAddress) = (i + 1) * 16;
+			simu(axiFromStreamCmd->endAddress) = (i + 2) * 16;
+			co_await scl::performTransfer(axiFromStreamCmd, clock);
+		}
+	});
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(valid(checkCmd)) = '0';
+		simu(ready(checkOut)) = '1';
+		for(size_t i = 0; i < 4; ++i)
+			co_await OnClk(clock);
+
+		simu(checkCmd->startAddress) = 16;
+		simu(checkCmd->endAddress) = 64;
+		simu(valid(checkCmd)) = '1';
+
+		for (size_t i = 0; i < 3; ++i)
+		{
+			for (size_t j = 0; j < 8; ++j)
+			{
+				co_await scl::performTransferWait(checkOut, clock);
+				BOOST_TEST(simu(*checkOut) == j);
+			}
+		}
+
+		stopTest();
+	});
+
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}

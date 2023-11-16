@@ -22,6 +22,8 @@ namespace gtry::scl
 {
 	RvStream<AxiAddress> axiGenerateAddressFromCommand(RvStream<AxiToStreamCmd>&& cmd, const AxiConfig& config)
 	{
+		Area ent{ "scl_axiGenerateAddressFromCommand", true };
+
 		RvStream<AxiAddress> out;
 		out->addr = config.addrW;
 		out->id = ConstBVec(cmd->id ,config.idW);
@@ -31,7 +33,7 @@ namespace gtry::scl
 		out->size = utils::Log2C(config.dataW.bytes());
 
 		HCL_DESIGNCHECK_HINT(cmd->bytesPerBurst % config.dataW.bytes() == 0, "Burst size must be a multiple of the data width of the AXI interface.");
-		out->len = cmd->bytesPerBurst / config.dataW.bytes();
+		out->len = cmd->bytesPerBurst / config.dataW.bytes() - 1;
 
 		out->burst = (size_t)AxiBurstType::INCR;
 		out->cache = 0;
@@ -45,7 +47,10 @@ namespace gtry::scl
 		// first out beat is in IDLE state with cmd->startAddress followed by incremental address register beats.
 		enum State { IDLE, TRANSFER };
 		Reg<Enum<State>> state{ IDLE };
+		state.setName("state");
+
 		UInt address = cmd->startAddress.width();
+		HCL_NAMED(address);
 
 		IF(state.current() == IDLE)
 		{
@@ -59,13 +64,14 @@ namespace gtry::scl
 			address += cmd->bytesPerBurst;
 
 		ready(cmd) = '0';
-		IF(state.current() == TRANSFER & address == cmd->endAddress)
+		IF(state.combinatorial() == TRANSFER & address == cmd->endAddress)
 		{
 			ready(cmd) = '1';
 			state = IDLE;
 		}
 		address = reg(address);
 
+		HCL_NAMED(out);
 		return out;
 	}
 
@@ -84,5 +90,32 @@ namespace gtry::scl
 		Stream out = axiToStream(move(axi.r));
 		HCL_NAMED(out);
 		return out;
+	}
+
+	void axiFromStream(RvStream<BVec>&& in, RvPacketStream<AxiWriteData>& out, size_t beatsPerBurst)
+	{
+		scl::Counter beatCtr{ beatsPerBurst };
+		IF(transfer(out))
+			beatCtr.inc();
+
+		out <<= in.transform([&](const BVec& data) {
+			return AxiWriteData{
+				.data = data,
+				.strb = BVec{out->strb.width().mask()},
+				.user = ConstBVec(out->user.width()),
+			};
+		}).add(Eop{ beatCtr.isLast() });
+	}
+
+	void axiFromStream(RvStream<AxiToStreamCmd>&& cmd, RvStream<BVec>&& data, Axi4& axi)
+	{
+		Area area{ "scl_axiFromStream", true };
+		HCL_NAMED(data);
+		HCL_NAMED(cmd);
+
+		*axi.aw <<= axiGenerateAddressFromCommand(move(cmd), axi.config());
+		axiFromStream(move(data), *axi.w, cmd->bytesPerBurst / axi.r->data.width().bytes());
+		ready(axi.b) = '1';
+		HCL_NAMED(axi);
 	}
 }
