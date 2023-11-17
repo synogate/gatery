@@ -19,6 +19,8 @@
 
 #include "HBM_IP.h"
 
+#include <boost/format.hpp>
+
 namespace gtry::scl::arch::xilinx
 {
 	HBM_IP::HBM_IP(std::string_view ipName) :
@@ -54,7 +56,7 @@ namespace gtry::scl::arch::xilinx
 			.rUserW = 32_b,
 		});
 
-		std::string prefix = std::format("AXI_{:02}_", portIndex);
+		std::string prefix = (boost::format("AXI_{%02d}_") % portIndex).str();
 
 		// CLOCK
 		clockIn(ClockScope::getClk(), prefix + "ACLK");
