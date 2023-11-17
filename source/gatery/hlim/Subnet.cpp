@@ -26,6 +26,7 @@
 #include "supportNodes/Node_ExportOverride.h"
 #include "supportNodes/Node_SignalTap.h"
 #include "coreNodes/Node_Signal.h"
+#include "coreNodes/Node_Pin.h"
 
 
 #include "Circuit.h"
@@ -331,6 +332,9 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllForExport(CircuitType &ci
 					if (sigTap->getTrigger() != Node_SignalTap::TRIG_FIRST_INPUT_HIGH && sigTap->getTrigger() != Node_SignalTap::TRIG_FIRST_INPUT_LOW) continue; 
 					if (!includeAsserts) continue; // ... and potentially not even those.
 				}
+			} else if (auto *pin = dynamic_cast<Node_Pin*>(n.get())) {
+				if (pin->getPinNodeParameter().simulationOnlyPin)
+					continue;
 			}
 			openList.push_back(n.get());
 		}

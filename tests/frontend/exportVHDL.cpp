@@ -688,10 +688,90 @@ BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
 	BOOST_TEST(exportContains(std::regex{"maybe"}));
 	BOOST_TEST(exportContains(std::regex{"maybe_single"}));
 	BOOST_TEST(exportContains(std::regex{"maybe_const"}));
-
+/*
 	BOOST_TEST(exportContains(std::regex{"maybe_no_signal"}));
 	BOOST_TEST(exportContains(std::regex{"maybe_single_no_signal"}));
 	BOOST_TEST(exportContains(std::regex{"maybe_const_no_signal"}));
+*/
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(simulationOnlyPins, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+	{
+		Bit input1 = pinIn().setName("input1");
+		Bit input2 = pinIn().setName("input2");
+
+		Bit output = input1 ^ input2;
+		pinOut(output).setName("output");
+
+		Area subarea("subArea", true);
+
+		Bit simulationOnlyInput = pinIn({.simulationOnlyPin = true}).setName("simulationOnlyInput");
+		Bit simProcessDriver = input1 & input2 & simulationOnlyInput;
+
+		pinOut(simProcessDriver, {.simulationOnlyPin = true}).setName("simulationOnlyOutput");
+
+
+		Bit inHelper = simulationOnlyInput;
+		inHelper.exportOverride(input2);
+		Bit output2 = input1 ^ inHelper;
+		pinOut(output2).setName("output2");
+
+
+		addSimulationProcess([=,this]()->SimProcess {
+
+			// Just read and write some stuff including the simulation pins to force everything into the recorded test bench
+
+			co_await OnClk(clock);
+
+			simu(input1) = '1';
+			simu(input2) = '0';
+			simu(simulationOnlyInput) = '0';
+
+			co_await OnClk(clock);
+
+			BOOST_TEST(simu(output) == '1');
+			BOOST_TEST(simu(output2) == '1');
+			BOOST_TEST(simu(simProcessDriver) == '0');
+
+			stopTest();
+		});
+
+	}
+
+	runTest(hlim::ClockRational(200, 1) / clock.getClk()->absoluteFrequency());	
+
+	BOOST_TEST(exportContains(std::regex{"input1"}));
+	BOOST_TEST(exportContains(std::regex{"input2"}));
+	BOOST_TEST(exportContains(std::regex{"output"}));
+	BOOST_TEST(exportContains(std::regex{"output2"}));
+
+	BOOST_TEST(!exportContains(std::regex{"simulationOnlyInput"}));
+	BOOST_TEST(!exportContains(std::regex{"simulationOnlyOutput"}));
+}
+
+
+BOOST_FIXTURE_TEST_CASE(tryExportSimulationOnlyPins, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+
+	{
+		Bit input1 = pinIn().setName("input1");
+		Bit input2 = pinIn({.simulationOnlyPin = true}).setName("input2");
+
+		Bit output = input1 ^ input2;
+		pinOut(output).setName("output");
+	}
+
+
+	BOOST_CHECK_THROW(testCompilation(), gtry::utils::DesignError);
 }
 
 

@@ -432,9 +432,11 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
 				continue;
 
 			// bidir pins (without enable) must be handled with special care through intricate wiring, rather than assigning to them in a process.
-			if (auto *pin = dynamic_cast<hlim::Node_Pin *>(node))
+			if (auto *pin = dynamic_cast<hlim::Node_Pin *>(node)) {
 				if (m_ioPins.contains(pin))
 					continue;
+				HCL_DESIGNCHECK_HINT(!pin->getPinNodeParameter().simulationOnlyPin, "A simulation only pin can not be exported and must be separated from the to be exported circuit through export/simulation overrides!");
+			}
 
 			hlim::Node_Register *regNode = dynamic_cast<hlim::Node_Register *>(node);
 			if (regNode != nullptr) {

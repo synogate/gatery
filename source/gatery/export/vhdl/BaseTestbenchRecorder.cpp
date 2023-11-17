@@ -157,7 +157,8 @@ void BaseTestbenchRecorder::findClocksAndPorts()
 			m_resetsOfInterest.insert(c);
 
 	for (auto &p : allIOPins)
-		m_allIOPins.insert(p);
+		if (!p->getPinNodeParameter().simulationOnlyPin)
+			m_allIOPins.insert(p);
 
 }
 
