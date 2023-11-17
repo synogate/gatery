@@ -382,7 +382,7 @@ namespace gtry
 		T transformIfSignal(const T& signal, TFunc&& func)
 		{
 			if constexpr(Signal<T>)
-				return transformSignal(signal, func);
+				return func(signal);
 			else
 				return signal;
 		}
@@ -391,7 +391,7 @@ namespace gtry
 		T transformIfSignal(const T& signal, Tr&& secondSignal, TFunc&& func)
 		{
 			if constexpr(Signal<T>)
-				return transformSignal(signal, secondSignal, func);
+				return func(signal, secondSignal);
 			else
 				return T{ secondSignal };
 		}
@@ -414,7 +414,7 @@ namespace gtry
 			return gtry::make_from_tuple<T>(
 				boost::hana::transform(boost::pfr::structure_tie(val), [&](auto&& member) {
 					if constexpr(Signal<decltype(member)>)
-						return transformSignal(member, func);
+						return func(member);
 					else
 						return member;
 				})
@@ -433,7 +433,7 @@ namespace gtry
 				), 
 				[&](auto member) {
 					if constexpr(Signal<decltype(std::get<0>(member))>)
-						return transformSignal(std::get<0>(member), std::get<1>(member), func);
+						return func(std::get<0>(member), std::get<1>(member));
 					else
 						return std::get<1>(member); // use reset value for metadata
 
@@ -450,7 +450,7 @@ namespace gtry
 				ret.reserve(val.size());
 
 			for(auto&& it : val)
-				ret.insert(ret.end(), transformSignal(it, func));
+				ret.insert(ret.end(), func(it));
 
 			return ret;
 		}
@@ -467,7 +467,7 @@ namespace gtry
 
 			auto it_reset = resetVal.begin();
 			for(auto&& it : val)
-				ret.insert(ret.end(), transformSignal(it, *it_reset++, func));
+				ret.insert(ret.end(), func(it, *it_reset++));
 
 			return ret;
 		}
@@ -482,7 +482,7 @@ namespace gtry
 			});
 
 			return boost::hana::unpack(in2, [&](auto&&... args) {
-				return T{ transformIfSignal(args, func)... };
+				return T{ func(args)... };
 			});
 		}
 
@@ -524,48 +524,23 @@ namespace gtry
 
 			// Essentially return Tuple{ transform(in3[0][0], in3[0][1]), transform(in3[1][0], in3[1][1]), ...}
 			return boost::hana::unpack(in3, [&](auto&&... args) {
-				return T{ transformIfSignal(std::get<0>(args), std::get<1>(args), func)...};
+				return T{ func(std::get<0>(args), std::get<1>(args))...};
 			});
 		}
 	}
 
-
-	namespace internal
-	{
-		void width(const BaseSignal auto& signal, BitWidth& sum);
-		void width(const ContainerSignal auto& signal, BitWidth& sum);
-		void width(const CompoundSignal auto& signal, BitWidth& sum);
-		void width(const TupleSignal auto& signal, BitWidth& sum);
-
-		void width(const BaseSignal auto& signal, BitWidth& sum)
-		{
-			sum += signal.width();
-		}
-
-		void width(const ContainerSignal auto& signal, BitWidth& sum)
-		{
-			for(auto& it : signal)
-				width(it, sum);
-		}
-
-		void width(const CompoundSignal auto& signal, BitWidth& sum)
-		{
-			width(boost::pfr::structure_tie(signal), sum);
-		}
-
-		void width(const TupleSignal auto& signal, BitWidth& sum)
-		{
-			boost::hana::for_each(signal, [&](const auto& member) {
-				if constexpr(Signal<decltype(member)>)
-					width(member, sum);
-			});
-		}
-	}
+	BitWidth width(const BaseSignal auto& signal) { return signal.width(); }
 
 	BitWidth width(const Signal auto& ...args)
 	{
 		BitWidth sum;
-		(internal::width(args, sum), ...);
+
+		(internal::transformSignal(args, [&](const auto& arg) {
+			if constexpr (Signal<decltype(arg)>)
+				sum += width(arg);
+			return arg;
+		}), ...);
+
 		return sum;
 	}
 }

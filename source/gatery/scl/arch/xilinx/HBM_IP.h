@@ -17,24 +17,25 @@
 */
 #pragma once
 
-#include "../utils/Traits.h"
+#include <gatery/frontend/ExternalModule.h>
 
-namespace gtry 
+#include "../../axi/axi.h"
+
+namespace gtry::scl::arch::xilinx
 {
-	template<BaseSignal TSig>
-	TSig final(const TSig& sig)
+	class HBM_IP : public ExternalModule
 	{
-		return TSig{ sig.outPort() };
-	}
+	public:
+		HBM_IP(std::string_view ipName = "hbm_0");
 
-	template<Signal TSig>
-	TSig final(const TSig& sig)
-	{
-		return internal::transformSignal(sig, [](const auto& subsig) {
-			if constexpr (!Signal<decltype(subsig)>)
-				return subsig;
-			else
-				return final(subsig);
-		});
-	}
+		// this clocks needs to be connected even when not using the APB interface
+		void clockAPB(const Clock& clk, size_t stackIndex);
+		void clockRef(const Clock& clk, size_t stackIndex);
+
+		Axi4 port(size_t portIndex, BitWidth addrW = 33_b);
+
+		Bit catastrophicTemperature(size_t stackIndex);
+		UInt temperature(size_t stackIndex);
+		Bit abpComplete(size_t stackIndex);
+	};
 }
