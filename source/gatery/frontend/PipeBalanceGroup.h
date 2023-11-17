@@ -144,7 +144,7 @@ namespace gtry {
 	template<Signal T>
 	T pipestage(const T& signal)
 	{
-		return internal::transformSignal(signal, [&](const BaseSignal auto& sig) {
+		return internal::transformSignal(signal, [&](const Signal auto& sig) {
 			return pipestage(sig); // forward so it can have overloads
 		});
 	}
