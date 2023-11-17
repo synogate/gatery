@@ -92,7 +92,7 @@ MemoryStorageDense::MemoryStorageDense(std::uint64_t size, const Initialization 
 		if (std::holds_alternative<std::span<uint8_t>>(*initialization.background))
 			backgroundSpan = std::get<std::span<uint8_t>>(*initialization.background);
 		else {
-			mappedBackgroundFile.open(std::get<std::filesystem::path>(*initialization.background));
+			mappedBackgroundFile.open(boost::filesystem::path{std::get<std::filesystem::path>(*initialization.background)});
 			backgroundSpan = std::span<const uint8_t>{ (const uint8_t*) mappedBackgroundFile.data(), mappedBackgroundFile.size() };
 		}
 
@@ -126,11 +126,13 @@ void MemoryStorageDense::setAllUndefined()
 
 MemoryStorageSparse::MemoryStorageSparse(std::uint64_t size, const Initialization &initialization) : m_size(size)
 {
-	if (std::holds_alternative<std::span<uint8_t>>(*initialization.background))
-		m_background = std::get<std::span<uint8_t>>(*initialization.background);
-	else {
-		m_mappedBackgroundFile.open(std::get<std::filesystem::path>(*initialization.background));
-		m_background = std::span<const uint8_t>{ (const uint8_t*) m_mappedBackgroundFile.data(), m_mappedBackgroundFile.size() };
+	if (initialization.background) {
+		if (std::holds_alternative<std::span<uint8_t>>(*initialization.background))
+			m_background = std::get<std::span<uint8_t>>(*initialization.background);
+		else {
+			m_mappedBackgroundFile.open(boost::filesystem::path{std::get<std::filesystem::path>(*initialization.background)});
+			m_background = std::span<const uint8_t>{ (const uint8_t*) m_mappedBackgroundFile.data(), m_mappedBackgroundFile.size() };
+		}
 	}
 
 	for (const auto &v : initialization.initialOverlay)
