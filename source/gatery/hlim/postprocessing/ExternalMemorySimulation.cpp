@@ -32,6 +32,8 @@ namespace gtry::hlim {
 
 namespace {
 
+
+
 struct WritePortRequest {
 	bool enabled = false;
 	bool enabledUndefined = false;
@@ -93,15 +95,21 @@ struct ReadPortResponse {
 	sim::DefaultBitVectorState data;
 };
 
+
+
 struct MemoryState {
 	// For each port that can write the current write port state.
 	std::vector<WritePortRequest> currentWriteRequest;
 
-	sim::DefaultBitVectorState memory;
+	std::unique_ptr<MemoryStorage> memory;
 
 	MemoryState(const MemorySimConfig &config) {
 		currentWriteRequest.resize(config.writePorts.size());
-		memory.resize(config.size);
+
+		if (config.sparse)
+			memory = std::make_unique<MemoryStorageSparse>(config.size, config.initialization);
+		else
+			memory = std::make_unique<MemoryStorageDense>(config.size, config.initialization);
 	}
 };
 
@@ -137,7 +145,7 @@ sim::SimulationFunction<void> handleReadPortOnce(MemorySimConfig &config, size_t
 		response.data.clearRange(sim::DefaultConfig::DEFINED, 0, port.width);
 	else {
 		// Start with data from memory
-		response.data.copyRange(0, memState.memory, rdStart, port.width);
+		memState.memory->read(response.data, rdStart, port.width);
 
 		// Potentially override with memory writes
 		if (port.rdw != MemorySimConfig::RdPrtNodePorts::READ_BEFORE_WRITE) {
@@ -247,7 +255,7 @@ sim::SimulationFunction<void> handleWritePortOnce(MemorySimConfig &config, size_
 	auto &port = config.writePorts[wrPortIdx];
 
 	WritePortRequest request;
-	request.readFromSimulation(port, memState.memory.size());
+	request.readFromSimulation(port, memState.memory->size());
 
 	for ([[maybe_unused]] auto i : utils::Range(port.inputLatency-1)) // one already swallowed by sim::WaitClock::DURING of caller
 		co_await sim::WaitClock(port.clk, sim::WaitClock::DURING);
@@ -263,76 +271,56 @@ sim::SimulationFunction<void> handleWritePortOnce(MemorySimConfig &config, size_
 
 		if (request.addrUndefined) {
 			std::cout << "Warning: Nuking external memory with write enabled (or undefined) and undefined address." << std::endl;
-			memState.memory.clearRange(sim::DefaultConfig::DEFINED, 0, memState.memory.size());
+			memState.memory->setAllUndefined();
 		} else {
 			size_t wrStart = request.addr * port.width;
 			size_t wrEnd = wrStart + port.width;
 
 			// Moving forward, clear definedness of request.data for bits that should be set to undefined in memory for whatever reason.
-			if (request.enabledUndefined) {
-				// Pessimistic, since the target might hold the same content as what we are writing.
-				request.data.clearRange(sim::DefaultConfig::DEFINED, 0, port.width);
-			} else {
-				bool writeAddrCollision = false;
-				for (auto j : utils::Range(config.writePorts.size())) {
-					if (j == wrPortIdx) continue;
-					const auto &otherRequest = memState.currentWriteRequest[j];
-					if (otherRequest.enabled || otherRequest.enabledUndefined) {
+			bool writeAddrCollision = false;
+			for (auto j : utils::Range(config.writePorts.size())) {
+				if (j == wrPortIdx) continue;
+				const auto &otherRequest = memState.currentWriteRequest[j];
+				if (otherRequest.enabled || otherRequest.enabledUndefined) {
 
-						if (otherRequest.addrUndefined) {
+					if (otherRequest.addrUndefined) {
+						writeAddrCollision = true;
+						request.data.clearRange(sim::DefaultConfig::DEFINED, 0, port.width);
+					} else {
+						size_t otherStart = otherRequest.addr * otherRequest.data.size();
+						size_t otherEnd = otherStart + otherRequest.data.size();
+						bool overlap = (otherStart < wrEnd) && (wrStart < otherEnd);
+
+						if (overlap) {
 							writeAddrCollision = true;
-							request.data.clearRange(sim::DefaultConfig::DEFINED, 0, port.width);
-						} else {
-							size_t otherStart = otherRequest.addr * otherRequest.data.size();
-							size_t otherEnd = otherStart + otherRequest.data.size();
-							bool overlap = (otherStart < wrEnd) && (wrStart < otherEnd);
 
-							if (overlap) {
-								writeAddrCollision = true;
+							// Overlap in memory space
+							size_t overlapStart = std::max(otherStart, wrStart);
+							size_t overlapEnd = std::min(otherEnd, wrEnd);
 
-								// Overlap in memory space
-								size_t overlapStart = std::max(otherStart, wrStart);
-								size_t overlapEnd = std::min(otherEnd, wrEnd);
+							// Overlap in the write word
+							size_t wordOverlapStart = overlapStart - wrStart;
+							size_t wordOverlapSize = overlapEnd - overlapStart;
 
-								// Overlap in the write word
-								size_t wordOverlapStart = overlapStart - wrStart;
-								size_t wordOverlapSize = overlapEnd - overlapStart;
+							ptrdiff_t writeShift = overlapStart - otherStart - wordOverlapStart;
 
-								ptrdiff_t writeShift = overlapStart - otherStart - wordOverlapStart;
-
-								if (otherRequest.mask.size() != 0) {
-									// Don't collide on bits not being written due to write mask
-									for (auto i : utils::Range(wordOverlapStart, wordOverlapStart + wordOverlapSize))
-										if (!otherRequest.mask.get(sim::DefaultConfig::DEFINED, i+writeShift) || otherRequest.mask.get(sim::DefaultConfig::VALUE, i+writeShift))
-											request.data.clear(sim::DefaultConfig::DEFINED, i);
-								} else
-									request.data.clearRange(sim::DefaultConfig::DEFINED, wordOverlapStart, wordOverlapSize);
-							}
+							if (otherRequest.mask.size() != 0) {
+								// Don't collide on bits not being written due to write mask
+								for (auto i : utils::Range(wordOverlapStart, wordOverlapStart + wordOverlapSize))
+									if (!otherRequest.mask.get(sim::DefaultConfig::DEFINED, i+writeShift) || otherRequest.mask.get(sim::DefaultConfig::VALUE, i+writeShift))
+										request.data.clear(sim::DefaultConfig::DEFINED, i);
+							} else
+								request.data.clearRange(sim::DefaultConfig::DEFINED, wordOverlapStart, wordOverlapSize);
 						}
 					}
 				}
+			}
 
-				if (writeAddrCollision)
-					std::cout << "Warning: Two write ports are trying to write to the same memory location." << std::endl;
-			}
+			if (writeAddrCollision)
+				std::cout << "Warning: Two write ports are trying to write to the same memory location." << std::endl;
+
 			// Actually perform the write to memory, which might be partially or fully undefined by now
-			if (request.mask.size() == 0)
-				memState.memory.copyRange(wrStart, request.data, 0, port.width);
-			else {
-				// For write masks, look at each bit (todo: optimize)
-				for (auto i : utils::Range(port.width))
-					if (request.mask.get(sim::DefaultConfig::DEFINED, i)) {
-						// If the write mask is defined, only copy the bit if it is high
-						if (request.mask.get(sim::DefaultConfig::VALUE, i)) {
-							memState.memory.set(sim::DefaultConfig::DEFINED, wrStart+i, request.data.get(sim::DefaultConfig::DEFINED, i));
-							memState.memory.set(sim::DefaultConfig::VALUE, wrStart+i, request.data.get(sim::DefaultConfig::VALUE, i));
-						}
-					} else
-						// If the write mask is undefined, the resulting bit is defined if it was defined before and its value would not change with the write.
-						memState.memory.set(sim::DefaultConfig::DEFINED, wrStart+i, 
-											memState.memory.get(sim::DefaultConfig::DEFINED, wrStart+i) && 
-														(memState.memory.get(sim::DefaultConfig::VALUE, wrStart+i) == request.data.get(sim::DefaultConfig::VALUE, i)));
-			}
+			memState.memory->write(wrStart, request.data, request.enabledUndefined, request.mask);
 		}
 	}
 }
@@ -384,8 +372,6 @@ void addExternalMemorySimulator(Circuit &circuit, MemorySimConfig config)
 	circuit.addSimulationProcess([config]()mutable->sim::SimulationFunction<>{
 
 		MemoryState memState(config);
-		if (config.initialization)
-			memState.memory.copyRange(0, *config.initialization, 0, std::min(memState.memory.size(), config.initialization->size()));
 
 		// Start write ports before read ports so that currentWriteRequest is always up to date for the reads
 		for (auto i : utils::Range(config.writePorts.size())) {

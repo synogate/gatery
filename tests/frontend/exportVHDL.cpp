@@ -611,7 +611,7 @@ BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
 {
 	using namespace gtry;
 
-    {
+	{
 		Bit input1 = pinIn().setName("input1");
 		Bit input2 = pinIn().setName("input2");
 
@@ -623,10 +623,10 @@ BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
 		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe\""};
 		attribute(input, attrib);
 
-        pinOut(input).setName("output");
-    }
+		pinOut(input).setName("output");
+	}
 
-    {
+	{
 		Bit input = pinIn().setName("inputSingle");
 
 		setName(input, "input_single");
@@ -635,9 +635,9 @@ BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
 		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_single\""};
 		attribute(input, attrib);
 
-        pinOut(input).setName("outputSingle");
-    }	
-    {
+		pinOut(input).setName("outputSingle");
+	}	
+	{
 		Bit input = '0';
 
 		setName(input, "input_const");
@@ -646,9 +646,41 @@ BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
 		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_const\""};
 		attribute(input, attrib);
 
-        pinOut(input).setName("outputConst");
-    }	
+		pinOut(input).setName("outputConst");
+	}	
 
+	{
+		Bit input1 = pinIn().setName("input1_no_signal");
+		Bit input2 = pinIn().setName("input2_no_signal");
+
+		Bit input = input1 ^ input2;
+
+
+		SignalAttributes attrib;
+		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_no_signal\""};
+		attribute(input, attrib);
+
+		pinOut(input).setName("output_no_signal");
+	}
+
+	{
+		Bit input = pinIn().setName("inputSingle_no_signal");
+
+		SignalAttributes attrib;
+		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_single_no_signal\""};
+		attribute(input, attrib);
+
+		pinOut(input).setName("outputSingle_no_signal");
+	}	
+	{
+		Bit input = '0';
+
+		SignalAttributes attrib;
+		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_const_no_signal\""};
+		attribute(input, attrib);
+
+		pinOut(input).setName("outputConst_no_signal");
+	}
 //	design.visualize("before");
 	testCompilation();
 //	design.visualize("after");
@@ -656,6 +688,10 @@ BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
 	BOOST_TEST(exportContains(std::regex{"maybe"}));
 	BOOST_TEST(exportContains(std::regex{"maybe_single"}));
 	BOOST_TEST(exportContains(std::regex{"maybe_const"}));
+
+	BOOST_TEST(exportContains(std::regex{"maybe_no_signal"}));
+	BOOST_TEST(exportContains(std::regex{"maybe_single_no_signal"}));
+	BOOST_TEST(exportContains(std::regex{"maybe_const_no_signal"}));
 }
 
 
