@@ -567,7 +567,7 @@ void BitVectorState<Config>::resize(size_t size)
 	{
 		m_values[i].resize((size + Config::NUM_BITS_PER_BLOCK - 1) / Config::NUM_BITS_PER_BLOCK);
 
-		if (size & Config::NUM_BITS_PER_BLOCK != 0)
+		if (size % Config::NUM_BITS_PER_BLOCK != 0)
 			m_values[i].back() &= utils::bitMaskRange(0, size % Config::NUM_BITS_PER_BLOCK);
 	}
 }
