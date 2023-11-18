@@ -99,7 +99,7 @@ class MemoryStorage {
 class MemoryStorageDense : public MemoryStorage
 {
 	public:	
-		MemoryStorageDense(std::uint64_t size, const Initialization &initialization);
+		MemoryStorageDense(std::uint64_t size, const Initialization& initialization = {});
 
 		using MemoryStorage::read;
 		virtual void read(sim::DefaultBitVectorState &dst, std::uint64_t offset, std::uint64_t size) const override;
