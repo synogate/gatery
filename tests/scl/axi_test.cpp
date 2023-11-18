@@ -41,8 +41,21 @@ BOOST_FIXTURE_TEST_CASE(axi_memory_test, BoostUnitTestSimulationFixture)
 	addSimulationProcess([&]()->SimProcess {
 		simInit(axi);
 
-		co_await scl::simPut(axi, 0, 1, 0x1234, clock);
-		auto [data, def, err] = co_await scl::simGet(axi, 0, 1, clock);
+		{
+			co_await scl::simPut(axi, 0, 1, 0x1234, clock);
+			auto [data, def, err] = co_await scl::simGet(axi, 0, 1, clock);
+			BOOST_TEST(!err);
+			BOOST_TEST(def != 0);
+			BOOST_TEST(data == 0x1234);
+		}
+
+		{
+			co_await scl::simPut(axi, 8, 3, 0x1234'5678'90AB'CDEFull, clock);
+			auto [data, def, err] = co_await scl::simGet(axi, 8, 3, clock);
+			BOOST_TEST(!err);
+			BOOST_TEST(~def == 0);
+			BOOST_TEST(data == 0x1234'5678'90AB'CDEFull);
+		}
 
 		co_await OnClk(clock);
 		stopTest();
