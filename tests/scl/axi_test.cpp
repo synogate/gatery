@@ -25,6 +25,7 @@
 
 #include <gatery/scl/axi/axiMasterModel.h>
 #include <gatery/scl/axi/AxiDMA.h>
+#include <gatery/scl/axi/AxiMemorySimulation.h>
 
 using namespace gtry;
 
@@ -42,6 +43,43 @@ BOOST_FIXTURE_TEST_CASE(axi_memory_test, BoostUnitTestSimulationFixture)
 
 		co_await scl::simPut(axi, 0, 1, 0x1234, clock);
 		auto [data, def, err] = co_await scl::simGet(axi, 0, 1, clock);
+
+		co_await OnClk(clock);
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(axi_memory_simulation_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	scl::Axi4& axi = scl::axiMemorySimulation(scl::AxiMemorySimulationConfig{
+		.axiCfg = scl::AxiConfig{.addrW = 16_b, .dataW = 16_b, .wUserW = 2_b, .rUserW = 2_b }
+	});
+	pinOut(axi, "axi");
+
+	addSimulationProcess([&]()->SimProcess {
+		simInit(axi);
+
+		{
+			co_await scl::simPut(axi, 0, 1, 0x1234, clock);
+			auto [data, def, err] = co_await scl::simGet(axi, 0, 1, clock);
+			BOOST_TEST(!err);
+			BOOST_TEST(def != 0);
+			BOOST_TEST(data == 0x1234);
+		}
+
+		{
+			co_await scl::simPut(axi, 8, 3, 0x1234'5678'90AB'CDEFull, clock);
+			auto [data, def, err] = co_await scl::simGet(axi, 8, 3, clock);
+			BOOST_TEST(!err);
+			BOOST_TEST(~def == 0);
+			BOOST_TEST(data == 0x1234'5678'90AB'CDEFull);
+		}
 
 		co_await OnClk(clock);
 		stopTest();
