@@ -31,13 +31,15 @@ namespace gtry::scl
 
 	SimFunction<std::tuple<uint64_t, uint64_t, bool>> simGet(Axi4& axi, uint64_t address, uint64_t logByteSize, const Clock& clk)
 	{
+		size_t beatCount = (1ull << logByteSize) / axi.r->data.width().bytes();
+
 		fork([&]()->SimProcess {
 			AxiAddress& req = **axi.ar;
 			simu(req.id) = 0;
 			simu(req.addr) = address;
-			simu(req.len) = 0;
-			simu(req.size)= logByteSize;
-			simu(req.burst) = 0;
+			simu(req.len) = beatCount - 1;
+			simu(req.size)= utils::Log2C(axi.r->data.width().bytes());
+			simu(req.burst) = (size_t)AxiBurstType::INCR;
 			simu(req.cache) = 0;
 			simu(req.prot) = 0;
 			simu(req.qos) = 0;
@@ -58,22 +60,37 @@ namespace gtry::scl
 			simu(req.user).invalidate();
 		});
 
-		co_await performTransferWait(axi.r, clk);
-		auto respData = simu(axi.r->data);
-		co_return std::make_tuple(respData.value(), respData.defined(), simu(axi.r->resp) > 1);
+		uint64_t data = 0;
+		uint64_t defined = 0;
+		bool error = false;
+
+		for (size_t i = 0; i < beatCount; ++i)
+		{
+			co_await performTransferWait(axi.r, clk);
+
+			auto respData = simu(axi.r->data);
+			data |= respData.value() << i * axi.r->data.width().bits();
+			defined |= respData.defined() << i * axi.r->data.width().bits();
+			error |= simu(axi.r->resp) > 1;
+		}
+		error |= simu(eop(axi.r)) == '0';
+
+		co_return std::make_tuple(data, defined, error);
 	}
 
 	SimFunction<bool> simPut(Axi4& axi, uint64_t address, uint64_t logByteSize, uint64_t data, const Clock& clk)
 	{
-		HCL_ASSERT_HINT(1ull << logByteSize == axi.r->data.width().bytes(), "non full word and burst transfers not implemented");
+		HCL_ASSERT_HINT(1ull << logByteSize >= axi.r->data.width().bytes(), "non full word and burst transfers not implemented");
+		size_t beatCount = (1ull << logByteSize) / axi.r->data.width().bytes();
 
 		fork([&]()->SimProcess {
+
 			AxiAddress& req = **axi.aw;
 			simu(req.id) = 0;
 			simu(req.addr) = address;
-			simu(req.len) = 0;
-			simu(req.size) = logByteSize;
-			simu(req.burst) = 0;
+			simu(req.len) = beatCount - 1;
+			simu(req.size) = utils::Log2C(axi.r->data.width().bytes());
+			simu(req.burst) = (size_t)AxiBurstType::INCR;
 			simu(req.cache) = 0;
 			simu(req.prot) = 0;
 			simu(req.qos) = 0;
@@ -96,12 +113,17 @@ namespace gtry::scl
 
 		fork([&]()->SimProcess {
 			AxiWriteData& req = **axi.w;
-			simu(req.data) = data;
-			simu(req.strb) = utils::bitMaskRange(0, 8 << logByteSize);
-			simu(req.user) = 0;
-			simu(eop(*axi.w)) = '1';
 
-			co_await performTransfer(*axi.w, clk);
+			for (size_t i = 0; i < beatCount; ++i)
+			{
+				simu(req.data) = data & req.data.width().mask();
+				simu(req.strb) = req.strb.width().mask();
+				simu(req.user) = 0;
+				simu(eop(*axi.w)) = i + 1 == beatCount;
+
+				co_await performTransfer(*axi.w, clk);
+				data >>= req.data.width().bits();
+			}
 
 			simu(req.data).invalidate();
 			simu(req.strb).invalidate();
