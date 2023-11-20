@@ -133,3 +133,37 @@ BOOST_FIXTURE_TEST_CASE(addWithCarry, BoostUnitTestSimulationFixture)
 	design.postprocess();
 	runTicks(clock.getClk(), 2048);
 }
+
+
+BOOST_FIXTURE_TEST_CASE(thermometric_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	UInt in = 4_b;
+	pinIn(in, "");
+
+	BVec out = uintToThermometric(in);
+	pinOut(out, "");
+
+	BOOST_TEST(out.width() == 15_b);
+	
+	addSimulationProcess([&, this]() -> SimProcess {
+		size_t answer = 0;
+		for (size_t i = 0; i <= out.size(); i++)
+		{
+			simu(in) = i;
+			co_await WaitStable();
+			BOOST_TEST(simu(out) == answer);
+			answer <<= 1;
+			answer |= 1;
+			co_await OnClk(clk);
+		}
+		stopTest();
+	});
+	if (false) {
+		recordVCD("dut.vcd");
+	}
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 2, 1'000'000 }));
+}
