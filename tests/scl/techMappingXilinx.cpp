@@ -515,7 +515,7 @@ BOOST_FIXTURE_TEST_CASE(DSP48E2_double_clb_test, TestWithDefaultDevice<gtry::GHD
 	}
 	pinIn(in, "in");
 
-	Vector<SInt> out = scl::doublePump<SInt, std::tuple<SInt, SInt, Bit, Bit>>([](const std::tuple<SInt, SInt, Bit, Bit>& params) {
+	Vector<SInt> out = scl::doublePump<SInt, std::tuple<SInt, SInt, Bit, Bit>>([](const std::tuple<SInt, SInt, Bit, Bit>& params, Bit isFirst, Bit isLast) {
 		return gtry::scl::arch::xilinx::mulAccumulate(
 			get<0>(params), 
 			get<1>(params),
