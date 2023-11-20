@@ -24,8 +24,8 @@
 #include "Scope.h"
 #include "Clock.h"
 
-namespace gtry {
-
+namespace gtry
+{
 	BaseOutputPin::BaseOutputPin(hlim::NodePort nodePort, std::string name, const PinNodeParameter& params)
 	{
 		m_pinNode = DesignScope::createNode<hlim::Node_Pin>(false, true, false);
@@ -36,7 +36,7 @@ namespace gtry {
 			m_pinNode->setClockDomain(ClockScope::getClk().getClk());
 	}
 
-	OutputPin::OutputPin(const Bit &bit, const PinNodeParameter& params) : BaseOutputPin(bit.readPort(), std::string(bit.getName()), params) { }
+	OutputPin::OutputPin(const Bit& bit, const PinNodeParameter& params) : BaseOutputPin(bit.readPort(), std::string(bit.getName()), params) { }
 
 
 
@@ -55,7 +55,7 @@ namespace gtry {
 
 	InputPin::operator Bit () const
 	{
-		return Bit(SignalReadPort({.node=m_pinNode, .port=0ull}));
+		return Bit(SignalReadPort({ .node = m_pinNode, .port = 0ull }));
 	}
 
 	InputPins::InputPins(BitWidth width, const PinNodeParameter& params) {
@@ -63,11 +63,11 @@ namespace gtry {
 		m_pinNode->setPinNodeParameter(params);
 	}
 
-	InputPins::operator UInt () const { return UInt(SignalReadPort({.node=m_pinNode, .port=0ull})); }
+	InputPins::operator UInt () const { return UInt(SignalReadPort({ .node = m_pinNode, .port = 0ull })); }
 
 
 
-	BaseTristatePin::BaseTristatePin(hlim::NodePort nodePort, std::string name, const Bit &outputEnable) {
+	BaseTristatePin::BaseTristatePin(hlim::NodePort nodePort, std::string name, const Bit& outputEnable) {
 		m_pinNode = DesignScope::createNode<hlim::Node_Pin>(true, true, true);
 		m_pinNode->connect(nodePort);
 		m_pinNode->connectEnable(outputEnable.readPort());
@@ -76,21 +76,21 @@ namespace gtry {
 			m_pinNode->setClockDomain(ClockScope::getClk().getClk());
 	}
 
-	TristatePin::TristatePin(const Bit &bit, const Bit &outputEnable) : BaseTristatePin(bit.readPort(), std::string(bit.getName()), outputEnable) 
+	TristatePin::TristatePin(const Bit& bit, const Bit& outputEnable) : BaseTristatePin(bit.readPort(), std::string(bit.getName()), outputEnable)
 	{
-	 
+
 	}
 
 
 	TristatePin::operator Bit () const
 	{
-		return Bit(SignalReadPort({.node=m_pinNode, .port=0ull}));
+		return Bit(SignalReadPort({ .node = m_pinNode, .port = 0ull }));
 	}
 
 
-	TristatePins::operator UInt () const 
-	{ 
-		return UInt(SignalReadPort({.node=m_pinNode, .port=0ull})); 
+	TristatePins::operator UInt () const
+	{
+		return UInt(SignalReadPort({ .node = m_pinNode, .port = 0ull }));
 	}
 
 
@@ -104,24 +104,54 @@ namespace gtry {
 			m_pinNode->setClockDomain(ClockScope::getClk().getClk());
 	}
 
-	BidirPin::BidirPin(const Bit &bit) : BaseBidirPin(bit.readPort(), std::string(bit.getName()))
+	BidirPin::BidirPin(const Bit& bit) : BaseBidirPin(bit.readPort(), std::string(bit.getName()))
 	{
-	 
+
 	}
 
 	BidirPin::operator Bit () const
 	{
-		return Bit(SignalReadPort({.node=m_pinNode, .port=0ull}));
+		return Bit(SignalReadPort({ .node = m_pinNode, .port = 0ull }));
 	}
 
 
-	BidirPins::operator UInt () const 
-	{ 
-		return UInt(SignalReadPort({.node=m_pinNode, .port=0ull})); 
+	BidirPins::operator UInt () const
+	{
+		return UInt(SignalReadPort({ .node = m_pinNode, .port = 0ull }));
 	}
 
+	OutputPins pinOut(const InputPins& input, const PinNodeParameter& params) { return OutputPins((UInt)input, params); }
 
+	void internal::PinVisitor::reverse()
+	{
+		isReverse = !isReverse;
+	}
 
-	OutputPins pinOut(const InputPins &input, const PinNodeParameter& params) { return OutputPins((UInt)input, params); }
+	void internal::PinVisitor::operator()(ElementarySignal& vec)
+	{
+		auto name = makeName();
+		HCL_DESIGNCHECK_HINT(vec.valid(), "Can not pin uninitialized bitvectors but the member " + name + " is uninitialized!");
 
+		hlim::Node_Pin* const node = DesignScope::createNode<hlim::Node_Pin>(!isReverse, isReverse, false);
+		if (isReverse)
+		{
+			node->connect(vec.readPort());
+			if (ClockScope::anyActive())
+				node->setClockDomain(ClockScope::getClk().getClk());
+		}
+		else
+		{
+			if (vec.connType().isBool())
+				node->setBool();
+			else
+				node->setWidth(vec.width().bits());
+
+			vec.assign(SignalReadPort{ node });
+		}
+
+		node->setName(makeName());
+		node->setPinNodeParameter(*params);
+		if (ClockScope::anyActive())
+			node->setClockDomain(ClockScope::getClk().getClk());
+	}
 }

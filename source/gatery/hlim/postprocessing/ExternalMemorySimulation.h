@@ -19,9 +19,11 @@
 
 #include <vector>
 #include <optional>
+#include <variant>
 
 #include "../../simulation/SigHandle.h"
 #include "../../simulation/BitVectorState.h"
+#include "MemoryStorage.h"
 
 namespace gtry::hlim {
 
@@ -35,7 +37,8 @@ class Clock;
  */
 struct MemorySimConfig {
 	size_t size;
-	std::optional<sim::DefaultBitVectorState> initialization;
+	bool sparse = false;
+	MemoryStorage::Initialization initialization;
 
 	struct RdPrtNodePorts {
 		Clock *clk = nullptr;

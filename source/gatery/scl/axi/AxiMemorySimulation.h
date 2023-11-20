@@ -16,25 +16,22 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
+#include "axi.h"
 
-#include "../utils/Traits.h"
+#include <gatery/hlim/postprocessing/MemoryStorage.h>
 
-namespace gtry 
+namespace gtry::scl
 {
-	template<BaseSignal TSig>
-	TSig final(const TSig& sig)
+	struct AxiMemorySimulationConfig
 	{
-		return TSig{ sig.outPort() };
-	}
+		AxiConfig axiCfg;
+		
+		size_t readLatency = 1;
+		BitWidth wordStride;
 
-	template<Signal TSig>
-	TSig final(const TSig& sig)
-	{
-		return internal::transformSignal(sig, [](const auto& subsig) {
-			if constexpr (!Signal<decltype(subsig)>)
-				return subsig;
-			else
-				return final(subsig);
-		});
-	}
+		std::shared_ptr<hlim::MemoryStorage> storage;
+	};
+
+	Axi4& axiMemorySimulation(AxiMemorySimulationConfig cfg);
+	Axi4 axiMemorySimulationOverride(AxiMemorySimulationConfig cfg, Axi4&& axi);
 }

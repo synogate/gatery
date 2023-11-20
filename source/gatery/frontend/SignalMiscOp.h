@@ -233,7 +233,7 @@ namespace internal
 		});
 	}
 
-	template<Signal T>
+	template<typename T>
 	void tap(const Reverse<T>& signal)
 	{
 		tap(*signal);

@@ -71,14 +71,16 @@ namespace gtry::hlim {
 			struct PinNodeParameter {
 				std::optional<ClockRational> portDelay = {};
 				bool delaySpecifiedElsewhere = false;
+				/// Whether or not this pin is only placed to attach simulation processes and not to be exported as a top level port map signal.
+				bool simulationOnlyPin = false;
 			};
 
 			inline PinNodeParameter getPinNodeParameter() const { return m_param; }
 			void setPinNodeParameter(PinNodeParameter parameter) { m_param = parameter; }
 
-			 virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
+			virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
 
-			 virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
+			virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
 		protected:
 			bool m_isInputPin;
 			bool m_isOutputPin;

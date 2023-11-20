@@ -155,8 +155,8 @@ namespace gtry {
 	inline InputPin pinIn(const PinNodeParameter& params = {}) { return InputPin(params); }
 	inline InputPins pinIn(BitWidth width, const PinNodeParameter& params = {}) { return InputPins(width, params); }
 
-	void pinIn(Signal auto&& signal, std::string prefix);
-	void pinOut(Signal auto&& signal, std::string prefix);
+	void pinIn(Signal auto&& signal, std::string prefix, const PinNodeParameter& params = {});
+	void pinOut(Signal auto&& signal, std::string prefix, const PinNodeParameter& params = {});
 
 	inline TristatePin tristatePin(const Bit &bit, const Bit &outputEnable) { return TristatePin(bit, outputEnable); }
 
@@ -176,43 +176,27 @@ namespace gtry
 	{
 		struct PinVisitor : CompoundNameVisitor
 		{
-			void reverse() final { isReverse = !isReverse; }
+			void reverse() final;
+			void operator () (ElementarySignal& vec) final;
 
-			void operator () (ElementarySignal& vec) final
-			{
-				if (isReverse)
-				{
-					auto name = makeName();
-					HCL_DESIGNCHECK_HINT(vec.valid(), "Can not pinOut uninitialized bitvectors but the member " + name + " is uninitialized!");
-					OutputPins(vec).setName(name);
-				}
-				else
-				{
-					BaseInputPin pin;
-					if (vec.connType().isBool())
-						pin.node()->setBool();
-					else
-						pin.node()->setWidth(vec.width().bits());
-					pin.node()->setName(makeName());
-					vec.assign(SignalReadPort{ pin.node() });
-				}
-			}
-
+			const PinNodeParameter* params = nullptr;
 			bool isReverse = false;
 		};
 	}
 
-	void pinIn(Signal auto&& signal, std::string prefix)
+	void pinIn(Signal auto&& signal, std::string prefix, const PinNodeParameter& params)
 	{
 		internal::PinVisitor v;
+		v.params = &params;
 		v.enter(prefix);
 		VisitCompound<std::remove_reference_t<decltype(signal)>>{}(signal, v);
 		v.leave();
 	}
 
-	void pinOut(Signal auto&& signal, std::string prefix)
+	void pinOut(Signal auto&& signal, std::string prefix, const PinNodeParameter& params)
 	{
 		internal::PinVisitor v;
+		v.params = &params;
 		v.reverse();
 		v.enter(prefix);
 		VisitCompound<std::remove_reference_t<decltype(signal)>>{}(signal, v);

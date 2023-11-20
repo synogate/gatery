@@ -86,8 +86,11 @@ namespace gtry {
 	template<Signal T>
 	T pipeinput(const T& signal, PipeBalanceGroup& group)
 	{
-		return internal::transformSignal(signal, [&](const BaseSignal auto& sig) {
-			return pipeinput(sig, group); // forward so it can have overloads
+		return internal::transformSignal(signal, [&](const auto& sig) {
+			if constexpr (!Signal<decltype(sig)>)
+				return sig;
+			else
+				return pipeinput(sig, group); // forward so it can have overloads
 		});
 	}
 
@@ -141,7 +144,7 @@ namespace gtry {
 	template<Signal T>
 	T pipestage(const T& signal)
 	{
-		return internal::transformSignal(signal, [&](const BaseSignal auto& sig) {
+		return internal::transformSignal(signal, [&](const Signal auto& sig) {
 			return pipestage(sig); // forward so it can have overloads
 		});
 	}

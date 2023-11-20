@@ -223,7 +223,7 @@ void Node_MemPort::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
 						bool isWriting = state.get(sim::DefaultConfig::VALUE, internalOffsets[wrEnableOffset]);
 
 						if (isWriting) {
-							// It's writing something (though write enable might be undefined in which case the stored write dta is undefined).
+							// It's writing something (though write enable might be undefined in which case the stored write data is undefined).
 							if (!utils::isMaskSet(wrAddressDefined, 0, wrAddrType.width)) {
 								// It's nuking the memory, but since we are dependent, we get a preview.
 								state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[(size_t)Outputs::rdData], getBitWidth());

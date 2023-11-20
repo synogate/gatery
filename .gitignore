@@ -20,5 +20,9 @@ Makefile
 
 /tests/export
 /tests/tmp
+/tests/test*
+/tests/*.vhd
+/tests/*.vhdl
+/tests/*.txt
 /scripts/**
 test_export

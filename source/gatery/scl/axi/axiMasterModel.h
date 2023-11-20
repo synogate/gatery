@@ -16,25 +16,13 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
+#include <gatery/frontend.h>
 
-#include "../utils/Traits.h"
+#include "axi.h"
 
-namespace gtry 
+namespace gtry::scl
 {
-	template<BaseSignal TSig>
-	TSig final(const TSig& sig)
-	{
-		return TSig{ sig.outPort() };
-	}
-
-	template<Signal TSig>
-	TSig final(const TSig& sig)
-	{
-		return internal::transformSignal(sig, [](const auto& subsig) {
-			if constexpr (!Signal<decltype(subsig)>)
-				return subsig;
-			else
-				return final(subsig);
-		});
-	}
+	void simInit(Axi4& axi);
+	SimFunction<std::tuple<uint64_t, uint64_t, bool>> simGet(Axi4& axi, uint64_t address, uint64_t logByteSize, const Clock& clk);
+	SimFunction<bool> simPut(Axi4& axi, uint64_t address, uint64_t logByteSize, uint64_t data, const Clock& clk);
 }
