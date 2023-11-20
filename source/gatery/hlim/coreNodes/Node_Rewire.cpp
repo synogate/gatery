@@ -319,6 +319,9 @@ std::unique_ptr<BaseNode> Node_Rewire::cloneUnconnected() const
 
 std::string Node_Rewire::attemptInferOutputName(size_t outputPort) const
 {
+	if (getNumInputPorts() == 0)
+		return "concatenated_constants";
+
 	size_t bitIndex;
 	if (m_rewireOperation.isBitExtract(bitIndex)) {
 		auto driver0 = getDriver(0);
