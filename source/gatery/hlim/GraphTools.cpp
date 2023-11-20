@@ -53,33 +53,23 @@ sim::DefaultBitVectorState evaluateStatically(Circuit &circuit, hlim::NodePort o
 
 Node_Pin *findInputPin(hlim::NodePort output)
 {
-	// Check if the driver is actually an input pin
-	Node_Pin* res;
-	if (res = dynamic_cast<Node_Pin*>(output.node))
-		return res;
-
-	// Otherwise follow signal nodes until an input pin is found.
-
-	// The driver must be a signal node
-	HCL_DESIGNCHECK(output.node != nullptr);
-	if (dynamic_cast<const Node_Signal*>(output.node) == nullptr)
-		return nullptr;
-
 	utils::UnstableSet<BaseNode*> encounteredNodes;
+	while (output.node != nullptr) {
+		if (encounteredNodes.contains(output.node))
+			return nullptr;
 
-	// Any preceding node must be a signal node or the pin we look for
-	for (auto nh : output.node->exploreInput(0)) {
-		if (encounteredNodes.contains(nh.node())) {
-			nh.backtrack();
-			continue;
-		}
-		encounteredNodes.insert(nh.node());
-		if (res = dynamic_cast<Node_Pin*>(nh.node()))
+		encounteredNodes.insert(output.node);
+
+		if (auto* res = dynamic_cast<Node_Pin*>(output.node))
 			return res;
-		else // If we hit s.th. that is neither pin nor signal, there is nothing we can do.
-			if (!nh.isSignal())
-				return nullptr;
+		else if (auto* signal = dynamic_cast<Node_Signal*>(output.node))
+			output = signal->getDriver(0);
+		else if (auto* exp = dynamic_cast<Node_ExportOverride*>(output.node))
+			output = exp->getDriver(Node_ExportOverride::SIM_INPUT);
+		else
+			return nullptr;
 	}
+
 	return nullptr;
 }
 
