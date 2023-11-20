@@ -32,7 +32,7 @@ namespace gtry::scl::arch::xilinx
 		void clockAPB(const Clock& clk, size_t stackIndex);
 		void clockRef(const Clock& clk, size_t stackIndex);
 
-		Axi4 port(size_t portIndex, BitWidth addrW = 33_b);
+		Axi4 port(size_t portIndex, BitWidth addrW = 33_b, bool addECCBitsToData = false);
 
 		Bit catastrophicTemperature(size_t stackIndex);
 		UInt temperature(size_t stackIndex);

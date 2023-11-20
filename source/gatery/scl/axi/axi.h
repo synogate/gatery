@@ -44,6 +44,8 @@ namespace gtry::scl
 		BitWidth wUserW;
 		BitWidth bUserW;
 		BitWidth rUserW;
+
+		BitWidth wordAddrW() const { return addrW - BitWidth::count(dataW.bytes()); }
 	};
 
 	struct AxiAddress
@@ -121,10 +123,10 @@ namespace gtry::scl
 	{
 		Area ent{ "scl_axi_fromMemory", true };
 
-		BitWidth dataW = BitWidth{ utils::nextPow2(width(mem.defaultValue()).bits()) };
+		BitWidth dataW = width(mem.defaultValue());
 		Axi4 axi = Axi4::fromConfig({
 			.addrW = mem.addressWidth() + BitWidth::count(dataW.bytes()),
-			.dataW = BitWidth{ utils::nextPow2(width(mem.defaultValue()).bits()) },
+			.dataW = dataW,
 			.idW = idW,
 		});
 		axi.r = connectMemoryReadPort(mem, move(*axi.ar));
@@ -136,16 +138,13 @@ namespace gtry::scl
 	inline RvPacketStream<AxiReadData> connectMemoryReadPort(Memory<T>& mem, RvStream<AxiAddress>&& req)
 	{
 		RvPacketStream<AxiReadData> resp = axiAddBurst(move(req)).transform([&](const AxiAddress& ar) {
-			BitWidth payloadW = width(mem.defaultValue());
-			BitWidth dataW = BitWidth{ utils::nextPow2(payloadW.bits()) };
-			BVec data = ConstBVec(dataW);
-			BitWidth wordAddrW = BitWidth::count(payloadW.bytes());
-			UInt wordAddr = ar.addr.upper(-BitWidth::count(dataW.bytes()));
-			data.lower(payloadW) = (BVec)pack(mem[wordAddr]);
+			BitWidth dataW = width(mem.defaultValue());
+			BitWidth wordAddrW = BitWidth::count(dataW.bytes());
 
+			UInt wordAddr = ar.addr.upper(-wordAddrW);
 			return AxiReadData{
 				.id = ar.id,
-				.data = data,
+				.data = (BVec)pack(mem[wordAddr]),
 				.resp = ConstBVec((size_t)AxiResponseCode::OKAY, 2_b),
 				.user = BVec{0}
 			};
@@ -169,7 +168,7 @@ namespace gtry::scl
 		sim_assert(!valid(burstReq) | eop(burstReq) == eop(data));
 
 		T unpackedData = constructFrom(mem.defaultValue());
-		unpack(data->data, unpackedData);
+		unpack(data->data.lower(width(unpackedData)), unpackedData);
 
 		BitWidth wordAddrW = BitWidth::count(data->data.width().bytes());
 		IF(transfer(data))
