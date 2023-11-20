@@ -24,6 +24,7 @@
 #include "ConditionalScope.h"
 #include "DesignScope.h"
 #include "Compound.h"
+#include "Reverse.h"
 
 #include <gatery/hlim/coreNodes/Node_Multiplexer.h>
 #include <gatery/hlim/supportNodes/Node_SignalTap.h>
@@ -226,6 +227,12 @@ namespace internal
 			if constexpr(Signal<decltype(member)>)
 				tap(member);
 		});
+	}
+
+	template<Signal T>
+	void tap(const Reverse<T>& signal)
+	{
+		tap(*signal);
 	}
 }
 
