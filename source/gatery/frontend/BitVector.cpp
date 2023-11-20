@@ -214,6 +214,14 @@ namespace gtry {
 		assign(SignalReadPort(expOverride));
 	}
 
+	void BaseBitVector::simulationOverride(const BaseBitVector& simulationOverride)
+	{
+		auto* expOverride = DesignScope::createNode<hlim::Node_ExportOverride>();
+		expOverride->connectInput(simulationOverride.readPort());
+		expOverride->connectOverride(readPort());
+		assign(SignalReadPort(expOverride));
+	}
+
 	void BaseBitVector::resize(size_t width)
 	{
 		HCL_DESIGNCHECK_HINT(!m_range, "BaseBitVector::resize is not allowed for alias BaseBitVector's. use zext instead.");

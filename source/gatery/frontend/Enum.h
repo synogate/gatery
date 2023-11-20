@@ -92,6 +92,7 @@ namespace gtry {
 			virtual void assign(SignalReadPort in, bool ignoreConditions = false) override;
 
 			void exportOverride(const SignalReadPort& exportOverride);
+			void simulationOverride(const SignalReadPort& simulationOverride);
 
 			bool valid() const final { return true; } // hide method since Enum is always valid
 			SignalReadPort rawDriver() const;
