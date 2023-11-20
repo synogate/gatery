@@ -120,7 +120,6 @@ namespace gtry::scl::pci {
 					.write(this->requesterID >> 8, 8_b)
 					.write(this->requesterID & 0xFF, 8_b)
 					.write(this->tag, 8_b)
-					.skip(1_b)
 					.write(*this->address, 7_b)
 					.skip(1_b);
 				HCL_DESIGNCHECK_HINT(helper.offset == 96, "incomplete header");
@@ -265,6 +264,9 @@ namespace gtry::scl::pci {
 		TlpPacketStream<EmptyBits> complCompl(tlpW);
 		complCompl.set(EmptyBits{ BitWidth::count(tlpW.bits()) });
 
+		setName(valid(complReq), "valid_checkpoint_3"); tap(valid(complReq));
+		HCL_NAMED(tl);
+
 		HCL_DESIGNCHECK_HINT(complReq->width() >= 128_b, "this design is limited to request widths that can accommodate an entire 4dw header into one beat");
 		HCL_DESIGNCHECK_HINT(complCompl->width() >= 96_b, "this design is limited to completion widths that can accommodate an entire 3dw header into one beat");
 		HCL_DESIGNCHECK_HINT(complReq->width() == complReq->width(), "artificial limitation for ease of implementation");
@@ -285,6 +287,7 @@ namespace gtry::scl::pci {
 		txid.error |= lastBe  != 0x0; //payload = 1dw -> this needs to be zero;
 		UInt lengthInWords = hdr.dataSize();
 		txid.error |= lengthInWords != 1; //one word allowed only
+		txid.error |= (emptyBits(complReq) != 512 - 4 * 32 & emptyBits(complReq) != 512 - 5 * 32);
 		
 		//deal with address calculations
 		UInt tlpAddress = cat(swapEndian(hdr.dw2, 8_b), swapEndian(hdr.dw3, 8_b));
@@ -309,6 +312,8 @@ namespace gtry::scl::pci {
 		
 		valid(tl.a) = valid(complReq);
 		ready(complReq) = ready(tl.a);
+
+		HCL_NAMED(complReq);
 		
 		//-----------------TILELINK D PARSING--------------------//
 
@@ -339,15 +344,19 @@ namespace gtry::scl::pci {
 		
 		complCompl.set(EmptyBits{ 384 });
 
-
-
-
+		setName(ans.error, "ERROR"); tap(ans.error);
 
 		//handshake
 		valid(complCompl) = valid((*tl.d)) & ((*tl.d)->hasData() | ans.error);
 		eop(complCompl) = '1';
+		emptyBits(complCompl) = 512 - 4 * 32;
 		ready((*tl.d)) = ready(complCompl) | (valid((*tl.d)) & !(*tl.d)->hasData());
 		
+		HCL_NAMED(complReq);
+		HCL_NAMED(complCompl);
+
+		setName(valid(complCompl), "valid_checkpoint_4"); tap(valid(complCompl));
+
 		return CompleterInterface{ move(complReq), move(complCompl) };
 	}
 
@@ -359,9 +368,10 @@ namespace gtry::scl::pci {
 
 namespace gtry::scl::pci::amd {
 
-	TlpPacketStream<scl::EmptyBits> completerRequestVendorUnlocking(axi4PacketStream<CQUser> in)
+	TlpPacketStream<scl::EmptyBits> completerRequestVendorUnlocking(axi4PacketStream<CQUser>&& in)
 	{
 		Area area{ "completer_request_vendor_unlocking", true };
+		setName(in, "axi_in");
 		HCL_DESIGNCHECK_HINT(in->width() >= 128_b, "stream must be at least as big as 4dw for this implementation");
 		/*
 		* since we will work with 512 bit dw, we will definitely receive the entire descriptor within the first beat:
@@ -408,8 +418,8 @@ namespace gtry::scl::pci::amd {
 		hdr.dw0.length(desc.dwordCount);
 
 		hdr.dw1 = (BVec)cat(cqUser.last_be.lower(4_b), cqUser.first_be.lower(4_b), desc.tag, desc.requesterID.lower(8_b), desc.requesterID.upper(8_b));
-		hdr.dw2 = desc.address.upper(32_b);
-		hdr.dw3 = desc.address.lower(32_b);
+		hdr.dw2 = swapEndian(desc.address.upper(32_b), 8_b);
+		hdr.dw3 = (BVec) swapEndian(cat(desc.address.lower(30_b), "2b0"), 8_b);
 		hdr.dw3.lower(2_b) = 0; //procesing hint thingy
 
 		TlpPacketStream<scl::EmptyBits> ret(in->width());
@@ -427,13 +437,15 @@ namespace gtry::scl::pci::amd {
 		//keep to empty conversion:
 		UInt emptyWords = thermometricToUInt(~keep(in)).lower(-1_b); HCL_NAMED(emptyWords);
 		emptyBits(ret) = cat(emptyWords, "5b0");
-
+		setName(ret, "tlp_out");
+		setName(valid(ret), "valid_checkpoint_2"); tap(valid(ret));
 		return ret;
 	}
 
-	axi4PacketStream<CCUser> completerCompletionVendorUnlocking(TlpPacketStream<EmptyBits> in)
+	axi4PacketStream<CCUser> completerCompletionVendorUnlocking(TlpPacketStream<EmptyBits>&& in)
 	{
 		Area area{ "completer_completion_vendor_unlocking", true };
+		setName(in, "tlp_in");
 		HCL_DESIGNCHECK_HINT(in->width() >= 96_b, "stream must be at least as big as 3dw for this implementation");
 
 		BVec hdrBvec = in->lower(96_b);
@@ -470,22 +482,23 @@ namespace gtry::scl::pci::amd {
 		desc.dwordCount = cat('0', hdr.dw0.length());
 		desc.completionStatus = hdr.dw1(21, 3_b);
 		desc.poisonedCompletion = hdr.dw0.ep;
-		desc.requesterID = hdr.dw2.lower(16_b);
-		desc.tag = hdr.dw1(16, 8_b);
-		desc.completerID = hdr.dw1.lower(16_b);
+		desc.requesterID = swapEndian(hdr.dw2.lower(16_b), 8_b);
+		desc.tag = hdr.dw2(16, 8_b);
+		desc.completerID = swapEndian(hdr.dw1.lower(16_b), 8_b);
 		desc.completerIdEnable = '0';
 		desc.tc = hdr.dw0.tc;
 		desc.attr = (BVec) cat(hdr.dw0.idBasedOrderingAttr2, hdr.dw0.relaxedOrderingAttr1, hdr.dw0.noSnoopAttr0);
 		desc.forceECRC = '0';
 
 		CCUser ccUser = allZeros(CCUser{});
+		HCL_NAMED(ccUser);
 
 		axi4PacketStream<CCUser> ret(in->width());
 		ret.get<CCUser>() = ccUser;
 
 		//data assignments
 		*ret = *in;
-		IF(valid(in) & sop(in))
+		IF(sop(in))
 			ret->lower(96_b) = (BVec) pack(desc);
 
 		//Handshake assignments
@@ -500,6 +513,8 @@ namespace gtry::scl::pci::amd {
 		BVec throwAway = (BVec) cat('0',uintToThermometric(emptyWords));
 
 		keep(ret) = swapEndian(~throwAway, 1_b); // free op
+		setName(ret, "axi_out");
+		setName(valid(ret), "valid_checkpoint_5"); tap(valid(ret));
 		return ret;
 	}
 }

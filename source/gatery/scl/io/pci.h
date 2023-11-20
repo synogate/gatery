@@ -96,7 +96,7 @@ namespace gtry::scl::pci
 			BVec lengthLsb = 8_b;
 
 			BVec length() { return (BVec) cat(lengthMsb, lengthLsb); }
-			void length(BVec len) { cat(lengthMsb, lengthLsb) = (UInt) len; }
+			void length(BVec len) { lengthMsb = len(8, 2_b); lengthLsb = len.lower(8_b); }
 		};
 	
 		DW0 dw0;
@@ -405,12 +405,12 @@ namespace gtry::scl::pci {
 		 * @toImprove:	add support for 3dw tlp creation, at the moment we generate only 4dw tlps, even when dealing with 32 bit
 		 *				requests, which is non-conformant with native tlps.
 		*/
-		TlpPacketStream<scl::EmptyBits>  completerRequestVendorUnlocking(axi4PacketStream<CQUser> in);
+		TlpPacketStream<scl::EmptyBits>  completerRequestVendorUnlocking(axi4PacketStream<CQUser>&& in);
 		
 		/**
 		 * @brief:
 		*/
-		axi4PacketStream<CCUser> completerCompletionVendorUnlocking(TlpPacketStream<EmptyBits> in);
+		axi4PacketStream<CCUser> completerCompletionVendorUnlocking(TlpPacketStream<EmptyBits>&& in);
 
 	}
 
