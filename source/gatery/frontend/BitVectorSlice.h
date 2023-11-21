@@ -82,7 +82,7 @@ namespace gtry
 		size_t m_offset = 0;
 	};
 
-	class BitVectorSliceDynamic : public BitVectorSlice
+	class BitVectorSliceDynamic final: public BitVectorSlice
 	{
 	public:
 		BitVectorSliceDynamic(const UInt& dynamicOffset, size_t maxOffset, size_t dynamicOffsetMul, BitWidth w, const std::shared_ptr<BitVectorSlice>& r);
