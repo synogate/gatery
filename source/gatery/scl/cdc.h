@@ -67,7 +67,7 @@ namespace gtry::scl
 	UInt synchronizeGrayCode(UInt in, UInt reset, const Clock& inClock, const Clock& outClock, SynchronizeParams params = {});
 
 	template<typename T, typename Targ>
-	Vector<T> doublePump(std::function<T(const Targ&, Bit, Bit)> circuit, Vector<Targ> args, const Clock& fastClock);
+	Vector<T> doublePump(std::function<T(const Targ&)> circuit, Vector<Targ> args, const Clock& fastClock);
 }
 
 
@@ -110,7 +110,7 @@ namespace gtry::scl
 	}
 
 	template<typename T, typename Targ>
-	Vector<T> doublePump(std::function<T(const Targ&, Bit, Bit)> circuit, Vector<Targ> args, const Clock& fastClock)
+	Vector<T> doublePump(std::function<T(const Targ&)> circuit, Vector<Targ> args, const Clock& fastClock)
 	{
 		const Clock& clk = ClockScope::getClk();
 		HCL_DESIGNCHECK_HINT(clk.absoluteFrequency() * args.size() == fastClock.absoluteFrequency(), "fast clock needs to be exactly the right multiple of the current clock for the given input");
@@ -123,7 +123,7 @@ namespace gtry::scl
 		ctr.inc();
 		Targ beatArgs = reg(mux(ctr.value(), args));
 		HCL_NAMED(beatArgs);
-		T beatOut = circuit(beatArgs, ctr.isFirst(), ctr.isLast());
+		T beatOut = circuit(beatArgs);
 		HCL_NAMED(beatOut);
 
 		Vector<T> out(args.size());
