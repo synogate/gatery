@@ -297,11 +297,11 @@ namespace gtry::scl::strm
 
 		Bit baseShiftReset = !valid(bitOffset);											HCL_NAMED(baseShiftReset);
 		UInt baseShift = insertBitOffset.width();										HCL_NAMED(baseShift);
-		RvPacketStream baseShifted = streamShiftLeft(base, baseShift, baseShiftReset);	HCL_NAMED(baseShifted);
-		RvPacketStream insertShifted = streamShiftLeft(insert, insertBitOffset);		HCL_NAMED(insertShifted);
+		auto baseShifted = streamShiftLeft(base, baseShift, baseShiftReset);	HCL_NAMED(baseShifted);
+		auto insertShifted = streamShiftLeft(insert, insertBitOffset);		HCL_NAMED(insertShifted);
 		Bit insertShiftedShouldDelayEop = valid(insert) & eop(insert) & zext(emptyBits(insert)) < zext(insertBitOffset); HCL_NAMED(insertShiftedShouldDelayEop);
 
-		RvPacketStream out = constructFrom(baseShifted);
+		auto out = constructFrom(baseShifted);
 		UInt beatCounter = streamPacketBeatCounter(out, insertBeat.width());			HCL_NAMED(beatCounter);
 
 		IF(transfer(out) & eop(out))

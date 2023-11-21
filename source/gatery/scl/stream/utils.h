@@ -208,7 +208,7 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	inline StreamT regDownstreamBlocking(StreamT&& in, const RegisterSettings& settings)
 	{
-		if constexpr (in.template has<Valid>())
+		if constexpr (StreamT::template has<Valid>())
 			valid(in).resetValue('0');
 
 		auto dsSig = constructFrom(copy(downstream(in)));
@@ -227,15 +227,15 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	inline StreamT regReady(StreamT &&in, const RegisterSettings& settings)
 	{
-		if constexpr (in.template has<Valid>())
+		if constexpr (StreamT::template has<Valid>())
 			valid(in).resetValue('0');
-		if constexpr (in.template has<Ready>())
+		if constexpr (StreamT::template has<Ready>())
 			ready(in).resetValue('0');
 
 		StreamT ret = constructFrom(in);
 		ret <<= in;
 
-		if constexpr (in.template has<Ready>())
+		if constexpr (StreamT::template has<Ready>())
 		{
 			Bit valid_reg;
 			auto data_reg = constructFrom(copy(downstream(in)));
@@ -268,12 +268,12 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	inline StreamT regDownstream(StreamT &&in, const RegisterSettings& settings)
 	{
-		if constexpr (in.template has<Valid>())
+		if constexpr (StreamT::template has<Valid>())
 			valid(in).resetValue('0');
 
 		StreamT ret;
 
-		if constexpr (in.template has<Ready>())
+		if constexpr (StreamT::template has<Ready>())
 		{
 			Bit valid_reg;
 			auto dsSig = constructFrom(copy(downstream(in)));
@@ -566,7 +566,7 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	inline StreamT pipeinputDownstream(StreamT&& in, PipeBalanceGroup& group)
 	{
-		if constexpr (in.template has<Valid>())
+		if constexpr (StreamT::template has<Valid>())
 			valid(in).resetValue('0');
 
 		StreamT ret;
