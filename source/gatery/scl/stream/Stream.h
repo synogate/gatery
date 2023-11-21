@@ -55,13 +55,9 @@ namespace gtry::scl::strm
 		struct is_stream_signal<Stream<T...>> : std::true_type {};
 	}
 
-#ifdef __clang__
-	template<typename T>
-	concept Assignable = std::is_assignable_v<T,T>;
-#else
+
 	template<typename T>
 	concept Assignable = requires(T& a, const T& b) { a = b; };
-#endif
 
 	template<class T>
 	concept BidirStreamSignal = StreamSignal<T> and !Assignable<T>;
@@ -72,6 +68,12 @@ namespace gtry::scl::strm
 		PayloadT data;
 		std::tuple<Meta...> _sig;
 	};
+
+#ifdef __clang__
+	#define GTRY_STRM_CLANG_RETURN_CONSTEXPR_GUARD if constexpr (!Assignable<AssignabilityTestType>) return Self{}; else
+#else
+	#define GTRY_STRM_CLANG_RETURN_CONSTEXPR_GUARD
+#endif
 
 	template<Signal PayloadT, Signal... Meta>
 	struct Stream
@@ -120,9 +122,15 @@ namespace gtry::scl::strm
 		template<Signal T> auto remove();
 		template<Signal T> auto remove() const requires(Assignable<AssignabilityTestType>);
 		auto removeUpstream() { return remove<Ready>(); }
-		auto removeUpstream() const requires(Assignable<AssignabilityTestType>) { return *this; }
+		auto removeUpstream() const requires(Assignable<AssignabilityTestType>) { 
+			GTRY_STRM_CLANG_RETURN_CONSTEXPR_GUARD
+			return *this;
+		}
 		auto removeFlowControl() { return remove<Ready>().template remove<Valid>().template remove<Sop>(); }
-		auto removeFlowControl() const requires(Assignable<AssignabilityTestType>) { return remove<Valid>().template remove<Sop>(); }
+		auto removeFlowControl() const requires(Assignable<AssignabilityTestType>) { 
+			GTRY_STRM_CLANG_RETURN_CONSTEXPR_GUARD
+			return remove<Valid>().template remove<Sop>(); 
+		}
 	};
 }
 
@@ -132,9 +140,9 @@ namespace gtry::scl::strm
 	template<Signal T>
 	inline constexpr bool Stream<PayloadT, Meta...>::has()
 	{
-		bool ret = std::is_base_of_v<std::remove_cvref_t<T>, std::remove_reference_t<PayloadT>>;
+		bool ret = std::is_base_of_v<std::remove_reference_t<T>, std::remove_reference_t<PayloadT>>;
 		if constexpr (sizeof...(Meta) != 0)
-			ret |= (std::is_same_v<std::remove_reference_t<Meta>, std::remove_cvref_t<T>> | ...);
+			ret |= (std::is_same_v<std::remove_reference_t<Meta>, std::remove_reference_t<T>> | ...);
 		return ret;
 	}
 
@@ -168,7 +176,7 @@ namespace gtry::scl::strm
 			ret.template get<T>() <<= signal;
 
 			std::apply([&](auto& ...meta) {
-				(connect(ret.template get<std::remove_cvref_t<decltype(meta)>>(), meta), ...);
+				((ret.template get<std::remove_reference_t<decltype(meta)>>() <<= meta), ...);
 			}, _sig);
 			return ret;
 		}

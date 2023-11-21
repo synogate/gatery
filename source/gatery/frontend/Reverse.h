@@ -33,7 +33,7 @@ namespace gtry
 		Reverse(Reverse&& rhs);
 		
 		template<class TArg>
-		Reverse(TArg&& arg) : m_obj(std::forward<TArg>(arg)) {}
+		Reverse(TArg&& arg) : m_obj{ std::forward<TArg>(arg) } {}
 
 		Reverse& operator = (const Reverse&) = delete;
 		Reverse& operator = (Reverse&&);

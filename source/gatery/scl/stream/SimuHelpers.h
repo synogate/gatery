@@ -90,26 +90,26 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	void simuStreamInvalidate(const StreamT& stream) {
 
-		if constexpr (stream.template has<Eop>())
+		if constexpr (StreamT::template has<Eop>())
 			simu(eop(stream)) = '0';
-		if constexpr (stream.template has<Sop>())
+		if constexpr (StreamT::template has<Sop>())
 			simu(sop(stream)) = '0';
-		if constexpr (stream.template has<TxId>())
+		if constexpr (StreamT::template has<TxId>())
 			simu(txid(stream)).invalidate();
-		if constexpr (stream.template has<Error>())
+		if constexpr (StreamT::template has<Error>())
 			simu(error(stream)).invalidate();
-		if constexpr (stream.template has<Empty>())
+		if constexpr (StreamT::template has<Empty>())
 			simu(empty(stream)).invalidate();
-		if constexpr (stream.template has<EmptyBits>())
+		if constexpr (StreamT::template has<EmptyBits>())
 			simu(stream.template get<EmptyBits>().emptyBits).invalidate();
 
 		simu(*stream).invalidate();
 
-		if constexpr (stream.template has<Valid>()) {
+		if constexpr (StreamT::template has<Valid>()) {
 			simu(valid(stream)) = '0';
-			if constexpr (stream.template has<Eop>())
+			if constexpr (StreamT::template has<Eop>())
 				simu(eop(stream)).invalidate();
-			if constexpr (stream.template has<Sop>())
+			if constexpr (StreamT::template has<Sop>())
 				simu(sop(stream)).invalidate();
 		}
 	}
@@ -122,11 +122,11 @@ namespace gtry::scl::strm
 		if ((packet.payload.size() % payloadBeatBits) != 0)
 			numberOfBeats++;
 
-		constexpr bool hasError = stream.template has<scl::Error>();
-		constexpr bool hasTxId	= stream.template has<scl::TxId>();
-		constexpr bool hasValid = stream.template has<scl::Valid>();
-		constexpr bool hasSop	= stream.template has<scl::Sop>();
-		constexpr bool hasEop = stream.template has<scl::Eop>();
+		constexpr bool hasError = StreamT::template has<scl::Error>();
+		constexpr bool hasTxId	= StreamT::template has<scl::TxId>();
+		constexpr bool hasValid = StreamT::template has<scl::Valid>();
+		constexpr bool hasSop	= StreamT::template has<scl::Sop>();
+		constexpr bool hasEop = StreamT::template has<scl::Eop>();
 
 		HCL_DESIGNCHECK_HINT(hasEop || numberOfBeats == 1, "Trying to send multi-beat data packets without an End of Packet Field");
 
@@ -170,14 +170,14 @@ namespace gtry::scl::strm
 			if constexpr (hasEop)
 				simu(eop(stream)) = isLastBeat;
 
-			if constexpr (stream.template has<scl::EmptyBits>())
+			if constexpr (StreamT::template has<scl::EmptyBits>())
 			{
 				const UInt& emptyBits = stream.template get<scl::EmptyBits>().emptyBits;
 				simu(emptyBits).invalidate();
 				if (isLastBeat)
 					simu(emptyBits) = payloadBeatBits - (packet.payload.size() % payloadBeatBits);
 			}
-			else if constexpr (stream.template has<scl::Empty>())
+			else if constexpr (StreamT::template has<scl::Empty>())
 			{
 				simu(empty(stream)).invalidate();
 				if (isLastBeat) {
@@ -208,7 +208,7 @@ namespace gtry::scl::strm
 
 	template<StreamSignal StreamT>
 	SimProcess readyDriver(const StreamT& stream, Clock clk, const uint64_t& unreadyMask){
-		static_assert(stream.template has<Ready>(), "Attempting to use a ready driver on a stream which does not feature a ready field is probably a mistake.");
+		static_assert(StreamT::template has<Ready>(), "Attempting to use a ready driver on a stream which does not feature a ready field is probably a mistake.");
 
 		simuReady(stream) = '0';
 		while (simuSop(stream) != '1' || simuValid(stream) != '1') {
@@ -227,7 +227,7 @@ namespace gtry::scl::strm
 
 	template<StreamSignal StreamT>
 	SimProcess readyDriverRNG(const StreamT& stream, Clock clk, size_t readyProbabilityPercent, unsigned int seed) {
-		static_assert(stream.template has<Ready>(), "Attempting to use a ready driver on a stream which does not feature a ready field is probably a mistake.");
+		static_assert(StreamT::template has<Ready>(), "Attempting to use a ready driver on a stream which does not feature a ready field is probably a mistake.");
 		assert(readyProbabilityPercent <= 100);
 
 		simuReady(stream) = '0';
@@ -258,27 +258,27 @@ namespace gtry::scl::strm
 			if (firstBeat) 
 			{
 				firstBeat = false;
-				if constexpr (stream.template has<scl::TxId>())
+				if constexpr (StreamT::template has<scl::TxId>())
 					result.txid(simu(txid(stream)));
 			}
 
 			if (simuEop(stream))
 			{
 				// Potentially crop off bytes in last beat
-				if constexpr (stream.template has<scl::EmptyBits>())
+				if constexpr (StreamT::template has<scl::EmptyBits>())
 				{
 					size_t numBitsToCrop = simu(stream.template get<scl::EmptyBits>().emptyBits);
 					HCL_DESIGNCHECK(numBitsToCrop < beatPayload.size());
 					beatPayload.resize(beatPayload.size() - numBitsToCrop);
 				}
-				else if constexpr (stream.template has<scl::Empty>())
+				else if constexpr (StreamT::template has<scl::Empty>())
 				{
 					size_t numBytesToCrop = simu(empty(stream));
 					HCL_DESIGNCHECK(numBytesToCrop * 8 < beatPayload.size());
 					beatPayload.resize(beatPayload.size() - numBytesToCrop * 8);
 				}
 
-				if constexpr (stream.template has<scl::Error>())
+				if constexpr (StreamT::template has<scl::Error>())
 					result.error(simu(error(stream)));
 			}
 

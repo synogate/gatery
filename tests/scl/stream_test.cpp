@@ -316,7 +316,7 @@ protected:
 	void simulateSendData(scl::Stream<UInt, Meta...>& stream, size_t group)
 	{
 		addSimulationProcess([=, this, &stream]()->SimProcess {
-			if constexpr (stream.template has<scl::Error>())
+			if constexpr (std::remove_reference_t<decltype(stream)>::template has<scl::Error>())
 				simu(error(stream)) = '0';
 
 			std::mt19937 rng{ std::random_device{}() };
@@ -334,7 +334,8 @@ protected:
 	template<class... Meta>
 	SimProcess sendDataPacket(scl::Stream<UInt, Meta...>& stream, size_t group, size_t packetOffset, size_t packetLen, uint64_t invalidBeats = 0)
 	{
-		constexpr bool hasValid = stream.template has<scl::Valid>();
+		using StreamT = scl::Stream<UInt, Meta...>;
+		constexpr bool hasValid = StreamT::template has<scl::Valid>();
 		for (size_t j = 0; j < packetLen; ++j)
 		{
 			simu(eop(stream)).invalidate();
@@ -1434,7 +1435,7 @@ BOOST_FIXTURE_TEST_CASE(store_forward_fifo_fuzz, BoostUnitTestSimulationFixture)
 	std::mt19937 rng{ 12524 };
 
 	scl::RvPacketStream<BVec, scl::Error> inPacketStream{ 8_b };
-	scl::RvPacketStream outPacketStream = storeForwardFifo(inPacketStream, 16);
+	auto outPacketStream = storeForwardFifo(inPacketStream, 16);
 	pinIn(inPacketStream, "inPacketStream");
 	pinOut(outPacketStream, "outPacketStream");
 
@@ -1566,7 +1567,7 @@ BOOST_FIXTURE_TEST_CASE(streamShiftLeft_test, BoostUnitTestSimulationFixture)
 	scl::RvPacketStream<BVec, scl::Empty> in{ 16_b };
 	empty(in) = 1_b;
 
-	scl::RvPacketStream out = streamShiftLeft(in, shift);
+	auto out = streamShiftLeft(in, shift);
 	pinIn(in, "in");
 	pinOut(out, "out");
 
@@ -1609,7 +1610,7 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_test, BoostUnitTestSimulationFixture)
 	scl::RvStream<UInt> inOffset{ 8_b };
 	scl::RvPacketStream<BVec> inBase{ 16_b };
 	scl::RvPacketStream<BVec> inInsert{ 16_b };
-	scl::RvPacketStream out = scl::strm::insert(move(inBase), std::move(inInsert), std::move(inOffset));
+	auto out = scl::strm::insert(move(inBase), std::move(inInsert), std::move(inOffset));
 
 	pinIn(inOffset, "inOffset");
 	pinIn(inBase, "inBase");
@@ -1652,7 +1653,7 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_fuzz_test, BoostUnitTestSimulationFixture)
 	for (scl::RvPacketStream<BVec, scl::EmptyBits>& in : { std::ref(inBase), std::ref(inInsert) })
 		in.template get<scl::EmptyBits>().emptyBits = BitWidth::count(inBase->width().bits());
 
-	scl::RvPacketStream out = scl::strm::insert(move(inBase), std::move(inInsert), std::move(inOffset));
+	auto out = scl::strm::insert(move(inBase), std::move(inInsert), std::move(inOffset));
 
 	pinIn(inOffset, "inOffset");
 	pinIn(inBase, "inBase");
@@ -1718,7 +1719,7 @@ BOOST_FIXTURE_TEST_CASE(streamDropPacket_test, BoostUnitTestSimulationFixture)
 	scl::RvPacketStream<BVec> in{ 8_b };
 	pinIn(in, "in");
 
-	scl::RvPacketStream out = scl::strm::dropPacket(move(in), drop);
+	auto out = scl::strm::dropPacket(move(in), drop);
 	pinOut(out, "out");
 
 	std::queue<scl::strm::SimPacket> expected;

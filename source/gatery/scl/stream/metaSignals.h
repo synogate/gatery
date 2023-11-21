@@ -171,7 +171,7 @@ namespace gtry::scl::strm {
 
 	template<StreamSignal T> 
 	auto simuReady(const T &stream) {
-		if constexpr (stream.template has<Ready>())
+		if constexpr (T::template has<Ready>())
 			return simu(ready(stream));
 		else
 			return '1';
@@ -179,7 +179,7 @@ namespace gtry::scl::strm {
 
 	template<StreamSignal T> 
 	auto simuValid(const T &stream) {
-		if constexpr (stream.template has<Valid>())
+		if constexpr (T::template has<Valid>())
 			return simu(valid(stream));
 		else
 			return '1';
@@ -187,7 +187,7 @@ namespace gtry::scl::strm {
 
 	template<StreamSignal T>
 	auto simuSop(const T& stream) {
-		if constexpr (stream.template has<Sop>())
+		if constexpr (T::template has<Sop>())
 			return simu(sop(stream));
 		else
 			return '1';
@@ -195,7 +195,7 @@ namespace gtry::scl::strm {
 
 	template<StreamSignal T>
 	auto simuEop(const T& stream) {
-		if constexpr (stream.template has<Eop>())
+		if constexpr (T::template has<Eop>())
 			return simu(eop(stream));
 		else
 			return '1';
