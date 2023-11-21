@@ -193,13 +193,13 @@ BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
 
 				if (!cplQueue.empty())
 				{
-					uint64_t reqTlp = cplQueue.front();
+					//uint64_t reqTlp = cplQueue.front();
 					cplQueue.pop();
 
 					auto resTlpState = simu(out->header).eval();
 					uint64_t hdr = resTlpState.extractNonStraddling(sim::DefaultConfig::VALUE, 0, 64);
-					uint64_t dst = resTlpState.extractNonStraddling(sim::DefaultConfig::VALUE, 64, 32);
-					uint64_t data = simu(out->data);
+					//uint64_t dst = resTlpState.extractNonStraddling(sim::DefaultConfig::VALUE, 64, 32);
+					//uint64_t data = simu(out->data);
 
 					BOOST_TEST(gtry::utils::bitfieldExtract(hdr, 24, 8) == 0x4A);
 

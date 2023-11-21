@@ -139,7 +139,7 @@ namespace gtry::scl
 			BitWidth payloadW = width(mem.defaultValue());
 			BitWidth dataW = BitWidth{ utils::nextPow2(payloadW.bits()) };
 			BVec data = ConstBVec(dataW);
-			BitWidth wordAddrW = BitWidth::count(payloadW.bytes());
+			//BitWidth wordAddrW = BitWidth::count(payloadW.bytes());
 			UInt wordAddr = ar.addr.upper(-BitWidth::count(dataW.bytes()));
 			data.lower(payloadW) = (BVec)pack(mem[wordAddr]);
 

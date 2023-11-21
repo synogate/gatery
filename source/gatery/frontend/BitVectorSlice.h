@@ -27,6 +27,7 @@ namespace gtry
 	class BitVectorSlice 
 	{
 	public:
+		virtual ~BitVectorSlice() = default;
 		BitWidth width() const { return BitWidth(m_width); }
 
 		virtual SignalReadPort readPort(SignalReadPort rootPort) const = 0;
@@ -82,7 +83,7 @@ namespace gtry
 		size_t m_offset = 0;
 	};
 
-	class BitVectorSliceDynamic final: public BitVectorSlice
+	class BitVectorSliceDynamic : public BitVectorSlice
 	{
 	public:
 		BitVectorSliceDynamic(const UInt& dynamicOffset, size_t maxOffset, size_t dynamicOffsetMul, BitWidth w, const std::shared_ptr<BitVectorSlice>& r);
