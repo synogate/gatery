@@ -319,12 +319,53 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_intra_connection_different_entities, gtry::GH
 
 	testCompilation();
 
-	BOOST_TEST(exportContains(std::regex{"in_bidir_signal : INOUT STD_LOGIC;"}));
-	BOOST_TEST(exportContains(std::regex{"SIGNAL s_bidir_signal : STD_LOGIC;"}));
+	BOOST_TEST(exportContains(std::regex{"in_bidir_signal : INOUT STD_LOGIC"}));
+	BOOST_TEST(exportContains(std::regex{"SIGNAL s_bidir_signal : STD_LOGIC"}));
 	//DesignScope::visualize("test_bidir_intra_connection_different_entities");
 }
 
+
+
 BOOST_FIXTURE_TEST_CASE(test_bidir_intra_connection_different_entities2, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	auto device = std::make_unique<scl::XilinxDevice>();
+	device->setupZynq7();
+	design.setTargetTechnology(std::move(device));
+
+
+
+	auto *iobuf1 = DesignScope::createNode<scl::arch::xilinx::IOBUF>();
+	iobuf1->setInput(scl::arch::xilinx::IOBUF::IN_I, pinIn().setName("I1"));
+	iobuf1->setInput(scl::arch::xilinx::IOBUF::IN_T, pinIn().setName("T1"));
+	pinOut(iobuf1->getOutputBit(scl::arch::xilinx::IOBUF::OUT_O)).setName("O1");
+
+	{
+		Area area("test", true);
+		auto *multiDriver = DesignScope::createNode<hlim::Node_MultiDriver>(2, hlim::ConnectionType{ .type = hlim::ConnectionType::BOOL, .width = 1 });
+		multiDriver->setName("bidir_signal");
+		multiDriver->rewireInput(0, iobuf1->getOutputBit(scl::arch::xilinx::IOBUF::OUT_IO_O).readPort());
+		iobuf1->setInput(scl::arch::xilinx::IOBUF::IN_IO_I, Bit(SignalReadPort(multiDriver)));
+
+		auto *iobuf2 = DesignScope::createNode<scl::arch::xilinx::IOBUF>();
+		iobuf2->setInput(scl::arch::xilinx::IOBUF::IN_I, pinIn().setName("I2"));
+		iobuf2->setInput(scl::arch::xilinx::IOBUF::IN_T, pinIn().setName("T2"));
+		pinOut(iobuf2->getOutputBit(scl::arch::xilinx::IOBUF::OUT_O)).setName("O2");
+
+		multiDriver->rewireInput(1, iobuf2->getOutputBit(scl::arch::xilinx::IOBUF::OUT_IO_O).readPort());
+		iobuf2->setInput(scl::arch::xilinx::IOBUF::IN_IO_I, Bit(SignalReadPort(multiDriver)));
+	}
+
+
+	testCompilation();
+
+	BOOST_TEST(exportContains(std::regex{"in_bidir_signal : INOUT STD_LOGIC"}));
+	BOOST_TEST(exportContains(std::regex{"SIGNAL s_bidir_signal : STD_LOGIC"}));
+	//DesignScope::visualize("test_bidir_intra_connection_different_entities2");
+}
+
+BOOST_FIXTURE_TEST_CASE(test_bidir_intra_connection_different_entities3, gtry::GHDLTestFixture)
 {
 	using namespace gtry;
 
@@ -361,10 +402,10 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_intra_connection_different_entities2, gtry::G
 
 	testCompilation();
 
-	BOOST_TEST(exportContains(std::regex{"in_bidir_signal : INOUT STD_LOGIC;"}));
-	BOOST_TEST(exportContains(std::regex{"SIGNAL s_bidir_signal : STD_LOGIC;"}));
+	BOOST_TEST(exportContains(std::regex{"in_bidir_signal : INOUT STD_LOGIC"}));
+	BOOST_TEST(exportContains(std::regex{"SIGNAL s_bidir_signal : STD_LOGIC"}));
 
-	//DesignScope::visualize("test_bidir_intra_connection_different_entities2");
+	//DesignScope::visualize("test_bidir_intra_connection_different_entities3");
 }
 
 BOOST_FIXTURE_TEST_CASE(uram288_cascade, TestWithDefaultDevice<gtry::GHDLTestFixture>)

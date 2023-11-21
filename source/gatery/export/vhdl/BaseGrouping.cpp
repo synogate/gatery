@@ -26,6 +26,7 @@
 
 #include "../../hlim/coreNodes/Node_Constant.h"
 #include "../../hlim/coreNodes/Node_Signal.h"
+#include "../../hlim/coreNodes/Node_MultiDriver.h"
 #include "../../hlim/coreNodes/Node_Register.h"
 #include "../../hlim/coreNodes/Node_Pin.h"
 #include "../../hlim/supportNodes/Node_Attributes.h"
@@ -108,14 +109,19 @@ std::string BaseGrouping::findNearestDesiredName(hlim::NodePort nodePort, hlim::
 		if (nodePort.node->hasGivenName())
 			return nodePort.node->getName();
 
-		if (dynamic_cast<hlim::Node_Signal*>(nodePort.node) != nullptr && !nodePort.node->getName().empty())
+		bool isSignal = dynamic_cast<hlim::Node_Signal*>(nodePort.node) != nullptr;
+		bool isMultiNode = dynamic_cast<hlim::Node_MultiDriver*>(nodePort.node) != nullptr;
+		if ((isSignal || isMultiNode) && !nodePort.node->getName().empty())
 			return nodePort.node->getName();
 	}
 
 	for (auto driven : nodePort.node->getDirectlyDriven(nodePort.port)) {
-		if (subtreeToRestrictTo == nullptr || driven.node->getGroup() == subtreeToRestrictTo || driven.node->getGroup()->isChildOf(subtreeToRestrictTo))
-			if (dynamic_cast<hlim::Node_Signal*>(driven.node) != nullptr && !driven.node->getName().empty())
+		if (subtreeToRestrictTo == nullptr || driven.node->getGroup() == subtreeToRestrictTo || driven.node->getGroup()->isChildOf(subtreeToRestrictTo)) {
+			bool isSignal = dynamic_cast<hlim::Node_Signal*>(driven.node) != nullptr;
+			bool isMultiNode = dynamic_cast<hlim::Node_MultiDriver*>(driven.node) != nullptr;
+			if ((isSignal || isMultiNode) && !driven.node->getName().empty())
 				return driven.node->getName();
+		}
 	}
 	
 	if (subtreeToRestrictTo == nullptr || nodePort.node->getGroup() == subtreeToRestrictTo || nodePort.node->getGroup()->isChildOf(subtreeToRestrictTo)) {
