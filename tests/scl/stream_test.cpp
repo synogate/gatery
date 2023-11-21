@@ -305,7 +305,7 @@ protected:
 				simu(valid(stream)) = '1';
 				simu(*stream) = i + group * m_transfers;
 
-				co_await scl::performTransferWait(stream, m_clock);
+				co_await performTransferWait(stream, m_clock);
 			}
 			simu(valid(stream)) = '0';
 			simu(*stream).invalidate();
@@ -356,7 +356,7 @@ protected:
 			simu(eop(stream)) = j == packetLen - 1;
 			simu(*stream) = packetOffset + j + group * m_transfers;
 
-			co_await scl::performTransferWait(stream, m_clock);
+			co_await performTransferWait(stream, m_clock);
 		}
 
 		if (!hasValid)
@@ -384,7 +384,7 @@ protected:
 					simu(eop(stream)) = j == packetLen - 1;
 					simu(*stream) = i + j + group * m_transfers;
 
-					co_await scl::performTransferWait(stream, m_clock);
+					co_await performTransferWait(stream, m_clock);
 				}
 				i += packetLen;
 			}
@@ -752,7 +752,7 @@ BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 				simu(valid(in)) = '1';
 				simu(*in) = (i >> (j * 4)) & 0xF;
 
-				co_await scl::performTransferWait(in, m_clock);
+				co_await performTransferWait(in, m_clock);
 			}
 		}
 		});
@@ -792,7 +792,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth, StreamTransferFixture)
 				((i * 3 + 1) << 8) |
 				((i * 3 + 2) << 16);
 
-			co_await scl::performTransferWait(in, m_clock);
+			co_await performTransferWait(in, m_clock);
 		}
 	});
 
@@ -826,7 +826,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth_RvPacketStream, StreamTransferFixture
 				((i * 3 + 1) << 8) |
 				((i * 3 + 2) << 16);
 
-			co_await scl::performTransferWait(in, m_clock);
+			co_await performTransferWait(in, m_clock);
 		}
 	});
 
@@ -863,7 +863,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
 				simu(*in) = uint8_t(i + j - 1);
 				simu(eop(in)) = j == 4;
 
-				co_await scl::performTransferWait(in, m_clock);
+				co_await performTransferWait(in, m_clock);
 			}
 		}
 	});
@@ -901,7 +901,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseLastBeat, StreamTransferFixture)
 				simu(*in) = uint8_t(i + j);
 				simu(eop(in)) = j == 4;
 
-				co_await scl::performTransferWait(in, m_clock);
+				co_await performTransferWait(in, m_clock);
 			}
 		}
 	});
@@ -941,7 +941,7 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 				simu(*in) = uint8_t(i + j + 1);
 				simu(eop(in)) = j == 2;
 
-				co_await scl::performTransferWait(in, m_clock);
+				co_await performTransferWait(in, m_clock);
 			}
 		}
 	});
@@ -1266,14 +1266,14 @@ BOOST_FIXTURE_TEST_CASE(addReadyAndFailOnBackpressure_test, StreamTransferFixtur
 
 		// simple packet passthrough test
 		fork(sendDataPacket(in, 0, 0, 3));
-		do co_await scl::performTransferWait(out, m_clock);
+		do co_await performTransferWait(out, m_clock);
 		while(simu(eop(out)) == '0');
 		BOOST_TEST(simu(error(out)) == '0');
 
 		// simple error passthrough test
 		fork(sendDataPacket(in, 0, 0, 3));
 		simu(error(in)) = '1';
-		do co_await scl::performTransferWait(out, m_clock);
+		do co_await performTransferWait(out, m_clock);
 		while (simu(eop(out)) == '0');
 		BOOST_TEST(simu(error(out)) == '1');
 		simu(error(in)) = '0';
@@ -1290,7 +1290,7 @@ BOOST_FIXTURE_TEST_CASE(addReadyAndFailOnBackpressure_test, StreamTransferFixtur
 
 		// next packet after error should be valid
 		fork(sendDataPacket(in, 0, 0, 3));
-		do co_await scl::performTransferWait(out, m_clock);
+		do co_await performTransferWait(out, m_clock);
 		while (simu(eop(out)) == '0');
 		BOOST_TEST(simu(error(out)) == '0');
 
@@ -1310,7 +1310,7 @@ BOOST_FIXTURE_TEST_CASE(addReadyAndFailOnBackpressure_test, StreamTransferFixtur
 
 		// next packet after error should be valid
 		fork(sendDataPacket(in, 0, 0, 3));
-		do co_await scl::performTransferWait(out, m_clock);
+		do co_await performTransferWait(out, m_clock);
 		while (simu(eop(out)) == '0');
 		BOOST_TEST(simu(error(out)) == '0');
 
@@ -1325,7 +1325,7 @@ BOOST_FIXTURE_TEST_CASE(addReadyAndFailOnBackpressure_test, StreamTransferFixtur
 		simu(ready(out)) = '1';
 
 		fork(sendDataPacket(in, 0, 0, 3));
-		do co_await scl::performTransferWait(out, m_clock);
+		do co_await performTransferWait(out, m_clock);
 		while (simu(eop(out)) == '0');
 		BOOST_TEST(simu(error(out)) == '1');
 
@@ -1525,7 +1525,7 @@ BOOST_FIXTURE_TEST_CASE(streamBroadcaster, BoostUnitTestSimulationFixture)
 			});
 
 			for (auto &b : allData) {
-				co_await scl::performTransferWait(stream, clk);
+				co_await performTransferWait(stream, clk);
 				BOOST_TEST(simu(*stream) == b);
 			}
 			numDone++;
@@ -1543,7 +1543,7 @@ BOOST_FIXTURE_TEST_CASE(streamBroadcaster, BoostUnitTestSimulationFixture)
 
 		for (auto &b : allData) {
 			simu(*inStream) = b;
-			co_await scl::performTransferWait(inStream, clk);
+			co_await performTransferWait(inStream, clk);
 		}
 
 		while (numDone != 2)

@@ -126,7 +126,7 @@ BOOST_FIXTURE_TEST_CASE(axi_axiGenerateAddressFromCommand_test, BoostUnitTestSim
 		simu(axiToStreamCmdStream->endAddress) = 1024;
 
 		for (size_t i = 0; i < 3; ++i)
-			co_await scl::performTransfer(axiToStreamCmdStream, clock);
+			co_await performTransfer(axiToStreamCmdStream, clock);
 	});
 
 	addSimulationProcess([&]()->SimProcess {
@@ -134,7 +134,7 @@ BOOST_FIXTURE_TEST_CASE(axi_axiGenerateAddressFromCommand_test, BoostUnitTestSim
 
 		for (size_t i = 128; i < 1024; i += axiToStreamCmdStream->bytesPerBurst)
 		{
-			co_await scl::performTransferWait(axiAddressStream, clock);
+			co_await performTransferWait(axiAddressStream, clock);
 			BOOST_TEST(simu(axiAddressStream->addr) == i);
 		}
 
@@ -149,7 +149,7 @@ BOOST_FIXTURE_TEST_CASE(axi_axiGenerateAddressFromCommand_test, BoostUnitTestSim
 
 		for (size_t i = 128; i < 1024; i += axiToStreamCmdStream->bytesPerBurst)
 		{
-			co_await scl::performTransferWait(axiAddressStream, clock);
+			co_await performTransferWait(axiAddressStream, clock);
 			BOOST_TEST(simu(axiAddressStream->addr) == i);
 		}
 
@@ -215,7 +215,7 @@ BOOST_FIXTURE_TEST_CASE(axi_dma_test, BoostUnitTestSimulationFixture)
 		simu(axiToStreamCmd->startAddress) = 0;
 		simu(axiToStreamCmd->endAddress) = 16;
 		while (true)
-			co_await scl::performTransfer(axiToStreamCmd, clock);
+			co_await performTransfer(axiToStreamCmd, clock);
 	});
 
 	addSimulationProcess([&]()->SimProcess {
@@ -226,7 +226,7 @@ BOOST_FIXTURE_TEST_CASE(axi_dma_test, BoostUnitTestSimulationFixture)
 		{
 			simu(axiFromStreamCmd->startAddress) = (i + 1) * 16;
 			simu(axiFromStreamCmd->endAddress) = (i + 2) * 16;
-			co_await scl::performTransfer(axiFromStreamCmd, clock);
+			co_await performTransfer(axiFromStreamCmd, clock);
 		}
 	});
 
@@ -244,7 +244,7 @@ BOOST_FIXTURE_TEST_CASE(axi_dma_test, BoostUnitTestSimulationFixture)
 		{
 			for (size_t j = 0; j < 8; ++j)
 			{
-				co_await scl::performTransferWait(checkOut, clock);
+				co_await performTransferWait(checkOut, clock);
 				BOOST_TEST(simu(*checkOut) == j);
 			}
 		}

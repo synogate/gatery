@@ -23,6 +23,7 @@
 
 #include <gatery/debug/websocks/WebSocksInterface.h>
 
+#include <gatery/scl/stream/SimuHelpers.h>
 #include <gatery/scl/tilelink/tilelink.h>
 #include <gatery/scl/tilelink/TileLinkMasterModel.h>
 #include <gatery/scl/tilelink/TileLinkValidator.h>

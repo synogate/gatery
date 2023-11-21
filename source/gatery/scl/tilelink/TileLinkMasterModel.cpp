@@ -19,6 +19,8 @@
 #include "tilelink.h"
 #include "TileLinkMasterModel.h"
 
+#include <gatery/scl/stream/SimuHelpers.h>
+
 namespace gtry::scl
 {
 	void TileLinkMasterModel::init(std::string_view prefix, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth)
@@ -88,7 +90,7 @@ namespace gtry::scl
 				while (m_dis(m_rng) > validProp)
 					co_await OnClk(clk);
 
-				co_await scl::performTransfer(m_link.a, clk);
+				co_await performTransfer(m_link.a, clk);
 			}
 			
 			simu(m_link.a->opcode).invalidate();
@@ -111,7 +113,7 @@ namespace gtry::scl
 		{
 			// ready set by chaos monkey
 			do
-				co_await scl::performTransferWait(*m_link.d, clk);
+				co_await performTransferWait(*m_link.d, clk);
 			while (simu((*m_link.d)->source) != sourceId);
 
 			ret.data.push_back({
