@@ -673,7 +673,7 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 		
 		newNodes.add(reg);
 
-		// If any input bit is defined uppon reset, add that as a reset value
+		// If any input bit is defined upon reset, add that as a reset value
 		auto resetValue = simulator.getValueOfOutput(np);
 		if (sim::anyDefined(resetValue, 0, resetValue.size())) {
 			auto *resetConst = circuit.createNode<Node_Constant>(resetValue, getOutputConnectionType(np).type);
@@ -1600,7 +1600,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const utils::StableS
 		
 		newlyCreatedNodes.add(reg);
 
-		// If any input bit is defined uppon reset, add that as a reset value
+		// If any input bit is defined upon reset, add that as a reset value
 		auto resetValue = simulator.getValueOfOutput(np);
 		if (sim::anyDefined(resetValue, 0, resetValue.size())) {
 			auto *resetConst = circuit.createNode<Node_Constant>(resetValue, getOutputConnectionType(np).type);
@@ -1989,7 +1989,7 @@ NodePort ReadModifyWriteHazardLogicBuilder::createRegister(NodePort nodePort, co
 	reg->connectInput(Node_Register::ENABLE, enable);
 	reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD).insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
 
-	// If any input bit is defined uppon reset, add that as a reset value
+	// If any input bit is defined upon reset, add that as a reset value
 	if (sim::anyDefined(resetValue, 0, resetValue.size())) {
 		auto *resetConst = m_circuit.createNode<Node_Constant>(resetValue, getOutputConnectionType(nodePort).type);
 		resetConst->moveToGroup(m_newNodesNodeGroup);
