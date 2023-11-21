@@ -228,8 +228,9 @@ BOOST_FIXTURE_TEST_CASE(blockram_cascade, TestWithDefaultDevice<Test_MemoryCasca
 	using namespace gtry;
 	depth = 1 << 16;
 	execute();
-	BOOST_TEST(exportContains(std::regex{"RAMB36E2"}));
-	BOOST_TEST(exportContains(std::regex{"ARCHITECTURE impl OF memory_split_at_addrbit_15"}));
+	BOOST_TEST(exportContains(std::regex{"RAMB36E2_inst : UNISIM.VCOMPONENTS.RAMB36E2"}));
+	BOOST_TEST(exportContains(std::regex{"RAMB36E2_inst_2 : UNISIM.VCOMPONENTS.RAMB36E2"}));
+	BOOST_TEST(exportContains(std::regex{"ARCHITECTURE impl OF memory_split"}));
 }
 
 
