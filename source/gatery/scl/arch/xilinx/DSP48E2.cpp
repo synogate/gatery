@@ -102,6 +102,10 @@ namespace gtry::scl::arch::xilinx
 
 		HCL_DESIGNCHECK(a.width() <= 27_b);
 		HCL_DESIGNCHECK(b.width() <= 18_b);
+		HCL_NAMED(a);
+		HCL_NAMED(b);
+		HCL_NAMED(restart);
+		HCL_NAMED(valid);
 
 		// model
 		SInt m = reg(reg(sext(a, 45_b) * sext(b, 45_b)));
@@ -131,6 +135,7 @@ namespace gtry::scl::arch::xilinx
 			dsp.opMode(DSP48E2::MuxW::zero, DSP48E2::MuxX::m, DSP48E2::MuxY::m, DSP48E2::MuxZ::zero);
 
 		acc.exportOverride((SInt)dsp.p());
+		HCL_NAMED(acc);
 		return acc;
 	}
 }
