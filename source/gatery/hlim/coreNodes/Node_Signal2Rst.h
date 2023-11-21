@@ -37,8 +37,8 @@ class Node_Signal2Rst : public Node<Node_Signal2Rst>
 		virtual std::string getInputName(size_t idx) const override;
 		virtual std::string getOutputName(size_t idx) const override;
 
-		virtual bool hasSideEffects() const { return m_clocks[0] != nullptr; }
-		virtual bool isCombinatorial(size_t port) const { return true; }
+		virtual bool hasSideEffects() const override { return m_clocks[0] != nullptr; }
+		virtual bool isCombinatorial(size_t port) const override { return true; }
 
 		void setClock(Clock *clk);
 

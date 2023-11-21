@@ -36,6 +36,7 @@ namespace gtry::sim {
 class SimulatorCallbacks
 {
 	public:
+		virtual ~SimulatorCallbacks() = default;
 
 		virtual void onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, const std::string &desc) { }
 		virtual void onAnnotationEnd(const hlim::ClockRational &simulationTime, const std::string &id) { }
