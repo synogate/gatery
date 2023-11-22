@@ -1142,15 +1142,27 @@ void Circuit::ensureEntityPortSignalNodes()
 		if (node->getGroup()->getGroupType() == NodeGroup::GroupType::SFU)
 			continue;
 
+		auto *extSrcNode = dynamic_cast<Node_External*>(node);
+		auto *multiDriverSrcNode = dynamic_cast<Node_MultiDriver*>(node);
+
 		// Check all outputs that are not dependencies
 		for (auto outputIdx : utils::Range(node->getNumOutputPorts())) {
 			if (node->getOutputConnectionType(outputIdx).type == ConnectionType::DEPENDENCY) continue;
+
+			// Check if this is a bidirectional connection, in which case no signal nodes but multi-driver nodes must be placed (by a different funtion).
+			if (extSrcNode && extSrcNode->getOutputPorts()[outputIdx].bidirPartner != 0) continue;
 
 			// Check all driven by this port if they are in a different node group
 			auto allDriven = node->getDirectlyDriven(0);
 			for (auto &driven : allDriven) {
 				if (driven.node->getGroup() == node->getGroup())
 					continue;
+
+				// Check if this is a bidirectional connection, in which case no signal nodes but multi-driver nodes must be placed (by a different funtion).
+				if (auto *extDstNode = dynamic_cast<Node_External*>(driven.node))
+					if (extDstNode->getInputPorts()[driven.port].bidirPartner != 0) continue;
+				auto *multiDriverDstNode = dynamic_cast<Node_MultiDriver*>(driven.node);
+				if (multiDriverSrcNode && multiDriverDstNode) continue;
 
 				// if this is a child node group
 				if (driven.node->getGroup()->isChildOf(node->getGroup())) {
@@ -1222,6 +1234,7 @@ void Circuit::ensureMultiDriverNodePlacement()
 
 		auto *newMulti = createNode<Node_MultiDriver>(2, multi->getOutputConnectionType(0));
 		newMulti->moveToGroup(node->getGroup());
+		newMulti->setName(multi->getName());
 
 		newMulti->connectInput(0, {.node = node, .port = outputPortIdx});
 		newMulti->connectInput(1, {.node = multi, .port = 0ull});

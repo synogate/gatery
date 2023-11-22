@@ -218,8 +218,8 @@ namespace gtry {
 		const size_t m_parts;
 	};
 
-	template<class T> SignalParts<T>::iterator begin(const SignalParts<T>& parts) { return parts.begin(); }
-	template<class T> SignalParts<T>::iterator end(const SignalParts<T>& parts) { return parts.end(); }
+	template<class T> typename SignalParts<T>::iterator begin(const SignalParts<T>& parts) { return parts.begin(); }
+	template<class T> typename SignalParts<T>::iterator end(const SignalParts<T>& parts) { return parts.end(); }
 
 	template<typename FinalType, typename DefaultValueType>
 	class SliceableBitVector : public BaseBitVector

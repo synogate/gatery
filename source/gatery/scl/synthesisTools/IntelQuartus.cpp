@@ -63,7 +63,7 @@ namespace gtry
 			regOutputIdentifier << regOutputReversePath[i]->getInstanceName() << '|';
 		regOutputIdentifier << regOutputReversePath.front()->getNamespaceScope().get(output).name;
 
-		auto type = output.node->getOutputConnectionType(0);
+		//auto type = output.node->getOutputConnectionType(0);
 		
 		path = regOutputIdentifier.str();
 		return true;

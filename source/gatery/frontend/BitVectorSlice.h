@@ -27,6 +27,7 @@ namespace gtry
 	class BitVectorSlice 
 	{
 	public:
+		virtual ~BitVectorSlice() = default;
 		BitWidth width() const { return BitWidth(m_width); }
 
 		virtual SignalReadPort readPort(SignalReadPort rootPort) const = 0;

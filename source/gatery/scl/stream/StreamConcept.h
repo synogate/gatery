@@ -18,6 +18,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #pragma once
 #include <gatery/utils/Traits.h>
 
+#include <type_traits>
+
 namespace gtry::scl::strm 
 {
 	namespace internal {
@@ -32,7 +34,7 @@ namespace gtry::scl::strm
 
 		{ stream.template add(internal::TestMeta{}) } -> Signal;
 		{ stream.template remove<internal::TestMeta>() } -> Signal;
-		{ stream.template has<internal::TestMeta>() } -> std::convertible_to<bool>;
+		{ std::remove_reference_t<decltype(stream)>::template has<internal::TestMeta>() } -> std::convertible_to<bool>;
 		{ stream.removeFlowControl() } -> Signal;
 
 	//	{ stream.template transform([](Signal auto&&) { return Bit{}; }) } -> Signal;

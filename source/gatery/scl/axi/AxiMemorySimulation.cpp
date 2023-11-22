@@ -95,7 +95,7 @@ namespace gtry::scl
 				fork([axi, cfg, clock]() -> SimProcess {
 					AxiAddress& ar = **axi->aw;
 					uint64_t wordOffset = simu(ar.addr).value() / cfg.axiCfg.dataW.bytes();
-					uint64_t size = simu(ar.size).value();
+					//uint64_t size = simu(ar.size).value();
 					uint64_t burst = simu(ar.burst).value();
 					uint64_t len = simu(ar.len).value() + 1;
 					uint64_t id = simu(ar.id).value();

@@ -134,7 +134,7 @@ namespace gtry::scl::strm {
 
 		pushStoreForward(fifo, in);
 
-		RvStream out = pop(fifo);
+		auto out = pop(fifo);
 
 		fifo.generate();
 		return out;
