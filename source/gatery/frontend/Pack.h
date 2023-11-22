@@ -17,6 +17,7 @@
 */
 #pragma once
 #include "Compound.h"
+#include "UInt.h"
 #include <utility>
 
 #include "DesignScope.h"

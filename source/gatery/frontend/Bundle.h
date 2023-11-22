@@ -24,6 +24,8 @@
 #include <vector>
 #include <functional>
 
+#if 0
+
 namespace gtry
 {
 	class Bundle
@@ -54,3 +56,4 @@ namespace gtry
 	};
 }
 
+#endif

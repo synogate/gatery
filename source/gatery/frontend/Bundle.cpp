@@ -18,6 +18,10 @@
 #include "gatery/pch.h"
 #include "Bundle.h"
 
+
+#if 0
+
+
 namespace gtry
 {
 	Bundle::Item* gtry::Bundle::find(const std::type_info& type, std::string_view name, size_t index)
@@ -43,3 +47,5 @@ namespace gtry
 	}
 
 }
+
+#endif

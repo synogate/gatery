@@ -70,21 +70,24 @@ namespace gtry
 	template<typename T>
 	struct VisitCompound<Reverse<T>>
 	{
-		void operator () (Reverse<T>& a, const Reverse<T>& b, CompoundVisitor& v, size_t flags)
+		template<CompoundAssignmentVisitor Visitor>
+		void operator () (Reverse<T>& a, const Reverse<T>& b, Visitor& v)
 		{
 			v.reverse();
-			VisitCompound<std::remove_cvref_t<T>>{}(*a, *b, v, flags);
+			VisitCompound<std::remove_cvref_t<T>>{}(*a, *b, v);
 			v.reverse();
 		}
 
-		void operator () (Reverse<T>& a, CompoundVisitor& v)
+		template<CompoundUnaryVisitor Visitor>
+		void operator () (Reverse<T>& a, Visitor& v)
 		{
 			v.reverse();
 			VisitCompound<std::remove_cvref_t<T>>{}(*a, v);
 			v.reverse();
-			}
+		}
 
-		void operator () (const Reverse<T>& a, const Reverse<T>& b, CompoundVisitor& v)
+		template<CompoundBinaryVisitor Visitor>
+		void operator () (const Reverse<T>& a, const Reverse<T>& b, Visitor& v)
 		{
 			v.reverse();
 			VisitCompound<std::remove_cvref_t<T>>{}(*a, *b, v);

@@ -110,7 +110,7 @@ namespace gtry::scl
 		
 		struct SigVis : CompoundNameVisitor
 		{
-			virtual void operator () (ElementarySignal& a) final override
+			virtual void elementaryOnly(ElementarySignal& a) final override
 			{
 				if (auto *bit = dynamic_cast<Bit*>(&a)) {
 					handleBit(*bit);

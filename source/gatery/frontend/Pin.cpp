@@ -127,7 +127,7 @@ namespace gtry
 		isReverse = !isReverse;
 	}
 
-	void internal::PinVisitor::operator()(ElementarySignal& vec)
+	void internal::PinVisitor::elementaryOnly(ElementarySignal& vec)
 	{
 		auto name = makeName();
 		HCL_DESIGNCHECK_HINT(vec.valid(), "Can not pin uninitialized bitvectors but the member " + name + " is uninitialized!");

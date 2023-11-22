@@ -391,7 +391,8 @@ namespace gtry {
 	template<scl::strm::StreamSignal T>
 	struct VisitCompound<T>
 	{
-		void operator () (T& a, const T& b, CompoundVisitor& v, size_t flags)
+		template<CompoundAssignmentVisitor Visitor>
+		void operator () (T& a, const T& b, Visitor& v)
 		{
 			std::apply([&](auto&... meta) {
 				(VisitCompound<std::remove_reference_t<decltype(meta)>>{}(
@@ -399,10 +400,11 @@ namespace gtry {
 					, ...);
 			}, a._sig);
 
-			VisitCompound<typename T::Payload>{}(a.data, b.data, v, flags);
+			VisitCompound<typename T::Payload>{}(a.data, b.data, v);
 		}
 
-		void operator () (T& a, CompoundVisitor& v)
+		template<CompoundUnaryVisitor Visitor>
+		void operator () (T& a, Visitor& v)
 		{
 			std::apply([&](auto&... meta) {
 				(VisitCompound<std::remove_reference_t<decltype(meta)>>{}(meta, v), ...);
@@ -411,7 +413,8 @@ namespace gtry {
 			VisitCompound<typename T::Payload>{}(a.data, v);
 		}
 
-		void operator () (const T& a, const T& b, CompoundVisitor& v)
+		template<CompoundBinaryVisitor Visitor>
+		void operator () (const T& a, const T& b, Visitor& v)
 		{
 			std::apply([&](auto&... meta) {
 				(VisitCompound<std::remove_reference_t<decltype(meta)>>{}(

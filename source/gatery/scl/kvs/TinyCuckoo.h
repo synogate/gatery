@@ -19,6 +19,7 @@
 #include <gatery/frontend.h>
 #include "../Avalon.h"
 #include "../memoryMap/MemoryMap.h"
+#include "../memoryMap/MemoryMapConnectors.h"
 
 namespace gtry::scl
 {
@@ -181,7 +182,9 @@ namespace gtry::scl
 	template<typename Tkey, typename Tval>
 	inline void TinyCuckoo<Tkey, Tval>::addCpuInterface(MemoryMap& mmap)
 	{
-		mmap.stage(m_tables);
+		mapIn(mmap, m_tables, "cuckoo_tables"); 
+		if (mmap.readEnabled())
+			mapOut(mmap, m_tables, "cuckoo_tables"); 
 	}
 
 }

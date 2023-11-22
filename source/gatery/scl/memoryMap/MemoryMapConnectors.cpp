@@ -16,31 +16,9 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
-#include "Compound.h"
+#include "MemoryMapConnectors.h"
 
-namespace gtry
+namespace gtry::scl
 {
-	void CompoundNameVisitor::enterName(std::string_view name)
-	{
-		m_names.push_back(name);
-		DefaultCompoundVisitor::enterName(name);
-	}
-
-	void CompoundNameVisitor::leave()
-	{
-		m_names.pop_back();
-		DefaultCompoundVisitor::leave();
-	}
-
-	std::string CompoundNameVisitor::makeName() const
-	{
-		std::string name;
-		for (std::string_view part : m_names)
-		{
-			if (!name.empty() && !std::isdigit(part.front()))
-				name += '_';
-			name += part;
-		}
-		return name;
-	}
+	
 }

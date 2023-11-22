@@ -23,6 +23,8 @@
 
 #include <string_view>
 #include <type_traits>
+#include <span>
+#include <concepts>
 
 #include <boost/spirit/home/support/container.hpp>
 #include <boost/hana/adapt_struct.hpp>
@@ -39,43 +41,198 @@
 
 namespace gtry
 {
-	class CompoundVisitor
-	{
-	public:
-		virtual void enterPackStruct();
-		virtual void enterPackContainer();
-		virtual void leavePack();
 
-		virtual void enter(std::string_view name);
-		virtual void leave();
-
-		virtual void reverse();
-
-		virtual void operator () (const ElementarySignal& a, const ElementarySignal& b) { }
-		virtual void operator () (ElementarySignal& a) { }
-		virtual void operator () (ElementarySignal& a, const ElementarySignal& b) { }
+	struct CompoundMemberAnnotation {
+		std::string_view shortDesc;
 	};
 
-	class CompoundNameVisitor : public CompoundVisitor
+	struct CompoundAnnotation {
+		std::string_view shortDesc;
+		std::string_view longDesc;
+		std::span<CompoundMemberAnnotation> memberDesc;
+	};
+
+	template<typename T>
+	struct CompoundAnnotator {
+	};
+
+	template<typename T>
+	concept IsAnnotated = requires(T) { {T::annotation} -> std::same_as<CompoundAnnotation>; };
+
+	template<typename T>
+	consteval CompoundAnnotation* getAnnotation() { return nullptr; }
+
+	template<typename T> requires (IsAnnotated<T>)
+	consteval CompoundAnnotation* getAnnotation() { return &T::annotation; }
+
+
+	/**
+	 * @brief Concept for a visitor for performing operations on all members of (potential) compounds recursively.
+	 * @details The visitor must be able to deal with all terminal members (int, BVec, ...).
+	 * Handling of non-terminal members (structs, containers, tuples) is handled by VisitCompound.
+	 * That is, the actual recursion is implemented in VisitCompound so that the Visitors can focus on the 
+	 * member operations.
+	 */
+	template<typename T>
+	concept CompoundVisitor = requires(T v, std::string_view name, const int i, ElementarySignal a, std::array<int, 5> container, std::tuple<int, int> myStruct) {
+		{ v.enterPackStruct(myStruct) } -> std::convertible_to<bool>;
+		{ v.enterPackContainer(container) } -> std::convertible_to<bool>;
+		v.leavePack();
+		v.enter(i, name);
+		v.enter(a, name);
+		v.leave();
+		v.reverse();
+	};
+	
+	template<typename T>
+	concept CompoundUnaryVisitor = CompoundVisitor<T> && requires(T v, ElementarySignal a, int i) {
+		v(i);
+		v(a);
+	};
+
+	template<typename T>
+	concept CompoundBinaryVisitor = CompoundVisitor<T> && requires(T v, const ElementarySignal a, const int i) {
+		v(i, i);
+		v(a, a);
+	};
+
+	template<typename T>
+	concept CompoundAssignmentVisitor = CompoundVisitor<T> && requires(T v, const ElementarySignal a, ElementarySignal b, int i, const int j) {
+		v(i, j);
+		v(b, a);
+	};
+
+	/**
+	 * @brief Helper implementation of the CompoundVisitor concept that ignores all callbacks.
+	 * @details This helps with the implementation of dedicated visitors by allowing through inheritance to only implement
+	 * the needed callbacks.
+	 */
+	class DefaultCompoundVisitor
 	{
 	public:
-		virtual void enter(std::string_view name) override;
-		virtual void leave() override;
+		/**
+		 * @brief Entering a member variable with a given name.
+		 * @details Calls to enter and leave can frame calls to operator(...) or the ycan frame hierarchy jumps through enterPackXXX(...) and leavePack(...)
+		 * and are used to signal member names.
+		 * @param t The member variable.
+		 * @param name The name of the member variable.
+		 */
+		template<typename T>
+		void enter(const T &t, std::string_view name) { enterName(name); }
+		/// Counterpart to enter()
+		void leave();
+
+		/**
+		 * @brief Entering a struct or class and returns with indications on how to proceed with member enumeration.
+		 * @details The return value indicates whether the automatic exploration of members can reccurse into the struct
+		 * or whether the struct as a whole is to be passed to the visitor's operator(...).
+		 * @param t The struct about to be entered
+		 * @returns True if the reccursion is to enter the struct and false, if the struct is to be passed to operator(...) as a whole.
+		 */
+		template<typename T>
+		bool enterPackStruct(const T &t) { return true; }
+
+		/**
+		 * @brief Entering a container and returns with indications on how to proceed with element enumeration.
+		 * @details The return value indicates whether the automatic exploration of element can reccurse into the container
+		 * or whether the container as a whole is to be passed to the visitor's operator(...).
+		 * @param t The container about to be entered
+		 * @returns True if the reccursion is to enter the container and false, if the container is to be passed to operator(...) as a whole.
+		 */
+		template<typename T>
+		bool enterPackContainer(const T &t) { return true; }
+
+		/// Counterpart to enterPackStruct and enterPackContainer
+		void leavePack() { }
+
+		/// Called when recursing through a Reverse<> signal (and also on the way back out).
+		void reverse() { }
+
+		template<typename T>
+		void operator () (const T& a, const T& b) { 
+			if constexpr (std::derived_from<T, ElementarySignal>)
+				elementaryOnly((const ElementarySignal&)a, (const ElementarySignal&)b);
+		}
+
+		template<typename T>
+		void operator () (T& a) {
+			if constexpr (std::derived_from<T, ElementarySignal>)
+				elementaryOnly((ElementarySignal&)a);
+		}
+
+		template<typename T>
+		void operator () (T& a, const T& b) {
+			if constexpr (std::derived_from<T, ElementarySignal>)
+				elementaryOnly((ElementarySignal&)a, (const ElementarySignal&)a);
+			else
+				// simply assign "meta data" (members that are not and do not contain signals)
+				a = b;
+		}
+
+		/// Simplified, non-template version of enter(...) that only reports the name.
+		virtual void enterName(std::string_view name) { }
+		/// Simplified, non-template version of the operator(...) that is called if the member variable is an ElementarySignal
+		virtual void elementaryOnly(const ElementarySignal& a, const ElementarySignal& b) { }
+		/// Simplified, non-template version of the operator(...) that is called if the member variable is an ElementarySignal
+		virtual void elementaryOnly(ElementarySignal& a) { }
+		/// Simplified, non-template version of the operator(...) that is called if the member variable is an ElementarySignal
+		virtual void elementaryOnly(ElementarySignal& a, const ElementarySignal& b) { }
+	};
+
+	class CompoundNameVisitor : public DefaultCompoundVisitor
+	{
+	public:
+		virtual void enterName(std::string_view name) override;
+		void leave();
 
 		std::string makeName() const;
 	protected:
 		std::vector<std::string_view> m_names;
 	};
 
+	/**
+	 * @brief Handles the recursive iteration over the members of (potential) compounds.
+	 * @details The actual operations on the terminal members (int, BVec, ...) are performed
+	 * by a Visitor which no longer needs to handle the recursive iteration, but still needs to
+	 * be able to handle all types of members (except structs, tuples, and containers).
+	 */
 	template<typename T, typename En = void>
 	struct VisitCompound
 	{
-		// simply assign "meta data" (members that are not and do not contain signals)
-		void operator () (T& a, const T& b, CompoundVisitor&, size_t flags) { a = b; }
-		void operator () (T& a, CompoundVisitor&) {}
-		void operator () (const T&, const T&, CompoundVisitor&) {}
+		template<CompoundAssignmentVisitor Visitor>
+		void operator () (T& a, const T& b, Visitor& v) { v(a, b); }
+
+		template<CompoundUnaryVisitor Visitor>
+		void operator () (T& a, Visitor& v) { v(a); }
+
+		template<CompoundBinaryVisitor Visitor>
+		void operator () (const T& a, const T& b, Visitor& v) { v(a, b); }
 	};
 
+
+	/// Reccursively iterate over all (pairs of) members of a compound and invoke the visitor's callbacks on the way for hierarchy transitions and terminal members (i.e. int, BVec, ...).
+	template<typename T, CompoundAssignmentVisitor Visitor>
+	void reccurseCompoundMembers(T& a, const T& b, Visitor& v, std::string_view prefix) {
+		v.enter(a, prefix);
+		VisitCompound<T>{}(a, b, v);
+		v.leave();
+	}
+
+	/// Reccursively iterate over all members of a compound and invoke the visitor's callbacks on the way for hierarchy transitions and terminal members (i.e. int, BVec, ...).
+	template<typename T, CompoundUnaryVisitor Visitor>
+	void reccurseCompoundMembers(T& a, Visitor& v, std::string_view prefix) {
+		v.enter(a, prefix);
+		VisitCompound<T>{}(a, v);
+		v.leave();
+	}
+
+	/// Reccursively iterate over all (pairs of) members of a compound and invoke the visitor's callbacks on the way for hierarchy transitions and terminal members (i.e. int, BVec, ...).
+	template<typename T, CompoundBinaryVisitor Visitor>
+	void reccurseCompoundMembers(const T& a, const T& b, Visitor& v, std::string_view prefix) {
+		v.enter(a, prefix);
+		VisitCompound<T>{}(a, b, v);
+		v.leave();
+	}
 
 
 	namespace internal
@@ -93,8 +250,9 @@ namespace gtry
 		auto signalOTron(const T& ret) { return ValueToBaseSignal<T>{ret}; }
 	}
 
+/*
 	template<typename T>
-	void visitForcedSignalCompound(const T& sig, CompoundVisitor& v)
+	void visitForcedSignalCompound(const T& sig, CompoundVisitor auto& v)
 	{
 		VisitCompound<ValueToBaseSignal<T>>{}(
 			internal::signalOTron(sig),
@@ -102,6 +260,7 @@ namespace gtry
 			v
 		);
 	}
+*/
 
 	template<typename... T>
 	struct VisitCompound<std::tuple<T...>>
@@ -138,42 +297,51 @@ namespace gtry
 			return name.substr(pos_s, pos_e - pos_s);
 		}
 
-		void operator () (std::tuple<T...>& a, const std::tuple<T...>& b, CompoundVisitor& v, size_t flags)
+		template<CompoundAssignmentVisitor Visitor>
+		void operator () (std::tuple<T...>& a, const std::tuple<T...>& b, Visitor& v)
 		{
-			v.enterPackStruct();
-			auto zipped = boost::hana::zip_with([](auto&&... args) { return std::tie(args...); }, a, b);
-			boost::hana::for_each(zipped, [&](auto& elem) {
-				v.enter(usableName<decltype(std::get<0>(elem))>());
-				VisitCompound<std::remove_cvref_t<decltype(std::get<0>(elem))>>{}(
-					std::get<0>(elem), std::get<1>(elem), v, flags
-				);
-				v.leave();
-			});
+			if (v.enterPackStruct(a)) {
+				auto zipped = boost::hana::zip_with([](auto&&... args) { return std::tie(args...); }, a, b);
+				boost::hana::for_each(zipped, [&](auto& elem) {
+					v.enter(std::get<0>(elem), usableName<decltype(std::get<0>(elem))>());
+					VisitCompound<std::remove_cvref_t<decltype(std::get<0>(elem))>>{}(
+						std::get<0>(elem), std::get<1>(elem), v
+					);
+					v.leave();
+				});
+			} else
+				v(a, b);
 			v.leavePack();
 		}
 
-		void operator () (std::tuple<T...>& a, CompoundVisitor& v)
+		template<CompoundUnaryVisitor Visitor>
+		void operator () (std::tuple<T...>& a, Visitor& v)
 		{
-			v.enterPackStruct();
-			boost::hana::for_each(a, [&](auto& elem) {
-				v.enter(usableName<decltype(elem)>());
-				VisitCompound<std::remove_cvref_t<decltype(elem)>>{}(elem, v);
-				v.leave();
-			});
+			if (v.enterPackStruct(a))
+				boost::hana::for_each(a, [&](auto& elem) {
+					v.enter(elem, usableName<decltype(elem)>());
+					VisitCompound<std::remove_cvref_t<decltype(elem)>>{}(elem, v);
+					v.leave();
+				});
+			else
+				v(a);
 			v.leavePack();
 		}
 
-		void operator () (const std::tuple<T...>& a, const std::tuple<T...>& b, CompoundVisitor& v)
+		template<CompoundBinaryVisitor Visitor>
+		void operator () (const std::tuple<T...>& a, const std::tuple<T...>& b, Visitor& v)
 		{
-			v.enterPackStruct();
-			auto zipped = boost::hana::zip_with([](auto&&... args) { return std::tie(args...); }, a, b);
-			boost::hana::for_each(zipped, [&](auto& elem) {
-				v.enter(usableName<decltype(std::get<0>(elem))>());
-				VisitCompound<std::remove_cvref_t<decltype(std::get<0>(elem))>>{}(
-					std::get<0>(elem), std::get<1>(elem), v
-				);
-				v.leave();
-			});
+			if (v.enterPackStruct(a)) {
+				auto zipped = boost::hana::zip_with([](auto&&... args) { return std::tie(args...); }, a, b);
+				boost::hana::for_each(zipped, [&](auto& elem) {
+					v.enter(std::get<0>(elem), usableName<decltype(std::get<0>(elem))>());
+					VisitCompound<std::remove_cvref_t<decltype(std::get<0>(elem))>>{}(
+						std::get<0>(elem), std::get<1>(elem), v
+					);
+					v.leave();
+				});
+			} else
+				v(a);
 			v.leavePack();
 		}
 	};
@@ -181,7 +349,8 @@ namespace gtry
 	template<typename T>
 	struct VisitCompound<T, std::enable_if_t<boost::spirit::traits::is_container<T>::value>>
 	{
-		void operator () (T& a, const T& b, CompoundVisitor& v, size_t flags)
+		template<CompoundAssignmentVisitor Visitor>
+		void operator () (T& a, const T& b, Visitor& v)
 		{
 			if constexpr (resizable<T>::value)
 				if (a.size() != b.size())
@@ -193,35 +362,41 @@ namespace gtry
 			std::string idx_string;
 			size_t idx = 0;
 
-			v.enterPackContainer();
-			for (; it_a != end(a) && it_b != end(b); it_a++, it_b++)
-			{
-				v.enter(idx_string = std::to_string(idx++));
-				VisitCompound<std::remove_cvref_t<decltype(*it_a)>>{}(*it_a, *it_b, v, flags);
-				v.leave();
-			}
+			if (v.enterPackContainer(a)) {
+				for (; it_a != end(a) && it_b != end(b); it_a++, it_b++)
+				{
+					v.enter(*it_a, idx_string = std::to_string(idx++));
+					VisitCompound<std::remove_cvref_t<decltype(*it_a)>>{}(*it_a, *it_b, v);
+					v.leave();
+				}
+			} else
+				v(a, b);
 			v.leavePack();
 
 			if (it_a != end(a) || it_b != end(b))
 				throw std::runtime_error("visit compound container of unequal size");
 		}
 
-		void operator () (T& a, CompoundVisitor& v)
+		template<CompoundUnaryVisitor Visitor>
+		void operator () (T& a, Visitor& v)
 		{
 			std::string idx_string;
 			size_t idx = 0;
 
-			v.enterPackContainer();
-			for (auto& it : a)
-			{
-				v.enter(idx_string = std::to_string(idx++));
-				VisitCompound<std::remove_cvref_t<decltype(it)>>{}(it, v);
-				v.leave();
-			}
+			if (v.enterPackContainer(a))
+				for (auto& element : a)
+				{
+					v.enter(element, idx_string = std::to_string(idx++));
+					VisitCompound<std::remove_cvref_t<decltype(element)>>{}(element, v);
+					v.leave();
+				}
+			else
+				v(a);
 			v.leavePack();
 		}
 
-		void operator () (const T& a, const T& b, CompoundVisitor& v) 
+		template<CompoundBinaryVisitor Visitor>
+		void operator () (const T& a, const T& b, Visitor& v) 
 		{
 			auto it_a = begin(a);
 			auto it_b = begin(b);
@@ -229,13 +404,15 @@ namespace gtry
 			std::string idx_string;
 			size_t idx = 0;
 
-			v.enterPackContainer();
-			for (; it_a != end(a) && it_b != end(b); it_a++, it_b++)
-			{
-				v.enter(idx_string = std::to_string(idx++));
-				VisitCompound<std::remove_cvref_t<decltype(*it_a)>>{}(*it_a, *it_b, v);
-				v.leave();
-			}
+			if (v.enterPackContainer(a)) {
+				for (; it_a != end(a) && it_b != end(b); it_a++, it_b++)
+				{
+					v.enter(*it_a, idx_string = std::to_string(idx++));
+					VisitCompound<std::remove_cvref_t<decltype(*it_a)>>{}(*it_a, *it_b, v);
+					v.leave();
+				}
+			} else
+				v(a, b);
 			v.leavePack();
 
 			if (it_a != end(a) || it_b != end(b))
@@ -246,46 +423,55 @@ namespace gtry
 	template<typename T>
 	struct VisitCompound<T, std::enable_if_t<boost::hana::Struct<T>::value>>
 	{
-		void operator () (T& a, const T& b, CompoundVisitor& v, size_t flags)
+		template<CompoundAssignmentVisitor Visitor>
+		void operator () (T& a, const T& b, Visitor& v)
 		{
-			v.enterPackStruct();
-			boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto member) {
-				auto& suba = boost::hana::second(member)(a);
-				auto& subb = boost::hana::second(member)(b);
+			if (v.enterPackStruct(a, b))
+				boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto member) {
+					auto& suba = boost::hana::second(member)(a);
+					auto& subb = boost::hana::second(member)(b);
 
-				v.enter(boost::hana::first(member).c_str());
-				VisitCompound<std::remove_cvref_t<decltype(suba)>>{}(suba, subb, v, flags);
-				v.leave();
-				});
-			v.leavePack();
-		}
-
-		void operator () (T& a, CompoundVisitor& v)
-		{
-			v.enterPackStruct();
-			boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto member) {
-				auto& suba = boost::hana::second(member)(a);
-				if constexpr (Signal<decltype(suba)>)
-				{
-					v.enter(boost::hana::first(member).c_str());
-					VisitCompound<std::remove_cvref_t<decltype(suba)>>{}(suba, v);
+					v.enter(suba, boost::hana::first(member).c_str());
+					VisitCompound<std::remove_cvref_t<decltype(suba)>>{}(suba, subb, v);
 					v.leave();
-				}
-			});
+				});
+			else
+				v(a, b);
 			v.leavePack();
 		}
 
-		void operator () (const T& a, const T& b, CompoundVisitor& v)
+		template<CompoundUnaryVisitor Visitor>
+		void operator () (T& a, Visitor& v)
 		{
-			v.enterPackStruct();
-			boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto member) {
-				auto& suba = boost::hana::second(member)(a);
-				auto& subb = boost::hana::second(member)(b);
-
-				v.enter(boost::hana::first(member).c_str());
-				VisitCompound<std::remove_cvref_t<decltype(suba)>>{}(suba, subb, v);
-				v.leave();
+			if (v.enterPackStruct(a))
+				boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto member) {
+					auto& suba = boost::hana::second(member)(a);
+					if constexpr (Signal<decltype(suba)>)
+					{
+						v.enter(suba, boost::hana::first(member).c_str());
+						VisitCompound<std::remove_cvref_t<decltype(suba)>>{}(suba, v);
+						v.leave();
+					}
 				});
+			else
+				v(a);
+			v.leavePack();
+		}
+
+		template<CompoundBinaryVisitor Visitor>
+		void operator () (const T& a, const T& b, Visitor& v)
+		{
+			if (v.enterPackStruct(a, b)) 
+				boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto member) {
+					auto& suba = boost::hana::second(member)(a);
+					auto& subb = boost::hana::second(member)(b);
+
+					v.enter(suba, boost::hana::first(member).c_str());
+					VisitCompound<std::remove_cvref_t<decltype(suba)>>{}(suba, subb, v);
+					v.leave();
+				});
+			else
+				v(a, b);
 			v.leavePack();
 		}
 	};
@@ -293,22 +479,25 @@ namespace gtry
 	template<typename T>
 	struct VisitCompound<std::optional<T>>
 	{
-		void operator () (std::optional<T>& a, const std::optional<T>& b, CompoundVisitor& v, size_t flags)
+		template<CompoundAssignmentVisitor Visitor>
+		void operator () (std::optional<T>& a, const std::optional<T>& b, Visitor& v)
 		{
 			if (b && !a)
 				a.emplace(constructFrom(b));
 
 			if (b)
-				VisitCompound<std::remove_cvref_t<T>>{}(*a, *b, v, flags);
+				VisitCompound<std::remove_cvref_t<T>>{}(*a, *b, v);
 		}
 
-		void operator () (std::optional<T>& a, CompoundVisitor& v)
+		template<CompoundUnaryVisitor Visitor>
+		void operator () (std::optional<T>& a, Visitor& v)
 		{
 			if (a)
 				VisitCompound<std::remove_cvref_t<T>>{}(*a, v);
 		}
 
-		void operator () (const std::optional<T>& a, const std::optional<T>& b, CompoundVisitor& v)
+		template<CompoundBinaryVisitor Visitor>
+		void operator () (const std::optional<T>& a, const std::optional<T>& b, Visitor& v)
 		{
 			if(a && b)
 				VisitCompound<std::remove_cvref_t<T>>{}(*a, *b, v);
@@ -318,29 +507,29 @@ namespace gtry
 	template<typename Comp> requires(!std::is_const_v<Comp>)
 	void setName(Comp& compound, std::string_view prefix)
 	{
-		struct NameVisitor : CompoundNameVisitor
+		struct NameVisitor : public CompoundNameVisitor
 		{
-			void operator () (ElementarySignal& vec) override { vec.setName(makeName()); }
+			void elementaryOnly(ElementarySignal& vec) override { vec.setName(makeName()); }
 		};
 
+		static_assert(CompoundUnaryVisitor<NameVisitor>);
+
 		NameVisitor v;
-		v.enter(prefix);
-		VisitCompound<Comp>{}(compound, v);
-		v.leave();
+		reccurseCompoundMembers(compound, v, prefix);
 	}
 
 	template<typename Comp>
 	void setName(const Comp& compound, std::string_view prefix)
 	{
-		struct NameVisitor : CompoundNameVisitor
+		struct NameVisitor : public CompoundNameVisitor
 		{
-			void operator () (const ElementarySignal& vec, const ElementarySignal& ) override { vec.setName(makeName()); }
+			void elementaryOnly(const ElementarySignal& vec, const ElementarySignal& ) override { vec.setName(makeName()); }
 		};
 
+		static_assert(CompoundBinaryVisitor<NameVisitor>);
+
 		NameVisitor v;
-		v.enter(prefix);
-		VisitCompound<Comp>{}(compound, compound, v);
-		v.leave();
+		reccurseCompoundMembers(compound, compound, v, prefix);
 	}
 
 	namespace internal
@@ -546,11 +735,14 @@ namespace gtry
 }
 
 
+/*
+
 #include "Bit.h"
 #include "UInt.h"
 #include "SInt.h"
 #include "BVec.h"
 #include "Enum.h"
+
 
 namespace gtry
 {
@@ -596,3 +788,4 @@ namespace gtry
 	};
 
 }
+*/

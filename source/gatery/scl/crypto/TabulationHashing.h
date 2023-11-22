@@ -21,6 +21,7 @@
 #include "../stream/Stream.h"
 #include "../Avalon.h"
 #include "../memoryMap/MemoryMap.h"
+#include "../memoryMap/MemoryMapConnectors.h"
 
 namespace gtry::scl
 {
@@ -40,7 +41,11 @@ namespace gtry::scl
 
 		void updatePorts(AvalonNetworkSection& net);
 
-		void addCpuInterface(MemoryMap& mmap) { mmap.stage(m_tables); }
+		void addCpuInterface(MemoryMap& mmap) { 
+			mapIn(mmap, m_tables, "tabulation_hashing_tables"); 
+			if (mmap.readEnabled())
+				mapOut(mmap, m_tables, "tabulation_hashing_tables"); 
+		}
 
 		size_t numTables() const { return m_tables.size(); }
 		BitWidth hashWidth() const { return m_hashWidth; }
