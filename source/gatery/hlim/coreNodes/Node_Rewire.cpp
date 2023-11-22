@@ -330,6 +330,8 @@ std::string Node_Rewire::attemptInferOutputName(size_t outputPort) const
 		name << driver0.node->getName() << "_bit_" << bitIndex;
 		return name.str();
 	} else {
+		if (getNumInputPorts() == 0)
+			return "rewired_constants";
 		std::stringstream name;
 		bool first = true;
 		for (auto i : utils::Range(getNumInputPorts())) {
