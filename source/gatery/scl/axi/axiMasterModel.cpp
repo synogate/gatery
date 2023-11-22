@@ -17,6 +17,7 @@
 */
 #include "gatery/pch.h"
 #include "axiMasterModel.h"
+#include <gatery/scl/stream/SimuHelpers.h>
 
 namespace gtry::scl
 {

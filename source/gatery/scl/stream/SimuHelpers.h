@@ -87,6 +87,50 @@ namespace gtry::scl::strm
 
 namespace gtry::scl::strm
 {
+	template<StreamSignal T>
+	SimProcess performTransferWait(const T& stream, const Clock& clock)
+	{
+		co_await OnClk(clock);
+	}
+
+	template<StreamSignal T> requires (T::template has<Ready>() && !T::template has<Valid>())
+	SimProcess performTransferWait(const T& stream, const Clock& clock)
+	{
+		do
+			co_await OnClk(clock);
+		while (!simu(ready(stream)));
+	}
+
+	template<StreamSignal T> requires (!T::template has<Ready>() && T::template has<Valid>())
+	SimProcess performTransferWait(const T& stream, const Clock& clock)
+	{
+		do
+			co_await OnClk(clock);
+		while (!simu(valid(stream)));
+	}
+
+	template<StreamSignal T> requires (T::template has<Ready>() && T::template has<Valid>())
+	SimProcess performTransferWait(const T& stream, const Clock& clock)
+	{
+		do
+			co_await OnClk(clock);
+		while (!simu(ready(stream)) || !simu(valid(stream)));
+	}
+
+	template<StreamSignal T>
+	SimProcess performTransfer(const T& stream, const Clock& clock)
+	{
+		co_await OnClk(clock);
+	}
+
+	template<StreamSignal T> requires (T::template has<Valid>())
+	SimProcess performTransfer(const T& stream, const Clock& clock)
+	{
+		simu(valid(stream)) = '1';
+		co_await performTransferWait(stream, clock);
+		simu(valid(stream)) = '0';
+	}
+
 	template<StreamSignal StreamT>
 	void simuStreamInvalidate(const StreamT& stream) {
 

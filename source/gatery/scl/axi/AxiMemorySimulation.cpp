@@ -18,6 +18,8 @@
 #include "gatery/pch.h"
 #include "AxiMemorySimulation.h"
 
+#include <gatery/scl/stream/SimuHelpers.h>
+
 namespace gtry::scl
 {
 	Axi4& axiMemorySimulation(AxiMemorySimulationConfig cfg)

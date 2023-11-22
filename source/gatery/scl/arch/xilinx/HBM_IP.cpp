@@ -46,14 +46,12 @@ namespace gtry::scl::arch::xilinx
 		clockIn(clk, "HBM_REF_CLK_" + std::to_string(stackIndex));
 	}
 
-	Axi4 HBM_IP::port(size_t portIndex, BitWidth addrW)
+	Axi4 HBM_IP::port(size_t portIndex, BitWidth addrW, bool addECCBitsToData)
 	{
 		Axi4 axi = Axi4::fromConfig({
 			.addrW = addrW,
-			.dataW = 256_b,
-			.idW = 6_b,
-			.wUserW = 32_b,
-			.rUserW = 32_b,
+			.dataW = addECCBitsToData ? 288_b : 256_b,
+			.idW = 6_b
 		});
 
 		std::string prefix = (boost::format("AXI_{%02d}_") % portIndex).str();
@@ -84,18 +82,25 @@ namespace gtry::scl::arch::xilinx
 		ready(*axi.w) = out(prefix + "WREADY");
 		valid(*axi.w) = in(prefix + "WVALID");
 		in(prefix + "WLAST") = eop(*axi.w);
-		in(prefix + "WDATA", 256_b) = (*axi.w)->data;
+		in(prefix + "WDATA", 256_b) = (*axi.w)->data.lower(256_b);
 		in(prefix + "WSTRB", 32_b) = (*axi.w)->strb;
-		in(prefix + "WDATA_PARITY", 32_b) = (*axi.w)->user;
+
+		if (addECCBitsToData)
+			in(prefix + "WDATA_PARITY", 32_b) = (*axi.w)->data.upper(32_b);
+		else
+			in(prefix + "WDATA_PARITY", 32_b);
 
 		// R
 		in(prefix + "RREADY") = ready(axi.r);
 		valid(axi.r) = out(prefix + "RVALID");
 		eop(axi.r) = in(prefix + "RLAST");
-		axi.r->data = out(prefix + "RDATA", 256_b);
+		axi.r->data = 0;
+		axi.r->data.lower(256_b) = out(prefix + "RDATA", 256_b);
 		axi.r->resp = out(prefix + "RRESP", 2_b);
 		axi.r->id = out(prefix + "RID", 6_b);
-		axi.r->user = out(prefix + "RDATA_PARITY", 32_b);
+
+		if(addECCBitsToData)
+			axi.r->data.upper(32_b) = out(prefix + "RDATA_PARITY", 32_b);
 
 		// B
 		in(prefix + "BREADY") = ready(axi.b);
