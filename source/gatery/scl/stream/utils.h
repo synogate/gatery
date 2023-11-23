@@ -181,7 +181,7 @@ namespace gtry::scl::strm
 	//untested
 	inline auto pipeinputDownstream(PipeBalanceGroup& group)
 	{
-		return [=](auto&& in) { return pipeinputDownstream(std::forward<decltype(in)>(in), group); };
+		return [&group](auto&& in) { return pipeinputDownstream(std::forward<decltype(in)>(in), group); };
 	}
 
 	using gtry::pipeinput;
