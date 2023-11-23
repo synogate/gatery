@@ -21,6 +21,8 @@
 #include "../stream/strm.h"
 #include "../Fifo.h"
 
+#include <boost/hana/fwd/define_struct.hpp>
+
 namespace gtry::scl
 {
 
@@ -39,22 +41,26 @@ namespace gtry::scl
 	class MemoryMapRegistrationVisitor
 	{
 		public:
-			MemoryMapRegistrationVisitor(MemoryMap *memoryMap) : memoryMap(memoryMap) { }
+			MemoryMapRegistrationVisitor(MemoryMap &memoryMap) : memoryMap(memoryMap) { }
 
 			template<typename T>
 			bool enterPackStruct(const T& member) {
-				memoryMap->enterScope(lastName, getAnnotation<T>());
+				memberCounter.push_back(0);
+				annotationStack.push_back(getAnnotation<T>());
+				memoryMap.enterScope(lastName, annotationStack.back());
 				return !HasCustomMemoryMapHandler<T>;
 			}
 
 			template<typename T>
 			bool enterPackContainer(const T& member) {
-				memoryMap->enterScope(lastName, getAnnotation<T>());
+				memberCounter.push_back(0);
+				annotationStack.push_back(getAnnotation<T>());
+				memoryMap.enterScope(lastName, getAnnotation<T>());
 				return !HasCustomMemoryMapHandler<T>;
 			}
 
 			void reverse() { isReverse = !isReverse; }
-			void leavePack() { memoryMap->leaveScope(); }
+			void leavePack() { memoryMap.leaveScope(); annotationStack.pop_back(); memberCounter.pop_back(); }
 
 			template<typename T>
 			void enter(const T &t, std::string_view name) { lastName = name; }
@@ -62,36 +68,43 @@ namespace gtry::scl
 
 			template<typename T>
 			void operator () (T& member) {
+				const CompoundMemberAnnotation *memberAnnotation = nullptr;
+				if (annotationStack.back() != nullptr) {
+					HCL_DESIGNCHECK_HINT(memberCounter.back() < annotationStack.back()->memberDesc.size(), "A struct that is being registered in a memory map has an annotation/description of the members that does not match the actual number of members in the struct!");
+					memberAnnotation = &annotationStack.back()->memberDesc[memberCounter.back()];
+				}
+
 				if constexpr (HasCustomMemoryMapHandler<T>)
-					CustomMemoryMapHandler<T>::memoryMap(*this, member, isReverse);
+					CustomMemoryMapHandler<T>::memoryMap(*this, member, isReverse, lastName, memberAnnotation);
 				else
-					if constexpr (std::derived_from<ElementarySignal, T>) {
+					if constexpr (std::derived_from<T, ElementarySignal>) {
 						if (isReverse)
-							selectionHandle.joinWith(memoryMap->mapOut(member, lastName, nullptr));
+							memoryMap.readable(member, lastName, memberAnnotation);
 						else
-							selectionHandle.joinWith(memoryMap->mapIn(member, lastName, nullptr));
+							selectionHandle.joinWith(memoryMap.writeable(member, lastName, memberAnnotation));
 					}
+				memberCounter.back()++;
 			}
 
 			MemoryMap::SelectionHandle selectionHandle;
-			MemoryMap *memoryMap = nullptr;
+			MemoryMap &memoryMap;
 		protected:
 			bool isReverse = false;
-
-			MemoryMap::SelectionHandle selectionHandle;
 			std::string lastName;
+			std::vector<const CompoundAnnotation *> annotationStack = { nullptr };
+			std::vector<size_t> memberCounter = { 0 };
 	};
 
 	MemoryMap::SelectionHandle mapIn(MemoryMap &map, auto&& compound, std::string prefix)
 	{
-		MemoryMapRegistrationVisitor v(&map);
+		MemoryMapRegistrationVisitor v(map);
 		reccurseCompoundMembers(compound, v, prefix);
 		return v.selectionHandle;
 	}
 
 	MemoryMap::SelectionHandle mapOut(MemoryMap &map, auto&& compound, std::string prefix)
 	{
-		MemoryMapRegistrationVisitor v(&map);
+		MemoryMapRegistrationVisitor v(map);
 		v.reverse();
 		reccurseCompoundMembers(compound, v, prefix);
 		return v.selectionHandle;
@@ -106,43 +119,101 @@ namespace gtry::scl
 
 	template<typename T>
 	struct CustomMemoryMapHandler<Memory<T>> {
-		static void memoryMap(MemoryMapRegistrationVisitor &v, T &stream, bool isReverse, std::string_view name, const CompoundMemberAnnotation *annotation) {
-			UInt cmdAddr = "32xX";
-			Bit cmdTrigger = wo(cmdAddr, {
-				.name = "cmd"
-			});
-			HCL_NAMED(cmdTrigger);
-			HCL_NAMED(cmdAddr);
+		static void memoryMap(MemoryMapRegistrationVisitor &v, T &memory, bool isReverse, std::string_view name, const CompoundMemberAnnotation *annotation) {
 
-			auto&& port = mem[cmdAddr(0, mem.addressWidth())];
+			struct Cmd {
+				BOOST_HANA_DEFINE_STRUCT(Cmd,
+					(Bit, write),
+					(BVec, address)
+				);
+			};
+
+			Cmd cmd = { .address = memory.addressWidth() };
+			Bit cmdTrigger = mapIn(v.memoryMap, cmd, "cmd").get(cmd.write);
+			HCL_NAMED(cmdTrigger);
+			HCL_NAMED(cmd);
+
+			auto&& port = memory[cmd.address];
 
 			T memContent = port.read();
 			T stage = constructFrom(memContent);
 
-			SigVis v{ this };
-			VisitCompound<T>{}(stage, v);
-			stage = reg(stage);
+			if (v.memoryMap.readEnabled())
+				mapOut(v.memoryMap, stage, "stage");
+			if (v.memoryMap.writeEnabled())
+				mapIn(v.memoryMap, stage, "stage");
 
-			IF(writeEnabled() & cmdTrigger & cmdAddr.msb() == '0')
+			IF(v.memoryMap.writeEnabled() & cmdTrigger & cmd.write)
 				port = stage;
 
-			if (readEnabled())
+			if (v.memoryMap.readEnabled())
 			{
-				Bit readCmd = reg(cmdTrigger & cmdAddr.msb() == '1', '0');
-				T readData = reg(memContent);
+				Bit dataAvailable;
+				dataAvailable = reg(dataAvailable, '0');
+
+				Bit readCmd = cmdTrigger & !cmd.write;
+				IF (readCmd)
+					dataAvailable = '0';
+				T readData = memContent;
+				for (auto i : utils::Range(memory.readLatencyHint())) {
+					readCmd = reg(readCmd, '0');
+					readData = reg(readData, { .allowRetimingBackwards = true });
+				}
 				HCL_NAMED(readCmd);
 				HCL_NAMED(readData);
 
-				IF(readCmd)
+				IF(readCmd) {
 					stage = readData;
+					dataAvailable = '1';
+				}
+
+				HCL_NAMED(dataAvailable);
+				mapOut(v.memoryMap, dataAvailable, "dataAvailable");
 			}
 		}
-	};	
+	};
 
 	template<StreamSignal T>
-	struct CustomMemoryMapHandler {
+	struct CustomMemoryMapHandler<T> {
 		static void memoryMap(MemoryMapRegistrationVisitor &v, T &stream, bool isReverse, std::string_view name, const CompoundMemberAnnotation *annotation) {
-			VisitCompound<T>{}(stream, v);
+			if (isReverse) {
+			} else {
+				
+				auto payload = constructFrom(*stream);
+				mapIn(v.memoryMap, payload, "payload");
+				*stream = payload;
+
+				if constexpr (T::template has<Valid>()) {
+					Bit streamValid;
+					if constexpr (T::template has<Ready>()) {
+						Bit streamReady = ready(stream);
+						if (v.memoryMap.readEnabled())
+							mapOut(v.memoryMap, streamReady, "ready"); // needed?
+
+						// Make valid drop to low on transfer, and allow reading the valid flag to know when the next transfer can happen.
+						IF (streamReady)
+							streamValid = '0';
+						mapOut(v.memoryMap, streamValid, "valid");
+
+						streamValid = reg(streamValid, '0');
+					} else
+						streamValid = '0';
+
+					mapIn(v.memoryMap, streamValid, "valid");
+					valid(stream) = streamValid;
+				}
+
+				boost::hana::for_each(stream._sig, [&](auto& elem) {
+					using MetaType = std::remove_cvref_t<decltype(elem)>;
+					if constexpr (std::same_as<MetaType, Valid>) {
+						// skip because it is handled separately
+					} else
+					if constexpr (std::same_as<MetaType, Ready>) {
+						// skip because it is handled separately
+					} else
+						VisitCompound<MetaType>{}(elem, v);
+				});
+			}
 		}
 	};
 

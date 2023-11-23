@@ -21,6 +21,8 @@
 
 #include <boost/flyweight.hpp>
 
+#include <ostream>
+
 namespace gtry::scl
 {
 	// Todo: Make this a tileLink thing
@@ -45,7 +47,14 @@ namespace gtry::scl
 		boost::flyweight<std::string> descLong;
 		/// Optional descriptions of sub-ranges in this address range
 		std::vector<boost::flyweight<AddressSpaceDescription>> children;
+
+		auto operator<=>(const AddressSpaceDescription&) const = default;
 	};
+
+    std::size_t hash_value(AddressSpaceDescription const& d);
+
+	void format(std::ostream &stream, const AddressSpaceDescription &desc, size_t indent = 0);
+	inline std::ostream &operator<<(std::ostream &stream, const AddressSpaceDescription &desc) { format(stream, desc); return stream; }
 
 
 	class MemoryMap
@@ -54,6 +63,7 @@ namespace gtry::scl
 			class SelectionHandle {
 				public:
 					static SelectionHandle NeverWritten() { SelectionHandle handle; handle.m_neverWritten = true; return handle; }
+					static SelectionHandle SingleSignal(const ElementarySignal &signal, Bit onWrite) { SelectionHandle handle; handle.m_fieldsSelected[signal.readPort()] = onWrite; return handle; }
 
 					Bit any();
 					Bit get(const ElementarySignal &s) { return m_fieldsSelected.find(s.readPort())->second; }

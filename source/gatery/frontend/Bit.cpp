@@ -336,4 +336,17 @@ namespace gtry {
 	{
 		return Bit{ signal.outPort(), signal.resetValue() };
 	}
+
+	BVec Bit::toBVec() const 
+	{ 
+		BVec b = 1_b; 
+		b[0] = *this; 
+		return b; 
+	}
+	
+	void Bit::fromBVec(const BVec &bvec)
+	{ 
+		(*this) = bvec.lsb(); 
+	}
+
 }

@@ -49,7 +49,7 @@ namespace gtry
 	struct CompoundAnnotation {
 		std::string_view shortDesc;
 		std::string_view longDesc;
-		std::span<CompoundMemberAnnotation> memberDesc;
+		std::vector<CompoundMemberAnnotation> memberDesc;
 	};
 
 	template<typename T>
@@ -120,7 +120,7 @@ namespace gtry
 		template<typename T>
 		void enter(const T &t, std::string_view name) { enterName(name); }
 		/// Counterpart to enter()
-		void leave();
+		void leave() { }
 
 		/**
 		 * @brief Entering a struct or class and returns with indications on how to proceed with member enumeration.
@@ -208,7 +208,6 @@ namespace gtry
 		template<CompoundBinaryVisitor Visitor>
 		void operator () (const T& a, const T& b, Visitor& v) { v(a, b); }
 	};
-
 
 	/// Reccursively iterate over all (pairs of) members of a compound and invoke the visitor's callbacks on the way for hierarchy transitions and terminal members (i.e. int, BVec, ...).
 	template<typename T, CompoundAssignmentVisitor Visitor>

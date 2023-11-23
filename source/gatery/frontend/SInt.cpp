@@ -17,6 +17,7 @@
 */
 #include "gatery/pch.h"
 #include "SInt.h"
+#include "BVec.h"
 
 namespace gtry {
 
@@ -50,4 +51,15 @@ namespace gtry {
 			port = port.expand(bvec.size() - decrement.value, hlim::ConnectionType::BITVEC);
 		return SInt(port);
 	}
+
+	BVec SInt::toBVec() const
+	{
+		return (BVec) *this; 
+	}
+
+	void SInt::fromBVec(const BVec &bvec)
+	{
+		(*this) = (SInt) bvec;
+	}
+
 }

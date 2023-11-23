@@ -20,6 +20,7 @@
 #include "Signal.h"
 #include "Bit.h"
 #include "UInt.h"
+#include "BVec.h"
 
 #include <gatery/hlim/NodePtr.h>
 #include <gatery/utils/Exceptions.h>
@@ -136,6 +137,9 @@ namespace gtry {
 		Enum<T> final() const;
 
 		constexpr BitWidth width() const override final;
+
+		virtual BVec toBVec() const override { return (BVec) numericalValue(); }
+		virtual void fromBVec(const BVec &bvec) override { (*this) = Enum<T>((UInt)bvec); }
 
 	protected:
 		virtual void createNode() override;

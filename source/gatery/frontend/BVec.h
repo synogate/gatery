@@ -59,6 +59,9 @@ namespace gtry {
 		// These must be here since they are implicitly deleted due to the cop and move ctors
 		BVec& operator = (const BVec &rhs) { BaseBitVector::operator=(rhs); return *this; }
 		BVec& operator = (BVec&& rhs) { BaseBitVector::operator=(std::move(rhs)); return *this; }
+
+		virtual BVec toBVec() const override { return *this; }
+		virtual void fromBVec(const BVec &bvec) override { (*this) = bvec; }
 	};
 
 	BVec ext(const BVec& bvec, BitWidth extendedWidth, Expansion policy);

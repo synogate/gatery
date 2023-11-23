@@ -25,44 +25,52 @@ namespace gtry::scl
 	{
 		public:
 			struct RegisteredBaseSignal {
-				BVec signal;
-				Bit onWrite;
-				CompoundMemberAnnotation *annotation;
+				std::string name;
+				std::optional<BVec> readSignal;
+				std::optional<BVec> writeSignal;
+				std::optional<Bit> onWrite;
+				const CompoundMemberAnnotation *annotation;
 			};
 
 			struct PhysicalRegister {
-				BVec signal;
-				Bit onWrite;
+				std::optional<BVec> readSignal;
+				std::optional<BVec> writeSignal;
+				std::optional<Bit> onWrite;
 
 				AddressSpaceDescription description;
 			};
 
 			struct Scope {
 				std::string name;
-				CompoundAnnotation *annotation;
+				const CompoundAnnotation *annotation;
 
 				std::list<RegisteredBaseSignal> registeredSignals;
-				gtry::Vector<PhysicalRegister> physicalRegisters;
+				std::list<PhysicalRegister> physicalRegisters;
 
 				AddressSpaceDescription physicalDescription;
 
 				std::list<Scope> subScopes;
 			};
 
-			PackedMemoryMap(std::string_view name, const CompoundAnnotation *anotation = nullptr);
+			PackedMemoryMap(std::string_view name, const CompoundAnnotation *annotation = nullptr);
 
-			virtual void enterScope(std::string_view name, const CompoundAnnotation *anotation = nullptr) override;
+			virtual void enterScope(std::string_view name, const CompoundAnnotation *annotation = nullptr) override;
 			virtual void leaveScope() override;
 
-			virtual SelectionHandle mapIn(ElementarySignal &value, std::string_view name, const CompoundMemberAnnotation *annotation = nullptr) override;
-			virtual SelectionHandle mapOut(ElementarySignal &value, std::string_view name, const CompoundMemberAnnotation *annotation = nullptr) override;
+			virtual void readable(const ElementarySignal &value, std::string_view name, const CompoundMemberAnnotation *annotation = nullptr) override;
+			virtual SelectionHandle writeable(ElementarySignal &value, std::string_view name, const CompoundMemberAnnotation *annotation = nullptr) override;
 			//virtual void reserve(BitWidth width, std::string_view name) override;
 
-			virtual void pack(BitWidth registerWidth);
+			virtual void packRegisters(BitWidth registerWidth);
 			const Scope &getTree() const { return m_scope; }
+			Scope &getTree() { return m_scope; }
 		protected:
 			bool m_alreadyPacked = false;
-			std::vector<std::string> m_scopeStack;
+			std::vector<Scope*> m_scopeStack;
 			Scope m_scope;
+
+			void packRegisters(BitWidth registerWidth, Scope &scope);
+
+			RegisteredBaseSignal *findSignal(Scope &scope, std::string_view name);
 	};
 }

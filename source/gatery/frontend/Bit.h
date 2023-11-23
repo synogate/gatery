@@ -120,6 +120,9 @@ namespace hlim {
 		hlim::Node_Signal* node() { return m_node; }
 		const hlim::Node_Signal* node() const { return m_node; }
 
+		virtual BVec toBVec() const override;
+		virtual void fromBVec(const BVec &bvec) override;
+
 	protected:
 		void createNode();
 		void assign(bool);

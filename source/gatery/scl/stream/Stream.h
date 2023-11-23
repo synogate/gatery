@@ -111,7 +111,7 @@ namespace gtry::scl::strm
 		auto transform(std::invocable<Payload> auto&& fun) const requires (Assignable<AssignabilityTestType>);
 #else		
 		auto transform(std::invocable<Payload> auto&& fun) const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>);
-#endif		
+#endif
 
 		template<StreamSignal T> T reduceTo();
 		template<StreamSignal T> T reduceTo() const requires(Assignable<AssignabilityTestType>);
@@ -394,35 +394,47 @@ namespace gtry {
 		template<CompoundAssignmentVisitor Visitor>
 		void operator () (T& a, const T& b, Visitor& v)
 		{
-			std::apply([&](auto&... meta) {
-				(VisitCompound<std::remove_reference_t<decltype(meta)>>{}(
-					meta, b.template get<std::remove_reference_t<decltype(meta)>>(), v)
-					, ...);
-			}, a._sig);
+			if (v.enterPackStruct(a)) {
+				std::apply([&](auto&... meta) {
+					(VisitCompound<std::remove_reference_t<decltype(meta)>>{}(
+						meta, b.template get<std::remove_reference_t<decltype(meta)>>(), v)
+						, ...);
+				}, a._sig);
 
-			VisitCompound<typename T::Payload>{}(a.data, b.data, v);
+				VisitCompound<typename T::Payload>{}(a.data, b.data, v);
+			} else
+				v(a);
+			v.leavePack();
 		}
 
 		template<CompoundUnaryVisitor Visitor>
 		void operator () (T& a, Visitor& v)
 		{
-			std::apply([&](auto&... meta) {
-				(VisitCompound<std::remove_reference_t<decltype(meta)>>{}(meta, v), ...);
-			}, a._sig);
+			if (v.enterPackStruct(a)) {
+				std::apply([&](auto&... meta) {
+					(VisitCompound<std::remove_reference_t<decltype(meta)>>{}(meta, v), ...);
+				}, a._sig);
 
-			VisitCompound<typename T::Payload>{}(a.data, v);
+				VisitCompound<typename T::Payload>{}(a.data, v);
+			} else
+				v(a);
+			v.leavePack();
 		}
 
 		template<CompoundBinaryVisitor Visitor>
 		void operator () (const T& a, const T& b, Visitor& v)
 		{
-			std::apply([&](auto&... meta) {
-				(VisitCompound<std::remove_reference_t<decltype(meta)>>{}(
-					meta, b.template get<std::remove_reference_t<decltype(meta)>>(), v)
-					, ...);
-			}, a._sig);
+			if (v.enterPackStruct(a)) {
+				std::apply([&](auto&... meta) {
+					(VisitCompound<std::remove_reference_t<decltype(meta)>>{}(
+						meta, b.template get<std::remove_reference_t<decltype(meta)>>(), v)
+						, ...);
+				}, a._sig);
 
-			VisitCompound<typename T::Payload>{}(a.data, b.data, v);
+				VisitCompound<typename T::Payload>{}(a.data, b.data, v);
+			} else
+				v(a);
+			v.leavePack();
 		}
 	};
 }
