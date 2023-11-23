@@ -24,6 +24,7 @@
 #include <gatery/debug/websocks/WebSocksInterface.h>
 #include <gatery/scl/synthesisTools/IntelQuartus.h>
 
+#include <gatery/scl/stream/SimuHelpers.h>
 #include <gatery/scl/tilelink/tilelink.h>
 #include <gatery/scl/tilelink/TileLinkHub.h>
 #include <gatery/scl/tilelink/TileLinkErrorResponder.h>
@@ -762,57 +763,45 @@ BOOST_FIXTURE_TEST_CASE(tilelink_stream_fetch_test, BoostUnitTestSimulationFixtu
 	cmd->beats = 4_b;
 	pinIn(cmd, "cmd");
 
-	RvStream<BVec> data;
-	*data = 16_b;
+	RvStream<BVec> data{ 16_b };
 	pinOut(data, "data");
 
-	TileLinkStreamFetch fetcher;
-	TileLinkUL link = fetcher.generate(cmd, data);
-	mem <<= link;
+	mem <<= TileLinkStreamFetch{}.generate(cmd, data, 1_b);
+
+	std::array<std::array<size_t, 2>, 3> testCases = {
+		std::array<size_t, 2>{ 16, 4 },
+		std::array<size_t, 2>{ 32, 1 },
+		std::array<size_t, 2>{ 40, 8 },
+	};
 
 	addSimulationProcess([&]()->SimProcess {
-		simu(valid(cmd)) = '0';
-		simu(ready(data)) = '0';
-		co_await OnClk(clock);
-
-		simu(cmd->address) = 16;
-		simu(cmd->beats) = 4;
-		simu(valid(cmd)) = '1';
-		co_await OnClk(clock);
-
-		while(simu(valid(data)) == '0')
-			co_await OnClk(clock);
-
-		co_await OnClk(clock);
-		simu(ready(data)) = '1';
-
-		while (simu(ready(cmd)) == '0')
-			co_await OnClk(clock);
-		co_await OnClk(clock);
-
-		simu(valid(cmd)) = '0';
-
+		for (const auto& tc : testCases)
+		{
+			simu(cmd->address) = tc[0];
+			simu(cmd->beats) = tc[1];
+			co_await performTransfer(cmd, clock);
+		}
 	});
 
 	addSimulationProcess([&]()->SimProcess {
-		for (size_t i = 0; i < 4; ++i)
-		{
-			do
-				co_await OnClk(clock);
-			while (simu(valid(data)) == '0' || simu(ready(data)) == '0');
+		fork(scl::strm::readyDriverRNG(data, clock, 80));
 
-			const size_t expectedByte = 16 + i * 2;
-			const size_t expectedWord = ((expectedByte + 1) << 8) | expectedByte;
-			BOOST_TEST(simu(*data) == expectedWord);
-		}
-
+		for(const auto& tc : testCases)
+			for (size_t i = 0; i < tc[1]; ++i)
+			{
+				const size_t expectedByte = tc[0] + i * 2;
+				const size_t expectedWord = ((expectedByte + 1) << 8) | expectedByte;
+				auto a = co_await scl::strm::receivePacket(data, clock);
+				BOOST_TEST(a.asUint64(data->width()) == expectedWord);
+			}
+		
 		co_await OnClk(clock);
-		co_await OnClk(clock);
+		BOOST_TEST(simu(valid(data)) == '0');
 		stopTest();
 	});
 
-	design.getCircuit().postprocess(gtry::DefaultPostprocessing{});
-	runTicks(clock.getClk(), 128);
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
 
 class LinkTest : public ClockedTest

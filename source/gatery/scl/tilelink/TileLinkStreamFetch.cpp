@@ -25,16 +25,16 @@ namespace gtry::scl
 		m_area.leave();
 	}
 
-	TileLinkUL TileLinkStreamFetch::generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut)
+	TileLinkUL TileLinkStreamFetch::generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut, BitWidth sourceW)
 	{
 		auto ent = m_area.enter();
 		HCL_NAMED(cmdIn);
 
-		auto link = tileLinkInit<TileLinkUL>(cmdIn->address.width(), dataOut->width());
+		auto link = tileLinkInit<TileLinkUL>(cmdIn->address.width(), dataOut->width(), sourceW);
 		link.a->opcode = (size_t)TileLinkA::Get;
 		link.a->param = 0;
 		link.a->size = utils::Log2C(link.a->mask.width().bits());
-		link.a->source = 0;
+		//link.a->source = 0;
 		link.a->mask = link.a->mask.width().mask();
 		link.a->data = ConstBVec(link.a->data.width());
 
@@ -43,15 +43,14 @@ namespace gtry::scl
 		addressOffset = reg(addressOffset, 0);
 		link.a->address = cmdIn->address + zext(cat(addressOffset, ConstUInt(0, BitWidth::count(dataOut->width().bytes()))));
 
-		Bit busy;
-		IF(transfer(*link.d))
-			busy = '0';
-		IF(transfer(link.a))
-			busy = '1';
-		busy = reg(busy, '0');
-		HCL_NAMED(busy);
+		BVec readySource{ BitWidth{sourceW.count()} };
+		HCL_NAMED(readySource);
 
-		valid(link.a) = valid(cmdIn) & !busy;
+		VStream<UInt> nextSource = priorityEncoder((UInt)readySource);
+		HCL_NAMED(nextSource);
+		
+		link.a->source = *nextSource;
+		valid(link.a) = valid(cmdIn) & valid(nextSource);
 
 		if (m_pauseFetch)
 		{
@@ -59,6 +58,12 @@ namespace gtry::scl
 				valid(link.a) = '0';
 			setName(*m_pauseFetch, "pauseFetch");
 		}
+
+		IF(transfer(*link.d))
+			readySource[(*link.d)->source] = '1';
+		IF(transfer(link.a))
+			readySource[link.a->source] = '0';
+		readySource = reg(readySource, BVec{ readySource.width().mask() });
 
 		ready(cmdIn) = '0';
 		IF(transfer(link.a))
