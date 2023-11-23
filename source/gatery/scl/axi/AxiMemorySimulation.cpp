@@ -31,7 +31,7 @@ namespace gtry::scl
 			cfg.wordStride = cfg.axiCfg.dataW + cfg.axiCfg.wUserW;
 
 		if(!cfg.storage)
-			cfg.storage = std::make_shared<hlim::MemoryStorageDense>((cfg.wordStride + cfg.axiCfg.wUserW).bits() * cfg.axiCfg.addrW.count());
+			cfg.storage = std::make_shared<hlim::MemoryStorageDense>((cfg.wordStride + cfg.axiCfg.wUserW).bits() * cfg.axiCfg.wordAddrW().count());
 		
 		const uint64_t uniqueId = (*axi->ar)->addr.node()->getId();
 		pinIn(*axi, "simu_aximem_" + std::to_string(uniqueId), { .simulationOnlyPin = true });
@@ -41,19 +41,24 @@ namespace gtry::scl
 			simu(valid(axi->r)) = '0';
 			simu(ready(*axi->ar)) = '1';
 
+			size_t slot_next = 0;
+			size_t slot_current = 0;
 			while (true)
 			{
 				co_await performTransferWait(*axi->ar, clock);
 
-				fork([axi, cfg, clock]() -> SimProcess {
+				fork([axi, cfg, clock, slot_next, &slot_current]() -> SimProcess {
 					AxiAddress& ar = **axi->ar;
 					uint64_t wordOffset = simu(ar.addr).value() / cfg.axiCfg.dataW.bytes();
-					uint64_t size = simu(ar.size).value();
+					//uint64_t size = simu(ar.size).value();
 					uint64_t burst = simu(ar.burst).value();
 					uint64_t len = simu(ar.len).value() + 1;
 					uint64_t id = simu(ar.id).value();
 
 					for (size_t i = 0; i < cfg.readLatency; ++i)
+						co_await OnClk(clock);
+
+					while(slot_next != slot_current)
 						co_await OnClk(clock);
 
 					for (size_t i = 0; i < len; ++i)
@@ -64,8 +69,8 @@ namespace gtry::scl
 						simu(axi->r->resp) = (size_t)AxiResponseCode::OKAY;
 
 						size_t bitOffset = wordOffset * cfg.wordStride.bits();
-						simu(axi->r->data) = cfg.storage->read(bitOffset, 8ull << size);
-						simu(axi->r->user) = cfg.storage->read(bitOffset + (8ull << size), cfg.axiCfg.rUserW.bits());
+						simu(axi->r->data) = cfg.storage->read(bitOffset, cfg.axiCfg.dataW.bits());
+						simu(axi->r->user) = cfg.storage->read(bitOffset + cfg.axiCfg.dataW.bits(), cfg.axiCfg.rUserW.bits());
 
 						co_await performTransferWait(axi->r, clock);
 						
@@ -79,7 +84,17 @@ namespace gtry::scl
 					simu(axi->r->resp).invalidate();
 					simu(axi->r->data).invalidate();
 					simu(axi->r->user).invalidate();
+
+					slot_current++;
 				});
+
+				slot_next++;
+				while (slot_next - slot_current > 8)
+				{
+					simu(ready(*axi->ar)) = '0';
+					co_await OnClk(clock);
+					simu(ready(*axi->ar)) = '1';
+				}
 			}
 		});
 
@@ -88,17 +103,23 @@ namespace gtry::scl
 			simu(ready(*axi->aw)) = '1';
 			simu(ready(*axi->w)) = '0';
 
+			size_t slot_next = 0;
+			size_t slot_current = 0;
+			size_t slot_current_ack = 0;
 			while (true)
 			{
 				co_await performTransferWait(*axi->aw, clock);
 
-				fork([axi, cfg, clock]() -> SimProcess {
+				fork([axi, cfg, clock, slot_next, &slot_current, &slot_current_ack]() -> SimProcess {
 					AxiAddress& ar = **axi->aw;
 					uint64_t wordOffset = simu(ar.addr).value() / cfg.axiCfg.dataW.bytes();
 					//uint64_t size = simu(ar.size).value();
 					uint64_t burst = simu(ar.burst).value();
 					uint64_t len = simu(ar.len).value() + 1;
 					uint64_t id = simu(ar.id).value();
+
+					while (slot_next != slot_current)
+						co_await OnClk(clock);
 
 					simu(ready(*axi->w)) = '1';
 
@@ -125,18 +146,30 @@ namespace gtry::scl
 							wordOffset++;	
 					}
 					simu(ready(*axi->w)) = '0';
+					slot_current++;
+
+					while (slot_next != slot_current_ack)
+						co_await OnClk(clock);
 
 					simu(axi->b->id) = id;
 					simu(axi->b->resp) = (size_t)AxiResponseCode::OKAY;
 					co_await performTransfer(axi->b, clock);
 					simu(axi->b->id).invalidate();
 					simu(axi->b->resp).invalidate();
+					slot_current_ack++;
 				});
+
+				slot_next++;
+				while (slot_next - slot_current > 8)
+				{
+					simu(ready(*axi->aw)) = '0';
+					co_await OnClk(clock);
+					simu(ready(*axi->aw)) = '1';
+				}
 			}
 			});
 
-
-		HCL_NAMED(*axi);
+		setName(*axi, "axi");
 		return *axi;
 	}
 
@@ -145,10 +178,10 @@ namespace gtry::scl
 		cfg.axiCfg = axi.config();
 		Axi4& simAxi = axiMemorySimulation(cfg);
 
-		Axi4 out;
+		Axi4 out = constructFrom(axi);
 		out <<= simAxi;
 
-		upstream(out) = upstream(axi);
+		upstream(axi) = upstream(out);
 
 		ready(*out.ar).exportOverride(ready(*axi.ar));
 		ready(*out.aw).exportOverride(ready(*axi.aw));

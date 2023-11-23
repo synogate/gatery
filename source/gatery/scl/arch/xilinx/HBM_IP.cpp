@@ -18,6 +18,7 @@
 #include "gatery/pch.h"
 
 #include "HBM_IP.h"
+#include <gatery/scl/axi/AxiMemorySimulation.h>
 
 #include <boost/format.hpp>
 
@@ -26,8 +27,6 @@ namespace gtry::scl::arch::xilinx
 	HBM_IP::HBM_IP(std::string_view ipName) :
 		ExternalModule(ipName, "xil_defaultlib")
 	{
-		
-
 	}
 
 	void HBM_IP::clockAPB(const Clock& clk, size_t stackIndex)
@@ -54,7 +53,7 @@ namespace gtry::scl::arch::xilinx
 			.idW = 6_b
 		});
 
-		std::string prefix = (boost::format("AXI_{%02d}_") % portIndex).str();
+		std::string prefix = (boost::format("AXI_%02d_") % portIndex).str();
 
 		// CLOCK
 		clockIn(ClockScope::getClk(), prefix + "ACLK");
@@ -67,7 +66,10 @@ namespace gtry::scl::arch::xilinx
 		in(prefix + "ARBURST", 2_b) = (BVec)(*axi.ar)->burst;
 		in(prefix + "ARID", 6_b) = (*axi.ar)->id;
 		in(prefix + "ARLEN", 4_b) = (BVec)(*axi.ar)->len.lower(4_b);
-		in(prefix + "ARSIZE", 3_b) = (BVec)(*axi.ar)->size;
+		if (addECCBitsToData)
+			in(prefix + "ARSIZE", 3_b) = (BVec)((*axi.ar)->size - 1);
+		else
+			in(prefix + "ARSIZE", 3_b) = (BVec)(*axi.ar)->size;
 
 		// AW
 		ready(*axi.aw) = out(prefix + "AWREADY");
@@ -76,14 +78,17 @@ namespace gtry::scl::arch::xilinx
 		in(prefix + "AWBURST", 2_b) = (BVec)(*axi.aw)->burst;
 		in(prefix + "AWID", 6_b) = (*axi.aw)->id;
 		in(prefix + "AWLEN", 4_b) = (BVec)(*axi.aw)->len.lower(4_b);
-		in(prefix + "AWSIZE", 3_b) = (BVec)(*axi.aw)->size;
+		if(addECCBitsToData)
+			in(prefix + "AWSIZE", 3_b) = (BVec)((*axi.aw)->size - 1);
+		else
+			in(prefix + "AWSIZE", 3_b) = (BVec)(*axi.aw)->size;
 
 		// W
 		ready(*axi.w) = out(prefix + "WREADY");
 		valid(*axi.w) = in(prefix + "WVALID");
 		in(prefix + "WLAST") = eop(*axi.w);
 		in(prefix + "WDATA", 256_b) = (*axi.w)->data.lower(256_b);
-		in(prefix + "WSTRB", 32_b) = (*axi.w)->strb;
+		in(prefix + "WSTRB", 32_b) = (*axi.w)->strb.lower(32_b);
 
 		if (addECCBitsToData)
 			in(prefix + "WDATA_PARITY", 32_b) = (*axi.w)->data.upper(32_b);
@@ -108,7 +113,7 @@ namespace gtry::scl::arch::xilinx
 		axi.b->resp = out(prefix + "BRESP", 2_b);
 		axi.b->id = out(prefix + "BID", 6_b);
 
-		return axi;
+		return axiMemorySimulationOverride({}, move(axi));
 	}
 
 	Bit HBM_IP::catastrophicTemperature(size_t stackIndex)
@@ -125,8 +130,4 @@ namespace gtry::scl::arch::xilinx
 	{
 		return Bit();
 	}
-
-
-
-
 }
