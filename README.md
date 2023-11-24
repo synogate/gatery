@@ -1,4 +1,4 @@
-# Gatery
+# Gatery {#gtry_page}
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=github_codespace_test&repo=368247767)
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL_v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
@@ -190,6 +190,11 @@ int main()
 }
 ````
 
+## Further Documentation
+
+- @ref gtry_frontend
+- @subpage gtry_scl_page
+
 
 ## License
 
@@ -209,3 +214,7 @@ Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+
+@defgroup gtry Gatery
+See @ref gtry_page

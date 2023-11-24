@@ -26,18 +26,28 @@
 namespace gtry::scl
 {
 
+
+/**
+ * @addtogroup gtry_scl_memorymaps
+ * @{
+ */
+
+	/// Type trait for providing custom handlers for registration in a @ref gtry::scl::MemoryMap for select types (i.e. streams, fifos, memories, ...)
+	/// @see gtry_scl_memorymaps_page
 	template<typename T>
 	struct CustomMemoryMapHandler {
 	};
 
 	class MemoryMapRegistrationVisitor;
 
+	/// Checks if a type has a custom handler for registration in a @ref gtry::scl::MemoryMap.
 	template<typename T>
 	concept HasCustomMemoryMapHandler = requires(MemoryMapRegistrationVisitor &v, T &t, bool b, 
 										std::string_view n, const CompoundMemberAnnotation *a) { 
 		CustomMemoryMapHandler<T>::memoryMap(v, t, b, n, a); 
 	};
 
+	/// Visitor class for @ref gtry::reccurseCompoundMembers to implement the recursive member registration for @ref gtry::scl::MemoryMap.
 	class MemoryMapRegistrationVisitor
 	{
 		public:
@@ -95,6 +105,19 @@ namespace gtry::scl
 			std::vector<size_t> memberCounter = { 0 };
 	};
 
+	/**
+	 * @brief Register a signal in a memory map as writeable from the bus master.
+	 * @details If the signal is a compound, the registration proceeds recursively
+	 * through the compound and registers each member individually.
+	 * Much like for @ref gtry::pinIn, encountering a reverse signal (see @ref gtry::Reverse)
+	 * flips the behaviour of the registration code and makes the signal readable by the bus master.
+	 * Some types may have custom registration behaviors defined through @ref gtry::scl::CustomMemoryMapHandler.
+	 * @param map The memory map to register in
+	 * @param compound The signal or compound to register
+	 * @param prefix The name under which to register in the memory map.
+	 * @return MemoryMap::SelectionHandle A handle that allows querying for individual members of the compound, whether they are being written by the bus master.
+	 * @see gtry_scl_memorymaps_page
+	 */
 	MemoryMap::SelectionHandle mapIn(MemoryMap &map, auto&& compound, std::string prefix)
 	{
 		MemoryMapRegistrationVisitor v(map);
@@ -102,6 +125,19 @@ namespace gtry::scl
 		return v.selectionHandle;
 	}
 
+	/**
+	 * @brief Register a signal in a memory map as readable from the bus master.
+	 * @details If the signal is a compound, the registration proceeds recursively
+	 * through the compound and registers each member individually.
+	 * Much like for @ref gtry::pinOut, encountering a reverse signal (see @ref gtry::Reverse)
+	 * flips the behaviour of the registration code and makes the signal writeable by the bus master.
+	 * Some types may have custom registration behaviors defined through @ref gtry::scl::CustomMemoryMapHandler.
+	 * @param map The memory map to register in
+	 * @param compound The signal or compound to register
+	 * @param prefix The name under which to register in the memory map.
+	 * @return MemoryMap::SelectionHandle A handle that allows querying for individual members of the compound, whether they are being written by the bus master.
+	 * @see gtry_scl_memorymaps_page
+	 */
 	MemoryMap::SelectionHandle mapOut(MemoryMap &map, auto&& compound, std::string prefix)
 	{
 		MemoryMapRegistrationVisitor v(map);
@@ -116,11 +152,6 @@ namespace gtry::scl
 	////////////////////////////////////////////////////
 
 	// Todo: Move these to sensible locations
-
-
-
-
-
 
 
 	template<typename T>
@@ -183,11 +214,36 @@ namespace gtry::scl
 	struct CustomMemoryMapHandler<T> {
 		static void memoryMap(MemoryMapRegistrationVisitor &v, T &stream, bool isReverse, std::string_view name, const CompoundMemberAnnotation *annotation) {
 			if (isReverse) {
-			} else {
-				
 				auto payload = constructFrom(*stream);
+				payload = reg(payload);
+				IF (transfer(stream))
+					connect(payload, *stream);
+				mapOut(v.memoryMap, payload, "payload");
+
+				if constexpr (T::template has<Ready>()) {
+					Bit streamReady;
+					if constexpr (T::template has<Valid>()) {
+						Bit streamValid = valid(stream);
+						if (v.memoryMap.readEnabled())
+							mapOut(v.memoryMap, streamValid, "valid");
+
+						// Make ready drop to low on transfer, and allow reading the ready flag to know when the payload register can be read.
+						IF (streamValid)
+							streamReady = '0';
+						mapOut(v.memoryMap, streamReady, "ready");
+					} else
+						streamReady = '0';					
+
+					mapIn(v.memoryMap, streamReady, "ready");
+					ready(stream) = streamReady;
+				}
+			} else {
+
+				auto payload = constructFrom(*stream);
+				if (v.memoryMap.readEnabled())
+					mapOut(v.memoryMap, payload, "payload");
 				mapIn(v.memoryMap, payload, "payload");
-				*stream = payload;
+				connect(*stream, payload);
 
 				if constexpr (T::template has<Valid>()) {
 					Bit streamValid;
@@ -202,9 +258,7 @@ namespace gtry::scl
 						mapOut(v.memoryMap, streamValid, "valid");
 					} else
 						streamValid = '0';
-					setName(streamValid, "streamValid_before_MM");
 					mapIn(v.memoryMap, streamValid, "valid");
-					setName(streamValid, "streamValid_after_MM");
 					valid(stream) = streamValid;
 				}
 
@@ -221,5 +275,8 @@ namespace gtry::scl
 			}
 		}
 	};
+
+
+/**@}*/
 
 }

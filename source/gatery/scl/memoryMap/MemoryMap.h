@@ -23,8 +23,16 @@
 
 #include <ostream>
 
+
 namespace gtry::scl
 {
+
+/**
+ * @addtogroup gtry_scl_memorymaps
+ * @{
+ */
+
+
 	// Todo: Make this a tileLink thing
 	struct AddressSpaceDescription {
 		enum Flags
@@ -38,7 +46,7 @@ namespace gtry::scl
 		/// Size of this field in the address space (in bits)
 		BitWidth size;
 		/// Whether anything in this field (or the sub fields) can be read or written
-		size_t flags = F_READ | F_WRITE;
+		//size_t flags = F_READ | F_WRITE;
 		/// Name of this address region
 		boost::flyweight<std::string> name;
 		/// Short description of what this address space contains
@@ -56,10 +64,20 @@ namespace gtry::scl
 	void format(std::ostream &stream, const AddressSpaceDescription &desc, size_t indent = 0);
 	inline std::ostream &operator<<(std::ostream &stream, const AddressSpaceDescription &desc) { format(stream, desc); return stream; }
 
-
+	/**
+	 * @brief Interface and no-op fallback implementation for the automatic generation of memory mapped control registers.
+	 * @details To register signals, use the @ref gtry::scl::mapIn and @ref gtry::scl::mapOut freestanding functions.
+	 * @see gtry_scl_memorymaps_page
+	 */
 	class MemoryMap
 	{
 		public:
+
+			/**
+			 * @brief Handle returned by @ref gtry::scl::mapIn and @ref gtry::scl::mapIn to determine when signals are written by the bus master.
+			 * @details Allows to query if specific members of a compound are being written by the bus master (in the cycle in which they are written).
+			 * @warning Not yet fully implemented.
+			 */
 			class SelectionHandle {
 				public:
 					static SelectionHandle NeverWritten() { SelectionHandle handle; handle.m_neverWritten = true; return handle; }
@@ -292,4 +310,6 @@ namespace gtry::scl
 		);
 	}
 #endif
+
+/**@}*/
 }

@@ -25,7 +25,7 @@ namespace gtry::scl
 		std::size_t hash = 31337;
 		boost::hash_combine(hash, d.offsetInBits);
 		boost::hash_combine(hash, d.size.bits());
-		boost::hash_combine(hash, d.flags);
+		//boost::hash_combine(hash, d.flags);
 		boost::hash_combine(hash, d.name);
 		boost::hash_combine(hash, d.descShort);
 		boost::hash_combine(hash, d.descLong);

@@ -21,6 +21,18 @@
 
 namespace gtry::scl
 {
+
+/**
+ * @addtogroup gtry_scl_memorymaps
+ * @{
+ */
+
+
+	/**
+	 * @brief Implementation for the automatic generation of memory mapped control registers.
+	 * @details To register signals, use the @ref gtry::scl::mapIn and @ref gtry::scl::mapOut freestanding functions.
+	 * @see gtry_scl_memorymaps_page
+	 */
 	class PackedMemoryMap : public MemoryMap
 	{
 		public:
@@ -61,7 +73,11 @@ namespace gtry::scl
 			virtual SelectionHandle writeable(ElementarySignal &value, std::string_view name, const CompoundMemberAnnotation *annotation = nullptr) override;
 			//virtual void reserve(BitWidth width, std::string_view name) override;
 
+			/// @brief Performs the actual address space allocation for the given data bus width.
+			/// @details Not to be called directly, but by bus master adaptors such as @ref gtry::scl::toTileLinkUL
 			virtual void packRegisters(BitWidth registerWidth);
+
+			/// Access for bus master adaptors
 			const Scope &getTree() const { return m_scope; }
 			Scope &getTree() { return m_scope; }
 		protected:
@@ -74,5 +90,7 @@ namespace gtry::scl
 
 			RegisteredBaseSignal *findSignal(Scope &scope, std::string_view name);
 	};
+
+/**@}*/
 
 }

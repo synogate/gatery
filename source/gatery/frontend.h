@@ -72,6 +72,7 @@ namespace gtry {
 }
 
 /** @defgroup gtry_frontend Gatery - Frontend
+ * @ingroup gtry
  * @brief Everything needed for composing circuits.
  * 
  * The Gatery frontend encompasses all classes and functions necessary for building 

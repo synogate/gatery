@@ -49,26 +49,14 @@ struct gtry::CompoundAnnotator<MyStruct> {
 };
 
 CompoundAnnotation gtry::CompoundAnnotator<MyStruct>::annotation = {
-		.shortDesc = "Bla",
-		.longDesc = "muchBla",
+		.shortDesc = "Short description",
+		.longDesc = "Long description",
 		.memberDesc = {
-			CompoundMemberAnnotation{ .shortDesc = "writeBla" },
-			CompoundMemberAnnotation{ .shortDesc = "addressBla" },
-			CompoundMemberAnnotation{ .shortDesc = "dataBla" },
+			CompoundMemberAnnotation{ .shortDesc = "Desc field 1" },
+			CompoundMemberAnnotation{ .shortDesc = "Desc field 2" },
+			CompoundMemberAnnotation{ .shortDesc = "Desc field 3" },
 		}
 	};
-
-
-
-
-struct IdiotBus {
-	BOOST_HANA_DEFINE_STRUCT(IdiotBus,
-		(UInt, address),
-		(gtry::Reverse<BVec>, rdData),
-		(BVec, wrData),
-		(Bit, write)
-	);	
-};
 
 
 BOOST_AUTO_TEST_SUITE(MemoryMap);
@@ -79,61 +67,23 @@ BOOST_FIXTURE_TEST_CASE(MemoryMapStruct, BoostUnitTestSimulationFixture)
 	using namespace gtry::scl;
 	using namespace gtry::scl::strm;
 
+	MyStruct myStruct{ Bit{}, 4_b, 16_b };
 
-	{
-		MyStruct myStruct{ Bit{}, 4_b, 16_b };
+	pinOut(myStruct, "myStruct");
 
-		pinOut(myStruct, "myStruct");
+	PackedMemoryMap memoryMap("myMemoryMap");
+	mapIn(memoryMap, myStruct, "myStruct");
+	mapOut(memoryMap, myStruct, "myStruct");
 
-		PackedMemoryMap memoryMap("myMemoryMap");
-		mapIn(memoryMap, myStruct, "myStruct");
-		mapOut(memoryMap, myStruct, "myStruct");
+	memoryMap.packRegisters(8_b);
 
-		memoryMap.packRegisters(8_b);
+	auto &tree = memoryMap.getTree();
+	//std::cout << tree.physicalDescription << std::endl;
 
-		auto &tree = memoryMap.getTree();
-		std::cout << tree.physicalDescription << std::endl;
-
-		//BOOST_TEST(tree.name == "myMemoryMap");
-		//BOOST_TEST(tree.subScopes.front().name == "myStream");
-		//BOOST_TEST(tree.subScopes.front().registeredSignals.front().name == "payload");
-		//BOOST_TEST(tree.subScopes.front().physicalRegisters.front().description.name == "payload");
-
-		IdiotBus bus = {
-			.address = 16_b,
-			.rdData = 8_b,
-			.wrData = 8_b,
-		};
-		pinIn(bus, "cpuBus");
-
-		std::function<void(PackedMemoryMap::Scope &scope)> processRegs;
-		processRegs = [&](PackedMemoryMap::Scope &scope) {
-			for (auto &r : scope.physicalRegisters) {
-				IF (bus.address == r.description.offsetInBits / bus.rdData->size()) {
-					if (r.readSignal)
-						*bus.rdData = zext(*r.readSignal);
-					
-					if (r.writeSignal) {
-						IF (bus.write) {
-							r.writeSignal = bus.wrData(0, r.writeSignal->width());
-							*r.onWrite = '1';
-						}
-					}
-				}
-			}
-			for (auto &c : scope.subScopes)
-				processRegs(c);
-		};
-		*bus.rdData = dontCare(*bus.rdData);
-		processRegs(tree);
-	}
-
-	design.visualize("test");
-
-	design.postprocess();
-
-	design.visualize("test_after");
-
+	BOOST_TEST(tree.name == "myMemoryMap");
+	BOOST_TEST(tree.subScopes.front().name == "myStruct");
+	BOOST_TEST(tree.subScopes.front().registeredSignals.front().name == "field1");
+	BOOST_TEST(tree.subScopes.front().physicalRegisters.front().description.name == "field1");
 }
 
 BOOST_FIXTURE_TEST_CASE(MemoryMapStream, BoostUnitTestSimulationFixture)
@@ -143,7 +93,7 @@ BOOST_FIXTURE_TEST_CASE(MemoryMapStream, BoostUnitTestSimulationFixture)
 	using namespace gtry::scl::strm;
 
 
-	RvStream<BVec> myStream{ 4_b };
+	RvStream<BVec> myStream{ 12_b };
 
 	pinOut(myStream, "myStream");
 
@@ -153,48 +103,12 @@ BOOST_FIXTURE_TEST_CASE(MemoryMapStream, BoostUnitTestSimulationFixture)
 	memoryMap.packRegisters(8_b);
 
 	auto &tree = memoryMap.getTree();
-	std::cout << tree.physicalDescription << std::endl;
+	//std::cout << tree.physicalDescription << std::endl;
 
 	BOOST_TEST(tree.name == "myMemoryMap");
 	BOOST_TEST(tree.subScopes.front().name == "myStream");
 	BOOST_TEST(tree.subScopes.front().registeredSignals.front().name == "payload");
 	BOOST_TEST(tree.subScopes.front().physicalRegisters.front().description.name == "payload_bits_0_to_8");
-
-
-	IdiotBus bus = {
-		.address = 16_b,
-		.rdData = 8_b,
-		.wrData = 8_b,
-	};
-	pinIn(bus, "cpuBus");
-
-	std::function<void(PackedMemoryMap::Scope &scope)> processRegs;
-	processRegs = [&](PackedMemoryMap::Scope &scope) {
-		for (auto &r : scope.physicalRegisters) {
-			IF (bus.address == r.description.offsetInBits / bus.rdData->size()) {
-				if (r.readSignal)
-					*bus.rdData = zext(*r.readSignal);
-				
-				if (r.writeSignal) {
-					IF (bus.write) {
-						r.writeSignal = bus.wrData(0, r.writeSignal->width());
-						*r.onWrite = '1';
-					}
-				}
-			}
-		}
-		for (auto &c : scope.subScopes)
-			processRegs(c);
-	};
-	*bus.rdData = dontCare(*bus.rdData);
-	processRegs(tree);
-
-	design.visualize("test");
-
-	design.postprocess();
-
-	design.visualize("test_after");
-
 }
 
 
@@ -234,7 +148,6 @@ BOOST_FIXTURE_TEST_CASE(MemoryMapStructTileLink, BoostUnitTestSimulationFixture)
 	TileLinkUL cpuInterface;
 	pinOut(myStruct, "myStruct");
 	{
-
 
 		PackedMemoryMap memoryMap("myMemoryMap");
 		mapIn(memoryMap, myStruct, "myStruct");
@@ -283,16 +196,13 @@ BOOST_FIXTURE_TEST_CASE(MemoryMapStructTileLink, BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	design.visualize("test");
-
 	design.postprocess();
-	design.visualize("test_after");
 
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
 
 
-BOOST_FIXTURE_TEST_CASE(MemoryMapStreamTileLink, BoostUnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(MemoryMapStreamOutTileLink, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
 	using namespace gtry::scl;
@@ -319,7 +229,7 @@ BOOST_FIXTURE_TEST_CASE(MemoryMapStreamTileLink, BoostUnitTestSimulationFixture)
 		cpuInterface = constructFrom(*tileLink);
 		*tileLink <<= cpuInterface;
 
-		std::cout << memoryMap.getTree().physicalDescription << std::endl;
+		//std::cout << memoryMap.getTree().physicalDescription << std::endl;
 	}
 	
 
@@ -379,10 +289,97 @@ BOOST_FIXTURE_TEST_CASE(MemoryMapStreamTileLink, BoostUnitTestSimulationFixture)
 		stopTest();
 	});
 
-	design.visualize("test");
+	design.postprocess();
+
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+
+
+
+
+BOOST_FIXTURE_TEST_CASE(MemoryMapStreamInTileLink, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+	using namespace gtry::scl;
+	using namespace gtry::scl::strm;
+
+
+	Clock clock({
+			.absoluteFrequency = {{125'000'000,1}},
+			.initializeRegs = false,
+	});
+	HCL_NAMED(clock);
+	ClockScope scp(clock);
+
+	RvStream<BVec> myStream{ 4_b };
+	TileLinkUL cpuInterface;
+	pinIn(myStream, "myStream");
+	{
+		PackedMemoryMap memoryMap("myMemoryMap");
+		mapOut(memoryMap, myStream, "myStream");
+
+		auto tileLink = toTileLinkUL(memoryMap, 8_b);
+		cpuInterface = constructFrom(*tileLink);
+		*tileLink <<= cpuInterface;
+
+		//std::cout << memoryMap.getTree().physicalDescription << std::endl;
+	}
+	
+
+	scl::TileLinkMasterModel linkModel;
+	linkModel.init("cpuBus", 
+		cpuInterface.a->address.width(), 
+		cpuInterface.a->data.width(), 
+		cpuInterface.a->size.width(), 
+		cpuInterface.a->source.width());
+
+	ul2ub(cpuInterface) <<= linkModel.getLink();
+
+	addSimulationProcess([&]()->SimProcess {
+		simuValid(myStream) = false;
+		
+		co_await OnClk(clock);
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "Expecting stream to not be ready");
+		BOOST_TEST(simuReady(myStream) == false);
+
+		// write ready
+		co_await OnClk(clock);
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "Setting ready");
+		co_await linkModel.put(2, 0, 1, clock);
+
+		co_await OnClk(clock);
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "Expecting stream to be ready");
+		BOOST_TEST(simuReady(myStream) == true);
+	
+		co_await OnClk(clock);
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "Offering data on stream");
+		simuValid(myStream) = true;
+		simu(*myStream) = 0xA;
+
+		co_await OnClk(clock);
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "Expecting memory map ready to drop to low");
+		while (true) {
+			auto [val, def, err] = co_await linkModel.get(2, 0, clock);
+			BOOST_TEST(def);
+			BOOST_TEST(!err);
+			if (!val) break;
+		}
+
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "Expecting stream to become non-ready");
+		BOOST_TEST(simuReady(myStream) == false);
+
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "Reading payload");
+		auto [val, def, err] = co_await linkModel.get(0, 0, clock);
+		BOOST_TEST(val == 0xA);
+		BOOST_TEST(def);
+		BOOST_TEST(!err);
+
+		co_await AfterClk(clock);
+		stopTest();
+	});
 
 	design.postprocess();
-	design.visualize("test_after");
 
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }

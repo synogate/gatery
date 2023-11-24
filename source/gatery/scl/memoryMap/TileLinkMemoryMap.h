@@ -29,6 +29,16 @@ namespace gtry::scl
 	template<class... Capability> struct TileLinkU;
 	using TileLinkUL = TileLinkU<>;
 
+
+/**
+ * @addtogroup gtry_scl_memorymaps
+ * @{
+ */
+
+
 	/// Turns a memory map into a TileLinkUL slave, allowing the registers to be accessed by the tilelink bus.
 	Reverse<TileLinkUL> toTileLinkUL(PackedMemoryMap &memoryMap, BitWidth busWidth);
+
+
+/**@}*/
 }

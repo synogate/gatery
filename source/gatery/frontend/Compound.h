@@ -57,13 +57,13 @@ namespace gtry
 	};
 
 	template<typename T>
-	concept IsAnnotated = requires(T) { {T::annotation} -> std::same_as<CompoundAnnotation>; };
+	concept IsAnnotated = requires(T) { {gtry::CompoundAnnotator<T>::annotation} -> std::convertible_to<const CompoundAnnotation&>; };
 
 	template<typename T>
 	consteval CompoundAnnotation* getAnnotation() { return nullptr; }
 
 	template<typename T> requires (IsAnnotated<T>)
-	consteval CompoundAnnotation* getAnnotation() { return &T::annotation; }
+	consteval CompoundAnnotation* getAnnotation() { return &gtry::CompoundAnnotator<T>::annotation; }
 
 
 	/**
