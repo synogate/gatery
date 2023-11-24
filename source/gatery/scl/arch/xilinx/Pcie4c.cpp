@@ -113,13 +113,13 @@ namespace gtry::scl::arch::xilinx {
 	
 	void Pcie4c::buildSignals()
 	{
-		auto& rxn =  in("pci_exp_rxn", BitWidth(m_cfg.lanes));
-		rxn = 0;
-		auto& rxp =  in("pci_exp_rxp", BitWidth(m_cfg.lanes));
-		rxp = 0;
-		auto txn = out("pci_exp_txn", BitWidth(m_cfg.lanes));
-		auto txp = out("pci_exp_txp", BitWidth(m_cfg.lanes));
+		BVec& rxn =  in("pci_exp_rxn", BitWidth(m_cfg.lanes));
+		BVec& rxp =  in("pci_exp_rxp", BitWidth(m_cfg.lanes));
+		BVec txn = out("pci_exp_txn", BitWidth(m_cfg.lanes));
+		BVec txp = out("pci_exp_txp", BitWidth(m_cfg.lanes));
 		
+		rxp = 0;
+		rxn = 0;
 		for (size_t i = 0; i < m_cfg.lanes; i++) {
 			 pinIn(rxn.at(i), std::string(m_cfg.PinRx) + std::to_string(i) + "_N");
 			 pinIn(rxp.at(i), std::string(m_cfg.PinRx) + std::to_string(i) + "_P");
