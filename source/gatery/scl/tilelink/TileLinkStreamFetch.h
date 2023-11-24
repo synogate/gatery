@@ -34,7 +34,9 @@ namespace gtry::scl
 		TileLinkStreamFetch();
 
 		TileLinkStreamFetch& pause(Bit condition) { m_pauseFetch = condition; return *this; }
-		virtual TileLinkUL generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut);
+
+		//TODO: it supports multiple requests in parallel, but the responses are not guaranteed to be in order if the slave is not in order
+		virtual TileLinkUL generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut, BitWidth sourceW = 0_b);
 	private:
 		Area m_area = {"scl_TileLinkStreamFetch", true};
 		std::optional<Bit> m_pauseFetch;

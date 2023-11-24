@@ -45,6 +45,7 @@ namespace gtry::scl
 		BitWidth bUserW;
 		BitWidth rUserW;
 
+		BitWidth alignedDataW() const { return BitWidth{ utils::nextPow2(dataW.bits()) }; }
 		BitWidth wordAddrW() const { return addrW - BitWidth::count(dataW.bytes()); }
 	};
 

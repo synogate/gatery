@@ -31,11 +31,11 @@ namespace gtry::scl
 		out->id = ConstBVec(cmd->id ,config.idW);
 		out->user = ConstBVec(config.arUserW);
 
-		HCL_DESIGNCHECK_HINT(cmd->bytesPerBurst >= config.dataW.bytes(), "Burst size must be at least as large as the data width of the AXI interface.");
+		HCL_DESIGNCHECK_HINT(cmd->bytesPerBurst >= config.alignedDataW().bytes(), "Burst size must be at least as large as the data width of the AXI interface.");
 		out->size = utils::Log2C(config.dataW.bytes());
 
-		HCL_DESIGNCHECK_HINT(cmd->bytesPerBurst % config.dataW.bytes() == 0, "Burst size must be a multiple of the data width of the AXI interface.");
-		out->len = cmd->bytesPerBurst / config.dataW.bytes() - 1;
+		HCL_DESIGNCHECK_HINT(cmd->bytesPerBurst % config.alignedDataW().bytes() == 0, "Burst size must be a multiple of the data width of the AXI interface.");
+		out->len = cmd->bytesPerBurst / config.alignedDataW().bytes() - 1;
 
 		out->burst = (size_t)AxiBurstType::INCR;
 		out->cache = 0;
@@ -51,7 +51,7 @@ namespace gtry::scl
 		Reg<Enum<State>> state{ IDLE };
 		state.setName("state");
 
-		UInt address = cmd->startAddress.width();
+		UInt address = cmd->endAddress.width();
 		HCL_NAMED(address);
 
 		IF(state.current() == IDLE)
@@ -97,8 +97,6 @@ namespace gtry::scl
 	void axiFromStream(RvStream<BVec>&& in, RvPacketStream<AxiWriteData>& out, size_t beatsPerBurst)
 	{
 		scl::Counter beatCtr{ beatsPerBurst };
-		IF(transfer(out))
-			beatCtr.inc();
 
 		out <<= in.transform([&](const BVec& data) {
 			return AxiWriteData{
@@ -107,6 +105,9 @@ namespace gtry::scl
 				.user = ConstBVec(out->user.width()),
 			};
 		}).add(Eop{ beatCtr.isLast() });
+
+		IF(transfer(out))
+			beatCtr.inc();
 	}
 
 	void axiFromStream(RvStream<AxiToStreamCmd>&& cmd, RvStream<BVec>&& data, Axi4& axi)
@@ -116,7 +117,7 @@ namespace gtry::scl
 		HCL_NAMED(cmd);
 
 		*axi.aw <<= axiGenerateAddressFromCommand(move(cmd), axi.config());
-		axiFromStream(move(data), *axi.w, cmd->bytesPerBurst / axi.r->data.width().bytes());
+		axiFromStream(move(data), *axi.w, cmd->bytesPerBurst / axi.config().alignedDataW().bytes());
 		ready(axi.b) = '1';
 		HCL_NAMED(axi);
 	}
