@@ -26,13 +26,10 @@ namespace gtry::scl::arch::xilinx
 	class Pcie4c : public gtry::ExternalModule
 	{
 	public:
-		/**
-		* @brief This structs defines the settings used by the IP generator
-		*/
 		struct Settings {
-			size_t userClkFrequency;
+			size_t userClkFrequency = 250'000'000;
 			BitWidth dataBusW;
-			size_t lanes;
+			size_t lanes = 16;
 	
 			std::string_view PinTx = "PCIE_EP_TX";
 			std::string_view PinRx = "PCIE_EP_RX";
