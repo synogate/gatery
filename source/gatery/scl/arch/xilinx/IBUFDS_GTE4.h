@@ -31,7 +31,7 @@ namespace gtry::scl::arch::xilinx {
 	{
 	public:
 		IBUFDS_GTE4();
-		IBUFDS_GTE4& clockInput(const Clock& inClk);
+		IBUFDS_GTE4& clockInput(const Clock& inClk, Bit inClkN);
 		Clock clockOutGT();
 		Clock clockOutAux();
 		IBUFDS_GTE4& clockEnable(Bit clockEnable);

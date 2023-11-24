@@ -24,12 +24,14 @@ namespace gtry::scl::arch::xilinx {
 	{ 
 		isEntity(false); 
 		in("CEB") = '0'; 
-		generic("REFCLK_HROW_CK_SEL") = 0; 
+		generic("REFCLK_HROW_CK_SEL") = "00"; 
 	}
-	IBUFDS_GTE4& IBUFDS_GTE4::clockInput(const Clock& inClk)
+
+	IBUFDS_GTE4& IBUFDS_GTE4::clockInput(const Clock& inClk, Bit inClkN)
 	{ 
-		clockIn(inClk, "I"); 
-		m_inClk = inClk; 
+		clockIn(inClk, "I");
+		m_inClk = inClk;
+		in("IB") = inClkN;
 		return *this;
 	}
 
@@ -44,9 +46,9 @@ namespace gtry::scl::arch::xilinx {
 		m_auxOutputSet = true;
 		HCL_DESIGNCHECK_HINT(m_inClk, "use clockInput first"); 
 		if (m_auxDivideFreqBy2)
-			return clockOut(*m_inClk, "OB", {}, { .frequencyMultiplier = hlim::ClockRational{1,2} });
+			return clockOut(*m_inClk, "ODIV2", {}, { .frequencyMultiplier = hlim::ClockRational{1,2} });
 		else
-			return clockOut(*m_inClk, "OB");
+			return clockOut(*m_inClk, "ODIV2");
 	}
 
 	IBUFDS_GTE4& IBUFDS_GTE4::clockEnable(Bit clockEnable) 
@@ -58,7 +60,7 @@ namespace gtry::scl::arch::xilinx {
 	IBUFDS_GTE4& IBUFDS_GTE4::auxDivideFreqBy2() 
 	{
 		HCL_DESIGNCHECK_HINT(!m_auxOutputSet, "You must call this before you call clockOutAux()");
-		generic("REFCLK_HROW_CK_SEL") = 1;
+		generic("REFCLK_HROW_CK_SEL") = "01";
 		m_auxDivideFreqBy2 = true; 
 		return *this; 
 	}
