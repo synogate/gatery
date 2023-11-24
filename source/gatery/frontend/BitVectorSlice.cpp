@@ -164,14 +164,14 @@ SignalReadPort gtry::BitVectorSliceDynamic::assignLocal(SignalReadPort current, 
 	for (auto i : utils::Range(m_maxDynamicIndex + 1)) {
 		auto* extract = DesignScope::createNode<hlim::Node_Rewire>(1);
 		extract->connectInput(0, current);
-		extract->setExtract(i, m_width);
+		extract->setExtract(i * m_offsetDynamicMul, m_width);
 
 		auto* rewire = DesignScope::createNode<hlim::Node_Rewire>(2);
 		rewire->connectInput(0, current);
 		rewire->connectInput(1, childAssign(SignalReadPort(extract)));
 
 		size_t currentW = current.node->getOutputConnectionType(current.port).width;
-		rewire->setOp(replaceSelection(i, m_width, currentW));
+		rewire->setOp(replaceSelection(i * m_offsetDynamicMul, m_width, currentW));
 
 		mux->connectInput(i, { .node = rewire, .port = 0ull });
 	}
