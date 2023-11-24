@@ -45,11 +45,13 @@ namespace gtry {
 			static const boost::filesystem::path &getGHDL() { return m_ghdlExecutable; }
 			static const std::filesystem::path &getIntelLibrary() { return m_intelLibrary; }
 			static const std::filesystem::path &getXilinxLibrary() { return m_xilinxLibrary; }
-			
+			static const std::vector<std::string> &GHDLArgs() { return m_ghdlArgs; }
+
 		protected:
 			static boost::filesystem::path m_ghdlExecutable;
 			static std::filesystem::path m_intelLibrary;
 			static std::filesystem::path m_xilinxLibrary;
+			static std::vector<std::string> m_ghdlArgs;
 	};
 
 	/**
@@ -77,11 +79,10 @@ namespace gtry {
 			bool exportContains(const std::regex &regex);
 		protected:
 			std::filesystem::path m_cwd;
+			std::vector<std::string> m_ghdlArgs;
 			std::map<std::string, std::string> m_customVhdlFiles;
 
 			void prepRun() override;
-
-			void softlinkAll(const std::filesystem::path &src);
 	};
 
 }
