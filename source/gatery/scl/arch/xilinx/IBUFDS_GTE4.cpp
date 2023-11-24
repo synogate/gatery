@@ -53,7 +53,7 @@ namespace gtry::scl::arch::xilinx {
 
 	IBUFDS_GTE4& IBUFDS_GTE4::clockEnable(Bit clockEnable) 
 	{
-		in("CEB") = clockEnable;
+		in("CEB") = !clockEnable;
 		return *this; 
 	}
 
