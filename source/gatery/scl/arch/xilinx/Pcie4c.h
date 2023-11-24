@@ -18,10 +18,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #pragma once
 #include <gatery/frontend.h>
 #include <gatery/scl/io/pci.h>
+#include <gatery/scl/arch/xilinx/XilinxPci.h>
 
 namespace gtry::scl::arch::xilinx 
 {
-	using namespace gtry::scl::pci::amd;
+	using namespace gtry::scl::pci::xilinx;
 	class Pcie4c : public gtry::ExternalModule
 	{
 	public:
@@ -32,25 +33,24 @@ namespace gtry::scl::arch::xilinx
 			size_t userClkFrequency;
 			BitWidth dataBusW;
 			size_t lanes;
-
-			std::string_view PinPerstN = "PCIE_EP_PERST_LS";
+	
 			std::string_view PinTx = "PCIE_EP_TX";
 			std::string_view PinRx = "PCIE_EP_RX";
 		};
-
+	
 		struct Status {
 			Bit user_lnk_up;
 			Bit phy_rdy_out;
 		};
-
-		Pcie4c(std::string_view name, Bit ipClockInput, Bit gtClockInput, Settings cfg);
-
-		axi4PacketStream<CQUser> completerRequest();
-		Pcie4c& completerCompletion(axi4PacketStream<CCUser>&& stream);
-
-		Pcie4c& requesterRequest(axi4PacketStream<RQUser>&& stream);
-		axi4PacketStream<RCUser> requesterCompletion();
-
+	
+		Pcie4c(std::string_view name, const Clock& ipClock, const Clock& gtClock, Settings cfg);
+	
+		Axi4PacketStream<CQUser> completerRequest();
+		Pcie4c& completerCompletion(Axi4PacketStream<CCUser>&& stream);
+	
+		Pcie4c& requesterRequest(Axi4PacketStream<RQUser>&& stream);
+		Axi4PacketStream<RCUser> requesterCompletion();
+	
 		const Clock& userClock() { return m_usrClk; }
 	private:
 		Settings m_cfg;
@@ -58,7 +58,7 @@ namespace gtry::scl::arch::xilinx
 		std::string m_name;
 		Status m_status;
 		void buildSignals();
-
+	
 	public:
 		struct Presets
 		{
@@ -70,7 +70,7 @@ namespace gtry::scl::arch::xilinx
 				ret.lanes = 16;
 				return ret;
 			}
-
+	
 			static const Settings Gen3x16_512()
 			{
 				Settings ret;
