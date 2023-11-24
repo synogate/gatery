@@ -16,6 +16,7 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#include "gatery/pch.h"
 #include "PackedMemoryMap.h"
 
 #include <ranges>
@@ -23,7 +24,7 @@
 namespace gtry::scl
 {
 
-PackedMemoryMap::PackedMemoryMap(std::string_view name, const CompoundAnnotation *annotation)
+PackedMemoryMap::PackedMemoryMap(std::string_view name, const CompoundAnnotation *annotation) : m_area("MemoryMap")
 {
 	m_scope.name = name;
 	m_scope.annotation = annotation;
@@ -51,6 +52,8 @@ void PackedMemoryMap::leaveScope()
 
 void PackedMemoryMap::readable(const ElementarySignal &value, std::string_view name, const CompoundMemberAnnotation *annotation)
 {
+	auto scope = m_area.enter();
+
 	HCL_DESIGNCHECK_HINT(!m_alreadyPacked, "All signals must be added to the memory map before computing the packed address map!");
 	auto &current = *m_scopeStack.back();
 
@@ -61,10 +64,13 @@ void PackedMemoryMap::readable(const ElementarySignal &value, std::string_view n
 	}
 
 	signal->readSignal = value.toBVec();
+	setName(*signal->readSignal, std::string(name)+"_read");
 }
 
 MemoryMap::SelectionHandle PackedMemoryMap::writeable(ElementarySignal &value, std::string_view name, const CompoundMemberAnnotation *annotation)
 {
+	auto scope = m_area.enter();
+
 	HCL_DESIGNCHECK_HINT(!m_alreadyPacked, "All signals must be added to the memory map before computing the packed address map!");
 
 	auto &current = *m_scopeStack.back();
@@ -75,18 +81,34 @@ MemoryMap::SelectionHandle PackedMemoryMap::writeable(ElementarySignal &value, s
 		signal = &current.registeredSignals.back();
 	}
 
+#if 0
 	signal->writeSignal = constructFrom(value.toBVec());
 	signal->onWrite = Bit{};
+	setName(*signal->writeSignal, std::string(name)+"_write");
 	value.fromBVec(*signal->writeSignal);
 
 	*signal->writeSignal = reg(*signal->writeSignal, zext(BVec(0), signal->writeSignal->width()));
+	setName(*signal->writeSignal, std::string(name)+"_register");
+#else
+	BVec bvecValue = value.toBVec();
+	bvecValue = reg(bvecValue, zext(BVec(0), value.width()));
+	setName(bvecValue, std::string(name)+"_register");
 
+	signal->writeSignal = constructFrom(value.toBVec());
+	setName(*signal->writeSignal, std::string(name)+"_write");
+	value.fromBVec(*signal->writeSignal);
+	*signal->writeSignal = bvecValue;
+
+	signal->onWrite = Bit{};
+#endif
 	return SelectionHandle::SingleSignal(value, *signal->onWrite);
 }
 
 
 void PackedMemoryMap::packRegisters(BitWidth registerWidth)
 {
+	auto scope = m_area.enter();
+
 	HCL_DESIGNCHECK_HINT(!m_alreadyPacked, "Memory map can only be packed once!");
 	m_alreadyPacked = true;
 
@@ -136,15 +158,19 @@ void PackedMemoryMap::packRegisters(BitWidth registerWidth, Scope &scope)
 			scope.physicalDescription.size += registerWidth;
 			scope.physicalDescription.children.emplace_back(physReg.description);
 
-			if (signal.readSignal)
+			if (signal.readSignal) {
 				physReg.readSignal = (*signal.readSignal)(startOffset, chunkSize);
+				setName(*physReg.readSignal, std::string(physReg.description.name)+"_readOut");
+			}
 			if (signal.writeSignal) {
 				physReg.writeSignal = chunkSize;
 				physReg.onWrite = Bit{};
 
 				// Hook write signal in order to default to no-change
+				setName(*physReg.writeSignal, std::string(physReg.description.name)+"_writeIn");
 				writeParts[i] = *physReg.writeSignal;
 				*physReg.writeSignal = oldWriteSignal(startOffset, chunkSize);
+				setName(*physReg.writeSignal, std::string(physReg.description.name)+"_writeOut");
 
 				// Don't hook the onWrite in order to default to '0'
 				*signal.onWrite = *physReg.onWrite;

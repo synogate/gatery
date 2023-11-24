@@ -18,6 +18,7 @@
 #pragma once
 #include "Signal.h"
 #include "Compound.h"
+#include "ConstructFrom.h"
 
 namespace gtry
 {

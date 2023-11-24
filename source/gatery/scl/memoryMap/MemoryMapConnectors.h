@@ -115,7 +115,13 @@ namespace gtry::scl
 
 	////////////////////////////////////////////////////
 
-	// Todo: Move these to responsible locations
+	// Todo: Move these to sensible locations
+
+
+
+
+
+
 
 	template<typename T>
 	struct CustomMemoryMapHandler<Memory<T>> {
@@ -194,12 +200,11 @@ namespace gtry::scl
 						IF (streamReady)
 							streamValid = '0';
 						mapOut(v.memoryMap, streamValid, "valid");
-
-						streamValid = reg(streamValid, '0');
 					} else
 						streamValid = '0';
-
+					setName(streamValid, "streamValid_before_MM");
 					mapIn(v.memoryMap, streamValid, "valid");
+					setName(streamValid, "streamValid_after_MM");
 					valid(stream) = streamValid;
 				}
 

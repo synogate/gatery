@@ -1,0 +1,107 @@
+/*  This file is part of Gatery, a library for circuit design.
+	Copyright (C) 2023 Michael Offel, Andreas Ley
+
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
+
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
+
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#include "gatery/pch.h"
+
+#include "TileLinkMemoryMap.h"
+
+#include "PackedMemoryMap.h"
+#include "../tilelink/tilelink.h"
+
+#include <gatery/utils/Range.h>
+
+#include <functional>
+
+namespace gtry::scl
+{
+	BVec byteMaskToBitMask(BVec byteMask) {
+		BVec result = ConstBVec(byteMask.width() * 8);
+		for (auto i : utils::Range(byteMask.size()))
+			result.word(i, 8_b) = (BVec) sext(byteMask[i]);
+		return result;
+	}
+
+
+	/// Turns a memory map into a TileLinkUL slave, allowing the registers to be accessed by the tilelink bus.
+	Reverse<TileLinkUL> toTileLinkUL(PackedMemoryMap &memoryMap, BitWidth busWidth)
+	{
+		Area area("MMtoTileLinkUL", true);
+
+		memoryMap.packRegisters(busWidth);
+		auto &tree = memoryMap.getTree();
+		BitWidth addrWidth = BitWidth::count(tree.physicalDescription.size / busWidth);
+
+		Reverse<TileLinkUL> toMaster;
+		tileLinkInit(*toMaster, addrWidth, busWidth, 0_b, 0_b);
+		HCL_NAMED(toMaster);
+
+		TileLinkChannelD d;
+		*d = tileLinkDefaultResponse(*toMaster->a);
+		valid(d) = valid(toMaster->a);
+		d->error = '1';
+
+		Bit anyWriteHappening = transfer(toMaster->a) & toMaster->a->isPut();
+		HCL_NAMED(anyWriteHappening);
+
+		UInt wordAddress = toMaster->a->address.upper(toMaster->a->address.width() - BitWidth::count(busWidth.bytes()));
+		HCL_NAMED(wordAddress);
+
+		std::function<void(PackedMemoryMap::Scope &scope)> processRegs;
+		processRegs = [&](PackedMemoryMap::Scope &scope) {
+			for (auto &r : scope.physicalRegisters) {
+				if (r.readSignal)
+					setName(*r.readSignal, r.description.name.get() + "_read");
+
+				Bit selected = wordAddress == r.description.offsetInBits / busWidth;
+				setName(selected, r.description.name.get() + "_selected");
+				IF (selected) {
+					d->error = '0';
+
+					if (r.readSignal)
+						d->data = zext(*r.readSignal);
+					
+					if (r.writeSignal) {
+						IF (anyWriteHappening) {
+							for (auto byte : utils::Range((r.writeSignal->size()+7)/8)) {
+								BitWidth size = std::min(8_b, r.writeSignal->width() - byte * 8_b);
+								IF (toMaster->a->mask[byte])
+									(*r.writeSignal)(byte * 8, size) = toMaster->a->data(byte * 8, size);
+							}
+							setName(*r.writeSignal, r.description.name.get() + "_maskedWrite");
+							*r.onWrite = '1';
+						}
+					}
+				}
+				if (r.writeSignal) {
+					setName(*r.writeSignal, r.description.name.get() + "_write");
+					setName(*r.onWrite, r.description.name.get() + "_writeSelect");
+				}
+			}
+			for (auto &c : scope.subScopes)
+				processRegs(c);
+		};
+		processRegs(tree);
+
+		setName(d, "response");
+
+		ready(toMaster->a) = ready(d);
+		*toMaster->d <<= strm::regReady(move(d));
+
+		return toMaster;
+	}
+}

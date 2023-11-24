@@ -65,6 +65,7 @@ namespace gtry::scl
 			const Scope &getTree() const { return m_scope; }
 			Scope &getTree() { return m_scope; }
 		protected:
+			Area m_area;
 			bool m_alreadyPacked = false;
 			std::vector<Scope*> m_scopeStack;
 			Scope m_scope;
@@ -73,4 +74,5 @@ namespace gtry::scl
 
 			RegisteredBaseSignal *findSignal(Scope &scope, std::string_view name);
 	};
+
 }
