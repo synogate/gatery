@@ -70,12 +70,4 @@ namespace gtry {
 		in = simOverrideDownstream(move(in), move(simIn));
 		return in;
 	}
-
-	template<Signal T>
-	T simDriveUpstream(T&& in, std::string simPrefix) {
-		auto [toHardware, toSimulation] = simOverrideUpstream(move(in));
-		pinOut(toSimulation, simPrefix, { .simulationOnlyPin = true });
-
-		return move(toHardware);
-	}
 }
