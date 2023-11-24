@@ -43,6 +43,7 @@
 #include "frontend/FSM.h"
 #include "frontend/GraphTools.h"
 #include "frontend/Memory.h"
+#include "frontend/Overrides.h"
 #include "frontend/Pack.h"
 #include "frontend/Pin.h"
 #include "frontend/Pipe.h"
