@@ -524,6 +524,7 @@ ReferenceSimulator::ReferenceSimulator(bool enableConsoleOutput)
 
 ReferenceSimulator::~ReferenceSimulator()
 {
+	RunTimeSimulationContext context(this);
 	destroyPendingEvents();
 }
 
@@ -532,6 +533,9 @@ void ReferenceSimulator::destroyPendingEvents()
 	m_simulationIsShuttingDown = true;
 	while (!m_nextEvents.empty())
 		m_nextEvents.pop();
+
+	m_coroutineHandler.stopAll();
+	m_processesAwaitingCommit.clear();
 	m_simulationIsShuttingDown = false;
 }
 
