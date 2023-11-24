@@ -70,7 +70,6 @@ namespace gtry::scl::strm
 		return [=](auto&& in) { return regDownstream(std::forward<decltype(in)>(in), settings); };
 	}
 
-
 	template<StreamSignal StreamT>
 	StreamT delay(StreamT&& in, size_t minCycles);
 
@@ -332,6 +331,7 @@ namespace gtry::scl::strm
 		}
 		return ret;
 	}
+
 
 	template<StreamSignal StreamT>
 	StreamT delay(StreamT&& in, size_t minCycles) {
