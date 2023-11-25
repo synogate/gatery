@@ -20,204 +20,325 @@
 #include <boost/test/data/dataset.hpp>
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
-
-#include <gatery/simulation/waveformFormats/VCDSink.h>
+#include <gatery/scl/stream/SimuHelpers.h>
+#include <iostream>
+#include <iomanip>
 
 #include <gatery/scl/io/pci.h>
-
-#include <queue>
+#include <gatery/scl/sim/SimPci.h> 
+#include <gatery/scl/io/PciToTileLink.h> 
 
 using namespace boost::unit_test;
 using namespace gtry;
-
-struct TbReq
+BOOST_FIXTURE_TEST_CASE(tlp_builder_test, BoostUnitTestSimulationFixture)
 {
-	bool read = false;
-	bool write = false;
-	uint32_t address = 0;
-	uint32_t data = 0;
-};
+	using namespace scl::pci;
+	using namespace scl::sim;
+	//Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	//ClockScope clkScope(clk);
+	TlpInstruction read{
+		.opcode = TlpOpcode::memoryReadRequest64bit,
+		.lastDWByteEnable = 0,
+		.wordAddress = 0x0123456789ABCDEC,
+	};
+	read.safeLength(1);
+	auto dbv = (sim::DefaultBitVectorState)read;
 
-struct TlpBuilder
-{
-	uint64_t hdr;
-
-	TlpBuilder& length(size_t words) { return insert(words, 0, 10); }
-	TlpBuilder& data(bool val = true) { return insert(val, 30); }
-	TlpBuilder& requester(size_t bus, size_t dev, size_t func) {
-		insert(func, 48, 3);
-		insert(dev, 48 + 3, 5);
-		return insert(bus, 56, 8);
+	std::cout << "READ" << std::endl;
+	for (size_t byte = 0; byte < dbv.size() / 8; byte++) {
+		if (byte % 4 == 0) std::cout << std::endl;
+		std::cout << std::setw(10) << std::dec << dbv.extract(byte * 8, 8) << " " << std::setw(2) << std::hex << dbv.extract(byte * 8, 8) << std::endl;
 	}
-	TlpBuilder& tag(size_t val) { return insert(val, 40, 8); }
+	//convert back to TlpInstruction and check equivalence
+	auto recreatedRead = TlpInstruction::createFrom(dbv);
+	BOOST_TEST((recreatedRead == read));
 
-	operator uint64_t () const { return hdr; }
+	TlpInstruction write{
+		.opcode = TlpOpcode::memoryWriteRequest64bit,
+		.requesterID = 0xABCD,
+		.tag = 0xFF,
+		.lastDWByteEnable = 0,
+		.wordAddress = 0x0123456789ABCDEC,
+	};
+	write.safeLength(1);
+	write.payload = std::vector<uint32_t>{ 0xAAAAAAAA };
 
-	TlpBuilder& insert(uint64_t val, size_t offset, size_t width) 
-	{ 
-		hdr = gtry::utils::bitfieldInsert(hdr, offset, width, val);
-		return *this;
+	dbv = (sim::DefaultBitVectorState)write;
+	std::cout << "WRITE" << std::endl;
+	for (size_t byte = 0; byte < dbv.size() / 8; byte++) {
+		if (byte % 4 == 0) std::cout << std::endl;
+		std::cout << std::setw(8) << std::dec << dbv.extract(byte * 8, 8) << " " << std::setw(2) << std::hex << dbv.extract(byte * 8, 8) << std::endl;
 	}
 
-	TlpBuilder& insert(bool val, size_t offset)
-	{
-		return insert(val ? 1 : 0, offset, 1);
-	}
-};
+	//check equivalence after round trip
+	auto recreatedWrite = TlpInstruction::createFrom(dbv);
+	BOOST_TEST((recreatedWrite == write));
+}
 
-BOOST_FIXTURE_TEST_CASE(pci_AvmmBridge_basic, BoostUnitTestSimulationFixture)
-{
-	Clock clock({ .absoluteFrequency = 100'000'000 });
-	ClockScope clkScp(clock);
+scl::strm::SimPacket writeWord(size_t byteAddress, uint32_t data) {
+	HCL_DESIGNCHECK_HINT(byteAddress % 4 == 0, "the address must be word aligned");
+	scl::sim::TlpInstruction write{
+		.opcode = scl::pci::TlpOpcode::memoryWriteRequest64bit,
+		.length = 1,
+		.requesterID = 0xABCD,
+		.tag = 0xFF,
+		.lastDWByteEnable = 0,
+		.wordAddress = byteAddress >> 2,
+	};
+	write.payload = std::vector<uint32_t>{ data };
+	return scl::strm::SimPacket(write);
+}
 
-	scl::RvStream<scl::pci::Tlp> in;
-	valid(in) = pinIn().setName("in_valid");
-
-	UInt inHeader = pinIn(64_b).setName("in_header");
-	UInt inAddress = pinIn(32_b).setName("in_address");
-	in->header = cat(inAddress, inHeader);
-	in->data = pinIn(32_b).setName("in_data");
-	pinOut(ready(in)).setName("in_ready");
-
-	scl::pci::PciId completerId;
-	completerId.bus = 1;
-	completerId.dev = 2;
-	completerId.func = 3;
-
-	scl::AvalonMM avmm;
-	avmm.ready = Bit{};
-	avmm.read = Bit{};
-	avmm.write = Bit{};
-	avmm.writeData = 32_b;
-	avmm.readData = 32_b;
-	avmm.readDataValid = Bit{};
-	avmm.maximumPendingReadTransactions = 4;
-
-	scl::pci::AvmmBridge uut{ in, avmm, completerId };
-	auto& out = uut.tx();
-	ready(out) = pinIn().setName("out_ready");
-	pinOut(valid(out)).setName("out_valid");
-	pinOut(out->header).setName("out_header");
-	pinOut(out->data).setName("out_data");
-
-	Memory<UInt> testMem{ 1 << 16, avmm.writeData->width() };
-	IF(*avmm.write & *avmm.ready)
-		testMem[avmm.address(0, 16_b)] = *avmm.writeData;
-	*avmm.readData = testMem[avmm.address(0, 16_b)];
-	*avmm.readDataValid = *avmm.read;
-	for (size_t i = 0; i < 6; ++i)
-	{
-		*avmm.readData = reg(*avmm.readData, {.allowRetimingBackward=true});
-		*avmm.readDataValid = reg(*avmm.readDataValid, '0', {.allowRetimingBackward=true});
-	}
-	*avmm.ready = pinIn().setName("avmm_ready_sim");
-
-	setName(avmm, "avmm");
-	//avmm.pinOut("avmm");
-
-	// stream in bfm
-	std::queue<TbReq> reqQueue;
-	std::queue<TlpBuilder> cplQueue;
+scl::strm::SimPacket readWord(size_t byteAddress) {
+	HCL_DESIGNCHECK_HINT(byteAddress % 4 == 0, "the address must be word aligned");
+	scl::sim::TlpInstruction read{
+		.opcode = scl::pci::TlpOpcode::memoryReadRequest64bit,
+		.length = 1,
+		.requesterID = 0xABCD,
+		.tag = 0xFF,
+		.lastDWByteEnable = 0,
+		.wordAddress = byteAddress >> 2,
+	};
+	return scl::strm::SimPacket(read);
+}
 
 
-	addSimulationProcess([&]()->SimProcess {
-		simu(*avmm.ready) = '1';
+BOOST_FIXTURE_TEST_CASE(tlp_RequestHeader_test, BoostUnitTestSimulationFixture) {
 
-		co_await AfterClk(clock);
+	using namespace scl::pci;
+	using namespace scl::sim;
 
-		for (uint32_t i = 0; i < 16; ++i)
-			reqQueue.push(TbReq{ .write = true, .address = i * 4, .data = i });
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
 
-		for (uint32_t i = 0; i < 16; ++i)
-			reqQueue.push(TbReq{ .read = true, .address = i * 4 });
+	std::mt19937 rng{ std::random_device{}() };
+
+	TlpInstruction read = TlpInstruction::randomize(TlpOpcode::memoryReadRequest64bit, std::random_device{}() );
+
+	BVec rawHeader = 128_b;
+	pinIn(rawHeader, "in_raw", {.simulationOnlyPin = true});
+
+	RequestHeader reqHdr = RequestHeader::fromRaw(rawHeader);
+
+	pinOut(reqHdr, "out");
+
+	BVec reconstructed = (BVec)reqHdr;
+
+	RequestHeader reqHdrRecon = RequestHeader::fromRaw(reconstructed);
+
+	pinOut(reqHdrRecon, "out");
 
 
-	});
+	addSimulationProcess(
+		[&, this]()->SimProcess {
+			co_await OnClk(clk);
+			simu(rawHeader) = (sim::DefaultBitVectorState) read;
+			co_await WaitFor(Seconds{ 0, 1});
+			BOOST_TEST(simu(reqHdr.common.type) == ((size_t) read.opcode & 0x1Fu));
+			BOOST_TEST(simu(reqHdr.common.fmt) == ((size_t) read.opcode >> 5));
+			BOOST_TEST(simu(reqHdr.common.addressType) == read.at);
+			BOOST_TEST(simu(reqHdr.processingHint) == read.ph);
+			BOOST_TEST(simu(reqHdr.common.processingHintPresence) == read.th);
+			BOOST_TEST(simu(reqHdr.common.attributes.idBasedOrdering) == read.idBasedOrderingAttr2);
+			BOOST_TEST(simu(reqHdr.common.attributes.noSnoop) == read.noSnoopAttr0);
+			BOOST_TEST(simu(reqHdr.common.attributes.relaxedOrdering) == read.relaxedOrderingAttr1);
+			BOOST_TEST(simu(reqHdr.common.digest) == read.td);
+			BOOST_TEST(simu(reqHdr.common.poisoned) == read.ep);
+			BOOST_TEST(simu(reqHdr.common.length) == *read.length);
+			BOOST_TEST(simu(reqHdr.common.trafficClass) == read.tc);
 
+			BOOST_TEST(simu(reqHdr.firstDWByteEnable) == read.firstDWByteEnable);
+			BOOST_TEST(simu(reqHdr.lastDWByteEnable) == read.lastDWByteEnable);
+			BOOST_TEST(simu(reqHdr.requesterId) == read.requesterID);
+			BOOST_TEST(simu(reqHdr.tag) == read.tag);
+			BOOST_TEST(simu(reqHdr.wordAddress) == *read.wordAddress);
 
-	addSimulationProcess([&]()->SimProcess {
+			BOOST_TEST(simu(reqHdrRecon.common.type) == simu(reqHdr.common.type));
+			BOOST_TEST(simu(reqHdrRecon.common.fmt)  == simu(reqHdr.common.fmt));
+			BOOST_TEST(simu(reqHdrRecon.common.addressType)  == simu(reqHdr.common.addressType));
+			BOOST_TEST(simu(reqHdrRecon.processingHint)  == simu(reqHdr.processingHint));
+			BOOST_TEST(simu(reqHdrRecon.common.processingHintPresence)  == simu(reqHdr.common.processingHintPresence));
+			BOOST_TEST(simu(reqHdrRecon.common.attributes.idBasedOrdering)  == simu(reqHdr.common.attributes.idBasedOrdering));
+			BOOST_TEST(simu(reqHdrRecon.common.attributes.noSnoop)  == simu(reqHdr.common.attributes.noSnoop));
+			BOOST_TEST(simu(reqHdrRecon.common.attributes.relaxedOrdering)  == simu(reqHdr.common.attributes.relaxedOrdering));
+			BOOST_TEST(simu(reqHdrRecon.common.digest)  == simu(reqHdr.common.digest));
+			BOOST_TEST(simu(reqHdrRecon.common.poisoned)  == simu(reqHdr.common.poisoned));
+			BOOST_TEST(simu(reqHdrRecon.common.length)  == simu(reqHdr.common.length));
+			BOOST_TEST(simu(reqHdrRecon.common.trafficClass)  == simu(reqHdr.common.trafficClass));
 
-		std::mt19937 rng{ 18057 };
-		uint8_t tag = 0xAA;
+			BOOST_TEST(simu(reqHdrRecon.firstDWByteEnable) == simu(reqHdr.firstDWByteEnable));
+			BOOST_TEST(simu(reqHdrRecon.lastDWByteEnable) == simu(reqHdr.lastDWByteEnable));
+			BOOST_TEST(simu(reqHdrRecon.requesterId) == simu(reqHdr.requesterId));
+			BOOST_TEST(simu(reqHdrRecon.tag) == simu(reqHdr.tag));
+			BOOST_TEST(simu(reqHdrRecon.wordAddress) == simu(reqHdr.wordAddress));
 
-		simu(valid(in)) = '0';
-		while (true)
-		{
-			if (simu(ready(in)) != '0')
-			{
-				if (reqQueue.empty())
-				{
-					simu(valid(in)) = '0';
-				}
-				else
-				{
-					const TbReq req = reqQueue.front();
-					reqQueue.pop();
-					simu(inAddress) = req.address;
-					simu(in->data) = req.data;
-
-					auto tlp = TlpBuilder{}.length(1);
-					tlp.requester(rng(), rng(), rng());
-					tlp.tag(tag++);
-
-					if (req.read)
-					{
-						simu(valid(in)) = '1';
-						simu(inHeader) = tlp;
-						cplQueue.push(tlp);
-					}
-					else if (req.write)
-					{
-						simu(valid(in)) = '1';
-						simu(inHeader) = tlp.data();
-					}
-					else
-					{
-						simu(valid(in)) = '0';
-					}
-				}
-			}
-			co_await AfterClk(clock);
+			co_await OnClk(clk);
+			stopTest();
 		}
-	});
-
-	// stream out bfm
-	addSimulationProcess([&]()->SimProcess {
-		simu(ready(out)) = '1';
-
-		while (true)
-		{
-			if ((bool)simu(ready(out)) & (bool)simu(valid(out)))
-			{
-				BOOST_TEST(!cplQueue.empty());
-
-				if (!cplQueue.empty())
-				{
-					//uint64_t reqTlp = cplQueue.front();
-					cplQueue.pop();
-
-					auto resTlpState = simu(out->header).eval();
-					uint64_t hdr = resTlpState.extractNonStraddling(sim::DefaultConfig::VALUE, 0, 64);
-					//uint64_t dst = resTlpState.extractNonStraddling(sim::DefaultConfig::VALUE, 64, 32);
-					//uint64_t data = simu(out->data);
-
-					BOOST_TEST(gtry::utils::bitfieldExtract(hdr, 24, 8) == 0x4A);
-
-				}
-			}
-			co_await AfterClk(clock);
-		}
-
-
-	});
-
-
-	//sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "pci_AvmmBridge_basic.vcd" };
-	//vcd.addAllPins();
-	//vcd.addAllNamedSignals();
+	);
 
 	design.postprocess();
-	//design.visualize("pci_AvmmBridge_basic");
 
-	runTicks(clock.getClk(), 190);
+	BOOST_TEST(!runHitsTimeout({1,1'000'000}));
 }
+
+BOOST_FIXTURE_TEST_CASE(tlp_CompletionHeader_test, BoostUnitTestSimulationFixture) {
+
+	using namespace scl::pci;
+	using namespace scl::sim;
+
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	TlpInstruction comp = TlpInstruction::randomize(TlpOpcode::completionWithData,  std::random_device{}());
+
+	BVec rawHeader = 96_b;
+	pinIn(rawHeader, "in_raw");
+
+	CompletionHeader compHdr = CompletionHeader::fromRaw(rawHeader);
+
+	pinOut(compHdr, "out");
+
+	BVec reconstructed = (BVec)compHdr;
+	
+	CompletionHeader compHdrRecon = CompletionHeader::fromRaw(reconstructed);
+	
+	pinOut(compHdrRecon, "out");
+
+
+	addSimulationProcess(
+		[&, this]()->SimProcess {
+			co_await OnClk(clk);
+			simu(rawHeader) = (sim::DefaultBitVectorState) comp;
+			co_await WaitFor(Seconds{ 0, 1});
+			BOOST_TEST(simu(compHdr.common.type) == ((size_t) comp.opcode & 0x1Fu));
+			BOOST_TEST(simu(compHdr.common.fmt) == ((size_t) comp.opcode >> 5));
+			BOOST_TEST(simu(compHdr.common.addressType) == comp.at);
+			BOOST_TEST(simu(compHdr.common.processingHintPresence) == comp.th);
+			BOOST_TEST(simu(compHdr.common.attributes.idBasedOrdering) == comp.idBasedOrderingAttr2);
+			BOOST_TEST(simu(compHdr.common.attributes.noSnoop) == comp.noSnoopAttr0);
+			BOOST_TEST(simu(compHdr.common.attributes.relaxedOrdering) == comp.relaxedOrderingAttr1);
+			BOOST_TEST(simu(compHdr.common.digest) == comp.td);
+			BOOST_TEST(simu(compHdr.common.poisoned) == comp.ep);
+			BOOST_TEST(simu(compHdr.common.length) == *comp.length);
+			BOOST_TEST(simu(compHdr.common.trafficClass) == comp.tc);
+
+
+			BOOST_TEST(simu(compHdr.requesterId) == comp.requesterID);
+			BOOST_TEST(simu(compHdr.completerId) == *comp.completerID);
+			BOOST_TEST(simu(compHdr.tag) == comp.tag);
+			BOOST_TEST(simu(compHdr.byteCount) == *comp.byteCount);
+			BOOST_TEST(simu(compHdr.byteCountModifier) == comp.byteCountModifier);
+			BOOST_TEST(simu(compHdr.lowerByteAddress) == *comp.lowerByteAddress);
+			BOOST_TEST(simu(compHdr.completionStatus) == comp.completionStatus);
+
+			BOOST_TEST(simu(compHdrRecon.common.type) == simu(compHdr.common.type));
+			BOOST_TEST(simu(compHdrRecon.common.fmt)  == simu(compHdr.common.fmt));
+			BOOST_TEST(simu(compHdrRecon.common.addressType)  == simu(compHdr.common.addressType));
+			BOOST_TEST(simu(compHdrRecon.common.processingHintPresence)  == simu(compHdr.common.processingHintPresence));
+			BOOST_TEST(simu(compHdrRecon.common.attributes.idBasedOrdering)  == simu(compHdr.common.attributes.idBasedOrdering));
+			BOOST_TEST(simu(compHdrRecon.common.attributes.noSnoop)  == simu(compHdr.common.attributes.noSnoop));
+			BOOST_TEST(simu(compHdrRecon.common.attributes.relaxedOrdering)  == simu(compHdr.common.attributes.relaxedOrdering));
+			BOOST_TEST(simu(compHdrRecon.common.digest)  == simu(compHdr.common.digest));
+			BOOST_TEST(simu(compHdrRecon.common.poisoned)  == simu(compHdr.common.poisoned));
+			BOOST_TEST(simu(compHdrRecon.common.length)  == simu(compHdr.common.length));
+			BOOST_TEST(simu(compHdrRecon.common.trafficClass)  == simu(compHdr.common.trafficClass));
+			
+			BOOST_TEST(simu(compHdrRecon.requesterId) == simu(compHdr.requesterId));
+			BOOST_TEST(simu(compHdrRecon.tag) == simu(compHdr.tag));
+			BOOST_TEST(simu(compHdrRecon.completerId) == simu(compHdr.completerId));
+			BOOST_TEST(simu(compHdrRecon.byteCount) == simu(compHdr.byteCount));
+			BOOST_TEST(simu(compHdrRecon.byteCountModifier) == simu(compHdr.byteCountModifier));
+			BOOST_TEST(simu(compHdrRecon.lowerByteAddress) == simu(compHdr.lowerByteAddress));
+			BOOST_TEST(simu(compHdrRecon.completionStatus) == simu(compHdr.completionStatus));
+
+			co_await OnClk(clk);
+			stopTest();
+		}
+	);
+
+	design.postprocess();
+
+	BOOST_TEST(!runHitsTimeout({1,1'000'000}));
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(tlp_to_tilelink_rw64_1dw, BoostUnitTestSimulationFixture) {
+	using namespace scl::pci;
+	using namespace scl::sim;
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+
+	BitWidth tlAddrW = 5_b;
+	BitWidth tlDataW = 32_b;
+	BitWidth tlSourceW = pack(TlpAnswerInfo{}).width();
+	BitWidth tlpW = 512_b;
+
+	Memory<BVec> mem(tlAddrW.count(), BVec(tlDataW));
+	scl::TileLinkUL ul = scl::tileLinkInit<scl::TileLinkUL>(tlAddrW, tlDataW, tlSourceW);
+	mem <<= ul;
+
+	HCL_NAMED(ul);
+
+
+	auto completerInterface = makeTileLinkMaster(move(ul), tlpW);
+	TlpPacketStream<scl::EmptyBits, BarInfo>& in = completerInterface.request;
+	in.set(BarInfo{ ConstBVec(0, 3_b) , 12});
+	pinIn(in, "in");
+
+	TlpPacketStream<scl::EmptyBits>& out = completerInterface.completion;
+	pinOut(out, "out");
+
+	setName((*out)(96, 32_b), "out_payload");
+	setName((*out)(0, 96_b), "out_hdr");
+
+	addSimulationProcess([&, this]()->SimProcess {
+		co_await scl::strm::sendPacket(in, writeWord(0, 0xAAAAAAAA), clk);
+		co_await scl::strm::sendPacket(in, writeWord(4, 0xBBBBBBBB), clk);
+		co_await scl::strm::sendPacket(in, writeWord(8, 0xCCCCCCCC), clk);
+		co_await scl::strm::sendPacket(in, readWord(0), clk);
+		co_await scl::strm::sendPacket(in, readWord(4), clk);
+		co_await scl::strm::sendPacket(in, readWord(8), clk);
+		
+	});
+
+	addSimulationProcess([&, this]() { return scl::strm::readyDriver(out, clk); });
+	addSimulationProcess([&, this]()->SimProcess{
+		auto firstPacket = co_await scl::strm::receivePacket(out, clk);
+		TlpInstruction receivedTlp = TlpInstruction::createFrom(firstPacket.payload);
+		BOOST_TEST((receivedTlp.opcode == TlpOpcode::completionWithData));
+		BOOST_TEST((receivedTlp.requesterID == 0xABCD));
+		BOOST_TEST((receivedTlp.tag == 0xFF));
+		BOOST_TEST((receivedTlp.length == 1));
+		BOOST_TEST((receivedTlp.payload->at(0) == 0xAAAAAAAA));
+
+		firstPacket = co_await scl::strm::receivePacket(out, clk);
+		receivedTlp = TlpInstruction::createFrom(firstPacket.payload);
+		BOOST_TEST((receivedTlp.opcode == TlpOpcode::completionWithData));
+		BOOST_TEST((receivedTlp.requesterID == 0xABCD));
+		BOOST_TEST((receivedTlp.tag == 0xFF));
+		BOOST_TEST((receivedTlp.length == 1));
+		BOOST_TEST((receivedTlp.payload->at(0) == 0xBBBBBBBB));
+
+
+		firstPacket = co_await scl::strm::receivePacket(out, clk);
+		receivedTlp = TlpInstruction::createFrom(firstPacket.payload);
+		BOOST_TEST((receivedTlp.opcode == TlpOpcode::completionWithData));
+		BOOST_TEST((receivedTlp.requesterID == 0xABCD));
+		BOOST_TEST((receivedTlp.tag == 0xFF));
+		BOOST_TEST((receivedTlp.length == 1));
+		BOOST_TEST((receivedTlp.payload->at(0) == 0xCCCCCCCC));
+
+		co_await OnClk(clk);
+		stopTest();
+		});
+
+
+	if (true) { recordVCD("dut.vcd"); }
+	design.postprocess();
+
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+

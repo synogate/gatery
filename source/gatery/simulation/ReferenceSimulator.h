@@ -227,6 +227,7 @@ class ReferenceSimulator : public Simulator
 {
 	public:
 		ReferenceSimulator(bool enableConsoleOutput = true);
+		virtual ~ReferenceSimulator();
 		virtual void compileProgram(const hlim::Circuit &circuit, const utils::StableSet<hlim::NodePort> &outputs = {}, bool ignoreSimulationProcesses = false) override;
 		void compileStaticEvaluation(const hlim::Circuit& circuit, const utils::StableSet<hlim::NodePort>& outputs);
 
@@ -237,6 +238,9 @@ class ReferenceSimulator : public Simulator
 		virtual void advanceEvent() override;
 		virtual void advance(hlim::ClockRational seconds) override;
 		virtual void abort() override { m_abortCalled = true; }
+		virtual bool abortCalled() const override { return m_abortCalled; }
+
+		virtual bool simulationIsShuttingDown() const override { return m_simulationIsShuttingDown; }
 
 		virtual void simProcSetInputPin(hlim::Node_Pin *pin, const DefaultBitVectorState &state) override;
 		virtual void simProcOverrideRegisterOutput(hlim::Node_Register *reg, const DefaultBitVectorState &state) override;
@@ -263,6 +267,8 @@ class ReferenceSimulator : public Simulator
 
 		std::priority_queue<Event> m_nextEvents;
 
+		void destroyPendingEvents();
+
 
 		SimulationCoroutineHandler m_coroutineHandler;
 
@@ -275,6 +281,7 @@ class ReferenceSimulator : public Simulator
 
 		bool m_abortCalled = false;
 		bool m_readOnlyMode = false;
+		bool m_simulationIsShuttingDown = false;
 
 
 		struct PerformanceStats {

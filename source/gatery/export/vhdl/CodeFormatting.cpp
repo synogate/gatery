@@ -40,7 +40,7 @@ R"Delim(
 --------------------------------------------------------------------
 -- This file was auto generated from Gatery. DO NOT MODIFY. Any
 -- changes made directly can not be brought back into the source
--- material and will be lost uppon regeneration.
+-- material and will be lost upon regeneration.
 --------------------------------------------------------------------
 )Delim";
 
@@ -382,7 +382,6 @@ void DefaultCodeFormatting::formatDataTypeConversion(std::ostream &stream, VHDLD
 				break;
 				case VHDLDataType::STD_LOGIC:
 				case VHDLDataType::STD_ULOGIC:
-					stream << srcIdentifier;
 					stream << srcIdentifier;
 				break;
 				default:

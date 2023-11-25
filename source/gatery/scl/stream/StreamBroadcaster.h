@@ -1,4 +1,4 @@
-/*  This file is part of Gatery, a library for circuit design.
+/*  StreamThis file is part of Gatery, a library for circuit design.
 	Copyright (C) 2021 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
@@ -34,24 +34,24 @@ namespace gtry::scl
 	 * @details If the sinks have backpressure, the source is correctly backpressured so that no sink
 	 * misses a transmission.
 	 */
-	template<StreamSignal T> requires ( 
-				T::template has<Ready>() == T::template has<Valid>())
+	template<StreamSignal StreamT> requires ( 
+				StreamT::template has<Ready>() == StreamT::template has<Valid>())
 	class StreamBroadcaster
 	{
 		public:
-			StreamBroadcaster(T &&stream) : StreamBroadcaster(stream) { }
+			StreamBroadcaster(StreamT &&stream) : StreamBroadcaster(stream) { }
 
-			StreamBroadcaster(T &stream) { 
+			StreamBroadcaster(StreamT &stream) { 
 				m_helper = std::make_shared<Helper>();
 				m_helper->source = constructFrom(stream);
 				m_helper->source <<= stream;
 				ready(m_helper->source) = '1';
 			}
 
-			void broadcastTo(T &sink) {
+			void broadcastTo(StreamT &sink) {
 				downstream(sink) = downstream(m_helper->source);
 
-				if constexpr (T::template has<Ready>()) {
+				if constexpr (StreamT::template has<Ready>()) {
 					ready(m_helper->source) &= ready(sink);
 
 					Bit othersReady = '1';
@@ -69,20 +69,20 @@ namespace gtry::scl
 				}
 			}
 
-			operator T() {
-				T res;
+			operator StreamT() {
+				StreamT res;
 				broadcastTo(res);
 				return res;
 			}
 
-			T bcastTo() {
-				T res;
+			StreamT bcastTo() {
+				StreamT res;
 				broadcastTo(res);
 				return res;
 			}
 		protected:
 			struct Helper {
-				T source;
+				StreamT source;
 
 				struct SinkControl {
 					Bit valid;
@@ -95,7 +95,7 @@ namespace gtry::scl
 	};
 
 	/// Overload of connect(...) for StreamBroadcaster to allow using the <<= operator with broadcasters.
-	template<StreamSignal T>
-	void connect(T& sink, StreamBroadcaster<T>& broadcaster) { broadcaster.broadcastTo(sink); }
+	template<StreamSignal StreamT>
+	void connect(StreamT& sink, StreamBroadcaster<StreamT>& broadcaster) { broadcaster.broadcastTo(sink); }
 
 }

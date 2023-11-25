@@ -689,7 +689,7 @@ namespace gtry
 				return std::tie(args...);
 			});
 
-			static_assert(std::tuple_size<decltype(in2)>::value == std::tuple_size<decltype(in2r)>::value, "Internal gatery error, something got lost uppon transforming signals");
+			static_assert(std::tuple_size<decltype(in2)>::value == std::tuple_size<decltype(in2r)>::value, "Internal gatery error, something got lost upon transforming signals");
 
 			// Zip in2 and in2r into:
 			// tuple{
@@ -705,7 +705,7 @@ namespace gtry
 				return std::tie(a, b);
 			}, in2, in2r);
 
-			static_assert(std::tuple_size<decltype(in2)>::value == std::tuple_size<decltype(in3)>::value, "Internal gatery error, something got lost uppon transforming signals");
+			static_assert(std::tuple_size<decltype(in2)>::value == std::tuple_size<decltype(in3)>::value, "Internal gatery error, something got lost upon transforming signals");
 
 
 			static_assert(std::is_same_v<decltype(boost::hana::at_c<0>(in3)), decltype(std::get<0>(in3))>);

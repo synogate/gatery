@@ -173,6 +173,14 @@ namespace gtry {
 		assign(SignalReadPort(expOverride));
 	}
 
+	void Bit::simulationOverride(const Bit& simulationOverride)
+	{
+		auto* expOverride = DesignScope::createNode<hlim::Node_ExportOverride>();
+		expOverride->connectInput(simulationOverride.readPort());
+		expOverride->connectOverride(readPort());
+		assign(SignalReadPort(expOverride));
+	}
+
 	BitWidth Bit::width() const
 	{
 		return 1_b;

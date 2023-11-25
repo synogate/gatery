@@ -133,6 +133,7 @@ namespace gtry {
 
 	protected:
 		void exportOverride(const BaseBitVector& exportOverride);
+		void simulationOverride(const BaseBitVector& simulationOverride);
 
 		void assign(std::uint64_t value, Expansion policy);
 		void assign(std::int64_t value, Expansion policy);
@@ -235,6 +236,7 @@ namespace gtry {
 		FinalType& operator = (const DefaultValueType &defaultValue) { BaseBitVector::operator=(defaultValue); return (FinalType&)*this; }
 
 		void exportOverride(const FinalType& exportOverride) { BaseBitVector::exportOverride(exportOverride); }
+		void simulationOverride(const FinalType& simulationOverride) { BaseBitVector::simulationOverride(simulationOverride); }
 
 		FinalType& operator() (size_t offset, BitWidth size) { return (*this)(Selection::Slice(int(offset), int(size.value))); }
 		const FinalType& operator() (size_t offset, BitWidth size) const { return (*this)(Selection::Slice(int(offset), int(size.value))); }

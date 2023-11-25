@@ -18,8 +18,8 @@
 #pragma once
 #include <gatery/frontend.h>
 #include "Stream.h"
+#include "StreamBroadcaster.h"
 #include "utils.h"
-#include "../TransactionalFifo.h"
 #include "../Counter.h"
 #include "metaSignals.h"
 
@@ -61,6 +61,17 @@ namespace gtry::scl::strm
 	template<BaseSignal Payload, Signal ... Meta, Signal... MetaInsert>
 	auto insert(RvPacketStream<Payload, Meta...>&& base, RvStream<Payload, MetaInsert...>&& insert, RvStream<UInt>&& bitOffset);
 
+	/**
+	 * @brief extends the width of a packet stream and takes care of all the metaData signals. Limited to extensions by integer multiples of the original source width
+	*/
+	template<PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
+	auto widthExtend(StreamT&& source, const BitWidth& width);
+
+	/**
+	* @brief reduces the width of a packet stream and takes care of all the metaData signals. Limited to reductions by integer multiples of the original source width
+	*/
+	template<PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
+	auto widthReduce(StreamT&& source, const BitWidth& width);
 }
 
 namespace gtry::scl::strm
@@ -178,8 +189,8 @@ namespace gtry::scl::strm
 		template<Signal Payload, Signal ... Meta>
 		auto addReadyAndFailOnBackpressure(const Stream<Payload, Meta...>& source)
 		{
-			Area ent{ "scl_addReadyAndFailOnBackpreasure", true };
-			auto ret = source
+			Area ent{ "scl_addReadyAndFailOnBackpressure", true };
+			Stream ret = source
 				.add(Ready{})
 				.add(Error{ error(source) });
 
@@ -403,5 +414,297 @@ namespace gtry::scl::strm
 
 		ready(bitOffset) = valid(out) & eop(out);
 		return out;
+	}
+
+	struct WidthManipMetaParams
+	{
+		const Counter& beat;
+		Bit outEop;
+		Bit outTransfer;
+		size_t ratio;
+	};
+	
+	Ready extendStreamMeta(Ready& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		Ready out;
+		*in.ready = '1';
+		IF(param.beat.isLast() | eop(inStream))
+			*in.ready = *out.ready;
+		return out;
+	}
+
+	Valid extendStreamMeta(Valid& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		return { in.valid & (param.beat.isLast() | eop(inStream)) };
+	}
+
+	template<BitVectorSignal T>
+	T extendStreamPayload(T& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		T ret = in.width() * param.ratio;
+		ret = reg(ret);
+		//UInt temp = zext(param.beat.value(), ret.width()) * UInt(in.width().bits()); //dumb overkill
+		//HCL_NAMED(temp);
+		//ret(temp, in.width()) = in;
+		auto retParts = ret.parts(param.ratio);
+		retParts[param.beat.value()] = in;
+		return ret;
+	}
+
+	ByteEnable extendStreamMeta(ByteEnable& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		BitWidth byteEnableW = in.byteEnable.width();
+		ByteEnable ret = { byteEnableW * param.ratio };
+		ret = reg(ret);
+		ret.byteEnable(param.beat.value() * byteEnableW.bits(), byteEnableW) = in.byteEnable;
+		return ret;
+	}
+
+	Eop extendStreamMeta(Eop& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		return in;
+	}
+
+	Sop extendStreamMeta(Sop& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		return { flagInstantSet(in.sop, param.beat.isLast() | eop(inStream)) };
+	}
+
+	Empty extendStreamMeta(Empty& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		size_t OutStartingPoint = inStream->width().bytes() * (param.ratio - 1);
+		BitWidth outEmptyW = BitWidth::last(OutStartingPoint + in.empty.width().last());
+
+		UInt empty = outEmptyW;
+
+		empty -= inStream->width().bytes();
+
+		IF(param.beat.isLast() | eop(inStream))
+			empty = OutStartingPoint ;
+
+		ENIF(transfer(inStream)) empty = reg(empty, OutStartingPoint);
+		
+		UInt ret = empty + zext(in.empty);
+		IF(eop(inStream))
+			empty = ret;
+
+		return { ret };
+	}
+
+	Error extendStreamMeta(Error& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		return in;
+	}
+
+	TxId extendStreamMeta(TxId& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		return in;
+	}
+
+	EmptyBits extendStreamMeta(EmptyBits& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		size_t OutStartingPoint = inStream->width().bits() * (param.ratio - 1);
+		BitWidth outEmptyBitsW = BitWidth::last(OutStartingPoint + in.emptyBits.width().last());
+
+		UInt emptyBits = outEmptyBitsW;
+
+		emptyBits -= inStream->width().bits();
+
+		IF(param.beat.isLast() | eop(inStream))
+			emptyBits = OutStartingPoint ;
+
+		ENIF(transfer(inStream)) emptyBits = reg(emptyBits, OutStartingPoint);
+
+		UInt ret = emptyBits + zext(in.emptyBits);
+		IF(eop(inStream))
+			emptyBits = ret;
+
+		return { ret };
+	}
+
+	template <Signal SignalT> 
+	SignalT extendStreamMeta(SignalT& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		return in;
+	}
+
+	template<PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
+	auto widthExtend(StreamT&& source, const BitWidth& width)
+	{
+		HCL_DESIGNCHECK(source->width() <= width);
+		const size_t ratio = width / source->width();
+
+		if constexpr (not StreamT::template has<scl::Empty>() and not StreamT::template has<scl::EmptyBits>())
+			HCL_DESIGNCHECK_HINT(false, "in order to use extendWidth, an empty metasignal must be present in the source signal");
+
+		auto scope = Area{ "scl_extendWidth" }.enter();
+
+		Counter counter{ ratio };
+		IF(transfer(source))
+			counter.inc();
+		IF(transfer(source) & eop(source))
+			counter.reset();
+
+		const WidthManipMetaParams params{
+			.beat = counter,
+			.ratio = ratio,
+		};
+
+		StreamT ret = {
+			.data = extendStreamPayload(*source, source, params),
+			._sig = std::apply([&](auto& ...meta) {
+				return std::tuple{ extendStreamMeta(meta, source, params)... };
+			}, source._sig)
+		};
+
+		HCL_NAMED(ret);
+		return ret;
+	}
+
+
+	Ready reduceStreamMeta(Ready& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		Ready out;
+		*in.ready = '0';
+		IF(param.beat.isLast() | param.outEop)
+			*in.ready = *out.ready;
+		return out;
+	}
+
+	Valid reduceStreamMeta(Valid& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		return { in.valid };
+	}
+
+	template<BitVectorSignal T>
+	T reduceStreamPayload(T& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		BitWidth outW = in.width() / param.ratio;
+		T ret = outW;
+		ret = in.part(param.ratio, param.beat.value());
+		return ret;
+	}
+
+	ByteEnable reduceStreamMeta(ByteEnable& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		BitWidth outByteEnableW = in.byteEnable.width() / param.ratio;
+		ByteEnable ret = { outByteEnableW };
+		ret.byteEnable = in.byteEnable(param.beat.value() * outByteEnableW.bits(), outByteEnableW);
+		return ret;
+	}
+
+	template <StreamSignal StreamT>
+	Eop reduceStreamMeta(Eop& in, StreamT& inStream, const WidthManipMetaParams& param)
+	{
+		const size_t bitsPerBeatIn = inStream->width().bits();
+		const size_t bitsPerBeatOut = bitsPerBeatIn / param.ratio;
+		UInt fullBits = bitsPerBeatIn - zext(emptyBits(inStream));
+
+		HCL_NAMED(fullBits);
+		UInt sentBits = BitWidth(bitsPerBeatIn);
+
+		IF(transfer(inStream)) sentBits = 0;
+		sentBits += bitsPerBeatOut;
+		ENIF(param.outTransfer) sentBits = reg(sentBits , bitsPerBeatOut);
+
+
+		Bit isLastBeat = sentBits >= zext(fullBits);
+		return { in.eop & isLastBeat };
+	}
+
+	Sop reduceStreamMeta(Sop& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		return { in.sop & param.beat.isFirst()};
+	}
+
+	Empty reduceStreamMeta(Empty& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		const size_t bytesPerBeatIn = inStream->width().bytes();
+		const size_t bytesPerBeatOut = bytesPerBeatIn / param.ratio;
+		UInt bytesLeft = BitWidth::last(bytesPerBeatIn); 
+
+		bytesLeft -= bytesPerBeatOut;
+		IF(transfer(inStream)) bytesLeft = bytesPerBeatIn;
+		ENIF(param.outTransfer) bytesLeft = reg(bytesLeft, bytesPerBeatIn);
+
+		BitWidth emptyOutW = BitWidth::count(bytesPerBeatOut);
+		return { (bytesLeft - zext(empty(inStream))).lower(emptyOutW)};
+	}
+
+	Error reduceStreamMeta(Error& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		return in;
+	}
+
+	TxId reduceStreamMeta(TxId& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		return in;
+	}
+
+	EmptyBits reduceStreamMeta(EmptyBits& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		const size_t bitsPerBeatIn = inStream->width().bits();
+		const size_t bitsPerBeatOut = bitsPerBeatIn / param.ratio;
+		UInt bitsLeft = BitWidth::last(bitsPerBeatIn); 
+
+		bitsLeft -= bitsPerBeatOut;
+		IF(transfer(inStream)) bitsLeft = bitsPerBeatIn;
+		ENIF(param.outTransfer) bitsLeft = reg(bitsLeft, bitsPerBeatIn);
+
+		BitWidth emptyBitsOutW = BitWidth::count(bitsPerBeatOut);
+		return { (bitsLeft - zext(emptyBits(inStream))).lower(emptyBitsOutW)};
+	}
+
+	template <Signal SignalT>
+	SignalT reduceStreamMeta(SignalT& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
+	{
+		return in;
+	}
+
+	template<PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
+	auto widthReduce(StreamT&& source, const BitWidth& width)
+	{
+		auto scope = Area{ "scl_reduceWidth" }.enter();
+
+		HCL_DESIGNCHECK(source->width() >= width);
+		const size_t ratio = source->width() / width;
+
+		Counter counter{ ratio };
+
+		WidthManipMetaParams params{
+			.beat = counter,
+			.ratio = ratio,
+		};
+
+		auto ret = Stream{
+			.data = reduceStreamPayload(*source, source, params),
+			._sig = std::apply([&](auto& ...meta) {
+				return std::tuple{ reduceStreamMeta(meta, source, params)... };
+				}, source._sig)
+		};
+
+		params.outEop = eop(ret);
+		params.outTransfer = transfer(ret);
+
+		IF(transfer(ret))
+			counter.inc();
+
+		IF(transfer(ret) & transfer(source))
+			counter.reset();
+
+		HCL_NAMED(ret);
+		return ret;
+	}
+
+	template<PacketStreamSignal StreamT> requires std::is_base_of_v<BaseBitVector, typename StreamT::Payload>
+	StreamT matchWidth(StreamT&& in, BitWidth desiredWidth) {
+		if (desiredWidth > in.width())
+			return widthExtend(move(in), desiredWidth);
+		else if (desiredWidth < in.width())
+			return widthReduce(move(in), desiredWidth);
+		else if (desiredWidth == in.width())
+			return move(in);
+		else
+			HCL_DESIGNCHECK_HINT(false, "something went terribly wrong if this failed");
 	}
 }

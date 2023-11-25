@@ -69,6 +69,14 @@ namespace gtry
 		assign(SignalReadPort(expOverride));		
 	}
 
+	void BaseEnum::simulationOverride(const SignalReadPort& simulationOverride)
+	{
+		auto* expOverride = DesignScope::createNode<hlim::Node_ExportOverride>();
+		expOverride->connectInput(simulationOverride);
+		expOverride->connectOverride(readPort());
+		assign(SignalReadPort(expOverride));
+	}
+
 	hlim::ConnectionType BaseEnum::connType() const {
 		return hlim::ConnectionType{
 			.type = hlim::ConnectionType::BITVEC,

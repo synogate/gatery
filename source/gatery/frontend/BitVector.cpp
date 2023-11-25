@@ -214,6 +214,14 @@ namespace gtry {
 		assign(SignalReadPort(expOverride));
 	}
 
+	void BaseBitVector::simulationOverride(const BaseBitVector& simulationOverride)
+	{
+		auto* expOverride = DesignScope::createNode<hlim::Node_ExportOverride>();
+		expOverride->connectInput(simulationOverride.readPort());
+		expOverride->connectOverride(readPort());
+		assign(SignalReadPort(expOverride));
+	}
+
 	void BaseBitVector::resize(size_t width)
 	{
 		HCL_DESIGNCHECK_HINT(!m_range, "BaseBitVector::resize is not allowed for alias BaseBitVector's. use zext instead.");
@@ -464,6 +472,7 @@ namespace gtry {
 
 	SignalReadPort BaseBitVector::rawDriver() const
 	{
+		HCL_ASSERT_HINT(valid(), "This signal has not been initialized with a BitWidth");
 		hlim::NodePort driver = m_node->getDriver(0);
 		if (!driver.node)
 			driver = hlim::NodePort{ .node = m_node, .port = 0ull };

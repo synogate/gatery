@@ -63,12 +63,12 @@ void UnitTestSimulationFixture::recordVCD(const std::string& filename)
 void UnitTestSimulationFixture::outputVHDL(const std::string& filename, bool includeTest)
 {
 	m_vhdlExport.emplace(filename);
-	(*m_vhdlExport)(design.getCircuit());
-
 	if (includeTest) {
-		m_vhdlExport->addTestbenchRecorder(*m_simulator, "testbench");
+		m_vhdlExport->addTestbenchRecorder(*m_simulator, filename + "_tb", true); 
 		//m_vhdlExport->writeGHDLScript("runGHDL.sh");
 	}
+
+	(*m_vhdlExport)(design.getCircuit());
 }
 
 void UnitTestSimulationFixture::stopTest()

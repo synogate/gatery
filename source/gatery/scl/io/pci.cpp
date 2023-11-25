@@ -1,4 +1,4 @@
-/*  This file is part of Gatery, a library for circuit design.
+/*  This file is part []of Gatery, a library for circuit design.
 	Copyright (C) 2021 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
@@ -18,196 +18,143 @@
 #include "gatery/pch.h"
 #include "pci.h"
 
-#include "../Fifo.h"
-#include "../stream/StreamArbiter.h"
 
-gtry::Bit gtry::scl::pci::isCompletionTlp(const UInt& tlpHeader)
-{
-	HCL_DESIGNCHECK_HINT(tlpHeader.width() >= 8_b, "first 8b of tlp header required for decoding");
-	Bit completion_tlp = tlpHeader(0, 5_b) == "b01010";
-	HCL_NAMED(completion_tlp);
-	return completion_tlp;
-}
 
-gtry::Bit gtry::scl::pci::isMemTlp(const UInt& tlpHeader)
-{
-	HCL_DESIGNCHECK_HINT(tlpHeader.width() >= 8_b, "first 8b of tlp header required for decoding");
-	Bit mem_tlp = tlpHeader(0, 5_b) == 0;
-	HCL_NAMED(mem_tlp);
-	return mem_tlp;
-}
+namespace gtry::scl::pci {
 
-gtry::Bit gtry::scl::pci::isDataTlp(const UInt& tlpHeader)
-{
-	HCL_DESIGNCHECK_HINT(tlpHeader.width() >= 32_b, "first word of tlp header required for decoding");
-	Bit data_tlp = tlpHeader[30];
-	HCL_NAMED(data_tlp);
-	return data_tlp;
-}
-
-gtry::scl::pci::AvmmBridge::AvmmBridge(RvStream<Tlp>& rx, AvalonMM& avmm, const PciId& cplId) :
-	AvmmBridge()
-{
-	setup(rx, avmm, cplId);
-}
-
-void gtry::scl::pci::AvmmBridge::setup(RvStream<Tlp>& rx, AvalonMM& avmm, const PciId& cplId)
-{
-	HCL_DESIGNCHECK_HINT(rx->header.width() == 96_b, "reduce tlp header address using discardHighAddressBits");
-	m_cplId = cplId;
-	generateFifoBridge(rx, avmm);
-}
-
-void gtry::scl::pci::AvmmBridge::generateFifoBridge(RvStream<Tlp>& rx, AvalonMM& avmm)
-{
-	HCL_DESIGNCHECK(avmm.readData->width() == 32_b);
-
-	auto entity = Area{ "AvmmBridge" }.enter();
-
-	sim_assert(!valid(rx) | rx->header(TlpOffset::type) == 0) << "not a memory tlp";
-
-	// decode command
-	avmm.address = rx->header(64, 32_b);
-	avmm.address(0, 2_b) = 0;
-
-	avmm.write = transfer(rx) & isDataTlp(rx->header);
-	avmm.read = transfer(rx) & !*avmm.write;
-	avmm.writeData = rx->data;
-
-	// store cpl data for command
-	size_t pipelineDepth = std::max<size_t>(avmm.maximumPendingReadTransactions, 1);
-	Fifo<MemTlpCplData> resQueue{ pipelineDepth , MemTlpCplData{} };
-
-	MemTlpCplData req;
-	req.decode(rx->header);
-	HCL_NAMED(req);
-	IF(*avmm.read)
-		resQueue.push(req);
-
-	// create tx tlp
-	avmm.createReadDataValid();
-	valid(m_tx) = *avmm.readDataValid;
-	m_tx->header = "96x00000000000000044a000001";
-	m_tx->header(48, 16_b) = pack(m_cplId);
-	m_tx->data = *avmm.readData;
-
-	// join response and cpl data
-	MemTlpCplData res = resQueue.peek();
-	IF(valid(m_tx))
-		resQueue.pop();
-	res.encode(m_tx->header);
-
-	ready(rx) = !resQueue.full();
-	if (avmm.ready)
-		ready(rx) &= *avmm.ready;
-
-	resQueue.generate();
-}
-
-gtry::scl::pci::Tlp gtry::scl::pci::Tlp::discardHighAddressBits() const
-{
-	Tlp tlpHdr{
-		.prefix = prefix,
-		.header = header(0, 96_b),
-		.data = data
-	};
-
-	if (header.width() > 96_b)
-		IF(header[TlpOffset::has4DW])
-		tlpHdr.header(64, 32_b) = header(96, 32_b);
-
-	HCL_NAMED(tlpHdr);
-	return tlpHdr;
-}
-
-void gtry::scl::pci::MemTlpCplData::decode(const UInt& tlpHdr)
-{
-	attr.trafficClass = tlpHdr(20, 3_b);
-	attr.idBasedOrdering = tlpHdr[18];
-	attr.relaxedOrdering = tlpHdr[13];
-	attr.noSnoop = tlpHdr[12];
-	lowerAddress = cat(tlpHdr(66, 5_b), "b00");
-
-	tag = tlpHdr(40, 8_b);
-	requester.func = tlpHdr(48, 3_b);
-	requester.dev = tlpHdr(48 + 3, 5_b);
-	requester.bus = tlpHdr(56, 8_b);
-}
-
-void gtry::scl::pci::MemTlpCplData::encode(UInt& tlpHdr) const
-{
-	tlpHdr(20, 3_b) = attr.trafficClass;
-	tlpHdr[18] = attr.idBasedOrdering;
-	tlpHdr[13] = attr.relaxedOrdering;
-	tlpHdr[12] = attr.noSnoop;
-
-	tlpHdr(64, 32_b) = cat(requester.bus, requester.dev, requester.func, tag, '0', lowerAddress);
-}
-
-void gtry::scl::pci::IntelPTileCompleter::generate()
-{
-	auto entity = Area{ "IntelPTileCompleter" }.enter();
-
-	static_assert(Signal<BVec&>);
-	static_assert(Signal<Tlp&>);
-	static_assert(Signal<RvPacketStream<Tlp>&>);
-	static_assert(CompoundSignal<RvPacketStream<Tlp>>);
-	static_assert(Signal<std::array<RvPacketStream<Tlp>, 2>&>);
-
-	Bit anyValid = '0';
-	std::array<VPacketStream<Tlp>, 2> in_reduced;
-	for (size_t i = 0; i < in.size(); ++i)
+	 void HeaderCommon::fromRawDw0(BVec rawDw0)
 	{
-		in[i]->header = 128_b;
-		in[i]->data = 32_b;
+		HCL_DESIGNCHECK(rawDw0.width() == 32_b);
 
-		UInt header = swapEndian(in[i]->header, 8_b, 32_b);
-		IF(header[29]) // 4 DW tlp header
-			header(64, 32_b) = header(96, 32_b);
-
-		valid(in_reduced[i]) = valid(in[i]) & sop(in[i]) & eop(in[i]);
-		*in_reduced[i] = *in[i];
-		in_reduced[i]->header = header(0, 96_b);
-		anyValid |= valid(in_reduced[i]);
+		auto bytes = rawDw0.parts(4);
+		type = bytes[0](0, 5_b);
+		fmt = bytes[0](5, 3_b);
+		processingHintPresence = bytes[1][0];
+		trafficClass = bytes[1](4, 3_b);
+		addressType = bytes[2](2, 2_b);
+		attributes.idBasedOrdering = bytes[1][2];
+		attributes.relaxedOrdering = bytes[2][5];
+		attributes.noSnoop = bytes[2][4];
+		poisoned = bytes[2][6];
+		digest = bytes[2][7];
+		length = cat(bytes[2](0, 2_b), bytes[3]);
 	}
 
-	Fifo in_buffer(32, in_reduced);
-	IF(anyValid)
-		in_buffer.push(in_reduced);
+	BVec HeaderCommon::rawDw0()
+	{
+		BVec dw0 = ConstBVec(32_b);
+		auto bytes = dw0.parts(4);
 
-	ready(in[0])= in_buffer.almostEmpty(32 - 27);
-	for (size_t i = 1; i < in.size(); ++i)
-		ready(in[i]) = ready(in[0]);
+		bytes[0].lower(5_b) = type;
+		bytes[0].upper(3_b) = fmt;
 
-	std::array<RvStream<Tlp>, 2> in_buffered{
-		RvStream<Tlp>{
-			*in_buffer.peek()[0],
-			{
-				Ready{},
-				Valid{valid(in_buffer.peek()[0])},
-			}
-		},
-		RvStream<Tlp>{
-			*in_buffer.peek()[1],
-			{
-				Ready{},
-				Valid{valid(in_buffer.peek()[1])},
-			}
-		},
-	};
+		bytes[1] = 0;
+		bytes[1][0] = processingHintPresence;
+		bytes[1][2] = attributes.idBasedOrdering;
+		bytes[1](4, 3_b) = trafficClass;
+		bytes[2].lower(2_b) = (BVec) length.upper(2_b);
+		bytes[2](2, 2_b) = addressType;
+		bytes[2][4] = attributes.noSnoop;
+		bytes[2][5] = attributes.relaxedOrdering;
+		bytes[2][6] = poisoned;
+		bytes[2][7] = digest;
+		bytes[3] = (BVec) length.lower(8_b);
 
-	arbitrateInOrder in_single{ in_buffered[0], in_buffered[1] };
-	IF(transfer(in_buffered[0]) | transfer(in_buffered[1]))
-		in_buffer.pop();
+		return dw0;
+	}
 
-	AvalonMM avmm;
-	avmm.ready = Bit{};
-	avmm.read = Bit{};
-	avmm.write = Bit{};
-	avmm.writeData = 32_b;
-	avmm.readData = 32_b;
-	avmm.readDataValid = Bit{};
+	RequestHeader RequestHeader::fromRaw(BVec rawHeader)
+	{
+		HCL_DESIGNCHECK_HINT(rawHeader.width() == 128_b, "A request header should have 4 DW");
+		RequestHeader ret;
 
-	AvmmBridge bridge{ in_single, avmm, completerId };
+		ret.common.fromRawDw0(rawHeader.part(4, 0));
 
+		auto dw = rawHeader.parts(4);
+		auto dw1Bytes = dw[1].parts(4);
+
+		ret.requesterId = (BVec) cat(dw1Bytes[0], dw1Bytes[1]);
+		ret.tag = dw1Bytes[2];
+		ret.lastDWByteEnable = dw1Bytes[3].upper(4_b);
+		ret.firstDWByteEnable = dw1Bytes[3].lower(4_b);
+		
+		ret.wordAddress = ConstUInt(62_b);
+		ret.wordAddress.upper(32_b) = (UInt) swapEndian(dw[2], 8_b);
+		ret.wordAddress.lower(30_b) = (UInt) swapEndian(dw[3], 8_b).upper(30_b);
+		ret.processingHint = dw[3].part(4, 3).lower(2_b);
+		return ret;
+	}
+
+	RequestHeader::operator BVec() 
+	{
+		BVec ret = ConstBVec(128_b);
+
+		auto dw = ret.parts(4);
+		dw[0] = common.rawDw0();
+
+		auto dw1Bytes = dw[1].parts(4);
+
+		dw1Bytes[0] = requesterId.upper(8_b);
+		dw1Bytes[1] = requesterId.lower(8_b);
+		dw1Bytes[2] = tag;
+		dw1Bytes[3].upper(4_b) = lastDWByteEnable;
+		dw1Bytes[3].lower(4_b) = firstDWByteEnable;
+
+		dw[2] = (BVec) swapEndian(wordAddress.upper(32_b), 8_b);
+		dw[3] = swapEndian( (BVec) cat(wordAddress.lower(30_b), processingHint), 8_b);
+
+		return ret;
+	}
+
+	CompletionHeader CompletionHeader::fromRaw(BVec rawHeader)
+	{
+		HCL_DESIGNCHECK_HINT(rawHeader.width() == 96_b, "A completion header should have 3 DW");
+
+		CompletionHeader ret;
+		ret.common.fromRawDw0(rawHeader.part(3, 0));
+
+		auto dw = rawHeader.parts(3);
+		auto dw1Bytes = dw[1].parts(4);
+
+		ret.completerId = (BVec)cat(dw1Bytes[0], dw1Bytes[1]);
+		ret.completionStatus = dw1Bytes[2](5, 3_b);
+		ret.byteCountModifier = dw1Bytes[2][4];
+		ret.byteCount = cat(dw1Bytes[2](0, 4_b), dw1Bytes[3]);
+
+		auto dw2Bytes = dw[2].parts(4);
+
+		ret.requesterId = (BVec)cat(dw2Bytes[0], dw2Bytes[1]);
+		ret.tag = dw2Bytes[2];
+		ret.lowerByteAddress = (UInt) dw2Bytes[3].lower(7_b);
+
+		return ret;
+	}
+
+	CompletionHeader::operator BVec()
+	{
+		BVec ret = ConstBVec(96_b);
+
+		auto dw = ret.parts(3);
+		dw[0] = common.rawDw0();
+
+		auto dw1Bytes = dw[1].parts(4);
+
+		dw1Bytes[0] = completerId.upper(8_b);
+		dw1Bytes[1] = completerId.lower(8_b);
+
+		dw1Bytes[2].lower(4_b) = (BVec) byteCount.upper(4_b);
+		dw1Bytes[2][4] = byteCountModifier;
+		dw1Bytes[2].upper(3_b) = completionStatus;
+		dw1Bytes[3] = (BVec) byteCount.lower(8_b);
+
+		auto dw2Bytes = dw[2].parts(4);
+
+		dw2Bytes[0] = requesterId.upper(8_b);
+		dw2Bytes[1] = requesterId.lower(8_b);
+		dw2Bytes[2] = tag;
+		dw2Bytes[3].msb() = '1';
+		dw2Bytes[3].lower(7_b) = (BVec) lowerByteAddress;
+		
+		return ret;
+	}
 }

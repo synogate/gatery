@@ -97,6 +97,7 @@ namespace hlim {
 
 		/// Defines an alternative signal source that in the export should be used to drive all following logic.
 		void exportOverride(const Bit& exportOverride);
+		void simulationOverride(const Bit& simulationOverride);
 
 		/// Always returns 1_b.
 		BitWidth width() const final;

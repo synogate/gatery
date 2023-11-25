@@ -21,18 +21,12 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
-#include <gatery/simulation/waveformFormats/VCDSink.h>
-#include <gatery/simulation/Simulator.h>
-#include <gatery/simulation/BitVectorState.h>
-
 #include <gatery/scl/stream/SimuHelpers.h>
 #include <gatery/scl/stream/StreamArbiter.h>
 #include <gatery/scl/stream/utils.h>
 #include <gatery/scl/stream/Packet.h>
 #include <gatery/scl/stream/FieldExtractor.h>
-#include <gatery/scl/io/SpiMaster.h> 
 
-#include <gatery/debug/websocks/WebSocksInterface.h>
 #include <gatery/scl/sim/SimulationSequencer.h>
 
 
@@ -40,67 +34,99 @@ using namespace boost::unit_test;
 using namespace gtry;
 
 
-template<typename StreamType>
+template<scl::strm::PacketStreamSignal StreamT>
 struct PacketSendAndReceiveTest : public BoostUnitTestSimulationFixture
 {
 	Clock packetTestclk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp = ClockScope(packetTestclk);
 	std::vector<scl::strm::SimPacket> allPackets;
+
+	std::optional<StreamT> in;
+	std::optional<StreamT> out;
+
 	bool addPipelineReg = true;
 	BitWidth txIdW = 4_b;
 	bool backpressureRNG = false;
 	size_t readyProbabilityPercent = 50;
 	std::uint64_t unreadyMask = 0;
 
-	void runTest() {
+	std::mt19937 gen = std::mt19937{ 23456789 };
+
+	void randomPackets(size_t count, size_t minSize, size_t maxSize) {
+		ClockScope clkScp(packetTestclk);
+		allPackets.resize(count);
+		for (auto &packet : allPackets) {
+			std::uniform_int_distribution<size_t> sizeDist(minSize, maxSize);
+			if (in) {
+				if constexpr (StreamT::template has<scl::Error>()) {
+					packet.error((gen() & 0b11) == 0 ? '1' : '0'); // 25% chance of error packet
+				}
+			}
+
+			std::vector<uint8_t> payload(sizeDist(gen));
+
+			for (auto &b : payload)
+				b = gen();
+
+			packet = payload;
+			if constexpr (StreamT::template has<scl::TxId>()) {
+				if (txIdW.value > 0) packet.txid(gen() % txIdW.count());
+			}
+		}
+	}
+
+
+	void runTest(bool vcd = false) {
 		ClockScope clkScp(packetTestclk);
 
-		StreamType in = { 16_b };
-		StreamType out = { 16_b };
+		if (!in) in.emplace(16_b);
+		if (!out) {
+			out.emplace((*in)->width());
+			if constexpr (StreamT::template has<scl::Empty>()) {
+				empty(*in) = BitWidth::last((*in)->width().bytes() - 1);
+				empty(*out) = BitWidth::last((*in)->width().bytes() - 1);
+			}
+			if constexpr (StreamT::template has<scl::TxId>()) {
+				txid(*in) = txIdW;
+				txid(*out) = txIdW;
+			}
 
-		if constexpr (StreamType::template has<scl::Empty>()) {
-			empty(in) = BitWidth::last(in->width().bytes() - 1);
-			empty(out) = BitWidth::last(in->width().bytes() - 1);
+			if (addPipelineReg)
+				*out <<= scl::strm::regDownstream(move(*in));
+			else
+				*out <<= *in;
 		}
-		if constexpr (StreamType::template has<scl::TxId>()) {
-			txid(in) = txIdW;
-			txid(out) = txIdW;
-		}
 
-		if (addPipelineReg)
-			out <<= scl::strm::regDownstream(move(in));
-		else
-			out <<= in;
-
-		pinIn(in, "in_");
-		pinOut(out, "out_");
+		pinIn(*in, "in_");
+		pinOut(*out, "out_");
 
 
 		addSimulationProcess([&, this]()->SimProcess {
 			scl::SimulationSequencer sendingSequencer;
 			
-			if constexpr (StreamType::template has<scl::Ready>())
+			if constexpr (StreamT::template has<scl::Ready>())
 				if(backpressureRNG)
-					fork(readyDriverRNG(out, packetTestclk, readyProbabilityPercent));
+					fork(readyDriverRNG(*out, packetTestclk, readyProbabilityPercent));
 				else
-					fork(readyDriver(out, packetTestclk, unreadyMask));
+					fork(readyDriver(*out, packetTestclk, unreadyMask));
 
 			for (const auto& packet : allPackets)
-				fork(sendPacket(in, packet, packetTestclk, sendingSequencer));
+				fork(sendPacket(*in, packet, packetTestclk, sendingSequencer));
 
 			for (const auto& packet : allPackets) {
-				scl::strm::SimPacket rvdPacket = co_await receivePacket(out, packetTestclk);
+				scl::strm::SimPacket rvdPacket = co_await receivePacket(*out, packetTestclk);
 				BOOST_TEST(rvdPacket.payload == packet.payload);
 
-				if constexpr (StreamType::template has<scl::TxId>()) {
+				if constexpr (StreamT::template has<scl::TxId>()) {
 					BOOST_TEST(rvdPacket.txid() == packet.txid());
 				}
-				if constexpr (StreamType::template has<scl::Error>()) {
+				if constexpr (StreamT::template has<scl::Error>()) {
 					BOOST_TEST(rvdPacket.error() == packet.error());
 				}
 			}
 			stopTest();
 			});
-
+		if (vcd) { recordVCD("dut.vcd"); }
 		design.postprocess();
 		BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
 	}
@@ -259,6 +285,334 @@ BOOST_FIXTURE_TEST_CASE(packetSenderFramework_test_RvStream, PacketSendAndReceiv
 	runTest();
 }
 
+using RvEmptyPacketStream = scl::RvPacketStream<BVec, scl::Empty>;
+
+BOOST_FIXTURE_TEST_CASE(packetSenderFramework_test_RvEmpty_non_power_of_2, PacketSendAndReceiveTest<RvEmptyPacketStream>) {
+
+	this->in.emplace(24_b);
+	empty(*in) = BitWidth::count((*in)->width().bytes());
+	this->out = scl::strm::regDownstream(move(*this->in));
+	this->txIdW = 0_b;
+
+	randomPackets(20, 1, 50 );
+
+	runTest();
+}
+
+
+using RvEmptyBitsPacketStream = scl::RvPacketStream<BVec, scl::EmptyBits>;
+
+BOOST_FIXTURE_TEST_CASE(packetSenderFramework_test_RvEmptyBits_non_power_of_2, PacketSendAndReceiveTest<RvEmptyBitsPacketStream>) {
+
+	this->in.emplace(24_b);
+	emptyBits(*in) = BitWidth::count((*in)->width().bits());
+	this->out = scl::strm::regDownstream(move(*this->in));
+	this->txIdW = 0_b;
+
+	randomPackets(20, 1, 50 );
+
+	runTest();
+}
+
+using TestPacketStream = scl::RvPacketStream<BVec, scl::Empty>;
+BOOST_FIXTURE_TEST_CASE(extendWidthFuzz_8_32, PacketSendAndReceiveTest<TestPacketStream>) {
+
+	this->in.emplace(8_b);
+	empty(*in) = BitWidth::last((*in)->width().bytes() - 1);
+	this->out = scl::strm::widthExtend(move(*this->in), 32_b);
+	this->txIdW = 0_b;
+	
+	
+	randomPackets(100, 1, 50 );
+	
+	backpressureRNG = true;
+	readyProbabilityPercent = 50;
+	
+	
+	runTest(false);
+}
+
+BOOST_FIXTURE_TEST_CASE(extendWidthFuzz_16_32, PacketSendAndReceiveTest<TestPacketStream>) {
+
+	this->in.emplace(16_b);
+	empty(*in) = BitWidth::last((*in)->width().bytes() - 1);
+	this->out = scl::strm::widthExtend(move(*this->in), 32_b);
+	this->txIdW = 0_b;
+
+
+	randomPackets(100, 1, 50 );
+
+	backpressureRNG = true;
+	readyProbabilityPercent = 50;
+
+
+	runTest(false);
+}
+
+BOOST_FIXTURE_TEST_CASE(extendWidthFuzz_8_24, PacketSendAndReceiveTest<TestPacketStream>) {
+
+	this->in.emplace(8_b);
+	empty(*in) = BitWidth::last((*in)->width().bytes() - 1);
+	this->out = scl::strm::widthExtend(move(*this->in), 24_b);
+	this->txIdW = 0_b;
+
+
+	randomPackets(100, 1, 50 );
+
+	backpressureRNG = true;
+	readyProbabilityPercent = 50;
+
+
+	runTest(false);
+}
+
+
+BOOST_FIXTURE_TEST_CASE(extendWidthFuzz_16_48, PacketSendAndReceiveTest<TestPacketStream>) {
+
+	this->in.emplace(16_b);
+	empty(*in) = BitWidth::last((*in)->width().bytes() - 1);
+	this->out = scl::strm::widthExtend(move(*this->in), 48_b);
+	this->txIdW = 0_b;
+
+
+	randomPackets(100, 1, 50 );
+
+	backpressureRNG = true;
+	readyProbabilityPercent = 50;
+
+
+	runTest(false);
+}
+
+using TestPacketStreamWithError = scl::RvPacketStream < BVec, scl::Empty, scl::Error > ;
+
+BOOST_FIXTURE_TEST_CASE(extendWidthFuzz_16_32_with_error, PacketSendAndReceiveTest<TestPacketStreamWithError>) {
+
+	this->in.emplace(16_b);
+	empty(*in) = BitWidth::last((*in)->width().bytes() - 1);
+	this->out = scl::strm::widthExtend(move(*this->in), 32_b);
+	this->txIdW = 0_b;
+
+
+	randomPackets(100, 1, 50 );
+
+	backpressureRNG = true;
+	readyProbabilityPercent = 50;
+
+
+	runTest(false);
+}
+
+
+using TestPacketStreamWithTxId = scl::RvPacketStream < BVec, scl::Empty, scl::TxId > ;
+
+BOOST_FIXTURE_TEST_CASE(extendWidthFuzz_16_32_with_txid, PacketSendAndReceiveTest<TestPacketStreamWithTxId>) {
+
+	this->txIdW = 4_b;
+
+	this->in.emplace(16_b);
+	empty(*in) = BitWidth::last((*in)->width().bytes() - 1);
+	txid(*in) = this->txIdW;
+	this->out = scl::strm::widthExtend(move(*this->in), 32_b);
+
+	randomPackets(100, 1, 50);
+
+	backpressureRNG = true;
+	readyProbabilityPercent = 50;
+
+	runTest(false);
+}
+
+using TestPacketStreamWithEmptyBits= scl::RvPacketStream < BVec, scl::EmptyBits> ;
+
+BOOST_FIXTURE_TEST_CASE(extendWidthFuzz_8_32_emptybits, PacketSendAndReceiveTest<TestPacketStreamWithEmptyBits>) {
+
+	this->in.emplace(8_b);
+	emptyBits(*in) = BitWidth::count((this->in)->data.width().bits());
+	this->out = scl::strm::widthExtend(move(*this->in), 32_b);
+
+	randomPackets(100, 1, 50);
+
+	backpressureRNG = true;
+	readyProbabilityPercent = 50;
+
+	runTest(false);
+}
+
+BOOST_FIXTURE_TEST_CASE(extendWidthFuzz_16_32_emptybits, PacketSendAndReceiveTest<TestPacketStreamWithEmptyBits>) {
+
+	this->in.emplace(16_b);
+	emptyBits(*in) = BitWidth::count((this->in)->data.width().bits());
+	this->out = scl::strm::widthExtend(move(*this->in), 32_b);
+
+	randomPackets(100, 1, 50);
+
+	backpressureRNG = true;
+	readyProbabilityPercent = 50;
+
+	runTest(false);
+}
+
+BOOST_FIXTURE_TEST_CASE(extendWidthFuzz_16_48_emptybits, PacketSendAndReceiveTest<TestPacketStreamWithEmptyBits>) {
+
+	this->in.emplace(16_b);
+	emptyBits(*in) = BitWidth::count((this->in)->data.width().bits());
+	this->out = scl::strm::widthExtend(move(*this->in), 48_b);
+
+	randomPackets(100, 1, 50);
+
+	backpressureRNG = true;
+	readyProbabilityPercent = 50;
+
+	runTest(false);
+}
+
+BOOST_FIXTURE_TEST_CASE(reduceWidthFuzz_32_8, PacketSendAndReceiveTest<TestPacketStream>) {
+
+	this->in.emplace(32_b);
+	empty(*in) = BitWidth::last((*in)->width().bytes() - 1);
+	this->out = scl::strm::widthReduce(move(*this->in), 8_b);
+	this->txIdW = 0_b;
+
+
+	randomPackets(20, 1, 50);
+
+	backpressureRNG = true;
+	readyProbabilityPercent = 50;
+
+
+	runTest(false);
+}
+
+
+BOOST_FIXTURE_TEST_CASE(reduceWidthFuzz_32_16, PacketSendAndReceiveTest<TestPacketStream>) {
+
+	this->in.emplace(32_b);
+	empty(*in) = BitWidth::last((*in)->width().bytes() - 1);
+	this->out = scl::strm::widthReduce(move(*this->in), 16_b);
+	this->txIdW = 0_b;
+
+
+	randomPackets(50, 1, 10);
+
+	backpressureRNG = true;
+	readyProbabilityPercent = 50;
+
+
+	runTest(false);
+}
+
+BOOST_FIXTURE_TEST_CASE(reduceWidthFuzz_48_16, PacketSendAndReceiveTest<TestPacketStream>) {
+
+	this->in.emplace(48_b);
+	empty(*in) = BitWidth::last((*in)->width().bytes() - 1);
+	this->out = scl::strm::widthReduce(move(*this->in), 16_b);
+	this->txIdW = 0_b;
+
+
+	randomPackets(50, 1, 15);
+
+	backpressureRNG = true;
+	readyProbabilityPercent = 50;
+
+
+	runTest(false);
+}
+
+BOOST_FIXTURE_TEST_CASE(reduceWidthFuzz_24_8, PacketSendAndReceiveTest<TestPacketStream>) {
+
+	this->in.emplace(24_b);
+	empty(*in) = BitWidth::last((*in)->width().bytes() - 1);
+	this->out = scl::strm::widthReduce(move(*this->in), 8_b);
+	this->txIdW = 0_b;
+
+
+	randomPackets(50, 1, 15);
+
+	backpressureRNG = true;
+	readyProbabilityPercent = 50;
+
+
+	runTest(false);
+}
+
+BOOST_FIXTURE_TEST_CASE(reduceWidthFuzz_32_16_with_error, PacketSendAndReceiveTest<TestPacketStreamWithError>) {
+
+	this->in.emplace(32_b);
+	empty(*in) = BitWidth::last((*in)->width().bytes() - 1);
+	this->out = scl::strm::widthReduce(move(*this->in), 16_b);
+	this->txIdW = 0_b;
+
+	randomPackets(100, 1, 50);
+
+	backpressureRNG = true;
+	readyProbabilityPercent = 50;
+
+	runTest(false);
+}
+
+
+BOOST_FIXTURE_TEST_CASE(reduceWidthFuzz_32_16_with_txid, PacketSendAndReceiveTest<TestPacketStreamWithTxId>) {
+
+	this->txIdW = 4_b;
+	this->in.emplace(32_b);
+	empty(*in) = BitWidth::last((*in)->width().bytes() - 1);
+	txid(*in) = this->txIdW;
+	this->out = scl::strm::widthReduce(move(*this->in), 16_b);
+
+	randomPackets(100, 1, 50);
+
+	backpressureRNG = true;
+	readyProbabilityPercent = 50;
+
+	runTest(false);
+}
+
+BOOST_FIXTURE_TEST_CASE(reduceWidthFuzz_32_8_emptybits, PacketSendAndReceiveTest<TestPacketStreamWithEmptyBits>) {
+
+	this->in.emplace(32_b);
+	emptyBits(*in) = BitWidth::count((this->in)->data.width().bits());
+	this->out = scl::strm::widthReduce(move(*this->in), 8_b);
+	this->txIdW = 0_b;
+
+	randomPackets(50, 1, 50);
+
+	backpressureRNG = true;
+	readyProbabilityPercent = 50;
+
+	runTest(false);
+}
+
+BOOST_FIXTURE_TEST_CASE(reduceWidthFuzz_32_16_emptybits, PacketSendAndReceiveTest<TestPacketStreamWithEmptyBits>) {
+
+	this->in.emplace(32_b);
+	emptyBits(*in) = BitWidth::count((this->in)->data.width().bits());
+	this->out = scl::strm::widthReduce(move(*this->in), 16_b);
+	this->txIdW = 0_b;
+
+	randomPackets(100, 1, 50);
+
+	backpressureRNG = true;
+	readyProbabilityPercent = 50;
+
+	runTest(false);
+}
+
+BOOST_FIXTURE_TEST_CASE(reduceWidthFuzz_48_16_emptybits, PacketSendAndReceiveTest<TestPacketStreamWithEmptyBits>) {
+
+	this->in.emplace(48_b);
+	emptyBits(*in) = BitWidth::count((this->in)->data.width().bits());
+	this->out = scl::strm::widthReduce(move(*this->in), 16_b);
+	this->txIdW = 0_b;
+
+	randomPackets(100, 1, 50);
+
+	backpressureRNG = true;
+	readyProbabilityPercent = 50;
+
+	runTest(false);
+}
+
 
 
 template<typename StreamType, typename OutStreamType>
@@ -274,9 +628,9 @@ struct FieldExtractionTest : public BoostUnitTestSimulationFixture
 
 	std::vector<scl::Field> fields;
 	std::mt19937 gen;
-
+	
 	FieldExtractionTest() : gen(23456789) { }
-						
+
 
 	void randomPackets(size_t count, size_t minSize, size_t maxSize) {
 		allPackets.resize(count);

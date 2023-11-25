@@ -1073,7 +1073,7 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 
 			HCL_ASSERT(resetValue.node != nullptr);
 			auto *constReset = dynamic_cast<hlim::Node_Constant*>(resetValue.node);
-			HCL_DESIGNCHECK_HINT(constReset, "Resets of registers must be constants uppon export!");
+			HCL_DESIGNCHECK_HINT(constReset, "Resets of registers must be constants upon export!");
 
 			const auto &outputDecl = m_namespaceScope.get(output);
 
@@ -1117,7 +1117,7 @@ void RegisterProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 
 			HCL_ASSERT(resetValue.node != nullptr);
 			auto *constReset = dynamic_cast<hlim::Node_Constant*>(resetValue.node);
-			HCL_DESIGNCHECK_HINT(constReset, "Resets of registers must be constants uppon export!");
+			HCL_DESIGNCHECK_HINT(constReset, "Resets of registers must be constants upon export!");
 
 			const auto &outputDecl = m_namespaceScope.get(output);
 

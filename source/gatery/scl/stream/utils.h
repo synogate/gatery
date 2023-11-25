@@ -70,6 +70,15 @@ namespace gtry::scl::strm
 		return [=](auto&& in) { return regDownstream(std::forward<decltype(in)>(in), settings); };
 	}
 
+	template<StreamSignal StreamT>
+	StreamT delay(StreamT&& in, size_t minCycles);
+
+	//untested
+	inline auto delay(size_t minCycles)
+	{
+		return [=](auto&& in) { return delay(std::forward<decltype(in)>(in), minCycles); };
+	}
+
 	/**
 	 * @brief extends the width of a simple payload stream. A 4-bit stream sent every beat extended to 8-bits means that the same data is send over an 8-bit bus once every 2 beats.
 	 * @param source source stream
@@ -121,8 +130,13 @@ namespace gtry::scl::strm
 	 * @return same typed stream as source input
 	*/
 	template<StreamSignal T>
-	requires (T::template has<Ready>() and T::template has<Valid>())
+	//requires (T::template has<Ready>() and T::template has<Valid>())
 	T stall(T&& source, Bit stallCondition);
+
+	inline auto stall(Bit stallCondition)
+	{
+		return [=](auto&& source) { return stall(std::forward<decltype(source)>(source), stallCondition); };
+	}
 
 	/**
 	 * @brief stalls a packet stream using a stall condition. This function ensures a stream is backpressured without losing any data. It will not interrupt an ongoing packet
@@ -164,6 +178,21 @@ namespace gtry::scl::strm
 	StreamT synchronizeStreamReqAck(StreamT& in, const Clock& inClock, const Clock& outClock);
 
 	/**
+	 * @brief This helper creates a stream whose payload is SignalT, a metaSignal of the original stream
+	 * @param input stream
+	 * @return stream with SignalT as Payload
+	*/
+	template<Signal SignalT, StreamSignal StreamT> requires (StreamT::template has<SignalT>())
+	auto extractMeta(StreamT&& in);
+
+	/**
+	 * @brief   This helper returns a stream whose payload is the raw (packed BVec) version of its original payload
+	 * @return  stream with BVec as payload
+	*/
+	template<StreamSignal StreamT> 
+	auto rawPayload(StreamT&& in);
+
+	/**
 	* @brief attaches a memory to a stream carrying addresses and returns a stream of the memory data
 	* @param addr the address stream to look up in memory
 	* @param memory - self explanatory
@@ -201,6 +230,10 @@ namespace gtry::scl::strm
 		upstream(in) = upstream(out);
 		return out;
 	}
+
+	template<StreamSignal StreamT>
+	Vector<StreamT> serialPushParallelPopBuffer(StreamT&& in, size_t numberOfElements);
+
 }
 
 namespace gtry::scl::strm
@@ -299,6 +332,21 @@ namespace gtry::scl::strm
 		return ret;
 	}
 
+
+	template<StreamSignal StreamT>
+	StreamT delay(StreamT&& in, size_t minCycles) {
+		StreamT ret = move(in);
+
+		for (int i = 0; i < ((int) minCycles) - 1; i++) {
+			ret = regDownstreamBlocking(move(ret));
+		}
+
+		if(minCycles > 0 ) {
+			ret = regDownstream(move(ret));
+		}
+		return ret;
+	}
+
 	template<BaseSignal T>
 	T makeShiftReg(BitWidth size, const T& in, const Bit& en)
 	{
@@ -319,7 +367,7 @@ namespace gtry::scl::strm
 	{
 		HCL_DESIGNCHECK(source->width() <= width);
 		const size_t ratio = width / source->width();
-
+		
 		auto scope = Area{ "scl_extendWidth" }.enter();
 
 		Counter counter{ ratio };
@@ -445,8 +493,18 @@ namespace gtry::scl::strm
 		return out;
 	}
 
+	template<Signal SignalT, StreamSignal StreamT> requires (StreamT::template has<SignalT>()) 
+		auto extractMeta(StreamT&& in) {
+		return in.transform([&](auto&& payload) { return in.template get<SignalT>(); }).template remove<SignalT>();
+	}
+
+	template<StreamSignal StreamT> 
+	auto rawPayload(StreamT&& in) {
+		return in.transform([](auto&& payload) { return (BVec)pack(payload); });
+	}
+
 	template<StreamSignal T>
-		requires (T::template has<Ready>() and T::template has<Valid>())
+	//	requires (T::template has<Ready>() and T::template has<Valid>())
 	T stall(T&& source, Bit stallCondition)
 	{
 		T out;
@@ -579,5 +637,49 @@ namespace gtry::scl::strm
 	T pipeinput(T& stream, PipeBalanceGroup& group) 
 	{
 		return scl::strm::pipeinputDownstream(move(stream), group);
+	}
+
+	template<StreamSignal StreamT>
+	Vector<StreamT> serialPushParallelPopBuffer(StreamT&& in, size_t numberOfElements) 
+	{
+		Vector<StreamT> popStreams;
+		Vector<StreamT> shiftStreams;
+
+		popStreams.reserve(numberOfElements);
+		shiftStreams.reserve(numberOfElements);
+
+		shiftStreams.push_back(move(in));
+
+		for (size_t i = 0; i < numberOfElements; i++)
+		{
+			StreamT popStream(constructFrom(*in));
+
+			IF(transfer(popStream))
+				valid(popStream) = '0';
+
+			IF(transfer(shiftStreams.back()))
+				downstream(popStream) = downstream(shiftStreams.back());
+
+			downstream(popStream) = reg(copy(downstream(popStream))); // copy gets rid of the references returned by the downstream function
+
+
+			StreamT shiftStream(*popStream);
+			valid(shiftStream) = valid(popStream);
+			ready(shiftStreams.back()) = !valid(popStream) | ready(popStream) | ready(shiftStream);
+
+			StreamT temp = strm::stall(move(shiftStream), transfer(popStream));
+
+			StreamT temp2(*popStream);
+			valid(temp2) = valid(popStream);
+			ready(popStream) = ready(temp2);
+			popStreams.push_back(move(temp2));
+
+			IF(transfer(temp))
+				valid(popStream) = '0';
+
+			shiftStreams.push_back(move(temp)); 
+		}
+		ready(shiftStreams.back()) = '0';
+		return popStreams;
 	}
 }

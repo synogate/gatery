@@ -522,6 +522,23 @@ ReferenceSimulator::ReferenceSimulator(bool enableConsoleOutput)
 	}
 }
 
+ReferenceSimulator::~ReferenceSimulator()
+{
+	RunTimeSimulationContext context(this);
+	destroyPendingEvents();
+}
+
+void ReferenceSimulator::destroyPendingEvents()
+{
+	m_simulationIsShuttingDown = true;
+	while (!m_nextEvents.empty())
+		m_nextEvents.pop();
+
+	m_coroutineHandler.stopAll();
+	m_processesAwaitingCommit.clear();
+	m_simulationIsShuttingDown = false;
+}
+
 void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const utils::StableSet<hlim::NodePort> &outputs, bool ignoreSimulationProcesses)
 {
 
@@ -580,9 +597,7 @@ void ReferenceSimulator::powerOn()
 	m_dataState.signalState.clearRange(DefaultConfig::VALUE, 0, m_program.m_fullStateWidth);
 	m_dataState.signalState.clearRange(DefaultConfig::DEFINED, 0, m_program.m_fullStateWidth);
 
-
-	while (!m_nextEvents.empty())
-		m_nextEvents.pop();
+	destroyPendingEvents();
 
 	m_callbackDispatcher.onPowerOn();
 

@@ -62,12 +62,13 @@ namespace gtry::scl
 
 		void attach(T&& stream, uint32_t sortKey = 1u << 31) { attach(stream, sortKey); }
 
+		void name(std::string name) { m_areaName = name; }
 
 		T& out() { return *m_out; }
 
 		virtual void generate()
 		{
-			auto area = Area{ "scl_StreamArbiter" }.enter();
+			auto area = Area{ m_areaName }.enter();
 			HCL_DESIGNCHECK_HINT(m_out, "No input stream attached and out template not provided.");
 			HCL_DESIGNCHECK_HINT(!m_generated, "Generate called twice.")
 			m_generated = true;
@@ -121,6 +122,7 @@ namespace gtry::scl
 		};
 		std::list<InStream> m_in;
 		std::optional<T> m_out;
+		std::string m_areaName = "scl_StreamArbiter";
 		TSelector m_selector;
 		bool m_generated = false;
 

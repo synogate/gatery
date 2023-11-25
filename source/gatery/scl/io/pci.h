@@ -17,97 +17,181 @@
 */
 #pragma once
 #include <gatery/frontend.h>
-#include "../Avalon.h"
-#include "../stream/Packet.h"
 
-namespace gtry::scl
+#include <gatery/scl/tilelink/tilelink.h>
+
+
+namespace gtry::scl::pci
 {
-	namespace pci
-	{
-		struct PciId
-		{
-			UInt bus = 8_b;
-			UInt dev = 5_b;
-			UInt func = 3_b;
+	template <Signal ...Meta>
+	using TlpPacketStream = RvPacketStream<BVec, Meta...>;
 
-			UInt ariFunc() const { return cat(dev, func); }
-		};
+	enum class TlpOpcode;
+	enum class CompletionStatus;
+	enum class AddressType;
+	enum class ProcessingHint;
+	enum class TrafficClass;
+	struct Attributes;
+	struct HeaderCommon;
+	struct CompletionHeader;
+	struct RequestHeader;
+	struct BarInfo;
+	struct CompleterInterface;
 
-		struct TlpHeaderAttr
-		{
-			UInt trafficClass = 3_b;
-			Bit relaxedOrdering;
-			Bit idBasedOrdering;
-			Bit noSnoop;
-		};
-
-		struct MemTlpCplData
-		{
-			PciId requester;
-			UInt tag = 8_b;
-			TlpHeaderAttr attr;
-			UInt lowerAddress = 7_b;
-
-			void decode(const UInt& tlpHdr);
-			void encode(UInt& tlpHdr) const;
-		};
-
-		namespace TlpOffset
-		{
-			constexpr size_t spec_offset(size_t bit, size_t byte, size_t word = 0) { return word * 32 + (3 - byte) * 8 + bit; }
-
-			constexpr size_t hasPrefix = spec_offset(7, 0, 0);
-			constexpr size_t hasData = spec_offset(6, 0, 0);
-			constexpr size_t has4DW = spec_offset(5, 0, 0);
-			constexpr Selection type{ .start = (int)spec_offset(0, 0, 0), .width = 5 };
-
-		}
-
-		struct Tlp
-		{
-			UInt prefix; // optional prefix
-			UInt header; // 96b or 128b header
-			UInt data; // payload
-
-			Tlp discardHighAddressBits() const;
-		};
-
-
-		Bit isCompletionTlp(const UInt& tlpHeader);
-		Bit isMemTlp(const UInt& tlpHeader);
-		Bit isDataTlp(const UInt& tlpHeader);
-
-		class AvmmBridge
-		{
-		public:
-			AvmmBridge() = default;
-			AvmmBridge(RvStream<Tlp>& rx, AvalonMM& avmm, const PciId& cplId);
-
-			void setup(RvStream<Tlp>& rx, AvalonMM& avmm, const PciId& cplId);
-
-			RvStream<Tlp>& tx() { return m_tx; }
-
-		protected:
-			void generateFifoBridge(RvStream<Tlp>& rx, AvalonMM& avmm);
-
-		private:
-			RvStream<Tlp> m_tx;
-			PciId m_cplId;
-		};
-
-		struct IntelPTileCompleter
-		{
-			void generate();
-
-			std::array<RvPacketStream<Tlp>, 2> in;
-			RvPacketStream<Tlp> out;
-			AvalonMM avmm;
-			PciId completerId;
-		};
-	}
 }
 
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::PciId, bus, dev, func);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::TlpHeaderAttr, trafficClass, relaxedOrdering, idBasedOrdering, noSnoop);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::MemTlpCplData, requester, tag, attr, lowerAddress);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::Tlp, prefix, header, data);
+
+
+namespace gtry::scl::pci
+{
+	enum class TlpOpcode {
+		memoryReadRequest32bit							= 0b000'0'0000,	//MRd32
+		memoryReadRequest64bit							= 0b001'0'0000,	//MRd64 
+		memoryReadRequestLocked32bit					= 0b000'0'0001,	//MRdLk32
+		memoryReadRequestLocked64bit					= 0b001'0'0001,	//MRdLk64
+		memoryWriteRequest32bit							= 0b010'0'0000,	//MWr
+		memoryWriteRequest64bit							= 0b011'0'0000,	//MWr64
+		ioReadRequest									= 0b000'0'0010,	//IORd
+		ioWriteRequest									= 0b010'0'0010,	//IOWr
+		configurationReadType0							= 0b000'0'0100,	//CfgRd0
+		configurationWriteType0							= 0b010'0'0100,	//CfgWr0
+		configurationReadType1							= 0b000'0'0101,	//CfgRd1
+		configurationWriteType1							= 0b010'0'0101,	//CfgWr1
+		messageRequest									= 0b001'1'0000,	//Msg
+		messageRequestWithDataPayload					= 0b011'1'0000,	//MsgD
+		completionWithoutData							= 0b000'0'1010,	//Cpl
+		completionWithData								= 0b010'0'1010,	//CplD 
+		completionforLockedMemoryReadWithoutData		= 0b000'0'1011,	//CplLk
+		completionforLockedMemoryReadWithData			= 0b010'0'1011,	//CplDLk
+		fetchAndAddAtomicOpRequest32bit					= 0b010'0'1100,	//FetchAdd32
+		fetchAndAddAtomicOpRequest64bit					= 0b011'0'1100,	//FetchAdd64
+		unconditionalSwapAtomicOpRequest32bit			= 0b010'0'1101,	//Swap32
+		unconditionalSwapAtomicOpRequest64bit			= 0b011'0'1101,	//Swap64
+		compareAndSwapAtomicOpRequest32bit				= 0b010'0'1110,	//CAS32
+		compareAndSwapAtomicOpRequest64bit				= 0b011'0'1110,	//CAS64
+		other															//error or unimplemented
+	};
+
+	enum class CompletionStatus {
+		successfulCompletion		= 0b000, //SC
+		unsupportedRequest			= 0b001, //UR
+		configRequestRetryStatus	= 0b010, //CRS
+		completerAbort				= 0b100, //CA
+	};
+
+	enum class AddressType {
+		untranslated_default	= 0b00,
+		translationRequest		= 0b01,
+		translatedRequest		= 0b10,
+		reserved				= 0b11,
+	};
+
+	enum class ProcessingHint {
+		bidirectionalDataStructure	= 0b00,
+		requester					= 0b01,
+		target						= 0b10,
+		targetWithPriority			= 0b11,
+	};
+
+	enum class TrafficClass {
+		bestEffort_default_tc0	= 0b000,
+		tc1	= 1,
+		tc2	= 2,
+		tc3	= 3,
+		tc4	= 4,
+		tc5	= 5,
+		tc6	= 6,
+		tc7	= 7
+	};
+
+	struct Attributes {
+		Bit noSnoop;
+		Bit relaxedOrdering;	
+		Bit idBasedOrdering; 		
+	};
+
+	struct HeaderCommon
+	{
+		BVec rawDw0();
+		void fromRawDw0(BVec rawDw0);
+
+		Bit poisoned;					
+		Bit digest;
+		
+		Bit processingHintPresence;	
+		Attributes attributes;
+
+		BVec addressType = 2_b;
+		BVec trafficClass = 3_b;
+
+		BVec fmt = 3_b;		
+		BVec type = 5_b;		//type and format
+		UInt length = 10_b;		//request payload length
+
+		UInt dataLength() const { UInt ret = 1024; IF(length != 0) ret = zext(length); return ret; }
+		void dataLength(UInt len) { length = len.lower(10_b); }
+		
+		void opcode(TlpOpcode op) { fmt = (size_t)op >> 5; type = (size_t) op & 0x1F; }
+	
+		Bit is3dw()		{ return fmt == 0b000 | fmt == 0b010; }
+		Bit is4dw()		{ return !is3dw(); }
+		Bit hasData()	{ return fmt == 0b010 | fmt == 0b011; }
+
+		Bit isCompletion()	{ return type == 0b01010; }
+		Bit isMemRW()		{ return type == 0b00000 | type == 0b00001; }
+		Bit isMemWrite()	{ return fmt.upper(2_b) == 0b01; }
+		Bit isMemRead()		{ return fmt.upper(2_b) == 0b00; }
+		UInt hdrSizeInDw()	{ UInt ret = 4; IF(is3dw()) ret = 3; return ret; }
+
+	};
+
+	struct CompletionHeader
+	{
+		static CompletionHeader fromRaw(BVec rawHeader);
+		operator BVec();
+
+		HeaderCommon common;
+
+		BVec requesterId = 16_b;
+		BVec tag = 8_b;
+		BVec completerId = 16_b;
+		UInt byteCount = 12_b;
+		Bit byteCountModifier;
+		UInt lowerByteAddress = 7_b;
+		BVec completionStatus = 2_b;
+	};
+
+	struct RequestHeader
+	{
+		static RequestHeader fromRaw(BVec rawHeader);
+		operator BVec();
+
+		HeaderCommon common;
+
+		BVec requesterId = 16_b;
+		BVec tag = 8_b;
+		BVec lastDWByteEnable = 4_b;
+		BVec firstDWByteEnable = 4_b;
+		UInt wordAddress = 62_b;
+		BVec processingHint = 2_b;
+	};
+
+	struct BarInfo {
+		BVec id = 3_b;
+		UInt logByteAperture = 6_b; //0-> 1B | 10 -> 1kB | 20 -> 1MB | 30 -> 1GB | etc.
+	};
+
+	struct CompleterInterface {
+		TlpPacketStream<EmptyBits, BarInfo> request;
+		TlpPacketStream<EmptyBits> completion;
+	};
+	
+}
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::CompleterInterface, request, completion);
+
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::HeaderCommon, poisoned, digest, processingHintPresence, attributes, addressType, trafficClass, fmt, type, length);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::RequestHeader, common, requesterId, tag, lastDWByteEnable, firstDWByteEnable, wordAddress, processingHint);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::CompletionHeader, common, requesterId, tag, completerId, byteCount, byteCountModifier, lowerByteAddress, completionStatus);
+
+
+

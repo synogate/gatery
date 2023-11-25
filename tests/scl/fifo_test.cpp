@@ -28,6 +28,10 @@
 
 
 #include <gatery/scl/TransactionalFifo.h>
+#include <gatery/scl/FifoArray.h>
+
+#include <gatery/scl/synthesisTools/IntelQuartus.h>
+#include <gatery/scl/arch/intel/IntelDevice.h>
 
 #include <queue>
 
@@ -647,6 +651,90 @@ BOOST_FIXTURE_TEST_CASE(DualClockFifo, BoostUnitTestSimulationFixture)
 
 	runTest(hlim::ClockRational(20000, 1) / rdClock.getClk()->absoluteFrequency());
 
+}
+
+
+BOOST_FIXTURE_TEST_CASE(FifoArray_poc, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope scope(clk);
+
+	if (true) {
+		//const std::string boardName = "cyc1000";
+		const std::string fpgaNumber = "AGFB014R24B2E2V";
+		auto device = std::make_unique<scl::IntelDevice>();
+		device->setupDevice(fpgaNumber);
+		design.setTargetTechnology(std::move(device));
+	}
+
+	size_t numberOfFifos = 4;
+	size_t elementsPerFifo = 64;
+	BitWidth dataW = 4_b;
+
+
+	scl::FifoArray<UInt> dutFifo(numberOfFifos, elementsPerFifo, UInt{dataW});
+
+	Bit pushEnable; pinIn(pushEnable, "pushEnable");
+	UInt pushSelector = BitWidth::count(numberOfFifos); pinIn(pushSelector, "pushSelector");
+	UInt pushData = dontCare(UInt{ dataW }); pinIn(pushData, "pushData");
+
+	dutFifo.selectPush(pushSelector);
+	pinOut(dutFifo.full(), "pushFull");
+	IF(pushEnable) dutFifo.push(pushData);
+
+	Bit popEnable; pinIn(popEnable, "popEnable");
+	UInt popSelector = constructFrom(pushSelector); pinIn(popSelector, "popSelector");
+	UInt popData = reg(dutFifo.peek(), RegisterSettings{ .allowRetimingBackward = true });
+	pinOut(popData, "popData");
+
+	
+	dutFifo.selectPop(popSelector);
+	pinOut(dutFifo.empty(), "popEmpty");
+	IF(popEnable) dutFifo.pop();
+
+
+	dutFifo.generate();
+
+
+
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(pushEnable) = '0';
+		simu(pushSelector) = 0;
+		simu(pushData) = 13;
+		simu(popSelector) = 0;
+		simu(popEnable) = '0';
+
+		co_await WaitFor(Seconds{0});
+
+		BOOST_TEST(simu(dutFifo.full()) == '0');
+		BOOST_TEST(simu(dutFifo.empty()) == '1');
+
+		simu(pushEnable) = '1';
+		
+		co_await OnClk(clk);
+
+		simu(pushEnable) = '0';
+
+		co_await WaitFor(Seconds{0});
+
+		BOOST_TEST(simu(dutFifo.empty()) == '0');
+		simu(popEnable) = '1';
+
+		co_await OnClk(clk);
+		simu(popEnable) = '0';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(popData) == 13);
+		co_await OnClk(clk);
+		co_await OnClk(clk);
+
+
+		stopTest();
+	});
+
+
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
 }
 
 

@@ -380,7 +380,7 @@ void WebSocksInterface::awaitDebugger()
 {
 	std::cout << "Waiting for websocks debugger session" << std::endl;
 	while (m_sessions.empty())
-        m_ioc.run_one();
+		m_ioc.run_one();
 	std::cout << "Debugger connected" << std::endl;
 }
 
@@ -394,11 +394,11 @@ void WebSocksInterface::pushGraph()
 
 void WebSocksInterface::stopInDebugger()
 {
-    while (true) {
+	while (true) {
 		operate();
-        using namespace std::chrono_literals;
-        std::this_thread::sleep_for(200ms);
-    }
+		using namespace std::chrono_literals;
+		std::this_thread::sleep_for(200ms);
+	}
 }
 
 void WebSocksInterface::log(LogMessage msg)

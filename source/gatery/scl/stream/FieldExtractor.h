@@ -99,8 +99,8 @@ namespace gtry::scl
 
 		// We can receive data if either:
 		// - We have not yet fully ingested to current packet (i.e. for discarding the payload)
-		// - The output has been transfered and we are ready for the next packet
-		if constexpr (PacketStream::template has<Ready>())
+		// - The output has been transferred and we are ready for the next packet
+		if constexpr (packetStream.template has<Ready>())
 			ready(packetStream) = !packetFullyIngested | outputTransfered;
 
 		IF (transfer(packetStream)) {
