@@ -78,6 +78,8 @@ class BaseTestbenchRecorder : public sim::SimulatorCallbacks
 		void writePortmap(std::ostream &stream);
 
 		void buildClockProcess(std::ostream &stream, const hlim::Clock *clock);
+
+		hlim::Node_Pin *isDrivenByPin(hlim::NodePort nodePort) const;
 };
 
 

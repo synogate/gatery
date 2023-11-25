@@ -257,7 +257,15 @@ void TestbenchRecorder::onSimProcOutputRead(const hlim::NodePort &output, const 
 		return;
 
 	auto name_it = m_outputToIoPinName.find(drivingOutput);
-	HCL_ASSERT_HINT(name_it != m_outputToIoPinName.end(), "Can only record asserts for signals that are output pins!");
+	if (name_it == m_outputToIoPinName.end()) {
+		if (isDrivenByPin(drivingOutput)) {
+			// It is legal to read back the value previously set to an input pin, e.g. in order to drive simulation processes machinery.
+			// In this case we can skip emitting an assert since technically there is nothing to check here.
+			return;
+		}
+		HCL_ASSERT_HINT(name_it != m_outputToIoPinName.end(), "Can only record asserts for signals that are output pins!");
+	}
+
 
 	CodeFormatting &cf = m_ast->getCodeFormatting();
 
