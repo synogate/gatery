@@ -443,9 +443,11 @@ namespace gtry::scl::strm
 	{
 		T ret = in.width() * param.ratio;
 		ret = reg(ret);
-		UInt temp = zext(param.beat.value(), ret.width()) * UInt(in.width().bits()); //dumb overkill
-		HCL_NAMED(temp);
-		ret(temp, in.width()) = in;
+		//UInt temp = zext(param.beat.value(), ret.width()) * UInt(in.width().bits()); //dumb overkill
+		//HCL_NAMED(temp);
+		//ret(temp, in.width()) = in;
+		auto retParts = ret.parts(param.ratio);
+		retParts[param.beat.value()] = in;
 		return ret;
 	}
 
@@ -579,9 +581,7 @@ namespace gtry::scl::strm
 	{
 		BitWidth outW = in.width() / param.ratio;
 		T ret = outW;
-		UInt temp = zext(param.beat.value(), ret.width()) * outW.bits(); //dumb overkill
-		HCL_NAMED(temp);
-		ret = in(temp, outW);
+		ret = in.part(param.ratio, param.beat.value());
 		return ret;
 	}
 
