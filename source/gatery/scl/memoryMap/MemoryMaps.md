@@ -9,7 +9,7 @@ Gatery will handle the actual register creation, address space allocation, and a
 ## Basics
 
 The `gtry::scl::MemoryMap` interface, provides a general interface to which signals can be registered.
-On it own, performs none of the above things and can be used as a placeholder when, due to configuration, no actual memory mapped registers are desired.
+On its own, performs none of the above things and can be used as a placeholder when, due to configuration, no actual memory mapped registers are desired.
 The `gtry::scl::PackedMemoryMap` implements a memory map that performs address space allocation and automatically splits registered signals if their width exceeds the master's bus width.
 
 Signals are not registered via member functions of `gtry::scl::MemoryMap`, but through free standing functions that function analogous to `gtry::pinIn` and `gtry::pinOut`:
