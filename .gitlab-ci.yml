@@ -71,6 +71,7 @@ test-linux-coverage:
     - mkdir cov
     - anybadge -l "Build time (seconds)" -v $(cat buildLog.txt | grep "User time (seconds):" | cut -d' ' -f 4) --file cov/buildTime.svg
     - anybadge -l "Build max RSS (kB)" -v $(cat buildLog.txt | grep "Maximum resident set size (kbytes)" | cut -d' ' -f 6) --file cov/buildMaxRSS.svg
+    - anybadge -l "Lines of Code" -v $(find ./ -type f \( -iname \*.cpp -o -iname \*.h -o -iname \*.hpp \) | xargs wc -l | grep total | cut -d' ' -f 3) --file cov/linesOfCode.svg
     - lcov --directory . --zerocounters
     - bin/linux-x86_64-Coverage/gatery-frontend-test -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/
     - bin/linux-x86_64-Coverage/gatery-scl-test -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/
