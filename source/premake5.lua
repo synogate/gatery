@@ -7,7 +7,7 @@ function GateryWorkspaceDefaults()
     flags { "MultiProcessorCompile" }
     cppdialect "c++20"
 
-    defines { "_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING" }
+    defines { "_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING", "_SILENCE_CXX23_DENORM_DEPRECATION_WARNING" }
 
     filter "configurations:Debug"
         runtime "Debug"
