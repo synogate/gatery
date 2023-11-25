@@ -176,8 +176,8 @@ namespace gtry
 	{
 		struct PinVisitor : CompoundNameVisitor
 		{
-			void reverse() final;
-			void operator () (ElementarySignal& vec) final;
+			void reverse();
+			virtual void elementaryOnly(ElementarySignal& vec) override final;
 
 			const PinNodeParameter* params = nullptr;
 			bool isReverse = false;
@@ -188,9 +188,7 @@ namespace gtry
 	{
 		internal::PinVisitor v;
 		v.params = &params;
-		v.enter(prefix);
-		VisitCompound<std::remove_reference_t<decltype(signal)>>{}(signal, v);
-		v.leave();
+		reccurseCompoundMembers(signal, v, prefix);
 	}
 
 	void pinOut(Signal auto&& signal, std::string prefix, const PinNodeParameter& params)
@@ -198,8 +196,6 @@ namespace gtry
 		internal::PinVisitor v;
 		v.params = &params;
 		v.reverse();
-		v.enter(prefix);
-		VisitCompound<std::remove_reference_t<decltype(signal)>>{}(signal, v);
-		v.leave();
+		reccurseCompoundMembers(signal, v, prefix);
 	}
 }

@@ -58,6 +58,9 @@ namespace gtry {
 		// These must be here since they are implicitly deleted due to the cop and move ctors
 		UInt& operator = (const UInt &rhs) { BaseBitVector::operator=(rhs); return *this; }
 		UInt& operator = (UInt&& rhs) { BaseBitVector::operator=(std::move(rhs)); return *this; }
+
+		virtual BVec toBVec() const override;
+		virtual void fromBVec(const BVec &bvec) override;
 	};
 
 	UInt ext(const Bit& bit, BitWidth extendedWidth, Expansion policy);

@@ -20,41 +20,16 @@
 
 namespace gtry
 {
-
-	void CompoundVisitor::enterPackStruct()
-	{
-	}
-
-	void CompoundVisitor::enterPackContainer()
-	{
-	}
-
-	void CompoundVisitor::leavePack()
-	{
-	}
-
-	void CompoundVisitor::enter(std::string_view name)
-	{
-	}
-
-	void CompoundVisitor::leave()
-	{
-	}
-
-	void CompoundVisitor::reverse()
-	{
-	}
-
-	void CompoundNameVisitor::enter(std::string_view name)
+	void CompoundNameVisitor::enterName(std::string_view name)
 	{
 		m_names.push_back(name);
-		CompoundVisitor::enter(name);
+		DefaultCompoundVisitor::enterName(name);
 	}
 
 	void CompoundNameVisitor::leave()
 	{
 		m_names.pop_back();
-		CompoundVisitor::leave();
+		DefaultCompoundVisitor::leave();
 	}
 
 	std::string CompoundNameVisitor::makeName() const

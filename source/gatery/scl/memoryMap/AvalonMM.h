@@ -18,25 +18,26 @@
 #pragma once
 #include "MemoryMap.h"
 
+#if 0
 namespace gtry::scl
 {
+
+	/// @deprecated Use the stand alone functions to connect command streams.
 	class AvalonMMSlave : public MemoryMap
 	{
 	public:
 		AvalonMMSlave(BitWidth addrWidth, BitWidth dataWidth);
 
-		virtual void ro(const UInt& value, RegDesc desc);
-		virtual void ro(const Bit& value, RegDesc desc);
-		virtual Bit rw(UInt& value, RegDesc desc);
-		virtual Bit rw(Bit& value, RegDesc desc);
+		virtual void ro(const BVec& value, RegDesc desc);
+		virtual Bit rw(BVec& value, RegDesc desc);
 
 		virtual void enterScope(std::string scope) override;
 		virtual void leaveScope() override;
 
 		UInt address;
 		Bit write;
-		UInt writeData;
-		UInt readData;
+		BVec writeData;
+		BVec readData;
 
 		std::vector<RegDesc> addressMap;
 
@@ -49,3 +50,4 @@ namespace gtry::scl
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::AvalonMMSlave, address, write, writeData, readData);
+#endif

@@ -19,8 +19,12 @@
 
 #include "Pin.h"
 #include "Signal.h"
+
 #include "Bit.h"
 #include "UInt.h"
+#include "SInt.h"
+#include "BVec.h"
+#include "Enum.h"
 
 #include "ReadSignalList.h"
 

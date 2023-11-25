@@ -20,6 +20,7 @@
 #include "RAM64M8.h"
 
 #include <gatery/frontend/UInt.h>
+#include <gatery/frontend/SInt.h>
 #include <gatery/frontend/Pack.h>
 
 #include <gatery/utils/Exceptions.h>

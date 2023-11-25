@@ -18,6 +18,7 @@
 #pragma once
 #include "Signal.h"
 #include "Compound.h"
+#include "ConstructFrom.h"
 
 namespace gtry
 {
@@ -33,7 +34,7 @@ namespace gtry
 		Reverse(Reverse&& rhs);
 		
 		template<class TArg>
-		Reverse(TArg&& arg) : m_obj(std::forward<TArg>(arg)) {}
+		Reverse(TArg&& arg) : m_obj{ std::forward<TArg>(arg) } {}
 
 		Reverse& operator = (const Reverse&) = delete;
 		Reverse& operator = (Reverse&&);
@@ -70,21 +71,24 @@ namespace gtry
 	template<typename T>
 	struct VisitCompound<Reverse<T>>
 	{
-		void operator () (Reverse<T>& a, const Reverse<T>& b, CompoundVisitor& v, size_t flags)
+		template<CompoundAssignmentVisitor Visitor>
+		void operator () (Reverse<T>& a, const Reverse<T>& b, Visitor& v)
 		{
 			v.reverse();
-			VisitCompound<std::remove_cvref_t<T>>{}(*a, *b, v, flags);
+			VisitCompound<std::remove_cvref_t<T>>{}(*a, *b, v);
 			v.reverse();
 		}
 
-		void operator () (Reverse<T>& a, CompoundVisitor& v)
+		template<CompoundUnaryVisitor Visitor>
+		void operator () (Reverse<T>& a, Visitor& v)
 		{
 			v.reverse();
 			VisitCompound<std::remove_cvref_t<T>>{}(*a, v);
 			v.reverse();
-			}
+		}
 
-		void operator () (const Reverse<T>& a, const Reverse<T>& b, CompoundVisitor& v)
+		template<CompoundBinaryVisitor Visitor>
+		void operator () (const Reverse<T>& a, const Reverse<T>& b, Visitor& v)
 		{
 			v.reverse();
 			VisitCompound<std::remove_cvref_t<T>>{}(*a, *b, v);

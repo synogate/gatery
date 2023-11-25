@@ -8,7 +8,7 @@
 		<Intrinsic Name="name" Expression="in()->m_name"/>
 		
 		<DisplayString Condition="!node()">uninitialized</DisplayString>
-		<DisplayString>{m_range.width}b {*in()}</DisplayString>
+		<DisplayString>{m_width} {*in()}</DisplayString>
 		
 		<Expand>
 			<Item Name="range">m_range</Item>

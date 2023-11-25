@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2023 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -16,33 +16,29 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-#include <gatery/frontend.h>
-#include "tilelink.h"
+
+#include <gatery/frontend/BitWidth.h>
+#include <gatery/frontend/Reverse.h>
+#include <gatery/scl/tilelink/tilelink.h>
+
 
 namespace gtry::scl
 {
-	class TileLinkStreamFetch
-	{
-	public:
-		struct Command
-		{
-			UInt address;
-			UInt beats;
-		};
+	class PackedMemoryMap;
 
-	public:
-		TileLinkStreamFetch();
-
-		TileLinkStreamFetch& pause(Bit condition) { m_pauseFetch = condition; return *this; }
-
-		//TODO: it supports multiple requests in parallel, but the responses are not guaranteed to be in order if the slave is not in order
-		virtual TileLinkUL generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut, BitWidth sourceW = 0_b);
-	private:
-		Area m_area = {"scl_TileLinkStreamFetch", true};
-		std::optional<Bit> m_pauseFetch;
-	};
+	template<class... Capability> struct TileLinkU;
+	using TileLinkUL = TileLinkU<>;
 
 
+/**
+ * @addtogroup gtry_scl_memorymaps
+ * @{
+ */
+
+
+	/// Turns a memory map into a TileLinkUL slave, allowing the registers to be accessed by the tilelink bus.
+	Reverse<TileLinkUL> toTileLinkUL(PackedMemoryMap &memoryMap, BitWidth busWidth);
+
+
+/**@}*/
 }
-
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkStreamFetch::Command, address, beats);

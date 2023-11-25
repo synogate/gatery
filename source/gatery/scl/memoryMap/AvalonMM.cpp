@@ -18,6 +18,8 @@
 #include "gatery/pch.h"
 #include "AvalonMM.h"
 
+#if 0
+
 namespace gtry::scl
 {
 	AvalonMMSlave::AvalonMMSlave(BitWidth addrWidth, BitWidth dataWidth) :
@@ -47,7 +49,7 @@ namespace gtry::scl
 		addressMap.push_back(d);
 	}
 
-	void AvalonMMSlave::ro(const UInt& value, RegDesc desc)
+	void AvalonMMSlave::ro(const BVec& value, RegDesc desc)
 	{
 		desc.flags = F_READ;
 		if (!scopeStack.empty()) desc.scope = scopeStack.back();
@@ -65,16 +67,7 @@ namespace gtry::scl
 		}
 	}
 
-	void AvalonMMSlave::ro(const Bit& value, RegDesc desc)
-	{
-		desc.flags = F_READ;
-		if (!scopeStack.empty()) desc.scope = scopeStack.back();
-		IF(address == addressMap.size())
-			readData = zext(value);
-		addressMap.push_back(desc);
-	}
-
-	Bit AvalonMMSlave::rw(UInt& value, RegDesc desc)
+	Bit AvalonMMSlave::rw(BVec& value, RegDesc desc)
 	{
 		desc.flags = F_READ | F_WRITE;
 		if (!scopeStack.empty()) desc.scope = scopeStack.back();
@@ -102,28 +95,6 @@ namespace gtry::scl
 		return selected;
 	}
 
-	Bit AvalonMMSlave::rw(Bit& value, RegDesc desc)
-	{
-		desc.flags = F_READ | F_WRITE;
-		if (!scopeStack.empty()) desc.scope = scopeStack.back();
-		Bit selected = '0';
-
-		IF(address == addressMap.size())
-		{
-			readData = zext(value);
-			IF(write)
-			{
-				selected = '1';
-				value = writeData[0];
-			}
-		}
-		setName(selected, desc.name + "_selected");
-		setName(value, desc.name);
-
-		addressMap.push_back(desc);
-		return selected;
-	}
-
 	void AvalonMMSlave::enterScope(std::string scope)
 	{
 		if (!scopeStack.empty())
@@ -144,3 +115,5 @@ namespace gtry::scl
 	}
 
 }
+
+#endif

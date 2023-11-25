@@ -60,6 +60,9 @@ namespace gtry {
 
 		Bit& sign() { return msb(); }
 		const Bit& sign() const { return msb(); }
+
+		virtual BVec toBVec() const override;
+		virtual void fromBVec(const BVec &bvec) override;
 	};
 
 	SInt ext(const SInt& bvec, BitWidth extendedWidth, Expansion policy);

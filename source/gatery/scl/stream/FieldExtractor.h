@@ -54,6 +54,9 @@ namespace gtry::scl
 	{
 		Area area("fieldExtractor", true);
 
+		using PacketStream = Stream<BVec, MetaInput...>;
+		using Output = Stream<gtry::Vector<BVec>, MetaOutput...>;
+
 		BitWidth beatWidth = packetStream->width();
 
 		// Figure out the last beat to be able to size the beat counter correctly
@@ -89,7 +92,7 @@ namespace gtry::scl
 		Reg<Bit> packetFullyIngested('0');
 		packetFullyIngested.setName("packetFullyIngested");
 		Reg<UInt> txidStore;
-		if constexpr (packetStream.template has<TxId>()) {
+		if constexpr (PacketStream::template has<TxId>()) {
 			txidStore.constructFrom(txid(packetStream));
 			txidStore.setName("txidStore");
 		}
@@ -115,7 +118,7 @@ namespace gtry::scl
 				// If there is no Empty field, then at this point we have everything to fully
 				// extract all fields. If there is an empty field, and if this is the EOP (where Empty is valid), 
 				// then we need to check if this beat actually contains sufficient bytes for all fields.
-				if constexpr (packetStream.template has<Empty>()) {
+				if constexpr (PacketStream::template has<Empty>()) {
 					size_t requiredBytes = (requiredBitsInLastHeaderBeat + 7) / 8;
 					size_t maxEmptyBytes = packetStream->size() / 8 - requiredBytes;
 					fieldsExtracted = !eop(packetStream) | (empty(packetStream) <= maxEmptyBytes);
@@ -135,12 +138,12 @@ namespace gtry::scl
 			}
 
 			// Since we may transmit the output after the packet has been fully ingested, we may have to remember the txid
-			if constexpr (packetStream.template has<TxId>())
+			if constexpr (PacketStream::template has<TxId>())
 				txidStore = txid(packetStream);
 		}
 
 		// Potentially forward additional fields
-		if constexpr (output.template has<TxId>() && packetStream.template has<TxId>())
+		if constexpr (Output::template has<TxId>() && PacketStream::template has<TxId>())
 			txid(output) = txidStore.combinatorial();
 
 

@@ -23,6 +23,7 @@
 
 #include <gatery/simulation/Simulator.h>
 
+#include <gatery/scl/stream/SimuHelpers.h>
 #include <gatery/scl/memory/sdram.h>
 #include <gatery/scl/memory/SdramTimer.h>
 #include <gatery/scl/memory/MemoryTester.h>
@@ -486,19 +487,19 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_init_test, SdramControllerTest)
 		co_await OnClk(clock());
 		issueWrite(0, 4, 1);
 		simu(link.a->data) = 0xCDCD;
-		co_await scl::performTransferWait(link.a, clock());
+		co_await performTransferWait(link.a, clock());
 		simu(link.a->data) = 0xCECE;
-		co_await scl::performTransferWait(link.a, clock());
+		co_await performTransferWait(link.a, clock());
 
 
 		issueRead(0, 2);
-		co_await scl::performTransferWait(link.a, clock());
+		co_await performTransferWait(link.a, clock());
 
 		issueRead(0, 4);
-		co_await scl::performTransferWait(link.a, clock());
+		co_await performTransferWait(link.a, clock());
 
 		issueRead(512, 1);
-		co_await scl::performTransferWait(link.a, clock());
+		co_await performTransferWait(link.a, clock());
 		simu(valid(link.a)) = '0';
 
 		for (size_t i = 0; i < 16; ++i)

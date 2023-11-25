@@ -81,7 +81,7 @@ namespace gtry::scl::strm
 	class SimuStreamPerformTransferWait {
 	public:
 		SimProcess wait(const T& stream, const Clock& clock) {
-			if constexpr (stream.template has<Sop>()) {
+			if constexpr (T::template has<Sop>()) {
 				if (!m_isInPacket){
 					do
 						co_await performTransferWait(stream, clock);
@@ -194,6 +194,8 @@ namespace gtry::scl::strm
 				.add(Ready{})
 				.add(Error{ error(source) });
 
+			using Ret = decltype(ret);
+
 			Bit hadError = flag(valid(source) & !ready(ret), transfer(ret) & eop(ret));
 			HCL_NAMED(hadError);
 			error(ret) |= hadError;
@@ -204,7 +206,7 @@ namespace gtry::scl::strm
 			HCL_NAMED(hadUnhandledEop);
 			IF(hadUnhandledEop & !valid(source))
 			{
-				if constexpr (ret.template has<Valid>())
+				if constexpr (Ret::template has<Valid>())
 					valid(ret) = '1';
 				eop(ret) = '1';
 			}
@@ -278,9 +280,10 @@ namespace gtry::scl::strm
 	template<BaseSignal Payload, Signal... Meta>
 	UInt streamBeatBitLength(const Stream<Payload, Meta...>& in)
 	{
+		using In = Stream<Payload, Meta...>;
 		UInt len = in->width().bits();
 
-		if constexpr (in.template has<scl::EmptyBits>())
+		if constexpr (In::template has<scl::EmptyBits>())
 		{
 			IF(eop(in))
 				len = in->width().bits() - zext(in.template get<scl::EmptyBits>().emptyBits);
@@ -308,11 +311,11 @@ namespace gtry::scl::strm
 
 		Bit baseShiftReset = !valid(bitOffset);											HCL_NAMED(baseShiftReset);
 		UInt baseShift = insertBitOffset.width();										HCL_NAMED(baseShift);
-		RvPacketStream baseShifted = streamShiftLeft(base, baseShift, baseShiftReset);	HCL_NAMED(baseShifted);
-		RvPacketStream insertShifted = streamShiftLeft(insert, insertBitOffset);		HCL_NAMED(insertShifted);
+		auto baseShifted = streamShiftLeft(base, baseShift, baseShiftReset);	HCL_NAMED(baseShifted);
+		auto insertShifted = streamShiftLeft(insert, insertBitOffset);		HCL_NAMED(insertShifted);
 		Bit insertShiftedShouldDelayEop = valid(insert) & eop(insert) & zext(emptyBits(insert)) < zext(insertBitOffset); HCL_NAMED(insertShiftedShouldDelayEop);
 
-		RvPacketStream out = constructFrom(baseShifted);
+		auto out = constructFrom(baseShifted);
 		UInt beatCounter = streamPacketBeatCounter(out, insertBeat.width());			HCL_NAMED(beatCounter);
 
 		IF(transfer(out) & eop(out))

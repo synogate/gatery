@@ -306,7 +306,7 @@ protected:
 				simu(valid(stream)) = '1';
 				simu(*stream) = i + group * m_transfers;
 
-				co_await scl::performTransferWait(stream, m_clock);
+				co_await performTransferWait(stream, m_clock);
 			}
 			simu(valid(stream)) = '0';
 			simu(*stream).invalidate();
@@ -317,7 +317,7 @@ protected:
 	void simulateSendData(scl::Stream<UInt, Meta...>& stream, size_t group)
 	{
 		addSimulationProcess([=, this, &stream]()->SimProcess {
-			if constexpr (stream.template has<scl::Error>())
+			if constexpr (std::remove_reference_t<decltype(stream)>::template has<scl::Error>())
 				simu(error(stream)) = '0';
 
 			std::mt19937 rng{ std::random_device{}() };
@@ -335,7 +335,8 @@ protected:
 	template<class... Meta>
 	SimProcess sendDataPacket(scl::Stream<UInt, Meta...>& stream, size_t group, size_t packetOffset, size_t packetLen, uint64_t invalidBeats = 0)
 	{
-		constexpr bool hasValid = stream.template has<scl::Valid>();
+		using StreamT = scl::Stream<UInt, Meta...>;
+		constexpr bool hasValid = StreamT::template has<scl::Valid>();
 		for (size_t j = 0; j < packetLen; ++j)
 		{
 			simu(eop(stream)).invalidate();
@@ -357,7 +358,7 @@ protected:
 			simu(eop(stream)) = j == packetLen - 1;
 			simu(*stream) = packetOffset + j + group * m_transfers;
 
-			co_await scl::performTransferWait(stream, m_clock);
+			co_await performTransferWait(stream, m_clock);
 		}
 
 		if (!hasValid)
@@ -385,7 +386,7 @@ protected:
 					simu(eop(stream)) = j == packetLen - 1;
 					simu(*stream) = i + j + group * m_transfers;
 
-					co_await scl::performTransferWait(stream, m_clock);
+					co_await performTransferWait(stream, m_clock);
 				}
 				i += packetLen;
 			}
@@ -753,7 +754,7 @@ BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 				simu(valid(in)) = '1';
 				simu(*in) = (i >> (j * 4)) & 0xF;
 
-				co_await scl::performTransferWait(in, m_clock);
+				co_await performTransferWait(in, m_clock);
 			}
 		}
 		});
@@ -793,7 +794,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth, StreamTransferFixture)
 				((i * 3 + 1) << 8) |
 				((i * 3 + 2) << 16);
 
-			co_await scl::performTransferWait(in, m_clock);
+			co_await performTransferWait(in, m_clock);
 		}
 	});
 
@@ -827,7 +828,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth_RvPacketStream, StreamTransferFixture
 				((i * 3 + 1) << 8) |
 				((i * 3 + 2) << 16);
 
-			co_await scl::performTransferWait(in, m_clock);
+			co_await performTransferWait(in, m_clock);
 		}
 	});
 
@@ -864,7 +865,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
 				simu(*in) = uint8_t(i + j - 1);
 				simu(eop(in)) = j == 4;
 
-				co_await scl::performTransferWait(in, m_clock);
+				co_await performTransferWait(in, m_clock);
 			}
 		}
 	});
@@ -902,7 +903,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseLastBeat, StreamTransferFixture)
 				simu(*in) = uint8_t(i + j);
 				simu(eop(in)) = j == 4;
 
-				co_await scl::performTransferWait(in, m_clock);
+				co_await performTransferWait(in, m_clock);
 			}
 		}
 	});
@@ -942,7 +943,7 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 				simu(*in) = uint8_t(i + j + 1);
 				simu(eop(in)) = j == 2;
 
-				co_await scl::performTransferWait(in, m_clock);
+				co_await performTransferWait(in, m_clock);
 			}
 		}
 	});
@@ -1267,14 +1268,14 @@ BOOST_FIXTURE_TEST_CASE(addReadyAndFailOnBackpressure_test, StreamTransferFixtur
 
 		// simple packet passthrough test
 		fork(sendDataPacket(in, 0, 0, 3));
-		do co_await scl::performTransferWait(out, m_clock);
+		do co_await performTransferWait(out, m_clock);
 		while(simu(eop(out)) == '0');
 		BOOST_TEST(simu(error(out)) == '0');
 
 		// simple error passthrough test
 		fork(sendDataPacket(in, 0, 0, 3));
 		simu(error(in)) = '1';
-		do co_await scl::performTransferWait(out, m_clock);
+		do co_await performTransferWait(out, m_clock);
 		while (simu(eop(out)) == '0');
 		BOOST_TEST(simu(error(out)) == '1');
 		simu(error(in)) = '0';
@@ -1291,7 +1292,7 @@ BOOST_FIXTURE_TEST_CASE(addReadyAndFailOnBackpressure_test, StreamTransferFixtur
 
 		// next packet after error should be valid
 		fork(sendDataPacket(in, 0, 0, 3));
-		do co_await scl::performTransferWait(out, m_clock);
+		do co_await performTransferWait(out, m_clock);
 		while (simu(eop(out)) == '0');
 		BOOST_TEST(simu(error(out)) == '0');
 
@@ -1311,7 +1312,7 @@ BOOST_FIXTURE_TEST_CASE(addReadyAndFailOnBackpressure_test, StreamTransferFixtur
 
 		// next packet after error should be valid
 		fork(sendDataPacket(in, 0, 0, 3));
-		do co_await scl::performTransferWait(out, m_clock);
+		do co_await performTransferWait(out, m_clock);
 		while (simu(eop(out)) == '0');
 		BOOST_TEST(simu(error(out)) == '0');
 
@@ -1326,7 +1327,7 @@ BOOST_FIXTURE_TEST_CASE(addReadyAndFailOnBackpressure_test, StreamTransferFixtur
 		simu(ready(out)) = '1';
 
 		fork(sendDataPacket(in, 0, 0, 3));
-		do co_await scl::performTransferWait(out, m_clock);
+		do co_await performTransferWait(out, m_clock);
 		while (simu(eop(out)) == '0');
 		BOOST_TEST(simu(error(out)) == '1');
 
@@ -1435,7 +1436,7 @@ BOOST_FIXTURE_TEST_CASE(store_forward_fifo_fuzz, BoostUnitTestSimulationFixture)
 	std::mt19937 rng{ 12524 };
 
 	scl::RvPacketStream<BVec, scl::Error> inPacketStream{ 8_b };
-	scl::RvPacketStream outPacketStream = storeForwardFifo(inPacketStream, 16);
+	auto outPacketStream = storeForwardFifo(inPacketStream, 16);
 	pinIn(inPacketStream, "inPacketStream");
 	pinOut(outPacketStream, "outPacketStream");
 
@@ -1526,7 +1527,7 @@ BOOST_FIXTURE_TEST_CASE(streamBroadcaster, BoostUnitTestSimulationFixture)
 			});
 
 			for (auto &b : allData) {
-				co_await scl::performTransferWait(stream, clk);
+				co_await performTransferWait(stream, clk);
 				BOOST_TEST(simu(*stream) == b);
 			}
 			numDone++;
@@ -1544,7 +1545,7 @@ BOOST_FIXTURE_TEST_CASE(streamBroadcaster, BoostUnitTestSimulationFixture)
 
 		for (auto &b : allData) {
 			simu(*inStream) = b;
-			co_await scl::performTransferWait(inStream, clk);
+			co_await performTransferWait(inStream, clk);
 		}
 
 		while (numDone != 2)
@@ -1567,7 +1568,7 @@ BOOST_FIXTURE_TEST_CASE(streamShiftLeft_test, BoostUnitTestSimulationFixture)
 	scl::RvPacketStream<BVec, scl::Empty> in{ 16_b };
 	empty(in) = 1_b;
 
-	scl::RvPacketStream out = streamShiftLeft(in, shift);
+	auto out = streamShiftLeft(in, shift);
 	pinIn(in, "in");
 	pinOut(out, "out");
 
@@ -1610,7 +1611,7 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_test, BoostUnitTestSimulationFixture)
 	scl::RvStream<UInt> inOffset{ 8_b };
 	scl::RvPacketStream<BVec> inBase{ 16_b };
 	scl::RvPacketStream<BVec> inInsert{ 16_b };
-	scl::RvPacketStream out = scl::strm::insert(move(inBase), std::move(inInsert), std::move(inOffset));
+	auto out = scl::strm::insert(move(inBase), std::move(inInsert), std::move(inOffset));
 
 	pinIn(inOffset, "inOffset");
 	pinIn(inBase, "inBase");
@@ -1653,7 +1654,7 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_fuzz_test, BoostUnitTestSimulationFixture)
 	for (scl::RvPacketStream<BVec, scl::EmptyBits>& in : { std::ref(inBase), std::ref(inInsert) })
 		in.template get<scl::EmptyBits>().emptyBits = BitWidth::count(inBase->width().bits());
 
-	scl::RvPacketStream out = scl::strm::insert(move(inBase), std::move(inInsert), std::move(inOffset));
+	auto out = scl::strm::insert(move(inBase), std::move(inInsert), std::move(inOffset));
 
 	pinIn(inOffset, "inOffset");
 	pinIn(inBase, "inBase");
@@ -1719,7 +1720,7 @@ BOOST_FIXTURE_TEST_CASE(streamDropPacket_test, BoostUnitTestSimulationFixture)
 	scl::RvPacketStream<BVec> in{ 8_b };
 	pinIn(in, "in");
 
-	scl::RvPacketStream out = scl::strm::dropPacket(move(in), drop);
+	auto out = scl::strm::dropPacket(move(in), drop);
 	pinOut(out, "out");
 
 	std::queue<scl::strm::SimPacket> expected;

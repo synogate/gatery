@@ -702,7 +702,7 @@ struct FieldExtractionTest : public BoostUnitTestSimulationFixture
 			size_t packetIdx = 0;
 			for (const auto& packet : allPackets) {
 
-				co_await scl::performTransferWait(out, packetTestclk);
+				co_await performTransferWait(out, packetTestclk);
 
 				if constexpr (StreamType::template has<scl::TxId>()) {
 					BOOST_TEST(simu(txid(out)) == packet.txid());

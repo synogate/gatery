@@ -210,7 +210,7 @@ namespace gtry::scl::strm
 	//untested
 	inline auto pipeinputDownstream(PipeBalanceGroup& group)
 	{
-		return [=](auto&& in) { return pipeinputDownstream(std::forward<decltype(in)>(in), group); };
+		return [&group](auto&& in) { return pipeinputDownstream(std::forward<decltype(in)>(in), group); };
 	}
 
 	using gtry::pipeinput;
@@ -241,7 +241,7 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	inline StreamT regDownstreamBlocking(StreamT&& in, const RegisterSettings& settings)
 	{
-		if constexpr (in.template has<Valid>())
+		if constexpr (StreamT::template has<Valid>())
 			valid(in).resetValue('0');
 
 		auto dsSig = constructFrom(copy(downstream(in)));
@@ -260,15 +260,15 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	inline StreamT regReady(StreamT &&in, const RegisterSettings& settings)
 	{
-		if constexpr (in.template has<Valid>())
+		if constexpr (StreamT::template has<Valid>())
 			valid(in).resetValue('0');
-		if constexpr (in.template has<Ready>())
+		if constexpr (StreamT::template has<Ready>())
 			ready(in).resetValue('0');
 
 		StreamT ret = constructFrom(in);
 		ret <<= in;
 
-		if constexpr (in.template has<Ready>())
+		if constexpr (StreamT::template has<Ready>())
 		{
 			Bit valid_reg;
 			auto data_reg = constructFrom(copy(downstream(in)));
@@ -301,12 +301,12 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	inline StreamT regDownstream(StreamT &&in, const RegisterSettings& settings)
 	{
-		if constexpr (in.template has<Valid>())
+		if constexpr (StreamT::template has<Valid>())
 			valid(in).resetValue('0');
 
 		StreamT ret;
 
-		if constexpr (in.template has<Ready>())
+		if constexpr (StreamT::template has<Ready>())
 		{
 			Bit valid_reg;
 			auto dsSig = constructFrom(copy(downstream(in)));
@@ -420,7 +420,7 @@ namespace gtry::scl::strm
 		out->resetNode();
 		*out = source->part(ratio, counter.value());
 
-		if constexpr (out.template has<ByteEnable>())
+		if constexpr (T::template has<ByteEnable>())
 		{
 			BVec& be = byteEnable(out);
 			BitWidth w = be.width() / ratio;
@@ -428,9 +428,9 @@ namespace gtry::scl::strm
 			be = byteEnable(source)(zext(counter.value(), +w) * w.bits(), w);
 		}
 
-		if constexpr (out.template has<Eop>())
+		if constexpr (T::template has<Eop>())
 			eop(out) &= counter.isLast();
-		if constexpr (out.template has<Sop>())
+		if constexpr (T::template has<Sop>())
 			sop(out) &= counter.isFirst();
 
 		HCL_NAMED(out);
@@ -560,7 +560,7 @@ namespace gtry::scl::strm
 	template<StreamSignal T>
 	T regDecouple(const T& stream, const RegisterSettings& settings)
 	{
-		static_assert(!stream.template has<Ready>(), "cannot create upstream register from const stream");
+		static_assert(!T::template has<Ready>(), "cannot create upstream register from const stream");
 		return strm::regDownstream(stream, settings);
 	}
 
@@ -624,7 +624,7 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	inline StreamT pipeinputDownstream(StreamT&& in, PipeBalanceGroup& group)
 	{
-		if constexpr (in.template has<Valid>())
+		if constexpr (StreamT::template has<Valid>())
 			valid(in).resetValue('0');
 
 		StreamT ret;
@@ -682,51 +682,4 @@ namespace gtry::scl::strm
 		ready(shiftStreams.back()) = '0';
 		return popStreams;
 	}
-}
-
-namespace gtry::scl {
-	namespace internal
-	{
-		template<StreamSignal T>
-		SimProcess performTransferWait(const T& stream, const Clock& clock) {
-			co_await OnClk(clock);
-		}
-
-		template<StreamSignal T> requires (T::template has<Ready>() && !T::template has<Valid>())
-			SimProcess performTransferWait(const T& stream, const Clock& clock) {
-			do
-				co_await OnClk(clock);
-			while (!simu(ready(stream)));
-		}
-
-		template<StreamSignal T> requires (!T::template has<Ready>() && T::template has<Valid>())
-			SimProcess performTransferWait(const T& stream, const Clock& clock) {
-			do
-				co_await OnClk(clock);
-			while (!simu(valid(stream)));
-		}
-
-		template<StreamSignal T> requires (T::template has<Ready>() && T::template has<Valid>())
-			SimProcess performTransferWait(const T& stream, const Clock& clock) {
-			do
-				co_await OnClk(clock);
-			while (!simu(ready(stream)) || !simu(valid(stream)));
-		}
-	}
-	SimProcess performTransferWait(const StreamSignal auto& stream, const Clock& clock) { return internal::performTransferWait(stream, clock); }
-
-	template<StreamSignal T>
-	SimProcess performTransfer(const T& stream, const Clock& clock) 
-	{
-		co_await OnClk(clock);
-	}
-
-	template<StreamSignal T> requires (T::template has<Valid>())
-		SimProcess performTransfer(const T& stream, const Clock& clock) 
-	{
-		simu(valid(stream)) = '1';
-		co_await performTransferWait(stream, clock);
-		simu(valid(stream)) = '0';
-	}
-	namespace strm{using scl::performTransferWait;}
 }

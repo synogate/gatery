@@ -80,10 +80,10 @@ namespace gtry::scl {
 		}
 
 		scl::RvStream<TileLinkD> writeRes = strm::pop(writeRequestFifo);
-		scl::RvStream writeResBuffered = strm::regDownstream(move(writeRes));
+		auto writeResBuffered = strm::regDownstream(move(writeRes));
 
 		scl::RvStream<TileLinkD> readRes = strm::pop(readRequestFifo);
-		scl::RvStream readResBuffered = strm::regDownstream(move(readRes));
+		auto readResBuffered = strm::regDownstream(move(readRes));
 
 
 		Bit responseReady = *avmm.read;
@@ -95,13 +95,13 @@ namespace gtry::scl {
 		HCL_NAMED(responseReady);
 
 		HCL_DESIGNCHECK_HINT(avmm.readData, "These interfaces are not compatible. There is no readData field in your AMM interface");
-		scl::RvStream<UInt> readData(*avmm.readData);
+		scl::RvStream<UInt> readData{ *avmm.readData };
 		valid(readData) = responseReady;
 		ready(ret.a) &= ready(readData);
 
 		scl::RvStream<UInt> readDataFifo = strm::fifo(move(readData), maxReadRequestsInFlight, scl::FallThrough::on);
 
-		scl::RvStream readResStalled = strm::stall(move(readResBuffered), !valid(readDataFifo));
+		auto readResStalled = strm::stall(move(readResBuffered), !valid(readDataFifo));
 		ready(readDataFifo) = ready(readResStalled);
 
 

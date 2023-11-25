@@ -20,6 +20,7 @@
 #include "Signal.h"
 #include "Bit.h"
 #include "UInt.h"
+#include "BVec.h"
 
 #include <gatery/hlim/NodePtr.h>
 #include <gatery/utils/Exceptions.h>
@@ -138,9 +139,12 @@ namespace gtry {
 
 		constexpr BitWidth width() const override final;
 
+		virtual BVec toBVec() const override { return (BVec) numericalValue(); }
+		virtual void fromBVec(const BVec &bvec) override { (*this) = Enum<T>((UInt)bvec); }
+
 	protected:
 		virtual void createNode() override;
-		void assign(T);
+		void assignEnum(T);
 	private:
 		std::optional<T> m_resetValue;
 	};
@@ -251,7 +255,7 @@ namespace gtry {
 	template<EnumType T>
 	Enum<T>::Enum(T v) {
 		createNode();
-		assign(v);
+		assignEnum(v);
 	}
 
 	template<EnumType T>
@@ -271,7 +275,7 @@ namespace gtry {
 
 	template<EnumType T>
 	Enum<T>& Enum<T>::operator=(T rhs) { 
-		assign(rhs); 
+		assignEnum(rhs); 
 		return *this; 
 	}
 
@@ -303,7 +307,7 @@ namespace gtry {
 	}
 
 	template<EnumType T>
-	void Enum<T>::assign(T v) {
+	void Enum<T>::assignEnum(T v) {
 		HCL_DESIGNCHECK_HINT((size_t)v < MAGIC_ENUM_RANGE_MAX, "The values of enums adapted to signals must be within a small range defined by the Magic Enum library!");
 
 		BaseEnum::assign((size_t)v, magic_enum::enum_name(v));

@@ -84,6 +84,9 @@ namespace gtry {
 
 		void attribute(const hlim::SignalAttributes &attributes);
 
+		virtual BVec toBVec() const = 0;
+		virtual void fromBVec(const BVec &bvec) = 0;
+
 	protected:
 		size_t m_initialScopeId = 0;
 

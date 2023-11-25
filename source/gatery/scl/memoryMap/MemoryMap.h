@@ -17,56 +17,103 @@
 */
 #pragma once
 #include <gatery/frontend.h>
+#include <gatery/utils/StableContainers.h>
+
+#include <boost/flyweight.hpp>
+
+#include <ostream>
+
 
 namespace gtry::scl
 {
-	class MemoryMap
-	{
-	public:
-		struct RegDesc
-		{
-			std::string name;
-			std::string desc;
-			std::string scope;
-			size_t flags;
 
-			struct BitRange {
-				size_t offset, size;
-				std::string descShort;
-				std::string descLong;
-			};
-			std::vector<BitRange> usedRanges;
-		};
+/**
+ * @addtogroup gtry_scl_memorymaps
+ * @{
+ */
 
+
+	// Todo: Make this a tileLink thing
+	struct AddressSpaceDescription {
 		enum Flags
 		{
 			F_READ = 1,
-			F_WRITE = 2
+			F_WRITE = 2,
 		};
 
-		virtual void enterScope(std::string scope) { }
-		virtual void leaveScope() { }
+		/// Start of this field in the address space (in bits!)
+		std::uint64_t offsetInBits;
+		/// Size of this field in the address space (in bits)
+		BitWidth size;
+		/// Whether anything in this field (or the sub fields) can be read or written
+		//size_t flags = F_READ | F_WRITE;
+		/// Name of this address region
+		boost::flyweight<std::string> name;
+		/// Short description of what this address space contains
+		boost::flyweight<std::string> descShort;
+		/// Long description of what this address space contains
+		boost::flyweight<std::string> descLong;
+		/// Optional descriptions of sub-ranges in this address range
+		std::vector<boost::flyweight<AddressSpaceDescription>> children;
 
-		virtual void ro(const UInt& value, RegDesc desc) {}
-		virtual void ro(const Bit& value, RegDesc desc) {}
-		virtual Bit rw(UInt& value, RegDesc desc) { return Bit{}; }
-		virtual Bit rw(Bit& value, RegDesc desc) { return Bit{}; }
-		virtual Bit wo(UInt& value, RegDesc desc) { return rw(value, std::move(desc)); }
-		virtual Bit wo(Bit& value, RegDesc desc) { return rw(value, std::move(desc)); }
-
-		Bit add(Bit& value, RegDesc desc);
-		Bit add(UInt& value, RegDesc desc);
-
-		template<typename T> void stage(Memory<T>& mem);
-		template<typename T> void stage(std::vector<Memory<T>>& mem);
-
-		void flags(size_t f) { m_flags = f; }
-		bool readEnabled() const { return (m_flags & F_READ) != 0; }
-		bool writeEnabled() const { return (m_flags & F_WRITE) != 0; }
-
-	protected:
-		size_t m_flags = F_READ | F_WRITE;
+		auto operator<=>(const AddressSpaceDescription&) const = default;
 	};
+
+    std::size_t hash_value(AddressSpaceDescription const& d);
+
+	void format(std::ostream &stream, const AddressSpaceDescription &desc, size_t indent = 0);
+	inline std::ostream &operator<<(std::ostream &stream, const AddressSpaceDescription &desc) { format(stream, desc); return stream; }
+
+	/**
+	 * @brief Interface and no-op fallback implementation for the automatic generation of memory mapped control registers.
+	 * @details To register signals, use the @ref gtry::scl::mapIn and @ref gtry::scl::mapOut freestanding functions.
+	 * @see gtry_scl_memorymaps_page
+	 */
+	class MemoryMap
+	{
+		public:
+
+			/**
+			 * @brief Handle returned by @ref gtry::scl::mapIn and @ref gtry::scl::mapIn to determine when signals are written by the bus master.
+			 * @details Allows to query if specific members of a compound are being written by the bus master (in the cycle in which they are written).
+			 * @warning Not yet fully implemented.
+			 */
+			class SelectionHandle {
+				public:
+					static SelectionHandle NeverWritten() { SelectionHandle handle; handle.m_neverWritten = true; return handle; }
+					static SelectionHandle SingleSignal(const ElementarySignal &signal, Bit onWrite) { SelectionHandle handle; handle.m_fieldsSelected[signal.readPort()] = onWrite; return handle; }
+
+					Bit any();
+					Bit get(const ElementarySignal &s) { return m_fieldsSelected.find(s.readPort())->second; }
+
+					void joinWith(SelectionHandle &&rhs);
+				protected:
+					bool m_neverWritten = false;
+					utils::StableMap<hlim::NodePort, Bit> m_fieldsSelected;
+			};
+
+			enum Flags
+			{
+				F_READ = 1,
+				F_WRITE = 2,
+			};
+
+			virtual void enterScope(std::string_view name, const CompoundAnnotation *anotation = nullptr) { }
+			virtual void leaveScope() { }
+
+			virtual void readable(const ElementarySignal &value, std::string_view name, const CompoundMemberAnnotation *annotation = nullptr) { }
+			virtual SelectionHandle writeable(ElementarySignal &value, std::string_view name, const CompoundMemberAnnotation *annotation = nullptr) { return SelectionHandle::NeverWritten(); }
+			virtual void reserve(BitWidth width, std::string_view name) { }
+
+			void flags(size_t f) { m_flags = f; }
+			bool readEnabled() const { return (m_flags & F_READ) != 0; }
+			bool writeEnabled() const { return (m_flags & F_WRITE) != 0; }
+
+		protected:
+			size_t m_flags = F_READ | F_WRITE;
+	};
+
+#if 0
 
 	inline Bit gtry::scl::MemoryMap::add(Bit& value, RegDesc desc)
 	{
@@ -101,12 +148,12 @@ namespace gtry::scl
 	{
 		struct SigVis : CompoundNameVisitor
 		{
-			virtual void operator () (UInt& a) final
+			virtual void elementaryOnly(UInt& a) final
 			{
 				mmap->add(a, { .name = makeName() });
 			}
 
-			virtual void operator () (Bit& a) final
+			virtual void elementaryOnly(Bit& a) final
 			{
 				mmap->add(a, { .name = makeName() });
 			}
@@ -262,5 +309,7 @@ namespace gtry::scl
 			ConstUInt(v.regCount, 8_b)
 		);
 	}
+#endif
 
+/**@}*/
 }
