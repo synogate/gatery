@@ -100,8 +100,8 @@ namespace gtry::scl::pci::xilinx {
 		valid(ret) = valid(in);
 		eop(ret) = eop(in);
 
-		//keep to empty conversion:
-		UInt emptyWords = thermometricToUInt(~keep(in)).lower(-1_b); HCL_NAMED(emptyWords);
+		//dwordEnable to empty conversion:
+		UInt emptyWords = thermometricToUInt(~dwordEnable(in)).lower(-1_b); HCL_NAMED(emptyWords);
 		emptyBits(ret) = cat(emptyWords, "5b0");
 
 		setName(ret, "tlp_out");
@@ -137,7 +137,7 @@ namespace gtry::scl::pci::xilinx {
 		sim_assert(emptyBits(in).lower(5_b) == 0); // the granularity of this empty signal cannot be less than 32 bits (expect the lsb's to be completely synthesized away)
 		UInt emptyWords = emptyBits(in).upper(-5_b);
 		BVec throwAway = (BVec) cat('0', uintToThermometric(emptyWords));
-		keep(ret) = swapEndian(~throwAway, 1_b); 
+		dwordEnable(ret) = swapEndian(~throwAway, 1_b); 
 
 		setName(ret, "axi_out");
 		return ret;
