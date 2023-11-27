@@ -136,8 +136,19 @@ namespace gtry::scl::arch::xilinx {
 		in("cfg_interrupt_pending", 4_b) = 0;
 
 		in("m_axis_cq_tready") = '0';
+		
 		in("s_axis_cc_tvalid") = '0';
+		in("s_axis_cc_tdata", m_cfg.dataBusW) = 0;
+		in("s_axis_cc_tkeep", BitWidth(m_cfg.dataBusW.bits()/32)) = 0;
+		in("s_axis_cc_tlast") = '0';
+		in("s_axis_cc_tuser", m_cfg.dataBusW == 512_b ? 81_b : 33_b) = 0;
+
 		in("m_axis_rc_tready") = '0';
+
 		in("s_axis_rq_tvalid") = '0';
+		in("s_axis_rq_tdata", m_cfg.dataBusW) = 0;
+		in("s_axis_rq_tkeep", BitWidth(m_cfg.dataBusW.bits()/32)) = 0;
+		in("s_axis_rq_tlast") = '0';
+		in("s_axis_rq_tuser", m_cfg.dataBusW == 512_b ? 183_b : 62_b) = 0;
 	}
 }
