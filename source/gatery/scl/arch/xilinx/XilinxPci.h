@@ -27,7 +27,7 @@ namespace gtry::scl::pci::xilinx {
 	
 	/** @brief amd axi4 generic packet stream */
 	template<Signal ...Meta>
-	using Axi4PacketStream = RvPacketStream<BVec, Keep, Meta...>;
+	using Axi4PacketStream = RvPacketStream<BVec, DwordEnable, Meta...>;
 	
 	/**
 	* @brief functions to convert between amd's proprietary tlp packet format to a Gatery Tlp Packet Stream
