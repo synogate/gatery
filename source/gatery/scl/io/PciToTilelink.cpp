@@ -108,7 +108,7 @@ namespace gtry::scl::pci {
 
 		valid(complCompl) = valid(d) & (d->hasData() | ans.error);
 		eop(complCompl) = '1';
-		emptyBits(complCompl) = 512 - 4 * 32;
+		emptyBits(complCompl) = tlpStreamW.bits() - 4 * 32;
 		ready(d) = ready(complCompl) | (valid(d) & !d->hasData());
 
 		return complCompl;
