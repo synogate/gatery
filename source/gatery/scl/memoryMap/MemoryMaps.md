@@ -154,11 +154,10 @@ This valid register *automatically deasserts* upon transfer (e.g. when the recei
 The valid register is also readable, allowing the bus master to poll and check for its deassertion before preparing the next transfer.
 
 For `gtry::scl::mapOut`-ed streams, i.e. streams being consumed by the bus master, the roles are reversed.
-The bus master initiates a transfer by writing `1` to the address of the ready register.
-This ready register *automatically deasserts* upon transfer (e.g. when the sender asserts valid).
-The ready register is also readable, allowing the bus master to poll and check for its deassertion in order to wait for the data to arrive.
-Upon transfer, the stream payload is transfered into a staging register from which the bus master can read it, potentially through multiple requests.
-
+The bus master awaits data by polling the valid register until it becomes asserted.
+Once data is available, it can be read from the payload addresses, potentially through multiple requests.
+With the data consumed, the bus master signals the transfer by writing `1` to the address of the ready register.
+This one *automatically deasserts* upon transfer (e.g. when the sender asserts valid).
 
 
 See @ref gtry_scl_memorymaps

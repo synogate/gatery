@@ -215,9 +215,7 @@ namespace gtry::scl
 		static void memoryMap(MemoryMapRegistrationVisitor &v, T &stream, bool isReverse, std::string_view name, const CompoundMemberAnnotation *annotation) {
 			if (isReverse) {
 				auto payload = constructFrom(*stream);
-				payload = reg(payload);
-				IF (transfer(stream))
-					connect(payload, *stream);
+				connect(payload, *stream);
 				mapOut(v.memoryMap, payload, "payload");
 
 				if constexpr (T::template has<Ready>()) {
