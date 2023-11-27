@@ -34,7 +34,7 @@ namespace gtry::scl::pci::xilinx {
 		hdr.common.type = 0b0'0000;
 		hdr.common.trafficClass = desc.tc;
 		hdr.common.attributes.idBasedOrdering = desc.attr[2];
-		hdr.common.processingHintPresence = cqUser.tph_present[0];
+		hdr.common.processingHintPresence = cqUser.tphPresent();
 
 		hdr.common.digest = '0';
 		hdr.common.poisoned = '0';
@@ -43,13 +43,13 @@ namespace gtry::scl::pci::xilinx {
 		hdr.common.addressType = desc.at;
 		hdr.common.length = desc.dwordCount;
 
-		hdr.firstDWByteEnable = cqUser.first_be.lower(4_b);
-		hdr.lastDWByteEnable = cqUser.last_be.lower(4_b);
+		hdr.firstDWByteEnable = cqUser.firstBeByteEnable();
+		hdr.lastDWByteEnable = cqUser.lastBeByteEnable();
 		hdr.tag = desc.tag;
 		hdr.requesterId = desc.requesterID;
 
 		hdr.wordAddress = desc.wordAddress;
-		hdr.processingHint = cqUser.tph_type(0, 2_b);
+		hdr.processingHint = cqUser.tphType();
 
 		return hdr;
 	}
@@ -117,10 +117,9 @@ namespace gtry::scl::pci::xilinx {
 		CompletionHeader hdr = CompletionHeader::fromRaw(in->lower(96_b));
 		CompleterCompletionDescriptor desc = createDescriptor(hdr);
 
-		CCUser ccUser = allZeros(CCUser{});
-		HCL_NAMED(ccUser);
-
 		Axi4PacketStream<CCUser> ret(in->width());
+		CCUser ccUser = CCUser::create(in->width());
+		ccUser.raw = 0;
 		ret.get<CCUser>() = ccUser;
 
 		//data assignments
