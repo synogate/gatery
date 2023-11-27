@@ -24,6 +24,9 @@
 
 #include "../../simulation/Simulator.h"
 #include "../../hlim/coreNodes/Node_Pin.h"
+#include "../../hlim/coreNodes/Node_Signal.h"
+#include "../../hlim/supportNodes/Node_ExportOverride.h"
+#include "../../hlim/RevisitCheck.h"
 
 namespace gtry::vhdl {
 
@@ -160,6 +163,28 @@ void BaseTestbenchRecorder::findClocksAndPorts()
 		if (!p->getPinNodeParameter().simulationOnlyPin)
 			m_allIOPins.insert(p);
 
+}
+
+hlim::Node_Pin *BaseTestbenchRecorder::isDrivenByPin(hlim::NodePort nodePort) const
+{
+	if (nodePort.node == nullptr) return nullptr;
+
+	hlim::RevisitCheck revisitCheck(*nodePort.node->getCircuit());
+
+	while (nodePort.node != nullptr) {
+		if (revisitCheck.contains(nodePort.node)) return nullptr;
+		revisitCheck.insert(nodePort.node);
+
+		if (auto *pin = dynamic_cast<hlim::Node_Pin*>(nodePort.node))
+			return pin;
+		else if (auto *signal = dynamic_cast<hlim::Node_Signal*>(nodePort.node))
+			nodePort = signal->getDriver(0);
+		else if (auto *overide = dynamic_cast<hlim::Node_ExportOverride*>(nodePort.node))
+			nodePort = overide->getDriver(hlim::Node_ExportOverride::EXP_INPUT);
+		else
+			return nullptr;		
+	}
+	return nullptr;
 }
 
 }

@@ -470,13 +470,12 @@ void FileBasedTestbenchRecorder::onSimProcOutputRead(const hlim::NodePort &outpu
 
 	auto name_it = m_outputToIoPinName.find(drivingOutput);
 	if (name_it == m_outputToIoPinName.end()) {
-		if (dynamic_cast<hlim::Node_Pin*>(drivingOutput.node)) return;
-
-		if (auto *signal = dynamic_cast<hlim::Node_Signal*>(drivingOutput.node))
-			if (dynamic_cast<hlim::Node_Pin*>(signal->getNonSignalDriver(0).node))
-				return;
-
-		HCL_ASSERT_HINT(false, "Can only record asserts for signals that are output pins!");
+		if (isDrivenByPin(drivingOutput)) {
+			// It is legal to read back the value previously set to an input pin, e.g. in order to drive simulation processes machinery.
+			// In this case we can skip emitting an assert since technically there is nothing to check here.
+			return;
+		}
+		HCL_ASSERT_HINT(name_it != m_outputToIoPinName.end(), "Can only record asserts for signals that are output pins!");
 	}
 
 	const auto& conType = hlim::getOutputConnectionType(drivingOutput);

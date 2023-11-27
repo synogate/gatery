@@ -29,6 +29,7 @@
 #include <gatery/scl/tilelink/TileLinkMasterModel.h>
 #include <iostream>
 
+
 using namespace boost::unit_test;
 using namespace gtry;
 using namespace gtry::utils;
@@ -343,37 +344,48 @@ BOOST_FIXTURE_TEST_CASE(MemoryMapStreamInTileLink, BoostUnitTestSimulationFixtur
 		sim::SimulationContext::current()->onDebugMessage(nullptr, "Expecting stream to not be ready");
 		BOOST_TEST(simuReady(myStream) == false);
 
-		// write ready
-		co_await OnClk(clock);
-		sim::SimulationContext::current()->onDebugMessage(nullptr, "Setting ready");
-		co_await linkModel.put(2, 0, 1, clock);
 
 		co_await OnClk(clock);
-		sim::SimulationContext::current()->onDebugMessage(nullptr, "Expecting stream to be ready");
-		BOOST_TEST(simuReady(myStream) == true);
-	
-		co_await OnClk(clock);
-		sim::SimulationContext::current()->onDebugMessage(nullptr, "Offering data on stream");
-		simuValid(myStream) = true;
-		simu(*myStream) = 0xA;
-
-		co_await OnClk(clock);
-		sim::SimulationContext::current()->onDebugMessage(nullptr, "Expecting memory map ready to drop to low");
-		while (true) {
-			auto [val, def, err] = co_await linkModel.get(2, 0, clock);
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "Expecting memory map valid to be low");
+		{
+			auto [val, def, err] = co_await linkModel.get(1, 0, clock);
+			BOOST_TEST(!val);
 			BOOST_TEST(def);
 			BOOST_TEST(!err);
-			if (!val) break;
 		}
 
-		sim::SimulationContext::current()->onDebugMessage(nullptr, "Expecting stream to become non-ready");
-		BOOST_TEST(simuReady(myStream) == false);
+		fork([&]()->SimProcess {
+			co_await OnClk(clock);
+			co_await OnClk(clock);
+			sim::SimulationContext::current()->onDebugMessage(nullptr, "Offering data on stream");
+			simu(*myStream) = 0xA;
+			co_await gtry::scl::strm::performTransfer(myStream, clock);
+			simu(*myStream).invalidate();
+		});
+
+		co_await OnClk(clock);
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "Expecting memory map valid to (eventually) become high");
+		while (true) {
+			auto [val, def, err] = co_await linkModel.get(1, 0, clock);
+			BOOST_TEST(def);
+			BOOST_TEST(!err);
+			if (val) break;
+		}
 
 		sim::SimulationContext::current()->onDebugMessage(nullptr, "Reading payload");
 		auto [val, def, err] = co_await linkModel.get(0, 0, clock);
 		BOOST_TEST(val == 0xA);
 		BOOST_TEST(def);
 		BOOST_TEST(!err);
+
+		// write ready
+		co_await OnClk(clock);
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "Setting ready");
+		co_await linkModel.put(2, 0, 1, clock);
+
+		co_await OnClk(clock);
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "Expecting stream to be non-ready");
+		BOOST_TEST(simuReady(myStream) == false);
 
 		co_await AfterClk(clock);
 		stopTest();
@@ -383,6 +395,8 @@ BOOST_FIXTURE_TEST_CASE(MemoryMapStreamInTileLink, BoostUnitTestSimulationFixtur
 
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
+
+
 
 
 BOOST_AUTO_TEST_SUITE_END();

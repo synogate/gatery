@@ -22,6 +22,7 @@
 #include "Clock.h"
 
 
+#include <gatery/hlim/Subnet.h>
 #include <gatery/export/DotExport.h>
 
 namespace gtry {
@@ -62,6 +63,25 @@ namespace gtry {
 		exp(get()->getCircuit(), nodeGroup);
 		exp.runGraphViz(filename+".svg");
 	}
+
+	void DesignScope::visualizeAround(const std::string &filename, size_t nodeId, size_t dilation)
+	{
+		hlim::ConstSubnet subnet;
+
+		for (const auto &node : get()->getCircuit().getNodes())
+			if (node->getId() == nodeId) {
+				subnet.add(node.get());
+				break;
+			}
+
+		for ([[maybe_unused]] auto i : utils::Range(dilation))
+			subnet.dilate(true, true);
+
+		DotExport exp(filename+".dot");
+		exp(get()->getCircuit(), subnet);
+		exp.runGraphViz(filename+".svg");
+	}
+
 
 	utils::PropertyTree DesignScope::instanceProperties(bool settingsOnly) const
 	{

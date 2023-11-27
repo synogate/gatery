@@ -55,6 +55,9 @@ class DesignScope : public BaseScope<DesignScope>
 		/// Visualizes the circuit (or node group) by creating a .dot file for graphviz and attempting to run graphviz on it.
 		static void visualize(const std::string &filename, hlim::NodeGroup *nodeGroup = nullptr);
 
+		/// Visualizes the circuit around a node by creating a .dot file for graphviz and attempting to run graphviz on it.
+		static void visualizeAround(const std::string &filename, size_t nodeId, size_t dilation);
+
 		static DesignScope *get() { return m_currentScope; }
 		hlim::Circuit &getCircuit() { return m_circuit; }
 		const hlim::Circuit &getCircuit() const { return m_circuit; }

@@ -775,5 +775,39 @@ BOOST_FIXTURE_TEST_CASE(tryExportSimulationOnlyPins, gtry::GHDLTestFixture)
 }
 
 
+BOOST_FIXTURE_TEST_CASE(testReadingInputPins, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+	{
+		Bit input1 = pinIn().setName("input1");
+		Bit input2 = pinIn().setName("input2");
+
+		Bit output = input1 ^ input2;
+		pinOut(output).setName("output");
+
+		addSimulationProcess([=,this]()->SimProcess {
+
+			co_await OnClk(clock);
+
+			simu(input1) = '1';
+			simu(input2) = '0';
+
+			co_await OnClk(clock);
+
+			BOOST_TEST(simu(output) == '1');
+			BOOST_TEST(simu(input2) == '0');
+
+			stopTest();
+		});
+
+	}
+
+	runTest(hlim::ClockRational(200, 1) / clock.getClk()->absoluteFrequency());	
+}
+
+
 
 BOOST_AUTO_TEST_SUITE_END()

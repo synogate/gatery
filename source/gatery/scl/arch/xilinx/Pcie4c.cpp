@@ -127,11 +127,17 @@ namespace gtry::scl::arch::xilinx {
 			 pinOut(txp.at(i), std::string(m_cfg.PinTx) + std::to_string(i) + "_P");
 		}
 	
+		ClockScope clk{ m_usrClk };
+
 		m_status.user_lnk_up = out("user_lnk_up");
 		m_status.phy_rdy_out = out("phy_rdy_out");
 	
 		in("cfg_interrupt_int"    , 4_b) = 0;
 		in("cfg_interrupt_pending", 4_b) = 0;
-	
+
+		in("m_axis_cq_tready") = '0';
+		in("s_axis_cc_tvalid") = '0';
+		in("m_axis_rc_tready") = '0';
+		in("s_axis_rq_tvalid") = '0';
 	}
 }

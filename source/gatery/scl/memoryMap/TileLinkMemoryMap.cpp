@@ -38,16 +38,15 @@ namespace gtry::scl
 
 
 	/// Turns a memory map into a TileLinkUL slave, allowing the registers to be accessed by the tilelink bus.
-	Reverse<TileLinkUL> toTileLinkUL(PackedMemoryMap &memoryMap, BitWidth busWidth)
+	Reverse<TileLinkUL> toTileLinkUL(PackedMemoryMap &memoryMap, BitWidth dataW, BitWidth sourceW)
 	{
 		Area area("MMtoTileLinkUL", true);
 
-		memoryMap.packRegisters(busWidth);
-		auto &tree = memoryMap.getTree();
-		BitWidth addrWidth = BitWidth::count(tree.physicalDescription.size / busWidth);
+		memoryMap.packRegisters(dataW);
+		auto& tree = memoryMap.getTree();
+		BitWidth addrWidth = BitWidth::count(tree.physicalDescription.size / 8_b);
 
-		Reverse<TileLinkUL> toMaster;
-		tileLinkInit(*toMaster, addrWidth, busWidth, 0_b, 0_b);
+		Reverse<TileLinkUL> toMaster = { tileLinkInit<TileLinkUL>(addrWidth, dataW, sourceW) };
 		HCL_NAMED(toMaster);
 
 		TileLinkChannelD d;
@@ -58,16 +57,16 @@ namespace gtry::scl
 		Bit anyWriteHappening = transfer(toMaster->a) & toMaster->a->isPut();
 		HCL_NAMED(anyWriteHappening);
 
-		UInt wordAddress = toMaster->a->address.upper(toMaster->a->address.width() - BitWidth::count(busWidth.bytes()));
+		UInt wordAddress = toMaster->a->address.upper(-BitWidth::count(dataW.bytes()));
 		HCL_NAMED(wordAddress);
 
-		std::function<void(PackedMemoryMap::Scope &scope)> processRegs;
-		processRegs = [&](PackedMemoryMap::Scope &scope) {
-			for (auto &r : scope.physicalRegisters) {
+		std::function<void(PackedMemoryMap::Scope& scope)> processRegs;
+		processRegs = [&](PackedMemoryMap::Scope& scope) {
+			for (auto& r : scope.physicalRegisters) {
 				if (r.readSignal)
 					setName(*r.readSignal, r.description.name.get() + "_read");
 
-				Bit selected = wordAddress == r.description.offsetInBits / busWidth;
+				Bit selected = wordAddress == r.description.offsetInBits / dataW;
 				setName(selected, r.description.name.get() + "_selected");
 				IF (selected) {
 					d->error = '0';

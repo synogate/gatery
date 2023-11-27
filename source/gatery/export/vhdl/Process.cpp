@@ -514,57 +514,84 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
 				}
 			}
 
-			if (context == VHDLDataType::STD_LOGIC_VECTOR && mustCastToSLV)
-				stream << "STD_LOGIC_VECTOR(";
-			else if (op.size() > 1 )
-				stream << "("; // Must not cast since concatenation
+			if (context == VHDLDataType::BOOL) {
+				HCL_ASSERT(op.size() == 1);
+				const auto &range = op.front();
+				HCL_ASSERT(range.subwidth == 1);
 
-			for (auto i : utils::Range(op.size())) {
-				if (i > 0) {
-					stream << " & ";
-					if (i % 16 == 15) {
-						stream << '\n';
-						cf.indent(stream, (unsigned) indentation);
-					}
-				}
-				const auto &range = op[op.size()-1-i];
 				switch (range.source) {
-					case hlim::Node_Rewire::OutputRange::INPUT: {
-						auto driver = rewireNode->getDriver(range.inputIdx);
-						auto subContext = hlim::outputIsBVec(driver)?VHDLDataType::UNSIGNED:VHDLDataType::STD_LOGIC;
-						formatExpression(stream, indentation, comments, driver, dependentInputs, subContext);
-						if (driver.node != nullptr)
-							if (range.inputOffset != 0 || range.subwidth != hlim::getOutputWidth(driver))
-								stream << "(" << range.inputOffset + range.subwidth - 1 << " downto " << range.inputOffset << ")";
-					} break;
+					case hlim::Node_Rewire::OutputRange::INPUT:
+						HCL_ASSERT(false); // Should have triggered rewireNode->getOp().isBitExtract if this is the case
+					break;
 					case hlim::Node_Rewire::OutputRange::CONST_ZERO:
-						stream << '"';
-						for ([[maybe_unused]] auto j : utils::Range(range.subwidth))
-							stream << "0";
-						stream << '"';
+						stream << "FALSE";
 					break;
 					case hlim::Node_Rewire::OutputRange::CONST_ONE:
-						stream << '"';
-						for ([[maybe_unused]] auto j : utils::Range(range.subwidth))
-							stream << "1";
-						stream << '"';
+						stream << "TRUE";
 					break;
 					case hlim::Node_Rewire::OutputRange::CONST_UNDEFINED:
-						stream << '"';
-						for ([[maybe_unused]] auto j : utils::Range(range.subwidth))
-							stream << "x";
-						stream << '"';
+						stream << "FALSE"; // Painfull
 					break;
 					default:
-						stream << "UNHANDLED_REWIRE_OP";
+						HCL_ASSERT_HINT(false, "UNHANDLED_REWIRE_OP");
 				}
-			}
+			} else {
+				if (context == VHDLDataType::STD_LOGIC_VECTOR && mustCastToSLV)
+					stream << "STD_LOGIC_VECTOR(";
+				else if (op.size() > 1 )
+					stream << "("; // Must not cast since concatenation
 
-			if (op.size() > 1)
-				stream << ')';
-			else
-				if (context == VHDLDataType::STD_LOGIC_VECTOR)
+				char separator = '"';
+
+				for (auto i : utils::Range(op.size())) {
+					if (i > 0) {
+						stream << " & ";
+						if (i % 16 == 15) {
+							stream << '\n';
+							cf.indent(stream, (unsigned) indentation);
+						}
+					}
+					const auto &range = op[op.size()-1-i];
+					HCL_ASSERT(range.subwidth > 0);
+					switch (range.source) {
+						case hlim::Node_Rewire::OutputRange::INPUT: {
+							HCL_ASSERT(context != VHDLDataType::BOOL); // Should have triggered rewireNode->getOp().isBitExtract if this is the case
+							auto driver = rewireNode->getDriver(range.inputIdx);
+							auto subContext = hlim::outputIsBVec(driver)?VHDLDataType::UNSIGNED:VHDLDataType::STD_LOGIC;
+							formatExpression(stream, indentation, comments, driver, dependentInputs, subContext);
+							if (driver.node != nullptr)
+								if (range.inputOffset != 0 || range.subwidth != hlim::getOutputWidth(driver))
+									stream << "(" << range.inputOffset + range.subwidth - 1 << " downto " << range.inputOffset << ")";
+						} break;
+						case hlim::Node_Rewire::OutputRange::CONST_ZERO:
+							stream << separator;
+							for ([[maybe_unused]] auto j : utils::Range(range.subwidth))
+								stream << "0";
+							stream << separator;
+						break;
+						case hlim::Node_Rewire::OutputRange::CONST_ONE:
+							stream << separator;
+							for ([[maybe_unused]] auto j : utils::Range(range.subwidth))
+								stream << "1";
+							stream << separator;
+						break;
+						case hlim::Node_Rewire::OutputRange::CONST_UNDEFINED:
+							stream << separator;
+							for ([[maybe_unused]] auto j : utils::Range(range.subwidth))
+								stream << "x";
+							stream << separator;
+						break;
+						default:
+							HCL_ASSERT_HINT(false, "UNHANDLED_REWIRE_OP");
+					}
+				}
+
+				if (op.size() > 1)
 					stream << ')';
+				else
+					if (context == VHDLDataType::STD_LOGIC_VECTOR)
+						stream << ')';
+			}
 		}
 
 		return;
