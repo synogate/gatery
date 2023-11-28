@@ -47,6 +47,8 @@ namespace gtry::scl::arch::xilinx
 	
 		Pcie4c& requesterRequest(Axi4PacketStream<RQUser>&& stream);
 		Axi4PacketStream<RCUser> requesterCompletion();
+
+		Settings settings() const { return m_cfg; }
 	
 		const Clock& userClock() { return m_usrClk; }
 	private:
