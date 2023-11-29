@@ -24,6 +24,10 @@ namespace gtry::scl::pci::xilinx {
 
 	RequestHeader createHeader(const CompleterRequestDescriptor& desc, const CQUser& cqUser);
 	CompleterCompletionDescriptor createDescriptor(const CompletionHeader& hdr);
+
+	RequesterRequestDescriptor createDescriptor(const RequestHeader& hdr);
+	CompletionHeader createHeader(const RequesterCompletionDescriptor& desc);
+	
 	
 	/** @brief amd axi4 generic packet stream */
 	template<Signal ...Meta>
@@ -36,5 +40,9 @@ namespace gtry::scl::pci::xilinx {
 	*/
 	TlpPacketStream<scl::EmptyBits, pci::BarInfo> completerRequestVendorUnlocking(Axi4PacketStream<CQUser>&& in);
 	Axi4PacketStream<CCUser> completerCompletionVendorUnlocking(TlpPacketStream<EmptyBits>&& in);
+
+	Axi4PacketStream<RQUser> requesterRequestVendorUnlocking(TlpPacketStream<scl::EmptyBits>&& in);
+	TlpPacketStream<scl::EmptyBits> requesterCompletionVendorUnlocking(Axi4PacketStream<RCUser>&& in, bool straddle = false);
+	
 }
 	
