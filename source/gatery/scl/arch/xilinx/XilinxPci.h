@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 namespace gtry::scl::pci::xilinx {
 
 	RequestHeader createHeader(const CompleterRequestDescriptor& desc, const CQUser& cqUser);
-	CompleterCompletionDescriptor createDescriptor(const CompletionHeader& desc);
+	CompleterCompletionDescriptor createDescriptor(const CompletionHeader& hdr);
 	
 	/** @brief amd axi4 generic packet stream */
 	template<Signal ...Meta>
