@@ -73,6 +73,55 @@ namespace gtry::scl::pci::xilinx {
 		return desc;
 	}
 
+	RequesterRequestDescriptor createDescriptor(const RequestHeader& hdr)
+	{
+		RequesterRequestDescriptor ret;
+		ret.at = hdr.common.addressType;
+		ret.wordAddress = hdr.wordAddress;
+		ret.dwordCount = hdr.common.length;
+		ret.reqType = 1; //memory write request
+		IF(hdr.common.isMemRead())
+			ret.reqType = 0;
+		ret.poisonedReq = hdr.common.poisoned;
+		ret.requesterID = hdr.requesterId;
+		ret.tag = hdr.tag;
+		ret.completerID = ConstBVec(ret.completerID.width());
+		ret.requesterIDEnable = '0';
+		ret.tc = hdr.common.trafficClass;
+		ret.attr = (BVec) pack(hdr.common.attributes);
+		ret.forceECRC = '0';
+		return ret;
+	}
+
+	CompletionHeader createHeader(const RequesterCompletionDescriptor& desc)
+	{
+		CompletionHeader ret;
+
+		ret.common.opcode(TlpOpcode::completionWithData);
+		IF(desc.lockedReadCompletion) ret.common.opcode(TlpOpcode::completionforLockedMemoryReadWithData);
+		ret.common.trafficClass = desc.tc;
+		
+		ret.common.attributes.idBasedOrdering = desc.attr[2];
+		ret.common.processingHintPresence = '0';
+
+		ret.common.digest = '0';
+		ret.common.poisoned = desc.poisonedCompletion;
+		ret.common.attributes.relaxedOrdering = desc.attr[1];
+		ret.common.attributes.noSnoop = desc.attr[0];
+		ret.common.addressType = (size_t) AddressType::defaultOption;
+		ret.common.length = desc.dwordCount;
+
+		ret.requesterId = desc.requesterId;
+		ret.tag = desc.tag;
+		ret.completerId = desc.completerId;
+		ret.byteCount = desc.byteCount;
+		ret.byteCountModifier = '0';
+		ret.lowerByteAddress = desc.lowerByteAddress;
+		ret.completionStatus = desc.completionStatus;
+		desc.requestCompleted; // maybe do something with this?
+		return ret;
+	}
+
 	TlpPacketStream<scl::EmptyBits, pci::BarInfo> completerRequestVendorUnlocking(Axi4PacketStream<CQUser>&& in)
 	{
 		Area area{ "completer_request_vendor_unlocking", true };
