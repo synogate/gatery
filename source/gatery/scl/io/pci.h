@@ -139,7 +139,7 @@ namespace gtry::scl::pci
 		Bit is3dw()			const { return fmt == 0b000 | fmt == 0b010; }
 		Bit is4dw()			const { return !is3dw(); }
 		Bit hasData()		const { return fmt == 0b010 | fmt == 0b011; }
-
+							
 		Bit isCompletion()	const { return type == 0b01010; }
 		Bit isMemRW()		const { return type == 0b00000 | type == 0b00001; }
 		Bit isMemWrite()	const { return fmt.upper(2_b) == 0b01; }
