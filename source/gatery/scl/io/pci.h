@@ -80,7 +80,8 @@ namespace gtry::scl::pci
 	};
 
 	enum class AddressType {
-		untranslated_default	= 0b00,
+		defaultOption			= 0b00,
+		untranslated			= 0b00,
 		translationRequest		= 0b01,
 		translatedRequest		= 0b10,
 		reserved				= 0b11,
@@ -94,7 +95,9 @@ namespace gtry::scl::pci
 	};
 
 	enum class TrafficClass {
-		bestEffort_default_tc0	= 0b000,
+		defaultOption	= 0,
+		bestEffort	= 0,
+		tc0	= 0,
 		tc1	= 1,
 		tc2	= 2,
 		tc3	= 3,
