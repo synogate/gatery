@@ -136,15 +136,15 @@ namespace gtry::scl::pci
 		
 		void opcode(TlpOpcode op) { fmt = (size_t)op >> 5; type = (size_t) op & 0x1F; }
 	
-		Bit is3dw()		{ return fmt == 0b000 | fmt == 0b010; }
-		Bit is4dw()		{ return !is3dw(); }
-		Bit hasData()	{ return fmt == 0b010 | fmt == 0b011; }
+		Bit is3dw()			const { return fmt == 0b000 | fmt == 0b010; }
+		Bit is4dw()			const { return !is3dw(); }
+		Bit hasData()		const { return fmt == 0b010 | fmt == 0b011; }
 
-		Bit isCompletion()	{ return type == 0b01010; }
-		Bit isMemRW()		{ return type == 0b00000 | type == 0b00001; }
-		Bit isMemWrite()	{ return fmt.upper(2_b) == 0b01; }
-		Bit isMemRead()		{ return fmt.upper(2_b) == 0b00; }
-		UInt hdrSizeInDw()	{ UInt ret = 4; IF(is3dw()) ret = 3; return ret; }
+		Bit isCompletion()	const { return type == 0b01010; }
+		Bit isMemRW()		const { return type == 0b00000 | type == 0b00001; }
+		Bit isMemWrite()	const { return fmt.upper(2_b) == 0b01; }
+		Bit isMemRead()		const { return fmt.upper(2_b) == 0b00; }
+		UInt hdrSizeInDw()	const { UInt ret = 4; IF(is3dw()) ret = 3; return ret; }
 
 	};
 
