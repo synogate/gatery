@@ -191,5 +191,67 @@ namespace gtry::scl::pci::xilinx {
 		return ret;
 	}
 
+	Axi4PacketStream<RQUser> requesterRequestVendorUnlocking(TlpPacketStream<scl::EmptyBits>&& in)
+	{
+		Area area{ "requester_request_vendor_unlocking", true };
+		setName(in, "tlp_in");
+		HCL_DESIGNCHECK_HINT(in->width() >= 128_b, "stream must be at least as big as 4dw for this implementation");
+
+		RequestHeader hdr = RequestHeader::fromRaw(in->lower(128_b));
+
+		RequesterRequestDescriptor desc = createDescriptor(hdr);
+
+		Axi4PacketStream<RQUser> ret(in->width());
+
+		*ret = *in;
+		IF(sop(in))
+			ret->lower(128_b) = (BVec)hdr;
+
+		ready(in) = ready(ret);
+		valid(ret) = valid(in);
+		eop(ret) = eop(in);
+
+		//dwordEnable to empty conversion:
+		sim_assert(emptyBits(in).lower(5_b) == 0); // the granularity of this empty signal cannot be less than 32 bits (expect the lsb's to be completely synthesized away)
+		UInt emptyWords = emptyBits(in).upper(-5_b);
+		BVec throwAway = (BVec) cat('0', uintToThermometric(emptyWords));
+		dwordEnable(ret) = swapEndian(~throwAway, 1_b); 
+
+		setName(ret, "tlp_out");
+		return ret;
+	}
+
+	TlpPacketStream<scl::EmptyBits> requesterCompletionVendorUnlocking(Axi4PacketStream<RCUser>&& in, bool straddle)
+	{
+		Area area{ "requester_completion_vendor_unlocking", true };
+		setName(in, "tlp_in");
+		HCL_DESIGNCHECK_HINT(!straddle, "not yet implemented");
+		HCL_DESIGNCHECK_HINT(in->width() == 512_b, "targeting 512_b at 250MHz");
+
+		RequesterCompletionDescriptor desc;
+		unpack(in->lower(96_b), desc);
+
+		CompletionHeader hdr = createHeader(desc);
+
+		TlpPacketStream<scl::EmptyBits> ret(in->width());
+
+		//data assignments
+		*ret = *in;
+		IF(sop(in))
+			ret->lower(128_b) = (BVec) pack(desc) ;
+
+		//Handshake assignments
+		ready(in) = ready(ret);
+		valid(ret) = valid(in);
+		eop(ret) = eop(in);
+
+		//dwordEnable to empty conversion:
+		UInt emptyWords = thermometricToUInt(~dwordEnable(in)).lower(-1_b); HCL_NAMED(emptyWords);
+		emptyBits(ret) = cat(emptyWords, "5b0");
+
+		setName(ret, "tlp_out");
+		return ret;
+	}
+
 }
 
