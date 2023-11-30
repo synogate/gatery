@@ -30,36 +30,36 @@ namespace gtry::scl::strm
 	 * the desired packet, using one of the ctor helpers provided.
 	*/
 	struct SimPacket {
-		sim::DefaultBitVectorState payload;
+		gtry::sim::DefaultBitVectorState payload;
 
 		SimPacket() = default;
-		SimPacket(sim::DefaultBitVectorState payload) : payload(std::move(payload)) {}
+		SimPacket(gtry::sim::DefaultBitVectorState payload) : payload(std::move(payload)) {}
 		SimPacket(std::span<const uint8_t> data) { *this = data; }
 		SimPacket(uint64_t payload, BitWidth payloadW) {
 			HCL_DESIGNCHECK_HINT(BitWidth::last(payload) <= payloadW, "The selected payload width would result in data truncation. Design not allowed" );
 			size_t numberOfBytesInPayload = payloadW.numBeats(8_b);
 			for (size_t byteIterator = 0; byteIterator < numberOfBytesInPayload; byteIterator++) {
-				this->payload.append(sim::createDefaultBitVectorState(8, payload & 0xFF));
+				this->payload.append(gtry::sim::createDefaultBitVectorState(8, payload & 0xFF));
 				payload >>= 8;
 			}
 			this->payload.resize(payloadW.bits());
 		}
 
-		SimPacket& operator =(std::span<const uint8_t> data) { payload = sim::createDefaultBitVectorState(data.size() * 8, data.data()); return *this; }
-		SimPacket& operator<<(const sim::DefaultBitVectorState& additionalData) { payload.append(additionalData); return *this; }
+		SimPacket& operator =(std::span<const uint8_t> data) { payload = gtry::sim::createDefaultBitVectorState(data.size() * 8, data.data()); return *this; }
+		SimPacket& operator<<(const gtry::sim::DefaultBitVectorState& additionalData) { payload.append(additionalData); return *this; }
 
 		SimPacket& txid(size_t id) { m_txid = id; return *this; }
 		SimPacket& error(char err) { m_error = err; return *this; }
 		SimPacket& invalidBeats(std::uint64_t invalidBeats) { m_invalidBeats = invalidBeats; return *this; }
 
 		size_t txid() const { return m_txid; }
-		uint64_t asUint64(BitWidth numberOfLSBsToConvert) const { return payload.extractNonStraddling(sim::DefaultConfig::VALUE, 0, numberOfLSBsToConvert.bits()); }
+		uint64_t asUint64(BitWidth numberOfLSBsToConvert) const { return payload.extractNonStraddling(gtry::sim::DefaultConfig::VALUE, 0, numberOfLSBsToConvert.bits()); }
 		char error() const { return m_error; }
 		std::uint64_t invalidBeats() const { return m_invalidBeats; }
 
 		std::span<uint8_t> data() {
 			HCL_DESIGNCHECK_HINT(payload.size() % 8 == 0, "Packet payload size is not a multiple of 8 bits!");
-			return std::span<uint8_t>((uint8_t*)payload.data(sim::DefaultConfig::VALUE), payload.size() / 8);
+			return std::span<uint8_t>((uint8_t*)payload.data(gtry::sim::DefaultConfig::VALUE), payload.size() / 8);
 		}
 		operator std::span<uint8_t>() { return data(); }
 	protected:
