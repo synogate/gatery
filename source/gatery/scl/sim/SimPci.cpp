@@ -22,6 +22,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 namespace gtry::scl::sim {
 	TlpInstruction::operator gtry::sim::DefaultBitVectorState()
 	{
+		return this->asDefaultBitVectorState();
+	}
+
+	gtry::sim::DefaultBitVectorState TlpInstruction::asDefaultBitVectorState(bool headerOnly)
+	{
 		gtry::sim::DefaultBitVectorState packet;
 		packet.resize(32);
 		DefaultBitVectorWriter helper(packet);
@@ -45,84 +50,84 @@ namespace gtry::scl::sim {
 		HCL_DESIGNCHECK(helper.offset == 32);
 
 		switch (this->opcode) {
-		case scl::pci::TlpOpcode::memoryReadRequest64bit: {
-			packet.resize(128);
-			HCL_DESIGNCHECK_HINT(this->length, "length not set");
-			HCL_DESIGNCHECK_HINT(this->requesterID, "requester id not set");
-			HCL_DESIGNCHECK_HINT(this->tag, "tag not set");
-			HCL_DESIGNCHECK_HINT(this->wordAddress, "address not set");
-			helper
-				.write(this->requesterID >> 8, 8_b)
-				.write(this->requesterID & 0xFF, 8_b)
-				.write(this->tag, 8_b)
-				.write(this->firstDWByteEnable, 4_b)
-				.write(this->lastDWByteEnable, 4_b)
-				.write((*this->wordAddress >> (56-2)) & 0xFF, 8_b)
-				.write((*this->wordAddress >> (48-2)) & 0xFF, 8_b)
-				.write((*this->wordAddress >> (40-2)) & 0xFF, 8_b)
-				.write((*this->wordAddress >> (32-2)) & 0xFF, 8_b)
-				.write((*this->wordAddress >> (24-2)) & 0xFF, 8_b)
-				.write((*this->wordAddress >> (16-2)) & 0xFF, 8_b)
-				.write((*this->wordAddress >> (8-2)) & 0xFF, 8_b)
-				.write(this->ph, 2_b)
-				.write((*this->wordAddress) & 0b00111111, 6_b);
-			HCL_DESIGNCHECK(helper.offset == 128);
-			break;
-		}
-		case scl::pci::TlpOpcode::memoryWriteRequest64bit:
-		{
-			packet.resize(128);
-			HCL_DESIGNCHECK_HINT(this->length, "length not set");
-			HCL_DESIGNCHECK_HINT(this->requesterID, "requester id not set");
-			HCL_DESIGNCHECK_HINT(this->tag, "tag not set");
-			HCL_DESIGNCHECK_HINT(this->wordAddress, "address not set");
-			HCL_DESIGNCHECK_HINT(this->payload, "you forgot to set the payload");
-			helper
-				.write(this->requesterID >> 8, 8_b)
-				.write(this->requesterID & 0xFF, 8_b)
-				.write(this->tag, 8_b)
-				.write(this->firstDWByteEnable, 4_b)
-				.write(this->lastDWByteEnable, 4_b)
-				.write((*this->wordAddress >> (56-2)) & 0xFF, 8_b)
-				.write((*this->wordAddress >> (48-2)) & 0xFF, 8_b)
-				.write((*this->wordAddress >> (40-2)) & 0xFF, 8_b)
-				.write((*this->wordAddress >> (32-2)) & 0xFF, 8_b)
-				.write((*this->wordAddress >> (24-2)) & 0xFF, 8_b)
-				.write((*this->wordAddress >> (16-2)) & 0xFF, 8_b)
-				.write((*this->wordAddress >> (8-2)) & 0xFF, 8_b)
-				.write(this->ph, 2_b)
-				.write((*this->wordAddress) & 0b00111111, 6_b);
-			HCL_DESIGNCHECK(helper.offset == 128);
-			break;
-		}
-		case scl::pci::TlpOpcode::completionWithData:
-		{
-			packet.resize(96);
-			HCL_DESIGNCHECK_HINT(this->length, "length not set");
-			HCL_DESIGNCHECK_HINT(this->completerID, "completer id not set");
-			HCL_DESIGNCHECK_HINT(this->byteCount, "byteCount not set");
-			HCL_DESIGNCHECK_HINT(this->requesterID, "requester id not set, this should come from your data requester");
-			HCL_DESIGNCHECK_HINT(this->tag, "tag not set, it should come from your data requester");
-			HCL_DESIGNCHECK_HINT(this->wordAddress, "address (lower address) not set, this corresponds to the byte address of the payload in the current TLP");
+			case scl::pci::TlpOpcode::memoryReadRequest64bit: {
+				packet.resize(128);
+				HCL_DESIGNCHECK_HINT(this->length, "length not set");
+				HCL_DESIGNCHECK_HINT(this->requesterID, "requester id not set");
+				HCL_DESIGNCHECK_HINT(this->tag, "tag not set");
+				HCL_DESIGNCHECK_HINT(this->wordAddress, "address not set");
+				helper
+					.write(this->requesterID >> 8, 8_b)
+					.write(this->requesterID & 0xFF, 8_b)
+					.write(this->tag, 8_b)
+					.write(this->firstDWByteEnable, 4_b)
+					.write(this->lastDWByteEnable, 4_b)
+					.write((*this->wordAddress >> (56-2)) & 0xFF, 8_b)
+					.write((*this->wordAddress >> (48-2)) & 0xFF, 8_b)
+					.write((*this->wordAddress >> (40-2)) & 0xFF, 8_b)
+					.write((*this->wordAddress >> (32-2)) & 0xFF, 8_b)
+					.write((*this->wordAddress >> (24-2)) & 0xFF, 8_b)
+					.write((*this->wordAddress >> (16-2)) & 0xFF, 8_b)
+					.write((*this->wordAddress >> (8-2)) & 0xFF, 8_b)
+					.write(this->ph, 2_b)
+					.write((*this->wordAddress) & 0b00111111, 6_b);
+				HCL_DESIGNCHECK(helper.offset == 128);
+				break;
+			}
+			case scl::pci::TlpOpcode::memoryWriteRequest64bit:
+			{
+				packet.resize(128);
+				HCL_DESIGNCHECK_HINT(this->length, "length not set");
+				HCL_DESIGNCHECK_HINT(this->requesterID, "requester id not set");
+				HCL_DESIGNCHECK_HINT(this->tag, "tag not set");
+				HCL_DESIGNCHECK_HINT(this->wordAddress, "address not set");
+				HCL_DESIGNCHECK_HINT(this->payload, "you forgot to set the payload");
+				helper
+					.write(this->requesterID >> 8, 8_b)
+					.write(this->requesterID & 0xFF, 8_b)
+					.write(this->tag, 8_b)
+					.write(this->firstDWByteEnable, 4_b)
+					.write(this->lastDWByteEnable, 4_b)
+					.write((*this->wordAddress >> (56-2)) & 0xFF, 8_b)
+					.write((*this->wordAddress >> (48-2)) & 0xFF, 8_b)
+					.write((*this->wordAddress >> (40-2)) & 0xFF, 8_b)
+					.write((*this->wordAddress >> (32-2)) & 0xFF, 8_b)
+					.write((*this->wordAddress >> (24-2)) & 0xFF, 8_b)
+					.write((*this->wordAddress >> (16-2)) & 0xFF, 8_b)
+					.write((*this->wordAddress >> (8-2)) & 0xFF, 8_b)
+					.write(this->ph, 2_b)
+					.write((*this->wordAddress) & 0b00111111, 6_b);
+				HCL_DESIGNCHECK(helper.offset == 128);
+				break;
+			}
+			case scl::pci::TlpOpcode::completionWithData:
+			{
+				packet.resize(96);
+				HCL_DESIGNCHECK_HINT(this->length, "length not set");
+				HCL_DESIGNCHECK_HINT(this->completerID, "completer id not set");
+				HCL_DESIGNCHECK_HINT(this->byteCount, "byteCount not set");
+				HCL_DESIGNCHECK_HINT(this->requesterID, "requester id not set, this should come from your data requester");
+				HCL_DESIGNCHECK_HINT(this->tag, "tag not set, it should come from your data requester");
+				HCL_DESIGNCHECK_HINT(this->wordAddress, "address (lower address) not set, this corresponds to the byte address of the payload in the current TLP");
 
-			helper
-				.write(*this->completerID >> 8, 8_b)
-				.write(*this->completerID & 0xFF, 8_b)
-				.write(*this->byteCount >> 8, 4_b)
-				.write(this->byteCountModifier, 1_b)
-				.write(this->completionStatus, 3_b)
-				.write(*this->byteCount & 0xFF, 8_b)
-				.write(this->requesterID >> 8, 8_b)
-				.write(this->requesterID & 0xFF, 8_b)
-				.write(this->tag, 8_b)
-				.write(*this->lowerByteAddress, 7_b)
-				.skip(1_b);
-			HCL_DESIGNCHECK_HINT(helper.offset == 96, "incomplete header");
-			break;
-		}
+				helper
+					.write(*this->completerID >> 8, 8_b)
+					.write(*this->completerID & 0xFF, 8_b)
+					.write(*this->byteCount >> 8, 4_b)
+					.write(this->byteCountModifier, 1_b)
+					.write(this->completionStatus, 3_b)
+					.write(*this->byteCount & 0xFF, 8_b)
+					.write(this->requesterID >> 8, 8_b)
+					.write(this->requesterID & 0xFF, 8_b)
+					.write(this->tag, 8_b)
+					.write(*this->lowerByteAddress, 7_b)
+					.skip(1_b);
+				HCL_DESIGNCHECK_HINT(helper.offset == 96, "incomplete header");
+				break;
+			}
 		}
 
-		if (this->payload) {
+		if (this->payload && !headerOnly) {
 			packet.resize(packet.size() + *this->length * 32);
 			for (size_t i = 0; i < *this->length; i++)
 				helper.write((*this->payload)[i], 32_b);
@@ -142,7 +147,7 @@ namespace gtry::scl::sim {
 		TlpInstruction ret;
 
 		ret.opcode = op;
-		ret.th = (rng() & 0x1);					
+		ret.th = (rng() & 0x1);		
 		ret.idBasedOrderingAttr2 = (rng() & 0x1);
 		ret.tc = (rng() & 0b111);				
 		ret.length  = (rng() & 0x3FF);			
@@ -249,5 +254,20 @@ namespace gtry::scl::sim {
 
 	std::ostream& operator << (std::ostream& s, const TlpInstruction& inst) {
 		HCL_DESIGNCHECK_HINT(false, "not yet implemented, put normal brackets around your test");
+	}
+
+
+	template<typename T>
+	DefaultBitVectorWriter& DefaultBitVectorWriter::write(const T& value, BitWidth size) {
+		HCL_DESIGNCHECK_HINT(offset + size.value <= destination.size(), "not enough space in destination to write value");
+		destination.insert(gtry::sim::DefaultConfig::VALUE, offset, size.value, (gtry::sim::DefaultConfig::BaseType)value);
+		destination.setRange(gtry::sim::DefaultConfig::DEFINED, offset, size.value);
+		offset += size.value;
+		return *this;
+	}
+	DefaultBitVectorWriter& DefaultBitVectorWriter::skip(BitWidth size) {
+		HCL_DESIGNCHECK_HINT(offset + size.value <= destination.size(), "offset would overflow after this operation. This is not allowed");
+		offset += size.value;
+		return *this;
 	}
 }
