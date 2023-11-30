@@ -34,17 +34,20 @@ namespace gtry::scl::sim {
 		m_rr.emplace(move(rr)); 
 		pinOut(*m_rr, "host_rr");
 	}
+
 	TlpPacketStream<EmptyBits>& PcieHostModel::requesterCompletion() { 
 		m_rc.emplace((*m_rr)->width()); 
 		emptyBits(*m_rc) =  BitWidth::count((*m_rc)->width().bits());
 		pinIn(*m_rc, "host_rc");
 		return *m_rc; 
 	}
+
 	SimProcess PcieHostModel::assertInvalidTlp(const Clock& clk)
 	{
 		fork(this->assertPayloadSizeDoesntMatchHeader(clk));
 		while (true) co_await OnClk(clk);
 	}
+
 	SimProcess PcieHostModel::assertPayloadSizeDoesntMatchHeader(const Clock& clk)
 	{
 		HCL_DESIGNCHECK_HINT(m_rr, "requesterRequest port is not connected");
@@ -54,6 +57,7 @@ namespace gtry::scl::sim {
 			BOOST_TEST(tlp.payload->size() == *tlp.length);
 		}
 	}
+
 	SimProcess PcieHostModel::assertUnsupportedTlp(const Clock& clk)
 	{
 		HCL_DESIGNCHECK_HINT(m_rr, "requesterRequest port is not connected");
@@ -63,16 +67,17 @@ namespace gtry::scl::sim {
 			BOOST_TEST((m_opcodesSupported.contains(tlp.opcode)), "the opcode (ftm and type): 0x" << magic_enum::enum_name(tlp.opcode) << "is not supported");
 		}
 	}
+
 	SimProcess PcieHostModel::completeRequests(const Clock& clk, size_t delay)
 	{
 		HCL_DESIGNCHECK_HINT(m_rr, "requesterRequest port is not connected");
 		HCL_DESIGNCHECK_HINT(m_rc, "requesterCompletion port is not connected");
 		SimulationSequencer sendingSeq;
+		fork([&, this]()->SimProcess { return scl::strm::readyDriver(*m_rr, clk); });
 		while (true) {
 			auto simPacket = co_await gtry::scl::strm::receivePacket(*m_rr, clk);
 
 
-			fork([&, this]()->SimProcess { return scl::strm::readyDriver(*m_rr, clk); });
 			//simPacket must be captured by copy because it might get overwritten with the next request before the first response has even gotten out
 			fork([&, simPacket, this]()->SimProcess {
 				for (size_t i = 0; i < delay; i++)

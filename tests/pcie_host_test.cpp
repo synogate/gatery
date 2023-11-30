@@ -73,12 +73,11 @@ BOOST_FIXTURE_TEST_CASE(host_read_1dw_512_b, BoostUnitTestSimulationFixture) {
 		scl::strm::SimPacket responsePacket = co_await scl::strm::receivePacket(requesterCompletion, clk);
 		auto tlp = scl::sim::TlpInstruction::createFrom(responsePacket.payload);
 		BOOST_TEST((tlp.opcode == pci::TlpOpcode::completionWithData));
-		BOOST_TEST(tlp.payload->front() == 0x1234);
+		BOOST_TEST(tlp.payload->front() == 0x03020100ull);
 		BOOST_TEST(*tlp.byteCount == 4);
 		BOOST_TEST(tlp.completionStatus == (size_t)pci::CompletionStatus::successfulCompletion);
 		stopTest();
 	});
-
 	
 
 	recordVCD("dut.vcd");
