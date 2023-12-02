@@ -38,7 +38,7 @@ static void exportOverrideTileLink(TileLinkUL& tl, TileLinkUL& phys)
 	(*tl.d)->error.exportOverride((*phys.d)->error);
 }
 
-std::array<TileLinkUL, 2> arch::xilinx::ultraRam(size_t numWords, UltraRamSettings cfg)
+std::array<TileLinkUL, 2> arch::xilinx::ultraRam(size_t numWords, UltraRamSettings&& cfg)
 {
 	Area ent{ "scl_ultraRam", true };
 	if (!cfg.name.empty())
@@ -94,7 +94,7 @@ std::array<TileLinkUL, 2> arch::xilinx::ultraRam(size_t numWords, UltraRamSettin
 	std::array<TileLinkUL, 2> outSim;
 	for (size_t i = 0; i < outSim.size(); ++i)
 	{
-		tileLinkInit(outSim[i], BitWidth::count(numWords), 64_b, 2_b, cfg.aSourceW);
+		tileLinkInit(outSim[i], BitWidth::count(numWords), 64_b, 2_b, i ? cfg.bSourceW : cfg.aSourceW);
 		ready(*outSim[i].d) = '1';
 		connect(simMem, outSim[i]);
 
@@ -120,7 +120,7 @@ TileLinkUL gtry::scl::arch::xilinx::ultraRamPort(BitWidth addrW, URAM288& inRam,
 		.bwe = zext(out.a->mask),
 	});
 	ready(out.a) = ready(*out.d);
-	sim_assert(ready(*out.d) | !valid(out.a)) << "URAM does not support back pressure in cascade mode";
+	sim_assert(ready(*out.d) | !valid(*out.d)) << "URAM does not support back pressure in cascade mode";
 
 	RvStream<TileLinkD> tlResult = { tileLinkDefaultResponse(*out.a) };
 	valid(tlResult) = valid(out.a);
