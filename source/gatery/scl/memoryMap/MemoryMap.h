@@ -42,7 +42,7 @@ namespace gtry::scl
 		};
 
 		/// Start of this field in the address space (in bits!)
-		std::uint64_t offsetInBits;
+		std::uint64_t offsetInBits = 0;
 		/// Size of this field in the address space (in bits)
 		BitWidth size;
 		/// Whether anything in this field (or the sub fields) can be read or written
