@@ -533,10 +533,6 @@ namespace gtry::scl::strm
 	{
 		HCL_DESIGNCHECK(source->width() <= width);
 		const size_t ratio = width / source->width();
-
-		if constexpr (not StreamT::template has<scl::Empty>() and not StreamT::template has<scl::EmptyBits>())
-			HCL_DESIGNCHECK_HINT(false, "in order to use extendWidth, an empty metasignal must be present in the source signal");
-
 		auto scope = Area{ "scl_extendWidth" }.enter();
 
 		Counter counter{ ratio };
