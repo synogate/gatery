@@ -260,6 +260,13 @@ namespace gtry
 
 	Bit Clock::reset(ResetActive active) const
 	{
+		if (m_clock->getRegAttribs().resetType == ResetType::NONE) {
+			if (active == ResetActive::HIGH)
+				return Bit('0');
+			else
+				return Bit('1');
+		}
+
 		auto* node = DesignScope::createNode<hlim::Node_ClkRst2Signal>();
 		node->setClock(m_clock);
 		Bit signal{SignalReadPort(node)};
