@@ -518,8 +518,10 @@ hlim::OutputClockRelation RAMBxE2::getOutputClockRelation(size_t output) const
 		case OUT_CAS_DOUTP_B: 
 		case OUT_DOUT_B_DOUT: 
 		case OUT_DOUTP_B_DOUTP: 
-			return { .dependentClocks={ m_clocks[CLK_B_WR] } };
-
+			if (isSimpleDualPort() || isRom())
+				return { .dependentClocks = { m_clocks[CLK_A_RD] } };
+			else
+				return { .dependentClocks = { m_clocks[CLK_B_WR] } };
 
 		// I'm not too certain about these
 		case OUT_CAS_OUTD_BITERR:
@@ -553,7 +555,6 @@ bool RAMBxE2::checkValidInputClocks(std::span<hlim::SignalClockDomain> inputCloc
 		return false;
 	};
 
-
 	if (!checkCompatibleWith(IN_ADDR_A_RDADDR, m_clocks[CLK_A_RD])) return false;
 	if (!checkCompatibleWith(IN_ADDREN_A, m_clocks[CLK_A_RD])) return false;
 	if (!checkCompatibleWith(IN_CAS_DIMUX_A, m_clocks[CLK_A_RD])) return false;
@@ -563,8 +564,6 @@ bool RAMBxE2::checkValidInputClocks(std::span<hlim::SignalClockDomain> inputCloc
 	if (!checkCompatibleWith(IN_CAS_DOMUXEN_A, m_clocks[CLK_A_RD])) return false;
 	if (!checkCompatibleWith(IN_CAS_OREG_IMUX_A, m_clocks[CLK_A_RD])) return false;
 	if (!checkCompatibleWith(IN_CAS_OREG_IMUXEN_A, m_clocks[CLK_A_RD])) return false;
-	if (!checkCompatibleWith(IN_DIN_A_DIN, m_clocks[CLK_A_RD])) return false;
-	if (!checkCompatibleWith(IN_DINP_A_DINP, m_clocks[CLK_A_RD])) return false;
 	if (!checkCompatibleWith(IN_EN_A_RD_EN, m_clocks[CLK_A_RD])) return false;
 	if (!checkCompatibleWith(IN_REG_CE_A_REG_CE, m_clocks[CLK_A_RD])) return false;
 	if (!checkCompatibleWith(IN_RST_RAM_A_RST_RAM, m_clocks[CLK_A_RD])) return false;
@@ -580,13 +579,23 @@ bool RAMBxE2::checkValidInputClocks(std::span<hlim::SignalClockDomain> inputCloc
 	if (!checkCompatibleWith(IN_CAS_DOMUXEN_B, m_clocks[CLK_B_WR])) return false;
 	if (!checkCompatibleWith(IN_CAS_OREG_IMUX_B, m_clocks[CLK_B_WR])) return false;
 	if (!checkCompatibleWith(IN_CAS_OREG_IMUXEN_B, m_clocks[CLK_B_WR])) return false;
-	if (!checkCompatibleWith(IN_DIN_B_DIN, m_clocks[CLK_B_WR])) return false;
-	if (!checkCompatibleWith(IN_DINP_B_DINP, m_clocks[CLK_B_WR])) return false;
 	if (!checkCompatibleWith(IN_EN_B_WR_EN, m_clocks[CLK_B_WR])) return false;
 	if (!checkCompatibleWith(IN_REG_CE_B, m_clocks[CLK_B_WR])) return false;
 	if (!checkCompatibleWith(IN_RST_RAM_B, m_clocks[CLK_B_WR])) return false;
 	if (!checkCompatibleWith(IN_RST_REG_B, m_clocks[CLK_B_WR])) return false;
 	if (!checkCompatibleWith(IN_WE_B_WE, m_clocks[CLK_B_WR])) return false;
+
+	if (isSimpleDualPort() || isRom()) {
+		if (!checkCompatibleWith(IN_DIN_A_DIN, m_clocks[CLK_B_WR])) return false;
+		if (!checkCompatibleWith(IN_DINP_A_DINP, m_clocks[CLK_B_WR])) return false;
+		if (!checkCompatibleWith(IN_DIN_B_DIN, m_clocks[CLK_B_WR])) return false;
+		if (!checkCompatibleWith(IN_DINP_B_DINP, m_clocks[CLK_B_WR])) return false;
+	} else {
+		if (!checkCompatibleWith(IN_DIN_A_DIN, m_clocks[CLK_A_RD])) return false;
+		if (!checkCompatibleWith(IN_DINP_A_DINP, m_clocks[CLK_A_RD])) return false;
+		if (!checkCompatibleWith(IN_DIN_B_DIN, m_clocks[CLK_B_WR])) return false;
+		if (!checkCompatibleWith(IN_DINP_B_DINP, m_clocks[CLK_B_WR])) return false;
+	}
 
 	return true;
 }
