@@ -92,10 +92,16 @@ void BasicBlock::extractSignals()
 		}
 		for (auto i : utils::Range(node->getClocks().size())) {
 			if (node->getClocks()[i] != nullptr) {
-				if (!node->getClockNames()[i].empty())
-					m_inputClocks.insert(node->getClocks()[i]->getClockPinSource());
-				if (!node->getResetNames()[i].empty())
-					m_inputResets.insert(node->getClocks()[i]->getResetPinSource());
+				if (!node->getClockNames()[i].empty()) {
+					auto* clk = node->getClocks()[i]->getClockPinSource();
+					HCL_ASSERT(clk);
+					m_inputClocks.insert(clk);
+				}
+				if (!node->getResetNames()[i].empty()) {
+					auto* clk = node->getClocks()[i]->getResetPinSource();
+					HCL_ASSERT(clk);
+					m_inputResets.insert(clk);
+				}
 			}
 		}
 	}
