@@ -15,32 +15,25 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#pragma once
+#include "gatery/pch.h"
+#include "TileLinkDMA.h"
 
-#include <gatery/frontend/ExternalModule.h>
-
-#include "../../axi/axi.h"
-
-namespace gtry::scl::arch::xilinx
+namespace gtry::scl
 {
-	class HBM_IP : public ExternalModule
+	void tileLinkFromStream(RvStream<AxiToStreamCmd>&& cmd, RvStream<BVec>&& data, TileLinkUB&& slave)
 	{
-	public:
-		HBM_IP(std::string_view ipName = "hbm_0");
+		Area ent{ "scl_tileLinkFromStream", true };
 
-		// this clocks needs to be connected even when not using the APB interface
-		void clockAPB(const Clock& clk, size_t stackIndex);
-		void clockRef(const Clock& clk, size_t stackIndex);
+		AxiConfig axiCfg{ 
+			.addrW = slave.a->address.width(),
+			.dataW = slave.a->data.width(),
+		};
+		RvStream<AxiAddress> cmdAddr = axiGenerateAddressFromCommand(std::move(cmd), axiCfg);
+		ready(cmdAddr) = transfer(slave.a) & eop(slave.a);
+		ready(data) = ready(slave.a);
+		ready(*slave.d) = '1';
 
-		Axi4 port(size_t portIndex, BitWidth addrW = 33_b, bool addECCBitsToData = false);
-
-		Bit catastrophicTemperature(size_t stackIndex);
-		UInt temperature(size_t stackIndex);
-		Bit abpComplete(size_t stackIndex);
-
-	protected:
-		std::optional<Clock> m_controllerClock;
-		Bit m_controllerResetLow;
-		
-	};
+		valid(slave.a) = valid(cmdAddr) & valid(data);
+		slave.a->setupPut(cmdAddr->addr, *data, cmd->id, utils::Log2C(cmd->bytesPerBurst));
+	}
 }

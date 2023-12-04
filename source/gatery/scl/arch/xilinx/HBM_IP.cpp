@@ -32,11 +32,17 @@ namespace gtry::scl::arch::xilinx
 	void HBM_IP::clockAPB(const Clock& clk, size_t stackIndex)
 	{
 		HCL_ASSERT(stackIndex < 2);
+		m_controllerClock = clk;
 
 		std::string prefix = "APB_" + std::to_string(stackIndex) + "_";
 
 		clockIn(clk, prefix + "PCLK");
-		in(prefix + "PRESET_N") = '1';
+
+		ClockScope scope(clk);
+		HCL_NAMED(m_controllerResetLow);
+
+		in(prefix + "PRESET_N") = m_controllerResetLow;
+		m_controllerResetLow = '1';
 	}
 
 	void HBM_IP::clockRef(const Clock& clk, size_t stackIndex)
@@ -56,12 +62,18 @@ namespace gtry::scl::arch::xilinx
 		std::string prefix = (boost::format("AXI_%02d_") % portIndex).str();
 
 		// CLOCK
-		clockIn(ClockScope::getClk(), prefix + "ACLK");
-		in(prefix + "ARESET_N") = '1';
+		const Clock& clk = ClockScope::getClk();
+		clockIn(clk, prefix + "ACLK");
+
+		// RESET
+		Bit resetSignalN = clk.reset(Clock::ResetActive::LOW);
+		HCL_NAMED(resetSignalN);
+		in(prefix + "ARESET_N") = resetSignalN;
+		m_controllerResetLow &= scl::synchronizeRelease(resetSignalN, clk, *m_controllerClock, hlim::RegisterAttributes::Active::LOW);
 
 		// AR
 		ready(*axi.ar) = out(prefix + "ARREADY");
-		valid(*axi.ar) = in(prefix + "ARVALID");
+		in(prefix + "ARVALID") = valid(*axi.ar);
 		in(prefix + "ARADDR", addrW) = (BVec)(*axi.ar)->addr;
 		in(prefix + "ARBURST", 2_b) = (BVec)(*axi.ar)->burst;
 		in(prefix + "ARID", 6_b) = (*axi.ar)->id;
@@ -73,7 +85,7 @@ namespace gtry::scl::arch::xilinx
 
 		// AW
 		ready(*axi.aw) = out(prefix + "AWREADY");
-		valid(*axi.aw) = in(prefix + "AWVALID");
+		in(prefix + "AWVALID") = valid(*axi.aw);
 		in(prefix + "AWADDR", addrW) = (BVec)(*axi.aw)->addr;
 		in(prefix + "AWBURST", 2_b) = (BVec)(*axi.aw)->burst;
 		in(prefix + "AWID", 6_b) = (*axi.aw)->id;
@@ -85,7 +97,7 @@ namespace gtry::scl::arch::xilinx
 
 		// W
 		ready(*axi.w) = out(prefix + "WREADY");
-		valid(*axi.w) = in(prefix + "WVALID");
+		in(prefix + "WVALID") = valid(*axi.w);
 		in(prefix + "WLAST") = eop(*axi.w);
 		in(prefix + "WDATA", 256_b) = (*axi.w)->data.lower(256_b);
 		in(prefix + "WSTRB", 32_b) = (*axi.w)->strb.lower(32_b);
@@ -98,7 +110,7 @@ namespace gtry::scl::arch::xilinx
 		// R
 		in(prefix + "RREADY") = ready(axi.r);
 		valid(axi.r) = out(prefix + "RVALID");
-		eop(axi.r) = in(prefix + "RLAST");
+		eop(axi.r) = out(prefix + "RLAST");
 		axi.r->data = 0;
 		axi.r->data.lower(256_b) = out(prefix + "RDATA", 256_b);
 		axi.r->resp = out(prefix + "RRESP", 2_b);
@@ -118,16 +130,16 @@ namespace gtry::scl::arch::xilinx
 
 	Bit HBM_IP::catastrophicTemperature(size_t stackIndex)
 	{
-		return Bit();
+		return out("DRAM_" + std::to_string(stackIndex) + "_STAT_CATTRIP");
 	}
 
 	UInt HBM_IP::temperature(size_t stackIndex)
 	{
-		return UInt();
+		return (UInt)out("DRAM_" + std::to_string(stackIndex) + "_STAT_TEMP", 7_b);
 	}
 
 	Bit HBM_IP::abpComplete(size_t stackIndex)
 	{
-		return Bit();
+		return out("apb_complete_" + std::to_string(stackIndex));
 	}
 }

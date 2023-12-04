@@ -22,7 +22,6 @@ namespace gtry::scl::pci::xilinx {
 	struct CQUser;
 	struct CCUser;
 	struct RQUser;
-	struct RQExtras;
 	struct RCUser;
 	struct CompleterRequestDescriptor;
 	struct CompleterCompletionDescriptor;
@@ -67,112 +66,40 @@ namespace gtry::scl::pci::xilinx {
 	};
 
 	struct CQUser {
-		BVec first_be = 8_b;
-		BVec last_be = 8_b;
-		BVec byte_en = 64_b;
+		BVec raw;
+		static CQUser create(BitWidth streamW);
 
-		BVec is_sop = 2_b;
-		BVec is_sop0_ptr = 2_b;
-		BVec is_sop1_ptr = 2_b;
+		BVec firstBeByteEnable(size_t idx = 0)	const{ return raw.width() == 512_b ? raw(0 + idx*4, 4_b) : raw(0, 4_b); }
+		BVec lastBeByteEnable(size_t idx = 0)	const{ return raw.width() == 512_b ? raw(8 + idx*4, 4_b) : raw(4, 4_b); }
+		Bit tphPresent(size_t idx = 0)			const{ return raw.width() == 512_b ? raw[97 + idx]		: raw[12]; }
+		BVec tphType(size_t idx = 0)			const{ return raw.width() == 512_b ? raw(99 + idx*2,2_b) : raw(13,2_b); }
 
-		BVec is_eop = 2_b;
-		BVec is_eop0_ptr = 4_b;
-		BVec is_eop1_ptr = 4_b;
-
-		Bit discontinue;
-
-		BVec tph_present = 2_b;
-		BVec tph_type = 4_b;
-
-		BVec tph_st_tag = 16_b;
-		BVec parity = 64_b;
+		void firstBeByteEnable(BVec newVal, size_t idx = 0)	{ if(raw.width() == 512_b) raw(0 + idx*4, 4_b) = newVal; else raw(0, 4_b) = newVal; }
+		void lastBeByteEnable(BVec newVal, size_t idx = 0)	{ if(raw.width() == 512_b) raw(8 + idx*4, 4_b) = newVal; else raw(4, 4_b) = newVal; }
+		void tphPresent(Bit newVal, size_t idx = 0)			{ if(raw.width() == 512_b) raw[97 + idx]	   = newVal; else raw[12]	  = newVal; }
+		void tphType(BVec newVal, size_t idx = 0)			{ if(raw.width() == 512_b) raw(99 + idx*2,2_b) = newVal; else raw(13,2_b) = newVal; }
 	};
 
 	struct CCUser {
-		BVec is_sop = 2_b;
-		BVec is_sop0_ptr = 2_b;
-		BVec is_sop1_ptr = 2_b;
-
-		BVec is_eop = 2_b;
-		BVec is_eop0_ptr = 4_b;
-		BVec is_eop1_ptr = 4_b;
-
-		Bit discontinue;
-
-		BVec parity = 64_b;
+		BVec raw;
+		static CCUser create(BitWidth streamW);
 	};
-
 
 	struct RQUser {
-		BVec first_be = 8_b;
-		BVec last_be = 8_b;
-
-		BVec addr_offset = 4_b;
-
-		BVec is_sop = 2_b;
-		BVec is_sop0_ptr = 2_b;
-		BVec is_sop1_ptr = 2_b;
-
-		BVec is_eop = 2_b;
-		BVec is_eop0_ptr = 4_b;
-		BVec is_eop1_ptr = 4_b;
-
-		Bit discontinue;
-
-		BVec tph_present = 2_b;
-		BVec tph_type = 4_b;
-		BVec tph_indirect_tag_en = 2_b;
-		BVec tph_st_tag = 16_b;
-
-		BVec seq_num0 = 6_b;
-		BVec seq_num1 = 6_b;
-
-		BVec parity = 64_b;
-	};
-
-	struct RQExtras {
-		Bit tag_vld0;
-		Bit tag_vld1;
-
-		BVec tag0 = 8_b;
-		BVec tag1 = 8_b;
-
-		BVec seq_num0 = 6_b;
-		BVec seq_num1 = 6_b;
-
-		Bit seq_num_vld0;
-		Bit seq_num_vld1;
+		BVec raw;
+		static RQUser create(BitWidth streamW);
 	};
 
 	struct RCUser {
-		BVec byte_en = 64_b;
-
-		BVec is_sop = 4_b;
-		BVec is_sop0_ptr = 2_b;
-		BVec is_sop1_ptr = 2_b;
-		BVec is_sop2_ptr = 2_b;
-		BVec is_sop3_ptr = 2_b;
-
-		BVec is_eop = 4_b;
-		BVec is_eop0_ptr = 4_b;
-		BVec is_eop1_ptr = 4_b;
-		BVec is_eop2_ptr = 4_b;
-		BVec is_eop3_ptr = 4_b;
-
-		Bit discontinue;
-
-		BVec parity = 64_b;
+		BVec raw;
+		static RCUser create(BitWidth streamW);
 	};
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::xilinx::CompleterRequestDescriptor, at, wordAddress, dwordCount, reqType, reservedDw2, requesterID, tag, targetFunction, barId, barAperture, tc, attr, reservedDw3);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::xilinx::CompleterCompletionDescriptor, lowerByteAddress, reservedDw0_0, at, reservedDw0_1, byteCount, lockedReadCompletion, reservedDw0_3, dwordCount, completionStatus, poisonedCompletion, reservedDw1, requesterID, tag, completerID, completerIdEnable, tc, attr, forceECRC);
 
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::xilinx::CQUser, first_be, last_be, byte_en, is_sop, is_sop0_ptr, is_sop1_ptr, is_eop, is_eop0_ptr, is_eop1_ptr, discontinue, tph_present, tph_type, tph_st_tag, parity);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::xilinx::CCUser, is_sop, is_sop0_ptr, is_sop1_ptr, is_eop, is_eop0_ptr, is_eop1_ptr, discontinue, parity);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::xilinx::RQUser, first_be, last_be, addr_offset, is_sop, is_sop0_ptr, is_sop1_ptr, is_eop, is_eop0_ptr, is_eop1_ptr, discontinue, tph_present, tph_type, tph_indirect_tag_en, tph_st_tag, seq_num0, seq_num1, parity);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::xilinx::RQExtras, tag_vld0, tag_vld1, tag0, tag1, seq_num0, seq_num1, seq_num_vld0, seq_num_vld1);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::xilinx::RCUser, byte_en, is_sop, is_sop0_ptr, is_sop1_ptr, is_sop2_ptr, is_sop3_ptr, is_eop, is_eop0_ptr, is_eop1_ptr, is_eop2_ptr, is_eop3_ptr, discontinue, parity);
-
-
-
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::xilinx::CQUser, raw);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::xilinx::CCUser, raw);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::xilinx::RQUser, raw);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::xilinx::RCUser, raw);

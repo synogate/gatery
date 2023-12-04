@@ -22,13 +22,13 @@
 
 namespace gtry::scl
 {
-	template<TileLinkSignal TLink>
+	template<TileLinkSignal TLink = TileLinkUL>
 	class TileLinkMux
 	{
 	public:
 		TileLinkMux();
 
-		virtual void attachSource(TLink& source);
+		virtual TileLinkMux& attachSource(TLink& source);
 
 	//	template<typename TArbiterPolicy = ArbiterPolicyLowest>
 		TLink generate();
@@ -53,7 +53,7 @@ namespace gtry::scl
 	}
 
 	template<TileLinkSignal TLink>
-	inline void TileLinkMux<TLink>::attachSource(TLink& source)
+	inline TileLinkMux<TLink>& TileLinkMux<TLink>::attachSource(TLink& source)
 	{
 		HCL_DESIGNCHECK_HINT(!m_generated, "already generated");
 		for (const TLink& l : m_source)
@@ -68,6 +68,8 @@ namespace gtry::scl
 		TLink& link = m_source.emplace_back();
 		link = constructFrom(source);
 		link <<= source;
+
+		return *this;
 	}
 
 	template<TileLinkSignal TLink>
@@ -99,6 +101,10 @@ namespace gtry::scl
 		size_t idx = 0;
 		BitWidth myTagW = BitWidth::count(m_source.size());
 		ready(d) = '0';
+
+		if (!m_source.empty())
+			ready(d) = ready(*m_source.front().d);
+
 		for (TLink& src : m_source)
 		{
 			(*src.d)->opcode = d->opcode;

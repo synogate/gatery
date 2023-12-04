@@ -174,9 +174,9 @@ SignalTapHelper sim_debugIf(Bit condition);
 template<typename Signal, typename std::enable_if_t<std::is_base_of_v<ElementarySignal, Signal>>* = nullptr  >
 void tap(const Signal& signal)
 {
-	//hlim::SignalAttributes att;
-	//att.userDefinedVendorAttributes["xilinx"]["mark_debug"] = { .type = "string", .value = "\"true\"" };
-	//attribute((Signal&)signal, att);
+	hlim::SignalAttributes att;
+	att.userDefinedVendorAttributes["xilinx"]["mark_debug"] = { .type = "string", .value = "\"true\"" };
+	attribute((Signal&)signal, att);
 
 	auto *node = DesignScope::createNode<hlim::Node_SignalTap>();
 	node->recordStackTrace();

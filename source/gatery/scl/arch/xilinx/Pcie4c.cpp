@@ -51,7 +51,7 @@ namespace gtry::scl::arch::xilinx {
 		const PinConfig pinCfg{ .type = PinType::STD_LOGIC };
 	
 		*cq = out("m_axis_cq_tdata", m_cfg.dataBusW);
-		unpack(out("m_axis_cq_tuser", 183_b), cq.template get<CQUser>());
+		cq.template get<CQUser>() = { out("m_axis_cq_tuser", m_cfg.dataBusW == 512_b? 183_b: 88_b) };
 	
 		valid(cq) = out("m_axis_cq_tvalid");
 		keep(cq) = out("m_axis_cq_tkeep", BitWidth(m_cfg.dataBusW.bits()/32));
@@ -70,7 +70,7 @@ namespace gtry::scl::arch::xilinx {
 		in("s_axis_cc_tkeep", BitWidth(m_cfg.dataBusW.bits()/32)) = keep(cc);
 	
 		in("s_axis_cc_tlast") = eop(cc);
-		in("s_axis_cc_tuser", 81_b) = (BVec) pack(cc.template get<CCUser>());
+		in("s_axis_cc_tuser", m_cfg.dataBusW == 512_b? 81_b: 33_b) = cc.template get<CCUser>().raw;
 		in("s_axis_cc_tvalid") = valid(cc);
 	
 		ready(cc) = out("s_axis_cc_tready", 4_b).lsb(); //all 4 bits indicate the same value, "any of the bit" can be used
@@ -84,7 +84,7 @@ namespace gtry::scl::arch::xilinx {
 		Axi4PacketStream<RCUser> rc;
 	
 		*rc = out("m_axis_rc_tdata", m_cfg.dataBusW);
-		unpack(out("m_axis_rc_tuser", 161_b), rc.template get<RCUser>());
+		rc.template get<RCUser>() = { out("m_axis_rc_tuser", m_cfg.dataBusW == 512_b ? 161_b : 75_b) };
 	
 		valid(rc) = out("m_axis_rc_tvalid");
 		keep(rc) = out("m_axis_rc_tkeep", BitWidth(m_cfg.dataBusW.bits()/32));
@@ -103,7 +103,7 @@ namespace gtry::scl::arch::xilinx {
 		in("s_axis_rq_tkeep", BitWidth(m_cfg.dataBusW.bits()/32)) = keep(rq);
 	
 		in("s_axis_rq_tlast") = eop(rq);
-		in("s_axis_rq_tuser", 137_b) = (BVec)pack(rq.template get<RQUser>());
+		in("s_axis_rq_tuser", m_cfg.dataBusW == 512_b ? 183_b : 62_b) = rq.template get<RQUser>().raw;
 		in("s_axis_rq_tvalid") = valid(rq);
 	
 		ready(rq) = out("s_axis_rq_tready", 4_b).lsb();
@@ -136,8 +136,19 @@ namespace gtry::scl::arch::xilinx {
 		in("cfg_interrupt_pending", 4_b) = 0;
 
 		in("m_axis_cq_tready") = '0';
+		
 		in("s_axis_cc_tvalid") = '0';
+		in("s_axis_cc_tdata", m_cfg.dataBusW) = 0;
+		in("s_axis_cc_tkeep", BitWidth(m_cfg.dataBusW.bits()/32)) = 0;
+		in("s_axis_cc_tlast") = '0';
+		in("s_axis_cc_tuser", m_cfg.dataBusW == 512_b ? 81_b : 33_b) = 0;
+
 		in("m_axis_rc_tready") = '0';
+
 		in("s_axis_rq_tvalid") = '0';
+		in("s_axis_rq_tdata", m_cfg.dataBusW) = 0;
+		in("s_axis_rq_tkeep", BitWidth(m_cfg.dataBusW.bits()/32)) = 0;
+		in("s_axis_rq_tlast") = '0';
+		in("s_axis_rq_tuser", m_cfg.dataBusW == 512_b ? 183_b : 62_b) = 0;
 	}
 }

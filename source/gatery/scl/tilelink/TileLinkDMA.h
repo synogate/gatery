@@ -16,31 +16,16 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
+#include <gatery/frontend.h>
+#include "tilelink.h"
+#include "../axi/AxiDMA.h"
 
-#include <gatery/frontend/ExternalModule.h>
-
-#include "../../axi/axi.h"
-
-namespace gtry::scl::arch::xilinx
+namespace gtry::scl
 {
-	class HBM_IP : public ExternalModule
-	{
-	public:
-		HBM_IP(std::string_view ipName = "hbm_0");
-
-		// this clocks needs to be connected even when not using the APB interface
-		void clockAPB(const Clock& clk, size_t stackIndex);
-		void clockRef(const Clock& clk, size_t stackIndex);
-
-		Axi4 port(size_t portIndex, BitWidth addrW = 33_b, bool addECCBitsToData = false);
-
-		Bit catastrophicTemperature(size_t stackIndex);
-		UInt temperature(size_t stackIndex);
-		Bit abpComplete(size_t stackIndex);
-
-	protected:
-		std::optional<Clock> m_controllerClock;
-		Bit m_controllerResetLow;
-		
-	};
+	/**
+	 * @brief Drive a TileLink bus from a data + command stream. 
+				NOTE: This function is not tile link complant in that it does not generate a unique id for each put.
+	 * @param cmd The address generator command as in axi.
+	*/
+	void tileLinkFromStream(RvStream<AxiToStreamCmd>&& cmd, RvStream<BVec>&& data, TileLinkUB&& slave);
 }

@@ -29,6 +29,6 @@ namespace gtry::scl::arch::xilinx
 		std::optional<size_t> latency;
 	};
 
-	std::array<TileLinkUL, 2> ultraRam(size_t numWords, UltraRamSettings cfg = {});
+	std::array<TileLinkUL, 2> ultraRam(size_t numWords, UltraRamSettings&& cfg = {});
 	TileLinkUL ultraRamPort(BitWidth addrW, URAM288& inRam, URAM288& outRam, URAM288::Port port, BitWidth sourceW, size_t latency);
 }

@@ -15,32 +15,26 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#pragma once
+#include "gatery/pch.h"
+#include "IBUFDS.h"
 
-#include <gatery/frontend/ExternalModule.h>
-
-#include "../../axi/axi.h"
+#include <gatery/frontend.h>
 
 namespace gtry::scl::arch::xilinx
 {
-	class HBM_IP : public ExternalModule
+	Bit IBUFDS(std::string_view pPinName, std::string_view nPinName)
 	{
-	public:
-		HBM_IP(std::string_view ipName = "hbm_0");
+		ExternalModule ibufds0{ "IBUFDS", "UNISIM", "vcomponents" };
+		ibufds0.in("I") = pinIn().setName(std::string{ pPinName });
+		ibufds0.in("IB") = pinIn().setName(std::string{ nPinName });
+		return ibufds0.out("O");
+	}
 
-		// this clocks needs to be connected even when not using the APB interface
-		void clockAPB(const Clock& clk, size_t stackIndex);
-		void clockRef(const Clock& clk, size_t stackIndex);
-
-		Axi4 port(size_t portIndex, BitWidth addrW = 33_b, bool addECCBitsToData = false);
-
-		Bit catastrophicTemperature(size_t stackIndex);
-		UInt temperature(size_t stackIndex);
-		Bit abpComplete(size_t stackIndex);
-
-	protected:
-		std::optional<Clock> m_controllerClock;
-		Bit m_controllerResetLow;
-		
-	};
+	Clock IBUFDS(const Clock& parentClock, std::string_view nPinName)
+	{
+		ExternalModule ibufds0{ "IBUFDS", "UNISIM", "vcomponents" };
+		ibufds0.clockIn(parentClock, "I");
+		ibufds0.in("IB") = pinIn().setName(std::string{ nPinName });
+		return ibufds0.clockOut(parentClock, "O");
+	}
 }

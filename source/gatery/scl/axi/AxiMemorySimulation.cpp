@@ -188,6 +188,7 @@ namespace gtry::scl
 		ready(*out.w).exportOverride(ready(*axi.w));
 
 		valid(out.r).exportOverride(valid(axi.r));
+		eop(out.r).exportOverride(eop(axi.r));
 		out.r->id.exportOverride(axi.r->id);
 		out.r->data.exportOverride(axi.r->data);
 		out.r->resp.exportOverride(axi.r->resp);
