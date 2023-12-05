@@ -51,7 +51,6 @@ namespace gtry::scl::arch::xilinx
 
 		if(clock.getClk()->getRegAttribs().resetType != Clock::ResetType::NONE)
 		{
-			HCL_DESIGNCHECK(clock.getClk()->getRegAttribs().resetType == Clock::ResetType::SYNCHRONOUS);
 			rst(clock.reset(Clock::ResetActive::HIGH));
 		}
 	}
