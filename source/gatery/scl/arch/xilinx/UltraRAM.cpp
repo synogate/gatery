@@ -94,7 +94,7 @@ std::array<TileLinkUL, 2> arch::xilinx::ultraRam(size_t numWords, UltraRamSettin
 	std::array<TileLinkUL, 2> outSim;
 	for (size_t i = 0; i < outSim.size(); ++i)
 	{
-		tileLinkInit(outSim[i], BitWidth::count(numWords), 64_b, 2_b, i ? cfg.bSourceW : cfg.aSourceW);
+		tileLinkInit(outSim[i], BitWidth::count(numWords) + 3_b, 64_b, 2_b, i ? cfg.bSourceW : cfg.aSourceW);
 		ready(*outSim[i].d) = '1';
 		connect(simMem, outSim[i]);
 
@@ -110,7 +110,7 @@ std::array<TileLinkUL, 2> arch::xilinx::ultraRam(size_t numWords, UltraRamSettin
 
 TileLinkUL gtry::scl::arch::xilinx::ultraRamPort(BitWidth addrW, URAM288& inRam, URAM288& outRam, URAM288::Port port, BitWidth sourceW, size_t latency)
 {
-	TileLinkUL out = tileLinkInit<TileLinkUL>(addrW, 64_b, sourceW);
+	TileLinkUL out = tileLinkInit<TileLinkUL>(addrW + 3_b, 64_b, sourceW);
 
 	inRam.port(port, {
 		.din = zext(out.a->data),
