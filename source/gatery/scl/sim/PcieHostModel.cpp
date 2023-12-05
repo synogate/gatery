@@ -60,13 +60,13 @@ namespace gtry::scl::sim {
 	void PcieHostModel::requesterRequest(TlpPacketStream<EmptyBits>&& rr)
 	{ 
 		m_rr.emplace(move(rr)); 
-		pinOut(*m_rr, "host_rr");
+		pinOut(*m_rr, "host_rr", {.simulationOnlyPin = true});
 	}
 
 	TlpPacketStream<EmptyBits>& PcieHostModel::requesterCompletion() { 
 		m_rc.emplace((*m_rr)->width()); 
 		emptyBits(*m_rc) =  BitWidth::count((*m_rc)->width().bits());
-		pinIn(*m_rc, "host_rc");
+		pinIn(*m_rc, "host_rc", {.simulationOnlyPin = true});
 		return *m_rc; 
 	}
 
