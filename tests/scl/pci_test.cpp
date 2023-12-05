@@ -230,7 +230,7 @@ BOOST_FIXTURE_TEST_CASE(tlp_CompletionHeader_test, BoostUnitTestSimulationFixtur
 			BOOST_TEST(simu(compHdr.byteCount) == *comp.byteCount);
 			BOOST_TEST(simu(compHdr.byteCountModifier) == comp.byteCountModifier);
 			BOOST_TEST(simu(compHdr.lowerByteAddress) == *comp.lowerByteAddress);
-			BOOST_TEST(simu(compHdr.completionStatus) == comp.completionStatus);
+			BOOST_TEST(simu(compHdr.completionStatus) == (size_t) comp.completionStatus);
 
 			BOOST_TEST(simu(compHdrRecon.common.type) == simu(compHdr.common.type));
 			BOOST_TEST(simu(compHdrRecon.common.fmt)  == simu(compHdr.common.fmt));

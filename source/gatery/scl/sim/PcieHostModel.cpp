@@ -29,7 +29,35 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 namespace gtry::scl::sim {
 	using namespace gtry;
 
-	void PcieHostModel::requesterRequest(TlpPacketStream<EmptyBits>&& rr) 
+
+	PcieHostModel::PcieHostModel(uint64_t memorySizeInBytes, bool memInitRandomDefined, uint32_t seed)
+	{
+		hlim::MemoryStorageDense mem(8 * memorySizeInBytes);
+		mem.setAllDefinedRandom(seed);
+		m_mem = std::make_unique<hlim::MemoryStorageDense>(mem);
+	}
+
+	PcieHostModel& PcieHostModel::defaultHandlers()
+	{
+		updateHandler(TlpOpcode::memoryReadRequest64bit, std::make_unique<Completer>());
+		return *this;
+	}
+
+	PcieHostModel& PcieHostModel::updateHandler(TlpOpcode op, std::unique_ptr<PciRequestHandler> requestHandler)
+	{
+		m_requestHandlers[op] = std::move(requestHandler);
+		return *this;
+	}
+
+	PcieHostModel& PcieHostModel::updateHandler(std::map<TlpOpcode, std::unique_ptr<PciRequestHandler>> requestHandlers)
+	{
+		for (auto& binding : requestHandlers) {
+			m_requestHandlers[binding.first] = move(binding.second);
+		}
+		return *this;
+	}
+
+	void PcieHostModel::requesterRequest(TlpPacketStream<EmptyBits>&& rr)
 	{ 
 		m_rr.emplace(move(rr)); 
 		pinOut(*m_rr, "host_rr");
@@ -40,6 +68,15 @@ namespace gtry::scl::sim {
 		emptyBits(*m_rc) =  BitWidth::count((*m_rc)->width().bits());
 		pinIn(*m_rc, "host_rc");
 		return *m_rc; 
+	}
+
+	PciRequestHandler* PcieHostModel::handler(TlpOpcode op)
+	{
+		auto it = m_requestHandlers.find(op);
+		if (it != m_requestHandlers.end())
+			return it->second.get();
+		else
+			return &m_defaultHandler;
 	}
 
 	SimProcess PcieHostModel::assertInvalidTlp(const Clock& clk)
@@ -64,9 +101,11 @@ namespace gtry::scl::sim {
 		while (true) {
 			auto simPacket = co_await gtry::scl::strm::receivePacket(*m_rr, clk);
 			auto tlp = TlpInstruction::createFrom(simPacket.payload);
-			BOOST_TEST((m_opcodesSupported.contains(tlp.opcode)), "the opcode (ftm and type): 0x" << magic_enum::enum_name(tlp.opcode) << "is not supported");
+			BOOST_TEST((m_requestHandlers.find(tlp.opcode) != m_requestHandlers.end()), "the opcode (ftm and type): 0x" << magic_enum::enum_name(tlp.opcode) << "is not supported");
 		}
 	}
+
+	
 
 	SimProcess PcieHostModel::completeRequests(const Clock& clk, size_t delay)
 	{
@@ -76,32 +115,12 @@ namespace gtry::scl::sim {
 		fork([&, this]()->SimProcess { return scl::strm::readyDriver(*m_rr, clk); });
 		while (true) {
 			auto simPacket = co_await gtry::scl::strm::receivePacket(*m_rr, clk);
-
-
 			//simPacket must be captured by copy because it might get overwritten with the next request before the first response has even gotten out
 			fork([&, simPacket, this]()->SimProcess {
 				for (size_t i = 0; i < delay; i++)
 					co_await OnClk(clk);
 				TlpInstruction request = TlpInstruction::createFrom(simPacket.payload);
-				if(request.opcode == TlpOpcode::memoryReadRequest64bit)
-				{
-					TlpInstruction completion = request;
-					completion.opcode = TlpOpcode::completionWithData;
-					completion.lowerByteAddress = (uint8_t) (*request.wordAddress << 2); //initial lower byte address
-					completion.completerID = 0x5678;
-					completion.byteCount = *request.length << 2; // initial byte count left
-
-					strm::SimPacket completionPacket(completion.asDefaultBitVectorState(true));
-
-					size_t baseBitAddress = *request.wordAddress << 5;
-					for (size_t dword = 0; dword < request.length; dword++)
-					{
-						completionPacket << m_mem.read(baseBitAddress, 32);
-						baseBitAddress += 32;
-					}
-
-					co_await strm::sendPacket(*m_rc, completionPacket, clk, sendingSeq);
-				}
+				co_await this->handler(request.opcode)->respond(request, *m_mem, *m_rc, clk, sendingSeq);
 			});
 		}
 	}

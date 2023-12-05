@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <gatery/scl/io/pci.h>
 #include <gatery/scl/sim/SimPci.h>
 #include <gatery/hlim/postprocessing/MemoryStorage.h>
+#include "PciRequestHandler.h"
 
 
 namespace gtry::scl::sim {
@@ -29,14 +30,20 @@ namespace gtry::scl::sim {
 	class PcieHostModel 
 	{
 	public:
-		PcieHostModel(const hlim::MemoryStorage& mem, const std::set<TlpOpcode>& opcodesSupported = { TlpOpcode::memoryReadRequest64bit }) 
-			:m_mem(mem), m_opcodesSupported(opcodesSupported) 
-		{}
+		PcieHostModel(uint64_t memorySizeInBytes = 64, bool memInitRandomDefined = true, uint32_t seed = 1259);
+		PcieHostModel(std::unique_ptr<hlim::MemoryStorage> mem) : m_mem(move(mem)) {}
 
-		PcieHostModel& chopCompletionInto64ByteChunks();
+		PcieHostModel& defaultHandlers();
+
+		PcieHostModel& updateHandler(TlpOpcode op, std::unique_ptr<PciRequestHandler> requestHandler);
+		PcieHostModel& updateHandler(std::map<TlpOpcode, std::unique_ptr<PciRequestHandler>> requestHandlers);
 		
 		void requesterRequest(TlpPacketStream<EmptyBits>&& rr);
 		TlpPacketStream<EmptyBits>& requesterCompletion();
+
+		PciRequestHandler* handler(TlpOpcode);
+
+		hlim::MemoryStorage& memory() { return *m_mem; }
 
 		SimProcess assertInvalidTlp(const Clock& clk);
 		SimProcess assertPayloadSizeDoesntMatchHeader(const Clock& clk);
@@ -44,11 +51,11 @@ namespace gtry::scl::sim {
 		SimProcess completeRequests(const Clock& clk, size_t delay = 0);
 
 	private:
-		const hlim::MemoryStorage& m_mem;
+		std::unique_ptr<hlim::MemoryStorage> m_mem;
 		std::optional<TlpPacketStream<EmptyBits>> m_rr;
 		std::optional<TlpPacketStream<EmptyBits>> m_rc;
-		bool m_chopInto64Bytes = false;
+		std::map<TlpOpcode, std::unique_ptr<PciRequestHandler>> m_requestHandlers;
+		Unsupported m_defaultHandler;
 
-		std::set<TlpOpcode> m_opcodesSupported;
 	};
 }

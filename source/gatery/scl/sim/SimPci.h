@@ -23,6 +23,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 namespace gtry::scl::sim {
 	using namespace scl::pci;
 
+	uint64_t readState(gtry::sim::DefaultBitVectorState raw, size_t offset, size_t size);
+	inline uint64_t readState(gtry::sim::DefaultBitVectorState raw) { return readState(raw, 0, raw.size()); }
+
 	struct DefaultBitVectorWriter {
 		gtry::sim::DefaultBitVectorState &destination;
 		size_t offset = 0;
@@ -55,7 +58,7 @@ namespace gtry::scl::sim {
 		std::optional<uint64_t> wordAddress;
 		std::optional<uint8_t> lowerByteAddress;
 		std::optional<size_t> completerID;
-		size_t completionStatus = 0b000;
+		CompletionStatus completionStatus = CompletionStatus::successfulCompletion;
 		bool byteCountModifier = 0;
 		std::optional<size_t> byteCount;
 		std::optional<std::vector<uint32_t>> payload;
