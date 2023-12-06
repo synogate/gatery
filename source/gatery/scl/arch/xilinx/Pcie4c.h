@@ -40,7 +40,7 @@ namespace gtry::scl::arch::xilinx
 			Bit phy_rdy_out;
 		};
 	
-		Pcie4c(std::string_view name, const Clock& ipClock, const Clock& gtClock, Settings cfg);
+		Pcie4c(const Clock& ipClock, const Clock& gtClock, Settings cfg, std::string_view name = "pcie4c_uscale_plus_0");
 	
 		Axi4PacketStream<CQUser> completerRequest();
 		Pcie4c& completerCompletion(Axi4PacketStream<CCUser>&& stream);
