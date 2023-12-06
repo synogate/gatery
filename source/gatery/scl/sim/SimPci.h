@@ -18,7 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #pragma once
 
 #include <gatery/frontend.h>
-#include <gatery/scl/io/pci.h>
+#include <gatery/scl/io/pci/pci.h>
 
 namespace gtry::scl::sim {
 	using namespace scl::pci;

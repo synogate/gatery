@@ -24,9 +24,9 @@
 #include <iostream>
 #include <iomanip>
 
-#include <gatery/scl/io/pci.h>
+#include <gatery/scl/io/pci/pci.h>
 #include <gatery/scl/sim/SimPci.h> 
-#include <gatery/scl/io/PciToTileLink.h> 
+#include <gatery/scl/io/pci/PciToTileLink.h> 
 
 using namespace boost::unit_test;
 using namespace gtry;

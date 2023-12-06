@@ -19,7 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "scl/pch.h"
 #include <gatery/frontend.h>
 
-#include <gatery/scl/io/pci.h>
+#include <gatery/scl/io/pci/pci.h>
 #include <gatery/scl/sim/PcieHostModel.h>
 #include <gatery/scl/sim/SimPci.h>
 
