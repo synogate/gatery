@@ -26,6 +26,7 @@
 
 #include <gatery/scl/stream/SimuHelpers.h>
 #include <gatery/scl/tilelink/tilelink.h>
+#include <gatery/scl/tilelink/TileLinkDMA.h>
 #include <gatery/scl/tilelink/TileLinkHub.h>
 #include <gatery/scl/tilelink/TileLinkErrorResponder.h>
 #include <gatery/scl/tilelink/TileLinkFiFo.h>
@@ -977,4 +978,64 @@ BOOST_FIXTURE_TEST_CASE(tilelink_fifo_test, LinkTest)
 		co_await OnClk(clock());
 		stopTest();
 	});
+}
+
+BOOST_FIXTURE_TEST_CASE(tilelink_FromStream_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000, .memoryResetType = ClockConfig::ResetType::NONE });
+	ClockScope clkScp(clock);
+
+	scl::RvStream<scl::AxiToStreamCmd> cmd{ {
+			.startAddress = 8_b,
+			.endAddress = 8_b,
+			.bytesPerBurst = 16
+	} };
+	pinIn(cmd, "cmd");
+
+	scl::RvStream<BVec> data{ 16_b };
+	pinIn(data, "data");
+
+	auto link = scl::tileLinkInit<scl::TileLinkUB>(8_b, 16_b, 0_b, 3_b);
+	pinOut(link, "link");
+
+	scl::tileLinkFromStream(move(cmd), move(data), move(link));
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(valid(cmd)) = '0';
+		co_await OnClk(clock);
+
+		for (size_t i = 1; i < 4; ++i)
+		{
+			simu(cmd->startAddress) = i * 16;
+			simu(cmd->endAddress) = i * 32;
+			co_await performTransfer(cmd, clock);
+		}
+	});
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(valid(data)) = '0';
+
+		for(size_t i = 0;; ++i)
+		{
+			simu(*data) = i;
+			co_await performTransfer(data, clock);
+		}
+	});
+
+	addSimulationProcess([&]()->SimProcess {
+		fork(scl::strm::readyDriverRNG(link.a, clock, 80));
+
+		for (size_t i = 0; i < 6*8; ++i)
+		{
+			co_await performTransferWait(link.a, clock);
+			BOOST_TEST(simu(link.a->data) == i);
+		}
+		co_await OnClk(clock);
+		BOOST_TEST(!simu(valid(link.a)));
+
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }

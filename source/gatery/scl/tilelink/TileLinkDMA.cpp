@@ -15,16 +15,25 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#pragma once
+#include "gatery/pch.h"
+#include "TileLinkDMA.h"
 
-#include "blockRam/XilinxSimpleDualPortBlockRam.h"
-
-namespace gtry::scl {
-	
-template<class CodeFormatter>
-void registerExternalNodeHandlerVHDL(CodeFormatter *codeFormatter) 
+namespace gtry::scl
 {
-	codeFormatter->addExternalNodeHandler(XilinxSimpleDualPortBlockRam::writeVHDL);
-}
-	
+	void tileLinkFromStream(RvStream<AxiToStreamCmd>&& cmd, RvStream<BVec>&& data, TileLinkUB&& slave)
+	{
+		Area ent{ "scl_tileLinkFromStream", true };
+
+		AxiConfig axiCfg{ 
+			.addrW = slave.a->address.width(),
+			.dataW = slave.a->data.width(),
+		};
+		RvStream<AxiAddress> cmdAddr = axiGenerateAddressFromCommand(std::move(cmd), axiCfg);
+		ready(cmdAddr) = transfer(slave.a) & eop(slave.a);
+		ready(data) = ready(slave.a);
+		ready(*slave.d) = '1';
+
+		valid(slave.a) = valid(cmdAddr) & valid(data);
+		slave.a->setupPut(cmdAddr->addr, *data, cmd->id, utils::Log2C(cmd->bytesPerBurst));
+	}
 }

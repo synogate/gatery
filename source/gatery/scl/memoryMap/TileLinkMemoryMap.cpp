@@ -99,8 +99,11 @@ namespace gtry::scl
 		setName(d, "response");
 
 		ready(toMaster->a) = ready(d);
-		*toMaster->d <<= strm::regReady(move(d));
+		*toMaster->d <<= d;
 
-		return toMaster;
+		Reverse<TileLinkUL> out = { tileLinkInit<TileLinkUL>(addrWidth, dataW, sourceW) };
+		HCL_NAMED(out);
+		*toMaster <<= regDecouple(move(*out));
+		return out;
 	}
 }

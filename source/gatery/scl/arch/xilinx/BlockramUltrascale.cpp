@@ -46,6 +46,7 @@ BlockramUltrascale::BlockramUltrascale(const XilinxDevice &xilinxDevice) : Xilin
 
 	m_desc.size = 36 << 10;
 	m_desc.addressBits = 15;
+	m_desc.supportsDualClock = true;
 }
 
 bool BlockramUltrascale::apply(hlim::NodeGroup *nodeGroup) const
@@ -59,7 +60,7 @@ bool BlockramUltrascale::apply(hlim::NodeGroup *nodeGroup) const
 	if (memGrp->getWritePorts().size() > 1) return false;
 	if (memGrp->getMemory()->getRequiredReadLatency() == 0) return false;
 	if (memGrp->getMemory()->getMinPortWidth() != memGrp->getMemory()->getMaxPortWidth()) return false;
-	if (!memtools::memoryIsSingleClock(nodeGroup)) return false;
+	//if (!memtools::memoryIsSingleClock(nodeGroup)) return false;
 
 	// At this point we are sure we can handle it (as long as register retiming doesn't fail of course).
 
@@ -259,7 +260,10 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 		HCL_ASSERT(writeClock->getTriggerEvent() == hlim::Clock::TriggerEvent::RISING);
 
 		bram->attachClock(writeClock, (size_t)RAMBxE2::Clocks::CLK_B_WR);
-	}	  
+		
+		if (writeClock != readClock)
+			bram->setupClockDomains(RAMBxE2::ClockDomains::INDEPENDENT);
+	}
 }
 
 

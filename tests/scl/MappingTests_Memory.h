@@ -42,3 +42,14 @@ struct Test_MemoryCascade : public gtry::GHDLTestFixture
 	bool forceNoInitialization = false;
 	void execute();
 };
+
+struct Test_SDP_DualClock : public gtry::GHDLTestFixture
+{
+	size_t depth = 1 << 16;
+	gtry::BitWidth elemSize = gtry::BitWidth(2);
+	size_t numWrites = 1000;
+	bool forceMemoryResetLogic = false;
+	bool forceNoInitialization = false;
+	void execute();
+};
+

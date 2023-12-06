@@ -35,7 +35,7 @@ namespace gtry::scl
 
 	void format(std::ostream &stream, const AddressSpaceDescription &desc, size_t indent)
 	{
-		std::cout << std::string(indent, ' ') << " From: " << desc.offsetInBits << " size " << desc.size << std::endl;
+		std::cout << std::string(indent, ' ') << " From: " << (desc.offsetInBits / 8) << " size " << desc.size << std::endl;
 		std::cout << std::string(indent, ' ') << "    Name: " << desc.name << std::endl;
 		std::cout << std::string(indent, ' ') << "    Short desc: " << desc.descShort << std::endl;
 		std::cout << std::string(indent, ' ') << "    Long desc: " << desc.descLong << std::endl;

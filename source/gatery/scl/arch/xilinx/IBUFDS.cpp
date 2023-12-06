@@ -16,13 +16,25 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/pch.h"
-#include "TargetVendor.h"
+#include "IBUFDS.h"
 
-namespace gtry::scl::buildCtrl {
+#include <gatery/frontend.h>
 
-TargetVendor::TargetVendor(Vendor vendor) : BaseScope<TargetVendor>()
+namespace gtry::scl::arch::xilinx
 {
-	m_vendor = vendor;
-}
+	Bit IBUFDS(std::string_view pPinName, std::string_view nPinName)
+	{
+		ExternalModule ibufds0{ "IBUFDS", "UNISIM", "vcomponents" };
+		ibufds0.in("I") = pinIn().setName(std::string{ pPinName });
+		ibufds0.in("IB") = pinIn().setName(std::string{ nPinName });
+		return ibufds0.out("O");
+	}
 
+	Clock IBUFDS(const Clock& parentClock, std::string_view nPinName)
+	{
+		ExternalModule ibufds0{ "IBUFDS", "UNISIM", "vcomponents" };
+		ibufds0.clockIn(parentClock, "I");
+		ibufds0.in("IB") = pinIn().setName(std::string{ nPinName });
+		return ibufds0.clockOut(parentClock, "O");
+	}
 }

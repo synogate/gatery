@@ -16,27 +16,16 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
+#include <gatery/frontend.h>
+#include "tilelink.h"
+#include "../axi/AxiDMA.h"
 
-#include <gatery/frontend/Scope.h>
-
-namespace gtry::scl::buildCtrl {
-
-class TargetVendor : public gtry::BaseScope<TargetVendor>
+namespace gtry::scl
 {
-	public:
-		enum Vendor {
-			VENDOR_GENERIC,
-			VENDOR_XILINX,
-			VENDOR_ALTERA,
-			VENDOR_LATTICE,
-		};
-		
-		TargetVendor(Vendor vendor);
-		
-		static TargetVendor *get() { return m_currentScope; }
-		static Vendor getVendor() { return m_currentScope==nullptr?VENDOR_GENERIC:m_currentScope->m_vendor; }
-	protected:
-		Vendor m_vendor;
-};
-
+	/**
+	 * @brief Drive a TileLink bus from a data + command stream. 
+				NOTE: This function is not tile link complant in that it does not generate a unique id for each put.
+	 * @param cmd The address generator command as in axi.
+	*/
+	void tileLinkFromStream(RvStream<AxiToStreamCmd>&& cmd, RvStream<BVec>&& data, TileLinkUB&& slave);
 }

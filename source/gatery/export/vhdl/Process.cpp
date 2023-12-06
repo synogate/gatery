@@ -113,19 +113,27 @@ void Process::extractSignals()
 		}
 
 		if (dynamic_cast<hlim::Node_Clk2Signal *>(node)) {
-			m_inputClocks.insert(node->getClocks()[0]->getClockPinSource());
+			auto* clk = node->getClocks()[0]->getClockPinSource();
+			HCL_ASSERT(clk);
+			m_inputClocks.insert(clk);
 		}
 
 		if (auto *rstSig = dynamic_cast<hlim::Node_ClkRst2Signal*>(node)) {
-			m_inputResets.insert(rstSig->getClocks()[0]->getResetPinSource());
+			auto* rst = rstSig->getClocks()[0]->getResetPinSource();
+			HCL_ASSERT(rst);
+			m_inputResets.insert(rst);
 		}
 
 		if (auto* s2rst = dynamic_cast<hlim::Node_Signal2Rst*>(node)) {
-			m_inputResets.insert(s2rst->getClocks()[0]->getResetPinSource());
+			auto* rst = s2rst->getClocks()[0]->getResetPinSource();
+			HCL_ASSERT(rst);
+			m_inputResets.insert(rst);
 		}
 
 		if (auto* s2clk = dynamic_cast<hlim::Node_Signal2Clk*>(node)) {
-			m_inputClocks.insert(s2clk->getClocks()[0]->getClockPinSource());
+			auto* clk = s2clk->getClocks()[0]->getClockPinSource();
+			HCL_ASSERT(clk);
+			m_inputClocks.insert(clk);
 		}
 
 		
