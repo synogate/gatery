@@ -44,6 +44,14 @@ namespace gtry::scl
 			}
 		});
 	}
+	void TileLinkMasterModel::init(std::string_view prefix, const TileLinkUB & tlub) {
+		init(prefix,
+			tlub.a->address.width(),
+			tlub.a->data.width(),
+			tlub.a->size.width(),
+			tlub.a->source.width()
+		);
+	}
 
 	void TileLinkMasterModel::probability(float valid, float ready, uint32_t seed)
 	{
