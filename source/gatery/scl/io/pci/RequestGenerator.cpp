@@ -20,5 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "RequestGenerator.h"
 
 namespace gtry::scl::pci {
+	TlpPacketStream<EmptyBits> requestGenerator(RvStream<ReadParams>&& readParams) {
 
+	}
 }

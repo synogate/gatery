@@ -20,7 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <gatery/scl/io/pci/pci.h>
 
 namespace gtry::scl::pci {
-	struct readParams {
-		
-	};
+
 }
+
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::ReadParams, originByteAddress, destByteAddress, numBytes);
