@@ -18,8 +18,8 @@ using namespace gtry::scl;
 namespace gtry::scl::arch::xilinx {
 	using namespace scl::pci::xilinx;
 
-	Pcie4c::Pcie4c(std::string_view name, const Clock& ipClock, const Clock& gtClock,  Settings cfg):
-		ExternalModule(name, ""),
+	Pcie4c::Pcie4c(const Clock& ipClock, const Clock& gtClock,  Settings cfg, std::string_view name):
+		ExternalModule(name, "xil_defaultlib"),
 		m_usrClk(clockOut("user_clk", "user_reset", ClockConfig{
 		.absoluteFrequency = hlim::ClockRational{ cfg.userClkFrequency, 1 },
 		.name = "pcie_usr_clk",
@@ -30,8 +30,8 @@ namespace gtry::scl::arch::xilinx {
 			})),
 			m_cfg(cfg)
 	{
-		this->requiresComponentDeclaration(true);
-		this->isEntity(false);
+		//this->requiresComponentDeclaration(false);
+		//this->isEntity(false);
 	
 		clockIn(ipClock, "sys_clk");
 		clockIn(gtClock, "sys_clk_gt");
