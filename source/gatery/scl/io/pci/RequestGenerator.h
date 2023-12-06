@@ -22,5 +22,3 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 namespace gtry::scl::pci {
 
 }
-
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::ReadParams, originByteAddress, destByteAddress, numBytes);
