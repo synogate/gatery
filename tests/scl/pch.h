@@ -13,7 +13,7 @@
 #include <gatery/scl/crypto/md5.h>
 #include <gatery/scl/crypto/SipHash.h>
 #include <gatery/scl/crypto/TabulationHashing.h>
-#include <gatery/scl/driverUtils/driver_utils.h>
+#include <gatery/scl/drivers/driver_utils.h>
 #include <gatery/scl/io/HDMITransmitter.h>
 #include <gatery/scl/io/uart.h>
 #include <gatery/scl/utils/BitCount.h>

@@ -17,7 +17,7 @@
 */
 #include "gatery/pch.h"
 #include "MemoryMap.h"
-#include <gatery/scl/driverUtils/MemoryMapEntry.h>
+#include <gatery/scl/drivers/MemoryMapEntry.h>
 
 namespace gtry::scl
 {
