@@ -141,22 +141,28 @@ void PackedMemoryMap::packRegisters(BitWidth registerWidth, Scope &scope)
 		if (signal.writeSignal)
 			oldWriteSignal = *signal.writeSignal;
 
+		AddressSpaceDescription description;
+		description.offsetInBits = scope.physicalDescription.offsetInBits + scope.physicalDescription.size.bits();
+		description.size = signalWidth;
+		description.name = signal.name;
+		if (signal.annotation != nullptr)
+			description.descShort = std::string(signal.annotation->shortDesc);
+
 		for (auto i : utils::Range(numRegisters)) {
-			scope.physicalRegisters.push_back({});
-			auto &physReg = scope.physicalRegisters.back();
-			physReg.description.offsetInBits = scope.physicalDescription.offsetInBits + scope.physicalDescription.size.bits();
 			size_t startOffset = i * registerWidth.bits();
 			BitWidth chunkSize = std::min(registerWidth, signalWidth - i * registerWidth);
-			physReg.description.size = chunkSize;
-			if (numRegisters > 1)
-				physReg.description.name = signal.name+"_bits_"+std::to_string(startOffset) + "_to_"+std::to_string(startOffset + chunkSize.bits());
-			else
-				physReg.description.name = signal.name;
-			if (signal.annotation != nullptr)
-				physReg.description.descShort = std::string(signal.annotation->shortDesc);
 
-			scope.physicalDescription.size += registerWidth;
-			scope.physicalDescription.children.emplace_back(physReg.description);
+			scope.physicalRegisters.push_back({});
+			auto &physReg = scope.physicalRegisters.back();
+			if (numRegisters > 1) {
+				physReg.description.name = signal.name+"_bits_"+std::to_string(startOffset) + "_to_"+std::to_string(startOffset + chunkSize.bits());
+				physReg.description.offsetInBits = description.offsetInBits + startOffset;
+				physReg.description.size = chunkSize;
+				if (signal.annotation != nullptr)
+					physReg.description.descShort = std::string(signal.annotation->shortDesc);
+		
+				description.children.emplace_back(physReg.description);
+			}
 
 			if (signal.readSignal) {
 				physReg.readSignal = (*signal.readSignal)(startOffset, chunkSize);
@@ -177,6 +183,9 @@ void PackedMemoryMap::packRegisters(BitWidth registerWidth, Scope &scope)
 				physReg.onWrite = '0';
 			}
 		}
+
+		scope.physicalDescription.size += numRegisters * registerWidth;
+		scope.physicalDescription.children.emplace_back(description);
 
 		if (signal.writeSignal)
 			*signal.writeSignal = (BVec) pack(writeParts);

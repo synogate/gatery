@@ -29,6 +29,7 @@
 #include <gatery/hlim/coreNodes/Node_Multiplexer.h>
 #include <gatery/hlim/supportNodes/Node_SignalTap.h>
 #include <gatery/hlim/NodePtr.h>
+#include <gatery/hlim/Attributes.h>
 #include <gatery/utils/Preprocessor.h>
 #include <gatery/utils/Traits.h>
 
