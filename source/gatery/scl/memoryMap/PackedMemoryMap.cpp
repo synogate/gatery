@@ -162,7 +162,8 @@ void PackedMemoryMap::packRegisters(BitWidth registerWidth, Scope &scope)
 					physReg.description.descShort = std::string(signal.annotation->shortDesc);
 		
 				description.children.emplace_back(physReg.description);
-			}
+			} else
+				physReg.description = description;
 
 			if (signal.readSignal) {
 				physReg.readSignal = (*signal.readSignal)(startOffset, chunkSize);
