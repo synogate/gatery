@@ -45,7 +45,7 @@ void BaseTestbenchRecorder::declareSignals(std::ostream &stream)
 
 	for (auto clock : m_clocksOfInterest) {
 		stream << "	SIGNAL " << rootEntity->getNamespaceScope().getClock(clock).name << " : STD_LOGIC := ";
-		auto val = m_simulator.getValueOfReset(clock);
+		auto val = m_simulator.getValueOfClock(clock);
 		if (!val[sim::DefaultConfig::DEFINED])
 			stream << "'X';" << std::endl;
 		else
