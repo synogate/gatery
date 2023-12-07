@@ -17,7 +17,7 @@
 */
 #include "gatery/pch.h"
 #include "MemoryMap.h"
-#include <gatery/scl/drivers/MemoryMapEntry.h>
+#include <gatery/scl/driver/MemoryMapEntry.h>
 
 namespace gtry::scl
 {
@@ -45,9 +45,9 @@ namespace gtry::scl
 			format(stream, c, indent + 8);
 	}
 
-	std::vector<MemoryMapEntry> exportAddressSpaceDescription(const AddressSpaceDescription &desc)
+	std::vector<driver::MemoryMapEntry> exportAddressSpaceDescription(const AddressSpaceDescription &desc)
 	{
-		std::vector<MemoryMapEntry> result;
+		std::vector<driver::MemoryMapEntry> result;
 
 		std::map<const AddressSpaceDescription*, size_t> childrenStartBackpointers;
 
@@ -64,7 +64,7 @@ namespace gtry::scl
 			if (!d->children.empty())
 				childrenStartBackpointers[&d->children.front().get()] = result.size();
 
-			MemoryMapEntry entry = {
+			driver::MemoryMapEntry entry = {
 				.addr = d->offsetInBits,
 				.width = d->size.value,
 				.flags = 0,
@@ -84,7 +84,7 @@ namespace gtry::scl
 		return result;
 	}
 
-	void format(std::ostream &stream, std::string_view name, const std::vector<MemoryMapEntry> &memoryMap)
+	void format(std::ostream &stream, std::string_view name, const std::vector<driver::MemoryMapEntry> &memoryMap)
 	{
 		stream << "static constexpr MemoryMapEntry " << name << "[] = {" << std::endl;
 		for (const auto &e : memoryMap)
