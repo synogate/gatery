@@ -483,7 +483,7 @@ BOOST_FIXTURE_TEST_CASE(ultraRamHelper, TestWithDefaultDevice<gtry::GHDLTestFixt
 BOOST_FIXTURE_TEST_CASE(mulAccumulate, TestWithDefaultDevice<gtry::GHDLTestFixture>)
 {
 	using namespace gtry;
-	Clock clock({ .absoluteFrequency = 100'000'000 });
+	Clock clock(ClockConfig{ .absoluteFrequency = 100'000'000, .resetName = "reset", .triggerEvent = ClockConfig::TriggerEvent::RISING, .resetActive = ClockConfig::ResetActive::HIGH });
 	ClockScope clkScp(clock);
 
 	SInt a = (SInt)pinIn(18_b).setName("a");
