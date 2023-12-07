@@ -673,5 +673,32 @@ BOOST_FIXTURE_TEST_CASE(test_bidir_pin_extnode, gtry::GHDLTestFixture)
 }
 
 
+BOOST_FIXTURE_TEST_CASE(sdp_dualclock_small, TestWithDefaultDevice<Test_SDP_DualClock>)
+{
+	forceNoInitialization = true; // todo: implement initialization for blockrams
+	forceMemoryResetLogic = true;
+
+	using namespace gtry;
+	depth = 16;
+	elemSize = 8_b;
+	numWrites = 10;
+	execute();
+	// Lutrams only support one clock, so even the small ones should result in the use of blockrams.
+	BOOST_TEST(exportContains(std::regex{"RAMB18E2_inst : UNISIM.VCOMPONENTS.RAMB18E2"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(sdp_dualclock_large, TestWithDefaultDevice<Test_SDP_DualClock>)
+{
+	forceNoInitialization = true; // todo: implement initialization for blockrams
+	forceMemoryResetLogic = true;
+
+	using namespace gtry;
+	depth = 4096;
+	elemSize = 8_b;
+	numWrites = 2000;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"RAMB36E2_inst : UNISIM.VCOMPONENTS.RAMB36E2"}));
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()

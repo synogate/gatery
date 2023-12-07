@@ -190,3 +190,117 @@ void Test_MemoryCascade::execute()
 
 	runTest(Seconds{numWrites + numWrites/4 * (latency+1) + 100,1} / clock.absoluteFrequency());
 }
+
+
+
+
+
+void Test_SDP_DualClock::execute()
+{
+	Clock clockA({
+			.absoluteFrequency = {{125'000'000,1}},
+			.memoryResetType = (forceMemoryResetLogic?ClockConfig::ResetType::SYNCHRONOUS:ClockConfig::ResetType::NONE),
+			.initializeRegs = false,
+			.initializeMemory = !forceNoInitialization,
+	});
+	HCL_NAMED(clockA);
+	Clock clockB({
+			.absoluteFrequency = {{260'000'000,1}},
+			.memoryResetType = (forceMemoryResetLogic?ClockConfig::ResetType::SYNCHRONOUS:ClockConfig::ResetType::NONE),
+			.initializeRegs = false,
+			.initializeMemory = !forceNoInitialization,
+	});
+	HCL_NAMED(clockB);
+
+
+	ClockScope scp(clockA);
+
+	Bit wrEn = pinIn().setName("wrEn");
+	UInt wrAddr = pinIn(BitWidth::count(depth)).setName("rdAddr");
+	UInt wrValue = pinIn(elemSize).setName("wrValue");
+
+	Memory<UInt> memory(depth, elemSize);
+	memory.noConflicts();
+
+	IF (wrEn)
+		memory[wrAddr] = wrValue;
+
+
+	ClockScope scpB(clockB);
+
+	UInt rdAddr = pinIn(BitWidth::count(depth)).setName("rdAddr");
+	UInt readValue = memory[rdAddr];
+
+	size_t latency = memory.readLatencyHint();
+	for ([[maybe_unused]] auto i : utils::Range(latency)) {
+		readValue = reg(readValue, {.allowRetimingBackward=true});
+	}
+
+	pinOut(readValue).setName("readValue");
+
+
+	addSimulationProcess([&]()->SimProcess {
+
+		std::mt19937 rng;
+
+		std::vector<size_t> refMemory;
+		refMemory.resize(depth, 0);
+		std::vector<bool> refMemoryWritten;
+		refMemoryWritten.resize(depth, false);
+
+		bool keepChecking = true;
+
+		simu(wrEn) = '0';
+
+		co_await OnClk(clockA);
+		co_await OnClk(clockB);
+
+		fork([&]()->SimProcess{
+			while (keepChecking) {
+
+				size_t address = rng() % depth;
+				simu(rdAddr) = address;
+
+				size_t expectedValue = refMemory[address];
+				bool expectedDefined = refMemoryWritten[address];
+		
+				co_await OnClk(clockB);
+
+				fork([&, expectedValue, expectedDefined]()->SimProcess{
+					for ([[maybe_unused]] auto i : utils::Range(latency))
+						co_await OnClk(clockB);
+
+					if (!expectedDefined)
+						BOOST_TEST(!simu(readValue).defined());
+					else
+						BOOST_TEST(simu(readValue) == expectedValue);
+				});
+			}
+		});
+
+
+		for ([[maybe_unused]] auto i : gtry::utils::Range(numWrites)) {
+
+			bool doWrite = rng() & 1;
+			size_t value = rng() % elemSize.value;
+			size_t address = rng() % depth;
+			simu(wrEn) = doWrite;
+			simu(wrValue) = value;
+			simu(wrAddr) = address;
+			co_await OnClk(clockA);
+
+			if (doWrite) {
+				refMemory[address] = value;
+				refMemoryWritten[address] = true;
+			}
+		}
+		simu(wrEn) = '0';
+		
+		for ([[maybe_unused]] auto i : gtry::utils::Range(100))
+			co_await AfterClk(clockA);
+
+		stopTest();
+	});
+
+	runTest(Seconds{numWrites + 200,1} / clockA.absoluteFrequency());
+}
