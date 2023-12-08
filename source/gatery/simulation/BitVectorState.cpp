@@ -34,7 +34,7 @@ DefaultBitVectorState createDefaultBitVectorState(std::size_t bitWidth, size_t v
 	state.resize(bitWidth);
 	state.setRange(DefaultConfig::DEFINED, 0, bitWidth);
 	state.clearRange(DefaultConfig::VALUE, 0, bitWidth);
-	state.insertNonStraddling(DefaultConfig::VALUE, 0, sizeof(value), value);
+	state.insertNonStraddling(DefaultConfig::VALUE, 0, sizeof(value) * 8, value);
 	return state;
 }
 
