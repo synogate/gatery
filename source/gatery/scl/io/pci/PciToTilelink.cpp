@@ -18,6 +18,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <gatery/pch.h>
 #include "PciToTileLink.h"
+#include <gatery/scl/utils/math.h>
+#include <gatery/scl/utils/Thermometric.h>
+#include <gatery/scl/utils/bitCount.h>
+#include <gatery/scl/utils/OneHot.h>
 
 namespace gtry::scl::pci {
 
@@ -40,7 +44,7 @@ namespace gtry::scl::pci {
 	}
 	TlpPacketStream<EmptyBits, BarInfo> completerRequestToTileLinkA(TileLinkChannelA& a, BitWidth tlpStreamW)
 	{
-		Area area{ "tlpToTileLinkA", true };
+		Area area{ "CRToTileLinkA", true };
 		TlpPacketStream<EmptyBits, BarInfo> complReq(tlpStreamW);
 		HCL_DESIGNCHECK_HINT(complReq->width() >= 128_b, "this design is limited to completion widths that can accommodate an entire 3dw header into one beat");
 		complReq.set(EmptyBits{ BitWidth::count(tlpStreamW.bits()) });
@@ -76,7 +80,7 @@ namespace gtry::scl::pci {
 
 	TlpPacketStream<EmptyBits> tileLinkDToCompleterCompletion(TileLinkChannelD&& d, BitWidth tlpStreamW)
 	{
-		Area area{ "tileLinkDToTlp", true };
+		Area area{ "tileLinkDToCC", true };
 		TlpAnswerInfo ans;
 		unpack(d->source, ans);
 		ans.error |= d->error; 
@@ -128,5 +132,118 @@ namespace gtry::scl::pci {
 		HCL_NAMED(complCompl);
 		
 		return CompleterInterface{ move(complReq), move(complCompl) };
+	}
+
+	static UInt logBytesToBytes(const UInt& logBytes) {
+		UInt bytes = 1 << logBytes;
+		return bytes;
+	}
+
+	static UInt length(const UInt& bytes, const UInt& byteAddress) {
+		UInt ret = "11d0";
+		IF(bytes > 4) {
+			ret = bytes >> 2;
+			IF(byteAddress.lower(2_b) != 0) {
+				ret += 1;
+			}
+		}
+		return ret;
+	}
+
+	static BVec firstDwByteEnable(const UInt& byteAddress) {
+		return (BVec) cat('1', ~uintToThermometric(byteAddress.lower(2_b)));
+	}
+
+	static BVec lastDwByteEnable(const UInt& bytes, const UInt& byteAddress) {
+		BVec ret = 4_b;
+		ret = "4b1111";
+		IF(byteAddress.lower(2_b) != 0) {
+			ret = (BVec) cat('0', uintToThermometric(byteAddress.lower(2_b)));
+		}
+		IF(bytes <= 4) {
+			ret = 0;
+		}
+		return ret;
+	}
+
+	TileLinkChannelA tileLinkAToRequesterRequest(TlpPacketStream<EmptyBits>& rr, BitWidth byteAddressW, BitWidth dataW)
+	{
+		Area area{ "tileLinkAToTlp", true };
+
+		TileLinkChannelA a = move(tileLinkInit<TileLinkUL>(byteAddressW, dataW, 8_b).a);
+
+		emptyBits(rr) = BitWidth::count(rr->width().bits());
+
+		RequestHeader hdr;
+		hdr.common.poisoned= '0';
+		hdr.common.digest= '0';
+		hdr.common.processingHintPresence = '0';
+		hdr.common.attributes = {'0','0','0'};
+		hdr.common.addressType = (size_t) AddressType::defaultOption;
+		hdr.common.trafficClass = (size_t) TrafficClass::defaultOption;
+		hdr.common.opcode(TlpOpcode::memoryReadRequest64bit);
+		IF(a->isPut()) {
+			sim_assert('0') << "untested, consider it non-working";
+			hdr.common.opcode(TlpOpcode::memoryWriteRequest64bit);
+		}
+		UInt bytes = logBytesToBytes(a->size);
+		hdr.common.dataLength(length(bytes, a->address));
+
+		hdr.requesterId = 0;
+		HCL_DESIGNCHECK_HINT(a->source.width() <= 8_b, "source is too large for the fixed (non-extended) tag field");
+		hdr.tag = (BVec) zext(a->source);
+
+
+		hdr.lastDWByteEnable = lastDwByteEnable(bytes, a->address);
+		hdr.firstDWByteEnable = firstDwByteEnable(a->address);
+		hdr.wordAddress = a->address >> 2;
+		hdr.processingHint = (size_t) ProcessingHint::defaultOption;
+
+		*rr = 0;
+		IF(sop(a)) {
+			rr->lower(128_b) = (BVec)hdr;
+		}
+
+		valid(rr) = valid(a);
+		eop(rr) = eop(a);
+		ready(a) = ready(rr);
+		emptyBits(rr) = rr->width().bits() - 4 * 32;
+
+		return a;
+	}
+
+	static UInt logByteSize(const UInt& lengthInBytes) {
+		sim_assert(bitcount(lengthInBytes) == 1) << "TileLink cannot represent non powers of 2 amount of bytes";
+		return encoder((OneHot) lengthInBytes);
+	}
+
+	TileLinkChannelD requesterCompletionToTileLinkD(TlpPacketStream<EmptyBits>&& rc, BitWidth byteAddressW, BitWidth dataW)
+	{
+		CompletionHeader hdr = CompletionHeader::fromRaw(rc->lower(96_b));
+
+		TileLinkChannelD d = move(*(tileLinkInit<TileLinkUL>(byteAddressW, dataW, 8_b).d));
+		HCL_DESIGNCHECK_HINT(d->data.width() == 32_b, "not yet implemented");
+
+		d->opcode = (size_t) TileLinkD::OpCode::AccessAckData;
+		d->source = (UInt) hdr.tag;
+		d->sink = 0;
+		d->param = 0;
+		d->error = hdr.common.poisoned | (hdr.completionStatus != (size_t) CompletionStatus::successfulCompletion);
+		d->size = logByteSize(hdr.byteCount);
+		d->data = (*rc)(96, 32_b);
+
+		valid(d) = valid(rc);
+		ready(rc) = ready(d);
+		sim_assert(emptyBits(rc) == (512 - (3 + 1) * 32)) << "only support one word right now";
+
+		return d;
+	}
+	TileLinkUL makePciMaster(RequesterInterface&& reqInt, BitWidth byteAddressW, BitWidth dataW)
+	{
+		TileLinkChannelA hello = tileLinkAToRequesterRequest(reqInt.request, byteAddressW, dataW);
+		TileLinkChannelD goodbye = requesterCompletionToTileLinkD(move(reqInt.completion), byteAddressW, dataW)
+
+
+		return {};
 	}
 }
