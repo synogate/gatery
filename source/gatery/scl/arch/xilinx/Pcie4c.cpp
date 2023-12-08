@@ -30,9 +30,6 @@ namespace gtry::scl::arch::xilinx {
 			})),
 			m_cfg(cfg)
 	{
-		//this->requiresComponentDeclaration(false);
-		//this->isEntity(false);
-	
 		clockIn(ipClock, "sys_clk");
 		clockIn(gtClock, "sys_clk_gt");
 	
