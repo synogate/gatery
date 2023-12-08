@@ -132,6 +132,8 @@ namespace gtry::hlim {
 
 		void setPartition(bool value) { m_isPartition = value; }
 		bool isPartition() const { return m_isPartition; }
+		void useComponentInstantiation(bool b) { m_useComponentInstantiation = b; }
+		bool useComponentInstantiation() const { return m_useComponentInstantiation; }
 	protected:
 		Circuit &m_circuit;
 		std::uint64_t m_id = ~0ull;
@@ -154,6 +156,7 @@ namespace gtry::hlim {
 
 		friend class BaseNode;
 		bool m_isPartition = false;
+		bool m_useComponentInstantiation = false;
 
 	private:
 		static NodeGroupConfig ms_config;

@@ -22,6 +22,7 @@
 #include <gatery/export/vhdl/VHDLExport.h>
 #include <gatery/scl/synthesisTools/GHDL.h>
 #include <gatery/scl/synthesisTools/IntelQuartus.h>
+#include <gatery/frontend/SynthesisTool.h>
 #include <gatery/hlim/Circuit.h>
 #include <boost/test/unit_test.hpp>
 
@@ -117,6 +118,8 @@ void GHDLTestFixture::testCompilation(Flavor flavor)
 	for (const auto &file_content : m_customVhdlFiles)
 		m_vhdlExport->addCustomVhdlFile(file_content.first, file_content.second);
 
+	m_vhdlExport->outputMode(vhdlOutputMode);
+
 	gtry::SynthesisTool* synthesisTool = nullptr;
 	switch (flavor) {
 		case TARGET_GHDL:  synthesisTool = new GHDL(); break;
@@ -127,10 +130,16 @@ void GHDLTestFixture::testCompilation(Flavor flavor)
 
 	synthesisTool->writeStandAloneProject(*m_vhdlExport, "compile.sh");
 	synthesisTool->writeStandAloneProject(*m_vhdlExport, "compile.bat");
+
+	m_generatedSourceFiles = SynthesisTool::sourceFiles(*m_vhdlExport, true, false);
 	m_vhdlExport.reset();
 	
 	boost::filesystem::path ghdlExecutable = bp::search_path("ghdl");
-	BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-a", "--ieee=synopsys", m_ghdlArgs, "design.vhd") == 0);
+
+	for (std::filesystem::path& vhdlFile : m_generatedSourceFiles)
+		BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-a", "--ieee=synopsys", m_ghdlArgs, vhdlFile.string()) == 0);
+
+//	BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-a", "--ieee=synopsys", m_ghdlArgs, "design.vhd") == 0);
 	BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-e", "--ieee=synopsys", m_ghdlArgs, "top") == 0);
 }
 
@@ -140,6 +149,7 @@ void GHDLTestFixture::prepRun()
 	BoostUnitTestSimulationFixture::prepRun();
 
 	m_vhdlExport.emplace(m_cwd / "design.vhd");
+	m_vhdlExport->outputMode(vhdlOutputMode);
 	m_vhdlExport->addTestbenchRecorder(getSimulator(), "testbench", true);
 	m_vhdlExport->targetSynthesisTool(new GHDL());
 	m_vhdlExport->writeStandAloneProjectFile("compile.sh");
@@ -154,23 +164,32 @@ void GHDLTestFixture::runTest(const hlim::ClockRational &timeoutSeconds)
 	BoostUnitTestSimulationFixture::runTest(timeoutSeconds);
 	BOOST_CHECK_MESSAGE(m_stopTestCalled, "Simulation timed out without being called to a stop by any simulation process!");
 
+	m_generatedSourceFiles = SynthesisTool::sourceFiles(*m_vhdlExport, true, true);
 	m_vhdlExport.reset();
 
 	boost::filesystem::path ghdlExecutable = bp::search_path("ghdl");
-	BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-a", "--ieee=synopsys", m_ghdlArgs, "design.vhd") == 0);
-	BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-a", "--ieee=synopsys", m_ghdlArgs, "testbench.vhd") == 0);
+
+	for (std::filesystem::path& vhdlFile : m_generatedSourceFiles)
+		BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-a", "--ieee=synopsys", m_ghdlArgs, vhdlFile.string()) == 0);
+
+	// BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-a", "--ieee=synopsys", m_ghdlArgs, "design.vhd") == 0);
+	// BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-a", "--ieee=synopsys", m_ghdlArgs, "testbench.vhd") == 0);
 	BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-e", "--ieee=synopsys", m_ghdlArgs, "testbench") == 0);
 	BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-r", "-fsynopsys", m_ghdlArgs, "testbench", "--ieee-asserts=disable", "--vcd=ghdl.vcd", "--assert-level=error") == 0);
 }
 
 bool GHDLTestFixture::exportContains(const std::regex &regex)
 {
-	std::ifstream file(m_cwd / "design.vhd", std::fstream::binary);
-	BOOST_TEST((bool) file);
-	std::stringstream buffer;
-	buffer << file.rdbuf();
+	for (std::filesystem::path& vhdlFile : m_generatedSourceFiles) {
+		std::ifstream file((m_cwd / vhdlFile).string().c_str(), std::fstream::binary);
+		BOOST_TEST((bool) file);
+		std::stringstream buffer;
+		buffer << file.rdbuf();
 
-	return std::regex_search(buffer.str(), regex);
+		if (std::regex_search(buffer.str(), regex))
+			return true;
+	}
+	return false;
 }
 
 }

@@ -339,12 +339,27 @@ void Entity::writePortDeclaration(std::ostream &stream, size_t indentation)
 	cf.indent(stream, 1); stream << ");" << std::endl;
 }
 
+void Entity::writeComponentDeclaration(std::ostream &stream, unsigned indent)
+{
+	CodeFormatting &cf = m_ast.getCodeFormatting();
+	cf.indent(stream, indent);
+	stream << "COMPONENT " << getName() << '\n';
+
+	writePortDeclaration(stream, indent);
+
+	cf.indent(stream, indent);
+	stream << "END COMPONENT;\n";
+}
+
 void Entity::writeInstantiationVHDL(std::ostream &stream, unsigned indent, const std::string &instanceName)
 {
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
 	cf.indent(stream, indent);
-	stream << instanceName << " : entity work." << getName() << "(impl) port map (" << std::endl;
+	if (m_nodeGroup != nullptr && m_nodeGroup->useComponentInstantiation())
+		stream << instanceName << " : " << getName() << " port map (" << std::endl;
+	else
+		stream << instanceName << " : entity work." << getName() << " port map (" << std::endl;
 
 	std::vector<std::string> portmapList;
 
