@@ -73,6 +73,7 @@ namespace gtry::scl::pci
 	};
 
 	enum class CompletionStatus {
+		defaultOption				= 0b000, 
 		successfulCompletion		= 0b000, //SC
 		unsupportedRequest			= 0b001, //UR
 		configRequestRetryStatus	= 0b010, //CRS
@@ -88,6 +89,7 @@ namespace gtry::scl::pci
 	};
 
 	enum class ProcessingHint {
+		defaultOption				= 0b00,
 		bidirectionalDataStructure	= 0b00,
 		requester					= 0b01,
 		target						= 0b10,
@@ -188,9 +190,14 @@ namespace gtry::scl::pci
 		TlpPacketStream<EmptyBits, BarInfo> request;
 		TlpPacketStream<EmptyBits> completion;
 	};
-	
+
+	struct RequesterInterface {
+		TlpPacketStream<EmptyBits> request;
+		TlpPacketStream<EmptyBits> completion;
+	};
 }
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::CompleterInterface, request, completion);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::RequesterInterface, request, completion);
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::HeaderCommon, poisoned, digest, processingHintPresence, attributes, addressType, trafficClass, fmt, type, length);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::RequestHeader, common, requesterId, tag, lastDWByteEnable, firstDWByteEnable, wordAddress, processingHint);
