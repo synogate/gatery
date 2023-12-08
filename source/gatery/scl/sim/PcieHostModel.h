@@ -41,6 +41,8 @@ namespace gtry::scl::sim {
 		void requesterRequest(TlpPacketStream<EmptyBits>&& rr);
 		TlpPacketStream<EmptyBits>& requesterCompletion();
 
+		RequesterInterface& requesterInterface(BitWidth tlpW);
+
 		PciRequestHandler* handler(TlpOpcode);
 
 		hlim::MemoryStorage& memory() { return *m_mem; }

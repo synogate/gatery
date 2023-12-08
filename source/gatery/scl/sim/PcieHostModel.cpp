@@ -69,6 +69,17 @@ namespace gtry::scl::sim {
 		pinIn(*m_rc, "host_rc", {.simulationOnlyPin = true});
 		return *m_rc; 
 	}
+	
+	RequesterInterface& PcieHostModel::requesterInterface(BitWidth tlpW) {
+		scl::pci::RequesterInterface reqInt{
+			.request{tlpW}
+		};
+	
+		this->requesterRequest(copy(reqInt.request)); // might f everyting up, let's see
+		reqInt.completion = move(this->requesterCompletion());
+		
+		return reqInt;
+	}
 
 	PciRequestHandler* PcieHostModel::handler(TlpOpcode op)
 	{
