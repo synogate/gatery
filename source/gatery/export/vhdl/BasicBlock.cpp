@@ -753,7 +753,7 @@ void BasicBlock::declareLocalComponents(std::ostream &stream, size_t indentation
 					if (alreadyDeclaredComponents.contains(subEntity->getName())) continue;
 					alreadyDeclaredComponents.insert(subEntity->getName());
 
-					subEntity->writeComponentDeclaration(stream, indentation);
+					subEntity->writeComponentDeclaration(stream, (unsigned)indentation);
 				}
 		}
 
