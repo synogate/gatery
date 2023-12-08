@@ -50,6 +50,10 @@ struct Attributes {
 	void loadConfig(const utils::ConfigTree& config);
 };
 
+struct GroupAttributes : public Attributes {
+
+};
+
 
 struct SignalAttributes : public Attributes {
 	/// Max fanout of this signal before it's driver is duplicated. 0 is don't care.

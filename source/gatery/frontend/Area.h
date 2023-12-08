@@ -115,6 +115,9 @@ namespace gtry
 		void useComponentInstantiation(bool b) { m_nodeGroup->useComponentInstantiation(b); }
 		bool useComponentInstantiation() const { return m_nodeGroup->useComponentInstantiation(); }
 
+		inline hlim::GroupAttributes &groupAttributes() { return m_nodeGroup->groupAttributes(); }
+		inline const hlim::GroupAttributes &groupAttributes() const { return m_nodeGroup->groupAttributes(); }
+
 	private:
 		hlim::NodeGroup* m_nodeGroup;
 

@@ -19,6 +19,8 @@
 
 #include "Node.h"
 
+#include "Attributes.h"
+
 #include "../utils/StackTrace.h"
 #include "../utils/ConfigTree.h"
 
@@ -134,6 +136,9 @@ namespace gtry::hlim {
 		bool isPartition() const { return m_isPartition; }
 		void useComponentInstantiation(bool b) { m_useComponentInstantiation = b; }
 		bool useComponentInstantiation() const { return m_useComponentInstantiation; }
+
+		inline GroupAttributes &groupAttributes() { return m_groupAttributes; }
+		inline const GroupAttributes &groupAttributes() const { return m_groupAttributes; }
 	protected:
 		Circuit &m_circuit;
 		std::uint64_t m_id = ~0ull;
@@ -143,6 +148,7 @@ namespace gtry::hlim {
 		GroupType m_groupType;
 		utils::PropertyTree m_properties;
 		utils::PropertyTree m_usedSettings;
+		GroupAttributes m_groupAttributes;
 
 		boost::container::flat_map<std::string, size_t> m_childInstanceCounter;
 

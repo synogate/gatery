@@ -34,6 +34,12 @@
 
 namespace gtry {
 
+
+void SynthesisTool::resolveAttributes(const hlim::GroupAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
+{
+	addUserDefinedAttributes(attribs, resolvedAttribs);
+}
+
 void SynthesisTool::addUserDefinedAttributes(const hlim::Attributes &attribs, hlim::ResolvedAttributes &resolvedAttribs)
 {
 	for (const auto &vendor : m_vendors) {

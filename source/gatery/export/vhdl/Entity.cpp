@@ -27,7 +27,7 @@
 #include "../../hlim/Clock.h"
 #include "../../hlim/coreNodes/Node_Pin.h"
 #include "../../hlim/coreNodes/Node_MultiDriver.h"
-
+#include <gatery/frontend/SynthesisTool.h>
 
 #include <memory>
 
@@ -349,6 +349,29 @@ void Entity::writeComponentDeclaration(std::ostream &stream, unsigned indent)
 
 	cf.indent(stream, indent);
 	stream << "END COMPONENT;\n";
+
+	if (m_nodeGroup != nullptr) {
+		std::map<std::string, hlim::AttribValue> alreadyDeclaredAttribs;
+
+		hlim::ResolvedAttributes resolvedAttribs;
+			
+		m_ast.getSynthesisTool().resolveAttributes(m_nodeGroup->groupAttributes(), resolvedAttribs);
+		
+		// write out all attribs
+		for (const auto &attrib : resolvedAttribs) {
+			auto it = alreadyDeclaredAttribs.find(attrib.first);
+			if (it == alreadyDeclaredAttribs.end()) {
+				alreadyDeclaredAttribs[attrib.first] = attrib.second;
+
+				cf.indent(stream, indent+1);
+				stream << "ATTRIBUTE " << attrib.first << " : " << attrib.second.type << ';' << std::endl;
+			} else
+				HCL_DESIGNCHECK_HINT(it->second.type == attrib.second.type, "Same attribute can't have different types!");
+
+			cf.indent(stream, indent+1);
+			stream << "ATTRIBUTE " << attrib.first << " OF " << getName() << " : COMPONENT IS " << attrib.second.value << ';' << std::endl;
+		}
+	}
 }
 
 void Entity::writeInstantiationVHDL(std::ostream &stream, unsigned indent, const std::string &instanceName)

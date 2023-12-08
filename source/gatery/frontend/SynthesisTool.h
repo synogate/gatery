@@ -42,6 +42,7 @@ class SynthesisTool {
 
 		virtual void prepareCircuit(hlim::Circuit &circuit)  { }
 
+		virtual void resolveAttributes(const hlim::GroupAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs);
 		virtual void resolveAttributes(const hlim::RegisterAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs) = 0;
 		virtual void resolveAttributes(const hlim::SignalAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs) = 0;
 		virtual void resolveAttributes(const hlim::MemoryAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs) = 0;
