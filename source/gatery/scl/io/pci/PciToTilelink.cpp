@@ -240,10 +240,9 @@ namespace gtry::scl::pci {
 	}
 	TileLinkUL makePciMaster(RequesterInterface&& reqInt, BitWidth byteAddressW, BitWidth dataW)
 	{
-		TileLinkChannelA hello = tileLinkAToRequesterRequest(reqInt.request, byteAddressW, dataW);
-		TileLinkChannelD goodbye = requesterCompletionToTileLinkD(move(reqInt.completion), byteAddressW, dataW)
+		TileLinkChannelA a = tileLinkAToRequesterRequest(reqInt.request, byteAddressW, dataW);
+		TileLinkChannelD d = requesterCompletionToTileLinkD(move(reqInt.completion), byteAddressW, dataW);
 
-
-		return {};
+		return TileLinkUL{ .a = move(a), .d = *d };
 	}
 }
