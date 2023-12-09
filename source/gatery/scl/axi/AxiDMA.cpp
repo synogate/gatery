@@ -25,7 +25,6 @@ namespace gtry::scl
 	RvStream<AxiAddress> axiGenerateAddressFromCommand(RvStream<AxiToStreamCmd>&& cmd, const AxiConfig& config)
 	{
 		Area ent{ "scl_axiGenerateAddressFromCommand", true };
-		cmd = scl::strm::regReady(move(cmd));
 
 		RvStream<AxiAddress> out;
 		out->addr = config.addrW;
