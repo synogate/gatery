@@ -192,6 +192,18 @@ BOOST_FIXTURE_TEST_CASE(lutram_2, TestWithDefaultDevice<Test_Histogram>)
 	numBuckets = 32;
 	bucketWidth = 8_b;
 	execute();
+	BOOST_TEST(exportContains(std::regex{"RAM64M8"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(lutram_3, TestWithDefaultDevice<Test_Histogram>)
+{
+	forceNoInitialization = true; // todo: activate initialization for lutrams (after proper testing)
+	forceMemoryResetLogic = true;
+
+	using namespace gtry;
+	numBuckets = 256;
+	bucketWidth = 4_b;
+	execute();
 	BOOST_TEST(exportContains(std::regex{"RAM256X1D"}));
 }
 
