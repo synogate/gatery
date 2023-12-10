@@ -427,7 +427,7 @@ BOOST_FIXTURE_TEST_CASE(uram288_cascade, TestWithDefaultDevice<gtry::GHDLTestFix
 
 	std::array<scl::arch::xilinx::URAM288, 8> ram;
 	for(size_t i = 1; i < ram.size(); ++i)
-		ram[i].cascade(ram[i - 1]);
+		ram[i].cascade(ram[i - 1], ram.size());
 
 	ram[3].cascadeReg(true);
 
