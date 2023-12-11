@@ -104,7 +104,7 @@ enum class TileLinkDOpCode {
 template<IsStaticMemoryMapEntryHandle Addr>
 void writeToTileLink(MemoryMapInterface &interface, Addr streamLocation, size_t tilelinkStartAddr, std::span<const std::byte> byteData)
 {
-	size_t busWidth = streamLocation.template get<"a">().template get<"data">().width() / 8;
+	size_t busWidth = streamLocation.template get<"a">().template get<"payload">().template get<"data">().width() / 8;
 
 	if (tilelinkStartAddr % busWidth != 0)
 		throw std::runtime_error("Unaligned writes not implemented yet!");
@@ -149,7 +149,7 @@ void writeToTileLink(MemoryMapInterface &interface, Addr streamLocation, size_t 
 template<IsStaticMemoryMapEntryHandle Addr>
 void readFromTileLink(MemoryMapInterface &interface, Addr streamLocation, size_t tilelinkStartAddr, std::span<std::byte> byteData)
 {
-	size_t busWidth = streamLocation.template get<"a">().template get<"data">().width() / 8;
+	size_t busWidth = streamLocation.template get<"a">().template get<"payload">().template get<"data">().width() / 8;
 
 	if (tilelinkStartAddr % busWidth != 0)
 		throw std::runtime_error("Unaligned writes not implemented yet!");
