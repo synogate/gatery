@@ -104,7 +104,8 @@ enum class TileLinkDOpCode {
 template<IsStaticMemoryMapEntryHandle Addr>
 void writeToTileLink(MemoryMapInterface &interface, Addr streamLocation, size_t tilelinkStartAddr, std::span<const std::byte> byteData)
 {
-	size_t busWidth = streamLocation.template get<"a">().template get<"payload">().template get<"data">().width() / 8;
+	auto payload = streamLocation.template get<"a">().template get<"payload">();
+	size_t busWidth = payload.template get<"data">().width() / 8;
 
 	if (tilelinkStartAddr % busWidth != 0)
 		throw std::runtime_error("Unaligned writes not implemented yet!");
@@ -112,19 +113,18 @@ void writeToTileLink(MemoryMapInterface &interface, Addr streamLocation, size_t 
 	if (byteData.size() % busWidth != 0)
 		throw std::runtime_error("Partial writes not implemented yet!");
 
+	size_t writeSize = busWidth;
+	size_t logSize = 63 - std::countl_zero((std::uint64_t) writeSize);
+	size_t writeMask = ~0ull;
+
+	interface.writeUInt(payload.template get<"opcode">(), (size_t)TileLinkAOpCode::PutFullData);
+	interface.writeUInt(payload.template get<"param">(), 0);
+	interface.writeUInt(payload.template get<"size">(), logSize);
+	interface.writeUInt(payload.template get<"mask">(), writeMask);
 	
 	for (size_t i = 0; i < byteData.size(); i += busWidth) {
 		writeToStream(interface, streamLocation.template get<"a">(), [tilelinkStartAddr, busWidth, byteData, i](MemoryMapInterface &interface, auto payload) {
-
-			size_t writeSize = busWidth;
-			size_t logSize = 63 - std::countl_zero((std::uint64_t) writeSize);
-			size_t writeMask = ~0ull;
-
-			interface.writeUInt(payload.template get<"opcode">(), writeSize < busWidth ? (size_t)TileLinkAOpCode::PutPartialData : (size_t)TileLinkAOpCode::PutFullData);
-			interface.writeUInt(payload.template get<"param">(), 0);
-			interface.writeUInt(payload.template get<"size">(), logSize);
 			interface.writeUInt(payload.template get<"address">(), tilelinkStartAddr + i);
-			interface.writeUInt(payload.template get<"mask">(), writeMask);
 			interface.write(payload.template get<"data">().addr()/8, byteData.subspan(i, busWidth));
 		});
 
@@ -149,26 +149,26 @@ void writeToTileLink(MemoryMapInterface &interface, Addr streamLocation, size_t 
 template<IsStaticMemoryMapEntryHandle Addr>
 void readFromTileLink(MemoryMapInterface &interface, Addr streamLocation, size_t tilelinkStartAddr, std::span<std::byte> byteData)
 {
-	size_t busWidth = streamLocation.template get<"a">().template get<"payload">().template get<"data">().width() / 8;
+	auto payload = streamLocation.template get<"a">().template get<"payload">();
+	size_t busWidth = payload.template get<"data">().width() / 8;
 
 	if (tilelinkStartAddr % busWidth != 0)
 		throw std::runtime_error("Unaligned writes not implemented yet!");
 
 	if (byteData.size() % busWidth != 0)
 		throw std::runtime_error("Partial writes not implemented yet!");
-	
+
+	size_t readSize = busWidth;
+	size_t logSize = 63 - std::countl_zero((std::uint64_t) readSize);
+	size_t readMask = ~0ull;
+	interface.writeUInt(payload.template get<"opcode">(), (size_t)TileLinkAOpCode::Get);
+	interface.writeUInt(payload.template get<"param">(), 0);
+	interface.writeUInt(payload.template get<"size">(), logSize);
+	interface.writeUInt(payload.template get<"mask">(), readMask);
+
 	for (size_t i = 0; i < byteData.size(); i += busWidth) {
 		writeToStream(interface, streamLocation.template get<"a">(), [tilelinkStartAddr, busWidth, byteData, i](MemoryMapInterface &interface, auto payload) {
-
-			size_t readSize = busWidth;
-			size_t logSize = 63 - std::countl_zero((std::uint64_t) readSize);
-			size_t readMask = ~0ull;
-
-			interface.writeUInt(payload.template get<"opcode">(), (size_t)TileLinkAOpCode::Get);
-			interface.writeUInt(payload.template get<"param">(), 0);
-			interface.writeUInt(payload.template get<"size">(), logSize);
 			interface.writeUInt(payload.template get<"address">(), tilelinkStartAddr + i);
-			interface.writeUInt(payload.template get<"mask">(), readMask);
 		});
 
 		readFromStream(interface, streamLocation.template get<"d">(), [tilelinkStartAddr, busWidth, byteData, i](MemoryMapInterface &interface, auto payload) {
