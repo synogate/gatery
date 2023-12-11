@@ -56,5 +56,13 @@ namespace gtry
 			return *this;
 		}
 
+		static Vector create(size_t count, const T& blueprint)
+		{
+			Vector out;
+			out.reserve(count);
+			for (size_t i = 0; i < count; ++i)
+				out.emplace_back(constructFrom(blueprint));
+			return out;
+		}
 	};
 }
