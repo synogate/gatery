@@ -77,10 +77,13 @@ namespace gtry {
 			void testCompilation(Flavor flavor = TARGET_GHDL);
 			void runTest(const hlim::ClockRational &timeoutSeconds);
 			bool exportContains(const std::regex &regex);
+
+			vhdl::OutputMode vhdlOutputMode = vhdl::OutputMode::AUTO;
 		protected:
 			std::filesystem::path m_cwd;
 			std::vector<std::string> m_ghdlArgs;
 			std::map<std::string, std::string> m_customVhdlFiles;
+			std::vector<std::filesystem::path> m_generatedSourceFiles;
 
 			void prepRun() override;
 	};

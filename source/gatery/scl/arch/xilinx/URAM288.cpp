@@ -59,19 +59,21 @@ namespace gtry::scl::arch::xilinx
 		in("BWE" + suffix, 9_b) = portIn.bwe;
 	}
 
-	void URAM288::cascade(URAM288& inRam)
+	void URAM288::cascade(URAM288& inRam, size_t numRamsInTotal)
 	{
 		m_cascadeAddress = inRam.m_cascadeAddress + 1;
+		size_t selfMask = (~0ull << utils::Log2C(numRamsInTotal)) & 0x7FF;
 
 		for (std::string port : { "_A", "_B" })
 		{
 			std::string inCascadeOrder = inRam.m_cascadeAddress == 0 ? "FIRST" : "MIDDLE";
 			inRam.generic("CASCADE_ORDER" + port) = inCascadeOrder;
 			inRam.generic("SELF_ADDR" + port).setBitVector(11, inRam.m_cascadeAddress);
+			inRam.generic("SELF_MASK" + port).setBitVector(11, selfMask);
 
 			generic("CASCADE_ORDER" + port) = "LAST";
 			generic("SELF_ADDR" + port).setBitVector(11, m_cascadeAddress);
-			generic("SELF_MASK" + port).setBitVector(11, 0);
+			generic("SELF_MASK" + port).setBitVector(11, selfMask);
 
 			// map: addr, bwe, dbiterr, din, dout, en, rdaccess, rdb_wr, sbiterr
 			in("CAS_IN_ADDR" + port, 23_b) = inRam.out("CAS_OUT_ADDR" + port, 23_b);

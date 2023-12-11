@@ -15,46 +15,16 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include <vector>
-#include "Bit.h"
+#pragma once
 
-namespace gtry
+#include <gatery/frontend.h>
+
+namespace gtry::scl
 {
-	template<typename T>
-	class Vector : public std::vector<T>
-	{
-	public:
-		using std::vector<T>::vector;
+	struct Axi4;
+}
 
-		Vector(Vector&& rhs)
-		{
-			std::vector<T>::reserve(rhs.size());
-			for (size_t i = 0; i < rhs.size(); ++i)
-				std::vector<T>::emplace_back(std::move(rhs[i]));
-		}
-
-		Vector(const Vector&) = default;
-
-		Vector& operator = (const Vector& rhs)
-		{
-			std::vector<T>::resize(rhs.size());
-
-			for (size_t i = 0; i < std::vector<T>::size(); ++i)
-				std::vector<T>::at(i) = rhs[i];
-
-			return *this;
-		}
-
-		Vector& operator = (Vector&& rhs)
-		{
-			using namespace std;
-			std::vector<T>::resize(rhs.size());
-
-			for (size_t i = 0; i < std::vector<T>::size(); ++i)
-				std::vector<T>::at(i) = move(rhs[i]);
-
-			return *this;
-		}
-
-	};
+namespace gtry::scl::arch::xilinx
+{
+	void ila(const Axi4& axi, std::string_view generatedIpName = "ila_0");
 }

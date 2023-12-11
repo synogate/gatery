@@ -54,7 +54,7 @@ namespace gtry::scl::arch::xilinx
 		PortOut port(Port portId);
 		void port(Port portId, const PortIn &portIn);
 
-		void cascade(URAM288& in);
+		void cascade(URAM288& in, size_t numRamsInTotal);
 		void cascadeReg(bool enableCascadingReg);
 
 		void enableOutputRegister(Port portId, bool enable);

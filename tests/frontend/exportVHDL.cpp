@@ -606,6 +606,68 @@ BOOST_FIXTURE_TEST_CASE(oneFilePerPartition, gtry::GHDLTestFixture)
 	BOOST_TEST(std::filesystem::exists("area3.vhd"));
 }
 
+BOOST_FIXTURE_TEST_CASE(oneFilePerPartitionWithComponentInstantiation, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Bit in = pinIn().setName("in");
+
+	{
+		Area area1("area1", true);
+		area1.setPartition(true);
+		area1.useComponentInstantiation(true);
+		Area area2("area2", true);
+		in ^= pinIn().setName("in2");
+	}
+
+	{
+		Area area3("area3", true);
+		area3.setPartition(true);
+		in ^= pinIn().setName("in3");
+	}
+
+	pinOut(in).setName("out");
+
+
+	vhdlOutputMode = vhdl::OutputMode::FILE_PER_PARTITION;
+	
+	testCompilation();
+
+	BOOST_TEST(exportContains(std::regex{"COMPONENT"}));
+}
+
+
+BOOST_FIXTURE_TEST_CASE(oneFilePerPartitionWithComponentInstantiationWithAttributes, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Bit in = pinIn().setName("in");
+
+	{
+		Area area1("area1", true);
+		area1.setPartition(true);
+		area1.useComponentInstantiation(true);
+		area1.groupAttributes().userDefinedVendorAttributes["all"]["black_box"] = {.type = "string", .value = "\"yes\""};
+		Area area2("area2", true);
+		in ^= pinIn().setName("in2");
+	}
+
+	{
+		Area area3("area3", true);
+		area3.setPartition(true);
+		in ^= pinIn().setName("in3");
+	}
+
+	pinOut(in).setName("out");
+
+
+	vhdlOutputMode = vhdl::OutputMode::FILE_PER_PARTITION;
+	
+	testCompilation();
+
+	BOOST_TEST(exportContains(std::regex{"ATTRIBUTE black_box OF .* : COMPONENT IS \"yes\";"}));
+}
+
 
 BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
 {

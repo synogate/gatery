@@ -59,6 +59,8 @@ namespace gtry::scl::arch::xilinx
 			.idW = 6_b
 		});
 
+		BitWidth hbmAddrOffsetW = addECCBitsToData ? 1_b : 0_b;
+
 		std::string prefix = (boost::format("AXI_%02d_") % portIndex).str();
 
 		// CLOCK
@@ -74,7 +76,7 @@ namespace gtry::scl::arch::xilinx
 		// AR
 		ready(*axi.ar) = out(prefix + "ARREADY");
 		in(prefix + "ARVALID") = valid(*axi.ar);
-		in(prefix + "ARADDR", addrW) = (BVec)(*axi.ar)->addr;
+		in(prefix + "ARADDR", addrW) = zext((BVec)(*axi.ar)->addr.upper(-hbmAddrOffsetW));
 		in(prefix + "ARBURST", 2_b) = (BVec)(*axi.ar)->burst;
 		in(prefix + "ARID", 6_b) = (*axi.ar)->id;
 		in(prefix + "ARLEN", 4_b) = (BVec)(*axi.ar)->len.lower(4_b);
@@ -86,7 +88,7 @@ namespace gtry::scl::arch::xilinx
 		// AW
 		ready(*axi.aw) = out(prefix + "AWREADY");
 		in(prefix + "AWVALID") = valid(*axi.aw);
-		in(prefix + "AWADDR", addrW) = (BVec)(*axi.aw)->addr;
+		in(prefix + "AWADDR", addrW) = zext((BVec)(*axi.aw)->addr.upper(-hbmAddrOffsetW));
 		in(prefix + "AWBURST", 2_b) = (BVec)(*axi.aw)->burst;
 		in(prefix + "AWID", 6_b) = (*axi.aw)->id;
 		in(prefix + "AWLEN", 4_b) = (BVec)(*axi.aw)->len.lower(4_b);
