@@ -158,6 +158,7 @@ class Simulator
 
 		/// Adds a simulation process to this simulator that gets started on power on.
 		virtual void addSimulationProcess(std::function<SimulationFunction<void>()> simProc) = 0;
+		virtual void addSimulationFiber(std::function<void()> simFiber) = 0;
 		virtual void addSimulationVisualization(sim::SimulationVisualization simVis) = 0;
 
 		/// Spawns a simulation process immediately (to be called during simulation to "fork").

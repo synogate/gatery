@@ -18,6 +18,7 @@
 #pragma once
 
 #include "Simulator.h"
+#include "simProc/SimulationFiber.h"
 
 #include <gatery/utils/StableContainers.h>
 #include "simProc/WaitClock.h"
@@ -252,6 +253,7 @@ class ReferenceSimulator : public Simulator
 		virtual std::array<bool, DefaultConfig::NUM_PLANES> getValueOfReset(const hlim::Clock *clk) override;
 
 		virtual void addSimulationProcess(std::function<SimulationFunction<void>()> simProc) override;
+		virtual void addSimulationFiber(std::function<void()> simFiber) override;
 		virtual void addSimulationVisualization(sim::SimulationVisualization simVis) override;
 
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitFor &waitFor, utils::RestrictTo<RunTimeSimulationContext>) override;
@@ -274,6 +276,8 @@ class ReferenceSimulator : public Simulator
 
 		std::vector<std::coroutine_handle<>> m_processesAwaitingCommit;
 		std::vector<std::function<SimulationFunction<>()>> m_simProcs;
+		std::vector<std::function<void()>> m_simFiberBodies;
+		std::list<SimulationFiber> m_simFibers;
 		std::vector<sim::SimulationVisualization> m_simViz;
 		std::list<SignalWatch> m_signalWatches;
 		bool m_stateNeedsReevaluating = false;
