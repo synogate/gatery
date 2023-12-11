@@ -127,7 +127,9 @@ namespace gtry::scl::arch::xilinx
 		axi.b->resp = out(prefix + "BRESP", 2_b);
 		axi.b->id = out(prefix + "BID", 6_b);
 
-		return axiMemorySimulationOverride({}, move(axi));
+		return axiMemorySimulationOverride({
+			.storage = std::make_shared<hlim::MemoryStorageSparse>(addrW.count() * 8, hlim::MemoryStorage::Initialization{}),
+		}, move(axi));
 	}
 
 	Bit HBM_IP::catastrophicTemperature(size_t stackIndex)
