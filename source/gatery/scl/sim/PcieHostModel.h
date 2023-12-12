@@ -27,7 +27,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 namespace gtry::scl::sim {
 	using namespace scl::pci;
 
-	class PcieHostModel 
+	class PcieHostModel
 	{
 	public:
 		PcieHostModel(uint64_t memorySizeInBytes = 64, bool memInitRandomDefined = true, uint32_t seed = 1259);
@@ -41,7 +41,7 @@ namespace gtry::scl::sim {
 		void requesterRequest(TlpPacketStream<EmptyBits>&& rr);
 		TlpPacketStream<EmptyBits>& requesterCompletion();
 
-		RequesterInterface& requesterInterface(BitWidth tlpW);
+		RequesterInterface requesterInterface(BitWidth tlpW);
 
 		PciRequestHandler* handler(TlpOpcode);
 

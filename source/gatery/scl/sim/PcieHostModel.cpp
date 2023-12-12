@@ -70,13 +70,22 @@ namespace gtry::scl::sim {
 		return *m_rc; 
 	}
 	
-	RequesterInterface& PcieHostModel::requesterInterface(BitWidth tlpW) {
+	RequesterInterface PcieHostModel::requesterInterface(BitWidth tlpW) {
+		m_rr.emplace(tlpW);
+		emptyBits(*m_rr) =  BitWidth::count((*m_rr)->width().bits());
+		pinOut(*m_rr, "host_rr", {.simulationOnlyPin = true});
+
+		m_rc.emplace(tlpW);
+		emptyBits(*m_rc) =  BitWidth::count((*m_rc)->width().bits());
+		pinIn(*m_rc, "host_rc", {.simulationOnlyPin = true});
+
 		scl::pci::RequesterInterface reqInt{
-			.request{tlpW}
+			.request = constructFrom(*m_rr),
+			.completion = constructFrom(*m_rc),
 		};
-	
-		this->requesterRequest(copy(reqInt.request)); // might f everyting up, let's see
-		reqInt.completion = move(this->requesterCompletion());
+
+		*m_rr <<= reqInt.request;
+		reqInt.completion <<= *m_rc;
 		
 		return reqInt;
 	}
@@ -112,7 +121,7 @@ namespace gtry::scl::sim {
 		while (true) {
 			auto simPacket = co_await gtry::scl::strm::receivePacket(*m_rr, clk);
 			auto tlp = TlpInstruction::createFrom(simPacket.payload);
-			BOOST_TEST((m_requestHandlers.find(tlp.opcode) != m_requestHandlers.end()), "the opcode (ftm and type): 0x" << magic_enum::enum_name(tlp.opcode) << "is not supported");
+			BOOST_TEST((m_requestHandlers.find(tlp.opcode) != m_requestHandlers.end()), "the opcode (ftm and type): " << magic_enum::enum_name(tlp.opcode) << "is not supported");
 		}
 	}
 
