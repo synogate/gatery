@@ -49,7 +49,7 @@ namespace gtry::scl
 
 				fork([axi, cfg, clock, slot_next, &slot_current]() -> SimProcess {
 					AxiAddress& ar = **axi->ar;
-					uint64_t wordOffset = simu(ar.addr).value() / cfg.axiCfg.dataW.bytes();
+					uint64_t wordOffset = simu(ar.addr).value() / cfg.axiCfg.alignedDataW().bytes();
 					//uint64_t size = simu(ar.size).value();
 					uint64_t burst = simu(ar.burst).value();
 					uint64_t len = simu(ar.len).value() + 1;
@@ -112,7 +112,7 @@ namespace gtry::scl
 
 				fork([axi, cfg, clock, slot_next, &slot_current, &slot_current_ack]() -> SimProcess {
 					AxiAddress& ar = **axi->aw;
-					uint64_t wordOffset = simu(ar.addr).value() / cfg.axiCfg.dataW.bytes();
+					uint64_t wordOffset = simu(ar.addr).value() / cfg.axiCfg.alignedDataW().bytes();
 					//uint64_t size = simu(ar.size).value();
 					uint64_t burst = simu(ar.burst).value();
 					uint64_t len = simu(ar.len).value() + 1;
