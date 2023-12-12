@@ -156,6 +156,8 @@ void MemoryStorageSparse::read(sim::DefaultBitVectorState &dst, std::uint64_t of
 
 void MemoryStorageSparse::write(std::uint64_t offset, const sim::DefaultBitVectorState &value, bool undefinedWriteEnable, const sim::DefaultBitVectorState &mask)
 {
+	if (value.size() == 0) return;
+
 	OverlayMap::iterator last = m_overlay.end();
 	OverlayMap::iterator first = m_overlay.end();
 
