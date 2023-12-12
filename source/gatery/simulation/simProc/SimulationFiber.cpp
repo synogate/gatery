@@ -43,10 +43,10 @@ void SimulationFiber::start()
 		try {
 			m_body();
 		} catch (const SimulationTerminated &e) {
-			std::unique_lock lock(m_mutex);
-			m_threadRunning = false;
-			m_wakeMain.notify_one();
 		}
+		std::unique_lock lock(m_mutex);
+		m_threadRunning = false;
+		m_wakeMain.notify_one();
 	});
 
 	while (m_threadRunning)
