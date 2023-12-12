@@ -106,8 +106,6 @@ namespace gtry::scl::sim {
 			{
 				packet.resize(96);
 				HCL_DESIGNCHECK_HINT(this->completerID, "completer id not set");
-				HCL_DESIGNCHECK_HINT(this->requesterID, "requester id not set, this should come from your data requester");
-				HCL_DESIGNCHECK_HINT(this->tag, "tag not set, it should come from your data requester");
 				if (this->completionStatus == CompletionStatus::unsupportedRequest) {
 					helper
 						.write(*this->completerID >> 8, 8_b)
