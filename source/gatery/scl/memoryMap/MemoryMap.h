@@ -68,7 +68,8 @@ namespace gtry::scl
 		class MemoryMapEntry;
 	}
 	std::vector<driver::MemoryMapEntry> exportAddressSpaceDescription(const AddressSpaceDescription &desc);
-	void format(std::ostream &stream, std::string_view name, const std::vector<driver::MemoryMapEntry> &memoryMap);
+	void format(std::ostream &stream, std::string_view name, std::span<const driver::MemoryMapEntry> memoryMap);
+	void writeGTKWaveFilterFile(std::ostream &stream, std::span<const driver::MemoryMapEntry> memoryMap);
 
 	/**
 	 * @brief Interface and no-op fallback implementation for the automatic generation of memory mapped control registers.

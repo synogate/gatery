@@ -84,7 +84,7 @@ namespace gtry::scl
 		return result;
 	}
 
-	void format(std::ostream &stream, std::string_view name, const std::vector<driver::MemoryMapEntry> &memoryMap)
+	void format(std::ostream &stream, std::string_view name, std::span<const driver::MemoryMapEntry> memoryMap)
 	{
 		stream << "static constexpr MemoryMapEntry " << name << "[] = {" << std::endl;
 		for (const auto &e : memoryMap)
@@ -102,6 +102,27 @@ namespace gtry::scl
 		stream << "};" << std::endl;
 	}
 
+	void writeGTKWaveFilterFile(std::ostream &stream, std::span<const driver::MemoryMapEntry> memoryMap)
+	{
+		std::function<void(const std::string &prefix, const driver::MemoryMapEntry &)> reccurse;
+
+		reccurse = [&](const std::string &prefix, const driver::MemoryMapEntry &e) {
+			std::string fullName;
+			if (prefix.empty())
+				fullName = e.name;
+			else
+				fullName = prefix+'_'+e.name;
+
+			if (e.childrenCount == 0 && e.width > 0) {
+				stream << std::hex << e.addr/8 << " " << fullName << std::endl;
+			}
+			for (size_t i = 0; i < e.childrenCount; i++)
+				reccurse(fullName, memoryMap[e.childrenStart + i]);
+		};
+
+		if (!memoryMap.empty())
+			reccurse("", memoryMap[0]);
+	}
 
 	void MemoryMap::SelectionHandle::joinWith(SelectionHandle &&rhs)
 	{
