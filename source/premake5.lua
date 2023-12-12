@@ -66,7 +66,7 @@ project "gatery"
     }
 
     removefiles  {
-        "gatery/scl/drivers/**.cpp"
+        "gatery/scl/driver/**.cpp"
     }
 
     pchsource "gatery/pch.cpp"
