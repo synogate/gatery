@@ -43,6 +43,8 @@ namespace gtry::scl::pci::xilinx {
 
 	Axi4PacketStream<RQUser> requesterRequestVendorUnlocking(TlpPacketStream<scl::EmptyBits>&& in);
 	TlpPacketStream<scl::EmptyBits> requesterCompletionVendorUnlocking(Axi4PacketStream<RCUser>&& in, bool straddle = false);
+
+	RequesterInterface requesterVendorUnlocking(Axi4PacketStream<RCUser>&& completion, Axi4PacketStream<RQUser>& request);
 	
 }
 	

@@ -83,7 +83,7 @@ namespace gtry::scl::pci::xilinx {
 	struct RequesterCompletionDescriptor {
 		UInt lowerByteAddress = 12_b;
 		BVec errorCode = 4_b;
-		UInt byteCount = 12_b;
+		UInt byteCount = 13_b;
 		Bit lockedReadCompletion;
 		Bit requestCompleted;
 		Bit reservedDw0;

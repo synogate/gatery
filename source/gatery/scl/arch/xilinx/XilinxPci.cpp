@@ -78,7 +78,7 @@ namespace gtry::scl::pci::xilinx {
 		RequesterRequestDescriptor ret;
 		ret.at = hdr.common.addressType;
 		ret.wordAddress = hdr.wordAddress;
-		ret.dwordCount = hdr.common.length;
+		ret.dwordCount = hdr.common.dataLength();
 		ret.reqType = 1; //memory write request
 		IF(hdr.common.isMemRead())
 			ret.reqType = 0;
@@ -116,7 +116,7 @@ namespace gtry::scl::pci::xilinx {
 		ret.completerId = desc.completerId;
 		ret.byteCount = desc.byteCount;
 		ret.byteCountModifier = '0';
-		ret.lowerByteAddress = desc.lowerByteAddress;
+		ret.lowerByteAddress = desc.lowerByteAddress.lower(7_b);
 		ret.completionStatus = desc.completionStatus;
 		desc.requestCompleted; // maybe do something with this?
 		return ret;
@@ -202,6 +202,8 @@ namespace gtry::scl::pci::xilinx {
 		RequesterRequestDescriptor desc = createDescriptor(hdr);
 
 		Axi4PacketStream<RQUser> ret(in->width());
+		dwordEnable(ret) = ret->width() / 32;
+		ret.set(RQUser{ ret->width() == 512_b ? 183_b : 62_b}); //no logic here, just documentation
 
 		*ret = *in;
 		IF(sop(in))
@@ -238,7 +240,7 @@ namespace gtry::scl::pci::xilinx {
 		//data assignments
 		*ret = *in;
 		IF(sop(in))
-			ret->lower(128_b) = (BVec) pack(desc) ;
+			ret->lower(96_b) = (BVec) hdr;
 
 		//Handshake assignments
 		ready(in) = ready(ret);
@@ -250,6 +252,24 @@ namespace gtry::scl::pci::xilinx {
 		emptyBits(ret) = cat(emptyWords, "5b0");
 
 		setName(ret, "tlp_out");
+		return ret;
+	}
+
+	RequesterInterface requesterVendorUnlocking(Axi4PacketStream<RCUser>&& completion, Axi4PacketStream<RQUser>& request)
+	{
+		RequesterInterface ret;
+		*ret.request = completion->width();
+		emptyBits(ret.request) = BitWidth::count(ret.request->width().bits());
+
+		*ret.completion = completion->width();
+		emptyBits(ret.completion) = BitWidth::count(ret.completion->width().bits());
+
+		TlpPacketStream<EmptyBits> temp = constructFrom(ret.request);
+		temp <<= ret.request;
+		request = requesterRequestVendorUnlocking(move(temp));
+
+		ret.completion = requesterCompletionVendorUnlocking(move(completion));
+
 		return ret;
 	}
 
