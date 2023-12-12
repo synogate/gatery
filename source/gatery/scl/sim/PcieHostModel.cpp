@@ -122,6 +122,7 @@ namespace gtry::scl::sim {
 	{
 		HCL_DESIGNCHECK_HINT(m_rr, "requesterRequest port is not connected");
 		HCL_DESIGNCHECK_HINT(m_rc, "requesterCompletion port is not connected");
+		simu(valid(*m_rc)) = '0';
 		SimulationSequencer sendingSeq;
 		fork([&, this]()->SimProcess { return scl::strm::readyDriver(*m_rr, clk); });
 		while (true) {
