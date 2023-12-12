@@ -19,10 +19,7 @@
 /*
  * Do not include the regular gatery headers since this is meant to compile stand-alone in driver/userspace application code. 
  */
-#ifdef _WIN32
-#include <gatery/pch.h>
-#endif
-
+ 
 #include "LinuxMemoryMappedPCI.h"
 
 #include "LinuxPCIDeviceFunctionList.h"

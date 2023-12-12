@@ -65,6 +65,10 @@ project "gatery"
         "gatery/*"
     }
 
+    removefiles  {
+        "gatery/scl/drivers/**.cpp"
+    }
+
     pchsource "gatery/pch.cpp"
     pchheader "gatery/pch.h"
 
