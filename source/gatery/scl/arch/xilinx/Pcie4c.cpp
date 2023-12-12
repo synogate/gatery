@@ -78,7 +78,7 @@ namespace gtry::scl::arch::xilinx {
 		return *this;
 	}
 	
-	Axi4PacketStream<RCUser> Pcie4c::requesterCompletion()
+	Axi4PacketStream<RCUser> Pcie4c::requesterCompletion() 
 	{
 		ClockScope clkScope{ m_usrClk };
 		Axi4PacketStream<RCUser> rc;
