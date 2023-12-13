@@ -39,6 +39,9 @@ namespace gtry::scl::driver {
 			LinuxAddressTranslator();
 			~LinuxAddressTranslator();
 
+			LinuxAddressTranslator(const LinuxAddressTranslator&) = delete;
+			void operator=(const LinuxAddressTranslator&) = delete;
+
 			PhysicalAddr userToPhysical(void *usrSpaceAddr) const;
 
 			inline size_t pageSize() const { return m_pageSize; }

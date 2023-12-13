@@ -33,11 +33,17 @@
 
 namespace gtry::scl::driver {
 
-	class LinuxMemoryBuffer {
+	class LinuxDMABuffer {
 		public:
-			LinuxMemoryBuffer(LinuxAddressTranslator &addrTranslator, size_t size, bool continuous = false, size_t retries = 100);
-			~LinuxMemoryBuffer();
+			LinuxDMABuffer(LinuxAddressTranslator &addrTranslator, size_t size, bool continuous = false, size_t retries = 100);
+			~LinuxDMABuffer();
+
+			LinuxDMABuffer(const LinuxDMABuffer&) = delete;
+			void operator=(const LinuxDMABuffer&) = delete;
+
 			bool isContinuous() const;
+
+			std::vector<PhysicalAddr> getScatterGatherList() const;
 
 			std::span<std::byte> userSpaceBuffer() { return m_buffer; }
 			

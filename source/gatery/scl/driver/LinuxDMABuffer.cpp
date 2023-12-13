@@ -21,7 +21,7 @@
  * Do not include the regular gatery headers since this is meant to compile stand-alone in driver/userspace application code. 
  */
 
-#include "LinuxMemoryBuffer.h"
+#include "LinuxDMABuffer.h"
 
 #include <cstring>
 #include <sys/mman.h>
@@ -39,9 +39,9 @@ void unlockAndUnmap(std::span<std::byte> buffer)
 }
 
 struct MemoryToUnlockAndUnmap {
-	std::vector<std::span<std::byte>> chunks;
+	std::vector<std::span<std::byte>> freeInDtor;
 	~MemoryToUnlockAndUnmap() {
-		for (auto &c : chunks)
+		for (auto &c : freeInDtor)
 			unlockAndUnmap(c);
 	}
 };
@@ -49,18 +49,18 @@ struct MemoryToUnlockAndUnmap {
 }
 
 
-LinuxMemoryBuffer::LinuxMemoryBuffer(LinuxAddressTranslator &addrTranslator, size_t size, bool continuous, size_t retries) : m_addrTranslator(addrTranslator)
+LinuxDMABuffer::LinuxDMABuffer(LinuxAddressTranslator &addrTranslator, size_t size, bool continuous, size_t retries) : m_addrTranslator(addrTranslator)
 {
 	allocatePopulateLock(size);
 
+	// This is probably a stupid idea...
 	if (continuous) {
 		MemoryToUnlockAndUnmap attempts;
-
 		for (size_t i = 0; i < retries; i++) {
 			if (isContinuous())	
 				return;
 			
-			attempts.chunks.push_back(m_buffer);
+			attempts.freeInDtor.push_back(m_buffer);
 			m_buffer = {};
 			allocatePopulateLock(size);
 		}
@@ -68,12 +68,12 @@ LinuxMemoryBuffer::LinuxMemoryBuffer(LinuxAddressTranslator &addrTranslator, siz
 	}
 }
 
-LinuxMemoryBuffer::~LinuxMemoryBuffer()
+LinuxDMABuffer::~LinuxDMABuffer()
 {
 	unlockAndUnmap(m_buffer);
 }
 
-bool LinuxMemoryBuffer::isContinuous() const
+bool LinuxDMABuffer::isContinuous() const
 {
 	PhysicalAddress startAddress = userToPhysical(m_buffer.data());
 	size_t numPages = (m_buffer.size() + m_addrTranslator.pageSize()-1) / m_addrTranslator.pageSize();
@@ -86,7 +86,19 @@ bool LinuxMemoryBuffer::isContinuous() const
 	return true;
 }
 
-void LinuxMemoryBuffer::allocatePopulateLock(size_t size)
+std::vector<PhysicalAddr> LinuxDMABuffer::getScatterGatherList() const
+{
+	size_t numPages = (m_buffer.size() + m_addrTranslator.pageSize()-1) / m_addrTranslator.pageSize();
+
+	std::vector<PhysicalAddr> list;
+	list.resize(numPages);
+	for (size_t page = 0; page < numPages; page++)
+		list[page] = userToPhysical(m_buffer.data() + page * m_addrTranslator.pageSize());
+
+	return list;
+}
+
+void LinuxDMABuffer::allocatePopulateLock(size_t size)
 {
 	void *addr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
 	if (addr == nullptr)
