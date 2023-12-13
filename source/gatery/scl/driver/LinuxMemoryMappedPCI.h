@@ -25,6 +25,12 @@
 
 #include <span>
 
+/**
+ * @addtogroup gtry_scl_driver
+ * @{
+ */
+
+
 namespace gtry::scl::driver {
 
 class PCIDeviceFunction;
@@ -54,3 +60,5 @@ class UserSpaceMapped32BitEndpoint : public MemoryMapInterface {
 
 
 }
+
+/**@}*/

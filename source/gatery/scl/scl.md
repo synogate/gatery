@@ -2,6 +2,7 @@
 
 Submodules:
 - @subpage gtry_scl_memorymaps_page
+- @subpage gtry_scl_driver_page
 
 See @ref gtry_scl
 

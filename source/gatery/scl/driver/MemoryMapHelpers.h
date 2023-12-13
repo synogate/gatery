@@ -28,6 +28,11 @@
 
 #include <concepts>
 
+/**
+ * @addtogroup gtry_scl_driver
+ * @{
+ */
+
 namespace gtry::scl::driver {
 
 
@@ -203,6 +208,7 @@ void clearTileLinkDChannel(MemoryMapInterface &interface, Addr streamLocation)
 
 
 
-
-
 }
+
+
+/**@}*/

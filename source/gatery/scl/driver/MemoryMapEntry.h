@@ -24,6 +24,11 @@
 
 #include <stdint.h>
 
+/**
+ * @addtogroup gtry_scl_driver
+ * @{
+ */
+
 #ifdef __cplusplus
 namespace gtry::scl::driver {
 #endif
@@ -48,3 +53,5 @@ struct MemoryMapEntry {
 #ifdef __cplusplus
 }
 #endif
+
+/**@}*/

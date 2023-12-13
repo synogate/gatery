@@ -27,6 +27,11 @@
 #include <stddef.h>
 #include <span>
 
+/**
+ * @addtogroup gtry_scl_driver
+ * @{
+ */
+
 namespace gtry::scl::driver {
 
 class MemoryMapInterface {
@@ -91,3 +96,5 @@ void MemoryMapInterface::writeUInt(MemoryMapEntryHandle addr, size_t data)
 
 
 }
+
+/**@}*/

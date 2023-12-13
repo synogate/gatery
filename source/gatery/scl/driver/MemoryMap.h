@@ -32,10 +32,15 @@
 
 #include "MemoryMapEntry.h"
 
+/**
+ * @addtogroup gtry_scl_driver
+ * @{
+ */
+
 namespace gtry::scl::driver {
 
-class MemoryMap;
 
+class MemoryMap;
 
 class MemoryMapEntryHandle {
     public:

@@ -24,6 +24,12 @@
 #include <filesystem>
 #include <optional>
 
+
+/**
+ * @addtogroup gtry_scl_driver
+ * @{
+ */
+
 namespace gtry::scl::driver {
 
 class PCIDeviceFunctionList;
@@ -89,6 +95,6 @@ class PCIDeviceFunctionList {
 		std::filesystem::path m_sysfsPath = "/sys/bus/pci/devices/";
 };
 
-
-
 }
+
+/**@}*/
