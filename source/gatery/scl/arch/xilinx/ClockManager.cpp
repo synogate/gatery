@@ -72,11 +72,11 @@ namespace gtry::scl::arch::xilinx
 
 		Clock& in0 = m_clkIn.find(0)->second;
 		Clock out = clockOut(
-			in0, "CLKOUT" + std::to_string(index), {},
+			in0, portName, {},
 			ClockConfig{ 
 				.frequencyMultiplier = hlim::ClockRational{ m_vcoMul, m_vcoDiv * counterDiv },
 				.name = std::string{name},
-				.phaseSynchronousWithParent = !inverted,
+				//.phaseSynchronousWithParent = !inverted,
 				.resetType = Clock::ResetType::ASYNCHRONOUS,
 				.resetActive = Clock::ResetActive::LOW
 			}
