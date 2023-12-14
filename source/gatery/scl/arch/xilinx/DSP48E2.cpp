@@ -137,4 +137,63 @@ namespace gtry::scl::arch::xilinx
 		HCL_NAMED(acc);
 		return acc;
 	}
+
+	SInt mulAccumulate(SInt a1, SInt b1, SInt a2, SInt b2, Bit restart, Bit valid, std::string_view instanceName)
+	{
+		Area ent{ "scl_mulAccumulate", true };
+		if (!instanceName.empty())
+			ent.getNodeGroup()->setInstanceName(std::string{ instanceName });
+
+		HCL_DESIGNCHECK(a1.width() <= 27_b);
+		HCL_DESIGNCHECK(b1.width() <= 18_b);
+		HCL_NAMED(a1);
+		HCL_NAMED(b1);
+		HCL_DESIGNCHECK(a2.width() <= 27_b);
+		HCL_DESIGNCHECK(b2.width() <= 18_b);
+		HCL_NAMED(a2);
+		HCL_NAMED(b2);
+		HCL_NAMED(restart);
+		HCL_NAMED(valid);
+
+		// model
+		SInt m = sext(a1, 48_b) * sext(b1, 48_b) + sext(a2, 48_b) * sext(b2, 48_b);
+		m = reg(reg(reg(m)));
+
+		SInt acc = 48_b;
+		Bit restartDelayed = reg(reg(reg(restart)));
+		IF(reg(reg(reg(valid))))
+		{
+			IF(restartDelayed)
+				acc = 0;
+			acc += sext(m);
+		}
+		acc = reg(acc);
+
+		// export
+		std::array<DSP48E2, 2> dsp;
+		for (DSP48E2& d : dsp)
+			d.clock(ClockScope::getClk());
+
+		dsp[0].a() = (BVec)sext(a1, 27_b);
+		dsp[0].b() = (BVec)sext(b1, 18_b);
+		dsp[0].inMode()[0] = '1'; // select A1 register
+		dsp[0].inMode()[4] = '1'; // select B1 register
+		dsp[0].opMode(DSP48E2::MuxW::zero, DSP48E2::MuxX::m, DSP48E2::MuxY::m, DSP48E2::MuxZ::zero);
+
+		dsp[1].generic("AREG") = 2;
+		dsp[1].generic("BREG") = 2;
+		dsp[1].a() = (BVec)sext(a2, 27_b);
+		dsp[1].b() = (BVec)sext(b2, 18_b);
+		dsp[1].in("PCIN", 48_b) = dsp[0].out("PCOUT", 48_b);
+
+		dsp[1].ceP() &= reg(reg(reg(valid)));
+
+		dsp[1].opMode(DSP48E2::MuxW::p, DSP48E2::MuxX::m, DSP48E2::MuxY::m, DSP48E2::MuxZ::pcin);
+		IF(reg(reg(restart)))
+			dsp[1].opMode(DSP48E2::MuxW::zero, DSP48E2::MuxX::m, DSP48E2::MuxY::m, DSP48E2::MuxZ::pcin);
+
+		acc.exportOverride((SInt)dsp[1].p());
+		HCL_NAMED(acc);
+		return acc;
+	}
 }
