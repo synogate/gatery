@@ -1,4 +1,4 @@
-+/*  This file is part of Gatery, a library for circuit design.
+/*  This file is part of Gatery, a library for circuit design.
 	Copyright (C) 2023 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
@@ -15,7 +15,6 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#pragma once
 
 /*
  * Do not include the regular gatery headers since this is meant to compile stand-alone in driver/userspace application code. 
@@ -25,6 +24,8 @@
 
 #include <cstring>
 #include <sys/mman.h>
+
+#include <stdexcept>
 
 namespace gtry::scl::driver {
 
@@ -75,7 +76,7 @@ LinuxDMABuffer::~LinuxDMABuffer()
 
 bool LinuxDMABuffer::isContinuous() const
 {
-	PhysicalAddress startAddress = userToPhysical(m_buffer.data());
+	PhysicalAddr startAddress = userToPhysical(m_buffer.data());
 	size_t numPages = (m_buffer.size() + m_addrTranslator.pageSize()-1) / m_addrTranslator.pageSize();
 	
 	for (size_t page = 1; page < numPages; page++) {
@@ -100,11 +101,13 @@ std::vector<PhysicalAddr> LinuxDMABuffer::getScatterGatherList() const
 
 void LinuxDMABuffer::allocatePopulateLock(size_t size)
 {
-	void *addr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+	//	MAP_HUGE_2MB, MAP_HUGE_1GB
+
+	std::byte *addr = (std::byte *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_SYNC, 0, 0);
 	if (addr == nullptr)
 		throw std::runtime_error("Failed to allocate!");
 	else {
-		m_buffer = std::span<std::byte>(addr, size);
+		m_buffer = std::span(addr, size);
 
 		// Force pages into existance by writing to them.
 		std::memset(m_buffer.data(), 0, m_buffer.size());

@@ -25,6 +25,7 @@
 
 #include <cstddef>
 #include <span>
+#include <vector>
 
 /**
  * @addtogroup gtry_scl_driver

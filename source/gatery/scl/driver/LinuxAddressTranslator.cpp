@@ -22,6 +22,11 @@
 
 #include "LinuxAddressTranslator.h"
 
+#include <unistd.h>
+#include <fcntl.h>
+
+#include <stdexcept>
+
 namespace gtry::scl::driver {
 
 LinuxAddressTranslator::LinuxAddressTranslator()
@@ -44,9 +49,9 @@ PhysicalAddr LinuxAddressTranslator::userToPhysical(void *usrSpaceAddr) const
 
 	uint64_t data;
     for (size_t numBytesRead = 0; numBytesRead < sizeof(data); ) {
-		auto remaining = std::as_writable_bytes(std::span{data}).subspan(numBytesRead, sizeof(data) - numBytesRead);
+		auto remaining = std::as_writable_bytes(std::span{&data, sizeof(data)}).subspan(numBytesRead, sizeof(data) - numBytesRead);
 
-    	ssize_t res = pread(m_pageMapFd, remaining.data(), remaining.size(), pageFrameNumber * sizeof(data) + numBytesRead);
+    	ssize_t res = pread(m_pageMapFd, remaining.data(), remaining.size(), virtualFrameNumber * sizeof(data) + numBytesRead);
 		if (res <= 0)
 			throw std::runtime_error("An error occured reading from the processes pagemap file for address translation.");
 
