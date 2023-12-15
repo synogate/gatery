@@ -103,7 +103,7 @@ namespace gtry::scl::arch::xilinx {
 		in("s_axis_rq_tkeep", BitWidth(m_cfg.dataBusW.bits()/32)) = keep(rq);
 	
 		in("s_axis_rq_tlast") = eop(rq);
-		in("s_axis_rq_tuser", m_cfg.dataBusW == 512_b ? 183_b : 62_b) = rq.template get<RQUser>().raw;
+		in("s_axis_rq_tuser", m_cfg.dataBusW == 512_b ? 137_b : 62_b) = rq.template get<RQUser>().raw;
 		in("s_axis_rq_tvalid") = valid(rq);
 	
 		ready(rq) = out("s_axis_rq_tready", 4_b).lsb();
@@ -149,6 +149,6 @@ namespace gtry::scl::arch::xilinx {
 		in("s_axis_rq_tdata", m_cfg.dataBusW) = 0;
 		in("s_axis_rq_tkeep", BitWidth(m_cfg.dataBusW.bits()/32)) = 0;
 		in("s_axis_rq_tlast") = '0';
-		in("s_axis_rq_tuser", m_cfg.dataBusW == 512_b ? 183_b : 62_b) = 0;
+		in("s_axis_rq_tuser", m_cfg.dataBusW == 512_b ? 137_b : 62_b) = 0;
 	}
 }

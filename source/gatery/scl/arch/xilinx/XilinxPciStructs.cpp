@@ -34,7 +34,7 @@ namespace gtry::scl::pci::xilinx
     RQUser gtry::scl::pci::xilinx::RQUser::create(BitWidth streamW)
     {
         if (streamW == 512_b) {
-            return RQUser{ ConstBVec(183_b) };
+            return RQUser{ ConstBVec(137_b) };
         }
         else if (streamW == 256_b || streamW == 128_b || streamW == 64_b) {
             return RQUser{ ConstBVec(62_b) };
