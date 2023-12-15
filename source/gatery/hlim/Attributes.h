@@ -21,16 +21,8 @@
 #include <string>
 #include <optional>
 
-
-namespace gtry::utils {
-	class DummyConfigTree;
-#ifdef USE_YAMLCPP
-	class YamlConfigTree;
-	using ConfigTree = YamlConfigTree;
-#else
-	using ConfigTree = DummyConfigTree;
-#endif
-}
+#include <gatery/utils/PropertyTree.h>
+#include <gatery/utils/ConfigTree.h>
 
 namespace gtry::hlim {
 
@@ -48,6 +40,10 @@ struct Attributes {
 
 	void fuseWith(const Attributes &rhs);
 	void loadConfig(const utils::ConfigTree& config);
+};
+
+struct GroupAttributes : public Attributes {
+
 };
 
 

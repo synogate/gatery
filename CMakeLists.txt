@@ -65,3 +65,32 @@ endif()
 add_subdirectory(tests/frontend)
 add_subdirectory(tests/scl)
 add_subdirectory(tests/tutorial)
+
+#############################################################
+
+
+file(GLOB_RECURSE srcs_driverUtils
+    "source/gatery/scl/driver/*.cpp" "source/gatery/scl/driver/*.h" "source/gatery/scl/driver/*.c"
+)
+
+add_library(gatery_driver_utils STATIC ${srcs_driverUtils})
+
+target_include_directories(gatery_driver_utils PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/source
+)
+
+
+target_include_directories(gatery_driver_utils SYSTEM PUBLIC
+    ${Boost_INCLUDE_DIRS}
+)
+
+target_link_libraries(gatery_driver_utils PUBLIC
+    ${Boost_LIBRARIES}
+)
+
+
+target_compile_features(gatery_driver_utils PUBLIC cxx_std_23)
+
+target_compile_definitions(gatery_driver_utils PUBLIC NOMINMAX)
+target_compile_definitions(gatery_driver_utils PUBLIC WIN32_LEAN_AND_MEAN)
+target_compile_definitions(gatery_driver_utils PUBLIC _HAS_DEPRECATED_IS_LITERAL_TYPE=1)

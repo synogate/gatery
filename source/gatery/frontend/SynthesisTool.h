@@ -42,6 +42,7 @@ class SynthesisTool {
 
 		virtual void prepareCircuit(hlim::Circuit &circuit)  { }
 
+		virtual void resolveAttributes(const hlim::GroupAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs);
 		virtual void resolveAttributes(const hlim::RegisterAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs) = 0;
 		virtual void resolveAttributes(const hlim::SignalAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs) = 0;
 		virtual void resolveAttributes(const hlim::MemoryAttributes &attribs, hlim::ResolvedAttributes &resolvedAttribs) = 0;
@@ -50,6 +51,8 @@ class SynthesisTool {
 		virtual void writeClocksFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename) = 0;
 		virtual void writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename) = 0;
 		virtual void writeStandAloneProject(vhdl::VHDLExport& vhdlExport, std::string_view filename) = 0;
+
+		static std::vector<std::filesystem::path> sourceFiles(vhdl::VHDLExport& vhdlExport, bool synthesis, bool simulation);
 protected:
 		std::vector<std::string> m_vendors;
 
@@ -57,8 +60,6 @@ protected:
 		void writeUserDefinedPathAttributes(std::ostream &stream, const hlim::PathAttributes &attribs, const std::string &start, const std::string &end);
 
 		void forEachPathAttribute(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::function<void(hlim::Node_PathAttributes*, std::string, std::string)> functor);
-
-		std::vector<std::filesystem::path> sourceFiles(vhdl::VHDLExport& vhdlExport, bool synthesis, bool simulation);
 };
 
 

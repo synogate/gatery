@@ -26,7 +26,13 @@ namespace gtry
 	public:
 		using std::vector<T>::vector;
 
-		Vector(Vector&&) = default;
+		Vector(Vector&& rhs)
+		{
+			std::vector<T>::reserve(rhs.size());
+			for (size_t i = 0; i < rhs.size(); ++i)
+				std::vector<T>::emplace_back(std::move(rhs[i]));
+		}
+
 		Vector(const Vector&) = default;
 
 		Vector& operator = (const Vector& rhs)
@@ -39,5 +45,24 @@ namespace gtry
 			return *this;
 		}
 
+		Vector& operator = (Vector&& rhs)
+		{
+			using namespace std;
+			std::vector<T>::resize(rhs.size());
+
+			for (size_t i = 0; i < std::vector<T>::size(); ++i)
+				std::vector<T>::at(i) = move(rhs[i]);
+
+			return *this;
+		}
+
+		static Vector create(size_t count, const T& blueprint)
+		{
+			Vector out;
+			out.reserve(count);
+			for (size_t i = 0; i < count; ++i)
+				out.emplace_back(constructFrom(blueprint));
+			return out;
+		}
 	};
 }

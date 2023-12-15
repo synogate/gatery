@@ -102,8 +102,21 @@ namespace gtry
 			return (MetaType*)m_nodeGroup->getMetaInfo();
 		}
 
-		void setPartition(bool value) { m_nodeGroup->setPartition(value); }
+		/**
+		 * @brief Whether or not to make this area a partition in a separate file with stable inputs (@see gtry::vhdl::VHDLExport::outputMode).
+		 * @details Setting this to true implies that the instantiation is to use component instantiations
+		 */
+		void setPartition(bool value) { m_nodeGroup->setPartition(value); if (value) useComponentInstantiation(true);  }
 		bool isPartition() const { return m_nodeGroup->isPartition(); }
+
+		/**
+		 * @brief Whether to use entity instantiations or component instantiations on this area.
+		 */
+		void useComponentInstantiation(bool b) { m_nodeGroup->useComponentInstantiation(b); }
+		bool useComponentInstantiation() const { return m_nodeGroup->useComponentInstantiation(); }
+
+		inline hlim::GroupAttributes &groupAttributes() { return m_nodeGroup->groupAttributes(); }
+		inline const hlim::GroupAttributes &groupAttributes() const { return m_nodeGroup->groupAttributes(); }
 
 	private:
 		hlim::NodeGroup* m_nodeGroup;

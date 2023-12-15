@@ -74,7 +74,7 @@ std::array<TileLinkUL, 2> arch::xilinx::ultraRam(size_t numWords, UltraRamSettin
 		ram[i].enableOutputRegister(URAM288::B, *cfg.latency >= 2);
 
 		if (i > 0)
-			ram[i].cascade(ram[i - 1]);
+			ram[i].cascade(ram[i - 1], numRamBlocks);
 		if(pipeLineRegisterSteps)
 			ram[i].cascadeReg(i % pipeLineRegisterSteps == pipeLineRegisterSteps - 1);
 	}
@@ -114,7 +114,7 @@ TileLinkUL gtry::scl::arch::xilinx::ultraRamPort(BitWidth addrW, URAM288& inRam,
 
 	inRam.port(port, {
 		.din = zext(out.a->data),
-		.addr = zext(out.a->address),
+		.addr = zext(out.a->address.upper(-3_b)),
 		.en = valid(out.a),
 		.rdb_wr = out.a->isPut(),
 		.bwe = zext(out.a->mask),
@@ -129,7 +129,6 @@ TileLinkUL gtry::scl::arch::xilinx::ultraRamPort(BitWidth addrW, URAM288& inRam,
 	*out.d <<= tlResult;
 
 	URAM288::PortOut memResult = outRam.port(port);
-	(*out.d)->error = memResult.dbiterr;
 	(*out.d)->data = memResult.dout.lower(64_b);
 	return out;
 }

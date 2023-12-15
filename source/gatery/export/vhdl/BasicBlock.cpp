@@ -744,6 +744,19 @@ void BasicBlock::declareLocalComponents(std::ostream &stream, size_t indentation
 	
 	std::set<std::string> alreadyDeclaredComponents;
 
+
+	for (auto &statement : m_statements)
+		if (statement.type == ConcurrentStatement::TYPE_ENTITY_INSTANTIATION) {
+			auto subEntity = m_entities[statement.ref.entityIdx];
+			if (subEntity->getNodeGroup() != nullptr)
+				if (subEntity->getNodeGroup()->useComponentInstantiation()) {
+					if (alreadyDeclaredComponents.contains(subEntity->getName())) continue;
+					alreadyDeclaredComponents.insert(subEntity->getName());
+
+					subEntity->writeComponentDeclaration(stream, (unsigned)indentation);
+				}
+		}
+
 	for (auto &n : m_externalNodes) {
 		auto node = n.node;
 		if (!node->requiresComponentDeclaration()) continue;

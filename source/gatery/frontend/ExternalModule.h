@@ -67,6 +67,10 @@ namespace gtry
 
 		void isEntity(bool b) { m_node.isEntity(b); }
 		void requiresComponentDeclaration(bool b) { m_node.requiresComponentDeclaration(b); }
+
+		void hasSideEffects(bool b) { m_node.m_hasSideEffects = b; }
+		bool hasSideEffects() const { return m_node.hasSideEffects(); }
+
 	protected:
 		const Clock& addClockOut(Clock clock, Bit clockSignal, std::optional<Bit> resetSignal);
 		hlim::Node_External& node() { return m_node; }
@@ -79,6 +83,9 @@ namespace gtry
 			using Node_External::resizeInputs;
 			using Node_External::resizeOutputs;
 			//using Node_External::declOutputBitVector;
+
+			virtual bool hasSideEffects() const override { return m_hasSideEffects || hlim::Node_External::hasSideEffects(); }
+			bool m_hasSideEffects = false;
 
 			void isEntity(bool b) { m_isEntity = b; }
 			void requiresComponentDeclaration(bool b) { m_requiresComponentDeclaration = b; }

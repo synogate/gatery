@@ -65,6 +65,9 @@ namespace gtry::hlim
 				this->setPartition(true);
 
 		m_id = m_circuit.allocateGroupId({});
+
+		if (auto attrib = this->config("attributes"))
+			m_groupAttributes.loadConfig(attrib);
 	}
 
 	NodeGroup::~NodeGroup()

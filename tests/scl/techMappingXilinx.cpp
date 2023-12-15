@@ -192,6 +192,18 @@ BOOST_FIXTURE_TEST_CASE(lutram_2, TestWithDefaultDevice<Test_Histogram>)
 	numBuckets = 32;
 	bucketWidth = 8_b;
 	execute();
+	BOOST_TEST(exportContains(std::regex{"RAM64M8"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(lutram_3, TestWithDefaultDevice<Test_Histogram>)
+{
+	forceNoInitialization = true; // todo: activate initialization for lutrams (after proper testing)
+	forceMemoryResetLogic = true;
+
+	using namespace gtry;
+	numBuckets = 256;
+	bucketWidth = 4_b;
+	execute();
 	BOOST_TEST(exportContains(std::regex{"RAM256X1D"}));
 }
 
@@ -415,7 +427,7 @@ BOOST_FIXTURE_TEST_CASE(uram288_cascade, TestWithDefaultDevice<gtry::GHDLTestFix
 
 	std::array<scl::arch::xilinx::URAM288, 8> ram;
 	for(size_t i = 1; i < ram.size(); ++i)
-		ram[i].cascade(ram[i - 1]);
+		ram[i].cascade(ram[i - 1], ram.size());
 
 	ram[3].cascadeReg(true);
 
@@ -445,7 +457,7 @@ BOOST_FIXTURE_TEST_CASE(ultraRamHelper, TestWithDefaultDevice<gtry::GHDLTestFixt
 	std::array<scl::TileLinkMasterModel, 2> m;
 	for (size_t i = 0; i < m.size(); ++i)
 	{
-		m[i].init("m" + std::to_string(i), 16_b, 64_b, 2_b, 1_b);
+		m[i].init("m" + std::to_string(i), ram[i].a->address.width(), 64_b, 2_b, 1_b);
 		(scl::TileLinkUB&)ram[i] <<= regDecouple(move(m[i].getLink()));
 	}
 
@@ -483,7 +495,7 @@ BOOST_FIXTURE_TEST_CASE(ultraRamHelper, TestWithDefaultDevice<gtry::GHDLTestFixt
 BOOST_FIXTURE_TEST_CASE(mulAccumulate, TestWithDefaultDevice<gtry::GHDLTestFixture>)
 {
 	using namespace gtry;
-	Clock clock({ .absoluteFrequency = 100'000'000 });
+	Clock clock(ClockConfig{ .absoluteFrequency = 100'000'000, .resetName = "reset", .triggerEvent = ClockConfig::TriggerEvent::RISING, .resetActive = ClockConfig::ResetActive::HIGH });
 	ClockScope clkScp(clock);
 
 	SInt a = (SInt)pinIn(18_b).setName("a");

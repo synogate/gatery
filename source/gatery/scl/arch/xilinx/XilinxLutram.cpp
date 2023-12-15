@@ -112,7 +112,7 @@ void XilinxLutram::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
 		case 8: widthSingleLutram = 1; break; // RAM256X1D
 		case 4: widthSingleLutram = 1; break; // RAM128X1D or half of RAM256X1D
 		default: 
-			if (maxDepth <= 6) 
+			if (maxDepth <= 64)
 				widthSingleLutram = 7; // RAM64M8
 			else
 				widthSingleLutram = 1; // RAM128X1D or RAM256X1D
