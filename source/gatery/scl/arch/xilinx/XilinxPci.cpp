@@ -257,6 +257,9 @@ namespace gtry::scl::pci::xilinx {
 
 	RequesterInterface requesterVendorUnlocking(Axi4PacketStream<RCUser>&& completion, Axi4PacketStream<RQUser>& request)
 	{
+		setName(completion, "axi_st_requester_completion");
+		tap(completion);
+
 		RequesterInterface ret;
 		*ret.request = completion->width();
 		emptyBits(ret.request) = BitWidth::count(ret.request->width().bits());
@@ -267,6 +270,9 @@ namespace gtry::scl::pci::xilinx {
 		TlpPacketStream<EmptyBits> temp = constructFrom(ret.request);
 		temp <<= ret.request;
 		request = requesterRequestVendorUnlocking(move(temp));
+
+		setName(request, "axi_st_requester_completion");
+		tap(request);
 
 		ret.completion = requesterCompletionVendorUnlocking(move(completion));
 
