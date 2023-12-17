@@ -141,7 +141,7 @@ protected:
 			}
 			simu(valid(stream)) = '0';
 			simu(*stream).invalidate();
-			});
+		});
 	}
 
 	template<class... Meta>
@@ -517,7 +517,7 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5_packet, StreamTransferFixture)
 	for(size_t i = 0; i < in.size(); ++i)
 	{
 		*in[i] = 10_b;
-		In(in[i], "in" + std::to_string(i) + "_");
+		In(in[i], "in" + std::to_string(i));
 		simulateArbiterTestSource(in[i]);
 		arbiter.attach(in[i]);
 	}
@@ -527,6 +527,28 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5_packet, StreamTransferFixture)
 	simulateArbiterTestSink(arbiter.out());
 
 	//recordVCD("streamArbiter_rrb5_packet.vcd");
+	design.postprocess();
+	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(streamArbiter_rrs5_packet, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::StreamArbiter<scl::RvPacketStream<UInt>, scl::ArbiterPolicyRoundRobinStrict> arbiter;
+	std::array<scl::RvPacketStream<UInt>, 5> in;
+	for (size_t i = 0; i < in.size(); ++i)
+	{
+		*in[i] = 10_b;
+		In(in[i], "in" + std::to_string(i));
+		simulateArbiterTestSource(in[i]);
+		arbiter.attach(in[i]);
+	}
+	arbiter.generate();
+
+	Out(arbiter.out());
+	simulateArbiterTestSink(arbiter.out());
+
 	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }

@@ -205,7 +205,40 @@ namespace gtry::scl
 		template<class TCont>
 		UInt operator () (const TCont& in)
 		{
-			return Counter{ in.size() }.inc().value();
+			UInt counter = BitWidth::count(in.size());
+			counter = reg(counter, counter.width().mask());
+			IF(counter == in.size() - 1)
+				counter = 0;
+			ELSE
+				counter += 1;
+			
+			return counter;
+		}
+	};
+
+	struct ArbiterPolicyRoundRobinStrict
+	{
+		template<class TCont>
+		UInt operator () (const TCont& in)
+		{
+			auto scope = Area{ "RoundRobinStrict" }.enter();
+			UInt counter = BitWidth::count(in.size());
+			counter = reg(counter, 0);
+
+			size_t i = 0;
+			for (const auto& s : in)
+			{
+				IF(reg(final(counter) == i & valid(s), '0'))
+				{
+					IF(counter == in.size() - 1)
+						counter = 0;
+					ELSE
+						counter += 1;
+				}
+				i++;
+			}
+
+			return counter;
 		}
 	};
 
