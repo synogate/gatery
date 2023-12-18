@@ -209,7 +209,7 @@ constexpr MemoryMapEntryHandle::MemoryMapEntryHandle(std::span<const MemoryMapEn
 
 
 constexpr MemoryMapEntryHandle MemoryMapEntryHandle::operator[](const std::string_view &name) const { 
-    static_assert(std::is_constant_evaluated());
+    //static_assert(std::is_constant_evaluated());
 
     size_t start = m_allEntries[m_idx].childrenStart;
     size_t end = start+m_allEntries[m_idx].childrenCount;

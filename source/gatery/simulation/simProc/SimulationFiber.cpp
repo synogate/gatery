@@ -16,6 +16,7 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#include "gatery/pch.h"
 #include "SimulationFiber.h"
 
 namespace gtry::sim {
@@ -42,7 +43,7 @@ void SimulationFiber::start()
 		m_thisFiber = this;
 		try {
 			m_body();
-		} catch (const SimulationTerminated &e) {
+		} catch (const SimulationTerminated &) {
 		}
 		std::unique_lock lock(m_mutex);
 		m_threadRunning = false;

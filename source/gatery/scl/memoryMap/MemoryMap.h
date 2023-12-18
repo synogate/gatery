@@ -65,7 +65,7 @@ namespace gtry::scl
 	inline std::ostream &operator<<(std::ostream &stream, const AddressSpaceDescription &desc) { format(stream, desc); return stream; }
 
 	namespace driver {
-		class MemoryMapEntry;
+		struct MemoryMapEntry;
 	}
 	std::vector<driver::MemoryMapEntry> exportAddressSpaceDescription(const AddressSpaceDescription &desc);
 	void format(std::ostream &stream, std::string_view name, std::span<const driver::MemoryMapEntry> memoryMap);

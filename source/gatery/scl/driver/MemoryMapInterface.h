@@ -87,10 +87,10 @@ void MemoryMapInterface::writeUInt(MemoryMapEntryHandle addr, size_t data)
 {
 	if (sizeof(size_t) < addr.size()/8)
 		throw std::runtime_error("Field too large!");
-	if (addr.size() <= 8) { writeU8(addr.addr()/8, data); return; }
-	if (addr.size() <= 16) { writeU16(addr.addr()/8, data); return; }
-	if (addr.size() <= 32) { writeU32(addr.addr()/8, data); return; }
-	if (addr.size() <= 64) { writeU64(addr.addr()/8, data); return; }
+	if (addr.size() <= 8) { writeU8(addr.addr()/8, (uint8_t) data); return; }
+	if (addr.size() <= 16) { writeU16(addr.addr()/8, (uint16_t) data); return; }
+	if (addr.size() <= 32) { writeU32(addr.addr()/8, (uint32_t) data); return; }
+	if (addr.size() <= 64) { writeU64(addr.addr()/8, (uint64_t) data); return; }
 }
 
 

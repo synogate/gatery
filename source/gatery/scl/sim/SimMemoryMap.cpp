@@ -61,7 +61,7 @@ uint32_t SimulationMapped32BitTileLink::readU32(size_t addr) const
 		auto [val, def, err] = co_await m_linkModel.get(addr, 2, m_clock);
 		if (err) throw std::runtime_error("Bus error!");
 		if (!def) throw std::runtime_error("Undefined value!");
-		co_return val;
+		co_return (uint32_t) val;
 	});
 }
 
@@ -69,6 +69,7 @@ void SimulationMapped32BitTileLink::writeU32(size_t addr, uint32_t data)
 {
 	sim::SimulationFiber::awaitCoroutine<uint32_t>([&]()->sim::SimulationFunction<uint32_t> {
 		co_await m_linkModel.put(addr, 2, data, m_clock);
+		co_return 0;
 	});
 }
 
