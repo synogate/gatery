@@ -44,10 +44,10 @@ BOOST_FIXTURE_TEST_CASE(tlp_builder_test, BoostUnitTestSimulationFixture)
 	read.safeLength(1);
 	auto dbv = (sim::DefaultBitVectorState)read;
 
-	std::cout << "READ" << std::endl;
+	//std::cout << "READ" << std::endl;
 	for (size_t byte = 0; byte < dbv.size() / 8; byte++) {
 		if (byte % 4 == 0) std::cout << std::endl;
-		std::cout << std::setw(10) << std::dec << dbv.extract(byte * 8, 8) << " " << std::setw(2) << std::hex << dbv.extract(byte * 8, 8) << std::endl;
+		//std::cout << std::setw(10) << std::dec << dbv.extract(byte * 8, 8) << " " << std::setw(2) << std::hex << dbv.extract(byte * 8, 8) << std::endl;
 	}
 	//convert back to TlpInstruction and check equivalence
 	auto recreatedRead = TlpInstruction::createFrom(dbv);
@@ -64,10 +64,10 @@ BOOST_FIXTURE_TEST_CASE(tlp_builder_test, BoostUnitTestSimulationFixture)
 	write.payload = std::vector<uint32_t>{ 0xAAAAAAAA };
 
 	dbv = (sim::DefaultBitVectorState)write;
-	std::cout << "WRITE" << std::endl;
+	//std::cout << "WRITE" << std::endl;
 	for (size_t byte = 0; byte < dbv.size() / 8; byte++) {
 		if (byte % 4 == 0) std::cout << std::endl;
-		std::cout << std::setw(8) << std::dec << dbv.extract(byte * 8, 8) << " " << std::setw(2) << std::hex << dbv.extract(byte * 8, 8) << std::endl;
+		//std::cout << std::setw(8) << std::dec << dbv.extract(byte * 8, 8) << " " << std::setw(2) << std::hex << dbv.extract(byte * 8, 8) << std::endl;
 	}
 
 	//check equivalence after round trip
