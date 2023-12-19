@@ -24,6 +24,7 @@
 #include <gatery/simulation/waveformFormats/VCDSink.h>
 #include <gatery/simulation/Simulator.h>
 
+#include <gatery/scl/synthesisTools/XilinxVivado.h>
 #include <gatery/scl/stream/strm.h>
 #include <gatery/scl/io/SpiMaster.h> 
 
@@ -2022,4 +2023,41 @@ BOOST_FIXTURE_TEST_CASE(delay_test_10, BoostUnitTestSimulationFixture)
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 2, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_credit_fifo, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	scl::RvStream<UInt> in{ .data = 10_b };
+	pinIn(in, "in");
+
+	addSimulationProcess([&, this]() -> SimProcess {
+		for (size_t i = 0;; i++)
+			co_await scl::strm::sendBeat(in, i, clk);
+	});
+
+	scl::RvStream out = delayAutoPipeline(move(in), 8);
+	pinOut(out, "out");
+
+	addSimulationProcess([&, this]() -> SimProcess {
+		fork(scl::strm::readyDriverRNG(out, clk, 80));
+
+		for (size_t i = 0; i < 24; ++i)
+		{
+			co_await scl::strm::performTransferWait(out, clk);
+			BOOST_TEST(simu(*out) == i);
+		}
+		stopTest();
+	});
+
+	design.postprocess();
+	if (true) {
+		m_vhdlExport.emplace("export/stream_credit_fifo.vhd");
+		m_vhdlExport->targetSynthesisTool(new gtry::XilinxVivado());
+		(*m_vhdlExport)(design.getCircuit());
+	}
+
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
