@@ -91,6 +91,14 @@ void XilinxVivado::resolveAttributes(const hlim::RegisterAttributes &attribs, hl
 		resolvedAttribs.insert({"extract_enable", {"string", "\"yes\""}});
 		resolvedAttribs.insert({"extract_reset", {"string", "\"yes\""}});
 	}
+
+	if (attribs.autoPipelineLimit)
+	{
+		HCL_DESIGNCHECK(!attribs.autoPipelineGroup.empty());
+		resolvedAttribs.insert({ "AUTOPIPELINE_GROUP", {"string", "\"" + attribs.autoPipelineGroup + "\""}});
+		resolvedAttribs.insert({ "AUTOPIPELINE_LIMIT", {"integer", std::to_string(attribs.autoPipelineLimit)} });
+	}
+
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }
 
