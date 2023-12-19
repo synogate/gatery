@@ -102,7 +102,6 @@ GHDLTestFixture::GHDLTestFixture()
 
 GHDLTestFixture::~GHDLTestFixture()
 {
-	std::filesystem::current_path(m_cwd);
 }
 
 void GHDLTestFixture::addCustomVHDL(std::string name, std::string content)
