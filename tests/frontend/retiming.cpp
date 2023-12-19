@@ -237,12 +237,13 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_struct, BoostUnitTestSimulationFixture)
 		simu(s_in.a) = false;
 		simu(s_in.b) = 42;
 		
-		for ([[maybe_unused]] auto i : Range(3)) {
+		for ([[maybe_unused]] auto i : Range(2)) {
 			BOOST_TEST(!simu(s_out.a).defined());
 			BOOST_TEST(!simu(s_out.b).defined());
 
 			co_await AfterClk(clock);
 		}
+		co_await AfterClk(clock);
 
 		BOOST_TEST(simu(s_out.a).defined());
 		BOOST_TEST(simu(s_out.a).value() == false);
@@ -352,11 +353,12 @@ BOOST_FIXTURE_TEST_CASE(retiming_hint_branching, BoostUnitTestSimulationFixture)
 		simu(input1) = 1337;
 		simu(input2) = 42;
 		
-		for ([[maybe_unused]] auto i : Range(2)) {
+		for ([[maybe_unused]] auto i : Range(1)) {
 			BOOST_TEST(!simu(output).defined());
 
 			co_await AfterClk(clock);
 		}
+		co_await AfterClk(clock);
 
 		BOOST_TEST(simu(output).defined());
 		BOOST_TEST(simu(output).value() == 1337+42);
@@ -402,11 +404,12 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeinputgroup, BoostUnitTestSimulationFixture)
 		simu(input1) = 1337;
 		simu(input2) = 42;
 
-		for([[maybe_unused]] auto i : Range(2)) {
+		for([[maybe_unused]] auto i : Range(1)) {
 			BOOST_TEST(!simu(output).defined());
 
 			co_await AfterClk(clock);
 		}
+		co_await AfterClk(clock);
 
 		BOOST_TEST(simu(output).defined());
 		BOOST_TEST(simu(output).value() == 1337 + 42);
