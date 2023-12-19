@@ -174,14 +174,30 @@ namespace gtry::scl::strm
 		}
 		else
 		{
-			Stream<PayloadT, Meta..., T> ret;
-			connect(*ret, data);
-			ret.template get<T>() <<= signal;
+			if constexpr (std::is_same_v<T, Ready>)
+			{
+				// Ready is always the first meta signal if present to fit R*Stream type declarations
+				// This is a bit of a hack, all meta signals should have some kind of deterministic ordering instead
+				Stream<PayloadT, T, Meta...> ret;
+				connect(*ret, data);
+				ret.template get<T>() <<= signal;
 
-			std::apply([&](auto& ...meta) {
-				((ret.template get<std::remove_reference_t<decltype(meta)>>() <<= meta), ...);
-			}, _sig);
-			return ret;
+				std::apply([&](auto& ...meta) {
+					((ret.template get<std::remove_reference_t<decltype(meta)>>() <<= meta), ...);
+				}, _sig);
+				return ret;
+			}
+			else
+			{
+				Stream<PayloadT, Meta..., T> ret;
+				connect(*ret, data);
+				ret.template get<T>() <<= signal;
+
+				std::apply([&](auto& ...meta) {
+					((ret.template get<std::remove_reference_t<decltype(meta)>>() <<= meta), ...);
+				}, _sig);
+				return ret;
+			}
 		}
 	}
 
