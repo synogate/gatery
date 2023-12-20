@@ -75,22 +75,22 @@ class MemoryMapInterface {
 
 size_t MemoryMapInterface::readUInt(MemoryMapEntryHandle addr) const
 {
-	if (sizeof(size_t) < addr.size()/8)
+	if (sizeof(size_t) < addr.width()/8)
 		throw std::runtime_error("Field too large!");
-	if (addr.size() <= 8) return readU8(addr.addr()/8);
-	if (addr.size() <= 16) return readU16(addr.addr()/8);
-	if (addr.size() <= 32) return readU32(addr.addr())/8;
-	if (addr.size() <= 64) return readU64(addr.addr()/8);
+	if (addr.width() <= 8) return readU8(addr.addr()/8);
+	if (addr.width() <= 16) return readU16(addr.addr()/8);
+	if (addr.width() <= 32) return readU32(addr.addr())/8;
+	if (addr.width() <= 64) return readU64(addr.addr()/8);
 }
 
 void MemoryMapInterface::writeUInt(MemoryMapEntryHandle addr, size_t data)
 {
-	if (sizeof(size_t) < addr.size()/8)
+	if (sizeof(size_t) < addr.width()/8)
 		throw std::runtime_error("Field too large!");
-	if (addr.size() <= 8) { writeU8(addr.addr()/8, data); return; }
-	if (addr.size() <= 16) { writeU16(addr.addr()/8, data); return; }
-	if (addr.size() <= 32) { writeU32(addr.addr()/8, data); return; }
-	if (addr.size() <= 64) { writeU64(addr.addr()/8, data); return; }
+	if (addr.width() <= 8) { writeU8(addr.addr()/8, data); return; }
+	if (addr.width() <= 16) { writeU16(addr.addr()/8, data); return; }
+	if (addr.width() <= 32) { writeU32(addr.addr()/8, data); return; }
+	if (addr.width() <= 64) { writeU64(addr.addr()/8, data); return; }
 }
 
 

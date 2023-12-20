@@ -27,52 +27,7 @@
 #include <boost/format.hpp>
 
 #include <concepts>
-
-#ifdef _WIN32
-
-namespace std {
-	template<typename T>
-	T countl_zero(T t) {
-		T result = 0;
-		consteval T msb = T{1} << (sizeof(T)*8-1);
-		while (t & msb == 0) {
-			t <<= 1;
-			result++;
-		}
-		return result;
-	}
-	template<typename T>
-	T countr_zero(T t) {
-		T result = 0;
-		while (t & 1 == 0) {
-			t >>= 1;
-			result++;
-		}
-		return result;
-	}
-
-	template<typename T>
-	T countl_one(T t) {
-		T result = 0;
-		consteval T msb = T{1} << (sizeof(T)*8-1);
-		while (t & msb != 0) {
-			t <<= 1;
-			result++;
-		}
-		return result;
-	}
-	template<typename T>
-	T countr_one(T t) {
-		T result = 0;
-		while (t & 1 != 0) {
-			t >>= 1;
-			result++;
-		}
-		return result;
-	}
-}
-
-#endif
+#include <bit>
 
 
 /**
@@ -244,8 +199,6 @@ Data readFromTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_
 }
 
 
-
-
 template<IsStaticMemoryMapEntryHandle Addr>
 void clearTileLinkDChannel(MemoryMapInterface &interface_, Addr streamLocation)
 {
@@ -253,9 +206,6 @@ void clearTileLinkDChannel(MemoryMapInterface &interface_, Addr streamLocation)
 		interface_.writeUInt(streamLocation.template get<"d">().template get<"ready">(), 1);
 }
 
-
-
 }
-
 
 /**@}*/

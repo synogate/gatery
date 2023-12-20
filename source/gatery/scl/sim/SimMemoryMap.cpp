@@ -26,7 +26,7 @@
 
 namespace gtry::scl::driver {
 
-SimulationFiberMapped32BitTileLink::SimulationFiberMapped32BitTileLink(scl::TileLinkMasterModel &linkModel, Clock &clock) : m_linkModel(linkModel), m_clock(clock)
+SimulationFiberMapped32BitTileLink::SimulationFiberMapped32BitTileLink(scl::TileLinkMasterModel &linkModel, const Clock &clock) : m_linkModel(linkModel), m_clock(clock)
 {
 }
 
@@ -62,7 +62,7 @@ uint32_t SimulationFiberMapped32BitTileLink::readU32(size_t addr) const
 		auto [val, def, err] = co_await m_linkModel.get(addr, 2, m_clock);
 		if (err) throw std::runtime_error("Bus error!");
 		if (!def) throw std::runtime_error("Undefined value!");
-		co_return val;
+		co_return (uint32_t) val;
 	});
 }
 
@@ -114,7 +114,7 @@ void SimulationFiberMapped32BitTileLink::writeBlock(const void *src, size_t addr
 }
 
 
-SimulationMapped32BitTileLink::SimulationMapped32BitTileLink(scl::TileLinkMasterModel &linkModel, Clock &clock, sim::Simulator &simulator) : m_linkModel(linkModel), m_clock(clock), m_simulator(simulator)
+SimulationMapped32BitTileLink::SimulationMapped32BitTileLink(scl::TileLinkMasterModel &linkModel, const Clock &clock, sim::Simulator &simulator) : m_linkModel(linkModel), m_clock(clock), m_simulator(simulator)
 {
 }
 
@@ -150,7 +150,7 @@ uint32_t SimulationMapped32BitTileLink::readU32(size_t addr) const
 		auto [val, def, err] = co_await m_linkModel.get(addr, 2, m_clock);
 		if (err) throw std::runtime_error("Bus error!");
 		if (!def) throw std::runtime_error("Undefined value!");
-		co_return val;
+		co_return (uint32_t) val;
 	});
 }
 
