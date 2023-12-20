@@ -19,8 +19,12 @@
 
 #include "../driver/MemoryMapInterface.h"
 
+
 namespace gtry {
 	class Clock;
+	namespace sim {
+		class Simulator;
+	}
 }
 
 

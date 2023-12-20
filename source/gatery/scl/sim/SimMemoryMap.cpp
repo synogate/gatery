@@ -19,6 +19,8 @@
 
 #include "SimMemoryMap.h"
 
+#include <gatery/simulation/Simulator.h>
+
 #include <gatery/simulation/simProc/SimulationFiber.h>
 
 #include <gatery/scl/tilelink/TileLinkMasterModel.h>

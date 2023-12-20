@@ -20,7 +20,7 @@
 
 namespace gtry::sim {
 
-Simulator::Simulator() : m_simulatorAccessOrchestrator(*this)
+Simulator::Simulator()
 {
 
 }
