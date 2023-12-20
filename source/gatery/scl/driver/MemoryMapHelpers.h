@@ -28,6 +28,53 @@
 
 #include <concepts>
 
+#ifdef _WIN32
+
+namespace std {
+	template<typename T>
+	T countl_zero(T t) {
+		T result = 0;
+		consteval T msb = T{1} << (sizeof(T)*8-1);
+		while (t & msb == 0) {
+			t <<= 1;
+			result++;
+		}
+		return result;
+	}
+	template<typename T>
+	T countr_zero(T t) {
+		T result = 0;
+		while (t & 1 == 0) {
+			t >>= 1;
+			result++;
+		}
+		return result;
+	}
+
+	template<typename T>
+	T countl_one(T t) {
+		T result = 0;
+		consteval T msb = T{1} << (sizeof(T)*8-1);
+		while (t & msb != 0) {
+			t <<= 1;
+			result++;
+		}
+		return result;
+	}
+	template<typename T>
+	T countr_one(T t) {
+		T result = 0;
+		while (t & 1 != 0) {
+			t >>= 1;
+			result++;
+		}
+		return result;
+	}
+}
+
+#endif
+
+
 /**
  * @addtogroup gtry_scl_driver
  * @{
@@ -36,52 +83,52 @@
 namespace gtry::scl::driver {
 
 
-//template<typename T>
-//concept PayloadCallback = requires (T t, MemoryMapInterface &interface__, DynamicMemoryMap<void> map) {
-//	{ t(interface__, map) };
-//};
+template<typename T>
+concept PayloadCallback = requires (T t, MemoryMapInterface &interface_, DynamicMemoryMap<void> map) {
+	{ t(interface_, map) };
+};
 
-template<typename Payload, typename Addr> requires (std::is_trivially_copyable_v<Payload>)
-void writeToStream(MemoryMapInterface &interface__, Addr streamLocation, const Payload &payload)
+template<typename Payload, IsStaticMemoryMapEntryHandle Addr> requires (std::is_trivially_copyable_v<Payload> && !PayloadCallback<Payload>)
+void writeToStream(MemoryMapInterface &interface_, Addr streamLocation, const Payload &payload)
 {
-	while (interface__.readUInt(streamLocation.template get<"valid">())) ;
+	while (interface_.readUInt(streamLocation.template get<"valid">())) ;
 
-	interface__.write(streamLocation.template get<"payload">().addr()/8, payload);
+	interface_.write(streamLocation.template get<"payload">().addr()/8, payload);
 
-	interface__.writeUInt(streamLocation.template get<"valid">(), 1);
+	interface_.writeUInt(streamLocation.template get<"valid">(), 1);
 }
 
-template<typename Addr, typename PayloadWriter>
-void writeToStreamCallback(MemoryMapInterface &interface__, Addr streamLocation, PayloadWriter payloadWriter)
+template<IsStaticMemoryMapEntryHandle Addr, PayloadCallback PayloadWriter>
+void writeToStream(MemoryMapInterface &interface_, Addr streamLocation, PayloadWriter payloadWriter)
 {
-	while (interface__.readUInt(streamLocation.template get<"valid">())) ;
+	while (interface_.readUInt(streamLocation.template get<"valid">())) ;
 
-	payloadWriter(interface__, streamLocation.template get<"payload">());
+	payloadWriter(interface_, streamLocation.template get<"payload">());
 
-	interface__.writeUInt(streamLocation.template get<"valid">(), 1);
+	interface_.writeUInt(streamLocation.template get<"valid">(), 1);
 }
 
 
-template<typename Payload, typename Addr> requires (std::is_trivially_copyable_v<Payload>)
-Payload readFromStream(MemoryMapInterface &interface__, Addr streamLocation)
+template<typename Payload, IsStaticMemoryMapEntryHandle Addr> requires (std::is_trivially_copyable_v<Payload> && !PayloadCallback<Payload>)
+Payload readFromStream(MemoryMapInterface &interface_, Addr streamLocation)
 {
-	while (!interface__.readUInt(streamLocation.template get<"valid">())) ;
+	while (!interface_.readUInt(streamLocation.template get<"valid">())) ;
 
-	Payload payload = interface__.read<Payload>(streamLocation.template get<"payload">().addr()/8);
+	Payload payload = interface_.read<Payload>(streamLocation.template get<"payload">().addr()/8);
 
-	interface__.writeUInt(streamLocation.template get<"ready">(), 1);
+	interface_.writeUInt(streamLocation.template get<"ready">(), 1);
 
 	return payload;
 }
 
-template<typename Addr, typename PayloadReader>
-void readFromStreamCallback(MemoryMapInterface &interface__, Addr streamLocation, PayloadReader payloadReader)
+template<IsStaticMemoryMapEntryHandle Addr, PayloadCallback PayloadReader>
+void readFromStream(MemoryMapInterface &interface_, Addr streamLocation, PayloadReader payloadReader)
 {
-	while (!interface__.readUInt(streamLocation.template get<"valid">())) ;
+	while (!interface_.readUInt(streamLocation.template get<"valid">())) ;
 
-	payloadReader(interface__, streamLocation.template get<"payload">());
+	payloadReader(interface_, streamLocation.template get<"payload">());
 
-	interface__.writeUInt(streamLocation.template get<"ready">(), 1);
+	interface_.writeUInt(streamLocation.template get<"ready">(), 1);
 }
 
 
@@ -106,8 +153,8 @@ enum class TileLinkDOpCode {
 	ReleaseAck = 6		// C
 };
 
-template<typename Addr>
-void writeToTileLink(MemoryMapInterface &interface__, Addr streamLocation, size_t tilelinkStartAddr, std::span<const std::byte> byteData)
+template<IsStaticMemoryMapEntryHandle Addr>
+void writeToTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_t tilelinkStartAddr, std::span<const std::byte> byteData)
 {
 	auto payload = streamLocation.template get<"a">().template get<"payload">();
 	size_t busWidth = payload.template get<"data">().width() / 8;
@@ -122,37 +169,37 @@ void writeToTileLink(MemoryMapInterface &interface__, Addr streamLocation, size_
 	size_t logSize = 63 - std::countl_zero((std::uint64_t) writeSize);
 	size_t writeMask = ~0ull;
 
-	interface__.writeUInt(payload.template get<"opcode">(), (size_t)TileLinkAOpCode::PutFullData);
-	interface__.writeUInt(payload.template get<"param">(), 0);
-	interface__.writeUInt(payload.template get<"size">(), logSize);
-	interface__.writeUInt(payload.template get<"mask">(), writeMask);
+	interface_.writeUInt(payload.template get<"opcode">(), (size_t)TileLinkAOpCode::PutFullData);
+	interface_.writeUInt(payload.template get<"param">(), 0);
+	interface_.writeUInt(payload.template get<"size">(), logSize);
+	interface_.writeUInt(payload.template get<"mask">(), writeMask);
 	
 	for (size_t i = 0; i < byteData.size(); i += busWidth) {
-		writeToStreamCallback(interface__, streamLocation.template get<"a">(), [tilelinkStartAddr, busWidth, byteData, i](MemoryMapInterface &interface__, auto payload) {
-			interface__.writeUInt(payload.template get<"address">(), tilelinkStartAddr + i);
-			interface__.write(payload.template get<"data">().addr()/8, byteData.subspan(i, busWidth));
+		writeToStream(interface_, streamLocation.template get<"a">(), [tilelinkStartAddr, busWidth, byteData, i](MemoryMapInterface &interface_, auto payload) {
+			interface_.writeUInt(payload.template get<"address">(), tilelinkStartAddr + i);
+			interface_.write(payload.template get<"data">().addr()/8, byteData.subspan(i, busWidth));
 		});
 
 		// Consume away the acks
 		// todo: don't wait for it
-		readFromStreamCallback(interface__, streamLocation.template get<"d">(), [tilelinkStartAddr, busWidth, byteData, i](MemoryMapInterface &interface__, auto payload) {
-			if (interface__.readUInt(payload.template get<"opcode">()) != (size_t) TileLinkDOpCode::AccessAck)
-				throw std::runtime_error((std::string("Expected a AccessAck but got ") + std::to_string(interface__.readUInt(payload.template get<"opcode">()))).c_str());
-			if (interface__.readUInt(payload.template get<"error">()) != 0)
-				throw std::runtime_error((boost::format("Writing to tilelink address 0x%x produced error %d") % (tilelinkStartAddr + i) % interface__.readUInt(payload.template get<"error">())).str().c_str());
+		readFromStream(interface_, streamLocation.template get<"d">(), [tilelinkStartAddr, busWidth, byteData, i](MemoryMapInterface &interface_, auto payload) {
+			if (interface_.readUInt(payload.template get<"opcode">()) != (size_t) TileLinkDOpCode::AccessAck)
+				throw std::runtime_error((std::string("Expected a AccessAck but got ") + std::to_string(interface_.readUInt(payload.template get<"opcode">()))).c_str());
+			if (interface_.readUInt(payload.template get<"error">()) != 0)
+				throw std::runtime_error((boost::format("Writing to tilelink address 0x%x produced error %d") % (tilelinkStartAddr + i) % interface_.readUInt(payload.template get<"error">())).str().c_str());
 		});
 	}
 }
 
-template<typename Addr, typename Data> requires (std::is_trivially_copyable_v<Data>)
-void writeToTileLink(MemoryMapInterface &interface__, Addr streamLocation, size_t tilelinkStartAddr, const Data &data)
+template<IsStaticMemoryMapEntryHandle Addr, typename Data> requires (std::is_trivially_copyable_v<Data>)
+void writeToTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_t tilelinkStartAddr, const Data &data)
 {
 	auto byteData = std::as_bytes(std::span{data});
-	writeToTileLink(interface__, streamLocation, tilelinkStartAddr, byteData);
+	writeToTileLink(interface_, streamLocation, tilelinkStartAddr, byteData);
 }
 
-template<typename Addr>
-void readFromTileLink(MemoryMapInterface &interface__, Addr streamLocation, size_t tilelinkStartAddr, std::span<std::byte> byteData)
+template<IsStaticMemoryMapEntryHandle Addr>
+void readFromTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_t tilelinkStartAddr, std::span<std::byte> byteData)
 {
 	auto payload = streamLocation.template get<"a">().template get<"payload">();
 	size_t busWidth = payload.template get<"data">().width() / 8;
@@ -166,44 +213,44 @@ void readFromTileLink(MemoryMapInterface &interface__, Addr streamLocation, size
 	size_t readSize = busWidth;
 	size_t logSize = 63 - std::countl_zero((std::uint64_t) readSize);
 	size_t readMask = ~0ull;
-	interface__.writeUInt(payload.template get<"opcode">(), (size_t)TileLinkAOpCode::Get);
-	interface__.writeUInt(payload.template get<"param">(), 0);
-	interface__.writeUInt(payload.template get<"size">(), logSize);
-	interface__.writeUInt(payload.template get<"mask">(), readMask);
+	interface_.writeUInt(payload.template get<"opcode">(), (size_t)TileLinkAOpCode::Get);
+	interface_.writeUInt(payload.template get<"param">(), 0);
+	interface_.writeUInt(payload.template get<"size">(), logSize);
+	interface_.writeUInt(payload.template get<"mask">(), readMask);
 
 	for (size_t i = 0; i < byteData.size(); i += busWidth) {
-		writeToStreamCallback(interface__, streamLocation.template get<"a">(), [tilelinkStartAddr, busWidth, byteData, i](MemoryMapInterface &interface__, auto payload) {
-			interface__.writeUInt(payload.template get<"address">(), tilelinkStartAddr + i);
+		writeToStream(interface_, streamLocation.template get<"a">(), [tilelinkStartAddr, busWidth, byteData, i](MemoryMapInterface &interface_, auto payload) {
+			interface_.writeUInt(payload.template get<"address">(), tilelinkStartAddr + i);
 		});
 
-		readFromStreamCallback(interface__, streamLocation.template get<"d">(), [tilelinkStartAddr, busWidth, byteData, i](MemoryMapInterface &interface__, auto payload) {
-			if (interface__.readUInt(payload.template get<"opcode">()) != (size_t) TileLinkDOpCode::AccessAckData)
-				throw std::runtime_error((std::string("Expected a AccessAckData but got ") + std::to_string(interface__.readUInt(payload.template get<"opcode">()))).c_str());
-			if (interface__.readUInt(payload.template get<"error">()) != 0)
-				throw std::runtime_error((boost::format("Reading from tilelink address 0x%x produced error %d") % (tilelinkStartAddr + i) % interface__.readUInt(payload.template get<"error">())).str().c_str());
+		readFromStream(interface_, streamLocation.template get<"d">(), [tilelinkStartAddr, busWidth, byteData, i](MemoryMapInterface &interface_, auto payload) {
+			if (interface_.readUInt(payload.template get<"opcode">()) != (size_t) TileLinkDOpCode::AccessAckData)
+				throw std::runtime_error((std::string("Expected a AccessAckData but got ") + std::to_string(interface_.readUInt(payload.template get<"opcode">()))).c_str());
+			if (interface_.readUInt(payload.template get<"error">()) != 0)
+				throw std::runtime_error((boost::format("Reading from tilelink address 0x%x produced error %d") % (tilelinkStartAddr + i) % interface_.readUInt(payload.template get<"error">())).str().c_str());
 
-			interface__.read(payload.template get<"data">().addr()/8, byteData.subspan(i, busWidth));
+			interface_.read(payload.template get<"data">().addr()/8, byteData.subspan(i, busWidth));
 		});
 	}
 }
 
-template<typename Addr, typename Data> requires (std::is_trivially_copyable_v<Data>)
-Data readFromTileLink(MemoryMapInterface &interface__, Addr streamLocation, size_t tilelinkStartAddr)
+template<IsStaticMemoryMapEntryHandle Addr, typename Data> requires (std::is_trivially_copyable_v<Data>)
+Data readFromTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_t tilelinkStartAddr)
 {
 	Data result;
 	auto byteData = std::as_writable_bytes(std::span{result});
-	readFromTileLink(interface__, streamLocation, tilelinkStartAddr, byteData);
+	readFromTileLink(interface_, streamLocation, tilelinkStartAddr, byteData);
 	return result;
 }
 
 
 
 
-template<typename Addr>
-void clearTileLinkDChannel(MemoryMapInterface &interface__, Addr streamLocation)
+template<IsStaticMemoryMapEntryHandle Addr>
+void clearTileLinkDChannel(MemoryMapInterface &interface, Addr streamLocation)
 {
-	while (interface__.readUInt(streamLocation.template get<"d">().template get<"valid">()))
-		interface__.writeUInt(streamLocation.template get<"d">().template get<"ready">(), 1);
+	while (interface.readUInt(streamLocation.template get<"d">().template get<"valid">()))
+		interface.writeUInt(streamLocation.template get<"d">().template get<"ready">(), 1);
 }
 
 
