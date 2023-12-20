@@ -62,7 +62,7 @@ namespace gtry::scl::arch::xilinx {
 		return cq;
 	}
 	
-	Pcie4c& Pcie4c::completerCompletion(Axi4PacketStream<CCUser>&& cc)
+	Pcie4c& Pcie4c::completerCompletion(Axi4PacketStream<CCUser>&& cc) 
 	{
 		ClockScope clk{ m_usrClk };
 	

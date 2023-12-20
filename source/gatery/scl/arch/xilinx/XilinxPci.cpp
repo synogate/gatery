@@ -257,6 +257,7 @@ namespace gtry::scl::pci::xilinx {
 
 	RequesterInterface requesterVendorUnlocking(Axi4PacketStream<RCUser>&& completion, Axi4PacketStream<RQUser>& request)
 	{
+		Area area{ "requesterInterfaceVendorUnlocking", true };
 		setName(completion, "axi_st_requester_completion");
 		tap(completion);
 

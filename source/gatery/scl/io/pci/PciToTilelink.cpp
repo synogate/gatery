@@ -169,7 +169,7 @@ namespace gtry::scl::pci {
 
 	TlpPacketStream<EmptyBits> tileLinkAToRequesterRequest(TileLinkChannelA&& a, BitWidth tlpW)
 	{
-		Area area{ "tileLinkAToTlp", true };
+		Area area{ "TL_A_to_requester_request_tlp", true };
 
 		TlpPacketStream<EmptyBits> rr(tlpW);
 		emptyBits(rr) = BitWidth::count(rr->width().bits());
@@ -197,12 +197,12 @@ namespace gtry::scl::pci {
 		HCL_DESIGNCHECK_HINT(a->source.width() <= 8_b, "source is too large for the fixed (non-extended) tag field");
 		hdr.tag = (BVec) zext(a->source);
 
-
 		hdr.lastDWByteEnable = lastDwByteEnable(bytes, a->address);
 		hdr.firstDWByteEnable = firstDwByteEnable(a->address);
 		hdr.wordAddress = zext(a->address >> 2);
 		hdr.processingHint = (size_t) ProcessingHint::defaultOption;
 		setName(hdr, "rr_hdr");
+
 		*rr = 0;
 		IF(sop(a)) {
 			rr->lower(128_b) = (BVec)hdr;
@@ -223,28 +223,33 @@ namespace gtry::scl::pci {
 
 	TileLinkChannelD requesterCompletionToTileLinkD(TlpPacketStream<EmptyBits>&& rc, BitWidth byteAddressW, BitWidth dataW)
 	{
+		Area area{ "requester_completion_tlp_to_TL_D", true };
 		const CompletionHeader hdr = CompletionHeader::fromRaw(rc->lower(96_b));
 
 		TileLinkChannelD d = move(*(tileLinkInit<TileLinkUL>(byteAddressW, dataW, 8_b).d));
-		HCL_DESIGNCHECK_HINT(d->data.width() == 32_b, "not yet implemented");
+		//HCL_DESIGNCHECK_HINT(d->data.width() == 32_b, "not yet implemented");
 
 		d->opcode = (size_t) TileLinkD::OpCode::AccessAckData;
 		d->source = (UInt) hdr.tag;
 		d->sink = 0;
 		d->param = 0;
 		d->error = hdr.common.poisoned | (hdr.completionStatus != (size_t) CompletionStatus::successfulCompletion);
+
 		IF(valid(rc) & sop(rc))
 			sim_assert(bitcount(hdr.byteCount) == 1) << "TileLink cannot represent non powers of 2 amount of bytes";
+
 		UInt size = logByteSize(hdr.byteCount);
 		IF(valid(rc) & sop(rc))
 			sim_assert(size < d->size.width().count()) << "breaking this assertion invalidates the next line's truncation";
 		d->size = size.lower(d->size.width());
-		d->data = (*rc)(96, 32_b);
+
+		BVec headerlessData = *rc >> 96;
+		d->data = (headerlessData << cat(hdr.lowerByteAddress(2, 3_b),"5b00000")).lower(d->data.width());
 
 		valid(d) = valid(rc);
 		ready(rc) = ready(d);
-		IF(valid(rc) & sop(rc))
-			sim_assert(emptyBits(rc) == (rc->width().bits() - (3 + 1) * 32)) << "only support one word right now";
+		//IF(valid(rc) & sop(rc))
+		//	sim_assert(emptyBits(rc) == (rc->width().bits() - (3*32 + ) )) << "only support one word right now";
 
 		return d;
 	}
