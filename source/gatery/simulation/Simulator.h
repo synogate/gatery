@@ -113,6 +113,9 @@ class Simulator
 		template<typename ReturnValue>
 		ReturnValue executeCoroutine(SimulationFunction<ReturnValue> coroutine);
 
+		template<typename ReturnValue>
+		ReturnValue executeCoroutine(std::function<SimulationFunction<ReturnValue>()> coroutine) { return executeCoroutine(coroutine()); }
+
 		/**
 		 * @brief Aborts a running simulation mid step
 		 * @details This immediately aborts calls to advanceEvent() or advance().
@@ -232,7 +235,7 @@ ReturnValue Simulator::executeCoroutine(SimulationFunction<ReturnValue> coroutin
 		done = true;
 	};
 
-	startCoroutine(&coroutine);
+	startCoroutine(callbackWrapper());
 	while (!done) advanceEvent();
 
 	return result;

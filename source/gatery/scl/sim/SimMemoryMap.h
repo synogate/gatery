@@ -22,6 +22,7 @@
 
 namespace gtry {
 	class Clock;
+
 	namespace sim {
 		class Simulator;
 	}

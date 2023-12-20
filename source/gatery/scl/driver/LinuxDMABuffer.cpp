@@ -28,7 +28,7 @@
 #include <stdexcept>
 
 #if defined(__x86_64__) || defined(__i386__)
-#include <clwbintrin.h>
+#include <x86gprintrin.h>
 #endif
 
 namespace gtry::scl::driver {
@@ -120,7 +120,7 @@ void LinuxDMABuffer::allocatePopulateLock(size_t size)
 			throw std::runtime_error("Pinning memory failed!");
 	}
 }
-
+/*
 void LinuxDMABuffer::writeBackDCache() const
 {
 #if defined(__x86_64__) || defined(__i386__)
@@ -130,5 +130,6 @@ void LinuxDMABuffer::writeBackDCache() const
 		_mm_clwb(lineStart);
 #endif
 }
+*/
 
 }
