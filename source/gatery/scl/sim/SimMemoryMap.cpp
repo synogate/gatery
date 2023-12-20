@@ -19,6 +19,7 @@
 
 #include "SimMemoryMap.h"
 
+#include <gatery/simulation/Simulator.h>
 #include <gatery/simulation/simProc/SimulationFiber.h>
 
 #include <gatery/scl/tilelink/TileLinkMasterModel.h>
@@ -145,7 +146,7 @@ void SimulationMapped32BitTileLink::writeU16(size_t addr, uint16_t data)
 
 uint32_t SimulationMapped32BitTileLink::readU32(size_t addr) const
 {
-	return m_simulator->executeCoroutine<uint32_t>([&]()->sim::SimulationFunction<uint32_t> {
+	return m_simulator.executeCoroutine<uint32_t>([&]()->sim::SimulationFunction<uint32_t> {
 		auto [val, def, err] = co_await m_linkModel.get(addr, 2, m_clock);
 		if (err) throw std::runtime_error("Bus error!");
 		if (!def) throw std::runtime_error("Undefined value!");
@@ -155,7 +156,7 @@ uint32_t SimulationMapped32BitTileLink::readU32(size_t addr) const
 
 void SimulationMapped32BitTileLink::writeU32(size_t addr, uint32_t data)
 {
-	m_simulator->executeCoroutine<uint32_t>([&]()->sim::SimulationFunction<uint32_t> {
+	m_simulator.executeCoroutine<uint32_t>([&]()->sim::SimulationFunction<uint32_t> {
 		co_await m_linkModel.put(addr, 2, data, m_clock);
 		co_return 0;
 	});
