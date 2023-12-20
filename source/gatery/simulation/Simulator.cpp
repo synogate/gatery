@@ -20,6 +20,10 @@
 
 namespace gtry::sim {
 
+Simulator::Simulator() : m_simulatorAccessOrchestrator(*this)
+{
+
+}
 
 void Simulator::CallbackDispatcher::onAnnotationStart(const hlim::ClockRational &simulationTime, const std::string &id, const std::string &desc)
 {
@@ -102,6 +106,5 @@ DefaultBitVectorState Simulator::simProcGetValueOfOutput(const hlim::NodePort &n
 	m_callbackDispatcher.onSimProcOutputRead(nodePort, value);
 	return value;
 }
-
 
 }

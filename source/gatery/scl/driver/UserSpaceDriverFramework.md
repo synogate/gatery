@@ -194,7 +194,7 @@ Linux lists PCIe devices in the `/sys/bus/pci/devices/` folder, which can be enu
 The specific device and function in question can either be identified by its IDs, or by its location on the bus:
 ```cpp
 	auto function = devices.findDeviceFunction(
-						0x0815, // devide Id
+						0x0815, // device Id
 						0xCAFE, // vendor Id
 						0  // function
 					);

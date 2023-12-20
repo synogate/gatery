@@ -30,9 +30,9 @@ namespace gtry::scl {
 
 namespace gtry::scl::driver {
 
-class SimulationMapped32BitTileLink : public MemoryMapInterface {
+class SimulationFiberMapped32BitTileLink : public MemoryMapInterface {
 	public:
-		SimulationMapped32BitTileLink(scl::TileLinkMasterModel &linkModel, Clock &clock);
+		SimulationFiberMapped32BitTileLink(scl::TileLinkMasterModel &linkModel, Clock &clock);
 
 		virtual uint8_t readU8(size_t addr) const override;
 		virtual void writeU8(size_t addr, uint8_t data) override;
@@ -51,6 +51,31 @@ class SimulationMapped32BitTileLink : public MemoryMapInterface {
 	protected:
 		scl::TileLinkMasterModel &m_linkModel;
 		Clock &m_clock;
+};
+
+
+class SimulationMapped32BitTileLink : public MemoryMapInterface {
+	public:
+		SimulationMapped32BitTileLink(scl::TileLinkMasterModel &linkModel, Clock &clock, sim::Simulator &simulator);
+
+		virtual uint8_t readU8(size_t addr) const override;
+		virtual void writeU8(size_t addr, uint8_t data) override;
+
+		virtual uint16_t readU16(size_t addr) const override;
+		virtual void writeU16(size_t addr, uint16_t data) override;
+
+		virtual uint32_t readU32(size_t addr) const override;
+		virtual void writeU32(size_t addr, uint32_t data) override;
+
+		virtual uint64_t readU64(size_t addr) const override;
+		virtual void writeU64(size_t addr, uint64_t data) override;
+
+		virtual void readBlock(void *dst, size_t addr, size_t size) const override;
+		virtual void writeBlock(const void *src, size_t addr, size_t size) override;
+	protected:
+		scl::TileLinkMasterModel &m_linkModel;
+		Clock &m_clock;
+		sim::Simulator &m_simulator;
 };
 
 

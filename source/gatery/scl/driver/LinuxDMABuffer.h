@@ -43,11 +43,12 @@ namespace gtry::scl::driver {
 			void operator=(const LinuxDMABuffer&) = delete;
 
 			bool isContinuous() const;
+			void writeBackDCache() const;
 
 			std::vector<PhysicalAddr> getScatterGatherList() const;
 
 			std::span<std::byte> userSpaceBuffer() { return m_buffer; }
-			
+
 			inline PhysicalAddr userToPhysical(void *usrSpaceAddr) const { return m_addrTranslator.userToPhysical(usrSpaceAddr); }
 		protected:
 			std::span<std::byte> m_buffer;

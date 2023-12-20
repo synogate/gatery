@@ -687,8 +687,7 @@ void ReferenceSimulator::powerOn()
 
 		// start all sim procs
 		for (auto &f : m_simProcs) {
-			m_coroutineHandler.start(f());
-			m_coroutineHandler.run();
+			startCoroutine(f());
 		}
 
 		// start all fibers
@@ -1201,6 +1200,12 @@ void ReferenceSimulator::suspendUntilProcessCompletion(std::coroutine_handle<> h
 {
 }
 */
+
+void ReferenceSimulator::startCoroutine(SimulationFunction<void> coroutine)
+{
+	m_coroutineHandler.start(coroutine);
+	m_coroutineHandler.run();
+}
 
 
 

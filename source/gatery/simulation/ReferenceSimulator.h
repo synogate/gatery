@@ -303,6 +303,8 @@ class ReferenceSimulator : public Simulator
 		void advanceMicroTick();
 		void checkSignalWatches();
 		void handleCurrentTimeStep();
+
+		virtual void startCoroutine(SimulationFunction<void> coroutine) override;
 };
 
 }

@@ -45,7 +45,7 @@ LinuxAddressTranslator::~LinuxAddressTranslator()
 
 PhysicalAddr LinuxAddressTranslator::userToPhysical(void *usrSpaceAddr) const
 {
-	size_t virtualFrameNumber = (size_t) usrSpaceAddr / m_pageSize;
+	uint64_t virtualFrameNumber = (uint64_t) usrSpaceAddr / m_pageSize;
 
 	uint64_t data;
     for (size_t numBytesRead = 0; numBytesRead < sizeof(data); ) {
@@ -72,7 +72,7 @@ PhysicalAddr LinuxAddressTranslator::userToPhysical(void *usrSpaceAddr) const
 		throw std::runtime_error("Could not translate address as its page is not present!");
 
 	uint64_t pageFrameNumber = data & ((1ull << 55) - 1);
-	return pageFrameNumber;
+	return pageFrameNumber * m_pageSize;
 }
 
 }
