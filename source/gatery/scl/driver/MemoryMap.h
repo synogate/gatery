@@ -129,7 +129,7 @@ class StaticMemoryMapEntryHandle {
 		constexpr operator MemoryMapEntryHandle() const { return entry(); }
 
         template<TemplateString name>
-        consteval auto get() const { return StaticMemoryMapEntryHandle<decltype(*this), name>{}; }
+        constexpr auto get() const { return StaticMemoryMapEntryHandle<decltype(*this), name>{}; }
     protected:
 		constexpr MemoryMapEntryHandle entry() const { 
             return ((MemoryMapEntryHandle)Parent{})[Name.value];
@@ -144,7 +144,7 @@ class DynamicMemoryMap {
         constexpr operator MemoryMapEntryHandle() const { return memoryMap; }
 
         template<TemplateString name>
-        consteval auto get() const { return StaticMemoryMapEntryHandle<decltype(*this), name>{}; }
+        constexpr auto get() const { return StaticMemoryMapEntryHandle<decltype(*this), name>{}; }
 };
 
 template<typename T>
