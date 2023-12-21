@@ -199,7 +199,7 @@ namespace gtry::scl::pci {
 
 		hdr.lastDWByteEnable = lastDwByteEnable(bytes, a->address);
 		hdr.firstDWByteEnable = firstDwByteEnable(a->address);
-		hdr.wordAddress = zext(a->address >> 2);
+		hdr.wordAddress = zext(a->address.upper(-2_b));
 		hdr.processingHint = (size_t) ProcessingHint::defaultOption;
 		setName(hdr, "rr_hdr");
 
