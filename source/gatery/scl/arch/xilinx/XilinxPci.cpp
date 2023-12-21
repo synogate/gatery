@@ -207,7 +207,7 @@ namespace gtry::scl::pci::xilinx {
 
 		*ret = *in;
 		IF(sop(in))
-			ret->lower(128_b) = (BVec)hdr;
+			ret->lower(128_b) = (BVec) pack(desc);
 
 		ready(in) = ready(ret);
 		valid(ret) = valid(in);
