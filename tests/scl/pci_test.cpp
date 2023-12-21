@@ -342,3 +342,36 @@ BOOST_FIXTURE_TEST_CASE(tlp_to_tilelink_rw64_1dw, BoostUnitTestSimulationFixture
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
 
+
+
+BOOST_FIXTURE_TEST_CASE(pci_deadbeef_test, BoostUnitTestSimulationFixture) {
+	using namespace scl::pci;
+	using namespace scl::sim;
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	const uint64_t deadbeef = 0xABCD'DEAD'BEEF'ABCDull;
+
+	UInt addr = ConstUInt(deadbeef, 64_b);
+
+	RequestHeader hdr;
+	//hdr.wordAddress = addr >> 2; this line silently resizes the vector 
+	hdr.wordAddress = zext(addr.upper(-2_b));
+
+	BOOST_TEST(hdr.wordAddress.width() == 62_b);
+
+	BVec raw = (BVec)hdr;
+
+	RequestHeader reconstructed = hdr.fromRaw(raw);
+	addSimulationProcess([&, this]()->SimProcess {
+		co_await OnClk(clk);
+			BOOST_TEST(simu(reconstructed.wordAddress) == simu(hdr.wordAddress));
+			stopTest();
+		}
+	);
+
+	design.postprocess();
+
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
