@@ -24,6 +24,7 @@
 #include <gatery/simulation/waveformFormats/VCDSink.h>
 #include <gatery/simulation/Simulator.h>
 
+#include <gatery/scl/synthesisTools/XilinxVivado.h>
 #include <gatery/scl/stream/strm.h>
 #include <gatery/scl/io/SpiMaster.h> 
 
@@ -31,196 +32,8 @@
 #include <gatery/scl/sim/SimulationSequencer.h>
 #include <gatery/scl/stream/SimuHelpers.h>
 
-
 using namespace boost::unit_test;
 using namespace gtry;
-
-BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_basic, BoostUnitTestSimulationFixture)
-{
-	Clock clock({ .absoluteFrequency = 100'000'000 });
-	ClockScope clkScp(clock);
-
-	scl::RvStream<UInt> in0;
-	scl::RvStream<UInt> in1;
-
-	*in0 = pinIn(8_b).setName("in0_data");
-	valid(in0)= pinIn().setName("in0_valid");
-	pinOut(ready(in0)).setName("in0_ready");
-
-	*in1 = pinIn(8_b).setName("in1_data");
-	valid(in1)= pinIn().setName("in1_valid");
-	pinOut(ready(in1)).setName("in1_ready");
-
-	scl::arbitrateInOrder uutObj{ in0, in1 };
-	scl::RvStream<UInt>& uut = uutObj;
-	pinOut(*uut).setName("out_data");
-	pinOut(valid(uut)).setName("out_valid");
-	ready(uut) = pinIn().setName("out_ready");
-
-	addSimulationProcess([&]()->SimProcess {
-		simu(ready(uut)) = '1';
-		simu(valid(in0)) = '0';
-		simu(valid(in1)) = '0';
-		simu(*in0) = 0;
-		simu(*in1) = 0;
-		co_await AfterClk(clock);
-
-		simu(valid(in0)) = '0';
-		simu(valid(in1)) = '1';
-		simu(*in1) = 1;
-		co_await AfterClk(clock);
-
-		simu(valid(in1)) = '0';
-		simu(valid(in0)) = '1';
-		simu(*in0) = 2;
-		co_await AfterClk(clock);
-
-		simu(valid(in1)) = '1';
-		simu(valid(in0)) = '1';
-		simu(*in0) = 3;
-		simu(*in1) = 4;
-		co_await AfterClk(clock);
-		co_await AfterClk(clock);
-
-		simu(valid(in1)) = '1';
-		simu(valid(in0)) = '1';
-		simu(*in0) = 5;
-		simu(*in1) = 6;
-		co_await AfterClk(clock);
-		co_await AfterClk(clock);
-
-		simu(valid(in0)) = '0';
-		simu(valid(in1)) = '1';
-		simu(*in1) = 7;
-		co_await AfterClk(clock);
-
-		simu(valid(in1)) = '0';
-		simu(valid(in0)) = '0';
-		simu(ready(uut)) = '0';
-		co_await AfterClk(clock);
-
-		simu(valid(in1)) = '0';
-		simu(valid(in0)) = '1';
-		simu(*in0) = 8;
-		simu(ready(uut)) = '1';
-		co_await AfterClk(clock);
-
-		simu(valid(in1)) = '0';
-		simu(valid(in0)) = '0';
-		co_await AfterClk(clock);
-	});
-
-	addSimulationProcess([&]()->SimProcess {
-
-		size_t counter = 1;
-		while (true)
-		{
-			co_await OnClk(clock);
-			if (simu(ready(uut)) && simu(valid(uut)))
-			{
-				BOOST_TEST(counter == simu(*uut));
-				counter++;
-			}
-		}
-
-	});
-
-	//sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "arbitrateInOrder_basic.vcd" };
-   //vcd.addAllPins();
-	//vcd.addAllNamedSignals();
-
-	design.postprocess();
-	//design.visualize("arbitrateInOrder_basic");
-
-	runTicks(clock.getClk(), 16);
-}
-
-BOOST_FIXTURE_TEST_CASE(arbitrateInOrder_fuzz, BoostUnitTestSimulationFixture)
-{
-	Clock clock({ .absoluteFrequency = 100'000'000 });
-	ClockScope clkScp(clock);
-
-	scl::RvStream<UInt> in0;
-	scl::RvStream<UInt> in1;
-
-	*in0 = pinIn(8_b).setName("in0_data");
-	valid(in0) = pinIn().setName("in0_valid");
-	pinOut(ready(in0)).setName("in0_ready");
-
-	*in1 = pinIn(8_b).setName("in1_data");
-	valid(in1) = pinIn().setName("in1_valid");
-	pinOut(ready(in1)).setName("in1_ready");
-
-	scl::arbitrateInOrder uutObj{ in0, in1 };
-	scl::RvStream<UInt>& uut = uutObj;
-	pinOut(*uut).setName("out_data");
-	pinOut(valid(uut)).setName("out_valid");
-	ready(uut) = pinIn().setName("out_ready");
-
-	addSimulationProcess([&]()->SimProcess {
-		simu(ready(uut)) = '1';
-		simu(valid(in0)) = '0';
-		simu(valid(in1)) = '0';
-
-		std::mt19937 rng{ 10179 };
-		size_t counter = 1;
-		while(true)
-		{
-			co_await OnClk(clock);
-			if (simu(ready(in0)))
-			{
-				if(rng() % 2 == 0)
-				{
-					simu(valid(in0)) = '1';
-					simu(*in0) = counter++;
-				}
-				else
-				{
-					simu(valid(in0)) = '0';
-				}
-
-				if(rng() % 2 == 0)
-				{
-					simu(valid(in1)) = '1';
-					simu(*in1) = counter++;
-				}
-				else
-				{
-					simu(valid(in1)) = '0';
-				}
-			}
-
-			// chaos monkey
-			simu(ready(uut)) = rng() % 8 != 0;
-		}
-	});
-
-
-	addSimulationProcess([&]()->SimProcess {
-
-		size_t counter = 1;
-		while(true)
-		{
-			co_await OnClk(clock);
-			if(simu(ready(uut)) && simu(valid(uut)))
-			{
-				BOOST_TEST(counter % 256 == simu(*uut));
-				counter++;
-			}
-		}
-
-	});
-
-	//sim::VCDSink vcd{ design.getCircuit(), getSimulator(), "arbitrateInOrder_fuzz.vcd" };
-	//vcd.addAllPins();
-	//vcd.addAllNamedSignals();
-
-	design.postprocess();
-   // design.visualize("arbitrateInOrder_fuzz");
-
-	runTicks(clock.getClk(), 256);
-}
-
 
 class StreamTransferFixture : public BoostUnitTestSimulationFixture
 {
@@ -329,7 +142,7 @@ protected:
 			}
 			simu(valid(stream)) = '0';
 			simu(*stream).invalidate();
-			});
+		});
 	}
 
 	template<class... Meta>
@@ -705,7 +518,7 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5_packet, StreamTransferFixture)
 	for(size_t i = 0; i < in.size(); ++i)
 	{
 		*in[i] = 10_b;
-		In(in[i], "in" + std::to_string(i) + "_");
+		In(in[i], "in" + std::to_string(i));
 		simulateArbiterTestSource(in[i]);
 		arbiter.attach(in[i]);
 	}
@@ -715,6 +528,28 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5_packet, StreamTransferFixture)
 	simulateArbiterTestSink(arbiter.out());
 
 	//recordVCD("streamArbiter_rrb5_packet.vcd");
+	design.postprocess();
+	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(streamArbiter_rrs5_packet, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::StreamArbiter<scl::RvPacketStream<UInt>, scl::ArbiterPolicyRoundRobinStrict> arbiter;
+	std::array<scl::RvPacketStream<UInt>, 5> in;
+	for (size_t i = 0; i < in.size(); ++i)
+	{
+		*in[i] = 10_b;
+		In(in[i], "in" + std::to_string(i));
+		simulateArbiterTestSource(in[i]);
+		arbiter.attach(in[i]);
+	}
+	arbiter.generate();
+
+	Out(arbiter.out());
+	simulateArbiterTestSink(arbiter.out());
+
 	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
@@ -2188,4 +2023,41 @@ BOOST_FIXTURE_TEST_CASE(delay_test_10, BoostUnitTestSimulationFixture)
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 2, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_credit_fifo, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	scl::RvStream<UInt> in{ .data = 10_b };
+	pinIn(in, "in");
+
+	addSimulationProcess([&, this]() -> SimProcess {
+		for (size_t i = 0;; i++)
+			co_await scl::strm::sendBeat(in, i, clk);
+	});
+
+	scl::RvStream out = delayAutoPipeline(move(in), 8);
+	pinOut(out, "out");
+
+	addSimulationProcess([&, this]() -> SimProcess {
+		fork(scl::strm::readyDriverRNG(out, clk, 80));
+
+		for (size_t i = 0; i < 24; ++i)
+		{
+			co_await scl::strm::performTransferWait(out, clk);
+			BOOST_TEST(simu(*out) == i);
+		}
+		stopTest();
+	});
+
+	design.postprocess();
+	if (true) {
+		m_vhdlExport.emplace("export/stream_credit_fifo.vhd");
+		m_vhdlExport->targetSynthesisTool(new gtry::XilinxVivado());
+		(*m_vhdlExport)(design.getCircuit());
+	}
+
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }

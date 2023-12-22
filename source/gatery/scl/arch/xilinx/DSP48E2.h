@@ -95,4 +95,16 @@ namespace gtry::scl::arch::xilinx
 	 * @return the accumulated multiplication results extended by 3 bits to 48 bits delayed by 3 clock cycles
 	*/
 	SInt mulAccumulate(SInt a, SInt b, Bit restart, Bit valid, std::string_view instanceName = {});
+
+	/**
+	 * @brief wrapper around two DSP48E2 module: sum_t (a1*b1 + a2*b2)
+	 * @param a1 27 bit input
+	 * @param b1 18 bit input
+	 * @param a2 27 bit input
+	 * @param b2 18 bit input
+	 * @param restart reset the accumulator to zero before adding the multiplication result
+	 * @param valid the input is ignored if valid is low
+	 * @return the accumulated multiplication results extended by 3 bits to 48 bits delayed by 4 clock cycles
+	*/
+	SInt mulAccumulate(SInt a1, SInt b1, SInt a2, SInt b2, Bit restart, Bit valid, std::string_view instanceName = {});
 }

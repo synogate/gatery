@@ -154,6 +154,7 @@ namespace gtry::hlim {
 			return !m_contradicting && m_terms.empty();
 
 		if (m_terms.size() != other.m_terms.size()) return false;
+		if (m_terms.size() != 1) return false; // Requires Demorgan otherwise
 		for (const auto &pair : m_terms.anyOrder()) {
 			auto it = other.m_terms.find(pair.second.driver);
 			if (it == other.m_terms.end()) return false;

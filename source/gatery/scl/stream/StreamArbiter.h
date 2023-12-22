@@ -205,7 +205,40 @@ namespace gtry::scl
 		template<class TCont>
 		UInt operator () (const TCont& in)
 		{
-			return Counter{ in.size() }.inc().value();
+			UInt counter = BitWidth::count(in.size());
+			counter = reg(counter, counter.width().mask());
+			IF(counter == in.size() - 1)
+				counter = 0;
+			ELSE
+				counter += 1;
+			
+			return counter;
+		}
+	};
+
+	struct ArbiterPolicyRoundRobinStrict
+	{
+		template<class TCont>
+		UInt operator () (const TCont& in)
+		{
+			auto scope = Area{ "RoundRobinStrict" }.enter();
+			UInt counter = BitWidth::count(in.size());
+			counter = reg(counter, 0);
+
+			size_t i = 0;
+			for (const auto& s : in)
+			{
+				IF(reg(final(counter) == i & valid(s), '0'))
+				{
+					IF(counter == in.size() - 1)
+						counter = 0;
+					ELSE
+						counter += 1;
+				}
+				i++;
+			}
+
+			return counter;
 		}
 	};
 
@@ -220,51 +253,4 @@ namespace gtry::scl
 		}
 	};
 
-	template<typename T>
-	struct arbitrateInOrder : RvStream<T>
-	{
-		arbitrateInOrder(RvStream<T>& in0, RvStream<T>& in1);
-	};
-
-	template<typename T>
-	inline arbitrateInOrder<T>::arbitrateInOrder(RvStream<T>& in0, RvStream<T>& in1)
-	{
-		auto entity = Area{ "arbitrateInOrder" }.enter();
-
-		RvStream<T>& me = *this;
-		ready(in0) = ready(me);
-		ready(in1) = ready(me);
-
-		// simple fsm state 0 is initial and state 1 is push upper input
-		Bit selectionState;
-		HCL_NAMED(selectionState);
-
-		*me = *in0;
-		valid(me) = valid(in0);
-		IF(selectionState == '1' | !valid(in0))
-		{
-			*me = *in1;
-			valid(me) = valid(in1);
-		}
-
-		IF(ready(me))
-		{
-			IF(	selectionState == '0' & 
-				valid(in0) & valid(in1))
-			{
-				selectionState = '1';
-			}
-			ELSE
-			{
-				selectionState = '0';
-			}
-
-			IF(selectionState == '1')
-			{
-				ready(in0) = '0';
-				ready(in1) = '0';
-			}
-		}
-		selectionState = reg(selectionState, '0');
-	}
 }

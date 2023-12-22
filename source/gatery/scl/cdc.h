@@ -121,28 +121,19 @@ namespace gtry::scl
 
 		scl::Counter ctr{ args.size() };
 		ctr.inc();
-
-		UInt selection = 1_b;
-
-		//selection = ctrl.value;
-		selection = zext(clk.clkSignal());
-		HCL_DESIGNCHECK(clk.getClk()->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING_AND_FALLING);
-		if (clk.getClk()->getTriggerEvent() == hlim::Clock::TriggerEvent::RISING)
-			selection = ~selection;
-		selection = allowClockDomainCrossing(selection, clk, fastClock);			
-
-
-		Targ beatArgs = reg(mux(selection, args));
+		Targ beatArgs = reg(mux(ctr.value(), args));
 		HCL_NAMED(beatArgs);
 		T beatOut = circuit(beatArgs);
 		HCL_NAMED(beatOut);
 
-		Vector<T> out(args.size());
-		for (T& it : out) it = constructFrom(beatOut);
-		demux(selection, out, beatOut);
-		out = reg(out);
+		Vector<T> outFast(args.size());
+		outFast.back() = beatOut;
+		for (int i = (int)outFast.size() - 2; i >= 0; --i)
+			outFast[i] = reg(outFast[i + 1]);
+		HCL_NAMED(outFast);
 
-		HCL_NAMED(out);
-		return allowClockDomainCrossing(out, fastClock, clk);
+		Vector<T> outSlow = reg(allowClockDomainCrossing(outFast, fastClock, clk), { .clock = clk });
+		HCL_NAMED(outSlow);
+		return outSlow;
 	}
 }

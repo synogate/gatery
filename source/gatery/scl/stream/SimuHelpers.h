@@ -68,6 +68,9 @@ namespace gtry::scl::strm
 		std::uint64_t m_invalidBeats = 0;
 	};
 
+	template<StreamSignal StreamT>
+	SimProcess sendBeat(const StreamT& stream, size_t payload, const Clock& clk);
+
 	/**
 	 * @brief Helper for sending a Beat of data through a stream during simulation. Thanks to the use of a sequencer,
 	 * the beats will be scheduled to be sent in the chronological order in which the function is called.
@@ -173,6 +176,14 @@ namespace gtry::scl::strm
 			if constexpr (StreamT::template has<Sop>())
 				simu(sop(stream)).invalidate();
 		}
+	}
+
+	template<StreamSignal StreamT>
+	SimProcess sendBeat(const StreamT& stream, size_t payload, const Clock& clk)
+	{
+		BitWidth payloadW = stream->width();
+		payload &= payloadW.mask();
+		return strm::sendPacket(stream, SimPacket{ payload,stream->width() }, clk);
 	}
 
 	template<StreamSignal StreamT>

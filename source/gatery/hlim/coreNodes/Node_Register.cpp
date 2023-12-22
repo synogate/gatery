@@ -57,7 +57,7 @@ void Node_Register::simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::
 
 void Node_Register::simulateResetChange(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort, bool resetHigh) const
 {
-	bool inReset = resetHigh ^ !(m_clocks[0]->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH);
+	bool inReset = (resetHigh ^ !(m_clocks[0]->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH)) && (getNonSignalDriver(RESET_VALUE).node != nullptr);
 	state.set(sim::DefaultConfig::VALUE, internalOffsets[INT_IN_RESET], inReset);
 
 	if (inReset && m_clocks[0]->getRegAttribs().resetType == RegisterAttributes::ResetType::ASYNCHRONOUS) {
