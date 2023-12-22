@@ -372,57 +372,6 @@ BOOST_FIXTURE_TEST_CASE(host_unsupported_completer, BoostUnitTestSimulationFixtu
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
 
-//BOOST_FIXTURE_TEST_CASE(host_read_4dw_64_b, BoostUnitTestSimulationFixture) {
-//	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
-//	ClockScope clkScope(clk);
-//	BitWidth streamW = 64_b;
-//
-//	pci::TlpPacketStream<EmptyBits> requesterRequest(streamW);
-//	emptyBits(requesterRequest) = BitWidth::count(requesterRequest->width().bits());
-//	pinIn(requesterRequest, "rr_in");
-//
-//	const size_t memSizeInBytes = 16;
-//	static_assert(memSizeInBytes % 4 == 0);
-//
-//	std::vector<uint8_t> data(memSizeInBytes);
-//	for (size_t i = 0; i < memSizeInBytes; i++)
-//		data[i] = (uint8_t) i;
-//
-//	hlim::MemoryStorageDense mem(memSizeInBytes * 8, hlim::MemoryStorageDense::Initialization{ .background = data });
-//	scl::sim::PcieHostModel host(mem);
-//	host.requesterRequest(move(requesterRequest));
-//
-//	pci::TlpPacketStream<EmptyBits>& requesterCompletion = host.requesterCompletion();
-//	pinOut(requesterCompletion, "rc_out");
-//
-//	scl::sim::TlpInstruction read;
-//	read.opcode = pci::TlpOpcode::memoryReadRequest64bit;
-//	read.wordAddress = 0;
-//	read.length = 1;
-//	read.lastDWByteEnable = 0;
-//
-//	addSimulationProcess([&, this]()->SimProcess { return host.completeRequests(clk, 3); });
-//
-//
-//	addSimulationProcess([&, this]()->SimProcess { return scl::strm::readyDriver(requesterCompletion, clk); });
-//	addSimulationProcess([&, this]()->SimProcess { return scl::strm::sendPacket(requesterRequest, scl::strm::SimPacket{ read }, clk); });
-//	addSimulationProcess([&, this]()->SimProcess {
-//		scl::strm::SimPacket responsePacket = co_await scl::strm::receivePacket(requesterCompletion, clk);
-//		auto tlp = scl::sim::TlpInstruction::createFrom(responsePacket.payload);
-//		BOOST_TEST((tlp.opcode == pci::TlpOpcode::completionWithData));
-//		BOOST_TEST(tlp.payload->front() == 0x03020100ull);
-//		BOOST_TEST(*tlp.byteCount == 4);
-//		BOOST_TEST(tlp.completionStatus == (size_t) pci::CompletionStatus::successfulCompletion);
-//		stopTest();
-//		});
-//
-//	recordVCD("dut.vcd");
-//	design.postprocess();
-//
-//	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
-//}
-
-
 
 
 
