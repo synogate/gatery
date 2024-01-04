@@ -113,7 +113,7 @@ BOOST_FIXTURE_TEST_CASE(tlp_RequestHeader_test, BoostUnitTestSimulationFixture) 
 
 	std::mt19937 rng{ std::random_device{}() };
 
-	TlpInstruction read = TlpInstruction::randomize(TlpOpcode::memoryReadRequest64bit, std::random_device{}() );
+	TlpInstruction read = TlpInstruction::randomizeNaive(TlpOpcode::memoryReadRequest64bit, std::random_device{}() );
 
 	BVec rawHeader = 128_b;
 	pinIn(rawHeader, "in_raw", {.simulationOnlyPin = true});
@@ -190,7 +190,7 @@ BOOST_FIXTURE_TEST_CASE(tlp_CompletionHeader_test, BoostUnitTestSimulationFixtur
 	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScope(clk);
 
-	TlpInstruction comp = TlpInstruction::randomize(TlpOpcode::completionWithData,  std::random_device{}());
+	TlpInstruction comp = TlpInstruction::randomizeNaive(TlpOpcode::completionWithData,  std::random_device{}());
 
 	BVec rawHeader = 96_b;
 	pinIn(rawHeader, "in_raw");
@@ -257,6 +257,7 @@ BOOST_FIXTURE_TEST_CASE(tlp_CompletionHeader_test, BoostUnitTestSimulationFixtur
 		}
 	);
 
+	if (true) { recordVCD("dut.vcd"); }
 	design.postprocess();
 
 	BOOST_TEST(!runHitsTimeout({1,1'000'000}));

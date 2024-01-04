@@ -154,7 +154,7 @@ namespace gtry::scl::sim {
 	}
 
 
-	TlpInstruction TlpInstruction::randomize(pci::TlpOpcode op, size_t seed) {
+	TlpInstruction TlpInstruction::randomizeNaive(pci::TlpOpcode op, size_t seed) {
 		std::mt19937 rng{ (unsigned int) seed };
 		TlpInstruction ret;
 

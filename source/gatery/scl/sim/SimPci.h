@@ -68,7 +68,7 @@ namespace gtry::scl::sim {
 		operator gtry::sim::DefaultBitVectorState();
 		gtry::sim::DefaultBitVectorState asDefaultBitVectorState(bool headerOnly = false);
 		static TlpInstruction createFrom(const gtry::sim::DefaultBitVectorState& raw);
-		static TlpInstruction randomize(pci::TlpOpcode op, size_t seed = 'p'+'i'+'z'+'z'+'a');
+		static TlpInstruction randomizeNaive(pci::TlpOpcode op, size_t seed = 'p'+'i'+'z'+'z'+'a');
 		auto operator <=> (const TlpInstruction& other) const = default;
 	};
 
