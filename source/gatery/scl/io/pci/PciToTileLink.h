@@ -38,6 +38,7 @@ namespace gtry::scl::pci {
 
 	TlpPacketStream<EmptyBits> tileLinkAToRequesterRequest(TileLinkChannelA&& a, BitWidth tlpW);
 	TileLinkChannelD requesterCompletionToTileLinkD(TlpPacketStream<EmptyBits>&& rc, BitWidth byteAddressW, BitWidth dataW);
+	TileLinkChannelD requesterCompletionToTileLinkDBurst(TlpPacketStream<EmptyBits>&& rc, BitWidth byteAddressW);
 	TileLinkUL makePciMaster(RequesterInterface&& reqInt, BitWidth byteAddressW, BitWidth dataW, BitWidth tagW);
 
 }

@@ -264,6 +264,7 @@ namespace gtry::scl::strm
 		return out;
 	}
 
+
 	UInt streamPacketBeatCounter(const StreamSignal auto& in, BitWidth counterW)
 	{
 		scl::Counter counter{ counterW.count() };
@@ -602,7 +603,7 @@ namespace gtry::scl::strm
 		IF(transfer(inStream)) sentBits = 0;
 		sentBits += bitsPerBeatOut;
 		ENIF(param.outTransfer) sentBits = reg(sentBits , bitsPerBeatOut);
-
+		
 
 		Bit isLastBeat = sentBits >= zext(fullBits);
 		return { in.eop & isLastBeat };

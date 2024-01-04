@@ -23,6 +23,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <gatery/scl/utils/bitCount.h>
 #include <gatery/scl/utils/OneHot.h>
 
+#include <gatery/scl/Fifo.h>
+
 namespace gtry::scl::pci {
 
 	void TlpAnswerInfo::setErrorFromLimitations(RequestHeader reqHdr) 
@@ -228,6 +230,47 @@ namespace gtry::scl::pci {
 
 		TileLinkChannelD d = move(*(tileLinkInit<TileLinkUL>(byteAddressW, dataW, 8_b).d));
 		//HCL_DESIGNCHECK_HINT(d->data.width() == 32_b, "not yet implemented");
+
+		d->opcode = (size_t) TileLinkD::OpCode::AccessAckData;
+		d->source = (UInt) hdr.tag;
+		d->sink = 0;
+		d->param = 0;
+		d->error = hdr.common.poisoned | (hdr.completionStatus != (size_t) CompletionStatus::successfulCompletion);
+
+		IF(valid(rc) & sop(rc))
+			sim_assert(bitcount(hdr.byteCount) == 1) << "TileLink cannot represent non powers of 2 amount of bytes";
+
+		UInt size = logByteSize(hdr.byteCount);
+		IF(valid(rc) & sop(rc))
+			sim_assert(size < d->size.width().count()) << "breaking this assertion invalidates the next line's truncation";
+		d->size = size.lower(d->size.width());
+
+		BVec headerlessData = *rc >> 96;
+		d->data = (headerlessData << cat(hdr.lowerByteAddress(2, 3_b),"5b00000")).lower(d->data.width());
+
+		valid(d) = valid(rc);
+		ready(rc) = ready(d);
+		//IF(valid(rc) & sop(rc))
+		//	sim_assert(emptyBits(rc) == (rc->width().bits() - (3*32 + ) )) << "only support one word right now";
+
+		return d;
+	}
+
+
+	
+
+	TileLinkChannelD requesterCompletionToTileLinkDMultipleBeats(TlpPacketStream<EmptyBits>&& rc, BitWidth byteAddressW)
+	{
+		Area area{ "requester_completion_tlp_to_TL_D", true };
+		CompletionHeader hdr = CompletionHeader::fromRaw(rc->lower(96_b));
+
+
+
+
+
+		HCL_DESIGNCHECK_HINT(rc->width() >= 96_b, "the first beat must contain the entire header in this implementation");
+
+		TileLinkChannelD d = move(*(tileLinkInit<TileLinkUL>(byteAddressW, rc->width(), 8_b).d));
 
 		d->opcode = (size_t) TileLinkD::OpCode::AccessAckData;
 		d->source = (UInt) hdr.tag;
