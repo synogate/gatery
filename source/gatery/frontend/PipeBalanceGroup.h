@@ -25,6 +25,7 @@
 
 #include <gatery/hlim/supportNodes/Node_RegSpawner.h>
 #include <gatery/hlim/supportNodes/Node_RegHint.h>
+#include <gatery/hlim/supportNodes/Node_NegativeRegister.h>
 #include <gatery/hlim/NodePtr.h>
 
 namespace gtry {
@@ -140,6 +141,20 @@ namespace gtry {
 
 		return T{ SignalReadPort(pipeStage, data.expansionPolicy) };
 	}
+
+	template<BaseSignal T>
+	std::tuple<T, Bit> negativeReg(const T& signal)
+	{
+		SignalReadPort data = signal.readPort();
+
+		auto* pipeStage = DesignScope::createNode<hlim::Node_RegHint>();
+		pipeStage->connectInput(data);
+
+		auto* negReg = DesignScope::createNode<hlim::Node_NegativeRegister>();
+		negReg->connectInput({.node = pipeStage, .port = 0});
+
+		return { T{ SignalReadPort(negReg->getDataOutput(), data.expansionPolicy) }, Bit{ SignalReadPort(negReg->getEnableOutput()) } };
+	}	
 
 	template<Signal T>
 	T pipestage(const T& signal)

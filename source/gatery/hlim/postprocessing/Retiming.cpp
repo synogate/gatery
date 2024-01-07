@@ -21,7 +21,12 @@
 
 #include "../supportNodes/Node_RegSpawner.h"
 #include "../supportNodes/Node_RegHint.h"
+#include "../supportNodes/Node_NegativeRegister.h"
 #include "../supportNodes/Node_RetimingBlocker.h"
+#include "../coreNodes/Node_Register.h"
+
+#include <gatery/debug/DebugInterface.h>
+
 
 #include "../Circuit.h"
 #include "../RegisterRetiming.h"
@@ -57,7 +62,8 @@ void resolveRetimingHints(Circuit &circuit, Subnet &subnet)
 	 */
 
 	// Resolve all register hints back to front
-	for (std::size_t i = regHints.size()-1; i < regHints.size(); i--) {
+	//for (std::size_t i = regHints.size()-1; i < regHints.size(); i--) {
+	for (std::size_t i = 0; i < regHints.size(); i++) {
 		auto node = regHints[i].second;
 		// Skip orphaned retiming hints
 		if (node->getDirectlyDriven(0).empty()) continue;
@@ -93,6 +99,29 @@ void resolveRetimingHints(Circuit &circuit, Subnet &subnet)
 					found = true;
 			HCL_ASSERT(found);
 			HCL_ASSERT(regHint->getDirectlyDriven(0).empty());
+		}
+}
+
+void annihilateNegativeRegisters(Circuit &circuit, Subnet &subnet)
+{
+	for (auto& n : subnet)
+		if (auto* negReg = dynamic_cast<Node_NegativeRegister*>(n)) {
+			auto driver = negReg->getNonSignalDriver(Node_Register::DATA);
+			auto *reg = dynamic_cast<Node_Register*>(driver.node);
+
+			if (reg == nullptr)
+				dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING << "Can not resolve negative register " << negReg << " because it is driven by " << driver.node << " which is not a register with which it can be fused. This usually means that retiming was unsuccessfull (negative register within a combinatorical loop?).");
+			else {
+				// Rewire data output to the regs input
+				auto dataDriven = negReg->getDirectlyDriven((size_t)Node_NegativeRegister::Outputs::data);
+				for (const auto &driven : dataDriven)
+					driven.node->rewireInput(driven.port, reg->getDriver(Node_Register::DATA));
+
+				// Rewire enable output to the regs enable
+				auto enableDriven = negReg->getDirectlyDriven((size_t)Node_NegativeRegister::Outputs::enable);
+				for (const auto &driven : enableDriven)
+					driven.node->rewireInput(driven.port, reg->getDriver(Node_Register::ENABLE));
+			}
 		}
 }
 

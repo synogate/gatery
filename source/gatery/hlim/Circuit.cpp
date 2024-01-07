@@ -1447,6 +1447,7 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 
 	subnet = Subnet::all(circuit);
 	resolveRetimingHints(circuit, subnet);
+	annihilateNegativeRegisters(circuit, subnet);
 	bypassRetimingBlockers(circuit, subnet);
 /*
 	{
@@ -1509,6 +1510,7 @@ void MinimalPostprocessing::generalOptimization(Circuit& circuit) const
 
 	subnet = Subnet::all(circuit);
 	resolveRetimingHints(circuit, subnet);
+	annihilateNegativeRegisters(circuit, subnet);
 	bypassRetimingBlockers(circuit, subnet);
 
 	circuit.ensureEntityPortSignalNodes();
@@ -1638,6 +1640,14 @@ void Circuit::readDebugNodeIds()
 		std::ranges::sort(m_debugNodeId);
 	}
 	std::filesystem::remove("debug_nodes.txt");
+}
+
+BaseNode *Circuit::findFirstNodeByName(std::string_view name)
+{
+	for (auto &n : m_nodes)
+		if (n->getName() == name)
+			return n.get();
+	return nullptr;
 }
 
 }
