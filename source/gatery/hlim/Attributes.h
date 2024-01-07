@@ -83,6 +83,15 @@ struct RegisterAttributes : public Attributes {
 
 	UsageType registerResetPinUsage = UsageType::DONT_CARE;
 	UsageType registerEnablePinUsage = UsageType::DONT_CARE;
+
+	// Allows the EDA tool to add up to autoPipelineLimit additional registers.
+	// You have to take care of handshake logic yourself.
+	// Not all tools support this.
+	//	- Vivado might not support this on registers with reset and enable
+	//  - Vivado does not support registers with fanout > 1
+	// All registers with the same autoPipelineGroup will be pipelined together.
+	size_t autoPipelineLimit = 0;
+	std::string autoPipelineGroup;
 };
 
 inline RegisterAttributes::Active operator!(RegisterAttributes::Active v)

@@ -137,12 +137,14 @@ namespace gtry::scl
 		T beatOut = circuit(beatArgs);
 		HCL_NAMED(beatOut);
 
-		Vector<T> out(args.size());
-		for (T& it : out) it = constructFrom(beatOut);
-		demux(selection, out, beatOut);
-		out = reg(out);
+		Vector<T> outFast(args.size());
+		outFast.back() = beatOut;
+		for (int i = (int)outFast.size() - 2; i >= 0; --i)
+			outFast[i] = reg(outFast[i + 1]);
+		HCL_NAMED(outFast);
 
-		HCL_NAMED(out);
-		return allowClockDomainCrossing(out, fastClock, clk);
+		Vector<T> outSlow = reg(allowClockDomainCrossing(outFast, fastClock, clk), { .clock = clk });
+		HCL_NAMED(outSlow);
+		return outSlow;
 	}
 }

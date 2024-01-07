@@ -554,6 +554,70 @@ BOOST_FIXTURE_TEST_CASE(mulAccumulate, TestWithDefaultDevice<gtry::GHDLTestFixtu
 	runTest({ 1,1'000'000 });
 }
 
+BOOST_FIXTURE_TEST_CASE(mulAccumulate2, TestWithDefaultDevice<gtry::GHDLTestFixture>)
+{
+	using namespace gtry;
+	Clock clock(ClockConfig{ .absoluteFrequency = 100'000'000, .resetName = "reset", .triggerEvent = ClockConfig::TriggerEvent::RISING, .resetActive = ClockConfig::ResetActive::HIGH });
+	ClockScope clkScp(clock);
+
+	SInt a1 = (SInt)pinIn(18_b).setName("a1");
+	SInt b1 = (SInt)pinIn(18_b).setName("b1");
+	SInt a2 = (SInt)pinIn(18_b).setName("a2");
+	SInt b2 = (SInt)pinIn(18_b).setName("b2");
+	Bit restart = pinIn().setName("restart");
+	Bit valid = pinIn().setName("valid");
+
+	SInt p = scl::arch::xilinx::mulAccumulate(a1, b1, a2, b2, restart, valid);
+	pinOut(p, "p");
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(a1) = 0;
+		simu(b1) = 0;
+		simu(a2) = 0;
+		simu(b2) = 0;
+		simu(restart) = '1';
+		simu(valid) = '1';
+		co_await OnClk(clock);
+
+		simu(a1) = 1;
+		simu(b1) = 1;
+		simu(restart) = '0';
+		for (size_t i = 0; i < 4; ++i)
+		{
+			simu(valid) = i % 2 == 1;
+			co_await OnClk(clock);
+		}
+
+		simu(a2) = -5;
+		simu(b2) = -9;
+		co_await OnClk(clock);
+
+		simu(a1) = -3;
+		simu(b1) = 4;
+		simu(restart) = '1';
+		co_await OnClk(clock);
+
+		simu(a1) = 5;
+		simu(b1) = -1;
+		simu(restart) = '0';
+	});
+
+	addSimulationProcess([&]()->SimProcess {
+		for(size_t i = 0; i < 6; ++i)
+			co_await OnClk(clock);
+
+		for (int expected : {0, 1, 1, 2, 3 + 45, -12 + 45, -17 + 2*45})
+		{
+			BOOST_TEST(simu(p) == expected);
+			co_await OnClk(clock);
+		}
+		
+		stopTest();
+	});
+
+	runTest({ 1,1'000'000 });
+}
+
 BOOST_FIXTURE_TEST_CASE(DSP48E2_double_clb_test, TestWithDefaultDevice<gtry::GHDLTestFixture>)
 {
 	using namespace gtry;

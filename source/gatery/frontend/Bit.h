@@ -114,6 +114,8 @@ namespace hlim {
 		void resetValue(bool v);
 		/// Defines a reset value for this signal. All register created on this signal without an explicit reset value will use this reset value.
 		void resetValue(char v);
+
+		void resetValueRemove();
 		/// Returns the optional reset value for this signal.
 		/// @see resetValue(char v)
 		std::optional<bool> resetValue() const { return m_resetValue; }

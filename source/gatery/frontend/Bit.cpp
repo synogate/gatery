@@ -250,6 +250,11 @@ namespace gtry {
 		HCL_ASSERT(v == '1' || v == '0'); resetValue(v == '1');
 	}
 
+	void Bit::resetValueRemove()
+	{
+		m_resetValue.reset();
+	}
+
 	void Bit::createNode()
 	{
 		HCL_ASSERT(!m_node);

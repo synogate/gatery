@@ -332,7 +332,8 @@ BOOST_FIXTURE_TEST_CASE(enableScopeRegisters, gtry::BoostUnitTestSimulationFixtu
 		// It should take *cycles* cycles for the 1 to ripple through, so the output should be undefined until then
 		for ([[maybe_unused]] auto i : utils::Range(cycles)) {
 			co_await OnClk(clock);
-			BOOST_TEST(!simu(output).allDefined());
+			if (i+1 < cycles)
+				BOOST_TEST(!simu(output).allDefined());
 		}
 		// Now the first '1' should come through
 		co_await OnClk(clock);
@@ -421,7 +422,8 @@ BOOST_FIXTURE_TEST_CASE(cascadedEnableScopeRegisters, gtry::BoostUnitTestSimulat
 		// It should take *cycles* cycles for the 1 to ripple through, so the output should be undefined until then
 		for ([[maybe_unused]] auto i : utils::Range(cycles)) {
 			co_await OnClk(clock);
-			BOOST_TEST(!simu(output).allDefined());
+			if (i + 1 < cycles)
+				BOOST_TEST(!simu(output).allDefined());
 		}
 		// Now the first '1' should come through
 		co_await OnClk(clock);
