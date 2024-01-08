@@ -54,7 +54,7 @@ namespace gtry::scl::arch::xilinx {
 		cq.template get<CQUser>() = { out("m_axis_cq_tuser", m_cfg.dataBusW == 512_b? 183_b: 88_b) };
 	
 		valid(cq) = out("m_axis_cq_tvalid");
-		keep(cq) = out("m_axis_cq_tkeep", BitWidth(m_cfg.dataBusW.bits()/32));
+		dwordEnable(cq) = out("m_axis_cq_tkeep", BitWidth(m_cfg.dataBusW.bits()/32));
 		eop(cq)	= out("m_axis_cq_tlast");
 	
 		in("m_axis_cq_tready") = ready(cq);
@@ -67,7 +67,7 @@ namespace gtry::scl::arch::xilinx {
 		ClockScope clk{ m_usrClk };
 	
 		in("s_axis_cc_tdata", m_cfg.dataBusW) = *cc;
-		in("s_axis_cc_tkeep", BitWidth(m_cfg.dataBusW.bits()/32)) = keep(cc);
+		in("s_axis_cc_tkeep", BitWidth(m_cfg.dataBusW.bits()/32)) = dwordEnable(cc);
 	
 		in("s_axis_cc_tlast") = eop(cc);
 		in("s_axis_cc_tuser", m_cfg.dataBusW == 512_b? 81_b: 33_b) = cc.template get<CCUser>().raw;
@@ -87,7 +87,7 @@ namespace gtry::scl::arch::xilinx {
 		rc.template get<RCUser>() = { out("m_axis_rc_tuser", m_cfg.dataBusW == 512_b ? 161_b : 75_b) };
 	
 		valid(rc) = out("m_axis_rc_tvalid");
-		keep(rc) = out("m_axis_rc_tkeep", BitWidth(m_cfg.dataBusW.bits()/32));
+		dwordEnable(rc) = out("m_axis_rc_tkeep", BitWidth(m_cfg.dataBusW.bits()/32));
 		eop(rc)	=	out("m_axis_rc_tlast");
 	
 		in("m_axis_rc_tready") = ready(rc);
@@ -100,7 +100,7 @@ namespace gtry::scl::arch::xilinx {
 		ClockScope clk{ m_usrClk };
 	
 		in("s_axis_rq_tdata", m_cfg.dataBusW) = *rq;
-		in("s_axis_rq_tkeep", BitWidth(m_cfg.dataBusW.bits()/32)) = keep(rq);
+		in("s_axis_rq_tkeep", BitWidth(m_cfg.dataBusW.bits()/32)) = dwordEnable(rq);
 	
 		in("s_axis_rq_tlast") = eop(rq);
 		in("s_axis_rq_tuser", m_cfg.dataBusW == 512_b ? 183_b : 62_b) = rq.template get<RQUser>().raw;
