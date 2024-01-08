@@ -46,6 +46,12 @@ namespace gtry::scl::strm
 	template<BaseSignal Payload, Signal... Meta>
 	auto streamShiftLeft(Stream<Payload, Meta...>& in, UInt shift, Bit reset = '0');
 
+	/**
+	* @brief applies a shift on a packetStream's data. Also computes new EmptyBits signal. As a side-effect, it can also be used to get rid of packet headers.
+	*/
+	template<scl::strm::PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
+	auto streamShiftRight(StreamT&& source, UInt shift);
+
 	UInt streamPacketBeatCounter(const StreamSignal auto& in, BitWidth counterW);
 
 	template<BaseSignal Payload, Signal... Meta>
@@ -72,6 +78,13 @@ namespace gtry::scl::strm
 	*/
 	template<PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
 	auto widthReduce(StreamT&& source, const BitWidth& width);
+
+	/**
+	 * @brief generic version of widthReduce and widthExtend that will choose the right circuit accordingly
+	*/
+	template<PacketStreamSignal StreamT> requires std::is_base_of_v<BaseBitVector, typename StreamT::Payload>
+	StreamT matchWidth(StreamT&& in, BitWidth desiredWidth);
+
 }
 
 namespace gtry::scl::strm
@@ -703,5 +716,115 @@ namespace gtry::scl::strm
 			return move(in);
 		else
 			HCL_DESIGNCHECK_HINT(false, "something went terribly wrong if this failed");
+	}
+
+	struct ShiftRightMetaParams {
+		UInt shift;
+		Bit anticipateEnd;
+		Bit outTransfer;
+		Bit outEop;
+		Bit canConsumeBeat;
+	};
+
+	template<BitVectorSignal T>
+	T shiftRightPayload(T& in, auto& inStream, const ShiftRightMetaParams& param)
+	{
+		T ret = constructFrom(in);
+
+		ENIF(transfer(inStream)) {
+			T doubleVec = (T) cat(in, reg(in));
+			ret = doubleVec(param.shift, in.width());
+		}
+
+		return ret;
+	}
+
+	scl::Valid shiftRightMeta(scl::Valid& in, auto& inStream, const ShiftRightMetaParams& param)
+	{
+		scl::Valid ret;
+		ret.valid = in.valid;
+
+		Bit thereWasAnAnticipatedEnd = scl::flagInstantSet(param.anticipateEnd, param.outTransfer & param.outEop,'0');
+		HCL_NAMED(thereWasAnAnticipatedEnd);
+		Bit validHeldForAnExtraBeat = !thereWasAnAnticipatedEnd & scl::flagInstantSet(transfer(inStream) & eop(inStream), param.outTransfer & param.outEop, '0');
+		HCL_NAMED(validHeldForAnExtraBeat);
+
+		IF(in.valid & sop(inStream)) {
+			ret.valid = '0';
+		}
+		ret.valid |= validHeldForAnExtraBeat;
+		return ret;
+	}
+
+	scl::Eop shiftRightMeta(scl::Eop& in, auto& inStream, const ShiftRightMetaParams& param)
+	{
+		scl::Eop ret;
+
+		Bit anticipatedEop = in.eop;
+		Bit DelayedEop = reg(scl::flagInstantSet(in.eop, param.outTransfer, '0'), '0');
+
+		ret.eop = DelayedEop;
+		Bit delayedAnticipateEndSignal = reg(param.anticipateEnd);
+		IF(param.anticipateEnd | delayedAnticipateEndSignal)
+			ret.eop = anticipatedEop;
+
+		return ret;
+	}
+
+	scl::Ready shiftRightMeta(scl::Ready& in, auto& inStream, const ShiftRightMetaParams& param)
+	{
+		scl::Ready ret;
+		Bit canConsumeBeat = valid(inStream) & sop(inStream);
+		*in.ready = *ret.ready | canConsumeBeat;
+		return ret;
+	}
+
+	scl::EmptyBits shiftRightMeta(scl::EmptyBits& in, auto& inStream, const ShiftRightMetaParams& param)
+	{
+		scl::EmptyBits ret = constructFrom(in);
+
+		ENIF(valid(inStream) & eop(inStream)) {
+			ret = reg(ret);
+		}
+		IF(valid(inStream) & eop(inStream)) {
+			ret.emptyBits = in.emptyBits + zext(param.shift);
+		}
+		return ret;
+	}
+
+
+
+	template<Signal T>
+	T shiftRightMeta(T& in, auto& inStream, const ShiftRightMetaParams& param)
+	{
+		T ret = move(in);
+		//something something
+		return ret;
+	}
+
+	template<scl::strm::PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
+	auto streamShiftRight(StreamT&& source, UInt shift)
+	{
+		auto scope = Area{ "scl_streamShiftRight" }.enter();
+
+		ShiftRightMetaParams params{
+			.shift = shift,
+		};
+
+		auto ret = scl::Stream{
+			.data = shiftRightPayload(*source, source, params),
+			._sig = std::apply([&](auto& ...meta) {
+				return std::tuple{ shiftRightMeta(meta, source, params)... };
+				}, source._sig)
+		};
+
+		UInt fullBits = source->width().bits() - zext(emptyBits(source));
+		params.anticipateEnd = scl::flagInstantSet(valid(source) & eop(source) & (zext(shift) >= fullBits), transfer(ret) & eop(ret), '0');
+		setName(params.anticipateEnd, "anticipateEnd");
+		params.outTransfer = transfer(ret);
+		params.outEop = eop(ret);
+
+		HCL_NAMED(ret);
+		return ret;
 	}
 }
