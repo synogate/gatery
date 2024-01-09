@@ -153,8 +153,15 @@ namespace gtry::scl::sim {
 		return packet;
 	}
 
-
-	TlpInstruction TlpInstruction::randomize(pci::TlpOpcode op, size_t seed) {
+	/**
+	 * @brief   fills the opcode with the desired opcode and every other field with completely random bits. 
+	 *			Does not check for coherence or create actual valid tlps.
+	 *			Intended for testing purposes only.
+	 * @param op opcode
+	 * @param seed seed for the randomization
+	 * @return naively random instruction
+	*/
+	TlpInstruction TlpInstruction::randomizeNaive(pci::TlpOpcode op, size_t seed) {
 		std::mt19937 rng{ (unsigned int) seed };
 		TlpInstruction ret;
 
