@@ -250,8 +250,6 @@ namespace gtry::scl::pci {
 
 		valid(d) = valid(rc);
 		ready(rc) = ready(d);
-		//IF(valid(rc) & sop(rc))
-		//	sim_assert(emptyBits(rc) == (rc->width().bits() - (3*32 + ) )) << "only support one word right now";
 
 		return d;
 	}
@@ -259,40 +257,39 @@ namespace gtry::scl::pci {
 
 	
 
-	TileLinkChannelD requesterCompletionToTileLinkDMultipleBeats(TlpPacketStream<EmptyBits>&& rc, BitWidth byteAddressW)
+	TileLinkChannelD requesterCompletionToTileLinkDFullW(TlpPacketStream<EmptyBits>&& rc)
 	{
 		Area area{ "requester_completion_tlp_to_TL_D", true };
-		CompletionHeader hdr = CompletionHeader::fromRaw(rc->lower(96_b));
-
-
-
-
-
 		HCL_DESIGNCHECK_HINT(rc->width() >= 96_b, "the first beat must contain the entire header in this implementation");
 
-		TileLinkChannelD d = move(*(tileLinkInit<TileLinkUL>(byteAddressW, rc->width(), 8_b).d));
+		CompletionHeader hdr = CompletionHeader::fromRaw(rc->lower(96_b));
 
+		ENIF(valid(rc) & sop(rc)) {
+			hdr = reg(hdr); // captures and holds the header before it gets squished by the shift right.
+		}
+
+		auto rcPayloadStream = scl::strm::streamShiftRight(move(rc), 96);
+
+		IF(valid(rcPayloadStream) & sop(rcPayloadStream))
+			sim_assert(bitcount(hdr.byteCount) == 1) << "TileLink cannot represent non powers of 2 amount of bytes";
+
+		TileLinkChannelD d = move(*(tileLinkInit<TileLinkUL>(64_b, rcPayloadStream->width(), 8_b).d));
+
+		d->data = *rcPayloadStream;
 		d->opcode = (size_t) TileLinkD::OpCode::AccessAckData;
 		d->source = (UInt) hdr.tag;
 		d->sink = 0;
 		d->param = 0;
 		d->error = hdr.common.poisoned | (hdr.completionStatus != (size_t) CompletionStatus::successfulCompletion);
 
-		IF(valid(rc) & sop(rc))
-			sim_assert(bitcount(hdr.byteCount) == 1) << "TileLink cannot represent non powers of 2 amount of bytes";
 
 		UInt size = logByteSize(hdr.byteCount);
-		IF(valid(rc) & sop(rc))
+		IF(valid(rcPayloadStream) & sop(rcPayloadStream))
 			sim_assert(size < d->size.width().count()) << "breaking this assertion invalidates the next line's truncation";
 		d->size = size.lower(d->size.width());
 
-		BVec headerlessData = *rc >> 96;
-		d->data = (headerlessData << cat(hdr.lowerByteAddress(2, 3_b),"5b00000")).lower(d->data.width());
-
-		valid(d) = valid(rc);
-		ready(rc) = ready(d);
-		//IF(valid(rc) & sop(rc))
-		//	sim_assert(emptyBits(rc) == (rc->width().bits() - (3*32 + ) )) << "only support one word right now";
+		valid(d) = valid(rcPayloadStream);
+		ready(rcPayloadStream) = ready(d);
 
 		return d;
 	}
@@ -308,6 +305,19 @@ namespace gtry::scl::pci {
 		reqInt.request <<= tileLinkAToRequesterRequest(move(a), reqInt.request->width());
 		*ret.d = requesterCompletionToTileLinkD(move(reqInt.completion), byteAddressW, dataW);
 	
+		return ret;
+	}
+
+	TileLinkUL makePciMasterFullW(RequesterInterface&& reqInt)
+	{
+		TileLinkUL ret = tileLinkInit<TileLinkUL>(64_b, reqInt.request->width(), 8_b);
+
+		TileLinkChannelA a = constructFrom(ret.a);
+		a <<= ret.a;
+
+		reqInt.request <<= tileLinkAToRequesterRequest(move(a), reqInt.request->width());
+		*ret.d = requesterCompletionToTileLinkDFullW(move(reqInt.completion));
+
 		return ret;
 	}
 }
