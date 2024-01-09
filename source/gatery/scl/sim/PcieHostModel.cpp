@@ -127,13 +127,19 @@ namespace gtry::scl::sim {
 
 	
 
-	SimProcess PcieHostModel::completeRequests(const Clock& clk, size_t delay)
+	SimProcess PcieHostModel::completeRequests(const Clock& clk, size_t delay, std::optional<uint8_t> rngReadyPercentage)
 	{
 		HCL_DESIGNCHECK_HINT(m_rr, "requesterRequest port is not connected");
 		HCL_DESIGNCHECK_HINT(m_rc, "requesterCompletion port is not connected");
 		simu(valid(*m_rc)) = '0';
 		SimulationSequencer sendingSeq;
-		fork([&, this]()->SimProcess { return scl::strm::readyDriver(*m_rr, clk); });
+
+		if(rngReadyPercentage)
+			fork([&, this]()->SimProcess { return scl::strm::readyDriverRNG(*m_rr, clk, *rngReadyPercentage); });
+		else
+			fork([&, this]()->SimProcess { return scl::strm::readyDriver(*m_rr, clk); });
+			
+		
 		while (true) {
 			auto simPacket = co_await gtry::scl::strm::receivePacket(*m_rr, clk);
 			//simPacket must be captured by copy because it might get overwritten with the next request before the first response has even gotten out
