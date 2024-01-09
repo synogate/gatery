@@ -451,7 +451,7 @@ BOOST_FIXTURE_TEST_CASE(pci_requesterCompletion_tileLink_fullW_test, BoostUnitTe
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
 
-BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_tilelink_to_pcieHostModel_test, BoostUnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_tilelink_to_hostModel_test, BoostUnitTestSimulationFixture)
 {
 	Area area{ "top_area", true };
 	using namespace scl::pci;
@@ -462,71 +462,61 @@ BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_tilelink_to_pcieHostModel_test, Boo
 
 	scl::sim::PcieHostModel host(memSizeInBytes);
 	host.defaultHandlers();
-	host.completeRequests(clk);
-	
+	addSimulationProcess([&, this]()->SimProcess { return host.completeRequests(clk,0,50); });
+
 	scl::TileLinkUL master = makePciMasterFullW(host.requesterInterface(512_b));
 
-	scl::TileLinkMasterModel linkModel;
+	pinIn(master, "link");
 
-	scl::TileLinkUL fromSimulation = constructFrom((scl::TileLinkUL&)linkModel.getLink());
-	fromSimulation <<= (scl::TileLinkUL&)linkModel.getLink();
+	addSimulationProcess([&, this]()->SimProcess { return scl::strm::readyDriverRNG(*master.d, clk, 50); });
 
-	HCL_NAMED(fromSimulation);
+	addSimulationProcess(
+		[&, this]()->SimProcess {
+			simu(valid(master.a)) = '0';
+			co_await OnClk(clk);
+			simu(master.a->address) = 0;
+			simu(master.a->opcode) = (size_t) scl::TileLinkA::OpCode::Get;
+			simu(master.a->param) = 0;
+			simu(master.a->source) = 42;
+			simu(master.a->size) = 6;
+			simu(valid(master.a)) = '1';
 
-	{
-		Area area("cpuBusSimulationOverride", true);
+			co_await scl::strm::performTransferWait(master.a, clk);
+			simu(valid(master.a)) = '0';
+			co_await OnClk(clk);
+			co_await OnClk(clk);
+			co_await OnClk(clk);
+			co_await OnClk(clk);
+			simu(master.a->address) = 0;
+			simu(master.a->opcode) = (size_t) scl::TileLinkA::OpCode::Get;
+			simu(master.a->param) = 0;
+			simu(master.a->source) = 24;
+			simu(master.a->size) = 6;
+			simu(valid(master.a)) = '1';
 
-		setName(cpuPortMathClk, "cpuPortMathClk_before");
-		setName(fromSimulation, "fromSimulation_before");
-
-		completerPort.a <<= simOverrideDownstream<scl::TileLinkChannelA>(move(cpuPortMathClk.a), move(fromSimulation.a));
-
-		auto [newD, newSimulationD] = simOverrideUpstream<scl::TileLinkChannelD>(move(*completerPort.d));
-		*cpuPortMathClk.d <<= newD;
-		*fromSimulation.d <<= newSimulationD;
-
-		setName(fromSimulation, "fromSimulation_after");
-		setName(cpuPortMathClk, "cpuPortMathClk_after");
-	}
-
-	auto memoryMapEntries = gtry::scl::exportAddressSpaceDescription(mMap.getTree().physicalDescription);
-
-	std::ofstream file("test_export/pcie_requester_test.gtkwave.filter", std::fstream::binary);
-	gtry::scl::writeGTKWaveFilterFile(file, memoryMapEntries);
-
-	scl::driver::SimulationFiberMapped32BitTileLink driverInterface(linkModel, (Clock&) clk);
-
-	struct pcie_requester_test_with_driver { };
-	using Map = scl::driver::DynamicMemoryMap<pcie_requester_test_with_driver>;
-	Map::memoryMap = scl::driver::MemoryMap(memoryMapEntries);
-	Map driverMemoryMap;
-
-	addSimulationFiber([&memoryMapEntries, &driverInterface, &clk, &driverMemoryMap, this](){
-		std::vector<std::byte> recalledData(32);
-
-		gtry::scl::driver::readFromTileLink(driverInterface, driverMemoryMap.template get<"requester_tilelink">(), 0xABCD'DEAD'BEEF'0000ull, std::as_writable_bytes(std::span(recalledData)));
-
-		stopTest();
+			co_await scl::strm::performTransferWait(master.a, clk);
+			simu(valid(master.a)) = '0';
 		}
 	);
 
-	board.attachTileLinkSlaveToCompleterPort(0, move(cpuPortMathClk));
+	addSimulationProcess(
+		[&, this]()->SimProcess {
 
-	std::ofstream mmapFile("test_export/memoryMappedRequesterPort.h", std::fstream::binary);
-	gtry::scl::format(mmapFile, "pcie4c_requester_test", memoryMapEntries);
+			co_await scl::strm::performTransferWait(*master.d, clk);
+			BOOST_TEST(host.memory().read(0,512) == (sim::DefaultBitVectorState) simu((*master.d)->data));
+			BOOST_TEST(simu((*master.d)->source) == 42);
 
-	recordVCD("test_export/memoryMappedRequesterPort.vcd");
+			co_await scl::strm::performTransferWait(*master.d, clk);
+			BOOST_TEST(host.memory().read(0,512) == (sim::DefaultBitVectorState) simu((*master.d)->data));
+			BOOST_TEST(simu((*master.d)->source) == 24);
+			co_await OnClk(clk);
+			stopTest();
+		}
+	);
+
+	recordVCD("dut.vcd");
 	design.postprocess();
+	//design.visualize("dut");
 
-	if (true) {
-		m_vhdlExport.emplace("test_export/memoryMappedRequesterPort.vhd");
-		m_vhdlExport->targetSynthesisTool(new gtry::XilinxVivado());
-		//m_vhdlExport->writeStandAloneProjectFile("export_thing.xpr");
-		//m_vhdlExport->writeConstraintsFile("top_constraints.sdc");
-		m_vhdlExport->writeClocksFile("top_clocks.sdc");
-		(*m_vhdlExport)(design.getCircuit());
-		//outputVHDL("pcie4c.vhd");
-	}
-
-	//BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
