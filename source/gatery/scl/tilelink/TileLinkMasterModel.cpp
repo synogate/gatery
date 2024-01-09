@@ -54,7 +54,7 @@ namespace gtry::scl
 	}
 
 	void TileLinkMasterModel::initAndDrive(std::string_view prefix, TileLinkUL&& slave) {
-		this->init(prefix, slave.a->address.width(), slave.a->data.width(), slave.a->source.width());
+		this->init(prefix, slave.a->address.width(), slave.a->data.width(), slave.a->size.width(), slave.a->source.width());
 		auto& master = (TileLinkUL&) this->getLink();
 
 		master <<= slave;
